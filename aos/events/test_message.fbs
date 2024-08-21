@@ -3,6 +3,7 @@ namespace aos;
 table TestMessage {
   value:int (id: 0);
   vector:[int] (id: 1);
+  data:[ubyte] (id: 2);
 }
 
 root_type TestMessage;

@@ -125,6 +125,35 @@ class ShmEventLoop : public EventLoop {
     return GetShmFetcherPrivateMemory(GetRawFetcher(fetcher));
   }
 
+  // Returns the local mapping of the shared memory used by the provided
+  // Fetcher to hold messages.
+  //
+  // Note that this may be the entire shared memory region held by this fetcher,
+  // depending on its channel's read_method.
+  //
+  // Only use this if you really know what you're doing. See the docs for
+  // SetFetcherUseWritableMemory() for more information.
+  template <typename T>
+  absl::Span<char> GetFetcherSharedMemory(aos::Fetcher<T> *fetcher) const {
+    CheckCurrentThread();
+    return GetShmFetcherSharedMemory(GetRawFetcher(fetcher));
+  }
+
+  // Setting "use writeable memory" to false (the default) means that the
+  // fetcher will provide messages in a read-only memory region. Setting "use
+  // writeable memory" to true means that the fetcher will provide messages in a
+  // writeable memory. Only use this if you absolutely know what you're doing.
+  // You should only use this if you're interacting with something like CUDA
+  // which expects writeable memory in its API. Note that regardless of this
+  // setting, the API for fetchers doesn't change. The messages will still be
+  // `const`.
+  template <typename T>
+  void SetFetcherUseWritableMemory(aos::Fetcher<T> *fetcher,
+                                   bool use_writable_memory) const {
+    CheckCurrentThread();
+    SetShmFetcherUseWritableMemory(GetRawFetcher(fetcher), use_writable_memory);
+  }
+
   int NumberBuffers(const Channel *channel) override;
 
   // All public-facing APIs will verify this mutex is held when they are called.
@@ -169,6 +198,13 @@ class ShmEventLoop : public EventLoop {
   // Private method to access the private memory mapping of a ShmFetcher.
   absl::Span<const char> GetShmFetcherPrivateMemory(
       const aos::RawFetcher *fetcher) const;
+
+  // Private method to access the shared memory mapping of a ShmFetcher.
+  absl::Span<char> GetShmFetcherSharedMemory(
+      const aos::RawFetcher *fetcher) const;
+
+  void SetShmFetcherUseWritableMemory(aos::RawFetcher *fetcher,
+                                      bool use_writable_memory) const;
 
   const UUID boot_uuid_;
 
