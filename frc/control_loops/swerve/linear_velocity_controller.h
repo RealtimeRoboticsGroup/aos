@@ -1,5 +1,6 @@
 #ifndef FRC971_CONTROL_LOOPS_SWERVE_LINEAR_VELOCITY_CONTROLLER_H_
 #define FRC971_CONTROL_LOOPS_SWERVE_LINEAR_VELOCITY_CONTROLLER_H_
+#include "frc971/control_loops/swerve/inverse_dynamics.h"
 #include "frc971/control_loops/swerve/linearized_controller.h"
 #include "frc971/control_loops/swerve/simplified_dynamics.h"
 
@@ -37,6 +38,8 @@ class LinearVelocityController {
   };
 
   using VirtualDynamics = Dynamics::VirtualVelocityDynamics;
+  using InverseDynamics =
+      AutoDiffInverseDynamics<Scalar, State, Input, VelocityControllerDynamics>;
 
   static constexpr std::chrono::milliseconds kDt{10};
 
@@ -67,13 +70,22 @@ class LinearVelocityController {
       Parameters params = MakeParameters(),
       const DynamicsParameters &dynamics_params = MakeDynamicsParameters());
 
+  ControllerResult RunController(const State &X, const Goal &goal);
   ControllerResult RunRawController(const State &X, const State &goal,
                                     const Input &U_ff);
 
   static State MakeGoal(const Goal &goal);
+  static StateSquare MakeInverseQ();
+  static InputSquare MakeInverseR();
+  static InverseDynamics MakeInverseDynamics(const DynamicsParameters &params) {
+    return {Dynamics(params), MakeGoal(Goal{1.0, 1.0, 1.0}), MakeInverseQ(),
+            MakeInverseR()};
+  }
+
+  Controller controller_;
 
  private:
-  Controller controller_;
+  InverseDynamics inverse_dynamics_;
 };
 
 }  // namespace frc971::control_loops::swerve

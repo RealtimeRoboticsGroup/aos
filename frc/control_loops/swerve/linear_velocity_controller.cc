@@ -38,6 +38,14 @@ LinearVelocityController::Parameters LinearVelocityController::MakeParameters(
                     .dynamics = std::make_unique<VirtualDynamics>(params)};
 }
 
+LinearVelocityController::StateSquare LinearVelocityController::MakeInverseQ() {
+  return StateSquare::Zero();
+}
+
+LinearVelocityController::InputSquare LinearVelocityController::MakeInverseR() {
+  return InputSquare::Identity();
+}
+
 namespace {
 LinearVelocityController::Dynamics::ModuleParams MakeModule(
     const Eigen::Matrix<LinearVelocityController::Scalar, 2, 1> &position) {
@@ -64,9 +72,10 @@ LinearVelocityController::MakeDynamicsParameters() {
           }};
 }
 
-LinearVelocityController::LinearVelocityController(Parameters params,
-                                                   const DynamicsParameters &)
-    : controller_(std::move(params)) {}
+LinearVelocityController::LinearVelocityController(
+    Parameters params, const DynamicsParameters &dynamics_params)
+    : controller_(std::move(params)),
+      inverse_dynamics_(MakeInverseDynamics(dynamics_params)) {}
 
 LinearVelocityController::State LinearVelocityController::MakeGoal(
     const Goal &goal) {
@@ -75,6 +84,23 @@ LinearVelocityController::State LinearVelocityController::MakeGoal(
   state(States::kVy) = goal.vy;
   state(States::kOmega) = goal.omega;
   return state;
+}
+
+LinearVelocityController::ControllerResult
+LinearVelocityController::RunController(const State &X, const Goal &goal) {
+  // Almost all of the cost is in inverting the dynamics currently.
+  auto start_time = aos::monotonic_clock::now();
+  const InverseDynamics::StateInput feedforwards =
+      inverse_dynamics_.InvertDynamics(MakeGoal(goal));
+  auto inverse_time = aos::monotonic_clock::now() - start_time;
+  start_time = aos::monotonic_clock::now();
+  const ControllerResult result =
+      RunRawController(X, feedforwards.state, feedforwards.input);
+  auto controller_time = aos::monotonic_clock::now() - start_time;
+  VLOG(2) << "inverse_time " << aos::time::DurationInSeconds(inverse_time)
+          << " controller time "
+          << aos::time::DurationInSeconds(controller_time);
+  return result;
 }
 
 LinearVelocityController::ControllerResult

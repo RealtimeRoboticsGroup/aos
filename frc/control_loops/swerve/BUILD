@@ -466,9 +466,45 @@ cc_library(
     hdrs = ["linear_velocity_controller.h"],
     deps = [
         ":eigen_dynamics",
+        ":inverse_dynamics",
         ":linearized_controller",
         ":simplified_dynamics",
         "@com_google_absl//absl/flags:flag",
+    ],
+)
+
+cc_test(
+    name = "linear_velocity_controller_test",
+    srcs = ["linear_velocity_controller_test.cc"],
+    linkstatic = True,
+    deps = [
+        ":linear_velocity_controller",
+        "//aos:realtime",
+        "//aos/testing:googletest",
+    ],
+)
+
+cc_library(
+    name = "inverse_dynamics",
+    hdrs = ["inverse_dynamics.h"],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        ":auto_diff_jacobian",
+        ":linearization_utils",
+        "//aos/time",
+        "//frc971/control_loops:jacobian",
+        "@com_google_absl//absl/strings:str_format",
+        "@com_google_ceres_solver//:ceres",
+    ],
+)
+
+cc_test(
+    name = "inverse_dynamics_test",
+    srcs = ["inverse_dynamics_test.cc"],
+    deps = [
+        ":inverse_dynamics",
+        "//aos:realtime",
+        "//aos/testing:googletest",
     ],
 )
 
@@ -516,6 +552,18 @@ cc_test(
     ],
 )
 
+cc_binary(
+    name = "inverse_dynamics_benchmark",
+    srcs = ["inverse_dynamics_benchmark.cc"],
+    deps = [
+        ":inverse_dynamics",
+        ":linear_velocity_controller",
+        ":simplified_dynamics",
+        "//aos:init",
+        "//aos:realtime",
+    ],
+)
+
 cc_library(
     name = "inverse_kinematics",
     hdrs = ["inverse_kinematics.h"],
@@ -546,6 +594,21 @@ cc_library(
         ":swerve_zeroing_fbs",
         "//frc/math:flatbuffers_matrix",
         "//frc/zeroing:continuous_absolute_encoder",
+    ],
+)
+
+cc_library(
+    name = "goal_solver",
+    srcs = ["goal_solver.cc"],
+    hdrs = ["goal_solver.h"],
+    deps = [
+        ":inverse_dynamics",
+        ":inverse_kinematics",
+        ":linear_velocity_controller",
+        ":swerve_drivetrain_goal_fbs",
+        ":swerve_drivetrain_joystick_goal_fbs",
+        "//aos/events:event_loop",
+        "//frc971/math:flatbuffers_matrix",
     ],
 )
 

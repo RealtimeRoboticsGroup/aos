@@ -17,6 +17,18 @@ cc_binary(
     ],
 )
 
+cc_binary(
+    name = "goal_solver",
+    srcs = ["goal_solver_main.cc"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":parameters",
+        "//aos:init",
+        "//aos/events:shm_event_loop",
+        "//frc971/control_loops/swerve:goal_solver",
+    ],
+)
+
 ts_project(
     name = "swerve_plotter",
     srcs = ["swerve_plotter.ts"],

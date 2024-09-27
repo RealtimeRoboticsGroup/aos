@@ -148,6 +148,12 @@
         },
         {
             "name": "/roborio/drivetrain",
+            "type": "frc.control_loops.swerve.Goal",
+            "source_node": "roborio",
+            "frequency": 250
+        },
+        {
+            "name": "/roborio/drivetrain",
             "type": "frc.control_loops.swerve.Status",
             "source_node": "roborio",
             "max_size": 10000,
@@ -413,6 +419,13 @@
                 "--rotate_every",
                 "30.0"
             ],
+            "nodes": [
+                "roborio"
+            ]
+        },
+        {
+            "name": "goal_solver",
+            "autostart": false,
             "nodes": [
                 "roborio"
             ]
