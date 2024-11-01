@@ -3,6 +3,7 @@
 #include "frc/constants/constants_sender_lib.h"
 #include "frc/control_loops/swerve/swerve_control_loops.h"
 #include "y2024_swerve/constants/constants_generated.h"
+#include "y2024_swerve/control_loops/parameters.h"
 
 using frc::control_loops::swerve::SwerveControlLoops;
 
@@ -22,7 +23,9 @@ int main(int argc, char **argv) {
 
   SwerveControlLoops swerve_control_loops(
       &event_loop, constants.constants().common()->rotation(),
-      constants.constants().robot()->swerve_zeroing(), "/drivetrain");
+      constants.constants().robot()->swerve_zeroing(),
+      y2024_swerve::control_loops::MakeSwerveParameters<float>(),
+      "/drivetrain");
 
   event_loop.Run();
 

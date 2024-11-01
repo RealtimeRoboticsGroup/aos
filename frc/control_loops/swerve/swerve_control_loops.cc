@@ -1,142 +1,209 @@
 #include "frc/control_loops/swerve/swerve_control_loops.h"
 
+ABSL_FLAG(int, swerve_priority, 1, "");
+ABSL_FLAG(int, swerve_iters, 1, "");
+
 namespace frc::control_loops::swerve {
 
 SwerveControlLoops::SwerveControlLoops(
     ::aos::EventLoop *event_loop,
     const frc::control_loops::
-        StaticZeroingSingleDOFProfiledSubsystemCommonParams *rotation_params,
-    const SwerveZeroing *zeroing_params, const ::std::string &name)
+        StaticZeroingSingleDOFProfiledSubsystemCommonParams *,
+    const SwerveZeroing *zeroing_params,
+    const NaiveEstimator::Parameters &params, const ::std::string &name)
     : frc::controls::ControlLoop<Goal, Position, StatusStatic, OutputStatic>(
           event_loop, name),
-      front_left_(rotation_params, zeroing_params->front_left()),
-      front_right_(rotation_params, zeroing_params->front_right()),
-      back_left_(rotation_params, zeroing_params->back_left()),
-      back_right_(rotation_params, zeroing_params->back_right()) {}
+      can_position_fetcher_(
+          event_loop->MakeFetcher<CanPosition>("/drivetrain")),
+      gyro_fetcher_(event_loop->MakeFetcher<::frc::sensors::GyroReading>(
+          "/drivetrain")),
+      naive_estimator_(zeroing_params, params),
+      velocity_controller_(LinearVelocityController::MakeParameters(params),
+                           params),
+      inverse_kinematics_(params),
+      velocity_ekf_(params) {
+  if (absl::GetFlag(FLAGS_swerve_priority) > 0) {
+    event_loop->SetRuntimeRealtimePriority(
+        absl::GetFlag(FLAGS_swerve_priority));
+  }
+}
 
 void SwerveControlLoops::RunIteration(
     const Goal *goal, const Position *position,
     aos::Sender<OutputStatic>::StaticBuilder *output_builder,
     aos::Sender<StatusStatic>::StaticBuilder *status_builder) {
-  if (WasReset()) {
-    front_left_.Reset();
-    front_right_.Reset();
-    back_left_.Reset();
-    back_right_.Reset();
+  ++iteration_counter_;
+  if (iteration_counter_ % absl::GetFlag(FLAGS_swerve_iters) != 0) {
+    return;
   }
-  aos::FlatbufferFixedAllocatorArray<
-      frc::control_loops::StaticZeroingSingleDOFProfiledSubsystemGoal, 512>
-      front_left_goal_buffer, front_right_goal_buffer, back_left_goal_buffer,
-      back_right_goal_buffer;
+  const aos::monotonic_clock::time_point profiling_start_time =
+      aos::monotonic_clock::now();
+  const aos::monotonic_clock::time_point now =
+      event_loop()->context().monotonic_event_time;
 
-  front_left_goal_buffer.Finish(
-      frc::control_loops::CreateStaticZeroingSingleDOFProfiledSubsystemGoal(
-          *front_left_goal_buffer.fbb(),
-          (goal != nullptr && goal->has_front_left_goal())
-              ? goal->front_left_goal()->rotation_angle()
-              : 0.0));
-  front_right_goal_buffer.Finish(
-      frc::control_loops::CreateStaticZeroingSingleDOFProfiledSubsystemGoal(
-          *front_right_goal_buffer.fbb(),
-          (goal != nullptr && goal->has_front_right_goal())
-              ? goal->front_right_goal()->rotation_angle()
-              : 0.0));
-  back_left_goal_buffer.Finish(
-      frc::control_loops::CreateStaticZeroingSingleDOFProfiledSubsystemGoal(
-          *back_left_goal_buffer.fbb(),
-          (goal != nullptr && goal->has_back_left_goal())
-              ? goal->back_left_goal()->rotation_angle()
-              : 0.0));
-  back_right_goal_buffer.Finish(
-      frc::control_loops::CreateStaticZeroingSingleDOFProfiledSubsystemGoal(
-          *back_right_goal_buffer.fbb(),
-          (goal != nullptr && goal->has_back_right_goal())
-              ? goal->back_right_goal()->rotation_angle()
-              : 0.0));
-  const bool disabled = front_left_.Correct(
-      &front_left_goal_buffer.message(),
-      position->front_left()->rotation_position(), output_builder == nullptr);
-  front_right_.Correct(&front_right_goal_buffer.message(),
-                       position->front_right()->rotation_position(),
-                       output_builder == nullptr);
-  back_left_.Correct(&back_left_goal_buffer.message(),
-                     position->back_left()->rotation_position(),
-                     output_builder == nullptr);
-  back_right_.Correct(&back_right_goal_buffer.message(),
-                      position->back_right()->rotation_position(),
-                      output_builder == nullptr);
+  gyro_fetcher_.Fetch();
 
-  const double front_left_voltage = front_left_.UpdateController(disabled);
-  front_left_.UpdateObserver(front_left_voltage);
-  const double front_right_voltage = front_right_.UpdateController(disabled);
-  front_right_.UpdateObserver(front_right_voltage);
-  const double back_left_voltage = back_left_.UpdateController(disabled);
-  back_left_.UpdateObserver(back_left_voltage);
-  const double back_right_voltage = back_right_.UpdateController(disabled);
-  back_right_.UpdateObserver(back_right_voltage);
-  (void)goal, (void)position;
-  aos::FlatbufferFixedAllocatorArray<
-      frc::control_loops::AbsoluteEncoderProfiledJointStatus, 512>
-      front_left_status_buffer, front_right_status_buffer,
-      back_left_status_buffer, back_right_status_buffer;
-  front_left_status_buffer.Finish(
-      front_left_.MakeStatus(front_left_status_buffer.fbb()));
-  front_right_status_buffer.Finish(
-      front_right_.MakeStatus(front_right_status_buffer.fbb()));
-  back_left_status_buffer.Finish(
-      back_left_.MakeStatus(back_left_status_buffer.fbb()));
-  back_right_status_buffer.Finish(
-      back_right_.MakeStatus(back_right_status_buffer.fbb()));
+  can_position_fetcher_.Fetch();
+  std::optional<NaiveEstimator::State> current_state;
+  if (gyro_fetcher_.get() != nullptr &&
+      can_position_fetcher_.get() != nullptr) {
+    double gyro_rate = gyro_fetcher_->velocity();
+    if (!yaw_gyro_zero_.has_value()) {
+      yaw_gyro_zeroer_.AddData(gyro_rate);
+      // Maximum variation to allow in the gyro when zeroing.
+      constexpr double kMaxYawGyroZeroingRange = 0.15;
+      if (yaw_gyro_zeroer_.full() &&
+          yaw_gyro_zeroer_.GetRange() < kMaxYawGyroZeroingRange) {
+        yaw_gyro_zero_ = yaw_gyro_zeroer_.GetAverage()(0);
+        VLOG(1) << "Zeroed to " << *yaw_gyro_zero_ << " Range "
+                << yaw_gyro_zeroer_.GetRange();
+      }
+    }
+    if (yaw_gyro_zero_.has_value()) {
+      gyro_rate = gyro_rate - yaw_gyro_zero_.value();
+    } else {
+      gyro_rate = 0.0;
+    }
+
+    current_state = naive_estimator_.Update(
+        now, position, can_position_fetcher_.get(), gyro_rate);
+    velocity_ekf_.Update(
+        now,
+        Eigen::Matrix<Scalar, 4, 1>{{current_state.value()(States::kThetas0)},
+                                    {current_state.value()(States::kThetas1)},
+                                    {current_state.value()(States::kThetas2)},
+                                    {current_state.value()(States::kThetas3)}},
+        {
+            aos::monotonic_clock::time_point{
+                std::chrono::nanoseconds(can_position_fetcher_->front_left()
+                                             ->translation()
+                                             ->timestamp())},
+            aos::monotonic_clock::time_point{
+                std::chrono::nanoseconds(can_position_fetcher_->front_right()
+                                             ->translation()
+                                             ->timestamp())},
+            aos::monotonic_clock::time_point{
+                std::chrono::nanoseconds(can_position_fetcher_->back_left()
+                                             ->translation()
+                                             ->timestamp())},
+            aos::monotonic_clock::time_point{
+                std::chrono::nanoseconds(can_position_fetcher_->back_right()
+                                             ->translation()
+                                             ->timestamp())},
+        },
+        Eigen::Matrix<Scalar, 4, 1>{
+            {can_position_fetcher_->front_left()->translation()->position()},
+            {can_position_fetcher_->front_right()->translation()->position()},
+            {can_position_fetcher_->back_left()->translation()->position()},
+            {can_position_fetcher_->back_right()->translation()->position()}},
+        gyro_rate, U_,
+        (status_builder != nullptr) ? status_builder->get()->add_velocity_ekf()
+                                    : nullptr);
+  }
+
+  const aos::monotonic_clock::time_point estimation_done =
+      aos::monotonic_clock::now();
+  U_.setZero();
+  std::optional<LinearVelocityController::ControllerResult> controller_result;
+  if (goal != nullptr && current_state.has_value()) {
+    CHECK_NE(goal->has_linear_velocity_goal(), goal->has_joystick_goal());
+    if (goal->has_linear_velocity_goal()) {
+      NaiveEstimator::State goal_state =
+          ToEigenOrDie<12, 1>(*goal->linear_velocity_goal()->state())
+              .cast<Scalar>();
+      controller_result = velocity_controller_.RunRawController(
+          current_state.value(), goal_state,
+          ToEigenOrDie<8, 1>(*goal->linear_velocity_goal()->input())
+              .cast<Scalar>());
+    } else if (goal->has_joystick_goal()) {
+      NaiveEstimator::State kinematics_state = current_state.value();
+      kinematics_state(NaiveEstimator::States::kVx) =
+          goal->joystick_goal()->vx();
+      kinematics_state(NaiveEstimator::States::kVy) =
+          goal->joystick_goal()->vy();
+      kinematics_state(NaiveEstimator::States::kOmega) =
+          goal->joystick_goal()->omega();
+      controller_result = velocity_controller_.RunRawController(
+          current_state.value(), inverse_kinematics_.Solve(kinematics_state),
+          Eigen::Matrix<Scalar, 8, 1>::Zero());
+    } else {
+      LOG(FATAL) << "Unreachable";
+    }
+    U_ = controller_result->U.cast<float>();
+  }
+
+  const aos::monotonic_clock::time_point controller_done =
+      aos::monotonic_clock::now();
 
   if (output_builder != nullptr) {
     OutputStatic *output = output_builder->get();
 
-    auto front_left_output = output->add_front_left_output();
-    front_left_output->set_rotation_current(front_left_voltage);
-    front_left_output->set_translation_current(
-        goal ? goal->front_left_goal()->translation_current() : 0.0);
-
-    auto front_right_output = output->add_front_right_output();
-    front_right_output->set_rotation_current(front_right_voltage);
-    front_right_output->set_translation_current(
-        goal ? goal->front_right_goal()->translation_current() : 0.0);
-
-    auto back_left_output = output->add_back_left_output();
-    back_left_output->set_rotation_current(back_left_voltage);
-    back_left_output->set_translation_current(
-        goal ? goal->back_left_goal()->translation_current() : 0.0);
-
-    auto back_right_output = output->add_back_right_output();
-    back_right_output->set_rotation_current(back_right_voltage);
-    back_right_output->set_translation_current(
-        goal ? goal->back_right_goal()->translation_current() : 0.0);
+    {
+      auto module_output = output->add_front_left_output();
+      module_output->set_rotation_current(U_(InputStates::kIs0));
+      module_output->set_translation_current(U_(InputStates::kId0));
+    }
+    {
+      auto module_output = output->add_front_right_output();
+      module_output->set_rotation_current(U_(InputStates::kIs1));
+      module_output->set_translation_current(U_(InputStates::kId1));
+    }
+    {
+      auto module_output = output->add_back_left_output();
+      module_output->set_rotation_current(U_(InputStates::kIs2));
+      module_output->set_translation_current(U_(InputStates::kId2));
+    }
+    {
+      auto module_output = output->add_back_right_output();
+      module_output->set_rotation_current(U_(InputStates::kIs3));
+      module_output->set_translation_current(U_(InputStates::kId3));
+    }
 
     // Ignore the return value of Send
     output_builder->CheckOk(output_builder->Send());
+  } else {
+    U_.setZero();
   }
 
   if (status_builder != nullptr) {
     StatusStatic *status = status_builder->get();
 
-    auto front_left_status = status->add_front_left_status();
-    PopulateSwerveModuleRotation(front_left_status,
-                                 &front_left_status_buffer.message());
+    if (current_state.has_value()) {
+      naive_estimator_.PopulateStatus(status->add_naive_estimator());
+    }
 
-    auto front_right_status = status->add_front_right_status();
-    PopulateSwerveModuleRotation(front_right_status,
-                                 &front_right_status_buffer.message());
-
-    auto back_left_status = status->add_back_left_status();
-    PopulateSwerveModuleRotation(back_left_status,
-                                 &back_left_status_buffer.message());
-
-    auto back_right_status = status->add_back_right_status();
-    PopulateSwerveModuleRotation(back_right_status,
-                                 &back_right_status_buffer.message());
+    if (controller_result.has_value()) {
+      auto controller_status = status->add_linear_controller();
+      CHECK(FromEigen(controller_result->debug.goal.cast<double>(),
+                      controller_status->add_goal_state()));
+      CHECK(FromEigen(controller_result->debug.U_ff.cast<double>(),
+                      controller_status->add_feedforwards_currents()));
+      CHECK(FromEigen(controller_result->debug.U_feedback.cast<double>(),
+                      controller_status->add_feedback_currents()));
+      CHECK(FromEigen(
+          controller_result->debug.feedback_contributions.cast<double>(),
+          controller_status->add_feedback_contributions()));
+      controller_status->set_sb02od_result(
+          controller_result->debug.sb02od_exit_code);
+    }
 
     // Ignore the return value of Send
     status_builder->CheckOk(status_builder->Send());
   }
+
+  const aos::monotonic_clock::time_point sends_done =
+      aos::monotonic_clock::now();
+
+  VLOG(1) << "Loop took "
+          << aos::time::DurationInSeconds(sends_done - profiling_start_time)
+          << " sec total. "
+          << aos::time::DurationInSeconds(estimation_done -
+                                          profiling_start_time)
+          << " sec in estimation "
+          << aos::time::DurationInSeconds(controller_done - estimation_done)
+          << " in controller "
+          << aos::time::DurationInSeconds(sends_done - controller_done)
+          << " sec cleaning up";
 }
 
 }  // namespace frc::control_loops::swerve
