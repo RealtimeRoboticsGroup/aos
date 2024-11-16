@@ -18,8 +18,8 @@ static_flatbuffer(
     srcs = ["swerve_path.fbs"],
     visibility = ["//visibility:public"],
     deps = [
-        "//frc971/math:matrix_fbs",
-    ]
+        "//frc/math:matrix_fbs",
+    ],
 )
 
 static_flatbuffer(
@@ -39,7 +39,10 @@ static_flatbuffer(
 static_flatbuffer(
     name = "swerve_drivetrain_status_fbs",
     srcs = ["swerve_drivetrain_status.fbs"],
-    deps = ["//frc/control_loops:profiled_subsystem_fbs"],
+    deps = [
+        "//frc/control_loops:profiled_subsystem_fbs",
+        "//frc/control_loops/drivetrain:drivetrain_status_fbs",
+    ],
 )
 
 static_flatbuffer(
@@ -90,9 +93,11 @@ cc_library(
         ":swerve_drivetrain_status_fbs",
         ":swerve_zeroing_fbs",
         ":velocity_ekf",
+        "//aos:math",
         "//frc/control_loops:control_loop",
         "//frc/control_loops:static_zeroing_single_dof_profiled_subsystem",
         "//frc/queues:gyro_fbs",
+        "//frc/wpilib:imu_batch_fbs",
         "//frc/zeroing:continuous_absolute_encoder",
         "//frc/zeroing:imu_zeroer",
     ],
@@ -105,7 +110,7 @@ cc_test(
     deps = [
         ":velocity_ekf",
         "//aos/testing:googletest",
-        "//frc971/math:eigen_matchers",
+        "//frc/math:eigen_matchers",
     ],
 )
 
@@ -176,33 +181,33 @@ cc_binary(
 
 cc_library(
     name = "autonomous_pd_loop",
-    hdrs = [
-      "autonomous_pd_loop.h"
-    ],
     srcs = [
         "autonomous_pd_loop.cc",
     ],
+    hdrs = [
+        "autonomous_pd_loop.h",
+    ],
     deps = [
         ":swerve_drivetrain_goal_fbs",
-        ":swerve_path_fbs",
         ":swerve_drivetrain_status_fbs",
+        ":swerve_path_fbs",
         "//aos/events:event_loop",
-        "//frc971/input:joystick_state_fbs",
+        "//frc/input:joystick_state_fbs",
         "@org_tuxfamily_eigen//:eigen",
     ],
 )
 
 cc_binary(
-  name = "spline_loader",
-  srcs = ["spline_loader.cc"],
-  deps = [
-    ":autonomous_pd_loop",
-    "//aos:json_to_flatbuffer",
-    "//aos/events:shm_event_loop",
-    "//aos:init",
-    "@com_google_absl//absl/flags:flag",
-    "@com_google_absl//absl/log",
-  ],
+    name = "spline_loader",
+    srcs = ["spline_loader.cc"],
+    deps = [
+        ":autonomous_pd_loop",
+        "//aos:init",
+        "//aos:json_to_flatbuffer",
+        "//aos/events:shm_event_loop",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/log",
+    ],
 )
 
 run_binary(
@@ -532,7 +537,7 @@ cc_library(
         ":auto_diff_jacobian",
         ":linearization_utils",
         "//aos/time",
-        "//frc971/control_loops:jacobian",
+        "//frc/control_loops:jacobian",
         "@com_google_absl//absl/strings:str_format",
         "@com_google_ceres_solver//:ceres",
     ],
@@ -648,7 +653,7 @@ cc_library(
         ":swerve_drivetrain_goal_fbs",
         ":swerve_drivetrain_joystick_goal_fbs",
         "//aos/events:event_loop",
-        "//frc971/math:flatbuffers_matrix",
+        "//frc/math:flatbuffers_matrix",
     ],
 )
 
@@ -660,8 +665,8 @@ cc_library(
         ":linearization_utils",
         ":simplified_dynamics",
         ":swerve_drivetrain_status_fbs",
-        "//frc971/estimation:ekf",
-        "//frc971/math:flatbuffers_matrix",
+        "//frc/estimation:ekf",
+        "//frc/math:flatbuffers_matrix",
         "@com_google_absl//absl/flags:flag",
     ],
 )

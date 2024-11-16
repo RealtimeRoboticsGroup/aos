@@ -17,6 +17,7 @@
 #include "frc/control_loops/swerve/swerve_zeroing_static.h"
 #include "frc/control_loops/swerve/velocity_ekf.h"
 #include "frc/queues/gyro_generated.h"
+#include "frc/wpilib/imu_batch_generated.h"
 #include "frc/zeroing/continuous_absolute_encoder.h"
 #include "frc/zeroing/imu_zeroer.h"
 
@@ -48,6 +49,7 @@ class SwerveControlLoops
           StaticZeroingSingleDOFProfiledSubsystemCommonParams *rotation_params,
       const SwerveZeroing *zeroing_params,
       const NaiveEstimator::Parameters &params,
+      const LinearVelocityController::ControllerWeights &lvc_weights,
       const ::std::string &name = "/swerve");
 
  protected:
@@ -58,13 +60,21 @@ class SwerveControlLoops
   int iteration_counter_ = 0;
   aos::Fetcher<CanPosition> can_position_fetcher_;
   aos::Fetcher<frc::sensors::GyroReading> gyro_fetcher_;
+  aos::Fetcher<frc::IMUValuesBatch> imu_fetcher_;
   std::optional<double> yaw_gyro_zero_;
   zeroing::Averager<double, 200> yaw_gyro_zeroer_;
+  frc::zeroing::ImuZeroer imu_zeroer_;
   NaiveEstimator naive_estimator_;
   LinearVelocityController velocity_controller_;
+  struct JoystickHeadingGoal {
+    Scalar heading;
+    aos::monotonic_clock::time_point last_time;
+  };
+  std::optional<JoystickHeadingGoal> desired_heading_;
   InverseKinematics<Scalar> inverse_kinematics_;
   VelocityEkf<Scalar> velocity_ekf_;
   LinearVelocityController::Input U_ = LinearVelocityController::Input::Zero();
+  bool ekf_initialized_ = false;
 };
 
 }  // namespace frc::control_loops::swerve

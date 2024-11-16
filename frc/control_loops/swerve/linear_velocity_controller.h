@@ -49,6 +49,16 @@ class LinearVelocityController {
     Scalar omega;
   };
 
+  struct ControllerWeights {
+    double Thetas_q;
+    double Omegas_q;
+    double Is_r;
+    double Is_t;
+    double Vel_q;
+    double Theta_q;
+    double Omega_q;
+  };
+
   struct ControllerDebug {
     Input U_ff;
     Input U_feedback;
@@ -63,11 +73,12 @@ class LinearVelocityController {
   };
 
   static Parameters MakeParameters(
+      const ControllerWeights weights,
       const DynamicsParameters &params = MakeDynamicsParameters());
   static DynamicsParameters MakeDynamicsParameters();
 
   LinearVelocityController(
-      Parameters params = MakeParameters(),
+      Parameters params,
       const DynamicsParameters &dynamics_params = MakeDynamicsParameters());
 
   ControllerResult RunController(const State &X, const Goal &goal);

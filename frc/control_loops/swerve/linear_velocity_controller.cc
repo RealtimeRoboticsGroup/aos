@@ -3,34 +3,37 @@
 #include "absl/flags/flag.h"
 
 ABSL_FLAG(double, thetas_q, 1.0, "");
-ABSL_FLAG(double, omegas_q, 1e-3, "");
-ABSL_FLAG(double, is_r, 1e-3, "");
-ABSL_FLAG(double, vel_q, 10.0, "");
+ABSL_FLAG(double, omegas_q, 1e-4, "");
+ABSL_FLAG(double, is_r, 1e-5, "");
+ABSL_FLAG(double, is_t, 1e-3, "");
+ABSL_FLAG(double, vel_q, 20.0, "");
+ABSL_FLAG(double, omega_q, 3.0, "");
 
 namespace frc971::control_loops::swerve {
 
 LinearVelocityController::Parameters LinearVelocityController::MakeParameters(
+    const ControllerWeights weights,
     const LinearVelocityController::DynamicsParameters &params) {
   StateSquare Q = StateSquare::Zero();
   // We don't really care much about the actual angles of the swerve modules,
   // but make them non-zero to help guide things.
-  Q.diagonal()(States::kThetas0) = absl::GetFlag(FLAGS_thetas_q);
-  Q.diagonal()(States::kThetas1) = absl::GetFlag(FLAGS_thetas_q);
-  Q.diagonal()(States::kThetas2) = absl::GetFlag(FLAGS_thetas_q);
-  Q.diagonal()(States::kThetas3) = absl::GetFlag(FLAGS_thetas_q);
-  Q.diagonal()(States::kOmegas0) = absl::GetFlag(FLAGS_omegas_q);
-  Q.diagonal()(States::kOmegas1) = absl::GetFlag(FLAGS_omegas_q);
-  Q.diagonal()(States::kOmegas2) = absl::GetFlag(FLAGS_omegas_q);
-  Q.diagonal()(States::kOmegas3) = absl::GetFlag(FLAGS_omegas_q);
-  Q.diagonal()(States::kTheta) = 1.2;
-  Q.diagonal()(States::kVx) = absl::GetFlag(FLAGS_vel_q);
-  Q.diagonal()(States::kVy) = absl::GetFlag(FLAGS_vel_q);
-  Q.diagonal()(States::kOmega) = 1.4;
+  Q.diagonal()(States::kThetas0) = weights.Thetas_q;
+  Q.diagonal()(States::kThetas1) = weights.Thetas_q;
+  Q.diagonal()(States::kThetas2) = weights.Thetas_q;
+  Q.diagonal()(States::kThetas3) = weights.Thetas_q;
+  Q.diagonal()(States::kOmegas0) = weights.Omegas_q;
+  Q.diagonal()(States::kOmegas1) = weights.Omegas_q;
+  Q.diagonal()(States::kOmegas2) = weights.Omegas_q;
+  Q.diagonal()(States::kOmegas3) = weights.Omegas_q;
+  Q.diagonal()(States::kTheta) = weights.Theta_q;
+  Q.diagonal()(States::kVx) = weights.Vel_q;
+  Q.diagonal()(States::kVy) = weights.Vel_q;
+  Q.diagonal()(States::kOmega) = weights.Omega_q;
 
   InputSquare R = InputSquare::Zero();
   for (size_t index = 0; index < 4; ++index) {
-    R.diagonal()(2 * index) = absl::GetFlag(FLAGS_is_r);
-    R.diagonal()(2 * index + 1) = 1e-3;
+    R.diagonal()(2 * index) = weights.Is_r;
+    R.diagonal()(2 * index + 1) = weights.Is_t;
   }
   return Parameters{.Q = Q,
                     .R = R,
