@@ -156,17 +156,25 @@ SwerveDrivetrainInputReader::SwerveGoals
 SwerveDrivetrainInputReader::GetSwerveGoals(
     const ::frc::input::driver_station::Data &data) {
   // xbox
-  constexpr double kMovementDeadband = 0.05;
-  constexpr double kRotationDeadband = 0.05;
+  constexpr double kMovementDeadband = 0.0;
+  constexpr double kRotationDeadband = 0.0;
+  constexpr double kVelScale = 12.0;
+  constexpr double kOmegaScale = 20.0;
 
   const double omega =
-      -aos::Deadband(-data.GetAxis(omega_axis_), kRotationDeadband, 1.0);
+      -kOmegaScale *
+      aos::Deadband(-data.GetAxis(rotation_axis_), kRotationDeadband, 1.0);
 
-  const double vx =
-      aos::Deadband(-data.GetAxis(vx_axis_), kMovementDeadband, 1.0);
+  const double raw_vx = -data.GetAxis(vx_axis_) + (0.31496063 / 8.0);
 
-  const double vy =
-      aos::Deadband(-data.GetAxis(vy_axis_), kMovementDeadband, 1.0);
+  const double raw_vy = -data.GetAxis(vy_axis_) + (0.2519685 / 8.0);
+
+  const double speed = kVelScale * aos::Deadband(std::hypot(raw_vx, raw_vy),
+                                                 kMovementDeadband, 1.0);
+  const double theta = std::atan2(raw_vy, raw_vx);
+
+  const double vx = speed * std::cos(theta);
+  const double vy = speed * std::sin(theta);
 
   return SwerveDrivetrainInputReader::SwerveGoals{vx, vy, omega};
 }
