@@ -20,7 +20,7 @@ table ArmPositions {
 
 table PotAndAbsEncoderConstants {
   zeroing_constants:frc971.zeroing.PotAndAbsoluteEncoderZeroingConstants (id: 0);
-  potentiometer_offset:double (id: 1);
+  arm_potentiometer_offset:double (id: 1);
   arm_positions:ArmPositions (id: 2);
 }
 

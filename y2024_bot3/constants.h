@@ -41,6 +41,32 @@ struct Values {
         subsystem_params;
     double potentiometer_offset;
   };
+
+  // todo: get the correct values for all these constants
+  static constexpr double kIntakeRollerOutputRatio = (16.0 / 34.0);
+  static constexpr double kArmOutputRatio =
+      (14.0 / 50.0) * (24.0 / 64.0) * (24.0 / 64.0) * (12.0 / 48.0);
+
+  static constexpr double kArmPotRatio() { return (12.0 / 48.0); }
+
+  static constexpr double kArmEncoderCountsPerRevolution() { return 4096.0; }
+
+  static constexpr double kArmEncoderRatio() { return (1.0 / 4.0); }
+
+  static constexpr double kArmPotRadiansPerVolt() {
+    return kArmPotRatio() * (10.0 /*turns*/ / 5.0 /*volts*/) *
+           (2 * M_PI /*radians*/);
+  }
+
+  static constexpr double kRotationModuleRatio() { return (1.0 / 12.1); }
+
+  static constexpr double kTranslationModuleRatio() {
+    return (12.0 / 54.0 * 38.0 / 16.0 * 15.0 / 45.0) * 1.8 * 0.0254;
+  }
+
+  static constexpr double kMaxDrivetrainEncoderPulsesPerSecond() {
+    return 1200000;
+  }
 };
 
 // Creates and returns a Values instance for the constants.
