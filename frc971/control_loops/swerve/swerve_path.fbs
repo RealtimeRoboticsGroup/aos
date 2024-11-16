@@ -1,0 +1,19 @@
+include "frc971/math/matrix.fbs";
+
+namespace frc971.control_loops.swerve;
+
+struct SwervePoint {
+  x: double;
+  y: double;
+  theta: double;
+}
+
+table SwervePath {
+  accelerations: [SwervePoint] (id: 0);
+  velocities: [SwervePoint] (id: 1);
+  positions: [SwervePoint] (id: 2);
+  times: [double] (id: 3);
+  scoring: [bool] (id: 4);
+}
+
+root_type SwervePath;

@@ -14,6 +14,15 @@ static_flatbuffer(
 )
 
 static_flatbuffer(
+    name = "swerve_path_fbs",
+    srcs = ["swerve_path.fbs"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//frc971/math:matrix_fbs",
+    ]
+)
+
+static_flatbuffer(
     name = "swerve_drivetrain_joystick_goal_fbs",
     srcs = ["swerve_drivetrain_joystick_goal.fbs"],
 )
@@ -163,6 +172,37 @@ cc_binary(
         "@com_google_absl//absl/strings:str_format",
         "@symengine",
     ],
+)
+
+cc_library(
+    name = "autonomous_pd_loop",
+    hdrs = [
+      "autonomous_pd_loop.h"
+    ],
+    srcs = [
+        "autonomous_pd_loop.cc",
+    ],
+    deps = [
+        ":swerve_drivetrain_goal_fbs",
+        ":swerve_path_fbs",
+        ":swerve_drivetrain_status_fbs",
+        "//aos/events:event_loop",
+        "//frc971/input:joystick_state_fbs",
+        "@org_tuxfamily_eigen//:eigen",
+    ],
+)
+
+cc_binary(
+  name = "spline_loader",
+  srcs = ["spline_loader.cc"],
+  deps = [
+    ":autonomous_pd_loop",
+    "//aos:json_to_flatbuffer",
+    "//aos/events:shm_event_loop",
+    "//aos:init",
+    "@com_google_absl//absl/flags:flag",
+    "@com_google_absl//absl/log",
+  ],
 )
 
 run_binary(
