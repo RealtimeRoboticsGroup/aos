@@ -5,14 +5,14 @@ y2024_swerve::SwervePublisher::SwervePublisher(aos::EventLoop *event_loop,
                                                const std::string &filename,
                                                double duration)
     : drivetrain_goal_sender_(
-          event_loop->MakeSender<frc::control_loops::swerve::GoalStatic>(
+          event_loop->MakeSender<frc971::control_loops::swerve::GoalStatic>(
               "/drivetrain")) {
   event_loop
       ->AddTimer([this, filename]() {
         auto goal_builder = drivetrain_goal_sender_.MakeStaticBuilder();
 
         auto drivetrain_goal =
-            aos::JsonFileToFlatbuffer<frc::control_loops::swerve::Goal>(
+            aos::JsonFileToFlatbuffer<frc971::control_loops::swerve::Goal>(
                 filename);
         CHECK(drivetrain_goal.Verify());
         CHECK(goal_builder->FromFlatbuffer(&drivetrain_goal.message()));
@@ -34,7 +34,7 @@ y2024_swerve::SwervePublisher::~SwervePublisher() {
         builder->add_back_left_goal(), builder->add_back_right_goal()}) {
     module_goal->set_rotation_angle(0.0);
     module_goal->set_translation_control_type_goal(
-        frc::control_loops::swerve::TranslationControlTypeGoal::CURRENT);
+        frc971::control_loops::swerve::TranslationControlTypeGoal::CURRENT);
     module_goal->set_translation_current(0.0);
   }
   builder.CheckOk(builder.Send());

@@ -2,28 +2,29 @@
 {% from 'y2024_swerve/constants/common.jinja2' import front_right_zero %}
 {% from 'y2024_swerve/constants/common.jinja2' import back_left_zero %}
 {% from 'y2024_swerve/constants/common.jinja2' import back_right_zero %}
+{% set M_PI = 3.14159265358979323846 %}
 
 {
   "robot": {
     "swerve_zeroing": {
       {% set _ = front_left_zero.update(
           {
-              "measured_absolute_position" : 1.332417183729859
+              "measured_absolute_position" : 2.934639251458032
           }
       ) %}
       {% set _ = front_right_zero.update(
           {
-              "measured_absolute_position" : 3.4927918912411986
+              "measured_absolute_position" : 4.872094665936765
           }
       ) %}
       {% set _ = back_left_zero.update(
           {
-              "measured_absolute_position" : 3.241233979895719
+              "measured_absolute_position" : 0.05358620595755559
           }
       ) %}
       {% set _ = back_right_zero.update(
           {
-              "measured_absolute_position" : 6.25249062612849
+              "measured_absolute_position" : 5.672941265642591
           }
       ) %}
       "front_left":  {{ front_left_zero | tojson(indent=2)}},

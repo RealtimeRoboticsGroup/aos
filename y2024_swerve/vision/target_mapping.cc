@@ -15,14 +15,14 @@
 #include "aos/events/simulated_event_loop.h"
 #include "aos/init.h"
 #include "aos/util/mcap_logger.h"
-#include "frc/constants/constants_sender_lib.h"
-#include "frc/control_loops/pose.h"
-#include "frc/vision/calibration_generated.h"
-#include "frc/vision/charuco_lib.h"
-#include "frc/vision/target_mapper.h"
-#include "frc/vision/vision_generated.h"
-#include "frc/vision/vision_util_lib.h"
-#include "frc/vision/visualize_robot.h"
+#include "frc971/constants/constants_sender_lib.h"
+#include "frc971/control_loops/pose.h"
+#include "frc971/vision/calibration_generated.h"
+#include "frc971/vision/charuco_lib.h"
+#include "frc971/vision/target_mapper.h"
+#include "frc971/vision/vision_generated.h"
+#include "frc971/vision/vision_util_lib.h"
+#include "frc971/vision/visualize_robot.h"
 #include "y2024_swerve/constants/simulated_constants_sender.h"
 #include "y2024_swerve/vision/vision_util.h"
 
@@ -67,17 +67,17 @@ ABSL_DECLARE_FLAG(int32_t, max_target_id);
 ABSL_DECLARE_FLAG(bool, visualize_solver);
 
 namespace y2024_swerve::vision {
-using frc::vision::DataAdapter;
-using frc::vision::ImageCallback;
-using frc::vision::PoseUtils;
-using frc::vision::TargetMap;
-using frc::vision::TargetMapper;
-using frc::vision::VisualizeRobot;
-namespace calibration = frc::vision::calibration;
+using frc971::vision::DataAdapter;
+using frc971::vision::ImageCallback;
+using frc971::vision::PoseUtils;
+using frc971::vision::TargetMap;
+using frc971::vision::TargetMapper;
+using frc971::vision::VisualizeRobot;
+namespace calibration = frc971::vision::calibration;
 
 // Class to handle reading target poses from a replayed log,
 // displaying various debug info, and passing the poses to
-// frc::vision::TargetMapper for field mapping.
+// frc971::vision::TargetMapper for field mapping.
 class TargetMapperReplay {
  public:
   TargetMapperReplay(aos::logger::LogReader *reader);
@@ -107,7 +107,7 @@ class TargetMapperReplay {
   // HandleAprilTags()
   void HandleNodeCaptures(
       aos::EventLoop *mapping_event_loop,
-      frc::constants::ConstantsFetcher<y2024_swerve::Constants>
+      frc971::constants::ConstantsFetcher<y2024_swerve::Constants>
           *constants_fetcher,
       int camera_number);
 
@@ -193,7 +193,7 @@ TargetMapperReplay::TargetMapperReplay(aos::logger::LogReader *reader)
         reader_->event_loop_factory()->MakeEventLoop(
             camera_node.node_name + "mapping", node));
 
-    frc::constants::ConstantsFetcher<y2024_swerve::Constants>
+    frc971::constants::ConstantsFetcher<y2024_swerve::Constants>
         constants_fetcher(
             mapping_event_loops_[mapping_event_loops_.size() - 1].get());
     HandleNodeCaptures(
@@ -207,7 +207,7 @@ TargetMapperReplay::TargetMapperReplay(aos::logger::LogReader *reader)
           mapping_event_loops_.back()->node()->name()->string_view(),
           camera_node.camera_number);
       cv::Mat extrinsics_cv =
-          frc::vision::CameraExtrinsics(calibration).value();
+          frc971::vision::CameraExtrinsics(calibration).value();
       Eigen::Matrix4d extrinsics_matrix;
       cv::cv2eigen(extrinsics_cv, extrinsics_matrix);
       const auto extrinsics = Eigen::Affine3d(extrinsics_matrix);
@@ -399,7 +399,7 @@ void TargetMapperReplay::HandleAprilTags(
 
 void TargetMapperReplay::HandleNodeCaptures(
     aos::EventLoop *mapping_event_loop,
-    frc::constants::ConstantsFetcher<y2024_swerve::Constants>
+    frc971::constants::ConstantsFetcher<y2024_swerve::Constants>
         *constants_fetcher,
     int camera_number) {
   // Get the camera extrinsics
@@ -407,7 +407,7 @@ void TargetMapperReplay::HandleNodeCaptures(
       std::string(mapping_event_loop->node()->name()->string_view());
   const auto *calibration = FindCameraCalibration(
       constants_fetcher->constants(), node_name, camera_number);
-  cv::Mat extrinsics_cv = frc::vision::CameraExtrinsics(calibration).value();
+  cv::Mat extrinsics_cv = frc971::vision::CameraExtrinsics(calibration).value();
   Eigen::Matrix4d extrinsics_matrix;
   cv::cv2eigen(extrinsics_cv, extrinsics_matrix);
   const auto extrinsics = Eigen::Affine3d(extrinsics_matrix);

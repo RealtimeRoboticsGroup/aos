@@ -8,7 +8,7 @@
     },
     {
       "name": "/imu/aos",
-      "type": "frc.JoystickState",
+      "type": "aos.JoystickState",
       "source_node": "imu",
       "frequency": 100,
       "logger": "LOCAL_AND_REMOTE_LOGGER",
@@ -28,7 +28,7 @@
       ]
     },
     {
-      "name": "/imu/aos/remote_timestamps/orin1/imu/aos/frc-JoystickState",
+      "name": "/imu/aos/remote_timestamps/orin1/imu/aos/aos-JoystickState",
       "type": "aos.message_bridge.RemoteMessage",
       "source_node": "imu",
       "logger": "NOT_LOGGED",
@@ -49,7 +49,7 @@
       "type": "aos.logging.LogMessageFbs",
       "source_node": "imu",
       "frequency": 200,
-      "num_senders": 20
+      "num_senders": 30
     },
     {
       "name": "/imu/aos",
@@ -136,7 +136,7 @@
     },
     {
       "name": "/imu/camera0",
-      "type": "frc.vision.CameraImage",
+      "type": "frc971.vision.CameraImage",
       "source_node": "imu",
       "channel_storage_duration": 1000000000,
       "frequency": 70,
@@ -147,7 +147,7 @@
     },
     {
       "name": "/imu/camera1",
-      "type": "frc.vision.CameraImage",
+      "type": "frc971.vision.CameraImage",
       "source_node": "imu",
       "channel_storage_duration": 1000000000,
       "frequency": 70,
@@ -190,7 +190,7 @@
     },
     {
       "name": "/imu/camera0",
-      "type": "frc.vision.TargetMap",
+      "type": "frc971.vision.TargetMap",
       "source_node": "imu",
       "frequency": 70,
       "num_senders": 2,
@@ -198,7 +198,7 @@
     },
     {
       "name": "/imu/camera1",
-      "type": "frc.vision.TargetMap",
+      "type": "frc971.vision.TargetMap",
       "source_node": "imu",
       "frequency": 70,
       "num_senders": 2,
@@ -206,7 +206,7 @@
     },
     {
       "name": "/imu",
-      "type": "frc.imu.DualImu",
+      "type": "frc971.imu.DualImu",
       "source_node": "imu",
       "frequency": 1100,
       "num_senders": 1,
@@ -214,7 +214,7 @@
     },
     {
       "name": "/imu",
-      "type": "frc.imu.CanTranslatorStatus",
+      "type": "frc971.imu.CanTranslatorStatus",
       "source_node": "imu",
       "frequency": 1000,
       "num_senders": 1,
@@ -222,7 +222,7 @@
     },
     {
       "name": "/imu/can",
-      "type": "frc.can_logger.CanFrame",
+      "type": "frc971.can_logger.CanFrame",
       "source_node": "imu",
       "frequency": 9000,
       "channel_storage_duration": 7000000000,
@@ -238,8 +238,15 @@
       "max_size": 65536
     },
     {
+        "name": "/imu/drivetrain",
+        "type": "frc971.control_loops.swerve.Status",
+        "source_node": "imu",
+        "max_size": 10000,
+        "frequency": 250
+    },
+    {
       "name": "/imu/localizer",
-      "type": "frc.IMUValuesBatch",
+      "type": "frc971.IMUValuesBatch",
       "source_node": "imu",
       "frequency": 2200,
       "max_size": 1600,
@@ -247,7 +254,7 @@
     },
     {
       "name": "/imu",
-      "type": "frc.imu.DualImuBlenderStatus",
+      "type": "frc971.imu.DualImuBlenderStatus",
       "source_node": "imu",
       "frequency": 1100,
       "num_senders": 1,
@@ -255,16 +262,33 @@
     },
     {
       "name": "/imu/hardware_monitor",
-      "type": "frc.orin.HardwareStats",
+      "type": "frc971.orin.HardwareStats",
       "source_node": "imu",
       "frequency": 2
+    },
+    {
+        "name": "/imu/drivetrain",
+        "type": "frc971.control_loops.swerve.CanPosition",
+        "source_node": "imu",
+        "frequency": 250,
+        "num_senders": 1,
+        "max_size": 656
+    },
+    {
+        "name": "/imu/drivetrain",
+        "type": "frc971.control_loops.swerve.Output",
+        "source_node": "imu",
+        "frequency": 400,
+        "max_size": 200,
+        "num_senders": 2
     }
+
   ],
   "applications": [
     {
       "name": "message_bridge_client",
       "args": [
-        "--rt_priority=16",
+        "--rt_priority=26",
         "--sinit_max_init_timeout=5000",
         "--rmem=8388608"
       ],
@@ -308,7 +332,7 @@
       "executable_name": "message_bridge_server",
       "user": "pi",
       "args": [
-        "--rt_priority=16",
+        "--rt_priority=26",
         "--force_wmem_max=131072"
       ],
       "nodes": [
@@ -435,9 +459,9 @@
       "executable_name": "argus_monitor",
       "args": [
         "/imu/camera0",
-        "frc.vision.TargetMap",
+        "frc971.vision.TargetMap",
         "/imu/camera1",
-        "frc.vision.TargetMap",
+        "frc971.vision.TargetMap",
       ],
       "user": "pi",
       "nodes": [
@@ -489,6 +513,22 @@
       "nodes": [
         "imu"
       ]
+    },
+    {
+        "name": "swerve_control_loops",
+        "nodes": [
+            "imu"
+        ]
+    },
+    {
+      "name": "canivore_logger",
+      "args": [
+            "--nodie_on_malloc",
+      ],
+      "user": "pi",
+      "nodes": [
+        "imu"
+      ]
     }
   ],
   "maps": [
@@ -526,6 +566,66 @@
       },
       "rename": {
         "name": "/imu/can"
+      }
+    },
+    {
+      "match": {
+        "name": "/drivetrain",
+        "type": "frc971.control_loops.swerve.Goal",
+        "source_node": "imu"
+      },
+      "rename": {
+        "name":"/roborio/drivetrain"
+      }
+    },
+    {
+      "match": {
+        "name": "/drivetrain",
+        "type": "frc971.control_loops.swerve.Position",
+        "source_node": "imu"
+      },
+      "rename": {
+        "name":"/roborio/drivetrain"
+      }
+    },
+    {
+      "match": {
+        "name": "/drivetrain",
+        "type": "frc971.control_loops.swerve.Status",
+        "source_node": "imu"
+      },
+      "rename": {
+        "name":"/imu/drivetrain"
+      }
+    },
+    {
+      "match": {
+        "name": "/drivetrain",
+        "type": "frc971.control_loops.swerve.CanPosition",
+        "source_node": "imu"
+      },
+      "rename": {
+        "name":"/imu/drivetrain"
+      }
+    },
+    {
+      "match": {
+        "name": "/drivetrain",
+        "type": "frc971.control_loops.swerve.Output",
+        "source_node": "imu"
+      },
+      "rename": {
+        "name":"/imu/drivetrain"
+      }
+    },
+    {
+      "match": {
+        "name": "/aos",
+        "type": "aos.RobotState",
+        "source_node": "imu"
+      },
+      "rename": {
+        "name": "/roborio/aos"
       }
     },
     {

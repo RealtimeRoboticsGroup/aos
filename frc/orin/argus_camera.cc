@@ -538,7 +538,7 @@ int Main() {
 
   aos::ShmEventLoop event_loop(&config.message());
 
-  event_loop.SetRuntimeRealtimePriority(55);
+  event_loop.SetRuntimeRealtimePriority(15);
   event_loop.SetRuntimeAffinity(aos::MakeCpusetFromCpus({2, 3, 4}));
 
   aos::Sender<frc::vision::CameraImage> sender =
@@ -657,7 +657,7 @@ int Main() {
         // ignore . and .. which are zeroes for some reason
         if (thread_id != 0 && thread_id != main_pid) {
           struct sched_param param;
-          param.sched_priority = 56;
+          param.sched_priority = 16;
           sched_setscheduler(thread_id, SCHED_FIFO, &param);
         }
       }

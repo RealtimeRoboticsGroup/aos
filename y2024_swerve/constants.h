@@ -7,7 +7,7 @@
 
 #include <cstdint>
 
-#include "frc/constants.h"
+#include "frc971/constants.h"
 
 namespace y2024_swerve::constants {
 struct Values {
@@ -24,22 +24,15 @@ struct Values {
   static constexpr double kDrivetrainStatorCurrentLimit() { return 35.0; }
   static constexpr double kDrivetrainSupplyCurrentLimit() { return 60.0; }
 
-  static constexpr double kRotationModuleRatio() {
-    return 9.0 / 24.0 * 14.0 / 72.0;
-  }
+  static constexpr double kRotationModuleRatio() { return (1.0 / 12.1); }
 
   static constexpr double kTranslationModuleRatio() {
-    return 1.0 / 6.75 * 2.0 * .0254;
+    return (12.0 / 54.0 * 38.0 / 16.0 * 15.0 / 45.0) * 1.8 * 0.0254;
   }
 
   static constexpr double kMaxDrivetrainEncoderPulsesPerSecond() {
     return 1200000;
   }
-
-  frc::constants::ContinuousAbsoluteEncoderZeroingConstants
-      front_left_zeroing_constants,
-      front_right_zeroing_constants, back_left_zeroing_constants,
-      back_right_zeroing_constants;
 };
 // Creates and returns a Values instance for the constants.
 // Should be called before realtime because this allocates memory.

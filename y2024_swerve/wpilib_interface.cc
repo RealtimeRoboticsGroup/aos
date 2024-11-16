@@ -4,18 +4,18 @@
 
 #include "aos/events/shm_event_loop.h"
 #include "aos/init.h"
-#include "frc/constants/constants_sender_lib.h"
-#include "frc/control_loops/control_loops_generated.h"
-#include "frc/control_loops/swerve/swerve_drivetrain_can_position_static.h"
-#include "frc/control_loops/swerve/swerve_drivetrain_position_static.h"
-#include "frc/queues/gyro_generated.h"
-#include "frc/wpilib/can_sensor_reader.h"
-#include "frc/wpilib/joystick_sender.h"
-#include "frc/wpilib/pdp_fetcher.h"
-#include "frc/wpilib/sensor_reader.h"
-#include "frc/wpilib/swerve/swerve_drivetrain_writer.h"
-#include "frc/wpilib/talonfx.h"
-#include "frc/wpilib/wpilib_robot_base.h"
+#include "frc971/constants/constants_sender_lib.h"
+#include "frc971/control_loops/control_loops_generated.h"
+#include "frc971/control_loops/swerve/swerve_drivetrain_can_position_static.h"
+#include "frc971/control_loops/swerve/swerve_drivetrain_position_static.h"
+#include "frc971/queues/gyro_generated.h"
+#include "frc971/wpilib/can_sensor_reader.h"
+#include "frc971/wpilib/joystick_sender.h"
+#include "frc971/wpilib/pdp_fetcher.h"
+#include "frc971/wpilib/sensor_reader.h"
+#include "frc971/wpilib/swerve/swerve_drivetrain_writer.h"
+#include "frc971/wpilib/talonfx.h"
+#include "frc971/wpilib/wpilib_robot_base.h"
 #include "y2024_swerve/constants.h"
 #include "y2024_swerve/constants/constants_generated.h"
 
@@ -23,12 +23,12 @@ ABSL_FLAG(bool, ctre_diag_server, false,
           "If true, enable the diagnostics server for interacting with "
           "devices on the CAN bus using Phoenix Tuner");
 
-using frc::wpilib::CANSensorReader;
-using frc::wpilib::TalonFX;
-using frc::wpilib::swerve::DrivetrainWriter;
-using frc::wpilib::swerve::SwerveModule;
+using frc971::wpilib::CANSensorReader;
+using frc971::wpilib::TalonFX;
+using frc971::wpilib::swerve::DrivetrainWriter;
+using frc971::wpilib::swerve::SwerveModule;
 
-namespace drivetrain = frc::control_loops::drivetrain;
+namespace drivetrain = frc971::control_loops::drivetrain;
 
 namespace y2024_swerve::wpilib {
 namespace {
@@ -46,21 +46,21 @@ static_assert(kMaxFastEncoderPulsesPerSecond <= 1300000,
               "fast encoders are too fast");
 }  // namespace
 
-class SensorReader : public ::frc::wpilib::SensorReader {
+class SensorReader : public ::frc971::wpilib::SensorReader {
  public:
   SensorReader(aos::ShmEventLoop *event_loop,
                std::shared_ptr<const constants::Values> values,
                const Constants *robot_constants,
-               frc::wpilib::swerve::SwerveModules modules)
-      : ::frc::wpilib::SensorReader(event_loop),
+               frc971::wpilib::swerve::SwerveModules modules)
+      : ::frc971::wpilib::SensorReader(event_loop),
         values_(values),
         robot_constants_(robot_constants),
         drivetrain_position_sender_(
             event_loop
-                ->MakeSender<frc::control_loops::swerve::PositionStatic>(
+                ->MakeSender<frc971::control_loops::swerve::PositionStatic>(
                     "/drivetrain")),
         modules_(modules),
-        gyro_sender_(event_loop->MakeSender<::frc::sensors::GyroReading>(
+        gyro_sender_(event_loop->MakeSender<::frc971::sensors::GyroReading>(
             "/drivetrain")) {
     UpdateFastEncoderFilterHz(kMaxFastEncoderPulsesPerSecond);
     event_loop->SetRuntimeAffinity(aos::MakeCpusetFromCpus({0}));
@@ -94,8 +94,8 @@ class SensorReader : public ::frc::wpilib::SensorReader {
 
     {
       auto builder = gyro_sender_.MakeBuilder();
-      ::frc::sensors::GyroReading::Builder gyro_reading_builder =
-          builder.MakeBuilder<::frc::sensors::GyroReading>();
+      ::frc971::sensors::GyroReading::Builder gyro_reading_builder =
+          builder.MakeBuilder<::frc971::sensors::GyroReading>();
       // +/- 2000 deg / sec
       constexpr double kMaxVelocity = 4000;  // degrees / second
       constexpr double kVelocityRadiansPerSecond =
@@ -157,17 +157,17 @@ class SensorReader : public ::frc::wpilib::SensorReader {
 
   const Constants *robot_constants_;
 
-  aos::Sender<frc::control_loops::swerve::PositionStatic>
+  aos::Sender<frc971::control_loops::swerve::PositionStatic>
       drivetrain_position_sender_;
 
-  frc::wpilib::swerve::SwerveModules modules_;
+  frc971::wpilib::swerve::SwerveModules modules_;
 
   std::unique_ptr<frc::DigitalInput> imu_yaw_rate_input_;
-  frc::wpilib::DMAPulseWidthReader imu_yaw_rate_reader_;
-  ::aos::Sender<::frc::sensors::GyroReading> gyro_sender_;
+  frc971::wpilib::DMAPulseWidthReader imu_yaw_rate_reader_;
+  ::aos::Sender<::frc971::sensors::GyroReading> gyro_sender_;
 };
 
-class WPILibRobot : public ::frc::wpilib::WPILibRobotBase {
+class WPILibRobot : public ::frc971::wpilib::WPILibRobotBase {
  public:
   ::std::unique_ptr<frc::Encoder> make_encoder(int index) {
     return std::make_unique<frc::Encoder>(10 + index * 2, 11 + index * 2, false,
@@ -190,12 +190,12 @@ class WPILibRobot : public ::frc::wpilib::WPILibRobotBase {
     aos::FlatbufferDetachedBuffer<aos::Configuration> config =
         aos::configuration::ReadConfig("aos_config.json");
 
-    frc::constants::WaitForConstants<y2024_swerve::Constants>(
+    frc971::constants::WaitForConstants<y2024_swerve::Constants>(
         &config.message());
 
     ::aos::ShmEventLoop constant_fetcher_event_loop(&config.message());
 
-    frc::constants::ConstantsFetcher<Constants> constants_fetcher(
+    frc971::constants::ConstantsFetcher<Constants> constants_fetcher(
         &constant_fetcher_event_loop);
 
     const Constants *robot_constants = &constants_fetcher.constants();
@@ -203,40 +203,40 @@ class WPILibRobot : public ::frc::wpilib::WPILibRobotBase {
     AddLoop(&constant_fetcher_event_loop);
 
     ::aos::ShmEventLoop joystick_sender_event_loop(&config.message());
-    ::frc::wpilib::JoystickSender joystick_sender(
+    ::frc971::wpilib::JoystickSender joystick_sender(
         &joystick_sender_event_loop);
     AddLoop(&joystick_sender_event_loop);
 
     ::aos::ShmEventLoop pdp_fetcher_event_loop(&config.message());
-    ::frc::wpilib::PDPFetcher pdp_fetcher(&pdp_fetcher_event_loop);
+    ::frc971::wpilib::PDPFetcher pdp_fetcher(&pdp_fetcher_event_loop);
     AddLoop(&pdp_fetcher_event_loop);
 
     std::vector<ctre::phoenix6::BaseStatusSignal *> signals_registry;
     std::vector<std::shared_ptr<TalonFX>> falcons;
 
     // TODO(max): Change the CanBus names with TalonFX software.
-    frc::wpilib::swerve::SwerveModules modules{
+    frc971::wpilib::swerve::SwerveModules modules{
         .front_left = std::make_shared<SwerveModule>(
-            frc::wpilib::TalonFXParams{6, true},
-            frc::wpilib::TalonFXParams{5, false}, "Drivetrain Bus",
+            frc971::wpilib::TalonFXParams{6, true},
+            frc971::wpilib::TalonFXParams{5, false}, "Drivetrain Bus",
             &signals_registry,
             constants::Values::kDrivetrainStatorCurrentLimit(),
             constants::Values::kDrivetrainSupplyCurrentLimit()),
         .front_right = std::make_shared<SwerveModule>(
-            frc::wpilib::TalonFXParams{3, true},
-            frc::wpilib::TalonFXParams{4, false}, "Drivetrain Bus",
+            frc971::wpilib::TalonFXParams{3, true},
+            frc971::wpilib::TalonFXParams{4, false}, "Drivetrain Bus",
             &signals_registry,
             constants::Values::kDrivetrainStatorCurrentLimit(),
             constants::Values::kDrivetrainSupplyCurrentLimit()),
         .back_left = std::make_shared<SwerveModule>(
-            frc::wpilib::TalonFXParams{7, true},
-            frc::wpilib::TalonFXParams{8, false}, "Drivetrain Bus",
+            frc971::wpilib::TalonFXParams{7, true},
+            frc971::wpilib::TalonFXParams{8, false}, "Drivetrain Bus",
             &signals_registry,
             constants::Values::kDrivetrainStatorCurrentLimit(),
             constants::Values::kDrivetrainSupplyCurrentLimit()),
         .back_right = std::make_shared<SwerveModule>(
-            frc::wpilib::TalonFXParams{2, true},
-            frc::wpilib::TalonFXParams{1, false}, "Drivetrain Bus",
+            frc971::wpilib::TalonFXParams{2, true},
+            frc971::wpilib::TalonFXParams{1, false}, "Drivetrain Bus",
             &signals_registry,
             constants::Values::kDrivetrainStatorCurrentLimit(),
             constants::Values::kDrivetrainSupplyCurrentLimit())};
@@ -247,11 +247,11 @@ class WPILibRobot : public ::frc::wpilib::WPILibRobotBase {
 
     modules.PopulateFalconsVector(&falcons);
 
-    aos::Sender<frc::control_loops::swerve::CanPositionStatic>
+    aos::Sender<frc971::control_loops::swerve::CanPositionStatic>
         can_position_sender =
             can_sensor_reader_event_loop
-                .MakeSender<frc::control_loops::swerve::CanPositionStatic>(
-                    "/drivetrain");
+                .MakeSender<frc971::control_loops::swerve::CanPositionStatic>(
+                    "/roborio/drivetrain");
 
     CANSensorReader can_sensor_reader(
         &can_sensor_reader_event_loop, std::move(signals_registry), falcons,
@@ -260,14 +260,14 @@ class WPILibRobot : public ::frc::wpilib::WPILibRobotBase {
           // TODO(max): use status properly in the flatbuffer.
           (void)status;
 
-          aos::Sender<frc::control_loops::swerve::CanPositionStatic>::
+          aos::Sender<frc971::control_loops::swerve::CanPositionStatic>::
               StaticBuilder builder = can_position_sender.MakeStaticBuilder();
 
           for (auto falcon : falcons) {
             falcon->RefreshNontimesyncedSignals();
           }
 
-          const frc::wpilib::swerve::SwerveModule::ModuleGearRatios
+          const frc971::wpilib::swerve::SwerveModule::ModuleGearRatios
               gear_ratios{
                   .rotation = constants::Values::kRotationModuleRatio(),
                   .translation = constants::Values::kTranslationModuleRatio()};
@@ -288,7 +288,7 @@ class WPILibRobot : public ::frc::wpilib::WPILibRobotBase {
 
     // Thread 2
 
-    aos::ShmEventLoop drivetrain_writer_event_loop(&config.message());
+    /*aos::ShmEventLoop drivetrain_writer_event_loop(&config.message());
     drivetrain_writer_event_loop.set_name("DrivetrainWriter");
 
     DrivetrainWriter drivetrain_writer(
@@ -297,7 +297,7 @@ class WPILibRobot : public ::frc::wpilib::WPILibRobotBase {
 
     drivetrain_writer.set_talonfxs(modules);
 
-    AddLoop(&drivetrain_writer_event_loop);
+    AddLoop(&drivetrain_writer_event_loop);*/
 
     // Thread 3
     aos::ShmEventLoop sensor_reader_event_loop(&config.message());
@@ -311,11 +311,11 @@ class WPILibRobot : public ::frc::wpilib::WPILibRobotBase {
     sensor_reader.set_front_right_encoder(
         make_encoder(1), std::make_unique<frc::DigitalInput>(1));
 
-    sensor_reader.set_back_left_encoder(make_encoder(4),
-                                        std::make_unique<frc::DigitalInput>(4));
+    sensor_reader.set_back_left_encoder(make_encoder(2),
+                                        std::make_unique<frc::DigitalInput>(2));
 
     sensor_reader.set_back_right_encoder(
-        make_encoder(0), std::make_unique<frc::DigitalInput>(0));
+        make_encoder(5), std::make_unique<frc::DigitalInput>(5));
 
     sensor_reader.set_yaw_rate_input(std::make_unique<frc::DigitalInput>(25));
 

@@ -11,8 +11,8 @@ cc_binary(
         "//aos:init",
         "//aos/events:shm_event_loop",
         "//aos/time",
-        "//frc/constants:constants_sender_lib",
-        "//frc/control_loops/swerve:swerve_control_loops",
+        "//frc971/constants:constants_sender_lib",
+        "//frc971/control_loops/swerve:swerve_control_loops",
         "//y2024_swerve/constants:constants_fbs",
     ],
 )

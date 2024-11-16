@@ -13,31 +13,31 @@
 #include "aos/logging/logging.h"
 #include "aos/network/team_number.h"
 #include "aos/util/log_interval.h"
-#include "frc/input/driver_station_data.h"
-#include "frc/input/drivetrain_input.h"
-#include "frc/input/joystick_input.h"
-#include "frc/input/redundant_joystick_data.h"
-#include "frc/input/swerve_joystick_input.h"
+#include "frc971/input/driver_station_data.h"
+#include "frc971/input/drivetrain_input.h"
+#include "frc971/input/joystick_input.h"
+#include "frc971/input/redundant_joystick_data.h"
+#include "frc971/input/swerve_joystick_input.h"
 
-using frc::CreateProfileParameters;
-using frc::input::driver_station::ButtonLocation;
-using frc::input::driver_station::ControlBit;
-using frc::input::driver_station::JoystickAxis;
-using frc::input::driver_station::POVLocation;
-using Side = frc::control_loops::drivetrain::RobotSide;
+using frc971::CreateProfileParameters;
+using frc971::input::driver_station::ButtonLocation;
+using frc971::input::driver_station::ControlBit;
+using frc971::input::driver_station::JoystickAxis;
+using frc971::input::driver_station::POVLocation;
+using Side = frc971::control_loops::drivetrain::RobotSide;
 
 namespace y2024_swerve::input::joysticks {
 
-namespace swerve = frc::control_loops::swerve;
+namespace swerve = frc971::control_loops::swerve;
 
-class Reader : public ::frc::input::SwerveJoystickInput {
+class Reader : public ::frc971::input::SwerveJoystickInput {
  public:
   Reader(::aos::EventLoop *event_loop)
-      : ::frc::input::SwerveJoystickInput(
+      : ::frc971::input::SwerveJoystickInput(
             event_loop, {.use_redundant_joysticks = true}) {}
 
   void HandleTeleop(
-      const ::frc::input::driver_station::Data &data) override {
+      const ::frc971::input::driver_station::Data &data) override {
     // Where teleop logic will eventually go when there is superstructure code
     (void)data;
   }

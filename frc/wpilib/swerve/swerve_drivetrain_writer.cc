@@ -39,10 +39,12 @@ void DrivetrainWriter::WriteConfigs() {
 
 void DrivetrainWriter::Write(
     const ::frc::control_loops::swerve::Output &output) {
-  modules_.front_left->WriteModule(output.front_left_output(), max_voltage_);
-  modules_.front_right->WriteModule(output.front_right_output(), max_voltage_);
-  modules_.back_left->WriteModule(output.back_left_output(), max_voltage_);
-  modules_.back_right->WriteModule(output.back_right_output(), max_voltage_);
+  (void)output;
+  // modules_.front_left->WriteModule(output.front_left_output(), max_voltage_);
+  // modules_.front_right->WriteModule(output.front_right_output(),
+  // max_voltage_); modules_.back_left->WriteModule(output.back_left_output(),
+  // max_voltage_); modules_.back_right->WriteModule(output.back_right_output(),
+  // max_voltage_);
 }
 
 void DrivetrainWriter::Stop() {
