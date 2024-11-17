@@ -354,9 +354,8 @@ class WPILibRobot : public ::frc971::wpilib::WPILibRobotBase {
 
     frc971::wpilib::CANSensorReader canivore_can_sensor_reader(
         &can_sensor_reader_event_loop, std::move(signals_registry), falcons,
-        [&arm, &intake_roller, &robot_constants,
-         &superstructure_can_position_sender, &can_position_sender, &falcons,
-         &modules](ctre::phoenix::StatusCode status) {
+        [&arm, &intake_roller, &superstructure_can_position_sender, &falcons,
+         &can_position_sender, &modules](ctre::phoenix::StatusCode status) {
           for (auto falcon : falcons) {
             falcon->RefreshNontimesyncedSignals();
           }
@@ -406,9 +405,15 @@ class WPILibRobot : public ::frc971::wpilib::WPILibRobotBase {
             [](const control_loops::superstructure::Output &output,
                const std::map<std::string_view, std::shared_ptr<TalonFX>>
                    &talonfx_map) {
-              (void)output;
-              (void)talonfx_map;
+              // Double check if it is supposed to be "arm"?
+              talonfx_map.find("arm")->second->WriteVoltage(
+                  output.arm_voltage());
+              talonfx_map.find("intake_roller")
+                  ->second->WriteVoltage(output.roller_voltage());
             });
+
+    can_superstructure_writer.add_talonfx("arm", arm);
+    can_superstructure_writer.add_talonfx("intake_roller", intake_roller);
 
     can_output_event_loop.MakeWatcher(
         "/roborio", [&can_superstructure_writer](

@@ -17,7 +17,7 @@ CANSensorReader::CANSensorReader(
   event_loop->SetRuntimeRealtimePriority(40);
 
   // TODO(max): Decide if we want to keep this on this core.
-  event_loop->SetRuntimeAffinity(aos::MakeCpusetFromCpus({1}));
+  //event_loop->SetRuntimeAffinity(aos::MakeCpusetFromCpus({1}));
 
   CHECK(flatbuffer_callback_);
   timer_handler_ = event_loop->AddTimer([this]() { Loop(); });
