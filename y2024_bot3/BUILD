@@ -63,7 +63,7 @@ robot_downloader(
         "//aos/network:message_bridge_client",
         "//aos/network:message_bridge_server",
         "//frc971/orin:argus_camera",
-        "//y2024_bot3/orin:can_logger",
+        "//frc971/can_logger",
         "//y2024_bot3/vision:apriltag_detector",
         "//frc971/vision:image_logger",
         "//y2024_bot3/orin:ctre_interface",
