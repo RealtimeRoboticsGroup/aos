@@ -1,5 +1,6 @@
 *.pyc
 /bazel-*
+/.bazelrc_autodetection
 /compile_commands.json
 /.bazelrc.user
 

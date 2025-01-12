@@ -224,7 +224,7 @@ generate_repositories_for_debs(opencv_amd64_debs)
 
 generate_repositories_for_debs(
     gstreamer_amd64_debs,
-    base_url = "https://software.frc971.org/Build-Dependencies/gstreamer_bullseye_amd64_deps",
+    base_url = "https://realtimeroboticsgroup.org/build-dependencies/gstreamer_bullseye_amd64_deps",
 )
 
 generate_repositories_for_debs(m4_debs)
@@ -443,7 +443,7 @@ http_archive(
     name = "arm64_debian_sysroot",
     build_file = "@//:compilers/orin_debian_rootfs.BUILD",
     sha256 = "9fefccc1877a7b5986e7ad29ac49a4217bfbb0fbea1bcc0314beff5d03a430cd",
-    url = "https://software.frc971.org/Build-Dependencies/2024-04-06-bookworm-arm64-nvidia-rootfs.tar.zst",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/2024-04-06-bookworm-arm64-nvidia-rootfs.tar.zst",
 )
 
 # Sysroot generated using //frc971/amd64/build_rootfs.py
@@ -451,7 +451,7 @@ http_archive(
     name = "amd64_debian_sysroot",
     build_file = "@//:compilers/amd64_debian_rootfs.BUILD",
     sha256 = "ceaf7e3fd4af04aca2ff0d55c94ce30c2b45d1136b0e81e9be5ebc1003f96052",
-    url = "https://software.frc971.org/Build-Dependencies/2023-12-10-bookworm-amd64-nvidia-rootfs.tar.zst",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/2023-12-10-bookworm-amd64-nvidia-rootfs.tar.zst",
 )
 
 # Generated with:
@@ -490,14 +490,14 @@ filegroup(
     visibility = ["//visibility:public"],
 )""",
     sha256 = "5312c79b19e9883b3cebd9d65b4438a2bf05b41da0bcd8c35e19d22c3b2e1859",
-    urls = ["https://software.frc971.org/Build-Dependencies/test_image_frc971.vision.CameraImage_2023.01.28.tar.gz"],
+    urls = ["https://realtimeroboticsgroup.org/build-dependencies/test_image_frc971.vision.CameraImage_2023.01.28.tar.gz"],
 )
 
 http_file(
     name = "game_pieces_edgetpu_model",
     downloaded_file_path = "edgetpu_model.tflite",
     sha256 = "3d37f34805d017153064076519aaf4b532658a3b8f2518bce8787f27a5c3064c",
-    urls = ["https://software.frc971.org/Build-Dependencies/models/2023/model_edgetpu_2023.04.09_3.tflite"],
+    urls = ["https://realtimeroboticsgroup.org/build-dependencies/models/2023/model_edgetpu_2023.04.09_3.tflite"],
 )
 
 # Recompressed from libusb-1.0.21.7z.
@@ -505,28 +505,28 @@ http_file(
     name = "libusb_1_0_windows",
     downloaded_file_path = "libusb-1.0.21-windows.tar.xz",
     sha256 = "fc2ba03992f343aabbaf9eb90559c6e00cdc6a2bd914d7cebea85857d5244015",
-    urls = ["https://software.frc971.org/Build-Dependencies/libusb-1.0.21-windows.tar.xz"],
+    urls = ["https://realtimeroboticsgroup.org/build-dependencies/libusb-1.0.21-windows.tar.xz"],
 )
 
 http_archive(
     name = "postgresql_amd64",
     build_file = "@//debian:postgresql_amd64.BUILD",
     sha256 = "483e199d0e7feae7cca0df132c649b5c20ddcc1a17760e656c25709f44f57a65",
-    url = "https://software.frc971.org/Build-Dependencies/postgresql_amd64_v2.tar.gz",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/postgresql_amd64_v2.tar.gz",
 )
 
 http_archive(
     name = "patch",
     build_file = "@//debian:patch.BUILD",
     sha256 = "b5ce139648a2e04f5585948ddad2fdae24dd4ee7976ac5a22d6ae7bd5674631e",
-    url = "https://software.frc971.org/Build-Dependencies/patch.tar.gz",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/patch.tar.gz",
 )
 
 http_archive(
     name = "rsync",
     build_file = "@//debian:rsync.BUILD",
     sha256 = "75ea8ce442c94fd12c0d00eb24860ac1de5ea6af56154bb1b195a96018c9e8a2",
-    url = "https://software.frc971.org/Build-Dependencies/rsync-2023.09.06.tar.gz",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/rsync-2023.09.06.tar.gz",
 )
 
 # //debian:ssh
@@ -534,7 +534,7 @@ http_archive(
     name = "ssh",
     build_file = "@//debian:ssh.BUILD",
     sha256 = "9c4a9eefa605283486fb15a44ef9977d4a95b55c3a41c4e71cfbacd1cf20a4b5",
-    url = "https://software.frc971.org/Build-Dependencies/ssh-2023.09.06.tar.gz",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/ssh-2023.09.06.tar.gz",
 )
 
 http_archive(
@@ -558,49 +558,49 @@ http_archive(
     name = "apache2",
     build_file = "@//debian:apache2.BUILD",
     sha256 = "98b0ad6d911751ba0aa486429e6278f995e7bbabd928c7d3d44c888fa2bf371b",
-    url = "https://software.frc971.org/Build-Dependencies/apache2.tar.gz",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/apache2.tar.gz",
 )
 
 http_archive(
     name = "pandoc",
     build_file = "@//debian:pandoc.BUILD",
     sha256 = "3c98503f29f2a7f771647b24a4b591bbe5539119b6b5a006ff09be7bec47bc0e",
-    url = "https://software.frc971.org/Build-Dependencies/pandoc-2023.12.14.tar.gz",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/pandoc-2023.12.14.tar.gz",
 )
 
 http_archive(
     name = "libusb",
     build_file = "@//debian:libusb.BUILD",
     sha256 = "3ca5cc2d317226f6646866ff9e8c443db3b0f6c82f828e800240982727531590",
-    url = "https://software.frc971.org/Build-Dependencies/libusb.tar.gz",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/libusb.tar.gz",
 )
 
 http_archive(
     name = "mingw_compiler",
     build_file = "@//debian:mingw_compiler.BUILD",
     sha256 = "45e86a8460f2151a4f0306e7ae7b06761029d2412ee16f63d1e8d2d29354e378",
-    url = "https://software.frc971.org/Build-Dependencies/mingw_compiler.tar.gz",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/mingw_compiler.tar.gz",
 )
 
 http_archive(
     name = "patchelf",
     build_file = "@//debian:patchelf.BUILD",
     sha256 = "bf8b709909d7d9e30815dd228eeded7dc282e3ce3919d0589ccbb56ac8632abc",
-    url = "https://software.frc971.org/Build-Dependencies/patchelf.tar.gz",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/patchelf.tar.gz",
 )
 
 http_archive(
     name = "arm_frc_gnueabi_deps",
     build_file = "@//debian:arm_frc_gnueabi_deps.BUILD",
     sha256 = "4b26fe45010817dc136488ee1604ade21bd7c264c29f17d864fc6eba9d7442c4",
-    url = "https://software.frc971.org/Build-Dependencies/arm_frc_gnueabi_deps.tar.gz",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/arm_frc_gnueabi_deps.tar.gz",
 )
 
 http_archive(
     name = "gtk_runtime",
     build_file = "@//debian:gtk_runtime.BUILD",
     sha256 = "5a6014d1783363be6bc95843d03bbb6513e650eaea60be2b1a4c65bf21981f9b",
-    url = "https://software.frc971.org/Build-Dependencies/gtk_runtime-4.tar.gz",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/gtk_runtime-4.tar.gz",
 )
 
 # Downloaded from
@@ -624,7 +624,7 @@ remote_java_repository(
         "@platforms//os:linux",
     ],
     urls = [
-        "https://software.frc971.org/Build-Dependencies/zulu11.54.25-ca-jdk11.0.14.1-linux_x64.tar.gz",
+        "https://realtimeroboticsgroup.org/build-dependencies/zulu11.54.25-ca-jdk11.0.14.1-linux_x64.tar.gz",
     ],
     version = "11",
 )
@@ -639,7 +639,7 @@ remote_java_repository(
         "@platforms//os:linux",
     ],
     urls = [
-        "https://software.frc971.org/Build-Dependencies/zulu11.54.25-ca-jdk11.0.14.1-linux_aarch64.tar.gz",
+        "https://realtimeroboticsgroup.org/build-dependencies/zulu11.54.25-ca-jdk11.0.14.1-linux_aarch64.tar.gz",
     ],
     version = "11",
 )
@@ -872,7 +872,7 @@ cc_library(
 """,
     sha256 = "0f1312f39eacc490fb253198c2d0e61e48ae00eff6a87cfd362358b1ad36a930",
     urls = [
-        "https://software.frc971.org/Build-Dependencies/phoenix6_24.50.0-alpha-2_arm64-2024.10.26.tar.gz",
+        "https://realtimeroboticsgroup.org/build-dependencies/phoenix6_24.50.0-alpha-2_arm64-2024.10.26.tar.gz",
     ],
 )
 
@@ -1140,7 +1140,7 @@ crates_repository(
     cargo_lockfile = "//:Cargo.lock",
     generator_sha256s = {"x86_64-unknown-linux-gnu": "1987a00e7ae12c705fa010b340410230ae8a47d7d95c02900191968b2e745649"},
     generator_urls = {
-        "x86_64-unknown-linux-gnu": "https://software.frc971.org/Build-Dependencies/cargo-bazel-x86_64-unknown-linux-gnu",
+        "x86_64-unknown-linux-gnu": "https://realtimeroboticsgroup.org/build-dependencies/cargo-bazel-x86_64-unknown-linux-gnu",
     },
     lockfile = "//:Cargo.Bazel.lock",
     manifests = [
@@ -1191,7 +1191,7 @@ crates_repository(
     cargo_lockfile = "//third_party/cargo:cxxbridge-cmd/Cargo.lock",
     generator_sha256s = {"x86_64-unknown-linux-gnu": "1987a00e7ae12c705fa010b340410230ae8a47d7d95c02900191968b2e745649"},
     generator_urls = {
-        "x86_64-unknown-linux-gnu": "https://software.frc971.org/Build-Dependencies/cargo-bazel-x86_64-unknown-linux-gnu",
+        "x86_64-unknown-linux-gnu": "https://realtimeroboticsgroup.org/build-dependencies/cargo-bazel-x86_64-unknown-linux-gnu",
     },
     lockfile = "//third_party/cargo:cxxbridge-cmd/Cargo.Bazel.lock",
     manifests = ["@cxxbridge-cmd//:Cargo.toml"],
@@ -1214,7 +1214,7 @@ http_file(
     name = "sample_logfile",
     downloaded_file_path = "log.fbs",
     sha256 = "45d1d19fb82786c476d3f21a8d62742abaeeedf4c16a00ec37ae350dcb61f1fc",
-    urls = ["https://software.frc971.org/Build-Dependencies/small_sample_logfile2.fbs"],
+    urls = ["https://realtimeroboticsgroup.org/build-dependencies/small_sample_logfile2.fbs"],
 )
 
 http_archive(
@@ -1227,7 +1227,7 @@ filegroup(
 )
     """,
     sha256 = "115dcd2fe005cb9cad3325707aa7f4466390c43a08555edf331c06c108bdf692",
-    url = "https://software.frc971.org/Build-Dependencies/2021-03-20_drivetrain_spin_wheels.tar.gz",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/2021-03-20_drivetrain_spin_wheels.tar.gz",
 )
 
 http_archive(
@@ -1240,7 +1240,7 @@ filegroup(
 )
     """,
     sha256 = "2b9a3ecc83f2aba89a1909ae38fe51e6718a5b4d0e7c131846dfb2845df9cd19",
-    url = "https://software.frc971.org/Build-Dependencies/2021-10-03_superstructure_shoot_balls.tar.gz",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/2021-10-03_superstructure_shoot_balls.tar.gz",
 )
 
 http_file(
@@ -1255,7 +1255,7 @@ http_archive(
     name = "opencv_k8",
     build_file = "@//debian:opencv.BUILD",
     sha256 = "1d8f839fd135a700ca0576a503b15b0a198fef5b36f22efae5cae9eaa17935d1",
-    url = "https://software.frc971.org/Build-Dependencies/opencv_amd64_v4.tar.gz",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/opencv_amd64_v4.tar.gz",
 )
 
 http_archive(
@@ -1278,7 +1278,7 @@ http_archive(
     name = "gstreamer_k8",
     build_file = "@//debian:gstreamer.BUILD",
     sha256 = "09765cb1dd8abc643cb1dd91d536aef3e6604ff05f5f92898d508ed857455d0b",
-    url = "https://software.frc971.org/Build-Dependencies/gstreamer_1.20.1-1~bpo11+1_amd64_v2.tar.gz",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/gstreamer_1.20.1-1~bpo11+1_amd64_v2.tar.gz",
 )
 
 # //debian:lzma_amd64
@@ -1299,7 +1299,7 @@ cc_library(
 )
 """,
     sha256 = "6fa0ad579b78bd41a0133024c34063b140442dd2ad4201fd2bf4c55229e7c13f",
-    urls = ["https://software.frc971.org/Build-Dependencies/lzma_amd64-2.tar.gz"],
+    urls = ["https://realtimeroboticsgroup.org/build-dependencies/lzma_amd64-2.tar.gz"],
 )
 
 # //debian:lzma_arm64
@@ -1320,7 +1320,7 @@ cc_library(
 )
 """,
     sha256 = "b4ab9fd7cf3bfdb9e3fc67ac4a3c84db7f7e3c48431ccfc6e6e210f5829d17c9",
-    urls = ["https://software.frc971.org/Build-Dependencies/lzma_arm64-2.tar.gz"],
+    urls = ["https://realtimeroboticsgroup.org/build-dependencies/lzma_arm64-2.tar.gz"],
 )
 
 local_repository(
@@ -1430,7 +1430,7 @@ filegroup(
 )
 """,
     sha256 = "6ae7cbedd9b1d54da095d460e2832c2a3e2917fbfa2ed22c6787d4b527a5677d",
-    urls = ["https://software.frc971.org/Build-Dependencies/clang_amd64.tar.gz"],
+    urls = ["https://realtimeroboticsgroup.org/build-dependencies/clang_amd64.tar.gz"],
 )
 
 http_archive(
@@ -1446,7 +1446,7 @@ exports_files(
 """,
     patch_cmds = ["touch lib/aarch64-linux-gnu/BUILD"],
     sha256 = "df4ea5194c80df8d1f5f6ed68b47ce9dbf78aa8cdebbc61cf00654d9075f8e3c",
-    urls = ["https://software.frc971.org/Build-Dependencies/libtinfo5_arm64.tar.gz"],
+    urls = ["https://realtimeroboticsgroup.org/build-dependencies/libtinfo5_arm64.tar.gz"],
 )
 
 http_archive(
@@ -1456,7 +1456,7 @@ http_archive(
         "unlink usr/bin/X11",
     ],
     sha256 = "a7491bf6c47ed0037992fa493f9c25af3ab00a695d706e1fdc122a8b798c0d7c",
-    urls = ["https://software.frc971.org/Build-Dependencies/xvfb_amd64.tar.gz"],
+    urls = ["https://realtimeroboticsgroup.org/build-dependencies/xvfb_amd64.tar.gz"],
 )
 
 # https://curl.haxx.se/download/curl-7.69.1.tar.gz
@@ -1465,7 +1465,7 @@ http_archive(
     build_file = "//debian:curl.BUILD",
     sha256 = "01ae0c123dee45b01bbaef94c0bc00ed2aec89cb2ee0fd598e0d302a6b5e0a98",
     strip_prefix = "curl-7.69.1",
-    url = "https://software.frc971.org/Build-Dependencies/curl-7.69.1.tar.gz",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/curl-7.69.1.tar.gz",
 )
 
 http_archive(
@@ -1497,7 +1497,7 @@ http_archive(
     name = "aws_sdk",
     build_file = "//debian:aws_sdk.BUILD",
     sha256 = "08856b91139d209f7423e60dd8f74a14ab6d053ca40088fcb42fd02484003e95",
-    url = "https://software.frc971.org/Build-Dependencies/aws_sdk-1.11.321.tar.gz",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/aws_sdk-1.11.321.tar.gz",
 )
 
 # Source code of LZ4 (files under lib/) are under BSD 2-Clause.
@@ -1578,7 +1578,7 @@ filegroup(
 )""",
     sha256 = "d02f4ca629e6dcf2b65557a0353871ce0025e70715214de4e6ec7e9f862de420",
     url =
-        "https://software.frc971.org/Build-Dependencies/foxglove-1456f4a4cb6f4c6c7e50e020ba9918dba9e04b96.tar.gz",
+        "https://realtimeroboticsgroup.org/build-dependencies/foxglove-1456f4a4cb6f4c6c7e50e020ba9918dba9e04b96.tar.gz",
 )
 
 #
@@ -1590,7 +1590,7 @@ http_archive(
     patches = ["//third_party/vl53l1x:vl53l1x.patch"],
     sha256 = "06a66254ab7a8b061f93ff0f65abb6088c3ea50335475bb6ac11087beb65d174",
     strip_prefix = "en.STSW-IMG009_v3.5.2/API",
-    url = "https://software.frc971.org/Build-Dependencies/en.STSW-IMG009.zip",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/en.STSW-IMG009.zip",
 )
 
 http_archive(
@@ -1602,35 +1602,35 @@ filegroup(
     visibility = ["//visibility:public"],
 )""",
     sha256 = "2356b9d0b3be59d01e837bfbbee21de55b16232d5e00c66701c20b64ff3272e3",
-    url = "https://software.frc971.org/Build-Dependencies/2023_arducam_apriltag_test_images.tar.gz",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/2023_arducam_apriltag_test_images.tar.gz",
 )
 
 http_file(
     name = "orin_image_apriltag",
     downloaded_file_path = "orin_image_apriltag.bfbs",
     sha256 = "c86604fd0b1301b301e299b1bba2573af8c586413934a386a2bd28fd9b037b84",
-    url = "https://software.frc971.org/Build-Dependencies/orin_image_apriltag.bfbs",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/orin_image_apriltag.bfbs",
 )
 
 http_file(
     name = "orin_large_image_apriltag",
     downloaded_file_path = "orin_large_gs_apriltag.bfbs",
     sha256 = "d933adac0d6c205c574791060be73701ead05977ff5dd9f6f4eadb45817c3ccb",
-    url = "https://software.frc971.org/Build-Dependencies/orin_large_gs_apriltag.bfbs",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/orin_large_gs_apriltag.bfbs",
 )
 
 http_file(
     name = "orin_capture_24_04",
     downloaded_file_path = "orin_capture_24_04.bfbs",
     sha256 = "719edb1d1394c13c1b55d02cf35c277e1d4c2111f4eb4220b28addc08634488a",
-    url = "https://software.frc971.org/Build-Dependencies/orin-capture-24-04-2024.02.14.bfbs",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/orin-capture-24-04-2024.02.14.bfbs",
 )
 
 http_file(
     name = "orin_capture_24_04_side",
     downloaded_file_path = "orin_capture_24_04_side.bfbs",
     sha256 = "4747cc98f8794d6570cb12a3171d7984e358581914a28b43fb6bb8b9bd7a10ac",
-    url = "https://software.frc971.org/Build-Dependencies/orin-capture-24-04-side-2024.02.17.bfbs",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/orin-capture-24-04-side-2024.02.17.bfbs",
 )
 
 http_archive(
@@ -1638,7 +1638,7 @@ http_archive(
     build_file = "//third_party:libedgetpu/libedgetpu.BUILD",
     sha256 = "c900faf2c9ea9599fda60c3d03ac43d0d7b34119659c9e35638b81cd14354b57",
     strip_prefix = "libedgetpu-bazel",
-    url = "https://software.frc971.org/Build-Dependencies/libedgetpu-ddfa7bde33c23afd8c2892182faa3e5b4e6ad94e.tar.gz",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/libedgetpu-ddfa7bde33c23afd8c2892182faa3e5b4e6ad94e.tar.gz",
 )
 
 http_archive(
@@ -1646,7 +1646,7 @@ http_archive(
     build_file = "//third_party:libtensorflowlite/libtensorflowlite.BUILD",
     sha256 = "a073dfddb3cb25113ba7eac6edb5569d0ae7988cad881d3f665e8ca0b8b85108",
     strip_prefix = "tensorflow-bazel",
-    url = "https://software.frc971.org/Build-Dependencies/tensorflow-a4dfb8d1a71385bd6d122e4f27f86dcebb96712d.tar.gz",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/tensorflow-a4dfb8d1a71385bd6d122e4f27f86dcebb96712d.tar.gz",
 )
 
 http_archive(
@@ -1699,7 +1699,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )""",
     sha256 = "b106b3b975d3cf3ad3fcd5e4be7409f6095e1d531346a90c4ad6bdb7da1d08a5",
-    url = "https://software.frc971.org/Build-Dependencies/2023_calibrate_multi_cameras_data.tar.gz",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/2023_calibrate_multi_cameras_data.tar.gz",
 )
 
 http_archive(
@@ -1733,7 +1733,7 @@ http_archive(
     name = "m4_v1.4.18",
     build_file = "@//debian:m4.BUILD",
     sha256 = "ee8dfe664ac8c1d066bab64f71bd076a021875581b3cc47dac4a14a475f50b15",
-    url = "http://software.frc971.org/Build-Dependencies/m4.tar.gz",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/m4.tar.gz",
 )
 
 http_archive(
@@ -1760,5 +1760,5 @@ filegroup(
     visibility = ["//visibility:public"],
 )""",
     sha256 = "0359e5c19117835c6ec336233a3bbfe2b273797afe9460bf224496802b8f4055",
-    url = "https://software.frc971.org/Build-Dependencies/intrinsic_calibration_test_images.tar.gz",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/intrinsic_calibration_test_images.tar.gz",
 )

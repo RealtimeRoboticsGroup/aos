@@ -17,6 +17,22 @@ platform(
 )
 
 platform(
+    name = "linux_x86_no_gpu",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+        "//tools/platforms/go:has_support",
+        "//tools/platforms/rust:has_support",
+        "//tools/platforms/nodejs:has_support",
+        "//tools/platforms/gpu:none",
+    ],
+    exec_properties = {
+        "container-image": "docker://docker.io/debian:bookworm",
+        "OSFamily": "linux",
+    },
+)
+
+platform(
     name = "linux_arm64",
     constraint_values = [
         "@platforms//os:linux",

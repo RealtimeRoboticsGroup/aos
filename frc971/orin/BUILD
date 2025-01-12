@@ -78,6 +78,7 @@ cc_test(
         # linux-sandbox on the host which has a GPU already.
         "no-remote-exec",
     ],
+    target_compatible_with = ["//tools/platforms/gpu:nvidia"],
     deps = [
         ":apriltag",
         ":ycbcr",
@@ -100,6 +101,7 @@ cc_test(
         "output_iterator_test.cc",
     ],
     features = ["cuda"],
+    target_compatible_with = ["//tools/platforms/gpu:nvidia"],
     deps = [
         ":apriltag",
         "//aos/testing:googletest",
@@ -113,6 +115,7 @@ cc_test(
         "points_test.cc",
     ],
     features = ["cuda"],
+    target_compatible_with = ["//tools/platforms/gpu:nvidia"],
     deps = [
         ":apriltag",
         "//aos/testing:googletest",

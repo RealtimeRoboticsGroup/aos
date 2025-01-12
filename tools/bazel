@@ -41,7 +41,7 @@ if [[ ! -d "${DOWNLOAD_DIR}" ]]; then
 fi
 
 readonly INSTALLER_NAME="bazel-${VERSION}-linux-x86_64"
-readonly DOWNLOAD_URL="https://software.frc971.org/Build-Dependencies/github.com/bazelbuild/bazel/releases/download/${VERSION}/${INSTALLER_NAME}"
+readonly DOWNLOAD_URL="https://realtimeroboticsgroup.org/build-dependencies/github.com/bazelbuild/bazel/releases/download/${VERSION}/${INSTALLER_NAME}"
 
 if [[ ! -d "${VERSION_DIR}" ]]; then
   echo "Downloading Bazel version ${VERSION} from ${DOWNLOAD_URL}..." >&2
@@ -108,6 +108,33 @@ ENVIRONMENT_VARIABLES+=(BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1)
 if [[ ! -z "${CARGO_BAZEL_REPIN+x}" ]]; then
   ENVIRONMENT_VARIABLES+=(CARGO_BAZEL_REPIN="${CARGO_BAZEL_REPIN}")
 fi
+
+# Generate a .bazelrc file to capture information about the host architecture. Parsing command line
+# arguments is hard to get right, so we instead do this through a .bazelrc file.
+
+# Protect against multiple parallel bazel executions.
+TMP_BAZELRC_AUTODETECTION="$(mktemp "$(git rev-parse --show-toplevel)/.bazelrc_autodetection.XXXXXXXXXX")"
+readonly TMP_BAZELRC_AUTODETECTION
+
+# Only support x86 for now
+if [ "$(uname -s -m)" == "Linux x86_64" ]; then
+  # Look for any NVIDIA device to figure out if we have a GPU or not.
+  if [ -e /dev/nvidia0 ]; then
+    cat > "${TMP_BAZELRC_AUTODETECTION}" <<EOF
+# Set the default host platform to x86 with a GPU
+build --host_platform=//tools/platforms:linux_x86
+build --extra_execution_platforms=//tools/platforms:linux_x86
+EOF
+  else
+    cat > "${TMP_BAZELRC_AUTODETECTION}" <<EOF
+# Set the default host platform to x86 without a GPU
+build --host_platform=//tools/platforms:linux_x86_no_gpu
+build --extra_execution_platforms=//tools/platforms:linux_x86_no_gpu
+EOF
+  fi
+fi
+# Now, do the rename atomically to avoid races.
+mv "${TMP_BAZELRC_AUTODETECTION}" "${TOP_LEVEL_DIR}/.bazelrc_autodetection"
 
 if [[ ! -z "${DISPLAY+x}" ]]; then
   ENVIRONMENT_VARIABLES+=(DISPLAY="${DISPLAY}")

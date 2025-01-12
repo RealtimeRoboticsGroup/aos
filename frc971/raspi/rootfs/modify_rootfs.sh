@@ -99,7 +99,7 @@ EOF
 fi
 
 if [[ ! -e wiringpi-2.70-1.deb ]]; then
-  wget --continue https://software.frc971.org/Build-Dependencies/wiringpi-2.70-1.deb
+  wget --continue https://realtimeroboticsgroup.org/build-dependencies/wiringpi-2.70-1.deb
 fi
 
 sudo cp target_configure.sh "${PARTITION}/tmp/"

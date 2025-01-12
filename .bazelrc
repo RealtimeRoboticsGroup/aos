@@ -22,6 +22,7 @@ build --custom_malloc=//tools/cpp:malloc
 
 # Shortcuts for selecting the target platform.
 build:k8 --platforms=//tools/platforms:linux_x86
+build:k8_no_gpu --platforms=//tools/platforms:linux_x86_no_gpu
 build:roborio --platforms=//tools/platforms:linux_roborio
 build:roborio --platform_suffix=-roborio
 build:arm64 --platforms=//tools/platforms:linux_arm64
@@ -183,6 +184,7 @@ build:iwyu --output_groups=report
 build:iwyu --@com_github_storypku_bazel_iwyu//:iwyu_opts=--no_fwd_decls,--cxx17ns,--verbose=3
 build:iwyu --strategy=iwyu=sandboxed,standalone
 
+import %workspace%/.bazelrc_autodetection
 
 # Load a local file that users can use to customize bazel invocations.  This
 # should stay the last line in this file so users can override things when they

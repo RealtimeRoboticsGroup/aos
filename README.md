@@ -1,8 +1,8 @@
 # Introduction
-This is FRC Team 971's main code repository. There are `README*` files throughout the source tree documenting specifics for their respective folders.
+This is AOS's main code repository. There are `README*` files throughout the source tree documenting specifics for their respective folders.
 
 ## Contributing
-All development of AOS is done on our gerrit instance at https://software.frc971.org/gerrit with github being a read-only mirror.  We are happy to add external contributors.  If you are interested, reach out to Austin Schuh or Stephan Massalt and we will help you get access.  In case of disputes over if a patch should be taken or not, Austin has final say.
+All development of AOS is done on our gerrit instance at https://realtimeroboticsgroup.org/gerrit with github being a read-only mirror.  We are happy to add external contributors.  If you are interested, reach out to Austin Schuh and he will help you get access.  In case of disputes over if a patch should be taken or not, Austin has final say.
 
 Submissions must be made under the terms of the following Developer Certificate of Origin.
 

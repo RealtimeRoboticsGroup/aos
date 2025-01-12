@@ -17,7 +17,7 @@ chmod a+x /root/bin/enable_imu.sh
 chown -R pi.pi /home/pi/.ssh
 chown -R pi.pi /home/pi/bin
 
-echo 'deb [trusted=yes] https://software.frc971.org/Build-Dependencies/gstreamer_bullseye_arm64_deps ./' >> /etc/apt/sources.list
+echo 'deb [trusted=yes] https://realtimeroboticsgroup.org/build-dependencies/gstreamer_bullseye_arm64_deps ./' >> /etc/apt/sources.list
 
 apt-get update
 

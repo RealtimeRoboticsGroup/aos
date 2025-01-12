@@ -1,29 +1,28 @@
 # Use tools/rehost.sh to rehost easily.
 
 block *
-rewrite maven.ctr-electronics.com/(.*) software.frc971.org/Build-Dependencies/maven.ctr-electronics.com/$1
-rewrite github.com/(.*) software.frc971.org/Build-Dependencies/github.com/$1
-rewrite developer.arm.com/(.*) software.frc971.org/Build-Dependencies/developer.arm.com/$1
-rewrite dl.google.com/(.*) software.frc971.org/Build-Dependencies/dl.google.com/$1
-rewrite mirror.bazel.build/(.*) software.frc971.org/Build-Dependencies/mirror.bazel.build/$1
-rewrite nodejs.org/(.*) software.frc971.org/Build-Dependencies/nodejs.org/$1
-rewrite static.rust-lang.org/(.*) software.frc971.org/Build-Dependencies/static.rust-lang.org/$1
-rewrite storage.googleapis.com/(.*) software.frc971.org/Build-Dependencies/storage.googleapis.com/$1
-rewrite files.pythonhosted.org/(.*) software.frc971.org/Build-Dependencies/files.pythonhosted.org/$1
-rewrite julialang-s3.julialang.org/(.*) software.frc971.org/Build-Dependencies/julialang-s3.julialang.org/$1
-rewrite devsite.ctr-electronics.com/(.*) software.frc971.org/Build-Dependencies/devsite.ctr-electronics.com/$1
-rewrite www.openssl.org/(.*) software.frc971.org/Build-Dependencies/www.openssl.org/$1
-rewrite zlib.net/(.*) software.frc971.org/Build-Dependencies/zlib.net/$1
-rewrite downloads.sourceforge.net/(.*) software.frc971.org/Build-Dependencies/downloads.sourceforge.net/$1
-rewrite cdn.cypress.io/(.*) software.frc971.org/Build-Dependencies/cdn.cypress.io/$1
-rewrite www.googleapis.com/(.*) software.frc971.org/Build-Dependencies/www.googleapis.com/$1
-rewrite www.johnvansickle.com/(.*) software.frc971.org/Build-Dependencies/www.johnvansickle.com/$1
-rewrite docs.opencv.org/(.*) software.frc971.org/Build-Dependencies/docs.opencv.org/$1
-rewrite security.ubuntu.com/(.*) software.frc971.org/Build-Dependencies/security.ubuntu.com/$1
+rewrite maven.ctr-electronics.com/(.*) realtimeroboticsgroup.org/build-dependencies/maven.ctr-electronics.com/$1
+rewrite github.com/(.*) realtimeroboticsgroup.org/build-dependencies/github.com/$1
+rewrite developer.arm.com/(.*) realtimeroboticsgroup.org/build-dependencies/developer.arm.com/$1
+rewrite dl.google.com/(.*) realtimeroboticsgroup.org/build-dependencies/dl.google.com/$1
+rewrite mirror.bazel.build/(.*) realtimeroboticsgroup.org/build-dependencies/mirror.bazel.build/$1
+rewrite nodejs.org/(.*) realtimeroboticsgroup.org/build-dependencies/nodejs.org/$1
+rewrite static.rust-lang.org/(.*) realtimeroboticsgroup.org/build-dependencies/static.rust-lang.org/$1
+rewrite storage.googleapis.com/(.*) realtimeroboticsgroup.org/build-dependencies/storage.googleapis.com/$1
+rewrite files.pythonhosted.org/(.*) realtimeroboticsgroup.org/build-dependencies/files.pythonhosted.org/$1
+rewrite julialang-s3.julialang.org/(.*) realtimeroboticsgroup.org/build-dependencies/julialang-s3.julialang.org/$1
+rewrite devsite.ctr-electronics.com/(.*) realtimeroboticsgroup.org/build-dependencies/devsite.ctr-electronics.com/$1
+rewrite www.openssl.org/(.*) realtimeroboticsgroup.org/build-dependencies/www.openssl.org/$1
+rewrite zlib.net/(.*) realtimeroboticsgroup.org/build-dependencies/zlib.net/$1
+rewrite downloads.sourceforge.net/(.*) realtimeroboticsgroup.org/build-dependencies/downloads.sourceforge.net/$1
+rewrite cdn.cypress.io/(.*) realtimeroboticsgroup.org/build-dependencies/cdn.cypress.io/$1
+rewrite www.googleapis.com/(.*) realtimeroboticsgroup.org/build-dependencies/www.googleapis.com/$1
+rewrite www.johnvansickle.com/(.*) realtimeroboticsgroup.org/build-dependencies/www.johnvansickle.com/$1
+rewrite docs.opencv.org/(.*) realtimeroboticsgroup.org/build-dependencies/docs.opencv.org/$1
+rewrite security.ubuntu.com/(.*) realtimeroboticsgroup.org/build-dependencies/security.ubuntu.com/$1
 allow crates.io
 allow golang.org
 allow go.dev
 allow registry.npmjs.org
 
-allow software.frc971.org
-allow www.frc971.org
+allow realtimeroboticsgroup.org

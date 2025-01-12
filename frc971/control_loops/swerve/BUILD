@@ -259,7 +259,10 @@ py_test(
         "JAX_PLATFORMS": "cuda",
     },
     main = "physics_test.py",
-    target_compatible_with = ["@platforms//cpu:x86_64"],
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "//tools/platforms/gpu:nvidia",
+    ],
     deps = [
         ":casadi_velocity_mpc_lib",
         ":dynamics",

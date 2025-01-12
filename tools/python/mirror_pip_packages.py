@@ -22,7 +22,7 @@ from pkginfo import Wheel
 
 PLAT = "manylinux_2_34"
 ARCH = "x86_64"
-WHEELHOUSE_MIRROR_URL = "https://software.frc971.org/Build-Dependencies/wheelhouse"
+WHEELHOUSE_MIRROR_URL = "https://realtimeroboticsgroup.org/build-dependencies/wheelhouse"
 PY_DEPS_WWWW_DIR = "/var/www/html/files/frc971/Build-Dependencies/wheelhouse"
 
 

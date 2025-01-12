@@ -9,13 +9,13 @@ fi
 echo "Pulling Binaries ..."
 if [ ! -f "./libjevoisbase.so" ]
 then
-  wget https://software.frc971.org/Build-Dependencies/libjevoisbase.so
+  wget https://realtimeroboticsgroup.org/build-dependencies/libjevoisbase.so
 fi
 echo "Got libjevoisbase.so"
 
 if [ ! -f "./PassThrough.so" ]
 then
-  wget https://software.frc971.org/Build-Dependencies/PassThrough.so
+  wget https://realtimeroboticsgroup.org/build-dependencies/PassThrough.so
 fi
 echo "Got PassThrough.so"
 

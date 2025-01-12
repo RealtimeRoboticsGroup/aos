@@ -14,7 +14,7 @@ STRIPPED_URL="${STRIPPED_URL#"http://"}"
 
 curl -L "https://${STRIPPED_URL}" -o "${LOCALPATH}"
 
-echo "https://software.frc971.org/Build-Dependencies/${STRIPPED_URL}"
+echo "https://realtimeroboticsgroup.org/build-dependencies/${STRIPPED_URL}"
 
 readonly TARGET_DIR="/data/files/frc971/Build-Dependencies"
 
