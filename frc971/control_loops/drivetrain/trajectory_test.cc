@@ -12,12 +12,6 @@
 #if defined(SUPPORT_PLOT)
 #include "third_party/matplotlib-cpp/matplotlibcpp.h"
 #endif
-#include "y2016/constants.h"
-#include "y2016/control_loops/drivetrain/drivetrain_dog_motor_plant.h"
-#include "y2016/control_loops/drivetrain/hybrid_velocity_drivetrain.h"
-#include "y2016/control_loops/drivetrain/kalman_drivetrain_motor_plant.h"
-#include "y2016/control_loops/drivetrain/polydrivetrain_dog_motor_plant.h"
-#include "y2019/control_loops/drivetrain/drivetrain_base.h"
 
 ABSL_DECLARE_FLAG(bool, plot);
 

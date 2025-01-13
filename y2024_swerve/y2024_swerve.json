@@ -1,8 +1,0 @@
-{
-  "channel_storage_duration": 10000000000,
-  "imports": [
-    "y2024_swerve_roborio.json",
-    "y2024_swerve_imu.json",
-    "y2024_swerve_orin1.json"
-  ]
-}

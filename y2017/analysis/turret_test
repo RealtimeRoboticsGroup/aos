@@ -1,9 +1,0 @@
-superstructure_lib_test output voltage_turret
-
-superstructure_lib_test status turret position
-superstructure_lib_test status turret velocity
-superstructure_lib_test status turret goal_position
-superstructure_lib_test status turret goal_velocity
-superstructure_lib_test status turret unprofiled_goal_position
-superstructure_lib_test status turret state
-superstructure_lib_test goal turret angle

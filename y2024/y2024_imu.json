@@ -232,20 +232,6 @@
     },
     {
       "name": "/imu/camera0",
-      "type": "y2024.localizer.Visualization",
-      "source_node": "imu",
-      "frequency": 70,
-      "max_size": 50000
-    },
-    {
-      "name": "/imu/camera1",
-      "type": "y2024.localizer.Visualization",
-      "source_node": "imu",
-      "frequency": 70,
-      "max_size": 50000
-    },
-    {
-      "name": "/imu/camera0",
       "type": "frc971.vision.TargetMap",
       "source_node": "imu",
       "frequency": 70,
@@ -302,26 +288,10 @@
       "max_size": 200
     },
     {
-      "name": "/localizer",
-      "type": "y2024.localizer.Status",
-      "source_node": "imu",
-      "frequency": 1600,
-      "max_size": 3200,
-      "num_senders": 2
-    },
-    {
       "name": "/imu/hardware_monitor",
       "type": "frc971.orin.HardwareStats",
       "source_node": "imu",
       "frequency": 2
-    },
-    {
-      "name": "/imu/constants",
-      "type": "y2024.Constants",
-      "source_node": "imu",
-      "frequency": 1,
-      "num_senders": 2,
-      "max_size": 65536
     }
   ],
   "applications": [

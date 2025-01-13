@@ -5,7 +5,6 @@
 #include "aos/network/team_number.h"
 #include "frc971/control_loops/drivetrain/drivetrain_config.h"
 #include "frc971/control_loops/state_feedback_loop.h"
-#include "y2020/constants.h"
 #include "y2020/control_loops/drivetrain/drivetrain_dog_motor_plant.h"
 #include "y2020/control_loops/drivetrain/hybrid_velocity_drivetrain.h"
 #include "y2020/control_loops/drivetrain/kalman_drivetrain_motor_plant.h"
@@ -57,20 +56,6 @@ const DrivetrainConfig<double> &GetDrivetrainConfig() {
        0.0)
           .finished() /*imu_transform*/,
   };
-
-  if (::aos::network::GetTeamNumber() !=
-      constants::Values::kCodingRobotTeamNumber) {
-    // TODO(james): Check X/Y axis
-    // transformations.
-    kDrivetrainConfig.imu_transform = (Eigen::Matrix<double, 3, 3>() << 1.0,
-                                       0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
-                                          .finished();
-    kDrivetrainConfig.gyro_type =
-        ::frc971::control_loops::drivetrain::GyroType::kImuZGyro;
-    // TODO(james): CHECK IF THIS IS kImuX or kImuFlippedX.
-    kDrivetrainConfig.imu_type =
-        ::frc971::control_loops::drivetrain::ImuType::kImuX;
-  }
 
   return kDrivetrainConfig;
 };

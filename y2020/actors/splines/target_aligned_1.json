@@ -1,9 +1,0 @@
-{"spline_count": 1, "spline_x": [2.707560494479258,
-  4.261038436854981,
-  5.087225880825187,
-  4.888021289429735,
-  6.519158879183451,
-  7.801118784873183
-], "spline_y": [
-1.79, 1.79, 1.6771446569752932, 0.22320548149895927, 0.7899924087277742, 0.7361473021539742
-], "constraints": [{"constraint_type": "LONGITUDINAL_ACCELERATION", "value": 4.0}, {"constraint_type": "LATERAL_ACCELERATION", "value": 3.0}, {"constraint_type": "VOLTAGE", "value": 9.0}]}

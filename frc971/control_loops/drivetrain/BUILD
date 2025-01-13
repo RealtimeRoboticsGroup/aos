@@ -500,7 +500,6 @@ cc_library(
         "//frc971/queues:gyro_fbs",
         "//frc971/wpilib:imu_batch_fbs",
         "//frc971/wpilib:imu_fbs",
-        "//y2016:constants",
         "//y2016/control_loops/drivetrain:polydrivetrain_plants",
     ] + cpu_select({
         "amd64": [
@@ -746,9 +745,6 @@ cc_test(
         ":trajectory",
         "//aos/testing:googletest",
         "//aos/testing:test_shm",
-        "//y2016:constants",
-        "//y2016/control_loops/drivetrain:polydrivetrain_plants",
-        "//y2019/control_loops/drivetrain:drivetrain_base",
     ] + cpu_select({
         "amd64": [
             "//third_party/matplotlib-cpp",

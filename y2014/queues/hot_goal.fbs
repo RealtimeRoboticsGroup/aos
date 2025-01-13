@@ -1,9 +1,0 @@
-namespace y2014;
-
-// Published on "/"
-table HotGoal {
-  left_count:uint64 (id: 0);
-  right_count:uint64 (id: 1);
-}
-
-root_type HotGoal;
