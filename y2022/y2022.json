@@ -13,11 +13,6 @@
   ],
   "imports": [
     "y2022_roborio.json",
-    "y2022_pi1.json",
-    "y2022_pi2.json",
-    "y2022_pi3.json",
-    "y2022_pi4.json",
-    "y2022_imu.json",
-    "y2022_logger.json"
+    "y2022_imu.json"
   ]
 }

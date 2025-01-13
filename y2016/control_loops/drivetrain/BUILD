@@ -77,20 +77,6 @@ cc_library(
     ],
 )
 
-cc_binary(
-    name = "drivetrain",
-    srcs = [
-        "drivetrain_main.cc",
-    ],
-    target_compatible_with = ["@platforms//os:linux"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":drivetrain_base",
-        "//aos:init",
-        "//frc971/control_loops/drivetrain:drivetrain_lib",
-    ],
-)
-
 drivetrain_config(
     name = "drivetrain_config",
     out = "drivetrain_config.json",

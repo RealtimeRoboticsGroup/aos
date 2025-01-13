@@ -13,7 +13,6 @@
 #include "third_party/matplotlib-cpp/matplotlibcpp.h"
 #endif
 #include "frc971/wpilib/imu_batch_generated.h"
-#include "y2016/constants.h"
 #include "y2016/control_loops/drivetrain/drivetrain_dog_motor_plant.h"
 #include "y2016/control_loops/drivetrain/hybrid_velocity_drivetrain.h"
 #include "y2016/control_loops/drivetrain/kalman_drivetrain_motor_plant.h"

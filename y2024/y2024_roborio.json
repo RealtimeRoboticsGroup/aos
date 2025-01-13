@@ -116,53 +116,6 @@
       ]
     },
     {
-      "name": "/superstructure",
-      "type": "y2024.control_loops.superstructure.Goal",
-      "source_node": "roborio",
-      "frequency": 250,
-      "max_size": 512
-    },
-    {
-      "name": "/superstructure",
-      "type": "y2024.control_loops.superstructure.Status",
-      "source_node": "roborio",
-      "frequency": 400,
-      "max_size": 2048,
-      "num_senders": 2
-    },
-    {
-      "name": "/superstructure",
-      "type": "y2024.control_loops.superstructure.Output",
-      "source_node": "roborio",
-      "frequency": 250,
-      "num_senders": 2,
-      "max_size": 224
-    },
-    {
-      "name": "/superstructure",
-      "type": "y2024.control_loops.superstructure.Position",
-      "source_node": "roborio",
-      "frequency": 250,
-      "num_senders": 2,
-      "max_size": 448
-    },
-    {
-      "name": "/superstructure/canivore",
-      "type": "y2024.control_loops.superstructure.CANPosition",
-      "source_node": "roborio",
-      "frequency": 220,
-      "num_senders": 2,
-      "max_size": 1024
-    },
-    {
-      "name": "/superstructure/rio",
-      "type": "y2024.control_loops.superstructure.CANPosition",
-      "source_node": "roborio",
-      "frequency": 220,
-      "num_senders": 2,
-      "max_size": 1024
-    },
-    {
       "name": "/can",
       "type": "frc971.can_logger.CanFrame",
       "source_node": "roborio",
@@ -312,14 +265,6 @@
       "type": "frc971.CANConfiguration",
       "source_node": "roborio",
       "frequency": 2
-    },
-    {
-      "name": "/roborio/constants",
-      "type": "y2024.Constants",
-      "source_node": "roborio",
-      "frequency": 1,
-      "num_senders": 2,
-      "max_size": 65536
     }
   ],
   "applications": [

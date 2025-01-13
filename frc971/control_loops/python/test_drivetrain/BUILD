@@ -116,7 +116,6 @@ py_library(
     srcs = ["__init__.py"],
     target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
-    deps = ["//y2018/control_loops:python_init"],
 )
 
 drivetrain_config(

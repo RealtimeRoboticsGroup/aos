@@ -1,6 +1,0 @@
-{
-  "imports": [
-    "../../y2024_defense.json",
-    "../../../frc971/control_loops/drivetrain/drivetrain_simulation_channels.json"
-  ]
-}
