@@ -18,6 +18,24 @@
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "3689c74f_ee435d0e",
+        "filename": "y2024/vision/BUILD",
+        "patchSetId": 3
+      },
+      "lineNbr": 31,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-01-15T04:47:04Z",
+      "side": 1,
+      "message": "Build passes, I must be wrong.",
+      "parentUuid": "b24dd25a_23e3a1bf",
+      "revId": "d0c36a260461945e93d3bbf7791ec7e06269461c",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "b24b604f_e0480104",
@@ -31,6 +49,24 @@
       "writtenOn": "2025-01-15T04:15:54Z",
       "side": 1,
       "message": "Do you need this?",
+      "revId": "d0c36a260461945e93d3bbf7791ec7e06269461c",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "941361fa_9b0404ec",
+        "filename": "y2024/vision/BUILD",
+        "patchSetId": 3
+      },
+      "lineNbr": 47,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-01-15T04:47:04Z",
+      "side": 1,
+      "message": "Build passes, I must be wrong.",
+      "parentUuid": "b24b604f_e0480104",
       "revId": "d0c36a260461945e93d3bbf7791ec7e06269461c",
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     }
