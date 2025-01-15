@@ -36,6 +36,24 @@
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "3d64765f_aab6467d",
+        "filename": "y2024/vision/BUILD",
+        "patchSetId": 3
+      },
+      "lineNbr": 31,
+      "author": {
+        "id": 1000002
+      },
+      "writtenOn": "2025-01-15T07:15:52Z",
+      "side": 1,
+      "message": "I was very confused by this at first, but if you look apriltag_detector needs these too....",
+      "parentUuid": "3689c74f_ee435d0e",
+      "revId": "d0c36a260461945e93d3bbf7791ec7e06269461c",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "b24b604f_e0480104",
