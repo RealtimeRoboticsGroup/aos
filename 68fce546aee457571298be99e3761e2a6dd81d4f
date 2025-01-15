@@ -16,6 +16,24 @@
       "message": "Can you add this file back?",
       "revId": "68fce546aee457571298be99e3761e2a6dd81d4f",
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "0d65e368_d493c5be",
+        "filename": "y2024/vision/viewer.cc",
+        "patchSetId": 2
+      },
+      "lineNbr": 1,
+      "author": {
+        "id": 1000002
+      },
+      "writtenOn": "2025-01-15T03:51:14Z",
+      "side": 0,
+      "message": "Done",
+      "parentUuid": "5e8e61fc_c143ede1",
+      "revId": "68fce546aee457571298be99e3761e2a6dd81d4f",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     }
   ]
 }

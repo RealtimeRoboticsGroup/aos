@@ -16,6 +16,24 @@
       "message": "Making a quick test comment....",
       "revId": "9529a664a2137cd63b7bb6ee288ba2a8d498c693",
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "4ab51b56_108bfbc2",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000002
+      },
+      "writtenOn": "2025-01-15T03:51:14Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "92e0904e_da44d0b3",
+      "revId": "9529a664a2137cd63b7bb6ee288ba2a8d498c693",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     }
   ]
 }
