@@ -1,26 +1,26 @@
 import {Injectable} from '@angular/core';
 import {Builder, ByteBuffer} from 'flatbuffers';
-import {ErrorResponse} from '@org_frc971/scouting/webserver/requests/messages/error_response_generated';
-import {RequestAllNotes} from '@org_frc971/scouting/webserver/requests/messages/request_all_notes_generated';
+import {ErrorResponse} from '@aos/scouting/webserver/requests/messages/error_response_generated';
+import {RequestAllNotes} from '@aos/scouting/webserver/requests/messages/request_all_notes_generated';
 import {
   Note,
   RequestAllNotesResponse,
-} from '@org_frc971/scouting/webserver/requests/messages/request_all_notes_response_generated';
-import {RequestAllDriverRankings} from '@org_frc971/scouting/webserver/requests/messages/request_all_driver_rankings_generated';
+} from '@aos/scouting/webserver/requests/messages/request_all_notes_response_generated';
+import {RequestAllDriverRankings} from '@aos/scouting/webserver/requests/messages/request_all_driver_rankings_generated';
 import {
   Ranking,
   RequestAllDriverRankingsResponse,
-} from '@org_frc971/scouting/webserver/requests/messages/request_all_driver_rankings_response_generated';
-import {Request2024DataScouting} from '@org_frc971/scouting/webserver/requests/messages/request_2024_data_scouting_generated';
+} from '@aos/scouting/webserver/requests/messages/request_all_driver_rankings_response_generated';
+import {Request2024DataScouting} from '@aos/scouting/webserver/requests/messages/request_2024_data_scouting_generated';
 import {
   PitImage,
   RequestAllPitImagesResponse,
-} from '@org_frc971/scouting/webserver/requests/messages/request_all_pit_images_response_generated';
-import {RequestAllPitImages} from '@org_frc971/scouting/webserver/requests/messages/request_all_pit_images_generated';
+} from '@aos/scouting/webserver/requests/messages/request_all_pit_images_response_generated';
+import {RequestAllPitImages} from '@aos/scouting/webserver/requests/messages/request_all_pit_images_generated';
 import {
   Stats2024,
   Request2024DataScoutingResponse,
-} from '@org_frc971/scouting/webserver/requests/messages/request_2024_data_scouting_response_generated';
+} from '@aos/scouting/webserver/requests/messages/request_2024_data_scouting_response_generated';
 
 @Injectable({providedIn: 'root'})
 export class ViewDataRequestor {

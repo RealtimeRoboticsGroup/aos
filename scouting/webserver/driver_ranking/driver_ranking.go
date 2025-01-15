@@ -11,11 +11,11 @@ import (
 	"strconv"
 
 	"github.com/bazelbuild/rules_go/go/runfiles"
-	"github.com/frc971/971-Robot-Code/scouting/db"
+	"github.com/RealtimeRoboticsGroup/aos/scouting/db"
 )
 
 const (
-	DEFAULT_SCRIPT_PATH = "org_frc971/scouting/DriverRank/src/DriverRank.jl"
+	DEFAULT_SCRIPT_PATH = "aos/scouting/DriverRank/src/DriverRank.jl"
 )
 
 type Database interface {

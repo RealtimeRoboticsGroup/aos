@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "rankings",
     srcs = ["rankings.go"],
-    importpath = "github.com/frc971/971-Robot-Code/scouting/webserver/rankings",
+    importpath = "github.com/RealtimeRoboticsGroup/aos/scouting/webserver/rankings",
     visibility = ["//visibility:public"],
     deps = [
         "//scouting/db",

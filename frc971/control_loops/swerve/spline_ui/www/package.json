@@ -1,5 +1,5 @@
 {
-    "name": "@org_frc971/control_loops/swerve/spline_ui/www",
+    "name": "@aos/control_loops/swerve/spline_ui/www",
     "private": true,
     "dependencies": {
         "@angular/animations": "v16-lts",

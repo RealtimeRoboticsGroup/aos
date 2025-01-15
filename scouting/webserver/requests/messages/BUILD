@@ -46,7 +46,7 @@ filegroup(
     flatbuffer_go_library(
         name = name + "_go_fbs",
         srcs = [name + ".fbs"],
-        importpath = "github.com/frc971/971-Robot-Code/scouting/webserver/requests/messages/" + name,
+        importpath = "github.com/RealtimeRoboticsGroup/aos/scouting/webserver/requests/messages/" + name,
         target_compatible_with = ["@platforms//cpu:x86_64"],
         visibility = ["//visibility:public"],
     ),

@@ -1,5 +1,5 @@
 load("@com_github_google_flatbuffers//:build_defs.bzl", "DEFAULT_FLATC_ARGS", "flatbuffer_cc_library")
-load("@org_frc971//aos/flatbuffers:generate.bzl", "static_flatbuffer")
+load("@aos//aos/flatbuffers:generate.bzl", "static_flatbuffer")
 
 FLATC_ARGS = [arg for arg in DEFAULT_FLATC_ARGS if arg != "--require-explicit-ids"]
 
@@ -26,7 +26,7 @@ static_flatbuffer(
     deps = [":non_table_schemas"],
 )
 
-load("@org_frc971//aos:flatbuffers.bzl", "cc_static_flatbuffer")
+load("@aos//aos:flatbuffers.bzl", "cc_static_flatbuffer")
 
 [cc_static_flatbuffer(
     name = filename[:-4] + "_schema",

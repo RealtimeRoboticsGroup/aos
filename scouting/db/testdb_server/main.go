@@ -92,7 +92,7 @@ func main() {
 	check(err, "Failed to create socket directory "+socketDir)
 
 	copyTestConfig(
-		getRunfile("org_frc971/scouting/db/testdb_server/postgres_test.conf"),
+		getRunfile("aos/scouting/db/testdb_server/postgres_test.conf"),
 		filepath.Join(dbDir, "postgresql.conf"),
 		*portPtr,
 		socketDir)

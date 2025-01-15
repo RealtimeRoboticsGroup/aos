@@ -1,7 +1,7 @@
 package main
 
 import (
-	build_tests "github.com/frc971/971-Robot-Code/build_tests/fbs"
+	build_tests "github.com/RealtimeRoboticsGroup/aos/build_tests/fbs"
 	flatbuffers "github.com/google/flatbuffers/go"
 )
 

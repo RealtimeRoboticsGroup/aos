@@ -1,9 +1,9 @@
 {
-    "name": "@org_frc971/scouting/www/match_list",
+    "name": "@aos/scouting/www/match_list",
     "private": true,
     "dependencies": {
-        "@org_frc971/scouting/webserver/requests/messages": "workspace:*",
-        "@org_frc971/scouting/www/rpc": "workspace:*",
+        "@aos/scouting/webserver/requests/messages": "workspace:*",
+        "@aos/scouting/www/rpc": "workspace:*",
         "@angular/forms": "v16-lts"
     }
 }

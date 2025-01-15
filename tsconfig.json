@@ -12,7 +12,7 @@
     "lib": ["es2021", "dom", "dom.iterable"],
     "moduleResolution": "node",
     "paths": {
-      "@org_frc971/*": ["./*"]
+      "@aos/*": ["./*"]
     }
   },
   "bazelOptions": {

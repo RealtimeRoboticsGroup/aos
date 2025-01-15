@@ -18,7 +18,7 @@ go_library(
         "scrape.go",
         "types.go",
     ],
-    importpath = "github.com/frc971/971-Robot-Code/scouting/scraping",
+    importpath = "github.com/RealtimeRoboticsGroup/aos/scouting/scraping",
     target_compatible_with = ["@platforms//cpu:x86_64"],
     visibility = ["//visibility:public"],
 )

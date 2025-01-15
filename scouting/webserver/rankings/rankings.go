@@ -1,8 +1,8 @@
 package rankings
 
 import (
-	"github.com/frc971/971-Robot-Code/scouting/db"
-	"github.com/frc971/971-Robot-Code/scouting/scraping"
+	"github.com/RealtimeRoboticsGroup/aos/scouting/db"
+	"github.com/RealtimeRoboticsGroup/aos/scouting/scraping"
 	"log"
 	"strings"
 )

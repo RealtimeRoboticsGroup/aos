@@ -1,6 +1,6 @@
 import {Component, ElementRef, ViewChild, isDevMode} from '@angular/core';
 
-import {CompLevel} from '@org_frc971/scouting/www/entry';
+import {CompLevel} from '@aos/scouting/www/entry';
 
 type Tab =
   | 'MatchList'

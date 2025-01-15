@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/frc971/971-Robot-Code/scouting/db"
-	"github.com/frc971/971-Robot-Code/scouting/webserver/server"
+	"github.com/RealtimeRoboticsGroup/aos/scouting/db"
+	"github.com/RealtimeRoboticsGroup/aos/scouting/webserver/server"
 )
 
 type MockDatabase struct {

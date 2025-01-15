@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/frc971/971-Robot-Code/build_tests/go_greeter"
+	"github.com/RealtimeRoboticsGroup/aos/build_tests/go_greeter"
 )
 
 func main() {

@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "camera_simulator_lib",
     srcs = ["camera_simulator.go"],
-    importpath = "github.com/frc971/971-Robot-Code/scouting/testing/camera_simulator",
+    importpath = "github.com/RealtimeRoboticsGroup/aos/scouting/testing/camera_simulator",
     target_compatible_with = ["@platforms//cpu:x86_64"],
     visibility = ["//visibility:private"],
 )

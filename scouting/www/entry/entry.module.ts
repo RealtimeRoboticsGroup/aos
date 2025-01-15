@@ -4,7 +4,7 @@ import {FormsModule} from '@angular/forms';
 import {EntryComponent} from './entry.component';
 import {QRCodeModule} from 'angularx-qrcode';
 
-import {PipeModule} from '@org_frc971/scouting/www/pipes';
+import {PipeModule} from '@aos/scouting/www/pipes';
 
 @NgModule({
   declarations: [EntryComponent],

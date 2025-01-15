@@ -1572,7 +1572,7 @@ the current node.
 
 [^ordering-guarantee]: There is actually an outstanding bug where in some
   corner-cases, ordering is not actually guaranteed. See
-  https://github.com/frc971/971-Robot-Code/issues/29
+  https://github.com/RealtimeRoboticsGroup/aos/issues/29
 
 #### Forwarded Message Metadata
 
@@ -1698,7 +1698,7 @@ clock.
 Additionally, the log reading code currently makes assumptions about how quickly
 the monotonic clocks on different nodes can drift apart from one another. This
 is currently a [hard-coded value if 1ms /
-sec](https://github.com/frc971/971-Robot-Code/blob/790cb54590e4f28f61e2f1bcd2e6e12ca47d7713/aos/network/timestamp_filter.h#L21-L26)
+sec](https://github.com/RealtimeRoboticsGroup/aos/blob/790cb54590e4f28f61e2f1bcd2e6e12ca47d7713/aos/network/timestamp_filter.h#L21-L26)
 (i.e., we assume that over one second of time on one node's clock, the other
 node's clock will have advanced by somewhere between 999 and 1001 milliseconds).
 This number could plausibly be changed, but we have not yet encountered clocks

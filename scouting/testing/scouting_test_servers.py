@@ -66,7 +66,7 @@ def set_up_tba_api_dir(tmpdir: Path, year: int, event_code: str):
     (tba_api_dir / "matches").write_text(
         Path(
             RUNFILES.Rlocation(
-                f"org_frc971/scouting/scraping/test_data/{year}_{event_code}.json"
+                f"aos/scouting/scraping/test_data/{year}_{event_code}.json"
             )).read_text())
 
 
@@ -96,7 +96,7 @@ class Runner:
         # webserver can start.
         self.testdb_server = subprocess.Popen([
             RUNFILES.Rlocation(
-                "org_frc971/scouting/db/testdb_server/testdb_server_/testdb_server"
+                "aos/scouting/db/testdb_server/testdb_server_/testdb_server"
             )
         ])
         wait_for_server(5432)
@@ -113,7 +113,7 @@ class Runner:
 
         # Wait for the scouting webserver to start up.
         self.webserver = subprocess.Popen([
-            RUNFILES.Rlocation("org_frc971/scouting/scouting"),
+            RUNFILES.Rlocation("aos/scouting/scouting"),
             f"--port={port}",
             f"--db_config={db_config}",
             f"--tba_config={tba_config}",

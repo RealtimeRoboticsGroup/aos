@@ -90,7 +90,7 @@ flatbuffer_py_library(
 flatbuffer_go_library(
     name = "test_go_fbs",
     srcs = ["test.fbs"],
-    importpath = "github.com/frc971/971-Robot-Code/build_tests/fbs",
+    importpath = "github.com/RealtimeRoboticsGroup/aos/build_tests/fbs",
     target_compatible_with = ["@platforms//cpu:x86_64"],
     visibility = ["//visibility:public"],
 )
@@ -131,7 +131,7 @@ go_library(
         # Not sure why gazelle wants this here?
         "hello_autocxx.h",
     ],
-    importpath = "github.com/frc971/971-Robot-Code/build_tests",
+    importpath = "github.com/RealtimeRoboticsGroup/aos/build_tests",
     target_compatible_with = ["@platforms//cpu:x86_64"],
     visibility = ["//visibility:private"],
     deps = ["//build_tests/go_greeter"],

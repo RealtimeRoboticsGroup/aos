@@ -1,5 +1,5 @@
 {
-    "name": "@org_frc971/scouting/webserver/requests/messages",
+    "name": "@aos/scouting/webserver/requests/messages",
     "private": true,
     "dependencies": {
     }

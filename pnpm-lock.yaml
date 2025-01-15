@@ -189,31 +189,31 @@ importers:
       '@angular/service-worker':
         specifier: v16-lts
         version: 16.2.12(@angular/common@16.2.12)(@angular/core@16.2.12)
-      '@org_frc971/scouting/www/driver_ranking':
+      '@aos/scouting/www/driver_ranking':
         specifier: workspace:*
         version: link:driver_ranking
-      '@org_frc971/scouting/www/entry':
+      '@aos/scouting/www/entry':
         specifier: workspace:*
         version: link:entry
-      '@org_frc971/scouting/www/match_list':
+      '@aos/scouting/www/match_list':
         specifier: workspace:*
         version: link:match_list
-      '@org_frc971/scouting/www/notes':
+      '@aos/scouting/www/notes':
         specifier: workspace:*
         version: link:notes
-      '@org_frc971/scouting/www/pipes':
+      '@aos/scouting/www/pipes':
         specifier: workspace:*
         version: link:pipes
-      '@org_frc971/scouting/www/pit_scouting':
+      '@aos/scouting/www/pit_scouting':
         specifier: workspace:*
         version: link:pit_scouting
-      '@org_frc971/scouting/www/scan':
+      '@aos/scouting/www/scan':
         specifier: workspace:*
         version: link:scan
-      '@org_frc971/scouting/www/shift_schedule':
+      '@aos/scouting/www/shift_schedule':
         specifier: workspace:*
         version: link:shift_schedule
-      '@org_frc971/scouting/www/view':
+      '@aos/scouting/www/view':
         specifier: workspace:*
         version: link:view
 
@@ -222,7 +222,7 @@ importers:
       '@angular/forms':
         specifier: v16-lts
         version: 16.2.12(@angular/common@16.2.12)(@angular/core@16.2.12)(@angular/platform-browser@16.2.12)(rxjs@7.5.7)
-      '@org_frc971/scouting/webserver/requests/messages':
+      '@aos/scouting/webserver/requests/messages':
         specifier: workspace:*
         version: link:../../webserver/requests/messages
 
@@ -234,13 +234,13 @@ importers:
       '@angular/platform-browser':
         specifier: v16-lts
         version: 16.2.12(@angular/animations@16.2.12)(@angular/common@16.2.12)(@angular/core@16.2.12)
-      '@org_frc971/scouting/webserver/requests/messages':
+      '@aos/scouting/webserver/requests/messages':
         specifier: workspace:*
         version: link:../../webserver/requests/messages
-      '@org_frc971/scouting/www/pipes':
+      '@aos/scouting/www/pipes':
         specifier: workspace:*
         version: link:../pipes
-      '@org_frc971/scouting/www/rpc':
+      '@aos/scouting/www/rpc':
         specifier: workspace:*
         version: link:../rpc
       '@types/pako':
@@ -258,10 +258,10 @@ importers:
       '@angular/forms':
         specifier: v16-lts
         version: 16.2.12(@angular/common@16.2.12)(@angular/core@16.2.12)(@angular/platform-browser@16.2.12)(rxjs@7.5.7)
-      '@org_frc971/scouting/webserver/requests/messages':
+      '@aos/scouting/webserver/requests/messages':
         specifier: workspace:*
         version: link:../../webserver/requests/messages
-      '@org_frc971/scouting/www/rpc':
+      '@aos/scouting/www/rpc':
         specifier: workspace:*
         version: link:../rpc
 
@@ -270,7 +270,7 @@ importers:
       '@angular/forms':
         specifier: v16-lts
         version: 16.2.12(@angular/common@16.2.12)(@angular/core@16.2.12)(@angular/platform-browser@16.2.12)(rxjs@7.5.7)
-      '@org_frc971/scouting/webserver/requests/messages':
+      '@aos/scouting/webserver/requests/messages':
         specifier: workspace:*
         version: link:../../webserver/requests/messages
 
@@ -281,13 +281,13 @@ importers:
       '@angular/forms':
         specifier: v16-lts
         version: 16.2.12(@angular/common@16.2.12)(@angular/core@16.2.12)(@angular/platform-browser@16.2.12)(rxjs@7.5.7)
-      '@org_frc971/scouting/webserver/requests/messages':
+      '@aos/scouting/webserver/requests/messages':
         specifier: workspace:*
         version: link:../../webserver/requests/messages
 
   scouting/www/rpc:
     dependencies:
-      '@org_frc971/scouting/webserver/requests/messages':
+      '@aos/scouting/webserver/requests/messages':
         specifier: workspace:*
         version: link:../../webserver/requests/messages
       dexie:
@@ -299,10 +299,10 @@ importers:
       '@angular/forms':
         specifier: v16-lts
         version: 16.2.12(@angular/common@16.2.12)(@angular/core@16.2.12)(@angular/platform-browser@16.2.12)(rxjs@7.5.7)
-      '@org_frc971/scouting/webserver/requests/messages':
+      '@aos/scouting/webserver/requests/messages':
         specifier: workspace:*
         version: link:../../webserver/requests/messages
-      '@org_frc971/scouting/www/rpc':
+      '@aos/scouting/www/rpc':
         specifier: workspace:*
         version: link:../rpc
       '@types/pako':
@@ -317,13 +317,13 @@ importers:
       '@angular/forms':
         specifier: v16-lts
         version: 16.2.12(@angular/common@16.2.12)(@angular/core@16.2.12)(@angular/platform-browser@16.2.12)(rxjs@7.5.7)
-      '@org_frc971/scouting/webserver/requests/messages':
+      '@aos/scouting/webserver/requests/messages':
         specifier: workspace:*
         version: link:../../webserver/requests/messages
 
   scouting/www/test/authorize:
     dependencies:
-      '@org_frc971/scouting/www/rpc':
+      '@aos/scouting/www/rpc':
         specifier: workspace:*
         version: link:../../rpc
       selenium-webdriver:
@@ -335,10 +335,10 @@ importers:
       '@angular/forms':
         specifier: v16-lts
         version: 16.2.12(@angular/common@16.2.12)(@angular/core@16.2.12)(@angular/platform-browser@16.2.12)(rxjs@7.5.7)
-      '@org_frc971/scouting/webserver/requests/messages':
+      '@aos/scouting/webserver/requests/messages':
         specifier: workspace:*
         version: link:../../webserver/requests/messages
-      '@org_frc971/scouting/www/rpc':
+      '@aos/scouting/www/rpc':
         specifier: workspace:*
         version: link:../rpc
 

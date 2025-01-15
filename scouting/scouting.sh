@@ -16,6 +16,6 @@ source "${RUNFILES_DIR:-/dev/null}/$f" 2>/dev/null || \
 runfiles_export_envvars
 
 exec \
-    "${RUNFILES_DIR}"/org_frc971/scouting/webserver/webserver_/webserver \
-    -directory "${RUNFILES_DIR}"/org_frc971/scouting/www/static_files/ \
+    "${RUNFILES_DIR}"/aos/scouting/webserver/webserver_/webserver \
+    -directory "${RUNFILES_DIR}"/aos/scouting/www/static_files/ \
     "$@"

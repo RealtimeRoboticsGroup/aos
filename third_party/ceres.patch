@@ -6,7 +6,7 @@ index 652c4b17..9c7a799c 100644
  # not support parameterization around threading choice or sparse backends.
  
  load("//:bazel/ceres.bzl", "ceres_library")
-+load("@org_frc971//tools/build_rules:select.bzl", "compiler_select")
++load("@aos//tools/build_rules:select.bzl", "compiler_select")
  
  ceres_library(
      name = "ceres",

@@ -7,7 +7,7 @@ go_library(
         "//scouting/webserver/requests/messages:fbs_files",
         "@com_github_google_flatbuffers//:flatc",
     ],
-    importpath = "github.com/frc971/971-Robot-Code/scouting/webserver/requests/debug/cli",
+    importpath = "github.com/RealtimeRoboticsGroup/aos/scouting/webserver/requests/debug/cli",
     target_compatible_with = ["@platforms//cpu:x86_64"],
     visibility = ["//visibility:private"],
     deps = [

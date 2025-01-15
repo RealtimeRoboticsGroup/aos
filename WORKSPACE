@@ -1,4 +1,4 @@
-workspace(name = "org_frc971")
+workspace(name = "aos")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
 load("@bazel_tools//tools/jdk:remote_java_repository.bzl", "remote_java_repository")

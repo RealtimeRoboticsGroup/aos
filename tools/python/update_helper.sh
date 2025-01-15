@@ -15,7 +15,7 @@ source "${RUNFILES_DIR:-/dev/null}/$f" 2>/dev/null || \
   { echo>&2 "ERROR: cannot find $f"; exit 1; }; f=; set -e
 # --- end runfiles.bash initialization v2 ---
 
-DOCKERFILE="$(rlocation org_frc971/tools/python/update_helper_files/Dockerfile)"
+DOCKERFILE="$(rlocation aos/tools/python/update_helper_files/Dockerfile)"
 CONTEXT_DIR="$(dirname "${DOCKERFILE}")"
 CONTAINER_TAG="pip-lock:${USER}"
 

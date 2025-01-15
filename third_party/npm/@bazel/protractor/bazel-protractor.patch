@@ -6,7 +6,7 @@ index 2d577b8..8d721b3 100755
      const runfiles = require(process.env['BAZEL_NODE_RUNFILES_HELPER']);
      const child_process = require("child_process");
      const net = require("net");
-+    const waitpid = require("./org_frc971/tools/build_rules/js/waitpid_module/waitpid_module.node");
++    const waitpid = require("./aos/tools/build_rules/js/waitpid_module/waitpid_module.node");
      function isTcpPortFree(port) {
          return new Promise((resolve, reject) => {
              const server = net.createServer();

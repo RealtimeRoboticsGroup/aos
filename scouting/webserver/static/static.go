@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/frc971/971-Robot-Code/scouting/db"
-	"github.com/frc971/971-Robot-Code/scouting/webserver/server"
+	"github.com/RealtimeRoboticsGroup/aos/scouting/db"
+	"github.com/RealtimeRoboticsGroup/aos/scouting/webserver/server"
 )
 
 // We want the static files (which include JS that is modified over time), to not be cached.

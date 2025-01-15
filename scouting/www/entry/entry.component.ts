@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {Builder, ByteBuffer} from 'flatbuffers';
-import {ErrorResponse} from '@org_frc971/scouting/webserver/requests/messages/error_response_generated';
+import {ErrorResponse} from '@aos/scouting/webserver/requests/messages/error_response_generated';
 import {
   StartMatchAction,
   StartMatchActionT,
@@ -33,14 +33,14 @@ import {
   ActionType,
   Action,
   ActionT,
-} from '@org_frc971/scouting/webserver/requests/messages/submit_2024_actions_generated';
-import {Match} from '@org_frc971/scouting/webserver/requests/messages/request_all_matches_response_generated';
+} from '@aos/scouting/webserver/requests/messages/submit_2024_actions_generated';
+import {Match} from '@aos/scouting/webserver/requests/messages/request_all_matches_response_generated';
 import {
   MatchListRequestor,
   ActionsSubmitter,
-} from '@org_frc971/scouting/www/rpc';
-import {RequestCurrentScouting} from '@org_frc971/scouting/webserver/requests/messages/request_current_scouting_generated';
-import {RequestCurrentScoutingResponse} from '@org_frc971/scouting/webserver/requests/messages/request_current_scouting_response_generated';
+} from '@aos/scouting/www/rpc';
+import {RequestCurrentScouting} from '@aos/scouting/webserver/requests/messages/request_current_scouting_generated';
+import {RequestCurrentScoutingResponse} from '@aos/scouting/webserver/requests/messages/request_current_scouting_response_generated';
 import {ActionHelper, ConcreteAction} from './action_helper';
 import * as pako from 'pako';
 

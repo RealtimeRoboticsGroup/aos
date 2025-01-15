@@ -74,7 +74,7 @@ source "$${RUNFILES_DIR:-/dev/null}/$$f" 2>/dev/null || \\
 # --- end runfiles.bash initialization v2 ---
 
 
-exec "$$(rlocation org_frc971/debian/download_packages)" %s %s %s %s --release=%s "$$@"
+exec "$$(rlocation aos/debian/download_packages)" %s %s %s %s --release=%s "$$@"
 END""" % (force_includes, force_excludes, excludes_list, package_list, release),
         target_compatible_with = target_compatible_with,
     )

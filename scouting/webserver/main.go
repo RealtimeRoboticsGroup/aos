@@ -14,14 +14,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/frc971/971-Robot-Code/scouting/background_task"
-	"github.com/frc971/971-Robot-Code/scouting/db"
-	"github.com/frc971/971-Robot-Code/scouting/webserver/driver_ranking"
-	"github.com/frc971/971-Robot-Code/scouting/webserver/match_list"
-	"github.com/frc971/971-Robot-Code/scouting/webserver/rankings"
-	"github.com/frc971/971-Robot-Code/scouting/webserver/requests"
-	"github.com/frc971/971-Robot-Code/scouting/webserver/server"
-	"github.com/frc971/971-Robot-Code/scouting/webserver/static"
+	"github.com/RealtimeRoboticsGroup/aos/scouting/background_task"
+	"github.com/RealtimeRoboticsGroup/aos/scouting/db"
+	"github.com/RealtimeRoboticsGroup/aos/scouting/webserver/driver_ranking"
+	"github.com/RealtimeRoboticsGroup/aos/scouting/webserver/match_list"
+	"github.com/RealtimeRoboticsGroup/aos/scouting/webserver/rankings"
+	"github.com/RealtimeRoboticsGroup/aos/scouting/webserver/requests"
+	"github.com/RealtimeRoboticsGroup/aos/scouting/webserver/server"
+	"github.com/RealtimeRoboticsGroup/aos/scouting/webserver/static"
 )
 
 type DatabaseConfig struct {
@@ -109,7 +109,7 @@ func main() {
 		}
 	} else {
 		log.Fatal("Must specify one of -db_config and -testdb_port. See " +
-			"https://github.com/frc971/971-Robot-Code/blob/master/scouting/README.md " +
+			"https://github.com/RealtimeRoboticsGroup/aos/blob/master/scouting/README.md " +
 			"for more information.")
 	}
 

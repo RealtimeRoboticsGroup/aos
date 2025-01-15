@@ -16,7 +16,7 @@ import tarfile
 from typing import List, Dict
 
 # Need a fully qualified import here because @bazel_tools interferes.
-import org_frc971.tools.go.mirror_lib
+import aos.tools.go.mirror_lib
 
 GO_DEPS_WWWW_DIR = "/var/www/html/files/frc971/Build-Dependencies/go_deps"
 
@@ -133,7 +133,7 @@ def main(argv):
 
     os.chdir(os.environ["BUILD_WORKSPACE_DIRECTORY"])
 
-    repos = org_frc971.tools.go.mirror_lib.parse_go_repositories(
+    repos = aos.tools.go.mirror_lib.parse_go_repositories(
         args.go_deps_bzl)
 
     if args.ssh_host:
@@ -145,7 +145,7 @@ def main(argv):
 
     if args.prune:
         # Delete all mirror info that is not needed anymore.
-        existing_cache_info = org_frc971.tools.go.mirror_lib.parse_go_mirror_info(
+        existing_cache_info = aos.tools.go.mirror_lib.parse_go_mirror_info(
             args.go_mirrors_bzl)
         cached_info = {}
         for repo in repos:
@@ -172,7 +172,7 @@ def main(argv):
                 "Skipping mirroring because of lack of --ssh_host or there's "
                 "nothing to actually mirror.")
 
-    org_frc971.tools.go.mirror_lib.write_go_mirror_info(
+    aos.tools.go.mirror_lib.write_go_mirror_info(
         args.go_mirrors_bzl, cached_info)
 
     return exit_code
