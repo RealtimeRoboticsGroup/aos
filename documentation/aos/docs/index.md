@@ -12,11 +12,11 @@ AOS](design) for more detail.
 Because AOS was originally developed under the auspices of a [High School
 Robotics Team](https://frc971.org/), it is still hosted on the corresponding
 servers, and that the code we refer to as "AOS" is present in the
-[aos](https://github.com/frc971/971-Robot-Code/tree/main/aos) folder.
+[aos](https://github.com/RealtimeRoboticsGroup/aos/tree/main/aos) folder.
 
 ## Contributing
 
-[971-Robot-Code](https://github.com/frc971/971-Robot-Code)
+[971-Robot-Code](https://github.com/RealtimeRoboticsGroup/aos)
 is the canonical GitHub mirror of the
 AOS code. Issues or feature requests can be reported using the GitHub issues page
 (this is subject to change); however, contributions to AOS are made through a

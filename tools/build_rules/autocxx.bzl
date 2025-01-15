@@ -1,5 +1,5 @@
 load("@bazel_tools//tools/build_defs/cc:action_names.bzl", "ACTION_NAMES")
-load("@org_frc971//tools/rust:defs.bzl", "rust_library")
+load("@aos//tools/rust:defs.bzl", "rust_library")
 load("@rules_cc//cc:find_cc_toolchain.bzl", "find_cc_toolchain")
 
 def _cc_toolchain_flags(ctx, cc_toolchain):

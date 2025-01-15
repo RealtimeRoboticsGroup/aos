@@ -20,7 +20,7 @@ def bazel_name_fix(filename, year):
     try:
         from bazel_tools.tools.python.runfiles import runfiles
         r = runfiles.Create()
-        ret_name = r.Rlocation('org_frc971/y%s/vision/%s' % (year, filename))
+        ret_name = r.Rlocation('aos/y%s/vision/%s' % (year, filename))
     except:
         print("Failed bazel_name_fix")
         pass

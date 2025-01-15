@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/frc971/971-Robot-Code/scouting/background_task"
-	"github.com/frc971/971-Robot-Code/scouting/db"
-	"github.com/frc971/971-Robot-Code/scouting/webserver/server"
+	"github.com/RealtimeRoboticsGroup/aos/scouting/background_task"
+	"github.com/RealtimeRoboticsGroup/aos/scouting/db"
+	"github.com/RealtimeRoboticsGroup/aos/scouting/webserver/server"
 )
 
 type MockDatabase struct {

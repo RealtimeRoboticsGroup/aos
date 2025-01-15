@@ -41,6 +41,6 @@ sh_test(
     ],
     data = [
         "//aos/flatbuffers:test_static_file",
-        "@org_frc971//aos/flatbuffers/test_dir:sample_test_static.h",
+        "@aos//aos/flatbuffers/test_dir:sample_test_static.h",
     ],
 )

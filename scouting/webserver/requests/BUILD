@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "requests",
     srcs = ["requests.go"],
-    importpath = "github.com/frc971/971-Robot-Code/scouting/webserver/requests",
+    importpath = "github.com/RealtimeRoboticsGroup/aos/scouting/webserver/requests",
     target_compatible_with = ["@platforms//cpu:x86_64"],
     visibility = ["//visibility:public"],
     deps = [

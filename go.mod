@@ -1,4 +1,4 @@
-module github.com/frc971/971-Robot-Code
+module github.com/RealtimeRoboticsGroup/aos
 
 go 1.17
 

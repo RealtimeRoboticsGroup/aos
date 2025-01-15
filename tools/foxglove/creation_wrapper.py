@@ -10,7 +10,7 @@ from python.runfiles import runfiles
 RUNFILES = runfiles.Create()
 
 FAKE_NPM_BIN = RUNFILES.Rlocation(
-    "org_frc971/tools/foxglove/creation_wrapper_npm")
+    "aos/tools/foxglove/creation_wrapper_npm")
 BUILDOZER_BIN = RUNFILES.Rlocation(
     "com_github_bazelbuild_buildtools/buildozer/buildozer_/buildozer")
 

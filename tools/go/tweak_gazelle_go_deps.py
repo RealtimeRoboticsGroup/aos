@@ -12,7 +12,7 @@ import argparse
 import sys
 import textwrap
 
-import org_frc971.tools.go.mirror_lib
+import aos.tools.go.mirror_lib
 
 
 def main(argv):
@@ -20,7 +20,7 @@ def main(argv):
     parser.add_argument("go_deps_bzl", type=str)
     args = parser.parse_args(argv[1:])
 
-    repos = org_frc971.tools.go.mirror_lib.parse_go_repositories(
+    repos = aos.tools.go.mirror_lib.parse_go_repositories(
         args.go_deps_bzl)
 
     with open(args.go_deps_bzl, "w") as file:

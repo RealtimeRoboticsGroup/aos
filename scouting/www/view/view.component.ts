@@ -1,31 +1,31 @@
 import {Component, OnInit} from '@angular/core';
 import {Builder, ByteBuffer} from 'flatbuffers';
-import {ErrorResponse} from '@org_frc971/scouting/webserver/requests/messages/error_response_generated';
+import {ErrorResponse} from '@aos/scouting/webserver/requests/messages/error_response_generated';
 import {
   Ranking,
   RequestAllDriverRankingsResponse,
-} from '@org_frc971/scouting/webserver/requests/messages/request_all_driver_rankings_response_generated';
+} from '@aos/scouting/webserver/requests/messages/request_all_driver_rankings_response_generated';
 import {
   Stats2024,
   Request2024DataScoutingResponse,
-} from '@org_frc971/scouting/webserver/requests/messages/request_2024_data_scouting_response_generated';
+} from '@aos/scouting/webserver/requests/messages/request_2024_data_scouting_response_generated';
 
 import {
   PitImage,
   RequestAllPitImagesResponse,
-} from '@org_frc971/scouting/webserver/requests/messages/request_all_pit_images_response_generated';
+} from '@aos/scouting/webserver/requests/messages/request_all_pit_images_response_generated';
 
 import {
   Note,
   RequestAllNotesResponse,
-} from '@org_frc971/scouting/webserver/requests/messages/request_all_notes_response_generated';
-import {Delete2024DataScouting} from '@org_frc971/scouting/webserver/requests/messages/delete_2024_data_scouting_generated';
-import {Delete2024DataScoutingResponse} from '@org_frc971/scouting/webserver/requests/messages/delete_2024_data_scouting_response_generated';
+} from '@aos/scouting/webserver/requests/messages/request_all_notes_response_generated';
+import {Delete2024DataScouting} from '@aos/scouting/webserver/requests/messages/delete_2024_data_scouting_generated';
+import {Delete2024DataScoutingResponse} from '@aos/scouting/webserver/requests/messages/delete_2024_data_scouting_response_generated';
 
 import {
   MatchListRequestor,
   ViewDataRequestor,
-} from '@org_frc971/scouting/www/rpc';
+} from '@aos/scouting/www/rpc';
 
 type Source = 'Notes' | 'Stats2024' | 'PitImages' | 'DriverRanking';
 

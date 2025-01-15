@@ -1,4 +1,4 @@
-load("@org_frc971//tools/build_rules:select.bzl", "compiler_select")
+load("@aos//tools/build_rules:select.bzl", "compiler_select")
 
 common_copts = [
     "-DPLATFORM_LINUX",

@@ -9,7 +9,7 @@ npm_link_all_packages(name = "node_modules")
 go_library(
     name = "authorize_lib",
     srcs = ["server.go"],
-    importpath = "github.com/frc971/971-Robot-Code/scouting/www/test/authorize",
+    importpath = "github.com/RealtimeRoboticsGroup/aos/scouting/www/test/authorize",
     target_compatible_with = ["@platforms//cpu:x86_64"],
     visibility = ["//visibility:private"],
 )

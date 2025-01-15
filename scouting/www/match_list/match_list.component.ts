@@ -1,13 +1,13 @@
 import {Component, EventEmitter, OnInit, Output} from '@angular/core';
 import {Builder, ByteBuffer} from 'flatbuffers';
-import {ErrorResponse} from '@org_frc971/scouting/webserver/requests/messages/error_response_generated';
-import {RequestAllMatches} from '@org_frc971/scouting/webserver/requests/messages/request_all_matches_generated';
+import {ErrorResponse} from '@aos/scouting/webserver/requests/messages/error_response_generated';
+import {RequestAllMatches} from '@aos/scouting/webserver/requests/messages/request_all_matches_generated';
 import {
   Match,
   RequestAllMatchesResponse,
-} from '@org_frc971/scouting/webserver/requests/messages/request_all_matches_response_generated';
+} from '@aos/scouting/webserver/requests/messages/request_all_matches_response_generated';
 
-import {MatchListRequestor} from '@org_frc971/scouting/www/rpc';
+import {MatchListRequestor} from '@aos/scouting/www/rpc';
 
 // TODO(phil): Deduplicate with entry.component.ts.
 const COMP_LEVELS = ['qm', 'ef', 'qf', 'sf', 'f'] as const;

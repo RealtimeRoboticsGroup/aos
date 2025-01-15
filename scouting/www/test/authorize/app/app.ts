@@ -1,6 +1,6 @@
 import {Component} from '@angular/core';
 
-import {RequestAuthorizer} from '@org_frc971/scouting/www/rpc';
+import {RequestAuthorizer} from '@aos/scouting/www/rpc';
 
 @Component({
   selector: 'test-app',

@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/frc971/971-Robot-Code/scouting/webserver/requests/debug"
+	"github.com/RealtimeRoboticsGroup/aos/scouting/webserver/requests/debug"
 )
 
 // Returns the absolute path of the specified path. This is an unwrapped

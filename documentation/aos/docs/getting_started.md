@@ -10,7 +10,7 @@ essentially from scratch.
 For purposes of this exercise, we will assume that you have cloned the
 [971-Robot-Code][github] repository. If you have set up AOS as an external repository in
 your own [Bazel](https://bazel.build/) workspace, then the main differences
-should just be that you add Bazel dependencies with an `@org_frc971`.
+should just be that you add Bazel dependencies with an `@aos`.
 
 AOS nominally supports Debian Bullseye, although later versions of Debian and
 Ubuntu 20.04+ should work to build the code.
@@ -211,7 +211,7 @@ This should generate a C++ header at `bazel-bin/foo/ping_generated.h`.
 
 Every system running AOS will need a configuration. The configuration is a
 FlatBuffer message defined in
-[configuration.fbs](https://github.com/frc971/971-Robot-Code/blob/main/aos/configuration.fbs).
+[configuration.fbs](https://github.com/RealtimeRoboticsGroup/aos/blob/main/aos/configuration.fbs).
 Developers typically interact with the AOS config as a JSON file, which is then
 parsed into a FlatBuffer by various pieces of tooling.
 
@@ -947,7 +947,7 @@ In order for these changes to take effect, you will need to reboot your machine
 logging out and logging back in, or by creating a new ssh session). Confirm that
 the limits have taken effect using `ulimit -a`.
 
-[github]: https://github.com/frc971/971-Robot-Code
+[github]: https://github.com/RealtimeRoboticsGroup/aos
 [flatbuffer_cc_library]: https://github.com/google/flatbuffers/blob/eeb49c275776fe7948370a0f7a4dd644a2c5f7a8/build_defs.bzl#L141
 [reflection_fbs]: https://github.com/google/flatbuffers/blob/master/reflection/reflection.fbs
 [^paths]: Note that `//` refers to the root of the current repository in Bazel.

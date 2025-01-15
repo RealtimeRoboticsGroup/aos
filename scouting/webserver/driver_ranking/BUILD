@@ -6,7 +6,7 @@ go_library(
     data = [
         "//scouting/DriverRank:driver_rank_script",
     ],
-    importpath = "github.com/frc971/971-Robot-Code/scouting/webserver/driver_ranking",
+    importpath = "github.com/RealtimeRoboticsGroup/aos/scouting/webserver/driver_ranking",
     target_compatible_with = ["@platforms//cpu:x86_64"],
     visibility = ["//visibility:public"],
     deps = [

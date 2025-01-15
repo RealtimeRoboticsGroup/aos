@@ -533,7 +533,7 @@ First, the bazel targets must be updated to generate the new code:
 
 ```python
 # This load must be added so that the static_flatbuffer rule is available.
-load("@org_frc971//aos/flatbuffers:generate.bzl", "static_flatbuffer")
+load("@aos//aos/flatbuffers:generate.bzl", "static_flatbuffer")
 
 # Remove the prior `flatbuffer_cc_library` and replace it with something like
 # this.

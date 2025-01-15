@@ -6,7 +6,7 @@ After=systemd-networkd-wait-online.service
 User=www-data
 Group=www-data
 Type=simple
-WorkingDirectory=/opt/frc971/scouting_server/scouting/scouting.runfiles/org_frc971
+WorkingDirectory=/opt/frc971/scouting_server/scouting/scouting.runfiles/aos
 Environment=RUNFILES_DIR=/opt/frc971/scouting_server/scouting/scouting.runfiles
 # Add "julia" to the PATH.
 Environment=PATH=/opt/frc971/julia_runtime/bin:/usr/local/bin:/usr/bin:/bin
