@@ -779,8 +779,11 @@ void ExtrinsicsMain(std::vector<CameraNode> &node_list,
         // Set the list up as TimestampedCameraDetection's to use the outlier
         // removal function
         TimestampedCameraDetection camera1_camera2{
+            .time = aos::distributed_clock::epoch(),
             .H_camera_target = H_camera1_camera2,
-            .camera_name = node_list.at(i + 1).camera_name()};
+            .camera_name = node_list.at(i + 1).camera_name(),
+            .board_id = 0,
+        };
         H_camera1_camera2_list.push_back(camera1_camera2);
         VLOG(1) << "Map from camera " << pose1.camera_name << " and tag "
                 << pose1.board_id << " with observation: \n"

@@ -71,7 +71,7 @@ void DebugPrint(const BlobList &blobl) {
     }
   }
   printf("maxx: %d minx: %d\n", maxx, minx);
-  char buf[maxx - minx];
+  char *buf = reinterpret_cast<char *>(alloca((maxx - minx) * sizeof(char)));
   for (const std::vector<ImageRange> &range : rimg.ranges()) {
     int i = minx;
     for (const ImageRange &span : range) {

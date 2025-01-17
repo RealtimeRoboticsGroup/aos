@@ -1307,6 +1307,9 @@ class CudaAprilTagDetector {
         pt p{
             .x = static_cast<uint16_t>(group[i].x()),
             .y = static_cast<uint16_t>(group[i].y()),
+            .gx = 0,
+            .gy = 0,
+            .slope = 0.0,
         };
         zarray_add(cluster, &p);
       }

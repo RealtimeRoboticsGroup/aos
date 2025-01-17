@@ -257,6 +257,10 @@ void UnpackChannel(const Channel *channel, MutableChannel *result) {
               .try_emplace(destination_node->name()->string_view(),
                            MutableConnection{
                                .name = destination_node->name()->string_view(),
+                               .timestamp_logger = std::nullopt,
+                               .timestamp_logger_nodes = {},
+                               .priority = std::nullopt,
+                               .time_to_live = std::nullopt,
                            })
               .first->second;
       UnpackConnection(destination_node, &destination);
@@ -372,6 +376,17 @@ void UnpackConfiguration(const Configuration *configuration,
                   MutableChannel{
                       .name = channel->name()->string_view(),
                       .type = channel->type()->string_view(),
+                      .frequency = std::nullopt,
+                      .max_size = std::nullopt,
+                      .num_senders = std::nullopt,
+                      .num_watchers = std::nullopt,
+                      .source_node = {},
+                      .destination_nodes = {},
+                      .logger = std::nullopt,
+                      .logger_nodes = {},
+                      .read_method = std::nullopt,
+                      .num_readers = std::nullopt,
+                      .channel_storage_duration = std::nullopt,
                   })
               .first->second;
 
@@ -404,6 +419,10 @@ void UnpackConfiguration(const Configuration *configuration,
               .try_emplace(node->name()->string_view(),
                            MutableNode{
                                .name = node->name()->string_view(),
+                               .hostname = {},
+                               .port = std::nullopt,
+                               .hostnames = {},
+                               .tags = {},
                            })
               .first->second;
       UnpackNode(node, &unpacked_node);
@@ -419,6 +438,15 @@ void UnpackConfiguration(const Configuration *configuration,
               .try_emplace(application->name()->string_view(),
                            MutableApplication{
                                .name = application->name()->string_view(),
+                               .executable_name = {},
+                               .maps = {},
+                               .nodes = {},
+                               .user = {},
+                               .args = {},
+                               .autostart = std::nullopt,
+                               .autorestart = std::nullopt,
+                               .memory_limit = std::nullopt,
+                               .stop_time = std::nullopt,
                            })
               .first->second;
       UnpackApplication(application, &unpacked_application);
