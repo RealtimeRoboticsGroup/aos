@@ -37,12 +37,12 @@ export LD_LIBRARY_PATH="${SYSROOT}/usr/lib:${SYSROOT}/lib:${ZLIB1G_DEV}/usr/lib/
   -isystem"${SYSROOT}/usr/include/c++/12" \
   -isystem"${SYSROOT}/usr/include/${MULTIARCH}/c++/12" \
   -isystem"${SYSROOT}/usr/include/c++/7/backward" \
-  -isystem"${LLVM_TOOLCHAIN}/lib/clang/17/include" \
+  -isystem"${LLVM_TOOLCHAIN}/lib/clang/18/include" \
   -isystem"${SYSROOT}/usr/include/${MULTIARCH}" \
   -isystem"${SYSROOT}/usr/include" \
   -isystem"${SYSROOT}/include" \
   "--sysroot=${SYSROOT}" \
-  -resource-dir "${LLVM_TOOLCHAIN}/lib/clang/17" \
+  -resource-dir "${LLVM_TOOLCHAIN}/lib/clang/18" \
   -target "${TARGET}" \
   -fuse-ld=lld \
   -L"${LLVM_TOOLCHAIN}/lib" \

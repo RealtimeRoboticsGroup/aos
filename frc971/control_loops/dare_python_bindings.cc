@@ -160,6 +160,10 @@ static PyModuleDef cpp_dare_module = {
         "testing.",
     .m_size = -1,
     .m_methods = methods,
+    .m_slots = NULL,
+    .m_traverse = NULL,
+    .m_clear = NULL,
+    .m_free = NULL,
 };
 
 PyObject *InitModule() { return PyModule_Create(&cpp_dare_module); }

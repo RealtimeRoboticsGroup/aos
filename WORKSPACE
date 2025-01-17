@@ -257,17 +257,17 @@ http_archive(
 
 load("@com_grail_bazel_toolchain//toolchain:rules.bzl", "llvm", "llvm_toolchain")
 
-llvm_version = "17.0.2"
+llvm_version = "18.1.8"
 
 llvm(
     name = "llvm_k8",
-    distribution = "clang+llvm-%s-x86_64-linux-gnu-ubuntu-22.04.tar.zst" % llvm_version,
+    distribution = "clang+llvm-%s-x86_64-linux-gnu-ubuntu-18.04.tar.zst" % llvm_version,
     llvm_version = llvm_version,
 )
 
 llvm(
     name = "llvm_aarch64",
-    distribution = "clang+llvm-%s-aarch64-linux-gnu.tar.xz" % llvm_version,
+    distribution = "clang+llvm-%s-aarch64-linux-gnu.tar.zst" % llvm_version,
     llvm_version = llvm_version,
 )
 
@@ -283,6 +283,9 @@ llvm_copts = [
     "-fmessage-length=100",
     "-fmacro-backtrace-limit=0",
     "-ggdb3",
+    # Too many core libraries have these right now.
+    # TODO(austin): Turn this off later.
+    "-Wno-deprecated-declarations",
 ]
 
 llvm_cxxopts = [

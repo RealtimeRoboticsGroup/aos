@@ -276,6 +276,7 @@ static PyMethodDef LogReader_methods[] = {
 // uses none of them really matter I think, and the alternatives are really
 // annoying.
 #pragma clang diagnostic ignored "-Wc99-designator"
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
 #endif
 
 static PyTypeObject LogReaderType = {
@@ -298,6 +299,11 @@ static PyModuleDef log_reader_module = {
     .m_name = "py_log_reader",
     .m_doc = "Example module that creates an extension type.",
     .m_size = -1,
+    .m_methods = NULL,
+    .m_slots = NULL,
+    .m_traverse = NULL,
+    .m_clear = NULL,
+    .m_free = NULL,
 };
 
 PyObject *InitModule() {

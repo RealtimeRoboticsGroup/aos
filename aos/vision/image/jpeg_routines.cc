@@ -219,7 +219,8 @@ bool ProcessJpeg(DataRef data, PixelRef *out) {
 
   int offset = 0;
   int step = cinfo.num_components * cinfo.image_width;
-  unsigned char *buffers[cinfo.image_height];
+  unsigned char **buffers = reinterpret_cast<unsigned char **>(
+      alloca(cinfo.image_height * sizeof(unsigned char *)));
   for (size_t i = 0; i < cinfo.image_height; ++i) {
     buffers[i] = &reinterpret_cast<unsigned char *>(out)[offset];
     offset += step;

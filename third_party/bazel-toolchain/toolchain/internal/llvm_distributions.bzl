@@ -310,6 +310,10 @@ _llvm_distributions = {
     "clang+llvm-17.0.2-sparcv9-sun-solaris2.11.tar.xz": "3702914668b5758817374271fa8a41fe67c77b2e86f17706c9d6906f250de6ae",
     "clang+llvm-17.0.2-x86_64-linux-gnu-ubuntu-22.04.tar.xz": "df297df804766f8fb18f10a188af78e55d82bb8881751408c2fa694ca19163a8",
     "clang+llvm-17.0.2-x86_64-linux-gnu-ubuntu-22.04.tar.zst": "f2eec88faa0036ae2af03af26bd7cb5c6cb0223659b1d7d33739aa9008af5964",
+
+    # 18.1.8
+    "clang+llvm-18.1.8-aarch64-linux-gnu.tar.zst": "21555a4bc393466b89aedcb6e41ebb474241497c15801222b41a68bbbd9d07f0",
+    "clang+llvm-18.1.8-x86_64-linux-gnu-ubuntu-18.04.tar.zst": "0bfaec33e69cfcf30aeafa64d8e1d1b36c9b19fe505a34dd69e4c01aa226c163",
 }
 
 # Note: Unlike the user-specified llvm_mirror attribute, the URL prefixes in
@@ -344,6 +348,7 @@ _llvm_distributions_base_url = {
     "16.0.6": "https://github.com/llvm/llvm-project/releases/download/llvmorg-",
     "17.0.1": "https://github.com/llvm/llvm-project/releases/download/llvmorg-",
     "17.0.2": "https://github.com/llvm/llvm-project/releases/download/llvmorg-",
+    "18.1.8": "https://github.com/llvm/llvm-project/releases/download/llvmorg-",
 }
 
 def _get_auth(ctx, urls):
