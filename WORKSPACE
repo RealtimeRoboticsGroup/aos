@@ -1386,9 +1386,9 @@ http_archive(
     name = "com_github_grpc_grpc",
     patch_args = ["-p1"],
     patches = ["//debian:grpc.patch"],
-    sha256 = "493d9905aa09124c2f44268b66205dd013f3925a7e82995f36745974e97af609",
-    strip_prefix = "grpc-1.63.0",
-    url = "https://github.com/grpc/grpc/archive/refs/tags/v1.63.0.tar.gz",
+    sha256 = "cd256d91781911d46a57506978b3979bfee45d5086a1b6668a3ae19c5e77f8dc",
+    strip_prefix = "grpc-1.69.0",
+    url = "https://github.com/grpc/grpc/archive/refs/tags/v1.69.0.tar.gz",
 )
 
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
