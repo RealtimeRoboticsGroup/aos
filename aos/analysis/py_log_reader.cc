@@ -253,6 +253,15 @@ static PyObject *LogReader_configuration(LogReaderType *self,
       buffer.span().size());
 }
 
+#ifdef __clang__
+// These extensions to C++ syntax do surprising things in C++, but for these
+// uses none of them really matter I think, and the alternatives are really
+// annoying.
+#pragma clang diagnostic ignored "-Wc99-designator"
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
+#pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
+#endif
+
 static PyMethodDef LogReader_methods[] = {
     {"configuration", (PyCFunction)LogReader_configuration, METH_NOARGS,
      "Return a bytes buffer for the Configuration of the logfile."},
@@ -270,14 +279,6 @@ static PyMethodDef LogReader_methods[] = {
      "json_message_data)."},
     {nullptr, 0, 0, nullptr} /* Sentinel */
 };
-
-#ifdef __clang__
-// These extensions to C++ syntax do surprising things in C++, but for these
-// uses none of them really matter I think, and the alternatives are really
-// annoying.
-#pragma clang diagnostic ignored "-Wc99-designator"
-#pragma clang diagnostic ignored "-Wmissing-field-initializers"
-#endif
 
 static PyTypeObject LogReaderType = {
     PyVarObject_HEAD_INIT(NULL, 0)

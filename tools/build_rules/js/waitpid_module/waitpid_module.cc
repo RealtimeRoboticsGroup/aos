@@ -58,7 +58,8 @@ void WaitPid(const v8::FunctionCallbackInfo<v8::Value> &args) {
   std::cout << "Successfully waited on PID " << pid << std::endl;
 }
 
-void Initialize(v8::Local<v8::Object> exports) {
+void Initialize(v8::Local<v8::Object> exports, v8::Local<v8::Value> /*module*/,
+                void * /*priv*/) {
   NODE_SET_METHOD(exports, "waitpid", WaitPid);
 }
 
