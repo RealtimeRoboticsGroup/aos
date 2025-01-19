@@ -175,6 +175,20 @@ void ImageCallback::DisableTracing() {
   ftrace_.TurnOffOrDie();
 }
 
+cv::Ptr<cv::aruco::CharucoBoard> MakeCharucoBoard(
+    cv::Size board_size, float square_length, float marker_length,
+    cv::Ptr<cv::aruco::Dictionary> dictionary) {
+#if CV_VERSION_MINOR >= 9
+  return cv::makePtr<cv::aruco::CharucoBoard>(board_size, square_length,
+                                              marker_length, *dictionary);
+
+#else
+  return cv::aruco::CharucoBoard::create(board_size.width, board_size.height,
+                                         square_length, marker_length,
+                                         dictionary);
+#endif
+}
+
 void CharucoExtractor::SetupTargetData() {
   marker_length_ = 0.146;
   square_length_ = 0.2;
@@ -184,9 +198,13 @@ void CharucoExtractor::SetupTargetData() {
 
   if (target_type_ == TargetType::kCharuco ||
       target_type_ == TargetType::kAruco) {
-    dictionary_ = cv::aruco::getPredefinedDictionary(
-        absl::GetFlag(FLAGS_large_board) ? cv::aruco::DICT_5X5_250
-                                         : cv::aruco::DICT_6X6_250);
+    dictionary_ =
+#if CV_VERSION_MINOR >= 9
+        cv::makePtr<cv::aruco::Dictionary>
+#endif
+        (cv::aruco::getPredefinedDictionary(absl::GetFlag(FLAGS_large_board)
+                                                ? cv::aruco::DICT_5X5_250
+                                                : cv::aruco::DICT_6X6_250));
     if (target_type_ == TargetType::kCharuco) {
       LOG(INFO) << "Using "
                 << (absl::GetFlag(FLAGS_large_board) ? "large" : "small")
@@ -195,32 +213,38 @@ void CharucoExtractor::SetupTargetData() {
                 << " pattern";
       board_ = (absl::GetFlag(FLAGS_large_board)
                     ? (absl::GetFlag(FLAGS_coarse_pattern)
-                           ? cv::aruco::CharucoBoard::create(
-                                 12, 9, 0.06, 0.04666, dictionary_)
-                           : cv::aruco::CharucoBoard::create(
-                                 25, 18, 0.03, 0.0233, dictionary_))
+                           ? MakeCharucoBoard(cv::Size(12, 9), 0.06, 0.04666,
+                                              dictionary_)
+                           : MakeCharucoBoard(cv::Size(25, 18), 0.03, 0.0233,
+                                              dictionary_))
                     : (absl::GetFlag(FLAGS_coarse_pattern)
-                           ? cv::aruco::CharucoBoard::create(7, 5, 0.04, 0.025,
-                                                             dictionary_)
+                           ? MakeCharucoBoard(cv::Size(7, 5), 0.04, 0.025,
+                                              dictionary_)
                            // TODO(jim): Need to figure out what
                            // size is for small board, fine pattern
-                           : cv::aruco::CharucoBoard::create(7, 5, 0.03, 0.0233,
-                                                             dictionary_)));
+                           : MakeCharucoBoard(cv::Size(7, 5), 0.03, 0.0233,
+                                              dictionary_)));
       if (!absl::GetFlag(FLAGS_board_template_path).empty()) {
         cv::Mat board_image;
-        board_->draw(cv::Size(600, 500), board_image, 10, 1);
+#if CV_VERSION_MINOR >= 9
+        board_->generateImage(
+#else
+        board_->draw(
+#endif
+            cv::Size(600, 500), board_image, 10, 1);
         cv::imwrite(absl::GetFlag(FLAGS_board_template_path), board_image);
       }
     }
   } else if (target_type_ == TargetType::kCharucoDiamond) {
     marker_length_ = 0.15;
     square_length_ = 0.2;
-    dictionary_ = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_250);
+    dictionary_ = cv::makePtr<cv::aruco::Dictionary>(
+        cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_250));
   } else if (target_type_ == TargetType::kAprilTag) {
     marker_length_ = 0.1016;
     square_length_ = 0.1524;
-    dictionary_ =
-        cv::aruco::getPredefinedDictionary(cv::aruco::DICT_APRILTAG_16h5);
+    dictionary_ = cv::makePtr<cv::aruco::Dictionary>(
+        cv::aruco::getPredefinedDictionary(cv::aruco::DICT_APRILTAG_16h5));
   } else {
     // Bail out if it's not a supported target
     LOG(FATAL) << "Target type undefined: "
@@ -387,7 +411,7 @@ void CharucoExtractor::ProcessImage(
 
   // Do initial marker detection; this is the same for all target types
   cv::Ptr<cv::aruco::DetectorParameters> detector_params =
-      cv::aruco::DetectorParameters::create();
+      cv::makePtr<cv::aruco::DetectorParameters>();
   detector_params->cornerRefinementMethod = cv::aruco::CORNER_REFINE_CONTOUR;
 
   cv::aruco::detectMarkers(rgb_image, dictionary_, marker_corners, marker_ids,

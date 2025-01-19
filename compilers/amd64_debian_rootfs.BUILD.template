@@ -1,0 +1,38 @@
+filegroup(
+    name = "sysroot_files",
+    srcs = glob(
+        include = [
+            "include/**",
+            "lib/**",
+            "lib64/**",
+            "usr/include/**",
+            "usr/local/**",
+            "usr/lib/**",
+            "usr/lib64/**",
+            "usr/bin/ptxas",
+            "usr/bin/fatbinary",
+        ],
+        exclude = [
+            "usr/share/**",
+        ],
+    ),
+    visibility = ["//visibility:public"],
+)
+
+# This one needs to be done special so we link against the one in the sysroot,
+# but actually use the one from the host.  NVIDIA gets really grumpy when the
+# version of the driver you have installed doesn't match the libraries in use.
+cc_library(
+    name = "cudart",
+    additional_linker_inputs = [
+        "usr/lib/x86_64-linux-gnu/libcuda.so.1",
+        "usr/lib/x86_64-linux-gnu/libcudart.so.11.0",
+    ],                    
+    linkopts = [
+        "external/amd64_debian_sysroot/usr/lib/x86_64-linux-gnu/libcuda.so.1",
+        "external/amd64_debian_sysroot/usr/lib/x86_64-linux-gnu/libcudart.so.11.0",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+{{ RULES }}

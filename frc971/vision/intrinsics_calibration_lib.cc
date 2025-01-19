@@ -379,8 +379,12 @@ void IntrinsicsCalibration::DrawCornersOnImage(cv::Mat image, uint index,
                                                std::vector<cv::Mat> rvecs,
                                                cv::Mat camera_matrix,
                                                cv::Mat dist_coeffs) {
-  std::vector<cv::Point3f> board_corners =
-      charuco_extractor_.board()->chessboardCorners;
+  std::vector<cv::Point3f> board_corners = charuco_extractor_.board()->
+#if CV_VERSION_MINOR >= 9
+                                           getChessboardCorners();
+#else
+                                           chessboardCorners;
+#endif
   double square_length = charuco_extractor_.board()->getSquareLength();
 
   {
@@ -486,7 +490,7 @@ void IntrinsicsCalibration::MaybeCalibrate() {
     // Found that using at least 100 iterations helped get convergence to
     // correct values
     cv::TermCriteria term_crit = cv::TermCriteria(
-        cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 1000, 1e-9);
+        cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 10000, 1e-12);
     reprojection_error_ = cv::aruco::calibrateCameraCharuco(
         all_charuco_corners_, all_charuco_ids_, charuco_extractor_.board(),
         image_size_, camera_mat_, dist_coeffs_, rvecs_, tvecs_,
