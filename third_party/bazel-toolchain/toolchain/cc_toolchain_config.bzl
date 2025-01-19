@@ -101,7 +101,8 @@ def cc_toolchain_config(
             "clang",
             "clang",
             "glibc_unknown",
-            "aarch64-linux-gnu",
+            #"aarch64-linux-gnu",
+            "aarch64-oe4t-linux",
         ),
         "linux-armv7": (
             "clang-armv7-linux",
@@ -155,6 +156,9 @@ def cc_toolchain_config(
         "-B{}bin/".format(toolchain_path_prefix),
     ] + resource_dir
 
+    if target_os_arch_key == "linux-aarch64":
+        compile_flags.extend(["-march=armv8-a+crc"])
+
     dbg_compile_flags = ["-fstandalone-debug"]
 
     opt_compile_flags = [
@@ -207,6 +211,8 @@ def cc_toolchain_config(
     if not standard_library and is_xcompile:
         print("WARNING: Using libc++ for host architecture while cross compiling, this is " +
               "probably not what you want. Explicitly set standard_libraries to libc++ to silence.")
+
+    sysroot_include_flags = []
 
     # The linker has no way of knowing if there are C++ objects; so we
     # always link C++ libraries.
@@ -285,6 +291,8 @@ def cc_toolchain_config(
                 "-nostdinc",
                 "-isystem",
                 target_toolchain_path_prefix + "lib/clang/{}/include".format(llvm_subfolder),
+            ]
+            sysroot_include_flags.extend([
                 "-isystem",
                 sysroot_path + "/usr/local/include",
                 "-isystem",
@@ -297,15 +305,31 @@ def cc_toolchain_config(
                 sysroot_path + "/include",
                 "-isystem",
                 sysroot_path + "/usr/include",
-            ]
+            ])
             compile_not_cxx_flags.extend(common_include_flags)
 
             cxx_flags.extend([
                 "-nostdinc++",
                 "-isystem",
                 sysroot_path + "/usr/include/c++/" + libstdcxx_version,
-                "-isystem",
-                sysroot_path + "/usr/include/" + multiarch + "/c++/" + libstdcxx_version,
+            ])
+
+            if multiarch == "aarch64-oe4t-linux":
+                cxx_flags.extend([
+                    "-isystem",
+                    sysroot_path + "/usr/include/c++/" + libstdcxx_version + "/" + multiarch,
+                ])
+                link_flags.extend([
+                    "-B{}/usr/lib/{}/{}/".format(sysroot_path, multiarch, libstdcxx_version),
+                    "-Wl,-L{}/usr/lib/{}/{}/".format(sysroot_path, multiarch, libstdcxx_version),
+                ])
+            else:
+                cxx_flags.extend([
+                    "-isystem",
+                    sysroot_path + "/usr/include/" + multiarch + "/c++/" + libstdcxx_version,
+                ])
+
+            cxx_flags.extend([
                 "-isystem",
                 sysroot_path + "/usr/include/c++/" + libstdcxx_version + "/backward",
             ] + common_include_flags)
@@ -416,6 +440,7 @@ def cc_toolchain_config(
         toolchain_identifier = toolchain_identifier,
         host_system_name = host_system_name,
         target_system_name = target_system_name,
+        sysroot_include_flags = sysroot_include_flags,
         target_libc = target_libc,
         abi_version = abi_version,
         abi_libc_version = abi_libc_version,

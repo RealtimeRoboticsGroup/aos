@@ -125,10 +125,6 @@ load(
     clang_amd64_debs = "files",
 )
 load(
-    "//debian:gstreamer_amd64.bzl",
-    gstreamer_amd64_debs = "files",
-)
-load(
     "//debian:gtk_runtime.bzl",
     gtk_runtime_debs = "files",
 )
@@ -145,24 +141,12 @@ load(
     libusb_debs = "files",
 )
 load(
-    "//debian:lzma_amd64.bzl",
-    lzma_amd64_debs = "files",
-)
-load(
-    "//debian:lzma_arm64.bzl",
-    lzma_arm64_debs = "files",
-)
-load(
     "//debian:m4.bzl",
     m4_debs = "files",
 )
 load(
     "//debian:mingw_compiler.bzl",
     mingw_compiler_debs = "files",
-)
-load(
-    "//debian:opencv_amd64.bzl",
-    opencv_amd64_debs = "files",
 )
 load("//debian:packages.bzl", "generate_repositories_for_debs")
 load(
@@ -220,18 +204,16 @@ generate_repositories_for_debs(arm_frc_gnueabi_deps_debs)
 
 generate_repositories_for_debs(gtk_runtime_debs)
 
-generate_repositories_for_debs(opencv_amd64_debs)
-
+# TODO(austin): Random things need this, stop doing that"
 generate_repositories_for_debs(
-    gstreamer_amd64_debs,
+    {
+        "zlib1g-dev_1.2.11.dfsg-2_amd64.deb": "a36b74415b32513dab9a2fa56e7d215f5e5d0185df6939e483267cef15e2eaf5",
+        "libxpm4_3.5.12-1_amd64.deb": "49e64f0923cdecb2aaf6c93f176c25f63b841da2a501651ae23070f998967aa7",
+    },
     base_url = "https://realtimeroboticsgroup.org/build-dependencies/gstreamer_bullseye_amd64_deps",
 )
 
 generate_repositories_for_debs(m4_debs)
-
-generate_repositories_for_debs(lzma_amd64_debs)
-
-generate_repositories_for_debs(lzma_arm64_debs)
 
 generate_repositories_for_debs(libtinfo5_amd64_debs)
 
@@ -334,7 +316,7 @@ llvm_toolchain(
     },
     standard_libraries = {
         "linux-x86_64": "libstdc++-12",
-        "linux-aarch64": "libstdc++-12",
+        "linux-aarch64": "libstdc++-13.3.0",
     },
     static_libstdcxx = False,
     sysroot = {
@@ -441,20 +423,23 @@ http_archive(
     url = "https://github.com/wpilibsuite/opensdk/releases/download/v2024-1/cortexa9_vfpv3-roborio-academic-2024-x86_64-linux-gnu-Toolchain-12.1.0.tgz",
 )
 
-# The main partition built from //frc971/orin/build_rootfs.py.
+# The main partition packaged with //compilers/buildify_yocto_image.py
+# Packaging the yocto image built from https://github.com/frc4646/meta-frc4646
+# To rebuild, follow the instructions in meta-frc4646, then, cd compilers and
+# run buildify_yocto_image.py /path/to/git/checkout/meta-frc4646
 http_archive(
     name = "arm64_debian_sysroot",
     build_file = "@//:compilers/orin_debian_rootfs.BUILD",
-    sha256 = "9fefccc1877a7b5986e7ad29ac49a4217bfbb0fbea1bcc0314beff5d03a430cd",
-    url = "https://realtimeroboticsgroup.org/build-dependencies/2024-04-06-bookworm-arm64-nvidia-rootfs.tar.zst",
+    sha256 = "9fe9ba57aaf8a2ba326648b6369404f33bbafbc822317f9682a89438f64a2ab3",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/2025-01-19-scarthgap-arm64-nvidia-rootfs.tar.zst",
 )
 
 # Sysroot generated using //frc971/amd64/build_rootfs.py
 http_archive(
     name = "amd64_debian_sysroot",
     build_file = "@//:compilers/amd64_debian_rootfs.BUILD",
-    sha256 = "ceaf7e3fd4af04aca2ff0d55c94ce30c2b45d1136b0e81e9be5ebc1003f96052",
-    url = "https://realtimeroboticsgroup.org/build-dependencies/2023-12-10-bookworm-amd64-nvidia-rootfs.tar.zst",
+    sha256 = "a26fd37dee3203e1d2f77bd9deef67d8a36f56999d1febd368df6881721e2bab",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/2025-01-19-bookworm-amd64-nvidia-rootfs.tar.zst",
 )
 
 # Generated with:
@@ -1255,13 +1240,6 @@ http_file(
 )
 
 http_archive(
-    name = "opencv_k8",
-    build_file = "@//debian:opencv.BUILD",
-    sha256 = "1d8f839fd135a700ca0576a503b15b0a198fef5b36f22efae5cae9eaa17935d1",
-    url = "https://realtimeroboticsgroup.org/build-dependencies/opencv_amd64_v4.tar.gz",
-)
-
-http_archive(
     name = "halide_k8",
     build_file = "@//debian:halide.BUILD",
     sha256 = "be3bdd067acb9ee0d37d0830821113cd69174bee46da466a836d8829fef7cf91",
@@ -1275,55 +1253,6 @@ http_archive(
     sha256 = "cdd42411bcbba682f73d7db0af69837c4857ee90f1727c6feb37fc9a98132385",
     strip_prefix = "Halide-14.0.0-arm-64-linux/",
     url = "https://github.com/halide/Halide/releases/download/v14.0.0/Halide-14.0.0-arm-64-linux-6b9ed2afd1d6d0badf04986602c943e287d44e46.tar.gz",
-)
-
-http_archive(
-    name = "gstreamer_k8",
-    build_file = "@//debian:gstreamer.BUILD",
-    sha256 = "09765cb1dd8abc643cb1dd91d536aef3e6604ff05f5f92898d508ed857455d0b",
-    url = "https://realtimeroboticsgroup.org/build-dependencies/gstreamer_1.20.1-1~bpo11+1_amd64_v2.tar.gz",
-)
-
-# //debian:lzma_amd64
-http_archive(
-    name = "lzma_amd64",
-    build_file_content = """
-cc_library(
-    name = "lib",
-    srcs = [
-        "usr/lib/x86_64-linux-gnu/liblzma.a",
-    ],
-    hdrs = glob([
-        "usr/include/lzma/*.h",
-        "usr/include/*.h",
-    ]),
-    strip_include_prefix = "usr/include",
-    visibility = ["//visibility:public"],
-)
-""",
-    sha256 = "6fa0ad579b78bd41a0133024c34063b140442dd2ad4201fd2bf4c55229e7c13f",
-    urls = ["https://realtimeroboticsgroup.org/build-dependencies/lzma_amd64-2.tar.gz"],
-)
-
-# //debian:lzma_arm64
-http_archive(
-    name = "lzma_arm64",
-    build_file_content = """
-cc_library(
-    name = "lib",
-    srcs = [
-        "usr/lib/aarch64-linux-gnu/liblzma.a",
-    ],
-    hdrs = glob([
-        "usr/include/lzma/*.h",
-        "usr/include/*.h",
-    ]),
-    strip_include_prefix = "usr/include",
-    visibility = ["//visibility:public"],
-)
-""",
-    sha256 = "b4ab9fd7cf3bfdb9e3fc67ac4a3c84db7f7e3c48431ccfc6e6e210f5829d17c9",
-    urls = ["https://realtimeroboticsgroup.org/build-dependencies/lzma_arm64-2.tar.gz"],
 )
 
 local_repository(

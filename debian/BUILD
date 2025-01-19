@@ -11,10 +11,6 @@ load(
     clang_amd64_debs = "files",
 )
 load(
-    ":gstreamer_amd64.bzl",
-    gstreamer_amd64_debs = "files",
-)
-load(
     ":gtk_runtime.bzl",
     gtk_runtime_debs = "files",
 )
@@ -31,20 +27,8 @@ load(
     libusb_debs = "files",
 )
 load(
-    ":lzma_amd64.bzl",
-    lzma_amd64_debs = "files",
-)
-load(
-    ":lzma_arm64.bzl",
-    lzma_arm64_debs = "files",
-)
-load(
     ":mingw_compiler.bzl",
     mingw_compiler_debs = "files",
-)
-load(
-    ":opencv_amd64.bzl",
-    opencv_amd64_debs = "files",
 )
 load(":packages.bzl", "download_packages", "generate_deb_tarball")
 load(
@@ -327,82 +311,6 @@ generate_deb_tarball(
 generate_deb_tarball(
     name = "gtk_runtime",
     files = gtk_runtime_debs,
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-download_packages(
-    name = "download_opencv",
-    packages = [
-        "libopencv-calib3d-dev",
-        "libopencv-calib3d4.5",
-        "libopencv-contrib-dev",
-        "libopencv-contrib4.5",
-        "libopencv-core-dev",
-        "libopencv-core4.5",
-        "libopencv-dev",
-        "libopencv-features2d-dev",
-        "libopencv-features2d4.5",
-        "libopencv-flann-dev",
-        "libopencv-flann4.5",
-        "libopencv-highgui-dev",
-        "libopencv-highgui4.5",
-        "libopencv-imgcodecs-dev",
-        "libopencv-imgcodecs4.5",
-        "libopencv-imgproc-dev",
-        "libopencv-imgproc4.5",
-        "libopencv-ml-dev",
-        "libopencv-ml4.5",
-        "libopencv-objdetect-dev",
-        "libopencv-objdetect4.5",
-        "libopencv-photo-dev",
-        "libopencv-photo4.5",
-        "libopencv-shape-dev",
-        "libopencv-shape4.5",
-        "libopencv-stitching-dev",
-        "libopencv-stitching4.5",
-        "libopencv-superres-dev",
-        "libopencv-superres4.5",
-        "libopencv-video-dev",
-        "libopencv-video4.5",
-        "libopencv-videoio-dev",
-        "libopencv-videoio4.5",
-        "libopencv-videostab-dev",
-        "libopencv-videostab4.5",
-        "libopencv-viz-dev",
-        "libopencv-viz4.5",
-    ],
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-generate_deb_tarball(
-    name = "opencv_amd64",
-    files = opencv_amd64_debs,
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-generate_deb_tarball(
-    name = "gstreamer_amd64",
-    files = gstreamer_amd64_debs,
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-download_packages(
-    name = "download_lzma",
-    packages = [
-        "liblzma-dev",
-    ],
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-generate_deb_tarball(
-    name = "lzma_amd64",
-    files = lzma_amd64_debs,
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-generate_deb_tarball(
-    name = "lzma_arm64",
-    files = lzma_arm64_debs,
     target_compatible_with = ["@platforms//os:linux"],
 )
 

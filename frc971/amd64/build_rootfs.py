@@ -137,11 +137,16 @@ def main():
                 "libopencv-videoio406",
                 "libopencv-videostab406",
                 "libopencv-viz406",
+                "libopencv-dev",
+                "gstreamer1.0-dev",
+                "libgl1-mesa-dev",
                 "libv4l-dev",
                 "libc6-dev",
                 "libstdc++-12-dev",
                 "nvidia-cuda-dev",
                 "nvidia-cuda-toolkit",
+                "libgstreamer-plugins-base1.0-dev",
+                "libgstreamer-plugins-bad1.0-dev",
             ])
 
     target_mkdir("root.root", "755", "usr/lib/cuda/bin")
@@ -156,25 +161,29 @@ def main():
         f"{os.getcwd()}/%Y-%m-%d-bookworm-amd64-nvidia-rootfs.tar")
     print(tarball)
 
-    subprocess.run([
-        "sudo",
-        "tar",
-        "--exclude=./usr/share/ca-certificates",
-        "--exclude=./usr/src",
-        "--exclude=./usr/lib/mesa-diverted",
-        "--exclude=./usr/bin/X11",
-        "--exclude=./usr/lib/systemd/system/system-systemd*cryptsetup.slice",
-        "--exclude=./dev",
-        "--exclude=./usr/include/cub",
-        "--exclude=./usr/include/nv",
-        "--exclude=./usr/include/thrust",
-        "--exclude=./usr/include/cuda",
-        "-cf",
-        tarball,
-        ".",
-    ],
-                   cwd=ROOTFS_FOLDER,
-                   check=True)
+    subprocess.run(
+        [
+            "sudo",
+            "tar",
+            "--exclude=./usr/share/ca-certificates",
+            "--exclude=./usr/src",
+            # This is a recursive symlink.  Thanks NVIDIA.  Ignore it to keep Bazel happy.
+            "--exclude=./usr/lib/mesa-diverted/libGL.so-master",
+            "--exclude=./usr/bin/X11",
+            # Stupid nonprinting characters that Bazel is unhappy with.  These weren't useful anyways.
+            "--exclude=./usr/lib/systemd/system/system-systemd*cryptsetup.slice",
+            "--exclude=./lib/systemd/system/system-systemd*cryptsetup.slice",
+            "--exclude=./dev",
+            "--exclude=./usr/include/cub",
+            "--exclude=./usr/include/nv",
+            "--exclude=./usr/include/thrust",
+            "--exclude=./usr/include/cuda",
+            "-cf",
+            tarball,
+            ".",
+        ],
+        cwd=ROOTFS_FOLDER,
+        check=True)
 
     subprocess.run(["sha256sum", tarball], check=True)
 
