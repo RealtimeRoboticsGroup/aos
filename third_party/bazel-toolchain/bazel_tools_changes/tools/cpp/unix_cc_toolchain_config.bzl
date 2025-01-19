@@ -712,6 +712,10 @@ def _impl(ctx):
                         flags = ["-isystem", "%{system_include_paths}"],
                         iterate_over = "system_include_paths",
                     ),
+                    # Add the sysroot flags after -iquotes
+                    flag_group(
+                        flags = ctx.attr.sysroot_include_flags,
+                    ),
                 ],
             ),
         ],
@@ -1148,10 +1152,11 @@ def _impl(ctx):
     if ctx.attr.cpu == "aarch64":
         cuda_flags += [
             "--cuda-gpu-arch=sm_87",
-            "--cuda-path=external/arm64_debian_sysroot/usr/local/cuda-11.8/",
-            "--ptxas-path=external/arm64_debian_sysroot/usr/local/cuda-11.8/bin/ptxas",
-            "-D__CUDACC_VER_MAJOR__=11",
-            "-D__CUDACC_VER_MINOR__=8",
+            "--cuda-path=external/arm64_debian_sysroot/usr/local/cuda-12.6/",
+            "--ptxas-path=external/arm64_debian_sysroot/usr/local/cuda-12.6/bin/ptxas",
+            "-D__CUDACC_VER_MAJOR__=12",
+            "-D__CUDACC_VER_MINOR__=6",
+            "-Wno-unknown-cuda-version",
         ]
         pass
     elif ctx.attr.cpu == "k8":
@@ -1368,6 +1373,7 @@ cc_toolchain_config = rule(
         "supports_start_end_lib": attr.bool(),
         "builtin_sysroot": attr.string(),
         "cuda_flags": attr.string_list(),
+        "sysroot_include_flags": attr.string_list(),
     },
     provides = [CcToolchainConfigInfo],
 )

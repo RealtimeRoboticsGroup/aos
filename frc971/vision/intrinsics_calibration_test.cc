@@ -147,10 +147,16 @@ void RunIntrinsicFromPoints(std::string calib_filename,
             std::vector<cv::Point2f> corner_list;
 
             cv::Mat point_viz = cv::Mat::zeros(image_size, CV_8UC3);
-            for (size_t i = 0; i < board->chessboardCorners.size(); i++) {
+            auto chessboard_corners =
+#if CV_VERSION_MINOR >= 9
+                board->getChessboardCorners();
+#else
+                board->chessboardCorners;
+#endif
+            for (size_t i = 0; i < chessboard_corners.size(); i++) {
               // Transform the ith corner into its new point location
               Eigen::Vector3f point_eigen;
-              cv::cv2eigen(cv::Mat(board->chessboardCorners[i]), point_eigen);
+              cv::cv2eigen(cv::Mat(chessboard_corners[i]), point_eigen);
               Eigen::Vector3f new_point =
                   (H_c_2 * Eigen::Translation3f(point_eigen)).translation();
               cv::Mat new_point_cv;
