@@ -46,15 +46,15 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = select({
         "//tools/platforms/hardware:roborio": [
-          "@ctre_phoenix6_api_cpp_headers//:api-cpp",
-          "@ctre_phoenix6_api_cpp_athena//:api-cpp",
-          "@ctre_phoenix6_tools_athena//:tools",
-          "@ctre_phoenix6_tools_headers//:tools",
-          "//third_party:wpilib"
+            "@ctre_phoenix6_api_cpp_headers//:api-cpp",
+            "@ctre_phoenix6_api_cpp_athena//:api-cpp",
+            "@ctre_phoenix6_tools_athena//:tools",
+            "@ctre_phoenix6_tools_headers//:tools",
+            "//third_party:wpilib",
         ],
         "@platforms//cpu:arm64": [
-          "@ctre_phoenix6_arm64//:headers",
-          "@ctre_phoenix6_arm64//:shared_libraries_lib",
+            "@ctre_phoenix6_arm64//:headers",
+            "@ctre_phoenix6_arm64//:shared_libraries_lib",
         ],
         "//conditions:default": [":unavailable"],
     }),
@@ -64,7 +64,7 @@ cc_library(
     name = "opencv",
     visibility = ["//visibility:public"],
     deps = select({
-        "//tools:cpu_k8": ["@opencv_k8//:opencv"],
+        "//tools:cpu_k8": ["@amd64_debian_sysroot//:opencv4"],
         "//tools:cpu_arm64": ["@arm64_debian_sysroot//:opencv4"],
         "//conditions:default": [":unavailable"],
     }),
@@ -74,7 +74,11 @@ cc_library(
     name = "gstreamer",
     visibility = ["//visibility:public"],
     deps = select({
-        "//tools:cpu_k8": ["@gstreamer_k8//:gstreamer"],
+        "//tools:cpu_k8": [
+            "@amd64_debian_sysroot//:gstreamer-1.0",
+            "@amd64_debian_sysroot//:gstreamer-app-1.0",
+            "@amd64_debian_sysroot//:gstreamer-webrtc-1.0",
+        ],
         "//tools:cpu_arm64": [
             "@arm64_debian_sysroot//:gstreamer-1.0",
             "@arm64_debian_sysroot//:gstreamer-app-1.0",
@@ -120,8 +124,8 @@ cc_library(
     name = "lzma",
     visibility = ["//visibility:public"],
     deps = select({
-        "//tools:cpu_k8": ["@lzma_amd64//:lib"],
-        "//tools:cpu_arm64": ["@lzma_arm64//:lib"],
+        "//tools:cpu_k8": ["@amd64_debian_sysroot//:liblzma"],
+        "//tools:cpu_arm64": ["@arm64_debian_sysroot//:liblzma"],
         "//conditions:default": [":unavailable"],
     }),
 )
@@ -131,17 +135,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = select({
         "//tools:cpu_k8": ["@amd64_debian_sysroot//:cudart"],
-        "//tools:cpu_arm64": ["@arm64_debian_sysroot//:cudart"],
-        "//conditions:default": [":unavailable"],
-    }),
-)
-
-cc_library(
-    name = "nppi",
-    visibility = ["//visibility:public"],
-    deps = select({
-        "//tools:cpu_k8": ["@amd64_debian_sysroot//:nppi"],
-        "//tools:cpu_arm64": ["@arm64_debian_sysroot//:nppi"],
+        "//tools:cpu_arm64": ["@arm64_debian_sysroot//:cudart-12.6"],
         "//conditions:default": [":unavailable"],
     }),
 )

@@ -8,6 +8,9 @@
 #include "Eigen/Geometry"
 #include "absl/types/span.h"
 #include "external/com_github_foxglove_schemas/ImageAnnotations_generated.h"
+#if CV_VERSION_MINOR >= 9
+#include "opencv2/aruco/aruco_calib.hpp"
+#endif
 #include "opencv2/aruco/charuco.hpp"
 #include "opencv2/calib3d.hpp"
 
