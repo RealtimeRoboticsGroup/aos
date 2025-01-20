@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "3b3e1157_95543e59",
+        "filename": "frc971/amd64/build_rootfs.py",
+        "patchSetId": 4
+      },
+      "lineNbr": 170,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-01-20T02:19:27Z",
+      "side": 1,
+      "message": "You\u0027re welcome :D",
+      "range": {
+        "startLine": 170,
+        "startChar": 51,
+        "endLine": 170,
+        "endChar": 57
+      },
+      "revId": "fb4a99078a4d277a1896c99ec9f89c0545b46de2",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "123e7837_b05a03a3",
+        "filename": "third_party/bazel-toolchain/toolchain/cc_toolchain_config.bzl",
+        "patchSetId": 4
+      },
+      "lineNbr": 104,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-01-20T02:19:27Z",
+      "side": 1,
+      "message": "delete?",
+      "range": {
+        "startLine": 104,
+        "startChar": 12,
+        "endLine": 104,
+        "endChar": 33
+      },
+      "revId": "fb4a99078a4d277a1896c99ec9f89c0545b46de2",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    }
+  ]
+}
