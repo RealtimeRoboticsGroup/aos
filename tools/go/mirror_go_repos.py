@@ -18,7 +18,8 @@ from typing import List, Dict
 # Need a fully qualified import here because @bazel_tools interferes.
 import aos.tools.go.mirror_lib
 
-GO_DEPS_WWWW_DIR = "/var/www/html/files/frc971/Build-Dependencies/go_deps"
+# TODO(austin): Update this to work with gsutil and the new S3 bucket.
+GO_DEPS_WWWW_DIR = "/var/www/html/files/frc/Build-Dependencies/go_deps"
 
 
 def compute_sha256(filepath: str) -> str:
@@ -122,7 +123,7 @@ def main(argv):
         "--ssh_host",
         type=str,
         help=("The SSH host to copy the downloaded Go repositories to. This "
-              "should be software.971spartans.net where all the "
+              "should be realtimeroboticsgroup.org where all the "
               "Build-Dependencies files live. Only specify this if you have "
               "access to the server."))
     parser.add_argument("--go_deps_bzl", type=str, default="go_deps.bzl")

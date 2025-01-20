@@ -1,4 +1,4 @@
-FRC971's Python setup
+AOS's Python setup
 ================================================================================
 
 How to depend on pip packages
@@ -45,7 +45,7 @@ How to add new pip packages
 How to make buildkite happy with new pip packages
 --------------------------------------------------------------------------------
 In order for buildkite to be able to use new pip packages, they have to be
-mirrored on frc971 infrastructure.
+mirrored on aos infrastructure.
 
 1. Follow the above procedure for adding new pip packages if not already done.
 2. Run the mirroring script.
@@ -53,4 +53,6 @@ mirrored on frc971 infrastructure.
         bazel run //tools/python:mirror_pip_packages -- --ssh_host <software>
 
     where `<software>` is the `ssh(1)` target for reaching the server that hosts
-    the FRC971 mirror.
+    the AOS mirror.
+
+    TODO(austin): Update this for our new GCS bucket solution.

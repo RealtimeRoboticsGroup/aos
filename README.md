@@ -73,8 +73,8 @@ There is also a document which goes over the basics of using both gerrit and git
 
 ### 3. The codelab
 
-Once you have an understanding of C++ and have gone through using all the steps needed to access the code you can start on the codelab, which is a directory living in `frc971/codelab/`. Which goes over a lot of the important introductory information that you need to know to get started when programming the robot.
-You can read the [README](./frc971/codelab/README.md), which gives you introduces you to the codelab as well as the concepts you need to understand first.
+Once you have an understanding of C++ and have gone through using all the steps needed to access the code you can start on the codelab, which is a directory living in `frc/codelab/`. Which goes over a lot of the important introductory information that you need to know to get started when programming the robot.
+You can read the [README](./frc/codelab/README.md), which gives you introduces you to the codelab as well as the concepts you need to understand first.
 
 ## Code reviews
 We want all code to at least have a second person look it over before it gets merged into the `main` branch. Gerrit has [extensive documentation on starting reviews](https://gerrit-review.googlesource.com/Documentation/user-upload.html).  There is also a good [intro User Guide](https://gerrit-review.googlesource.com/Documentation/intro-user.html) and an [intro to working with Gerrit](https://gerrit-review.googlesource.com/Documentation/intro-gerrit-walkthrough.html) and [Gerrit workflows](https://docs.google.com/presentation/d/1C73UgQdzZDw0gzpaEqIC6SPujZJhqamyqO1XOHjH-uk)
@@ -107,25 +107,25 @@ apt install clang-format
 
 ### Creating ssh aliases
 
-It is also handy to alias logins to the raspberry pi's by adding lines like this to your ~/.ssh/config file:
+It is also handy to alias logins to the orins by adding lines like this to your ~/.ssh/config file:
 ```console
-Host pi-7971-2
+Host orin-4646-2
     User pi
     ForwardAgent yes
-    HostName 10.79.71.102
+    HostName 10.46.46.102
     StrictHostKeyChecking no
 ```
 or, for the roborio:
 ```
-Host roborio-971
+Host roborio-4646
     User admin
-    HostName 10.9.71.2
+    HostName 10.46.46.2
     StrictHostKeyChecking no
 ```
 This allows you to use the alias to `ping`, `ssh`, or run commands like:
 ```
-# Download code to robot #7971's raspberry pi #2
-bazel run --config=armv7 -c opt //y2020:download_stripped -- pi-7971-2
+# Download code to robot #4646's raspberry pi #2
+bazel run --config=arm64 -c opt //y2024:download_stripped -- orin-4646-1
 ```
 
 ## Other Information

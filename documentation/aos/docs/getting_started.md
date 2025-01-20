@@ -8,7 +8,8 @@ essentially from scratch.
 ## Building the Code
 
 For purposes of this exercise, we will assume that you have cloned the
-[971-Robot-Code][github] repository. If you have set up AOS as an external repository in
+[aos][https://github.com/RealtimeRoboticsGroup/aos] repository. If you
+have set up AOS as an external repository in
 your own [Bazel](https://bazel.build/) workspace, then the main differences
 should just be that you add Bazel dependencies with an `@aos`.
 

@@ -1,0 +1,78 @@
+include "frc/math/matrix.fbs";
+
+namespace frc.control_loops.fbs;
+
+// This file contains tables that represent the constants required
+// to initialize a control loop.
+// See frc/control_loops/state_feedback_loop.h
+
+table StateFeedbackPlantCoefficients {
+  a:frc.fbs.Matrix (id: 0);
+  b:frc.fbs.Matrix (id: 1);
+  c:frc.fbs.Matrix (id: 2);
+  d:frc.fbs.Matrix (id: 3);
+  u_min:frc.fbs.Matrix (id: 4);
+  u_max:frc.fbs.Matrix (id: 5);
+  u_limit_coefficient:frc.fbs.Matrix (id: 6);
+  u_limit_constant:frc.fbs.Matrix (id: 7);
+  dt:uint64 (id: 8);
+  delayed_u:uint64 (id: 9);
+  wrap_point:frc.fbs.Matrix (id: 10);
+}
+
+table StateFeedbackHybridPlantCoefficients {
+  a_continuous:frc.fbs.Matrix (id: 0);
+  b_continuous:frc.fbs.Matrix (id: 1);
+  c:frc.fbs.Matrix (id: 2);
+  d:frc.fbs.Matrix (id: 3);
+  u_min:frc.fbs.Matrix (id: 4);
+  u_max:frc.fbs.Matrix (id: 5);
+  u_limit_coefficient:frc.fbs.Matrix (id: 6);
+  u_limit_constant:frc.fbs.Matrix (id: 7);
+  delayed_u:uint64 (id: 8);
+  wrap_point:frc.fbs.Matrix (id: 9);
+}
+
+table StateFeedbackControllerCoefficients {
+  k:frc.fbs.Matrix (id: 0);
+  kff:frc.fbs.Matrix (id: 1);
+}
+
+table StateFeedbackObserverCoefficients {
+  kalman_gain:frc.fbs.Matrix (id: 0);
+  q:frc.fbs.Matrix (id: 1);
+  r:frc.fbs.Matrix (id: 2);
+  delayed_u:uint64 (id: 3);
+}
+
+table HybridKalmanCoefficients {
+  q_continuous:frc.fbs.Matrix (id: 0);
+  r_continuous:frc.fbs.Matrix (id: 1);
+  p_steady_state:frc.fbs.Matrix (id: 2);
+  delayed_u:uint64 (id: 3);
+}
+
+// The tables below represent a single index within a
+// *Loop object. A vector of these will be necessary to initialize
+// the loop (the vector will be of length one except when using a
+// gain-scheduled controller).
+table StateFeedbackLoopCoefficients {
+  plant:StateFeedbackPlantCoefficients (id: 0);
+  controller:StateFeedbackControllerCoefficients (id: 1);
+  observer:StateFeedbackObserverCoefficients (id: 2);
+}
+
+table StateFeedbackHybridLoopCoefficients {
+  plant:StateFeedbackHybridPlantCoefficients (id: 0);
+  controller:StateFeedbackControllerCoefficients (id: 1);
+  observer:HybridKalmanCoefficients (id: 2);
+}
+
+// Helpers for when we need to be able to package just the loop coefficients.
+table StateFeedbackLoopCoefficientsVector {
+  loops:[StateFeedbackLoopCoefficients] (id: 0);
+}
+
+table StateFeedbackHybridLoopCoefficientsVector {
+  loops:[StateFeedbackHybridLoopCoefficients] (id: 0);
+}

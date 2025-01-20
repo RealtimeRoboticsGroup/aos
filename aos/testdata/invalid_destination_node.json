@@ -17,11 +17,11 @@
   "nodes": [
     {
       "name": "roborio",
-      "hostname": "roboRIO-971.local"
+      "hostname": "roboRIO-4646.local"
     },
     {
       "name": "dest",
-      "hostname": "dest-971.local"
+      "hostname": "dest-4646.local"
     }
   ]
 }

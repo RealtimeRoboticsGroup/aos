@@ -1,0 +1,38 @@
+{
+  "channels": [
+    {
+      "name": "/aos",
+      "type": "aos.timing.Report"
+    },
+    {
+      "name": "/aos",
+      "type": "aos.logging.LogMessageFbs",
+      "frequency": 400
+    },
+    {
+      "name": "/imu",
+      "type": "frc.imu.DualImu",
+      "frequency": 2000
+    },
+    {
+      "name": "/can",
+      "type": "frc.can_logger.CanFrame",
+      "frequency": 200
+    },
+    {
+      "name": "/localizer",
+      "type": "frc.IMUValuesBatch",
+      "frequency": 1100
+    },
+    {
+      "name": "/imu",
+      "type": "frc.imu.CanTranslatorStatus",
+      "frequency": 100
+    },
+    {
+      "name": "/imu",
+      "type": "frc.imu.DualImuBlenderStatus",
+      "frequency": 2000
+    },
+  ]
+}

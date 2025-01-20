@@ -94,7 +94,7 @@ Alliance.
    characters and numbers.
 
 Now that you have your API key, create a config file called
-`scouting_config.json` in the root of the 971-Robot-Code repo. It should have
+`scouting_config.json` in the root of the aos repo. It should have
 the following contents:
 ```json
 {

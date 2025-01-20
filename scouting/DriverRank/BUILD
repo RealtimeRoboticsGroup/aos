@@ -38,7 +38,7 @@ pkg_deb(
     name = "aos-scouting-julia",
     architecture = "amd64",
     data = ":julia_files",
-    description = "The Julia files for the FRC971 scouting web server.",
+    description = "The Julia files for the scouting web server.",
     maintainer = "gerrit@realtimeroboticsgroup.org",
     package = "aos-scouting-julia",
     postinst = "postinst",

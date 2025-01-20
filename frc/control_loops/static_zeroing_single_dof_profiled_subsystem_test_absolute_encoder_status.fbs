@@ -1,0 +1,10 @@
+include "frc/control_loops/control_loops.fbs";
+include "frc/control_loops/profiled_subsystem.fbs";
+
+namespace frc.control_loops.zeroing.testing;
+
+table SubsystemAbsoluteEncoderProfiledJointStatus {
+  status:frc.control_loops.AbsoluteEncoderProfiledJointStatus (id: 0);
+}
+
+root_type SubsystemAbsoluteEncoderProfiledJointStatus;

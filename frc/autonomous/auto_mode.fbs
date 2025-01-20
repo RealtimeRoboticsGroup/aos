@@ -1,0 +1,8 @@
+namespace frc.autonomous;
+
+table AutonomousMode {
+  // Mode read from the mode setting sensors.
+  mode:int (id: 0);
+}
+
+root_type AutonomousMode;

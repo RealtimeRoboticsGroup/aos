@@ -2,7 +2,7 @@
 
 #include "gtest/gtest.h"
 
-namespace frc971::teensy::testing {
+namespace frc::teensy::testing {
 
 TEST(QueueTest, Basic) {
   Queue queue(64);
@@ -38,4 +38,4 @@ TEST(QueueTest, Fill) {
   ASSERT_TRUE(queue.empty());
 }
 
-}  // namespace frc971::teensy::testing
+}  // namespace frc::teensy::testing

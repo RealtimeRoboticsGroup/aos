@@ -1,0 +1,13 @@
+{
+  "channels":
+  [
+    {
+      "name": "/test",
+      "type": "frc.wpilib.LoopOutputHandlerTestOutput"
+    }
+  ],
+  "imports":
+  [
+    "../../aos/events/aos.json"
+  ]
+}

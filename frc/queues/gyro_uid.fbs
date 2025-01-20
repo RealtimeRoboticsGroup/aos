@@ -1,0 +1,8 @@
+namespace frc.sensors;
+
+// Published on "/drivetrain"
+table Uid {
+  uid:uint (id: 0);
+}
+
+root_type Uid;

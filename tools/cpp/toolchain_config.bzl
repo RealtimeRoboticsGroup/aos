@@ -849,7 +849,7 @@ def _impl(ctx):
                                 "-lc",
                                 "-lsupc++",
                                 "-Wl,--end-group",
-                                "-Tfrc971/imu_fdcan/Dual_IMU/STM32G473RETX_FLASH.ld",
+                                "-Tfrc/imu_fdcan/Dual_IMU/STM32G473RETX_FLASH.ld",
                             ],
                         ),
                     ],

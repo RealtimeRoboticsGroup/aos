@@ -4,7 +4,7 @@
 
 #include "motors/core/time.h"
 
-namespace frc971::teensy {
+namespace frc::teensy {
 
 Spi::~Spi() {
   DisableTransmitInterrupt();
@@ -135,4 +135,4 @@ bool InterruptBufferedSpi::ReadFrame(const DisableInterrupts &) {
   return true;
 }
 
-}  // namespace frc971::teensy
+}  // namespace frc::teensy

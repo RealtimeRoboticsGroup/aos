@@ -163,7 +163,7 @@ TEST_P(MessageBridgeParameterizedTest, PingPong) {
           builder.fbb()->CreateString(long_data);
           examples::Ping::Builder ping_builder =
               builder.MakeBuilder<examples::Ping>();
-          ping_builder.add_value(ping_count + 971);
+          ping_builder.add_value(ping_count + 4646);
           EXPECT_EQ(builder.Send(ping_builder.Finish()), RawSender::Error::kOk);
           ++ping_count;
         }

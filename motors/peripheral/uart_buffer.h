@@ -6,7 +6,7 @@
 
 #include "absl/types/span.h"
 
-namespace frc971::teensy {
+namespace frc::teensy {
 
 // Manages a circular buffer of data to send out.
 template <int kSize>
@@ -89,6 +89,6 @@ void UartBuffer<kSize>::PushSingle(char c) {
   ++size_;
 }
 
-}  // namespace frc971::teensy
+}  // namespace frc::teensy
 
 #endif  // MOTORS_PERIPHERAL_UART_BUFFER_H_

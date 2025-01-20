@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package frc971;
+package frc;
 
 import "google/protobuf/empty.proto";
 

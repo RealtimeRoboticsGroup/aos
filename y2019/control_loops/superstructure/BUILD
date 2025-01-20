@@ -9,7 +9,7 @@ static_flatbuffer(
     ],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
-        "//frc971/control_loops:control_loops_fbs",
-        "//frc971/control_loops:profiled_subsystem_fbs",
+        "//frc/control_loops:control_loops_fbs",
+        "//frc/control_loops:profiled_subsystem_fbs",
     ],
 )

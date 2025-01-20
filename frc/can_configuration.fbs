@@ -1,0 +1,10 @@
+namespace frc;
+
+// Message which triggers wpilib_interface to print out the current
+// configuration, and optionally re-apply it.
+table CANConfiguration {
+  // If true, re-apply the configs to see if that fixes the TalonFX Motor.
+  reapply:bool = false (id: 0);
+}
+
+root_type CANConfiguration;

@@ -57,16 +57,16 @@ void MakeAndTestApplication(int value, F constructor) {
 }  // namespace
 
 TEST(EventLoopRustTest, TestApplicationOnce) {
-  MakeAndTestApplication(971, &make_test_application);
+  MakeAndTestApplication(649, &make_test_application);
 }
 
 TEST(EventLoopRustTest, TestApplicationTwice) {
-  MakeAndTestApplication(971, &make_test_application);
+  MakeAndTestApplication(649, &make_test_application);
   MakeAndTestApplication(254, &make_test_application);
 }
 
 TEST(EventLoopRustTest, TestTypedApplicationTwice) {
-  MakeAndTestApplication(971, &make_typed_test_application);
+  MakeAndTestApplication(649, &make_typed_test_application);
   MakeAndTestApplication(254, &make_typed_test_application);
 }
 

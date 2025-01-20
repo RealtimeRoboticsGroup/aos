@@ -198,7 +198,7 @@ object->set_scalar(123);
   CHECK(sub_string->emplace_back('D'));
 }
 {
-  object->set_substruct({971, 254});
+  object->set_substruct({1678, 254});
 }
 {
   auto subtable = object->add_subtable();
@@ -208,7 +208,7 @@ object->set_scalar(123);
   auto vector = object->add_vector_of_structs();
   CHECK(vector->emplace_back({48, 67}));
   CHECK(vector->emplace_back({118, 148}));
-  CHECK(vector->emplace_back({971, 973}));
+  CHECK(vector->emplace_back({1678, 973}));
   // Max vector size is three; this should fail.
   CHECK(!vector->emplace_back({1114, 2056}));
 }
@@ -240,7 +240,7 @@ This will then output:
   "D"
  ],
  "substruct": {
-  "x": 971.0,
+  "x": 1678.0,
   "y": 254.0
  },
  "subtable": {
@@ -256,7 +256,7 @@ This will then output:
    "y": 148.0
   },
   {
-   "x": 971.0,
+   "x": 1678.0,
    "y": 973.0
   }
  ],

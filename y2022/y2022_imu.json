@@ -69,7 +69,7 @@
     },
     {
       "name": "/localizer",
-      "type": "frc971.controls.LocalizerOutput",
+      "type": "frc.controls.LocalizerOutput",
       "source_node": "imu",
       "frequency": 400,
       "max_size": 200,
@@ -90,7 +90,7 @@
       ]
     },
     {
-      "name": "/imu/aos/remote_timestamps/roborio/localizer/frc971-controls-LocalizerOutput",
+      "name": "/imu/aos/remote_timestamps/roborio/localizer/frc-controls-LocalizerOutput",
       "type": "aos.message_bridge.RemoteMessage",
       "source_node": "imu",
       "logger": "NOT_LOGGED",
@@ -100,7 +100,7 @@
     },
     {
       "name": "/localizer",
-      "type": "frc971.IMUValuesBatch",
+      "type": "frc.IMUValuesBatch",
       "source_node": "imu",
       "frequency": 2200,
       "max_size": 1600,
@@ -175,7 +175,7 @@
         "pi-8971-5",
         "pi-9971-5"
       ],
-      "port": 9971
+      "port": 4646
     },
     {
       "name": "roborio"

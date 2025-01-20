@@ -121,7 +121,7 @@ TEST_F(JsonToFlatbufferTest, Structs) {
                   "\"foo_byte\": 2 } } }"));
   EXPECT_TRUE(JsonAndBack(
       "{ \"foo_struct_scalars\": { \"foo_float\": 1.234, \"foo_double\": "
-      "4.567, \"foo_int32\": -971, \"foo_uint32\": 4294967294, "
+      "4.567, \"foo_int32\": -4646, \"foo_uint32\": 4294967294, "
       "\"foo_int64\": -1030, \"foo_uint64\": 18446744073709551614 } }",
       TestReflection::kNo));
   // Confirm that we parse integers into floating point fields correctly.
@@ -132,7 +132,7 @@ TEST_F(JsonToFlatbufferTest, Structs) {
       TestReflection::kNo));
   EXPECT_TRUE(JsonAndBack(
       "{ \"vector_foo_struct_scalars\": [ { \"foo_float\": 1.234, "
-      "\"foo_double\": 4.567, \"foo_int32\": -971, "
+      "\"foo_double\": 4.567, \"foo_int32\": -4646, "
       "\"foo_uint32\": 4294967294, \"foo_int64\": -1030, \"foo_uint64\": "
       "18446744073709551614 }, { \"foo_float\": 2, \"foo_double\": "
       "4.1, \"foo_int32\": 10, \"foo_uint32\": 13, "

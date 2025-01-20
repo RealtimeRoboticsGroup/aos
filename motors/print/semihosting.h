@@ -5,7 +5,7 @@
 
 #include "motors/print/print.h"
 
-namespace frc971::motors {
+namespace frc::motors {
 
 // A printing implementation which uses the ARM semihosting interface. This
 // requries an attached debugger with software support.
@@ -30,6 +30,6 @@ class SemihostingPrinting final : public PrintingImplementation {
   // file if the name is filled out in the parameters.
 };
 
-}  // namespace frc971::motors
+}  // namespace frc::motors
 
 #endif  // MOTORS_PRINT_SEMIHOSTING_H_

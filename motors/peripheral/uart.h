@@ -8,7 +8,7 @@
 #include "motors/peripheral/uart_buffer.h"
 #include "motors/util.h"
 
-namespace frc971::teensy {
+namespace frc::teensy {
 
 // Simple synchronous interface to a UART.
 class Uart {
@@ -120,6 +120,6 @@ class InterruptBufferedUart {
   UartBuffer<1024> transmit_buffer_, receive_buffer_;
 };
 
-}  // namespace frc971::teensy
+}  // namespace frc::teensy
 
 #endif  // MOTORS_PERIPHERAL_UART_H_

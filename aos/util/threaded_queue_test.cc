@@ -98,7 +98,7 @@ TEST(ThreadedQueueTest, ExitEarly) {
   for (int ii = 0; ii < 10000; ++ii) {
     ThreadedQueue<int, int> queue(
         [](int) {
-          return ThreadedQueue<int, int>::PushResult{971, false, false};
+          return ThreadedQueue<int, int>::PushResult{1323, false, false};
         },
         0);
     queue.StopPushing();

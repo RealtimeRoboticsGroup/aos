@@ -4,7 +4,7 @@
 
 #include "motors/core/kinetis.h"
 
-namespace frc971::motors {
+namespace frc::motors {
 namespace {
 
 ::std::atomic<teensy::AcmTty *> global_stdout{nullptr};
@@ -47,7 +47,7 @@ DedicatedUsbPrinting::DedicatedUsbPrinting()
     : usb_device_{0, 0x16c0, 0x0490},
       stdout_tty_{&usb_device_},
       debug_tty_{&usb_device_} {
-  usb_device_.SetManufacturer("FRC 971 Spartan Robotics");
+  usb_device_.SetManufacturer("Realtime Robotics Group");
   usb_device_.SetProduct("FET12v2");
   NVIC_SET_SANE_PRIORITY(IRQ_USBOTG, 0x7);
 }
@@ -61,4 +61,4 @@ void DedicatedUsbPrinting::Initialize() {
   global_stdout.store(&stdout_tty_, ::std::memory_order_release);
 }
 
-}  // namespace frc971::motors
+}  // namespace frc::motors

@@ -919,7 +919,7 @@ TEST_F(PartsMergerTest, TwoFileTimestampMerger) {
     MakeLogMessage(e + chrono::milliseconds(1001), 0, 0x006);
     writer0.WriteSizedFlatbuffer(MakeTimestampMessage(
         e + chrono::milliseconds(1001), 0, chrono::seconds(100),
-        e + chrono::nanoseconds(971)));
+        e + chrono::nanoseconds(649)));
     writer1.WriteSizedFlatbuffer(MakeTimestampMessage(
         e + chrono::milliseconds(1001), 0, chrono::seconds(100)));
 
@@ -969,7 +969,7 @@ TEST_F(PartsMergerTest, TwoFileTimestampMerger) {
   EXPECT_EQ(output[1].timestamp.time, e + chrono::milliseconds(101001));
   EXPECT_TRUE(output[1].header->has_monotonic_timestamp_time);
   EXPECT_EQ(output[1].header->monotonic_timestamp_time,
-            monotonic_clock::time_point(std::chrono::nanoseconds(971)));
+            monotonic_clock::time_point(std::chrono::nanoseconds(649)));
 
   EXPECT_EQ(output[2].timestamp.boot, 0u);
   EXPECT_EQ(output[2].timestamp.time, e + chrono::milliseconds(101002));
@@ -1283,7 +1283,7 @@ TEST_F(TimestampMapperTest, MessageWithTimestampTime) {
         MakeLogMessage(e + chrono::milliseconds(1000), 0, 0x005));
     writer1.WriteSizedFlatbuffer(MakeTimestampMessage(
         e + chrono::milliseconds(1000), 0, chrono::seconds(100),
-        e + chrono::nanoseconds(971)));
+        e + chrono::nanoseconds(649)));
 
     writer0.WriteSizedFlatbuffer(
         MakeLogMessage(e + chrono::milliseconds(2000), 0, 0x006));
@@ -1368,7 +1368,7 @@ TEST_F(TimestampMapperTest, MessageWithTimestampTime) {
               e + chrono::seconds(100) + chrono::milliseconds(1000));
     EXPECT_EQ(output1[0].monotonic_timestamp_time.boot, 0u);
     EXPECT_EQ(output1[0].monotonic_timestamp_time.time,
-              e + chrono::nanoseconds(971));
+              e + chrono::nanoseconds(649));
     EXPECT_TRUE(output1[0].data != nullptr);
 
     EXPECT_EQ(output1[1].monotonic_event_time.boot, 0u);

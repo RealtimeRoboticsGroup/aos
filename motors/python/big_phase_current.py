@@ -5,7 +5,7 @@ from __future__ import print_function
 import numpy
 from matplotlib import pylab
 import scipy.integrate
-from frc971.control_loops.python import controls
+from frc.control_loops.python import controls
 import time
 import operator
 

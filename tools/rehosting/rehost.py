@@ -7,7 +7,8 @@ from pathlib import Path
 import os
 import sys
 
-BUILD_DEPENDENCIES_PATH = "/data/files/frc971/Build-Dependencies/"
+# TODO(austin): This doesn't work with the GCS bucket in use now.
+BUILD_DEPENDENCIES_PATH = "/tmp/Build-Dependencies/"
 WWW_GROUP = "www-data"
 
 

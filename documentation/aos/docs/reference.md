@@ -505,7 +505,7 @@ class Ping {
     // Construct the builder for the specific message we are building.
     aos::examples::Ping::Builder ping_builder =
         builder.MakeBuilder<aos::examples::Ping>();
-    ping_builder.add_value(971);
+    ping_builder.add_value(4646);
     // Actually send out the completed message.
     builder.CheckOk(builder.Send(ping_builder.Finish()));
   }
@@ -651,7 +651,7 @@ class Ping {
   void PopulatePing() {
     aos::examples::Ping::Builder ping_builder =
         builder_.MakeBuilder<aos::examples::Ping>();
-    ping_builder.add_value(971);
+    ping_builder.add_value(4646);
     ping_builder.add_send_time(
         event_loop_->monotonic_now().time_since_epoch().count());
     ping_offset_ = ping_builder.Finish();

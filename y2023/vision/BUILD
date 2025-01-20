@@ -1,4 +1,4 @@
-load("//frc971:halide.bzl", "halide_library")
+load("//frc:halide.bzl", "halide_library")
 
 halide_library(
     name = "ToGreyscaleAndDecimateHalide",

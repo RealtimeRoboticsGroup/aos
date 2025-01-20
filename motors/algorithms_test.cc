@@ -6,7 +6,7 @@
 
 #include "gtest/gtest.h"
 
-namespace frc971::motors::testing {
+namespace frc::motors::testing {
 
 class BalanceReadingsTest : public ::testing::Test {
  protected:
@@ -95,4 +95,4 @@ TEST_F(BalanceReadingsTest, Basic) {
   CheckReadingsResult({{3424, 5013, 3424}, {2, 2, 2}});
 }
 
-}  // namespace frc971::motors::testing
+}  // namespace frc::motors::testing

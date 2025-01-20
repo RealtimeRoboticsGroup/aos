@@ -7,7 +7,7 @@
 #include "motors/usb/hid.h"
 #include "motors/util.h"
 
-namespace frc971 {
+namespace frc {
 namespace motors {
 
 constexpr int kNumEncoders = 2;
@@ -128,6 +128,6 @@ class DriverStation {
   int MeasurementsToJoystick(MeasurementData bbMeasurement);
 };
 }  // namespace motors
-}  // namespace frc971
+}  // namespace frc
 
 #endif  //  MOTORS_BUTTON_BOARD_H_

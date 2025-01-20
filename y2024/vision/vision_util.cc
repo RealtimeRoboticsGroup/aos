@@ -29,7 +29,7 @@ std::map<std::string, int> CreateOrderingMap(
   return map;
 }
 
-const frc971::vision::calibration::CameraCalibration *FindCameraCalibration(
+const frc::vision::calibration::CameraCalibration *FindCameraCalibration(
     const y2024::Constants &calibration_data, std::string_view node_name,
     int camera_number) {
   CHECK(calibration_data.has_cameras());

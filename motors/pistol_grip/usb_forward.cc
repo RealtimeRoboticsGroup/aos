@@ -107,7 +107,7 @@ void FindEndpoint(libusb_device_handle *handle, uint8_t *endpoint) {
   abort();
 }
 
-constexpr uint16_t port_number() { return 10971; }
+constexpr uint16_t port_number() { return 10973; }
 
 }  // namespace
 

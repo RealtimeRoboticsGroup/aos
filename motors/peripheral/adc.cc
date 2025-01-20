@@ -2,7 +2,7 @@
 
 #include "motors/core/kinetis.h"
 
-namespace frc971::motors {
+namespace frc::motors {
 namespace {
 
 #define ADC_SC2_BASE \
@@ -57,4 +57,4 @@ void AdcInitCommon(AdcChannels adc0_channels, AdcChannels adc1_channels) {
   ADC_INIT_SINGLE(1, (adc1_channels == AdcChannels::kB) ? ADC_CFG2_MUXSEL : 0);
 }
 
-}  // namespace frc971::motors
+}  // namespace frc::motors

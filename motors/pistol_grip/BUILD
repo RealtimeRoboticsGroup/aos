@@ -37,7 +37,7 @@ cc_binary(
     target_compatible_with = ["@platforms//os:none"],
     deps = [
         ":motor_controls",
-        "//frc971/control_loops/drivetrain:haptic_wheel",
+        "//frc/control_loops/drivetrain:haptic_wheel",
         "//motors:motor",
         "//motors:util",
         "//motors/core",

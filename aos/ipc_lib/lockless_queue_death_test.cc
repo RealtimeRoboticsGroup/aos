@@ -151,7 +151,7 @@ TEST(LocklessQueueTest, Death) {
 
           // Send a message to make sure that the queue still works.
           char data[100];
-          size_t s = snprintf(data, sizeof(data), "foobar%d", 971);
+          size_t s = snprintf(data, sizeof(data), "foobar%d", 973);
           ASSERT_EQ(
               sender.Send(data, s + 1, monotonic_clock::min_time,
                           realtime_clock::min_time, monotonic_clock::min_time,

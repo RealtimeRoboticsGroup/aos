@@ -6,7 +6,7 @@
 #include "aos/init.h"
 
 // To run this example, do:
-// bazel run -c opt //frc971/analysis:in_process_plotter_demo
+// bazel run -c opt //frc/analysis:in_process_plotter_demo
 // And then open localhost:8080, select "C++ Plotter" from the drop-down, and
 // then select "TITLE!" or "Trig Functions" from the second drop-down to see
 // each plot.

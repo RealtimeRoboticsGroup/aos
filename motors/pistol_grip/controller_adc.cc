@@ -2,7 +2,7 @@
 
 #include "motors/peripheral/adc.h"
 
-namespace frc971::motors {
+namespace frc::motors {
 
 void AdcInitSmall() {
   AdcInitCommon();
@@ -95,4 +95,4 @@ SmallInitReadings AdcReadSmallInit(const DisableInterrupts &) {
   return r;
 }
 
-}  // namespace frc971::motors
+}  // namespace frc::motors

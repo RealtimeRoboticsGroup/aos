@@ -27,7 +27,7 @@ index 2d577b8..8d721b3 100755
 -            }
 -            throw new Error('Unable to find a free port');
 -        });
-+        // FRC971 hack. Since we're in linux-sandbox, we can use a fixed port.
++        // AOS Bazel hack. Since we're in linux-sandbox, we can use a fixed port.
 +        // The original code has a race condition.
 +        return 6060;
      }
@@ -38,7 +38,7 @@ index 2d577b8..8d721b3 100755
                  }
              });
 +
-+            // FRC971 hack. Since postgres leaves files in /dev/shm, we want to
++            // AOS Bazel hack. Since postgres leaves files in /dev/shm, we want to
 +            // shut it down as gracefully as possible.
 +            process.on('exit', () => {
 +                serverProcess.kill('SIGTERM');

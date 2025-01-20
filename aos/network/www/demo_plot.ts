@@ -1,8 +1,8 @@
 // This file provides a basic demonstration of the plotting functionality.
 // The plotDemo() function provided here is called by
-// //frc971/analysis:plot_index.ts
+// //frc/analysis:plot_index.ts
 // To view the demo plot, run
-// bazel run -c opt //frc971/analysis:live_web_plotter_demo
+// bazel run -c opt //frc/analysis:live_web_plotter_demo
 // And then navigate to
 // http://localhost:8080/?plot=Demo
 // The plot=Demo isn't structly necessary, but ensures that this plot is
@@ -35,7 +35,7 @@ export function plotDemo(conn: Connection, parentDiv: Element): void {
   {
     // Set up a plot that shows some arbitrary PDP current values.
     const pdpValues =
-        aosPlotter.addMessageSource('/aos', 'frc971.PDPValues');
+        aosPlotter.addMessageSource('/aos', 'frc.PDPValues');
     const timingPlot = aosPlotter.addPlot(parentDiv);
     timingPlot.plot.getAxisLabels().setTitle('Current Values');
     timingPlot.plot.getAxisLabels().setYLabel('Current (Amps)');

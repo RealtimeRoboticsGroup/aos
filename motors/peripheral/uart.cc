@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-namespace frc971::teensy {
+namespace frc::teensy {
 
 // Currently hard-coded for 8-bit + no parity + start bit + stop bit.
 void Uart::Initialize(int baud_rate) {
@@ -151,4 +151,4 @@ void InterruptBufferedUart::ReadCharacters(const DisableInterrupts &) {
   }
 }
 
-}  // namespace frc971::teensy
+}  // namespace frc::teensy

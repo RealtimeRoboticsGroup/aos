@@ -34,8 +34,8 @@ constexpr double Values::kDrivetrainEncoderRatio, Values::kShooterEncoderRatio,
     Values::kIntakeEncoderIndexDifference,
     Values::kShoulderEncoderIndexDifference,
     Values::kWristEncoderIndexDifference;
-constexpr ::frc971::constants::Range Values::kIntakeRange,
-    Values::kShoulderRange, Values::kWristRange;
+constexpr ::frc::constants::Range Values::kIntakeRange, Values::kShoulderRange,
+    Values::kWristRange;
 
 namespace {
 const uint16_t kCompTeamNumber = 971;

@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-#include "frc971/zeroing/wrap.h"
+#include "frc/zeroing/wrap.h"
 
 namespace motors::seems_reasonable {
 namespace {
@@ -31,7 +31,7 @@ void Spring::Iterate(bool unload, bool prime, bool fire, bool force_reset,
                      bool force_move, bool encoder_valid, float angle) {
   // Angle is +- M_PI.  So, we need to find the nearest angle to the previous
   // one, and that's our new angle.
-  angle_ = ::frc971::zeroing::Wrap(angle_, angle, kTwoPi);
+  angle_ = ::frc::zeroing::Wrap(angle_, angle, kTwoPi);
 
   switch (state_) {
     case State::UNINITIALIZED:

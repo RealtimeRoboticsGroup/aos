@@ -1,22 +1,22 @@
 [Unit]
-Description=FRC971 Scouting Server
+Description=Scouting Server
 After=systemd-networkd-wait-online.service
 
 [Service]
 User=www-data
 Group=www-data
 Type=simple
-WorkingDirectory=/opt/frc971/scouting_server/scouting/scouting.runfiles/aos
-Environment=RUNFILES_DIR=/opt/frc971/scouting_server/scouting/scouting.runfiles
+WorkingDirectory=/opt/frc/scouting_server/scouting/scouting.runfiles/aos
+Environment=RUNFILES_DIR=/opt/frc/scouting_server/scouting/scouting.runfiles
 # Add "julia" to the PATH.
-Environment=PATH=/opt/frc971/julia_runtime/bin:/usr/local/bin:/usr/bin:/bin
-# Use the Julia cache set up by the frc971-scouting-julia package.
-Environment=JULIA_DEPOT_PATH=/var/frc971/scouting/julia_depot/
-Environment=JULIA_PROJECT=/opt/frc971/julia_manifest
-ExecStart=/opt/frc971/scouting_server/scouting/scouting \
+Environment=PATH=/opt/frc/julia_runtime/bin:/usr/local/bin:/usr/bin:/bin
+# Use the Julia cache set up by the frc-scouting-julia package.
+Environment=JULIA_DEPOT_PATH=/var/frc/scouting/julia_depot/
+Environment=JULIA_PROJECT=/opt/frc/julia_manifest
+ExecStart=/opt/frc/scouting_server/scouting/scouting \
     -port 8080 \
-    -db_config /var/frc971/scouting/db_config.json \
-    -tba_config /var/frc971/scouting/tba_config.json
+    -db_config /var/frc/scouting/db_config.json \
+    -tba_config /var/frc/scouting/tba_config.json
 Restart=always
 
 [Install]

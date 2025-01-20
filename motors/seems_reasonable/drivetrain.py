@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from frc971.control_loops.python import drivetrain
+from frc.control_loops.python import drivetrain
 import sys
 
 import gflags

@@ -203,12 +203,12 @@
     {
       "name": "pi1",
       "hostname": "raspberrypi",
-      "port": 9971
+      "port": 4646
     },
     {
       "name": "pi2",
       "hostname": "raspberrypi2",
-      "port": 9971
+      "port": 4646
     }
   ]
 }

@@ -1,0 +1,66 @@
+{
+  "channels": [
+    {
+      "name": "/drivetrain",
+      "type": "frc.IMUValuesBatch",
+      "max_size": 2000,
+      "frequency": 2000
+    },
+    /* TODO(james): Experiment with size limitations. */
+    {
+      "name": "/drivetrain",
+      "type": "frc.control_loops.drivetrain.fb.Trajectory",
+      "max_size": 600000,
+      "frequency": 4,
+      "num_senders": 2,
+      "read_method": "PIN",
+      "num_readers": 6
+    },
+    {
+      "name": "/drivetrain",
+      "type": "frc.control_loops.drivetrain.SplineGoal",
+      "frequency": 10
+    },
+    {
+      "name": "/drivetrain",
+      "type": "frc.sensors.GyroReading",
+      "frequency": 200
+    },
+    {
+      "name": "/drivetrain",
+      "type": "frc.sensors.Uid",
+      "frequency": 200
+    },
+    {
+      "name": "/drivetrain",
+      "type": "frc.control_loops.drivetrain.Goal",
+      "frequency": 200
+    },
+    {
+      "name": "/drivetrain",
+      "type": "frc.control_loops.drivetrain.Position",
+      "frequency": 200
+    },
+    {
+      "name": "/drivetrain",
+      "type": "frc.control_loops.drivetrain.CANPosition",
+      "frequency": 200
+    },
+    {
+      "name": "/drivetrain",
+      "type": "frc.control_loops.drivetrain.Status",
+      "frequency": 200,
+      "max_size": 2000
+    },
+    {
+      "name": "/drivetrain",
+      "type": "frc.control_loops.drivetrain.Output",
+      "frequency": 200
+    },
+    {
+      "name": "/drivetrain",
+      "type": "frc.control_loops.drivetrain.LocalizerControl",
+      "frequency": 200
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 env:
   STARTUP: --max_idle_secs=0
-  COMMON: -c opt --stamp=no --curses=yes --symlink_prefix=/ --repo_env=FRC971_RUNNING_IN_CI=1 --repository_cache=~/.cache/bazel_repository --experimental_repository_cache_hardlinks=true --google_default_credentials --remote_cache=https://storage.googleapis.com/austin-vpn-bazel-cache
+  COMMON: -c opt --stamp=no --curses=yes --symlink_prefix=/ --repo_env=AOS_RUNNING_IN_CI=1 --repository_cache=~/.cache/bazel_repository --experimental_repository_cache_hardlinks=true --google_default_credentials --remote_cache=https://storage.googleapis.com/austin-vpn-bazel-cache
   TARGETS: //... @com_google_absl//... @com_google_ceres_solver//... @com_github_rawrtc_rawrtc//... @com_google_googletest//... @symengine//...
   ROBORIO_TARGETS: ${TARGETS}
 

@@ -1,0 +1,11 @@
+include "frc/wpilib/imu.fbs";
+
+namespace frc;
+
+attribute "static_length";
+
+table IMUValuesBatch {
+  readings:[IMUValues] (id: 0, static_length: 1);
+}
+
+root_type IMUValuesBatch;

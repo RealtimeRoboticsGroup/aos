@@ -4,7 +4,7 @@
 #include "motors/peripheral/uart.h"
 #include "motors/print/print.h"
 
-namespace frc971::motors {
+namespace frc::motors {
 
 // A printing implementation using a hardware UART. This has a reasonably sized
 // buffer in memory and uses interrupts to keep the hardware busy. It could
@@ -27,6 +27,6 @@ class UartPrinting : public PrintingImplementation {
 // Could easily create a subclass of UartPrinting that also implements
 // WriteDebug on a second UART, and conditionally instantiate that.
 
-}  // namespace frc971::motors
+}  // namespace frc::motors
 
 #endif  // MOTORS_PRINT_UART_H_

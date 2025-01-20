@@ -18,7 +18,7 @@ namespace aos::message_bridge {
 class SctpClient {
  public:
   SctpClient(std::string_view remote_host, int remote_port, int streams,
-             std::string_view local_host = "0.0.0.0", int local_port = 9971,
+             std::string_view local_host = "0.0.0.0", int local_port = 4646,
              SctpAuthMethod requested_authentication = SctpAuthMethod::kNoAuth);
 
   ~SctpClient() {}

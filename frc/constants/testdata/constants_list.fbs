@@ -1,0 +1,14 @@
+include "frc/constants/testdata/constants_data.fbs";
+
+namespace frc.constants.testdata;
+
+table ConstantsList {
+  constants:[Constant] (id: 0);
+}
+
+table Constant {
+  team:long (id: 0);
+  data:ConstantsData (id: 1);
+}
+
+root_type ConstantsList;

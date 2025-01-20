@@ -2,7 +2,7 @@
 
 import sys
 from y2016.control_loops.python import drivetrain
-from frc971.control_loops.python import polydrivetrain
+from frc.control_loops.python import polydrivetrain
 
 import gflags
 import glog

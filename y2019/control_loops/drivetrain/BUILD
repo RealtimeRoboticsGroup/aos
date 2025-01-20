@@ -54,8 +54,8 @@ cc_library(
     target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
-        "//frc971/control_loops:hybrid_state_feedback_loop",
-        "//frc971/control_loops:state_feedback_loop",
+        "//frc/control_loops:hybrid_state_feedback_loop",
+        "//frc/control_loops:state_feedback_loop",
     ],
 )
 
@@ -71,8 +71,8 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":polydrivetrain_plants",
-        "//frc971:shifter_hall_effect",
-        "//frc971/control_loops/drivetrain:drivetrain_config",
+        "//frc:shifter_hall_effect",
+        "//frc/control_loops/drivetrain:drivetrain_config",
     ],
 )
 

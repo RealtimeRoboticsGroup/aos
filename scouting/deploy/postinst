@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script runs after the frc971-scouting-server package is installed. This
+# This script runs after the aos-scouting-server package is installed. This
 # script is responsible for making sure the webserver has everything it needs,
 # then starts the webserver.
 
@@ -9,19 +9,19 @@ set -o nounset
 set -o pipefail
 
 # Create a directory for the database to live in.
-mkdir -p /var/frc971/scouting/
+mkdir -p /var/frc/scouting/
 
 # Create an empty The Blue Alliance configuration file.
-if [[ ! -e /var/frc971/scouting/tba_config.json ]]; then
-    echo '{}' > /var/frc971/scouting/tba_config.json
+if [[ ! -e /var/frc/scouting/tba_config.json ]]; then
+    echo '{}' > /var/frc/scouting/tba_config.json
 fi
 
 # Make sure it's all usable by the user.
-chown -R www-data:www-data /var/frc971/scouting/
+chown -R www-data:www-data /var/frc/scouting/
 
 # Update the timestamps on the files so that web browsers pull the new version.
 # Otherwise users have to explicitly bypass the cache when visiting the site.
-find /opt/frc971/scouting_server/scouting/scouting.runfiles/aos/scouting/www/ -type f -exec touch {} +
+find /opt/frc/scouting_server/scouting/scouting.runfiles/aos/scouting/www/ -type f -exec touch {} +
 
 systemctl daemon-reload
 systemctl enable scouting.service

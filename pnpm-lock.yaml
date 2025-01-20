@@ -170,7 +170,7 @@ importers:
         specifier: ^5
         version: 5.1.6
 
-  frc971/control_loops/swerve/spline_ui/www:
+  frc/control_loops/swerve/spline_ui/www:
     dependencies:
       '@angular/animations':
         specifier: v16-lts

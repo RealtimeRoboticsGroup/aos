@@ -1190,7 +1190,7 @@ TEST_F(ConfigurationTest, AddChannelToConfigMultiNode) {
           ArtifactPath("aos/events/ping.bfbs"));
 
   aos::ChannelT channel_overrides;
-  channel_overrides.frequency = 971;
+  channel_overrides.frequency = 649;
   FlatbufferDetachedBuffer<Configuration> new_config =
       AddChannelToConfiguration(&base_config.message(), "/new", schema,
                                 GetNode(&base_config.message(), "pi1"),
@@ -1205,7 +1205,7 @@ TEST_F(ConfigurationTest, AddChannelToConfigMultiNode) {
   ASSERT_TRUE(channel->has_schema());
   ASSERT_TRUE(channel->has_source_node());
   ASSERT_EQ("pi1", channel->source_node()->string_view());
-  ASSERT_EQ(971, channel->frequency());
+  ASSERT_EQ(649, channel->frequency());
 }
 
 // Create a new configuration with the specified channel removed.

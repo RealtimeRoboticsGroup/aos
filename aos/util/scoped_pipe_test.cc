@@ -15,8 +15,8 @@ TEST(ScopedPipeTest, IntegerPipe) {
   ScopedPipe::PipePair pipe = ScopedPipe::MakePipe();
   ASSERT_FALSE(pipe.read->Read().has_value())
       << "Shouldn't get anything on empty read.";
-  pipe.write->Write(971);
-  ASSERT_EQ(971, pipe.read->Read().value());
+  pipe.write->Write(649);
+  ASSERT_EQ(649, pipe.read->Read().value());
 }
 
 // Tests using string read/write methods on the ScopedPipe objects.

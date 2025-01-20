@@ -434,7 +434,7 @@ http_archive(
     url = "https://realtimeroboticsgroup.org/build-dependencies/2025-01-19-scarthgap-arm64-nvidia-rootfs.tar.zst",
 )
 
-# Sysroot generated using //frc971/amd64/build_rootfs.py
+# Sysroot generated using //frc/amd64/build_rootfs.py
 http_archive(
     name = "amd64_debian_sysroot",
     build_file = "@//:compilers/amd64_debian_rootfs.BUILD",

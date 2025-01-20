@@ -160,7 +160,7 @@ TEST_F(ActionTest, StartWithOldGoal) {
     TestActionGoal::Builder goal_builder =
         builder.MakeBuilder<TestActionGoal>();
 
-    goal_builder.add_run(971);
+    goal_builder.add_run(4646);
     builder.CheckOk(builder.Send(goal_builder.Finish()));
   }
 

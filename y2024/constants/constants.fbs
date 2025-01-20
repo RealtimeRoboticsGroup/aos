@@ -1,14 +1,14 @@
-include "frc971/vision/calibration.fbs";
-include "frc971/vision/target_map.fbs";
-include "frc971/control_loops/profiled_subsystem.fbs";
-include "frc971/zeroing/constants.fbs";
-include "frc971/math/matrix.fbs";
-include "frc971/control_loops/drivetrain/drivetrain_config.fbs";
+include "frc/vision/calibration.fbs";
+include "frc/vision/target_map.fbs";
+include "frc/control_loops/profiled_subsystem.fbs";
+include "frc/zeroing/constants.fbs";
+include "frc/math/matrix.fbs";
+include "frc/control_loops/drivetrain/drivetrain_config.fbs";
 
 namespace y2024;
 
 table CameraConfiguration {
-  calibration:frc971.vision.calibration.CameraCalibration (id: 0);
+  calibration:frc.vision.calibration.CameraCalibration (id: 0);
 }
 
 table ShotParams {
@@ -65,7 +65,7 @@ table ClimberSetPoints {
 }
 
 table PotAndAbsEncoderConstants {
-  zeroing_constants:frc971.zeroing.PotAndAbsoluteEncoderZeroingConstants (id: 0);
+  zeroing_constants:frc.zeroing.PotAndAbsoluteEncoderZeroingConstants (id: 0);
   potentiometer_offset:double (id: 1);
 }
 
@@ -140,7 +140,7 @@ enum AutonomousMode : ubyte {
 }
 
 table RobotConstants {
-  intake_constants:frc971.zeroing.AbsoluteEncoderZeroingConstants (id: 0);
+  intake_constants:frc.zeroing.AbsoluteEncoderZeroingConstants (id: 0);
   // Deprecated since climber no longer has an encoder
   climber_constants:PotAndAbsEncoderConstants (id: 1, deprecated);
   climber_potentiometer_offset:double (id: 8);
@@ -160,7 +160,7 @@ table ShooterSetPoint {
 
 table Pose {
   // Pos is a 3x1 matrix which contains the (x, y, z) component of the Pose.
-  pos: frc971.fbs.Matrix (id: 0);
+  pos: frc.fbs.Matrix (id: 0);
   theta: double (id: 1);
 }
 
@@ -186,24 +186,24 @@ table IgnoreTargets {
 
 // Common table for constants unrelated to the robot
 table Common {
-  target_map:frc971.vision.TargetMap (id: 0);
+  target_map:frc.vision.TargetMap (id: 0);
   shooter_interpolation_table: [InterpolationTablePoint] (id: 1);
   shooter_shuttle_interpolation_table: [InterpolationTablePoint] (id: 30);
   note_interpolation_table: [NoteInterpolationTablePoint] (id: 31);
   intake_roller_voltages:IntakeRollerVoltages (id : 2);
   intake_pivot_set_points:IntakePivotSetPoints (id: 3);
-  intake_pivot:frc971.control_loops.StaticZeroingSingleDOFProfiledSubsystemCommonParams (id: 4);
-  drivetrain:frc971.control_loops.drivetrain.fbs.DrivetrainConfig (id: 5);
+  intake_pivot:frc.control_loops.StaticZeroingSingleDOFProfiledSubsystemCommonParams (id: 4);
+  drivetrain:frc.control_loops.drivetrain.fbs.DrivetrainConfig (id: 5);
   current_limits:CurrentLimits (id: 6);
   transfer_roller_voltages:TransferRollerVoltages (id: 7);
-  climber:frc971.control_loops.StaticZeroingSingleDOFProfiledSubsystemCommonParams (id: 8, deprecated);
+  climber:frc.control_loops.StaticZeroingSingleDOFProfiledSubsystemCommonParams (id: 8, deprecated);
   climber_set_points:ClimberSetPoints (id: 9, deprecated);
   turret_loading_position: double (id: 10);
   catapult_return_position: double (id: 11);
-  catapult:frc971.control_loops.StaticZeroingSingleDOFProfiledSubsystemCommonParams (id: 12);
-  altitude:frc971.control_loops.StaticZeroingSingleDOFProfiledSubsystemCommonParams (id: 13);
-  turret:frc971.control_loops.StaticZeroingSingleDOFProfiledSubsystemCommonParams (id: 14);
-  extend:frc971.control_loops.StaticZeroingSingleDOFProfiledSubsystemCommonParams (id: 15);
+  catapult:frc.control_loops.StaticZeroingSingleDOFProfiledSubsystemCommonParams (id: 12);
+  altitude:frc.control_loops.StaticZeroingSingleDOFProfiledSubsystemCommonParams (id: 13);
+  turret:frc.control_loops.StaticZeroingSingleDOFProfiledSubsystemCommonParams (id: 14);
+  extend:frc.control_loops.StaticZeroingSingleDOFProfiledSubsystemCommonParams (id: 15);
   extend_roller_voltages:ExtendRollerVoltages (id: 16);
   shooter_targets:ShooterTargets (id: 17);
   shooter_shuttle_targets:ShooterTargets (id: 29);

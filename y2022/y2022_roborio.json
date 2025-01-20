@@ -133,21 +133,21 @@
     },
     {
       "name": "/drivetrain",
-      "type": "frc971.sensors.GyroReading",
+      "type": "frc.sensors.GyroReading",
       "source_node": "roborio",
       "frequency": 200,
       "num_senders": 2
     },
     {
       "name": "/drivetrain",
-      "type": "frc971.sensors.Uid",
+      "type": "frc.sensors.Uid",
       "source_node": "roborio",
       "frequency": 200,
       "num_senders": 2
     },
     {
       "name": "/drivetrain",
-      "type": "frc971.control_loops.drivetrain.fb.Trajectory",
+      "type": "frc.control_loops.drivetrain.fb.Trajectory",
       "source_node": "roborio",
       "max_size": 600000,
       "frequency": 10,
@@ -158,20 +158,20 @@
     },
     {
       "name": "/drivetrain",
-      "type": "frc971.control_loops.drivetrain.SplineGoal",
+      "type": "frc.control_loops.drivetrain.SplineGoal",
       "source_node": "roborio",
       "frequency": 10
     },
     {
       "name": "/drivetrain",
-      "type": "frc971.control_loops.drivetrain.Goal",
+      "type": "frc.control_loops.drivetrain.Goal",
       "source_node": "roborio",
       "max_size": 224,
       "frequency": 200
     },
     {
       "name": "/drivetrain",
-      "type": "frc971.control_loops.drivetrain.Position",
+      "type": "frc.control_loops.drivetrain.Position",
       "source_node": "roborio",
       "frequency": 400,
       "max_size": 112,
@@ -179,7 +179,7 @@
     },
     {
       "name": "/drivetrain",
-      "type": "frc971.control_loops.drivetrain.Output",
+      "type": "frc.control_loops.drivetrain.Output",
       "source_node": "roborio",
       "frequency": 400,
       "max_size": 80,
@@ -187,7 +187,7 @@
     },
     {
       "name": "/drivetrain",
-      "type": "frc971.control_loops.drivetrain.Status",
+      "type": "frc.control_loops.drivetrain.Status",
       "source_node": "roborio",
       "frequency": 400,
       "max_size": 1616,
@@ -195,7 +195,7 @@
     },
     {
       "name": "/drivetrain",
-      "type": "frc971.control_loops.drivetrain.LocalizerControl",
+      "type": "frc.control_loops.drivetrain.LocalizerControl",
       "source_node": "roborio",
       "frequency": 200,
       "max_size": 96
@@ -212,25 +212,25 @@
     },
     {
       "name": "/autonomous",
-      "type": "frc971.autonomous.Goal",
+      "type": "frc.autonomous.Goal",
       "source_node": "roborio"
     },
     {
       "name": "/autonomous",
-      "type": "frc971.autonomous.AutonomousMode",
+      "type": "frc.autonomous.AutonomousMode",
       "source_node": "roborio",
       "frequency": 200
     },
     {
       "name": "/roborio/aos",
-      "type": "frc971.PDPValues",
+      "type": "frc.PDPValues",
       "source_node": "roborio",
       "frequency": 55,
       "max_size": 368
     },
     {
       "name": "/roborio/aos",
-      "type": "frc971.wpilib.PneumaticsToLog",
+      "type": "frc.wpilib.PneumaticsToLog",
       "source_node": "roborio",
       "frequency": 50
     }
@@ -333,7 +333,7 @@
         "roboRIO-8971-FRC",
         "roboRIO-9971-FRC"
       ],
-      "port": 9971
+      "port": 4646
     },
     {
       "name": "imu"

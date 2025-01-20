@@ -129,7 +129,7 @@ TEST_F(StaticFlatbuffersTest, DocumentationExample) {
     CHECK(sub_string->emplace_back('D'));
   }
   {
-    object->set_substruct({971, 254});
+    object->set_substruct({1323, 254});
   }
   {
     auto subtable = object->add_subtable();
@@ -139,7 +139,7 @@ TEST_F(StaticFlatbuffersTest, DocumentationExample) {
     auto vector = object->add_vector_of_structs();
     CHECK(vector->emplace_back({48, 67}));
     CHECK(vector->emplace_back({118, 148}));
-    CHECK(vector->emplace_back({971, 973}));
+    CHECK(vector->emplace_back({1323, 973}));
     // Max vector size is three; this should fail.
     CHECK(!vector->emplace_back({1114, 2056}));
   }
@@ -241,11 +241,11 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
     }
     EXPECT_EQ("{  }", aos::FlatbufferToJson(builder.AsFlatbufferSpan()));
     object->set_foo(123);
-    object->set_baz(971);
+    object->set_baz(1323);
     CHECK(builder.AsFlatbufferSpan().Verify());
     EXPECT_EQ(123, object->AsFlatbuffer().foo());
-    EXPECT_EQ(971, object->AsFlatbuffer().baz());
-    EXPECT_EQ(R"json({ "foo": 123, "baz": 971 })json",
+    EXPECT_EQ(1323, object->AsFlatbuffer().baz());
+    EXPECT_EQ(R"json({ "foo": 123, "baz": 1323 })json",
               aos::FlatbufferToJson(builder.AsFlatbufferSpan()));
     TestMemory(builder.buffer());
   }
@@ -325,10 +325,10 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
                               {.multi_line = true}));
     {
       EXPECT_FALSE(object->has_substruct());
-      object->set_substruct({971, 254});
+      object->set_substruct({1323, 254});
       EXPECT_TRUE(object->has_substruct());
       EXPECT_TRUE(fbs.has_substruct());
-      EXPECT_EQ(971, fbs.substruct()->x());
+      EXPECT_EQ(1323, fbs.substruct()->x());
       EXPECT_EQ(254, fbs.substruct()->y());
     }
     EXPECT_EQ(
@@ -343,7 +343,7 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
   "D"
  ],
  "substruct": {
-  "x": 971,
+  "x": 1323,
   "y": 254
  }
 })json",
@@ -368,7 +368,7 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
   "D"
  ],
  "substruct": {
-  "x": 971,
+  "x": 1323,
   "y": 254
  },
  "subtable": {
@@ -381,7 +381,7 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
       auto vector = object->add_vector_of_structs();
       ASSERT_TRUE(vector->emplace_back({48, 67}));
       ASSERT_TRUE(vector->emplace_back({118, 148}));
-      ASSERT_TRUE(vector->emplace_back({971, 973}));
+      ASSERT_TRUE(vector->emplace_back({1323, 973}));
       ASSERT_FALSE(vector->emplace_back({1114, 2056}));
       EXPECT_TRUE(fbs.has_vector_of_structs());
       EXPECT_EQ(3u, fbs.vector_of_structs()->size());
@@ -393,7 +393,7 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
       EXPECT_EQ((*object->vector_of_structs())[1].x(),
                 fbs.vector_of_structs()->Get(1)->x());
       EXPECT_EQ(148, fbs.vector_of_structs()->Get(1)->y());
-      EXPECT_EQ(971, fbs.vector_of_structs()->Get(2)->x());
+      EXPECT_EQ(1323, fbs.vector_of_structs()->Get(2)->x());
       EXPECT_EQ(973, fbs.vector_of_structs()->Get(2)->y());
     }
     EXPECT_EQ(
@@ -408,7 +408,7 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
   "D"
  ],
  "substruct": {
-  "x": 971,
+  "x": 1323,
   "y": 254
  },
  "subtable": {
@@ -424,7 +424,7 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
    "y": 148
   },
   {
-   "x": 971,
+   "x": 1323,
    "y": 973
   }
  ]
@@ -455,7 +455,7 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
   "D"
  ],
  "substruct": {
-  "x": 971,
+  "x": 1323,
   "y": 254
  },
  "subtable": {
@@ -471,7 +471,7 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
    "y": 148
   },
   {
-   "x": 971,
+   "x": 1323,
    "y": 973
   }
  ],
@@ -504,7 +504,7 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
   "D"
  ],
  "substruct": {
-  "x": 971,
+  "x": 1323,
   "y": 254
  },
  "subtable": {
@@ -520,7 +520,7 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
    "y": 148
   },
   {
-   "x": 971,
+   "x": 1323,
    "y": 973
   }
  ],
@@ -561,7 +561,7 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
   "D"
  ],
  "substruct": {
-  "x": 971,
+  "x": 1323,
   "y": 254
  },
  "subtable": {
@@ -580,7 +580,7 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
    "y": 148
   },
   {
-   "x": 971,
+   "x": 1323,
    "y": 973
   }
  ],
@@ -632,7 +632,7 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
   "D"
  ],
  "substruct": {
-  "x": 971,
+  "x": 1323,
   "y": 254
  },
  "subtable": {
@@ -651,7 +651,7 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
    "y": 148
   },
   {
-   "x": 971,
+   "x": 1323,
    "y": 973
   }
  ],
@@ -901,7 +901,7 @@ TEST_F(StaticFlatbuffersTest, ExactSizeSpanAllocator) {
     ASSERT_TRUE(sub_string->emplace_back('D'));
   }
   {
-    object->set_substruct({971, 254});
+    object->set_substruct({1323, 254});
   }
   {
     auto subtable = object->add_subtable();
@@ -911,7 +911,7 @@ TEST_F(StaticFlatbuffersTest, ExactSizeSpanAllocator) {
     auto vector = object->add_vector_of_structs();
     ASSERT_TRUE(vector->emplace_back({48, 67}));
     ASSERT_TRUE(vector->emplace_back({118, 148}));
-    ASSERT_TRUE(vector->emplace_back({971, 973}));
+    ASSERT_TRUE(vector->emplace_back({1323, 973}));
     // Max vector size is three; this should fail.
     ASSERT_FALSE(vector->emplace_back({1114, 2056}));
     // We don't have any extra space available.
@@ -1069,7 +1069,7 @@ TEST_F(StaticFlatbuffersTest, FixedStackAllocator) {
     ASSERT_TRUE(sub_string->emplace_back('D'));
   }
   {
-    object->set_substruct({971, 254});
+    object->set_substruct({1323, 254});
   }
   {
     auto subtable = object->add_subtable();
@@ -1079,7 +1079,7 @@ TEST_F(StaticFlatbuffersTest, FixedStackAllocator) {
     auto vector = object->add_vector_of_structs();
     ASSERT_TRUE(vector->emplace_back({48, 67}));
     ASSERT_TRUE(vector->emplace_back({118, 148}));
-    ASSERT_TRUE(vector->emplace_back({971, 973}));
+    ASSERT_TRUE(vector->emplace_back({1323, 973}));
     // Max vector size is three; this should fail.
     ASSERT_FALSE(vector->emplace_back({1114, 2056}));
     // We don't have any extra space available.
@@ -1106,8 +1106,8 @@ TEST_F(StaticFlatbuffersTest, FixedStackAllocator) {
 // object API.
 TEST_F(StaticFlatbuffersTest, ObjectApiCopy) {
   aos::fbs::testing::TestTableT object_t;
-  object_t.scalar = 971;
-  object_t.vector_of_strings.push_back("971");
+  object_t.scalar = 1323;
+  object_t.vector_of_strings.push_back("1323");
   object_t.vector_of_structs.push_back({1, 2});
   object_t.subtable = std::make_unique<SubTableT>();
   aos::fbs::AlignedVectorAllocator allocator;
@@ -1116,8 +1116,8 @@ TEST_F(StaticFlatbuffersTest, ObjectApiCopy) {
   ASSERT_TRUE(builder.AsFlatbufferSpan().Verify());
   // Note that vectors and strings get set to zero-length, but present, values.
   EXPECT_EQ(
-      "{ \"scalar\": 971, \"vector_of_scalars\": [  ], \"string\": \"\", "
-      "\"vector_of_strings\": [ \"971\" ], \"subtable\": { \"foo\": 0, "
+      "{ \"scalar\": 1323, \"vector_of_scalars\": [  ], \"string\": \"\", "
+      "\"vector_of_strings\": [ \"1323\" ], \"subtable\": { \"foo\": 0, "
       "\"baz\": 0 }, \"vector_aligned\": [  ], \"vector_of_structs\": [ { "
       "\"x\": 1, \"y\": 2 } ], \"vector_of_tables\": [  ], "
       "\"unspecified_length_vector\": [  ], \"unspecified_length_string\": "
@@ -1177,7 +1177,7 @@ TEST_F(StaticFlatbuffersTest, BuilderMoveConstructor) {
     ASSERT_TRUE(sub_string->emplace_back('D'));
   }
   {
-    object->set_substruct({971, 254});
+    object->set_substruct({1323, 254});
   }
   {
     auto subtable = object->add_subtable();
@@ -1187,7 +1187,7 @@ TEST_F(StaticFlatbuffersTest, BuilderMoveConstructor) {
     auto vector = object->add_vector_of_structs();
     ASSERT_TRUE(vector->emplace_back({48, 67}));
     ASSERT_TRUE(vector->emplace_back({118, 148}));
-    ASSERT_TRUE(vector->emplace_back({971, 973}));
+    ASSERT_TRUE(vector->emplace_back({1323, 973}));
     // Max vector size is three; this should fail.
     ASSERT_FALSE(vector->emplace_back({1114, 2056}));
     // We don't have any extra space available.

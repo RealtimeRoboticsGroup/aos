@@ -165,7 +165,7 @@ filegroup(
 filegroup(
     name = "gcc_arm_none_eabi_linker_files",
     srcs = [
-        "//frc971/imu_fdcan/Dual_IMU:linker_scripts",
+        "//frc/imu_fdcan/Dual_IMU:linker_scripts",
         "//motors/core:linkerscripts",
         "//tools/cpp/gcc_arm_none_eabi:ar",
         "//tools/cpp/gcc_arm_none_eabi:gcc",

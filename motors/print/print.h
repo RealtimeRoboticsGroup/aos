@@ -8,7 +8,7 @@
 #include "aos/containers/sized_array.h"
 #include "motors/core/kinetis.h"
 
-namespace frc971 {
+namespace frc {
 namespace teensy {
 
 class AcmTty;
@@ -97,6 +97,6 @@ struct PrintingParameters {
     const PrintingParameters &parameters);
 
 }  // namespace motors
-}  // namespace frc971
+}  // namespace frc
 
 #endif  // MOTORS_PRINT_PRINT_H_

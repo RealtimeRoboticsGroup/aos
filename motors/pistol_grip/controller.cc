@@ -4,8 +4,8 @@
 #include <atomic>
 #include <cmath>
 
-#include "frc971/control_loops/drivetrain/integral_haptic_trigger.h"
-#include "frc971/control_loops/drivetrain/integral_haptic_wheel.h"
+#include "frc/control_loops/drivetrain/integral_haptic_trigger.h"
+#include "frc/control_loops/drivetrain/integral_haptic_wheel.h"
 #include "motors/core/kinetis.h"
 #include "motors/core/time.h"
 #include "motors/motor.h"
@@ -25,7 +25,7 @@ extern const float kWheelCoggingTorque1[4096];
 extern const float kTriggerCoggingTorque0[4096];
 extern const float kTriggerCoggingTorque1[4096];
 
-namespace frc971::motors {
+namespace frc::motors {
 namespace {
 
 ::std::atomic<const float *> trigger_cogging_torque{nullptr};
@@ -39,10 +39,10 @@ float WheelCoggingTorque(uint32_t index) {
   return wheel_cogging_torque.load(::std::memory_order_relaxed)[index];
 }
 
-using ::frc971::control_loops::drivetrain::MakeIntegralHapticTriggerObserver;
-using ::frc971::control_loops::drivetrain::MakeIntegralHapticTriggerPlant;
-using ::frc971::control_loops::drivetrain::MakeIntegralHapticWheelObserver;
-using ::frc971::control_loops::drivetrain::MakeIntegralHapticWheelPlant;
+using ::frc::control_loops::drivetrain::MakeIntegralHapticTriggerObserver;
+using ::frc::control_loops::drivetrain::MakeIntegralHapticTriggerPlant;
+using ::frc::control_loops::drivetrain::MakeIntegralHapticWheelObserver;
+using ::frc::control_loops::drivetrain::MakeIntegralHapticWheelPlant;
 
 // Returns an identifier for the processor we're running on.
 // This isn't guaranteed to be unique, but it should be close enough.
@@ -72,9 +72,9 @@ uint8_t ProcessorIndex() {
 const uint8_t processor_index = ProcessorIndex();
 
 constexpr float kHapticWheelCurrentLimit = static_cast<float>(
-    ::frc971::control_loops::drivetrain::kHapticWheelCurrentLimit);
+    ::frc::control_loops::drivetrain::kHapticWheelCurrentLimit);
 constexpr float kHapticTriggerCurrentLimit = static_cast<float>(
-    ::frc971::control_loops::drivetrain::kHapticTriggerCurrentLimit);
+    ::frc::control_loops::drivetrain::kHapticTriggerCurrentLimit);
 
 ::std::atomic<Motor *> global_motor0{nullptr}, global_motor1{nullptr};
 
@@ -125,7 +125,7 @@ float absolute_wheel(float wheel_position) {
 
 extern "C" {
 
-void *__stack_chk_guard = (void *)0x67111971;
+void *__stack_chk_guard = (void *)0x67111973;
 void __stack_chk_fail() {
   while (true) {
     GPIOC_PSOR = (1 << 5);
@@ -641,9 +641,9 @@ extern "C" void pit3_isr() {
   }
 
   constexpr float kTriggerP =
-      static_cast<float>(::frc971::control_loops::drivetrain::kHapticTriggerP);
+      static_cast<float>(::frc::control_loops::drivetrain::kHapticTriggerP);
   constexpr float kTriggerD =
-      static_cast<float>(::frc971::control_loops::drivetrain::kHapticTriggerD);
+      static_cast<float>(::frc::control_loops::drivetrain::kHapticTriggerD);
   float trigger_goal_current = trigger_haptic_current;
   if (trigger_haptics) {
     trigger_goal_current +=
@@ -1153,4 +1153,4 @@ extern "C" int main() {
   return 0;
 }
 
-}  // namespace frc971::motors
+}  // namespace frc::motors

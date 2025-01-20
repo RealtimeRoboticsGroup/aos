@@ -7,7 +7,7 @@
 #include "motors/usb/usb.h"
 #include "motors/util.h"
 
-namespace frc971::teensy {
+namespace frc::teensy {
 
 // A simple function that just has an interrupt out endpoint and exposes the
 // data received.
@@ -57,6 +57,6 @@ class InterruptOut final : public UsbFunction {
   const ::std::string name_;
 };
 
-}  // namespace frc971::teensy
+}  // namespace frc::teensy
 
 #endif  // MOTORS_USB_INTERRUPT_OUT_H_

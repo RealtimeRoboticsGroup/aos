@@ -144,17 +144,7 @@ private:
 
     _interpreter() {
       // Force PYTHONHOME and PYTHONPATH to our sandboxed python.
-#if defined(FRC971_DEBIAN_BUNDLED_PYTHON)
-      wchar_t python_home[] = L"../python_repo/usr/";
-      wchar_t python_path[] =
-          L"../matplotlib_repo/3:../python_repo/usr/lib/python35.zip:../"
-          L"python_repo/usr/lib/python3.5:../python_repo/usr/lib/python3.5/"
-          L"plat-x86_64-linux-gnu:../python_repo/usr/lib/python3.5/"
-          L"lib-dynload:../python_repo/usr/lib/python3/dist-packages";
-
-      Py_SetPath(python_path);
-      Py_SetPythonHome(python_home);
-#elif defined(FRC971_UPSTREAM_BUNDLED_PYTHON)
+#if defined(AOS_UPSTREAM_BUNDLED_PYTHON)
       wchar_t python_home[] = L"../python3_9_x86_64-unknown-linux-gnu/";
       Py_SetPythonHome(python_home);
 
@@ -213,7 +203,7 @@ private:
             throw std::runtime_error("Error loading module matplotlib!");
         }
 
-#if defined(FRC971_UPSTREAM_BUNDLED_PYTHON)
+#if defined(AOS_UPSTREAM_BUNDLED_PYTHON)
         // We don't support tkinter with Python from rules_python. We use the
         // GTK backend instead.
         // https://github.com/matplotlib/matplotlib/issues/23074

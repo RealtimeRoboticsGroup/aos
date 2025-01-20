@@ -5,10 +5,10 @@ static_flatbuffer(
     srcs = ["constants.fbs"],
     visibility = ["//visibility:public"],
     deps = [
-        "//frc971/control_loops:profiled_subsystem_fbs",
-        "//frc971/control_loops/drivetrain:drivetrain_config_fbs",
-        "//frc971/vision:calibration_fbs",
-        "//frc971/vision:target_map_fbs",
-        "//frc971/zeroing:constants_fbs",
+        "//frc/control_loops:profiled_subsystem_fbs",
+        "//frc/control_loops/drivetrain:drivetrain_config_fbs",
+        "//frc/vision:calibration_fbs",
+        "//frc/vision:target_map_fbs",
+        "//frc/zeroing:constants_fbs",
     ],
 )

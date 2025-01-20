@@ -7,9 +7,9 @@
 #include "aos/init.h"
 #include "aos/json_to_flatbuffer.h"
 #include "aos/time/time.h"
-#include "frc971/constants/constants_sender_lib.h"
-#include "frc971/vision/vision_generated.h"
-#include "frc971/vision/vision_util_lib.h"
+#include "frc/constants/constants_sender_lib.h"
+#include "frc/vision/vision_generated.h"
+#include "frc/vision/vision_util_lib.h"
 #include "y2024/vision/vision_util.h"
 
 ABSL_FLAG(std::string, capture, "",
@@ -23,7 +23,7 @@ ABSL_FLAG(double, scale, 1.0, "Scale factor for images being displayed");
 namespace y2024::vision {
 namespace {
 
-using frc971::vision::CameraImage;
+using frc::vision::CameraImage;
 
 bool DisplayLoop(const cv::Mat intrinsics, const cv::Mat dist_coeffs,
                  aos::Fetcher<CameraImage> *image_fetcher) {
@@ -80,11 +80,11 @@ void ViewerMain() {
   aos::FlatbufferDetachedBuffer<aos::Configuration> config =
       aos::configuration::ReadConfig(absl::GetFlag(FLAGS_config));
 
-  frc971::constants::WaitForConstants<y2024::Constants>(&config.message());
+  frc::constants::WaitForConstants<y2024::Constants>(&config.message());
 
   aos::ShmEventLoop event_loop(&config.message());
 
-  frc971::constants::ConstantsFetcher<y2024::Constants> constants_fetcher(
+  frc::constants::ConstantsFetcher<y2024::Constants> constants_fetcher(
       &event_loop);
   CHECK(absl::GetFlag(FLAGS_channel).length() == 8)
       << " channel should be of the form '/cameraN' for viewing images from "
@@ -93,9 +93,8 @@ void ViewerMain() {
   const auto *calibration_data = FindCameraCalibration(
       constants_fetcher.constants(), event_loop.node()->name()->string_view(),
       camera_id);
-  const cv::Mat intrinsics = frc971::vision::CameraIntrinsics(calibration_data);
-  const cv::Mat dist_coeffs =
-      frc971::vision::CameraDistCoeffs(calibration_data);
+  const cv::Mat intrinsics = frc::vision::CameraIntrinsics(calibration_data);
+  const cv::Mat dist_coeffs = frc::vision::CameraDistCoeffs(calibration_data);
 
   aos::Fetcher<CameraImage> image_fetcher =
       event_loop.MakeFetcher<CameraImage>(absl::GetFlag(FLAGS_channel));

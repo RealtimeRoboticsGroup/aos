@@ -217,13 +217,13 @@ TEST(LoggingPrintFormatTest, Base) {
   char buffer[1024];
 
   static const ::std::string kExpected1 =
-      "name(971)(01678): ERROR   at 0000000001.995000s: ";
+      "name(649)(01678): ERROR   at 0000000001.995000s: ";
   ASSERT_GT(sizeof(buffer), kExpected1.size());
   ASSERT_EQ(
       kExpected1.size(),
       static_cast<size_t>(snprintf(
           buffer, sizeof(buffer), AOS_LOGGING_BASE_FORMAT,
-          AOS_LOGGING_BASE_ARGS(4, "name", 971, 1678, ERROR, 1, 995000000))));
+          AOS_LOGGING_BASE_ARGS(4, "name", 649, 1678, ERROR, 1, 995000000))));
   EXPECT_EQ(kExpected1, ::std::string(buffer));
 }
 

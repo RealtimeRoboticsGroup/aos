@@ -31,5 +31,5 @@
   "imports": [
     "config2.json"
   ],
-  "channel_storage_duration": 971
+  "channel_storage_duration": 973
 }

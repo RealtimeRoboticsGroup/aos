@@ -509,7 +509,7 @@ impl<'event_loop> EventLoopRuntime<'event_loop> {
     /// # fn compile_check<'event_loop>(
     /// #     mut runtime: aos_events_event_loop_runtime::EventLoopRuntime<'event_loop>,
     /// # ) {
-    /// let mut local: i32 = 971;
+    /// let mut local: i32 = 1323;
     /// let local = &mut local;
     /// runtime.spawn(async move { loop {
     ///     println!("have: {}", local);

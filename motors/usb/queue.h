@@ -4,7 +4,7 @@
 #include <atomic>
 #include <memory>
 
-namespace frc971::teensy {
+namespace frc::teensy {
 
 // A FIFO queue which reads/writes variable-sized chunks.
 //
@@ -60,6 +60,6 @@ class Queue {
   ::std::atomic<size_t> write_cursor_{0};
 };
 
-}  // namespace frc971::teensy
+}  // namespace frc::teensy
 
 #endif  // MOTORS_USB_QUEUE_H_

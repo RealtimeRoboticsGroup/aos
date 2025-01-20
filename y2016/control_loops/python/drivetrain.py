@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 from __future__ import print_function
-from frc971.control_loops.python import drivetrain
+from frc.control_loops.python import drivetrain
 import sys
 
 import gflags

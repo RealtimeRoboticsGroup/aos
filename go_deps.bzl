@@ -15,22 +15,10 @@ def go_dependencies():
         version = "v0.38.1",
     )
     maybe_override_go_dep(
-        name = "com_github_buildkite_go_buildkite",
-        importpath = "github.com/buildkite/go-buildkite",
-        sum = "h1:yEjSu1axFC88x4dbufhgMDsEnJztPWlLiZzEvzJggXc=",
-        version = "v2.2.0+incompatible",
-    )
-    maybe_override_go_dep(
         name = "com_github_burntsushi_toml",
         importpath = "github.com/BurntSushi/toml",
         sum = "h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=",
         version = "v0.3.1",
-    )
-    maybe_override_go_dep(
-        name = "com_github_cenkalti_backoff",
-        importpath = "github.com/cenkalti/backoff",
-        sum = "h1:tNowT99t7UNflLxfYYSlKYsBpXdEet03Pg2g16Swow4=",
-        version = "v2.2.1+incompatible",
     )
     maybe_override_go_dep(
         name = "com_github_census_instrumentation_opencensus_proto",
@@ -145,12 +133,6 @@ def go_dependencies():
         importpath = "github.com/google/go-cmp",
         sum = "h1:BKbKCqvP6I+rmFHt06ZmyQtvB8xAkWdhFyr0ZUNZcxQ=",
         version = "v0.5.6",
-    )
-    maybe_override_go_dep(
-        name = "com_github_google_go_querystring",
-        importpath = "github.com/google/go-querystring",
-        sum = "h1:AnCroh3fv4ZBgVIf1Iwtovgjaw/GiKJo8M8yD/fhyJ8=",
-        version = "v1.1.0",
     )
     maybe_override_go_dep(
         name = "com_github_google_renameio",

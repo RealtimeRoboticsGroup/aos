@@ -11,7 +11,7 @@
 #include "motors/usb/usb_serial.h"
 #include "motors/util.h"
 
-namespace frc971::motors {
+namespace frc::motors {
 namespace {
 
 struct MediumAdcReadings {
@@ -91,7 +91,7 @@ MediumAdcReadings AdcReadMedium(const DisableInterrupts &) {
 
 extern "C" {
 
-void *__stack_chk_guard = (void *)0x67111971;
+void *__stack_chk_guard = (void *)0x67111973;
 void __stack_chk_fail(void) {
   while (true) {
     GPIOC_PSOR = (1 << 5);
@@ -341,4 +341,4 @@ extern "C" int main(void) {
   return 0;
 }
 
-}  // namespace frc971::motors
+}  // namespace frc::motors

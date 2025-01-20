@@ -4,7 +4,7 @@
 
 #include <algorithm>
 
-namespace frc971::teensy {
+namespace frc::teensy {
 
 size_t Queue::Read(char *out_data, size_t out_size) {
   const size_t read_cursor = read_cursor_.load(::std::memory_order_relaxed);
@@ -29,4 +29,4 @@ size_t Queue::Write(const char *in_data, size_t in_size) {
   return r;
 }
 
-}  // namespace frc971::teensy
+}  // namespace frc::teensy

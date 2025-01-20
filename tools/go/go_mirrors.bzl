@@ -14,32 +14,12 @@ GO_MIRROR_INFO = {
         "strip_prefix": "github.com/bazelbuild/rules_go@v0.38.1",
         "version": "v0.38.1",
     },
-    "com_github_buildkite_go_buildkite": {
-        "filename": "com_github_buildkite_go_buildkite__v2.2.0+incompatible.zip",
-        "importpath": "github.com/buildkite/go-buildkite",
-        "kwargs": {
-            "build_directives": [
-                "gazelle:resolve go github.com/cenkalti/backoff @com_github_cenkalti_backoff//:go_default_library",
-                "gazelle:resolve go github.com/google/go-querystring/query @com_github_google_go_querystring//query:go_default_library",
-            ],
-        },
-        "sha256": "1871115c8c6db004e4b6e57cee927043bfc9ea0c56e7b8f8336021bd8bf588c4",
-        "strip_prefix": "github.com/buildkite/go-buildkite@v2.2.0+incompatible",
-        "version": "v2.2.0+incompatible",
-    },
     "com_github_burntsushi_toml": {
         "filename": "com_github_burntsushi_toml__v0.3.1.zip",
         "importpath": "github.com/BurntSushi/toml",
         "sha256": "815c6e594745f2d8842ff9a4b0569c6695e6cdfd5e07e5b3d98d06b72ca41e3c",
         "strip_prefix": "github.com/BurntSushi/toml@v0.3.1",
         "version": "v0.3.1",
-    },
-    "com_github_cenkalti_backoff": {
-        "filename": "com_github_cenkalti_backoff__v2.2.1+incompatible.zip",
-        "importpath": "github.com/cenkalti/backoff",
-        "sha256": "f8196815a1b4d25e5b8158029d5264801fc8aa5ff128ccf30752fd169693d43b",
-        "strip_prefix": "github.com/cenkalti/backoff@v2.2.1+incompatible",
-        "version": "v2.2.1+incompatible",
     },
     "com_github_census_instrumentation_opencensus_proto": {
         "filename": "com_github_census_instrumentation_opencensus_proto__v0.2.1.zip",
@@ -173,13 +153,6 @@ GO_MIRROR_INFO = {
         "sha256": "32c6bb53a2f214fecd43ca0a436758488d088a9ac23e391ef4b502eda0591147",
         "strip_prefix": "github.com/google/go-cmp@v0.5.6",
         "version": "v0.5.6",
-    },
-    "com_github_google_go_querystring": {
-        "filename": "com_github_google_go_querystring__v1.1.0.zip",
-        "importpath": "github.com/google/go-querystring",
-        "sha256": "a6aafc01f5602e6177928751074e325792a654e1d92f0e238b8e8739656dd72b",
-        "strip_prefix": "github.com/google/go-querystring@v1.1.0",
-        "version": "v1.1.0",
     },
     "com_github_google_renameio": {
         "filename": "com_github_google_renameio__v0.1.0.zip",

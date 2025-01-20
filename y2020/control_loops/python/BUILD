@@ -9,7 +9,7 @@ py_binary(
     target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         ":python_init",
-        "//frc971/control_loops/python:drivetrain",
+        "//frc/control_loops/python:drivetrain",
         "@pip//glog",
         "@pip//python_gflags",
     ],
@@ -25,7 +25,7 @@ py_binary(
     target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         ":python_init",
-        "//frc971/control_loops/python:polydrivetrain",
+        "//frc/control_loops/python:polydrivetrain",
         "@pip//glog",
         "@pip//python_gflags",
     ],
@@ -41,9 +41,9 @@ py_library(
     visibility = ["//visibility:public"],
     deps = [
         ":python_init",
-        "//frc971/control_loops/python:controls",
-        "//frc971/control_loops/python:drivetrain",
-        "//frc971/control_loops/python:polydrivetrain",
+        "//frc/control_loops/python:controls",
+        "//frc/control_loops/python:drivetrain",
+        "//frc/control_loops/python:polydrivetrain",
         "@pip//glog",
         "@pip//python_gflags",
     ],

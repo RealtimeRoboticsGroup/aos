@@ -2,7 +2,7 @@
 
 #include "gtest/gtest.h"
 
-namespace frc971::teensy::testing {
+namespace frc::teensy::testing {
 
 TEST(EndpointBufferStateTest, Filling) {
   EXPECT_TRUE(BufferStateHasEmpty(EndpointBufferState::kBothEmptyEvenFirst));
@@ -59,4 +59,4 @@ TEST(EndpointBufferStateTest, Transitions) {
             BufferStateAfterEmpty(EndpointBufferState::kBothFullEvenFirst));
 }
 
-}  // namespace frc971::teensy::testing
+}  // namespace frc::teensy::testing

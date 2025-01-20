@@ -7,7 +7,7 @@
 #include <chrono>
 #include <cmath>
 
-#include "frc971/control_loops/drivetrain/polydrivetrain.h"
+#include "frc/control_loops/drivetrain/polydrivetrain.h"
 #include "motors/core/kinetis.h"
 #include "motors/core/time.h"
 #include "motors/peripheral/adc.h"
@@ -19,13 +19,13 @@
 #include "motors/seems_reasonable/spring.h"
 #include "motors/util.h"
 
-namespace frc971::motors {
+namespace frc::motors {
 namespace {
 
-using ::frc971::constants::ShifterHallEffect;
-using ::frc971::control_loops::drivetrain::DrivetrainConfig;
-using ::frc971::control_loops::drivetrain::OutputT;
-using ::frc971::control_loops::drivetrain::PolyDrivetrain;
+using ::frc::constants::ShifterHallEffect;
+using ::frc::control_loops::drivetrain::DrivetrainConfig;
+using ::frc::control_loops::drivetrain::OutputT;
+using ::frc::control_loops::drivetrain::PolyDrivetrain;
 using ::motors::seems_reasonable::Spring;
 
 namespace chrono = ::std::chrono;
@@ -60,10 +60,10 @@ const ShifterHallEffect kThreeStateDriveShifter{{}, 0.0, 0.0, 0.25, 0.75};
 
 const DrivetrainConfig<float> &GetDrivetrainConfig() {
   static DrivetrainConfig<float> kDrivetrainConfig{
-      ::frc971::control_loops::drivetrain::ShifterType::kNoShifter,
-      ::frc971::control_loops::drivetrain::LoopType::kOpenLoop,
-      ::frc971::control_loops::drivetrain::GyroType::kSpartanGyro,
-      ::frc971::control_loops::drivetrain::ImuType::kImuX,
+      ::frc::control_loops::drivetrain::ShifterType::kNoShifter,
+      ::frc::control_loops::drivetrain::LoopType::kOpenLoop,
+      ::frc::control_loops::drivetrain::GyroType::kSpartanGyro,
+      ::frc::control_loops::drivetrain::ImuType::kImuX,
 
       ::motors::seems_reasonable::MakeDrivetrainLoop,
       ::motors::seems_reasonable::MakeVelocityDrivetrainLoop,
@@ -656,7 +656,7 @@ extern "C" void pit3_isr() {
 
 extern "C" {
 
-void *__stack_chk_guard = (void *)0x67111971;
+void *__stack_chk_guard = (void *)0x67111973;
 void __stack_chk_fail(void);
 
 }  // extern "C"
@@ -798,4 +798,4 @@ void __stack_chk_fail(void) {
   }
 }
 
-}  // namespace frc971::motors
+}  // namespace frc::motors

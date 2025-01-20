@@ -13,7 +13,7 @@ USERNAME - memlock unlimited
   2. Reboot your machine to pick up the changes
 
 ### Compile and run the code
-  1. Compile the code for ping and pong, as well as aos_dump for looking at the messages.  We'll assume throughout that you're running from the top level directory of the 971 code.
+  1. Compile the code for ping and pong, as well as aos_dump for looking at the messages.  We'll assume throughout that you're running from the top level directory of aos.
   ```
   bazel build -c opt //aos/events:ping //aos/events:pong //aos:aos_dump
   ```

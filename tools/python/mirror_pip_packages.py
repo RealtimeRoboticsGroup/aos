@@ -23,7 +23,8 @@ from pkginfo import Wheel
 PLAT = "manylinux_2_34"
 ARCH = "x86_64"
 WHEELHOUSE_MIRROR_URL = "https://realtimeroboticsgroup.org/build-dependencies/wheelhouse"
-PY_DEPS_WWWW_DIR = "/var/www/html/files/frc971/Build-Dependencies/wheelhouse"
+# TODO(austin): Update this to use gsutil to rehost to the bucket.
+PY_DEPS_WWWW_DIR = "/tmp/Build-Dependencies/wheelhouse"
 
 
 def sanitize_name(name: str) -> str:
@@ -149,7 +150,7 @@ def main(argv: List[str]) -> Optional[int]:
         "--ssh_host",
         type=str,
         help=("The SSH host to copy the downloaded Go repositories to. This "
-              "should be software.971spartans.net where all the "
+              "should be realtimeroboticsgroup.org where all the "
               "Build-Dependencies files live. Only specify this if you have "
               "access to the server."))
     args = parser.parse_args(argv[1:])
@@ -180,9 +181,9 @@ def main(argv: List[str]) -> Optional[int]:
         "run",
         "-it",
         "-v",
-        f"{python_dir}:/opt/971_build/",
+        f"{python_dir}:/opt/build/",
         container_tag,
-        "/opt/971_build/generate_pip_packages_in_docker.sh",
+        "/opt/build/generate_pip_packages_in_docker.sh",
         PLAT,
         ARCH,
         str(caller_id),

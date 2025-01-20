@@ -5,7 +5,7 @@
 #include "motors/usb/cdc.h"
 #include "motors/usb/usb.h"
 
-namespace frc971::motors {
+namespace frc::motors {
 
 // A printing implementation which uses externally-created functions. The stdout
 // one is required, while the debug one is optional.
@@ -67,6 +67,6 @@ class DedicatedUsbPrinting final : public PrintingImplementation {
   teensy::AcmTty debug_tty_;
 };
 
-}  // namespace frc971::motors
+}  // namespace frc::motors
 
 #endif  // MOTORS_PRINT_USB_H_

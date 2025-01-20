@@ -95,8 +95,8 @@ TEST_F(ErrorTest, StringLiteralError) {
 // Tests that the CheckExpected() call works as intended.
 TEST(ErrorDeathTest, CheckExpected) {
   tl::expected<int, Error> expected;
-  expected.emplace(971);
-  EXPECT_EQ(971, CheckExpected(expected))
+  expected.emplace(118);
+  EXPECT_EQ(118, CheckExpected(expected))
       << "Should have gotten out the emplaced value on no error.";
   expected = Error::MakeUnexpectedError("Hello, World!");
   EXPECT_DEATH(CheckExpected(expected), "Hello, World!")

@@ -1,0 +1,12 @@
+include "frc/zeroing/constants.fbs";
+
+namespace frc.control_loops.swerve;
+
+table SwerveZeroing {
+    front_left:frc.zeroing.ContinuousAbsoluteEncoderZeroingConstants (id: 0);
+    front_right:frc.zeroing.ContinuousAbsoluteEncoderZeroingConstants (id: 1);
+    back_left:frc.zeroing.ContinuousAbsoluteEncoderZeroingConstants (id: 2);
+    back_right:frc.zeroing.ContinuousAbsoluteEncoderZeroingConstants (id: 3);
+}
+
+root_type SwerveZeroing;

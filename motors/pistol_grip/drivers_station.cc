@@ -15,7 +15,7 @@
 #include "motors/usb/usb.h"
 #include "motors/util.h"
 
-namespace frc971::motors {
+namespace frc::motors {
 namespace {
 
 // TODO(Brian): Move this and the other two test functions somewhere else.
@@ -231,7 +231,7 @@ constexpr char kReportDescriptor[] = {
 
 extern "C" {
 
-void *__stack_chk_guard = (void *)0x67111971;
+void *__stack_chk_guard = (void *)0x67111973;
 void __stack_chk_fail(void) {
   while (true) {
     GPIOC_PSOR = (1 << 5);
@@ -277,7 +277,7 @@ extern "C" int main(void) {
   delay(100);
 
   teensy::UsbDevice usb_device(0, 0x16c0, 0x0491);
-  usb_device.SetManufacturer("FRC 971 Spartan Robotics");
+  usb_device.SetManufacturer("Realtime Robotics Group");
   usb_device.SetProduct("Pistol Grip Controller interface");
 
   teensy::HidFunction throttle_joystick(&usb_device, 14);
@@ -307,4 +307,4 @@ extern "C" int main(void) {
   return 0;
 }
 
-}  // namespace frc971::motors
+}  // namespace frc::motors

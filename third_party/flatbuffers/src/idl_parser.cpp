@@ -3759,7 +3759,7 @@ void Parser::Serialize() {
     std::vector<Offset<flatbuffers::String>> included_files;
     for (auto f = files_included_per_file_.begin();
          f != files_included_per_file_.end(); f++) {
-      // frc971 modification to make file paths in schemas deterministic.
+      // aos modification to make file paths in schemas deterministic.
       const auto filename__ = builder_.CreateSharedString(f->first);
       for (auto i = f->second.begin(); i != f->second.end(); i++) {
         included_files.push_back(builder_.CreateSharedString(i->schema_name));
@@ -3790,7 +3790,7 @@ void Parser::Serialize() {
   }
 }
 
-// frc971 modification to make declaration files in schemas deterministic.
+// aos modification to make declaration files in schemas deterministic.
 // TODO(james): Figure out a clean way to make this workspace root relative.
 namespace {
 std::string DeclarationFileStripped(const std::string *declaration_file) {

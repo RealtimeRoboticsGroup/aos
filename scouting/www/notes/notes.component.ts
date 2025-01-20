@@ -81,7 +81,7 @@ const KEYWORD_CHECKBOX_LABELS = {
 } as const;
 
 @Component({
-  selector: 'frc971-notes',
+  selector: 'frc-notes',
   templateUrl: './notes.ng.html',
   styleUrls: ['../app/common.css', './notes.component.css'],
 })

@@ -28,7 +28,7 @@ uint16_t GetTeamNumber();
 void OverrideTeamNumber(uint16_t team);
 
 // Returns the number for a pi/orin formatted hostname.  pi-team#-pi# (e.g., 5
-// for pi-971-5 or 2 for orin-9971-2)
+// for pi-3132-5 or 2 for orin-4646-2)
 std::optional<uint16_t> ParsePiOrOrinNumber(const std::string_view hostname);
 
 // Returns whether the device is a "pi" or an "orin" based on hostname
@@ -39,7 +39,7 @@ namespace team_number_internal {
 std::optional<uint16_t> ParseRoborioTeamNumber(const std::string_view hostname);
 
 // Returns the team number for a pi/orin formatted hostname.  pi-team#-pi#
-// (e.g., 971 for pi-971-5 or 9971 for orin-9971-2)
+// (e.g., 649 for pi-649-5 or 1323 for orin-1323-2)
 std::optional<uint16_t> ParsePiOrOrinTeamNumber(
     const std::string_view hostname);
 

@@ -1,6 +1,6 @@
 #include "motors/usb/hid.h"
 
-namespace frc971::teensy {
+namespace frc::teensy {
 namespace {
 
 constexpr uint8_t hid_class() { return 0x03; }
@@ -209,4 +209,4 @@ void HidFunction::HandleConfigured(int endpoint) {
   }
 }
 
-}  // namespace frc971::teensy
+}  // namespace frc::teensy

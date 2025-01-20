@@ -28,7 +28,7 @@
 #include "motors/usb/usb.h"
 #include "motors/util.h"
 
-namespace frc971 {
+namespace frc {
 namespace motors {
 namespace {
 
@@ -659,7 +659,7 @@ void DriverStation::PackMeasurementsToCAN(MeasurementData *bb_measurements,
 
 extern "C" {
 
-void *__stack_chk_guard = (void *)0x67111971;
+void *__stack_chk_guard = (void *)0x67111973;
 void __stack_chk_fail(void) {
   while (true) {
     GPIOC_PSOR = (1 << 5);
@@ -1111,8 +1111,8 @@ int DriverStation::Run() {
   delay(100);
 
   teensy::UsbDevice usb_device(0, 0x16c0, 0x0492);
-  usb_device.SetManufacturer("FRC 971 Spartan Robotics");
-  usb_device.SetProduct("Spartan Joystick Board");
+  usb_device.SetManufacturer("Realtime Robotics Group");
+  usb_device.SetProduct("Joystick Board");
 
   teensy::HidFunction joystick0(&usb_device, kReportSize);
   joystick0.set_report_descriptor(
@@ -1191,9 +1191,9 @@ int DriverStation::Run() {
 }
 
 extern "C" int main(void) {
-  frc971::motors::DriverStation driverStation;
+  frc::motors::DriverStation driverStation;
   return driverStation.Run();
 }
 
 }  // namespace motors
-}  // namespace frc971
+}  // namespace frc

@@ -1,0 +1,8 @@
+namespace frc.wpilib;
+
+// Test output message.
+table LoopOutputHandlerTestOutput {
+  voltage:double (id: 0);
+}
+
+root_type LoopOutputHandlerTestOutput;

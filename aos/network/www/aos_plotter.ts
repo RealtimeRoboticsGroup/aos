@@ -6,7 +6,7 @@
 // every message and extracting the fields to plot.
 // It is also possible to insert code to make modifications to the messages
 // as we read/process them, as is the case for the IMU processing code (see
-// //frc971/wpilib:imu*.ts) where each message is actually a batch of several
+// //frc/wpilib:imu*.ts) where each message is actually a batch of several
 // individual messages that need to be plotted as separate points.
 //
 // The basic flow for using the AosPlotter is:

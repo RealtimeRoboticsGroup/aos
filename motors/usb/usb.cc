@@ -6,7 +6,7 @@
 
 #include "motors/util.h"
 
-namespace frc971::teensy {
+namespace frc::teensy {
 namespace {
 
 // The mask of interrupts we care about.
@@ -1067,4 +1067,4 @@ void UsbDevice::SetBdtEntry(int endpoint, Direction direction, EvenOdd odd,
   *MutableBdtEntry(endpoint, direction, odd) = bdt_entry;
 }
 
-}  // namespace frc971::teensy
+}  // namespace frc::teensy

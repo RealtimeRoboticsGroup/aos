@@ -117,7 +117,7 @@
     },
     {
       "name": "/orin1/camera0",
-      "type": "frc971.vision.CameraImage",
+      "type": "frc.vision.CameraImage",
       "source_node": "orin1",
       "channel_storage_duration": 1000000000,
       "frequency": 70,
@@ -128,7 +128,7 @@
     },
     {
       "name": "/orin1/camera1",
-      "type": "frc971.vision.CameraImage",
+      "type": "frc.vision.CameraImage",
       "source_node": "orin1",
       "channel_storage_duration": 1000000000,
       "frequency": 70,
@@ -171,7 +171,7 @@
     },
     {
       "name": "/orin1/camera0",
-      "type": "frc971.vision.TargetMap",
+      "type": "frc.vision.TargetMap",
       "source_node": "orin1",
       "frequency": 70,
       "num_senders": 2,
@@ -194,7 +194,7 @@
     },
     {
       "name": "/orin1/camera1",
-      "type": "frc971.vision.TargetMap",
+      "type": "frc.vision.TargetMap",
       "source_node": "orin1",
       "frequency": 70,
       "num_senders": 2,
@@ -216,14 +216,14 @@
       ]
     },
     {
-      "name": "/orin1/aos/remote_timestamps/imu/orin1/camera0/frc971-vision-TargetMap",
+      "name": "/orin1/aos/remote_timestamps/imu/orin1/camera0/frc-vision-TargetMap",
       "type": "aos.message_bridge.RemoteMessage",
       "frequency": 80,
       "source_node": "orin1",
       "max_size": 208
     },
     {
-      "name": "/orin1/aos/remote_timestamps/imu/orin1/camera1/frc971-vision-TargetMap",
+      "name": "/orin1/aos/remote_timestamps/imu/orin1/camera1/frc-vision-TargetMap",
       "type": "aos.message_bridge.RemoteMessage",
       "frequency": 80,
       "source_node": "orin1",
@@ -231,7 +231,7 @@
     },
     {
       "name": "/orin1/hardware_monitor",
-      "type": "frc971.orin.HardwareStats",
+      "type": "frc.orin.HardwareStats",
       "source_node": "orin1",
       "frequency": 2
     }
@@ -353,9 +353,9 @@
       "executable_name": "argus_monitor",
       "args": [
         "/orin1/camera0",
-        "frc971.vision.TargetMap",
+        "frc.vision.TargetMap",
         "/orin1/camera1",
-        "frc971.vision.TargetMap",
+        "frc.vision.TargetMap",
       ],
       "user": "pi",
       "nodes": [
@@ -476,7 +476,7 @@
         "orin-8971-1",
         "orin-9971-1"
       ],
-      "port": 9971
+      "port": 4646
     },
     {
       "name": "imu"

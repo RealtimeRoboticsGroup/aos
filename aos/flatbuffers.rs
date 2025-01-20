@@ -367,61 +367,61 @@ mod tests {
     fn test_take() {
         fn take_box_dyn_ref(flatbuffer: &DynFlatbuffer<'_, Location<'static>>) {
             assert_eq!(Some("xyz"), flatbuffer.message().name());
-            assert_eq!(971, flatbuffer.message().frequency());
+            assert_eq!(4646, flatbuffer.message().frequency());
         }
 
         fn take_box_dyn_ref_static(flatbuffer: &DynFlatbuffer<'static, Location<'static>>) {
             assert_eq!(Some("xyz"), flatbuffer.message().name());
-            assert_eq!(971, flatbuffer.message().frequency());
+            assert_eq!(4646, flatbuffer.message().frequency());
         }
 
         fn take_bare_dyn_ref(flatbuffer: &dyn Flatbuffer<Location<'static>>) {
             assert_eq!(Some("xyz"), flatbuffer.message().name());
-            assert_eq!(971, flatbuffer.message().frequency());
+            assert_eq!(4646, flatbuffer.message().frequency());
         }
 
         fn take_impl_ref(flatbuffer: &impl Flatbuffer<Location<'static>>) {
             assert_eq!(Some("xyz"), flatbuffer.message().name());
-            assert_eq!(971, flatbuffer.message().frequency());
+            assert_eq!(4646, flatbuffer.message().frequency());
         }
 
         fn take_impl_ref_static(flatbuffer: &(impl Flatbuffer<Location<'static>> + 'static)) {
             assert_eq!(Some("xyz"), flatbuffer.message().name());
-            assert_eq!(971, flatbuffer.message().frequency());
+            assert_eq!(4646, flatbuffer.message().frequency());
         }
 
         fn take_box_dyn(flatbuffer: DynFlatbuffer<'_, Location<'static>>) {
             assert_eq!(Some("xyz"), flatbuffer.message().name());
-            assert_eq!(971, flatbuffer.message().frequency());
+            assert_eq!(4646, flatbuffer.message().frequency());
         }
 
         fn take_box_dyn_static(flatbuffer: DynFlatbuffer<'static, Location<'static>>) {
             assert_eq!(Some("xyz"), flatbuffer.message().name());
-            assert_eq!(971, flatbuffer.message().frequency());
+            assert_eq!(4646, flatbuffer.message().frequency());
         }
 
         fn take_impl(flatbuffer: impl Flatbuffer<Location<'static>>) {
             assert_eq!(Some("xyz"), flatbuffer.message().name());
-            assert_eq!(971, flatbuffer.message().frequency());
+            assert_eq!(4646, flatbuffer.message().frequency());
         }
 
         fn take_impl_static(flatbuffer: impl Flatbuffer<Location<'static>> + 'static) {
             assert_eq!(Some("xyz"), flatbuffer.message().name());
-            assert_eq!(971, flatbuffer.message().frequency());
+            assert_eq!(4646, flatbuffer.message().frequency());
         }
 
         fn take_nondyn_ref(
             flatbuffer: &NonSizePrefixedFlatbuffer<Location<'static>, CollapsedFlatBufferBuilder>,
         ) {
             assert_eq!(Some("xyz"), flatbuffer.message().name());
-            assert_eq!(971, flatbuffer.message().frequency());
+            assert_eq!(4646, flatbuffer.message().frequency());
         }
 
         fn take_nondyn(
             flatbuffer: NonSizePrefixedFlatbuffer<Location<'static>, CollapsedFlatBufferBuilder>,
         ) {
             assert_eq!(Some("xyz"), flatbuffer.message().name());
-            assert_eq!(971, flatbuffer.message().frequency());
+            assert_eq!(4646, flatbuffer.message().frequency());
         }
 
         let flatbuffer = {
@@ -429,7 +429,7 @@ mod tests {
             let xyz = fbb.create_string("xyz");
             let mut location = LocationBuilder::new(&mut fbb);
             location.add_name(xyz);
-            location.add_frequency(971);
+            location.add_frequency(4646);
             let location = location.finish();
             NonSizePrefixedFlatbuffer::finish_minimal_and_collapse(fbb, location)
         };
@@ -459,7 +459,7 @@ mod tests {
     fn test_make_dyn() {
         fn take_ref(flatbuffer: &impl Flatbuffer<Location<'static>>) {
             assert_eq!(Some("xyz"), flatbuffer.message().name());
-            assert_eq!(971, flatbuffer.message().frequency());
+            assert_eq!(4646, flatbuffer.message().frequency());
         }
 
         let flatbuffer = {
@@ -467,7 +467,7 @@ mod tests {
             let xyz = fbb.create_string("xyz");
             let mut location = LocationBuilder::new(&mut fbb);
             location.add_name(xyz);
-            location.add_frequency(971);
+            location.add_frequency(4646);
             let location = location.finish();
             NonSizePrefixedFlatbuffer::finish_minimal_and_collapse(fbb, location)
         };
@@ -501,7 +501,7 @@ mod tests {
                         let xyz = fbb.create_string("xyz");
                         let mut location = LocationBuilder::new(&mut fbb);
                         location.add_name(xyz);
-                        location.add_frequency(971);
+                        location.add_frequency(4646);
                         let location = location.finish();
                         fbb.$finish(location, None);
                         fbb
@@ -513,7 +513,7 @@ mod tests {
                         )
                         .unwrap();
                         assert_eq!(Some("xyz"), flatbuffer.message().name());
-                        assert_eq!(971, flatbuffer.message().frequency());
+                        assert_eq!(4646, flatbuffer.message().frequency());
                         flatbuffer.revalidate().unwrap();
                     }
 
@@ -521,7 +521,7 @@ mod tests {
                         let flatbuffer =
                             $maybe_prefixed::<Location, _>::new(fbb.finished_data()).unwrap();
                         assert_eq!(Some("xyz"), flatbuffer.message().name());
-                        assert_eq!(971, flatbuffer.message().frequency());
+                        assert_eq!(4646, flatbuffer.message().frequency());
                         flatbuffer.revalidate().unwrap();
                     }
 
@@ -531,7 +531,7 @@ mod tests {
                         array_data[..finished_data.len()].copy_from_slice(finished_data);
                         let flatbuffer = $maybe_prefixed::<Location, _>::new(array_data).unwrap();
                         assert_eq!(Some("xyz"), flatbuffer.message().name());
-                        assert_eq!(971, flatbuffer.message().frequency());
+                        assert_eq!(4646, flatbuffer.message().frequency());
                         flatbuffer.revalidate().unwrap();
                     }
                 }
@@ -542,12 +542,12 @@ mod tests {
                     let xyz = fbb.create_string("xyz");
                     let mut location = LocationBuilder::new(&mut fbb);
                     location.add_name(xyz);
-                    location.add_frequency(971);
+                    location.add_frequency(4646);
                     let location = location.finish();
                     let flatbuffer = $maybe_prefixed::finish_minimal_and_collapse(fbb, location);
 
                     assert_eq!(Some("xyz"), flatbuffer.message().name());
-                    assert_eq!(971, flatbuffer.message().frequency());
+                    assert_eq!(4646, flatbuffer.message().frequency());
                     flatbuffer.revalidate().unwrap();
                 }
 
@@ -590,7 +590,7 @@ mod tests {
                         let fbb = {
                             let mut fbb = FlatBufferBuilder::new();
                             let mut location = LocationBuilder::new(&mut fbb);
-                            location.add_frequency(971);
+                            location.add_frequency(4646);
                             let location = location.finish();
                             fbb.$finish(location, None);
                             fbb

@@ -72,8 +72,7 @@ JSON file has to have these three entries in it:
     }
 
 where the "..." values are replaced with the information to connect to an LDAP
-server. If you want to connect to our FRC971 LDAP server, please contact a
-Software mentor. Or ask on the `#coding` Slack channel.
+server.
 
 If the default ports of 7000 and 7500 are already taken, you can change them via
 the `--https_port` and `--wrapped_port` arguments.

@@ -139,7 +139,7 @@
     },
         {
       "name": "/localizer",
-      "type": "frc971.controls.LocalizerOutput",
+      "type": "frc.controls.LocalizerOutput",
       "source_node": "imu",
       "frequency": 52,
       "logger": "LOCAL_AND_REMOTE_LOGGER",
@@ -159,7 +159,7 @@
       ]
     },
     {
-      "name": "/imu/aos/remote_timestamps/roborio/localizer/frc971-controls-LocalizerOutput",
+      "name": "/imu/aos/remote_timestamps/roborio/localizer/frc-controls-LocalizerOutput",
       "type": "aos.message_bridge.RemoteMessage",
       "source_node": "imu",
       "logger": "NOT_LOGGED",
@@ -178,7 +178,7 @@
     },
     {
       "name": "/imu/camera0",
-      "type": "frc971.vision.CameraImage",
+      "type": "frc.vision.CameraImage",
       "source_node": "imu",
       "channel_storage_duration": 1000000000,
       "frequency": 70,
@@ -189,7 +189,7 @@
     },
     {
       "name": "/imu/camera1",
-      "type": "frc971.vision.CameraImage",
+      "type": "frc.vision.CameraImage",
       "source_node": "imu",
       "channel_storage_duration": 1000000000,
       "frequency": 70,
@@ -232,7 +232,7 @@
     },
     {
       "name": "/imu/camera0",
-      "type": "frc971.vision.TargetMap",
+      "type": "frc.vision.TargetMap",
       "source_node": "imu",
       "frequency": 70,
       "num_senders": 2,
@@ -240,7 +240,7 @@
     },
     {
       "name": "/imu/camera1",
-      "type": "frc971.vision.TargetMap",
+      "type": "frc.vision.TargetMap",
       "source_node": "imu",
       "frequency": 70,
       "num_senders": 2,
@@ -248,7 +248,7 @@
     },
     {
       "name": "/imu",
-      "type": "frc971.imu.DualImu",
+      "type": "frc.imu.DualImu",
       "source_node": "imu",
       "frequency": 1100,
       "num_senders": 1,
@@ -256,7 +256,7 @@
     },
     {
       "name": "/imu",
-      "type": "frc971.imu.CanTranslatorStatus",
+      "type": "frc.imu.CanTranslatorStatus",
       "source_node": "imu",
       "frequency": 1000,
       "num_senders": 1,
@@ -264,7 +264,7 @@
     },
     {
       "name": "/can/cana",
-      "type": "frc971.can_logger.CanFrame",
+      "type": "frc.can_logger.CanFrame",
       "source_node": "imu",
       "frequency": 9000,
       "channel_storage_duration": 7000000000,
@@ -273,7 +273,7 @@
     },
     {
       "name": "/localizer",
-      "type": "frc971.IMUValuesBatch",
+      "type": "frc.IMUValuesBatch",
       "source_node": "imu",
       "frequency": 2200,
       "max_size": 1600,
@@ -281,7 +281,7 @@
     },
     {
       "name": "/imu",
-      "type": "frc971.imu.DualImuBlenderStatus",
+      "type": "frc.imu.DualImuBlenderStatus",
       "source_node": "imu",
       "frequency": 1100,
       "num_senders": 1,
@@ -289,7 +289,7 @@
     },
     {
       "name": "/imu/hardware_monitor",
-      "type": "frc971.orin.HardwareStats",
+      "type": "frc.orin.HardwareStats",
       "source_node": "imu",
       "frequency": 2
     }
@@ -477,9 +477,9 @@
       "executable_name": "argus_monitor",
       "args": [
         "/imu/camera0",
-        "frc971.vision.TargetMap",
+        "frc.vision.TargetMap",
         "/imu/camera1",
-        "frc971.vision.TargetMap",
+        "frc.vision.TargetMap",
       ],
       "user": "pi",
       "nodes": [
@@ -581,7 +581,7 @@
         "orin-8971-2",
         "orin-9971-2"
       ],
-      "port": 9971
+      "port": 4646
     },
     {
       "name": "roborio"

@@ -52,7 +52,7 @@ def flatbuffer_ts_library(
     """
     srcs_lib = "%s_srcs" % (name)
 
-    # frc971-specific modification: Add a genrule that overwrites the imports for any flatbuffer
+    # aos-specific modification: Add a genrule that overwrites the imports for any flatbuffer
     # types (mostly just for reflection) because they need to point to external/, not to
     # third_party/.
     # TODO(james): There absolutely are better ways to do this, but this was the quick and dirty

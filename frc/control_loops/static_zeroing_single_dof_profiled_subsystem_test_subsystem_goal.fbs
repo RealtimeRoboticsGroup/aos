@@ -1,0 +1,13 @@
+include "frc/control_loops/profiled_subsystem.fbs";
+include "frc/control_loops/control_loops.fbs";
+
+namespace frc.control_loops.zeroing.testing;
+
+table SubsystemGoal {
+  unsafe_goal:double (id: 0);
+  profile_params:frc.ProfileParameters (id: 1);
+  goal_velocity:double (id: 2);
+  ignore_profile:bool (id: 3);
+}
+
+root_type SubsystemGoal;

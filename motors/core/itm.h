@@ -3,7 +3,7 @@
 
 #include "motors/core/reg_debug.h"
 
-namespace frc971 {
+namespace frc {
 namespace motors {
 
 // Manages the ITM (Instrumentation and Trace Macrocell), along with the TPIU
@@ -85,6 +85,6 @@ inline void Write32(int port, uint32_t value) {
 
 }  // namespace itm
 }  // namespace motors
-}  // namespace frc971
+}  // namespace frc
 
 #endif  // MOTORS_CORE_ITM_H_

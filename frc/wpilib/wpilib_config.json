@@ -1,0 +1,13 @@
+{
+  "channels":
+  [
+    {
+      "name": "/aos",
+      "type": "frc.PDPValues"
+    },
+    {
+      "name": "/aos",
+      "type": "frc.wpilib.PneumaticsToLog"
+    }
+  ]
+}

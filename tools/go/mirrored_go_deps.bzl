@@ -17,7 +17,7 @@ def maybe_override_go_dep(name, importpath, sum, version, **kwargs):
             fail(("The repo {} is not properly mirrored. " +
                   "Please ask someone with mirroring access for help." +
                   "They need to 'bazel run //tools/go:mirror_go_repos -- " +
-                  "--ssh_host <software.971spartans.net>'.").format(name))
+                  "--ssh_host <realtimeroboticsgroup.org>'.").format(name))
 
     # If we want to use the upstream version and we've already imported a
     # mirrored version via mirrored_go_dependencies(), then we override it here

@@ -189,12 +189,12 @@
     {
       "name": "pi1",
       "hostname": "pi1",
-      "port": 9971
+      "port": 4646
     },
     {
       "name": "pi2",
       "hostname": "pi2",
-      "port": 9971
+      "port": 4646
     }
   ]
 }

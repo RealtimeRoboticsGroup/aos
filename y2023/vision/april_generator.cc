@@ -14,7 +14,7 @@
 // https://halide-lang.org/tutorials/tutorial_lesson_15_generators.html has an
 // introduction to much of the magic in this file.
 
-namespace frc971::vision {
+namespace frc::vision {
 namespace {
 
 // Returns a function implementating a 1-dimensional gaussian blur convolution.
@@ -146,10 +146,9 @@ class ThresholdGenerator : public Halide::Generator<ThresholdGenerator> {
   }
 };
 
-}  // namespace frc971::vision
+}  // namespace frc::vision
 
 // TODO(austin): Combine the functions and optimize for device/host and all that
 // jazz.
-HALIDE_REGISTER_GENERATOR(frc971::vision::DecimateGenerator, decimate_generator)
-HALIDE_REGISTER_GENERATOR(frc971::vision::ThresholdGenerator,
-                          threshold_generator)
+HALIDE_REGISTER_GENERATOR(frc::vision::DecimateGenerator, decimate_generator)
+HALIDE_REGISTER_GENERATOR(frc::vision::ThresholdGenerator, threshold_generator)

@@ -215,12 +215,12 @@
     {
       "name": "devbox",
       "hostname": "devbox",
-      "port": 9971
+      "port": 4646
     },
     {
       "name": "remote",
       "hostname": "vpu",
-      "port": 9971
+      "port": 4646
     }
   ],
   "applications": [

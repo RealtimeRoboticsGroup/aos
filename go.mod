@@ -4,7 +4,6 @@ go 1.17
 
 require (
 	github.com/bazelbuild/rules_go v0.38.1
-	github.com/buildkite/go-buildkite v2.2.0+incompatible
 	github.com/google/flatbuffers v2.0.5+incompatible
 	google.golang.org/grpc v1.50.0
 	gorm.io/driver/postgres v1.3.7
@@ -12,9 +11,7 @@ require (
 )
 
 require (
-	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.1
-	github.com/google/go-querystring v1.1.0 // indirect
 	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4 // indirect
 	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1 // indirect
 	golang.org/x/text v0.3.7 // indirect

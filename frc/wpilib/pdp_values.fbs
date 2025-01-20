@@ -1,0 +1,13 @@
+namespace frc;
+
+// Values retrieved from the PDP.
+// Published on ".frc.pdp_values"
+table PDPValues {
+  voltage:double (id: 0);
+  temperature:double (id: 1);
+  power:double (id: 2);
+  // Array of 16 currents.
+  currents:[double] (id: 3);
+}
+
+root_type PDPValues;

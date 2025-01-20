@@ -3,14 +3,14 @@
 
 #include <cstdint>
 
-#include "frc971/constants.h"
-#include "frc971/control_loops/state_feedback_loop.h"
-#include "frc971/shifter_hall_effect.h"
+#include "frc/constants.h"
+#include "frc/control_loops/state_feedback_loop.h"
+#include "frc/shifter_hall_effect.h"
 
 namespace y2016::constants {
 
-using ::frc971::constants::PotAndIndexPulseZeroingConstants;
-using ::frc971::constants::ShifterHallEffect;
+using ::frc::constants::PotAndIndexPulseZeroingConstants;
+using ::frc::constants::ShifterHallEffect;
 
 // Has all of the numbers that change for both robots and makes it easy to
 // retrieve the values for the current one.
@@ -52,30 +52,30 @@ struct Values {
 
   // Subsystem motion ranges, in whatever units that their respective queues say
   // the use.
-  static constexpr ::frc971::constants::Range kIntakeRange{// Lower hard stop
-                                                           -0.5,
-                                                           // Upper hard stop
-                                                           2.85 + 0.05,
-                                                           // Lower soft stop
-                                                           -0.300,
-                                                           // Uppper soft stop
-                                                           2.725};
-  static constexpr ::frc971::constants::Range kShoulderRange{// Lower hard stop
-                                                             -0.150,
-                                                             // Upper hard stop
-                                                             2.8,
-                                                             // Lower soft stop
-                                                             -0.010,
-                                                             // Uppper soft stop
-                                                             2.0};
-  static constexpr ::frc971::constants::Range kWristRange{// Lower hard stop
-                                                          -3.0,
+  static constexpr ::frc::constants::Range kIntakeRange{// Lower hard stop
+                                                        -0.5,
+                                                        // Upper hard stop
+                                                        2.85 + 0.05,
+                                                        // Lower soft stop
+                                                        -0.300,
+                                                        // Uppper soft stop
+                                                        2.725};
+  static constexpr ::frc::constants::Range kShoulderRange{// Lower hard stop
+                                                          -0.150,
                                                           // Upper hard stop
-                                                          3.0,
+                                                          2.8,
                                                           // Lower soft stop
-                                                          -2.6,
+                                                          -0.010,
                                                           // Uppper soft stop
-                                                          2.6};
+                                                          2.0};
+  static constexpr ::frc::constants::Range kWristRange{// Lower hard stop
+                                                       -3.0,
+                                                       // Upper hard stop
+                                                       3.0,
+                                                       // Lower soft stop
+                                                       -2.6,
+                                                       // Uppper soft stop
+                                                       2.6};
 
   // ///// Dynamic constants. /////
   double drivetrain_max_speed;

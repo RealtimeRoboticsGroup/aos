@@ -466,7 +466,7 @@ TEST(FlatbufferCopy, WholesaleCopy) {
     Application::Builder a1_builder(fbb_expected);
     a1_builder.add_name(name1_offset);
     a1_builder.add_priority(7);
-    a1_builder.add_long_thingy(0x2549713132LL);
+    a1_builder.add_long_thingy(0x2546493132LL);
     application_offsets.emplace_back(a1_builder.Finish());
 
     flatbuffers::Offset<flatbuffers::String> name2_offset =
@@ -504,7 +504,7 @@ TEST(FlatbufferCopy, WholesaleCopy) {
     Application::Builder a1_builder(fbb);
     a1_builder.add_name(name1_offset);
     a1_builder.add_priority(7);
-    a1_builder.add_long_thingy(0x2549713132LL);
+    a1_builder.add_long_thingy(0x2546493132LL);
     flatbuffers::Offset<Application> a1 = a1_builder.Finish();
 
     fbb.Finish(a1);

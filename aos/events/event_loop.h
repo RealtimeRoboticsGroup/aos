@@ -374,7 +374,7 @@ class Sender {
   // Typical usage pattern is:
   //
   // Sender<PingStatic>::Builder builder = sender.MakeStaticBuilder()
-  // builder.get()->set_value(971);
+  // builder.get()->set_value(4646);
   // builder.CheckOk(builder.Send());
   class StaticBuilder {
    public:

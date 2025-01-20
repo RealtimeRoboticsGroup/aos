@@ -14,7 +14,7 @@ Git and Gerrit are both essential tools which we use to program the robot, this 
 
 Term Definition:
 - Repository: A project or collection of projects managed using git.
-For example our code lives in a repository called `971-Robot-Code`.
+For example our code lives in a repository called `RealtimeRoboticsGroup/aos`.
 - Commit: A collection of code changes
 - Branch: A collection of commits
 

@@ -140,7 +140,7 @@ function visit(path) {
 before(() => {
   visit('/');
   disableAlerts();
-  cy.title().should('eq', 'FRC971 Scouting Application');
+  cy.title().should('eq', 'FRC Scouting Application');
 });
 
 beforeEach(() => {

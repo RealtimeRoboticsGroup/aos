@@ -7,7 +7,7 @@ py_binary(
     target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         ":python_init",
-        "//frc971/control_loops/python:drivetrain",
+        "//frc/control_loops/python:drivetrain",
         "@pip//glog",
         "@pip//python_gflags",
     ],
@@ -23,7 +23,7 @@ py_binary(
     target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         ":python_init",
-        "//frc971/control_loops/python:polydrivetrain",
+        "//frc/control_loops/python:polydrivetrain",
         "@pip//glog",
         "@pip//python_gflags",
     ],
@@ -80,8 +80,8 @@ cc_library(
     target_compatible_with = ["@platforms//os:none"],
     visibility = ["//visibility:public"],
     deps = [
-        "//frc971/control_loops:state_feedback_loop",
-        "//frc971/control_loops/drivetrain:polydrivetrain",
+        "//frc/control_loops:state_feedback_loop",
+        "//frc/control_loops/drivetrain:polydrivetrain",
     ],
 )
 
@@ -90,7 +90,7 @@ cc_library(
     srcs = ["spring.cc"],
     hdrs = ["spring.h"],
     visibility = ["//visibility:public"],
-    deps = ["//frc971/zeroing:wrap"],
+    deps = ["//frc/zeroing:wrap"],
 )
 
 cc_test(

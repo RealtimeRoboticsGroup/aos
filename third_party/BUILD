@@ -9,7 +9,7 @@ cc_library(
     linkstatic = True,
     target_compatible_with = ["//tools/platforms/hardware:roborio"],
     visibility = ["//visibility:public"],
-    deps = ["//frc971/wpilib/ahal"],
+    deps = ["//frc/wpilib/ahal"],
 )
 
 cc_library(

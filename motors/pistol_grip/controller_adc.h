@@ -3,7 +3,7 @@
 
 #include "motors/util.h"
 
-namespace frc971::motors {
+namespace frc::motors {
 
 struct SmallAdcReadings {
   uint16_t currents[3];
@@ -27,6 +27,6 @@ SmallAdcReadings AdcReadSmall1(const DisableInterrupts &);
 // Reads the absolute encoder values for initialization.
 SmallInitReadings AdcReadSmallInit(const DisableInterrupts &);
 
-}  // namespace frc971::motors
+}  // namespace frc::motors
 
 #endif  // MOTORS_PISTOL_GRIP_CONTROLLER_ADC_H_

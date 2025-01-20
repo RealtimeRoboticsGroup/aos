@@ -3153,7 +3153,7 @@ TEST_P(AbstractEventLoopTest, RawRemoteTimes) {
       aos::realtime_clock::time_point(chrono::seconds(3132));
   const aos::monotonic_clock::time_point monotonic_remote_transmit_time =
       aos::monotonic_clock::time_point(chrono::seconds(1601));
-  const uint32_t remote_queue_index = 0x254971;
+  const uint32_t remote_queue_index = 0x254649;
   const UUID source_boot_uuid = UUID::Random();
 
   std::unique_ptr<aos::RawSender> sender =

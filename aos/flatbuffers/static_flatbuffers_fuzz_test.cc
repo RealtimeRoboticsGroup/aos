@@ -63,16 +63,16 @@ TEST_F(StaticFlatbuffersFuzzTest, JsonFuzzing) {
           "\"vector_of_strings\": [\n  \"\",\n  \"abcdef\"\n ]",
           "\"vector_of_strings\": [\n  \"\",\n  \"abcdef\",\n  "
           "\"abcdefghijklmnopqrstuvwxyz\"\n ]",
-          "\"vector_of_strings\": [\n  \"\",\n  \"abcdef\",\n  \"971\",\n  "
+          "\"vector_of_strings\": [\n  \"\",\n  \"abcdef\",\n  \"1323\",\n  "
           "\"abcdefghijklmnopqrstuvwxyz\"\n ]",
           "\"vector_of_strings\": [\n  \"\",\n  \"abcdef\",\n  "
-          "\"abcdefghijklmnopqrstuvwxyz\",\n  \"971\",\n  \"123\"\n ]",
+          "\"abcdefghijklmnopqrstuvwxyz\",\n  \"1323\",\n  \"123\"\n ]",
           "\"vector_of_strings\": [\n  \"\",\n  \"abcdef\",\n  \"xyz\",\n  "
-          "\"971\",\n  \"123\"\n ]",
+          "\"1323\",\n  \"123\"\n ]",
       },
       {
           "",
-          "\"substruct\": {\n  \"x\": 971,\n  \"y\": 123\n }",
+          "\"substruct\": {\n  \"x\": 1323,\n  \"y\": 123\n }",
       },
       {
           "",

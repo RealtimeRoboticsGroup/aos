@@ -7,7 +7,7 @@ py_binary(
     target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         ":python_init",
-        "//frc971/control_loops/python:controls",
+        "//frc/control_loops/python:controls",
         "@pip//glog",
         "@pip//matplotlib",
         "@pip//python_gflags",
@@ -24,7 +24,7 @@ py_binary(
     target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         ":python_init",
-        "//frc971/control_loops/python:controls",
+        "//frc/control_loops/python:controls",
         "@pip//glog",
         "@pip//python_gflags",
     ],

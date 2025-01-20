@@ -32,7 +32,7 @@ std::vector<CameraNode> CreateNodeList();
 std::map<std::string, int> CreateOrderingMap(
     std::vector<CameraNode> &node_list);
 
-const frc971::vision::calibration::CameraCalibration *FindCameraCalibration(
+const frc::vision::calibration::CameraCalibration *FindCameraCalibration(
     const y2024::Constants &calibration_data, std::string_view node_name,
     int camera_number);
 

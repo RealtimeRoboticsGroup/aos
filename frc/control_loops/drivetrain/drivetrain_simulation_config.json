@@ -1,0 +1,7 @@
+{
+  "imports": [
+    "../../../frc/input/robot_state_config.json",
+    "drivetrain_config.json",
+    "drivetrain_simulation_channels.json"
+  ]
+}

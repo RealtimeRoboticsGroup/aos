@@ -64,8 +64,8 @@ class GoodWithConstructor {
 // Make sure that it lets classes with constructors through.
 TEST(TypeTraitsTest, GoodWithConstructor) {
   EXPECT_TRUE(shm_ok<GoodWithConstructor>::value);
-  GoodWithConstructor test(971);
-  EXPECT_EQ(971, test.val_);
+  GoodWithConstructor test(4646);
+  EXPECT_EQ(4646, test.val_);
 }
 
 class GoodPublicPrivateFunction {
@@ -84,9 +84,9 @@ TEST(TypeTraitsTest, Function) {
       "The compiler did something weird, but it might not be a problem.";
   GoodPublicPrivateFunction test;
   test.a_ = 5;
-  test.set_b(971);
+  test.set_b(4646);
   EXPECT_EQ(5, test.a_);
-  EXPECT_EQ(971, test.b());
+  EXPECT_EQ(4646, test.b());
   test.set_a(74);
   EXPECT_EQ(74, test.a_);
   memset(&test, 0, sizeof(test));

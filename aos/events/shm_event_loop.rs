@@ -118,7 +118,7 @@ impl<'config> ShmEventLoop<'config> {
     /// # use std::path::Path;
     /// # use aos_configuration::read_config_from;
     /// let config = read_config_from(Path::new("path/to/aos_config.json")).unwrap();
-    /// let shared_data = Cell::new(971);
+    /// let shared_data = Cell::new(3132);
     /// let shared_data = &shared_data;
     /// let event_loop = ShmEventLoop::new(&config);
     /// event_loop.run_with(|runtime| {
@@ -149,7 +149,7 @@ impl<'config> ShmEventLoop<'config> {
     /// let event_loop = ShmEventLoop::new(&config);
     /// event_loop.run_with(|runtime| {
     ///   // ERROR: `shared_data` doesn't live long enough.
-    ///   let shared_data = Cell::new(971);
+    ///   let shared_data = Cell::new(3132);
     ///   let t1 = async {
     ///     shared_data.set(shared_data.get() + 1);
     ///   };
@@ -252,7 +252,7 @@ mod tests {
         let config =
             read_config_from(&artifact_path(Path::new("aos/events/pingpong_config.json"))).unwrap();
 
-        const VALUE: i32 = 971;
+        const VALUE: i32 = 3132;
         let barrier = Barrier::new(2);
         let count = AtomicUsize::new(0);
 

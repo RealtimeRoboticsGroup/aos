@@ -4,7 +4,7 @@
 #include "absl/flags/flag.h"
 
 #include "aos/init.h"
-#include "frc971/orin/gpu_apriltag.h"
+#include "frc/orin/gpu_apriltag.h"
 #include "y2024/constants/constants_generated.h"
 #include "y2024/vision/vision_util.h"
 
@@ -16,21 +16,21 @@ void GpuApriltagDetector() {
   aos::FlatbufferDetachedBuffer<aos::Configuration> config =
       aos::configuration::ReadConfig(absl::GetFlag(FLAGS_config));
 
-  frc971::constants::WaitForConstants<y2024::Constants>(&config.message());
+  frc::constants::WaitForConstants<y2024::Constants>(&config.message());
 
   aos::ShmEventLoop event_loop(&config.message());
 
-  const frc971::constants::ConstantsFetcher<y2024::Constants> calibration_data(
+  const frc::constants::ConstantsFetcher<y2024::Constants> calibration_data(
       &event_loop);
 
   CHECK(absl::GetFlag(FLAGS_channel).length() == 8);
   int camera_id = std::stoi(absl::GetFlag(FLAGS_channel).substr(7, 1));
-  const frc971::vision::calibration::CameraCalibration *calibration =
+  const frc::vision::calibration::CameraCalibration *calibration =
       y2024::vision::FindCameraCalibration(
           calibration_data.constants(),
           event_loop.node()->name()->string_view(), camera_id);
 
-  frc971::apriltag::ApriltagDetector detector(
+  frc::apriltag::ApriltagDetector detector(
       &event_loop, absl::GetFlag(FLAGS_channel), calibration);
 
   // TODO(austin): Figure out our core pinning strategy.
@@ -44,7 +44,7 @@ void GpuApriltagDetector() {
   LOG(INFO) << "Running event loop";
   // TODO(austin): Pre-warm it...
   event_loop.Run();
-}  // namespace frc971::apriltag
+}  // namespace frc::apriltag
 
 int main(int argc, char **argv) {
   aos::InitGoogle(&argc, &argv);

@@ -118,7 +118,7 @@ def offset_dxf(dxf, scale, resolution, pm)
 	swl_p = offset_dxf_integer(dxf, IntegerScale, 2**15)
 end
 
-obj_name = (ARGV[0] || "9971-15-P-0015_transmition_plate.dxf")
+obj_name = (ARGV[0] || "118-15-P-0015_transmition_plate.dxf")
 class PMLoader
 	def initialize()
 		@cache = {}

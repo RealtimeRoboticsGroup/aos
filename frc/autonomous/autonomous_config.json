@@ -1,0 +1,18 @@
+{
+  "channels":
+  [
+    {
+      "name": "/autonomous",
+      "type": "aos.common.actions.Status"
+    },
+    {
+      "name": "/autonomous",
+      "type": "frc.autonomous.Goal"
+    },
+    {
+      "name": "/autonomous",
+      "type": "frc.autonomous.AutonomousMode",
+      "frequency": 200
+    }
+  ]
+}

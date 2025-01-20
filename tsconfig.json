@@ -16,7 +16,7 @@
     }
   },
   "bazelOptions": {
-    "workspaceName": "971-Robot-Code"
+    "workspaceName": "aos"
   },
   "angularCompilerOptions": {
     "strictInjectionParameters": true,

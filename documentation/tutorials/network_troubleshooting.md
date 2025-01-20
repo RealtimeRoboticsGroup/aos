@@ -1,7 +1,7 @@
 # Notes on troubleshooting network setup
 
 If the roboRIO has been configued to use a static IP address like
-10.9.71.2, set the laptop to have an IP address on the 10.9.71.x
+10.16.78.2, set the laptop to have an IP address on the 10.16.78.x
 subnet with a netmask of 255.0.0.0.  The ".x" is different than the
 .2 for the roboRIO or any other device on the network.  The driver
 station uses .5 or .6 so avoid those.  The radio uses .1 or .50 so
@@ -17,11 +17,11 @@ probably means that the robot and laptop are on different subnets.
 They need to be on the same subnet for the laptop to connect to the
 robot.  Connecting can be confirmed by using ping.
 ```
-ping roboRIO-971-frc.local
+ping roboRIO-1678-frc.local
 ```
 or
 ```
-ping 10.9.71.2
+ping 10.16.78.2
 ```
 
 If this does not work, perhaps the roboRIO has not been configured to
@@ -29,10 +29,10 @@ have a static IP address.  Use a USB cable to connect from a Windows
 laptop to the roboRIO and use a web browser (Chrome is preferred,
 IE/Edge is not-- see [this technical
 note](https://docs.wpilib.org/en/stable/docs/software/roborio-info/roborio-web-dashboard.html))
-to configure the roboRIO to have a static IP address of 10.9.71.2.
-Browse to http://roborio-971-frc.local or http://172.22.11.2.  Click
+to configure the roboRIO to have a static IP address of 10.16.78.2.
+Browse to http://roborio-1678-frc.local or http://172.22.11.2.  Click
 on the "Ethernet" icon on the left, select "Static" for the "Configure
-IPv4 Address" option.  Set the "IPv4 Address" to 10.9.71.2. Set the
+IPv4 Address" option.  Set the "IPv4 Address" to 10.16.78.2. Set the
 "Subnet Mask" to "255.0.0.0".  Finally click on "Save" at the bottom
 of the screen.  If you have trouble using an Ethernet cable, try using
 a USB cable (USB A->B).
