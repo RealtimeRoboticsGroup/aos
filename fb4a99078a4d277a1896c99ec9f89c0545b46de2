@@ -45,6 +45,30 @@
       },
       "revId": "fb4a99078a4d277a1896c99ec9f89c0545b46de2",
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "a7c4e7f9_6259004b",
+        "filename": "third_party/bazel-toolchain/toolchain/cc_toolchain_config.bzl",
+        "patchSetId": 4
+      },
+      "lineNbr": 104,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-01-20T06:59:41Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "123e7837_b05a03a3",
+      "range": {
+        "startLine": 104,
+        "startChar": 12,
+        "endLine": 104,
+        "endChar": 33
+      },
+      "revId": "fb4a99078a4d277a1896c99ec9f89c0545b46de2",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     }
   ]
 }
