@@ -33,6 +33,24 @@
       "message": "If we are going to churn these things can we make them numbers that *aren\u0027t* affiliated with any specific organization?",
       "revId": "6ab13bbf679777689ce3954cb8392a0519b6b405",
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "ddfc5d20_f774c74d",
+        "filename": "aos/network/sctp_client.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 21,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-01-21T06:21:58Z",
+      "side": 1,
+      "message": "I\u0027ll send a follow-up for at least the port numbers.",
+      "parentUuid": "6a6290b5_a9ddfb1f",
+      "revId": "6ab13bbf679777689ce3954cb8392a0519b6b405",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     }
   ],
   "submitRequirementResults": [
