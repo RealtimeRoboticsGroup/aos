@@ -350,6 +350,8 @@ class ShmFetcher : public RawFetcher {
   }
 
   ~ShmFetcher() override {
+    CHECK(!event_loop()->is_running())
+        << ": Can't destroy Fetcher while running";
     shm_event_loop()->CheckCurrentThread();
     context_.data = nullptr;
   }
@@ -774,6 +776,7 @@ class ShmPhasedLoopHandler final : public PhasedLoopHandler {
 
 ::std::unique_ptr<RawFetcher> ShmEventLoop::MakeRawFetcher(
     const Channel *channel) {
+  CHECK(!is_running()) << ": Can't make Fetcher while running";
   CheckCurrentThread();
   if (!configuration::ChannelIsReadableOnNode(channel, node())) {
     LOG(FATAL) << "Channel { \"name\": \"" << channel->name()->string_view()

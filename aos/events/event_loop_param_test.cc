@@ -1372,6 +1372,27 @@ TEST_P(AbstractEventLoopDeathTest, NoArgWatcherInOnRun) {
   EXPECT_DEATH(Run(), "running");
 }
 
+// Verify that we can't create a fetcher inside OnRun.
+TEST_P(AbstractEventLoopDeathTest, FetcherInOnRun) {
+  auto loop1 = MakePrimary();
+
+  aos::Fetcher<TestMessage> fetcher;
+  //loop1->OnRun([&]() { fetcher = loop1->MakeFetcher<TestMessage>("/test"); });
+  loop1->OnRun([&]() { loop1->MakeFetcher<TestMessage>("/test"); });
+
+  EXPECT_DEATH(Run(), "running");
+}
+
+// Verify that we can't destroy a fetcher inside OnRun.
+TEST_P(AbstractEventLoopDeathTest, DestroyFetcherInOnRun) {
+  auto loop1 = MakePrimary();
+
+  aos::Fetcher<TestMessage> fetcher = loop1->MakeFetcher<TestMessage>("/test");
+  loop1->OnRun([&]() { fetcher = aos::Fetcher<TestMessage>(); });
+
+  EXPECT_DEATH(Run(), "running");
+}
+
 // Verify that Quit() works when there are multiple watchers.
 TEST_P(AbstractEventLoopTest, MultipleWatcherQuit) {
   auto loop1 = Make();
