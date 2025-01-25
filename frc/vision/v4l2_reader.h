@@ -86,7 +86,7 @@ class V4L2ReaderBase {
   // TODO(Brian): This concept won't exist once we start using variable-size
   // H.264 frames.
   size_t ImageSize() const { return ImageSize(rows_, cols_); }
-  static size_t ImageSize(int rows, int cols) {
+  virtual size_t ImageSize(int rows, int cols) const {
     return rows * cols * 2 /* bytes per pixel */;
   }
 
@@ -123,6 +123,7 @@ class V4L2ReaderBase {
 
   struct BufferInfo {
     int index = -1;
+    int bytesused = -1;
     aos::monotonic_clock::time_point monotonic_eof =
         aos::monotonic_clock::min_time;
 
@@ -130,6 +131,7 @@ class V4L2ReaderBase {
 
     void Clear() {
       index = -1;
+      bytesused = -1;
       monotonic_eof = aos::monotonic_clock::min_time;
     }
   };
@@ -163,6 +165,21 @@ class V4L2Reader : public V4L2ReaderBase {
  public:
   V4L2Reader(aos::EventLoop *event_loop, std::string_view device_name,
              std::string_view image_channel = "/camera");
+};
+
+// V4L2 Reader with MJPEG support.
+class MjpegV4L2Reader : public V4L2ReaderBase {
+ public:
+  MjpegV4L2Reader(aos::EventLoop *event_loop, aos::internal::EPoll *epoll,
+                  std::string_view device_name,
+                  std::string_view image_channel = "/camera");
+
+  size_t ImageSize(int rows, int cols) const override {
+    return rows * cols * 2 + 589 /* bytes per pixel */;
+  }
+
+ private:
+  aos::internal::EPoll *epoll_;
 };
 
 // Rockpi specific v4l2 reader.  This assumes that the media device has been

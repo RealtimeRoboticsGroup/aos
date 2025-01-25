@@ -546,6 +546,7 @@ robot_downloader(
         ":apriltag_detector",
         "//aos/events:aos_timing_report_streamer",
         "//aos/util:foxglove_websocket",
+        "//y2022/vision:camera_reader",
     ],
     data = [
         ":aos_config",

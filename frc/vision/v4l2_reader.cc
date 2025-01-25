@@ -10,7 +10,10 @@
 
 ABSL_FLAG(bool, ignore_timestamps, false,
           "Don't require timestamps on images.  Used to allow webcams");
-
+ABSL_FLAG(uint32_t, imagewidth, 640,
+          "Image capture resolution width in pixels.");
+ABSL_FLAG(uint32_t, imageheight, 480,
+          "Image capture resolution height in pixels.");
 namespace frc::vision {
 
 V4L2ReaderBase::V4L2ReaderBase(aos::EventLoop *event_loop,
@@ -65,23 +68,35 @@ void V4L2ReaderBase::StreamOn() {
       cols_ = format.fmt.pix_mp.width;
       rows_ = format.fmt.pix_mp.height;
       LOG(INFO) << "Format is " << cols_ << ", " << rows_;
-      CHECK_EQ(format.fmt.pix_mp.pixelformat, V4L2_PIX_FMT_YUYV)
-          << ": Invalid pixel format";
+      if (format.fmt.pix_mp.pixelformat == V4L2_PIX_FMT_MJPEG) {
+        CHECK_EQ(static_cast<int>(format.fmt.pix_mp.plane_fmt[0].bytesperline),
+                 0);
+      } else if (format.fmt.pix_mp.pixelformat == V4L2_PIX_FMT_YUYV) {
+        CHECK_EQ(static_cast<int>(format.fmt.pix_mp.plane_fmt[0].bytesperline),
+                 cols_ * 2 /* bytes per pixel */);
+      } else {
+        LOG(FATAL) << ": Invalid pixel format";
+      }
 
       CHECK_EQ(format.fmt.pix_mp.num_planes, 1u);
 
-      CHECK_EQ(static_cast<int>(format.fmt.pix_mp.plane_fmt[0].bytesperline),
-               cols_ * 2 /* bytes per pixel */);
       CHECK_EQ(format.fmt.pix_mp.plane_fmt[0].sizeimage, ImageSize());
     } else {
       cols_ = format.fmt.pix.width;
       rows_ = format.fmt.pix.height;
       LOG(INFO) << "Format is " << cols_ << ", " << rows_;
-      CHECK_EQ(format.fmt.pix.pixelformat, V4L2_PIX_FMT_YUYV)
-          << ": Invalid pixel format";
+      if (format.fmt.pix.pixelformat == V4L2_PIX_FMT_MJPEG) {
+        CHECK_EQ(static_cast<int>(format.fmt.pix.bytesperline), 0);
+      }
 
-      CHECK_EQ(static_cast<int>(format.fmt.pix.bytesperline),
-               cols_ * 2 /* bytes per pixel */);
+      else if (format.fmt.pix_mp.pixelformat == V4L2_PIX_FMT_YUYV) {
+        CHECK_EQ(static_cast<int>(format.fmt.pix.bytesperline),
+                 cols_ * 2 /* bytes per pixel */);
+      }
+
+      else {
+        LOG(FATAL) << ": Invalid pixel format";
+      }
       CHECK_EQ(format.fmt.pix.sizeimage, ImageSize());
     }
   }
@@ -135,8 +150,8 @@ bool V4L2ReaderBase::ReadLatestImage() {
     // iteration, which means we found an image so return it.
     ftrace_.FormatMessage("Got saved buffer %d", saved_buffer_.index);
     saved_buffer_ = previous_buffer;
-    buffers_[saved_buffer_.index].PrepareMessage(rows_, cols_, ImageSize(),
-                                                 saved_buffer_.monotonic_eof);
+    buffers_[saved_buffer_.index].PrepareMessage(
+        rows_, cols_, saved_buffer_.bytesused, saved_buffer_.monotonic_eof);
     return true;
   }
 }
@@ -240,7 +255,7 @@ V4L2ReaderBase::BufferInfo V4L2ReaderBase::DequeueBuffer() {
     CHECK_EQ(buffer.flags & V4L2_BUF_FLAG_TSTAMP_SRC_MASK,
              static_cast<uint32_t>(V4L2_BUF_FLAG_TSTAMP_SRC_EOF));
   }
-  return {static_cast<int>(buffer.index),
+  return {static_cast<int>(buffer.index), static_cast<int>(buffer.bytesused),
           aos::time::from_timeval(buffer.timestamp)};
 }
 
@@ -305,8 +320,8 @@ V4L2Reader::V4L2Reader(aos::EventLoop *event_loop, std::string_view device_name,
   format.type = multiplanar() ? V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE
                               : V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
-  constexpr int kWidth = 640;
-  constexpr int kHeight = 480;
+  const int kWidth = absl::GetFlag(FLAGS_imagewidth);
+  const int kHeight = absl::GetFlag(FLAGS_imageheight);
   format.fmt.pix.width = kWidth;
   format.fmt.pix.height = kHeight;
   format.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
@@ -321,6 +336,46 @@ V4L2Reader::V4L2Reader(aos::EventLoop *event_loop, std::string_view device_name,
   CHECK_EQ(format.fmt.pix.sizeimage, ImageSize(kHeight, kWidth));
 
   StreamOn();
+}
+MjpegV4L2Reader::MjpegV4L2Reader(aos::EventLoop *event_loop,
+                                 aos::internal::EPoll *epoll,
+                                 std::string_view device_name,
+                                 std::string_view image_channel)
+    : V4L2ReaderBase(event_loop, device_name, image_channel), epoll_(epoll) {
+  // Don't know why this magic call to SetExposure is required (before the
+  // camera settings are configured) to make things work on boot of the pi, but
+  // it seems to be-- without it, the image exposure is wrong (too dark). Note--
+  // any valid value seems to work-- just choosing 1 for now
+
+  SetExposure(1);
+
+  struct v4l2_format format;
+  memset(&format, 0, sizeof(format));
+  format.type = multiplanar() ? V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE
+                              : V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+  const int kWidth = absl::GetFlag(FLAGS_imagewidth);
+  const int kHeight = absl::GetFlag(FLAGS_imageheight);
+  format.fmt.pix.width = kWidth;
+  format.fmt.pix.height = kHeight;
+  format.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG;
+  // This means we want to capture from a progressive (non-interlaced)
+  // source.
+  format.fmt.pix.field = V4L2_FIELD_NONE;
+  PCHECK(Ioctl(VIDIOC_S_FMT, &format) == 0);
+  CHECK_EQ(static_cast<int>(format.fmt.pix.width), kWidth);
+  CHECK_EQ(static_cast<int>(format.fmt.pix.height), kHeight);
+  CHECK_EQ(static_cast<int>(format.fmt.pix.bytesperline), 0);
+  CHECK_EQ(format.fmt.pix.sizeimage, ImageSize(kHeight, kWidth));
+
+  StreamOn();
+  epoll_->OnReadable(fd().get(), [this]() {
+    if (!ReadLatestImage()) {
+      return;
+    }
+
+    SendLatestImage();
+  });
 }
 
 RockchipV4L2Reader::RockchipV4L2Reader(aos::EventLoop *event_loop,
