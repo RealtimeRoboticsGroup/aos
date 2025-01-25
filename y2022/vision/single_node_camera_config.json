@@ -1,0 +1,66 @@
+{
+  "channels" : [
+    {
+      "name": "/aos",
+      "type": "aos.timing.Report",
+      "source_node": "orin"
+    },
+    {
+      "name": "/aos",
+      "type": "aos.logging.LogMessageFbs",
+      "source_node": "orin"
+    },
+    {
+      "name": "/aos",
+      "type": "aos.message_bridge.ClientStatistics",
+      "source_node": "orin"
+    },
+    {
+      "name": "/aos",
+      "type": "aos.message_bridge.Timestamp",
+      "source_node": "orin"
+    },
+    {
+      "name": "/aos",
+      "type": "aos.message_bridge.ServerStatistics",
+      "source_node": "orin"
+    },
+    {
+      "name": "/camera",
+      "type": "frc.vision.CameraImage",
+      "source_node": "orin",
+      "max_size": 2000000,
+      "frequency": 150
+    },
+    {
+      "name": "/camera1",
+      "type": "frc.vision.CameraImage",
+      "source_node": "orin",
+      "max_size": 20000000
+    },
+    {
+      "name": "/camera2",
+      "type": "frc.vision.CameraImage",
+      "source_node": "orin",
+      "max_size": 20000000
+    },
+    {
+      "name": "/camera3",
+      "type": "frc.vision.CameraImage",
+      "source_node": "orin",
+      "max_size": 20000000
+    },
+    {
+      "name": "/visualize0",
+      "type": "foxglove.CompressedImage",
+      "source_node": "orin",
+      "max_size": 10000000
+    }
+  ],
+  "nodes": [
+    {
+      "name": "orin",
+      "hostnames": ["orin-4646-1","debian"]
+    }
+  ]
+}
