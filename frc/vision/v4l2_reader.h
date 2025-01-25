@@ -86,7 +86,7 @@ class V4L2ReaderBase {
   // TODO(Brian): This concept won't exist once we start using variable-size
   // H.264 frames.
   size_t ImageSize() const { return ImageSize(rows_, cols_); }
-  static size_t ImageSize(int rows, int cols) {
+  virtual size_t ImageSize(int rows, int cols) const {
     return rows * cols * 2 /* bytes per pixel */;
   }
 
@@ -98,7 +98,8 @@ class V4L2ReaderBase {
   struct Buffer {
     void InitializeMessage(size_t max_image_size);
 
-    void PrepareMessage(int rows, int cols, size_t image_size,
+    void PrepareMessage(int rows, int cols, ImageFormat format,
+                        size_t memory_size, size_t valid_size,
                         aos::monotonic_clock::time_point monotonic_eof);
 
     void Send() {
@@ -117,12 +118,17 @@ class V4L2ReaderBase {
     flatbuffers::Offset<CameraImage> message_offset;
 
     uint8_t *data_pointer = nullptr;
-
     std::string_view image_channel_;
   };
 
   struct BufferInfo {
     int index = -1;
+    // Size of the memory block in bytes.
+    int memory_size = -1;
+    // Number of bytes of the block which are valid.
+    // These don't match when both the starting and ending address need to be
+    // aligned, but the length isn't aligned.
+    int valid_size = -1;
     aos::monotonic_clock::time_point monotonic_eof =
         aos::monotonic_clock::min_time;
 
@@ -130,6 +136,8 @@ class V4L2ReaderBase {
 
     void Clear() {
       index = -1;
+      memory_size = -1;
+      valid_size = -1;
       monotonic_eof = aos::monotonic_clock::min_time;
     }
   };
@@ -146,7 +154,7 @@ class V4L2ReaderBase {
   BufferInfo saved_buffer_;
 
   bool multiplanar_ = false;
-
+  ImageFormat format_;
   int rows_ = 0;
   int cols_ = 0;
 
@@ -163,6 +171,23 @@ class V4L2Reader : public V4L2ReaderBase {
  public:
   V4L2Reader(aos::EventLoop *event_loop, std::string_view device_name,
              std::string_view image_channel = "/camera");
+};
+
+// V4L2 Reader with MJPEG support.
+class MjpegV4L2Reader : public V4L2ReaderBase {
+ public:
+  MjpegV4L2Reader(aos::EventLoop *event_loop, aos::internal::EPoll *epoll,
+                  std::string_view device_name,
+                  std::string_view image_channel = "/camera");
+
+  size_t ImageSize(int rows, int cols) const override {
+    // TODO(austin): It appears that some cameras include size for a header, and
+    // some don't.  This might not be the most useful concept for MJPEGs.
+    return rows * cols * 2; /* bytes per pixel */
+  }
+
+ private:
+  aos::internal::EPoll *epoll_;
 };
 
 // Rockpi specific v4l2 reader.  This assumes that the media device has been

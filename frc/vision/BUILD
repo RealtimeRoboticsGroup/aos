@@ -553,6 +553,7 @@ robot_downloader(
         "//aos/util:filesystem_monitor",
         "//aos/util:foxglove_websocket",
         "//frc/orin:hardware_monitor",
+        "//frc/vision:camera_reader",
     ],
     data = [
         ":aos_config",
@@ -639,4 +640,18 @@ jinja2_template(
     includes = glob([
         "constants/*.json",
     ]),
+)
+
+cc_binary(
+    name = "camera_reader",
+    srcs = [
+        "camera_reader_main.cc",
+    ],
+    target_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//aos:init",
+        "//aos/events:shm_event_loop",
+        "//frc/vision:v4l2_reader",
+    ],
 )
