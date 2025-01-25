@@ -65,7 +65,7 @@ void V4L2ReaderBase::StreamOn() {
       cols_ = format.fmt.pix_mp.width;
       rows_ = format.fmt.pix_mp.height;
       LOG(INFO) << "Format is " << cols_ << ", " << rows_;
-      CHECK_EQ(format.fmt.pix_mp.pixelformat, V4L2_PIX_FMT_YUYV)
+      CHECK_EQ(format.fmt.pix_mp.pixelformat, V4L2_PIX_FMT_MJPEG)
           << ": Invalid pixel format";
 
       CHECK_EQ(format.fmt.pix_mp.num_planes, 1u);
@@ -77,11 +77,11 @@ void V4L2ReaderBase::StreamOn() {
       cols_ = format.fmt.pix.width;
       rows_ = format.fmt.pix.height;
       LOG(INFO) << "Format is " << cols_ << ", " << rows_;
-      CHECK_EQ(format.fmt.pix.pixelformat, V4L2_PIX_FMT_YUYV)
+      CHECK_EQ(format.fmt.pix.pixelformat, V4L2_PIX_FMT_MJPEG)
           << ": Invalid pixel format";
 
       CHECK_EQ(static_cast<int>(format.fmt.pix.bytesperline),
-               cols_ * 2 /* bytes per pixel */);
+               cols_ * 0 /* bytes per pixel */);
       CHECK_EQ(format.fmt.pix.sizeimage, ImageSize());
     }
   }
@@ -135,7 +135,7 @@ bool V4L2ReaderBase::ReadLatestImage() {
     // iteration, which means we found an image so return it.
     ftrace_.FormatMessage("Got saved buffer %d", saved_buffer_.index);
     saved_buffer_ = previous_buffer;
-    buffers_[saved_buffer_.index].PrepareMessage(rows_, cols_, ImageSize(),
+    buffers_[saved_buffer_.index].PrepareMessage(rows_, cols_, saved_buffer_.bytesused,
                                                  saved_buffer_.monotonic_eof);
     return true;
   }
@@ -240,7 +240,7 @@ V4L2ReaderBase::BufferInfo V4L2ReaderBase::DequeueBuffer() {
     CHECK_EQ(buffer.flags & V4L2_BUF_FLAG_TSTAMP_SRC_MASK,
              static_cast<uint32_t>(V4L2_BUF_FLAG_TSTAMP_SRC_EOF));
   }
-  return {static_cast<int>(buffer.index),
+  return {static_cast<int>(buffer.index),static_cast<int>(buffer.bytesused),
           aos::time::from_timeval(buffer.timestamp)};
 }
 
@@ -305,11 +305,11 @@ V4L2Reader::V4L2Reader(aos::EventLoop *event_loop, std::string_view device_name,
   format.type = multiplanar() ? V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE
                               : V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
-  constexpr int kWidth = 640;
-  constexpr int kHeight = 480;
+  constexpr int kWidth = 1280;
+  constexpr int kHeight = 720;
   format.fmt.pix.width = kWidth;
   format.fmt.pix.height = kHeight;
-  format.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
+  format.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG;
   // This means we want to capture from a progressive (non-interlaced)
   // source.
   format.fmt.pix.field = V4L2_FIELD_NONE;
@@ -317,7 +317,7 @@ V4L2Reader::V4L2Reader(aos::EventLoop *event_loop, std::string_view device_name,
   CHECK_EQ(static_cast<int>(format.fmt.pix.width), kWidth);
   CHECK_EQ(static_cast<int>(format.fmt.pix.height), kHeight);
   CHECK_EQ(static_cast<int>(format.fmt.pix.bytesperline),
-           kWidth * 2 /* bytes per pixel */);
+           kWidth * 0 /* bytes per pixel */);
   CHECK_EQ(format.fmt.pix.sizeimage, ImageSize(kHeight, kWidth));
 
   StreamOn();

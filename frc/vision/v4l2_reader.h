@@ -87,9 +87,10 @@ class V4L2ReaderBase {
   // H.264 frames.
   size_t ImageSize() const { return ImageSize(rows_, cols_); }
   static size_t ImageSize(int rows, int cols) {
-    return rows * cols * 2 /* bytes per pixel */;
+    return rows * cols * 2 + 589 /* bytes per pixel */;
   }
 
+  public:
   const aos::ScopedFD &fd() { return fd_; };
 
   static constexpr int kNumberBuffers = 4;
@@ -123,6 +124,7 @@ class V4L2ReaderBase {
 
   struct BufferInfo {
     int index = -1;
+    int bytesused = -1;
     aos::monotonic_clock::time_point monotonic_eof =
         aos::monotonic_clock::min_time;
 
@@ -130,6 +132,7 @@ class V4L2ReaderBase {
 
     void Clear() {
       index = -1;
+      bytesused = -1;
       monotonic_eof = aos::monotonic_clock::min_time;
     }
   };
