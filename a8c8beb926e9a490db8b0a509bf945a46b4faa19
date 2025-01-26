@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "be58ce1a_fd5cda5d",
+        "filename": "frc/vision/v4l2_reader.cc",
+        "patchSetId": 1
+      },
+      "lineNbr": 68,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-01-26T00:13:10Z",
+      "side": 0,
+      "message": "I think we want to support both camera types.",
+      "revId": "a8c8beb926e9a490db8b0a509bf945a46b4faa19",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    }
+  ]
+}
