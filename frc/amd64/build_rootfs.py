@@ -147,6 +147,7 @@ def main():
                 "nvidia-cuda-toolkit",
                 "libgstreamer-plugins-base1.0-dev",
                 "libgstreamer-plugins-bad1.0-dev",
+                "libturbojpeg0-dev",
             ])
 
     target_mkdir("root.root", "755", "usr/lib/cuda/bin")

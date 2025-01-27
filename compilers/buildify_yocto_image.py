@@ -147,6 +147,7 @@ def main(argv):
                 filesystem.packages['libgstrtp-1.0-0'],
                 filesystem.packages['libpcre2-dev'],
                 filesystem.packages['gstreamer1.0-plugins-bad-dev'],
+                filesystem.packages['libjpeg-dev'],
             ]
 
             with open("orin_debian_rootfs.BUILD", "w") as file:

@@ -346,7 +346,8 @@ class Package:
         files = []
         for f in self.files:
             if f in directories:
-                self.directories.append(f)
+                if f not in self.directories:
+                    self.directories.append(f)
             elif f in symlinks:
                 self.symlinks[f] = symlinks[f]
             else:
@@ -499,9 +500,19 @@ class Filesystem:
 
     def __init__(self, partition, sudo_bash):
         self.partition = partition
-        # TODO(austin): I really want to be able to run this on an amd64
-        # filesystem too, which won't work with qemu-aarch64-static.  Pull it
-        # into a library.
+
+        # Ask ld for the shared library search paths and use those.
+        searchdir_output = subprocess.run(sudo_bash + [
+            "-c",
+            'ld --verbose | grep SEARCH_DIR'
+        ],
+                                   check=True,
+                                   stdout=subprocess.PIPE)
+        self.library_search_path = searchdir_output.stdout.decode('utf-8').strip().replace(
+            'SEARCH_DIR("=', '').replace('");', '').split()
+        logging.info(self.library_search_path)
+
+        # Now, pull out the packages installed and their dependency tree.
         result = subprocess.run(sudo_bash + [
             "-c",
             "dpkg-query -W -f='Version: ${Version}\nPackage: ${Package}\nProvides: ${Provides}\nDepends: ${Depends}\n${db-fsys:Files}--\n'"
@@ -724,6 +735,12 @@ class Filesystem:
             if self.exists(to_search):
                 return to_search
 
+        for lpath in self.library_search_path:
+            to_search = os.path.join(lpath, obj)
+            logging.vlog(1, 'Looking for %s', to_search)
+            if self.exists(to_search):
+                return to_search
+
         raise FileNotFoundError(obj)
 
     @functools.cache
@@ -732,11 +749,14 @@ class Filesystem:
         filename = f'{self.partition}/{obj}'
         soname = os.path.basename(obj)
         if not is_elf_file(filename):
+            logging.vlog(1, 'Non elf file %s', filename)
             if detect_static_library(filename):
                 return [], None, []
 
-            return parse_linker_script(
+            result = parse_linker_script(
                 read_linker_script(filename)), soname, []
+            logging.vlog(1, 'Parsed %s to contain %s', filename, result)
+            return result
 
         result = subprocess.run(
             ['objdump', '-p', filename],
@@ -930,6 +950,9 @@ def generate_build_file(filesystem, packages_to_eval, template_filename):
     with open(template_filename, "r") as file:
         template = jinja2.Template(file.read())
 
+    # Each string in the list is a fully contained rule.  Sort them so we get determinism when
+    # re-generating to minimize git diffs.
+    rules.sort()
     substitutions = {
         "RULES": '\n\n'.join(rules),
     }

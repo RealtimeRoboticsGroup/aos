@@ -41,6 +41,7 @@ def main(argv):
             filesystem.packages['libopencv-dev'],
             filesystem.packages['libc6-dev'],
             filesystem.packages['libstdc++-dev'],
+            filesystem.packages['libturbojpeg0-dev'],
             filesystem.packages['nvidia-cuda-dev'],
             filesystem.packages['libgstreamer-plugins-bad1.0-dev'],
             filesystem.packages['libgstreamer-plugins-base1.0-dev'],
