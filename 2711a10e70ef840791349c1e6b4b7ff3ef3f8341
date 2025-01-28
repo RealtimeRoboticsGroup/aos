@@ -81,6 +81,30 @@
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "1f1b03c3_9b1f6743",
+        "filename": "aos/starter/starterd.cc",
+        "patchSetId": 2
+      },
+      "lineNbr": 52,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-01-28T05:37:18Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "5f683637_8dfef585",
+      "range": {
+        "startLine": 52,
+        "startChar": 0,
+        "endLine": 52,
+        "endChar": 71
+      },
+      "revId": "2711a10e70ef840791349c1e6b4b7ff3ef3f8341",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "4ed4b1c6_601f9e2f",
@@ -94,6 +118,30 @@
       "writtenOn": "2025-01-28T05:27:02Z",
       "side": 1,
       "message": "spelling (throughout this commit \u0026 commit msg)",
+      "range": {
+        "startLine": 57,
+        "startChar": 33,
+        "endLine": 57,
+        "endChar": 45
+      },
+      "revId": "2711a10e70ef840791349c1e6b4b7ff3ef3f8341",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "1d567601_8f825e08",
+        "filename": "aos/starter/starterd.cc",
+        "patchSetId": 2
+      },
+      "lineNbr": 57,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-01-28T05:37:18Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "4ed4b1c6_601f9e2f",
       "range": {
         "startLine": 57,
         "startChar": 33,
