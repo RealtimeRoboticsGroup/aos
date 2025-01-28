@@ -3,6 +3,23 @@
     {
       "unresolved": true,
       "key": {
+        "uuid": "f11b97bf_3ea54a77",
+        "filename": "frc/vision/vision.fbs",
+        "patchSetId": 1
+      },
+      "lineNbr": 12,
+      "author": {
+        "id": 1000002
+      },
+      "writtenOn": "2025-01-28T06:32:48Z",
+      "side": 1,
+      "message": "Actually, could you add more explicit references here? Also, the comment above needs to be updated.",
+      "revId": "d16678a9d5e61560d927ad8a671cad4c28517a6a",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
         "uuid": "9280e03a_870ea261",
         "filename": "frc/vision/vision.fbs",
         "patchSetId": 1
