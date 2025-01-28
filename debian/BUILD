@@ -15,14 +15,6 @@ load(
     gtk_runtime_debs = "files",
 )
 load(
-    ":libtinfo5_amd64.bzl",
-    libtinfo5_amd64_debs = "files",
-)
-load(
-    ":libtinfo5_arm64.bzl",
-    libtinfo5_arm64_debs = "files",
-)
-load(
     ":libusb.bzl",
     libusb_debs = "files",
 )
@@ -311,18 +303,6 @@ generate_deb_tarball(
 generate_deb_tarball(
     name = "gtk_runtime",
     files = gtk_runtime_debs,
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-generate_deb_tarball(
-    name = "libtinfo5_amd64",
-    files = libtinfo5_amd64_debs,
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-generate_deb_tarball(
-    name = "libtinfo5_arm64",
-    files = libtinfo5_arm64_debs,
     target_compatible_with = ["@platforms//os:linux"],
 )
 

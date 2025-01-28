@@ -129,14 +129,6 @@ load(
     gtk_runtime_debs = "files",
 )
 load(
-    "//debian:libtinfo5_amd64.bzl",
-    libtinfo5_amd64_debs = "files",
-)
-load(
-    "//debian:libtinfo5_arm64.bzl",
-    libtinfo5_arm64_debs = "files",
-)
-load(
     "//debian:libusb.bzl",
     libusb_debs = "files",
 )
@@ -214,10 +206,6 @@ generate_repositories_for_debs(
 )
 
 generate_repositories_for_debs(m4_debs)
-
-generate_repositories_for_debs(libtinfo5_amd64_debs)
-
-generate_repositories_for_debs(libtinfo5_arm64_debs)
 
 generate_repositories_for_debs(xvfb_amd64_debs)
 
@@ -1363,22 +1351,6 @@ filegroup(
 """,
     sha256 = "6ae7cbedd9b1d54da095d460e2832c2a3e2917fbfa2ed22c6787d4b527a5677d",
     urls = ["https://realtimeroboticsgroup.org/build-dependencies/clang_amd64.tar.gz"],
-)
-
-http_archive(
-    name = "libtinfo5_arm64",
-    build_file_content = """
-exports_files(
-    [
-        'lib/aarch64-linux-gnu/libtinfo.so.5',
-        'lib/aarch64-linux-gnu/libtinfo.so.5.9',
-    ],
-    ["//visibility:public"],
-)
-""",
-    patch_cmds = ["touch lib/aarch64-linux-gnu/BUILD"],
-    sha256 = "df4ea5194c80df8d1f5f6ed68b47ce9dbf78aa8cdebbc61cf00654d9075f8e3c",
-    urls = ["https://realtimeroboticsgroup.org/build-dependencies/libtinfo5_arm64.tar.gz"],
 )
 
 http_archive(
