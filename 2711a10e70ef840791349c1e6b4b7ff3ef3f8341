@@ -3,6 +3,29 @@
     {
       "unresolved": true,
       "key": {
+        "uuid": "66e056ca_6fb60fe9",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 2
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 1000002
+      },
+      "writtenOn": "2025-01-28T05:27:55Z",
+      "side": 1,
+      "message": "*supplemental, throughout the commit.",
+      "range": {
+        "startLine": 7,
+        "startChar": 22,
+        "endLine": 7,
+        "endChar": 34
+      },
+      "revId": "2711a10e70ef840791349c1e6b4b7ff3ef3f8341",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
         "uuid": "5f683637_8dfef585",
         "filename": "aos/starter/starterd.cc",
         "patchSetId": 2
@@ -20,6 +43,23 @@
         "endLine": 52,
         "endChar": 71
       },
+      "revId": "2711a10e70ef840791349c1e6b4b7ff3ef3f8341",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "c53fbe52_1309c9c4",
+        "filename": "aos/starter/starterd.cc",
+        "patchSetId": 2
+      },
+      "lineNbr": 52,
+      "author": {
+        "id": 1000002
+      },
+      "writtenOn": "2025-01-28T05:27:55Z",
+      "side": 1,
+      "message": "Technically should check the return value, in case someone managed to change the group list since hte prior call.",
       "revId": "2711a10e70ef840791349c1e6b4b7ff3ef3f8341",
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     },
