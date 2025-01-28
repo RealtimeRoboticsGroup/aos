@@ -26,6 +26,30 @@
     {
       "unresolved": false,
       "key": {
+        "uuid": "2176c2cb_eac3ab95",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 2
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-01-28T05:37:37Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "66e056ca_6fb60fe9",
+      "range": {
+        "startLine": 7,
+        "startChar": 22,
+        "endLine": 7,
+        "endChar": 34
+      },
+      "revId": "2711a10e70ef840791349c1e6b4b7ff3ef3f8341",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": false,
+      "key": {
         "uuid": "309013e3_8beab31a",
         "filename": "/PATCHSET_LEVEL",
         "patchSetId": 2
@@ -101,6 +125,24 @@
         "endLine": 52,
         "endChar": 71
       },
+      "revId": "2711a10e70ef840791349c1e6b4b7ff3ef3f8341",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "0c3670f8_9ee2df18",
+        "filename": "aos/starter/starterd.cc",
+        "patchSetId": 2
+      },
+      "lineNbr": 52,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-01-28T05:37:37Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "c53fbe52_1309c9c4",
       "revId": "2711a10e70ef840791349c1e6b4b7ff3ef3f8341",
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     },
