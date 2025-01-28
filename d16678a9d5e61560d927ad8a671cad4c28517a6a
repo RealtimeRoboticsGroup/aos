@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "9280e03a_870ea261",
+        "filename": "frc/vision/vision.fbs",
+        "patchSetId": 1
+      },
+      "lineNbr": 28,
+      "author": {
+        "id": 1000002
+      },
+      "writtenOn": "2025-01-28T06:32:14Z",
+      "side": 1,
+      "message": "Make the default explicit maybe? I guess we don\u0027t really have existing logs to stress about...",
+      "revId": "d16678a9d5e61560d927ad8a671cad4c28517a6a",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    }
+  ]
+}
