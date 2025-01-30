@@ -29,11 +29,11 @@ cc_binary(
     target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
+        ":vision_fbs",
         "//aos:configuration",
         "//aos:init",
         "//aos/events:simulated_event_loop",
         "//aos/events/logging:log_reader",
-        "//frc/vision:vision_fbs",
         "//third_party:opencv",
     ],
 )
@@ -46,6 +46,7 @@ cc_binary(
     target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
+        ":vision_fbs",
         "//aos:configuration",
         "//aos:init",
         "//aos/events:shm_event_loop",
@@ -53,7 +54,6 @@ cc_binary(
         "//aos/logging:log_namer",
         "//aos/util:filesystem_fbs",
         "//frc/input:joystick_state_fbs",
-        "//frc/vision:vision_fbs",
     ],
 )
 
@@ -164,13 +164,13 @@ cc_library(
     target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
+        ":vision_fbs",
         "//aos:flatbuffers",
         "//aos/events:event_loop",
         "//aos/network:message_bridge_server_fbs",
         "//aos/network:team_number",
         "//frc/control_loops:quaternion_utils",
         "//frc/vision:calibration_fbs",
-        "//frc/vision:vision_fbs",
         "//third_party:opencv",
         "@com_github_foxglove_schemas//:schemas",
         "@com_google_absl//absl/log",
@@ -356,7 +356,7 @@ aos_config(
     testonly = True,
     src = "converter_test_config.json",
     flatbuffers = [
-        "//frc/vision:vision_fbs",
+        ":vision_fbs",
         "//aos/events:event_loop_fbs",
         "//aos/logging:log_message_fbs",
         "//aos/network:message_bridge_client_fbs",
@@ -393,10 +393,10 @@ cc_library(
     ],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
+        ":vision_fbs",
         "//aos/events:event_loop",
         "//frc/control_loops/drivetrain:improved_down_estimator",
         "//frc/vision:charuco_lib",
-        "//frc/vision:vision_fbs",
         "//frc/vision:vision_util_lib",
         "//frc/wpilib:imu_batch_fbs",
         "//frc/wpilib:imu_fbs",
@@ -415,11 +415,11 @@ cc_binary(
     visibility = ["//visibility:public"],
     deps = [
         ":intrinsics_calibration_lib",
+        ":vision_fbs",
         "//aos:init",
         "//aos/events:shm_event_loop",
         "//frc/control_loops/drivetrain:improved_down_estimator",
         "//frc/vision:charuco_lib",
-        "//frc/vision:vision_fbs",
         "//frc/wpilib:imu_batch_fbs",
         "//frc/wpilib:imu_fbs",
         "//third_party:opencv",
@@ -515,5 +515,17 @@ cc_library(
         "//frc/vision:vision_util_lib",
         "//third_party:opencv",
         "@org_tuxfamily_eigen//:eigen",
+    ],
+)
+
+cc_binary(
+    name = "turbojpeg_decoder",
+    srcs = ["turbojpeg_decoder.cc"],
+    deps = [
+        ":vision_fbs",
+        "//aos:configuration",
+        "//aos:init",
+        "//aos/events:shm_event_loop",
+        "//third_party:libturbojpeg",
     ],
 )

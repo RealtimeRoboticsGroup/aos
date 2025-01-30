@@ -139,3 +139,13 @@ cc_library(
         "//conditions:default": [":unavailable"],
     }),
 )
+
+cc_library(
+    name = "libturbojpeg",
+    visibility = ["//visibility:public"],
+    deps = select({
+        "//tools:cpu_k8": ["@amd64_debian_sysroot//:libturbojpeg"],
+        "//tools:cpu_arm64": ["@arm64_debian_sysroot//:libturbojpeg"],
+        "//conditions:default": [":unavailable"],
+    }),
+)
