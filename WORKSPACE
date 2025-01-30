@@ -426,8 +426,8 @@ http_archive(
 http_archive(
     name = "amd64_debian_sysroot",
     build_file = "@//:compilers/amd64_debian_rootfs.BUILD",
-    sha256 = "a26fd37dee3203e1d2f77bd9deef67d8a36f56999d1febd368df6881721e2bab",
-    url = "https://realtimeroboticsgroup.org/build-dependencies/2025-01-19-bookworm-amd64-nvidia-rootfs.tar.zst",
+    sha256 = "9456f874343f32b897c88af6fb0503c261b2dc533b519759fb5b42016d3406c9",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/2025-01-26-bookworm-amd64-nvidia-rootfs.tar.zst",
 )
 
 # Generated with:
