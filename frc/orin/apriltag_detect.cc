@@ -1,6 +1,7 @@
 #include <thrust/iterator/constant_iterator.h>
 #include <thrust/iterator/transform_iterator.h>
 
+#include <cmath>
 #include <cub/device/device_copy.cuh>
 #include <cub/device/device_radix_sort.cuh>
 #include <cub/device/device_reduce.cuh>
@@ -645,11 +646,18 @@ void GpuDetector::DecodeTags() {
 
   zarray_truncate(detections_, 0);
 
+  after_memcpy_gray_.Synchronize();
   image_u8_t im_orig{
       .width = static_cast<int32_t>(width_),
-      .height = static_cast<int32_t>(height_),
+      .height = static_cast<int32_t>(original_height_),
       .stride = static_cast<int32_t>(width_),
-      .buf = gray_image_host_.get(),
+      .buf = const_cast<uint8_t *>(gray_image_host_ptr_),
+      // TODO - find a better way to do this --^. Problem is that
+      //        for the MONO8 case, we just want an alias to the input
+      //        data, since that's already greyscale to begin with.
+      //        For other input types, it should point to a class member
+      //        buffer which is the output of the greyscale conversion /
+      //        d2h memcpy.
   };
 
   int ntasks = 0;

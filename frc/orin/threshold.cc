@@ -1,3 +1,15 @@
+// Allow static analysis tools to better handle CUDA code
+// (not perfect but better than nothing)
+#ifndef __global__
+#define __global__
+#endif
+#ifndef __device__
+#define __device__
+#endif
+#ifndef __forceinline__
+#define __forceinline__
+#endif
+
 #include "frc/orin/threshold.h"
 
 #include <stdint.h>
@@ -13,31 +25,92 @@ namespace {
 // 1456 -> 2 * 8 * 7 * 13
 // 1088 -> 2 * 32 * 17
 
-// Writes out the grayscale image and decimated image.
-__global__ void InternalCudaToGreyscaleAndDecimateHalide(
-    const uint8_t *color_image, uint8_t *gray_image, uint8_t *decimated_image,
-    size_t width, size_t height) {
-  size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+// Convert from input format to grayscale.
+template <vision::ImageFormat IMAGE_FORMAT>
+__global__ void InternalCudaToGreyscale(const uint8_t *color_image,
+                                        uint8_t *gray_image, uint32_t width,
+                                        uint32_t height) {
+  uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
   while (i < width * height) {
-    uint8_t pixel = gray_image[i] = color_image[i * 2];
-
-    const size_t row = i / width;
-    const size_t col = i - width * row;
-
-    // Copy over every other pixel.
-    if (row % 2 == 0 && col % 2 == 0) {
-      size_t decimated_row = row / 2;
-      size_t decimated_col = col / 2;
-      decimated_image[decimated_row * width / 2 + decimated_col] = pixel;
+    if constexpr (IMAGE_FORMAT == vision::ImageFormat::MONO8) {
+      gray_image[i] = color_image[i];  // Grayscale input is already aliased to
+                                       // color device image
+    } else if constexpr (IMAGE_FORMAT == vision::ImageFormat::MONO16) {
+      gray_image[i] =
+          color_image[i * 2 + 1];  // MSBits of MONO16 - does this also work on
+                                   // jetson or do we need a be/le split?
+    } else if constexpr (IMAGE_FORMAT == vision::ImageFormat::YUYV422) {
+      gray_image[i] = color_image[i * 2];  // YUY input
+    } else if constexpr (IMAGE_FORMAT == vision::ImageFormat::BGR8) {
+      gray_image[i] =
+          0.114f * static_cast<float>(color_image[i * 3]) +
+          0.587f * static_cast<float>(color_image[i * 3 + 1]) +
+          0.299f * static_cast<float>(color_image[i * 3 + 2]);  // BGR input
+    } else if constexpr (IMAGE_FORMAT == vision::ImageFormat::BGRA8) {
+      gray_image[i] =
+          0.114f * static_cast<float>(color_image[i * 4]) +
+          0.587f * static_cast<float>(color_image[i * 4 + 1]) +
+          0.299f *
+              static_cast<float>(
+                  color_image[i * 4 + 2]);  // BGRA input, skip alpha channel
     }
+
     i += blockDim.x * gridDim.x;
   }
+}
 
+// Writes out the grayscale image and decimated image.
+template <vision::ImageFormat IMAGE_FORMAT>
+__global__ void InternalCudaToGreyscaleAndDecimateHalide(
+    const uint8_t *color_image, uint8_t *decimated_image,
+    const uint32_t in_width, const uint32_t in_height) {
+  const uint32_t out_height = in_height / 2;
+  const uint32_t out_width = in_width / 2;
+  uint32_t out_i = blockIdx.x * blockDim.x + threadIdx.x;
+
+  while (out_i < out_width * out_height) {
+    uint8_t pixel;
+    const uint32_t out_row = out_i / out_width;
+    const uint32_t out_col = out_i - out_width * out_row;
+
+    const u_int32_t in_row = out_row * 2;
+    const u_int32_t in_col = out_col * 2;
+
+    const uint32_t in_i = in_row * in_width + in_col;
+
+    if constexpr (IMAGE_FORMAT == vision::ImageFormat::MONO8) {
+      pixel = color_image[in_i];
+    } else if constexpr (IMAGE_FORMAT == vision::ImageFormat::MONO16) {
+      pixel =
+          color_image[in_i * 2 + 1];  // MSBits of MONO16 - does this also work
+                                      // on jetson or do we need a be/le split?
+    } else if constexpr (IMAGE_FORMAT == vision::ImageFormat::YUYV422) {
+      pixel = color_image[in_i * 2];  // YUY input
+    } else if constexpr (IMAGE_FORMAT == vision::ImageFormat::BGR8) {
+      pixel =
+          0.114f * static_cast<float>(color_image[in_i * 3]) +
+          0.587f * static_cast<float>(color_image[in_i * 3 + 1]) +
+          0.299f * static_cast<float>(color_image[in_i * 3 + 2]);  // BGR input
+    } else if constexpr (IMAGE_FORMAT == vision::ImageFormat::BGRA8) {
+      pixel =
+          0.114f * static_cast<float>(color_image[in_i * 4]) +
+          0.587f * static_cast<float>(color_image[in_i * 4 + 1]) +
+          0.299f *
+              static_cast<float>(
+                  color_image[in_i * 4 + 2]);  // BGRA input, skip alpha channel
+    }
+
+    decimated_image[out_row * out_width + out_col] = pixel;
+    out_i += blockDim.x * gridDim.x;
+  }
   // TODO(austin): Figure out how to load contiguous memory reasonably
   // efficiently and max/min over it.
 
   // TODO(austin): Can we do the threshold here too?  That would be less memory
   // bandwidth consumed...
+  //   could do it by merging this code with InernalBlockMinMax, altering
+  //   the input indexing so it grabs from the undecimated input image.  Add
+  //   the grayscale converion code in there as well?
 }
 
 // Returns the min and max for a row of 4 pixels.
@@ -152,31 +225,51 @@ __global__ void InternalThreshold(const uint8_t *decimated_image,
 
 }  // namespace
 
-void CudaToGreyscaleAndDecimateHalide(
-    const uint8_t *color_image, uint8_t *gray_image, uint8_t *decimated_image,
-    uint8_t *unfiltered_minmax_image, uint8_t *minmax_image,
-    uint8_t *thresholded_image, size_t width, size_t height,
-    size_t min_white_black_diff, CudaStream *stream) {
-  CHECK((width % 8) == 0);
-  CHECK((height % 8) == 0);
+template <vision::ImageFormat IMAGE_FORMAT>
+void Threshold<IMAGE_FORMAT>::CudaToGreyscale(const uint8_t *color_image,
+                                              uint8_t *gray_image,
+                                              uint32_t width, uint32_t height,
+                                              CudaStream *stream) {
   constexpr size_t kThreads = 256;
   {
     // Step one, convert to gray and decimate.
     size_t kBlocks = (width * height + kThreads - 1) / kThreads / 4;
-    InternalCudaToGreyscaleAndDecimateHalide<<<kBlocks, kThreads, 0,
-                                               stream->get()>>>(
-        color_image, gray_image, decimated_image, width, height);
+    InternalCudaToGreyscale<IMAGE_FORMAT>
+        <<<kBlocks, kThreads, 0, stream->get()>>>(color_image, gray_image,
+                                                  width, height);
+    MaybeCheckAndSynchronize();
+  }
+}
+
+template <vision::ImageFormat IMAGE_FORMAT>
+void Threshold<IMAGE_FORMAT>::CudaToGreyscaleAndDecimateHalide(
+    const uint8_t *color_image, uint8_t *decimated_image,
+    uint8_t *unfiltered_minmax_image, uint8_t *minmax_image,
+    uint8_t *thresholded_image, uint32_t width, uint32_t height,
+    uint32_t min_white_black_diff, CudaStream *stream) {
+  CHECK((width % 8) == 0);
+  CHECK((height % 8) == 0);
+  constexpr size_t kThreads = 256;
+  const uint32_t decimated_width = width / 2;
+  const uint32_t decimated_height = height / 2;
+
+  {
+    // Step one, convert to gray and decimate.
+    const size_t kBlocks =
+        (decimated_width * decimated_height + kThreads - 1) / kThreads / 4;
+    // GpuMemory<uint8_t> decimated_image_device_2(decimated_width *
+    // decimated_height);  // temp debug
+    InternalCudaToGreyscaleAndDecimateHalide<IMAGE_FORMAT>
+        <<<kBlocks, kThreads, 0, stream->get()>>>(color_image, decimated_image,
+                                                  width, height);
     MaybeCheckAndSynchronize();
   }
 
-  size_t decimated_width = width / 2;
-  size_t decimated_height = height / 2;
-
   {
     // Step 2, compute a min/max for each block of 4x4 (16) pixels.
-    dim3 threads(16, 16, 1);
-    dim3 blocks((decimated_width / 4 + 15) / 16,
-                (decimated_height / 4 + 15) / 16, 1);
+    const dim3 threads(16, 16, 1);
+    const dim3 blocks((decimated_width / 4 + 15) / 16,
+                      (decimated_height / 4 + 15) / 16, 1);
 
     InternalBlockMinMax<<<blocks, threads, 0, stream->get()>>>(
         decimated_image, reinterpret_cast<uchar2 *>(unfiltered_minmax_image),
@@ -203,5 +296,11 @@ void CudaToGreyscaleAndDecimateHalide(
     MaybeCheckAndSynchronize();
   }
 }
+
+template class Threshold<vision::ImageFormat::MONO8>;
+template class Threshold<vision::ImageFormat::MONO16>;
+template class Threshold<vision::ImageFormat::YUYV422>;
+template class Threshold<vision::ImageFormat::BGR8>;
+template class Threshold<vision::ImageFormat::BGRA8>;
 
 }  // namespace frc::apriltag

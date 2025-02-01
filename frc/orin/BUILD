@@ -26,6 +26,7 @@ cc_library(
         "apriltag.cc",
         "apriltag_detect.cc",
         "cuda.cc",
+        "cuda_event_timing.cc",
         "labeling_allegretti_2019_BKE.cc",
         "line_fit_filter.cc",
         "points.cc",
@@ -34,6 +35,7 @@ cc_library(
     hdrs = [
         "apriltag.h",
         "cuda.h",
+        "cuda_event_timing.h",
         "gpu_image.h",
         "labeling_allegretti_2019_BKE.h",
         "line_fit_filter.h",
@@ -50,6 +52,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//aos/time",
+        "//frc/vision:vision_fbs",
         "//third_party:cudart",
         "//third_party/apriltag",
         "@com_github_nvidia_cccl//:cccl",

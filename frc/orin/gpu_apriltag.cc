@@ -55,7 +55,7 @@ ApriltagDetector::ApriltagDetector(
       distortion_camera_matrix_(GetCameraMatrix(calibration_)),
       distortion_coefficients_(GetDistCoeffs(calibration_)),
       gpu_detector_(width, height, tag_detector_, distortion_camera_matrix_,
-                    distortion_coefficients_),
+                    distortion_coefficients_, vision::ImageFormat::YUYV422),
       image_callback_(
           event_loop, channel_name,
           [this](cv::Mat image_color_mat,

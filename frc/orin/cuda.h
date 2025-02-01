@@ -1,6 +1,14 @@
 #ifndef FRC_ORIN_CUDA_H_
 #define FRC_ORIN_CUDA_H_
 
+// Try to trick C++ static analysis tools into dealing with cuda code
+#ifndef __host__
+#define __host__
+#endif
+#ifndef __device__
+#define __device__
+#endif
+
 #include <chrono>
 #include <span>
 
@@ -12,7 +20,7 @@
 
 // CHECKs that a cuda method returned success.
 // TODO(austin): This will not handle if and else statements quite right, fix if
-// we care.
+// we care (wrap in a do {} while(0) block).
 #define CHECK_CUDA(condition)                                             \
   if (auto c = condition)                                                 \
   LOG(FATAL) << "Check failed: " #condition " (" << cudaGetErrorString(c) \
@@ -130,9 +138,11 @@ class GpuMemory {
   // device memory.
   GpuMemory(size_t size) : size_(size) {
     CHECK_CUDA(cudaMalloc((void **)(&memory_), size * sizeof(T)));
+    // Since we could be allocating extra rows to pad to a given alignment,
+    // make sure the padding is a known value.
+    CHECK_CUDA(cudaMemset(memory_, 0, size * sizeof(T)));
   }
   GpuMemory(const GpuMemory &) = delete;
-  GpuMemory &operator=(const GpuMemory &) = delete;
   GpuMemory(const GpuMemory &&) noexcept = delete;
   GpuMemory &operator=(const GpuMemory &&) noexcept = delete;
 
@@ -174,8 +184,8 @@ class GpuMemory {
   void MemcpyAsyncTo(T *host_memory, size_t size, CudaStream *stream) const {
     CHECK_CUDA(cudaMemcpyAsync(reinterpret_cast<void *>(host_memory),
                                reinterpret_cast<void *>(memory_),
-                               sizeof(T) * size, cudaMemcpyDeviceToHost,
-                               stream->get()));
+                               sizeof(T) * std::min(size, size_),
+                               cudaMemcpyDeviceToHost, stream->get()));
   }
   void MemcpyAsyncTo(T *host_memory, CudaStream *stream) const {
     MemcpyAsyncTo(host_memory, size_, stream);
@@ -226,7 +236,7 @@ class GpuMemory {
 
  private:
   T *memory_;
-  const size_t size_;
+  size_t size_;
 };
 
 // Synchronizes and CHECKs for success the last CUDA operation.
