@@ -20,22 +20,23 @@ namespace frc::apriltag {
 class BlobExtentsIndexFinder {
  public:
   BlobExtentsIndexFinder(const MinMaxExtents *extents_device,
-                         size_t num_extents)
+                         apriltag_size_t num_extents)
       : extents_device_(extents_device), num_extents_(num_extents) {}
 
-  __host__ __device__ size_t FindBlobIndex(size_t point_index) const {
+  __host__ __device__ apriltag_size_t
+  FindBlobIndex(apriltag_size_t point_index) const {
     // Do a binary search for the blob which has the point in it's
     // starting_offset range.
-    size_t min = 0;
-    size_t max = num_extents_;
+    apriltag_size_t min = 0;
+    apriltag_size_t max = num_extents_;
     while (true) {
       if (min + 1 == max) {
         return min;
       }
 
-      size_t average = min + (max - min) / 2;
-      if (average < num_extents_ && extents_device_[average].starting_offset <=
-                                        static_cast<size_t>(point_index)) {
+      apriltag_size_t average = min + (max - min) / 2;
+      if (average < num_extents_ &&
+          extents_device_[average].starting_offset <= point_index) {
         min = average;
       } else {
         max = average;
@@ -44,13 +45,13 @@ class BlobExtentsIndexFinder {
   }
 
   // Returns the extents for a blob index.
-  __host__ __device__ MinMaxExtents Get(size_t index) const {
+  __host__ __device__ MinMaxExtents Get(apriltag_size_t index) const {
     return extents_device_[index];
   }
 
  private:
   const MinMaxExtents *extents_device_;
-  size_t num_extents_;
+  apriltag_size_t num_extents_;
 
   // TODO(austin): Cache the last one?
 };

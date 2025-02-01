@@ -40,10 +40,11 @@ __device__ __forceinline__ uint8_t ToGray(const uint8_t *color_image) {
 // Convert from input format to grayscale.
 template <vision::ImageFormat IMAGE_FORMAT>
 __global__ void InternalCudaToGreyscale(const uint8_t *color_image,
-                                        uint8_t *gray_image, uint32_t width,
-                                        uint32_t height) {
-  constexpr uint32_t kBytesPerPixel = BytesPerPixel(IMAGE_FORMAT);
-  uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
+                                        uint8_t *gray_image,
+                                        apriltag_size_t width,
+                                        apriltag_size_t height) {
+  constexpr apriltag_size_t kBytesPerPixel = BytesPerPixel(IMAGE_FORMAT);
+  apriltag_size_t i = blockIdx.x * blockDim.x + threadIdx.x;
   while (i < width * height) {
     gray_image[i] = ToGray<IMAGE_FORMAT>(color_image + i * kBytesPerPixel);
 
@@ -55,20 +56,20 @@ __global__ void InternalCudaToGreyscale(const uint8_t *color_image,
 template <vision::ImageFormat IMAGE_FORMAT>
 __global__ void InternalCudaToGreyscaleAndDecimateHalide(
     const uint8_t *color_image, uint8_t *decimated_image,
-    const uint32_t in_width, const uint32_t in_height) {
-  constexpr uint32_t kBytesPerPixel = BytesPerPixel(IMAGE_FORMAT);
-  const uint32_t out_height = in_height / 2;
-  const uint32_t out_width = in_width / 2;
-  uint32_t out_i = blockIdx.x * blockDim.x + threadIdx.x;
+    const apriltag_size_t in_width, const apriltag_size_t in_height) {
+  constexpr apriltag_size_t kBytesPerPixel = BytesPerPixel(IMAGE_FORMAT);
+  const apriltag_size_t out_height = in_height / 2;
+  const apriltag_size_t out_width = in_width / 2;
+  apriltag_size_t out_i = blockIdx.x * blockDim.x + threadIdx.x;
 
   while (out_i < out_width * out_height) {
-    const uint32_t out_row = out_i / out_width;
-    const uint32_t out_col = out_i - out_width * out_row;
+    const apriltag_size_t out_row = out_i / out_width;
+    const apriltag_size_t out_col = out_i - out_width * out_row;
 
     const u_int32_t in_row = out_row * 2;
     const u_int32_t in_col = out_col * 2;
 
-    const uint32_t in_i = in_row * in_width + in_col;
+    const apriltag_size_t in_i = in_row * in_width + in_col;
 
     decimated_image[out_row * out_width + out_col] =
         ToGray<IMAGE_FORMAT>(color_image + in_i * kBytesPerPixel);
@@ -98,17 +99,20 @@ __forceinline__ __device__ uchar2 minmax(uchar2 val0, uchar2 val1) {
 }
 
 // Returns the pixel index of a pixel at the provided x and y location.
-__forceinline__ __device__ size_t XYToIndex(size_t width, size_t x, size_t y) {
+__forceinline__ __device__ apriltag_size_t XYToIndex(apriltag_size_t width,
+                                                     apriltag_size_t x,
+                                                     apriltag_size_t y) {
   return width * y + x;
 }
 
 // Computes the min and max pixel value for each block of 4 pixels.
 __global__ void InternalBlockMinMax(const uint8_t *decimated_image,
                                     uchar2 *unfiltered_minmax_image,
-                                    size_t width, size_t height) {
+                                    const apriltag_size_t width,
+                                    const apriltag_size_t height) {
   uchar2 vals[4];
-  const size_t x = blockIdx.x * blockDim.x + threadIdx.x;
-  const size_t y = blockIdx.y * blockDim.y + threadIdx.y;
+  const apriltag_size_t x = blockIdx.x * blockDim.x + threadIdx.x;
+  const apriltag_size_t y = blockIdx.y * blockDim.y + threadIdx.y;
 
   if (x >= width || y >= height) {
     return;
@@ -128,12 +132,13 @@ __global__ void InternalBlockMinMax(const uint8_t *decimated_image,
 // Filters the min/max for the surrounding block of 9 pixels centered on our
 // location using min/max and writes the result back out.
 __global__ void InternalBlockFilter(const uchar2 *unfiltered_minmax_image,
-                                    uchar2 *minmax_image, size_t width,
-                                    size_t height) {
+                                    uchar2 *minmax_image,
+                                    const apriltag_size_t width,
+                                    const apriltag_size_t height) {
   uchar2 result = make_uchar2(255, 0);
 
-  const size_t x = blockIdx.x * blockDim.x + threadIdx.x;
-  const size_t y = blockIdx.y * blockDim.y + threadIdx.y;
+  const apriltag_size_t x = blockIdx.x * blockDim.x + threadIdx.x;
+  const apriltag_size_t y = blockIdx.y * blockDim.y + threadIdx.y;
 
   if (x >= width || y >= height) {
     return;
@@ -142,16 +147,16 @@ __global__ void InternalBlockFilter(const uchar2 *unfiltered_minmax_image,
   // Iterate through the 3x3 set of points centered on the point this image is
   // responsible for, and compute the overall min/max.
 #pragma unroll
-  for (int i = -1; i <= 1; ++i) {
+  for (int32_t i = -1; i <= 1; ++i) {
 #pragma unroll
-    for (int j = -1; j <= 1; ++j) {
-      const ssize_t read_x = x + i;
-      const ssize_t read_y = y + j;
+    for (int32_t j = -1; j <= 1; ++j) {
+      const int32_t read_x = x + i;
+      const int32_t read_y = y + j;
 
-      if (read_x < 0 || read_x >= static_cast<ssize_t>(width)) {
+      if (read_x < 0 || read_x >= static_cast<int32_t>(width)) {
         continue;
       }
-      if (read_y < 0 || read_y >= static_cast<ssize_t>(height)) {
+      if (read_y < 0 || read_y >= static_cast<int32_t>(height)) {
         continue;
       }
 
@@ -166,12 +171,14 @@ __global__ void InternalBlockFilter(const uchar2 *unfiltered_minmax_image,
 // Thresholds the image based on the filtered thresholds.
 __global__ void InternalThreshold(const uint8_t *decimated_image,
                                   const uchar2 *minmax_image,
-                                  uint8_t *thresholded_image, size_t width,
-                                  size_t height, size_t min_white_black_diff) {
-  size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+                                  uint8_t *thresholded_image,
+                                  const apriltag_size_t width,
+                                  const apriltag_size_t height,
+                                  const apriltag_size_t min_white_black_diff) {
+  apriltag_size_t i = blockIdx.x * blockDim.x + threadIdx.x;
   while (i < width * height) {
-    const size_t x = i % width;
-    const size_t y = i / width;
+    const apriltag_size_t x = i % width;
+    const apriltag_size_t y = i / width;
 
     const uchar2 minmax_val = minmax_image[x / 4 + (y / 4) * width / 4];
 
@@ -198,18 +205,16 @@ class TypedThreshold : public Threshold {
   // Create a full-size grayscale image from a color image on the provided
   // stream.
   void CudaToGreyscale(const uint8_t *color_image, uint8_t *gray_image,
-                       uint32_t width, uint32_t height,
+                       apriltag_size_t width, apriltag_size_t height,
                        CudaStream *stream) override;
 
   // Converts to grayscale, decimates, and thresholds an image on the provided
   // stream.
-  void CudaThresholdAndDecimate(const uint8_t *color_image,
-                                uint8_t *decimated_image,
-                                uint8_t *unfiltered_minmax_image,
-                                uint8_t *minmax_image,
-                                uint8_t *thresholded_image, uint32_t width,
-                                uint32_t height, uint32_t min_white_black_diff,
-                                CudaStream *stream) override;
+  void CudaThresholdAndDecimate(
+      const uint8_t *color_image, uint8_t *decimated_image,
+      uint8_t *unfiltered_minmax_image, uint8_t *minmax_image,
+      uint8_t *thresholded_image, apriltag_size_t width, apriltag_size_t height,
+      apriltag_size_t min_white_black_diff, CudaStream *stream) override;
 
   virtual ~TypedThreshold() = default;
 };
@@ -217,8 +222,8 @@ class TypedThreshold : public Threshold {
 template <vision::ImageFormat IMAGE_FORMAT>
 void TypedThreshold<IMAGE_FORMAT>::CudaToGreyscale(const uint8_t *color_image,
                                                    uint8_t *gray_image,
-                                                   uint32_t width,
-                                                   uint32_t height,
+                                                   apriltag_size_t width,
+                                                   apriltag_size_t height,
                                                    CudaStream *stream) {
   constexpr size_t kThreads = 256;
   {
@@ -235,13 +240,13 @@ template <vision::ImageFormat IMAGE_FORMAT>
 void TypedThreshold<IMAGE_FORMAT>::CudaThresholdAndDecimate(
     const uint8_t *color_image, uint8_t *decimated_image,
     uint8_t *unfiltered_minmax_image, uint8_t *minmax_image,
-    uint8_t *thresholded_image, uint32_t width, uint32_t height,
-    uint32_t min_white_black_diff, CudaStream *stream) {
+    uint8_t *thresholded_image, apriltag_size_t width, apriltag_size_t height,
+    apriltag_size_t min_white_black_diff, CudaStream *stream) {
   CHECK((width % 8) == 0);
   CHECK((height % 8) == 0);
   constexpr size_t kThreads = 256;
-  const uint32_t decimated_width = width / 2;
-  const uint32_t decimated_height = height / 2;
+  const apriltag_size_t decimated_width = width / 2;
+  const apriltag_size_t decimated_height = height / 2;
 
   {
     // Step one, convert to gray and decimate.
@@ -276,7 +281,8 @@ void TypedThreshold<IMAGE_FORMAT>::CudaThresholdAndDecimate(
   {
     // Now, write out 127 if the min/max are too close to each other, or 0/255
     // if the pixels are above or below the average of the min/max.
-    size_t kBlocks = (width * height / 4 + kThreads - 1) / kThreads / 4;
+    const apriltag_size_t kBlocks =
+        (width * height / 4 + kThreads - 1) / kThreads / 4;
     InternalThreshold<<<kBlocks, kThreads, 0, stream->get()>>>(
         decimated_image, reinterpret_cast<uchar2 *>(minmax_image),
         thresholded_image, decimated_width, decimated_height,

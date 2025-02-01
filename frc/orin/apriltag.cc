@@ -218,8 +218,8 @@ template <size_t kBlockWidth, size_t kBlockHeight>
 __global__ void BlobDiff(const uint8_t *thresholded_image,
                          const uint32_t *blobs,
                          const uint32_t *union_markers_size,
-                         QuadBoundaryPoint *result, size_t width,
-                         size_t height) {
+                         QuadBoundaryPoint *result, apriltag_size_t width,
+                         apriltag_size_t height) {
   __shared__ uint32_t temp_blob_storage[kBlockWidth * kBlockHeight];
   __shared__ uint8_t temp_image_storage[kBlockWidth * kBlockHeight];
 
@@ -276,7 +276,7 @@ __global__ void BlobDiff(const uint8_t *thresholded_image,
   if (v0 == 127 || union_markers_size[rep0] < 25) {
 #pragma unroll
     for (size_t point_offset = 0; point_offset < 4; ++point_offset) {
-      const size_t write_address =
+      const apriltag_size_t write_address =
           (width - 2) * (height - 2) * point_offset + global_output_index;
       result[write_address] = QuadBoundaryPoint();
     }
@@ -308,7 +308,7 @@ __global__ void BlobDiff(const uint8_t *thresholded_image,
         cluster_id.set_black_to_white(v1 > v0);                          \
       }                                                                  \
     }                                                                    \
-    const size_t write_address =                                         \
+    const apriltag_size_t write_address =                                \
         (width - 2) * (height - 2) * point_offset + global_output_index; \
     result[write_address] = cluster_id;                                  \
   }
@@ -341,7 +341,7 @@ __global__ void BlobDiff(const uint8_t *thresholded_image,
       v1_block_2 != v1_block_left) {
     if (x != 1 && union_markers_size[rep_block_left] >= 25 &&
         union_markers_size[rep_block_2] >= 25) {
-      const size_t write_address =
+      const uint32_t write_address =
           (width - 2) * (height - 2) * 3 + global_output_index;
       result[write_address] = QuadBoundaryPoint();
       return;
@@ -371,12 +371,13 @@ struct MaskBlobIndex {
 // center.
 class RewriteToIndexPoint {
  public:
-  RewriteToIndexPoint(MinMaxExtents *extents_device, size_t num_extents)
+  RewriteToIndexPoint(MinMaxExtents *extents_device,
+                      apriltag_size_t num_extents)
       : blob_finder_(extents_device, num_extents) {}
 
   __host__ __device__ __forceinline__ IndexPoint
   operator()(cub::KeyValuePair<long, QuadBoundaryPoint> pt) const {
-    size_t index = blob_finder_.FindBlobIndex(pt.key);
+    const apriltag_size_t index = blob_finder_.FindBlobIndex(pt.key);
     IndexPoint result(index, pt.value.point_bits());
     return result;
   }
@@ -387,7 +388,8 @@ class RewriteToIndexPoint {
 // Calculates Theta for a given IndexPoint
 class AddThetaToIndexPoint {
  public:
-  AddThetaToIndexPoint(MinMaxExtents *extents_device, size_t num_extents)
+  AddThetaToIndexPoint(MinMaxExtents *extents_device,
+                       apriltag_size_t num_extents)
       : blob_finder_(extents_device, num_extents) {}
   __host__ __device__ __forceinline__ IndexPoint operator()(IndexPoint a) {
     MinMaxExtents extents = blob_finder_.Get(a.blob_index());
@@ -406,7 +408,7 @@ class AddThetaToIndexPoint {
 // TODO(austin): Make something which rewrites points on the way back out to
 // memory and adds the slope.
 
-// Transforms aQuadBoundaryPoint into a single point extent for Reduce.
+// Transforms a QuadBoundaryPoint into a single point extent for Reduce.
 struct TransformQuadBoundaryPointToMinMaxExtents {
   __host__ __device__ __forceinline__ MinMaxExtents
   operator()(cub::KeyValuePair<long, QuadBoundaryPoint> pt) const {
@@ -464,14 +466,15 @@ class NonzeroBlobs {
 // the middle.
 class SelectBlobs {
  public:
-  SelectBlobs(const MinMaxExtents *extents_device, size_t tag_width,
+  SelectBlobs(const MinMaxExtents *extents_device, apriltag_size_t tag_width,
               bool reversed_border, bool normal_border,
-              size_t min_cluster_pixels, size_t max_cluster_pixels)
+              apriltag_size_t min_cluster_pixels,
+              apriltag_size_t max_cluster_pixels)
       : extents_device_(extents_device),
         tag_width_(tag_width),
         reversed_border_(reversed_border),
         normal_border_(normal_border),
-        min_cluster_pixels_(std::max<size_t>(24u, min_cluster_pixels)),
+        min_cluster_pixels_(std::max<apriltag_size_t>(24u, min_cluster_pixels)),
         max_cluster_pixels_(max_cluster_pixels) {}
 
   // Returns true if the blob passes the size and dot product checks and is
@@ -486,13 +489,14 @@ class SelectBlobs {
     }
 
     // Area must also be reasonable.
-    if ((extents.max_x - extents.min_x) * (extents.max_y - extents.min_y) <
+    if (static_cast<apriltag_size_t>(extents.max_x - extents.min_x) *
+            static_cast<apriltag_size_t>(extents.max_y - extents.min_y) <
         tag_width_) {
       return false;
     }
 
     // And the right side must be inside.
-    const bool quad_reversed_border = extents.dot() < 0.0;
+    const bool quad_reversed_border = extents.dot() < 0.0f;
     if (!reversed_border_ && quad_reversed_border) {
       return false;
     }
@@ -503,20 +507,13 @@ class SelectBlobs {
     return true;
   }
 
-  __host__ __device__ __forceinline__ bool operator()(
-      const IndexPoint &a) const {
-    bool result = (*this)(extents_device_[a.blob_index()]);
-
-    return result;
-  }
-
   const MinMaxExtents *extents_device_;
-  size_t tag_width_;
+  apriltag_size_t tag_width_;
 
   bool reversed_border_;
   bool normal_border_;
-  size_t min_cluster_pixels_;
-  size_t max_cluster_pixels_;
+  apriltag_size_t min_cluster_pixels_;
+  apriltag_size_t max_cluster_pixels_;
 };
 
 // Class to zero out the count (and clear the starting offset) for each extents
@@ -524,9 +521,10 @@ class SelectBlobs {
 // update zero sized blobs.
 struct TransformZeroFilteredBlobSizes {
  public:
-  TransformZeroFilteredBlobSizes(size_t tag_width, bool reversed_border,
-                                 bool normal_border, size_t min_cluster_pixels,
-                                 size_t max_cluster_pixels)
+  TransformZeroFilteredBlobSizes(apriltag_size_t tag_width,
+                                 bool reversed_border, bool normal_border,
+                                 apriltag_size_t min_cluster_pixels,
+                                 apriltag_size_t max_cluster_pixels)
       : select_blobs_(nullptr, tag_width, reversed_border, normal_border,
                       min_cluster_pixels, max_cluster_pixels) {}
 
@@ -574,8 +572,7 @@ struct SumPoints {
 };
 
 struct TransformLineFitPoint {
-  __host__ __device__ __forceinline__ LineFitPoint
-  operator()(IndexPoint p) const {
+  __device__ __forceinline__ LineFitPoint operator()(IndexPoint p) const {
     LineFitPoint result;
 
     // we now undo our fixed-point arithmetic.
@@ -610,7 +607,11 @@ struct TransformLineFitPoint {
     result.blob_index = p.blob_index();
     return result;
   }
-
+  TransformLineFitPoint(const uint8_t *decimated_image_device,
+                        int decimated_width_param, int decimated_height_param)
+      : decimated_image_device_(decimated_image_device),
+        decimated_width(decimated_width_param),
+        decimated_height(decimated_height_param) {}
   const uint8_t *decimated_image_device_;
   int decimated_width;
   int decimated_height;
@@ -816,7 +817,7 @@ void GpuDetector::Detect(const uint8_t *image) {
   //
   // Aprilrobotics has a *3 instead of a *2 here since they have duplicated
   // points in their list at this stage.
-  const size_t max_april_tag_perimeter = 2 * (width_ + height_);
+  const apriltag_size_t max_april_tag_perimeter = 2 * (width_ + height_);
 
   {
     // Now that we have the dot products, we need to rewrite the extents for the

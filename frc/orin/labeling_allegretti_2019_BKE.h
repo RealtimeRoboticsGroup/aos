@@ -3,6 +3,8 @@
 
 #include <cuda_runtime.h>
 
+#include <cstdint>
+
 #include "frc/orin/gpu_image.h"
 
 void LabelImage(const GpuImage<uint8_t> input, GpuImage<uint32_t> output,

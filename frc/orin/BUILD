@@ -33,6 +33,7 @@ cc_library(
     ],
     hdrs = [
         "apriltag.h",
+        "apriltag_types.h",
         "cuda.h",
         "gpu_image.h",
         "labeling_allegretti_2019_BKE.h",

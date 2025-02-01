@@ -17,6 +17,7 @@
 #include "aos/realtime.h"
 #include "frc/constants/constants_sender_lib.h"
 #include "frc/orin/apriltag.h"
+#include "frc/orin/apriltag_types.h"
 #include "frc/vision/calibration_generated.h"
 #include "frc/vision/charuco_lib.h"
 #include "frc/vision/target_map_generated.h"
