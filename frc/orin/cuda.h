@@ -22,6 +22,7 @@ namespace frc::apriltag {
 
 // Class to manage the lifetime of a Cuda stream.  This is used to provide
 // relative ordering between kernels on the same stream.
+class CudaEvent;
 class CudaStream {
  public:
   CudaStream() { CHECK_CUDA(cudaStreamCreate(&stream_)); }
@@ -35,6 +36,9 @@ class CudaStream {
 
   // Returns the stream.
   cudaStream_t get() { return stream_; }
+
+  // Make this stream wait until the selected event has been triggered
+  void Wait(CudaEvent *event);
 
  private:
   cudaStream_t stream_;
@@ -52,6 +56,8 @@ class CudaEvent {
   CudaEvent &operator=(const CudaEvent &&) noexcept = delete;
 
   virtual ~CudaEvent() { CHECK_CUDA(cudaEventDestroy(event_)); }
+
+  cudaEvent_t get() { return event_; }
 
   // Queues up an event to be timestamped on the stream when it is executed.
   void Record(CudaStream *stream) {
