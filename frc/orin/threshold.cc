@@ -53,17 +53,19 @@ __forceinline__ __device__ uchar2 minmax(uchar2 val0, uchar2 val1) {
 }
 
 // Returns the pixel index of a pixel at the provided x and y location.
-__forceinline__ __device__ size_t XYToIndex(size_t width, size_t x, size_t y) {
+__forceinline__ __device__ uint32_t XYToIndex(uint32_t width, uint32_t x,
+                                              uint32_t y) {
   return width * y + x;
 }
 
 // Computes the min and max pixel value for each block of 4 pixels.
 __global__ void InternalBlockMinMax(const uint8_t *decimated_image,
                                     uchar2 *unfiltered_minmax_image,
-                                    size_t width, size_t height) {
+                                    const uint32_t width,
+                                    const uint32_t height) {
   uchar2 vals[4];
-  const size_t x = blockIdx.x * blockDim.x + threadIdx.x;
-  const size_t y = blockIdx.y * blockDim.y + threadIdx.y;
+  const uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
+  const uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
 
   if (x >= width || y >= height) {
     return;
@@ -83,12 +85,12 @@ __global__ void InternalBlockMinMax(const uint8_t *decimated_image,
 // Filters the min/max for the surrounding block of 9 pixels centered on our
 // location using min/max and writes the result back out.
 __global__ void InternalBlockFilter(const uchar2 *unfiltered_minmax_image,
-                                    uchar2 *minmax_image, size_t width,
-                                    size_t height) {
+                                    uchar2 *minmax_image, const uint32_t width,
+                                    const uint32_t height) {
   uchar2 result = make_uchar2(255, 0);
 
-  const size_t x = blockIdx.x * blockDim.x + threadIdx.x;
-  const size_t y = blockIdx.y * blockDim.y + threadIdx.y;
+  const uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
+  const uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
 
   if (x >= width || y >= height) {
     return;
@@ -97,16 +99,16 @@ __global__ void InternalBlockFilter(const uchar2 *unfiltered_minmax_image,
   // Iterate through the 3x3 set of points centered on the point this image is
   // responsible for, and compute the overall min/max.
 #pragma unroll
-  for (int i = -1; i <= 1; ++i) {
+  for (int32_t i = -1; i <= 1; ++i) {
 #pragma unroll
-    for (int j = -1; j <= 1; ++j) {
-      const ssize_t read_x = x + i;
-      const ssize_t read_y = y + j;
+    for (int32_t j = -1; j <= 1; ++j) {
+      const int32_t read_x = x + i;
+      const int32_t read_y = y + j;
 
-      if (read_x < 0 || read_x >= static_cast<ssize_t>(width)) {
+      if (read_x < 0 || read_x >= static_cast<int32_t>(width)) {
         continue;
       }
-      if (read_y < 0 || read_y >= static_cast<ssize_t>(height)) {
+      if (read_y < 0 || read_y >= static_cast<int32_t>(height)) {
         continue;
       }
 
@@ -121,12 +123,13 @@ __global__ void InternalBlockFilter(const uchar2 *unfiltered_minmax_image,
 // Thresholds the image based on the filtered thresholds.
 __global__ void InternalThreshold(const uint8_t *decimated_image,
                                   const uchar2 *minmax_image,
-                                  uint8_t *thresholded_image, size_t width,
-                                  size_t height, size_t min_white_black_diff) {
-  size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+                                  uint8_t *thresholded_image,
+                                  const uint32_t width, const uint32_t height,
+                                  const uint32_t min_white_black_diff) {
+  uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
   while (i < width * height) {
-    const size_t x = i % width;
-    const size_t y = i / width;
+    const uint32_t x = i % width;
+    const uint32_t y = i / width;
 
     const uchar2 minmax_val = minmax_image[x / 4 + (y / 4) * width / 4];
 
@@ -192,7 +195,7 @@ void CudaToGreyscaleAndDecimateHalide(
   {
     // Now, write out 127 if the min/max are too close to each other, or 0/255
     // if the pixels are above or below the average of the min/max.
-    size_t kBlocks = (width * height / 4 + kThreads - 1) / kThreads / 4;
+    const uint32_t kBlocks = (width * height / 4 + kThreads - 1) / kThreads / 4;
     InternalThreshold<<<kBlocks, kThreads, 0, stream->get()>>>(
         decimated_image, reinterpret_cast<uchar2 *>(minmax_image),
         thresholded_image, decimated_width, decimated_height,
