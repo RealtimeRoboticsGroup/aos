@@ -28,6 +28,8 @@ class CudaStream {
 
   CudaStream(const CudaStream &) = delete;
   CudaStream &operator=(const CudaStream &) = delete;
+  CudaStream(const CudaStream &&) noexcept = delete;
+  CudaStream &operator=(const CudaStream &&) noexcept = delete;
 
   virtual ~CudaStream() { CHECK_CUDA(cudaStreamDestroy(stream_)); }
 
@@ -46,6 +48,8 @@ class CudaEvent {
 
   CudaEvent(const CudaEvent &) = delete;
   CudaEvent &operator=(const CudaEvent &) = delete;
+  CudaEvent(const CudaEvent &&) noexcept = delete;
+  CudaEvent &operator=(const CudaEvent &&) noexcept = delete;
 
   virtual ~CudaEvent() { CHECK_CUDA(cudaEventDestroy(event_)); }
 
@@ -83,6 +87,8 @@ class HostMemory {
   }
   HostMemory(const HostMemory &) = delete;
   HostMemory &operator=(const HostMemory &) = delete;
+  HostMemory(const HostMemory &&) noexcept = delete;
+  HostMemory &operator=(const HostMemory &&) noexcept = delete;
 
   virtual ~HostMemory() { CHECK_CUDA(cudaFreeHost(span_.data())); }
 
@@ -117,6 +123,9 @@ class GpuMemory {
   }
   GpuMemory(const GpuMemory &) = delete;
   GpuMemory &operator=(const GpuMemory &) = delete;
+
+  GpuMemory(const GpuMemory &&) noexcept = delete;
+  GpuMemory &operator=(const GpuMemory &&) noexcept = delete;
 
   virtual ~GpuMemory() { CHECK_CUDA(cudaFree(memory_)); }
 
@@ -204,6 +213,11 @@ void CheckAndSynchronize(std::string_view message = "");
 // so we can leave debugging in the code.
 void MaybeCheckAndSynchronize();
 void MaybeCheckAndSynchronize(std::string_view message);
+
+// A size type for use in apriltag GPU code.
+// This is 32 bits to consume less memory and be faster.  And, a 4 GB image will
+// break so much other stuff that it isn't worth stressing.
+typedef uint32_t apriltag_size_t;
 
 }  // namespace frc::apriltag
 

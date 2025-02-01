@@ -9,7 +9,7 @@
 namespace frc::apriltag {
 
 // Returns the number of bytes per pixel.
-constexpr __device__ uint32_t
+constexpr __device__ apriltag_size_t
 BytesPerPixel(const vision::ImageFormat image_format) {
   switch (image_format) {
     case vision::ImageFormat::MONO8:
@@ -34,7 +34,7 @@ class Threshold {
   // Create a full-size grayscale image from a color image on the provided
   // stream.
   virtual void CudaToGreyscale(const uint8_t *color_image, uint8_t *gray_image,
-                               uint32_t width, uint32_t height,
+                               apriltag_size_t width, apriltag_size_t height,
                                CudaStream *stream) = 0;
 
   // Converts to grayscale, decimates, and thresholds an image on the provided
@@ -42,8 +42,8 @@ class Threshold {
   virtual void CudaThresholdAndDecimate(
       const uint8_t *color_image, uint8_t *decimated_image,
       uint8_t *unfiltered_minmax_image, uint8_t *minmax_image,
-      uint8_t *thresholded_image, uint32_t width, uint32_t height,
-      uint32_t min_white_black_diff, CudaStream *stream) = 0;
+      uint8_t *thresholded_image, apriltag_size_t width, apriltag_size_t height,
+      apriltag_size_t min_white_black_diff, CudaStream *stream) = 0;
 
   virtual ~Threshold() = default;
 };

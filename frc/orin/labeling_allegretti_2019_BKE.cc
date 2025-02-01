@@ -24,11 +24,14 @@
 
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
+#include "frc/orin/cuda.h"
 
 #define BLOCK_ROWS 16
 #define BLOCK_COLS 16
 
 namespace {
+
+using frc::apriltag::apriltag_size_t;
 
 //         This is a block-based algorithm.
 // Blocks are 2x2 sized, with internal pixels named as:
@@ -397,7 +400,7 @@ __global__ void FinalLabeling(GpuImage<uint32_t> labels,
 
   if ((foreground_info & 0xf) != 0u) {
     // We've got foreground!
-    size_t count = 0;
+    apriltag_size_t count = 0;
     if (HasBit(foreground_info, Info::a)) {
       ++count;
     }
@@ -423,7 +426,7 @@ __global__ void FinalLabeling(GpuImage<uint32_t> labels,
       (background_right_info & 0xf) != 0u &&
       background_left_label == background_right_label) {
     // They are all populated and match, go for it.
-    size_t count = 0;
+    apriltag_size_t count = 0;
     if (HasBit(background_left_info, Info::a)) {
       ++count;
     }
@@ -442,7 +445,7 @@ __global__ void FinalLabeling(GpuImage<uint32_t> labels,
   }
 
   if ((background_left_info & 0xf) != 0u) {
-    size_t count = 0;
+    apriltag_size_t count = 0;
     if (HasBit(background_left_info, Info::a)) {
       ++count;
     }
@@ -453,7 +456,7 @@ __global__ void FinalLabeling(GpuImage<uint32_t> labels,
   }
 
   if ((background_right_info & 0xf) != 0u) {
-    size_t count = 0;
+    apriltag_size_t count = 0;
     if (HasBit(background_right_info, Info::b)) {
       ++count;
     }
