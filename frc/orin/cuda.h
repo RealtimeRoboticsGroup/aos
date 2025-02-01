@@ -109,6 +109,10 @@ class HostMemory {
   void MemcpyFrom(const T *other) {
     memcpy(span_.data(), other, sizeof(T) * size());
   }
+  void MemcpyFrom(const T *other, const size_t size) {
+    memcpy(span_.data(), other, sizeof(T) * size);
+  }
+
   // Copies data to other (host memory) from this's memory.
   void MemcpyTo(const T *other) {
     memcpy(other, span_.data(), sizeof(T) * size());
@@ -129,7 +133,6 @@ class GpuMemory {
   }
   GpuMemory(const GpuMemory &) = delete;
   GpuMemory &operator=(const GpuMemory &) = delete;
-
   GpuMemory(const GpuMemory &&) noexcept = delete;
   GpuMemory &operator=(const GpuMemory &&) noexcept = delete;
 
@@ -148,8 +151,22 @@ class GpuMemory {
     CHECK_CUDA(cudaMemcpyAsync(memory_, host_memory, sizeof(T) * size_,
                                cudaMemcpyHostToDevice, stream->get()));
   }
+  void MemcpyAsyncFrom(const T *host_memory, const size_t size,
+                       CudaStream *stream) {
+    CHECK_LE(size, size_);
+    CHECK_CUDA(cudaMemcpyAsync(memory_, host_memory, sizeof(T) * size,
+                               cudaMemcpyHostToDevice, stream->get()));
+  }
   void MemcpyAsyncFrom(const HostMemory<T> *host_memory, CudaStream *stream) {
-    MemcpyAsyncFrom(host_memory->get(), stream);
+    CHECK_CUDA(cudaMemcpyAsync(memory_, host_memory,
+                               sizeof(T) * host_memory->size(),
+                               cudaMemcpyHostToDevice, stream->get()));
+  }
+  void MemcpyAsyncFrom(const HostMemory<T> *host_memory, const size_t size,
+                       CudaStream *stream) {
+    CHECK_LE(size, size_);
+    CHECK_CUDA(cudaMemcpyAsync(memory_, host_memory, sizeof(T) * size,
+                               cudaMemcpyHostToDevice, stream->get()));
   }
 
   // Copies data to host memory from this memory asynchronously on the provided
