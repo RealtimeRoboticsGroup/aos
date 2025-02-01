@@ -132,7 +132,6 @@ class GpuMemory {
     CHECK_CUDA(cudaMalloc((void **)(&memory_), size * sizeof(T)));
   }
   GpuMemory(const GpuMemory &) = delete;
-  GpuMemory &operator=(const GpuMemory &) = delete;
   GpuMemory(const GpuMemory &&) noexcept = delete;
   GpuMemory &operator=(const GpuMemory &&) noexcept = delete;
 
@@ -226,7 +225,7 @@ class GpuMemory {
 
  private:
   T *memory_;
-  const size_t size_;
+  size_t size_;
 };
 
 // Synchronizes and CHECKs for success the last CUDA operation.
