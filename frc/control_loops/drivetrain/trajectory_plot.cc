@@ -8,8 +8,8 @@
 #include "aos/network/team_number.h"
 #include "aos/time/time.h"
 #include "frc/control_loops/dlqr.h"
+#include "frc/control_loops/drivetrain/test_robot/drivetrain_base.h"
 #include "frc/control_loops/drivetrain/trajectory.h"
-#include "y2019/control_loops/drivetrain/drivetrain_base.h"
 
 // Notes:
 //   Basic ideas from spline following are from Jared Russell and
@@ -44,8 +44,7 @@ namespace chrono = ::std::chrono;
 namespace frc::control_loops::drivetrain {
 
 void Main() {
-  const DrivetrainConfig<double> config =
-      ::y2019::control_loops::drivetrain::GetDrivetrainConfig();
+  const DrivetrainConfig<double> config = test_robot::GetDrivetrainConfig();
   Trajectory trajectory(DistanceSpline(Spline(Spline4To6(
                             (::Eigen::Matrix<double, 2, 4>() << 0.0,
                              1.2 * absl::GetFlag(FLAGS_forward),

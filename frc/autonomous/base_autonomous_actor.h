@@ -11,7 +11,6 @@
 #include "frc/control_loops/drivetrain/drivetrain_config.h"
 #include "frc/control_loops/drivetrain/drivetrain_goal_generated.h"
 #include "frc/control_loops/drivetrain/drivetrain_status_generated.h"
-#include "y2019/control_loops/drivetrain/target_selector_generated.h"
 
 namespace frc::autonomous {
 
@@ -97,10 +96,7 @@ class BaseAutonomousActor : public ::aos::common::actions::ActorBase<Goal> {
   double Y();
   double Theta();
 
-  void LineFollowAtVelocity(
-      double velocity,
-      y2019::control_loops::drivetrain::SelectionHint hint =
-          y2019::control_loops::drivetrain::SelectionHint::NONE);
+  void LineFollowAtVelocity(double velocity);
 
   // Waits until the robot is pitched up above the specified angle, or the move
   // finishes.  Returns true on success, and false if it cancels.
@@ -134,8 +130,6 @@ class BaseAutonomousActor : public ::aos::common::actions::ActorBase<Goal> {
   };
   InitialDrivetrain initial_drivetrain_;
 
-  ::aos::Sender<::y2019::control_loops::drivetrain::TargetSelectorHint>
-      target_selector_hint_sender_;
   ::aos::Sender<::frc::control_loops::drivetrain::Goal> drivetrain_goal_sender_;
   ::aos::Sender<::frc::control_loops::drivetrain::SplineGoal>
       spline_goal_sender_;

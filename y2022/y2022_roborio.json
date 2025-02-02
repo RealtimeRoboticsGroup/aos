@@ -201,11 +201,6 @@
       "max_size": 96
     },
     {
-      "name": "/drivetrain",
-      "type": "y2019.control_loops.drivetrain.TargetSelectorHint",
-      "source_node": "roborio"
-    },
-    {
       "name": "/autonomous",
       "type": "aos.common.actions.Status",
       "source_node": "roborio"

@@ -40,7 +40,7 @@ class TargetSelectorInterface {
   // should return true and the sign of the *Radius() functions will be
   // respected by the line following code.
   virtual bool SignedRadii() const = 0;
-  // The "radius" of the target--for y2019, we wanted to drive in so that a disc
+  // The "radius" of the target--for 2019, we wanted to drive in so that a disc
   // with radius r would hit the plane of the target at an offset of exactly r
   // from the TargetPose--this is distinct from wanting the center of the
   // robot to project straight onto the center of the target.
