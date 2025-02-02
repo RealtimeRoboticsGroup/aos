@@ -11,28 +11,20 @@ FLAGS = gflags.FLAGS
 
 gflags.DEFINE_bool('plot', False, 'If true, plot the loop response.')
 
-#update mass (120lbs right now)
-#robot radius needs confirming(set as distance of center wheels from each other)
-#J needs updating
-
-# TODO(austin): wpilib
-# Encoder is on a 24 tooth gear attached to the output gear.
-
 kDrivetrain = drivetrain.DrivetrainParams(
-    J=1.5,
-    mass=38.5,
-    # TODO(austin): Measure.
-    robot_radius=0.45 / 2.0,
-    wheel_radius=4.0 * 0.0254 / 2.0,
-    G=9.0 / 52.0,
-    q_pos=0.14,
-    q_vel=1.30,
-    efficiency=0.80,
-    has_imu=True,
-    force=True,
-    kf_q_voltage=13.0,
-    controller_poles=[0.82, 0.82],
-    robot_cg_offset=0.0)
+    J=2.0,
+    mass=68,
+    robot_radius=0.601 / 2.0,
+    wheel_radius=0.097155 * 0.9811158901447808 / 118.0 * 115.75,
+    G_high=14.0 / 48.0 * 28.0 / 50.0 * 18.0 / 36.0,
+    G_low=14.0 / 48.0 * 18.0 / 60.0 * 18.0 / 36.0,
+    q_pos_low=0.12,
+    q_pos_high=0.14,
+    q_vel_low=1.0,
+    q_vel_high=0.95,
+    has_imu=False,
+    dt=0.005,
+    controller_poles=[0.67, 0.67])
 
 
 def main(argv):
@@ -45,7 +37,7 @@ def main(argv):
         print("Expected .h, .cc, and .json filenames")
     else:
         # Write the generated constants out to a file.
-        drivetrain.WriteDrivetrain(argv[1:4], argv[4:7], 'y2019', kDrivetrain)
+        drivetrain.WriteDrivetrain(argv[1:4], argv[4:7], ['frc', 'control_loops', 'drivetrain', 'test_robot'], kDrivetrain)
 
 
 if __name__ == '__main__':

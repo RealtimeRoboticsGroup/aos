@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import sys
-from y2019.control_loops.python import drivetrain
+from frc.control_loops.drivetrain.test_robot import drivetrain
 from frc.control_loops.python import polydrivetrain
 
 import gflags
@@ -24,7 +24,7 @@ def main(argv):
         glog.fatal('Expected .h, .cc, and .json filenames')
     else:
         polydrivetrain.WritePolyDrivetrain(argv[1:4], argv[4:7], argv[7:10],
-                                           'y2019', drivetrain.kDrivetrain)
+                                           ['frc', 'control_loops', 'drivetrain', 'test_robot'], drivetrain.kDrivetrain)
 
 
 if __name__ == '__main__':

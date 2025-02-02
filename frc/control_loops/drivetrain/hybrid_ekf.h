@@ -13,10 +13,6 @@
 #include "frc/control_loops/drivetrain/drivetrain_config.h"
 #include "frc/control_loops/runge_kutta.h"
 
-namespace y2019::control_loops::testing {
-class ParameterizedLocalizerTest;
-}  // namespace y2019::control_loops::testing
-
 namespace frc::control_loops::drivetrain {
 
 namespace testing {
@@ -213,7 +209,7 @@ class HybridEkf {
   // The ExpectedObservationBuilder creates a new ExpectedObservationFunctor.
   // This is used for situations where in order to know what the correction
   // methods even are we need to know the state at some time in the past. This
-  // is only used in the y2019 code and we've generally stopped using this
+  // was only used in the 2019 code and we've generally stopped using this
   // pattern.
   class ExpectedObservationBuilder {
    public:
@@ -770,7 +766,6 @@ class HybridEkf {
       observations_;
 
   friend class testing::HybridEkfTest;
-  friend class y2019::control_loops::testing::ParameterizedLocalizerTest;
 };  // class HybridEkf
 
 template <typename Scalar>

@@ -1,4 +1,60 @@
-load("//aos/flatbuffers:generate.bzl", "static_flatbuffer")
+load("//frc/control_loops/drivetrain:drivetrain_config.bzl", "drivetrain_config")
+
+py_binary(
+    name = "drivetrain",
+    srcs = [
+        "drivetrain.py",
+    ],
+    legacy_create_init = False,
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+    deps = [
+        ":python_init",
+        "//frc/control_loops/python:drivetrain",
+        "@pip//glog",
+        "@pip//python_gflags",
+    ],
+)
+
+py_binary(
+    name = "polydrivetrain",
+    srcs = [
+        "drivetrain.py",
+        "polydrivetrain.py",
+    ],
+    legacy_create_init = False,
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+    deps = [
+        ":python_init",
+        "//frc/control_loops/python:polydrivetrain",
+        "@pip//glog",
+        "@pip//python_gflags",
+    ],
+)
+
+py_library(
+    name = "polydrivetrain_lib",
+    srcs = [
+        "drivetrain.py",
+        "polydrivetrain.py",
+    ],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":python_init",
+        "//frc/control_loops/python:controls",
+        "//frc/control_loops/python:drivetrain",
+        "//frc/control_loops/python:polydrivetrain",
+        "@pip//glog",
+        "@pip//python_gflags",
+    ],
+)
+
+py_library(
+    name = "python_init",
+    srcs = ["__init__.py"],
+    target_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:public"],
+)
 
 genrule(
     name = "genrule_drivetrain",
@@ -10,10 +66,10 @@ genrule(
         "kalman_drivetrain_motor_plant.cc",
         "kalman_drivetrain_motor_plant.json",
     ],
-    cmd = "$(location //y2019/control_loops/python:drivetrain) $(OUTS)",
+    cmd = "$(location :drivetrain) $(OUTS)",
     target_compatible_with = ["@platforms//os:linux"],
     tools = [
-        "//y2019/control_loops/python:drivetrain",
+        "//frc/control_loops/drivetrain/test_robot:drivetrain",
     ],
 )
 
@@ -30,10 +86,10 @@ genrule(
         "hybrid_velocity_drivetrain.cc",
         "hybrid_velocity_drivetrain.json",
     ],
-    cmd = "$(location //y2019/control_loops/python:polydrivetrain) $(OUTS)",
+    cmd = "$(location //frc/control_loops/drivetrain/test_robot:polydrivetrain) $(OUTS)",
     target_compatible_with = ["@platforms//os:linux"],
     tools = [
-        "//y2019/control_loops/python:polydrivetrain",
+        ":polydrivetrain",
     ],
 )
 
@@ -76,9 +132,7 @@ cc_library(
     ],
 )
 
-static_flatbuffer(
-    name = "target_selector_fbs",
-    srcs = ["target_selector.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
-    visibility = ["//visibility:public"],
+drivetrain_config(
+    name = "drivetrain_config",
+    out = "drivetrain_config.json",
 )
