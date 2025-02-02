@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "3259560d_84ca412d",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 3
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-02-02T20:51:27Z",
+      "side": 1,
+      "message": "Would a typedef be useful in case we ever want to switch again? Or just to distinguish cuda 32 bit type from some other random variable that also happens to be 32 bits?",
+      "range": {
+        "startLine": 7,
+        "startChar": 21,
+        "endLine": 7,
+        "endChar": 32
+      },
+      "revId": "6c869514cbb47da6e06e1700a685ef12631bc6d9",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    }
+  ]
+}
