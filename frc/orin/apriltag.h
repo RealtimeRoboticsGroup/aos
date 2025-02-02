@@ -11,6 +11,8 @@
 #include "frc/orin/gpu_image.h"
 #include "frc/orin/line_fit_filter.h"
 #include "frc/orin/points.h"
+#include "frc/orin/threshold.h"
+#include "frc/vision/vision_generated.h"
 
 namespace frc::apriltag {
 
@@ -88,8 +90,12 @@ class GpuDetector {
   // Constructs a detector, reserving space for detecting tags of the provided
   // with and height, using the provided detector options.
   GpuDetector(size_t width, size_t height, apriltag_detector_t *tag_detector,
-              CameraMatrix camera_matrix, DistCoeffs distortion_coefficients);
+              CameraMatrix camera_matrix, DistCoeffs distortion_coefficients,
+              vision::ImageFormat image_format);
   virtual ~GpuDetector();
+
+  size_t width() const { return width_; }
+  size_t height() const { return height_; }
 
   // Detects april tags in the provided image.
   void Detect(const uint8_t *image);
@@ -348,6 +354,8 @@ class GpuDetector {
   GpuMemory<uint8_t> temp_storage_compressed_filtered_blobs_device_;
   GpuMemory<uint8_t> temp_storage_selected_extents_scan_device_;
   GpuMemory<uint8_t> temp_storage_line_fit_scan_device_;
+
+  std::unique_ptr<Threshold> threshold_;
 
   // Cumulative duration of april tag detection.
   std::chrono::nanoseconds execution_duration_{0};

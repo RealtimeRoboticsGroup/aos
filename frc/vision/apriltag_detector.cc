@@ -11,6 +11,9 @@ ABSL_FLAG(std::string, channel, "/camera", "Channel name");
 ABSL_FLAG(std::string, config, "aos_config.json",
           "Path to the config file to use.");
 
+ABSL_FLAG(uint32_t, width, 1600, "Width of the image in pixels.");
+ABSL_FLAG(uint32_t, height, 1304, "Height of the image in pixels.");
+
 namespace frc::vision {
 
 const calibration::CameraCalibration *FindCameraCalibration(
@@ -48,7 +51,8 @@ void GpuApriltagDetector() {
                             camera_id);
 
   frc::apriltag::ApriltagDetector detector(
-      &event_loop, absl::GetFlag(FLAGS_channel), calibration);
+      &event_loop, absl::GetFlag(FLAGS_channel), calibration,
+      absl::GetFlag(FLAGS_width), absl::GetFlag(FLAGS_height));
 
   // TODO(austin): Figure out our core pinning strategy.
   // event_loop.SetRuntimeAffinity(aos::MakeCpusetFromCpus({5}));

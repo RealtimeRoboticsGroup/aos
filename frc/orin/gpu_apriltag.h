@@ -95,7 +95,8 @@ class ApriltagDetector {
   // pose.
   void DestroyPose(apriltag_pose_t *pose) const;
 
-  void HandleImage(cv::Mat color_image, aos::monotonic_clock::time_point eof);
+  void HandleImage(const frc::vision::CameraImage &color_image,
+                   aos::monotonic_clock::time_point eof);
 
  private:
   apriltag_family_t *tag_family_;
@@ -113,10 +114,11 @@ class ApriltagDetector {
   CameraMatrix distortion_camera_matrix_;
   DistCoeffs distortion_coefficients_;
 
+  vision::ImageFormat image_format_;
   frc::apriltag::GpuDetector gpu_detector_;
   cv::Size image_size_;
 
-  frc::vision::ImageCallback image_callback_;
+  frc::vision::CameraImageCallback image_callback_;
   aos::Sender<frc::vision::TargetMap> target_map_sender_;
   aos::Sender<foxglove::ImageAnnotations> image_annotations_sender_;
   size_t rejections_;

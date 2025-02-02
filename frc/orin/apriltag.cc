@@ -116,7 +116,8 @@ static size_t DeviceScanInclusiveScanByKeyScratchSpace(size_t elements) {
 GpuDetector::GpuDetector(size_t width, size_t height,
                          apriltag_detector_t *tag_detector,
                          CameraMatrix camera_matrix,
-                         DistCoeffs distortion_coefficients)
+                         DistCoeffs distortion_coefficients,
+                         vision::ImageFormat image_format)
     : width_(width),
       height_(height),
       tag_detector_(tag_detector),
@@ -168,7 +169,8 @@ GpuDetector::GpuDetector(size_t width, size_t height,
               cub::KeyValuePair<long, MinMaxExtents>>(kMaxBlobs)),
       temp_storage_line_fit_scan_device_(
           DeviceScanInclusiveScanByKeyScratchSpace<uint32_t, LineFitPoint>(
-              sorted_selected_blobs_device_.size())) {
+              sorted_selected_blobs_device_.size())),
+      threshold_(MakeThreshold(image_format)) {
   fit_quads_host_.reserve(kMaxBlobs);
   quad_corners_host_.reserve(kMaxBlobs);
 
@@ -673,11 +675,14 @@ void GpuDetector::Detect(const uint8_t *image) {
   after_image_memcpy_to_device_.Record(&stream_);
 
   // Threshold the image.
-  CudaToGreyscaleAndDecimateHalide(
-      color_image_device_.get(), gray_image_device_.get(),
-      decimated_image_device_.get(), unfiltered_minmax_image_device_.get(),
-      minmax_image_device_.get(), thresholded_image_device_.get(), width_,
-      height_, tag_detector_->qtp.min_white_black_diff, &stream_);
+  threshold_->CudaThresholdAndDecimate(
+      color_image_device_.get(), decimated_image_device_.get(),
+      unfiltered_minmax_image_device_.get(), minmax_image_device_.get(),
+      thresholded_image_device_.get(), width_, height_,
+      tag_detector_->qtp.min_white_black_diff, &stream_);
+  threshold_->CudaToGreyscale(color_image_device_.get(),
+                              gray_image_device_.get(), width_, height_,
+                              &stream_);
   after_threshold_.Record(&stream_);
 
   gray_image_device_.MemcpyAsyncTo(&gray_image_host_, &stream_);

@@ -50,6 +50,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//aos/time",
+        "//frc/vision:vision_fbs",
         "//third_party:cudart",
         "//third_party/apriltag",
         "@com_github_nvidia_cccl//:cccl",

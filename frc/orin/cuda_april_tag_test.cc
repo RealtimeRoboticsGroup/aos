@@ -278,7 +278,8 @@ class CudaAprilTagDetector {
         union_markers_(decimated_cuda_.size(), CV_32SC1),
         union_markers_size_(decimated_cuda_.size(), CV_32SC1),
         gpu_detector_(width, height, tag_detector_, create_camera_matrix(),
-                      create_distortion_coefficients_five()),
+                      create_distortion_coefficients_five(),
+                      vision::ImageFormat::YUYV422),
         width_(width),
         height_(height) {
     // Report out info about our GPU.

@@ -31,6 +31,7 @@ ABSL_FLAG(int32_t, pixel_border, 150,
           "Size of image border within which to reject detected corners");
 ABSL_FLAG(uint64_t, pose_estimation_iterations, 50,
           "Number of iterations for apriltag pose estimation.");
+ABSL_FLAG(std::string, image_format, "YUYV422", "Image format to use.");
 
 namespace frc::apriltag {
 
@@ -40,6 +41,20 @@ constexpr aos::monotonic_clock::duration kMaxImageAge =
     std::chrono::milliseconds(50);
 
 namespace chrono = std::chrono;
+
+vision::ImageFormat ImageFormatFromString(std::string_view format) {
+  size_t i = 0;
+  while (true) {
+    if (vision::EnumNamesImageFormat()[i] == nullptr) {
+      LOG(FATAL) << "Invalid image format: " << format;
+    }
+    if (vision::EnumNamesImageFormat()[i] == format) {
+      LOG(INFO) << "Using image format: " << format;
+      return vision::EnumValuesImageFormat()[i];
+    }
+    ++i;
+  }
+}
 
 ApriltagDetector::ApriltagDetector(
     aos::EventLoop *event_loop, std::string_view channel_name,
@@ -54,13 +69,14 @@ ApriltagDetector::ApriltagDetector(
       dist_coeffs_(frc::vision::CameraDistCoeffs(calibration_)),
       distortion_camera_matrix_(GetCameraMatrix(calibration_)),
       distortion_coefficients_(GetDistCoeffs(calibration_)),
+      image_format_(ImageFormatFromString(absl::GetFlag(FLAGS_image_format))),
       gpu_detector_(width, height, tag_detector_, distortion_camera_matrix_,
-                    distortion_coefficients_),
+                    distortion_coefficients_, image_format_),
       image_callback_(
           event_loop, channel_name,
-          [this](cv::Mat image_color_mat,
+          [this](const vision::CameraImage &image,
                  const aos::monotonic_clock::time_point eof) {
-            HandleImage(image_color_mat, eof);
+            HandleImage(image, eof);
           },
           kMaxImageAge),
       target_map_sender_(
@@ -68,8 +84,6 @@ ApriltagDetector::ApriltagDetector(
       image_annotations_sender_(
           event_loop->MakeSender<foxglove::ImageAnnotations>(channel_name)),
       rejections_(0) {
-  image_callback_.set_format(frc::vision::ImageCallback::Format::YUYV2);
-
   projection_matrix_ = cv::Mat::zeros(3, 4, CV_64F);
   intrinsics_.rowRange(0, 3).colRange(0, 3).copyTo(
       projection_matrix_.rowRange(0, 3).colRange(0, 3));
@@ -167,26 +181,28 @@ void ApriltagDetector::DestroyPose(apriltag_pose_t *pose) const {
   matd_destroy(pose->t);
 }
 
-void ApriltagDetector::HandleImage(cv::Mat color_image,
+void ApriltagDetector::HandleImage(const vision::CameraImage &image,
                                    aos::monotonic_clock::time_point eof) {
   const aos::monotonic_clock::time_point start_time =
       aos::monotonic_clock::now();
-  gpu_detector_.Detect(color_image.data);
-  image_size_ = color_image.size();
-  cv::Mat image_copy;
-  if (absl::GetFlag(FLAGS_visualize)) {
-    // TODO: Need to figure out how to extract displayable color image from this
-    image_copy = color_image.clone();
-  }
+
+  CHECK(image.format() == image_format_)
+      << ": Image format doesn't match --image_format="
+      << absl::GetFlag(FLAGS_image_format);
+  CHECK(image.has_data());
+  CHECK_EQ(gpu_detector_.width(), static_cast<size_t>(image.cols()));
+  CHECK_EQ(gpu_detector_.height(), static_cast<size_t>(image.rows()));
+  gpu_detector_.Detect(image.data()->data());
+  image_size_ = cv::Size(image.cols(), image.rows());
 
   const zarray_t *detections = gpu_detector_.Detections();
 
   aos::monotonic_clock::time_point end_time = aos::monotonic_clock::now();
 
   const uint32_t min_x = absl::GetFlag(FLAGS_pixel_border);
-  const uint32_t max_x = color_image.cols - absl::GetFlag(FLAGS_pixel_border);
+  const uint32_t max_x = image.cols() - absl::GetFlag(FLAGS_pixel_border);
   const uint32_t min_y = absl::GetFlag(FLAGS_pixel_border);
-  const uint32_t max_y = color_image.rows - absl::GetFlag(FLAGS_pixel_border);
+  const uint32_t max_y = image.rows() - absl::GetFlag(FLAGS_pixel_border);
 
   // Define variables for storing / visualizing the output
   std::vector<Detection> results;
@@ -331,48 +347,12 @@ void ApriltagDetector::HandleImage(cv::Mat color_image,
                                      .distortion_factor = distortion_factor,
                                      .pose_error_ratio = pose_error_ratio});
 
-      if (absl::GetFlag(FLAGS_visualize)) {
-        // Draw raw (distorted) corner points in green
-        cv::line(image_copy, orig_corner_points[0], orig_corner_points[1],
-                 cv::Scalar(0, 255, 0), 2);
-        cv::line(image_copy, orig_corner_points[1], orig_corner_points[2],
-                 cv::Scalar(0, 255, 0), 2);
-        cv::line(image_copy, orig_corner_points[2], orig_corner_points[3],
-                 cv::Scalar(0, 255, 0), 2);
-        cv::line(image_copy, orig_corner_points[3], orig_corner_points[0],
-                 cv::Scalar(0, 255, 0), 2);
-
-        // Draw undistorted corner points in red
-        cv::line(image_copy, corner_points[0], corner_points[1],
-                 cv::Scalar(0, 0, 255), 2);
-        cv::line(image_copy, corner_points[2], corner_points[1],
-                 cv::Scalar(0, 0, 255), 2);
-        cv::line(image_copy, corner_points[2], corner_points[3],
-                 cv::Scalar(0, 0, 255), 2);
-        cv::line(image_copy, corner_points[0], corner_points[3],
-                 cv::Scalar(0, 0, 255), 2);
-      }
-
       VLOG(1) << "Found tag number " << gpu_detection->id
               << " hamming: " << gpu_detection->hamming
               << " margin: " << gpu_detection->decision_margin;
     } else {
       rejections_++;
     }
-  }
-
-  if (absl::GetFlag(FLAGS_visualize)) {
-    // Display the result
-    // Rotate by 180 degrees to make it upright
-    // TODO: Make this an option?
-    bool flip_image_ = true;
-    if (flip_image_) {
-      cv::rotate(image_copy, image_copy, 1);
-    }
-    // TODO: Need to fix image display to handle YUYV images
-    //    cv::imshow(absl::StrCat("ApriltagDetector Image ", node_name_),
-    //               color_image);
-    //    cv::waitKey(1);
   }
 
   const auto corners_offset = builder.fbb()->CreateVector(foxglove_corners);
