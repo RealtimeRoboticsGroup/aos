@@ -10,7 +10,6 @@
 #include "frc/control_loops/drivetrain/localizer.h"
 #include "frc/control_loops/pose.h"
 #include "frc/control_loops/profiled_subsystem_generated.h"
-#include "y2019/control_loops/superstructure/superstructure_goal_generated.h"
 
 namespace frc::control_loops::drivetrain {
 

@@ -28,7 +28,6 @@ aos_config(
         "//aos/network:timestamp_fbs",
         "//aos/network:remote_message_fbs",
         "//frc/control_loops/drivetrain/localization:localizer_output_fbs",
-        "//y2019/control_loops/drivetrain:target_selector_fbs",
     ],
     target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
@@ -46,7 +45,6 @@ aos_config(
         "//aos/network:message_bridge_client_fbs",
         "//aos/network:message_bridge_server_fbs",
         "//aos/network:timestamp_fbs",
-        "//y2019/control_loops/drivetrain:target_selector_fbs",
     ],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [

@@ -11,7 +11,6 @@
 #include "frc/control_loops/drivetrain/drivetrain_goal_generated.h"
 #include "frc/control_loops/drivetrain/drivetrain_status_generated.h"
 #include "frc/control_loops/drivetrain/spline.h"
-#include "y2019/control_loops/drivetrain/target_selector_generated.h"
 
 using ::aos::monotonic_clock;
 namespace chrono = ::std::chrono;
@@ -26,10 +25,6 @@ BaseAutonomousActor::BaseAutonomousActor(
     : aos::common::actions::ActorBase<Goal>(event_loop, "/autonomous"),
       dt_config_(dt_config),
       initial_drivetrain_({0.0, 0.0}),
-      target_selector_hint_sender_(
-          event_loop->TryMakeSender<
-              ::y2019::control_loops::drivetrain::TargetSelectorHint>(
-              "/drivetrain")),
       drivetrain_goal_sender_(
           event_loop->MakeSender<drivetrain::Goal>("/drivetrain")),
       spline_goal_sender_(
@@ -512,8 +507,7 @@ bool BaseAutonomousActor::SplineHandle::WaitForSplineDistanceTraveled(
   }
 }
 
-void BaseAutonomousActor::LineFollowAtVelocity(
-    double velocity, y2019::control_loops::drivetrain::SelectionHint hint) {
+void BaseAutonomousActor::LineFollowAtVelocity(double velocity) {
   {
     auto builder = drivetrain_goal_sender_.MakeBuilder();
     drivetrain::Goal::Builder goal_builder =
@@ -525,17 +519,6 @@ void BaseAutonomousActor::LineFollowAtVelocity(
     // factor it out in some way.
     goal_builder.add_throttle(velocity / 4.0);
     builder.CheckOk(builder.Send(goal_builder.Finish()));
-  }
-
-  if (target_selector_hint_sender_) {
-    // TODO(james): 2019? Seriously?
-    auto builder = target_selector_hint_sender_.MakeBuilder();
-    ::y2019::control_loops::drivetrain::TargetSelectorHint::Builder
-        target_hint_builder = builder.MakeBuilder<
-            ::y2019::control_loops::drivetrain::TargetSelectorHint>();
-
-    target_hint_builder.add_suggested_target(hint);
-    builder.CheckOk(builder.Send(target_hint_builder.Finish()));
   }
 }
 

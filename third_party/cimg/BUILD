@@ -15,7 +15,6 @@ cc_library(
     #
     # Also, if the compiler finds several, there are probably more subtle ones
     # that the compiler doesn't notice.
-    visibility = ["//y2019/image_streamer:__pkg__"],
     deps = [
         "//third_party/libjpeg",
     ],
