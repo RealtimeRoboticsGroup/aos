@@ -39,7 +39,6 @@ cc_library(
         "//frc/control_loops/drivetrain:localizer_fbs",
         "//frc/control_loops/drivetrain:spline",
         "//frc/control_loops/drivetrain:spline_goal_fbs",
-        "//y2019/control_loops/drivetrain:target_selector_fbs",
     ],
 )
 

@@ -57,7 +57,6 @@ aos_config(
         "//aos/network:message_bridge_client_fbs",
         "//aos/network:message_bridge_server_fbs",
         "//frc/wpilib:pdp_values_fbs",
-        # y2019 stuff shouldn't be here (e.g. target selector)
         "//aos/network:timestamp_fbs",
         "//frc/control_loops/drivetrain:drivetrain_can_position_fbs",
         "//frc/control_loops/drivetrain:rio_localizer_inputs_fbs",

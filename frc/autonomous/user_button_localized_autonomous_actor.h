@@ -12,7 +12,6 @@
 #include "frc/control_loops/drivetrain/drivetrain_config.h"
 #include "frc/control_loops/drivetrain/drivetrain_goal_generated.h"
 #include "frc/control_loops/drivetrain/drivetrain_status_generated.h"
-#include "y2019/control_loops/drivetrain/target_selector_generated.h"
 
 namespace frc::autonomous {
 

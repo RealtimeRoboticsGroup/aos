@@ -312,7 +312,6 @@ cc_library(
         "//frc/control_loops:dlqr",
         "//frc/control_loops:pose",
         "//frc/control_loops:profiled_subsystem_fbs",
-        "//y2019/control_loops/superstructure:superstructure_goal_fbs",
         "@org_tuxfamily_eigen//:eigen",
     ],
 )
@@ -719,8 +718,8 @@ cc_binary(
         ":trajectory",
         "//aos/logging",
         "//aos/network:team_number",
+        "//frc/control_loops/drivetrain/test_robot:drivetrain_base",
         "//third_party/matplotlib-cpp",
-        "//y2019/control_loops/drivetrain:drivetrain_base",
         "@com_google_absl//absl/flags:flag",
         "@org_tuxfamily_eigen//:eigen",
     ],
