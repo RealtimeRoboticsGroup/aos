@@ -18,6 +18,24 @@
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "21fee154_0a5695c1",
+        "filename": "frc/orin/cuda.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 25,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-02-03T06:59:12Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "15c40e52_55ea2f15",
+      "revId": "e960ace80d07557f78e9e64b035aad12499b1bf5",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "981d518b_1afe54c1",
@@ -41,6 +59,30 @@
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "15769a09_2618a23c",
+        "filename": "frc/orin/cuda.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 40,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-02-03T06:59:12Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "981d518b_1afe54c1",
+      "range": {
+        "startLine": 40,
+        "startChar": 69,
+        "endLine": 40,
+        "endChar": 70
+      },
+      "revId": "e960ace80d07557f78e9e64b035aad12499b1bf5",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "82c3d7a0_62026e6c",
@@ -54,6 +96,24 @@
       "writtenOn": "2025-02-02T20:53:19Z",
       "side": 1,
       "message": "const function",
+      "revId": "e960ace80d07557f78e9e64b035aad12499b1bf5",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "c62fb31c_fab14c24",
+        "filename": "frc/orin/cuda.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 60,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-02-03T06:59:12Z",
+      "side": 1,
+      "message": "Technically you are correct, but this handle lets you mutate the event.  It feels like it is practically mutable, so a non-const function is the right answer.",
+      "parentUuid": "82c3d7a0_62026e6c",
       "revId": "e960ace80d07557f78e9e64b035aad12499b1bf5",
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     }
