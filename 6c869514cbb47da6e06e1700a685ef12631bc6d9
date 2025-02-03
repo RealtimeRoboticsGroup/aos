@@ -22,6 +22,30 @@
       },
       "revId": "6c869514cbb47da6e06e1700a685ef12631bc6d9",
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "72e7aec8_fe27822f",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 3
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-02-03T06:59:16Z",
+      "side": 1,
+      "message": "I don\u0027t think we\u0027ll want to switch (32 bits means we\u0027d have over a 4 GB image to process, and all the bit packing that we do in the processing code won\u0027t fit in 64 bits anymore), but a typedef is a good idea for keeping track.",
+      "parentUuid": "3259560d_84ca412d",
+      "range": {
+        "startLine": 7,
+        "startChar": 21,
+        "endLine": 7,
+        "endChar": 32
+      },
+      "revId": "6c869514cbb47da6e06e1700a685ef12631bc6d9",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     }
   ]
 }
