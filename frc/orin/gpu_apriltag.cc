@@ -387,10 +387,6 @@ void ApriltagDetector::HandleImage(const vision::CameraImage &image,
 
   VLOG(2) << "Took " << chrono::duration<double>(end_time - start_time).count()
           << " seconds to detect overall";
-
-  return;
-  // TODO: Need to have proper return here
-  //    return {.detections = results, .rejections = rejections_};
 }
 
 }  // namespace frc::apriltag
