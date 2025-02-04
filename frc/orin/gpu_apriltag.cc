@@ -261,10 +261,10 @@ void ApriltagDetector::HandleImage(const vision::CameraImage &image,
       apriltag_detection_info_t info;
       info.tagsize = 6.5 * 0.0254;
 
-      info.fx = intrinsics_.at<double>(0, 0);
-      info.fy = intrinsics_.at<double>(1, 1);
-      info.cx = intrinsics_.at<double>(0, 2);
-      info.cy = intrinsics_.at<double>(1, 2);
+      info.fx = intrinsics_.at<float>(0, 0);
+      info.fy = intrinsics_.at<float>(1, 1);
+      info.cx = intrinsics_.at<float>(0, 2);
+      info.cy = intrinsics_.at<float>(1, 2);
 
       // Send original corner points in green
       std::vector<cv::Point2f> orig_corner_points =
