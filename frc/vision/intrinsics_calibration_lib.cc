@@ -24,6 +24,9 @@ ABSL_FLAG(bool, use_rational_model, true,
 
 ABSL_DECLARE_FLAG(bool, visualize);
 
+ABSL_FLAG(bool, grayscale, false,
+          "If true, calibrate in grayscale, otherwise, calibrate in color");
+
 namespace frc::vision {
 
 // Found that under 50 ms would fail image too often on intrinsics with
@@ -72,6 +75,9 @@ IntrinsicsCalibration::IntrinsicsCalibration(
       calibration_folder_(calibration_folder),
       exit_handle_(exit_handle),
       exit_collection_(false) {
+  if (absl::GetFlag(FLAGS_grayscale)) {
+    image_callback_.set_format(ImageCallback::Format::GRAYSCALE);
+  }
   if (!absl::GetFlag(FLAGS_visualize)) {
     // The only way to exit into the calibration routines is by hitting "q"
     // while visualization is running.  The event_loop doesn't pause enough
@@ -85,6 +91,11 @@ IntrinsicsCalibration::IntrinsicsCalibration(
         !absl::GetFlag(FLAGS_draw_axes))
       << "Only save images if we're not drawing on them";
 
+  if (absl::GetFlag(FLAGS_image_save_path) != "") {
+    CHECK(std::filesystem::is_directory(absl::GetFlag(FLAGS_image_save_path)))
+        << absl::GetFlag(FLAGS_image_save_path) << " is not a directory";
+  }
+
   LOG(INFO) << "Hostname is: " << hostname_ << " and camera channel is "
             << camera_channel_;
 
@@ -96,21 +107,13 @@ IntrinsicsCalibration::IntrinsicsCalibration(
 }
 
 void IntrinsicsCalibration::HandleCharuco(
-    cv::Mat rgb_image, const aos::monotonic_clock::time_point /*eof*/,
+    const cv::Mat rgb_image, const aos::monotonic_clock::time_point /*eof*/,
     std::vector<cv::Vec4i> charuco_ids,
     std::vector<std::vector<cv::Point2f>> charuco_corners, bool valid,
     std::vector<Eigen::Vector3d> rvecs_eigen,
     std::vector<Eigen::Vector3d> tvecs_eigen) {
   constexpr float kVisualizationScaleFactor = 2.0;
-  static int image_save_count = 0;
-  static int invalid_images_saved = 0;
-  if (absl::GetFlag(FLAGS_image_save_path) != "") {
-    std::string image_name =
-        absl::StrFormat("/img_%06d.png", image_save_count++);
-    std::string path = absl::GetFlag(FLAGS_image_save_path) + image_name;
-    VLOG(2) << "Saving intrinsic calibration image to " << path;
-    cv::imwrite(path, rgb_image);
-  }
+  cv::Mat mutable_rgb_image = rgb_image.clone();
 
   // Store the image size, since it gets used in undistort and calibration
   image_size_ = rgb_image.size();
@@ -118,7 +121,7 @@ void IntrinsicsCalibration::HandleCharuco(
     // Before resizing/flipping, display undistorted image, if asked to
     if (display_undistorted_) {
       cv::Mat undistorted_rgb_image(image_size_, CV_8UC3);
-      cv::undistort(rgb_image, undistorted_rgb_image,
+      cv::undistort(mutable_rgb_image, undistorted_rgb_image,
                     charuco_extractor_.camera_matrix(),
                     charuco_extractor_.dist_coeffs());
 
@@ -126,12 +129,12 @@ void IntrinsicsCalibration::HandleCharuco(
     }
 
     // Reduce resolution displayed on remote viewer to prevent lag
-    cv::resize(rgb_image, rgb_image,
-               cv::Size(rgb_image.cols / kVisualizationScaleFactor,
-                        rgb_image.rows / kVisualizationScaleFactor));
-    cv::Mat display_image = rgb_image;
+    cv::resize(mutable_rgb_image, mutable_rgb_image,
+               cv::Size(mutable_rgb_image.cols / kVisualizationScaleFactor,
+                        mutable_rgb_image.rows / kVisualizationScaleFactor));
+    cv::Mat display_image = mutable_rgb_image;
     if (absl::GetFlag(FLAGS_flip_image)) {
-      cv::flip(rgb_image, display_image, 1);
+      cv::flip(mutable_rgb_image, display_image, 1);
     }
     cv::putText(
         display_image,
@@ -235,7 +238,7 @@ void IntrinsicsCalibration::HandleCharuco(
       LOG(INFO) << "Manual capture triggered";
       H_camera_board = prev_H_board_camera_;
       if (!valid) {
-        invalid_images_saved++;
+        invalid_images_saved_++;
       }
       store_image = true;
     } else {
@@ -266,7 +269,7 @@ void IntrinsicsCalibration::HandleCharuco(
       }
       if (absl::GetFlag(FLAGS_visualize)) {
         if (point_viz_image_.empty()) {
-          point_viz_image_ = cv::Mat::zeros(rgb_image.size(), CV_8UC1);
+          point_viz_image_ = cv::Mat::zeros(mutable_rgb_image.size(), CV_8UC1);
         }
         // Draw a small circle for each corner
         for (uint i = 0; i < all_charuco_corners_.back().size(); i++) {
@@ -285,12 +288,20 @@ void IntrinsicsCalibration::HandleCharuco(
         cv::waitKey(1);
       }
       LOG(INFO) << "Storing image #" << all_charuco_corners_.size();
+
+      if (absl::GetFlag(FLAGS_image_save_path) != "") {
+        std::string image_name =
+            absl::StrFormat("/img_%06d.png", image_save_count_++);
+        std::string path = absl::GetFlag(FLAGS_image_save_path) + image_name;
+        VLOG(2) << "Saving intrinsic calibration image to " << path;
+        cv::imwrite(path, rgb_image);
+      }
     }
   }
 
   // TODO<Jim>: Do we really need this?
-  if (invalid_images_saved > 0) {
-    LOG(INFO) << "Captured " << invalid_images_saved
+  if (invalid_images_saved_ > 0) {
+    LOG(INFO) << "Captured " << invalid_images_saved_
               << " invalid images out of " << all_charuco_corners_.size();
   }
 }
@@ -349,6 +360,8 @@ IntrinsicsCalibration::BuildCalibration(
 
   std::optional<uint16_t> camera_number =
       frc::vision::CameraNumberFromChannel(std::string(camera_channel));
+  CHECK(camera_number.has_value())
+      << ": Failed to parse camera number from " << camera_channel;
 
   flatbuffers::Offset<flatbuffers::Vector<float>>
       distortion_coefficients_offset = fbb.CreateVector<float>(
@@ -510,12 +523,12 @@ void IntrinsicsCalibration::MaybeCalibrate() {
         aos::realtime_clock::now();
     std::optional<uint16_t> team_number =
         aos::network::team_number_internal::ParsePiOrOrinTeamNumber(hostname_);
-    CHECK(team_number) << ": Invalid hostname " << hostname_
-                       << ", failed to parse team number";
+    CHECK(team_number.has_value()) << ": Invalid hostname " << hostname_
+                                   << ", failed to parse team number";
     std::optional<std::string_view> cpu_type =
         aos::network::ParsePiOrOrin(hostname_);
-    CHECK(cpu_type) << ": Invalid cpu_type from" << hostname_
-                    << ", failed to parse cpu type";
+    CHECK(cpu_type.has_value()) << ": Invalid cpu_type from" << hostname_
+                                << ", failed to parse cpu type";
     std::optional<uint16_t> cpu_number =
         aos::network::ParsePiOrOrinNumber(hostname_);
     std::string node_name =
