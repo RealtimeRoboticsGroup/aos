@@ -5,18 +5,22 @@
       "name": "/aos",
       "type": "aos.timing.Report",
       "source_node": "orin",
-      "max_size": 4096
+      "num_senders": 20,
+      "max_size": 8192
     },
     {
       "name": "/aos",
       "type": "aos.logging.LogMessageFbs",
-      "source_node": "orin"
+      "source_node": "orin",
+      "num_senders": 20,
+      "frequency": 1000,
+      "max_size": 512
     },
     {
       "name": "/aos",
       "type": "aos.starter.Status",
       "source_node": "orin",
-      "max_size": 2048
+      "max_size": 4096
     },
     {
       "name": "/aos",
@@ -56,7 +60,7 @@
       "type": "frc.vision.CameraImage",
       "source_node": "orin",
       "logger": "NOT_LOGGED",
-      "channel_storage_duration": 1000000,
+      "channel_storage_duration": 100000000,
       "max_size": 4172800,
       "frequency": 80
     },
@@ -84,29 +88,89 @@
       "type": "frc.vision.CameraImage",
       "source_node": "orin",
       "logger": "NOT_LOGGED",
-      "channel_storage_duration": 1000000,
+      "channel_storage_duration": 100000000,
       "max_size": 4172800,
+      "frequency": 80
+    },
+    {
+      "name": "/camera1/gray",
+      "type": "frc.vision.TargetMap",
+      "source_node": "orin",
+      "frequency": 80
+    },
+    {
+      "name": "/camera1/gray",
+      "type": "foxglove.ImageAnnotations",
+      "source_node": "orin",
       "frequency": 80
     },
     {
       "name": "/camera2",
       "type": "frc.vision.CameraImage",
       "source_node": "orin",
-      "max_size": 2000000,
-      "frequency": 150
+      "max_size": 4172800,
+      "frequency": 80
+    },
+    {
+      "name": "/camera2/gray",
+      "type": "frc.vision.CameraImage",
+      "source_node": "orin",
+      "logger": "NOT_LOGGED",
+      "channel_storage_duration": 100000000,
+      "max_size": 4172800,
+      "frequency": 80
+    },
+    {
+      "name": "/camera2/gray",
+      "type": "frc.vision.TargetMap",
+      "source_node": "orin",
+      "frequency": 80
+    },
+    {
+      "name": "/camera2/gray",
+      "type": "foxglove.ImageAnnotations",
+      "source_node": "orin",
+      "frequency": 80
     },
     {
       "name": "/camera3",
       "type": "frc.vision.CameraImage",
       "source_node": "orin",
-      "max_size": 2000000,
-      "frequency": 150
+      "max_size": 4172800,
+      "frequency": 80
     },
     {
-      "name": "/visualize0",
-      "type": "foxglove.CompressedImage",
+      "name": "/camera3/gray",
+      "type": "frc.vision.CameraImage",
       "source_node": "orin",
-      "max_size": 2000000
+      "logger": "NOT_LOGGED",
+      "channel_storage_duration": 100000000,
+      "max_size": 4172800,
+      "frequency": 80
+    },
+    {
+      "name": "/camera3/gray",
+      "type": "frc.vision.TargetMap",
+      "source_node": "orin",
+      "frequency": 80
+    },
+    {
+      "name": "/camera3/gray",
+      "type": "foxglove.ImageAnnotations",
+      "source_node": "orin",
+      "frequency": 80
+    },
+    {
+      "name": "/aos",
+      "type": "aos.util.FilesystemStatus",
+      "source_node": "orin",
+      "frequency": 1
+    },
+    {
+      "name": "/hardware_monitor",
+      "type": "frc.orin.HardwareStats",
+      "source_node": "orin",
+      "frequency": 1
     }
   ],
   "applications": [
@@ -153,6 +217,48 @@
       "nodes": ["orin"]
     },
     {
+      "name": "turbojpeg_decoder2",
+      "executable_name": "turbojpeg_decoder",
+      "maps": [{
+        "match": {
+          "name": "/camera"
+        },
+        "rename": {
+          "name": "/camera2"
+        }
+      },
+      {
+        "match": {
+          "name": "/camera/gray"
+        },
+        "rename": {
+          "name": "/camera2/gray"
+        }
+      }],
+      "nodes": ["orin"]
+    },
+    {
+      "name": "turbojpeg_decoder3",
+      "executable_name": "turbojpeg_decoder",
+      "maps": [{
+        "match": {
+          "name": "/camera"
+        },
+        "rename": {
+          "name": "/camera3"
+        }
+      },
+      {
+        "match": {
+          "name": "/camera/gray"
+        },
+        "rename": {
+          "name": "/camera3/gray"
+        }
+      }],
+      "nodes": ["orin"]
+    },
+    {
       "name": "foxglove_websocket",
       "nodes": ["orin"]
     },
@@ -160,6 +266,36 @@
       "name": "vision_constants_sender",
       "nodes": ["orin"],
       "autorestart": false
+    },
+    {
+      "name": "irq_affinity",
+      "executable_name": "irq_affinity",
+      "user": "root",
+      "args": ["--user=pi", "--irq_config=orin_irq_config.json"],
+      "nodes": [ "orin" ]
+    },
+    {
+      "name": "filesystem_monitor",
+      "executable_name": "filesystem_monitor",
+      "nodes": [ "orin" ]
+    },
+    {
+      "name": "hardware_monitor",
+      "executable_name": "hardware_monitor",
+      "nodes": [ "orin" ]
+    },
+    {
+      "name": "image_logger",
+      "executable_name": "image_logger",
+      "autostart": false,
+      "args": [
+        "--rotate_every",
+        "30.0",
+        "--direct",
+        "--flush_size=4194304"
+      ],
+      "user": "pi",
+      "nodes": [ "orin" ]
     }
   ],
   "nodes": [
