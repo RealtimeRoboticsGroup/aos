@@ -363,10 +363,12 @@ aos_config(
         "//aos/events:event_loop_fbs",
         "//aos/logging:log_message_fbs",
         "//aos/starter:starter_fbs",
+        "//aos/util:filesystem_fbs",
         "//aos/starter:starter_rpc_fbs",
         "//aos/network:message_bridge_client_fbs",
         "//aos/network:message_bridge_server_fbs",
         "//aos/network:timestamp_fbs",
+        "//frc/orin:hardware_stats_fbs",
         "@com_github_foxglove_schemas//:schemas",
     ],
 )
@@ -541,15 +543,21 @@ cc_library(
 
 robot_downloader(
     binaries = [
-        ":vision_constants_sender",
-        ":turbojpeg_decoder",
         ":apriltag_detector",
+        ":image_logger",
+        ":intrinsics_calibration",
+        ":turbojpeg_decoder",
+        ":vision_constants_sender",
         "//aos/events:aos_timing_report_streamer",
+        "//aos/starter:irq_affinity",
+        "//aos/util:filesystem_monitor",
         "//aos/util:foxglove_websocket",
+        "//frc/orin:hardware_monitor",
     ],
     data = [
         ":aos_config",
         ":constants.json",
+        "//frc/orin:orin_irq_config.json",
     ],
     target_compatible_with = ["@platforms//cpu:arm64"],
     target_type = "orin",
