@@ -55,7 +55,7 @@ std::optional<uint16_t> CameraNumberFromChannel(std::string camera_channel) {
   }
   // If the string doesn't end in /camera#, return nullopt
   uint16_t cam_len = std::string("/camera").length();
-  if (camera_channel.length() != camera_channel.find("/camera") + cam_len + 1) {
+  if (camera_channel.length() < camera_channel.find("/camera") + cam_len + 1) {
     return std::nullopt;
   }
 

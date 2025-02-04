@@ -14,6 +14,8 @@ TEST(VisionUtilsTest, CameraNumberFromChannel) {
   ASSERT_EQ(CameraNumberFromChannel("/orin1/camera0").value(), 0);
   ASSERT_EQ(CameraNumberFromChannel("/orin1/camera1").value(), 1);
   ASSERT_EQ(CameraNumberFromChannel("/orin1"), std::nullopt);
+  ASSERT_EQ(CameraNumberFromChannel("/camera1/gray").value(), 1);
+  ASSERT_EQ(CameraNumberFromChannel("/camera2/gray").value(), 2);
 }
 
 namespace {
