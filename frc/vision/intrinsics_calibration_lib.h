@@ -132,6 +132,9 @@ class IntrinsicsCalibration {
 
   bool exit_collection_;
   std::vector<std::string> file_list_;
+
+  int image_save_count_ = 0;
+  int invalid_images_saved_ = 0;
 };
 
 }  // namespace frc::vision

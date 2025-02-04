@@ -23,11 +23,10 @@ ABSL_FLAG(std::string, base_intrinsics, "",
 ABSL_FLAG(std::string, calibration_folder, "/tmp",
           "Folder to place calibration files.");
 ABSL_FLAG(std::string, camera_id, "",
-          "Camera ID in format YY-NN-- year and number.");
+          "Camera ID in format YY-NN year and number.");
 ABSL_FLAG(std::string, channel, "/camera", "Camera channel to use");
 ABSL_FLAG(std::string, config, "aos_config.json",
           "Path to the config file to use.");
-ABSL_FLAG(std::string, cpu_name, "", "Pi/Orin name to calibrate.");
 ABSL_FLAG(bool, display_undistorted, false,
           "If true, display the undistorted image.");
 
@@ -40,11 +39,9 @@ void Main() {
 
   aos::ShmEventLoop event_loop(&config.message());
 
-  std::string hostname = absl::GetFlag(FLAGS_cpu_name);
-  if (hostname == "") {
-    hostname = aos::network::GetHostname();
-    LOG(INFO) << "Using pi/orin name from hostname as " << hostname;
-  }
+  const std::string hostname = aos::network::GetHostname();
+  LOG(INFO) << "Using pi/orin name from hostname as " << hostname;
+
   CHECK(!absl::GetFlag(FLAGS_base_intrinsics).empty())
       << "Need a base intrinsics json to use to auto-capture images when the "
          "camera moves.";
@@ -57,21 +54,12 @@ void Main() {
       << "Failed to parse node number from " << hostname
       << ".  Should be of form orin-7971-2";
 
-  std::string camera_name = absl::StrCat(
-      "/", aos::network::ParsePiOrOrin(hostname).value(),
-      std::to_string(aos::network::ParsePiOrOrinNumber(hostname).value()),
-      absl::GetFlag(FLAGS_channel));
-  // THIS IS A HACK FOR 2024, since we call Orin2 "Imu"
-  if (aos::network::ParsePiOrOrin(hostname).value() == "orin" &&
-      aos::network::ParsePiOrOrinNumber(hostname).value() == 2) {
-    LOG(INFO) << "\nHACK for 2024: Renaming orin2 to imu\n";
-    camera_name = absl::StrCat("/imu", absl::GetFlag(FLAGS_channel));
-  }
-  CHECK(event_loop.GetChannel<CameraImage>(camera_name) != nullptr)
-      << " invalid camera name provided as '" << camera_name << "'";
+  const std::string channel = absl::StrCat(absl::GetFlag(FLAGS_channel));
+  CHECK(event_loop.GetChannel<CameraImage>(channel) != nullptr)
+      << " invalid camera name provided as '" << channel << "'";
 
   IntrinsicsCalibration calibrator(
-      &event_loop, hostname, camera_name, absl::GetFlag(FLAGS_camera_id),
+      &event_loop, hostname, channel, absl::GetFlag(FLAGS_camera_id),
       absl::GetFlag(FLAGS_base_intrinsics),
       absl::GetFlag(FLAGS_display_undistorted),
       absl::GetFlag(FLAGS_calibration_folder), exit_handle.get());
