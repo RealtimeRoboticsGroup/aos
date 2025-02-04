@@ -43,7 +43,8 @@ void GpuApriltagDetector() {
   const frc::constants::ConstantsFetcher<CameraConstants> calibration_data(
       &event_loop);
 
-  CHECK(absl::GetFlag(FLAGS_channel).length() == 8);
+  CHECK_GE(absl::GetFlag(FLAGS_channel).length(), 8u)
+      << ": Channel name must be of the form /cameraX*";
   int camera_id = std::stoi(absl::GetFlag(FLAGS_channel).substr(7, 1));
   const frc::vision::calibration::CameraCalibration *calibration =
       FindCameraCalibration(calibration_data.constants(),
