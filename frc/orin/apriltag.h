@@ -282,6 +282,7 @@ class GpuDetector {
   // TODO(austin): Remove this...
   HostMemory<uint8_t> color_image_host_;
   HostMemory<uint8_t> gray_image_host_;
+  const uint8_t *gray_image_host_ptr_;
 
   // Starting color image.
   GpuMemory<uint8_t> color_image_device_;
@@ -374,6 +375,8 @@ class GpuDetector {
   zarray_t *poly1_;
 
   zarray_t *detections_ = nullptr;
+
+  const vision::ImageFormat image_format_;
 };
 
 }  // namespace frc::apriltag

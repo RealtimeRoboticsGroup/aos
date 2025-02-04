@@ -649,7 +649,7 @@ void GpuDetector::DecodeTags() {
       .width = static_cast<int32_t>(width_),
       .height = static_cast<int32_t>(height_),
       .stride = static_cast<int32_t>(width_),
-      .buf = gray_image_host_.get(),
+      .buf = const_cast<uint8_t *>(gray_image_host_ptr_),
   };
 
   int ntasks = 0;

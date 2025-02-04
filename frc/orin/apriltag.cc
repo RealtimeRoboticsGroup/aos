@@ -170,7 +170,8 @@ GpuDetector::GpuDetector(size_t width, size_t height,
       temp_storage_line_fit_scan_device_(
           DeviceScanInclusiveScanByKeyScratchSpace<uint32_t, LineFitPoint>(
               sorted_selected_blobs_device_.size())),
-      threshold_(MakeThreshold(image_format)) {
+      threshold_(MakeThreshold(image_format)),
+      image_format_(image_format) {
   fit_quads_host_.reserve(kMaxBlobs);
   quad_corners_host_.reserve(kMaxBlobs);
 
@@ -681,12 +682,17 @@ void GpuDetector::Detect(const uint8_t *image) {
       unfiltered_minmax_image_device_.get(), minmax_image_device_.get(),
       thresholded_image_device_.get(), width_, height_,
       tag_detector_->qtp.min_white_black_diff, &stream_);
-  threshold_->CudaToGreyscale(color_image_device_.get(),
-                              gray_image_device_.get(), width_, height_,
-                              &stream_);
   after_threshold_.Record(&stream_);
 
-  gray_image_device_.MemcpyAsyncTo(&gray_image_host_, &stream_);
+  if (image_format_ != vision::ImageFormat::MONO8) {
+    threshold_->CudaToGreyscale(color_image_device_.get(),
+                                gray_image_device_.get(), width_, height_,
+                                &stream_);
+    gray_image_device_.MemcpyAsyncTo(&gray_image_host_, &stream_);
+    gray_image_host_ptr_ = gray_image_host_.get();
+  } else {
+    gray_image_host_ptr_ = image;
+  }
 
   after_memcpy_gray_.Record(&stream_);
 
