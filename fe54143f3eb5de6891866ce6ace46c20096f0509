@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "68996273_b24dfdcc",
+        "filename": "frc/vision/charuco_lib.cc",
+        "patchSetId": 1
+      },
+      "lineNbr": 177,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-02-05T02:09:59Z",
+      "side": 1,
+      "message": "C++ casts?",
+      "range": {
+        "startLine": 177,
+        "startChar": 44,
+        "endLine": 177,
+        "endChar": 52
+      },
+      "revId": "fe54143f3eb5de6891866ce6ace46c20096f0509",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    }
+  ]
+}
