@@ -22,6 +22,30 @@
       },
       "revId": "fe54143f3eb5de6891866ce6ace46c20096f0509",
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "2d532bf6_49d8e66e",
+        "filename": "frc/vision/charuco_lib.cc",
+        "patchSetId": 1
+      },
+      "lineNbr": 177,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-02-05T03:03:04Z",
+      "side": 1,
+      "message": "That\u0027s how the old code was.  I\u0027d rather leave it be for now.",
+      "parentUuid": "68996273_b24dfdcc",
+      "range": {
+        "startLine": 177,
+        "startChar": 44,
+        "endLine": 177,
+        "endChar": 52
+      },
+      "revId": "fe54143f3eb5de6891866ce6ace46c20096f0509",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     }
   ]
 }
