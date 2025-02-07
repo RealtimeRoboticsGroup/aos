@@ -113,6 +113,7 @@ class LinearSystem(control_loop.ControlLoop):
         self.Kff = controls.TwoStateFeedForwards(self.B, self.Qff)
 
         glog.debug('K %s', repr(self.K))
+        glog.debug('Kff %s', repr(self.Kff))
         glog.debug('Poles are %s',
                    repr(numpy.linalg.eig(self.A - self.B * self.K)[0]))
 
