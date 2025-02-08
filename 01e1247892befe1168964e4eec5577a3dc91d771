@@ -1,0 +1,30 @@
+{
+  "comments": [],
+  "submitRequirementResults": [
+    {
+      "submitRequirement": {
+        "name": "Verified",
+        "description": {
+          "value": "At least one maximum vote for label \u0027Verified\u0027 is required"
+        },
+        "applicabilityExpression": {},
+        "submittabilityExpression": {
+          "expressionString": "label:Verified\u003dMAX,user\u003dnon_uploader AND -label:Verified\u003dMIN"
+        },
+        "overrideExpression": {},
+        "allowOverrideInChildProjects": true
+      },
+      "applicabilityExpressionResult": {},
+      "submittabilityExpressionResult": {
+        "value": {"expression":{"expressionString":"label:Verified=MAX,user=non_uploader AND -label:Verified=MIN"},"status":"PASS","errorMessage":{"value":null},"passingAtoms":["label:Verified=MAX,user=non_uploader"],"failingAtoms":["label:Verified=MIN"]}
+      },
+      "overrideExpressionResult": {},
+      "patchSetCommitId": "01e1247892befe1168964e4eec5577a3dc91d771",
+      "legacy": {
+        "value": false
+      },
+      "forced": {},
+      "hidden": {}
+    }
+  ]
+}
