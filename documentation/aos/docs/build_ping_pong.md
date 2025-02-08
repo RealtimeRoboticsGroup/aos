@@ -1,7 +1,5 @@
 # Getting Started
 
-[TOC]
-
 This page will walk through how to create a simple Ping/Pong application in AOS,
 essentially from scratch.
 
@@ -13,7 +11,7 @@ have set up AOS as an external repository in
 your own [Bazel](https://bazel.build/) workspace, then the main differences
 should just be that you add Bazel dependencies with an `@aos`.
 
-AOS nominally supports Debian Bullseye, although later versions of Debian and
+AOS nominally supports Debian Bookworm, although later versions of Debian and
 Ubuntu 20.04+ should work to build the code.
 
 After cloning AOS and installing Bazel, then you can confirm that the core

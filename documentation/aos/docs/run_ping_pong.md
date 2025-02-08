@@ -1,8 +1,8 @@
-## How to run ping & pong
+# How to run ping & pong
 
 Running ping<->pong is a nice way to test that you can run some basic code and shows how messaging can work between two nodes
 
-### Set up real-time niceties:
+## Set up real-time niceties:
   1. Add the following lines to `/etc/security/limits.d/rt.conf`, replacing "USERNAME" with the username you're running under.  You'll probably need to do this as root, e.g., `sudo nano /etc/security/limits.d/rt.conf`
 ```
 USERNAME - nice -20
@@ -12,7 +12,7 @@ USERNAME - memlock unlimited
 
   2. Reboot your machine to pick up the changes
 
-### Compile and run the code
+## Compile and run the code
   1. Compile the code for ping and pong, as well as aos_dump for looking at the messages.  We'll assume throughout that you're running from the top level directory of aos.
   ```
   bazel build -c opt //aos/events:ping //aos/events:pong //aos:aos_dump
