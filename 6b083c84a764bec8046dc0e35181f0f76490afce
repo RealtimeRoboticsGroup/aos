@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "965476c4_f67e01d9",
+        "filename": "frc/orin/gpu_apriltag.cc",
+        "patchSetId": 2
+      },
+      "lineNbr": 52,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-02-08T02:34:27Z",
+      "side": 1,
+      "message": "I think the log doesn\u0027t belong in this helper function. Ok now but not if used elsewhere. If not used elsewhere, anonymous namespace?",
+      "revId": "6b083c84a764bec8046dc0e35181f0f76490afce",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "ec40f491_d374eb8d",
+        "filename": "frc/orin/threshold.cc",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-02-08T02:34:27Z",
+      "side": 1,
+      "message": "Disclaimer: Code here looks fine to me, but I can\u0027t tell whether it is correct.",
+      "revId": "6b083c84a764bec8046dc0e35181f0f76490afce",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    }
+  ]
+}
