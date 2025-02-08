@@ -16,6 +16,233 @@
       "message": "Try it here https://github.com/steple/aos/tree/stephan/docs",
       "revId": "74cbcb5b8072b45e5965171fc754134e1fa54a46",
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "b6f87523_538c811e",
+        "filename": "README.md",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-02-08T04:59:36Z",
+      "side": 1,
+      "message": "top cleaned up\n\nbottom section deleted",
+      "revId": "74cbcb5b8072b45e5965171fc754134e1fa54a46",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "6195590d_f655387f",
+        "filename": "README.md",
+        "patchSetId": 2
+      },
+      "lineNbr": 11,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-02-08T04:59:36Z",
+      "side": 1,
+      "message": "How do you imagine the split of aos code and frc code will work?",
+      "range": {
+        "startLine": 5,
+        "startChar": 1,
+        "endLine": 11,
+        "endChar": 2
+      },
+      "revId": "74cbcb5b8072b45e5965171fc754134e1fa54a46",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "ede47e8c_b94eb627",
+        "filename": "aos/README.md",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-02-08T04:59:36Z",
+      "side": 1,
+      "message": "I moved the rust section to reference.md and deleted the rest.",
+      "revId": "74cbcb5b8072b45e5965171fc754134e1fa54a46",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "dcd7b0b9_75d29cdc",
+        "filename": "documentation/README.md",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-02-08T04:59:36Z",
+      "side": 1,
+      "message": "Removed no-longer-relevant.",
+      "revId": "74cbcb5b8072b45e5965171fc754134e1fa54a46",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "d7a83a4f_203c6963",
+        "filename": "documentation/aos/docs/design.md",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-02-08T04:59:36Z",
+      "side": 1,
+      "message": "Included in index.md",
+      "revId": "74cbcb5b8072b45e5965171fc754134e1fa54a46",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "de2afc2d_8f360c84",
+        "filename": "documentation/aos/docs/index.md",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-02-08T04:59:36Z",
+      "side": 1,
+      "message": "rewrote this",
+      "revId": "74cbcb5b8072b45e5965171fc754134e1fa54a46",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "d4ed942d_f336c0ff",
+        "filename": "documentation/aos/docs/reference.md",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-02-08T04:59:36Z",
+      "side": 1,
+      "message": "How come this is not featured more prominently? This is awesome.",
+      "revId": "74cbcb5b8072b45e5965171fc754134e1fa54a46",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "e8acbfbd_c9b4193b",
+        "filename": "documentation/aos/docs/run_ping_pong.md",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-02-08T04:59:36Z",
+      "side": 1,
+      "message": "Turned this into quickstart - run ping pong",
+      "revId": "74cbcb5b8072b45e5965171fc754134e1fa54a46",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "014ec7b3_4b538e60",
+        "filename": "documentation/tutorials/download-code-to-the-robot.md",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-02-08T04:59:36Z",
+      "side": 1,
+      "message": "deleted",
+      "revId": "74cbcb5b8072b45e5965171fc754134e1fa54a46",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "597bb6cb_251a1dc5",
+        "filename": "documentation/tutorials/getting-started.md",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-02-08T04:59:36Z",
+      "side": 1,
+      "message": "streamlined this assuming a more experienced user",
+      "revId": "74cbcb5b8072b45e5965171fc754134e1fa54a46",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "b089fc36_b0dc57ba",
+        "filename": "documentation/tutorials/network_troubleshooting.md",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-02-08T04:59:36Z",
+      "side": 1,
+      "message": "deleted",
+      "revId": "74cbcb5b8072b45e5965171fc754134e1fa54a46",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "6e153c81_52e377e2",
+        "filename": "documentation/tutorials/rio-gdb.md",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-02-08T04:59:36Z",
+      "side": 1,
+      "message": "deleted",
+      "revId": "74cbcb5b8072b45e5965171fc754134e1fa54a46",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "2dfe639e_ede72029",
+        "filename": "documentation/tutorials/setup-pycharm-on-build-server.md",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-02-08T04:59:36Z",
+      "side": 1,
+      "message": "deleted",
+      "revId": "74cbcb5b8072b45e5965171fc754134e1fa54a46",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     }
   ]
 }
