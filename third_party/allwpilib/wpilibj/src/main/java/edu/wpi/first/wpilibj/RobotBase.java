@@ -6,7 +6,6 @@ package edu.wpi.first.wpilibj;
 
 import edu.wpi.first.cameraserver.CameraServerShared;
 import edu.wpi.first.cameraserver.CameraServerSharedStore;
-import edu.wpi.first.cscore.CameraServerJNI;
 import edu.wpi.first.hal.FRCNetComm.tInstances;
 import edu.wpi.first.hal.FRCNetComm.tResourceType;
 import edu.wpi.first.hal.HAL;
@@ -15,6 +14,7 @@ import edu.wpi.first.math.MathShared;
 import edu.wpi.first.math.MathSharedStore;
 import edu.wpi.first.math.MathUsageId;
 import edu.wpi.first.networktables.MultiSubscriber;
+import edu.wpi.first.networktables.NetworkTableEvent;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.util.WPIUtilJNI;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
@@ -43,6 +43,10 @@ public abstract class RobotBase implements AutoCloseable {
   private static long m_threadId = -1;
 
   private final MultiSubscriber m_suball;
+
+  private final int m_connListenerHandle;
+
+  private boolean m_dashboardDetected;
 
   private static void setupCameraServerShared() {
     CameraServerShared shared =
@@ -92,49 +96,38 @@ public abstract class RobotBase implements AutoCloseable {
           @Override
           public void reportUsage(MathUsageId id, int count) {
             switch (id) {
-              case kKinematics_DifferentialDrive:
-                HAL.report(
-                    tResourceType.kResourceType_Kinematics,
-                    tInstances.kKinematics_DifferentialDrive);
-                break;
-              case kKinematics_MecanumDrive:
-                HAL.report(
-                    tResourceType.kResourceType_Kinematics, tInstances.kKinematics_MecanumDrive);
-                break;
-              case kKinematics_SwerveDrive:
-                HAL.report(
-                    tResourceType.kResourceType_Kinematics, tInstances.kKinematics_SwerveDrive);
-                break;
-              case kTrajectory_TrapezoidProfile:
-                HAL.report(tResourceType.kResourceType_TrapezoidProfile, count);
-                break;
-              case kFilter_Linear:
-                HAL.report(tResourceType.kResourceType_LinearFilter, count);
-                break;
-              case kOdometry_DifferentialDrive:
-                HAL.report(
-                    tResourceType.kResourceType_Odometry, tInstances.kOdometry_DifferentialDrive);
-                break;
-              case kOdometry_SwerveDrive:
-                HAL.report(tResourceType.kResourceType_Odometry, tInstances.kOdometry_SwerveDrive);
-                break;
-              case kOdometry_MecanumDrive:
-                HAL.report(tResourceType.kResourceType_Odometry, tInstances.kOdometry_MecanumDrive);
-                break;
-              case kController_PIDController2:
-                HAL.report(tResourceType.kResourceType_PIDController2, count);
-                break;
-              case kController_ProfiledPIDController:
-                HAL.report(tResourceType.kResourceType_ProfiledPIDController, count);
-                break;
-              default:
-                break;
+              case kKinematics_DifferentialDrive -> HAL.report(
+                  tResourceType.kResourceType_Kinematics, tInstances.kKinematics_DifferentialDrive);
+              case kKinematics_MecanumDrive -> HAL.report(
+                  tResourceType.kResourceType_Kinematics, tInstances.kKinematics_MecanumDrive);
+              case kKinematics_SwerveDrive -> HAL.report(
+                  tResourceType.kResourceType_Kinematics, tInstances.kKinematics_SwerveDrive);
+              case kTrajectory_TrapezoidProfile -> HAL.report(
+                  tResourceType.kResourceType_TrapezoidProfile, count);
+              case kFilter_Linear -> HAL.report(tResourceType.kResourceType_LinearFilter, count);
+              case kOdometry_DifferentialDrive -> HAL.report(
+                  tResourceType.kResourceType_Odometry, tInstances.kOdometry_DifferentialDrive);
+              case kOdometry_SwerveDrive -> HAL.report(
+                  tResourceType.kResourceType_Odometry, tInstances.kOdometry_SwerveDrive);
+              case kOdometry_MecanumDrive -> HAL.report(
+                  tResourceType.kResourceType_Odometry, tInstances.kOdometry_MecanumDrive);
+              case kController_PIDController2 -> HAL.report(
+                  tResourceType.kResourceType_PIDController2, count);
+              case kController_ProfiledPIDController -> HAL.report(
+                  tResourceType.kResourceType_ProfiledPIDController, count);
+              case kController_BangBangController -> HAL.report(
+                  tResourceType.kResourceType_BangBangController, count);
+              case kTrajectory_PathWeaver -> HAL.report(
+                  tResourceType.kResourceType_PathWeaverTrajectory, count);
+              default -> {
+                // NOP
+              }
             }
           }
 
           @Override
           public double getTimestamp() {
-            return WPIUtilJNI.now() * 1.0e-6;
+            return Timer.getTimestamp();
           }
         });
   }
@@ -174,6 +167,65 @@ public abstract class RobotBase implements AutoCloseable {
       System.err.println("timed out while waiting for NT server to start");
     }
 
+    m_connListenerHandle =
+        inst.addConnectionListener(
+            false,
+            event -> {
+              if (event.is(NetworkTableEvent.Kind.kConnected)) {
+                if (event.connInfo.remote_id.startsWith("glass")) {
+                  HAL.report(tResourceType.kResourceType_Dashboard, tInstances.kDashboard_Glass);
+                  m_dashboardDetected = true;
+                } else if (event.connInfo.remote_id.startsWith("SmartDashboard")) {
+                  HAL.report(
+                      tResourceType.kResourceType_Dashboard, tInstances.kDashboard_SmartDashboard);
+                  m_dashboardDetected = true;
+                } else if (event.connInfo.remote_id.startsWith("shuffleboard")) {
+                  HAL.report(
+                      tResourceType.kResourceType_Dashboard, tInstances.kDashboard_Shuffleboard);
+                  m_dashboardDetected = true;
+                } else if (event.connInfo.remote_id.startsWith("elastic")
+                    || event.connInfo.remote_id.startsWith("Elastic")) {
+                  HAL.report(tResourceType.kResourceType_Dashboard, tInstances.kDashboard_Elastic);
+                  m_dashboardDetected = true;
+                } else if (event.connInfo.remote_id.startsWith("Dashboard")) {
+                  HAL.report(tResourceType.kResourceType_Dashboard, tInstances.kDashboard_LabVIEW);
+                  m_dashboardDetected = true;
+                } else if (event.connInfo.remote_id.startsWith("AdvantageScope")) {
+                  HAL.report(
+                      tResourceType.kResourceType_Dashboard, tInstances.kDashboard_AdvantageScope);
+                  m_dashboardDetected = true;
+                } else if (event.connInfo.remote_id.startsWith("QFRCDashboard")) {
+                  HAL.report(
+                      tResourceType.kResourceType_Dashboard, tInstances.kDashboard_QFRCDashboard);
+                  m_dashboardDetected = true;
+                } else if (event.connInfo.remote_id.startsWith("FRC Web Components")) {
+                  HAL.report(
+                      tResourceType.kResourceType_Dashboard,
+                      tInstances.kDashboard_FRCWebComponents);
+                  m_dashboardDetected = true;
+                } else {
+                  // Only report unknown if there wasn't another dashboard already reported
+                  // (unknown could also be another device)
+                  if (!m_dashboardDetected) {
+                    int delim = event.connInfo.remote_id.indexOf('@');
+                    if (delim != -1) {
+                      HAL.report(
+                          tResourceType.kResourceType_Dashboard,
+                          tInstances.kDashboard_Unknown,
+                          0,
+                          event.connInfo.remote_id.substring(0, delim));
+                    } else {
+                      HAL.report(
+                          tResourceType.kResourceType_Dashboard,
+                          tInstances.kDashboard_Unknown,
+                          0,
+                          event.connInfo.remote_id);
+                    }
+                  }
+                }
+              }
+            });
+
     LiveWindow.setEnabled(false);
     Shuffleboard.disableActuatorWidgets();
   }
@@ -190,6 +242,7 @@ public abstract class RobotBase implements AutoCloseable {
   @Override
   public void close() {
     m_suball.close();
+    NetworkTableInstance.getDefault().removeListener(m_connListenerHandle);
   }
 
   /**
@@ -413,16 +466,15 @@ public abstract class RobotBase implements AutoCloseable {
    * @param robotSupplier Function that returns an instance of the robot subclass.
    */
   public static <T extends RobotBase> void startRobot(Supplier<T> robotSupplier) {
+    // Check that the MSVC runtime is valid.
+    WPIUtilJNI.checkMsvcRuntime();
+
     if (!HAL.initialize(500, 0)) {
       throw new IllegalStateException("Failed to initialize. Terminating");
     }
 
     // Force refresh DS data
     DriverStation.refreshData();
-
-    // Call a CameraServer JNI function to force OpenCV native library loading
-    // Needed because all the OpenCV JNI functions don't have built in loading
-    CameraServerJNI.enumerateSinks();
 
     HAL.report(
         tResourceType.kResourceType_Language, tInstances.kLanguage_Java, 0, WPILibVersion.Version);
@@ -457,6 +509,11 @@ public abstract class RobotBase implements AutoCloseable {
     } else {
       runRobot(robotSupplier);
     }
+
+    // On RIO, this will just terminate rather than shutting down cleanly (it's a no-op in sim).
+    // It's not worth the risk of hanging on shutdown when we want the code to restart as quickly
+    // as possible.
+    HAL.terminate();
 
     HAL.shutdown();
 

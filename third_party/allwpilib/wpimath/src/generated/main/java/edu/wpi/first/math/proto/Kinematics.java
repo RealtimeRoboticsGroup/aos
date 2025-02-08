@@ -19,61 +19,58 @@ import us.hebi.quickbuf.RepeatedByte;
 import us.hebi.quickbuf.RepeatedMessage;
 
 public final class Kinematics {
-  private static final RepeatedByte descriptorData = ProtoUtil.decodeBase64(3208,
+  private static final RepeatedByte descriptorData = ProtoUtil.decodeBase64(3021,
     "ChBraW5lbWF0aWNzLnByb3RvEgl3cGkucHJvdG8aEGdlb21ldHJ5MmQucHJvdG8iTQoVUHJvdG9idWZD" + 
     "aGFzc2lzU3BlZWRzEg4KAnZ4GAEgASgBUgJ2eBIOCgJ2eRgCIAEoAVICdnkSFAoFb21lZ2EYAyABKAFS" + 
     "BW9tZWdhIkYKI1Byb3RvYnVmRGlmZmVyZW50aWFsRHJpdmVLaW5lbWF0aWNzEh8KC3RyYWNrX3dpZHRo" + 
     "GAEgASgBUgp0cmFja1dpZHRoIlAKJFByb3RvYnVmRGlmZmVyZW50aWFsRHJpdmVXaGVlbFNwZWVkcxIS" + 
-    "CgRsZWZ0GAEgASgBUgRsZWZ0EhQKBXJpZ2h0GAIgASgBUgVyaWdodCKkAgoeUHJvdG9idWZNZWNhbnVt" + 
-    "RHJpdmVLaW5lbWF0aWNzEj8KCmZyb250X2xlZnQYASABKAsyIC53cGkucHJvdG8uUHJvdG9idWZUcmFu" + 
-    "c2xhdGlvbjJkUglmcm9udExlZnQSQQoLZnJvbnRfcmlnaHQYAiABKAsyIC53cGkucHJvdG8uUHJvdG9i" + 
-    "dWZUcmFuc2xhdGlvbjJkUgpmcm9udFJpZ2h0Ej0KCXJlYXJfbGVmdBgDIAEoCzIgLndwaS5wcm90by5Q" + 
-    "cm90b2J1ZlRyYW5zbGF0aW9uMmRSCHJlYXJMZWZ0Ej8KCnJlYXJfcmlnaHQYBCABKAsyIC53cGkucHJv" + 
-    "dG8uUHJvdG9idWZUcmFuc2xhdGlvbjJkUglyZWFyUmlnaHQinwEKIVByb3RvYnVmTWVjYW51bURyaXZl" + 
-    "TW90b3JWb2x0YWdlcxIdCgpmcm9udF9sZWZ0GAEgASgBUglmcm9udExlZnQSHwoLZnJvbnRfcmlnaHQY" + 
-    "AiABKAFSCmZyb250UmlnaHQSGwoJcmVhcl9sZWZ0GAMgASgBUghyZWFyTGVmdBIdCgpyZWFyX3JpZ2h0" + 
-    "GAQgASgBUglyZWFyUmlnaHQioAEKIlByb3RvYnVmTWVjYW51bURyaXZlV2hlZWxQb3NpdGlvbnMSHQoK" + 
-    "ZnJvbnRfbGVmdBgBIAEoAVIJZnJvbnRMZWZ0Eh8KC2Zyb250X3JpZ2h0GAIgASgBUgpmcm9udFJpZ2h0" + 
-    "EhsKCXJlYXJfbGVmdBgDIAEoAVIIcmVhckxlZnQSHQoKcmVhcl9yaWdodBgEIAEoAVIJcmVhclJpZ2h0" + 
-    "Ip0BCh9Qcm90b2J1Zk1lY2FudW1Ecml2ZVdoZWVsU3BlZWRzEh0KCmZyb250X2xlZnQYASABKAFSCWZy" + 
-    "b250TGVmdBIfCgtmcm9udF9yaWdodBgCIAEoAVIKZnJvbnRSaWdodBIbCglyZWFyX2xlZnQYAyABKAFS" + 
-    "CHJlYXJMZWZ0Eh0KCnJlYXJfcmlnaHQYBCABKAFSCXJlYXJSaWdodCJbCh1Qcm90b2J1ZlN3ZXJ2ZURy" + 
-    "aXZlS2luZW1hdGljcxI6Cgdtb2R1bGVzGAEgAygLMiAud3BpLnByb3RvLlByb3RvYnVmVHJhbnNsYXRp" + 
-    "b24yZFIHbW9kdWxlcyJvChxQcm90b2J1ZlN3ZXJ2ZU1vZHVsZVBvc2l0aW9uEhoKCGRpc3RhbmNlGAEg",
-    "ASgBUghkaXN0YW5jZRIzCgVhbmdsZRgCIAEoCzIdLndwaS5wcm90by5Qcm90b2J1ZlJvdGF0aW9uMmRS" + 
-    "BWFuZ2xlImYKGVByb3RvYnVmU3dlcnZlTW9kdWxlU3RhdGUSFAoFc3BlZWQYASABKAFSBXNwZWVkEjMK" + 
-    "BWFuZ2xlGAIgASgLMh0ud3BpLnByb3RvLlByb3RvYnVmUm90YXRpb24yZFIFYW5nbGVCGgoYZWR1Lndw" + 
-    "aS5maXJzdC5tYXRoLnByb3RvSocOCgYSBAAAPwEKCAoBDBIDAAASCggKAQISAwIAEgoJCgIDABIDBAAa" + 
-    "CggKAQgSAwYAMQoJCgIIARIDBgAxCgoKAgQAEgQIAAwBCgoKAwQAARIDCAgdCgsKBAQAAgASAwkCEAoM" + 
-    "CgUEAAIABRIDCQIICgwKBQQAAgABEgMJCQsKDAoFBAACAAMSAwkODwoLCgQEAAIBEgMKAhAKDAoFBAAC" + 
-    "AQUSAwoCCAoMCgUEAAIBARIDCgkLCgwKBQQAAgEDEgMKDg8KCwoEBAACAhIDCwITCgwKBQQAAgIFEgML" + 
-    "AggKDAoFBAACAgESAwsJDgoMCgUEAAICAxIDCxESCgoKAgQBEgQOABABCgoKAwQBARIDDggrCgsKBAQB" + 
-    "AgASAw8CGQoMCgUEAQIABRIDDwIICgwKBQQBAgABEgMPCRQKDAoFBAECAAMSAw8XGAoKCgIEAhIEEgAV" + 
-    "AQoKCgMEAgESAxIILAoLCgQEAgIAEgMTAhIKDAoFBAICAAUSAxMCCAoMCgUEAgIAARIDEwkNCgwKBQQC" + 
-    "AgADEgMTEBEKCwoEBAICARIDFAITCgwKBQQCAgEFEgMUAggKDAoFBAICAQESAxQJDgoMCgUEAgIBAxID" + 
-    "FBESCgoKAgQDEgQXABwBCgoKAwQDARIDFwgmCgsKBAQDAgASAxgCJwoMCgUEAwIABhIDGAIXCgwKBQQD" + 
-    "AgABEgMYGCIKDAoFBAMCAAMSAxglJgoLCgQEAwIBEgMZAigKDAoFBAMCAQYSAxkCFwoMCgUEAwIBARID" + 
-    "GRgjCgwKBQQDAgEDEgMZJicKCwoEBAMCAhIDGgImCgwKBQQDAgIGEgMaAhcKDAoFBAMCAgESAxoYIQoM" + 
-    "CgUEAwICAxIDGiQlCgsKBAQDAgMSAxsCJwoMCgUEAwIDBhIDGwIXCgwKBQQDAgMBEgMbGCIKDAoFBAMC" + 
-    "AwMSAxslJgoKCgIEBBIEHgAjAQoKCgMEBAESAx4IKQoLCgQEBAIAEgMfAhgKDAoFBAQCAAUSAx8CCAoM" + 
-    "CgUEBAIAARIDHwkTCgwKBQQEAgADEgMfFhcKCwoEBAQCARIDIAIZCgwKBQQEAgEFEgMgAggKDAoFBAQC" + 
-    "AQESAyAJFAoMCgUEBAIBAxIDIBcYCgsKBAQEAgISAyECFwoMCgUEBAICBRIDIQIICgwKBQQEAgIBEgMh" + 
-    "CRIKDAoFBAQCAgMSAyEVFgoLCgQEBAIDEgMiAhgKDAoFBAQCAwUSAyICCAoMCgUEBAIDARIDIgkTCgwK" + 
-    "BQQEAgMDEgMiFhcKCgoCBAUSBCUAKgEKCgoDBAUBEgMlCCoKCwoEBAUCABIDJgIYCgwKBQQFAgAFEgMm",
-    "AggKDAoFBAUCAAESAyYJEwoMCgUEBQIAAxIDJhYXCgsKBAQFAgESAycCGQoMCgUEBQIBBRIDJwIICgwK" + 
-    "BQQFAgEBEgMnCRQKDAoFBAUCAQMSAycXGAoLCgQEBQICEgMoAhcKDAoFBAUCAgUSAygCCAoMCgUEBQIC" + 
-    "ARIDKAkSCgwKBQQFAgIDEgMoFRYKCwoEBAUCAxIDKQIYCgwKBQQFAgMFEgMpAggKDAoFBAUCAwESAykJ" + 
-    "EwoMCgUEBQIDAxIDKRYXCgoKAgQGEgQsADEBCgoKAwQGARIDLAgnCgsKBAQGAgASAy0CGAoMCgUEBgIA" + 
-    "BRIDLQIICgwKBQQGAgABEgMtCRMKDAoFBAYCAAMSAy0WFwoLCgQEBgIBEgMuAhkKDAoFBAYCAQUSAy4C" + 
-    "CAoMCgUEBgIBARIDLgkUCgwKBQQGAgEDEgMuFxgKCwoEBAYCAhIDLwIXCgwKBQQGAgIFEgMvAggKDAoF" + 
-    "BAYCAgESAy8JEgoMCgUEBgICAxIDLxUWCgsKBAQGAgMSAzACGAoMCgUEBgIDBRIDMAIICgwKBQQGAgMB" + 
-    "EgMwCRMKDAoFBAYCAwMSAzAWFwoKCgIEBxIEMwA1AQoKCgMEBwESAzMIJQoLCgQEBwIAEgM0Ai0KDAoF" + 
-    "BAcCAAQSAzQCCgoMCgUEBwIABhIDNAsgCgwKBQQHAgABEgM0ISgKDAoFBAcCAAMSAzQrLAoKCgIECBIE" + 
-    "NwA6AQoKCgMECAESAzcIJAoLCgQECAIAEgM4AhYKDAoFBAgCAAUSAzgCCAoMCgUECAIAARIDOAkRCgwK" + 
-    "BQQIAgADEgM4FBUKCwoEBAgCARIDOQIfCgwKBQQIAgEGEgM5AhQKDAoFBAgCAQESAzkVGgoMCgUECAIB" + 
-    "AxIDOR0eCgoKAgQJEgQ8AD8BCgoKAwQJARIDPAghCgsKBAQJAgASAz0CEwoMCgUECQIABRIDPQIICgwK" + 
-    "BQQJAgABEgM9CQ4KDAoFBAkCAAMSAz0REgoLCgQECQIBEgM+Ah8KDAoFBAkCAQYSAz4CFAoMCgUECQIB" + 
-    "ARIDPhUaCgwKBQQJAgEDEgM+HR5iBnByb3RvMw==");
+    "CgRsZWZ0GAEgASgBUgRsZWZ0EhQKBXJpZ2h0GAIgASgBUgVyaWdodCJTCidQcm90b2J1ZkRpZmZlcmVu" + 
+    "dGlhbERyaXZlV2hlZWxQb3NpdGlvbnMSEgoEbGVmdBgBIAEoAVIEbGVmdBIUCgVyaWdodBgCIAEoAVIF" + 
+    "cmlnaHQipAIKHlByb3RvYnVmTWVjYW51bURyaXZlS2luZW1hdGljcxI/Cgpmcm9udF9sZWZ0GAEgASgL" + 
+    "MiAud3BpLnByb3RvLlByb3RvYnVmVHJhbnNsYXRpb24yZFIJZnJvbnRMZWZ0EkEKC2Zyb250X3JpZ2h0" + 
+    "GAIgASgLMiAud3BpLnByb3RvLlByb3RvYnVmVHJhbnNsYXRpb24yZFIKZnJvbnRSaWdodBI9CglyZWFy" + 
+    "X2xlZnQYAyABKAsyIC53cGkucHJvdG8uUHJvdG9idWZUcmFuc2xhdGlvbjJkUghyZWFyTGVmdBI/Cgpy" + 
+    "ZWFyX3JpZ2h0GAQgASgLMiAud3BpLnByb3RvLlByb3RvYnVmVHJhbnNsYXRpb24yZFIJcmVhclJpZ2h0" + 
+    "IqABCiJQcm90b2J1Zk1lY2FudW1Ecml2ZVdoZWVsUG9zaXRpb25zEh0KCmZyb250X2xlZnQYASABKAFS" + 
+    "CWZyb250TGVmdBIfCgtmcm9udF9yaWdodBgCIAEoAVIKZnJvbnRSaWdodBIbCglyZWFyX2xlZnQYAyAB" + 
+    "KAFSCHJlYXJMZWZ0Eh0KCnJlYXJfcmlnaHQYBCABKAFSCXJlYXJSaWdodCKdAQofUHJvdG9idWZNZWNh" + 
+    "bnVtRHJpdmVXaGVlbFNwZWVkcxIdCgpmcm9udF9sZWZ0GAEgASgBUglmcm9udExlZnQSHwoLZnJvbnRf" + 
+    "cmlnaHQYAiABKAFSCmZyb250UmlnaHQSGwoJcmVhcl9sZWZ0GAMgASgBUghyZWFyTGVmdBIdCgpyZWFy" + 
+    "X3JpZ2h0GAQgASgBUglyZWFyUmlnaHQiWwodUHJvdG9idWZTd2VydmVEcml2ZUtpbmVtYXRpY3MSOgoH" + 
+    "bW9kdWxlcxgBIAMoCzIgLndwaS5wcm90by5Qcm90b2J1ZlRyYW5zbGF0aW9uMmRSB21vZHVsZXMibwoc" + 
+    "UHJvdG9idWZTd2VydmVNb2R1bGVQb3NpdGlvbhIaCghkaXN0YW5jZRgBIAEoAVIIZGlzdGFuY2USMwoF" + 
+    "YW5nbGUYAiABKAsyHS53cGkucHJvdG8uUHJvdG9idWZSb3RhdGlvbjJkUgVhbmdsZSJmChlQcm90b2J1",
+    "ZlN3ZXJ2ZU1vZHVsZVN0YXRlEhQKBXNwZWVkGAEgASgBUgVzcGVlZBIzCgVhbmdsZRgCIAEoCzIdLndw" + 
+    "aS5wcm90by5Qcm90b2J1ZlJvdGF0aW9uMmRSBWFuZ2xlQhoKGGVkdS53cGkuZmlyc3QubWF0aC5wcm90" + 
+    "b0qZDQoGEgQAAD0BCggKAQwSAwAAEgoICgECEgMCABIKCQoCAwASAwQAGgoICgEIEgMGADEKCQoCCAES" + 
+    "AwYAMQoKCgIEABIECAAMAQoKCgMEAAESAwgIHQoLCgQEAAIAEgMJAhAKDAoFBAACAAUSAwkCCAoMCgUE" + 
+    "AAIAARIDCQkLCgwKBQQAAgADEgMJDg8KCwoEBAACARIDCgIQCgwKBQQAAgEFEgMKAggKDAoFBAACAQES" + 
+    "AwoJCwoMCgUEAAIBAxIDCg4PCgsKBAQAAgISAwsCEwoMCgUEAAICBRIDCwIICgwKBQQAAgIBEgMLCQ4K" + 
+    "DAoFBAACAgMSAwsREgoKCgIEARIEDgAQAQoKCgMEAQESAw4IKwoLCgQEAQIAEgMPAhkKDAoFBAECAAUS" + 
+    "Aw8CCAoMCgUEAQIAARIDDwkUCgwKBQQBAgADEgMPFxgKCgoCBAISBBIAFQEKCgoDBAIBEgMSCCwKCwoE" + 
+    "BAICABIDEwISCgwKBQQCAgAFEgMTAggKDAoFBAICAAESAxMJDQoMCgUEAgIAAxIDExARCgsKBAQCAgES" + 
+    "AxQCEwoMCgUEAgIBBRIDFAIICgwKBQQCAgEBEgMUCQ4KDAoFBAICAQMSAxQREgoKCgIEAxIEFwAaAQoK" + 
+    "CgMEAwESAxcILwoLCgQEAwIAEgMYAhIKDAoFBAMCAAUSAxgCCAoMCgUEAwIAARIDGAkNCgwKBQQDAgAD" + 
+    "EgMYEBEKCwoEBAMCARIDGQITCgwKBQQDAgEFEgMZAggKDAoFBAMCAQESAxkJDgoMCgUEAwIBAxIDGRES" + 
+    "CgoKAgQEEgQcACEBCgoKAwQEARIDHAgmCgsKBAQEAgASAx0CJwoMCgUEBAIABhIDHQIXCgwKBQQEAgAB" + 
+    "EgMdGCIKDAoFBAQCAAMSAx0lJgoLCgQEBAIBEgMeAigKDAoFBAQCAQYSAx4CFwoMCgUEBAIBARIDHhgj" + 
+    "CgwKBQQEAgEDEgMeJicKCwoEBAQCAhIDHwImCgwKBQQEAgIGEgMfAhcKDAoFBAQCAgESAx8YIQoMCgUE" + 
+    "BAICAxIDHyQlCgsKBAQEAgMSAyACJwoMCgUEBAIDBhIDIAIXCgwKBQQEAgMBEgMgGCIKDAoFBAQCAwMS" + 
+    "AyAlJgoKCgIEBRIEIwAoAQoKCgMEBQESAyMIKgoLCgQEBQIAEgMkAhgKDAoFBAUCAAUSAyQCCAoMCgUE" + 
+    "BQIAARIDJAkTCgwKBQQFAgADEgMkFhcKCwoEBAUCARIDJQIZCgwKBQQFAgEFEgMlAggKDAoFBAUCAQES" + 
+    "AyUJFAoMCgUEBQIBAxIDJRcYCgsKBAQFAgISAyYCFwoMCgUEBQICBRIDJgIICgwKBQQFAgIBEgMmCRIK" + 
+    "DAoFBAUCAgMSAyYVFgoLCgQEBQIDEgMnAhgKDAoFBAUCAwUSAycCCAoMCgUEBQIDARIDJwkTCgwKBQQF",
+    "AgMDEgMnFhcKCgoCBAYSBCoALwEKCgoDBAYBEgMqCCcKCwoEBAYCABIDKwIYCgwKBQQGAgAFEgMrAggK" + 
+    "DAoFBAYCAAESAysJEwoMCgUEBgIAAxIDKxYXCgsKBAQGAgESAywCGQoMCgUEBgIBBRIDLAIICgwKBQQG" + 
+    "AgEBEgMsCRQKDAoFBAYCAQMSAywXGAoLCgQEBgICEgMtAhcKDAoFBAYCAgUSAy0CCAoMCgUEBgICARID" + 
+    "LQkSCgwKBQQGAgIDEgMtFRYKCwoEBAYCAxIDLgIYCgwKBQQGAgMFEgMuAggKDAoFBAYCAwESAy4JEwoM" + 
+    "CgUEBgIDAxIDLhYXCgoKAgQHEgQxADMBCgoKAwQHARIDMQglCgsKBAQHAgASAzICLQoMCgUEBwIABBID" + 
+    "MgIKCgwKBQQHAgAGEgMyCyAKDAoFBAcCAAESAzIhKAoMCgUEBwIAAxIDMissCgoKAgQIEgQ1ADgBCgoK" + 
+    "AwQIARIDNQgkCgsKBAQIAgASAzYCFgoMCgUECAIABRIDNgIICgwKBQQIAgABEgM2CREKDAoFBAgCAAMS" + 
+    "AzYUFQoLCgQECAIBEgM3Ah8KDAoFBAgCAQYSAzcCFAoMCgUECAIBARIDNxUaCgwKBQQIAgEDEgM3HR4K" + 
+    "CgoCBAkSBDoAPQEKCgoDBAkBEgM6CCEKCwoEBAkCABIDOwITCgwKBQQJAgAFEgM7AggKDAoFBAkCAAES" + 
+    "AzsJDgoMCgUECQIAAxIDOxESCgsKBAQJAgESAzwCHwoMCgUECQIBBhIDPAIUCgwKBQQJAgEBEgM8FRoK" + 
+    "DAoFBAkCAQMSAzwdHmIGcHJvdG8z");
 
   static final Descriptors.FileDescriptor descriptor = Descriptors.FileDescriptor.internalBuildGeneratedFileFrom("kinematics.proto", "wpi.proto", descriptorData, Geometry2D.getDescriptor());
 
@@ -83,19 +80,19 @@ public final class Kinematics {
 
   static final Descriptors.Descriptor wpi_proto_ProtobufDifferentialDriveWheelSpeeds_descriptor = descriptor.internalContainedType(200, 80, "ProtobufDifferentialDriveWheelSpeeds", "wpi.proto.ProtobufDifferentialDriveWheelSpeeds");
 
-  static final Descriptors.Descriptor wpi_proto_ProtobufMecanumDriveKinematics_descriptor = descriptor.internalContainedType(283, 292, "ProtobufMecanumDriveKinematics", "wpi.proto.ProtobufMecanumDriveKinematics");
+  static final Descriptors.Descriptor wpi_proto_ProtobufDifferentialDriveWheelPositions_descriptor = descriptor.internalContainedType(282, 83, "ProtobufDifferentialDriveWheelPositions", "wpi.proto.ProtobufDifferentialDriveWheelPositions");
 
-  static final Descriptors.Descriptor wpi_proto_ProtobufMecanumDriveMotorVoltages_descriptor = descriptor.internalContainedType(578, 159, "ProtobufMecanumDriveMotorVoltages", "wpi.proto.ProtobufMecanumDriveMotorVoltages");
+  static final Descriptors.Descriptor wpi_proto_ProtobufMecanumDriveKinematics_descriptor = descriptor.internalContainedType(368, 292, "ProtobufMecanumDriveKinematics", "wpi.proto.ProtobufMecanumDriveKinematics");
 
-  static final Descriptors.Descriptor wpi_proto_ProtobufMecanumDriveWheelPositions_descriptor = descriptor.internalContainedType(740, 160, "ProtobufMecanumDriveWheelPositions", "wpi.proto.ProtobufMecanumDriveWheelPositions");
+  static final Descriptors.Descriptor wpi_proto_ProtobufMecanumDriveWheelPositions_descriptor = descriptor.internalContainedType(663, 160, "ProtobufMecanumDriveWheelPositions", "wpi.proto.ProtobufMecanumDriveWheelPositions");
 
-  static final Descriptors.Descriptor wpi_proto_ProtobufMecanumDriveWheelSpeeds_descriptor = descriptor.internalContainedType(903, 157, "ProtobufMecanumDriveWheelSpeeds", "wpi.proto.ProtobufMecanumDriveWheelSpeeds");
+  static final Descriptors.Descriptor wpi_proto_ProtobufMecanumDriveWheelSpeeds_descriptor = descriptor.internalContainedType(826, 157, "ProtobufMecanumDriveWheelSpeeds", "wpi.proto.ProtobufMecanumDriveWheelSpeeds");
 
-  static final Descriptors.Descriptor wpi_proto_ProtobufSwerveDriveKinematics_descriptor = descriptor.internalContainedType(1062, 91, "ProtobufSwerveDriveKinematics", "wpi.proto.ProtobufSwerveDriveKinematics");
+  static final Descriptors.Descriptor wpi_proto_ProtobufSwerveDriveKinematics_descriptor = descriptor.internalContainedType(985, 91, "ProtobufSwerveDriveKinematics", "wpi.proto.ProtobufSwerveDriveKinematics");
 
-  static final Descriptors.Descriptor wpi_proto_ProtobufSwerveModulePosition_descriptor = descriptor.internalContainedType(1155, 111, "ProtobufSwerveModulePosition", "wpi.proto.ProtobufSwerveModulePosition");
+  static final Descriptors.Descriptor wpi_proto_ProtobufSwerveModulePosition_descriptor = descriptor.internalContainedType(1078, 111, "ProtobufSwerveModulePosition", "wpi.proto.ProtobufSwerveModulePosition");
 
-  static final Descriptors.Descriptor wpi_proto_ProtobufSwerveModuleState_descriptor = descriptor.internalContainedType(1268, 102, "ProtobufSwerveModuleState", "wpi.proto.ProtobufSwerveModuleState");
+  static final Descriptors.Descriptor wpi_proto_ProtobufSwerveModuleState_descriptor = descriptor.internalContainedType(1191, 102, "ProtobufSwerveModuleState", "wpi.proto.ProtobufSwerveModuleState");
 
   /**
    * @return this proto file's descriptor.
@@ -1114,6 +1111,344 @@ public final class Kinematics {
   }
 
   /**
+   * Protobuf type {@code ProtobufDifferentialDriveWheelPositions}
+   */
+  public static final class ProtobufDifferentialDriveWheelPositions extends ProtoMessage<ProtobufDifferentialDriveWheelPositions> implements Cloneable {
+    private static final long serialVersionUID = 0L;
+
+    /**
+     * <code>optional double left = 1;</code>
+     */
+    private double left;
+
+    /**
+     * <code>optional double right = 2;</code>
+     */
+    private double right;
+
+    private ProtobufDifferentialDriveWheelPositions() {
+    }
+
+    /**
+     * @return a new empty instance of {@code ProtobufDifferentialDriveWheelPositions}
+     */
+    public static ProtobufDifferentialDriveWheelPositions newInstance() {
+      return new ProtobufDifferentialDriveWheelPositions();
+    }
+
+    /**
+     * <code>optional double left = 1;</code>
+     * @return whether the left field is set
+     */
+    public boolean hasLeft() {
+      return (bitField0_ & 0x00000001) != 0;
+    }
+
+    /**
+     * <code>optional double left = 1;</code>
+     * @return this
+     */
+    public ProtobufDifferentialDriveWheelPositions clearLeft() {
+      bitField0_ &= ~0x00000001;
+      left = 0D;
+      return this;
+    }
+
+    /**
+     * <code>optional double left = 1;</code>
+     * @return the left
+     */
+    public double getLeft() {
+      return left;
+    }
+
+    /**
+     * <code>optional double left = 1;</code>
+     * @param value the left to set
+     * @return this
+     */
+    public ProtobufDifferentialDriveWheelPositions setLeft(final double value) {
+      bitField0_ |= 0x00000001;
+      left = value;
+      return this;
+    }
+
+    /**
+     * <code>optional double right = 2;</code>
+     * @return whether the right field is set
+     */
+    public boolean hasRight() {
+      return (bitField0_ & 0x00000002) != 0;
+    }
+
+    /**
+     * <code>optional double right = 2;</code>
+     * @return this
+     */
+    public ProtobufDifferentialDriveWheelPositions clearRight() {
+      bitField0_ &= ~0x00000002;
+      right = 0D;
+      return this;
+    }
+
+    /**
+     * <code>optional double right = 2;</code>
+     * @return the right
+     */
+    public double getRight() {
+      return right;
+    }
+
+    /**
+     * <code>optional double right = 2;</code>
+     * @param value the right to set
+     * @return this
+     */
+    public ProtobufDifferentialDriveWheelPositions setRight(final double value) {
+      bitField0_ |= 0x00000002;
+      right = value;
+      return this;
+    }
+
+    @Override
+    public ProtobufDifferentialDriveWheelPositions copyFrom(
+        final ProtobufDifferentialDriveWheelPositions other) {
+      cachedSize = other.cachedSize;
+      if ((bitField0_ | other.bitField0_) != 0) {
+        bitField0_ = other.bitField0_;
+        left = other.left;
+        right = other.right;
+      }
+      return this;
+    }
+
+    @Override
+    public ProtobufDifferentialDriveWheelPositions mergeFrom(
+        final ProtobufDifferentialDriveWheelPositions other) {
+      if (other.isEmpty()) {
+        return this;
+      }
+      cachedSize = -1;
+      if (other.hasLeft()) {
+        setLeft(other.left);
+      }
+      if (other.hasRight()) {
+        setRight(other.right);
+      }
+      return this;
+    }
+
+    @Override
+    public ProtobufDifferentialDriveWheelPositions clear() {
+      if (isEmpty()) {
+        return this;
+      }
+      cachedSize = -1;
+      bitField0_ = 0;
+      left = 0D;
+      right = 0D;
+      return this;
+    }
+
+    @Override
+    public ProtobufDifferentialDriveWheelPositions clearQuick() {
+      if (isEmpty()) {
+        return this;
+      }
+      cachedSize = -1;
+      bitField0_ = 0;
+      return this;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
+      if (!(o instanceof ProtobufDifferentialDriveWheelPositions)) {
+        return false;
+      }
+      ProtobufDifferentialDriveWheelPositions other = (ProtobufDifferentialDriveWheelPositions) o;
+      return bitField0_ == other.bitField0_
+        && (!hasLeft() || ProtoUtil.isEqual(left, other.left))
+        && (!hasRight() || ProtoUtil.isEqual(right, other.right));
+    }
+
+    @Override
+    public void writeTo(final ProtoSink output) throws IOException {
+      if ((bitField0_ & 0x00000001) != 0) {
+        output.writeRawByte((byte) 9);
+        output.writeDoubleNoTag(left);
+      }
+      if ((bitField0_ & 0x00000002) != 0) {
+        output.writeRawByte((byte) 17);
+        output.writeDoubleNoTag(right);
+      }
+    }
+
+    @Override
+    protected int computeSerializedSize() {
+      int size = 0;
+      if ((bitField0_ & 0x00000001) != 0) {
+        size += 9;
+      }
+      if ((bitField0_ & 0x00000002) != 0) {
+        size += 9;
+      }
+      return size;
+    }
+
+    @Override
+    @SuppressWarnings("fallthrough")
+    public ProtobufDifferentialDriveWheelPositions mergeFrom(final ProtoSource input) throws
+        IOException {
+      // Enabled Fall-Through Optimization (QuickBuffers)
+      int tag = input.readTag();
+      while (true) {
+        switch (tag) {
+          case 9: {
+            // left
+            left = input.readDouble();
+            bitField0_ |= 0x00000001;
+            tag = input.readTag();
+            if (tag != 17) {
+              break;
+            }
+          }
+          case 17: {
+            // right
+            right = input.readDouble();
+            bitField0_ |= 0x00000002;
+            tag = input.readTag();
+            if (tag != 0) {
+              break;
+            }
+          }
+          case 0: {
+            return this;
+          }
+          default: {
+            if (!input.skipField(tag)) {
+              return this;
+            }
+            tag = input.readTag();
+            break;
+          }
+        }
+      }
+    }
+
+    @Override
+    public void writeTo(final JsonSink output) throws IOException {
+      output.beginObject();
+      if ((bitField0_ & 0x00000001) != 0) {
+        output.writeDouble(FieldNames.left, left);
+      }
+      if ((bitField0_ & 0x00000002) != 0) {
+        output.writeDouble(FieldNames.right, right);
+      }
+      output.endObject();
+    }
+
+    @Override
+    public ProtobufDifferentialDriveWheelPositions mergeFrom(final JsonSource input) throws
+        IOException {
+      if (!input.beginObject()) {
+        return this;
+      }
+      while (!input.isAtEnd()) {
+        switch (input.readFieldHash()) {
+          case 3317767: {
+            if (input.isAtField(FieldNames.left)) {
+              if (!input.trySkipNullValue()) {
+                left = input.readDouble();
+                bitField0_ |= 0x00000001;
+              }
+            } else {
+              input.skipUnknownField();
+            }
+            break;
+          }
+          case 108511772: {
+            if (input.isAtField(FieldNames.right)) {
+              if (!input.trySkipNullValue()) {
+                right = input.readDouble();
+                bitField0_ |= 0x00000002;
+              }
+            } else {
+              input.skipUnknownField();
+            }
+            break;
+          }
+          default: {
+            input.skipUnknownField();
+            break;
+          }
+        }
+      }
+      input.endObject();
+      return this;
+    }
+
+    @Override
+    public ProtobufDifferentialDriveWheelPositions clone() {
+      return new ProtobufDifferentialDriveWheelPositions().copyFrom(this);
+    }
+
+    @Override
+    public boolean isEmpty() {
+      return ((bitField0_) == 0);
+    }
+
+    public static ProtobufDifferentialDriveWheelPositions parseFrom(final byte[] data) throws
+        InvalidProtocolBufferException {
+      return ProtoMessage.mergeFrom(new ProtobufDifferentialDriveWheelPositions(), data).checkInitialized();
+    }
+
+    public static ProtobufDifferentialDriveWheelPositions parseFrom(final ProtoSource input) throws
+        IOException {
+      return ProtoMessage.mergeFrom(new ProtobufDifferentialDriveWheelPositions(), input).checkInitialized();
+    }
+
+    public static ProtobufDifferentialDriveWheelPositions parseFrom(final JsonSource input) throws
+        IOException {
+      return ProtoMessage.mergeFrom(new ProtobufDifferentialDriveWheelPositions(), input).checkInitialized();
+    }
+
+    /**
+     * @return factory for creating ProtobufDifferentialDriveWheelPositions messages
+     */
+    public static MessageFactory<ProtobufDifferentialDriveWheelPositions> getFactory() {
+      return ProtobufDifferentialDriveWheelPositionsFactory.INSTANCE;
+    }
+
+    /**
+     * @return this type's descriptor.
+     */
+    public static Descriptors.Descriptor getDescriptor() {
+      return Kinematics.wpi_proto_ProtobufDifferentialDriveWheelPositions_descriptor;
+    }
+
+    private enum ProtobufDifferentialDriveWheelPositionsFactory implements MessageFactory<ProtobufDifferentialDriveWheelPositions> {
+      INSTANCE;
+
+      @Override
+      public ProtobufDifferentialDriveWheelPositions create() {
+        return ProtobufDifferentialDriveWheelPositions.newInstance();
+      }
+    }
+
+    /**
+     * Contains name constants used for serializing JSON
+     */
+    static class FieldNames {
+      static final FieldName left = FieldName.forField("left");
+
+      static final FieldName right = FieldName.forField("right");
+    }
+  }
+
+  /**
    * Protobuf type {@code ProtobufMecanumDriveKinematics}
    */
   public static final class ProtobufMecanumDriveKinematics extends ProtoMessage<ProtobufMecanumDriveKinematics> implements Cloneable {
@@ -1682,506 +2017,6 @@ public final class Kinematics {
       @Override
       public ProtobufMecanumDriveKinematics create() {
         return ProtobufMecanumDriveKinematics.newInstance();
-      }
-    }
-
-    /**
-     * Contains name constants used for serializing JSON
-     */
-    static class FieldNames {
-      static final FieldName frontLeft = FieldName.forField("frontLeft", "front_left");
-
-      static final FieldName frontRight = FieldName.forField("frontRight", "front_right");
-
-      static final FieldName rearLeft = FieldName.forField("rearLeft", "rear_left");
-
-      static final FieldName rearRight = FieldName.forField("rearRight", "rear_right");
-    }
-  }
-
-  /**
-   * Protobuf type {@code ProtobufMecanumDriveMotorVoltages}
-   */
-  public static final class ProtobufMecanumDriveMotorVoltages extends ProtoMessage<ProtobufMecanumDriveMotorVoltages> implements Cloneable {
-    private static final long serialVersionUID = 0L;
-
-    /**
-     * <code>optional double front_left = 1;</code>
-     */
-    private double frontLeft;
-
-    /**
-     * <code>optional double front_right = 2;</code>
-     */
-    private double frontRight;
-
-    /**
-     * <code>optional double rear_left = 3;</code>
-     */
-    private double rearLeft;
-
-    /**
-     * <code>optional double rear_right = 4;</code>
-     */
-    private double rearRight;
-
-    private ProtobufMecanumDriveMotorVoltages() {
-    }
-
-    /**
-     * @return a new empty instance of {@code ProtobufMecanumDriveMotorVoltages}
-     */
-    public static ProtobufMecanumDriveMotorVoltages newInstance() {
-      return new ProtobufMecanumDriveMotorVoltages();
-    }
-
-    /**
-     * <code>optional double front_left = 1;</code>
-     * @return whether the frontLeft field is set
-     */
-    public boolean hasFrontLeft() {
-      return (bitField0_ & 0x00000001) != 0;
-    }
-
-    /**
-     * <code>optional double front_left = 1;</code>
-     * @return this
-     */
-    public ProtobufMecanumDriveMotorVoltages clearFrontLeft() {
-      bitField0_ &= ~0x00000001;
-      frontLeft = 0D;
-      return this;
-    }
-
-    /**
-     * <code>optional double front_left = 1;</code>
-     * @return the frontLeft
-     */
-    public double getFrontLeft() {
-      return frontLeft;
-    }
-
-    /**
-     * <code>optional double front_left = 1;</code>
-     * @param value the frontLeft to set
-     * @return this
-     */
-    public ProtobufMecanumDriveMotorVoltages setFrontLeft(final double value) {
-      bitField0_ |= 0x00000001;
-      frontLeft = value;
-      return this;
-    }
-
-    /**
-     * <code>optional double front_right = 2;</code>
-     * @return whether the frontRight field is set
-     */
-    public boolean hasFrontRight() {
-      return (bitField0_ & 0x00000002) != 0;
-    }
-
-    /**
-     * <code>optional double front_right = 2;</code>
-     * @return this
-     */
-    public ProtobufMecanumDriveMotorVoltages clearFrontRight() {
-      bitField0_ &= ~0x00000002;
-      frontRight = 0D;
-      return this;
-    }
-
-    /**
-     * <code>optional double front_right = 2;</code>
-     * @return the frontRight
-     */
-    public double getFrontRight() {
-      return frontRight;
-    }
-
-    /**
-     * <code>optional double front_right = 2;</code>
-     * @param value the frontRight to set
-     * @return this
-     */
-    public ProtobufMecanumDriveMotorVoltages setFrontRight(final double value) {
-      bitField0_ |= 0x00000002;
-      frontRight = value;
-      return this;
-    }
-
-    /**
-     * <code>optional double rear_left = 3;</code>
-     * @return whether the rearLeft field is set
-     */
-    public boolean hasRearLeft() {
-      return (bitField0_ & 0x00000004) != 0;
-    }
-
-    /**
-     * <code>optional double rear_left = 3;</code>
-     * @return this
-     */
-    public ProtobufMecanumDriveMotorVoltages clearRearLeft() {
-      bitField0_ &= ~0x00000004;
-      rearLeft = 0D;
-      return this;
-    }
-
-    /**
-     * <code>optional double rear_left = 3;</code>
-     * @return the rearLeft
-     */
-    public double getRearLeft() {
-      return rearLeft;
-    }
-
-    /**
-     * <code>optional double rear_left = 3;</code>
-     * @param value the rearLeft to set
-     * @return this
-     */
-    public ProtobufMecanumDriveMotorVoltages setRearLeft(final double value) {
-      bitField0_ |= 0x00000004;
-      rearLeft = value;
-      return this;
-    }
-
-    /**
-     * <code>optional double rear_right = 4;</code>
-     * @return whether the rearRight field is set
-     */
-    public boolean hasRearRight() {
-      return (bitField0_ & 0x00000008) != 0;
-    }
-
-    /**
-     * <code>optional double rear_right = 4;</code>
-     * @return this
-     */
-    public ProtobufMecanumDriveMotorVoltages clearRearRight() {
-      bitField0_ &= ~0x00000008;
-      rearRight = 0D;
-      return this;
-    }
-
-    /**
-     * <code>optional double rear_right = 4;</code>
-     * @return the rearRight
-     */
-    public double getRearRight() {
-      return rearRight;
-    }
-
-    /**
-     * <code>optional double rear_right = 4;</code>
-     * @param value the rearRight to set
-     * @return this
-     */
-    public ProtobufMecanumDriveMotorVoltages setRearRight(final double value) {
-      bitField0_ |= 0x00000008;
-      rearRight = value;
-      return this;
-    }
-
-    @Override
-    public ProtobufMecanumDriveMotorVoltages copyFrom(
-        final ProtobufMecanumDriveMotorVoltages other) {
-      cachedSize = other.cachedSize;
-      if ((bitField0_ | other.bitField0_) != 0) {
-        bitField0_ = other.bitField0_;
-        frontLeft = other.frontLeft;
-        frontRight = other.frontRight;
-        rearLeft = other.rearLeft;
-        rearRight = other.rearRight;
-      }
-      return this;
-    }
-
-    @Override
-    public ProtobufMecanumDriveMotorVoltages mergeFrom(
-        final ProtobufMecanumDriveMotorVoltages other) {
-      if (other.isEmpty()) {
-        return this;
-      }
-      cachedSize = -1;
-      if (other.hasFrontLeft()) {
-        setFrontLeft(other.frontLeft);
-      }
-      if (other.hasFrontRight()) {
-        setFrontRight(other.frontRight);
-      }
-      if (other.hasRearLeft()) {
-        setRearLeft(other.rearLeft);
-      }
-      if (other.hasRearRight()) {
-        setRearRight(other.rearRight);
-      }
-      return this;
-    }
-
-    @Override
-    public ProtobufMecanumDriveMotorVoltages clear() {
-      if (isEmpty()) {
-        return this;
-      }
-      cachedSize = -1;
-      bitField0_ = 0;
-      frontLeft = 0D;
-      frontRight = 0D;
-      rearLeft = 0D;
-      rearRight = 0D;
-      return this;
-    }
-
-    @Override
-    public ProtobufMecanumDriveMotorVoltages clearQuick() {
-      if (isEmpty()) {
-        return this;
-      }
-      cachedSize = -1;
-      bitField0_ = 0;
-      return this;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (o == this) {
-        return true;
-      }
-      if (!(o instanceof ProtobufMecanumDriveMotorVoltages)) {
-        return false;
-      }
-      ProtobufMecanumDriveMotorVoltages other = (ProtobufMecanumDriveMotorVoltages) o;
-      return bitField0_ == other.bitField0_
-        && (!hasFrontLeft() || ProtoUtil.isEqual(frontLeft, other.frontLeft))
-        && (!hasFrontRight() || ProtoUtil.isEqual(frontRight, other.frontRight))
-        && (!hasRearLeft() || ProtoUtil.isEqual(rearLeft, other.rearLeft))
-        && (!hasRearRight() || ProtoUtil.isEqual(rearRight, other.rearRight));
-    }
-
-    @Override
-    public void writeTo(final ProtoSink output) throws IOException {
-      if ((bitField0_ & 0x00000001) != 0) {
-        output.writeRawByte((byte) 9);
-        output.writeDoubleNoTag(frontLeft);
-      }
-      if ((bitField0_ & 0x00000002) != 0) {
-        output.writeRawByte((byte) 17);
-        output.writeDoubleNoTag(frontRight);
-      }
-      if ((bitField0_ & 0x00000004) != 0) {
-        output.writeRawByte((byte) 25);
-        output.writeDoubleNoTag(rearLeft);
-      }
-      if ((bitField0_ & 0x00000008) != 0) {
-        output.writeRawByte((byte) 33);
-        output.writeDoubleNoTag(rearRight);
-      }
-    }
-
-    @Override
-    protected int computeSerializedSize() {
-      int size = 0;
-      if ((bitField0_ & 0x00000001) != 0) {
-        size += 9;
-      }
-      if ((bitField0_ & 0x00000002) != 0) {
-        size += 9;
-      }
-      if ((bitField0_ & 0x00000004) != 0) {
-        size += 9;
-      }
-      if ((bitField0_ & 0x00000008) != 0) {
-        size += 9;
-      }
-      return size;
-    }
-
-    @Override
-    @SuppressWarnings("fallthrough")
-    public ProtobufMecanumDriveMotorVoltages mergeFrom(final ProtoSource input) throws IOException {
-      // Enabled Fall-Through Optimization (QuickBuffers)
-      int tag = input.readTag();
-      while (true) {
-        switch (tag) {
-          case 9: {
-            // frontLeft
-            frontLeft = input.readDouble();
-            bitField0_ |= 0x00000001;
-            tag = input.readTag();
-            if (tag != 17) {
-              break;
-            }
-          }
-          case 17: {
-            // frontRight
-            frontRight = input.readDouble();
-            bitField0_ |= 0x00000002;
-            tag = input.readTag();
-            if (tag != 25) {
-              break;
-            }
-          }
-          case 25: {
-            // rearLeft
-            rearLeft = input.readDouble();
-            bitField0_ |= 0x00000004;
-            tag = input.readTag();
-            if (tag != 33) {
-              break;
-            }
-          }
-          case 33: {
-            // rearRight
-            rearRight = input.readDouble();
-            bitField0_ |= 0x00000008;
-            tag = input.readTag();
-            if (tag != 0) {
-              break;
-            }
-          }
-          case 0: {
-            return this;
-          }
-          default: {
-            if (!input.skipField(tag)) {
-              return this;
-            }
-            tag = input.readTag();
-            break;
-          }
-        }
-      }
-    }
-
-    @Override
-    public void writeTo(final JsonSink output) throws IOException {
-      output.beginObject();
-      if ((bitField0_ & 0x00000001) != 0) {
-        output.writeDouble(FieldNames.frontLeft, frontLeft);
-      }
-      if ((bitField0_ & 0x00000002) != 0) {
-        output.writeDouble(FieldNames.frontRight, frontRight);
-      }
-      if ((bitField0_ & 0x00000004) != 0) {
-        output.writeDouble(FieldNames.rearLeft, rearLeft);
-      }
-      if ((bitField0_ & 0x00000008) != 0) {
-        output.writeDouble(FieldNames.rearRight, rearRight);
-      }
-      output.endObject();
-    }
-
-    @Override
-    public ProtobufMecanumDriveMotorVoltages mergeFrom(final JsonSource input) throws IOException {
-      if (!input.beginObject()) {
-        return this;
-      }
-      while (!input.isAtEnd()) {
-        switch (input.readFieldHash()) {
-          case 127514064:
-          case -324277155: {
-            if (input.isAtField(FieldNames.frontLeft)) {
-              if (!input.trySkipNullValue()) {
-                frontLeft = input.readDouble();
-                bitField0_ |= 0x00000001;
-              }
-            } else {
-              input.skipUnknownField();
-            }
-            break;
-          }
-          case -336370317:
-          case -1456996218: {
-            if (input.isAtField(FieldNames.frontRight)) {
-              if (!input.trySkipNullValue()) {
-                frontRight = input.readDouble();
-                bitField0_ |= 0x00000002;
-              }
-            } else {
-              input.skipUnknownField();
-            }
-            break;
-          }
-          case -854852661:
-          case -712874558: {
-            if (input.isAtField(FieldNames.rearLeft)) {
-              if (!input.trySkipNullValue()) {
-                rearLeft = input.readDouble();
-                bitField0_ |= 0x00000004;
-              }
-            } else {
-              input.skipUnknownField();
-            }
-            break;
-          }
-          case -724967720:
-          case -618613823: {
-            if (input.isAtField(FieldNames.rearRight)) {
-              if (!input.trySkipNullValue()) {
-                rearRight = input.readDouble();
-                bitField0_ |= 0x00000008;
-              }
-            } else {
-              input.skipUnknownField();
-            }
-            break;
-          }
-          default: {
-            input.skipUnknownField();
-            break;
-          }
-        }
-      }
-      input.endObject();
-      return this;
-    }
-
-    @Override
-    public ProtobufMecanumDriveMotorVoltages clone() {
-      return new ProtobufMecanumDriveMotorVoltages().copyFrom(this);
-    }
-
-    @Override
-    public boolean isEmpty() {
-      return ((bitField0_) == 0);
-    }
-
-    public static ProtobufMecanumDriveMotorVoltages parseFrom(final byte[] data) throws
-        InvalidProtocolBufferException {
-      return ProtoMessage.mergeFrom(new ProtobufMecanumDriveMotorVoltages(), data).checkInitialized();
-    }
-
-    public static ProtobufMecanumDriveMotorVoltages parseFrom(final ProtoSource input) throws
-        IOException {
-      return ProtoMessage.mergeFrom(new ProtobufMecanumDriveMotorVoltages(), input).checkInitialized();
-    }
-
-    public static ProtobufMecanumDriveMotorVoltages parseFrom(final JsonSource input) throws
-        IOException {
-      return ProtoMessage.mergeFrom(new ProtobufMecanumDriveMotorVoltages(), input).checkInitialized();
-    }
-
-    /**
-     * @return factory for creating ProtobufMecanumDriveMotorVoltages messages
-     */
-    public static MessageFactory<ProtobufMecanumDriveMotorVoltages> getFactory() {
-      return ProtobufMecanumDriveMotorVoltagesFactory.INSTANCE;
-    }
-
-    /**
-     * @return this type's descriptor.
-     */
-    public static Descriptors.Descriptor getDescriptor() {
-      return Kinematics.wpi_proto_ProtobufMecanumDriveMotorVoltages_descriptor;
-    }
-
-    private enum ProtobufMecanumDriveMotorVoltagesFactory implements MessageFactory<ProtobufMecanumDriveMotorVoltages> {
-      INSTANCE;
-
-      @Override
-      public ProtobufMecanumDriveMotorVoltages create() {
-        return ProtobufMecanumDriveMotorVoltages.newInstance();
       }
     }
 

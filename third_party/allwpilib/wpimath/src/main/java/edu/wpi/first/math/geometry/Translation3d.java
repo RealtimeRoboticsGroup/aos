@@ -11,11 +11,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.geometry.proto.Translation3dProto;
 import edu.wpi.first.math.geometry.struct.Translation3dStruct;
 import edu.wpi.first.math.interpolation.Interpolatable;
-import edu.wpi.first.units.Distance;
-import edu.wpi.first.units.Measure;
+import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.util.protobuf.ProtobufSerializable;
 import edu.wpi.first.util.struct.StructSerializable;
 import java.util.Objects;
@@ -31,6 +33,13 @@ import java.util.Objects;
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE)
 public class Translation3d
     implements Interpolatable<Translation3d>, ProtobufSerializable, StructSerializable {
+  /**
+   * A preallocated Translation3d representing the origin.
+   *
+   * <p>This exists to avoid allocations for common translations.
+   */
+  public static final Translation3d kZero = new Translation3d();
+
   private final double m_x;
   private final double m_y;
   private final double m_z;
@@ -79,8 +88,29 @@ public class Translation3d
    * @param y The y component of the translation.
    * @param z The z component of the translation.
    */
-  public Translation3d(Measure<Distance> x, Measure<Distance> y, Measure<Distance> z) {
+  public Translation3d(Distance x, Distance y, Distance z) {
     this(x.in(Meters), y.in(Meters), z.in(Meters));
+  }
+
+  /**
+   * Constructs a 3D translation from a 2D translation in the X-Y plane.
+   *
+   * @param translation The 2D translation.
+   * @see Pose3d#Pose3d(Pose2d)
+   * @see Transform3d#Transform3d(Transform2d)
+   */
+  public Translation3d(Translation2d translation) {
+    this(translation.getX(), translation.getY(), 0.0);
+  }
+
+  /**
+   * Constructs a Translation3d from a 3D translation vector. The values are assumed to be in
+   * meters.
+   *
+   * @param vector The translation vector.
+   */
+  public Translation3d(Vector<N3> vector) {
+    this(vector.get(0), vector.get(1), vector.get(2));
   }
 
   /**
@@ -127,6 +157,42 @@ public class Translation3d
   }
 
   /**
+   * Returns the X component of the translation in a measure.
+   *
+   * @return The x component of the translation in a measure.
+   */
+  public Distance getMeasureX() {
+    return Meters.of(m_x);
+  }
+
+  /**
+   * Returns the Y component of the translation in a measure.
+   *
+   * @return The y component of the translation in a measure.
+   */
+  public Distance getMeasureY() {
+    return Meters.of(m_y);
+  }
+
+  /**
+   * Returns the Z component of the translation in a measure.
+   *
+   * @return The z component of the translation in a measure.
+   */
+  public Distance getMeasureZ() {
+    return Meters.of(m_z);
+  }
+
+  /**
+   * Returns a 2D translation vector representation of this translation.
+   *
+   * @return A 2D translation vector representation of this translation.
+   */
+  public Vector<N3> toVector() {
+    return VecBuilder.fill(m_x, m_y, m_z);
+  }
+
+  /**
    * Returns the norm, or distance from the origin to the translation.
    *
    * @return The norm of the translation.
@@ -148,6 +214,17 @@ public class Translation3d
     final var p = new Quaternion(0.0, m_x, m_y, m_z);
     final var qprime = other.getQuaternion().times(p).times(other.getQuaternion().inverse());
     return new Translation3d(qprime.getX(), qprime.getY(), qprime.getZ());
+  }
+
+  /**
+   * Rotates this translation around another translation in 3D space.
+   *
+   * @param other The other translation to rotate around.
+   * @param rot The rotation to rotate the translation by.
+   * @return The new rotated translation.
+   */
+  public Translation3d rotateAround(Translation3d other, Rotation3d rot) {
+    return this.minus(other).rotateBy(rot).plus(other);
   }
 
   /**
@@ -232,12 +309,10 @@ public class Translation3d
    */
   @Override
   public boolean equals(Object obj) {
-    if (obj instanceof Translation3d) {
-      return Math.abs(((Translation3d) obj).m_x - m_x) < 1E-9
-          && Math.abs(((Translation3d) obj).m_y - m_y) < 1E-9
-          && Math.abs(((Translation3d) obj).m_z - m_z) < 1E-9;
-    }
-    return false;
+    return obj instanceof Translation3d other
+        && Math.abs(other.m_x - m_x) < 1E-9
+        && Math.abs(other.m_y - m_y) < 1E-9
+        && Math.abs(other.m_z - m_z) < 1E-9;
   }
 
   @Override

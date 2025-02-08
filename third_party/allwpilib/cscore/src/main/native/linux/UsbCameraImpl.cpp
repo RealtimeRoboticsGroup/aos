@@ -21,6 +21,9 @@
 
 #include <algorithm>
 #include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include <fmt/format.h>
 #include <wpi/MemAlloc.h>
@@ -30,7 +33,6 @@
 #include <wpi/raw_ostream.h>
 #include <wpi/timestamp.h>
 
-#include "Handle.h"
 #include "Instance.h"
 #include "JpegUtil.h"
 #include "Log.h"
@@ -80,6 +82,8 @@ static VideoMode::PixelFormat ToPixelFormat(__u32 pixelFormat) {
       return VideoMode::kRGB565;
     case V4L2_PIX_FMT_BGR24:
       return VideoMode::kBGR;
+    case V4L2_PIX_FMT_ABGR32:
+      return VideoMode::kBGRA;
     case V4L2_PIX_FMT_GREY:
       return VideoMode::kGray;
     case V4L2_PIX_FMT_Y16:
@@ -102,6 +106,8 @@ static __u32 FromPixelFormat(VideoMode::PixelFormat pixelFormat) {
       return V4L2_PIX_FMT_RGB565;
     case VideoMode::kBGR:
       return V4L2_PIX_FMT_BGR24;
+    case VideoMode::kBGRA:
+      return V4L2_PIX_FMT_ABGR32;
     case VideoMode::kGray:
       return V4L2_PIX_FMT_GREY;
     case VideoMode::kY16:
@@ -549,8 +555,51 @@ void UsbCameraImpl::CameraThreadMain() {
           good = false;
         }
         if (good) {
+          Frame::Time frameTime{wpi::Now()};
+          WPI_TimestampSource timeSource{WPI_TIMESRC_FRAME_DEQUEUE};
+
+          // check the timestamp time
+          auto tsFlags = buf.flags & V4L2_BUF_FLAG_TIMESTAMP_MASK;
+          SDEBUG4("Flags {}", tsFlags);
+          if (tsFlags == V4L2_BUF_FLAG_TIMESTAMP_UNKNOWN) {
+            SDEBUG4("Got unknown time for frame - default to wpi::Now");
+          } else if (tsFlags == V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC) {
+            SDEBUG4("Got valid monotonic time for frame");
+            // we can't go directly to frametime, since the rest of cscore
+            // expects us to use wpi::Now, which is in an arbitrary timebase
+            // (see timestamp.cpp). Best I can do is (approximately) translate
+            // between timebases
+
+            // grab current time in the same timebase as buf.timestamp
+            struct timespec ts;
+            if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0) {
+              int64_t nowTime = {ts.tv_sec * 1'000'000 + ts.tv_nsec / 1000};
+              int64_t bufTime = {buf.timestamp.tv_sec * 1'000'000 +
+                                 buf.timestamp.tv_usec};
+              // And offset frameTime by the latency
+              int64_t offset{nowTime - bufTime};
+              frameTime -= offset;
+
+              // Figure out the timestamp's source
+              int tsrcFlags = buf.flags & V4L2_BUF_FLAG_TSTAMP_SRC_MASK;
+              if (tsrcFlags == V4L2_BUF_FLAG_TSTAMP_SRC_EOF) {
+                timeSource = WPI_TIMESRC_V4L_EOF;
+              } else if (tsrcFlags == V4L2_BUF_FLAG_TSTAMP_SRC_SOE) {
+                timeSource = WPI_TIMESRC_V4L_SOE;
+              } else {
+                timeSource = WPI_TIMESRC_UNKNOWN;
+              }
+              SDEBUG4("Frame was {} uS old, flags {}, source {}", offset,
+                      tsrcFlags, static_cast<int>(timeSource));
+            } else {
+              // Can't do anything if we can't access the clock, leave default
+            }
+          } else if (tsFlags == V4L2_BUF_FLAG_TIMESTAMP_COPY) {
+            SDEBUG4("Got valid copy time for frame - default to wpi::Now");
+          }
+
           PutFrame(static_cast<VideoMode::PixelFormat>(m_mode.pixelFormat),
-                   width, height, image, wpi::Now());  // TODO: time
+                   width, height, image, frameTime, timeSource);
         }
       }
 

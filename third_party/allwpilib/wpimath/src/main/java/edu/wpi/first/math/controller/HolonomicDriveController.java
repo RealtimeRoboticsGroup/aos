@@ -22,9 +22,9 @@ import edu.wpi.first.math.util.Units;
  * point toward. This heading reference is profiled for smoothness.
  */
 public class HolonomicDriveController {
-  private Pose2d m_poseError = new Pose2d();
-  private Rotation2d m_rotationError = new Rotation2d();
-  private Pose2d m_poseTolerance = new Pose2d();
+  private Pose2d m_poseError = Pose2d.kZero;
+  private Rotation2d m_rotationError = Rotation2d.kZero;
+  private Pose2d m_poseTolerance = Pose2d.kZero;
   private boolean m_enabled = true;
 
   private final PIDController m_xController;
@@ -141,15 +141,6 @@ public class HolonomicDriveController {
   }
 
   /**
-   * Returns the heading controller.
-   *
-   * @return heading ProfiledPIDController
-   */
-  public ProfiledPIDController getThetaController() {
-    return m_thetaController;
-  }
-
-  /**
    * Returns the x controller.
    *
    * @return X PIDController
@@ -165,5 +156,14 @@ public class HolonomicDriveController {
    */
   public PIDController getYController() {
     return m_yController;
+  }
+
+  /**
+   * Returns the heading controller.
+   *
+   * @return heading ProfiledPIDController
+   */
+  public ProfiledPIDController getThetaController() {
+    return m_thetaController;
   }
 }

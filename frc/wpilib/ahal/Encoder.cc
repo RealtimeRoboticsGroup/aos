@@ -80,11 +80,7 @@ Encoder::Encoder(int aChannel, int bChannel, bool reverseDirection,
  *
  * Frees the FPGA resources associated with an Encoder.
  */
-Encoder::~Encoder() {
-  int32_t status = 0;
-  HAL_FreeEncoder(m_encoder, &status);
-  HAL_CHECK_STATUS(status);
-}
+Encoder::~Encoder() { HAL_FreeEncoder(m_encoder); }
 
 /**
  * The encoding scale factor 1x, 2x, or 4x, per the requested encodingType.

@@ -7,10 +7,11 @@ AprilTagFields expects.
 
 The input CSV has the following format:
 
-* Columns: ID, X, Y, Z, Rotation
+* Columns: ID, X, Y, Z, Z Rotation, Y Rotation
 * ID is a positive integer
 * X, Y, and Z are decimal inches
-* Rotation is yaw in degrees
+* Z Rotation is yaw in degrees
+* Y Rotation is pitch in degrees
 
 The values come from a table in the layout marking diagram (e.g.,
 https://firstfrc.blob.core.windows.net/frc2024/FieldAssets/2024LayoutMarkingDiagram.pdf).
@@ -21,7 +22,6 @@ import json
 import os
 
 from wpimath import geometry, units
-import numpy as np
 
 
 def main():
@@ -49,13 +49,14 @@ def main():
                 x = float(row[1])
                 y = float(row[2])
                 z = float(row[3])
-                rotation = float(row[4])
+                zRotation = float(row[4])
+                yRotation = float(row[5])
 
                 # Turn yaw into quaternion
                 q = geometry.Rotation3d(
-                    units.radians(0.0),
-                    units.radians(0.0),
-                    units.degreesToRadians(rotation),
+                    units.radians(0),
+                    units.degreesToRadians(yRotation),
+                    units.degreesToRadians(zRotation),
                 ).getQuaternion()
 
                 json_data["tags"].append(
@@ -82,6 +83,7 @@ def main():
         # Write JSON
         with open(filename.replace(".csv", ".json"), "w") as f:
             json.dump(json_data, f, indent=2)
+            f.write("\n")
 
 
 if __name__ == "__main__":

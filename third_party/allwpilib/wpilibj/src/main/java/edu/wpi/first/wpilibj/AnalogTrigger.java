@@ -12,6 +12,7 @@ import edu.wpi.first.util.sendable.Sendable;
 import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.util.sendable.SendableRegistry;
 import edu.wpi.first.wpilibj.AnalogTriggerOutput.AnalogTriggerType;
+import java.lang.ref.Reference;
 
 /** Class for creating and configuring Analog Triggers. */
 public class AnalogTrigger implements Sendable, AutoCloseable {
@@ -20,7 +21,6 @@ public class AnalogTrigger implements Sendable, AutoCloseable {
 
   private AnalogInput m_analogInput;
 
-  @SuppressWarnings({"PMD.SingularField", "PMD.UnusedPrivateField"})
   private DutyCycle m_dutyCycle;
 
   private boolean m_ownsAnalog;
@@ -74,11 +74,15 @@ public class AnalogTrigger implements Sendable, AutoCloseable {
 
   @Override
   public void close() {
-    SendableRegistry.remove(this);
-    AnalogJNI.cleanAnalogTrigger(m_port);
-    m_port = 0;
-    if (m_ownsAnalog && m_analogInput != null) {
-      m_analogInput.close();
+    try {
+      SendableRegistry.remove(this);
+      AnalogJNI.cleanAnalogTrigger(m_port);
+      m_port = 0;
+      if (m_ownsAnalog && m_analogInput != null) {
+        m_analogInput.close();
+      }
+    } finally {
+      Reference.reachabilityFence(m_dutyCycle);
     }
   }
 

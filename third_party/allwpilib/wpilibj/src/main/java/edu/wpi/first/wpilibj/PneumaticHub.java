@@ -25,7 +25,7 @@ public class PneumaticHub implements PneumaticsBase {
     private int m_refCount;
     private int m_reservedMask;
     private boolean m_compressorReserved;
-    public int[] m_oneShotDurMs = new int[PortsJNI.getNumREVPHChannels()];
+    public final int[] m_oneShotDurMs = new int[PortsJNI.getNumREVPHChannels()];
     private final Object m_reserveLock = new Object();
 
     DataStore(int module) {
@@ -96,8 +96,7 @@ public class PneumaticHub implements PneumaticsBase {
 
   private static DataStore getForModule(int module) {
     synchronized (m_handleLock) {
-      Integer moduleBoxed = module;
-      DataStore pcm = m_handleMap.get(moduleBoxed);
+      DataStore pcm = m_handleMap.get(module);
       if (pcm == null) {
         pcm = new DataStore(module);
       }
@@ -249,8 +248,7 @@ public class PneumaticHub implements PneumaticsBase {
 
   @Override
   public int getSolenoidDisabledList() {
-    int raw = REVPHJNI.getStickyFaultsNative(m_handle);
-    return raw & 0xFFFF;
+    return REVPHJNI.getSolenoidDisabledList(m_handle);
   }
 
   /**

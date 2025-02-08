@@ -5,6 +5,7 @@
 package edu.wpi.first.math;
 
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.jni.StateSpaceUtilJNI;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.numbers.N4;
@@ -80,7 +81,7 @@ public final class StateSpaceUtil {
       if (tolerances.get(i, 0) == Double.POSITIVE_INFINITY) {
         result.set(i, i, 0.0);
       } else {
-        result.set(i, i, 1.0 / (Math.pow(tolerances.get(i, 0), 2)));
+        result.set(i, i, 1.0 / Math.pow(tolerances.get(i, 0), 2));
       }
     }
 
@@ -102,7 +103,8 @@ public final class StateSpaceUtil {
    */
   public static <States extends Num, Inputs extends Num> boolean isStabilizable(
       Matrix<States, States> A, Matrix<States, Inputs> B) {
-    return WPIMathJNI.isStabilizable(A.getNumRows(), B.getNumCols(), A.getData(), B.getData());
+    return StateSpaceUtilJNI.isStabilizable(
+        A.getNumRows(), B.getNumCols(), A.getData(), B.getData());
   }
 
   /**
@@ -120,7 +122,7 @@ public final class StateSpaceUtil {
    */
   public static <States extends Num, Outputs extends Num> boolean isDetectable(
       Matrix<States, States> A, Matrix<Outputs, States> C) {
-    return WPIMathJNI.isStabilizable(
+    return StateSpaceUtilJNI.isStabilizable(
         A.getNumRows(), C.getNumRows(), A.transpose().getData(), C.transpose().getData());
   }
 
@@ -129,7 +131,10 @@ public final class StateSpaceUtil {
    *
    * @param pose A pose to convert to a vector.
    * @return The given pose in vector form, with the third element, theta, in radians.
+   * @deprecated Create the vector manually instead. If you were using this as an intermediate step
+   *     for constructing affine transformations, use {@link Pose2d#toMatrix()} instead.
    */
+  @Deprecated(forRemoval = true, since = "2025")
   public static Matrix<N3, N1> poseToVector(Pose2d pose) {
     return VecBuilder.fill(pose.getX(), pose.getY(), pose.getRotation().getRadians());
   }
@@ -178,7 +183,10 @@ public final class StateSpaceUtil {
    *
    * @param pose A pose to convert to a vector.
    * @return The given pose in as a 4x1 vector of x, y, cos(theta), and sin(theta).
+   * @deprecated Create the vector manually instead. If you were using this as an intermediate step
+   *     for constructing affine transformations, use {@link Pose2d#toMatrix()} instead.
    */
+  @Deprecated(forRemoval = true, since = "2025")
   public static Matrix<N4, N1> poseTo4dVector(Pose2d pose) {
     return VecBuilder.fill(
         pose.getTranslation().getX(),
@@ -192,7 +200,10 @@ public final class StateSpaceUtil {
    *
    * @param pose A pose to convert to a vector.
    * @return The given pose in vector form, with the third element, theta, in radians.
+   * @deprecated Create the vector manually instead. If you were using this as an intermediate step
+   *     for constructing affine transformations, use {@link Pose2d#toMatrix()} instead.
    */
+  @Deprecated(forRemoval = true, since = "2025")
   public static Matrix<N3, N1> poseTo3dVector(Pose2d pose) {
     return VecBuilder.fill(
         pose.getTranslation().getX(),
