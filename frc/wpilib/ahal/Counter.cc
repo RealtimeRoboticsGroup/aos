@@ -85,10 +85,7 @@ Counter::Counter(EncodingType encodingType,
 Counter::~Counter() {
   SetUpdateWhenEmpty(true);
 
-  int32_t status = 0;
-  HAL_FreeCounter(m_counter, &status);
-  wpi_setHALError(status);
-  HAL_CHECK_STATUS(status);
+  HAL_FreeCounter(m_counter);
 }
 
 void Counter::SetUpSource(int channel) {

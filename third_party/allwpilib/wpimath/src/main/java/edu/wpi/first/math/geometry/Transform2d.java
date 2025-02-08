@@ -6,16 +6,26 @@ package edu.wpi.first.math.geometry;
 
 import static edu.wpi.first.units.Units.Meters;
 
+import edu.wpi.first.math.MatBuilder;
+import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.Nat;
 import edu.wpi.first.math.geometry.proto.Transform2dProto;
 import edu.wpi.first.math.geometry.struct.Transform2dStruct;
-import edu.wpi.first.units.Distance;
-import edu.wpi.first.units.Measure;
+import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.util.protobuf.ProtobufSerializable;
 import edu.wpi.first.util.struct.StructSerializable;
 import java.util.Objects;
 
 /** Represents a transformation for a Pose2d in the pose's frame. */
 public class Transform2d implements ProtobufSerializable, StructSerializable {
+  /**
+   * A preallocated Transform2d representing no transformation.
+   *
+   * <p>This exists to avoid allocations for common transformations.
+   */
+  public static final Transform2d kZero = new Transform2d();
+
   private final Translation2d m_translation;
   private final Rotation2d m_rotation;
 
@@ -68,14 +78,28 @@ public class Transform2d implements ProtobufSerializable, StructSerializable {
    * @param y The y component of the translational component of the transform.
    * @param rotation The rotational component of the transform.
    */
-  public Transform2d(Measure<Distance> x, Measure<Distance> y, Rotation2d rotation) {
+  public Transform2d(Distance x, Distance y, Rotation2d rotation) {
     this(x.in(Meters), y.in(Meters), rotation);
+  }
+
+  /**
+   * Constructs a transform with the specified affine transformation matrix.
+   *
+   * @param matrix The affine transformation matrix.
+   * @throws IllegalArgumentException if the affine transformation matrix is invalid.
+   */
+  public Transform2d(Matrix<N3, N3> matrix) {
+    m_translation = new Translation2d(matrix.get(0, 2), matrix.get(1, 2));
+    m_rotation = new Rotation2d(matrix.block(2, 2, 0, 0));
+    if (matrix.get(2, 0) != 0.0 || matrix.get(2, 1) != 0.0 || matrix.get(2, 2) != 1.0) {
+      throw new IllegalArgumentException("Affine transformation matrix is invalid");
+    }
   }
 
   /** Constructs the identity transform -- maps an initial pose to itself. */
   public Transform2d() {
-    m_translation = new Translation2d();
-    m_rotation = new Rotation2d();
+    m_translation = Translation2d.kZero;
+    m_rotation = Rotation2d.kZero;
   }
 
   /**
@@ -106,7 +130,7 @@ public class Transform2d implements ProtobufSerializable, StructSerializable {
    * @return The composition of the two transformations.
    */
   public Transform2d plus(Transform2d other) {
-    return new Transform2d(new Pose2d(), new Pose2d().transformBy(this).transformBy(other));
+    return new Transform2d(Pose2d.kZero, Pose2d.kZero.transformBy(this).transformBy(other));
   }
 
   /**
@@ -134,6 +158,46 @@ public class Transform2d implements ProtobufSerializable, StructSerializable {
    */
   public double getY() {
     return m_translation.getY();
+  }
+
+  /**
+   * Returns the X component of the transformation's translation in a measure.
+   *
+   * @return The x component of the transformation's translation in a measure.
+   */
+  public Distance getMeasureX() {
+    return m_translation.getMeasureX();
+  }
+
+  /**
+   * Returns the Y component of the transformation's translation in a measure.
+   *
+   * @return The y component of the transformation's translation in a measure.
+   */
+  public Distance getMeasureY() {
+    return m_translation.getMeasureY();
+  }
+
+  /**
+   * Returns an affine transformation matrix representation of this transformation.
+   *
+   * @return An affine transformation matrix representation of this transformation.
+   */
+  public Matrix<N3, N3> toMatrix() {
+    var vec = m_translation.toVector();
+    var mat = m_rotation.toMatrix();
+    return MatBuilder.fill(
+        Nat.N3(),
+        Nat.N3(),
+        mat.get(0, 0),
+        mat.get(0, 1),
+        vec.get(0),
+        mat.get(1, 0),
+        mat.get(1, 1),
+        vec.get(1),
+        0.0,
+        0.0,
+        1.0);
   }
 
   /**
@@ -172,11 +236,9 @@ public class Transform2d implements ProtobufSerializable, StructSerializable {
    */
   @Override
   public boolean equals(Object obj) {
-    if (obj instanceof Transform2d) {
-      return ((Transform2d) obj).m_translation.equals(m_translation)
-          && ((Transform2d) obj).m_rotation.equals(m_rotation);
-    }
-    return false;
+    return obj instanceof Transform2d other
+        && other.m_translation.equals(m_translation)
+        && other.m_rotation.equals(m_rotation);
   }
 
   @Override

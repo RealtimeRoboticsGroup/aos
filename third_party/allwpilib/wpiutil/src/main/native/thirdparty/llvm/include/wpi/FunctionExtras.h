@@ -35,9 +35,9 @@
 #include "wpi/PointerIntPair.h"
 #include "wpi/PointerUnion.h"
 #include "wpi/STLForwardCompat.h"
+#include "wpi/Compiler.h"
 #include "wpi/MemAlloc.h"
 #include "wpi/type_traits.h"
-#include <cstddef>
 #include <cstring>
 #include <memory>
 #include <type_traits>
@@ -168,7 +168,7 @@ protected:
     // provide four pointers worth of storage here.
     // This is mutable as an inlined `const unique_function<void() const>` may
     // still modify its own mutable members.
-    alignas(void*) mutable std::byte InlineStorage[InlineStorageSize];
+    alignas(void *) mutable std::byte InlineStorage[InlineStorageSize];
   } StorageUnion;
 
   // A compressed pointer to either our dispatching callback or our table of
@@ -324,8 +324,10 @@ protected:
     // Clear the old callback and inline flag to get back to as-if-null.
     RHS.CallbackAndInlineFlag = {};
 
-#ifndef NDEBUG
-    // In debug builds, we also scribble across the rest of the storage.
+#if !defined(NDEBUG) && !LLVM_ADDRESS_SANITIZER_BUILD
+    // In debug builds without ASan, we also scribble across the rest of the
+    // storage. Scribbling under AddressSanitizer (ASan) is disabled to prevent
+    // overwriting poisoned objects (e.g., annotated short strings).
     memset(RHS.getInlineStorage(), 0xAD, InlineStorageSize);
 #endif
   }

@@ -22,6 +22,10 @@ namespace cs {
 
 class SourceImpl;
 
+std::unique_ptr<Image> CreateImageFromBGRA(cs::SourceImpl* source, size_t width,
+                                           size_t height, size_t stride,
+                                           const uint8_t* data);
+
 class Frame {
   friend class SourceImpl;
 
@@ -35,6 +39,7 @@ class Frame {
     wpi::recursive_mutex mutex;
     std::atomic_int refcount{0};
     Time time{0};
+    WPI_TimestampSource timeSource{WPI_TIMESRC_UNKNOWN};
     SourceImpl& source;
     std::string error;
     wpi::SmallVector<Image*, 4> images;
@@ -44,9 +49,11 @@ class Frame {
  public:
   Frame() noexcept = default;
 
-  Frame(SourceImpl& source, std::string_view error, Time time);
+  Frame(SourceImpl& source, std::string_view error, Time time,
+        WPI_TimestampSource timeSrc);
 
-  Frame(SourceImpl& source, std::unique_ptr<Image> image, Time time);
+  Frame(SourceImpl& source, std::unique_ptr<Image> image, Time time,
+        WPI_TimestampSource timeSrc);
 
   Frame(const Frame& frame) noexcept : m_impl{frame.m_impl} {
     if (m_impl) {
@@ -71,6 +78,9 @@ class Frame {
   }
 
   Time GetTime() const { return m_impl ? m_impl->time : 0; }
+  WPI_TimestampSource GetTimeSource() const {
+    return m_impl ? m_impl->timeSource : WPI_TIMESRC_UNKNOWN;
+  }
 
   std::string_view GetError() const {
     if (!m_impl) {
@@ -206,6 +216,7 @@ class Frame {
   Image* ConvertGrayToMJPEG(Image* image, int quality);
   Image* ConvertGrayToY16(Image* image);
   Image* ConvertY16ToGray(Image* image);
+  Image* ConvertBGRToBGRA(Image* image);
 
   Image* GetImage(int width, int height, VideoMode::PixelFormat pixelFormat) {
     if (pixelFormat == VideoMode::kMJPEG) {

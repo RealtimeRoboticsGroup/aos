@@ -65,8 +65,7 @@ class SPI final {
    *
    * @deprecated Does not work, will be removed.
    */
-  WPI_DEPRECATED("Not supported by roboRIO.")
-  void SetMSBFirst();
+  [[deprecated("Not supported by roboRIO.")]] void SetMSBFirst();
 
   /**
    * Configure the order that bits are sent and received on the wire
@@ -74,8 +73,7 @@ class SPI final {
    *
    * @deprecated Does not work, will be removed.
    */
-  WPI_DEPRECATED("Not supported by roboRIO.")
-  void SetLSBFirst();
+  [[deprecated("Not supported by roboRIO.")]] void SetLSBFirst();
 
   /**
    * Configure that the data is stable on the leading edge and the data
@@ -83,8 +81,7 @@ class SPI final {
    *
    * @deprecated Use SetMode() instead.
    */
-  WPI_DEPRECATED("Use SetMode() instead")
-  void SetSampleDataOnLeadingEdge();
+  [[deprecated("Use SetMode() instead.")]] void SetSampleDataOnLeadingEdge();
 
   /**
    * Configure that the data is stable on the trailing edge and the data
@@ -92,8 +89,7 @@ class SPI final {
    *
    * @deprecated Use SetMode() instead.
    */
-  WPI_DEPRECATED("Use SetMode() instead")
-  void SetSampleDataOnTrailingEdge();
+  [[deprecated("Use SetMode() instead.")]] void SetSampleDataOnTrailingEdge();
 
   /**
    * Configure the clock output line to be active low.
@@ -101,8 +97,7 @@ class SPI final {
    *
    * @deprecated Use SetMode() instead.
    */
-  WPI_DEPRECATED("Use SetMode() instead")
-  void SetClockActiveLow();
+  [[deprecated("Use SetMode() instead.")]] void SetClockActiveLow();
 
   /**
    * Configure the clock output line to be active high.
@@ -110,8 +105,7 @@ class SPI final {
    *
    * @deprecated Use SetMode() instead.
    */
-  WPI_DEPRECATED("Use SetMode() instead")
-  void SetClockActiveHigh();
+  [[deprecated("Use SetMode() instead.")]] void SetClockActiveHigh();
 
   /**
    * Sets the mode for the SPI device.
@@ -272,7 +266,7 @@ class SPI final {
                           int pow2BytesPerRead);
 
  protected:
-  hal::SPIPort m_port;
+  HAL_SPIPort m_port;
   HAL_SPIMode m_mode = HAL_SPIMode::HAL_SPI_kMode0;
 
  private:

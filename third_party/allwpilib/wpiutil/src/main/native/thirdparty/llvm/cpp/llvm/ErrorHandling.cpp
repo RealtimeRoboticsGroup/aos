@@ -15,7 +15,7 @@
 #include "wpi/SmallVector.h"
 #include "wpi/Errc.h"
 #include "wpi/WindowsError.h"
-#include "fmt/format.h"
+#include "wpi/print.h"
 #include <cassert>
 #include <cstdlib>
 #include <mutex>
@@ -86,7 +86,7 @@ void wpi::report_fatal_error(std::string_view Reason, bool GenCrashDiag) {
   if (handler) {
     handler(handlerData, std::string{Reason}.c_str(), GenCrashDiag);
   } else {
-    fmt::print(stderr, "LLVM ERROR: {}\n", Reason);
+    wpi::print(stderr, "LLVM ERROR: {}\n", Reason);
   }
 
   exit(1);
@@ -95,7 +95,8 @@ void wpi::report_fatal_error(std::string_view Reason, bool GenCrashDiag) {
 void wpi::install_bad_alloc_error_handler(fatal_error_handler_t handler,
                                            void *user_data) {
   std::scoped_lock Lock(BadAllocErrorHandlerMutex);
-  assert(!ErrorHandler && "Bad alloc error handler already registered!\n");
+  assert(!BadAllocErrorHandler &&
+         "Bad alloc error handler already registered!\n");
   BadAllocErrorHandler = handler;
   BadAllocErrorHandlerUserData = user_data;
 }
@@ -159,11 +160,11 @@ void wpi::wpi_unreachable_internal(const char *msg, const char *file,
   // wpi_unreachable is intended to be used to indicate "impossible"
   // situations, and not legitimate runtime errors.
   if (msg)
-    fmt::print(stderr, "{}\n", msg);
+    wpi::print(stderr, "{}\n", msg);
   std::fputs("UNREACHABLE executed", stderr);
   if (file)
-    fmt::print(stderr, " at {}:{}", file, line);
-  fmt::print(stderr, "!\n");
+    wpi::print(stderr, " at {}:{}", file, line);
+  wpi::print(stderr, "!\n");
   abort();
 #ifdef LLVM_BUILTIN_UNREACHABLE
   // Windows systems and possibly others don't declare abort() to be noreturn,
@@ -174,7 +175,19 @@ void wpi::wpi_unreachable_internal(const char *msg, const char *file,
 
 #ifdef _WIN32
 
+#define WIN32_NO_STATUS
+#include "Windows/WindowsSupport.h"
+#undef WIN32_NO_STATUS
+#include <ntstatus.h>
 #include <winerror.h>
+
+// This function obtains the last error code and maps it. It may call
+// RtlGetLastNtStatus, which is a lower level API that can return a
+// more specific error code than GetLastError.
+std::error_code wpi::mapLastWindowsError() {
+  unsigned EV = ::GetLastError();
+  return mapWindowsError(EV);
+}
 
 // I'd rather not double the line count of the following.
 #define MAP_ERR_TO_COND(x, y)                                                  \

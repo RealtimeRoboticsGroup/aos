@@ -4,15 +4,14 @@
 
 #pragma once
 
-#include <concepts>
 #include <functional>
-#include <memory>
 #include <utility>
 
 #include <frc/event/BooleanEvent.h>
 #include <frc/event/EventLoop.h>
 #include <frc/filter/Debouncer.h>
 #include <units/time.h>
+#include <wpi/FunctionExtras.h>
 
 #include "frc2/command/Command.h"
 #include "frc2/command/CommandScheduler.h"
@@ -58,6 +57,23 @@ class Trigger {
   Trigger() : Trigger([] { return false; }) {}
 
   Trigger(const Trigger& other);
+
+  /**
+   * Starts the command when the condition changes.
+   *
+   * @param command the command to start
+   * @return this trigger, so calls can be chained
+   */
+  Trigger OnChange(Command* command);
+
+  /**
+   * Starts the command when the condition changes. Moves command ownership to
+   * the button scheduler.
+   *
+   * @param command the command to start
+   * @return this trigger, so calls can be chained
+   */
+  Trigger OnChange(CommandPtr&& command);
 
   /**
    * Starts the given command whenever the condition changes from `false` to
@@ -270,11 +286,19 @@ class Trigger {
 
   /**
    * Returns the current state of this trigger.
+   *
    * @return A bool representing the current state of the trigger.
    */
   bool Get() const;
 
  private:
+  /**
+   * Adds a binding to the EventLoop.
+   *
+   * @param body The body of the binding to add.
+   */
+  void AddBinding(wpi::unique_function<void(bool, bool)>&& body);
+
   frc::EventLoop* m_loop;
   std::function<bool()> m_condition;
 };

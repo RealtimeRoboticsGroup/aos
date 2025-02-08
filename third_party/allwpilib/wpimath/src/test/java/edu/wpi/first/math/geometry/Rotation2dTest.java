@@ -43,8 +43,8 @@ class Rotation2dTest {
 
   @Test
   void testRotateByFromZero() {
-    var zero = new Rotation2d();
-    var rotated = zero.rotateBy(Rotation2d.fromDegrees(90.0));
+    var zero = Rotation2d.kZero;
+    var rotated = zero.rotateBy(Rotation2d.kCCW_Pi_2);
 
     assertAll(
         () -> assertEquals(Math.PI / 2.0, rotated.getRadians(), kEpsilon),
@@ -53,7 +53,7 @@ class Rotation2dTest {
 
   @Test
   void testRotateByNonZero() {
-    var rot = Rotation2d.fromDegrees(90.0);
+    var rot = Rotation2d.kCCW_Pi_2;
     rot = rot.plus(Rotation2d.fromDegrees(30.0));
 
     assertEquals(120.0, rot.getDegrees(), kEpsilon);
@@ -101,6 +101,14 @@ class Rotation2dTest {
   }
 
   @Test
+  void testToMatrix() {
+    var before = Rotation2d.fromDegrees(20.0);
+    var after = new Rotation2d(before.toMatrix());
+
+    assertEquals(before, after);
+  }
+
+  @Test
   void testInterpolate() {
     // 50 + (70 - 50) * 0.5 = 60
     var rot1 = Rotation2d.fromDegrees(50);
@@ -112,6 +120,6 @@ class Rotation2dTest {
     rot1 = Rotation2d.fromDegrees(170);
     rot2 = Rotation2d.fromDegrees(-160);
     interpolated = rot1.interpolate(rot2, 0.5);
-    assertEquals(-175.0, interpolated.getDegrees());
+    assertEquals(-175.0, interpolated.getDegrees(), kEpsilon);
   }
 }

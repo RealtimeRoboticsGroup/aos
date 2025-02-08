@@ -12,6 +12,8 @@
 #include <utility>
 #include <vector>
 
+#include <wpi/deprecated.h>
+
 #include "frc2/command/CommandPtr.h"
 #include "frc2/command/Requirements.h"
 #include "frc2/command/SelectCommand.h"
@@ -83,6 +85,18 @@ CommandPtr StartEnd(std::function<void()> start, std::function<void()> end,
 [[nodiscard]]
 CommandPtr RunEnd(std::function<void()> run, std::function<void()> end,
                   Requirements requirements = {});
+
+/**
+ * Constructs a command that runs an action once, and then runs an action every
+ * iteration until interrupted.
+ *
+ * @param start the action to run on start
+ * @param run the action to run every iteration
+ * @param requirements subsystems the action requires
+ */
+[[nodiscard]]
+CommandPtr StartRun(std::function<void()> start, std::function<void()> run,
+                    Requirements requirements = {});
 
 /**
  * Constructs a command that prints a message and finishes.
@@ -171,7 +185,6 @@ CommandPtr DeferredProxy(wpi::unique_function<Command*()> supplier);
  */
 [[nodiscard]]
 CommandPtr DeferredProxy(wpi::unique_function<CommandPtr()> supplier);
-
 // Command Groups
 
 namespace impl {

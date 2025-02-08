@@ -218,6 +218,28 @@ local_repository(
     path = "third_party/bazel-toolchain",
 )
 
+local_repository(
+    name = "com_github_wpilibsuite_allwpilib",
+    path = "third_party/allwpilib",
+)
+
+# Download toolchains
+http_archive(
+    name = "rules_bzlmodrio_toolchains",
+    sha256 = "ff25b5f9445cbd43759be4c6582b987d1065cf817c593eedc7ada1a699298c84",
+    url = "https://github.com/wpilibsuite/rules_bzlmodRio_toolchains/releases/download/2025-1.bcr2/rules_bzlmodRio_toolchains-2025-1.bcr2.tar.gz",
+)
+
+http_archive(
+    name = "bzlmodrio-ni",
+    sha256 = "fff62c3cb3e83f9a0d0a01f1739477c9ca5e9a6fac05be1ad59dafcd385801f7",
+    url = "https://github.com/wpilibsuite/bzlmodRio-ni/releases/download/2025.2.0/bzlmodRio-ni-2025.2.0.tar.gz",
+)
+
+load("@bzlmodrio-ni//:maven_cpp_deps.bzl", "setup_legacy_bzlmodrio_ni_cpp_dependencies")
+
+setup_legacy_bzlmodrio_ni_cpp_dependencies()
+
 http_archive(
     name = "RangeHTTPServer",
     sha256 = "98a8e4980f91d048dc9159cfc5f115280d0b5ec59a5b01df0422b887212fa4f0",
@@ -406,9 +428,9 @@ http_archive(
     name = "arm_frc_linux_gnueabi_repo",
     build_file = "@//tools/cpp/arm-frc-linux-gnueabi:arm-frc-linux-gnueabi.BUILD",
     patches = ["//debian:fts.patch"],
-    sha256 = "10349791e4f9fa33100ee52a84e7f9ba4df581963818334771253369b0d12061",
+    sha256 = "0ed7c454eab947166c41177f72f795a408f4b7c5fc0f7fd6ee35dba1871fbfac",
     strip_prefix = "roborio-academic",
-    url = "https://github.com/wpilibsuite/opensdk/releases/download/v2024-1/cortexa9_vfpv3-roborio-academic-2024-x86_64-linux-gnu-Toolchain-12.1.0.tgz",
+    url = "https://github.com/wpilibsuite/opensdk/releases/download/v2025-1/cortexa9_vfpv3-roborio-academic-2025-x86_64-linux-gnu-Toolchain-12.1.0.tgz",
 )
 
 # The main partition packaged with //compilers/buildify_yocto_image.py
@@ -428,17 +450,6 @@ http_archive(
     build_file = "@//:compilers/amd64_debian_rootfs.BUILD",
     sha256 = "9456f874343f32b897c88af6fb0503c261b2dc533b519759fb5b42016d3406c9",
     url = "https://realtimeroboticsgroup.org/build-dependencies/2025-01-26-bookworm-amd64-nvidia-rootfs.tar.zst",
-)
-
-# Generated with:
-# git fetch https://github.com/wpilibsuite/ni-libraries main
-# git archive --output=allwpilib_ni-libraries_776db4e8aed31a651fa2f590e7468c69b384b42a.tar.gz --format=tar.gz 776db4e8aed31a651fa2f590e7468c69b384b42a
-http_archive(
-    name = "allwpilib_ni_libraries",
-    build_file = "@//debian:ni-libraries.BUILD",
-    sha256 = "86458884701c817351b2ec651a2f13591258da54b4f54f05d8f1ce04eb214ba5",
-    strip_prefix = "ni-libraries-2024.2.1",
-    url = "https://github.com/wpilibsuite/ni-libraries/archive/refs/tags/v2024.2.1.zip",
 )
 
 # For protobuf. Don't use these.
@@ -655,9 +666,10 @@ cc_library(
     visibility = ['//visibility:public'],
     hdrs = glob(['ctre/phoenix6/**/*.hpp', 'ctre/unit/**/*.h']),
     includes = ["."],
-    deps = ["@//third_party/allwpilib/wpimath",
-            "@ctre_phoenix6_tools_headers//:tools",
-            ],
+    deps = [
+        "@com_github_wpilibsuite_allwpilib//wpimath:wpimath.static",
+        "@ctre_phoenix6_tools_headers//:tools",
+    ],
 )
 """,
     sha256 = "67fdd9a4bf275c69666bbc8bf38312eea8a85bf9fda3901d02af3a18136ffb3e",

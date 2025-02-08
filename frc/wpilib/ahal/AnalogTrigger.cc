@@ -56,9 +56,7 @@ AnalogTrigger::AnalogTrigger(DutyCycle *input) {
 }
 
 AnalogTrigger::~AnalogTrigger() {
-  int32_t status = 0;
-  HAL_CleanAnalogTrigger(m_trigger, &status);
-  HAL_CHECK_STATUS(status);
+  HAL_CleanAnalogTrigger(m_trigger);
 
   if (m_ownsAnalog) {
     delete m_analogInput;

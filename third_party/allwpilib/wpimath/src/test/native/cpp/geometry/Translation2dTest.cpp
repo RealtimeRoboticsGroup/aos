@@ -35,7 +35,16 @@ TEST(Translation2dTest, RotateBy) {
   const auto rotated = another.RotateBy(90_deg);
 
   EXPECT_NEAR(0.0, rotated.X().value(), 1e-9);
-  EXPECT_DOUBLE_EQ(3.0, rotated.Y().value());
+  EXPECT_NEAR(3.0, rotated.Y().value(), 1e-9);
+}
+
+TEST(Translation2dTest, RotateAround) {
+  const Translation2d translation{2_m, 1_m};
+  const Translation2d other{3_m, 2_m};
+  const auto rotated = translation.RotateAround(other, 180_deg);
+
+  EXPECT_NEAR(4.0, rotated.X().value(), 1e-9);
+  EXPECT_NEAR(3.0, rotated.Y().value(), 1e-9);
 }
 
 TEST(Translation2dTest, Multiplication) {
@@ -124,6 +133,16 @@ TEST(Translation2dTest, Nearest) {
   EXPECT_DOUBLE_EQ(
       origin.Nearest({translation4, translation2, translation3}).Y().value(),
       translation2.Y().value());
+}
+
+TEST(Translation2dTest, ToVector) {
+  const Eigen::Vector2d vec(1.0, 2.0);
+  const Translation2d translation{vec};
+
+  EXPECT_DOUBLE_EQ(vec[0], translation.X().value());
+  EXPECT_DOUBLE_EQ(vec[1], translation.Y().value());
+
+  EXPECT_TRUE(vec == translation.ToVector());
 }
 
 TEST(Translation2dTest, Constexpr) {

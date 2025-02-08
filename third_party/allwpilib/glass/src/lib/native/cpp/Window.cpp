@@ -4,9 +4,11 @@
 
 #include "glass/Window.h"
 
+#include <string>
+
+#include <fmt/format.h>
 #include <imgui.h>
 #include <imgui_internal.h>
-#include <wpi/StringExtras.h>
 
 #include "glass/Context.h"
 #include "glass/Storage.h"
@@ -55,15 +57,24 @@ void Window::Display() {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, m_padding);
   }
 
-  char label[128];
+  std::string* name = &m_name;
   if (m_name.empty()) {
-    wpi::format_to_n_c_str(label, sizeof(label), "{}###{}", m_defaultName,
-                           m_id);
-  } else {
-    wpi::format_to_n_c_str(label, sizeof(label), "{}###{}", m_name, m_id);
+    name = &m_defaultName;
   }
+  std::string label = fmt::format("{}###{}", *name, m_id);
 
-  if (Begin(label, &m_visible, m_flags)) {
+  // Accounts for size of title, collapse button, and close button
+  float minWidth =
+      ImGui::CalcTextSize(name->c_str()).x + ImGui::GetFontSize() * 2 +
+      ImGui::GetStyle().ItemInnerSpacing.x * 3 +
+      ImGui::GetStyle().FramePadding.x * 2 + ImGui::GetStyle().WindowBorderSize;
+  // Accounts for size of hamburger button
+  if (m_renamePopupEnabled || m_view->HasSettings()) {
+    minWidth += ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.x;
+  }
+  ImGui::SetNextWindowSizeConstraints({minWidth, 0}, ImVec2{FLT_MAX, FLT_MAX});
+
+  if (Begin(label.c_str(), &m_visible, m_flags)) {
     if (m_renamePopupEnabled || m_view->HasSettings()) {
       bool isClicked = (ImGui::IsMouseReleased(ImGuiMouseButton_Right) &&
                         ImGui::IsItemHovered());

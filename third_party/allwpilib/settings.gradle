@@ -52,12 +52,17 @@ include 'cameraserver:multiCameraServer'
 include 'wpilibNewCommands'
 include 'romiVendordep'
 include 'xrpVendordep'
-include 'myRobot'
+include 'developerRobot'
 include 'docs'
 include 'msvcruntime'
 include 'ntcoreffi'
 include 'apriltag'
 include 'processstarter'
+include 'epilogue-processor'
+include 'epilogue-runtime'
+include 'thirdparty:googletest'
+include 'thirdparty:imgui_suite'
+include 'wpical'
 
 buildCache {
     def cred = {

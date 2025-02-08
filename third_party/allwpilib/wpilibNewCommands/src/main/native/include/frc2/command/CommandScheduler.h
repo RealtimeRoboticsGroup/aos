@@ -88,6 +88,10 @@ class CommandScheduler final : public wpi::Sendable,
    * interruptible. If this is the case, they will be interrupted and the
    * command will be scheduled.
    *
+   * @warning Using this function directly can often lead to unexpected behavior
+   * and should be avoided. Instead Triggers should be used to schedule
+   * Commands.
+   *
    * @param command the command to schedule
    */
   void Schedule(const CommandPtr& command);
@@ -95,9 +99,26 @@ class CommandScheduler final : public wpi::Sendable,
   /**
    * Schedules a command for execution. Does nothing if the command is already
    * scheduled. If a command's requirements are not available, it will only be
+   * started if all the commands currently using those requirements are
+   * interruptible. If this is the case, they will be interrupted and the
+   * command will be scheduled.
+   *
+   * @param command the command to schedule
+   */
+  void Schedule(CommandPtr&& command);
+
+  /**
+   * Schedules a command for execution. Does nothing if the command is already
+   * scheduled. If a command's requirements are not available, it will only be
    * started if all the commands currently using those requirements have been
    * scheduled as interruptible. If this is the case, they will be interrupted
    * and the command will be scheduled.
+   *
+   * The pointer must remain valid through the entire lifecycle of the command.
+   *
+   * @warning Using this function directly can often lead to unexpected behavior
+   * and should be avoided. Instead Triggers should be used to schedule
+   * Commands.
    *
    * @param command the command to schedule
    */
@@ -107,6 +128,10 @@ class CommandScheduler final : public wpi::Sendable,
    * Schedules multiple commands for execution. Does nothing for commands
    * already scheduled.
    *
+   * @warning Using this function directly can often lead to unexpected behavior
+   * and should be avoided. Instead Triggers should be used to schedule
+   * Commands.
+   *
    * @param commands the commands to schedule
    */
   void Schedule(std::span<Command* const> commands);
@@ -114,6 +139,10 @@ class CommandScheduler final : public wpi::Sendable,
   /**
    * Schedules multiple commands for execution. Does nothing for commands
    * already scheduled.
+   *
+   * @warning Using this function directly can often lead to unexpected behavior
+   * and should be avoided. Instead Triggers should be used to schedule
+   * Commands.
    *
    * @param commands the commands to schedule
    */
@@ -332,6 +361,11 @@ class CommandScheduler final : public wpi::Sendable,
    * Enables the command scheduler.
    */
   void Enable();
+
+  /**
+   * Prints list of epochs added so far and their times.
+   */
+  void PrintWatchdogEpochs();
 
   /**
    * Adds an action to perform on the initialization of any command by the

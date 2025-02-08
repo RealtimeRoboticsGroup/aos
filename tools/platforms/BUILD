@@ -60,6 +60,7 @@ platform(
         "//tools/platforms/rust:lacks_support",
         "//tools/platforms/nodejs:lacks_support",
         "//tools/platforms/gpu:none",
+        "@rules_bzlmodrio_toolchains//constraints/is_roborio:true",
     ],
 )
 

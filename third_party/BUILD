@@ -16,7 +16,7 @@ cc_library(
     name = "wpilib_hal",
     target_compatible_with = ["//tools/platforms/hardware:roborio"],
     visibility = ["//visibility:public"],
-    deps = ["//third_party/allwpilib:hal"],
+    deps = ["@com_github_wpilibsuite_allwpilib//hal:wpiHal.static"],
 )
 
 cc_library(
