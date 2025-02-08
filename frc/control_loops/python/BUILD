@@ -324,3 +324,19 @@ py_binary(
         "@pip//python_gflags",
     ],
 )
+
+py_binary(
+    name = "arm",
+    srcs = [
+        "arm.py",
+    ],
+    legacy_create_init = False,
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+    deps = [
+        ":controls",
+        ":angular_system",
+        ":python_init",
+        "@pip//glog",
+        "@pip//python_gflags",
+    ],
+)
