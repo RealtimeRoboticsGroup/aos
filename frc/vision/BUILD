@@ -4,6 +4,7 @@ load("//aos:config.bzl", "aos_config")
 load("//aos/flatbuffers:generate.bzl", "static_flatbuffer")
 load("//frc:downloader.bzl", "robot_downloader")
 load("//tools/build_rules:template.bzl", "jinja2_template")
+load(":validator.bzl", "camera_constants_json")
 
 cc_binary(
     name = "modify_extrinsics",
@@ -634,9 +635,28 @@ cc_binary(
 )
 
 jinja2_template(
-    name = "constants.json",
+    name = "constants_unvalidated.json",
     src = "constants.jinja2.json",
     includes = glob([
         "constants/*.json",
     ]),
+)
+
+cc_binary(
+    name = "camera_constants_formatter",
+    srcs = ["camera_constants_formatter.cc"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":camera_constants_list_fbs",
+        "//aos:init",
+        "//aos:json_to_flatbuffer",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
+    ],
+)
+
+camera_constants_json(
+    name = "camera_constants_json",
+    src = ":constants_unvalidated.json",
+    out = "constants.json",
 )

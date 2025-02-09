@@ -4,8 +4,11 @@
       "team": 4646,
       "data": {
         "calibration": [
-          {% include 'frc/vision/constants/calibration_orin-4646-0.json' %}
-          /* TODO(austin): Move calibration out to jinja, and validate.*/
+          {% include 'frc/vision/constants/calibration_orin1-4646-0_cam-25-01_2025-02-02_21-02-33.json' %},
+          /* TODO(austin): Validate. */
+          {% include 'frc/vision/constants/calibration_orin1-4646-1_cam-25-02_2025-02-02_21-25-24.json' %},
+          {% include 'frc/vision/constants/calibration_orin1-4646-2_cam-25-03_fake.json' %},
+          {% include 'frc/vision/constants/calibration_orin1-4646-3_cam-25-04_fake.json' %}
         ]
       }
     }
