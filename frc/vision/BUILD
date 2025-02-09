@@ -548,6 +548,7 @@ robot_downloader(
         ":image_logger",
         ":intrinsics_calibration",
         ":turbojpeg_decoder",
+        ":network_tables_publisher",
         ":vision_constants_sender",
         "//aos/events:aos_timing_report_streamer",
         "//aos/starter:irq_affinity",
@@ -659,4 +660,18 @@ camera_constants_json(
     name = "camera_constants_json",
     src = ":constants_unvalidated.json",
     out = "constants.json",
+)
+
+cc_binary(
+    name = "network_tables_publisher",
+    srcs = ["network_tables_publisher.cc"],
+    deps = [
+        ":target_map_fbs",
+        "//aos:configuration",
+        "//aos:init",
+        "//aos/events:shm_event_loop",
+        "@com_github_wpilibsuite_allwpilib//ntcore:ntcore.static",
+        "@com_google_absl//absl/flags:flag",
+        "@org_tuxfamily_eigen//:eigen",
+    ],
 )
