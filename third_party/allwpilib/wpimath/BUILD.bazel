@@ -10,12 +10,10 @@ filegroup(
 
 cc_library(
     name = "eigen-headers",
-    hdrs = glob([
-        "src/main/native/thirdparty/eigen/include/**",
-    ]),
-    includes = ["src/main/native/thirdparty/eigen/include"],
-    strip_include_prefix = "src/main/native/thirdparty/eigen/include",
     visibility = ["//wpimath:__subpackages__"],
+    deps = [
+        "@org_tuxfamily_eigen//:eigen",
+    ],
 )
 
 cc_library(
