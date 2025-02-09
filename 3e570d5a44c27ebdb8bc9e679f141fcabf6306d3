@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "4cef1b1d_a13e8664",
+        "filename": "frc/orin/apriltag_detect.cc",
+        "patchSetId": 4
+      },
+      "lineNbr": 632,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-02-09T02:38:05Z",
+      "side": 1,
+      "message": "Passing null pointers to matd_destroy is safe.",
+      "range": {
+        "startLine": 630,
+        "startChar": 0,
+        "endLine": 632,
+        "endChar": 0
+      },
+      "revId": "3e570d5a44c27ebdb8bc9e679f141fcabf6306d3",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    }
+  ]
+}
