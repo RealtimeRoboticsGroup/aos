@@ -6,7 +6,8 @@
       "type": "aos.timing.Report",
       "source_node": "orin",
       "num_senders": 20,
-      "max_size": 8192
+      "frequency": 25,
+      "max_size": 16384
     },
     {
       "name": "/aos",
@@ -20,7 +21,7 @@
       "name": "/aos",
       "type": "aos.starter.Status",
       "source_node": "orin",
-      "max_size": 4096
+      "max_size": 8192
     },
     {
       "name": "/aos",
@@ -78,7 +79,8 @@
       "name": "/camera0/gray",
       "type": "foxglove.ImageAnnotations",
       "source_node": "orin",
-      "frequency": 80
+      "frequency": 80,
+      "max_size": 2048
     },
     {
       "name": "/camera1",
@@ -110,7 +112,8 @@
       "name": "/camera1/gray",
       "type": "foxglove.ImageAnnotations",
       "source_node": "orin",
-      "frequency": 80
+      "frequency": 80,
+      "max_size": 2048
     },
     {
       "name": "/camera2",
@@ -142,7 +145,8 @@
       "name": "/camera2/gray",
       "type": "foxglove.ImageAnnotations",
       "source_node": "orin",
-      "frequency": 80
+      "frequency": 80,
+      "max_size": 2048
     },
     {
       "name": "/camera3",
@@ -174,7 +178,8 @@
       "name": "/camera3/gray",
       "type": "foxglove.ImageAnnotations",
       "source_node": "orin",
-      "frequency": 80
+      "frequency": 80,
+      "max_size": 2048
     },
     {
       "name": "/aos",

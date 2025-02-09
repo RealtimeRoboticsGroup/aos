@@ -1,0 +1,43 @@
+From 98f97380c47ef53a80219cd1d5a4317c56cd1d10 Mon Sep 17 00:00:00 2001
+From: Austin Schuh <austin.linux@gmail.com>
+Date: Sun, 9 Feb 2025 15:16:34 -0800
+Subject: [PATCH] Make platform constraints more flexible
+
+I've got toolchains for yocto based linux distributions which are very
+much linux and unix, but don't match the constraints here.  I want to be
+able to build network tables for them.  Really, the goal of these is to
+detect linux, not the particular blessed variants of linux, so say that
+in the constraints.
+
+Signed-off-by: Austin Schuh <austin.linux@gmail.com>
+---
+ constraints/combined/BUILD.bazel | 8 +++-----
+ 1 file changed, 3 insertions(+), 5 deletions(-)
+
+diff --git a/constraints/combined/BUILD.bazel b/constraints/combined/BUILD.bazel
+index d4b57c6..cd4cfda 100644
+--- a/constraints/combined/BUILD.bazel
++++ b/constraints/combined/BUILD.bazel
+@@ -17,16 +17,14 @@ selects.config_setting_group(
+ selects.config_setting_group(
+     name = "is_unix",
+     match_any = [
+-        ":is_cross_compiler",
+-        "@bazel_tools//src/conditions:darwin",
+-        "@bazel_tools//src/conditions:linux_x86_64",
++        "@platforms//os:macos",
++        "@platforms//os:linux",
+     ],
+ )
+ 
+ selects.config_setting_group(
+     name = "is_linux",
+     match_any = [
+-        ":is_cross_compiler",
+-        "@bazel_tools//src/conditions:linux_x86_64",
++        "@platforms//os:linux",
+     ],
+ )
+-- 
+2.39.5
+
