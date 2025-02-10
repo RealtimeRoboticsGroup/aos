@@ -627,8 +627,12 @@ class ShmWatcherState : public WatcherState {
 
   void UnregisterWakeup() { return simple_shm_fetcher_.UnregisterWakeup(); }
 
-  absl::Span<const char> GetSharedMemory() const {
-    return simple_shm_fetcher_.GetConstSharedMemory();
+  absl::Span<char> GetMutableSharedMemory() const {
+    return simple_shm_fetcher_.GetMutableSharedMemory();
+  }
+
+  void SetUseWritableMemory(bool use_writable_memory) {
+    simple_shm_fetcher_.SetUseWritableMemory(use_writable_memory);
   }
 
  private:
@@ -1209,12 +1213,20 @@ void ShmEventLoop::set_name(const std::string_view name) {
   UpdateTimingReport();
 }
 
-absl::Span<const char> ShmEventLoop::GetWatcherSharedMemory(
+void ShmEventLoop::SetWatcherUseWritableMemory(
+    const Channel *channel, bool use_writable_memory) {
+  CheckCurrentThread();
+  ShmWatcherState *const watcher_state =
+      static_cast<ShmWatcherState *>(GetWatcherState(channel));
+  return watcher_state->SetUseWritableMemory(use_writable_memory);
+}
+
+absl::Span<char> ShmEventLoop::GetWatcherSharedMemory(
     const Channel *channel) {
   CheckCurrentThread();
   ShmWatcherState *const watcher_state =
       static_cast<ShmWatcherState *>(GetWatcherState(channel));
-  return watcher_state->GetSharedMemory();
+  return watcher_state->GetMutableSharedMemory();
 }
 
 int ShmEventLoop::NumberBuffers(const Channel *channel) {
