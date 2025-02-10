@@ -1,5 +1,5 @@
-#ifndef Y2020_VISION_CHARUCO_LIB_H_
-#define Y2020_VISION_CHARUCO_LIB_H_
+#ifndef FRC_VISION_CHARUCO_LIB_H_
+#define FRC_VISION_CHARUCO_LIB_H_
 
 #include <functional>
 #include <string_view>
@@ -233,4 +233,4 @@ flatbuffers::Offset<foxglove::PointsAnnotation> BuildPointsAnnotation(
 
 }  // namespace frc::vision
 
-#endif  // Y2020_VISION_CHARUCO_LIB_H_
+#endif  // FRC_VISION_CHARUCO_LIB_H_

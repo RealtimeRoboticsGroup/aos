@@ -185,6 +185,19 @@ cc_library(
 )
 
 cc_library(
+    name = "cuda_camera_image_callback",
+    srcs = ["cuda_camera_image_callback.cc"],
+    hdrs = ["cuda_camera_image_callback.h"],
+    target_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":charuco_lib",
+        "//aos/events:shm_event_loop",
+        "//frc/orin:cuda",
+    ],
+)
+
+cc_library(
     name = "extrinsics_calibration",
     srcs = [
         "calibration_accumulator.cc",
