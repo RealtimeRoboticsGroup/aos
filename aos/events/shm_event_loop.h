@@ -103,7 +103,18 @@ class ShmEventLoop : public EventLoop {
   // Returns the local mapping of the shared memory used by the watcher on the
   // specified channel. A watcher must be created on this channel before calling
   // this.
-  absl::Span<const char> GetWatcherSharedMemory(const Channel *channel);
+  absl::Span<char> GetWatcherSharedMemory(const Channel *channel);
+
+  // Setting "use writeable memory" to false (the default) means that the
+  // watcher will provide messages in a read-only memory region. Setting "use
+  // writeable memory" to true means that the watcher will provide messages in a
+  // writeable memory. Only use this if you absolutely know what you're doing.
+  // You should only use this if you're interacting with something like CUDA
+  // which expects writeable memory in its API. Note that regardless of this
+  // setting, the API for watcher doesn't change. The messages will still be
+  // `const`.
+  void SetWatcherUseWritableMemory(const Channel *channel,
+                                   bool use_writable_memory);
 
   // Returns the local mapping of the shared memory used by the provided Sender.
   template <typename T>
