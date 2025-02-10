@@ -761,21 +761,25 @@ void GpuDetector::Detect(const uint8_t *image, const uint8_t *image_device) {
 
   after_compact_.Record(&stream_);
 
-  int num_compressed_union_marker_pair_host;
   {
-    num_compressed_union_marker_pair_device_.MemcpyTo(
-        &num_compressed_union_marker_pair_host);
-    CHECK_LT(static_cast<size_t>(num_compressed_union_marker_pair_host),
+    num_compressed_union_marker_pair_device_.MemcpyAsyncTo(
+        &num_compressed_union_marker_pair_host_, &stream_);
+    CHECK_LT(static_cast<size_t>(*num_compressed_union_marker_pair_host_.get()),
              union_marker_pair_device_.size());
+  }
 
+  after_num_compact_memcpy_.Record(&stream_);
+
+  {
     // Now, sort just the keys to group like points.
     size_t temp_storage_bytes = radix_sort_tmpstorage_device_.size();
     QuadBoundaryPointDecomposer decomposer;
+    after_num_compact_memcpy_.Synchronize();
     CHECK_CUDA(cub::DeviceRadixSort::SortKeys(
         radix_sort_tmpstorage_device_.get(), temp_storage_bytes,
         compressed_union_marker_pair_device_.get(),
         sorted_union_marker_pair_device_.get(),
-        num_compressed_union_marker_pair_host, decomposer,
+        *num_compressed_union_marker_pair_host_.get(), decomposer,
         QuadBoundaryPoint::kRepEndBit, QuadBoundaryPoint::kBitsInKey,
         stream_.get()));
 
@@ -784,7 +788,6 @@ void GpuDetector::Detect(const uint8_t *image, const uint8_t *image_device) {
 
   after_sort_.Record(&stream_);
 
-  size_t num_quads_host = 0;
   {
     // Our next step is to compute the extents and dot product so we can filter
     // blobs.
@@ -813,10 +816,12 @@ void GpuDetector::Detect(const uint8_t *image, const uint8_t *image_device) {
         temp_storage_bounds_reduce_by_key_device_.get(), temp_storage_bytes,
         key_input_iterator, key_discard_iterator, value_input_iterator,
         extents_device_.get(), num_quads_device_.get(), reduce,
-        num_compressed_union_marker_pair_host, stream_.get());
+        *num_compressed_union_marker_pair_host_.get(), stream_.get());
     after_bounds_.Record(&stream_);
 
-    num_quads_device_.MemcpyTo(&num_quads_host);
+    num_quads_device_.MemcpyAsyncTo(&num_quads_host_, &stream_);
+    after_bounds_memcpy_.Record(&stream_);
+
   }
 
   // Longest april tag will be the full perimeter of the image.  Each point
@@ -854,10 +859,13 @@ void GpuDetector::Detect(const uint8_t *image, const uint8_t *image_device) {
     // post-selected values.
     size_t temp_storage_bytes =
         temp_storage_selected_extents_scan_device_.size();
+
+    after_bounds_memcpy_.Synchronize();
+
     CHECK_CUDA(cub::DeviceScan::InclusiveScan(
         temp_storage_selected_extents_scan_device_.get(), temp_storage_bytes,
         input_iterator, selected_extents_device_.get(), sum_points,
-        num_quads_host));
+        *num_quads_host_.get(), stream_.get()));
 
     MaybeCheckAndSynchronize("cub::DeviceScan::InclusiveScan");
   }
@@ -869,13 +877,13 @@ void GpuDetector::Detect(const uint8_t *image, const uint8_t *image_device) {
     // Now, copy over all points which pass our thresholds.
     cub::ArgIndexInputIterator<QuadBoundaryPoint *> value_index_input_iterator(
         sorted_union_marker_pair_device_.get());
-    RewriteToIndexPoint rewrite(extents_device_.get(), num_quads_host);
+    RewriteToIndexPoint rewrite(extents_device_.get(), *num_quads_host_.get());
 
     cub::TransformInputIterator<IndexPoint, RewriteToIndexPoint,
                                 cub::ArgIndexInputIterator<QuadBoundaryPoint *>>
         input_iterator(value_index_input_iterator, rewrite);
 
-    AddThetaToIndexPoint add_theta(extents_device_.get(), num_quads_host);
+    AddThetaToIndexPoint add_theta(extents_device_.get(), *num_quads_host_.get());
 
     TransformOutputIterator<IndexPoint, IndexPoint, AddThetaToIndexPoint>
         output_iterator(selected_blobs_device_.get(), add_theta);
@@ -888,8 +896,9 @@ void GpuDetector::Detect(const uint8_t *image, const uint8_t *image_device) {
     CHECK_CUDA(cub::DeviceSelect::If(
         temp_storage_compressed_filtered_blobs_device_.get(),
         temp_storage_bytes, input_iterator, output_iterator,
-        num_selected_blobs_device_.get(), num_compressed_union_marker_pair_host,
-        select_blobs, stream_.get()));
+        num_selected_blobs_device_.get(),
+        *num_compressed_union_marker_pair_host_.get(), select_blobs,
+        stream_.get()));
 
     MaybeCheckAndSynchronize("cub::DeviceSelect::If");
 
@@ -950,9 +959,9 @@ void GpuDetector::Detect(const uint8_t *image, const uint8_t *image_device) {
 
   {
     FitLines(line_fit_points_device_.get(), num_selected_blobs_host,
-             selected_extents_device_.get(), num_quads_host, errs_device_.get(),
-             filtered_errs_device_.get(), filtered_is_local_peak_device_.get(),
-             &stream_);
+             selected_extents_device_.get(), *num_quads_host_.get(),
+             errs_device_.get(), filtered_errs_device_.get(),
+             filtered_is_local_peak_device_.get(), &stream_);
   }
   after_line_filter_.Record(&stream_);
 
@@ -1067,9 +1076,10 @@ void GpuDetector::Detect(const uint8_t *image, const uint8_t *image_device) {
 
   // Report out how long things took.
 
-  VLOG(1) << "Found " << num_compressed_union_marker_pair_host << " items";
+  VLOG(1) << "Found " << *num_compressed_union_marker_pair_host_.get()
+          << " items";
   VLOG(1) << "Selected " << num_selected_blobs_host << " right side out points";
-  VLOG(1) << "Found compressed runs: " << num_quads_host;
+  VLOG(1) << "Found compressed runs: " << *num_quads_host_.get();
   VLOG(1) << "Peaks " << num_compressed_peaks_host << " peaks";
   VLOG(1) << "Peak Selected blobs " << num_quad_peaked_quads_host << " quads";
   CudaEvent *previous_event = &start_;
@@ -1081,8 +1091,10 @@ void GpuDetector::Detect(const uint8_t *image, const uint8_t *image_device) {
            {"Unionfinding", after_unionfinding_},
            {"Diff", after_diff_},
            {"Compact", after_compact_},
+           {"Memcpy Compact", after_num_compact_memcpy_},
            {"Sort", after_sort_},
            {"Bounds", after_bounds_},
+           {"Bounds Memcpy", after_bounds_memcpy_},
            {"Transform Extents", after_transform_extents_},
            {"Filter by dot product", after_filter_},
            {"Filtered sort", after_filtered_sort_},
