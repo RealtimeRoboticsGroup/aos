@@ -669,23 +669,26 @@ struct MergePeakExtents {
 
 }  // namespace
 
-void GpuDetector::Detect(const uint8_t *image) {
+void GpuDetector::Detect(const uint8_t *image, const uint8_t *image_device) {
   const aos::monotonic_clock::time_point start_time =
       aos::monotonic_clock::now();
   start_.Record(&stream_);
-  color_image_device_.MemcpyAsyncFrom(image, &stream_);
+  if (image_device == nullptr) {
+    color_image_device_.MemcpyAsyncFrom(image, &stream_);
+    image_device = color_image_device_.get();
+  }
   after_image_memcpy_to_device_.Record(&stream_);
 
   // Threshold the image.
   threshold_->CudaThresholdAndDecimate(
-      color_image_device_.get(), decimated_image_device_.get(),
+      image_device, decimated_image_device_.get(),
       unfiltered_minmax_image_device_.get(), minmax_image_device_.get(),
       thresholded_image_device_.get(), width_, height_,
       tag_detector_->qtp.min_white_black_diff, &stream_);
   after_threshold_.Record(&stream_);
 
   if (image_format_ != vision::ImageFormat::MONO8) {
-    threshold_->CudaToGreyscale(color_image_device_.get(),
+    threshold_->CudaToGreyscale(image_device,
                                 gray_image_device_.get(), width_, height_,
                                 &stream_);
     gray_image_device_.MemcpyAsyncTo(&gray_image_host_, &stream_);
