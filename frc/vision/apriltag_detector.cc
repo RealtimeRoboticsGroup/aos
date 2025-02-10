@@ -55,6 +55,8 @@ void GpuApriltagDetector() {
       &event_loop, absl::GetFlag(FLAGS_channel), calibration,
       absl::GetFlag(FLAGS_width), absl::GetFlag(FLAGS_height));
 
+  detector.PinMemory(&event_loop);
+
   // TODO(austin): Figure out our core pinning strategy.
   // event_loop.SetRuntimeAffinity(aos::MakeCpusetFromCpus({5}));
 
