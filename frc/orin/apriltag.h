@@ -99,7 +99,7 @@ class GpuDetector {
   size_t height() const { return height_; }
 
   // Detects april tags in the provided image.
-  void Detect(const uint8_t *image);
+  void Detect(const uint8_t *image, const uint8_t *image_device);
 
   const std::vector<QuadCorners> &FitQuads() const;
 
