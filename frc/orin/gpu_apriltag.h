@@ -20,6 +20,7 @@
 #include "frc/orin/apriltag_types.h"
 #include "frc/vision/calibration_generated.h"
 #include "frc/vision/charuco_lib.h"
+#include "frc/vision/cuda_camera_image_callback.h"
 #include "frc/vision/target_map_generated.h"
 #include "frc/vision/vision_generated.h"
 
@@ -71,6 +72,10 @@ class ApriltagDetector {
 
   ~ApriltagDetector();
 
+  void PinMemory(aos::ShmEventLoop *shm_event_loop) {
+    image_callback_.PinMemory(shm_event_loop);
+  }
+
   // Creates the GPU-based Apriltag detector.
   apriltag_detector_t *MakeTagDetector(apriltag_family_t *tag_family);
 
@@ -119,7 +124,7 @@ class ApriltagDetector {
   frc::apriltag::GpuDetector gpu_detector_;
   cv::Size image_size_;
 
-  frc::vision::CameraImageCallback image_callback_;
+  frc::vision::CudaCameraImageCallback image_callback_;
   aos::Sender<frc::vision::TargetMap> target_map_sender_;
   aos::Sender<foxglove::ImageAnnotations> image_annotations_sender_;
   size_t rejections_;

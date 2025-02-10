@@ -336,7 +336,7 @@ class CudaAprilTagDetector {
   void DetectGPU(cv::Mat color_image) {
     CHECK_EQ(color_image.size(), gray_cuda_.size());
 
-    gpu_detector_.Detect(color_image.data);
+    gpu_detector_.Detect(color_image.data, nullptr);
 
     gpu_detector_.CopyGrayTo(gray_cuda_.data);
     gpu_detector_.CopyDecimatedTo(decimated_cuda_.data);
