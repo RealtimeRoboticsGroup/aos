@@ -2,6 +2,7 @@ namespace aos;
 
 table TestMessage {
   value:int (id: 0);
+  data:[ubyte] (id: 1);
 }
 
 root_type TestMessage;

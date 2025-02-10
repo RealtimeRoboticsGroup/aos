@@ -405,6 +405,15 @@ class LocklessQueuePinner {
   size_t size() const;
   const void *Data() const;
 
+  // If set to `true`, changes the pinner to point at writable memory instead of
+  // read-only memory. Specifically, the `Data()` call will point into writable
+  // memory. Only use this if you absolutely know what you're doing. Calling
+  // this function with `false` (the default) will cause `Data()` to point at
+  // the read-only memory.
+  void set_use_writable_memory(bool use_writable_memory) {
+    use_writable_memory_ = use_writable_memory;
+  }
+
  private:
   LocklessQueuePinner(LocklessQueueMemory *memory,
                       const LocklessQueueMemory *const_memory);
@@ -415,6 +424,8 @@ class LocklessQueuePinner {
 
   // Index into the pinner list.
   int pinner_index_ = -1;
+
+  bool use_writable_memory_ = false;
 };
 
 class LocklessQueueReader {
@@ -461,9 +472,20 @@ class LocklessQueueReader {
   // more than 2^32 messages are sent.
   QueueIndex LatestIndex() const;
 
+  // If set to `true`, changes the reader to point at writable memory instead of
+  // read-only memory. Specifically, the `Read()` call will return a message
+  // that points into writable memory. Only use this if you absolutely know what
+  // you're doing. Calling this function with `false` (the default) will cause
+  // `Read()` to return a message that points at the read-only memory.
+  void set_use_writable_memory(bool use_writable_memory) {
+    use_writable_memory_ = use_writable_memory;
+  }
+
  private:
   LocklessQueueMemory *const memory_;
   const LocklessQueueMemory *const_memory_;
+
+  bool use_writable_memory_ = false;
 };
 
 // Returns the number of messages which are logically in the queue at a time.

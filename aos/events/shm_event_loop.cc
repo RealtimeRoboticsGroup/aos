@@ -227,6 +227,13 @@ class SimpleShmFetcher {
         LocklessQueueMessageDataSize(lockless_queue_memory_.memory()));
   }
 
+  void SetUseWritableMemory(bool use_writable_memory) {
+    if (pin_data()) {
+      pinner_->set_use_writable_memory(use_writable_memory);
+    }
+    reader_.set_use_writable_memory(use_writable_memory);
+  }
+
  private:
   ipc_lib::LocklessQueueReader::Result DoFetch(
       ipc_lib::QueueIndex queue_index,
@@ -396,6 +403,14 @@ class ShmFetcher : public RawFetcher {
 
   absl::Span<const char> GetPrivateMemory() const {
     return simple_shm_fetcher_.GetPrivateMemory();
+  }
+
+  absl::Span<char> GetMutableSharedMemory() const {
+    return simple_shm_fetcher_.GetMutableSharedMemory();
+  }
+
+  void SetUseWritableMemory(bool use_writable_memory) {
+    simple_shm_fetcher_.SetUseWritableMemory(use_writable_memory);
   }
 
  private:
@@ -1218,6 +1233,18 @@ absl::Span<const char> ShmEventLoop::GetShmFetcherPrivateMemory(
     const aos::RawFetcher *fetcher) const {
   CheckCurrentThread();
   return static_cast<const ShmFetcher *>(fetcher)->GetPrivateMemory();
+}
+
+absl::Span<char> ShmEventLoop::GetShmFetcherSharedMemory(
+    const aos::RawFetcher *fetcher) const {
+  CheckCurrentThread();
+  return static_cast<const ShmFetcher *>(fetcher)->GetMutableSharedMemory();
+}
+
+void ShmEventLoop::SetShmFetcherUseWritableMemory(
+    aos::RawFetcher *fetcher, bool use_writable_memory) const {
+  CheckCurrentThread();
+  static_cast<ShmFetcher *>(fetcher)->SetUseWritableMemory(use_writable_memory);
 }
 
 pid_t ShmEventLoop::GetTid() {

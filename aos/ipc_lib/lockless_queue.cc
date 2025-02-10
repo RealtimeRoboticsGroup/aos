@@ -484,8 +484,8 @@ size_t LocklessQueueMemorySize(LocklessQueueConfiguration config) {
 // Calculates the starting byte for a redzone in shared memory. This starting
 // value is simply incremented for subsequent bytes.
 //
-// The result is based on the offset of the region in shared memor, to ensure it
-// is the same for each region when we generate and verify, but different for
+// The result is based on the offset of the region in shared memory, to ensure
+// it is the same for each region when we generate and verify, but different for
 // each region to help catch forms of corruption like copying out-of-bounds data
 // from one place to another.
 //
@@ -1298,7 +1298,10 @@ const void *LocklessQueuePinner::Data() const {
       const_memory_->GetPinner(pinner_index_);
   QueueIndex pinned = pinner->pinned.RelaxedLoad(queue_size);
   CHECK(pinned.valid());
-  const Message *message = const_memory_->GetMessage(pinned);
+
+  const Message *message = use_writable_memory_
+                               ? memory_->GetMessage(pinned)
+                               : const_memory_->GetMessage(pinned);
 
   return message->data(const_memory_->message_data_size());
 }
@@ -1321,10 +1324,12 @@ LocklessQueueReader::Result LocklessQueueReader::Read(
 
   // Read the message stored at the requested location.
   Index mi = const_memory_->LoadIndex(queue_index);
-  const Message *m = const_memory_->GetMessage(mi);
+  const Message *m = use_writable_memory_ ? memory_->GetMessage(mi)
+                                          : const_memory_->GetMessage(mi);
 
   while (true) {
-    DCHECK(!CheckBothRedzones(const_memory_, m))
+    DCHECK(
+        !CheckBothRedzones(use_writable_memory_ ? memory_ : const_memory_, m))
         << ": Invalid message found in shared memory";
     // We need to confirm that the data doesn't change while we are reading it.
     // Do that by first confirming that the message points to the queue index we
@@ -1342,7 +1347,9 @@ LocklessQueueReader::Result LocklessQueueReader::Read(
       // Someone has re-used this message between when we pulled it out of the
       // queue and when we grabbed its index.  It is pretty hard to deduce
       // what happened. Just try again.
-      const Message *const new_m = const_memory_->GetMessage(queue_index);
+      const Message *const new_m = use_writable_memory_
+                                       ? memory_->GetMessage(queue_index)
+                                       : const_memory_->GetMessage(queue_index);
       if (m != new_m) {
         m = new_m;
         VLOG(3) << "Retrying, m doesn't match";

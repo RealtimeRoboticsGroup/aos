@@ -5,6 +5,7 @@
 #include "absl/flags/flag.h"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 #include "aos/events/event_loop_param_test.h"
@@ -395,14 +396,95 @@ TEST_P(ShmEventLoopTest, GetFetcherPrivateMemory) {
   auto sender = loop2->MakeSender<TestMessage>("/test");
   {
     auto builder = sender.MakeBuilder();
+    const std::vector<uint8_t> data{1, 2, 3};
+    flatbuffers::Offset<flatbuffers::Vector<uint8_t>> data_offset =
+        builder.fbb()->CreateVector(data);
+
     TestMessage::Builder test_builder(*builder.fbb());
     test_builder.add_value(1);
+    test_builder.add_data(data_offset);
+
     builder.CheckOk(builder.Send(test_builder.Finish()));
   }
 
   ASSERT_TRUE(fetcher.Fetch());
   EXPECT_GE(fetcher.context().data, private_memory.begin());
   EXPECT_LT(fetcher.context().data, private_memory.end());
+
+  if (GetParam() == ReadMethod::PIN) {
+    // For pinned messages only, we can get access to the full underlying
+    // memory. For copied messages, we only get a sub-portion of the memory so
+    // this test won't work. Validate that we can also access the underlying
+    // memory in a writable manner.
+    ASSERT_TRUE(fetcher->has_data());
+    EXPECT_THAT(*fetcher->data(), ::testing::ElementsAre(1, 2, 3));
+
+    // Get read-write access to the fetcher's underlying memory. It should not
+    // be overlapping with the private memory.
+    const auto shared_memory = loop1->GetFetcherSharedMemory(&fetcher);
+    EXPECT_TRUE(shared_memory.end() <= private_memory.data() ||
+                shared_memory.data() >= private_memory.end());
+    const ptrdiff_t offset =
+        fetcher->data()->data() -
+        reinterpret_cast<const uint8_t *>(private_memory.data());
+    // Do some sanity checks that we got the right data.
+    EXPECT_EQ(shared_memory[offset + 0], 1);
+    EXPECT_EQ(shared_memory[offset + 1], 2);
+    EXPECT_EQ(shared_memory[offset + 2], 3);
+
+    // Change the fetcher's result by poking directly at the shared memory.
+    shared_memory[offset] = 5;
+    EXPECT_THAT(*fetcher->data(), ::testing::ElementsAre(5, 2, 3));
+  }
+}
+
+// Validates that we can make fetchers point at writable memory.
+TEST_P(ShmEventLoopTest, SetFetcherUseWritableMemory) {
+  auto generic_loop1 = factory()->MakePrimary("primary");
+  ShmEventLoop *const loop1 = static_cast<ShmEventLoop *>(generic_loop1.get());
+
+  // Check that GetFetcherSharedMemory returns non-null/non-empty memory span.
+  auto fetcher = loop1->MakeFetcher<TestMessage>("/test");
+  const auto shared_memory = loop1->GetFetcherSharedMemory(&fetcher);
+  EXPECT_FALSE(shared_memory.empty());
+
+  loop1->SetFetcherUseWritableMemory(&fetcher, true);
+
+  // Send out a simple message with some bytes stuffed in.
+  auto loop2 = factory()->Make("sender");
+  auto sender = loop2->MakeSender<TestMessage>("/test");
+  {
+    auto builder = sender.MakeBuilder();
+    const std::vector<uint8_t> data{1, 2, 3};
+    flatbuffers::Offset<flatbuffers::Vector<uint8_t>> data_offset =
+        builder.fbb()->CreateVector(data);
+    TestMessage::Builder test_builder(*builder.fbb());
+    test_builder.add_data(data_offset);
+    builder.CheckOk(builder.Send(test_builder.Finish()));
+  }
+
+  ASSERT_TRUE(fetcher.Fetch());
+
+  if (GetParam() == ReadMethod::PIN) {
+    // For pinned messages only, we can get access to the full underlying
+    // memory. For copied messages, we only get a sub-portion of the memory so
+    // this test won't work. Validate that we can also access the underlying
+    // memory in a writable manner.
+    ASSERT_TRUE(fetcher->has_data());
+    EXPECT_THAT(*fetcher->data(), ::testing::ElementsAre(1, 2, 3));
+
+    // Get read-write access to the fetcher's underlying memory. Since we called
+    // SetFetcherUseWritableMemory(true), we can modify the memory directly.
+    uint8_t *data = const_cast<uint8_t *>(fetcher->data()->data());
+
+    // Validate that the message is in the writable section.
+    EXPECT_GE(data, reinterpret_cast<uint8_t *>(shared_memory.begin()));
+    EXPECT_LT(data, reinterpret_cast<uint8_t *>(shared_memory.end()));
+
+    // Change the fetcher's result by poking directly at the shared memory.
+    *data = 5;
+    EXPECT_THAT(*fetcher->data(), ::testing::ElementsAre(5, 2, 3));
+  }
 }
 
 // Tests that corrupting the bytes around the data buffer results in a crash.
