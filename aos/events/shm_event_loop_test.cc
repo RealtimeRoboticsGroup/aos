@@ -352,6 +352,7 @@ TEST_P(ShmEventLoopDeathTest, GetWatcherSharedMemory) {
     }
     factory()->Exit();
   });
+  loop1->SetWatcherUseWritableMemory(channel, true);
   shared_memory = loop1->GetWatcherSharedMemory(channel);
   EXPECT_FALSE(shared_memory.empty());
 
