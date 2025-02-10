@@ -21,11 +21,29 @@ halide_library(
 )
 
 cc_library(
+    name = "cuda",
+    srcs = [
+        "cuda.cc",
+    ],
+    hdrs = [
+        "cuda.h",
+    ],
+    features = ["cuda"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//third_party:cudart",
+        "@com_github_nvidia_cccl//:cccl",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
+    ],
+)
+
+cc_library(
     name = "apriltag",
     srcs = [
         "apriltag.cc",
         "apriltag_detect.cc",
-        "cuda.cc",
         "labeling_allegretti_2019_BKE.cc",
         "line_fit_filter.cc",
         "points.cc",
@@ -34,7 +52,6 @@ cc_library(
     hdrs = [
         "apriltag.h",
         "apriltag_types.h",
-        "cuda.h",
         "gpu_image.h",
         "labeling_allegretti_2019_BKE.h",
         "line_fit_filter.h",
@@ -50,6 +67,7 @@ cc_library(
     features = ["cuda"],
     visibility = ["//visibility:public"],
     deps = [
+        ":cuda",
         "//aos/time",
         "//frc/vision:vision_fbs",
         "//third_party:cudart",
@@ -156,7 +174,7 @@ cc_library(
         "//aos/events:shm_event_loop",
         "//frc/constants:constants_sender_lib",
         "//frc/vision:calibration_fbs",
-        "//frc/vision:charuco_lib",
+        "//frc/vision:cuda_camera_image_callback",
         "//frc/vision:target_map_fbs",
         "//frc/vision:vision_util_lib",
         "//third_party:opencv",
