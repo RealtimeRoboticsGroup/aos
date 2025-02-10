@@ -264,8 +264,10 @@ class GpuDetector {
   CudaEvent after_unionfinding_;
   CudaEvent after_diff_;
   CudaEvent after_compact_;
+  CudaEvent after_num_compact_memcpy_;
   CudaEvent after_sort_;
   CudaEvent after_bounds_;
+  CudaEvent after_bounds_memcpy_;
   CudaEvent after_transform_extents_;
   CudaEvent after_filter_;
   CudaEvent after_filtered_sort_;
@@ -310,9 +312,12 @@ class GpuDetector {
   // Number of compressed points.
   GpuMemory<int> num_compressed_union_marker_pair_device_{
       /* allocate 1 integer...*/ 1};
+  HostMemory<int> num_compressed_union_marker_pair_host_{
+      /* allocate 1 integer*/ 1};
 
   // Number of unique blob IDs.
   GpuMemory<size_t> num_quads_device_{/* allocate 1 integer...*/ 1};
+  HostMemory<size_t> num_quads_host_{/* allocate 1 integer...*/ 1};
   // Bounds per blob, one blob per ID.
   GpuMemory<MinMaxExtents> extents_device_;
   // Extents of all the blobs under consideration.
