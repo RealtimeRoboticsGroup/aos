@@ -52,6 +52,8 @@
     {
       "name": "/camera0",
       "type": "frc.vision.CameraImage",
+      "read_method": "PIN",
+      "num_readers": 4,
       "source_node": "orin",
       "max_size": 4172800,
       "frequency": 80
@@ -59,6 +61,8 @@
     {
       "name": "/camera0/gray",
       "type": "frc.vision.CameraImage",
+      "read_method": "PIN",
+      "num_readers": 4,
       "source_node": "orin",
       "logger": "NOT_LOGGED",
       "channel_storage_duration": 100000000,
@@ -81,6 +85,8 @@
     {
       "name": "/camera1",
       "type": "frc.vision.CameraImage",
+      "read_method": "PIN",
+      "num_readers": 4,
       "source_node": "orin",
       "max_size": 4172800,
       "frequency": 80
@@ -88,6 +94,8 @@
     {
       "name": "/camera1/gray",
       "type": "frc.vision.CameraImage",
+      "read_method": "PIN",
+      "num_readers": 4,
       "source_node": "orin",
       "logger": "NOT_LOGGED",
       "channel_storage_duration": 100000000,
@@ -110,6 +118,8 @@
     {
       "name": "/camera2",
       "type": "frc.vision.CameraImage",
+      "read_method": "PIN",
+      "num_readers": 4,
       "source_node": "orin",
       "max_size": 4172800,
       "frequency": 80
@@ -117,6 +127,8 @@
     {
       "name": "/camera2/gray",
       "type": "frc.vision.CameraImage",
+      "read_method": "PIN",
+      "num_readers": 4,
       "source_node": "orin",
       "logger": "NOT_LOGGED",
       "channel_storage_duration": 100000000,
@@ -139,6 +151,8 @@
     {
       "name": "/camera3",
       "type": "frc.vision.CameraImage",
+      "read_method": "PIN",
+      "num_readers": 4,
       "source_node": "orin",
       "max_size": 4172800,
       "frequency": 80
@@ -146,6 +160,8 @@
     {
       "name": "/camera3/gray",
       "type": "frc.vision.CameraImage",
+      "read_method": "PIN",
+      "num_readers": 4,
       "source_node": "orin",
       "logger": "NOT_LOGGED",
       "channel_storage_duration": 100000000,
