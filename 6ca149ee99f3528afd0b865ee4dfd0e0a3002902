@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "cc6102b5_699b7bbb",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-02-11T17:24:35Z",
+      "side": 1,
+      "message": "I\u0027d like to pull the april_generator.cc code into //frc.  That might be enough to hit the desired frame rate instead of doing it in CUDA.",
+      "revId": "6ca149ee99f3528afd0b865ee4dfd0e0a3002902",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    }
+  ]
+}
