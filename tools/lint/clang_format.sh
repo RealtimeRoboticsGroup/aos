@@ -29,7 +29,6 @@ cc_files=($(git ls-tree --name-only --full-tree -r @ \
         -e '^motors/pistol_grip/vtable_.*\.cc$' \
         -e '^motors/teensy_loader_cli/' \
         -e '^motors/usb/usb_' \
-        -e '^y2023/vision/rkisp1-config\.h$' \
     | (grep -e '\.c$' -e '\.cc$' -e '\.h$' || :)))
 
 # If we have any C/C++ files, format them.

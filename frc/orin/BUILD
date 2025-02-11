@@ -92,8 +92,6 @@ cc_test(
         "//frc/vision:vision_fbs",
         "//third_party:opencv",
         "//third_party/apriltag",
-        "//y2023/vision:ThresholdHalide",
-        "//y2023/vision:ToGreyscaleAndDecimateHalide",
     ],
 )
 
