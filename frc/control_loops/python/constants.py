@@ -142,16 +142,7 @@ FIELD = FIELDS["2024 Field"]
 
 
 def get_json_folder(field):
-    if field.year == 2020 or field.year == 2021:
-        return "y2020/actors/splines"
-    elif field.year == 2022:
-        return "y2022/actors/splines"
-    elif field.year == 2023:
-        return "y2023/autonomous/splines"
-    elif field.year == 2024:
-        return "y2024/autonomous/splines"
-    else:
-        return "frc/control_loops/python/spline_jsons"
+    return "frc/control_loops/python/spline_jsons"
 
 
 def inToM(i):

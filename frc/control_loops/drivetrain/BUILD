@@ -606,7 +606,7 @@ cc_binary(
         ":trajectory",
         "//aos/logging",
         "//aos/network:team_number",
-        "//y2020/control_loops/drivetrain:drivetrain_base",
+        "//frc/control_loops/drivetrain/test_robot:drivetrain_base",
         "@org_tuxfamily_eigen//:eigen",
     ],
 )
