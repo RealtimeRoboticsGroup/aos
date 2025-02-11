@@ -8,7 +8,7 @@
 #include "frc/control_loops/drivetrain/distance_spline.h"
 #include "frc/control_loops/drivetrain/spline.h"
 #include "frc/control_loops/drivetrain/trajectory.h"
-#include "y2020/control_loops/drivetrain/drivetrain_base.h"
+#include "frc/control_loops/drivetrain/test_robot/drivetrain_base.h"
 
 namespace frc::control_loops::drivetrain {
 
@@ -121,7 +121,7 @@ Trajectory *NewTrajectory(DistanceSpline *spline, double vmax,
   return new Trajectory(
       DistanceSpline(*spline),
       std::make_unique<DrivetrainConfig<double>>(
-          ::y2020::control_loops::drivetrain::GetDrivetrainConfig()),
+          ::frc::control_loops::drivetrain::test_robot::GetDrivetrainConfig()),
       nullptr, -1, vmax, num_distance);
 }
 
