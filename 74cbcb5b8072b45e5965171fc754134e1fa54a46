@@ -3,6 +3,29 @@
     {
       "unresolved": true,
       "key": {
+        "uuid": "ee810076_e8ee0295",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 2
+      },
+      "lineNbr": 9,
+      "author": {
+        "id": 1000002
+      },
+      "writtenOn": "2025-02-11T06:18:18Z",
+      "side": 1,
+      "message": "Can you clean up this commit message? Something more like\n\n\u003e Documentation cleanup\n\u003e\n\u003e * Update the main README.\n\u003e * Consolidate markdown files in documentation folder.\n\u003e ... etc.",
+      "range": {
+        "startLine": 6,
+        "startChar": 0,
+        "endLine": 9,
+        "endChar": 19
+      },
+      "revId": "74cbcb5b8072b45e5965171fc754134e1fa54a46",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
         "uuid": "57a00ccb_afa629a6",
         "filename": "/PATCHSET_LEVEL",
         "patchSetId": 2
@@ -145,6 +168,24 @@
     {
       "unresolved": true,
       "key": {
+        "uuid": "91ef2bfd_f6378b9c",
+        "filename": "documentation/aos/docs/reference.md",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000002
+      },
+      "writtenOn": "2025-02-11T06:18:18Z",
+      "side": 1,
+      "message": "Nowhere to put it/serve it and I was lazy about figuring out how to place it more obviously when I wrote it.",
+      "parentUuid": "d4ed942d_f336c0ff",
+      "revId": "74cbcb5b8072b45e5965171fc754134e1fa54a46",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
         "uuid": "e8acbfbd_c9b4193b",
         "filename": "documentation/aos/docs/run_ping_pong.md",
         "patchSetId": 2
@@ -156,6 +197,23 @@
       "writtenOn": "2025-02-08T04:59:36Z",
       "side": 1,
       "message": "Turned this into quickstart - run ping pong",
+      "revId": "74cbcb5b8072b45e5965171fc754134e1fa54a46",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "b70fff60_6b82aa11",
+        "filename": "documentation/tutorials/BUILD",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000002
+      },
+      "writtenOn": "2025-02-11T06:18:18Z",
+      "side": 1,
+      "message": "Should we just delete this BUILD file and alter the glob in `documentation/aos/BUILD` to include the tutorials folder?",
       "revId": "74cbcb5b8072b45e5965171fc754134e1fa54a46",
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     },
