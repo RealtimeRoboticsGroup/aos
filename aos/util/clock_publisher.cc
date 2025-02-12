@@ -35,6 +35,10 @@ void ClockPublisher::SendTimepoints() {
         (node != nullptr)
             ? builder.fbb()->CreateString(node->name()->string_view())
             : flatbuffers::Offset<flatbuffers::String>(0);
+    flatbuffers::Offset<flatbuffers::String> boot_uuid =
+        node_factory->is_running()
+            ? node_factory->boot_uuid().PackString(builder.fbb())
+            : flatbuffers::Offset<flatbuffers::String>(0);
     NodeTimepoint::Builder timepoint_builder =
         builder.MakeBuilder<NodeTimepoint>();
     if (node != nullptr) {
@@ -42,6 +46,7 @@ void ClockPublisher::SendTimepoints() {
     }
     if (node_factory->is_running()) {
       timepoint_builder.add_boot_count(node_factory->boot_count());
+      timepoint_builder.add_boot_uuid(boot_uuid);
       timepoint_builder.add_monotonic_time(
           node_factory->monotonic_now().time_since_epoch().count());
       timepoint_builder.add_realtime_time(
