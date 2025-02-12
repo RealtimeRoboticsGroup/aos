@@ -208,6 +208,24 @@
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "a4b3a55c_d6fec7e1",
+        "filename": "documentation/aos/docs/reference.md",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-02-12T02:58:14Z",
+      "side": 1,
+      "message": "Acknowledged",
+      "parentUuid": "91ef2bfd_f6378b9c",
+      "revId": "74cbcb5b8072b45e5965171fc754134e1fa54a46",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "e8acbfbd_c9b4193b",
