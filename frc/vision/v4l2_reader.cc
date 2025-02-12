@@ -286,6 +286,9 @@ V4L2ReaderBase::BufferInfo V4L2ReaderBase::DequeueBuffer() {
     memmove(
         buffers_[buffer.index].data_pointer + memory_size - aligned_bytes_used,
         buffers_[buffer.index].data_pointer, buffer.bytesused);
+
+    // Update the size now that we know we don't need it all.
+    memory_size = aligned_bytes_used;
     valid_size = buffer.bytesused;
   } else {
     CHECK_EQ(memory_size, buffer.bytesused);
