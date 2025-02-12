@@ -2071,6 +2071,34 @@ const Application *GetApplication(const Configuration *config,
   return nullptr;
 }
 
+std::vector<const Application *> GetApplicationsContainingSubstring(
+    const Configuration *config, std::string_view node_name,
+    std::string_view substring, Autostart autostart) {
+  std::vector<const Application *> results;
+  if (config->has_applications()) {
+    for (const Application *app : *config->applications()) {
+      if (MultiNode(config) && !node_name.empty()) {
+        if (std::find_if(app->nodes()->cbegin(), app->nodes()->cend(),
+                         [node_name](const flatbuffers::String *const node) {
+                           return node->string_view() == node_name;
+                         }) == app->nodes()->cend()) {
+          continue;
+        }
+      }
+      if (autostart == Autostart::kYes && !app->autostart()) {
+        continue;
+      }
+      CHECK(app->has_name());
+      CHECK(!substring.empty()) << ": substring cannot be empty";
+      if (app->name()->string_view().find(substring) !=
+          std::string_view::npos) {
+        results.push_back(app);
+      }
+    }
+  }
+  return results;
+}
+
 const Node *SourceNode(const Configuration *config, const Channel *channel) {
   if (!MultiNode(config)) {
     return nullptr;
