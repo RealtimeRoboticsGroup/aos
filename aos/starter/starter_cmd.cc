@@ -47,6 +47,9 @@ ABSL_FLAG(std::string, _bash_autocomplete_word, "",
 ABSL_FLAG(std::string, sort, "name",
           "The name of the column to sort processes by.  "
           "Can be \"name\", \"state\", \"pid\", or \"uptime\".");
+ABSL_FLAG(int32_t, timeout, 20,
+          "The number of seconds to allow for blocking commands. After "
+          "this timeout, the operation is considered a failure.");
 
 namespace {
 
@@ -379,8 +382,8 @@ void InteractWithAll(const aos::Configuration *config,
     }
 
     // Restart each running process
-    if (aos::starter::SendCommandBlocking(commands, config,
-                                          chrono::seconds(5))) {
+    if (aos::starter::SendCommandBlocking(
+            commands, config, chrono::seconds(absl::GetFlag(FLAGS_timeout)))) {
       std::cout << success_text << "all \n";
     } else {
       std::cout << failure_text << "all \n";
@@ -436,9 +439,9 @@ bool InteractWithProgram(int argc, char **argv,
     return false;
   }
 
-  if (aos::starter::SendCommandBlocking(command, application_name, config,
-                                        chrono::seconds(5),
-                                        application_nodes)) {
+  if (aos::starter::SendCommandBlocking(
+          command, application_name, config,
+          chrono::seconds(absl::GetFlag(FLAGS_timeout)), application_nodes)) {
     std::cout << success_text << application_name << '\n';
   } else {
     std::cout << failure_text << application_name << '\n';
