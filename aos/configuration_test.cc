@@ -1222,6 +1222,281 @@ TEST_F(ConfigurationTest, AddChannelToConfigMultiNode) {
   ASSERT_EQ(649, channel->frequency());
 }
 
+class GetApplicationsContainingSubstringTest : public ConfigurationTest {};
+
+// Tests that GetApplicationsContainingSubstring handles no applications in the
+// config, and returns an empty list.
+TEST_F(GetApplicationsContainingSubstringTest, NoApps) {
+  {
+    const FlatbufferDetachedBuffer<Configuration> config =
+        JsonToFlatbuffer<Configuration>(R"config({
+  "nodes": [
+    {
+      "name": "node1"
+    },
+    {
+      "name": "node2"
+    }
+  ]
+})config");
+    const std::vector<const Application *> result =
+        GetApplicationsContainingSubstring(&config.message(), "node1", "app");
+    EXPECT_TRUE(result.empty());
+  }
+  {
+    const FlatbufferDetachedBuffer<Configuration> config =
+        JsonToFlatbuffer<Configuration>(R"config({
+  "applications": [],
+  "nodes": [
+    {
+      "name": "node1"
+    },
+    {
+      "name": "node2"
+    }
+  ]
+})config");
+    const std::vector<const Application *> result =
+        GetApplicationsContainingSubstring(&config.message(), "node1", "app");
+    EXPECT_TRUE(result.empty());
+  }
+}
+
+// Tests that GetApplicationsContainingSubstring returns the correct
+// applications for a query on a single node config.
+TEST_F(GetApplicationsContainingSubstringTest, SingleNode) {
+  const FlatbufferDetachedBuffer<Configuration> config =
+      JsonToFlatbuffer<Configuration>(R"config({
+  "applications": [
+    {
+      "name": "foo"
+    },
+    {
+      "name": "bar"
+    },
+    {
+      "name": "baz",
+      "autostart": false
+    },
+    {
+      "name": "sparse"
+    }
+  ]
+})config");
+  {
+    const std::vector<const Application *> result =
+        GetApplicationsContainingSubstring(&config.message(), "", "fo");
+    EXPECT_EQ(result.size(), 1u);
+    EXPECT_EQ(result[0]->name()->string_view(), "foo");
+  }
+  {
+    const std::vector<const Application *> result =
+        GetApplicationsContainingSubstring(&config.message(), "", "ba",
+                                           Autostart::kYes);
+    EXPECT_EQ(result.size(), 1u);
+    EXPECT_EQ(result[0]->name()->string_view(), "bar");
+  }
+  {
+    const std::vector<const Application *> result =
+        GetApplicationsContainingSubstring(&config.message(), "", "ar");
+    EXPECT_EQ(result.size(), 2u);
+    EXPECT_EQ(result[0]->name()->string_view(), "bar");
+    EXPECT_EQ(result[1]->name()->string_view(), "sparse");
+  }
+}
+
+// Tests that GetApplicationsContainingSubstring returns the correct
+// applications for a query on a multi node config.
+TEST_F(GetApplicationsContainingSubstringTest, MultiNode) {
+  const FlatbufferDetachedBuffer<Configuration> config =
+      JsonToFlatbuffer<Configuration>(R"config({
+  "applications": [
+    {
+      "name": "foo1",
+      "nodes": [
+        "node1",
+        "node2"
+      ]
+    },
+    {
+      "name": "foo2",
+      "nodes": [
+        "node2",
+        "node3"
+      ]
+    },
+    {
+      "name": "bar",
+      "nodes": [
+        "node1",
+        "node2"
+      ]
+    },
+    {
+      "name": "baz",
+      "nodes": [
+        "node2"
+      ],
+      "autostart": false
+    },
+    {
+      "name": "sparse",
+      "nodes": [
+        "node2",
+        "node3"
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "node1"
+    },
+    {
+      "name": "node2"
+    },
+    {
+      "name": "node3"
+    }
+  ]
+})config");
+  // If node_name is empty, we should get back all apps that contain the
+  // substring.
+  {
+    const std::vector<const Application *> result =
+        GetApplicationsContainingSubstring(&config.message(), "", "foo");
+    EXPECT_EQ(result.size(), 2u);
+    EXPECT_EQ(result[0]->name()->string_view(), "foo1");
+    EXPECT_EQ(result[1]->name()->string_view(), "foo2");
+  }
+  {
+    const std::vector<const Application *> result =
+        GetApplicationsContainingSubstring(&config.message(), "", "ba");
+    EXPECT_EQ(result.size(), 2u);
+    EXPECT_EQ(result[0]->name()->string_view(), "bar");
+    EXPECT_EQ(result[1]->name()->string_view(), "baz");
+  }
+  {
+    const std::vector<const Application *> result =
+        GetApplicationsContainingSubstring(&config.message(), "", "ar");
+    EXPECT_EQ(result.size(), 2u);
+    EXPECT_EQ(result[0]->name()->string_view(), "bar");
+    EXPECT_EQ(result[1]->name()->string_view(), "sparse");
+  }
+  // If node_name has a value, we should get apps filtered by substring and
+  // node.
+  {
+    const std::vector<const Application *> result =
+        GetApplicationsContainingSubstring(&config.message(), "node1", "foo");
+    EXPECT_EQ(result.size(), 1u);
+    EXPECT_EQ(result[0]->name()->string_view(), "foo1");
+  }
+  {
+    const std::vector<const Application *> result =
+        GetApplicationsContainingSubstring(&config.message(), "node2", "foo");
+    EXPECT_EQ(result.size(), 2u);
+    EXPECT_EQ(result[0]->name()->string_view(), "foo1");
+    EXPECT_EQ(result[1]->name()->string_view(), "foo2");
+  }
+  {
+    const std::vector<const Application *> result =
+        GetApplicationsContainingSubstring(&config.message(), "node1", "ba");
+    EXPECT_EQ(result.size(), 1u);
+    EXPECT_EQ(result[0]->name()->string_view(), "bar");
+  }
+  {
+    const std::vector<const Application *> result =
+        GetApplicationsContainingSubstring(&config.message(), "node2", "ba");
+    EXPECT_EQ(result.size(), 2u);
+    EXPECT_EQ(result[0]->name()->string_view(), "bar");
+    EXPECT_EQ(result[1]->name()->string_view(), "baz");
+  }
+  {
+    const std::vector<const Application *> result =
+        GetApplicationsContainingSubstring(&config.message(), "node3", "ar");
+    EXPECT_EQ(result.size(), 1u);
+    EXPECT_EQ(result[0]->name()->string_view(), "sparse");
+  }
+  {
+    const std::vector<const Application *> result =
+        GetApplicationsContainingSubstring(&config.message(), "node2", "ar");
+    EXPECT_EQ(result.size(), 2u);
+    EXPECT_EQ(result[0]->name()->string_view(), "bar");
+    EXPECT_EQ(result[1]->name()->string_view(), "sparse");
+  }
+  // If autostart is kYes, we should get apps filtered by substring and
+  // autostart (and node, if specified).
+  {
+    const std::vector<const Application *> result =
+        GetApplicationsContainingSubstring(&config.message(), "", "ba",
+                                           Autostart::kYes);
+    EXPECT_EQ(result.size(), 1u);
+    EXPECT_EQ(result[0]->name()->string_view(), "bar");
+  }
+  {
+    const std::vector<const Application *> result =
+        GetApplicationsContainingSubstring(&config.message(), "node2", "ba",
+                                           Autostart::kYes);
+    EXPECT_EQ(result.size(), 1u);
+    EXPECT_EQ(result[0]->name()->string_view(), "bar");
+  }
+}
+
+class GetApplicationsContainingSubstringDeathTest
+    : public GetApplicationsContainingSubstringTest {};
+
+// Tests that GetApplicationsContainingSubstring fails if the provided substring
+// is empty.
+TEST_F(GetApplicationsContainingSubstringDeathTest, EmptySubstring) {
+  const FlatbufferDetachedBuffer<Configuration> config =
+      JsonToFlatbuffer<Configuration>(R"config({
+  "applications": [
+    {
+      "name": "foo1",
+      "nodes": [
+        "node1",
+        "node2"
+      ]
+    },
+    {
+      "name": "foo2",
+      "nodes": [
+        "node2",
+        "node3"
+      ]
+    },
+    {
+      "name": "bar",
+      "nodes": [
+        "node1",
+        "node2"
+      ]
+    },
+    {
+      "name": "sparse",
+      "nodes": [
+        "node2",
+        "node3"
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "node1"
+    },
+    {
+      "name": "node2"
+    },
+    {
+      "name": "node3"
+    }
+  ]
+})config");
+  EXPECT_DEATH(
+      GetApplicationsContainingSubstring(&config.message(), "node2", ""),
+      "substring cannot be empty");
+}
+
+
 // Create a new configuration with the specified channel removed.
 // Initially there must be exactly one channel in the base_config that matches
 // the criteria. Check to make sure the new configuration has one less channel,

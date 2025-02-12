@@ -218,6 +218,15 @@ const Application *GetApplication(const Configuration *config,
                                   const Node *my_node,
                                   std::string_view application_name);
 
+enum class Autostart { kNo = 0, kYes };
+// Returns all applications whose name contains the provided substring. If
+// node_name is non-empty, then only the applications that run on that node are
+// returned. If autostart is kYes, then only the applications are configured to
+// autostart are returned.
+std::vector<const Application *> GetApplicationsContainingSubstring(
+    const Configuration *config, std::string_view node_name,
+    std::string_view substring, Autostart autostart = Autostart::kNo);
+
 // Returns true if the provided application should start on the provided node.
 bool ApplicationShouldStart(const Configuration *config, const Node *my_node,
                             const Application *application);
