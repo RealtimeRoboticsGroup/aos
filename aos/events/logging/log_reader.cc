@@ -59,10 +59,12 @@ ABSL_FLAG(
 
 ABSL_FLAG(
     std::string, start_time, "",
-    "If set, start at this point in time in the log on the realtime clock.");
+    "If set, start at this point in time in the log on the realtime clock. "
+    "Times are expected to be in the form of 2021-01-15_15-30-35.000000000.");
 ABSL_FLAG(
     std::string, end_time, "",
-    "If set, end at this point in time in the log on the realtime clock.");
+    "If set, end at this point in time in the log on the realtime clock. Times "
+    "are expected to be in the form of 2021-01-15_15-30-35.000000000.");
 
 ABSL_FLAG(bool, drop_realtime_messages_before_start, false,
           "If set, will drop any messages sent before the start of the "
@@ -772,6 +774,19 @@ void LogReader::RegisterDuringStartup(EventLoop *event_loop, const Node *node) {
   for (size_t logged_channel_index = 0;
        logged_channel_index < logged_configuration()->channels()->size();
        ++logged_channel_index) {
+    // We skip creating the per channel setup here for channels not in
+    // ReplayChannels. This avoids creating unnecessary Senders.
+    const ReplayChannelIndices *replay_channel_indicies =
+        state->GetReplayChannelIndices();
+    if (replay_channel_indicies != nullptr) {
+      auto const begin = replay_channel_indicies->cbegin();
+      auto const end = replay_channel_indicies->cend();
+      // TODO: benchmark strategies for channel_index matching
+      if (!std::binary_search(begin, end, logged_channel_index)) {
+        continue;
+      }
+    }
+
     const Channel *channel = config_remapper_.RemapChannel(
         event_loop, node,
         logged_configuration()->channels()->Get(logged_channel_index));
@@ -2023,6 +2038,17 @@ bool LogReader::AreStatesInitialized() const {
   for (const auto &state : states_) {
     if (state) {
       return true;
+    }
+  }
+  return false;
+}
+
+bool LogReader::HasSender(size_t logged_channel_index) const {
+  for (const auto &state : states_) {
+    if (state != nullptr) {
+      if (state->HasSender(logged_channel_index)) {
+        return true;
+      }
     }
   }
   return false;

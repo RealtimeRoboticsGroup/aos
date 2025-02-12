@@ -36,6 +36,10 @@ namespace aos::logger {
 
 class EventNotifier;
 
+namespace testing {
+class MultinodeLoggerTest;
+}
+
 // We end up with one of the following 3 log file types.
 //
 // Single node logged as the source node.
@@ -397,7 +401,12 @@ class LogReader {
     };
   }
 
+ protected:
+  bool HasSender(size_t logged_channel_index) const;
+
  private:
+  friend class testing::MultinodeLoggerTest;
+
   void Register(EventLoop *event_loop, const Node *node);
 
   void RegisterDuringStartup(EventLoop *event_loop, const Node *node);
@@ -769,6 +778,14 @@ class LogReader {
     // and queue up messages until the specified time. No-op of
     // ThreadedBuffering::kNo is set. Should only be called once.
     void QueueThreadUntil(BootTimestamp time);
+
+    const ReplayChannelIndices *GetReplayChannelIndices() {
+      return replay_channel_indices_.get();
+    }
+
+    bool HasSender(size_t logged_channel_index) const {
+      return channels_[logged_channel_index] != nullptr;
+    }
 
    private:
     void TrackMessageSendTiming(const RawSender &sender,

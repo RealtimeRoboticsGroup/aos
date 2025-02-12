@@ -17,6 +17,10 @@
 #include "aos/events/logging/lzma_encoder.h"
 #endif
 
+namespace aos::logger {
+class LogReader;
+}
+
 namespace aos::logger::testing {
 
 struct CompressionParams {
@@ -171,6 +175,9 @@ class MultinodeLoggerTest : public ::testing::TestWithParam<
       realtime_clock::time_point end_time = realtime_clock::max_time);
 
   void AddExtension(std::string_view extension);
+
+  bool HasSender(const aos::logger::LogReader &log_reader,
+                 size_t channel_index);
 
   absl::FlagSaver flag_saver_;
 

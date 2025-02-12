@@ -532,6 +532,11 @@ MultinodeLoggerTest::ConfirmReadable(const std::vector<std::string> &files,
   return testing::ConfirmReadable(files, start_time, end_time);
 }
 
+bool MultinodeLoggerTest::HasSender(const aos::logger::LogReader &log_reader,
+                                    size_t channel_index) {
+  return log_reader.HasSender(channel_index);
+}
+
 // Counts the number of messages on a channel.  Returns (channel name, channel
 // type, count) for every message matching matcher()
 std::vector<std::tuple<std::string, std::string, int>> CountChannelsMatching(
