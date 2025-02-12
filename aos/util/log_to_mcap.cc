@@ -78,12 +78,17 @@ int main(int argc, char *argv[]) {
     }
 
     const aos::Configuration *raw_config = config_reader.logged_configuration();
+    // The ClockTimepoints message for multiple VPUs is bigger than the default
+    // 1000 bytes. So we need to set a bigger size here.
+    aos::ChannelT channel_overrides;
+    channel_overrides.max_size = 2000;
     config = aos::configuration::AddChannelToConfiguration(
         raw_config, "/clocks",
         aos::FlatbufferSpan<reflection::Schema>(aos::ClockTimepointsSchema()),
         replay_node.empty()
             ? nullptr
-            : aos::configuration::GetNode(raw_config, replay_node));
+            : aos::configuration::GetNode(raw_config, replay_node),
+        channel_overrides);
   }
 
   aos::logger::LogReader reader(

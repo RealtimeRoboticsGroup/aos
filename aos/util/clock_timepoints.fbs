@@ -9,6 +9,8 @@ table NodeTimepoint {
   node:string (id: 0);
   // Current boot count for this node (to allow observing reboots).
   boot_count:int (id: 1);
+  // The current boot UUID for this node (to make it easier to correlate journal logs).
+  boot_uuid:string (id: 4);
   // Current monotonic time of this clock, in nanoseconds.
   monotonic_time:int64 (id: 2);
   // Current realtime (UNIX epoch) time of this clock, in nanoseconds.
