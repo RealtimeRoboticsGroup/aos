@@ -28,12 +28,6 @@
 
 ABSL_FLAG(uint64_t, mcap_chunk_size, 10'000'000,
           "Size, in bytes, of individual MCAP chunks");
-ABSL_FLAG(bool, fetch, false,
-          "Whether to fetch most recent messages at start of logfile. Turn "
-          "this on if there are, e.g., one-time messages sent before the "
-          "start of the logfile that you need access to. Turn it off if you "
-          "don't want to deal with having messages that have timestamps that "
-          "may be arbitrarily far before any other interesting messages.");
 
 namespace aos {
 
@@ -250,13 +244,6 @@ std::vector<McapLogger::SummaryOffset> McapLogger::WriteSchemasAndChannels(
               WriteChunk(chunk);
             }
           });
-      fetchers_[id] = event_loop_->MakeRawFetcher(channel);
-      event_loop_->OnRun([this, id, channel]() {
-        if (absl::GetFlag(FLAGS_fetch) && fetchers_[id]->Fetch()) {
-          WriteMessage(id, channel, fetchers_[id]->context(),
-                       &current_chunks_[id]);
-        }
-      });
     }
   }
 

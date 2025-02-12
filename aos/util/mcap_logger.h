@@ -214,7 +214,6 @@ class McapLogger {
       aos::monotonic_clock::min_time;
   // Count of all messages on each channel, indexed by channel ID.
   std::map<uint16_t, uint64_t> message_counts_;
-  std::map<uint16_t, std::unique_ptr<RawFetcher>> fetchers_;
   // All currently-being-built chunks. Indexed by channel ID. This is used to
   // segregate channels into separate chunks to support more efficient reading.
   std::map<uint16_t, ChunkStatus> current_chunks_;

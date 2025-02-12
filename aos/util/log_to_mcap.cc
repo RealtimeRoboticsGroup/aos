@@ -33,7 +33,7 @@ ABSL_FLAG(bool, compress, true, "Whether to use LZ4 compression in MCAP file.");
 ABSL_FLAG(bool, include_clocks, true,
           "Whether to add a /clocks channel that publishes all nodes' clock "
           "offsets.");
-ABSL_FLAG(bool, include_pre_start_messages, false,
+ABSL_FLAG(bool, fetch, false,
           "If set, *all* messages in the logfile will be included, including "
           "any that may have occurred prior to the start of the log. This "
           "can be used to see additional data, but given that data may be "
@@ -129,11 +129,11 @@ int main(int argc, char *argv[]) {
           &factory, clock_event_loop.get());
     }
   };
-  if (absl::GetFlag(FLAGS_include_pre_start_messages)) {
-    // Note: This condition is subtly different from just using --fetch from
-    // mcap_logger.cc. Namely, if there is >1 message on a given channel prior
-    // to the logfile start, then fetching in the reader OnStart() is
-    // insufficient to get *all* log data.
+  if (absl::GetFlag(FLAGS_fetch)) {
+    // Note: This condition is subtly different from just calling Fetch() on
+    // every channel in OnStart(). Namely, if there is >1 message on a given
+    // channel prior to the logfile start, then fetching in the reader OnStart()
+    // is insufficient to get *all* log data.
     factory.GetNodeEventLoopFactory(node)->OnStartup(startup_handler);
   } else {
     reader.OnStart(node, startup_handler);
