@@ -10,7 +10,7 @@
 
 namespace aos {
 
-void InitFromRust(const char * /*argv0*/) {
+void InitFromRust() {
   CHECK(!aos::IsInitialized()) << "Only initialize once.";
 
   absl::InitializeLog();

@@ -35,7 +35,7 @@ struct FlagInfo {
 // A special initialization function that initializes the C++ parts in a way
 // compatible with Rust. This requires careful coordination with `:init_rs`, do
 // not use it from anywhere else.
-void InitFromRust(const char *argv0);
+void InitFromRust();
 
 std::vector<FlagInfo> GetCppFlags();
 
