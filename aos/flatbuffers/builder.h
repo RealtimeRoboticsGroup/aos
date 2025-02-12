@@ -2,6 +2,7 @@
 #define AOS_FLATBUFFERS_BUILDER_H_
 #include "aos/flatbuffers.h"
 #include "aos/flatbuffers/static_table.h"
+
 namespace aos::fbs {
 
 // Builder class to handle the memory for a static flatbuffer object. This
@@ -40,24 +41,12 @@ class Builder final : public ResizeableObject {
   // still has the ability to select whether or not the new memory gets
   // zero-initialized.
   Builder(Allocator *allocator)
-      : ResizeableObject(
-            allocator->AllocateOrDie(kBufferSize, T::kAlign, SetZero::kYes),
-            allocator),
-        flatbuffer_start_(BufferStart(buffer_)),
-        flatbuffer_(internal::GetSubSpan(buffer_, flatbuffer_start_, T::kSize),
-                    this) {
-    SetPrefix();
-  }
+      : Builder(allocator->AllocateOrDie(kBufferSize, T::kAlign, SetZero::kYes),
+                allocator) {}
   Builder(std::unique_ptr<Allocator> allocator =
               std::make_unique<AlignedVectorAllocator>())
-      : ResizeableObject(
-            allocator->AllocateOrDie(kBufferSize, T::kAlign, SetZero::kYes),
-            std::move(allocator)),
-        flatbuffer_start_(BufferStart(buffer_)),
-        flatbuffer_(internal::GetSubSpan(buffer_, flatbuffer_start_, T::kSize),
-                    this) {
-    SetPrefix();
-  }
+      : Builder(allocator->AllocateOrDie(kBufferSize, T::kAlign, SetZero::kYes),
+                std::move(allocator)) {}
   Builder(Builder &&other)
       : ResizeableObject(std::move(other)),
         flatbuffer_(std::move(other.flatbuffer_)) {
@@ -93,6 +82,14 @@ class Builder final : public ResizeableObject {
   T *operator->() { return get(); }
 
  private:
+  template <typename AllocatorType>
+  Builder(std::span<uint8_t> buffer, AllocatorType allocator)
+      : ResizeableObject(buffer, std::move(allocator)),
+        flatbuffer_start_(BufferStart(buffer_)),
+        flatbuffer_(internal::GetSubSpan(buffer_, flatbuffer_start_, T::kSize),
+                    this) {
+    SetPrefix();
+  }
   size_t Alignment() const override { return flatbuffer_.t.Alignment(); }
   size_t NumberOfSubObjects() const override { return 1; }
   void SetPrefix() {
