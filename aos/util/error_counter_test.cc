@@ -40,7 +40,7 @@ TEST(ErrorCounterTest, ErrorCounter) {
 }
 
 // Tests the ArrayErrorCounter
-TEST(ErrorCounterTest, ARrayErrorCounter) {
+TEST(ErrorCounterTest, ArrayErrorCounter) {
   ArrayErrorCounter<aos::timing::SendError, aos::timing::SendErrorCount>
       counter;
   flatbuffers::FlatBufferBuilder fbb;
@@ -64,8 +64,14 @@ TEST(ErrorCounterTest, ARrayErrorCounter) {
               message.message().error_counts()->Get(1)->error());
     EXPECT_EQ(1u, message.message().error_counts()->Get(1)->count());
   }
+  EXPECT_EQ(
+      2u, counter.GetErrorCount(aos::timing::SendError::MESSAGE_SENT_TOO_FAST));
+  EXPECT_EQ(1u, counter.GetErrorCount(aos::timing::SendError::INVALID_REDZONE));
 
   counter.ResetCounts();
+  EXPECT_EQ(
+      0u, counter.GetErrorCount(aos::timing::SendError::MESSAGE_SENT_TOO_FAST));
+  EXPECT_EQ(0u, counter.GetErrorCount(aos::timing::SendError::INVALID_REDZONE));
   {
     const flatbuffers::Offset<
         flatbuffers::Vector<flatbuffers::Offset<aos::timing::SendErrorCount>>>
