@@ -89,12 +89,21 @@ class SimulatedEventLoopFactory {
 
   // Starts executing the event loops unconditionally until Exit is called or
   // all the nodes have shut down.
-  // All Run*() methods return an unexpected value if there is either an
+  // All NonFatalRun*() methods return an unexpected value if there is either an
   // internal fault that can still be recovered from gracefully or if a user
   // application called Exit() with a Status.
-  Result<void> Run();
+  // The "regular" Run*() methods will call CheckExpected() on the corresponding
+  // NonFatalRun*() method.
+  // The Run*() methods exist for code which always would want to call
+  // CheckExpected() anyways and/or existed prior to the NonFatalRun*()
+  // overloads existing and so would not handle the return values if the
+  // existing Run*() interfaces were swapped out unexpectedly.
+  void Run();
+  [[nodiscard]] Result<void> NonFatalRun();
   // Executes the event loops for a duration.
-  Result<void> RunFor(distributed_clock::duration duration);
+  void RunFor(distributed_clock::duration duration);
+  [[nodiscard]] Result<void> NonFatalRunFor(
+      distributed_clock::duration duration);
   // Executes the event loops until a time.
   // Returns kEventsRemaining if there are still events remaining.
   // Returns an unexpected value if there was an error.
@@ -102,8 +111,10 @@ class SimulatedEventLoopFactory {
     kEventsRemaining,
     kFinishedEventProcessing,
   };
-  Result<RunEndState> RunUntil(aos::realtime_clock::time_point time,
-                               const aos::Node *node = nullptr);
+  RunEndState RunUntil(aos::realtime_clock::time_point time,
+                       const aos::Node *node = nullptr);
+  [[nodiscard]] Result<RunEndState> NonFatalRunUntil(
+      aos::realtime_clock::time_point time, const aos::Node *node = nullptr);
 
   // Stops executing all event loops.  Meant to be called from within an event
   // loop handler.

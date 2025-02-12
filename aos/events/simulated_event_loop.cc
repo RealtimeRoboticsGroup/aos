@@ -1576,7 +1576,11 @@ Result<void> SimulatedEventLoopFactory::GetAndClearExitStatus() {
   return exit_status.value_or(Result<void>{});
 }
 
-Result<void> SimulatedEventLoopFactory::RunFor(
+void SimulatedEventLoopFactory::RunFor(monotonic_clock::duration duration) {
+  CheckExpected(NonFatalRunFor(duration));
+}
+
+Result<void> SimulatedEventLoopFactory::NonFatalRunFor(
     monotonic_clock::duration duration) {
   // This sets running to true too.
   scheduler_scheduler_.RunFor(duration);
@@ -1590,9 +1594,14 @@ Result<void> SimulatedEventLoopFactory::RunFor(
   return GetAndClearExitStatus();
 }
 
+SimulatedEventLoopFactory::RunEndState SimulatedEventLoopFactory::RunUntil(
+    realtime_clock::time_point now, const aos::Node *node) {
+  return CheckExpected(NonFatalRunUntil(now, node));
+}
+
 Result<SimulatedEventLoopFactory::RunEndState>
-SimulatedEventLoopFactory::RunUntil(realtime_clock::time_point now,
-                                    const aos::Node *node) {
+SimulatedEventLoopFactory::NonFatalRunUntil(realtime_clock::time_point now,
+                                            const aos::Node *node) {
   RunEndState ran_until_time =
       scheduler_scheduler_.RunUntil(
           now, &GetNodeEventLoopFactory(node)->scheduler_,
@@ -1612,7 +1621,9 @@ SimulatedEventLoopFactory::RunUntil(realtime_clock::time_point now,
       [ran_until_time]() { return ran_until_time; });
 }
 
-Result<void> SimulatedEventLoopFactory::Run() {
+void SimulatedEventLoopFactory::Run() { CheckExpected(NonFatalRun()); }
+
+Result<void> SimulatedEventLoopFactory::NonFatalRun() {
   // This sets running to true too.
   scheduler_scheduler_.Run();
   for (std::unique_ptr<NodeEventLoopFactory> &node : node_factories_) {

@@ -44,7 +44,7 @@ class SimulatedEventLoopTestFactory : public EventLoopTestFactory {
     return event_loop_factory_->MakeEventLoop(name, my_node());
   }
 
-  Result<void> Run() override { return event_loop_factory_->Run(); }
+  Result<void> Run() override { return event_loop_factory_->NonFatalRun(); }
 
   std::unique_ptr<ExitHandle> MakeExitHandle() override {
     MaybeMake();
