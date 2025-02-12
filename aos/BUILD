@@ -439,6 +439,7 @@ cc_library(
         ":json_tokenizer",
         "//aos/flatbuffers:builder",
         "//aos/util:file",
+        "//aos/util:string_formatting",
         "@com_github_google_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",

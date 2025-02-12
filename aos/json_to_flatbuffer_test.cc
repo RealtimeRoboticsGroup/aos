@@ -25,14 +25,17 @@ class JsonToFlatbufferTest : public ::testing::Test {
   // currently minor discrepencies between how the JSON output works for the two
   // modes, so some tests must manually disable testing of the
   // FlatbufferToJson() overload that takes a reflection::Schema*.
-  bool JsonAndBack(const char *str, TestReflection test_reflection_to_json =
-                                        TestReflection::kYes) {
-    return JsonAndBack(str, str, test_reflection_to_json);
+  bool JsonAndBack(
+      const char *str,
+      TestReflection test_reflection_to_json = TestReflection::kYes,
+      JsonOptions json_options = {}) {
+    return JsonAndBack(str, str, test_reflection_to_json, json_options);
   }
 
   bool JsonAndBack(
       const char *in, const char *out,
-      TestReflection test_reflection_to_json = TestReflection::kYes) {
+      TestReflection test_reflection_to_json = TestReflection::kYes,
+      JsonOptions json_options = {}) {
     FlatbufferDetachedBuffer<Configuration> fb_typetable =
         JsonToFlatbuffer<Configuration>(in);
     FlatbufferDetachedBuffer<Configuration> fb_reflection =
@@ -45,10 +48,12 @@ class JsonToFlatbufferTest : public ::testing::Test {
       return false;
     }
 
-    const ::std::string back_typetable = FlatbufferToJson(fb_typetable);
-    const ::std::string back_reflection = FlatbufferToJson(fb_reflection);
-    const ::std::string back_reflection_reflection =
-        FlatbufferToJson(&Schema().message(), fb_reflection.span().data());
+    const ::std::string back_typetable =
+        FlatbufferToJson(fb_typetable, json_options);
+    const ::std::string back_reflection =
+        FlatbufferToJson(fb_reflection, json_options);
+    const ::std::string back_reflection_reflection = FlatbufferToJson(
+        &Schema().message(), fb_reflection.span().data(), json_options);
 
     printf("Back to table via TypeTable and to string via TypeTable: %s\n",
            back_typetable.c_str());
@@ -471,4 +476,179 @@ TEST_F(JsonToFlatbufferTest, SpacedData) {
           ArtifactPath("aos/json_to_flatbuffer_test_spaces.json"))));
 }
 
+// Test fixture for testing JSON to Flatbuffer conversion with float precision
+// options.
+class JsonToFlatbufferFloatPrecisionTest : public JsonToFlatbufferTest {
+ public:
+  void CheckOutput(const char *json_str, int precision,
+                   const char *expected_output_json) {
+    const JsonOptions options{.float_precision = precision};
+    EXPECT_TRUE(JsonAndBack(json_str, expected_output_json,
+                            TestReflection::kYes, options))
+        << "Check failed.\n  json_str:\n  " << json_str
+        << "\n  precision: " << precision;
+  }
+};
+
+// Test to verify JSON to Flatbuffer and back to JSON conversion with various
+// float precisions.
+TEST_F(JsonToFlatbufferFloatPrecisionTest, FloatPrecision) {
+  const char *input = R"({
+    "foo_float": 3.141592653589793,
+    "foo_double": 2.718281828459045
+  })";
+
+  const FlatbufferDetachedBuffer<Configuration> flatbuffer =
+      JsonToFlatbuffer<Configuration>(input);
+
+  // precision=0 rounds to nearest integer.
+  CheckOutput(input, 0, R"({ "foo_float": 3, "foo_double": 3 })");
+  CheckOutput(input, 1, R"({ "foo_float": 3.1, "foo_double": 2.7 })");
+  CheckOutput(input, 2, R"({ "foo_float": 3.14, "foo_double": 2.72 })");
+  CheckOutput(input, 3, R"({ "foo_float": 3.142, "foo_double": 2.718 })");
+  CheckOutput(input, 4, R"({ "foo_float": 3.1416, "foo_double": 2.7183 })");
+  CheckOutput(input, 5, R"({ "foo_float": 3.14159, "foo_double": 2.71828 })");
+}
+
+// Test to verify handling of trailing zeros in float precision, using a number
+// with a fractional part.
+TEST_F(JsonToFlatbufferFloatPrecisionTest, TrailingZerosFractional) {
+  const char *input = R"({
+    "foo_float": 3.5000,
+    "foo_double": 2.1000
+  })";
+
+  const FlatbufferDetachedBuffer<Configuration> flatbuffer =
+      JsonToFlatbuffer<Configuration>(input);
+
+  // Trailing zeros after the first are trimmed.
+  // precision=0 rounds to nearest integer.
+  CheckOutput(input, 0, R"({ "foo_float": 4, "foo_double": 2 })");
+  CheckOutput(input, 1, R"({ "foo_float": 3.5, "foo_double": 2.1 })");
+  CheckOutput(input, 2, R"({ "foo_float": 3.5, "foo_double": 2.1 })");
+  CheckOutput(input, 3, R"({ "foo_float": 3.5, "foo_double": 2.1 })");
+}
+
+// Test to verify handling of trailing zeros in float precision, using a number
+// without a fractional part.
+TEST_F(JsonToFlatbufferFloatPrecisionTest, TrailingZerosInteger) {
+  const char *input = R"({
+    "foo_float": 3,
+    "foo_double": 2
+  })";
+
+  const FlatbufferDetachedBuffer<Configuration> flatbuffer =
+      JsonToFlatbuffer<Configuration>(input);
+
+  // Trailing zeros after the first are trimmed.
+  // precision=0 rounds to nearest integer.
+  CheckOutput(input, 0, R"({ "foo_float": 3, "foo_double": 2 })");
+  CheckOutput(input, 1, R"({ "foo_float": 3.0, "foo_double": 2.0 })");
+  CheckOutput(input, 2, R"({ "foo_float": 3.0, "foo_double": 2.0 })");
+  CheckOutput(input, 3, R"({ "foo_float": 3.0, "foo_double": 2.0 })");
+}
+
+// Test to verify JSON to Flatbuffer and back to JSON conversion with float
+// precision.
+TEST_F(JsonToFlatbufferFloatPrecisionTest, FloatMax) {
+  const char *input = R"({ "foo_float": 3.1415927 })";
+
+  const FlatbufferDetachedBuffer<Configuration> flatbuffer =
+      JsonToFlatbuffer<Configuration>(input);
+
+  // precision=0 rounds to nearest integer.
+  CheckOutput(input, 0, R"({ "foo_float": 3 })");
+  CheckOutput(input, 1, R"({ "foo_float": 3.1 })");
+  CheckOutput(input, 2, R"({ "foo_float": 3.14 })");
+  // Check with the maximum precision value for float, which is 7.
+  CheckOutput(input, 7, R"({ "foo_float": 3.1415927 })");
+}
+
+// Test to verify JSON to Flatbuffer and back to JSON conversion with double
+// precision.
+TEST_F(JsonToFlatbufferFloatPrecisionTest, DoubleMax) {
+  const char *input = R"({ "foo_double": 2.718281828459045 })";
+
+  const FlatbufferDetachedBuffer<Configuration> flatbuffer =
+      JsonToFlatbuffer<Configuration>(input);
+
+  // Trailing zeros after the first are trimmed.
+  // precision=0 rounds to nearest integer.
+  CheckOutput(input, 0, R"({ "foo_double": 3 })");
+  CheckOutput(input, 1, R"({ "foo_double": 2.7 })");
+  CheckOutput(input, 2, R"({ "foo_double": 2.72 })");
+  // Check with the maximum precision value for double, which is 15.
+  CheckOutput(input, 15, R"({ "foo_double": 2.718281828459045 })");
+}
+
+// Test to verify JSON to Flatbuffer and back to JSON conversion with a very
+// small float value.
+TEST_F(JsonToFlatbufferFloatPrecisionTest, SmallFloat) {
+  // Choose an arbitrary exponent that will give the value many decimal places.
+  const char *input = R"({ "foo_float": 3.141593e-14 })";
+
+  const FlatbufferDetachedBuffer<Configuration> flatbuffer =
+      JsonToFlatbuffer<Configuration>(input);
+
+  // Trailing zeros after the first are trimmed.
+  // precision=0 rounds to nearest integer.
+  CheckOutput(input, 0, R"({ "foo_float": 0 })");
+  CheckOutput(input, 1, R"({ "foo_float": 0.0 })");
+  CheckOutput(input, 2, R"({ "foo_float": 0.0 })");
+  CheckOutput(input, 20, R"({ "foo_float": 0.00000000000003141593 })");
+  // Since the float data type has 7 significant digits, the decimals after the
+  // 20th will be unpredictable.
+}
+
+// Test to verify JSON to Flatbuffer and back to JSON conversion with a very
+// small double value.
+TEST_F(JsonToFlatbufferFloatPrecisionTest, SmallDouble) {
+  // Choose an arbitrary exponent that will give the value many decimal places.
+  const char *input = R"({ "foo_double": 3.14159265358979e-14 })";
+
+  const FlatbufferDetachedBuffer<Configuration> flatbuffer =
+      JsonToFlatbuffer<Configuration>(input);
+
+  // Trailing zeros after the first are trimmed.
+  // precision=0 rounds to nearest integer.
+  CheckOutput(input, 0, R"({ "foo_double": 0 })");
+  CheckOutput(input, 1, R"({ "foo_double": 0.0 })");
+  CheckOutput(input, 2, R"({ "foo_double": 0.0 })");
+  CheckOutput(input, 5, R"({ "foo_double": 0.0 })");
+  CheckOutput(input, 28, R"({ "foo_double": 0.0000000000000314159265358979 })");
+  // Since the float data type has 15 significant digits, the decimals after the
+  // 28th will be unpredictable.
+}
+
+// Test to verify JSON to Flatbuffer and back to JSON conversion with a very
+// large float value.
+TEST_F(JsonToFlatbufferFloatPrecisionTest, LargeFloat) {
+  const char *input = R"({ "foo_float": 3.1415927e5 })";
+
+  const FlatbufferDetachedBuffer<Configuration> flatbuffer =
+      JsonToFlatbuffer<Configuration>(input);
+
+  // precision=0 rounds to nearest integer.
+  CheckOutput(input, 0, R"({ "foo_float": 314159 })");
+  CheckOutput(input, 1, R"({ "foo_float": 314159.3 })");
+  // Since the float data type has 7 significant digits, the decimals after the
+  // first will be unpredictable.
+}
+
+// Test to verify JSON to Flatbuffer and back to JSON conversion with a very
+// large double value.
+TEST_F(JsonToFlatbufferFloatPrecisionTest, LargeDouble) {
+  const char *input = R"({ "foo_double": 3.141592653589793e5 })";
+
+  const FlatbufferDetachedBuffer<Configuration> flatbuffer =
+      JsonToFlatbuffer<Configuration>(input);
+
+  // precision=0 rounds to nearest integer.
+  CheckOutput(input, 0, R"({ "foo_double": 314159 })");
+  CheckOutput(input, 1, R"({ "foo_double": 314159.3 })");
+  CheckOutput(input, 2, R"({ "foo_double": 314159.27 })");
+  CheckOutput(input, 9, R"({ "foo_double": 314159.265358979 })");
+  // Since the double data type has 15 significant digits, the decimals after
+  // the 9th will be unpredictable.
+}
 }  // namespace aos::testing

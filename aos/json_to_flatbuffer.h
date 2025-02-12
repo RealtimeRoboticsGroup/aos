@@ -58,6 +58,11 @@ struct JsonOptions {
   bool max_multi_line = false;
   // Will integers be printed in hexadecimal form instead of decimal.
   bool use_hex = false;
+  // Optional precision for floating-point numbers. When not specified, the
+  // default precision is used. This is fractional precision, i.e. the number of
+  // digits after the decimal point. Trailing zeros after the first trailing
+  // zero to the right of the decimal point will be stripped.
+  std::optional<int> float_precision;
 };
 
 // Converts a flatbuffer into a Json string.

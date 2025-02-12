@@ -222,6 +222,19 @@ cc_library(
 )
 
 cc_library(
+    name = "string_formatting",
+    srcs = [
+        "string_formatting.cc",
+    ],
+    hdrs = [
+        "string_formatting.h",
+    ],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+    ],
+)
+
+cc_library(
     name = "trapezoid_profile",
     srcs = [
         "trapezoid_profile.cc",

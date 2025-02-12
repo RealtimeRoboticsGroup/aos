@@ -11,6 +11,7 @@
 
 #include "aos/flatbuffer_utils.h"
 #include "aos/json_tokenizer.h"
+#include "aos/util/string_formatting.h"
 
 // TODO(austin): Can we just do an Offset<void> ?  It doesn't matter, so maybe
 // just say that.
@@ -986,9 +987,11 @@ namespace {
 class TruncatingStringVisitor : public flatbuffers::IterationVisitor {
  public:
   TruncatingStringVisitor(size_t max_vector_size, std::string delimiter,
-                          bool quotes, std::string indent, bool vdelimited)
+                          bool quotes, std::string indent, bool vdelimited,
+                          std::optional<int> float_precision)
       : max_vector_size_(max_vector_size),
-        to_string_(delimiter, quotes, indent, vdelimited) {}
+        to_string_(delimiter, quotes, indent, vdelimited),
+        float_precision_(float_precision) {}
   ~TruncatingStringVisitor() override {}
 
   void StartSequence() override {
@@ -1048,11 +1051,21 @@ class TruncatingStringVisitor : public flatbuffers::IterationVisitor {
   }
   void Float(float value) override {
     if (should_skip()) return;
-    to_string_.Float(value);
+    if (float_precision_.has_value()) {
+      to_string_.s +=
+          util::FormatFloat(static_cast<double>(value), *float_precision_);
+    } else {
+      to_string_.Float(value);
+    }
   }
+
   void Double(double value) override {
     if (should_skip()) return;
-    to_string_.Double(value);
+    if (float_precision_.has_value()) {
+      to_string_.s += util::FormatFloat(value, *float_precision_);
+    } else {
+      to_string_.Double(value);
+    }
   }
   void String(const flatbuffers::String *value) override {
     if (should_skip()) return;
@@ -1097,6 +1110,7 @@ class TruncatingStringVisitor : public flatbuffers::IterationVisitor {
   const size_t max_vector_size_;
   flatbuffers::ToStringVisitor to_string_;
   int skip_levels_ = 0;
+  std::optional<int> float_precision_;
 };
 
 }  // namespace
@@ -1111,7 +1125,8 @@ class TruncatingStringVisitor : public flatbuffers::IterationVisitor {
   }
   TruncatingStringVisitor tostring_visitor(
       json_options.max_vector_size, json_options.multi_line ? "\n" : " ", true,
-      json_options.multi_line ? " " : "", json_options.multi_line);
+      json_options.multi_line ? " " : "", json_options.multi_line,
+      json_options.float_precision);
   flatbuffers::IterateObject(reinterpret_cast<const uint8_t *>(t), typetable,
                              &tostring_visitor);
   return tostring_visitor.string();

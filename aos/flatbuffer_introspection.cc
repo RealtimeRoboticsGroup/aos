@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include "aos/json_to_flatbuffer.h"
+#include "aos/util/string_formatting.h"
 
 namespace aos {
 
@@ -59,17 +60,28 @@ void IntToString(int64_t val, reflection::BaseType type, FastStringBuilder *out,
 }
 
 void FloatToString(double val, reflection::BaseType type,
-                   FastStringBuilder *out) {
+                   FastStringBuilder *out, JsonOptions json_options) {
   if (std::isnan(val)) {
     out->Append(std::signbit(val) ? "-nan" : "nan");
     return;
   }
+
   switch (type) {
     case BaseType::Float:
-      out->Append(static_cast<float>(val));
+      if (json_options.float_precision.has_value()) {
+        out->Append(
+            util::FormatFloat(val, json_options.float_precision.value()));
+      } else {
+        out->Append(static_cast<float>(val));
+      }
       break;
     case BaseType::Double:
-      out->Append(val);
+      if (json_options.float_precision.has_value()) {
+        out->Append(
+            util::FormatFloat(val, json_options.float_precision.value()));
+      } else {
+        out->Append(val);
+      }
       break;
     default:
       out->Append("null");
@@ -168,7 +180,8 @@ void FieldToString(
       break;
     case BaseType::Float:
     case BaseType::Double:
-      FloatToString(GetAnyFieldF(*table, *field), type->base_type(), out);
+      FloatToString(GetAnyFieldF(*table, *field), type->base_type(), out,
+                    json_options);
       break;
     case BaseType::String:
       if constexpr (std::is_same<flatbuffers::Table, ObjT>()) {
@@ -248,7 +261,7 @@ void FieldToString(
                 enums, out, json_options.use_hex);
           } else if (flatbuffers::IsFloat(elem_type)) {
             FloatToString(flatbuffers::GetAnyVectorElemF(vector, elem_type, i),
-                          elem_type, out);
+                          elem_type, out, json_options);
           } else if (elem_type == BaseType::String) {
             out->AppendChar('"');
             out->Append(flatbuffers::GetAnyVectorElemS(vector, elem_type, i));
