@@ -191,8 +191,9 @@ class Allocator {
   [[nodiscard]] virtual std::optional<std::span<uint8_t>> Allocate(
       size_t size, size_t alignment, SetZero set_zero) = 0;
   // Identical to Allocate(), but dies on failure.
-  [[nodiscard]] std::span<uint8_t> AllocateOrDie(size_t size, size_t alignment,
-                                                 SetZero set_zero) {
+  [[nodiscard]] virtual std::span<uint8_t> AllocateOrDie(size_t size,
+                                                         size_t alignment,
+                                                         SetZero set_zero) {
     std::optional<std::span<uint8_t>> span =
         Allocate(size, alignment, set_zero);
     CHECK(span.has_value()) << ": Failed to allocate " << size << " bytes.";

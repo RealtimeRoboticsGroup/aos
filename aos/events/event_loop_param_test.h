@@ -51,6 +51,11 @@ class EventLoopTestFactory {
       "name": "/test3",
       "type": "aos.TestMessage",
       "channel_storage_duration": 10000000000
+    },
+    {
+      "name": "/test/too_small",
+      "type": "aos.TestMessage",
+      "max_size": 8
     }
   ]
 })config",
@@ -108,6 +113,11 @@ class EventLoopTestFactory {
       "name": "/test3",
       "type": "aos.TestMessage",
       "channel_storage_duration": 10000000000
+    },
+    {
+      "name": "/test/too_small",
+      "type": "aos.TestMessage",
+      "max_size": 8
     }
   ]
 })config",
@@ -157,6 +167,13 @@ class EventLoopTestFactory {
       "read_method": "PIN",
       "num_readers": 10,
       "channel_storage_duration": 10000000000
+    },
+    {
+      "name": "/test/too_small",
+      "type": "aos.TestMessage",
+      "read_method": "PIN",
+      "num_readers": 10,
+      "max_size": 8
     }
   ]
 })config";

@@ -125,6 +125,37 @@ class RawSender {
     kInvalidRedzone,
   };
 
+  // Overrides the standard SpanAllocator to provide a more coherent error
+  // message when AllocateOrDie() fails.
+  class ChannelSpanAllocator : public fbs::SpanAllocator {
+   public:
+    ChannelSpanAllocator(std::span<uint8_t> buffer, const aos::Channel *channel)
+        : SpanAllocator(buffer), channel_(channel) {}
+
+    [[nodiscard]] virtual std::span<uint8_t> AllocateOrDie(
+        size_t size, size_t alignment, fbs::SetZero set_zero) override {
+      std::optional<std::span<uint8_t>> span =
+          Allocate(size, alignment, set_zero);
+      CHECK(span.has_value())
+          << ": Failed to allocate " << size << " bytes for "
+          << configuration::StrippedChannelToString(channel_)
+          << " with max_size of " << channel_->max_size();
+      // The below checks are just sanity checks---if they fail, that implies
+      // that the allocator is failing to hold to its contracts, rather than
+      // just that there is insufficient memory available.
+      CHECK_EQ(size, span.value().size())
+          << ": Failed to allocate " << size << " bytes.";
+      CHECK_EQ(reinterpret_cast<size_t>(span.value().data()) % alignment, 0u)
+          << "Failed to allocate data of length " << size << " with alignment "
+          << alignment;
+
+      return span.value();
+    }
+
+   private:
+    const aos::Channel *channel_;
+  };
+
   RawSender(EventLoop *event_loop, const Channel *channel);
   RawSender(const RawSender &) = delete;
   RawSender &operator=(const RawSender &) = delete;
@@ -199,11 +230,12 @@ class RawSender {
                                    channel());
   }
 
-  fbs::SpanAllocator *static_allocator() {
+  ChannelSpanAllocator *static_allocator() {
     CHECK(!fbb_allocator_.has_value())
         << ": May not mix-and-match static and raw flatbuffer builders.";
     return &static_allocator_.emplace(
-        std::span<uint8_t>{reinterpret_cast<uint8_t *>(data()), size()});
+        std::span<uint8_t>{reinterpret_cast<uint8_t *>(data()), size()},
+        channel_);
   }
 
   // Index of the buffer which is currently exposed by data() and the various
@@ -248,10 +280,10 @@ class RawSender {
   Ftrace ftrace_;
 
   // Depending on which API is being used, we will populate either
-  // fbb_allocator_ (for use with FlatBufferBuilders) or the SpanAllocator (for
-  // use with the static flatbuffer API).
+  // fbb_allocator_ (for use with FlatBufferBuilders) or the
+  // ChannelSpanAllocator (for use with the static flatbuffer API).
   std::optional<ChannelPreallocatedAllocator> fbb_allocator_;
-  std::optional<fbs::SpanAllocator> static_allocator_;
+  std::optional<ChannelSpanAllocator> static_allocator_;
 };
 
 // Needed for compatibility with glog

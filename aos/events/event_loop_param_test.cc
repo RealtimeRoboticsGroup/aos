@@ -1342,6 +1342,60 @@ TEST_P(AbstractEventLoopDeathTest, TooManyWatchersAndFetchers) {
       "\"aos.TestMessage\"[^}]*\\ }, too many readers.");
 }
 
+// Verify that we can't exceed the configured channel maximum size on a regular
+// Sender.
+TEST_P(AbstractEventLoopDeathTest, SenderRespectsMaxSize) {
+  auto loop1 = MakePrimary();
+  auto sender = loop1->MakeSender<TestMessage>("/test2");
+
+  const int max_size = sender.channel()->max_size();
+
+  auto builder = sender.MakeBuilder();
+  // We should be able to allocate a vector that is exactly the max size,
+  // when including the size element:
+  ASSERT_EQ(0, max_size % 4);
+  builder.fbb()->CreateVector(std::vector<uint32_t>((max_size / 4) - 1));
+
+  // If we try to allocate anything more, we should die.
+  EXPECT_DEATH(builder.fbb()->CreateVector(std::vector<uint32_t>()),
+               "Requested [0-9]* bytes.*max size 1000 for "
+               "channel.*/test2.*aos.TestMessage");
+}
+
+// Verify that we can't exceed the configured channel maximum size on a static
+// flatbuffers Sender.
+TEST_P(AbstractEventLoopTest, StaticSenderRespectsMaxSize) {
+  auto loop1 = MakePrimary();
+  auto sender = loop1->MakeSender<TestMessageStatic>("/test2");
+
+  const int max_size = sender.channel()->max_size();
+
+  auto builder = sender.MakeStaticBuilder();
+  auto vector = builder->add_vector();
+  const int element_size = 4;
+  const int starting_size = builder.builder()->buffer().size();
+  ASSERT_EQ(0, max_size % element_size);
+  ASSERT_EQ(0, starting_size % element_size);
+  // Attempt to allocate as many elements as we should be allowed to in the
+  // vector.
+  ASSERT_TRUE(vector->reserve((max_size - starting_size) / element_size +
+                              vector->capacity()));
+  ASSERT_EQ(max_size, builder.builder()->buffer().size());
+
+  // If we try to allocate anything more, we should fail to do so.
+  EXPECT_FALSE(vector->reserve(vector->capacity() + 1));
+}
+
+// Verify that if the channel is too small for even the initial static
+// flatbuffer to be allocated that we correctly fail.
+TEST_P(AbstractEventLoopDeathTest, StaticSenderRespectsInitialMaxSize) {
+  auto loop1 = MakePrimary();
+  auto sender = loop1->MakeSender<TestMessageStatic>("/test/too_small");
+  EXPECT_DEATH(
+      sender.MakeStaticBuilder(),
+      R"(Failed to allocate [0-9]* bytes for \{ "name": "/test/too_small", "type": "aos.TestMessage" \} with max_size of 8)");
+}
+
 // Verify that we can't create a sender inside OnRun.
 TEST_P(AbstractEventLoopDeathTest, SenderInOnRun) {
   auto loop1 = MakePrimary();
