@@ -124,6 +124,7 @@ const Node *GetNode(const Configuration *config, size_t node_index);
 // Returns a matching node, or nullptr if the provided node is nullptr and we
 // are in a single node world.
 const Node *GetNodeOrDie(const Configuration *config, const Node *node);
+const Node *GetNodeOrDie(const Configuration *config, std::string_view name);
 // Returns the Node out of the configuration which matches our hostname.
 // CHECKs if it can't be found.
 const Node *GetMyNode(const Configuration *config);

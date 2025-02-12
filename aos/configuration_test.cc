@@ -975,6 +975,7 @@ TEST_F(ConfigurationDeathTest, GetNodeOrDie) {
     FlatbufferDetachedBuffer<Configuration> single_node_config =
         ReadConfig(ArtifactPath("aos/testdata/config1.json"));
     EXPECT_EQ(nullptr, GetNodeOrDie(&single_node_config.message(), nullptr));
+    EXPECT_EQ(nullptr, GetNodeOrDie(&single_node_config.message(), ""));
 
     // Confirm that we die when a node is passed in.
     EXPECT_DEATH(
@@ -982,13 +983,22 @@ TEST_F(ConfigurationDeathTest, GetNodeOrDie) {
           GetNodeOrDie(&single_node_config.message(),
                        config.message().nodes()->Get(0));
         },
-        "Provided a node in a single node world.");
+        "Provided a node name of 'pi1' in a single node world.");
+    EXPECT_DEATH(
+        {
+          GetNodeOrDie(&single_node_config.message(),
+                       config.message().nodes()->Get(0)->name()->string_view());
+        },
+        "Provided a node name of 'pi1' in a single node world.");
   }
 
   const Node *pi1 = GetNode(&config.message(), "pi1");
   // Now try a lookup using a node from a different instance of the config.
   EXPECT_EQ(pi1,
             GetNodeOrDie(&config.message(), config2.message().nodes()->Get(0)));
+  EXPECT_EQ(pi1, GetNodeOrDie(
+                     &config.message(),
+                     config2.message().nodes()->Get(0)->name()->string_view()));
 }
 
 TEST_F(ConfigurationTest, GetNodeFromHostname) {

@@ -1657,12 +1657,28 @@ const Node *GetNode(const Configuration *config, size_t node_index) {
 
 const Node *GetNodeOrDie(const Configuration *config, const Node *node) {
   if (!MultiNode(config)) {
-    CHECK(node == nullptr) << ": Provided a node in a single node world.";
+    CHECK(node == nullptr) << ": Provided a node name of '"
+                           << node->name()->string_view()
+                           << "' in a single node world.";
     return nullptr;
   } else {
     const Node *config_node = GetNode(config, node);
     if (config_node == nullptr) {
       LOG(FATAL) << "Couldn't find node matching " << FlatbufferToJson(node);
+    }
+    return config_node;
+  }
+}
+
+const Node *GetNodeOrDie(const Configuration *config, std::string_view name) {
+  if (!MultiNode(config)) {
+    CHECK(name.empty()) << ": Provided a node name of '" << name
+                        << "' in a single node world.";
+    return nullptr;
+  } else {
+    const Node *config_node = GetNode(config, name);
+    if (config_node == nullptr) {
+      LOG(FATAL) << "Couldn't find node matching " << name;
     }
     return config_node;
   }
