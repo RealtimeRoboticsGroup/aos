@@ -24,6 +24,30 @@
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "5c122c92_68e76296",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 2
+      },
+      "lineNbr": 9,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-02-12T02:57:57Z",
+      "side": 1,
+      "message": "Done, I think?",
+      "parentUuid": "ee810076_e8ee0295",
+      "range": {
+        "startLine": 6,
+        "startChar": 0,
+        "endLine": 9,
+        "endChar": 19
+      },
+      "revId": "74cbcb5b8072b45e5965171fc754134e1fa54a46",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "57a00ccb_afa629a6",
@@ -214,6 +238,24 @@
       "writtenOn": "2025-02-11T06:18:18Z",
       "side": 1,
       "message": "Should we just delete this BUILD file and alter the glob in `documentation/aos/BUILD` to include the tutorials folder?",
+      "revId": "74cbcb5b8072b45e5965171fc754134e1fa54a46",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "5064f3fb_f39ef72e",
+        "filename": "documentation/tutorials/BUILD",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-02-12T02:57:57Z",
+      "side": 1,
+      "message": "Include a sibling folder? That doesn\u0027t feel right to me.",
+      "parentUuid": "b70fff60_6b82aa11",
       "revId": "74cbcb5b8072b45e5965171fc754134e1fa54a46",
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     },
