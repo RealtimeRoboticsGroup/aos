@@ -122,6 +122,11 @@ class ArrayErrorCounter {
     error_counts_.at(static_cast<size_t>(error))++;
   }
 
+  size_t GetErrorCount(Error error) const {
+    DCHECK_LT(static_cast<size_t>(error), error_counts_.size());
+    return error_counts_.at(static_cast<size_t>(error));
+  }
+
   // Sets all the error counts to zero.
   void ResetCounts() { error_counts_.fill(0); }
 
