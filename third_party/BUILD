@@ -88,6 +88,16 @@ cc_library(
     }),
 )
 
+filegroup(
+    name = "gstreamer_plugins_extra",
+    srcs = select({
+        "//tools:cpu_k8": ["@gstreamer_k8//:gstreamer_plugins_extra"],
+        "//tools:cpu_aarch64": ["@gstreamer_aarch64//:gstreamer_plugins_extra"],
+        "//conditions:default": [":unavailable"],
+    }),
+    visibility = ["//visibility:public"],
+)
+
 cc_library(
     name = "halide",
     visibility = ["//visibility:public"],
