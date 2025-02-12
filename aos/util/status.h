@@ -157,6 +157,9 @@ T CheckExpected(const Result<T> &expected) {
 template <>
 void CheckExpected<void>(const Result<void> &expected);
 
+// Convenience method to explicitly construct an "okay" Result<void>.
+inline Result<void> Ok() { return Result<void>{}; }
+
 int ResultExitCode(const Result<void> &expected);
 
 inline std::ostream &operator<<(std::ostream &stream, const Error &error) {
