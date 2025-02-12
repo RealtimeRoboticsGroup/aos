@@ -210,7 +210,7 @@ class SimpleShmFetcher {
     watcher_ = std::nullopt;
   }
 
-  absl::Span<char> GetMutableSharedMemory() {
+  absl::Span<char> GetMutableSharedMemory() const {
     return lockless_queue_memory_.GetMutableSharedMemory();
   }
 
