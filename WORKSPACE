@@ -1290,11 +1290,22 @@ http_archive(
     ],
 )
 
-load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
+load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk", "go_register_toolchains", "go_rules_dependencies")
+
+go_download_sdk(
+    name = "go_sdk",
+    goarch = "amd64",
+    goos = "linux",
+    sdks = {
+        # Pulled from https://go.dev/dl/ to avoid the external dependency.
+        "linux_amd64": ("go1.19.5.linux-amd64.tar.gz", "36519702ae2fd573c9869461990ae550c8c0d955cd28d2827a6b159fda81ff95"),
+    },
+    version = "1.19.5",
+)
 
 go_rules_dependencies()
 
-go_register_toolchains(version = "1.19.5")
+go_register_toolchains()
 
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 load("//:go_deps.bzl", "go_dependencies")
