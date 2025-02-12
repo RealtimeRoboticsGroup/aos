@@ -1663,22 +1663,22 @@ TEST(SimulatedEventLoopTest, MultinodePingPongWithOffsetAndSlope) {
 
   // Compute their time on the global distributed clock so we can compute
   // distance betwen them.
-  const distributed_clock::time_point pi1_ping_time =
+  const distributed_clock::time_point pi1_ping_time = CheckExpected(
       simulated_event_loop_factory.GetNodeEventLoopFactory(pi1)
           ->ToDistributedClock(
-              ping_on_pi1_fetcher.context().monotonic_event_time);
-  const distributed_clock::time_point pi2_ping_time =
+              ping_on_pi1_fetcher.context().monotonic_event_time));
+  const distributed_clock::time_point pi2_ping_time = CheckExpected(
       simulated_event_loop_factory.GetNodeEventLoopFactory(pi2)
           ->ToDistributedClock(
-              ping_on_pi2_fetcher.context().monotonic_event_time);
-  const distributed_clock::time_point pi1_pong_time =
+              ping_on_pi2_fetcher.context().monotonic_event_time));
+  const distributed_clock::time_point pi1_pong_time = CheckExpected(
       simulated_event_loop_factory.GetNodeEventLoopFactory(pi1)
           ->ToDistributedClock(
-              pong_on_pi1_fetcher.context().monotonic_event_time);
-  const distributed_clock::time_point pi2_pong_time =
+              pong_on_pi1_fetcher.context().monotonic_event_time));
+  const distributed_clock::time_point pi2_pong_time = CheckExpected(
       simulated_event_loop_factory.GetNodeEventLoopFactory(pi2)
           ->ToDistributedClock(
-              pong_on_pi2_fetcher.context().monotonic_event_time);
+              pong_on_pi2_fetcher.context().monotonic_event_time));
 
   // And confirm the delivery delay is just about exactly 150 uS for both
   // directions like expected.  There will be a couple ns of rounding errors in

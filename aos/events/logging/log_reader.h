@@ -120,7 +120,12 @@ class LogReader {
   // Registers all the callbacks to send the log file data out to an event loop
   // factory.  This does not start replaying or change the current distributed
   // time of the factory.  It does change the monotonic clocks to be right.
-  virtual void RegisterWithoutStarting(
+  void RegisterWithoutStarting(SimulatedEventLoopFactory *event_loop_factory);
+  // Identical to RegisterWithoutStarting(), except that certain classes of
+  // errors will result in an error value being returned rather than resulting
+  // in a LOG(FATAL). If this returns an error, log reading has failed and the
+  // log reader may now be in an inconsistent state.
+  [[nodiscard]] virtual Result<void> NonFatalRegisterWithoutStarting(
       SimulatedEventLoopFactory *event_loop_factory);
   // Runs the log until the last start time.  Register above is defined as:
   // Register(...) {
@@ -407,9 +412,10 @@ class LogReader {
  private:
   friend class testing::MultinodeLoggerTest;
 
-  void Register(EventLoop *event_loop, const Node *node);
+  [[nodiscard]] Result<void> Register(EventLoop *event_loop, const Node *node);
 
-  void RegisterDuringStartup(EventLoop *event_loop, const Node *node);
+  [[nodiscard]] Result<void> RegisterDuringStartup(EventLoop *event_loop,
+                                                   const Node *node);
 
   const Channel *RemapChannel(const EventLoop *event_loop, const Node *node,
                               const Channel *channel);
@@ -497,13 +503,13 @@ class LogReader {
 
     // Returns the next sorted message with all the timestamps extracted and
     // matched.
-    TimestampedMessage PopOldest();
+    Result<TimestampedMessage> PopOldest();
 
     // Returns the monotonic time of the oldest message.
-    BootTimestamp SingleThreadedOldestMessageTime();
+    Result<BootTimestamp> SingleThreadedOldestMessageTime();
     // Returns the monotonic time of the oldest message, handling querying the
     // separate thread of ThreadedBuffering was set.
-    BootTimestamp MultiThreadedOldestMessageTime();
+    Result<BootTimestamp> MultiThreadedOldestMessageTime();
 
     size_t boot_count() const {
       // If we are replaying directly into an event loop, we can't reboot.  So
@@ -530,11 +536,11 @@ class LogReader {
     // timestamps instead of timestamps and much larger data for a shorter
     // period.  For logs where timestamps are stored with the data, this
     // triggers those files to be read twice.
-    void ReadTimestamps();
+    [[nodiscard]] Result<void> ReadTimestamps();
 
     // Primes the queues inside State.  Should be called before calling
     // OldestMessageTime.
-    void MaybeSeedSortedMessages();
+    [[nodiscard]] Result<void> MaybeSeedSortedMessages();
 
     void SetUpStartupTimer() {
       const monotonic_clock::time_point start_time =
@@ -617,7 +623,7 @@ class LogReader {
 
     // Converts a timestamp from the monotonic clock on this node to the
     // distributed clock.
-    distributed_clock::time_point ToDistributedClock(
+    Result<distributed_clock::time_point> ToDistributedClock(
         monotonic_clock::time_point time) {
       CHECK(node_event_loop_factory_);
       return node_event_loop_factory_->ToDistributedClock(time);
@@ -652,7 +658,7 @@ class LogReader {
       return event_loop_unique_ptr_.get();
     }
 
-    distributed_clock::time_point RemoteToDistributedClock(
+    Result<distributed_clock::time_point> RemoteToDistributedClock(
         size_t channel_index, monotonic_clock::time_point time) {
       CHECK(node_event_loop_factory_);
       return channel_source_state_[channel_index]
@@ -915,7 +921,8 @@ class LogReader {
     // various nodes are at, leading to potential issues.
     ThreadedBuffering threading_;
     std::optional<BootTimestamp> last_queued_message_;
-    std::optional<util::ThreadedQueue<TimestampedMessage, BootTimestamp>>
+    std::optional<
+        util::ThreadedQueue<Result<TimestampedMessage>, BootTimestamp>>
         message_queuer_;
 
     // If a ReplayChannels was passed to LogReader, this will hold the
@@ -947,12 +954,28 @@ class LogReader {
   // Returns the timestamp queueing strategy to use.
   TimestampQueueStrategy ComputeTimestampQueueStrategy() const;
 
+  template <typename T>
+  void ExitOrCheckExpected(const Result<T> &result) {
+    if (result.has_value()) {
+      return;
+    }
+    if (exit_handle_) {
+      exit_handle_->Exit(Error::MakeUnexpected(result.error()));
+    } else {
+      CheckExpected(result);
+    }
+  }
+
   // List of filters for a connection.  The pointer to the first node will be
   // less than the second node.
   std::unique_ptr<message_bridge::MultiNodeNoncausalOffsetEstimator> filters_;
 
   std::unique_ptr<SimulatedEventLoopFactory> event_loop_factory_unique_ptr_;
   SimulatedEventLoopFactory *event_loop_factory_ = nullptr;
+
+  // Exit handle---this allows us to terminate execution with appropriate error
+  // codes when we encounter an error in the logfile.
+  std::unique_ptr<ExitHandle> exit_handle_;
 
   // Number of nodes which still have data to send.  This is used to figure out
   // when to exit.

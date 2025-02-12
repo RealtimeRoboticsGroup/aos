@@ -66,12 +66,14 @@ class TimeConverter {
 
   // Converts a time to the distributed clock for scheduling and cross-node
   // time measurement.
-  virtual distributed_clock::time_point ToDistributedClock(
+  // If the time conversion fails, returns an error.
+  virtual Result<distributed_clock::time_point> ToDistributedClock(
       size_t node_index, logger::BootTimestamp time) = 0;
 
   // Takes the distributed time and converts it to the monotonic clock for this
   // node.
-  virtual logger::BootTimestamp FromDistributedClock(
+  // If the time conversion fails, returns an error.
+  virtual Result<logger::BootTimestamp> FromDistributedClock(
       size_t node_index, distributed_clock::time_point time,
       size_t boot_count) = 0;
 
@@ -165,14 +167,14 @@ class EventScheduler {
   inline bool is_running() const;
 
   // Returns the timestamp of the next event to trigger.
-  std::pair<distributed_clock::time_point, monotonic_clock::time_point>
+  Result<std::pair<distributed_clock::time_point, monotonic_clock::time_point>>
   OldestEvent();
   // Handles the next event.
-  void CallOldestEvent();
+  [[nodiscard]] Result<void> CallOldestEvent();
 
   // Converts a time to the distributed clock for scheduling and cross-node time
   // measurement.
-  distributed_clock::time_point ToDistributedClock(
+  Result<distributed_clock::time_point> ToDistributedClock(
       monotonic_clock::time_point time) const {
     return converter_->ToDistributedClock(node_index_,
                                           {.boot = boot_count_, .time = time});
@@ -180,7 +182,7 @@ class EventScheduler {
 
   // Takes the distributed time and converts it to the monotonic clock for this
   // node.
-  logger::BootTimestamp FromDistributedClock(
+  Result<logger::BootTimestamp> FromDistributedClock(
       distributed_clock::time_point time) const {
     return converter_->FromDistributedClock(node_index_, time, boot_count_);
   }
@@ -211,9 +213,9 @@ class EventScheduler {
 
   // For implementing reboots.
   void Shutdown();
-  void Startup();
+  [[nodiscard]] Result<void> Startup();
 
-  void MaybeRunOnStartup();
+  [[nodiscard]] Result<void> MaybeRunOnStartup();
   void MaybeRunOnRun();
 
   constexpr monotonic_clock::time_point kInvalidCachedTime() {
@@ -258,13 +260,13 @@ class EventScheduler {
   // Converts time by doing nothing to it.
   class UnityConverter final : public TimeConverter {
    public:
-    distributed_clock::time_point ToDistributedClock(
+    Result<distributed_clock::time_point> ToDistributedClock(
         size_t /*node_index*/, logger::BootTimestamp time) override {
       CHECK_EQ(time.boot, 0u) << ": Reboots unsupported by default.";
       return distributed_clock::epoch() + time.time.time_since_epoch();
     }
 
-    logger::BootTimestamp FromDistributedClock(
+    Result<logger::BootTimestamp> FromDistributedClock(
         size_t /*node_index*/, distributed_clock::time_point time,
         size_t boot_count) override {
       CHECK_EQ(boot_count, 0u);
@@ -301,13 +303,19 @@ class EventScheduler {
 //
 // This pushes us towards merge sort.  Sorting each node's events with a heap
 // like we used to be doing, and then sorting each of those nodes independently.
+//
+// Note on methods returning Result<T> objects: An error will be returned if
+// there has been any internal failure which does not require that we abort the
+// program. However, no existing non-fatal errors permit you to continue
+// execution after the error occurs (existing errors generally correspond to log
+// reading failures).
 class EventSchedulerScheduler {
  public:
   // Adds an event scheduler to the list.
   void AddEventScheduler(EventScheduler *scheduler);
 
   // Runs until there are no more events or Exit is called.
-  void Run();
+  [[nodiscard]] Result<void> Run();
 
   // Stops running.
   void Exit() { is_running_ = false; }
@@ -315,7 +323,7 @@ class EventSchedulerScheduler {
   // Runs for a duration on the distributed clock.  Time on the distributed
   // clock should be very representative of time on each node, but won't be
   // exactly the same.
-  void RunFor(distributed_clock::duration duration);
+  [[nodiscard]] Result<void> RunFor(distributed_clock::duration duration);
 
   // Sets the realtime replay rate. A value of 1.0 will cause the scheduler to
   // try to play events in realtime. 0.5 will run at half speed. Use infinity
@@ -328,8 +336,9 @@ class EventSchedulerScheduler {
   // realtime offset.
   // Returns true if it ran until time (i.e., Exit() was not called before
   // end_time).
-  bool RunUntil(realtime_clock::time_point end_time, EventScheduler *scheduler,
-                std::function<std::chrono::nanoseconds()> fn_realtime_offset);
+  [[nodiscard]] Result<bool> RunUntil(
+      realtime_clock::time_point end_time, EventScheduler *scheduler,
+      std::function<std::chrono::nanoseconds()> fn_realtime_offset);
 
   // Returns the current distributed time.
   distributed_clock::time_point distributed_now() const { return now_; }
@@ -348,22 +357,23 @@ class EventSchedulerScheduler {
   // Runs the provided callback now.  Stops everything, runs the callback, then
   // starts it all up again.  This lets us do operations like starting and
   // stopping applications while running.
-  void TemporarilyStopAndRun(std::function<void()> fn);
+  Result<void> TemporarilyStopAndRun(std::function<void()> fn);
 
  private:
-  void Reboot();
+  [[nodiscard]] Result<void> Reboot();
 
   void MaybeRunStopped();
-  void MaybeRunOnStartup();
+  [[nodiscard]] Result<void> MaybeRunOnStartup();
 
   // Returns the next event time and scheduler on which to run it.
-  std::tuple<distributed_clock::time_point, EventScheduler *> OldestEvent();
+  Result<std::tuple<distributed_clock::time_point, EventScheduler *>>
+  OldestEvent();
 
   // Handles running loop_body repeatedly until complete. loop_body should
   // return the next time at which it wants to be called, and set is_running_ to
   // false once we should stop.
   template <typename F>
-  void RunMaybeRealtimeLoop(F loop_body);
+  [[nodiscard]] Result<void> RunMaybeRealtimeLoop(F loop_body);
 
   // True if we are running.
   bool is_running_ = false;
@@ -387,8 +397,12 @@ inline distributed_clock::time_point EventScheduler::distributed_now() const {
   return scheduler_scheduler_->distributed_now();
 }
 inline monotonic_clock::time_point EventScheduler::monotonic_now() const {
-  const logger::BootTimestamp t =
-      FromDistributedClock(scheduler_scheduler_->distributed_now());
+  // Retrieving the current monotonic_now should always succeed.
+  // TODO(james): Not actually 100% sure that this is true, but piping
+  // Result<>'s up through the entire set of users of monotonic_now() is going
+  // to be miserable, so we should probably aim to *make* it true.
+  const logger::BootTimestamp t = CheckExpected(
+      FromDistributedClock(scheduler_scheduler_->distributed_now()));
   CHECK_EQ(t.boot, boot_count_)
       << ": "
       << " " << t << " d " << scheduler_scheduler_->distributed_now();
