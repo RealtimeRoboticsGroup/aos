@@ -2,6 +2,8 @@ include "log_replayer_config.fbs";
 
 namespace aos;
 
+attribute "static_length";
+
 table LogReplayerStats {
 	// The ReplayConfig passed to log_replayer.
 	replay_config:ReplayConfig (id: 0);
@@ -11,9 +13,14 @@ table LogReplayerStats {
 	// Monotonic start and end times of log replay, in nanoseconds.
 	monotonic_start_time:int64 (id: 3);
 	monotonic_end_time:int64 (id: 4);
-    // Name of the node where the log originated from.
-    // Note: Currently, only single node replay is supported.
-	node:string (id: 5);
+	// Name of the node where the log originated from.
+	// Note: Currently, only single node replay is supported.
+	node:string (id: 5, static_length: 10);
+
+	// Formatted times which can be used with the start and end times flags in LogReader.
+	// Format will look like: 2021-01-15_15-30-35.000000000
+	start_time:string (id: 6, static_length: 29);
+	end_time:string (id: 7, static_length: 29);
 }
 
 root_type LogReplayerStats;

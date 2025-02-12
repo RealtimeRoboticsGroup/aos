@@ -20,6 +20,7 @@
 #include "aos/events/logging/log_replayer_config_generated.h"
 #include "aos/events/logging/log_replayer_stats_generated.h"
 #include "aos/events/logging/log_replayer_stats_schema.h"
+#include "aos/events/logging/log_replayer_stats_static.h"
 #include "aos/events/logging/logfile_sorting.h"
 #include "aos/events/logging/logfile_utils.h"
 #include "aos/events/logging/replay_timing_generated.h"
@@ -55,6 +56,9 @@ ABSL_FLAG(std::string, merge_with_config, "",
           "add extra applications needed to run only for log_replayer");
 ABSL_FLAG(bool, print_stats, true,
           "if set, prints the LogReplayerStats message as JSON to stdout");
+ABSL_FLAG(bool, fatal_app_not_found, true,
+          "If set, will fatally check when an application is not found in the "
+          "timing report used for checking the channels in the replay log.");
 
 namespace aos::logger {
 
@@ -115,13 +119,15 @@ int Main(int argc, char *argv[]) {
     std::vector<std::string> applications;
     for (const auto &application :
          *replay_config.value().message().applications()) {
-      if (application->name()->string_view() != "camera_message_interceptor") {
-        applications.emplace_back(application->name()->string_view());
-      }
+      applications.emplace_back(application->name()->string_view());
     }
 
+    // This skips fatally checking for a timing report of each individual
+    // application
+    ChannelsInLogOptions options{true, true, true, FLAGS_fatal_app_not_found};
+
     aos::logger::ChannelsInLogResult channels =
-        ChannelsInLog(logfiles, active_nodes, applications);
+        ChannelsInLog(logfiles, active_nodes, applications, options);
     for (auto const &channel :
          channels.watchers_and_fetchers_without_senders.value()) {
       message_filter.emplace_back(channel.name, channel.type);
@@ -157,47 +163,44 @@ int Main(int argc, char *argv[]) {
     event_loop.SkipAosLog();
     event_loop.SkipTimingReport();
 
-    aos::Sender<aos::LogReplayerStats> stats_sender =
-        event_loop.MakeSender<aos::LogReplayerStats>("/replay");
-    auto builder = stats_sender.MakeBuilder();
-    auto node_name = builder.fbb()->CreateString(event_loop.node()->name());
-    flatbuffers::Offset<aos::ReplayConfig> replay_config_offset;
+    aos::Sender<aos::LogReplayerStatsStatic> stats_sender =
+        event_loop.MakeSender<aos::LogReplayerStatsStatic>("/replay");
+    auto stats_msg = stats_sender.MakeStaticBuilder();
     if (replay_config.has_value()) {
-      replay_config_offset =
-          aos::CopyFlatBuffer(&replay_config.value().message(), builder.fbb());
-    }
-
-    auto stats_builder = builder.MakeBuilder<aos::LogReplayerStats>();
-    if (replay_config.has_value()) {
-      stats_builder.add_replay_config(replay_config_offset);
+      auto new_replay_config = CHECK_NOTNULL(stats_msg->add_replay_config());
+      CHECK(
+          new_replay_config->FromFlatbuffer(&replay_config.value().message()));
     }
 
     reader.Register(&event_loop);
 
     // Save off the start and end times of replay.
-    reader.OnStart(event_loop.node(), [&event_loop, &stats_builder,
-                                       &node_name]() {
-      stats_builder.add_node(node_name);
-      stats_builder.add_realtime_start_time(
-          std::chrono::nanoseconds(event_loop.realtime_now().time_since_epoch())
-              .count());
+    reader.OnStart(event_loop.node(), [&event_loop, &stats_msg]() {
+      auto node_name = CHECK_NOTNULL(stats_msg->add_node());
+      node_name->SetString(event_loop.node()->name()->string_view());
 
-      stats_builder.add_monotonic_start_time(
+      const aos::realtime_clock::time_point now = event_loop.realtime_now();
+      stats_msg->set_realtime_start_time(now.time_since_epoch().count());
+      auto formatted_start_time = CHECK_NOTNULL(stats_msg->add_start_time());
+      formatted_start_time->SetString(ToString(now));
+
+      stats_msg->set_monotonic_start_time(
           std::chrono::nanoseconds(
               event_loop.monotonic_now().time_since_epoch())
               .count());
     });
 
-    reader.OnEnd(event_loop.node(), [&event_loop, &stats_builder, &builder]() {
-      stats_builder.add_realtime_end_time(
-          std::chrono::nanoseconds(event_loop.realtime_now().time_since_epoch())
-              .count());
+    reader.OnEnd(event_loop.node(), [&event_loop, &stats_msg]() {
+      const aos::realtime_clock::time_point now = event_loop.realtime_now();
+      stats_msg->set_realtime_end_time(now.time_since_epoch().count());
+      auto formatted_end_time = CHECK_NOTNULL(stats_msg->add_end_time());
+      formatted_end_time->SetString(ToString(now));
 
-      stats_builder.add_monotonic_end_time(
+      stats_msg->set_monotonic_end_time(
           std::chrono::nanoseconds(
               event_loop.monotonic_now().time_since_epoch())
               .count());
-      builder.CheckOk(builder.Send(stats_builder.Finish()));
+      stats_msg.CheckOk(stats_msg.Send());
     });
 
     reader.OnEnd(event_loop.node(), [&event_loop]() { event_loop.Exit(); });
