@@ -20,6 +20,7 @@ struct ChannelsInLogOptions {
   bool get_senders = false;
   bool get_watchers = false;
   bool get_fetchers = false;
+  bool fatal_application_not_found = true;
 };  // struct ChannelsInLogOptions
 
 // Reads the first ~1 second of timing reports in a logfile and generates a list

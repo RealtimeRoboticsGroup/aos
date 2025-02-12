@@ -28,9 +28,9 @@ void HandleChannelsInApplications(
   std::string name = report.name()->str();
   if (results->observed_applications[nodes_index].count(name) > 0) {
     if (!results->remaining_applications[nodes_index].empty()) {
-      LOG(FATAL) << "Didn't see timing reports for every application! "
-                 << absl::StrJoin(results->remaining_applications[nodes_index],
-                                  ", ");
+      (options.fatal_application_not_found ? LOG(FATAL) : LOG(WARNING))
+          << "Didn't see timing reports for every application! "
+          << absl::StrJoin(results->remaining_applications[nodes_index], ", ");
     } else {
       factory->Exit();
     }
