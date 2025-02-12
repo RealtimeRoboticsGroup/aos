@@ -93,9 +93,11 @@ inline const Channel *GetChannel(const Configuration *config,
 }
 
 // Returns a list of all the channel names that can be used to refer to the
-// specified channel on the given node/application. this allows a reverse-lookup
+// specified channel on the given node/application. This allows a reverse-lookup
 // of any renames that happen.
-// Does not perform forwards-lookup first.
+//
+// Performs a forward lookup first, and if the provided combination of
+// parameters doesn't resolve to a channel, returns an empty list.
 std::set<std::string> GetChannelAliases(const Configuration *config,
                                         std::string_view name,
                                         std::string_view type,

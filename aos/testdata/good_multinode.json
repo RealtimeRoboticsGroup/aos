@@ -1,13 +1,23 @@
 {
   "channels": [
     {
+      "name": "/aos/first",
+      "type": ".aos.test",
+      "source_node": "pi1"
+    },
+    {
+      "name": "/aos/second",
+      "type": ".aos.test",
+      "source_node": "pi1"
+    },
+    {
       "name": "/foo",
       "type": ".aos.bar",
       "max_size": 5,
       "source_node": "pi1"
     },
     {
-      "name": "/foo/subfolder",
+      "name": "/foo/testing",
       "type": ".aos.bar",
       "max_size": 5,
       "source_node": "pi1"
@@ -42,6 +52,26 @@
       },
       "rename": {
         "name": "/foo"
+      }
+    },
+    {
+      "match": {
+        "name": "/aos",
+        "type": ".aos.test",
+        "source_node": "pi1"
+      },
+      "rename": {
+        "name": "/aos/first"
+      }
+    },
+    {
+      "match": {
+        "name": "/aos",
+        "type": ".aos.test",
+        "source_node": "pi1"
+      },
+      "rename": {
+        "name": "/aos/second"
       }
     }
   ],

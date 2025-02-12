@@ -273,8 +273,11 @@ TEST_F(ConfigurationTest, GetChannelAliasesMultinode) {
                                       "/magic/string"));
 
   EXPECT_THAT(
-      GetChannelAliases(&config.message(), "/foo", ".aos.baz", "app1", pi1),
-      ::testing::UnorderedElementsAre("/foo", "/batman3", "/magic/string"));
+      GetChannelAliases(&config.message(), "/foo", ".aos.bar", "", pi1),
+      ::testing::UnorderedElementsAre("/foo", "/batman", "/magic/string"));
+
+  EXPECT_TRUE(GetChannelAliases(&config.message(), "/foo", ".aos.baz", "", pi1)
+                  .empty());
 
   EXPECT_THAT(
       GetChannelAliases(&config.message(), "/foo/testing", ".aos.bar", "", pi1),
@@ -284,6 +287,17 @@ TEST_F(ConfigurationTest, GetChannelAliasesMultinode) {
       GetChannelAliases(&config.message(), "/foo/testing", ".aos.bar", "app1",
                         pi2),
       ::testing::UnorderedElementsAre("/foo/testing", "/magic/string/testing"));
+
+  // The second map in the config (/aos -> /aos/second) always takes precedence
+  // over the first one (/aos -> /aos/first), so this shouldn't have "/aos" as
+  // an alias.
+  EXPECT_THAT(
+      GetChannelAliases(&config.message(), "/aos/first", ".aos.test", "", pi1),
+      ::testing::UnorderedElementsAre("/aos/first"));
+
+  EXPECT_THAT(
+      GetChannelAliases(&config.message(), "/aos/second", ".aos.test", "", pi1),
+      ::testing::UnorderedElementsAre("/aos/second", "/aos"));
 }
 
 // Tests that we can lookup a location with type specific maps.
@@ -318,9 +332,9 @@ TEST_F(ConfigurationTest, GetChannelGlob) {
   // Now confirm that glob with something following it matches and renames
   // correctly.
   const char *kExpectedSubfolderMultinodeLocation =
-      "{ \"name\": \"/foo/subfolder\", \"type\": \".aos.bar\", \"max_size\": "
+      "{ \"name\": \"/foo/testing\", \"type\": \".aos.bar\", \"max_size\": "
       "5, \"source_node\": \"pi1\" }";
-  EXPECT_EQ(FlatbufferToJson(GetChannel(config, "/magic/string/subfolder",
+  EXPECT_EQ(FlatbufferToJson(GetChannel(config, "/magic/string/testing",
                                         ".aos.bar", "app7", pi1)),
             kExpectedSubfolderMultinodeLocation);
 }
@@ -1029,7 +1043,7 @@ TEST_F(ConfigurationTest, SourceNodeIndex) {
       ReadConfig(ArtifactPath("aos/testdata/good_multinode.json"));
   std::vector<size_t> result = SourceNodeIndex(&config.message());
 
-  EXPECT_THAT(result, ::testing::ElementsAreArray({0, 1, 0, 0}));
+  EXPECT_THAT(result, ::testing::ElementsAreArray({0, 0, 0, 1, 0, 0}));
 }
 
 // Tests that SourceNode reasonably handles both single and multi-node configs.

@@ -1308,7 +1308,16 @@ std::set<std::string> GetChannelAliases(const Configuration *config,
                                         std::string_view type,
                                         const std::string_view application_name,
                                         const Node *node) {
-  std::set<std::string> names{std::string(name)};
+  std::set<std::string> names;
+  const Channel *resolved_channel =
+      GetChannel(config, name, type, application_name, node);
+  if (resolved_channel == nullptr) {
+    return names;
+  }
+  VLOG(1) << "Provided channel resolves to "
+          << resolved_channel->name()->string_view() << " "
+          << resolved_channel->type()->string_view();
+  names.insert(std::string(name));
   if (config->has_maps()) {
     HandleReverseMaps(config->maps(), type, node, &names);
   }
@@ -1317,6 +1326,25 @@ std::set<std::string> GetChannelAliases(const Configuration *config,
         GetApplication(config, node, application_name);
     if (application != nullptr && application->has_maps()) {
       HandleReverseMaps(application->maps(), type, node, &names);
+    }
+  }
+  // HandleReverseMaps takes neither ordering of maps nor the type into account.
+  // Do a forward lookup for each alias. If it doesn't result in the same
+  // channel as the one queried, remove it from the list.
+  auto it = names.begin();
+  while (it != names.end()) {
+    const Channel *channel =
+        GetChannel(config, *it, type, application_name, node);
+    CHECK(channel != nullptr);
+    if (channel->name()->string_view() !=
+        resolved_channel->name()->string_view()) {
+      VLOG(1) << "Alias " << *it << " resolves to "
+              << channel->name()->string_view() << " "
+              << channel->type()->string_view()
+              << ", which does not match. Removing from list.";
+      it = names.erase(it);
+    } else {
+      ++it;
     }
   }
   return names;
