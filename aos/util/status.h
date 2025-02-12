@@ -61,6 +61,12 @@ class Error {
     kError = 1,
   };
 
+  // Wraps an Error with an unexpected<> so that a Result<> may be constructed
+  // from the Error.
+  static tl::unexpected<Error> MakeUnexpected(const Error &error) {
+    return tl::unexpected<Error>(error);
+  }
+
   // Constructs an Error, copying the provided message. If the message is
   // shorter than kStaticMessageLength, then the message will be stored entirely
   // on the stack; longer messages will require dynamic memory allocation.
@@ -75,8 +81,7 @@ class Error {
   static tl::unexpected<Error> MakeUnexpectedError(
       std::string_view message,
       std::source_location source_location = std::source_location::current()) {
-    return tl::unexpected<Error>(
-        MakeError(message, std::move(source_location)));
+    return MakeUnexpected(MakeError(message, std::move(source_location)));
   }
 
   // Constructs an error, retaining the provided pointer to a null-terminated
@@ -94,7 +99,7 @@ class Error {
   static tl::unexpected<Error> MakeUnexpectedStringLiteralError(
       const char *message,
       std::source_location source_location = std::source_location::current()) {
-    return tl::unexpected<Error>(
+    return MakeUnexpected(
         MakeStringLiteralError(message, std::move(source_location)));
   }
 
@@ -129,6 +134,12 @@ class Error {
   std::optional<std::source_location> source_location_;
 };
 
+// Unfortunately, [[nodiscard]] does not work on using/typedef declarations, but
+// if we change the type at all (e.g., creating a class that inherits from
+// tl::expected) then converting between expected's and Results becomes a lot
+// messier. In lieu of [[nodiscard]] being specified here, it is strongly
+// advised the functions returning Result<>'s---especially those returning
+// Result<void>---be marked [[nodiscard]].
 template <typename T>
 using Result = tl::expected<T, Error>;
 
@@ -147,5 +158,99 @@ template <>
 void CheckExpected<void>(const Result<void> &expected);
 
 int ResultExitCode(const Result<void> &expected);
+
+inline std::ostream &operator<<(std::ostream &stream, const Error &error) {
+  stream << error.ToString();
+  return stream;
+}
+
+template <typename T>
+std::ostream &operator<<(std::ostream &stream, const Result<T> &result) {
+  if (result.has_value()) {
+    stream << result.value();
+  } else {
+    stream << "<Error: " << result.error() << ">";
+  }
+  return stream;
+}
+
+inline std::ostream &operator<<(std::ostream &stream,
+                                const Result<void> &result) {
+  if (result.has_value()) {
+    stream << "<void>";
+  } else {
+    stream << "<Error: " << result.error() << ">";
+  }
+  return stream;
+}
+
+// Takes an expression that evalutes to a Result<> and returns the error if
+// there is one.
+#define AOS_RETURN_IF_ERROR(result)                                           \
+  {                                                                           \
+    /* Ensure that we only evalute result once. (reference lifetime extension \
+     * should prevent lifetime issues here). */                               \
+    const auto &tmp = (result);                                               \
+    if (!tmp.has_value()) {                                                   \
+      return ::aos::Error::MakeUnexpected(tmp.error());                       \
+    }                                                                         \
+  }
+
+// If expression evalutes to a type of Result<T> then a variable named variable
+// of type const T& will be declared that is initialized to refer to the result
+// of evaluating the expression. If expression evaluates to an error state,
+// returns the error prior to initializing the variable.
+#define AOS_DECLARE_OR_RETURN_IF_ERROR(variable, expression)                \
+  /* Ensure that we only evalute result once. (reference lifetime extension \
+   * should prevent lifetime issues here). */                               \
+  const auto &variable##__tmp = (expression);                               \
+  if (!variable##__tmp.has_value()) {                                       \
+    return ::aos::Error::MakeUnexpected(variable##__tmp.error());           \
+  }                                                                         \
+  const auto &variable = variable##__tmp.value();
+
+namespace internal {
+// The below is a cutesy way to prevent
+// AOS_GET_VALUE_OR_RETURN_ERROR() from being called with an lvalue
+// expression. We do this because it may not be obvious to users whether
+// AOS_GET_VALUE_OR_RETURN_ERROR() would attempt to copy the
+// provided lvalue or move from it, and unlike
+// AOS_DECLARE_OR_RETURN_IF_ERROR where we can declare the result
+// variable as a reference in this case the result variable is generally going
+// to own the returned value, and so must either copy or move from the input.
+// When the input expression is a temporary this is easy---we can just always
+// move, avoiding extra copies without anyone noticing. If the input is an
+// lvalue (e.g., some other variable being used to store a Result<>), then
+// choosing one or the other creates a footgun. There may be cleaner ways to
+// enforce that the input expression be a temporary, but this wrapper
+// conveniently fails to compile when passed an lvalue reference. If we did want
+// to make AOS_GET_VALUE_OR_RETURN_ERROR support moving lvalue
+// references into it then we could define a template <typename T> T
+// &ForwardExpression(T &lvalue) { return lvalue; } overload and the below macro
+// would work fine If, alternatively, we wanted to copy the input lvalue's, we
+// could define a template <typename T> T ForwardExpression(T &lvalue) { return
+// lvalue; } to achieve that result.
+template <typename T>
+T ForwardExpression(T &&rvalue) {
+  return std::move(rvalue);
+}
+}  // namespace internal
+// Performs a similar function to AOS_DECLARE_OR_RETURN_IF_ERROR,
+// except that this assumes that variable is already declared and so just sets
+// it to the result of the expression, if it is an expected value. Does not
+// support taking an lvalue as the expression, as it is not intuitive whether
+// this would result in a copy or a move of the provided lvalue, and most
+// use-cases will take an rvalue of some sort.
+#define AOS_GET_VALUE_OR_RETURN_ERROR(variable, expression)                  \
+  /* Ensure that we only evalute result once. Note that we use decltype()    \
+   * rather than auto to preserve any reference type returned by             \
+   * ForwardExpression() (not currently relevant, but may become relevant if \
+   * we support lvalues in (expression). */                                  \
+  decltype(::aos::internal::ForwardExpression(expression)) variable##__tmp = \
+      ::aos::internal::ForwardExpression(expression);                        \
+  if (!variable##__tmp.has_value()) {                                        \
+    return ::aos::Error::MakeUnexpected(variable##__tmp.error());            \
+  }                                                                          \
+  variable = std::move(variable##__tmp.value());
 }  // namespace aos
 #endif  // AOS_UTIL_STATUS_H_

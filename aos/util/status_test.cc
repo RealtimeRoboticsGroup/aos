@@ -5,6 +5,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include "aos/macros.h"
 #include "aos/realtime.h"
 #include "aos/testing/path.h"
 
@@ -105,5 +106,156 @@ TEST(ErrorDeathTest, CheckExpected) {
   EXPECT_DEATH(CheckExpected<void>(Error::MakeUnexpectedError("void expected")),
                "void expected")
       << "A void expected should work with CheckExpected().";
+}
+
+// Test struct that cannot be copied but which can be moved, to be used to
+// ensure that the various Result macros do not induce extra copies.
+struct DisallowCopy {
+  DisallowCopy() {}
+  DISALLOW_COPY_AND_ASSIGN(DisallowCopy);
+  DisallowCopy(DisallowCopy &&) = default;
+  DisallowCopy &operator=(DisallowCopy &&) = default;
+};
+
+TEST_F(ErrorTest, ReturnResultIfErrorNoExtraCopies) {
+  Result<DisallowCopy> test_value = {};
+  bool executed = false;
+  const Result<void> result = [&test_value, &executed]() -> Result<void> {
+    AOS_RETURN_IF_ERROR(test_value);
+    executed = true;
+    // next, confirm that we do actually return early on an unexpected.
+    AOS_RETURN_IF_ERROR(
+        Result<void>(Error::MakeUnexpectedError("Hello, World!")));
+    return {};
+  }();
+  EXPECT_FALSE(result.has_value());
+  EXPECT_TRUE(executed);
+}
+
+// Validates that the AOS_RETURN_IF_ERROR() macro can handle a temporary
+// expression. When run under sanitizers this should also help to validate if
+// the lifetime of any temporaries in AOS_RETURN_IF_ERROR are handled
+// incorrectly.
+TEST_F(ErrorTest, ReturnResultHandlesLifetime) {
+  const Result<void> result = []() -> Result<void> {
+    AOS_RETURN_IF_ERROR(
+        Result<void>(Error::MakeUnexpectedError("Hello, World!")));
+    return {};
+  }();
+  EXPECT_FALSE(result.has_value());
+}
+
+// Validates that we evaluate the expression passed to
+// AOS_RETURN_IF_ERROR exactly one.
+TEST_F(ErrorTest, ReturnResultEvaluatesOnce) {
+  int counter = 0;
+  const Result<void> result = [&counter]() -> Result<void> {
+    AOS_RETURN_IF_ERROR([&counter]() -> Result<void> {
+      counter++;
+      return {};
+    }());
+    return {};
+  }();
+  EXPECT_TRUE(result.has_value());
+  EXPECT_EQ(1, counter) << "The expression passed to AOS_RETURN_IF_ERROR "
+                           "should have been evaluated exactly once.";
+}
+
+TEST_F(ErrorTest, DeclareVariableNoExtraCopies) {
+  Result<DisallowCopy> test_value = {};
+  bool executed = false;
+  const Result<void> result = [&test_value, &executed]() -> Result<void> {
+    AOS_DECLARE_OR_RETURN_IF_ERROR(expected, test_value);
+    (void)expected;
+    executed = true;
+    // next, confirm that we do actually return early on an unexpected.
+    AOS_DECLARE_OR_RETURN_IF_ERROR(
+        never_reached,
+        Result<DisallowCopy>(Error::MakeUnexpectedError("Hello, World!")));
+    (void)never_reached;
+    return {};
+  }();
+  EXPECT_FALSE(result.has_value());
+  EXPECT_TRUE(executed);
+}
+
+// Validates that the AOS_DECLARE_OR_RETURN_IF_ERROR() macro can handle
+// a temporary expression. When run under sanitizers this should also help to
+// validate if the lifetime of any temporaries in
+// AOS_DECLARE_OR_RETURN_IF_ERROR are handled incorrectly.
+TEST_F(ErrorTest, DeclareVariableLifetime) {
+  const Result<void> result = []() -> Result<void> {
+    AOS_DECLARE_OR_RETURN_IF_ERROR(
+        tmp, Result<int>(Error::MakeUnexpectedError("Hello, World!")));
+    (void)tmp;
+    return {};
+  }();
+  EXPECT_FALSE(result.has_value());
+}
+
+// Validates that we evaluate the expression passed to
+// AOS_DECLARE_OR_RETURN_IF_ERROR exactly one.
+TEST_F(ErrorTest, DeclareVariableEvaluatesOnce) {
+  int counter = 0;
+  const Result<void> result = [&counter]() -> Result<void> {
+    AOS_DECLARE_OR_RETURN_IF_ERROR(tmp, [&counter]() -> Result<int> {
+      counter++;
+      return {};
+    }());
+    (void)tmp;
+    return {};
+  }();
+  EXPECT_TRUE(result.has_value());
+  EXPECT_EQ(1, counter) << "The expression passed to AOS_RETURN_IF_ERROR "
+                           "should have been evaluated exactly once.";
+}
+
+TEST_F(ErrorTest, InitializeVariableNoExtraCopies) {
+  bool executed = false;
+  const Result<void> result = [&executed]() -> Result<void> {
+    DisallowCopy tmp;
+    AOS_GET_VALUE_OR_RETURN_ERROR(tmp, Result<DisallowCopy>{});
+    executed = true;
+    DisallowCopy tmp2;
+    // next, confirm that we do actually return early on an unexpected.
+    AOS_GET_VALUE_OR_RETURN_ERROR(
+        tmp2,
+        Result<DisallowCopy>(Error::MakeUnexpectedError("Hello, World!")));
+    return {};
+  }();
+  EXPECT_FALSE(result.has_value());
+  EXPECT_TRUE(executed);
+}
+
+// Validates that the AOS_GET_VALUE_OR_RETURN_ERROR() macro can
+// handle a temporary expression. When run under sanitizers this should also
+// help to validate if the lifetime of any temporaries in
+// AOS_GET_VALUE_OR_RETURN_ERROR are handled incorrectly.
+TEST_F(ErrorTest, InitializeVariableLifetime) {
+  const Result<void> result = []() -> Result<void> {
+    DisallowCopy tmp;
+    AOS_GET_VALUE_OR_RETURN_ERROR(
+        tmp, Result<DisallowCopy>(Error::MakeUnexpectedError("Hello, World!")));
+    return {};
+  }();
+  EXPECT_FALSE(result.has_value());
+}
+
+// Validates that we evaluate the expression passed to
+// AOS_GET_VALUE_OR_RETURN_ERROR exactly one.
+TEST_F(ErrorTest, InitializeVariableEvaluatesOnce) {
+  int counter = 0;
+  const Result<void> result = [&counter]() -> Result<void> {
+    int tmp;
+    AOS_GET_VALUE_OR_RETURN_ERROR(tmp, [&counter]() -> Result<int> {
+      counter++;
+      return counter;
+    }());
+    EXPECT_EQ(tmp, counter);
+    return {};
+  }();
+  EXPECT_TRUE(result.has_value());
+  EXPECT_EQ(1, counter) << "The expression passed to AOS_RETURN_IF_ERROR "
+                           "should have been evaluated exactly once.";
 }
 }  // namespace aos::testing
