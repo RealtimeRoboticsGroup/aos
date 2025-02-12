@@ -1449,9 +1449,9 @@ http_archive(
     build_file = "//third_party/foxglove/ws_protocol:foxglove_ws_protocol.BUILD",
     patch_args = ["-p1"],
     patches = ["//third_party/foxglove/ws_protocol:foxglove_ws_protocol.patch"],
-    sha256 = "3256f09a67419f6556778c443d332f1a4bf53ba0e7a464179bf838abffa366ab",
-    strip_prefix = "ws-protocol-releases-typescript-ws-protocol-examples-v0.0.6",
-    url = "https://github.com/foxglove/ws-protocol/archive/refs/tags/releases/typescript/ws-protocol-examples/v0.0.6.tar.gz",
+    sha256 = "eee484aefe4cb08dcef9ec52df5f904e017e15517865dcfa2462ff8070c9d906",
+    strip_prefix = "ws-protocol-releases-typescript-ws-protocol-examples-v0.8.1",
+    url = "https://github.com/foxglove/ws-protocol/archive/refs/tags/releases/typescript/ws-protocol-examples/v0.8.1.tar.gz",
 )
 
 http_archive(

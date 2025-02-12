@@ -6,7 +6,8 @@
 #include <memory>
 #include <set>
 
-#include "foxglove/websocket/server.hpp"
+#include "foxglove/websocket/websocket_notls.hpp"
+#include "foxglove/websocket/websocket_server.hpp"
 
 #include "aos/events/event_loop.h"
 
@@ -45,7 +46,7 @@ class FoxgloveWebsocketServer {
   ~FoxgloveWebsocketServer();
 
  private:
-  typedef foxglove::websocket::ChannelId ChannelId;
+  typedef foxglove::ChannelId ChannelId;
 
   struct FetcherState {
     std::unique_ptr<aos::RawFetcher> fetcher;
@@ -63,11 +64,14 @@ class FoxgloveWebsocketServer {
   const Serialization serialization_;
   const FetchPinnedChannels fetch_pinned_channels_;
   const CanonicalChannelNames canonical_channels_;
-  foxglove::websocket::Server server_;
+  foxglove::Server<foxglove::WebSocketNoTls> server_;
   // A map of fetchers for every single channel that could be subscribed to.
   std::map<ChannelId, FetcherState> fetchers_;
-  // The set of channels that we have clients actively subscribed to.
-  std::set<ChannelId> active_channels_;
+  // The set of channels that we have clients actively subscribed to. Each
+  // channel can have an arbitrary number of clients subscribed.
+  std::unordered_map<ChannelId,
+                     std::set<foxglove::ConnHandle, std::owner_less<>>>
+      active_channels_;
 };
 }  // namespace aos
 #endif  // AOS_UTIL_FOXGLOVE_WEBSOCKET_LIB_H_

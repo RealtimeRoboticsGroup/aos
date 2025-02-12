@@ -15,7 +15,7 @@
 #include "flatbuffers/string.h"
 #include "flatbuffers/vector.h"
 #include "nlohmann/json.hpp"
-#include <foxglove/websocket/server.hpp>
+#include <foxglove/websocket/websocket_server.hpp>
 
 #include "aos/configuration.h"
 #include "aos/events/context.h"
@@ -30,8 +30,31 @@ ABSL_FLAG(uint32_t, sorting_buffer_ms, 100,
           "them to foxglove.");
 
 namespace {
+
 // Period at which to poll the fetchers for all the channels.
 constexpr std::chrono::milliseconds kPollPeriod{50};
+
+void PrintFoxgloveMessage(foxglove::WebSocketLogLevel log_level,
+                          char const *message) {
+  switch (log_level) {
+    case foxglove::WebSocketLogLevel::Debug:
+      VLOG(1) << message;
+      break;
+    case foxglove::WebSocketLogLevel::Info:
+      LOG(INFO) << message;
+      break;
+    case foxglove::WebSocketLogLevel::Warn:
+      LOG(WARNING) << message;
+      break;
+    case foxglove::WebSocketLogLevel::Error:
+      LOG(ERROR) << message;
+      break;
+    case foxglove::WebSocketLogLevel::Critical:
+      LOG(FATAL) << message;
+      break;
+  }
+}
+
 }  // namespace
 
 namespace aos {
@@ -43,7 +66,15 @@ FoxgloveWebsocketServer::FoxgloveWebsocketServer(
       serialization_(serialization),
       fetch_pinned_channels_(fetch_pinned_channels),
       canonical_channels_(canonical_channels),
-      server_(port, "aos_foxglove") {
+      server_(
+          "aos_foxglove", &PrintFoxgloveMessage,
+          {
+              .capabilities =
+                  {
+                      // Specify server capabilities here.
+                      // https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#fields
+                  },
+          }) {
   for (const aos::Channel *channel :
        *event_loop_->configuration()->channels()) {
     const bool is_pinned = (channel->read_method() == ReadMethod::PIN);
@@ -64,40 +95,64 @@ FoxgloveWebsocketServer::FoxgloveWebsocketServer(
           name_to_send = shortest_name;
           break;
       }
-      const ChannelId id =
+      // TODO(philsc): Add all the channels at once instead of individually.
+      const std::vector<ChannelId> ids =
           (serialization_ == Serialization::kJson)
-              ? server_.addChannel(foxglove::websocket::ChannelWithoutId{
+              ? server_.addChannels({foxglove::ChannelWithoutId{
                     .topic = name_to_send + " " + channel->type()->str(),
                     .encoding = "json",
                     .schemaName = channel->type()->str(),
                     .schema =
-                        JsonSchemaForFlatbuffer({channel->schema()}).dump()})
-              : server_.addChannel(foxglove::websocket::ChannelWithoutId{
+                        JsonSchemaForFlatbuffer({channel->schema()}).dump()}})
+              : server_.addChannels({foxglove::ChannelWithoutId{
                     .topic = name_to_send + " " + channel->type()->str(),
                     .encoding = "flatbuffer",
                     .schemaName = channel->type()->str(),
                     .schema = absl::Base64Escape(
                         {reinterpret_cast<const char *>(schema.span().data()),
-                         schema.span().size()})});
+                         schema.span().size()})}});
+      CHECK_EQ(ids.size(), 1u);
+      const ChannelId id = ids[0];
       CHECK(fetchers_.count(id) == 0);
       fetchers_[id] =
           FetcherState{.fetcher = event_loop_->MakeRawFetcher(channel)};
     }
   }
 
-  server_.setSubscribeHandler([this](ChannelId channel) {
+  foxglove::ServerHandlers<foxglove::ConnHandle> handlers;
+  handlers.subscribeHandler = [this](ChannelId channel,
+                                     foxglove::ConnHandle client_handle) {
     if (fetchers_.count(channel) == 0) {
       return;
     }
-    if (active_channels_.count(channel) == 0) {
+    if (!active_channels_.contains(channel)) {
       // Catch up to the latest message on the requested channel, then subscribe
       // to it.
       fetchers_[channel].fetcher->Fetch();
-      active_channels_.insert(channel);
     }
-  });
-  server_.setUnsubscribeHandler(
-      [this](ChannelId channel) { active_channels_.erase(channel); });
+    // Take note that this client is now listening on this channel.
+    active_channels_[channel].insert(client_handle);
+  };
+  handlers.unsubscribeHandler = [this](ChannelId channel,
+                                       foxglove::ConnHandle client_handle) {
+    auto it = active_channels_.find(channel);
+    if (it == active_channels_.end()) {
+      // As far as we're aware, no one is listening on this channel. This might
+      // be a bogus request from the client. Either way, ignore it.
+      return;
+    }
+
+    // Remove the client from the list of clients that receive new messages on
+    // this channel.
+    it->second.erase(client_handle);
+    if (it->second.empty()) {
+      // If this was the last client for this channel, then we don't need to
+      // fetch from this channel anymore.
+      active_channels_.erase(it);
+    }
+  };
+  server_.setHandlers(std::move(handlers));
+
   aos::TimerHandler *timer = event_loop_->AddTimer([this]() {
     // In order to run the websocket server, we just let it spin every cycle for
     // a bit. This isn't great for integration, but lets us stay in control and
@@ -125,7 +180,7 @@ FoxgloveWebsocketServer::FoxgloveWebsocketServer(
         fetcher_times;
 
     // Go through and seed fetcher_times with the first message on each channel.
-    for (const ChannelId channel : active_channels_) {
+    for (const auto &[channel, _connections] : active_channels_) {
       FetcherState *fetcher = &fetchers_[channel];
       if (fetcher->sent_current_message) {
         if (fetcher->fetcher->FetchNext()) {
@@ -145,19 +200,25 @@ FoxgloveWebsocketServer::FoxgloveWebsocketServer(
     while (!fetcher_times.empty()) {
       const ChannelId channel = fetcher_times.begin()->second;
       FetcherState *fetcher = &fetchers_[channel];
-      switch (serialization_) {
-        case Serialization::kJson:
-          server_.sendMessage(
-              channel, fetcher_times.begin()->first.time_since_epoch().count(),
-              aos::FlatbufferToJson(fetcher->fetcher->channel()->schema(),
-                                    static_cast<const uint8_t *>(
-                                        fetcher->fetcher->context().data)));
-          break;
-        case Serialization::kFlatbuffer:
-          server_.sendMessage(
-              channel, fetcher_times.begin()->first.time_since_epoch().count(),
-              {static_cast<const char *>(fetcher->fetcher->context().data),
-               fetcher->fetcher->context().size});
+      for (foxglove::ConnHandle connection : active_channels_[channel]) {
+        switch (serialization_) {
+          case Serialization::kJson: {
+            const std::string json = aos::FlatbufferToJson(
+                fetcher->fetcher->channel()->schema(),
+                static_cast<const uint8_t *>(fetcher->fetcher->context().data));
+            server_.sendMessage(
+                connection, channel,
+                fetcher_times.begin()->first.time_since_epoch().count(),
+                reinterpret_cast<const uint8_t *>(json.data()), json.size());
+            break;
+          }
+          case Serialization::kFlatbuffer:
+            server_.sendMessage(
+                connection, channel,
+                fetcher_times.begin()->first.time_since_epoch().count(),
+                static_cast<const uint8_t *>(fetcher->fetcher->context().data),
+                fetcher->fetcher->context().size);
+        }
       }
       fetcher_times.erase(fetcher_times.begin());
       fetcher->sent_current_message = true;
@@ -175,6 +236,8 @@ FoxgloveWebsocketServer::FoxgloveWebsocketServer(
   event_loop_->OnRun([timer, this]() {
     timer->Schedule(event_loop_->monotonic_now(), kPollPeriod);
   });
+
+  server_.start("0.0.0.0", port);
 }
 FoxgloveWebsocketServer::~FoxgloveWebsocketServer() { server_.stop(); }
 }  // namespace aos

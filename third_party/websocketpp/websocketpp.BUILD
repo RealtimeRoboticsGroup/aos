@@ -10,5 +10,9 @@ cc_library(
     ],
     includes = ["."],
     visibility = ["//visibility:public"],
-    deps = ["@asio"],
+    deps = [
+        "@asio",
+        "@boringssl//:ssl",
+        "@zlib",
+    ],
 )
