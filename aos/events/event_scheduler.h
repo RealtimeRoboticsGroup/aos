@@ -107,7 +107,9 @@ class EventScheduler {
     converter_ = converter;
   }
 
-  UUID boot_uuid() { return converter_->boot_uuid(node_index_, boot_count_); }
+  UUID boot_uuid() const {
+    return converter_->boot_uuid(node_index_, boot_count_);
+  }
 
   // Schedule an event with a callback function
   // Returns an iterator to the event

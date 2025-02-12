@@ -324,6 +324,14 @@ class NodeEventLoopFactory {
     return boot_uuid_;
   }
 
+  // Returns the boot UUID for this node.
+  UUID boot_uuid() const {
+    if (boot_uuid_ == UUID::Zero()) {
+      return scheduler_.boot_uuid();
+    }
+    return boot_uuid_;
+  }
+
   // Stops forwarding messages to the other node, and reports disconnected in
   // the ServerStatistics message for this node, and the ClientStatistics for
   // the other node.

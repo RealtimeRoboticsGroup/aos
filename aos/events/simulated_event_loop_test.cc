@@ -2198,6 +2198,22 @@ TEST(SimulatedEventLoopDeathTest, AllowApplicationCreationDuringInOnRun) {
   EXPECT_DEATH(factory->RunFor(chrono::seconds(1)), "OnRun");
 }
 
+// Tests that boot UUIDs match for const and non-const
+// SimulatedEventLoopFactory. Since the implementations of these two are
+// different, it's important to validate despite appearing like an awkward test.
+TEST(SimulatedEventLoopTest, BootUUIDsWorkForConstNodeEventLoopFactory) {
+  aos::FlatbufferDetachedBuffer<aos::Configuration> config =
+      aos::configuration::ReadConfig(
+          ArtifactPath("aos/events/multinode_pingpong_test_split_config.json"));
+
+  SimulatedEventLoopFactory factory(&config.message());
+  NodeEventLoopFactory *pi1 = factory.GetNodeEventLoopFactory("pi1");
+
+  EXPECT_NE(pi1->boot_uuid(), UUID::Zero());
+  EXPECT_EQ(pi1->boot_uuid(),
+            static_cast<const NodeEventLoopFactory *>(pi1)->boot_uuid());
+}
+
 // Tests that messages don't survive a reboot of a node.
 TEST(SimulatedEventLoopTest, ChannelClearedOnReboot) {
   aos::FlatbufferDetachedBuffer<aos::Configuration> config =
