@@ -45,9 +45,9 @@ TEST_F(FlatbufferIntrospectionTest, IntegerTest) {
   std::string out = FlatbufferToJson(schema_, builder.GetBufferPointer());
 
   EXPECT_EQ(out,
-            "{ \"foo_bool\": true, \"foo_byte\": -5, \"foo_int\": -20, "
-            "\"foo_long\": -100, \"foo_short\": -10, \"foo_ubyte\": 5, "
-            "\"foo_uint\": 20, \"foo_ulong\": 100, \"foo_ushort\": 10 }");
+            "{ \"foo_byte\": -5, \"foo_ubyte\": 5, \"foo_bool\": true, "
+            "\"foo_short\": -10, \"foo_ushort\": 10, \"foo_int\": -20, "
+            "\"foo_uint\": 20, \"foo_long\": -100, \"foo_ulong\": 100 }");
 }
 
 TEST_F(FlatbufferIntrospectionTest, FloatTest) {
@@ -62,7 +62,7 @@ TEST_F(FlatbufferIntrospectionTest, FloatTest) {
   std::string out = FlatbufferToJson(schema_, builder.GetBufferPointer());
 
   EXPECT_EQ(
-      out, "{ \"foo_double\": 0.5555555555555556, \"foo_float\": 0.33333334 }");
+      out, "{ \"foo_float\": 0.33333334, \"foo_double\": 0.5555555555555556 }");
 }
 
 TEST_F(FlatbufferIntrospectionTest, NanFloatTest) {
@@ -76,7 +76,7 @@ TEST_F(FlatbufferIntrospectionTest, NanFloatTest) {
 
   std::string out = FlatbufferToJson(schema_, builder.GetBufferPointer());
 
-  EXPECT_EQ(out, "{ \"foo_double\": nan, \"foo_float\": nan }");
+  EXPECT_EQ(out, "{ \"foo_float\": nan, \"foo_double\": nan }");
 }
 
 TEST_F(FlatbufferIntrospectionTest, VectorScalarTest) {
@@ -131,17 +131,18 @@ TEST_F(FlatbufferIntrospectionTest, VectorScalarTest) {
 
   EXPECT_EQ(
       out,
-      "{ \"vector_foo_bool\": [ true, false, true, false ], "
-      "\"vector_foo_byte\": [ -3, -2, -1, 0, 1, 2, 3 ], \"vector_foo_double\": "
-      "[ 0, 0.1111111111111111, 0.2222222222222222, 0.3333333333333333 ], "
-      "\"vector_foo_float\": [ 0, 0.11111111, 0.22222222, 0.33333334 ], "
-      "\"vector_foo_int\": [ -300, -200, -100, 0, 100, 200, 300 ], "
-      "\"vector_foo_long\": [ -3000, -2000, -1000, 0, 1000, 2000, 3000 ], "
+      "{ \"vector_foo_byte\": [ -3, -2, -1, 0, 1, 2, 3 ], "
+      "\"vector_foo_ubyte\": [ 0, 1, 2, 3, 4, 5, 6 ], "
+      "\"vector_foo_bool\": [ true, false, true, false ], "
       "\"vector_foo_short\": [ -30, -20, -10, 0, 10, 20, 30 ], "
-      "\"vector_foo_ubyte\": [ 0, 1, 2, 3, 4, 5, 6 ], \"vector_foo_uint\": [ "
-      "0, 100, 200, 300, 400, 500, 600 ], \"vector_foo_ulong\": [ 0, 1000, "
-      "2000, 3000, 4000, 5000, 6000 ], \"vector_foo_ushort\": [ 0, 10, 20, 30, "
-      "40, 50, 60 ] }");
+      "\"vector_foo_ushort\": [ 0, 10, 20, 30, 40, 50, 60 ], "
+      "\"vector_foo_int\": [ -300, -200, -100, 0, 100, 200, 300 ], "
+      "\"vector_foo_uint\": [ 0, 100, 200, 300, 400, 500, 600 ], "
+      "\"vector_foo_long\": [ -3000, -2000, -1000, 0, 1000, 2000, 3000 ], "
+      "\"vector_foo_ulong\": [ 0, 1000, 2000, 3000, 4000, 5000, 6000 ], "
+      "\"vector_foo_float\": [ 0, 0.11111111, 0.22222222, 0.33333334 ], "
+      "\"vector_foo_double\": [ 0, 0.1111111111111111, 0.2222222222222222, "
+      "0.3333333333333333 ] }");
 }
 
 TEST_F(FlatbufferIntrospectionTest, StringTest) {
@@ -257,9 +258,10 @@ TEST_F(FlatbufferIntrospectionTest, TableTest) {
 
   EXPECT_EQ(out,
             "{ \"foo_byte\": 5, \"foo_string\": \"Root Config String\", "
+            "\"vector_foo_byte\": [ 0, 1, 2, 3, 4, 5 ], "
             "\"nested_config\": { \"foo_byte\": 10, \"foo_string\": \"Nested "
-            "Config String\", \"vector_foo_byte\": [ 6, 7, 8, 9, 10 ] }, "
-            "\"vector_foo_byte\": [ 0, 1, 2, 3, 4, 5 ] }");
+            "Config String\", "
+            "\"vector_foo_byte\": [ 6, 7, 8, 9, 10 ] } }");
 }
 
 TEST_F(FlatbufferIntrospectionTest, StructTest) {
@@ -466,10 +468,10 @@ TEST_F(FlatbufferIntrospectionTest, MultilineVectorScalarTest) {
 
   EXPECT_EQ(
       out,
-      "{\n  \"vector_foo_double\": [ 0, 0.1111111111111111, "
-      "0.2222222222222222, 0.3333333333333333 ],\n  \"vector_foo_float\": [ 0, "
-      "0.11111111, 0.22222222, 0.33333334 ],\n  \"vector_foo_int\": [ -300, "
-      "-200, -100, 0, 100, 200, 300 ]\n}");
+      "{\n  \"vector_foo_int\": [ -300, -200, -100, 0, 100, 200, 300 ],\n  "
+      "\"vector_foo_float\": [ 0, 0.11111111, 0.22222222, 0.33333334 ],\n  "
+      "\"vector_foo_double\": [ 0, 0.1111111111111111, 0.2222222222222222, "
+      "0.3333333333333333 ]\n}");
 }
 
 // Tests that a nullptr buffer prints nullptr.

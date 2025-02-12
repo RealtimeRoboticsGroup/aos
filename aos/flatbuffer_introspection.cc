@@ -335,7 +335,17 @@ void ObjectToString(
   if (!wrap) {
     out->AppendChar(' ');
   }
-  for (const reflection::Field *field : *obj->fields()) {
+
+  // Sort fields by field id to ensure they are output in the same order defined
+  // by the flatbuffer schema.
+  std::vector<const reflection::Field *> sorted_fields(obj->fields()->begin(),
+                                                       obj->fields()->end());
+  std::sort(sorted_fields.begin(), sorted_fields.end(),
+            [](const reflection::Field *a, const reflection::Field *b) {
+              return a->id() < b->id();
+            });
+
+  for (const reflection::Field *field : sorted_fields) {
     // Check whether this object has the field populated (even for structs,
     // which should have all fields populated)
     if (object->GetAddressOf(field->offset())) {
