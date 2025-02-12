@@ -196,6 +196,62 @@
   ],
   "applications": [
     {
+      "name": "camera_reader0",
+      "executable_name": "camera_reader",
+      "args": ["--ignore_timestamps", "--viddevice=/dev/videoa", "--imagewidth=1600", "--imageheight=1304"],
+      "maps": [{
+        "match": {
+          "name": "/camera"
+        },
+        "rename": {
+          "name": "/camera0"
+        }
+      }],
+      "nodes": ["orin"]
+    },
+    {
+      "name": "camera_reader1",
+      "executable_name": "camera_reader",
+      "args": ["--ignore_timestamps", "--viddevice=/dev/videob", "--imagewidth=1600", "--imageheight=1304"],
+      "maps": [{
+        "match": {
+          "name": "/camera"
+        },
+        "rename": {
+          "name": "/camera1"
+        }
+      }],
+      "nodes": ["orin"]
+    },
+    {
+      "name": "camera_reader2",
+      "executable_name": "camera_reader",
+      "args": ["--ignore_timestamps", "--viddevice=/dev/videoc", "--imagewidth=1600", "--imageheight=1304"],
+      "maps": [{
+        "match": {
+          "name": "/camera"
+        },
+        "rename": {
+          "name": "/camera2"
+        }
+      }],
+      "nodes": ["orin"]
+    },
+    {
+      "name": "camera_reader3",
+      "executable_name": "camera_reader",
+      "args": ["--ignore_timestamps", "--viddevice=/dev/videod", "--imagewidth=1600", "--imageheight=1304"],
+      "maps": [{
+        "match": {
+          "name": "/camera"
+        },
+        "rename": {
+          "name": "/camera3"
+        }
+      }],
+      "nodes": ["orin"]
+    },
+    {
       "name": "turbojpeg_decoder0",
       "executable_name": "turbojpeg_decoder",
       "maps": [{
