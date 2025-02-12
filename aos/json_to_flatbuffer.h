@@ -105,6 +105,27 @@ void FlatbufferToJson(FastStringBuilder *builder,
                       const reflection::Schema *schema, const uint8_t *data,
                       JsonOptions json_options = {});
 
+// Generic overload version of FlatbufferToJson for any
+// flatbuffers::NativeTable, i.e. the types that have the 'T' suffix in the
+// name.
+template <typename T, typename = std::enable_if_t<
+                          std::is_base_of<flatbuffers::NativeTable, T>::value>>
+std::string FlatbufferToJson(const T &native_table,
+                             JsonOptions json_options = {}) {
+  // Serialize the flatbuffers::NativeTable object so we can use the same
+  // function.
+  flatbuffers::FlatBufferBuilder builder;
+  using TableType = typename T::TableType;
+  flatbuffers::Offset<TableType> offset =
+      TableType::Pack(builder, &native_table);
+  builder.Finish(offset);
+  const TableType *message =
+      flatbuffers::GetRoot<TableType>(builder.GetBufferPointer());
+
+  // Convert the FlatBuffer to JSON with the given options.
+  return aos::FlatbufferToJson(message, json_options);
+}
+
 // Writes a Flatbuffer to a file, or dies.
 template <typename T>
 inline void WriteFlatbufferToJson(std::string_view filename, const T *msg) {

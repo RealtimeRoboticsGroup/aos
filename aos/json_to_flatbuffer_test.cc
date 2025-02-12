@@ -651,4 +651,145 @@ TEST_F(JsonToFlatbufferFloatPrecisionTest, LargeDouble) {
   // Since the double data type has 15 significant digits, the decimals after
   // the 9th will be unpredictable.
 }
+
+class NativeTableJsonTest : public ::testing::Test {
+ public:
+  NativeTableJsonTest() {}
+
+  // Utility function to test converting a native table to JSON and back.
+  bool NativeTableToJsonAndBack(const ConfigurationT &native_table,
+                                const std::string &expected_json) {
+    // Convert the native table to JSON
+    std::string json_output = FlatbufferToJson(native_table);
+
+    printf("JSON Output:\n%s\n", json_output.c_str());
+
+    // Now parse the JSON back into a Flatbuffer.
+    FlatbufferDetachedBuffer<Configuration> fb =
+        JsonToFlatbuffer<Configuration>(json_output);
+
+    // Create a new native table object to hold the unpacked data.
+    ConfigurationT new_native_table;
+
+    // Unpack the FlatBuffer data into the new native table.
+    flatbuffers::GetRoot<Configuration>(fb.span().data())
+        ->UnPackTo(&new_native_table);
+
+    // Convert back to JSON to compare with the expected output.
+    std::string new_json_output = FlatbufferToJson(new_native_table);
+
+    printf("New JSON Output:\n%s\n", new_json_output.c_str());
+
+    printf("Expected JSON Output:\n%s\n", expected_json.c_str());
+
+    return json_output == expected_json && new_json_output == expected_json;
+  }
+};
+
+// Test the conversion of a simple native table.
+TEST_F(NativeTableJsonTest, BasicNativeTable) {
+  // Create a native table object.
+  ConfigurationT native_table;
+
+  // Populate the native table.
+  native_table.foo_bool = true;
+  native_table.foo_int = 123;
+  native_table.foo_string = "example";
+
+  const std::string expected_json =
+      R"({ "locations": [  ], )"
+      R"("maps": [  ], )"
+      R"("apps": [  ], )"
+      R"("imports": [  ], )"
+      R"("foo_byte": 0, )"
+      R"("foo_ubyte": 0, )"
+      R"("foo_bool": true, )"
+      R"("foo_short": 0, )"
+      R"("foo_ushort": 0, )"
+      R"("foo_int": 123, )"
+      R"("foo_uint": 0, )"
+      R"("foo_long": 0, )"
+      R"("foo_ulong": 0, )"
+      R"("foo_float": 0, )"
+      R"("foo_double": 0, )"
+      R"("foo_string": "example", )"
+      R"("foo_enum": "None", )"
+      R"("foo_enum_default": "None", )"
+      R"("vector_foo_byte": [  ], )"
+      R"("vector_foo_ubyte": [  ], )"
+      R"("vector_foo_bool": [  ], )"
+      R"("vector_foo_short": [  ], )"
+      R"("vector_foo_ushort": [  ], )"
+      R"("vector_foo_int": [  ], )"
+      R"("vector_foo_uint": [  ], )"
+      R"("vector_foo_long": [  ], )"
+      R"("vector_foo_ulong": [  ], )"
+      R"("vector_foo_float": [  ], )"
+      R"("vector_foo_double": [  ], )"
+      R"("vector_foo_string": [  ], )"
+      R"("vector_foo_enum": [  ], )"
+      R"("vector_foo_struct": [  ], )"
+      R"("vector_foo_struct_scalars": [  ], )"
+      R"("foo_enum_nonconsecutive": "Zero", )"
+      R"("foo_enum_nonconsecutive_default": "Big" })";
+
+  // Perform the test.
+  EXPECT_TRUE(NativeTableToJsonAndBack(native_table, expected_json));
+}
+
+// Test the conversion of a nested native table.
+TEST_F(NativeTableJsonTest, NestedNativeTable) {
+  // Create a native table object.
+  ConfigurationT native_table;
+
+  // Populate a nested Application object.
+  auto app = std::make_unique<ApplicationT>();
+  app->name = "my_app";
+  app->priority = 1;
+
+  // Add the Application to the Configuration.
+  native_table.apps.push_back(std::move(app));
+
+  // Expected JSON output.
+  const std::string expected_json =
+      R"({ "locations": [  ], )"
+      R"("maps": [  ], )"
+      R"("apps": [ { "name": "my_app", "priority": 1, "maps": [  ], "long_thingy": 0 } ], )"
+      R"("imports": [  ], )"
+      R"("foo_byte": 0, )"
+      R"("foo_ubyte": 0, )"
+      R"("foo_bool": false, )"
+      R"("foo_short": 0, )"
+      R"("foo_ushort": 0, )"
+      R"("foo_int": 0, )"
+      R"("foo_uint": 0, )"
+      R"("foo_long": 0, )"
+      R"("foo_ulong": 0, )"
+      R"("foo_float": 0, )"
+      R"("foo_double": 0, )"
+      R"("foo_string": "", )"
+      R"("foo_enum": "None", )"
+      R"("foo_enum_default": "None", )"
+      R"("vector_foo_byte": [  ], )"
+      R"("vector_foo_ubyte": [  ], )"
+      R"("vector_foo_bool": [  ], )"
+      R"("vector_foo_short": [  ], )"
+      R"("vector_foo_ushort": [  ], )"
+      R"("vector_foo_int": [  ], )"
+      R"("vector_foo_uint": [  ], )"
+      R"("vector_foo_long": [  ], )"
+      R"("vector_foo_ulong": [  ], )"
+      R"("vector_foo_float": [  ], )"
+      R"("vector_foo_double": [  ], )"
+      R"("vector_foo_string": [  ], )"
+      R"("vector_foo_enum": [  ], )"
+      R"("vector_foo_struct": [  ], )"
+      R"("vector_foo_struct_scalars": [  ], )"
+      R"("foo_enum_nonconsecutive": "Zero", )"
+      R"("foo_enum_nonconsecutive_default": "Big" })";
+
+  // Perform the test
+  EXPECT_TRUE(NativeTableToJsonAndBack(native_table, expected_json));
+}
+
 }  // namespace aos::testing
