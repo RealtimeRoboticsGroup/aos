@@ -21,9 +21,9 @@ rewrite www.johnvansickle.com/(.*) realtimeroboticsgroup.org/build-dependencies/
 rewrite docs.opencv.org/(.*) realtimeroboticsgroup.org/build-dependencies/docs.opencv.org/$1
 rewrite security.ubuntu.com/(.*) realtimeroboticsgroup.org/build-dependencies/security.ubuntu.com/$1
 rewrite frcmaven.wpi.edu/(.*) realtimeroboticsgroup.org/build-dependencies/frcmaven.wpi.edu/$1
-allow crates.io
-allow golang.org
-allow go.dev
-allow registry.npmjs.org
+rewrite crates.io/(.*) realtimeroboticsgroup.org/build-dependencies/crates.io/$1
+rewrite golang.org/(.*) realtimeroboticsgroup.org/build-dependencies/golang.org/$1
+rewrite go.dev/(.*) realtimeroboticsgroup.org/build-dependencies/go.dev/$1
+rewrite registry.npmjs.org/(.*) realtimeroboticsgroup.org/build-dependencies/registry.npmjs.org/$1
 
 allow realtimeroboticsgroup.org
