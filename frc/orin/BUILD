@@ -46,6 +46,7 @@ cc_library(
         "apriltag_detect.cc",
         "labeling_allegretti_2019_BKE.cc",
         "line_fit_filter.cc",
+        "neon_threshold.cc",
         "points.cc",
         "threshold.cc",
     ],
@@ -83,6 +84,7 @@ cc_test(
     name = "cuda_april_tag_test",
     srcs = [
         "cuda_april_tag_test.cc",
+        "threshold_test.cc",
     ],
     data = [
         "@apriltag_test_bfbs_images",

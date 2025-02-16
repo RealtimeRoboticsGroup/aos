@@ -121,13 +121,10 @@ GpuDetector::GpuDetector(size_t width, size_t height,
     : width_(width),
       height_(height),
       tag_detector_(tag_detector),
-      color_image_host_(width * height * 2),
       gray_image_host_(width * height),
       color_image_device_(width * height * 2),
       gray_image_device_(width * height),
       decimated_image_device_(width / 2 * height / 2),
-      unfiltered_minmax_image_device_((width / 2 / 4 * height / 2 / 4) * 2),
-      minmax_image_device_((width / 2 / 4 * height / 2 / 4) * 2),
       thresholded_image_device_(width / 2 * height / 2),
       union_markers_device_(width / 2 * height / 2),
       union_markers_size_device_(width / 2 * height / 2),
@@ -170,7 +167,7 @@ GpuDetector::GpuDetector(size_t width, size_t height,
       temp_storage_line_fit_scan_device_(
           DeviceScanInclusiveScanByKeyScratchSpace<uint32_t, LineFitPoint>(
               sorted_selected_blobs_device_.size())),
-      threshold_(MakeThreshold(image_format)),
+      threshold_(MakeThreshold(image_format, width, height)),
       image_format_(image_format) {
   fit_quads_host_.reserve(kMaxBlobs);
   quad_corners_host_.reserve(kMaxBlobs);
@@ -669,7 +666,21 @@ struct MergePeakExtents {
 
 }  // namespace
 
+void GpuDetector::DoThreshold(const uint8_t *image, const uint8_t * /*image_device*/) {
+  std::vector<uint8_t> decimated_image(width_ / 2 * height_ / 2, 0);
+  std::vector<uint8_t> thresholded_image(width_ / 2 * height_ / 2, 0);
+
+  std::unique_ptr<Threshold> threshold =
+      MakeNeonThreshold(image_format_, width_, height_);
+
+  threshold->ThresholdAndDecimate(
+      image, decimated_image.data(), thresholded_image.data(),
+      tag_detector_->qtp.min_white_black_diff, nullptr);
+}
+
 void GpuDetector::Detect(const uint8_t *image, const uint8_t *image_device) {
+  // TODO(austin): Use our simd thresholder.
+  // Need the API here to be good enough for it to abstract the problem.
   const aos::monotonic_clock::time_point start_time =
       aos::monotonic_clock::now();
   start_.Record(&stream_);
@@ -680,16 +691,14 @@ void GpuDetector::Detect(const uint8_t *image, const uint8_t *image_device) {
   after_image_memcpy_to_device_.Record(&stream_);
 
   // Threshold the image.
-  threshold_->CudaThresholdAndDecimate(
-      image_device, decimated_image_device_.get(),
-      unfiltered_minmax_image_device_.get(), minmax_image_device_.get(),
-      thresholded_image_device_.get(), width_, height_,
-      tag_detector_->qtp.min_white_black_diff, &stream_);
+  threshold_->ThresholdAndDecimate(image_device, decimated_image_device_.get(),
+                                   thresholded_image_device_.get(),
+                                   tag_detector_->qtp.min_white_black_diff,
+                                   &stream_);
   after_threshold_.Record(&stream_);
 
   if (image_format_ != vision::ImageFormat::MONO8) {
-    threshold_->CudaToGreyscale(image_device, gray_image_device_.get(), width_,
-                                height_, &stream_);
+    threshold_->ToGreyscale(image_device, gray_image_device_.get(), &stream_);
     gray_image_device_.MemcpyAsyncTo(&gray_image_host_, &stream_);
     gray_image_host_ptr_ = gray_image_host_.get();
   } else {
@@ -1125,7 +1134,10 @@ void GpuDetector::Detect(const uint8_t *image, const uint8_t *image_device) {
     execution_duration_ += previous_event->ElapsedTime(start_);
     VLOG(1) << "Average overall "
             << float_milli(execution_duration_ / execution_count_).count()
-            << "ms";
+            << "ms, "
+            << (1000.0 /
+                float_milli(execution_duration_ / execution_count_).count())
+            << "hz";
   }
 
   first_ = false;

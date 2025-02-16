@@ -54,7 +54,7 @@ __global__ void InternalCudaToGreyscale(const uint8_t *color_image,
 
 // Writes out the grayscale image and decimated image.
 template <vision::ImageFormat IMAGE_FORMAT>
-__global__ void InternalCudaToGreyscaleAndDecimateHalide(
+__global__ void InternalCudaToGreyscaleAndDecimate(
     const uint8_t *color_image, uint8_t *decimated_image,
     const apriltag_size_t in_width, const apriltag_size_t in_height) {
   constexpr apriltag_size_t kBytesPerPixel = BytesPerPixel(IMAGE_FORMAT);
@@ -202,59 +202,70 @@ __global__ void InternalThreshold(const uint8_t *decimated_image,
 template <vision::ImageFormat IMAGE_FORMAT>
 class TypedThreshold : public Threshold {
  public:
+  TypedThreshold(size_t width, size_t height)
+      : width_(width),
+        height_(height),
+        unfiltered_minmax_image_device_((width / 2 / 4 * height / 2 / 4) * 2),
+        minmax_image_device_((width / 2 / 4 * height / 2 / 4) * 2) {}
   // Create a full-size grayscale image from a color image on the provided
   // stream.
-  void CudaToGreyscale(const uint8_t *color_image, uint8_t *gray_image,
-                       apriltag_size_t width, apriltag_size_t height,
-                       CudaStream *stream) override;
+  void ToGreyscale(const uint8_t *color_image, uint8_t *gray_image,
+                   CudaStream *stream) override;
 
   // Converts to grayscale, decimates, and thresholds an image on the provided
   // stream.
-  void CudaThresholdAndDecimate(
-      const uint8_t *color_image, uint8_t *decimated_image,
-      uint8_t *unfiltered_minmax_image, uint8_t *minmax_image,
-      uint8_t *thresholded_image, apriltag_size_t width, apriltag_size_t height,
-      apriltag_size_t min_white_black_diff, CudaStream *stream) override;
+  void ThresholdAndDecimate(const uint8_t *color_image,
+                            uint8_t *decimated_image,
+                            uint8_t *thresholded_image,
+                            apriltag_size_t min_white_black_diff,
+                            CudaStream *stream) override;
 
   virtual ~TypedThreshold() = default;
+
+ private:
+  size_t width_;
+  size_t height_;
+
+  GpuMemory<uint8_t> unfiltered_minmax_image_device_;
+  GpuMemory<uint8_t> minmax_image_device_;
 };
 
 template <vision::ImageFormat IMAGE_FORMAT>
-void TypedThreshold<IMAGE_FORMAT>::CudaToGreyscale(const uint8_t *color_image,
-                                                   uint8_t *gray_image,
-                                                   apriltag_size_t width,
-                                                   apriltag_size_t height,
-                                                   CudaStream *stream) {
+void TypedThreshold<IMAGE_FORMAT>::ToGreyscale(const uint8_t *color_image,
+                                               uint8_t *gray_image,
+                                               CudaStream *stream) {
   constexpr size_t kThreads = 256;
   {
     // Step one, convert to gray and decimate.
-    size_t kBlocks = (width * height + kThreads - 1) / kThreads / 4;
+    size_t kBlocks = (width_ * height_ + kThreads - 1) / kThreads / 4;
     InternalCudaToGreyscale<IMAGE_FORMAT>
         <<<kBlocks, kThreads, 0, stream->get()>>>(color_image, gray_image,
-                                                  width, height);
+                                                  width_, height_);
     MaybeCheckAndSynchronize();
   }
 }
 
 template <vision::ImageFormat IMAGE_FORMAT>
-void TypedThreshold<IMAGE_FORMAT>::CudaThresholdAndDecimate(
+void TypedThreshold<IMAGE_FORMAT>::ThresholdAndDecimate(
     const uint8_t *color_image, uint8_t *decimated_image,
-    uint8_t *unfiltered_minmax_image, uint8_t *minmax_image,
-    uint8_t *thresholded_image, apriltag_size_t width, apriltag_size_t height,
-    apriltag_size_t min_white_black_diff, CudaStream *stream) {
-  CHECK((width % 8) == 0);
-  CHECK((height % 8) == 0);
+    uint8_t *thresholded_image, apriltag_size_t min_white_black_diff,
+    CudaStream *stream) {
+  uint8_t *unfiltered_minmax_image = unfiltered_minmax_image_device_.get();
+  uint8_t *minmax_image = minmax_image_device_.get();
+
+  CHECK((width_ % 8) == 0);
+  CHECK((height_ % 8) == 0);
   constexpr size_t kThreads = 256;
-  const apriltag_size_t decimated_width = width / 2;
-  const apriltag_size_t decimated_height = height / 2;
+  const apriltag_size_t decimated_width = width_ / 2;
+  const apriltag_size_t decimated_height = height_ / 2;
 
   {
     // Step one, convert to gray and decimate.
     const size_t kBlocks =
         (decimated_width * decimated_height + kThreads - 1) / kThreads / 4;
-    InternalCudaToGreyscaleAndDecimateHalide<IMAGE_FORMAT>
+    InternalCudaToGreyscaleAndDecimate<IMAGE_FORMAT>
         <<<kBlocks, kThreads, 0, stream->get()>>>(color_image, decimated_image,
-                                                  width, height);
+                                                  width_, height_);
     MaybeCheckAndSynchronize();
   }
 
@@ -282,29 +293,54 @@ void TypedThreshold<IMAGE_FORMAT>::CudaThresholdAndDecimate(
     // Now, write out 127 if the min/max are too close to each other, or 0/255
     // if the pixels are above or below the average of the min/max.
     const apriltag_size_t kBlocks =
-        (width * height / 4 + kThreads - 1) / kThreads / 4;
+        (width_ * height_ / 4 + kThreads - 1) / kThreads / 4;
     InternalThreshold<<<kBlocks, kThreads, 0, stream->get()>>>(
         decimated_image, reinterpret_cast<uchar2 *>(minmax_image),
         thresholded_image, decimated_width, decimated_height,
         min_white_black_diff);
     MaybeCheckAndSynchronize();
   }
+
+  HostMemory<uint8_t> minmax_image_host((width_ / 2 / 4 * height_ / 2 / 4 * 2));
+  minmax_image_device_.MemcpyTo(&minmax_image_host);
+
+  for (size_t h = 0; h < height_ / 8; h += 1) {
+    for (size_t w = 0; w < width_ / 8; w += 2) {
+      const bool print = (w == 0 && h == 540 / 4);
+      if (print) {
+        LOG(INFO) << h << ", " << w << ": " << std::hex
+                  << static_cast<int>(*(
+                         reinterpret_cast<uint16_t *>(minmax_image_host.get()) +
+                         h * width_ / 8 + w));
+        LOG(INFO) << h << ", " << w + 1 << ": " << std::hex
+                  << static_cast<int>(*(
+                         reinterpret_cast<uint16_t *>(minmax_image_host.get()) +
+                         h * width_ / 8 + w + 1));
+      }
+    }
+  }
 }
 
 }  // namespace
 
-std::unique_ptr<Threshold> MakeThreshold(vision::ImageFormat image_format) {
+std::unique_ptr<Threshold> MakeThreshold(vision::ImageFormat image_format,
+                                         size_t width, size_t height) {
   switch (image_format) {
     case vision::ImageFormat::MONO8:
-      return std::make_unique<TypedThreshold<vision::ImageFormat::MONO8>>();
+      return std::make_unique<TypedThreshold<vision::ImageFormat::MONO8>>(
+          width, height);
     case vision::ImageFormat::MONO16:
-      return std::make_unique<TypedThreshold<vision::ImageFormat::MONO16>>();
+      return std::make_unique<TypedThreshold<vision::ImageFormat::MONO16>>(
+          width, height);
     case vision::ImageFormat::YUYV422:
-      return std::make_unique<TypedThreshold<vision::ImageFormat::YUYV422>>();
+      return std::make_unique<TypedThreshold<vision::ImageFormat::YUYV422>>(
+          width, height);
     case vision::ImageFormat::BGR8:
-      return std::make_unique<TypedThreshold<vision::ImageFormat::BGR8>>();
+      return std::make_unique<TypedThreshold<vision::ImageFormat::BGR8>>(
+          width, height);
     case vision::ImageFormat::BGRA8:
-      return std::make_unique<TypedThreshold<vision::ImageFormat::BGRA8>>();
+      return std::make_unique<TypedThreshold<vision::ImageFormat::BGRA8>>(
+          width, height);
     default:
       LOG(FATAL) << "Unknown image format: "
                  << vision::EnumNameImageFormat(image_format);
