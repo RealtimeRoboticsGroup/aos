@@ -180,23 +180,12 @@ class Application {
   std::optional<int> exit_code() const { return exit_code_; }
 
   // Sets the memory limit for the application to the provided limit.
-  void SetMemoryLimit(size_t limit) {
-    if (!memory_cgroup_) {
-      memory_cgroup_ = std::make_unique<MemoryCGroup>(name_);
-    }
-    memory_cgroup_->SetLimit("memory.limit_in_bytes", limit);
-  }
+  void SetMemoryLimit(size_t limit);
 
   // Sets the cgroup and memory limit to a pre-existing cgroup which is
   // externally managed.  This lets us configure the cgroup of an application
   // without root access.
-  void SetExistingCgroupMemoryLimit(std::string_view name, size_t limit) {
-    if (!memory_cgroup_) {
-      memory_cgroup_ = std::make_unique<MemoryCGroup>(
-          name, MemoryCGroup::Create::kDoNotCreate);
-    }
-    memory_cgroup_->SetLimit("memory.limit_in_bytes", limit);
-  }
+  void SetExistingCgroupMemoryLimit(std::string_view name, size_t limit);
 
   // Observe a timing report message, and save it if it is relevant to us.
   // It is the responsibility of the caller to manage this, because the lifetime
