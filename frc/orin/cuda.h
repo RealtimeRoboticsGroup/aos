@@ -231,6 +231,48 @@ class GpuMemory {
   const size_t size_;
 };
 
+// Class to manage the lifetime of page locked host memory for fast copies back
+// to host memory.
+template <typename T>
+class UnifiedMemory {
+ public:
+  // Allocates a block of memory for holding up to size objects of type T.
+  UnifiedMemory(size_t size) {
+    T *memory;
+    CHECK_CUDA(cudaMallocManaged((void **)(&memory), size * sizeof(T)));
+    span_ = std::span<T>(memory, size);
+  }
+  UnifiedMemory(const UnifiedMemory &) = delete;
+  UnifiedMemory &operator=(const UnifiedMemory &) = delete;
+  UnifiedMemory(const UnifiedMemory &&) noexcept = delete;
+  UnifiedMemory &operator=(const UnifiedMemory &&) noexcept = delete;
+
+  virtual ~UnifiedMemory() { CHECK_CUDA(cudaFree(span_.data())); }
+
+  // Returns a pointer to the memory.
+  T *get() { return span_.data(); }
+  const T *get() const { return span_.data(); }
+
+  // Returns the number of objects the memory can hold.
+  size_t size() const { return span_.size(); }
+
+  // Copies data from other (host memory) to this's memory.
+  void MemcpyFrom(const T *other) {
+    memcpy(span_.data(), other, sizeof(T) * size());
+  }
+  void MemcpyFrom(const T *other, const size_t size) {
+    memcpy(span_.data(), other, sizeof(T) * size);
+  }
+
+  // Copies data to other (host memory) from this's memory.
+  void MemcpyTo(T *other) const {
+    memcpy(other, span_.data(), sizeof(T) * size());
+  }
+
+ private:
+  std::span<T> span_;
+};
+
 // Synchronizes and CHECKs for success the last CUDA operation.
 void CheckAndSynchronize(std::string_view message = "");
 
