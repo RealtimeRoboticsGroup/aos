@@ -13,6 +13,8 @@
 
 ABSL_FLAG(std::string, config, "aos_config.json",
           "File path of aos configuration");
+ABSL_FLAG(std::string, server, "roborio",
+          "Server (IP address or hostname) to connect to.");
 
 namespace frc::vision {
 
@@ -22,7 +24,8 @@ class NetworkTablesPublisher {
                          std::string_view table_name)
       : event_loop_(event_loop),
         table_(nt::NetworkTableInstance::GetDefault().GetTable(table_name)),
-        pose_topic_(table_->GetDoubleArrayTopic("botpose_wpiblue")) {
+        pose_topic_(table_->GetDoubleArrayTopic("botpose_wpiblue")),
+        pose_publisher_(pose_topic_.Publish({.keepDuplicates = true})) {
     for (size_t i = 0; i < 4; i++) {
       event_loop_->MakeWatcher(absl::StrCat("/camera", i, "/gray"),
                                [this, i](const TargetMap &target_map) {
@@ -69,9 +72,6 @@ class NetworkTablesPublisher {
   void Publish(Eigen::Vector3d translation, Eigen::Vector3d ypr,
                double latency_ms, int tag_count, double tag_span_m,
                double tag_dist_m, double tag_area_percent) {
-    nt::DoubleArrayPublisher publisher =
-        pose_topic_.Publish({.keepDuplicates = true});
-
     std::array<double, 11> pose{
         translation.x(),  translation.y(),
         translation.z(),  ypr.x(),
@@ -81,13 +81,14 @@ class NetworkTablesPublisher {
         tag_area_percent,
     };
 
-    publisher.Set(pose);
+    pose_publisher_.Set(pose);
   }
 
   aos::EventLoop *event_loop_;
 
   std::shared_ptr<nt::NetworkTable> table_;
   nt::DoubleArrayTopic pose_topic_;
+  nt::DoubleArrayPublisher pose_publisher_;
 };
 
 int Main() {
@@ -95,6 +96,10 @@ int Main() {
       aos::configuration::ReadConfig(absl::GetFlag(FLAGS_config));
 
   aos::ShmEventLoop event_loop(&config.message());
+
+  nt::NetworkTableInstance instance = nt::NetworkTableInstance::GetDefault();
+  instance.SetServer(absl::GetFlag(FLAGS_server));
+  instance.StartClient4("rtrg_frc_apriltag");
 
   NetworkTablesPublisher publisher(&event_loop, "orin");
 

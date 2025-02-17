@@ -690,3 +690,24 @@ cc_binary(
         "@org_tuxfamily_eigen//:eigen",
     ],
 )
+
+cc_binary(
+    name = "network_tables_server",
+    srcs = ["network_tables_server.cc"],
+    deps = [
+        "//aos:init",
+        "@com_github_wpilibsuite_allwpilib//ntcore:ntcore.static",
+        "@com_google_absl//absl/flags:flag",
+    ],
+)
+
+cc_binary(
+    name = "network_tables_client",
+    srcs = ["network_tables_client.cc"],
+    deps = [
+        "//aos:init",
+        "@com_github_wpilibsuite_allwpilib//ntcore:ntcore.static",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/log:die_if_null",
+    ],
+)
