@@ -14,6 +14,7 @@
 #include <cub/iterator/transform_input_iterator.cuh>
 #include <vector>
 
+#include "absl/flags/flag.h"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "third_party/apriltag/common/g2d.h"
@@ -22,6 +23,8 @@
 #include "frc/orin/labeling_allegretti_2019_BKE.h"
 #include "frc/orin/threshold.h"
 #include "frc/orin/transform_output_iterator.h"
+
+ABSL_FLAG(bool, use_neon, false, "Use NEON optimized threshold");
 
 namespace frc::apriltag {
 namespace {
@@ -167,7 +170,9 @@ GpuDetector::GpuDetector(size_t width, size_t height,
       temp_storage_line_fit_scan_device_(
           DeviceScanInclusiveScanByKeyScratchSpace<uint32_t, LineFitPoint>(
               sorted_selected_blobs_device_.size())),
-      threshold_(MakeThreshold(image_format, width, height)),
+      threshold_(absl::GetFlag(FLAGS_use_neon)
+                     ? MakeNeonThreshold(image_format, width, height)
+                     : MakeThreshold(image_format, width, height)),
       image_format_(image_format) {
   fit_quads_host_.reserve(kMaxBlobs);
   quad_corners_host_.reserve(kMaxBlobs);
@@ -666,23 +671,25 @@ struct MergePeakExtents {
 
 }  // namespace
 
-void GpuDetector::DoThreshold(const uint8_t *image, const uint8_t * /*image_device*/) {
-  std::vector<uint8_t> decimated_image(width_ / 2 * height_ / 2, 0);
-  std::vector<uint8_t> thresholded_image(width_ / 2 * height_ / 2, 0);
-
-  std::unique_ptr<Threshold> threshold =
-      MakeNeonThreshold(image_format_, width_, height_);
-
-  threshold->ThresholdAndDecimate(
-      image, decimated_image.data(), thresholded_image.data(),
-      tag_detector_->qtp.min_white_black_diff, nullptr);
-}
-
 void GpuDetector::Detect(const uint8_t *image, const uint8_t *image_device) {
   // TODO(austin): Use our simd thresholder.
   // Need the API here to be good enough for it to abstract the problem.
   const aos::monotonic_clock::time_point start_time =
       aos::monotonic_clock::now();
+
+  union_markers_size_device_.MemsetAsync(0u, &memset_stream_);
+  after_memset_.Record(&memset_stream_);
+
+  // Threshold the image.
+  bool has_thresholded = false;
+  if (image_device != nullptr && image_format_ == vision::ImageFormat::MONO8) {
+    has_thresholded = true;
+  threshold_->ThresholdAndDecimate(image_device, decimated_image_device_.get(),
+                                   thresholded_image_device_.get(),
+                                   tag_detector_->qtp.min_white_black_diff,
+                                   &stream_);
+  }
+
   start_.Record(&stream_);
   if (image_device == nullptr) {
     color_image_device_.MemcpyAsyncFrom(image, &stream_);
@@ -690,11 +697,13 @@ void GpuDetector::Detect(const uint8_t *image, const uint8_t *image_device) {
   }
   after_image_memcpy_to_device_.Record(&stream_);
 
-  // Threshold the image.
-  threshold_->ThresholdAndDecimate(image_device, decimated_image_device_.get(),
-                                   thresholded_image_device_.get(),
-                                   tag_detector_->qtp.min_white_black_diff,
-                                   &stream_);
+  if (!has_thresholded) {
+    threshold_->ThresholdAndDecimate(
+        image_device, decimated_image_device_.get(),
+        thresholded_image_device_.get(),
+        tag_detector_->qtp.min_white_black_diff, &stream_);
+  }
+
   after_threshold_.Record(&stream_);
 
   if (image_format_ != vision::ImageFormat::MONO8) {
@@ -707,8 +716,7 @@ void GpuDetector::Detect(const uint8_t *image, const uint8_t *image_device) {
 
   after_memcpy_gray_.Record(&stream_);
 
-  union_markers_size_device_.MemsetAsync(0u, &stream_);
-  after_memset_.Record(&stream_);
+  after_memset_.Synchronize();
 
   // Unionfind the image.
   LabelImage(ToGpuImage(thresholded_image_device_),

@@ -254,6 +254,7 @@ class GpuDetector {
 
   // Stream to operate on.
   CudaStream stream_;
+  CudaStream memset_stream_;
 
   // Events for each of the steps for timing.
   CudaEvent start_;

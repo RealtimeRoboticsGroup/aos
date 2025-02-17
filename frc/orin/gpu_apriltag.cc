@@ -198,7 +198,7 @@ void ApriltagDetector::HandleImage(const vision::CameraImage &image,
       static_cast<void *>(const_cast<uint8_t *>(image.data()->data())), 0));
   CHECK_NE(image_device, nullptr);
 
-  gpu_detector_.Detect(image.data()->data(), image_device);
+  gpu_detector_.Detect(image.data()->data(), image.data()->data());
   image_size_ = cv::Size(image.cols(), image.rows());
 
   const zarray_t *detections = gpu_detector_.Detections();
