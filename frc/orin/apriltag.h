@@ -245,6 +245,27 @@ class GpuDetector {
     }
   }
 
+  template <typename T>
+  GpuImage<T> ToGpuImage(UnifiedMemory<T> &memory) {
+    if (memory.size() == width_ * height_) {
+      return GpuImage<T>{
+          .data = memory.get(),
+          .rows = height_,
+          .cols = width_,
+          .step = width_,
+      };
+    } else if (memory.size() == width_ * height_ / 4) {
+      return GpuImage<T>{
+          .data = memory.get(),
+          .rows = height_ / 2,
+          .cols = width_ / 2,
+          .step = width_ / 2,
+      };
+    } else {
+      LOG(FATAL) << "Unknown image shape";
+    }
+  }
+
   // Size of the image.
   const size_t width_;
   const size_t height_;
@@ -290,9 +311,9 @@ class GpuDetector {
   // Full size gray scale image.
   GpuMemory<uint8_t> gray_image_device_;
   // Half resolution, gray, decimated image.
-  GpuMemory<uint8_t> decimated_image_device_;
+  UnifiedMemory<uint8_t> decimated_image_device_;
   // Intermediates for thresholding.
-  GpuMemory<uint8_t> thresholded_image_device_;
+  UnifiedMemory<uint8_t> thresholded_image_device_;
 
   // The union markers for each pixel.
   GpuMemory<uint32_t> union_markers_device_;
