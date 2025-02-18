@@ -163,9 +163,11 @@ TEST(PartsMessageReaderDeathTest, TooFarOutOfOrder) {
 
   PartsMessageReader reader(parts[0].parts[0]);
 
-  EXPECT_TRUE(reader.ReadMessage());
-  EXPECT_TRUE(reader.ReadMessage());
-  EXPECT_DEATH({ reader.ReadMessage(); }, "-0.000000001sec vs. 0.000000000sec");
+  EXPECT_TRUE(CheckExpected(reader.ReadMessage()));
+  EXPECT_TRUE(CheckExpected(reader.ReadMessage()));
+  EXPECT_DEATH(
+      { CheckExpected(reader.ReadMessage()); },
+      "Max out of order of 100000000ns exceeded.");
 }
 
 // Tests that we can transparently re-assemble part files with a
@@ -234,7 +236,7 @@ TEST(PartsMessageReaderTest, ReadWrite) {
   EXPECT_EQ(
       reader.max_out_of_order_duration(),
       std::chrono::nanoseconds(config1.message().max_out_of_order_duration()));
-  EXPECT_TRUE(reader.ReadMessage());
+  EXPECT_TRUE(CheckExpected(reader.ReadMessage()));
   EXPECT_EQ(reader.filename(), logfile0);
   EXPECT_EQ(reader.newest_timestamp(),
             monotonic_clock::time_point(chrono::nanoseconds(1)));
@@ -243,7 +245,7 @@ TEST(PartsMessageReaderTest, ReadWrite) {
       std::chrono::nanoseconds(config1.message().max_out_of_order_duration()));
 
   // Read the second message.
-  EXPECT_TRUE(reader.ReadMessage());
+  EXPECT_TRUE(CheckExpected(reader.ReadMessage()));
   EXPECT_EQ(reader.filename(), logfile1);
   EXPECT_EQ(reader.newest_timestamp(),
             monotonic_clock::time_point(chrono::nanoseconds(2)));
@@ -252,7 +254,7 @@ TEST(PartsMessageReaderTest, ReadWrite) {
       std::chrono::nanoseconds(config1.message().max_out_of_order_duration()));
 
   // And then confirm that reading again returns no message.
-  EXPECT_FALSE(reader.ReadMessage());
+  EXPECT_FALSE(CheckExpected(reader.ReadMessage()));
   EXPECT_EQ(reader.filename(), logfile1);
   EXPECT_EQ(
       reader.max_out_of_order_duration(),
@@ -687,27 +689,27 @@ TEST_F(MessageSorterTest, Pull) {
 
   std::deque<Message> output;
 
-  ASSERT_TRUE(message_sorter.Front() != nullptr);
-  output.emplace_back(std::move(*message_sorter.Front()));
+  ASSERT_TRUE(CheckExpected(message_sorter.Front()) != nullptr);
+  output.emplace_back(std::move(*CheckExpected(message_sorter.Front())));
   message_sorter.PopFront();
   EXPECT_EQ(message_sorter.sorted_until(), e + chrono::milliseconds(1900));
 
-  ASSERT_TRUE(message_sorter.Front() != nullptr);
-  output.emplace_back(std::move(*message_sorter.Front()));
+  ASSERT_TRUE(CheckExpected(message_sorter.Front()) != nullptr);
+  output.emplace_back(std::move(*CheckExpected(message_sorter.Front())));
   message_sorter.PopFront();
   EXPECT_EQ(message_sorter.sorted_until(), e + chrono::milliseconds(1900));
 
-  ASSERT_TRUE(message_sorter.Front() != nullptr);
-  output.emplace_back(std::move(*message_sorter.Front()));
+  ASSERT_TRUE(CheckExpected(message_sorter.Front()) != nullptr);
+  output.emplace_back(std::move(*CheckExpected(message_sorter.Front())));
   message_sorter.PopFront();
   EXPECT_EQ(message_sorter.sorted_until(), monotonic_clock::max_time);
 
-  ASSERT_TRUE(message_sorter.Front() != nullptr);
-  output.emplace_back(std::move(*message_sorter.Front()));
+  ASSERT_TRUE(CheckExpected(message_sorter.Front()) != nullptr);
+  output.emplace_back(std::move(*CheckExpected(message_sorter.Front())));
   message_sorter.PopFront();
   EXPECT_EQ(message_sorter.sorted_until(), monotonic_clock::max_time);
 
-  ASSERT_TRUE(message_sorter.Front() == nullptr);
+  ASSERT_TRUE(CheckExpected(message_sorter.Front()) == nullptr);
 
   EXPECT_EQ(output[0].timestamp.boot, 0);
   EXPECT_EQ(output[0].timestamp.time, e + chrono::milliseconds(1000));
@@ -751,13 +753,13 @@ TEST_F(MessageSorterTest, WayBeforeStart) {
        {e + chrono::milliseconds(1900), e + chrono::milliseconds(1900),
         e + chrono::milliseconds(1900), monotonic_clock::max_time,
         monotonic_clock::max_time}) {
-    ASSERT_TRUE(message_sorter.Front() != nullptr);
-    output.emplace_back(std::move(*message_sorter.Front()));
+    ASSERT_TRUE(CheckExpected(message_sorter.Front()) != nullptr);
+    output.emplace_back(std::move(*CheckExpected(message_sorter.Front())));
     message_sorter.PopFront();
     EXPECT_EQ(message_sorter.sorted_until(), t);
   }
 
-  ASSERT_TRUE(message_sorter.Front() == nullptr);
+  ASSERT_TRUE(CheckExpected(message_sorter.Front()) == nullptr);
 
   EXPECT_EQ(output[0].timestamp.boot, 0u);
   EXPECT_EQ(output[0].timestamp.time, e - chrono::milliseconds(1000));
@@ -797,14 +799,15 @@ TEST_F(MessageSorterDeathTest, Pull) {
   EXPECT_EQ(message_sorter.sorted_until(), monotonic_clock::min_time);
   std::deque<Message> output;
 
-  ASSERT_TRUE(message_sorter.Front() != nullptr);
+  ASSERT_TRUE(CheckExpected(message_sorter.Front()) != nullptr);
   message_sorter.PopFront();
-  ASSERT_TRUE(message_sorter.Front() != nullptr);
-  ASSERT_TRUE(message_sorter.Front() != nullptr);
+  ASSERT_TRUE(CheckExpected(message_sorter.Front()) != nullptr);
+  ASSERT_TRUE(CheckExpected(message_sorter.Front()) != nullptr);
   message_sorter.PopFront();
 
   EXPECT_DEATH(
-      { message_sorter.Front(); }, "Max out of order of 100000000ns exceeded.");
+      { CheckExpected(message_sorter.Front()); },
+      "Max out of order of 100000000ns exceeded.");
 }
 
 // Tests that we can merge data from 2 separate files, including duplicate data.
@@ -850,39 +853,39 @@ TEST_F(PartsMergerTest, TwoFileMerger) {
   std::deque<Message> output;
 
   EXPECT_EQ(merger.sorted_until(), monotonic_clock::min_time);
-  ASSERT_TRUE(merger.Front() != nullptr);
+  ASSERT_TRUE(CheckExpected(merger.Front()) != nullptr);
   EXPECT_EQ(merger.sorted_until(), e + chrono::milliseconds(1900));
 
-  output.emplace_back(std::move(*merger.Front()));
+  output.emplace_back(std::move(*CheckExpected(merger.Front())));
   merger.PopFront();
   EXPECT_EQ(merger.sorted_until(), e + chrono::milliseconds(1900));
 
-  ASSERT_TRUE(merger.Front() != nullptr);
-  output.emplace_back(std::move(*merger.Front()));
+  ASSERT_TRUE(CheckExpected(merger.Front()) != nullptr);
+  output.emplace_back(std::move(*CheckExpected(merger.Front())));
   merger.PopFront();
   EXPECT_EQ(merger.sorted_until(), e + chrono::milliseconds(2900));
 
-  ASSERT_TRUE(merger.Front() != nullptr);
-  output.emplace_back(std::move(*merger.Front()));
+  ASSERT_TRUE(CheckExpected(merger.Front()) != nullptr);
+  output.emplace_back(std::move(*CheckExpected(merger.Front())));
   merger.PopFront();
   EXPECT_EQ(merger.sorted_until(), e + chrono::milliseconds(2900));
 
-  ASSERT_TRUE(merger.Front() != nullptr);
-  output.emplace_back(std::move(*merger.Front()));
+  ASSERT_TRUE(CheckExpected(merger.Front()) != nullptr);
+  output.emplace_back(std::move(*CheckExpected(merger.Front())));
   merger.PopFront();
   EXPECT_EQ(merger.sorted_until(), e + chrono::milliseconds(2900));
 
-  ASSERT_TRUE(merger.Front() != nullptr);
-  output.emplace_back(std::move(*merger.Front()));
+  ASSERT_TRUE(CheckExpected(merger.Front()) != nullptr);
+  output.emplace_back(std::move(*CheckExpected(merger.Front())));
   merger.PopFront();
   EXPECT_EQ(merger.sorted_until(), monotonic_clock::max_time);
 
-  ASSERT_TRUE(merger.Front() != nullptr);
-  output.emplace_back(std::move(*merger.Front()));
+  ASSERT_TRUE(CheckExpected(merger.Front()) != nullptr);
+  output.emplace_back(std::move(*CheckExpected(merger.Front())));
   merger.PopFront();
   EXPECT_EQ(merger.sorted_until(), monotonic_clock::max_time);
 
-  ASSERT_TRUE(merger.Front() == nullptr);
+  ASSERT_TRUE(CheckExpected(merger.Front()) == nullptr);
 
   EXPECT_EQ(output[0].timestamp.boot, 0u);
   EXPECT_EQ(output[0].timestamp.time, e + chrono::milliseconds(1000));
@@ -955,11 +958,11 @@ TEST_F(PartsMergerTest, TwoFileTimestampMerger) {
   std::deque<Message> output;
 
   for (int i = 0; i < 4; ++i) {
-    ASSERT_TRUE(merger.Front() != nullptr);
-    output.emplace_back(std::move(*merger.Front()));
+    ASSERT_TRUE(CheckExpected(merger.Front()) != nullptr);
+    output.emplace_back(std::move(*CheckExpected(merger.Front())));
     merger.PopFront();
   }
-  ASSERT_TRUE(merger.Front() == nullptr);
+  ASSERT_TRUE(CheckExpected(merger.Front()) == nullptr);
 
   EXPECT_EQ(output[0].timestamp.boot, 0u);
   EXPECT_EQ(output[0].timestamp.time, e + chrono::milliseconds(101000));
@@ -1034,31 +1037,31 @@ TEST_F(TimestampMapperTest, ReadNode0First) {
 
     EXPECT_EQ(mapper0_count, 0u);
     EXPECT_EQ(mapper1_count, 0u);
-    ASSERT_TRUE(mapper0.Front() != nullptr);
+    ASSERT_TRUE(CheckExpected(mapper0.Front()) != nullptr);
     EXPECT_EQ(mapper0_count, 1u);
     EXPECT_EQ(mapper1_count, 0u);
-    output0.emplace_back(std::move(*mapper0.Front()));
-    mapper0.PopFront();
+    output0.emplace_back(std::move(*CheckExpected(mapper0.Front())));
+    CheckExpected(mapper0.PopFront());
     EXPECT_TRUE(mapper0.started());
     EXPECT_EQ(mapper0_count, 1u);
     EXPECT_EQ(mapper1_count, 0u);
 
-    ASSERT_TRUE(mapper0.Front() != nullptr);
+    ASSERT_TRUE(CheckExpected(mapper0.Front()) != nullptr);
     EXPECT_EQ(mapper0_count, 2u);
     EXPECT_EQ(mapper1_count, 0u);
-    output0.emplace_back(std::move(*mapper0.Front()));
-    mapper0.PopFront();
+    output0.emplace_back(std::move(*CheckExpected(mapper0.Front())));
+    CheckExpected(mapper0.PopFront());
     EXPECT_TRUE(mapper0.started());
 
-    ASSERT_TRUE(mapper0.Front() != nullptr);
-    output0.emplace_back(std::move(*mapper0.Front()));
-    mapper0.PopFront();
+    ASSERT_TRUE(CheckExpected(mapper0.Front()) != nullptr);
+    output0.emplace_back(std::move(*CheckExpected(mapper0.Front())));
+    CheckExpected(mapper0.PopFront());
     EXPECT_TRUE(mapper0.started());
 
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 0u);
 
-    ASSERT_TRUE(mapper0.Front() == nullptr);
+    ASSERT_TRUE(CheckExpected(mapper0.Front()) == nullptr);
 
     EXPECT_EQ(output0[0].monotonic_event_time.boot, 0u);
     EXPECT_EQ(output0[0].monotonic_event_time.time,
@@ -1083,31 +1086,31 @@ TEST_F(TimestampMapperTest, ReadNode0First) {
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 0u);
 
-    ASSERT_TRUE(mapper1.Front() != nullptr);
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 1u);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
     EXPECT_TRUE(mapper1.started());
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 1u);
 
-    ASSERT_TRUE(mapper1.Front() != nullptr);
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 2u);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
     EXPECT_TRUE(mapper1.started());
 
-    ASSERT_TRUE(mapper1.Front() != nullptr);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
     EXPECT_TRUE(mapper1.started());
 
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 3u);
 
-    ASSERT_TRUE(mapper1.Front() == nullptr);
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) == nullptr);
 
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 3u);
@@ -1186,11 +1189,11 @@ TEST_F(TimestampMapperTest, ReplayChannelsCallbackTest) {
     EXPECT_EQ(mapper0_count, 0u);
     EXPECT_EQ(mapper1_count, 0u);
 
-    ASSERT_TRUE(mapper0.Front() != nullptr);
+    ASSERT_TRUE(CheckExpected(mapper0.Front()) != nullptr);
     EXPECT_EQ(mapper0_count, 1u);
     EXPECT_EQ(mapper1_count, 0u);
-    output0.emplace_back(std::move(*mapper0.Front()));
-    mapper0.PopFront();
+    output0.emplace_back(std::move(*CheckExpected(mapper0.Front())));
+    CheckExpected(mapper0.PopFront());
 
     EXPECT_TRUE(mapper0.started());
     EXPECT_EQ(mapper0_count, 1u);
@@ -1199,17 +1202,17 @@ TEST_F(TimestampMapperTest, ReplayChannelsCallbackTest) {
     // mapper0_count is now at 3 since the second message is not queued, but
     // timestamp_callback needs to be called everytime even if Front() does not
     // provide a message due to the replay_channels_callback.
-    ASSERT_TRUE(mapper0.Front() != nullptr);
+    ASSERT_TRUE(CheckExpected(mapper0.Front()) != nullptr);
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 0u);
-    output0.emplace_back(std::move(*mapper0.Front()));
-    mapper0.PopFront();
+    output0.emplace_back(std::move(*CheckExpected(mapper0.Front())));
+    CheckExpected(mapper0.PopFront());
 
     EXPECT_TRUE(mapper0.started());
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 0u);
 
-    ASSERT_TRUE(mapper0.Front() == nullptr);
+    ASSERT_TRUE(CheckExpected(mapper0.Front()) == nullptr);
     EXPECT_TRUE(mapper0.started());
 
     EXPECT_EQ(mapper0_count, 3u);
@@ -1233,11 +1236,11 @@ TEST_F(TimestampMapperTest, ReplayChannelsCallbackTest) {
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 0u);
 
-    ASSERT_TRUE(mapper1.Front() != nullptr);
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 1u);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
     EXPECT_TRUE(mapper1.started());
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 1u);
@@ -1245,15 +1248,15 @@ TEST_F(TimestampMapperTest, ReplayChannelsCallbackTest) {
     // mapper1_count is now at 3 since the second message is not queued, but
     // timestamp_callback needs to be called everytime even if Front() does not
     // provide a message due to the replay_channels_callback.
-    ASSERT_TRUE(mapper1.Front() != nullptr);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
     EXPECT_TRUE(mapper1.started());
 
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 3u);
 
-    ASSERT_TRUE(mapper1.Front() == nullptr);
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) == nullptr);
 
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 3u);
@@ -1319,12 +1322,12 @@ TEST_F(TimestampMapperTest, MessageWithTimestampTime) {
     std::deque<TimestampedMessage> output0;
 
     for (int i = 0; i < 3; ++i) {
-      ASSERT_TRUE(mapper0.Front() != nullptr) << ": " << i;
-      output0.emplace_back(std::move(*mapper0.Front()));
-      mapper0.PopFront();
+      ASSERT_TRUE(CheckExpected(mapper0.Front()) != nullptr) << ": " << i;
+      output0.emplace_back(std::move(*CheckExpected(mapper0.Front())));
+      CheckExpected(mapper0.PopFront());
     }
 
-    ASSERT_TRUE(mapper0.Front() == nullptr);
+    ASSERT_TRUE(CheckExpected(mapper0.Front()) == nullptr);
 
     EXPECT_EQ(output0[0].monotonic_event_time.boot, 0u);
     EXPECT_EQ(output0[0].monotonic_event_time.time,
@@ -1356,12 +1359,12 @@ TEST_F(TimestampMapperTest, MessageWithTimestampTime) {
     std::deque<TimestampedMessage> output1;
 
     for (int i = 0; i < 3; ++i) {
-      ASSERT_TRUE(mapper1.Front() != nullptr);
-      output1.emplace_back(std::move(*mapper1.Front()));
-      mapper1.PopFront();
+      ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
+      output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+      CheckExpected(mapper1.PopFront());
     }
 
-    ASSERT_TRUE(mapper1.Front() == nullptr);
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) == nullptr);
 
     EXPECT_EQ(output1[0].monotonic_event_time.boot, 0u);
     EXPECT_EQ(output1[0].monotonic_event_time.time,
@@ -1443,22 +1446,22 @@ TEST_F(TimestampMapperTest, ReadNode1First) {
     SCOPED_TRACE("Trying node1 now");
     std::deque<TimestampedMessage> output1;
 
-    ASSERT_TRUE(mapper1.Front() != nullptr);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
     EXPECT_TRUE(mapper1.started());
 
-    ASSERT_TRUE(mapper1.Front() != nullptr);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
     EXPECT_TRUE(mapper1.started());
 
-    ASSERT_TRUE(mapper1.Front() != nullptr);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
     EXPECT_TRUE(mapper1.started());
 
-    ASSERT_TRUE(mapper1.Front() == nullptr);
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) == nullptr);
 
     EXPECT_EQ(output1[0].monotonic_event_time.boot, 0u);
     EXPECT_EQ(output1[0].monotonic_event_time.time,
@@ -1479,22 +1482,22 @@ TEST_F(TimestampMapperTest, ReadNode1First) {
   {
     std::deque<TimestampedMessage> output0;
 
-    ASSERT_TRUE(mapper0.Front() != nullptr);
-    output0.emplace_back(std::move(*mapper0.Front()));
-    mapper0.PopFront();
+    ASSERT_TRUE(CheckExpected(mapper0.Front()) != nullptr);
+    output0.emplace_back(std::move(*CheckExpected(mapper0.Front())));
+    CheckExpected(mapper0.PopFront());
     EXPECT_TRUE(mapper0.started());
 
-    ASSERT_TRUE(mapper0.Front() != nullptr);
-    output0.emplace_back(std::move(*mapper0.Front()));
-    mapper0.PopFront();
+    ASSERT_TRUE(CheckExpected(mapper0.Front()) != nullptr);
+    output0.emplace_back(std::move(*CheckExpected(mapper0.Front())));
+    CheckExpected(mapper0.PopFront());
     EXPECT_TRUE(mapper0.started());
 
-    ASSERT_TRUE(mapper0.Front() != nullptr);
-    output0.emplace_back(std::move(*mapper0.Front()));
-    mapper0.PopFront();
+    ASSERT_TRUE(CheckExpected(mapper0.Front()) != nullptr);
+    output0.emplace_back(std::move(*CheckExpected(mapper0.Front())));
+    CheckExpected(mapper0.PopFront());
     EXPECT_TRUE(mapper0.started());
 
-    ASSERT_TRUE(mapper0.Front() == nullptr);
+    ASSERT_TRUE(CheckExpected(mapper0.Front()) == nullptr);
 
     EXPECT_EQ(output0[0].monotonic_event_time.boot, 0u);
     EXPECT_EQ(output0[0].monotonic_event_time.time,
@@ -1565,22 +1568,22 @@ TEST_F(TimestampMapperTest, ReadMissingDataBefore) {
     SCOPED_TRACE("Trying node1 now");
     std::deque<TimestampedMessage> output1;
 
-    ASSERT_TRUE(mapper1.Front() != nullptr);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
     EXPECT_TRUE(mapper1.started());
 
-    ASSERT_TRUE(mapper1.Front() != nullptr);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
     EXPECT_TRUE(mapper1.started());
 
-    ASSERT_TRUE(mapper1.Front() != nullptr);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
     EXPECT_TRUE(mapper1.started());
 
-    ASSERT_TRUE(mapper1.Front() == nullptr);
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) == nullptr);
 
     EXPECT_EQ(output1[0].monotonic_event_time.boot, 0u);
     EXPECT_EQ(output1[0].monotonic_event_time.time,
@@ -1651,22 +1654,22 @@ TEST_F(TimestampMapperTest, ReadMissingDataAfter) {
     SCOPED_TRACE("Trying node1 now");
     std::deque<TimestampedMessage> output1;
 
-    ASSERT_TRUE(mapper1.Front() != nullptr);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
     EXPECT_TRUE(mapper1.started());
 
-    ASSERT_TRUE(mapper1.Front() != nullptr);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
     EXPECT_TRUE(mapper1.started());
 
-    ASSERT_TRUE(mapper1.Front() != nullptr);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
     EXPECT_TRUE(mapper1.started());
 
-    ASSERT_TRUE(mapper1.Front() == nullptr);
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) == nullptr);
 
     EXPECT_EQ(output1[0].monotonic_event_time.boot, 0u);
     EXPECT_EQ(output1[0].monotonic_event_time.time,
@@ -1737,14 +1740,14 @@ TEST_F(TimestampMapperTest, ReadMissingDataMiddle) {
   {
     std::deque<TimestampedMessage> output1;
 
-    ASSERT_TRUE(mapper1.Front() != nullptr);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
 
-    ASSERT_TRUE(mapper1.Front() != nullptr);
-    output1.emplace_back(std::move(*mapper1.Front()));
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
 
-    ASSERT_FALSE(mapper1.Front() == nullptr);
+    ASSERT_FALSE(CheckExpected(mapper1.Front()) == nullptr);
 
     EXPECT_EQ(output1[0].monotonic_event_time.boot, 0u);
     EXPECT_EQ(output1[0].monotonic_event_time.time,
@@ -1816,11 +1819,11 @@ TEST_F(TimestampMapperTest, ReadSameTimestamp) {
     std::deque<TimestampedMessage> output1;
 
     for (int i = 0; i < 4; ++i) {
-      ASSERT_TRUE(mapper1.Front() != nullptr);
-      output1.emplace_back(std::move(*mapper1.Front()));
-      mapper1.PopFront();
+      ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
+      output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+      CheckExpected(mapper1.PopFront());
     }
-    ASSERT_TRUE(mapper1.Front() == nullptr);
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) == nullptr);
 
     EXPECT_EQ(output1[0].monotonic_event_time.boot, 0u);
     EXPECT_EQ(output1[0].monotonic_event_time.time,
@@ -1915,16 +1918,16 @@ TEST_F(TimestampMapperTest, NoPeer) {
   {
     std::deque<TimestampedMessage> output1;
 
-    ASSERT_TRUE(mapper1.Front() != nullptr);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
-    ASSERT_TRUE(mapper1.Front() != nullptr);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
-    ASSERT_TRUE(mapper1.Front() != nullptr);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
-    ASSERT_TRUE(mapper1.Front() == nullptr);
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) == nullptr);
 
     EXPECT_EQ(output1[0].monotonic_event_time.boot, 0u);
     EXPECT_EQ(output1[0].monotonic_event_time.time,
@@ -2000,38 +2003,38 @@ TEST_F(TimestampMapperTest, QueueUntilNode0) {
 
     EXPECT_EQ(mapper0_count, 0u);
     EXPECT_EQ(mapper1_count, 0u);
-    mapper0.QueueUntil(
-        BootTimestamp{.boot = 0, .time = e + chrono::milliseconds(1000)});
+    CheckExpected(mapper0.QueueUntil(
+        BootTimestamp{.boot = 0, .time = e + chrono::milliseconds(1000)}));
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 0u);
 
-    ASSERT_TRUE(mapper0.Front() != nullptr);
+    ASSERT_TRUE(CheckExpected(mapper0.Front()) != nullptr);
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 0u);
 
-    mapper0.QueueUntil(
-        BootTimestamp{.boot = 0, .time = e + chrono::milliseconds(1500)});
+    CheckExpected(mapper0.QueueUntil(
+        BootTimestamp{.boot = 0, .time = e + chrono::milliseconds(1500)}));
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 0u);
 
-    mapper0.QueueUntil(
-        BootTimestamp{.boot = 0, .time = e + chrono::milliseconds(2500)});
+    CheckExpected(mapper0.QueueUntil(
+        BootTimestamp{.boot = 0, .time = e + chrono::milliseconds(2500)}));
     EXPECT_EQ(mapper0_count, 4u);
     EXPECT_EQ(mapper1_count, 0u);
 
-    output0.emplace_back(std::move(*mapper0.Front()));
-    mapper0.PopFront();
-    output0.emplace_back(std::move(*mapper0.Front()));
-    mapper0.PopFront();
-    output0.emplace_back(std::move(*mapper0.Front()));
-    mapper0.PopFront();
-    output0.emplace_back(std::move(*mapper0.Front()));
-    mapper0.PopFront();
+    output0.emplace_back(std::move(*CheckExpected(mapper0.Front())));
+    CheckExpected(mapper0.PopFront());
+    output0.emplace_back(std::move(*CheckExpected(mapper0.Front())));
+    CheckExpected(mapper0.PopFront());
+    output0.emplace_back(std::move(*CheckExpected(mapper0.Front())));
+    CheckExpected(mapper0.PopFront());
+    output0.emplace_back(std::move(*CheckExpected(mapper0.Front())));
+    CheckExpected(mapper0.PopFront());
 
     EXPECT_EQ(mapper0_count, 4u);
     EXPECT_EQ(mapper1_count, 0u);
 
-    ASSERT_TRUE(mapper0.Front() == nullptr);
+    ASSERT_TRUE(CheckExpected(mapper0.Front()) == nullptr);
 
     EXPECT_EQ(output0[0].monotonic_event_time.boot, 0u);
     EXPECT_EQ(output0[0].monotonic_event_time.time,
@@ -2060,48 +2063,48 @@ TEST_F(TimestampMapperTest, QueueUntilNode0) {
 
     EXPECT_EQ(mapper0_count, 4u);
     EXPECT_EQ(mapper1_count, 0u);
-    mapper1.QueueUntil(BootTimestamp{
+    CheckExpected(mapper1.QueueUntil(BootTimestamp{
         .boot = 0,
-        .time = e + chrono::seconds(100) + chrono::milliseconds(1000)});
+        .time = e + chrono::seconds(100) + chrono::milliseconds(1000)}));
     EXPECT_EQ(mapper0_count, 4u);
     EXPECT_EQ(mapper1_count, 3u);
 
-    ASSERT_TRUE(mapper1.Front() != nullptr);
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
     EXPECT_EQ(mapper0_count, 4u);
     EXPECT_EQ(mapper1_count, 3u);
 
-    mapper1.QueueUntil(BootTimestamp{
+    CheckExpected(mapper1.QueueUntil(BootTimestamp{
         .boot = 0,
-        .time = e + chrono::seconds(100) + chrono::milliseconds(1500)});
+        .time = e + chrono::seconds(100) + chrono::milliseconds(1500)}));
     EXPECT_EQ(mapper0_count, 4u);
     EXPECT_EQ(mapper1_count, 3u);
 
-    mapper1.QueueUntil(BootTimestamp{
+    CheckExpected(mapper1.QueueUntil(BootTimestamp{
         .boot = 0,
-        .time = e + chrono::seconds(100) + chrono::milliseconds(2500)});
+        .time = e + chrono::seconds(100) + chrono::milliseconds(2500)}));
     EXPECT_EQ(mapper0_count, 4u);
     EXPECT_EQ(mapper1_count, 4u);
 
-    ASSERT_TRUE(mapper1.Front() != nullptr);
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
     EXPECT_EQ(mapper0_count, 4u);
     EXPECT_EQ(mapper1_count, 4u);
 
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
-    ASSERT_TRUE(mapper1.Front() != nullptr);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
-    ASSERT_TRUE(mapper1.Front() != nullptr);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
-    ASSERT_TRUE(mapper1.Front() != nullptr);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
 
     EXPECT_EQ(mapper0_count, 4u);
     EXPECT_EQ(mapper1_count, 4u);
 
-    ASSERT_TRUE(mapper1.Front() == nullptr);
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) == nullptr);
 
     EXPECT_EQ(mapper0_count, 4u);
     EXPECT_EQ(mapper1_count, 4u);
@@ -2155,13 +2158,13 @@ TEST_F(SingleNodeTimestampMapperTest, QueueTimestampsForSingleNodes) {
                           TimestampQueueStrategy::kQueueTimestampsAtStartup);
   mapper0.set_timestamp_callback(
       [&](TimestampedMessage *) { ++mapper0_count; });
-  mapper0.QueueTimestamps();
+  CheckExpected(mapper0.QueueTimestamps());
 
   for (int i = 0; i < 4; ++i) {
-    ASSERT_TRUE(mapper0.Front() != nullptr);
-    mapper0.PopFront();
+    ASSERT_TRUE(CheckExpected(mapper0.Front()) != nullptr);
+    CheckExpected(mapper0.PopFront());
   }
-  EXPECT_TRUE(mapper0.Front() == nullptr);
+  EXPECT_TRUE(CheckExpected(mapper0.Front()) == nullptr);
   EXPECT_EQ(mapper0_count, 4u);
 }
 
@@ -2286,12 +2289,12 @@ TEST_F(BootMergerTest, SortAcrossReboot) {
 
   std::vector<Message> output;
   for (int i = 0; i < 4; ++i) {
-    ASSERT_TRUE(merger.Front() != nullptr);
-    output.emplace_back(std::move(*merger.Front()));
+    ASSERT_TRUE(CheckExpected(merger.Front()) != nullptr);
+    output.emplace_back(std::move(*CheckExpected(merger.Front())));
     merger.PopFront();
   }
 
-  ASSERT_TRUE(merger.Front() == nullptr);
+  ASSERT_TRUE(CheckExpected(merger.Front()) == nullptr);
 
   EXPECT_EQ(output[0].timestamp.boot, 0u);
   EXPECT_EQ(output[0].timestamp.time, e + chrono::milliseconds(1000));
@@ -2482,31 +2485,31 @@ TEST_F(RebootTimestampMapperTest, ReadNode0First) {
 
     EXPECT_EQ(mapper0_count, 0u);
     EXPECT_EQ(mapper1_count, 0u);
-    ASSERT_TRUE(mapper0.Front() != nullptr);
+    ASSERT_TRUE(CheckExpected(mapper0.Front()) != nullptr);
     EXPECT_EQ(mapper0_count, 1u);
     EXPECT_EQ(mapper1_count, 0u);
-    output0.emplace_back(std::move(*mapper0.Front()));
-    mapper0.PopFront();
+    output0.emplace_back(std::move(*CheckExpected(mapper0.Front())));
+    CheckExpected(mapper0.PopFront());
     EXPECT_TRUE(mapper0.started());
     EXPECT_EQ(mapper0_count, 1u);
     EXPECT_EQ(mapper1_count, 0u);
 
-    ASSERT_TRUE(mapper0.Front() != nullptr);
+    ASSERT_TRUE(CheckExpected(mapper0.Front()) != nullptr);
     EXPECT_EQ(mapper0_count, 2u);
     EXPECT_EQ(mapper1_count, 0u);
-    output0.emplace_back(std::move(*mapper0.Front()));
-    mapper0.PopFront();
+    output0.emplace_back(std::move(*CheckExpected(mapper0.Front())));
+    CheckExpected(mapper0.PopFront());
     EXPECT_TRUE(mapper0.started());
 
-    ASSERT_TRUE(mapper0.Front() != nullptr);
-    output0.emplace_back(std::move(*mapper0.Front()));
-    mapper0.PopFront();
+    ASSERT_TRUE(CheckExpected(mapper0.Front()) != nullptr);
+    output0.emplace_back(std::move(*CheckExpected(mapper0.Front())));
+    CheckExpected(mapper0.PopFront());
     EXPECT_TRUE(mapper0.started());
 
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 0u);
 
-    ASSERT_TRUE(mapper0.Front() == nullptr);
+    ASSERT_TRUE(CheckExpected(mapper0.Front()) == nullptr);
 
     LOG(INFO) << output0[0];
     LOG(INFO) << output0[1];
@@ -2547,36 +2550,36 @@ TEST_F(RebootTimestampMapperTest, ReadNode0First) {
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 0u);
 
-    ASSERT_TRUE(mapper1.Front() != nullptr);
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 1u);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
     EXPECT_TRUE(mapper1.started());
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 1u);
 
-    ASSERT_TRUE(mapper1.Front() != nullptr);
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 2u);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
     EXPECT_TRUE(mapper1.started());
 
-    ASSERT_TRUE(mapper1.Front() != nullptr);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
     EXPECT_TRUE(mapper1.started());
 
-    ASSERT_TRUE(mapper1.Front() != nullptr);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
     EXPECT_TRUE(mapper1.started());
 
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 4u);
 
-    ASSERT_TRUE(mapper1.Front() == nullptr);
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) == nullptr);
 
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 4u);
@@ -2703,31 +2706,31 @@ TEST_F(RebootTimestampMapperTest, Node2Reboot) {
 
     EXPECT_EQ(mapper0_count, 0u);
     EXPECT_EQ(mapper1_count, 0u);
-    ASSERT_TRUE(mapper0.Front() != nullptr);
+    ASSERT_TRUE(CheckExpected(mapper0.Front()) != nullptr);
     EXPECT_EQ(mapper0_count, 1u);
     EXPECT_EQ(mapper1_count, 0u);
-    output0.emplace_back(std::move(*mapper0.Front()));
-    mapper0.PopFront();
+    output0.emplace_back(std::move(*CheckExpected(mapper0.Front())));
+    CheckExpected(mapper0.PopFront());
     EXPECT_TRUE(mapper0.started());
     EXPECT_EQ(mapper0_count, 1u);
     EXPECT_EQ(mapper1_count, 0u);
 
-    ASSERT_TRUE(mapper0.Front() != nullptr);
+    ASSERT_TRUE(CheckExpected(mapper0.Front()) != nullptr);
     EXPECT_EQ(mapper0_count, 2u);
     EXPECT_EQ(mapper1_count, 0u);
-    output0.emplace_back(std::move(*mapper0.Front()));
-    mapper0.PopFront();
+    output0.emplace_back(std::move(*CheckExpected(mapper0.Front())));
+    CheckExpected(mapper0.PopFront());
     EXPECT_TRUE(mapper0.started());
 
-    ASSERT_TRUE(mapper0.Front() != nullptr);
-    output0.emplace_back(std::move(*mapper0.Front()));
-    mapper0.PopFront();
+    ASSERT_TRUE(CheckExpected(mapper0.Front()) != nullptr);
+    output0.emplace_back(std::move(*CheckExpected(mapper0.Front())));
+    CheckExpected(mapper0.PopFront());
     EXPECT_TRUE(mapper0.started());
 
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 0u);
 
-    ASSERT_TRUE(mapper0.Front() == nullptr);
+    ASSERT_TRUE(CheckExpected(mapper0.Front()) == nullptr);
 
     LOG(INFO) << output0[0];
     LOG(INFO) << output0[1];
@@ -2774,31 +2777,31 @@ TEST_F(RebootTimestampMapperTest, Node2Reboot) {
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 0u);
 
-    ASSERT_TRUE(mapper1.Front() != nullptr);
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 1u);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
     EXPECT_TRUE(mapper1.started());
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 1u);
 
-    ASSERT_TRUE(mapper1.Front() != nullptr);
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 2u);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
     EXPECT_TRUE(mapper1.started());
 
-    ASSERT_TRUE(mapper1.Front() != nullptr);
-    output1.emplace_back(std::move(*mapper1.Front()));
-    mapper1.PopFront();
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) != nullptr);
+    output1.emplace_back(std::move(*CheckExpected(mapper1.Front())));
+    CheckExpected(mapper1.PopFront());
     EXPECT_TRUE(mapper1.started());
 
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 3u);
 
-    ASSERT_TRUE(mapper1.Front() == nullptr);
+    ASSERT_TRUE(CheckExpected(mapper1.Front()) == nullptr);
 
     EXPECT_EQ(mapper0_count, 3u);
     EXPECT_EQ(mapper1_count, 3u);

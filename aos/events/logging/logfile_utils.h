@@ -28,6 +28,7 @@
 #include "aos/events/logging/logger_generated.h"
 #include "aos/flatbuffers.h"
 #include "aos/network/remote_message_generated.h"
+#include "aos/util/status.h"
 
 namespace aos::logger {
 
@@ -297,7 +298,9 @@ class MessageReader {
     return newest_timestamp_;
   }
 
-  // Returns the next message if there is one.
+  // Returns the next message if there is one (nullptr if we reached the end of
+  // the log).
+  // Returns an error if we encountered an issue in reading the log.
   std::shared_ptr<UnpackedMessageHeader> ReadMessage();
 
   // The time at which we need to read another chunk from the logfile.
@@ -382,10 +385,11 @@ class PartsMessageReader {
     return newest_timestamp_;
   }
 
-  // Returns the next message if there is one, or nullopt if we have reached the
-  // end of all the files.
+  // Returns the next message if there is one (nullptr if we reached the end of
+  // the logfiles).
+  // Returns an error if we encountered an issue in reading the log.
   // Note: reading the next message may change the max_out_of_order_duration().
-  std::shared_ptr<UnpackedMessageHeader> ReadMessage();
+  [[nodiscard]] Result<std::shared_ptr<UnpackedMessageHeader>> ReadMessage();
 
   // Returns the boot count for the requested node, or std::nullopt if we don't
   // know.
@@ -584,8 +588,9 @@ class MessageSorter {
   // The time this data is sorted until.
   monotonic_clock::time_point sorted_until() const { return sorted_until_; }
 
-  // Returns the next sorted message from the log file.
-  const Message *Front();
+  // Returns the next sorted message from the log file; nullptr if at the end of
+  // the log. Returns an error if we encounter an error in reading the logfile.
+  [[nodiscard]] Result<const Message *> Front();
   // Pops the front message.  This should only be called after a call to
   // Front().
   void PopFront();
@@ -660,8 +665,10 @@ class PartsMerger {
   // The time this data is sorted until.
   monotonic_clock::time_point sorted_until() const { return sorted_until_; }
 
-  // Returns the next sorted message from the set of log files.
-  const Message *Front();
+  // Returns the next sorted message from the set of log files; nullptr if at
+  // the end of the log.
+  // Returns an error on a failure to read the log files.
+  [[nodiscard]] Result<const Message *> Front();
   // Pops the front message.  This should only be called after a call to
   // Front().
   void PopFront();
@@ -720,8 +727,10 @@ class BootMerger {
 
   bool started() const;
 
-  // Returns the next sorted message from the set of log files.
-  const Message *Front();
+  // Returns the next sorted message from the set of log files; nullptr if at
+  // the end of the log.
+  // Returns an error on a failure to read the log files.
+  [[nodiscard]] Result<const Message *> Front();
   // Pops the front message.  This should only be called after a call to
   // Front().
   void PopFront();
@@ -767,8 +776,11 @@ class SplitTimestampBootMerger {
   // that distinction, source_node is provided which has a list of which node
   // index is the source node for each channel, where the channel index is the
   // array index.
-  void QueueTimestamps(std::function<void(TimestampedMessage *)> fn,
-                       const std::vector<size_t> &source_node);
+  // Returns an error if there were any issues while attempting to read the
+  // logfile.
+  [[nodiscard]] Result<void> QueueTimestamps(
+      std::function<void(TimestampedMessage *)> fn,
+      const std::vector<size_t> &source_node);
 
   // Node index in the configuration of this node.
   int node() const { return boot_merger_.node(); }
@@ -789,8 +801,11 @@ class SplitTimestampBootMerger {
     return boot_merger_.started();
   }
 
-  // Returns the next sorted message from the set of log files.
-  const Message *Front();
+  // Returns the next sorted message from the set of log files; nullptr if we
+  // have reached the end of the log files.
+  // Returns an error if there were any issues while attempting to read the
+  // log.
+  [[nodiscard]] Result<const Message *> Front();
 
   // Pops the front message.  This should only be called after a call to
   // Front().
@@ -868,10 +883,12 @@ class TimestampMapper {
   // Returns true if anything has been queued up.
   bool started() const { return boot_merger_.started(); }
 
-  // Returns the next message for this node.
-  TimestampedMessage *Front();
+  // Returns the next message for this node; nullptr if at the end of the log.
+  // Returns an error upon failing to read the log.
+  [[nodiscard]] Result<TimestampedMessage *> Front();
   // Pops the next message.  Front must be called first.
-  void PopFront();
+  // Returns
+  [[nodiscard]] Result<void> PopFront();
 
   // Returns debug information about this node.
   std::string DebugString() const;
@@ -879,24 +896,30 @@ class TimestampMapper {
   // Queues just the timestamps so that the timestamp callback gets called.
   // Note, the timestamp callback will get called when they get returned too, so
   // make sure to unset it if you don't want to be called twice.
-  void QueueTimestamps();
+  [[nodiscard]] Result<void> QueueTimestamps();
 
   // Queues data the provided time.
-  void QueueUntil(BootTimestamp queue_time);
+  [[nodiscard]] Result<void> QueueUntil(BootTimestamp queue_time);
   // Queues until we have time_estimation_buffer of data in the queue.
-  void QueueFor(std::chrono::nanoseconds time_estimation_buffer);
+  [[nodiscard]] Result<void> QueueFor(
+      std::chrono::nanoseconds time_estimation_buffer);
 
   // Queues until the condition is met.
   template <typename T>
-  void QueueUntilCondition(T fn) {
+  [[nodiscard]] Result<void> QueueUntilCondition(T fn) {
     while (true) {
       if (fn()) {
         break;
       }
-      if (!QueueMatched()) {
-        break;
+      const Result<bool> queued_message = QueueMatched();
+      if (!queued_message.has_value()) {
+        return Error::MakeUnexpected(queued_message.error());
+      }
+      if (!queued_message.value()) {
+        return Ok();
       }
     }
+    return Ok();
   }
 
   // Sets the callback that can be used to skip messages.
@@ -949,25 +972,28 @@ class TimestampMapper {
 
   // Returns (and forgets about) the data for the provided timestamp message
   // showing when it was delivered to this node.
-  Message MatchingMessageFor(const Message &message);
+  Result<Message> MatchingMessageFor(const Message &message);
 
   // Queues up a single message into our message queue, and any nodes that this
   // message is delivered to.  Returns true if one was available, false
   // otherwise.
-  bool Queue();
+  // Returns an error if an error was encountered in log reading.
+  [[nodiscard]] Result<bool> Queue();
 
   // Queues up a single matched message into our matched message queue.  Returns
   // true if one was queued, and false otherwise.
-  bool QueueMatched();
+  // Returns an error if an error was encountered in log reading.
+  [[nodiscard]] Result<bool> QueueMatched();
 
   // Queues a message if the replay_channels_callback is passed and the end of
   // the log file has not been reached.
-  MatchResult MaybeQueueMatched();
+  // Returns an error if an error was encountered in log reading.
+  [[nodiscard]] Result<MatchResult> MaybeQueueMatched();
 
   // Queues up data until we have at least one message >= to time t.
   // Useful for triggering a remote node to read enough data to have the
   // timestamp you care about available.
-  void QueueUnmatchedUntil(BootTimestamp t);
+  [[nodiscard]] Result<void> QueueUnmatchedUntil(BootTimestamp t);
 
   // Queues m into matched_messages_.
   void QueueMessage(const Message *m);

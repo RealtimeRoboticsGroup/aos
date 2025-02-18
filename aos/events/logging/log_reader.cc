@@ -294,27 +294,48 @@ void LogReader::State::QueueThreadUntil(BootTimestamp time) {
           // nullopt but not done().
           if (last_queued_message_.has_value() &&
               queue_until < last_queued_message_) {
-            return util::ThreadedQueue<TimestampedMessage,
+            return util::ThreadedQueue<Result<TimestampedMessage>,
                                        BootTimestamp>::PushResult{
                 std::nullopt, false,
                 last_queued_message_ == BootTimestamp::max_time()};
           }
 
-          TimestampedMessage *message = timestamp_mapper_->Front();
+          Result<TimestampedMessage *> message = timestamp_mapper_->Front();
+          if (!message.has_value()) {
+            return util::ThreadedQueue<Result<TimestampedMessage>,
+                                       BootTimestamp>::PushResult{
+                Error::MakeUnexpected(message.error()), /*more_to_push=*/false,
+                /*done=*/true};
+          }
           // Upon reaching the end of the log, exit.
           if (message == nullptr) {
             last_queued_message_ = BootTimestamp::max_time();
-            return util::ThreadedQueue<TimestampedMessage,
-                                       BootTimestamp>::PushResult{std::nullopt,
-                                                                  false, true};
+            return util::ThreadedQueue<Result<TimestampedMessage>,
+                                       BootTimestamp>::PushResult{
+                std::nullopt,
+                /*more_to_push=*/false, /*done=*/true};
           }
 
-          last_queued_message_ = message->monotonic_event_time;
-          const util::ThreadedQueue<TimestampedMessage,
+          last_queued_message_ = message.value()->monotonic_event_time;
+          const util::ThreadedQueue<Result<TimestampedMessage>,
                                     BootTimestamp>::PushResult result{
-              *message, queue_until >= last_queued_message_, false};
-          timestamp_mapper_->PopFront();
-          MaybeSeedSortedMessages();
+              *message.value(), queue_until >= last_queued_message_, false};
+          const Result<void> pop_result = timestamp_mapper_->PopFront();
+          if (!pop_result.has_value()) {
+            return util::ThreadedQueue<Result<TimestampedMessage>,
+                                       BootTimestamp>::PushResult{
+                Error::MakeUnexpected(pop_result.error()),
+                /*more_to_push=*/false,
+                /*done=*/true};
+          }
+          const Result<void> seed_result = MaybeSeedSortedMessages();
+          if (!seed_result.has_value()) {
+            return util::ThreadedQueue<Result<TimestampedMessage>,
+                                       BootTimestamp>::PushResult{
+                Error::MakeUnexpected(pop_result.error()),
+                /*more_to_push=*/false,
+                /*done=*/true};
+          }
           return result;
         },
         time);
@@ -436,6 +457,11 @@ void LogReader::Register() {
 
 void LogReader::RegisterWithoutStarting(
     SimulatedEventLoopFactory *event_loop_factory) {
+  CheckExpected(NonFatalRegisterWithoutStarting(event_loop_factory));
+}
+
+Result<void> LogReader::NonFatalRegisterWithoutStarting(
+    SimulatedEventLoopFactory *event_loop_factory) {
   event_loop_factory_ = event_loop_factory;
   config_remapper_.set_configuration(event_loop_factory_->configuration());
 
@@ -503,7 +529,7 @@ void LogReader::RegisterWithoutStarting(
   if (timestamp_queue_strategy ==
       TimestampQueueStrategy::kQueueTimestampsAtStartup) {
     for (std::unique_ptr<State> &state : states_) {
-      state->ReadTimestamps();
+      AOS_RETURN_IF_ERROR(state->ReadTimestamps());
     }
   }
 
@@ -525,10 +551,14 @@ void LogReader::RegisterWithoutStarting(
     NodeEventLoopFactory *node_factory =
         event_loop_factory_->GetNodeEventLoopFactory(node);
     node_factory->OnStartup([this, state, node]() {
-      RegisterDuringStartup(state->MakeEventLoop(), node);
+      ExitOrCheckExpected(RegisterDuringStartup(state->MakeEventLoop(), node));
     });
     node_factory->OnShutdown([this, state, node]() {
-      RegisterDuringStartup(nullptr, node);
+      // TODO(james): Does this actually respect the Result<> passed to Exit()?
+      // Does it matter?
+      // For now, default to a FATAL check in lieu of a more direct
+      // verification.
+      CheckExpected(RegisterDuringStartup(nullptr, node));
       state->DestroyEventLoop();
     });
   }
@@ -542,7 +572,7 @@ void LogReader::RegisterWithoutStarting(
   filters_->CheckGraph();
 
   for (std::unique_ptr<State> &state : states_) {
-    state->MaybeSeedSortedMessages();
+    AOS_RETURN_IF_ERROR(state->MaybeSeedSortedMessages());
   }
 
   // Forwarding is tracked per channel.  If it is enabled, we want to turn it
@@ -571,6 +601,8 @@ void LogReader::RegisterWithoutStarting(
 
   // Write pseudo start times out to file now that we are all setup.
   filters_->Start(event_loop_factory_);
+
+  return Ok();
 }
 
 void LogReader::Register(SimulatedEventLoopFactory *event_loop_factory) {
@@ -599,8 +631,8 @@ void LogReader::StartAfterRegister(
     }
     // And start computing the start time on the distributed clock now that
     // that works.
-    start_time = std::max(
-        start_time, state->ToDistributedClock(state->monotonic_start_time(0)));
+    start_time = std::max(start_time, CheckExpected(state->ToDistributedClock(
+                                          state->monotonic_start_time(0))));
   }
 
   // TODO(austin): If a node doesn't have a start time, we might not queue
@@ -711,28 +743,28 @@ void LogReader::Register(EventLoop *event_loop) {
   if (timestamp_queue_strategy ==
       TimestampQueueStrategy::kQueueTimestampsAtStartup) {
     for (std::unique_ptr<State> &state : states_) {
-      state->ReadTimestamps();
+      CheckExpected(state->ReadTimestamps());
     }
   }
 
   for (const Node *node : configuration::GetNodes(configuration())) {
     if (node == nullptr || node->name()->string_view() ==
                                event_loop->node()->name()->string_view()) {
-      Register(event_loop, event_loop->node());
+      CheckExpected(Register(event_loop, event_loop->node()));
     } else {
-      Register(nullptr, node);
+      CheckExpected(Register(nullptr, node));
     }
   }
 }
 
-void LogReader::Register(EventLoop *event_loop, const Node *node) {
+Result<void> LogReader::Register(EventLoop *event_loop, const Node *node) {
   State *state =
       states_[configuration::GetNodeIndex(configuration(), node)].get();
 
   // If we didn't find any log files with data in them, we won't ever get a
   // callback or be live.  So skip the rest of the setup.
   if (state->SingleThreadedOldestMessageTime() == BootTimestamp::max_time()) {
-    return;
+    return Ok();
   }
 
   if (event_loop != nullptr) {
@@ -742,14 +774,16 @@ void LogReader::Register(EventLoop *event_loop, const Node *node) {
   if (event_loop_factory_ != nullptr) {
     event_loop_factory_->GetNodeEventLoopFactory(node)->OnStartup(
         [this, event_loop, node]() {
-          RegisterDuringStartup(event_loop, node);
+          ExitOrCheckExpected(RegisterDuringStartup(event_loop, node));
         });
   } else {
-    RegisterDuringStartup(event_loop, node);
+    AOS_RETURN_IF_ERROR(RegisterDuringStartup(event_loop, node));
   }
+  return Ok();
 }
 
-void LogReader::RegisterDuringStartup(EventLoop *event_loop, const Node *node) {
+Result<void> LogReader::RegisterDuringStartup(EventLoop *event_loop,
+                                              const Node *node) {
   if (event_loop != nullptr) {
     CHECK(event_loop->configuration() == configuration());
   }
@@ -852,7 +886,7 @@ void LogReader::RegisterDuringStartup(EventLoop *event_loop, const Node *node) {
     state->ClearRemoteTimestampSenders();
     state->set_timer_handler(nullptr);
     state->set_startup_timer(nullptr);
-    return;
+    return Ok();
   }
 
   state->set_timer_handler(event_loop->AddTimer([this, state]() {
@@ -867,7 +901,13 @@ void LogReader::RegisterDuringStartup(EventLoop *event_loop, const Node *node) {
       return;
     }
 
-    TimestampedMessage timestamped_message = state->PopOldest();
+    Result<TimestampedMessage> timestamped_message_result = state->PopOldest();
+    if (!timestamped_message_result.has_value()) {
+      ExitOrCheckExpected(timestamped_message_result);
+      return;
+    }
+    TimestampedMessage timestamped_message =
+        std::move(timestamped_message_result.value());
 
     CHECK_EQ(timestamped_message.monotonic_event_time.boot,
              state->boot_count());
@@ -1081,7 +1121,13 @@ void LogReader::RegisterDuringStartup(EventLoop *event_loop, const Node *node) {
           << " timestamped_message.data is null";
     }
 
-    const BootTimestamp next_time = state->MultiThreadedOldestMessageTime();
+    const Result<BootTimestamp> next_time_result =
+        state->MultiThreadedOldestMessageTime();
+    if (!next_time_result.has_value()) {
+      ExitOrCheckExpected(next_time_result);
+      return;
+    }
+    const BootTimestamp next_time = next_time_result.value();
     if (next_time != BootTimestamp::max_time()) {
       if (next_time.boot != state->boot_count()) {
         VLOG(1) << "Next message for node '"
@@ -1127,7 +1173,7 @@ void LogReader::RegisterDuringStartup(EventLoop *event_loop, const Node *node) {
             << state->monotonic_now();
   }));
 
-  state->MaybeSeedSortedMessages();
+  AOS_RETURN_IF_ERROR(state->MaybeSeedSortedMessages());
 
   if (state->SingleThreadedOldestMessageTime() != BootTimestamp::max_time()) {
     state->set_startup_timer(
@@ -1139,21 +1185,28 @@ void LogReader::RegisterDuringStartup(EventLoop *event_loop, const Node *node) {
       state->SetEndTimeFlag(end_time_);
       ++live_nodes_with_realtime_time_end_;
     }
-    event_loop->OnRun([state]() {
-      BootTimestamp next_time = state->SingleThreadedOldestMessageTime();
-      CHECK_EQ(next_time.boot, state->boot_count());
+    event_loop->OnRun([this, state]() {
+      const Result<BootTimestamp> next_time =
+          state->SingleThreadedOldestMessageTime();
+      if (!next_time.has_value()) {
+        ExitOrCheckExpected(next_time);
+        return;
+      }
+      CHECK_EQ(next_time->boot, state->boot_count());
       // Queue up messages and then set clock offsets (we don't want to set
       // clock offsets before we've done the work of getting the first messages
       // primed).
       state->QueueThreadUntil(
-          next_time + std::chrono::duration_cast<std::chrono::nanoseconds>(
-                          std::chrono::duration<double>(absl::GetFlag(
-                              FLAGS_threaded_look_ahead_seconds))));
+          next_time.value() +
+          std::chrono::duration_cast<std::chrono::nanoseconds>(
+              std::chrono::duration<double>(
+                  absl::GetFlag(FLAGS_threaded_look_ahead_seconds))));
       state->MaybeSetClockOffset();
-      state->Schedule(next_time.time);
+      state->Schedule(next_time->time);
       state->SetUpStartupTimer();
     });
   }
+  return Ok();
 }
 
 void LogReader::SetEndTime(std::string end_time) {
@@ -1796,81 +1849,92 @@ LogReader::RemoteMessageSender *LogReader::State::RemoteTimestampSender(
   return result.first->second.get();
 }
 
-TimestampedMessage LogReader::State::PopOldest() {
+Result<TimestampedMessage> LogReader::State::PopOldest() {
   // multithreaded
   if (message_queuer_.has_value()) {
-    std::optional<TimestampedMessage> message = message_queuer_->Pop();
+    std::optional<Result<TimestampedMessage>> message = message_queuer_->Pop();
     CHECK(message.has_value()) << ": Unexpectedly ran out of messages.";
+    // If there is an error during message reading, propagate it up.
+    if (!message.value().has_value()) {
+      return Error::MakeUnexpected(message.value().error());
+    }
     message_queuer_->SetState(
-        message.value().monotonic_event_time +
+        message.value().value().monotonic_event_time +
         std::chrono::duration_cast<std::chrono::nanoseconds>(
             std::chrono::duration<double>(
                 absl::GetFlag(FLAGS_threaded_look_ahead_seconds))));
-    VLOG(1) << "Popped " << message.value()
+    VLOG(1) << "Popped " << message.value().value()
             << configuration::CleanedChannelToString(
                    event_loop_->configuration()->channels()->Get(
-                       factory_channel_index_[message->channel_index]));
+                       factory_channel_index_[message->value().channel_index]));
     return message.value();
   } else {  // single threaded
     CHECK(timestamp_mapper_ != nullptr);
-    TimestampedMessage *result_ptr = timestamp_mapper_->Front();
-    CHECK(result_ptr != nullptr);
+    return timestamp_mapper_->Front().and_then(
+        [this](TimestampedMessage *result_ptr) -> Result<TimestampedMessage> {
+          CHECK(result_ptr != nullptr);
 
-    TimestampedMessage result = std::move(*result_ptr);
+          TimestampedMessage result = std::move(*result_ptr);
 
-    VLOG(2) << "Node '" << MaybeNodeName(event_loop_->node())
-            << "': PopOldest Popping " << result.monotonic_event_time;
-    timestamp_mapper_->PopFront();
-    MaybeSeedSortedMessages();
+          VLOG(2) << "Node '" << MaybeNodeName(event_loop_->node())
+                  << "': PopOldest Popping " << result.monotonic_event_time;
+          AOS_RETURN_IF_ERROR(timestamp_mapper_->PopFront());
+          AOS_RETURN_IF_ERROR(MaybeSeedSortedMessages());
 
-    CHECK_EQ(result.monotonic_event_time.boot, boot_count());
+          CHECK_EQ(result.monotonic_event_time.boot, boot_count());
 
-    VLOG(1) << "Popped " << result
-            << configuration::CleanedChannelToString(
-                   event_loop_->configuration()->channels()->Get(
-                       factory_channel_index_[result.channel_index]));
-    return result;
+          VLOG(1) << "Popped " << result
+                  << configuration::CleanedChannelToString(
+                         event_loop_->configuration()->channels()->Get(
+                             factory_channel_index_[result.channel_index]));
+          return result;
+        });
   }
 }
 
-BootTimestamp LogReader::State::MultiThreadedOldestMessageTime() {
+Result<BootTimestamp> LogReader::State::MultiThreadedOldestMessageTime() {
   if (!message_queuer_.has_value()) {
     return SingleThreadedOldestMessageTime();
   }
-  std::optional<TimestampedMessage> message = message_queuer_->Peek();
+  std::optional<Result<TimestampedMessage>> message = message_queuer_->Peek();
   if (!message.has_value()) {
     return BootTimestamp::max_time();
   }
-  if (message.value().monotonic_event_time.boot == boot_count()) {
-    ObserveNextMessage(message.value().monotonic_event_time.time,
-                       message.value().realtime_event_time);
+  if (!message.value().has_value()) {
+    return Error::MakeUnexpected(message.value().error());
   }
-  return message.value().monotonic_event_time;
+  if (message.value().value().monotonic_event_time.boot == boot_count()) {
+    ObserveNextMessage(message.value().value().monotonic_event_time.time,
+                       message.value().value().realtime_event_time);
+  }
+  return message.value().value().monotonic_event_time;
 }
 
-BootTimestamp LogReader::State::SingleThreadedOldestMessageTime() {
+Result<BootTimestamp> LogReader::State::SingleThreadedOldestMessageTime() {
   CHECK(!message_queuer_.has_value())
       << "Cannot use SingleThreadedOldestMessageTime() once the queuer thread "
          "is created.";
   if (timestamp_mapper_ == nullptr) {
     return BootTimestamp::max_time();
   }
-  TimestampedMessage *result_ptr = timestamp_mapper_->Front();
-  if (result_ptr == nullptr) {
-    return BootTimestamp::max_time();
-  }
-  VLOG(2) << "Node '" << MaybeNodeName(node()) << "': oldest message at "
-          << result_ptr->monotonic_event_time.time;
-  if (result_ptr->monotonic_event_time.boot == boot_count()) {
-    ObserveNextMessage(result_ptr->monotonic_event_time.time,
-                       result_ptr->realtime_event_time);
-  }
-  return result_ptr->monotonic_event_time;
+  return timestamp_mapper_->Front().transform(
+      [this](TimestampedMessage *result_ptr) {
+        if (result_ptr == nullptr) {
+          return BootTimestamp::max_time();
+        }
+        VLOG(2) << "Node '" << MaybeNodeName(node()) << "': oldest message at "
+                << result_ptr->monotonic_event_time.time;
+        if (result_ptr->monotonic_event_time.boot == boot_count()) {
+          ObserveNextMessage(result_ptr->monotonic_event_time.time,
+                             result_ptr->realtime_event_time);
+        }
+        return result_ptr->monotonic_event_time;
+      });
 }
 
-void LogReader::State::ReadTimestamps() {
-  if (!timestamp_mapper_) return;
-  timestamp_mapper_->QueueTimestamps();
+Result<void> LogReader::State::ReadTimestamps() {
+  if (!timestamp_mapper_) return Ok();
+  AOS_RETURN_IF_ERROR(timestamp_mapper_->QueueTimestamps());
 
   // TODO(austin): Maybe make timestamp mapper do this so we don't need to clear
   // it out?
@@ -1879,18 +1943,20 @@ void LogReader::State::ReadTimestamps() {
   // when SplitTimestampBootMerger sees the timestamp, and when TimestampMapper
   // sees it.
   timestamp_mapper_->set_timestamp_callback([](TimestampedMessage *) {});
+  return Ok();
 }
 
-void LogReader::State::MaybeSeedSortedMessages() {
-  if (!timestamp_mapper_) return;
+Result<void> LogReader::State::MaybeSeedSortedMessages() {
+  if (!timestamp_mapper_) return Ok();
 
   // The whole purpose of seeding is to make timestamp_mapper load timestamps.
   // So if we have already loaded them, skip seeding.
   if (timestamp_queue_strategy_ ==
-      TimestampQueueStrategy::kQueueTimestampsAtStartup)
-    return;
+      TimestampQueueStrategy::kQueueTimestampsAtStartup) {
+    return Ok();
+  }
 
-  timestamp_mapper_->QueueFor(
+  return timestamp_mapper_->QueueFor(
       chrono::duration_cast<chrono::seconds>(chrono::duration<double>(
           absl::GetFlag(FLAGS_time_estimation_buffer_seconds))));
 }

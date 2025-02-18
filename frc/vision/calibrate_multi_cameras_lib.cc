@@ -616,11 +616,12 @@ void ExtrinsicsMain(std::vector<CameraNode> &node_list,
          &two_board_extrinsics_list, &vis_robot, &camera_colors, &ordering_map,
          &image_period_ms, display_count](const TargetMap &map) {
           aos::distributed_clock::time_point camera_distributed_time =
-              reader->event_loop_factory()
-                  ->GetNodeEventLoopFactory(event_loop->node())
-                  ->ToDistributedClock(aos::monotonic_clock::time_point(
-                      aos::monotonic_clock::duration(
-                          map.monotonic_timestamp_ns())));
+              CheckExpected(
+                  reader->event_loop_factory()
+                      ->GetNodeEventLoopFactory(event_loop->node())
+                      ->ToDistributedClock(aos::monotonic_clock::time_point(
+                          aos::monotonic_clock::duration(
+                              map.monotonic_timestamp_ns()))));
 
           HandleTargetMap(map, camera_distributed_time,
                           camera_node.camera_name(), last_eofs_debug,

@@ -51,6 +51,8 @@ class Problem {
     size_t solution_node = std::numeric_limits<size_t>::max();
   };
 
+  virtual ~Problem() {}
+
   // Computes the derivatives of the cost function.
   // If quiet is true, ComputeDerivatives shouldn't print anything.  If all is
   // true, all inequality constraints are populated, otherwise only the
@@ -194,6 +196,8 @@ class NewtonSolver {
 class TimestampProblem : public Problem {
  public:
   TimestampProblem(size_t count);
+
+  virtual ~TimestampProblem() {}
 
   size_t size() const { return base_clock_.size(); }
 
@@ -354,14 +358,14 @@ class InterpolatedTimeConverter : public TimeConverter {
 
   // Converts a time to the distributed clock for scheduling and cross-node
   // time measurement.
-  distributed_clock::time_point ToDistributedClock(
+  Result<distributed_clock::time_point> ToDistributedClock(
       size_t node_index, logger::BootTimestamp time) override;
 
   // Takes the distributed time and converts it to the monotonic clock for this
   // node.
-  logger::BootTimestamp FromDistributedClock(size_t node_index,
-                                             distributed_clock::time_point time,
-                                             size_t boot_count) override;
+  Result<logger::BootTimestamp> FromDistributedClock(
+      size_t node_index, distributed_clock::time_point time,
+      size_t boot_count) override;
 
   // Called whenever time passes this point and we can forget about it.
   // TODO(austin): Pop here instead of in log reader.
@@ -370,7 +374,7 @@ class InterpolatedTimeConverter : public TimeConverter {
   // Queues 1 more timestamp in the interpolation list.  This is public for
   // timestamp_extractor so it can hammer on the log until everything is queued.
   // Return type matches that of NextTimestamp().
-  [[nodiscard]] std::optional<std::optional<const std::tuple<
+  [[nodiscard]] Result<std::optional<const std::tuple<
       distributed_clock::time_point, std::vector<logger::BootTimestamp>> *>>
   QueueNextTimestamp();
 
@@ -383,23 +387,23 @@ class InterpolatedTimeConverter : public TimeConverter {
   // If !NextTimestamp().has_value(), then an error occurred. If
   // !NextTimestamp().value().has_value(), then there is merely no next
   // timestamp available.
-  // TODO(james): Swap this to std::expected when available.
-  virtual std::optional<std::optional<std::tuple<
-      distributed_clock::time_point, std::vector<logger::BootTimestamp>>>>
+  virtual Result<std::optional<std::tuple<distributed_clock::time_point,
+                                          std::vector<logger::BootTimestamp>>>>
   NextTimestamp() = 0;
 
   // Queues timestamps util the last time in the queue matches the provided
   // function.
   template <typename F>
-  void QueueUntil(F not_done) {
+  [[nodiscard]] Result<void> QueueUntil(F not_done) {
     while (!at_end_ && (times_.empty() || not_done(times_.back()))) {
-      // Check the outer std::optional to watch for errors.
-      CHECK(QueueNextTimestamp().has_value())
-          << ": An error occurred when queueing timestamps.";
+      AOS_RETURN_IF_ERROR(
+          // Turn the Result<> into a Result<void> so the macro can work.
+          QueueNextTimestamp().transform([](const auto) { return; }));
     }
 
     CHECK(!times_.empty())
         << ": Found no times to do timestamp estimation, please investigate.";
+    return {};
   }
 
   // The number of nodes to enforce.
@@ -540,10 +544,10 @@ class MultiNodeNoncausalOffsetEstimator final
     NoncausalTimestampFilter *next_node_filter = nullptr;
   };
 
-  TimestampProblem MakeProblem();
+  Result<TimestampProblem> MakeProblem();
 
-  std::optional<std::optional<std::tuple<distributed_clock::time_point,
-                                         std::vector<logger::BootTimestamp>>>>
+  Result<std::optional<std::tuple<distributed_clock::time_point,
+                                  std::vector<logger::BootTimestamp>>>>
   NextTimestamp() override;
 
   // Returns the list of candidate times to solve for.

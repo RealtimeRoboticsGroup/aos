@@ -217,8 +217,9 @@ void Calibration::HandleCharuco(
   if (valid) {
     CHECK(rvecs_eigen.size() > 0) << "Require at least one target detected";
     // We only use one (the first) target detected for calibration
-    data_->AddCameraPose(image_factory_->ToDistributedClock(eof),
-                         rvecs_eigen[0], tvecs_eigen[0]);
+    data_->AddCameraPose(
+        aos::CheckExpected(image_factory_->ToDistributedClock(eof)),
+        rvecs_eigen[0], tvecs_eigen[0]);
 
     Eigen::IOFormat HeavyFmt(Eigen::FullPrecision, 0, ", ", ",\n", "[", "]",
                              "[", "]");
@@ -276,8 +277,9 @@ void Calibration::HandleIMU(const frc::IMUValues *imu) {
                         last_value_.accelerometer_z);
 
   // TODO: ToDistributedClock may be too noisy.
-  data_->AddImu(imu_factory_->ToDistributedClock(monotonic_clock::time_point(
-                    chrono::nanoseconds(imu->monotonic_timestamp_ns()))),
+  data_->AddImu(aos::CheckExpected(imu_factory_->ToDistributedClock(
+                    monotonic_clock::time_point(
+                        chrono::nanoseconds(imu->monotonic_timestamp_ns())))),
                 gyro, accel * kG);
 }
 
