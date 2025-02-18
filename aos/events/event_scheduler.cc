@@ -35,13 +35,14 @@ void EventScheduler::Deschedule(EventScheduler::Token token) {
   events_list_.erase(token);
 }
 
-std::pair<distributed_clock::time_point, monotonic_clock::time_point>
+Result<std::pair<distributed_clock::time_point, monotonic_clock::time_point>>
 EventScheduler::OldestEvent() {
   // If we haven't started yet, schedule a special event for the epoch to allow
   // ourselves to boot.
   if (!called_started_) {
     if (!cached_epoch_) {
-      cached_epoch_ = ToDistributedClock(monotonic_clock::epoch());
+      AOS_GET_VALUE_OR_RETURN_ERROR(
+          cached_epoch_, ToDistributedClock(monotonic_clock::epoch()));
     }
     return std::make_pair(*cached_epoch_, monotonic_clock::epoch());
   }
@@ -54,7 +55,8 @@ EventScheduler::OldestEvent() {
   const monotonic_clock::time_point monotonic_time =
       events_list_.begin()->first;
   if (cached_event_list_monotonic_time_ != monotonic_time) {
-    cached_event_list_time_ = ToDistributedClock(monotonic_time);
+    AOS_GET_VALUE_OR_RETURN_ERROR(cached_event_list_time_,
+                                  ToDistributedClock(monotonic_time));
     cached_event_list_monotonic_time_ = monotonic_time;
   }
 
@@ -66,27 +68,28 @@ void EventScheduler::Shutdown() {
   on_shutdown_();
 }
 
-void EventScheduler::Startup() {
+Result<void> EventScheduler::Startup() {
   ++boot_count_;
   cached_event_list_monotonic_time_ = kInvalidCachedTime();
   CHECK(!is_running_);
-  MaybeRunOnStartup();
+  AOS_RETURN_IF_ERROR(MaybeRunOnStartup());
   CHECK(called_started_);
+  return Ok();
 }
 
-void EventScheduler::CallOldestEvent() {
+Result<void> EventScheduler::CallOldestEvent() {
   if (!called_started_) {
     // If we haven't started, start.
-    MaybeRunOnStartup();
+    AOS_RETURN_IF_ERROR(MaybeRunOnStartup());
     MaybeRunOnRun();
     CHECK(called_started_);
-    return;
+    return Ok();
   }
   CHECK(is_running_);
   CHECK_GT(events_list_.size(), 0u);
   auto iter = events_list_.begin();
-  const logger::BootTimestamp t =
-      FromDistributedClock(scheduler_scheduler_->distributed_now());
+  AOS_DECLARE_OR_RETURN_IF_ERROR(
+      t, FromDistributedClock(scheduler_scheduler_->distributed_now()));
   VLOG(2) << "Got time back " << t;
   CHECK_EQ(t.boot, boot_count_);
   CHECK_EQ(t.time, iter->first) << ": Time is wrong on node " << node_index_;
@@ -96,6 +99,7 @@ void EventScheduler::CallOldestEvent() {
   callback->Handle();
 
   converter_->ObserveTimePassed(scheduler_scheduler_->distributed_now());
+  return Ok();
 }
 
 void EventScheduler::RunOnRun() {
@@ -135,15 +139,16 @@ void EventScheduler::MaybeRunStopped() {
   }
 }
 
-void EventScheduler::MaybeRunOnStartup() {
+Result<void> EventScheduler::MaybeRunOnStartup() {
   CHECK(!called_started_);
   CHECK(!is_running_);
-  const logger::BootTimestamp t =
-      FromDistributedClock(scheduler_scheduler_->distributed_now());
+  AOS_DECLARE_OR_RETURN_IF_ERROR(
+      t, FromDistributedClock(scheduler_scheduler_->distributed_now()));
   if (t.boot == boot_count_ && t.time >= monotonic_clock::epoch()) {
     called_started_ = true;
     RunOnStartup();
   }
+  return Ok();
 }
 
 void EventScheduler::MaybeRunOnRun() {
@@ -179,80 +184,83 @@ void EventSchedulerScheduler::MaybeRunStopped() {
   }
 }
 
-bool EventSchedulerScheduler::RunUntil(
+Result<bool> EventSchedulerScheduler::RunUntil(
     realtime_clock::time_point end_time, EventScheduler *scheduler,
     std::function<std::chrono::nanoseconds()> fn_realtime_offset) {
   logging::ScopedLogRestorer prev_logger;
-  MaybeRunOnStartup();
+  AOS_RETURN_IF_ERROR(MaybeRunOnStartup());
 
   bool reached_end_time = false;
 
-  RunMaybeRealtimeLoop([this, scheduler, end_time, fn_realtime_offset,
-                        &reached_end_time]() {
-    std::tuple<distributed_clock::time_point, EventScheduler *> oldest_event =
-        OldestEvent();
-    aos::distributed_clock::time_point oldest_event_time_distributed =
-        std::get<0>(oldest_event);
-    logger::BootTimestamp test_time_monotonic =
-        scheduler->FromDistributedClock(oldest_event_time_distributed);
-    realtime_clock::time_point oldest_event_realtime(
-        test_time_monotonic.time_since_epoch() + fn_realtime_offset());
+  const Result<void> result =
+      RunMaybeRealtimeLoop([this, scheduler, end_time, fn_realtime_offset,
+                            &reached_end_time]() -> Result<void> {
+        // std::tuple<distributed_clock::time_point, EventScheduler *>
+        // oldest_event =
+        AOS_DECLARE_OR_RETURN_IF_ERROR(oldest_event, OldestEvent());
+        aos::distributed_clock::time_point oldest_event_time_distributed =
+            std::get<0>(oldest_event);
+        logger::BootTimestamp test_time_monotonic;
+        AOS_GET_VALUE_OR_RETURN_ERROR(
+            test_time_monotonic,
+            scheduler->FromDistributedClock(oldest_event_time_distributed));
+        realtime_clock::time_point oldest_event_realtime(
+            test_time_monotonic.time_since_epoch() + fn_realtime_offset());
 
-    if ((std::get<0>(oldest_event) == distributed_clock::max_time) ||
-        (oldest_event_realtime > end_time &&
-         (reboots_.empty() ||
-          std::get<0>(reboots_.front()) > oldest_event_time_distributed))) {
-      is_running_ = false;
-      reached_end_time = true;
+        if ((std::get<0>(oldest_event) == distributed_clock::max_time) ||
+            (oldest_event_realtime > end_time &&
+             (reboots_.empty() ||
+              std::get<0>(reboots_.front()) > oldest_event_time_distributed))) {
+          is_running_ = false;
+          reached_end_time = true;
 
-      // We have to nudge our time back to the distributed time
-      // corresponding to our desired realtime time.
-      const monotonic_clock::time_point end_monotonic =
-          monotonic_clock::epoch() + end_time.time_since_epoch() -
-          fn_realtime_offset();
-      const aos::distributed_clock::time_point end_time_distributed =
-          scheduler->ToDistributedClock(end_monotonic);
+          // We have to nudge our time back to the distributed time
+          // corresponding to our desired realtime time.
+          const monotonic_clock::time_point end_monotonic =
+              monotonic_clock::epoch() + end_time.time_since_epoch() -
+              fn_realtime_offset();
 
-      now_ = end_time_distributed;
+          AOS_GET_VALUE_OR_RETURN_ERROR(
+              now_, scheduler->ToDistributedClock(end_monotonic));
 
-      return;
-    }
+          return Ok();
+        }
 
-    if (!reboots_.empty() &&
-        std::get<0>(reboots_.front()) <= std::get<0>(oldest_event)) {
-      // Reboot is next.
-      CHECK_LE(now_,
-               std::get<0>(reboots_.front()) + std::chrono::nanoseconds(1))
-          << ": Simulated time went backwards by too much.  Please "
-             "investigate.";
-      now_ = std::get<0>(reboots_.front());
-      Reboot();
-      reboots_.erase(reboots_.begin());
-      return;
-    }
+        if (!reboots_.empty() &&
+            std::get<0>(reboots_.front()) <= std::get<0>(oldest_event)) {
+          // Reboot is next.
+          CHECK_LE(now_,
+                   std::get<0>(reboots_.front()) + std::chrono::nanoseconds(1))
+              << ": Simulated time went backwards by too much.  Please "
+                 "investigate.";
+          now_ = std::get<0>(reboots_.front());
+          AOS_RETURN_IF_ERROR(Reboot());
+          reboots_.erase(reboots_.begin());
+          return Ok();
+        }
 
-    // We get to pick our tradeoffs here.  Either we assume that there are
-    // no backward step changes in our time function for each node, or we
-    // have to let time go backwards.  We currently only really see this
-    // happen when 2 events are scheduled for "now", time changes, and
-    // there is a nanosecond or two of rounding due to integer math.
-    //
-    // //aos/events/logging:logger_test triggers this.
-    CHECK_LE(now_, std::get<0>(oldest_event) + std::chrono::nanoseconds(1))
-        << ": Simulated time went backwards by too much.  Please "
-           "investigate.";
+        // We get to pick our tradeoffs here.  Either we assume that there are
+        // no backward step changes in our time function for each node, or we
+        // have to let time go backwards.  We currently only really see this
+        // happen when 2 events are scheduled for "now", time changes, and
+        // there is a nanosecond or two of rounding due to integer math.
+        //
+        // //aos/events/logging:logger_test triggers this.
+        CHECK_LE(now_, std::get<0>(oldest_event) + std::chrono::nanoseconds(1))
+            << ": Simulated time went backwards by too much.  Please "
+               "investigate.";
 
-    now_ = std::get<0>(oldest_event);
+        now_ = std::get<0>(oldest_event);
 
-    std::get<1>(oldest_event)->CallOldestEvent();
-  });
+        return std::get<1>(oldest_event)->CallOldestEvent();
+      });
 
   MaybeRunStopped();
 
-  return reached_end_time;
+  return result.transform([reached_end_time]() { return reached_end_time; });
 }
 
-void EventSchedulerScheduler::Reboot() {
+Result<void> EventSchedulerScheduler::Reboot() {
   const std::vector<logger::BootTimestamp> &times =
       std::get<1>(reboots_.front());
   CHECK_EQ(times.size(), schedulers_.size());
@@ -282,30 +290,32 @@ void EventSchedulerScheduler::Reboot() {
   // (especially message_bridge), it could try to send stuff out.  We want
   // to move everything over to the new boot before doing that.
   for (const size_t node_index : rebooted) {
-    schedulers_[node_index]->Startup();
+    AOS_RETURN_IF_ERROR(schedulers_[node_index]->Startup());
   }
   for (const size_t node_index : rebooted) {
     schedulers_[node_index]->MaybeRunOnRun();
   }
   is_running_ = true;
+  return Ok();
 }
 
-void EventSchedulerScheduler::RunFor(distributed_clock::duration duration) {
+Result<void> EventSchedulerScheduler::RunFor(
+    distributed_clock::duration duration) {
   distributed_clock::time_point end_time = now_ + duration;
   logging::ScopedLogRestorer prev_logger;
-  MaybeRunOnStartup();
+  AOS_RETURN_IF_ERROR(MaybeRunOnStartup());
 
   // Run all the sub-event-schedulers.
-  RunMaybeRealtimeLoop([this, end_time]() {
-    std::tuple<distributed_clock::time_point, EventScheduler *> oldest_event =
-        OldestEvent();
+  const Result<void> result = RunMaybeRealtimeLoop([this, end_time]()
+                                                       -> Result<void> {
+    AOS_DECLARE_OR_RETURN_IF_ERROR(oldest_event, OldestEvent());
     if (!reboots_.empty() &&
         std::get<0>(reboots_.front()) <= std::get<0>(oldest_event)) {
       // Reboot is next.
       if (std::get<0>(reboots_.front()) > end_time) {
         // Reboot is after our end time, give up.
         is_running_ = false;
-        return;
+        return Ok();
       }
 
       CHECK_LE(now_,
@@ -313,16 +323,16 @@ void EventSchedulerScheduler::RunFor(distributed_clock::duration duration) {
           << ": Simulated time went backwards by too much.  Please "
              "investigate.";
       now_ = std::get<0>(reboots_.front());
-      Reboot();
+      AOS_RETURN_IF_ERROR(Reboot());
       reboots_.erase(reboots_.begin());
-      return;
+      return Ok();
     }
 
     // No events left, bail.
     if (std::get<0>(oldest_event) == distributed_clock::max_time ||
         std::get<0>(oldest_event) > end_time) {
       is_running_ = false;
-      return;
+      return Ok();
     }
 
     // We get to pick our tradeoffs here.  Either we assume that there are no
@@ -337,22 +347,23 @@ void EventSchedulerScheduler::RunFor(distributed_clock::duration duration) {
     // push time forwards
     now_ = std::get<0>(oldest_event);
 
-    std::get<1>(oldest_event)->CallOldestEvent();
+    return std::get<1>(oldest_event)->CallOldestEvent();
   });
 
   now_ = end_time;
 
   MaybeRunStopped();
+
+  return result;
 }
 
-void EventSchedulerScheduler::Run() {
+Result<void> EventSchedulerScheduler::Run() {
   logging::ScopedLogRestorer prev_logger;
-  MaybeRunOnStartup();
+  AOS_RETURN_IF_ERROR(MaybeRunOnStartup());
 
   // Run all the sub-event-schedulers.
-  RunMaybeRealtimeLoop([this]() {
-    std::tuple<distributed_clock::time_point, EventScheduler *> oldest_event =
-        OldestEvent();
+  const Result<void> result = RunMaybeRealtimeLoop([this]() -> Result<void> {
+    AOS_DECLARE_OR_RETURN_IF_ERROR(oldest_event, OldestEvent());
     if (!reboots_.empty() &&
         std::get<0>(reboots_.front()) <= std::get<0>(oldest_event)) {
       // Reboot is next.
@@ -361,14 +372,14 @@ void EventSchedulerScheduler::Run() {
           << ": Simulated time went backwards by too much.  Please "
              "investigate.";
       now_ = std::get<0>(reboots_.front());
-      Reboot();
+      AOS_RETURN_IF_ERROR(Reboot());
       reboots_.erase(reboots_.begin());
-      return;
+      return Ok();
     }
     // No events left, bail.
     if (std::get<0>(oldest_event) == distributed_clock::max_time) {
       is_running_ = false;
-      return;
+      return Ok();
     }
 
     // We get to pick our tradeoffs here.  Either we assume that there are no
@@ -382,23 +393,30 @@ void EventSchedulerScheduler::Run() {
         << ": Simulated time went backwards by too much.  Please investigate.";
     now_ = std::get<0>(oldest_event);
 
-    std::get<1>(oldest_event)->CallOldestEvent();
+    return std::get<1>(oldest_event)->CallOldestEvent();
   });
 
   MaybeRunStopped();
+  return result;
 }
 
 template <typename F>
-void EventSchedulerScheduler::RunMaybeRealtimeLoop(F loop_body) {
+Result<void> EventSchedulerScheduler::RunMaybeRealtimeLoop(F loop_body) {
   internal::TimerFd timerfd;
   CHECK_LT(0.0, replay_rate_) << "Replay rate must be positive.";
+  const Result<std::tuple<distributed_clock::time_point, EventScheduler *>>
+      oldest_event = OldestEvent();
+  if (!oldest_event.has_value()) {
+    return Error::MakeUnexpected(oldest_event.error());
+  }
   distributed_clock::time_point last_distributed_clock =
-      std::get<0>(OldestEvent());
+      std::get<0>(oldest_event.value());
   monotonic_clock::time_point last_monotonic_clock = monotonic_clock::now();
   timerfd.SetTime(last_monotonic_clock, std::chrono::seconds(0));
+  Result<void> result{};
   epoll_.OnReadable(
       timerfd.fd(), [this, &last_distributed_clock, &last_monotonic_clock,
-                     &timerfd, loop_body]() {
+                     &timerfd, &result, loop_body]() {
         const uint64_t read_result = timerfd.Read();
         if (!is_running_) {
           epoll_.Quit();
@@ -414,7 +432,10 @@ void EventSchedulerScheduler::RunMaybeRealtimeLoop(F loop_body) {
         // This is deliberately written to support the user changing replay
         // rates dynamically.
         do {
-          loop_body();
+          result = loop_body();
+          if (!result.has_value()) {
+            is_running_ = false;
+          }
           if (is_running_) {
             const monotonic_clock::time_point next_trigger =
                 last_monotonic_clock +
@@ -432,9 +453,10 @@ void EventSchedulerScheduler::RunMaybeRealtimeLoop(F loop_body) {
 
   epoll_.Run();
   epoll_.DeleteFd(timerfd.fd());
+  return result;
 }
 
-std::tuple<distributed_clock::time_point, EventScheduler *>
+Result<std::tuple<distributed_clock::time_point, EventScheduler *>>
 EventSchedulerScheduler::OldestEvent() {
   distributed_clock::time_point min_event_time = distributed_clock::max_time;
   EventScheduler *min_scheduler = nullptr;
@@ -442,8 +464,7 @@ EventSchedulerScheduler::OldestEvent() {
   // TODO(austin): Don't linearly search...  But for N=3, it is probably the
   // fastest way to do this.
   for (EventScheduler *scheduler : schedulers_) {
-    const std::pair<distributed_clock::time_point, monotonic_clock::time_point>
-        event_time = scheduler->OldestEvent();
+    AOS_DECLARE_OR_RETURN_IF_ERROR(event_time, scheduler->OldestEvent());
     if (event_time.second != monotonic_clock::max_time) {
       if (event_time.first < min_event_time) {
         min_event_time = event_time.first;
@@ -459,7 +480,8 @@ EventSchedulerScheduler::OldestEvent() {
   return std::make_tuple(min_event_time, min_scheduler);
 }
 
-void EventSchedulerScheduler::TemporarilyStopAndRun(std::function<void()> fn) {
+Result<void> EventSchedulerScheduler::TemporarilyStopAndRun(
+    std::function<void()> fn) {
   if (in_on_run_) {
     LOG(FATAL)
         << "Can't call AllowApplicationCreationDuring from an OnRun callback.";
@@ -471,14 +493,15 @@ void EventSchedulerScheduler::TemporarilyStopAndRun(std::function<void()> fn) {
   }
   fn();
   if (was_running) {
-    MaybeRunOnStartup();
+    AOS_RETURN_IF_ERROR(MaybeRunOnStartup());
   }
+  return Ok();
 }
 
-void EventSchedulerScheduler::MaybeRunOnStartup() {
+Result<void> EventSchedulerScheduler::MaybeRunOnStartup() {
   is_running_ = true;
   for (EventScheduler *scheduler : schedulers_) {
-    scheduler->MaybeRunOnStartup();
+    AOS_RETURN_IF_ERROR(scheduler->MaybeRunOnStartup());
   }
   in_on_run_ = true;
   // We must trigger all the OnRun's *after* all the OnStartup callbacks are
@@ -487,6 +510,7 @@ void EventSchedulerScheduler::MaybeRunOnStartup() {
     scheduler->MaybeRunOnRun();
   }
   in_on_run_ = false;
+  return Ok();
 }
 
 }  // namespace aos

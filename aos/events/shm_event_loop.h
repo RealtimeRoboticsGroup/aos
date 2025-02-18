@@ -46,6 +46,7 @@ class ShmEventLoop : public EventLoop {
   void operator=(ShmEventLoop const &) = delete;
 
   // Runs the event loop until Exit is called, or ^C is caught.
+  // TODO(james): Upgrade this to [[nodiscard]].
   Result<void> Run();
   // Exits the event loop.  async-signal-safe (see
   // https://man7.org/linux/man-pages/man7/signal-safety.7.html).

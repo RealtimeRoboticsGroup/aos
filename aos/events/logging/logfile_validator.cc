@@ -101,18 +101,23 @@ bool MultiNodeLogIsReadable(const LogFilesContainer &log_files,
       continue;
     }
     while (true) {
-      TimestampedMessage *m = timestamp_mapper->Front();
-      if (m == nullptr) {
+      Result<TimestampedMessage *> m = timestamp_mapper->Front();
+      if (!m.has_value()) {
+        return preempt_destructor(false);
+      }
+      if (m.value() == nullptr) {
         break;
       }
-      timestamp_mapper->PopFront();
+      if (!timestamp_mapper->PopFront().has_value()) {
+        return preempt_destructor(false);
+      }
     }
   }
 
   // Don't get clever. Use the first time as the start time.  Note: this is
   // different than how log_cat and others work.
-  std::optional<std::optional<const std::tuple<distributed_clock::time_point,
-                                               std::vector<BootTimestamp>> *>>
+  Result<std::optional<const std::tuple<distributed_clock::time_point,
+                                        std::vector<BootTimestamp>> *>>
       next_timestamp = multinode_estimator.QueueNextTimestamp();
   if (!next_timestamp.has_value() || !next_timestamp.value().has_value()) {
     return preempt_destructor(false);
@@ -135,8 +140,8 @@ bool MultiNodeLogIsReadable(const LogFilesContainer &log_files,
   // As we pull off all the timestamps, the time problem is continually solved,
   // filling in the CSV files.
   while (true) {
-    std::optional<std::optional<const std::tuple<distributed_clock::time_point,
-                                                 std::vector<BootTimestamp>> *>>
+    Result<std::optional<const std::tuple<distributed_clock::time_point,
+                                          std::vector<BootTimestamp>> *>>
         next_timestamp = multinode_estimator.QueueNextTimestamp();
     if (!next_timestamp.has_value()) {
       return preempt_destructor(false);
