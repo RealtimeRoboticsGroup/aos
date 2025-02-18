@@ -192,13 +192,13 @@ class ChannelStats {
     if (source_node_ != nullptr &&
         context.monotonic_remote_time != context.monotonic_event_time) {
       // Convert times to distributed clock so they can be compared across nodes
-      const aos::distributed_clock::time_point remote_time =
+      const aos::distributed_clock::time_point remote_time = CheckExpected(
           factory_->GetNodeEventLoopFactory(source_node_)
-              ->ToDistributedClock(context.monotonic_remote_time);
+              ->ToDistributedClock(context.monotonic_remote_time));
 
       const aos::distributed_clock::time_point event_time =
-          factory_->GetNodeEventLoopFactory(destination_node_)
-              ->ToDistributedClock(context.monotonic_event_time);
+          CheckExpected(factory_->GetNodeEventLoopFactory(destination_node_)
+                            ->ToDistributedClock(context.monotonic_event_time));
       // Add the current latency to the sum
       total_latency_ += event_time - remote_time;
 

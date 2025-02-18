@@ -1583,7 +1583,7 @@ void SimulatedEventLoopFactory::RunFor(monotonic_clock::duration duration) {
 Result<void> SimulatedEventLoopFactory::NonFatalRunFor(
     monotonic_clock::duration duration) {
   // This sets running to true too.
-  scheduler_scheduler_.RunFor(duration);
+  const Result<void> result = scheduler_scheduler_.RunFor(duration);
   for (std::unique_ptr<NodeEventLoopFactory> &node : node_factories_) {
     if (node) {
       for (SimulatedEventLoop *loop : node->event_loops_) {
@@ -1591,7 +1591,7 @@ Result<void> SimulatedEventLoopFactory::NonFatalRunFor(
       }
     }
   }
-  return GetAndClearExitStatus();
+  return result.and_then([this]() { return GetAndClearExitStatus(); });
 }
 
 SimulatedEventLoopFactory::RunEndState SimulatedEventLoopFactory::RunUntil(
@@ -1602,14 +1602,16 @@ SimulatedEventLoopFactory::RunEndState SimulatedEventLoopFactory::RunUntil(
 Result<SimulatedEventLoopFactory::RunEndState>
 SimulatedEventLoopFactory::NonFatalRunUntil(realtime_clock::time_point now,
                                             const aos::Node *node) {
-  RunEndState ran_until_time =
-      scheduler_scheduler_.RunUntil(
-          now, &GetNodeEventLoopFactory(node)->scheduler_,
-          [this, &node](void) {
-            return GetNodeEventLoopFactory(node)->realtime_offset();
-          })
-          ? RunEndState::kEventsRemaining
-          : RunEndState::kFinishedEventProcessing;
+  const Result<RunEndState> result =
+      scheduler_scheduler_
+          .RunUntil(now, &GetNodeEventLoopFactory(node)->scheduler_,
+                    [this, &node](void) {
+                      return GetNodeEventLoopFactory(node)->realtime_offset();
+                    })
+          .transform([](const bool events_remaining) {
+            return events_remaining ? RunEndState::kEventsRemaining
+                                    : RunEndState::kFinishedEventProcessing;
+          });
   for (std::unique_ptr<NodeEventLoopFactory> &node : node_factories_) {
     if (node) {
       for (SimulatedEventLoop *loop : node->event_loops_) {
@@ -1617,23 +1619,26 @@ SimulatedEventLoopFactory::NonFatalRunUntil(realtime_clock::time_point now,
       }
     }
   }
-  return GetAndClearExitStatus().transform(
-      [ran_until_time]() { return ran_until_time; });
+  return result.and_then([this](const RunEndState end_state) {
+    return GetAndClearExitStatus().transform(
+        [end_state]() { return end_state; });
+  });
 }
 
 void SimulatedEventLoopFactory::Run() { CheckExpected(NonFatalRun()); }
 
 Result<void> SimulatedEventLoopFactory::NonFatalRun() {
   // This sets running to true too.
-  scheduler_scheduler_.Run();
+  const Result<void> result = scheduler_scheduler_.Run();
   for (std::unique_ptr<NodeEventLoopFactory> &node : node_factories_) {
     if (node) {
+      CHECK(!node->is_running());
       for (SimulatedEventLoop *loop : node->event_loops_) {
         CHECK(!loop->is_running());
       }
     }
   }
-  return GetAndClearExitStatus();
+  return result.and_then([this]() { return GetAndClearExitStatus(); });
 }
 
 void SimulatedEventLoopFactory::Exit(Result<void> status) {

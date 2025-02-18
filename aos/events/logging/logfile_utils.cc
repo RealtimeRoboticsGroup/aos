@@ -1482,7 +1482,8 @@ void PartsMessageReader::ComputeBootCounts() {
   }
 }
 
-std::shared_ptr<UnpackedMessageHeader> PartsMessageReader::ReadMessage() {
+Result<std::shared_ptr<UnpackedMessageHeader>>
+PartsMessageReader::ReadMessage() {
   while (!done_) {
     std::shared_ptr<UnpackedMessageHeader> message =
         message_reader_.ReadMessage();
@@ -1500,13 +1501,20 @@ std::shared_ptr<UnpackedMessageHeader> PartsMessageReader::ReadMessage() {
         after_start_ = true;
       }
       if (after_start_) {
-        CHECK_GE(monotonic_sent_time,
-                 newest_timestamp_ - max_out_of_order_duration())
-            << ": Max out of order of " << max_out_of_order_duration().count()
-            << "ns exceeded. " << log_parts_access_.parts()
-            << ", start time is "
-            << log_parts_access_.parts().monotonic_start_time
-            << " currently reading " << filename();
+        if (monotonic_sent_time <
+            newest_timestamp_ - max_out_of_order_duration()) {
+          return Error::MakeUnexpectedError(
+              // TODO(james): Come up with some clever macro akin to LOG(INFO)
+              // that makes it easier for people to use existing operator<<
+              // patterns.
+              (std::stringstream()
+               << "Max out of order of " << max_out_of_order_duration().count()
+               << "ns exceeded. " << log_parts_access_.parts()
+               << ", start time is "
+               << log_parts_access_.parts().monotonic_start_time
+               << " currently reading " << filename())
+                  .str());
+        }
       }
       return message;
     }
@@ -1631,7 +1639,7 @@ MessageSorter::MessageSorter(const LogPartsAccess log_parts_access)
       source_node_index_(configuration::SourceNodeIndex(parts().config.get())) {
 }
 
-const Message *MessageSorter::Front() {
+Result<const Message *> MessageSorter::Front() {
   // Queue up data until enough data has been queued that the front message is
   // sorted enough to be safe to pop.  This may do nothing, so we should make
   // sure the nothing path is checked quickly.
@@ -1643,8 +1651,8 @@ const Message *MessageSorter::Front() {
         break;
       }
 
-      std::shared_ptr<UnpackedMessageHeader> msg =
-          parts_message_reader_.ReadMessage();
+      std::shared_ptr<UnpackedMessageHeader> msg;
+      AOS_GET_VALUE_OR_RETURN_ERROR(msg, parts_message_reader_.ReadMessage());
       // No data left, sorted forever, work through what is left.
       if (!msg) {
         sorted_until_ = monotonic_clock::max_time;
@@ -1810,14 +1818,15 @@ std::vector<const LogParts *> PartsMerger::Parts() const {
   return p;
 }
 
-const Message *PartsMerger::Front() {
+Result<const Message *> PartsMerger::Front() {
   // Return the current Front if we have one, otherwise go compute one.
   if (current_ != nullptr) {
-    const Message *result = current_->Front();
-    CHECK_GE(result->timestamp.time, last_message_time_);
-    VLOG(1) << this << " PartsMerger::Front for node " << node_name() << " "
-            << *result;
-    return result;
+    return current_->Front().transform([this](const Message *result) {
+      CHECK_GE(result->timestamp.time, last_message_time_);
+      VLOG(1) << this << " PartsMerger::Front for node " << node_name() << " "
+              << *result;
+      return result;
+    });
   }
 
   // Otherwise, do a simple search for the oldest message, deduplicating any
@@ -1825,7 +1834,11 @@ const Message *PartsMerger::Front() {
   const Message *oldest = nullptr;
   sorted_until_ = monotonic_clock::max_time;
   for (MessageSorter &message_sorter : message_sorters_) {
-    const Message *msg = message_sorter.Front();
+    Result<const Message *> read_result = message_sorter.Front();
+    if (!read_result.has_value()) {
+      return read_result;
+    }
+    const Message *msg = read_result.value();
     if (!msg) {
       sorted_until_ = std::min(sorted_until_, message_sorter.sorted_until());
       continue;
@@ -1912,11 +1925,15 @@ std::string_view BootMerger::node_name() const {
   return configuration::NodeName(configuration().get(), node());
 }
 
-const Message *BootMerger::Front() {
+Result<const Message *> BootMerger::Front() {
   if (parts_mergers_[index_].get() != nullptr) {
-    const Message *result = parts_mergers_[index_]->Front();
+    Result<const Message *> result = parts_mergers_[index_]->Front();
 
-    if (result != nullptr) {
+    if (!result.has_value()) {
+      return result;
+    }
+
+    if (result.value() != nullptr) {
       VLOG(1) << this << " BootMerger::Front " << node_name() << " " << *result;
       return result;
     }
@@ -1928,8 +1945,8 @@ const Message *BootMerger::Front() {
     return nullptr;
   } else {
     ++index_;
-    const Message *result = Front();
-    VLOG(1) << this << " BootMerger::Front " << node_name() << " " << *result;
+    Result<const Message *> result = Front();
+    VLOG(1) << this << " BootMerger::Front " << node_name() << " " << **result;
     return result;
   }
 }
@@ -2029,20 +2046,20 @@ SplitTimestampBootMerger::SplitTimestampBootMerger(
   }
 }
 
-void SplitTimestampBootMerger::QueueTimestamps(
+Result<void> SplitTimestampBootMerger::QueueTimestamps(
     std::function<void(TimestampedMessage *)> fn,
     const std::vector<size_t> &source_node) {
   if (!timestamp_boot_merger_) {
-    return;
+    return Ok();
   }
 
   while (true) {
     // Load all the timestamps.  If we find data, ignore it and drop it on the
     // floor.  It will be read when boot_merger_ is used.
-    const Message *msg = timestamp_boot_merger_->Front();
+    AOS_DECLARE_OR_RETURN_IF_ERROR(msg, timestamp_boot_merger_->Front());
     if (!msg) {
       queue_timestamps_ran_ = true;
-      return;
+      return Ok();
     }
     CHECK_LT(msg->channel_index, source_node.size());
     if (source_node[msg->channel_index] != static_cast<size_t>(node())) {
@@ -2106,59 +2123,60 @@ monotonic_clock::time_point SplitTimestampBootMerger::monotonic_oldest_time(
                   timestamp_boot_merger_->monotonic_oldest_time(boot));
 }
 
-const Message *SplitTimestampBootMerger::Front() {
-  const Message *boot_merger_front = boot_merger_.Front();
+Result<const Message *> SplitTimestampBootMerger::Front() {
+  return boot_merger_.Front().transform(
+      [this](const Message *boot_merger_front) {
+        if (timestamp_boot_merger_) {
+          CHECK(queue_timestamps_ran_);
+        }
 
-  if (timestamp_boot_merger_) {
-    CHECK(queue_timestamps_ran_);
-  }
+        const Message *timestamp_messages_front = nullptr;
+        if (!timestamp_messages_.empty()) {
+          timestamp_messages_front = &timestamp_messages_.front();
+        }
 
-  const Message *timestamp_messages_front = nullptr;
-  if (!timestamp_messages_.empty()) {
-    timestamp_messages_front = &timestamp_messages_.front();
-  }
+        if (!timestamp_messages_front) {
+          message_source_ = MessageSource::kBootMerger;
+          if (boot_merger_front != nullptr) {
+            VLOG(1) << this << " SplitTimestampBootMerger::Front "
+                    << node_name() << " " << *boot_merger_front;
+          } else {
+            VLOG(1) << this << " SplitTimestampBootMerger::Front "
+                    << node_name() << " nullptr";
+          }
+          return boot_merger_front;
+        }
 
-  if (!timestamp_messages_front) {
-    message_source_ = MessageSource::kBootMerger;
-    if (boot_merger_front != nullptr) {
-      VLOG(1) << this << " SplitTimestampBootMerger::Front " << node_name()
-              << " " << *boot_merger_front;
-    } else {
-      VLOG(1) << this << " SplitTimestampBootMerger::Front " << node_name()
-              << " nullptr";
-    }
-    return boot_merger_front;
-  }
+        if (boot_merger_front == nullptr) {
+          message_source_ = MessageSource::kTimestampMessage;
 
-  if (boot_merger_front == nullptr) {
-    message_source_ = MessageSource::kTimestampMessage;
+          VLOG(1) << this << " SplitTimestampBootMerger::Front " << node_name()
+                  << " " << *timestamp_messages_front;
+          return timestamp_messages_front;
+        }
 
-    VLOG(1) << this << " SplitTimestampBootMerger::Front " << node_name() << " "
-            << *timestamp_messages_front;
-    return timestamp_messages_front;
-  }
-
-  if (*boot_merger_front <= *timestamp_messages_front) {
-    if (*boot_merger_front == *timestamp_messages_front) {
-      VLOG(1) << this << " SplitTimestampBootMerger::Front " << node_name()
-              << " Dropping duplicate timestamp.";
-      timestamp_messages_.pop_front();
-    }
-    message_source_ = MessageSource::kBootMerger;
-    if (boot_merger_front != nullptr) {
-      VLOG(1) << this << " SplitTimestampBootMerger::Front " << node_name()
-              << " " << *boot_merger_front;
-    } else {
-      VLOG(1) << this << " SplitTimestampBootMerger::Front " << node_name()
-              << " nullptr";
-    }
-    return boot_merger_front;
-  } else {
-    message_source_ = MessageSource::kTimestampMessage;
-    VLOG(1) << this << " SplitTimestampBootMerger::Front " << node_name() << " "
-            << *timestamp_messages_front;
-    return timestamp_messages_front;
-  }
+        if (*boot_merger_front <= *timestamp_messages_front) {
+          if (*boot_merger_front == *timestamp_messages_front) {
+            VLOG(1) << this << " SplitTimestampBootMerger::Front "
+                    << node_name() << " Dropping duplicate timestamp.";
+            timestamp_messages_.pop_front();
+          }
+          message_source_ = MessageSource::kBootMerger;
+          if (boot_merger_front != nullptr) {
+            VLOG(1) << this << " SplitTimestampBootMerger::Front "
+                    << node_name() << " " << *boot_merger_front;
+          } else {
+            VLOG(1) << this << " SplitTimestampBootMerger::Front "
+                    << node_name() << " nullptr";
+          }
+          return boot_merger_front;
+        } else {
+          message_source_ = MessageSource::kTimestampMessage;
+          VLOG(1) << this << " SplitTimestampBootMerger::Front " << node_name()
+                  << " " << *timestamp_messages_front;
+          return timestamp_messages_front;
+        }
+      });
 }
 
 void SplitTimestampBootMerger::PopFront() {
@@ -2256,7 +2274,7 @@ void TimestampMapper::QueueMessage(const Message *msg) {
   VLOG(1) << node_name() << " Inserted " << matched_messages_.back();
 }
 
-TimestampedMessage *TimestampMapper::Front() {
+Result<TimestampedMessage *> TimestampMapper::Front() {
   // No need to fetch anything new.  A previous message still exists.
   switch (first_message_) {
     case FirstMessage::kNeedsUpdate:
@@ -2272,7 +2290,8 @@ TimestampedMessage *TimestampMapper::Front() {
   }
 
   if (matched_messages_.empty()) {
-    if (!QueueMatched()) {
+    AOS_DECLARE_OR_RETURN_IF_ERROR(queued_message, QueueMatched());
+    if (!queued_message) {
       first_message_ = FirstMessage::kNullptr;
       VLOG(1) << this << " TimestampMapper::Front " << node_name()
               << " nullptr";
@@ -2285,12 +2304,14 @@ TimestampedMessage *TimestampMapper::Front() {
   return &matched_messages_.front();
 }
 
-bool TimestampMapper::QueueMatched() {
-  MatchResult result = MatchResult::kEndOfFile;
+Result<bool> TimestampMapper::QueueMatched() {
+  Result<MatchResult> result = MatchResult::kEndOfFile;
   do {
     result = MaybeQueueMatched();
-  } while (result == MatchResult::kSkipped);
-  return result == MatchResult::kQueued;
+  } while (result.has_value() && result == MatchResult::kSkipped);
+  return result.transform([](const MatchResult match_result) {
+    return match_result == MatchResult::kQueued;
+  });
 }
 
 bool TimestampMapper::CheckReplayChannelsAndMaybePop(
@@ -2304,11 +2325,11 @@ bool TimestampMapper::CheckReplayChannelsAndMaybePop(
   return false;
 }
 
-TimestampMapper::MatchResult TimestampMapper::MaybeQueueMatched() {
+Result<TimestampMapper::MatchResult> TimestampMapper::MaybeQueueMatched() {
   if (nodes_data_.empty()) {
     // Simple path.  We are single node, so there are no timestamps to match!
     CHECK_EQ(messages_.size(), 0u);
-    const Message *msg = boot_merger_.Front();
+    AOS_DECLARE_OR_RETURN_IF_ERROR(msg, boot_merger_.Front());
     if (!msg) {
       return MatchResult::kEndOfFile;
     }
@@ -2333,7 +2354,8 @@ TimestampMapper::MatchResult TimestampMapper::MaybeQueueMatched() {
   // messages which are delivered.  Reuse the flow below which uses messages_
   // by just adding the new message to messages_ and continuing.
   if (messages_.empty()) {
-    if (!Queue()) {
+    AOS_DECLARE_OR_RETURN_IF_ERROR(queue_result, Queue());
+    if (!queue_result) {
       // Found nothing to add, we are out of data!
       return MatchResult::kEndOfFile;
     }
@@ -2360,7 +2382,8 @@ TimestampMapper::MatchResult TimestampMapper::MaybeQueueMatched() {
   } else {
     // Got a timestamp, find the matching remote data, match it, and return
     // it.
-    Message data = MatchingMessageFor(*msg);
+    Message data;
+    AOS_GET_VALUE_OR_RETURN_ERROR(data, MatchingMessageFor(*msg));
 
     // Return the data from the remote.  The local message only has timestamp
     // info which isn't relevant anymore once extracted.
@@ -2396,15 +2419,18 @@ TimestampMapper::MatchResult TimestampMapper::MaybeQueueMatched() {
   }
 }
 
-void TimestampMapper::QueueUntil(BootTimestamp queue_time) {
+Result<void> TimestampMapper::QueueUntil(BootTimestamp queue_time) {
   while (last_message_time_ <= queue_time) {
-    if (!QueueMatched()) {
-      return;
+    AOS_DECLARE_OR_RETURN_IF_ERROR(queued_message, QueueMatched());
+    if (!queued_message) {
+      return Ok();
     }
   }
+  return Ok();
 }
 
-void TimestampMapper::QueueFor(chrono::nanoseconds time_estimation_buffer) {
+Result<void> TimestampMapper::QueueFor(
+    chrono::nanoseconds time_estimation_buffer) {
   // Note: queueing for time doesn't really work well across boots.  So we
   // just assume that if you are using this, you only care about the current
   // boot.
@@ -2414,8 +2440,9 @@ void TimestampMapper::QueueFor(chrono::nanoseconds time_estimation_buffer) {
   // Make sure we have something queued first.  This makes the end time
   // calculation simpler, and is typically what folks want regardless.
   if (matched_messages_.empty()) {
-    if (!QueueMatched()) {
-      return;
+    AOS_DECLARE_OR_RETURN_IF_ERROR(queued_message, QueueMatched());
+    if (!queued_message) {
+      return Ok();
     }
   }
 
@@ -2429,22 +2456,26 @@ void TimestampMapper::QueueFor(chrono::nanoseconds time_estimation_buffer) {
   // --time_estimation_buffer_seconds seconds queued up (but queue at least
   // until the log starts).
   while (end_queue_time >= last_message_time_.time) {
-    if (!QueueMatched()) {
-      return;
+    AOS_DECLARE_OR_RETURN_IF_ERROR(queued_message, QueueMatched());
+    if (!queued_message) {
+      return Ok();
     }
   }
+  return Ok();
 }
 
-void TimestampMapper::PopFront() {
+Result<void> TimestampMapper::PopFront() {
   CHECK(first_message_ != FirstMessage::kNeedsUpdate);
-  last_popped_message_time_ = Front()->monotonic_event_time;
-  first_message_ = FirstMessage::kNeedsUpdate;
+  return Front().transform([this](const TimestampedMessage *message) {
+    last_popped_message_time_ = message->monotonic_event_time;
+    first_message_ = FirstMessage::kNeedsUpdate;
 
-  VLOG(1) << node_name() << " Popped " << matched_messages_.back();
-  matched_messages_.pop_front();
+    VLOG(1) << node_name() << " Popped " << matched_messages_.back();
+    matched_messages_.pop_front();
+  });
 }
 
-Message TimestampMapper::MatchingMessageFor(const Message &message) {
+Result<Message> TimestampMapper::MatchingMessageFor(const Message &message) {
   // Figure out what queue index we are looking for.
   CHECK(message.header != nullptr);
   CHECK(message.header->remote_queue_index.has_value());
@@ -2483,7 +2514,7 @@ Message TimestampMapper::MatchingMessageFor(const Message &message) {
   std::deque<Message> *data_queue =
       &peer->nodes_data_[node()].channels[message.channel_index].messages;
 
-  peer->QueueUnmatchedUntil(monotonic_remote_time);
+  AOS_RETURN_IF_ERROR(peer->QueueUnmatchedUntil(monotonic_remote_time));
 
   if (data_queue->empty()) {
     return Message{.channel_index = message.channel_index,
@@ -2568,20 +2599,21 @@ Message TimestampMapper::MatchingMessageFor(const Message &message) {
   }
 }
 
-void TimestampMapper::QueueUnmatchedUntil(BootTimestamp t) {
+Result<void> TimestampMapper::QueueUnmatchedUntil(BootTimestamp t) {
   if (queued_until_ > t) {
-    return;
+    return Ok();
   }
   while (true) {
     if (!messages_.empty() && messages_.back().timestamp > t) {
       queued_until_ = std::max(queued_until_, messages_.back().timestamp);
-      return;
+      return Ok();
     }
 
-    if (!Queue()) {
+    AOS_DECLARE_OR_RETURN_IF_ERROR(queue_result, Queue());
+    if (!queue_result) {
       // Found nothing to add, we are out of data!
       queued_until_ = BootTimestamp::max_time();
-      return;
+      return Ok();
     }
 
     // Now that it has been added (and cannibalized), forget about it
@@ -2590,58 +2622,60 @@ void TimestampMapper::QueueUnmatchedUntil(BootTimestamp t) {
   }
 }
 
-bool TimestampMapper::Queue() {
-  const Message *msg = boot_merger_.Front();
-  if (msg == nullptr) {
-    return false;
-  }
-  for (NodeData &node_data : nodes_data_) {
-    if (!node_data.any_delivered) continue;
-    if (!node_data.save_for_peer) continue;
-    if (node_data.channels[msg->channel_index].delivered) {
-      // If we have data but no timestamps (logs where the timestamps didn't get
-      // logged are classic), we can grow this indefinitely.  We don't need to
-      // keep anything that is older than the last message returned.
-
-      // We have the time on the source node.
-      // We care to wait until we have the time on the destination node.
-      std::deque<Message> &messages =
-          node_data.channels[msg->channel_index].messages;
-      // Max delay over the network is the TTL, so let's take the queue time and
-      // add TTL to it.  Don't forget any messages which are reliable until
-      // someone can come up with a good reason to forget those too.
-      if (node_data.channels[msg->channel_index].time_to_live >
-          chrono::nanoseconds(0)) {
-        // We need to make *some* assumptions about network delay for this to
-        // work.  We want to only look at the RX side.  This means we need to
-        // track the last time a message was popped from any channel from the
-        // node sending this message, and compare that to the max time we expect
-        // that a message will take to be delivered across the network.  This
-        // assumes that messages are popped in time order as a proxy for
-        // measuring the distributed time at this layer.
-        //
-        // Leave at least 1 message in here so we can handle reboots and
-        // messages getting sent twice.
-        while (messages.size() > 1u &&
-               messages.begin()->timestamp +
-                       node_data.channels[msg->channel_index].time_to_live +
-                       chrono::duration_cast<chrono::nanoseconds>(
-                           chrono::duration<double>(
-                               absl::GetFlag(FLAGS_max_network_delay))) <
-                   last_popped_message_time_) {
-          messages.pop_front();
-        }
-      }
-      node_data.channels[msg->channel_index].messages.emplace_back(*msg);
+Result<bool> TimestampMapper::Queue() {
+  return boot_merger_.Front().transform([this](const Message *msg) {
+    if (msg == nullptr) {
+      return false;
     }
-  }
+    for (NodeData &node_data : nodes_data_) {
+      if (!node_data.any_delivered) continue;
+      if (!node_data.save_for_peer) continue;
+      if (node_data.channels[msg->channel_index].delivered) {
+        // If we have data but no timestamps (logs where the timestamps didn't
+        // get logged are classic), we can grow this indefinitely.  We don't
+        // need to keep anything that is older than the last message returned.
 
-  messages_.emplace_back(std::move(*msg));
-  return true;
+        // We have the time on the source node.
+        // We care to wait until we have the time on the destination node.
+        std::deque<Message> &messages =
+            node_data.channels[msg->channel_index].messages;
+        // Max delay over the network is the TTL, so let's take the queue time
+        // and add TTL to it.  Don't forget any messages which are reliable
+        // until someone can come up with a good reason to forget those too.
+        if (node_data.channels[msg->channel_index].time_to_live >
+            chrono::nanoseconds(0)) {
+          // We need to make *some* assumptions about network delay for this to
+          // work.  We want to only look at the RX side.  This means we need to
+          // track the last time a message was popped from any channel from the
+          // node sending this message, and compare that to the max time we
+          // expect that a message will take to be delivered across the network.
+          // This assumes that messages are popped in time order as a proxy for
+          // measuring the distributed time at this layer.
+          //
+          // Leave at least 1 message in here so we can handle reboots and
+          // messages getting sent twice.
+          while (messages.size() > 1u &&
+                 messages.begin()->timestamp +
+                         node_data.channels[msg->channel_index].time_to_live +
+                         chrono::duration_cast<chrono::nanoseconds>(
+                             chrono::duration<double>(
+                                 absl::GetFlag(FLAGS_max_network_delay))) <
+                     last_popped_message_time_) {
+            messages.pop_front();
+          }
+        }
+        node_data.channels[msg->channel_index].messages.emplace_back(*msg);
+      }
+    }
+
+    messages_.emplace_back(std::move(*msg));
+    return true;
+  });
 }
 
-void TimestampMapper::QueueTimestamps() {
-  boot_merger_.QueueTimestamps(std::ref(timestamp_callback_), source_node_);
+Result<void> TimestampMapper::QueueTimestamps() {
+  return boot_merger_.QueueTimestamps(std::ref(timestamp_callback_),
+                                      source_node_);
 }
 
 std::string TimestampMapper::DebugString() const {

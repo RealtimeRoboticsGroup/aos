@@ -107,14 +107,14 @@ void TestingTimeConverter::AddNextTimestamp(
   ts_.emplace_back(std::make_tuple(time, std::move(times)));
 }
 
-std::optional<std::optional<std::tuple<distributed_clock::time_point,
-                                       std::vector<logger::BootTimestamp>>>>
+Result<std::optional<std::tuple<distributed_clock::time_point,
+                                std::vector<logger::BootTimestamp>>>>
 TestingTimeConverter::NextTimestamp() {
   CHECK(!first_) << ": Tried to pull a timestamp before one was added.  This "
                     "is unlikely to be what you want.";
   if (ts_.empty()) {
-    std::optional<std::optional<std::tuple<distributed_clock::time_point,
-                                           std::vector<logger::BootTimestamp>>>>
+    Result<std::optional<std::tuple<distributed_clock::time_point,
+                                    std::vector<logger::BootTimestamp>>>>
         result;
     result.emplace(std::nullopt);
     return result;

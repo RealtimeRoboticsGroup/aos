@@ -33,7 +33,7 @@ class SlopeOffsetTimeConverter final : public TimeConverter {
     distributed_slope_[node_index] = distributed_slope;
   }
 
-  distributed_clock::time_point ToDistributedClock(
+  Result<distributed_clock::time_point> ToDistributedClock(
       size_t node_index, BootTimestamp time) override {
     CHECK_EQ(time.boot, 0u);
     return distributed_clock::epoch() +
@@ -42,11 +42,11 @@ class SlopeOffsetTimeConverter final : public TimeConverter {
                distributed_slope_[node_index]);
   }
 
-  BootTimestamp FromDistributedClock(size_t node_index,
-                                     distributed_clock::time_point time,
-                                     size_t boot_index) override {
+  Result<BootTimestamp> FromDistributedClock(size_t node_index,
+                                             distributed_clock::time_point time,
+                                             size_t boot_index) override {
     CHECK_EQ(boot_index, 0u);
-    return {
+    return BootTimestamp{
         .boot = 0u,
         .time = monotonic_clock::epoch() +
                 std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -85,17 +85,18 @@ TEST(EventSchedulerTest, IdentityTimeConversion) {
   SlopeOffsetTimeConverter time(1);
   EventScheduler s(0);
   s.SetTimeConverter(0u, &time);
-  EXPECT_EQ(s.FromDistributedClock(distributed_clock::epoch()),
+  EXPECT_EQ(CheckExpected(s.FromDistributedClock(distributed_clock::epoch())),
             BootTimestamp::epoch());
 
-  EXPECT_EQ(
-      s.FromDistributedClock(distributed_clock::epoch() + chrono::seconds(1)),
-      BootTimestamp::epoch() + chrono::seconds(1));
+  EXPECT_EQ(CheckExpected(s.FromDistributedClock(distributed_clock::epoch() +
+                                                 chrono::seconds(1))),
+            BootTimestamp::epoch() + chrono::seconds(1));
 
-  EXPECT_EQ(s.ToDistributedClock(monotonic_clock::epoch()),
+  EXPECT_EQ(CheckExpected(s.ToDistributedClock(monotonic_clock::epoch())),
             distributed_clock::epoch());
 
-  EXPECT_EQ(s.ToDistributedClock(monotonic_clock::epoch() + chrono::seconds(1)),
+  EXPECT_EQ(CheckExpected(s.ToDistributedClock(monotonic_clock::epoch() +
+                                               chrono::seconds(1))),
             distributed_clock::epoch() + chrono::seconds(1));
 }
 
@@ -106,17 +107,19 @@ TEST(EventSchedulerTest, DoubleTimeConversion) {
   s.SetTimeConverter(0u, &time);
   time.SetDistributedOffset(0u, std::chrono::seconds(7), 2.0);
 
-  EXPECT_EQ(s.FromDistributedClock(distributed_clock::epoch()),
+  EXPECT_EQ(CheckExpected(s.FromDistributedClock(distributed_clock::epoch())),
             BootTimestamp::epoch() + chrono::seconds(7));
 
-  EXPECT_EQ(
-      s.FromDistributedClock(distributed_clock::epoch() + chrono::seconds(1)),
-      BootTimestamp::epoch() + chrono::seconds(9));
+  EXPECT_EQ(CheckExpected(s.FromDistributedClock(distributed_clock::epoch() +
+                                                 chrono::seconds(1))),
+            BootTimestamp::epoch() + chrono::seconds(9));
 
-  EXPECT_EQ(s.ToDistributedClock(monotonic_clock::epoch() + chrono::seconds(7)),
+  EXPECT_EQ(CheckExpected(s.ToDistributedClock(monotonic_clock::epoch() +
+                                               chrono::seconds(7))),
             distributed_clock::epoch());
 
-  EXPECT_EQ(s.ToDistributedClock(monotonic_clock::epoch() + chrono::seconds(9)),
+  EXPECT_EQ(CheckExpected(s.ToDistributedClock(monotonic_clock::epoch() +
+                                               chrono::seconds(9))),
             distributed_clock::epoch() + chrono::seconds(1));
 }
 
@@ -133,17 +136,17 @@ TEST(EventSchedulerTest, RunUntil) {
   scheduler.Schedule(monotonic_clock::epoch() + chrono::seconds(1), &e);
   scheduler.Schedule(monotonic_clock::epoch() + chrono::seconds(3), &quitter);
   scheduler.Schedule(monotonic_clock::epoch() + chrono::seconds(5), &e);
-  ASSERT_TRUE(scheduler_scheduler.RunUntil(
+  ASSERT_TRUE(CheckExpected(scheduler_scheduler.RunUntil(
       realtime_clock::epoch() + std::chrono::seconds(2), &scheduler,
-      []() { return std::chrono::nanoseconds{0}; }));
+      []() { return std::chrono::nanoseconds{0}; })));
   EXPECT_EQ(counter, 1);
-  ASSERT_FALSE(scheduler_scheduler.RunUntil(
+  ASSERT_FALSE(CheckExpected(scheduler_scheduler.RunUntil(
       realtime_clock::epoch() + std::chrono::seconds(4), &scheduler,
-      []() { return std::chrono::nanoseconds{0}; }));
+      []() { return std::chrono::nanoseconds{0}; })));
   EXPECT_EQ(counter, 1);
-  ASSERT_TRUE(scheduler_scheduler.RunUntil(
+  ASSERT_TRUE(CheckExpected(scheduler_scheduler.RunUntil(
       realtime_clock::epoch() + std::chrono::seconds(6), &scheduler,
-      []() { return std::chrono::nanoseconds{0}; }));
+      []() { return std::chrono::nanoseconds{0}; })));
   EXPECT_EQ(counter, 2);
 }
 
@@ -185,16 +188,16 @@ class EventSchedulerParamTest : public testing::TestWithParam<RunMode> {
   void ParamRunFor(std::chrono::nanoseconds t) {
     switch (GetParam()) {
       case RunMode::kRun:
-        scheduler_scheduler_.Run();
+        CheckExpected(scheduler_scheduler_.Run());
         break;
       case RunMode::kRunUntil:
-        scheduler_scheduler_.RunUntil(
+        CheckExpected(scheduler_scheduler_.RunUntil(
             realtime_clock::time_point(
                 schedulers_.at(0).monotonic_now().time_since_epoch() + t),
-            &schedulers_.at(0), []() { return std::chrono::nanoseconds(0); });
+            &schedulers_.at(0), []() { return std::chrono::nanoseconds(0); }));
         break;
       case RunMode::kRunFor:
-        scheduler_scheduler_.RunFor(t);
+        CheckExpected(scheduler_scheduler_.RunFor(t));
         break;
     }
   }

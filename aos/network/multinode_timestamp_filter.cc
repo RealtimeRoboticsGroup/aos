@@ -1461,20 +1461,20 @@ void TimestampProblem::Debug() {
   }
 }
 
-std::optional<std::optional<const std::tuple<distributed_clock::time_point,
-                                             std::vector<BootTimestamp>> *>>
+Result<std::optional<const std::tuple<distributed_clock::time_point,
+                                      std::vector<BootTimestamp>> *>>
 InterpolatedTimeConverter::QueueNextTimestamp() {
-  std::optional<std::optional<
+  Result<std::optional<
       std::tuple<distributed_clock::time_point, std::vector<BootTimestamp>>>>
       next_time = NextTimestamp();
   if (!next_time.has_value()) {
     VLOG(1) << "Error in processing timestamps.";
-    return std::nullopt;
+    return Error::MakeUnexpected(next_time.error());
   }
   if (!next_time.value().has_value()) {
     VLOG(1) << "Last timestamp, calling it quits";
-    std::optional<std::optional<const std::tuple<distributed_clock::time_point,
-                                                 std::vector<BootTimestamp>> *>>
+    Result<std::optional<const std::tuple<distributed_clock::time_point,
+                                          std::vector<BootTimestamp>> *>>
         result;
     result.emplace(std::nullopt);
     // Check that C++ actually works how we think it does...
@@ -1568,8 +1568,9 @@ distributed_clock::time_point ToDistributedClock(
                   static_cast<int64_t>(numerator / absl::int128(dt.count())));
 }
 
-distributed_clock::time_point InterpolatedTimeConverter::ToDistributedClock(
-    size_t node_index, BootTimestamp time) {
+Result<distributed_clock::time_point>
+InterpolatedTimeConverter::ToDistributedClock(size_t node_index,
+                                              BootTimestamp time) {
   CHECK_LT(node_index, node_count_);
   // If there is only one node, time estimation makes no sense.  Just return
   // unity time.
@@ -1578,11 +1579,11 @@ distributed_clock::time_point InterpolatedTimeConverter::ToDistributedClock(
   }
 
   // Make sure there are enough timestamps in the queue.
-  QueueUntil(
+  AOS_RETURN_IF_ERROR(QueueUntil(
       [time, node_index](const std::tuple<distributed_clock::time_point,
                                           std::vector<BootTimestamp>> &t) {
         return std::get<1>(t)[node_index] < time;
-      });
+      }));
 
   // Before the beginning needs to have 0 slope otherwise time jumps when
   // timestamp 2 happens.
@@ -1654,7 +1655,7 @@ distributed_clock::time_point InterpolatedTimeConverter::ToDistributedClock(
   return result;
 }
 
-BootTimestamp InterpolatedTimeConverter::FromDistributedClock(
+Result<BootTimestamp> InterpolatedTimeConverter::FromDistributedClock(
     size_t node_index, distributed_clock::time_point time, size_t boot_count) {
   CHECK_LT(node_index, node_count_);
   // If there is only one node, time estimation makes no sense.  Just return
@@ -1664,10 +1665,11 @@ BootTimestamp InterpolatedTimeConverter::FromDistributedClock(
   }
 
   // Make sure there are enough timestamps in the queue.
-  QueueUntil([time](const std::tuple<distributed_clock::time_point,
-                                     std::vector<BootTimestamp>> &t) {
-    return std::get<0>(t) < time;
-  });
+  AOS_RETURN_IF_ERROR(
+      QueueUntil([time](const std::tuple<distributed_clock::time_point,
+                                         std::vector<BootTimestamp>> &t) {
+        return std::get<0>(t) < time;
+      }));
 
   if (times_.size() == 1u || time < std::get<0>(times_[0])) {
     if (time < std::get<0>(times_[0])) {
@@ -1679,7 +1681,8 @@ BootTimestamp InterpolatedTimeConverter::FromDistributedClock(
         time - std::get<0>(times_[0]) + std::get<1>(times_[0])[node_index].time;
     VLOG(3) << "FromDistributedClock(" << node_index << ", " << time << ", "
             << boot_count << ") -> " << result;
-    return {.boot = std::get<1>(times_[0])[node_index].boot, .time = result};
+    return BootTimestamp{.boot = std::get<1>(times_[0])[node_index].boot,
+                         .time = result};
   }
 
   // Now, find the corresponding timestamps.  Search from the back since that's
@@ -1761,7 +1764,7 @@ BootTimestamp InterpolatedTimeConverter::FromDistributedClock(
                     static_cast<int64_t>(numerator / absl::int128(dd.count())));
   VLOG(3) << "FromDistributedClock(" << node_index << ", " << time << ", "
           << boot_count << ") -> " << result;
-  return {.boot = t0.boot, .time = result};
+  return BootTimestamp{.boot = t0.boot, .time = result};
 }
 
 MultiNodeNoncausalOffsetEstimator::MultiNodeNoncausalOffsetEstimator(
@@ -2307,7 +2310,7 @@ void MultiNodeNoncausalOffsetEstimator::CheckGraph() {
   }
 }
 
-TimestampProblem MultiNodeNoncausalOffsetEstimator::MakeProblem() {
+Result<TimestampProblem> MultiNodeNoncausalOffsetEstimator::MakeProblem() {
   // Build up the problem for all valid timestamps.
   TimestampProblem problem(NodesCount());
 
@@ -2322,8 +2325,8 @@ TimestampProblem MultiNodeNoncausalOffsetEstimator::MakeProblem() {
       if (timestamp_mappers_[node_index] != nullptr) {
         // Make sure we have enough data queued such that if we are going to
         // have a timestamp on this filter, we do have a timestamp queued.
-        timestamp_mappers_[node_index]->QueueFor(
-            time_estimation_buffer_seconds_);
+        AOS_RETURN_IF_ERROR(timestamp_mappers_[node_index]->QueueFor(
+            time_estimation_buffer_seconds_));
       }
     }
   }
@@ -2373,14 +2376,20 @@ TimestampProblem MultiNodeNoncausalOffsetEstimator::MakeProblem() {
             // delivered to a node, it can have the timestamp time attached to
             // that message as well.  That means that we have to queue both
             // nodes until we have 2 unobserved points from both nodes.
-            timestamp_mappers_[node_a_index]->QueueUntilCondition(
-                [&filter]() { return filter.filter->has_unobserved_line(); });
+            AOS_RETURN_IF_ERROR(
+                timestamp_mappers_[node_a_index]->QueueUntilCondition(
+                    [&filter]() {
+                      return filter.filter->has_unobserved_line();
+                    }));
 
             // Sometimes, we literally have no logs for the reverse direction.
             // So don't sweat it.
             if (timestamp_mappers_[node_b_index] != nullptr) {
-              timestamp_mappers_[node_b_index]->QueueUntilCondition(
-                  [&filter]() { return filter.filter->has_unobserved_line(); });
+              AOS_RETURN_IF_ERROR(
+                  timestamp_mappers_[node_b_index]->QueueUntilCondition(
+                      [&filter]() {
+                        return filter.filter->has_unobserved_line();
+                      }));
             }
 
             // If we actually found a line, make sure to buffer to the desired
@@ -2388,14 +2397,15 @@ TimestampProblem MultiNodeNoncausalOffsetEstimator::MakeProblem() {
             // invalidate the point.  Do this for both nodes to pick up all the
             // timestamps.
             if (filter.filter->has_unobserved_line()) {
-              timestamp_mappers_[node_a_index]->QueueUntil(
+              AOS_RETURN_IF_ERROR(timestamp_mappers_[node_a_index]->QueueUntil(
                   filter.filter->unobserved_line_end() +
-                  time_estimation_buffer_seconds_);
+                  time_estimation_buffer_seconds_));
 
               if (timestamp_mappers_[node_b_index] != nullptr) {
-                timestamp_mappers_[node_b_index]->QueueUntil(
-                    filter.filter->unobserved_line_remote_end() +
-                    time_estimation_buffer_seconds_);
+                AOS_RETURN_IF_ERROR(
+                    timestamp_mappers_[node_b_index]->QueueUntil(
+                        filter.filter->unobserved_line_remote_end() +
+                        time_estimation_buffer_seconds_));
               }
             }
           }
@@ -3114,182 +3124,193 @@ void MultiNodeNoncausalOffsetEstimator::WriteFilter(
   }
 }
 
-std::optional<std::optional<
+Result<std::optional<
     std::tuple<distributed_clock::time_point, std::vector<BootTimestamp>>>>
 MultiNodeNoncausalOffsetEstimator::NextTimestamp() {
   // TODO(austin): Detect and handle there being fewer nodes in the log file
   // than in replay, or them being in a different order.
-  TimestampProblem problem = MakeProblem();
+  return MakeProblem().and_then([this](TimestampProblem problem)
+                                    -> Result<std::optional<std::tuple<
+                                        distributed_clock::time_point,
+                                        std::vector<BootTimestamp>>>> {
+    // Ok, now solve for the minimum time on each channel.
+    auto next_solution = NextSolution(&problem, last_monotonics_);
+    if (!next_solution.has_value()) {
+      return Error::MakeUnexpectedError("Unable to solve timestamp problem.");
+    }
+    std::vector<BootTimestamp> result_times =
+        std::move(std::get<1>(next_solution.value()));
+    NoncausalTimestampFilter *next_filter = nullptr;
+    int solution_node_index = 0;
+    std::tie(next_filter, std::ignore, solution_node_index) =
+        next_solution.value();
 
-  // Ok, now solve for the minimum time on each channel.
-  auto next_solution = NextSolution(&problem, last_monotonics_);
-  if (!next_solution.has_value()) {
-    return std::nullopt;
-  }
-  std::vector<BootTimestamp> result_times =
-      std::move(std::get<1>(next_solution.value()));
-  NoncausalTimestampFilter *next_filter = nullptr;
-  int solution_node_index = 0;
-  std::tie(next_filter, std::ignore, solution_node_index) =
-      next_solution.value();
+    CHECK(!all_done_);
 
-  CHECK(!all_done_);
+    // All done.
+    if (result_times.empty()) {
+      if (first_solution_) {
+        VLOG(1) << "No more timestamps and the first solution.";
+        // If this is our first time, there is no solution.  Instead of giving
+        // up completely, (and providing no estimate of time at all), just say
+        // that everything is on the distributed clock.  This will then get used
+        // as a 1:1 mapping.
+        first_solution_ = false;
+        if (fp_) {
+          fprintf(fp_, "0.000000000");
+          for (size_t i = 0; i < NodesCount(); ++i) {
+            fprintf(fp_, ", 0.000000000");
+          }
+          fprintf(fp_, "\n");
+        }
+        return std::make_tuple(
+            distributed_clock::epoch(),
+            std::vector<BootTimestamp>(NodesCount(), BootTimestamp::epoch()));
+      }
+      if (VLOG_IS_ON(1)) {
+        LOG(INFO) << "Found no more timestamps.";
+        for (const auto &filters : filters_per_node_) {
+          for (const auto &filter : filters) {
+            filter.filter->Debug();
+          }
+        }
+      }
+      all_done_ = true;
 
-  // All done.
-  if (result_times.empty()) {
-    if (first_solution_) {
-      VLOG(1) << "No more timestamps and the first solution.";
-      // If this is our first time, there is no solution.  Instead of giving up
-      // completely, (and providing no estimate of time at all), just say that
-      // everything is on the distributed clock.  This will then get used as a
-      // 1:1 mapping.
-      first_solution_ = false;
+      // TODO(austin): Instead of giving up forever, give up as far as we can
+      // look into the future.  This would let nodes start up unknown and
+      // converge to something useful when they connect.
       if (fp_) {
-        fprintf(fp_, "0.000000000");
-        for (size_t i = 0; i < NodesCount(); ++i) {
-          fprintf(fp_, ", 0.000000000");
-        }
-        fprintf(fp_, "\n");
+        fflush(fp_);
       }
-      return std::make_tuple(
-          distributed_clock::epoch(),
-          std::vector<BootTimestamp>(NodesCount(), BootTimestamp::epoch()));
+      Result<std::optional<std::tuple<distributed_clock::time_point,
+                                      std::vector<BootTimestamp>>>>
+          result;
+      result.emplace(std::nullopt);
+      CHECK(result.has_value());
+      CHECK(!result.value().has_value());
+      return result;
     }
-    if (VLOG_IS_ON(1)) {
-      LOG(INFO) << "Found no more timestamps.";
-      for (const auto &filters : filters_per_node_) {
-        for (const auto &filter : filters) {
-          filter.filter->Debug();
-        }
-      }
-    }
-    all_done_ = true;
 
-    // TODO(austin): Instead of giving up forever, give up as far as we can look
-    // into the future.  This would let nodes start up unknown and converge to
-    // something useful when they connect.
-    if (fp_) {
-      fflush(fp_);
-    }
-    std::optional<std::optional<
-        std::tuple<distributed_clock::time_point, std::vector<BootTimestamp>>>>
-        result;
-    result.emplace(std::nullopt);
-    CHECK(result.has_value());
-    CHECK(!result.value().has_value());
-    return result;
-  }
-
-  {
-    size_t index = 0;
-    for (auto t : result_times) {
-      VLOG(1)
-          << "Time: " << t << " "
-          << logged_configuration_->nodes()->Get(index)->name()->string_view();
-      ++index;
-    }
-  }
-
-  std::tuple<logger::BootTimestamp, logger::BootDuration> sample;
-  if (first_solution_) {
-    first_solution_ = false;
-
-    // Force any unknown nodes to track the distributed clock (which starts at 0
-    // too).
-    for (BootTimestamp &time : result_times) {
-      if (time == BootTimestamp::min_time()) {
-        time = BootTimestamp::epoch();
+    {
+      size_t index = 0;
+      for (auto t : result_times) {
+        VLOG(1) << "Time: " << t << " "
+                << logged_configuration_->nodes()
+                       ->Get(index)
+                       ->name()
+                       ->string_view();
+        ++index;
       }
     }
-    if (next_filter) {
-      // This isn't a start time because we have a corresponding filter.
-      sample = *next_filter->Consume();
-      VLOG(1) << "Sample is " << std::get<0>(sample) << " from "
-              << next_filter->node_a()->name()->string_view();
-      next_filter->Pop(std::get<0>(sample) - time_estimation_buffer_seconds_);
-    }
-  } else {
-    if (next_filter) {
-      // This isn't a start time because we have a corresponding filter.
-      sample = *next_filter->Consume();
-      VLOG(1) << "Sample is " << std::get<0>(sample) << " from "
-              << next_filter->node_a()->name()->string_view();
-      next_filter->Pop(std::get<0>(sample) - time_estimation_buffer_seconds_);
-    }
-    // We found a good sample, so consume it.  If it is a duplicate, we still
-    // want to consume it.  But, if this is the first time around, we want to
-    // re-solve by recursing (once) to pickup the better base.
 
-    TimeComparison compare = CompareTimes(last_monotonics_, result_times);
-    switch (compare) {
-      case TimeComparison::kBefore:
-        break;
-      case TimeComparison::kAfter:
-        problem.Debug();
-        for (size_t i = 0; i < result_times.size(); ++i) {
-          LOG(INFO) << "  " << last_monotonics_[i] << " vs " << result_times[i]
-                    << " -> "
-                    << (last_monotonics_[i].time - result_times[i].time).count()
-                    << "ns";
+    std::tuple<logger::BootTimestamp, logger::BootDuration> sample;
+    if (first_solution_) {
+      first_solution_ = false;
+
+      // Force any unknown nodes to track the distributed clock (which starts at
+      // 0 too).
+      for (BootTimestamp &time : result_times) {
+        if (time == BootTimestamp::min_time()) {
+          time = BootTimestamp::epoch();
         }
-        UpdateSolution(std::move(result_times));
-        WriteFilter(next_filter, sample);
-        if (!FlushAndClose(false)) {
-          return std::nullopt;
-        }
-        LOG(ERROR)
-            << "Found a solution before the last returned solution on node "
-            << solution_node_index;
-        return std::nullopt;
-      case TimeComparison::kEq:
-        WriteFilter(next_filter, sample);
-        return NextTimestamp();
-      case TimeComparison::kInvalid: {
-        const chrono::nanoseconds invalid_distance =
-            InvalidDistance(last_monotonics_, result_times);
-        if (invalid_distance <=
-            chrono::nanoseconds(absl::GetFlag(FLAGS_max_invalid_distance_ns))) {
+      }
+      if (next_filter) {
+        // This isn't a start time because we have a corresponding filter.
+        sample = *next_filter->Consume();
+        VLOG(1) << "Sample is " << std::get<0>(sample) << " from "
+                << next_filter->node_a()->name()->string_view();
+        next_filter->Pop(std::get<0>(sample) - time_estimation_buffer_seconds_);
+      }
+    } else {
+      if (next_filter) {
+        // This isn't a start time because we have a corresponding filter.
+        sample = *next_filter->Consume();
+        VLOG(1) << "Sample is " << std::get<0>(sample) << " from "
+                << next_filter->node_a()->name()->string_view();
+        next_filter->Pop(std::get<0>(sample) - time_estimation_buffer_seconds_);
+      }
+      // We found a good sample, so consume it.  If it is a duplicate, we still
+      // want to consume it.  But, if this is the first time around, we want to
+      // re-solve by recursing (once) to pickup the better base.
+
+      TimeComparison compare = CompareTimes(last_monotonics_, result_times);
+      switch (compare) {
+        case TimeComparison::kBefore:
+          break;
+        case TimeComparison::kAfter:
+          problem.Debug();
+          for (size_t i = 0; i < result_times.size(); ++i) {
+            LOG(INFO)
+                << "  " << last_monotonics_[i] << " vs " << result_times[i]
+                << " -> "
+                << (last_monotonics_[i].time - result_times[i].time).count()
+                << "ns";
+          }
+          UpdateSolution(std::move(result_times));
+          WriteFilter(next_filter, sample);
+          if (!FlushAndClose(false)) {
+            return Error::MakeUnexpectedError(
+                "Unable to flush timestamp debug information.");
+          }
+          LOG(ERROR)
+              << "Found a solution before the last returned solution on node "
+              << solution_node_index;
+          return Error::MakeUnexpectedError(
+              "Timestamp solving error---see above.");
+        case TimeComparison::kEq:
           WriteFilter(next_filter, sample);
           return NextTimestamp();
-        }
-        LOG(INFO) << "Times can't be compared by " << invalid_distance.count()
-                  << "ns";
-        CHECK_EQ(last_monotonics_.size(), result_times.size());
-        for (size_t i = 0; i < result_times.size(); ++i) {
-          LOG(INFO) << "  " << last_monotonics_[i] << " vs " << result_times[i]
-                    << " -> "
-                    << (last_monotonics_[i].time - result_times[i].time).count()
+        case TimeComparison::kInvalid: {
+          const chrono::nanoseconds invalid_distance =
+              InvalidDistance(last_monotonics_, result_times);
+          if (invalid_distance <=
+              chrono::nanoseconds(FLAGS_max_invalid_distance_ns)) {
+            WriteFilter(next_filter, sample);
+            return NextTimestamp();
+          }
+          LOG(INFO) << "Times can't be compared by " << invalid_distance.count()
                     << "ns";
-        }
-        UpdateSolution(std::move(result_times));
-        WriteFilter(next_filter, sample);
-        if (!FlushAndClose(false)) {
-          return std::nullopt;
-        }
-        LOG(ERROR) << "Please investigate.  Use --max_invalid_distance_ns="
-                   << invalid_distance.count() << " to ignore this.";
-        return std::nullopt;
-      } break;
-    }
-  }
-
-  UpdateSolution(std::move(result_times));
-  WriteFilter(next_filter, sample);
-
-  // And freeze everything.
-  {
-    size_t node_index = 0;
-    for (const auto &filters : filters_per_node_) {
-      for (const auto &filter : filters) {
-        filter.filter->FreezeUntil(last_monotonics_[node_index],
-                                   last_monotonics_[filter.b_index]);
+          CHECK_EQ(last_monotonics_.size(), result_times.size());
+          for (size_t i = 0; i < result_times.size(); ++i) {
+            LOG(INFO)
+                << "  " << last_monotonics_[i] << " vs " << result_times[i]
+                << " -> "
+                << (last_monotonics_[i].time - result_times[i].time).count()
+                << "ns";
+          }
+          UpdateSolution(std::move(result_times));
+          WriteFilter(next_filter, sample);
+          if (!FlushAndClose(false)) {
+            return Error::MakeUnexpectedError(
+                "Unable to flush timestamp debug information.");
+          }
+          LOG(ERROR) << "Please investigate.  Use --max_invalid_distance_ns="
+                     << invalid_distance.count() << " to ignore this.";
+          return Error::MakeUnexpectedError(
+              "Timestamp solving error---see above.");
+        } break;
       }
-      ++node_index;
     }
-  }
 
-  FlushAllSamples(false);
-  return std::make_tuple(last_distributed_, last_monotonics_);
+    UpdateSolution(std::move(result_times));
+    WriteFilter(next_filter, sample);
+
+    // And freeze everything.
+    {
+      size_t node_index = 0;
+      for (const auto &filters : filters_per_node_) {
+        for (const auto &filter : filters) {
+          filter.filter->FreezeUntil(last_monotonics_[node_index],
+                                     last_monotonics_[filter.b_index]);
+        }
+        ++node_index;
+      }
+    }
+
+    FlushAllSamples(false);
+    return std::make_tuple(last_distributed_, last_monotonics_);
+  });
 }
 
 void MultiNodeNoncausalOffsetEstimator::FlushAllSamples(bool finish) {

@@ -477,11 +477,15 @@ class RawMessageDelayer {
   // Converts from time on the sending node to time on the receiving node.
   logger::BootTimestamp DeliveredTime(
       const monotonic_clock::time_point transmit_time) const {
+    // These distributed clock calls should generally succeed; if that is not
+    // the case, we can figure out how best to propagate the failures up the
+    // stack.
     const distributed_clock::time_point distributed_sent_time =
-        fetch_node_factory_->ToDistributedClock(transmit_time);
+        CheckExpected(fetch_node_factory_->ToDistributedClock(transmit_time));
 
-    const logger::BootTimestamp t = send_node_factory_->FromDistributedClock(
-        distributed_sent_time + send_node_factory_->network_delay());
+    const logger::BootTimestamp t =
+        CheckExpected(send_node_factory_->FromDistributedClock(
+            distributed_sent_time + send_node_factory_->network_delay()));
     return t;
   }
 

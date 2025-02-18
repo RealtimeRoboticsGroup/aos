@@ -303,9 +303,9 @@ class NodeEventLoopFactory {
   // measurement.
   // Note: converting time too far in the future can cause problems when
   // replaying logs.  Only convert times in the present or near past.
-  inline distributed_clock::time_point ToDistributedClock(
+  inline Result<distributed_clock::time_point> ToDistributedClock(
       monotonic_clock::time_point time) const;
-  inline logger::BootTimestamp FromDistributedClock(
+  inline Result<logger::BootTimestamp> FromDistributedClock(
       distributed_clock::time_point time) const;
 
   // Sets the class used to convert time.  This pointer must out-live the
@@ -461,12 +461,13 @@ inline distributed_clock::time_point NodeEventLoopFactory::distributed_now()
   return scheduler_.distributed_now();
 }
 
-inline logger::BootTimestamp NodeEventLoopFactory::FromDistributedClock(
+inline Result<logger::BootTimestamp> NodeEventLoopFactory::FromDistributedClock(
     distributed_clock::time_point time) const {
   return scheduler_.FromDistributedClock(time);
 }
 
-inline distributed_clock::time_point NodeEventLoopFactory::ToDistributedClock(
+inline Result<distributed_clock::time_point>
+NodeEventLoopFactory::ToDistributedClock(
     monotonic_clock::time_point time) const {
   return scheduler_.ToDistributedClock(time);
 }

@@ -71,7 +71,7 @@ int Main(int argc, char **argv) {
   CHECK_EQ(timestamp_mapper, node_mapper);
 
   while (true) {
-    TimestampedMessage *m = timestamp_mapper->Front();
+    TimestampedMessage *m = CheckExpected(timestamp_mapper->Front());
     if (m == nullptr) {
       break;
     }
@@ -88,7 +88,7 @@ int Main(int argc, char **argv) {
               << configuration::StrippedChannelToString(
                      config->channels()->Get(m->channel_index))
               << " " << *m << "\n";
-    timestamp_mapper->PopFront();
+    CheckExpected(timestamp_mapper->PopFront());
   }
 
   return 0;
