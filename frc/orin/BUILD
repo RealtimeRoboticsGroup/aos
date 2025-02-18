@@ -1,6 +1,7 @@
 load("//aos:flatbuffers.bzl", "cc_static_flatbuffer")
 load("//aos/flatbuffers:generate.bzl", "static_flatbuffer")
 load("//frc:halide.bzl", "halide_library")
+load("//tools/build_rules:select.bzl", "cpu_select")
 
 exports_files(["orin_irq_config.json"])
 
@@ -40,6 +41,58 @@ cc_library(
 )
 
 cc_library(
+    name = "threshold",
+    srcs = [
+        "threshold.cc",
+    ] + cpu_select({
+        "arm64": [
+            "neon_threshold.cc",
+        ],
+        "else": [],
+    }),
+    hdrs = [
+        "apriltag_types.h",
+        "threshold.h",
+    ],
+    features = ["cuda"],
+    deps = [
+        ":cuda",
+        "//aos/time",
+        "//frc/vision:vision_fbs",
+    ],
+)
+
+cc_test(
+    name = "simd_threshold_test",
+    srcs = [
+        "threshold_test.cc",
+    ],
+    data = [
+        "@orin_capture_24_04_side//file",
+    ],
+    features = ["cuda"],
+    tags = [
+        # This needs a GPU, which means we need the GPU to be accessible inside
+        # the container.  Rather than solve that right now, just run it under
+        # linux-sandbox on the host which has a GPU already.
+        "no-remote-exec",
+    ],
+    target_compatible_with = [
+        "//tools/platforms/gpu:nvidia",
+        "@platforms//cpu:arm64",
+    ],
+    deps = [
+        ":threshold",
+        "//aos:flatbuffer_merge",
+        "//aos:json_to_flatbuffer",
+        "//aos/testing:googletest",
+        "//aos/testing:path",
+        "//frc/vision:vision_fbs",
+        "//third_party/apriltag",
+    ],
+)
+
+cc_library(
     name = "apriltag",
     srcs = [
         "apriltag.cc",
@@ -47,16 +100,14 @@ cc_library(
         "labeling_allegretti_2019_BKE.cc",
         "line_fit_filter.cc",
         "points.cc",
-        "threshold.cc",
     ],
     hdrs = [
         "apriltag.h",
-        "apriltag_types.h",
+        "cuda.h",
         "gpu_image.h",
         "labeling_allegretti_2019_BKE.h",
         "line_fit_filter.h",
         "points.h",
-        "threshold.h",
         "transform_output_iterator.h",
     ],
     copts = [
@@ -68,6 +119,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":cuda",
+        ":threshold",
         "//aos/time",
         "//frc/vision:vision_fbs",
         "//third_party:cudart",
