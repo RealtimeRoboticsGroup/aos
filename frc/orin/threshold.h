@@ -34,23 +34,27 @@ class Threshold {
  public:
   // Create a full-size grayscale image from a color image on the provided
   // stream.
-  virtual void CudaToGreyscale(const uint8_t *color_image, uint8_t *gray_image,
-                               apriltag_size_t width, apriltag_size_t height,
-                               CudaStream *stream) = 0;
+  virtual void ToGreyscale(const uint8_t *color_image, uint8_t *gray_image,
+                           CudaStream *stream) = 0;
 
   // Converts to grayscale, decimates, and thresholds an image on the provided
   // stream.
-  virtual void CudaThresholdAndDecimate(
-      const uint8_t *color_image, uint8_t *decimated_image,
-      uint8_t *unfiltered_minmax_image, uint8_t *minmax_image,
-      uint8_t *thresholded_image, apriltag_size_t width, apriltag_size_t height,
-      apriltag_size_t min_white_black_diff, CudaStream *stream) = 0;
+  virtual void ThresholdAndDecimate(const uint8_t *color_image,
+                                    uint8_t *decimated_image,
+                                    uint8_t *thresholded_image,
+                                    apriltag_size_t min_white_black_diff,
+                                    CudaStream *stream) = 0;
 
   virtual ~Threshold() = default;
 };
 
 // Constructs an optimized threshold object for the provided image format.
-std::unique_ptr<Threshold> MakeThreshold(vision::ImageFormat image_format);
+std::unique_ptr<Threshold> MakeThreshold(vision::ImageFormat image_format,
+                                         size_t width, size_t height);
+
+// Constructs a NEON optimized threshold object for the provided image format.
+std::unique_ptr<Threshold> MakeNeonThreshold(vision::ImageFormat image_format,
+                                             size_t width, size_t height);
 
 }  // namespace frc::apriltag
 
