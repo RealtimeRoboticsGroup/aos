@@ -280,7 +280,6 @@ class GpuDetector {
   CudaEvent after_quad_fit_memcpy_;
 
   // TODO(austin): Remove this...
-  HostMemory<uint8_t> color_image_host_;
   HostMemory<uint8_t> gray_image_host_;
   const uint8_t *gray_image_host_ptr_;
 
@@ -291,8 +290,6 @@ class GpuDetector {
   // Half resolution, gray, decimated image.
   GpuMemory<uint8_t> decimated_image_device_;
   // Intermediates for thresholding.
-  GpuMemory<uint8_t> unfiltered_minmax_image_device_;
-  GpuMemory<uint8_t> minmax_image_device_;
   GpuMemory<uint8_t> thresholded_image_device_;
 
   // The union markers for each pixel.
