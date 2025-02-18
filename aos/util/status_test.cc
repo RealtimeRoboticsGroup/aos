@@ -49,8 +49,7 @@ TEST_F(ErrorTest, RealtimeError) {
 // object into an exit code suitable for exiting a program.
 TEST_F(ErrorTest, ExitCode) {
   static_assert(0 == static_cast<int>(Error::StatusCode::kOk));
-  EXPECT_EQ(static_cast<int>(Error::StatusCode::kOk),
-            ResultExitCode(Result<void>{}));
+  EXPECT_EQ(static_cast<int>(Error::StatusCode::kOk), ResultExitCode(Ok()));
   EXPECT_EQ(static_cast<int>(Error::StatusCode::kError),
             ResultExitCode(Error::MakeUnexpectedError("")));
 }
