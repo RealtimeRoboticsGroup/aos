@@ -89,4 +89,33 @@ TEST_F(EventTest, WaitTimeout) {
   EXPECT_GE(finish_time - start_time, kWaitTime);
 }
 
+TEST_F(EventTest, WaitTimeoutSuccess) {
+  // Start a thread that will set the event after a short delay.
+  std::thread setter([this]() {
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    test_event_.Set();
+  });
+
+  // Wait for longer than the thread will take to set the event.
+  const bool result = test_event_.WaitTimeout(std::chrono::milliseconds(100));
+  EXPECT_TRUE(result);
+
+  setter.join();
+}
+
+TEST_F(EventTest, WaitTimeoutFailure) {
+  // Wait for a short time, no one will set the event.
+  const bool result = test_event_.WaitTimeout(std::chrono::milliseconds(50));
+  EXPECT_FALSE(result);
+}
+
+TEST_F(EventTest, WaitTimeoutAlreadySet) {
+  // Set the event before waiting.
+  test_event_.Set();
+
+  // Wait should return immediately with true.
+  const bool result = test_event_.WaitTimeout(std::chrono::milliseconds(100));
+  EXPECT_TRUE(result);
+}
+
 }  // namespace aos::testing
