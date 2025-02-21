@@ -3,14 +3,6 @@ load(
     apache2_debs = "files",
 )
 load(
-    ":gtk_runtime.bzl",
-    gtk_runtime_debs = "files",
-)
-load(
-    ":libusb.bzl",
-    libusb_debs = "files",
-)
-load(
     ":mingw_compiler.bzl",
     mingw_compiler_debs = "files",
 )
@@ -22,14 +14,6 @@ load(
 load(
     ":postgresql_amd64.bzl",
     postgresql_amd64_debs = "files",
-)
-load(
-    ":rsync.bzl",
-    rsync_debs = "files",
-)
-load(
-    ":ssh.bzl",
-    ssh_debs = "files",
 )
 load(
     ":xvfb_amd64.bzl",
@@ -68,55 +52,6 @@ download_packages(
 )
 
 download_packages(
-    name = "download_rsync_packages",
-    excludes = [
-    ],
-    packages = [
-        "rsync",
-    ],
-)
-
-download_packages(
-    name = "download_ssh_packages",
-    excludes = [
-        "libcbor0.8",
-        "libsemanage2",
-        "libsepol2",
-    ],
-    packages = [
-        "ssh",
-    ],
-)
-
-download_packages(
-    name = "download_gtk_runtime",
-    excludes = [
-        "libstdc++6",
-        "lsb-base",
-        "libglib2.0-dev-bin",
-        "fonts-freefont",
-        "gsettings-backend",
-        "libpng-dev",
-        "libz-dev",
-        "libstdc++-dev",
-        "libc6-dev",
-    ],
-    # Since "libglib2.0-0" pulls in glibc, we need to forcibly remove it again.
-    force_excludes = [
-        "libc6",
-        "libgcc-s1",
-    ],
-    force_includes = [
-        "libglib2.0-0",
-    ],
-    packages = [
-        "gir1.2-gtk-3.0",
-        "libgtk-3-dev",
-        "librsvg2-common",
-    ],
-)
-
-download_packages(
     name = "download_postgresql_deps",
     excludes = [
         "adduser",
@@ -134,17 +69,6 @@ download_packages(
     ],
     packages = [
         "postgresql",
-    ],
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-download_packages(
-    name = "download_libusb_deps",
-    packages = [
-        "libusb-0.1-4",
-        "libusb-1.0-0",
-        "libusb-1.0-0-dev",
-        "libusb-dev",
     ],
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -176,32 +100,8 @@ generate_deb_tarball(
 )
 
 generate_deb_tarball(
-    name = "rsync",
-    files = rsync_debs,
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-generate_deb_tarball(
-    name = "ssh_v3",
-    files = ssh_debs,
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-generate_deb_tarball(
-    name = "libusb",
-    files = libusb_debs,
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-generate_deb_tarball(
     name = "mingw_compiler",
     files = mingw_compiler_debs,
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-generate_deb_tarball(
-    name = "gtk_runtime",
-    files = gtk_runtime_debs,
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -222,8 +122,6 @@ generate_deb_tarball(
 )
 
 exports_files([
-    "ssh_wrapper.sh",
-    "rsync_wrapper.sh",
     "curl.BUILD",
     "BUILD.zlib.bazel",
 ])

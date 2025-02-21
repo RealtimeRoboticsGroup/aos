@@ -20,7 +20,7 @@ index 3454790..a6f3246 100644
 +    if not runfiles_dir:
 +        raise FileNotFoundError("Failed runfiles lookup.")
 +
-+    gtk_runtime_dir = os.path.join(runfiles_dir, "gtk_runtime")
++    gtk_runtime_dir = os.path.join(runfiles_dir, "amd64_debian_sysroot")
 +
 +    ld_library_path = os.getenv("LD_LIBRARY_PATH") or ""
 +    if ld_library_path:
@@ -31,20 +31,20 @@ index 3454790..a6f3246 100644
 +        gtk_runtime_dir + "/usr/lib/x86_64-linux-gnu",
 +    ]) + ld_library_path
 +
++    os.environ["GCONV_PATH"] = os.path.join(gtk_runtime_dir, "usr", "lib", "x86_64-linux-gnu", "gconv")
 +    os.environ["GI_GIR_PATH"] = os.path.join(gtk_runtime_dir, "usr", "share", "gir-1.0")
-+    os.environ["GI_TYPELIB_PATH"] = os.path.join(gtk_runtime_dir, "usr", "lib",
-+                                                 "x86_64-linux-gnu",
++    os.environ["GI_TYPELIB_PATH"] = os.path.join(gtk_runtime_dir, "usr", "lib", "x86_64-linux-gnu",
 +                                                 "girepository-1.0")
 +
-+    os.environ["GIO_EXTRA_MODULES"] = os.path.join(gtk_runtime_dir, "usr", "lib", "x86_64-linux-gnu", "gio", "modules")
++    os.environ["GIO_MODULE_DIR"] = os.path.join(gtk_runtime_dir, "usr", "lib", "x86_64-linux-gnu", "gio", "modules")
 +
 +    # Tell fontconfig where to find the sandboxed font files.
-+    os.environ["FONTCONFIG_PATH"] = os.path.join(gtk_runtime_dir, "etc/fonts/")
-+    os.environ["FONTCONFIG_FILE"] = os.path.join(gtk_runtime_dir, "etc/fonts/fonts.conf")
++    os.environ["FONTCONFIG_PATH"] = "etc/fonts/"
++    os.environ["FONTCONFIG_FILE"] = "fonts.conf"
 +    # The sysroot here needs to be "/". If it were _base, then the font caches
 +    # would contain _base-relative paths in them. Unfortunately pango interprets
 +    # those as absolute paths and ends up failing to find all fonts.
-+    os.environ["FONTCONFIG_SYSROOT"] = "/"
++    os.environ["FONTCONFIG_SYSROOT"] = gtk_runtime_dir
 +    os.environ["GDK_PIXBUF_MODULEDIR"] = os.path.join(gtk_runtime_dir, "usr", "lib",
 +                                                      "x86_64-linux-gnu", "gdk-pixbuf-2.0",
 +                                                      "2.10.0", "loaders")
