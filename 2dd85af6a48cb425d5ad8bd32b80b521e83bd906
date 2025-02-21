@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "23b7da52_2e66febc",
+        "filename": "aos/ipc_lib/event_test.cc",
+        "patchSetId": 2
+      },
+      "lineNbr": 93,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-02-21T04:55:44Z",
+      "side": 1,
+      "message": "Can you run this on the RT scheduler so it is more reliable?  50ms isn\u0027t super precise.\n\nI\u0027m not sure how much to worry about this here, but I found when doing the message bridge tests that starting threads is slow, and sometimes I needed to use another Event to block until the thread was running.",
+      "revId": "2dd85af6a48cb425d5ad8bd32b80b521e83bd906",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "b5386348_177f7103",
+        "filename": "aos/ipc_lib/event_test.cc",
+        "patchSetId": 2
+      },
+      "lineNbr": 117,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-02-21T04:55:44Z",
+      "side": 1,
+      "message": "Worth testing that immediately means !\u003d 100 ms by timing it?",
+      "revId": "2dd85af6a48cb425d5ad8bd32b80b521e83bd906",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    }
+  ]
+}
