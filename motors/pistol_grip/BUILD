@@ -61,7 +61,8 @@ cc_binary(
     deps = [
         # Don't add anything else here. :usb_forward_windows still has to build it
         # without any other dependencies.
-        "@libusb//:libusb_1_0",
+        "@amd64_debian_sysroot//:libusb-1.0",
+        "@amd64_debian_sysroot//:libusb",
     ],
 )
 
