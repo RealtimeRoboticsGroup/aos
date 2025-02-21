@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "cf302f0c_8a96fa76",
+        "filename": "documentation/aos/docs/run_ping_pong.md",
+        "patchSetId": 1
+      },
+      "lineNbr": 160,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-02-21T03:36:25Z",
+      "side": 1,
+      "message": "Give an example interpretation here?\n\nping received 100 pong messages, wakeup latency was 36ms on average, meaning 36ms after the pong application sent the pong message...",
+      "range": {
+        "startLine": 160,
+        "startChar": 0,
+        "endLine": 160,
+        "endChar": 3
+      },
+      "revId": "54d4e92979baf19abafca98a4bbb26f256c10dea",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    }
+  ]
+}
