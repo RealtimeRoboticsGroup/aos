@@ -11,9 +11,64 @@ filegroup(
             "usr/lib64/**",
             "usr/bin/ptxas",
             "usr/bin/fatbinary",
+            "etc/fonts/**",
         ],
         exclude = [
             "usr/share/**",
+        ],
+    ) + glob(
+        include = [
+            "usr/share/gir-1.0/**",
+            "usr/share/fonts/**",
+        ],
+    ),
+    visibility = ["//visibility:public"],
+)
+
+# Don't include libraries which need to come from the host.
+# https://peps.python.org/pep-0513/
+system_libraries = [
+    "libc.so.6",
+    "libm.so.6",
+    "libdl.so.2",
+    "librt.so.1",
+    "libc.so.6",
+    "libnsl.so*",
+    "libutil.so.1",
+    "libpthread.so.0",
+    "libresolv.so*",
+    "libX11.so.6*",
+    "libXext.so*",
+    "libXrender.so*",
+    "libICE.so*",
+    "libSM.so*",
+    "libGL.so*",
+    "libgobject-2.0.so*",
+    "libgthread-2.0.so*",
+    "libglib-2.0.so*",
+]
+
+filegroup(
+    name = "python_sysroot_files",
+    srcs = glob(
+        include = [
+            "include/**",
+            "lib/**",
+            "lib64/**",
+            "usr/include/**",
+            "usr/local/**",
+            "usr/lib/**",
+            "usr/lib64/**",
+            "usr/bin/ptxas",
+            "usr/bin/fatbinary",
+            "etc/fonts/**",
+        ],
+        exclude = ["usr/share/**"] + ["usr/lib/x86_64-linux-gnu/%s" % (lib,) for lib in system_libraries] +
+                  ["lib/x86_64-linux-gnu/%s" % (lib,) for lib in system_libraries],
+    ) + glob(
+        include = [
+            "usr/share/gir-1.0/**",
+            "usr/share/fonts/**",
         ],
     ),
     visibility = ["//visibility:public"],

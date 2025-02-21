@@ -14,17 +14,26 @@ import os
 import shutil
 
 
+def call(args, **kwargs):
+    # Make sure the environmental variables for the ssh agent get through.
+    env = os.environ.copy()
+    env["LD_LIBRARY_PATH"] = "external/amd64_debian_sysroot/usr/lib/x86_64-linux-gnu/:external/amd64_debian_sysroot/lib/x86_64-linux-gnu/"
+    subprocess.check_call(
+        args,
+        **kwargs,
+        env=env,
+    )
+
+
 def install(ssh_target, pkg, channel, ssh_path, scp_path):
     """Installs a package from NI on the ssh target."""
     print("Installing", pkg)
     PKG_URL = f"http://download.ni.com/ni-linux-rt/feeds/academic/2023/arm/{channel}/cortexa9-vfpv3/{pkg}"
     subprocess.check_call(["wget", PKG_URL, "-O", pkg])
     try:
-        subprocess.check_call(
-            [scp_path, "-S", ssh_path, pkg, ssh_target + ":/tmp/" + pkg])
-        subprocess.check_call(
-            [ssh_path, ssh_target, "opkg", "install", "/tmp/" + pkg])
-        subprocess.check_call([ssh_path, ssh_target, "rm", "/tmp/" + pkg])
+        call([scp_path, "-S", ssh_path, pkg, ssh_target + ":/tmp/" + pkg])
+        call([ssh_path, ssh_target, "opkg", "install", "/tmp/" + pkg])
+        call([ssh_path, ssh_target, "rm", "/tmp/" + pkg])
     finally:
         subprocess.check_call(["rm", pkg])
 
@@ -72,8 +81,8 @@ def main(argv):
 
     ssh_target = "%s@%s" % (user, hostname)
 
-    ssh_path = "external/ssh/ssh"
-    scp_path = "external/ssh/scp"
+    ssh_path = "external/amd64_debian_sysroot/usr/bin/ssh"
+    scp_path = "external/amd64_debian_sysroot/usr/bin/scp"
 
     # install jq
     try:
@@ -91,8 +100,10 @@ def main(argv):
             install(ssh_target, "jq_1.5-r0.35_cortexa9-vfpv3.ipk", 'extra',
                     ssh_path, scp_path)
 
-            subprocess.check_call([ssh_path, ssh_target, "jq", "--version"],
-                                  stdout=subprocess.DEVNULL)
+            call(
+                [ssh_path, ssh_target, "jq", "--version"],
+                stdout=subprocess.DEVNULL,
+            )
 
     # Since rsync is pretty fixed in what it can do, build up a temporary
     # directory with the exact contents we want the target to have.  This
@@ -126,7 +137,7 @@ def main(argv):
             os.chmod(os.path.join(temp_dir, "starterd"), 0o775 | stat.S_ISUID)
 
         rsync_cmd = ([
-            "external/rsync/rsync",
+            "external/amd64_debian_sysroot/usr/bin/rsync",
             "-e",
             ssh_path,
             "-c",
@@ -145,7 +156,7 @@ def main(argv):
             rsync_cmd += ["%s:%s" % (ssh_target, target_dir)]
 
         try:
-            subprocess.check_call(rsync_cmd)
+            call(rsync_cmd)
         except subprocess.CalledProcessError as e:
             if e.returncode == 127 or e.returncode == 12:
                 print("Unconfigured roboRIO, installing rsync.")
@@ -155,12 +166,11 @@ def main(argv):
                         'extra', ssh_path, scp_path)
                 install(ssh_target, "rsync_3.1.3-r0.23_cortexa9-vfpv3.ipk",
                         'extra', ssh_path, scp_path)
-                subprocess.check_call(rsync_cmd)
+                call(rsync_cmd)
             elif e.returncode == 11:
                 # Directory wasn't created, make it and try again.  This keeps the happy path fast.
-                subprocess.check_call(
-                    [ssh_path, ssh_target, "mkdir", "-p", target_dir])
-                subprocess.check_call(rsync_cmd)
+                call([ssh_path, ssh_target, "mkdir", "-p", target_dir])
+                call(rsync_cmd)
             else:
                 raise e
 

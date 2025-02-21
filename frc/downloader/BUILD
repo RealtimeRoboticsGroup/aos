@@ -4,9 +4,8 @@ py_binary(
         "downloader.py",
     ],
     data = [
-        "@rsync",
-        "@ssh",
-        "@ssh//:scp",
+        "@amd64_debian_sysroot//:rsync-filegroup",
+        "@amd64_debian_sysroot//:ssh-filegroup",
     ],
     target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
