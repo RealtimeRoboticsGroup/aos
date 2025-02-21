@@ -25,7 +25,7 @@ SYSROOT="$(rlocation amd64_debian_sysroot)"
 LLVM_TOOLCHAIN="$(dirname "$(dirname "$(rlocation llvm_k8/bin/clang)")")"
 TARGET=x86_64-unknown-linux-gnu
 MULTIARCH=x86_64-linux-gnu
-export LD_LIBRARY_PATH="${SYSROOT}/usr/lib:${SYSROOT}/lib:${SYSROOT}/usr/lib/${MULTIARCH}"
+export LD_LIBRARY_PATH=external/llvm_toolchain/llvm/lib/
 "${LLVM_TOOLCHAIN}/bin/clang++" \
   -fcolor-diagnostics \
   -I"${HALIDE}/include" \

@@ -2,11 +2,11 @@ load("@rules_python//python:pip.bzl", "package_annotation")
 
 ANNOTATIONS = {
     "matplotlib": package_annotation(
-        data = ["@gtk_runtime//:gtk_runtime"],
+        data = ["@amd64_debian_sysroot//:python_sysroot_files"],
         deps = ["@bazel_tools//tools/python/runfiles"],
     ),
     "pygobject": package_annotation(
-        data = ["@gtk_runtime//:gtk_runtime"],
+        data = ["@amd64_debian_sysroot//:python_sysroot_files"],
         deps = ["@bazel_tools//tools/python/runfiles"],
     ),
     "python-gflags": package_annotation(
