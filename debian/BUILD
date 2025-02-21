@@ -20,10 +20,6 @@ load(
 )
 load(":packages.bzl", "download_packages", "generate_deb_tarball")
 load(
-    ":pandoc.bzl",
-    pandoc_debs = "files",
-)
-load(
     ":phoenix6.bzl",
     phoenix6_debs = "files",
 )
@@ -162,14 +158,6 @@ download_packages(
 )
 
 download_packages(
-    name = "download_pandoc_deps",
-    packages = [
-        "pandoc",
-    ],
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-download_packages(
     name = "download_libusb_deps",
     packages = [
         "libusb-0.1-4",
@@ -215,12 +203,6 @@ generate_deb_tarball(
 generate_deb_tarball(
     name = "ssh_v3",
     files = ssh_debs,
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-generate_deb_tarball(
-    name = "pandoc",
-    files = pandoc_debs,
     target_compatible_with = ["@platforms//os:linux"],
 )
 

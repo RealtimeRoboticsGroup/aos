@@ -137,10 +137,7 @@ load(
     mingw_compiler_debs = "files",
 )
 load("//debian:packages.bzl", "generate_repositories_for_debs")
-load(
-    "//debian:pandoc.bzl",
-    pandoc_debs = "files",
-)
+
 load(
     "//debian:phoenix6.bzl",
     phoenix6_debs = "files",
@@ -169,8 +166,6 @@ generate_repositories_for_debs(ssh_debs)
 generate_repositories_for_debs(apache2_debs)
 
 generate_repositories_for_debs(postgresql_amd64_debs)
-
-generate_repositories_for_debs(pandoc_debs)
 
 generate_repositories_for_debs(libusb_debs)
 
@@ -505,13 +500,6 @@ http_archive(
     build_file = "@//debian:apache2.BUILD",
     sha256 = "98b0ad6d911751ba0aa486429e6278f995e7bbabd928c7d3d44c888fa2bf371b",
     url = "https://realtimeroboticsgroup.org/build-dependencies/apache2.tar.gz",
-)
-
-http_archive(
-    name = "pandoc",
-    build_file = "@//debian:pandoc.BUILD",
-    sha256 = "3c98503f29f2a7f771647b24a4b591bbe5539119b6b5a006ff09be7bec47bc0e",
-    url = "https://realtimeroboticsgroup.org/build-dependencies/pandoc-2023.12.14.tar.gz",
 )
 
 http_archive(

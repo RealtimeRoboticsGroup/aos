@@ -33,31 +33,6 @@ cc_library(
     ],
 )
 
-genrule(
-    name = "doc",
-    srcs = [
-        "NOTES.md",
-    ],
-    outs = [
-        "NOTES.html",
-    ],
-    cmd = " ".join([
-        "$(location @pandoc)",
-        "-f",
-        "markdown_github-hard_line_breaks",
-        "-t",
-        "html5",
-        "-o",
-        "$@",
-        "$<",
-    ]),
-    target_compatible_with = ["@platforms//os:linux"],
-    tools = [
-        "@pandoc",
-        "@pandoc//:all_files",
-    ],
-)
-
 cc_library(
     name = "algorithms",
     srcs = [
