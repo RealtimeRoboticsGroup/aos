@@ -22,6 +22,30 @@
       },
       "revId": "54d4e92979baf19abafca98a4bbb26f256c10dea",
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "af176908_0fed866f",
+        "filename": "documentation/aos/docs/run_ping_pong.md",
+        "patchSetId": 1
+      },
+      "lineNbr": 160,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-02-21T04:52:55Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "cf302f0c_8a96fa76",
+      "range": {
+        "startLine": 160,
+        "startChar": 0,
+        "endLine": 160,
+        "endChar": 3
+      },
+      "revId": "54d4e92979baf19abafca98a4bbb26f256c10dea",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     }
   ]
 }
