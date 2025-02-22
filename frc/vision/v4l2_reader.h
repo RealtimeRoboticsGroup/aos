@@ -87,10 +87,7 @@ class V4L2ReaderBase {
 
   // TODO(Brian): This concept won't exist once we start using variable-size
   // H.264 frames.
-  size_t ImageSize() const { return ImageSize(rows_, cols_); }
-  virtual size_t ImageSize(int rows, int cols) const {
-    return rows * cols * 2 /* bytes per pixel */;
-  }
+  size_t ImageSize() const { return image_size_; }
 
   const aos::ScopedFD &fd() { return fd_; };
 
@@ -159,6 +156,8 @@ class V4L2ReaderBase {
   ImageFormat format_;
   int rows_ = 0;
   int cols_ = 0;
+  // Image size reported by V4L2. This may not always be exactly rows * Cols.
+  int image_size_ = 0;
 
   aos::ScopedFD fd_;
 
@@ -183,12 +182,6 @@ class MjpegV4L2Reader : public V4L2ReaderBase {
                   std::string_view image_channel = "/camera");
 
   ~MjpegV4L2Reader() override;
-
-  size_t ImageSize(int rows, int cols) const override {
-    // TODO(austin): It appears that some cameras include size for a header, and
-    // some don't.  This might not be the most useful concept for MJPEGs.
-    return rows * cols * 2; /* bytes per pixel */
-  }
 
  private:
   aos::internal::EPoll *epoll_;

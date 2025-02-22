@@ -47,6 +47,12 @@ V4L2ReaderBase::V4L2ReaderBase(aos::EventLoop *event_loop,
   StreamOff();
 }
 
+namespace {
+int AlignImageSize(int image_size) {
+  return ((image_size - 1) / 128 + 1) * 128;
+}
+}  // namespace
+
 void V4L2ReaderBase::StreamOn() {
   {
     struct v4l2_requestbuffers request;
@@ -70,6 +76,7 @@ void V4L2ReaderBase::StreamOn() {
     if (multiplanar()) {
       cols_ = format.fmt.pix_mp.width;
       rows_ = format.fmt.pix_mp.height;
+      image_size_ = AlignImageSize(format.fmt.pix_mp.plane_fmt[0].sizeimage);
       LOG(INFO) << "Format is " << cols_ << ", " << rows_;
       if (format.fmt.pix_mp.pixelformat == V4L2_PIX_FMT_MJPEG) {
         CHECK_EQ(static_cast<int>(format.fmt.pix_mp.plane_fmt[0].bytesperline),
@@ -84,11 +91,10 @@ void V4L2ReaderBase::StreamOn() {
       }
 
       CHECK_EQ(format.fmt.pix_mp.num_planes, 1u);
-
-      CHECK_EQ(format.fmt.pix_mp.plane_fmt[0].sizeimage, ImageSize());
     } else {
       cols_ = format.fmt.pix.width;
       rows_ = format.fmt.pix.height;
+      image_size_ = AlignImageSize(format.fmt.pix.sizeimage);
       LOG(INFO) << "Format is " << cols_ << ", " << rows_;
       if (format.fmt.pix.pixelformat == V4L2_PIX_FMT_MJPEG) {
         CHECK_EQ(static_cast<int>(format.fmt.pix.bytesperline), 0);
@@ -100,7 +106,6 @@ void V4L2ReaderBase::StreamOn() {
       } else {
         LOG(FATAL) << ": Invalid pixel format";
       }
-      CHECK_EQ(format.fmt.pix.sizeimage, ImageSize());
     }
   }
 
@@ -375,7 +380,6 @@ V4L2Reader::V4L2Reader(aos::EventLoop *event_loop, std::string_view device_name,
   CHECK_EQ(static_cast<int>(format.fmt.pix.height), kHeight);
   CHECK_EQ(static_cast<int>(format.fmt.pix.bytesperline),
            kWidth * 2 /* bytes per pixel */);
-  CHECK_EQ(format.fmt.pix.sizeimage, ImageSize(kHeight, kWidth));
 
   StreamOn();
 }
@@ -408,7 +412,6 @@ MjpegV4L2Reader::MjpegV4L2Reader(aos::EventLoop *event_loop,
   CHECK_EQ(static_cast<int>(format.fmt.pix.width), kWidth);
   CHECK_EQ(static_cast<int>(format.fmt.pix.height), kHeight);
   CHECK_EQ(static_cast<int>(format.fmt.pix.bytesperline), 0);
-  CHECK_EQ(format.fmt.pix.sizeimage, ImageSize(kHeight, kWidth));
 
   // Set framerate
   if (absl::GetFlag(FLAGS_imagefps) > 0) {
