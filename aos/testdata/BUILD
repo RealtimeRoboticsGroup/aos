@@ -17,6 +17,7 @@ filegroup(
         "expected_multinode.json",
         "good_multinode.json",
         "good_multinode_hostnames.json",
+        "good_multinode_regex_hostname.json",
         "invalid_channel_name1.json",
         "invalid_channel_name2.json",
         "invalid_channel_name3.json",

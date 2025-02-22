@@ -1047,6 +1047,34 @@ TEST_F(ConfigurationTest, GetNodeFromHostnames) {
   EXPECT_EQ(nullptr, GetNodeFromHostname(&config.message(), "3"));
 }
 
+TEST_F(ConfigurationTest, GetNodeFromRegexHostname) {
+  FlatbufferDetachedBuffer<Configuration> config = ReadConfig(
+      ArtifactPath("aos/testdata/good_multinode_regex_hostname.json"));
+  {
+    const Node *pi1 = GetNodeFromHostname(&config.message(), "device-123-1");
+    ASSERT_TRUE(pi1 != nullptr);
+    EXPECT_EQ("pi1", pi1->name()->string_view());
+  }
+  {
+    const Node *pi2 = GetNodeFromHostname(&config.message(), "device-456-2");
+    ASSERT_TRUE(pi2 != nullptr);
+    EXPECT_EQ("pi2", pi2->name()->string_view());
+  }
+  {
+    const Node *pi2 = GetNodeFromHostname(&config.message(), "device-789-2");
+    ASSERT_TRUE(pi2 != nullptr);
+    EXPECT_EQ("pi2", pi2->name()->string_view());
+  }
+  {
+    const Node *pi2 = GetNodeFromHostname(&config.message(), "device--2");
+    ASSERT_TRUE(pi2 != nullptr);
+    EXPECT_EQ("pi2", pi2->name()->string_view());
+  }
+  EXPECT_EQ(nullptr, GetNodeFromHostname(&config.message(), "device"));
+  EXPECT_EQ(nullptr, GetNodeFromHostname(&config.message(), "device-abc-1"));
+  EXPECT_EQ(nullptr, GetNodeFromHostname(&config.message(), "3"));
+}
+
 // Tests that SourceNodeIndex reasonably handles a multi-node log file.
 TEST_F(ConfigurationTest, SourceNodeIndex) {
   FlatbufferDetachedBuffer<Configuration> config =
