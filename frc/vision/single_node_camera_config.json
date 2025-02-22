@@ -81,6 +81,12 @@
       "frequency": 80
     },
     {
+      "name": "/camera0/gray",
+      "type": "frc.vision.TurboJpegDecoderStatus",
+      "source_node": "orin",
+      "frequency": 2
+    },
+    {
       "name": "/camera1",
       "type": "frc.vision.CameraImage",
       "read_method": "PIN",
@@ -111,6 +117,12 @@
       "type": "foxglove.ImageAnnotations",
       "source_node": "orin",
       "frequency": 80
+    },
+    {
+      "name": "/camera1/gray",
+      "type": "frc.vision.TurboJpegDecoderStatus",
+      "source_node": "orin",
+      "frequency": 2
     },
     {
       "name": "/camera2",
@@ -145,6 +157,12 @@
       "frequency": 80
     },
     {
+      "name": "/camera2/gray",
+      "type": "frc.vision.TurboJpegDecoderStatus",
+      "source_node": "orin",
+      "frequency": 2
+    },
+    {
       "name": "/camera3",
       "type": "frc.vision.CameraImage",
       "read_method": "PIN",
@@ -175,6 +193,12 @@
       "type": "foxglove.ImageAnnotations",
       "source_node": "orin",
       "frequency": 80
+    },
+    {
+      "name": "/camera3/gray",
+      "type": "frc.vision.TurboJpegDecoderStatus",
+      "source_node": "orin",
+      "frequency": 2
     },
     {
       "name": "/aos",

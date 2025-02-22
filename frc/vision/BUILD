@@ -374,6 +374,7 @@ aos_config(
         ":vision_fbs",
         ":target_map_fbs",
         ":camera_constants_fbs",
+        ":turbojpeg_decoder_status_fbs",
         "//aos/events:event_loop_fbs",
         "//aos/logging:log_message_fbs",
         "//aos/starter:starter_fbs",
@@ -578,13 +579,22 @@ robot_downloader(
     target_type = "orin",
 )
 
+static_flatbuffer(
+    name = "turbojpeg_decoder_status_fbs",
+    srcs = ["turbojpeg_decoder_status.fbs"],
+    target_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:public"],
+)
+
 cc_binary(
     name = "turbojpeg_decoder",
     srcs = ["turbojpeg_decoder.cc"],
     deps = [
+        ":turbojpeg_decoder_status_fbs",
         ":vision_fbs",
         "//aos:configuration",
         "//aos:init",
+        "//aos/containers:inlined_vector",
         "//aos/events:shm_event_loop",
         "//third_party:libturbojpeg",
     ],

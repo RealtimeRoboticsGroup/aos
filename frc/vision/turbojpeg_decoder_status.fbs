@@ -1,0 +1,16 @@
+namespace frc.vision;
+
+attribute "static_length";
+
+table TurboJpegDecoderStatus {
+  // The number of successful decodings since the last status message.
+  successful_decodes:uint (id: 0);
+  // The number of unsuccessful decodings since the last status message.
+  failed_decodes:uint (id: 1);
+  // The most recent decode error message. If no decodings have failed since
+  // the last status message, will not be populated.
+  // May be truncated.
+  last_error_message:string (id: 2, static_length: 128);
+}
+
+root_type TurboJpegDecoderStatus;
