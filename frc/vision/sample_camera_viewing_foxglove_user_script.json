@@ -1,0 +1,18 @@
+// The ./types module provides helper types for your Input events and messages.
+import { Input, Message } from "./types";
+
+export const inputs = ["/camera2 frc.vision.CameraImage"];
+
+export const output = "/camera2/foxglove";
+
+export default function script(
+  event: Input<"/camera2 frc.vision.CameraImage">,
+): Message<"foxglove_msgs/CompressedImage"> {
+  return {
+    timestamp: { sec: 0, nsec: 0 },
+    frame_id: "",
+    data: event.message.data,
+    format: "jpeg",
+  };
+}
+
