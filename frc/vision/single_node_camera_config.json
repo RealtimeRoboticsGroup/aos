@@ -431,7 +431,7 @@
   "nodes": [
     {
       "name": "orin",
-      "hostnames": ["orin-4646-1"]
+      "hostnames": ["orin-[0-9]*-1"]
     }
   ]
 }
