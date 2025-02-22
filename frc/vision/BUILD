@@ -690,10 +690,18 @@ camera_constants_json(
     out = "constants.json",
 )
 
+static_flatbuffer(
+    name = "field_map_fbs",
+    srcs = ["field_map.fbs"],
+    target_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:public"],
+)
+
 cc_binary(
     name = "network_tables_publisher",
     srcs = ["network_tables_publisher.cc"],
     deps = [
+        ":field_map_fbs",
         ":target_map_fbs",
         "//aos:configuration",
         "//aos:init",

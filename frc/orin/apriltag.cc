@@ -1135,7 +1135,10 @@ void GpuDetector::Detect(const uint8_t *image, const uint8_t *image_device) {
 
   VLOG(1) << "Overall "
           << float_milli(previous_event->ElapsedTime(start_)).count() << "ms, "
-          << float_milli(end_time - start_time).count() << "ms on host";
+          << float_milli(end_time - start_time).count() << "ms on host, "
+            << (1000.0 /
+                float_milli(previous_event->ElapsedTime(start_)).count())
+            << "hz";
   // Average.  Skip the first one as the kernel is warming up and is slower.
   if (!first_) {
     ++execution_count_;

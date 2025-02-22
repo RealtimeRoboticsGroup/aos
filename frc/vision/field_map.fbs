@@ -1,0 +1,40 @@
+namespace frc.vision;
+
+enum Family : uint8 {
+  apriltag3_36h11_classic = 0,
+}
+
+table Fiducial {
+  family:Family = apriltag3_36h11_classic (id: 0);
+
+  // ID of the tag
+  id:int32 = 0 (id: 1);
+
+  // Size of the april tag in mm
+  size:double = 165.1 (id: 2);
+
+  // 3D location of the tag
+  transform:[double] (id: 3);
+
+  // If true, this tag is unique on the field.
+  unique:bool = true (id: 4);
+}
+
+// The origin (0, 0) is in the middle of the field.
+// X is the long way, +x being towards the red driver station
+//                    -x being towards blue
+// Z is up
+// Y is whatever makes it a right hand coordinate system.
+table FieldMap {
+  // Size of the field in meters.
+  fieldlength:double (id: 0);
+  fieldwidth:double (id: 1);
+
+  // List of all the tags
+  fiducials:[Fiducial] (id: 2);
+
+  // Type of the field. "frc" for frc.
+  type:string (id: 3);
+}
+
+root_type FieldMap;

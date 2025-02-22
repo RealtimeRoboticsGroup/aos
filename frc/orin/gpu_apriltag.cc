@@ -26,12 +26,20 @@ ABSL_FLAG(
     "distortion factors so that this value (and a higher distortion) maps to "
     "1.0.");
 ABSL_FLAG(double, min_decision_margin, 50.0,
-          "Minimum decision margin (confidence) for an apriltag detection");
-ABSL_FLAG(int32_t, pixel_border, 150,
+          "Minimum decision margin (confidence) for an apriltag detection.  "
+          "This is the difference between each of the bits in the tag, and the "
+          "decision threshold.");
+ABSL_FLAG(int32_t, pixel_border, 50,
           "Size of image border within which to reject detected corners");
 ABSL_FLAG(uint64_t, pose_estimation_iterations, 50,
           "Number of iterations for apriltag pose estimation.");
 ABSL_FLAG(std::string, image_format, "YUYV422", "Image format to use.");
+
+ABSL_FLAG(uint32_t, min_white_black_diff, 5,
+          "Minimum difference required between black and white to be called an "
+          "edge.");
+ABSL_FLAG(uint32_t, min_cluster_pixels, 25,
+          "Minimum number of pixels in a cluster.");
 
 namespace frc::apriltag {
 
@@ -102,7 +110,10 @@ apriltag_detector_t *ApriltagDetector::MakeTagDetector(
 
   tag_detector->nthreads = 6;
   tag_detector->wp = workerpool_create(tag_detector->nthreads);
-  tag_detector->qtp.min_white_black_diff = 5;
+  tag_detector->qtp.min_white_black_diff =
+      absl::GetFlag(FLAGS_min_white_black_diff);
+  tag_detector->qtp.min_cluster_pixels =
+      absl::GetFlag(FLAGS_min_cluster_pixels);
   tag_detector->debug = absl::GetFlag(FLAGS_debug);
 
   return tag_detector;

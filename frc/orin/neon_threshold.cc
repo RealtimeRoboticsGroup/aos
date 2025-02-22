@@ -85,7 +85,7 @@ void NeonThreshold::ThresholdAndDecimate(
     const uint8_t *color_image, uint8_t *decimated_image,
     uint8_t * thresholded_image, apriltag_size_t min_white_black_diff,
     CudaStream * /*stream*/) {
-  LOG(INFO) << "Neon Before";
+  VLOG(1) << "Neon Before";
   const aos::monotonic_clock::time_point start_time =
       aos::monotonic_clock::now();
   uint16_t *min_max_image_data = horizontal_filtered_min_max_image_.data();
@@ -632,7 +632,7 @@ void NeonThreshold::ThresholdAndDecimate(
 
   const aos::monotonic_clock::time_point end_time = aos::monotonic_clock::now();
 
-  LOG(INFO) << "Neon After, took "
+  VLOG(1) << "Neon After, took "
             << double_milli(pass1_time - start_time).count()
             << "ms for pass 1, " << double_milli(end_time - pass1_time).count()
             << "ms for pass 2, " << double_milli(end_time - start_time).count()

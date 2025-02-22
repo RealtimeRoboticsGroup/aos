@@ -21,7 +21,6 @@ def call(args, **kwargs):
         env={
             "LD_LIBRARY_PATH":
             "external/amd64_debian_sysroot/usr/lib/x86_64-linux-gnu/:external/amd64_debian_sysroot/lib/x86_64-linux-gnu/",
-            "LD_DEBUG": "libs",
         },
     )
 

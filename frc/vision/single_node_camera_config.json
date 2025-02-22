@@ -338,25 +338,25 @@
     {
       "name": "apriltag_detector0",
       "executable_name": "apriltag_detector",
-      "args": ["--channel", "/camera0/gray", "--image_format=MONO8"],
+      "args": ["--channel", "/camera0/gray", "--image_format=MONO8", "--min_white_black_diff=20", "--use_neon"],
       "nodes": ["orin"]
     },
     {
       "name": "apriltag_detector1",
       "executable_name": "apriltag_detector",
-      "args": ["--channel", "/camera1/gray", "--image_format=MONO8"],
+      "args": ["--channel", "/camera1/gray", "--image_format=MONO8", "--min_white_black_diff=20", "--use_neon"],
       "nodes": ["orin"]
     },
     {
       "name": "apriltag_detector2",
       "executable_name": "apriltag_detector",
-      "args": ["--channel", "/camera2/gray", "--image_format=MONO8"],
+      "args": ["--channel", "/camera2/gray", "--image_format=MONO8", "--min_white_black_diff=20", "--use_neon"],
       "nodes": ["orin"]
     },
     {
       "name": "apriltag_detector3",
       "executable_name": "apriltag_detector",
-      "args": ["--channel", "/camera3/gray", "--image_format=MONO8"],
+      "args": ["--channel", "/camera3/gray", "--image_format=MONO8", "--min_white_black_diff=20", "--use_neon"],
       "nodes": ["orin"]
     },
     {

@@ -43,11 +43,12 @@ class TurboJpegDecoder {
 
     {
       aos::ScopedNotRealtime nrt;
-      CHECK_EQ(tjDecompressHeader3(handle_, image.data()->data(),
-                                   image.data()->size(), &width, &height,
-                                   &subsamp, &colorspace),
-               0)
-          << "Error decompressing header: " << tjGetErrorStr();
+      if (tjDecompressHeader3(handle_, image.data()->data(),
+                              image.data()->size(), &width, &height, &subsamp,
+                              &colorspace) != 0) {
+        LOG(ERROR) << "Error decompressing header: " << tjGetErrorStr();
+        return;
+      }
     }
 
     auto builder = camera_output_sender_.MakeBuilder();
