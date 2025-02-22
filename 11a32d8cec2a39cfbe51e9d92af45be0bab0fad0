@@ -1,0 +1,90 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "1c124b0e_7c9208ff",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 4
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000002
+      },
+      "writtenOn": "2025-02-22T23:25:01Z",
+      "side": 1,
+      "message": "Haven\u0027t carefully reviewed exact instructions, but leaning on the fact that the control flow looks right + the test looking right to validate that.",
+      "revId": "11a32d8cec2a39cfbe51e9d92af45be0bab0fad0",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "49657b19_2adfb5dc",
+        "filename": "frc/orin/neon_threshold.cc",
+        "patchSetId": 4
+      },
+      "lineNbr": 69,
+      "author": {
+        "id": 1000002
+      },
+      "writtenOn": "2025-02-22T23:25:01Z",
+      "side": 1,
+      "message": "nit: bytes",
+      "range": {
+        "startLine": 69,
+        "startChar": 20,
+        "endLine": 69,
+        "endChar": 26
+      },
+      "revId": "11a32d8cec2a39cfbe51e9d92af45be0bab0fad0",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "22be6f96_37dbacad",
+        "filename": "frc/orin/neon_threshold.cc",
+        "patchSetId": 4
+      },
+      "lineNbr": 100,
+      "author": {
+        "id": 1000002
+      },
+      "writtenOn": "2025-02-22T23:25:01Z",
+      "side": 1,
+      "message": "This final sentences could be clarified to make sure that it is clear that this is a per-pixel operation, not a full-block operation.",
+      "range": {
+        "startLine": 99,
+        "startChar": 48,
+        "endLine": 100,
+        "endChar": 32
+      },
+      "revId": "11a32d8cec2a39cfbe51e9d92af45be0bab0fad0",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "1cfacce8_fab94a67",
+        "filename": "frc/orin/neon_threshold.cc",
+        "patchSetId": 4
+      },
+      "lineNbr": 102,
+      "author": {
+        "id": 1000002
+      },
+      "writtenOn": "2025-02-22T23:25:01Z",
+      "side": 1,
+      "message": "nit: naive",
+      "range": {
+        "startLine": 102,
+        "startChar": 24,
+        "endLine": 102,
+        "endChar": 29
+      },
+      "revId": "11a32d8cec2a39cfbe51e9d92af45be0bab0fad0",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    }
+  ]
+}
