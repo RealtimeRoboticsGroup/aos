@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "16c5a451_9bffcb2e",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-02-22T20:48:38Z",
+      "side": 1,
+      "message": "This feels half done.  The size still is virtual.  Do we need it at all?",
+      "revId": "07921fffa5d4d89233583f220c6b6fb2c9c6bd53",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    }
+  ]
+}
