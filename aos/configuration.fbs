@@ -192,6 +192,16 @@ table Node {
   // Don't specify a hostname in multiple nodes in the same configuration.
   hostnames:[string] (id: 3);
 
+  // Alternative to either hostname or hostnames.
+  // Will be interpretted as a regex when
+  // attempting to match to device hostnames. E.g.,
+  // "hostname_regex": ["orin-1", "orin-[0-9]*-1"]
+  // will match any of:
+  // "orin-1", "orin-123-1", or "orin-456-1"
+  // but not:
+  // "orin-2", "orin-abc-1", or "orin-[0-9]*-1"
+  hostname_regex:string (id: 5);
+
   // An arbitrary list of strings representing properties of each node.  These
   // can be used to store information about roles.
   tags:[string] (id: 4);

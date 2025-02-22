@@ -81,13 +81,13 @@ struct LoggerState {
 };
 
 constexpr std::string_view kCombinedConfigSha1() {
-  return "ee3b6392800e5f55906d9dd047544293aca0a1511c1607d6a11247f17b4c70bf";
+  return "81d9b2c71dd5a00aac8a73aaec1559696b5276c0e51d15866c8d3f6682ed043e";
 }
 constexpr std::string_view kSplitConfigSha1() {
-  return "1adeb99668c1ec132c070cf3cb60afb25ce517b29a941e9e75b06663195d4576";
+  return "5be4974f6fa3a4f73d7e517b438b23fd4452b1dc9b3b8f26a0fbdd481dc4d06e";
 }
 constexpr std::string_view kReloggedSplitConfigSha1() {
-  return "a2a5360b76b343f4335be406697943214288d9a470d104a0e74d5de8d7520b02";
+  return "92355a8573f2065636cb3feb99b9c18780f00ca288e7f86d557ecd1cac25f959";
 }
 
 LoggerState MakeLoggerState(NodeEventLoopFactory *node,

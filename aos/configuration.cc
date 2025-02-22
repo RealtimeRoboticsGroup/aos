@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <map>
+#include <regex>
 #include <set>
 #include <string>
 #include <string_view>
@@ -136,6 +137,7 @@ struct MutableNode {
   // represents.
   std::string_view name;
   std::string_view hostname;
+  std::string_view hostname_regex;
   std::optional<uint16_t> port;
   absl::btree_set<std::string_view> hostnames;
   absl::btree_set<std::string_view> tags;
@@ -286,11 +288,14 @@ void UnpackChannel(const Channel *channel, MutableChannel *result) {
 
 void UnpackNode(const Node *node, MutableNode *result) {
   CHECK_EQ(node->name()->string_view(), result->name);
-  CHECK_EQ(Node::MiniReflectTypeTable()->num_elems, 5u)
+  CHECK_EQ(Node::MiniReflectTypeTable()->num_elems, 6u)
       << ": Merging logic needs to be updated when the number of node "
          "fields changes.";
   if (node->has_hostname()) {
     result->hostname = node->hostname()->string_view();
+  }
+  if (node->has_hostname_regex()) {
+    result->hostname_regex = node->hostname_regex()->string_view();
   }
   if (node->has_port()) {
     result->port = node->port();
@@ -420,6 +425,7 @@ void UnpackConfiguration(const Configuration *configuration,
                            MutableNode{
                                .name = node->name()->string_view(),
                                .hostname = {},
+                               .hostname_regex = {},
                                .port = std::nullopt,
                                .hostnames = {},
                                .tags = {},
@@ -600,8 +606,12 @@ flatbuffers::Offset<Node> PackNode(const MutableNode &node,
   flatbuffers::Offset<flatbuffers::String> name_offset =
       fbb->CreateSharedString(node.name);
   flatbuffers::Offset<flatbuffers::String> hostname_offset;
+  flatbuffers::Offset<flatbuffers::String> hostname_regex_offset;
   if (!node.hostname.empty()) {
     hostname_offset = fbb->CreateSharedString(node.hostname);
+  }
+  if (!node.hostname_regex.empty()) {
+    hostname_regex_offset = fbb->CreateSharedString(node.hostname_regex);
   }
   flatbuffers::Offset<
       flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>>
@@ -613,6 +623,9 @@ flatbuffers::Offset<Node> PackNode(const MutableNode &node,
   node_builder.add_name(name_offset);
   if (!hostname_offset.IsNull()) {
     node_builder.add_hostname(hostname_offset);
+  }
+  if (!hostname_regex_offset.IsNull()) {
+    node_builder.add_hostname_regex(hostname_regex_offset);
   }
   if (node.port) {
     node_builder.add_port(node.port.value());
@@ -1567,6 +1580,12 @@ const Node *GetNodeFromHostname(const Configuration *config,
         if (candidate->string_view() == hostname) {
           return node;
         }
+      }
+    }
+    if (node->has_hostname_regex()) {
+      std::regex re(node->hostname_regex()->str());
+      if (std::regex_match(std::string(hostname), re)) {
+        return node;
       }
     }
   }
