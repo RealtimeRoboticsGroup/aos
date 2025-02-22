@@ -14,6 +14,9 @@ ABSL_FLAG(uint32_t, imagewidth, 640,
           "Image capture resolution width in pixels.");
 ABSL_FLAG(uint32_t, imageheight, 480,
           "Image capture resolution height in pixels.");
+ABSL_FLAG(
+    int32_t, imagefps, -1,
+    "Image capture framerate, in Hz. If -1, does not set FPS explicitly.");
 namespace frc::vision {
 
 V4L2ReaderBase::V4L2ReaderBase(aos::EventLoop *event_loop,
@@ -406,6 +409,20 @@ MjpegV4L2Reader::MjpegV4L2Reader(aos::EventLoop *event_loop,
   CHECK_EQ(static_cast<int>(format.fmt.pix.height), kHeight);
   CHECK_EQ(static_cast<int>(format.fmt.pix.bytesperline), 0);
   CHECK_EQ(format.fmt.pix.sizeimage, ImageSize(kHeight, kWidth));
+
+  // Set framerate
+  if (absl::GetFlag(FLAGS_imagefps) > 0) {
+    struct v4l2_streamparm setfps;
+    memset(&setfps, 0, sizeof(struct v4l2_streamparm));
+    setfps.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    setfps.parm.capture.timeperframe.numerator = 1;
+    setfps.parm.capture.timeperframe.denominator =
+        absl::GetFlag(FLAGS_imagefps);
+    PCHECK(Ioctl(VIDIOC_S_PARM, &setfps) == 0);
+    LOG(INFO) << "framerate ended up at "
+              << setfps.parm.capture.timeperframe.numerator << "/"
+              << setfps.parm.capture.timeperframe.denominator;
+  }
 
   StreamOn();
   epoll_->OnReadable(fd().get(), [this]() {
