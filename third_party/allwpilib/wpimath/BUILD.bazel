@@ -10,12 +10,15 @@ filegroup(
 
 cc_library(
     name = "eigen-headers",
-    hdrs = glob([
-        "src/main/native/thirdparty/eigen/include/**",
-    ]),
-    includes = ["src/main/native/thirdparty/eigen/include"],
-    strip_include_prefix = "src/main/native/thirdparty/eigen/include",
     visibility = ["//wpimath:__subpackages__"],
+    #hdrs = glob([
+    #"src/main/native/thirdparty/eigen/include/**",
+    #]),
+    #includes = ["src/main/native/thirdparty/eigen/include"],
+    #strip_include_prefix = "src/main/native/thirdparty/eigen/include",
+    deps = [
+        "@org_tuxfamily_eigen//:eigen",
+    ],
 )
 
 cc_library(
@@ -59,9 +62,13 @@ cc_library(
             "src/main/native/cpp/**",
             "src/generated/main/native/cpp/**/*.cpp",
         ],
-        exclude = ["src/main/native/cpp/jni/**"],
+        exclude = [
+            "src/main/native/cpp/jni/**",
+            "src/main/native/cpp/controller/ArmFeedforward.cpp",
+        ],
     ) + [":sleipnir-srcs"],
     hdrs = glob(["src/main/native/include/**"]),
+    copts = ["-Wno-invalid-constexpr"],
     defines = ["WPILIB_EXPORTS"],
     includes = [
         "src/main/native/include",

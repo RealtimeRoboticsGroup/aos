@@ -15,13 +15,12 @@ import shutil
 
 
 def call(args, **kwargs):
+    env = os.environ.copy()
+    env["LD_LIBRARY_PATH"] = "external/amd64_debian_sysroot/usr/lib/x86_64-linux-gnu/:external/amd64_debian_sysroot/lib/x86_64-linux-gnu/"
     subprocess.check_call(
         args,
         **kwargs,
-        env={
-            "LD_LIBRARY_PATH":
-            "external/amd64_debian_sysroot/usr/lib/x86_64-linux-gnu/:external/amd64_debian_sysroot/lib/x86_64-linux-gnu/",
-        },
+        env=env,
     )
 
 

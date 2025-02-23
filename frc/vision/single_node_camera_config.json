@@ -175,6 +175,12 @@
       "frequency": 80
     },
     {
+      "name": "/transform_coordinates",
+      "type": "frc.vision.TransformedCoordinates",
+      "source_node": "orin",
+      "frequency": 80
+    },
+    {
       "name": "/camera3/gray",
       "type": "foxglove.ImageAnnotations",
       "source_node": "orin",
@@ -383,6 +389,16 @@
     {
       "name": "hardware_monitor",
       "executable_name": "hardware_monitor",
+      "nodes": [ "orin" ]
+    },
+    {
+      "name": "network_tables_publisher",
+      "executable_name": "network_tables_publisher",
+      "nodes": [ "orin" ]
+    },
+    {
+      "name": "network_tables_server",
+      "executable_name": "network_tables_server",
       "nodes": [ "orin" ]
     },
     {
