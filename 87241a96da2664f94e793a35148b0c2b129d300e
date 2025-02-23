@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "c4a55696_01bfa92f",
+        "filename": "aos/configuration.fbs",
+        "patchSetId": 3
+      },
+      "lineNbr": 203,
+      "author": {
+        "id": 1000002
+      },
+      "writtenOn": "2025-02-23T05:29:45Z",
+      "side": 1,
+      "message": "Genuinely curious if people think it makes more sense to do this vs. modifying the existing parameters to be regex\u0027s.",
+      "range": {
+        "startLine": 195,
+        "startChar": 0,
+        "endLine": 203,
+        "endChar": 32
+      },
+      "revId": "87241a96da2664f94e793a35148b0c2b129d300e",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    }
+  ]
+}
