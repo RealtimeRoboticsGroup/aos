@@ -41,6 +41,30 @@
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "5d8b289e_bc6b23d1",
+        "filename": "frc/orin/neon_threshold.cc",
+        "patchSetId": 4
+      },
+      "lineNbr": 69,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-02-23T02:15:24Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "49657b19_2adfb5dc",
+      "range": {
+        "startLine": 69,
+        "startChar": 20,
+        "endLine": 69,
+        "endChar": 26
+      },
+      "revId": "11a32d8cec2a39cfbe51e9d92af45be0bab0fad0",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "22be6f96_37dbacad",
@@ -64,6 +88,30 @@
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "1370d93b_71cc8c5a",
+        "filename": "frc/orin/neon_threshold.cc",
+        "patchSetId": 4
+      },
+      "lineNbr": 100,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-02-23T02:15:24Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "22be6f96_37dbacad",
+      "range": {
+        "startLine": 99,
+        "startChar": 48,
+        "endLine": 100,
+        "endChar": 32
+      },
+      "revId": "11a32d8cec2a39cfbe51e9d92af45be0bab0fad0",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "1cfacce8_fab94a67",
@@ -77,6 +125,30 @@
       "writtenOn": "2025-02-22T23:25:01Z",
       "side": 1,
       "message": "nit: naive",
+      "range": {
+        "startLine": 102,
+        "startChar": 24,
+        "endLine": 102,
+        "endChar": 29
+      },
+      "revId": "11a32d8cec2a39cfbe51e9d92af45be0bab0fad0",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "c0a4741c_3d4bae30",
+        "filename": "frc/orin/neon_threshold.cc",
+        "patchSetId": 4
+      },
+      "lineNbr": 102,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-02-23T02:15:24Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "1cfacce8_fab94a67",
       "range": {
         "startLine": 102,
         "startChar": 24,
