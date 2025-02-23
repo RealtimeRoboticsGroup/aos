@@ -2,7 +2,10 @@ licenses(["notice"])
 
 cc_library(
     name = "eigen",
-    srcs = glob(["Eigen/src/**/*.h"]),
+    srcs = glob([
+        "Eigen/src/**/*.h",
+        "Eigen/src/plugins/*.inc",
+    ]),
     hdrs = glob(
         ["Eigen/*"],
         exclude = [
