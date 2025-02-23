@@ -24,8 +24,6 @@
 #include "aos/util/file.h"
 #include "aos/util/process_info_generated.h"
 
-ABSL_FLAG(bool, cgroupv2, false, "If true, use cgroup v2");
-
 namespace aos::starter {
 
 // Blocks all signals while an instance of this class is in scope.
@@ -121,10 +119,7 @@ class Sudo {
 };
 
 MemoryCGroup::MemoryCGroup(std::string_view name, Create should_create)
-    : cgroup_(absl::StrCat(
-          (absl::GetFlag(FLAGS_cgroupv2) ? "/sys/fs/cgroup/aos_"
-                                         : "/sys/fs/cgroup/memory/aos_"),
-          name)),
+    : cgroup_(absl::StrCat("/sys/fs/cgroup/memory/aos_", name)),
       should_create_(should_create) {
   if (should_create_ == Create::kDoCreate) {
     Sudo sudo;
@@ -142,11 +137,6 @@ MemoryCGroup::MemoryCGroup(std::string_view name, Create should_create)
       PLOG(FATAL) << ": Failed to create cgroup aos_" << cgroup_
                   << ", do you have permission?";
     }
-
-    if (absl::GetFlag(FLAGS_cgroupv2)) {
-      util::WriteStringToFileOrDie(
-          absl::StrCat(cgroup_, "/cgroup.subtree_control").c_str(), "+memory");
-    }
   }
 }
 
@@ -154,13 +144,13 @@ void MemoryCGroup::AddTid(pid_t pid) {
   if (pid == 0) {
     pid = getpid();
   }
-  const std::string pid_file = absl::StrCat(
-      cgroup_, absl::GetFlag(FLAGS_cgroupv2) ? "/cgroup.procs" : "/tasks");
   if (should_create_ == Create::kDoCreate) {
     Sudo sudo;
-    util::WriteStringToFileOrDie(pid_file.c_str(), std::to_string(pid));
+    util::WriteStringToFileOrDie(absl::StrCat(cgroup_, "/tasks").c_str(),
+                                 std::to_string(pid));
   } else {
-    util::WriteStringToFileOrDie(pid_file.c_str(), std::to_string(pid));
+    util::WriteStringToFileOrDie(absl::StrCat(cgroup_, "/tasks").c_str(),
+                                 std::to_string(pid));
   }
 }
 
@@ -851,26 +841,6 @@ Application::~Application() {
   stop_timer_->Disable();
   pipe_timer_->Disable();
   child_status_handler_->Disable();
-}
-
-void Application::SetMemoryLimit(size_t limit) {
-  if (!memory_cgroup_) {
-    memory_cgroup_ = std::make_unique<MemoryCGroup>(name_);
-  }
-  memory_cgroup_->SetLimit(
-      absl::GetFlag(FLAGS_cgroupv2) ? "memory.max" : "memory.limit_in_bytes",
-      limit);
-}
-
-void Application::SetExistingCgroupMemoryLimit(std::string_view name,
-                                               size_t limit) {
-  if (!memory_cgroup_) {
-    memory_cgroup_ = std::make_unique<MemoryCGroup>(
-        name, MemoryCGroup::Create::kDoNotCreate);
-  }
-  memory_cgroup_->SetLimit(
-      absl::GetFlag(FLAGS_cgroupv2) ? "memory.max" : "memory.limit_in_bytes",
-      limit);
 }
 
 }  // namespace aos::starter
