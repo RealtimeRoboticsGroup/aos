@@ -316,6 +316,7 @@ _llvm_distributions = {
     "clang+llvm-18.1.8-x86_64-linux-gnu-ubuntu-18.04.tar.zst": "0bfaec33e69cfcf30aeafa64d8e1d1b36c9b19fe505a34dd69e4c01aa226c163",
 
     "clang+llvm-19.1.7-x86_64-linux-gnu.tar.zst": "19f188ebac34680910d4c2e6b9b0740b2c1f0180470e9066567fd7954a52e704",
+    "clang+llvm-19.1.7-x86_64-linux-gnu-ubuntu-22.04.tar.zst": "a48debcb20660ae9e462ec27a5b4951fd96ee8fc7f2a17418f561c3bc4c8a78e",
     "clang+llvm-19.1.7-aarch64-linux-gnu-ubuntu-22.04.tar.zst": "cec855a2b2c86f16786b7f9172926c5e28fe88c9b1c3d64765bc342d53aa1bd7",
 }
 

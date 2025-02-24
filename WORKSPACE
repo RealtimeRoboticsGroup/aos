@@ -184,7 +184,7 @@ llvm_version = "19.1.7"
 
 llvm(
     name = "llvm_k8",
-    distribution = "clang+llvm-%s-x86_64-linux-gnu.tar.zst" % llvm_version,
+    distribution = "clang+llvm-%s-x86_64-linux-gnu-ubuntu-22.04.tar.zst" % llvm_version,
     llvm_version = llvm_version,
 )
 
@@ -381,6 +381,15 @@ http_archive(
     build_file = "@//:compilers/amd64_debian_rootfs.BUILD",
     sha256 = "70c4d31acb5e4ff4849f2c2c3aeb897b6b266f931d075cbb882c684230d128e9",
     url = "https://realtimeroboticsgroup.org/build-dependencies/2025-02-22-bookworm-amd64-nvidia-rootfs.tar.zst",
+)
+
+# Sysroot generated using //frc/amd64/build_rootfs_ubuntu.py
+# TODO(austin): Figure out how to select this based on the host.
+http_archive(
+    name = "amd64_ubuntu_22.04_sysroot",
+    build_file = "@//:compilers/amd64_ubuntu_rootfs.BUILD",
+    sha256 = "ef6349f0557a968a62b2bd7b14a1ddeaab353fd695552d6b4bc301b76b0e9238",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/2025-02-25-jammy-amd64-nvidia-rootfs.tar.zst",
 )
 
 http_archive(

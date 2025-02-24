@@ -15,7 +15,7 @@ from rootfs_utils import scoped_tmpdir_tarball, Filesystem, check_buildifier, ge
 def main(argv):
     if len(argv) != 2:
         print("Usage:", file=sys.stderr)
-        print(" |buildify_debian_x86_image /path/to/image.tar.zst",
+        print(" |buildify_ubuntu_x86_image /path/to/image.tar.zst",
               file=sys.stderr)
         return 1
 
@@ -56,12 +56,12 @@ def main(argv):
             filesystem.packages['libgstreamer1.0-dev'],
         ]
 
-        with open("amd64_debian_rootfs.BUILD", "w") as file:
+        with open("amd64_ubuntu_rootfs.BUILD", "w") as file:
             file.write(
                 generate_build_file(filesystem, packages_to_eval,
-                                    "amd64_debian_rootfs.BUILD.template"))
+                                    "amd64_ubuntu_rootfs.BUILD.template"))
 
-        subprocess.run(['buildifier', "amd64_debian_rootfs.BUILD"])
+        subprocess.run(['buildifier', "amd64_ubuntu_rootfs.BUILD"])
 
 
 if __name__ == '__main__':

@@ -635,7 +635,7 @@ class Filesystem:
         for line in result.stdout.decode('utf-8').split('\n'):
             if line.startswith('\t'):
                 logging.vlog(1, line)
-                split_line = re.split(' \\(libc6,(AArch64|x86-64)\\) => ',
+                split_line = re.split(' \\(libc6,(AArch64|x86-64.*)\\) => ',
                                       line.strip())
                 self.ldconfig_cache[split_line[0]] = split_line[2]
 
@@ -736,7 +736,8 @@ class Filesystem:
 
         for lpath in self.library_search_path:
             to_search = os.path.join(lpath, obj)
-            logging.vlog(1, 'Looking for %s', to_search)
+            logging.vlog(1, 'Looking for %s from %s', to_search,
+                         requesting_obj)
             if self.exists(to_search):
                 return to_search
 
@@ -792,6 +793,11 @@ class Filesystem:
         return deps, soname, runpaths
 
 
+def valid_filename(f):
+    """Validates that a filename doesn't have reserved symbols in it."""
+    return ":" not in f
+
+
 def generate_build_file(filesystem, packages_to_eval, template_filename):
     # Now, we want to figure out what the dependencies of each of the packages are.
     # Generate the dependency tree starting from an initial list of packages.
@@ -836,6 +842,7 @@ def generate_build_file(filesystem, packages_to_eval, template_filename):
                      objects)
         if objects:
             objs_to_eval += objects
+            logging.vlog(1, 'Adding: %s', objects)
 
         hdrs.sort()
         deps.sort()
@@ -843,10 +850,13 @@ def generate_build_file(filesystem, packages_to_eval, template_filename):
         hdrs_files = ''.join(hdrs)
         deps_joined = ''.join([f'        ":{d}-headers",\n' for d in deps])
 
-        filegroup_srcs = ''.join(
-            [f'        "{f[1:]}",\n' for f in next_package.files] +
-            [f'        "{f[1:]}",\n' for f in next_package.symlinks.keys()] +
-            [f'        ":{d}-filegroup",\n' for d in deps])
+        filegroup_srcs = ''.join([
+            f'        "{f[1:]}",\n'
+            for f in next_package.files if valid_filename(f)
+        ] + [
+            f'        "{f[1:]}",\n'
+            for f in next_package.symlinks.keys() if valid_filename(f)
+        ] + [f'        ":{d}-filegroup",\n' for d in deps])
 
         rules.append(
             f'filegroup(\n    name = "{next_package.name.name}-filegroup",\n    srcs = [\n{filegroup_srcs}    ],\n    visibility = ["//visibility:public"],\n)'
@@ -861,6 +871,12 @@ def generate_build_file(filesystem, packages_to_eval, template_filename):
         if obj in obj_set:
             continue
         obj_set.add(obj)
+
+        # We trim out a couple of super weird object files when building the rootfs.
+        # Ignore them here.
+        if not os.path.exists(f"{filesystem.partition}/{obj}"):
+            logging.warning("Object %s doesn't exist, ignoring", obj)
+            continue
 
         deps, soname, runpaths = filesystem.object_dependencies(obj)
         resolved_deps = []
