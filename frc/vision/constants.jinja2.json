@@ -11,6 +11,17 @@
           {% include 'frc/vision/constants/calibration_orin1-4646-3_cam-25-04_fake.json' %}
         ]
       }
+    },
+    {
+      "team": 1868,
+      "data": {
+        "calibration": [
+          {% include 'frc/vision/constants/calibration_orin1-1868-0_cam-25-11_1970-01-01_03-17-57.json'  %},
+          {% include 'frc/vision/constants/calibration_orin1-1868-1-fake.json' %},
+          {% include 'frc/vision/constants/calibration_orin1-1868-2-fake.json' %},
+          {% include 'frc/vision/constants/calibration_orin1-1868-3-fake.json' %}
+        ]
+      }
     }
   ]
 }
