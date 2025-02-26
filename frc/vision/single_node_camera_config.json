@@ -47,6 +47,7 @@
       "name": "/constants",
       "type": "frc.vision.CameraConstants",
       "source_node": "orin",
+      "max_size": 4096,
       "frequency": 1
     },
     {
