@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "351fe156_53699ea4",
+        "filename": "frc/vision/constants/frc2025r2.fmap",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000002
+      },
+      "writtenOn": "2025-02-26T06:16:14Z",
+      "side": 1,
+      "message": "Can you add a note somewhere indicating the source for this? This might even belong more properly in a `third_party/` folder if it should have a license attached.",
+      "revId": "c8da7f70aa46deabf8f13646e049cb70f018ccfb",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    }
+  ]
+}
