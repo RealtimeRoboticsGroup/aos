@@ -714,11 +714,13 @@ cc_binary(
     name = "network_tables_publisher",
     srcs = ["network_tables_publisher.cc"],
     deps = [
+        ":camera_constants_fbs",
         ":field_map_fbs",
         ":target_map_fbs",
         "//aos:configuration",
         "//aos:init",
         "//aos/events:shm_event_loop",
+        "//frc/constants:constants_sender_lib",
         "@com_github_wpilibsuite_allwpilib//ntcore:ntcore.static",
         "@com_github_wpilibsuite_allwpilib//wpimath:wpimath.static",
         "@com_google_absl//absl/flags:flag",

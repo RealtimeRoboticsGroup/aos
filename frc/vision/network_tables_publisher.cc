@@ -11,7 +11,9 @@
 #include "aos/events/shm_event_loop.h"
 #include "aos/init.h"
 #include "aos/json_to_flatbuffer.h"
+#include "frc/constants/constants_sender_lib.h"
 #include "frc/geometry/Pose2d.h"
+#include "frc/vision/camera_constants_generated.h"
 #include "frc/vision/field_map_generated.h"
 #include "frc/vision/target_map_generated.h"
 
@@ -19,11 +21,28 @@ ABSL_FLAG(std::string, config, "aos_config.json",
           "File path of aos configuration");
 ABSL_FLAG(std::string, field_map, "frc2025r2.fmap",
           "File path of the field map to use");
+ABSL_FLAG(double, max_distance, 4.0, "Max distance to accept targets.");
 
-ABSL_FLAG(std::string, server, "localhost",
+ABSL_FLAG(std::string, server, "roborio",
           "Server (IP address or hostname) to connect to.");
 
 namespace frc::vision {
+
+const calibration::CameraCalibration *FindCameraCalibration(
+    const CameraConstants &calibration_data, std::string_view node_name,
+    int camera_number) {
+  CHECK(calibration_data.has_calibration());
+  for (const calibration::CameraCalibration *candidate :
+       *calibration_data.calibration()) {
+    if (candidate->node_name()->string_view() != node_name ||
+        candidate->camera_number() != camera_number) {
+      continue;
+    }
+    return candidate;
+  }
+  LOG(FATAL) << ": Failed to find camera calibration for " << node_name
+             << " and camera number " << camera_number;
+}
 
 class NetworkTablesPublisher {
  public:
@@ -31,17 +50,23 @@ class NetworkTablesPublisher {
                          std::string_view table_name, const FieldMap *field_map)
       : event_loop_(event_loop),
         table_(nt::NetworkTableInstance::GetDefault().GetTable(table_name)),
-        pose_topic_(table_->GetDoubleArrayTopic("botpose_wpiblue")),
         pose2d_topic_(table_->GetStructTopic<frc::Pose2d>("apriltag_pose")),
-        pose_publisher_(pose_topic_.Publish({.keepDuplicates = true})),
         pose2d_publisher_(pose2d_topic_.Publish({.keepDuplicates = true})),
         fieldwidth_(field_map->fieldwidth()),
-        fieldlength_(field_map->fieldlength()) {
+        fieldlength_(field_map->fieldlength()),
+        calibration_data_(event_loop) {
     for (size_t i = 0; i < 4; i++) {
-      event_loop_->MakeWatcher(absl::StrCat("/camera", i, "/gray"),
-                               [this, i](const TargetMap &target_map) {
-                                 HandleTargetMap(i, target_map);
-                               });
+      const calibration::CameraCalibration *calibration =
+          FindCameraCalibration(calibration_data_.constants(),
+                                event_loop->node()->name()->string_view(), i);
+      CHECK(calibration->has_fixed_extrinsics());
+      CHECK(calibration->fixed_extrinsics()->has_data());
+      CHECK_EQ(calibration->fixed_extrinsics()->data()->size(), 16u);
+      event_loop_->MakeWatcher(
+          absl::StrCat("/camera", i, "/gray"),
+          [this, calibration](const TargetMap &target_map) {
+            HandleTargetMap(calibration, target_map);
+          });
     }
 
     size_t max_id = 0u;
@@ -75,17 +100,32 @@ class NetworkTablesPublisher {
   }
 
  private:
-  void HandleTargetMap(int i, const TargetMap &target_map) {
-    VLOG(1) << "Got map for " << i;
-
-    if (target_map.target_poses()->size() == 0) {
-      Publish(Eigen::Vector3d::Zero(), 0, 0, 0, 0, 0, 0.0);
-      return;
+  void HandleTargetMap(const calibration::CameraCalibration *calibration,
+                       const TargetMap &target_map) {
+    // TODO(austin): Handle multiple targets better.
+    const TargetPoseFbs *target_pose = nullptr;
+    double min_distance = 1e6;
+    for (size_t i = 0; i < target_map.target_poses()->size(); ++i) {
+      const TargetPoseFbs *target_pose_i = target_map.target_poses()->Get(i);
+      const Eigen::Vector3d translation_vector_i(
+          target_pose_i->position()->x(), target_pose_i->position()->y(),
+          target_pose_i->position()->z());
+      VLOG(2) << "Got target pose: " << translation_vector_i.norm() << " for "
+              << i;
+      if (target_pose == nullptr ||
+          translation_vector_i.norm() < min_distance) {
+        target_pose = target_pose_i;
+        min_distance = translation_vector_i.norm();
+      }
     }
 
-    // TODO(austin): What do we do with multiple targets?  Need to fuse them
-    // somehow.
-    const TargetPoseFbs *target_pose = target_map.target_poses()->Get(0);
+    VLOG(1) << "Got map for " << calibration->camera_number() << " with "
+            << target_map.target_poses()->size() << " targets, min distance of "
+            << min_distance;
+    if (target_pose == nullptr ||
+        min_distance > absl::GetFlag(FLAGS_max_distance)) {
+      return;
+    }
 
     const Eigen::Vector3d translation_vector(target_pose->position()->x(),
                                              target_pose->position()->y(),
@@ -118,41 +158,39 @@ class NetworkTablesPublisher {
                 std::chrono::nanoseconds(target_map.monotonic_timestamp_ns())))
             .count();
 
-    VLOG(1) << "Cam" << i << ", tag " << target_pose->id()
-            << ", t: " << translation_vector.transpose() << " at "
-            << (camera_to_field * Eigen::Vector3d::Zero()).transpose()
-            << " age: " << age_ms << "ms";
+    const Eigen::Matrix<double, 4, 4> camera_to_robot_matrix =
+        Eigen::Map<const Eigen::Matrix<float, 4, 4, Eigen::RowMajor>>(
+            calibration->fixed_extrinsics()->data()->data())
+            .cast<double>();
+
+    Eigen::Affine3d camera_to_robot camera_to_robot.matrix() =
+        camera_to_robot_matrix;
+
+    VLOG(2) << "Cam " << calibration->camera_number()
+            << " fixed extrinsics are: " << camera_to_robot.matrix();
+
+    const Eigen::Affine3d robot_to_field =
+        camera_to_field * camera_to_robot.inverse();
 
     // Project the heading onto the plane of the field by rotating a unit
     // vector and backing out the heading.
     const Eigen::Vector3d projected_z =
-        camera_to_field.rotation().matrix() * Eigen::Vector3d::UnitZ();
+        robot_to_field.rotation().matrix() * Eigen::Vector3d::UnitX();
     const double yaw = std::atan2(projected_z.y(), projected_z.x());
 
-    Publish(camera_to_field * Eigen::Vector3d::Zero() +
+    VLOG(1) << "Cam" << calibration->camera_number() << ", tag "
+            << target_pose->id() << ", t: " << translation_vector.transpose()
+            << " min distance " << min_distance << " at "
+            << (robot_to_field * Eigen::Vector3d::Zero()).transpose() << " yaw "
+            << yaw << " age: " << age_ms << "ms";
+
+    Publish(robot_to_field * Eigen::Vector3d::Zero() +
                 Eigen::Vector3d(fieldlength_ / 2.0, fieldwidth_ / 2.0, 0.0),
             age_ms, target_map.target_poses()->size(), 0,
             translation_vector.norm(), 0, yaw);
   }
 
-  void Publish(Eigen::Vector3d translation, double latency_ms, int tag_count,
-               double tag_span_m, double tag_dist_m, double tag_area_percent,
-               double yaw) {
-    std::array<double, 11> pose{
-        translation.x(),
-        translation.y(),
-        translation.z(),
-        yaw,
-        0.0,
-        0.0,
-        latency_ms,
-        static_cast<double>(tag_count),
-        tag_span_m,
-        tag_dist_m,
-        tag_area_percent,
-    };
-
-    pose_publisher_.Set(pose);
+  void Publish(Eigen::Vector3d translation, double yaw) {
     pose2d_publisher_.Set(Pose2d{units::meter_t{translation.x()},
                                  units::meter_t{translation.y()},
                                  frc::Rotation2d{units::radian_t{yaw}}});
@@ -161,14 +199,14 @@ class NetworkTablesPublisher {
   aos::EventLoop *event_loop_;
 
   std::shared_ptr<nt::NetworkTable> table_;
-  nt::DoubleArrayTopic pose_topic_;
   nt::StructTopic<frc::Pose2d> pose2d_topic_;
 
   std::vector<Eigen::Affine3d> tag_transformations_;
-  nt::DoubleArrayPublisher pose_publisher_;
   nt::StructPublisher<frc::Pose2d> pose2d_publisher_;
   double fieldwidth_;
   double fieldlength_;
+
+  const frc::constants::ConstantsFetcher<CameraConstants> calibration_data_;
 };
 
 int Main() {
@@ -178,6 +216,8 @@ int Main() {
   // TODO(austin): Really should publish this as a message.
   aos::FlatbufferDetachedBuffer<FieldMap> field_map =
       aos::JsonFileToFlatbuffer<FieldMap>(absl::GetFlag(FLAGS_field_map));
+
+  frc::constants::WaitForConstants<CameraConstants>(&config.message());
 
   aos::ShmEventLoop event_loop(&config.message());
 
