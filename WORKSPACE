@@ -399,13 +399,6 @@ filegroup(
     urls = ["https://realtimeroboticsgroup.org/build-dependencies/test_image_frc971.vision.CameraImage_2023.01.28.tar.gz"],
 )
 
-http_file(
-    name = "game_pieces_edgetpu_model",
-    downloaded_file_path = "edgetpu_model.tflite",
-    sha256 = "3d37f34805d017153064076519aaf4b532658a3b8f2518bce8787f27a5c3064c",
-    urls = ["https://realtimeroboticsgroup.org/build-dependencies/models/2023/model_edgetpu_2023.04.09_3.tflite"],
-)
-
 # Recompressed from libusb-1.0.21.7z.
 http_file(
     name = "libusb_1_0_windows",
@@ -1515,3 +1508,10 @@ http_archive(
 load("@rules_m4//m4:m4.bzl", "m4_register_toolchains")
 
 m4_register_toolchains(version = "1.4.18")
+
+http_file(
+    name = "frc2025_field_map_welded",
+    downloaded_file_path = "frc2025r2.fmap",
+    sha256 = "20b7621bf988a6e378a252576d43d2bfbd17d4f38ea2cbb2e7f2cfc82a17732a",
+    urls = ["https://downloads.limelightvision.io/models/frc2025r2.fmap"],
+)

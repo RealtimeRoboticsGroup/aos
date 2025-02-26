@@ -575,6 +575,7 @@ robot_downloader(
         ":aos_config",
         ":constants.json",
         "//frc/orin:orin_irq_config.json",
+        "@frc2025_field_map_welded//file:frc2025r2.fmap",
     ],
     target_compatible_with = ["@platforms//cpu:arm64"],
     target_type = "orin",

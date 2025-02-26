@@ -26,5 +26,6 @@ rewrite golang.org/(.*) realtimeroboticsgroup.org/build-dependencies/golang.org/
 rewrite go.dev/(.*) realtimeroboticsgroup.org/build-dependencies/go.dev/$1
 rewrite registry.npmjs.org/(.*) realtimeroboticsgroup.org/build-dependencies/registry.npmjs.org/$1
 rewrite mirrors.kernel.org/(.*) realtimeroboticsgroup.org/build-dependencies/mirrors.kernel.org/$1
+rewrite downloads.limelightvision.io/(.*) realtimeroboticsgroup.org/build-dependencies/downloads.limelightvision.io/$1
 
 allow realtimeroboticsgroup.org
