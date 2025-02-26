@@ -46,6 +46,30 @@
       },
       "revId": "87241a96da2664f94e793a35148b0c2b129d300e",
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "48943876_2fbb2900",
+        "filename": "aos/configuration.fbs",
+        "patchSetId": 3
+      },
+      "lineNbr": 203,
+      "author": {
+        "id": 1000002
+      },
+      "writtenOn": "2025-02-26T03:50:03Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "7256b956_243526e2",
+      "range": {
+        "startLine": 195,
+        "startChar": 0,
+        "endLine": 203,
+        "endChar": 32
+      },
+      "revId": "87241a96da2664f94e793a35148b0c2b129d300e",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     }
   ]
 }
