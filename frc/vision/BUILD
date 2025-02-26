@@ -572,6 +572,7 @@ robot_downloader(
         "//frc/vision:camera_reader",
     ],
     data = [
+        "constants/frc2025r2.fmap",
         ":aos_config",
         ":constants.json",
         "//frc/orin:orin_irq_config.json",
