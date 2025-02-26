@@ -29,10 +29,15 @@ ABSL_FLAG(uint32_t, sorting_buffer_ms, 100,
           "Amount of time to buffer messages to sort them before sending "
           "them to foxglove.");
 
-namespace {
+ABSL_FLAG(uint32_t, poll_period_ms, 50,
+          "Period to poll channels at and push messages into the websocket.");
 
-// Period at which to poll the fetchers for all the channels.
-constexpr std::chrono::milliseconds kPollPeriod{50};
+ABSL_FLAG(int64_t, max_lossless_channel_size, 1024 * 1024,
+          "Max message size to send without skipping messages.  Any messages "
+          "sent faster than --poll_period_ms and bigger than this threshold "
+          "will get rate limited with Fetch().");
+
+namespace {
 
 void PrintFoxgloveMessage(foxglove::WebSocketLogLevel log_level,
                           char const *message) {
@@ -122,8 +127,11 @@ FoxgloveWebsocketServer::FoxgloveWebsocketServer(
       CHECK_EQ(ids.size(), 1u);
       const ChannelId id = ids[0];
       CHECK(fetchers_.count(id) == 0);
-      fetchers_[id] =
-          FetcherState{.fetcher = event_loop_->MakeRawFetcher(channel)};
+      fetchers_[id] = FetcherState{
+          .fetcher = event_loop_->MakeRawFetcher(channel),
+          .fetch_next = channel->max_size() <=
+                        absl::GetFlag(FLAGS_max_lossless_channel_size),
+      };
     }
   }
 
@@ -168,7 +176,8 @@ FoxgloveWebsocketServer::FoxgloveWebsocketServer(
     // epoll; or (b) rewrite the foxglove websocket server to use seasocks
     // (which we know how to integrate), we'll just function with this.
     // TODO(james): Tighter integration into our event loop structure.
-    server_.run_for(kPollPeriod / 2);
+    server_.run_for(
+        std::chrono::milliseconds(absl::GetFlag(FLAGS_poll_period_ms)) / 2);
 
     // Unfortunately, we can't just push out all the messages as they come in.
     // Foxglove expects that the timestamps associated with each message to be
@@ -191,7 +200,13 @@ FoxgloveWebsocketServer::FoxgloveWebsocketServer(
     for (const auto &[channel, _connections] : active_channels_) {
       FetcherState *fetcher = &fetchers_[channel];
       if (fetcher->sent_current_message) {
-        if (fetcher->fetcher->FetchNext()) {
+        bool fetched;
+        if (fetcher->fetch_next) {
+          fetched = fetcher->fetcher->FetchNext();
+        } else {
+          fetched = fetcher->fetcher->Fetch();
+        }
+        if (fetched) {
           fetcher->sent_current_message = false;
         }
       }
@@ -230,19 +245,23 @@ FoxgloveWebsocketServer::FoxgloveWebsocketServer(
       }
       fetcher_times.erase(fetcher_times.begin());
       fetcher->sent_current_message = true;
-      if (fetcher->fetcher->FetchNext()) {
-        fetcher->sent_current_message = false;
-        const aos::monotonic_clock::time_point send_time =
-            fetcher->fetcher->context().monotonic_event_time;
-        if (send_time <= sort_until) {
-          fetcher_times.insert(std::make_pair(send_time, channel));
+      if (fetcher->fetch_next) {
+        if (fetcher->fetcher->FetchNext()) {
+          fetcher->sent_current_message = false;
+          const aos::monotonic_clock::time_point send_time =
+              fetcher->fetcher->context().monotonic_event_time;
+          if (send_time <= sort_until) {
+            fetcher_times.insert(std::make_pair(send_time, channel));
+          }
         }
       }
     }
   });
 
   event_loop_->OnRun([timer, this]() {
-    timer->Schedule(event_loop_->monotonic_now(), kPollPeriod);
+    timer->Schedule(
+        event_loop_->monotonic_now(),
+        std::chrono::milliseconds(absl::GetFlag(FLAGS_poll_period_ms)));
   });
 
   server_.start("0.0.0.0", port);

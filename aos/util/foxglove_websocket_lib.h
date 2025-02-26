@@ -58,6 +58,10 @@ class FoxgloveWebsocketServer {
     // on the fetcher. Once we get around to actually sending the data, we can
     // set this to true so that we know it is safe to call FetchNext() again.
     bool sent_current_message = true;
+
+    // If false, throttle message rates using Fetch instead of using FetchNext
+    // to get all of them.  This helps with large messages like images.
+    bool fetch_next = true;
   };
 
   aos::EventLoop *event_loop_;
