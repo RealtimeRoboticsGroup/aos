@@ -56,7 +56,7 @@
       "num_readers": 4,
       "source_node": "orin",
       "max_size": 4172800,
-      "frequency": 80
+      "frequency": 125
     },
     {
       "name": "/camera0/gray",
@@ -67,19 +67,19 @@
       "logger": "NOT_LOGGED",
       "channel_storage_duration": 100000000,
       "max_size": 4172800,
-      "frequency": 80
+      "frequency": 125
     },
     {
       "name": "/camera0/gray",
       "type": "frc.vision.TargetMap",
       "source_node": "orin",
-      "frequency": 80
+      "frequency": 125
     },
     {
       "name": "/camera0/gray",
       "type": "foxglove.ImageAnnotations",
       "source_node": "orin",
-      "frequency": 80,
+      "frequency": 125,
       "max_size": 2048
     },
     {
@@ -95,7 +95,7 @@
       "num_readers": 4,
       "source_node": "orin",
       "max_size": 4172800,
-      "frequency": 80
+      "frequency": 125
     },
     {
       "name": "/camera1/gray",
@@ -106,19 +106,19 @@
       "logger": "NOT_LOGGED",
       "channel_storage_duration": 100000000,
       "max_size": 4172800,
-      "frequency": 80
+      "frequency": 125
     },
     {
       "name": "/camera1/gray",
       "type": "frc.vision.TargetMap",
       "source_node": "orin",
-      "frequency": 80
+      "frequency": 125
     },
     {
       "name": "/camera1/gray",
       "type": "foxglove.ImageAnnotations",
       "source_node": "orin",
-      "frequency": 80,
+      "frequency": 125,
       "max_size": 2048
     },
     {
@@ -134,7 +134,7 @@
       "num_readers": 4,
       "source_node": "orin",
       "max_size": 4172800,
-      "frequency": 80
+      "frequency": 125
     },
     {
       "name": "/camera2/gray",
@@ -145,19 +145,19 @@
       "logger": "NOT_LOGGED",
       "channel_storage_duration": 100000000,
       "max_size": 4172800,
-      "frequency": 80
+      "frequency": 125
     },
     {
       "name": "/camera2/gray",
       "type": "frc.vision.TargetMap",
       "source_node": "orin",
-      "frequency": 80
+      "frequency": 125
     },
     {
       "name": "/camera2/gray",
       "type": "foxglove.ImageAnnotations",
       "source_node": "orin",
-      "frequency": 80,
+      "frequency": 125,
       "max_size": 2048
     },
     {
@@ -173,7 +173,7 @@
       "num_readers": 4,
       "source_node": "orin",
       "max_size": 4172800,
-      "frequency": 80
+      "frequency": 125
     },
     {
       "name": "/camera3/gray",
@@ -184,19 +184,19 @@
       "logger": "NOT_LOGGED",
       "channel_storage_duration": 100000000,
       "max_size": 4172800,
-      "frequency": 80
+      "frequency": 125
     },
     {
       "name": "/camera3/gray",
       "type": "frc.vision.TargetMap",
       "source_node": "orin",
-      "frequency": 80
+      "frequency": 125
     },
     {
       "name": "/camera3/gray",
       "type": "foxglove.ImageAnnotations",
       "source_node": "orin",
-      "frequency": 80,
+      "frequency": 125,
       "max_size": 2048
     },
     {
