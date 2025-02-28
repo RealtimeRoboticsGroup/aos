@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 
 from __future__ import annotations
 import sys
@@ -37,23 +37,12 @@ def main(argv):
             ["sudo", "chroot", "--userspec=0:0", rootfs, "/bin/bash"],
         )
 
-        # TODO(austin):
-        #  I need tests for all this...
-        #  This is getting too complicated to trust that it keeps working otherwise.
-        # I can't wrap a cc_library around a linker script.
-        #  I need to either rewrite the linker script to use sandboxed paths, or I need to inline it into the BUILD file.  Either way, I need to explode if someone tries to do another one.
-        # libusb-0.1-4
-
         packages_to_eval = [
             filesystem.packages['libopencv-dev'],
             filesystem.packages['libc6-dev'],
-            filesystem.packages['libusb-dev'],
-            filesystem.packages['libusb-1.0-0-dev'],
             filesystem.packages['libstdc++-dev'],
             filesystem.packages['libturbojpeg0-dev'],
             filesystem.packages['nvidia-cuda-dev'],
-            filesystem.packages['ssh'],
-            filesystem.packages['rsync'],
             filesystem.packages['libgstreamer-plugins-bad1.0-dev'],
             filesystem.packages['libgstreamer-plugins-base1.0-dev'],
             filesystem.packages['libgstreamer1.0-dev'],

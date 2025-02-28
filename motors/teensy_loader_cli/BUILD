@@ -8,7 +8,6 @@ cc_binary(
     ],
     target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
-        "@amd64_debian_sysroot//:libusb",
-        "@amd64_debian_sysroot//:libusb-1.0",
+        "@libusb",
     ],
 )

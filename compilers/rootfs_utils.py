@@ -742,14 +742,10 @@ class Filesystem:
 
         raise FileNotFoundError(obj)
 
-    def filesystem_path(self, obj: str):
-        return f'{self.partition}/{obj}'
-
     @functools.cache
-    def object_dependencies(
-            self, obj: str) -> tuple[list[str], str | None, list[str]]:
+    def object_dependencies(self, obj: str) -> str:
         # Step 1: is it a shared library?
-        filename = self.filesystem_path(obj)
+        filename = f'{self.partition}/{obj}'
         soname = os.path.basename(obj)
         if not is_elf_file(filename):
             logging.vlog(1, 'Non elf file %s', filename)
@@ -757,7 +753,7 @@ class Filesystem:
                 return [], None, []
 
             result = parse_linker_script(
-                read_linker_script(filename)), None, []
+                read_linker_script(filename)), soname, []
             logging.vlog(1, 'Parsed %s to contain %s', filename, result)
             return result
 
@@ -845,11 +841,10 @@ def generate_build_file(filesystem, packages_to_eval, template_filename):
 
         filegroup_srcs = ''.join(
             [f'        "{f[1:]}",\n' for f in next_package.files] +
-            [f'        "{f[1:]}",\n' for f in next_package.symlinks.keys()] +
             [f'        ":{d}-filegroup",\n' for d in deps])
 
         rules.append(
-            f'filegroup(\n    name = "{next_package.name.name}-filegroup",\n    srcs = [\n{filegroup_srcs}    ],\n    visibility = ["//visibility:public"],\n)'
+            f'filegroup(\n    name = "{next_package.name.name}-filegroup",\n    srcs = [\n{filegroup_srcs}    ],\n)'
         )
         rules.append(
             f'cc_library(\n    name = "{next_package.name.name}-headers",\n    hdrs = [\n{hdrs_files}    ],\n    visibility = ["//visibility:public"],\n    deps = [\n{deps_joined}    ],\n)'
@@ -892,16 +887,15 @@ def generate_build_file(filesystem, packages_to_eval, template_filename):
             # We got a None soname when a static library comes through.  The
             # only one I've seen so far is libc_nonshared.a, which we want to ignore.
             if soname is not None:
-                canonical_obj = filesystem.resolve_object(
-                    soname, requesting_obj=obj, runpaths=runpaths)[1:]
-                srcs = f"\n    srcs = [\"{canonical_obj}\"],"
-            else:
-                logging.warning('No soname for %s', obj)
-                srcs = ""
-
-            rules.append(
-                f'cc_library(\n    name = "{rule_name}-lib",{srcs}\n    deps = [\n{rule_deps}    ],\n)'
-            )
+                canonical_objs = [
+                    filesystem.resolve_object(soname,
+                                              requesting_obj=obj,
+                                              runpaths=runpaths)[1:]
+                ]
+                joined_canonical_objs = "\", \"".join(canonical_objs)
+                rules.append(
+                    f'cc_library(\n    name = "{rule_name}-lib",\n    srcs = ["{joined_canonical_objs}"],\n    deps = [\n{rule_deps}    ],\n)'
+                )
         except FileNotFoundError as e:
             # soname is busted.
             logging.warning('SONAME of %s for %s is not resolvable, ignoring',

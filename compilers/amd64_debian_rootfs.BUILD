@@ -11,15 +11,9 @@ filegroup(
             "usr/lib64/**",
             "usr/bin/ptxas",
             "usr/bin/fatbinary",
-            "etc/fonts/**",
         ],
         exclude = [
             "usr/share/**",
-        ],
-    ) + glob(
-        include = [
-            "usr/share/gir-1.0/**",
-            "usr/share/fonts/**",
         ],
     ),
     visibility = ["//visibility:public"],
@@ -143,53 +137,6 @@ cc_library(
     ],
 )
 
-# pkgconf -> atk
-cc_library(
-    name = "atk",
-    includes = ["usr/include/atk-1.0"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":glib-2.0",
-        ":gobject-2.0",
-        ":libatk1.0-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libatk-1.0.so.0.24609.1-lib",
-    ],
-)
-
-# pkgconf -> atk-bridge-2.0
-cc_library(
-    name = "atk-bridge-2.0",
-    includes = ["usr/include/at-spi2-atk/2.0"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":atk",
-        ":atspi-2",
-        ":dbus-1",
-        ":glib-2.0",
-        ":gmodule-2.0",
-        ":gobject-2.0",
-        ":libatk-bridge2.0-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libatk-bridge-2.0.so.0.0.0-lib",
-    ],
-)
-
-# pkgconf -> atspi-2
-cc_library(
-    name = "atspi-2",
-    includes = ["usr/include/at-spi-2.0"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":dbus-1",
-        ":glib-2.0",
-        ":gobject-2.0",
-        ":libatspi2.0-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libatspi.so.0.0.1-lib",
-        ":x11",
-        ":xi",
-        ":xtst",
-    ],
-)
-
 # pkgconf -> bigreqsproto
 cc_library(
     name = "bigreqsproto",
@@ -207,165 +154,6 @@ cc_library(
     deps = [
         ":libblkid-dev-headers",
         ":usr_lib_x86_64-linux-gnu_libblkid.so.1.1.0-lib",
-    ],
-)
-
-# pkgconf -> cairo
-cc_library(
-    name = "cairo",
-    includes = ["usr/include/cairo"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":gobject-2.0",
-        ":libcairo2-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libcairo.so.2.11600.0-lib",
-    ],
-)
-
-# pkgconf -> cairo-fc
-cc_library(
-    name = "cairo-fc",
-    includes = ["usr/include/cairo"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":cairo",
-        ":libcairo2-dev-headers",
-    ],
-)
-
-# pkgconf -> cairo-ft
-cc_library(
-    name = "cairo-ft",
-    includes = ["usr/include/cairo"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":cairo",
-        ":libcairo2-dev-headers",
-    ],
-)
-
-# pkgconf -> cairo-gobject
-cc_library(
-    name = "cairo-gobject",
-    includes = ["usr/include/cairo"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":cairo",
-        ":libcairo2-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libcairo-gobject.so.2.11600.0-lib",
-    ],
-)
-
-# pkgconf -> cairo-pdf
-cc_library(
-    name = "cairo-pdf",
-    includes = ["usr/include/cairo"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":cairo",
-        ":libcairo2-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libz.so.1.2.13-lib",
-    ],
-)
-
-# pkgconf -> cairo-png
-cc_library(
-    name = "cairo-png",
-    includes = ["usr/include/cairo"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":cairo",
-        ":libcairo2-dev-headers",
-    ],
-)
-
-# pkgconf -> cairo-ps
-cc_library(
-    name = "cairo-ps",
-    includes = ["usr/include/cairo"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":cairo",
-        ":libcairo2-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libz.so.1.2.13-lib",
-    ],
-)
-
-# pkgconf -> cairo-script
-cc_library(
-    name = "cairo-script",
-    includes = ["usr/include/cairo"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":cairo",
-        ":libcairo2-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libz.so.1.2.13-lib",
-    ],
-)
-
-# pkgconf -> cairo-svg
-cc_library(
-    name = "cairo-svg",
-    includes = ["usr/include/cairo"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":cairo",
-        ":libcairo2-dev-headers",
-    ],
-)
-
-# pkgconf -> cairo-tee
-cc_library(
-    name = "cairo-tee",
-    includes = ["usr/include/cairo"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":cairo",
-        ":libcairo2-dev-headers",
-    ],
-)
-
-# pkgconf -> cairo-xcb
-cc_library(
-    name = "cairo-xcb",
-    includes = ["usr/include/cairo"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":cairo",
-        ":libcairo2-dev-headers",
-    ],
-)
-
-# pkgconf -> cairo-xcb-shm
-cc_library(
-    name = "cairo-xcb-shm",
-    includes = ["usr/include/cairo"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":cairo",
-        ":libcairo2-dev-headers",
-    ],
-)
-
-# pkgconf -> cairo-xlib
-cc_library(
-    name = "cairo-xlib",
-    includes = ["usr/include/cairo"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":cairo",
-        ":libcairo2-dev-headers",
-    ],
-)
-
-# pkgconf -> cairo-xlib-xrender
-cc_library(
-    name = "cairo-xlib-xrender",
-    includes = ["usr/include/cairo"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":cairo-xlib",
-        ":libcairo2-dev-headers",
     ],
 )
 
@@ -394,30 +182,6 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":x11proto-dev-headers",
-    ],
-)
-
-# pkgconf -> datrie-0.2
-cc_library(
-    name = "datrie-0.2",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libdatrie-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libdatrie.so.1.4.0-lib",
-    ],
-)
-
-# pkgconf -> dbus-1
-cc_library(
-    name = "dbus-1",
-    includes = [
-        "usr/include/dbus-1.0",
-        "usr/lib/x86_64-linux-gnu/dbus-1.0/include",
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libdbus-1-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libdbus-1.so.3.32.4-lib",
     ],
 )
 
@@ -467,29 +231,6 @@ cc_library(
     ],
 )
 
-# pkgconf -> epoxy
-cc_library(
-    name = "epoxy",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":egl",
-        ":gl",
-        ":libepoxy-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libepoxy.so.0.0.0-lib",
-        ":x11",
-    ],
-)
-
-# pkgconf -> expat
-cc_library(
-    name = "expat",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libexpat1-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libexpat.so.1.8.10-lib",
-    ],
-)
-
 # pkgconf -> fixesproto
 cc_library(
     name = "fixesproto",
@@ -497,18 +238,6 @@ cc_library(
     deps = [
         ":x11proto-dev-headers",
         ":xextproto",
-    ],
-)
-
-# pkgconf -> fontconfig
-cc_library(
-    name = "fontconfig",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":expat",
-        ":freetype2",
-        ":libfontconfig-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libfontconfig.so.1.12.0-lib",
     ],
 )
 
@@ -521,40 +250,6 @@ cc_library(
     ],
 )
 
-# pkgconf -> fontutil
-cc_library(
-    name = "fontutil",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":xfonts-utils-headers",
-    ],
-)
-
-# pkgconf -> freetype2
-cc_library(
-    name = "freetype2",
-    includes = ["usr/include/freetype2"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libbrotlidec",
-        ":libfreetype-dev-headers",
-        ":libpng",
-        ":usr_lib_x86_64-linux-gnu_libfreetype.so.6.18.3-lib",
-        ":zlib",
-    ],
-)
-
-# pkgconf -> fribidi
-cc_library(
-    name = "fribidi",
-    includes = ["usr/include/fribidi"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libfribidi-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libfribidi.so.0.4.0-lib",
-    ],
-)
-
 # pkgconf -> gbm
 cc_library(
     name = "gbm",
@@ -562,81 +257,6 @@ cc_library(
     deps = [
         ":libgbm-dev-headers",
         ":usr_lib_x86_64-linux-gnu_libgbm.so.1.0.0-lib",
-    ],
-)
-
-# pkgconf -> gdk-3.0
-cc_library(
-    name = "gdk-3.0",
-    includes = ["usr/include/gtk-3.0"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":gio-unix-2.0",
-        ":libgtk-3-dev-headers",
-        ":pango",
-        ":usr_lib_x86_64-linux-gnu_libgdk-3.so.0.2406.32-lib",
-        ":usr_lib_x86_64-linux-gnu_libz.so.1.2.13-lib",
-    ],
-)
-
-# pkgconf -> gdk-broadway-3.0
-cc_library(
-    name = "gdk-broadway-3.0",
-    includes = ["usr/include/gtk-3.0"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":gio-unix-2.0",
-        ":libgtk-3-dev-headers",
-        ":pango",
-        ":usr_lib_x86_64-linux-gnu_libgdk-3.so.0.2406.32-lib",
-        ":usr_lib_x86_64-linux-gnu_libz.so.1.2.13-lib",
-    ],
-)
-
-# pkgconf -> gdk-pixbuf-2.0
-cc_library(
-    name = "gdk-pixbuf-2.0",
-    includes = ["usr/include/gdk-pixbuf-2.0"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":gio-2.0",
-        ":glib-2.0",
-        ":gmodule-no-export-2.0",
-        ":gobject-2.0",
-        ":libgdk-pixbuf-2.0-dev-headers",
-        ":libjpeg",
-        ":libpng",
-        ":libtiff-4",
-        ":shared-mime-info",
-        ":usr_lib_x86_64-linux-gnu_libgdk_pixbuf-2.0.so.0.4200.10-lib",
-    ],
-)
-
-# pkgconf -> gdk-wayland-3.0
-cc_library(
-    name = "gdk-wayland-3.0",
-    includes = ["usr/include/gtk-3.0"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":gio-unix-2.0",
-        ":libgtk-3-dev-headers",
-        ":pango",
-        ":usr_lib_x86_64-linux-gnu_libgdk-3.so.0.2406.32-lib",
-        ":usr_lib_x86_64-linux-gnu_libz.so.1.2.13-lib",
-    ],
-)
-
-# pkgconf -> gdk-x11-3.0
-cc_library(
-    name = "gdk-x11-3.0",
-    includes = ["usr/include/gtk-3.0"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":gio-unix-2.0",
-        ":libgtk-3-dev-headers",
-        ":pango",
-        ":usr_lib_x86_64-linux-gnu_libgdk-3.so.0.2406.32-lib",
-        ":usr_lib_x86_64-linux-gnu_libz.so.1.2.13-lib",
     ],
 )
 
@@ -774,16 +394,6 @@ cc_library(
         ":libffi",
         ":libglib2.0-dev-headers",
         ":usr_lib_x86_64-linux-gnu_libgobject-2.0.so.0.7400.6-lib",
-    ],
-)
-
-# pkgconf -> graphite2
-cc_library(
-    name = "graphite2",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libgraphite2-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libgraphite2.so.3.2.1-lib",
     ],
 )
 
@@ -1406,69 +1016,6 @@ cc_library(
     ],
 )
 
-# pkgconf -> gtk+-3.0
-cc_library(
-    name = "gtk+-3.0",
-    includes = ["usr/include/gtk-3.0"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":atk",
-        ":gdk-3.0",
-        ":libgtk-3-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libgtk-3.so.0.2406.32-lib",
-    ],
-)
-
-# pkgconf -> gtk+-broadway-3.0
-cc_library(
-    name = "gtk+-broadway-3.0",
-    includes = ["usr/include/gtk-3.0"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":atk",
-        ":gdk-3.0",
-        ":libgtk-3-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libgtk-3.so.0.2406.32-lib",
-    ],
-)
-
-# pkgconf -> gtk+-unix-print-3.0
-cc_library(
-    name = "gtk+-unix-print-3.0",
-    includes = ["usr/include/gtk-3.0/unix-print"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":gtk+-3.0",
-        ":libgtk-3-dev-headers",
-    ],
-)
-
-# pkgconf -> gtk+-wayland-3.0
-cc_library(
-    name = "gtk+-wayland-3.0",
-    includes = ["usr/include/gtk-3.0"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":atk",
-        ":gdk-3.0",
-        ":libgtk-3-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libgtk-3.so.0.2406.32-lib",
-    ],
-)
-
-# pkgconf -> gtk+-x11-3.0
-cc_library(
-    name = "gtk+-x11-3.0",
-    includes = ["usr/include/gtk-3.0"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":atk",
-        ":gdk-3.0",
-        ":libgtk-3-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libgtk-3.so.0.2406.32-lib",
-    ],
-)
-
 # pkgconf -> gudev-1.0
 cc_library(
     name = "gudev-1.0",
@@ -1480,103 +1027,6 @@ cc_library(
         ":libgudev-1.0-dev-headers",
         ":libudev",
         ":usr_lib_x86_64-linux-gnu_libgudev-1.0.so.0.3.0-lib",
-    ],
-)
-
-# pkgconf -> harfbuzz
-cc_library(
-    name = "harfbuzz",
-    includes = ["usr/include/harfbuzz"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":freetype2",
-        ":glib-2.0",
-        ":graphite2",
-        ":libharfbuzz-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libharfbuzz.so.0.60000.0-lib",
-    ],
-)
-
-# pkgconf -> harfbuzz-gobject
-cc_library(
-    name = "harfbuzz-gobject",
-    includes = ["usr/include/harfbuzz"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":glib-2.0",
-        ":gobject-2.0",
-        ":harfbuzz",
-        ":libharfbuzz-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libharfbuzz-gobject.so.0.60000.0-lib",
-    ],
-)
-
-# pkgconf -> harfbuzz-icu
-cc_library(
-    name = "harfbuzz-icu",
-    includes = ["usr/include/harfbuzz"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":harfbuzz",
-        ":icu-uc",
-        ":libharfbuzz-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libharfbuzz-icu.so.0.60000.0-lib",
-    ],
-)
-
-# pkgconf -> harfbuzz-subset
-cc_library(
-    name = "harfbuzz-subset",
-    includes = ["usr/include/harfbuzz"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":harfbuzz",
-        ":libharfbuzz-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libharfbuzz-subset.so.0.60000.0-lib",
-    ],
-)
-
-# pkgconf -> ice
-cc_library(
-    name = "ice",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libice-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libICE.so.6.3.0-lib",
-        ":xproto",
-    ],
-)
-
-# pkgconf -> icu-i18n
-cc_library(
-    name = "icu-i18n",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":icu-uc",
-        ":libicu-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libicui18n.so.72.1-lib",
-    ],
-)
-
-# pkgconf -> icu-io
-cc_library(
-    name = "icu-io",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":icu-i18n",
-        ":libicu-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libicuio.so.72.1-lib",
-    ],
-)
-
-# pkgconf -> icu-uc
-cc_library(
-    name = "icu-uc",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libicu-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libicudata.so.72.1-lib",
-        ":usr_lib_x86_64-linux-gnu_libicuuc.so.72.1-lib",
     ],
 )
 
@@ -1642,38 +1092,6 @@ cc_library(
     deps = [
         ":libavutil-dev-headers",
         ":usr_lib_x86_64-linux-gnu_libavutil.so.57.28.100-lib",
-    ],
-)
-
-# pkgconf -> libbrotlicommon
-cc_library(
-    name = "libbrotlicommon",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libbrotli-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libbrotlicommon.so.1.0.9-lib",
-    ],
-)
-
-# pkgconf -> libbrotlidec
-cc_library(
-    name = "libbrotlidec",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libbrotli-dev-headers",
-        ":libbrotlicommon",
-        ":usr_lib_x86_64-linux-gnu_libbrotlidec.so.1.0.9-lib",
-    ],
-)
-
-# pkgconf -> libbrotlienc
-cc_library(
-    name = "libbrotlienc",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libbrotli-dev-headers",
-        ":libbrotlicommon",
-        ":usr_lib_x86_64-linux-gnu_libbrotlienc.so.1.0.9-lib",
     ],
 )
 
@@ -1999,17 +1417,6 @@ cc_library(
     ],
 )
 
-# pkgconf -> libthai
-cc_library(
-    name = "libthai",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":datrie-0.2",
-        ":libthai-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libthai.so.0.3.1-lib",
-    ],
-)
-
 # pkgconf -> libtiff-4
 cc_library(
     name = "libtiff-4",
@@ -2097,27 +1504,6 @@ cc_library(
         ":libunwind-dev-headers",
         ":libunwind-generic",
         ":usr_lib_x86_64-linux-gnu_libunwind-ptrace.so.0.0.0-lib",
-    ],
-)
-
-# pkgconf -> libusb
-cc_library(
-    name = "libusb",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libusb-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libusb.so-lib",
-    ],
-)
-
-# pkgconf -> libusb-1.0
-cc_library(
-    name = "libusb-1.0",
-    includes = ["usr/include/libusb-1.0"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libusb-1.0-0-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libusb-1.0.so.0.3.0-lib",
     ],
 )
 
@@ -2326,124 +1712,6 @@ cc_library(
     ],
 )
 
-# pkgconf -> pango
-cc_library(
-    name = "pango",
-    includes = ["usr/include/pango-1.0"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":cairo",
-        ":fontconfig",
-        ":freetype2",
-        ":fribidi",
-        ":gio-2.0",
-        ":glib-2.0",
-        ":gobject-2.0",
-        ":harfbuzz",
-        ":libpango1.0-dev-headers",
-        ":libthai",
-        ":usr_lib_x86_64-linux-gnu_libpango-1.0.so.0.5000.12-lib",
-        ":xft",
-        ":xrender",
-    ],
-)
-
-# pkgconf -> pangocairo
-cc_library(
-    name = "pangocairo",
-    includes = ["usr/include/pango-1.0"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":cairo",
-        ":fontconfig",
-        ":freetype2",
-        ":fribidi",
-        ":gio-2.0",
-        ":glib-2.0",
-        ":gobject-2.0",
-        ":harfbuzz",
-        ":harfbuzz-gobject",
-        ":libpango1.0-dev-headers",
-        ":libthai",
-        ":pango",
-        ":pangoft2",
-        ":usr_lib_x86_64-linux-gnu_libpangocairo-1.0.so.0.5000.12-lib",
-        ":xft",
-        ":xrender",
-    ],
-)
-
-# pkgconf -> pangofc
-cc_library(
-    name = "pangofc",
-    includes = ["usr/include/pango-1.0"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libpango1.0-dev-headers",
-        ":pangoft2",
-    ],
-)
-
-# pkgconf -> pangoft2
-cc_library(
-    name = "pangoft2",
-    includes = ["usr/include/pango-1.0"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":cairo",
-        ":fontconfig",
-        ":freetype2",
-        ":fribidi",
-        ":gio-2.0",
-        ":glib-2.0",
-        ":gobject-2.0",
-        ":harfbuzz",
-        ":harfbuzz-gobject",
-        ":libpango1.0-dev-headers",
-        ":libthai",
-        ":pango",
-        ":usr_lib_x86_64-linux-gnu_libpangoft2-1.0.so.0.5000.12-lib",
-        ":xft",
-        ":xrender",
-    ],
-)
-
-# pkgconf -> pangoot
-cc_library(
-    name = "pangoot",
-    includes = ["usr/include/pango-1.0"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libpango1.0-dev-headers",
-        ":pangoft2",
-    ],
-)
-
-# pkgconf -> pangoxft
-cc_library(
-    name = "pangoxft",
-    includes = ["usr/include/pango-1.0"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":cairo",
-        ":fontconfig",
-        ":freetype2",
-        ":fribidi",
-        ":gio-2.0",
-        ":glib-2.0",
-        ":gobject-2.0",
-        ":harfbuzz",
-        ":harfbuzz-gobject",
-        ":libpango1.0-dev-headers",
-        ":libthai",
-        ":pango",
-        ":pangoft2",
-        ":usr_lib_x86_64-linux-gnu_libpangoxft-1.0.so.0.5000.12-lib",
-        ":xft",
-        ":xrender",
-    ],
-)
-
 # pkgconf -> pciaccess
 cc_library(
     name = "pciaccess",
@@ -2451,17 +1719,6 @@ cc_library(
     deps = [
         ":libpciaccess-dev-headers",
         ":usr_lib_x86_64-linux-gnu_libpciaccess.so.0.11.1-lib",
-    ],
-)
-
-# pkgconf -> pixman-1
-cc_library(
-    name = "pixman-1",
-    includes = ["usr/include/pixman-1"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libpixman-1-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libpixman-1.so.0.42.2-lib",
     ],
 )
 
@@ -2543,17 +1800,6 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":shared-mime-info-headers",
-    ],
-)
-
-# pkgconf -> sm
-cc_library(
-    name = "sm",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":ice",
-        ":libsm-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libSM.so.6.0.1-lib",
     ],
 )
 
@@ -2648,15 +1894,6 @@ cc_library(
     ],
 )
 
-# pkgconf -> wayland-protocols
-cc_library(
-    name = "wayland-protocols",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":wayland-protocols-headers",
-    ],
-)
-
 # pkgconf -> wayland-scanner
 cc_library(
     name = "wayland-scanner",
@@ -2722,70 +1959,12 @@ cc_library(
     ],
 )
 
-# pkgconf -> xcb-render
-cc_library(
-    name = "xcb-render",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libxcb-render0-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libxcb-render.so.0.0.0-lib",
-        ":xcb",
-    ],
-)
-
-# pkgconf -> xcb-shm
-cc_library(
-    name = "xcb-shm",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libxcb-shm0-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libxcb-shm.so.0.0.0-lib",
-        ":xcb",
-    ],
-)
-
 # pkgconf -> xcmiscproto
 cc_library(
     name = "xcmiscproto",
     visibility = ["//visibility:public"],
     deps = [
         ":x11proto-dev-headers",
-    ],
-)
-
-# pkgconf -> xcomposite
-cc_library(
-    name = "xcomposite",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libxcomposite-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libXcomposite.so.1.0.0-lib",
-        ":x11",
-        ":xproto",
-    ],
-)
-
-# pkgconf -> xcursor
-cc_library(
-    name = "xcursor",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libxcursor-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libXcursor.so.1.0.2-lib",
-        ":x11",
-        ":xproto",
-    ],
-)
-
-# pkgconf -> xdamage
-cc_library(
-    name = "xdamage",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libxdamage-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libXdamage.so.1.1.0-lib",
-        ":x11",
-        ":xproto",
     ],
 )
 
@@ -2797,18 +1976,6 @@ cc_library(
         ":libxdmcp-dev-headers",
         ":usr_lib_x86_64-linux-gnu_libXdmcp.so.6.0.0-lib",
         ":xproto",
-    ],
-)
-
-# pkgconf -> xext
-cc_library(
-    name = "xext",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libxext-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libXext.so.6.4.0-lib",
-        ":x11",
-        ":xextproto",
     ],
 )
 
@@ -2858,81 +2025,12 @@ cc_library(
     ],
 )
 
-# pkgconf -> xfixes
-cc_library(
-    name = "xfixes",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libxfixes-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libXfixes.so.3.1.0-lib",
-        ":x11",
-        ":xproto",
-    ],
-)
-
-# pkgconf -> xft
-cc_library(
-    name = "xft",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":fontconfig",
-        ":freetype2",
-        ":libxft-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libXft.so.2.3.6-lib",
-        ":xproto",
-        ":xrender",
-    ],
-)
-
-# pkgconf -> xi
-cc_library(
-    name = "xi",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":inputproto",
-        ":libxi-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libXi.so.6.1.0-lib",
-        ":x11",
-    ],
-)
-
-# pkgconf -> xinerama
-cc_library(
-    name = "xinerama",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libxinerama-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libXinerama.so.1.0.0-lib",
-        ":x11",
-        ":xineramaproto",
-    ],
-)
-
 # pkgconf -> xineramaproto
 cc_library(
     name = "xineramaproto",
     visibility = ["//visibility:public"],
     deps = [
         ":x11proto-dev-headers",
-    ],
-)
-
-# pkgconf -> xkbcommon
-cc_library(
-    name = "xkbcommon",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libxkbcommon-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libxkbcommon.so.0.0.0-lib",
-    ],
-)
-
-# pkgconf -> xkbcomp
-cc_library(
-    name = "xkbcomp",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":x11-xkb-utils-headers",
     ],
 )
 
@@ -2963,48 +2061,12 @@ cc_library(
     ],
 )
 
-# pkgconf -> xrandr
-cc_library(
-    name = "xrandr",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libxrandr-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libXrandr.so.2.2.0-lib",
-        ":x11",
-        ":xproto",
-    ],
-)
-
-# pkgconf -> xrender
-cc_library(
-    name = "xrender",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libxrender-dev-headers",
-        ":usr_lib_x86_64-linux-gnu_libXrender.so.1.3.0-lib",
-        ":x11",
-        ":xproto",
-    ],
-)
-
 # pkgconf -> xtrans
 cc_library(
     name = "xtrans",
     visibility = ["//visibility:public"],
     deps = [
         ":xtrans-dev-headers",
-    ],
-)
-
-# pkgconf -> xtst
-cc_library(
-    name = "xtst",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libxtst-dev-headers",
-        ":recordproto",
-        ":usr_lib_x86_64-linux-gnu_libXtst.so.6.1.0-lib",
-        ":x11",
     ],
 )
 
@@ -4486,16 +3548,6 @@ cc_library(
 )
 
 cc_library(
-    name = "libcbor0.8-headers",
-    hdrs = [
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libc6-headers",
-    ],
-)
-
-cc_library(
     name = "libcfitsio10-headers",
     hdrs = [
     ],
@@ -5720,20 +4772,6 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":libc6-headers",
-    ],
-)
-
-cc_library(
-    name = "libfido2-1-headers",
-    hdrs = [
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libc6-headers",
-        ":libcbor0.8-headers",
-        ":libssl3-headers",
-        ":libudev1-headers",
-        ":zlib1g-headers",
     ],
 )
 
@@ -10727,16 +9765,6 @@ cc_library(
 )
 
 cc_library(
-    name = "libpopt0-headers",
-    hdrs = [
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libc6-headers",
-    ],
-)
-
-cc_library(
     name = "libpq5-headers",
     hdrs = [
     ],
@@ -13868,27 +12896,6 @@ cc_library(
 )
 
 cc_library(
-    name = "libusb-0.1-4-headers",
-    hdrs = [
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libc6-headers",
-    ],
-)
-
-cc_library(
-    name = "libusb-1.0-0-dev-headers",
-    hdrs = [
-        "usr/include/libusb-1.0/libusb.h",
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libusb-1.0-0-headers",
-    ],
-)
-
-cc_library(
     name = "libusb-1.0-0-headers",
     hdrs = [
     ],
@@ -13896,18 +12903,6 @@ cc_library(
     deps = [
         ":libc6-headers",
         ":libudev1-headers",
-    ],
-)
-
-cc_library(
-    name = "libusb-dev-headers",
-    hdrs = [
-        "usr/include/usb.h",
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libc6-dev-headers",
-        ":libusb-0.1-4-headers",
     ],
 )
 
@@ -14215,17 +13210,6 @@ cc_library(
     deps = [
         ":libc6-headers",
         ":libwebp7-headers",
-    ],
-)
-
-cc_library(
-    name = "libwrap0-headers",
-    hdrs = [
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libc6-headers",
-        ":libnsl2-headers",
     ],
 )
 
@@ -14761,16 +13745,6 @@ cc_library(
         ":libc6-headers",
         ":libx11-6-headers",
         ":libxext6-headers",
-    ],
-)
-
-cc_library(
-    name = "libxxhash0-headers",
-    hdrs = [
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libc6-headers",
     ],
 )
 
@@ -16114,66 +15088,6 @@ cc_library(
 )
 
 cc_library(
-    name = "openssh-client-headers",
-    hdrs = [
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":adduser-headers",
-        ":libc6-headers",
-        ":libedit2-headers",
-        ":libfido2-1-headers",
-        ":libgssapi-krb5-2-headers",
-        ":libselinux1-headers",
-        ":libssl3-headers",
-        ":passwd-headers",
-        ":zlib1g-headers",
-    ],
-)
-
-cc_library(
-    name = "openssh-server-headers",
-    hdrs = [
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":adduser-headers",
-        ":debconf-headers",
-        ":libaudit1-headers",
-        ":libc6-headers",
-        ":libcom-err2-headers",
-        ":libcrypt1-headers",
-        ":libgssapi-krb5-2-headers",
-        ":libkrb5-3-headers",
-        ":libpam-modules-headers",
-        ":libpam-runtime-headers",
-        ":libpam0g-headers",
-        ":libselinux1-headers",
-        ":libssl3-headers",
-        ":libsystemd0-headers",
-        ":libwrap0-headers",
-        ":openssh-client-headers",
-        ":openssh-sftp-server-headers",
-        ":procps-headers",
-        ":runit-helper-headers",
-        ":sysvinit-utils-headers",
-        ":ucf-headers",
-        ":zlib1g-headers",
-    ],
-)
-
-cc_library(
-    name = "openssh-sftp-server-headers",
-    hdrs = [
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libc6-headers",
-        ":openssh-client-headers",
-    ],
-)
-
-cc_library(
     name = "passwd-headers",
     hdrs = [
     ],
@@ -16334,42 +15248,6 @@ cc_library(
 )
 
 cc_library(
-    name = "rsync-headers",
-    hdrs = [
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":libacl1-headers",
-        ":libc6-headers",
-        ":liblz4-1-headers",
-        ":libpopt0-headers",
-        ":libssl3-headers",
-        ":libxxhash0-headers",
-        ":libzstd1-headers",
-        ":sysvinit-utils-headers",
-        ":zlib1g-headers",
-    ],
-)
-
-cc_library(
-    name = "runit-helper-headers",
-    hdrs = [
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-    ],
-)
-
-cc_library(
-    name = "sensible-utils-headers",
-    hdrs = [
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-    ],
-)
-
-cc_library(
     name = "shared-mime-info-headers",
     hdrs = [
     ],
@@ -16378,17 +15256,6 @@ cc_library(
         ":libc6-headers",
         ":libglib2.0-0-headers",
         ":libxml2-headers",
-    ],
-)
-
-cc_library(
-    name = "ssh-headers",
-    hdrs = [
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":openssh-client-headers",
-        ":openssh-server-headers",
     ],
 )
 
@@ -16451,17 +15318,6 @@ cc_library(
 )
 
 cc_library(
-    name = "ucf-headers",
-    hdrs = [
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":debconf-headers",
-        ":sensible-utils-headers",
-    ],
-)
-
-cc_library(
     name = "unixodbc-common-headers",
     hdrs = [
     ],
@@ -16490,6 +15346,7 @@ cc_library(
 
 cc_library(
     name = "usr_lib_gcc_x86_64-linux-gnu_12_libgcc_s.so-lib",
+    srcs = ["usr/lib/gcc/x86_64-linux-gnu/12/libgcc_s.so"],
     deps = [
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
     ],
@@ -20425,6 +19282,7 @@ cc_library(
 
 cc_library(
     name = "usr_lib_x86_64-linux-gnu_libc.so-lib",
+    srcs = ["usr/lib/x86_64-linux-gnu/libc.so"],
     deps = [
         ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libc_nonshared.a-lib",
@@ -20436,12 +19294,6 @@ cc_library(
     srcs = ["lib/x86_64-linux-gnu/libc.so.6"],
     deps = [
         ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
-    ],
-)
-
-cc_library(
-    name = "usr_lib_x86_64-linux-gnu_libc_nonshared.a-lib",
-    deps = [
     ],
 )
 
@@ -20484,13 +19336,6 @@ cc_library(
 cc_library(
     name = "usr_lib_x86_64-linux-gnu_libcap.so.2.66-lib",
     srcs = ["lib/x86_64-linux-gnu/libcap.so.2"],
-    deps = [
-    ],
-)
-
-cc_library(
-    name = "usr_lib_x86_64-linux-gnu_libcbor.so.0.8.0-lib",
-    srcs = ["lib/x86_64-linux-gnu/libcbor.so.0.8"],
     deps = [
     ],
 )
@@ -21006,18 +19851,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libffi.so.8.1.2-lib",
     srcs = ["lib/x86_64-linux-gnu/libffi.so.8"],
     deps = [
-    ],
-)
-
-cc_library(
-    name = "usr_lib_x86_64-linux-gnu_libfido2.so.1.12.0-lib",
-    srcs = ["lib/x86_64-linux-gnu/libfido2.so.1"],
-    deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
-        ":usr_lib_x86_64-linux-gnu_libcbor.so.0.8.0-lib",
-        ":usr_lib_x86_64-linux-gnu_libcrypto.so.3-lib",
-        ":usr_lib_x86_64-linux-gnu_libudev.so.1.7.5-lib",
-        ":usr_lib_x86_64-linux-gnu_libz.so.1.2.13-lib",
     ],
 )
 
@@ -22779,6 +21612,7 @@ cc_library(
 
 cc_library(
     name = "usr_lib_x86_64-linux-gnu_libm.so-lib",
+    srcs = ["usr/lib/x86_64-linux-gnu/libm.so"],
     deps = [
         ":usr_lib_x86_64-linux-gnu_libmvec.so.1-lib",
     ],
@@ -24483,13 +23317,6 @@ cc_library(
 )
 
 cc_library(
-    name = "usr_lib_x86_64-linux-gnu_libpopt.so.0.0.2-lib",
-    srcs = ["lib/x86_64-linux-gnu/libpopt.so.0"],
-    deps = [
-    ],
-)
-
-cc_library(
     name = "usr_lib_x86_64-linux-gnu_libpq.so.5.15-lib",
     srcs = ["lib/x86_64-linux-gnu/libpq.so.5"],
     deps = [
@@ -25234,26 +24061,12 @@ cc_library(
 )
 
 cc_library(
-    name = "usr_lib_x86_64-linux-gnu_libusb-0.1.so.4.4.4-lib",
-    srcs = ["lib/x86_64-linux-gnu/libusb-0.1.so.4"],
-    deps = [
-    ],
-)
-
-cc_library(
     name = "usr_lib_x86_64-linux-gnu_libusb-1.0.so.0.3.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libusb-1.0.so.0"],
     deps = [
         ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libpthread.so.0-lib",
         ":usr_lib_x86_64-linux-gnu_libudev.so.1.7.5-lib",
-    ],
-)
-
-cc_library(
-    name = "usr_lib_x86_64-linux-gnu_libusb.so-lib",
-    deps = [
-        ":usr_lib_x86_64-linux-gnu_libusb-0.1.so.4.4.4-lib",
     ],
 )
 
@@ -27525,14 +26338,6 @@ cc_library(
 )
 
 cc_library(
-    name = "usr_lib_x86_64-linux-gnu_libwrap.so.0.7.6-lib",
-    srcs = ["lib/x86_64-linux-gnu/libwrap.so.0"],
-    deps = [
-        ":usr_lib_x86_64-linux-gnu_libnsl.so.2.0.1-lib",
-    ],
-)
-
-cc_library(
     name = "usr_lib_x86_64-linux-gnu_libx264.so.164-lib",
     srcs = ["lib/x86_64-linux-gnu/libx264.so.164"],
     deps = [
@@ -27754,13 +26559,6 @@ cc_library(
     srcs = ["lib/x86_64-linux-gnu/libxvidcore.so.4"],
     deps = [
         ":usr_lib_x86_64-linux-gnu_libpthread.so.0-lib",
-    ],
-)
-
-cc_library(
-    name = "usr_lib_x86_64-linux-gnu_libxxhash.so.0.8.1-lib",
-    srcs = ["lib/x86_64-linux-gnu/libxxhash.so.0"],
-    deps = [
     ],
 )
 
@@ -29819,9 +28617,7 @@ filegroup(
     srcs = [
         "etc/adduser.conf",
         "etc/deluser.conf",
-        "usr/sbin/addgroup",
         "usr/sbin/adduser",
-        "usr/sbin/delgroup",
         "usr/sbin/deluser",
         "usr/share/doc/adduser/NEWS.Debian.gz",
         "usr/share/doc/adduser/README.gz",
@@ -29873,12 +28669,9 @@ filegroup(
         "usr/share/man/fr/man8/deluser.8.gz",
         "usr/share/man/man5/adduser.conf.5.gz",
         "usr/share/man/man5/deluser.conf.5.gz",
-        "usr/share/man/man8/addgroup.8.gz",
         "usr/share/man/man8/adduser.8.gz",
         "usr/share/man/man8/adduser.local.8.gz",
-        "usr/share/man/man8/delgroup.8.gz",
         "usr/share/man/man8/deluser.8.gz",
-        "usr/share/man/man8/deluser.local.8.gz",
         "usr/share/man/nl/man5/adduser.conf.5.gz",
         "usr/share/man/nl/man5/deluser.conf.5.gz",
         "usr/share/man/nl/man8/adduser.8.gz",
@@ -29890,7 +28683,6 @@ filegroup(
         "usr/share/perl5/Debian/AdduserCommon.pm",
         ":passwd-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -29914,7 +28706,6 @@ filegroup(
         ":libc6-filegroup",
         ":libdbus-1-3-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -29941,7 +28732,6 @@ filegroup(
         ":libselinux1-filegroup",
         ":libsystemd0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -29950,7 +28740,6 @@ filegroup(
         "etc/default/dbus",
         "etc/init.d/dbus",
         "lib/systemd/system/dbus.service",
-        "lib/systemd/system/multi-user.target.wants/dbus.service",
         "usr/lib/dbus-1.0/dbus-daemon-launch-helper",
         "usr/share/bug/dbus/control",
         "usr/share/doc/dbus/AUTHORS.gz",
@@ -29968,7 +28757,6 @@ filegroup(
         ":libexpat1-filegroup",
         ":libsystemd0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -29982,14 +28770,12 @@ filegroup(
         "usr/share/doc/dbus-session-bus-common/copyright",
         "usr/share/lintian/overrides/dbus-session-bus-common",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "dbus-system-bus-common-filegroup",
     srcs = [
         "lib/systemd/system/dbus.socket",
-        "lib/systemd/system/sockets.target.wants/dbus.socket",
         "usr/lib/sysusers.d/dbus.conf",
         "usr/share/dbus-1/system.conf",
         "usr/share/doc/dbus-system-bus-common/AUTHORS.gz",
@@ -30000,7 +28786,6 @@ filegroup(
         "usr/share/lintian/overrides/dbus-system-bus-common",
         ":adduser-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -30009,7 +28794,6 @@ filegroup(
         "etc/X11/Xsession.d/20dbus_xdg-runtime",
         "usr/lib/systemd/user/dbus.service",
         "usr/lib/systemd/user/dbus.socket",
-        "usr/lib/systemd/user/sockets.target.wants/dbus.socket",
         "usr/share/doc/dbus-user-session/AUTHORS.gz",
         "usr/share/doc/dbus-user-session/NEWS.gz",
         "usr/share/doc/dbus-user-session/README.gz",
@@ -30021,7 +28805,6 @@ filegroup(
         ":libpam-systemd-filegroup",
         ":systemd-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -30035,7 +28818,6 @@ filegroup(
         ":libdconf1-filegroup",
         ":libglib2.0-0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -30053,7 +28835,6 @@ filegroup(
         ":libglib2.0-0-filegroup",
         ":procps-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -30071,7 +28852,6 @@ filegroup(
         "usr/sbin/dpkg-preconfigure",
         "usr/sbin/dpkg-reconfigure",
         "usr/share/bash-completion/completions/debconf",
-        "usr/share/bash-completion/completions/debconf-show",
         "usr/share/debconf/confmodule",
         "usr/share/debconf/confmodule.sh",
         "usr/share/debconf/debconf.conf",
@@ -30195,7 +28975,6 @@ filegroup(
         "usr/share/perl5/Debian/DebConf/Client/ConfModule.pm",
         "usr/share/pixmaps/debian-logo.png",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -30206,7 +28985,6 @@ filegroup(
         "lib/udev/rules.d/95-dm-notify.rules",
         "sbin/blkdeactivate",
         "sbin/dmsetup",
-        "sbin/dmstats",
         "usr/share/doc/dmsetup/changelog.Debian.devmapper.gz",
         "usr/share/doc/dmsetup/changelog.Debian.gz",
         "usr/share/doc/dmsetup/copyright",
@@ -30216,7 +28994,6 @@ filegroup(
         "usr/share/man/man8/dmstats.8.gz",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -30389,31 +29166,11 @@ filegroup(
         "usr/share/polkit-1/actions/org.dpkg.pkexec.update-alternatives.policy",
         ":tar-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "fontconfig-config-filegroup",
     srcs = [
-        "etc/fonts/conf.d/10-scale-bitmap-fonts.conf",
-        "etc/fonts/conf.d/10-yes-antialias.conf",
-        "etc/fonts/conf.d/11-lcdfilter-default.conf",
-        "etc/fonts/conf.d/20-unhint-small-vera.conf",
-        "etc/fonts/conf.d/30-metric-aliases.conf",
-        "etc/fonts/conf.d/40-nonlatin.conf",
-        "etc/fonts/conf.d/45-generic.conf",
-        "etc/fonts/conf.d/45-latin.conf",
-        "etc/fonts/conf.d/48-spacing.conf",
-        "etc/fonts/conf.d/49-sansserif.conf",
-        "etc/fonts/conf.d/50-user.conf",
-        "etc/fonts/conf.d/51-local.conf",
-        "etc/fonts/conf.d/60-generic.conf",
-        "etc/fonts/conf.d/60-latin.conf",
-        "etc/fonts/conf.d/65-fonts-persian.conf",
-        "etc/fonts/conf.d/65-nonlatin.conf",
-        "etc/fonts/conf.d/69-unifont.conf",
-        "etc/fonts/conf.d/80-delicious.conf",
-        "etc/fonts/conf.d/90-synthetic.conf",
         "etc/fonts/conf.d/README",
         "etc/fonts/fonts.conf",
         "usr/share/doc/fontconfig-config/NEWS.Debian.gz",
@@ -30466,7 +29223,6 @@ filegroup(
         ":debconf-filegroup",
         ":fonts-dejavu-core-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -30503,7 +29259,6 @@ filegroup(
         ":libfontconfig1-filegroup",
         ":libfreetype6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -30521,18 +29276,6 @@ filegroup(
         "etc/fonts/conf.avail/58-dejavu-lgc-sans.conf",
         "etc/fonts/conf.avail/58-dejavu-lgc-sans-mono.conf",
         "etc/fonts/conf.avail/58-dejavu-lgc-serif.conf",
-        "etc/fonts/conf.d/20-unhint-small-dejavu-lgc-sans.conf",
-        "etc/fonts/conf.d/20-unhint-small-dejavu-lgc-sans-mono.conf",
-        "etc/fonts/conf.d/20-unhint-small-dejavu-lgc-serif.conf",
-        "etc/fonts/conf.d/20-unhint-small-dejavu-sans.conf",
-        "etc/fonts/conf.d/20-unhint-small-dejavu-sans-mono.conf",
-        "etc/fonts/conf.d/20-unhint-small-dejavu-serif.conf",
-        "etc/fonts/conf.d/57-dejavu-sans.conf",
-        "etc/fonts/conf.d/57-dejavu-sans-mono.conf",
-        "etc/fonts/conf.d/57-dejavu-serif.conf",
-        "etc/fonts/conf.d/58-dejavu-lgc-sans.conf",
-        "etc/fonts/conf.d/58-dejavu-lgc-sans-mono.conf",
-        "etc/fonts/conf.d/58-dejavu-lgc-serif.conf",
         "usr/share/doc/fonts-dejavu-core/AUTHORS",
         "usr/share/doc/fonts-dejavu-core/BUGS",
         "usr/share/doc/fonts-dejavu-core/README.md",
@@ -30549,7 +29292,6 @@ filegroup(
         "usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",
         "usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -30560,7 +29302,6 @@ filegroup(
         "usr/share/doc/gcc-12-base/changelog.Debian.gz",
         "usr/share/doc/gcc-12-base/copyright",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -30715,7 +29456,6 @@ filegroup(
         "usr/share/gdal/vicar.json",
         "usr/share/lintian/overrides/gdal-data",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -30728,7 +29468,6 @@ filegroup(
         "usr/share/doc/gdal-plugins/changelog.gz",
         "usr/share/doc/gdal-plugins/copyright",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -30750,7 +29489,6 @@ filegroup(
         "usr/share/doc/gir1.2-freedesktop/copyright",
         ":gir1.2-glib-2.0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -30766,7 +29504,6 @@ filegroup(
         ":libgirepository-1.0-1-filegroup",
         ":libglib2.0-0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -30795,7 +29532,6 @@ filegroup(
         ":gir1.2-gstreamer-1.0-filegroup",
         ":libgstreamer-plugins-bad1.0-0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -30822,7 +29558,6 @@ filegroup(
         ":libgstreamer-gl1.0-0-filegroup",
         ":libgstreamer-plugins-base1.0-0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -30839,7 +29574,6 @@ filegroup(
         ":gir1.2-glib-2.0-filegroup",
         ":libgstreamer1.0-0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -30851,7 +29585,6 @@ filegroup(
         ":gir1.2-glib-2.0-filegroup",
         ":libgudev-1.0-0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -30931,7 +29664,6 @@ filegroup(
         "usr/share/locale/zh_HK/LC_MESSAGES/glib-networking.mo",
         "usr/share/locale/zh_TW/LC_MESSAGES/glib-networking.mo",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -30951,7 +29683,6 @@ filegroup(
         ":libgnutls30-filegroup",
         ":libproxy1v5-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -30967,7 +29698,6 @@ filegroup(
         ":libglib2.0-0-filegroup",
         ":libproxy1v5-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -30980,7 +29710,6 @@ filegroup(
         "usr/share/lintian/overrides/glx-alternative-mesa",
         ":update-glx-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -30996,7 +29725,6 @@ filegroup(
         ":glx-diversions-filegroup",
         ":update-glx-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -31010,7 +29738,6 @@ filegroup(
         "usr/share/lintian/overrides/glx-diversions",
         ":glx-alternative-mesa-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -31114,7 +29841,6 @@ filegroup(
         "usr/share/locale/zh_TW/LC_MESSAGES/gsettings-desktop-schemas.mo",
         ":dconf-gsettings-backend-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -31137,30 +29863,22 @@ filegroup(
         "etc/libibverbs.d/rxe.driver",
         "etc/libibverbs.d/siw.driver",
         "etc/libibverbs.d/vmw_pvrdma.driver",
-        "usr/lib/x86_64-linux-gnu/libefa.so.1",
         "usr/lib/x86_64-linux-gnu/libefa.so.1.2.44.0",
         "usr/lib/x86_64-linux-gnu/libibverbs/libbnxt_re-rdmav34.so",
         "usr/lib/x86_64-linux-gnu/libibverbs/libcxgb4-rdmav34.so",
-        "usr/lib/x86_64-linux-gnu/libibverbs/libefa-rdmav34.so",
         "usr/lib/x86_64-linux-gnu/libibverbs/liberdma-rdmav34.so",
         "usr/lib/x86_64-linux-gnu/libibverbs/libhfi1verbs-rdmav34.so",
         "usr/lib/x86_64-linux-gnu/libibverbs/libhns-rdmav34.so",
         "usr/lib/x86_64-linux-gnu/libibverbs/libipathverbs-rdmav34.so",
         "usr/lib/x86_64-linux-gnu/libibverbs/libirdma-rdmav34.so",
-        "usr/lib/x86_64-linux-gnu/libibverbs/libmana-rdmav34.so",
-        "usr/lib/x86_64-linux-gnu/libibverbs/libmlx4-rdmav34.so",
-        "usr/lib/x86_64-linux-gnu/libibverbs/libmlx5-rdmav34.so",
         "usr/lib/x86_64-linux-gnu/libibverbs/libmthca-rdmav34.so",
         "usr/lib/x86_64-linux-gnu/libibverbs/libocrdma-rdmav34.so",
         "usr/lib/x86_64-linux-gnu/libibverbs/libqedr-rdmav34.so",
         "usr/lib/x86_64-linux-gnu/libibverbs/librxe-rdmav34.so",
         "usr/lib/x86_64-linux-gnu/libibverbs/libsiw-rdmav34.so",
         "usr/lib/x86_64-linux-gnu/libibverbs/libvmw_pvrdma-rdmav34.so",
-        "usr/lib/x86_64-linux-gnu/libmana.so.1",
         "usr/lib/x86_64-linux-gnu/libmana.so.1.0.44.0",
-        "usr/lib/x86_64-linux-gnu/libmlx4.so.1",
         "usr/lib/x86_64-linux-gnu/libmlx4.so.1.0.44.0",
-        "usr/lib/x86_64-linux-gnu/libmlx5.so.1",
         "usr/lib/x86_64-linux-gnu/libmlx5.so.1.24.44.0",
         "usr/share/doc/ibverbs-providers/changelog.Debian.gz",
         "usr/share/doc/ibverbs-providers/copyright",
@@ -31168,7 +29886,6 @@ filegroup(
         ":libc6-filegroup",
         ":libibverbs1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -31191,7 +29908,6 @@ filegroup(
         "usr/share/man/man8/update-rc.d.8.gz",
         ":usr-is-merged-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -31219,1264 +29935,753 @@ filegroup(
         "usr/share/iso-codes/json/schema-639-2.json",
         "usr/share/iso-codes/json/schema-639-3.json",
         "usr/share/iso-codes/json/schema-639-5.json",
-        "usr/share/locale/ab/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ab/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/ab/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/ab/LC_MESSAGES/iso_639_5.mo",
-        "usr/share/locale/ace/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ace/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/ach/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ach/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/af/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/af/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/af/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/af/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/af/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/af/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/af/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/ak/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ak/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/am/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/am/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/am/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/am/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/am/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/am/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/am/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/an/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/an/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/ar/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/ar/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ar/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/ar/LC_MESSAGES/iso_3166-3.mo",
         "usr/share/locale/ar/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/ar/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/ar/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/ar/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/ar/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/as/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/as/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/as/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/as/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/as/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/ast/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/ast/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ast/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/ast/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/ast/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/ast/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/ast/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/ast/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/ast/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/ast/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/ast/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/ast/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/ast/LC_MESSAGES/iso_639_5.mo",
-        "usr/share/locale/ay/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ay/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/az/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/az/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/az/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/az/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/az/LC_MESSAGES/iso_3166_2.mo",
-        "usr/share/locale/az/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/az/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/az/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/az/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/ba/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ba/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/bar/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/bar/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/be/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/be/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/be/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/be/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/be/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/be/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/be/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/be/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/be/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/be/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/be/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/be/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/be/LC_MESSAGES/iso_639_5.mo",
         "usr/share/locale/bg/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/bg/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/bg/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/bg/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/bg/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/bg/LC_MESSAGES/iso_3166_2.mo",
-        "usr/share/locale/bg/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/bg/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/bg/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/bg/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/bi/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/bi/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/bn/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/bn/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/bn/LC_MESSAGES/iso_3166-3.mo",
         "usr/share/locale/bn/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/bn/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/bn/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/bn/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/bn/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/bn/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/bn/LC_MESSAGES/iso_639_5.mo",
         "usr/share/locale/bn_BD/LC_MESSAGES/iso_15924.mo",
         "usr/share/locale/bn_BD/LC_MESSAGES/iso_3166-2.mo",
-        "usr/share/locale/bn_BD/LC_MESSAGES/iso_3166_2.mo",
-        "usr/share/locale/bn_BD/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/bn_BD/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/bn_BD/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/bn_BD/LC_MESSAGES/iso_639_5.mo",
-        "usr/share/locale/bn_IN/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/bn_IN/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/bn_IN/LC_MESSAGES/iso_3166-3.mo",
         "usr/share/locale/br/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/br/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/br/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/br/LC_MESSAGES/iso_3166-3.mo",
         "usr/share/locale/br/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/br/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/br/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/br/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/br/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/bs/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/bs/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/bs/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/bs/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/bs/LC_MESSAGES/iso_3166_2.mo",
-        "usr/share/locale/bs/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/bs/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/bs/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/bs/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/byn/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/byn/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/byn/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/byn/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/byn/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/byn/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/byn/LC_MESSAGES/iso_639_3.mo",
         "usr/share/locale/ca/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/ca/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ca/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/ca/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/ca/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/ca/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/ca/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/ca/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/ca/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/ca/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/ca/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/ce/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ce/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/ch/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ch/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/chr/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/chr/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/ckb/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ckb/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/crh/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/crh/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/crh/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/crh/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/crh/LC_MESSAGES/iso_3166_2.mo",
-        "usr/share/locale/crh/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/crh/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/crh/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/crh/LC_MESSAGES/iso_639_3.mo",
         "usr/share/locale/cs/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/cs/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/cs/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/cs/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/cs/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/cs/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/cs/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/cs/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/cs/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/cs/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/cs/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/cs/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/cs/LC_MESSAGES/iso_639_5.mo",
-        "usr/share/locale/csb/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/csb/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/cv/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/cv/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/cv/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/cy/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/cy/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/cy/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/cy/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/cy/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/cy/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/cy/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/cy/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/cy/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/cy/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/cy/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/cy/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/cy/LC_MESSAGES/iso_639_5.mo",
         "usr/share/locale/da/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/da/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/da/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/da/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/da/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/da/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/da/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/da/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/da/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/da/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/da/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/da/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/da/LC_MESSAGES/iso_639_5.mo",
         "usr/share/locale/de/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/de/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/de/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/de/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/de/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/de/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/de/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/de/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/de/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/de/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/de/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/de/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/de/LC_MESSAGES/iso_639_5.mo",
-        "usr/share/locale/dv/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/dv/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/dz/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/dz/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/dz/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/ee/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ee/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/el/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/el/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/el/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/el/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/el/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/el/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/el/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/el/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/el/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/el/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/el/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/el/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/el/LC_MESSAGES/iso_639_5.mo",
         "usr/share/locale/en/LC_MESSAGES/iso_3166-2.mo",
-        "usr/share/locale/en/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/eo/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/eo/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/eo/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/eo/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/eo/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/eo/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/eo/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/eo/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/eo/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/eo/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/eo/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/eo/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/eo/LC_MESSAGES/iso_639_5.mo",
         "usr/share/locale/es/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/es/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/es/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/es/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/es/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/es/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/es/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/es/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/es/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/es/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/es/LC_MESSAGES/iso_639_3.mo",
         "usr/share/locale/et/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/et/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/et/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/et/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/et/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/et/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/et/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/et/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/et/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/et/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/et/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/et/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/et/LC_MESSAGES/iso_639_5.mo",
         "usr/share/locale/eu/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/eu/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/eu/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/eu/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/eu/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/eu/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/eu/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/eu/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/eu/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/eu/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/eu/LC_MESSAGES/iso_639_3.mo",
         "usr/share/locale/fa/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/fa/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/fa/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/fa/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/fa/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/fa/LC_MESSAGES/iso_3166_2.mo",
-        "usr/share/locale/fa/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/fa/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/fa/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/fa/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/ff/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ff/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/fi/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/fi/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/fi/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/fi/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/fi/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/fi/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/fi/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/fi/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/fi/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/fi/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/fi/LC_MESSAGES/iso_639_3.mo",
         "usr/share/locale/fil/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/fil/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/fil/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/fil/LC_MESSAGES/iso_3166-2.mo",
-        "usr/share/locale/fil/LC_MESSAGES/iso_3166_2.mo",
-        "usr/share/locale/fo/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/fo/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/fo/LC_MESSAGES/iso_3166-3.mo",
         "usr/share/locale/fr/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/fr/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/fr/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/fr/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/fr/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/fr/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/fr/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/fr/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/fr/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/fr/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/fr/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/fr/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/fr/LC_MESSAGES/iso_639_5.mo",
-        "usr/share/locale/frp/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/frp/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/fur/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/fur/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/fur/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/fur/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/fur/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/fur/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/fur/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/fur/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/fur/LC_MESSAGES/iso_639_5.mo",
-        "usr/share/locale/fy/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/fy/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/ga/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ga/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/ga/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/ga/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/ga/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/ga/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/ga/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/ga/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/ga/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/ga/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/gez/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/gez/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/gez/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/gez/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/gez/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/gez/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/gez/LC_MESSAGES/iso_639_3.mo",
         "usr/share/locale/gl/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/gl/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/gl/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/gl/LC_MESSAGES/iso_3166-3.mo",
         "usr/share/locale/gl/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/gl/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/gl/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/gl/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/gl/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/gn/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/gn/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/gu/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/gu/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/gu/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/gu/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/gu/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/gu/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/gu/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/gv/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/gv/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/ha/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ha/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/haw/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/haw/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/haw/LC_MESSAGES/iso_3166-3.mo",
         "usr/share/locale/he/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/he/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/he/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/he/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/he/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/he/LC_MESSAGES/iso_3166_2.mo",
-        "usr/share/locale/he/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/he/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/he/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/he/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/hi/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/hi/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/hi/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/hi/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/hi/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/hi/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/hi/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/hi/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/hi/LC_MESSAGES/iso_639_5.mo",
         "usr/share/locale/hr/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/hr/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/hr/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/hr/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/hr/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/hr/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/hr/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/hr/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/hr/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/hr/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/hr/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/hr/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/hr/LC_MESSAGES/iso_639_5.mo",
-        "usr/share/locale/ht/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ht/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/hu/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/hu/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/hu/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/hu/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/hu/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/hu/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/hu/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/hu/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/hu/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/hu/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/hu/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/hu/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/hu/LC_MESSAGES/iso_639_5.mo",
-        "usr/share/locale/hy/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/hy/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/hy/LC_MESSAGES/iso_3166-3.mo",
         "usr/share/locale/ia/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/ia/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ia/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/ia/LC_MESSAGES/iso_3166-3.mo",
         "usr/share/locale/id/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/id/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/id/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/id/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/id/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/id/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/id/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/id/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/id/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/id/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/id/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/id/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/id/LC_MESSAGES/iso_639_5.mo",
-        "usr/share/locale/io/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/io/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/is/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/is/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/is/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/is/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/is/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/is/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/is/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/is/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/is/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/is/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/is/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/is/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/is/LC_MESSAGES/iso_639_5.mo",
         "usr/share/locale/it/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/it/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/it/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/it/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/it/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/it/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/it/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/it/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/it/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/it/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/it/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/it/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/it/LC_MESSAGES/iso_639_5.mo",
-        "usr/share/locale/iu/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/iu/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/ja/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/ja/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ja/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/ja/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/ja/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/ja/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/ja/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/ja/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/ja/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/ja/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/ja/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/jam/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/jam/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/ka/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/ka/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ka/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/ka/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/ka/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/ka/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/ka/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/ka/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/ka/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/ka/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/ka/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/ka/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/ka/LC_MESSAGES/iso_639_5.mo",
         "usr/share/locale/kab/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/kab/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/kab/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/kab/LC_MESSAGES/iso_3166-2.mo",
-        "usr/share/locale/kab/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/kab/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/kab/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/kab/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/kab/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/kab/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/kab/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/kab/LC_MESSAGES/iso_639_5.mo",
-        "usr/share/locale/ki/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ki/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/kk/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/kk/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/kk/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/kl/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/kl/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/km/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/km/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/km/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/kmr/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/kmr/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/kmr/LC_MESSAGES/iso_3166-3.mo",
         "usr/share/locale/kmr/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/kmr/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/kn/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/kn/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/kn/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/kn/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/kn/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/kn/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/kn/LC_MESSAGES/iso_639_3.mo",
         "usr/share/locale/ko/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/ko/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ko/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/ko/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/ko/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/ko/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/ko/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/ko/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/ko/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/ko/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/ko/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/kok/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/kok/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/kok/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/kok/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/kv/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/kv/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/kw/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/kw/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/ky/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ky/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/ky/LC_MESSAGES/iso_3166-2.mo",
-        "usr/share/locale/ky/LC_MESSAGES/iso_3166_2.mo",
-        "usr/share/locale/lo/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/lo/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/lt/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/lt/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/lt/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/lt/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/lt/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/lt/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/lt/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/lt/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/lt/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/lt/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/lt/LC_MESSAGES/iso_639_3.mo",
         "usr/share/locale/lv/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/lv/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/lv/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/lv/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/lv/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/lv/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/lv/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/lv/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/lv/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/lv/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/lv/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/mai/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/mai/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/mhr/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/mhr/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/mi/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/mi/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/mi/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/mi/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/mi/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/mi/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/mi/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/mk/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/mk/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/mk/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/mk/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/mk/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/mk/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/mk/LC_MESSAGES/iso_639_3.mo",
         "usr/share/locale/ml/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/ml/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ml/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/ml/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/ml/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/ml/LC_MESSAGES/iso_639-2.mo",
-        "usr/share/locale/mn/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/mn/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/mn/LC_MESSAGES/iso_3166-3.mo",
         "usr/share/locale/mn/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/mn/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/mn/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/mn/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/mn/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/mo/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/mo/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/mr/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/mr/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/mr/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/mr/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/mr/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/mr/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/mr/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/ms/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ms/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/ms/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/ms/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/ms/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/ms/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/ms/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/mt/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/mt/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/mt/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/mt/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/mt/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/mt/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/mt/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/my/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/my/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/na/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/na/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/nah/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/nah/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/nb/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/nb/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/nb/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/nb/LC_MESSAGES/iso_3166-3.mo",
         "usr/share/locale/nb/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/nb/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/nb/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/nb/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/nb/LC_MESSAGES/iso_639_3.mo",
         "usr/share/locale/nb_NO/LC_MESSAGES/iso_3166-2.mo",
-        "usr/share/locale/nb_NO/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/nb_NO/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/nb_NO/LC_MESSAGES/iso_639_5.mo",
-        "usr/share/locale/ne/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ne/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/ne/LC_MESSAGES/iso_3166-3.mo",
         "usr/share/locale/nl/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/nl/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/nl/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/nl/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/nl/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/nl/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/nl/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/nl/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/nl/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/nl/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/nl/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/nl/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/nl/LC_MESSAGES/iso_639_5.mo",
         "usr/share/locale/nn/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/nn/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/nn/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/nn/LC_MESSAGES/iso_3166-3.mo",
         "usr/share/locale/nn/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/nn/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/nn/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/nn/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/nn/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/nso/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/nso/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/nso/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/nso/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/nso/LC_MESSAGES/iso_3166_2.mo",
-        "usr/share/locale/nso/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/nso/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/nso/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/nso/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/nv/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/nv/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/oc/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/oc/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/oc/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/oc/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/oc/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/oc/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/oc/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/oc/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/oc/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/oc/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/oc/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/oc/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/oc/LC_MESSAGES/iso_639_5.mo",
-        "usr/share/locale/or/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/or/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/or/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/or/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/or/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/or/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/or/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/pa/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/pa/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/pa/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/pa/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/pa/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/pa/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/pa/LC_MESSAGES/iso_639_3.mo",
         "usr/share/locale/pa_PK/LC_MESSAGES/iso_15924.mo",
         "usr/share/locale/pa_PK/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/pa_PK/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/pa_PK/LC_MESSAGES/iso_3166_2.mo",
-        "usr/share/locale/pa_PK/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/pa_PK/LC_MESSAGES/iso_639-2.mo",
-        "usr/share/locale/pap/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/pap/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/pi/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/pi/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/pl/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/pl/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/pl/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/pl/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/pl/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/pl/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/pl/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/pl/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/pl/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/pl/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/pl/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/pl/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/pl/LC_MESSAGES/iso_639_5.mo",
-        "usr/share/locale/ps/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ps/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/ps/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/ps/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/ps/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/ps/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/ps/LC_MESSAGES/iso_639_3.mo",
         "usr/share/locale/pt/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/pt/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/pt/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/pt/LC_MESSAGES/iso_3166-3.mo",
         "usr/share/locale/pt/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/pt/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/pt/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/pt/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/pt/LC_MESSAGES/iso_639_3.mo",
         "usr/share/locale/pt_BR/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/pt_BR/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/pt_BR/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/pt_BR/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/pt_BR/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/pt_BR/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/pt_BR/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/pt_BR/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/pt_BR/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/pt_BR/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/pt_BR/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/pt_BR/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/pt_BR/LC_MESSAGES/iso_639_5.mo",
         "usr/share/locale/ro/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/ro/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ro/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/ro/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/ro/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/ro/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/ro/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/ro/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/ro/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/ro/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/ro/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/ro_MD/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/ro_MD/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/ru/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/ru/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ru/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/ru/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/ru/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/ru/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/ru/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/ru/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/ru/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/ru/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/ru/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/ru/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/ru/LC_MESSAGES/iso_639_5.mo",
-        "usr/share/locale/rw/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/rw/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/rw/LC_MESSAGES/iso_3166-3.mo",
         "usr/share/locale/rw/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/rw/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/rw/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/rw/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/rw/LC_MESSAGES/iso_639_3.mo",
         "usr/share/locale/sc/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/sc/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/sc/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/sc/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/sc/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/sc/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/sc/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/sc/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/sc/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/sc/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/sc/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/sc/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/sc/LC_MESSAGES/iso_639_5.mo",
-        "usr/share/locale/sd/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/sd/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/si/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/si/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/si/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/si/LC_MESSAGES/iso_3166-3.mo",
         "usr/share/locale/sk/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/sk/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/sk/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/sk/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/sk/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/sk/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/sk/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/sk/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/sk/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/sk/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/sk/LC_MESSAGES/iso_639_3.mo",
         "usr/share/locale/sl/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/sl/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/sl/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/sl/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/sl/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/sl/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/sl/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/sl/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/sl/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/sl/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/sl/LC_MESSAGES/iso_639_3.mo",
         "usr/share/locale/so/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/so/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/so/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/so/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/so/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/so/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/so/LC_MESSAGES/iso_4217.mo",
         "usr/share/locale/so/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/so/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/son/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/son/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/sq/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/sq/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/sq/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/sq/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/sq/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/sq/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/sq/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/sq/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/sq/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/sq/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/sq/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/sq/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/sq/LC_MESSAGES/iso_639_5.mo",
         "usr/share/locale/sr/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/sr/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/sr/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/sr/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/sr/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/sr/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/sr/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/sr/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/sr/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/sr/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/sr/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/sr/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/sr/LC_MESSAGES/iso_639_5.mo",
         "usr/share/locale/sr@latin/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/sr@latin/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/sr@latin/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/sr@latin/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/sr@latin/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/sr@latin/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/sr@latin/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/sr@latin/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/sr@latin/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/sr@latin/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/sr@latin/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/sr@latin/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/sr@latin/LC_MESSAGES/iso_639_5.mo",
         "usr/share/locale/sv/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/sv/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/sv/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/sv/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/sv/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/sv/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/sv/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/sv/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/sv/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/sv/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/sv/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/sv/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/sv/LC_MESSAGES/iso_639_5.mo",
-        "usr/share/locale/sw/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/sw/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/sw/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/ta/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ta/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/ta/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/ta/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/ta/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/ta/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/ta/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/te/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/te/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/te/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/te/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/te/LC_MESSAGES/iso_639-2.mo",
-        "usr/share/locale/tg/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/tg/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/tg/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/tg/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/th/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/th/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/th/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/th/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/th/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/th/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/th/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/th/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/th/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/th/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/th/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/ti/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ti/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/ti/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/ti/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/ti/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/ti/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/ti/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/tig/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/tig/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/tig/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/tig/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/tig/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/tig/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/tig/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/tk/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/tk/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/tk/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/tl/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/tl/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/tl/LC_MESSAGES/iso_3166-3.mo",
         "usr/share/locale/tr/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/tr/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/tr/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/tr/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/tr/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/tr/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/tr/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/tr/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/tr/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/tr/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/tr/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/tr/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/tr/LC_MESSAGES/iso_639_5.mo",
-        "usr/share/locale/tt/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/tt/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/tt/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/tt/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/tt/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/tt/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/tt/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/tt@iqtelif/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/tt@iqtelif/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/tt@iqtelif/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/tt@iqtelif/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/tt@iqtelif/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/tt@iqtelif/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/tt@iqtelif/LC_MESSAGES/iso_639_3.mo",
         "usr/share/locale/tzm/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/tzm/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/tzm/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/tzm/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/tzm/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/tzm/LC_MESSAGES/iso_639-2.mo",
-        "usr/share/locale/ug/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ug/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/ug/LC_MESSAGES/iso_3166-3.mo",
         "usr/share/locale/uk/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/uk/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/uk/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/uk/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/uk/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/uk/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/uk/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/uk/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/uk/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/uk/LC_MESSAGES/iso_639-3.mo",
         "usr/share/locale/uk/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/uk/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/uk/LC_MESSAGES/iso_639_5.mo",
-        "usr/share/locale/ur/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ur/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/uz/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/uz/LC_MESSAGES/iso_3166-1.mo",
-        "usr/share/locale/ve/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/ve/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/ve/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/ve/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/ve/LC_MESSAGES/iso_3166_2.mo",
-        "usr/share/locale/ve/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/ve/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/ve/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/ve/LC_MESSAGES/iso_639_3.mo",
         "usr/share/locale/vi/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/vi/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/vi/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/vi/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/vi/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/vi/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/vi/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/vi/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/vi/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/vi/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/vi/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/wa/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/wa/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/wa/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/wa/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/wa/LC_MESSAGES/iso_3166_2.mo",
-        "usr/share/locale/wa/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/wa/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/wa/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/wa/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/wal/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/wal/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/wal/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/wo/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/wo/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/wo/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/xh/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/xh/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/xh/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/xh/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/xh/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/xh/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/xh/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/yo/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/yo/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/zh_CN/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/zh_CN/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/zh_CN/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/zh_CN/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/zh_CN/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/zh_CN/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/zh_CN/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/zh_CN/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/zh_CN/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/zh_CN/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/zh_CN/LC_MESSAGES/iso_639_3.mo",
         "usr/share/locale/zh_HK/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/zh_HK/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/zh_HK/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/zh_HK/LC_MESSAGES/iso_3166-3.mo",
         "usr/share/locale/zh_HK/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/zh_HK/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/zh_HK/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/zh_Hans/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/zh_Hans/LC_MESSAGES/iso_639_5.mo",
         "usr/share/locale/zh_Hant/LC_MESSAGES/iso_639-5.mo",
-        "usr/share/locale/zh_Hant/LC_MESSAGES/iso_639_5.mo",
         "usr/share/locale/zh_TW/LC_MESSAGES/iso_15924.mo",
-        "usr/share/locale/zh_TW/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/zh_TW/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/zh_TW/LC_MESSAGES/iso_3166-2.mo",
         "usr/share/locale/zh_TW/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/zh_TW/LC_MESSAGES/iso_3166_2.mo",
         "usr/share/locale/zh_TW/LC_MESSAGES/iso_4217.mo",
-        "usr/share/locale/zh_TW/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/zh_TW/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/zh_TW/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/zh_TW/LC_MESSAGES/iso_639_3.mo",
-        "usr/share/locale/zu/LC_MESSAGES/iso_3166.mo",
         "usr/share/locale/zu/LC_MESSAGES/iso_3166-1.mo",
         "usr/share/locale/zu/LC_MESSAGES/iso_3166-3.mo",
-        "usr/share/locale/zu/LC_MESSAGES/iso_639.mo",
         "usr/share/locale/zu/LC_MESSAGES/iso_639-2.mo",
         "usr/share/locale/zu/LC_MESSAGES/iso_639-3.mo",
-        "usr/share/locale/zu/LC_MESSAGES/iso_639_3.mo",
         "usr/share/pkgconfig/iso-codes.pc",
         "usr/share/xml/iso-codes/iso_15924.xml",
-        "usr/share/xml/iso-codes/iso_3166.xml",
         "usr/share/xml/iso-codes/iso_3166-1.xml",
         "usr/share/xml/iso-codes/iso_3166-2.xml",
         "usr/share/xml/iso-codes/iso_3166-3.xml",
-        "usr/share/xml/iso-codes/iso_3166_2.xml",
         "usr/share/xml/iso-codes/iso_4217.xml",
-        "usr/share/xml/iso-codes/iso_639.xml",
         "usr/share/xml/iso-codes/iso_639-2.xml",
         "usr/share/xml/iso-codes/iso_639-3.xml",
         "usr/share/xml/iso-codes/iso_639-5.xml",
-        "usr/share/xml/iso-codes/iso_639_3.xml",
-        "usr/share/xml/iso-codes/iso_639_5.xml",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libabsl20220623-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libabsl_bad_any_cast_impl.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_bad_any_cast_impl.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_bad_optional_access.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_bad_optional_access.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_bad_variant_access.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_bad_variant_access.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_base.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_base.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_city.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_city.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_civil_time.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_civil_time.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_cord.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_cord.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_cord_internal.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_cord_internal.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_cordz_functions.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_cordz_functions.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_cordz_handle.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_cordz_handle.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_cordz_info.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_cordz_info.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_cordz_sample_token.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_cordz_sample_token.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_debugging_internal.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_debugging_internal.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_demangle_internal.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_demangle_internal.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_examine_stack.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_examine_stack.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_exponential_biased.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_exponential_biased.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_failure_signal_handler.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_failure_signal_handler.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_flags_commandlineflag.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_flags_commandlineflag.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_flags_commandlineflag_internal.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_flags_commandlineflag_internal.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_flags_config.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_flags_config.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_flags_internal.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_flags_internal.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_flags_marshalling.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_flags_marshalling.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_flags_parse.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_flags_parse.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_flags_private_handle_accessor.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_flags_private_handle_accessor.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_flags_program_name.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_flags_program_name.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_flags_reflection.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_flags_reflection.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_flags_usage.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_flags_usage.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_flags_usage_internal.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_flags_usage_internal.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_graphcycles_internal.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_graphcycles_internal.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_hash.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_hash.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_hashtablez_sampler.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_hashtablez_sampler.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_int128.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_int128.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_leak_check.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_leak_check.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_log_severity.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_log_severity.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_low_level_hash.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_low_level_hash.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_malloc_internal.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_malloc_internal.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_periodic_sampler.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_periodic_sampler.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_random_distributions.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_random_distributions.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_random_internal_distribution_test_util.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_random_internal_distribution_test_util.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_random_internal_platform.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_random_internal_platform.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_random_internal_pool_urbg.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_random_internal_pool_urbg.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_random_internal_randen.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_random_internal_randen.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_random_internal_randen_hwaes.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_random_internal_randen_hwaes.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_random_internal_randen_hwaes_impl.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_random_internal_randen_hwaes_impl.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_random_internal_randen_slow.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_random_internal_randen_slow.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_random_internal_seed_material.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_random_internal_seed_material.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_random_seed_gen_exception.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_random_seed_gen_exception.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_random_seed_sequences.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_random_seed_sequences.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_raw_hash_set.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_raw_hash_set.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_raw_logging_internal.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_raw_logging_internal.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_scoped_set_env.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_scoped_set_env.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_spinlock_wait.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_spinlock_wait.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_stacktrace.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_stacktrace.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_status.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_status.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_statusor.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_statusor.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_str_format_internal.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_str_format_internal.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_strerror.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_strerror.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_strings.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_strings.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_strings_internal.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_strings_internal.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_symbolize.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_symbolize.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_synchronization.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_synchronization.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_throw_delegate.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_throw_delegate.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_time.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_time.so.20220623.0.0",
-        "usr/lib/x86_64-linux-gnu/libabsl_time_zone.so.20220623",
         "usr/lib/x86_64-linux-gnu/libabsl_time_zone.so.20220623.0.0",
         "usr/share/doc/libabsl20220623/changelog.Debian.gz",
         "usr/share/doc/libabsl20220623/copyright",
@@ -32485,13 +30690,11 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libaccinj64-11.8-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libaccinj64.so.11.8",
         "usr/lib/x86_64-linux-gnu/libaccinj64.so.11.8.87",
         "usr/share/doc/libaccinj64-11.8/changelog.Debian.gz",
         "usr/share/doc/libaccinj64-11.8/copyright",
@@ -32500,13 +30703,11 @@ filegroup(
         ":libcupti11.8-filegroup",
         ":libgcc-s1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libacl1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libacl.so.1",
         "usr/lib/x86_64-linux-gnu/libacl.so.1.1.2301",
         "usr/share/doc/libacl1/changelog.Debian.gz",
         "usr/share/doc/libacl1/changelog.gz",
@@ -32514,13 +30715,11 @@ filegroup(
         "usr/share/lintian/overrides/libacl1",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libaec0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libaec.so.0",
         "usr/lib/x86_64-linux-gnu/libaec.so.0.0.12",
         "usr/share/doc/libaec0/AUTHORS",
         "usr/share/doc/libaec0/README.SZIP",
@@ -32533,38 +30732,32 @@ filegroup(
         "usr/share/doc/libaec0/patent.txt",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libaom3-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libaom.so.3",
         "usr/lib/x86_64-linux-gnu/libaom.so.3.6.0",
         "usr/share/doc/libaom3/changelog.Debian.gz",
         "usr/share/doc/libaom3/changelog.gz",
         "usr/share/doc/libaom3/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libapparmor1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libapparmor.so.1",
         "usr/lib/x86_64-linux-gnu/libapparmor.so.1.8.4",
         "usr/share/doc/libapparmor1/changelog.Debian.gz",
         "usr/share/doc/libapparmor1/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libarchive13-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libarchive.so.13",
         "usr/lib/x86_64-linux-gnu/libarchive.so.13.6.2",
         "usr/share/doc/libarchive13/NEWS.gz",
         "usr/share/doc/libarchive13/changelog.Debian.gz",
@@ -32579,7 +30772,6 @@ filegroup(
         ":libzstd1-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -32591,13 +30783,11 @@ filegroup(
         "usr/share/doc/libargon2-1/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libarmadillo11-filegroup",
     srcs = [
-        "usr/lib/libarmadillo.so.11",
         "usr/lib/libarmadillo.so.11.4.2",
         "usr/share/doc/libarmadillo11/README.md.gz",
         "usr/share/doc/libarmadillo11/changelog.Debian.gz",
@@ -32611,13 +30801,11 @@ filegroup(
         ":libstdc++6-filegroup",
         ":libsuperlu5-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libarpack2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libarpack.so.2",
         "usr/lib/x86_64-linux-gnu/libarpack.so.2.1.0",
         "usr/share/doc/libarpack2/changelog.Debian.gz",
         "usr/share/doc/libarpack2/changelog.gz",
@@ -32627,30 +30815,25 @@ filegroup(
         ":libgfortran5-filegroup",
         ":liblapack3-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libasan8-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libasan.so.8",
         "usr/lib/x86_64-linux-gnu/libasan.so.8.0.0",
         ":gcc-12-base-filegroup",
         ":libc6-filegroup",
         ":libgcc-s1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libatomic1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libatomic.so.1",
         "usr/lib/x86_64-linux-gnu/libatomic.so.1.2.0",
         ":gcc-12-base-filegroup",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -32662,13 +30845,11 @@ filegroup(
         "usr/share/doc/libaudit-common/copyright",
         "usr/share/man/man5/libaudit.conf.5.gz",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libaudit1-filegroup",
     srcs = [
-        "lib/x86_64-linux-gnu/libaudit.so.1",
         "lib/x86_64-linux-gnu/libaudit.so.1.0.0",
         "usr/share/doc/libaudit1/changelog.Debian.gz",
         "usr/share/doc/libaudit1/changelog.gz",
@@ -32677,7 +30858,6 @@ filegroup(
         ":libc6-filegroup",
         ":libcap-ng0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -32709,7 +30889,6 @@ filegroup(
         "usr/include/x86_64-linux-gnu/libavcodec/vorbis_parser.h",
         "usr/include/x86_64-linux-gnu/libavcodec/xvmc.h",
         "usr/lib/x86_64-linux-gnu/libavcodec.a",
-        "usr/lib/x86_64-linux-gnu/libavcodec.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libavcodec.pc",
         "usr/share/doc/libavcodec-dev/changelog.Debian.gz",
         "usr/share/doc/libavcodec-dev/changelog.gz",
@@ -32718,13 +30897,11 @@ filegroup(
         ":libavutil-dev-filegroup",
         ":libswresample-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libavcodec59-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libavcodec.so.59",
         "usr/lib/x86_64-linux-gnu/libavcodec.so.59.37.100",
         "usr/share/doc/libavcodec59/changelog.Debian.gz",
         "usr/share/doc/libavcodec59/changelog.gz",
@@ -32765,7 +30942,6 @@ filegroup(
         ":libzvbi0-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -32776,7 +30952,6 @@ filegroup(
         "usr/include/x86_64-linux-gnu/libavformat/version.h",
         "usr/include/x86_64-linux-gnu/libavformat/version_major.h",
         "usr/lib/x86_64-linux-gnu/libavformat.a",
-        "usr/lib/x86_64-linux-gnu/libavformat.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libavformat.pc",
         "usr/share/doc/libavformat-dev/changelog.Debian.gz",
         "usr/share/doc/libavformat-dev/changelog.gz",
@@ -32786,13 +30961,11 @@ filegroup(
         ":libavutil-dev-filegroup",
         ":libswresample-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libavformat59-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libavformat.so.59",
         "usr/lib/x86_64-linux-gnu/libavformat.so.59.27.100",
         "usr/share/doc/libavformat59/changelog.Debian.gz",
         "usr/share/doc/libavformat59/changelog.gz",
@@ -32814,13 +30987,11 @@ filegroup(
         ":libzmq5-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libavif15-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libavif.so.15",
         "usr/lib/x86_64-linux-gnu/libavif.so.15.0.1",
         "usr/share/doc/libavif15/LICENSE.gz",
         "usr/share/doc/libavif15/changelog.Debian.gz",
@@ -32834,7 +31005,6 @@ filegroup(
         ":libsvtav1enc1-filegroup",
         ":libyuv0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -32932,20 +31102,17 @@ filegroup(
         "usr/include/x86_64-linux-gnu/libavutil/video_enc_params.h",
         "usr/include/x86_64-linux-gnu/libavutil/xtea.h",
         "usr/lib/x86_64-linux-gnu/libavutil.a",
-        "usr/lib/x86_64-linux-gnu/libavutil.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libavutil.pc",
         "usr/share/doc/libavutil-dev/changelog.Debian.gz",
         "usr/share/doc/libavutil-dev/changelog.gz",
         "usr/share/doc/libavutil-dev/copyright",
         ":libavutil57-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libavutil57-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libavutil.so.57",
         "usr/lib/x86_64-linux-gnu/libavutil.so.57.28.100",
         "usr/share/doc/libavutil57/changelog.Debian.gz",
         "usr/share/doc/libavutil57/changelog.gz",
@@ -32961,20 +31128,17 @@ filegroup(
         ":libx11-6-filegroup",
         ":ocl-icd-libopencl1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libblas3-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/blas/libblas.so.3",
         "usr/lib/x86_64-linux-gnu/blas/libblas.so.3.11.0",
         "usr/share/doc/libblas3/changelog.Debian.gz",
         "usr/share/doc/libblas3/copyright",
         "usr/share/lintian/overrides/libblas3",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -32982,7 +31146,6 @@ filegroup(
     srcs = [
         "usr/include/blkid/blkid.h",
         "usr/lib/x86_64-linux-gnu/libblkid.a",
-        "usr/lib/x86_64-linux-gnu/libblkid.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/blkid.pc",
         "usr/share/doc/libblkid-dev/changelog.Debian.gz",
         "usr/share/doc/libblkid-dev/changelog.gz",
@@ -32992,13 +31155,11 @@ filegroup(
         ":libc6-dev-filegroup",
         ":uuid-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libblkid1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libblkid.so.1",
         "usr/lib/x86_64-linux-gnu/libblkid.so.1.1.0",
         "usr/share/doc/libblkid1/changelog.Debian.gz",
         "usr/share/doc/libblkid1/changelog.gz",
@@ -33006,13 +31167,11 @@ filegroup(
         "usr/share/lintian/overrides/libblkid1",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libblosc1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libblosc.so.1",
         "usr/lib/x86_64-linux-gnu/libblosc.so.1.21.3",
         "usr/share/doc/libblosc1/README.md.gz",
         "usr/share/doc/libblosc1/THANKS",
@@ -33025,13 +31184,11 @@ filegroup(
         ":libzstd1-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libbluray2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libbluray.so.2",
         "usr/lib/x86_64-linux-gnu/libbluray.so.2.4.3",
         "usr/share/doc/libbluray2/changelog.Debian.gz",
         "usr/share/doc/libbluray2/changelog.gz",
@@ -33042,17 +31199,13 @@ filegroup(
         ":libudfread0-filegroup",
         ":libxml2-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libbrotli1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libbrotlicommon.so.1",
         "usr/lib/x86_64-linux-gnu/libbrotlicommon.so.1.0.9",
-        "usr/lib/x86_64-linux-gnu/libbrotlidec.so.1",
         "usr/lib/x86_64-linux-gnu/libbrotlidec.so.1.0.9",
-        "usr/lib/x86_64-linux-gnu/libbrotlienc.so.1",
         "usr/lib/x86_64-linux-gnu/libbrotlienc.so.1.0.9",
         "usr/share/doc/libbrotli1/changelog.Debian.amd64.gz",
         "usr/share/doc/libbrotli1/changelog.Debian.gz",
@@ -33060,13 +31213,11 @@ filegroup(
         "usr/share/lintian/overrides/libbrotli1",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libbsd0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libbsd.so.0",
         "usr/lib/x86_64-linux-gnu/libbsd.so.0.11.7",
         "usr/share/doc/libbsd0/changelog.Debian.gz",
         "usr/share/doc/libbsd0/changelog.gz",
@@ -33075,14 +31226,11 @@ filegroup(
         ":libc6-filegroup",
         ":libmd0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libbz2-1.0-filegroup",
     srcs = [
-        "lib/x86_64-linux-gnu/libbz2.so.1",
-        "lib/x86_64-linux-gnu/libbz2.so.1.0",
         "lib/x86_64-linux-gnu/libbz2.so.1.0.4",
         "usr/share/doc/libbz2-1.0/changelog.Debian.amd64.gz",
         "usr/share/doc/libbz2-1.0/changelog.Debian.gz",
@@ -33090,7 +31238,6 @@ filegroup(
         "usr/share/doc/libbz2-1.0/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -33103,7 +31250,6 @@ filegroup(
         "usr/share/man/man1/gencat.1.gz",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -33589,12 +31735,9 @@ filegroup(
         "usr/lib/x86_64-linux-gnu/gcrt1.o",
         "usr/lib/x86_64-linux-gnu/grcrt1.o",
         "usr/lib/x86_64-linux-gnu/libBrokenLocale.a",
-        "usr/lib/x86_64-linux-gnu/libBrokenLocale.so",
         "usr/lib/x86_64-linux-gnu/libanl.a",
-        "usr/lib/x86_64-linux-gnu/libanl.so",
         "usr/lib/x86_64-linux-gnu/libc.a",
         "usr/lib/x86_64-linux-gnu/libc.so",
-        "usr/lib/x86_64-linux-gnu/libc_malloc_debug.so",
         "usr/lib/x86_64-linux-gnu/libc_nonshared.a",
         "usr/lib/x86_64-linux-gnu/libdl.a",
         "usr/lib/x86_64-linux-gnu/libg.a",
@@ -33603,15 +31746,10 @@ filegroup(
         "usr/lib/x86_64-linux-gnu/libm-2.36.a",
         "usr/lib/x86_64-linux-gnu/libmcheck.a",
         "usr/lib/x86_64-linux-gnu/libmvec.a",
-        "usr/lib/x86_64-linux-gnu/libmvec.so",
-        "usr/lib/x86_64-linux-gnu/libnss_compat.so",
-        "usr/lib/x86_64-linux-gnu/libnss_hesiod.so",
         "usr/lib/x86_64-linux-gnu/libpthread.a",
         "usr/lib/x86_64-linux-gnu/libpthread_nonshared.a",
         "usr/lib/x86_64-linux-gnu/libresolv.a",
-        "usr/lib/x86_64-linux-gnu/libresolv.so",
         "usr/lib/x86_64-linux-gnu/librt.a",
-        "usr/lib/x86_64-linux-gnu/libthread_db.so",
         "usr/lib/x86_64-linux-gnu/libutil.a",
         "usr/lib/x86_64-linux-gnu/rcrt1.o",
         "usr/share/doc/libc6-dev/NEWS.Debian.gz",
@@ -33627,7 +31765,6 @@ filegroup(
         ":linux-libc-dev-filegroup",
         ":rpcsvc-proto-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -33654,7 +31791,6 @@ filegroup(
         "lib/x86_64-linux-gnu/librt.so.1",
         "lib/x86_64-linux-gnu/libthread_db.so.1",
         "lib/x86_64-linux-gnu/libutil.so.1",
-        "lib64/ld-linux-x86-64.so.2",
         "usr/lib/x86_64-linux-gnu/gconv/ANSI_X3.110.so",
         "usr/lib/x86_64-linux-gnu/gconv/ARMSCII-8.so",
         "usr/lib/x86_64-linux-gnu/gconv/ASMO_449.so",
@@ -33921,13 +32057,11 @@ filegroup(
         "usr/share/lintian/overrides/libc6",
         ":libgcc-s1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libcairo-gobject2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libcairo-gobject.so.2",
         "usr/lib/x86_64-linux-gnu/libcairo-gobject.so.2.11600.0",
         "usr/share/doc/libcairo-gobject2/changelog.Debian.gz",
         "usr/share/doc/libcairo-gobject2/changelog.gz",
@@ -33936,13 +32070,11 @@ filegroup(
         ":libcairo2-filegroup",
         ":libglib2.0-0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libcairo2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libcairo.so.2",
         "usr/lib/x86_64-linux-gnu/libcairo.so.2.11600.0",
         "usr/share/doc/libcairo2/changelog.Debian.gz",
         "usr/share/doc/libcairo2/changelog.gz",
@@ -33960,15 +32092,12 @@ filegroup(
         ":libxrender1-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libcap-ng0-filegroup",
     srcs = [
-        "lib/x86_64-linux-gnu/libcap-ng.so.0",
         "lib/x86_64-linux-gnu/libcap-ng.so.0.0.0",
-        "lib/x86_64-linux-gnu/libdrop_ambient.so.0",
         "lib/x86_64-linux-gnu/libdrop_ambient.so.0.0.0",
         "usr/share/doc/libcap-ng0/changelog.Debian.amd64.gz",
         "usr/share/doc/libcap-ng0/changelog.Debian.gz",
@@ -33976,7 +32105,6 @@ filegroup(
         "usr/share/doc/libcap-ng0/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -33999,43 +32127,23 @@ filegroup(
         ":libc6-filegroup",
         ":libcap2-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libcap2-filegroup",
     srcs = [
-        "lib/x86_64-linux-gnu/libcap.so.2",
         "lib/x86_64-linux-gnu/libcap.so.2.66",
-        "lib/x86_64-linux-gnu/libpsx.so.2",
         "lib/x86_64-linux-gnu/libpsx.so.2.66",
         "usr/share/doc/libcap2/changelog.Debian.gz",
         "usr/share/doc/libcap2/changelog.gz",
         "usr/share/doc/libcap2/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
-    name = "libcbor0.8-filegroup",
-    srcs = [
-        "usr/lib/x86_64-linux-gnu/libcbor.so.0.8",
-        "usr/lib/x86_64-linux-gnu/libcbor.so.0.8.0",
-        "usr/share/doc/libcbor0.8/README.md",
-        "usr/share/doc/libcbor0.8/changelog.Debian.amd64.gz",
-        "usr/share/doc/libcbor0.8/changelog.Debian.gz",
-        "usr/share/doc/libcbor0.8/changelog.gz",
-        "usr/share/doc/libcbor0.8/copyright",
-        ":libc6-filegroup",
-    ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libcfitsio10-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libcfitsio.so.10",
         "usr/lib/x86_64-linux-gnu/libcfitsio.so.10.4.2.0",
         "usr/share/doc/libcfitsio10/changelog.Debian.gz",
         "usr/share/doc/libcfitsio10/changelog.gz",
@@ -34045,14 +32153,11 @@ filegroup(
         ":libcurl3-gnutls-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libcharls2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libCharLS.so.2",
-        "usr/lib/x86_64-linux-gnu/libcharls.so.2",
         "usr/lib/x86_64-linux-gnu/libcharls.so.2.4.1",
         "usr/share/doc/libcharls2/changelog.Debian.gz",
         "usr/share/doc/libcharls2/changelog.gz",
@@ -34061,13 +32166,11 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libchromaprint1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libchromaprint.so.1",
         "usr/lib/x86_64-linux-gnu/libchromaprint.so.1.5.1",
         "usr/share/doc/libchromaprint1/changelog.Debian.amd64.gz",
         "usr/share/doc/libchromaprint1/changelog.Debian.gz",
@@ -34079,20 +32182,17 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libcjson1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libcjson.so.1",
         "usr/lib/x86_64-linux-gnu/libcjson.so.1.7.15",
         "usr/share/doc/libcjson1/changelog.Debian.gz",
         "usr/share/doc/libcjson1/changelog.gz",
         "usr/share/doc/libcjson1/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -34103,19 +32203,16 @@ filegroup(
         "usr/share/doc/libcodec2-1.0/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libcom-err2-filegroup",
     srcs = [
-        "lib/x86_64-linux-gnu/libcom_err.so.2",
         "lib/x86_64-linux-gnu/libcom_err.so.2.1",
         "usr/share/doc/libcom-err2/changelog.Debian.gz",
         "usr/share/doc/libcom-err2/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -34123,8 +32220,6 @@ filegroup(
     srcs = [
         "usr/include/crypt.h",
         "usr/lib/x86_64-linux-gnu/libcrypt.a",
-        "usr/lib/x86_64-linux-gnu/libcrypt.so",
-        "usr/lib/x86_64-linux-gnu/pkgconfig/libcrypt.pc",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libxcrypt.pc",
         "usr/share/doc/libcrypt-dev/README.md.gz",
         "usr/share/doc/libcrypt-dev/TODO.md.gz",
@@ -34134,35 +32229,26 @@ filegroup(
         "usr/share/man/man3/crypt.3.gz",
         "usr/share/man/man3/crypt_checksalt.3.gz",
         "usr/share/man/man3/crypt_gensalt.3.gz",
-        "usr/share/man/man3/crypt_gensalt_ra.3.gz",
-        "usr/share/man/man3/crypt_gensalt_rn.3.gz",
         "usr/share/man/man3/crypt_preferred_method.3.gz",
-        "usr/share/man/man3/crypt_r.3.gz",
-        "usr/share/man/man3/crypt_ra.3.gz",
-        "usr/share/man/man3/crypt_rn.3.gz",
         "usr/share/man/man5/crypt.5.gz",
         ":libcrypt1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libcrypt1-filegroup",
     srcs = [
-        "lib/x86_64-linux-gnu/libcrypt.so.1",
         "lib/x86_64-linux-gnu/libcrypt.so.1.1.0",
         "usr/share/doc/libcrypt1/changelog.Debian.gz",
         "usr/share/doc/libcrypt1/changelog.gz",
         "usr/share/doc/libcrypt1/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libcryptsetup12-filegroup",
     srcs = [
-        "lib/x86_64-linux-gnu/libcryptsetup.so.12",
         "lib/x86_64-linux-gnu/libcryptsetup.so.12.9.0",
         "usr/share/bug/libcryptsetup12",
         "usr/share/doc/libcryptsetup12/NEWS.Debian.gz",
@@ -34177,7 +32263,6 @@ filegroup(
         ":libssl3-filegroup",
         ":libuuid1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -34473,7 +32558,6 @@ filegroup(
         "usr/share/doc/libcu++-dev/overview.md.gz",
         "usr/share/doc/libcu++-dev/readme.md",
         "usr/share/doc/libcu++-dev/releases.md",
-        "usr/share/doc/libcu++-dev/releases/changelog.md.gz",
         "usr/share/doc/libcu++-dev/releases/versioning.md.gz",
         "usr/share/doc/libcu++-dev/serve",
         "usr/share/doc/libcu++-dev/setup.md",
@@ -34492,7 +32576,6 @@ filegroup(
         "usr/share/doc/libcu++-dev/standard_api/utility_library/version.md",
         "usr/share/lintian/overrides/libcu++-dev",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -34648,13 +32731,11 @@ filegroup(
         "usr/share/doc/libcub-dev/examples/device/example_device_select_unique.cu",
         "usr/share/doc/libcub-dev/examples/device/example_device_sort_find_non_trivial_runs.cu",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libcublas11-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libcublas.so.11",
         "usr/lib/x86_64-linux-gnu/libcublas.so.11.11.3.6",
         "usr/share/doc/libcublas11/changelog.Debian.gz",
         "usr/share/doc/libcublas11/copyright",
@@ -34663,13 +32744,11 @@ filegroup(
         ":libcublaslt11-filegroup",
         ":libgcc-s1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libcublaslt11-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libcublasLt.so.11",
         "usr/lib/x86_64-linux-gnu/libcublasLt.so.11.11.3.6",
         "usr/share/doc/libcublaslt11/changelog.Debian.gz",
         "usr/share/doc/libcublaslt11/copyright",
@@ -34677,14 +32756,11 @@ filegroup(
         ":libc6-filegroup",
         ":libgcc-s1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libcuda1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/nvidia/current/libcuda.so",
-        "usr/lib/x86_64-linux-gnu/nvidia/current/libcuda.so.1",
         "usr/lib/x86_64-linux-gnu/nvidia/current/libcuda.so.535.216.01",
         "usr/share/bug/libcuda1/control",
         "usr/share/bug/libcuda1/script",
@@ -34698,26 +32774,22 @@ filegroup(
         ":nvidia-alternative-filegroup",
         ":nvidia-support-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libcudart11.0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libcudart.so.11.0",
         "usr/lib/x86_64-linux-gnu/libcudart.so.11.8.89",
         "usr/share/doc/libcudart11.0/changelog.Debian.gz",
         "usr/share/doc/libcudart11.0/copyright",
         "usr/share/lintian/overrides/libcudart11.0",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libcufft10-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libcufft.so.10",
         "usr/lib/x86_64-linux-gnu/libcufft.so.10.9.0.58",
         "usr/share/doc/libcufft10/changelog.Debian.gz",
         "usr/share/doc/libcufft10/copyright",
@@ -34725,13 +32797,11 @@ filegroup(
         ":libc6-filegroup",
         ":libgcc-s1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libcufftw10-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libcufftw.so.10",
         "usr/lib/x86_64-linux-gnu/libcufftw.so.10.9.0.58",
         "usr/share/doc/libcufftw10/changelog.Debian.gz",
         "usr/share/doc/libcufftw10/copyright",
@@ -34740,13 +32810,11 @@ filegroup(
         ":libcufft10-filegroup",
         ":libgcc-s1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libcuinj64-11.8-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libcuinj64.so.11.8",
         "usr/lib/x86_64-linux-gnu/libcuinj64.so.11.8.87",
         "usr/share/doc/libcuinj64-11.8/changelog.Debian.gz",
         "usr/share/doc/libcuinj64-11.8/copyright",
@@ -34756,7 +32824,6 @@ filegroup(
         ":libcupti11.8-filegroup",
         ":libgcc-s1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -34793,7 +32860,6 @@ filegroup(
         "usr/include/nvperf_cuda_host.h",
         "usr/include/nvperf_host.h",
         "usr/include/nvperf_target.h",
-        "usr/lib/x86_64-linux-gnu/libcupti.so",
         "usr/lib/x86_64-linux-gnu/libcupti_static.a",
         "usr/lib/x86_64-linux-gnu/libnvperf_host_static.a",
         "usr/share/doc/libcupti-dev/changelog.Debian.gz",
@@ -34801,14 +32867,12 @@ filegroup(
         "usr/share/lintian/overrides/libcupti-dev",
         ":libcupti11.8-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libcupti11.8-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/libcheckpoint.so",
-        "usr/lib/x86_64-linux-gnu/libcupti.so.11.8",
         "usr/lib/x86_64-linux-gnu/libcupti.so.2022.3.0",
         "usr/lib/x86_64-linux-gnu/libnvperf_host.so",
         "usr/lib/x86_64-linux-gnu/libnvperf_target.so",
@@ -34819,13 +32883,11 @@ filegroup(
         ":libc6-filegroup",
         ":libgcc-s1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libcurand10-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libcurand.so.10",
         "usr/lib/x86_64-linux-gnu/libcurand.so.10.3.0.86",
         "usr/share/doc/libcurand10/changelog.Debian.gz",
         "usr/share/doc/libcurand10/copyright",
@@ -34833,14 +32895,11 @@ filegroup(
         ":libc6-filegroup",
         ":libgcc-s1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libcurl3-gnutls-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libcurl-gnutls.so.3",
-        "usr/lib/x86_64-linux-gnu/libcurl-gnutls.so.4",
         "usr/lib/x86_64-linux-gnu/libcurl-gnutls.so.4.8.0",
         "usr/share/doc/libcurl3-gnutls/changelog.Debian.gz",
         "usr/share/doc/libcurl3-gnutls/changelog.gz",
@@ -34860,13 +32919,11 @@ filegroup(
         ":libzstd1-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libcurl4-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libcurl.so.4",
         "usr/lib/x86_64-linux-gnu/libcurl.so.4.8.0",
         "usr/share/doc/libcurl4/changelog.Debian.gz",
         "usr/share/doc/libcurl4/changelog.gz",
@@ -34884,13 +32941,11 @@ filegroup(
         ":libzstd1-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libcusolver11-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libcusolver.so.11",
         "usr/lib/x86_64-linux-gnu/libcusolver.so.11.4.1.48",
         "usr/share/doc/libcusolver11/changelog.Debian.gz",
         "usr/share/doc/libcusolver11/copyright",
@@ -34900,13 +32955,11 @@ filegroup(
         ":libcublaslt11-filegroup",
         ":libgcc-s1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libcusolvermg11-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libcusolverMg.so.11",
         "usr/lib/x86_64-linux-gnu/libcusolverMg.so.11.4.1.48",
         "usr/share/doc/libcusolvermg11/changelog.Debian.gz",
         "usr/share/doc/libcusolvermg11/copyright",
@@ -34917,13 +32970,11 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libcusparse11-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libcusparse.so.11",
         "usr/lib/x86_64-linux-gnu/libcusparse.so.11.7.5.86",
         "usr/share/doc/libcusparse11/changelog.Debian.gz",
         "usr/share/doc/libcusparse11/copyright",
@@ -34931,13 +32982,11 @@ filegroup(
         ":libc6-filegroup",
         ":libgcc-s1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libdatrie1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libdatrie.so.1",
         "usr/lib/x86_64-linux-gnu/libdatrie.so.1.4.0",
         "usr/share/doc/libdatrie1/NEWS.gz",
         "usr/share/doc/libdatrie1/README",
@@ -34947,19 +32996,16 @@ filegroup(
         "usr/share/doc/libdatrie1/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libdav1d6-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libdav1d.so.6",
         "usr/lib/x86_64-linux-gnu/libdav1d.so.6.6.0",
         "usr/share/doc/libdav1d6/changelog.Debian.gz",
         "usr/share/doc/libdav1d6/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -34972,13 +33018,11 @@ filegroup(
         "usr/share/lintian/overrides/libdb5.3",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libdbus-1-3-filegroup",
     srcs = [
-        "lib/x86_64-linux-gnu/libdbus-1.so.3",
         "lib/x86_64-linux-gnu/libdbus-1.so.3.32.4",
         "usr/share/doc/libdbus-1-3/AUTHORS.gz",
         "usr/share/doc/libdbus-1-3/NEWS.gz",
@@ -34988,13 +33032,11 @@ filegroup(
         ":libc6-filegroup",
         ":libsystemd0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libdc1394-25-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libdc1394.so.25",
         "usr/lib/x86_64-linux-gnu/libdc1394.so.25.0.0",
         "usr/share/doc/libdc1394-25/changelog.Debian.gz",
         "usr/share/doc/libdc1394-25/changelog.gz",
@@ -35003,7 +33045,6 @@ filegroup(
         ":libraw1394-11-filegroup",
         ":libusb-1.0-0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -35028,7 +33069,6 @@ filegroup(
         "usr/include/dc1394/vendor/pixelink.h",
         "usr/include/dc1394/video.h",
         "usr/lib/x86_64-linux-gnu/libdc1394.a",
-        "usr/lib/x86_64-linux-gnu/libdc1394.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libdc1394-2.pc",
         "usr/share/doc/libdc1394-dev/changelog.Debian.gz",
         "usr/share/doc/libdc1394-dev/changelog.gz",
@@ -35036,13 +33076,11 @@ filegroup(
         ":libdc1394-25-filegroup",
         ":libraw1394-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libdconf1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libdconf.so.1",
         "usr/lib/x86_64-linux-gnu/libdconf.so.1.0.0",
         "usr/share/doc/libdconf1/NEWS.gz",
         "usr/share/doc/libdconf1/README",
@@ -35051,13 +33089,11 @@ filegroup(
         ":libc6-filegroup",
         ":libglib2.0-0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libde265-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libde265.so.0",
         "usr/lib/x86_64-linux-gnu/libde265.so.0.1.4",
         "usr/share/doc/libde265-0/changelog.Debian.gz",
         "usr/share/doc/libde265-0/changelog.gz",
@@ -35066,7 +33102,6 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -35074,13 +33109,11 @@ filegroup(
     srcs = [
         "usr/include/libdeflate.h",
         "usr/lib/x86_64-linux-gnu/libdeflate.a",
-        "usr/lib/x86_64-linux-gnu/libdeflate.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libdeflate.pc",
         "usr/share/doc/libdeflate-dev/changelog.Debian.gz",
         "usr/share/doc/libdeflate-dev/copyright",
         ":libdeflate0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -35091,7 +33124,6 @@ filegroup(
         "usr/share/doc/libdeflate0/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -35106,13 +33138,11 @@ filegroup(
         ":libselinux1-filegroup",
         ":libudev1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libdouble-conversion3-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libdouble-conversion.so.3",
         "usr/lib/x86_64-linux-gnu/libdouble-conversion.so.3.1",
         "usr/share/doc/libdouble-conversion3/README.md",
         "usr/share/doc/libdouble-conversion3/changelog.Debian.gz",
@@ -35122,13 +33152,11 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libdrm-amdgpu1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libdrm_amdgpu.so.1",
         "usr/lib/x86_64-linux-gnu/libdrm_amdgpu.so.1.0.0",
         "usr/share/doc/libdrm-amdgpu1/changelog.Debian.amd64.gz",
         "usr/share/doc/libdrm-amdgpu1/changelog.Debian.gz",
@@ -35136,7 +33164,6 @@ filegroup(
         ":libc6-filegroup",
         ":libdrm2-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -35146,7 +33173,6 @@ filegroup(
         "usr/share/doc/libdrm-common/copyright",
         "usr/share/libdrm/amdgpu.ids",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -35196,15 +33222,10 @@ filegroup(
         "usr/include/xf86drm.h",
         "usr/include/xf86drmMode.h",
         "usr/lib/x86_64-linux-gnu/libdrm.a",
-        "usr/lib/x86_64-linux-gnu/libdrm.so",
         "usr/lib/x86_64-linux-gnu/libdrm_amdgpu.a",
-        "usr/lib/x86_64-linux-gnu/libdrm_amdgpu.so",
         "usr/lib/x86_64-linux-gnu/libdrm_intel.a",
-        "usr/lib/x86_64-linux-gnu/libdrm_intel.so",
         "usr/lib/x86_64-linux-gnu/libdrm_nouveau.a",
-        "usr/lib/x86_64-linux-gnu/libdrm_nouveau.so",
         "usr/lib/x86_64-linux-gnu/libdrm_radeon.a",
-        "usr/lib/x86_64-linux-gnu/libdrm_radeon.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libdrm.pc",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libdrm_amdgpu.pc",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libdrm_intel.pc",
@@ -35226,13 +33247,11 @@ filegroup(
         ":libdrm2-filegroup",
         ":libpciaccess-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libdrm-intel1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libdrm_intel.so.1",
         "usr/lib/x86_64-linux-gnu/libdrm_intel.so.1.0.0",
         "usr/share/doc/libdrm-intel1/changelog.Debian.amd64.gz",
         "usr/share/doc/libdrm-intel1/changelog.Debian.gz",
@@ -35241,13 +33260,11 @@ filegroup(
         ":libdrm2-filegroup",
         ":libpciaccess0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libdrm-nouveau2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libdrm_nouveau.so.2",
         "usr/lib/x86_64-linux-gnu/libdrm_nouveau.so.2.0.0",
         "usr/share/doc/libdrm-nouveau2/changelog.Debian.amd64.gz",
         "usr/share/doc/libdrm-nouveau2/changelog.Debian.gz",
@@ -35256,13 +33273,11 @@ filegroup(
         ":libc6-filegroup",
         ":libdrm2-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libdrm-radeon1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libdrm_radeon.so.1",
         "usr/lib/x86_64-linux-gnu/libdrm_radeon.so.1.0.1",
         "usr/share/doc/libdrm-radeon1/changelog.Debian.amd64.gz",
         "usr/share/doc/libdrm-radeon1/changelog.Debian.gz",
@@ -35270,13 +33285,11 @@ filegroup(
         ":libc6-filegroup",
         ":libdrm2-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libdrm2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libdrm.so.2",
         "usr/lib/x86_64-linux-gnu/libdrm.so.2.4.0",
         "usr/share/doc/libdrm2/NEWS.Debian.gz",
         "usr/share/doc/libdrm2/changelog.Debian.amd64.gz",
@@ -35285,7 +33298,6 @@ filegroup(
         ":libc6-filegroup",
         ":libdrm-common-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -35297,7 +33309,6 @@ filegroup(
         "usr/include/elfutils/libdwelf.h",
         "usr/include/elfutils/libdwfl.h",
         "usr/lib/x86_64-linux-gnu/libdw.a",
-        "usr/lib/x86_64-linux-gnu/libdw.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libdw.pc",
         "usr/share/doc/libdw-dev/changelog.Debian.gz",
         "usr/share/doc/libdw-dev/changelog.gz",
@@ -35307,13 +33318,11 @@ filegroup(
         ":liblzma-dev-filegroup",
         ":zlib1g-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libdw1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libdw.so.1",
         "usr/lib/x86_64-linux-gnu/libdw-0.188.so",
         "usr/share/doc/libdw1/changelog.Debian.gz",
         "usr/share/doc/libdw1/changelog.gz",
@@ -35324,13 +33333,11 @@ filegroup(
         ":liblzma5-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libedit2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libedit.so.2",
         "usr/lib/x86_64-linux-gnu/libedit.so.2.0.70",
         "usr/share/doc/libedit2/TODO.Debian",
         "usr/share/doc/libedit2/changelog.Debian.gz",
@@ -35343,7 +33350,6 @@ filegroup(
         ":libc6-filegroup",
         ":libtinfo6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -35352,7 +33358,6 @@ filegroup(
         "usr/include/EGL/egl.h",
         "usr/include/EGL/eglext.h",
         "usr/include/EGL/eglplatform.h",
-        "usr/lib/x86_64-linux-gnu/libEGL.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/egl.pc",
         "usr/share/bug/libegl-dev/control",
         "usr/share/doc/libegl-dev/changelog.Debian.gz",
@@ -35361,13 +33366,11 @@ filegroup(
         ":libgl-dev-filegroup",
         ":libx11-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libegl-mesa0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libEGL_mesa.so.0",
         "usr/lib/x86_64-linux-gnu/libEGL_mesa.so.0.0.0",
         "usr/share/bug/libegl-mesa0/control",
         "usr/share/bug/libegl-mesa0/script",
@@ -35393,13 +33396,11 @@ filegroup(
         ":libxcb1-filegroup",
         ":libxshmfence1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libegl1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libEGL.so.1",
         "usr/share/bug/libegl1/control",
         "usr/share/doc/libegl1/changelog.Debian.gz",
         "usr/share/doc/libegl1/copyright",
@@ -35407,7 +33408,6 @@ filegroup(
         ":libegl-mesa0-filegroup",
         ":libglvnd0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -35419,7 +33419,6 @@ filegroup(
         "usr/include/libelf.h",
         "usr/include/nlist.h",
         "usr/lib/x86_64-linux-gnu/libelf.a",
-        "usr/lib/x86_64-linux-gnu/libelf.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libelf.pc",
         "usr/share/doc/libelf-dev/changelog.Debian.gz",
         "usr/share/doc/libelf-dev/changelog.gz",
@@ -35431,13 +33430,11 @@ filegroup(
         ":libelf1-filegroup",
         ":zlib1g-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libelf1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libelf.so.1",
         "usr/lib/x86_64-linux-gnu/libelf-0.188.so",
         "usr/share/doc/libelf1/changelog.Debian.gz",
         "usr/share/doc/libelf1/changelog.gz",
@@ -35452,38 +33449,32 @@ filegroup(
         ":libc6-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libevdev2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libevdev.so.2",
         "usr/lib/x86_64-linux-gnu/libevdev.so.2.3.0",
         "usr/share/doc/libevdev2/changelog.Debian.gz",
         "usr/share/doc/libevdev2/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libevent-core-2.1-7-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libevent_core-2.1.so.7",
         "usr/lib/x86_64-linux-gnu/libevent_core-2.1.so.7.0.1",
         "usr/share/doc/libevent-core-2.1-7/changelog.Debian.gz",
         "usr/share/doc/libevent-core-2.1-7/changelog.gz",
         "usr/share/doc/libevent-core-2.1-7/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libevent-pthreads-2.1-7-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libevent_pthreads-2.1.so.7",
         "usr/lib/x86_64-linux-gnu/libevent_pthreads-2.1.so.7.0.1",
         "usr/share/doc/libevent-pthreads-2.1-7/changelog.Debian.gz",
         "usr/share/doc/libevent-pthreads-2.1-7/changelog.gz",
@@ -35491,7 +33482,6 @@ filegroup(
         ":libc6-filegroup",
         ":libevent-core-2.1-7-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -35512,7 +33502,6 @@ filegroup(
         "usr/include/libexif/exif-tag.h",
         "usr/include/libexif/exif-utils.h",
         "usr/lib/x86_64-linux-gnu/libexif.a",
-        "usr/lib/x86_64-linux-gnu/libexif.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libexif.pc",
         "usr/share/doc/libexif-dev/NEWS.gz",
         "usr/share/doc/libexif-dev/README.gz",
@@ -35523,13 +33512,11 @@ filegroup(
         ":libc6-dev-filegroup",
         ":libexif12-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libexif12-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libexif.so.12",
         "usr/lib/x86_64-linux-gnu/libexif.so.12.3.4",
         "usr/share/doc/libexif12/changelog.Debian.amd64.gz",
         "usr/share/doc/libexif12/changelog.Debian.gz",
@@ -35562,15 +33549,12 @@ filegroup(
         "usr/share/locale/zh_CN/LC_MESSAGES/libexif-12.mo",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libexpat1-filegroup",
     srcs = [
-        "lib/x86_64-linux-gnu/libexpat.so.1",
         "lib/x86_64-linux-gnu/libexpat.so.1.8.10",
-        "usr/lib/x86_64-linux-gnu/libexpatw.so.1",
         "usr/lib/x86_64-linux-gnu/libexpatw.so.1.8.10",
         "usr/share/doc/libexpat1/AUTHORS",
         "usr/share/doc/libexpat1/changelog.Debian.gz",
@@ -35578,13 +33562,11 @@ filegroup(
         "usr/share/doc/libexpat1/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libfabric1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libfabric.so.1",
         "usr/lib/x86_64-linux-gnu/libfabric.so.1.20.0",
         "usr/share/doc/libfabric1/AUTHORS.gz",
         "usr/share/doc/libfabric1/NEWS.md.gz",
@@ -35599,13 +33581,11 @@ filegroup(
         ":libpsm2-2-filegroup",
         ":librdmacm1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libfdisk1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libfdisk.so.1",
         "usr/lib/x86_64-linux-gnu/libfdisk.so.1.1.0",
         "usr/share/doc/libfdisk1/changelog.Debian.gz",
         "usr/share/doc/libfdisk1/changelog.gz",
@@ -35615,7 +33595,6 @@ filegroup(
         ":libc6-filegroup",
         ":libuuid1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -35624,7 +33603,6 @@ filegroup(
         "usr/include/x86_64-linux-gnu/ffi.h",
         "usr/include/x86_64-linux-gnu/ffitarget.h",
         "usr/lib/x86_64-linux-gnu/libffi.a",
-        "usr/lib/x86_64-linux-gnu/libffi.so",
         "usr/lib/x86_64-linux-gnu/libffi_pic.a",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libffi.pc",
         "usr/share/doc-base/libffi-dev.libffi",
@@ -35656,42 +33634,21 @@ filegroup(
         "usr/share/man/man3/ffi_prep_cif_var.3.gz",
         ":libffi8-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libffi8-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libffi.so.8",
         "usr/lib/x86_64-linux-gnu/libffi.so.8.1.2",
         "usr/share/doc/libffi8/changelog.Debian.gz",
         "usr/share/doc/libffi8/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
-    name = "libfido2-1-filegroup",
-    srcs = [
-        "usr/lib/x86_64-linux-gnu/libfido2.so.1",
-        "usr/lib/x86_64-linux-gnu/libfido2.so.1.12.0",
-        "usr/share/doc/libfido2-1/changelog.Debian.amd64.gz",
-        "usr/share/doc/libfido2-1/changelog.Debian.gz",
-        "usr/share/doc/libfido2-1/copyright",
-        ":libc6-filegroup",
-        ":libcbor0.8-filegroup",
-        ":libssl3-filegroup",
-        ":libudev1-filegroup",
-        ":zlib1g-filegroup",
-    ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libfontconfig1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libfontconfig.so.1",
         "usr/lib/x86_64-linux-gnu/libfontconfig.so.1.12.0",
         "usr/share/doc/libfontconfig1/changelog.Debian.gz",
         "usr/share/doc/libfontconfig1/changelog.gz",
@@ -35701,13 +33658,11 @@ filegroup(
         ":libexpat1-filegroup",
         ":libfreetype6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libfreetype6-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libfreetype.so.6",
         "usr/lib/x86_64-linux-gnu/libfreetype.so.6.18.3",
         "usr/share/doc/libfreetype6/README",
         "usr/share/doc/libfreetype6/changelog.Debian.gz",
@@ -35718,13 +33673,11 @@ filegroup(
         ":libpng16-16-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libfreexl1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libfreexl.so.1",
         "usr/lib/x86_64-linux-gnu/libfreexl.so.1.1.0",
         "usr/share/doc/libfreexl1/changelog.Debian.gz",
         "usr/share/doc/libfreexl1/copyright",
@@ -35732,13 +33685,11 @@ filegroup(
         "usr/share/doc/libfreexl1/examples/xl2sql.c",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libfribidi0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libfribidi.so.0",
         "usr/lib/x86_64-linux-gnu/libfribidi.so.0.4.0",
         "usr/share/doc/libfribidi0/NEWS.gz",
         "usr/share/doc/libfribidi0/README",
@@ -35749,17 +33700,13 @@ filegroup(
         "usr/share/doc/libfribidi0/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libfyba0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libfyba.so.0",
         "usr/lib/x86_64-linux-gnu/libfyba.so.0.0.0",
-        "usr/lib/x86_64-linux-gnu/libfygm.so.0",
         "usr/lib/x86_64-linux-gnu/libfygm.so.0.0.0",
-        "usr/lib/x86_64-linux-gnu/libfyut.so.0",
         "usr/lib/x86_64-linux-gnu/libfyut.so.0.0.0",
         "usr/share/doc/libfyba0/README.gz",
         "usr/share/doc/libfyba0/changelog.Debian.gz",
@@ -35770,13 +33717,11 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgav1-1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgav1.so.1",
         "usr/lib/x86_64-linux-gnu/libgav1.so.1.0.0",
         "usr/share/doc/libgav1-1/changelog.Debian.amd64.gz",
         "usr/share/doc/libgav1-1/changelog.Debian.gz",
@@ -35786,14 +33731,12 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgbm-dev-filegroup",
     srcs = [
         "usr/include/gbm.h",
-        "usr/lib/x86_64-linux-gnu/libgbm.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/gbm.pc",
         "usr/share/bug/libgbm-dev/control",
         "usr/share/bug/libgbm-dev/script",
@@ -35802,13 +33745,11 @@ filegroup(
         "usr/share/doc/libgbm-dev/copyright",
         ":libgbm1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgbm1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgbm.so.1",
         "usr/lib/x86_64-linux-gnu/libgbm.so.1.0.0",
         "usr/share/bug/libgbm1/control",
         "usr/share/bug/libgbm1/script",
@@ -35821,7 +33762,6 @@ filegroup(
         ":libexpat1-filegroup",
         ":libwayland-server0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -35964,30 +33904,22 @@ filegroup(
         "usr/lib/gcc/x86_64-linux-gnu/12/include/xsavesintrin.h",
         "usr/lib/gcc/x86_64-linux-gnu/12/include/xtestintrin.h",
         "usr/lib/gcc/x86_64-linux-gnu/12/libasan.a",
-        "usr/lib/gcc/x86_64-linux-gnu/12/libasan.so",
         "usr/lib/gcc/x86_64-linux-gnu/12/libasan_preinit.o",
         "usr/lib/gcc/x86_64-linux-gnu/12/libatomic.a",
-        "usr/lib/gcc/x86_64-linux-gnu/12/libatomic.so",
         "usr/lib/gcc/x86_64-linux-gnu/12/libbacktrace.a",
         "usr/lib/gcc/x86_64-linux-gnu/12/libgcc.a",
         "usr/lib/gcc/x86_64-linux-gnu/12/libgcc_eh.a",
         "usr/lib/gcc/x86_64-linux-gnu/12/libgcc_s.so",
         "usr/lib/gcc/x86_64-linux-gnu/12/libgcov.a",
         "usr/lib/gcc/x86_64-linux-gnu/12/libgomp.a",
-        "usr/lib/gcc/x86_64-linux-gnu/12/libgomp.so",
         "usr/lib/gcc/x86_64-linux-gnu/12/libitm.a",
-        "usr/lib/gcc/x86_64-linux-gnu/12/libitm.so",
         "usr/lib/gcc/x86_64-linux-gnu/12/liblsan.a",
-        "usr/lib/gcc/x86_64-linux-gnu/12/liblsan.so",
         "usr/lib/gcc/x86_64-linux-gnu/12/liblsan_preinit.o",
         "usr/lib/gcc/x86_64-linux-gnu/12/libquadmath.a",
-        "usr/lib/gcc/x86_64-linux-gnu/12/libquadmath.so",
         "usr/lib/gcc/x86_64-linux-gnu/12/libssp_nonshared.a",
         "usr/lib/gcc/x86_64-linux-gnu/12/libtsan.a",
-        "usr/lib/gcc/x86_64-linux-gnu/12/libtsan.so",
         "usr/lib/gcc/x86_64-linux-gnu/12/libtsan_preinit.o",
         "usr/lib/gcc/x86_64-linux-gnu/12/libubsan.a",
-        "usr/lib/gcc/x86_64-linux-gnu/12/libubsan.so",
         ":gcc-12-base-filegroup",
         ":libasan8-filegroup",
         ":libatomic1-filegroup",
@@ -35999,7 +33931,6 @@ filegroup(
         ":libtsan2-filegroup",
         ":libubsan1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -36009,13 +33940,11 @@ filegroup(
         "usr/share/lintian/overrides/libgcc-s1",
         ":gcc-12-base-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgcrypt20-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgcrypt.so.20",
         "usr/lib/x86_64-linux-gnu/libgcrypt.so.20.4.1",
         "usr/share/doc/libgcrypt20/AUTHORS.gz",
         "usr/share/doc/libgcrypt20/NEWS.gz",
@@ -36028,13 +33957,11 @@ filegroup(
         ":libc6-filegroup",
         ":libgpg-error0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgd3-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgd.so.3",
         "usr/lib/x86_64-linux-gnu/libgd.so.3.0.11",
         "usr/share/doc/libgd3/changelog.Debian.gz",
         "usr/share/doc/libgd3/changelog.gz",
@@ -36051,13 +33978,11 @@ filegroup(
         ":libwebp7-filegroup",
         ":libxpm4-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgdal32-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgdal.so.32",
         "usr/lib/x86_64-linux-gnu/libgdal.so.32.3.6.2",
         "usr/share/doc/libgdal32/NOTICE",
         "usr/share/doc/libgdal32/changelog.Debian.amd64.gz",
@@ -36113,7 +34038,6 @@ filegroup(
         ":libzstd1-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -36487,42 +34411,23 @@ filegroup(
         "usr/lib/x86_64-linux-gnu/gdcm-3.0/vtkgdcm-vtk-python-module-properties.cmake",
         "usr/lib/x86_64-linux-gnu/gdcm-3.0/vtkgdcmPython-targets.cmake",
         "usr/lib/x86_64-linux-gnu/gdcm-3.0/vtkgdcmPython-targets-none.cmake",
-        "usr/lib/x86_64-linux-gnu/libgdcmCommon.so",
-        "usr/lib/x86_64-linux-gnu/libgdcmDICT.so",
-        "usr/lib/x86_64-linux-gnu/libgdcmDSED.so",
-        "usr/lib/x86_64-linux-gnu/libgdcmIOD.so",
-        "usr/lib/x86_64-linux-gnu/libgdcmMEXD.so",
-        "usr/lib/x86_64-linux-gnu/libgdcmMSFF.so",
-        "usr/lib/x86_64-linux-gnu/libgdcmjpeg12.so",
-        "usr/lib/x86_64-linux-gnu/libgdcmjpeg16.so",
-        "usr/lib/x86_64-linux-gnu/libgdcmjpeg8.so",
         "usr/share/doc/libgdcm-dev/changelog.Debian.gz",
         "usr/share/doc/libgdcm-dev/copyright",
         ":libgdcm3.0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgdcm3.0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgdcmCommon.so.3.0",
         "usr/lib/x86_64-linux-gnu/libgdcmCommon.so.3.0.21",
-        "usr/lib/x86_64-linux-gnu/libgdcmDICT.so.3.0",
         "usr/lib/x86_64-linux-gnu/libgdcmDICT.so.3.0.21",
-        "usr/lib/x86_64-linux-gnu/libgdcmDSED.so.3.0",
         "usr/lib/x86_64-linux-gnu/libgdcmDSED.so.3.0.21",
-        "usr/lib/x86_64-linux-gnu/libgdcmIOD.so.3.0",
         "usr/lib/x86_64-linux-gnu/libgdcmIOD.so.3.0.21",
-        "usr/lib/x86_64-linux-gnu/libgdcmMEXD.so.3.0",
         "usr/lib/x86_64-linux-gnu/libgdcmMEXD.so.3.0.21",
-        "usr/lib/x86_64-linux-gnu/libgdcmMSFF.so.3.0",
         "usr/lib/x86_64-linux-gnu/libgdcmMSFF.so.3.0.21",
-        "usr/lib/x86_64-linux-gnu/libgdcmjpeg12.so.3.0",
         "usr/lib/x86_64-linux-gnu/libgdcmjpeg12.so.3.0.21",
-        "usr/lib/x86_64-linux-gnu/libgdcmjpeg16.so.3.0",
         "usr/lib/x86_64-linux-gnu/libgdcmjpeg16.so.3.0.21",
-        "usr/lib/x86_64-linux-gnu/libgdcmjpeg8.so.3.0",
         "usr/lib/x86_64-linux-gnu/libgdcmjpeg8.so.3.0.21",
         "usr/share/doc/libgdcm3.0/README.Debian",
         "usr/share/doc/libgdcm3.0/README.md",
@@ -36550,7 +34455,6 @@ filegroup(
         ":libuuid1-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -36568,7 +34472,6 @@ filegroup(
         "usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders/libpixbufloader-xbm.so",
         "usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders/libpixbufloader-xpm.so",
         "usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders",
-        "usr/lib/x86_64-linux-gnu/libgdk_pixbuf-2.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgdk_pixbuf-2.0.so.0.4200.10",
         "usr/share/doc/libgdk-pixbuf-2.0-0/NEWS.gz",
         "usr/share/doc/libgdk-pixbuf-2.0-0/README.md",
@@ -36582,7 +34485,6 @@ filegroup(
         ":libtiff6-filegroup",
         ":shared-mime-info-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -36698,13 +34600,11 @@ filegroup(
         "usr/share/locale/zh_HK/LC_MESSAGES/gdk-pixbuf.mo",
         "usr/share/locale/zh_TW/LC_MESSAGES/gdk-pixbuf.mo",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgeos-c1v5-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgeos_c.so.1",
         "usr/lib/x86_64-linux-gnu/libgeos_c.so.1.17.1",
         "usr/share/doc/libgeos-c1v5/NEWS.Debian.gz",
         "usr/share/doc/libgeos-c1v5/changelog.Debian.gz",
@@ -36715,7 +34615,6 @@ filegroup(
         ":libgeos3.11.1-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -36730,13 +34629,11 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgeotiff5-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgeotiff.so.5",
         "usr/lib/x86_64-linux-gnu/libgeotiff.so.5.2.1",
         "usr/share/doc/libgeotiff5/README.gz",
         "usr/share/doc/libgeotiff5/README_BIN",
@@ -36749,26 +34646,22 @@ filegroup(
         ":libproj25-filegroup",
         ":libtiff6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgfortran5-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgfortran.so.5",
         "usr/lib/x86_64-linux-gnu/libgfortran.so.5.0.0",
         ":gcc-12-base-filegroup",
         ":libc6-filegroup",
         ":libgcc-s1-filegroup",
         ":libquadmath0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgif7-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgif.so.7",
         "usr/lib/x86_64-linux-gnu/libgif.so.7.2.0",
         "usr/share/doc/libgif7/NEWS.gz",
         "usr/share/doc/libgif7/TODO",
@@ -36777,13 +34670,11 @@ filegroup(
         "usr/share/doc/libgif7/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgirepository-1.0-1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgirepository-1.0.so.1",
         "usr/lib/x86_64-linux-gnu/libgirepository-1.0.so.1.0.0",
         "usr/share/doc/libgirepository-1.0-1/changelog.Debian.gz",
         "usr/share/doc/libgirepository-1.0-1/copyright",
@@ -36791,7 +34682,6 @@ filegroup(
         ":libffi8-filegroup",
         ":libglib2.0-0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -36801,7 +34691,6 @@ filegroup(
         "usr/include/GL/glcorearb.h",
         "usr/include/GL/glext.h",
         "usr/include/KHR/khrplatform.h",
-        "usr/lib/x86_64-linux-gnu/libGL.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/gl.pc",
         "usr/share/bug/libgl-dev/control",
         "usr/share/doc/libgl-dev/changelog.Debian.gz",
@@ -36809,13 +34698,11 @@ filegroup(
         ":libgl1-filegroup",
         ":libglx-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgl1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libGL.so.1",
         "usr/share/bug/libgl1/control",
         "usr/share/doc/libgl1/changelog.Debian.gz",
         "usr/share/doc/libgl1/copyright",
@@ -36823,7 +34710,6 @@ filegroup(
         ":libglvnd0-filegroup",
         ":libglx0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -36865,26 +34751,22 @@ filegroup(
         ":libzstd1-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgl2ps1.4-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgl2ps.so.1.4",
         "usr/lib/x86_64-linux-gnu/libgl2ps.so.1.4.2",
         "usr/share/doc/libgl2ps1.4/changelog.Debian.gz",
         "usr/share/doc/libgl2ps1.4/copyright",
         ":libc6-filegroup",
         ":libgl1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libglapi-mesa-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libglapi.so.0",
         "usr/lib/x86_64-linux-gnu/libglapi.so.0.0.0",
         "usr/share/bug/libglapi-mesa/control",
         "usr/share/bug/libglapi-mesa/script",
@@ -36894,7 +34776,6 @@ filegroup(
         "usr/share/lintian/overrides/libglapi-mesa",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -36912,8 +34793,6 @@ filegroup(
         "usr/include/GLES3/gl32.h",
         "usr/include/GLES3/gl3ext.h",
         "usr/include/GLES3/gl3platform.h",
-        "usr/lib/x86_64-linux-gnu/libGLESv1_CM.so",
-        "usr/lib/x86_64-linux-gnu/libGLESv2.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/glesv1_cm.pc",
         "usr/lib/x86_64-linux-gnu/pkgconfig/glesv2.pc",
         "usr/share/bug/libgles-dev/control",
@@ -36924,13 +34803,11 @@ filegroup(
         ":libgles1-filegroup",
         ":libgles2-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgles1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libGLESv1_CM.so.1",
         "usr/share/bug/libgles1/control",
         "usr/share/doc/libgles1/changelog.Debian.gz",
         "usr/share/doc/libgles1/copyright",
@@ -36938,13 +34815,11 @@ filegroup(
         ":libc6-filegroup",
         ":libglvnd0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgles2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libGLESv2.so.2",
         "usr/share/bug/libgles2/control",
         "usr/share/doc/libgles2/changelog.Debian.gz",
         "usr/share/doc/libgles2/copyright",
@@ -36952,20 +34827,17 @@ filegroup(
         ":libc6-filegroup",
         ":libglvnd0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libglew2.2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libGLEW.so.2.2",
         "usr/lib/x86_64-linux-gnu/libGLEW.so.2.2.0",
         "usr/share/doc/libglew2.2/changelog.Debian.amd64.gz",
         "usr/share/doc/libglew2.2/changelog.Debian.gz",
         "usr/share/doc/libglew2.2/copyright",
         ":libgl1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -36974,15 +34846,10 @@ filegroup(
         "usr/lib/x86_64-linux-gnu/glib-2.0/gio-launch-desktop",
         "usr/lib/x86_64-linux-gnu/glib-2.0/gio-querymodules",
         "usr/lib/x86_64-linux-gnu/glib-2.0/glib-compile-schemas",
-        "usr/lib/x86_64-linux-gnu/libgio-2.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgio-2.0.so.0.7400.6",
-        "usr/lib/x86_64-linux-gnu/libglib-2.0.so.0",
         "usr/lib/x86_64-linux-gnu/libglib-2.0.so.0.7400.6",
-        "usr/lib/x86_64-linux-gnu/libgmodule-2.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgmodule-2.0.so.0.7400.6",
-        "usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0.7400.6",
-        "usr/lib/x86_64-linux-gnu/libgthread-2.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgthread-2.0.so.0.7400.6",
         "usr/share/doc/libglib2.0-0/NEWS.gz",
         "usr/share/doc/libglib2.0-0/README.md",
@@ -36996,7 +34863,6 @@ filegroup(
         ":libselinux1-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -37005,8 +34871,6 @@ filegroup(
         "usr/bin/gapplication",
         "usr/bin/gdbus",
         "usr/bin/gio",
-        "usr/bin/gio-querymodules",
-        "usr/bin/glib-compile-schemas",
         "usr/bin/gresource",
         "usr/bin/gsettings",
         "usr/share/bash-completion/completions/gapplication",
@@ -37029,7 +34893,6 @@ filegroup(
         ":libglib2.0-0-filegroup",
         ":libglib2.0-data-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -37138,7 +35001,6 @@ filegroup(
         "usr/share/locale/zh_HK/LC_MESSAGES/glib20.mo",
         "usr/share/locale/zh_TW/LC_MESSAGES/glib20.mo",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -37181,7 +35043,6 @@ filegroup(
         ":python3-distutils-filegroup",
         ":python3-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -37464,15 +35325,10 @@ filegroup(
         "usr/include/glib-2.0/gobject/gvaluetypes.h",
         "usr/lib/x86_64-linux-gnu/glib-2.0/include/glibconfig.h",
         "usr/lib/x86_64-linux-gnu/libgio-2.0.a",
-        "usr/lib/x86_64-linux-gnu/libgio-2.0.so",
         "usr/lib/x86_64-linux-gnu/libglib-2.0.a",
-        "usr/lib/x86_64-linux-gnu/libglib-2.0.so",
         "usr/lib/x86_64-linux-gnu/libgmodule-2.0.a",
-        "usr/lib/x86_64-linux-gnu/libgmodule-2.0.so",
         "usr/lib/x86_64-linux-gnu/libgobject-2.0.a",
-        "usr/lib/x86_64-linux-gnu/libgobject-2.0.so",
         "usr/lib/x86_64-linux-gnu/libgthread-2.0.a",
-        "usr/lib/x86_64-linux-gnu/libgthread-2.0.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/gio-2.0.pc",
         "usr/lib/x86_64-linux-gnu/pkgconfig/gio-unix-2.0.pc",
         "usr/lib/x86_64-linux-gnu/pkgconfig/glib-2.0.pc",
@@ -37502,13 +35358,11 @@ filegroup(
         ":pkgconf-filegroup",
         ":zlib1g-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libglvnd0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libGLdispatch.so.0",
         "usr/lib/x86_64-linux-gnu/libGLdispatch.so.0.0.0",
         "usr/share/bug/libglvnd0/control",
         "usr/share/doc/libglvnd0/changelog.Debian.gz",
@@ -37516,7 +35370,6 @@ filegroup(
         "usr/share/lintian/overrides/libglvnd0",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -37524,7 +35377,6 @@ filegroup(
     srcs = [
         "usr/include/GL/glx.h",
         "usr/include/GL/glxext.h",
-        "usr/lib/x86_64-linux-gnu/libGLX.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/glx.pc",
         "usr/share/bug/libglx-dev/control",
         "usr/share/doc/libglx-dev/changelog.Debian.gz",
@@ -37532,14 +35384,11 @@ filegroup(
         ":libglx0-filegroup",
         ":libx11-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libglx-mesa0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libGLX_indirect.so.0",
-        "usr/lib/x86_64-linux-gnu/libGLX_mesa.so.0",
         "usr/lib/x86_64-linux-gnu/libGLX_mesa.so.0.0.0",
         "usr/share/bug/libglx-mesa0/control",
         "usr/share/bug/libglx-mesa0/script",
@@ -37567,13 +35416,11 @@ filegroup(
         ":libxshmfence1-filegroup",
         ":libxxf86vm1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libglx0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libGLX.so.0",
         "usr/lib/x86_64-linux-gnu/libGLX.so.0.0.0",
         "usr/share/bug/libglx0/control",
         "usr/share/doc/libglx0/changelog.Debian.gz",
@@ -37583,13 +35430,11 @@ filegroup(
         ":libglx-mesa0-filegroup",
         ":libx11-6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgme0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgme.so.0",
         "usr/lib/x86_64-linux-gnu/libgme.so.0.6.3",
         "usr/share/doc/libgme0/changelog.Debian.gz",
         "usr/share/doc/libgme0/changelog.gz",
@@ -37599,13 +35444,11 @@ filegroup(
         ":libstdc++6-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgmp10-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgmp.so.10",
         "usr/lib/x86_64-linux-gnu/libgmp.so.10.4.1",
         "usr/share/doc/libgmp10/README.Debian",
         "usr/share/doc/libgmp10/changelog.Debian.gz",
@@ -37613,13 +35456,11 @@ filegroup(
         "usr/share/doc/libgmp10/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgnutls30-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgnutls.so.30",
         "usr/lib/x86_64-linux-gnu/libgnutls.so.30.34.3",
         "usr/share/doc/libgnutls30/AUTHORS.gz",
         "usr/share/doc/libgnutls30/NEWS.Debian.gz",
@@ -37656,24 +35497,20 @@ filegroup(
         ":libtasn1-6-filegroup",
         ":libunistring2-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgomp1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgomp.so.1",
         "usr/lib/x86_64-linux-gnu/libgomp.so.1.0.0",
         ":gcc-12-base-filegroup",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgpg-error0-filegroup",
     srcs = [
-        "lib/x86_64-linux-gnu/libgpg-error.so.0",
         "lib/x86_64-linux-gnu/libgpg-error.so.0.33.1",
         "usr/share/doc/libgpg-error0/README.gz",
         "usr/share/doc/libgpg-error0/changelog.Debian.gz",
@@ -37681,7 +35518,6 @@ filegroup(
         "usr/share/doc/libgpg-error0/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -37689,7 +35525,6 @@ filegroup(
     srcs = [
         "lib/udev/hwdb.d/20-libgphoto2-6.hwdb",
         "lib/udev/rules.d/60-libgphoto2-6.rules",
-        "usr/lib/x86_64-linux-gnu/libgphoto2.so.6",
         "usr/lib/x86_64-linux-gnu/libgphoto2.so.6.3.0",
         "usr/lib/x86_64-linux-gnu/libgphoto2/2.5.30/ax203.so",
         "usr/lib/x86_64-linux-gnu/libgphoto2/2.5.30/canon.so",
@@ -37772,7 +35607,6 @@ filegroup(
         ":libltdl7-filegroup",
         ":libxml2-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -37796,8 +35630,6 @@ filegroup(
         "usr/include/gphoto2/gphoto2-setting.h",
         "usr/include/gphoto2/gphoto2-version.h",
         "usr/include/gphoto2/gphoto2-widget.h",
-        "usr/lib/x86_64-linux-gnu/libgphoto2.so",
-        "usr/lib/x86_64-linux-gnu/libgphoto2_port.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libgphoto2.pc",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libgphoto2_port.pc",
         "usr/share/doc/libgphoto2-dev/NEWS.Debian.gz",
@@ -37811,13 +35643,11 @@ filegroup(
         ":libgphoto2-6-filegroup",
         ":pkgconf-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgphoto2-port12-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgphoto2_port.so.12",
         "usr/lib/x86_64-linux-gnu/libgphoto2_port.so.12.1.0",
         "usr/lib/x86_64-linux-gnu/libgphoto2_port/0.12.1/disk.so",
         "usr/lib/x86_64-linux-gnu/libgphoto2_port/0.12.1/ptpip.so",
@@ -37855,27 +35685,22 @@ filegroup(
         ":libltdl7-filegroup",
         ":libusb-1.0-0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgraphite2-3-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgraphite2.so.2.0.0",
-        "usr/lib/x86_64-linux-gnu/libgraphite2.so.3",
         "usr/lib/x86_64-linux-gnu/libgraphite2.so.3.2.1",
         "usr/share/doc/libgraphite2-3/changelog.Debian.gz",
         "usr/share/doc/libgraphite2-3/changelog.gz",
         "usr/share/doc/libgraphite2-3/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgsm1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgsm.so.1",
         "usr/lib/x86_64-linux-gnu/libgsm.so.1.0.19",
         "usr/share/doc/libgsm1/MACHINES",
         "usr/share/doc/libgsm1/README",
@@ -37885,13 +35710,11 @@ filegroup(
         "usr/share/doc/libgsm1/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgssapi-krb5-2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgssapi_krb5.so.2",
         "usr/lib/x86_64-linux-gnu/libgssapi_krb5.so.2.2",
         "usr/share/doc/libgssapi-krb5-2/changelog.Debian.gz",
         "usr/share/doc/libgssapi-krb5-2/copyright",
@@ -37902,13 +35725,11 @@ filegroup(
         ":libkrb5-3-filegroup",
         ":libkrb5support0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgssdp-1.6-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgssdp-1.6.so.0",
         "usr/lib/x86_64-linux-gnu/libgssdp-1.6.so.0.106.2",
         "usr/share/doc/libgssdp-1.6-0/NEWS.gz",
         "usr/share/doc/libgssdp-1.6-0/README.md",
@@ -37918,13 +35739,11 @@ filegroup(
         ":libglib2.0-0-filegroup",
         ":libsoup-3.0-0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgstreamer-gl1.0-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgstgl-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstgl-1.0.so.0.2200.0",
         "usr/share/doc/libgstreamer-gl1.0-0/changelog.Debian.gz",
         "usr/share/doc/libgstreamer-gl1.0-0/changelog.gz",
@@ -37945,13 +35764,11 @@ filegroup(
         ":libx11-xcb1-filegroup",
         ":libxcb1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgstreamer-opencv1.0-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgstopencv-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstopencv-1.0.so.0.2200.0",
         "usr/share/doc/libgstreamer-opencv1.0-0/changelog.Debian.gz",
         "usr/share/doc/libgstreamer-opencv1.0-0/changelog.gz",
@@ -37964,50 +35781,30 @@ filegroup(
         ":libopencv-core406-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgstreamer-plugins-bad1.0-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgstadaptivedemux-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstadaptivedemux-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstbadaudio-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstbadaudio-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstbasecamerabinsrc-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstbasecamerabinsrc-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstcodecparsers-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstcodecparsers-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstcodecs-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstcodecs-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstcuda-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstcuda-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstinsertbin-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstinsertbin-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstisoff-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstisoff-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstmpegts-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstmpegts-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstphotography-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstphotography-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstplay-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstplay-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstplayer-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstplayer-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstsctp-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstsctp-1.0.so.0.2200.0",
         "usr/lib/x86_64-linux-gnu/libgsttranscoder-1.0.so.0",
-        "usr/lib/x86_64-linux-gnu/libgsturidownloader-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgsturidownloader-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstva-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstva-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstvulkan-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstvulkan-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstwayland-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstwayland-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstwebrtc-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstwebrtc-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstwebrtcnice-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstwebrtcnice-1.0.so.0.2200.0",
         "usr/share/doc/libgstreamer-plugins-bad1.0-0/changelog.Debian.gz",
         "usr/share/doc/libgstreamer-plugins-bad1.0-0/changelog.gz",
@@ -38038,7 +35835,6 @@ filegroup(
         ":libxkbcommon-x11-0-filegroup",
         ":libxkbcommon0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -38199,27 +35995,6 @@ filegroup(
         "usr/include/gstreamer-1.0/gst/webrtc/webrtc.h",
         "usr/include/gstreamer-1.0/gst/webrtc/webrtc-enumtypes.h",
         "usr/include/gstreamer-1.0/gst/webrtc/webrtc_fwd.h",
-        "usr/lib/x86_64-linux-gnu/libgstadaptivedemux-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstbadaudio-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstbasecamerabinsrc-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstcodecparsers-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstcodecs-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstcuda-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstinsertbin-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstisoff-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstmpegts-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstopencv-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstphotography-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstplay-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstplayer-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstsctp-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgsttranscoder-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgsturidownloader-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstva-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstvulkan-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstwayland-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstwebrtc-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstwebrtcnice-1.0.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/gstreamer-bad-audio-1.0.pc",
         "usr/lib/x86_64-linux-gnu/pkgconfig/gstreamer-codecparsers-1.0.pc",
         "usr/lib/x86_64-linux-gnu/pkgconfig/gstreamer-cuda-1.0.pc",
@@ -38262,33 +36037,21 @@ filegroup(
         ":libgstreamer1.0-dev-filegroup",
         ":libopencv-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgstreamer-plugins-base1.0-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgstallocators-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstallocators-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstapp-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstapp-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstaudio-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstaudio-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstfft-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstfft-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstpbutils-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstpbutils-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstriff-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstriff-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstrtp-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstrtp-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstrtsp-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstrtsp-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstsdp-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstsdp-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgsttag-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgsttag-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstvideo-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstvideo-1.0.so.0.2200.0",
         "usr/share/doc/libgstreamer-plugins-base1.0-0/changelog.Debian.gz",
         "usr/share/doc/libgstreamer-plugins-base1.0-0/changelog.gz",
@@ -38341,7 +36104,6 @@ filegroup(
         ":liborc-0.4-0-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -38541,18 +36303,6 @@ filegroup(
         "usr/include/gstreamer-1.0/gst/video/videoorientation.h",
         "usr/include/gstreamer-1.0/gst/video/videooverlay.h",
         "usr/lib/x86_64-linux-gnu/gstreamer-1.0/include/gst/gl/gstglconfig.h",
-        "usr/lib/x86_64-linux-gnu/libgstallocators-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstapp-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstaudio-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstfft-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstgl-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstpbutils-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstriff-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstrtp-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstrtsp-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstsdp-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgsttag-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstvideo-1.0.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/gstreamer-allocators-1.0.pc",
         "usr/lib/x86_64-linux-gnu/pkgconfig/gstreamer-app-1.0.pc",
         "usr/lib/x86_64-linux-gnu/pkgconfig/gstreamer-audio-1.0.pc",
@@ -38603,7 +36353,6 @@ filegroup(
         ":libx11-xcb-dev-filegroup",
         ":pkgconf-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -38613,15 +36362,10 @@ filegroup(
         "usr/lib/x86_64-linux-gnu/gstreamer-1.0/libgstcoretracers.so",
         "usr/lib/x86_64-linux-gnu/gstreamer1.0/gstreamer-1.0/gst-plugin-scanner",
         "usr/lib/x86_64-linux-gnu/gstreamer1.0/gstreamer-1.0/gst-ptp-helper",
-        "usr/lib/x86_64-linux-gnu/libgstbase-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstbase-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstcheck-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstcheck-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstcontroller-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstcontroller-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstnet-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstnet-1.0.so.0.2200.0",
-        "usr/lib/x86_64-linux-gnu/libgstreamer-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgstreamer-1.0.so.0.2200.0",
         "usr/share/doc/libgstreamer1.0-0/changelog.Debian.gz",
         "usr/share/doc/libgstreamer1.0-0/changelog.gz",
@@ -38676,7 +36420,6 @@ filegroup(
         ":libglib2.0-0-filegroup",
         ":libunwind8-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -38806,11 +36549,6 @@ filegroup(
         "usr/include/gstreamer-1.0/gst/net/net.h",
         "usr/include/gstreamer-1.0/gst/net/net-prelude.h",
         "usr/lib/x86_64-linux-gnu/gstreamer1.0/gstreamer-1.0/gst-codec-info-1.0",
-        "usr/lib/x86_64-linux-gnu/libgstbase-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstcheck-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstcontroller-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstnet-1.0.so",
-        "usr/lib/x86_64-linux-gnu/libgstreamer-1.0.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/gstreamer-1.0.pc",
         "usr/lib/x86_64-linux-gnu/pkgconfig/gstreamer-base-1.0.pc",
         "usr/lib/x86_64-linux-gnu/pkgconfig/gstreamer-check-1.0.pc",
@@ -38839,13 +36577,11 @@ filegroup(
         ":libunwind-dev-filegroup",
         ":pkgconf-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgudev-1.0-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgudev-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libgudev-1.0.so.0.3.0",
         "usr/share/doc/libgudev-1.0-0/changelog.Debian.gz",
         "usr/share/doc/libgudev-1.0-0/copyright",
@@ -38853,7 +36589,6 @@ filegroup(
         ":libglib2.0-0-filegroup",
         ":libudev1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -38866,7 +36601,6 @@ filegroup(
         "usr/include/gudev-1.0/gudev/gudevenums.h",
         "usr/include/gudev-1.0/gudev/gudevenumtypes.h",
         "usr/include/gudev-1.0/gudev/gudevtypes.h",
-        "usr/lib/x86_64-linux-gnu/libgudev-1.0.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/gudev-1.0.pc",
         "usr/share/doc/libgudev-1.0-dev/changelog.Debian.gz",
         "usr/share/doc/libgudev-1.0-dev/copyright",
@@ -38894,13 +36628,11 @@ filegroup(
         ":libudev-dev-filegroup",
         ":pkgconf-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgupnp-1.6-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgupnp-1.6.so.0",
         "usr/lib/x86_64-linux-gnu/libgupnp-1.6.so.0.106.3",
         "usr/share/doc/libgupnp-1.6-0/NEWS.gz",
         "usr/share/doc/libgupnp-1.6-0/README.md",
@@ -38913,13 +36645,11 @@ filegroup(
         ":libxml2-filegroup",
         ":shared-mime-info-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libgupnp-igd-1.0-4-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libgupnp-igd-1.0.so.4",
         "usr/lib/x86_64-linux-gnu/libgupnp-igd-1.0.so.4.2.1",
         "usr/share/doc/libgupnp-igd-1.0-4/changelog.Debian.gz",
         "usr/share/doc/libgupnp-igd-1.0-4/copyright",
@@ -38928,13 +36658,11 @@ filegroup(
         ":libgssdp-1.6-0-filegroup",
         ":libgupnp-1.6-0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libharfbuzz0b-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libharfbuzz.so.0",
         "usr/lib/x86_64-linux-gnu/libharfbuzz.so.0.60000.0",
         "usr/share/doc/libharfbuzz0b/changelog.Debian.gz",
         "usr/share/doc/libharfbuzz0b/changelog.gz",
@@ -38944,15 +36672,12 @@ filegroup(
         ":libglib2.0-0-filegroup",
         ":libgraphite2-3-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libhdf4-0-alt-filegroup",
     srcs = [
-        "usr/lib/libdfalt.so.0",
         "usr/lib/libdfalt.so.0.0.0",
-        "usr/lib/libmfhdfalt.so.0",
         "usr/lib/libmfhdfalt.so.0.0.0",
         "usr/share/doc/libhdf4-0-alt/NEWS.Debian.gz",
         "usr/share/doc/libhdf4-0-alt/changelog.Debian.gz",
@@ -38963,16 +36688,13 @@ filegroup(
         ":libtirpc3-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libhdf5-103-1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libhdf5_serial.so.103",
         "usr/lib/x86_64-linux-gnu/libhdf5_serial.so.103.3.1",
         "usr/share/doc/libhdf5-103-1/README.Debian",
-        "usr/share/doc/libhdf5-103-1/RELEASE.txt.gz",
         "usr/share/doc/libhdf5-103-1/changelog.Debian.gz",
         "usr/share/doc/libhdf5-103-1/changelog.gz",
         "usr/share/doc/libhdf5-103-1/copyright",
@@ -38982,28 +36704,23 @@ filegroup(
         ":libsz2-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libhdf5-hl-100-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libhdf5_serial_hl.so.100",
         "usr/lib/x86_64-linux-gnu/libhdf5_serial_hl.so.100.1.5",
-        "usr/share/doc/libhdf5-hl-100/RELEASE.txt.gz",
         "usr/share/doc/libhdf5-hl-100/changelog.Debian.gz",
         "usr/share/doc/libhdf5-hl-100/changelog.gz",
         "usr/share/doc/libhdf5-hl-100/copyright",
         ":libc6-filegroup",
         ":libhdf5-103-1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libheif1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libheif.so.1",
         "usr/lib/x86_64-linux-gnu/libheif.so.1.15.1",
         "usr/share/doc/libheif1/changelog.Debian.gz",
         "usr/share/doc/libheif1/copyright",
@@ -39016,13 +36733,11 @@ filegroup(
         ":libx265-199-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libhogweed6-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libhogweed.so.6",
         "usr/lib/x86_64-linux-gnu/libhogweed.so.6.6",
         "usr/share/doc/libhogweed6/changelog.Debian.gz",
         "usr/share/doc/libhogweed6/changelog.gz",
@@ -39031,7 +36746,6 @@ filegroup(
         ":libgmp10-filegroup",
         ":libnettle8-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -39051,30 +36765,24 @@ filegroup(
         ":libxnvctrl0-filegroup",
         ":ocl-icd-libopencl1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libhwloc15-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libhwloc.so.15",
         "usr/lib/x86_64-linux-gnu/libhwloc.so.15.6.1",
         "usr/share/doc/libhwloc15/changelog.Debian.gz",
         "usr/share/doc/libhwloc15/copyright",
         ":libc6-filegroup",
         ":libudev1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libhwy1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libhwy.so.1",
         "usr/lib/x86_64-linux-gnu/libhwy.so.1.0.3",
-        "usr/lib/x86_64-linux-gnu/libhwy_contrib.so.1",
         "usr/lib/x86_64-linux-gnu/libhwy_contrib.so.1.0.3",
-        "usr/lib/x86_64-linux-gnu/libhwy_test.so.1",
         "usr/lib/x86_64-linux-gnu/libhwy_test.so.1.0.3",
         "usr/share/doc/libhwy1/changelog.Debian.gz",
         "usr/share/doc/libhwy1/copyright",
@@ -39082,13 +36790,11 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libibverbs1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libibverbs.so.1",
         "usr/lib/x86_64-linux-gnu/libibverbs.so.1.14.44.0",
         "usr/share/doc/libibverbs1/changelog.Debian.gz",
         "usr/share/doc/libibverbs1/copyright",
@@ -39098,13 +36804,11 @@ filegroup(
         ":libnl-3-200-filegroup",
         ":libnl-route-3-200-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libice6-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libICE.so.6",
         "usr/lib/x86_64-linux-gnu/libICE.so.6.3.0",
         "usr/share/doc/libice6/changelog.Debian.gz",
         "usr/share/doc/libice6/changelog.gz",
@@ -39113,23 +36817,16 @@ filegroup(
         ":libc6-filegroup",
         ":x11-common-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libicu72-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libicudata.so.72",
         "usr/lib/x86_64-linux-gnu/libicudata.so.72.1",
-        "usr/lib/x86_64-linux-gnu/libicui18n.so.72",
         "usr/lib/x86_64-linux-gnu/libicui18n.so.72.1",
-        "usr/lib/x86_64-linux-gnu/libicuio.so.72",
         "usr/lib/x86_64-linux-gnu/libicuio.so.72.1",
-        "usr/lib/x86_64-linux-gnu/libicutest.so.72",
         "usr/lib/x86_64-linux-gnu/libicutest.so.72.1",
-        "usr/lib/x86_64-linux-gnu/libicutu.so.72",
         "usr/lib/x86_64-linux-gnu/libicutu.so.72.1",
-        "usr/lib/x86_64-linux-gnu/libicuuc.so.72",
         "usr/lib/x86_64-linux-gnu/libicuuc.so.72.1",
         "usr/share/doc/libicu72/changelog.Debian.gz",
         "usr/share/doc/libicu72/copyright",
@@ -39138,13 +36835,11 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libidn2-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libidn2.so.0",
         "usr/lib/x86_64-linux-gnu/libidn2.so.0.3.8",
         "usr/share/doc/libidn2-0/AUTHORS",
         "usr/share/doc/libidn2-0/NEWS.gz",
@@ -39181,13 +36876,11 @@ filegroup(
         ":libc6-filegroup",
         ":libunistring2-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libimath-3-1-29-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libImath-3_1.so.29",
         "usr/lib/x86_64-linux-gnu/libImath-3_1.so.29.5.0",
         "usr/share/doc/libimath-3-1-29/changelog.Debian.gz",
         "usr/share/doc/libimath-3-1-29/changelog.gz",
@@ -39195,7 +36888,6 @@ filegroup(
         ":libc6-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -39282,8 +36974,6 @@ filegroup(
         "usr/lib/x86_64-linux-gnu/cmake/Imath/ImathConfigVersion.cmake",
         "usr/lib/x86_64-linux-gnu/cmake/Imath/ImathTargets.cmake",
         "usr/lib/x86_64-linux-gnu/cmake/Imath/ImathTargets-none.cmake",
-        "usr/lib/x86_64-linux-gnu/libImath.so",
-        "usr/lib/x86_64-linux-gnu/libImath-3_1.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/Imath.pc",
         "usr/lib/x86_64-linux-gnu/pkgconfig/PyImath.pc",
         "usr/share/doc/libimath-dev/changelog.Debian.gz",
@@ -39291,7 +36981,6 @@ filegroup(
         "usr/share/doc/libimath-dev/copyright",
         ":libimath-3-1-29-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -39348,13 +37037,11 @@ filegroup(
         ":libudev1-filegroup",
         ":libwacom9-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libinput10-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libinput.so.10",
         "usr/lib/x86_64-linux-gnu/libinput.so.10.13.0",
         "usr/share/doc/libinput10/changelog.Debian.gz",
         "usr/share/doc/libinput10/copyright",
@@ -39365,31 +37052,26 @@ filegroup(
         ":libudev1-filegroup",
         ":libwacom9-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libip4tc2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libip4tc.so.2",
         "usr/lib/x86_64-linux-gnu/libip4tc.so.2.0.0",
         "usr/share/doc/libip4tc2/NEWS.Debian.gz",
         "usr/share/doc/libip4tc2/changelog.Debian.gz",
         "usr/share/doc/libip4tc2/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libitm1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libitm.so.1",
         "usr/lib/x86_64-linux-gnu/libitm.so.1.0.0",
         ":gcc-12-base-filegroup",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -39399,13 +37081,11 @@ filegroup(
         "usr/include/jbig85.h",
         "usr/include/jbig_ar.h",
         "usr/lib/x86_64-linux-gnu/libjbig.a",
-        "usr/lib/x86_64-linux-gnu/libjbig.so",
         "usr/share/doc/libjbig-dev/changelog.Debian.gz",
         "usr/share/doc/libjbig-dev/changelog.gz",
         "usr/share/doc/libjbig-dev/copyright",
         ":libjbig0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -39417,7 +37097,6 @@ filegroup(
         "usr/share/doc/libjbig0/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -39429,7 +37108,6 @@ filegroup(
         "usr/include/jpeglib.h",
         "usr/include/x86_64-linux-gnu/jconfig.h",
         "usr/lib/x86_64-linux-gnu/libjpeg.a",
-        "usr/lib/x86_64-linux-gnu/libjpeg.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libjpeg.pc",
         "usr/share/doc/libjpeg62-turbo-dev/README.ijg.gz",
         "usr/share/doc/libjpeg62-turbo-dev/README.md.gz",
@@ -39445,13 +37123,11 @@ filegroup(
         ":libc6-dev-filegroup",
         ":libjpeg62-turbo-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libjpeg62-turbo-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libjpeg.so.62",
         "usr/lib/x86_64-linux-gnu/libjpeg.so.62.3.0",
         "usr/share/doc/libjpeg62-turbo/changelog.Debian.gz",
         "usr/share/doc/libjpeg62-turbo/changelog.gz",
@@ -39459,13 +37135,11 @@ filegroup(
         "usr/share/lintian/overrides/libjpeg62-turbo",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libjson-c5-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libjson-c.so.5",
         "usr/lib/x86_64-linux-gnu/libjson-c.so.5.2.0",
         "usr/share/doc/libjson-c5/README",
         "usr/share/doc/libjson-c5/README.html",
@@ -39474,14 +37148,12 @@ filegroup(
         "usr/share/doc/libjson-c5/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libjsoncpp25-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/libjsoncpp.so.1.9.5",
-        "usr/lib/x86_64-linux-gnu/libjsoncpp.so.25",
         "usr/share/doc/libjsoncpp25/README.Debian",
         "usr/share/doc/libjsoncpp25/README.md",
         "usr/share/doc/libjsoncpp25/changelog.Debian.gz",
@@ -39490,15 +37162,12 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libjxl0.7-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libjxl.so.0.7",
         "usr/lib/x86_64-linux-gnu/libjxl.so.0.7.0",
-        "usr/lib/x86_64-linux-gnu/libjxl_threads.so.0.7",
         "usr/lib/x86_64-linux-gnu/libjxl_threads.so.0.7.0",
         "usr/share/doc/libjxl0.7/changelog.Debian.gz",
         "usr/share/doc/libjxl0.7/changelog.gz",
@@ -39510,38 +37179,32 @@ filegroup(
         ":liblcms2-2-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libk5crypto3-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libk5crypto.so.3",
         "usr/lib/x86_64-linux-gnu/libk5crypto.so.3.1",
         "usr/share/doc/libk5crypto3/changelog.Debian.gz",
         "usr/share/doc/libk5crypto3/copyright",
         ":libc6-filegroup",
         ":libkrb5support0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libkeyutils1-filegroup",
     srcs = [
-        "lib/x86_64-linux-gnu/libkeyutils.so.1",
         "lib/x86_64-linux-gnu/libkeyutils.so.1.10",
         "usr/share/doc/libkeyutils1/changelog.Debian.gz",
         "usr/share/doc/libkeyutils1/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libkmlbase1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libkmlbase.so.1",
         "usr/lib/x86_64-linux-gnu/libkmlbase.so.1.3.0",
         "usr/share/doc/libkmlbase1/README.md",
         "usr/share/doc/libkmlbase1/changelog.Debian.gz",
@@ -39555,13 +37218,11 @@ filegroup(
         ":liburiparser1-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libkmldom1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libkmldom.so.1",
         "usr/lib/x86_64-linux-gnu/libkmldom.so.1.3.0",
         "usr/share/doc/libkmldom1/README.md",
         "usr/share/doc/libkmldom1/changelog.Debian.gz",
@@ -39573,13 +37234,11 @@ filegroup(
         ":libkmlbase1-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libkmlengine1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libkmlengine.so.1",
         "usr/lib/x86_64-linux-gnu/libkmlengine.so.1.3.0",
         "usr/share/doc/libkmlengine1/README.md",
         "usr/share/doc/libkmlengine1/changelog.Debian.gz",
@@ -39591,13 +37250,11 @@ filegroup(
         ":libkmldom1-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libkmod2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libkmod.so.2",
         "usr/lib/x86_64-linux-gnu/libkmod.so.2.4.0",
         "usr/share/doc/libkmod2/changelog.Debian.gz",
         "usr/share/doc/libkmod2/changelog.gz",
@@ -39607,14 +37264,12 @@ filegroup(
         ":libssl3-filegroup",
         ":libzstd1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libkrb5-3-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/krb5/plugins/preauth/spake.so",
-        "usr/lib/x86_64-linux-gnu/libkrb5.so.3",
         "usr/lib/x86_64-linux-gnu/libkrb5.so.3.3",
         "usr/share/doc/libkrb5-3/README.Debian",
         "usr/share/doc/libkrb5-3/README.gz",
@@ -39628,25 +37283,21 @@ filegroup(
         ":libkrb5support0-filegroup",
         ":libssl3-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libkrb5support0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libkrb5support.so.0",
         "usr/lib/x86_64-linux-gnu/libkrb5support.so.0.1",
         "usr/share/doc/libkrb5support0/changelog.Debian.gz",
         "usr/share/doc/libkrb5support0/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "liblapack3-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3",
         "usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.11.0",
         "usr/share/doc/liblapack3/changelog.Debian.gz",
         "usr/share/doc/liblapack3/copyright",
@@ -39656,28 +37307,23 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libgfortran5-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "liblcms2-2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/liblcms2.so.2",
         "usr/lib/x86_64-linux-gnu/liblcms2.so.2.0.14",
         "usr/share/doc/liblcms2-2/changelog.Debian.gz",
         "usr/share/doc/liblcms2-2/changelog.gz",
         "usr/share/doc/liblcms2-2/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libldap-2.5-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/liblber-2.5.so.0",
         "usr/lib/x86_64-linux-gnu/liblber-2.5.so.0.1.8",
-        "usr/lib/x86_64-linux-gnu/libldap-2.5.so.0",
         "usr/lib/x86_64-linux-gnu/libldap-2.5.so.0.1.8",
         "usr/share/doc/libldap-2.5-0/README.Debian",
         "usr/share/doc/libldap-2.5-0/changelog.Debian.gz",
@@ -39688,13 +37334,11 @@ filegroup(
         ":libgnutls30-filegroup",
         ":libsasl2-2-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "liblept5-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/liblept.so.5",
         "usr/lib/x86_64-linux-gnu/liblept.so.5.0.4",
         "usr/share/doc/liblept5/changelog.Debian.amd64.gz",
         "usr/share/doc/liblept5/changelog.Debian.gz",
@@ -39709,7 +37353,6 @@ filegroup(
         ":libwebpmux3-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -39718,15 +37361,12 @@ filegroup(
         "usr/include/Lerc_c_api.h",
         "usr/include/Lerc_types.h",
         "usr/lib/x86_64-linux-gnu/libLerc.a",
-        "usr/lib/x86_64-linux-gnu/libLerc.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/Lerc.pc",
-        "usr/share/doc/liblerc-dev/NOTICE",
         "usr/share/doc/liblerc-dev/changelog.Debian.gz",
         "usr/share/doc/liblerc-dev/changelog.gz",
         "usr/share/doc/liblerc-dev/copyright",
         ":liblerc4-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -39741,13 +37381,11 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libllvm15-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libLLVM-15.so",
         "usr/lib/x86_64-linux-gnu/libLLVM-15.so.1",
         "usr/share/doc/libllvm15/NEWS.Debian.gz",
         "usr/share/doc/libllvm15/changelog.Debian.amd64.gz",
@@ -39764,25 +37402,21 @@ filegroup(
         ":libz3-4-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "liblsan0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/liblsan.so.0",
         "usr/lib/x86_64-linux-gnu/liblsan.so.0.0.0",
         ":gcc-12-base-filegroup",
         ":libc6-filegroup",
         ":libgcc-s1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libltdl7-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libltdl.so.7",
         "usr/lib/x86_64-linux-gnu/libltdl.so.7.3.2",
         "usr/share/doc/libltdl7/NEWS.gz",
         "usr/share/doc/libltdl7/README",
@@ -39791,19 +37425,16 @@ filegroup(
         "usr/share/doc/libltdl7/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "liblz4-1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/liblz4.so.1",
         "usr/lib/x86_64-linux-gnu/liblz4.so.1.9.4",
         "usr/share/doc/liblz4-1/changelog.Debian.gz",
         "usr/share/doc/liblz4-1/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -39825,12 +37456,8 @@ filegroup(
         "usr/include/lzma/version.h",
         "usr/include/lzma/vli.h",
         "usr/lib/x86_64-linux-gnu/liblzma.a",
-        "usr/lib/x86_64-linux-gnu/liblzma.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/liblzma.pc",
-        "usr/share/doc/liblzma-dev/AUTHORS",
-        "usr/share/doc/liblzma-dev/NEWS.gz",
         "usr/share/doc/liblzma-dev/README.Debian",
-        "usr/share/doc/liblzma-dev/THANKS",
         "usr/share/doc/liblzma-dev/TODO",
         "usr/share/doc/liblzma-dev/changelog.Debian.gz",
         "usr/share/doc/liblzma-dev/changelog.gz",
@@ -39847,13 +37474,11 @@ filegroup(
         "usr/share/doc/liblzma-dev/xz-file-format.txt.gz",
         ":liblzma5-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "liblzma5-filegroup",
     srcs = [
-        "lib/x86_64-linux-gnu/liblzma.so.5",
         "lib/x86_64-linux-gnu/liblzma.so.5.4.1",
         "usr/share/doc/liblzma5/AUTHORS",
         "usr/share/doc/liblzma5/NEWS.gz",
@@ -39863,7 +37488,6 @@ filegroup(
         "usr/share/doc/liblzma5/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -39882,56 +37506,46 @@ filegroup(
         ":mariadb-common-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libmbedcrypto7-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/libmbedcrypto.so.2.28.3",
-        "usr/lib/x86_64-linux-gnu/libmbedcrypto.so.7",
         "usr/share/doc/libmbedcrypto7/changelog.Debian.gz",
         "usr/share/doc/libmbedcrypto7/changelog.gz",
         "usr/share/doc/libmbedcrypto7/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libmd0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libmd.so.0",
         "usr/lib/x86_64-linux-gnu/libmd.so.0.0.5",
         "usr/share/doc/libmd0/changelog.Debian.gz",
         "usr/share/doc/libmd0/changelog.gz",
         "usr/share/doc/libmd0/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libmd4c0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libmd4c.so.0",
         "usr/lib/x86_64-linux-gnu/libmd4c.so.0.4.8",
         "usr/share/doc/libmd4c0/changelog.Debian.gz",
         "usr/share/doc/libmd4c0/changelog.gz",
         "usr/share/doc/libmd4c0/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libmfx1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libmfx.so.1",
         "usr/lib/x86_64-linux-gnu/libmfx.so.1.35",
-        "usr/lib/x86_64-linux-gnu/libmfx-tracer.so.1",
         "usr/lib/x86_64-linux-gnu/libmfx-tracer.so.1.35",
-        "usr/lib/x86_64-linux-gnu/libmfxhw64.so.1",
         "usr/lib/x86_64-linux-gnu/libmfxhw64.so.1.35",
         "usr/lib/x86_64-linux-gnu/mfx/libmfx_h264la_hw64.so",
         "usr/lib/x86_64-linux-gnu/mfx/libmfx_hevc_fei_hw64.so",
@@ -39949,27 +37563,23 @@ filegroup(
         ":libstdc++6-filegroup",
         ":libva2-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libminizip1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libminizip.so.1",
         "usr/lib/x86_64-linux-gnu/libminizip.so.1.0.0",
         "usr/share/doc/libminizip1/changelog.Debian.gz",
         "usr/share/doc/libminizip1/copyright",
         ":libc6-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libmount-dev-filegroup",
     srcs = [
         "usr/include/libmount/libmount.h",
-        "usr/lib/x86_64-linux-gnu/libmount.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/mount.pc",
         "usr/share/doc/libmount-dev/changelog.Debian.gz",
         "usr/share/doc/libmount-dev/changelog.gz",
@@ -39979,13 +37589,11 @@ filegroup(
         ":libmount1-filegroup",
         ":libselinux1-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libmount1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libmount.so.1",
         "usr/lib/x86_64-linux-gnu/libmount.so.1.1.0",
         "usr/share/doc/libmount1/changelog.Debian.gz",
         "usr/share/doc/libmount1/changelog.gz",
@@ -39995,26 +37603,22 @@ filegroup(
         ":libc6-filegroup",
         ":libselinux1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libmp3lame0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libmp3lame.so.0",
         "usr/lib/x86_64-linux-gnu/libmp3lame.so.0.0.0",
         "usr/share/doc/libmp3lame0/changelog.Debian.gz",
         "usr/share/doc/libmp3lame0/changelog.gz",
         "usr/share/doc/libmp3lame0/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libmpg123-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libmpg123.so.0",
         "usr/lib/x86_64-linux-gnu/libmpg123.so.0.47.0",
         "usr/share/doc/libmpg123-0/changelog.Debian.gz",
         "usr/share/doc/libmpg123-0/changelog.gz",
@@ -40022,13 +37626,11 @@ filegroup(
         "usr/share/lintian/overrides/libmpg123-0",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libmtdev1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libmtdev.so.1",
         "usr/lib/x86_64-linux-gnu/libmtdev.so.1.0.0",
         "usr/share/apport/package-hooks/source_mtdev.py",
         "usr/share/doc/libmtdev1/README",
@@ -40037,37 +37639,29 @@ filegroup(
         "usr/share/doc/libmtdev1/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libmunge2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libmunge.so.2",
         "usr/lib/x86_64-linux-gnu/libmunge.so.2.0.0",
         "usr/share/doc/libmunge2/changelog.Debian.gz",
         "usr/share/doc/libmunge2/changelog.gz",
         "usr/share/doc/libmunge2/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libncursesw6-filegroup",
     srcs = [
-        "lib/x86_64-linux-gnu/libncursesw.so.6",
         "lib/x86_64-linux-gnu/libncursesw.so.6.4",
-        "usr/lib/x86_64-linux-gnu/libformw.so.6",
         "usr/lib/x86_64-linux-gnu/libformw.so.6.4",
-        "usr/lib/x86_64-linux-gnu/libmenuw.so.6",
         "usr/lib/x86_64-linux-gnu/libmenuw.so.6.4",
-        "usr/lib/x86_64-linux-gnu/libpanelw.so.6",
         "usr/lib/x86_64-linux-gnu/libpanelw.so.6.4",
         ":libc6-filegroup",
         ":libtinfo6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -40084,13 +37678,11 @@ filegroup(
         ":libhdf5-hl-100-filegroup",
         ":libxml2-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libnettle8-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libnettle.so.8",
         "usr/lib/x86_64-linux-gnu/libnettle.so.8.6",
         "usr/share/doc/libnettle8/NEWS.gz",
         "usr/share/doc/libnettle8/README",
@@ -40099,13 +37691,11 @@ filegroup(
         "usr/share/doc/libnettle8/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libnghttp2-14-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libnghttp2.so.14",
         "usr/lib/x86_64-linux-gnu/libnghttp2.so.14.24.1",
         "usr/share/doc/libnghttp2-14/AUTHORS",
         "usr/share/doc/libnghttp2-14/README.rst.gz",
@@ -40113,13 +37703,11 @@ filegroup(
         "usr/share/doc/libnghttp2-14/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libnice10-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libnice.so.10",
         "usr/lib/x86_64-linux-gnu/libnice.so.10.13.1",
         "usr/share/doc/libnice10/changelog.Debian.gz",
         "usr/share/doc/libnice10/changelog.gz",
@@ -40129,7 +37717,6 @@ filegroup(
         ":libgnutls30-filegroup",
         ":libgupnp-igd-1.0-4-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -40137,7 +37724,6 @@ filegroup(
     srcs = [
         "etc/libnl-3/classid",
         "etc/libnl-3/pktloc",
-        "lib/x86_64-linux-gnu/libnl-3.so.200",
         "lib/x86_64-linux-gnu/libnl-3.so.200.26.0",
         "usr/share/doc/libnl-3-200/README.Debian",
         "usr/share/doc/libnl-3-200/changelog.Debian.amd64.gz",
@@ -40146,13 +37732,11 @@ filegroup(
         "usr/share/doc/libnl-3-200/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libnl-route-3-200-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libnl-route-3.so.200",
         "usr/lib/x86_64-linux-gnu/libnl-route-3.so.200.26.0",
         "usr/share/doc/libnl-route-3-200/changelog.Debian.amd64.gz",
         "usr/share/doc/libnl-route-3-200/changelog.Debian.gz",
@@ -40161,7 +37745,6 @@ filegroup(
         ":libc6-filegroup",
         ":libnl-3-200-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -40174,13 +37757,11 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libnppc11-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libnppc.so.11",
         "usr/lib/x86_64-linux-gnu/libnppc.so.11.8.0.86",
         "usr/share/doc/libnppc11/changelog.Debian.gz",
         "usr/share/doc/libnppc11/copyright",
@@ -40188,13 +37769,11 @@ filegroup(
         ":libc6-filegroup",
         ":libgcc-s1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libnppial11-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libnppial.so.11",
         "usr/lib/x86_64-linux-gnu/libnppial.so.11.8.0.86",
         "usr/share/doc/libnppial11/changelog.Debian.gz",
         "usr/share/doc/libnppial11/copyright",
@@ -40203,13 +37782,11 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libnppc11-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libnppicc11-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libnppicc.so.11",
         "usr/lib/x86_64-linux-gnu/libnppicc.so.11.8.0.86",
         "usr/share/doc/libnppicc11/changelog.Debian.gz",
         "usr/share/doc/libnppicc11/copyright",
@@ -40218,13 +37795,11 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libnppc11-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libnppidei11-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libnppidei.so.11",
         "usr/lib/x86_64-linux-gnu/libnppidei.so.11.8.0.86",
         "usr/share/doc/libnppidei11/changelog.Debian.gz",
         "usr/share/doc/libnppidei11/copyright",
@@ -40233,13 +37808,11 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libnppc11-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libnppif11-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libnppif.so.11",
         "usr/lib/x86_64-linux-gnu/libnppif.so.11.8.0.86",
         "usr/share/doc/libnppif11/changelog.Debian.gz",
         "usr/share/doc/libnppif11/copyright",
@@ -40248,13 +37821,11 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libnppc11-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libnppig11-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libnppig.so.11",
         "usr/lib/x86_64-linux-gnu/libnppig.so.11.8.0.86",
         "usr/share/doc/libnppig11/changelog.Debian.gz",
         "usr/share/doc/libnppig11/copyright",
@@ -40263,13 +37834,11 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libnppc11-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libnppim11-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libnppim.so.11",
         "usr/lib/x86_64-linux-gnu/libnppim.so.11.8.0.86",
         "usr/share/doc/libnppim11/changelog.Debian.gz",
         "usr/share/doc/libnppim11/copyright",
@@ -40278,13 +37847,11 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libnppc11-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libnppist11-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libnppist.so.11",
         "usr/lib/x86_64-linux-gnu/libnppist.so.11.8.0.86",
         "usr/share/doc/libnppist11/changelog.Debian.gz",
         "usr/share/doc/libnppist11/copyright",
@@ -40293,13 +37860,11 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libnppc11-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libnppisu11-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libnppisu.so.11",
         "usr/lib/x86_64-linux-gnu/libnppisu.so.11.8.0.86",
         "usr/share/doc/libnppisu11/changelog.Debian.gz",
         "usr/share/doc/libnppisu11/copyright",
@@ -40308,13 +37873,11 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libnppc11-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libnppitc11-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libnppitc.so.11",
         "usr/lib/x86_64-linux-gnu/libnppitc.so.11.8.0.86",
         "usr/share/doc/libnppitc11/changelog.Debian.gz",
         "usr/share/doc/libnppitc11/copyright",
@@ -40323,13 +37886,11 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libnppc11-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libnpps11-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libnpps.so.11",
         "usr/lib/x86_64-linux-gnu/libnpps.so.11.8.0.86",
         "usr/share/doc/libnpps11/changelog.Debian.gz",
         "usr/share/doc/libnpps11/copyright",
@@ -40338,7 +37899,6 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libnppc11-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -40359,7 +37919,6 @@ filegroup(
         "usr/include/rpcsvc/yppasswd.x",
         "usr/include/rpcsvc/ypupd.h",
         "usr/lib/x86_64-linux-gnu/libnsl.a",
-        "usr/lib/x86_64-linux-gnu/libnsl.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libnsl.pc",
         "usr/share/doc/libnsl-dev/changelog.Debian.gz",
         "usr/share/doc/libnsl-dev/changelog.gz",
@@ -40367,13 +37926,11 @@ filegroup(
         ":libnsl2-filegroup",
         ":libtirpc-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libnsl2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libnsl.so.2",
         "usr/lib/x86_64-linux-gnu/libnsl.so.2.0.1",
         "usr/share/doc/libnsl2/changelog.Debian.gz",
         "usr/share/doc/libnsl2/changelog.gz",
@@ -40381,7 +37938,6 @@ filegroup(
         ":libc6-filegroup",
         ":libtirpc3-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -40395,7 +37951,6 @@ filegroup(
         "usr/share/lintian/overrides/libnspr4",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -40421,25 +37976,21 @@ filegroup(
         ":libnspr4-filegroup",
         ":libsqlite3-0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libnuma1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libnuma.so.1",
         "usr/lib/x86_64-linux-gnu/libnuma.so.1.0.0",
         "usr/share/doc/libnuma1/changelog.Debian.gz",
         "usr/share/doc/libnuma1/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libnvblas11-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libnvblas.so.11",
         "usr/lib/x86_64-linux-gnu/libnvblas.so.11.11.3.6",
         "usr/share/doc/libnvblas11/changelog.Debian.gz",
         "usr/share/doc/libnvblas11/copyright",
@@ -40449,7 +38000,6 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -40461,14 +38011,11 @@ filegroup(
         "usr/share/lintian/overrides/libnvidia-ml-dev",
         ":libnvidia-ml1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libnvidia-ml1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/nvidia/current/libnvidia-ml.so",
-        "usr/lib/x86_64-linux-gnu/nvidia/current/libnvidia-ml.so.1",
         "usr/lib/x86_64-linux-gnu/nvidia/current/libnvidia-ml.so.535.216.01",
         "usr/share/bug/libnvidia-ml1/control",
         "usr/share/bug/libnvidia-ml1/script",
@@ -40479,7 +38026,6 @@ filegroup(
         ":libc6-filegroup",
         ":nvidia-alternative-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -40496,13 +38042,11 @@ filegroup(
         ":libssl3-filegroup",
         ":nvidia-alternative-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libnvidia-ptxjitcompiler1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/nvidia/current/libnvidia-ptxjitcompiler.so.1",
         "usr/lib/x86_64-linux-gnu/nvidia/current/libnvidia-ptxjitcompiler.so.535.216.01",
         "usr/share/bug/libnvidia-ptxjitcompiler1/control",
         "usr/share/bug/libnvidia-ptxjitcompiler1/script",
@@ -40512,13 +38056,11 @@ filegroup(
         "usr/share/lintian/overrides/libnvidia-ptxjitcompiler1",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libnvjpeg11-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libnvjpeg.so.11",
         "usr/lib/x86_64-linux-gnu/libnvjpeg.so.11.9.0.86",
         "usr/share/doc/libnvjpeg11/changelog.Debian.gz",
         "usr/share/doc/libnvjpeg11/copyright",
@@ -40526,13 +38068,11 @@ filegroup(
         ":libc6-filegroup",
         ":libgcc-s1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libnvrtc-builtins11.8-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libnvrtc-builtins.so.11.8",
         "usr/lib/x86_64-linux-gnu/libnvrtc-builtins.so.11.8.89",
         "usr/share/doc/libnvrtc-builtins11.8/changelog.Debian.gz",
         "usr/share/doc/libnvrtc-builtins11.8/copyright",
@@ -40541,13 +38081,11 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libnvrtc11.2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libnvrtc.so.11.2",
         "usr/lib/x86_64-linux-gnu/libnvrtc.so.11.8.89",
         "usr/share/doc/libnvrtc11.2/changelog.Debian.gz",
         "usr/share/doc/libnvrtc11.2/copyright",
@@ -40555,13 +38093,11 @@ filegroup(
         ":libc6-filegroup",
         ":libnvrtc-builtins11.8-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libnvtoolsext1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libnvToolsExt.so.1",
         "usr/lib/x86_64-linux-gnu/libnvToolsExt.so.1.0.0",
         "usr/share/doc/libnvtoolsext1/changelog.Debian.gz",
         "usr/share/doc/libnvtoolsext1/copyright",
@@ -40570,39 +38106,33 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libnvvm4-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libnvvm.so.4",
         "usr/lib/x86_64-linux-gnu/libnvvm.so.4.0.0",
         "usr/share/doc/libnvvm4/changelog.Debian.gz",
         "usr/share/doc/libnvvm4/copyright",
         "usr/share/lintian/overrides/libnvvm4",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libodbc2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libodbc.so.2",
         "usr/lib/x86_64-linux-gnu/libodbc.so.2.0.0",
         "usr/share/doc/libodbc2/changelog.Debian.gz",
         "usr/share/doc/libodbc2/copyright",
         ":libc6-filegroup",
         ":libltdl7-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libodbcinst2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libodbcinst.so.2",
         "usr/lib/x86_64-linux-gnu/libodbcinst.so.2.0.0",
         "usr/share/doc/libodbcinst2/changelog.Debian.gz",
         "usr/share/doc/libodbcinst2/copyright",
@@ -40610,15 +38140,12 @@ filegroup(
         ":libltdl7-filegroup",
         ":unixodbc-common-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libogdi4.1-filegroup",
     srcs = [
-        "usr/lib/libogdi.so.4",
         "usr/lib/libogdi.so.4.1",
-        "usr/lib/libvpf.so.4",
         "usr/lib/libvpf.so.4.1",
         "usr/lib/ogdi/4.1/libadrg.so",
         "usr/lib/ogdi/4.1/libecs_tcl.so",
@@ -40635,20 +38162,17 @@ filegroup(
         ":libtirpc3-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libogg0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libogg.so.0",
         "usr/lib/x86_64-linux-gnu/libogg.so.0.8.5",
         "usr/share/doc/libogg0/changelog.Debian.gz",
         "usr/share/doc/libogg0/changelog.gz",
         "usr/share/doc/libogg0/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -40658,21 +38182,18 @@ filegroup(
         "usr/include/opencv4/opencv2/calib3d/calib3d.hpp",
         "usr/include/opencv4/opencv2/calib3d/calib3d_c.h",
         "usr/lib/x86_64-linux-gnu/libopencv_calib3d.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_calib3d.so",
         "usr/share/doc/libopencv-calib3d-dev/README.Debian",
         "usr/share/doc/libopencv-calib3d-dev/changelog.Debian.gz",
         "usr/share/doc/libopencv-calib3d-dev/copyright",
         ":libopencv-calib3d406-filegroup",
         ":libopencv-features2d-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libopencv-calib3d406-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/libopencv_calib3d.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_calib3d.so.406",
         "usr/share/doc/libopencv-calib3d406/changelog.Debian.gz",
         "usr/share/doc/libopencv-calib3d406/copyright",
         ":libc6-filegroup",
@@ -40683,7 +38204,6 @@ filegroup(
         ":libopencv-imgproc406-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -40887,79 +38407,42 @@ filegroup(
         "usr/include/opencv4/opencv2/xphoto/tonemap.hpp",
         "usr/include/opencv4/opencv2/xphoto/white_balance.hpp",
         "usr/lib/x86_64-linux-gnu/libopencv_alphamat.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_alphamat.so",
         "usr/lib/x86_64-linux-gnu/libopencv_aruco.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_aruco.so",
         "usr/lib/x86_64-linux-gnu/libopencv_barcode.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_barcode.so",
         "usr/lib/x86_64-linux-gnu/libopencv_bgsegm.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_bgsegm.so",
         "usr/lib/x86_64-linux-gnu/libopencv_bioinspired.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_bioinspired.so",
         "usr/lib/x86_64-linux-gnu/libopencv_ccalib.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_ccalib.so",
         "usr/lib/x86_64-linux-gnu/libopencv_cvv.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_cvv.so",
         "usr/lib/x86_64-linux-gnu/libopencv_datasets.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_datasets.so",
         "usr/lib/x86_64-linux-gnu/libopencv_dnn_objdetect.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_dnn_objdetect.so",
         "usr/lib/x86_64-linux-gnu/libopencv_dnn_superres.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_dnn_superres.so",
         "usr/lib/x86_64-linux-gnu/libopencv_dpm.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_dpm.so",
         "usr/lib/x86_64-linux-gnu/libopencv_face.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_face.so",
         "usr/lib/x86_64-linux-gnu/libopencv_freetype.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_freetype.so",
         "usr/lib/x86_64-linux-gnu/libopencv_fuzzy.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_fuzzy.so",
         "usr/lib/x86_64-linux-gnu/libopencv_hdf.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_hdf.so",
         "usr/lib/x86_64-linux-gnu/libopencv_hfs.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_hfs.so",
         "usr/lib/x86_64-linux-gnu/libopencv_img_hash.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_img_hash.so",
         "usr/lib/x86_64-linux-gnu/libopencv_intensity_transform.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_intensity_transform.so",
         "usr/lib/x86_64-linux-gnu/libopencv_line_descriptor.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_line_descriptor.so",
         "usr/lib/x86_64-linux-gnu/libopencv_mcc.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_mcc.so",
         "usr/lib/x86_64-linux-gnu/libopencv_optflow.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_optflow.so",
         "usr/lib/x86_64-linux-gnu/libopencv_phase_unwrapping.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_phase_unwrapping.so",
         "usr/lib/x86_64-linux-gnu/libopencv_plot.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_plot.so",
         "usr/lib/x86_64-linux-gnu/libopencv_quality.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_quality.so",
         "usr/lib/x86_64-linux-gnu/libopencv_rapid.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_rapid.so",
         "usr/lib/x86_64-linux-gnu/libopencv_reg.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_reg.so",
         "usr/lib/x86_64-linux-gnu/libopencv_rgbd.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_rgbd.so",
         "usr/lib/x86_64-linux-gnu/libopencv_saliency.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_saliency.so",
         "usr/lib/x86_64-linux-gnu/libopencv_stereo.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_stereo.so",
         "usr/lib/x86_64-linux-gnu/libopencv_structured_light.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_structured_light.so",
         "usr/lib/x86_64-linux-gnu/libopencv_surface_matching.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_surface_matching.so",
         "usr/lib/x86_64-linux-gnu/libopencv_text.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_text.so",
         "usr/lib/x86_64-linux-gnu/libopencv_tracking.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_tracking.so",
         "usr/lib/x86_64-linux-gnu/libopencv_wechat_qrcode.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_wechat_qrcode.so",
         "usr/lib/x86_64-linux-gnu/libopencv_ximgproc.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_ximgproc.so",
         "usr/lib/x86_64-linux-gnu/libopencv_xobjdetect.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_xobjdetect.so",
         "usr/lib/x86_64-linux-gnu/libopencv_xphoto.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_xphoto.so",
         "usr/share/doc/libopencv-contrib-dev/README.Debian",
         "usr/share/doc/libopencv-contrib-dev/changelog.Debian.gz",
         "usr/share/doc/libopencv-contrib-dev/copyright",
@@ -40983,86 +38466,48 @@ filegroup(
         ":libopencv-videostab-dev-filegroup",
         ":libopencv-viz-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libopencv-contrib406-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/libopencv_alphamat.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_alphamat.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_aruco.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_aruco.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_barcode.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_barcode.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_bgsegm.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_bgsegm.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_bioinspired.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_bioinspired.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_ccalib.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_ccalib.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_cvv.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_cvv.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_datasets.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_datasets.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_dnn_objdetect.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_dnn_objdetect.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_dnn_superres.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_dnn_superres.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_dpm.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_dpm.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_face.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_face.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_freetype.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_freetype.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_fuzzy.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_fuzzy.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_hdf.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_hdf.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_hfs.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_hfs.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_img_hash.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_img_hash.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_intensity_transform.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_intensity_transform.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_line_descriptor.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_line_descriptor.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_mcc.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_mcc.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_optflow.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_optflow.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_phase_unwrapping.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_phase_unwrapping.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_plot.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_plot.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_quality.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_quality.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_rapid.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_rapid.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_reg.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_reg.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_rgbd.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_rgbd.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_saliency.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_saliency.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_stereo.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_stereo.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_structured_light.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_structured_light.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_surface_matching.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_surface_matching.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_text.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_text.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_tracking.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_tracking.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_wechat_qrcode.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_wechat_qrcode.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_ximgproc.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_ximgproc.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_xobjdetect.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_xobjdetect.so.406",
         "usr/lib/x86_64-linux-gnu/libopencv_xphoto.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_xphoto.so.406",
         "usr/share/doc/libopencv-contrib406/changelog.Debian.gz",
         "usr/share/doc/libopencv-contrib406/copyright",
         "usr/share/lintian/overrides/libopencv-contrib406",
@@ -41088,7 +38533,6 @@ filegroup(
         ":libstdc++6-filegroup",
         ":libtesseract5-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -41227,7 +38671,6 @@ filegroup(
         "usr/include/opencv4/opencv2/opencv_modules.hpp",
         "usr/include/x86_64-linux-gnu/opencv4/opencv2/cvconfig.h",
         "usr/lib/x86_64-linux-gnu/libopencv_core.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_core.so",
         "usr/share/doc/libopencv-core-dev/README.Debian",
         "usr/share/doc/libopencv-core-dev/changelog.Debian.gz",
         "usr/share/doc/libopencv-core-dev/copyright",
@@ -41235,14 +38678,12 @@ filegroup(
         ":libtbb-dev-filegroup",
         ":zlib1g-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libopencv-core406-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/libopencv_core.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_core.so.406",
         "usr/share/doc/libopencv-core406/changelog.Debian.gz",
         "usr/share/doc/libopencv-core406/copyright",
         ":libblas3-filegroup",
@@ -41254,7 +38695,6 @@ filegroup(
         ":libtbb12-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -41308,7 +38748,6 @@ filegroup(
         ":libstdc++6-filegroup",
         ":pkgconf-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -41326,20 +38765,17 @@ filegroup(
         "usr/include/opencv4/opencv2/dnn/utils/inference_engine.hpp",
         "usr/include/opencv4/opencv2/dnn/version.hpp",
         "usr/lib/x86_64-linux-gnu/libopencv_dnn.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_dnn.so",
         "usr/share/doc/libopencv-dnn-dev/changelog.Debian.gz",
         "usr/share/doc/libopencv-dnn-dev/copyright",
         ":libopencv-core-dev-filegroup",
         ":libopencv-dnn406-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libopencv-dnn406-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/libopencv_dnn.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_dnn.so.406",
         "usr/share/doc/libopencv-dnn406/changelog.Debian.gz",
         "usr/share/doc/libopencv-dnn406/copyright",
         ":libc6-filegroup",
@@ -41349,7 +38785,6 @@ filegroup(
         ":libprotobuf32-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -41359,7 +38794,6 @@ filegroup(
         "usr/include/opencv4/opencv2/features2d/features2d.hpp",
         "usr/include/opencv4/opencv2/features2d/hal/interface.h",
         "usr/lib/x86_64-linux-gnu/libopencv_features2d.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_features2d.so",
         "usr/share/doc/libopencv-features2d-dev/README.Debian",
         "usr/share/doc/libopencv-features2d-dev/changelog.Debian.gz",
         "usr/share/doc/libopencv-features2d-dev/copyright",
@@ -41368,14 +38802,12 @@ filegroup(
         ":libopencv-highgui-dev-filegroup",
         ":libopencv-ml-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libopencv-features2d406-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/libopencv_features2d.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_features2d.so.406",
         "usr/share/doc/libopencv-features2d406/changelog.Debian.gz",
         "usr/share/doc/libopencv-features2d406/copyright",
         ":libc6-filegroup",
@@ -41385,7 +38817,6 @@ filegroup(
         ":libopencv-imgproc406-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -41429,21 +38860,18 @@ filegroup(
         "usr/include/opencv4/opencv2/flann/simplex_downhill.h",
         "usr/include/opencv4/opencv2/flann/timer.h",
         "usr/lib/x86_64-linux-gnu/libopencv_flann.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_flann.so",
         "usr/share/doc/libopencv-flann-dev/README.Debian",
         "usr/share/doc/libopencv-flann-dev/changelog.Debian.gz",
         "usr/share/doc/libopencv-flann-dev/copyright",
         ":libopencv-core-dev-filegroup",
         ":libopencv-flann406-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libopencv-flann406-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/libopencv_flann.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_flann.so.406",
         "usr/share/doc/libopencv-flann406/changelog.Debian.gz",
         "usr/share/doc/libopencv-flann406/copyright",
         ":libc6-filegroup",
@@ -41451,7 +38879,6 @@ filegroup(
         ":libopencv-core406-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -41461,7 +38888,6 @@ filegroup(
         "usr/include/opencv4/opencv2/highgui/highgui.hpp",
         "usr/include/opencv4/opencv2/highgui/highgui_c.h",
         "usr/lib/x86_64-linux-gnu/libopencv_highgui.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_highgui.so",
         "usr/share/doc/libopencv-highgui-dev/README.Debian",
         "usr/share/doc/libopencv-highgui-dev/changelog.Debian.gz",
         "usr/share/doc/libopencv-highgui-dev/copyright",
@@ -41478,14 +38904,12 @@ filegroup(
         ":libswscale-dev-filegroup",
         ":libtiff-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libopencv-highgui406-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/libopencv_highgui.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_highgui.so.406",
         "usr/share/doc/libopencv-highgui406/changelog.Debian.gz",
         "usr/share/doc/libopencv-highgui406/copyright",
         ":libc6-filegroup",
@@ -41500,7 +38924,6 @@ filegroup(
         ":libqt5widgets5-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -41513,21 +38936,18 @@ filegroup(
         "usr/include/opencv4/opencv2/imgcodecs/legacy/constants_c.h",
         "usr/include/opencv4/opencv2/imgcodecs/macosx.h",
         "usr/lib/x86_64-linux-gnu/libopencv_imgcodecs.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_imgcodecs.so",
         "usr/share/doc/libopencv-imgcodecs-dev/changelog.Debian.gz",
         "usr/share/doc/libopencv-imgcodecs-dev/copyright",
         ":libgdcm-dev-filegroup",
         ":libopencv-imgcodecs406-filegroup",
         ":libopencv-imgproc-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libopencv-imgcodecs406-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/libopencv_imgcodecs.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_imgcodecs.so.406",
         "usr/share/doc/libopencv-imgcodecs406/changelog.Debian.gz",
         "usr/share/doc/libopencv-imgcodecs406/copyright",
         ":libc6-filegroup",
@@ -41544,7 +38964,6 @@ filegroup(
         ":libtiff6-filegroup",
         ":libwebp7-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -41560,21 +38979,18 @@ filegroup(
         "usr/include/opencv4/opencv2/imgproc/segmentation.hpp",
         "usr/include/opencv4/opencv2/imgproc/types_c.h",
         "usr/lib/x86_64-linux-gnu/libopencv_imgproc.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_imgproc.so",
         "usr/share/doc/libopencv-imgproc-dev/README.Debian",
         "usr/share/doc/libopencv-imgproc-dev/changelog.Debian.gz",
         "usr/share/doc/libopencv-imgproc-dev/copyright",
         ":libopencv-core-dev-filegroup",
         ":libopencv-imgproc406-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libopencv-imgproc406-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/libopencv_imgproc.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_imgproc.so.406",
         "usr/share/doc/libopencv-imgproc406/changelog.Debian.gz",
         "usr/share/doc/libopencv-imgproc406/copyright",
         ":libc6-filegroup",
@@ -41582,7 +38998,6 @@ filegroup(
         ":libopencv-core406-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -41592,21 +39007,18 @@ filegroup(
         "usr/include/opencv4/opencv2/ml/ml.hpp",
         "usr/include/opencv4/opencv2/ml/ml.inl.hpp",
         "usr/lib/x86_64-linux-gnu/libopencv_ml.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_ml.so",
         "usr/share/doc/libopencv-ml-dev/README.Debian",
         "usr/share/doc/libopencv-ml-dev/changelog.Debian.gz",
         "usr/share/doc/libopencv-ml-dev/copyright",
         ":libopencv-core-dev-filegroup",
         ":libopencv-ml406-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libopencv-ml406-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/libopencv_ml.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_ml.so.406",
         "usr/share/doc/libopencv-ml406/changelog.Debian.gz",
         "usr/share/doc/libopencv-ml406/copyright",
         ":libc6-filegroup",
@@ -41614,7 +39026,6 @@ filegroup(
         ":libopencv-core406-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -41625,7 +39036,6 @@ filegroup(
         "usr/include/opencv4/opencv2/objdetect/face.hpp",
         "usr/include/opencv4/opencv2/objdetect/objdetect.hpp",
         "usr/lib/x86_64-linux-gnu/libopencv_objdetect.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_objdetect.so",
         "usr/share/doc/libopencv-objdetect-dev/README.Debian",
         "usr/share/doc/libopencv-objdetect-dev/changelog.Debian.gz",
         "usr/share/doc/libopencv-objdetect-dev/copyright",
@@ -41633,14 +39043,12 @@ filegroup(
         ":libopencv-ml-dev-filegroup",
         ":libopencv-objdetect406-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libopencv-objdetect406-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/libopencv_objdetect.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_objdetect.so.406",
         "usr/share/doc/libopencv-objdetect406/changelog.Debian.gz",
         "usr/share/doc/libopencv-objdetect406/copyright",
         ":libc6-filegroup",
@@ -41651,7 +39059,6 @@ filegroup(
         ":libopencv-imgproc406-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -41662,21 +39069,18 @@ filegroup(
         "usr/include/opencv4/opencv2/photo/legacy/constants_c.h",
         "usr/include/opencv4/opencv2/photo/photo.hpp",
         "usr/lib/x86_64-linux-gnu/libopencv_photo.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_photo.so",
         "usr/share/doc/libopencv-photo-dev/README.Debian",
         "usr/share/doc/libopencv-photo-dev/changelog.Debian.gz",
         "usr/share/doc/libopencv-photo-dev/copyright",
         ":libopencv-imgproc-dev-filegroup",
         ":libopencv-photo406-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libopencv-photo406-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/libopencv_photo.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_photo.so.406",
         "usr/share/doc/libopencv-photo406/changelog.Debian.gz",
         "usr/share/doc/libopencv-photo406/copyright",
         ":libc6-filegroup",
@@ -41685,7 +39089,6 @@ filegroup(
         ":libopencv-imgproc406-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -41698,20 +39101,17 @@ filegroup(
         "usr/include/opencv4/opencv2/shape/shape_distance.hpp",
         "usr/include/opencv4/opencv2/shape/shape_transformer.hpp",
         "usr/lib/x86_64-linux-gnu/libopencv_shape.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_shape.so",
         "usr/share/doc/libopencv-shape-dev/changelog.Debian.gz",
         "usr/share/doc/libopencv-shape-dev/copyright",
         ":libopencv-shape406-filegroup",
         ":libopencv-video-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libopencv-shape406-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/libopencv_shape.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_shape.so.406",
         "usr/share/doc/libopencv-shape406/changelog.Debian.gz",
         "usr/share/doc/libopencv-shape406/copyright",
         ":libc6-filegroup",
@@ -41721,7 +39121,6 @@ filegroup(
         ":libopencv-imgproc406-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -41742,7 +39141,6 @@ filegroup(
         "usr/include/opencv4/opencv2/stitching/detail/warpers_inl.hpp",
         "usr/include/opencv4/opencv2/stitching/warpers.hpp",
         "usr/lib/x86_64-linux-gnu/libopencv_stitching.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_stitching.so",
         "usr/share/doc/libopencv-stitching-dev/README.Debian",
         "usr/share/doc/libopencv-stitching-dev/changelog.Debian.gz",
         "usr/share/doc/libopencv-stitching-dev/copyright",
@@ -41750,14 +39148,12 @@ filegroup(
         ":libopencv-objdetect-dev-filegroup",
         ":libopencv-stitching406-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libopencv-stitching406-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/libopencv_stitching.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_stitching.so.406",
         "usr/share/doc/libopencv-stitching406/changelog.Debian.gz",
         "usr/share/doc/libopencv-stitching406/copyright",
         ":libc6-filegroup",
@@ -41769,7 +39165,6 @@ filegroup(
         ":libopencv-imgproc406-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -41778,7 +39173,6 @@ filegroup(
         "usr/include/opencv4/opencv2/superres.hpp",
         "usr/include/opencv4/opencv2/superres/optical_flow.hpp",
         "usr/lib/x86_64-linux-gnu/libopencv_superres.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_superres.so",
         "usr/share/doc/libopencv-superres-dev/README.Debian",
         "usr/share/doc/libopencv-superres-dev/changelog.Debian.gz",
         "usr/share/doc/libopencv-superres-dev/copyright",
@@ -41786,14 +39180,12 @@ filegroup(
         ":libopencv-video-dev-filegroup",
         ":libopencv-videoio-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libopencv-superres406-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/libopencv_superres.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_superres.so.406",
         "usr/share/doc/libopencv-superres406/changelog.Debian.gz",
         "usr/share/doc/libopencv-superres406/copyright",
         ":libc6-filegroup",
@@ -41805,7 +39197,6 @@ filegroup(
         ":libopencv-videoio406-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -41818,21 +39209,18 @@ filegroup(
         "usr/include/opencv4/opencv2/video/tracking.hpp",
         "usr/include/opencv4/opencv2/video/video.hpp",
         "usr/lib/x86_64-linux-gnu/libopencv_video.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_video.so",
         "usr/share/doc/libopencv-video-dev/README.Debian",
         "usr/share/doc/libopencv-video-dev/changelog.Debian.gz",
         "usr/share/doc/libopencv-video-dev/copyright",
         ":libopencv-imgproc-dev-filegroup",
         ":libopencv-video406-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libopencv-video406-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/libopencv_video.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_video.so.406",
         "usr/share/doc/libopencv-video406/changelog.Debian.gz",
         "usr/share/doc/libopencv-video406/copyright",
         ":libc6-filegroup",
@@ -41843,7 +39231,6 @@ filegroup(
         ":libopencv-imgproc406-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -41856,21 +39243,18 @@ filegroup(
         "usr/include/opencv4/opencv2/videoio/videoio.hpp",
         "usr/include/opencv4/opencv2/videoio/videoio_c.h",
         "usr/lib/x86_64-linux-gnu/libopencv_videoio.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_videoio.so",
         "usr/share/doc/libopencv-videoio-dev/changelog.Debian.gz",
         "usr/share/doc/libopencv-videoio-dev/copyright",
         ":libgphoto2-dev-filegroup",
         ":libopencv-imgcodecs-dev-filegroup",
         ":libopencv-videoio406-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libopencv-videoio406-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/libopencv_videoio.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_videoio.so.406",
         "usr/share/doc/libopencv-videoio406/changelog.Debian.gz",
         "usr/share/doc/libopencv-videoio406/copyright",
         ":libavcodec59-filegroup",
@@ -41890,7 +39274,6 @@ filegroup(
         ":libstdc++6-filegroup",
         ":libswscale6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -41912,7 +39295,6 @@ filegroup(
         "usr/include/opencv4/opencv2/videostab/stabilizer.hpp",
         "usr/include/opencv4/opencv2/videostab/wobble_suppression.hpp",
         "usr/lib/x86_64-linux-gnu/libopencv_videostab.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_videostab.so",
         "usr/share/doc/libopencv-videostab-dev/README.Debian",
         "usr/share/doc/libopencv-videostab-dev/changelog.Debian.gz",
         "usr/share/doc/libopencv-videostab-dev/copyright",
@@ -41921,14 +39303,12 @@ filegroup(
         ":libopencv-video-dev-filegroup",
         ":libopencv-videostab406-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libopencv-videostab406-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/libopencv_videostab.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_videostab.so.406",
         "usr/share/doc/libopencv-videostab406/changelog.Debian.gz",
         "usr/share/doc/libopencv-videostab406/copyright",
         ":libc6-filegroup",
@@ -41942,7 +39322,6 @@ filegroup(
         ":libopencv-videoio406-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -41955,20 +39334,17 @@ filegroup(
         "usr/include/opencv4/opencv2/viz/widget_accessor.hpp",
         "usr/include/opencv4/opencv2/viz/widgets.hpp",
         "usr/lib/x86_64-linux-gnu/libopencv_viz.a",
-        "usr/lib/x86_64-linux-gnu/libopencv_viz.so",
         "usr/share/doc/libopencv-viz-dev/changelog.Debian.gz",
         "usr/share/doc/libopencv-viz-dev/copyright",
         ":libopencv-core-dev-filegroup",
         ":libopencv-viz406-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libopencv-viz406-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/libopencv_viz.so.4.6.0",
-        "usr/lib/x86_64-linux-gnu/libopencv_viz.so.406",
         "usr/share/doc/libopencv-viz406/changelog.Debian.gz",
         "usr/share/doc/libopencv-viz406/copyright",
         ":libc6-filegroup",
@@ -41977,21 +39353,15 @@ filegroup(
         ":libstdc++6-filegroup",
         ":libvtk9.1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libopenexr-3-1-30-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libIex-3_1.so.30",
         "usr/lib/x86_64-linux-gnu/libIex-3_1.so.30.5.1",
-        "usr/lib/x86_64-linux-gnu/libIlmThread-3_1.so.30",
         "usr/lib/x86_64-linux-gnu/libIlmThread-3_1.so.30.5.1",
-        "usr/lib/x86_64-linux-gnu/libOpenEXR-3_1.so.30",
         "usr/lib/x86_64-linux-gnu/libOpenEXR-3_1.so.30.5.1",
-        "usr/lib/x86_64-linux-gnu/libOpenEXRCore-3_1.so.30",
         "usr/lib/x86_64-linux-gnu/libOpenEXRCore-3_1.so.30.5.1",
-        "usr/lib/x86_64-linux-gnu/libOpenEXRUtil-3_1.so.30",
         "usr/lib/x86_64-linux-gnu/libOpenEXRUtil-3_1.so.30.5.1",
         "usr/share/doc/libopenexr-3-1-30/changelog.Debian.gz",
         "usr/share/doc/libopenexr-3-1-30/changelog.gz",
@@ -42002,7 +39372,6 @@ filegroup(
         ":libstdc++6-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -42151,16 +39520,6 @@ filegroup(
         "usr/lib/x86_64-linux-gnu/cmake/OpenEXR/OpenEXRConfigVersion.cmake",
         "usr/lib/x86_64-linux-gnu/cmake/OpenEXR/OpenEXRTargets.cmake",
         "usr/lib/x86_64-linux-gnu/cmake/OpenEXR/OpenEXRTargets-none.cmake",
-        "usr/lib/x86_64-linux-gnu/libIex.so",
-        "usr/lib/x86_64-linux-gnu/libIex-3_1.so",
-        "usr/lib/x86_64-linux-gnu/libIlmThread.so",
-        "usr/lib/x86_64-linux-gnu/libIlmThread-3_1.so",
-        "usr/lib/x86_64-linux-gnu/libOpenEXR.so",
-        "usr/lib/x86_64-linux-gnu/libOpenEXR-3_1.so",
-        "usr/lib/x86_64-linux-gnu/libOpenEXRCore.so",
-        "usr/lib/x86_64-linux-gnu/libOpenEXRCore-3_1.so",
-        "usr/lib/x86_64-linux-gnu/libOpenEXRUtil.so",
-        "usr/lib/x86_64-linux-gnu/libOpenEXRUtil-3_1.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/OpenEXR.pc",
         "usr/share/doc/libopenexr-dev/changelog.Debian.gz",
         "usr/share/doc/libopenexr-dev/changelog.gz",
@@ -42169,13 +39528,11 @@ filegroup(
         ":libopenexr-3-1-30-filegroup",
         ":zlib1g-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libopengl0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libOpenGL.so.0",
         "usr/lib/x86_64-linux-gnu/libOpenGL.so.0.0.0",
         "usr/share/bug/libopengl0/control",
         "usr/share/doc/libopengl0/changelog.Debian.gz",
@@ -42183,62 +39540,40 @@ filegroup(
         ":libc6-filegroup",
         ":libglvnd0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libopenjp2-7-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/libopenjp2.so.2.5.0",
-        "usr/lib/x86_64-linux-gnu/libopenjp2.so.7",
         "usr/share/doc/libopenjp2-7/changelog.Debian.gz",
         "usr/share/doc/libopenjp2-7/changelog.gz",
         "usr/share/doc/libopenjp2-7/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libopenmpi3-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libmca_common_monitoring.so.50",
         "usr/lib/x86_64-linux-gnu/libmca_common_monitoring.so.50.20.0",
-        "usr/lib/x86_64-linux-gnu/libmca_common_ofi.so.10",
         "usr/lib/x86_64-linux-gnu/libmca_common_ofi.so.10.0.2",
-        "usr/lib/x86_64-linux-gnu/libmca_common_ompio.so.41",
         "usr/lib/x86_64-linux-gnu/libmca_common_ompio.so.41.29.4",
-        "usr/lib/x86_64-linux-gnu/libmca_common_sm.so.40",
         "usr/lib/x86_64-linux-gnu/libmca_common_sm.so.40.30.0",
-        "usr/lib/x86_64-linux-gnu/libmca_common_ucx.so.40",
         "usr/lib/x86_64-linux-gnu/libmca_common_ucx.so.40.30.2",
-        "usr/lib/x86_64-linux-gnu/libmca_common_verbs.so.40",
         "usr/lib/x86_64-linux-gnu/libmca_common_verbs.so.40.30.0",
-        "usr/lib/x86_64-linux-gnu/libmpi.so.40",
         "usr/lib/x86_64-linux-gnu/libmpi.so.40.30.4",
-        "usr/lib/x86_64-linux-gnu/libmpi_cxx.so.40",
         "usr/lib/x86_64-linux-gnu/libmpi_cxx.so.40.30.1",
-        "usr/lib/x86_64-linux-gnu/libmpi_java.so.40",
         "usr/lib/x86_64-linux-gnu/libmpi_java.so.40.30.0",
-        "usr/lib/x86_64-linux-gnu/libmpi_mpifh.so.40",
         "usr/lib/x86_64-linux-gnu/libmpi_mpifh.so.40.30.0",
-        "usr/lib/x86_64-linux-gnu/libmpi_mpifh-gfortran.so.40",
         "usr/lib/x86_64-linux-gnu/libmpi_mpifh-gfortran.so.40.30.0",
-        "usr/lib/x86_64-linux-gnu/libmpi_usempi_ignore_tkr.so.40",
         "usr/lib/x86_64-linux-gnu/libmpi_usempi_ignore_tkr.so.40.30.0",
-        "usr/lib/x86_64-linux-gnu/libmpi_usempi_ignore_tkr-gfortran.so.40",
         "usr/lib/x86_64-linux-gnu/libmpi_usempi_ignore_tkr-gfortran.so.40.30.0",
-        "usr/lib/x86_64-linux-gnu/libmpi_usempif08.so.40",
         "usr/lib/x86_64-linux-gnu/libmpi_usempif08.so.40.30.0",
-        "usr/lib/x86_64-linux-gnu/libmpi_usempif08-gfortran.so.40",
         "usr/lib/x86_64-linux-gnu/libmpi_usempif08-gfortran.so.40.30.0",
-        "usr/lib/x86_64-linux-gnu/libompitrace.so.40",
         "usr/lib/x86_64-linux-gnu/libompitrace.so.40.30.1",
-        "usr/lib/x86_64-linux-gnu/libopen-pal.so.40",
         "usr/lib/x86_64-linux-gnu/libopen-pal.so.40.30.2",
-        "usr/lib/x86_64-linux-gnu/libopen-rte.so.40",
         "usr/lib/x86_64-linux-gnu/libopen-rte.so.40.30.2",
-        "usr/lib/x86_64-linux-gnu/liboshmem.so.40",
         "usr/lib/x86_64-linux-gnu/liboshmem.so.40.30.2",
         "usr/lib/x86_64-linux-gnu/openmpi/lib/ompi_monitoring_prof.so",
         "usr/lib/x86_64-linux-gnu/openmpi/lib/openmpi3/libompi_dbg_msgq.so",
@@ -42383,13 +39718,11 @@ filegroup(
         ":libucx0-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libopenmpt0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libopenmpt.so.0",
         "usr/lib/x86_64-linux-gnu/libopenmpt.so.0.3.3",
         "usr/share/doc/libopenmpt0/changelog.Debian.gz",
         "usr/share/doc/libopenmpt0/changelog.gz",
@@ -42403,33 +39736,27 @@ filegroup(
         ":libvorbisfile3-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libopus0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libopus.so.0",
         "usr/lib/x86_64-linux-gnu/libopus.so.0.8.0",
         "usr/share/doc/libopus0/changelog.Debian.gz",
         "usr/share/doc/libopus0/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "liborc-0.4-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/liborc-0.4.so.0",
         "usr/lib/x86_64-linux-gnu/liborc-0.4.so.0.33.0",
-        "usr/lib/x86_64-linux-gnu/liborc-test-0.4.so.0",
         "usr/lib/x86_64-linux-gnu/liborc-test-0.4.so.0.33.0",
         "usr/share/doc/liborc-0.4-0/changelog.Debian.gz",
         "usr/share/doc/liborc-0.4-0/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -42442,7 +39769,6 @@ filegroup(
         ":libc6-filegroup",
         ":liborc-0.4-0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -42484,8 +39810,6 @@ filegroup(
         "usr/include/orc-0.4/orc/orcvariable.h",
         "usr/include/orc-0.4/orc/orcx86.h",
         "usr/include/orc-0.4/orc/orcx86insn.h",
-        "usr/lib/x86_64-linux-gnu/liborc-0.4.so",
-        "usr/lib/x86_64-linux-gnu/liborc-test-0.4.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/orc-0.4.pc",
         "usr/lib/x86_64-linux-gnu/pkgconfig/orc-test-0.4.pc",
         "usr/share/aclocal/orc.m4",
@@ -42494,13 +39818,11 @@ filegroup(
         ":liborc-0.4-0-filegroup",
         ":liborc-0.4-dev-bin-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libp11-kit0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libp11-kit.so.0",
         "usr/lib/x86_64-linux-gnu/libp11-kit.so.0.3.0",
         "usr/share/doc/libp11-kit0/changelog.Debian.gz",
         "usr/share/doc/libp11-kit0/changelog.gz",
@@ -42509,7 +39831,6 @@ filegroup(
         ":libc6-filegroup",
         ":libffi8-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -42628,7 +39949,6 @@ filegroup(
         "usr/share/man/man8/pam_xauth.8.gz",
         "usr/share/pam-configs/mkhomedir",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -42726,9 +40046,7 @@ filegroup(
         "usr/share/locale/zh_TW/LC_MESSAGES/Linux-PAM.mo",
         "usr/share/locale/zu/LC_MESSAGES/Linux-PAM.mo",
         "usr/share/man/man5/pam.conf.5.gz",
-        "usr/share/man/man5/pam.d.5.gz",
         "usr/share/man/man7/PAM.7.gz",
-        "usr/share/man/man7/pam.7.gz",
         "usr/share/man/man8/pam-auth-update.8.gz",
         "usr/share/man/man8/pam_getenv.8.gz",
         "usr/share/pam-configs/unix",
@@ -42745,7 +40063,6 @@ filegroup(
         ":debconf-filegroup",
         ":libpam-modules-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -42766,17 +40083,13 @@ filegroup(
         ":systemd-filegroup",
         ":systemd-sysv-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libpam0g-filegroup",
     srcs = [
-        "lib/x86_64-linux-gnu/libpam.so.0",
         "lib/x86_64-linux-gnu/libpam.so.0.85.1",
-        "lib/x86_64-linux-gnu/libpam_misc.so.0",
         "lib/x86_64-linux-gnu/libpam_misc.so.0.82.1",
-        "lib/x86_64-linux-gnu/libpamc.so.0",
         "lib/x86_64-linux-gnu/libpamc.so.0.82.1",
         "usr/share/doc/libpam0g/Debian-PAM-MiniPolicy.gz",
         "usr/share/doc/libpam0g/NEWS.Debian.gz",
@@ -42791,13 +40104,11 @@ filegroup(
         ":libaudit1-filegroup",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libpango-1.0-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libpango-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libpango-1.0.so.0.5000.12",
         "usr/share/doc/libpango-1.0-0/NEWS.gz",
         "usr/share/doc/libpango-1.0-0/README.md",
@@ -42811,13 +40122,11 @@ filegroup(
         ":libharfbuzz0b-filegroup",
         ":libthai0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libpangocairo-1.0-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libpangocairo-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libpangocairo-1.0.so.0.5000.12",
         "usr/share/doc/libpangocairo-1.0-0/changelog.Debian.gz",
         "usr/share/doc/libpangocairo-1.0-0/copyright",
@@ -42829,13 +40138,11 @@ filegroup(
         ":libpango-1.0-0-filegroup",
         ":libpangoft2-1.0-0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libpangoft2-1.0-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libpangoft2-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libpangoft2-1.0.so.0.5000.12",
         "usr/share/doc/libpangoft2-1.0-0/changelog.Debian.gz",
         "usr/share/doc/libpangoft2-1.0-0/copyright",
@@ -42846,7 +40153,6 @@ filegroup(
         ":libharfbuzz0b-filegroup",
         ":libpango-1.0-0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -42854,20 +40160,17 @@ filegroup(
     srcs = [
         "usr/include/pciaccess.h",
         "usr/lib/x86_64-linux-gnu/libpciaccess.a",
-        "usr/lib/x86_64-linux-gnu/libpciaccess.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/pciaccess.pc",
         "usr/share/doc/libpciaccess-dev/changelog.Debian.gz",
         "usr/share/doc/libpciaccess-dev/changelog.gz",
         "usr/share/doc/libpciaccess-dev/copyright",
         ":libpciaccess0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libpciaccess0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libpciaccess.so.0",
         "usr/lib/x86_64-linux-gnu/libpciaccess.so.0.11.1",
         "usr/share/doc/libpciaccess0/changelog.Debian.gz",
         "usr/share/doc/libpciaccess0/changelog.gz",
@@ -42875,39 +40178,33 @@ filegroup(
         ":libc6-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libpcre2-16-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libpcre2-16.so.0",
         "usr/lib/x86_64-linux-gnu/libpcre2-16.so.0.11.2",
         "usr/share/doc/libpcre2-16-0/changelog.Debian.gz",
         "usr/share/doc/libpcre2-16-0/changelog.gz",
         "usr/share/doc/libpcre2-16-0/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libpcre2-32-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libpcre2-32.so.0",
         "usr/lib/x86_64-linux-gnu/libpcre2-32.so.0.11.2",
         "usr/share/doc/libpcre2-32-0/changelog.Debian.gz",
         "usr/share/doc/libpcre2-32-0/changelog.gz",
         "usr/share/doc/libpcre2-32-0/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libpcre2-8-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libpcre2-8.so.0",
         "usr/lib/x86_64-linux-gnu/libpcre2-8.so.0.11.2",
         "usr/share/doc/libpcre2-8-0/README.Debian",
         "usr/share/doc/libpcre2-8-0/changelog.Debian.gz",
@@ -42915,7 +40212,6 @@ filegroup(
         "usr/share/doc/libpcre2-8-0/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -42925,13 +40221,9 @@ filegroup(
         "usr/include/pcre2.h",
         "usr/include/pcre2posix.h",
         "usr/lib/x86_64-linux-gnu/libpcre2-16.a",
-        "usr/lib/x86_64-linux-gnu/libpcre2-16.so",
         "usr/lib/x86_64-linux-gnu/libpcre2-32.a",
-        "usr/lib/x86_64-linux-gnu/libpcre2-32.so",
         "usr/lib/x86_64-linux-gnu/libpcre2-8.a",
-        "usr/lib/x86_64-linux-gnu/libpcre2-8.so",
         "usr/lib/x86_64-linux-gnu/libpcre2-posix.a",
-        "usr/lib/x86_64-linux-gnu/libpcre2-posix.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libpcre2-16.pc",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libpcre2-32.pc",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libpcre2-8.pc",
@@ -43037,13 +40329,11 @@ filegroup(
         ":libpcre2-8-0-filegroup",
         ":libpcre2-posix3-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libpcre2-posix3-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libpcre2-posix.so.3",
         "usr/lib/x86_64-linux-gnu/libpcre2-posix.so.3.0.4",
         "usr/share/doc/libpcre2-posix3/changelog.Debian.gz",
         "usr/share/doc/libpcre2-posix3/changelog.gz",
@@ -43051,25 +40341,21 @@ filegroup(
         ":libc6-filegroup",
         ":libpcre2-8-0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libpgm-5.3-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libpgm-5.3.so.0",
         "usr/lib/x86_64-linux-gnu/libpgm-5.3.so.0.0.128",
         "usr/share/doc/libpgm-5.3-0/changelog.Debian.gz",
         "usr/share/doc/libpgm-5.3-0/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libpixman-1-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libpixman-1.so.0",
         "usr/lib/x86_64-linux-gnu/libpixman-1.so.0.42.2",
         "usr/share/doc/libpixman-1-0/changelog.Debian.gz",
         "usr/share/doc/libpixman-1-0/changelog.gz",
@@ -43077,28 +40363,22 @@ filegroup(
         "usr/share/lintian/overrides/libpixman-1-0",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libpkgconf3-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libpkgconf.so.3",
         "usr/lib/x86_64-linux-gnu/libpkgconf.so.3.0.0",
         "usr/share/doc/libpkgconf3/changelog.Debian.gz",
         "usr/share/doc/libpkgconf3/changelog.gz",
         "usr/share/doc/libpkgconf3/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libpmix2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libpmix.so.2",
-        "usr/lib/x86_64-linux-gnu/libpmix.so.2.6.2",
-        "usr/lib/x86_64-linux-gnu/pmix2/lib/libpmix.so.2",
         "usr/lib/x86_64-linux-gnu/pmix2/lib/libpmix.so.2.6.2",
         "usr/lib/x86_64-linux-gnu/pmix2/lib/pmix/pmix_mca_pcompress_zlib.so",
         "usr/lib/x86_64-linux-gnu/pmix2/lib/pmix/pmix_mca_prm_default.so",
@@ -43139,25 +40419,16 @@ filegroup(
         ":libmunge2-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libpng-dev-filegroup",
     srcs = [
-        "usr/bin/libpng-config",
         "usr/bin/libpng16-config",
         "usr/include/libpng16/png.h",
         "usr/include/libpng16/pngconf.h",
         "usr/include/libpng16/pnglibconf.h",
-        "usr/include/png.h",
-        "usr/include/pngconf.h",
-        "usr/include/pnglibconf.h",
-        "usr/lib/x86_64-linux-gnu/libpng.a",
-        "usr/lib/x86_64-linux-gnu/libpng.so",
         "usr/lib/x86_64-linux-gnu/libpng16.a",
-        "usr/lib/x86_64-linux-gnu/libpng16.so",
-        "usr/lib/x86_64-linux-gnu/pkgconfig/libpng.pc",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libpng16.pc",
         "usr/share/doc/libpng-dev/changelog.Debian.gz",
         "usr/share/doc/libpng-dev/changelog.gz",
@@ -43165,7 +40436,6 @@ filegroup(
         "usr/share/doc/libpng-dev/examples/example.c",
         "usr/share/doc/libpng-dev/examples/pngtest.c",
         "usr/share/doc/libpng-dev/examples/pngtest.png",
-        "usr/share/man/man1/libpng-config.1.gz",
         "usr/share/man/man1/libpng16-config.1.gz",
         "usr/share/man/man3/libpng.3.gz",
         "usr/share/man/man3/libpngpf.3.gz",
@@ -43173,13 +40443,11 @@ filegroup(
         ":libpng16-16-filegroup",
         ":zlib1g-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libpng16-16-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libpng16.so.16",
         "usr/lib/x86_64-linux-gnu/libpng16.so.16.39.0",
         "usr/share/doc-base/libpng16-16.libpng16",
         "usr/share/doc/libpng16-16/ANNOUNCE",
@@ -43192,13 +40460,11 @@ filegroup(
         ":libc6-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libpoppler126-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libpoppler.so.126",
         "usr/lib/x86_64-linux-gnu/libpoppler.so.126.0.0",
         "usr/share/doc/libpoppler126/AUTHORS",
         "usr/share/doc/libpoppler126/NEWS.gz",
@@ -43221,62 +40487,11 @@ filegroup(
         ":libtiff6-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
-    name = "libpopt0-filegroup",
-    srcs = [
-        "usr/lib/x86_64-linux-gnu/libpopt.so.0",
-        "usr/lib/x86_64-linux-gnu/libpopt.so.0.0.2",
-        "usr/share/doc/libpopt0/README",
-        "usr/share/doc/libpopt0/changelog.Debian.gz",
-        "usr/share/doc/libpopt0/copyright",
-        "usr/share/locale/ca/LC_MESSAGES/popt.mo",
-        "usr/share/locale/cs/LC_MESSAGES/popt.mo",
-        "usr/share/locale/da/LC_MESSAGES/popt.mo",
-        "usr/share/locale/de/LC_MESSAGES/popt.mo",
-        "usr/share/locale/eo/LC_MESSAGES/popt.mo",
-        "usr/share/locale/es/LC_MESSAGES/popt.mo",
-        "usr/share/locale/fi/LC_MESSAGES/popt.mo",
-        "usr/share/locale/fr/LC_MESSAGES/popt.mo",
-        "usr/share/locale/ga/LC_MESSAGES/popt.mo",
-        "usr/share/locale/gl/LC_MESSAGES/popt.mo",
-        "usr/share/locale/hu/LC_MESSAGES/popt.mo",
-        "usr/share/locale/id/LC_MESSAGES/popt.mo",
-        "usr/share/locale/is/LC_MESSAGES/popt.mo",
-        "usr/share/locale/it/LC_MESSAGES/popt.mo",
-        "usr/share/locale/ja/LC_MESSAGES/popt.mo",
-        "usr/share/locale/ka/LC_MESSAGES/popt.mo",
-        "usr/share/locale/ko/LC_MESSAGES/popt.mo",
-        "usr/share/locale/lv/LC_MESSAGES/popt.mo",
-        "usr/share/locale/nb/LC_MESSAGES/popt.mo",
-        "usr/share/locale/nl/LC_MESSAGES/popt.mo",
-        "usr/share/locale/pl/LC_MESSAGES/popt.mo",
-        "usr/share/locale/pt/LC_MESSAGES/popt.mo",
-        "usr/share/locale/pt_BR/LC_MESSAGES/popt.mo",
-        "usr/share/locale/ro/LC_MESSAGES/popt.mo",
-        "usr/share/locale/ru/LC_MESSAGES/popt.mo",
-        "usr/share/locale/si/LC_MESSAGES/popt.mo",
-        "usr/share/locale/sk/LC_MESSAGES/popt.mo",
-        "usr/share/locale/sl/LC_MESSAGES/popt.mo",
-        "usr/share/locale/sv/LC_MESSAGES/popt.mo",
-        "usr/share/locale/th/LC_MESSAGES/popt.mo",
-        "usr/share/locale/tr/LC_MESSAGES/popt.mo",
-        "usr/share/locale/uk/LC_MESSAGES/popt.mo",
-        "usr/share/locale/vi/LC_MESSAGES/popt.mo",
-        "usr/share/locale/wa/LC_MESSAGES/popt.mo",
-        "usr/share/locale/zh_CN/LC_MESSAGES/popt.mo",
-        "usr/share/locale/zh_TW/LC_MESSAGES/popt.mo",
-        ":libc6-filegroup",
-    ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libpq5-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libpq.so.5",
         "usr/lib/x86_64-linux-gnu/libpq.so.5.15",
         "usr/share/doc/libpq5/changelog.Debian.gz",
         "usr/share/doc/libpq5/changelog.gz",
@@ -43299,13 +40514,11 @@ filegroup(
         ":libldap-2.5-0-filegroup",
         ":libssl3-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libproc2-0-filegroup",
     srcs = [
-        "lib/x86_64-linux-gnu/libproc2.so.0",
         "lib/x86_64-linux-gnu/libproc2.so.0.0.1",
         "usr/share/doc/libproc2-0/NEWS.Debian.gz",
         "usr/share/doc/libproc2-0/changelog.Debian.gz",
@@ -43314,13 +40527,11 @@ filegroup(
         ":libc6-filegroup",
         ":libsystemd0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libproj25-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libproj.so.25",
         "usr/lib/x86_64-linux-gnu/libproj.so.25.9.1.1",
         "usr/share/doc/libproj25/AUTHORS",
         "usr/share/doc/libproj25/NEWS.Debian.gz",
@@ -43339,13 +40550,11 @@ filegroup(
         ":libtiff6-filegroup",
         ":proj-data-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libprotobuf32-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libprotobuf.so.32",
         "usr/lib/x86_64-linux-gnu/libprotobuf.so.32.0.12",
         "usr/share/doc/libprotobuf32/changelog.Debian.gz",
         "usr/share/doc/libprotobuf32/changelog.gz",
@@ -43355,13 +40564,11 @@ filegroup(
         ":libstdc++6-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libproxy1v5-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libproxy.so.1",
         "usr/lib/x86_64-linux-gnu/libproxy.so.1.0.0",
         "usr/share/doc/libproxy1v5/NEWS.gz",
         "usr/share/doc/libproxy1v5/changelog.Debian.gz",
@@ -43371,13 +40578,11 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libpsl5-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libpsl.so.5",
         "usr/lib/x86_64-linux-gnu/libpsl.so.5.3.4",
         "usr/share/doc/libpsl5/changelog.Debian.gz",
         "usr/share/doc/libpsl5/changelog.gz",
@@ -43386,27 +40591,23 @@ filegroup(
         ":libidn2-0-filegroup",
         ":libunistring2-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libpsm-infinipath1-filegroup",
     srcs = [
         "usr/lib/libpsm1/libpsm_infinipath.so.1.16",
-        "usr/lib/x86_64-linux-gnu/libinfinipath.so.4",
         "usr/lib/x86_64-linux-gnu/libinfinipath.so.4.0",
         "usr/share/doc/libpsm-infinipath1/changelog.Debian.gz",
         "usr/share/doc/libpsm-infinipath1/copyright",
         ":libc6-filegroup",
         ":libuuid1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libpsm2-2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libpsm2.so.2",
         "usr/lib/x86_64-linux-gnu/libpsm2.so.2.2",
         "usr/share/doc/libpsm2-2/README.Debian",
         "usr/share/doc/libpsm2-2/README.gz",
@@ -43416,7 +40617,6 @@ filegroup(
         ":libc6-filegroup",
         ":libnuma1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -43427,7 +40627,6 @@ filegroup(
         "usr/share/doc/libpthread-stubs0-dev/changelog.Debian.gz",
         "usr/share/doc/libpthread-stubs0-dev/copyright",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -43439,7 +40638,6 @@ filegroup(
         "usr/share/doc/libpython3-stdlib/copyright",
         ":libpython3.11-stdlib-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -43691,7 +40889,6 @@ filegroup(
         "usr/lib/python3.11/selectors.py",
         "usr/lib/python3.11/signal.py",
         "usr/lib/python3.11/site.py",
-        "usr/lib/python3.11/sitecustomize.py",
         "usr/lib/python3.11/socket.py",
         "usr/lib/python3.11/sre_compile.py",
         "usr/lib/python3.11/sre_constants.py",
@@ -43730,7 +40927,6 @@ filegroup(
         ":libc6-filegroup",
         ":libssl3-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -43749,7 +40945,6 @@ filegroup(
         "usr/lib/python3.11/_osx_support.py",
         "usr/lib/python3.11/_pydecimal.py",
         "usr/lib/python3.11/_pyio.py",
-        "usr/lib/python3.11/_sysconfigdata__linux_x86_64-linux-gnu.py",
         "usr/lib/python3.11/aifc.py",
         "usr/lib/python3.11/antigravity.py",
         "usr/lib/python3.11/asynchat.py",
@@ -44074,29 +41269,23 @@ filegroup(
         ":libuuid1-filegroup",
         ":media-types-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libqhull-r8.0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libqhull_r.so.8.0",
         "usr/lib/x86_64-linux-gnu/libqhull_r.so.8.0.2",
         "usr/share/doc/libqhull-r8.0/changelog.Debian.gz",
         "usr/share/doc/libqhull-r8.0/changelog.gz",
         "usr/share/doc/libqhull-r8.0/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libqt5core5a-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libQt5Core.so.5",
-        "usr/lib/x86_64-linux-gnu/libQt5Core.so.5.15",
         "usr/lib/x86_64-linux-gnu/libQt5Core.so.5.15.8",
-        "usr/lib/x86_64-linux-gnu/qt-default/qtchooser/default.conf",
         "usr/share/doc/libqt5core5a/changelog.Debian.gz",
         "usr/share/doc/libqt5core5a/copyright",
         "usr/share/lintian/overrides/libqt5core5a",
@@ -44111,14 +41300,11 @@ filegroup(
         ":shared-mime-info-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libqt5dbus5-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libQt5DBus.so.5",
-        "usr/lib/x86_64-linux-gnu/libQt5DBus.so.5.15",
         "usr/lib/x86_64-linux-gnu/libQt5DBus.so.5.15.8",
         "usr/share/doc/libqt5dbus5/changelog.Debian.gz",
         "usr/share/doc/libqt5dbus5/copyright",
@@ -44128,23 +41314,14 @@ filegroup(
         ":libqt5core5a-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libqt5gui5-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libQt5EglFSDeviceIntegration.so.5",
-        "usr/lib/x86_64-linux-gnu/libQt5EglFSDeviceIntegration.so.5.15",
         "usr/lib/x86_64-linux-gnu/libQt5EglFSDeviceIntegration.so.5.15.8",
-        "usr/lib/x86_64-linux-gnu/libQt5EglFsKmsSupport.so.5",
-        "usr/lib/x86_64-linux-gnu/libQt5EglFsKmsSupport.so.5.15",
         "usr/lib/x86_64-linux-gnu/libQt5EglFsKmsSupport.so.5.15.8",
-        "usr/lib/x86_64-linux-gnu/libQt5Gui.so.5",
-        "usr/lib/x86_64-linux-gnu/libQt5Gui.so.5.15",
         "usr/lib/x86_64-linux-gnu/libQt5Gui.so.5.15.8",
-        "usr/lib/x86_64-linux-gnu/libQt5XcbQpa.so.5",
-        "usr/lib/x86_64-linux-gnu/libQt5XcbQpa.so.5.15",
         "usr/lib/x86_64-linux-gnu/libQt5XcbQpa.so.5.15.8",
         "usr/lib/x86_64-linux-gnu/qt5/plugins/egldeviceintegrations/libqeglfs-emu-integration.so",
         "usr/lib/x86_64-linux-gnu/qt5/plugins/egldeviceintegrations/libqeglfs-kms-egldevice-integration.so",
@@ -44218,14 +41395,11 @@ filegroup(
         ":libxrender1-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libqt5network5-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libQt5Network.so.5",
-        "usr/lib/x86_64-linux-gnu/libQt5Network.so.5.15",
         "usr/lib/x86_64-linux-gnu/libQt5Network.so.5.15.8",
         "usr/lib/x86_64-linux-gnu/qt5/plugins/bearer/libqconnmanbearer.so",
         "usr/lib/x86_64-linux-gnu/qt5/plugins/bearer/libqgenericbearer.so",
@@ -44241,14 +41415,11 @@ filegroup(
         ":libstdc++6-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libqt5opengl5-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libQt5OpenGL.so.5",
-        "usr/lib/x86_64-linux-gnu/libQt5OpenGL.so.5.15",
         "usr/lib/x86_64-linux-gnu/libQt5OpenGL.so.5.15.8",
         "usr/share/doc/libqt5opengl5/changelog.Debian.gz",
         "usr/share/doc/libqt5opengl5/copyright",
@@ -44259,14 +41430,11 @@ filegroup(
         ":libqt5widgets5-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libqt5test5-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libQt5Test.so.5",
-        "usr/lib/x86_64-linux-gnu/libQt5Test.so.5.15",
         "usr/lib/x86_64-linux-gnu/libQt5Test.so.5.15.8",
         "usr/share/doc/libqt5test5/changelog.Debian.gz",
         "usr/share/doc/libqt5test5/copyright",
@@ -44276,14 +41444,11 @@ filegroup(
         ":libqt5core5a-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libqt5widgets5-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libQt5Widgets.so.5",
-        "usr/lib/x86_64-linux-gnu/libQt5Widgets.so.5.15",
         "usr/lib/x86_64-linux-gnu/libQt5Widgets.so.5.15.8",
         "usr/share/doc/libqt5widgets5/changelog.Debian.gz",
         "usr/share/doc/libqt5widgets5/copyright",
@@ -44294,24 +41459,20 @@ filegroup(
         ":libqt5gui5-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libquadmath0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libquadmath.so.0",
         "usr/lib/x86_64-linux-gnu/libquadmath.so.0.0.0",
         ":gcc-12-base-filegroup",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "librabbitmq4-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/librabbitmq.so.4",
         "usr/lib/x86_64-linux-gnu/librabbitmq.so.4.5.0",
         "usr/share/doc/librabbitmq4/changelog.Debian.amd64.gz",
         "usr/share/doc/librabbitmq4/changelog.Debian.gz",
@@ -44320,33 +41481,28 @@ filegroup(
         ":libc6-filegroup",
         ":libssl3-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "librav1e0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/librav1e.so.0",
         "usr/lib/x86_64-linux-gnu/librav1e.so.0.5.1",
         "usr/share/doc/librav1e0/changelog.Debian.gz",
         "usr/share/doc/librav1e0/copyright",
         ":libc6-filegroup",
         ":libgcc-s1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libraw1394-11-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libraw1394.so.11",
         "usr/lib/x86_64-linux-gnu/libraw1394.so.11.1.0",
         "usr/share/doc/libraw1394-11/changelog.Debian.gz",
         "usr/share/doc/libraw1394-11/changelog.gz",
         "usr/share/doc/libraw1394-11/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -44356,7 +41512,6 @@ filegroup(
         "usr/include/libraw1394/ieee1394.h",
         "usr/include/libraw1394/raw1394.h",
         "usr/lib/x86_64-linux-gnu/libraw1394.a",
-        "usr/lib/x86_64-linux-gnu/libraw1394.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libraw1394.pc",
         "usr/share/doc/libraw1394-dev/README.Debian",
         "usr/share/doc/libraw1394-dev/changelog.Debian.gz",
@@ -44364,17 +41519,13 @@ filegroup(
         "usr/share/doc/libraw1394-dev/copyright",
         ":libraw1394-11-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "librdmacm1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/librdmacm.so.1",
         "usr/lib/x86_64-linux-gnu/librdmacm.so.1.3.44.0",
         "usr/lib/x86_64-linux-gnu/rsocket/librspreload.so",
-        "usr/lib/x86_64-linux-gnu/rsocket/librspreload.so.1",
-        "usr/lib/x86_64-linux-gnu/rsocket/librspreload.so.1.0.0",
         "usr/share/doc/librdmacm1/changelog.Debian.gz",
         "usr/share/doc/librdmacm1/copyright",
         "usr/share/doc/librdmacm1/librdmacm.md",
@@ -44382,15 +41533,12 @@ filegroup(
         ":libibverbs1-filegroup",
         ":libnl-3-200-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libreadline8-filegroup",
     srcs = [
-        "lib/x86_64-linux-gnu/libhistory.so.8",
         "lib/x86_64-linux-gnu/libhistory.so.8.2",
-        "lib/x86_64-linux-gnu/libreadline.so.8",
         "lib/x86_64-linux-gnu/libreadline.so.8.2",
         "usr/share/doc/libreadline8/README.Debian",
         "usr/share/doc/libreadline8/USAGE",
@@ -44403,13 +41551,11 @@ filegroup(
         ":libtinfo6-filegroup",
         ":readline-common-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "librist4-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/librist.so.4",
         "usr/lib/x86_64-linux-gnu/librist.so.4.2.0",
         "usr/share/doc/librist4/changelog.Debian.gz",
         "usr/share/doc/librist4/copyright",
@@ -44417,13 +41563,11 @@ filegroup(
         ":libcjson1-filegroup",
         ":libmbedcrypto7-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "librsvg2-2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/librsvg-2.so.2",
         "usr/lib/x86_64-linux-gnu/librsvg-2.so.2.48.0",
         "usr/share/doc/librsvg2-2/AUTHORS",
         "usr/share/doc/librsvg2-2/NEWS.gz",
@@ -44441,7 +41585,6 @@ filegroup(
         ":libpangocairo-1.0-0-filegroup",
         ":libxml2-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -44459,26 +41602,22 @@ filegroup(
         ":libnettle8-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "librttopo1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/librttopo.so.1",
         "usr/lib/x86_64-linux-gnu/librttopo.so.1.1.0",
         "usr/share/doc/librttopo1/changelog.Debian.gz",
         "usr/share/doc/librttopo1/copyright",
         ":libc6-filegroup",
         ":libgeos-c1v5-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libsasl2-2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libsasl2.so.2",
         "usr/lib/x86_64-linux-gnu/libsasl2.so.2.0.25",
         "usr/share/doc/libsasl2-2/NEWS.Debian.gz",
         "usr/share/doc/libsasl2-2/README.Debian",
@@ -44488,14 +41627,11 @@ filegroup(
         ":libc6-filegroup",
         ":libsasl2-modules-db-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libsasl2-modules-db-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/sasl2/libsasldb.so",
-        "usr/lib/x86_64-linux-gnu/sasl2/libsasldb.so.2",
         "usr/lib/x86_64-linux-gnu/sasl2/libsasldb.so.2.0.25",
         "usr/share/doc/libsasl2-modules-db/NEWS.Debian.gz",
         "usr/share/doc/libsasl2-modules-db/changelog.Debian.gz",
@@ -44503,20 +41639,17 @@ filegroup(
         ":libc6-filegroup",
         ":libdb5.3-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libseccomp2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libseccomp.so.2",
         "usr/lib/x86_64-linux-gnu/libseccomp.so.2.5.4",
         "usr/share/doc/libseccomp2/changelog.Debian.gz",
         "usr/share/doc/libseccomp2/changelog.gz",
         "usr/share/doc/libseccomp2/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -44530,221 +41663,75 @@ filegroup(
         "usr/include/selinux/restorecon.h",
         "usr/include/selinux/selinux.h",
         "usr/lib/x86_64-linux-gnu/libselinux.a",
-        "usr/lib/x86_64-linux-gnu/libselinux.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libselinux.pc",
         "usr/share/doc/libselinux1-dev/changelog.Debian.amd64.gz",
         "usr/share/doc/libselinux1-dev/changelog.Debian.gz",
         "usr/share/doc/libselinux1-dev/copyright",
         "usr/share/man/man3/avc_add_callback.3.gz",
-        "usr/share/man/man3/avc_audit.3.gz",
-        "usr/share/man/man3/avc_av_stats.3.gz",
         "usr/share/man/man3/avc_cache_stats.3.gz",
-        "usr/share/man/man3/avc_cleanup.3.gz",
         "usr/share/man/man3/avc_compute_create.3.gz",
-        "usr/share/man/man3/avc_compute_member.3.gz",
         "usr/share/man/man3/avc_context_to_sid.3.gz",
-        "usr/share/man/man3/avc_destroy.3.gz",
-        "usr/share/man/man3/avc_entry_ref_init.3.gz",
-        "usr/share/man/man3/avc_get_initial_context.3.gz",
-        "usr/share/man/man3/avc_get_initial_sid.3.gz",
         "usr/share/man/man3/avc_has_perm.3.gz",
-        "usr/share/man/man3/avc_has_perm_noaudit.3.gz",
         "usr/share/man/man3/avc_init.3.gz",
-        "usr/share/man/man3/avc_netlink_acquire_fd.3.gz",
-        "usr/share/man/man3/avc_netlink_check_nb.3.gz",
-        "usr/share/man/man3/avc_netlink_close.3.gz",
         "usr/share/man/man3/avc_netlink_loop.3.gz",
-        "usr/share/man/man3/avc_netlink_open.3.gz",
-        "usr/share/man/man3/avc_netlink_release_fd.3.gz",
         "usr/share/man/man3/avc_open.3.gz",
-        "usr/share/man/man3/avc_reset.3.gz",
-        "usr/share/man/man3/avc_sid_stats.3.gz",
-        "usr/share/man/man3/avc_sid_to_context.3.gz",
-        "usr/share/man/man3/checkPasswdAccess.3.gz",
-        "usr/share/man/man3/context_free.3.gz",
         "usr/share/man/man3/context_new.3.gz",
-        "usr/share/man/man3/context_range_get.3.gz",
-        "usr/share/man/man3/context_range_set.3.gz",
-        "usr/share/man/man3/context_role_get.3.gz",
-        "usr/share/man/man3/context_role_set.3.gz",
-        "usr/share/man/man3/context_type_get.3.gz",
-        "usr/share/man/man3/context_type_set.3.gz",
-        "usr/share/man/man3/context_user_get.3.gz",
-        "usr/share/man/man3/context_user_set.3.gz",
-        "usr/share/man/man3/fgetfilecon.3.gz",
-        "usr/share/man/man3/fgetfilecon_raw.3.gz",
-        "usr/share/man/man3/fini_selinuxmnt.3.gz",
-        "usr/share/man/man3/freecon.3.gz",
-        "usr/share/man/man3/freeconary.3.gz",
-        "usr/share/man/man3/fsetfilecon.3.gz",
-        "usr/share/man/man3/fsetfilecon_raw.3.gz",
-        "usr/share/man/man3/get_default_context.3.gz",
-        "usr/share/man/man3/get_default_context_with_level.3.gz",
-        "usr/share/man/man3/get_default_context_with_role.3.gz",
-        "usr/share/man/man3/get_default_context_with_rolelevel.3.gz",
-        "usr/share/man/man3/get_default_type.3.gz",
         "usr/share/man/man3/get_ordered_context_list.3.gz",
-        "usr/share/man/man3/get_ordered_context_list_with_level.3.gz",
         "usr/share/man/man3/getcon.3.gz",
-        "usr/share/man/man3/getcon_raw.3.gz",
         "usr/share/man/man3/getexeccon.3.gz",
-        "usr/share/man/man3/getexeccon_raw.3.gz",
         "usr/share/man/man3/getfilecon.3.gz",
-        "usr/share/man/man3/getfilecon_raw.3.gz",
         "usr/share/man/man3/getfscreatecon.3.gz",
-        "usr/share/man/man3/getfscreatecon_raw.3.gz",
         "usr/share/man/man3/getkeycreatecon.3.gz",
-        "usr/share/man/man3/getkeycreatecon_raw.3.gz",
-        "usr/share/man/man3/getpeercon.3.gz",
-        "usr/share/man/man3/getpeercon_raw.3.gz",
-        "usr/share/man/man3/getpidcon.3.gz",
-        "usr/share/man/man3/getpidcon_raw.3.gz",
-        "usr/share/man/man3/getprevcon.3.gz",
-        "usr/share/man/man3/getprevcon_raw.3.gz",
         "usr/share/man/man3/getseuserbyname.3.gz",
         "usr/share/man/man3/getsockcreatecon.3.gz",
-        "usr/share/man/man3/getsockcreatecon_raw.3.gz",
         "usr/share/man/man3/init_selinuxmnt.3.gz",
         "usr/share/man/man3/is_context_customizable.3.gz",
         "usr/share/man/man3/is_selinux_enabled.3.gz",
-        "usr/share/man/man3/is_selinux_mls_enabled.3.gz",
-        "usr/share/man/man3/lgetfilecon.3.gz",
-        "usr/share/man/man3/lgetfilecon_raw.3.gz",
-        "usr/share/man/man3/lsetfilecon.3.gz",
-        "usr/share/man/man3/lsetfilecon_raw.3.gz",
-        "usr/share/man/man3/manual_user_enter_context.3.gz",
         "usr/share/man/man3/matchmediacon.3.gz",
         "usr/share/man/man3/matchpathcon.3.gz",
         "usr/share/man/man3/matchpathcon_checkmatches.3.gz",
-        "usr/share/man/man3/matchpathcon_filespec_add.3.gz",
-        "usr/share/man/man3/matchpathcon_filespec_destroy.3.gz",
-        "usr/share/man/man3/matchpathcon_filespec_eval.3.gz",
-        "usr/share/man/man3/matchpathcon_fini.3.gz",
-        "usr/share/man/man3/matchpathcon_index.3.gz",
-        "usr/share/man/man3/matchpathcon_init.3.gz",
-        "usr/share/man/man3/mode_to_security_class.3.gz",
-        "usr/share/man/man3/print_access_vector.3.gz",
-        "usr/share/man/man3/query_user_context.3.gz",
-        "usr/share/man/man3/rpm_execcon.3.gz",
-        "usr/share/man/man3/security_av_perm_to_string.3.gz",
-        "usr/share/man/man3/security_av_string.3.gz",
         "usr/share/man/man3/security_check_context.3.gz",
-        "usr/share/man/man3/security_check_context_raw.3.gz",
         "usr/share/man/man3/security_class_to_string.3.gz",
-        "usr/share/man/man3/security_commit_booleans.3.gz",
         "usr/share/man/man3/security_compute_av.3.gz",
-        "usr/share/man/man3/security_compute_av_flags.3.gz",
-        "usr/share/man/man3/security_compute_av_flags_raw.3.gz",
-        "usr/share/man/man3/security_compute_av_raw.3.gz",
-        "usr/share/man/man3/security_compute_create.3.gz",
-        "usr/share/man/man3/security_compute_create_name.3.gz",
-        "usr/share/man/man3/security_compute_create_name_raw.3.gz",
-        "usr/share/man/man3/security_compute_create_raw.3.gz",
-        "usr/share/man/man3/security_compute_member.3.gz",
-        "usr/share/man/man3/security_compute_member_raw.3.gz",
-        "usr/share/man/man3/security_compute_relabel.3.gz",
-        "usr/share/man/man3/security_compute_relabel_raw.3.gz",
-        "usr/share/man/man3/security_compute_user.3.gz",
-        "usr/share/man/man3/security_compute_user_raw.3.gz",
-        "usr/share/man/man3/security_deny_unknown.3.gz",
         "usr/share/man/man3/security_disable.3.gz",
-        "usr/share/man/man3/security_get_boolean_active.3.gz",
-        "usr/share/man/man3/security_get_boolean_names.3.gz",
-        "usr/share/man/man3/security_get_boolean_pending.3.gz",
-        "usr/share/man/man3/security_get_initial_context.3.gz",
-        "usr/share/man/man3/security_get_initial_context_raw.3.gz",
         "usr/share/man/man3/security_getenforce.3.gz",
         "usr/share/man/man3/security_load_booleans.3.gz",
         "usr/share/man/man3/security_load_policy.3.gz",
-        "usr/share/man/man3/security_mkload_policy.3.gz",
         "usr/share/man/man3/security_policyvers.3.gz",
-        "usr/share/man/man3/security_reject_unknown.3.gz",
-        "usr/share/man/man3/security_set_boolean.3.gz",
-        "usr/share/man/man3/security_setenforce.3.gz",
-        "usr/share/man/man3/selabel_close.3.gz",
         "usr/share/man/man3/selabel_digest.3.gz",
         "usr/share/man/man3/selabel_get_digests_all_partial_matches.3.gz",
         "usr/share/man/man3/selabel_lookup.3.gz",
         "usr/share/man/man3/selabel_lookup_best_match.3.gz",
-        "usr/share/man/man3/selabel_lookup_best_match_raw.3.gz",
-        "usr/share/man/man3/selabel_lookup_raw.3.gz",
         "usr/share/man/man3/selabel_open.3.gz",
         "usr/share/man/man3/selabel_partial_match.3.gz",
         "usr/share/man/man3/selabel_stats.3.gz",
         "usr/share/man/man3/selinux_binary_policy_path.3.gz",
         "usr/share/man/man3/selinux_boolean_sub.3.gz",
-        "usr/share/man/man3/selinux_check_access.3.gz",
-        "usr/share/man/man3/selinux_check_passwd_access.3.gz",
         "usr/share/man/man3/selinux_check_securetty_context.3.gz",
         "usr/share/man/man3/selinux_colors_path.3.gz",
-        "usr/share/man/man3/selinux_contexts_path.3.gz",
-        "usr/share/man/man3/selinux_current_policy_path.3.gz",
-        "usr/share/man/man3/selinux_default_context_path.3.gz",
-        "usr/share/man/man3/selinux_default_type_path.3.gz",
-        "usr/share/man/man3/selinux_failsafe_context_path.3.gz",
         "usr/share/man/man3/selinux_file_context_cmp.3.gz",
-        "usr/share/man/man3/selinux_file_context_homedir_path.3.gz",
-        "usr/share/man/man3/selinux_file_context_local_path.3.gz",
-        "usr/share/man/man3/selinux_file_context_path.3.gz",
         "usr/share/man/man3/selinux_file_context_verify.3.gz",
         "usr/share/man/man3/selinux_getenforcemode.3.gz",
         "usr/share/man/man3/selinux_getpolicytype.3.gz",
-        "usr/share/man/man3/selinux_homedir_context_path.3.gz",
-        "usr/share/man/man3/selinux_init_load_policy.3.gz",
         "usr/share/man/man3/selinux_lsetfilecon_default.3.gz",
-        "usr/share/man/man3/selinux_media_context_path.3.gz",
-        "usr/share/man/man3/selinux_mkload_policy.3.gz",
-        "usr/share/man/man3/selinux_netfilter_context_path.3.gz",
-        "usr/share/man/man3/selinux_path.3.gz",
         "usr/share/man/man3/selinux_policy_root.3.gz",
         "usr/share/man/man3/selinux_raw_context_to_color.3.gz",
-        "usr/share/man/man3/selinux_removable_context_path.3.gz",
         "usr/share/man/man3/selinux_restorecon.3.gz",
         "usr/share/man/man3/selinux_restorecon_default_handle.3.gz",
         "usr/share/man/man3/selinux_restorecon_get_skipped_errors.3.gz",
-        "usr/share/man/man3/selinux_restorecon_parallel.3.gz",
         "usr/share/man/man3/selinux_restorecon_set_alt_rootpath.3.gz",
         "usr/share/man/man3/selinux_restorecon_set_exclude_list.3.gz",
         "usr/share/man/man3/selinux_restorecon_set_sehandle.3.gz",
         "usr/share/man/man3/selinux_restorecon_xattr.3.gz",
-        "usr/share/man/man3/selinux_securetty_types_path.3.gz",
         "usr/share/man/man3/selinux_set_callback.3.gz",
         "usr/share/man/man3/selinux_set_mapping.3.gz",
-        "usr/share/man/man3/selinux_set_policy_root.3.gz",
-        "usr/share/man/man3/selinux_status_close.3.gz",
-        "usr/share/man/man3/selinux_status_deny_unknown.3.gz",
-        "usr/share/man/man3/selinux_status_getenforce.3.gz",
         "usr/share/man/man3/selinux_status_open.3.gz",
-        "usr/share/man/man3/selinux_status_policyload.3.gz",
-        "usr/share/man/man3/selinux_status_updated.3.gz",
-        "usr/share/man/man3/selinux_user_contexts_path.3.gz",
-        "usr/share/man/man3/selinux_usersconf_path.3.gz",
-        "usr/share/man/man3/selinux_x_context_path.3.gz",
         "usr/share/man/man3/set_matchpathcon_flags.3.gz",
-        "usr/share/man/man3/set_matchpathcon_invalidcon.3.gz",
-        "usr/share/man/man3/set_matchpathcon_printf.3.gz",
-        "usr/share/man/man3/set_selinuxmnt.3.gz",
-        "usr/share/man/man3/setcon.3.gz",
-        "usr/share/man/man3/setcon_raw.3.gz",
-        "usr/share/man/man3/setexeccon.3.gz",
-        "usr/share/man/man3/setexeccon_raw.3.gz",
         "usr/share/man/man3/setfilecon.3.gz",
-        "usr/share/man/man3/setfilecon_raw.3.gz",
-        "usr/share/man/man3/setfscreatecon.3.gz",
-        "usr/share/man/man3/setfscreatecon_raw.3.gz",
-        "usr/share/man/man3/setkeycreatecon.3.gz",
-        "usr/share/man/man3/setkeycreatecon_raw.3.gz",
-        "usr/share/man/man3/setsockcreatecon.3.gz",
-        "usr/share/man/man3/setsockcreatecon_raw.3.gz",
-        "usr/share/man/man3/sidget.3.gz",
-        "usr/share/man/man3/sidput.3.gz",
-        "usr/share/man/man3/string_to_av_perm.3.gz",
-        "usr/share/man/man3/string_to_security_class.3.gz",
         ":libpcre2-dev-filegroup",
         ":libselinux1-filegroup",
         ":libsepol-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -44757,7 +41744,6 @@ filegroup(
         ":libc6-filegroup",
         ":libpcre2-8-0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -44769,7 +41755,6 @@ filegroup(
         "usr/share/man/man5/semanage.conf.5.gz",
         "usr/share/man/ru/man5/semanage.conf.5.gz",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -44786,7 +41771,6 @@ filegroup(
         ":libsemanage-common-filegroup",
         ":libsepol2-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -44798,13 +41782,11 @@ filegroup(
         "usr/share/doc/libsensors-config/changelog.gz",
         "usr/share/doc/libsensors-config/copyright",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libsensors5-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libsensors.so.5",
         "usr/lib/x86_64-linux-gnu/libsensors.so.5.0.0",
         "usr/share/doc/libsensors5/README.Debian",
         "usr/share/doc/libsensors5/changelog.Debian.gz",
@@ -44813,7 +41795,6 @@ filegroup(
         ":libc6-filegroup",
         ":libsensors-config-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -44865,14 +41846,12 @@ filegroup(
         "usr/include/sepol/user_record.h",
         "usr/include/sepol/users.h",
         "usr/lib/x86_64-linux-gnu/libsepol.a",
-        "usr/lib/x86_64-linux-gnu/libsepol.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libsepol.pc",
         "usr/share/doc/libsepol-dev/changelog.Debian.gz",
         "usr/share/doc/libsepol-dev/copyright",
         "usr/share/man/man3/sepol_check_context.3.gz",
         ":libsepol2-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -44883,26 +41862,22 @@ filegroup(
         "usr/share/doc/libsepol2/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libshine3-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libshine.so.3",
         "usr/lib/x86_64-linux-gnu/libshine.so.3.0.1",
         "usr/share/doc/libshine3/changelog.Debian.gz",
         "usr/share/doc/libshine3/changelog.gz",
         "usr/share/doc/libshine3/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libsm6-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libSM.so.6",
         "usr/lib/x86_64-linux-gnu/libSM.so.6.0.1",
         "usr/share/doc/libsm6/changelog.Debian.gz",
         "usr/share/doc/libsm6/changelog.gz",
@@ -44911,27 +41886,23 @@ filegroup(
         ":libice6-filegroup",
         ":libuuid1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libsnappy1v5-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libsnappy.so.1",
         "usr/lib/x86_64-linux-gnu/libsnappy.so.1.1.9",
         "usr/share/doc/libsnappy1v5/changelog.Debian.gz",
         "usr/share/doc/libsnappy1v5/copyright",
         ":libc6-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libsocket++1-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/libsocket++.a",
-        "usr/lib/x86_64-linux-gnu/libsocket++.so.1",
         "usr/lib/x86_64-linux-gnu/libsocket++.so.1.0.2",
         "usr/share/doc/libsocket++1/changelog.Debian.amd64.gz",
         "usr/share/doc/libsocket++1/changelog.Debian.gz",
@@ -44941,13 +41912,11 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libsodium23-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libsodium.so.23",
         "usr/lib/x86_64-linux-gnu/libsodium.so.23.3.0",
         "usr/share/doc/libsodium23/AUTHORS.gz",
         "usr/share/doc/libsodium23/README.markdown",
@@ -44957,13 +41926,11 @@ filegroup(
         "usr/share/doc/libsodium23/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libsoup-3.0-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libsoup-3.0.so.0",
         "usr/lib/x86_64-linux-gnu/libsoup-3.0.so.0.6.0",
         "usr/share/doc/libsoup-3.0-0/AUTHORS",
         "usr/share/doc/libsoup-3.0-0/NEWS.gz",
@@ -44981,7 +41948,6 @@ filegroup(
         ":libsqlite3-0-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -45058,26 +42024,22 @@ filegroup(
         "usr/share/locale/zh_HK/LC_MESSAGES/libsoup-3.0.mo",
         "usr/share/locale/zh_TW/LC_MESSAGES/libsoup-3.0.mo",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libsoxr0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libsoxr.so.0",
         "usr/lib/x86_64-linux-gnu/libsoxr.so.0.1.2",
         "usr/share/doc/libsoxr0/changelog.Debian.gz",
         "usr/share/doc/libsoxr0/copyright",
         ":libc6-filegroup",
         ":libgomp1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libspatialite7-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libspatialite.so.7",
         "usr/lib/x86_64-linux-gnu/libspatialite.so.7.1.2",
         "usr/share/doc/libspatialite7/NEWS.Debian.gz",
         "usr/share/doc/libspatialite7/README.Debian",
@@ -45099,26 +42061,22 @@ filegroup(
         ":libxml2-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libspeex1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libspeex.so.1",
         "usr/lib/x86_64-linux-gnu/libspeex.so.1.5.2",
         "usr/share/doc/libspeex1/changelog.Debian.gz",
         "usr/share/doc/libspeex1/changelog.gz",
         "usr/share/doc/libspeex1/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libsqlite3-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libsqlite3.so.0",
         "usr/lib/x86_64-linux-gnu/libsqlite3.so.0.8.6",
         "usr/share/doc/libsqlite3-0/README.Debian",
         "usr/share/doc/libsqlite3-0/changelog.Debian.gz",
@@ -45127,13 +42085,11 @@ filegroup(
         "usr/share/doc/libsqlite3-0/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libsrt1.5-gnutls-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libsrt-gnutls.so.1.5",
         "usr/lib/x86_64-linux-gnu/libsrt-gnutls.so.1.5.1",
         "usr/share/doc/libsrt1.5-gnutls/changelog.Debian.gz",
         "usr/share/doc/libsrt1.5-gnutls/copyright",
@@ -45144,13 +42100,11 @@ filegroup(
         ":libnettle8-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libssh-gcrypt-4-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libssh-gcrypt.so.4",
         "usr/lib/x86_64-linux-gnu/libssh-gcrypt.so.4.9.6",
         "usr/share/doc/libssh-gcrypt-4/changelog.Debian.gz",
         "usr/share/doc/libssh-gcrypt-4/changelog.gz",
@@ -45162,13 +42116,11 @@ filegroup(
         ":libgssapi-krb5-2-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libssh2-1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libssh2.so.1",
         "usr/lib/x86_64-linux-gnu/libssh2.so.1.0.1",
         "usr/share/doc/libssh2-1/AUTHORS",
         "usr/share/doc/libssh2-1/RELEASE-NOTES",
@@ -45180,7 +42132,6 @@ filegroup(
         ":libssl3-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -45197,7 +42148,6 @@ filegroup(
         "usr/share/doc/libssl3/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -46010,7 +42960,6 @@ filegroup(
         "usr/include/x86_64-linux-gnu/c++/12/bits/time_members.h",
         "usr/include/x86_64-linux-gnu/c++/12/ext/opt_random.h",
         "usr/lib/gcc/x86_64-linux-gnu/12/libstdc++.a",
-        "usr/lib/gcc/x86_64-linux-gnu/12/libstdc++.so",
         "usr/lib/gcc/x86_64-linux-gnu/12/libstdc++fs.a",
         "usr/lib/gcc/x86_64-linux-gnu/12/libsupc++.a",
         "usr/share/doc/gcc-12-base/C++/README.libstdc++-baseline.amd64",
@@ -46021,13 +42970,11 @@ filegroup(
         ":libgcc-12-dev-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libstdc++6-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libstdc++.so.6",
         "usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30",
         "usr/share/gcc/python/libstdcxx/__init__.py",
         "usr/share/gcc/python/libstdcxx/v6/__init__.py",
@@ -46038,13 +42985,11 @@ filegroup(
         ":libc6-filegroup",
         ":libgcc-s1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libsuperlu5-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libsuperlu.so.5",
         "usr/lib/x86_64-linux-gnu/libsuperlu.so.5.3.0",
         "usr/share/doc/libsuperlu5/README.Debian",
         "usr/share/doc/libsuperlu5/README.gz",
@@ -46054,20 +42999,17 @@ filegroup(
         ":libblas3-filegroup",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libsvtav1enc1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libSvtAv1Enc.so.1",
         "usr/lib/x86_64-linux-gnu/libSvtAv1Enc.so.1.4.1",
         "usr/share/doc/libsvtav1enc1/changelog.Debian.gz",
         "usr/share/doc/libsvtav1enc1/changelog.gz",
         "usr/share/doc/libsvtav1enc1/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -46077,7 +43019,6 @@ filegroup(
         "usr/include/x86_64-linux-gnu/libswresample/version.h",
         "usr/include/x86_64-linux-gnu/libswresample/version_major.h",
         "usr/lib/x86_64-linux-gnu/libswresample.a",
-        "usr/lib/x86_64-linux-gnu/libswresample.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libswresample.pc",
         "usr/share/doc/libswresample-dev/changelog.Debian.gz",
         "usr/share/doc/libswresample-dev/changelog.gz",
@@ -46085,13 +43026,11 @@ filegroup(
         ":libavutil-dev-filegroup",
         ":libswresample4-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libswresample4-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libswresample.so.4",
         "usr/lib/x86_64-linux-gnu/libswresample.so.4.7.100",
         "usr/share/doc/libswresample4/changelog.Debian.gz",
         "usr/share/doc/libswresample4/changelog.gz",
@@ -46101,7 +43040,6 @@ filegroup(
         ":libc6-filegroup",
         ":libsoxr0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -46111,7 +43049,6 @@ filegroup(
         "usr/include/x86_64-linux-gnu/libswscale/version.h",
         "usr/include/x86_64-linux-gnu/libswscale/version_major.h",
         "usr/lib/x86_64-linux-gnu/libswscale.a",
-        "usr/lib/x86_64-linux-gnu/libswscale.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libswscale.pc",
         "usr/share/doc/libswscale-dev/changelog.Debian.gz",
         "usr/share/doc/libswscale-dev/changelog.gz",
@@ -46119,13 +43056,11 @@ filegroup(
         ":libavutil-dev-filegroup",
         ":libswscale6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libswscale6-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libswscale.so.6",
         "usr/lib/x86_64-linux-gnu/libswscale.so.6.7.100",
         "usr/share/doc/libswscale6/changelog.Debian.gz",
         "usr/share/doc/libswscale6/changelog.gz",
@@ -46134,7 +43069,6 @@ filegroup(
         ":libavutil57-filegroup",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -46165,13 +43099,11 @@ filegroup(
         ":libssl3-filegroup",
         ":libzstd1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libsystemd0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libsystemd.so.0",
         "usr/lib/x86_64-linux-gnu/libsystemd.so.0.35.0",
         "usr/share/doc/libsystemd0/NEWS.Debian.gz",
         "usr/share/doc/libsystemd0/changelog.Debian.gz",
@@ -46183,13 +43115,11 @@ filegroup(
         ":liblzma5-filegroup",
         ":libzstd1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libsz2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libsz.so.2",
         "usr/lib/x86_64-linux-gnu/libsz.so.2.0.1",
         "usr/share/doc/libsz2/changelog.Debian.amd64.gz",
         "usr/share/doc/libsz2/changelog.Debian.gz",
@@ -46198,13 +43128,11 @@ filegroup(
         ":libaec0-filegroup",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libtasn1-6-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libtasn1.so.6",
         "usr/lib/x86_64-linux-gnu/libtasn1.so.6.6.3",
         "usr/share/doc/libtasn1-6/AUTHORS",
         "usr/share/doc/libtasn1-6/README.md",
@@ -46214,7 +43142,6 @@ filegroup(
         "usr/share/doc/libtasn1-6/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -46364,23 +43291,17 @@ filegroup(
         "usr/lib/x86_64-linux-gnu/cmake/TBB/TBBConfigVersion.cmake",
         "usr/lib/x86_64-linux-gnu/cmake/TBB/TBBTargets.cmake",
         "usr/lib/x86_64-linux-gnu/cmake/TBB/TBBTargets-none.cmake",
-        "usr/lib/x86_64-linux-gnu/libtbb.so",
-        "usr/lib/x86_64-linux-gnu/libtbbbind_2_5.so",
-        "usr/lib/x86_64-linux-gnu/libtbbmalloc.so",
-        "usr/lib/x86_64-linux-gnu/libtbbmalloc_proxy.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/tbb.pc",
         "usr/share/doc/libtbb-dev/README.Debian",
         "usr/share/doc/libtbb-dev/changelog.Debian.gz",
         "usr/share/doc/libtbb-dev/copyright",
         ":libtbb12-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libtbb12-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libtbb.so.12",
         "usr/lib/x86_64-linux-gnu/libtbb.so.12.8",
         "usr/share/doc/libtbb12/changelog.Debian.gz",
         "usr/share/doc/libtbb12/copyright",
@@ -46390,13 +43311,11 @@ filegroup(
         ":libtbbbind-2-5-filegroup",
         ":libtbbmalloc2-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libtbbbind-2-5-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libtbbbind_2_5.so.3",
         "usr/lib/x86_64-linux-gnu/libtbbbind_2_5.so.3.8",
         "usr/share/doc/libtbbbind-2-5/changelog.Debian.gz",
         "usr/share/doc/libtbbbind-2-5/copyright",
@@ -46405,29 +43324,24 @@ filegroup(
         ":libhwloc15-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libtbbmalloc2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libtbbmalloc.so.2",
         "usr/lib/x86_64-linux-gnu/libtbbmalloc.so.2.8",
-        "usr/lib/x86_64-linux-gnu/libtbbmalloc_proxy.so.2",
         "usr/lib/x86_64-linux-gnu/libtbbmalloc_proxy.so.2.8",
         "usr/share/doc/libtbbmalloc2/changelog.Debian.gz",
         "usr/share/doc/libtbbmalloc2/copyright",
         ":libc6-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libtcl8.6-filegroup",
     srcs = [
         "usr/lib/x86_64-linux-gnu/libtcl8.6.so",
-        "usr/lib/x86_64-linux-gnu/libtcl8.6.so.0",
         "usr/share/doc/libtcl8.6/changelog.Debian.gz",
         "usr/share/doc/libtcl8.6/changelog.gz",
         "usr/share/doc/libtcl8.6/copyright",
@@ -46663,13 +43577,11 @@ filegroup(
         ":tzdata-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libtesseract5-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libtesseract.so.5",
         "usr/lib/x86_64-linux-gnu/libtesseract.so.5.0.3",
         "usr/share/doc/libtesseract5/changelog.Debian.gz",
         "usr/share/doc/libtesseract5/changelog.gz",
@@ -46714,7 +43626,6 @@ filegroup(
         ":liblept5-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -46725,13 +43636,11 @@ filegroup(
         "usr/share/doc/libthai-data/copyright",
         "usr/share/libthai/thbrk.tri",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libthai0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libthai.so.0",
         "usr/lib/x86_64-linux-gnu/libthai.so.0.3.1",
         "usr/share/doc/libthai0/changelog.Debian.gz",
         "usr/share/doc/libthai0/changelog.gz",
@@ -46740,17 +43649,13 @@ filegroup(
         ":libdatrie1-filegroup",
         ":libthai-data-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libtheora0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libtheora.so.0",
         "usr/lib/x86_64-linux-gnu/libtheora.so.0.3.10",
-        "usr/lib/x86_64-linux-gnu/libtheoradec.so.1",
         "usr/lib/x86_64-linux-gnu/libtheoradec.so.1.1.4",
-        "usr/lib/x86_64-linux-gnu/libtheoraenc.so.1",
         "usr/lib/x86_64-linux-gnu/libtheoraenc.so.1.1.2",
         "usr/share/doc/libtheora0/changelog.Debian.amd64.gz",
         "usr/share/doc/libtheora0/changelog.Debian.gz",
@@ -46760,7 +43665,6 @@ filegroup(
         ":libcairo2-filegroup",
         ":libogg0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -47664,7 +44568,6 @@ filegroup(
         "usr/share/doc/libthrust-dev/examples/word_count.cu",
         ":libcub-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -47676,9 +44579,7 @@ filegroup(
         "usr/include/x86_64-linux-gnu/tiffio.hxx",
         "usr/include/x86_64-linux-gnu/tiffvers.h",
         "usr/lib/x86_64-linux-gnu/libtiff.a",
-        "usr/lib/x86_64-linux-gnu/libtiff.so",
         "usr/lib/x86_64-linux-gnu/libtiffxx.a",
-        "usr/lib/x86_64-linux-gnu/libtiffxx.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libtiff-4.pc",
         "usr/share/doc/libtiff-dev/changelog.Debian.gz",
         "usr/share/doc/libtiff-dev/changelog.gz",
@@ -47753,13 +44654,11 @@ filegroup(
         ":libzstd-dev-filegroup",
         ":zlib1g-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libtiff6-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libtiff.so.6",
         "usr/lib/x86_64-linux-gnu/libtiff.so.6.0.0",
         "usr/share/doc/libtiff6/changelog.Debian.gz",
         "usr/share/doc/libtiff6/changelog.gz",
@@ -47774,13 +44673,11 @@ filegroup(
         ":libzstd1-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libtiffxx6-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libtiffxx.so.6",
         "usr/lib/x86_64-linux-gnu/libtiffxx.so.6.0.0",
         "usr/share/doc/libtiffxx6/changelog.Debian.gz",
         "usr/share/doc/libtiffxx6/changelog.gz",
@@ -47789,22 +44686,18 @@ filegroup(
         ":libstdc++6-filegroup",
         ":libtiff6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libtinfo6-filegroup",
     srcs = [
-        "lib/x86_64-linux-gnu/libtinfo.so.6",
         "lib/x86_64-linux-gnu/libtinfo.so.6.4",
-        "usr/lib/x86_64-linux-gnu/libtic.so.6",
         "usr/lib/x86_64-linux-gnu/libtic.so.6.4",
         "usr/share/doc/libtinfo6/changelog.Debian.gz",
         "usr/share/doc/libtinfo6/changelog.gz",
         "usr/share/doc/libtinfo6/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -47817,7 +44710,6 @@ filegroup(
         "usr/share/doc/libtirpc-common/copyright",
         "usr/share/man/man5/netconfig.5.gz",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -47858,7 +44750,6 @@ filegroup(
         "usr/include/tirpc/rpcsvc/crypt.h",
         "usr/include/tirpc/rpcsvc/crypt.x",
         "usr/lib/x86_64-linux-gnu/libtirpc.a",
-        "usr/lib/x86_64-linux-gnu/libtirpc.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libtirpc.pc",
         "usr/share/doc/libtirpc-dev/NEWS.Debian.gz",
         "usr/share/doc/libtirpc-dev/THANKS",
@@ -47903,13 +44794,11 @@ filegroup(
         "usr/share/man/man3/rtime.3t.gz",
         ":libtirpc3-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libtirpc3-filegroup",
     srcs = [
-        "lib/x86_64-linux-gnu/libtirpc.so.3",
         "lib/x86_64-linux-gnu/libtirpc.so.3.0.0",
         "usr/share/doc/libtirpc3/NEWS.Debian.gz",
         "usr/share/doc/libtirpc3/changelog.Debian.gz",
@@ -47919,7 +44808,6 @@ filegroup(
         ":libgssapi-krb5-2-filegroup",
         ":libtirpc-common-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -47927,7 +44815,6 @@ filegroup(
     srcs = [
         "usr/lib/tcltk/x86_64-linux-gnu/tk8.6/pkgIndex.tcl",
         "usr/lib/x86_64-linux-gnu/libtk8.6.so",
-        "usr/lib/x86_64-linux-gnu/libtk8.6.so.0",
         "usr/share/doc/libtk8.6/changelog.Debian.gz",
         "usr/share/doc/libtk8.6/changelog.gz",
         "usr/share/doc/libtk8.6/copyright",
@@ -48027,19 +44914,16 @@ filegroup(
         ":libxft2-filegroup",
         ":libxss1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libtsan2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libtsan.so.2",
         "usr/lib/x86_64-linux-gnu/libtsan.so.2.0.0",
         ":gcc-12-base-filegroup",
         ":libc6-filegroup",
         ":libgcc-s1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -48051,20 +44935,17 @@ filegroup(
         "usr/lib/x86_64-linux-gnu/cmake/libjpeg-turbo/libjpeg-turboTargets.cmake",
         "usr/lib/x86_64-linux-gnu/cmake/libjpeg-turbo/libjpeg-turboTargets-none.cmake",
         "usr/lib/x86_64-linux-gnu/libturbojpeg.a",
-        "usr/lib/x86_64-linux-gnu/libturbojpeg.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libturbojpeg.pc",
         "usr/share/doc/libturbojpeg0-dev/changelog.Debian.gz",
         "usr/share/doc/libturbojpeg0-dev/changelog.gz",
         "usr/share/doc/libturbojpeg0-dev/copyright",
         ":libturbojpeg0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libturbojpeg0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libturbojpeg.so.0",
         "usr/lib/x86_64-linux-gnu/libturbojpeg.so.0.2.0",
         "usr/share/doc/libturbojpeg0/changelog.Debian.gz",
         "usr/share/doc/libturbojpeg0/changelog.gz",
@@ -48072,57 +44953,43 @@ filegroup(
         "usr/share/lintian/overrides/libturbojpeg0",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libtwolame0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libtwolame.so.0",
         "usr/lib/x86_64-linux-gnu/libtwolame.so.0.0.0",
         "usr/share/doc/libtwolame0/changelog.Debian.gz",
         "usr/share/doc/libtwolame0/changelog.gz",
         "usr/share/doc/libtwolame0/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libubsan1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libubsan.so.1",
         "usr/lib/x86_64-linux-gnu/libubsan.so.1.0.0",
         ":gcc-12-base-filegroup",
         ":libc6-filegroup",
         ":libgcc-s1-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libucx0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libucm.so.0",
         "usr/lib/x86_64-linux-gnu/libucm.so.0.0.0",
-        "usr/lib/x86_64-linux-gnu/libucp.so.0",
         "usr/lib/x86_64-linux-gnu/libucp.so.0.0.0",
-        "usr/lib/x86_64-linux-gnu/libucs.so.0",
         "usr/lib/x86_64-linux-gnu/libucs.so.0.0.0",
-        "usr/lib/x86_64-linux-gnu/libucs_signal.so.0",
         "usr/lib/x86_64-linux-gnu/libucs_signal.so.0.0.0",
-        "usr/lib/x86_64-linux-gnu/libuct.so.0",
         "usr/lib/x86_64-linux-gnu/libuct.so.0.0.0",
-        "usr/lib/x86_64-linux-gnu/ucx/libuct_cma.so.0",
         "usr/lib/x86_64-linux-gnu/ucx/libuct_cma.so.0.0.0",
-        "usr/lib/x86_64-linux-gnu/ucx/libuct_ib.so.0",
         "usr/lib/x86_64-linux-gnu/ucx/libuct_ib.so.0.0.0",
-        "usr/lib/x86_64-linux-gnu/ucx/libuct_rdmacm.so.0",
         "usr/lib/x86_64-linux-gnu/ucx/libuct_rdmacm.so.0.0.0",
         "usr/share/doc/libucx0/AUTHORS",
         "usr/share/doc/libucx0/NEWS.gz",
-        "usr/share/doc/libucx0/README",
         "usr/share/doc/libucx0/changelog.Debian.gz",
         "usr/share/doc/libucx0/copyright",
         ":ibverbs-providers-filegroup",
@@ -48131,129 +44998,63 @@ filegroup(
         ":libnuma1-filegroup",
         ":librdmacm1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libudev-dev-filegroup",
     srcs = [
         "usr/include/libudev.h",
-        "usr/lib/x86_64-linux-gnu/libudev.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libudev.pc",
         "usr/share/doc/libudev-dev/NEWS.Debian.gz",
         "usr/share/doc/libudev-dev/changelog.Debian.gz",
         "usr/share/doc/libudev-dev/copyright",
         "usr/share/man/man3/libudev.3.gz",
-        "usr/share/man/man3/udev_device_get_action.3.gz",
-        "usr/share/man/man3/udev_device_get_current_tags_list_entry.3.gz",
-        "usr/share/man/man3/udev_device_get_devlinks_list_entry.3.gz",
-        "usr/share/man/man3/udev_device_get_devnode.3.gz",
-        "usr/share/man/man3/udev_device_get_devnum.3.gz",
-        "usr/share/man/man3/udev_device_get_devpath.3.gz",
-        "usr/share/man/man3/udev_device_get_devtype.3.gz",
-        "usr/share/man/man3/udev_device_get_driver.3.gz",
-        "usr/share/man/man3/udev_device_get_is_initialized.3.gz",
-        "usr/share/man/man3/udev_device_get_parent.3.gz",
-        "usr/share/man/man3/udev_device_get_parent_with_subsystem_devtype.3.gz",
-        "usr/share/man/man3/udev_device_get_properties_list_entry.3.gz",
-        "usr/share/man/man3/udev_device_get_property_value.3.gz",
-        "usr/share/man/man3/udev_device_get_subsystem.3.gz",
-        "usr/share/man/man3/udev_device_get_sysattr_list_entry.3.gz",
-        "usr/share/man/man3/udev_device_get_sysattr_value.3.gz",
-        "usr/share/man/man3/udev_device_get_sysname.3.gz",
-        "usr/share/man/man3/udev_device_get_sysnum.3.gz",
         "usr/share/man/man3/udev_device_get_syspath.3.gz",
-        "usr/share/man/man3/udev_device_get_tags_list_entry.3.gz",
-        "usr/share/man/man3/udev_device_get_udev.3.gz",
-        "usr/share/man/man3/udev_device_has_current_tag.3.gz",
         "usr/share/man/man3/udev_device_has_tag.3.gz",
-        "usr/share/man/man3/udev_device_new_from_device_id.3.gz",
-        "usr/share/man/man3/udev_device_new_from_devnum.3.gz",
-        "usr/share/man/man3/udev_device_new_from_environment.3.gz",
-        "usr/share/man/man3/udev_device_new_from_subsystem_sysname.3.gz",
         "usr/share/man/man3/udev_device_new_from_syspath.3.gz",
-        "usr/share/man/man3/udev_device_ref.3.gz",
-        "usr/share/man/man3/udev_device_set_sysattr_value.3.gz",
-        "usr/share/man/man3/udev_device_unref.3.gz",
-        "usr/share/man/man3/udev_enumerate_add_match_is_initialized.3.gz",
-        "usr/share/man/man3/udev_enumerate_add_match_parent.3.gz",
-        "usr/share/man/man3/udev_enumerate_add_match_property.3.gz",
         "usr/share/man/man3/udev_enumerate_add_match_subsystem.3.gz",
-        "usr/share/man/man3/udev_enumerate_add_match_sysattr.3.gz",
-        "usr/share/man/man3/udev_enumerate_add_match_sysname.3.gz",
-        "usr/share/man/man3/udev_enumerate_add_match_tag.3.gz",
-        "usr/share/man/man3/udev_enumerate_add_nomatch_subsystem.3.gz",
-        "usr/share/man/man3/udev_enumerate_add_nomatch_sysattr.3.gz",
-        "usr/share/man/man3/udev_enumerate_add_syspath.3.gz",
-        "usr/share/man/man3/udev_enumerate_get_list_entry.3.gz",
-        "usr/share/man/man3/udev_enumerate_get_udev.3.gz",
         "usr/share/man/man3/udev_enumerate_new.3.gz",
-        "usr/share/man/man3/udev_enumerate_ref.3.gz",
         "usr/share/man/man3/udev_enumerate_scan_devices.3.gz",
-        "usr/share/man/man3/udev_enumerate_scan_subsystems.3.gz",
-        "usr/share/man/man3/udev_enumerate_unref.3.gz",
         "usr/share/man/man3/udev_list_entry.3.gz",
-        "usr/share/man/man3/udev_list_entry_get_by_name.3.gz",
-        "usr/share/man/man3/udev_list_entry_get_name.3.gz",
-        "usr/share/man/man3/udev_list_entry_get_next.3.gz",
-        "usr/share/man/man3/udev_list_entry_get_value.3.gz",
-        "usr/share/man/man3/udev_monitor_enable_receiving.3.gz",
-        "usr/share/man/man3/udev_monitor_filter_add_match_subsystem_devtype.3.gz",
-        "usr/share/man/man3/udev_monitor_filter_add_match_tag.3.gz",
-        "usr/share/man/man3/udev_monitor_filter_remove.3.gz",
         "usr/share/man/man3/udev_monitor_filter_update.3.gz",
-        "usr/share/man/man3/udev_monitor_get_fd.3.gz",
-        "usr/share/man/man3/udev_monitor_get_udev.3.gz",
         "usr/share/man/man3/udev_monitor_new_from_netlink.3.gz",
         "usr/share/man/man3/udev_monitor_receive_device.3.gz",
-        "usr/share/man/man3/udev_monitor_ref.3.gz",
-        "usr/share/man/man3/udev_monitor_set_receive_buffer_size.3.gz",
-        "usr/share/man/man3/udev_monitor_unref.3.gz",
         "usr/share/man/man3/udev_new.3.gz",
-        "usr/share/man/man3/udev_ref.3.gz",
-        "usr/share/man/man3/udev_unref.3.gz",
         ":libudev1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libudev1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libudev.so.1",
         "usr/lib/x86_64-linux-gnu/libudev.so.1.7.5",
         "usr/share/doc/libudev1/NEWS.Debian.gz",
         "usr/share/doc/libudev1/changelog.Debian.gz",
         "usr/share/doc/libudev1/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libudfread0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libudfread.so.0",
         "usr/lib/x86_64-linux-gnu/libudfread.so.0.1.0",
         "usr/share/doc/libudfread0/changelog.Debian.gz",
         "usr/share/doc/libudfread0/changelog.gz",
         "usr/share/doc/libudfread0/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libunistring2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libunistring.so.2",
         "usr/lib/x86_64-linux-gnu/libunistring.so.2.2.0",
         "usr/share/doc/libunistring2/changelog.Debian.gz",
         "usr/share/doc/libunistring2/changelog.gz",
         "usr/share/doc/libunistring2/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -48267,15 +45068,9 @@ filegroup(
         "usr/include/x86_64-linux-gnu/libunwind-x86_64.h",
         "usr/include/x86_64-linux-gnu/unwind.h",
         "usr/lib/x86_64-linux-gnu/libunwind.a",
-        "usr/lib/x86_64-linux-gnu/libunwind.so",
         "usr/lib/x86_64-linux-gnu/libunwind-coredump.a",
-        "usr/lib/x86_64-linux-gnu/libunwind-coredump.so",
-        "usr/lib/x86_64-linux-gnu/libunwind-generic.a",
-        "usr/lib/x86_64-linux-gnu/libunwind-generic.so",
         "usr/lib/x86_64-linux-gnu/libunwind-ptrace.a",
-        "usr/lib/x86_64-linux-gnu/libunwind-ptrace.so",
         "usr/lib/x86_64-linux-gnu/libunwind-x86_64.a",
-        "usr/lib/x86_64-linux-gnu/libunwind-x86_64.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libunwind.pc",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libunwind-coredump.pc",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libunwind-generic.pc",
@@ -48315,19 +45110,14 @@ filegroup(
         ":liblzma-dev-filegroup",
         ":libunwind8-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libunwind8-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libunwind.so.8",
         "usr/lib/x86_64-linux-gnu/libunwind.so.8.0.1",
-        "usr/lib/x86_64-linux-gnu/libunwind-coredump.so.0",
         "usr/lib/x86_64-linux-gnu/libunwind-coredump.so.0.0.0",
-        "usr/lib/x86_64-linux-gnu/libunwind-ptrace.so.0",
         "usr/lib/x86_64-linux-gnu/libunwind-ptrace.so.0.0.0",
-        "usr/lib/x86_64-linux-gnu/libunwind-x86_64.so.8",
         "usr/lib/x86_64-linux-gnu/libunwind-x86_64.so.8.0.1",
         "usr/share/doc/libunwind8/changelog.Debian.gz",
         "usr/share/doc/libunwind8/changelog.gz",
@@ -48335,56 +45125,22 @@ filegroup(
         ":libc6-filegroup",
         ":liblzma5-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "liburiparser1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/liburiparser.so.1",
         "usr/lib/x86_64-linux-gnu/liburiparser.so.1.0.30",
         "usr/share/doc/liburiparser1/changelog.Debian.gz",
         "usr/share/doc/liburiparser1/changelog.gz",
         "usr/share/doc/liburiparser1/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
-    name = "libusb-0.1-4-filegroup",
-    srcs = [
-        "lib/x86_64-linux-gnu/libusb-0.1.so.4",
-        "lib/x86_64-linux-gnu/libusb-0.1.so.4.4.4",
-        "usr/share/doc/libusb-0.1-4/README.Debian",
-        "usr/share/doc/libusb-0.1-4/changelog.Debian.gz",
-        "usr/share/doc/libusb-0.1-4/changelog.gz",
-        "usr/share/doc/libusb-0.1-4/copyright",
-        ":libc6-filegroup",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
-    name = "libusb-1.0-0-dev-filegroup",
-    srcs = [
-        "usr/include/libusb-1.0/libusb.h",
-        "usr/lib/x86_64-linux-gnu/libusb-1.0.a",
-        "usr/lib/x86_64-linux-gnu/libusb-1.0.so",
-        "usr/lib/x86_64-linux-gnu/pkgconfig/libusb-1.0.pc",
-        "usr/share/doc/libusb-1.0-0-dev/README",
-        "usr/share/doc/libusb-1.0-0-dev/changelog.Debian.gz",
-        "usr/share/doc/libusb-1.0-0-dev/changelog.gz",
-        "usr/share/doc/libusb-1.0-0-dev/copyright",
-        ":libusb-1.0-0-filegroup",
-    ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libusb-1.0-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libusb-1.0.so.0",
         "usr/lib/x86_64-linux-gnu/libusb-1.0.so.0.3.0",
         "usr/share/doc/libusb-1.0-0/README",
         "usr/share/doc/libusb-1.0-0/changelog.Debian.gz",
@@ -48393,91 +45149,22 @@ filegroup(
         ":libc6-filegroup",
         ":libudev1-filegroup",
     ],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
-    name = "libusb-dev-filegroup",
-    srcs = [
-        "usr/bin/libusb-config",
-        "usr/include/usb.h",
-        "usr/lib/x86_64-linux-gnu/libusb.a",
-        "usr/lib/x86_64-linux-gnu/libusb.so",
-        "usr/lib/x86_64-linux-gnu/pkgconfig/libusb.pc",
-        "usr/share/doc-base/libusb-dev",
-        "usr/share/doc/libusb-dev/changelog.Debian.gz",
-        "usr/share/doc/libusb-dev/changelog.gz",
-        "usr/share/doc/libusb-dev/copyright",
-        "usr/share/doc/libusb-dev/html/api.html",
-        "usr/share/doc/libusb-dev/html/api-device-interfaces.html",
-        "usr/share/doc/libusb-dev/html/api-return-values.html",
-        "usr/share/doc/libusb-dev/html/api-synchronous.html",
-        "usr/share/doc/libusb-dev/html/api-timeouts.html",
-        "usr/share/doc/libusb-dev/html/api-types.html",
-        "usr/share/doc/libusb-dev/html/examples.html",
-        "usr/share/doc/libusb-dev/html/examples-code.html",
-        "usr/share/doc/libusb-dev/html/examples-other.html",
-        "usr/share/doc/libusb-dev/html/examples-tests.html",
-        "usr/share/doc/libusb-dev/html/function.usbbulkread.html",
-        "usr/share/doc/libusb-dev/html/function.usbbulkwrite.html",
-        "usr/share/doc/libusb-dev/html/function.usbclaiminterface.html",
-        "usr/share/doc/libusb-dev/html/function.usbclearhalt.html",
-        "usr/share/doc/libusb-dev/html/function.usbclose.html",
-        "usr/share/doc/libusb-dev/html/function.usbcontrolmsg.html",
-        "usr/share/doc/libusb-dev/html/function.usbdetachkerneldrivernp.html",
-        "usr/share/doc/libusb-dev/html/function.usbfindbusses.html",
-        "usr/share/doc/libusb-dev/html/function.usbfinddevices.html",
-        "usr/share/doc/libusb-dev/html/function.usbgetbusses.html",
-        "usr/share/doc/libusb-dev/html/function.usbgetdescriptor.html",
-        "usr/share/doc/libusb-dev/html/function.usbgetdescriptorbyendpoint.html",
-        "usr/share/doc/libusb-dev/html/function.usbgetdrivernp.html",
-        "usr/share/doc/libusb-dev/html/function.usbgetstring.html",
-        "usr/share/doc/libusb-dev/html/function.usbgetstringsimple.html",
-        "usr/share/doc/libusb-dev/html/function.usbinit.html",
-        "usr/share/doc/libusb-dev/html/function.usbinterruptread.html",
-        "usr/share/doc/libusb-dev/html/function.usbinterruptwrite.html",
-        "usr/share/doc/libusb-dev/html/function.usbopen.html",
-        "usr/share/doc/libusb-dev/html/function.usbreleaseinterface.html",
-        "usr/share/doc/libusb-dev/html/function.usbreset.html",
-        "usr/share/doc/libusb-dev/html/function.usbresetep.html",
-        "usr/share/doc/libusb-dev/html/function.usbsetaltinterface.html",
-        "usr/share/doc/libusb-dev/html/function.usbsetconfiguration.html",
-        "usr/share/doc/libusb-dev/html/functions.html",
-        "usr/share/doc/libusb-dev/html/index.html",
-        "usr/share/doc/libusb-dev/html/intro.html",
-        "usr/share/doc/libusb-dev/html/intro-overview.html",
-        "usr/share/doc/libusb-dev/html/intro-support.html",
-        "usr/share/doc/libusb-dev/html/preface.html",
-        "usr/share/doc/libusb-dev/html/ref.bulk.html",
-        "usr/share/doc/libusb-dev/html/ref.control.html",
-        "usr/share/doc/libusb-dev/html/ref.core.html",
-        "usr/share/doc/libusb-dev/html/ref.deviceops.html",
-        "usr/share/doc/libusb-dev/html/ref.interrupt.html",
-        "usr/share/doc/libusb-dev/html/ref.nonportable.html",
-        "usr/share/man/man1/libusb-config.1.gz",
-        ":libc6-dev-filegroup",
-        ":libusb-0.1-4-filegroup",
-    ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libuuid1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libuuid.so.1",
         "usr/lib/x86_64-linux-gnu/libuuid.so.1.3.0",
         "usr/share/doc/libuuid1/changelog.Debian.gz",
         "usr/share/doc/libuuid1/changelog.gz",
         "usr/share/doc/libuuid1/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libva-drm2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libva-drm.so.2",
         "usr/lib/x86_64-linux-gnu/libva-drm.so.2.1700.0",
         "usr/share/doc/libva-drm2/changelog.Debian.gz",
         "usr/share/doc/libva-drm2/changelog.gz",
@@ -48486,13 +45173,11 @@ filegroup(
         ":libdrm2-filegroup",
         ":libva2-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libva-x11-2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libva-x11.so.2",
         "usr/lib/x86_64-linux-gnu/libva-x11.so.2.1700.0",
         "usr/share/doc/libva-x11-2/changelog.Debian.gz",
         "usr/share/doc/libva-x11-2/changelog.gz",
@@ -48507,29 +45192,24 @@ filegroup(
         ":libxext6-filegroup",
         ":libxfixes3-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libva2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libva.so.2",
         "usr/lib/x86_64-linux-gnu/libva.so.2.1700.0",
         "usr/share/doc/libva2/changelog.Debian.gz",
         "usr/share/doc/libva2/changelog.gz",
         "usr/share/doc/libva2/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libvdpau1-filegroup",
     srcs = [
         "etc/vdpau_wrapper.cfg",
-        "usr/lib/x86_64-linux-gnu/libvdpau.so.1",
         "usr/lib/x86_64-linux-gnu/libvdpau.so.1.0.0",
-        "usr/lib/x86_64-linux-gnu/vdpau/libvdpau_trace.so.1",
         "usr/lib/x86_64-linux-gnu/vdpau/libvdpau_trace.so.1.0.0",
         "usr/share/bug/libvdpau1",
         "usr/share/doc/libvdpau1/changelog.Debian.gz",
@@ -48538,13 +45218,11 @@ filegroup(
         ":libx11-6-filegroup",
         ":libxext6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libvorbis0a-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libvorbis.so.0",
         "usr/lib/x86_64-linux-gnu/libvorbis.so.0.4.9",
         "usr/share/doc/libvorbis0a/changelog.Debian.gz",
         "usr/share/doc/libvorbis0a/changelog.gz",
@@ -48553,13 +45231,11 @@ filegroup(
         ":libc6-filegroup",
         ":libogg0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libvorbisenc2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libvorbisenc.so.2",
         "usr/lib/x86_64-linux-gnu/libvorbisenc.so.2.0.12",
         "usr/share/doc/libvorbisenc2/changelog.Debian.gz",
         "usr/share/doc/libvorbisenc2/changelog.gz",
@@ -48567,13 +45243,11 @@ filegroup(
         ":libc6-filegroup",
         ":libvorbis0a-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libvorbisfile3-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libvorbisfile.so.3",
         "usr/lib/x86_64-linux-gnu/libvorbisfile.so.3.3.8",
         "usr/share/doc/libvorbisfile3/changelog.Debian.gz",
         "usr/share/doc/libvorbisfile3/changelog.gz",
@@ -48582,295 +45256,156 @@ filegroup(
         ":libogg0-filegroup",
         ":libvorbis0a-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libvpx7-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libvpx.so.7",
-        "usr/lib/x86_64-linux-gnu/libvpx.so.7.1",
         "usr/lib/x86_64-linux-gnu/libvpx.so.7.1.0",
         "usr/share/doc/libvpx7/changelog.Debian.gz",
         "usr/share/doc/libvpx7/changelog.gz",
         "usr/share/doc/libvpx7/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libvtk9.1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libvtkChartsCore-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkChartsCore-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkCommonColor-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkCommonColor-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkCommonComputationalGeometry-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkCommonComputationalGeometry-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkCommonCore-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkCommonCore-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkCommonDataModel-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkCommonDataModel-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkCommonExecutionModel-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkCommonExecutionModel-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkCommonMath-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkCommonMath-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkCommonMisc-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkCommonMisc-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkCommonPython-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkCommonPython-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkCommonSystem-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkCommonSystem-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkCommonTransforms-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkCommonTransforms-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkDICOMParser-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkDICOMParser-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkDomainsChemistry-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkDomainsChemistry-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkDomainsChemistryOpenGL2-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkDomainsChemistryOpenGL2-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkDomainsParallelChemistry-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkDomainsParallelChemistry-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersAMR-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersAMR-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersCore-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersCore-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersExtraction-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersExtraction-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersFlowPaths-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersFlowPaths-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersGeneral-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersGeneral-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersGeneric-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersGeneric-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersGeometry-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersGeometry-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersHybrid-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersHybrid-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersHyperTree-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersHyperTree-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersImaging-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersImaging-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersModeling-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersModeling-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersParallel-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersParallel-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersParallelGeometry-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersParallelGeometry-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersParallelImaging-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersParallelImaging-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersParallelMPI-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersParallelMPI-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersParallelVerdict-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersParallelVerdict-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersPoints-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersPoints-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersProgrammable-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersProgrammable-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersPython-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersPython-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersSMP-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersSMP-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersSelection-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersSelection-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersSources-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersSources-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersStatistics-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersStatistics-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersTexture-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersTexture-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersTopology-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersTopology-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkFiltersVerdict-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkFiltersVerdict-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkGeovisCore-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkGeovisCore-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOAMR-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOAMR-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOAsynchronous-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOAsynchronous-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOCGNSReader-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOCGNSReader-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOCONVERGECFD-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOCONVERGECFD-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOChemistry-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOChemistry-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOCityGML-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOCityGML-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOCore-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOCore-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOEnSight-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOEnSight-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOExodus-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOExodus-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOExport-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOExport-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOExportGL2PS-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOExportGL2PS-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOExportPDF-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOExportPDF-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOGeometry-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOGeometry-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOHDF-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOHDF-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOIOSS-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOIOSS-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOImage-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOImage-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOImport-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOImport-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOInfovis-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOInfovis-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOLSDyna-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOLSDyna-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOLegacy-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOLegacy-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOMINC-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOMINC-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOMPIImage-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOMPIImage-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOMPIParallel-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOMPIParallel-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOMotionFX-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOMotionFX-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOMovie-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOMovie-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIONetCDF-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIONetCDF-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOOggTheora-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOOggTheora-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOPLY-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOPLY-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOParallel-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOParallel-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOParallelNetCDF-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOParallelNetCDF-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOParallelXML-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOParallelXML-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOSQL-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOSQL-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOSegY-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOSegY-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOTecplotTable-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOTecplotTable-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOVeraOut-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOVeraOut-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOVideo-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOVideo-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOXML-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOXML-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkIOXMLParser-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkIOXMLParser-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkImagingColor-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkImagingColor-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkImagingCore-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkImagingCore-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkImagingFourier-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkImagingFourier-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkImagingGeneral-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkImagingGeneral-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkImagingHybrid-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkImagingHybrid-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkImagingMath-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkImagingMath-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkImagingMorphological-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkImagingMorphological-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkImagingSources-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkImagingSources-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkImagingStatistics-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkImagingStatistics-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkImagingStencil-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkImagingStencil-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkInfovisCore-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkInfovisCore-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkInfovisLayout-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkInfovisLayout-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkInteractionImage-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkInteractionImage-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkInteractionStyle-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkInteractionStyle-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkInteractionWidgets-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkInteractionWidgets-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkJava-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkJava-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkParallelCore-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkParallelCore-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkParallelDIY-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkParallelDIY-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkParallelMPI-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkParallelMPI-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkParallelMPI4Py-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkParallelMPI4Py-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkPythonContext2D-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkPythonContext2D-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkPythonInterpreter-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkPythonInterpreter-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkRenderingAnnotation-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkRenderingAnnotation-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkRenderingContext2D-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkRenderingContext2D-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkRenderingContextOpenGL2-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkRenderingContextOpenGL2-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkRenderingCore-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkRenderingCore-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkRenderingFreeType-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkRenderingFreeType-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkRenderingGL2PSOpenGL2-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkRenderingGL2PSOpenGL2-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkRenderingImage-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkRenderingImage-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkRenderingLOD-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkRenderingLOD-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkRenderingLabel-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkRenderingLabel-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkRenderingOpenGL2-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkRenderingOpenGL2-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkRenderingSceneGraph-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkRenderingSceneGraph-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkRenderingTk-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkRenderingTk-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkRenderingUI-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkRenderingUI-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkRenderingVolume-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkRenderingVolume-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkRenderingVolumeOpenGL2-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkRenderingVolumeOpenGL2-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkRenderingVtkJS-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkRenderingVtkJS-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkTestingRendering-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkTestingRendering-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkViewsContext2D-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkViewsContext2D-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkViewsCore-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkViewsCore-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkViewsInfovis-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkViewsInfovis-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkWrappingPythonCore3.11-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkWrappingPythonCore3.11-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkWrappingTools-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkWrappingTools-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkcgns-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkcgns-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkexodusII-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkexodusII-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkfmt-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkfmt-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkioss-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkioss-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkkissfft-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkkissfft-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtklibharu-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtklibharu-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkloguru-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkloguru-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkmetaio-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkmetaio-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkpugixml-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkpugixml-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtksys-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtksys-9.1.so.9.1.0",
-        "usr/lib/x86_64-linux-gnu/libvtkverdict-9.1.so.1",
         "usr/lib/x86_64-linux-gnu/libvtkverdict-9.1.so.9.1.0",
         "usr/lib/x86_64-linux-gnu/vtk/hierarchy/VTK/vtkChartsCore-hierarchy.txt",
         "usr/lib/x86_64-linux-gnu/vtk/hierarchy/VTK/vtkCommonColor-hierarchy.txt",
@@ -49022,19 +45557,16 @@ filegroup(
         ":libxml2-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libvulkan1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libvulkan.so.1",
         "usr/lib/x86_64-linux-gnu/libvulkan.so.1.3.239",
         "usr/share/doc/libvulkan1/changelog.Debian.gz",
         "usr/share/doc/libvulkan1/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -49493,13 +46025,11 @@ filegroup(
         "usr/share/libwacom/xp-pen-g640.tablet",
         "usr/share/libwacom/xp-pen-star03.tablet",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libwacom9-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libwacom.so.9",
         "usr/lib/x86_64-linux-gnu/libwacom.so.9.0.0",
         "usr/share/doc/libwacom9/changelog.Debian.gz",
         "usr/share/doc/libwacom9/copyright",
@@ -49508,7 +46038,6 @@ filegroup(
         ":libgudev-1.0-0-filegroup",
         ":libwacom-common-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -49523,33 +46052,28 @@ filegroup(
         ":libexpat1-filegroup",
         ":libxml2-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libwayland-client0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libwayland-client.so.0",
         "usr/lib/x86_64-linux-gnu/libwayland-client.so.0.21.0",
         "usr/share/doc/libwayland-client0/changelog.Debian.gz",
         "usr/share/doc/libwayland-client0/copyright",
         ":libc6-filegroup",
         ":libffi8-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libwayland-cursor0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libwayland-cursor.so.0",
         "usr/lib/x86_64-linux-gnu/libwayland-cursor.so.0.21.0",
         "usr/share/doc/libwayland-cursor0/changelog.Debian.gz",
         "usr/share/doc/libwayland-cursor0/copyright",
         ":libc6-filegroup",
         ":libwayland-client0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -49566,10 +46090,6 @@ filegroup(
         "usr/include/wayland-server-protocol.h",
         "usr/include/wayland-util.h",
         "usr/include/wayland-version.h",
-        "usr/lib/x86_64-linux-gnu/libwayland-client.so",
-        "usr/lib/x86_64-linux-gnu/libwayland-cursor.so",
-        "usr/lib/x86_64-linux-gnu/libwayland-egl.so",
-        "usr/lib/x86_64-linux-gnu/libwayland-server.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/wayland-client.pc",
         "usr/lib/x86_64-linux-gnu/pkgconfig/wayland-cursor.pc",
         "usr/lib/x86_64-linux-gnu/pkgconfig/wayland-egl.pc",
@@ -49586,32 +46106,27 @@ filegroup(
         ":libwayland-egl1-filegroup",
         ":libwayland-server0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libwayland-egl1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libwayland-egl.so.1",
         "usr/lib/x86_64-linux-gnu/libwayland-egl.so.1.21.0",
         "usr/share/doc/libwayland-egl1/changelog.Debian.gz",
         "usr/share/doc/libwayland-egl1/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libwayland-server0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libwayland-server.so.0",
         "usr/lib/x86_64-linux-gnu/libwayland-server.so.0.21.0",
         "usr/share/doc/libwayland-server0/changelog.Debian.gz",
         "usr/share/doc/libwayland-server0/copyright",
         ":libc6-filegroup",
         ":libffi8-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -49624,11 +46139,8 @@ filegroup(
         "usr/include/webp/mux_types.h",
         "usr/include/webp/types.h",
         "usr/lib/x86_64-linux-gnu/libwebp.a",
-        "usr/lib/x86_64-linux-gnu/libwebp.so",
         "usr/lib/x86_64-linux-gnu/libwebpdemux.a",
-        "usr/lib/x86_64-linux-gnu/libwebpdemux.so",
         "usr/lib/x86_64-linux-gnu/libwebpmux.a",
-        "usr/lib/x86_64-linux-gnu/libwebpmux.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libwebp.pc",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libwebpdemux.pc",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libwebpmux.pc",
@@ -49651,26 +46163,22 @@ filegroup(
         ":libwebpdemux2-filegroup",
         ":libwebpmux3-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libwebp7-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libwebp.so.7",
         "usr/lib/x86_64-linux-gnu/libwebp.so.7.1.5",
         "usr/share/doc/libwebp7/changelog.Debian.gz",
         "usr/share/doc/libwebp7/changelog.gz",
         "usr/share/doc/libwebp7/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libwebpdemux2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libwebpdemux.so.2",
         "usr/lib/x86_64-linux-gnu/libwebpdemux.so.2.0.11",
         "usr/share/doc/libwebpdemux2/changelog.Debian.gz",
         "usr/share/doc/libwebpdemux2/changelog.gz",
@@ -49678,13 +46186,11 @@ filegroup(
         ":libc6-filegroup",
         ":libwebp7-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libwebpmux3-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libwebpmux.so.3",
         "usr/lib/x86_64-linux-gnu/libwebpmux.so.3.0.10",
         "usr/share/doc/libwebpmux3/changelog.Debian.gz",
         "usr/share/doc/libwebpmux3/changelog.gz",
@@ -49692,33 +46198,11 @@ filegroup(
         ":libc6-filegroup",
         ":libwebp7-filegroup",
     ],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
-    name = "libwrap0-filegroup",
-    srcs = [
-        "usr/lib/x86_64-linux-gnu/libwrap.so.0",
-        "usr/lib/x86_64-linux-gnu/libwrap.so.0.7.6",
-        "usr/share/doc/libwrap0/README.Debian",
-        "usr/share/doc/libwrap0/README.gz",
-        "usr/share/doc/libwrap0/changelog.Debian.gz",
-        "usr/share/doc/libwrap0/changelog.gz",
-        "usr/share/doc/libwrap0/copyright",
-        "usr/share/man/man5/hosts.allow.5.gz",
-        "usr/share/man/man5/hosts.deny.5.gz",
-        "usr/share/man/man5/hosts_access.5.gz",
-        "usr/share/man/man5/hosts_options.5.gz",
-        ":libc6-filegroup",
-        ":libnsl2-filegroup",
-    ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libx11-6-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libX11.so.6",
         "usr/lib/x86_64-linux-gnu/libX11.so.6.4.0",
         "usr/share/doc/libx11-6/NEWS.Debian.gz",
         "usr/share/doc/libx11-6/changelog.Debian.gz",
@@ -49729,7 +46213,6 @@ filegroup(
         ":libx11-data-filegroup",
         ":libxcb1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -49929,9 +46412,7 @@ filegroup(
         "usr/share/doc/libx11-data/changelog.gz",
         "usr/share/doc/libx11-data/copyright",
         "usr/share/man/man5/Compose.5.gz",
-        "usr/share/man/man5/XCompose.5.gz",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -49950,7 +46431,6 @@ filegroup(
         "usr/include/X11/cursorfont.h",
         "usr/include/X11/extensions/XKBgeom.h",
         "usr/lib/x86_64-linux-gnu/libX11.a",
-        "usr/lib/x86_64-linux-gnu/libX11.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/x11.pc",
         "usr/share/doc/libx11-dev/changelog.Debian.gz",
         "usr/share/doc/libx11-dev/changelog.gz",
@@ -49962,7 +46442,6 @@ filegroup(
         ":x11proto-dev-filegroup",
         ":xtrans-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -49970,7 +46449,6 @@ filegroup(
     srcs = [
         "usr/include/X11/Xlib-xcb.h",
         "usr/lib/x86_64-linux-gnu/libX11-xcb.a",
-        "usr/lib/x86_64-linux-gnu/libX11-xcb.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/x11-xcb.pc",
         "usr/share/doc/libx11-xcb-dev/changelog.Debian.gz",
         "usr/share/doc/libx11-xcb-dev/changelog.gz",
@@ -49981,20 +46459,17 @@ filegroup(
         ":libx11-xcb1-filegroup",
         ":libxcb1-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libx11-xcb1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libX11-xcb.so.1",
         "usr/lib/x86_64-linux-gnu/libX11-xcb.so.1.0.0",
         "usr/share/doc/libx11-xcb1/changelog.Debian.gz",
         "usr/share/doc/libx11-xcb1/changelog.gz",
         "usr/share/doc/libx11-xcb1/copyright",
         ":libx11-6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -50005,7 +46480,6 @@ filegroup(
         "usr/share/doc/libx264-164/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -50020,7 +46494,6 @@ filegroup(
         ":libnuma1-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -50028,43 +46501,30 @@ filegroup(
     srcs = [
         "usr/include/X11/Xauth.h",
         "usr/lib/x86_64-linux-gnu/libXau.a",
-        "usr/lib/x86_64-linux-gnu/libXau.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/xau.pc",
         "usr/share/doc/libxau-dev/changelog.Debian.gz",
         "usr/share/doc/libxau-dev/changelog.gz",
         "usr/share/doc/libxau-dev/copyright",
         "usr/share/man/man3/Xau.3.gz",
-        "usr/share/man/man3/XauDisposeAuth.3.gz",
-        "usr/share/man/man3/XauFileName.3.gz",
-        "usr/share/man/man3/XauGetAuthByAddr.3.gz",
-        "usr/share/man/man3/XauGetBestAuthByAddr.3.gz",
-        "usr/share/man/man3/XauLockAuth.3.gz",
-        "usr/share/man/man3/XauReadAuth.3.gz",
-        "usr/share/man/man3/XauUnlockAuth.3.gz",
-        "usr/share/man/man3/XauWriteAuth.3.gz",
         ":libxau6-filegroup",
         ":x11proto-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxau6-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libXau.so.6",
         "usr/lib/x86_64-linux-gnu/libXau.so.6.0.0",
         "usr/share/doc/libxau6/changelog.Debian.gz",
         "usr/share/doc/libxau6/changelog.gz",
         "usr/share/doc/libxau6/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxcb-dri2-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libxcb-dri2.so.0",
         "usr/lib/x86_64-linux-gnu/libxcb-dri2.so.0.0.0",
         "usr/share/doc/libxcb-dri2-0/changelog.Debian.gz",
         "usr/share/doc/libxcb-dri2-0/changelog.gz",
@@ -50072,13 +46532,11 @@ filegroup(
         ":libc6-filegroup",
         ":libxcb1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxcb-dri3-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libxcb-dri3.so.0",
         "usr/lib/x86_64-linux-gnu/libxcb-dri3.so.0.1.0",
         "usr/share/doc/libxcb-dri3-0/changelog.Debian.gz",
         "usr/share/doc/libxcb-dri3-0/changelog.gz",
@@ -50086,13 +46544,11 @@ filegroup(
         ":libc6-filegroup",
         ":libxcb1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxcb-glx0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libxcb-glx.so.0",
         "usr/lib/x86_64-linux-gnu/libxcb-glx.so.0.0.0",
         "usr/share/doc/libxcb-glx0/changelog.Debian.gz",
         "usr/share/doc/libxcb-glx0/changelog.gz",
@@ -50100,13 +46556,11 @@ filegroup(
         ":libc6-filegroup",
         ":libxcb1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxcb-icccm4-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libxcb-icccm.so.4",
         "usr/lib/x86_64-linux-gnu/libxcb-icccm.so.4.0.0",
         "usr/share/doc/libxcb-icccm4/NEWS.gz",
         "usr/share/doc/libxcb-icccm4/README",
@@ -50116,13 +46570,11 @@ filegroup(
         ":libc6-filegroup",
         ":libxcb1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxcb-image0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libxcb-image.so.0",
         "usr/lib/x86_64-linux-gnu/libxcb-image.so.0.0.0",
         "usr/share/doc/libxcb-image0/changelog.Debian.gz",
         "usr/share/doc/libxcb-image0/changelog.gz",
@@ -50132,13 +46584,11 @@ filegroup(
         ":libxcb-util1-filegroup",
         ":libxcb1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxcb-keysyms1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libxcb-keysyms.so.1",
         "usr/lib/x86_64-linux-gnu/libxcb-keysyms.so.1.0.0",
         "usr/share/doc/libxcb-keysyms1/NEWS.gz",
         "usr/share/doc/libxcb-keysyms1/README",
@@ -50149,13 +46599,11 @@ filegroup(
         ":libc6-filegroup",
         ":libxcb1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxcb-present0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libxcb-present.so.0",
         "usr/lib/x86_64-linux-gnu/libxcb-present.so.0.0.0",
         "usr/share/doc/libxcb-present0/changelog.Debian.gz",
         "usr/share/doc/libxcb-present0/changelog.gz",
@@ -50163,13 +46611,11 @@ filegroup(
         ":libc6-filegroup",
         ":libxcb1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxcb-randr0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libxcb-randr.so.0",
         "usr/lib/x86_64-linux-gnu/libxcb-randr.so.0.1.0",
         "usr/share/doc/libxcb-randr0/changelog.Debian.gz",
         "usr/share/doc/libxcb-randr0/changelog.gz",
@@ -50177,13 +46623,11 @@ filegroup(
         ":libc6-filegroup",
         ":libxcb1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxcb-render-util0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libxcb-render-util.so.0",
         "usr/lib/x86_64-linux-gnu/libxcb-render-util.so.0.0.0",
         "usr/share/doc/libxcb-render-util0/NEWS.gz",
         "usr/share/doc/libxcb-render-util0/README",
@@ -50195,13 +46639,11 @@ filegroup(
         ":libxcb-render0-filegroup",
         ":libxcb1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxcb-render0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libxcb-render.so.0",
         "usr/lib/x86_64-linux-gnu/libxcb-render.so.0.0.0",
         "usr/share/doc/libxcb-render0/changelog.Debian.gz",
         "usr/share/doc/libxcb-render0/changelog.gz",
@@ -50209,13 +46651,11 @@ filegroup(
         ":libc6-filegroup",
         ":libxcb1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxcb-shape0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libxcb-shape.so.0",
         "usr/lib/x86_64-linux-gnu/libxcb-shape.so.0.0.0",
         "usr/share/doc/libxcb-shape0/changelog.Debian.gz",
         "usr/share/doc/libxcb-shape0/changelog.gz",
@@ -50223,13 +46663,11 @@ filegroup(
         ":libc6-filegroup",
         ":libxcb1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxcb-shm0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libxcb-shm.so.0",
         "usr/lib/x86_64-linux-gnu/libxcb-shm.so.0.0.0",
         "usr/share/doc/libxcb-shm0/changelog.Debian.gz",
         "usr/share/doc/libxcb-shm0/changelog.gz",
@@ -50237,13 +46675,11 @@ filegroup(
         ":libc6-filegroup",
         ":libxcb1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxcb-sync1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libxcb-sync.so.1",
         "usr/lib/x86_64-linux-gnu/libxcb-sync.so.1.0.0",
         "usr/share/doc/libxcb-sync1/changelog.Debian.gz",
         "usr/share/doc/libxcb-sync1/changelog.gz",
@@ -50251,13 +46687,11 @@ filegroup(
         ":libc6-filegroup",
         ":libxcb1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxcb-util1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libxcb-util.so.1",
         "usr/lib/x86_64-linux-gnu/libxcb-util.so.1.0.0",
         "usr/share/doc/libxcb-util1/changelog.Debian.amd64.gz",
         "usr/share/doc/libxcb-util1/changelog.Debian.gz",
@@ -50266,13 +46700,11 @@ filegroup(
         ":libc6-filegroup",
         ":libxcb1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxcb-xfixes0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libxcb-xfixes.so.0",
         "usr/lib/x86_64-linux-gnu/libxcb-xfixes.so.0.0.0",
         "usr/share/doc/libxcb-xfixes0/changelog.Debian.gz",
         "usr/share/doc/libxcb-xfixes0/changelog.gz",
@@ -50280,13 +46712,11 @@ filegroup(
         ":libc6-filegroup",
         ":libxcb1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxcb-xinerama0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libxcb-xinerama.so.0",
         "usr/lib/x86_64-linux-gnu/libxcb-xinerama.so.0.0.0",
         "usr/share/doc/libxcb-xinerama0/changelog.Debian.gz",
         "usr/share/doc/libxcb-xinerama0/changelog.gz",
@@ -50294,13 +46724,11 @@ filegroup(
         ":libc6-filegroup",
         ":libxcb1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxcb-xinput0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libxcb-xinput.so.0",
         "usr/lib/x86_64-linux-gnu/libxcb-xinput.so.0.1.0",
         "usr/share/doc/libxcb-xinput0/changelog.Debian.gz",
         "usr/share/doc/libxcb-xinput0/changelog.gz",
@@ -50308,13 +46736,11 @@ filegroup(
         ":libc6-filegroup",
         ":libxcb1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxcb-xkb1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libxcb-xkb.so.1",
         "usr/lib/x86_64-linux-gnu/libxcb-xkb.so.1.0.0",
         "usr/share/doc/libxcb-xkb1/changelog.Debian.gz",
         "usr/share/doc/libxcb-xkb1/changelog.gz",
@@ -50322,7 +46748,6 @@ filegroup(
         ":libc6-filegroup",
         ":libxcb1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -50334,7 +46759,6 @@ filegroup(
         "usr/include/xcb/xcbext.h",
         "usr/include/xcb/xproto.h",
         "usr/lib/x86_64-linux-gnu/libxcb.a",
-        "usr/lib/x86_64-linux-gnu/libxcb.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/xcb.pc",
         "usr/share/doc/libxcb1-dev/changelog.Debian.gz",
         "usr/share/doc/libxcb1-dev/changelog.gz",
@@ -50344,13 +46768,11 @@ filegroup(
         ":libxcb1-filegroup",
         ":libxdmcp-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxcb1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libxcb.so.1",
         "usr/lib/x86_64-linux-gnu/libxcb.so.1.1.0",
         "usr/share/doc/libxcb1/changelog.Debian.gz",
         "usr/share/doc/libxcb1/changelog.gz",
@@ -50359,7 +46781,6 @@ filegroup(
         ":libxau6-filegroup",
         ":libxdmcp6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -50367,7 +46788,6 @@ filegroup(
     srcs = [
         "usr/include/X11/Xdmcp.h",
         "usr/lib/x86_64-linux-gnu/libXdmcp.a",
-        "usr/lib/x86_64-linux-gnu/libXdmcp.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/xdmcp.pc",
         "usr/share/doc/libxdmcp-dev/changelog.Debian.gz",
         "usr/share/doc/libxdmcp-dev/changelog.gz",
@@ -50376,13 +46796,11 @@ filegroup(
         ":libxdmcp6-filegroup",
         ":x11proto-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxdmcp6-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libXdmcp.so.6",
         "usr/lib/x86_64-linux-gnu/libXdmcp.so.6.0.0",
         "usr/share/doc/libxdmcp6/changelog.Debian.gz",
         "usr/share/doc/libxdmcp6/changelog.gz",
@@ -50390,7 +46808,6 @@ filegroup(
         ":libbsd0-filegroup",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -50408,13 +46825,11 @@ filegroup(
         ":libicu72-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxext6-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libXext.so.6",
         "usr/lib/x86_64-linux-gnu/libXext.so.6.4.0",
         "usr/share/doc/libxext6/changelog.Debian.amd64.gz",
         "usr/share/doc/libxext6/changelog.Debian.gz",
@@ -50423,13 +46838,11 @@ filegroup(
         ":libc6-filegroup",
         ":libx11-6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxfixes3-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libXfixes.so.3",
         "usr/lib/x86_64-linux-gnu/libXfixes.so.3.1.0",
         "usr/share/doc/libxfixes3/changelog.Debian.gz",
         "usr/share/doc/libxfixes3/changelog.gz",
@@ -50437,13 +46850,11 @@ filegroup(
         ":libc6-filegroup",
         ":libx11-6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxft2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libXft.so.2",
         "usr/lib/x86_64-linux-gnu/libXft.so.2.3.6",
         "usr/share/doc/libxft2/changelog.Debian.gz",
         "usr/share/doc/libxft2/changelog.gz",
@@ -50454,13 +46865,11 @@ filegroup(
         ":libx11-6-filegroup",
         ":libxrender1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxkbcommon-x11-0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libxkbcommon-x11.so.0",
         "usr/lib/x86_64-linux-gnu/libxkbcommon-x11.so.0.0.0",
         "usr/share/doc/libxkbcommon-x11-0/changelog.Debian.gz",
         "usr/share/doc/libxkbcommon-x11-0/copyright",
@@ -50469,28 +46878,23 @@ filegroup(
         ":libxcb1-filegroup",
         ":libxkbcommon0-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxkbcommon0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libxkbcommon.so.0",
         "usr/lib/x86_64-linux-gnu/libxkbcommon.so.0.0.0",
         "usr/share/doc/libxkbcommon0/changelog.Debian.gz",
         "usr/share/doc/libxkbcommon0/copyright",
         ":libc6-filegroup",
         ":xkb-data-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxml2-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libxml2.so.2",
         "usr/lib/x86_64-linux-gnu/libxml2.so.2.9.14",
-        "usr/share/doc/libxml2/NEWS.gz",
         "usr/share/doc/libxml2/README.Debian",
         "usr/share/doc/libxml2/README.md",
         "usr/share/doc/libxml2/changelog.Debian.gz",
@@ -50502,13 +46906,11 @@ filegroup(
         ":liblzma5-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxnvctrl0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libXNVCtrl.so.0",
         "usr/lib/x86_64-linux-gnu/libXNVCtrl.so.0.0.0",
         "usr/share/doc/libxnvctrl0/changelog.Debian.gz",
         "usr/share/doc/libxnvctrl0/copyright",
@@ -50516,13 +46918,11 @@ filegroup(
         ":libx11-6-filegroup",
         ":libxext6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxpm4-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libXpm.so.4",
         "usr/lib/x86_64-linux-gnu/libXpm.so.4.11.0",
         "usr/share/doc/libxpm4/changelog.Debian.gz",
         "usr/share/doc/libxpm4/changelog.gz",
@@ -50530,13 +46930,11 @@ filegroup(
         ":libc6-filegroup",
         ":libx11-6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxrender1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libXrender.so.1",
         "usr/lib/x86_64-linux-gnu/libXrender.so.1.3.0",
         "usr/share/doc/libxrender1/changelog.Debian.gz",
         "usr/share/doc/libxrender1/changelog.gz",
@@ -50544,26 +46942,22 @@ filegroup(
         ":libc6-filegroup",
         ":libx11-6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxshmfence1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libxshmfence.so.1",
         "usr/lib/x86_64-linux-gnu/libxshmfence.so.1.0.0",
         "usr/share/doc/libxshmfence1/changelog.Debian.gz",
         "usr/share/doc/libxshmfence1/changelog.gz",
         "usr/share/doc/libxshmfence1/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxss1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libXss.so.1",
         "usr/lib/x86_64-linux-gnu/libXss.so.1.0.0",
         "usr/share/doc/libxss1/changelog.Debian.gz",
         "usr/share/doc/libxss1/changelog.gz",
@@ -50573,26 +46967,22 @@ filegroup(
         ":libxext6-filegroup",
         ":x11-common-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxvidcore4-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libxvidcore.so.4",
         "usr/lib/x86_64-linux-gnu/libxvidcore.so.4.3",
         "usr/share/doc/libxvidcore4/changelog.Debian.gz",
         "usr/share/doc/libxvidcore4/changelog.gz",
         "usr/share/doc/libxvidcore4/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libxxf86vm1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libXxf86vm.so.1",
         "usr/lib/x86_64-linux-gnu/libXxf86vm.so.1.0.0",
         "usr/share/doc/libxxf86vm1/changelog.Debian.amd64.gz",
         "usr/share/doc/libxxf86vm1/changelog.Debian.gz",
@@ -50602,26 +46992,11 @@ filegroup(
         ":libx11-6-filegroup",
         ":libxext6-filegroup",
     ],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
-    name = "libxxhash0-filegroup",
-    srcs = [
-        "usr/lib/x86_64-linux-gnu/libxxhash.so.0",
-        "usr/lib/x86_64-linux-gnu/libxxhash.so.0.8.1",
-        "usr/share/doc/libxxhash0/changelog.Debian.gz",
-        "usr/share/doc/libxxhash0/changelog.gz",
-        "usr/share/doc/libxxhash0/copyright",
-        ":libc6-filegroup",
-    ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libyuv0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libyuv.so.0",
         "usr/lib/x86_64-linux-gnu/libyuv.so.0.0.1857",
         "usr/share/doc/libyuv0/changelog.Debian.gz",
         "usr/share/doc/libyuv0/copyright",
@@ -50630,7 +47005,6 @@ filegroup(
         ":libjpeg62-turbo-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -50644,13 +47018,11 @@ filegroup(
         ":libgcc-s1-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libzmq5-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libzmq.so.5",
         "usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4",
         "usr/share/doc/libzmq5/AUTHORS",
         "usr/share/doc/libzmq5/NEWS.gz",
@@ -50665,7 +47037,6 @@ filegroup(
         ":libsodium23-filegroup",
         ":libstdc++6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -50679,7 +47050,6 @@ filegroup(
         "usr/lib/x86_64-linux-gnu/cmake/zstd/zstdTargets.cmake",
         "usr/lib/x86_64-linux-gnu/cmake/zstd/zstdTargets-none.cmake",
         "usr/lib/x86_64-linux-gnu/libzstd.a",
-        "usr/lib/x86_64-linux-gnu/libzstd.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/libzstd.pc",
         "usr/share/doc/libzstd-dev/README.Debian",
         "usr/share/doc/libzstd-dev/changelog.Debian.gz",
@@ -50700,20 +47070,17 @@ filegroup(
         "usr/share/doc/libzstd-dev/examples/streaming_memory_usage.c",
         ":libzstd1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libzstd1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libzstd.so.1",
         "usr/lib/x86_64-linux-gnu/libzstd.so.1.5.4",
         "usr/share/doc/libzstd1/changelog.Debian.gz",
         "usr/share/doc/libzstd1/changelog.gz",
         "usr/share/doc/libzstd1/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -50736,15 +47103,12 @@ filegroup(
         "usr/share/locale/nl/LC_MESSAGES/zvbi.mo",
         "usr/share/locale/pl/LC_MESSAGES/zvbi.mo",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "libzvbi0-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libzvbi.so.0",
         "usr/lib/x86_64-linux-gnu/libzvbi.so.0.13.2",
-        "usr/lib/x86_64-linux-gnu/libzvbi-chains.so.0",
         "usr/lib/x86_64-linux-gnu/libzvbi-chains.so.0.0.0",
         "usr/share/doc/libzvbi0/AUTHORS.gz",
         "usr/share/doc/libzvbi0/NEWS.gz",
@@ -50758,7 +47122,6 @@ filegroup(
         ":libpng16-16-filegroup",
         ":libzvbi-common-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -51701,7 +48064,6 @@ filegroup(
         "usr/share/doc/linux-libc-dev/changelog.Debian.gz",
         "usr/share/doc/linux-libc-dev/copyright",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -51712,7 +48074,6 @@ filegroup(
         "usr/share/doc/mariadb-common/copyright",
         ":mysql-common-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -51723,7 +48084,6 @@ filegroup(
         "usr/share/doc/media-types/changelog.gz",
         "usr/share/doc/media-types/copyright",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -51750,11 +48110,9 @@ filegroup(
         "usr/share/man/man5/fstab.5.gz",
         "usr/share/man/man8/losetup.8.gz",
         "usr/share/man/man8/mount.8.gz",
-        "usr/share/man/man8/swapoff.8.gz",
         "usr/share/man/man8/swapon.8.gz",
         "usr/share/man/man8/umount.8.gz",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -51770,7 +48128,6 @@ filegroup(
         "usr/share/lintian/overrides/mysql-common",
         "usr/share/mysql-common/configure-symlinks",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -51784,7 +48141,6 @@ filegroup(
         "usr/share/lintian/overrides/nvidia-alternative",
         ":glx-alternative-nvidia-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -51991,64 +48347,36 @@ filegroup(
         "usr/include/vector_functions.hpp",
         "usr/include/vector_types.h",
         "usr/lib/x86_64-linux-gnu/cuda-gdb/libcudacore.a",
-        "usr/lib/x86_64-linux-gnu/libaccinj64.so",
-        "usr/lib/x86_64-linux-gnu/libcublas.so",
-        "usr/lib/x86_64-linux-gnu/libcublasLt.so",
         "usr/lib/x86_64-linux-gnu/libcublasLt_static.a",
         "usr/lib/x86_64-linux-gnu/libcublas_static.a",
         "usr/lib/x86_64-linux-gnu/libcudadevrt.a",
-        "usr/lib/x86_64-linux-gnu/libcudart.so",
         "usr/lib/x86_64-linux-gnu/libcudart_static.a",
-        "usr/lib/x86_64-linux-gnu/libcufft.so",
         "usr/lib/x86_64-linux-gnu/libcufft_static.a",
         "usr/lib/x86_64-linux-gnu/libcufft_static_nocallback.a",
-        "usr/lib/x86_64-linux-gnu/libcufftw.so",
         "usr/lib/x86_64-linux-gnu/libcufftw_static.a",
         "usr/lib/x86_64-linux-gnu/libcufilt.a",
-        "usr/lib/x86_64-linux-gnu/libcuinj64.so",
         "usr/lib/x86_64-linux-gnu/libculibos.a",
-        "usr/lib/x86_64-linux-gnu/libcurand.so",
         "usr/lib/x86_64-linux-gnu/libcurand_static.a",
-        "usr/lib/x86_64-linux-gnu/libcusolver.so",
-        "usr/lib/x86_64-linux-gnu/libcusolverMg.so",
         "usr/lib/x86_64-linux-gnu/libcusolver_lapack_static.a",
         "usr/lib/x86_64-linux-gnu/libcusolver_static.a",
-        "usr/lib/x86_64-linux-gnu/libcusparse.so",
         "usr/lib/x86_64-linux-gnu/libcusparse_static.a",
         "usr/lib/x86_64-linux-gnu/liblapack_static.a",
         "usr/lib/x86_64-linux-gnu/libmetis_static.a",
-        "usr/lib/x86_64-linux-gnu/libnppc.so",
         "usr/lib/x86_64-linux-gnu/libnppc_static.a",
-        "usr/lib/x86_64-linux-gnu/libnppial.so",
         "usr/lib/x86_64-linux-gnu/libnppial_static.a",
-        "usr/lib/x86_64-linux-gnu/libnppicc.so",
         "usr/lib/x86_64-linux-gnu/libnppicc_static.a",
-        "usr/lib/x86_64-linux-gnu/libnppidei.so",
         "usr/lib/x86_64-linux-gnu/libnppidei_static.a",
-        "usr/lib/x86_64-linux-gnu/libnppif.so",
         "usr/lib/x86_64-linux-gnu/libnppif_static.a",
-        "usr/lib/x86_64-linux-gnu/libnppig.so",
         "usr/lib/x86_64-linux-gnu/libnppig_static.a",
-        "usr/lib/x86_64-linux-gnu/libnppim.so",
         "usr/lib/x86_64-linux-gnu/libnppim_static.a",
-        "usr/lib/x86_64-linux-gnu/libnppist.so",
         "usr/lib/x86_64-linux-gnu/libnppist_static.a",
-        "usr/lib/x86_64-linux-gnu/libnppisu.so",
         "usr/lib/x86_64-linux-gnu/libnppisu_static.a",
-        "usr/lib/x86_64-linux-gnu/libnppitc.so",
         "usr/lib/x86_64-linux-gnu/libnppitc_static.a",
-        "usr/lib/x86_64-linux-gnu/libnpps.so",
         "usr/lib/x86_64-linux-gnu/libnpps_static.a",
-        "usr/lib/x86_64-linux-gnu/libnvToolsExt.so",
-        "usr/lib/x86_64-linux-gnu/libnvblas.so",
-        "usr/lib/x86_64-linux-gnu/libnvjpeg.so",
         "usr/lib/x86_64-linux-gnu/libnvjpeg_static.a",
         "usr/lib/x86_64-linux-gnu/libnvptxcompiler_static.a",
-        "usr/lib/x86_64-linux-gnu/libnvrtc.so",
-        "usr/lib/x86_64-linux-gnu/libnvrtc-builtins.so",
         "usr/lib/x86_64-linux-gnu/libnvrtc-builtins_static.a",
         "usr/lib/x86_64-linux-gnu/libnvrtc_static.a",
-        "usr/lib/x86_64-linux-gnu/libnvvm.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/cuda.pc",
         "usr/lib/x86_64-linux-gnu/stubs/libcublas.so",
         "usr/lib/x86_64-linux-gnu/stubs/libcublasLt.so",
@@ -52111,7 +48439,6 @@ filegroup(
         ":libnvvm4-filegroup",
         ":libthrust-dev-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -52124,13 +48451,11 @@ filegroup(
         "usr/share/man/man1/nvidia-bug-report.sh.1.gz",
         ":debconf-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "ocl-icd-libopencl1-filegroup",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libOpenCL.so.1",
         "usr/lib/x86_64-linux-gnu/libOpenCL.so.1.0.0",
         "usr/share/doc-base/ocl-icd-libopencl1.ocl-icd-libopencl1",
         "usr/share/doc/ocl-icd-libopencl1/NEWS.Debian.gz",
@@ -52142,133 +48467,8 @@ filegroup(
         "usr/share/doc/ocl-icd-libopencl1/html/libOpenCL.html",
         "usr/share/lintian/overrides/ocl-icd-libopencl1",
         "usr/share/man/man7/libOpenCL.7.gz",
-        "usr/share/man/man7/libOpenCL.so.7.gz",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
-    name = "openssh-client-filegroup",
-    srcs = [
-        "etc/ssh/ssh_config",
-        "usr/bin/scp",
-        "usr/bin/sftp",
-        "usr/bin/slogin",
-        "usr/bin/ssh",
-        "usr/bin/ssh-add",
-        "usr/bin/ssh-agent",
-        "usr/bin/ssh-argv0",
-        "usr/bin/ssh-copy-id",
-        "usr/bin/ssh-keygen",
-        "usr/bin/ssh-keyscan",
-        "usr/lib/openssh/agent-launch",
-        "usr/lib/openssh/ssh-keysign",
-        "usr/lib/openssh/ssh-pkcs11-helper",
-        "usr/lib/openssh/ssh-sk-helper",
-        "usr/lib/systemd/user/graphical-session-pre.target.wants/ssh-agent.service",
-        "usr/lib/systemd/user/ssh-agent.service",
-        "usr/share/apport/package-hooks/openssh-client.py",
-        "usr/share/doc/openssh-client/NEWS.Debian.gz",
-        "usr/share/doc/openssh-client/OVERVIEW.gz",
-        "usr/share/doc/openssh-client/README",
-        "usr/share/doc/openssh-client/README.Debian.gz",
-        "usr/share/doc/openssh-client/README.dns",
-        "usr/share/doc/openssh-client/README.tun.gz",
-        "usr/share/doc/openssh-client/changelog.Debian.gz",
-        "usr/share/doc/openssh-client/changelog.gz",
-        "usr/share/doc/openssh-client/copyright",
-        "usr/share/lintian/overrides/openssh-client",
-        "usr/share/man/man1/scp.1.gz",
-        "usr/share/man/man1/sftp.1.gz",
-        "usr/share/man/man1/slogin.1.gz",
-        "usr/share/man/man1/ssh.1.gz",
-        "usr/share/man/man1/ssh-add.1.gz",
-        "usr/share/man/man1/ssh-agent.1.gz",
-        "usr/share/man/man1/ssh-argv0.1.gz",
-        "usr/share/man/man1/ssh-copy-id.1.gz",
-        "usr/share/man/man1/ssh-keygen.1.gz",
-        "usr/share/man/man1/ssh-keyscan.1.gz",
-        "usr/share/man/man5/ssh_config.5.gz",
-        "usr/share/man/man8/ssh-keysign.8.gz",
-        "usr/share/man/man8/ssh-pkcs11-helper.8.gz",
-        "usr/share/man/man8/ssh-sk-helper.8.gz",
-        ":adduser-filegroup",
-        ":libc6-filegroup",
-        ":libedit2-filegroup",
-        ":libfido2-1-filegroup",
-        ":libgssapi-krb5-2-filegroup",
-        ":libselinux1-filegroup",
-        ":libssl3-filegroup",
-        ":passwd-filegroup",
-        ":zlib1g-filegroup",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
-    name = "openssh-server-filegroup",
-    srcs = [
-        "etc/default/ssh",
-        "etc/init.d/ssh",
-        "etc/pam.d/sshd",
-        "etc/ssh/moduli",
-        "etc/sv/ssh/.meta/installed",
-        "etc/sv/ssh/finish",
-        "etc/sv/ssh/log/run",
-        "etc/sv/ssh/run",
-        "etc/ufw/applications.d/openssh-server",
-        "lib/systemd/system/rescue-ssh.target",
-        "lib/systemd/system/ssh.service",
-        "lib/systemd/system/ssh.socket",
-        "usr/lib/openssh/ssh-session-cleanup",
-        "usr/sbin/sshd",
-        "usr/share/apport/package-hooks/openssh-server.py",
-        "usr/share/doc/openssh-client/examples/ssh-session-cleanup.service",
-        "usr/share/lintian/overrides/openssh-server",
-        "usr/share/man/man5/authorized_keys.5.gz",
-        "usr/share/man/man5/moduli.5.gz",
-        "usr/share/man/man5/sshd_config.5.gz",
-        "usr/share/man/man8/sshd.8.gz",
-        "usr/share/openssh/sshd_config",
-        "usr/share/openssh/sshd_config.md5sum",
-        "usr/share/runit/meta/ssh/installed",
-        ":adduser-filegroup",
-        ":debconf-filegroup",
-        ":libaudit1-filegroup",
-        ":libc6-filegroup",
-        ":libcom-err2-filegroup",
-        ":libcrypt1-filegroup",
-        ":libgssapi-krb5-2-filegroup",
-        ":libkrb5-3-filegroup",
-        ":libpam-modules-filegroup",
-        ":libpam-runtime-filegroup",
-        ":libpam0g-filegroup",
-        ":libselinux1-filegroup",
-        ":libssl3-filegroup",
-        ":libsystemd0-filegroup",
-        ":libwrap0-filegroup",
-        ":openssh-client-filegroup",
-        ":openssh-sftp-server-filegroup",
-        ":procps-filegroup",
-        ":runit-helper-filegroup",
-        ":sysvinit-utils-filegroup",
-        ":ucf-filegroup",
-        ":zlib1g-filegroup",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
-    name = "openssh-sftp-server-filegroup",
-    srcs = [
-        "usr/lib/openssh/sftp-server",
-        "usr/lib/sftp-server",
-        "usr/share/man/man8/sftp-server.8.gz",
-        ":libc6-filegroup",
-        ":openssh-client-filegroup",
-    ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -52290,7 +48490,6 @@ filegroup(
         "usr/lib/tmpfiles.d/passwd.conf",
         "usr/sbin/chgpasswd",
         "usr/sbin/chpasswd",
-        "usr/sbin/cpgr",
         "usr/sbin/cppw",
         "usr/sbin/groupadd",
         "usr/sbin/groupdel",
@@ -52306,7 +48505,6 @@ filegroup(
         "usr/sbin/useradd",
         "usr/sbin/userdel",
         "usr/sbin/usermod",
-        "usr/sbin/vigr",
         "usr/sbin/vipw",
         "usr/share/doc/passwd/NEWS.Debian.gz",
         "usr/share/doc/passwd/README.Debian",
@@ -52330,7 +48528,6 @@ filegroup(
         "usr/share/man/da/man1/chfn.1.gz",
         "usr/share/man/da/man5/gshadow.5.gz",
         "usr/share/man/da/man8/groupdel.8.gz",
-        "usr/share/man/da/man8/vigr.8.gz",
         "usr/share/man/da/man8/vipw.8.gz",
         "usr/share/man/de/man1/chage.1.gz",
         "usr/share/man/de/man1/chfn.1.gz",
@@ -52348,16 +48545,12 @@ filegroup(
         "usr/share/man/de/man8/groupmems.8.gz",
         "usr/share/man/de/man8/groupmod.8.gz",
         "usr/share/man/de/man8/grpck.8.gz",
-        "usr/share/man/de/man8/grpconv.8.gz",
-        "usr/share/man/de/man8/grpunconv.8.gz",
         "usr/share/man/de/man8/newusers.8.gz",
         "usr/share/man/de/man8/pwck.8.gz",
         "usr/share/man/de/man8/pwconv.8.gz",
-        "usr/share/man/de/man8/pwunconv.8.gz",
         "usr/share/man/de/man8/useradd.8.gz",
         "usr/share/man/de/man8/userdel.8.gz",
         "usr/share/man/de/man8/usermod.8.gz",
-        "usr/share/man/de/man8/vigr.8.gz",
         "usr/share/man/de/man8/vipw.8.gz",
         "usr/share/man/fi/man1/chfn.1.gz",
         "usr/share/man/fi/man1/chsh.1.gz",
@@ -52379,16 +48572,12 @@ filegroup(
         "usr/share/man/fr/man8/groupmems.8.gz",
         "usr/share/man/fr/man8/groupmod.8.gz",
         "usr/share/man/fr/man8/grpck.8.gz",
-        "usr/share/man/fr/man8/grpconv.8.gz",
-        "usr/share/man/fr/man8/grpunconv.8.gz",
         "usr/share/man/fr/man8/newusers.8.gz",
         "usr/share/man/fr/man8/pwck.8.gz",
         "usr/share/man/fr/man8/pwconv.8.gz",
-        "usr/share/man/fr/man8/pwunconv.8.gz",
         "usr/share/man/fr/man8/useradd.8.gz",
         "usr/share/man/fr/man8/userdel.8.gz",
         "usr/share/man/fr/man8/usermod.8.gz",
-        "usr/share/man/fr/man8/vigr.8.gz",
         "usr/share/man/fr/man8/vipw.8.gz",
         "usr/share/man/hu/man1/chsh.1.gz",
         "usr/share/man/hu/man1/gpasswd.1.gz",
@@ -52412,16 +48601,12 @@ filegroup(
         "usr/share/man/it/man8/groupmems.8.gz",
         "usr/share/man/it/man8/groupmod.8.gz",
         "usr/share/man/it/man8/grpck.8.gz",
-        "usr/share/man/it/man8/grpconv.8.gz",
-        "usr/share/man/it/man8/grpunconv.8.gz",
         "usr/share/man/it/man8/newusers.8.gz",
         "usr/share/man/it/man8/pwck.8.gz",
         "usr/share/man/it/man8/pwconv.8.gz",
-        "usr/share/man/it/man8/pwunconv.8.gz",
         "usr/share/man/it/man8/useradd.8.gz",
         "usr/share/man/it/man8/userdel.8.gz",
         "usr/share/man/it/man8/usermod.8.gz",
-        "usr/share/man/it/man8/vigr.8.gz",
         "usr/share/man/it/man8/vipw.8.gz",
         "usr/share/man/ja/man1/chage.1.gz",
         "usr/share/man/ja/man1/chfn.1.gz",
@@ -52436,21 +48621,16 @@ filegroup(
         "usr/share/man/ja/man8/groupdel.8.gz",
         "usr/share/man/ja/man8/groupmod.8.gz",
         "usr/share/man/ja/man8/grpck.8.gz",
-        "usr/share/man/ja/man8/grpconv.8.gz",
-        "usr/share/man/ja/man8/grpunconv.8.gz",
         "usr/share/man/ja/man8/newusers.8.gz",
         "usr/share/man/ja/man8/pwck.8.gz",
         "usr/share/man/ja/man8/pwconv.8.gz",
-        "usr/share/man/ja/man8/pwunconv.8.gz",
         "usr/share/man/ja/man8/useradd.8.gz",
         "usr/share/man/ja/man8/userdel.8.gz",
         "usr/share/man/ja/man8/usermod.8.gz",
-        "usr/share/man/ja/man8/vigr.8.gz",
         "usr/share/man/ja/man8/vipw.8.gz",
         "usr/share/man/ko/man1/chfn.1.gz",
         "usr/share/man/ko/man1/chsh.1.gz",
         "usr/share/man/ko/man5/passwd.5.gz",
-        "usr/share/man/ko/man8/vigr.8.gz",
         "usr/share/man/ko/man8/vipw.8.gz",
         "usr/share/man/man1/chage.1.gz",
         "usr/share/man/man1/chfn.1.gz",
@@ -52465,23 +48645,18 @@ filegroup(
         "usr/share/man/man5/subuid.5.gz",
         "usr/share/man/man8/chgpasswd.8.gz",
         "usr/share/man/man8/chpasswd.8.gz",
-        "usr/share/man/man8/cpgr.8.gz",
         "usr/share/man/man8/cppw.8.gz",
         "usr/share/man/man8/groupadd.8.gz",
         "usr/share/man/man8/groupdel.8.gz",
         "usr/share/man/man8/groupmems.8.gz",
         "usr/share/man/man8/groupmod.8.gz",
         "usr/share/man/man8/grpck.8.gz",
-        "usr/share/man/man8/grpconv.8.gz",
-        "usr/share/man/man8/grpunconv.8.gz",
         "usr/share/man/man8/newusers.8.gz",
         "usr/share/man/man8/pwck.8.gz",
         "usr/share/man/man8/pwconv.8.gz",
-        "usr/share/man/man8/pwunconv.8.gz",
         "usr/share/man/man8/useradd.8.gz",
         "usr/share/man/man8/userdel.8.gz",
         "usr/share/man/man8/usermod.8.gz",
-        "usr/share/man/man8/vigr.8.gz",
         "usr/share/man/man8/vipw.8.gz",
         "usr/share/man/pl/man1/chage.1.gz",
         "usr/share/man/pl/man1/chsh.1.gz",
@@ -52493,7 +48668,6 @@ filegroup(
         "usr/share/man/pl/man8/grpck.8.gz",
         "usr/share/man/pl/man8/userdel.8.gz",
         "usr/share/man/pl/man8/usermod.8.gz",
-        "usr/share/man/pl/man8/vigr.8.gz",
         "usr/share/man/pl/man8/vipw.8.gz",
         "usr/share/man/pt_BR/man1/gpasswd.1.gz",
         "usr/share/man/pt_BR/man5/passwd.5.gz",
@@ -52517,16 +48691,12 @@ filegroup(
         "usr/share/man/ru/man8/groupmems.8.gz",
         "usr/share/man/ru/man8/groupmod.8.gz",
         "usr/share/man/ru/man8/grpck.8.gz",
-        "usr/share/man/ru/man8/grpconv.8.gz",
-        "usr/share/man/ru/man8/grpunconv.8.gz",
         "usr/share/man/ru/man8/newusers.8.gz",
         "usr/share/man/ru/man8/pwck.8.gz",
         "usr/share/man/ru/man8/pwconv.8.gz",
-        "usr/share/man/ru/man8/pwunconv.8.gz",
         "usr/share/man/ru/man8/useradd.8.gz",
         "usr/share/man/ru/man8/userdel.8.gz",
         "usr/share/man/ru/man8/usermod.8.gz",
-        "usr/share/man/ru/man8/vigr.8.gz",
         "usr/share/man/ru/man8/vipw.8.gz",
         "usr/share/man/sv/man1/chage.1.gz",
         "usr/share/man/sv/man1/chsh.1.gz",
@@ -52541,7 +48711,6 @@ filegroup(
         "usr/share/man/sv/man8/grpck.8.gz",
         "usr/share/man/sv/man8/pwck.8.gz",
         "usr/share/man/sv/man8/userdel.8.gz",
-        "usr/share/man/sv/man8/vigr.8.gz",
         "usr/share/man/sv/man8/vipw.8.gz",
         "usr/share/man/tr/man1/chage.1.gz",
         "usr/share/man/tr/man1/chfn.1.gz",
@@ -52570,16 +48739,12 @@ filegroup(
         "usr/share/man/uk/man8/groupmems.8.gz",
         "usr/share/man/uk/man8/groupmod.8.gz",
         "usr/share/man/uk/man8/grpck.8.gz",
-        "usr/share/man/uk/man8/grpconv.8.gz",
-        "usr/share/man/uk/man8/grpunconv.8.gz",
         "usr/share/man/uk/man8/newusers.8.gz",
         "usr/share/man/uk/man8/pwck.8.gz",
         "usr/share/man/uk/man8/pwconv.8.gz",
-        "usr/share/man/uk/man8/pwunconv.8.gz",
         "usr/share/man/uk/man8/useradd.8.gz",
         "usr/share/man/uk/man8/userdel.8.gz",
         "usr/share/man/uk/man8/usermod.8.gz",
-        "usr/share/man/uk/man8/vigr.8.gz",
         "usr/share/man/uk/man8/vipw.8.gz",
         "usr/share/man/zh_CN/man1/chage.1.gz",
         "usr/share/man/zh_CN/man1/chfn.1.gz",
@@ -52597,16 +48762,12 @@ filegroup(
         "usr/share/man/zh_CN/man8/groupmems.8.gz",
         "usr/share/man/zh_CN/man8/groupmod.8.gz",
         "usr/share/man/zh_CN/man8/grpck.8.gz",
-        "usr/share/man/zh_CN/man8/grpconv.8.gz",
-        "usr/share/man/zh_CN/man8/grpunconv.8.gz",
         "usr/share/man/zh_CN/man8/newusers.8.gz",
         "usr/share/man/zh_CN/man8/pwck.8.gz",
         "usr/share/man/zh_CN/man8/pwconv.8.gz",
-        "usr/share/man/zh_CN/man8/pwunconv.8.gz",
         "usr/share/man/zh_CN/man8/useradd.8.gz",
         "usr/share/man/zh_CN/man8/userdel.8.gz",
         "usr/share/man/zh_CN/man8/usermod.8.gz",
-        "usr/share/man/zh_CN/man8/vigr.8.gz",
         "usr/share/man/zh_CN/man8/vipw.8.gz",
         "usr/share/man/zh_TW/man1/chfn.1.gz",
         "usr/share/man/zh_TW/man1/chsh.1.gz",
@@ -52626,7 +48787,6 @@ filegroup(
         ":libselinux1-filegroup",
         ":libsemanage2-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -52642,21 +48802,16 @@ filegroup(
         ":libc6-filegroup",
         ":libpkgconf3-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "pkgconf-filegroup",
     srcs = [
-        "usr/bin/pkg-config",
-        "usr/bin/x86_64-linux-gnu-pkg-config",
-        "usr/bin/x86_64-linux-gnu-pkgconf",
         "usr/share/aclocal/pkg.m4",
         "usr/share/doc/pkgconf/changelog.Debian.gz",
         "usr/share/doc/pkgconf/changelog.gz",
         "usr/share/doc/pkgconf/copyright",
         "usr/share/lintian/overrides/pkgconf",
-        "usr/share/man/man1/pkg-config.1.gz",
         "usr/share/man/man1/pkgconf.1.gz",
         "usr/share/man/man5/pc.5.gz",
         "usr/share/man/man5/pkgconf-personality.5.gz",
@@ -52664,7 +48819,6 @@ filegroup(
         "usr/share/pkgconfig/personality.d/x86_64-linux-gnu.personality",
         ":pkgconf-bin-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -52679,12 +48833,10 @@ filegroup(
         "usr/bin/free",
         "usr/bin/pgrep",
         "usr/bin/pidwait",
-        "usr/bin/pkill",
         "usr/bin/pmap",
         "usr/bin/pwdx",
         "usr/bin/skill",
         "usr/bin/slabtop",
-        "usr/bin/snice",
         "usr/bin/tload",
         "usr/bin/top",
         "usr/bin/uptime",
@@ -52748,14 +48900,11 @@ filegroup(
         "usr/share/man/man1/free.1.gz",
         "usr/share/man/man1/kill.1.gz",
         "usr/share/man/man1/pgrep.1.gz",
-        "usr/share/man/man1/pidwait.1.gz",
-        "usr/share/man/man1/pkill.1.gz",
         "usr/share/man/man1/pmap.1.gz",
         "usr/share/man/man1/ps.1.gz",
         "usr/share/man/man1/pwdx.1.gz",
         "usr/share/man/man1/skill.1.gz",
         "usr/share/man/man1/slabtop.1.gz",
-        "usr/share/man/man1/snice.1.gz",
         "usr/share/man/man1/tload.1.gz",
         "usr/share/man/man1/top.1.gz",
         "usr/share/man/man1/uptime.1.gz",
@@ -52830,7 +48979,6 @@ filegroup(
         ":libproc2-0-filegroup",
         ":libtinfo6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -52868,7 +49016,6 @@ filegroup(
         "usr/share/proj/triangulation.schema.json",
         "usr/share/proj/world",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -52930,35 +49077,25 @@ filegroup(
         ":python3-filegroup",
         ":python3-lib2to3-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "python3-filegroup",
     srcs = [
-        "usr/bin/pdb3",
-        "usr/bin/pydoc3",
-        "usr/bin/pygettext3",
         "usr/lib/valgrind/python3.supp",
         "usr/share/doc-base/python3.python-policy",
-        "usr/share/doc/python3.11/python-policy.txt.gz",
         "usr/share/doc/python3/README.Debian",
         "usr/share/doc/python3/changelog.Debian.amd64.gz",
         "usr/share/doc/python3/changelog.Debian.gz",
         "usr/share/doc/python3/copyright",
         "usr/share/doc/python3/python-policy.txt.gz",
         "usr/share/lintian/overrides/python3",
-        "usr/share/man/man1/pdb3.1.gz",
-        "usr/share/man/man1/pydoc3.1.gz",
-        "usr/share/man/man1/pygettext3.1.gz",
-        "usr/share/pixmaps/python3.xpm",
         "usr/share/python3/python.mk",
         "usr/share/python3/runtime.d/public_modules.rtinstall",
         "usr/share/python3/runtime.d/public_modules.rtremove",
         ":libpython3-stdlib-filegroup",
         ":python3.11-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -53044,13 +49181,11 @@ filegroup(
         "usr/share/lintian/overrides/python3-lib2to3",
         ":python3-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "python3.11-filegroup",
     srcs = [
-        "usr/bin/pdb3.11",
         "usr/bin/pydoc3.11",
         "usr/bin/pygettext3.11",
         "usr/share/applications/python3.11.desktop",
@@ -53060,7 +49195,6 @@ filegroup(
         "usr/share/doc/python3.11/README.rst.gz",
         "usr/share/doc/python3.11/README.venv",
         "usr/share/doc/python3.11/changelog.Debian.gz",
-        "usr/share/doc/python3.11/changelog.gz",
         "usr/share/doc/python3.11/copyright",
         "usr/share/lintian/overrides/python3.11",
         "usr/share/man/man1/pdb3.11.1.gz",
@@ -53072,7 +49206,6 @@ filegroup(
         ":media-types-filegroup",
         ":python3.11-minimal-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -53090,7 +49223,6 @@ filegroup(
         ":libpython3.11-minimal-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -53107,7 +49239,6 @@ filegroup(
         "usr/share/readline/inputrc",
         ":dpkg-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -53144,94 +49275,6 @@ filegroup(
         "usr/share/man/man1/rpcgen.1.gz",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
-    name = "rsync-filegroup",
-    srcs = [
-        "etc/default/rsync",
-        "etc/init.d/rsync",
-        "lib/systemd/system/rsync.service",
-        "usr/bin/rrsync",
-        "usr/bin/rsync",
-        "usr/bin/rsync-ssl",
-        "usr/share/doc/rsync/NEWS.Debian.gz",
-        "usr/share/doc/rsync/NEWS.md.gz",
-        "usr/share/doc/rsync/README.Debian",
-        "usr/share/doc/rsync/changelog.Debian.gz",
-        "usr/share/doc/rsync/copyright",
-        "usr/share/doc/rsync/examples/logrotate.conf.rsync",
-        "usr/share/doc/rsync/examples/rsyncd.conf",
-        "usr/share/lintian/overrides/rsync",
-        "usr/share/man/man1/rrsync.1.gz",
-        "usr/share/man/man1/rsync.1.gz",
-        "usr/share/man/man1/rsync-ssl.1.gz",
-        "usr/share/man/man5/rsyncd.conf.5.gz",
-        "usr/share/rsync/scripts/atomic-rsync",
-        "usr/share/rsync/scripts/cull-options",
-        "usr/share/rsync/scripts/cvs2includes",
-        "usr/share/rsync/scripts/file-attr-restore",
-        "usr/share/rsync/scripts/files-to-excludes",
-        "usr/share/rsync/scripts/git-set-file-times",
-        "usr/share/rsync/scripts/logfilter",
-        "usr/share/rsync/scripts/lsh",
-        "usr/share/rsync/scripts/mnt-excl",
-        "usr/share/rsync/scripts/munge-symlinks",
-        "usr/share/rsync/scripts/rsync-no-vanished",
-        "usr/share/rsync/scripts/rsyncstats",
-        ":libacl1-filegroup",
-        ":libc6-filegroup",
-        ":liblz4-1-filegroup",
-        ":libpopt0-filegroup",
-        ":libssl3-filegroup",
-        ":libxxhash0-filegroup",
-        ":libzstd1-filegroup",
-        ":sysvinit-utils-filegroup",
-        ":zlib1g-filegroup",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
-    name = "runit-helper-filegroup",
-    srcs = [
-        "lib/runit-helper/runit-helper",
-        "usr/share/doc/runit-helper/changelog.gz",
-        "usr/share/doc/runit-helper/copyright",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
-    name = "sensible-utils-filegroup",
-    srcs = [
-        "usr/bin/select-editor",
-        "usr/bin/sensible-browser",
-        "usr/bin/sensible-editor",
-        "usr/bin/sensible-pager",
-        "usr/lib/mime/packages/sensible-utils",
-        "usr/share/doc/sensible-utils/changelog.gz",
-        "usr/share/doc/sensible-utils/copyright",
-        "usr/share/man/de/man1/select-editor.1.gz",
-        "usr/share/man/de/man1/sensible-browser.1.gz",
-        "usr/share/man/de/man1/sensible-editor.1.gz",
-        "usr/share/man/de/man1/sensible-pager.1.gz",
-        "usr/share/man/fr/man1/select-editor.1.gz",
-        "usr/share/man/fr/man1/sensible-browser.1.gz",
-        "usr/share/man/fr/man1/sensible-editor.1.gz",
-        "usr/share/man/fr/man1/sensible-pager.1.gz",
-        "usr/share/man/man1/select-editor.1.gz",
-        "usr/share/man/man1/sensible-browser.1.gz",
-        "usr/share/man/man1/sensible-editor.1.gz",
-        "usr/share/man/man1/sensible-pager.1.gz",
-        "usr/share/man/pt/man1/select-editor.1.gz",
-        "usr/share/man/pt/man1/sensible-browser.1.gz",
-        "usr/share/man/pt/man1/sensible-editor.1.gz",
-        "usr/share/man/pt/man1/sensible-pager.1.gz",
-        "usr/share/sensible-utils/bin/gettext",
-    ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -53333,20 +49376,6 @@ filegroup(
         ":libglib2.0-0-filegroup",
         ":libxml2-filegroup",
     ],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
-    name = "ssh-filegroup",
-    srcs = [
-        "usr/share/doc/ssh/NEWS.Debian.gz",
-        "usr/share/doc/ssh/changelog.Debian.gz",
-        "usr/share/doc/ssh/changelog.gz",
-        "usr/share/doc/ssh/copyright",
-        ":openssh-client-filegroup",
-        ":openssh-server-filegroup",
-    ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -53356,7 +49385,6 @@ filegroup(
         "bin/loginctl",
         "bin/networkctl",
         "bin/systemctl",
-        "bin/systemd",
         "bin/systemd-ask-password",
         "bin/systemd-creds",
         "bin/systemd-escape",
@@ -53369,8 +49397,6 @@ filegroup(
         "bin/systemd-sysusers",
         "bin/systemd-tmpfiles",
         "bin/systemd-tty-ask-password-agent",
-        "etc/modules-load.d/modules.conf",
-        "etc/sysctl.d/99-sysctl.conf",
         "etc/systemd/journald.conf",
         "etc/systemd/logind.conf",
         "etc/systemd/networkd.conf",
@@ -53404,24 +49430,15 @@ filegroup(
         "lib/systemd/system-generators/systemd-sysv-generator",
         "lib/systemd/system-generators/systemd-veritysetup-generator",
         "lib/systemd/system-preset/90-systemd.preset",
-        "lib/systemd/system/autovt@.service",
         "lib/systemd/system/basic.target",
         "lib/systemd/system/blockdev@.target",
         "lib/systemd/system/bluetooth.target",
         "lib/systemd/system/boot-complete.target",
         "lib/systemd/system/console-getty.service",
         "lib/systemd/system/container-getty@.service",
-        "lib/systemd/system/cryptdisks.service",
-        "lib/systemd/system/cryptdisks-early.service",
         "lib/systemd/system/cryptsetup.target",
         "lib/systemd/system/cryptsetup-pre.target",
-        "lib/systemd/system/ctrl-alt-del.target",
-        "lib/systemd/system/dbus-org.freedesktop.hostname1.service",
-        "lib/systemd/system/dbus-org.freedesktop.locale1.service",
-        "lib/systemd/system/dbus-org.freedesktop.login1.service",
-        "lib/systemd/system/dbus-org.freedesktop.timedate1.service",
         "lib/systemd/system/debug-shell.service",
-        "lib/systemd/system/default.target",
         "lib/systemd/system/dev-hugepages.mount",
         "lib/systemd/system/dev-mqueue.mount",
         "lib/systemd/system/emergency.service",
@@ -53431,26 +49448,19 @@ filegroup(
         "lib/systemd/system/final.target",
         "lib/systemd/system/first-boot-complete.target",
         "lib/systemd/system/getty.target",
-        "lib/systemd/system/getty.target.wants/getty-static.service",
         "lib/systemd/system/getty-pre.target",
         "lib/systemd/system/getty-static.service",
         "lib/systemd/system/getty@.service",
         "lib/systemd/system/graphical.target",
-        "lib/systemd/system/graphical.target.wants/systemd-update-utmp-runlevel.service",
         "lib/systemd/system/halt.target",
         "lib/systemd/system/hibernate.target",
-        "lib/systemd/system/hwclock.service",
         "lib/systemd/system/hybrid-sleep.target",
         "lib/systemd/system/initrd.target",
-        "lib/systemd/system/initrd.target.wants/systemd-pcrphase-initrd.service",
         "lib/systemd/system/initrd-cleanup.service",
         "lib/systemd/system/initrd-fs.target",
         "lib/systemd/system/initrd-parse-etc.service",
         "lib/systemd/system/initrd-root-device.target",
-        "lib/systemd/system/initrd-root-device.target.wants/remote-cryptsetup.target",
-        "lib/systemd/system/initrd-root-device.target.wants/remote-veritysetup.target",
         "lib/systemd/system/initrd-root-fs.target",
-        "lib/systemd/system/initrd-root-fs.target.wants/systemd-repart.service",
         "lib/systemd/system/initrd-switch-root.service",
         "lib/systemd/system/initrd-switch-root.target",
         "lib/systemd/system/initrd-udevadm-cleanup-db.service",
@@ -53458,18 +49468,12 @@ filegroup(
         "lib/systemd/system/integritysetup.target",
         "lib/systemd/system/integritysetup-pre.target",
         "lib/systemd/system/kexec.target",
-        "lib/systemd/system/kmod.service",
         "lib/systemd/system/kmod-static-nodes.service",
         "lib/systemd/system/local-fs.target",
         "lib/systemd/system/local-fs-pre.target",
         "lib/systemd/system/machine.slice",
         "lib/systemd/system/modprobe@.service",
         "lib/systemd/system/multi-user.target",
-        "lib/systemd/system/multi-user.target.wants/getty.target",
-        "lib/systemd/system/multi-user.target.wants/systemd-ask-password-wall.path",
-        "lib/systemd/system/multi-user.target.wants/systemd-logind.service",
-        "lib/systemd/system/multi-user.target.wants/systemd-update-utmp-runlevel.service",
-        "lib/systemd/system/multi-user.target.wants/systemd-user-sessions.service",
         "lib/systemd/system/network.target",
         "lib/systemd/system/network-online.target",
         "lib/systemd/system/network-pre.target",
@@ -53480,12 +49484,9 @@ filegroup(
         "lib/systemd/system/printer.target",
         "lib/systemd/system/proc-sys-fs-binfmt_misc.automount",
         "lib/systemd/system/proc-sys-fs-binfmt_misc.mount",
-        "lib/systemd/system/procps.service",
         "lib/systemd/system/quotaon.service",
-        "lib/systemd/system/rc.service",
         "lib/systemd/system/rc-local.service",
         "lib/systemd/system/rc-local.service.d/debian.conf",
-        "lib/systemd/system/rcS.service",
         "lib/systemd/system/reboot.target",
         "lib/systemd/system/remote-cryptsetup.target",
         "lib/systemd/system/remote-fs.target",
@@ -53493,15 +49494,7 @@ filegroup(
         "lib/systemd/system/remote-veritysetup.target",
         "lib/systemd/system/rescue.service",
         "lib/systemd/system/rescue.target",
-        "lib/systemd/system/rescue.target.wants/systemd-update-utmp-runlevel.service",
         "lib/systemd/system/rpcbind.target",
-        "lib/systemd/system/runlevel0.target",
-        "lib/systemd/system/runlevel1.target",
-        "lib/systemd/system/runlevel2.target",
-        "lib/systemd/system/runlevel3.target",
-        "lib/systemd/system/runlevel4.target",
-        "lib/systemd/system/runlevel5.target",
-        "lib/systemd/system/runlevel6.target",
         "lib/systemd/system/serial-getty@.service",
         "lib/systemd/system/shutdown.target",
         "lib/systemd/system/sigpwr.target",
@@ -53509,10 +49502,6 @@ filegroup(
         "lib/systemd/system/slices.target",
         "lib/systemd/system/smartcard.target",
         "lib/systemd/system/sockets.target",
-        "lib/systemd/system/sockets.target.wants/systemd-initctl.socket",
-        "lib/systemd/system/sockets.target.wants/systemd-journald.socket",
-        "lib/systemd/system/sockets.target.wants/systemd-journald-audit.socket",
-        "lib/systemd/system/sockets.target.wants/systemd-journald-dev-log.socket",
         "lib/systemd/system/sound.target",
         "lib/systemd/system/suspend.target",
         "lib/systemd/system/suspend-then-hibernate.target",
@@ -53522,33 +49511,6 @@ filegroup(
         "lib/systemd/system/sys-kernel-debug.mount",
         "lib/systemd/system/sys-kernel-tracing.mount",
         "lib/systemd/system/sysinit.target",
-        "lib/systemd/system/sysinit.target.wants/cryptsetup.target",
-        "lib/systemd/system/sysinit.target.wants/dev-hugepages.mount",
-        "lib/systemd/system/sysinit.target.wants/dev-mqueue.mount",
-        "lib/systemd/system/sysinit.target.wants/integritysetup.target",
-        "lib/systemd/system/sysinit.target.wants/kmod-static-nodes.service",
-        "lib/systemd/system/sysinit.target.wants/proc-sys-fs-binfmt_misc.automount",
-        "lib/systemd/system/sysinit.target.wants/sys-fs-fuse-connections.mount",
-        "lib/systemd/system/sysinit.target.wants/sys-kernel-config.mount",
-        "lib/systemd/system/sysinit.target.wants/sys-kernel-debug.mount",
-        "lib/systemd/system/sysinit.target.wants/sys-kernel-tracing.mount",
-        "lib/systemd/system/sysinit.target.wants/systemd-ask-password-console.path",
-        "lib/systemd/system/sysinit.target.wants/systemd-binfmt.service",
-        "lib/systemd/system/sysinit.target.wants/systemd-firstboot.service",
-        "lib/systemd/system/sysinit.target.wants/systemd-journal-flush.service",
-        "lib/systemd/system/sysinit.target.wants/systemd-journald.service",
-        "lib/systemd/system/sysinit.target.wants/systemd-machine-id-commit.service",
-        "lib/systemd/system/sysinit.target.wants/systemd-modules-load.service",
-        "lib/systemd/system/sysinit.target.wants/systemd-pcrphase.service",
-        "lib/systemd/system/sysinit.target.wants/systemd-pcrphase-sysinit.service",
-        "lib/systemd/system/sysinit.target.wants/systemd-random-seed.service",
-        "lib/systemd/system/sysinit.target.wants/systemd-repart.service",
-        "lib/systemd/system/sysinit.target.wants/systemd-sysctl.service",
-        "lib/systemd/system/sysinit.target.wants/systemd-sysusers.service",
-        "lib/systemd/system/sysinit.target.wants/systemd-tmpfiles-setup.service",
-        "lib/systemd/system/sysinit.target.wants/systemd-tmpfiles-setup-dev.service",
-        "lib/systemd/system/sysinit.target.wants/systemd-update-utmp.service",
-        "lib/systemd/system/sysinit.target.wants/veritysetup.target",
         "lib/systemd/system/syslog.socket",
         "lib/systemd/system/system-update.target",
         "lib/systemd/system/system-update-cleanup.service",
@@ -53622,7 +49584,6 @@ filegroup(
         "lib/systemd/system/time-set.target",
         "lib/systemd/system/time-sync.target",
         "lib/systemd/system/timers.target",
-        "lib/systemd/system/timers.target.wants/systemd-tmpfiles-clean.timer",
         "lib/systemd/system/umount.target",
         "lib/systemd/system/usb-gadget.target",
         "lib/systemd/system/user.slice",
@@ -53633,7 +49594,6 @@ filegroup(
         "lib/systemd/system/user@0.service.d/10-login-barrier.conf",
         "lib/systemd/system/veritysetup.target",
         "lib/systemd/system/veritysetup-pre.target",
-        "lib/systemd/system/x11-common.service",
         "lib/systemd/systemd",
         "lib/systemd/systemd-ac-power",
         "lib/systemd/systemd-backlight",
@@ -53669,7 +49629,6 @@ filegroup(
         "lib/systemd/systemd-socket-proxyd",
         "lib/systemd/systemd-sulogin-shell",
         "lib/systemd/systemd-sysctl",
-        "lib/systemd/systemd-sysroot-fstab-check",
         "lib/systemd/systemd-sysv-install",
         "lib/systemd/systemd-time-wait-sync",
         "lib/systemd/systemd-timedated",
@@ -53700,9 +49659,7 @@ filegroup(
         "usr/bin/systemd-run",
         "usr/bin/systemd-socket-activate",
         "usr/bin/systemd-stdio-bridge",
-        "usr/bin/systemd-umount",
         "usr/bin/timedatectl",
-        "usr/lib/environment.d/99-environment.conf",
         "usr/lib/kernel/install.conf",
         "usr/lib/kernel/install.d/50-depmod.install",
         "usr/lib/kernel/install.d/85-initrd.install",
@@ -53792,7 +49749,6 @@ filegroup(
         "usr/share/bash-completion/completions/timedatectl",
         "usr/share/bug/systemd/control",
         "usr/share/bug/systemd/script",
-        "usr/share/dbus-1/services/org.freedesktop.systemd1.service",
         "usr/share/dbus-1/system.d/org.freedesktop.hostname1.conf",
         "usr/share/dbus-1/system.d/org.freedesktop.locale1.conf",
         "usr/share/dbus-1/system.d/org.freedesktop.login1.conf",
@@ -53876,7 +49832,6 @@ filegroup(
         "usr/share/man/man1/systemd-detect-virt.1.gz",
         "usr/share/man/man1/systemd-escape.1.gz",
         "usr/share/man/man1/systemd-firstboot.1.gz",
-        "usr/share/man/man1/systemd-firstboot.service.1.gz",
         "usr/share/man/man1/systemd-id128.1.gz",
         "usr/share/man/man1/systemd-inhibit.1.gz",
         "usr/share/man/man1/systemd-machine-id-setup.1.gz",
@@ -53888,27 +49843,20 @@ filegroup(
         "usr/share/man/man1/systemd-socket-activate.1.gz",
         "usr/share/man/man1/systemd-stdio-bridge.1.gz",
         "usr/share/man/man1/systemd-tty-ask-password-agent.1.gz",
-        "usr/share/man/man1/systemd-umount.1.gz",
         "usr/share/man/man1/timedatectl.1.gz",
         "usr/share/man/man5/binfmt.d.5.gz",
         "usr/share/man/man5/dnssec-trust-anchors.d.5.gz",
         "usr/share/man/man5/environment.d.5.gz",
-        "usr/share/man/man5/extension-release.5.gz",
         "usr/share/man/man5/hostname.5.gz",
-        "usr/share/man/man5/initrd-release.5.gz",
         "usr/share/man/man5/integritytab.5.gz",
         "usr/share/man/man5/journald.conf.5.gz",
-        "usr/share/man/man5/journald.conf.d.5.gz",
-        "usr/share/man/man5/journald@.conf.5.gz",
         "usr/share/man/man5/locale.conf.5.gz",
         "usr/share/man/man5/localtime.5.gz",
         "usr/share/man/man5/logind.conf.5.gz",
-        "usr/share/man/man5/logind.conf.d.5.gz",
         "usr/share/man/man5/machine-id.5.gz",
         "usr/share/man/man5/machine-info.5.gz",
         "usr/share/man/man5/modules-load.d.5.gz",
         "usr/share/man/man5/networkd.conf.5.gz",
-        "usr/share/man/man5/networkd.conf.d.5.gz",
         "usr/share/man/man5/org.freedesktop.LogControl1.5.gz",
         "usr/share/man/man5/org.freedesktop.hostname1.5.gz",
         "usr/share/man/man5/org.freedesktop.import1.5.gz",
@@ -53921,22 +49869,17 @@ filegroup(
         "usr/share/man/man5/org.freedesktop.timedate1.5.gz",
         "usr/share/man/man5/os-release.5.gz",
         "usr/share/man/man5/pstore.conf.5.gz",
-        "usr/share/man/man5/pstore.conf.d.5.gz",
         "usr/share/man/man5/repart.d.5.gz",
-        "usr/share/man/man5/sleep.conf.d.5.gz",
         "usr/share/man/man5/sysctl.d.5.gz",
-        "usr/share/man/man5/system.conf.d.5.gz",
         "usr/share/man/man5/systemd.automount.5.gz",
         "usr/share/man/man5/systemd.device.5.gz",
         "usr/share/man/man5/systemd.dnssd.5.gz",
         "usr/share/man/man5/systemd.exec.5.gz",
         "usr/share/man/man5/systemd.kill.5.gz",
         "usr/share/man/man5/systemd.mount.5.gz",
-        "usr/share/man/man5/systemd.negative.5.gz",
         "usr/share/man/man5/systemd.netdev.5.gz",
         "usr/share/man/man5/systemd.network.5.gz",
         "usr/share/man/man5/systemd.path.5.gz",
-        "usr/share/man/man5/systemd.positive.5.gz",
         "usr/share/man/man5/systemd.preset.5.gz",
         "usr/share/man/man5/systemd.resource-control.5.gz",
         "usr/share/man/man5/systemd.scope.5.gz",
@@ -53949,19 +49892,14 @@ filegroup(
         "usr/share/man/man5/systemd.unit.5.gz",
         "usr/share/man/man5/systemd-sleep.conf.5.gz",
         "usr/share/man/man5/systemd-system.conf.5.gz",
-        "usr/share/man/man5/systemd-user.conf.5.gz",
-        "usr/share/man/man5/systemd-user-runtime-dir.5.gz",
         "usr/share/man/man5/sysusers.d.5.gz",
         "usr/share/man/man5/tmpfiles.d.5.gz",
-        "usr/share/man/man5/user.conf.d.5.gz",
-        "usr/share/man/man5/user-runtime-dir@.service.5.gz",
         "usr/share/man/man5/user@.service.5.gz",
         "usr/share/man/man5/veritytab.5.gz",
         "usr/share/man/man7/bootup.7.gz",
         "usr/share/man/man7/daemon.7.gz",
         "usr/share/man/man7/file-hierarchy.7.gz",
         "usr/share/man/man7/kernel-command-line.7.gz",
-        "usr/share/man/man7/sd-stub.7.gz",
         "usr/share/man/man7/systemd.directives.7.gz",
         "usr/share/man/man7/systemd.environment-generator.7.gz",
         "usr/share/man/man7/systemd.generator.7.gz",
@@ -53974,132 +49912,61 @@ filegroup(
         "usr/share/man/man7/systemd.system-credentials.7.gz",
         "usr/share/man/man7/systemd.time.7.gz",
         "usr/share/man/man7/systemd-stub.7.gz",
-        "usr/share/man/man8/30-systemd-environment-d-generator.8.gz",
         "usr/share/man/man8/kernel-install.8.gz",
-        "usr/share/man/man8/rc-local.service.8.gz",
-        "usr/share/man/man8/systemd-ask-password-console.path.8.gz",
         "usr/share/man/man8/systemd-ask-password-console.service.8.gz",
-        "usr/share/man/man8/systemd-ask-password-wall.path.8.gz",
-        "usr/share/man/man8/systemd-ask-password-wall.service.8.gz",
-        "usr/share/man/man8/systemd-backlight.8.gz",
         "usr/share/man/man8/systemd-backlight@.service.8.gz",
-        "usr/share/man/man8/systemd-binfmt.8.gz",
         "usr/share/man/man8/systemd-binfmt.service.8.gz",
-        "usr/share/man/man8/systemd-boot-check-no-failures.8.gz",
         "usr/share/man/man8/systemd-boot-check-no-failures.service.8.gz",
-        "usr/share/man/man8/systemd-cryptsetup.8.gz",
         "usr/share/man/man8/systemd-cryptsetup-generator.8.gz",
         "usr/share/man/man8/systemd-cryptsetup@.service.8.gz",
         "usr/share/man/man8/systemd-debug-generator.8.gz",
         "usr/share/man/man8/systemd-environment-d-generator.8.gz",
-        "usr/share/man/man8/systemd-fsck.8.gz",
-        "usr/share/man/man8/systemd-fsck-root.service.8.gz",
-        "usr/share/man/man8/systemd-fsck-usr.service.8.gz",
         "usr/share/man/man8/systemd-fsck@.service.8.gz",
-        "usr/share/man/man8/systemd-fsckd.8.gz",
         "usr/share/man/man8/systemd-fsckd.service.8.gz",
-        "usr/share/man/man8/systemd-fsckd.socket.8.gz",
         "usr/share/man/man8/systemd-fstab-generator.8.gz",
         "usr/share/man/man8/systemd-getty-generator.8.gz",
         "usr/share/man/man8/systemd-gpt-auto-generator.8.gz",
-        "usr/share/man/man8/systemd-growfs.8.gz",
-        "usr/share/man/man8/systemd-growfs-root.service.8.gz",
-        "usr/share/man/man8/systemd-growfs@.service.8.gz",
         "usr/share/man/man8/systemd-halt.service.8.gz",
-        "usr/share/man/man8/systemd-hibernate.service.8.gz",
-        "usr/share/man/man8/systemd-hibernate-resume.8.gz",
         "usr/share/man/man8/systemd-hibernate-resume-generator.8.gz",
         "usr/share/man/man8/systemd-hibernate-resume@.service.8.gz",
-        "usr/share/man/man8/systemd-hostnamed.8.gz",
         "usr/share/man/man8/systemd-hostnamed.service.8.gz",
-        "usr/share/man/man8/systemd-hybrid-sleep.service.8.gz",
-        "usr/share/man/man8/systemd-importd.8.gz",
         "usr/share/man/man8/systemd-importd.service.8.gz",
-        "usr/share/man/man8/systemd-initctl.8.gz",
         "usr/share/man/man8/systemd-initctl.service.8.gz",
-        "usr/share/man/man8/systemd-initctl.socket.8.gz",
-        "usr/share/man/man8/systemd-integritysetup.8.gz",
         "usr/share/man/man8/systemd-integritysetup-generator.8.gz",
         "usr/share/man/man8/systemd-integritysetup@.service.8.gz",
-        "usr/share/man/man8/systemd-journald.8.gz",
         "usr/share/man/man8/systemd-journald.service.8.gz",
-        "usr/share/man/man8/systemd-journald.socket.8.gz",
-        "usr/share/man/man8/systemd-journald-audit.socket.8.gz",
-        "usr/share/man/man8/systemd-journald-dev-log.socket.8.gz",
-        "usr/share/man/man8/systemd-journald-varlink@.socket.8.gz",
-        "usr/share/man/man8/systemd-journald@.service.8.gz",
-        "usr/share/man/man8/systemd-journald@.socket.8.gz",
-        "usr/share/man/man8/systemd-kexec.service.8.gz",
-        "usr/share/man/man8/systemd-localed.8.gz",
         "usr/share/man/man8/systemd-localed.service.8.gz",
-        "usr/share/man/man8/systemd-logind.8.gz",
         "usr/share/man/man8/systemd-logind.service.8.gz",
         "usr/share/man/man8/systemd-machine-id-commit.service.8.gz",
-        "usr/share/man/man8/systemd-makefs.8.gz",
         "usr/share/man/man8/systemd-makefs@.service.8.gz",
-        "usr/share/man/man8/systemd-mkswap@.service.8.gz",
-        "usr/share/man/man8/systemd-modules-load.8.gz",
         "usr/share/man/man8/systemd-modules-load.service.8.gz",
-        "usr/share/man/man8/systemd-network-generator.8.gz",
         "usr/share/man/man8/systemd-network-generator.service.8.gz",
-        "usr/share/man/man8/systemd-networkd.8.gz",
         "usr/share/man/man8/systemd-networkd.service.8.gz",
-        "usr/share/man/man8/systemd-networkd-wait-online.8.gz",
         "usr/share/man/man8/systemd-networkd-wait-online.service.8.gz",
-        "usr/share/man/man8/systemd-networkd-wait-online@.service.8.gz",
-        "usr/share/man/man8/systemd-pcrphase.8.gz",
         "usr/share/man/man8/systemd-pcrphase.service.8.gz",
-        "usr/share/man/man8/systemd-pcrphase-initrd.service.8.gz",
-        "usr/share/man/man8/systemd-pcrphase-sysinit.service.8.gz",
-        "usr/share/man/man8/systemd-poweroff.service.8.gz",
-        "usr/share/man/man8/systemd-pstore.8.gz",
         "usr/share/man/man8/systemd-pstore.service.8.gz",
-        "usr/share/man/man8/systemd-quotacheck.8.gz",
         "usr/share/man/man8/systemd-quotacheck.service.8.gz",
-        "usr/share/man/man8/systemd-random-seed.8.gz",
         "usr/share/man/man8/systemd-random-seed.service.8.gz",
         "usr/share/man/man8/systemd-rc-local-generator.8.gz",
-        "usr/share/man/man8/systemd-reboot.service.8.gz",
-        "usr/share/man/man8/systemd-remount-fs.8.gz",
         "usr/share/man/man8/systemd-remount-fs.service.8.gz",
         "usr/share/man/man8/systemd-repart.8.gz",
-        "usr/share/man/man8/systemd-repart.service.8.gz",
-        "usr/share/man/man8/systemd-rfkill.8.gz",
         "usr/share/man/man8/systemd-rfkill.service.8.gz",
-        "usr/share/man/man8/systemd-rfkill.socket.8.gz",
         "usr/share/man/man8/systemd-run-generator.8.gz",
-        "usr/share/man/man8/systemd-shutdown.8.gz",
-        "usr/share/man/man8/systemd-sleep.8.gz",
         "usr/share/man/man8/systemd-socket-proxyd.8.gz",
         "usr/share/man/man8/systemd-suspend.service.8.gz",
-        "usr/share/man/man8/systemd-suspend-then-hibernate.service.8.gz",
-        "usr/share/man/man8/systemd-sysctl.8.gz",
         "usr/share/man/man8/systemd-sysctl.service.8.gz",
         "usr/share/man/man8/systemd-sysext.8.gz",
-        "usr/share/man/man8/systemd-sysext.service.8.gz",
         "usr/share/man/man8/systemd-system-update-generator.8.gz",
         "usr/share/man/man8/systemd-sysusers.8.gz",
-        "usr/share/man/man8/systemd-sysusers.service.8.gz",
         "usr/share/man/man8/systemd-sysv-generator.8.gz",
-        "usr/share/man/man8/systemd-time-wait-sync.8.gz",
         "usr/share/man/man8/systemd-time-wait-sync.service.8.gz",
-        "usr/share/man/man8/systemd-timedated.8.gz",
         "usr/share/man/man8/systemd-timedated.service.8.gz",
         "usr/share/man/man8/systemd-tmpfiles.8.gz",
-        "usr/share/man/man8/systemd-tmpfiles-clean.service.8.gz",
-        "usr/share/man/man8/systemd-tmpfiles-clean.timer.8.gz",
-        "usr/share/man/man8/systemd-tmpfiles-setup.service.8.gz",
-        "usr/share/man/man8/systemd-tmpfiles-setup-dev.service.8.gz",
         "usr/share/man/man8/systemd-udev-settle.service.8.gz",
-        "usr/share/man/man8/systemd-update-utmp.8.gz",
         "usr/share/man/man8/systemd-update-utmp.service.8.gz",
-        "usr/share/man/man8/systemd-update-utmp-runlevel.service.8.gz",
-        "usr/share/man/man8/systemd-user-sessions.8.gz",
         "usr/share/man/man8/systemd-user-sessions.service.8.gz",
-        "usr/share/man/man8/systemd-veritysetup.8.gz",
         "usr/share/man/man8/systemd-veritysetup-generator.8.gz",
         "usr/share/man/man8/systemd-veritysetup@.service.8.gz",
-        "usr/share/man/man8/systemd-volatile-root.8.gz",
         "usr/share/man/man8/systemd-volatile-root.service.8.gz",
         "usr/share/man/man8/systemd-xdg-autostart-generator.8.gz",
         "usr/share/pkgconfig/systemd.pc",
@@ -54146,37 +50013,25 @@ filegroup(
         ":libsystemd0-filegroup",
         ":mount-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "systemd-sysv-filegroup",
     srcs = [
-        "sbin/halt",
-        "sbin/init",
-        "sbin/poweroff",
-        "sbin/reboot",
-        "sbin/runlevel",
-        "sbin/shutdown",
-        "sbin/telinit",
         "usr/share/doc/systemd-sysv/NEWS.Debian.gz",
         "usr/share/doc/systemd-sysv/changelog.Debian.gz",
         "usr/share/doc/systemd-sysv/copyright",
         "usr/share/man/man1/init.1.gz",
         "usr/share/man/man8/halt.8.gz",
-        "usr/share/man/man8/poweroff.8.gz",
-        "usr/share/man/man8/reboot.8.gz",
         "usr/share/man/man8/runlevel.8.gz",
         "usr/share/man/man8/shutdown.8.gz",
         "usr/share/man/man8/telinit.8.gz",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "sysvinit-utils-filegroup",
     srcs = [
-        "bin/pidof",
         "lib/init/init-d-script",
         "lib/init/vars.sh",
         "lib/lsb/init-functions",
@@ -54191,14 +50046,12 @@ filegroup(
         "usr/share/man/man8/pidof.8.gz",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "tar-filegroup",
     srcs = [
         "bin/tar",
-        "etc/rmt",
         "usr/lib/mime/packages/tar",
         "usr/sbin/rmt-tar",
         "usr/sbin/tarcat",
@@ -54252,7 +50105,6 @@ filegroup(
         "usr/share/man/man1/tarcat.1.gz",
         "usr/share/man/man8/rmt-tar.8.gz",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -54268,7 +50120,6 @@ filegroup(
         "usr/share/zoneinfo/Africa/Addis_Ababa",
         "usr/share/zoneinfo/Africa/Algiers",
         "usr/share/zoneinfo/Africa/Asmara",
-        "usr/share/zoneinfo/Africa/Asmera",
         "usr/share/zoneinfo/Africa/Bamako",
         "usr/share/zoneinfo/Africa/Bangui",
         "usr/share/zoneinfo/Africa/Banjul",
@@ -54313,7 +50164,6 @@ filegroup(
         "usr/share/zoneinfo/Africa/Ouagadougou",
         "usr/share/zoneinfo/Africa/Porto-Novo",
         "usr/share/zoneinfo/Africa/Sao_Tome",
-        "usr/share/zoneinfo/Africa/Timbuktu",
         "usr/share/zoneinfo/Africa/Tripoli",
         "usr/share/zoneinfo/Africa/Tunis",
         "usr/share/zoneinfo/Africa/Windhoek",
@@ -54324,7 +50174,6 @@ filegroup(
         "usr/share/zoneinfo/America/Araguaina",
         "usr/share/zoneinfo/America/Argentina/Buenos_Aires",
         "usr/share/zoneinfo/America/Argentina/Catamarca",
-        "usr/share/zoneinfo/America/Argentina/ComodRivadavia",
         "usr/share/zoneinfo/America/Argentina/Cordoba",
         "usr/share/zoneinfo/America/Argentina/Jujuy",
         "usr/share/zoneinfo/America/Argentina/La_Rioja",
@@ -54338,7 +50187,6 @@ filegroup(
         "usr/share/zoneinfo/America/Aruba",
         "usr/share/zoneinfo/America/Asuncion",
         "usr/share/zoneinfo/America/Atikokan",
-        "usr/share/zoneinfo/America/Atka",
         "usr/share/zoneinfo/America/Bahia",
         "usr/share/zoneinfo/America/Bahia_Banderas",
         "usr/share/zoneinfo/America/Barbados",
@@ -54348,19 +50196,15 @@ filegroup(
         "usr/share/zoneinfo/America/Boa_Vista",
         "usr/share/zoneinfo/America/Bogota",
         "usr/share/zoneinfo/America/Boise",
-        "usr/share/zoneinfo/America/Buenos_Aires",
         "usr/share/zoneinfo/America/Cambridge_Bay",
         "usr/share/zoneinfo/America/Campo_Grande",
         "usr/share/zoneinfo/America/Cancun",
         "usr/share/zoneinfo/America/Caracas",
-        "usr/share/zoneinfo/America/Catamarca",
         "usr/share/zoneinfo/America/Cayenne",
         "usr/share/zoneinfo/America/Cayman",
         "usr/share/zoneinfo/America/Chicago",
         "usr/share/zoneinfo/America/Chihuahua",
         "usr/share/zoneinfo/America/Ciudad_Juarez",
-        "usr/share/zoneinfo/America/Coral_Harbour",
-        "usr/share/zoneinfo/America/Cordoba",
         "usr/share/zoneinfo/America/Costa_Rica",
         "usr/share/zoneinfo/America/Creston",
         "usr/share/zoneinfo/America/Cuiaba",
@@ -54374,12 +50218,9 @@ filegroup(
         "usr/share/zoneinfo/America/Edmonton",
         "usr/share/zoneinfo/America/Eirunepe",
         "usr/share/zoneinfo/America/El_Salvador",
-        "usr/share/zoneinfo/America/Ensenada",
         "usr/share/zoneinfo/America/Fort_Nelson",
-        "usr/share/zoneinfo/America/Fort_Wayne",
         "usr/share/zoneinfo/America/Fortaleza",
         "usr/share/zoneinfo/America/Glace_Bay",
-        "usr/share/zoneinfo/America/Godthab",
         "usr/share/zoneinfo/America/Goose_Bay",
         "usr/share/zoneinfo/America/Grand_Turk",
         "usr/share/zoneinfo/America/Grenada",
@@ -54398,29 +50239,21 @@ filegroup(
         "usr/share/zoneinfo/America/Indiana/Vevay",
         "usr/share/zoneinfo/America/Indiana/Vincennes",
         "usr/share/zoneinfo/America/Indiana/Winamac",
-        "usr/share/zoneinfo/America/Indianapolis",
         "usr/share/zoneinfo/America/Inuvik",
         "usr/share/zoneinfo/America/Iqaluit",
         "usr/share/zoneinfo/America/Jamaica",
-        "usr/share/zoneinfo/America/Jujuy",
         "usr/share/zoneinfo/America/Juneau",
         "usr/share/zoneinfo/America/Kentucky/Louisville",
         "usr/share/zoneinfo/America/Kentucky/Monticello",
-        "usr/share/zoneinfo/America/Knox_IN",
-        "usr/share/zoneinfo/America/Kralendijk",
         "usr/share/zoneinfo/America/La_Paz",
         "usr/share/zoneinfo/America/Lima",
         "usr/share/zoneinfo/America/Los_Angeles",
-        "usr/share/zoneinfo/America/Louisville",
-        "usr/share/zoneinfo/America/Lower_Princes",
         "usr/share/zoneinfo/America/Maceio",
         "usr/share/zoneinfo/America/Managua",
         "usr/share/zoneinfo/America/Manaus",
-        "usr/share/zoneinfo/America/Marigot",
         "usr/share/zoneinfo/America/Martinique",
         "usr/share/zoneinfo/America/Matamoros",
         "usr/share/zoneinfo/America/Mazatlan",
-        "usr/share/zoneinfo/America/Mendoza",
         "usr/share/zoneinfo/America/Menominee",
         "usr/share/zoneinfo/America/Merida",
         "usr/share/zoneinfo/America/Metlakatla",
@@ -54429,11 +50262,9 @@ filegroup(
         "usr/share/zoneinfo/America/Moncton",
         "usr/share/zoneinfo/America/Monterrey",
         "usr/share/zoneinfo/America/Montevideo",
-        "usr/share/zoneinfo/America/Montreal",
         "usr/share/zoneinfo/America/Montserrat",
         "usr/share/zoneinfo/America/Nassau",
         "usr/share/zoneinfo/America/New_York",
-        "usr/share/zoneinfo/America/Nipigon",
         "usr/share/zoneinfo/America/Nome",
         "usr/share/zoneinfo/America/Noronha",
         "usr/share/zoneinfo/America/North_Dakota/Beulah",
@@ -54442,31 +50273,24 @@ filegroup(
         "usr/share/zoneinfo/America/Nuuk",
         "usr/share/zoneinfo/America/Ojinaga",
         "usr/share/zoneinfo/America/Panama",
-        "usr/share/zoneinfo/America/Pangnirtung",
         "usr/share/zoneinfo/America/Paramaribo",
         "usr/share/zoneinfo/America/Phoenix",
         "usr/share/zoneinfo/America/Port-au-Prince",
         "usr/share/zoneinfo/America/Port_of_Spain",
-        "usr/share/zoneinfo/America/Porto_Acre",
         "usr/share/zoneinfo/America/Porto_Velho",
         "usr/share/zoneinfo/America/Puerto_Rico",
         "usr/share/zoneinfo/America/Punta_Arenas",
-        "usr/share/zoneinfo/America/Rainy_River",
         "usr/share/zoneinfo/America/Rankin_Inlet",
         "usr/share/zoneinfo/America/Recife",
         "usr/share/zoneinfo/America/Regina",
         "usr/share/zoneinfo/America/Resolute",
         "usr/share/zoneinfo/America/Rio_Branco",
-        "usr/share/zoneinfo/America/Rosario",
-        "usr/share/zoneinfo/America/Santa_Isabel",
         "usr/share/zoneinfo/America/Santarem",
         "usr/share/zoneinfo/America/Santiago",
         "usr/share/zoneinfo/America/Santo_Domingo",
         "usr/share/zoneinfo/America/Sao_Paulo",
         "usr/share/zoneinfo/America/Scoresbysund",
-        "usr/share/zoneinfo/America/Shiprock",
         "usr/share/zoneinfo/America/Sitka",
-        "usr/share/zoneinfo/America/St_Barthelemy",
         "usr/share/zoneinfo/America/St_Johns",
         "usr/share/zoneinfo/America/St_Kitts",
         "usr/share/zoneinfo/America/St_Lucia",
@@ -54475,16 +50299,13 @@ filegroup(
         "usr/share/zoneinfo/America/Swift_Current",
         "usr/share/zoneinfo/America/Tegucigalpa",
         "usr/share/zoneinfo/America/Thule",
-        "usr/share/zoneinfo/America/Thunder_Bay",
         "usr/share/zoneinfo/America/Tijuana",
         "usr/share/zoneinfo/America/Toronto",
         "usr/share/zoneinfo/America/Tortola",
         "usr/share/zoneinfo/America/Vancouver",
-        "usr/share/zoneinfo/America/Virgin",
         "usr/share/zoneinfo/America/Whitehorse",
         "usr/share/zoneinfo/America/Winnipeg",
         "usr/share/zoneinfo/America/Yakutat",
-        "usr/share/zoneinfo/America/Yellowknife",
         "usr/share/zoneinfo/Antarctica/Casey",
         "usr/share/zoneinfo/Antarctica/Davis",
         "usr/share/zoneinfo/Antarctica/DumontDUrville",
@@ -54493,11 +50314,9 @@ filegroup(
         "usr/share/zoneinfo/Antarctica/McMurdo",
         "usr/share/zoneinfo/Antarctica/Palmer",
         "usr/share/zoneinfo/Antarctica/Rothera",
-        "usr/share/zoneinfo/Antarctica/South_Pole",
         "usr/share/zoneinfo/Antarctica/Syowa",
         "usr/share/zoneinfo/Antarctica/Troll",
         "usr/share/zoneinfo/Antarctica/Vostok",
-        "usr/share/zoneinfo/Arctic/Longyearbyen",
         "usr/share/zoneinfo/Asia/Aden",
         "usr/share/zoneinfo/Asia/Almaty",
         "usr/share/zoneinfo/Asia/Amman",
@@ -54505,7 +50324,6 @@ filegroup(
         "usr/share/zoneinfo/Asia/Aqtau",
         "usr/share/zoneinfo/Asia/Aqtobe",
         "usr/share/zoneinfo/Asia/Ashgabat",
-        "usr/share/zoneinfo/Asia/Ashkhabad",
         "usr/share/zoneinfo/Asia/Atyrau",
         "usr/share/zoneinfo/Asia/Baghdad",
         "usr/share/zoneinfo/Asia/Bahrain",
@@ -54515,13 +50333,8 @@ filegroup(
         "usr/share/zoneinfo/Asia/Beirut",
         "usr/share/zoneinfo/Asia/Bishkek",
         "usr/share/zoneinfo/Asia/Brunei",
-        "usr/share/zoneinfo/Asia/Calcutta",
         "usr/share/zoneinfo/Asia/Chita",
-        "usr/share/zoneinfo/Asia/Choibalsan",
-        "usr/share/zoneinfo/Asia/Chongqing",
-        "usr/share/zoneinfo/Asia/Chungking",
         "usr/share/zoneinfo/Asia/Colombo",
-        "usr/share/zoneinfo/Asia/Dacca",
         "usr/share/zoneinfo/Asia/Damascus",
         "usr/share/zoneinfo/Asia/Dhaka",
         "usr/share/zoneinfo/Asia/Dili",
@@ -54529,29 +50342,24 @@ filegroup(
         "usr/share/zoneinfo/Asia/Dushanbe",
         "usr/share/zoneinfo/Asia/Famagusta",
         "usr/share/zoneinfo/Asia/Gaza",
-        "usr/share/zoneinfo/Asia/Harbin",
         "usr/share/zoneinfo/Asia/Hebron",
         "usr/share/zoneinfo/Asia/Ho_Chi_Minh",
         "usr/share/zoneinfo/Asia/Hong_Kong",
         "usr/share/zoneinfo/Asia/Hovd",
         "usr/share/zoneinfo/Asia/Irkutsk",
-        "usr/share/zoneinfo/Asia/Istanbul",
         "usr/share/zoneinfo/Asia/Jakarta",
         "usr/share/zoneinfo/Asia/Jayapura",
         "usr/share/zoneinfo/Asia/Jerusalem",
         "usr/share/zoneinfo/Asia/Kabul",
         "usr/share/zoneinfo/Asia/Kamchatka",
         "usr/share/zoneinfo/Asia/Karachi",
-        "usr/share/zoneinfo/Asia/Kashgar",
         "usr/share/zoneinfo/Asia/Kathmandu",
-        "usr/share/zoneinfo/Asia/Katmandu",
         "usr/share/zoneinfo/Asia/Khandyga",
         "usr/share/zoneinfo/Asia/Kolkata",
         "usr/share/zoneinfo/Asia/Krasnoyarsk",
         "usr/share/zoneinfo/Asia/Kuala_Lumpur",
         "usr/share/zoneinfo/Asia/Kuching",
         "usr/share/zoneinfo/Asia/Kuwait",
-        "usr/share/zoneinfo/Asia/Macao",
         "usr/share/zoneinfo/Asia/Macau",
         "usr/share/zoneinfo/Asia/Magadan",
         "usr/share/zoneinfo/Asia/Makassar",
@@ -54568,9 +50376,7 @@ filegroup(
         "usr/share/zoneinfo/Asia/Qatar",
         "usr/share/zoneinfo/Asia/Qostanay",
         "usr/share/zoneinfo/Asia/Qyzylorda",
-        "usr/share/zoneinfo/Asia/Rangoon",
         "usr/share/zoneinfo/Asia/Riyadh",
-        "usr/share/zoneinfo/Asia/Saigon",
         "usr/share/zoneinfo/Asia/Sakhalin",
         "usr/share/zoneinfo/Asia/Samarkand",
         "usr/share/zoneinfo/Asia/Seoul",
@@ -54581,14 +50387,10 @@ filegroup(
         "usr/share/zoneinfo/Asia/Tashkent",
         "usr/share/zoneinfo/Asia/Tbilisi",
         "usr/share/zoneinfo/Asia/Tehran",
-        "usr/share/zoneinfo/Asia/Tel_Aviv",
-        "usr/share/zoneinfo/Asia/Thimbu",
         "usr/share/zoneinfo/Asia/Thimphu",
         "usr/share/zoneinfo/Asia/Tokyo",
         "usr/share/zoneinfo/Asia/Tomsk",
-        "usr/share/zoneinfo/Asia/Ujung_Pandang",
         "usr/share/zoneinfo/Asia/Ulaanbaatar",
-        "usr/share/zoneinfo/Asia/Ulan_Bator",
         "usr/share/zoneinfo/Asia/Urumqi",
         "usr/share/zoneinfo/Asia/Ust-Nera",
         "usr/share/zoneinfo/Asia/Vientiane",
@@ -54601,61 +50403,29 @@ filegroup(
         "usr/share/zoneinfo/Atlantic/Bermuda",
         "usr/share/zoneinfo/Atlantic/Canary",
         "usr/share/zoneinfo/Atlantic/Cape_Verde",
-        "usr/share/zoneinfo/Atlantic/Faeroe",
         "usr/share/zoneinfo/Atlantic/Faroe",
-        "usr/share/zoneinfo/Atlantic/Jan_Mayen",
         "usr/share/zoneinfo/Atlantic/Madeira",
         "usr/share/zoneinfo/Atlantic/Reykjavik",
         "usr/share/zoneinfo/Atlantic/South_Georgia",
         "usr/share/zoneinfo/Atlantic/St_Helena",
         "usr/share/zoneinfo/Atlantic/Stanley",
-        "usr/share/zoneinfo/Australia/ACT",
         "usr/share/zoneinfo/Australia/Adelaide",
         "usr/share/zoneinfo/Australia/Brisbane",
         "usr/share/zoneinfo/Australia/Broken_Hill",
-        "usr/share/zoneinfo/Australia/Canberra",
-        "usr/share/zoneinfo/Australia/Currie",
         "usr/share/zoneinfo/Australia/Darwin",
         "usr/share/zoneinfo/Australia/Eucla",
         "usr/share/zoneinfo/Australia/Hobart",
-        "usr/share/zoneinfo/Australia/LHI",
         "usr/share/zoneinfo/Australia/Lindeman",
         "usr/share/zoneinfo/Australia/Lord_Howe",
         "usr/share/zoneinfo/Australia/Melbourne",
-        "usr/share/zoneinfo/Australia/NSW",
-        "usr/share/zoneinfo/Australia/North",
         "usr/share/zoneinfo/Australia/Perth",
-        "usr/share/zoneinfo/Australia/Queensland",
-        "usr/share/zoneinfo/Australia/South",
         "usr/share/zoneinfo/Australia/Sydney",
-        "usr/share/zoneinfo/Australia/Tasmania",
-        "usr/share/zoneinfo/Australia/Victoria",
-        "usr/share/zoneinfo/Australia/West",
-        "usr/share/zoneinfo/Australia/Yancowinna",
-        "usr/share/zoneinfo/Brazil/Acre",
-        "usr/share/zoneinfo/Brazil/DeNoronha",
-        "usr/share/zoneinfo/Brazil/East",
-        "usr/share/zoneinfo/Brazil/West",
         "usr/share/zoneinfo/CET",
         "usr/share/zoneinfo/CST6CDT",
-        "usr/share/zoneinfo/Canada/Atlantic",
-        "usr/share/zoneinfo/Canada/Central",
-        "usr/share/zoneinfo/Canada/Eastern",
-        "usr/share/zoneinfo/Canada/Mountain",
-        "usr/share/zoneinfo/Canada/Newfoundland",
-        "usr/share/zoneinfo/Canada/Pacific",
-        "usr/share/zoneinfo/Canada/Saskatchewan",
-        "usr/share/zoneinfo/Canada/Yukon",
-        "usr/share/zoneinfo/Chile/Continental",
-        "usr/share/zoneinfo/Chile/EasterIsland",
-        "usr/share/zoneinfo/Cuba",
         "usr/share/zoneinfo/EET",
         "usr/share/zoneinfo/EST",
         "usr/share/zoneinfo/EST5EDT",
-        "usr/share/zoneinfo/Egypt",
-        "usr/share/zoneinfo/Eire",
         "usr/share/zoneinfo/Etc/GMT",
-        "usr/share/zoneinfo/Etc/GMT+0",
         "usr/share/zoneinfo/Etc/GMT+1",
         "usr/share/zoneinfo/Etc/GMT+10",
         "usr/share/zoneinfo/Etc/GMT+11",
@@ -54668,7 +50438,6 @@ filegroup(
         "usr/share/zoneinfo/Etc/GMT+7",
         "usr/share/zoneinfo/Etc/GMT+8",
         "usr/share/zoneinfo/Etc/GMT+9",
-        "usr/share/zoneinfo/Etc/GMT-0",
         "usr/share/zoneinfo/Etc/GMT-1",
         "usr/share/zoneinfo/Etc/GMT-10",
         "usr/share/zoneinfo/Etc/GMT-11",
@@ -54683,24 +50452,16 @@ filegroup(
         "usr/share/zoneinfo/Etc/GMT-7",
         "usr/share/zoneinfo/Etc/GMT-8",
         "usr/share/zoneinfo/Etc/GMT-9",
-        "usr/share/zoneinfo/Etc/GMT0",
-        "usr/share/zoneinfo/Etc/Greenwich",
-        "usr/share/zoneinfo/Etc/UCT",
         "usr/share/zoneinfo/Etc/UTC",
-        "usr/share/zoneinfo/Etc/Universal",
-        "usr/share/zoneinfo/Etc/Zulu",
         "usr/share/zoneinfo/Europe/Amsterdam",
         "usr/share/zoneinfo/Europe/Andorra",
         "usr/share/zoneinfo/Europe/Astrakhan",
         "usr/share/zoneinfo/Europe/Athens",
-        "usr/share/zoneinfo/Europe/Belfast",
         "usr/share/zoneinfo/Europe/Belgrade",
         "usr/share/zoneinfo/Europe/Berlin",
-        "usr/share/zoneinfo/Europe/Bratislava",
         "usr/share/zoneinfo/Europe/Brussels",
         "usr/share/zoneinfo/Europe/Bucharest",
         "usr/share/zoneinfo/Europe/Budapest",
-        "usr/share/zoneinfo/Europe/Busingen",
         "usr/share/zoneinfo/Europe/Chisinau",
         "usr/share/zoneinfo/Europe/Copenhagen",
         "usr/share/zoneinfo/Europe/Dublin",
@@ -54711,7 +50472,6 @@ filegroup(
         "usr/share/zoneinfo/Europe/Istanbul",
         "usr/share/zoneinfo/Europe/Jersey",
         "usr/share/zoneinfo/Europe/Kaliningrad",
-        "usr/share/zoneinfo/Europe/Kiev",
         "usr/share/zoneinfo/Europe/Kirov",
         "usr/share/zoneinfo/Europe/Kyiv",
         "usr/share/zoneinfo/Europe/Lisbon",
@@ -54720,19 +50480,15 @@ filegroup(
         "usr/share/zoneinfo/Europe/Luxembourg",
         "usr/share/zoneinfo/Europe/Madrid",
         "usr/share/zoneinfo/Europe/Malta",
-        "usr/share/zoneinfo/Europe/Mariehamn",
         "usr/share/zoneinfo/Europe/Minsk",
         "usr/share/zoneinfo/Europe/Monaco",
         "usr/share/zoneinfo/Europe/Moscow",
-        "usr/share/zoneinfo/Europe/Nicosia",
         "usr/share/zoneinfo/Europe/Oslo",
         "usr/share/zoneinfo/Europe/Paris",
-        "usr/share/zoneinfo/Europe/Podgorica",
         "usr/share/zoneinfo/Europe/Prague",
         "usr/share/zoneinfo/Europe/Riga",
         "usr/share/zoneinfo/Europe/Rome",
         "usr/share/zoneinfo/Europe/Samara",
-        "usr/share/zoneinfo/Europe/San_Marino",
         "usr/share/zoneinfo/Europe/Sarajevo",
         "usr/share/zoneinfo/Europe/Saratov",
         "usr/share/zoneinfo/Europe/Simferopol",
@@ -54741,29 +50497,16 @@ filegroup(
         "usr/share/zoneinfo/Europe/Stockholm",
         "usr/share/zoneinfo/Europe/Tallinn",
         "usr/share/zoneinfo/Europe/Tirane",
-        "usr/share/zoneinfo/Europe/Tiraspol",
         "usr/share/zoneinfo/Europe/Ulyanovsk",
-        "usr/share/zoneinfo/Europe/Uzhgorod",
         "usr/share/zoneinfo/Europe/Vaduz",
-        "usr/share/zoneinfo/Europe/Vatican",
         "usr/share/zoneinfo/Europe/Vienna",
         "usr/share/zoneinfo/Europe/Vilnius",
         "usr/share/zoneinfo/Europe/Volgograd",
         "usr/share/zoneinfo/Europe/Warsaw",
         "usr/share/zoneinfo/Europe/Zagreb",
-        "usr/share/zoneinfo/Europe/Zaporozhye",
         "usr/share/zoneinfo/Europe/Zurich",
         "usr/share/zoneinfo/Factory",
-        "usr/share/zoneinfo/GB",
-        "usr/share/zoneinfo/GB-Eire",
-        "usr/share/zoneinfo/GMT",
-        "usr/share/zoneinfo/GMT+0",
-        "usr/share/zoneinfo/GMT-0",
-        "usr/share/zoneinfo/GMT0",
-        "usr/share/zoneinfo/Greenwich",
         "usr/share/zoneinfo/HST",
-        "usr/share/zoneinfo/Hongkong",
-        "usr/share/zoneinfo/Iceland",
         "usr/share/zoneinfo/Indian/Antananarivo",
         "usr/share/zoneinfo/Indian/Chagos",
         "usr/share/zoneinfo/Indian/Christmas",
@@ -54775,22 +50518,9 @@ filegroup(
         "usr/share/zoneinfo/Indian/Mauritius",
         "usr/share/zoneinfo/Indian/Mayotte",
         "usr/share/zoneinfo/Indian/Reunion",
-        "usr/share/zoneinfo/Iran",
-        "usr/share/zoneinfo/Israel",
-        "usr/share/zoneinfo/Jamaica",
-        "usr/share/zoneinfo/Japan",
-        "usr/share/zoneinfo/Kwajalein",
-        "usr/share/zoneinfo/Libya",
         "usr/share/zoneinfo/MET",
         "usr/share/zoneinfo/MST",
         "usr/share/zoneinfo/MST7MDT",
-        "usr/share/zoneinfo/Mexico/BajaNorte",
-        "usr/share/zoneinfo/Mexico/BajaSur",
-        "usr/share/zoneinfo/Mexico/General",
-        "usr/share/zoneinfo/NZ",
-        "usr/share/zoneinfo/NZ-CHAT",
-        "usr/share/zoneinfo/Navajo",
-        "usr/share/zoneinfo/PRC",
         "usr/share/zoneinfo/PST8PDT",
         "usr/share/zoneinfo/Pacific/Apia",
         "usr/share/zoneinfo/Pacific/Auckland",
@@ -54799,7 +50529,6 @@ filegroup(
         "usr/share/zoneinfo/Pacific/Chuuk",
         "usr/share/zoneinfo/Pacific/Easter",
         "usr/share/zoneinfo/Pacific/Efate",
-        "usr/share/zoneinfo/Pacific/Enderbury",
         "usr/share/zoneinfo/Pacific/Fakaofo",
         "usr/share/zoneinfo/Pacific/Fiji",
         "usr/share/zoneinfo/Pacific/Funafuti",
@@ -54808,7 +50537,6 @@ filegroup(
         "usr/share/zoneinfo/Pacific/Guadalcanal",
         "usr/share/zoneinfo/Pacific/Guam",
         "usr/share/zoneinfo/Pacific/Honolulu",
-        "usr/share/zoneinfo/Pacific/Johnston",
         "usr/share/zoneinfo/Pacific/Kanton",
         "usr/share/zoneinfo/Pacific/Kiritimati",
         "usr/share/zoneinfo/Pacific/Kosrae",
@@ -54824,98 +50552,23 @@ filegroup(
         "usr/share/zoneinfo/Pacific/Palau",
         "usr/share/zoneinfo/Pacific/Pitcairn",
         "usr/share/zoneinfo/Pacific/Pohnpei",
-        "usr/share/zoneinfo/Pacific/Ponape",
         "usr/share/zoneinfo/Pacific/Port_Moresby",
         "usr/share/zoneinfo/Pacific/Rarotonga",
         "usr/share/zoneinfo/Pacific/Saipan",
-        "usr/share/zoneinfo/Pacific/Samoa",
         "usr/share/zoneinfo/Pacific/Tahiti",
         "usr/share/zoneinfo/Pacific/Tarawa",
         "usr/share/zoneinfo/Pacific/Tongatapu",
-        "usr/share/zoneinfo/Pacific/Truk",
         "usr/share/zoneinfo/Pacific/Wake",
         "usr/share/zoneinfo/Pacific/Wallis",
-        "usr/share/zoneinfo/Pacific/Yap",
-        "usr/share/zoneinfo/Poland",
-        "usr/share/zoneinfo/Portugal",
-        "usr/share/zoneinfo/ROC",
-        "usr/share/zoneinfo/ROK",
-        "usr/share/zoneinfo/Singapore",
-        "usr/share/zoneinfo/Turkey",
-        "usr/share/zoneinfo/UCT",
-        "usr/share/zoneinfo/US/Alaska",
-        "usr/share/zoneinfo/US/Aleutian",
-        "usr/share/zoneinfo/US/Arizona",
-        "usr/share/zoneinfo/US/Central",
-        "usr/share/zoneinfo/US/East-Indiana",
-        "usr/share/zoneinfo/US/Eastern",
-        "usr/share/zoneinfo/US/Hawaii",
-        "usr/share/zoneinfo/US/Indiana-Starke",
-        "usr/share/zoneinfo/US/Michigan",
-        "usr/share/zoneinfo/US/Mountain",
-        "usr/share/zoneinfo/US/Pacific",
-        "usr/share/zoneinfo/US/Samoa",
-        "usr/share/zoneinfo/UTC",
-        "usr/share/zoneinfo/Universal",
-        "usr/share/zoneinfo/W-SU",
         "usr/share/zoneinfo/WET",
-        "usr/share/zoneinfo/Zulu",
         "usr/share/zoneinfo/iso3166.tab",
         "usr/share/zoneinfo/leap-seconds.list",
         "usr/share/zoneinfo/leapseconds",
-        "usr/share/zoneinfo/localtime",
-        "usr/share/zoneinfo/posix/CET",
-        "usr/share/zoneinfo/posix/CST6CDT",
-        "usr/share/zoneinfo/posix/Cuba",
-        "usr/share/zoneinfo/posix/EET",
-        "usr/share/zoneinfo/posix/EST",
-        "usr/share/zoneinfo/posix/EST5EDT",
-        "usr/share/zoneinfo/posix/Egypt",
-        "usr/share/zoneinfo/posix/Eire",
-        "usr/share/zoneinfo/posix/Factory",
-        "usr/share/zoneinfo/posix/GB",
-        "usr/share/zoneinfo/posix/GB-Eire",
-        "usr/share/zoneinfo/posix/GMT",
-        "usr/share/zoneinfo/posix/GMT+0",
-        "usr/share/zoneinfo/posix/GMT-0",
-        "usr/share/zoneinfo/posix/GMT0",
-        "usr/share/zoneinfo/posix/Greenwich",
-        "usr/share/zoneinfo/posix/HST",
-        "usr/share/zoneinfo/posix/Hongkong",
-        "usr/share/zoneinfo/posix/Iceland",
-        "usr/share/zoneinfo/posix/Iran",
-        "usr/share/zoneinfo/posix/Israel",
-        "usr/share/zoneinfo/posix/Jamaica",
-        "usr/share/zoneinfo/posix/Japan",
-        "usr/share/zoneinfo/posix/Kwajalein",
-        "usr/share/zoneinfo/posix/Libya",
-        "usr/share/zoneinfo/posix/MET",
-        "usr/share/zoneinfo/posix/MST",
-        "usr/share/zoneinfo/posix/MST7MDT",
-        "usr/share/zoneinfo/posix/NZ",
-        "usr/share/zoneinfo/posix/NZ-CHAT",
-        "usr/share/zoneinfo/posix/Navajo",
-        "usr/share/zoneinfo/posix/PRC",
-        "usr/share/zoneinfo/posix/PST8PDT",
-        "usr/share/zoneinfo/posix/Poland",
-        "usr/share/zoneinfo/posix/Portugal",
-        "usr/share/zoneinfo/posix/ROC",
-        "usr/share/zoneinfo/posix/ROK",
-        "usr/share/zoneinfo/posix/Singapore",
-        "usr/share/zoneinfo/posix/Turkey",
-        "usr/share/zoneinfo/posix/UCT",
-        "usr/share/zoneinfo/posix/UTC",
-        "usr/share/zoneinfo/posix/Universal",
-        "usr/share/zoneinfo/posix/W-SU",
-        "usr/share/zoneinfo/posix/WET",
-        "usr/share/zoneinfo/posix/Zulu",
-        "usr/share/zoneinfo/posixrules",
         "usr/share/zoneinfo/right/Africa/Abidjan",
         "usr/share/zoneinfo/right/Africa/Accra",
         "usr/share/zoneinfo/right/Africa/Addis_Ababa",
         "usr/share/zoneinfo/right/Africa/Algiers",
         "usr/share/zoneinfo/right/Africa/Asmara",
-        "usr/share/zoneinfo/right/Africa/Asmera",
         "usr/share/zoneinfo/right/Africa/Bamako",
         "usr/share/zoneinfo/right/Africa/Bangui",
         "usr/share/zoneinfo/right/Africa/Banjul",
@@ -54960,7 +50613,6 @@ filegroup(
         "usr/share/zoneinfo/right/Africa/Ouagadougou",
         "usr/share/zoneinfo/right/Africa/Porto-Novo",
         "usr/share/zoneinfo/right/Africa/Sao_Tome",
-        "usr/share/zoneinfo/right/Africa/Timbuktu",
         "usr/share/zoneinfo/right/Africa/Tripoli",
         "usr/share/zoneinfo/right/Africa/Tunis",
         "usr/share/zoneinfo/right/Africa/Windhoek",
@@ -54971,7 +50623,6 @@ filegroup(
         "usr/share/zoneinfo/right/America/Araguaina",
         "usr/share/zoneinfo/right/America/Argentina/Buenos_Aires",
         "usr/share/zoneinfo/right/America/Argentina/Catamarca",
-        "usr/share/zoneinfo/right/America/Argentina/ComodRivadavia",
         "usr/share/zoneinfo/right/America/Argentina/Cordoba",
         "usr/share/zoneinfo/right/America/Argentina/Jujuy",
         "usr/share/zoneinfo/right/America/Argentina/La_Rioja",
@@ -54985,7 +50636,6 @@ filegroup(
         "usr/share/zoneinfo/right/America/Aruba",
         "usr/share/zoneinfo/right/America/Asuncion",
         "usr/share/zoneinfo/right/America/Atikokan",
-        "usr/share/zoneinfo/right/America/Atka",
         "usr/share/zoneinfo/right/America/Bahia",
         "usr/share/zoneinfo/right/America/Bahia_Banderas",
         "usr/share/zoneinfo/right/America/Barbados",
@@ -54995,19 +50645,15 @@ filegroup(
         "usr/share/zoneinfo/right/America/Boa_Vista",
         "usr/share/zoneinfo/right/America/Bogota",
         "usr/share/zoneinfo/right/America/Boise",
-        "usr/share/zoneinfo/right/America/Buenos_Aires",
         "usr/share/zoneinfo/right/America/Cambridge_Bay",
         "usr/share/zoneinfo/right/America/Campo_Grande",
         "usr/share/zoneinfo/right/America/Cancun",
         "usr/share/zoneinfo/right/America/Caracas",
-        "usr/share/zoneinfo/right/America/Catamarca",
         "usr/share/zoneinfo/right/America/Cayenne",
         "usr/share/zoneinfo/right/America/Cayman",
         "usr/share/zoneinfo/right/America/Chicago",
         "usr/share/zoneinfo/right/America/Chihuahua",
         "usr/share/zoneinfo/right/America/Ciudad_Juarez",
-        "usr/share/zoneinfo/right/America/Coral_Harbour",
-        "usr/share/zoneinfo/right/America/Cordoba",
         "usr/share/zoneinfo/right/America/Costa_Rica",
         "usr/share/zoneinfo/right/America/Creston",
         "usr/share/zoneinfo/right/America/Cuiaba",
@@ -55021,12 +50667,9 @@ filegroup(
         "usr/share/zoneinfo/right/America/Edmonton",
         "usr/share/zoneinfo/right/America/Eirunepe",
         "usr/share/zoneinfo/right/America/El_Salvador",
-        "usr/share/zoneinfo/right/America/Ensenada",
         "usr/share/zoneinfo/right/America/Fort_Nelson",
-        "usr/share/zoneinfo/right/America/Fort_Wayne",
         "usr/share/zoneinfo/right/America/Fortaleza",
         "usr/share/zoneinfo/right/America/Glace_Bay",
-        "usr/share/zoneinfo/right/America/Godthab",
         "usr/share/zoneinfo/right/America/Goose_Bay",
         "usr/share/zoneinfo/right/America/Grand_Turk",
         "usr/share/zoneinfo/right/America/Grenada",
@@ -55045,29 +50688,21 @@ filegroup(
         "usr/share/zoneinfo/right/America/Indiana/Vevay",
         "usr/share/zoneinfo/right/America/Indiana/Vincennes",
         "usr/share/zoneinfo/right/America/Indiana/Winamac",
-        "usr/share/zoneinfo/right/America/Indianapolis",
         "usr/share/zoneinfo/right/America/Inuvik",
         "usr/share/zoneinfo/right/America/Iqaluit",
         "usr/share/zoneinfo/right/America/Jamaica",
-        "usr/share/zoneinfo/right/America/Jujuy",
         "usr/share/zoneinfo/right/America/Juneau",
         "usr/share/zoneinfo/right/America/Kentucky/Louisville",
         "usr/share/zoneinfo/right/America/Kentucky/Monticello",
-        "usr/share/zoneinfo/right/America/Knox_IN",
-        "usr/share/zoneinfo/right/America/Kralendijk",
         "usr/share/zoneinfo/right/America/La_Paz",
         "usr/share/zoneinfo/right/America/Lima",
         "usr/share/zoneinfo/right/America/Los_Angeles",
-        "usr/share/zoneinfo/right/America/Louisville",
-        "usr/share/zoneinfo/right/America/Lower_Princes",
         "usr/share/zoneinfo/right/America/Maceio",
         "usr/share/zoneinfo/right/America/Managua",
         "usr/share/zoneinfo/right/America/Manaus",
-        "usr/share/zoneinfo/right/America/Marigot",
         "usr/share/zoneinfo/right/America/Martinique",
         "usr/share/zoneinfo/right/America/Matamoros",
         "usr/share/zoneinfo/right/America/Mazatlan",
-        "usr/share/zoneinfo/right/America/Mendoza",
         "usr/share/zoneinfo/right/America/Menominee",
         "usr/share/zoneinfo/right/America/Merida",
         "usr/share/zoneinfo/right/America/Metlakatla",
@@ -55076,11 +50711,9 @@ filegroup(
         "usr/share/zoneinfo/right/America/Moncton",
         "usr/share/zoneinfo/right/America/Monterrey",
         "usr/share/zoneinfo/right/America/Montevideo",
-        "usr/share/zoneinfo/right/America/Montreal",
         "usr/share/zoneinfo/right/America/Montserrat",
         "usr/share/zoneinfo/right/America/Nassau",
         "usr/share/zoneinfo/right/America/New_York",
-        "usr/share/zoneinfo/right/America/Nipigon",
         "usr/share/zoneinfo/right/America/Nome",
         "usr/share/zoneinfo/right/America/Noronha",
         "usr/share/zoneinfo/right/America/North_Dakota/Beulah",
@@ -55089,31 +50722,24 @@ filegroup(
         "usr/share/zoneinfo/right/America/Nuuk",
         "usr/share/zoneinfo/right/America/Ojinaga",
         "usr/share/zoneinfo/right/America/Panama",
-        "usr/share/zoneinfo/right/America/Pangnirtung",
         "usr/share/zoneinfo/right/America/Paramaribo",
         "usr/share/zoneinfo/right/America/Phoenix",
         "usr/share/zoneinfo/right/America/Port-au-Prince",
         "usr/share/zoneinfo/right/America/Port_of_Spain",
-        "usr/share/zoneinfo/right/America/Porto_Acre",
         "usr/share/zoneinfo/right/America/Porto_Velho",
         "usr/share/zoneinfo/right/America/Puerto_Rico",
         "usr/share/zoneinfo/right/America/Punta_Arenas",
-        "usr/share/zoneinfo/right/America/Rainy_River",
         "usr/share/zoneinfo/right/America/Rankin_Inlet",
         "usr/share/zoneinfo/right/America/Recife",
         "usr/share/zoneinfo/right/America/Regina",
         "usr/share/zoneinfo/right/America/Resolute",
         "usr/share/zoneinfo/right/America/Rio_Branco",
-        "usr/share/zoneinfo/right/America/Rosario",
-        "usr/share/zoneinfo/right/America/Santa_Isabel",
         "usr/share/zoneinfo/right/America/Santarem",
         "usr/share/zoneinfo/right/America/Santiago",
         "usr/share/zoneinfo/right/America/Santo_Domingo",
         "usr/share/zoneinfo/right/America/Sao_Paulo",
         "usr/share/zoneinfo/right/America/Scoresbysund",
-        "usr/share/zoneinfo/right/America/Shiprock",
         "usr/share/zoneinfo/right/America/Sitka",
-        "usr/share/zoneinfo/right/America/St_Barthelemy",
         "usr/share/zoneinfo/right/America/St_Johns",
         "usr/share/zoneinfo/right/America/St_Kitts",
         "usr/share/zoneinfo/right/America/St_Lucia",
@@ -55122,16 +50748,13 @@ filegroup(
         "usr/share/zoneinfo/right/America/Swift_Current",
         "usr/share/zoneinfo/right/America/Tegucigalpa",
         "usr/share/zoneinfo/right/America/Thule",
-        "usr/share/zoneinfo/right/America/Thunder_Bay",
         "usr/share/zoneinfo/right/America/Tijuana",
         "usr/share/zoneinfo/right/America/Toronto",
         "usr/share/zoneinfo/right/America/Tortola",
         "usr/share/zoneinfo/right/America/Vancouver",
-        "usr/share/zoneinfo/right/America/Virgin",
         "usr/share/zoneinfo/right/America/Whitehorse",
         "usr/share/zoneinfo/right/America/Winnipeg",
         "usr/share/zoneinfo/right/America/Yakutat",
-        "usr/share/zoneinfo/right/America/Yellowknife",
         "usr/share/zoneinfo/right/Antarctica/Casey",
         "usr/share/zoneinfo/right/Antarctica/Davis",
         "usr/share/zoneinfo/right/Antarctica/DumontDUrville",
@@ -55140,11 +50763,9 @@ filegroup(
         "usr/share/zoneinfo/right/Antarctica/McMurdo",
         "usr/share/zoneinfo/right/Antarctica/Palmer",
         "usr/share/zoneinfo/right/Antarctica/Rothera",
-        "usr/share/zoneinfo/right/Antarctica/South_Pole",
         "usr/share/zoneinfo/right/Antarctica/Syowa",
         "usr/share/zoneinfo/right/Antarctica/Troll",
         "usr/share/zoneinfo/right/Antarctica/Vostok",
-        "usr/share/zoneinfo/right/Arctic/Longyearbyen",
         "usr/share/zoneinfo/right/Asia/Aden",
         "usr/share/zoneinfo/right/Asia/Almaty",
         "usr/share/zoneinfo/right/Asia/Amman",
@@ -55152,7 +50773,6 @@ filegroup(
         "usr/share/zoneinfo/right/Asia/Aqtau",
         "usr/share/zoneinfo/right/Asia/Aqtobe",
         "usr/share/zoneinfo/right/Asia/Ashgabat",
-        "usr/share/zoneinfo/right/Asia/Ashkhabad",
         "usr/share/zoneinfo/right/Asia/Atyrau",
         "usr/share/zoneinfo/right/Asia/Baghdad",
         "usr/share/zoneinfo/right/Asia/Bahrain",
@@ -55162,13 +50782,8 @@ filegroup(
         "usr/share/zoneinfo/right/Asia/Beirut",
         "usr/share/zoneinfo/right/Asia/Bishkek",
         "usr/share/zoneinfo/right/Asia/Brunei",
-        "usr/share/zoneinfo/right/Asia/Calcutta",
         "usr/share/zoneinfo/right/Asia/Chita",
-        "usr/share/zoneinfo/right/Asia/Choibalsan",
-        "usr/share/zoneinfo/right/Asia/Chongqing",
-        "usr/share/zoneinfo/right/Asia/Chungking",
         "usr/share/zoneinfo/right/Asia/Colombo",
-        "usr/share/zoneinfo/right/Asia/Dacca",
         "usr/share/zoneinfo/right/Asia/Damascus",
         "usr/share/zoneinfo/right/Asia/Dhaka",
         "usr/share/zoneinfo/right/Asia/Dili",
@@ -55176,29 +50791,24 @@ filegroup(
         "usr/share/zoneinfo/right/Asia/Dushanbe",
         "usr/share/zoneinfo/right/Asia/Famagusta",
         "usr/share/zoneinfo/right/Asia/Gaza",
-        "usr/share/zoneinfo/right/Asia/Harbin",
         "usr/share/zoneinfo/right/Asia/Hebron",
         "usr/share/zoneinfo/right/Asia/Ho_Chi_Minh",
         "usr/share/zoneinfo/right/Asia/Hong_Kong",
         "usr/share/zoneinfo/right/Asia/Hovd",
         "usr/share/zoneinfo/right/Asia/Irkutsk",
-        "usr/share/zoneinfo/right/Asia/Istanbul",
         "usr/share/zoneinfo/right/Asia/Jakarta",
         "usr/share/zoneinfo/right/Asia/Jayapura",
         "usr/share/zoneinfo/right/Asia/Jerusalem",
         "usr/share/zoneinfo/right/Asia/Kabul",
         "usr/share/zoneinfo/right/Asia/Kamchatka",
         "usr/share/zoneinfo/right/Asia/Karachi",
-        "usr/share/zoneinfo/right/Asia/Kashgar",
         "usr/share/zoneinfo/right/Asia/Kathmandu",
-        "usr/share/zoneinfo/right/Asia/Katmandu",
         "usr/share/zoneinfo/right/Asia/Khandyga",
         "usr/share/zoneinfo/right/Asia/Kolkata",
         "usr/share/zoneinfo/right/Asia/Krasnoyarsk",
         "usr/share/zoneinfo/right/Asia/Kuala_Lumpur",
         "usr/share/zoneinfo/right/Asia/Kuching",
         "usr/share/zoneinfo/right/Asia/Kuwait",
-        "usr/share/zoneinfo/right/Asia/Macao",
         "usr/share/zoneinfo/right/Asia/Macau",
         "usr/share/zoneinfo/right/Asia/Magadan",
         "usr/share/zoneinfo/right/Asia/Makassar",
@@ -55215,9 +50825,7 @@ filegroup(
         "usr/share/zoneinfo/right/Asia/Qatar",
         "usr/share/zoneinfo/right/Asia/Qostanay",
         "usr/share/zoneinfo/right/Asia/Qyzylorda",
-        "usr/share/zoneinfo/right/Asia/Rangoon",
         "usr/share/zoneinfo/right/Asia/Riyadh",
-        "usr/share/zoneinfo/right/Asia/Saigon",
         "usr/share/zoneinfo/right/Asia/Sakhalin",
         "usr/share/zoneinfo/right/Asia/Samarkand",
         "usr/share/zoneinfo/right/Asia/Seoul",
@@ -55228,14 +50836,10 @@ filegroup(
         "usr/share/zoneinfo/right/Asia/Tashkent",
         "usr/share/zoneinfo/right/Asia/Tbilisi",
         "usr/share/zoneinfo/right/Asia/Tehran",
-        "usr/share/zoneinfo/right/Asia/Tel_Aviv",
-        "usr/share/zoneinfo/right/Asia/Thimbu",
         "usr/share/zoneinfo/right/Asia/Thimphu",
         "usr/share/zoneinfo/right/Asia/Tokyo",
         "usr/share/zoneinfo/right/Asia/Tomsk",
-        "usr/share/zoneinfo/right/Asia/Ujung_Pandang",
         "usr/share/zoneinfo/right/Asia/Ulaanbaatar",
-        "usr/share/zoneinfo/right/Asia/Ulan_Bator",
         "usr/share/zoneinfo/right/Asia/Urumqi",
         "usr/share/zoneinfo/right/Asia/Ust-Nera",
         "usr/share/zoneinfo/right/Asia/Vientiane",
@@ -55248,61 +50852,29 @@ filegroup(
         "usr/share/zoneinfo/right/Atlantic/Bermuda",
         "usr/share/zoneinfo/right/Atlantic/Canary",
         "usr/share/zoneinfo/right/Atlantic/Cape_Verde",
-        "usr/share/zoneinfo/right/Atlantic/Faeroe",
         "usr/share/zoneinfo/right/Atlantic/Faroe",
-        "usr/share/zoneinfo/right/Atlantic/Jan_Mayen",
         "usr/share/zoneinfo/right/Atlantic/Madeira",
         "usr/share/zoneinfo/right/Atlantic/Reykjavik",
         "usr/share/zoneinfo/right/Atlantic/South_Georgia",
         "usr/share/zoneinfo/right/Atlantic/St_Helena",
         "usr/share/zoneinfo/right/Atlantic/Stanley",
-        "usr/share/zoneinfo/right/Australia/ACT",
         "usr/share/zoneinfo/right/Australia/Adelaide",
         "usr/share/zoneinfo/right/Australia/Brisbane",
         "usr/share/zoneinfo/right/Australia/Broken_Hill",
-        "usr/share/zoneinfo/right/Australia/Canberra",
-        "usr/share/zoneinfo/right/Australia/Currie",
         "usr/share/zoneinfo/right/Australia/Darwin",
         "usr/share/zoneinfo/right/Australia/Eucla",
         "usr/share/zoneinfo/right/Australia/Hobart",
-        "usr/share/zoneinfo/right/Australia/LHI",
         "usr/share/zoneinfo/right/Australia/Lindeman",
         "usr/share/zoneinfo/right/Australia/Lord_Howe",
         "usr/share/zoneinfo/right/Australia/Melbourne",
-        "usr/share/zoneinfo/right/Australia/NSW",
-        "usr/share/zoneinfo/right/Australia/North",
         "usr/share/zoneinfo/right/Australia/Perth",
-        "usr/share/zoneinfo/right/Australia/Queensland",
-        "usr/share/zoneinfo/right/Australia/South",
         "usr/share/zoneinfo/right/Australia/Sydney",
-        "usr/share/zoneinfo/right/Australia/Tasmania",
-        "usr/share/zoneinfo/right/Australia/Victoria",
-        "usr/share/zoneinfo/right/Australia/West",
-        "usr/share/zoneinfo/right/Australia/Yancowinna",
-        "usr/share/zoneinfo/right/Brazil/Acre",
-        "usr/share/zoneinfo/right/Brazil/DeNoronha",
-        "usr/share/zoneinfo/right/Brazil/East",
-        "usr/share/zoneinfo/right/Brazil/West",
         "usr/share/zoneinfo/right/CET",
         "usr/share/zoneinfo/right/CST6CDT",
-        "usr/share/zoneinfo/right/Canada/Atlantic",
-        "usr/share/zoneinfo/right/Canada/Central",
-        "usr/share/zoneinfo/right/Canada/Eastern",
-        "usr/share/zoneinfo/right/Canada/Mountain",
-        "usr/share/zoneinfo/right/Canada/Newfoundland",
-        "usr/share/zoneinfo/right/Canada/Pacific",
-        "usr/share/zoneinfo/right/Canada/Saskatchewan",
-        "usr/share/zoneinfo/right/Canada/Yukon",
-        "usr/share/zoneinfo/right/Chile/Continental",
-        "usr/share/zoneinfo/right/Chile/EasterIsland",
-        "usr/share/zoneinfo/right/Cuba",
         "usr/share/zoneinfo/right/EET",
         "usr/share/zoneinfo/right/EST",
         "usr/share/zoneinfo/right/EST5EDT",
-        "usr/share/zoneinfo/right/Egypt",
-        "usr/share/zoneinfo/right/Eire",
         "usr/share/zoneinfo/right/Etc/GMT",
-        "usr/share/zoneinfo/right/Etc/GMT+0",
         "usr/share/zoneinfo/right/Etc/GMT+1",
         "usr/share/zoneinfo/right/Etc/GMT+10",
         "usr/share/zoneinfo/right/Etc/GMT+11",
@@ -55315,7 +50887,6 @@ filegroup(
         "usr/share/zoneinfo/right/Etc/GMT+7",
         "usr/share/zoneinfo/right/Etc/GMT+8",
         "usr/share/zoneinfo/right/Etc/GMT+9",
-        "usr/share/zoneinfo/right/Etc/GMT-0",
         "usr/share/zoneinfo/right/Etc/GMT-1",
         "usr/share/zoneinfo/right/Etc/GMT-10",
         "usr/share/zoneinfo/right/Etc/GMT-11",
@@ -55330,24 +50901,16 @@ filegroup(
         "usr/share/zoneinfo/right/Etc/GMT-7",
         "usr/share/zoneinfo/right/Etc/GMT-8",
         "usr/share/zoneinfo/right/Etc/GMT-9",
-        "usr/share/zoneinfo/right/Etc/GMT0",
-        "usr/share/zoneinfo/right/Etc/Greenwich",
-        "usr/share/zoneinfo/right/Etc/UCT",
         "usr/share/zoneinfo/right/Etc/UTC",
-        "usr/share/zoneinfo/right/Etc/Universal",
-        "usr/share/zoneinfo/right/Etc/Zulu",
         "usr/share/zoneinfo/right/Europe/Amsterdam",
         "usr/share/zoneinfo/right/Europe/Andorra",
         "usr/share/zoneinfo/right/Europe/Astrakhan",
         "usr/share/zoneinfo/right/Europe/Athens",
-        "usr/share/zoneinfo/right/Europe/Belfast",
         "usr/share/zoneinfo/right/Europe/Belgrade",
         "usr/share/zoneinfo/right/Europe/Berlin",
-        "usr/share/zoneinfo/right/Europe/Bratislava",
         "usr/share/zoneinfo/right/Europe/Brussels",
         "usr/share/zoneinfo/right/Europe/Bucharest",
         "usr/share/zoneinfo/right/Europe/Budapest",
-        "usr/share/zoneinfo/right/Europe/Busingen",
         "usr/share/zoneinfo/right/Europe/Chisinau",
         "usr/share/zoneinfo/right/Europe/Copenhagen",
         "usr/share/zoneinfo/right/Europe/Dublin",
@@ -55358,7 +50921,6 @@ filegroup(
         "usr/share/zoneinfo/right/Europe/Istanbul",
         "usr/share/zoneinfo/right/Europe/Jersey",
         "usr/share/zoneinfo/right/Europe/Kaliningrad",
-        "usr/share/zoneinfo/right/Europe/Kiev",
         "usr/share/zoneinfo/right/Europe/Kirov",
         "usr/share/zoneinfo/right/Europe/Kyiv",
         "usr/share/zoneinfo/right/Europe/Lisbon",
@@ -55367,19 +50929,15 @@ filegroup(
         "usr/share/zoneinfo/right/Europe/Luxembourg",
         "usr/share/zoneinfo/right/Europe/Madrid",
         "usr/share/zoneinfo/right/Europe/Malta",
-        "usr/share/zoneinfo/right/Europe/Mariehamn",
         "usr/share/zoneinfo/right/Europe/Minsk",
         "usr/share/zoneinfo/right/Europe/Monaco",
         "usr/share/zoneinfo/right/Europe/Moscow",
-        "usr/share/zoneinfo/right/Europe/Nicosia",
         "usr/share/zoneinfo/right/Europe/Oslo",
         "usr/share/zoneinfo/right/Europe/Paris",
-        "usr/share/zoneinfo/right/Europe/Podgorica",
         "usr/share/zoneinfo/right/Europe/Prague",
         "usr/share/zoneinfo/right/Europe/Riga",
         "usr/share/zoneinfo/right/Europe/Rome",
         "usr/share/zoneinfo/right/Europe/Samara",
-        "usr/share/zoneinfo/right/Europe/San_Marino",
         "usr/share/zoneinfo/right/Europe/Sarajevo",
         "usr/share/zoneinfo/right/Europe/Saratov",
         "usr/share/zoneinfo/right/Europe/Simferopol",
@@ -55388,29 +50946,16 @@ filegroup(
         "usr/share/zoneinfo/right/Europe/Stockholm",
         "usr/share/zoneinfo/right/Europe/Tallinn",
         "usr/share/zoneinfo/right/Europe/Tirane",
-        "usr/share/zoneinfo/right/Europe/Tiraspol",
         "usr/share/zoneinfo/right/Europe/Ulyanovsk",
-        "usr/share/zoneinfo/right/Europe/Uzhgorod",
         "usr/share/zoneinfo/right/Europe/Vaduz",
-        "usr/share/zoneinfo/right/Europe/Vatican",
         "usr/share/zoneinfo/right/Europe/Vienna",
         "usr/share/zoneinfo/right/Europe/Vilnius",
         "usr/share/zoneinfo/right/Europe/Volgograd",
         "usr/share/zoneinfo/right/Europe/Warsaw",
         "usr/share/zoneinfo/right/Europe/Zagreb",
-        "usr/share/zoneinfo/right/Europe/Zaporozhye",
         "usr/share/zoneinfo/right/Europe/Zurich",
         "usr/share/zoneinfo/right/Factory",
-        "usr/share/zoneinfo/right/GB",
-        "usr/share/zoneinfo/right/GB-Eire",
-        "usr/share/zoneinfo/right/GMT",
-        "usr/share/zoneinfo/right/GMT+0",
-        "usr/share/zoneinfo/right/GMT-0",
-        "usr/share/zoneinfo/right/GMT0",
-        "usr/share/zoneinfo/right/Greenwich",
         "usr/share/zoneinfo/right/HST",
-        "usr/share/zoneinfo/right/Hongkong",
-        "usr/share/zoneinfo/right/Iceland",
         "usr/share/zoneinfo/right/Indian/Antananarivo",
         "usr/share/zoneinfo/right/Indian/Chagos",
         "usr/share/zoneinfo/right/Indian/Christmas",
@@ -55422,22 +50967,9 @@ filegroup(
         "usr/share/zoneinfo/right/Indian/Mauritius",
         "usr/share/zoneinfo/right/Indian/Mayotte",
         "usr/share/zoneinfo/right/Indian/Reunion",
-        "usr/share/zoneinfo/right/Iran",
-        "usr/share/zoneinfo/right/Israel",
-        "usr/share/zoneinfo/right/Jamaica",
-        "usr/share/zoneinfo/right/Japan",
-        "usr/share/zoneinfo/right/Kwajalein",
-        "usr/share/zoneinfo/right/Libya",
         "usr/share/zoneinfo/right/MET",
         "usr/share/zoneinfo/right/MST",
         "usr/share/zoneinfo/right/MST7MDT",
-        "usr/share/zoneinfo/right/Mexico/BajaNorte",
-        "usr/share/zoneinfo/right/Mexico/BajaSur",
-        "usr/share/zoneinfo/right/Mexico/General",
-        "usr/share/zoneinfo/right/NZ",
-        "usr/share/zoneinfo/right/NZ-CHAT",
-        "usr/share/zoneinfo/right/Navajo",
-        "usr/share/zoneinfo/right/PRC",
         "usr/share/zoneinfo/right/PST8PDT",
         "usr/share/zoneinfo/right/Pacific/Apia",
         "usr/share/zoneinfo/right/Pacific/Auckland",
@@ -55446,7 +50978,6 @@ filegroup(
         "usr/share/zoneinfo/right/Pacific/Chuuk",
         "usr/share/zoneinfo/right/Pacific/Easter",
         "usr/share/zoneinfo/right/Pacific/Efate",
-        "usr/share/zoneinfo/right/Pacific/Enderbury",
         "usr/share/zoneinfo/right/Pacific/Fakaofo",
         "usr/share/zoneinfo/right/Pacific/Fiji",
         "usr/share/zoneinfo/right/Pacific/Funafuti",
@@ -55455,7 +50986,6 @@ filegroup(
         "usr/share/zoneinfo/right/Pacific/Guadalcanal",
         "usr/share/zoneinfo/right/Pacific/Guam",
         "usr/share/zoneinfo/right/Pacific/Honolulu",
-        "usr/share/zoneinfo/right/Pacific/Johnston",
         "usr/share/zoneinfo/right/Pacific/Kanton",
         "usr/share/zoneinfo/right/Pacific/Kiritimati",
         "usr/share/zoneinfo/right/Pacific/Kosrae",
@@ -55471,99 +51001,20 @@ filegroup(
         "usr/share/zoneinfo/right/Pacific/Palau",
         "usr/share/zoneinfo/right/Pacific/Pitcairn",
         "usr/share/zoneinfo/right/Pacific/Pohnpei",
-        "usr/share/zoneinfo/right/Pacific/Ponape",
         "usr/share/zoneinfo/right/Pacific/Port_Moresby",
         "usr/share/zoneinfo/right/Pacific/Rarotonga",
         "usr/share/zoneinfo/right/Pacific/Saipan",
-        "usr/share/zoneinfo/right/Pacific/Samoa",
         "usr/share/zoneinfo/right/Pacific/Tahiti",
         "usr/share/zoneinfo/right/Pacific/Tarawa",
         "usr/share/zoneinfo/right/Pacific/Tongatapu",
-        "usr/share/zoneinfo/right/Pacific/Truk",
         "usr/share/zoneinfo/right/Pacific/Wake",
         "usr/share/zoneinfo/right/Pacific/Wallis",
-        "usr/share/zoneinfo/right/Pacific/Yap",
-        "usr/share/zoneinfo/right/Poland",
-        "usr/share/zoneinfo/right/Portugal",
-        "usr/share/zoneinfo/right/ROC",
-        "usr/share/zoneinfo/right/ROK",
-        "usr/share/zoneinfo/right/Singapore",
-        "usr/share/zoneinfo/right/Turkey",
-        "usr/share/zoneinfo/right/UCT",
-        "usr/share/zoneinfo/right/US/Alaska",
-        "usr/share/zoneinfo/right/US/Aleutian",
-        "usr/share/zoneinfo/right/US/Arizona",
-        "usr/share/zoneinfo/right/US/Central",
-        "usr/share/zoneinfo/right/US/East-Indiana",
-        "usr/share/zoneinfo/right/US/Eastern",
-        "usr/share/zoneinfo/right/US/Hawaii",
-        "usr/share/zoneinfo/right/US/Indiana-Starke",
-        "usr/share/zoneinfo/right/US/Michigan",
-        "usr/share/zoneinfo/right/US/Mountain",
-        "usr/share/zoneinfo/right/US/Pacific",
-        "usr/share/zoneinfo/right/US/Samoa",
-        "usr/share/zoneinfo/right/UTC",
-        "usr/share/zoneinfo/right/Universal",
-        "usr/share/zoneinfo/right/W-SU",
         "usr/share/zoneinfo/right/WET",
-        "usr/share/zoneinfo/right/Zulu",
         "usr/share/zoneinfo/tzdata.zi",
         "usr/share/zoneinfo/zone.tab",
         "usr/share/zoneinfo/zone1970.tab",
         ":debconf-filegroup",
     ],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
-    name = "ucf-filegroup",
-    srcs = [
-        "etc/ucf.conf",
-        "usr/bin/lcf",
-        "usr/bin/ucf",
-        "usr/bin/ucfq",
-        "usr/bin/ucfr",
-        "usr/share/doc/ucf/changelog.gz",
-        "usr/share/doc/ucf/copyright",
-        "usr/share/doc/ucf/examples/postinst",
-        "usr/share/doc/ucf/examples/postrm",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/00README",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/TODO",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/test-list",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/tests/package-changed",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/tests/package-orig",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/tests/test_01",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/tests/test_02",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/tests/test_03",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/tests/test_04",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/tests/test_05",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/tests/test_06",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/tests/test_07",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/tests/test_08",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/tests/test_09",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/tests/test_10",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/tests/test_11",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/tests/test_12",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/tests/test_13",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/tests/test_14",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/tests/test_15",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/tests/test_16",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/tests/test_17",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/tests/test_18",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/tests/test_19",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/tests/test_20",
-        "usr/share/doc/ucf/examples/ucf_helper_functions/testsuite",
-        "usr/share/lintian/overrides/ucf",
-        "usr/share/man/man1/lcf.1.gz",
-        "usr/share/man/man1/ucf.1.gz",
-        "usr/share/man/man1/ucfq.1.gz",
-        "usr/share/man/man1/ucfr.1.gz",
-        "usr/share/man/man5/ucf.conf.5.gz",
-        "usr/share/ucf/ucf_helper_functions.sh",
-        ":debconf-filegroup",
-        ":sensible-utils-filegroup",
-    ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -55575,7 +51026,6 @@ filegroup(
         "usr/share/man/man5/odbc.ini.5.gz",
         "usr/share/man/man5/odbcinst.ini.5.gz",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -55589,7 +51039,6 @@ filegroup(
         "usr/share/lintian/overrides/update-glx",
         "usr/share/man/man8/update-glx.8.gz",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -55598,7 +51047,6 @@ filegroup(
         "usr/share/doc/usr-is-merged/changelog.gz",
         "usr/share/doc/usr-is-merged/copyright",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -55606,7 +51054,6 @@ filegroup(
     srcs = [
         "usr/include/uuid/uuid.h",
         "usr/lib/x86_64-linux-gnu/libuuid.a",
-        "usr/lib/x86_64-linux-gnu/libuuid.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/uuid.pc",
         "usr/share/doc/uuid-dev/changelog.Debian.gz",
         "usr/share/doc/uuid-dev/changelog.gz",
@@ -55616,9 +51063,6 @@ filegroup(
         "usr/share/man/man3/uuid_compare.3.gz",
         "usr/share/man/man3/uuid_copy.3.gz",
         "usr/share/man/man3/uuid_generate.3.gz",
-        "usr/share/man/man3/uuid_generate_random.3.gz",
-        "usr/share/man/man3/uuid_generate_time.3.gz",
-        "usr/share/man/man3/uuid_generate_time_safe.3.gz",
         "usr/share/man/man3/uuid_is_null.3.gz",
         "usr/share/man/man3/uuid_parse.3.gz",
         "usr/share/man/man3/uuid_time.3.gz",
@@ -55626,7 +51070,6 @@ filegroup(
         ":libc6-dev-filegroup",
         ":libuuid1-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -55647,7 +51090,6 @@ filegroup(
         "etc/X11/rgb.txt",
         "etc/init.d/x11-common",
         "usr/bin/X11",
-        "usr/share/X11/rgb.txt",
         "usr/share/doc/x11-common/NEWS.Debian.gz",
         "usr/share/doc/x11-common/changelog.Debian.old.gz",
         "usr/share/doc/x11-common/changelog.gz",
@@ -55658,7 +51100,6 @@ filegroup(
         "usr/share/man/man5/Xsession.options.d.5.gz",
         ":sysvinit-utils-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -55855,7 +51296,6 @@ filegroup(
         "usr/share/pkgconfig/xproto.pc",
         ":xorg-sgml-doctools-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -55943,9 +51383,6 @@ filegroup(
         "usr/share/X11/xkb/rules/evdev.xml",
         "usr/share/X11/xkb/rules/xfree98",
         "usr/share/X11/xkb/rules/xkb.dtd",
-        "usr/share/X11/xkb/rules/xorg",
-        "usr/share/X11/xkb/rules/xorg.lst",
-        "usr/share/X11/xkb/rules/xorg.xml",
         "usr/share/X11/xkb/symbols/af",
         "usr/share/X11/xkb/symbols/al",
         "usr/share/X11/xkb/symbols/altwin",
@@ -56206,7 +51643,6 @@ filegroup(
         "usr/share/man/man7/xkeyboard-config.7.gz",
         "usr/share/pkgconfig/xkeyboard-config.pc",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -56225,7 +51661,6 @@ filegroup(
         "usr/share/sgml/X11/xorg-fo.xsl",
         "usr/share/sgml/X11/xorg-xhtml.xsl",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -56249,7 +51684,6 @@ filegroup(
         "usr/share/doc/xtrans-dev/xtrans.xml.gz",
         "usr/share/pkgconfig/xtrans.pc",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -56258,7 +51692,6 @@ filegroup(
         "usr/include/zconf.h",
         "usr/include/zlib.h",
         "usr/lib/x86_64-linux-gnu/libz.a",
-        "usr/lib/x86_64-linux-gnu/libz.so",
         "usr/lib/x86_64-linux-gnu/pkgconfig/zlib.pc",
         "usr/share/doc/zlib1g-dev/FAQ.gz",
         "usr/share/doc/zlib1g-dev/README.gz",
@@ -56288,18 +51721,15 @@ filegroup(
         ":libc6-dev-filegroup",
         ":zlib1g-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "zlib1g-filegroup",
     srcs = [
-        "lib/x86_64-linux-gnu/libz.so.1",
         "lib/x86_64-linux-gnu/libz.so.1.2.13",
         "usr/share/doc/zlib1g/changelog.Debian.gz",
         "usr/share/doc/zlib1g/changelog.gz",
         "usr/share/doc/zlib1g/copyright",
         ":libc6-filegroup",
     ],
-    visibility = ["//visibility:public"],
 )

@@ -117,6 +117,14 @@ load(
     apache2_debs = "files",
 )
 load(
+    "//debian:gtk_runtime.bzl",
+    gtk_runtime_debs = "files",
+)
+load(
+    "//debian:libusb.bzl",
+    libusb_debs = "files",
+)
+load(
     "//debian:mingw_compiler.bzl",
     mingw_compiler_debs = "files",
 )
@@ -130,15 +138,40 @@ load(
     postgresql_amd64_debs = "files",
 )
 load(
+    "//debian:rsync.bzl",
+    rsync_debs = "files",
+)
+load(
+    "//debian:ssh.bzl",
+    ssh_debs = "files",
+)
+load(
     "//debian:xvfb_amd64.bzl",
     xvfb_amd64_debs = "files",
 )
+
+generate_repositories_for_debs(rsync_debs)
+
+generate_repositories_for_debs(ssh_debs)
 
 generate_repositories_for_debs(apache2_debs)
 
 generate_repositories_for_debs(postgresql_amd64_debs)
 
+generate_repositories_for_debs(libusb_debs)
+
 generate_repositories_for_debs(mingw_compiler_debs)
+
+generate_repositories_for_debs(gtk_runtime_debs)
+
+# TODO(austin): Random things need this, stop doing that"
+generate_repositories_for_debs(
+    {
+        "zlib1g-dev_1.2.11.dfsg-2_amd64.deb": "a36b74415b32513dab9a2fa56e7d215f5e5d0185df6939e483267cef15e2eaf5",
+        "libxpm4_3.5.12-1_amd64.deb": "49e64f0923cdecb2aaf6c93f176c25f63b841da2a501651ae23070f998967aa7",
+    },
+    base_url = "https://realtimeroboticsgroup.org/build-dependencies/gstreamer_bullseye_amd64_deps",
+)
 
 generate_repositories_for_debs(xvfb_amd64_debs)
 
@@ -379,8 +412,8 @@ http_archive(
 http_archive(
     name = "amd64_debian_sysroot",
     build_file = "@//:compilers/amd64_debian_rootfs.BUILD",
-    sha256 = "70c4d31acb5e4ff4849f2c2c3aeb897b6b266f931d075cbb882c684230d128e9",
-    url = "https://realtimeroboticsgroup.org/build-dependencies/2025-02-22-bookworm-amd64-nvidia-rootfs.tar.zst",
+    sha256 = "9456f874343f32b897c88af6fb0503c261b2dc533b519759fb5b42016d3406c9",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/2025-01-26-bookworm-amd64-nvidia-rootfs.tar.zst",
 )
 
 http_archive(
@@ -418,6 +451,21 @@ http_archive(
 )
 
 http_archive(
+    name = "rsync",
+    build_file = "@//debian:rsync.BUILD",
+    sha256 = "75ea8ce442c94fd12c0d00eb24860ac1de5ea6af56154bb1b195a96018c9e8a2",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/rsync-2023.09.06.tar.gz",
+)
+
+# //debian:ssh
+http_archive(
+    name = "ssh",
+    build_file = "@//debian:ssh.BUILD",
+    sha256 = "9c4a9eefa605283486fb15a44ef9977d4a95b55c3a41c4e71cfbacd1cf20a4b5",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/ssh-2023.09.06.tar.gz",
+)
+
+http_archive(
     name = "ffmpeg",
     build_file_content = """
 load("@bazel_skylib//rules:native_binary.bzl", "native_binary")
@@ -442,10 +490,24 @@ http_archive(
 )
 
 http_archive(
+    name = "libusb",
+    build_file = "@//debian:libusb.BUILD",
+    sha256 = "3ca5cc2d317226f6646866ff9e8c443db3b0f6c82f828e800240982727531590",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/libusb.tar.gz",
+)
+
+http_archive(
     name = "mingw_compiler",
     build_file = "@//debian:mingw_compiler.BUILD",
     sha256 = "45e86a8460f2151a4f0306e7ae7b06761029d2412ee16f63d1e8d2d29354e378",
     url = "https://realtimeroboticsgroup.org/build-dependencies/mingw_compiler.tar.gz",
+)
+
+http_archive(
+    name = "gtk_runtime",
+    build_file = "@//debian:gtk_runtime.BUILD",
+    sha256 = "5a6014d1783363be6bc95843d03bbb6513e650eaea60be2b1a4c65bf21981f9b",
+    url = "https://realtimeroboticsgroup.org/build-dependencies/gtk_runtime-4.tar.gz",
 )
 
 # Downloaded from

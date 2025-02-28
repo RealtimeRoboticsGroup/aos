@@ -31,22 +31,22 @@ index ba9cd6c..083ef5b 100644
 +    # There's a bug where the temp directory gets set if MATPLOTLIBRC isn't set.
 +    # That causes the directory to not be created in time. We set the variable
 +    # manually here to work around the bug.
-+    os.environ["MPLCONFIGDIR"] = f"/tmp/matplotlib-nobody-{os.getpid()}"
++    os.environ["MPLCONFIGDIR"] = "/tmp/matplotlib-nobody"
 +
-+    gtk_runtime_dir = os.path.join(runfiles_dir, "amd64_debian_sysroot")
++    gtk_runtime_base = os.path.join(runfiles_dir, "gtk_runtime")
 +
 +    # Tell fontconfig where to find matplotlib's sandboxed font files.
 +    os.environ["FONTCONFIG_PATH"] = "etc/fonts"
 +    os.environ["FONTCONFIG_FILE"] = "fonts.conf"
-+    os.environ["FONTCONFIG_SYSROOT"] = gtk_runtime_dir
++    os.environ["FONTCONFIG_SYSROOT"] = gtk_runtime_base
 +
 +    ld_library_path = os.getenv("LD_LIBRARY_PATH") or ""
 +    if ld_library_path:
 +        ld_library_path = ":" + ld_library_path
 +
 +    os.environ["LD_LIBRARY_PATH"] = ":".join([
-+        gtk_runtime_dir + "/lib/x86_64-linux-gnu",
-+        gtk_runtime_dir + "/usr/lib/x86_64-linux-gnu",
++        gtk_runtime_base + "/lib/x86_64-linux-gnu",
++        gtk_runtime_base + "/usr/lib/x86_64-linux-gnu",
 +    ]) + ld_library_path
 +
 +_hermeticity_fixup()
