@@ -50,7 +50,11 @@ class NetworkTablesPublisher {
                          std::string_view table_name, const FieldMap *field_map)
       : event_loop_(event_loop),
         table_(nt::NetworkTableInstance::GetDefault().GetTable(table_name)),
+        relative_pose_topic_(
+            table_->GetDoubleArrayTopic("photon_relative_apriltag_pose")),
         pose2d_topic_(table_->GetStructTopic<frc::Pose2d>("apriltag_pose")),
+        relative_pose_publisher_(
+            relative_pose_topic_.Publish({.keepDuplicates = true})),
         pose2d_publisher_(pose2d_topic_.Publish({.keepDuplicates = true})),
         fieldwidth_(field_map->fieldwidth()),
         fieldlength_(field_map->fieldlength()),
@@ -143,13 +147,24 @@ class NetworkTablesPublisher {
 
     // The map is in the photonvision tag coordinate system, and the detections
     // are in the aprilrobotics tag coordinate system. Convert.
-    const Eigen::Matrix3d april_to_photon_matrix =
+    const Eigen::Matrix3d april_to_photon_tag_matrix =
         (Eigen::Matrix3d() << 0, 0, -1, 1, 0, 0, 0, -1, 0).finished();
-    const Eigen::Quaternion<double> april_to_photon(april_to_photon_matrix);
+    const Eigen::Quaternion<double> april_to_photon_tag(
+        april_to_photon_tag_matrix);
+
+    // PhotonVision operates with a +X out, +Y left, +Z up in camera frame.
+    // See
+    // https://docs.photonvision.org/en/latest/docs/apriltag-pipelines/coordinate-systems.html
+    const Eigen::Quaternion<double> april_to_photon_camera(
+        (Eigen::Matrix3d() << 0, 0, 1, -1, 0, 0, 0, -1, 0).finished());
+
+    PublishRelative(
+        calibration->camera_number(), target_pose->id(),
+        april_to_photon_camera * tag_to_camera * april_to_photon_tag.inverse());
 
     // Chain them all together to get camera -> field.
     const Eigen::Affine3d camera_to_field =
-        tag_to_field * april_to_photon * tag_to_camera.inverse();
+        tag_to_field * april_to_photon_tag * tag_to_camera.inverse();
 
     const double age_ms =
         std::chrono::duration<double, std::milli>(
@@ -189,6 +204,20 @@ class NetworkTablesPublisher {
             yaw);
   }
 
+  void PublishRelative(size_t camera_id, size_t apriltag_id,
+                       const Eigen::Affine3d &relative_pose) {
+    // WPILib likes row-major matrices.
+    const Eigen::Matrix<double, 4, 4, Eigen::RowMajor> row_major_transform =
+        relative_pose.matrix();
+    std::array<double, 18> packet;
+    packet[0] = camera_id;
+    packet[1] = apriltag_id;
+    for (size_t index = 0; index < 16; ++index) {
+      packet[2 + index] = row_major_transform.data()[index];
+    }
+    relative_pose_publisher_.Set(packet);
+  }
+
   void Publish(Eigen::Vector3d translation, double yaw) {
     pose2d_publisher_.Set(Pose2d{units::meter_t{translation.x()},
                                  units::meter_t{translation.y()},
@@ -198,9 +227,12 @@ class NetworkTablesPublisher {
   aos::EventLoop *event_loop_;
 
   std::shared_ptr<nt::NetworkTable> table_;
+
+  nt::DoubleArrayTopic relative_pose_topic_;
   nt::StructTopic<frc::Pose2d> pose2d_topic_;
 
   std::vector<Eigen::Affine3d> tag_transformations_;
+  nt::DoubleArrayPublisher relative_pose_publisher_;
   nt::StructPublisher<frc::Pose2d> pose2d_publisher_;
   double fieldwidth_;
   double fieldlength_;
