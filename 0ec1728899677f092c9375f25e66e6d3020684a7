@@ -1,0 +1,44 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "973dd2f8_44a38490",
+        "filename": "frc/vision/robot_transformation_calculator.cc",
+        "patchSetId": 2
+      },
+      "lineNbr": 8,
+      "author": {
+        "id": 1000002
+      },
+      "writtenOn": "2025-03-01T03:42:28Z",
+      "side": 1,
+      "message": "I might add a *bit* more of a comment indicating what this is for.....",
+      "revId": "0ec1728899677f092c9375f25e66e6d3020684a7",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "c4d66d7d_7e3602eb",
+        "filename": "frc/vision/robot_transformation_calculator.cc",
+        "patchSetId": 2
+      },
+      "lineNbr": 40,
+      "author": {
+        "id": 1000002
+      },
+      "writtenOn": "2025-03-01T03:42:28Z",
+      "side": 1,
+      "message": "This is a bit much dead code....",
+      "range": {
+        "startLine": 35,
+        "startChar": 0,
+        "endLine": 40,
+        "endChar": 49
+      },
+      "revId": "0ec1728899677f092c9375f25e66e6d3020684a7",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    }
+  ]
+}
