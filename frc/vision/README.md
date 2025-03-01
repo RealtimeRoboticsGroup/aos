@@ -31,3 +31,46 @@ root[2] orin-4646-1 /home/pi
    send more data than the kernel alots to it, it will end up truncated and
    will cause an invalid image to be read. 4646 is using a divisor of `8`,
    1868 is using a divisor of `2`.
+
+## Intrinsics Calibration
+
+Intrinsics calibration *can* be run just on the Orin. However, it tends to
+be significantly faster to run it first on the Orin, then scp the calibration
+images off and let the actual *solve* run on a host laptop (the
+calibration consists first of collecting 50 images, then of running a solver
+against said images; the Orin CPU tends to be very slow at the solve portion).
+
+On the Orin, run:
+
+```
+pi[83] orin-1868-1 ~
+$ intrinsics_calibration --base_intrinsics bin/base_intrinsics/calibration_orin1-1868-1-fake.json --channel /camera0/gray --calibration_folder intrinsics_images/ --camera_id 25-99 --grayscale --image_save_path intrinsics_images/ --twenty_inch_large_board
+```
+
+Notes to be aware of:
+* Use a base intrinsics for a camera that *matches* the resolution of your
+  camera. Otherwise the calibration will tend to overly aggressively reject
+  board detections.
+* Set the `--channel` based on what camera you are calibrating.
+* Set `--camera_id` to an ID you will use for the *physical* camera you are
+  calibrating.
+* Move around/rotate the board to persuade it to automatically capture images.
+* Once 50 images have been captured, press `q` to quit.
+* You need to turn on X11 forwarding (`-X` passed to `ssh`) to get a
+  visualization.
+* The `--twenty_inch_large_board` corresponds to [this etsy
+  listing](https://etsy.com/listing/1820746969/charuco-calibration-target).
+
+If you wish to wait for the orin to complete calibration on its own (on the
+order of ~20 minutes), you may. This will produce a JSON file that can be placed
+in `frc/vision/constants/` and referenced in `frc/vision/constants.jinja2.json`.
+
+If you want to copy the images off and run intrinsics calibration on your
+machine, `scp` them back to your device and run:
+```
+$ bazel run -c opt //frc/vision:intrinsics_calibration  -- --twenty_inch_large_board --grayscale --override_hostname orin-1868-1 --base_intrinsics ~/aos/frc/vision/constants/calibration_orin1-1868-0_cam-25-11_1970-01-01_03-17-57.json --camera_id 25-99 --channel /camera0/gray --image_load_path ~/logs/2025/intrinsics/test_cal0/ --config frc/vision/aos_config.json
+```
+
+With similar notes about the flags to before; update the `--override_hostname`
+to match your team number. Make sure you are using the same `--base_intrinsics`
+that you used in the live capture.
