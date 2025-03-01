@@ -51,6 +51,13 @@
       "frequency": 1
     },
     {
+      "name": "/constants",
+      "type": "frc.vision.TargetMap",
+      "source_node": "orin",
+      "max_size": 8192,
+      "frequency": 1
+    },
+    {
       "name": "/camera0",
       "type": "frc.vision.CameraImage",
       "read_method": "PIN",
