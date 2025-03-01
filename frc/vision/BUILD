@@ -727,3 +727,15 @@ cc_binary(
         "@org_tuxfamily_eigen//:eigen",
     ],
 )
+
+cc_binary(
+    name = "robot_transformation_calculator",
+    srcs = [
+        "robot_transformation_calculator.cc",
+    ],
+    deps = [
+        "//aos:init",
+        "@com_google_absl//absl/log",
+        "@org_tuxfamily_eigen//:eigen",
+    ],
+)
