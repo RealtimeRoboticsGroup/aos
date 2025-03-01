@@ -1,0 +1,55 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "2dac44c2_85c1d51e",
+        "filename": "frc/vision/intrinsics_calibration_lib.cc",
+        "patchSetId": 3
+      },
+      "lineNbr": 119,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-03-01T17:30:04Z",
+      "side": 1,
+      "message": "This should save you, no?",
+      "revId": "4f81c104c8c8ea9e3373d0f7b286f59eaf32f920",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "87d2c7cb_a84101a8",
+        "filename": "frc/vision/intrinsics_calibration_lib.cc",
+        "patchSetId": 3
+      },
+      "lineNbr": 127,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-03-01T17:30:04Z",
+      "side": 1,
+      "message": "Redundant.  See above.",
+      "revId": "4f81c104c8c8ea9e3373d0f7b286f59eaf32f920",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "f6c41922_3e410f88",
+        "filename": "frc/vision/intrinsics_calibration_lib.cc",
+        "patchSetId": 3
+      },
+      "lineNbr": 150,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-03-01T17:30:04Z",
+      "side": 1,
+      "message": "Same",
+      "revId": "4f81c104c8c8ea9e3373d0f7b286f59eaf32f920",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    }
+  ]
+}
