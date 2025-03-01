@@ -1,6 +1,120 @@
 {
   "channels": [
     {
+      /* Channel providing the true state of the drivetrain in simulation. */
+      "name": "/drivetrain/truth",
+      "type": "frc.control_loops.drivetrain.Status",
+      "source_node": "roborio",
+      "frequency": 200,
+      "max_size": 2000
+    },
+    {
+      "name": "/imu/aos",
+      "type": "aos.timing.Report",
+      "source_node": "imu",
+      "frequency": 50,
+      "num_senders": 20,
+      "max_size": 4096
+    },
+    {
+      "name": "/imu/aos",
+      "type": "aos.logging.LogMessageFbs",
+      "source_node": "imu",
+      "frequency": 200,
+      "num_senders": 20
+    },
+    {
+      "name": "/imu/aos",
+      "type": "aos.message_bridge.ServerStatistics",
+      "source_node": "imu",
+      "max_size": 2048,
+      "frequency": 10,
+      "num_senders": 2
+    },
+    {
+      "name": "/imu/aos",
+      "type": "aos.message_bridge.ClientStatistics",
+      "source_node": "imu",
+      "frequency": 20,
+      "num_senders": 2
+    },
+    {
+      "name": "/imu/aos",
+      "type": "aos.logging.DynamicLogCommand",
+      "source_node": "imu",
+      "frequency": 10,
+      "num_senders": 2
+    },
+    {
+      "name": "/imu/aos",
+      "type": "aos.message_bridge.Timestamp",
+      "source_node": "imu",
+      "frequency": 15,
+      "num_senders": 2,
+      "logger": "LOCAL_AND_REMOTE_LOGGER",
+      "logger_nodes": [
+        "roborio"
+      ],
+      "max_size": 400,
+      "destination_nodes": [
+        {
+          "name": "roborio",
+          "priority": 1,
+          "timestamp_logger": "LOCAL_AND_REMOTE_LOGGER",
+          "timestamp_logger_nodes": [
+            "imu"
+          ],
+          "time_to_live": 5000000
+        }
+      ]
+    },
+    {
+      "name": "/imu/aos/remote_timestamps/roborio/imu/aos/aos-message_bridge-Timestamp",
+      "type": "aos.message_bridge.RemoteMessage",
+      "frequency": 20,
+      "source_node": "imu",
+      "max_size": 208
+    },
+    {
+      "name": "/localizer",
+      "type": "frc.controls.LocalizerOutput",
+      "source_node": "imu",
+      "frequency": 400,
+      "max_size": 200,
+      "logger": "LOCAL_AND_REMOTE_LOGGER",
+      "logger_nodes": [
+        "roborio"
+      ],
+      "destination_nodes": [
+        {
+          "name": "roborio",
+          "priority": 5,
+          "timestamp_logger": "LOCAL_AND_REMOTE_LOGGER",
+          "timestamp_logger_nodes": [
+            "imu"
+          ],
+          "time_to_live": 5000000
+        }
+      ]
+    },
+    {
+      "name": "/imu/aos/remote_timestamps/roborio/localizer/frc-controls-LocalizerOutput",
+      "type": "aos.message_bridge.RemoteMessage",
+      "source_node": "imu",
+      "logger": "NOT_LOGGED",
+      "frequency": 400,
+      "num_senders": 2,
+      "max_size": 200
+    },
+    {
+      "name": "/localizer",
+      "type": "frc.IMUValuesBatch",
+      "source_node": "imu",
+      "frequency": 2200,
+      "max_size": 1600,
+      "num_senders": 2
+    },
+    {
       "name": "/roborio/aos",
       "type": "aos.JoystickState",
       "source_node": "roborio",
@@ -76,32 +190,6 @@
       "num_senders": 2
     },
     {
-      "name": "/roborio/aos/remote_timestamps/pi1/roborio/aos/aos-message_bridge-Timestamp",
-      "type": "aos.message_bridge.RemoteMessage",
-      "frequency": 20,
-      "source_node": "roborio",
-      "max_size": 208
-    },
-    {
-      "name": "/roborio/aos/remote_timestamps/pi2/roborio/aos/aos-message_bridge-Timestamp",
-      "type": "aos.message_bridge.RemoteMessage",
-      "frequency": 20,
-      "source_node": "roborio",
-      "max_size": 208
-    },
-    {
-      "name": "/roborio/aos/remote_timestamps/pi3/roborio/aos/aos-message_bridge-Timestamp",
-      "type": "aos.message_bridge.RemoteMessage",
-      "frequency": 20,
-      "source_node": "roborio"
-    },
-    {
-      "name": "/roborio/aos/remote_timestamps/pi4/roborio/aos/aos-message_bridge-Timestamp",
-      "type": "aos.message_bridge.RemoteMessage",
-      "frequency": 20,
-      "source_node": "roborio"
-    },
-    {
       "name": "/roborio/aos/remote_timestamps/imu/roborio/aos/aos-message_bridge-Timestamp",
       "type": "aos.message_bridge.RemoteMessage",
       "frequency": 20,
@@ -134,13 +222,6 @@
     {
       "name": "/drivetrain",
       "type": "frc.sensors.GyroReading",
-      "source_node": "roborio",
-      "frequency": 200,
-      "num_senders": 2
-    },
-    {
-      "name": "/drivetrain",
-      "type": "frc.sensors.Uid",
       "source_node": "roborio",
       "frequency": 200,
       "num_senders": 2
@@ -199,114 +280,18 @@
       "source_node": "roborio",
       "frequency": 200,
       "max_size": 96
-    },
-    {
-      "name": "/autonomous",
-      "type": "aos.common.actions.Status",
-      "source_node": "roborio"
-    },
-    {
-      "name": "/autonomous",
-      "type": "frc.autonomous.Goal",
-      "source_node": "roborio"
-    },
-    {
-      "name": "/autonomous",
-      "type": "frc.autonomous.AutonomousMode",
-      "source_node": "roborio",
-      "frequency": 200
-    },
-    {
-      "name": "/roborio/aos",
-      "type": "frc.PDPValues",
-      "source_node": "roborio",
-      "frequency": 55,
-      "max_size": 368
-    },
-    {
-      "name": "/roborio/aos",
-      "type": "frc.wpilib.PneumaticsToLog",
-      "source_node": "roborio",
-      "frequency": 50
-    }
-  ],
-  "applications": [
-    {
-      "name": "drivetrain",
-      "executable_name": "drivetrain",
-      "nodes": [
-        "roborio"
-      ]
-    },
-    {
-      "name": "trajectory_generator",
-      "executable_name": "trajectory_generator",
-      "nodes": [
-        "roborio"
-      ]
-    },
-    {
-      "name": "superstructure",
-      "executable_name": "superstructure",
-      "nodes": [
-        "roborio"
-      ]
-    },
-    {
-      "name": "joystick_reader",
-      "executable_name": "joystick_reader",
-      "nodes": [
-        "roborio"
-      ]
-    },
-    {
-      "name": "wpilib_interface",
-      "executable_name": "wpilib_interface",
-      "nodes": [
-        "roborio"
-      ]
-    },
-    {
-      "name": "autonomous_action",
-      "executable_name": "autonomous_action",
-      "nodes": [
-        "roborio"
-      ]
-    },
-    {
-      "name": "web_proxy",
-      "executable_name": "web_proxy_main",
-      "args": ["--min_ice_port=5800", "--max_ice_port=5810"],
-      "nodes": [
-        "roborio"
-      ]
-    },
-    {
-      "name": "roborio_message_bridge_client",
-      "executable_name": "message_bridge_client.sh",
-      "args": ["--rt_priority=16"],
-      "nodes": [
-        "roborio"
-      ]
-    },
-    {
-      "name": "message_bridge_server",
-      "executable_name": "message_bridge_server",
-      "args": ["--rt_priority=16"],
-      "nodes": [
-        "roborio"
-      ]
-    },
-    {
-      "name": "logger",
-      "executable_name": "logger_main",
-      "args": ["--snappy_compress"],
-      "nodes": [
-        "roborio"
-      ]
     }
   ],
   "maps": [
+    {
+      "match": {
+        "name": "/aos*",
+        "source_node": "imu"
+      },
+      "rename": {
+        "name": "/imu/aos"
+      }
+    },
     {
       "match": {
         "name": "/aos*",
@@ -315,23 +300,23 @@
       "rename": {
         "name": "/roborio/aos"
       }
+    },
+    {
+      "match": {
+        "name": "/aos",
+        "type": "aos.RobotState"
+      },
+      "rename": {
+        "name": "/roborio/aos"
+      }
     }
   ],
   "nodes": [
     {
-      "name": "roborio",
-      "hostname": "roborio",
-      "hostnames": [
-        "roboRIO-971-FRC",
-        "roboRIO-6971-FRC",
-        "roboRIO-7971-FRC",
-        "roboRIO-8971-FRC",
-        "roboRIO-9971-FRC"
-      ],
-      "port": 3141
+      "name": "imu"
     },
     {
-      "name": "imu"
+      "name": "roborio"
     }
   ]
 }

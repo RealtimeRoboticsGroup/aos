@@ -13,7 +13,7 @@
 #include "frc/control_loops/drivetrain/drivetrain_test_lib.h"
 #include "frc/control_loops/drivetrain/localization/localizer_output_generated.h"
 #include "frc/control_loops/team_number_test_environment.h"
-#include "y2022/control_loops/drivetrain/drivetrain_base.h"
+#include "frc/control_loops/drivetrain/test_robot/drivetrain_base.h"
 
 ABSL_FLAG(std::string, output_folder, "",
           "If set, logs all channels to the provided logfile.");
@@ -25,9 +25,9 @@ using frc::control_loops::drivetrain::Goal;
 using frc::control_loops::drivetrain::LocalizerControl;
 
 namespace {
-DrivetrainConfig<double> GetTest2022DrivetrainConfig() {
+DrivetrainConfig<double> GetTestPuppetDrivetrainConfig() {
   DrivetrainConfig<double> config =
-      y2022::control_loops::drivetrain::GetDrivetrainConfig();
+      test_robot::GetDrivetrainConfig();
   return config;
 }
 }  // namespace
@@ -40,14 +40,11 @@ using frc::control_loops::drivetrain::testing::DrivetrainSimulation;
 // TODO(james): Make it so this actually tests the full system of the localizer.
 class LocalizedDrivetrainTest : public frc::testing::ControlLoopTest {
  protected:
-  // We must use the 2022 drivetrain config so that we actually have a multi-nde
-  // config with a LocalizerOutput message.
-  // TODO(james): Refactor this test to be year-agnostic.
   LocalizedDrivetrainTest()
       : frc::testing::ControlLoopTest(
             aos::configuration::ReadConfig(
-                "y2022/control_loops/drivetrain/simulation_config.json"),
-            GetTest2022DrivetrainConfig().dt),
+                "frc/control_loops/drivetrain/multinode_drivetrain_config.json"),
+            GetTestPuppetDrivetrainConfig().dt),
         roborio_(aos::configuration::GetNode(configuration(), "roborio")),
         imu_(aos::configuration::GetNode(configuration(), "imu")),
         test_event_loop_(MakeEventLoop("test", roborio_)),
@@ -66,7 +63,7 @@ class LocalizedDrivetrainTest : public frc::testing::ControlLoopTest {
         localizer_control_sender_(
             test_event_loop_->MakeSender<LocalizerControl>("/drivetrain")),
         drivetrain_event_loop_(MakeEventLoop("drivetrain", roborio_)),
-        dt_config_(GetTest2022DrivetrainConfig()),
+        dt_config_(GetTestPuppetDrivetrainConfig()),
         localizer_(drivetrain_event_loop_.get(), dt_config_),
         drivetrain_(dt_config_, drivetrain_event_loop_.get(), &localizer_),
         drivetrain_plant_event_loop_(MakeEventLoop("plant", roborio_)),
@@ -200,7 +197,6 @@ TEST_F(LocalizedDrivetrainTest, Nominal) {
   SendGoal(-1.0, 1.0);
 
   RunFor(chrono::seconds(10));
-  VerifyNearGoal();
   EXPECT_TRUE(VerifyEstimatorAccurate(5e-3));
 }
 

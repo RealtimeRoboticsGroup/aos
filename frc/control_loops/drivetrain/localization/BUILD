@@ -37,7 +37,7 @@ cc_library(
 cc_test(
     name = "puppet_localizer_test",
     srcs = ["puppet_localizer_test.cc"],
-    data = ["//y2022/control_loops/drivetrain:simulation_config"],
+    data = ["//frc/control_loops/drivetrain:multinode_drivetrain_config"],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":puppet_localizer",
@@ -49,7 +49,7 @@ cc_test(
         "//frc/control_loops/drivetrain:drivetrain_lib",
         "//frc/control_loops/drivetrain:drivetrain_test_lib",
         "//frc/control_loops/drivetrain/localization:localizer_output_fbs",
-        "//y2022/control_loops/drivetrain:drivetrain_base",
+        "//frc/control_loops/drivetrain/test_robot:drivetrain_base",
     ],
 )
 

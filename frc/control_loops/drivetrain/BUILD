@@ -146,6 +146,40 @@ static_flatbuffer(
 )
 
 aos_config(
+    name = "multinode_drivetrain_config",
+    testonly = True,
+    src = "multinode_drivetrain_config_source.json",
+    flatbuffers = [
+        "//aos/events:event_loop_fbs",
+        "//aos/logging:dynamic_log_command_fbs",
+        "//aos/logging:log_message_fbs",
+        "//aos/starter:starter_fbs",
+        "//aos/starter:starter_rpc_fbs",
+        "//aos/network:message_bridge_client_fbs",
+        "//aos/network:message_bridge_server_fbs",
+        "//aos/network:timestamp_fbs",
+        "//aos/network:remote_message_fbs",
+        "//frc/control_loops/drivetrain/localization:localizer_output_fbs",
+        ":drivetrain_goal_fbs",
+        "//frc/input:joystick_state_fbs",
+        "//frc/input:robot_state_fbs",
+        ":trajectory_fbs",
+        ":spline_goal_fbs",
+        ":drivetrain_output_fbs",
+        ":drivetrain_status_fbs",
+        ":drivetrain_position_fbs",
+        ":drivetrain_can_position_fbs",
+        ":localizer_fbs",
+        "//frc/queues:gyro_fbs",
+        "//frc/queues:gyro_uid_fbs",
+        "//frc/wpilib:imu_fbs",
+        "//frc/wpilib:imu_batch_fbs",
+    ],
+    target_compatible_with = ["@platforms//os:linux"],
+    visibility = [":__subpackages__"],
+)
+
+aos_config(
     name = "simulation_channels",
     src = "drivetrain_simulation_channels.json",
     flatbuffers = [
