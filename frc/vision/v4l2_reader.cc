@@ -204,7 +204,16 @@ void V4L2ReaderBase::UseAutoExposure() {
   v4l2_control control;
   control.id = V4L2_CID_EXPOSURE_AUTO;
   control.value = V4L2_EXPOSURE_AUTO;
-  PCHECK(Ioctl(VIDIOC_S_CTRL, &control) == 0);
+  if (Ioctl(VIDIOC_S_CTRL, &control) != 0) {
+    if (errno == EINVAL) {
+      control.value = V4L2_EXPOSURE_APERTURE_PRIORITY;
+      // Try setting V4L2_EXPOSURE_APERTURE_PRIORITY instead:
+      PCHECK(Ioctl(VIDIOC_S_CTRL, &control) == 0)
+          << ": Failed to set auto-exposure.";
+    } else {
+      PLOG(FATAL) << ": Failed to set auto-exposure.";
+    }
+  }
 }
 
 void V4L2ReaderBase::Buffer::InitializeMessage(size_t max_image_size) {
