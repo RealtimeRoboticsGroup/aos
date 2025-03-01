@@ -1,0 +1,253 @@
+{
+  "configById": {
+    "Image!3aqdps1": {
+      "cameraState": {
+        "distance": 20,
+        "perspective": true,
+        "phi": 60,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "thetaOffset": 45,
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {},
+      "transforms": {},
+      "topics": {},
+      "layers": {},
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {
+        "imageTopic": "/camera0/foxglove",
+        "annotations": {
+          "/camera0/gray foxglove.ImageAnnotations": {
+            "visible": true
+          }
+        }
+      }
+    },
+    "Image!2zjju9c": {
+      "cameraState": {
+        "distance": 20,
+        "perspective": true,
+        "phi": 60,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "thetaOffset": 45,
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {},
+      "transforms": {},
+      "topics": {},
+      "layers": {},
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {
+        "imageTopic": "/camera1/foxglove",
+        "annotations": {
+          "/camera0/gray foxglove.ImageAnnotations": {
+            "visible": false
+          },
+          "/camera1/gray foxglove.ImageAnnotations": {
+            "visible": true
+          }
+        }
+      }
+    },
+    "Image!2tarky3": {
+      "cameraState": {
+        "distance": 20,
+        "perspective": true,
+        "phi": 60,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "thetaOffset": 45,
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {},
+      "transforms": {},
+      "topics": {},
+      "layers": {},
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {
+        "imageTopic": "/camera2/foxglove",
+        "annotations": {
+          "/camera0/gray foxglove.ImageAnnotations": {
+            "visible": false
+          },
+          "/camera2/gray foxglove.ImageAnnotations": {
+            "visible": true
+          }
+        }
+      }
+    },
+    "Image!17kl67v": {
+      "cameraState": {
+        "distance": 20,
+        "perspective": true,
+        "phi": 60,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "thetaOffset": 45,
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {},
+      "transforms": {},
+      "topics": {},
+      "layers": {},
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {
+        "imageTopic": "/camera3/foxglove",
+        "annotations": {
+          "/camera0/gray foxglove.ImageAnnotations": {
+            "visible": false
+          },
+          "/camera3/gray foxglove.ImageAnnotations": {
+            "visible": true
+          }
+        }
+      }
+    },
+    "Tab!43zohug": {
+      "activeTabIdx": 0,
+      "tabs": [
+        {
+          "layout": {
+            "first": {
+              "first": "Image!3aqdps1",
+              "second": "Image!2zjju9c",
+              "direction": "row"
+            },
+            "second": {
+              "first": "Image!2tarky3",
+              "second": "Image!17kl67v",
+              "direction": "row"
+            },
+            "direction": "column"
+          },
+          "title": "Camera Feeds"
+        }
+      ]
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {
+    "35fea0e1-a4c8-4c92-8b86-8b54f3109a02": {
+      "sourceCode": "// The ./types module provides helper types for your Input events and messages.\nimport { Input, Message } from \"./types\";\n\nexport const inputs = [\"/camera0 frc.vision.CameraImage\"];\n\nexport const output = \"/camera0/foxglove\";\n\nexport default function script(\n  event: Input<\"/camera0 frc.vision.CameraImage\">,\n): Message<\"foxglove_msgs/CompressedImage\"> {\n  return {\n    timestamp: { sec: 0, nsec: 0 },\n    frame_id: \"\",\n    data: event.message.data,\n    format: \"jpeg\",\n  };\n}\n",
+      "name": "JPEG0"
+    },
+    "fb9adbda-2f33-49fa-a977-215bfe16c49e": {
+      "sourceCode": "// The ./types module provides helper types for your Input events and messages.\nimport { Input, Message } from \"./types\";\n\nexport const inputs = [\"/camera1 frc.vision.CameraImage\"];\n\nexport const output = \"/camera1/foxglove\";\n\nexport default function script(\n  event: Input<\"/camera1 frc.vision.CameraImage\">,\n): Message<\"foxglove_msgs/CompressedImage\"> {\n  return {\n    timestamp: { sec: 0, nsec: 0 },\n    frame_id: \"\",\n    data: event.message.data,\n    format: \"jpeg\",\n  };\n}\n",
+      "name": "JPEG1"
+    },
+    "ac74ac42-2e84-4da9-8419-718c71824643": {
+      "sourceCode": "// The ./types module provides helper types for your Input events and messages.\nimport { Input, Message } from \"./types\";\n\nexport const inputs = [\"/camera2 frc.vision.CameraImage\"];\n\nexport const output = \"/camera2/foxglove\";\n\nexport default function script(\n  event: Input<\"/camera2 frc.vision.CameraImage\">,\n): Message<\"foxglove_msgs/CompressedImage\"> {\n  return {\n    timestamp: { sec: 0, nsec: 0 },\n    frame_id: \"\",\n    data: event.message.data,\n    format: \"jpeg\",\n  };\n}\n",
+      "name": "JPEG2"
+    },
+    "86862177-cce7-438e-9134-58f72d7d9037": {
+      "sourceCode": "// The ./types module provides helper types for your Input events and messages.\nimport { Input, Message } from \"./types\";\n\nexport const inputs = [\"/camera3 frc.vision.CameraImage\"];\n\nexport const output = \"/camera3/foxglove\";\n\nexport default function script(\n  event: Input<\"/camera3 frc.vision.CameraImage\">,\n): Message<\"foxglove_msgs/CompressedImage\"> {\n  return {\n    timestamp: { sec: 0, nsec: 0 },\n    frame_id: \"\",\n    data: event.message.data,\n    format: \"jpeg\",\n  };\n}\n",
+      "name": "JPEG3"
+    }
+  },
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": "Tab!43zohug"
+}

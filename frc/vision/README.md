@@ -74,3 +74,40 @@ $ bazel run -c opt //frc/vision:intrinsics_calibration  -- --twenty_inch_large_b
 With similar notes about the flags to before; update the `--override_hostname`
 to match your team number. Make sure you are using the same `--base_intrinsics`
 that you used in the live capture.
+
+## Adjusting exposure settings
+
+To adjust exposure settings, the `exposure_100us` setting should be adjusted in
+the `constants.jinja2.json`. Setting this value to `0` will enable
+auto-exposure.
+
+The "proper" way to change and deploy changes to exposure is to modify the file
+in the code-base and then redeploy code. However, at events where there may not
+be anyone available who *can* deploy code, the following procedure may be
+followed:
+
+1. SSH onto the device: `ssh pi@10.18.68.101`.
+2. Edit the `constants.json`: `vim bin/constants.json`
+3. Edit the `exposure_100us` setting to the value you want (note: there may be
+   multiple entries for each robot listed in the constants; there is no harm in
+   just altering all of the exposure settings).
+4. Save & exit editing the constants file.
+5. Restart the constants sender to cause the changed constants to take effect:
+   `aos_starter restart vision_constants_sender`
+6. Note: Sometimes camera drivers have difficulty doing things right and you may
+   need to restart the whole device to have the changes take effect.
+
+## Viewing live camera feeds
+
+1. Get access to [Foxglove](foxglove.dev)---for working at events, downloading
+   the desktop application is encouraged.
+2. Select "Open a new connection".
+3. Use the "Foxglove WebSocket" option with a URL of `ws://10.18.68.101:8765`
+   (substitution your team number as appropriate).
+4.  [Import](https://docs.foxglove.dev/docs/visualization/layouts#import-and-export) the Foxglove layout that we have at
+   [`foxglove_camera_feeds.json`](foxglove_camera_feeds.json).
+
+You may need to close some of the camera feeds to reduce bandwidth load.
+You can also zoom in on feeds, and do any variety of things to ease in looking
+at the images.
+
