@@ -56,9 +56,9 @@ class IntrinsicsCalibration {
   static aos::FlatbufferDetachedBuffer<calibration::CameraCalibration>
   BuildCalibration(cv::Mat camera_matrix, cv::Mat dist_coeffs,
                    aos::realtime_clock::time_point realtime_now,
-                   std::string_view cpu_type, uint16_t cpu_number,
-                   std::string_view camera_channel, std::string_view camera_id,
-                   uint16_t team_number, double reprojection_error);
+                   std::string_view node_name, std::string_view camera_channel,
+                   std::string_view camera_id, uint16_t team_number,
+                   double reprojection_error);
 
   // Return how many captures we've made so far
   int NumCaptures() const { return all_charuco_ids_.size(); };
@@ -92,8 +92,7 @@ class IntrinsicsCalibration {
   static constexpr double kFrameDeltaTLimit = 0.01;
 
   std::string hostname_;
-  const std::optional<std::string_view> cpu_type_;
-  const std::optional<uint16_t> cpu_number_;
+  std::string node_name_;
   const std::string camera_channel_;
   const std::string camera_id_;
 

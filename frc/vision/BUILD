@@ -3,6 +3,7 @@ load("@com_github_google_flatbuffers//:typescript.bzl", "flatbuffer_ts_library")
 load("//aos:config.bzl", "aos_config")
 load("//aos/flatbuffers:generate.bzl", "static_flatbuffer")
 load("//frc:downloader.bzl", "robot_downloader")
+load("//frc/downloader:downloader.bzl", "aos_downloader_dir")
 load("//tools/build_rules:template.bzl", "jinja2_template")
 load(":validator.bzl", "camera_constants_json")
 
@@ -439,6 +440,7 @@ cc_library(
         "//frc/wpilib:imu_batch_fbs",
         "//frc/wpilib:imu_fbs",
         "//third_party:opencv",
+        "@com_google_absl//absl/log:die_if_null",
         "@com_google_absl//absl/strings:str_format",
         "@org_tuxfamily_eigen//:eigen",
     ],
@@ -449,6 +451,7 @@ cc_binary(
     srcs = [
         "intrinsics_calibration.cc",
     ],
+    data = [":aos_config"],
     target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
@@ -557,6 +560,12 @@ cc_library(
     ],
 )
 
+aos_downloader_dir(
+    name = "base_intrinsics_files",
+    srcs = glob(["constants/calibration*.json"]),
+    dir = "base_intrinsics",
+)
+
 robot_downloader(
     binaries = [
         ":apriltag_detector",
@@ -578,6 +587,9 @@ robot_downloader(
         "//frc/orin:orin_irq_config.json",
         "@frc2025_field_map_welded//file:frc2025r2.fmap",
     ],
+    # Deploy the raw intrinsics files so that it is easy to run intrinsics
+    # without needing to manually scp around intrinsics JSON's.
+    dirs = [":base_intrinsics_files"],
     target_compatible_with = ["@platforms//cpu:arm64"],
     target_type = "orin",
 )

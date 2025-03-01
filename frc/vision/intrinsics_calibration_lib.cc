@@ -4,6 +4,7 @@
 
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
+#include "absl/log/die_if_null.h"
 #include "opencv2/core/eigen.hpp"
 
 // NOTE: This will flip any annotations / text that has already been drawn on
@@ -40,8 +41,7 @@ IntrinsicsCalibration::IntrinsicsCalibration(
     std::string_view base_intrinsics_file, bool display_undistorted,
     std::string_view calibration_folder, aos::ExitHandle *exit_handle)
     : hostname_(hostname),
-      cpu_type_(aos::network::ParsePiOrOrin(hostname_)),
-      cpu_number_(aos::network::ParsePiOrOrinNumber(hostname_)),
+      node_name_(ABSL_DIE_IF_NULL(event_loop->node())->name()->string_view()),
       camera_channel_(camera_channel),
       camera_id_(camera_id),
       reprojection_error_(std::numeric_limits<double>::max()),
@@ -78,8 +78,9 @@ IntrinsicsCalibration::IntrinsicsCalibration(
   if (absl::GetFlag(FLAGS_grayscale)) {
     image_callback_.set_format(ImageCallback::Format::GRAYSCALE);
   }
-  if (!absl::GetFlag(FLAGS_visualize)) {
-    // The only way to exit into the calibration routines is by hitting "q"
+  if (!absl::GetFlag(FLAGS_visualize) &&
+      absl::GetFlag(FLAGS_image_load_path).empty()) {
+    // The only way to exit into the live calibration routines is by hitting "q"
     // while visualization is running.  The event_loop doesn't pause enough
     // to handle ctrl-c exit requests
     LOG(INFO) << "Setting visualize to true, since currently the intrinsics "
@@ -99,8 +100,6 @@ IntrinsicsCalibration::IntrinsicsCalibration(
   LOG(INFO) << "Hostname is: " << hostname_ << " and camera channel is "
             << camera_channel_;
 
-  CHECK(cpu_number_) << ": Invalid cpu number " << hostname_
-                     << ", failed to parse cpu number";
   std::regex re{"^[0-9][0-9]-[0-9][0-9]"};
   CHECK(std::regex_match(camera_id_, re))
       << ": Invalid camera_id '" << camera_id_ << "', should be of form YY-NN";
@@ -125,7 +124,9 @@ void IntrinsicsCalibration::HandleCharuco(
                     charuco_extractor_.camera_matrix(),
                     charuco_extractor_.dist_coeffs());
 
-      cv::imshow("Display undist", undistorted_rgb_image);
+      if (absl::GetFlag(FLAGS_visualize)) {
+        cv::imshow("Display undist", undistorted_rgb_image);
+      }
     }
 
     // Reduce resolution displayed on remote viewer to prevent lag
@@ -146,7 +147,9 @@ void IntrinsicsCalibration::HandleCharuco(
                   cv::Point(display_image.size().width / 2, 30),
                   cv::FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(0, 0, 255));
     }
-    cv::imshow("Display", display_image);
+    if (absl::GetFlag(FLAGS_visualize)) {
+      cv::imshow("Display", display_image);
+    }
   }
 
   int keystroke = cv::waitKey(1);
@@ -337,19 +340,12 @@ void IntrinsicsCalibration::LoadImagesFromPath(
 aos::FlatbufferDetachedBuffer<calibration::CameraCalibration>
 IntrinsicsCalibration::BuildCalibration(
     cv::Mat camera_matrix, cv::Mat dist_coeffs,
-    aos::realtime_clock::time_point realtime_now, std::string_view cpu_type,
-    uint16_t cpu_number, std::string_view camera_channel,
-    std::string_view camera_id, uint16_t team_number,
-    double reprojection_error) {
+    aos::realtime_clock::time_point realtime_now, std::string_view node_name,
+    std::string_view camera_channel, std::string_view camera_id,
+    uint16_t team_number, double reprojection_error) {
   flatbuffers::FlatBufferBuilder fbb;
-  // THIS IS A HACK FOR 2024, since we call Orin2 "Imu"
-  std::string cpu_name = absl::StrFormat("%s%d", cpu_type, cpu_number);
-  if (cpu_type == "orin" && cpu_number == 2) {
-    LOG(INFO) << "Renaming orin2 to imu";
-    cpu_name = "imu";
-  }
   flatbuffers::Offset<flatbuffers::String> name_offset =
-      fbb.CreateString(cpu_name.c_str());
+      fbb.CreateString(node_name);
   flatbuffers::Offset<flatbuffers::String> camera_id_offset =
       fbb.CreateString(camera_id);
   flatbuffers::Offset<flatbuffers::Vector<float>> intrinsics_offset =
@@ -525,24 +521,11 @@ void IntrinsicsCalibration::MaybeCalibrate() {
         aos::network::team_number_internal::ParsePiOrOrinTeamNumber(hostname_);
     CHECK(team_number.has_value()) << ": Invalid hostname " << hostname_
                                    << ", failed to parse team number";
-    std::optional<std::string_view> cpu_type =
-        aos::network::ParsePiOrOrin(hostname_);
-    CHECK(cpu_type.has_value()) << ": Invalid cpu_type from" << hostname_
-                                << ", failed to parse cpu type";
-    std::optional<uint16_t> cpu_number =
-        aos::network::ParsePiOrOrinNumber(hostname_);
-    std::string node_name =
-        std::string(cpu_type.value()) +
-        (cpu_number ? std::to_string(cpu_number.value()) : "");
-    // Hack around naming scheme for imu == orin2
-    if (node_name == "orin2") {
-      node_name = "imu";
-    }
     aos::FlatbufferDetachedBuffer<calibration::CameraCalibration>
-        camera_calibration = BuildCalibration(
-            camera_mat_, dist_coeffs_, realtime_now, cpu_type_.value(),
-            cpu_number_.value(), camera_channel_, camera_id_,
-            team_number.value(), reprojection_error_);
+        camera_calibration =
+            BuildCalibration(camera_mat_, dist_coeffs_, realtime_now,
+                             node_name_, camera_channel_, camera_id_,
+                             team_number.value(), reprojection_error_);
     std::stringstream time_ss;
     time_ss << realtime_now;
 
@@ -550,7 +533,7 @@ void IntrinsicsCalibration::MaybeCalibrate() {
         frc::vision::CameraNumberFromChannel(camera_channel_);
     CHECK(camera_number.has_value());
     std::string calibration_filename =
-        CalibrationFilename(calibration_folder_, node_name, team_number.value(),
+        CalibrationFilename(calibration_folder_, node_name_, team_number.value(),
                             camera_number.value(), camera_id_, time_ss.str());
 
     LOG(INFO) << calibration_filename << " -> "
