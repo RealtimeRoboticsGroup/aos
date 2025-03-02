@@ -64,6 +64,63 @@ class ConstantSender {
   aos::Sender<ConstantsData> sender_;
 };
 
+// Publishes constants specific to the current robot also using the robot's name.
+template <typename ConstantsData, typename ConstantsList>
+class NameConstantSender {
+ public:
+  NameConstantSender(aos::EventLoop *event_loop, std::string constants_path,
+                     std::string_view robot_name,
+                     std::string_view channel_name = "/constants")
+      : NameConstantSender<ConstantsData, ConstantsList>(
+            event_loop, constants_path, aos::network::GetTeamNumber(),
+            robot_name, channel_name) {}
+
+  NameConstantSender(aos::EventLoop *event_loop, std::string constants_path,
+                     const uint16_t team_number, std::string_view robot_name,
+                     std::string_view channel_name)
+      : team_number_(team_number),
+        robot_name_(robot_name),
+        channel_name_(channel_name),
+        constants_path_(constants_path),
+        event_loop_(event_loop),
+        sender_(event_loop_->MakeSender<ConstantsData>(channel_name_)) {
+    typename aos::Sender<ConstantsData>::Builder builder =
+        sender_.MakeBuilder();
+    builder.CheckOk(builder.Send(GetConstantsForTeamNumber(builder.fbb())));
+  }
+
+ private:
+  const uint16_t team_number_ = 0;
+  std::string_view robot_name_;
+  std::string_view channel_name_;
+  flatbuffers::Offset<ConstantsData> GetConstantsForTeamNumber(
+      flatbuffers::FlatBufferBuilder *fbb) {
+    aos::FlatbufferDetachedBuffer<ConstantsList> fb =
+        aos::JsonFileToFlatbuffer<ConstantsList>(constants_path_);
+    const ConstantsList &message = fb.message();
+    const auto *constants = message.constants();
+    // Search through the constants for the one matching our team number.
+    for (const auto &constant_data : *constants) {
+      CHECK(constant_data->has_robot_name());
+      if (team_number_ == constant_data->team() &&
+          robot_name_ == constant_data->robot_name()->string_view()) {
+        // Values is equal to the constants meant for the specific robot.
+        const ConstantsData *values = constant_data->data();
+        flatbuffers::Offset<ConstantsData> flatbuffer_constants =
+            aos::RecursiveCopyFlatBuffer(values, fbb);
+        return flatbuffer_constants;
+      }
+    }
+    LOG(FATAL) << "There was no match for " << team_number_
+               << ". Check the constants.json file for the team number that is "
+                  "missing.";
+  }
+
+  std::string constants_path_;
+  aos::EventLoop *event_loop_;
+  aos::Sender<ConstantsData> sender_;
+};
+
 // This class fetches the current constants for the device, with appropriate
 // CHECKs to ensure that (a) the constants never change and (b) that the
 // constants are always available. This can be paired with WaitForConstants to

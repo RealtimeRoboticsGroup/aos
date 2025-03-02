@@ -17,9 +17,10 @@ int main(int argc, char **argv) {
   aos::FlatbufferDetachedBuffer<aos::Configuration> config =
       aos::configuration::ReadConfig(absl::GetFlag(FLAGS_config));
   aos::ShmEventLoop event_loop(&config.message());
-  frc::constants::ConstantSender<frc::vision::CameraConstants,
-                                 frc::vision::CameraConstantsList>
-      constants_sender(&event_loop, absl::GetFlag(FLAGS_constants_path));
+  frc::constants::NameConstantSender<frc::vision::CameraConstants,
+                                     frc::vision::CameraConstantsList>
+      constants_sender(&event_loop, absl::GetFlag(FLAGS_constants_path),
+                       aos::util::ReadFileToStringOrDie("robotname"));
   // Don't need to call Run().
   return 0;
 }

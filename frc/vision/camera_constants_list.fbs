@@ -4,6 +4,7 @@ namespace frc.vision;
 
 table TeamAndCameraConstants {
   team:uint32 (id: 0);
+  robot_name:string (id: 2);
   data:CameraConstants (id: 1);
 }
 
