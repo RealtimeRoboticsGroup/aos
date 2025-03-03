@@ -81,9 +81,9 @@ TEST_F(ConfigurationTest, UnsortedConfig) {
 
   LOG(INFO) << "Read: " << FlatbufferToJson(config, {.multi_line = true});
 
-  EXPECT_EQ(FlatbufferToJson(GetChannel(config, "/aos/robot_state",
-                                        "aos.RobotState", "app1", nullptr)),
-            "{ \"name\": \"/aos/robot_state\", \"type\": \"aos.RobotState\", "
+  EXPECT_EQ(FlatbufferToJson(GetChannel(config, "/frc/robot_state",
+                                        "frc.RobotState", "app1", nullptr)),
+            "{ \"name\": \"/frc/robot_state\", \"type\": \"frc.RobotState\", "
             "\"max_size\": 5 }");
 }
 

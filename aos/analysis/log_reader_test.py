@@ -12,8 +12,8 @@ class LogReaderTest(unittest.TestCase):
         # A list of all the channels in the logfile--this is used to confirm that
         # we did indeed read the config correctly.
         self.all_channels = [
-            ("/aos", "aos.JoystickState"), ("/aos", "aos.RobotState"),
-            ("/aos", "aos.timing.Report"), ("/aos", "frc.PDPValues"),
+            ("/frc", "frc.JoystickState"), ("/frc", "frc.RobotState"),
+            ("/aos", "aos.timing.Report"), ("/frc", "frc.PDPValues"),
             ("/aos", "frc.wpilib.PneumaticsToLog"),
             ("/autonomous", "aos.common.actions.Status"),
             ("/autonomous", "frc.autonomous.AutonomousMode"),

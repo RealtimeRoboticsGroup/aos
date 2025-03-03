@@ -84,18 +84,18 @@ class ControlLoop {
     output_sender_ = event_loop_->MakeSender<OutputType>(name_);
     status_sender_ = event_loop_->MakeSender<StatusType>(name_);
     goal_fetcher_ = event_loop_->MakeFetcher<GoalType>(name_);
-    robot_state_fetcher_ = event_loop_->MakeFetcher<::aos::RobotState>("/aos");
+    robot_state_fetcher_ = event_loop_->MakeFetcher<frc::RobotState>("/frc");
     joystick_state_fetcher_ =
-        event_loop_->MakeFetcher<::aos::JoystickState>("/aos");
+        event_loop_->MakeFetcher<::frc::JoystickState>("/frc");
 
     event_loop_->MakeWatcher(name_, [this](const PositionType &position) {
       this->IteratePosition(position);
     });
   }
 
-  const ::aos::RobotState &robot_state() const { return *robot_state_fetcher_; }
+  const frc::RobotState &robot_state() const { return *robot_state_fetcher_; }
   bool has_joystick_state() const { return joystick_state_fetcher_.get(); }
-  const ::aos::JoystickState &joystick_state() const {
+  const ::frc::JoystickState &joystick_state() const {
     return *joystick_state_fetcher_;
   }
 
@@ -162,8 +162,8 @@ class ControlLoop {
   ::aos::Sender<OutputType> output_sender_;
   ::aos::Sender<StatusType> status_sender_;
   ::aos::Fetcher<GoalType> goal_fetcher_;
-  ::aos::Fetcher<::aos::RobotState> robot_state_fetcher_;
-  ::aos::Fetcher<::aos::JoystickState> joystick_state_fetcher_;
+  ::aos::Fetcher<frc::RobotState> robot_state_fetcher_;
+  ::aos::Fetcher<frc::JoystickState> joystick_state_fetcher_;
 
   // Fetcher only to be used for the Iterate method.  If Iterate is called, Run
   // can't be called.

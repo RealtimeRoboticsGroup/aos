@@ -3,17 +3,17 @@
   "maps": [
     {
       "match": {
-        "name": "/aos",
-        "type": "aos.RobotState"
+        "name": "/frc",
+        "type": "frc.RobotState"
       },
       "rename": {
-        "name": "/roborio/aos"
+        "name": "/roborio/frc"
       }
     }
   ],
   "imports": [
     "y2024_roborio.json",
     "y2024_imu.json",
-    "y2024_orin1.json",
+    "y2024_orin1.json"
   ]
 }

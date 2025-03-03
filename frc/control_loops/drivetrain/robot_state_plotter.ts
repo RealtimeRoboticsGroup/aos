@@ -11,8 +11,8 @@ const DEFAULT_HEIGHT = AosPlotter.DEFAULT_HEIGHT;
 
 export function plotRobotState(conn: Connection, element: Element) : void {
   const aosPlotter = new AosPlotter(conn);
-  const robotState = aosPlotter.addMessageSource('/aos', 'aos.RobotState');
-  const joystickState = aosPlotter.addMessageSource('/aos', 'aos.JoystickState');
+  const robotState = aosPlotter.addMessageSource('/frc', 'frc.RobotState');
+  const joystickState = aosPlotter.addMessageSource('/frc', 'frc.JoystickState');
 
   var currentTop = 0;
 

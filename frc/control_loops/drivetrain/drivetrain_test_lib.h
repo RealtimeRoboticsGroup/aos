@@ -120,7 +120,7 @@ class DrivetrainSimulation {
 
   ::aos::EventLoop *event_loop_;
   ::aos::EventLoop *imu_event_loop_;
-  ::aos::Fetcher<::aos::RobotState> robot_state_fetcher_;
+  ::aos::Fetcher<frc::RobotState> robot_state_fetcher_;
 
   ::aos::Sender<::frc::control_loops::drivetrain::Position>
       drivetrain_position_sender_;

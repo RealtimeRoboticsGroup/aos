@@ -17,10 +17,10 @@ class JoystickInput {
  public:
   explicit JoystickInput(::aos::EventLoop *event_loop)
       : event_loop_(event_loop) {
-    event_loop_->MakeWatcher(
-        "/aos", [this](const ::aos::JoystickState &joystick_state) {
-          this->HandleData(&joystick_state);
-        });
+    event_loop_->MakeWatcher("/frc",
+                             [this](const frc::JoystickState &joystick_state) {
+                               this->HandleData(&joystick_state);
+                             });
     event_loop->SetRuntimeRealtimePriority(28);
   }
 
@@ -28,7 +28,7 @@ class JoystickInput {
   int mode() const { return mode_; }
 
  private:
-  void HandleData(const ::aos::JoystickState *joystick_state);
+  void HandleData(const frc::JoystickState *joystick_state);
 
   // Subclasses should do whatever they want with data here.
   virtual void RunIteration(const driver_station::Data &data) = 0;

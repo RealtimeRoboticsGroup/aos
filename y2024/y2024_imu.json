@@ -7,8 +7,8 @@
       "frequency": 2
     },
     {
-      "name": "/imu/aos",
-      "type": "aos.JoystickState",
+      "name": "/imu/frc",
+      "type": "frc.JoystickState",
       "source_node": "imu",
       "frequency": 100,
       "logger": "LOCAL_AND_REMOTE_LOGGER",
@@ -28,7 +28,7 @@
       ]
     },
     {
-      "name": "/imu/aos/remote_timestamps/orin1/imu/aos/aos-JoystickState",
+      "name": "/imu/aos/remote_timestamps/orin1/imu/aos/frc-JoystickState",
       "type": "aos.message_bridge.RemoteMessage",
       "source_node": "imu",
       "logger": "NOT_LOGGED",

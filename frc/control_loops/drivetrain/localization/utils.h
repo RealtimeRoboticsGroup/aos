@@ -39,7 +39,7 @@ class LocalizationUtils {
   // Returns true if either there is no JoystickState message available or if
   // we are currently in autonomous mode.
   bool MaybeInAutonomous();
-  aos::Alliance Alliance();
+  frc::Alliance Alliance();
 
   // Returns the offset between our node and the specified node (or nullopt if
   // no offset is available). The sign of this will be such that the time on
@@ -54,7 +54,7 @@ class LocalizationUtils {
   aos::Fetcher<frc::control_loops::drivetrain::RioLocalizerInputs>
       combined_fetcher_;
   aos::Fetcher<aos::message_bridge::ServerStatistics> clock_offset_fetcher_;
-  aos::Fetcher<aos::JoystickState> joystick_state_fetcher_;
+  aos::Fetcher<frc::JoystickState> joystick_state_fetcher_;
 };
 
 // Converts a flatbuffer TransformationMatrix to an Eigen matrix.

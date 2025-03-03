@@ -82,58 +82,56 @@ int main(int argc, char *argv[]) {
     PCHECK(errno == 0) << ": Renicing to -20 failed.";
   });
 
-  event_loop.MakeWatcher(
-      "/imu/aos", [&](const aos::JoystickState &joystick_state) {
-        const auto timestamp = event_loop.context().monotonic_event_time;
-        filesystem_status.Fetch();
+  event_loop.MakeWatcher("/frc", [&](const frc::JoystickState &joystick_state) {
+    const auto timestamp = event_loop.context().monotonic_event_time;
+    filesystem_status.Fetch();
 
-        // Store the last time we got disabled
-        if (enabled && !joystick_state.enabled()) {
-          last_disable_time = timestamp;
-        }
-        enabled = joystick_state.enabled();
+    // Store the last time we got disabled
+    if (enabled && !joystick_state.enabled()) {
+      last_disable_time = timestamp;
+    }
+    enabled = joystick_state.enabled();
 
-        bool enough_space = true;
+    bool enough_space = true;
 
-        if (filesystem_status.get() != nullptr) {
-          enough_space = false;
-          for (const aos::util::Filesystem *fs :
-               *filesystem_status->filesystems()) {
-            CHECK(fs->has_path());
-            if (fs->path()->string_view() == "/") {
-              if (fs->free_space() > 50ull * 1024ull * 1024ull * 1024ull) {
-                enough_space = true;
-              }
-            }
+    if (filesystem_status.get() != nullptr) {
+      enough_space = false;
+      for (const aos::util::Filesystem *fs :
+           *filesystem_status->filesystems()) {
+        CHECK(fs->has_path());
+        if (fs->path()->string_view() == "/") {
+          if (fs->free_space() > 50ull * 1024ull * 1024ull * 1024ull) {
+            enough_space = true;
           }
         }
+      }
+    }
 
-        const bool should_be_logging =
-            (enabled ||
-             timestamp <
-                 last_disable_time + std::chrono::duration<double>(
-                                         absl::GetFlag(FLAGS_disabled_time))) &&
-            enough_space;
+    const bool should_be_logging =
+        (enabled || timestamp < last_disable_time +
+                                    std::chrono::duration<double>(
+                                        absl::GetFlag(FLAGS_disabled_time))) &&
+        enough_space;
 
-        if (!logging && should_be_logging) {
-          auto log_namer = MakeLogNamer(&event_loop);
-          if (log_namer == nullptr) {
-            return;
-          }
+    if (!logging && should_be_logging) {
+      auto log_namer = MakeLogNamer(&event_loop);
+      if (log_namer == nullptr) {
+        return;
+      }
 
-          // Start logging if we just got enabled
-          LOG(INFO) << "Starting logging";
-          logger.StartLogging(std::move(log_namer));
-          logging = true;
-          last_rotation_time = event_loop.monotonic_now();
-        } else if (logging && !should_be_logging) {
-          // Stop logging if we've been disabled for a non-negligible amount of
-          // time
-          LOG(INFO) << "Stopping logging";
-          logger.StopLogging(event_loop.monotonic_now());
-          logging = false;
-        }
-      });
+      // Start logging if we just got enabled
+      LOG(INFO) << "Starting logging";
+      logger.StartLogging(std::move(log_namer));
+      logging = true;
+      last_rotation_time = event_loop.monotonic_now();
+    } else if (logging && !should_be_logging) {
+      // Stop logging if we've been disabled for a non-negligible amount of
+      // time
+      LOG(INFO) << "Stopping logging";
+      logger.StopLogging(event_loop.monotonic_now());
+      logging = false;
+    }
+  });
 
   event_loop.Run();
 
