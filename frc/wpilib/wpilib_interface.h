@@ -9,8 +9,8 @@
 namespace frc::wpilib {
 
 // Sends out a message on ::aos::robot_state.
-flatbuffers::Offset<aos::RobotState> PopulateRobotState(
-    aos::Sender<::aos::RobotState>::Builder *builder, int32_t my_pid);
+flatbuffers::Offset<frc::RobotState> PopulateRobotState(
+    aos::Sender<frc::RobotState>::Builder *builder, int32_t my_pid);
 
 }  // namespace frc::wpilib
 

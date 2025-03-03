@@ -1,4 +1,4 @@
-namespace aos;
+namespace frc;
 
 enum MatchType : byte { kNone, kPractice, kQualification, kElimination }
 

@@ -30,7 +30,7 @@ class GyroSender {
   void Loop(const int iterations);
 
   ::aos::EventLoop *event_loop_;
-  ::aos::Fetcher<::aos::RobotState> joystick_state_fetcher_;
+  ::aos::Fetcher<frc::RobotState> joystick_state_fetcher_;
   ::aos::Sender<::frc::sensors::Uid> uid_sender_;
   ::aos::Sender<::frc::sensors::GyroReading> gyro_reading_sender_;
 

@@ -13,8 +13,8 @@ class JoystickSender {
   JoystickSender(::aos::ShmEventLoop *event_loop);
 
  private:
-  ::aos::ShmEventLoop *event_loop_;
-  ::aos::Sender<::aos::JoystickState> joystick_state_sender_;
+  aos::ShmEventLoop *event_loop_;
+  aos::Sender<frc::JoystickState> joystick_state_sender_;
   const uint16_t team_id_;
 };
 

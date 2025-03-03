@@ -24,7 +24,7 @@ using ::aos::monotonic_clock;
 GyroSender::GyroSender(::aos::ShmEventLoop *event_loop)
     : event_loop_(event_loop),
       joystick_state_fetcher_(
-          event_loop_->MakeFetcher<aos::RobotState>("/aos")),
+          event_loop_->MakeFetcher<frc::RobotState>("/frc")),
       uid_sender_(event_loop_->MakeSender<frc::sensors::Uid>("/drivetrain")),
       gyro_reading_sender_(
           event_loop_->MakeSender<frc::sensors::GyroReading>("/drivetrain")) {

@@ -7,12 +7,12 @@ namespace frc::input::driver_station {
 
 Data::Data() : current_values_(), old_values_() {}
 
-void Data::Update(const aos::JoystickState *new_values) {
+void Data::Update(const frc::JoystickState *new_values) {
   old_values_ = current_values_;
   CHECK(new_values->has_joysticks());
   CHECK_EQ(new_values->joysticks()->size(), current_values_.joysticks.size());
   for (size_t i = 0; i < current_values_.joysticks.size(); ++i) {
-    const aos::Joystick *joystick = new_values->joysticks()->Get(i);
+    const frc::Joystick *joystick = new_values->joysticks()->Get(i);
     current_values_.joysticks[i].buttons = joystick->buttons();
     current_values_.joysticks[i].pov = joystick->pov();
     for (size_t j = 0; j < joystick->axis()->size(); ++j) {

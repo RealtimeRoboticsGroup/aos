@@ -72,7 +72,7 @@ class Data {
   Data();
 
   // Updates the current information with a new set of values.
-  void Update(const aos::JoystickState *new_values);
+  void Update(const frc::JoystickState *new_values);
 
   virtual bool IsPressed(POVLocation location) const;
   virtual bool PosEdge(POVLocation location) const;

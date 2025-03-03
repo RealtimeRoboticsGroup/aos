@@ -50,9 +50,9 @@ int main(int argc, char *argv[]) {
                                                    roborio);
     event_loop->MakeWatcher("/aos", [&start_time, &end_time, &printed_match,
                                      &event_loop](
-                                        const aos::JoystickState &msg) {
-      if (!printed_match && msg.match_type() != aos::MatchType::kNone) {
-        LOG(INFO) << "Match Type: " << aos::EnumNameMatchType(msg.match_type());
+                                        const frc::JoystickState &msg) {
+      if (!printed_match && msg.match_type() != frc::MatchType::kNone) {
+        LOG(INFO) << "Match Type: " << frc::EnumNameMatchType(msg.match_type());
         LOG(INFO) << "Match #: " << msg.match_number();
         printed_match = true;
       }

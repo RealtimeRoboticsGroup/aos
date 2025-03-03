@@ -8,12 +8,12 @@
 
 namespace frc::wpilib {
 
-flatbuffers::Offset<aos::RobotState> PopulateRobotState(
-    aos::Sender<::aos::RobotState>::Builder *builder, int32_t my_pid) {
+flatbuffers::Offset<frc::RobotState> PopulateRobotState(
+    aos::Sender<frc::RobotState>::Builder *builder, int32_t my_pid) {
   int32_t status = 0;
 
-  aos::RobotState::Builder robot_state_builder =
-      builder->MakeBuilder<aos::RobotState>();
+  frc::RobotState::Builder robot_state_builder =
+      builder->MakeBuilder<frc::RobotState>();
 
   robot_state_builder.add_reader_pid(my_pid);
   robot_state_builder.add_outputs_enabled(HAL_GetSystemActive(&status));

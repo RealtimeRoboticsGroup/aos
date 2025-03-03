@@ -32,10 +32,10 @@ class UserButtonLocalizedAutonomousActor : public BaseAutonomousActor {
 
   void MaybeSendStartingPosition();
 
-  ::aos::Fetcher<aos::RobotState> robot_state_fetcher_;
-  ::aos::Fetcher<aos::JoystickState> joystick_state_fetcher_;
+  ::aos::Fetcher<frc::RobotState> robot_state_fetcher_;
+  ::aos::Fetcher<frc::JoystickState> joystick_state_fetcher_;
 
-  aos::Alliance alliance_ = aos::Alliance::kInvalid;
+  frc::Alliance alliance_ = frc::Alliance::kInvalid;
   bool is_planned_ = false;
   bool sent_starting_position_ = false;
 

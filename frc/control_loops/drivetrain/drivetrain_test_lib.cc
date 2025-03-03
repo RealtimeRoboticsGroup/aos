@@ -96,7 +96,7 @@ DrivetrainSimulation::DrivetrainSimulation(
     aos::monotonic_clock::duration imu_read_period)
     : event_loop_(event_loop),
       imu_event_loop_(imu_event_loop),
-      robot_state_fetcher_(event_loop_->MakeFetcher<::aos::RobotState>("/aos")),
+      robot_state_fetcher_(event_loop_->MakeFetcher<frc::RobotState>("/frc")),
       drivetrain_position_sender_(
           event_loop_->MakeSender<::frc::control_loops::drivetrain::Position>(
               "/drivetrain")),

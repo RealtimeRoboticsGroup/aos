@@ -244,7 +244,7 @@ class SensorReader {
       bool right_inverted);
 
   ::aos::EventLoop *event_loop_;
-  ::aos::Sender<::aos::RobotState> robot_state_sender_;
+  aos::Sender<frc::RobotState> robot_state_sender_;
 
   frc::DigitalGlitchFilter fast_encoder_filter_, medium_encoder_filter_;
 

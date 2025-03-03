@@ -16,11 +16,11 @@ int main(int argc, char **argv) {
   std::unique_ptr<aos::EventLoop> event_loop =
       reader.event_loop_factory()->MakeEventLoop("roborio", roborio);
 
-  aos::MatchType match_type = aos::MatchType::kNone;
+  frc::MatchType match_type = frc::MatchType::kNone;
   int match_number = 0;
 
   auto joystick_state_fetcher =
-      event_loop->MakeFetcher<aos::JoystickState>("/roborio/aos");
+      event_loop->MakeFetcher<frc::JoystickState>("/roborio/frc");
 
   event_loop->AddPhasedLoop(
       [&](int) {
@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
         match_number = joystick_state_fetcher->match_number();
         // Exits if the match type isn't kNone if match type isn't kNone the
         // match has been found
-        if (match_type != aos::MatchType::kNone) {
+        if (match_type != frc::MatchType::kNone) {
           reader.event_loop_factory()->Exit();
           return;
         }
@@ -41,6 +41,6 @@ int main(int argc, char **argv) {
 
   reader.event_loop_factory()->Run();
 
-  LOG(INFO) << "Match Type: " << aos::EnumNameMatchType(match_type);
+  LOG(INFO) << "Match Type: " << frc::EnumNameMatchType(match_type);
   LOG(INFO) << "Match #: " << match_number;
 }

@@ -10,13 +10,13 @@
 
 namespace frc::wpilib {
 
-using aos::Joystick;
+using frc::Joystick;
 
 JoystickSender::JoystickSender(::aos::ShmEventLoop *event_loop)
     : event_loop_(event_loop),
       joystick_state_sender_(
-          event_loop_->MakeSender<::aos::JoystickState>("/aos")),
-      team_id_(::aos::network::GetTeamNumber()) {
+          event_loop_->MakeSender<frc::JoystickState>("/frc")),
+      team_id_(aos::network::GetTeamNumber()) {
   event_loop_->SetRuntimeRealtimePriority(28);
   event_loop->set_name("joystick_sender");
 
@@ -72,8 +72,8 @@ JoystickSender::JoystickSender(::aos::ShmEventLoop *event_loop)
         flatbuffers::Offset<flatbuffers::String> event_name_offset =
             builder.fbb()->CreateString(ds->GetEventName());
 
-        aos::JoystickState::Builder joystick_state_builder =
-            builder.MakeBuilder<aos::JoystickState>();
+        frc::JoystickState::Builder joystick_state_builder =
+            builder.MakeBuilder<frc::JoystickState>();
 
         joystick_state_builder.add_joysticks(joysticks_offset);
 
@@ -93,13 +93,13 @@ JoystickSender::JoystickSender(::aos::ShmEventLoop *event_loop)
         joystick_state_builder.add_autonomous(ds->IsAutonomous());
         switch (ds->GetAlliance()) {
           case frc::DriverStation::kRed:
-            joystick_state_builder.add_alliance(aos::Alliance::kRed);
+            joystick_state_builder.add_alliance(frc::Alliance::kRed);
             break;
           case frc::DriverStation::kBlue:
-            joystick_state_builder.add_alliance(aos::Alliance::kBlue);
+            joystick_state_builder.add_alliance(frc::Alliance::kBlue);
             break;
           case frc::DriverStation::kInvalid:
-            joystick_state_builder.add_alliance(aos::Alliance::kInvalid);
+            joystick_state_builder.add_alliance(frc::Alliance::kInvalid);
             break;
         }
         joystick_state_builder.add_location(ds->GetLocation());
@@ -110,17 +110,17 @@ JoystickSender::JoystickSender(::aos::ShmEventLoop *event_loop)
 
         switch (ds->GetMatchType()) {
           case frc::DriverStation::kNone:
-            joystick_state_builder.add_match_type(aos::MatchType::kNone);
+            joystick_state_builder.add_match_type(frc::MatchType::kNone);
             break;
           case frc::DriverStation::kPractice:
-            joystick_state_builder.add_match_type(aos::MatchType::kPractice);
+            joystick_state_builder.add_match_type(frc::MatchType::kPractice);
             break;
           case frc::DriverStation::kQualification:
             joystick_state_builder.add_match_type(
-                aos::MatchType::kQualification);
+                frc::MatchType::kQualification);
             break;
           case frc::DriverStation::kElimination:
-            joystick_state_builder.add_match_type(aos::MatchType::kElimination);
+            joystick_state_builder.add_match_type(frc::MatchType::kElimination);
             break;
         }
         joystick_state_builder.add_event_name(event_name_offset);

@@ -115,8 +115,8 @@
       "num_senders": 2
     },
     {
-      "name": "/roborio/aos",
-      "type": "aos.JoystickState",
+      "name": "/roborio/frc",
+      "type": "frc.JoystickState",
       "source_node": "roborio",
       "frequency": 100,
       "logger": "LOCAL_AND_REMOTE_LOGGER",
@@ -136,7 +136,7 @@
       ]
     },
     {
-      "name": "/roborio/aos/remote_timestamps/imu/roborio/aos/aos-JoystickState",
+      "name": "/roborio/aos/remote_timestamps/imu/roborio/frc/frc-JoystickState",
       "type": "aos.message_bridge.RemoteMessage",
       "source_node": "roborio",
       "logger": "NOT_LOGGED",
@@ -145,8 +145,8 @@
       "max_size": 200
     },
     {
-      "name": "/roborio/aos",
-      "type": "aos.RobotState",
+      "name": "/roborio/frc",
+      "type": "frc.RobotState",
       "source_node": "roborio",
       "frequency": 200
     },
@@ -303,11 +303,20 @@
     },
     {
       "match": {
-        "name": "/aos",
-        "type": "aos.RobotState"
+        "name": "/frc",
+        "type": "frc.JoystickState"
       },
       "rename": {
-        "name": "/roborio/aos"
+        "name": "/roborio/frc"
+      }
+    },
+    {
+      "match": {
+        "name": "/frc",
+        "type": "frc.RobotState"
+      },
+      "rename": {
+        "name": "/roborio/frc"
       }
     }
   ],

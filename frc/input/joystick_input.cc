@@ -8,7 +8,7 @@
 
 namespace frc::input {
 
-void JoystickInput::HandleData(const ::aos::JoystickState *joystick_state) {
+void JoystickInput::HandleData(const frc::JoystickState *joystick_state) {
   data_.Update(joystick_state);
 
   mode_ = static_cast<int>(joystick_state->switch_left()) |
