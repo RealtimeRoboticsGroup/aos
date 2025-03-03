@@ -1,6 +1,6 @@
 #include "frc/autonomous/user_button_localized_autonomous_actor.h"
 
-using ::aos::monotonic_clock;
+using aos::monotonic_clock;
 namespace chrono = ::std::chrono;
 namespace this_thread = ::std::this_thread;
 namespace drivetrain = frc::control_loops::drivetrain;
@@ -8,12 +8,12 @@ namespace drivetrain = frc::control_loops::drivetrain;
 namespace frc::autonomous {
 
 UserButtonLocalizedAutonomousActor::UserButtonLocalizedAutonomousActor(
-    ::aos::EventLoop *event_loop,
+    aos::EventLoop *event_loop,
     const control_loops::drivetrain::DrivetrainConfig<double> &dt_config)
     : BaseAutonomousActor(event_loop, dt_config),
-      robot_state_fetcher_(event_loop->MakeFetcher<aos::RobotState>("/aos")),
+      robot_state_fetcher_(event_loop->MakeFetcher<frc::RobotState>("/frc")),
       joystick_state_fetcher_(
-          event_loop->MakeFetcher<aos::JoystickState>("/aos")) {
+          event_loop->MakeFetcher<frc::JoystickState>("/frc")) {
   drivetrain_status_fetcher_.Fetch();
   replan_timer_ = event_loop->AddTimer([this]() { DoReplan(); });
 
@@ -59,7 +59,7 @@ void UserButtonLocalizedAutonomousActor::DoReplan() {
     return;
   }
 
-  if (alliance_ == aos::Alliance::kInvalid) {
+  if (alliance_ == frc::Alliance::kInvalid) {
     return;
   }
 

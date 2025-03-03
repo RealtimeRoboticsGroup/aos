@@ -2,7 +2,7 @@
   "channels": [
     {
       "name": "/roborio/aos",
-      "type": "aos.JoystickState",
+      "type": "frc.JoystickState",
       "source_node": "roborio",
       "frequency": 100,
       "logger": "LOCAL_AND_REMOTE_LOGGER",
@@ -26,7 +26,7 @@
     },
     {
       "name": "/roborio/aos",
-      "type": "aos.RobotState",
+      "type": "frc.RobotState",
       "source_node": "roborio",
       "frequency": 250
     },

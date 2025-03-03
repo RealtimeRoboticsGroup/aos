@@ -1,4 +1,4 @@
-namespace aos;
+namespace frc;
 
 // This message is sent out on this queue when sensors are read. It contains
 // global robot state and information about whether the process reading sensors

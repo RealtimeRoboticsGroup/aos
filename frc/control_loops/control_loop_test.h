@@ -56,9 +56,9 @@ class ControlLoopTestTemplated : public TestBaseClass {
             : nullptr);
     aos::testing::EnableTestLogging();
     robot_state_sender_ =
-        robot_status_event_loop_->MakeSender<::aos::RobotState>("/aos");
+        robot_status_event_loop_->MakeSender<frc::RobotState>("/frc");
     joystick_state_sender_ =
-        robot_status_event_loop_->MakeSender<::aos::JoystickState>("/aos");
+        robot_status_event_loop_->MakeSender<frc::JoystickState>("/frc");
 
     // Schedule the robot status send 1 nanosecond before the loop runs.
     send_robot_state_phased_loop_ = robot_status_event_loop_->AddPhasedLoop(
@@ -78,8 +78,8 @@ class ControlLoopTestTemplated : public TestBaseClass {
   void set_team_id(uint16_t team_id) { team_id_ = team_id; }
   uint16_t team_id() const { return team_id_; }
 
-  void set_alliance(aos::Alliance alliance) { alliance_ = alliance; }
-  aos::Alliance alliance() const { return alliance_; }
+  void set_alliance(frc::Alliance alliance) { alliance_ = alliance; }
+  frc::Alliance alliance() const { return alliance_; }
 
   // Sets the enabled/disabled bit and (potentially) rebroadcasts the robot
   // state messages.
@@ -139,8 +139,8 @@ class ControlLoopTestTemplated : public TestBaseClass {
     if (monotonic_now() >= kDSPacketTime + last_ds_time_ ||
         last_enabled_ != enabled_) {
       auto new_state = joystick_state_sender_.MakeBuilder();
-      ::aos::JoystickState::Builder builder =
-          new_state.template MakeBuilder<::aos::JoystickState>();
+      frc::JoystickState::Builder builder =
+          new_state.template MakeBuilder<frc::JoystickState>();
 
       builder.add_fake(true);
 
@@ -161,8 +161,8 @@ class ControlLoopTestTemplated : public TestBaseClass {
   void SendRobotState() {
     auto new_state = robot_state_sender_.MakeBuilder();
 
-    ::aos::RobotState::Builder builder =
-        new_state.template MakeBuilder<::aos::RobotState>();
+    frc::RobotState::Builder builder =
+        new_state.template MakeBuilder<frc::RobotState>();
 
     builder.add_reader_pid(reader_pid_);
     builder.add_outputs_enabled(enabled_);
@@ -191,7 +191,7 @@ class ControlLoopTestTemplated : public TestBaseClass {
   const ::std::chrono::nanoseconds dt_;
 
   uint16_t team_id_ = 118;
-  aos::Alliance alliance_ = aos::Alliance::kInvalid;
+  frc::Alliance alliance_ = frc::Alliance::kInvalid;
   int32_t reader_pid_ = 1;
   double battery_voltage_ = 12.4;
 
@@ -202,8 +202,8 @@ class ControlLoopTestTemplated : public TestBaseClass {
 
   ::std::unique_ptr<::aos::EventLoop> robot_status_event_loop_;
 
-  ::aos::Sender<::aos::RobotState> robot_state_sender_;
-  ::aos::Sender<::aos::JoystickState> joystick_state_sender_;
+  ::aos::Sender<frc::RobotState> robot_state_sender_;
+  ::aos::Sender<frc::JoystickState> joystick_state_sender_;
 
   ::aos::PhasedLoopHandler *send_robot_state_phased_loop_ = nullptr;
   ::aos::TimerHandler *send_joystick_state_timer_ = nullptr;

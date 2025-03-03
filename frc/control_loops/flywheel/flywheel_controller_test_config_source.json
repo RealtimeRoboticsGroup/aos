@@ -1,8 +1,8 @@
 {
   "channels": [
     {
-      "name": "/aos",
-      "type": "aos.JoystickState"
+      "name": "/frc",
+      "type": "frc.JoystickState"
     },
     {
       "name": "/aos",
@@ -10,8 +10,8 @@
       "frequency": 400
     },
     {
-      "name": "/aos",
-      "type": "aos.RobotState",
+      "name": "/frc",
+      "type": "frc.RobotState",
       "frequency": 250
     },
     {

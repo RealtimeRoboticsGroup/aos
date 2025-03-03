@@ -12,7 +12,7 @@ LocalizationUtils::LocalizationUtils(aos::EventLoop *event_loop)
           event_loop->MakeFetcher<aos::message_bridge::ServerStatistics>(
               "/aos")),
       joystick_state_fetcher_(
-          event_loop->MakeFetcher<aos::JoystickState>("/roborio/aos")) {}
+          event_loop->MakeFetcher<frc::JoystickState>("/frc")) {}
 
 namespace {
 template <typename T>
@@ -71,11 +71,11 @@ bool LocalizationUtils::MaybeInAutonomous() {
              : true;
 }
 
-aos::Alliance LocalizationUtils::Alliance() {
+frc::Alliance LocalizationUtils::Alliance() {
   joystick_state_fetcher_.Fetch();
   return (joystick_state_fetcher_.get() != nullptr)
              ? joystick_state_fetcher_->alliance()
-             : aos::Alliance::kInvalid;
+             : frc::Alliance::kInvalid;
 }
 
 std::optional<aos::monotonic_clock::duration> LocalizationUtils::ClockOffset(

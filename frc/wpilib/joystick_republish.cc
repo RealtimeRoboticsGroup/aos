@@ -18,13 +18,13 @@ int main(int argc, char *argv[]) {
       aos::configuration::ReadConfig(absl::GetFlag(FLAGS_config));
   aos::ShmEventLoop event_loop(&config.message());
 
-  aos::Sender<aos::JoystickState> sender(
-      event_loop.MakeSender<aos::JoystickState>("/imu/aos"));
+  aos::Sender<frc::JoystickState> sender(
+      event_loop.MakeSender<frc::JoystickState>("/imu/frc"));
 
   event_loop.MakeWatcher(
-      "/roborio/aos", [&](const aos::JoystickState &joystick_state) {
+      "/roborio/frc", [&](const frc::JoystickState &joystick_state) {
         auto builder = sender.MakeBuilder();
-        flatbuffers::Offset<aos::JoystickState> state_fbs =
+        flatbuffers::Offset<frc::JoystickState> state_fbs =
             aos::CopyFlatBuffer(&joystick_state, builder.fbb());
         builder.CheckOk(builder.Send(state_fbs));
       });
