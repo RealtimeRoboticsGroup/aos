@@ -80,13 +80,13 @@ void AllocateLogName(char **filename, const char *directory,
   std::string time_short = aos::ToString(aos::realtime_clock::now());
   time_short = time_short.substr(0, time_short.find("."));
 
-  if (asprintf(filename, "%s/%s-%03d_%s", directory, basename, fileindex,
+  if (asprintf(filename, "%s-%03d_%s", basename, fileindex,
                time_short.c_str()) == -1) {
     PLOG(FATAL) << "couldn't create final name";
   }
   // Fix basename formatting.
-  LOG(INFO) << "Created log file (" << *filename << "). Previous file was ("
-            << directory << "/" << previous << ").";
+  LOG(INFO) << "Created log file (" << directory << "/" << *filename
+            << "). Previous file was (" << directory << "/" << previous << ").";
 }
 
 bool FoundThumbDrive(const char *path) {
@@ -159,8 +159,8 @@ std::optional<std::string> MaybeGetLogName(const char *basename) {
   char *tmp;
   AllocateLogName(&tmp, folder.c_str(), basename);
 
-  std::string log_base_name = tmp;
-  std::string log_roborio_name = log_base_name + "/";
+  std::string log_base_name = folder + "/" + std::string(tmp);
+  std::string log_roborio_name = std::string(tmp) + "/";
   free(tmp);
 
   char *tmp2;
