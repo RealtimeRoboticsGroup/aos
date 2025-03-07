@@ -533,7 +533,7 @@ cc_library(
         "//frc/queues:gyro_fbs",
         "//frc/wpilib:imu_batch_fbs",
         "//frc/wpilib:imu_fbs",
-        "//y2016/control_loops/drivetrain:polydrivetrain_plants",
+        "//frc/control_loops/drivetrain/test_robot:polydrivetrain_plants",
     ] + cpu_select({
         "amd64": [
             "//third_party/matplotlib-cpp",
@@ -956,7 +956,7 @@ jinja2_template(
     name = "drivetrain_test_config.json",
     src = "drivetrain_test_config.jinja2.json",
     includes = [
-        "//y2016/control_loops/drivetrain:drivetrain_config",
+        "//frc/control_loops/drivetrain/test_robot:drivetrain_config",
     ],
     parameters = {},
     visibility = ["//visibility:public"],
