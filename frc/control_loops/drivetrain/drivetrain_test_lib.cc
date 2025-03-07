@@ -12,11 +12,11 @@
 #if defined(SUPPORT_PLOT)
 #include "third_party/matplotlib-cpp/matplotlibcpp.h"
 #endif
+#include "frc/control_loops/drivetrain/test_robot/drivetrain_dog_motor_plant.h"
+#include "frc/control_loops/drivetrain/test_robot/hybrid_velocity_drivetrain.h"
+#include "frc/control_loops/drivetrain/test_robot/kalman_drivetrain_motor_plant.h"
+#include "frc/control_loops/drivetrain/test_robot/polydrivetrain_dog_motor_plant.h"
 #include "frc/wpilib/imu_batch_generated.h"
-#include "y2016/control_loops/drivetrain/drivetrain_dog_motor_plant.h"
-#include "y2016/control_loops/drivetrain/hybrid_velocity_drivetrain.h"
-#include "y2016/control_loops/drivetrain/kalman_drivetrain_motor_plant.h"
-#include "y2016/control_loops/drivetrain/polydrivetrain_dog_motor_plant.h"
 
 ABSL_FLAG(bool, plot, false, "If true, plot");
 
@@ -52,21 +52,22 @@ const DrivetrainConfig<double> &GetTestDrivetrainConfig() {
       ::frc::control_loops::drivetrain::LoopType::kClosedLoop,
       ::frc::control_loops::drivetrain::GyroType::kImuZGyro,
       ImuType::kImuFlippedX,
-      ::y2016::control_loops::drivetrain::MakeDrivetrainLoop,
-      ::y2016::control_loops::drivetrain::MakeVelocityDrivetrainLoop,
-      ::y2016::control_loops::drivetrain::MakeKFDrivetrainLoop,
-      ::y2016::control_loops::drivetrain::MakeHybridVelocityDrivetrainLoop,
+      ::frc::control_loops::drivetrain::test_robot::MakeDrivetrainLoop,
+      ::frc::control_loops::drivetrain::test_robot::MakeVelocityDrivetrainLoop,
+      ::frc::control_loops::drivetrain::test_robot::MakeKFDrivetrainLoop,
+      ::frc::control_loops::drivetrain::test_robot::
+          MakeHybridVelocityDrivetrainLoop,
 
-      chrono::duration_cast<chrono::nanoseconds>(
-          chrono::duration<double>(::y2016::control_loops::drivetrain::kDt)),
-      ::y2016::control_loops::drivetrain::kRobotRadius,
-      ::y2016::control_loops::drivetrain::kWheelRadius,
-      ::y2016::control_loops::drivetrain::kV,
+      chrono::duration_cast<chrono::nanoseconds>(chrono::duration<double>(
+          ::frc::control_loops::drivetrain::test_robot::kDt)),
+      ::frc::control_loops::drivetrain::test_robot::kRobotRadius,
+      ::frc::control_loops::drivetrain::test_robot::kWheelRadius,
+      ::frc::control_loops::drivetrain::test_robot::kV,
 
-      ::y2016::control_loops::drivetrain::kHighGearRatio,
-      ::y2016::control_loops::drivetrain::kLowGearRatio,
-      ::y2016::control_loops::drivetrain::kJ,
-      ::y2016::control_loops::drivetrain::kMass,
+      ::frc::control_loops::drivetrain::test_robot::kHighGearRatio,
+      ::frc::control_loops::drivetrain::test_robot::kLowGearRatio,
+      ::frc::control_loops::drivetrain::test_robot::kJ,
+      ::frc::control_loops::drivetrain::test_robot::kMass,
       kThreeStateDriveShifter,
       kThreeStateDriveShifter,
       false,

@@ -3,7 +3,7 @@
   "loop_type": "kClosedLoop",
   "gyro_type": "kImuZGyro",
   "imu_type" : "kImuFlippedX",
-  "loop_config": {% include 'y2016/control_loops/drivetrain/drivetrain_config.json' %},
+  "loop_config": {% include 'frc/control_loops/drivetrain/test_robot/drivetrain_config.json' %},
   "left_drive": {
     "low_gear_low": 0.0,
     "high_gear_high": 0.0,
