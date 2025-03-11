@@ -205,15 +205,17 @@ void SctpClientConnection::MessageReceived() {
             case SCTP_COMM_UP:
               NodeConnected(sac->sac_assoc_id);
 
-              VLOG(1) << "Received up from " << message->PeerAddress() << " on "
-                      << sac->sac_assoc_id << " state " << sac->sac_state;
+              VLOG(1) << "Received up from " << message->PeerAddress()
+                      << " on assoc " << sac->sac_assoc_id << " state "
+                      << sac->sac_state;
               break;
             case SCTP_COMM_LOST:
             case SCTP_SHUTDOWN_COMP:
             case SCTP_CANT_STR_ASSOC: {
               NodeDisconnected();
-              VLOG(1) << "Disconnect from " << message->PeerAddress() << " on "
-                      << sac->sac_assoc_id << " state " << sac->sac_state;
+              VLOG(1) << "Disconnect from " << message->PeerAddress()
+                      << " on assoc " << sac->sac_assoc_id << " state "
+                      << sac->sac_state;
             } break;
             default:
               LOG(FATAL) << "Never seen state " << sac->sac_state << " before.";
@@ -253,10 +255,10 @@ void SctpClientConnection::SendConnect() {
                                     connect_message_.span().size()),
                    0)) {
     VLOG(1) << "Sending connect to " << remote_node_->hostname()->string_view()
-            << " succeeded.";
+            << " port " << remote_node_->port() << " succeeded.";
   } else {
     VLOG(1) << "Connect to " << remote_node_->hostname()->string_view()
-            << " failed.";
+            << " port " << remote_node_->port() << " failed.";
   }
 }
 
@@ -332,6 +334,20 @@ void SctpClientConnection::HandleData(const Message *message) {
         monotonic_clock::time_point(
             chrono::nanoseconds(remote_data->monotonic_remote_transmit_time())),
         remote_data->queue_index(), remote_boot_uuid));
+    VLOG(1) << "Sent "
+            << configuration::StrippedChannelToString(
+                   channel_state->sender->channel())
+            << " -> {\"channel_index\": " << remote_data->channel_index()
+            << ", \"monotonic_sent_time\": "
+            << remote_data->monotonic_sent_time()
+            << ", \"monotonic_remote_transmit_time\": "
+            << remote_data->monotonic_remote_transmit_time()
+            << ", \"realtime_sent_time\": " << remote_data->realtime_sent_time()
+            << ", \"queue_index\": " << remote_data->queue_index()
+            << ", \"monotonic_remote_time\": " << sender->monotonic_sent_time()
+            << ", \"realtime_remote_time\": " << sender->realtime_sent_time()
+            << ", \"remote_queue_index\": " << sender->sent_queue_index()
+            << "}";
 
     client_status_->SampleFilter(
         client_index_,
@@ -430,8 +446,8 @@ bool SctpClientConnection::SendTimestamp(SavedTimestamp timestamp) {
       timestamp.remote_queue_index);
 
   // Unique ID is channel_index and monotonic clock.
-  VLOG(1) << this << " Sent timestamp " << timestamp.channel_index << " "
-          << timestamp.queue_index;
+  VLOG(1) << this << " Sent timestamp for channel " << timestamp.channel_index
+          << ", queue index " << timestamp.queue_index;
   if (!client_.Send(
           kTimestampStream(),
           std::string_view(reinterpret_cast<const char *>(

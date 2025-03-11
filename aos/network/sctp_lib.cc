@@ -19,6 +19,7 @@
 #include "absl/flags/flag.h"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
+#include "absl/strings/str_cat.h"
 
 #include "aos/util/file.h"
 
@@ -196,12 +197,14 @@ std::string Address(const struct sockaddr_storage &sockaddr) {
   char addrbuf[INET6_ADDRSTRLEN];
   if (sockaddr.ss_family == AF_INET) {
     const struct sockaddr_in *sin = (const struct sockaddr_in *)&sockaddr;
-    return std::string(
-        inet_ntop(AF_INET, &sin->sin_addr, addrbuf, INET6_ADDRSTRLEN));
+    return absl::StrCat(
+        inet_ntop(AF_INET, &sin->sin_addr, addrbuf, INET6_ADDRSTRLEN), ":",
+        sin->sin_port);
   } else {
     const struct sockaddr_in6 *sin6 = (const struct sockaddr_in6 *)&sockaddr;
-    return std::string(
-        inet_ntop(AF_INET6, &sin6->sin6_addr, addrbuf, INET6_ADDRSTRLEN));
+    return absl::StrCat(
+        inet_ntop(AF_INET6, &sin6->sin6_addr, addrbuf, INET6_ADDRSTRLEN), ":",
+        sin6->sin6_port);
   }
 }
 
@@ -426,7 +429,7 @@ bool SctpReadWrite::SendMessage(
     return false;
   }
   CHECK_EQ(static_cast<ssize_t>(data.size()), size);
-  VLOG(2) << "Sent " << data.size();
+  VLOG(2) << "Sent " << data.size() << " bytes";
   return true;
 }
 
