@@ -43,12 +43,11 @@ void ThreadedEventLoopRunner::Exit() {
 }
 
 MessageBridgeParameterizedTest::MessageBridgeParameterizedTest()
-    : pi1_("pi1", "raspberrypi", "pi1_message_bridge_server",
-           GetParam().config),
-      pi2_("pi2", "raspberrypi2", "pi2_message_bridge_client",
-           GetParam().config),
+    : pi1_("pi1", "raspberrypi", GetParam().config),
+      pi2_("pi2", "raspberrypi2", GetParam().config),
       config_(aos::configuration::ReadConfig(GetParam().config)),
       config_sha256_(Sha256(config_.span())) {
+  VLOG(1) << "Testing with " << GetParam().config;
   // Make sure that we clean up all the shared memory queues so that we cannot
   // inadvertently be influenced other tests or by previously run AOS
   // applications (in a fully sharded test running inside the bazel sandbox,
@@ -62,11 +61,10 @@ bool MessageBridgeParameterizedTest::shared() const {
 }
 
 PiNode::PiNode(const std::string node_name, const std::string host_name,
-               const std::string app_name, const std::string config_filename)
+               const std::string config_filename)
     : boot_uuid_(UUID::Random()),
       node_name_(node_name),
       host_name_(host_name),
-      app_name_(app_name),
       config_(aos::configuration::ReadConfig(config_filename)),
       config_sha256_(Sha256(config_.span())) {}
 
@@ -79,7 +77,8 @@ void PiNode::OnPi() {
 void PiNode::MakeServer(const std::string server_config_sha256) {
   OnPi();
   LOG(INFO) << "Making " << node_name_ << " server";
-  absl::SetFlag(&FLAGS_application_name, app_name_);
+  absl::SetFlag(&FLAGS_application_name,
+                absl::StrCat(node_name_, "_message_bridge_server"));
   server_event_loop_ = std::make_unique<aos::ShmEventLoop>(&config_.message());
   server_event_loop_->SetRuntimeRealtimePriority(1);
   message_bridge_server_ = std::make_unique<MessageBridgeServer>(
@@ -117,7 +116,8 @@ void PiNode::StopServer() {
 void PiNode::MakeClient() {
   OnPi();
   LOG(INFO) << "Making " << node_name_ << " client";
-  absl::SetFlag(&FLAGS_application_name, app_name_);
+  absl::SetFlag(&FLAGS_application_name,
+                absl::StrCat(node_name_, "_message_bridge_client"));
   client_event_loop_ = std::make_unique<aos::ShmEventLoop>(&config_.message());
   client_event_loop_->SetRuntimeRealtimePriority(1);
   message_bridge_client_ = std::make_unique<MessageBridgeClient>(

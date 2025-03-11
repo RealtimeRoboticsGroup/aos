@@ -369,6 +369,7 @@ TEST_P(MessageBridgeParameterizedTest, PingPong) {
               ASSERT_TRUE(pi1_on_pi1_timestamp_fetcher.FetchNext());
             }
 
+            VLOG(1) << "On the Timestamp channel";
             pi1_context = &pi1_on_pi1_timestamp_fetcher.context();
             pi2_context = &pi1_on_pi2_timestamp_fetcher.context();
           } else if (header.channel_index() == ping_timestamp_channel) {
@@ -384,6 +385,7 @@ TEST_P(MessageBridgeParameterizedTest, PingPong) {
               ASSERT_TRUE(ping_on_pi1_fetcher.FetchNext());
             }
 
+            VLOG(1) << "On the Ping channel";
             pi1_context = &ping_on_pi1_fetcher.context();
             pi2_context = &ping_on_pi2_fetcher.context();
           } else {
@@ -408,7 +410,7 @@ TEST_P(MessageBridgeParameterizedTest, PingPong) {
                     pi2_context->monotonic_remote_time);
 
           // Confirm the forwarded message also matches the source message.
-          EXPECT_EQ(pi1_context->queue_index, header.queue_index());
+          EXPECT_EQ(pi1_context->queue_index, header.remote_queue_index());
           EXPECT_EQ(pi1_context->monotonic_event_time,
                     header_monotonic_remote_time);
           EXPECT_EQ(pi1_context->realtime_event_time,
@@ -423,10 +425,19 @@ TEST_P(MessageBridgeParameterizedTest, PingPong) {
   ThreadedEventLoopRunner pong_thread(&pong_event_loop);
   ThreadedEventLoopRunner ping_thread(&ping_event_loop);
 
+  LOG(INFO) << "Starting servers.";
   pi1_.StartServer();
+  pi2_.StartServer();
+  LOG(INFO) << "Starting clients.";
+
+  // Wait a bit so all the queue indices don't match across the nodes.  This
+  // makes it so that Timestamp messages will get dropped.  That means that the
+  // queue index and remote queue index won't match, which means we need to
+  // properly track them to pass the test.
+  std::this_thread::sleep_for(chrono::milliseconds(1000));
+
   pi1_.StartClient();
   pi2_.StartClient();
-  pi2_.StartServer();
 
   // And go!
   // Run for 5 seconds to make sure we have time to estimate the offset.
@@ -1481,7 +1492,7 @@ TEST(MessageBridgeTests, MismatchedServerAndClientConfigs) {
   // Make a `MessageBridgeServer` with the config
   // `message_bridge_test_mismatched_configs_pi1_and_pi3_config.json`.
   // In this config, `pi1` talks to `pi3`, but does *not* talk to `pi2`.
-  PiNode pi1("pi1", "raspberrypi", "pi1_message_bridge_server",
+  PiNode pi1("pi1", "raspberrypi",
              "message_bridge_test_mismatched_configs_pi1_and_pi3_config.json");
   pi1.OnPi();
   pi1.MakeServer();
@@ -1499,7 +1510,7 @@ TEST(MessageBridgeTests, MismatchedServerAndClientConfigs) {
   // `MessageBridgeServerStatus::nodes_` vector at the index corresponding to
   // the client node's index. In such a case, we expect to not crash or raise an
   // exception.
-  PiNode pi2("pi2", "raspberrypi2", "pi2_message_bridge_client",
+  PiNode pi2("pi2", "raspberrypi2",
              "message_bridge_test_mismatched_configs_pi1_and_pi2_config.json");
   pi2.OnPi();
   pi2.MakeClient();

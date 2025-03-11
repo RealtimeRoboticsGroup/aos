@@ -50,7 +50,7 @@ struct Param {
 class PiNode {
  public:
   PiNode(const std::string node_name, const std::string host_name,
-         const std::string app_name, const std::string config_filename);
+         const std::string config_filename);
   // OnPi* sets the global state necessary to pretend that a ShmEventLoop is on
   // the requisite system.
   void OnPi();
@@ -69,7 +69,6 @@ class PiNode {
   const UUID boot_uuid_;
   const std::string node_name_;
   const std::string host_name_;
-  const std::string app_name_;
 
   aos::FlatbufferDetachedBuffer<aos::Configuration> config_;
   std::string config_sha256_;

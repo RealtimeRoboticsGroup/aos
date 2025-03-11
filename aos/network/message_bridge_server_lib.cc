@@ -186,7 +186,11 @@ bool ChannelState::TrySendData(const Context &context) {
   bool logged_remotely = false;
   bool retry_required = false;
   VLOG(1) << "Send for " << configuration::StrippedChannelToString(channel_)
-          << " with " << context.queue_index << " and data " << context.data;
+          << " with {\"channel_index\": " << channel_index_
+          << ", \"queue_index\": " << context.queue_index
+          << ", \"monotonic_sent_time\": " << context.monotonic_event_time
+          << ", \"realtime_sent_time\": " << context.realtime_event_time
+          << "} and data " << context.data << ", size " << fbb.GetSize();
   for (Peer &peer : peers_) {
     if (PeerReadyToFetchNext(peer, context)) {
       VLOG(1) << "Skipping send for "
@@ -247,7 +251,8 @@ bool ChannelState::TrySendData(const Context &context) {
       VLOG(2) << "TODO(austin): backup log to disk if this fails eventually";
     }
   } else {
-    VLOG(2) << "Not bothering to track this message since nobody cares.";
+    VLOG(2) << "Not bothering to track this message since it isn't logged "
+               "remotely.";
   }
 
   // TODO(austin): Limit the size of this queue.  Flush messages to disk
@@ -709,7 +714,7 @@ void MessageBridgeServer::HandleData(const Message *message) {
         return;
       }
     }
-    VLOG(1) << FlatbufferToJson(connect);
+    VLOG(1) << "Connect msg: " << FlatbufferToJson(connect);
 
     if (!connect->has_config_sha256()) {
       if (VLOG_IS_ON(1)) {
@@ -811,6 +816,8 @@ void MessageBridgeServer::HandleData(const Message *message) {
       flatbuffers::Verifier verifier(message->data(), message->size);
       CHECK(message_header->Verify(verifier));
     }
+
+    VLOG(1) << "Received Timestamp msg: " << FlatbufferToJson(message_header);
 
     CHECK_LT(message_header->channel_index(), channels_.size());
     ChannelState *channel = channels_[message_header->channel_index()].get();
