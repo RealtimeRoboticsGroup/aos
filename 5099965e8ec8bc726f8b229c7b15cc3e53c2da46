@@ -35,6 +35,23 @@
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "ba59882e_2ed1795b",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-03-14T03:03:08Z",
+      "side": 1,
+      "message": "To detect the platform, in tools/bazel:\n```\nif [[ -f /etc/debian_version ]]; then\n  if grep -q \"Ubuntu\" /etc/os-release; then\n    echo \"Ubuntu\"\n  else\n    echo \"Debian\"\n  fi\nelse\n  echo \"Not Debian or Ubuntu\"\nfi\n```",
+      "revId": "5099965e8ec8bc726f8b229c7b15cc3e53c2da46",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "e333d799_d666ab69",
