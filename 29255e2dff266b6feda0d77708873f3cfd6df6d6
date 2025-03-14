@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "138d781f_33eb5aa7",
+        "filename": "aos/network/message_bridge_test.cc",
+        "patchSetId": 1
+      },
+      "lineNbr": 435,
+      "author": {
+        "id": 1000002
+      },
+      "writtenOn": "2025-03-14T01:19:05Z",
+      "side": 1,
+      "message": "not sure I\u0027m following the \"forcing us to properly handle queue indices\" half of this comment.",
+      "range": {
+        "startLine": 434,
+        "startChar": 59,
+        "endLine": 435,
+        "endChar": 35
+      },
+      "revId": "29255e2dff266b6feda0d77708873f3cfd6df6d6",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    }
+  ]
+}
