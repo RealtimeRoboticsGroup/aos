@@ -604,6 +604,7 @@ robot_downloader(
         "//aos/util:filesystem_monitor",
         "//aos/util:foxglove_websocket",
         "//frc/orin:hardware_monitor",
+        "//frc/orin:localizer_logger",
         "//frc/vision:camera_reader",
     ],
     data = [
