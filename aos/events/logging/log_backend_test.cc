@@ -5,6 +5,9 @@
 #include <fstream>
 #include <random>
 
+#include "absl/flags/declare.h"
+#include "absl/flags/flag.h"
+#include "absl/flags/reflection.h"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
@@ -14,6 +17,9 @@
 
 #include "aos/containers/resizeable_buffer.h"
 #include "aos/testing/tmpdir.h"
+#include "aos/util/file.h"
+
+ABSL_DECLARE_FLAG(bool, sync);
 
 namespace aos::logger::testing {
 namespace {
@@ -56,6 +62,34 @@ TEST(LogBackendTest, CreateSimpleFile) {
   EXPECT_EQ(view, "test");
 }
 
+TEST(FileHandlerTest, CloseSyncsDirectory) {
+  absl::FlagSaver flag_saver;
+  absl::SetFlag(&FLAGS_sync, true);
+
+  const std::string logevent = aos::testing::TestTmpDir() + "/";
+  const std::string filename = "test.log";
+  const std::string filepath = logevent + filename;
+
+  // Create the directory.
+  ASSERT_TRUE(aos::util::MkdirPIfSpace(logevent, 0777, true));
+
+  // Create a FileHandler.
+  FileHandler file_handler(filepath, false);
+
+  // Open, write, and close the file.
+  ASSERT_EQ(file_handler.OpenForWrite(), WriteCode::kOk);
+  auto result = Write(&file_handler, "test");
+  EXPECT_EQ(result.code, WriteCode::kOk);
+  EXPECT_EQ(result.messages_written, 1);
+  EXPECT_EQ(file_handler.Close(), WriteCode::kOk);
+
+  // Check that the file exists (created by MkdirPIfSpace with sync = true).
+  EXPECT_TRUE(std::filesystem::exists(filepath));
+
+  // Cleanup
+  std::filesystem::remove(filepath);
+}
+
 TEST(LogBackendTest, CreateRenamableFile) {
   const std::string logevent = aos::testing::TestTmpDir() + "/logevent/";
   RenamableFileBackend backend(logevent, false);
@@ -96,6 +130,37 @@ TEST(LogBackendTest, RenameBaseAfterWrite) {
 
   std::string renamed = aos::testing::TestTmpDir() + "/renamed/";
   backend.RenameLogBase(renamed);
+
+  EXPECT_FALSE(std::filesystem::exists(logevent + "test.log"));
+  EXPECT_TRUE(std::filesystem::exists(renamed + "test.log"));
+
+  EXPECT_EQ(file->Close(), WriteCode::kOk);
+  // Check that file is renamed.
+  EXPECT_TRUE(std::filesystem::exists(renamed + "test.log"));
+}
+
+TEST(LogBackendTest, RenameBaseWithSync) {
+  // Save the original flag value and restore it at the end of the test.
+  absl::FlagSaver flag_saver;
+  // Set the sync flag to true for this test.
+  absl::SetFlag(&FLAGS_sync, true);
+
+  // Use unique directory names for this test.
+  const std::string logevent =
+      aos::testing::TestTmpDir() + "/logevent_with_sync/";
+  const std::string renamed =
+      aos::testing::TestTmpDir() + "/renamed_with_sync/";
+
+  RenamableFileBackend backend(logevent, false);
+  auto file = backend.RequestFile("test.log");
+  ASSERT_EQ(file->OpenForWrite(), WriteCode::kOk);
+  auto result = Write(file.get(), "test");
+  EXPECT_EQ(result.code, WriteCode::kOk);
+  EXPECT_EQ(result.messages_written, 1);
+  EXPECT_TRUE(std::filesystem::exists(logevent + "test.log"));
+
+  // This will now sync the parent directories due to FLAGS_sync being true.
+  EXPECT_TRUE(backend.RenameLogBase(renamed));
 
   EXPECT_FALSE(std::filesystem::exists(logevent + "test.log"));
   EXPECT_TRUE(std::filesystem::exists(renamed + "test.log"));

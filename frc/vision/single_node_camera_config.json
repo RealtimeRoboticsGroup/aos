@@ -425,14 +425,22 @@
     {
       "name": "image_logger",
       "executable_name": "image_logger",
-      "autostart": false,
       "args": [
         "--rotate_every",
-        "30.0",
+        "5.0",
         "--direct",
-        "--flush_size=4194304"
+        "--flush_size=4194304",
+        "--sync"
       ],
-      "user": "pi",
+      "nodes": [ "orin" ]
+    },
+    {
+      "name": "localizer_logger",
+      "args": [
+        "--rotate_every",
+        "5.0",
+        "--sync"
+      ],
       "nodes": [ "orin" ]
     }
   ],

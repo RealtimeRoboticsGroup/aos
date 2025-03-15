@@ -3,6 +3,7 @@
 #include <unistd.h>
 
 #include <cstdlib>
+#include <filesystem>
 #include <optional>
 #include <string>
 
@@ -167,6 +168,52 @@ TEST(FileTest, WriteFileError) {
   EXPECT_EQ(0, result.bytes_written);
   EXPECT_EQ(-1, result.return_code);
   EXPECT_EQ("", ReadFileToStringOrDie(test_file));
+}
+
+// Tests that SyncDirectory opens, fsyncs, and closes a directory.
+TEST(FileTest, SyncDirectory) {
+  // Create a temporary directory.
+  const ::std::string tmp_dir = aos::testing::TestTmpDir();
+  const ::std::string new_dir = tmp_dir + "/sync_dir_test/";
+
+  ASSERT_FALSE(PathExists(new_dir));
+  MkdirP(new_dir, 0777);
+  ASSERT_TRUE(PathExists(new_dir));
+
+  // Call SyncDirectory and check that no errors occur.
+  EXPECT_NO_FATAL_FAILURE(SyncDirectory(std::filesystem::path(new_dir)));
+
+  // Clean up the directory.
+  UnlinkRecursive(new_dir);
+}
+
+// Tests that MkdirPIfSpace creates the directory with and without syncing.
+TEST(FileTest, MkdirPIfSpace) {
+  const ::std::string tmp_dir = aos::testing::TestTmpDir();
+  const ::std::string base_dir = tmp_dir + "/mkdir_p_if_space/";
+  const ::std::string new_dir_sync = base_dir + "sync/a/b/c/";
+  const ::std::string new_dir_nosync = base_dir + "nosync/a/b/c/";
+
+  // Clean-up from any previous failures.
+  UnlinkRecursive(base_dir);
+
+  // Test with syncing enabled.
+  ASSERT_FALSE(PathExists(new_dir_sync));
+  ASSERT_TRUE(MkdirPIfSpace(new_dir_sync, 0777, true));
+  ASSERT_TRUE(PathExists(new_dir_sync));
+  EXPECT_TRUE(std::filesystem::is_directory(new_dir_sync));
+  // When sync is true, both the created directory and its parent directory
+  // should be synced.
+  // TODO(austin): Confirm that fsync was called on both directories. This is
+  // hard.
+
+  // Test without syncing.
+  ASSERT_FALSE(PathExists(new_dir_nosync));
+  ASSERT_TRUE(MkdirPIfSpace(new_dir_nosync, 0777, false));
+  ASSERT_TRUE(PathExists(new_dir_nosync));
+  EXPECT_TRUE(std::filesystem::is_directory(new_dir_nosync));
+
+  UnlinkRecursive(base_dir);
 }
 
 }  // namespace aos::util::testing
