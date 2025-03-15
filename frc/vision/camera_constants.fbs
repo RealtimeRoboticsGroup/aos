@@ -22,6 +22,9 @@ table CameraStreamSettings {
   // uses these units).
   // If not set, or set to zero, auto-exposure will be used.
   exposure_100us:uint32 (id: 3);
+
+  // The gain to set the camera to.
+  gain:uint32 (id: 4);
 }
 
 table CameraConstants {
