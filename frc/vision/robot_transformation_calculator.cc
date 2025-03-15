@@ -25,38 +25,68 @@ int Main() {
                               ",");
 
   // Converts from the camera frame to the robot frame.
+  const double angle0 = 0.0;
+  const double angledown0 = 15.0;
   const Eigen::Affine3d orientation0 =
-      Eigen::Translation3d(0.1687, -0.2156, 0.7979) *
-      Eigen::AngleAxisd(-260.0 * M_PI / 180, Eigen::Vector3d::UnitZ()) *
+      Eigen::Translation3d(-0.120, 0.133, 0.710) *
+      Eigen::AngleAxisd(angle0 * M_PI / 180, Eigen::Vector3d::UnitZ()) *
+      Eigen::AngleAxisd(angledown0 * M_PI / 180, Eigen::Vector3d::UnitY()) *
       camera_to_robot;
 
   LOG(INFO) << "Orientation0 (cam to robot): \n"
             << orientation0.matrix().format(json_format);
-  LOG(INFO) << "T: " << orientation0 * Eigen::Vector3d(0.0, 0.0, 0.0);
+  LOG(INFO) << "T: "
+            << (orientation0 * Eigen::Vector3d(0.0, 0.0, 0.0)).transpose()
+            << " angle " << angle0 << " or " << angle0 + 360.;
 
+  LOG(INFO) << "Camera0 to robot: \n" << orientation0.matrix();
+  const Eigen::Vector3d z = orientation0 * Eigen::Vector3d::Zero();
+  LOG(INFO) << "0: " << (z).transpose();
+  LOG(INFO) << "X: "
+            << (orientation0 * Eigen::Vector3d::UnitX() - z).transpose();
+  LOG(INFO) << "Y: "
+            << (orientation0 * Eigen::Vector3d::UnitY() - z).transpose();
+  LOG(INFO) << "Z: "
+            << (orientation0 * Eigen::Vector3d::UnitZ() - z).transpose();
+
+  const double angle1 = 36.0;
+  const double angledown1 = 0.0;
   const Eigen::Affine3d orientation1 =
-      Eigen::Translation3d(0.1832, -0.2219, 0.4074) *
-      Eigen::AngleAxisd(-345. * M_PI / 180, Eigen::Vector3d::UnitZ()) *
+      Eigen::Translation3d(0.177, -0.210, 0.959) *
+      Eigen::AngleAxisd(angle1 * M_PI / 180, Eigen::Vector3d::UnitZ()) *
+      Eigen::AngleAxisd(angledown1 * M_PI / 180, Eigen::Vector3d::UnitY()) *
       camera_to_robot;
 
   LOG(INFO) << "Orientation1: \n" << orientation1.matrix().format(json_format);
-  LOG(INFO) << "T: " << orientation1 * Eigen::Vector3d(0.0, 0.0, 0.0);
+  LOG(INFO) << "T: "
+            << (orientation1 * Eigen::Vector3d(0.0, 0.0, 0.0)).transpose()
+            << " angle " << angle1 << " or " << angle1 + 360.;
 
+  const double angle2 = -36.0;
+  const double angledown2 = 0.0;
   const Eigen::Affine3d orientation2 =
-      Eigen::Translation3d(-0.1844, -0.2333, 0.4067) *
-      Eigen::AngleAxisd(-185. * M_PI / 180, Eigen::Vector3d::UnitZ()) *
+      Eigen::Translation3d(-0.177, -0.317, 0.959) *
+      Eigen::AngleAxisd(angle2 * M_PI / 180, Eigen::Vector3d::UnitZ()) *
+      Eigen::AngleAxisd(angledown2 * M_PI / 180, Eigen::Vector3d::UnitY()) *
       camera_to_robot;
 
   LOG(INFO) << "Orientation2: \n" << orientation2.matrix().format(json_format);
-  LOG(INFO) << "T: " << orientation2 * Eigen::Vector3d(0.0, 0.0, 0.0);
+  LOG(INFO) << "T: "
+            << (orientation2 * Eigen::Vector3d(0.0, 0.0, 0.0)).transpose()
+            << " angle " << angle2 << " or " << angle2 + 360.;
 
+  const double angle3 = 180.;
+  const double angledown3 = -28.0;
   const Eigen::Affine3d orientation3 =
-      Eigen::Translation3d(-0.1594, -0.2926, 0.7630) *
-      Eigen::AngleAxisd(-70. * M_PI / 180, Eigen::Vector3d::UnitZ()) *
+      Eigen::Translation3d(0.120, -0.264, 1.031) *
+      Eigen::AngleAxisd(angle3 * M_PI / 180, Eigen::Vector3d::UnitZ()) *
+      Eigen::AngleAxisd(angledown3 * M_PI / 180, Eigen::Vector3d::UnitY()) *
       camera_to_robot;
 
   LOG(INFO) << "Orientation3: \n" << orientation3.matrix().format(json_format);
-  LOG(INFO) << "T: " << orientation3 * Eigen::Vector3d(0.0, 0.0, 0.0);
+  LOG(INFO) << "T: "
+            << (orientation3 * Eigen::Vector3d(0.0, 0.0, 0.0)).transpose()
+            << " angle " << angle3 << " or " << angle3 + 360.;
   return 0;
 }
 
