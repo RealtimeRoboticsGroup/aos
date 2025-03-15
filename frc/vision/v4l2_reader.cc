@@ -51,15 +51,19 @@ V4L2ReaderBase::V4L2ReaderBase(aos::EventLoop *event_loop,
   StreamOff();
 }
 
-void V4L2ReaderBase::SetExposureFromConfig() {
+void V4L2ReaderBase::ConfigureCameraFromConfig() {
   // If specified, set exposure; otherwise explicitly set auto-exposure.
   // Do this in a separate function from the V4L2ReaderBase constructor since
   // SetExposure() itself is virtual and should not be called from the base
   // constructor directly.
-  if (stream_settings_->exposure_100us() > 0) {
+  if (stream_settings_->has_exposure_100us()) {
     SetExposure(stream_settings_->exposure_100us());
   } else {
     UseAutoExposure();
+  }
+
+  if (stream_settings_->has_gain()) {
+    SetGain(stream_settings_->gain());
   }
 }
 
@@ -411,7 +415,7 @@ V4L2Reader::V4L2Reader(aos::EventLoop *event_loop, std::string_view device_name,
   CHECK_EQ(static_cast<int>(format.fmt.pix.bytesperline),
            width * 2 /* bytes per pixel */);
 
-  SetExposureFromConfig();
+  ConfigureCameraFromConfig();
 
   StreamOn();
 }
@@ -473,7 +477,7 @@ MjpegV4L2Reader::MjpegV4L2Reader(aos::EventLoop *event_loop,
               << setfps.parm.capture.timeperframe.denominator;
   }
 
-  SetExposureFromConfig();
+  ConfigureCameraFromConfig();
 
   StreamOn();
   epoll_->OnReadable(fd().get(), [this]() {
@@ -498,7 +502,7 @@ RockchipV4L2Reader::RockchipV4L2Reader(aos::EventLoop *event_loop,
       image_sensor_fd_(open(image_sensor_subdev.data(), O_RDWR | O_NONBLOCK)),
       buffer_requeuer_([this](int buffer) { EnqueueBuffer(buffer); },
                        kEnqueueFifoPriority) {
-  SetExposureFromConfig();
+  ConfigureCameraFromConfig();
   PCHECK(image_sensor_fd_.get() != -1)
       << " Failed to open device " << device_name;
   StreamOn();
@@ -529,6 +533,13 @@ void RockchipV4L2Reader::SetExposure(size_t duration) {
   exposure_control.id = V4L2_CID_EXPOSURE;
   exposure_control.value = static_cast<int>(duration);
   PCHECK(ImageSensorIoctl(VIDIOC_S_CTRL, &exposure_control) == 0);
+}
+
+void V4L2ReaderBase::SetGain(size_t gain) {
+  v4l2_control gain_control;
+  gain_control.id = V4L2_CID_GAIN;
+  gain_control.value = static_cast<int>(gain);
+  PCHECK(ioctl(fd_.get(), VIDIOC_S_CTRL, &gain_control) == 0);
 }
 
 void RockchipV4L2Reader::SetGain(size_t gain) {

@@ -60,6 +60,9 @@ class V4L2ReaderBase {
   // microsecond units.
   virtual void SetExposure(size_t duration);
 
+  // Sets the sensor gain.
+  virtual void SetGain(size_t gain);
+
   // Switches from manual to auto exposure.
   void UseAutoExposure();
 
@@ -94,7 +97,7 @@ class V4L2ReaderBase {
 
   const aos::ScopedFD &fd() { return fd_; };
 
-  void SetExposureFromConfig();
+  void ConfigureCameraFromConfig();
 
   static constexpr int kNumberBuffers = 4;
 
@@ -209,7 +212,7 @@ class RockchipV4L2Reader : public V4L2ReaderBase {
 
   void SetExposure(size_t duration) override;
 
-  void SetGain(size_t gain);
+  void SetGain(size_t gain) override;
   void SetGainExt(size_t gain);
 
   void SetVerticalBlanking(size_t vblank);
