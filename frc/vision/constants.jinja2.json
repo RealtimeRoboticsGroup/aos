@@ -1,6 +1,40 @@
 {
   "constants": [
     {
+      "team": 0,
+      "robot_name": "test",
+      "data": {
+        "calibration": [
+          {% include 'frc/vision/constants/test-calibration_cam-1.json' %},
+          {% include 'frc/vision/constants/test-calibration_cam-2.json' %},
+          {% include 'frc/vision/constants/test-calibration_cam-3.json' %},
+          {% include 'frc/vision/constants/test-calibration_cam-4.json' %}
+        ],
+        "default_camera_stream_settings": {
+          "image_width": 1456,
+          "image_height": 1088
+        }
+      }
+    },
+    {
+      "team": 4646,
+      "robot_name": "austin",
+      "data": {
+        "calibration": [
+          {% include 'frc/vision/constants/calibration_orin1-4646-0_cam-25-01_2025-03-06_09-08-48.json' %},
+          {% include 'frc/vision/constants/calibration_orin1-4646-1_cam-25-02_2025-02-02_21-25-24.json' %},
+          {% include 'frc/vision/constants/calibration_orin1-4646-2_cam-25-03_fake.json' %},
+          {% include 'frc/vision/constants/calibration_orin1-4646-3_cam-25-04_fake.json' %}
+        ],
+        "default_camera_stream_settings": {
+          "image_width": 1600,
+          "image_height": 1304,
+          "exposure_100us": 60,
+          "gain": 0
+        }
+      }
+    },
+    {
       "team": 4646,
       "robot_name": "alpha",
       "data": {
@@ -9,6 +43,25 @@
           {% include 'frc/vision/constants/calibration_orin1-4646-0_cam-25-08_2025-02-17_13-42-27.json' %},
           {% include 'frc/vision/constants/calibration_orin1-4646-0_cam-25-11_2025-02-17_13-48-18.json' %},
           {% include 'frc/vision/constants/calibration_orin1-4646-0_cam-25-06_2025-02-17_13-13-24.json' %}
+        ],
+        "default_camera_stream_settings": {
+          "image_width": 1600,
+          "image_height": 1304,
+          "exposure_100us": 15,
+          "gain": 0
+        }
+      }
+    },
+    {
+      "team": 4646,
+      /* Comp robot */
+      "robot_name": "blackbeard",
+      "data": {
+        "calibration": [
+          {% include 'frc/vision/constants/calibration_orin1-4646-0_cam-25-07_2025-02-18_13-23-39.json' %},
+          {% include 'frc/vision/constants/calibration_orin-4646-2_cam-25-09_2025-03-06_15-37-04.json' %},
+          {% include 'frc/vision/constants/calibration_orin-4646-3_cam-25-10_2025-03-06_15-37-04.json' %},
+          {% include 'frc/vision/constants/calibration_orin1-4646-0_cam-25-12_2025-02-18_13-08-36.json' %}
         ],
         "default_camera_stream_settings": {
           "image_width": 1600,
