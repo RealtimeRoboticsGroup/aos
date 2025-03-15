@@ -6,6 +6,7 @@
 #include <sys/types.h>
 
 #include <array>
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <string>
@@ -38,8 +39,16 @@ void WriteStringToFileOrDie(const std::string_view filename,
                             const std::string_view contents,
                             mode_t permissions = S_IRWXU);
 
-// Returns true if it succeeds or false if the filesystem is full.
-bool MkdirPIfSpace(std::string_view path, mode_t mode);
+// Creates all parent directories in the given path.
+// For example, if path is "/a/b/c/file.txt", it creates directories "/a",
+// "/a/b", and "/a/b/c". If path is "/a/b/c/" (with a trailing slash), it
+// creates directories "/a", "/a/b", and "/a/b/c". When sync is true, each
+// created directory and its parent directory are synced to disk. Returns true
+// if it succeeds or false if the filesystem is full.
+bool MkdirPIfSpace(std::string_view path, mode_t mode, bool sync = false);
+
+// Synchronizes the provided directory to disk.
+void SyncDirectory(const std::filesystem::path &path);
 
 inline void MkdirP(std::string_view path, mode_t mode) {
   CHECK(MkdirPIfSpace(path, mode));
