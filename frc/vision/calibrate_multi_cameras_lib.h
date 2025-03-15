@@ -59,14 +59,18 @@ struct CameraNode {
   int camera_number;
 
   inline const std::string camera_name() const {
-    return "/" + node_name + "/camera" + std::to_string(camera_number);
+    return "/camera" + std::to_string(camera_number) + "/gray";
   }
 };
 
-std::vector<CameraNode> CreateNodeList();
+struct NodeList {
+  std::vector<CameraNode> cameras;
+  int fixed_camera = 0;
+};
 
-std::map<std::string, int> CreateOrderingMap(
-    std::vector<CameraNode> &node_list);
+NodeList CreateNodeList();
+
+std::map<std::string, int> CreateOrderingMap(const NodeList &node_list);
 
 // Helper function to compute average pose when supplied with list
 // of TimestampedCameraDetection's
@@ -131,7 +135,7 @@ void HandleImage(
 void WriteExtrinsicFile(Eigen::Affine3d extrinsic, CameraNode camera_node,
                         const calibration::CameraCalibration *original_cal);
 
-void ExtrinsicsMain(std::vector<CameraNode> &node_list,
+void ExtrinsicsMain(const NodeList &node_list,
                     std::function<const calibration::CameraCalibration *(
                         aos::EventLoop *const, std::string, int)>
                         find_calibration,
