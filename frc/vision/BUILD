@@ -797,3 +797,34 @@ cc_binary(
         "@com_google_absl//absl/log:die_if_null",
     ],
 )
+
+cc_binary(
+    name = "calibrate_multi_cameras",
+    srcs = [
+        "calibrate_multi_cameras.cc",
+        "vision_util.cc",
+        "vision_util.h",
+    ],
+    data = [
+        ":aos_config",
+        ":constants.json",
+    ],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        "//aos:init",
+        "//aos/events:simulated_event_loop",
+        "//aos/events/logging:log_reader",
+        "//aos/util:mcap_logger",
+        "//frc/constants:constants_sender_lib",
+        "//frc/control_loops:pose",
+        "//frc/vision:calibrate_multi_cameras_lib",
+        "//frc/vision:calibration_fbs",
+        "//frc/vision:charuco_lib",
+        "//frc/vision:extrinsics_calibration",
+        "//frc/vision:target_mapper",
+        "//frc/vision:vision_util_lib",
+        "//frc/vision/swerve_localizer:simulated_constants_sender_lib",
+        "//third_party:opencv",
+        "@org_tuxfamily_eigen//:eigen",
+    ],
+)

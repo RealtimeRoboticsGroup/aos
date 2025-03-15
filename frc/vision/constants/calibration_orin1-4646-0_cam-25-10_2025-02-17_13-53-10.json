@@ -1,5 +1,5 @@
 {
- "node_name": "orin1",
+ "node_name": "orin",
  "team_number": 4646,
  "intrinsics": [
   955.0235,
@@ -28,8 +28,16 @@
   0,
   0
  ],
+ "fixed_extrinsics": {
+   "data": [
+       0.58778525229247314,                    0,  0.80901699437494745, -0.17699999999999999,
+       0.80901699437494745,                    0, -0.58778525229247314,               -0.317,
+                         0,                    1,                    0,  0.95899999999999996,
+                         0,                    0,                    0,                    1
+   ]
+ },
  "calibration_timestamp": 1739821990503475230,
  "camera_id": "25-10",
- "camera_number": 0,
+ "camera_number": 3,
  "reprojection_error": 0.45600352
 }

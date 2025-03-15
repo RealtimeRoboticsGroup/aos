@@ -16,7 +16,7 @@ ABSL_FLAG(
     int32_t, frozen_target_id, 1,
     "Freeze the pose of this target so the map can have one fixed point.");
 ABSL_FLAG(int32_t, min_target_id, 1, "Minimum target id to solve for");
-ABSL_FLAG(int32_t, max_target_id, 8, "Maximum target id to solve for");
+ABSL_FLAG(int32_t, max_target_id, 30, "Maximum target id to solve for");
 ABSL_FLAG(bool, visualize_solver, false,
           "If true, visualize the solving process.");
 // This does seem like a strict threshold for a constaint to be considered an
