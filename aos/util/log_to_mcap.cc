@@ -23,7 +23,6 @@
 #include "aos/util/mcap_logger.h"
 
 ABSL_FLAG(std::string, node, "", "Node to replay from the perspective of.");
-ABSL_FLAG(std::string, output_path, "/tmp/log.mcap", "Log to output.");
 ABSL_FLAG(std::string, mode, "flatbuffer", "json or flatbuffer serialization.");
 ABSL_FLAG(
     bool, canonical_channel_names, false,
@@ -42,13 +41,21 @@ ABSL_FLAG(bool, fetch, false,
 
 // Converts an AOS log to an MCAP log that can be fed into Foxglove. To try this
 // out, run:
-// bazel run -c opt //aos/util:log_to_mcap -- --node NODE_NAME /path/to/logfile
+// bazel run -c opt //aos/util:log_to_mcap -- \
+//     --node NODE_NAME /path/to/logfile output.mcap
 //
 // Then navigate to http://studio.foxglove.dev (or spin up your own instance
 // locally), and use it to open the file (this doesn't upload the file to
 // foxglove's servers or anything).
 int main(int argc, char *argv[]) {
   aos::InitGoogle(&argc, &argv);
+
+  if (argc < 3) {
+    LOG(FATAL) << "Usage: " << argv[0] << " path/to/log output.mcap";
+  }
+
+  const std::string output_path = argv[argc - 1];
+  --argc;
 
   const std::vector<aos::logger::LogFile> logfiles =
       aos::logger::SortParts(aos::logger::FindLogs(argc, argv));
@@ -109,16 +116,15 @@ int main(int argc, char *argv[]) {
   std::unique_ptr<aos::ClockPublisher> clock_publisher;
 
   std::unique_ptr<aos::EventLoop> mcap_event_loop;
-  CHECK(!absl::GetFlag(FLAGS_output_path).empty());
   std::unique_ptr<aos::McapLogger> relogger;
   auto startup_handler = [&relogger, &mcap_event_loop, &reader,
-                          &clock_event_loop, &clock_publisher, &factory,
-                          node]() {
+                          &clock_event_loop, &clock_publisher, &factory, node,
+                          output_path]() {
     CHECK(!mcap_event_loop) << ": log_to_mcap does not support generating MCAP "
                                "files from multi-boot logs.";
     mcap_event_loop = reader.event_loop_factory()->MakeEventLoop("mcap", node);
     relogger = std::make_unique<aos::McapLogger>(
-        mcap_event_loop.get(), absl::GetFlag(FLAGS_output_path),
+        mcap_event_loop.get(), output_path,
         absl::GetFlag(FLAGS_mode) == "flatbuffer"
             ? aos::McapLogger::Serialization::kFlatbuffer
             : aos::McapLogger::Serialization::kJson,
