@@ -319,6 +319,12 @@ WriteCode FileHandler::Close() {
     return WriteCode::kOk;
   }
   bool ran_out_of_space = false;
+
+  if (absl::GetFlag(FLAGS_sync)) {
+    // Force everythig out at the end so we know that it hits disk.
+    fdatasync(fd_);
+  }
+
   if (close(fd_) == -1) {
     if (errno == ENOSPC) {
       ran_out_of_space = true;
