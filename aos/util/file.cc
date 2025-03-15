@@ -78,7 +78,14 @@ void WriteStringToFileOrDie(const std::string_view filename,
       {reinterpret_cast<const uint8_t *>(contents.data()), contents.size()});
 }
 
-bool MkdirPIfSpace(std::string_view path, mode_t mode) {
+void SyncDirectory(const std::filesystem::path &path) {
+  const int dir_fd = open(path.c_str(), O_DIRECTORY);
+  PCHECK(dir_fd != -1) << "Failed to open directory " << path;
+  PCHECK(fsync(dir_fd) != -1) << "Failed to fsync directory " << path;
+  PCHECK(close(dir_fd) != -1) << "Failed to close directory " << path;
+}
+
+bool MkdirPIfSpace(std::string_view path, mode_t mode, bool sync) {
   auto last_slash_pos = path.find_last_of("/");
 
   std::string folder(last_slash_pos == std::string_view::npos
@@ -87,7 +94,7 @@ bool MkdirPIfSpace(std::string_view path, mode_t mode) {
   if (folder.empty()) {
     return true;
   }
-  if (!MkdirPIfSpace(folder, mode)) {
+  if (!MkdirPIfSpace(folder, mode, sync)) {
     return false;
   }
   const int result = mkdir(folder.c_str(), mode);
@@ -101,6 +108,20 @@ bool MkdirPIfSpace(std::string_view path, mode_t mode) {
     VLOG(1) << "Created " << folder;
   }
   PCHECK(result == 0) << ": Error creating " << folder;
+  if (sync) {
+    // Sync the newly created directory.
+    SyncDirectory(std::filesystem::path(folder));
+
+    // Also sync the parent directory to ensure the directory entry is written
+    // to disk.
+    auto parent_slash_pos = folder.find_last_of("/");
+    if (parent_slash_pos != std::string::npos) {
+      std::string parent_dir = folder.substr(0, parent_slash_pos);
+      if (!parent_dir.empty()) {
+        SyncDirectory(std::filesystem::path(parent_dir));
+      }
+    }
+  }
   return true;
 }
 

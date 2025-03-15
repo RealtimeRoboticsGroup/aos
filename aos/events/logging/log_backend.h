@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "absl/types/span.h"
@@ -221,6 +222,12 @@ class FileHandler : public LogSink {
   // This is used by subclasses who need to access filename.
   std::string_view filename() const { return filename_; }
 
+  // This is used by subclasses to update the filename when the base directory
+  // is renamed. It replaces old_base_name with new_base_name in the filename.
+  // Assumes that old_base_name is at the start of the filename.
+  void UpdateFilenameBase(const std::string_view old_base_name,
+                          const std::string_view new_base_name);
+
  private:
   // Enables O_DIRECT on the open file if it is supported.  Cheap to call if it
   // is already enabled.
@@ -235,7 +242,7 @@ class FileHandler : public LogSink {
   // aligned and multiples of it in length.
   WriteCode WriteV(const std::vector<struct iovec> &iovec, bool aligned);
 
-  const std::string filename_;
+  std::string filename_;
 
   int fd_ = -1;
 
@@ -358,6 +365,9 @@ class RenamableFileBackend : public LogBackend {
   // This function called after file closed, to adjust file names in case of
   // base name was changed or temp files enabled.
   WriteCode RenameFileAfterClose(std::string_view filename);
+
+  // Returns true if the base directory has been renamed.
+  bool was_renamed() const { return !old_base_name_.empty(); }
 
   const bool supports_odirect_;
   std::string base_name_;

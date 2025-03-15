@@ -127,9 +127,23 @@ FileHandler::FileHandler(std::string filename, bool supports_odirect)
 
 FileHandler::~FileHandler() { Close(); }
 
+void FileHandler::UpdateFilenameBase(const std::string_view old_base_name,
+                                     const std::string_view new_base_name) {
+  // If the filename already starts with the new base name, it's already been
+  // updated.
+  if (filename_.starts_with(new_base_name)) {
+    return;
+  }
+
+  CHECK(filename_.starts_with(old_base_name))
+      << "Expected old_base_name '" << old_base_name
+      << "' to be at the start of filename '" << filename_ << "'";
+  filename_.replace(0, old_base_name.length(), new_base_name);
+}
+
 WriteCode FileHandler::OpenForWrite() {
   iovec_.reserve(10);
-  if (!aos::util::MkdirPIfSpace(filename_, 0777)) {
+  if (!aos::util::MkdirPIfSpace(filename_, 0777, absl::GetFlag(FLAGS_sync))) {
     return WriteCode::kOutOfSpace;
   } else {
     fd_ = open(filename_.c_str(), O_RDWR | O_CLOEXEC | O_CREAT | O_EXCL, 0774);
@@ -319,12 +333,21 @@ WriteCode FileHandler::Close() {
     return WriteCode::kOk;
   }
   bool ran_out_of_space = false;
+
+  if (absl::GetFlag(FLAGS_sync)) {
+    // Force everythig out at the end so we know that it hits disk.
+    fdatasync(fd_);
+  }
+
   if (close(fd_) == -1) {
     if (errno == ENOSPC) {
       ran_out_of_space = true;
     } else {
       PLOG(ERROR) << "Closing log file failed";
     }
+  }
+  if (absl::GetFlag(FLAGS_sync)) {
+    aos::util::SyncDirectory(std::filesystem::path(filename_).parent_path());
   }
   fd_ = -1;
   VLOG(1) << "Closed " << filename_;
@@ -422,6 +445,34 @@ bool RenamableFileBackend::RenameLogBase(std::string_view new_base_name) {
                   << new_directory;
       return false;
     }
+
+    // Sync parent directories after successful rename if sync flag is set.
+    if (absl::GetFlag(FLAGS_sync)) {
+      // Find parent directories for syncing.
+      auto current_parent_split = current_directory.rfind("/");
+      if (current_parent_split != std::string::npos) {
+        std::string current_parent_dir =
+            current_directory.substr(0, current_parent_split);
+        if (!current_parent_dir.empty()) {
+          aos::util::SyncDirectory(std::filesystem::path(current_parent_dir));
+        }
+      }
+
+      auto new_parent_split = new_directory.rfind("/");
+      if (new_parent_split != std::string::npos) {
+        std::string new_parent_dir = new_directory.substr(0, new_parent_split);
+        if (!new_parent_dir.empty()) {
+          // Only sync new parent directory if it's different from the current
+          // parent directory.
+          auto current_parent_split = current_directory.rfind("/");
+          if (current_parent_split == std::string::npos ||
+              new_parent_dir !=
+                  current_directory.substr(0, current_parent_split)) {
+            aos::util::SyncDirectory(std::filesystem::path(new_parent_dir));
+          }
+        }
+      }
+    }
   } else {
     // Handle if directory was already renamed.
     dir = opendir(new_directory.c_str());
@@ -452,9 +503,16 @@ WriteCode RenamableFileBackend::RenameFileAfterClose(
   // buffer writers. Therefore, the name of that active buffer may still refer
   // to the old file location rather than the new one.
   if (!old_base_name_.empty()) {
-    auto offset = current_filename.find(old_base_name_);
-    if (offset != std::string::npos) {
-      current_filename.replace(offset, old_base_name_.length(), base_name_);
+    // Check if the filename already has the new base name.
+    if (current_filename.find(base_name_) == 0) {
+      // File was created after the base directory was renamed, so it already
+      // has the new base name.
+      VLOG(1) << "File already has new base name: " << current_filename;
+    } else {
+      auto offset = current_filename.find(old_base_name_);
+      if (offset != std::string::npos) {
+        current_filename.replace(offset, old_base_name_.length(), base_name_);
+      }
     }
   }
 
@@ -468,6 +526,16 @@ WriteCode RenamableFileBackend::RenameFileAfterClose(
   int result = rename(current_filename.c_str(), final_filename.c_str());
 
   bool ran_out_of_space = false;
+  if (absl::GetFlag(FLAGS_sync)) {
+    // Syncing the directory after rename ensures that the updated
+    // directory entry (with the new file name) is written to disk.
+    // This is sufficient for data integrity because renaming is an
+    // atomic operation on most filesystems. Once the directory
+    // entry is updated, the file is guaranteed to be accessible
+    // under the new name, and the old name is no longer valid.
+    aos::util::SyncDirectory(
+        std::filesystem::path(final_filename).parent_path());
+  }
   if (result != 0) {
     if (errno == ENOSPC) {
       ran_out_of_space = true;
@@ -485,6 +553,15 @@ WriteCode RenamableFileBackend::RenamableFileHandler::Close() {
   if (!is_open()) {
     return WriteCode::kOk;
   }
+
+  // If the base directory has been renamed, update the filename to point to the
+  // new location.
+  if (owner_->was_renamed()) {
+    // Update the filename using the protected method.
+    UpdateFilenameBase(owner_->old_base_name_, owner_->base_name_);
+  }
+
+  // Continue with the standard close logic.
   if (FileHandler::Close() == WriteCode::kOutOfSpace) {
     return WriteCode::kOutOfSpace;
   }
