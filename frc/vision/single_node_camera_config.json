@@ -5,15 +5,15 @@
       "name": "/aos",
       "type": "aos.timing.Report",
       "source_node": "orin",
-      "num_senders": 20,
-      "frequency": 25,
+      "num_senders": 25,
+      "frequency": 30,
       "max_size": 16384
     },
     {
       "name": "/aos",
       "type": "aos.logging.LogMessageFbs",
       "source_node": "orin",
-      "num_senders": 20,
+      "num_senders": 30,
       "frequency": 1000,
       "max_size": 512
     },
@@ -42,6 +42,32 @@
       "name": "/aos",
       "type": "aos.message_bridge.ServerStatistics",
       "source_node": "orin"
+    },
+    {
+      "name": "/frc",
+      "type": "frc.JoystickState",
+      "source_node": "orin",
+      "max_size": 256
+    },
+    {
+      "name": "/frc",
+      "type": "frc.RobotState",
+      "source_node": "orin",
+      "max_size": 128
+    },
+    {
+      "name": "/drivetrain",
+      "type": "frc.vision.swerve_localizer.ChassisSpeeds",
+      "source_node": "orin",
+      "max_size": 128,
+      "frequency": 500
+    },
+    {
+      "name": "/drivetrain",
+      "type": "frc.vision.swerve_localizer.Pose2d",
+      "source_node": "orin",
+      "max_size": 128,
+      "frequency": 500
     },
     {
       "name": "/constants",
@@ -389,6 +415,10 @@
       "name": "apriltag_detector3",
       "executable_name": "apriltag_detector",
       "args": ["--channel", "/camera3/gray", "--image_format=MONO8", "--min_white_black_diff=20", "--use_neon"],
+      "nodes": ["orin"]
+    },
+    {
+      "name": "network_tables_swerve_client",
       "nodes": ["orin"]
     },
     {
