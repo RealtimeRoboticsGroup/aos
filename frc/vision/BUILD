@@ -386,8 +386,13 @@ aos_config(
         "//aos/network:message_bridge_server_fbs",
         "//aos/network:timestamp_fbs",
         "//frc/orin:hardware_stats_fbs",
+        "//frc/vision/swerve_localizer:chassis_speeds_fbs",
+        "//frc/vision/swerve_localizer:pose2d_fbs",
+        "//frc/input:joystick_state_fbs",
+        "//frc/input:robot_state_fbs",
         "@com_github_foxglove_schemas//:schemas",
     ],
+    visibility = ["//frc/vision:__subpackages__"],
 )
 
 aos_config(
@@ -605,6 +610,7 @@ robot_downloader(
         "//aos/util:foxglove_websocket",
         "//frc/orin:hardware_monitor",
         "//frc/orin:localizer_logger",
+        "//frc/vision/swerve_localizer:network_tables_swerve_client",
         "//frc/vision:camera_reader",
     ],
     data = [

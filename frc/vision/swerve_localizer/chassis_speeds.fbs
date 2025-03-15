@@ -1,0 +1,9 @@
+namespace frc.vision.swerve_localizer;
+
+table ChassisSpeeds {
+  vx:double (id: 0);
+  vy:double (id: 1);
+  omega:double (id: 2);
+}
+
+root_type ChassisSpeeds;

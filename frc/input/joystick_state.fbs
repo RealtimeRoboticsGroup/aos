@@ -42,7 +42,7 @@ table JoystickState {
   fake:bool (id: 8);
 
   // Color of our current alliance.
-  alliance:Alliance (id: 9);
+  alliance:Alliance = kInvalid (id: 9);
 
   // String corresponding to the game data string
   game_data:string (id: 10);
@@ -54,6 +54,9 @@ table JoystickState {
   replay_number:int (id: 13);
   match_type:MatchType (id: 14);
   event_name:string (id: 15);
+  match_time:int = -1 (id: 16);
+  ds_attached:bool (id: 17);
+  emergency_stop:bool (id: 18);
 }
 
 root_type JoystickState;
