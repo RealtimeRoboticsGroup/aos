@@ -232,7 +232,10 @@ void ExpandStackSize() {
 namespace {
 // Bool to track if malloc hooks have failed to be configured.
 bool has_malloc_hook = true;
-thread_local bool is_realtime = false;
+// We need this to be initial-exec to avoid triggering an allocation when the
+// thread local variable is accessed.  If you want to learn more, see:
+// https://www.akkadia.org/drepper/tls.pdf
+__attribute__((tls_model("initial-exec"))) thread_local bool is_realtime = false;
 }  // namespace
 
 bool MarkRealtime(bool realtime) {
