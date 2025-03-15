@@ -11,7 +11,7 @@ namespace frc::vision {
 
 void VisualizeRobot::SetDefaultViewpoint(int image_width, double focal_length) {
   // 10 meters above the origin, rotated so the camera faces straight down
-  Eigen::Translation3d camera_trans(0, 0, 10.0);
+  Eigen::Translation3d camera_trans(0, 0, 3.0);
   Eigen::AngleAxisd camera_rot(M_PI, Eigen::Vector3d::UnitX());
   Eigen::Affine3d camera_viewpoint = camera_trans * camera_rot;
   SetViewpoint(camera_viewpoint);

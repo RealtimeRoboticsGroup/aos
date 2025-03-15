@@ -159,7 +159,7 @@ void IntrinsicsCalibration::HandleCharuco(
     // Require valid poses on loading from disk, so we can visually
     // review once done
     if (!absl::GetFlag(FLAGS_image_load_path).empty()) {
-      LOG(FATAL) << "Shouldn't have invalid images in loading from logs";
+      LOG(ERROR) << "Shouldn't have invalid images in loading from logs";
     }
     VLOG(1) << "Skip because pose is not valid";
     return;
