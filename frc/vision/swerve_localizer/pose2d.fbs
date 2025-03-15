@@ -1,0 +1,10 @@
+namespace frc.vision.swerve_localizer;
+
+table Pose2d {
+  x:double (id: 0);
+  y:double (id: 1);
+  theta:double (id: 2);
+}
+
+root_type Pose2d;
+
