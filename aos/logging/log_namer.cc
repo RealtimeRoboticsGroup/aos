@@ -163,19 +163,7 @@ std::optional<std::string> MaybeGetLogName(const char *basename) {
   std::string log_roborio_name = std::string(tmp) + "/";
   free(tmp);
 
-  char *tmp2;
-  if (asprintf(&tmp2, "%s/%s-current", folder.c_str(), basename) == -1) {
-    PLOG(WARNING) << "couldn't create current symlink name";
-  } else {
-    if (unlink(tmp2) == -1 && (errno != EROFS && errno != ENOENT)) {
-      LOG(WARNING) << "unlink('" << tmp2 << "') failed";
-    }
-    if (symlink(log_roborio_name.c_str(), tmp2) == -1) {
-      PLOG(WARNING) << "symlink('" << log_roborio_name.c_str() << "', '" << tmp2
-                    << "') failed";
-    }
-    free(tmp2);
-  }
+  UpdateCurrentSymlink(folder, basename, log_roborio_name);
   return log_base_name;
 }
 
@@ -193,6 +181,33 @@ std::string GetLogName(const char *basename) {
   }
 
   return log_base_name.value();
+}
+
+void UpdateCurrentSymlink(std::string_view folder, std::string_view basename,
+                          std::string_view target) {
+  // Convert string_views to std::string to ensure null-termination
+  std::string folder_str(folder);
+  std::string basename_str(basename);
+  std::string target_str(target);
+
+  char *tmp2;
+  if (asprintf(&tmp2, "%s/%s-current", folder_str.c_str(),
+               basename_str.c_str()) == -1) {
+    PLOG(WARNING) << "couldn't create current symlink name";
+    return;
+  }
+
+  if (unlink(tmp2) == -1 && (errno != EROFS && errno != ENOENT)) {
+    LOG(WARNING) << "unlink('" << tmp2 << "') failed";
+  }
+
+  if (symlink(target_str.c_str(), tmp2) == -1) {
+    PLOG(WARNING) << "symlink('" << target_str << "', '" << tmp2 << "') failed";
+  } else {
+    VLOG(1) << "Updated symlink " << tmp2 << " -> " << target_str;
+  }
+
+  free(tmp2);
 }
 
 }  // namespace aos::logging
