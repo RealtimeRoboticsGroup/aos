@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "e3bcb1b9_7d999115",
+        "filename": "frc/vision/swerve_localizer/field_map_constants_sender_lib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 10,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-03-17T00:33:10Z",
+      "side": 1,
+      "message": "header for string_view is missing",
+      "revId": "e31626760cbc5098f931c49ae1f7612bbd97abf8",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "0b6d6896_22a517af",
+        "filename": "frc/vision/swerve_localizer/simulated_constants_sender_lib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 14,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-03-17T00:33:10Z",
+      "side": 1,
+      "message": "`string_view`?\nheader is missing",
+      "revId": "e31626760cbc5098f931c49ae1f7612bbd97abf8",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    }
+  ]
+}
