@@ -35,6 +35,24 @@
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "b2048f6f_5d5824ba",
+        "filename": "frc/vision/swerve_localizer/network_tables_swerve_client.cc",
+        "patchSetId": 6
+      },
+      "lineNbr": 1,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-03-17T06:13:36Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "dba24194_35f5ceee",
+      "revId": "991063cdfa61fdf971f20e1a194f182da326c429",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "37304570_0852c890",
@@ -48,6 +66,24 @@
       "writtenOn": "2025-03-17T00:25:43Z",
       "side": 1,
       "message": "`const`",
+      "revId": "991063cdfa61fdf971f20e1a194f182da326c429",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "2afc6289_d6822514",
+        "filename": "frc/vision/swerve_localizer/network_tables_swerve_client.cc",
+        "patchSetId": 6
+      },
+      "lineNbr": 86,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-03-17T06:13:36Z",
+      "side": 1,
+      "message": "I purposefully left that as not const.  Yes, technically you can make it const, but I\u0027m giving a \"pointer\" to the file which is fully mutable.  If someone gives you a const ref, I don\u0027t expect you to be able to change it.  mutable captures that better, I think.",
+      "parentUuid": "37304570_0852c890",
       "revId": "991063cdfa61fdf971f20e1a194f182da326c429",
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     }
