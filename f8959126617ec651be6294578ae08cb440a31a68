@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "704535e3_a68ee501",
+        "filename": "aos/util/log_to_mcap.cc",
+        "patchSetId": 2
+      },
+      "lineNbr": 26,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-03-17T00:17:50Z",
+      "side": 1,
+      "message": "There is also a flag for this?",
+      "revId": "f8959126617ec651be6294578ae08cb440a31a68",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "82027f0f_7c0a974d",
+        "filename": "aos/util/log_to_mcap.cc",
+        "patchSetId": 2
+      },
+      "lineNbr": 45,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-03-17T00:17:50Z",
+      "side": 1,
+      "message": "This comment doesn\u0027t match the usage below.",
+      "revId": "f8959126617ec651be6294578ae08cb440a31a68",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    }
+  ]
+}
