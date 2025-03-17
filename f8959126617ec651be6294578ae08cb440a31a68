@@ -18,6 +18,24 @@
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "52745c8b_82cb7da4",
+        "filename": "aos/util/log_to_mcap.cc",
+        "patchSetId": 2
+      },
+      "lineNbr": 26,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-03-17T06:09:41Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "704535e3_a68ee501",
+      "revId": "f8959126617ec651be6294578ae08cb440a31a68",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "82027f0f_7c0a974d",
@@ -31,6 +49,24 @@
       "writtenOn": "2025-03-17T00:17:50Z",
       "side": 1,
       "message": "This comment doesn\u0027t match the usage below.",
+      "revId": "f8959126617ec651be6294578ae08cb440a31a68",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "f4c5f6e6_6772dcc8",
+        "filename": "aos/util/log_to_mcap.cc",
+        "patchSetId": 2
+      },
+      "lineNbr": 45,
+      "author": {
+        "id": 1000000
+      },
+      "writtenOn": "2025-03-17T06:09:41Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "82027f0f_7c0a974d",
       "revId": "f8959126617ec651be6294578ae08cb440a31a68",
       "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
     }
