@@ -1,0 +1,55 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "33937b0e_9ef7fc78",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 6
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-03-17T00:25:43Z",
+      "side": 1,
+      "message": "Code looks reasonable, but I have no idea what this does.",
+      "revId": "991063cdfa61fdf971f20e1a194f182da326c429",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "dba24194_35f5ceee",
+        "filename": "frc/vision/swerve_localizer/network_tables_swerve_client.cc",
+        "patchSetId": 6
+      },
+      "lineNbr": 1,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-03-17T00:25:43Z",
+      "side": 1,
+      "message": "\"\"",
+      "revId": "991063cdfa61fdf971f20e1a194f182da326c429",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "37304570_0852c890",
+        "filename": "frc/vision/swerve_localizer/network_tables_swerve_client.cc",
+        "patchSetId": 6
+      },
+      "lineNbr": 86,
+      "author": {
+        "id": 1000004
+      },
+      "writtenOn": "2025-03-17T00:25:43Z",
+      "side": 1,
+      "message": "`const`",
+      "revId": "991063cdfa61fdf971f20e1a194f182da326c429",
+      "serverId": "6c5518a3-f832-4f35-b67e-d05e8f148453"
+    }
+  ]
+}
