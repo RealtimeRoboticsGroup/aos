@@ -12,9 +12,11 @@
 #include "aos/init.h"
 #include "aos/json_to_flatbuffer.h"
 #include "frc/constants/constants_sender_lib.h"
+#include "frc/control_loops/drivetrain/localization/localizer_output_generated.h"
 #include "frc/geometry/Pose2d.h"
 #include "frc/vision/camera_constants_generated.h"
 #include "frc/vision/field_map_generated.h"
+#include "frc/vision/swerve_localizer/status_generated.h"
 #include "frc/vision/target_map_generated.h"
 
 ABSL_FLAG(std::string, config, "aos_config.json",
@@ -50,7 +52,10 @@ class NetworkTablesPublisher {
                          std::string_view table_name, const FieldMap *field_map)
       : event_loop_(event_loop),
         table_(nt::NetworkTableInstance::GetDefault().GetTable(table_name)),
+        fused_pose2d_topic_(table_->GetStructTopic<frc::Pose2d>("fused_pose")),
         pose2d_topic_(table_->GetStructTopic<frc::Pose2d>("apriltag_pose")),
+        fused_pose2d_publisher_(fused_pose2d_topic_.Publish(
+            {.periodic = 0.02, .keepDuplicates = true})),
         pose2d_publisher_(pose2d_topic_.Publish({.keepDuplicates = true})),
         fieldwidth_(field_map->fieldwidth()),
         fieldlength_(field_map->fieldlength()),
@@ -68,6 +73,15 @@ class NetworkTablesPublisher {
             HandleTargetMap(calibration, target_map);
           });
     }
+    event_loop_->MakeWatcher(
+        "/localizer",
+        [this](const frc::controls::LocalizerOutput &localizer_output) {
+          Publish(
+              &fused_pose2d_publisher_,
+              Eigen::Vector3d(localizer_output.x(), localizer_output.y(), 0.0) +
+                  Eigen::Vector3d(fieldlength_ / 2.0, fieldwidth_ / 2.0, 0.0),
+              localizer_output.theta());
+        });
 
     size_t max_id = 0u;
     for (const Fiducial *fiducial : *field_map->fiducials()) {
@@ -184,23 +198,27 @@ class NetworkTablesPublisher {
             << (robot_to_field * Eigen::Vector3d::Zero()).transpose() << " yaw "
             << yaw << " age: " << age_ms << "ms";
 
-    Publish(robot_to_field * Eigen::Vector3d::Zero() +
+    Publish(&pose2d_publisher_,
+            robot_to_field * Eigen::Vector3d::Zero() +
                 Eigen::Vector3d(fieldlength_ / 2.0, fieldwidth_ / 2.0, 0.0),
             yaw);
   }
 
-  void Publish(Eigen::Vector3d translation, double yaw) {
-    pose2d_publisher_.Set(Pose2d{units::meter_t{translation.x()},
-                                 units::meter_t{translation.y()},
-                                 frc::Rotation2d{units::radian_t{yaw}}});
+  void Publish(nt::StructPublisher<frc::Pose2d> *publisher,
+               Eigen::Vector3d translation, double yaw) {
+    publisher->Set(Pose2d{units::meter_t{translation.x()},
+                          units::meter_t{translation.y()},
+                          frc::Rotation2d{units::radian_t{yaw}}});
   }
 
   aos::EventLoop *event_loop_;
 
   std::shared_ptr<nt::NetworkTable> table_;
+  nt::StructTopic<frc::Pose2d> fused_pose2d_topic_;
   nt::StructTopic<frc::Pose2d> pose2d_topic_;
 
   std::vector<Eigen::Affine3d> tag_transformations_;
+  nt::StructPublisher<frc::Pose2d> fused_pose2d_publisher_;
   nt::StructPublisher<frc::Pose2d> pose2d_publisher_;
   double fieldwidth_;
   double fieldlength_;

@@ -246,11 +246,17 @@ int Main() {
                 << " Got: " << value.value.vx.value() << ", "
                 << value.value.vy.value() << ", " << value.value.omega.value();
 
+        aos::realtime_clock::time_point publish_time(
+            std::chrono::microseconds(value.time));
+
         aos::Sender<ChassisSpeedsStatic>::StaticBuilder builder =
             speeds_sender.MakeStaticBuilder();
         builder->set_vx(value.value.vx.value());
         builder->set_vy(value.value.vy.value());
         builder->set_omega(value.value.omega.value());
+        builder->set_age(std::chrono::duration<double, std::milli>(
+                             aos::realtime_clock::now() - publish_time)
+                             .count());
         builder.CheckOk(builder.Send());
       }
     }
@@ -264,11 +270,17 @@ int Main() {
                 << value.value.Y().value() << ", "
                 << value.value.Rotation().Radians().value();
 
+        aos::realtime_clock::time_point publish_time(
+            std::chrono::microseconds(value.time));
+
         aos::Sender<Pose2dStatic>::StaticBuilder builder =
             pose_sender.MakeStaticBuilder();
         builder->set_x(value.value.X().value());
         builder->set_y(value.value.Y().value());
         builder->set_theta(value.value.Rotation().Radians().value());
+        builder->set_age(std::chrono::duration<double, std::milli>(
+                             aos::realtime_clock::now() - publish_time)
+                             .count());
         builder.CheckOk(builder.Send());
       }
     }

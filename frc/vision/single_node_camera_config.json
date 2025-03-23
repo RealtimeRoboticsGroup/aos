@@ -70,6 +70,13 @@
       "frequency": 500
     },
     {
+      "name": "/drivetrain",
+      "type": "frc.control_loops.drivetrain.LocalizerControl",
+      "source_node": "orin",
+      "max_size": 128,
+      "frequency": 500
+    },
+    {
       "name": "/constants",
       "type": "frc.vision.CameraConstants",
       "source_node": "orin",
@@ -123,6 +130,13 @@
       "frequency": 2
     },
     {
+      "name": "/camera0/gray",
+      "type": "frc.vision.swerve_localizer.Visualization",
+      "source_node": "orin",
+      "max_size": 50000,
+      "frequency": 125
+    },
+    {
       "name": "/camera1",
       "type": "frc.vision.CameraImage",
       "read_method": "PIN",
@@ -160,6 +174,13 @@
       "type": "frc.vision.TurboJpegDecoderStatus",
       "source_node": "orin",
       "frequency": 2
+    },
+    {
+      "name": "/camera1/gray",
+      "type": "frc.vision.swerve_localizer.Visualization",
+      "source_node": "orin",
+      "max_size": 50000,
+      "frequency": 125
     },
     {
       "name": "/camera2",
@@ -201,6 +222,13 @@
       "frequency": 2
     },
     {
+      "name": "/camera2/gray",
+      "type": "frc.vision.swerve_localizer.Visualization",
+      "source_node": "orin",
+      "max_size": 50000,
+      "frequency": 125
+    },
+    {
       "name": "/camera3",
       "type": "frc.vision.CameraImage",
       "read_method": "PIN",
@@ -240,10 +268,29 @@
       "frequency": 2
     },
     {
+      "name": "/camera3/gray",
+      "type": "frc.vision.swerve_localizer.Visualization",
+      "source_node": "orin",
+      "max_size": 50000,
+      "frequency": 125
+    },
+    {
       "name": "/aos",
       "type": "aos.util.FilesystemStatus",
       "source_node": "orin",
       "frequency": 1
+    },
+    {
+      "name": "/localizer",
+      "type": "frc.vision.swerve_localizer.Status",
+      "source_node": "orin",
+      "frequency": 500
+    },
+    {
+      "name": "/localizer",
+      "type": "frc.controls.LocalizerOutput",
+      "source_node": "orin",
+      "frequency": 500
     },
     {
       "name": "/hardware_monitor",
@@ -423,10 +470,25 @@
     },
     {
       "name": "foxglove_websocket",
+      "args": [ "--poll_period_ms=100" ],
+      "nodes": ["orin"]
+    },
+    {
+      "name": "web_proxy",
+      "executable_name": "web_proxy_main",
+      "args": [
+        "--min_ice_port=5800",
+        "--max_ice_port=5810"
+      ],
       "nodes": ["orin"]
     },
     {
       "name": "vision_constants_sender",
+      "nodes": ["orin"],
+      "autorestart": false
+    },
+    {
+      "name": "field_map_constants_sender",
       "nodes": ["orin"],
       "autorestart": false
     },
@@ -450,6 +512,11 @@
     {
       "name": "network_tables_publisher",
       "executable_name": "network_tables_publisher",
+      "nodes": [ "orin" ]
+    },
+    {
+      "name": "localizer_main",
+      "args": ["--max_implied_teleop_yaw_error=90"],
       "nodes": [ "orin" ]
     },
     {
