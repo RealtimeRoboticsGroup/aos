@@ -16,6 +16,15 @@ ts_project(
 )
 
 static_flatbuffer(
+    name = "udp_status_fbs",
+    srcs = [
+        "udp_status.fbs",
+    ],
+    target_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:public"],
+)
+
+static_flatbuffer(
     name = "status_fbs",
     srcs = [
         "status.fbs",
@@ -81,9 +90,9 @@ cc_library(
         "//frc/control_loops/drivetrain/localization:localizer_output_fbs",
         "//frc/control_loops/drivetrain/localization:utils",
         "//frc/math:flatbuffers_matrix",
+        "//frc/vision:camera_constants_fbs",
         "//frc/vision:target_map_fbs",
         "//frc/vision:target_map_utils",
-        "//frc/vision:camera_constants_fbs",
     ],
 )
 
@@ -138,16 +147,16 @@ cc_binary(
     ],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
-        ":simulated_constants_sender_lib",
         ":localizer",
+        ":simulated_constants_sender_lib",
         "//aos:configuration",
         "//aos:init",
         "//aos:json_to_flatbuffer",
         "//aos/events:simulated_event_loop",
         "//aos/events/logging:log_reader",
         "//aos/events/logging:log_writer",
-        "//aos/util:simulation_logger",
         "//aos/network:web_proxy",
+        "//aos/util:simulation_logger",
         "//frc/constants:constants_sender_lib",
         "//frc/imu_fdcan:dual_imu_blender_lib",
     ],
@@ -225,10 +234,14 @@ cc_binary(
     deps = [
         ":chassis_speeds_fbs",
         ":pose2d_fbs",
+        ":udp_status_fbs",
         "//aos:configuration",
         "//aos:init",
         "//aos:json_to_flatbuffer",
         "//aos/events:shm_event_loop",
+        "//aos/vision/events:udp",
+        "//frc/constants:constants_sender_lib",
+        "//frc/control_loops/drivetrain/localization:localizer_output_fbs",
         "//frc/input:joystick_state_fbs",
         "//frc/input:robot_state_fbs",
         "//frc/vision:field_map_fbs",

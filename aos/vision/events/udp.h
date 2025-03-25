@@ -54,6 +54,8 @@ class RXUdpSocket {
 
   static int SocketBindListenOnPort(int port);
 
+  int fd() { return fd_.get(); }
+
  private:
   ScopedFD fd_;
 

@@ -1,0 +1,14 @@
+namespace frc.vision.swerve_localizer;
+
+attribute "static_length";
+
+enum NetworkHealth : uint8 {
+  // The Send call failed back to the rio.
+  SEND_FAILURE = 0,
+}
+
+table UdpStatus {
+  faults:[NetworkHealth] (id: 0);
+}
+
+root_type UdpStatus;

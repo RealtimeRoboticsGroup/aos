@@ -25,6 +25,9 @@ void SendFieldMap(aos::EventLoop *event_loop, const FieldMap *field_map,
   auto target_poses = builder->add_target_poses();
   CHECK(target_poses->reserve(field_map->fiducials()->size()));
 
+  builder->set_fieldlength(field_map->fieldlength());
+  builder->set_fieldwidth(field_map->fieldwidth());
+
   // Now, fill in the tag transformations table.
   for (const Fiducial *fiducial : *field_map->fiducials()) {
     CHECK(fiducial->has_transform());

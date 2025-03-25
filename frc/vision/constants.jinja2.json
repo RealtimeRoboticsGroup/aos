@@ -47,8 +47,8 @@
         "default_camera_stream_settings": {
           "image_width": 1600,
           "image_height": 1304,
-          "exposure_100us": 15,
-          "gain": 0
+          "exposure_100us": 30,
+          "gain": 1
         }
       }
     },
@@ -66,8 +66,8 @@
         "default_camera_stream_settings": {
           "image_width": 1600,
           "image_height": 1304,
-          "exposure_100us": 15,
-          "gain": 0
+          "exposure_100us": 30,
+          "gain": 1
         }
       }
     },

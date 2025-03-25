@@ -19,6 +19,11 @@ ABSL_FLAG(uint32_t, imageheight, 0,
 ABSL_FLAG(int32_t, imagefps, 0,
           "Image capture framerate, in Hz. If 0, will use the settings from "
           "the CameraStreamSettings flatbuffer.");
+ABSL_FLAG(
+    int32_t, isp_latency_ms, 0,
+    "The EOF timestamp is the timestamp the image is received on the ORIN.  "
+    "There can be external processing which isn't captured in this.  Subtract "
+    "this offset from the EOF timestamp to get the actual capture time.");
 namespace frc::vision {
 
 V4L2ReaderBase::V4L2ReaderBase(aos::EventLoop *event_loop,
@@ -262,7 +267,10 @@ void V4L2ReaderBase::Buffer::PrepareMessage(
   image_builder.add_rows(rows);
   image_builder.add_cols(cols);
   image_builder.add_monotonic_timestamp_ns(
-      std::chrono::nanoseconds(monotonic_eof.time_since_epoch()).count());
+      std::chrono::nanoseconds(
+          monotonic_eof.time_since_epoch() -
+          std::chrono::milliseconds(absl::GetFlag(FLAGS_isp_latency_ms)))
+          .count());
   message_offset = image_builder.Finish();
 }
 

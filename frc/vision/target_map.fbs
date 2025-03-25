@@ -79,6 +79,10 @@ table TargetMap {
   // so we don't have an excessive amount of random target
   // detections (for use case 2).
   rejections:uint64 (id: 3);
+
+  // Size of the field in meters.
+  fieldlength:double (id: 4);
+  fieldwidth:double (id: 5);
 }
 
 root_type TargetMap;

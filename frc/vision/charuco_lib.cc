@@ -285,7 +285,8 @@ void CharucoExtractor::SetupTargetData() {
                 << (absl::GetFlag(FLAGS_coarse_pattern) ? "coarse" : "fine")
                 << " pattern";
       if (absl::GetFlag(FLAGS_twenty_inch_large_board)) {
-        board_ = MakeCharucoBoard(cv::Size(15, 15), 0.03, 0.022, dictionary_);
+        board_ = MakeCharucoBoard(cv::Size(8, 8), 0.0254, 0.75 * 0.0254,
+                                  dictionary_);
       } else if (absl::GetFlag(FLAGS_large_board)) {
         if (absl::GetFlag(FLAGS_coarse_pattern)) {
           board_ =

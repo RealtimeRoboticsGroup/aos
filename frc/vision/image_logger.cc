@@ -238,7 +238,7 @@ int main(int argc, char *argv[]) {
 
         // Extract the directory name without the path for the symlink target
         std::filesystem::path new_path(new_base_name);
-        std::string target = new_path.filename().string();
+        std::string target = new_path.parent_path().filename().string() ;
 
         // Update the symlink to point to the new directory
         aos::logging::UpdateCurrentSymlink(folder, kLogBaseName, target);

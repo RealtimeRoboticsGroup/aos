@@ -689,6 +689,10 @@ void ExtrinsicsMain(const NodeList &node_list,
         pose_list.push_back(ext);
       }
     }
+    if (camera_node.camera_name() == "/camera1/gray") {
+      LOG(INFO) << "Skipping camera 1.";
+      continue;
+    }
     RemoveOutliers(pose_list, remove_outliers_iterations);
 
     CHECK(pose_list.size() > 0)
