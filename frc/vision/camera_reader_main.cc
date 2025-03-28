@@ -33,6 +33,9 @@ void CameraReaderMain() {
   const CameraStreamSettings *const stream_settings =
       calibration_data.constants().default_camera_stream_settings();
 
+  uint32_t last_exposure = stream_settings->exposure_100us();
+  uint32_t last_gain = stream_settings->gain();
+
   MjpegV4L2Reader v4l2_reader(&event_loop, event_loop.epoll(),
                               absl::GetFlag(FLAGS_viddevice),
                               absl::GetFlag(FLAGS_channel), stream_settings);
@@ -49,6 +52,21 @@ void CameraReaderMain() {
       v4l2_reader.UseAutoExposure();
     }
   }
+
+  event_loop.MakeWatcher(
+      "/camera", [&v4l2_reader, &last_exposure,
+                  &last_gain](const CameraStreamSettings &settings) {
+        if (settings.has_exposure_100us() &&
+            settings.exposure_100us() != last_exposure) {
+          v4l2_reader.SetExposure(settings.exposure_100us());
+          last_exposure = settings.exposure_100us();
+        }
+
+        if (settings.has_gain() && last_gain != settings.gain()) {
+          v4l2_reader.SetGain(settings.gain());
+          last_gain = settings.gain();
+        }
+      });
 
   event_loop.Run();
 }

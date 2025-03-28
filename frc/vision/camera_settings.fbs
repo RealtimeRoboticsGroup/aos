@@ -1,0 +1,29 @@
+namespace frc.vision;
+
+// Represents an image capture period to be passed to V4L2.
+// This implies a period of (numerator / denominator) seconds for a given
+// video stream (i.e., a framerate in Hz of denominator / numerator).
+table TimePerFrame {
+  numerator:uint32 = 1 (id: 0);
+  denominator:uint32 = 1 (id: 1);
+}
+
+
+table CameraStreamSettings {
+  // Image width and height, in pixels, to use for this camera.
+  image_width:uint (id: 0);
+  image_height:uint (id: 1);
+  // If set, will use this to set the framerate of the camera; if not set,
+  // the camera's default framerate will be used.
+  frame_period:TimePerFrame (id: 2);
+  // Exposure time to set for the camera, in units of 100 microseconds (this
+  // is passed directly to the V4L2 V4L2_CID_EXPOSURE_ABSOLUTE setting, which
+  // uses these units).
+  // If not set, or set to zero, auto-exposure will be used.
+  exposure_100us:uint32 (id: 3);
+
+  // The gain to set the camera to.
+  gain:uint32 (id: 4);
+}
+
+root_type CameraStreamSettings;
