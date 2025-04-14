@@ -14,6 +14,14 @@ halide_library(
 )
 
 halide_library(
+    name = "resize_normalize",
+    src = "resize_generator.cc",
+    args = "input_rows=1304 input_cols=1600 output_rows=416 output_cols=512 output_stride=212992 input_start_row=0 input_start_col=64",
+    function = "resize_normalize",
+    visibility = ["//visibility:public"],
+)
+
+halide_library(
     name = "ycbcr422",
     src = "crcv_generator.cc",
     args = "rows=1088 cols=1456 ystride=1536 cbcrstride=1536",
@@ -60,6 +68,23 @@ cc_library(
     deps = [
         ":cuda",
         "//aos/time",
+        "//frc/vision:vision_fbs",
+    ],
+)
+
+cc_test(
+    name = "resize_normalize_test",
+    srcs = [
+        "resize_normalize_test.cc",
+    ],
+    data = [
+        "coral_image_thriftycam_2025.bfbs",
+    ],
+    deps = [
+        ":resize_normalize",
+        "//aos:json_to_flatbuffer",
+        "//aos/testing:googletest",
+        "//aos/testing:path",
         "//frc/vision:vision_fbs",
     ],
 )
