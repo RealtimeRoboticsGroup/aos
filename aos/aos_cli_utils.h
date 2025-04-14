@@ -54,6 +54,8 @@ class Printer {
                     const aos::Channel *channel, const aos::Context &context);
   void PrintMessage(const aos::Channel *channel, const aos::Context &context);
 
+  void PrintBfbs(const aos::Context &context);
+
  private:
   // Builder to make printing fast
   aos::FastStringBuilder str_builder_;

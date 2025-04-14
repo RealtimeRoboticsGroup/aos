@@ -426,4 +426,10 @@ void Printer::PrintMessage(const aos::Channel *channel,
   ++message_count_;
 }
 
+void Printer::PrintBfbs(const aos::Context &context) {
+  std::cout << std::string_view(static_cast<const char *>(context.data),
+                                context.size);
+  ++message_count_;
+}
+
 }  // namespace aos

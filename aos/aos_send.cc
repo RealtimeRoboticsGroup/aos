@@ -14,6 +14,7 @@
 
 ABSL_FLAG(double, rate, -1,
           "Rate at which to send the message (-1 to send once).");
+ABSL_FLAG(bool, bfbs, false, "If true, treat message as a binary flatbuffer.");
 
 int main(int argc, char **argv) {
   absl::SetProgramUsageMessage(
@@ -57,30 +58,49 @@ int main(int argc, char **argv) {
   const aos::Channel *const channel = cli_info.found_channels[0];
   const std::unique_ptr<aos::RawSender> sender =
       cli_info.event_loop->MakeRawSender(channel);
-  flatbuffers::FlatBufferBuilder fbb(sender->fbb_allocator()->size(),
-                                     sender->fbb_allocator());
-  fbb.ForceDefaults(true);
-  flatbuffers::Offset<flatbuffers::Table> msg_offset =
-      aos::JsonToFlatbuffer(message_to_send, channel->schema(), &fbb);
-
-  if (msg_offset.IsNull()) {
-    return 1;
-  }
-
-  fbb.Finish(msg_offset);
-
-  if (absl::GetFlag(FLAGS_rate) < 0) {
-    sender->CheckOk(sender->Send(fbb.GetSize()));
+  if (absl::GetFlag(FLAGS_bfbs)) {
+    if (absl::GetFlag(FLAGS_rate) < 0) {
+      sender->CheckOk(
+          sender->Send(message_to_send.data(), message_to_send.size()));
+    } else {
+      cli_info.event_loop
+          ->AddTimer([&message_to_send, &sender]() {
+            sender->CheckOk(
+                sender->Send(message_to_send.data(), message_to_send.size()));
+          })
+          ->Schedule(cli_info.event_loop->monotonic_now(),
+                     std::chrono::duration_cast<std::chrono::nanoseconds>(
+                         std::chrono::duration<double>(
+                             1.0 / absl::GetFlag(FLAGS_rate))));
+      cli_info.event_loop->Run();
+    }
   } else {
-    cli_info.event_loop
-        ->AddTimer([&fbb, &sender]() {
-          sender->CheckOk(sender->Send(fbb.GetBufferPointer(), fbb.GetSize()));
-        })
-        ->Schedule(cli_info.event_loop->monotonic_now(),
-                   std::chrono::duration_cast<std::chrono::nanoseconds>(
-                       std::chrono::duration<double>(
-                           1.0 / absl::GetFlag(FLAGS_rate))));
-    cli_info.event_loop->Run();
+    flatbuffers::FlatBufferBuilder fbb(sender->fbb_allocator()->size(),
+                                       sender->fbb_allocator());
+    fbb.ForceDefaults(true);
+    flatbuffers::Offset<flatbuffers::Table> msg_offset =
+        aos::JsonToFlatbuffer(message_to_send, channel->schema(), &fbb);
+
+    if (msg_offset.IsNull()) {
+      return 1;
+    }
+
+    fbb.Finish(msg_offset);
+
+    if (absl::GetFlag(FLAGS_rate) < 0) {
+      sender->CheckOk(sender->Send(fbb.GetSize()));
+    } else {
+      cli_info.event_loop
+          ->AddTimer([&fbb, &sender]() {
+            sender->CheckOk(
+                sender->Send(fbb.GetBufferPointer(), fbb.GetSize()));
+          })
+          ->Schedule(cli_info.event_loop->monotonic_now(),
+                     std::chrono::duration_cast<std::chrono::nanoseconds>(
+                         std::chrono::duration<double>(
+                             1.0 / absl::GetFlag(FLAGS_rate))));
+      cli_info.event_loop->Run();
+    }
   }
 
   return 0;

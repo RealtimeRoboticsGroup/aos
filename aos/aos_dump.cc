@@ -31,6 +31,7 @@ ABSL_FLAG(int32_t, timeout, -1,
           "exiting.  -1 means forever, 0 means don't wait.");
 ABSL_FLAG(bool, hex, false,
           "Are integers in the messages printed in hex notation.");
+ABSL_FLAG(bool, bfbs, false, "If true, print the raw bfbs message contents.");
 
 int main(int argc, char **argv) {
   absl::SetProgramUsageMessage(
@@ -73,7 +74,11 @@ int main(int argc, char **argv) {
       const std::unique_ptr<aos::RawFetcher> fetcher =
           cli_info.event_loop->MakeRawFetcher(channel);
       if (fetcher->Fetch()) {
-        printer.PrintMessage(channel, fetcher->context());
+        if (absl::GetFlag(FLAGS_bfbs)) {
+          printer.PrintBfbs(fetcher->context());
+        } else {
+          printer.PrintMessage(channel, fetcher->context());
+        }
       }
     }
 
@@ -95,7 +100,11 @@ int main(int argc, char **argv) {
               return;
             }
 
-            printer.PrintMessage(channel, context);
+            if (absl::GetFlag(FLAGS_bfbs)) {
+              printer.PrintBfbs(context);
+            } else {
+              printer.PrintMessage(channel, context);
+            }
             next_send_time =
                 context.monotonic_event_time +
                 std::chrono::milliseconds(absl::GetFlag(FLAGS_rate_limit));
