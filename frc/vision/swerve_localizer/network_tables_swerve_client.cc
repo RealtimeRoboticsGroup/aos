@@ -11,6 +11,8 @@
 #include <mutex>
 #include <thread>
 
+#include "Eigen/Dense"
+#include "Eigen/Geometry"
 #include "absl/flags/flag.h"
 #include "absl/log/check.h"
 #include "absl/log/die_if_null.h"
@@ -26,6 +28,7 @@
 #include "frc/input/joystick_state_static.h"
 #include "frc/input/robot_state_static.h"
 #include "frc/kinematics/ChassisSpeeds.h"
+#include "frc/vision/game_piece_locations_static.h"
 #include "frc/vision/swerve_localizer/chassis_speeds_static.h"
 #include "frc/vision/swerve_localizer/pose2d_static.h"
 #include "frc/vision/swerve_localizer/udp_status_static.h"
@@ -46,6 +49,7 @@ ABSL_FLAG(std::string, server, "roborio", "");
 ABSL_FLAG(uint16_t, drive_state_port, 4647,
           "Port to listen for drivestate UDP messages on.");
 ABSL_FLAG(uint16_t, pose_port, 4648, "Port to publish poses to");
+ABSL_FLAG(uint16_t, game_piece_port, 4649, "Port to publish game pieces to");
 ABSL_FLAG(std::string, chassis_speed_topic, "/DriveState/Speeds", "");
 ABSL_FLAG(std::string, pose_topic, "/DriveState/Pose", "");
 ABSL_FLAG(std::string, autonomous_topic,
@@ -157,6 +161,121 @@ class EventFd {
   int fd_ = -1;
 };
 
+class CoralForwarder {
+ public:
+  CoralForwarder(
+      aos::EventLoop *event_loop, nt::NetworkTableInstance *instance,
+      frc::constants::ConstantsFetcher<TargetMap> *target_map_fetcher)
+      : event_loop_(event_loop),
+        instance_(instance),
+        target_map_fetcher_(target_map_fetcher),
+        udp_server_(ResolveHostname(absl::GetFlag(FLAGS_server),
+                                    absl::GetFlag(FLAGS_game_piece_port))),
+        game_piece_socket_(udp_server_, absl::GetFlag(FLAGS_game_piece_port)),
+        localizer_output_fetcher_(
+            event_loop_->MakeFetcher<frc::controls::LocalizerOutput>(
+                "/localizer")) {
+    event_loop_->MakeWatcher(
+        "/camera1/coral",
+        [this](const frc::vision::GamePieceLocations &locations) {
+          HandleGamePieceLocations(locations);
+        });
+  }
+
+  size_t send_failure_count() const { return send_failure_count_; }
+
+  void reset_send_failure_count() { send_failure_count_ = 0; }
+
+ private:
+  void HandleGamePieceLocations(
+      const frc::vision::GamePieceLocations &locations) {
+    auto offset = instance_->GetServerTimeOffset();
+    if (!offset.has_value()) {
+      VLOG(1) << "Not connected, ignoring";
+      return;
+    }
+
+    localizer_output_fetcher_.Fetch();
+    if (localizer_output_fetcher_.get() == nullptr) {
+      return;
+    }
+
+    if (!locations.has_locations()) return;
+
+    const double x = localizer_output_fetcher_->x();
+    const double y = localizer_output_fetcher_->y();
+    const double theta = localizer_output_fetcher_->theta();
+
+    const Eigen::Affine3d robot_to_field =
+        Eigen::Translation3d(Eigen::Vector3d(x, y, 0.0)) *
+        Eigen::AngleAxisd(theta, Eigen::Vector3d::UnitZ());
+
+    const Eigen::Vector3d intake = robot_to_field * Eigen::Vector3d(-1.0, 0.0, 0.0);
+
+    // 1: pick the best one.
+    //
+    // 2: Pack it and ship it.
+
+    // confidence, x, y, width, height, time
+    std::array<double, 6> game_piece_data{
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        static_cast<double>(
+            std::chrono::duration_cast<std::chrono::microseconds>(
+                event_loop_->context().realtime_event_time.time_since_epoch())
+                .count() +
+            offset.value())};
+
+    if (locations.locations()->size() > 0) {
+      const frc::vision::GamePieceLocation *best_location = nullptr;
+      for (const frc::vision::GamePieceLocation *location :
+           *locations.locations()) {
+        if (best_location == nullptr) {
+          best_location = location;
+          continue;
+        }
+
+        if (std::hypot(best_location->x() - intake.x(),
+                       best_location->y() - intake.y()) >
+            std::hypot(location->x() - intake.x(),
+                       location->y() - intake.y())) {
+          best_location = location;
+        }
+      }
+
+      game_piece_data[0] = best_location->confidence();
+      game_piece_data[1] = best_location->x() +
+                           target_map_fetcher_->constants().fieldlength() / 2.0;
+      game_piece_data[2] = best_location->y() +
+                           target_map_fetcher_->constants().fieldwidth() / 2.0;
+      game_piece_data[3] = best_location->width();
+      game_piece_data[4] = best_location->height();
+    }
+
+    if (game_piece_socket_.Send(
+            reinterpret_cast<char *>(game_piece_data.data()),
+            game_piece_data.size() * sizeof(double)) !=
+        game_piece_data.size() * sizeof(double)) {
+      ++send_failure_count_;
+      VLOG(1) << "Send failure";
+    }
+  }
+
+  aos::EventLoop *event_loop_;
+  nt::NetworkTableInstance *instance_;
+  frc::constants::ConstantsFetcher<TargetMap> *target_map_fetcher_;
+
+  std::string udp_server_;
+  aos::events::TXUdpSocket game_piece_socket_;
+
+  aos::Fetcher<frc::controls::LocalizerOutput> localizer_output_fetcher_;
+
+  size_t send_failure_count_ = 0;
+};
+
 int Main() {
   aos::FlatbufferDetachedBuffer<aos::Configuration> config =
       aos::configuration::ReadConfig(absl::GetFlag(FLAGS_config));
@@ -248,6 +367,8 @@ int Main() {
           VLOG(1) << "Send failure";
         }
       });
+
+  CoralForwarder coral_forwarder(&event_loop, &instance, &target_map_fetcher);
 
   event_loop.epoll()->OnReadable(drive_state_socket.fd(), [&]() {
     std::array<uint8_t, 256> buffer;
@@ -476,10 +597,13 @@ int Main() {
     aos::Sender<UdpStatusStatic>::StaticBuilder builder =
         udp_status_sender.MakeStaticBuilder();
     auto faults = builder->add_faults();
-    if (send_failure_count > 0) {
+    const size_t overall_send_failure_count =
+        send_failure_count + coral_forwarder.send_failure_count();
+    if (overall_send_failure_count > 0) {
       CHECK(faults->reserve(1));
       CHECK(faults->emplace_back(NetworkHealth::SEND_FAILURE));
       send_failure_count = 0;
+      coral_forwarder.reset_send_failure_count();
     }
     builder.CheckOk(builder.Send());
   });

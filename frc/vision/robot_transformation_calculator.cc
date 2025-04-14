@@ -26,9 +26,9 @@ int Main() {
 
   // Converts from the camera frame to the robot frame.
   const double angle0 = 0.0;
-  const double angledown0 = 15.0;
+  const double angledown0 = -30.0;
   const Eigen::Affine3d orientation0 =
-      Eigen::Translation3d(-0.120, 0.133, 0.710) *
+      Eigen::Translation3d(-0.002, 0.074, 0.210) *
       Eigen::AngleAxisd(angle0 * M_PI / 180, Eigen::Vector3d::UnitZ()) *
       Eigen::AngleAxisd(angledown0 * M_PI / 180, Eigen::Vector3d::UnitY()) *
       camera_to_robot;
@@ -75,10 +75,10 @@ int Main() {
             << (orientation2 * Eigen::Vector3d(0.0, 0.0, 0.0)).transpose()
             << " angle " << angle2 << " or " << angle2 + 360.;
 
-  const double angle3 = 180.;
-  const double angledown3 = -28.0;
+  const double angle3 = 180.0 - 15.0;
+  const double angledown3 = 30.0;
   const Eigen::Affine3d orientation3 =
-      Eigen::Translation3d(0.120, -0.264, 1.031) *
+      Eigen::Translation3d(-0.175, -0.228, 0.877) *
       Eigen::AngleAxisd(angle3 * M_PI / 180, Eigen::Vector3d::UnitZ()) *
       Eigen::AngleAxisd(angledown3 * M_PI / 180, Eigen::Vector3d::UnitY()) *
       camera_to_robot;

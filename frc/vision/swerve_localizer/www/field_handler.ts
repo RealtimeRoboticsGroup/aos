@@ -4,6 +4,7 @@ import {ServerStatistics, State as ConnectionState} from '../../../../aos/networ
 import {Connection} from '../../../../aos/network/www/proxy'
 import {ZeroingError} from '../../../../frc/control_loops/control_loops_generated'
 import {LocalizerOutput} from '../../../control_loops/drivetrain/localization/localizer_output_generated'
+import {GamePieceLocations, GamePieceLocation} from '../../../vision/game_piece_locations_generated'
 import {TargetMap} from '../../target_map_generated'
 import {RejectionReason} from '../status_generated'
 import {TargetEstimateDebug, Visualization} from '../visualization_generated'
@@ -24,6 +25,7 @@ const CAMERAS = ['/camera0/gray', '/camera1/gray', '/camera2/gray', '/camera3/gr
 export class FieldHandler {
   private canvas = document.createElement('canvas');
   private localizerOutput: LocalizerOutput|null = null;
+  private gamePieceLocationMatches = new Map<number, GamePieceLocations>();
 
   // Image information indexed by timestamp (seconds since the epoch), so that
   // we can stop displaying images after a certain amount of time.
@@ -139,6 +141,10 @@ export class FieldHandler {
           this.handleLocalizerOutput(data);
         });
       this.connection.addHandler(
+        '/camera1/coral', 'frc.vision.GamePieceLocations', (data) => {
+          this.handleGamePieceLocations(data);
+        });
+      this.connection.addHandler(
         '/aos', 'aos.message_bridge.ServerStatistics',
         (data) => {this.handleServerStatistics(data)});
       this.connection.addHandler(
@@ -179,6 +185,14 @@ export class FieldHandler {
   private handleLocalizerOutput(data: Uint8Array): void {
     const fbBuffer = new ByteBuffer(data);
     this.localizerOutput = LocalizerOutput.getRootAsLocalizerOutput(fbBuffer);
+  }
+
+  private handleGamePieceLocations(data: Uint8Array): void {
+    const fbBuffer = new ByteBuffer(data);
+    const now = Date.now() / 1000.0;
+
+    this.gamePieceLocationMatches.set(
+        now, GamePieceLocations.getRootAsGamePieceLocations(fbBuffer));
   }
 
   private populateNodeConnections(nodeName: string): void {
@@ -297,6 +311,24 @@ export class FieldHandler {
   ctx.restore();
 }
 
+  drawCoral(
+    x: number, y: number, color: string = 'blue'): void {
+  const ctx = this.canvas.getContext('2d');
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = ROBOT_WIDTH / 15.0;
+  // Empty array = solid line.
+  ctx.setLineDash([]);
+
+  ctx.beginPath();
+  ctx.arc(0, 0, 0.15, 0, 2 * Math.PI);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+
   setZeroing(div: HTMLElement): void {
     div.innerHTML = 'zeroing';
     div.classList.remove('faulted');
@@ -393,6 +425,27 @@ export class FieldHandler {
         const cameraRgba = cameraRgb + alpha;
         this.drawRobot(x, y, theta, cameraRgba, dashed);
         this.drawCamera(cameraX, cameraY, cameraTheta, cameraRgba);
+      }
+    }
+
+    for (const [time, value] of this.gamePieceLocationMatches) {
+      const age = now - time;
+      const kRemovalAge = 1.0;
+      if (age > kRemovalAge) {
+        this.gamePieceLocationMatches.delete(time);
+        continue;
+      }
+      const kMaxImageAlpha = 0.5;
+      const ageAlpha = kMaxImageAlpha * (kRemovalAge - age) / kRemovalAge
+      for (let i = 0; i < value.locationsLength(); i++) {
+        const loc = value.locations(i);
+        const x = loc.x();
+        const y = loc.y();
+        // Make camera readings fade over time.
+        const alpha = Math.round(255 * ageAlpha).toString(16).padStart(2, '0');
+        const cameraRgb = '#41137d';
+        const cameraRgba = cameraRgb + alpha;
+        this.drawCoral(x, y, cameraRgba);
       }
     }
 

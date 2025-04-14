@@ -1,0 +1,25 @@
+namespace frc.vision;
+
+// Bounding box detection.
+table BoundingBox {
+  // Class ID of this detection
+  class_id:uint8 (id: 0);
+
+  // 0-1 confidence.
+  confidence:float (id: 1);
+
+  // Location of upper left corner in pixels.
+  // 0, 0 is the upper left corner, x is horizontal.
+  x0:float (id: 2);
+  y0:float (id: 3);
+
+  // Size of the box in pixels.
+  width:float (id: 4);
+  height:float (id: 5);
+}
+
+table BoundingBoxes {
+  boxes:[BoundingBox] (id: 0);
+}
+
+root_type BoundingBoxes;

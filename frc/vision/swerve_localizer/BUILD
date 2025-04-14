@@ -245,6 +245,7 @@ cc_binary(
         "//frc/input:joystick_state_fbs",
         "//frc/input:robot_state_fbs",
         "//frc/vision:field_map_fbs",
+        "//frc/vision:game_piece_locations_fbs",
         "//frc/vision:target_map_fbs",
         "@com_github_wpilibsuite_allwpilib//ntcore:ntcore.static",
         "@com_github_wpilibsuite_allwpilib//wpimath:wpimath.static",

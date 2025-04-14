@@ -20,6 +20,10 @@ ABSL_FLAG(std::string, config, "aos_config.json",
           "File path of aos configuration");
 ABSL_FLAG(std::string, channel, "/camera", "Channel name for the camera.");
 
+ABSL_FLAG(uint32_t, skip, 0,
+          "Number of images to skip to reduce the framerate of inference to "
+          "reduce GPU load.");
+
 namespace frc::vision {
 
 class TurboJpegDecoder {
@@ -50,6 +54,13 @@ class TurboJpegDecoder {
     CHECK(image.format() == ImageFormat::MJPEG)
         << ": Expected MJPEG format but got: "
         << EnumNameImageFormat(image.format());
+
+    if (skip_ != 0) {
+      --skip_;
+      return;
+    } else {
+      skip_ = absl::GetFlag(FLAGS_skip);
+    }
 
     int width, height, subsamp, colorspace;
 
@@ -138,6 +149,8 @@ class TurboJpegDecoder {
   int successful_decodes_ = 0;
   int failed_decodes_ = 0;
   aos::InlinedVector<char, 128> last_error_message_;
+
+  size_t skip_ = 0;
 };
 
 int Main() {

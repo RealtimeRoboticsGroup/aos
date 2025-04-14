@@ -373,6 +373,8 @@ aos_config(
     name = "aos_config",
     src = "single_node_camera_config.json",
     flatbuffers = [
+        ":coral_detection_fbs",
+        ":game_piece_locations_fbs",
         ":vision_fbs",
         ":target_map_fbs",
         ":camera_settings_fbs",
@@ -604,8 +606,10 @@ aos_downloader_dir(
 
 robot_downloader(
     binaries = [
+        ":yolo",
         ":apriltag_detector",
         ":field_side_exposure_adjuster",
+        ":game_piece_mapper",
         ":image_logger",
         ":intrinsics_calibration",
         ":turbojpeg_decoder",
@@ -627,6 +631,8 @@ robot_downloader(
     ],
     data = [
         ":aos_config",
+        ":best416x.engine",
+        ":reexported29.engine",
         ":constants.json",
         "//frc/orin:orin_irq_config.json",
         "@frc2025_field_map_welded//file:frc2025r2.fmap",
@@ -885,13 +891,63 @@ cc_binary(
     features = ["cuda"],
     visibility = ["//visibility:public"],
     deps = [
+        ":coral_detection_fbs",
+        ":cuda_camera_image_callback",
+        ":vision_fbs",
+        "//aos:configuration",
         "//aos:init",
+        "//aos/events:shm_event_loop",
         "//aos/util:file",
         "//frc/orin:cuda",
+        "//frc/orin:resize_normalize",
         "//third_party:cudart",
+        "//third_party:opencv",
         "//third_party:tensorrt",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
+    ],
+)
+
+static_flatbuffer(
+    name = "coral_detection_fbs",
+    srcs = ["coral_detection.fbs"],
+    target_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:public"],
+)
+
+flatbuffer_ts_library(
+    name = "game_piece_locations_ts_fbs",
+    srcs = ["game_piece_locations.fbs"],
+    target_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:public"],
+)
+
+static_flatbuffer(
+    name = "game_piece_locations_fbs",
+    srcs = ["game_piece_locations.fbs"],
+    target_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:public"],
+)
+
+cc_binary(
+    name = "game_piece_mapper",
+    srcs = [
+        "game_piece_mapper.cc",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":camera_constants_fbs",
+        ":coral_detection_fbs",
+        ":game_piece_locations_fbs",
+        "//aos:configuration",
+        "//aos:init",
+        "//aos/events:shm_event_loop",
+        "//frc/constants:constants_sender_lib",
+        "//frc/control_loops/drivetrain/localization:localizer_output_fbs",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
+        "@org_tuxfamily_eigen//:eigen",
     ],
 )

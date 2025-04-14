@@ -36,6 +36,7 @@ ts_project(
         "//frc/control_loops:control_loops_ts_fbs",
         "//frc/control_loops/drivetrain:drivetrain_status_ts_fbs",
         "//frc/control_loops/drivetrain/localization:localizer_output_ts_fbs",
+        "//frc/vision:game_piece_locations_ts_fbs",
         "//frc/vision:target_map_ts_fbs",
         "//frc/vision/swerve_localizer:status_ts_fbs",
         "//frc/vision/swerve_localizer:visualization_ts_fbs",
