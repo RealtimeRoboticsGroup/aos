@@ -607,6 +607,7 @@ aos_downloader_dir(
 robot_downloader(
     binaries = [
         ":yolo",
+        ":image_dump_cli",
         ":apriltag_detector",
         ":field_side_exposure_adjuster",
         ":game_piece_mapper",
@@ -632,8 +633,8 @@ robot_downloader(
     data = [
         ":aos_config",
         ":best416x.engine",
-        ":reexported29.engine",
         ":constants.json",
+        ":reexported29.engine",
         "//frc/orin:orin_irq_config.json",
         "@frc2025_field_map_welded//file:frc2025r2.fmap",
     ],
@@ -949,5 +950,42 @@ cc_binary(
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
         "@org_tuxfamily_eigen//:eigen",
+    ],
+)
+
+cc_binary(
+    name = "image_dump",
+    srcs = [
+        "image_dump.cc",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":vision_fbs",
+        "//aos:init",
+        "//aos:sha256",
+        "//aos/events:simulated_event_loop",
+        "//aos/events/logging:log_reader",
+        "//aos/util:file",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
+    ],
+)
+
+cc_binary(
+    name = "image_dump_cli",
+    srcs = [
+        "image_dump_cli.cc",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":vision_fbs",
+        "//aos:init",
+        "//aos:sha256",
+        "//aos/events:shm_event_loop",
+        "//aos/util:file",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
     ],
 )
