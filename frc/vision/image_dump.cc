@@ -38,7 +38,7 @@ class ImageDump {
      LOG(INFO) << "Writing " << path;
 
      CHECK(aos::util::MkdirPIfSpace(path, 0755));
-     aos::util::WriteStringToFileOrDie(path, image_data);
+     aos::util::WriteStringToFileOrDie(path, image_data, 0644);
    }
 
   private:

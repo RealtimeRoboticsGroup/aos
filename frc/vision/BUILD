@@ -633,8 +633,10 @@ robot_downloader(
     data = [
         ":aos_config",
         ":best416x.engine",
+        ":with_auto.engine",
         ":constants.json",
         ":reexported29.engine",
+        ":with_cole_no_feet.engine",
         "//frc/orin:orin_irq_config.json",
         "@frc2025_field_map_welded//file:frc2025r2.fmap",
     ],

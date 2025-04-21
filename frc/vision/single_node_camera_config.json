@@ -102,7 +102,7 @@
       "name": "/camera0",
       "type": "frc.vision.CameraImage",
       "read_method": "PIN",
-      "num_readers": 4,
+      "num_readers": 5,
       "source_node": "orin",
       "max_size": 4172800,
       "frequency": 125
@@ -176,7 +176,7 @@
       "name": "/camera1",
       "type": "frc.vision.CameraImage",
       "read_method": "PIN",
-      "num_readers": 4,
+      "num_readers": 5,
       "source_node": "orin",
       "max_size": 4172800,
       "frequency": 125
@@ -229,7 +229,7 @@
       "name": "/camera2",
       "type": "frc.vision.CameraImage",
       "read_method": "PIN",
-      "num_readers": 4,
+      "num_readers": 5,
       "source_node": "orin",
       "max_size": 4172800,
       "frequency": 125
@@ -282,7 +282,7 @@
       "name": "/camera3",
       "type": "frc.vision.CameraImage",
       "read_method": "PIN",
-      "num_readers": 4,
+      "num_readers": 5,
       "source_node": "orin",
       "max_size": 4172800,
       "frequency": 125
@@ -587,7 +587,8 @@
       "name": "yolo",
       "autostart": true,
       /*"args": ["--engine_path=/home/pi/bin/best416x.engine", "--nodie_on_malloc"],*/
-      "args": ["--engine_path=/home/pi/bin/reexported29.engine", "--nodie_on_malloc", "--skip=0"],
+      /*"args": ["--engine_path=/home/pi/bin/reexported29.engine", "--nodie_on_malloc", "--skip=0"],*/
+      "args": ["--engine_path=/home/pi/bin/with_auto.engine", "--nodie_on_malloc", "--skip=0"],
       "nodes": [ "orin" ]
     },
     {
@@ -604,6 +605,7 @@
         "5.0",
         "--direct",
         "--flush_size=4194304",
+        "--disabled_time=10",
         "--sync"
       ],
       "nodes": [ "orin" ]

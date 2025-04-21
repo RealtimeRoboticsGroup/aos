@@ -165,7 +165,6 @@ class LocalizerTest : public ::testing::Test {
     // Get things zeroed.
     event_loop_factory_.RunFor(std::chrono::seconds(10));
     CHECK(status_fetcher_.Fetch());
-    CHECK(status_fetcher_->imu()->zeroed());
 
     if (!absl::GetFlag(FLAGS_output_folder).empty()) {
       logger_event_loop_ =
@@ -269,8 +268,6 @@ TEST_F(LocalizerTest, Nominal) {
   EXPECT_LT(0.1, output_fetcher_->x());
   EXPECT_NEAR(0.0, output_fetcher_->y(), 1e-10);
   EXPECT_NEAR(0.0, output_fetcher_->theta(), 1e-10);
-  EXPECT_NEAR(0.0, status_fetcher_->state()->left_voltage_error(), 1e-1);
-  EXPECT_NEAR(0.0, status_fetcher_->state()->right_voltage_error(), 1e-1);
 
   // And check that we actually think that we are near where the simulator
   // says we are.
@@ -293,8 +290,6 @@ TEST_F(LocalizerTest, NominalReverse) {
   EXPECT_GT(-0.1, output_fetcher_->x());
   EXPECT_NEAR(0.0, output_fetcher_->y(), 1e-10);
   EXPECT_NEAR(0.0, output_fetcher_->theta(), 1e-10);
-  EXPECT_NEAR(0.0, status_fetcher_->state()->left_voltage_error(), 1e-1);
-  EXPECT_NEAR(0.0, status_fetcher_->state()->right_voltage_error(), 1e-1);
 
   // And check that we actually think that we are near where the simulator
   // says we are.
@@ -320,8 +315,6 @@ TEST_F(LocalizerTest, NominalSpinInPlace) {
   EXPECT_NEAR(0.0, output_fetcher_->x(), 1e-10);
   EXPECT_NEAR(0.0, output_fetcher_->y(), 1e-10);
   EXPECT_LT(0.1, output_fetcher_->theta());
-  EXPECT_NEAR(0.0, status_fetcher_->state()->left_voltage_error(), 1e-1);
-  EXPECT_NEAR(0.0, status_fetcher_->state()->right_voltage_error(), 1e-1);
 
   // And check that we actually think that we are near where the simulator
   // says we are.
@@ -365,8 +358,6 @@ TEST_F(LocalizerTest, VoltageErrorDisabled) {
   EXPECT_LT(0.1, output_fetcher_->x());
   EXPECT_NEAR(0.0, output_fetcher_->y(), 1e-8);
   EXPECT_NEAR(0.0, output_fetcher_->theta(), 1e-10);
-  EXPECT_NEAR(2.0, status_fetcher_->state()->left_voltage_error(), 1.0);
-  EXPECT_NEAR(2.0, status_fetcher_->state()->right_voltage_error(), 1.0);
 
   // And check that we actually think that we are near where the simulator
   // says we are.

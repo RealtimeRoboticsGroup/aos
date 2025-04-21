@@ -42,13 +42,12 @@ export function plotVision(conn: Connection, element: Element): void {
 
   const targets = [];
   const targetLabels = [];
-    for (const camera of ['camera0', 'camera1', 'camera2', 'camera3']) {
-      targetLabels.push(camera);
-      targets.push(aosPlotter.addRawMessageSource(
-          '/' + camera + '/gray', 'frc.vision.swerve_localizer.Visualization',
-          new VisionMessageHandler(
-              conn.getSchema('frc.vision.swerve_localizer.Visualization'))));
-    }
+  for (const camera of ['camera0', 'camera1', 'camera2', 'camera3']) {
+    targetLabels.push(camera);
+    targets.push(aosPlotter.addRawMessageSource(
+        '/' + camera + '/gray', 'frc.vision.swerve_localizer.Visualization',
+        new VisionMessageHandler(
+            conn.getSchema('frc.vision.swerve_localizer.Visualization'))));
   }
   const localizerStatus = aosPlotter.addMessageSource(
       '/localizer', 'frc.vision.swerve_localizer.Status');
