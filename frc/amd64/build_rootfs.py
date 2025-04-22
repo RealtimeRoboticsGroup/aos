@@ -160,8 +160,6 @@ def main():
                 "gir1.2-gtk-3.0",
                 "libgtk-3-dev",
                 "librsvg2-common",
-                "apache2",
-                "postgresql",
                 "gvfs-libs",
                 "gir1.2-gtk-3.0",
                 "gir1.2-pango-1.0",

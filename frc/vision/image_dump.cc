@@ -14,14 +14,14 @@ class ImageDump {
   public:
    ImageDump(aos::EventLoop *event_loop) : event_loop_(event_loop) {
      event_loop_->MakeWatcher(
-         "/camera0",
-         [this](const frc::vision::CameraImage &image) { LogImage(image, 0); });
-     event_loop_->MakeWatcher(
-         "/camera3",
-         [this](const frc::vision::CameraImage &image) { LogImage(image, 3); });
-     event_loop_->MakeWatcher(
-         "/camera2",
-         [this](const frc::vision::CameraImage &image) { LogImage(image, 2); });
+         "/camera1",
+         [this](const frc::vision::CameraImage &image) { LogImage(image, 1); });
+     //event_loop_->MakeWatcher(
+         //"/camera3",
+         //[this](const frc::vision::CameraImage &image) { LogImage(image, 3); });
+     //event_loop_->MakeWatcher(
+         //"/camera2",
+         //[this](const frc::vision::CameraImage &image) { LogImage(image, 2); });
    }
 
    void LogImage(const frc::vision::CameraImage &image, int camera) {
