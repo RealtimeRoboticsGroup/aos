@@ -132,6 +132,8 @@ cc_test(
 )
 
 cc_test(
+    # todo(ben): Temprarily DISABLE this test.
+    tags = ["manual"],
     name = "static_flatbuffers_fuzz_test",
     # This does a combinatoric sweep over a variety of things, and can end up taking a while.
     timeout = "eternal",

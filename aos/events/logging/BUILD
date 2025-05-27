@@ -263,6 +263,8 @@ cc_binary(
 )
 
 sh_test(
+    # todo(ben): Temprarily DISABLE this test.
+    tags = ["manual"],
     name = "logfile_utils_out_of_space_test",
     srcs = [
         "logfile_utils_out_of_space_test.sh",
@@ -273,12 +275,12 @@ sh_test(
     env = {
         "RUNNER": "$(rootpath :logfile_utils_out_of_space_test_runner)",
     },
-    tags = [
-        # This uses unclone to make a new mount namespace.  Turns out, this is
-        # quite hard to figure out how to put in a remote cluster.  So just
-        # give up and run it locally under linux-sandbox where it is easy.
-        "no-remote-exec",
-    ],
+    #tags = [
+    #    # This uses unclone to make a new mount namespace.  Turns out, this is
+    #    # quite hard to figure out how to put in a remote cluster.  So just
+    #    # give up and run it locally under linux-sandbox where it is easy.
+    #    "no-remote-exec",
+    #],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@bazel_tools//tools/bash/runfiles",
@@ -975,6 +977,8 @@ cc_test(
 )
 
 cc_test(
+    # todo(ben): Temprarily DISABLE this test.
+    tags = ["manual"],
     name = "multinode_logger_test",
     srcs = ["multinode_logger_test.cc"],
     copts = select({

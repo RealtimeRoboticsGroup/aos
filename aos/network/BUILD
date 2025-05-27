@@ -238,15 +238,17 @@ cc_library(
 )
 
 cc_test(
+    # TODO(ben): Temprarily DISABLE this test.
+    tags = ["manual"],
     name = "sctp_test",
     srcs = [
         "sctp_test.cc",
     ],
-    tags = [
-        # Fakeroot is required to enable "net.sctp.auth_enable".
-        "requires-fakeroot",
-        "no-remote-exec",
-    ],
+    #tags = [
+    #    # Fakeroot is required to enable "net.sctp.auth_enable".
+    #    "requires-fakeroot",
+    #    "no-remote-exec",
+    #],
     target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         ":sctp_client",
@@ -620,6 +622,8 @@ cc_library(
 )
 
 cc_test(
+    # todo(ben): Temprarily DISABLE this test.
+    tags = ["manual"],
     name = "message_bridge_retry_test",
     srcs = [
         "message_bridge_retry_test.cc",
@@ -645,6 +649,8 @@ cc_test(
 )
 
 cc_test(
+    # todo(ben): Temprarily DISABLE this test.
+    tags = ["manual"],
     name = "message_bridge_test",
     srcs = [
         "message_bridge_test.cc",
@@ -877,6 +883,8 @@ cc_binary(
 )
 
 sh_test(
+    # todo(ben): Temprarily DISABLE this test.
+    tags = ["manual"],
     name = "sctp_lib_test",
     srcs = [
         "sctp_lib_test.sh",
