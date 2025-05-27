@@ -47,28 +47,22 @@ register_jq_toolchains()
 
 http_archive(
     name = "rules_python",
-    patch_args = ["-p1"],
-    patches = [
-        "//third_party:rules_python/0001-Support-overriding-individual-packages.patch",
-        "//third_party:rules_python/0002-Allow-user-to-patch-wheels.patch",
-    ],
-    sha256 = "497ca47374f48c8b067d786b512ac10a276211810f4a580178ee9b9ad139323a",
-    strip_prefix = "rules_python-0.16.1",
-    url = "https://github.com/bazelbuild/rules_python/archive/refs/tags/0.16.1.tar.gz",
+    sha256 = "9f9f3b300a9264e4c77999312ce663be5dee9a56e361a1f6fe7ec60e1beef9a3",
+    strip_prefix = "rules_python-1.4.1",
+    url = "https://github.com/bazel-contrib/rules_python/releases/download/1.4.1/rules_python-1.4.1.tar.gz",
 )
+
+load("@rules_python//python:repositories.bzl", "py_repositories")
+
+py_repositories()
 
 load("@rules_python//python:repositories.bzl", "python_register_toolchains")
 
 python_register_toolchains(
     name = "python3_9",
     python_version = "3.9",
-    register_toolchains = False,
 )
 
-load(
-    "@python3_9//:defs.bzl",
-    python_interpreter = "interpreter",
-)
 load("@rules_python//python:pip.bzl", "pip_parse")
 load(
     "//tools/python:package_annotations.bzl",
@@ -79,10 +73,8 @@ pip_parse(
     name = "pip_deps",
     annotations = PYTHON_ANNOTATIONS,
     enable_implicit_namespace_pkgs = True,
-    overrides = "//tools/python:whl_overrides.json",
-    patch_spec = "//tools/python:patches.json",
-    python_interpreter_target = python_interpreter,
-    require_overrides = RUNNING_IN_CI,
+    #overrides = "//tools/python:whl_overrides.json",
+    #patch_spec = "//tools/python:patches.json",
     requirements_lock = "//tools/python:requirements.lock.txt",
 )
 
