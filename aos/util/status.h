@@ -211,39 +211,24 @@ inline std::ostream &operator<<(std::ostream &stream, const Status &result) {
   return stream;
 }
 
-// Takes an expression that evaluates to a Result<> and returns the error if
+// Takes an expression that evalutes to a Result<> and returns the error if
 // there is one.
-#define AOS_RETURN_IF_ERROR(result)                                            \
-  {                                                                            \
-    /* Ensure that we only evaluate result once. (reference lifetime extension \
-     * should prevent lifetime issues here). */                                \
-    const auto &tmp = (result);                                                \
-    if (!tmp.has_value()) {                                                    \
-      return ::aos::MakeError(tmp.error());                                    \
-    }                                                                          \
+#define AOS_RETURN_IF_ERROR(result)                                           \
+  {                                                                           \
+    /* Ensure that we only evalute result once. (reference lifetime extension \
+     * should prevent lifetime issues here). */                               \
+    const auto &tmp = (result);                                               \
+    if (!tmp.has_value()) {                                                   \
+      return ::aos::MakeError(tmp.error());                                   \
+    }                                                                         \
   }
-
-// If expression evaluates to a type of Result<T> then a variable named variable
-// of type const T& will be declared that is initialized to refer to the result
-// of evaluating the expression. If expression evaluates to an error state,
-// returns the error prior to initializing the variable.
-#define AOS_DECLARE_OR_RETURN_IF_ERROR(variable, expression)                 \
-  /* Ensure that we only evaluate result once. (reference lifetime extension \
-   * should prevent lifetime issues here). */                                \
-  const auto &variable##__tmp = (expression);                                \
-  if (!variable##__tmp.has_value()) {                                        \
-    return ::aos::MakeError(variable##__tmp.error());                        \
-  }                                                                          \
-  const auto &variable = variable##__tmp.value();
 
 namespace internal {
 // The below is a cutesy way to prevent
 // AOS_GET_VALUE_OR_RETURN_ERROR() from being called with an lvalue
 // expression. We do this because it may not be obvious to users whether
 // AOS_GET_VALUE_OR_RETURN_ERROR() would attempt to copy the
-// provided lvalue or move from it, and unlike
-// AOS_DECLARE_OR_RETURN_IF_ERROR where we can declare the result
-// variable as a reference in this case the result variable is generally going
+// provided lvalue or move from it. The result variable is generally going
 // to own the returned value, and so must either copy or move from the input.
 // When the input expression is a temporary this is easy---we can just always
 // move, avoiding extra copies without anyone noticing. If the input is an
@@ -262,22 +247,29 @@ T ForwardExpression(T &&rvalue) {
   return std::move(rvalue);
 }
 }  // namespace internal
-// Performs a similar function to AOS_DECLARE_OR_RETURN_IF_ERROR,
-// except that this assumes that variable is already declared and so just sets
-// it to the result of the expression, if it is an expected value. Does not
-// support taking an lvalue as the expression, as it is not intuitive whether
-// this would result in a copy or a move of the provided lvalue, and most
-// use-cases will take an rvalue of some sort.
-#define AOS_GET_VALUE_OR_RETURN_ERROR(variable, expression)                  \
-  /* Ensure that we only evaluate result once. Note that we use decltype()   \
-   * rather than auto to preserve any reference type returned by             \
-   * ForwardExpression() (not currently relevant, but may become relevant if \
-   * we support lvalues in (expression). */                                  \
-  decltype(::aos::internal::ForwardExpression(expression)) variable##__tmp = \
-      ::aos::internal::ForwardExpression(expression);                        \
-  if (!variable##__tmp.has_value()) {                                        \
-    return ::aos::MakeError(variable##__tmp.error());                        \
-  }                                                                          \
-  variable = std::move(variable##__tmp.value());
+
+// If expression (of type Result<T>) evaluates to an error state, then this
+// macro will call `return`. If the expression does not evaluate to an error
+// state, it will get the value out of the Result. Use like so:
+//
+//   Result<int> result = ...
+//   int value = AOS_GET_VALUE_OR_RETURN_ERROR(result);
+//   std::cout << value << "\n";
+//
+// If `result` is an error state, then the `std::cout` will never execute
+// because the macro will return from the current function. If `result`
+// contains a value, however, it will be printed via `std::cout`.
+#define AOS_GET_VALUE_OR_RETURN_ERROR(expression)                  \
+  ({                                                               \
+    /* Ensure that we only evalute result once. */                 \
+    decltype(::aos::internal::ForwardExpression(expression)) tmp = \
+        (expression);                                              \
+    if (!tmp.has_value()) {                                        \
+      return ::aos::MakeError(tmp.error());                        \
+    }                                                              \
+    std::move(tmp.value());                                        \
+  })
+
 }  // namespace aos
+
 #endif  // AOS_UTIL_STATUS_H_
