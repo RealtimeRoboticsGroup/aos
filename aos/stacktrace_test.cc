@@ -62,9 +62,7 @@ TEST(StacktraceDeathTest, StackTraceOnCrash) {
 }
 
 // Tests that we get a useful stacktrace on a segfault.
-// TODO(philipp.schrader): Enable when we get stack unwinding in signal handlers
-// working.
-TEST(StacktraceDeathTest, DISABLED_StackTraceOnSegfault) {
+TEST(StacktraceDeathTest, StackTraceOnSegfault) {
   g_function = [] { CHECK_EQ(raise(SIGSEGV), 0); };
 
   EXPECT_DEATH(
@@ -86,9 +84,7 @@ TEST(StacktraceDeathTest, DISABLED_StackTraceOnSegfault) {
 }
 
 // Tests that we get a useful stacktrace on a malloc.
-// TODO(philipp.schrader): Enable when we get stack unwinding in signal handlers
-// working.
-TEST(StacktraceDeathTest, DISABLED_StackTraceOnMalloc) {
+TEST(StacktraceDeathTest, StackTraceOnMalloc) {
   g_function = [] {
     ScopedRealtime rt;
     volatile int *a = new int[3];

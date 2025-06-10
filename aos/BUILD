@@ -180,6 +180,9 @@ cc_library(
     hdrs = [
         "init.h",
     ],
+    implementation_deps = [
+        ":init_stack_unwinder",
+    ],
     target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
@@ -260,6 +263,33 @@ cc_test(
         "//aos/testing:googletest",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
+    ],
+)
+
+cc_library(
+    name = "llvm_libunwind",
+    target_compatible_with = select({
+        "@platforms//cpu:aarch64": [],
+        "@platforms//cpu:x86_64": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = select({
+        "@platforms//cpu:aarch64": ["@llvm_aarch64//:libunwind"],
+        "@platforms//cpu:x86_64": ["@llvm_k8//:libunwind"],
+    }),
+)
+
+cc_library(
+    name = "init_stack_unwinder",
+    srcs = [
+        "init_stack_unwinder.cc",
+    ],
+    hdrs = [
+        "init_stack_unwinder.h",
+    ],
+    implementation_deps = [
+        ":llvm_libunwind",
+        "@com_google_absl//absl/debugging:stacktrace",
     ],
 )
 

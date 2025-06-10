@@ -21,6 +21,7 @@
 #include "absl/log/globals.h"
 #include "absl/log/initialize.h"
 
+#include "aos/init_stack_unwinder.h"
 #include "aos/realtime.h"
 #include "aos/uuid.h"
 
@@ -47,6 +48,9 @@ void InitGoogle(int *argc, char ***argv) {
   *argc = positional_arguments.size();
 
   absl::InitializeLog();
+
+  // Switch to our own unwinder.
+  InitStackUnwinder();
 
   if (absl::GetFlag(FLAGS_backtrace)) {
     absl::InitializeSymbolizer((*argv)[0]);
