@@ -1219,4 +1219,19 @@ TEST_F(StaticFlatbuffersTest, OrDefaultFunctions) {
   ASSERT_TRUE(builder.AsFlatbufferSpan().Verify());
 }
 
+// Validates that the SetStringOrDie function behaves as expected.
+TEST_F(StaticFlatbuffersTest, SetStringOrDie) {
+  Builder<TestTableStatic> builder;
+  TestTableStatic *object = builder.get();
+
+  SetStringOrDie(object->add_string(), "Hello");
+  EXPECT_EQ(object->string()->string_view(), "Hello");
+
+  Vector<String<10>, 3, false, 0> *vector = object->add_vector_of_strings();
+  ASSERT_TRUE(vector != nullptr);
+  SetStringOrDie(vector->emplace_back(), "World");
+  ASSERT_EQ(vector->size(), 1);
+  EXPECT_EQ(vector->at(0).string_view(), "World");
+}
+
 }  // namespace aos::fbs::testing

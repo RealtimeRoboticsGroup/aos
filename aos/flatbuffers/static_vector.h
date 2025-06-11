@@ -3,6 +3,7 @@
 #include <span>
 
 #include "absl/log/check.h"
+#include "absl/log/die_if_null.h"
 #include "absl/log/log.h"
 #include "flatbuffers/base.h"
 #include "flatbuffers/vector.h"
@@ -828,6 +829,21 @@ class String : public Vector<char, kStaticLength, true, 0, true> {
   friend struct internal::TableMover<String<kStaticLength>>;
   String(String &&) = default;
 };
+
+// A wrapper to automatically resize a String and set it.
+//
+// Use it like so:
+//
+//   FlatbufferStatic *message = ...
+//   SetStringOrDie(message->add_string_field(), "text");
+//
+// This function automatically checks that `add_string_field()` and the resizing
+// succeeded.
+template <size_t kStaticLength>
+void SetStringOrDie(String<kStaticLength> *string, std::string_view value) {
+  CHECK(ABSL_DIE_IF_NULL(string)->reserve(value.size()));
+  string->SetString(value);
+}
 
 namespace internal {
 // Specialization for all non-inline vector types. All of these types will just

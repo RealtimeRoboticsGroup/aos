@@ -178,13 +178,12 @@ int Main(int argc, char *argv[]) {
 
     // Save off the start and end times of replay.
     reader.OnStart(event_loop.node(), [&event_loop, &stats_msg]() {
-      auto node_name = ABSL_DIE_IF_NULL(stats_msg->add_node());
-      node_name->SetString(event_loop.node()->name()->string_view());
+      fbs::SetStringOrDie(stats_msg->add_node(),
+                          event_loop.node()->name()->string_view());
 
       const aos::realtime_clock::time_point now = event_loop.realtime_now();
       stats_msg->set_realtime_start_time(now.time_since_epoch().count());
-      auto formatted_start_time = ABSL_DIE_IF_NULL(stats_msg->add_start_time());
-      formatted_start_time->SetString(ToString(now));
+      fbs::SetStringOrDie(stats_msg->add_start_time(), ToString(now));
 
       stats_msg->set_monotonic_start_time(
           std::chrono::nanoseconds(
@@ -195,8 +194,7 @@ int Main(int argc, char *argv[]) {
     reader.OnEnd(event_loop.node(), [&event_loop, &stats_msg]() {
       const aos::realtime_clock::time_point now = event_loop.realtime_now();
       stats_msg->set_realtime_end_time(now.time_since_epoch().count());
-      auto formatted_end_time = ABSL_DIE_IF_NULL(stats_msg->add_end_time());
-      formatted_end_time->SetString(ToString(now));
+      fbs::SetStringOrDie(stats_msg->add_end_time(), ToString(now));
 
       stats_msg->set_monotonic_end_time(
           std::chrono::nanoseconds(
