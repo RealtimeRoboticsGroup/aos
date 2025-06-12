@@ -227,24 +227,34 @@ const Node *SourceNode(const Configuration *config, const Channel *channel);
 std::vector<const Node *> TimestampNodes(const Configuration *config,
                                          const Node *my_node);
 
+// Enum to define filtering criteria for applications based on their `autostart`
+// configuration.
+//
+// kDontCare - Include all applications regardless of their autostart setting
+// kYes      - Include only applications that are configured to autostart
+enum class Autostart { kDontCare = 0, kYes };
+
 // Returns the application for the provided node and name if it exists, or
 // nullptr if it does not exist on this node.
 const Application *GetApplication(const Configuration *config,
                                   const Node *my_node,
                                   std::string_view application_name);
 
-enum class Autostart { kNo = 0, kYes };
 // Returns all applications whose name contains the provided substring. If
 // node_name is non-empty, then only the applications that run on that node are
 // returned. If autostart is kYes, then only the applications are configured to
 // autostart are returned.
 std::vector<const Application *> GetApplicationsContainingSubstring(
     const Configuration *config, std::string_view node_name,
-    std::string_view substring, Autostart autostart = Autostart::kNo);
+    std::string_view substring,
+    Autostart autostart_filter = Autostart::kDontCare);
 
-// Returns true if the provided application should start on the provided node.
+// Returns true if the application is configured to start on the specified node.
+// If autostart_filter is kYes, the autostart parameter for the provided
+// application on that node must also be true for this function to return true.
 bool ApplicationShouldStart(const Configuration *config, const Node *my_node,
-                            const Application *application);
+                            const Application *application,
+                            Autostart autostart_filter);
 
 // Returns the number of messages in the queue.
 size_t QueueSize(const Configuration *config, const Channel *channel);

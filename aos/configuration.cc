@@ -2138,7 +2138,18 @@ std::vector<const Node *> TimestampNodes(const Configuration *config,
 }
 
 bool ApplicationShouldStart(const Configuration *config, const Node *my_node,
-                            const Application *application) {
+                            const Application *application,
+                            Autostart autostart_filter) {
+  switch (autostart_filter) {
+    case Autostart::kYes:
+      if (!application->autostart()) {
+        return false;
+      }
+      break;
+    case Autostart::kDontCare:
+      break;
+  }
+
   if (MultiNode(config)) {
     // Ok, we need
     ABSL_CHECK(application->has_nodes());
@@ -2163,7 +2174,8 @@ const Application *GetApplication(const Configuration *config,
         application_name, CompareApplications);
     if (application_iterator != config->applications()->cend() &&
         EqualsApplications(*application_iterator, application_name)) {
-      if (ApplicationShouldStart(config, my_node, *application_iterator)) {
+      if (ApplicationShouldStart(config, my_node, *application_iterator,
+                                 Autostart::kDontCare)) {
         return *application_iterator;
       }
     }
@@ -2173,7 +2185,7 @@ const Application *GetApplication(const Configuration *config,
 
 std::vector<const Application *> GetApplicationsContainingSubstring(
     const Configuration *config, std::string_view node_name,
-    std::string_view substring, Autostart autostart) {
+    std::string_view substring, Autostart autostart_filter) {
   std::vector<const Application *> results;
   if (config->has_applications()) {
     for (const Application *app : *config->applications()) {
@@ -2185,8 +2197,14 @@ std::vector<const Application *> GetApplicationsContainingSubstring(
           continue;
         }
       }
-      if (autostart == Autostart::kYes && !app->autostart()) {
-        continue;
+      switch (autostart_filter) {
+        case Autostart::kYes:
+          if (!app->autostart()) {
+            continue;
+          }
+          break;
+        case Autostart::kDontCare:
+          break;
       }
       ABSL_CHECK(app->has_name());
       ABSL_CHECK(!substring.empty()) << ": substring cannot be empty";

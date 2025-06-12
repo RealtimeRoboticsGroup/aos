@@ -79,7 +79,8 @@ MockStarter::MockStarter(aos::EventLoop *event_loop)
     for (const aos::Application *application :
          *event_loop_->configuration()->applications()) {
       if (aos::configuration::ApplicationShouldStart(
-              event_loop_->configuration(), event_loop_->node(), application)) {
+              event_loop_->configuration(), event_loop_->node(), application,
+              aos::configuration::Autostart::kDontCare)) {
         statuses_[application->name()->str()] = ApplicationStatus{
             next_id_++, application->autostart(), event_loop_->monotonic_now()};
       }

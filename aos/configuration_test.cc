@@ -1908,4 +1908,62 @@ TEST_F(ConfigurationTest, MultinodeMerge) {
       FlatbufferToJson(config, {.multi_line = true}));
 }
 
+// Tests that ApplicationShouldStart correctly filters by autostart value.
+TEST_F(ConfigurationTest, ApplicationShouldStartAutostartFilter) {
+  const FlatbufferDetachedBuffer<Configuration> config =
+      JsonToFlatbuffer<Configuration>(R"config({
+          "applications": [
+            {
+              "name": "autostart_app",
+              "autostart": true,
+              "nodes": ["node1"]
+            },
+            {
+              "name": "default_autostart_app",
+              "nodes": ["node1"]
+            },
+            {
+              "name": "no_autostart_app", 
+              "autostart": false,
+              "nodes": ["node1"]
+            }
+          ],
+          "nodes": [
+            {
+              "name": "node1"
+            }
+          ]
+        })config");
+
+  const Node *node1 = GetNode(&config.message(), "node1");
+  const Application *autostart_app =
+      GetApplication(&config.message(), node1, "autostart_app");
+  const Application *no_autostart_app =
+      GetApplication(&config.message(), node1, "no_autostart_app");
+  const Application *default_autostart_app =
+      GetApplication(&config.message(), node1, "default_autostart_app");
+
+  ASSERT_TRUE(autostart_app != nullptr);
+  ASSERT_TRUE(no_autostart_app != nullptr);
+  ASSERT_TRUE(default_autostart_app != nullptr);
+
+  // Test Autostart::kDontCare - should accept all applications regardless of
+  // autostart value
+  EXPECT_TRUE(ApplicationShouldStart(&config.message(), node1, autostart_app,
+                                     Autostart::kDontCare));
+  EXPECT_TRUE(ApplicationShouldStart(&config.message(), node1, no_autostart_app,
+                                     Autostart::kDontCare));
+  EXPECT_TRUE(ApplicationShouldStart(
+      &config.message(), node1, default_autostart_app, Autostart::kDontCare));
+
+  // Test Autostart::kYes - should only accept applications with autostart=true
+  EXPECT_TRUE(ApplicationShouldStart(&config.message(), node1, autostart_app,
+                                     Autostart::kYes));
+  EXPECT_FALSE(ApplicationShouldStart(&config.message(), node1,
+                                      no_autostart_app, Autostart::kYes));
+  EXPECT_TRUE(ApplicationShouldStart(&config.message(), node1,
+                                     default_autostart_app,
+                                     Autostart::kYes));  // default is true
+}
+
 }  // namespace aos::configuration::testing
