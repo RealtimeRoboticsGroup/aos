@@ -2169,6 +2169,20 @@ const Application *GetApplication(const Configuration *config,
                                   const Node *my_node,
                                   std::string_view application_name) {
   if (config->has_applications()) {
+    // Our later usage of std::lower_bound will not work as expected unless
+    // the applications are sorted by name.
+    // It's expensive to sort them, so just do a check when the tests are
+    // running in debug mode to ensure that all the tests have properly sorted
+    // applications.
+    ABSL_DCHECK(std::is_sorted(
+        config->applications()->cbegin(), config->applications()->cend(),
+        [](const Application *lhs, const Application *rhs) {
+          ABSL_DCHECK(lhs->has_name());
+          ABSL_DCHECK(rhs->has_name());
+          return lhs->name()->string_view() < rhs->name()->string_view();
+        }))
+        << "config->applications() is not sorted by name";
+
     auto application_iterator = std::lower_bound(
         config->applications()->cbegin(), config->applications()->cend(),
         application_name, CompareApplications);

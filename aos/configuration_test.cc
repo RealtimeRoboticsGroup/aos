@@ -1966,4 +1966,32 @@ TEST_F(ConfigurationTest, ApplicationShouldStartAutostartFilter) {
                                      Autostart::kYes));  // default is true
 }
 
+// Test that our ABSL_DCHECK will reject an unsorted applications list when
+// running in debug mode.
+#ifndef NDEBUG
+TEST_F(ConfigurationDeathTest, GetApplicationUnsortedApplications) {
+  const aos::FlatbufferDetachedBuffer<Configuration> config =
+      JsonToFlatbuffer<Configuration>(R"config({
+  "applications": [
+    {
+      "name": "zebra_app"
+    },
+    {
+      "name": "apple_app"
+    }
+  ]
+})config");
+
+  // The behavior in release mode is undefined when the applications are
+  // not sorted, but it's too slow for GetApplication to check at runtime.
+
+  // In debug mode, this will trigger the ABSL_DCHECK in GetApplication
+  // because the applications are not sorted.
+  // In release mode (NDEBUG defined), ABSL_DCHECK is a no-op, so it won't die.
+
+  EXPECT_DEATH({ GetApplication(&config.message(), nullptr, "apple_app"); },
+               "config->applications\\(\\) is not sorted by name");
+}
+#endif
+
 }  // namespace aos::configuration::testing
