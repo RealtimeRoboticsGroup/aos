@@ -1,11 +1,11 @@
 // Provides a plot which handles plotting the plot defined by a
 // aos.analysis.Plot message.
-import {Plot as PlotFb} from './plot_data_generated';
+import {Plot as PlotFb} from './plot_data_ts_fbs/aos/analysis';
 import {MessageHandler, TimestampedMessage} from '../../aos/network/www/aos_plotter';
 import {ByteBuffer} from 'flatbuffers';
 import {Plot, Point} from '../../aos/network/www/plotter';
 import {Connection} from '../../aos/network/www/proxy';
-import {Schema} from 'flatbuffers_reflection/reflection_generated';
+import {Schema} from '../../external/com_github_google_flatbuffers/reflection/reflection_ts_fbs/reflection';
 
 export function plotData(conn: Connection, parentDiv: Element) {
   // Set up a selection box to allow the user to choose between plots to show.

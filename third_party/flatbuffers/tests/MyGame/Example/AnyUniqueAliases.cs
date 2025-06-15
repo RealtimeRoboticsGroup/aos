@@ -85,4 +85,29 @@ public class AnyUniqueAliasesUnion_JsonConverter : Newtonsoft.Json.JsonConverter
 }
 
 
+
+static public class AnyUniqueAliasesVerify
+{
+  static public bool Verify(Google.FlatBuffers.Verifier verifier, byte typeId, uint tablePos)
+  {
+    bool result = true;
+    switch((AnyUniqueAliases)typeId)
+    {
+      case AnyUniqueAliases.M:
+        result = MyGame.Example.MonsterVerify.Verify(verifier, tablePos);
+        break;
+      case AnyUniqueAliases.TS:
+        result = MyGame.Example.TestSimpleTableWithEnumVerify.Verify(verifier, tablePos);
+        break;
+      case AnyUniqueAliases.M2:
+        result = MyGame.Example2.MonsterVerify.Verify(verifier, tablePos);
+        break;
+      default: result = true;
+        break;
+    }
+    return result;
+  }
+}
+
+
 }

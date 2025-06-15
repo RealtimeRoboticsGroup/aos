@@ -78,6 +78,11 @@ mod arrays_test_generated;
 #[path = "../../keyword_test/mod.rs"]
 mod keyword_test_generated;
 
+// Test rust namer, should not cause compiling issues
+#[allow(dead_code, unused_imports, clippy::all)]
+#[path = "../../rust_namer_test/mod.rs"]
+mod rust_namer_test;
+
 #[rustfmt::skip] // TODO: Use standard rust formatting and remove dead code.
 #[allow(dead_code)]
 mod flatbuffers_tests {
@@ -2416,6 +2421,14 @@ mod push_impls {
                     0, 0, 0, 0,
                     0, 0, 0, 0,
                     0, 0, 0, 1]);
+    }
+
+    #[test]
+    fn push_u8_generated_struct_alignment() {
+        let mut b = flatbuffers::FlatBufferBuilder::new();
+        b.push(1u8);
+        b.push(my_game::example::Test::new(10, 20));
+        check(&b, &[10, 0, 20, 0, 0, 1]);
     }
 }
 

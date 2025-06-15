@@ -3,6 +3,21 @@ load("//:build_defs.bzl", "flatbuffer_rust_library")
 load("//:typescript.bzl", "flatbuffer_ts_library")
 
 filegroup(
+    name = "distribution",
+    srcs = [
+        "BUILD.bazel",
+        "reflection.fbs",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# flatbuffer_ts_library() only supports .fbs file but not filegroups
+exports_files(
+    srcs = ["reflection.fbs"],
+    visibility = ["//reflection/ts:__pkg__"],
+)
+
+filegroup(
     name = "reflection_fbs_schema",
     srcs = ["reflection.fbs"],
     visibility = ["//visibility:public"],
@@ -12,6 +27,20 @@ flatbuffer_ts_library(
     name = "reflection_ts_fbs",
     srcs = ["reflection.fbs"],
     include_reflection = False,
+    ts_files = ["reflection/%s" % (name,) for name in [
+        "advanced-features.ts",
+        "base-type.ts",
+        "enum.ts",
+        "enum-val.ts",
+        "field.ts",
+        "key-value.ts",
+        "object.ts",
+        "rpccall.ts",
+        "schema-file.ts",
+        "schema.ts",
+        "service.ts",
+        "type.ts",
+    ]] + ["reflection.ts"],
     visibility = ["//visibility:public"],
 )
 

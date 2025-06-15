@@ -203,6 +203,7 @@ TEST_F(AbsoluteAndAbsoluteEncoderZeroingTest,
   estimator.UpdateEstimate(*sensor_values);
   ASSERT_TRUE(estimator.error());
 
+  fbb.Reset();
   fbb.Finish(estimator.GetEstimatorState(&fbb));
   const AbsoluteAndAbsoluteEncoderEstimatorState *state =
       flatbuffers::GetRoot<AbsoluteAndAbsoluteEncoderEstimatorState>(

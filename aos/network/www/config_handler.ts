@@ -1,5 +1,5 @@
 import {ByteBuffer} from 'flatbuffers';
-import {Configuration} from '../../configuration_generated';
+import {Configuration} from '../../configuration_ts_fbs/aos';
 import {Connection} from './proxy';
 
 import {Parser, Table} from './reflection'

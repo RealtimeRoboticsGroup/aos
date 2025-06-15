@@ -1,5 +1,5 @@
 // Plotter for the C++ in-process plotter.
-import {Configuration} from '../../../aos/configuration_generated';
+import {Configuration} from '../../../aos/configuration_ts_fbs/aos';
 import {Connection} from '../../../aos/network/www/proxy';
 import {plotData} from '../plot_data_utils';
 

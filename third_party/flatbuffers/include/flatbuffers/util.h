@@ -32,6 +32,7 @@
 #  include <stdio.h>
 #endif  // FLATBUFFERS_PREFER_PRINTF
 
+#include <cmath>
 #include <limits>
 #include <string>
 
@@ -259,7 +260,7 @@ inline void strtoval_impl(double *val, const char *str, char **endptr) {
 }
 
 // UBSAN: double to float is safe if numeric_limits<float>::is_iec559 is true.
-__suppress_ubsan__("float-cast-overflow")
+FLATBUFFERS_SUPPRESS_UBSAN("float-cast-overflow")
 inline void strtoval_impl(float *val, const char *str, char **endptr) {
   *val = __strtof_impl(str, endptr);
 }
@@ -316,6 +317,7 @@ inline bool StringToFloatImpl(T *val, const char *const str) {
   strtoval_impl(val, str, const_cast<char **>(&end));
   auto done = (end != str) && (*end == '\0');
   if (!done) *val = 0;  // erase partial result
+  if (done && std::isnan(*val)) { *val = std::numeric_limits<T>::quiet_NaN(); }
   return done;
 }
 
@@ -480,6 +482,11 @@ std::string PosixPath(const std::string &path);
 // creating dirs for any parts of the path that don't exist yet.
 void EnsureDirExists(const std::string &filepath);
 
+// Obtains the relative or absolute path.
+std::string FilePath(const std::string &project,
+                     const std::string &filePath,
+                     bool absolute);
+
 // Obtains the absolute path from any other path.
 // Returns the input path if the absolute path couldn't be resolved.
 std::string AbsolutePath(const std::string &filepath);
@@ -624,7 +631,7 @@ inline bool EscapeString(const char *s, size_t length, std::string *_text,
               // we previously checked for non-UTF-8, so we shouldn't reach
               // here.
               //
-              // 2) We reached here by someone calling GenerateText()
+              // 2) We reached here by someone calling GenText()
               // on a previously-serialized flatbuffer. The data might have
               // non-UTF-8 Strings, or might be corrupt.
               //
@@ -723,9 +730,10 @@ enum class Case {
   kSnake2 = 9,
 };
 
-// Convert the `input` string of case `input_case` to the specified `output_case`.
+// Convert the `input` string of case `input_case` to the specified
+// `output_case`.
 std::string ConvertCase(const std::string &input, Case output_case,
-                    Case input_case = Case::kSnake);
+                        Case input_case = Case::kSnake);
 
 }  // namespace flatbuffers
 

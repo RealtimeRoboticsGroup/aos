@@ -23,7 +23,8 @@
 namespace flatbuffers {
 
 // Helper class to verify the integrity of a FlatBuffer
-class Verifier FLATBUFFERS_FINAL_CLASS {
+template <bool TrackVerifierBufferSize>
+class VerifierTemplate FLATBUFFERS_FINAL_CLASS {
  public:
   static constexpr uoffset_t kDefaultMaxTables = 3000000;
 
@@ -36,20 +37,24 @@ class Verifier FLATBUFFERS_FINAL_CLASS {
     bool check_alignment = true;
     // If true, run verifier on nested flatbuffers
     bool check_nested_flatbuffers = true;
+    // The maximum size of a buffer.
+    size_t max_size = FLATBUFFERS_MAX_BUFFER_SIZE;
+    // Use assertions to check for errors.
+    bool assert = false;
   };
 
-  explicit Verifier(const uint8_t *const buf, const size_t buf_len,
-                    const Options &opts)
+  explicit VerifierTemplate(const uint8_t *const buf, const size_t buf_len,
+                            const Options &opts)
       : buf_(buf), size_(buf_len), opts_(opts) {
-    FLATBUFFERS_ASSERT(size_ < FLATBUFFERS_MAX_BUFFER_SIZE);
+    FLATBUFFERS_ASSERT(size_ < opts.max_size);
   }
 
-  // Deprecated API, please construct with Verifier::Options.
-  Verifier(const uint8_t *const buf, const size_t buf_len,
-           const uoffset_t max_depth = 64,
-           const uoffset_t max_tables = kDefaultMaxTables,
-           const bool check_alignment = true)
-      : Verifier(buf, buf_len, [&] {
+  // Deprecated API, please construct with VerifierTemplate::Options.
+  VerifierTemplate(const uint8_t *const buf, const size_t buf_len,
+                   const uoffset_t max_depth = 64,
+                   const uoffset_t max_tables = kDefaultMaxTables,
+                   const bool check_alignment = true)
+      : VerifierTemplate(buf, buf_len, [&] {
           Options opts;
           opts.max_depth = max_depth;
           opts.max_tables = max_tables;
@@ -61,25 +66,25 @@ class Verifier FLATBUFFERS_FINAL_CLASS {
   bool Check(const bool ok) const {
     // clang-format off
     #ifdef FLATBUFFERS_DEBUG_VERIFICATION_FAILURE
-      FLATBUFFERS_ASSERT(ok);
-    #endif
-    #ifdef FLATBUFFERS_TRACK_VERIFIER_BUFFER_SIZE
-      if (!ok)
-        upper_bound_ = 0;
+      if (opts_.assert) { FLATBUFFERS_ASSERT(ok); }
     #endif
     // clang-format on
+    if (TrackVerifierBufferSize) {
+      if (!ok) {
+        upper_bound_ = 0;
+      }
+    }
     return ok;
   }
 
   // Verify any range within the buffer.
   bool Verify(const size_t elem, const size_t elem_len) const {
-    // clang-format off
-    #ifdef FLATBUFFERS_TRACK_VERIFIER_BUFFER_SIZE
+    if (TrackVerifierBufferSize) {
       auto upper_bound = elem + elem_len;
-      if (upper_bound_ < upper_bound)
+      if (upper_bound_ < upper_bound) {
         upper_bound_ =  upper_bound;
-    #endif
-    // clang-format on
+      }
+    }
     return Check(elem_len < size_ && elem <= size_ - elem_len);
   }
 
@@ -116,41 +121,43 @@ class Verifier FLATBUFFERS_FINAL_CLASS {
   }
 
   // Verify a pointer (may be NULL) of any vector type.
-  template<typename T> bool VerifyVector(const Vector<T> *const vec) const {
-    return !vec || VerifyVectorOrString(reinterpret_cast<const uint8_t *>(vec),
-                                        sizeof(T));
+  template<int &..., typename T, typename LenT>
+  bool VerifyVector(const Vector<T, LenT> *const vec) const {
+    return !vec || VerifyVectorOrString<LenT>(
+                       reinterpret_cast<const uint8_t *>(vec), sizeof(T));
   }
 
   // Verify a pointer (may be NULL) of a vector to struct.
-  template<typename T>
-  bool VerifyVector(const Vector<const T *> *const vec) const {
-    return VerifyVector(reinterpret_cast<const Vector<T> *>(vec));
+  template<int &..., typename T, typename LenT>
+  bool VerifyVector(const Vector<const T *, LenT> *const vec) const {
+    return VerifyVector(reinterpret_cast<const Vector<T, LenT> *>(vec));
   }
 
   // Verify a pointer (may be NULL) to string.
   bool VerifyString(const String *const str) const {
     size_t end;
-    return !str || (VerifyVectorOrString(reinterpret_cast<const uint8_t *>(str),
-                                         1, &end) &&
+    return !str || (VerifyVectorOrString<uoffset_t>(
+                        reinterpret_cast<const uint8_t *>(str), 1, &end) &&
                     Verify(end, 1) &&           // Must have terminator
                     Check(buf_[end] == '\0'));  // Terminating byte must be 0.
   }
 
   // Common code between vectors and strings.
+  template<typename LenT = uoffset_t>
   bool VerifyVectorOrString(const uint8_t *const vec, const size_t elem_size,
                             size_t *const end = nullptr) const {
-    const auto veco = static_cast<size_t>(vec - buf_);
+    const auto vec_offset = static_cast<size_t>(vec - buf_);
     // Check we can read the size field.
-    if (!Verify<uoffset_t>(veco)) return false;
+    if (!Verify<LenT>(vec_offset)) return false;
     // Check the whole array. If this is a string, the byte past the array must
     // be 0.
-    const auto size = ReadScalar<uoffset_t>(vec);
-    const auto max_elems = FLATBUFFERS_MAX_BUFFER_SIZE / elem_size;
+    const LenT size = ReadScalar<LenT>(vec);
+    const auto max_elems = opts_.max_size / elem_size;
     if (!Check(size < max_elems))
       return false;  // Protect against byte_size overflowing.
-    const auto byte_size = sizeof(size) + elem_size * size;
-    if (end) *end = veco + byte_size;
-    return Verify(veco, byte_size);
+    const auto byte_size = sizeof(LenT) + elem_size * size;
+    if (end) *end = vec_offset + byte_size;
+    return Verify(vec_offset, byte_size);
   }
 
   // Special case for string contents, after the above has been called.
@@ -174,8 +181,8 @@ class Verifier FLATBUFFERS_FINAL_CLASS {
     return true;
   }
 
-  __suppress_ubsan__("unsigned-integer-overflow") bool VerifyTableStart(
-      const uint8_t *const table) {
+  FLATBUFFERS_SUPPRESS_UBSAN("unsigned-integer-overflow")
+  bool VerifyTableStart(const uint8_t *const table) {
     // Check the vtable offset.
     const auto tableo = static_cast<size_t>(table - buf_);
     if (!Verify<soffset_t>(tableo)) return false;
@@ -206,19 +213,19 @@ class Verifier FLATBUFFERS_FINAL_CLASS {
     }
 
     // Call T::Verify, which must be in the generated code for this type.
-    const auto o = VerifyOffset(start);
-    return Check(o != 0) &&
-           reinterpret_cast<const T *>(buf_ + start + o)->Verify(*this)
-    // clang-format off
-    #ifdef FLATBUFFERS_TRACK_VERIFIER_BUFFER_SIZE
-           && GetComputedSize()
-    #endif
-        ;
-    // clang-format on
+    const auto o = VerifyOffset<uoffset_t>(start);
+    if (!Check(o != 0)) return false;
+    if (!(reinterpret_cast<const T *>(buf_ + start + o)->Verify(*this))) {
+      return false;
+    }
+    if (TrackVerifierBufferSize) {
+      if (GetComputedSize() == 0) return false;
+    }
+    return true;
   }
 
-  template<typename T>
-  bool VerifyNestedFlatBuffer(const Vector<uint8_t> *const buf,
+  template<typename T, int &..., typename SizeT>
+  bool VerifyNestedFlatBuffer(const Vector<uint8_t, SizeT> *const buf,
                               const char *const identifier) {
     // Caller opted out of this.
     if (!opts_.check_nested_flatbuffers) return true;
@@ -229,7 +236,8 @@ class Verifier FLATBUFFERS_FINAL_CLASS {
     // If there is a nested buffer, it must be greater than the min size.
     if (!Check(buf->size() >= FLATBUFFERS_MIN_BUFFER_SIZE)) return false;
 
-    Verifier nested_verifier(buf->data(), buf->size());
+    VerifierTemplate<TrackVerifierBufferSize> nested_verifier(
+        buf->data(), buf->size(), opts_);
     return nested_verifier.VerifyBuffer<T>(identifier);
   }
 
@@ -240,29 +248,32 @@ class Verifier FLATBUFFERS_FINAL_CLASS {
     return VerifyBufferFromStart<T>(identifier, 0);
   }
 
-  template<typename T>
+  template<typename T, typename SizeT = uoffset_t>
   bool VerifySizePrefixedBuffer(const char *const identifier) {
-    return Verify<uoffset_t>(0U) &&
-           Check(ReadScalar<uoffset_t>(buf_) == size_ - sizeof(uoffset_t)) &&
-           VerifyBufferFromStart<T>(identifier, sizeof(uoffset_t));
+    return Verify<SizeT>(0U) &&
+           // Ensure the prefixed size is within the bounds of the provided
+           // length.
+           Check(ReadScalar<SizeT>(buf_) + sizeof(SizeT) <= size_) &&
+           VerifyBufferFromStart<T>(identifier, sizeof(SizeT));
   }
 
-  uoffset_t VerifyOffset(const size_t start) const {
-    if (!Verify<uoffset_t>(start)) return 0;
-    const auto o = ReadScalar<uoffset_t>(buf_ + start);
+  template<typename OffsetT = uoffset_t, typename SOffsetT = soffset_t>
+  size_t VerifyOffset(const size_t start) const {
+    if (!Verify<OffsetT>(start)) return 0;
+    const auto o = ReadScalar<OffsetT>(buf_ + start);
     // May not point to itself.
     if (!Check(o != 0)) return 0;
-    // Can't wrap around / buffers are max 2GB.
-    if (!Check(static_cast<soffset_t>(o) >= 0)) return 0;
+    // Can't wrap around larger than the max size.
+    if (!Check(static_cast<SOffsetT>(o) >= 0)) return 0;
     // Must be inside the buffer to create a pointer from it (pointer outside
     // buffer is UB).
     if (!Verify(start + o, 1)) return 0;
     return o;
   }
 
-  uoffset_t VerifyOffset(const uint8_t *const base,
-                         const voffset_t start) const {
-    return VerifyOffset(static_cast<size_t>(base - buf_) + start);
+  template<typename OffsetT = uoffset_t>
+  size_t VerifyOffset(const uint8_t *const base, const voffset_t start) const {
+    return VerifyOffset<OffsetT>(static_cast<size_t>(base - buf_) + start);
   }
 
   // Called at the start of a table to increase counters measuring data
@@ -280,21 +291,27 @@ class Verifier FLATBUFFERS_FINAL_CLASS {
     return true;
   }
 
-  // Returns the message size in bytes
+  // Returns the message size in bytes.
+  //
+  // This should only be called after first calling VerifyBuffer or
+  // VerifySizePrefixedBuffer.
+  //
+  // This method should only be called for VerifierTemplate instances
+  // where the TrackVerifierBufferSize template parameter is true,
+  // i.e. for SizeVerifier.  For instances where TrackVerifierBufferSize
+  // is false, this fails at runtime or returns zero.
   size_t GetComputedSize() const {
-    // clang-format off
-    #ifdef FLATBUFFERS_TRACK_VERIFIER_BUFFER_SIZE
+    if (TrackVerifierBufferSize) {
       uintptr_t size = upper_bound_;
       // Align the size to uoffset_t
       size = (size - 1 + sizeof(uoffset_t)) & ~(sizeof(uoffset_t) - 1);
       return (size > size_) ?  0 : size;
-    #else
-      // Must turn on FLATBUFFERS_TRACK_VERIFIER_BUFFER_SIZE for this to work.
-      (void)upper_bound_;
-      FLATBUFFERS_ASSERT(false);
-      return 0;
-    #endif
-    // clang-format on
+    }
+    // Must use SizeVerifier, or (deprecated) turn on
+    // FLATBUFFERS_TRACK_VERIFIER_BUFFER_SIZE, for this to work.
+    (void)upper_bound_;
+    FLATBUFFERS_ASSERT(false);
+    return 0;
   }
 
   std::vector<uint8_t> *GetFlexReuseTracker() { return flex_reuse_tracker_; }
@@ -314,6 +331,35 @@ class Verifier FLATBUFFERS_FINAL_CLASS {
   uoffset_t num_tables_ = 0;
   std::vector<uint8_t> *flex_reuse_tracker_ = nullptr;
 };
+
+// Specialization for 64-bit offsets.
+template<>
+template<>
+inline size_t VerifierTemplate<false>::VerifyOffset<uoffset64_t>(
+    const size_t start) const {
+  return VerifyOffset<uoffset64_t, soffset64_t>(start);
+}
+template<>
+template<>
+inline size_t VerifierTemplate<true>::VerifyOffset<uoffset64_t>(
+    const size_t start) const {
+  return VerifyOffset<uoffset64_t, soffset64_t>(start);
+}
+
+// Instance of VerifierTemplate that supports GetComputedSize().
+using SizeVerifier = VerifierTemplate</*TrackVerifierBufferSize = */ true>;
+
+// The FLATBUFFERS_TRACK_VERIFIER_BUFFER_SIZE build configuration macro is
+// deprecated, and should not be defined, since it is easy to misuse in ways
+// that result in ODR violations. Rather than using Verifier and defining
+// FLATBUFFERS_TRACK_VERIFIER_BUFFER_SIZE, please use SizeVerifier instead.
+#ifdef FLATBUFFERS_TRACK_VERIFIER_BUFFER_SIZE  // Deprecated, see above.
+using Verifier = SizeVerifier;
+#else
+// Instance of VerifierTemplate that is slightly faster, but does not
+// support GetComputedSize().
+using Verifier = VerifierTemplate</*TrackVerifierBufferSize = */ false>;
+#endif
 
 }  // namespace flatbuffers
 

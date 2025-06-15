@@ -15,6 +15,8 @@
  */
 
 // independent from idl_parser, since this code is not needed for most clients
+#include "idl_gen_dart.h"
+
 #include <cassert>
 #include <cmath>
 
@@ -70,7 +72,7 @@ static std::set<std::string> DartKeywords() {
     "dynamic",  "implements", "set",
   };
 }
-} // namespace
+}  // namespace
 
 const std::string _kFb = "fb";
 
@@ -85,6 +87,27 @@ class DartGenerator : public BaseGenerator {
       : BaseGenerator(parser, path, file_name, "", ".", "dart"),
         namer_(WithFlagOptions(DartDefaultConfig(), parser.opts, path),
                DartKeywords()) {}
+
+  template<typename T>
+  void import_generator(const std::vector<T *> &definitions,
+                        const std::string &included,
+                        std::set<std::string> &imports) {
+    for (const auto &item : definitions) {
+      if (item->file == included) {
+        std::string component = namer_.Namespace(*item->defined_namespace);
+        std::string filebase =
+            flatbuffers::StripPath(flatbuffers::StripExtension(item->file));
+        std::string filename =
+            namer_.File(filebase + (component.empty() ? "" : "_" + component));
+
+        imports.emplace("import './" + filename + "'" +
+                        (component.empty()
+                             ? ";\n"
+                             : " as " + ImportAliasName(component) + ";\n"));
+      }
+    }
+  }
+
   // Iterate through all definitions we haven't generate code for (enums,
   // structs, and tables) and output them to a single file.
   bool generate() {
@@ -93,12 +116,26 @@ class DartGenerator : public BaseGenerator {
     GenerateEnums(namespace_code);
     GenerateStructs(namespace_code);
 
+    std::set<std::string> imports;
+
+    for (const auto &included_file : parser_.GetIncludedFiles()) {
+      if (included_file.filename == parser_.file_being_parsed_) continue;
+
+      import_generator(parser_.structs_.vec, included_file.filename, imports);
+      import_generator(parser_.enums_.vec, included_file.filename, imports);
+    }
+
+    std::string import_code = "";
+    for (const auto &file : imports) { import_code += file; }
+
+    import_code += import_code.empty() ? "" : "\n";
+
     for (auto kv = namespace_code.begin(); kv != namespace_code.end(); ++kv) {
       code.clear();
       code = code + "// " + FlatBuffersGeneratedWarning() + "\n";
       code = code +
              "// ignore_for_file: unused_import, unused_field, unused_element, "
-             "unused_local_variable\n\n";
+             "unused_local_variable, constant_identifier_names\n\n";
 
       if (!kv->first.empty()) { code += "library " + kv->first + ";\n\n"; }
 
@@ -113,7 +150,10 @@ class DartGenerator : public BaseGenerator {
                   "' as " + ImportAliasName(kv2->first) + ";\n";
         }
       }
+
       code += "\n";
+      code += import_code;
+
       code += kv->second;
 
       if (!SaveFile(Filename(kv->first).c_str(), code, false)) { return false; }
@@ -175,36 +215,45 @@ class DartGenerator : public BaseGenerator {
         namer_.Type(enum_def) + (enum_def.is_union ? "TypeId" : "");
     const bool is_bit_flags =
         enum_def.attributes.Lookup("bit_flags") != nullptr;
+
     // The flatbuffer schema language allows bit flag enums to potentially have
     // a default value of zero, even if it's not a valid enum value...
-    const bool permit_zero = is_bit_flags;
+    const bool auto_default = is_bit_flags && !enum_def.FindByValue("0");
 
-    code += "class " + enum_type + " {\n";
-    code += "  final int value;\n";
-    code += "  const " + enum_type + "._(this.value);\n\n";
-    code += "  factory " + enum_type + ".fromValue(int value) {\n";
-    code += "    final result = values[value];\n";
-    code += "    if (result == null) {\n";
-    if (permit_zero) {
-      code += "      if (value == 0) {\n";
-      code += "        return " + enum_type + "._(0);\n";
-      code += "      } else {\n";
+    code += "enum " + enum_type + " {\n";
+    for (auto it = enum_def.Vals().begin(); it != enum_def.Vals().end(); ++it) {
+      auto &ev = **it;
+      const auto enum_var = namer_.Variant(ev);
+      if (it != enum_def.Vals().begin()) code += ",\n";
+      code += "  " + enum_var + "(" + enum_def.ToString(ev) + ")";
     }
-    code += "        throw StateError('Invalid value $value for bit flag enum ";
-    code += enum_type + "');\n";
-    if (permit_zero) { code += "      }\n"; }
-    code += "    }\n";
+    if (auto_default) { code += ",\n  _default(0)"; }
+    code += ";\n\n";
 
-    code += "    return result;\n";
+    code += "  final int value;\n";
+    code += "  const " + enum_type + "(this.value);\n\n";
+    code += "  factory " + enum_type + ".fromValue(int value) {\n";
+    code += "    switch (value) {\n";
+    for (auto it = enum_def.Vals().begin(); it != enum_def.Vals().end(); ++it) {
+      auto &ev = **it;
+      const auto enum_var = namer_.Variant(ev);
+      code += "      case " + enum_def.ToString(ev) + ":";
+      code += " return " + enum_type + "." + enum_var + ";\n";
+    }
+    if (auto_default) {
+      code += "      case 0: return " + enum_type + "._default;\n";
+    }
+    code += "      default: throw StateError(";
+    code += "'Invalid value $value for bit flag enum');\n";
+    code += "    }\n";
     code += "  }\n\n";
 
-    code += "  static " + enum_type + "? _createOrNull(int? value) => \n";
+    code += "  static " + enum_type + "? _createOrNull(int? value) =>\n";
     code +=
         "      value == null ? null : " + enum_type + ".fromValue(value);\n\n";
 
-    // this is meaningless for bit_flags
-    // however, note that unlike "regular" dart enums this enum can still have
-    // holes.
+    // This is meaningless for bit_flags, however, note that unlike "regular"
+    // dart enums this enum can still have holes.
     if (!is_bit_flags) {
       code += "  static const int minValue = " +
               enum_def.ToString(*enum_def.MinValue()) + ";\n";
@@ -212,37 +261,8 @@ class DartGenerator : public BaseGenerator {
               enum_def.ToString(*enum_def.MaxValue()) + ";\n";
     }
 
-    code +=
-        "  static bool containsValue(int value) =>"
-        " values.containsKey(value);\n\n";
-
-    for (auto it = enum_def.Vals().begin(); it != enum_def.Vals().end(); ++it) {
-      auto &ev = **it;
-      const auto enum_var = namer_.Variant(ev);
-
-      if (!ev.doc_comment.empty()) {
-        if (it != enum_def.Vals().begin()) { code += '\n'; }
-        GenDocComment(ev.doc_comment, "  ", code);
-      }
-      code += "  static const " + enum_type + " " + enum_var + " = " +
-              enum_type + "._(" + enum_def.ToString(ev) + ");\n";
-    }
-
-    code += "  static const Map<int, " + enum_type + "> values = {\n";
-    for (auto it = enum_def.Vals().begin(); it != enum_def.Vals().end(); ++it) {
-      auto &ev = **it;
-      const auto enum_var = namer_.Variant(ev);
-      if (it != enum_def.Vals().begin()) code += ",\n";
-      code += "    " + enum_def.ToString(ev) + ": " + enum_var;
-    }
-    code += "};\n\n";
-
     code += "  static const " + _kFb + ".Reader<" + enum_type + "> reader = _" +
-            enum_type + "Reader();\n\n";
-    code += "  @override\n";
-    code += "  String toString() {\n";
-    code += "    return '" + enum_type + "{value: $value}';\n";
-    code += "  }\n";
+            enum_type + "Reader();\n";
     code += "}\n\n";
 
     GenEnumReader(enum_def, enum_type, code);
@@ -512,8 +532,7 @@ class DartGenerator : public BaseGenerator {
           if (auto val = enum_def.FindByValue(defaultValue)) {
             constructor_args += " = " + namer_.EnumVariant(enum_def, *val);
           } else {
-            constructor_args += " = const " + namer_.Type(enum_def) + "._(" +
-                                defaultValue + ")";
+            constructor_args += " = " + namer_.Type(enum_def) + "._default";
           }
         } else {
           constructor_args += " = " + defaultValue;
@@ -720,9 +739,7 @@ class DartGenerator : public BaseGenerator {
 
   std::string getDefaultValue(const Value &value) const {
     if (!value.constant.empty() && value.constant != "0") {
-      if (IsBool(value.type.base_type)) {
-        return "true";
-      }
+      if (IsBool(value.type.base_type)) { return "true"; }
       if (IsScalar(value.type.base_type)) {
         if (StringIsFlatbufferNan(value.constant)) {
           return "double.nan";
@@ -1084,14 +1101,14 @@ class DartGenerator : public BaseGenerator {
 };
 }  // namespace dart
 
-bool GenerateDart(const Parser &parser, const std::string &path,
-                  const std::string &file_name) {
+static bool GenerateDart(const Parser &parser, const std::string &path,
+                         const std::string &file_name) {
   dart::DartGenerator generator(parser, path, file_name);
   return generator.generate();
 }
 
-std::string DartMakeRule(const Parser &parser, const std::string &path,
-                         const std::string &file_name) {
+static std::string DartMakeRule(const Parser &parser, const std::string &path,
+                                const std::string &file_name) {
   auto filebase =
       flatbuffers::StripPath(flatbuffers::StripExtension(file_name));
   dart::DartGenerator generator(parser, path, file_name);
@@ -1102,6 +1119,59 @@ std::string DartMakeRule(const Parser &parser, const std::string &path,
     make_rule += " " + *it;
   }
   return make_rule;
+}
+
+namespace {
+
+class DartCodeGenerator : public CodeGenerator {
+ public:
+  Status GenerateCode(const Parser &parser, const std::string &path,
+                      const std::string &filename) override {
+    if (!GenerateDart(parser, path, filename)) { return Status::ERROR; }
+    return Status::OK;
+  }
+
+  Status GenerateCode(const uint8_t *, int64_t,
+                      const CodeGenOptions &) override {
+    return Status::NOT_IMPLEMENTED;
+  }
+
+  Status GenerateMakeRule(const Parser &parser, const std::string &path,
+                          const std::string &filename,
+                          std::string &output) override {
+    output = DartMakeRule(parser, path, filename);
+    return Status::OK;
+  }
+
+  Status GenerateGrpcCode(const Parser &parser, const std::string &path,
+                          const std::string &filename) override {
+    (void)parser;
+    (void)path;
+    (void)filename;
+    return Status::NOT_IMPLEMENTED;
+  }
+
+  Status GenerateRootFile(const Parser &parser,
+                          const std::string &path) override {
+    (void)parser;
+    (void)path;
+    return Status::NOT_IMPLEMENTED;
+  }
+
+  bool IsSchemaOnly() const override { return true; }
+
+  bool SupportsBfbsGeneration() const override { return false; }
+
+  bool SupportsRootFileGeneration() const override { return false; }
+
+  IDLOptions::Language Language() const override { return IDLOptions::kDart; }
+
+  std::string LanguageName() const override { return "Dart"; }
+};
+}  // namespace
+
+std::unique_ptr<CodeGenerator> NewDartCodeGenerator() {
+  return std::unique_ptr<DartCodeGenerator>(new DartCodeGenerator());
 }
 
 }  // namespace flatbuffers

@@ -3,6 +3,7 @@
 #include "absl/flags/flag.h"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
+#include "absl/log/vlog_is_on.h"
 
 ABSL_FLAG(int32_t, lzma_threads, 1, "Number of threads to use for encoding");
 

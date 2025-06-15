@@ -115,6 +115,7 @@ const std::string ScalarCppType(const reflection::BaseType type) {
     case reflection::BaseType::None:
     case reflection::BaseType::Union:
     case reflection::BaseType::Array:
+    case reflection::BaseType::Vector64:
     case reflection::BaseType::MaxBaseType:
       LOG(FATAL) << ": Type " << reflection::EnumNameBaseType(type)
                  << " not a scalar.";
@@ -139,7 +140,7 @@ const std::string IncludePathForFbs(
   // (note that we could muck around with the paths on the bazel side to instead
   // get a cc_library with the correct include paths specified, although it is
   // not clear that that would be any simpler than the extra else-if).
-  if (fbs_file == "reflection/reflection.fbs" ||
+  if (fbs_file.ends_with("reflection/reflection.fbs") ||
       fbs_file.ends_with("external/" AOS_REPO_NAME
                          "/aos/flatbuffers/reflection/reflection.fbs")) {
     if (include_suffix == "generated") {
@@ -434,6 +435,7 @@ void PopulateTypeData(const reflection::Schema *schema,
     case reflection::BaseType::UType:
     case reflection::BaseType::Union:
     case reflection::BaseType::Array:
+    case reflection::BaseType::Vector64:
     case reflection::BaseType::MaxBaseType:
       LOG(FATAL) << ": Type " << reflection::EnumNameBaseType(type->base_type())
                  << " not supported currently.";

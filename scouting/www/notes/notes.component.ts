@@ -1,13 +1,13 @@
 import {Component, HostListener} from '@angular/core';
 import {Builder, ByteBuffer} from 'flatbuffers';
-import {ErrorResponse} from '@aos/scouting/webserver/requests/messages/error_response_generated';
-import {RequestNotesForTeam} from '@aos/scouting/webserver/requests/messages/request_notes_for_team_generated';
+import {ErrorResponse} from '@aos/scouting/webserver/requests/messages/error_response_ts_fbs/scouting/webserver/requests';
+import {RequestNotesForTeam} from '@aos/scouting/webserver/requests/messages/request_notes_for_team_ts_fbs/scouting/webserver/requests';
 import {
   Note as NoteFb,
   RequestNotesForTeamResponse,
-} from '@aos/scouting/webserver/requests/messages/request_notes_for_team_response_generated';
-import {SubmitNotes} from '@aos/scouting/webserver/requests/messages/submit_notes_generated';
-import {SubmitNotesResponse} from '@aos/scouting/webserver/requests/messages/submit_notes_response_generated';
+} from '@aos/scouting/webserver/requests/messages/request_notes_for_team_response_ts_fbs/scouting/webserver/requests';
+import {SubmitNotes} from '@aos/scouting/webserver/requests/messages/submit_notes_ts_fbs/scouting/webserver/requests';
+import {SubmitNotesResponse} from '@aos/scouting/webserver/requests/messages/submit_notes_response_ts_fbs/scouting/webserver/requests';
 
 /*
 For new games, the keywords being used will likely need to be updated.

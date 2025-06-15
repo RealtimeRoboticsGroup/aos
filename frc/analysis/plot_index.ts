@@ -20,7 +20,7 @@
 // each robot year, and may even end up allowing plots to be specified solely
 // using JSON rather than requiring people to write a script just to create
 // a plot.
-import {Configuration} from '../../aos/configuration_generated';
+import {Configuration} from '../../aos/configuration_ts_fbs/aos';
 import {plotDemo} from '../../aos/network/www/demo_plot';
 import {Connection} from '../../aos/network/www/proxy';
 import {plotDownEstimator} from '../control_loops/drivetrain/down_estimator_plotter';

@@ -96,3 +96,37 @@ public class CharacterUnion_JsonConverter : Newtonsoft.Json.JsonConverter {
   }
 }
 
+
+
+static public class CharacterVerify
+{
+  static public bool Verify(Google.FlatBuffers.Verifier verifier, byte typeId, uint tablePos)
+  {
+    bool result = true;
+    switch((Character)typeId)
+    {
+      case Character.MuLan:
+        result = AttackerVerify.Verify(verifier, tablePos);
+        break;
+      case Character.Rapunzel:
+        result = verifier.VerifyUnionData(tablePos, 4, 4);
+        break;
+      case Character.Belle:
+        result = verifier.VerifyUnionData(tablePos, 4, 4);
+        break;
+      case Character.BookFan:
+        result = verifier.VerifyUnionData(tablePos, 4, 4);
+        break;
+      case Character.Other:
+       result = verifier.VerifyUnionString(tablePos);
+        break;
+      case Character.Unused:
+       result = verifier.VerifyUnionString(tablePos);
+        break;
+      default: result = true;
+        break;
+    }
+    return result;
+  }
+}
+

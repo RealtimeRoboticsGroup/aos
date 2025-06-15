@@ -32,6 +32,7 @@ class Tokenizer {
     kStringValue,
     kTrueValue,
     kFalseValue,
+    kNullValue,
   };
 
   // Returns the next token.

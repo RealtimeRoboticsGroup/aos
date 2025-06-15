@@ -8,6 +8,7 @@
 
 #include "absl/log/check.h"
 #include "absl/log/log.h"
+#include "absl/log/vlog_is_on.h"
 #include "absl/strings/str_format.h"
 
 // Stringifies the cpu_set_t for LOG().

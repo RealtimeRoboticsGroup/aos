@@ -872,6 +872,16 @@ local_repository(
     path = "third_party/flatbuffers",
 )
 
+load("@com_github_google_flatbuffers//ts:repositories.bzl", "flatbuffers_npm")
+
+flatbuffers_npm(
+    name = "flatbuffers_npm",
+)
+
+load("@flatbuffers_npm//:repositories.bzl", fbs_npm_repositories = "npm_repositories")
+
+fbs_npm_repositories()
+
 local_repository(
     name = "rules_rust",
     path = "third_party/rules_rust",

@@ -3,9 +3,8 @@
 package Example
 
 import (
-	"strconv"
-
 	flatbuffers "github.com/google/flatbuffers/go"
+	"strconv"
 )
 
 type AnyAmbiguousAliases byte
@@ -61,14 +60,17 @@ func (t *AnyAmbiguousAliasesT) Pack(builder *flatbuffers.Builder) flatbuffers.UO
 func (rcv AnyAmbiguousAliases) UnPack(table flatbuffers.Table) *AnyAmbiguousAliasesT {
 	switch rcv {
 	case AnyAmbiguousAliasesM1:
-		x := Monster{_tab: table}
-		return &AnyAmbiguousAliasesT{ Type: AnyAmbiguousAliasesM1, Value: x.UnPack() }
+		var x Monster
+		x.Init(table.Bytes, table.Pos)
+		return &AnyAmbiguousAliasesT{Type: AnyAmbiguousAliasesM1, Value: x.UnPack()}
 	case AnyAmbiguousAliasesM2:
-		x := Monster{_tab: table}
-		return &AnyAmbiguousAliasesT{ Type: AnyAmbiguousAliasesM2, Value: x.UnPack() }
+		var x Monster
+		x.Init(table.Bytes, table.Pos)
+		return &AnyAmbiguousAliasesT{Type: AnyAmbiguousAliasesM2, Value: x.UnPack()}
 	case AnyAmbiguousAliasesM3:
-		x := Monster{_tab: table}
-		return &AnyAmbiguousAliasesT{ Type: AnyAmbiguousAliasesM3, Value: x.UnPack() }
+		var x Monster
+		x.Init(table.Bytes, table.Pos)
+		return &AnyAmbiguousAliasesT{Type: AnyAmbiguousAliasesM3, Value: x.UnPack()}
 	}
 	return nil
 }

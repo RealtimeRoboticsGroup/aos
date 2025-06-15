@@ -89,7 +89,6 @@ ts_project(
     visibility = ["//visibility:public"],
     deps = [
         "//aos:configuration_ts_fbs",
-        "//aos:json_to_flatbuffer_fbs_ts",
         "@com_github_google_flatbuffers//reflection:reflection_ts_fbs",
         "@com_github_google_flatbuffers//ts:flatbuffers_ts",
     ],

@@ -421,6 +421,13 @@ static_flatbuffer(
 flatbuffer_ts_library(
     name = "process_info_ts_fbs",
     srcs = ["process_info.fbs"],
+    namespace = "aos.util",
+    tables = [
+        "ThreadState",
+        "ThreadInfo",
+        "ProcessInfo",
+        "TopProcessesFbs",
+    ],
     target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )

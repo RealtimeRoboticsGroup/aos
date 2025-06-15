@@ -3,7 +3,9 @@
 #include <limits>
 #include <vector>
 
+#include "flatbuffers/base.h"
 #include "flatbuffers/flatbuffer_builder.h"
+#include "flatbuffers/flatbuffers.h"
 #include "flatbuffers/idl.h"
 #include "flatbuffers/registry.h"
 #include "flatbuffers/verifier.h"
@@ -311,6 +313,33 @@ void AccessFlatBufferTest(const uint8_t *flatbuf, size_t length, bool pooled) {
   TEST_NOTNULL(vecoftables->LookupByKey("Fred"));
   TEST_NOTNULL(vecoftables->LookupByKey("Wilma"));
 
+  // Verify the same objects are returned for char*-based and string-based
+  // lookups.
+  TEST_EQ(vecoftables->LookupByKey("Barney"),
+          vecoftables->LookupByKey(std::string("Barney")));
+  TEST_EQ(vecoftables->LookupByKey("Fred"),
+          vecoftables->LookupByKey(std::string("Fred")));
+  TEST_EQ(vecoftables->LookupByKey("Wilma"),
+          vecoftables->LookupByKey(std::string("Wilma")));
+
+#ifdef FLATBUFFERS_HAS_STRING_VIEW
+  // Tests for LookupByKey with a key that is a truncated
+  // version of a longer, invalid key.
+  const std::string invalid_key = "Barney123";
+  std::string_view valid_truncated_key = invalid_key;
+  valid_truncated_key.remove_suffix(3);  // "Barney"
+  TEST_NOTNULL(vecoftables->LookupByKey(valid_truncated_key));
+  TEST_EQ(vecoftables->LookupByKey("Barney"),
+          vecoftables->LookupByKey(valid_truncated_key));
+
+  // Tests for LookupByKey with a key that is a truncated
+  // version of a longer, valid key.
+  const std::string valid_key = "Barney";
+  std::string_view invalid_truncated_key = valid_key;
+  invalid_truncated_key.remove_suffix(3);  // "Bar"
+  TEST_NULL(vecoftables->LookupByKey(invalid_truncated_key));
+#endif  // FLATBUFFERS_HAS_STRING_VIEW
+
   // Test accessing a vector of sorted structs
   auto vecofstructs = monster->testarrayofsortedstruct();
   if (vecofstructs) {  // not filled in monster_test.bfbs
@@ -422,8 +451,8 @@ void MutateFlatBuffersTest(uint8_t *flatbuf, std::size_t length) {
 
   // Mutate structs.
   auto pos = monster->mutable_pos();
-  auto test3 = pos->mutable_test3();  // Struct inside a struct.
-  test3.mutate_a(50);                 // Struct fields never fail.
+  auto &test3 = pos->mutable_test3();  // Struct inside a struct.
+  test3.mutate_a(50);                  // Struct fields never fail.
   TEST_EQ(test3.a(), 50);
   test3.mutate_a(10);
 
@@ -441,13 +470,12 @@ void MutateFlatBuffersTest(uint8_t *flatbuf, std::size_t length) {
   first->mutate_hp(1000);
 
   // Test for each loop over mutable entries
-  for (auto item: *tables)
-  {
+  for (auto item : *tables) {
     TEST_EQ(item->hp(), 1000);
     item->mutate_hp(0);
     TEST_EQ(item->hp(), 0);
     item->mutate_hp(1000);
-    break; // one iteration is enough, just testing compilation
+    break;  // one iteration is enough, just testing compilation
   }
 
   // Mutate via LookupByKey
@@ -508,7 +536,7 @@ void ObjectFlatBuffersTest(uint8_t *flatbuf) {
   CheckMonsterObject(monster2.get());
 
   // Test object copy.
-  auto monster3 = *monster2;
+  MonsterT monster3 = *monster2;
   flatbuffers::FlatBufferBuilder fbb3;
   fbb3.Finish(CreateMonster(fbb3, &monster3, &rehasher), MonsterIdentifier());
   const auto len3 = fbb3.GetSize();
@@ -579,11 +607,31 @@ void SizePrefixedTest() {
   flatbuffers::Verifier verifier(fbb.GetBufferPointer(), fbb.GetSize());
   TEST_EQ(VerifySizePrefixedMonsterBuffer(verifier), true);
 
+  // The prefixed size doesn't include itself, so substract the size of the
+  // prefix
+  TEST_EQ(GetPrefixedSize(fbb.GetBufferPointer()),
+          fbb.GetSize() - sizeof(uoffset_t));
+
+  // Getting the buffer length does include the prefix size, so it should be the
+  // full lenght.
+  TEST_EQ(GetSizePrefixedBufferLength(fbb.GetBufferPointer()), fbb.GetSize());
+
   // Access it.
   auto m = GetSizePrefixedMonster(fbb.GetBufferPointer());
   TEST_EQ(m->mana(), 200);
   TEST_EQ(m->hp(), 300);
   TEST_EQ_STR(m->name()->c_str(), "bob");
+
+  {
+    // Verify that passing a larger size is OK, but not a smaller
+    flatbuffers::Verifier verifier_larger(fbb.GetBufferPointer(),
+                                          fbb.GetSize() + 10);
+    TEST_EQ(VerifySizePrefixedMonsterBuffer(verifier_larger), true);
+
+    flatbuffers::Verifier verifier_smaller(fbb.GetBufferPointer(),
+                                           fbb.GetSize() - 10);
+    TEST_EQ(VerifySizePrefixedMonsterBuffer(verifier_smaller), false);
+  }
 }
 
 void TestMonsterExtraFloats(const std::string &tests_data_path) {
@@ -625,8 +673,8 @@ void TestMonsterExtraFloats(const std::string &tests_data_path) {
   TEST_EQ(def_extra->d2(), +infinity_d);
   TEST_EQ(def_extra->d3(), -infinity_d);
   std::string jsongen;
-  auto result = GenerateText(parser, def_obj, &jsongen);
-  TEST_EQ(result, true);
+  auto result = GenText(parser, def_obj, &jsongen);
+  TEST_NULL(result);
   // Check expected default values.
   TEST_EQ(std::string::npos != jsongen.find("f0: nan"), true);
   TEST_EQ(std::string::npos != jsongen.find("f1: nan"), true);
@@ -775,9 +823,8 @@ void ParseAndGenerateTextTest(const std::string &tests_data_path, bool binary) {
   // to ensure it is correct, we now generate text back from the binary,
   // and compare the two:
   std::string jsongen;
-  auto result =
-      GenerateText(parser, parser.builder_.GetBufferPointer(), &jsongen);
-  TEST_EQ(result, true);
+  auto result = GenText(parser, parser.builder_.GetBufferPointer(), &jsongen);
+  TEST_NULL(result);
   TEST_EQ_STR(jsongen.c_str(), jsonfile.c_str());
 
   // We can also do the above using the convenient Registry that knows about
@@ -815,9 +862,7 @@ void ParseAndGenerateTextTest(const std::string &tests_data_path, bool binary) {
   // request natural printing for utf-8 strings
   parser.opts.natural_utf8 = true;
   parser.opts.strict_json = true;
-  TEST_EQ(
-      GenerateText(parser, parser.builder_.GetBufferPointer(), &jsongen_utf8),
-      true);
+  TEST_NULL(GenText(parser, parser.builder_.GetBufferPointer(), &jsongen_utf8));
   TEST_EQ_STR(jsongen_utf8.c_str(), jsonfile_utf8.c_str());
 }
 

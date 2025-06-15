@@ -16,6 +16,8 @@
 
 // independent from idl_parser, since this code is not needed for most clients
 
+#include "idl_gen_kotlin.h"
+
 #include <functional>
 #include <unordered_set>
 
@@ -53,7 +55,7 @@ static Namer::Config KotlinDefaultConfig() {
            /*functions=*/Case::kKeep,
            /*fields=*/Case::kLowerCamel,
            /*variables=*/Case::kLowerCamel,
-           /*variants=*/Case::kLowerCamel,
+           /*variants=*/Case::kKeep,
            /*enum_variant_seperator=*/"",  // I.e. Concatenate.
            /*escape_keywords=*/Namer::Config::Escape::BeforeConvertingCase,
            /*namespaces=*/Case::kKeep,
@@ -68,7 +70,7 @@ static Namer::Config KotlinDefaultConfig() {
            /*filename_suffix=*/"",
            /*filename_extension=*/".kt" };
 }
-} // namespace
+}  // namespace
 
 class KotlinGenerator : public BaseGenerator {
  public:
@@ -132,9 +134,22 @@ class KotlinGenerator : public BaseGenerator {
       code += "\n\n";
     }
     if (needs_includes) {
-      code += "import java.nio.*\n";
-      code += "import kotlin.math.sign\n";
-      code += "import com.google.flatbuffers.*\n\n";
+      code +=
+          "import com.google.flatbuffers.BaseVector\n"
+          "import com.google.flatbuffers.BooleanVector\n"
+          "import com.google.flatbuffers.ByteVector\n"
+          "import com.google.flatbuffers.Constants\n"
+          "import com.google.flatbuffers.DoubleVector\n"
+          "import com.google.flatbuffers.FlatBufferBuilder\n"
+          "import com.google.flatbuffers.FloatVector\n"
+          "import com.google.flatbuffers.LongVector\n"
+          "import com.google.flatbuffers.StringVector\n"
+          "import com.google.flatbuffers.Struct\n"
+          "import com.google.flatbuffers.Table\n"
+          "import com.google.flatbuffers.UnionVector\n"
+          "import java.nio.ByteBuffer\n"
+          "import java.nio.ByteOrder\n"
+          "import kotlin.math.sign\n\n";
     }
     code += classcode;
     const std::string dirs = namer_.Directories(ns);
@@ -178,10 +193,11 @@ class KotlinGenerator : public BaseGenerator {
     auto r_type = GenTypeGet(field.value.type);
     if (field.IsScalarOptional() ||
         // string, structs and unions
-        (base_type == BASE_TYPE_STRING || base_type == BASE_TYPE_STRUCT ||
-         base_type == BASE_TYPE_UNION) ||
+        (!field.IsRequired() &&
+         (base_type == BASE_TYPE_STRING || base_type == BASE_TYPE_STRUCT ||
+          base_type == BASE_TYPE_UNION)) ||
         // vector of anything not scalar
-        (base_type == BASE_TYPE_VECTOR &&
+        (base_type == BASE_TYPE_VECTOR && !field.IsRequired() &&
          !IsScalar(field.value.type.VectorType().base_type))) {
       r_type += "?";
     }
@@ -284,7 +300,7 @@ class KotlinGenerator : public BaseGenerator {
         auto field_type = GenTypeBasic(enum_def.underlying_type.base_type);
         auto val = enum_def.ToString(ev);
         auto suffix = LiteralSuffix(enum_def.underlying_type.base_type);
-        writer.SetValue("name", namer_.LegacyKotlinVariant(ev));
+        writer.SetValue("name", namer_.Variant(ev.name));
         writer.SetValue("type", field_type);
         writer.SetValue("val", val + suffix);
         GenerateComment(ev.doc_comment, writer, &comment_config);
@@ -299,7 +315,10 @@ class KotlinGenerator : public BaseGenerator {
       // Average distance between values above which we consider a table
       // "too sparse". Change at will.
       static const uint64_t kMaxSparseness = 5;
-      if (range / static_cast<uint64_t>(enum_def.size()) < kMaxSparseness) {
+      bool generate_names =
+          range / static_cast<uint64_t>(enum_def.size()) < kMaxSparseness &&
+          parser_.opts.mini_reflect == IDLOptions::kTypesAndNames;
+      if (generate_names) {
         GeneratePropertyOneLine(writer, "names", "Array<String>", [&]() {
           writer += "arrayOf(\\";
           auto val = enum_def.Vals().front();
@@ -505,7 +524,7 @@ class KotlinGenerator : public BaseGenerator {
           // runtime.
           GenerateFunOneLine(
               writer, "validateVersion", "", "",
-              [&]() { writer += "Constants.FLATBUFFERS_22_10_26()"; },
+              [&]() { writer += "Constants.FLATBUFFERS_25_1_21()"; },
               options.gen_jvmstatic);
 
           GenerateGetRootAsAccessors(namer_.Type(struct_def), writer, options);
@@ -682,6 +701,9 @@ class KotlinGenerator : public BaseGenerator {
     writer.SetValue("root", GenMethod(vector_type));
     writer.SetValue("cast", CastToSigned(vector_type));
 
+    if (IsUnsigned(vector_type.base_type)) {
+      writer += "@kotlin.ExperimentalUnsignedTypes";
+    }
     GenerateFun(
         writer, method_name, params, "Int",
         [&]() {
@@ -985,7 +1007,15 @@ class KotlinGenerator : public BaseGenerator {
                     OffsetWrapper(
                         writer, offset_val,
                         [&]() { writer += "obj.__assign({{seek}}, bb)"; },
-                        [&]() { writer += "null"; });
+                        [&]() {
+                          if (field.IsRequired()) {
+                            writer +=
+                                "throw AssertionError(\"No value for "
+                                "(required) field {{field_name}}\")";
+                          } else {
+                            writer += "null";
+                          }
+                        });
                   });
             }
             break;
@@ -995,12 +1025,30 @@ class KotlinGenerator : public BaseGenerator {
             // val Name : String?
             //     get() = {
             //         val o = __offset(10)
-            //         return if (o != 0) __string(o + bb_pos) else null
+            //          return if (o != 0) {
+            //              __string(o + bb_pos)
+            //          } else {
+            //              null
+            //          }
             //     }
             // ? adds nullability annotation
             GenerateGetter(writer, field_name, return_type, [&]() {
               writer += "val o = __offset({{offset}})";
-              writer += "return if (o != 0) __string(o + bb_pos) else null";
+              writer += "return if (o != 0) {";
+              writer.IncrementIdentLevel();
+              writer += "__string(o + bb_pos)";
+              writer.DecrementIdentLevel();
+              writer += "} else {";
+              writer.IncrementIdentLevel();
+              if (field.IsRequired()) {
+                writer +=
+                    "throw AssertionError(\"No value for (required) field "
+                    "{{field_name}}\")";
+              } else {
+                writer += "null";
+              }
+              writer.DecrementIdentLevel();
+              writer += "}";
             });
             break;
           case BASE_TYPE_VECTOR: {
@@ -1025,7 +1073,11 @@ class KotlinGenerator : public BaseGenerator {
             GenerateFun(writer, field_name, params, return_type, [&]() {
               auto inline_size = NumToString(InlineSize(vectortype));
               auto index = "__vector(o) + j * " + inline_size;
-              auto not_found = NotFoundReturn(field.value.type.element);
+              auto not_found =
+                  field.IsRequired()
+                      ? "throw IndexOutOfBoundsException(\"Index out of range: "
+                        "$j, vector {{field_name}} is empty\")"
+                      : NotFoundReturn(field.value.type.element);
               auto found = "";
               writer.SetValue("index", index);
               switch (vectortype.base_type) {
@@ -1541,9 +1593,65 @@ class KotlinGenerator : public BaseGenerator {
 };
 }  // namespace kotlin
 
-bool GenerateKotlin(const Parser &parser, const std::string &path,
-                    const std::string &file_name) {
+static bool GenerateKotlin(const Parser &parser, const std::string &path,
+                           const std::string &file_name) {
   kotlin::KotlinGenerator generator(parser, path, file_name);
   return generator.generate();
 }
+
+namespace {
+
+class KotlinCodeGenerator : public CodeGenerator {
+ public:
+  Status GenerateCode(const Parser &parser, const std::string &path,
+                      const std::string &filename) override {
+    if (!GenerateKotlin(parser, path, filename)) { return Status::ERROR; }
+    return Status::OK;
+  }
+
+  Status GenerateCode(const uint8_t *, int64_t,
+                      const CodeGenOptions &) override {
+    return Status::NOT_IMPLEMENTED;
+  }
+
+  Status GenerateMakeRule(const Parser &parser, const std::string &path,
+                          const std::string &filename,
+                          std::string &output) override {
+    (void)parser;
+    (void)path;
+    (void)filename;
+    (void)output;
+    return Status::NOT_IMPLEMENTED;
+  }
+
+  Status GenerateGrpcCode(const Parser &parser, const std::string &path,
+                          const std::string &filename) override {
+    (void)parser;
+    (void)path;
+    (void)filename;
+    return Status::NOT_IMPLEMENTED;
+  }
+
+  Status GenerateRootFile(const Parser &parser,
+                          const std::string &path) override {
+    (void)parser;
+    (void)path;
+    return Status::NOT_IMPLEMENTED;
+  }
+  bool IsSchemaOnly() const override { return true; }
+
+  bool SupportsBfbsGeneration() const override { return false; }
+
+  bool SupportsRootFileGeneration() const override { return false; }
+
+  IDLOptions::Language Language() const override { return IDLOptions::kKotlin; }
+
+  std::string LanguageName() const override { return "Kotlin"; }
+};
+}  // namespace
+
+std::unique_ptr<CodeGenerator> NewKotlinCodeGenerator() {
+  return std::unique_ptr<KotlinCodeGenerator>(new KotlinCodeGenerator());
+}
+
 }  // namespace flatbuffers

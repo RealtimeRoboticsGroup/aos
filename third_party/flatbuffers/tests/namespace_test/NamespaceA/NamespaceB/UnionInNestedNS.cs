@@ -75,4 +75,23 @@ public class UnionInNestedNSUnion_JsonConverter : Newtonsoft.Json.JsonConverter 
 }
 
 
+
+static public class UnionInNestedNSVerify
+{
+  static public bool Verify(Google.FlatBuffers.Verifier verifier, byte typeId, uint tablePos)
+  {
+    bool result = true;
+    switch((UnionInNestedNS)typeId)
+    {
+      case UnionInNestedNS.TableInNestedNS:
+        result = NamespaceA.NamespaceB.TableInNestedNSVerify.Verify(verifier, tablePos);
+        break;
+      default: result = true;
+        break;
+    }
+    return result;
+  }
+}
+
+
 }

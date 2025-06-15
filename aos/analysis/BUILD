@@ -34,7 +34,6 @@ py_test(
         "@sample_logfile//file",
     ],
     target_compatible_with = ["@platforms//os:linux"],
-    deps = ["//aos:configuration_fbs_python"],
 )
 
 static_flatbuffer(
@@ -49,6 +48,16 @@ flatbuffer_ts_library(
     name = "plot_data_ts_fbs",
     srcs = [
         "plot_data.fbs",
+    ],
+    namespace = "aos.analysis",
+    tables = [
+        "Position",
+        "Point",
+        "Color",
+        "LineStyle",
+        "Line",
+        "Figure",
+        "Plot",
     ],
     target_compatible_with = ["@platforms//os:linux"],
 )

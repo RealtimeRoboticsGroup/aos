@@ -15,6 +15,10 @@ flatbuffer_ts_library(
     srcs = [
         "flywheel_controller_status.fbs",
     ],
+    ts_files = [
+        "frc/control-loops/flywheel.ts",
+        "frc/control-loops/flywheel/flywheel-controller-status.ts",
+    ],
     visibility = ["//visibility:public"],
 )
 

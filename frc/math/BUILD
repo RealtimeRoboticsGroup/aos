@@ -12,6 +12,13 @@ flatbuffer_ts_library(
     srcs = [
         "matrix.fbs",
     ],
+    ts_files = [
+        "frc/fbs.ts",
+        "frc/fbs/storage-order.ts",
+        "frc/fbs/matrix.ts",
+        "frc/fbs/matrix-field.ts",
+        "frc/fbs/field-error.ts",
+    ],
     visibility = ["//visibility:public"],
 )
 

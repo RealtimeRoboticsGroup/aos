@@ -507,6 +507,15 @@ bool JsonParser::DoParse(FlatbufferType type, const std::string_view data,
 
         if (!AddElement(field_index, t.field_value())) return false;
       } break;
+
+      case Tokenizer::TokenType::kNullValue: {
+        if (stack_.size() == 0) {
+          fprintf(stderr, "We don't support null at the root level.\n");
+          return false;
+        }
+        stack_.back().field_name = t.field_name();
+      } break;
+
       case Tokenizer::TokenType::kField:  // field name
       {
         stack_.back().field_name = t.field_name();

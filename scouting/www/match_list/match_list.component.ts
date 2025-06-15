@@ -1,11 +1,11 @@
 import {Component, EventEmitter, OnInit, Output} from '@angular/core';
 import {Builder, ByteBuffer} from 'flatbuffers';
-import {ErrorResponse} from '@aos/scouting/webserver/requests/messages/error_response_generated';
-import {RequestAllMatches} from '@aos/scouting/webserver/requests/messages/request_all_matches_generated';
+import {ErrorResponse} from '@aos/scouting/webserver/requests/messages/error_response_ts_fbs/scouting/webserver/requests';
+import {RequestAllMatches} from '@aos/scouting/webserver/requests/messages/request_all_matches_ts_fbs/scouting/webserver/requests';
 import {
   Match,
   RequestAllMatchesResponse,
-} from '@aos/scouting/webserver/requests/messages/request_all_matches_response_generated';
+} from '@aos/scouting/webserver/requests/messages/request_all_matches_response_ts_fbs/scouting/webserver/requests';
 
 import {MatchListRequestor} from '@aos/scouting/www/rpc';
 

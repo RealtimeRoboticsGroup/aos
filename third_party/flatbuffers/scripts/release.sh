@@ -1,7 +1,29 @@
+#!/usr/bin/bash
 
-printf -v year '%(%y)T' -1
-printf -v month '%(%m)T' -1
-printf -v day '%(%d)T' -1
+# Steps to do a release:
+#
+# 1. Make sure the repo builds and ./flatttests passes first, so that any
+#    version changes are localized.
+# 2. Run this script which should update all the version strings in the
+#    appropriate places.
+# 3. `make clean`
+# 4. `make -j flatc`
+# 5. Make sure the version is part of flatc: `./flatc --version`
+# 6. `scripts/generated_code.py`
+# 7. `goldens/generated_code.py`
+# 8. `make -j`
+# 9. Make sure the tests pass: `./flattests`
+
+# Requires the xmlstarlet command.
+#   Install via: apt install xmlstarlet
+if ! command -v xmlstarlet 2>&1 >/dev/null
+then
+    echo "xmlstarlet could not be found"
+    exit 1
+fi
+
+# Read the date as in the Pacific TZ, with no leading padding
+read year month day <<<$(date --date="TZ=\"US/Pacific\"" +'%-y %-m %-d')
 
 version="$year.$month.$day"
 version_underscore="$year\_$month\_$day"
@@ -31,7 +53,9 @@ sed -i \
   -e "s/\(FLATBUFFERS_VERSION_REVISION == \)[0-9]*\(.*\)/\1$day\2/" \
   include/flatbuffers/reflection_generated.h \
   tests/evolution_test/evolution_v1_generated.h \
-  tests/evolution_test/evolution_v2_generated.h
+  tests/evolution_test/evolution_v2_generated.h \
+  tests/*_generated.h \
+  tests/**/*_generated.h
 
 echo "Updating java/pom.xml..."
 xmlstarlet edit --inplace -N s=http://maven.apache.org/POM/4.0.0 \
@@ -62,6 +86,16 @@ echo "Updating python/setup.py..."
 sed -i \
   -e "s/\(version='\).*/\1$version',/" \
   python/setup.py
+
+echo "Updating rust/flatbuffers/Cargo.toml..."
+sed -i \
+  "s/^version = \".*\"$/version = \"$version\"/g" \
+  rust/flatbuffers/Cargo.toml
+
+echo "Updating rust/flexbuffers/Cargo.toml..."
+sed -i \
+  "s/^version = \".*\"$/version = \"$version\"/g" \
+  rust/flexbuffers/Cargo.toml
 
 echo "Updating FlatBuffers.podspec..."
 sed -i \

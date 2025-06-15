@@ -43,6 +43,10 @@ flatbuffer_ts_library(
     name = "ping_ts_fbs",
     srcs = ["ping.fbs"],
     target_compatible_with = ["@platforms//os:linux"],
+    ts_files = [
+        "aos/examples/ping.ts",
+        "aos/examples.ts",
+    ],
 )
 
 flatbuffer_rust_library(

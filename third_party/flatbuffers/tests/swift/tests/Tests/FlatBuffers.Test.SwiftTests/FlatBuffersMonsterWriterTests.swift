@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Google Inc. All rights reserved.
+ * Copyright 2024 Google Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,10 +34,10 @@ class FlatBuffersMonsterWriterTests: XCTestCase {
   }
 
   func testReadFromOtherLanguages() {
-    let path = FileManager.default.currentDirectoryPath
     let url = URL(fileURLWithPath: path, isDirectory: true)
-      .appendingPathComponent("monsterdata_test").appendingPathExtension("mon")
-    guard let data = try? Data(contentsOf: url) else { return }
+      .appendingPathComponent("monsterdata_test")
+      .appendingPathExtension("mon")
+    let data = try! Data(contentsOf: url)
     let _data = ByteBuffer(data: data)
     readVerifiedMonster(fb: _data)
   }
@@ -47,7 +47,8 @@ class FlatBuffersMonsterWriterTests: XCTestCase {
     // swiftformat:disable all
     XCTAssertEqual(bytes.sizedByteArray, [48, 0, 0, 0, 77, 79, 78, 83, 0, 0, 0, 0, 36, 0, 72, 0, 40, 0, 0, 0, 38, 0, 32, 0, 0, 0, 28, 0, 0, 0, 27, 0, 20, 0, 16, 0, 12, 0, 4, 0, 0, 0, 0, 0, 0, 0, 11, 0, 36, 0, 0, 0, 164, 0, 0, 0, 0, 0, 0, 1, 60, 0, 0, 0, 68, 0, 0, 0, 76, 0, 0, 0, 0, 0, 0, 1, 88, 0, 0, 0, 120, 0, 0, 0, 0, 0, 80, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 64, 2, 0, 5, 0, 6, 0, 0, 0, 2, 0, 0, 0, 64, 0, 0, 0, 48, 0, 0, 0, 2, 0, 0, 0, 30, 0, 40, 0, 10, 0, 20, 0, 152, 255, 255, 255, 4, 0, 0, 0, 4, 0, 0, 0, 70, 114, 101, 100, 0, 0, 0, 0, 5, 0, 0, 0, 0, 1, 2, 3, 4, 0, 0, 0, 5, 0, 0, 0, 116, 101, 115, 116, 50, 0, 0, 0, 5, 0, 0, 0, 116, 101, 115, 116, 49, 0, 0, 0, 9, 0, 0, 0, 77, 121, 77, 111, 110, 115, 116, 101, 114, 0, 0, 0, 3, 0, 0, 0, 20, 0, 0, 0, 36, 0, 0, 0, 4, 0, 0, 0, 240, 255, 255, 255, 32, 0, 0, 0, 248, 255, 255, 255, 36, 0, 0, 0, 12, 0, 8, 0, 0, 0, 0, 0, 0, 0, 4, 0, 12, 0, 0, 0, 28, 0, 0, 0, 5, 0, 0, 0, 87, 105, 108, 109, 97, 0, 0, 0, 6, 0, 0, 0, 66, 97, 114, 110, 101, 121, 0, 0, 5, 0, 0, 0, 70, 114, 111, 100, 111, 0, 0, 0])
     // swiftformat:enable all
-    let monster = MyGame_Example_Monster.getRootAsMonster(bb: bytes.buffer)
+    var buffer = bytes.buffer
+    let monster: MyGame_Example_Monster = getRoot(byteBuffer: &buffer)
     readMonster(monster: monster)
     mutateMonster(fb: bytes.buffer)
     readMonster(monster: monster)
@@ -78,7 +79,8 @@ class FlatBuffersMonsterWriterTests: XCTestCase {
     Monster.add(name: name, &fbb)
     let root = Monster.endMonster(&fbb, start: mStart)
     fbb.finish(offset: root)
-    let newMonster = Monster.getRootAsMonster(bb: fbb.sizedBuffer)
+    var buffer = fbb.sizedBuffer
+    let newMonster: Monster = getRoot(byteBuffer: &buffer)
     XCTAssertNil(newMonster.pos)
     XCTAssertEqual(newMonster.name, "Frodo")
   }
@@ -100,7 +102,8 @@ class FlatBuffersMonsterWriterTests: XCTestCase {
     let root = Monster.endMonster(&fbb, start: mStart)
     fbb.finish(offset: root)
 
-    let newMonster = Monster.getRootAsMonster(bb: fbb.sizedBuffer)
+    var buffer = fbb.sizedBuffer
+    let newMonster: Monster = getRoot(byteBuffer: &buffer)
     XCTAssertEqual(newMonster.pos!.x, 10)
     XCTAssertEqual(newMonster.name, "Barney")
   }
@@ -110,11 +113,11 @@ class FlatBuffersMonsterWriterTests: XCTestCase {
     var array: [UInt8] = [48, 0, 0, 0, 77, 79, 78, 83, 0, 0, 0, 0, 36, 0, 72, 0, 40, 0, 0, 0, 38, 0, 32, 0, 0, 0, 28, 0, 0, 0, 27, 0, 20, 0, 16, 0, 12, 0, 4, 0, 0, 0, 0, 0, 0, 0, 11, 0, 36, 0, 0, 0, 164, 0, 0, 0, 0, 0, 0, 1, 60, 0, 0, 0, 68, 0, 0, 0, 76, 0, 0, 0, 0, 0, 0, 1, 88, 0, 0, 0, 120, 0, 0, 0, 0, 0, 80, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 64, 2, 0, 5, 0, 6, 0, 0, 0, 2, 0, 0, 0, 64, 0, 0, 0, 48, 0, 0, 0, 2, 0, 0, 0, 30, 0, 40, 0, 10, 0, 20, 0, 152, 255, 255, 255, 4, 0, 0, 0, 4, 0, 0, 0, 70, 114, 101, 100, 0, 0, 0, 0, 5, 0, 0, 0, 0, 1, 2, 3, 4, 0, 0, 0, 5, 0, 0, 0, 116, 101, 115, 116, 50, 0, 0, 0, 5, 0, 0, 0, 116, 101, 115, 116, 49, 0, 0, 0, 9, 0, 0, 0, 77, 121, 77, 111, 110, 115, 116, 101, 114, 0, 0, 0, 3, 0, 0, 0, 20, 0, 0, 0, 36, 0, 0, 0, 4, 0, 0, 0, 240, 255, 255, 255, 32, 0, 0, 0, 248, 255, 255, 255, 36, 0, 0, 0, 12, 0, 8, 0, 0, 0, 0, 0, 0, 0, 4, 0, 12, 0, 0, 0, 28, 0, 0, 0, 5, 0, 0, 0, 87, 105, 108, 109, 97, 0, 0, 0, 6, 0, 0, 0, 66, 97, 114, 110, 101, 121, 0, 0, 5, 0, 0, 0, 70, 114, 111, 100, 111, 0, 0, 0]
     // swiftformat:enable all
     let unpacked = array
-      .withUnsafeMutableBytes { (memory) -> MyGame_Example_MonsterT in
-        let bytes = ByteBuffer(
+      .withUnsafeMutableBytes { memory -> MyGame_Example_MonsterT in
+        var bytes = ByteBuffer(
           assumingMemoryBound: memory.baseAddress!,
           capacity: memory.count)
-        var monster = Monster.getRootAsMonster(bb: bytes)
+        var monster: Monster = getRoot(byteBuffer: &bytes)
         readFlatbufferMonster(monster: &monster)
         let unpacked = monster.unpack()
         return unpacked
@@ -132,8 +135,8 @@ class FlatBuffersMonsterWriterTests: XCTestCase {
       nameOffset: name,
       testarrayofboolsVectorOffset: bools)
     fbb.finish(offset: root)
-    let monster = Monster.getRootAsMonster(bb: fbb.sizedBuffer)
-
+    var buffer = fbb.sizedBuffer
+    let monster: Monster = getRoot(byteBuffer: &buffer)
     let values = monster.testarrayofbools
 
     XCTAssertEqual(boolArray, values)
@@ -151,14 +154,72 @@ class FlatBuffersMonsterWriterTests: XCTestCase {
           byteBuffer: &byteBuffer) as MyGame_Example_Monster))
   }
 
+  func testUnalignedRead() {
+    // Aligned read
+    let fbb = createMonster(withPrefix: false)
+    let testAligned: () -> Bool = {
+      var buffer = fbb.sizedBuffer
+      var monster: Monster = getRoot(byteBuffer: &buffer)
+      self.readFlatbufferMonster(monster: &monster)
+      return true
+    }
+    XCTAssertEqual(testAligned(), true)
+    let testUnaligned: () -> Bool = {
+      var bytes: [UInt8] = [0x00]
+      bytes.append(contentsOf: fbb.sizedByteArray)
+      return bytes.withUnsafeMutableBytes { ptr in
+        guard var baseAddress = ptr.baseAddress else {
+          XCTFail("Base pointer is not defined")
+          return false
+        }
+        baseAddress = baseAddress.advanced(by: 1)
+        let unlignedPtr = UnsafeMutableRawPointer(baseAddress)
+        var bytes = ByteBuffer(
+          assumingMemoryBound: unlignedPtr,
+          capacity: ptr.count - 1,
+          allowReadingUnalignedBuffers: true)
+        var monster: Monster = getRoot(byteBuffer: &bytes)
+        self.readFlatbufferMonster(monster: &monster)
+        return true
+      }
+    }
+    XCTAssertEqual(testUnaligned(), true)
+  }
+
+  func testCopyUnalignedToAlignedBuffers() {
+    // Aligned read
+    let fbb = createMonster(withPrefix: true)
+    let testUnaligned: () -> Bool = {
+      var bytes: [UInt8] = [0x00]
+      bytes.append(contentsOf: fbb.sizedByteArray)
+      return bytes.withUnsafeMutableBytes { ptr in
+        guard var baseAddress = ptr.baseAddress else {
+          XCTFail("Base pointer is not defined")
+          return false
+        }
+        baseAddress = baseAddress.advanced(by: 1)
+        let unlignedPtr = UnsafeMutableRawPointer(baseAddress)
+        let bytes = ByteBuffer(
+          assumingMemoryBound: unlignedPtr,
+          capacity: ptr.count - 1,
+          allowReadingUnalignedBuffers: false)
+        var newBuf = FlatBuffersUtils.removeSizePrefix(bb: bytes)
+        var monster: Monster = getRoot(byteBuffer: &newBuf)
+        self.readFlatbufferMonster(monster: &monster)
+        return true
+      }
+    }
+    XCTAssertEqual(testUnaligned(), true)
+  }
+
   func readMonster(monster: Monster) {
     var monster = monster
     readFlatbufferMonster(monster: &monster)
     let unpacked: MyGame_Example_MonsterT? = monster.unpack()
     readObjectApi(monster: unpacked!)
-    guard let buffer = unpacked?.serialize()
+    guard var buffer = unpacked?.serialize()
     else { fatalError("Couldnt generate bytebuffer") }
-    var newMonster = Monster.getRootAsMonster(bb: buffer)
+    var newMonster: Monster = getRoot(byteBuffer: &buffer)
     readFlatbufferMonster(monster: &newMonster)
   }
 
@@ -224,7 +285,8 @@ class FlatBuffersMonsterWriterTests: XCTestCase {
   }
 
   func mutateMonster(fb: ByteBuffer) {
-    let monster = Monster.getRootAsMonster(bb: fb)
+    var fb = fb
+    let monster: Monster = getRoot(byteBuffer: &fb)
     XCTAssertFalse(monster.mutate(mana: 10))
     XCTAssertEqual(monster.testarrayoftables(at: 0)?.name, "Barney")
     XCTAssertEqual(monster.testarrayoftables(at: 1)?.name, "Frodo")
@@ -377,11 +439,26 @@ class FlatBuffersMonsterWriterTests: XCTestCase {
     let fbb = createMonster(withPrefix: false)
     var sizedBuffer = fbb.sizedBuffer
     do {
+      struct Test: Decodable {
+        struct Pos: Decodable {
+          let x, y, z: Int
+        }
+        let hp: Int
+        let inventory: [UInt8]
+        let name: String
+        let pos: Pos
+      }
       let reader: Monster = try getCheckedRoot(byteBuffer: &sizedBuffer)
       let encoder = JSONEncoder()
       encoder.keyEncodingStrategy = .convertToSnakeCase
       let data = try encoder.encode(reader)
-      XCTAssertEqual(data, jsonData.data(using: .utf8))
+      let decoder = JSONDecoder()
+      decoder.keyDecodingStrategy = .convertFromSnakeCase
+      let value = try decoder.decode(Test.self, from: data)
+      XCTAssertEqual(value.name, "MyMonster")
+      XCTAssertEqual(value.pos.x, 1)
+      XCTAssertEqual(value.pos.y, 2)
+      XCTAssertEqual(value.pos.z, 3)
     } catch {
       XCTFail(error.localizedDescription)
     }
@@ -392,4 +469,36 @@ class FlatBuffersMonsterWriterTests: XCTestCase {
     {\"hp\":80,\"inventory\":[0,1,2,3,4],\"test\":{\"name\":\"Fred\"},\"testarrayofstring\":[\"test1\",\"test2\"],\"testarrayoftables\":[{\"name\":\"Barney\"},{\"name\":\"Frodo\"},{\"name\":\"Wilma\"}],\"test4\":[{\"a\":30,\"b\":40},{\"a\":10,\"b\":20}],\"testbool\":true,\"test_type\":\"Monster\",\"pos\":{\"y\":2,\"test3\":{\"a\":5,\"b\":6},\"z\":3,\"x\":1,\"test1\":3,\"test2\":\"Green\"},\"name\":\"MyMonster\"}
     """
   }
+
+  private var path: String {
+    #if os(macOS)
+    // Gets the current path of this test file then
+    // strips out the nested directories.
+    let filePath = URL(filePath: #file)
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+    return filePath.absoluteString
+    #else
+    return FileManager.default.currentDirectoryPath
+    #endif
+  }
+
+  func testContiguousBytes() {
+    let byteArray: [UInt8] = [3, 1, 4, 1, 5, 9]
+    var fbb = FlatBufferBuilder(initialSize: 1)
+    let name = fbb.create(string: "Frodo")
+    let bytes = fbb.createVector(bytes: byteArray)
+    let root = Monster.createMonster(
+      &fbb,
+      nameOffset: name,
+      inventoryVectorOffset: bytes)
+    fbb.finish(offset: root)
+    var buffer = fbb.sizedBuffer
+    let monster: Monster = getRoot(byteBuffer: &buffer)
+    let values = monster.inventory
+
+    XCTAssertEqual(byteArray, values)
+  }
+
 }

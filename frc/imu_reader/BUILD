@@ -36,6 +36,10 @@ flatbuffer_ts_library(
     srcs = [
         "imu_failures.fbs",
     ],
+    ts_files = [
+        "frc/controls.ts",
+        "frc/controls/imu-failures.ts",
+    ],
     visibility = ["//visibility:public"],
 )
 

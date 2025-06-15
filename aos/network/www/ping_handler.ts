@@ -1,4 +1,4 @@
-import {Ping} from '../../events/ping_generated';
+import {Ping} from '../../events/ping_ts_fbs/aos/examples';
 import {ByteBuffer} from 'flatbuffers';
 
 export function HandlePing(data: Uint8Array) {

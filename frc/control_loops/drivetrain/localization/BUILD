@@ -65,5 +65,11 @@ static_flatbuffer(
 flatbuffer_ts_library(
     name = "localizer_output_ts_fbs",
     srcs = ["localizer_output.fbs"],
+    ts_files = [
+        "frc/controls.ts",
+        "frc/controls/quaternion.ts",
+        "frc/controls/led-output.ts",
+        "frc/controls/localizer-output.ts",
+    ],
     visibility = ["//visibility:public"],
 )

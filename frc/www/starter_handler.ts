@@ -1,6 +1,6 @@
 import {ByteBuffer} from 'flatbuffers'
 import {Connection} from '../../aos/network/www/proxy'
-import {Status, ApplicationStatus, State, LastStopReason, FileState} from '../../aos/starter/starter_generated'
+import {Status, ApplicationStatus, State, LastStopReason, FileState} from '../../aos/starter/starter_ts_fbs/aos/starter'
 
 const NODES = ['/orin1', '/imu', '/roborio'];
 

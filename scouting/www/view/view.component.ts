@@ -1,26 +1,26 @@
 import {Component, OnInit} from '@angular/core';
 import {Builder, ByteBuffer} from 'flatbuffers';
-import {ErrorResponse} from '@aos/scouting/webserver/requests/messages/error_response_generated';
+import {ErrorResponse} from '@aos/scouting/webserver/requests/messages/error_response_ts_fbs/scouting/webserver/requests';
 import {
   Ranking,
   RequestAllDriverRankingsResponse,
-} from '@aos/scouting/webserver/requests/messages/request_all_driver_rankings_response_generated';
+} from '@aos/scouting/webserver/requests/messages/request_all_driver_rankings_response_ts_fbs/scouting/webserver/requests';
 import {
   Stats2024,
   Request2024DataScoutingResponse,
-} from '@aos/scouting/webserver/requests/messages/request_2024_data_scouting_response_generated';
+} from '@aos/scouting/webserver/requests/messages/request_2024_data_scouting_response_ts_fbs/scouting/webserver/requests';
 
 import {
   PitImage,
   RequestAllPitImagesResponse,
-} from '@aos/scouting/webserver/requests/messages/request_all_pit_images_response_generated';
+} from '@aos/scouting/webserver/requests/messages/request_all_pit_images_response_ts_fbs/scouting/webserver/requests';
 
 import {
   Note,
   RequestAllNotesResponse,
-} from '@aos/scouting/webserver/requests/messages/request_all_notes_response_generated';
-import {Delete2024DataScouting} from '@aos/scouting/webserver/requests/messages/delete_2024_data_scouting_generated';
-import {Delete2024DataScoutingResponse} from '@aos/scouting/webserver/requests/messages/delete_2024_data_scouting_response_generated';
+} from '@aos/scouting/webserver/requests/messages/request_all_notes_response_ts_fbs/scouting/webserver/requests';
+import {Delete2024DataScouting} from '@aos/scouting/webserver/requests/messages/delete_2024_data_scouting_ts_fbs/scouting/webserver/requests';
+import {Delete2024DataScoutingResponse} from '@aos/scouting/webserver/requests/messages/delete_2024_data_scouting_response_ts_fbs/scouting/webserver/requests';
 
 import {MatchListRequestor, ViewDataRequestor} from '@aos/scouting/www/rpc';
 

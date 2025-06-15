@@ -65,7 +65,11 @@ namespace Google.FlatBuffers
         // Create a .NET String from UTF-8 data stored inside the flatbuffer.
         public string __string(int offset)
         {
-            offset += bb.GetInt(offset);
+            int stringOffset = bb.GetInt(offset);
+            if (stringOffset == 0)
+                return null;
+
+            offset += stringOffset;
             var len = bb.GetInt(offset);
             var startPos = offset + sizeof(int);
             return bb.GetStringUTF8(startPos, len);
@@ -86,7 +90,7 @@ namespace Google.FlatBuffers
             return offset + bb.GetInt(offset) + sizeof(int);  // data starts after the length
         }
 
-#if ENABLE_SPAN_T && (UNSAFE_BYTEBUFFER || NETSTANDARD2_1)
+#if ENABLE_SPAN_T && UNSAFE_BYTEBUFFER
         // Get the data of a vector whoses offset is stored at "offset" in this object as an
         // Spant&lt;byte&gt;. If the vector is not present in the ByteBuffer,
         // then an empty span will be returned.

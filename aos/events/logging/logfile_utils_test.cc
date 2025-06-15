@@ -3277,7 +3277,7 @@ std::string AnnotateBinaries(
     flatbuffers::span<uint8_t> binary_data) {
   flatbuffers::BinaryAnnotator binary_annotator(
       schema.span().data(), schema.span().size(), binary_data.data(),
-      binary_data.size());
+      binary_data.size(), /*is_size_prefixed=*/false);
 
   auto annotations = binary_annotator.Annotate();
 

@@ -318,6 +318,7 @@ def rollup_bundle(name, entry_point, node_modules = "//:node_modules", deps = []
         sourcemap = "false",
         config_file = ":%s__rollup_config.mjs" % name,
         entry_point = entry_point,
+        silent = True,
         **kwargs
     )
 

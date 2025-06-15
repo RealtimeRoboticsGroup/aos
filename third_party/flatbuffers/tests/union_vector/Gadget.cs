@@ -76,3 +76,25 @@ public class GadgetUnion_JsonConverter : Newtonsoft.Json.JsonConverter {
   }
 }
 
+
+
+static public class GadgetVerify
+{
+  static public bool Verify(Google.FlatBuffers.Verifier verifier, byte typeId, uint tablePos)
+  {
+    bool result = true;
+    switch((Gadget)typeId)
+    {
+      case Gadget.FallingTub:
+        result = verifier.VerifyUnionData(tablePos, 4, 4);
+        break;
+      case Gadget.HandFan:
+        result = HandFanVerify.Verify(verifier, tablePos);
+        break;
+      default: result = true;
+        break;
+    }
+    return result;
+  }
+}
+

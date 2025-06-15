@@ -1,9 +1,20 @@
 load("@rules_python//python:defs.bzl", "py_library")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("@aspect_rules_js//npm:defs.bzl", "npm_link_package")
+load("@rules_license//rules:license.bzl", "license")
 
 package(
+    default_applicable_licenses = [":license"],
     default_visibility = ["//visibility:public"],
+)
+
+license(
+    name = "license",
+    package_name = "Flatbuffers",
+    license_kinds = ["@rules_license//licenses/spdx:Apache-2.0"],
+    license_text = "LICENSE",
+    package_url = "https://flatbuffers.dev/",
+    package_version = "65e49faf7",
 )
 
 licenses(["notice"])
@@ -37,6 +48,29 @@ config_setting(
     ],
 )
 
+filegroup(
+    name = "distribution",
+    srcs = [
+        ".bazelignore",
+        ".npmrc",
+        "BUILD.bazel",
+        "MODULE.bazel",
+        "WORKSPACE",
+        "build_defs.bzl",
+        "package.json",
+        "pnpm-lock.yaml",
+        "typescript.bzl",
+        "//grpc/src/compiler:distribution",
+        "//include/codegen:distribution",
+        "//reflection:distribution",
+        "//src:distribution",
+        "//ts:distribution",
+    ] + glob([
+        "include/flatbuffers/*.h",
+    ]),
+    visibility = ["//visibility:public"],
+)
+
 # Public flatc library to compile flatbuffer files at runtime.
 cc_library(
     name = "flatbuffers",
@@ -55,12 +89,13 @@ filegroup(
         "include/flatbuffers/allocator.h",
         "include/flatbuffers/array.h",
         "include/flatbuffers/base.h",
-        "include/flatbuffers/bfbs_generator.h",
         "include/flatbuffers/buffer.h",
         "include/flatbuffers/buffer_ref.h",
+        "include/flatbuffers/code_generator.h",
         "include/flatbuffers/code_generators.h",
         "include/flatbuffers/default_allocator.h",
         "include/flatbuffers/detached_buffer.h",
+        "include/flatbuffers/file_manager.h",
         "include/flatbuffers/flatbuffer_builder.h",
         "include/flatbuffers/flatbuffers.h",
         "include/flatbuffers/flex_flat_util.h",
@@ -112,15 +147,7 @@ filegroup(
 # Library used by flatbuffer_cc_library rules.
 cc_library(
     name = "runtime_cc",
-    hdrs = [
-        "include/flatbuffers/base.h",
-        "include/flatbuffers/flatbuffers.h",
-        "include/flatbuffers/flexbuffers.h",
-        "include/flatbuffers/stl_emulation.h",
-        "include/flatbuffers/util.h",
-        "include/flatbuffers/vector.h",
-        "include/flatbuffers/verifier.h",
-    ],
+    hdrs = ["//:public_headers"],
     linkstatic = 1,
     strip_include_prefix = "/include",
 )

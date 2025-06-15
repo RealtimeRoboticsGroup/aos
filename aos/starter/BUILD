@@ -200,6 +200,17 @@ flatbuffer_ts_library(
     name = "starter_ts_fbs",
     srcs = ["starter.fbs"],
     target_compatible_with = ["@platforms//os:linux"],
+    ts_files = [
+        "aos/starter/state.ts",
+        "aos/starter.ts",
+        "aos/util/process-info.ts",
+        "aos/util/thread-info.ts",
+        "aos/util/thread-state.ts",
+        "aos/starter/last-stop-reason.ts",
+        "aos/starter/file-state.ts",
+        "aos/starter/status.ts",
+        "aos/starter/application-status.ts",
+    ],
     visibility = ["//visibility:public"],
     deps = ["//aos/util:process_info_ts_fbs"],
 )

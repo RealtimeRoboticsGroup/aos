@@ -42,9 +42,11 @@ class JsonToFlatbufferTest : public ::testing::Test {
         JsonToFlatbuffer(in, FlatbufferType(&Schema().message()));
 
     if (fb_typetable.span().size() == 0) {
+      printf("Empty TypeTable\n");
       return false;
     }
     if (fb_reflection.span().size() == 0) {
+      printf("Empty Reflection\n");
       return false;
     }
 
@@ -480,6 +482,39 @@ TEST_F(JsonToFlatbufferTest, NestedArrays) {
   EXPECT_TRUE(
       JsonAndBack("{ \"vov\": { \"v\": [ { \"str\": [ \"a\", \"b\" ] }, { "
                   "\"str\": [ \"c\", \"d\" ] } ] } }"));
+}
+
+// Test that we support null JSON values and it means omit the field.
+TEST_F(JsonToFlatbufferTest, NullValues) {
+  EXPECT_TRUE(JsonAndBack("{ \"foo_bool\": null }", "{  }"));
+
+  EXPECT_TRUE(JsonAndBack("{ \"foo_byte\": null }", "{  }"));
+  EXPECT_TRUE(JsonAndBack("{ \"foo_ubyte\": null }", "{  }"));
+
+  EXPECT_TRUE(JsonAndBack("{ \"foo_short\": null }", "{  }"));
+  EXPECT_TRUE(JsonAndBack("{ \"foo_ushort\": null }", "{  }"));
+
+  EXPECT_TRUE(JsonAndBack("{ \"foo_int\": null }", "{  }"));
+  EXPECT_TRUE(JsonAndBack("{ \"foo_uint\": null }", "{  }"));
+
+  EXPECT_TRUE(JsonAndBack("{ \"foo_long\": null }", "{  }"));
+  EXPECT_TRUE(JsonAndBack("{ \"foo_ulong\": null }", "{  }"));
+
+  EXPECT_TRUE(JsonAndBack("{ \"foo_float\": null }", "{  }"));
+  EXPECT_TRUE(JsonAndBack("{ \"foo_double\": null }", "{  }"));
+
+  EXPECT_TRUE(JsonAndBack("{ \"foo_enum\": null }", "{  }"));
+  EXPECT_TRUE(JsonAndBack("{ \"foo_enum\": null }", "{  }"));
+
+  EXPECT_TRUE(JsonAndBack("{ \"foo_enum_default\": null }", "{  }"));
+
+  EXPECT_TRUE(JsonAndBack("{ \"foo_string\": null }", "{  }"));
+
+  EXPECT_TRUE(JsonAndBack("{ \"foo_enum_nonconsecutive\": null }", "{  }"));
+
+  EXPECT_TRUE(JsonAndBack("{ \"vector_foo_string\": null }", "{  }"));
+
+  EXPECT_TRUE(JsonAndBack("{ \"single_application\": null }", "{  }"));
 }
 
 // TODO(austin): Missmatched values.

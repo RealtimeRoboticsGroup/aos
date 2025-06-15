@@ -198,6 +198,9 @@ namespace Google.FlatBuffers.Test
 
         private void TestBuffer(ByteBuffer bb)
         {
+            bool test = Monster.VerifyMonster(bb);
+            Assert.AreEqual(true, test);
+
             Monster monster = Monster.GetRootAsMonster(bb);
 
             Assert.AreEqual(80, monster.Hp);
@@ -287,7 +290,7 @@ namespace Google.FlatBuffers.Test
         [FlatBuffersTestMethod]
         public void CanReadCppGeneratedWireFile()
         {
-            var data = File.ReadAllBytes(@"../monsterdata_test.mon");
+            var data = File.ReadAllBytes(@"monsterdata_test.mon");
             var bb = new ByteBuffer(data);
             TestBuffer(bb);
             TestObjectAPI(Monster.GetRootAsMonster(bb));
@@ -296,10 +299,10 @@ namespace Google.FlatBuffers.Test
         [FlatBuffersTestMethod]
         public void CanReadJsonFile()
         {
-            var jsonText = File.ReadAllText(@"../monsterdata_test.json");
+            var jsonText = File.ReadAllText(@"monsterdata_test.json");
             var mon = MonsterT.DeserializeFromJson(jsonText);
             var fbb = new FlatBufferBuilder(1);
-            fbb.Finish(Monster.Pack(fbb, mon).Value);
+            Monster.FinishMonsterBuffer(fbb, Monster.Pack(fbb, mon));
             TestBuffer(fbb.DataBuffer);
         }
 

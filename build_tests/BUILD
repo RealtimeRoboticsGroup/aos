@@ -1,4 +1,5 @@
-load("@com_github_google_flatbuffers//:build_defs.bzl", "flatbuffer_go_library", "flatbuffer_py_library")
+load("@com_github_google_flatbuffers//:build_defs.bzl", "flatbuffer_go_library")
+load("@com_github_google_flatbuffers//:typescript.bzl", "flatbuffer_ts_library")
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 load("@rules_cc//cc:defs.bzl", "cc_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
@@ -76,16 +77,16 @@ cc_test(
     ],
 )
 
-flatbuffer_py_library(
-    name = "test_python_fbs",
+flatbuffer_ts_library(
+    name = "test_ts_fbs",
     srcs = ["test.fbs"],
     namespace = "aos.examples",
     tables = [
         "Foo",
         "Bar",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
-    visibility = ["//visibility:public"],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+    visibility = [":__subpackages__"],
 )
 
 flatbuffer_go_library(
@@ -94,13 +95,6 @@ flatbuffer_go_library(
     importpath = "github.com/RealtimeRoboticsGroup/aos/build_tests/fbs",
     target_compatible_with = ["@platforms//cpu:x86_64"],
     visibility = ["//visibility:public"],
-)
-
-py_test(
-    name = "python_fbs",
-    srcs = ["python_fbs.py"],
-    target_compatible_with = ["@platforms//os:linux"],
-    deps = [":test_python_fbs"],
 )
 
 py_test(

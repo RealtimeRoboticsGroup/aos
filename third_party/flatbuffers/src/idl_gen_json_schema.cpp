@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "idl_gen_json_schema.h"
+
 #include <algorithm>
 #include <iostream>
 #include <limits>
@@ -28,8 +30,7 @@ namespace jsons {
 
 namespace {
 
-template<class T>
-static std::string GenFullName(const T *enum_def) {
+template<class T> static std::string GenFullName(const T *enum_def) {
   std::string full_name;
   const auto &name_spaces = enum_def->defined_namespace->components;
   for (auto ns = name_spaces.cbegin(); ns != name_spaces.cend(); ++ns) {
@@ -39,8 +40,7 @@ static std::string GenFullName(const T *enum_def) {
   return full_name;
 }
 
-template<class T>
-static std::string GenTypeRef(const T *enum_def) {
+template<class T> static std::string GenTypeRef(const T *enum_def) {
   return "\"$ref\" : \"#/definitions/" + GenFullName(enum_def) + "\"";
 }
 
@@ -142,7 +142,7 @@ static std::string GenType(const Type &type) {
   }
 }
 
-} // namespace
+}  // namespace
 
 class JsonSchemaGenerator : public BaseGenerator {
  private:
@@ -317,17 +317,68 @@ class JsonSchemaGenerator : public BaseGenerator {
 };
 }  // namespace jsons
 
-bool GenerateJsonSchema(const Parser &parser, const std::string &path,
-                        const std::string &file_name) {
+static bool GenerateJsonSchema(const Parser &parser, const std::string &path,
+                               const std::string &file_name) {
   jsons::JsonSchemaGenerator generator(parser, path, file_name);
   if (!generator.generate()) { return false; }
   return generator.save();
 }
 
-bool GenerateJsonSchema(const Parser &parser, std::string *json) {
-  jsons::JsonSchemaGenerator generator(parser, "", "");
-  if (!generator.generate()) { return false; }
-  *json = generator.getJson();
-  return true;
+namespace {
+
+class JsonSchemaCodeGenerator : public CodeGenerator {
+ public:
+  Status GenerateCode(const Parser &parser, const std::string &path,
+                      const std::string &filename) override {
+    if (!GenerateJsonSchema(parser, path, filename)) { return Status::ERROR; }
+    return Status::OK;
+  }
+
+  Status GenerateCode(const uint8_t *, int64_t,
+                      const CodeGenOptions &) override {
+    return Status::NOT_IMPLEMENTED;
+  }
+
+  Status GenerateMakeRule(const Parser &parser, const std::string &path,
+                          const std::string &filename,
+                          std::string &output) override {
+    (void)parser;
+    (void)path;
+    (void)filename;
+    (void)output;
+    return Status::NOT_IMPLEMENTED;
+  }
+
+  Status GenerateGrpcCode(const Parser &parser, const std::string &path,
+                          const std::string &filename) override {
+    (void)parser;
+    (void)path;
+    (void)filename;
+    return Status::NOT_IMPLEMENTED;
+  }
+
+  Status GenerateRootFile(const Parser &parser,
+                          const std::string &path) override {
+    (void)parser;
+    (void)path;
+    return Status::NOT_IMPLEMENTED;
+  }
+  bool IsSchemaOnly() const override { return true; }
+
+  bool SupportsBfbsGeneration() const override { return false; }
+
+  bool SupportsRootFileGeneration() const override { return false; }
+
+  IDLOptions::Language Language() const override {
+    return IDLOptions::kJsonSchema;
+  }
+
+  std::string LanguageName() const override { return "JsonSchema"; }
+};
+}  // namespace
+
+std::unique_ptr<CodeGenerator> NewJsonSchemaCodeGenerator() {
+  return std::unique_ptr<JsonSchemaCodeGenerator>(
+      new JsonSchemaCodeGenerator());
 }
 }  // namespace flatbuffers

@@ -8,11 +8,12 @@
 
 // Ensure the included flatbuffers.h is the same version as when this file was
 // generated, otherwise it may not be compatible.
-static_assert(FLATBUFFERS_VERSION_MAJOR == 22 &&
-              FLATBUFFERS_VERSION_MINOR == 10 &&
-              FLATBUFFERS_VERSION_REVISION == 26,
+static_assert(FLATBUFFERS_VERSION_MAJOR == 25 &&
+              FLATBUFFERS_VERSION_MINOR == 1 &&
+              FLATBUFFERS_VERSION_REVISION == 21,
              "Non-compatible flatbuffers version included");
 
+#include <ostream>
 namespace reflection {
 
 struct Type;
@@ -76,25 +77,25 @@ bool operator!=(const SchemaFileT &lhs, const SchemaFileT &rhs);
 bool operator==(const SchemaT &lhs, const SchemaT &rhs);
 bool operator!=(const SchemaT &lhs, const SchemaT &rhs);
 
-inline const flatbuffers::TypeTable *TypeTypeTable();
+inline const ::flatbuffers::TypeTable *TypeTypeTable();
 
-inline const flatbuffers::TypeTable *KeyValueTypeTable();
+inline const ::flatbuffers::TypeTable *KeyValueTypeTable();
 
-inline const flatbuffers::TypeTable *EnumValTypeTable();
+inline const ::flatbuffers::TypeTable *EnumValTypeTable();
 
-inline const flatbuffers::TypeTable *EnumTypeTable();
+inline const ::flatbuffers::TypeTable *EnumTypeTable();
 
-inline const flatbuffers::TypeTable *FieldTypeTable();
+inline const ::flatbuffers::TypeTable *FieldTypeTable();
 
-inline const flatbuffers::TypeTable *ObjectTypeTable();
+inline const ::flatbuffers::TypeTable *ObjectTypeTable();
 
-inline const flatbuffers::TypeTable *RPCCallTypeTable();
+inline const ::flatbuffers::TypeTable *RPCCallTypeTable();
 
-inline const flatbuffers::TypeTable *ServiceTypeTable();
+inline const ::flatbuffers::TypeTable *ServiceTypeTable();
 
-inline const flatbuffers::TypeTable *SchemaFileTypeTable();
+inline const ::flatbuffers::TypeTable *SchemaFileTypeTable();
 
-inline const flatbuffers::TypeTable *SchemaTypeTable();
+inline const ::flatbuffers::TypeTable *SchemaTypeTable();
 
 enum class BaseType : int8_t {
   None = 0,
@@ -115,12 +116,13 @@ enum class BaseType : int8_t {
   Obj = 15,
   Union = 16,
   Array = 17,
-  MaxBaseType = 18,
+  Vector64 = 18,
+  MaxBaseType = 19,
   MIN = None,
   MAX = MaxBaseType
 };
 
-inline const BaseType (&EnumValuesBaseType())[19] {
+inline const BaseType (&EnumValuesBaseType())[20] {
   static const BaseType values[] = {
     BaseType::None,
     BaseType::UType,
@@ -140,13 +142,14 @@ inline const BaseType (&EnumValuesBaseType())[19] {
     BaseType::Obj,
     BaseType::Union,
     BaseType::Array,
+    BaseType::Vector64,
     BaseType::MaxBaseType
   };
   return values;
 }
 
 inline const char * const *EnumNamesBaseType() {
-  static const char * const names[20] = {
+  static const char * const names[21] = {
     "None",
     "UType",
     "Bool",
@@ -165,6 +168,7 @@ inline const char * const *EnumNamesBaseType() {
     "Obj",
     "Union",
     "Array",
+    "Vector64",
     "MaxBaseType",
     nullptr
   };
@@ -172,9 +176,14 @@ inline const char * const *EnumNamesBaseType() {
 }
 
 inline const char *EnumNameBaseType(BaseType e) {
-  if (flatbuffers::IsOutRange(e, BaseType::None, BaseType::MaxBaseType)) return "";
+  if (::flatbuffers::IsOutRange(e, BaseType::None, BaseType::MaxBaseType)) return "";
   const size_t index = static_cast<size_t>(e);
   return EnumNamesBaseType()[index];
+}
+
+inline std::ostream& operator<<(std::ostream& os, const BaseType &e) {
+  os << EnumNameBaseType(e);
+  return os;
 }
 
 /// New schema language features that are not supported by old code generators.
@@ -214,12 +223,17 @@ inline const char * const *EnumNamesAdvancedFeatures() {
 }
 
 inline const char *EnumNameAdvancedFeatures(AdvancedFeatures e) {
-  if (flatbuffers::IsOutRange(e, AdvancedFeatures::AdvancedArrayFeatures, AdvancedFeatures::DefaultVectorsAndStrings)) return "";
+  if (::flatbuffers::IsOutRange(e, AdvancedFeatures::AdvancedArrayFeatures, AdvancedFeatures::DefaultVectorsAndStrings)) return "";
   const size_t index = static_cast<size_t>(e) - static_cast<size_t>(AdvancedFeatures::AdvancedArrayFeatures);
   return EnumNamesAdvancedFeatures()[index];
 }
 
-struct TypeT : public flatbuffers::NativeTable {
+inline std::ostream& operator<<(std::ostream& os, const AdvancedFeatures &e) {
+  os << EnumNameAdvancedFeatures(e);
+  return os;
+}
+
+struct TypeT : public ::flatbuffers::NativeTable {
   typedef Type TableType;
   static FLATBUFFERS_CONSTEXPR_CPP11 const char *GetFullyQualifiedName() {
     return "reflection.TypeT";
@@ -232,11 +246,11 @@ struct TypeT : public flatbuffers::NativeTable {
   uint32_t element_size = 0;
 };
 
-struct Type FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+struct Type FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef TypeT NativeTableType;
   typedef TypeBuilder Builder;
   struct Traits;
-  static const flatbuffers::TypeTable *MiniReflectTypeTable() {
+  static const ::flatbuffers::TypeTable *MiniReflectTypeTable() {
     return TypeTypeTable();
   }
   static FLATBUFFERS_CONSTEXPR_CPP11 const char *GetFullyQualifiedName() {
@@ -324,7 +338,7 @@ struct Type FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_element_size() const {
     return CheckField(VT_ELEMENT_SIZE);
   }
-  bool Verify(flatbuffers::Verifier &verifier) const {
+  bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<int8_t>(verifier, VT_BASE_TYPE, 1) &&
            VerifyField<int8_t>(verifier, VT_ELEMENT, 1) &&
@@ -334,15 +348,15 @@ struct Type FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            VerifyField<uint32_t>(verifier, VT_ELEMENT_SIZE, 4) &&
            verifier.EndTable();
   }
-  TypeT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
-  void UnPackTo(TypeT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
-  static flatbuffers::Offset<Type> Pack(flatbuffers::FlatBufferBuilder &_fbb, const TypeT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+  TypeT *UnPack(const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(TypeT *_o, const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static ::flatbuffers::Offset<Type> Pack(::flatbuffers::FlatBufferBuilder &_fbb, const TypeT* _o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 };
 
 struct TypeBuilder {
   typedef Type Table;
-  flatbuffers::FlatBufferBuilder &fbb_;
-  flatbuffers::uoffset_t start_;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
   void add_base_type(reflection::BaseType base_type) {
     fbb_.AddElement<int8_t>(Type::VT_BASE_TYPE, static_cast<int8_t>(base_type), 0);
   }
@@ -361,19 +375,19 @@ struct TypeBuilder {
   void add_element_size(uint32_t element_size) {
     fbb_.AddElement<uint32_t>(Type::VT_ELEMENT_SIZE, element_size, 0);
   }
-  explicit TypeBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+  explicit TypeBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  flatbuffers::Offset<Type> Finish() {
+  ::flatbuffers::Offset<Type> Finish() {
     const auto end = fbb_.EndTable(start_);
-    auto o = flatbuffers::Offset<Type>(end);
+    auto o = ::flatbuffers::Offset<Type>(end);
     return o;
   }
 };
 
-inline flatbuffers::Offset<Type> CreateType(
-    flatbuffers::FlatBufferBuilder &_fbb,
+inline ::flatbuffers::Offset<Type> CreateType(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
     reflection::BaseType base_type = reflection::BaseType::None,
     reflection::BaseType element = reflection::BaseType::None,
     int32_t index = -1,
@@ -395,9 +409,9 @@ struct Type::Traits {
   static auto constexpr Create = CreateType;
 };
 
-flatbuffers::Offset<Type> CreateType(flatbuffers::FlatBufferBuilder &_fbb, const TypeT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+::flatbuffers::Offset<Type> CreateType(::flatbuffers::FlatBufferBuilder &_fbb, const TypeT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
-struct KeyValueT : public flatbuffers::NativeTable {
+struct KeyValueT : public ::flatbuffers::NativeTable {
   typedef KeyValue TableType;
   static FLATBUFFERS_CONSTEXPR_CPP11 const char *GetFullyQualifiedName() {
     return "reflection.KeyValueT";
@@ -406,11 +420,11 @@ struct KeyValueT : public flatbuffers::NativeTable {
   std::string value{};
 };
 
-struct KeyValue FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+struct KeyValue FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef KeyValueT NativeTableType;
   typedef KeyValueBuilder Builder;
   struct Traits;
-  static const flatbuffers::TypeTable *MiniReflectTypeTable() {
+  static const ::flatbuffers::TypeTable *MiniReflectTypeTable() {
     return KeyValueTypeTable();
   }
   static FLATBUFFERS_CONSTEXPR_CPP11 const char *GetFullyQualifiedName() {
@@ -420,11 +434,11 @@ struct KeyValue FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_KEY = 4,
     VT_VALUE = 6
   };
-  const flatbuffers::String *key() const {
-    return GetPointer<const flatbuffers::String *>(VT_KEY);
+  const ::flatbuffers::String *key() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_KEY);
   }
-  flatbuffers::String *mutable_key() {
-    return GetPointer<flatbuffers::String *>(VT_KEY);
+  ::flatbuffers::String *mutable_key() {
+    return GetPointer<::flatbuffers::String *>(VT_KEY);
   }
   void clear_key() {
     ClearField(VT_KEY);
@@ -432,17 +446,23 @@ struct KeyValue FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_key() const {
     return CheckField(VT_KEY);
   }
-  bool KeyCompareLessThan(const KeyValue *o) const {
+  bool KeyCompareLessThan(const KeyValue * const o) const {
     return *key() < *o->key();
   }
   int KeyCompareWithValue(const char *_key) const {
     return strcmp(key()->c_str(), _key);
   }
-  const flatbuffers::String *value() const {
-    return GetPointer<const flatbuffers::String *>(VT_VALUE);
+  template<typename StringType>
+  int KeyCompareWithValue(const StringType& _key) const {
+    if (key()->c_str() < _key) return -1;
+    if (_key < key()->c_str()) return 1;
+    return 0;
   }
-  flatbuffers::String *mutable_value() {
-    return GetPointer<flatbuffers::String *>(VT_VALUE);
+  const ::flatbuffers::String *value() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_VALUE);
+  }
+  ::flatbuffers::String *mutable_value() {
+    return GetPointer<::flatbuffers::String *>(VT_VALUE);
   }
   void clear_value() {
     ClearField(VT_VALUE);
@@ -450,7 +470,7 @@ struct KeyValue FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_value() const {
     return CheckField(VT_VALUE);
   }
-  bool Verify(flatbuffers::Verifier &verifier) const {
+  bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyOffsetRequired(verifier, VT_KEY) &&
            verifier.VerifyString(key()) &&
@@ -458,37 +478,37 @@ struct KeyValue FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.VerifyString(value()) &&
            verifier.EndTable();
   }
-  KeyValueT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
-  void UnPackTo(KeyValueT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
-  static flatbuffers::Offset<KeyValue> Pack(flatbuffers::FlatBufferBuilder &_fbb, const KeyValueT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+  KeyValueT *UnPack(const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(KeyValueT *_o, const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static ::flatbuffers::Offset<KeyValue> Pack(::flatbuffers::FlatBufferBuilder &_fbb, const KeyValueT* _o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 };
 
 struct KeyValueBuilder {
   typedef KeyValue Table;
-  flatbuffers::FlatBufferBuilder &fbb_;
-  flatbuffers::uoffset_t start_;
-  void add_key(flatbuffers::Offset<flatbuffers::String> key) {
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_key(::flatbuffers::Offset<::flatbuffers::String> key) {
     fbb_.AddOffset(KeyValue::VT_KEY, key);
   }
-  void add_value(flatbuffers::Offset<flatbuffers::String> value) {
+  void add_value(::flatbuffers::Offset<::flatbuffers::String> value) {
     fbb_.AddOffset(KeyValue::VT_VALUE, value);
   }
-  explicit KeyValueBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+  explicit KeyValueBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  flatbuffers::Offset<KeyValue> Finish() {
+  ::flatbuffers::Offset<KeyValue> Finish() {
     const auto end = fbb_.EndTable(start_);
-    auto o = flatbuffers::Offset<KeyValue>(end);
+    auto o = ::flatbuffers::Offset<KeyValue>(end);
     fbb_.Required(o, KeyValue::VT_KEY);
     return o;
   }
 };
 
-inline flatbuffers::Offset<KeyValue> CreateKeyValue(
-    flatbuffers::FlatBufferBuilder &_fbb,
-    flatbuffers::Offset<flatbuffers::String> key = 0,
-    flatbuffers::Offset<flatbuffers::String> value = 0) {
+inline ::flatbuffers::Offset<KeyValue> CreateKeyValue(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    ::flatbuffers::Offset<::flatbuffers::String> key = 0,
+    ::flatbuffers::Offset<::flatbuffers::String> value = 0) {
   KeyValueBuilder builder_(_fbb);
   builder_.add_value(value);
   builder_.add_key(key);
@@ -500,8 +520,8 @@ struct KeyValue::Traits {
   static auto constexpr Create = CreateKeyValue;
 };
 
-inline flatbuffers::Offset<KeyValue> CreateKeyValueDirect(
-    flatbuffers::FlatBufferBuilder &_fbb,
+inline ::flatbuffers::Offset<KeyValue> CreateKeyValueDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
     const char *key = nullptr,
     const char *value = nullptr) {
   auto key__ = key ? _fbb.CreateString(key) : 0;
@@ -512,9 +532,9 @@ inline flatbuffers::Offset<KeyValue> CreateKeyValueDirect(
       value__);
 }
 
-flatbuffers::Offset<KeyValue> CreateKeyValue(flatbuffers::FlatBufferBuilder &_fbb, const KeyValueT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+::flatbuffers::Offset<KeyValue> CreateKeyValue(::flatbuffers::FlatBufferBuilder &_fbb, const KeyValueT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
-struct EnumValT : public flatbuffers::NativeTable {
+struct EnumValT : public ::flatbuffers::NativeTable {
   typedef EnumVal TableType;
   static FLATBUFFERS_CONSTEXPR_CPP11 const char *GetFullyQualifiedName() {
     return "reflection.EnumValT";
@@ -530,11 +550,11 @@ struct EnumValT : public flatbuffers::NativeTable {
   EnumValT &operator=(EnumValT o) FLATBUFFERS_NOEXCEPT;
 };
 
-struct EnumVal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+struct EnumVal FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef EnumValT NativeTableType;
   typedef EnumValBuilder Builder;
   struct Traits;
-  static const flatbuffers::TypeTable *MiniReflectTypeTable() {
+  static const ::flatbuffers::TypeTable *MiniReflectTypeTable() {
     return EnumValTypeTable();
   }
   static FLATBUFFERS_CONSTEXPR_CPP11 const char *GetFullyQualifiedName() {
@@ -547,11 +567,11 @@ struct EnumVal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_DOCUMENTATION = 12,
     VT_ATTRIBUTES = 14
   };
-  const flatbuffers::String *name() const {
-    return GetPointer<const flatbuffers::String *>(VT_NAME);
+  const ::flatbuffers::String *name() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_NAME);
   }
-  flatbuffers::String *mutable_name() {
-    return GetPointer<flatbuffers::String *>(VT_NAME);
+  ::flatbuffers::String *mutable_name() {
+    return GetPointer<::flatbuffers::String *>(VT_NAME);
   }
   void clear_name() {
     ClearField(VT_NAME);
@@ -571,7 +591,7 @@ struct EnumVal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_value() const {
     return CheckField(VT_VALUE);
   }
-  bool KeyCompareLessThan(const EnumVal *o) const {
+  bool KeyCompareLessThan(const EnumVal * const o) const {
     return value() < o->value();
   }
   int KeyCompareWithValue(int64_t _value) const {
@@ -589,11 +609,11 @@ struct EnumVal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_union_type() const {
     return CheckField(VT_UNION_TYPE);
   }
-  const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *documentation() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_DOCUMENTATION);
+  const ::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *documentation() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *>(VT_DOCUMENTATION);
   }
-  flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *mutable_documentation() {
-    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_DOCUMENTATION);
+  ::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *mutable_documentation() {
+    return GetPointer<::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *>(VT_DOCUMENTATION);
   }
   void clear_documentation() {
     ClearField(VT_DOCUMENTATION);
@@ -601,11 +621,11 @@ struct EnumVal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_documentation() const {
     return CheckField(VT_DOCUMENTATION);
   }
-  const flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>> *attributes() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>> *>(VT_ATTRIBUTES);
+  const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>> *attributes() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>> *>(VT_ATTRIBUTES);
   }
-  flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>> *mutable_attributes() {
-    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>> *>(VT_ATTRIBUTES);
+  ::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>> *mutable_attributes() {
+    return GetPointer<::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>> *>(VT_ATTRIBUTES);
   }
   void clear_attributes() {
     ClearField(VT_ATTRIBUTES);
@@ -613,7 +633,7 @@ struct EnumVal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_attributes() const {
     return CheckField(VT_ATTRIBUTES);
   }
-  bool Verify(flatbuffers::Verifier &verifier) const {
+  bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyOffsetRequired(verifier, VT_NAME) &&
            verifier.VerifyString(name()) &&
@@ -628,49 +648,49 @@ struct EnumVal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.VerifyVectorOfTables(attributes()) &&
            verifier.EndTable();
   }
-  EnumValT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
-  void UnPackTo(EnumValT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
-  static flatbuffers::Offset<EnumVal> Pack(flatbuffers::FlatBufferBuilder &_fbb, const EnumValT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+  EnumValT *UnPack(const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(EnumValT *_o, const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static ::flatbuffers::Offset<EnumVal> Pack(::flatbuffers::FlatBufferBuilder &_fbb, const EnumValT* _o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 };
 
 struct EnumValBuilder {
   typedef EnumVal Table;
-  flatbuffers::FlatBufferBuilder &fbb_;
-  flatbuffers::uoffset_t start_;
-  void add_name(flatbuffers::Offset<flatbuffers::String> name) {
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_name(::flatbuffers::Offset<::flatbuffers::String> name) {
     fbb_.AddOffset(EnumVal::VT_NAME, name);
   }
   void add_value(int64_t value) {
     fbb_.AddElement<int64_t>(EnumVal::VT_VALUE, value, 0);
   }
-  void add_union_type(flatbuffers::Offset<reflection::Type> union_type) {
+  void add_union_type(::flatbuffers::Offset<reflection::Type> union_type) {
     fbb_.AddOffset(EnumVal::VT_UNION_TYPE, union_type);
   }
-  void add_documentation(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> documentation) {
+  void add_documentation(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>>> documentation) {
     fbb_.AddOffset(EnumVal::VT_DOCUMENTATION, documentation);
   }
-  void add_attributes(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>>> attributes) {
+  void add_attributes(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>>> attributes) {
     fbb_.AddOffset(EnumVal::VT_ATTRIBUTES, attributes);
   }
-  explicit EnumValBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+  explicit EnumValBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  flatbuffers::Offset<EnumVal> Finish() {
+  ::flatbuffers::Offset<EnumVal> Finish() {
     const auto end = fbb_.EndTable(start_);
-    auto o = flatbuffers::Offset<EnumVal>(end);
+    auto o = ::flatbuffers::Offset<EnumVal>(end);
     fbb_.Required(o, EnumVal::VT_NAME);
     return o;
   }
 };
 
-inline flatbuffers::Offset<EnumVal> CreateEnumVal(
-    flatbuffers::FlatBufferBuilder &_fbb,
-    flatbuffers::Offset<flatbuffers::String> name = 0,
+inline ::flatbuffers::Offset<EnumVal> CreateEnumVal(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    ::flatbuffers::Offset<::flatbuffers::String> name = 0,
     int64_t value = 0,
-    flatbuffers::Offset<reflection::Type> union_type = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> documentation = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>>> attributes = 0) {
+    ::flatbuffers::Offset<reflection::Type> union_type = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>>> documentation = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>>> attributes = 0) {
   EnumValBuilder builder_(_fbb);
   builder_.add_value(value);
   builder_.add_attributes(attributes);
@@ -685,15 +705,15 @@ struct EnumVal::Traits {
   static auto constexpr Create = CreateEnumVal;
 };
 
-inline flatbuffers::Offset<EnumVal> CreateEnumValDirect(
-    flatbuffers::FlatBufferBuilder &_fbb,
+inline ::flatbuffers::Offset<EnumVal> CreateEnumValDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
     const char *name = nullptr,
     int64_t value = 0,
-    flatbuffers::Offset<reflection::Type> union_type = 0,
-    const std::vector<flatbuffers::Offset<flatbuffers::String>> *documentation = nullptr,
-    std::vector<flatbuffers::Offset<reflection::KeyValue>> *attributes = nullptr) {
+    ::flatbuffers::Offset<reflection::Type> union_type = 0,
+    const std::vector<::flatbuffers::Offset<::flatbuffers::String>> *documentation = nullptr,
+    std::vector<::flatbuffers::Offset<reflection::KeyValue>> *attributes = nullptr) {
   auto name__ = name ? _fbb.CreateString(name) : 0;
-  auto documentation__ = documentation ? _fbb.CreateVector<flatbuffers::Offset<flatbuffers::String>>(*documentation) : 0;
+  auto documentation__ = documentation ? _fbb.CreateVector<::flatbuffers::Offset<::flatbuffers::String>>(*documentation) : 0;
   auto attributes__ = attributes ? _fbb.CreateVectorOfSortedTables<reflection::KeyValue>(attributes) : 0;
   return reflection::CreateEnumVal(
       _fbb,
@@ -704,9 +724,9 @@ inline flatbuffers::Offset<EnumVal> CreateEnumValDirect(
       attributes__);
 }
 
-flatbuffers::Offset<EnumVal> CreateEnumVal(flatbuffers::FlatBufferBuilder &_fbb, const EnumValT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+::flatbuffers::Offset<EnumVal> CreateEnumVal(::flatbuffers::FlatBufferBuilder &_fbb, const EnumValT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
-struct EnumT : public flatbuffers::NativeTable {
+struct EnumT : public ::flatbuffers::NativeTable {
   typedef Enum TableType;
   static FLATBUFFERS_CONSTEXPR_CPP11 const char *GetFullyQualifiedName() {
     return "reflection.EnumT";
@@ -724,11 +744,11 @@ struct EnumT : public flatbuffers::NativeTable {
   EnumT &operator=(EnumT o) FLATBUFFERS_NOEXCEPT;
 };
 
-struct Enum FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+struct Enum FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef EnumT NativeTableType;
   typedef EnumBuilder Builder;
   struct Traits;
-  static const flatbuffers::TypeTable *MiniReflectTypeTable() {
+  static const ::flatbuffers::TypeTable *MiniReflectTypeTable() {
     return EnumTypeTable();
   }
   static FLATBUFFERS_CONSTEXPR_CPP11 const char *GetFullyQualifiedName() {
@@ -743,11 +763,11 @@ struct Enum FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_DOCUMENTATION = 14,
     VT_DECLARATION_FILE = 16
   };
-  const flatbuffers::String *name() const {
-    return GetPointer<const flatbuffers::String *>(VT_NAME);
+  const ::flatbuffers::String *name() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_NAME);
   }
-  flatbuffers::String *mutable_name() {
-    return GetPointer<flatbuffers::String *>(VT_NAME);
+  ::flatbuffers::String *mutable_name() {
+    return GetPointer<::flatbuffers::String *>(VT_NAME);
   }
   void clear_name() {
     ClearField(VT_NAME);
@@ -755,17 +775,23 @@ struct Enum FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_name() const {
     return CheckField(VT_NAME);
   }
-  bool KeyCompareLessThan(const Enum *o) const {
+  bool KeyCompareLessThan(const Enum * const o) const {
     return *name() < *o->name();
   }
   int KeyCompareWithValue(const char *_name) const {
     return strcmp(name()->c_str(), _name);
   }
-  const flatbuffers::Vector<flatbuffers::Offset<reflection::EnumVal>> *values() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<reflection::EnumVal>> *>(VT_VALUES);
+  template<typename StringType>
+  int KeyCompareWithValue(const StringType& _name) const {
+    if (name()->c_str() < _name) return -1;
+    if (_name < name()->c_str()) return 1;
+    return 0;
   }
-  flatbuffers::Vector<flatbuffers::Offset<reflection::EnumVal>> *mutable_values() {
-    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<reflection::EnumVal>> *>(VT_VALUES);
+  const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::EnumVal>> *values() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::EnumVal>> *>(VT_VALUES);
+  }
+  ::flatbuffers::Vector<::flatbuffers::Offset<reflection::EnumVal>> *mutable_values() {
+    return GetPointer<::flatbuffers::Vector<::flatbuffers::Offset<reflection::EnumVal>> *>(VT_VALUES);
   }
   void clear_values() {
     ClearField(VT_VALUES);
@@ -797,11 +823,11 @@ struct Enum FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_underlying_type() const {
     return CheckField(VT_UNDERLYING_TYPE);
   }
-  const flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>> *attributes() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>> *>(VT_ATTRIBUTES);
+  const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>> *attributes() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>> *>(VT_ATTRIBUTES);
   }
-  flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>> *mutable_attributes() {
-    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>> *>(VT_ATTRIBUTES);
+  ::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>> *mutable_attributes() {
+    return GetPointer<::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>> *>(VT_ATTRIBUTES);
   }
   void clear_attributes() {
     ClearField(VT_ATTRIBUTES);
@@ -809,11 +835,11 @@ struct Enum FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_attributes() const {
     return CheckField(VT_ATTRIBUTES);
   }
-  const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *documentation() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_DOCUMENTATION);
+  const ::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *documentation() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *>(VT_DOCUMENTATION);
   }
-  flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *mutable_documentation() {
-    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_DOCUMENTATION);
+  ::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *mutable_documentation() {
+    return GetPointer<::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *>(VT_DOCUMENTATION);
   }
   void clear_documentation() {
     ClearField(VT_DOCUMENTATION);
@@ -822,11 +848,11 @@ struct Enum FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     return CheckField(VT_DOCUMENTATION);
   }
   /// File that this Enum is declared in.
-  const flatbuffers::String *declaration_file() const {
-    return GetPointer<const flatbuffers::String *>(VT_DECLARATION_FILE);
+  const ::flatbuffers::String *declaration_file() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_DECLARATION_FILE);
   }
-  flatbuffers::String *mutable_declaration_file() {
-    return GetPointer<flatbuffers::String *>(VT_DECLARATION_FILE);
+  ::flatbuffers::String *mutable_declaration_file() {
+    return GetPointer<::flatbuffers::String *>(VT_DECLARATION_FILE);
   }
   void clear_declaration_file() {
     ClearField(VT_DECLARATION_FILE);
@@ -834,7 +860,7 @@ struct Enum FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_declaration_file() const {
     return CheckField(VT_DECLARATION_FILE);
   }
-  bool Verify(flatbuffers::Verifier &verifier) const {
+  bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyOffsetRequired(verifier, VT_NAME) &&
            verifier.VerifyString(name()) &&
@@ -854,43 +880,43 @@ struct Enum FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.VerifyString(declaration_file()) &&
            verifier.EndTable();
   }
-  EnumT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
-  void UnPackTo(EnumT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
-  static flatbuffers::Offset<Enum> Pack(flatbuffers::FlatBufferBuilder &_fbb, const EnumT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+  EnumT *UnPack(const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(EnumT *_o, const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static ::flatbuffers::Offset<Enum> Pack(::flatbuffers::FlatBufferBuilder &_fbb, const EnumT* _o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 };
 
 struct EnumBuilder {
   typedef Enum Table;
-  flatbuffers::FlatBufferBuilder &fbb_;
-  flatbuffers::uoffset_t start_;
-  void add_name(flatbuffers::Offset<flatbuffers::String> name) {
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_name(::flatbuffers::Offset<::flatbuffers::String> name) {
     fbb_.AddOffset(Enum::VT_NAME, name);
   }
-  void add_values(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::EnumVal>>> values) {
+  void add_values(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::EnumVal>>> values) {
     fbb_.AddOffset(Enum::VT_VALUES, values);
   }
   void add_is_union(bool is_union) {
     fbb_.AddElement<uint8_t>(Enum::VT_IS_UNION, static_cast<uint8_t>(is_union), 0);
   }
-  void add_underlying_type(flatbuffers::Offset<reflection::Type> underlying_type) {
+  void add_underlying_type(::flatbuffers::Offset<reflection::Type> underlying_type) {
     fbb_.AddOffset(Enum::VT_UNDERLYING_TYPE, underlying_type);
   }
-  void add_attributes(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>>> attributes) {
+  void add_attributes(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>>> attributes) {
     fbb_.AddOffset(Enum::VT_ATTRIBUTES, attributes);
   }
-  void add_documentation(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> documentation) {
+  void add_documentation(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>>> documentation) {
     fbb_.AddOffset(Enum::VT_DOCUMENTATION, documentation);
   }
-  void add_declaration_file(flatbuffers::Offset<flatbuffers::String> declaration_file) {
+  void add_declaration_file(::flatbuffers::Offset<::flatbuffers::String> declaration_file) {
     fbb_.AddOffset(Enum::VT_DECLARATION_FILE, declaration_file);
   }
-  explicit EnumBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+  explicit EnumBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  flatbuffers::Offset<Enum> Finish() {
+  ::flatbuffers::Offset<Enum> Finish() {
     const auto end = fbb_.EndTable(start_);
-    auto o = flatbuffers::Offset<Enum>(end);
+    auto o = ::flatbuffers::Offset<Enum>(end);
     fbb_.Required(o, Enum::VT_NAME);
     fbb_.Required(o, Enum::VT_VALUES);
     fbb_.Required(o, Enum::VT_UNDERLYING_TYPE);
@@ -898,15 +924,15 @@ struct EnumBuilder {
   }
 };
 
-inline flatbuffers::Offset<Enum> CreateEnum(
-    flatbuffers::FlatBufferBuilder &_fbb,
-    flatbuffers::Offset<flatbuffers::String> name = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::EnumVal>>> values = 0,
+inline ::flatbuffers::Offset<Enum> CreateEnum(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    ::flatbuffers::Offset<::flatbuffers::String> name = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::EnumVal>>> values = 0,
     bool is_union = false,
-    flatbuffers::Offset<reflection::Type> underlying_type = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>>> attributes = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> documentation = 0,
-    flatbuffers::Offset<flatbuffers::String> declaration_file = 0) {
+    ::flatbuffers::Offset<reflection::Type> underlying_type = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>>> attributes = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>>> documentation = 0,
+    ::flatbuffers::Offset<::flatbuffers::String> declaration_file = 0) {
   EnumBuilder builder_(_fbb);
   builder_.add_declaration_file(declaration_file);
   builder_.add_documentation(documentation);
@@ -923,19 +949,19 @@ struct Enum::Traits {
   static auto constexpr Create = CreateEnum;
 };
 
-inline flatbuffers::Offset<Enum> CreateEnumDirect(
-    flatbuffers::FlatBufferBuilder &_fbb,
+inline ::flatbuffers::Offset<Enum> CreateEnumDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
     const char *name = nullptr,
-    std::vector<flatbuffers::Offset<reflection::EnumVal>> *values = nullptr,
+    std::vector<::flatbuffers::Offset<reflection::EnumVal>> *values = nullptr,
     bool is_union = false,
-    flatbuffers::Offset<reflection::Type> underlying_type = 0,
-    std::vector<flatbuffers::Offset<reflection::KeyValue>> *attributes = nullptr,
-    const std::vector<flatbuffers::Offset<flatbuffers::String>> *documentation = nullptr,
+    ::flatbuffers::Offset<reflection::Type> underlying_type = 0,
+    std::vector<::flatbuffers::Offset<reflection::KeyValue>> *attributes = nullptr,
+    const std::vector<::flatbuffers::Offset<::flatbuffers::String>> *documentation = nullptr,
     const char *declaration_file = nullptr) {
   auto name__ = name ? _fbb.CreateString(name) : 0;
   auto values__ = values ? _fbb.CreateVectorOfSortedTables<reflection::EnumVal>(values) : 0;
   auto attributes__ = attributes ? _fbb.CreateVectorOfSortedTables<reflection::KeyValue>(attributes) : 0;
-  auto documentation__ = documentation ? _fbb.CreateVector<flatbuffers::Offset<flatbuffers::String>>(*documentation) : 0;
+  auto documentation__ = documentation ? _fbb.CreateVector<::flatbuffers::Offset<::flatbuffers::String>>(*documentation) : 0;
   auto declaration_file__ = declaration_file ? _fbb.CreateString(declaration_file) : 0;
   return reflection::CreateEnum(
       _fbb,
@@ -948,9 +974,9 @@ inline flatbuffers::Offset<Enum> CreateEnumDirect(
       declaration_file__);
 }
 
-flatbuffers::Offset<Enum> CreateEnum(flatbuffers::FlatBufferBuilder &_fbb, const EnumT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+::flatbuffers::Offset<Enum> CreateEnum(::flatbuffers::FlatBufferBuilder &_fbb, const EnumT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
-struct FieldT : public flatbuffers::NativeTable {
+struct FieldT : public ::flatbuffers::NativeTable {
   typedef Field TableType;
   static FLATBUFFERS_CONSTEXPR_CPP11 const char *GetFullyQualifiedName() {
     return "reflection.FieldT";
@@ -968,17 +994,18 @@ struct FieldT : public flatbuffers::NativeTable {
   std::vector<std::string> documentation{};
   bool optional = false;
   uint16_t padding = 0;
+  bool offset64 = false;
   FieldT() = default;
   FieldT(const FieldT &o);
   FieldT(FieldT&&) FLATBUFFERS_NOEXCEPT = default;
   FieldT &operator=(FieldT o) FLATBUFFERS_NOEXCEPT;
 };
 
-struct Field FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+struct Field FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef FieldT NativeTableType;
   typedef FieldBuilder Builder;
   struct Traits;
-  static const flatbuffers::TypeTable *MiniReflectTypeTable() {
+  static const ::flatbuffers::TypeTable *MiniReflectTypeTable() {
     return FieldTypeTable();
   }
   static FLATBUFFERS_CONSTEXPR_CPP11 const char *GetFullyQualifiedName() {
@@ -997,13 +1024,14 @@ struct Field FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_ATTRIBUTES = 22,
     VT_DOCUMENTATION = 24,
     VT_OPTIONAL = 26,
-    VT_PADDING = 28
+    VT_PADDING = 28,
+    VT_OFFSET64 = 30
   };
-  const flatbuffers::String *name() const {
-    return GetPointer<const flatbuffers::String *>(VT_NAME);
+  const ::flatbuffers::String *name() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_NAME);
   }
-  flatbuffers::String *mutable_name() {
-    return GetPointer<flatbuffers::String *>(VT_NAME);
+  ::flatbuffers::String *mutable_name() {
+    return GetPointer<::flatbuffers::String *>(VT_NAME);
   }
   void clear_name() {
     ClearField(VT_NAME);
@@ -1011,11 +1039,17 @@ struct Field FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_name() const {
     return CheckField(VT_NAME);
   }
-  bool KeyCompareLessThan(const Field *o) const {
+  bool KeyCompareLessThan(const Field * const o) const {
     return *name() < *o->name();
   }
   int KeyCompareWithValue(const char *_name) const {
     return strcmp(name()->c_str(), _name);
+  }
+  template<typename StringType>
+  int KeyCompareWithValue(const StringType& _name) const {
+    if (name()->c_str() < _name) return -1;
+    if (_name < name()->c_str()) return 1;
+    return 0;
   }
   const reflection::Type *type() const {
     return GetPointer<const reflection::Type *>(VT_TYPE);
@@ -1113,11 +1147,11 @@ struct Field FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_key() const {
     return CheckField(VT_KEY);
   }
-  const flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>> *attributes() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>> *>(VT_ATTRIBUTES);
+  const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>> *attributes() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>> *>(VT_ATTRIBUTES);
   }
-  flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>> *mutable_attributes() {
-    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>> *>(VT_ATTRIBUTES);
+  ::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>> *mutable_attributes() {
+    return GetPointer<::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>> *>(VT_ATTRIBUTES);
   }
   void clear_attributes() {
     ClearField(VT_ATTRIBUTES);
@@ -1125,11 +1159,11 @@ struct Field FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_attributes() const {
     return CheckField(VT_ATTRIBUTES);
   }
-  const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *documentation() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_DOCUMENTATION);
+  const ::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *documentation() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *>(VT_DOCUMENTATION);
   }
-  flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *mutable_documentation() {
-    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_DOCUMENTATION);
+  ::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *mutable_documentation() {
+    return GetPointer<::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *>(VT_DOCUMENTATION);
   }
   void clear_documentation() {
     ClearField(VT_DOCUMENTATION);
@@ -1162,7 +1196,20 @@ struct Field FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_padding() const {
     return CheckField(VT_PADDING);
   }
-  bool Verify(flatbuffers::Verifier &verifier) const {
+  /// If the field uses 64-bit offsets.
+  bool offset64() const {
+    return GetField<uint8_t>(VT_OFFSET64, 0) != 0;
+  }
+  bool mutate_offset64(bool _offset64 = 0) {
+    return SetField<uint8_t>(VT_OFFSET64, static_cast<uint8_t>(_offset64), 0);
+  }
+  void clear_offset64() {
+    ClearField(VT_OFFSET64);
+  }
+  bool has_offset64() const {
+    return CheckField(VT_OFFSET64);
+  }
+  bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyOffsetRequired(verifier, VT_NAME) &&
            verifier.VerifyString(name()) &&
@@ -1183,21 +1230,22 @@ struct Field FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.VerifyVectorOfStrings(documentation()) &&
            VerifyField<uint8_t>(verifier, VT_OPTIONAL, 1) &&
            VerifyField<uint16_t>(verifier, VT_PADDING, 2) &&
+           VerifyField<uint8_t>(verifier, VT_OFFSET64, 1) &&
            verifier.EndTable();
   }
-  FieldT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
-  void UnPackTo(FieldT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
-  static flatbuffers::Offset<Field> Pack(flatbuffers::FlatBufferBuilder &_fbb, const FieldT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+  FieldT *UnPack(const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(FieldT *_o, const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static ::flatbuffers::Offset<Field> Pack(::flatbuffers::FlatBufferBuilder &_fbb, const FieldT* _o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 };
 
 struct FieldBuilder {
   typedef Field Table;
-  flatbuffers::FlatBufferBuilder &fbb_;
-  flatbuffers::uoffset_t start_;
-  void add_name(flatbuffers::Offset<flatbuffers::String> name) {
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_name(::flatbuffers::Offset<::flatbuffers::String> name) {
     fbb_.AddOffset(Field::VT_NAME, name);
   }
-  void add_type(flatbuffers::Offset<reflection::Type> type) {
+  void add_type(::flatbuffers::Offset<reflection::Type> type) {
     fbb_.AddOffset(Field::VT_TYPE, type);
   }
   void add_id(uint16_t id) {
@@ -1221,10 +1269,10 @@ struct FieldBuilder {
   void add_key(bool key) {
     fbb_.AddElement<uint8_t>(Field::VT_KEY, static_cast<uint8_t>(key), 0);
   }
-  void add_attributes(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>>> attributes) {
+  void add_attributes(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>>> attributes) {
     fbb_.AddOffset(Field::VT_ATTRIBUTES, attributes);
   }
-  void add_documentation(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> documentation) {
+  void add_documentation(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>>> documentation) {
     fbb_.AddOffset(Field::VT_DOCUMENTATION, documentation);
   }
   void add_optional(bool optional) {
@@ -1233,23 +1281,26 @@ struct FieldBuilder {
   void add_padding(uint16_t padding) {
     fbb_.AddElement<uint16_t>(Field::VT_PADDING, padding, 0);
   }
-  explicit FieldBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+  void add_offset64(bool offset64) {
+    fbb_.AddElement<uint8_t>(Field::VT_OFFSET64, static_cast<uint8_t>(offset64), 0);
+  }
+  explicit FieldBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  flatbuffers::Offset<Field> Finish() {
+  ::flatbuffers::Offset<Field> Finish() {
     const auto end = fbb_.EndTable(start_);
-    auto o = flatbuffers::Offset<Field>(end);
+    auto o = ::flatbuffers::Offset<Field>(end);
     fbb_.Required(o, Field::VT_NAME);
     fbb_.Required(o, Field::VT_TYPE);
     return o;
   }
 };
 
-inline flatbuffers::Offset<Field> CreateField(
-    flatbuffers::FlatBufferBuilder &_fbb,
-    flatbuffers::Offset<flatbuffers::String> name = 0,
-    flatbuffers::Offset<reflection::Type> type = 0,
+inline ::flatbuffers::Offset<Field> CreateField(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    ::flatbuffers::Offset<::flatbuffers::String> name = 0,
+    ::flatbuffers::Offset<reflection::Type> type = 0,
     uint16_t id = 0,
     uint16_t offset = 0,
     int64_t default_integer = 0,
@@ -1257,10 +1308,11 @@ inline flatbuffers::Offset<Field> CreateField(
     bool deprecated = false,
     bool required = false,
     bool key = false,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>>> attributes = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> documentation = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>>> attributes = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>>> documentation = 0,
     bool optional = false,
-    uint16_t padding = 0) {
+    uint16_t padding = 0,
+    bool offset64 = false) {
   FieldBuilder builder_(_fbb);
   builder_.add_default_real(default_real);
   builder_.add_default_integer(default_integer);
@@ -1271,6 +1323,7 @@ inline flatbuffers::Offset<Field> CreateField(
   builder_.add_padding(padding);
   builder_.add_offset(offset);
   builder_.add_id(id);
+  builder_.add_offset64(offset64);
   builder_.add_optional(optional);
   builder_.add_key(key);
   builder_.add_required(required);
@@ -1283,10 +1336,10 @@ struct Field::Traits {
   static auto constexpr Create = CreateField;
 };
 
-inline flatbuffers::Offset<Field> CreateFieldDirect(
-    flatbuffers::FlatBufferBuilder &_fbb,
+inline ::flatbuffers::Offset<Field> CreateFieldDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
     const char *name = nullptr,
-    flatbuffers::Offset<reflection::Type> type = 0,
+    ::flatbuffers::Offset<reflection::Type> type = 0,
     uint16_t id = 0,
     uint16_t offset = 0,
     int64_t default_integer = 0,
@@ -1294,13 +1347,14 @@ inline flatbuffers::Offset<Field> CreateFieldDirect(
     bool deprecated = false,
     bool required = false,
     bool key = false,
-    std::vector<flatbuffers::Offset<reflection::KeyValue>> *attributes = nullptr,
-    const std::vector<flatbuffers::Offset<flatbuffers::String>> *documentation = nullptr,
+    std::vector<::flatbuffers::Offset<reflection::KeyValue>> *attributes = nullptr,
+    const std::vector<::flatbuffers::Offset<::flatbuffers::String>> *documentation = nullptr,
     bool optional = false,
-    uint16_t padding = 0) {
+    uint16_t padding = 0,
+    bool offset64 = false) {
   auto name__ = name ? _fbb.CreateString(name) : 0;
   auto attributes__ = attributes ? _fbb.CreateVectorOfSortedTables<reflection::KeyValue>(attributes) : 0;
-  auto documentation__ = documentation ? _fbb.CreateVector<flatbuffers::Offset<flatbuffers::String>>(*documentation) : 0;
+  auto documentation__ = documentation ? _fbb.CreateVector<::flatbuffers::Offset<::flatbuffers::String>>(*documentation) : 0;
   return reflection::CreateField(
       _fbb,
       name__,
@@ -1315,12 +1369,13 @@ inline flatbuffers::Offset<Field> CreateFieldDirect(
       attributes__,
       documentation__,
       optional,
-      padding);
+      padding,
+      offset64);
 }
 
-flatbuffers::Offset<Field> CreateField(flatbuffers::FlatBufferBuilder &_fbb, const FieldT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+::flatbuffers::Offset<Field> CreateField(::flatbuffers::FlatBufferBuilder &_fbb, const FieldT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
-struct ObjectT : public flatbuffers::NativeTable {
+struct ObjectT : public ::flatbuffers::NativeTable {
   typedef Object TableType;
   static FLATBUFFERS_CONSTEXPR_CPP11 const char *GetFullyQualifiedName() {
     return "reflection.ObjectT";
@@ -1339,11 +1394,11 @@ struct ObjectT : public flatbuffers::NativeTable {
   ObjectT &operator=(ObjectT o) FLATBUFFERS_NOEXCEPT;
 };
 
-struct Object FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+struct Object FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef ObjectT NativeTableType;
   typedef ObjectBuilder Builder;
   struct Traits;
-  static const flatbuffers::TypeTable *MiniReflectTypeTable() {
+  static const ::flatbuffers::TypeTable *MiniReflectTypeTable() {
     return ObjectTypeTable();
   }
   static FLATBUFFERS_CONSTEXPR_CPP11 const char *GetFullyQualifiedName() {
@@ -1359,11 +1414,11 @@ struct Object FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_DOCUMENTATION = 16,
     VT_DECLARATION_FILE = 18
   };
-  const flatbuffers::String *name() const {
-    return GetPointer<const flatbuffers::String *>(VT_NAME);
+  const ::flatbuffers::String *name() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_NAME);
   }
-  flatbuffers::String *mutable_name() {
-    return GetPointer<flatbuffers::String *>(VT_NAME);
+  ::flatbuffers::String *mutable_name() {
+    return GetPointer<::flatbuffers::String *>(VT_NAME);
   }
   void clear_name() {
     ClearField(VT_NAME);
@@ -1371,17 +1426,23 @@ struct Object FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_name() const {
     return CheckField(VT_NAME);
   }
-  bool KeyCompareLessThan(const Object *o) const {
+  bool KeyCompareLessThan(const Object * const o) const {
     return *name() < *o->name();
   }
   int KeyCompareWithValue(const char *_name) const {
     return strcmp(name()->c_str(), _name);
   }
-  const flatbuffers::Vector<flatbuffers::Offset<reflection::Field>> *fields() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<reflection::Field>> *>(VT_FIELDS);
+  template<typename StringType>
+  int KeyCompareWithValue(const StringType& _name) const {
+    if (name()->c_str() < _name) return -1;
+    if (_name < name()->c_str()) return 1;
+    return 0;
   }
-  flatbuffers::Vector<flatbuffers::Offset<reflection::Field>> *mutable_fields() {
-    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<reflection::Field>> *>(VT_FIELDS);
+  const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::Field>> *fields() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::Field>> *>(VT_FIELDS);
+  }
+  ::flatbuffers::Vector<::flatbuffers::Offset<reflection::Field>> *mutable_fields() {
+    return GetPointer<::flatbuffers::Vector<::flatbuffers::Offset<reflection::Field>> *>(VT_FIELDS);
   }
   void clear_fields() {
     ClearField(VT_FIELDS);
@@ -1425,11 +1486,11 @@ struct Object FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_bytesize() const {
     return CheckField(VT_BYTESIZE);
   }
-  const flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>> *attributes() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>> *>(VT_ATTRIBUTES);
+  const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>> *attributes() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>> *>(VT_ATTRIBUTES);
   }
-  flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>> *mutable_attributes() {
-    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>> *>(VT_ATTRIBUTES);
+  ::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>> *mutable_attributes() {
+    return GetPointer<::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>> *>(VT_ATTRIBUTES);
   }
   void clear_attributes() {
     ClearField(VT_ATTRIBUTES);
@@ -1437,11 +1498,11 @@ struct Object FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_attributes() const {
     return CheckField(VT_ATTRIBUTES);
   }
-  const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *documentation() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_DOCUMENTATION);
+  const ::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *documentation() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *>(VT_DOCUMENTATION);
   }
-  flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *mutable_documentation() {
-    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_DOCUMENTATION);
+  ::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *mutable_documentation() {
+    return GetPointer<::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *>(VT_DOCUMENTATION);
   }
   void clear_documentation() {
     ClearField(VT_DOCUMENTATION);
@@ -1450,11 +1511,11 @@ struct Object FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     return CheckField(VT_DOCUMENTATION);
   }
   /// File that this Object is declared in.
-  const flatbuffers::String *declaration_file() const {
-    return GetPointer<const flatbuffers::String *>(VT_DECLARATION_FILE);
+  const ::flatbuffers::String *declaration_file() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_DECLARATION_FILE);
   }
-  flatbuffers::String *mutable_declaration_file() {
-    return GetPointer<flatbuffers::String *>(VT_DECLARATION_FILE);
+  ::flatbuffers::String *mutable_declaration_file() {
+    return GetPointer<::flatbuffers::String *>(VT_DECLARATION_FILE);
   }
   void clear_declaration_file() {
     ClearField(VT_DECLARATION_FILE);
@@ -1462,7 +1523,7 @@ struct Object FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_declaration_file() const {
     return CheckField(VT_DECLARATION_FILE);
   }
-  bool Verify(flatbuffers::Verifier &verifier) const {
+  bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyOffsetRequired(verifier, VT_NAME) &&
            verifier.VerifyString(name()) &&
@@ -1482,19 +1543,19 @@ struct Object FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.VerifyString(declaration_file()) &&
            verifier.EndTable();
   }
-  ObjectT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
-  void UnPackTo(ObjectT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
-  static flatbuffers::Offset<Object> Pack(flatbuffers::FlatBufferBuilder &_fbb, const ObjectT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+  ObjectT *UnPack(const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(ObjectT *_o, const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static ::flatbuffers::Offset<Object> Pack(::flatbuffers::FlatBufferBuilder &_fbb, const ObjectT* _o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 };
 
 struct ObjectBuilder {
   typedef Object Table;
-  flatbuffers::FlatBufferBuilder &fbb_;
-  flatbuffers::uoffset_t start_;
-  void add_name(flatbuffers::Offset<flatbuffers::String> name) {
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_name(::flatbuffers::Offset<::flatbuffers::String> name) {
     fbb_.AddOffset(Object::VT_NAME, name);
   }
-  void add_fields(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::Field>>> fields) {
+  void add_fields(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::Field>>> fields) {
     fbb_.AddOffset(Object::VT_FIELDS, fields);
   }
   void add_is_struct(bool is_struct) {
@@ -1506,38 +1567,38 @@ struct ObjectBuilder {
   void add_bytesize(int32_t bytesize) {
     fbb_.AddElement<int32_t>(Object::VT_BYTESIZE, bytesize, 0);
   }
-  void add_attributes(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>>> attributes) {
+  void add_attributes(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>>> attributes) {
     fbb_.AddOffset(Object::VT_ATTRIBUTES, attributes);
   }
-  void add_documentation(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> documentation) {
+  void add_documentation(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>>> documentation) {
     fbb_.AddOffset(Object::VT_DOCUMENTATION, documentation);
   }
-  void add_declaration_file(flatbuffers::Offset<flatbuffers::String> declaration_file) {
+  void add_declaration_file(::flatbuffers::Offset<::flatbuffers::String> declaration_file) {
     fbb_.AddOffset(Object::VT_DECLARATION_FILE, declaration_file);
   }
-  explicit ObjectBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+  explicit ObjectBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  flatbuffers::Offset<Object> Finish() {
+  ::flatbuffers::Offset<Object> Finish() {
     const auto end = fbb_.EndTable(start_);
-    auto o = flatbuffers::Offset<Object>(end);
+    auto o = ::flatbuffers::Offset<Object>(end);
     fbb_.Required(o, Object::VT_NAME);
     fbb_.Required(o, Object::VT_FIELDS);
     return o;
   }
 };
 
-inline flatbuffers::Offset<Object> CreateObject(
-    flatbuffers::FlatBufferBuilder &_fbb,
-    flatbuffers::Offset<flatbuffers::String> name = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::Field>>> fields = 0,
+inline ::flatbuffers::Offset<Object> CreateObject(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    ::flatbuffers::Offset<::flatbuffers::String> name = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::Field>>> fields = 0,
     bool is_struct = false,
     int32_t minalign = 0,
     int32_t bytesize = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>>> attributes = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> documentation = 0,
-    flatbuffers::Offset<flatbuffers::String> declaration_file = 0) {
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>>> attributes = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>>> documentation = 0,
+    ::flatbuffers::Offset<::flatbuffers::String> declaration_file = 0) {
   ObjectBuilder builder_(_fbb);
   builder_.add_declaration_file(declaration_file);
   builder_.add_documentation(documentation);
@@ -1555,20 +1616,20 @@ struct Object::Traits {
   static auto constexpr Create = CreateObject;
 };
 
-inline flatbuffers::Offset<Object> CreateObjectDirect(
-    flatbuffers::FlatBufferBuilder &_fbb,
+inline ::flatbuffers::Offset<Object> CreateObjectDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
     const char *name = nullptr,
-    std::vector<flatbuffers::Offset<reflection::Field>> *fields = nullptr,
+    std::vector<::flatbuffers::Offset<reflection::Field>> *fields = nullptr,
     bool is_struct = false,
     int32_t minalign = 0,
     int32_t bytesize = 0,
-    std::vector<flatbuffers::Offset<reflection::KeyValue>> *attributes = nullptr,
-    const std::vector<flatbuffers::Offset<flatbuffers::String>> *documentation = nullptr,
+    std::vector<::flatbuffers::Offset<reflection::KeyValue>> *attributes = nullptr,
+    const std::vector<::flatbuffers::Offset<::flatbuffers::String>> *documentation = nullptr,
     const char *declaration_file = nullptr) {
   auto name__ = name ? _fbb.CreateString(name) : 0;
   auto fields__ = fields ? _fbb.CreateVectorOfSortedTables<reflection::Field>(fields) : 0;
   auto attributes__ = attributes ? _fbb.CreateVectorOfSortedTables<reflection::KeyValue>(attributes) : 0;
-  auto documentation__ = documentation ? _fbb.CreateVector<flatbuffers::Offset<flatbuffers::String>>(*documentation) : 0;
+  auto documentation__ = documentation ? _fbb.CreateVector<::flatbuffers::Offset<::flatbuffers::String>>(*documentation) : 0;
   auto declaration_file__ = declaration_file ? _fbb.CreateString(declaration_file) : 0;
   return reflection::CreateObject(
       _fbb,
@@ -1582,9 +1643,9 @@ inline flatbuffers::Offset<Object> CreateObjectDirect(
       declaration_file__);
 }
 
-flatbuffers::Offset<Object> CreateObject(flatbuffers::FlatBufferBuilder &_fbb, const ObjectT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+::flatbuffers::Offset<Object> CreateObject(::flatbuffers::FlatBufferBuilder &_fbb, const ObjectT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
-struct RPCCallT : public flatbuffers::NativeTable {
+struct RPCCallT : public ::flatbuffers::NativeTable {
   typedef RPCCall TableType;
   static FLATBUFFERS_CONSTEXPR_CPP11 const char *GetFullyQualifiedName() {
     return "reflection.RPCCallT";
@@ -1600,11 +1661,11 @@ struct RPCCallT : public flatbuffers::NativeTable {
   RPCCallT &operator=(RPCCallT o) FLATBUFFERS_NOEXCEPT;
 };
 
-struct RPCCall FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+struct RPCCall FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef RPCCallT NativeTableType;
   typedef RPCCallBuilder Builder;
   struct Traits;
-  static const flatbuffers::TypeTable *MiniReflectTypeTable() {
+  static const ::flatbuffers::TypeTable *MiniReflectTypeTable() {
     return RPCCallTypeTable();
   }
   static FLATBUFFERS_CONSTEXPR_CPP11 const char *GetFullyQualifiedName() {
@@ -1617,11 +1678,11 @@ struct RPCCall FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_ATTRIBUTES = 10,
     VT_DOCUMENTATION = 12
   };
-  const flatbuffers::String *name() const {
-    return GetPointer<const flatbuffers::String *>(VT_NAME);
+  const ::flatbuffers::String *name() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_NAME);
   }
-  flatbuffers::String *mutable_name() {
-    return GetPointer<flatbuffers::String *>(VT_NAME);
+  ::flatbuffers::String *mutable_name() {
+    return GetPointer<::flatbuffers::String *>(VT_NAME);
   }
   void clear_name() {
     ClearField(VT_NAME);
@@ -1629,11 +1690,17 @@ struct RPCCall FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_name() const {
     return CheckField(VT_NAME);
   }
-  bool KeyCompareLessThan(const RPCCall *o) const {
+  bool KeyCompareLessThan(const RPCCall * const o) const {
     return *name() < *o->name();
   }
   int KeyCompareWithValue(const char *_name) const {
     return strcmp(name()->c_str(), _name);
+  }
+  template<typename StringType>
+  int KeyCompareWithValue(const StringType& _name) const {
+    if (name()->c_str() < _name) return -1;
+    if (_name < name()->c_str()) return 1;
+    return 0;
   }
   const reflection::Object *request() const {
     return GetPointer<const reflection::Object *>(VT_REQUEST);
@@ -1659,11 +1726,11 @@ struct RPCCall FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_response() const {
     return CheckField(VT_RESPONSE);
   }
-  const flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>> *attributes() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>> *>(VT_ATTRIBUTES);
+  const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>> *attributes() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>> *>(VT_ATTRIBUTES);
   }
-  flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>> *mutable_attributes() {
-    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>> *>(VT_ATTRIBUTES);
+  ::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>> *mutable_attributes() {
+    return GetPointer<::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>> *>(VT_ATTRIBUTES);
   }
   void clear_attributes() {
     ClearField(VT_ATTRIBUTES);
@@ -1671,11 +1738,11 @@ struct RPCCall FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_attributes() const {
     return CheckField(VT_ATTRIBUTES);
   }
-  const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *documentation() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_DOCUMENTATION);
+  const ::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *documentation() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *>(VT_DOCUMENTATION);
   }
-  flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *mutable_documentation() {
-    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_DOCUMENTATION);
+  ::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *mutable_documentation() {
+    return GetPointer<::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *>(VT_DOCUMENTATION);
   }
   void clear_documentation() {
     ClearField(VT_DOCUMENTATION);
@@ -1683,7 +1750,7 @@ struct RPCCall FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_documentation() const {
     return CheckField(VT_DOCUMENTATION);
   }
-  bool Verify(flatbuffers::Verifier &verifier) const {
+  bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyOffsetRequired(verifier, VT_NAME) &&
            verifier.VerifyString(name()) &&
@@ -1699,37 +1766,37 @@ struct RPCCall FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.VerifyVectorOfStrings(documentation()) &&
            verifier.EndTable();
   }
-  RPCCallT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
-  void UnPackTo(RPCCallT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
-  static flatbuffers::Offset<RPCCall> Pack(flatbuffers::FlatBufferBuilder &_fbb, const RPCCallT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+  RPCCallT *UnPack(const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(RPCCallT *_o, const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static ::flatbuffers::Offset<RPCCall> Pack(::flatbuffers::FlatBufferBuilder &_fbb, const RPCCallT* _o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 };
 
 struct RPCCallBuilder {
   typedef RPCCall Table;
-  flatbuffers::FlatBufferBuilder &fbb_;
-  flatbuffers::uoffset_t start_;
-  void add_name(flatbuffers::Offset<flatbuffers::String> name) {
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_name(::flatbuffers::Offset<::flatbuffers::String> name) {
     fbb_.AddOffset(RPCCall::VT_NAME, name);
   }
-  void add_request(flatbuffers::Offset<reflection::Object> request) {
+  void add_request(::flatbuffers::Offset<reflection::Object> request) {
     fbb_.AddOffset(RPCCall::VT_REQUEST, request);
   }
-  void add_response(flatbuffers::Offset<reflection::Object> response) {
+  void add_response(::flatbuffers::Offset<reflection::Object> response) {
     fbb_.AddOffset(RPCCall::VT_RESPONSE, response);
   }
-  void add_attributes(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>>> attributes) {
+  void add_attributes(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>>> attributes) {
     fbb_.AddOffset(RPCCall::VT_ATTRIBUTES, attributes);
   }
-  void add_documentation(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> documentation) {
+  void add_documentation(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>>> documentation) {
     fbb_.AddOffset(RPCCall::VT_DOCUMENTATION, documentation);
   }
-  explicit RPCCallBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+  explicit RPCCallBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  flatbuffers::Offset<RPCCall> Finish() {
+  ::flatbuffers::Offset<RPCCall> Finish() {
     const auto end = fbb_.EndTable(start_);
-    auto o = flatbuffers::Offset<RPCCall>(end);
+    auto o = ::flatbuffers::Offset<RPCCall>(end);
     fbb_.Required(o, RPCCall::VT_NAME);
     fbb_.Required(o, RPCCall::VT_REQUEST);
     fbb_.Required(o, RPCCall::VT_RESPONSE);
@@ -1737,13 +1804,13 @@ struct RPCCallBuilder {
   }
 };
 
-inline flatbuffers::Offset<RPCCall> CreateRPCCall(
-    flatbuffers::FlatBufferBuilder &_fbb,
-    flatbuffers::Offset<flatbuffers::String> name = 0,
-    flatbuffers::Offset<reflection::Object> request = 0,
-    flatbuffers::Offset<reflection::Object> response = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>>> attributes = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> documentation = 0) {
+inline ::flatbuffers::Offset<RPCCall> CreateRPCCall(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    ::flatbuffers::Offset<::flatbuffers::String> name = 0,
+    ::flatbuffers::Offset<reflection::Object> request = 0,
+    ::flatbuffers::Offset<reflection::Object> response = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>>> attributes = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>>> documentation = 0) {
   RPCCallBuilder builder_(_fbb);
   builder_.add_documentation(documentation);
   builder_.add_attributes(attributes);
@@ -1758,16 +1825,16 @@ struct RPCCall::Traits {
   static auto constexpr Create = CreateRPCCall;
 };
 
-inline flatbuffers::Offset<RPCCall> CreateRPCCallDirect(
-    flatbuffers::FlatBufferBuilder &_fbb,
+inline ::flatbuffers::Offset<RPCCall> CreateRPCCallDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
     const char *name = nullptr,
-    flatbuffers::Offset<reflection::Object> request = 0,
-    flatbuffers::Offset<reflection::Object> response = 0,
-    std::vector<flatbuffers::Offset<reflection::KeyValue>> *attributes = nullptr,
-    const std::vector<flatbuffers::Offset<flatbuffers::String>> *documentation = nullptr) {
+    ::flatbuffers::Offset<reflection::Object> request = 0,
+    ::flatbuffers::Offset<reflection::Object> response = 0,
+    std::vector<::flatbuffers::Offset<reflection::KeyValue>> *attributes = nullptr,
+    const std::vector<::flatbuffers::Offset<::flatbuffers::String>> *documentation = nullptr) {
   auto name__ = name ? _fbb.CreateString(name) : 0;
   auto attributes__ = attributes ? _fbb.CreateVectorOfSortedTables<reflection::KeyValue>(attributes) : 0;
-  auto documentation__ = documentation ? _fbb.CreateVector<flatbuffers::Offset<flatbuffers::String>>(*documentation) : 0;
+  auto documentation__ = documentation ? _fbb.CreateVector<::flatbuffers::Offset<::flatbuffers::String>>(*documentation) : 0;
   return reflection::CreateRPCCall(
       _fbb,
       name__,
@@ -1777,9 +1844,9 @@ inline flatbuffers::Offset<RPCCall> CreateRPCCallDirect(
       documentation__);
 }
 
-flatbuffers::Offset<RPCCall> CreateRPCCall(flatbuffers::FlatBufferBuilder &_fbb, const RPCCallT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+::flatbuffers::Offset<RPCCall> CreateRPCCall(::flatbuffers::FlatBufferBuilder &_fbb, const RPCCallT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
-struct ServiceT : public flatbuffers::NativeTable {
+struct ServiceT : public ::flatbuffers::NativeTable {
   typedef Service TableType;
   static FLATBUFFERS_CONSTEXPR_CPP11 const char *GetFullyQualifiedName() {
     return "reflection.ServiceT";
@@ -1795,11 +1862,11 @@ struct ServiceT : public flatbuffers::NativeTable {
   ServiceT &operator=(ServiceT o) FLATBUFFERS_NOEXCEPT;
 };
 
-struct Service FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+struct Service FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef ServiceT NativeTableType;
   typedef ServiceBuilder Builder;
   struct Traits;
-  static const flatbuffers::TypeTable *MiniReflectTypeTable() {
+  static const ::flatbuffers::TypeTable *MiniReflectTypeTable() {
     return ServiceTypeTable();
   }
   static FLATBUFFERS_CONSTEXPR_CPP11 const char *GetFullyQualifiedName() {
@@ -1812,11 +1879,11 @@ struct Service FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_DOCUMENTATION = 10,
     VT_DECLARATION_FILE = 12
   };
-  const flatbuffers::String *name() const {
-    return GetPointer<const flatbuffers::String *>(VT_NAME);
+  const ::flatbuffers::String *name() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_NAME);
   }
-  flatbuffers::String *mutable_name() {
-    return GetPointer<flatbuffers::String *>(VT_NAME);
+  ::flatbuffers::String *mutable_name() {
+    return GetPointer<::flatbuffers::String *>(VT_NAME);
   }
   void clear_name() {
     ClearField(VT_NAME);
@@ -1824,17 +1891,23 @@ struct Service FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_name() const {
     return CheckField(VT_NAME);
   }
-  bool KeyCompareLessThan(const Service *o) const {
+  bool KeyCompareLessThan(const Service * const o) const {
     return *name() < *o->name();
   }
   int KeyCompareWithValue(const char *_name) const {
     return strcmp(name()->c_str(), _name);
   }
-  const flatbuffers::Vector<flatbuffers::Offset<reflection::RPCCall>> *calls() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<reflection::RPCCall>> *>(VT_CALLS);
+  template<typename StringType>
+  int KeyCompareWithValue(const StringType& _name) const {
+    if (name()->c_str() < _name) return -1;
+    if (_name < name()->c_str()) return 1;
+    return 0;
   }
-  flatbuffers::Vector<flatbuffers::Offset<reflection::RPCCall>> *mutable_calls() {
-    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<reflection::RPCCall>> *>(VT_CALLS);
+  const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::RPCCall>> *calls() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::RPCCall>> *>(VT_CALLS);
+  }
+  ::flatbuffers::Vector<::flatbuffers::Offset<reflection::RPCCall>> *mutable_calls() {
+    return GetPointer<::flatbuffers::Vector<::flatbuffers::Offset<reflection::RPCCall>> *>(VT_CALLS);
   }
   void clear_calls() {
     ClearField(VT_CALLS);
@@ -1842,11 +1915,11 @@ struct Service FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_calls() const {
     return CheckField(VT_CALLS);
   }
-  const flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>> *attributes() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>> *>(VT_ATTRIBUTES);
+  const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>> *attributes() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>> *>(VT_ATTRIBUTES);
   }
-  flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>> *mutable_attributes() {
-    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>> *>(VT_ATTRIBUTES);
+  ::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>> *mutable_attributes() {
+    return GetPointer<::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>> *>(VT_ATTRIBUTES);
   }
   void clear_attributes() {
     ClearField(VT_ATTRIBUTES);
@@ -1854,11 +1927,11 @@ struct Service FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_attributes() const {
     return CheckField(VT_ATTRIBUTES);
   }
-  const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *documentation() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_DOCUMENTATION);
+  const ::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *documentation() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *>(VT_DOCUMENTATION);
   }
-  flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *mutable_documentation() {
-    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_DOCUMENTATION);
+  ::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *mutable_documentation() {
+    return GetPointer<::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *>(VT_DOCUMENTATION);
   }
   void clear_documentation() {
     ClearField(VT_DOCUMENTATION);
@@ -1867,11 +1940,11 @@ struct Service FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     return CheckField(VT_DOCUMENTATION);
   }
   /// File that this Service is declared in.
-  const flatbuffers::String *declaration_file() const {
-    return GetPointer<const flatbuffers::String *>(VT_DECLARATION_FILE);
+  const ::flatbuffers::String *declaration_file() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_DECLARATION_FILE);
   }
-  flatbuffers::String *mutable_declaration_file() {
-    return GetPointer<flatbuffers::String *>(VT_DECLARATION_FILE);
+  ::flatbuffers::String *mutable_declaration_file() {
+    return GetPointer<::flatbuffers::String *>(VT_DECLARATION_FILE);
   }
   void clear_declaration_file() {
     ClearField(VT_DECLARATION_FILE);
@@ -1879,7 +1952,7 @@ struct Service FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_declaration_file() const {
     return CheckField(VT_DECLARATION_FILE);
   }
-  bool Verify(flatbuffers::Verifier &verifier) const {
+  bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyOffsetRequired(verifier, VT_NAME) &&
            verifier.VerifyString(name()) &&
@@ -1896,49 +1969,49 @@ struct Service FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.VerifyString(declaration_file()) &&
            verifier.EndTable();
   }
-  ServiceT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
-  void UnPackTo(ServiceT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
-  static flatbuffers::Offset<Service> Pack(flatbuffers::FlatBufferBuilder &_fbb, const ServiceT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+  ServiceT *UnPack(const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(ServiceT *_o, const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static ::flatbuffers::Offset<Service> Pack(::flatbuffers::FlatBufferBuilder &_fbb, const ServiceT* _o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 };
 
 struct ServiceBuilder {
   typedef Service Table;
-  flatbuffers::FlatBufferBuilder &fbb_;
-  flatbuffers::uoffset_t start_;
-  void add_name(flatbuffers::Offset<flatbuffers::String> name) {
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_name(::flatbuffers::Offset<::flatbuffers::String> name) {
     fbb_.AddOffset(Service::VT_NAME, name);
   }
-  void add_calls(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::RPCCall>>> calls) {
+  void add_calls(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::RPCCall>>> calls) {
     fbb_.AddOffset(Service::VT_CALLS, calls);
   }
-  void add_attributes(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>>> attributes) {
+  void add_attributes(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>>> attributes) {
     fbb_.AddOffset(Service::VT_ATTRIBUTES, attributes);
   }
-  void add_documentation(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> documentation) {
+  void add_documentation(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>>> documentation) {
     fbb_.AddOffset(Service::VT_DOCUMENTATION, documentation);
   }
-  void add_declaration_file(flatbuffers::Offset<flatbuffers::String> declaration_file) {
+  void add_declaration_file(::flatbuffers::Offset<::flatbuffers::String> declaration_file) {
     fbb_.AddOffset(Service::VT_DECLARATION_FILE, declaration_file);
   }
-  explicit ServiceBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+  explicit ServiceBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  flatbuffers::Offset<Service> Finish() {
+  ::flatbuffers::Offset<Service> Finish() {
     const auto end = fbb_.EndTable(start_);
-    auto o = flatbuffers::Offset<Service>(end);
+    auto o = ::flatbuffers::Offset<Service>(end);
     fbb_.Required(o, Service::VT_NAME);
     return o;
   }
 };
 
-inline flatbuffers::Offset<Service> CreateService(
-    flatbuffers::FlatBufferBuilder &_fbb,
-    flatbuffers::Offset<flatbuffers::String> name = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::RPCCall>>> calls = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::KeyValue>>> attributes = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> documentation = 0,
-    flatbuffers::Offset<flatbuffers::String> declaration_file = 0) {
+inline ::flatbuffers::Offset<Service> CreateService(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    ::flatbuffers::Offset<::flatbuffers::String> name = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::RPCCall>>> calls = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::KeyValue>>> attributes = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>>> documentation = 0,
+    ::flatbuffers::Offset<::flatbuffers::String> declaration_file = 0) {
   ServiceBuilder builder_(_fbb);
   builder_.add_declaration_file(declaration_file);
   builder_.add_documentation(documentation);
@@ -1953,17 +2026,17 @@ struct Service::Traits {
   static auto constexpr Create = CreateService;
 };
 
-inline flatbuffers::Offset<Service> CreateServiceDirect(
-    flatbuffers::FlatBufferBuilder &_fbb,
+inline ::flatbuffers::Offset<Service> CreateServiceDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
     const char *name = nullptr,
-    std::vector<flatbuffers::Offset<reflection::RPCCall>> *calls = nullptr,
-    std::vector<flatbuffers::Offset<reflection::KeyValue>> *attributes = nullptr,
-    const std::vector<flatbuffers::Offset<flatbuffers::String>> *documentation = nullptr,
+    std::vector<::flatbuffers::Offset<reflection::RPCCall>> *calls = nullptr,
+    std::vector<::flatbuffers::Offset<reflection::KeyValue>> *attributes = nullptr,
+    const std::vector<::flatbuffers::Offset<::flatbuffers::String>> *documentation = nullptr,
     const char *declaration_file = nullptr) {
   auto name__ = name ? _fbb.CreateString(name) : 0;
   auto calls__ = calls ? _fbb.CreateVectorOfSortedTables<reflection::RPCCall>(calls) : 0;
   auto attributes__ = attributes ? _fbb.CreateVectorOfSortedTables<reflection::KeyValue>(attributes) : 0;
-  auto documentation__ = documentation ? _fbb.CreateVector<flatbuffers::Offset<flatbuffers::String>>(*documentation) : 0;
+  auto documentation__ = documentation ? _fbb.CreateVector<::flatbuffers::Offset<::flatbuffers::String>>(*documentation) : 0;
   auto declaration_file__ = declaration_file ? _fbb.CreateString(declaration_file) : 0;
   return reflection::CreateService(
       _fbb,
@@ -1974,9 +2047,9 @@ inline flatbuffers::Offset<Service> CreateServiceDirect(
       declaration_file__);
 }
 
-flatbuffers::Offset<Service> CreateService(flatbuffers::FlatBufferBuilder &_fbb, const ServiceT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+::flatbuffers::Offset<Service> CreateService(::flatbuffers::FlatBufferBuilder &_fbb, const ServiceT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
-struct SchemaFileT : public flatbuffers::NativeTable {
+struct SchemaFileT : public ::flatbuffers::NativeTable {
   typedef SchemaFile TableType;
   static FLATBUFFERS_CONSTEXPR_CPP11 const char *GetFullyQualifiedName() {
     return "reflection.SchemaFileT";
@@ -1988,11 +2061,11 @@ struct SchemaFileT : public flatbuffers::NativeTable {
 /// File specific information.
 /// Symbols declared within a file may be recovered by iterating over all
 /// symbols and examining the `declaration_file` field.
-struct SchemaFile FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+struct SchemaFile FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef SchemaFileT NativeTableType;
   typedef SchemaFileBuilder Builder;
   struct Traits;
-  static const flatbuffers::TypeTable *MiniReflectTypeTable() {
+  static const ::flatbuffers::TypeTable *MiniReflectTypeTable() {
     return SchemaFileTypeTable();
   }
   static FLATBUFFERS_CONSTEXPR_CPP11 const char *GetFullyQualifiedName() {
@@ -2003,11 +2076,11 @@ struct SchemaFile FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_INCLUDED_FILENAMES = 6
   };
   /// Filename, relative to project root.
-  const flatbuffers::String *filename() const {
-    return GetPointer<const flatbuffers::String *>(VT_FILENAME);
+  const ::flatbuffers::String *filename() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_FILENAME);
   }
-  flatbuffers::String *mutable_filename() {
-    return GetPointer<flatbuffers::String *>(VT_FILENAME);
+  ::flatbuffers::String *mutable_filename() {
+    return GetPointer<::flatbuffers::String *>(VT_FILENAME);
   }
   void clear_filename() {
     ClearField(VT_FILENAME);
@@ -2015,18 +2088,24 @@ struct SchemaFile FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_filename() const {
     return CheckField(VT_FILENAME);
   }
-  bool KeyCompareLessThan(const SchemaFile *o) const {
+  bool KeyCompareLessThan(const SchemaFile * const o) const {
     return *filename() < *o->filename();
   }
   int KeyCompareWithValue(const char *_filename) const {
     return strcmp(filename()->c_str(), _filename);
   }
-  /// Names of included files, relative to project root.
-  const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *included_filenames() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_INCLUDED_FILENAMES);
+  template<typename StringType>
+  int KeyCompareWithValue(const StringType& _filename) const {
+    if (filename()->c_str() < _filename) return -1;
+    if (_filename < filename()->c_str()) return 1;
+    return 0;
   }
-  flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *mutable_included_filenames() {
-    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_INCLUDED_FILENAMES);
+  /// Names of included files, relative to project root.
+  const ::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *included_filenames() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *>(VT_INCLUDED_FILENAMES);
+  }
+  ::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *mutable_included_filenames() {
+    return GetPointer<::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *>(VT_INCLUDED_FILENAMES);
   }
   void clear_included_filenames() {
     ClearField(VT_INCLUDED_FILENAMES);
@@ -2034,7 +2113,7 @@ struct SchemaFile FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_included_filenames() const {
     return CheckField(VT_INCLUDED_FILENAMES);
   }
-  bool Verify(flatbuffers::Verifier &verifier) const {
+  bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyOffsetRequired(verifier, VT_FILENAME) &&
            verifier.VerifyString(filename()) &&
@@ -2043,37 +2122,37 @@ struct SchemaFile FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.VerifyVectorOfStrings(included_filenames()) &&
            verifier.EndTable();
   }
-  SchemaFileT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
-  void UnPackTo(SchemaFileT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
-  static flatbuffers::Offset<SchemaFile> Pack(flatbuffers::FlatBufferBuilder &_fbb, const SchemaFileT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+  SchemaFileT *UnPack(const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(SchemaFileT *_o, const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static ::flatbuffers::Offset<SchemaFile> Pack(::flatbuffers::FlatBufferBuilder &_fbb, const SchemaFileT* _o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 };
 
 struct SchemaFileBuilder {
   typedef SchemaFile Table;
-  flatbuffers::FlatBufferBuilder &fbb_;
-  flatbuffers::uoffset_t start_;
-  void add_filename(flatbuffers::Offset<flatbuffers::String> filename) {
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_filename(::flatbuffers::Offset<::flatbuffers::String> filename) {
     fbb_.AddOffset(SchemaFile::VT_FILENAME, filename);
   }
-  void add_included_filenames(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> included_filenames) {
+  void add_included_filenames(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>>> included_filenames) {
     fbb_.AddOffset(SchemaFile::VT_INCLUDED_FILENAMES, included_filenames);
   }
-  explicit SchemaFileBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+  explicit SchemaFileBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  flatbuffers::Offset<SchemaFile> Finish() {
+  ::flatbuffers::Offset<SchemaFile> Finish() {
     const auto end = fbb_.EndTable(start_);
-    auto o = flatbuffers::Offset<SchemaFile>(end);
+    auto o = ::flatbuffers::Offset<SchemaFile>(end);
     fbb_.Required(o, SchemaFile::VT_FILENAME);
     return o;
   }
 };
 
-inline flatbuffers::Offset<SchemaFile> CreateSchemaFile(
-    flatbuffers::FlatBufferBuilder &_fbb,
-    flatbuffers::Offset<flatbuffers::String> filename = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> included_filenames = 0) {
+inline ::flatbuffers::Offset<SchemaFile> CreateSchemaFile(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    ::flatbuffers::Offset<::flatbuffers::String> filename = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>>> included_filenames = 0) {
   SchemaFileBuilder builder_(_fbb);
   builder_.add_included_filenames(included_filenames);
   builder_.add_filename(filename);
@@ -2085,21 +2164,21 @@ struct SchemaFile::Traits {
   static auto constexpr Create = CreateSchemaFile;
 };
 
-inline flatbuffers::Offset<SchemaFile> CreateSchemaFileDirect(
-    flatbuffers::FlatBufferBuilder &_fbb,
+inline ::flatbuffers::Offset<SchemaFile> CreateSchemaFileDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
     const char *filename = nullptr,
-    const std::vector<flatbuffers::Offset<flatbuffers::String>> *included_filenames = nullptr) {
+    const std::vector<::flatbuffers::Offset<::flatbuffers::String>> *included_filenames = nullptr) {
   auto filename__ = filename ? _fbb.CreateString(filename) : 0;
-  auto included_filenames__ = included_filenames ? _fbb.CreateVector<flatbuffers::Offset<flatbuffers::String>>(*included_filenames) : 0;
+  auto included_filenames__ = included_filenames ? _fbb.CreateVector<::flatbuffers::Offset<::flatbuffers::String>>(*included_filenames) : 0;
   return reflection::CreateSchemaFile(
       _fbb,
       filename__,
       included_filenames__);
 }
 
-flatbuffers::Offset<SchemaFile> CreateSchemaFile(flatbuffers::FlatBufferBuilder &_fbb, const SchemaFileT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+::flatbuffers::Offset<SchemaFile> CreateSchemaFile(::flatbuffers::FlatBufferBuilder &_fbb, const SchemaFileT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
-struct SchemaT : public flatbuffers::NativeTable {
+struct SchemaT : public ::flatbuffers::NativeTable {
   typedef Schema TableType;
   static FLATBUFFERS_CONSTEXPR_CPP11 const char *GetFullyQualifiedName() {
     return "reflection.SchemaT";
@@ -2118,11 +2197,11 @@ struct SchemaT : public flatbuffers::NativeTable {
   SchemaT &operator=(SchemaT o) FLATBUFFERS_NOEXCEPT;
 };
 
-struct Schema FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+struct Schema FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef SchemaT NativeTableType;
   typedef SchemaBuilder Builder;
   struct Traits;
-  static const flatbuffers::TypeTable *MiniReflectTypeTable() {
+  static const ::flatbuffers::TypeTable *MiniReflectTypeTable() {
     return SchemaTypeTable();
   }
   static FLATBUFFERS_CONSTEXPR_CPP11 const char *GetFullyQualifiedName() {
@@ -2138,11 +2217,11 @@ struct Schema FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_ADVANCED_FEATURES = 16,
     VT_FBS_FILES = 18
   };
-  const flatbuffers::Vector<flatbuffers::Offset<reflection::Object>> *objects() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<reflection::Object>> *>(VT_OBJECTS);
+  const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::Object>> *objects() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::Object>> *>(VT_OBJECTS);
   }
-  flatbuffers::Vector<flatbuffers::Offset<reflection::Object>> *mutable_objects() {
-    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<reflection::Object>> *>(VT_OBJECTS);
+  ::flatbuffers::Vector<::flatbuffers::Offset<reflection::Object>> *mutable_objects() {
+    return GetPointer<::flatbuffers::Vector<::flatbuffers::Offset<reflection::Object>> *>(VT_OBJECTS);
   }
   void clear_objects() {
     ClearField(VT_OBJECTS);
@@ -2150,11 +2229,11 @@ struct Schema FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_objects() const {
     return CheckField(VT_OBJECTS);
   }
-  const flatbuffers::Vector<flatbuffers::Offset<reflection::Enum>> *enums() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<reflection::Enum>> *>(VT_ENUMS);
+  const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::Enum>> *enums() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::Enum>> *>(VT_ENUMS);
   }
-  flatbuffers::Vector<flatbuffers::Offset<reflection::Enum>> *mutable_enums() {
-    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<reflection::Enum>> *>(VT_ENUMS);
+  ::flatbuffers::Vector<::flatbuffers::Offset<reflection::Enum>> *mutable_enums() {
+    return GetPointer<::flatbuffers::Vector<::flatbuffers::Offset<reflection::Enum>> *>(VT_ENUMS);
   }
   void clear_enums() {
     ClearField(VT_ENUMS);
@@ -2162,11 +2241,11 @@ struct Schema FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_enums() const {
     return CheckField(VT_ENUMS);
   }
-  const flatbuffers::String *file_ident() const {
-    return GetPointer<const flatbuffers::String *>(VT_FILE_IDENT);
+  const ::flatbuffers::String *file_ident() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_FILE_IDENT);
   }
-  flatbuffers::String *mutable_file_ident() {
-    return GetPointer<flatbuffers::String *>(VT_FILE_IDENT);
+  ::flatbuffers::String *mutable_file_ident() {
+    return GetPointer<::flatbuffers::String *>(VT_FILE_IDENT);
   }
   void clear_file_ident() {
     ClearField(VT_FILE_IDENT);
@@ -2174,11 +2253,11 @@ struct Schema FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_file_ident() const {
     return CheckField(VT_FILE_IDENT);
   }
-  const flatbuffers::String *file_ext() const {
-    return GetPointer<const flatbuffers::String *>(VT_FILE_EXT);
+  const ::flatbuffers::String *file_ext() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_FILE_EXT);
   }
-  flatbuffers::String *mutable_file_ext() {
-    return GetPointer<flatbuffers::String *>(VT_FILE_EXT);
+  ::flatbuffers::String *mutable_file_ext() {
+    return GetPointer<::flatbuffers::String *>(VT_FILE_EXT);
   }
   void clear_file_ext() {
     ClearField(VT_FILE_EXT);
@@ -2198,11 +2277,11 @@ struct Schema FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_root_table() const {
     return CheckField(VT_ROOT_TABLE);
   }
-  const flatbuffers::Vector<flatbuffers::Offset<reflection::Service>> *services() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<reflection::Service>> *>(VT_SERVICES);
+  const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::Service>> *services() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::Service>> *>(VT_SERVICES);
   }
-  flatbuffers::Vector<flatbuffers::Offset<reflection::Service>> *mutable_services() {
-    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<reflection::Service>> *>(VT_SERVICES);
+  ::flatbuffers::Vector<::flatbuffers::Offset<reflection::Service>> *mutable_services() {
+    return GetPointer<::flatbuffers::Vector<::flatbuffers::Offset<reflection::Service>> *>(VT_SERVICES);
   }
   void clear_services() {
     ClearField(VT_SERVICES);
@@ -2224,11 +2303,11 @@ struct Schema FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   /// All the files used in this compilation. Files are relative to where
   /// flatc was invoked.
-  const flatbuffers::Vector<flatbuffers::Offset<reflection::SchemaFile>> *fbs_files() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<reflection::SchemaFile>> *>(VT_FBS_FILES);
+  const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::SchemaFile>> *fbs_files() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<reflection::SchemaFile>> *>(VT_FBS_FILES);
   }
-  flatbuffers::Vector<flatbuffers::Offset<reflection::SchemaFile>> *mutable_fbs_files() {
-    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<reflection::SchemaFile>> *>(VT_FBS_FILES);
+  ::flatbuffers::Vector<::flatbuffers::Offset<reflection::SchemaFile>> *mutable_fbs_files() {
+    return GetPointer<::flatbuffers::Vector<::flatbuffers::Offset<reflection::SchemaFile>> *>(VT_FBS_FILES);
   }
   void clear_fbs_files() {
     ClearField(VT_FBS_FILES);
@@ -2236,7 +2315,7 @@ struct Schema FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool has_fbs_files() const {
     return CheckField(VT_FBS_FILES);
   }
-  bool Verify(flatbuffers::Verifier &verifier) const {
+  bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyOffsetRequired(verifier, VT_OBJECTS) &&
            verifier.VerifyVector(objects()) &&
@@ -2259,62 +2338,62 @@ struct Schema FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.VerifyVectorOfTables(fbs_files()) &&
            verifier.EndTable();
   }
-  SchemaT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
-  void UnPackTo(SchemaT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
-  static flatbuffers::Offset<Schema> Pack(flatbuffers::FlatBufferBuilder &_fbb, const SchemaT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+  SchemaT *UnPack(const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(SchemaT *_o, const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static ::flatbuffers::Offset<Schema> Pack(::flatbuffers::FlatBufferBuilder &_fbb, const SchemaT* _o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 };
 
 struct SchemaBuilder {
   typedef Schema Table;
-  flatbuffers::FlatBufferBuilder &fbb_;
-  flatbuffers::uoffset_t start_;
-  void add_objects(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::Object>>> objects) {
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_objects(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::Object>>> objects) {
     fbb_.AddOffset(Schema::VT_OBJECTS, objects);
   }
-  void add_enums(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::Enum>>> enums) {
+  void add_enums(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::Enum>>> enums) {
     fbb_.AddOffset(Schema::VT_ENUMS, enums);
   }
-  void add_file_ident(flatbuffers::Offset<flatbuffers::String> file_ident) {
+  void add_file_ident(::flatbuffers::Offset<::flatbuffers::String> file_ident) {
     fbb_.AddOffset(Schema::VT_FILE_IDENT, file_ident);
   }
-  void add_file_ext(flatbuffers::Offset<flatbuffers::String> file_ext) {
+  void add_file_ext(::flatbuffers::Offset<::flatbuffers::String> file_ext) {
     fbb_.AddOffset(Schema::VT_FILE_EXT, file_ext);
   }
-  void add_root_table(flatbuffers::Offset<reflection::Object> root_table) {
+  void add_root_table(::flatbuffers::Offset<reflection::Object> root_table) {
     fbb_.AddOffset(Schema::VT_ROOT_TABLE, root_table);
   }
-  void add_services(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::Service>>> services) {
+  void add_services(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::Service>>> services) {
     fbb_.AddOffset(Schema::VT_SERVICES, services);
   }
   void add_advanced_features(reflection::AdvancedFeatures advanced_features) {
     fbb_.AddElement<uint64_t>(Schema::VT_ADVANCED_FEATURES, static_cast<uint64_t>(advanced_features), 0);
   }
-  void add_fbs_files(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::SchemaFile>>> fbs_files) {
+  void add_fbs_files(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::SchemaFile>>> fbs_files) {
     fbb_.AddOffset(Schema::VT_FBS_FILES, fbs_files);
   }
-  explicit SchemaBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+  explicit SchemaBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  flatbuffers::Offset<Schema> Finish() {
+  ::flatbuffers::Offset<Schema> Finish() {
     const auto end = fbb_.EndTable(start_);
-    auto o = flatbuffers::Offset<Schema>(end);
+    auto o = ::flatbuffers::Offset<Schema>(end);
     fbb_.Required(o, Schema::VT_OBJECTS);
     fbb_.Required(o, Schema::VT_ENUMS);
     return o;
   }
 };
 
-inline flatbuffers::Offset<Schema> CreateSchema(
-    flatbuffers::FlatBufferBuilder &_fbb,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::Object>>> objects = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::Enum>>> enums = 0,
-    flatbuffers::Offset<flatbuffers::String> file_ident = 0,
-    flatbuffers::Offset<flatbuffers::String> file_ext = 0,
-    flatbuffers::Offset<reflection::Object> root_table = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::Service>>> services = 0,
+inline ::flatbuffers::Offset<Schema> CreateSchema(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::Object>>> objects = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::Enum>>> enums = 0,
+    ::flatbuffers::Offset<::flatbuffers::String> file_ident = 0,
+    ::flatbuffers::Offset<::flatbuffers::String> file_ext = 0,
+    ::flatbuffers::Offset<reflection::Object> root_table = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::Service>>> services = 0,
     reflection::AdvancedFeatures advanced_features = static_cast<reflection::AdvancedFeatures>(0),
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<reflection::SchemaFile>>> fbs_files = 0) {
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<reflection::SchemaFile>>> fbs_files = 0) {
   SchemaBuilder builder_(_fbb);
   builder_.add_advanced_features(advanced_features);
   builder_.add_fbs_files(fbs_files);
@@ -2332,16 +2411,16 @@ struct Schema::Traits {
   static auto constexpr Create = CreateSchema;
 };
 
-inline flatbuffers::Offset<Schema> CreateSchemaDirect(
-    flatbuffers::FlatBufferBuilder &_fbb,
-    std::vector<flatbuffers::Offset<reflection::Object>> *objects = nullptr,
-    std::vector<flatbuffers::Offset<reflection::Enum>> *enums = nullptr,
+inline ::flatbuffers::Offset<Schema> CreateSchemaDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    std::vector<::flatbuffers::Offset<reflection::Object>> *objects = nullptr,
+    std::vector<::flatbuffers::Offset<reflection::Enum>> *enums = nullptr,
     const char *file_ident = nullptr,
     const char *file_ext = nullptr,
-    flatbuffers::Offset<reflection::Object> root_table = 0,
-    std::vector<flatbuffers::Offset<reflection::Service>> *services = nullptr,
+    ::flatbuffers::Offset<reflection::Object> root_table = 0,
+    std::vector<::flatbuffers::Offset<reflection::Service>> *services = nullptr,
     reflection::AdvancedFeatures advanced_features = static_cast<reflection::AdvancedFeatures>(0),
-    std::vector<flatbuffers::Offset<reflection::SchemaFile>> *fbs_files = nullptr) {
+    std::vector<::flatbuffers::Offset<reflection::SchemaFile>> *fbs_files = nullptr) {
   auto objects__ = objects ? _fbb.CreateVectorOfSortedTables<reflection::Object>(objects) : 0;
   auto enums__ = enums ? _fbb.CreateVectorOfSortedTables<reflection::Enum>(enums) : 0;
   auto file_ident__ = file_ident ? _fbb.CreateString(file_ident) : 0;
@@ -2360,7 +2439,7 @@ inline flatbuffers::Offset<Schema> CreateSchemaDirect(
       fbs_files__);
 }
 
-flatbuffers::Offset<Schema> CreateSchema(flatbuffers::FlatBufferBuilder &_fbb, const SchemaT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+::flatbuffers::Offset<Schema> CreateSchema(::flatbuffers::FlatBufferBuilder &_fbb, const SchemaT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
 
 inline bool operator==(const TypeT &lhs, const TypeT &rhs) {
@@ -2378,13 +2457,13 @@ inline bool operator!=(const TypeT &lhs, const TypeT &rhs) {
 }
 
 
-inline TypeT *Type::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+inline TypeT *Type::UnPack(const ::flatbuffers::resolver_function_t *_resolver) const {
   auto _o = std::make_unique<TypeT>();
   UnPackTo(_o.get(), _resolver);
   return _o.release();
 }
 
-inline void Type::UnPackTo(TypeT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+inline void Type::UnPackTo(TypeT *_o, const ::flatbuffers::resolver_function_t *_resolver) const {
   (void)_o;
   (void)_resolver;
   { auto _e = base_type(); _o->base_type = _e; }
@@ -2395,14 +2474,14 @@ inline void Type::UnPackTo(TypeT *_o, const flatbuffers::resolver_function_t *_r
   { auto _e = element_size(); _o->element_size = _e; }
 }
 
-inline flatbuffers::Offset<Type> Type::Pack(flatbuffers::FlatBufferBuilder &_fbb, const TypeT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+inline ::flatbuffers::Offset<Type> Type::Pack(::flatbuffers::FlatBufferBuilder &_fbb, const TypeT* _o, const ::flatbuffers::rehasher_function_t *_rehasher) {
   return CreateType(_fbb, _o, _rehasher);
 }
 
-inline flatbuffers::Offset<Type> CreateType(flatbuffers::FlatBufferBuilder &_fbb, const TypeT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+inline ::flatbuffers::Offset<Type> CreateType(::flatbuffers::FlatBufferBuilder &_fbb, const TypeT *_o, const ::flatbuffers::rehasher_function_t *_rehasher) {
   (void)_rehasher;
   (void)_o;
-  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const TypeT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  struct _VectorArgs { ::flatbuffers::FlatBufferBuilder *__fbb; const TypeT* __o; const ::flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
   auto _base_type = _o->base_type;
   auto _element = _o->element;
   auto _index = _o->index;
@@ -2431,27 +2510,27 @@ inline bool operator!=(const KeyValueT &lhs, const KeyValueT &rhs) {
 }
 
 
-inline KeyValueT *KeyValue::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+inline KeyValueT *KeyValue::UnPack(const ::flatbuffers::resolver_function_t *_resolver) const {
   auto _o = std::make_unique<KeyValueT>();
   UnPackTo(_o.get(), _resolver);
   return _o.release();
 }
 
-inline void KeyValue::UnPackTo(KeyValueT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+inline void KeyValue::UnPackTo(KeyValueT *_o, const ::flatbuffers::resolver_function_t *_resolver) const {
   (void)_o;
   (void)_resolver;
   { auto _e = key(); if (_e) _o->key = _e->str(); }
   { auto _e = value(); if (_e) _o->value = _e->str(); }
 }
 
-inline flatbuffers::Offset<KeyValue> KeyValue::Pack(flatbuffers::FlatBufferBuilder &_fbb, const KeyValueT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+inline ::flatbuffers::Offset<KeyValue> KeyValue::Pack(::flatbuffers::FlatBufferBuilder &_fbb, const KeyValueT* _o, const ::flatbuffers::rehasher_function_t *_rehasher) {
   return CreateKeyValue(_fbb, _o, _rehasher);
 }
 
-inline flatbuffers::Offset<KeyValue> CreateKeyValue(flatbuffers::FlatBufferBuilder &_fbb, const KeyValueT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+inline ::flatbuffers::Offset<KeyValue> CreateKeyValue(::flatbuffers::FlatBufferBuilder &_fbb, const KeyValueT *_o, const ::flatbuffers::rehasher_function_t *_rehasher) {
   (void)_rehasher;
   (void)_o;
-  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const KeyValueT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  struct _VectorArgs { ::flatbuffers::FlatBufferBuilder *__fbb; const KeyValueT* __o; const ::flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
   auto _key = _fbb.CreateString(_o->key);
   auto _value = _o->value.empty() ? _fbb.CreateSharedString("") : _fbb.CreateString(_o->value);
   return reflection::CreateKeyValue(
@@ -2493,35 +2572,35 @@ inline EnumValT &EnumValT::operator=(EnumValT o) FLATBUFFERS_NOEXCEPT {
   return *this;
 }
 
-inline EnumValT *EnumVal::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+inline EnumValT *EnumVal::UnPack(const ::flatbuffers::resolver_function_t *_resolver) const {
   auto _o = std::make_unique<EnumValT>();
   UnPackTo(_o.get(), _resolver);
   return _o.release();
 }
 
-inline void EnumVal::UnPackTo(EnumValT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+inline void EnumVal::UnPackTo(EnumValT *_o, const ::flatbuffers::resolver_function_t *_resolver) const {
   (void)_o;
   (void)_resolver;
   { auto _e = name(); if (_e) _o->name = _e->str(); }
   { auto _e = value(); _o->value = _e; }
   { auto _e = union_type(); if (_e) { if(_o->union_type) { _e->UnPackTo(_o->union_type.get(), _resolver); } else { _o->union_type = flatbuffers::unique_ptr<reflection::TypeT>(_e->UnPack(_resolver)); } } else if (_o->union_type) { _o->union_type.reset(); } }
-  { auto _e = documentation(); if (_e) { _o->documentation.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->documentation[_i] = _e->Get(_i)->str(); } } else { _o->documentation.resize(0); } }
-  { auto _e = attributes(); if (_e) { _o->attributes.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->attributes[_i]) { _e->Get(_i)->UnPackTo(_o->attributes[_i].get(), _resolver); } else { _o->attributes[_i] = flatbuffers::unique_ptr<reflection::KeyValueT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->attributes.resize(0); } }
+  { auto _e = documentation(); if (_e) { _o->documentation.resize(_e->size()); for (::flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->documentation[_i] = _e->Get(_i)->str(); } } else { _o->documentation.resize(0); } }
+  { auto _e = attributes(); if (_e) { _o->attributes.resize(_e->size()); for (::flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->attributes[_i]) { _e->Get(_i)->UnPackTo(_o->attributes[_i].get(), _resolver); } else { _o->attributes[_i] = flatbuffers::unique_ptr<reflection::KeyValueT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->attributes.resize(0); } }
 }
 
-inline flatbuffers::Offset<EnumVal> EnumVal::Pack(flatbuffers::FlatBufferBuilder &_fbb, const EnumValT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+inline ::flatbuffers::Offset<EnumVal> EnumVal::Pack(::flatbuffers::FlatBufferBuilder &_fbb, const EnumValT* _o, const ::flatbuffers::rehasher_function_t *_rehasher) {
   return CreateEnumVal(_fbb, _o, _rehasher);
 }
 
-inline flatbuffers::Offset<EnumVal> CreateEnumVal(flatbuffers::FlatBufferBuilder &_fbb, const EnumValT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+inline ::flatbuffers::Offset<EnumVal> CreateEnumVal(::flatbuffers::FlatBufferBuilder &_fbb, const EnumValT *_o, const ::flatbuffers::rehasher_function_t *_rehasher) {
   (void)_rehasher;
   (void)_o;
-  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const EnumValT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  struct _VectorArgs { ::flatbuffers::FlatBufferBuilder *__fbb; const EnumValT* __o; const ::flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
   auto _name = _fbb.CreateString(_o->name);
   auto _value = _o->value;
   auto _union_type = _o->union_type ? CreateType(_fbb, _o->union_type.get(), _rehasher) : 0;
   auto _documentation = _fbb.CreateVectorOfStrings(_o->documentation);
-  auto _attributes = _fbb.CreateVector<flatbuffers::Offset<reflection::KeyValue>> (_o->attributes.size(), [](size_t i, _VectorArgs *__va) { return CreateKeyValue(*__va->__fbb, __va->__o->attributes[i].get(), __va->__rehasher); }, &_va );
+  auto _attributes = _fbb.CreateVector<::flatbuffers::Offset<reflection::KeyValue>> (_o->attributes.size(), [](size_t i, _VectorArgs *__va) { return CreateKeyValue(*__va->__fbb, __va->__o->attributes[i].get(), __va->__rehasher); }, &_va );
   return reflection::CreateEnumVal(
       _fbb,
       _name,
@@ -2571,37 +2650,37 @@ inline EnumT &EnumT::operator=(EnumT o) FLATBUFFERS_NOEXCEPT {
   return *this;
 }
 
-inline EnumT *Enum::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+inline EnumT *Enum::UnPack(const ::flatbuffers::resolver_function_t *_resolver) const {
   auto _o = std::make_unique<EnumT>();
   UnPackTo(_o.get(), _resolver);
   return _o.release();
 }
 
-inline void Enum::UnPackTo(EnumT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+inline void Enum::UnPackTo(EnumT *_o, const ::flatbuffers::resolver_function_t *_resolver) const {
   (void)_o;
   (void)_resolver;
   { auto _e = name(); if (_e) _o->name = _e->str(); }
-  { auto _e = values(); if (_e) { _o->values.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->values[_i]) { _e->Get(_i)->UnPackTo(_o->values[_i].get(), _resolver); } else { _o->values[_i] = flatbuffers::unique_ptr<reflection::EnumValT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->values.resize(0); } }
+  { auto _e = values(); if (_e) { _o->values.resize(_e->size()); for (::flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->values[_i]) { _e->Get(_i)->UnPackTo(_o->values[_i].get(), _resolver); } else { _o->values[_i] = flatbuffers::unique_ptr<reflection::EnumValT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->values.resize(0); } }
   { auto _e = is_union(); _o->is_union = _e; }
   { auto _e = underlying_type(); if (_e) { if(_o->underlying_type) { _e->UnPackTo(_o->underlying_type.get(), _resolver); } else { _o->underlying_type = flatbuffers::unique_ptr<reflection::TypeT>(_e->UnPack(_resolver)); } } else if (_o->underlying_type) { _o->underlying_type.reset(); } }
-  { auto _e = attributes(); if (_e) { _o->attributes.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->attributes[_i]) { _e->Get(_i)->UnPackTo(_o->attributes[_i].get(), _resolver); } else { _o->attributes[_i] = flatbuffers::unique_ptr<reflection::KeyValueT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->attributes.resize(0); } }
-  { auto _e = documentation(); if (_e) { _o->documentation.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->documentation[_i] = _e->Get(_i)->str(); } } else { _o->documentation.resize(0); } }
+  { auto _e = attributes(); if (_e) { _o->attributes.resize(_e->size()); for (::flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->attributes[_i]) { _e->Get(_i)->UnPackTo(_o->attributes[_i].get(), _resolver); } else { _o->attributes[_i] = flatbuffers::unique_ptr<reflection::KeyValueT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->attributes.resize(0); } }
+  { auto _e = documentation(); if (_e) { _o->documentation.resize(_e->size()); for (::flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->documentation[_i] = _e->Get(_i)->str(); } } else { _o->documentation.resize(0); } }
   { auto _e = declaration_file(); if (_e) _o->declaration_file = _e->str(); }
 }
 
-inline flatbuffers::Offset<Enum> Enum::Pack(flatbuffers::FlatBufferBuilder &_fbb, const EnumT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+inline ::flatbuffers::Offset<Enum> Enum::Pack(::flatbuffers::FlatBufferBuilder &_fbb, const EnumT* _o, const ::flatbuffers::rehasher_function_t *_rehasher) {
   return CreateEnum(_fbb, _o, _rehasher);
 }
 
-inline flatbuffers::Offset<Enum> CreateEnum(flatbuffers::FlatBufferBuilder &_fbb, const EnumT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+inline ::flatbuffers::Offset<Enum> CreateEnum(::flatbuffers::FlatBufferBuilder &_fbb, const EnumT *_o, const ::flatbuffers::rehasher_function_t *_rehasher) {
   (void)_rehasher;
   (void)_o;
-  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const EnumT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  struct _VectorArgs { ::flatbuffers::FlatBufferBuilder *__fbb; const EnumT* __o; const ::flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
   auto _name = _fbb.CreateString(_o->name);
-  auto _values = _fbb.CreateVector<flatbuffers::Offset<reflection::EnumVal>> (_o->values.size(), [](size_t i, _VectorArgs *__va) { return CreateEnumVal(*__va->__fbb, __va->__o->values[i].get(), __va->__rehasher); }, &_va );
+  auto _values = _fbb.CreateVector<::flatbuffers::Offset<reflection::EnumVal>> (_o->values.size(), [](size_t i, _VectorArgs *__va) { return CreateEnumVal(*__va->__fbb, __va->__o->values[i].get(), __va->__rehasher); }, &_va );
   auto _is_union = _o->is_union;
   auto _underlying_type = _o->underlying_type ? CreateType(_fbb, _o->underlying_type.get(), _rehasher) : 0;
-  auto _attributes = _fbb.CreateVector<flatbuffers::Offset<reflection::KeyValue>> (_o->attributes.size(), [](size_t i, _VectorArgs *__va) { return CreateKeyValue(*__va->__fbb, __va->__o->attributes[i].get(), __va->__rehasher); }, &_va );
+  auto _attributes = _fbb.CreateVector<::flatbuffers::Offset<reflection::KeyValue>> (_o->attributes.size(), [](size_t i, _VectorArgs *__va) { return CreateKeyValue(*__va->__fbb, __va->__o->attributes[i].get(), __va->__rehasher); }, &_va );
   auto _documentation = _fbb.CreateVectorOfStrings(_o->documentation);
   auto _declaration_file = _o->declaration_file.empty() ? _fbb.CreateSharedString("") : _fbb.CreateString(_o->declaration_file);
   return reflection::CreateEnum(
@@ -2630,7 +2709,8 @@ inline bool operator==(const FieldT &lhs, const FieldT &rhs) {
       (lhs.attributes.size() == rhs.attributes.size() && std::equal(lhs.attributes.cbegin(), lhs.attributes.cend(), rhs.attributes.cbegin(), [](flatbuffers::unique_ptr<reflection::KeyValueT> const &a, flatbuffers::unique_ptr<reflection::KeyValueT> const &b) { return (a == b) || (a && b && *a == *b); })) &&
       (lhs.documentation == rhs.documentation) &&
       (lhs.optional == rhs.optional) &&
-      (lhs.padding == rhs.padding);
+      (lhs.padding == rhs.padding) &&
+      (lhs.offset64 == rhs.offset64);
 }
 
 inline bool operator!=(const FieldT &lhs, const FieldT &rhs) {
@@ -2650,7 +2730,8 @@ inline FieldT::FieldT(const FieldT &o)
         key(o.key),
         documentation(o.documentation),
         optional(o.optional),
-        padding(o.padding) {
+        padding(o.padding),
+        offset64(o.offset64) {
   attributes.reserve(o.attributes.size());
   for (const auto &attributes_ : o.attributes) { attributes.emplace_back((attributes_) ? new reflection::KeyValueT(*attributes_) : nullptr); }
 }
@@ -2669,16 +2750,17 @@ inline FieldT &FieldT::operator=(FieldT o) FLATBUFFERS_NOEXCEPT {
   std::swap(documentation, o.documentation);
   std::swap(optional, o.optional);
   std::swap(padding, o.padding);
+  std::swap(offset64, o.offset64);
   return *this;
 }
 
-inline FieldT *Field::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+inline FieldT *Field::UnPack(const ::flatbuffers::resolver_function_t *_resolver) const {
   auto _o = std::make_unique<FieldT>();
   UnPackTo(_o.get(), _resolver);
   return _o.release();
 }
 
-inline void Field::UnPackTo(FieldT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+inline void Field::UnPackTo(FieldT *_o, const ::flatbuffers::resolver_function_t *_resolver) const {
   (void)_o;
   (void)_resolver;
   { auto _e = name(); if (_e) _o->name = _e->str(); }
@@ -2690,20 +2772,21 @@ inline void Field::UnPackTo(FieldT *_o, const flatbuffers::resolver_function_t *
   { auto _e = deprecated(); _o->deprecated = _e; }
   { auto _e = required(); _o->required = _e; }
   { auto _e = key(); _o->key = _e; }
-  { auto _e = attributes(); if (_e) { _o->attributes.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->attributes[_i]) { _e->Get(_i)->UnPackTo(_o->attributes[_i].get(), _resolver); } else { _o->attributes[_i] = flatbuffers::unique_ptr<reflection::KeyValueT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->attributes.resize(0); } }
-  { auto _e = documentation(); if (_e) { _o->documentation.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->documentation[_i] = _e->Get(_i)->str(); } } else { _o->documentation.resize(0); } }
+  { auto _e = attributes(); if (_e) { _o->attributes.resize(_e->size()); for (::flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->attributes[_i]) { _e->Get(_i)->UnPackTo(_o->attributes[_i].get(), _resolver); } else { _o->attributes[_i] = flatbuffers::unique_ptr<reflection::KeyValueT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->attributes.resize(0); } }
+  { auto _e = documentation(); if (_e) { _o->documentation.resize(_e->size()); for (::flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->documentation[_i] = _e->Get(_i)->str(); } } else { _o->documentation.resize(0); } }
   { auto _e = optional(); _o->optional = _e; }
   { auto _e = padding(); _o->padding = _e; }
+  { auto _e = offset64(); _o->offset64 = _e; }
 }
 
-inline flatbuffers::Offset<Field> Field::Pack(flatbuffers::FlatBufferBuilder &_fbb, const FieldT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+inline ::flatbuffers::Offset<Field> Field::Pack(::flatbuffers::FlatBufferBuilder &_fbb, const FieldT* _o, const ::flatbuffers::rehasher_function_t *_rehasher) {
   return CreateField(_fbb, _o, _rehasher);
 }
 
-inline flatbuffers::Offset<Field> CreateField(flatbuffers::FlatBufferBuilder &_fbb, const FieldT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+inline ::flatbuffers::Offset<Field> CreateField(::flatbuffers::FlatBufferBuilder &_fbb, const FieldT *_o, const ::flatbuffers::rehasher_function_t *_rehasher) {
   (void)_rehasher;
   (void)_o;
-  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const FieldT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  struct _VectorArgs { ::flatbuffers::FlatBufferBuilder *__fbb; const FieldT* __o; const ::flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
   auto _name = _fbb.CreateString(_o->name);
   auto _type = _o->type ? CreateType(_fbb, _o->type.get(), _rehasher) : 0;
   auto _id = _o->id;
@@ -2713,10 +2796,11 @@ inline flatbuffers::Offset<Field> CreateField(flatbuffers::FlatBufferBuilder &_f
   auto _deprecated = _o->deprecated;
   auto _required = _o->required;
   auto _key = _o->key;
-  auto _attributes = _fbb.CreateVector<flatbuffers::Offset<reflection::KeyValue>> (_o->attributes.size(), [](size_t i, _VectorArgs *__va) { return CreateKeyValue(*__va->__fbb, __va->__o->attributes[i].get(), __va->__rehasher); }, &_va );
+  auto _attributes = _fbb.CreateVector<::flatbuffers::Offset<reflection::KeyValue>> (_o->attributes.size(), [](size_t i, _VectorArgs *__va) { return CreateKeyValue(*__va->__fbb, __va->__o->attributes[i].get(), __va->__rehasher); }, &_va );
   auto _documentation = _fbb.CreateVectorOfStrings(_o->documentation);
   auto _optional = _o->optional;
   auto _padding = _o->padding;
+  auto _offset64 = _o->offset64;
   return reflection::CreateField(
       _fbb,
       _name,
@@ -2731,7 +2815,8 @@ inline flatbuffers::Offset<Field> CreateField(flatbuffers::FlatBufferBuilder &_f
       _attributes,
       _documentation,
       _optional,
-      _padding);
+      _padding,
+      _offset64);
 }
 
 
@@ -2777,39 +2862,39 @@ inline ObjectT &ObjectT::operator=(ObjectT o) FLATBUFFERS_NOEXCEPT {
   return *this;
 }
 
-inline ObjectT *Object::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+inline ObjectT *Object::UnPack(const ::flatbuffers::resolver_function_t *_resolver) const {
   auto _o = std::make_unique<ObjectT>();
   UnPackTo(_o.get(), _resolver);
   return _o.release();
 }
 
-inline void Object::UnPackTo(ObjectT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+inline void Object::UnPackTo(ObjectT *_o, const ::flatbuffers::resolver_function_t *_resolver) const {
   (void)_o;
   (void)_resolver;
   { auto _e = name(); if (_e) _o->name = _e->str(); }
-  { auto _e = fields(); if (_e) { _o->fields.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->fields[_i]) { _e->Get(_i)->UnPackTo(_o->fields[_i].get(), _resolver); } else { _o->fields[_i] = flatbuffers::unique_ptr<reflection::FieldT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->fields.resize(0); } }
+  { auto _e = fields(); if (_e) { _o->fields.resize(_e->size()); for (::flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->fields[_i]) { _e->Get(_i)->UnPackTo(_o->fields[_i].get(), _resolver); } else { _o->fields[_i] = flatbuffers::unique_ptr<reflection::FieldT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->fields.resize(0); } }
   { auto _e = is_struct(); _o->is_struct = _e; }
   { auto _e = minalign(); _o->minalign = _e; }
   { auto _e = bytesize(); _o->bytesize = _e; }
-  { auto _e = attributes(); if (_e) { _o->attributes.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->attributes[_i]) { _e->Get(_i)->UnPackTo(_o->attributes[_i].get(), _resolver); } else { _o->attributes[_i] = flatbuffers::unique_ptr<reflection::KeyValueT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->attributes.resize(0); } }
-  { auto _e = documentation(); if (_e) { _o->documentation.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->documentation[_i] = _e->Get(_i)->str(); } } else { _o->documentation.resize(0); } }
+  { auto _e = attributes(); if (_e) { _o->attributes.resize(_e->size()); for (::flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->attributes[_i]) { _e->Get(_i)->UnPackTo(_o->attributes[_i].get(), _resolver); } else { _o->attributes[_i] = flatbuffers::unique_ptr<reflection::KeyValueT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->attributes.resize(0); } }
+  { auto _e = documentation(); if (_e) { _o->documentation.resize(_e->size()); for (::flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->documentation[_i] = _e->Get(_i)->str(); } } else { _o->documentation.resize(0); } }
   { auto _e = declaration_file(); if (_e) _o->declaration_file = _e->str(); }
 }
 
-inline flatbuffers::Offset<Object> Object::Pack(flatbuffers::FlatBufferBuilder &_fbb, const ObjectT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+inline ::flatbuffers::Offset<Object> Object::Pack(::flatbuffers::FlatBufferBuilder &_fbb, const ObjectT* _o, const ::flatbuffers::rehasher_function_t *_rehasher) {
   return CreateObject(_fbb, _o, _rehasher);
 }
 
-inline flatbuffers::Offset<Object> CreateObject(flatbuffers::FlatBufferBuilder &_fbb, const ObjectT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+inline ::flatbuffers::Offset<Object> CreateObject(::flatbuffers::FlatBufferBuilder &_fbb, const ObjectT *_o, const ::flatbuffers::rehasher_function_t *_rehasher) {
   (void)_rehasher;
   (void)_o;
-  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const ObjectT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  struct _VectorArgs { ::flatbuffers::FlatBufferBuilder *__fbb; const ObjectT* __o; const ::flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
   auto _name = _fbb.CreateString(_o->name);
-  auto _fields = _fbb.CreateVector<flatbuffers::Offset<reflection::Field>> (_o->fields.size(), [](size_t i, _VectorArgs *__va) { return CreateField(*__va->__fbb, __va->__o->fields[i].get(), __va->__rehasher); }, &_va );
+  auto _fields = _fbb.CreateVector<::flatbuffers::Offset<reflection::Field>> (_o->fields.size(), [](size_t i, _VectorArgs *__va) { return CreateField(*__va->__fbb, __va->__o->fields[i].get(), __va->__rehasher); }, &_va );
   auto _is_struct = _o->is_struct;
   auto _minalign = _o->minalign;
   auto _bytesize = _o->bytesize;
-  auto _attributes = _fbb.CreateVector<flatbuffers::Offset<reflection::KeyValue>> (_o->attributes.size(), [](size_t i, _VectorArgs *__va) { return CreateKeyValue(*__va->__fbb, __va->__o->attributes[i].get(), __va->__rehasher); }, &_va );
+  auto _attributes = _fbb.CreateVector<::flatbuffers::Offset<reflection::KeyValue>> (_o->attributes.size(), [](size_t i, _VectorArgs *__va) { return CreateKeyValue(*__va->__fbb, __va->__o->attributes[i].get(), __va->__rehasher); }, &_va );
   auto _documentation = _fbb.CreateVectorOfStrings(_o->documentation);
   auto _declaration_file = _o->declaration_file.empty() ? _fbb.CreateSharedString("") : _fbb.CreateString(_o->declaration_file);
   return reflection::CreateObject(
@@ -2857,34 +2942,34 @@ inline RPCCallT &RPCCallT::operator=(RPCCallT o) FLATBUFFERS_NOEXCEPT {
   return *this;
 }
 
-inline RPCCallT *RPCCall::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+inline RPCCallT *RPCCall::UnPack(const ::flatbuffers::resolver_function_t *_resolver) const {
   auto _o = std::make_unique<RPCCallT>();
   UnPackTo(_o.get(), _resolver);
   return _o.release();
 }
 
-inline void RPCCall::UnPackTo(RPCCallT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+inline void RPCCall::UnPackTo(RPCCallT *_o, const ::flatbuffers::resolver_function_t *_resolver) const {
   (void)_o;
   (void)_resolver;
   { auto _e = name(); if (_e) _o->name = _e->str(); }
   { auto _e = request(); if (_e) { if(_o->request) { _e->UnPackTo(_o->request.get(), _resolver); } else { _o->request = flatbuffers::unique_ptr<reflection::ObjectT>(_e->UnPack(_resolver)); } } else if (_o->request) { _o->request.reset(); } }
   { auto _e = response(); if (_e) { if(_o->response) { _e->UnPackTo(_o->response.get(), _resolver); } else { _o->response = flatbuffers::unique_ptr<reflection::ObjectT>(_e->UnPack(_resolver)); } } else if (_o->response) { _o->response.reset(); } }
-  { auto _e = attributes(); if (_e) { _o->attributes.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->attributes[_i]) { _e->Get(_i)->UnPackTo(_o->attributes[_i].get(), _resolver); } else { _o->attributes[_i] = flatbuffers::unique_ptr<reflection::KeyValueT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->attributes.resize(0); } }
-  { auto _e = documentation(); if (_e) { _o->documentation.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->documentation[_i] = _e->Get(_i)->str(); } } else { _o->documentation.resize(0); } }
+  { auto _e = attributes(); if (_e) { _o->attributes.resize(_e->size()); for (::flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->attributes[_i]) { _e->Get(_i)->UnPackTo(_o->attributes[_i].get(), _resolver); } else { _o->attributes[_i] = flatbuffers::unique_ptr<reflection::KeyValueT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->attributes.resize(0); } }
+  { auto _e = documentation(); if (_e) { _o->documentation.resize(_e->size()); for (::flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->documentation[_i] = _e->Get(_i)->str(); } } else { _o->documentation.resize(0); } }
 }
 
-inline flatbuffers::Offset<RPCCall> RPCCall::Pack(flatbuffers::FlatBufferBuilder &_fbb, const RPCCallT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+inline ::flatbuffers::Offset<RPCCall> RPCCall::Pack(::flatbuffers::FlatBufferBuilder &_fbb, const RPCCallT* _o, const ::flatbuffers::rehasher_function_t *_rehasher) {
   return CreateRPCCall(_fbb, _o, _rehasher);
 }
 
-inline flatbuffers::Offset<RPCCall> CreateRPCCall(flatbuffers::FlatBufferBuilder &_fbb, const RPCCallT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+inline ::flatbuffers::Offset<RPCCall> CreateRPCCall(::flatbuffers::FlatBufferBuilder &_fbb, const RPCCallT *_o, const ::flatbuffers::rehasher_function_t *_rehasher) {
   (void)_rehasher;
   (void)_o;
-  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const RPCCallT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  struct _VectorArgs { ::flatbuffers::FlatBufferBuilder *__fbb; const RPCCallT* __o; const ::flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
   auto _name = _fbb.CreateString(_o->name);
   auto _request = _o->request ? CreateObject(_fbb, _o->request.get(), _rehasher) : 0;
   auto _response = _o->response ? CreateObject(_fbb, _o->response.get(), _rehasher) : 0;
-  auto _attributes = _fbb.CreateVector<flatbuffers::Offset<reflection::KeyValue>> (_o->attributes.size(), [](size_t i, _VectorArgs *__va) { return CreateKeyValue(*__va->__fbb, __va->__o->attributes[i].get(), __va->__rehasher); }, &_va );
+  auto _attributes = _fbb.CreateVector<::flatbuffers::Offset<reflection::KeyValue>> (_o->attributes.size(), [](size_t i, _VectorArgs *__va) { return CreateKeyValue(*__va->__fbb, __va->__o->attributes[i].get(), __va->__rehasher); }, &_va );
   auto _documentation = _fbb.CreateVectorOfStrings(_o->documentation);
   return reflection::CreateRPCCall(
       _fbb,
@@ -2929,33 +3014,33 @@ inline ServiceT &ServiceT::operator=(ServiceT o) FLATBUFFERS_NOEXCEPT {
   return *this;
 }
 
-inline ServiceT *Service::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+inline ServiceT *Service::UnPack(const ::flatbuffers::resolver_function_t *_resolver) const {
   auto _o = std::make_unique<ServiceT>();
   UnPackTo(_o.get(), _resolver);
   return _o.release();
 }
 
-inline void Service::UnPackTo(ServiceT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+inline void Service::UnPackTo(ServiceT *_o, const ::flatbuffers::resolver_function_t *_resolver) const {
   (void)_o;
   (void)_resolver;
   { auto _e = name(); if (_e) _o->name = _e->str(); }
-  { auto _e = calls(); if (_e) { _o->calls.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->calls[_i]) { _e->Get(_i)->UnPackTo(_o->calls[_i].get(), _resolver); } else { _o->calls[_i] = flatbuffers::unique_ptr<reflection::RPCCallT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->calls.resize(0); } }
-  { auto _e = attributes(); if (_e) { _o->attributes.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->attributes[_i]) { _e->Get(_i)->UnPackTo(_o->attributes[_i].get(), _resolver); } else { _o->attributes[_i] = flatbuffers::unique_ptr<reflection::KeyValueT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->attributes.resize(0); } }
-  { auto _e = documentation(); if (_e) { _o->documentation.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->documentation[_i] = _e->Get(_i)->str(); } } else { _o->documentation.resize(0); } }
+  { auto _e = calls(); if (_e) { _o->calls.resize(_e->size()); for (::flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->calls[_i]) { _e->Get(_i)->UnPackTo(_o->calls[_i].get(), _resolver); } else { _o->calls[_i] = flatbuffers::unique_ptr<reflection::RPCCallT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->calls.resize(0); } }
+  { auto _e = attributes(); if (_e) { _o->attributes.resize(_e->size()); for (::flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->attributes[_i]) { _e->Get(_i)->UnPackTo(_o->attributes[_i].get(), _resolver); } else { _o->attributes[_i] = flatbuffers::unique_ptr<reflection::KeyValueT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->attributes.resize(0); } }
+  { auto _e = documentation(); if (_e) { _o->documentation.resize(_e->size()); for (::flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->documentation[_i] = _e->Get(_i)->str(); } } else { _o->documentation.resize(0); } }
   { auto _e = declaration_file(); if (_e) _o->declaration_file = _e->str(); }
 }
 
-inline flatbuffers::Offset<Service> Service::Pack(flatbuffers::FlatBufferBuilder &_fbb, const ServiceT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+inline ::flatbuffers::Offset<Service> Service::Pack(::flatbuffers::FlatBufferBuilder &_fbb, const ServiceT* _o, const ::flatbuffers::rehasher_function_t *_rehasher) {
   return CreateService(_fbb, _o, _rehasher);
 }
 
-inline flatbuffers::Offset<Service> CreateService(flatbuffers::FlatBufferBuilder &_fbb, const ServiceT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+inline ::flatbuffers::Offset<Service> CreateService(::flatbuffers::FlatBufferBuilder &_fbb, const ServiceT *_o, const ::flatbuffers::rehasher_function_t *_rehasher) {
   (void)_rehasher;
   (void)_o;
-  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const ServiceT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  struct _VectorArgs { ::flatbuffers::FlatBufferBuilder *__fbb; const ServiceT* __o; const ::flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
   auto _name = _fbb.CreateString(_o->name);
-  auto _calls = _fbb.CreateVector<flatbuffers::Offset<reflection::RPCCall>> (_o->calls.size(), [](size_t i, _VectorArgs *__va) { return CreateRPCCall(*__va->__fbb, __va->__o->calls[i].get(), __va->__rehasher); }, &_va );
-  auto _attributes = _fbb.CreateVector<flatbuffers::Offset<reflection::KeyValue>> (_o->attributes.size(), [](size_t i, _VectorArgs *__va) { return CreateKeyValue(*__va->__fbb, __va->__o->attributes[i].get(), __va->__rehasher); }, &_va );
+  auto _calls = _fbb.CreateVector<::flatbuffers::Offset<reflection::RPCCall>> (_o->calls.size(), [](size_t i, _VectorArgs *__va) { return CreateRPCCall(*__va->__fbb, __va->__o->calls[i].get(), __va->__rehasher); }, &_va );
+  auto _attributes = _fbb.CreateVector<::flatbuffers::Offset<reflection::KeyValue>> (_o->attributes.size(), [](size_t i, _VectorArgs *__va) { return CreateKeyValue(*__va->__fbb, __va->__o->attributes[i].get(), __va->__rehasher); }, &_va );
   auto _documentation = _fbb.CreateVectorOfStrings(_o->documentation);
   auto _declaration_file = _o->declaration_file.empty() ? _fbb.CreateSharedString("") : _fbb.CreateString(_o->declaration_file);
   return reflection::CreateService(
@@ -2979,27 +3064,27 @@ inline bool operator!=(const SchemaFileT &lhs, const SchemaFileT &rhs) {
 }
 
 
-inline SchemaFileT *SchemaFile::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+inline SchemaFileT *SchemaFile::UnPack(const ::flatbuffers::resolver_function_t *_resolver) const {
   auto _o = std::make_unique<SchemaFileT>();
   UnPackTo(_o.get(), _resolver);
   return _o.release();
 }
 
-inline void SchemaFile::UnPackTo(SchemaFileT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+inline void SchemaFile::UnPackTo(SchemaFileT *_o, const ::flatbuffers::resolver_function_t *_resolver) const {
   (void)_o;
   (void)_resolver;
   { auto _e = filename(); if (_e) _o->filename = _e->str(); }
-  { auto _e = included_filenames(); if (_e) { _o->included_filenames.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->included_filenames[_i] = _e->Get(_i)->str(); } } else { _o->included_filenames.resize(0); } }
+  { auto _e = included_filenames(); if (_e) { _o->included_filenames.resize(_e->size()); for (::flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->included_filenames[_i] = _e->Get(_i)->str(); } } else { _o->included_filenames.resize(0); } }
 }
 
-inline flatbuffers::Offset<SchemaFile> SchemaFile::Pack(flatbuffers::FlatBufferBuilder &_fbb, const SchemaFileT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+inline ::flatbuffers::Offset<SchemaFile> SchemaFile::Pack(::flatbuffers::FlatBufferBuilder &_fbb, const SchemaFileT* _o, const ::flatbuffers::rehasher_function_t *_rehasher) {
   return CreateSchemaFile(_fbb, _o, _rehasher);
 }
 
-inline flatbuffers::Offset<SchemaFile> CreateSchemaFile(flatbuffers::FlatBufferBuilder &_fbb, const SchemaFileT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+inline ::flatbuffers::Offset<SchemaFile> CreateSchemaFile(::flatbuffers::FlatBufferBuilder &_fbb, const SchemaFileT *_o, const ::flatbuffers::rehasher_function_t *_rehasher) {
   (void)_rehasher;
   (void)_o;
-  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const SchemaFileT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  struct _VectorArgs { ::flatbuffers::FlatBufferBuilder *__fbb; const SchemaFileT* __o; const ::flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
   auto _filename = _fbb.CreateString(_o->filename);
   auto _included_filenames = _fbb.CreateVectorOfStrings(_o->included_filenames);
   return reflection::CreateSchemaFile(
@@ -3053,41 +3138,41 @@ inline SchemaT &SchemaT::operator=(SchemaT o) FLATBUFFERS_NOEXCEPT {
   return *this;
 }
 
-inline SchemaT *Schema::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+inline SchemaT *Schema::UnPack(const ::flatbuffers::resolver_function_t *_resolver) const {
   auto _o = std::make_unique<SchemaT>();
   UnPackTo(_o.get(), _resolver);
   return _o.release();
 }
 
-inline void Schema::UnPackTo(SchemaT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+inline void Schema::UnPackTo(SchemaT *_o, const ::flatbuffers::resolver_function_t *_resolver) const {
   (void)_o;
   (void)_resolver;
-  { auto _e = objects(); if (_e) { _o->objects.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->objects[_i]) { _e->Get(_i)->UnPackTo(_o->objects[_i].get(), _resolver); } else { _o->objects[_i] = flatbuffers::unique_ptr<reflection::ObjectT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->objects.resize(0); } }
-  { auto _e = enums(); if (_e) { _o->enums.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->enums[_i]) { _e->Get(_i)->UnPackTo(_o->enums[_i].get(), _resolver); } else { _o->enums[_i] = flatbuffers::unique_ptr<reflection::EnumT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->enums.resize(0); } }
+  { auto _e = objects(); if (_e) { _o->objects.resize(_e->size()); for (::flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->objects[_i]) { _e->Get(_i)->UnPackTo(_o->objects[_i].get(), _resolver); } else { _o->objects[_i] = flatbuffers::unique_ptr<reflection::ObjectT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->objects.resize(0); } }
+  { auto _e = enums(); if (_e) { _o->enums.resize(_e->size()); for (::flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->enums[_i]) { _e->Get(_i)->UnPackTo(_o->enums[_i].get(), _resolver); } else { _o->enums[_i] = flatbuffers::unique_ptr<reflection::EnumT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->enums.resize(0); } }
   { auto _e = file_ident(); if (_e) _o->file_ident = _e->str(); }
   { auto _e = file_ext(); if (_e) _o->file_ext = _e->str(); }
   { auto _e = root_table(); if (_e) { if(_o->root_table) { _e->UnPackTo(_o->root_table.get(), _resolver); } else { _o->root_table = flatbuffers::unique_ptr<reflection::ObjectT>(_e->UnPack(_resolver)); } } else if (_o->root_table) { _o->root_table.reset(); } }
-  { auto _e = services(); if (_e) { _o->services.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->services[_i]) { _e->Get(_i)->UnPackTo(_o->services[_i].get(), _resolver); } else { _o->services[_i] = flatbuffers::unique_ptr<reflection::ServiceT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->services.resize(0); } }
+  { auto _e = services(); if (_e) { _o->services.resize(_e->size()); for (::flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->services[_i]) { _e->Get(_i)->UnPackTo(_o->services[_i].get(), _resolver); } else { _o->services[_i] = flatbuffers::unique_ptr<reflection::ServiceT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->services.resize(0); } }
   { auto _e = advanced_features(); _o->advanced_features = _e; }
-  { auto _e = fbs_files(); if (_e) { _o->fbs_files.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->fbs_files[_i]) { _e->Get(_i)->UnPackTo(_o->fbs_files[_i].get(), _resolver); } else { _o->fbs_files[_i] = flatbuffers::unique_ptr<reflection::SchemaFileT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->fbs_files.resize(0); } }
+  { auto _e = fbs_files(); if (_e) { _o->fbs_files.resize(_e->size()); for (::flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->fbs_files[_i]) { _e->Get(_i)->UnPackTo(_o->fbs_files[_i].get(), _resolver); } else { _o->fbs_files[_i] = flatbuffers::unique_ptr<reflection::SchemaFileT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->fbs_files.resize(0); } }
 }
 
-inline flatbuffers::Offset<Schema> Schema::Pack(flatbuffers::FlatBufferBuilder &_fbb, const SchemaT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+inline ::flatbuffers::Offset<Schema> Schema::Pack(::flatbuffers::FlatBufferBuilder &_fbb, const SchemaT* _o, const ::flatbuffers::rehasher_function_t *_rehasher) {
   return CreateSchema(_fbb, _o, _rehasher);
 }
 
-inline flatbuffers::Offset<Schema> CreateSchema(flatbuffers::FlatBufferBuilder &_fbb, const SchemaT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+inline ::flatbuffers::Offset<Schema> CreateSchema(::flatbuffers::FlatBufferBuilder &_fbb, const SchemaT *_o, const ::flatbuffers::rehasher_function_t *_rehasher) {
   (void)_rehasher;
   (void)_o;
-  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const SchemaT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
-  auto _objects = _fbb.CreateVector<flatbuffers::Offset<reflection::Object>> (_o->objects.size(), [](size_t i, _VectorArgs *__va) { return CreateObject(*__va->__fbb, __va->__o->objects[i].get(), __va->__rehasher); }, &_va );
-  auto _enums = _fbb.CreateVector<flatbuffers::Offset<reflection::Enum>> (_o->enums.size(), [](size_t i, _VectorArgs *__va) { return CreateEnum(*__va->__fbb, __va->__o->enums[i].get(), __va->__rehasher); }, &_va );
+  struct _VectorArgs { ::flatbuffers::FlatBufferBuilder *__fbb; const SchemaT* __o; const ::flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _objects = _fbb.CreateVector<::flatbuffers::Offset<reflection::Object>> (_o->objects.size(), [](size_t i, _VectorArgs *__va) { return CreateObject(*__va->__fbb, __va->__o->objects[i].get(), __va->__rehasher); }, &_va );
+  auto _enums = _fbb.CreateVector<::flatbuffers::Offset<reflection::Enum>> (_o->enums.size(), [](size_t i, _VectorArgs *__va) { return CreateEnum(*__va->__fbb, __va->__o->enums[i].get(), __va->__rehasher); }, &_va );
   auto _file_ident = _o->file_ident.empty() ? _fbb.CreateSharedString("") : _fbb.CreateString(_o->file_ident);
   auto _file_ext = _o->file_ext.empty() ? _fbb.CreateSharedString("") : _fbb.CreateString(_o->file_ext);
   auto _root_table = _o->root_table ? CreateObject(_fbb, _o->root_table.get(), _rehasher) : 0;
-  auto _services = _fbb.CreateVector<flatbuffers::Offset<reflection::Service>> (_o->services.size(), [](size_t i, _VectorArgs *__va) { return CreateService(*__va->__fbb, __va->__o->services[i].get(), __va->__rehasher); }, &_va );
+  auto _services = _fbb.CreateVector<::flatbuffers::Offset<reflection::Service>> (_o->services.size(), [](size_t i, _VectorArgs *__va) { return CreateService(*__va->__fbb, __va->__o->services[i].get(), __va->__rehasher); }, &_va );
   auto _advanced_features = _o->advanced_features;
-  auto _fbs_files = _fbb.CreateVector<flatbuffers::Offset<reflection::SchemaFile>> (_o->fbs_files.size(), [](size_t i, _VectorArgs *__va) { return CreateSchemaFile(*__va->__fbb, __va->__o->fbs_files[i].get(), __va->__rehasher); }, &_va );
+  auto _fbs_files = _fbb.CreateVector<::flatbuffers::Offset<reflection::SchemaFile>> (_o->fbs_files.size(), [](size_t i, _VectorArgs *__va) { return CreateSchemaFile(*__va->__fbb, __va->__o->fbs_files[i].get(), __va->__rehasher); }, &_va );
   return reflection::CreateSchema(
       _fbb,
       _objects,
@@ -3100,29 +3185,30 @@ inline flatbuffers::Offset<Schema> CreateSchema(flatbuffers::FlatBufferBuilder &
       _fbs_files);
 }
 
-inline const flatbuffers::TypeTable *BaseTypeTypeTable() {
-  static const flatbuffers::TypeCode type_codes[] = {
-    { flatbuffers::ET_CHAR, 0, 0 },
-    { flatbuffers::ET_CHAR, 0, 0 },
-    { flatbuffers::ET_CHAR, 0, 0 },
-    { flatbuffers::ET_CHAR, 0, 0 },
-    { flatbuffers::ET_CHAR, 0, 0 },
-    { flatbuffers::ET_CHAR, 0, 0 },
-    { flatbuffers::ET_CHAR, 0, 0 },
-    { flatbuffers::ET_CHAR, 0, 0 },
-    { flatbuffers::ET_CHAR, 0, 0 },
-    { flatbuffers::ET_CHAR, 0, 0 },
-    { flatbuffers::ET_CHAR, 0, 0 },
-    { flatbuffers::ET_CHAR, 0, 0 },
-    { flatbuffers::ET_CHAR, 0, 0 },
-    { flatbuffers::ET_CHAR, 0, 0 },
-    { flatbuffers::ET_CHAR, 0, 0 },
-    { flatbuffers::ET_CHAR, 0, 0 },
-    { flatbuffers::ET_CHAR, 0, 0 },
-    { flatbuffers::ET_CHAR, 0, 0 },
-    { flatbuffers::ET_CHAR, 0, 0 }
+inline const ::flatbuffers::TypeTable *BaseTypeTypeTable() {
+  static const ::flatbuffers::TypeCode type_codes[] = {
+    { ::flatbuffers::ET_CHAR, 0, 0 },
+    { ::flatbuffers::ET_CHAR, 0, 0 },
+    { ::flatbuffers::ET_CHAR, 0, 0 },
+    { ::flatbuffers::ET_CHAR, 0, 0 },
+    { ::flatbuffers::ET_CHAR, 0, 0 },
+    { ::flatbuffers::ET_CHAR, 0, 0 },
+    { ::flatbuffers::ET_CHAR, 0, 0 },
+    { ::flatbuffers::ET_CHAR, 0, 0 },
+    { ::flatbuffers::ET_CHAR, 0, 0 },
+    { ::flatbuffers::ET_CHAR, 0, 0 },
+    { ::flatbuffers::ET_CHAR, 0, 0 },
+    { ::flatbuffers::ET_CHAR, 0, 0 },
+    { ::flatbuffers::ET_CHAR, 0, 0 },
+    { ::flatbuffers::ET_CHAR, 0, 0 },
+    { ::flatbuffers::ET_CHAR, 0, 0 },
+    { ::flatbuffers::ET_CHAR, 0, 0 },
+    { ::flatbuffers::ET_CHAR, 0, 0 },
+    { ::flatbuffers::ET_CHAR, 0, 0 },
+    { ::flatbuffers::ET_CHAR, 0, 0 },
+    { ::flatbuffers::ET_CHAR, 0, 0 }
   };
-  static const flatbuffers::TypeFunction type_refs[] = {
+  static const ::flatbuffers::TypeFunction type_refs[] = {
     reflection::BaseTypeTypeTable
   };
   static const char * const names[] = {
@@ -3144,22 +3230,23 @@ inline const flatbuffers::TypeTable *BaseTypeTypeTable() {
     "Obj",
     "Union",
     "Array",
+    "Vector64",
     "MaxBaseType"
   };
-  static const flatbuffers::TypeTable tt = {
-    flatbuffers::ST_ENUM, 19, type_codes, type_refs, nullptr, nullptr, names
+  static const ::flatbuffers::TypeTable tt = {
+    ::flatbuffers::ST_ENUM, 20, type_codes, type_refs, nullptr, nullptr, names
   };
   return &tt;
 }
 
-inline const flatbuffers::TypeTable *AdvancedFeaturesTypeTable() {
-  static const flatbuffers::TypeCode type_codes[] = {
-    { flatbuffers::ET_ULONG, 0, 0 },
-    { flatbuffers::ET_ULONG, 0, 0 },
-    { flatbuffers::ET_ULONG, 0, 0 },
-    { flatbuffers::ET_ULONG, 0, 0 }
+inline const ::flatbuffers::TypeTable *AdvancedFeaturesTypeTable() {
+  static const ::flatbuffers::TypeCode type_codes[] = {
+    { ::flatbuffers::ET_ULONG, 0, 0 },
+    { ::flatbuffers::ET_ULONG, 0, 0 },
+    { ::flatbuffers::ET_ULONG, 0, 0 },
+    { ::flatbuffers::ET_ULONG, 0, 0 }
   };
-  static const flatbuffers::TypeFunction type_refs[] = {
+  static const ::flatbuffers::TypeFunction type_refs[] = {
     reflection::AdvancedFeaturesTypeTable
   };
   static const int64_t values[] = { 1ULL, 2ULL, 4ULL, 8ULL };
@@ -3169,22 +3256,22 @@ inline const flatbuffers::TypeTable *AdvancedFeaturesTypeTable() {
     "OptionalScalars",
     "DefaultVectorsAndStrings"
   };
-  static const flatbuffers::TypeTable tt = {
-    flatbuffers::ST_ENUM, 4, type_codes, type_refs, nullptr, values, names
+  static const ::flatbuffers::TypeTable tt = {
+    ::flatbuffers::ST_ENUM, 4, type_codes, type_refs, nullptr, values, names
   };
   return &tt;
 }
 
-inline const flatbuffers::TypeTable *TypeTypeTable() {
-  static const flatbuffers::TypeCode type_codes[] = {
-    { flatbuffers::ET_CHAR, 0, 0 },
-    { flatbuffers::ET_CHAR, 0, 0 },
-    { flatbuffers::ET_INT, 0, -1 },
-    { flatbuffers::ET_USHORT, 0, -1 },
-    { flatbuffers::ET_UINT, 0, -1 },
-    { flatbuffers::ET_UINT, 0, -1 }
+inline const ::flatbuffers::TypeTable *TypeTypeTable() {
+  static const ::flatbuffers::TypeCode type_codes[] = {
+    { ::flatbuffers::ET_CHAR, 0, 0 },
+    { ::flatbuffers::ET_CHAR, 0, 0 },
+    { ::flatbuffers::ET_INT, 0, -1 },
+    { ::flatbuffers::ET_USHORT, 0, -1 },
+    { ::flatbuffers::ET_UINT, 0, -1 },
+    { ::flatbuffers::ET_UINT, 0, -1 }
   };
-  static const flatbuffers::TypeFunction type_refs[] = {
+  static const ::flatbuffers::TypeFunction type_refs[] = {
     reflection::BaseTypeTypeTable
   };
   static const char * const names[] = {
@@ -3195,37 +3282,37 @@ inline const flatbuffers::TypeTable *TypeTypeTable() {
     "base_size",
     "element_size"
   };
-  static const flatbuffers::TypeTable tt = {
-    flatbuffers::ST_TABLE, 6, type_codes, type_refs, nullptr, nullptr, names
+  static const ::flatbuffers::TypeTable tt = {
+    ::flatbuffers::ST_TABLE, 6, type_codes, type_refs, nullptr, nullptr, names
   };
   return &tt;
 }
 
-inline const flatbuffers::TypeTable *KeyValueTypeTable() {
-  static const flatbuffers::TypeCode type_codes[] = {
-    { flatbuffers::ET_STRING, 0, -1 },
-    { flatbuffers::ET_STRING, 0, -1 }
+inline const ::flatbuffers::TypeTable *KeyValueTypeTable() {
+  static const ::flatbuffers::TypeCode type_codes[] = {
+    { ::flatbuffers::ET_STRING, 0, -1 },
+    { ::flatbuffers::ET_STRING, 0, -1 }
   };
   static const char * const names[] = {
     "key",
     "value"
   };
-  static const flatbuffers::TypeTable tt = {
-    flatbuffers::ST_TABLE, 2, type_codes, nullptr, nullptr, nullptr, names
+  static const ::flatbuffers::TypeTable tt = {
+    ::flatbuffers::ST_TABLE, 2, type_codes, nullptr, nullptr, nullptr, names
   };
   return &tt;
 }
 
-inline const flatbuffers::TypeTable *EnumValTypeTable() {
-  static const flatbuffers::TypeCode type_codes[] = {
-    { flatbuffers::ET_STRING, 0, -1 },
-    { flatbuffers::ET_LONG, 0, -1 },
-    { flatbuffers::ET_SEQUENCE, 0, 0 },
-    { flatbuffers::ET_SEQUENCE, 0, 1 },
-    { flatbuffers::ET_STRING, 1, -1 },
-    { flatbuffers::ET_SEQUENCE, 1, 2 }
+inline const ::flatbuffers::TypeTable *EnumValTypeTable() {
+  static const ::flatbuffers::TypeCode type_codes[] = {
+    { ::flatbuffers::ET_STRING, 0, -1 },
+    { ::flatbuffers::ET_LONG, 0, -1 },
+    { ::flatbuffers::ET_SEQUENCE, 0, 0 },
+    { ::flatbuffers::ET_SEQUENCE, 0, 1 },
+    { ::flatbuffers::ET_STRING, 1, -1 },
+    { ::flatbuffers::ET_SEQUENCE, 1, 2 }
   };
-  static const flatbuffers::TypeFunction type_refs[] = {
+  static const ::flatbuffers::TypeFunction type_refs[] = {
     reflection::ObjectTypeTable,
     reflection::TypeTypeTable,
     reflection::KeyValueTypeTable
@@ -3238,23 +3325,23 @@ inline const flatbuffers::TypeTable *EnumValTypeTable() {
     "documentation",
     "attributes"
   };
-  static const flatbuffers::TypeTable tt = {
-    flatbuffers::ST_TABLE, 6, type_codes, type_refs, nullptr, nullptr, names
+  static const ::flatbuffers::TypeTable tt = {
+    ::flatbuffers::ST_TABLE, 6, type_codes, type_refs, nullptr, nullptr, names
   };
   return &tt;
 }
 
-inline const flatbuffers::TypeTable *EnumTypeTable() {
-  static const flatbuffers::TypeCode type_codes[] = {
-    { flatbuffers::ET_STRING, 0, -1 },
-    { flatbuffers::ET_SEQUENCE, 1, 0 },
-    { flatbuffers::ET_BOOL, 0, -1 },
-    { flatbuffers::ET_SEQUENCE, 0, 1 },
-    { flatbuffers::ET_SEQUENCE, 1, 2 },
-    { flatbuffers::ET_STRING, 1, -1 },
-    { flatbuffers::ET_STRING, 0, -1 }
+inline const ::flatbuffers::TypeTable *EnumTypeTable() {
+  static const ::flatbuffers::TypeCode type_codes[] = {
+    { ::flatbuffers::ET_STRING, 0, -1 },
+    { ::flatbuffers::ET_SEQUENCE, 1, 0 },
+    { ::flatbuffers::ET_BOOL, 0, -1 },
+    { ::flatbuffers::ET_SEQUENCE, 0, 1 },
+    { ::flatbuffers::ET_SEQUENCE, 1, 2 },
+    { ::flatbuffers::ET_STRING, 1, -1 },
+    { ::flatbuffers::ET_STRING, 0, -1 }
   };
-  static const flatbuffers::TypeFunction type_refs[] = {
+  static const ::flatbuffers::TypeFunction type_refs[] = {
     reflection::EnumValTypeTable,
     reflection::TypeTypeTable,
     reflection::KeyValueTypeTable
@@ -3268,29 +3355,30 @@ inline const flatbuffers::TypeTable *EnumTypeTable() {
     "documentation",
     "declaration_file"
   };
-  static const flatbuffers::TypeTable tt = {
-    flatbuffers::ST_TABLE, 7, type_codes, type_refs, nullptr, nullptr, names
+  static const ::flatbuffers::TypeTable tt = {
+    ::flatbuffers::ST_TABLE, 7, type_codes, type_refs, nullptr, nullptr, names
   };
   return &tt;
 }
 
-inline const flatbuffers::TypeTable *FieldTypeTable() {
-  static const flatbuffers::TypeCode type_codes[] = {
-    { flatbuffers::ET_STRING, 0, -1 },
-    { flatbuffers::ET_SEQUENCE, 0, 0 },
-    { flatbuffers::ET_USHORT, 0, -1 },
-    { flatbuffers::ET_USHORT, 0, -1 },
-    { flatbuffers::ET_LONG, 0, -1 },
-    { flatbuffers::ET_DOUBLE, 0, -1 },
-    { flatbuffers::ET_BOOL, 0, -1 },
-    { flatbuffers::ET_BOOL, 0, -1 },
-    { flatbuffers::ET_BOOL, 0, -1 },
-    { flatbuffers::ET_SEQUENCE, 1, 1 },
-    { flatbuffers::ET_STRING, 1, -1 },
-    { flatbuffers::ET_BOOL, 0, -1 },
-    { flatbuffers::ET_USHORT, 0, -1 }
+inline const ::flatbuffers::TypeTable *FieldTypeTable() {
+  static const ::flatbuffers::TypeCode type_codes[] = {
+    { ::flatbuffers::ET_STRING, 0, -1 },
+    { ::flatbuffers::ET_SEQUENCE, 0, 0 },
+    { ::flatbuffers::ET_USHORT, 0, -1 },
+    { ::flatbuffers::ET_USHORT, 0, -1 },
+    { ::flatbuffers::ET_LONG, 0, -1 },
+    { ::flatbuffers::ET_DOUBLE, 0, -1 },
+    { ::flatbuffers::ET_BOOL, 0, -1 },
+    { ::flatbuffers::ET_BOOL, 0, -1 },
+    { ::flatbuffers::ET_BOOL, 0, -1 },
+    { ::flatbuffers::ET_SEQUENCE, 1, 1 },
+    { ::flatbuffers::ET_STRING, 1, -1 },
+    { ::flatbuffers::ET_BOOL, 0, -1 },
+    { ::flatbuffers::ET_USHORT, 0, -1 },
+    { ::flatbuffers::ET_BOOL, 0, -1 }
   };
-  static const flatbuffers::TypeFunction type_refs[] = {
+  static const ::flatbuffers::TypeFunction type_refs[] = {
     reflection::TypeTypeTable,
     reflection::KeyValueTypeTable
   };
@@ -3307,26 +3395,27 @@ inline const flatbuffers::TypeTable *FieldTypeTable() {
     "attributes",
     "documentation",
     "optional",
-    "padding"
+    "padding",
+    "offset64"
   };
-  static const flatbuffers::TypeTable tt = {
-    flatbuffers::ST_TABLE, 13, type_codes, type_refs, nullptr, nullptr, names
+  static const ::flatbuffers::TypeTable tt = {
+    ::flatbuffers::ST_TABLE, 14, type_codes, type_refs, nullptr, nullptr, names
   };
   return &tt;
 }
 
-inline const flatbuffers::TypeTable *ObjectTypeTable() {
-  static const flatbuffers::TypeCode type_codes[] = {
-    { flatbuffers::ET_STRING, 0, -1 },
-    { flatbuffers::ET_SEQUENCE, 1, 0 },
-    { flatbuffers::ET_BOOL, 0, -1 },
-    { flatbuffers::ET_INT, 0, -1 },
-    { flatbuffers::ET_INT, 0, -1 },
-    { flatbuffers::ET_SEQUENCE, 1, 1 },
-    { flatbuffers::ET_STRING, 1, -1 },
-    { flatbuffers::ET_STRING, 0, -1 }
+inline const ::flatbuffers::TypeTable *ObjectTypeTable() {
+  static const ::flatbuffers::TypeCode type_codes[] = {
+    { ::flatbuffers::ET_STRING, 0, -1 },
+    { ::flatbuffers::ET_SEQUENCE, 1, 0 },
+    { ::flatbuffers::ET_BOOL, 0, -1 },
+    { ::flatbuffers::ET_INT, 0, -1 },
+    { ::flatbuffers::ET_INT, 0, -1 },
+    { ::flatbuffers::ET_SEQUENCE, 1, 1 },
+    { ::flatbuffers::ET_STRING, 1, -1 },
+    { ::flatbuffers::ET_STRING, 0, -1 }
   };
-  static const flatbuffers::TypeFunction type_refs[] = {
+  static const ::flatbuffers::TypeFunction type_refs[] = {
     reflection::FieldTypeTable,
     reflection::KeyValueTypeTable
   };
@@ -3340,21 +3429,21 @@ inline const flatbuffers::TypeTable *ObjectTypeTable() {
     "documentation",
     "declaration_file"
   };
-  static const flatbuffers::TypeTable tt = {
-    flatbuffers::ST_TABLE, 8, type_codes, type_refs, nullptr, nullptr, names
+  static const ::flatbuffers::TypeTable tt = {
+    ::flatbuffers::ST_TABLE, 8, type_codes, type_refs, nullptr, nullptr, names
   };
   return &tt;
 }
 
-inline const flatbuffers::TypeTable *RPCCallTypeTable() {
-  static const flatbuffers::TypeCode type_codes[] = {
-    { flatbuffers::ET_STRING, 0, -1 },
-    { flatbuffers::ET_SEQUENCE, 0, 0 },
-    { flatbuffers::ET_SEQUENCE, 0, 0 },
-    { flatbuffers::ET_SEQUENCE, 1, 1 },
-    { flatbuffers::ET_STRING, 1, -1 }
+inline const ::flatbuffers::TypeTable *RPCCallTypeTable() {
+  static const ::flatbuffers::TypeCode type_codes[] = {
+    { ::flatbuffers::ET_STRING, 0, -1 },
+    { ::flatbuffers::ET_SEQUENCE, 0, 0 },
+    { ::flatbuffers::ET_SEQUENCE, 0, 0 },
+    { ::flatbuffers::ET_SEQUENCE, 1, 1 },
+    { ::flatbuffers::ET_STRING, 1, -1 }
   };
-  static const flatbuffers::TypeFunction type_refs[] = {
+  static const ::flatbuffers::TypeFunction type_refs[] = {
     reflection::ObjectTypeTable,
     reflection::KeyValueTypeTable
   };
@@ -3365,21 +3454,21 @@ inline const flatbuffers::TypeTable *RPCCallTypeTable() {
     "attributes",
     "documentation"
   };
-  static const flatbuffers::TypeTable tt = {
-    flatbuffers::ST_TABLE, 5, type_codes, type_refs, nullptr, nullptr, names
+  static const ::flatbuffers::TypeTable tt = {
+    ::flatbuffers::ST_TABLE, 5, type_codes, type_refs, nullptr, nullptr, names
   };
   return &tt;
 }
 
-inline const flatbuffers::TypeTable *ServiceTypeTable() {
-  static const flatbuffers::TypeCode type_codes[] = {
-    { flatbuffers::ET_STRING, 0, -1 },
-    { flatbuffers::ET_SEQUENCE, 1, 0 },
-    { flatbuffers::ET_SEQUENCE, 1, 1 },
-    { flatbuffers::ET_STRING, 1, -1 },
-    { flatbuffers::ET_STRING, 0, -1 }
+inline const ::flatbuffers::TypeTable *ServiceTypeTable() {
+  static const ::flatbuffers::TypeCode type_codes[] = {
+    { ::flatbuffers::ET_STRING, 0, -1 },
+    { ::flatbuffers::ET_SEQUENCE, 1, 0 },
+    { ::flatbuffers::ET_SEQUENCE, 1, 1 },
+    { ::flatbuffers::ET_STRING, 1, -1 },
+    { ::flatbuffers::ET_STRING, 0, -1 }
   };
-  static const flatbuffers::TypeFunction type_refs[] = {
+  static const ::flatbuffers::TypeFunction type_refs[] = {
     reflection::RPCCallTypeTable,
     reflection::KeyValueTypeTable
   };
@@ -3390,39 +3479,39 @@ inline const flatbuffers::TypeTable *ServiceTypeTable() {
     "documentation",
     "declaration_file"
   };
-  static const flatbuffers::TypeTable tt = {
-    flatbuffers::ST_TABLE, 5, type_codes, type_refs, nullptr, nullptr, names
+  static const ::flatbuffers::TypeTable tt = {
+    ::flatbuffers::ST_TABLE, 5, type_codes, type_refs, nullptr, nullptr, names
   };
   return &tt;
 }
 
-inline const flatbuffers::TypeTable *SchemaFileTypeTable() {
-  static const flatbuffers::TypeCode type_codes[] = {
-    { flatbuffers::ET_STRING, 0, -1 },
-    { flatbuffers::ET_STRING, 1, -1 }
+inline const ::flatbuffers::TypeTable *SchemaFileTypeTable() {
+  static const ::flatbuffers::TypeCode type_codes[] = {
+    { ::flatbuffers::ET_STRING, 0, -1 },
+    { ::flatbuffers::ET_STRING, 1, -1 }
   };
   static const char * const names[] = {
     "filename",
     "included_filenames"
   };
-  static const flatbuffers::TypeTable tt = {
-    flatbuffers::ST_TABLE, 2, type_codes, nullptr, nullptr, nullptr, names
+  static const ::flatbuffers::TypeTable tt = {
+    ::flatbuffers::ST_TABLE, 2, type_codes, nullptr, nullptr, nullptr, names
   };
   return &tt;
 }
 
-inline const flatbuffers::TypeTable *SchemaTypeTable() {
-  static const flatbuffers::TypeCode type_codes[] = {
-    { flatbuffers::ET_SEQUENCE, 1, 0 },
-    { flatbuffers::ET_SEQUENCE, 1, 1 },
-    { flatbuffers::ET_STRING, 0, -1 },
-    { flatbuffers::ET_STRING, 0, -1 },
-    { flatbuffers::ET_SEQUENCE, 0, 0 },
-    { flatbuffers::ET_SEQUENCE, 1, 2 },
-    { flatbuffers::ET_ULONG, 0, 3 },
-    { flatbuffers::ET_SEQUENCE, 1, 4 }
+inline const ::flatbuffers::TypeTable *SchemaTypeTable() {
+  static const ::flatbuffers::TypeCode type_codes[] = {
+    { ::flatbuffers::ET_SEQUENCE, 1, 0 },
+    { ::flatbuffers::ET_SEQUENCE, 1, 1 },
+    { ::flatbuffers::ET_STRING, 0, -1 },
+    { ::flatbuffers::ET_STRING, 0, -1 },
+    { ::flatbuffers::ET_SEQUENCE, 0, 0 },
+    { ::flatbuffers::ET_SEQUENCE, 1, 2 },
+    { ::flatbuffers::ET_ULONG, 0, 3 },
+    { ::flatbuffers::ET_SEQUENCE, 1, 4 }
   };
-  static const flatbuffers::TypeFunction type_refs[] = {
+  static const ::flatbuffers::TypeFunction type_refs[] = {
     reflection::ObjectTypeTable,
     reflection::EnumTypeTable,
     reflection::ServiceTypeTable,
@@ -3439,26 +3528,26 @@ inline const flatbuffers::TypeTable *SchemaTypeTable() {
     "advanced_features",
     "fbs_files"
   };
-  static const flatbuffers::TypeTable tt = {
-    flatbuffers::ST_TABLE, 8, type_codes, type_refs, nullptr, nullptr, names
+  static const ::flatbuffers::TypeTable tt = {
+    ::flatbuffers::ST_TABLE, 8, type_codes, type_refs, nullptr, nullptr, names
   };
   return &tt;
 }
 
 inline const reflection::Schema *GetSchema(const void *buf) {
-  return flatbuffers::GetRoot<reflection::Schema>(buf);
+  return ::flatbuffers::GetRoot<reflection::Schema>(buf);
 }
 
 inline const reflection::Schema *GetSizePrefixedSchema(const void *buf) {
-  return flatbuffers::GetSizePrefixedRoot<reflection::Schema>(buf);
+  return ::flatbuffers::GetSizePrefixedRoot<reflection::Schema>(buf);
 }
 
 inline Schema *GetMutableSchema(void *buf) {
-  return flatbuffers::GetMutableRoot<Schema>(buf);
+  return ::flatbuffers::GetMutableRoot<Schema>(buf);
 }
 
 inline reflection::Schema *GetMutableSizePrefixedSchema(void *buf) {
-  return flatbuffers::GetMutableSizePrefixedRoot<reflection::Schema>(buf);
+  return ::flatbuffers::GetMutableSizePrefixedRoot<reflection::Schema>(buf);
 }
 
 inline const char *SchemaIdentifier() {
@@ -3466,22 +3555,22 @@ inline const char *SchemaIdentifier() {
 }
 
 inline bool SchemaBufferHasIdentifier(const void *buf) {
-  return flatbuffers::BufferHasIdentifier(
+  return ::flatbuffers::BufferHasIdentifier(
       buf, SchemaIdentifier());
 }
 
 inline bool SizePrefixedSchemaBufferHasIdentifier(const void *buf) {
-  return flatbuffers::BufferHasIdentifier(
+  return ::flatbuffers::BufferHasIdentifier(
       buf, SchemaIdentifier(), true);
 }
 
 inline bool VerifySchemaBuffer(
-    flatbuffers::Verifier &verifier) {
+    ::flatbuffers::Verifier &verifier) {
   return verifier.VerifyBuffer<reflection::Schema>(SchemaIdentifier());
 }
 
 inline bool VerifySizePrefixedSchemaBuffer(
-    flatbuffers::Verifier &verifier) {
+    ::flatbuffers::Verifier &verifier) {
   return verifier.VerifySizePrefixedBuffer<reflection::Schema>(SchemaIdentifier());
 }
 
@@ -3490,26 +3579,26 @@ inline const char *SchemaExtension() {
 }
 
 inline void FinishSchemaBuffer(
-    flatbuffers::FlatBufferBuilder &fbb,
-    flatbuffers::Offset<reflection::Schema> root) {
+    ::flatbuffers::FlatBufferBuilder &fbb,
+    ::flatbuffers::Offset<reflection::Schema> root) {
   fbb.Finish(root, SchemaIdentifier());
 }
 
 inline void FinishSizePrefixedSchemaBuffer(
-    flatbuffers::FlatBufferBuilder &fbb,
-    flatbuffers::Offset<reflection::Schema> root) {
+    ::flatbuffers::FlatBufferBuilder &fbb,
+    ::flatbuffers::Offset<reflection::Schema> root) {
   fbb.FinishSizePrefixed(root, SchemaIdentifier());
 }
 
 inline flatbuffers::unique_ptr<reflection::SchemaT> UnPackSchema(
     const void *buf,
-    const flatbuffers::resolver_function_t *res = nullptr) {
+    const ::flatbuffers::resolver_function_t *res = nullptr) {
   return flatbuffers::unique_ptr<reflection::SchemaT>(GetSchema(buf)->UnPack(res));
 }
 
 inline flatbuffers::unique_ptr<reflection::SchemaT> UnPackSizePrefixedSchema(
     const void *buf,
-    const flatbuffers::resolver_function_t *res = nullptr) {
+    const ::flatbuffers::resolver_function_t *res = nullptr) {
   return flatbuffers::unique_ptr<reflection::SchemaT>(GetSizePrefixedSchema(buf)->UnPack(res));
 }
 

@@ -26,9 +26,9 @@
 // Ensure no includes to flatc internals. bfbs_gen.h and generator.h are OK.
 #include "bfbs_gen.h"
 #include "bfbs_namer.h"
-#include "flatbuffers/bfbs_generator.h"
 
 // The intermediate representation schema.
+#include "flatbuffers/code_generator.h"
 #include "flatbuffers/reflection.h"
 #include "flatbuffers/reflection_generated.h"
 
@@ -77,7 +77,6 @@ Namer::Config NimDefaultConfig() {
            /*filename_extension=*/".nim" };
 }
 
-const std::string Indent = "  ";
 const std::string Export = "*";
 const std::set<std::string> builtin_types = {
   "uint8",   "uint8",  "bool",   "int8",  "uint8",   "int16",
@@ -96,8 +95,10 @@ class NimBfbsGenerator : public BaseBfbsGenerator {
         flatc_version_(flatc_version),
         namer_(NimDefaultConfig(), NimKeywords()) {}
 
-  GeneratorStatus GenerateFromSchema(const r::Schema *schema)
+  Status GenerateFromSchema(const r::Schema *schema,
+                            const CodeGenOptions &options)
       FLATBUFFERS_OVERRIDE {
+    options_ = options;
     ForAllEnums(schema->enums(), [&](const r::Enum *enum_def) {
       StartCodeBlock(enum_def);
       GenerateEnum(enum_def);
@@ -108,6 +109,51 @@ class NimBfbsGenerator : public BaseBfbsGenerator {
     });
     return OK;
   }
+
+  using BaseBfbsGenerator::GenerateCode;
+
+  Status GenerateCode(const Parser &parser, const std::string &path,
+                      const std::string &filename) override {
+    (void)parser;
+    (void)path;
+    (void)filename;
+    return NOT_IMPLEMENTED;
+  }
+
+  Status GenerateMakeRule(const Parser &parser, const std::string &path,
+                          const std::string &filename,
+                          std::string &output) override {
+    (void)parser;
+    (void)path;
+    (void)filename;
+    (void)output;
+    return NOT_IMPLEMENTED;
+  }
+
+  Status GenerateGrpcCode(const Parser &parser, const std::string &path,
+                          const std::string &filename) override {
+    (void)parser;
+    (void)path;
+    (void)filename;
+    return NOT_IMPLEMENTED;
+  }
+
+  Status GenerateRootFile(const Parser &parser,
+                          const std::string &path) override {
+    (void)parser;
+    (void)path;
+    return NOT_IMPLEMENTED;
+  }
+
+  bool IsSchemaOnly() const override { return true; }
+
+  bool SupportsBfbsGeneration() const override { return true; }
+
+  bool SupportsRootFileGeneration() const override { return false; }
+
+  IDLOptions::Language Language() const override { return IDLOptions::kNim; }
+
+  std::string LanguageName() const override { return "Nim"; }
 
   uint64_t SupportedAdvancedFeatures() const FLATBUFFERS_OVERRIDE {
     return static_cast<uint64_t>(r::AdvancedFeatures::AdvancedArrayFeatures) |
@@ -476,9 +522,11 @@ class NimBfbsGenerator : public BaseBfbsGenerator {
     if (IsFloatingPoint(base_type)) {
       if (field->default_real() != field->default_real()) {
         return "NaN";
-      } else if (field->default_real() == std::numeric_limits<double>::infinity()) {
+      } else if (field->default_real() ==
+                 std::numeric_limits<double>::infinity()) {
         return "Inf";
-      } else if (field->default_real() == -std::numeric_limits<double>::infinity()) {
+      } else if (field->default_real() ==
+                 -std::numeric_limits<double>::infinity()) {
         return "-Inf";
       }
       return NumToString(field->default_real());
@@ -630,12 +678,15 @@ class NimBfbsGenerator : public BaseBfbsGenerator {
 
     // TODO(derekbailey): figure out a save file without depending on util.h
     EnsureDirExists(path);
-    const std::string file_name = path + "/" + namer_.File(name);
+    const std::string file_name =
+        options_.output_path + path + "/" + namer_.File(name);
     SaveFile(file_name.c_str(), code, false);
   }
 
   std::unordered_set<std::string> keywords_;
   std::map<std::string, std::string> imports_;
+  CodeGenOptions options_;
+
   const r::Object *current_obj_;
   const r::Enum *current_enum_;
   const std::string flatc_version_;
@@ -643,7 +694,7 @@ class NimBfbsGenerator : public BaseBfbsGenerator {
 };
 }  // namespace
 
-std::unique_ptr<BfbsGenerator> NewNimBfbsGenerator(
+std::unique_ptr<CodeGenerator> NewNimBfbsGenerator(
     const std::string &flatc_version) {
   return std::unique_ptr<NimBfbsGenerator>(new NimBfbsGenerator(flatc_version));
 }

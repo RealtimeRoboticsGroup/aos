@@ -46,21 +46,6 @@ class LogReaderTest(unittest.TestCase):
         A previous iteration of the log reader seg faulted when doing this."""
         pass
 
-    @unittest.skip("broken by flatbuffer upgrade")
-    def test_read_config(self):
-        """Tests that we can read the configuration from the logfile."""
-        config_bytes = self.reader.configuration()
-        config = Configuration.GetRootAsConfiguration(config_bytes, 0)
-
-        channel_set = set(self.all_channels)
-        for ii in range(config.ChannelsLength()):
-            channel = config.Channels(ii)
-            # Will raise KeyError if the channel does not exist
-            channel_set.remove((channel.Name().decode("utf-8"),
-                                channel.Type().decode("utf-8")))
-
-        self.assertEqual(0, len(channel_set))
-
     def test_empty_process(self):
         """Tests running process() without subscribing to anything succeeds."""
         self.reader.process()

@@ -3,9 +3,9 @@
 package Example
 
 import (
-	"math"
-
+	"bytes"
 	flatbuffers "github.com/google/flatbuffers/go"
+	"math"
 
 	MyGame "MyGame"
 )
@@ -73,14 +73,19 @@ type MonsterT struct {
 }
 
 func (t *MonsterT) Pack(builder *flatbuffers.Builder) flatbuffers.UOffsetT {
-	if t == nil { return 0 }
-	nameOffset := builder.CreateString(t.Name)
+	if t == nil {
+		return 0
+	}
+	nameOffset := flatbuffers.UOffsetT(0)
+	if t.Name != "" {
+		nameOffset = builder.CreateString(t.Name)
+	}
 	inventoryOffset := flatbuffers.UOffsetT(0)
 	if t.Inventory != nil {
 		inventoryOffset = builder.CreateByteString(t.Inventory)
 	}
 	testOffset := t.Test.Pack(builder)
-	
+
 	test4Offset := flatbuffers.UOffsetT(0)
 	if t.Test4 != nil {
 		test4Length := len(t.Test4)
@@ -239,9 +244,9 @@ func (t *MonsterT) Pack(builder *flatbuffers.Builder) flatbuffers.UOffsetT {
 		vectorOfNonOwningReferencesOffset = builder.EndVector(vectorOfNonOwningReferencesLength)
 	}
 	anyUniqueOffset := t.AnyUnique.Pack(builder)
-	
+
 	anyAmbiguousOffset := t.AnyAmbiguous.Pack(builder)
-	
+
 	vectorOfEnumsOffset := flatbuffers.UOffsetT(0)
 	if t.VectorOfEnums != nil {
 		vectorOfEnumsLength := len(t.VectorOfEnums)
@@ -490,7 +495,9 @@ func (rcv *Monster) UnPackTo(t *MonsterT) {
 }
 
 func (rcv *Monster) UnPack() *MonsterT {
-	if rcv == nil { return nil }
+	if rcv == nil {
+		return nil
+	}
 	t := &MonsterT{}
 	rcv.UnPackTo(t)
 	return t
@@ -500,6 +507,8 @@ type Monster struct {
 	_tab flatbuffers.Table
 }
 
+const MonsterIdentifier = "MONS"
+
 func GetRootAsMonster(buf []byte, offset flatbuffers.UOffsetT) *Monster {
 	n := flatbuffers.GetUOffsetT(buf[offset:])
 	x := &Monster{}
@@ -507,11 +516,29 @@ func GetRootAsMonster(buf []byte, offset flatbuffers.UOffsetT) *Monster {
 	return x
 }
 
+func FinishMonsterBuffer(builder *flatbuffers.Builder, offset flatbuffers.UOffsetT) {
+	identifierBytes := []byte(MonsterIdentifier)
+	builder.FinishWithFileIdentifier(offset, identifierBytes)
+}
+
+func MonsterBufferHasIdentifier(buf []byte) bool {
+	return flatbuffers.BufferHasIdentifier(buf, MonsterIdentifier)
+}
+
 func GetSizePrefixedRootAsMonster(buf []byte, offset flatbuffers.UOffsetT) *Monster {
 	n := flatbuffers.GetUOffsetT(buf[offset+flatbuffers.SizeUint32:])
 	x := &Monster{}
 	x.Init(buf, n+offset+flatbuffers.SizeUint32)
 	return x
+}
+
+func FinishSizePrefixedMonsterBuffer(builder *flatbuffers.Builder, offset flatbuffers.UOffsetT) {
+	identifierBytes := []byte(MonsterIdentifier)
+	builder.FinishSizePrefixedWithFileIdentifier(offset, identifierBytes)
+}
+
+func SizePrefixedMonsterBufferHasIdentifier(buf []byte) bool {
+	return flatbuffers.SizePrefixedBufferHasIdentifier(buf, MonsterIdentifier)
 }
 
 func (rcv *Monster) Init(buf []byte, i flatbuffers.UOffsetT) {
@@ -566,6 +593,38 @@ func (rcv *Monster) Name() []byte {
 		return rcv._tab.ByteVector(o + rcv._tab.Pos)
 	}
 	return nil
+}
+
+func MonsterKeyCompare(o1, o2 flatbuffers.UOffsetT, buf []byte) bool {
+	obj1 := &Monster{}
+	obj2 := &Monster{}
+	obj1.Init(buf, flatbuffers.UOffsetT(len(buf))-o1)
+	obj2.Init(buf, flatbuffers.UOffsetT(len(buf))-o2)
+	return string(obj1.Name()) < string(obj2.Name())
+}
+
+func (rcv *Monster) LookupByKey(key string, vectorLocation flatbuffers.UOffsetT, buf []byte) bool {
+	span := flatbuffers.GetUOffsetT(buf[vectorLocation-4:])
+	start := flatbuffers.UOffsetT(0)
+	bKey := []byte(key)
+	for span != 0 {
+		middle := span / 2
+		tableOffset := flatbuffers.GetIndirectOffset(buf, vectorLocation+4*(start+middle))
+		obj := &Monster{}
+		obj.Init(buf, tableOffset)
+		comp := bytes.Compare(obj.Name(), bKey)
+		if comp > 0 {
+			span = middle
+		} else if comp < 0 {
+			middle += 1
+			start += middle
+			span -= middle
+		} else {
+			rcv.Init(buf, tableOffset)
+			return true
+		}
+	}
+	return false
 }
 
 func (rcv *Monster) Inventory(j int) byte {
@@ -681,6 +740,15 @@ func (rcv *Monster) Testarrayoftables(obj *Monster, j int) bool {
 		x = rcv._tab.Indirect(x)
 		obj.Init(rcv._tab.Bytes, x)
 		return true
+	}
+	return false
+}
+
+func (rcv *Monster) TestarrayoftablesByKey(obj *Monster, key string) bool {
+	o := flatbuffers.UOffsetT(rcv._tab.Offset(26))
+	if o != 0 {
+		x := rcv._tab.Vector(o)
+		return obj.LookupByKey(key, x, rcv._tab.Bytes)
 	}
 	return false
 }
@@ -1091,6 +1159,15 @@ func (rcv *Monster) VectorOfReferrables(obj *Referrable, j int) bool {
 	return false
 }
 
+func (rcv *Monster) VectorOfReferrablesByKey(obj *Referrable, key uint64) bool {
+	o := flatbuffers.UOffsetT(rcv._tab.Offset(74))
+	if o != 0 {
+		x := rcv._tab.Vector(o)
+		return obj.LookupByKey(key, x, rcv._tab.Bytes)
+	}
+	return false
+}
+
 func (rcv *Monster) VectorOfReferrablesLength() int {
 	o := flatbuffers.UOffsetT(rcv._tab.Offset(74))
 	if o != 0 {
@@ -1145,6 +1222,15 @@ func (rcv *Monster) VectorOfStrongReferrables(obj *Referrable, j int) bool {
 		x = rcv._tab.Indirect(x)
 		obj.Init(rcv._tab.Bytes, x)
 		return true
+	}
+	return false
+}
+
+func (rcv *Monster) VectorOfStrongReferrablesByKey(obj *Referrable, key uint64) bool {
+	o := flatbuffers.UOffsetT(rcv._tab.Offset(80))
+	if o != 0 {
+		x := rcv._tab.Vector(o)
+		return obj.LookupByKey(key, x, rcv._tab.Bytes)
 	}
 	return false
 }
@@ -1363,6 +1449,15 @@ func (rcv *Monster) ScalarKeySortedTables(obj *Stat, j int) bool {
 		x = rcv._tab.Indirect(x)
 		obj.Init(rcv._tab.Bytes, x)
 		return true
+	}
+	return false
+}
+
+func (rcv *Monster) ScalarKeySortedTablesByKey(obj *Stat, key uint16) bool {
+	o := flatbuffers.UOffsetT(rcv._tab.Offset(104))
+	if o != 0 {
+		x := rcv._tab.Vector(o)
+		return obj.LookupByKey(key, x, rcv._tab.Bytes)
 	}
 	return false
 }

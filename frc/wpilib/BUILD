@@ -287,11 +287,22 @@ static_flatbuffer(
 flatbuffer_ts_library(
     name = "imu_ts_fbs",
     srcs = ["imu.fbs"],
+    ts_files = [
+        "frc.ts",
+        "frc/adis16470-diag-stat.ts",
+        "frc/imuvalues.ts",
+    ],
 )
 
 flatbuffer_ts_library(
     name = "imu_batch_ts_fbs",
     srcs = ["imu_batch.fbs"],
+    ts_files = [
+        "frc.ts",
+        "frc/adis16470-diag-stat.ts",
+        "frc/imuvalues.ts",
+        "frc/imuvalues-batch.ts",
+    ],
     deps = [
         ":imu_ts_fbs",
     ],

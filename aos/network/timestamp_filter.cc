@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <tuple>
 
+#include "absl/log/vlog_is_on.h"
 #include "absl/numeric/int128.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"

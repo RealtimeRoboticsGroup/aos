@@ -1,4 +1,5 @@
 # Incompatible library in case one isn't available for a specific architecture.
+
 cc_library(
     name = "unavailable",
     target_compatible_with = ["@platforms//:incompatible"],

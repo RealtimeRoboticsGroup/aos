@@ -1,6 +1,6 @@
 import {Builder, ByteBuffer} from 'flatbuffers';
-import {Configuration} from '../../configuration_generated'
-import {BaseType, Configuration as TestTable, FooStruct, Location, Map, VectorOfStrings, VectorOfVectorOfString} from '../../json_to_flatbuffer_generated'
+import {Configuration} from '../../configuration_ts_fbs/aos';
+import {BaseType, Configuration as TestTable, FooStruct, Location, Map, VectorOfStrings, VectorOfVectorOfString} from '../../json_to_flatbuffer_fbs_ts/aos/testing'
 
 import {Connection} from './proxy';
 import {Parser, Table} from './reflection'

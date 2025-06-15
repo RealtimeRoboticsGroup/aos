@@ -26,9 +26,9 @@
 // Ensure no includes to flatc internals. bfbs_gen.h and generator.h are OK.
 #include "bfbs_gen.h"
 #include "bfbs_namer.h"
-#include "flatbuffers/bfbs_generator.h"
 
 // The intermediate representation schema.
+#include "flatbuffers/code_generator.h"
 #include "flatbuffers/reflection.h"
 #include "flatbuffers/reflection_generated.h"
 
@@ -79,14 +79,58 @@ class LuaBfbsGenerator : public BaseBfbsGenerator {
         flatc_version_(flatc_version),
         namer_(LuaDefaultConfig(), LuaKeywords()) {}
 
-  GeneratorStatus GenerateFromSchema(const r::Schema *schema)
+  Status GenerateFromSchema(const r::Schema *schema,
+                            const CodeGenOptions &options)
       FLATBUFFERS_OVERRIDE {
-    if (!GenerateEnums(schema->enums())) { return FAILED; }
+    options_ = options;
+    if (!GenerateEnums(schema->enums())) { return ERROR; }
     if (!GenerateObjects(schema->objects(), schema->root_table())) {
-      return FAILED;
+      return ERROR;
     }
     return OK;
   }
+
+  using BaseBfbsGenerator::GenerateCode;
+
+  Status GenerateCode(const Parser &, const std::string &,
+                      const std::string &) override {
+    return Status::NOT_IMPLEMENTED;
+  }
+
+  Status GenerateMakeRule(const Parser &parser, const std::string &path,
+                          const std::string &filename,
+                          std::string &output) override {
+    (void)parser;
+    (void)path;
+    (void)filename;
+    (void)output;
+    return Status::NOT_IMPLEMENTED;
+  }
+
+  Status GenerateGrpcCode(const Parser &parser, const std::string &path,
+                          const std::string &filename) override {
+    (void)parser;
+    (void)path;
+    (void)filename;
+    return Status::NOT_IMPLEMENTED;
+  }
+
+  Status GenerateRootFile(const Parser &parser,
+                          const std::string &path) override {
+    (void)parser;
+    (void)path;
+    return Status::NOT_IMPLEMENTED;
+  }
+
+  bool IsSchemaOnly() const override { return true; }
+
+  bool SupportsBfbsGeneration() const override { return true; }
+
+  bool SupportsRootFileGeneration() const override { return false; }
+
+  IDLOptions::Language Language() const override { return IDLOptions::kLua; }
+
+  std::string LanguageName() const override { return "Lua"; }
 
   uint64_t SupportedAdvancedFeatures() const FLATBUFFERS_OVERRIDE {
     return 0xF;
@@ -612,12 +656,15 @@ class LuaBfbsGenerator : public BaseBfbsGenerator {
 
     // TODO(derekbailey): figure out a save file without depending on util.h
     EnsureDirExists(path);
-    const std::string file_name = path + "/" + namer_.File(name);
+    const std::string file_name =
+        options_.output_path + path + "/" + namer_.File(name);
     SaveFile(file_name.c_str(), code, false);
   }
 
   std::unordered_set<std::string> keywords_;
   std::map<std::string, std::string> requires_;
+  CodeGenOptions options_;
+
   const r::Object *current_obj_;
   const r::Enum *current_enum_;
   const std::string flatc_version_;
@@ -625,7 +672,7 @@ class LuaBfbsGenerator : public BaseBfbsGenerator {
 };
 }  // namespace
 
-std::unique_ptr<BfbsGenerator> NewLuaBfbsGenerator(
+std::unique_ptr<CodeGenerator> NewLuaBfbsGenerator(
     const std::string &flatc_version) {
   return std::unique_ptr<LuaBfbsGenerator>(new LuaBfbsGenerator(flatc_version));
 }

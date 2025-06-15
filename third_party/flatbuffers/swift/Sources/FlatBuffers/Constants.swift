@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Google Inc. All rights reserved.
+ * Copyright 2024 Google Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,7 @@
  * limitations under the License.
  */
 
-#if !os(WASI)
-  #if os(Linux)
-  import CoreFoundation
-  #else
-  import Foundation
-  #endif
-#else
-import SwiftOverlayShims
-#endif
+import Foundation
 
 /// A boolean to see if the system is littleEndian
 let isLitteEndian: Bool = {
@@ -119,4 +111,4 @@ extension UInt64: Scalar, Verifiable {
   public typealias NumericValue = UInt64
 }
 
-public func FlatBuffersVersion_22_10_26() {}
+public func FlatBuffersVersion_25_1_21() {}

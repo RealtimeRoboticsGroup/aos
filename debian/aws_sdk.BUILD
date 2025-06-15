@@ -1,4 +1,13 @@
 load("@aos//tools/build_rules:select.bzl", "compiler_select")
+load("@rules_license//rules:license.bzl", "license")
+
+package(default_applicable_licenses = [":license"])
+
+license(
+    name = "license",
+    license_kinds = ["@rules_license//licenses/spdx:Apache-2.0"],
+    license_text = "LICENSE.txt",
+)
 
 common_copts = [
     "-DPLATFORM_LINUX",

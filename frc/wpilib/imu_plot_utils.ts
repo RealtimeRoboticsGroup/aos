@@ -1,11 +1,11 @@
 // This script provides a basic utility for de-batching the IMUValues
 // message. See imu_plotter.ts for usage.
-import {IMUValuesBatch} from './imu_batch_generated';
+import {IMUValuesBatch} from './imu_batch_ts_fbs/frc';
 import {MessageHandler, TimestampedMessage} from '../../aos/network/www/aos_plotter';
 import {Point} from '../../aos/network/www/plotter';
 import {Table} from '../../aos/network/www/reflection';
 import {ByteBuffer} from 'flatbuffers';
-import {Schema} from 'flatbuffers_reflection/reflection_generated';
+import {Schema} from '../../external/com_github_google_flatbuffers/reflection/reflection_ts_fbs/reflection';
 
 const FILTER_WINDOW_SIZE = 100;
 

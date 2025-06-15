@@ -1,4 +1,3 @@
-load("@com_github_google_flatbuffers//:build_defs.bzl", "flatbuffer_py_library")
 load("@com_github_google_flatbuffers//:typescript.bzl", "flatbuffer_ts_library")
 load("//aos:config.bzl", "aos_config")
 load("//aos/flatbuffers:generate.bzl", "static_flatbuffer")
@@ -83,6 +82,11 @@ flatbuffer_ts_library(
     name = "vision_ts_fbs",
     srcs = ["vision.fbs"],
     target_compatible_with = ["@platforms//os:linux"],
+    ts_files = [
+        "frc/vision.ts",
+        "frc/vision/image-format.ts",
+        "frc/vision/camera-image.ts",
+    ],
     visibility = ["//visibility:public"],
 )
 
@@ -97,6 +101,12 @@ flatbuffer_ts_library(
     name = "calibration_ts_fbs",
     srcs = ["calibration.fbs"],
     target_compatible_with = ["@platforms//os:linux"],
+    ts_files = [
+        "frc/vision/calibration.ts",
+        "frc/vision/calibration/transformation-matrix.ts",
+        "frc/vision/calibration/camera-calibration.ts",
+        "frc/vision/calibration/calibration-data.ts",
+    ],
     visibility = ["//visibility:public"],
 )
 
@@ -104,37 +114,14 @@ flatbuffer_ts_library(
     name = "target_map_ts_fbs",
     srcs = ["target_map.fbs"],
     target_compatible_with = ["@platforms//os:linux"],
+    ts_files = [
+        "frc/vision.ts",
+        "frc/vision/position.ts",
+        "frc/vision/quaternion.ts",
+        "frc/vision/target-pose-fbs.ts",
+        "frc/vision/target-map.ts",
+    ],
     visibility = ["//visibility:public"],
-)
-
-flatbuffer_py_library(
-    name = "calibration_fbs_python",
-    srcs = [
-        "calibration.fbs",
-    ],
-    namespace = "frc.vision.calibration",
-    tables = [
-        "CalibrationData",
-        "CameraCalibration",
-        "TransformationMatrix",
-    ],
-    target_compatible_with = ["@platforms//os:linux"],
-    visibility = ["//visibility:public"],
-)
-
-py_library(
-    name = "create_calib_file",
-    srcs = [
-        "create_calib_file.py",
-    ],
-    target_compatible_with = ["@platforms//os:linux"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":calibration_fbs_python",
-        "@pip//glog",
-        "@pip//opencv_python",
-        "@rules_python//python/runfiles",
-    ],
 )
 
 cc_library(

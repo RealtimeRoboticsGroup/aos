@@ -1,0 +1,11 @@
+include "build_tests/test.fbs";
+include "reflection/reflection.fbs";
+
+namespace aos.examples2;
+
+table Parent {
+  foo:aos.examples.Foo (id: 0);
+  schema:reflection.Schema (id: 1);
+}
+
+root_type Parent;

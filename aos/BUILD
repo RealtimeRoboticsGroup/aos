@@ -1,4 +1,4 @@
-load("@com_github_google_flatbuffers//:build_defs.bzl", "flatbuffer_cc_library", "flatbuffer_py_library")
+load("@com_github_google_flatbuffers//:build_defs.bzl", "flatbuffer_cc_library")
 load("@com_github_google_flatbuffers//:typescript.bzl", "flatbuffer_ts_library")
 load("@rules_python//python:defs.bzl", "py_binary", "py_library")
 load("//aos:flatbuffers.bzl", "cc_static_flatbuffer")
@@ -284,20 +284,17 @@ cc_static_flatbuffer(
 flatbuffer_ts_library(
     name = "configuration_ts_fbs",
     srcs = ["configuration.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
-    visibility = ["//visibility:public"],
-)
-
-flatbuffer_py_library(
-    name = "configuration_fbs_python",
-    srcs = ["configuration.fbs"],
+    include_reflection = True,
     namespace = "aos",
     tables = [
-        "Configuration",
-        "Channel",
+        "LoggerConfig",
         "Connection",
+        "ReadMethod",
+        "Channel",
         "Map",
+        "Application",
         "Node",
+        "Configuration",
     ],
     target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
@@ -382,6 +379,21 @@ autocxx_library(
 flatbuffer_ts_library(
     name = "json_to_flatbuffer_fbs_ts",
     srcs = ["json_to_flatbuffer.fbs"],
+    namespace = "aos.testing",
+    tables = [
+        "BaseType",
+        "NonConsecutive",
+        "Location",
+        "Map",
+        "Application",
+        "VectorOfStrings",
+        "VectorOfVectorOfString",
+        "Configuration",
+        "FooStructNested",
+        "FooStruct",
+        "ScalarSweepStruct",
+        "StructEnum",
+    ],
     target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//aos:__subpackages__"],
 )

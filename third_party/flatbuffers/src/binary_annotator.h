@@ -17,14 +17,21 @@
 #ifndef FLATBUFFERS_BINARY_ANNOTATOR_H_
 #define FLATBUFFERS_BINARY_ANNOTATOR_H_
 
+#include <cstddef>
+#include <cstdint>
+#include <iomanip>
+#include <ios>
+#include <list>
 #include <map>
+#include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "flatbuffers/base.h"
 #include "flatbuffers/reflection.h"
+#include "flatbuffers/reflection_generated.h"
 #include "flatbuffers/stl_emulation.h"
-#include "flatbuffers/util.h"
 
 namespace flatbuffers {
 
@@ -47,19 +54,20 @@ enum class BinaryRegionType {
   Float = 15,
   Double = 16,
   UType = 17,
+  UOffset64 = 18,
 };
 
 template<typename T>
 static inline std::string ToHex(T i, size_t width = sizeof(T)) {
   std::stringstream stream;
-  stream << std::hex << std::uppercase << std::setfill('0') << std::setw(width)
-         << i;
+  stream << std::hex << std::uppercase << std::setfill('0')
+         << std::setw(static_cast<int>(width)) << i;
   return stream.str();
 }
 
 // Specialized version for uint8_t that don't work well with std::hex.
 static inline std::string ToHex(uint8_t i) {
-  return ToHex(static_cast<int>(i), 2);
+  return ToHex<int>(static_cast<int>(i), 2);
 }
 
 enum class BinaryRegionStatus {
@@ -178,6 +186,7 @@ enum class BinarySectionType {
   Vector = 7,
   Union = 8,
   Padding = 9,
+  Vector64 = 10,
 };
 
 // A section of the binary that is grouped together in some logical manner, and
@@ -215,6 +224,7 @@ inline static BinaryRegionType GetRegionType(reflection::BaseType base_type) {
 inline static std::string ToString(const BinaryRegionType type) {
   switch (type) {
     case BinaryRegionType::UOffset: return "UOffset32";
+    case BinaryRegionType::UOffset64: return "UOffset64";
     case BinaryRegionType::SOffset: return "SOffset32";
     case BinaryRegionType::VOffset: return "VOffset16";
     case BinaryRegionType::Bool: return "bool";
@@ -223,7 +233,7 @@ inline static std::string ToString(const BinaryRegionType type) {
     case BinaryRegionType::Uint8: return "uint8_t";
     case BinaryRegionType::Uint16: return "uint16_t";
     case BinaryRegionType::Uint32: return "uint32_t";
-    case BinaryRegionType::Uint64: return "uint64_t"; ;
+    case BinaryRegionType::Uint64: return "uint64_t";
     case BinaryRegionType::Int8: return "int8_t";
     case BinaryRegionType::Int16: return "int16_t";
     case BinaryRegionType::Int32: return "int32_t";
@@ -241,12 +251,26 @@ class BinaryAnnotator {
   explicit BinaryAnnotator(const uint8_t *const bfbs,
                            const uint64_t bfbs_length,
                            const uint8_t *const binary,
-                           const uint64_t binary_length)
+                           const uint64_t binary_length,
+                           const bool is_size_prefixed)
       : bfbs_(bfbs),
         bfbs_length_(bfbs_length),
         schema_(reflection::GetSchema(bfbs)),
+        root_table_(""),
         binary_(binary),
-        binary_length_(binary_length) {}
+        binary_length_(binary_length),
+        is_size_prefixed_(is_size_prefixed) {}
+
+  BinaryAnnotator(const reflection::Schema *schema,
+                  const std::string &root_table, const uint8_t *binary,
+                  uint64_t binary_length, bool is_size_prefixed)
+      : bfbs_(nullptr),
+        bfbs_length_(0),
+        schema_(schema),
+        root_table_(root_table),
+        binary_(binary),
+        binary_length_(binary_length),
+        is_size_prefixed_(is_size_prefixed) {}
 
   std::map<uint64_t, BinarySection> Annotate();
 
@@ -257,6 +281,8 @@ class BinaryAnnotator {
       uint16_t offset_from_table = 0;
     };
 
+    const reflection::Object *referring_table = nullptr;
+
     // Field ID -> {field def, offset from table}
     std::map<uint16_t, Entry> fields;
 
@@ -266,13 +292,18 @@ class BinaryAnnotator {
 
   uint64_t BuildHeader(uint64_t offset);
 
-  void BuildVTable(uint64_t offset, const reflection::Object *table,
-                   uint64_t offset_of_referring_table);
+  // VTables can be shared across instances or even across objects. This
+  // attempts to get an existing vtable given the offset and table type,
+  // otherwise it will built the vtable, memorize it, and return the built
+  // VTable. Returns nullptr if building the VTable fails.
+  VTable *GetOrBuildVTable(uint64_t offset, const reflection::Object *table,
+                           uint64_t offset_of_referring_table);
 
   void BuildTable(uint64_t offset, const BinarySectionType type,
                   const reflection::Object *table);
 
   uint64_t BuildStruct(uint64_t offset, std::vector<BinaryRegion> &regions,
+                       const std::string referring_field_name,
                        const reflection::Object *structure);
 
   void BuildString(uint64_t offset, const reflection::Object *table,
@@ -280,7 +311,7 @@ class BinaryAnnotator {
 
   void BuildVector(uint64_t offset, const reflection::Object *table,
                    const reflection::Field *field, uint64_t parent_table_offset,
-                   const VTable &vtable);
+                   const std::map<uint16_t, VTable::Entry> vtable_fields);
 
   std::string BuildUnion(uint64_t offset, uint8_t realized_type,
                          const reflection::Field *field);
@@ -316,7 +347,7 @@ class BinaryAnnotator {
   }
 
   // Adds the provided `section` keyed by the `offset` it occurs at. If a
-  // section is already added at that offset, it doesn't replace the exisiting
+  // section is already added at that offset, it doesn't replace the existing
   // one.
   void AddSection(const uint64_t offset, const BinarySection &section) {
     sections_.insert(std::make_pair(offset, section));
@@ -371,17 +402,21 @@ class BinaryAnnotator {
 
   bool ContainsSection(const uint64_t offset);
 
+  const reflection::Object *RootTable() const;
+
   // The schema for the binary file
   const uint8_t *bfbs_;
   const uint64_t bfbs_length_;
   const reflection::Schema *schema_;
+  const std::string root_table_;
 
   // The binary data itself.
   const uint8_t *binary_;
   const uint64_t binary_length_;
+  const bool is_size_prefixed_;
 
   // Map of binary offset to vtables, to dedupe vtables.
-  std::map<uint64_t, VTable> vtables_;
+  std::map<uint64_t, std::list<VTable>> vtables_;
 
   // The annotated binary sections, index by their absolute offset.
   std::map<uint64_t, BinarySection> sections_;

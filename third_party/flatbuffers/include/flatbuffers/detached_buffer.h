@@ -45,7 +45,7 @@ class DetachedBuffer {
         cur_(cur),
         size_(sz) {}
 
-  DetachedBuffer(DetachedBuffer &&other)
+  DetachedBuffer(DetachedBuffer &&other) noexcept
       : allocator_(other.allocator_),
         own_allocator_(other.own_allocator_),
         buf_(other.buf_),
@@ -55,7 +55,7 @@ class DetachedBuffer {
     other.reset();
   }
 
-  DetachedBuffer &operator=(DetachedBuffer &&other) {
+  DetachedBuffer &operator=(DetachedBuffer &&other) noexcept {
     if (this == &other) return *this;
 
     destroy();
@@ -79,6 +79,11 @@ class DetachedBuffer {
   uint8_t *data() { return cur_; }
 
   size_t size() const { return size_; }
+
+  uint8_t *begin() { return data(); }
+  const uint8_t *begin() const { return data(); }
+  uint8_t *end() { return data() + size(); }
+  const uint8_t *end() const { return data() + size(); }
 
   // These may change access mode, leave these at end of public section
   FLATBUFFERS_DELETE_FUNC(DetachedBuffer(const DetachedBuffer &other));

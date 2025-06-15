@@ -175,6 +175,9 @@ TEST(JsonSchemaTest, ReflectionSchema) {
                                                     "offset": {
                                                         "type": "number"
                                                     },
+                                                    "offset64": {
+                                                        "type": "boolean"
+                                                    },
                                                     "optional": {
                                                         "type": "boolean"
                                                     },
@@ -356,6 +359,9 @@ TEST(JsonSchemaTest, ReflectionSchema) {
                                 "offset": {
                                     "type": "number"
                                 },
+                                "offset64": {
+                                    "type": "boolean"
+                                },
                                 "optional": {
                                     "type": "boolean"
                                 },
@@ -478,6 +484,9 @@ TEST(JsonSchemaTest, ReflectionSchema) {
                             },
                             "offset": {
                                 "type": "number"
+                            },
+                            "offset64": {
+                                "type": "boolean"
                             },
                             "optional": {
                                 "type": "boolean"
@@ -643,6 +652,9 @@ TEST(JsonSchemaTest, ReflectionSchema) {
                                                     "offset": {
                                                         "type": "number"
                                                     },
+                                                    "offset64": {
+                                                        "type": "boolean"
+                                                    },
                                                     "optional": {
                                                         "type": "boolean"
                                                     },
@@ -763,6 +775,9 @@ TEST(JsonSchemaTest, ReflectionSchema) {
                                                     },
                                                     "offset": {
                                                         "type": "number"
+                                                    },
+                                                    "offset64": {
+                                                        "type": "boolean"
                                                     },
                                                     "optional": {
                                                         "type": "boolean"

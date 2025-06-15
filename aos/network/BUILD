@@ -36,7 +36,16 @@ static_flatbuffer(
 flatbuffer_ts_library(
     name = "connect_ts_fbs",
     srcs = ["connect.fbs"],
+    include_reflection = True,
     target_compatible_with = ["@platforms//os:linux"],
+    ts_files = [
+        "aos/message-bridge/connect.ts",
+        "aos/channel.ts",
+        "aos/logger-config.ts",
+        "aos/connection.ts",
+        "aos/read-method.ts",
+        "aos/node.ts",
+    ],
     deps = [
         "//aos:configuration_ts_fbs",
     ],
@@ -77,6 +86,12 @@ static_flatbuffer(
 flatbuffer_ts_library(
     name = "message_bridge_client_ts_fbs",
     srcs = ["message_bridge_client.fbs"],
+    ts_files = [
+        "aos/message-bridge/client-connection.ts",
+        "aos/message-bridge/client-statistics.ts",
+        "aos/message-bridge/state.ts",
+        "aos/node.ts",
+    ],
     deps = [
         ":message_bridge_server_ts_fbs",
     ],
@@ -124,6 +139,14 @@ static_flatbuffer(
 flatbuffer_ts_library(
     name = "message_bridge_server_ts_fbs",
     srcs = ["message_bridge_server.fbs"],
+    ts_files = [
+        "aos/message-bridge/server-connection.ts",
+        "aos/message-bridge/server-statistics.ts",
+        "aos/message-bridge/server-channel-statistics.ts",
+        "aos/message-bridge/state.ts",
+        "aos/message-bridge.ts",
+        "aos/node.ts",
+    ],
     deps = [
         "//aos:configuration_ts_fbs",
     ],
@@ -704,7 +727,27 @@ flatbuffer_cc_library(
 flatbuffer_ts_library(
     name = "web_proxy_ts_fbs",
     srcs = ["web_proxy.fbs"],
+    include_reflection = True,
     target_compatible_with = ["@platforms//os:linux"],
+    ts_files = [
+        "aos/web-proxy/sdp-type.ts",
+        "aos/web-proxy/web-socket-sdp.ts",
+        "aos/web-proxy/web-socket-ice.ts",
+        "aos/web-proxy/web-socket-message.ts",
+        "aos/web-proxy/message-header.ts",
+        "aos/web-proxy/payload.ts",
+        "aos/web-proxy/transfer-method.ts",
+        "aos/web-proxy/channel-request.ts",
+        "aos/web-proxy/channel-state.ts",
+        "aos/web-proxy/subscriber-request.ts",
+        "aos/web-proxy.ts",
+        "aos/message-bridge/connect.ts",
+        "aos/channel.ts",
+        "aos/logger-config.ts",
+        "aos/connection.ts",
+        "aos/read-method.ts",
+        "aos/node.ts",
+    ],
     deps = [
         ":connect_ts_fbs",
         "//aos:configuration_ts_fbs",

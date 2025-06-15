@@ -149,4 +149,11 @@ flatbuffers.pc
 **/html/**
 **/latex/**
 # https://cmake.org/cmake/help/latest/module/FetchContent.html#variable:FETCHCONTENT_BASE_DIR
+cmake-build-debug/
 _deps/
+**/.gradle/**
+kotlin/**/generated
+MODULE.bazel.lock
+
+# Ignore the generated docs
+docs/site

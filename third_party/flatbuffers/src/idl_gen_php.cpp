@@ -16,6 +16,8 @@
 
 // independent from idl_parser, since this code is not needed for most clients
 
+#include "idl_gen_php.h"
+
 #include <string>
 
 #include "flatbuffers/code_generators.h"
@@ -518,8 +520,8 @@ class PhpGenerator : public BaseGenerator {
       auto &field = **it;
 
       if (field.deprecated) continue;
+      if (it != struct_def.fields.vec.begin()) { code += ", "; }
       code += "$" + field.name;
-      if (!(it == (--struct_def.fields.vec.end()))) { code += ", "; }
     }
     code += ")\n";
     code += Indent + "{\n";
@@ -937,9 +939,66 @@ class PhpGenerator : public BaseGenerator {
 };
 }  // namespace php
 
-bool GeneratePhp(const Parser &parser, const std::string &path,
-                 const std::string &file_name) {
+static bool GeneratePhp(const Parser &parser, const std::string &path,
+                        const std::string &file_name) {
   php::PhpGenerator generator(parser, path, file_name);
   return generator.generate();
 }
+
+namespace {
+
+class PhpCodeGenerator : public CodeGenerator {
+ public:
+  Status GenerateCode(const Parser &parser, const std::string &path,
+                      const std::string &filename) override {
+    if (!GeneratePhp(parser, path, filename)) { return Status::ERROR; }
+    return Status::OK;
+  }
+
+  Status GenerateCode(const uint8_t *, int64_t,
+                      const CodeGenOptions &) override {
+    return Status::NOT_IMPLEMENTED;
+  }
+
+  Status GenerateMakeRule(const Parser &parser, const std::string &path,
+                          const std::string &filename,
+                          std::string &output) override {
+    (void)parser;
+    (void)path;
+    (void)filename;
+    (void)output;
+    return Status::NOT_IMPLEMENTED;
+  }
+
+  Status GenerateGrpcCode(const Parser &parser, const std::string &path,
+                          const std::string &filename) override {
+    (void)parser;
+    (void)path;
+    (void)filename;
+    return Status::NOT_IMPLEMENTED;
+  }
+
+  Status GenerateRootFile(const Parser &parser,
+                          const std::string &path) override {
+    (void)parser;
+    (void)path;
+    return Status::NOT_IMPLEMENTED;
+  }
+
+  bool IsSchemaOnly() const override { return true; }
+
+  bool SupportsBfbsGeneration() const override { return false; }
+
+  bool SupportsRootFileGeneration() const override { return false; }
+
+  IDLOptions::Language Language() const override { return IDLOptions::kPhp; }
+
+  std::string LanguageName() const override { return "Php"; }
+};
+}  // namespace
+
+std::unique_ptr<CodeGenerator> NewPhpCodeGenerator() {
+  return std::unique_ptr<PhpCodeGenerator>(new PhpCodeGenerator());
+}
+
 }  // namespace flatbuffers

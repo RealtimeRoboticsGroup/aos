@@ -23,12 +23,12 @@
 // The demo_plot.ts script has a basic example of using this library, with all
 // the required boilerplate, as well as some extra examples about how to
 // add axis labels and the such.
-import {Channel, Configuration} from '../../configuration_generated';
+import {Channel, Configuration} from '../../configuration_ts_fbs/aos';
 import {Line, Plot, Point} from './plotter';
 import {Connection} from './proxy';
-import {SubscriberRequest, ChannelRequest, TransferMethod} from '../web_proxy_generated';
+import {SubscriberRequest, ChannelRequest, TransferMethod} from '../web_proxy_ts_fbs/aos/web-proxy';
 import {Parser, Table} from './reflection'
-import {Schema} from 'flatbuffers_reflection/reflection_generated';
+import {Schema} from '../../../external/com_github_google_flatbuffers/reflection/reflection_ts_fbs/reflection';
 import {ByteBuffer} from 'flatbuffers';
 
 export class TimestampedMessage {

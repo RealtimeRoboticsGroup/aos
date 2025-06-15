@@ -4,7 +4,7 @@ import {
 {% for action in ACTIONS %}
   {{ action }}T,
 {% endfor %}
-} from '@aos/scouting/webserver/requests/messages/submit_2024_actions_generated';
+} from '@aos/scouting/webserver/requests/messages/submit_2024_actions_ts_fbs/scouting/webserver/requests';
 
 export type ConcreteAction =
 {% for action in ACTIONS %}

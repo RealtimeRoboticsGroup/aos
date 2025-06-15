@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Google Inc. All rights reserved.
+ * Copyright 2024 Google Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,8 @@ final class FlatbuffersVerifierTests: XCTestCase {
 
   var validFlatbuffersObject: ByteBuffer!
   var invalidFlatbuffersObject: ByteBuffer!
+  var invalidFlatbuffersObject2: ByteBuffer!
+  var invalidFlatbuffersObject3: ByteBuffer!
 
   override func setUp() {
     // swiftformat:disable all
@@ -41,6 +43,11 @@ final class FlatbuffersVerifierTests: XCTestCase {
 
     invalidFlatbuffersObject = ByteBuffer(bytes: [0, 48, 0, 0, 0, 77, 79, 78, 83, 0, 0, 0, 0, 36, 0, 72, 0, 40, 0, 0, 0, 38, 0, 32, 0, 0, 0, 28, 0, 0, 0, 27, 0, 20, 0, 16, 0, 12, 0, 4, 0, 0, 0, 0, 0, 0, 0, 11, 0, 36, 0, 0, 0, 164, 0, 0, 0, 0, 0, 0, 1, 60, 0, 0, 0, 68, 0, 0, 0, 76, 0, 0, 0, 0, 0, 0, 1, 88, 0, 0, 0, 120, 0, 0, 0, 0, 0, 80, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 64, 2, 0, 5, 0, 6, 0, 0, 0, 2, 0, 0, 0, 64, 0, 0, 0, 48, 0, 0, 0, 2, 0, 0, 0, 30, 0, 40, 0, 10, 0, 20, 0, 152, 255, 255, 255, 4, 0, 0, 0, 4, 0, 0, 0, 70, 114, 101, 100, 0, 0, 0, 0, 5, 0, 0, 0, 0, 1, 2, 3, 4, 0, 0, 0, 5, 0, 0, 0, 116, 101, 115, 116, 50, 0, 0, 0, 5, 0, 0, 0, 116, 101, 115, 116, 49, 0, 0, 0, 9, 0, 0, 0, 77, 121, 77, 111, 110, 115, 116, 101, 114, 0, 0, 0, 3, 0, 0, 0, 20, 0, 0, 0, 36, 0, 0, 0, 4, 0, 0, 0, 240, 255, 255, 255, 32, 0, 0, 0, 248, 255, 255, 255, 36, 0, 0, 0, 12, 0, 8, 0, 0, 0, 0, 0, 0, 0, 4, 0, 12, 0, 0, 0, 28, 0, 0, 0, 5, 0, 0, 0, 87, 105, 108, 109, 97, 0, 0, 0, 6, 0, 0, 0, 66, 97, 114, 110, 101, 121, 0, 0, 5, 0, 0, 0, 70, 114, 111, 100, 111, 0, 0, 0])
 
+    // Array failure within a the inventory array
+    invalidFlatbuffersObject2 = ByteBuffer(bytes: [48, 0, 0, 0, 77, 79, 78, 83, 0, 0, 0, 0, 36, 0, 72, 0, 40, 0, 0, 0, 38, 0, 32, 0, 0, 0, 28, 0, 0, 0, 27, 0, 20, 0, 16, 0, 12, 0, 4, 0, 0, 0, 0, 0, 0, 0, 11, 0, 36, 0, 0, 0, 164, 0, 0, 0, 0, 0, 0, 1, 60, 0, 0, 0, 68, 0, 0, 0, 76, 0, 0, 0, 0, 0, 0, 1, 88, 0, 0, 0, 120, 0, 0, 0, 0, 0, 80, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 64, 2, 0, 5, 0, 6, 0, 0, 0, 2, 0, 0, 0, 64, 0, 0, 0, 48, 0, 0, 0, 2, 0, 0, 0, 30, 0, 40, 0, 10, 0, 20, 0, 152, 255, 255, 255, 4, 0, 0, 0, 4, 0, 0, 0, 70, 114, 101, 100, 0, 0, 0, 0, 5, 0, 0, 0, 0, 1, 2, 0x00, 3, 4, 0, 0, 0, 5, 0, 0, 0, 116, 101, 115, 116, 50, 0, 0, 0, 5, 0, 0, 0, 116, 101, 115, 116, 49, 0, 0, 0, 9, 0, 0, 0, 77, 121, 77, 111, 110, 115, 116, 101, 114, 0, 0, 0, 3, 0, 0, 0, 20, 0, 0, 0, 36, 0, 0, 0, 4, 0, 0, 0, 240, 255, 255, 255, 32, 0, 0, 0, 248, 255, 255, 255, 36, 0, 0, 0, 12, 0, 8, 0, 0, 0, 0, 0, 0, 0, 4, 0, 12, 0, 0, 0, 28, 0, 0, 0, 5, 0, 0, 0, 87, 105, 108, 109, 97, 0, 0, 0, 6, 0, 0, 0, 66, 97, 114, 110, 101, 121, 0, 0, 5, 0, 0, 0, 70, 114, 111, 100, 111, 0, 0, 0])
+
+    // Array failure within a the strings array
+    invalidFlatbuffersObject3 = ByteBuffer(bytes: [48, 0, 0, 0, 77, 79, 78, 83, 0, 0, 0, 0, 36, 0, 72, 0, 40, 0, 0, 0, 38, 0, 32, 0, 0, 0, 28, 0, 0, 0, 27, 0, 20, 0, 16, 0, 12, 0, 4, 0, 0, 0, 0, 0, 0, 0, 11, 0, 36, 0, 0, 0, 164, 0, 0, 0, 0, 0, 0, 1, 60, 0, 0, 0, 68, 0, 0, 0, 76, 0, 0, 0, 0, 0, 0, 1, 88, 0, 0, 0, 120, 0, 0, 0, 0, 0, 80, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 64, 2, 0, 5, 0, 6, 0, 0, 0, 2, 0, 0, 0, 64, 0, 0, 0, 48, 0, 0, 0, 2, 0, 0, 0, 30, 0, 40, 0, 10, 0, 20, 0, 152, 255, 255, 255, 4, 0, 0, 0, 4, 0, 0, 0, 70, 114, 101, 100, 0, 0, 0, 0, 5, 0, 0, 0, 0, 1, 2, 3, 4, 0, 0, 0, 5, 0, 0, 0, 116, 101, 115, 116, 50, 0, 0, 0, 5, 0, 0, 0, 116, 101, 115, 116, 49, 0, 0, 0, 9, 0, 0, 0, 77, 121, 77, 111, 110, 115, 116, 101, 114, 0, 0, 0, 3, 0, 0, 0, 20, 0, 0, 0, 36, 0, 0, 0, 4, 0, 0, 0, 240, 255, 255, 255, 32, 0, 0, 0, 248, 255, 255, 255, 36, 0, 0, 0, 12, 0, 8, 0, 0, 0, 0, 0, 0, 0, 4, 0, 12, 0, 0, 0, 28, 0, 0, 0, 5, 0, 0, 0, 87, 105, 108, 109, 97, 0, 0, 0, 6, 0, 0, 0, 66, 97, 114, 110, 101, 121, 0, 0, 5, 0, 0, 0, 70, 114, 111, 100, 0x00, 111, 0, 0, 0])
     // swiftformat:enable all
   }
 
@@ -56,8 +63,19 @@ final class FlatbuffersVerifierTests: XCTestCase {
     XCTAssertThrowsError(try Verifier(buffer: &buffer))
   }
 
+  func testFailingID() {
+    let dutData : [UInt8] = [1,2,3,4,5,6,7]
+    var buff  = ByteBuffer(bytes: dutData)
+    do {
+      let _: Monster = try getCheckedRoot(byteBuffer: &buff, fileId: "ABCD")
+      XCTFail("This should always fail")
+    } catch {
+      XCTAssertEqual(error as? FlatbuffersErrors, .bufferDoesntContainID)
+    }
+  }
+
   func testVerifierCheckAlignment() {
-    var verifier = try! Verifier(buffer: &buffer)
+    let verifier = try! Verifier(buffer: &buffer)
     do {
       try verifier.isAligned(position: 20, type: Int.self)
     } catch {
@@ -67,7 +85,7 @@ final class FlatbuffersVerifierTests: XCTestCase {
     }
     XCTAssertNoThrow(try verifier.isAligned(position: 16, type: Int.self))
 
-    var newVerifer = try! Verifier(buffer: &buffer, checkAlignment: false)
+    let newVerifer = try! Verifier(buffer: &buffer, checkAlignment: false)
     XCTAssertNoThrow(try newVerifer.isAligned(position: 16, type: Int.self))
   }
 
@@ -94,7 +112,7 @@ final class FlatbuffersVerifierTests: XCTestCase {
   }
 
   func testPositionInBuffer() {
-    var verifier = try! Verifier(buffer: &buffer)
+    let verifier = try! Verifier(buffer: &buffer)
     XCTAssertNoThrow(try verifier.inBuffer(position: 0, of: Int64.self))
     XCTAssertNoThrow(try verifier.inBuffer(position: 24, of: Int64.self))
     XCTAssertThrowsError(try verifier.inBuffer(position: -9, of: Int64.self))
@@ -116,6 +134,9 @@ final class FlatbuffersVerifierTests: XCTestCase {
     var verifier = try! Verifier(buffer: &validFlatbuffersObject)
 
     var tableVerifer = try! verifier.visitTable(at: 48)
+    XCTAssertEqual(verifier.depth, 1)
+    XCTAssertEqual(verifier.tableCount, 1)
+
     XCTAssertNoThrow(try tableVerifer.visit(
       field: 4,
       fieldName: "Vec",
@@ -192,6 +213,8 @@ final class FlatbuffersVerifierTests: XCTestCase {
         error as! FlatbuffersErrors,
         .missAlignedPointer(position: 25, type: "UInt16"))
     }
+    tableVerifer.finish()
+    XCTAssertEqual(verifier.depth, 0)
   }
 
   func testVerifyUnionVectors() {
@@ -205,7 +228,9 @@ final class FlatbuffersVerifierTests: XCTestCase {
     // swiftformat:disable all
     var byteBuffer = ByteBuffer(bytes: [20, 0, 0, 0, 77, 79, 86, 73, 12, 0, 12, 0, 0, 0, 0, 0, 8, 0, 4, 0, 12, 0, 0, 0, 8, 0, 0, 0, 20, 0, 0, 0, 3, 0, 0, 0, 24, 0, 0, 0, 32, 0, 0, 0, 12, 0, 0, 0, 3, 0, 0, 0, 3, 1, 4, 0, 2, 0, 0, 0, 7, 0, 0, 0, 0, 0, 6, 0, 8, 0, 4, 0, 6, 0, 0, 0, 8, 0, 0, 0])
     // swiftformat:enable all
-    XCTAssertThrowsError(try getCheckedRoot(byteBuffer: &byteBuffer, fileId: "FLEX") as Movie)
+    XCTAssertThrowsError(try getCheckedRoot(
+      byteBuffer: &byteBuffer,
+      fileId: "FLEX") as Movie)
   }
 
   func testVerifyPrefixedBuffer() {
@@ -235,6 +260,18 @@ final class FlatbuffersVerifierTests: XCTestCase {
         byteBuffer: &invalidFlatbuffersObject) as MyGame_Example_Monster)
   }
 
+  func testInvalidBuffer2() {
+    XCTAssertThrowsError(
+      try getCheckedRoot(
+        byteBuffer: &invalidFlatbuffersObject2) as MyGame_Example_Monster)
+  }
+
+  func testInvalidBuffer3() {
+    XCTAssertThrowsError(
+      try getCheckedRoot(
+        byteBuffer: &invalidFlatbuffersObject3) as MyGame_Example_Monster)
+  }
+
   func testValidUnionBuffer() {
     let string = "Awesome \\\\t\t\nstring!"
     var fb = FlatBufferBuilder()
@@ -259,7 +296,51 @@ final class FlatbuffersVerifierTests: XCTestCase {
     XCTAssertNoThrow(try getCheckedRoot(byteBuffer: &buf) as Movie)
   }
 
+  func testNestedTables() throws {
+    var builder = FlatBufferBuilder()
+    let name = builder.create(string: "Monster")
+
+    let enemy = MyGame_Example_Monster.createMonster(
+      &builder,
+      nameOffset: name)
+    let currentName = builder.create(string: "Main name")
+    let monster = MyGame_Example_Monster.createMonster(
+      &builder,
+      nameOffset: currentName,
+      enemyOffset: enemy)
+    builder.finish(offset: monster)
+
+    var sizedBuffer = builder.sizedBuffer
+    var verifier = try! Verifier(buffer: &sizedBuffer)
+    var tableVerifer = try! verifier.visitTable(
+      at: try getOffset(at: 0, within: verifier))
+    XCTAssertEqual(verifier.depth, 1)
+    XCTAssertEqual(verifier.tableCount, 1)
+
+    let position = try tableVerifer.dereference(28)!
+
+    var nestedTable = try verifier.visitTable(
+      at: try getOffset(at: position, within: verifier))
+
+    XCTAssertEqual(verifier.depth, 2)
+    XCTAssertEqual(verifier.tableCount, 2)
+    nestedTable.finish()
+    XCTAssertEqual(verifier.depth, 1)
+    XCTAssertEqual(verifier.tableCount, 2)
+    tableVerifer.finish()
+    XCTAssertEqual(verifier.depth, 0)
+    XCTAssertEqual(verifier.tableCount, 2)
+  }
+
   func add(buffer: inout ByteBuffer, v: Int32, p: Int) {
     buffer.write(value: v, index: p)
+  }
+
+  private func getOffset(
+    at value: Int,
+    within verifier: Verifier) throws -> Int
+  {
+    let offset: UOffset = try verifier.getValue(at: value)
+    return Int(clamping: (Int(offset) &+ 0).magnitude)
   }
 }

@@ -425,6 +425,9 @@ Tokenizer::TokenType Tokenizer::Next() {
         ConsumeWhitespace();
         state_ = State::kExpectValue;
         return TokenType::kStartArray;
+      } else if (Consume("null")) {
+        field_value_ = "null";
+        result = TokenType::kNullValue;
       } else if (ConsumeString(&s)) {
         // Parsed as a string, grab it.
         field_value_ = ::std::move(s);

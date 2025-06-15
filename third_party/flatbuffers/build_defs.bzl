@@ -3,6 +3,9 @@
 
 """
 Rules for building C++ flatbuffers with Bazel.
+
+AOS Note: These have diverged substantially from upstream; they should
+probably just be extracted from the third_party/flatbuffers folder entirely.
 """
 
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -59,27 +62,29 @@ FlatbufferLibraryInfo = provider()
 def _flatbuffer_library_compile_impl(ctx):
     outs = []
     commands = []
+    all_srcs = depset(ctx.files.srcs, transitive = [dep[FlatbufferLibraryInfo].srcs for dep in ctx.attr.deps])
+
+    workspaces = []
+
+    for dep in ctx.attr.deps:
+        for dep_src in dep[FlatbufferLibraryInfo].srcs.to_list():
+            root = dep_src.owner.workspace_root
+            if root and root not in workspaces:
+                workspaces.append(root)
+
+    all_files = depset(ctx.attr.generated_files)
+    if ctx.attr.generated_files:
+        outs = ctx.outputs.generated_files
+
     for src in ctx.files.srcs:
-        workspaces = []
-        if ctx.attr.tables_for_filenames:
-            out_dir = None
-            for table in ctx.attr.tables_for_filenames:
-                out = ctx.actions.declare_file(ctx.attr.out_prefix + table + ctx.attr.output_suffix)
-                this_out_dir = "/".join(out.dirname.split("/")[:-(len(ctx.attr.out_prefix.split("/")) - 1)])
-                if out_dir:
-                    if this_out_dir != out_dir:
-                        fail("Trying to write to multiple directories")
-                else:
-                    out_dir = this_out_dir
-                outs.append(out)
-        else:
-            out = ctx.actions.declare_file(ctx.attr.out_prefix + src.basename.replace(".fbs", "") + ctx.attr.output_suffix)
+        if not ctx.attr.generated_files:
+            out = ctx.actions.declare_file(src.basename.replace(".fbs", "") + ctx.attr.output_suffix)
             outs.append(out)
-            out_dir = out.dirname
 
         input_dir = src.dirname
 
         external_folder = None
+        out_package_path = ctx.label.package
         if input_dir.startswith("external/"):
             second_slash_index = input_dir.find("/", len("external/"))
 
@@ -88,11 +93,9 @@ def _flatbuffer_library_compile_impl(ctx):
                 external_folder = input_dir
             else:
                 external_folder = input_dir[0:second_slash_index]
+            out_package_path = "external/" + ctx.label.repo_name + "/" + ctx.label.package
 
-        for f in ctx.files.includes:
-            root = f.owner.workspace_root
-            if root and root not in workspaces:
-                workspaces.append(root)
+        external_folder = None
 
         # For flatbuffers built in external repos, we don't want "external/foo" in the path.
         # That will trigger #include "external/foo/bar_generated.h".  To fix that, cd into
@@ -113,35 +116,35 @@ def _flatbuffer_library_compile_impl(ctx):
         arguments.extend(ctx.attr.language_flags)
         arguments.extend([
             "-o",
-            prefix + out_dir,
+            prefix + ctx.bin_dir.path + "/" + out_package_path + "/" + ctx.attr.output_folder,
         ])
         arguments.append(prefix + src.path)
         if external_folder != None:
             commands.append("(cd " + external_folder + " && " + " ".join(arguments) + ")")
         else:
-            commands.append(" ".join(arguments))
+            commands.append("  ".join(arguments))
 
     ctx.actions.run_shell(
         outputs = outs,
-        inputs = ctx.files.srcs + ctx.files.includes,
+        inputs = all_srcs,
         tools = [ctx.executable._flatc],
         command = " && ".join(commands),
         mnemonic = "Flatc",
         progress_message = "Generating flatbuffer files for %{input}:",
     )
-    return [DefaultInfo(files = depset(outs)), FlatbufferLibraryInfo(srcs = ctx.files.srcs)]
+    return [DefaultInfo(files = depset(outs)), FlatbufferLibraryInfo(srcs = all_srcs)]
 
 _flatbuffer_library_compile = rule(
     implementation = _flatbuffer_library_compile_impl,
     attrs = {
         "srcs": attr.label_list(mandatory = True, allow_files = True),
-        "output_suffix": attr.string(mandatory = True),
-        "tables_for_filenames": attr.string_list(mandatory = False),
+        "output_suffix": attr.string(default = ""),
+        "output_folder": attr.string(default = ""),
+        "generated_files": attr.output_list(mandatory = False),
         "language_flags": attr.string_list(mandatory = True),
-        "includes": attr.label_list(default = [], allow_files = True),
+        "deps": attr.label_list(default = [], providers = [FlatbufferLibraryInfo], doc = "All of our direct dependencies."),
         "include_paths": attr.string_list(default = []),
         "flatc_args": attr.string_list(default = []),
-        "out_prefix": attr.string(default = ""),
         "_flatc": attr.label(executable = True, cfg = "exec", default = Label(flatc_path)),
     },
 )
@@ -151,9 +154,9 @@ def flatbuffer_library_public(
         srcs,
         output_suffix,
         language_flag,
-        out_prefix = "",
-        tables_for_filenames = None,
-        includes = [],
+        generated_files = None,
+        output_folder = "",
+        deps = [],
         include_paths = DEFAULT_INCLUDE_PATHS,
         flatc_args = DEFAULT_FLATC_ARGS,
         reflection_name = "",
@@ -171,9 +174,7 @@ def flatbuffer_library_public(
       srcs: Source .fbs files. Sent in order to the compiler.
       output_suffix: Suffix for output files from flatc.
       language_flag: Target language flag. One of [-c, -j, -js].
-      out_prefix: Prepend this path to the front of all generated files except on
-          single source targets. Usually is a directory name.
-      includes: Optional, list of filegroups of schemas that the srcs depend on.
+      deps: Optional, list of filegroups of schemas that the srcs depend on.
       include_paths: Optional, list of paths the includes files can be found in.
       flatc_args: Optional, list of additional arguments to pass to flatc.
       reflection_name: Optional, if set this will generate the flatbuffer
@@ -197,12 +198,12 @@ def flatbuffer_library_public(
         name = name,
         srcs = srcs,
         output_suffix = output_suffix,
+        output_folder = output_folder,
         language_flags = [language_flag],
-        includes = includes,
+        deps = deps,
         include_paths = include_paths,
         flatc_args = flatc_args,
-        out_prefix = out_prefix,
-        tables_for_filenames = tables_for_filenames,
+        generated_files = generated_files,
         compatible_with = compatible_with,
         target_compatible_with = target_compatible_with,
         restricted_to = restricted_to,
@@ -215,10 +216,9 @@ def flatbuffer_library_public(
             srcs = srcs,
             output_suffix = ".bfbs",
             language_flags = ["-b", "--schema"],
-            includes = includes,
+            deps = deps,
             include_paths = include_paths,
             flatc_args = flatc_args,
-            out_prefix = out_prefix,
             compatible_with = compatible_with,
             target_compatible_with = target_compatible_with,
             restricted_to = restricted_to,
@@ -229,7 +229,6 @@ def flatbuffer_cc_library(
         name,
         srcs,
         srcs_filegroup_name = "",
-        out_prefix = "",
         deps = [],
         includes = [],
         include_paths = DEFAULT_INCLUDE_PATHS,
@@ -249,8 +248,6 @@ def flatbuffer_cc_library(
       srcs_filegroup_name: Name of the output filegroup that holds srcs. Pass this
           filegroup into the `includes` parameter of any other
           flatbuffer_cc_library that depends on this one's schemas.
-      out_prefix: Prepend this path to the front of all generated files. Usually
-          is a directory name.
       deps: Optional, list of other flatbuffer_cc_library's to depend on. Cannot be specified
           alongside includes.
       includes: Optional, list of filegroups of schemas that the srcs depend on.
@@ -287,7 +284,7 @@ def flatbuffer_cc_library(
         # use of includes without good reason.
         fail("Cannot specify both deps and include in flatbuffer_cc_library.")
     if deps:
-        includes = [d + "_includes" for d in deps]
+        includes = [d + "_srcs" for d in deps]
     reflection_name = "%s_reflection" % name if gen_reflections else ""
 
     srcs_lib = "%s_srcs" % (name)
@@ -296,8 +293,7 @@ def flatbuffer_cc_library(
         srcs = srcs,
         output_suffix = "_generated.h",
         language_flag = "-c",
-        out_prefix = out_prefix,
-        includes = includes,
+        deps = includes,
         include_paths = include_paths,
         flatc_args = flatc_args,
         compatible_with = compatible_with,
@@ -305,6 +301,7 @@ def flatbuffer_cc_library(
         target_compatible_with = target_compatible_with,
         reflection_name = reflection_name,
         reflection_visibility = visibility,
+        visibility = visibility,
     )
     native.cc_library(
         name = name,
@@ -329,72 +326,6 @@ def flatbuffer_cc_library(
         visibility = visibility,
     )
 
-    # A filegroup for the `srcs`. That is, all the schema files for this
-    # Flatbuffer set.
-    native.filegroup(
-        name = srcs_filegroup_name if srcs_filegroup_name else "%s_includes" % (name),
-        srcs = srcs + includes,
-        compatible_with = compatible_with,
-        restricted_to = restricted_to,
-        visibility = srcs_filegroup_visibility if srcs_filegroup_visibility != None else visibility,
-    )
-
-def flatbuffer_py_library(
-        name,
-        srcs,
-        namespace,
-        tables,
-        compatible_with = None,
-        target_compatible_with = None,
-        includes = [],
-        include_paths = DEFAULT_INCLUDE_PATHS,
-        flatc_args = DEFAULT_FLATC_ARGS,
-        visibility = None,
-        srcs_filegroup_visibility = None):
-    """Generates a py_library rule for a given flatbuffer definition.
-
-    Args:
-      name: Name of the generated py_library rule.
-      srcs: Source .fbs file(s).
-      namespace: Namespace of the specified flatbuffer schema. Until
-        we make the rules sophisticated enough to figure out what
-        python files will be generated from a given schema, the user
-        has to manually specify this.
-      tables: List of table names--currently, we don't do anything to
-        automatically figure out how to handle the fact that a separate
-        python file will be generated for every table definition, and that
-        we can't know what files will be output until after the file has
-        been parsed. As such, we just force the user to manually specify
-        things.
-    """
-
-    srcs_lib = "%s_srcs" % (name)
-    if not tables:
-        fail("Must specify the list of tables")
-    flatbuffer_library_public(
-        name = srcs_lib,
-        srcs = srcs,
-        output_suffix = ".py",
-        out_prefix = namespace.replace(".", "/") + "/",
-        tables_for_filenames = tables,
-        language_flag = "--python",
-        includes = includes,
-        include_paths = include_paths,
-        flatc_args = flatc_args,
-        compatible_with = compatible_with,
-        target_compatible_with = target_compatible_with,
-        visibility = ["//visibility:private"],
-    )
-    py_library(
-        name = name,
-        srcs = [srcs_lib],
-        visibility = visibility,
-        compatible_with = compatible_with,
-        target_compatible_with = target_compatible_with,
-        imports = ["."],
-        deps = ["@com_github_google_flatbuffers//:flatpy"],
-    )
-
 def flatbuffer_go_library(
         name,
         srcs,
@@ -414,7 +345,7 @@ def flatbuffer_go_library(
         srcs = srcs,
         output_suffix = "_generated.go",
         language_flag = "--go",
-        includes = includes,
+        deps = includes,
         include_paths = include_paths,
         flatc_args = flatc_args,
         compatible_with = compatible_with,
@@ -435,7 +366,7 @@ def _flatbuffer_rust_lib_gen_impl(ctx):
     # TODO(Brian): I think this needs changes to properly handle multiple .fbs files in a rule.
     uses = []
     for (dep, dep_srcs) in zip(ctx.attr.deps, ctx.attr.dep_srcs):
-        for dep_src in dep_srcs[FlatbufferLibraryInfo].srcs:
+        for dep_src in dep_srcs[FlatbufferLibraryInfo].srcs.to_list():
             uses.append((dep[CrateInfo].name, dep_src.basename.replace(".fbs", "_generated")))
     lib_rs_content = "\n".join(
         [
@@ -490,7 +421,7 @@ def flatbuffer_rust_library(
         srcs = srcs,
         language_flag = "--rust",
         output_suffix = "_generated.rs",
-        includes = includes,
+        deps = includes,
         include_paths = include_paths,
         flatc_args = flatc_args,
         compatible_with = compatible_with,

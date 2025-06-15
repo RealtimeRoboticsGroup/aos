@@ -6,8 +6,8 @@ import {
   ViewChildren,
 } from '@angular/core';
 import {Builder, ByteBuffer} from 'flatbuffers';
-import {ErrorResponse} from '@aos/scouting/webserver/requests/messages/error_response_generated';
-import {SubmitPitImage} from '@aos/scouting/webserver/requests/messages/submit_pit_image_generated';
+import {ErrorResponse} from '@aos/scouting/webserver/requests/messages/error_response_ts_fbs/scouting/webserver/requests';
+import {SubmitPitImage} from '@aos/scouting/webserver/requests/messages/submit_pit_image_ts_fbs/scouting/webserver/requests';
 
 type Section = 'TeamSelection' | 'Data';
 

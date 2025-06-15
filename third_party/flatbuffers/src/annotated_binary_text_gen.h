@@ -41,6 +41,9 @@ class AnnotatedBinaryTextGenerator {
     //
     // Example: binary1.bin -> binary1.afb
     std::string output_extension = "afb";
+
+    // Controls.
+    bool include_vector_contents = true;
   };
 
   explicit AnnotatedBinaryTextGenerator(
@@ -53,8 +56,8 @@ class AnnotatedBinaryTextGenerator {
 
   // Generate the annotated binary for the given `filename`. Returns true if the
   // annotated binary was successfully saved.
-  bool Generate(const std::string &filename,
-                const std::string &schema_filename);
+  bool Generate(const std::string &filename, const std::string &schema_filename,
+                const std::string &output_filename = "");
 
  private:
   const std::map<uint64_t, BinarySection> annotations_;
