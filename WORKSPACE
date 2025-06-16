@@ -50,6 +50,10 @@ http_archive(
     sha256 = "9f9f3b300a9264e4c77999312ce663be5dee9a56e361a1f6fe7ec60e1beef9a3",
     strip_prefix = "rules_python-1.4.1",
     url = "https://github.com/bazel-contrib/rules_python/releases/download/1.4.1/rules_python-1.4.1.tar.gz",
+    patches = [
+        "//third_party:rules_python/0001-Allow-WORKSPACE-users-to-patch-wheels.patch",
+    ],
+    patch_args = ["-p1"],
 )
 
 load("@rules_python//python:repositories.bzl", "py_repositories")
@@ -89,7 +93,22 @@ load(
     install_pip_deps = "install_deps",
 )
 
-install_pip_deps()
+install_pip_deps(
+    patch_spec = {
+        "matplotlib": {
+            patch: json.encode({"patch_strip": 2})
+            for patch in [
+                "//third_party:python/matplotlib/init.patch",
+            ]
+        },
+        "pygobject": {
+            patch: json.encode({"patch_strip": 2})
+            for patch in [
+                "//third_party:python/pygobject/init.patch",
+            ]
+        },
+    },
+)
 
 load("//tools/python:repo_defs.bzl", "pip_configure")
 
