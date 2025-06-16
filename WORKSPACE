@@ -52,6 +52,7 @@ http_archive(
     url = "https://github.com/bazel-contrib/rules_python/releases/download/1.4.1/rules_python-1.4.1.tar.gz",
     patches = [
         "//third_party:rules_python/0001-Allow-WORKSPACE-users-to-patch-wheels.patch",
+        "//third_party:rules_python/0002-Allow-users-to-inject-extra-deps.patch",
     ],
     patch_args = ["-p1"],
 )
@@ -81,8 +82,6 @@ pip_parse(
     extra_pip_args = [
         "--index-url=http://localhost:8000",
     ],
-    #overrides = "//tools/python:whl_overrides.json",
-    #patch_spec = "//tools/python:patches.json",
     requirements_lock = "//tools/python:requirements.lock.txt",
     python_interpreter_target = "@python3_9_host//:python",
 )

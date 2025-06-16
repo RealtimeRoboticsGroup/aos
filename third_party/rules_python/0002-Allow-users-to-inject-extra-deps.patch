@@ -1,0 +1,72 @@
+From f4bd4e26fe5dab2e524e893a6fb40927d61e7c12 Mon Sep 17 00:00:00 2001
+From: Philipp Schrader <philipp.schrader@gmail.com>
+Date: Sun, 15 Jun 2025 17:58:34 -0700
+Subject: [PATCH] Allow users to inject extra deps
+
+---
+ python/private/pypi/generate_whl_library_build_bazel.bzl | 1 +
+ python/private/pypi/package_annotation.bzl               | 3 +++
+ python/private/pypi/whl_library_targets.bzl              | 3 ++-
+ 3 files changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/python/private/pypi/generate_whl_library_build_bazel.bzl b/python/private/pypi/generate_whl_library_build_bazel.bzl
+index 31c9d4da..3f5cbb98 100644
+--- a/python/private/pypi/generate_whl_library_build_bazel.bzl
++++ b/python/private/pypi/generate_whl_library_build_bazel.bzl
+@@ -94,6 +94,7 @@ def generate_whl_library_build_bazel(
+         kwargs["srcs_exclude"] = annotation.srcs_exclude_glob
+         if annotation.additive_build_content:
+             additional_content.append(annotation.additive_build_content)
++        kwargs["extra_deps"] = annotation.deps
+     if default_python_version:
+         kwargs["default_python_version"] = default_python_version
+ 
+diff --git a/python/private/pypi/package_annotation.bzl b/python/private/pypi/package_annotation.bzl
+index 4a54703a..5627151c 100644
+--- a/python/private/pypi/package_annotation.bzl
++++ b/python/private/pypi/package_annotation.bzl
+@@ -18,6 +18,7 @@ def package_annotation(
+         additive_build_content = None,
+         copy_files = {},
+         copy_executables = {},
++        deps = [],
+         data = [],
+         data_exclude_glob = [],
+         srcs_exclude_glob = []):
+@@ -31,6 +32,7 @@ def package_annotation(
+         copy_executables (dict, optional): A mapping of `src` and `out` files for
+             [@bazel_skylib//rules:copy_file.bzl][cf]. Targets generated here will also be flagged as
+             executable.
++        deps (list, optional): A list of labels to add as `deps` dependencies to the generated `py_library` target.
+         data (list, optional): A list of labels to add as `data` dependencies to the generated `py_library` target.
+         data_exclude_glob (list, optional): A list of exclude glob patterns to add as `data` to the generated
+             `py_library` target.
+@@ -43,6 +45,7 @@ def package_annotation(
+         additive_build_content = additive_build_content,
+         copy_files = copy_files,
+         copy_executables = copy_executables,
++        deps = deps,
+         data = data,
+         data_exclude_glob = data_exclude_glob,
+         srcs_exclude_glob = srcs_exclude_glob,
+diff --git a/python/private/pypi/whl_library_targets.bzl b/python/private/pypi/whl_library_targets.bzl
+index 21e4a54a..c959ea1e 100644
+--- a/python/private/pypi/whl_library_targets.bzl
++++ b/python/private/pypi/whl_library_targets.bzl
+@@ -125,6 +125,7 @@ def whl_library_targets(
+             DATA_LABEL: ["data/**"],
+         },
+         dependencies = [],
++        extra_deps = [],
+         dependencies_by_platform = {},
+         group_deps = [],
+         group_name = "",
+@@ -344,7 +345,7 @@ def whl_library_targets(
+                 deps_by_platform = dependencies_by_platform,
+                 tmpl = dep_template.format(name = "{}", target = PY_LIBRARY_PUBLIC_LABEL),
+                 select = getattr(native, "select", select),
+-            ),
++            ) + extra_deps,
+             tags = tags,
+             visibility = impl_vis,
+             experimental_venvs_site_packages = Label("@rules_python//python/config_settings:venvs_site_packages"),
