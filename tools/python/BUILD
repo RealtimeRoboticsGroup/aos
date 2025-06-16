@@ -1,12 +1,15 @@
 load("@rules_python//python:defs.bzl", "py_binary", "py_runtime_pair")
-load("@rules_python//python:pip.bzl", "compile_pip_requirements")
+load("@rules_uv//uv:pip.bzl", "pip_compile")
 
 # Invoke this via "bazel run //tools/python:requirements.update".
-compile_pip_requirements(
-    name = "requirements",
-    extra_args = [
-        # Make it so we can depend on setuptools.
-        "--allow-unsafe",
+pip_compile(
+    name = "requirements.update",
+    args = [
+        # Generate hashes for reproducibility.
+        "--generate-hashes",
+        # For compatibility with rules_python and pip, we keep the extras in the
+        # requirements.
+        "--no-strip-extras",
         "--index-url=http://localhost:8000/",
     ],
     requirements_in = "requirements.txt",
@@ -20,6 +23,10 @@ compile_pip_requirements(
         # not good for our hermeticity assumptions. Disable the test lock file
         # test for now.
         "manual",
+    ],
+    target_compatible_with = [
+        # TODO(philsc): Make Python work for other platforms too.
+        "@platforms//cpu:x86_64",
     ],
 )
 

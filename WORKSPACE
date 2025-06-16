@@ -116,6 +116,40 @@ pip_configure(
 )
 
 http_archive(
+    name = "bazel_features",
+    sha256 = "06f02b97b6badb3227df2141a4b4622272cdcd2951526f40a888ab5f43897f14",
+    strip_prefix = "bazel_features-1.9.0",
+    url = "https://github.com/bazel-contrib/bazel_features/releases/download/v1.9.0/bazel_features-v1.9.0.tar.gz",
+)
+
+load("@bazel_features//:deps.bzl", "bazel_features_deps")
+
+bazel_features_deps()
+
+http_archive(
+    name = "rules_multitool",
+    sha256 = "b354be5278ef326dbf613e5d52ac5d897c0b410bcdc2b577b8a7a682ed1c5a37",
+    strip_prefix = "rules_multitool-0.7.1",
+    url = "https://github.com/theoremlp/rules_multitool/releases/download/v0.7.1/rules_multitool-0.7.1.tar.gz",
+)
+
+load("@rules_multitool//multitool:multitool.bzl", "multitool")
+
+# As long as we're using WORKSPACE, this will only work if uv is the only thing
+# using the multitool repo name. Otherwise, we'll have to patch it.
+multitool(
+    name = "multitool",
+    lockfile = "@rules_uv//uv/private:uv.lock.json",
+)
+
+http_archive(
+    name = "rules_uv",
+    sha256 = "ec6c758b946db1ff0af0aec4f4b96ca91c2fb0ded6ec9b8c4e815d157dc9705b",
+    strip_prefix = "rules_uv-0.13.0",
+    url = "https://github.com/theoremlp/rules_uv/releases/download/v0.13.0/rules_uv-0.13.0.tar.gz",
+)
+
+http_archive(
     name = "rules_pkg",
     sha256 = "cad05f864a32799f6f9022891de91ac78f30e0fa07dc68abac92a628121b5b11",
     urls = [
