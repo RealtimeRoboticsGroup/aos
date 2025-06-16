@@ -64,6 +64,7 @@ mkdir "${SCRIPT_DIR}"/wheelhouse
   --no-deps \
   -r "${SCRIPT_DIR}/requirements.lock.txt" \
   -w "${SCRIPT_DIR}/wheelhouse_tmp/" \
+  --timeout=500 \
   | tee /tmp/pip-wheel.log
 
 # Find the list of packages that were built from source.

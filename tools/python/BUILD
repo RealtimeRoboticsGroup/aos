@@ -7,6 +7,7 @@ compile_pip_requirements(
     extra_args = [
         # Make it so we can depend on setuptools.
         "--allow-unsafe",
+        "--index-url=http://localhost:8000/",
     ],
     requirements_in = "requirements.txt",
     requirements_txt = "requirements.lock.txt",
@@ -71,5 +72,15 @@ py_binary(
     deps = [
         "@pip//pkginfo",
         "@pip//requests",
+    ],
+)
+
+py_binary(
+    name = "create_simple_pypi",
+    srcs = [
+        "create_simple_pypi.py",
+    ],
+    deps = [
+        "@pip//pkginfo",
     ],
 )

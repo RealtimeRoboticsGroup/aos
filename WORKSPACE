@@ -73,9 +73,14 @@ pip_parse(
     name = "pip_deps",
     annotations = PYTHON_ANNOTATIONS,
     enable_implicit_namespace_pkgs = True,
+    download_only = True,
+    extra_pip_args = [
+        "--index-url=http://localhost:8000",
+    ],
     #overrides = "//tools/python:whl_overrides.json",
     #patch_spec = "//tools/python:patches.json",
     requirements_lock = "//tools/python:requirements.lock.txt",
+    python_interpreter_target = "@python3_9_host//:python",
 )
 
 # Load the starlark macro which will define your dependencies.

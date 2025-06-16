@@ -6,6 +6,8 @@ each entry. Those wheels are then mirrored.
 See tools/python/README.md for some more information.
 """
 
+# TODO(philsc): Remove this whole file and use rules_uv instead.
+
 import argparse
 import hashlib
 import json
@@ -180,6 +182,7 @@ def main(argv: List[str]) -> Optional[int]:
         "docker",
         "run",
         "-it",
+        "--net=host",
         "-v",
         f"{python_dir}:/opt/build/",
         container_tag,
@@ -189,6 +192,8 @@ def main(argv: List[str]) -> Optional[int]:
         str(caller_id),
     ],
                    check=True)
+
+    return
 
     # Get the list of wheels we downloaded form pypi.org or built ourselves.
     wheelhouse = python_dir / "wheelhouse"
