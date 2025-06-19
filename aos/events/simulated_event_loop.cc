@@ -283,14 +283,14 @@ class SimulatedChannel {
 
   ~SimulatedChannel() {
     latest_message_.reset();
-    CHECK_EQ(static_cast<size_t>(number_buffers()),
-             available_buffer_indices_.size());
     CHECK_EQ(0u, fetchers_.size())
         << configuration::StrippedChannelToString(channel());
     CHECK_EQ(0u, watchers_.size())
         << configuration::StrippedChannelToString(channel());
     CHECK_EQ(0, sender_count_)
         << configuration::StrippedChannelToString(channel());
+    CHECK_EQ(static_cast<size_t>(number_buffers()),
+             available_buffer_indices_.size());
   }
 
   // The number of messages we pretend to have in the queue.
