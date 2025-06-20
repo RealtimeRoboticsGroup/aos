@@ -112,10 +112,8 @@ class ErrorType {
 template <typename T = void>
 using Result = tl::expected<T, ErrorType>;
 
-// Status is a convenience type for functions that return Result<void>.
-template <typename T>
-using StatusOr = Result<T>;
-using Status = StatusOr<void>;
+// Status is a convenience type for functions that return Result<>.
+using Status = Result<>;
 
 using Error = tl::unexpected<ErrorType>;
 
@@ -166,7 +164,7 @@ inline Error MakeError(
 }
 
 // Convenience method to explicitly construct an "okay" Status.
-inline Status Ok() { return Status{}; }
+inline Status Ok() { return Result<>{}; }
 
 // Convenience method to check for an "okay" status.
 inline bool IsOk(const Result<> &result) { return result.has_value(); }
