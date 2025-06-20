@@ -514,7 +514,8 @@ class SimulatedFetcher : public RawFetcher {
       : RawFetcher(event_loop, simulated_channel->channel()),
         simulated_channel_(simulated_channel) {}
   ~SimulatedFetcher() {
-    CHECK(!event_loop()->is_running()) << ": Can't make Fetcher while running";
+    CHECK(!event_loop()->is_running())
+        << ": Can't destroy Fetcher while running";
     simulated_channel_->UnregisterFetcher(this);
   }
 
