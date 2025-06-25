@@ -153,6 +153,9 @@ cc_library(
     hdrs = ["//:public_headers"],
     linkstatic = 1,
     strip_include_prefix = "/include",
+    deps = [
+        "@com_google_absl//absl/log:absl_check",
+    ],
 )
 
 py_library(
