@@ -50,7 +50,7 @@ mirrored on aos infrastructure.
 1. Follow the above procedure for adding new pip packages if not already done.
 2. Run the mirroring script.
 
-        bazel run //tools/python:mirror_pip_packages -- --ssh_host <software>
+        bazel run //tools/python:mirror_pip_packages
 
     where `<software>` is the `ssh(1)` target for reaching the server that hosts
     the AOS mirror.

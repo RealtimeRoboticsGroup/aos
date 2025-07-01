@@ -80,7 +80,7 @@ pip_parse(
     enable_implicit_namespace_pkgs = True,
     download_only = True,
     extra_pip_args = [
-        "--index-url=http://localhost:8000",
+        #"--index-url=http://localhost:8000",
     ],
     requirements_lock = "//tools/python:requirements.lock.txt",
     python_interpreter_target = "@python3_9_host//:python",
