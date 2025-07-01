@@ -29,6 +29,13 @@ WHEELHOUSE_MIRROR_URL = "https://realtimeroboticsgroup.org/build-dependencies/wh
 WHEELHOUSE_GCS_URL = "gs://austin-vpn-build-dependencies/wheelhouse/simple"
 
 
+def run(cmd, check=True, **kwargs) -> subprocess.CompletedProcess:
+    env = os.environ.copy()
+    env.pop("PYTHONSAFEPATH", None)
+    env.pop("PYTHONPATH", None)
+    return subprocess.run(cmd, check=check, env=env, **kwargs)
+
+
 def normalize_name(name: str) -> str:
     """Normalizes a package name so it's consistent across all use cases.
 
@@ -121,6 +128,7 @@ def copy_to_gcs(filename: Path) -> None:
     command = ["gsutil", "cp", filename, gcs_path]
 
     print(command)
+    run(command)
 
 
 def main(argv: List[str]) -> Optional[int]:
@@ -143,33 +151,31 @@ def main(argv: List[str]) -> Optional[int]:
 
     container_tag = f"pip-compile:{caller}"
 
-    subprocess.run([
+    run([
         "docker",
         "build",
         "--file=generate_pip_packages.Dockerfile",
         f"--tag={container_tag}",
         ".",
     ],
-                   cwd=python_dir,
-                   check=True)
+                   cwd=python_dir)
 
-    ## Run the wheel generation script inside the docker container provided by
-    ## the pypa/manylinux project.
-    ## https://github.com/pypa/manylinux/
-    #subprocess.run([
-    #    "docker",
-    #    "run",
-    #    "-it",
-    #    "--net=host",
-    #    "-v",
-    #    f"{python_dir}:/opt/build/",
-    #    container_tag,
-    #    "/opt/build/generate_pip_packages_in_docker.sh",
-    #    PLAT,
-    #    ARCH,
-    #    str(caller_id),
-    #],
-    #               check=True)
+    # Run the wheel generation script inside the docker container provided by
+    # the pypa/manylinux project.
+    # https://github.com/pypa/manylinux/
+    run([
+        "docker",
+        "run",
+        "-it",
+        "--net=host",
+        "-v",
+        f"{python_dir}:/opt/build/",
+        container_tag,
+        "/opt/build/generate_pip_packages_in_docker.sh",
+        PLAT,
+        ARCH,
+        str(caller_id),
+    ])
 
     # Get the list of wheels we downloaded form pypi.org or built ourselves.
     wheelhouse = python_dir / "wheelhouse"
