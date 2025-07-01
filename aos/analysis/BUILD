@@ -109,15 +109,3 @@ cc_binary(
         "//aos:init",
     ],
 )
-
-cc_binary(
-    name = "local_foxglove",
-    srcs = ["local_foxglove.cc"],
-    data = ["@foxglove_studio"],
-    deps = [
-        "//aos:init",
-        "//aos/network:gen_embedded",
-        "//aos/seasocks:seasocks_logger",
-        "//third_party/seasocks",
-    ],
-)

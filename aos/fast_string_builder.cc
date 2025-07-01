@@ -2,6 +2,8 @@
 
 #include <charconv>
 
+#include "absl/log/absl_check.h"
+
 namespace aos {
 
 FastStringBuilder::FastStringBuilder(std::size_t initial_size) {
@@ -44,7 +46,8 @@ void FastStringBuilder::Append(float val) {
   Resize(kMaxSize);
   const std::to_chars_result result =
       std::to_chars(str_.data() + index, str_.data() + index + kMaxSize, val);
-  CHECK(result.ec == std::errc()) << std::make_error_code(result.ec).message();
+  ABSL_CHECK(result.ec == std::errc())
+      << std::make_error_code(result.ec).message();
   str_.resize(result.ptr - str_.data());
 }
 
@@ -62,7 +65,8 @@ void FastStringBuilder::Append(double val) {
   Resize(kMaxSize);
   const std::to_chars_result result =
       std::to_chars(str_.data() + index, str_.data() + index + kMaxSize, val);
-  CHECK(result.ec == std::errc()) << std::make_error_code(result.ec).message();
+  ABSL_CHECK(result.ec == std::errc())
+      << std::make_error_code(result.ec).message();
   str_.resize(result.ptr - str_.data());
 }
 

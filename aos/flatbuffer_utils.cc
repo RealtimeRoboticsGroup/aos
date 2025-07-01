@@ -1,36 +1,36 @@
 #include "aos/flatbuffer_utils.h"
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "flatbuffers/minireflect.h"
 #include "flatbuffers/reflection_generated.h"
 
 namespace aos {
 
 FlatbufferType::FlatbufferType(const flatbuffers::TypeTable *type_table) {
-  CHECK(type_table != nullptr);
+  ABSL_CHECK(type_table != nullptr);
   type_table_ = type_table;
 }
 FlatbufferType::FlatbufferType(const reflection::Schema *schema) {
-  CHECK(schema != nullptr);
+  ABSL_CHECK(schema != nullptr);
   schema_ = schema;
-  DCHECK(schema->root_table() != nullptr);
+  ABSL_DCHECK(schema->root_table() != nullptr);
   object_ = schema->root_table();
 }
 
 FlatbufferType::FlatbufferType(const reflection::Schema *schema,
                                const reflection::Object *object) {
-  CHECK(schema != nullptr);
+  ABSL_CHECK(schema != nullptr);
   schema_ = schema;
-  DCHECK(object != nullptr);
+  ABSL_DCHECK(object != nullptr);
   object_ = object;
 }
 
 FlatbufferType::FlatbufferType(const reflection::Schema *schema,
                                const reflection::Enum *fb_enum) {
-  CHECK(schema != nullptr);
+  ABSL_CHECK(schema != nullptr);
   schema_ = schema;
-  CHECK(fb_enum != nullptr);
+  ABSL_CHECK(fb_enum != nullptr);
   enum_ = fb_enum;
 }
 
@@ -44,7 +44,7 @@ bool FlatbufferType::IsSequence() const {
   if (enum_) {
     return enum_->is_union();
   }
-  LOG(FATAL) << "Unimplemented";
+  ABSL_LOG(FATAL) << "Unimplemented";
 }
 
 bool FlatbufferType::IsTable() const {
@@ -54,7 +54,7 @@ bool FlatbufferType::IsTable() const {
   if (object_) {
     return !object_->is_struct();
   }
-  LOG(FATAL) << "Unimplemented";
+  ABSL_LOG(FATAL) << "Unimplemented";
 }
 
 bool FlatbufferType::IsStruct() const {
@@ -64,7 +64,7 @@ bool FlatbufferType::IsStruct() const {
   if (object_) {
     return object_->is_struct();
   }
-  LOG(FATAL) << "Unimplemented";
+  ABSL_LOG(FATAL) << "Unimplemented";
 }
 
 bool FlatbufferType::IsEnum() const {
@@ -77,18 +77,18 @@ bool FlatbufferType::IsEnum() const {
   if (enum_) {
     return !enum_->is_union();
   }
-  LOG(FATAL) << "Unimplemented";
+  ABSL_LOG(FATAL) << "Unimplemented";
 }
 
 bool FlatbufferType::FieldIsSequence(int index) const {
-  DCHECK(IsSequence());
+  ABSL_DCHECK(IsSequence());
   if (type_table_) {
-    DCHECK_LT(static_cast<size_t>(index), type_table_->num_elems);
+    ABSL_DCHECK_LT(static_cast<size_t>(index), type_table_->num_elems);
     const flatbuffers::TypeCode &type_code = type_table_->type_codes[index];
     if (type_code.base_type != flatbuffers::ET_SEQUENCE) {
       return false;
     }
-    DCHECK(FieldType(index).IsSequence());
+    ABSL_DCHECK(FieldType(index).IsSequence());
     return true;
   }
   if (object_ || enum_) {
@@ -96,13 +96,13 @@ bool FlatbufferType::FieldIsSequence(int index) const {
     return base_type == reflection::BaseType::Obj ||
            base_type == reflection::BaseType::Union;
   }
-  LOG(FATAL) << "Unimplemented";
+  ABSL_LOG(FATAL) << "Unimplemented";
 }
 
 bool FlatbufferType::FieldIsEnum(int index) const {
-  DCHECK(IsSequence());
+  ABSL_DCHECK(IsSequence());
   if (type_table_) {
-    DCHECK_LT(static_cast<size_t>(index), type_table_->num_elems);
+    ABSL_DCHECK_LT(static_cast<size_t>(index), type_table_->num_elems);
     const flatbuffers::TypeCode &type_code = type_table_->type_codes[index];
     if (type_code.base_type == flatbuffers::ET_SEQUENCE) {
       return false;
@@ -111,7 +111,7 @@ bool FlatbufferType::FieldIsEnum(int index) const {
       // Not an enum.
       return false;
     }
-    DCHECK(FieldType(index).IsEnum());
+    ABSL_DCHECK(FieldType(index).IsEnum());
     return true;
   }
   if (object_ || enum_) {
@@ -122,12 +122,12 @@ bool FlatbufferType::FieldIsEnum(int index) const {
     }
     return ReflectionType(index)->index() >= 0;
   }
-  LOG(FATAL) << "Unimplemented";
+  ABSL_LOG(FATAL) << "Unimplemented";
 }
 
 std::optional<int64_t> FlatbufferType::EnumValue(std::string_view name) const {
-  DCHECK(IsEnum());
-  DCHECK(!object_);
+  ABSL_DCHECK(IsEnum());
+  ABSL_DCHECK(!object_);
   if (type_table_) {
     for (size_t i = 0; i < type_table_->num_elems; ++i) {
       if (name == type_table_->names[i]) {
@@ -149,27 +149,27 @@ std::optional<int64_t> FlatbufferType::EnumValue(std::string_view name) const {
     }
     return std::nullopt;
   }
-  LOG(FATAL) << "Unimplemented";
+  ABSL_LOG(FATAL) << "Unimplemented";
 }
 
 bool FlatbufferType::FieldIsRepeating(int index) const {
-  DCHECK(IsSequence());
+  ABSL_DCHECK(IsSequence());
   if (type_table_) {
-    DCHECK_LT(static_cast<size_t>(index), type_table_->num_elems);
+    ABSL_DCHECK_LT(static_cast<size_t>(index), type_table_->num_elems);
     const flatbuffers::TypeCode &type_code = type_table_->type_codes[index];
     return type_code.is_repeating;
   }
   if (object_ || enum_) {
     const reflection::BaseType type = ReflectionType(index)->base_type();
-    CHECK(type != reflection::BaseType::None);
+    ABSL_CHECK(type != reflection::BaseType::None);
     return type == reflection::BaseType::Vector ||
            type == reflection::BaseType::Array;
   }
-  LOG(FATAL) << "Unimplemented";
+  ABSL_LOG(FATAL) << "Unimplemented";
 }
 
 int FlatbufferType::FieldIndex(std::string_view field_name) const {
-  DCHECK(IsSequence());
+  ABSL_DCHECK(IsSequence());
   if (type_table_) {
     for (size_t i = 0; i < type_table_->num_elems; ++i) {
       if (field_name == std::string_view(type_table_->names[i])) {
@@ -196,13 +196,13 @@ int FlatbufferType::FieldIndex(std::string_view field_name) const {
     }
     return -1;
   }
-  LOG(FATAL) << "Unimplemented";
+  ABSL_LOG(FATAL) << "Unimplemented";
 }
 
 std::string_view FlatbufferType::FieldName(int index) const {
-  DCHECK(IsSequence());
+  ABSL_DCHECK(IsSequence());
   if (type_table_) {
-    DCHECK_LT(static_cast<size_t>(index), type_table_->num_elems);
+    ABSL_DCHECK_LT(static_cast<size_t>(index), type_table_->num_elems);
     return type_table_->names[index];
   }
   if (object_) {
@@ -211,7 +211,7 @@ std::string_view FlatbufferType::FieldName(int index) const {
   if (enum_) {
     return ReflectionEnumValue(index)->name()->string_view();
   }
-  LOG(FATAL) << "Unimplemented";
+  ABSL_LOG(FATAL) << "Unimplemented";
 }
 
 namespace {
@@ -220,7 +220,7 @@ flatbuffers::ElementaryType ElementaryTypeFromBaseType(
     reflection::BaseType base_type) {
   switch (base_type) {
     case reflection::BaseType::None:
-      LOG(FATAL) << "Invalid schema";
+      ABSL_LOG(FATAL) << "Invalid schema";
     case reflection::BaseType::UType:
       return flatbuffers::ElementaryType::ET_UTYPE;
     case reflection::BaseType::Bool:
@@ -252,7 +252,7 @@ flatbuffers::ElementaryType ElementaryTypeFromBaseType(
     case reflection::BaseType::Union:
       return flatbuffers::ElementaryType::ET_SEQUENCE;
     default:
-      LOG(FATAL) << "Unknown BaseType";
+      ABSL_LOG(FATAL) << "Unknown BaseType";
   }
 }
 
@@ -260,16 +260,16 @@ flatbuffers::ElementaryType ElementaryTypeFromBaseType(
 
 flatbuffers::ElementaryType FlatbufferType::FieldElementaryType(
     int index) const {
-  DCHECK(IsSequence());
+  ABSL_DCHECK(IsSequence());
   if (type_table_) {
-    DCHECK_LT(static_cast<size_t>(index), type_table_->num_elems);
+    ABSL_DCHECK_LT(static_cast<size_t>(index), type_table_->num_elems);
     const flatbuffers::TypeCode &type_code = type_table_->type_codes[index];
     return static_cast<flatbuffers::ElementaryType>(type_code.base_type);
   }
   if (object_ || enum_) {
     return ElementaryTypeFromBaseType(ReflectionElementBaseType(index));
   }
-  LOG(FATAL) << "Unimplemented";
+  ABSL_LOG(FATAL) << "Unimplemented";
 }
 
 namespace {
@@ -277,7 +277,7 @@ namespace {
 size_t BaseTypeInlineSize(reflection::BaseType base_type) {
   switch (base_type) {
     case reflection::BaseType::None:
-      LOG(FATAL) << "Invalid schema";
+      ABSL_LOG(FATAL) << "Invalid schema";
     case reflection::BaseType::UType:
     case reflection::BaseType::Bool:
     case reflection::BaseType::Byte:
@@ -298,14 +298,14 @@ size_t BaseTypeInlineSize(reflection::BaseType base_type) {
     case reflection::BaseType::Union:
       return 4;
     default:
-      LOG(FATAL) << "Unknown BaseType";
+      ABSL_LOG(FATAL) << "Unknown BaseType";
   }
 }
 
 }  // namespace
 
 size_t FlatbufferType::InlineSize() const {
-  DCHECK(IsSequence());
+  ABSL_DCHECK(IsSequence());
   if (type_table_) {
     return flatbuffers::InlineSize(flatbuffers::ElementaryType::ET_SEQUENCE,
                                    type_table_);
@@ -316,7 +316,7 @@ size_t FlatbufferType::InlineSize() const {
   if (enum_) {
     return BaseTypeInlineSize(enum_->underlying_type()->base_type());
   }
-  LOG(FATAL) << "Unimplemented";
+  ABSL_LOG(FATAL) << "Unimplemented";
 }
 
 // Returns the required alignment for this type.
@@ -335,7 +335,7 @@ size_t FlatbufferType::Alignment() const {
   }
   // We don't do a great job of supporting unions in general, and as of this
   // writing did not try to look up what the alignment rules for unions were.
-  LOG(FATAL) << "Unimplemented";
+  ABSL_LOG(FATAL) << "Unimplemented";
 }
 
 size_t FlatbufferType::FieldInlineAlignment(size_t field_index) const {
@@ -346,18 +346,18 @@ size_t FlatbufferType::FieldInlineAlignment(size_t field_index) const {
 }
 
 size_t FlatbufferType::StructFieldOffset(int index) const {
-  DCHECK(IsStruct());
+  ABSL_DCHECK(IsStruct());
   if (type_table_) {
     return type_table_->values[index];
   }
   if (object_) {
     return ReflectionObjectField(index)->offset();
   }
-  LOG(FATAL) << "Unimplemented";
+  ABSL_LOG(FATAL) << "Unimplemented";
 }
 
 size_t FlatbufferType::FieldInlineSize(int index) const {
-  DCHECK(IsSequence());
+  ABSL_DCHECK(IsSequence());
   if (type_table_) {
     return flatbuffers::InlineSize(
         FieldElementaryType(index),
@@ -383,11 +383,11 @@ size_t FlatbufferType::FieldInlineSize(int index) const {
     }
     return element_size;
   }
-  LOG(FATAL) << "Unimplemented";
+  ABSL_LOG(FATAL) << "Unimplemented";
 }
 
 int FlatbufferType::NumberFields() const {
-  DCHECK(IsSequence());
+  ABSL_DCHECK(IsSequence());
   if (type_table_) {
     return type_table_->num_elems;
   }
@@ -397,19 +397,19 @@ int FlatbufferType::NumberFields() const {
   if (enum_) {
     return enum_->values()->size();
   }
-  LOG(FATAL) << "Unimplemented";
+  ABSL_LOG(FATAL) << "Unimplemented";
 }
 
 FlatbufferType FlatbufferType::FieldType(int index) const {
-  DCHECK(IsSequence());
+  ABSL_DCHECK(IsSequence());
   if (type_table_) {
-    DCHECK_LT(static_cast<size_t>(index), type_table_->num_elems);
+    ABSL_DCHECK_LT(static_cast<size_t>(index), type_table_->num_elems);
     const flatbuffers::TypeCode &type_code = type_table_->type_codes[index];
-    CHECK_GE(type_code.sequence_ref, 0);
+    ABSL_CHECK_GE(type_code.sequence_ref, 0);
     // type_refs can be shorter than num_elems, but not longer, so this is still
     // a valid sanity check.
-    DCHECK_LT(static_cast<size_t>(type_code.sequence_ref),
-              type_table_->num_elems);
+    ABSL_DCHECK_LT(static_cast<size_t>(type_code.sequence_ref),
+                   type_table_->num_elems);
     const flatbuffers::TypeFunction type_function =
         type_table_->type_refs[type_code.sequence_ref];
     return FlatbufferType(type_function());
@@ -417,17 +417,19 @@ FlatbufferType FlatbufferType::FieldType(int index) const {
   if (object_ || enum_) {
     const reflection::BaseType base_type = ReflectionElementBaseType(index);
     const int object_index = ReflectionType(index)->index();
-    CHECK(object_index >= 0) << ": Invalid schema";
+    ABSL_CHECK(object_index >= 0) << ": Invalid schema";
     if (base_type == reflection::BaseType::Obj ||
         base_type == reflection::BaseType::Union) {
-      DCHECK_LT(static_cast<size_t>(object_index), schema_->objects()->size());
+      ABSL_DCHECK_LT(static_cast<size_t>(object_index),
+                     schema_->objects()->size());
       return FlatbufferType(schema_, schema_->objects()->Get(object_index));
     } else {
-      DCHECK_LT(static_cast<size_t>(object_index), schema_->enums()->size());
+      ABSL_DCHECK_LT(static_cast<size_t>(object_index),
+                     schema_->enums()->size());
       return FlatbufferType(schema_, schema_->enums()->Get(object_index));
     }
   }
-  LOG(FATAL) << "Unimplemented";
+  ABSL_LOG(FATAL) << "Unimplemented";
 }
 
 const reflection::Type *FlatbufferType::ReflectionType(int index) const {
@@ -440,23 +442,23 @@ const reflection::Type *FlatbufferType::ReflectionType(int index) const {
 
 const reflection::Field *FlatbufferType::ReflectionObjectField(
     int index) const {
-  DCHECK(object_);
+  ABSL_DCHECK(object_);
   const auto result = std::find_if(
       object_->fields()->begin(), object_->fields()->end(),
       [index](const reflection::Field *field) { return field->id() == index; });
-  DCHECK(result != object_->fields()->end());
+  ABSL_DCHECK(result != object_->fields()->end());
   return *result;
 }
 
 const reflection::EnumVal *FlatbufferType::ReflectionEnumValue(
     int index) const {
-  DCHECK(enum_);
+  ABSL_DCHECK(enum_);
   const auto result =
       std::find_if(enum_->values()->begin(), enum_->values()->end(),
                    [index](const reflection::EnumVal *value) {
                      return value->value() == index;
                    });
-  DCHECK(result != enum_->values()->end());
+  ABSL_DCHECK(result != enum_->values()->end());
   return *result;
 }
 
@@ -468,7 +470,7 @@ reflection::BaseType FlatbufferType::ReflectionElementBaseType(
       base_type == reflection::BaseType::Array) {
     base_type = type->element();
   }
-  CHECK(base_type != reflection::BaseType::None);
+  ABSL_CHECK(base_type != reflection::BaseType::None);
   return base_type;
 }
 

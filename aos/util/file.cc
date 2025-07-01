@@ -16,6 +16,8 @@
 #include <ostream>
 #include <string_view>
 
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "flatbuffers/util.h"
 
 #include "aos/sanitizers.h"
@@ -29,7 +31,7 @@ namespace aos::util {
 
 std::string ReadFileToStringOrDie(const std::string_view filename) {
   std::optional<std::string> r = MaybeReadFileToString(filename);
-  PCHECK(r.has_value()) << "Failed to read " << filename << " to string";
+  ABSL_PCHECK(r.has_value()) << "Failed to read " << filename << " to string";
   return r.value();
 }
 
@@ -38,14 +40,14 @@ std::optional<std::string> MaybeReadFileToString(
   std::string r;
   ScopedFD fd(open(::std::string(filename).c_str(), O_RDONLY));
   if (fd.get() == -1) {
-    PLOG(ERROR) << "Failed to open " << filename;
+    ABSL_PLOG(ERROR) << "Failed to open " << filename;
     return std::nullopt;
   }
   while (true) {
     char buffer[1024];
     const ssize_t result = read(fd.get(), buffer, sizeof(buffer));
     if (result < 0) {
-      PLOG(ERROR) << "Failed to read from " << filename;
+      ABSL_PLOG(ERROR) << "Failed to read from " << filename;
       return std::nullopt;
     }
     if (result == 0) {
@@ -59,11 +61,11 @@ std::optional<std::string> MaybeReadFileToString(
 std::vector<uint8_t> ReadFileToVecOrDie(const std::string_view filename) {
   std::vector<uint8_t> r;
   ScopedFD fd(open(::std::string(filename).c_str(), O_RDONLY));
-  PCHECK(fd.get() != -1) << ": opening " << filename;
+  ABSL_PCHECK(fd.get() != -1) << ": opening " << filename;
   while (true) {
     uint8_t buffer[1024];
     const ssize_t result = read(fd.get(), buffer, sizeof(buffer));
-    PCHECK(result >= 0) << ": reading from " << filename;
+    ABSL_PCHECK(result >= 0) << ": reading from " << filename;
     if (result == 0) {
       break;
     }
@@ -82,9 +84,9 @@ void WriteStringToFileOrDie(const std::string_view filename,
 
 void SyncDirectory(const std::filesystem::path &path) {
   const int dir_fd = open(path.c_str(), O_DIRECTORY);
-  PCHECK(dir_fd != -1) << "Failed to open directory " << path;
-  PCHECK(fsync(dir_fd) != -1) << "Failed to fsync directory " << path;
-  PCHECK(close(dir_fd) != -1) << "Failed to close directory " << path;
+  ABSL_PCHECK(dir_fd != -1) << "Failed to open directory " << path;
+  ABSL_PCHECK(fsync(dir_fd) != -1) << "Failed to fsync directory " << path;
+  ABSL_PCHECK(close(dir_fd) != -1) << "Failed to close directory " << path;
 }
 
 bool MkdirPIfSpace(std::string_view path, mode_t mode, bool sync) {
@@ -101,15 +103,15 @@ bool MkdirPIfSpace(std::string_view path, mode_t mode, bool sync) {
   }
   const int result = mkdir(folder.c_str(), mode);
   if (result == -1 && errno == EEXIST) {
-    VLOG(2) << folder << " already exists";
+    ABSL_VLOG(2) << folder << " already exists";
     return true;
   } else if (result == -1 && errno == ENOSPC) {
-    VLOG(2) << "Out of space";
+    ABSL_VLOG(2) << "Out of space";
     return false;
   } else {
-    VLOG(1) << "Created " << folder;
+    ABSL_VLOG(1) << "Created " << folder;
   }
-  PCHECK(result == 0) << ": Error creating " << folder;
+  ABSL_PCHECK(result == 0) << ": Error creating " << folder;
   if (sync) {
     // Sync the newly created directory.
     SyncDirectory(std::filesystem::path(folder));
@@ -154,7 +156,7 @@ void UnlinkRecursive(std::string_view path) {
 
   while ((curr = fts_read(ftsp))) {
 #if AOS_SANITIZE_MEMORY
-    // fts_read doesn't have propper msan interceptors.  Unpoison it ourselves.
+    // fts_read doesn't have proper msan interceptors.  Unpoison it ourselves.
     if (curr) {
       __msan_unpoison(curr, sizeof(*curr));
       __msan_unpoison_string(curr->fts_accpath);
@@ -166,7 +168,7 @@ void UnlinkRecursive(std::string_view path) {
       case FTS_NS:
       case FTS_DNR:
       case FTS_ERR:
-        LOG(WARNING) << "Can't read " << curr->fts_accpath;
+        ABSL_LOG(WARNING) << "Can't read " << curr->fts_accpath;
         break;
 
       case FTS_DC:
@@ -186,10 +188,11 @@ void UnlinkRecursive(std::string_view path) {
       case FTS_SL:
       case FTS_SLNONE:
       case FTS_DEFAULT:
-        VLOG(1) << "Removing " << curr->fts_path;
+        ABSL_VLOG(1) << "Removing " << curr->fts_path;
         if (remove(curr->fts_accpath) < 0) {
-          LOG(WARNING) << curr->fts_path
-                       << ": Failed to remove: " << strerror(curr->fts_errno);
+          ABSL_LOG(WARNING)
+              << curr->fts_path
+              << ": Failed to remove: " << strerror(curr->fts_errno);
         }
         break;
     }
@@ -204,21 +207,22 @@ std::shared_ptr<absl::Span<uint8_t>> MMapFile(const std::string &path,
                                               FileOptions options) {
   int fd =
       open(path.c_str(), options == FileOptions::kReadable ? O_RDONLY : O_RDWR);
-  PCHECK(fd != -1) << "Unable to open file " << path;
+  ABSL_PCHECK(fd != -1) << "Unable to open file " << path;
   struct stat sb;
-  PCHECK(fstat(fd, &sb) != -1) << ": Unable to get file size of " << path;
+  ABSL_PCHECK(fstat(fd, &sb) != -1) << ": Unable to get file size of " << path;
   uint8_t *start = reinterpret_cast<uint8_t *>(mmap(
       NULL, sb.st_size,
       options == FileOptions::kReadable ? PROT_READ : (PROT_READ | PROT_WRITE),
       MAP_SHARED, fd, 0));
-  CHECK(start != MAP_FAILED) << ": Unable to open mapping to file " << path;
+  ABSL_CHECK(start != MAP_FAILED)
+      << ": Unable to open mapping to file " << path;
   std::shared_ptr<absl::Span<uint8_t>> span =
       std::shared_ptr<absl::Span<uint8_t>>(
           new absl::Span<uint8_t>(start, sb.st_size),
           [](absl::Span<uint8_t> *span) {
-            PCHECK(msync(span->data(), span->size(), MS_SYNC) == 0)
+            ABSL_PCHECK(msync(span->data(), span->size(), MS_SYNC) == 0)
                 << ": Failed to flush data before unmapping.";
-            PCHECK(munmap(span->data(), span->size()) != -1);
+            ABSL_PCHECK(munmap(span->data(), span->size()) != -1);
             delete span;
           });
   close(fd);
@@ -229,15 +233,15 @@ FileReader::FileReader(std::string_view filename,
                        FileReaderErrorType error_type)
     : file_(open(::std::string(filename).c_str(), O_RDONLY)) {
   if (!is_open()) {
-    PLOG_IF(FATAL, error_type == FileReaderErrorType::kFatal)
+    ABSL_PLOG_IF(FATAL, error_type == FileReaderErrorType::kFatal)
         << ": opening " << filename;
-    PLOG(ERROR) << "opening " << filename;
+    ABSL_PLOG(ERROR) << "opening " << filename;
   }
 }
 
 std::optional<absl::Span<char>> FileReader::ReadContents(
     absl::Span<char> buffer) {
-  PCHECK(0 == lseek(file_.get(), 0, SEEK_SET));
+  ABSL_PCHECK(0 == lseek(file_.get(), 0, SEEK_SET));
   const ssize_t result = read(file_.get(), buffer.data(), buffer.size());
   if (result < 0) {
     // Read timeout for an i2c request returns this.
@@ -246,14 +250,14 @@ std::optional<absl::Span<char>> FileReader::ReadContents(
     }
   }
 
-  PCHECK(result >= 0);
+  ABSL_PCHECK(result >= 0);
   return absl::Span<char>{buffer.data(), static_cast<size_t>(result)};
 }
 
 FileWriter::FileWriter(std::string_view filename, mode_t permissions)
     : file_(open(::std::string(filename).c_str(), O_WRONLY | O_CREAT | O_TRUNC,
                  permissions)) {
-  PCHECK(file_.get() != -1) << ": opening " << filename;
+  ABSL_PCHECK(file_.get() != -1) << ": opening " << filename;
 }
 
 // absl::SimpleAtoi doesn't interpret a leading 0x as hex, which we need here.
@@ -272,10 +276,10 @@ std::optional<int32_t> FileReader::ReadInt32() {
   }
 
   // Verify we found the newline.
-  CHECK_EQ(buffer[string_span->size() - 1], '\n');
+  ABSL_CHECK_EQ(buffer[string_span->size() - 1], '\n');
   // Truncate the newline.
   buffer[string_span->size() - 1] = '\0';
-  CHECK(flatbuffers::StringToNumber(buffer.data(), &result))
+  ABSL_CHECK(flatbuffers::StringToNumber(buffer.data(), &result))
       << ": Error parsing string to integer: "
       << std::string_view(string_span->data(), string_span->size());
 
@@ -314,7 +318,7 @@ void FileWriter::WriteBytesOrDie(std::string_view bytes) {
 }
 
 void FileWriter::WriteBytesOrDie(absl::Span<const uint8_t> bytes) {
-  PCHECK(bytes.size() == WriteBytes(bytes).bytes_written)
+  ABSL_PCHECK(bytes.size() == WriteBytes(bytes).bytes_written)
       << ": Failed to write " << bytes.size() << " bytes.";
 }
 

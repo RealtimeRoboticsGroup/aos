@@ -1,8 +1,5 @@
 #include "aos/events/timing_statistics.h"
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
-
 #include "aos/events/event_loop_generated.h"
 
 namespace aos::internal {

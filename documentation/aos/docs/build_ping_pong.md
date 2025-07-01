@@ -281,7 +281,7 @@ must be unique per channel, but it is possible to both have multiple channels
 with the same name but different types and channels with different names but the same types.
 Note that the `type` field will always use the fully-qualified type name (i.e., it includes
 the namespace). The frequency is a strict maximum---messages cannot be sent any faster.
-See [Sent Too Fast](/reference#sent-too-fast) for details on max frequencies.
+See [Sent Too Fast](reference.md#sent-too-fast) for details on max frequencies.
 
 There is also a `max_size` channel value that allows you to increase the allowable
 size (in bytes) for messages sent on the channel.
@@ -481,7 +481,7 @@ defined. For a `.fbs` file named `foo.fbs`, the resulting header will be named
 
 By convention, the top-level class for an AOS application will take, as the
 first argument to its constructor, an `aos::EventLoop*`. The
-[EventLoop](/reference#eventloop-interface) will be
+[EventLoop](reference.md#eventloop-interface) will be
 used for all the application's interactions with the rest of the AOS system.
 
 In `ping_lib.cc`:
@@ -567,7 +567,7 @@ methods and the resulting builders to construct a `Ping` message with a count
 and current time. We then actually send it out, checking to ensure that there
 were no errors encountered while attempting to send the message.
 
-See [FlatBuffers](/flatbuffers) for more details on working with FlatBuffers in
+See [FlatBuffers](flatbuffers.md) for more details on working with FlatBuffers in
 AOS.
 
 ```cpp

@@ -1,0 +1,6 @@
+exports_files([
+    # Retrieved from https://github.com/libunwind/libunwind/blob/c3042adcea96f90de99632ceb096e78bf330e7e7/LICENSE
+    "libunwind/LICENSE.txt",
+    # Retrieved from https://github.com/tukaani-project/xz/blob/dbfb925c8198087afb3527e6c57b66fae1a980bb/COPYING
+    "liblzma/COPYING",
+])

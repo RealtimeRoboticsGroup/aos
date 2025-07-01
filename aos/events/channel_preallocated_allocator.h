@@ -1,6 +1,8 @@
 #ifndef AOS_EVENTS_CHANNEL_PREALLOCATED_ALLOCATOR_
 #define AOS_EVENTS_CHANNEL_PREALLOCATED_ALLOCATOR_
 
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "flatbuffers/flatbuffers.h"
 
 #include "aos/configuration.h"
@@ -17,32 +19,33 @@ class ChannelPreallocatedAllocator : public flatbuffers::Allocator {
   ChannelPreallocatedAllocator(const ChannelPreallocatedAllocator &) = delete;
   ChannelPreallocatedAllocator(ChannelPreallocatedAllocator &&other)
       : data_(other.data_), size_(other.size_), channel_(other.channel_) {
-    CHECK(!is_allocated()) << ": May not overwrite in-use allocator";
-    CHECK(!other.is_allocated());
+    ABSL_CHECK(!is_allocated()) << ": May not overwrite in-use allocator";
+    ABSL_CHECK(!other.is_allocated());
   }
 
   ChannelPreallocatedAllocator &operator=(
       const ChannelPreallocatedAllocator &) = delete;
   ChannelPreallocatedAllocator &operator=(
       ChannelPreallocatedAllocator &&other) {
-    CHECK(!is_allocated()) << ": May not overwrite in-use allocator";
-    CHECK(!other.is_allocated());
+    ABSL_CHECK(!is_allocated()) << ": May not overwrite in-use allocator";
+    ABSL_CHECK(!other.is_allocated());
     data_ = other.data_;
     size_ = other.size_;
     channel_ = other.channel_;
     return *this;
   }
-  ~ChannelPreallocatedAllocator() override { CHECK(!is_allocated_); }
+  ~ChannelPreallocatedAllocator() override { ABSL_CHECK(!is_allocated_); }
 
   // TODO(austin): Read the contract for these.
   uint8_t *allocate(size_t size) override {
     if (is_allocated_) {
-      LOG(FATAL) << "Can't allocate more memory with a fixed size allocator on "
-                    "channel "
-                 << configuration::CleanedChannelToString(channel_);
+      ABSL_LOG(FATAL)
+          << "Can't allocate more memory with a fixed size allocator on "
+             "channel "
+          << configuration::CleanedChannelToString(channel_);
     }
 
-    CHECK_LE(size, size_)
+    ABSL_CHECK_LE(size, size_)
         << ": Tried to allocate more space than available on channel "
         << configuration::CleanedChannelToString(channel_);
 
@@ -51,10 +54,10 @@ class ChannelPreallocatedAllocator : public flatbuffers::Allocator {
   }
 
   void deallocate(uint8_t *data, size_t size) override {
-    CHECK_EQ(data, data_)
+    ABSL_CHECK_EQ(data, data_)
         << ": Deallocating data not allocated here on channel "
         << configuration::CleanedChannelToString(channel_);
-    CHECK_LE(size, size_)
+    ABSL_CHECK_LE(size, size_)
         << ": Tried to deallocate more space than available on channel "
         << configuration::CleanedChannelToString(channel_);
     is_allocated_ = false;
@@ -63,7 +66,7 @@ class ChannelPreallocatedAllocator : public flatbuffers::Allocator {
   uint8_t *reallocate_downward(uint8_t * /*old_p*/, size_t /*old_size*/,
                                size_t new_size, size_t /*in_use_back*/,
                                size_t /*in_use_front*/) override {
-    LOG(FATAL)
+    ABSL_LOG(FATAL)
         << "Requested " << new_size
         << " bytes (includes extra for room to grow even more), max size "
         << channel_->max_size() << " for channel "

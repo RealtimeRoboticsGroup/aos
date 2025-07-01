@@ -26,8 +26,8 @@
 #include "aos/mutex/mutex.h"
 #include "aos/network/message_bridge_server_generated.h"
 #include "aos/network/multinode_timestamp_filter.h"
+#include "aos/network/noncausal_timestamp_filter.h"
 #include "aos/network/remote_message_generated.h"
-#include "aos/network/timestamp_filter.h"
 #include "aos/time/time.h"
 #include "aos/util/threaded_queue.h"
 #include "aos/uuid.h"
@@ -126,7 +126,7 @@ class LogReader {
   // errors will result in an error value being returned rather than resulting
   // in a LOG(FATAL). If this returns an error, log reading has failed and the
   // log reader may now be in an inconsistent state.
-  [[nodiscard]] virtual Result<void> NonFatalRegisterWithoutStarting(
+  [[nodiscard]] virtual Status NonFatalRegisterWithoutStarting(
       SimulatedEventLoopFactory *event_loop_factory);
   // Runs the log until the last start time.  Register above is defined as:
   // Register(...) {
@@ -413,13 +413,12 @@ class LogReader {
  private:
   friend class testing::MultinodeLoggerTest;
 
-  [[nodiscard]] Result<void> Register(EventLoop *event_loop, const Node *node);
+  [[nodiscard]] Status Register(EventLoop *event_loop, const Node *node);
 
-  [[nodiscard]] Result<void> RegisterDuringStartup(EventLoop *event_loop,
-                                                   const Node *node);
+  [[nodiscard]] Status RegisterDuringStartup(EventLoop *event_loop,
+                                             const Node *node);
 
-  const Channel *RemapChannel(const EventLoop *event_loop, const Node *node,
-                              const Channel *channel);
+  const Channel *RemapChannel(const Channel *channel);
 
   // Checks if any states have their event loops initialized which indicates
   // events have been scheduled
@@ -537,11 +536,11 @@ class LogReader {
     // timestamps instead of timestamps and much larger data for a shorter
     // period.  For logs where timestamps are stored with the data, this
     // triggers those files to be read twice.
-    [[nodiscard]] Result<void> ReadTimestamps();
+    [[nodiscard]] Status ReadTimestamps();
 
     // Primes the queues inside State.  Should be called before calling
     // OldestMessageTime.
-    [[nodiscard]] Result<void> MaybeSeedSortedMessages();
+    [[nodiscard]] Status MaybeSeedSortedMessages();
 
     void SetUpStartupTimer() {
       const monotonic_clock::time_point start_time =
@@ -961,7 +960,7 @@ class LogReader {
       return;
     }
     if (exit_handle_) {
-      exit_handle_->Exit(Error::MakeUnexpected(result.error()));
+      exit_handle_->Exit(MakeError(result.error()));
     } else {
       CheckExpected(result);
     }

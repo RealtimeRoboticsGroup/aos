@@ -5,8 +5,7 @@
 #include <cstdint>
 #include <type_traits>
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
 
 #include "aos/events/event_loop.h"
 
@@ -51,7 +50,7 @@ void EventLoop::MakeWatcher(const std::string_view channel_name, Watch &&w) {
       configuration_, channel_name, MessageType::GetFullyQualifiedName(),
       name(), node());
 
-  CHECK(channel != nullptr)
+  ABSL_CHECK(channel != nullptr)
       << ": Channel { \"name\": \"" << channel_name << "\", \"type\": \""
       << MessageType::GetFullyQualifiedName()
       << "\" } not found in config for application " << name() << ".";
@@ -70,7 +69,7 @@ void EventLoop::MakeNoArgWatcher(const std::string_view channel_name,
   const Channel *channel = configuration::GetChannel(
       configuration_, channel_name, MessageType::GetFullyQualifiedName(),
       name(), node());
-  CHECK(channel != nullptr)
+  ABSL_CHECK(channel != nullptr)
       << ": Channel { \"name\": \"" << channel_name << "\", \"type\": \""
       << MessageType::GetFullyQualifiedName()
       << "\" } not found in config for application " << name() << ".";
@@ -111,7 +110,7 @@ inline bool RawFetcher::FetchNext() {
 }
 
 inline bool RawFetcher::FetchNextIf(std::function<bool(const Context &)> fn) {
-  DCHECK(fn);
+  ABSL_DCHECK(fn);
   const auto result = DoFetchNextIf(std::move(fn));
   if (result.first) {
     if (timing_.fetcher) {
@@ -172,7 +171,7 @@ inline bool RawFetcher::Fetch() {
 }
 
 inline bool RawFetcher::FetchIf(std::function<bool(const Context &)> fn) {
-  DCHECK(fn);
+  ABSL_DCHECK(fn);
 
   const auto result = DoFetchIf(std::move(fn));
   if (result.first) {
@@ -442,15 +441,15 @@ class WatcherState {
 template <typename T>
 RawSender::Error Sender<T>::Send(
     const NonSizePrefixedFlatbuffer<T> &flatbuffer) {
-  CHECK(valid()) << ": Sender must be initialized before sending.";
+  ABSL_CHECK(valid()) << ": Sender must be initialized before sending.";
   return sender_->Send(flatbuffer.span().data(), flatbuffer.span().size());
 }
 
 template <typename T>
 RawSender::Error Sender<T>::SendDetached(FlatbufferDetachedBuffer<T> detached) {
-  CHECK_EQ(static_cast<void *>(detached.span().data() + detached.span().size() -
-                               sender_->size()),
-           sender_->data())
+  ABSL_CHECK_EQ(static_cast<void *>(detached.span().data() +
+                                    detached.span().size() - sender_->size()),
+                sender_->data())
       << ": May only send the buffer detached from this Sender";
   return sender_->Send(detached.span().size());
 }

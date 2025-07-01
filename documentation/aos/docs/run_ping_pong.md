@@ -1,16 +1,19 @@
 # How to run ping & pong
 
-Running ping<->pong is a nice way to test that you can run some basic code and shows how messaging can work between two nodes
+Running ping<->pong is a nice way to test that you can run some basic code. This example shows how messaging can work between two processes.
 
 ## Set up real-time niceties:
-  1. Add the following lines to `/etc/security/limits.d/rt.conf`, replacing "USERNAME" with the username you're running under.  You'll probably need to do this as root, e.g., `sudo nano /etc/security/limits.d/rt.conf`
+
+You only have to do this once. This allows the processes to run in a "sufficiently realtime" manner.
+
+  1. Add the following lines to `/etc/security/limits.d/rt.conf`, replacing "USERNAME" with the username you're running under.  You'll probably need to do this as root, e.g., `sudo nano /etc/security/limits.d/rt.conf`.
 ```
 USERNAME - nice -20
 USERNAME - rtprio 95
 USERNAME - memlock unlimited
 ```
 
-  2. Reboot your machine to pick up the changes
+  2. Reboot your machine to pick up the changes.
 
 ## Compile and run the code
   1. Compile the code for ping and pong, as well as aos_dump for looking at the messages.  We'll assume throughout that you're running from the top level directory of aos.
@@ -25,9 +28,9 @@ USERNAME - memlock unlimited
   3. In a third window, explore the message stream using `aos_dump`.  Some things you can do:
     1. List the channels:
        `bazel-bin/aos/aos_dump --config bazel-bin/aos/events/pingpong_config.json`
-    2. Listen to a specific topic on a channel-- copy one of the channels listed in the first step and put it at the end of the aos_dump command (e.g., "/test aos.examples.Ping")
+    2. Listen to a specific topic on a channel-- copy one of the channels listed in the first step and put it at the end of the aos_dump command (e.g., "/test aos.examples.Ping"):
        `bazel-bin/aos/aos_dump --config bazel-bin/aos/events/pingpong_config.json /test aos.examples.Ping`
-    3. Listen to multiple topics on a channel (e.g., all the topics published on "/test")
+    3. Listen to multiple topics on a channel (e.g., all the topics published on "/test"):
        `bazel-bin/aos/aos_dump --config bazel-bin/aos/events/pingpong_config.json /test`
 
 
@@ -41,33 +44,31 @@ alias aos_dump='bazel-bin/aos/aos_dump --config bazel-bin/aos/events/pingpong_co
 In addition to running ping and pong, this is a good example to explore event logging.
 
   1. Start by compiling the code:
-  ```
-  bazel build -c opt //aos/events/logging:logger_main
-  ```
+     ```
+     bazel build -c opt //aos/events/logging:logger_main //aos/events/logging:log_cat
+     ```
 
   2. Create a folder for the log files, e.g., 
-  ```
-  mkdir /tmp/log_folder
-  ```
+     ```
+     mkdir /tmp/log_folder
+     ```
 
-  3. Run the command to log the data:
-  ```
-  bazel-bin/aos/events/logging/logger_main --config bazel-bin/aos/events/pingpong_config.json --logging_folder /tmp/log_folder/
-  ```
+  3. Run the logger to log the data:
+     ```  
+     bazel-bin/aos/events/logging/logger_main --config bazel-bin/aos/events/pingpong_config.json --logging_folder /tmp/log_folder/
+     ```
+  
+     A log folder should be created in /tmp/log_folder, with a name something like `fbs_log_-<number>_<date and time>`.
 
-A log file should be created in /tmp/log_folder, with a name something like `fbs_log-001.bfbs`.
+     If you're running ping and pong at the same time, you should be able to watch the log file grow in size as events are being logged.  For example, running `ls -lh /tmp/log_folder/*` will list the files and their sizes.  Doing this periodically (e.g., every 15-30 seconds) should show the new log file growing in size.
 
-If you're running ping and pong at the same time, you should be able to watch the log file grow in size as events are being logged.  For example, running `ls -lh /tmp/log_folder/*` will list the files and their sizes.  Doing this periodically (e.g., every 15-30 seconds) should show the new log file growing in size.
-
-   4. View the contents of the log file (using `log_cat` functionality found in the `logging` sub-directory):
-      1. Compile `log_cat`:
+   4. View the contents of the log file using `log_cat`. Run the binary pointed at the recorded event log.:
       ```
-      bazel build -c opt //aos/events/logging:log_cat
+      bazel-bin/aos/events/logging/log_cat /tmp/log_folder/fbs_log_-<number>_<date and time>
       ```
-
-      2. Run the binary pointed at the recorded event log (this assumes you're running from the base directory of the repository and that the file is named `fbs_log-001.bfbs`):
+      You will a list of all messages, in the format
       ```
-      bazel-bin/aos/events/logging/log_cat /tmp/log_folder/fbs_log-001.bfbs
+      <wallclock time> <second since start> <channel> <message type> <message as json>
       ```
 
 ## EXERCISE:
@@ -115,8 +116,7 @@ INFO: Build completed successfully, 44 total actions
 
 To run everything by hand, just run `./starterd` after extracting, and everything will start up automatically.
 
-
-## Benchmarking
+### Benchmarking
 
 `ping` and `pong` serve as a good pair of latency benchmarking applications for doing initial checking of the performance of a system.
 By default, they run with a RT priority of 5, and they can also be configured to forward across the network with a custom `aos_config.bfbs`.

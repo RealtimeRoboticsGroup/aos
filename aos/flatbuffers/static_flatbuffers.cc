@@ -11,8 +11,8 @@
 #include <utility>
 #include <vector>
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
@@ -75,12 +75,12 @@ int64_t GetLengthAttributeOrZero(const reflection::Field *field,
     return 0;
   }
   int64_t value;
-  CHECK(absl::SimpleAtoi(str.value(), &value))
+  ABSL_CHECK(absl::SimpleAtoi(str.value(), &value))
       << ": Field " << field->name()->string_view()
       << " must specify a positive integer for the " << attribute
       << " attribute. Got \"" << str.value() << "\".";
-  CHECK_LE(0, value) << ": Field " << field->name()->string_view()
-                     << " must have a non-negative " << attribute << ".";
+  ABSL_CHECK_LE(0, value) << ": Field " << field->name()->string_view()
+                          << " must have a non-negative " << attribute << ".";
   return value;
 }
 
@@ -117,10 +117,10 @@ const std::string ScalarCppType(const reflection::BaseType type) {
     case reflection::BaseType::Array:
     case reflection::BaseType::Vector64:
     case reflection::BaseType::MaxBaseType:
-      LOG(FATAL) << ": Type " << reflection::EnumNameBaseType(type)
-                 << " not a scalar.";
+      ABSL_LOG(FATAL) << ": Type " << reflection::EnumNameBaseType(type)
+                      << " not a scalar.";
   }
-  LOG(FATAL) << "Unreachable";
+  ABSL_LOG(FATAL) << "Unreachable";
 }
 
 const std::string FlatbufferNameToCppName(const std::string_view input) {
@@ -148,7 +148,7 @@ const std::string IncludePathForFbs(
     } else if (include_suffix == "static") {
       return "aos/flatbuffers/reflection/reflection_static.h";
     } else {
-      LOG(FATAL) << "This should be unreachable.";
+      ABSL_LOG(FATAL) << "This should be unreachable.";
     }
   }
   fbs_file.remove_suffix(4);
@@ -299,8 +299,8 @@ static void PopulateTypeDataForScalarOrEnum(const reflection::Schema *schema,
       break;
 
     default:
-      LOG(FATAL) << "Invalid type for this function: "
-                 << reflection::EnumNameBaseType(type->base_type());
+      ABSL_LOG(FATAL) << "Invalid type for this function: "
+                      << reflection::EnumNameBaseType(type->base_type());
       break;
   }
 }
@@ -324,8 +324,8 @@ static void PopulateTypeDataForVector(const reflection::Schema *schema,
                                       FieldData *field) {
   const reflection::Type *type = field_fbs->type();
   // Cast each side to int so Abseil won't try to stream reflection::BaseType.
-  CHECK_EQ(static_cast<int>(type->base_type()),
-           static_cast<int>(reflection::BaseType::Vector));
+  ABSL_CHECK_EQ(static_cast<int>(type->base_type()),
+                static_cast<int>(reflection::BaseType::Vector));
 
   field->is_repeated = true;
   field->is_inline = false;
@@ -351,7 +351,7 @@ static void PopulateTypeDataForVector(const reflection::Schema *schema,
       elements_are_inline = false;
       break;
     case reflection::BaseType::Vector:
-      LOG(FATAL) << "Vectors of vectors are not allowed.";
+      ABSL_LOG(FATAL) << "Vectors of vectors are not allowed.";
       break;
     default:
       element_type = ScalarOrEnumType(schema, type->element(), type->index());
@@ -397,7 +397,7 @@ static void PopulateTypeDataForObject(const reflection::Schema *schema,
 // metadata.
 void PopulateTypeData(const reflection::Schema *schema,
                       const reflection::Field *field_fbs, FieldData *field) {
-  VLOG(1) << aos::FlatbufferToJson(field_fbs);
+  ABSL_VLOG(1) << aos::FlatbufferToJson(field_fbs);
 
   const reflection::Type *type = field_fbs->type();
   field->inline_size = type->base_size();
@@ -437,8 +437,9 @@ void PopulateTypeData(const reflection::Schema *schema,
     case reflection::BaseType::Array:
     case reflection::BaseType::Vector64:
     case reflection::BaseType::MaxBaseType:
-      LOG(FATAL) << ": Type " << reflection::EnumNameBaseType(type->base_type())
-                 << " not supported currently.";
+      ABSL_LOG(FATAL) << ": Type "
+                      << reflection::EnumNameBaseType(type->base_type())
+                      << " not supported currently.";
   }
 }
 
@@ -455,9 +456,9 @@ std::string MakeMoveConstructor(std::string_view type_name) {
 
 std::string MakeConstructor(std::string_view type_name) {
   const std::string constructor_body =
-      R"code(CHECK_EQ(buffer.size(), kSize);
-    CHECK_EQ(0u,
-             reinterpret_cast<size_t>(buffer.data() + kAlignOffset) % kAlign);
+      R"code(ABSL_CHECK_EQ(buffer.size(), kSize);
+    ABSL_CHECK_EQ(0u,
+                  reinterpret_cast<size_t>(buffer.data() + kAlignOffset) % kAlign);
     PopulateVtable();)code";
   return absl::Substitute(
       R"code(  // Constructors for creating a flatbuffer object.
@@ -533,7 +534,7 @@ std::string MakeHaser(const FieldData &field) {
 std::string MakeInlineAccessors(const FieldData &field,
                                 const size_t inline_absolute_offset) {
   constexpr size_t kVtablePointerSize = sizeof(soffset_t);
-  CHECK_EQ(
+  ABSL_CHECK_EQ(
       (inline_absolute_offset - kVtablePointerSize) % field.inline_alignment,
       0u)
       << ": Unaligned field " << field.name << " on " << field.full_type
@@ -605,7 +606,7 @@ std::string MakeOffsetDataAccessors(const FieldData &field) {
   // then populate/modify as desired.
   // The field must not be populated yet.
   $1 *add_$0() {
-    CHECK(!$2.has_value());
+    ABSL_CHECK(!$2.has_value());
     constexpr size_t kVtableIndex = $3;
     // If this object does not normally have its initial memory statically
     // allocated, allocate it now (this is used for zero-length vectors).
@@ -721,25 +722,31 @@ std::string MakeAccessors(const FieldData &field,
                          : MakeOffsetDataAccessors(field);
 }
 
+std::string MakePublicConstants(const FieldData &field) {
+  if (field.is_inline) {
+    if (field.default_value_expression.has_value()) {
+      return absl::StrFormat(R"code(
+  // Default value for field %s (note that values with no explicitly-specified
+  // default values do not have `kDefault_*` values exposed).
+  static constexpr %s kDefault_%s = %s;
+)code",
+                             field.name, field.full_type, field.name,
+                             field.default_value_expression.value());
+    }
+  }
+  return {};
+}
+
 std::string MakeMembers(const FieldData &field,
                         std::string_view offset_data_absolute_offset,
                         size_t inline_absolute_offset) {
   if (field.is_inline) {
-    std::string code_str = absl::StrFormat(
+    return absl::StrFormat(
         R"code(  // Offset from the start of the buffer to the inline data for the field
   // %s.
   static constexpr size_t %s = %d;
 )code",
         field.name, InlineAbsoluteOffsetName(field), inline_absolute_offset);
-
-    if (field.default_value_expression.has_value()) {
-      code_str += absl::StrFormat(
-          R"code(  // This is an inline scalar/enum with a default, define kDefault_<name>.
-  static constexpr %s kDefault_%s = %s;
-)code",
-          field.full_type, field.name, field.default_value_expression.value());
-    }
-    return code_str;
   } else {
     return absl::StrFormat(
         R"code(
@@ -810,7 +817,7 @@ std::string MakeObjectCopier(const std::vector<FieldData> &fields) {
     {
       %s *added_%s =
           add_%s();
-      CHECK(added_%s != nullptr);
+      ABSL_CHECK(added_%s != nullptr);
       if (!added_%s->FromFlatbuffer(other.%s)) {
         // Fail if we were unable to copy (e.g., if we tried to copy in a long
         // vector and do not have the space for it).
@@ -825,7 +832,7 @@ std::string MakeObjectCopier(const std::vector<FieldData> &fields) {
       copiers.emplace_back(absl::StrFormat(R"code(    if (other.%s) {
       %s *added_%s =
           add_%s();
-      CHECK(added_%s != nullptr);
+      ABSL_CHECK(added_%s != nullptr);
       if (!added_%s->FromFlatbuffer(*other.%s)) {
         // Fail if we were unable to copy (e.g., if we tried to copy in a long
         // vector and do not have the space for it).
@@ -881,7 +888,7 @@ std::string MakeCopier(const std::vector<FieldData> &fields) {
       copiers.emplace_back(absl::StrFormat(R"code(    if (other.has_%s()) {
       %s *added_%s =
           add_%s();
-      CHECK(added_%s != nullptr);
+      ABSL_CHECK(added_%s != nullptr);
       if (!added_%s->FromFlatbuffer(other.%s())) {
         // Fail if we were unable to copy (e.g., if we tried to copy in a long
         // vector and do not have the space for it).
@@ -908,7 +915,7 @@ std::string MakeCopier(const std::vector<FieldData> &fields) {
   // Equivalent to FromFlatbuffer(const Flatbuffer&); this overload is provided
   // to ease implementation of the aos::fbs::Vector internals.
   [[nodiscard]] bool FromFlatbuffer(const Flatbuffer *other) {
-    CHECK(other != nullptr);
+    ABSL_CHECK(other != nullptr);
     return FromFlatbuffer(*other);
   }
 )code",
@@ -934,7 +941,7 @@ std::string MakeSubObjectList(const std::vector<FieldData> &fields) {
   // special.
   size_t NumberOfSubObjects() const final { return 0; }
   using ::aos::fbs::ResizeableObject::SubObject;
-  SubObject GetSubObject(size_t) final { LOG(FATAL) << "No subobjects."; }
+  SubObject GetSubObject(size_t) final { ABSL_LOG(FATAL) << "No subobjects."; }
 )code";
   }
   return absl::Substitute(
@@ -1035,6 +1042,7 @@ GeneratedObject GenerateCodeForObject(const reflection::Schema *schema,
       "(kVtableStart + kVtableSize)";
   std::string offset_data_relative_offset = offset_data_start_expression;
   std::vector<std::string> accessors;
+  std::vector<std::string> public_constants;
   std::vector<std::string> members;
   std::set<std::string> includes = {
       MakeInclude("aos/flatbuffers/static_table.h"),
@@ -1070,6 +1078,7 @@ GeneratedObject GenerateCodeForObject(const reflection::Schema *schema,
     }
     const std::string offset_data_absolute_offset = offset_data_relative_offset;
     accessors.emplace_back(MakeAccessors(field, inline_absolute_offset));
+    public_constants.emplace_back(MakePublicConstants(field));
     members.emplace_back(MakeMembers(field, offset_data_absolute_offset,
                                      inline_absolute_offset));
 
@@ -1130,9 +1139,10 @@ GeneratedObject GenerateCodeForObject(const reflection::Schema *schema,
   static const char *GetFullyQualifiedName() {
     return Flatbuffer::GetFullyQualifiedName();
   }
+%s
 )code",
       inline_data_size, object->fields()->size(), alignment, nominal_min_align,
-      offset_data_start_expression);
+      offset_data_start_expression, absl::StrJoin(public_constants, ""));
   const std::string_view fbs_type_name = object->name()->string_view();
   const std::string type_namespace = FlatbufferNameToCppName(
       fbs_type_name.substr(0, fbs_type_name.find_last_of(".")));
@@ -1275,9 +1285,9 @@ GeneratedCode GeneratedCode::MergeCode(
     // 2. Some of the codegen needs to be tweaked so that we can have the
     // generated
     //    C++ classes depend on one another.
-    CHECK(!to_remove.empty())
+    ABSL_CHECK(!to_remove.empty())
         << ": Circular dependencies in flatbuffers schemas are not supported.";
-    CHECK_EQ(1u, remaining_objects.erase(to_remove))
+    ABSL_CHECK_EQ(1u, remaining_objects.erase(to_remove))
         << ": Failed to remove " << to_remove;
   }
   return result;

@@ -15,11 +15,11 @@
 #include "absl/debugging/symbolize.h"
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/log/flags.h"
 #include "absl/log/globals.h"
 #include "absl/log/initialize.h"
-#include "absl/log/log.h"
 
 #include "aos/realtime.h"
 #include "aos/uuid.h"
@@ -35,23 +35,12 @@ std::atomic<bool> initialized{false};
 bool IsInitialized() { return initialized; }
 
 void InitGoogle(int *argc, char ***argv) {
-  CHECK(!IsInitialized()) << "Only initialize once.";
+  ABSL_CHECK(!IsInitialized()) << "Only initialize once.";
   absl::SetStderrThreshold(absl::LogSeverityAtLeast::kInfo);
   std::vector<char *> positional_arguments =
       absl::ParseCommandLine(*argc, *argv);
 
-  {
-    const std::vector<absl::UnrecognizedFlag> unrecognized_flags;
-    absl::ReportUnrecognizedFlags(unrecognized_flags);
-    if (!unrecognized_flags.empty()) {
-      for (const absl::UnrecognizedFlag &flag : unrecognized_flags) {
-        LOG(ERROR) << "Unrecognized flag " << flag.flag_name;
-      }
-      LOG(FATAL) << "Found unrecognized flags, aborting";
-    }
-  }
-
-  CHECK_LE(positional_arguments.size(), static_cast<size_t>(*argc));
+  ABSL_CHECK_LE(positional_arguments.size(), static_cast<size_t>(*argc));
   for (size_t i = 0; i < positional_arguments.size(); ++i) {
     (*argv)[i] = positional_arguments[i];
   }

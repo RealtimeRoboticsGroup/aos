@@ -1,6 +1,8 @@
 #include "frc/vision/foxglove_image_converter_lib.h"
 
 #include "absl/flags/flag.h"
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/imgproc.hpp"
 

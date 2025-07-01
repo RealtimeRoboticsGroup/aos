@@ -12,7 +12,7 @@ license(
     name = "license",
     package_name = "Flatbuffers",
     license_kinds = ["@rules_license//licenses/spdx:Apache-2.0"],
-    license_text = "LICENSE",
+    license_text = "LICENSE.txt",
     package_url = "https://flatbuffers.dev/",
     package_version = "65e49faf7",
 )
@@ -76,7 +76,10 @@ cc_library(
     name = "flatbuffers",
     hdrs = ["//:public_headers"],
     copts = ["-Wno-cast-align"],
-    defines = ["FLATBUFFERS_USE_STD_SPAN"],
+    defines = [
+        "FLATBUFFERS_USE_STD_SPAN",
+        "FLATBUFFERS_MAX_ALIGNMENT=64",
+    ],
     linkstatic = 1,
     strip_include_prefix = "/include",
     deps = ["//src:flatbuffers"],

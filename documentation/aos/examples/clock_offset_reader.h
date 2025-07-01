@@ -1,5 +1,8 @@
 #ifndef DOCUMENTATION_AOS_EXAMPLES_CLOCK_OFFSET_READER_H_
 #define DOCUMENTATION_AOS_EXAMPLES_CLOCK_OFFSET_READER_H_
+
+#include "absl/log/absl_log.h"
+
 #include "aos/events/event_loop.h"
 #include "aos/network/message_bridge_server_generated.h"
 #include "documentation/aos/examples/sensor_data_generated.h"
@@ -40,14 +43,14 @@ class SensorAgeReader {
             // node (although it can be good practice to check that the node you
             // are looking for actually exists, to protect against programming
             // errors).
-            LOG(WARNING) << "Message bridge disconnected.";
+            ABSL_LOG(WARNING) << "Message bridge disconnected.";
             return;
           }
           break;
         }
       }
     } else {
-      LOG(WARNING) << "No message bridge status available.";
+      ABSL_LOG(WARNING) << "No message bridge status available.";
       return;
     }
     const aos::monotonic_clock::time_point now = event_loop_->monotonic_now();
@@ -65,12 +68,12 @@ class SensorAgeReader {
     const aos::monotonic_clock::time_point capture_time(
         std::chrono::nanoseconds(msg.hardware_capture_time_ns()) -
         monotonic_offset);
-    LOG(INFO) << "The sensor data was sent "
-              << aos::time::DurationInSeconds(now - send_time)
-              << " seconds ago.";
-    LOG(INFO) << "The sensor data was read off of the hardware "
-              << aos::time::DurationInSeconds(now - capture_time)
-              << " seconds ago.";
+    ABSL_LOG(INFO) << "The sensor data was sent "
+                   << aos::time::DurationInSeconds(now - send_time)
+                   << " seconds ago.";
+    ABSL_LOG(INFO) << "The sensor data was read off of the hardware "
+                   << aos::time::DurationInSeconds(now - capture_time)
+                   << " seconds ago.";
   }
 
   aos::EventLoop *event_loop_;

@@ -5,8 +5,7 @@
 
 #include <limits>
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
 
 #include "aos/ipc_lib/shm_observers.h"
 
@@ -205,7 +204,7 @@ class Index {
                    queue_index & std::numeric_limits<PackedIndexType>::max()) |
                (static_cast<IndexType>(message_index)
                 << std::numeric_limits<PackedIndexType>::digits)) {
-    CHECK_LE(message_index, MaxMessages());
+    ABSL_CHECK_LE(message_index, MaxMessages());
   }
 
   // Index of this message in the message array.

@@ -68,7 +68,7 @@ void EventScheduler::Shutdown() {
   on_shutdown_();
 }
 
-Result<void> EventScheduler::Startup() {
+Status EventScheduler::Startup() {
   ++boot_count_;
   cached_event_list_monotonic_time_ = kInvalidCachedTime();
   CHECK(!is_running_);
@@ -77,7 +77,7 @@ Result<void> EventScheduler::Startup() {
   return Ok();
 }
 
-Result<void> EventScheduler::CallOldestEvent() {
+Status EventScheduler::CallOldestEvent() {
   if (!called_started_) {
     // If we haven't started, start.
     AOS_RETURN_IF_ERROR(MaybeRunOnStartup());
@@ -139,7 +139,7 @@ void EventScheduler::MaybeRunStopped() {
   }
 }
 
-Result<void> EventScheduler::MaybeRunOnStartup() {
+Status EventScheduler::MaybeRunOnStartup() {
   CHECK(!called_started_);
   CHECK(!is_running_);
   AOS_DECLARE_OR_RETURN_IF_ERROR(
@@ -192,9 +192,9 @@ Result<bool> EventSchedulerScheduler::RunUntil(
 
   bool reached_end_time = false;
 
-  const Result<void> result =
+  const Status result =
       RunMaybeRealtimeLoop([this, scheduler, end_time, fn_realtime_offset,
-                            &reached_end_time]() -> Result<void> {
+                            &reached_end_time]() -> Status {
         // std::tuple<distributed_clock::time_point, EventScheduler *>
         // oldest_event =
         AOS_DECLARE_OR_RETURN_IF_ERROR(oldest_event, OldestEvent());
@@ -260,7 +260,7 @@ Result<bool> EventSchedulerScheduler::RunUntil(
   return result.transform([reached_end_time]() { return reached_end_time; });
 }
 
-Result<void> EventSchedulerScheduler::Reboot() {
+Status EventSchedulerScheduler::Reboot() {
   const std::vector<logger::BootTimestamp> &times =
       std::get<1>(reboots_.front());
   CHECK_EQ(times.size(), schedulers_.size());
@@ -299,15 +299,13 @@ Result<void> EventSchedulerScheduler::Reboot() {
   return Ok();
 }
 
-Result<void> EventSchedulerScheduler::RunFor(
-    distributed_clock::duration duration) {
+Status EventSchedulerScheduler::RunFor(distributed_clock::duration duration) {
   distributed_clock::time_point end_time = now_ + duration;
   logging::ScopedLogRestorer prev_logger;
   AOS_RETURN_IF_ERROR(MaybeRunOnStartup());
 
   // Run all the sub-event-schedulers.
-  const Result<void> result = RunMaybeRealtimeLoop([this, end_time]()
-                                                       -> Result<void> {
+  const Status result = RunMaybeRealtimeLoop([this, end_time]() -> Status {
     AOS_DECLARE_OR_RETURN_IF_ERROR(oldest_event, OldestEvent());
     if (!reboots_.empty() &&
         std::get<0>(reboots_.front()) <= std::get<0>(oldest_event)) {
@@ -347,6 +345,10 @@ Result<void> EventSchedulerScheduler::RunFor(
     // push time forwards
     now_ = std::get<0>(oldest_event);
 
+    if (on_event_) {
+      on_event_(oldest_event);
+    }
+
     return std::get<1>(oldest_event)->CallOldestEvent();
   });
 
@@ -357,12 +359,12 @@ Result<void> EventSchedulerScheduler::RunFor(
   return result;
 }
 
-Result<void> EventSchedulerScheduler::Run() {
+Status EventSchedulerScheduler::Run() {
   logging::ScopedLogRestorer prev_logger;
   AOS_RETURN_IF_ERROR(MaybeRunOnStartup());
 
   // Run all the sub-event-schedulers.
-  const Result<void> result = RunMaybeRealtimeLoop([this]() -> Result<void> {
+  const Status result = RunMaybeRealtimeLoop([this]() -> Status {
     AOS_DECLARE_OR_RETURN_IF_ERROR(oldest_event, OldestEvent());
     if (!reboots_.empty() &&
         std::get<0>(reboots_.front()) <= std::get<0>(oldest_event)) {
@@ -407,7 +409,7 @@ Result<void> EventSchedulerScheduler::RunMaybeRealtimeLoop(F loop_body) {
   const Result<std::tuple<distributed_clock::time_point, EventScheduler *>>
       oldest_event = OldestEvent();
   if (!oldest_event.has_value()) {
-    return Error::MakeUnexpected(oldest_event.error());
+    return MakeError(oldest_event.error());
   }
   distributed_clock::time_point last_distributed_clock =
       std::get<0>(oldest_event.value());

@@ -7,6 +7,7 @@
 #include <optional>
 #include <string>
 
+#include "absl/log/absl_check.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -158,7 +159,7 @@ TEST(FileTest, WriteFileError) {
   FileWriter writer(test_file, S_IRUSR);
 
   // Mess up the file management by closing the file descriptor.
-  PCHECK(0 == close(writer.fd()));
+  ABSL_PCHECK(0 == close(writer.fd()));
 
   FileWriter::WriteResult result;
   {

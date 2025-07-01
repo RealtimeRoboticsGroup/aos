@@ -30,9 +30,10 @@ class SimulatedChannel;
 class NodeEventLoopFactory;
 class SimulatedEventLoop;
 class SimulatedFactoryExitHandle;
+class SimulatedEventLoopLogSink;
 namespace message_bridge {
 class SimulatedMessageBridge;
-}
+}  // namespace message_bridge
 
 // There are 2 concepts needed to support multi-node simulations.
 //  1) The node.  This is implemented with NodeEventLoopFactory.
@@ -99,11 +100,10 @@ class SimulatedEventLoopFactory {
   // overloads existing and so would not handle the return values if the
   // existing Run*() interfaces were swapped out unexpectedly.
   void Run();
-  [[nodiscard]] Result<void> NonFatalRun();
+  [[nodiscard]] Status NonFatalRun();
   // Executes the event loops for a duration.
   void RunFor(distributed_clock::duration duration);
-  [[nodiscard]] Result<void> NonFatalRunFor(
-      distributed_clock::duration duration);
+  [[nodiscard]] Status NonFatalRunFor(distributed_clock::duration duration);
   // Executes the event loops until a time.
   // Returns kEventsRemaining if there are still events remaining.
   // Returns an unexpected value if there was an error.
@@ -118,7 +118,7 @@ class SimulatedEventLoopFactory {
 
   // Stops executing all event loops.  Meant to be called from within an event
   // loop handler.
-  void Exit(Result<void> status = {});
+  void Exit(Status status = {});
 
   std::unique_ptr<ExitHandle> MakeExitHandle();
 
@@ -179,7 +179,11 @@ class SimulatedEventLoopFactory {
 
   // Returns the contents of exit_status_ (or a successful Result<> if
   // exit_status_ is nullopt), and clears the exit status.
-  Result<void> GetAndClearExitStatus();
+  Status GetAndClearExitStatus();
+
+  // Creates a new log sink depending on whether --use_simulated_clocks_for_logs
+  // is set.
+  std::unique_ptr<SimulatedEventLoopLogSink> MaybeCreateSimulatedLogSink();
 
   const Configuration *const configuration_;
   EventSchedulerScheduler scheduler_scheduler_;
@@ -199,7 +203,7 @@ class SimulatedEventLoopFactory {
   // actually exited. This is to try to provide consistent behavior in cases
   // where Exit() is called multiple times before Run() is aactually terminates
   // execution.
-  std::optional<Result<void>> exit_status_{};
+  std::optional<Status> exit_status_{};
 };
 
 // This class holds all the state required to be a single node.

@@ -122,9 +122,12 @@ static BinarySection GenerateMissingSection(const uint64_t offset,
 std::map<uint64_t, BinarySection> BinaryAnnotator::Annotate() {
   if (bfbs_ != nullptr && bfbs_length_ != 0) {
     flatbuffers::Verifier verifier(bfbs_, static_cast<size_t>(bfbs_length_));
+    // Local modification note: Directiy calling VerifySchemaBuffer requires
+    // that the serialized schema include an identifier, which sometimes does
+    // not exist (e.g., in AOS configs).
     if ((is_size_prefixed_ &&
-         !reflection::VerifySizePrefixedSchemaBuffer(verifier)) ||
-        !reflection::VerifySchemaBuffer(verifier)) {
+         !verifier.VerifySizePrefixedBuffer<reflection::Schema>(nullptr)) ||
+        !verifier.VerifyBuffer<reflection::Schema>(nullptr)) {
       return {};
     }
   }

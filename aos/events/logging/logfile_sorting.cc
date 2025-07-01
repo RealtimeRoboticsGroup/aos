@@ -374,7 +374,7 @@ void PartsSorter::PopulateFromFiles(
         ReadHeader(reader);
     if (!log_header) {
       if (!absl::GetFlag(FLAGS_quiet_sorting)) {
-        LOG(WARNING) << "Skipping " << part.name << " without a header";
+        LOG(WARNING) << "Skipping " << part.name << " without a header.";
       }
       corrupted.emplace_back(part.name);
       continue;

@@ -58,6 +58,7 @@ class AnnotatedBinaryTextGenerator {
   // annotated binary was successfully saved.
   bool Generate(const std::string &filename, const std::string &schema_filename,
                 const std::string &output_filename = "");
+  std::string GenerateString();
 
  private:
   const std::map<uint64_t, BinarySection> annotations_;

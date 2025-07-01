@@ -18,9 +18,9 @@
 #include "absl/container/btree_map.h"
 #include "absl/container/btree_set.h"
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
-#include "absl/log/log.h"
-#include "absl/log/vlog_is_on.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_split.h"
@@ -77,7 +77,7 @@ FlatbufferDetachedBuffer<Configuration> ReadConfigFile(std::string_view path,
   flatbuffers::DetachedBuffer buffer = JsonToFlatbuffer(
       util::ReadFileToStringOrDie(path), ConfigurationTypeTable());
 
-  CHECK_GT(buffer.size(), 0u) << ": Failed to parse JSON file: " << path;
+  ABSL_CHECK_GT(buffer.size(), 0u) << ": Failed to parse JSON file: " << path;
 
   FlatbufferDetachedBuffer<Configuration> result(std::move(buffer));
   configuration::ValidateUnmergedConfiguration(result);
@@ -207,7 +207,7 @@ void UnpackStringSet(
 
 void UnpackConnection(const Connection *destination_node,
                       MutableConnection *result) {
-  CHECK_EQ(Connection::MiniReflectTypeTable()->num_elems, 5u)
+  ABSL_CHECK_EQ(Connection::MiniReflectTypeTable()->num_elems, 5u)
       << ": Merging logic needs to be updated when the number of connection "
          "fields changes.";
   if (destination_node->has_timestamp_logger()) {
@@ -227,7 +227,7 @@ void UnpackConnection(const Connection *destination_node,
 }
 
 void UnpackChannel(const Channel *channel, MutableChannel *result) {
-  CHECK_EQ(Channel::MiniReflectTypeTable()->num_elems, 14u)
+  ABSL_CHECK_EQ(Channel::MiniReflectTypeTable()->num_elems, 14u)
       << ": Merging logic needs to be updated when the number of channel "
          "fields changes.";
 
@@ -287,8 +287,8 @@ void UnpackChannel(const Channel *channel, MutableChannel *result) {
 }
 
 void UnpackNode(const Node *node, MutableNode *result) {
-  CHECK_EQ(node->name()->string_view(), result->name);
-  CHECK_EQ(Node::MiniReflectTypeTable()->num_elems, 5u)
+  ABSL_CHECK_EQ(node->name()->string_view(), result->name);
+  ABSL_CHECK_EQ(Node::MiniReflectTypeTable()->num_elems, 5u)
       << ": Merging logic needs to be updated when the number of node "
          "fields changes.";
   if (node->has_hostname()) {
@@ -307,15 +307,15 @@ void UnpackNode(const Node *node, MutableNode *result) {
 }
 
 void UnpackMap(const Map *map, MutableMap *result) {
-  CHECK(map->has_match());
-  CHECK(map->has_rename());
+  ABSL_CHECK(map->has_match());
+  ABSL_CHECK(map->has_rename());
   UnpackChannel(map->match(), &(result->match));
   UnpackChannel(map->rename(), &(result->rename));
 }
 
 void UnpackApplication(const Application *application,
                        MutableApplication *result) {
-  CHECK_EQ(application->name()->string_view(), result->name);
+  ABSL_CHECK_EQ(application->name()->string_view(), result->name);
 
   if (application->has_executable_name()) {
     result->executable_name = application->executable_name()->string_view();
@@ -365,7 +365,7 @@ void UnpackConfiguration(const Configuration *configuration,
   if (configuration->has_channels()) {
     for (const Channel *channel : *configuration->channels()) {
       // Explode on malformed entries.
-      CHECK(channel->has_name() && channel->has_type());
+      ABSL_CHECK(channel->has_name() && channel->has_type());
 
       // Attempt to insert the channel.
       MutableChannel &unpacked_channel =
@@ -407,8 +407,8 @@ void UnpackConfiguration(const Configuration *configuration,
     result->maps.reserve(configuration->maps()->size());
 
     for (const Map *map : *configuration->maps()) {
-      CHECK(map->has_match());
-      CHECK(map->has_rename());
+      ABSL_CHECK(map->has_match());
+      ABSL_CHECK(map->has_rename());
 
       result->maps.emplace_back();
       UnpackMap(map, &(result->maps.back()));
@@ -417,7 +417,7 @@ void UnpackConfiguration(const Configuration *configuration,
 
   if (configuration->has_nodes()) {
     for (const Node *node : *configuration->nodes()) {
-      CHECK(node->has_name());
+      ABSL_CHECK(node->has_name());
 
       MutableNode &unpacked_node =
           result->nodes
@@ -436,7 +436,7 @@ void UnpackConfiguration(const Configuration *configuration,
 
   if (configuration->has_applications()) {
     for (const Application *application : *configuration->applications()) {
-      CHECK(application->has_name());
+      ABSL_CHECK(application->has_name());
 
       MutableApplication &unpacked_application =
           result->applications
@@ -522,7 +522,7 @@ flatbuffers::Offset<Channel> PackChannel(
 
   for (const std::pair<const std::string_view, MutableConnection>
            &destination_node : channel.destination_nodes) {
-    CHECK_EQ(destination_node.first, destination_node.second.name);
+    ABSL_CHECK_EQ(destination_node.first, destination_node.second.name);
     connection_offsets.push_back(PackConnection(destination_node.second, fbb));
   }
 
@@ -734,8 +734,8 @@ flatbuffers::Offset<Configuration> PackConfiguration(
     std::vector<flatbuffers::Offset<Channel>> channel_offsets;
     for (const std::pair<const MutableChannelName, MutableChannel>
              &channel_key : configuration.channels) {
-      CHECK_EQ(channel_key.first.name, channel_key.second.name);
-      CHECK_EQ(channel_key.first.type, channel_key.second.type);
+      ABSL_CHECK_EQ(channel_key.first.name, channel_key.second.name);
+      ABSL_CHECK_EQ(channel_key.first.type, channel_key.second.type);
       const MutableChannel &channel = channel_key.second;
       auto cached_schema = schema_cache.find(channel.type);
       flatbuffers::Offset<reflection::Schema> schema_offset;
@@ -773,7 +773,7 @@ flatbuffers::Offset<Configuration> PackConfiguration(
     std::vector<flatbuffers::Offset<Node>> node_offsets;
     for (const std::pair<const std::string_view, MutableNode> &node :
          configuration.nodes) {
-      CHECK_EQ(node.first, node.second.name);
+      ABSL_CHECK_EQ(node.first, node.second.name);
       node_offsets.emplace_back(PackNode(node.second, fbb));
     }
     nodes_offset = fbb->CreateVector(node_offsets);
@@ -786,7 +786,7 @@ flatbuffers::Offset<Configuration> PackConfiguration(
     std::vector<flatbuffers::Offset<Application>> applications_offsets;
     for (const std::pair<const std::string_view, MutableApplication>
              &application : configuration.applications) {
-      CHECK_EQ(application.first, application.second.name);
+      ABSL_CHECK_EQ(application.first, application.second.name);
       applications_offsets.emplace_back(
           PackApplication(application.second, fbb));
     }
@@ -826,7 +826,7 @@ std::string AbsolutePath(const std::string_view filename) {
   // Uses an std::string so that we know the input will be null-terminated.
   const std::string terminated_file(filename);
   char buffer[PATH_MAX];
-  PCHECK(NULL != realpath(terminated_file.c_str(), buffer));
+  ABSL_PCHECK(NULL != realpath(terminated_file.c_str(), buffer));
   return buffer;
 }
 
@@ -839,7 +839,7 @@ std::string RemoveDotDots(const std::string_view filename) {
     } else if (*iterator == ".") {
       iterator = split.erase(iterator);
     } else if (*iterator == "..") {
-      CHECK(iterator != split.begin())
+      ABSL_CHECK(iterator != split.begin())
           << ": Import path may not start with ..: " << filename;
       auto previous = iterator;
       --previous;
@@ -856,7 +856,7 @@ std::optional<FlatbufferDetachedBuffer<Configuration>> MaybeReadConfig(
     const std::string_view path, absl::btree_set<std::string> *visited_paths,
     const std::vector<std::string_view> &extra_import_paths) {
   std::string binary_path = MaybeReplaceExtension(path, ".json", ".bfbs");
-  VLOG(1) << "Looking up: " << path << ", starting with: " << binary_path;
+  ABSL_VLOG(1) << "Looking up: " << path << ", starting with: " << binary_path;
   bool binary_path_exists = util::PathExists(binary_path);
   std::string raw_path(path);
   // For each .json file, look and see if we can find a .bfbs file next to it
@@ -868,7 +868,7 @@ std::optional<FlatbufferDetachedBuffer<Configuration>> MaybeReadConfig(
       // Nowhere else to look up an absolute path, so fail now. Note that we
       // always have at least one extra import path based on /proc/self/exe, so
       // warning about those paths existing isn't helpful.
-      LOG(ERROR) << ": Failed to find file " << path << ".";
+      ABSL_LOG(ERROR) << ": Failed to find file " << path << ".";
       return std::nullopt;
     }
 
@@ -876,20 +876,20 @@ std::optional<FlatbufferDetachedBuffer<Configuration>> MaybeReadConfig(
     for (const auto &import_path : extra_import_paths) {
       raw_path = std::string(import_path) + "/" + RemoveDotDots(path);
       binary_path = MaybeReplaceExtension(raw_path, ".json", ".bfbs");
-      VLOG(1) << "Checking: " << binary_path;
+      ABSL_VLOG(1) << "Checking: " << binary_path;
       binary_path_exists = util::PathExists(binary_path);
       if (binary_path_exists) {
         found_path = true;
         break;
       }
-      VLOG(1) << "Checking: " << raw_path;
+      ABSL_VLOG(1) << "Checking: " << raw_path;
       if (util::PathExists(raw_path)) {
         found_path = true;
         break;
       }
     }
     if (!found_path) {
-      LOG(ERROR) << ": Failed to find file " << path << ".";
+      ABSL_LOG(ERROR) << ": Failed to find file " << path << ".";
       return std::nullopt;
     }
   }
@@ -935,9 +935,9 @@ std::optional<FlatbufferDetachedBuffer<Configuration>> MaybeReadConfig(
   // actually loaded (which should be consistent if imported twice).
   if (!visited_paths->insert(absolute_path).second) {
     for (const auto &visited_path : *visited_paths) {
-      LOG(INFO) << "Already visited: " << visited_path;
+      ABSL_LOG(INFO) << "Already visited: " << visited_path;
     }
-    LOG(FATAL)
+    ABSL_LOG(FATAL)
         << "Already imported " << path << " (i.e. " << absolute_path
         << "). See above for the files that have already been processed.";
     return std::nullopt;
@@ -1011,17 +1011,17 @@ void ValidateUnmergedConfiguration(const Flatbuffer<Configuration> &config) {
   // is a basic consistency check.
   if (config.message().has_channels()) {
     for (const Channel *c : *config.message().channels()) {
-      CHECK(c->has_name());
-      CHECK(c->has_type());
+      ABSL_CHECK(c->has_name());
+      ABSL_CHECK(c->has_type());
       if (c->name()->string_view().back() == '/') {
-        LOG(FATAL) << "Channel names can't end with '/'";
+        ABSL_LOG(FATAL) << "Channel names can't end with '/'";
       }
       if (c->name()->string_view().front() != '/') {
-        LOG(FATAL) << "Channel names must start with '/'";
+        ABSL_LOG(FATAL) << "Channel names must start with '/'";
       }
       if (c->name()->string_view().find("//") != std::string_view::npos) {
-        LOG(FATAL) << ": Invalid channel name " << c->name()->string_view()
-                   << ", can't use //.";
+        ABSL_LOG(FATAL) << "Invalid channel name " << c->name()->string_view()
+                        << ", can't use //.";
       }
       for (const char data : c->name()->string_view()) {
         if (data >= '0' && data <= '9') {
@@ -1036,15 +1036,15 @@ void ValidateUnmergedConfiguration(const Flatbuffer<Configuration> &config) {
         if (data == '-' || data == '_' || data == '/') {
           continue;
         }
-        LOG(FATAL) << "Invalid channel name " << c->name()->string_view()
-                   << ", can only use [-a-zA-Z0-9_/]";
+        ABSL_LOG(FATAL) << "Invalid channel name " << c->name()->string_view()
+                        << ", can only use [-a-zA-Z0-9_/]";
       }
 
-      CHECK_LT(QueueSize(&config.message(), c) + QueueScratchBufferSize(c),
-               absl::GetFlag(FLAGS_max_queue_size_override) != 0
-                   ? absl::GetFlag(FLAGS_max_queue_size_override)
-                   : std::numeric_limits<
-                         ipc_lib::QueueIndex::PackedIndexType>::max())
+      ABSL_CHECK_LT(QueueSize(&config.message(), c) + QueueScratchBufferSize(c),
+                    absl::GetFlag(FLAGS_max_queue_size_override) != 0
+                        ? absl::GetFlag(FLAGS_max_queue_size_override)
+                        : std::numeric_limits<
+                              ipc_lib::QueueIndex::PackedIndexType>::max())
           << ": More messages/second configured than the queue can hold on "
           << CleanedChannelToString(c) << ", " << c->frequency() << "hz for "
           << ChannelStorageDuration(&config.message(), c).count() << "ns";
@@ -1055,8 +1055,8 @@ void ValidateUnmergedConfiguration(const Flatbuffer<Configuration> &config) {
         for (const flatbuffers::String *s : *c->logger_nodes()) {
           logger_nodes.insert(s->string_view());
         }
-        CHECK_EQ(static_cast<size_t>(logger_nodes.size()),
-                 c->logger_nodes()->size())
+        ABSL_CHECK_EQ(static_cast<size_t>(logger_nodes.size()),
+                      c->logger_nodes()->size())
             << ": Found duplicate logger_nodes in "
             << CleanedChannelToString(c);
       }
@@ -1069,8 +1069,8 @@ void ValidateUnmergedConfiguration(const Flatbuffer<Configuration> &config) {
             for (const flatbuffers::String *s : *d->timestamp_logger_nodes()) {
               timestamp_logger_nodes.insert(s->string_view());
             }
-            CHECK_EQ(static_cast<size_t>(timestamp_logger_nodes.size()),
-                     d->timestamp_logger_nodes()->size())
+            ABSL_CHECK_EQ(static_cast<size_t>(timestamp_logger_nodes.size()),
+                          d->timestamp_logger_nodes()->size())
                 << ": Found duplicate timestamp_logger_nodes in "
                 << CleanedChannelToString(c);
           }
@@ -1081,14 +1081,14 @@ void ValidateUnmergedConfiguration(const Flatbuffer<Configuration> &config) {
         // reader side, let'd just disallow it for now.
         if (c->logger() == LoggerConfig::NOT_LOGGED) {
           for (const Connection *d : *c->destination_nodes()) {
-            CHECK(d->timestamp_logger() == LoggerConfig::NOT_LOGGED)
+            ABSL_CHECK(d->timestamp_logger() == LoggerConfig::NOT_LOGGED)
                 << ": Logging timestamps without data is not supported.  If "
                    "you have a good use case, let's talk.  "
                 << CleanedChannelToString(c);
           }
         }
       }
-      CHECK_EQ(c->read_method() == ReadMethod::PIN, c->num_readers() != 0)
+      ABSL_CHECK_EQ(c->read_method() == ReadMethod::PIN, c->num_readers() != 0)
           << ": num_readers may be set if and only if read_method is PIN,"
              " if you want 0 readers do not set PIN: "
           << CleanedChannelToString(c);
@@ -1104,7 +1104,7 @@ enum class CheckSchemaExistence { kYes, kNo };
 void ValidateConfiguration(const Flatbuffer<Configuration> &config,
                            const CheckSchemaExistence check_schemas) {
   // No imports should be left.
-  CHECK(!config.message().has_imports());
+  ABSL_CHECK(!config.message().has_imports());
 
   ValidateUnmergedConfiguration(config);
 
@@ -1113,7 +1113,7 @@ void ValidateConfiguration(const Flatbuffer<Configuration> &config,
     const Channel *last_channel = nullptr;
     for (const Channel *c : *config.message().channels()) {
       if (last_channel != nullptr) {
-        CHECK(CompareChannels(
+        ABSL_CHECK(CompareChannels(
             last_channel,
             std::make_pair(c->name()->string_view(), c->type()->string_view())))
             << ": Channels not sorted!";
@@ -1121,7 +1121,7 @@ void ValidateConfiguration(const Flatbuffer<Configuration> &config,
       last_channel = c;
 
       if (check_schemas == CheckSchemaExistence::kYes) {
-        CHECK(c->has_schema())
+        ABSL_CHECK(c->has_schema())
             << ": Failed to find schema for " << StrippedChannelToString(c);
       }
     }
@@ -1129,18 +1129,18 @@ void ValidateConfiguration(const Flatbuffer<Configuration> &config,
 
   if (config.message().has_nodes() && config.message().has_channels()) {
     for (const Channel *c : *config.message().channels()) {
-      CHECK(c->has_source_node()) << ": Channel " << FlatbufferToJson(c)
-                                  << " is missing \"source_node\"";
-      CHECK(GetNode(&config.message(), c->source_node()->string_view()) !=
-            nullptr)
+      ABSL_CHECK(c->has_source_node()) << ": Channel " << FlatbufferToJson(c)
+                                       << " is missing \"source_node\"";
+      ABSL_CHECK(GetNode(&config.message(), c->source_node()->string_view()) !=
+                 nullptr)
           << ": Channel " << FlatbufferToJson(c)
           << " has an unknown \"source_node\"";
 
       if (c->has_destination_nodes()) {
         for (const Connection *connection : *c->destination_nodes()) {
-          CHECK(connection->has_name());
-          CHECK(GetNode(&config.message(), connection->name()->string_view()) !=
-                nullptr)
+          ABSL_CHECK(connection->has_name());
+          ABSL_CHECK(GetNode(&config.message(),
+                             connection->name()->string_view()) != nullptr)
               << ": Channel " << FlatbufferToJson(c)
               << " has an unknown \"destination_nodes\" "
               << connection->name()->string_view();
@@ -1148,17 +1148,18 @@ void ValidateConfiguration(const Flatbuffer<Configuration> &config,
           switch (connection->timestamp_logger()) {
             case LoggerConfig::LOCAL_LOGGER:
             case LoggerConfig::NOT_LOGGED:
-              CHECK(!connection->has_timestamp_logger_nodes())
+              ABSL_CHECK(!connection->has_timestamp_logger_nodes())
                   << ": " << CleanedChannelToString(c);
               break;
             case LoggerConfig::REMOTE_LOGGER:
             case LoggerConfig::LOCAL_AND_REMOTE_LOGGER:
-              CHECK(connection->has_timestamp_logger_nodes());
-              CHECK_GT(connection->timestamp_logger_nodes()->size(), 0u);
+              ABSL_CHECK(connection->has_timestamp_logger_nodes());
+              ABSL_CHECK_GT(connection->timestamp_logger_nodes()->size(), 0u);
               for (const flatbuffers::String *timestamp_logger_node :
                    *connection->timestamp_logger_nodes()) {
-                CHECK(GetNode(&config.message(),
-                              timestamp_logger_node->string_view()) != nullptr)
+                ABSL_CHECK(GetNode(&config.message(),
+                                   timestamp_logger_node->string_view()) !=
+                           nullptr)
                     << ": Channel " << FlatbufferToJson(c)
                     << " has an unknown \"timestamp_logger_node\""
                     << connection->name()->string_view();
@@ -1166,8 +1167,8 @@ void ValidateConfiguration(const Flatbuffer<Configuration> &config,
               break;
           }
 
-          CHECK_NE(connection->name()->string_view(),
-                   c->source_node()->string_view())
+          ABSL_CHECK_NE(connection->name()->string_view(),
+                        c->source_node()->string_view())
               << ": Channel " << FlatbufferToJson(c)
               << " is forwarding data to itself";
         }
@@ -1180,11 +1181,11 @@ void HandleReverseMaps(
     const flatbuffers::Vector<flatbuffers::Offset<aos::Map>> *maps,
     std::string_view type, const Node *node, std::set<std::string> *names) {
   for (const Map *map : *maps) {
-    CHECK(map != nullptr);
+    ABSL_CHECK(map != nullptr);
     const Channel *const match = map->match();
-    CHECK(match != nullptr);
+    ABSL_CHECK(match != nullptr);
     const Channel *const rename = map->rename();
-    CHECK(rename != nullptr);
+    ABSL_CHECK(rename != nullptr);
 
     // Handle type specific maps.
     const flatbuffers::String *const match_type_string = match->type();
@@ -1275,7 +1276,7 @@ void HandleMaps(const flatbuffers::Vector<flatbuffers::Offset<aos::Map>> *maps,
           std::string_view(*name).substr(
               0, std::min(name->size(), match_name.size() - 1)) ==
               match_name.substr(0, match_name.size() - 1)) {
-        CHECK_EQ(match_name.find('*'), match_name.size() - 1);
+        ABSL_CHECK_EQ(match_name.find('*'), match_name.size() - 1);
       } else {
         continue;
       }
@@ -1303,7 +1304,7 @@ void HandleMaps(const flatbuffers::Vector<flatbuffers::Offset<aos::Map>> *maps,
     if (match_name.back() == '*') {
       new_name += std::string(name->substr(match_name.size() - 1));
     }
-    VLOG(1) << "Renamed \"" << *name << "\" to \"" << new_name << "\"";
+    ABSL_VLOG(1) << "Renamed \"" << *name << "\" to \"" << new_name << "\"";
     *name = std::move(new_name);
   }
 }
@@ -1319,9 +1320,9 @@ std::set<std::string> GetChannelAliases(const Configuration *config,
   if (resolved_channel == nullptr) {
     return names;
   }
-  VLOG(1) << "Provided channel resolves to "
-          << resolved_channel->name()->string_view() << " "
-          << resolved_channel->type()->string_view();
+  ABSL_VLOG(1) << "Provided channel resolves to "
+               << resolved_channel->name()->string_view() << " "
+               << resolved_channel->type()->string_view();
   names.insert(std::string(name));
   if (config->has_maps()) {
     HandleReverseMaps(config->maps(), type, node, &names);
@@ -1340,13 +1341,13 @@ std::set<std::string> GetChannelAliases(const Configuration *config,
   while (it != names.end()) {
     const Channel *channel =
         GetChannel(config, *it, type, application_name, node);
-    CHECK(channel != nullptr);
+    ABSL_CHECK(channel != nullptr);
     if (channel->name()->string_view() !=
         resolved_channel->name()->string_view()) {
-      VLOG(1) << "Alias " << *it << " resolves to "
-              << channel->name()->string_view() << " "
-              << channel->type()->string_view()
-              << ", which does not match. Removing from list.";
+      ABSL_VLOG(1) << "Alias " << *it << " resolves to "
+                   << channel->name()->string_view() << " "
+                   << channel->type()->string_view()
+                   << ", which does not match. Removing from list.";
       it = names.erase(it);
     } else {
       ++it;
@@ -1394,7 +1395,7 @@ std::optional<FlatbufferDetachedBuffer<Configuration>> MaybeReadConfig(
     extra_import_paths_with_exe.emplace_back(
         proc_self_exec.substr(0, proc_self_exec.rfind("/")));
   } else {
-    VLOG(1) << "Failed to read /proc/self/exe";
+    ABSL_VLOG(1) << "Failed to read /proc/self/exe";
   }
 
   // We only want to read a file once.  So track the visited files in a set.
@@ -1420,7 +1421,7 @@ FlatbufferDetachedBuffer<Configuration> ReadConfig(
     const std::string_view path,
     const std::vector<std::string_view> &extra_import_paths) {
   auto optional_config = MaybeReadConfig(path, extra_import_paths);
-  CHECK(optional_config) << "Could not read config. See above errors";
+  ABSL_CHECK(optional_config) << "Could not read config. See above errors";
   return std::move(*optional_config);
 }
 
@@ -1453,11 +1454,11 @@ const Channel *GetChannel(const Configuration *config, std::string_view name,
   const std::string_view original_name = name;
   std::string mutable_name;
   if (node != nullptr) {
-    VLOG(1) << "Looking up { \"name\": \"" << name << "\", \"type\": \"" << type
-            << "\" } on " << aos::FlatbufferToJson(node);
+    ABSL_VLOG(1) << "Looking up { \"name\": \"" << name << "\", \"type\": \""
+                 << type << "\" } on " << aos::FlatbufferToJson(node);
   } else {
-    VLOG(1) << "Looking up { \"name\": \"" << name << "\", \"type\": \"" << type
-            << "\" }";
+    ABSL_VLOG(1) << "Looking up { \"name\": \"" << name << "\", \"type\": \""
+                 << type << "\" }";
   }
 
   // First handle application specific maps.  Only do this if we have a matching
@@ -1480,8 +1481,8 @@ const Channel *GetChannel(const Configuration *config, std::string_view name,
   }
 
   if (original_name != name) {
-    VLOG(1) << "Remapped to { \"name\": \"" << name << "\", \"type\": \""
-            << type << "\" }";
+    ABSL_VLOG(1) << "Remapped to { \"name\": \"" << name << "\", \"type\": \""
+                 << type << "\" }";
   }
 
   // Then look for the channel (note that this relies on the channels being
@@ -1493,40 +1494,56 @@ const Channel *GetChannel(const Configuration *config, std::string_view name,
   // Make sure we actually found it, and it matches.
   if (channel_iterator != config->channels()->cend() &&
       EqualsChannels(*channel_iterator, std::make_pair(name, type))) {
-    if (VLOG_IS_ON(2)) {
-      VLOG(2) << "Found: " << FlatbufferToJson(*channel_iterator);
-    } else if (VLOG_IS_ON(1)) {
-      VLOG(1) << "Found: " << CleanedChannelToString(*channel_iterator);
+    if (ABSL_VLOG_IS_ON(2)) {
+      ABSL_VLOG(2) << "Found: " << FlatbufferToJson(*channel_iterator);
+    } else if (ABSL_VLOG_IS_ON(1)) {
+      ABSL_VLOG(1) << "Found: " << CleanedChannelToString(*channel_iterator);
     }
     return *channel_iterator;
   } else {
-    VLOG(1) << "No match for { \"name\": \"" << name << "\", \"type\": \""
-            << type << "\" }";
+    ABSL_VLOG(1) << "No match for { \"name\": \"" << name << "\", \"type\": \""
+                 << type << "\" }";
     if (original_name != name && !quiet) {
-      VLOG(1) << "Remapped from {\"name\": \"" << original_name
-              << "\", \"type\": \"" << type << "\"}, to {\"name\": \"" << name
-              << "\", \"type\": \"" << type
-              << "\"}, but no channel by that name exists.";
+      ABSL_VLOG(1) << "Remapped from {\"name\": \"" << original_name
+                   << "\", \"type\": \"" << type << "\"}, to {\"name\": \""
+                   << name << "\", \"type\": \"" << type
+                   << "\"}, but no channel by that name exists.";
     }
     return nullptr;
   }
 }
 
+namespace {
 size_t ChannelIndex(const Configuration *configuration,
-                    const Channel *channel) {
-  CHECK(configuration->channels() != nullptr) << ": No channels";
+                    const std::string_view name, const std::string_view type) {
+  ABSL_CHECK(configuration->channels() != nullptr) << ": No channels";
 
-  const auto c = std::lower_bound(
-      configuration->channels()->cbegin(), configuration->channels()->cend(),
-      std::make_pair(channel->name()->string_view(),
-                     channel->type()->string_view()),
-      CompareChannels);
-  CHECK(c != configuration->channels()->cend())
-      << ": Channel pointer not found in configuration()->channels()";
-  CHECK(*c == channel)
+  const auto c = std::lower_bound(configuration->channels()->cbegin(),
+                                  configuration->channels()->cend(),
+                                  std::make_pair(name, type), CompareChannels);
+  ABSL_CHECK(c != configuration->channels()->cend())
       << ": Channel pointer not found in configuration()->channels()";
 
   return std::distance(configuration->channels()->cbegin(), c);
+}
+}  // namespace
+
+size_t ChannelIndex(const Configuration *configuration,
+                    const Channel *channel) {
+  const size_t index =
+      ChannelIndex(configuration, channel->name()->string_view(),
+                   channel->type()->string_view());
+
+  ABSL_CHECK(configuration->channels()->Get(index) == channel)
+      << ": Channel pointer not found in configuration()->channels()";
+
+  return index;
+}
+
+const Channel *GetFullySpecifiedChannel(const Configuration *config,
+                                        const std::string_view name,
+                                        const std::string_view type) {
+  return config->channels()->Get(ChannelIndex(config, name, type));
 }
 
 std::string CleanedChannelToString(const Channel *channel) {
@@ -1549,8 +1566,8 @@ FlatbufferDetachedBuffer<Configuration> MergeConfiguration(
 
   // Now, add the schemas in so they will get packed.
   for (const aos::FlatbufferVector<reflection::Schema> &schema : schemas) {
-    CHECK(schema.message().has_root_table());
-    CHECK(schema.message().root_table()->has_name());
+    ABSL_CHECK(schema.message().has_root_table());
+    ABSL_CHECK(schema.message().root_table()->has_name());
     // Make sure to overwrite any existing schemas; schemas that appear in
     // later channels should override those specified earlier.
     // This is mostly used for log-replay scenarios where we need to upgrade
@@ -1627,19 +1644,20 @@ const Node *GetMyNode(const Configuration *config) {
   const Node *node = GetNodeFromHostname(config, hostname);
   if (node != nullptr) return node;
 
-  LOG(FATAL) << "Unknown node for host: " << hostname
-             << ".  Consider using --override_hostname if hostname detection "
-                "is wrong.";
+  ABSL_LOG(FATAL)
+      << "Unknown node for host: " << hostname
+      << ".  Consider using --override_hostname if hostname detection "
+         "is wrong.";
   return nullptr;
 }
 
 const Node *GetNode(const Configuration *config, const Node *node) {
   if (!MultiNode(config)) {
-    CHECK(node == nullptr) << ": Provided a node in a single node world.";
+    ABSL_CHECK(node == nullptr) << ": Provided a node in a single node world.";
     return nullptr;
   } else {
-    CHECK(node != nullptr);
-    CHECK(node->has_name());
+    ABSL_CHECK(node != nullptr);
+    ABSL_CHECK(node->has_name());
     return GetNode(config, node->name()->string_view());
   }
 }
@@ -1649,10 +1667,12 @@ const Node *GetNode(const Configuration *config, std::string_view name) {
     if (name.empty()) {
       return nullptr;
     }
-    LOG(FATAL) << ": Asking for a named node from a single node configuration.";
+    ABSL_LOG(FATAL)
+        << ": Asking for a named node from a single node configuration.";
   }
   for (const Node *node : *config->nodes()) {
-    CHECK(node->has_name()) << ": Malformed node " << FlatbufferToJson(node);
+    ABSL_CHECK(node->has_name())
+        << ": Malformed node " << FlatbufferToJson(node);
     if (node->name()->string_view() == name) {
       return node;
     }
@@ -1662,24 +1682,25 @@ const Node *GetNode(const Configuration *config, std::string_view name) {
 
 const Node *GetNode(const Configuration *config, size_t node_index) {
   if (!MultiNode(config)) {
-    CHECK_EQ(node_index, 0u) << ": Invalid node in a single node world.";
+    ABSL_CHECK_EQ(node_index, 0u) << ": Invalid node in a single node world.";
     return nullptr;
   } else {
-    CHECK_LT(node_index, config->nodes()->size());
+    ABSL_CHECK_LT(node_index, config->nodes()->size());
     return config->nodes()->Get(node_index);
   }
 }
 
 const Node *GetNodeOrDie(const Configuration *config, const Node *node) {
   if (!MultiNode(config)) {
-    CHECK(node == nullptr) << ": Provided a node name of '"
-                           << node->name()->string_view()
-                           << "' in a single node world.";
+    ABSL_CHECK(node == nullptr)
+        << ": Provided a node name of '" << node->name()->string_view()
+        << "' in a single node world.";
     return nullptr;
   } else {
     const Node *config_node = GetNode(config, node);
     if (config_node == nullptr) {
-      LOG(FATAL) << "Couldn't find node matching " << FlatbufferToJson(node);
+      ABSL_LOG(FATAL) << "Couldn't find node matching "
+                      << FlatbufferToJson(node);
     }
     return config_node;
   }
@@ -1687,13 +1708,13 @@ const Node *GetNodeOrDie(const Configuration *config, const Node *node) {
 
 const Node *GetNodeOrDie(const Configuration *config, std::string_view name) {
   if (!MultiNode(config)) {
-    CHECK(name.empty()) << ": Provided a node name of '" << name
-                        << "' in a single node world.";
+    ABSL_CHECK(name.empty())
+        << ": Provided a node name of '" << name << "' in a single node world.";
     return nullptr;
   } else {
     const Node *config_node = GetNode(config, name);
     if (config_node == nullptr) {
-      LOG(FATAL) << "Couldn't find node matching " << name;
+      ABSL_LOG(FATAL) << "Couldn't find node matching " << name;
     }
     return config_node;
   }
@@ -1742,7 +1763,7 @@ int GetNodeIndex(const Configuration *config, const Node *node) {
   }
 
   const Node *result = GetNode(config, node);
-  CHECK(result != nullptr);
+  ABSL_CHECK(result != nullptr);
 
   {
     int node_index = GetNodeIndexFromConfig(config, result);
@@ -1751,8 +1772,8 @@ int GetNodeIndex(const Configuration *config, const Node *node) {
     }
   }
 
-  LOG(FATAL) << "Node " << FlatbufferToJson(node)
-             << " not found in the configuration.";
+  ABSL_LOG(FATAL) << "Node " << FlatbufferToJson(node)
+                  << " not found in the configuration.";
 }
 
 int GetNodeIndex(const Configuration *config, std::string_view name) {
@@ -1769,7 +1790,7 @@ int GetNodeIndex(const Configuration *config, std::string_view name) {
       ++node_index;
     }
   }
-  LOG(FATAL) << "Node " << name << " not found in the configuration.";
+  ABSL_LOG(FATAL) << "Node " << name << " not found in the configuration.";
 }
 
 size_t NodesCount(const Configuration *config) {
@@ -1839,9 +1860,9 @@ bool ChannelIsSendableOnNode(const Channel *channel, const Node *node) {
   if (node == nullptr) {
     return true;
   }
-  CHECK(channel->has_source_node()) << FlatbufferToJson(channel);
-  CHECK(node->has_name()) << FlatbufferToJson(node);
-  CHECK(channel != nullptr);
+  ABSL_CHECK(channel->has_source_node()) << FlatbufferToJson(channel);
+  ABSL_CHECK(node->has_name()) << FlatbufferToJson(node);
+  ABSL_CHECK(channel != nullptr);
   return (channel->source_node()->string_view() == node->name()->string_view());
 }
 
@@ -1859,7 +1880,7 @@ bool ChannelIsReadableOnNode(const Channel *channel, const Node *node) {
   }
 
   for (const Connection *connection : *channel->destination_nodes()) {
-    CHECK(connection->has_name());
+    ABSL_CHECK(connection->has_name());
     if (connection->name()->string_view() == node->name()->string_view()) {
       return true;
     }
@@ -1886,10 +1907,11 @@ bool ChannelMessageIsLoggedOnNode(const Channel *channel, const Node *node) {
     } else if (channel->logger() == LoggerConfig::NOT_LOGGED) {
       return false;
     }
-    LOG(FATAL) << "Unsupported logging configuration in a single node world: "
-               << CleanedChannelToString(channel);
+    ABSL_LOG(FATAL)
+        << "Unsupported logging configuration in a single node world: "
+        << CleanedChannelToString(channel);
   }
-  CHECK(node != nullptr);
+  ABSL_CHECK(node != nullptr);
   return ChannelMessageIsLoggedOnNode(channel, node->name()->string_view());
 }
 
@@ -1899,9 +1921,9 @@ bool ChannelMessageIsLoggedOnNode(const Channel *channel,
     case LoggerConfig::LOCAL_LOGGER:
       return channel->source_node()->string_view() == node_name;
     case LoggerConfig::LOCAL_AND_REMOTE_LOGGER:
-      CHECK(channel->has_logger_nodes())
+      ABSL_CHECK(channel->has_logger_nodes())
           << "Missing logger nodes on " << StrippedChannelToString(channel);
-      CHECK_GT(channel->logger_nodes()->size(), 0u)
+      ABSL_CHECK_GT(channel->logger_nodes()->size(), 0u)
           << "Missing logger nodes on " << StrippedChannelToString(channel);
 
       if (channel->source_node()->string_view() == node_name) {
@@ -1910,9 +1932,9 @@ bool ChannelMessageIsLoggedOnNode(const Channel *channel,
 
       [[fallthrough]];
     case LoggerConfig::REMOTE_LOGGER:
-      CHECK(channel->has_logger_nodes())
+      ABSL_CHECK(channel->has_logger_nodes())
           << "Missing logger nodes on " << StrippedChannelToString(channel);
-      CHECK_GT(channel->logger_nodes()->size(), 0u)
+      ABSL_CHECK_GT(channel->logger_nodes()->size(), 0u)
           << "Missing logger nodes on " << StrippedChannelToString(channel);
       for (const flatbuffers::String *logger_node : *channel->logger_nodes()) {
         if (logger_node->string_view() == node_name) {
@@ -1925,7 +1947,8 @@ bool ChannelMessageIsLoggedOnNode(const Channel *channel,
       return false;
   }
 
-  LOG(FATAL) << "Unknown logger config " << static_cast<int>(channel->logger());
+  ABSL_LOG(FATAL) << "Unknown logger config "
+                  << static_cast<int>(channel->logger());
 }
 
 size_t ConnectionCount(const Channel *channel) {
@@ -1961,16 +1984,16 @@ bool ConnectionDeliveryTimeIsLoggedOnNode(const Connection *connection,
   }
   switch (connection->timestamp_logger()) {
     case LoggerConfig::LOCAL_AND_REMOTE_LOGGER:
-      CHECK(connection->has_timestamp_logger_nodes());
-      CHECK_GT(connection->timestamp_logger_nodes()->size(), 0u);
+      ABSL_CHECK(connection->has_timestamp_logger_nodes());
+      ABSL_CHECK_GT(connection->timestamp_logger_nodes()->size(), 0u);
       if (connection->name()->string_view() == node->name()->string_view()) {
         return true;
       }
 
       [[fallthrough]];
     case LoggerConfig::REMOTE_LOGGER:
-      CHECK(connection->has_timestamp_logger_nodes());
-      CHECK_GT(connection->timestamp_logger_nodes()->size(), 0u);
+      ABSL_CHECK(connection->has_timestamp_logger_nodes());
+      ABSL_CHECK_GT(connection->timestamp_logger_nodes()->size(), 0u);
       for (const flatbuffers::String *timestamp_logger_node :
            *connection->timestamp_logger_nodes()) {
         if (timestamp_logger_node->string_view() ==
@@ -1986,8 +2009,8 @@ bool ConnectionDeliveryTimeIsLoggedOnNode(const Connection *connection,
       return false;
   }
 
-  LOG(FATAL) << "Unknown logger config "
-             << static_cast<int>(connection->timestamp_logger());
+  ABSL_LOG(FATAL) << "Unknown logger config "
+                  << static_cast<int>(connection->timestamp_logger());
 }
 
 std::vector<std::string_view> SourceNodeNames(const Configuration *config,
@@ -2007,7 +2030,7 @@ std::vector<std::string_view> SourceNodeNames(const Configuration *config,
 
   std::vector<std::string_view> result;
   for (const std::string_view source : result_set) {
-    VLOG(1) << "Found a source node of " << source;
+    ABSL_VLOG(1) << "Found a source node of " << source;
     result.emplace_back(source);
   }
   return result;
@@ -2037,7 +2060,7 @@ std::vector<std::string_view> DestinationNodeNames(const Configuration *config,
   }
 
   for (const std::string_view destination : result) {
-    VLOG(1) << "Found a destination node of " << destination;
+    ABSL_VLOG(1) << "Found a destination node of " << destination;
   }
   return result;
 }
@@ -2045,7 +2068,7 @@ std::vector<std::string_view> DestinationNodeNames(const Configuration *config,
 std::vector<const Node *> TimestampNodes(const Configuration *config,
                                          const Node *my_node) {
   if (!configuration::MultiNode(config)) {
-    CHECK(my_node == nullptr);
+    ABSL_CHECK(my_node == nullptr);
     return std::vector<const Node *>{};
   }
 
@@ -2063,8 +2086,8 @@ std::vector<const Node *> TimestampNodes(const Configuration *config,
 
       if (configuration::ConnectionDeliveryTimeIsLoggedOnNode(connection,
                                                               my_node)) {
-        VLOG(1) << "Timestamps are logged from "
-                << FlatbufferToJson(other_node);
+        ABSL_VLOG(1) << "Timestamps are logged from "
+                     << FlatbufferToJson(other_node);
         timestamp_logger_nodes.insert(other_node);
       }
     }
@@ -2081,8 +2104,8 @@ bool ApplicationShouldStart(const Configuration *config, const Node *my_node,
                             const Application *application) {
   if (MultiNode(config)) {
     // Ok, we need
-    CHECK(application->has_nodes());
-    CHECK(my_node != nullptr);
+    ABSL_CHECK(application->has_nodes());
+    ABSL_CHECK(my_node != nullptr);
     for (const flatbuffers::String *str : *application->nodes()) {
       if (str->string_view() == my_node->name()->string_view()) {
         return true;
@@ -2128,8 +2151,8 @@ std::vector<const Application *> GetApplicationsContainingSubstring(
       if (autostart == Autostart::kYes && !app->autostart()) {
         continue;
       }
-      CHECK(app->has_name());
-      CHECK(!substring.empty()) << ": substring cannot be empty";
+      ABSL_CHECK(app->has_name());
+      ABSL_CHECK(!substring.empty()) << ": substring cannot be empty";
       if (app->name()->string_view().find(substring) !=
           std::string_view::npos) {
         results.push_back(app);
@@ -2147,7 +2170,7 @@ const Node *SourceNode(const Configuration *config, const Channel *channel) {
 }
 
 std::vector<size_t> SourceNodeIndex(const Configuration *config) {
-  CHECK(config->has_channels());
+  ABSL_CHECK(config->has_channels());
   std::vector<size_t> result;
   result.resize(config->channels()->size(), 0u);
   if (MultiNode(config)) {
@@ -2161,7 +2184,7 @@ std::vector<size_t> SourceNodeIndex(const Configuration *config) {
 
 chrono::nanoseconds ChannelStorageDuration(const Configuration *config,
                                            const Channel *channel) {
-  CHECK(channel != nullptr);
+  ABSL_CHECK(channel != nullptr);
   if (channel->has_channel_storage_duration()) {
     return chrono::nanoseconds(channel->channel_storage_duration());
   }
@@ -2217,10 +2240,10 @@ aos::FlatbufferDetachedBuffer<Configuration> AddChannelToConfiguration(
     aos::FlatbufferVector<reflection::Schema> schema, const aos::Node *node,
     ChannelT overrides) {
   overrides.name = name;
-  CHECK(schema.message().has_root_table());
+  ABSL_CHECK(schema.message().has_root_table());
   overrides.type = schema.message().root_table()->name()->string_view();
   if (node != nullptr) {
-    CHECK(node->has_name());
+    ABSL_CHECK(node->has_name());
     overrides.source_node = node->name()->string_view();
   }
 
@@ -2257,7 +2280,7 @@ FlatbufferDetachedBuffer<Configuration> GetPartialConfiguration(
   flatbuffers::FlatBufferBuilder fbb;
   std::vector<flatbuffers::Offset<Channel>> new_channels_vec;
   for (const auto &channel : *configuration.channels()) {
-    CHECK(channel != nullptr);
+    ABSL_CHECK(channel != nullptr);
     if (should_include_channel(*channel)) {
       new_channels_vec.push_back(RecursiveCopyFlatBuffer(channel, &fbb));
     }

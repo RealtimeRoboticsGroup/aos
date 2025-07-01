@@ -1,6 +1,9 @@
 #ifndef AOS_EVENTS_EVENT_LOOP_RUNTIME_H_
 #define AOS_EVENTS_EVENT_LOOP_RUNTIME_H_
 
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
+
 // Exposes the primitives to implement an async Rust runtime on top of an
 // EventLoop. This is not intended to be used directly, so the APIs are not
 // particularly ergonomic for C++. See the Rust wrapper for detailed
@@ -193,14 +196,14 @@ class EventLoopRuntime {
   ~EventLoopRuntime() {
     // Do this first, because it may hold child objects.
     task_.reset();
-    CHECK_EQ(child_count_, 0)
+    ABSL_CHECK_EQ(child_count_, 0)
         << ": Some child objects were not destroyed first";
   }
 
   EventLoop *event_loop() const { return event_loop_; }
 
   void Spawn(std::unique_ptr<ApplicationFuture> task) const {
-    CHECK(!task_) << ": May only call Spawn once";
+    ABSL_CHECK(!task_) << ": May only call Spawn once";
     task_ = std::move(task);
     DoPoll();
     // Just do this unconditionally, so we don't have to keep track of each
@@ -266,7 +269,7 @@ class EventLoopRuntime {
   // Polls the top-level future once. This is what all the callbacks should do.
   void DoPoll() const {
     if (task_) {
-      CHECK(task_->Poll()) << ": Rust panic, aborting";
+      ABSL_CHECK(task_->Poll()) << ": Rust panic, aborting";
     }
   }
 

@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <sys/uio.h>
 
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -299,6 +300,7 @@ class FileBackend : public LogBackend, public LogSource {
  public:
   // base_name is the path to the folder where log files are.
   explicit FileBackend(std::string_view base_name, bool supports_direct);
+
   ~FileBackend() override = default;
 
   // Request file from a file system. It is not open yet.
@@ -315,6 +317,26 @@ class FileBackend : public LogBackend, public LogSource {
   const bool supports_odirect_;
   const std::string base_name_;
   const std::string_view separator_;
+};
+
+// Provides a file backend that supports log folders.
+class LogFolder : public FileBackend {
+ public:
+  // Opens logs in the specified folder.
+  explicit LogFolder(const std::filesystem::path &log_directory_path,
+                     bool supports_direct)
+      : FileBackend(MakeBaseName(log_directory_path), supports_direct) {}
+
+ private:
+  // Ensures that the last character of the path is '/' to set the correct value
+  // of separator in FileBackend.
+  static std::string MakeBaseName(const std::filesystem::path &path) {
+    if (path.string().back() == '/') {
+      return path.string();
+    } else {
+      return path.string() + '/';
+    }
+  }
 };
 
 // Provides a file backend that supports renaming of the base log folder and

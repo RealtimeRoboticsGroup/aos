@@ -66,7 +66,11 @@ int main(int argc, char *argv[]) {
           : aos::FoxgloveWebsocketServer::FetchPinnedChannels::kNo,
       absl::GetFlag(FLAGS_canonical_channel_names)
           ? aos::FoxgloveWebsocketServer::CanonicalChannelNames::kCanonical
-          : aos::FoxgloveWebsocketServer::CanonicalChannelNames::kShortened);
+          : aos::FoxgloveWebsocketServer::CanonicalChannelNames::kShortened,
+      {
+          // We want foxglove to control AOS apps.
+          std::regex(".* aos\\.starter\\.StarterRpc$"),
+      });
 
   event_loop.Run();
 }

@@ -14,8 +14,8 @@ cc_library(
         ":static_vector",
         "//aos:json_to_flatbuffer",
         "@com_github_google_flatbuffers//:flatbuffers",
-        "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
     ],
@@ -38,8 +38,8 @@ cc_library(
         "@aos//aos:realtime",
         "@com_github_google_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/base",
-        "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/types:span",
     ],
 )
@@ -64,8 +64,7 @@ cc_library(
     deps = [
         ":base",
         "@com_github_google_flatbuffers//:flatbuffers",
-        "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -90,6 +89,7 @@ cc_library(
     deps = [
         ":static_table",
         "//aos:flatbuffers",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -116,6 +116,7 @@ cc_test(
     srcs = ["static_flatbuffers_test.cc"],
     data = ["//aos/flatbuffers/test_dir:test_data"],
     deps = [
+        ":binary_annotator",
         ":builder",
         ":interesting_schemas",
         ":static_flatbuffers",
@@ -127,7 +128,6 @@ cc_test(
         "//aos/flatbuffers/test_dir:type_coverage_fbs",
         "//aos/testing:googletest",
         "//aos/testing:path",
-        "@com_github_google_flatbuffers//src:flatc_library",
     ],
 )
 
@@ -191,5 +191,32 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_google_flatbuffers//:flatbuffers",
+    ],
+)
+
+cc_library(
+    name = "binary_annotator",
+    srcs = ["binary_annotator.cc"],
+    hdrs = ["binary_annotator.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//aos:flatbuffers",
+        "//aos:json_to_flatbuffer",
+        "@com_github_google_flatbuffers//:flatbuffers",
+        "@com_github_google_flatbuffers//src:flatc_library",
+    ],
+)
+
+cc_test(
+    name = "binary_annotator_test",
+    srcs = ["binary_annotator_test.cc"],
+    data = [":test_fbs_fbs_reflection_out"],
+    deps = [
+        ":binary_annotator",
+        ":test_fbs",
+        ":test_schema",
+        "//aos:json_to_flatbuffer",
+        "//aos/testing:googletest",
+        "//aos/testing:path",
     ],
 )

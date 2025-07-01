@@ -491,7 +491,7 @@ can be registered on any channel (across all processes). See
 
 The normal pattern for constructing and sending a simple message
 (using the `Ping` sample message described in [Getting
-Started](/build_ping_pong#defining-flatbuffer-messages):
+Started](build_ping_pong.md#defining-flatbuffer-messages):
 
 ```cpp
 class Ping {
@@ -577,7 +577,7 @@ void SendMessage() {
 For more discussion on dynamic memory allocations and best practices in
 realtime-code, see [Realtime Scheduler](#realtime-scheduler). To better
 understand some of the constraints associated with the `FlatBufferBuilder`, see
-[FlatBuffers](/flatbuffers).
+[FlatBuffers](flatbuffers.md).
 
 Building a single FlatBuffer at startup and then mutating it before sending
 instead of rebuilding the FlatBuffer every time (using the sample
@@ -1135,8 +1135,8 @@ reports in a live system and a `timing_report_dump` (build
 These binaries allow for filtering timing reports by application and can
 optionally aggregate timing reports across time into a single summary report.
 
-As an example, a single timing report from the `ping` process in the [Getting
-Started](#getting-started) example looks like:
+As an example, a single timing report from the `ping` process in the
+[Run Ping Pong](run_ping_pong.md) example looks like:
 
 ```bash
 $ bazel run //aos/events:aos_timing_report_streamer -- --config $(pwd)/bazel-bin/foo/pingpong_config.json  --application=ping
@@ -1406,7 +1406,7 @@ shared memory queue and prevent any messages from actually flowing.
 *Receving*: By default, `Fetcher`s and `Watcher`s will copy a message on
 receipt. This allows us to allow arbitrarily many processes to be fetching on a
 given channel by default. However, if the `read_method` for a channel is set to
-`PIN` in the [configuration](#Configurations) then each reader will acquire a
+`PIN` in the [configuration](#configurations) then each reader will acquire a
 slot in the shared memory queue (this causes there to be a limit on the maximum
 number of allowed readers). If `PIN`d, then when you read the message you are
 reading directly from shared memory. Note that there is an independent
@@ -1437,8 +1437,9 @@ all the messages received in the last polling period.
 
 ### Typical `ShmEventLoop` usage
 
-There is a good sample `main()` in the [Getting Started](/getting_started/#writing-the-ping-main);
-the key pattern that is typically followed is:
+There is a good sample `main()` in the
+[Run Ping Pong](build_ping_pong.md/#writing-the-ping-main); the key pattern that
+  is typically followed is:
 
 ```cpp
 // We pull in a config that is stored somewhere on disk (as pointed to by

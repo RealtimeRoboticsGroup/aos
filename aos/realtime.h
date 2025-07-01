@@ -6,9 +6,9 @@
 #include <ostream>
 #include <string_view>
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
-#include "absl/log/vlog_is_on.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 #include "absl/strings/str_format.h"
 
 // Stringifies the cpu_set_t for LOG().
@@ -122,7 +122,7 @@ class ScopedRealtime {
  public:
   ScopedRealtime() : prior_(MarkRealtime(true)) {}
   ~ScopedRealtime() {
-    CHECK(MarkRealtime(prior_)) << ": Priority was modified";
+    ABSL_CHECK(MarkRealtime(prior_)) << ": Priority was modified";
   }
 
  private:
@@ -135,7 +135,7 @@ class ScopedNotRealtime {
  public:
   ScopedNotRealtime() : prior_(MarkRealtime(false)) {}
   ~ScopedNotRealtime() {
-    CHECK(!MarkRealtime(prior_)) << ": Priority was modified";
+    ABSL_CHECK(!MarkRealtime(prior_)) << ": Priority was modified";
   }
 
  private:

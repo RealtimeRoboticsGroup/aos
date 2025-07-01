@@ -1,6 +1,8 @@
 #include "frc/can_logger/can_logger.h"
 
 #include "absl/flags/flag.h"
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 
 ABSL_FLAG(bool, poll, false,
           "If true, poll the CAN bus every 100ms.  If false, wake up for "

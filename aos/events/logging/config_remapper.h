@@ -159,8 +159,7 @@ class ConfigRemapper {
     }
   }
 
-  const Channel *RemapChannel(const EventLoop *event_loop, const Node *node,
-                              const Channel *channel);
+  const Channel *RemapChannel(const Channel *channel);
   // Returns a list of all the original channels from remapping.
   std::vector<const Channel *> RemappedChannels() const;
 

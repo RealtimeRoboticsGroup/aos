@@ -8,6 +8,7 @@ license(
     name = "license",
     package_name = "snappy",
     license_kinds = ["@rules_license//licenses/spdx:BSD-3-Clause"],
+    license_text = "COPYING",
     package_url = "https://github.com/google/snappy",
     package_version = "fe18b46322727fe4bc6939326ba6bde1e0858b61",
 )
@@ -33,5 +34,6 @@ cc_library(
         "snappy-stubs-public.h",
     ],
     copts = ["-Wno-sign-compare"],
+    includes = ["."],
     visibility = ["//visibility:public"],
 )

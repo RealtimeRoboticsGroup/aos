@@ -7,8 +7,8 @@
 #include <cstdlib>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/numbers.h"
 
 ABSL_FLAG(std::string, override_hostname, "",
@@ -80,9 +80,9 @@ uint16_t DoGetTeamNumber() {
   if (override_number != nullptr) {
     uint32_t result;
     if (!absl::SimpleAtoi(override_number, &result)) {
-      LOG(FATAL) << "Error parsing AOS_TEAM_NUMBER: " << override_number;
+      ABSL_LOG(FATAL) << "Error parsing AOS_TEAM_NUMBER: " << override_number;
     }
-    LOG(WARNING)
+    ABSL_LOG(WARNING)
         << "Team number overriden by AOS_TEAM_NUMBER environment variable to "
         << result;
     return result;
@@ -91,18 +91,19 @@ uint16_t DoGetTeamNumber() {
   {
     const auto result = team_number_internal::ParseRoborioTeamNumber(hostname);
     if (result) {
-      LOG(INFO) << "roboRIO hostname team number is: " << *result;
+      ABSL_LOG(INFO) << "roboRIO hostname team number is: " << *result;
       return *result;
     }
   }
   {
     const auto result = team_number_internal::ParsePiOrOrinTeamNumber(hostname);
     if (result) {
-      LOG(INFO) << "Pi/Orin hostname team number is: " << *result;
+      ABSL_LOG(INFO) << "Pi/Orin hostname team number is: " << *result;
       return *result;
     }
   }
-  LOG(FATAL) << "Failed to parse a team number from hostname: " << hostname;
+  ABSL_LOG(FATAL) << "Failed to parse a team number from hostname: "
+                  << hostname;
 }
 
 }  // namespace
@@ -111,7 +112,7 @@ uint16_t DoGetTeamNumber() {
   if (absl::GetFlag(FLAGS_override_hostname).empty()) {
     char buf[256];
     buf[sizeof(buf) - 1] = '\0';
-    PCHECK(gethostname(buf, sizeof(buf) - 1) == 0);
+    ABSL_PCHECK(gethostname(buf, sizeof(buf) - 1) == 0);
     return buf;
   } else {
     return absl::GetFlag(FLAGS_override_hostname);

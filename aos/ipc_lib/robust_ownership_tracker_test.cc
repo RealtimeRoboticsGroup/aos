@@ -5,6 +5,8 @@
 #include <sys/mman.h>
 #include <sys/wait.h>
 
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 
 namespace aos::ipc_lib::testing {
@@ -17,10 +19,10 @@ class SharedRobustOwnershipTracker {
     tracker_ = static_cast<RobustOwnershipTracker *>(
         mmap(nullptr, sizeof(RobustOwnershipTracker), PROT_READ | PROT_WRITE,
              MAP_SHARED | MAP_ANONYMOUS, -1, 0));
-    PCHECK(MAP_FAILED != tracker_);
+    ABSL_PCHECK(MAP_FAILED != tracker_);
   };
   ~SharedRobustOwnershipTracker() {
-    PCHECK(munmap(tracker_, sizeof(RobustOwnershipTracker)) != -1);
+    ABSL_PCHECK(munmap(tracker_, sizeof(RobustOwnershipTracker)) != -1);
   }
 
   // Captures the tid.
@@ -39,27 +41,28 @@ class RobustOwnershipTrackerTest : public ::testing::Test {
     pid_t pid = fork();
     if (pid == 0) {
       fn();
-      LOG(INFO) << "Child exiting normally.";
+      ABSL_LOG(INFO) << "Child exiting normally.";
       exit(0);
       return;
     }
 
-    LOG(INFO) << "Child has pid " << pid;
+    ABSL_LOG(INFO) << "Child has pid " << pid;
 
     while (true) {
-      LOG(INFO) << "Waiting for child.";
+      ABSL_LOG(INFO) << "Waiting for child.";
       int status;
       const pid_t waited_on = waitpid(pid, &status, 0);
       // Check for failure.
       if (waited_on == -1) {
         if (errno == EINTR) continue;
-        PLOG(FATAL) << ": waitpid(" << pid << ", " << &status << ", 0) failed";
+        ABSL_PLOG(FATAL) << ": waitpid(" << pid << ", " << &status
+                         << ", 0) failed";
       }
-      CHECK_EQ(waited_on, pid)
+      ABSL_CHECK_EQ(waited_on, pid)
           << ": waitpid() got child " << waited_on << " instead of " << pid;
-      CHECK(WIFEXITED(status));
-      LOG(INFO) << "Status " << WEXITSTATUS(status);
-      CHECK(WEXITSTATUS(status) == 0);
+      ABSL_CHECK(WIFEXITED(status));
+      ABSL_LOG(INFO) << "Status " << WEXITSTATUS(status);
+      ABSL_CHECK(WEXITSTATUS(status) == 0);
       return;
     }
   }

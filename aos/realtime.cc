@@ -17,8 +17,8 @@
 
 #include "absl/base/internal/raw_logging.h"
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/sanitizers.h"
 #include "aos/uuid.h"
@@ -79,7 +79,7 @@ void SetSoftRLimit(
   bool am_root = getuid() == 0;
   if (set_for_root == SetLimitForRoot::kYes || !am_root) {
     struct rlimit64 rlim;
-    PCHECK(getrlimit64(resource, &rlim) == 0)
+    ABSL_PCHECK(getrlimit64(resource, &rlim) == 0)
         << ": getting limit for " << resource;
 
     if (allow_decrease == AllowSoftLimitDecrease::kYes) {
@@ -89,7 +89,7 @@ void SetSoftRLimit(
     }
     rlim.rlim_max = ::std::max(rlim.rlim_max, soft);
 
-    PCHECK(setrlimit64(resource, &rlim) == 0)
+    ABSL_PCHECK(setrlimit64(resource, &rlim) == 0)
         << ": changing limit for " << resource << " to " << rlim.rlim_cur
         << " with max of " << rlim.rlim_max << " (" << help_string << ")";
   }
@@ -103,15 +103,15 @@ void LockAllMemory() {
   SetSoftRLimit(RLIMIT_MEMLOCK, RLIM_INFINITY, SetLimitForRoot::kNo,
                 "use --skip_locking_memory to not lock memory.");
 
-  PCHECK(mlockall(MCL_CURRENT | MCL_FUTURE) == 0)
+  ABSL_PCHECK(mlockall(MCL_CURRENT | MCL_FUTURE) == 0)
       << ": Failed to lock memory, use --skip_locking_memory to bypass this.  "
          "Bypassing will impact RT performance.";
 
 #if !defined(AOS_SANITIZE_ADDRESS) && !defined(AOS_SANITIZE_MEMORY)
   // Don't give freed memory back to the OS.
-  CHECK_EQ(1, mallopt(M_TRIM_THRESHOLD, -1));
+  ABSL_CHECK_EQ(1, mallopt(M_TRIM_THRESHOLD, -1));
   // Don't use mmap for large malloc chunks.
-  CHECK_EQ(1, mallopt(M_MMAP_MAX, 0));
+  ABSL_CHECK_EQ(1, mallopt(M_MMAP_MAX, 0));
 #endif
 
   // TODO(austin): new tcmalloc does this differently...
@@ -136,8 +136,8 @@ void LockAllMemory() {
 
 void InitRT() {
   if (absl::GetFlag(FLAGS_skip_locking_memory)) {
-    LOG(WARNING) << "Ignoring request to lock all memory due to "
-                    "--skip_locking_memory.";
+    ABSL_LOG(WARNING) << "Ignoring request to lock all memory due to "
+                         "--skip_locking_memory.";
     return;
   }
 
@@ -163,19 +163,19 @@ void InitRT() {
 void UnsetCurrentThreadRealtimePriority() {
   struct sched_param param;
   param.sched_priority = 0;
-  PCHECK(sched_setscheduler(0, SCHED_OTHER, &param) == 0);
+  ABSL_PCHECK(sched_setscheduler(0, SCHED_OTHER, &param) == 0);
   MarkRealtime(false);
 }
 
 void SetCurrentThreadAffinity(const cpu_set_t &cpuset) {
-  PCHECK(sched_setaffinity(0, sizeof(cpuset), &cpuset) == 0) << cpuset;
+  ABSL_PCHECK(sched_setaffinity(0, sizeof(cpuset), &cpuset) == 0) << cpuset;
 }
 
 void SetCurrentThreadName(const std::string_view name) {
-  CHECK_LE(name.size(), 16u) << ": thread name '" << name << "' too long";
-  VLOG(1) << "This thread is changing to '" << name << "'";
+  ABSL_CHECK_LE(name.size(), 16u) << ": thread name '" << name << "' too long";
+  ABSL_VLOG(1) << "This thread is changing to '" << name << "'";
   std::string string_name(name);
-  PCHECK(prctl(PR_SET_NAME, string_name.c_str()) == 0)
+  ABSL_PCHECK(prctl(PR_SET_NAME, string_name.c_str()) == 0)
       << ": changing name to " << string_name;
   if (&logging::internal::ReloadThreadName != nullptr) {
     logging::internal::ReloadThreadName();
@@ -184,7 +184,7 @@ void SetCurrentThreadName(const std::string_view name) {
 
 cpu_set_t GetCurrentThreadAffinity() {
   cpu_set_t result;
-  PCHECK(sched_getaffinity(0, sizeof(result), &result) == 0);
+  ABSL_PCHECK(sched_getaffinity(0, sizeof(result), &result) == 0);
   return result;
 }
 
@@ -194,8 +194,9 @@ void SetCurrentThreadRealtimePriority(int priority) {
   UUID::Random();
 
   if (absl::GetFlag(FLAGS_skip_realtime_scheduler)) {
-    LOG(WARNING) << "Ignoring request to switch to the RT scheduler due to "
-                    "--skip_realtime_scheduler.";
+    ABSL_LOG(WARNING)
+        << "Ignoring request to switch to the RT scheduler due to "
+           "--skip_realtime_scheduler.";
     return;
   }
   // Make sure we will only be allowed to run for 3 seconds straight.
@@ -214,7 +215,7 @@ void SetCurrentThreadRealtimePriority(int priority) {
   struct sched_param param;
   param.sched_priority = priority;
   MarkRealtime(true);
-  PCHECK(sched_setscheduler(0, SCHED_FIFO, &param) == 0)
+  ABSL_PCHECK(sched_setscheduler(0, SCHED_FIFO, &param) == 0)
       << ": changing to SCHED_FIFO with " << priority
       << ", if you want to bypass this check for testing, use "
          "--skip_realtime_scheduler";
@@ -242,7 +243,7 @@ bool MarkRealtime(bool realtime) {
     // don't have malloc hooks available, but we also don't go realtime.  Delay
     // complaining in that case until we try to go RT and it matters.
 #if !defined(AOS_SANITIZE_ADDRESS) && !defined(AOS_SANITIZE_MEMORY)
-    CHECK(has_malloc_hook)
+    ABSL_CHECK(has_malloc_hook)
         << ": Failed to register required malloc hooks before going realtime.  "
            "Disable --die_on_malloc to continue.";
 #endif
@@ -257,9 +258,9 @@ bool IsDieOnMallocEnabled() {
          has_malloc_hook;
 }
 
-void CheckRealtime() { CHECK(is_realtime); }
+void CheckRealtime() { ABSL_CHECK(is_realtime); }
 
-void CheckNotRealtime() { CHECK(!is_realtime); }
+void CheckNotRealtime() { ABSL_CHECK(!is_realtime); }
 
 ScopedRealtimeRestorer::ScopedRealtimeRestorer() : prior_(is_realtime) {}
 
@@ -365,21 +366,21 @@ void RegisterMallocHook() {
   if (absl::GetFlag(FLAGS_die_on_malloc)) {
     // tcmalloc redefines __libc_malloc, so use this as a feature test.
     if (&__libc_malloc == &tc_malloc) {
-      if (VLOG_IS_ON(1)) {
+      if (ABSL_VLOG_IS_ON(1)) {
         ABSL_RAW_LOG(INFO, "Hooking tcmalloc for die_on_malloc");
       }
       if (&MallocHook_AddNewHook != nullptr) {
-        CHECK(MallocHook_AddNewHook(&NewHook));
+        ABSL_CHECK(MallocHook_AddNewHook(&NewHook));
       } else {
         has_malloc_hook = false;
       }
       if (&MallocHook_AddDeleteHook != nullptr) {
-        CHECK(MallocHook_AddDeleteHook(&DeleteHook));
+        ABSL_CHECK(MallocHook_AddDeleteHook(&DeleteHook));
       } else {
         has_malloc_hook = false;
       }
     } else {
-      if (VLOG_IS_ON(1)) {
+      if (ABSL_VLOG_IS_ON(1)) {
         ABSL_RAW_LOG(INFO, "Replacing glibc malloc");
       }
       if (&malloc != &aos_malloc_hook) {

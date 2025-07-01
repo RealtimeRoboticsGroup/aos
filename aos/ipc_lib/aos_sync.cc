@@ -25,8 +25,8 @@
 #endif
 
 #include "absl/base/call_once.h"
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/macros.h"
 #include "aos/util/compiler_memory_barrier.h"
@@ -433,10 +433,11 @@ pid_t do_get_tid() {
 void check_cached_tid(pid_t tid) {
   pid_t actual = do_get_tid();
   if (tid != actual) {
-    LOG(FATAL) << "task " << static_cast<intmax_t>(tid) << " forked into "
-               << static_cast<intmax_t>(actual)
-               << " without letting aos_sync know so we're not really sure "
-                  "what's going on";
+    ABSL_LOG(FATAL)
+        << "task " << static_cast<intmax_t>(tid) << " forked into "
+        << static_cast<intmax_t>(actual)
+        << " without letting aos_sync know so we're not really sure "
+           "what's going on";
   }
 }
 
@@ -451,7 +452,7 @@ void atfork_child() {
 }
 
 void InstallAtforkHook() {
-  PCHECK(pthread_atfork(NULL, NULL, &atfork_child) == 0)
+  ABSL_PCHECK(pthread_atfork(NULL, NULL, &atfork_child) == 0)
       << ": pthread_atfork(NULL, NULL, "
       << reinterpret_cast<void *>(&atfork_child) << ") failed";
 }
@@ -545,8 +546,8 @@ void Init() {
   robust_head.futex_offset = static_cast<ssize_t>(offsetof(aos_mutex, futex)) -
                              static_cast<ssize_t>(offsetof(aos_mutex, next));
   robust_head.pending_next = 0;
-  PCHECK(syscall(SYS_set_robust_list, robust_head_next_value(),
-                 sizeof(robust_head)) == 0)
+  ABSL_PCHECK(syscall(SYS_set_robust_list, robust_head_next_value(),
+                      sizeof(robust_head)) == 0)
       << ": set_robust_list(" << reinterpret_cast<void *>(robust_head.next)
       << ", " << sizeof(robust_head) << ") failed";
   if (kRobustListDebug) {
@@ -719,12 +720,13 @@ inline int mutex_do_get(aos_mutex *m, bool signals_fail,
           }
         }
         my_robust_list::robust_head.pending_next = 0;
-        CHECK_NE(ret, -EDEADLK) << ": multiple lock of " << m << " by " << tid;
+        ABSL_CHECK_NE(ret, -EDEADLK)
+            << ": multiple lock of " << m << " by " << tid;
 
         errno = -ret;
-        PLOG(FATAL) << "FUTEX_LOCK_PI(" << &m->futex
-                    << "(=" << __atomic_load_n(&m->futex, __ATOMIC_SEQ_CST)
-                    << "), 1, " << timeout << ") failed";
+        ABSL_PLOG(FATAL) << "FUTEX_LOCK_PI(" << &m->futex
+                         << "(=" << __atomic_load_n(&m->futex, __ATOMIC_SEQ_CST)
+                         << "), 1, " << timeout << ") failed";
       } else {
         if (kLockDebug) {
           printf("%" PRId32 ": %p kernel lock done\n", tid, m);
@@ -791,8 +793,9 @@ void condition_wake(aos_condition *c, aos_mutex *m, int number_requeue) {
       }
       my_robust_list::robust_head.pending_next = 0;
       errno = -ret;
-      PLOG(FATAL) << "FUTEX_CMP_REQUEUE_PI(" << c << ", 1, " << number_requeue
-                  << ", " << &m->futex << ", *" << c << ") failed";
+      ABSL_PLOG(FATAL) << "FUTEX_CMP_REQUEUE_PI(" << c << ", 1, "
+                       << number_requeue << ", " << &m->futex << ", *" << c
+                       << ") failed";
     } else {
       return;
     }
@@ -819,10 +822,10 @@ void mutex_unlock(aos_mutex *m) {
     my_robust_list::robust_head.pending_next = 0;
     check_cached_tid(tid);
     if ((value & FUTEX_TID_MASK) == 0) {
-      LOG(FATAL) << "multiple unlock of aos_mutex " << m << " by " << tid;
+      ABSL_LOG(FATAL) << "multiple unlock of aos_mutex " << m << " by " << tid;
     } else {
-      LOG(FATAL) << "aos_mutex " << m << " is locked by "
-                 << (value & FUTEX_TID_MASK) << ", not " << tid;
+      ABSL_LOG(FATAL) << "aos_mutex " << m << " is locked by "
+                      << (value & FUTEX_TID_MASK) << ", not " << tid;
     }
   }
 
@@ -836,7 +839,7 @@ void mutex_unlock(aos_mutex *m) {
     if (ret != 0) {
       my_robust_list::robust_head.pending_next = 0;
       errno = -ret;
-      PLOG(FATAL) << "FUTEX_UNLOCK_PI(" << (&m->futex) << ") failed";
+      ABSL_PLOG(FATAL) << "FUTEX_UNLOCK_PI(" << (&m->futex) << ") failed";
     }
   } else {
     // There aren't any waiters, so no need to call into the kernel.
@@ -874,8 +877,8 @@ int mutex_trylock(aos_mutex *m) {
         }
         my_robust_list::robust_head.pending_next = 0;
         errno = -ret;
-        PLOG(FATAL) << "FUTEX_TRYLOCK_PI(" << (&m->futex)
-                    << ", 0, NULL) failed";
+        ABSL_PLOG(FATAL) << "FUTEX_TRYLOCK_PI(" << (&m->futex)
+                         << ", 0, NULL) failed";
       }
     }
   }
@@ -900,7 +903,7 @@ void death_notification_init(aos_mutex *m) {
   my_robust_list::Adder adder(m);
   {
     RunShmObservers run_observers(m, true);
-    CHECK(compare_and_swap(&m->futex, 0, tid));
+    ABSL_CHECK(compare_and_swap(&m->futex, 0, tid));
   }
   adder.Add();
 }
@@ -926,7 +929,7 @@ void death_notification_release(aos_mutex *m) {
   if (ret != 0) {
     my_robust_list::robust_head.pending_next = 0;
     errno = -ret;
-    PLOG(FATAL) << "FUTEX_UNLOCK_PI(" << &m->futex << ") failed";
+    ABSL_PLOG(FATAL) << "FUTEX_UNLOCK_PI(" << &m->futex << ") failed";
   }
 }
 
@@ -979,8 +982,8 @@ int condition_wait(aos_condition *c, aos_mutex *m, struct timespec *end_time) {
       }
       my_robust_list::robust_head.pending_next = 0;
       errno = -ret;
-      PLOG(FATAL) << "FUTEX_WAIT_REQUEUE_PI(" << c << ", " << wait_start << ", "
-                  << (&m->futex) << ") failed";
+      ABSL_PLOG(FATAL) << "FUTEX_WAIT_REQUEUE_PI(" << c << ", " << wait_start
+                       << ", " << (&m->futex) << ") failed";
     } else {
       // Record that the kernel relocked it for us.
       lock_pthread_mutex(m);

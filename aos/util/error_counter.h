@@ -4,8 +4,7 @@
 
 #include <array>
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
 #include "flatbuffers/buffer.h"
 #include "flatbuffers/flatbuffer_builder.h"
 #include "flatbuffers/vector.h"
@@ -50,10 +49,10 @@ class ErrorCounter {
 
   template <typename Static>
   static void InitializeStaticFbs(Static *builder) {
-    CHECK(builder->reserve(kNumErrors));
+    ABSL_CHECK(builder->reserve(kNumErrors));
     for (size_t ii = 0; ii < kNumErrors; ++ii) {
       auto element = builder->emplace_back();
-      CHECK(element != nullptr);
+      ABSL_CHECK(element != nullptr);
       element->set_error(static_cast<Error>(ii));
       element->set_count(0);
     }
@@ -67,16 +66,17 @@ class ErrorCounter {
   void InvalidateBuffer() { vector_ = nullptr; }
 
   void IncrementError(Error error) {
-    CHECK(vector_ != nullptr);
-    DCHECK_LT(static_cast<size_t>(error), vector_->size());
+    ABSL_CHECK(vector_ != nullptr);
+    ABSL_DCHECK_LT(static_cast<size_t>(error), vector_->size());
     Count *counter = vector_->GetMutableObject(static_cast<size_t>(error));
     counter->mutate_count(counter->count() + 1);
   }
 
   // Sets all the error counts to zero.
   void ResetCounts() {
-    CHECK(vector_ != nullptr);
-    DCHECK_EQ(vector_->size(), kNumErrors) << this << " vector " << vector_;
+    ABSL_CHECK(vector_ != nullptr);
+    ABSL_DCHECK_EQ(vector_->size(), kNumErrors)
+        << this << " vector " << vector_;
     for (size_t ii = 0; ii < kNumErrors; ++ii) {
       vector_->GetMutableObject(ii)->mutate_count(0);
     }
@@ -118,12 +118,12 @@ class ArrayErrorCounter {
   }
 
   void IncrementError(Error error) {
-    DCHECK_LT(static_cast<size_t>(error), error_counts_.size());
+    ABSL_DCHECK_LT(static_cast<size_t>(error), error_counts_.size());
     error_counts_.at(static_cast<size_t>(error))++;
   }
 
   size_t GetErrorCount(Error error) const {
-    DCHECK_LT(static_cast<size_t>(error), error_counts_.size());
+    ABSL_DCHECK_LT(static_cast<size_t>(error), error_counts_.size());
     return error_counts_.at(static_cast<size_t>(error));
   }
 

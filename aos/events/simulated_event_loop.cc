@@ -8,6 +8,11 @@
 #include <vector>
 
 #include "absl/container/btree_map.h"
+#include "absl/flags/flag.h"
+#include "absl/log/die_if_null.h"
+#include "absl/log/globals.h"
+#include "absl/log/log_sink.h"
+#include "absl/log/log_sink_registry.h"
 
 #include "aos/events/aos_logging.h"
 #include "aos/events/simulated_network_bridge.h"
@@ -21,6 +26,11 @@
 // die_on_malloc set, it won't die.  Really, we need to go RT, or fall back to
 // the base thread's original RT state to be actually accurate.
 
+ABSL_FLAG(
+    bool, use_simulated_clocks_for_logs, false,
+    "If true, hook into LOG statements to print out the simulated time instead "
+    "of the wall clock time. Also prints out the node name.");
+
 namespace aos {
 
 class SimulatedEventLoop;
@@ -30,6 +40,114 @@ class SimulatedChannel;
 using CheckSentTooFast = NodeEventLoopFactory::CheckSentTooFast;
 using ExclusiveSenders = NodeEventLoopFactory::ExclusiveSenders;
 using EventLoopOptions = NodeEventLoopFactory::EventLoopOptions;
+
+// A log sink that hooks in to the current simulation and uses those clocks
+// instead of the wall clock. It also disables the default log sink.
+//
+// This is only active when --use_simulated_clocks_for_logs is set.
+class SimulatedEventLoopLogSink : public absl::LogSink {
+ public:
+  SimulatedEventLoopLogSink(
+      const Configuration *configuration,
+      EventSchedulerScheduler *scheduler_scheduler,
+      const std::vector<std::unique_ptr<NodeEventLoopFactory>> &node_factories)
+      : scheduler_scheduler_(scheduler_scheduler),
+        node_factories_(node_factories),
+        silence_normal_logs_(absl::LogSeverityAtLeast::kInfinity) {
+    absl::AddLogSink(this);
+
+    if (node_factories_.size() == 0) {
+      // It appears that we have no nodes. In this case, there's nothing to set
+      // up.
+      return;
+    } else if (!configuration::MultiNode(configuration)) {
+      // Since we just have a single node, we don't need a callback to tell us
+      // about the current node. Everything will happen on the same node.
+      CHECK_EQ(node_factories_.size(), 1u);
+      current_event_loop_factory_ = node_factories_[0].get();
+    } else {
+      // We're on a multi-node system so we need to be notified when we execute
+      // an event on a different node.
+      scheduler_scheduler_->set_on_event(
+          [this](std::tuple<distributed_clock::time_point /* distributed_now */,
+                            const EventScheduler *>
+                     event) {
+            const EventScheduler *event_scheduler =
+                ABSL_DIE_IF_NULL(std::get<1>(event));
+            DCHECK_LT(event_scheduler->node_index(), node_factories_.size());
+            current_event_loop_factory_ =
+                node_factories_[event_scheduler->node_index()].get();
+          });
+    }
+  }
+
+  ~SimulatedEventLoopLogSink() override {
+    // Reset the callback and stop printing to the screen. The normal log
+    // statements will resume once silence_normal_logs_ gets destroyed.
+    scheduler_scheduler_->set_on_event(nullptr);
+    absl::RemoveLogSink(this);
+  }
+
+ private:
+  void Send(const absl::LogEntry &entry) override {
+    // We get called twice on fatal errors.
+    //   1) With the message
+    //   2) With the message and the stacktrace
+    // There's no need to push the message out twice.
+    if (entry.stacktrace().size() > 0) {
+      std::cerr << entry.stacktrace();
+      return;
+    }
+    if (current_event_loop_factory_ == nullptr) {
+      // If we don't have any information about the current node, fall back to
+      // the default logging style. This will use the wall clock.
+      std::cerr << entry.text_message_with_prefix_and_newline();
+    } else {
+      const Node *node = current_event_loop_factory_->node();
+
+      // Convert the simulated realtime time into a calendar-like time.
+      const realtime_clock::time_point realtime_now =
+          current_event_loop_factory_->realtime_now();
+      const absl::Time absl_realtime_now = absl::FromUnixNanos(
+          std::chrono::duration_cast<std::chrono::nanoseconds>(
+              realtime_now.time_since_epoch())
+              .count());
+
+      static const absl::TimeZone utc = absl::UTCTimeZone();
+      const absl::TimeZone::CivilInfo civil_info = utc.At(absl_realtime_now);
+      const absl::CivilSecond &civil_second = civil_info.cs;
+
+      if (!node) {
+        // We're on a single-node system. Don't print out any node-related
+        // information.
+        absl::FPrintF(
+            stderr, "%c%02d%02d %02d:%02d:%02d.%06d %7d %s:%d] %s\n",
+            absl::LogSeverityName(entry.log_severity())[0],
+            civil_second.month(), civil_second.day(), civil_second.hour(),
+            civil_second.minute(), civil_second.second(),
+            absl::ToInt64Microseconds(civil_info.subsecond), entry.tid(),
+            entry.source_basename(), entry.source_line(), entry.text_message());
+      } else {
+        // We're on a multi-node system. Print out node-related information.
+        absl::FPrintF(
+            stderr, "%c%02d%02d %02d:%02d:%02d.%06d %s %7d %s:%d] %s\n",
+            absl::LogSeverityName(entry.log_severity())[0],
+            civil_second.month(), civil_second.day(), civil_second.hour(),
+            civil_second.minute(), civil_second.second(),
+            absl::ToInt64Microseconds(civil_info.subsecond),
+            node->name()->string_view(), entry.tid(), entry.source_basename(),
+            entry.source_line(), entry.text_message());
+      }
+    }
+  }
+
+  EventSchedulerScheduler *const scheduler_scheduler_;
+  const std::vector<std::unique_ptr<NodeEventLoopFactory>> &node_factories_;
+  const NodeEventLoopFactory *current_event_loop_factory_ = nullptr;
+
+  // Don't print normal logs to stderr. All messages will be written by us.
+  absl::ScopedStderrThreshold silence_normal_logs_;
+};
 
 namespace {
 
@@ -136,7 +254,7 @@ class SimulatedFactoryExitHandle : public ExitHandle {
     --factory_->exit_handle_count_;
   }
 
-  void Exit(Result<void> status) override { factory_->Exit(status); }
+  void Exit(Status status) override { factory_->Exit(status); }
 
  private:
   SimulatedEventLoopFactory *const factory_;
@@ -1570,21 +1688,34 @@ void NodeEventLoopFactory::Shutdown() {
   channels_.clear();
 }
 
-Result<void> SimulatedEventLoopFactory::GetAndClearExitStatus() {
-  std::optional<Result<void>> exit_status;
+Status SimulatedEventLoopFactory::GetAndClearExitStatus() {
+  std::optional<Status> exit_status;
   // Clear the stored exit_status_ and extract it to be returned.
   exit_status_.swap(exit_status);
-  return exit_status.value_or(Result<void>{});
+  return exit_status.value_or(Status{});
+}
+
+std::unique_ptr<SimulatedEventLoopLogSink>
+SimulatedEventLoopFactory::MaybeCreateSimulatedLogSink() {
+  std::unique_ptr<SimulatedEventLoopLogSink> result;
+  if (absl::GetFlag(FLAGS_use_simulated_clocks_for_logs)) {
+    result = std::make_unique<SimulatedEventLoopLogSink>(
+        configuration_, &scheduler_scheduler_, node_factories_);
+  }
+  return result;
 }
 
 void SimulatedEventLoopFactory::RunFor(monotonic_clock::duration duration) {
   CheckExpected(NonFatalRunFor(duration));
 }
 
-Result<void> SimulatedEventLoopFactory::NonFatalRunFor(
+Status SimulatedEventLoopFactory::NonFatalRunFor(
     monotonic_clock::duration duration) {
+  std::unique_ptr<SimulatedEventLoopLogSink> log_sink =
+      MaybeCreateSimulatedLogSink();
+
   // This sets running to true too.
-  const Result<void> result = scheduler_scheduler_.RunFor(duration);
+  const Status result = scheduler_scheduler_.RunFor(duration);
   for (std::unique_ptr<NodeEventLoopFactory> &node : node_factories_) {
     if (node) {
       for (SimulatedEventLoop *loop : node->event_loops_) {
@@ -1603,6 +1734,9 @@ SimulatedEventLoopFactory::RunEndState SimulatedEventLoopFactory::RunUntil(
 Result<SimulatedEventLoopFactory::RunEndState>
 SimulatedEventLoopFactory::NonFatalRunUntil(realtime_clock::time_point now,
                                             const aos::Node *node) {
+  std::unique_ptr<SimulatedEventLoopLogSink> log_sink =
+      MaybeCreateSimulatedLogSink();
+
   const Result<RunEndState> result =
       scheduler_scheduler_
           .RunUntil(now, &GetNodeEventLoopFactory(node)->scheduler_,
@@ -1629,6 +1763,9 @@ SimulatedEventLoopFactory::NonFatalRunUntil(realtime_clock::time_point now,
 void SimulatedEventLoopFactory::Run() { CheckExpected(NonFatalRun()); }
 
 Result<void> SimulatedEventLoopFactory::NonFatalRun() {
+  std::unique_ptr<SimulatedEventLoopLogSink> log_sink =
+      MaybeCreateSimulatedLogSink();
+
   // This sets running to true too.
   const Result<void> result = scheduler_scheduler_.Run();
   for (std::unique_ptr<NodeEventLoopFactory> &node : node_factories_) {

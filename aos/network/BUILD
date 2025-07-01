@@ -200,8 +200,8 @@ cc_library(
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/strings",
     ],
 )
@@ -489,6 +489,8 @@ cc_library(
         "//aos/logging",
         "//aos/util:file",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/strings",
     ],
 )
@@ -838,8 +840,31 @@ cc_binary(
 
 cc_library(
     name = "timestamp_filter",
-    srcs = ["timestamp_filter.cc"],
-    hdrs = ["timestamp_filter.h"],
+    srcs = [
+        "timestamp_filter.cc",
+    ],
+    hdrs = [
+        "timestamp_filter.h",
+    ],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        ":noncausal_timestamp_filter",
+        "//aos:configuration",
+        "//aos/events/logging:boot_timestamp",
+        "//aos/time",
+        "@com_google_absl//absl/numeric:int128",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_library(
+    name = "noncausal_timestamp_filter",
+    srcs = [
+        "noncausal_timestamp_filter.cc",
+    ],
+    hdrs = [
+        "noncausal_timestamp_filter.h",
+    ],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos:configuration",
@@ -856,7 +881,7 @@ cc_library(
     hdrs = ["multinode_timestamp_filter.h"],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
-        ":timestamp_filter",
+        ":noncausal_timestamp_filter",
         "//aos:configuration",
         "//aos/events:simulated_event_loop",
         "//aos/events/logging:boot_timestamp",
@@ -874,6 +899,19 @@ cc_test(
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":timestamp_filter",
+        "//aos:json_to_flatbuffer",
+        "//aos/testing:googletest",
+    ],
+)
+
+cc_test(
+    name = "noncausal_timestamp_filter_test",
+    srcs = [
+        "noncausal_timestamp_filter_test.cc",
+    ],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        ":noncausal_timestamp_filter",
         "//aos:json_to_flatbuffer",
         "//aos/testing:googletest",
     ],

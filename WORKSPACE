@@ -331,7 +331,10 @@ register_toolchains(
 http_archive(
     name = "com_google_absl",
     patch_args = ["-p1"],
-    patches = ["//third_party/abseil:abseil.patch"],
+    patches = [
+        "//third_party/abseil:0001-Add-hooks-for-using-abseil-with-AOS.patch",
+        "//third_party/abseil:0002-Suppress-the-stack-trace-on-SIGABRT.patch",
+    ],
     sha256 = "733726b8c3a6d39a4120d7e45ea8b41a434cdacde401cba500f14236c49b39dc",
     strip_prefix = "abseil-cpp-20240116.2",
     url = "https://github.com/abseil/abseil-cpp/archive/refs/tags/20240116.2.tar.gz",
@@ -1329,28 +1332,8 @@ http_archive(
     name = "com_github_foxglove_schemas",
     build_file = "//third_party/foxglove/schemas:schemas.BUILD",
     sha256 = "c0d08365eb8fba0af7773b5f0095fb53fb53f020bde46edaa308af5bb939fc15",
-    strip_prefix = "schemas-7a3e077b88142ac46bb4e2616f83dc029b45352e/schemas/flatbuffer",
+    strip_prefix = "schemas-7a3e077b88142ac46bb4e2616f83dc029b45352e",
     url = "https://github.com/foxglove/schemas/archive/7a3e077b88142ac46bb4e2616f83dc029b45352e.tar.gz",
-)
-
-# This contains the *compiled* foxglove studio. This can be reproduced by:
-# 1. Cloning https://github.com/foxglove/studio
-# 2. Building the code (yarn install; yarn web:build:prod)
-# 3. tar'ing the web/.webpack folder (e.g., tar czvf foxglove-1456f4a4cb6f4c6c7e50e020ba9918dba9e04b96.tar.gz --directory=web/.webpack/ .)
-# These files can be hosted locally to provide an offline foxglove server.
-# Foxglove may be served on any port and may be nested at a subpath
-# (e.g., at hostname:8000/foxglove behind a proxy).
-http_archive(
-    name = "foxglove_studio",
-    build_file_content = """
-filegroup(
-    name = "foxglove_studio",
-    srcs = glob(["**"]),
-    visibility = ["//visibility:public"],
-)""",
-    sha256 = "d02f4ca629e6dcf2b65557a0353871ce0025e70715214de4e6ec7e9f862de420",
-    url =
-        "https://realtimeroboticsgroup.org/build-dependencies/foxglove-1456f4a4cb6f4c6c7e50e020ba9918dba9e04b96.tar.gz",
 )
 
 #

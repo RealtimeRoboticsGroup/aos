@@ -1,5 +1,6 @@
 #include "frc/orin/resize_normalize.h"
 
+#include "absl/log/log.h"
 #include "gtest/gtest.h"
 
 #include "HalideBuffer.h"

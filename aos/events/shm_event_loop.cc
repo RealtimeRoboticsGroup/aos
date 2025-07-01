@@ -11,8 +11,8 @@
 #include <stdexcept>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/events/aos_logging.h"
 #include "aos/events/epoll.h"
@@ -72,9 +72,9 @@ const Node *MaybeMyNode(const Configuration *configuration) {
 void IgnoreWakeupSignal() {
   struct sigaction action;
   action.sa_handler = SIG_IGN;
-  PCHECK(sigemptyset(&action.sa_mask) == 0);
+  ABSL_PCHECK(sigemptyset(&action.sa_mask) == 0);
   action.sa_flags = 0;
-  PCHECK(sigaction(ipc_lib::kWakeupSignal, &action, nullptr) == 0);
+  ABSL_PCHECK(sigaction(ipc_lib::kWakeupSignal, &action, nullptr) == 0);
 }
 
 }  // namespace
@@ -90,10 +90,10 @@ ShmEventLoop::ShmEventLoop(const Configuration *configuration)
   // See LocklessQueueWakeUpper::Wakeup() for some more information.
   IgnoreWakeupSignal();
 
-  CHECK(IsInitialized()) << ": Need to initialize AOS first.";
+  ABSL_CHECK(IsInitialized()) << ": Need to initialize AOS first.";
   ClearContext();
   if (configuration->has_nodes()) {
-    CHECK(node_ != nullptr) << ": Couldn't find node in config.";
+    ABSL_CHECK(node_ != nullptr) << ": Couldn't find node in config.";
   }
 }
 
@@ -129,20 +129,20 @@ class SimpleShmFetcher {
   // Sets this object to copy data out of the shared memory into a private
   // buffer when fetching.
   void CopyDataOnFetch() {
-    CHECK(!pin_data());
+    ABSL_CHECK(!pin_data());
     data_storage_.reset(static_cast<char *>(
         malloc(channel_->max_size() + kChannelDataAlignment - 1)));
   }
 
   // Sets this object to pin data in shared memory when fetching.
   void PinDataOnFetch() {
-    CHECK(!copy_data());
+    ABSL_CHECK(!copy_data());
     auto maybe_pinner =
         ipc_lib::LocklessQueuePinner::Make(lockless_queue_memory_.queue());
     if (!maybe_pinner) {
-      LOG(FATAL) << "Failed to create reader on "
-                 << configuration::CleanedChannelToString(channel_)
-                 << ", too many readers.";
+      ABSL_LOG(FATAL) << "Failed to create reader on "
+                      << configuration::CleanedChannelToString(channel_)
+                      << ", too many readers.";
     }
     pinner_ = std::move(maybe_pinner.value());
   }
@@ -187,7 +187,7 @@ class SimpleShmFetcher {
     const ipc_lib::LocklessQueueReader::Result read_result =
         DoFetch(queue_index, std::move(fn));
 
-    CHECK(read_result != ipc_lib::LocklessQueueReader::Result::NOTHING_NEW)
+    ABSL_CHECK(read_result != ipc_lib::LocklessQueueReader::Result::NOTHING_NEW)
         << ": Queue index went backwards.  This should never happen.  "
         << configuration::CleanedChannelToString(channel_);
 
@@ -199,14 +199,14 @@ class SimpleShmFetcher {
   Context context() const { return context_; }
 
   bool RegisterWakeup(int priority) {
-    CHECK(!watcher_);
+    ABSL_CHECK(!watcher_);
     watcher_ = ipc_lib::LocklessQueueWatcher::Make(
         lockless_queue_memory_.queue(), priority);
     return static_cast<bool>(watcher_);
   }
 
   void UnregisterWakeup() {
-    CHECK(watcher_);
+    ABSL_CHECK(watcher_);
     watcher_ = std::nullopt;
   }
 
@@ -253,7 +253,7 @@ class SimpleShmFetcher {
     if (read_result == ipc_lib::LocklessQueueReader::Result::GOOD) {
       if (pin_data()) {
         const int pin_result = pinner_->PinIndex(queue_index.index());
-        CHECK(pin_result >= 0)
+        ABSL_CHECK(pin_result >= 0)
             << ": Got behind while reading and the last message was modified "
                "out from under us while we tried to pin it. Don't get so far "
                "behind on: "
@@ -288,7 +288,7 @@ class SimpleShmFetcher {
     // Make sure the data wasn't modified while we were reading it.  This
     // can only happen if you are reading the last message *while* it is
     // being written to, which means you are pretty far behind.
-    CHECK(read_result != ipc_lib::LocklessQueueReader::Result::OVERWROTE)
+    ABSL_CHECK(read_result != ipc_lib::LocklessQueueReader::Result::OVERWROTE)
         << ": Got behind while reading and the last message was modified "
            "out from under us while we were reading it.  Don't get so far "
            "behind on: "
@@ -299,15 +299,15 @@ class SimpleShmFetcher {
     // for a long time in the middle of this function.
     if (read_result == ipc_lib::LocklessQueueReader::Result::TOO_OLD) {
       event_loop_->SendTimingReport();
-      LOG(FATAL) << "The next message is no longer available.  "
-                 << configuration::CleanedChannelToString(channel_);
+      ABSL_LOG(FATAL) << "The next message is no longer available.  "
+                      << configuration::CleanedChannelToString(channel_);
     }
 
     return read_result;
   }
 
   char *data_storage_start() const {
-    CHECK(copy_data());
+    ABSL_CHECK(copy_data());
     return RoundChannelData(data_storage_.get(), channel_->max_size());
   }
 
@@ -357,7 +357,7 @@ class ShmFetcher : public RawFetcher {
   }
 
   ~ShmFetcher() override {
-    CHECK(!event_loop()->is_running())
+    ABSL_CHECK(!event_loop()->is_running())
         << ": Can't destroy Fetcher while running";
     shm_event_loop()->CheckCurrentThread();
     context_.data = nullptr;
@@ -427,7 +427,7 @@ class ShmExitHandle : public ExitHandle {
     ++event_loop_->exit_handle_count_;
   }
   ~ShmExitHandle() override {
-    CHECK_GT(event_loop_->exit_handle_count_, 0);
+    ABSL_CHECK_GT(event_loop_->exit_handle_count_, 0);
     --event_loop_->exit_handle_count_;
   }
   // Because of how we handle reference counting, we either need to implement
@@ -436,9 +436,7 @@ class ShmExitHandle : public ExitHandle {
   // supporting it should be straightforwards.
   DISALLOW_COPY_AND_ASSIGN(ShmExitHandle);
 
-  void Exit(Result<void> status) override {
-    event_loop_->ExitWithStatus(status);
-  }
+  void Exit(Status status) override { event_loop_->ExitWithStatus(status); }
 
  private:
   ShmEventLoop *const event_loop_;
@@ -467,9 +465,9 @@ class ShmSender : public RawSender {
     if (sender) {
       return std::move(sender.value());
     }
-    LOG(FATAL) << "Failed to create sender on "
-               << configuration::CleanedChannelToString(channel)
-               << ", too many senders.";
+    ABSL_LOG(FATAL) << "Failed to create sender on "
+                    << configuration::CleanedChannelToString(channel)
+                    << ", too many senders.";
   }
 
   void *data() override {
@@ -488,14 +486,14 @@ class ShmSender : public RawSender {
                uint32_t remote_queue_index,
                const UUID &source_boot_uuid) override {
     shm_event_loop()->CheckCurrentThread();
-    CHECK_LE(length, static_cast<size_t>(channel()->max_size()))
+    ABSL_CHECK_LE(length, static_cast<size_t>(channel()->max_size()))
         << ": Sent too big a message on "
         << configuration::CleanedChannelToString(channel());
     const auto result = lockless_queue_sender_.Send(
         length, monotonic_remote_time, realtime_remote_time,
         monotonic_remote_transmit_time, remote_queue_index, source_boot_uuid,
         &monotonic_sent_time_, &realtime_sent_time_, &sent_queue_index_);
-    CHECK_NE(result, ipc_lib::LocklessQueueSender::Result::INVALID_REDZONE)
+    ABSL_CHECK_NE(result, ipc_lib::LocklessQueueSender::Result::INVALID_REDZONE)
         << ": Somebody wrote outside the buffer of their message on channel "
         << configuration::CleanedChannelToString(channel());
 
@@ -512,7 +510,7 @@ class ShmSender : public RawSender {
                uint32_t remote_queue_index,
                const UUID &source_boot_uuid) override {
     shm_event_loop()->CheckCurrentThread();
-    CHECK_LE(length, static_cast<size_t>(channel()->max_size()))
+    ABSL_CHECK_LE(length, static_cast<size_t>(channel()->max_size()))
         << ": Sent too big a message on "
         << configuration::CleanedChannelToString(channel());
     const auto result = lockless_queue_sender_.Send(
@@ -521,7 +519,7 @@ class ShmSender : public RawSender {
         remote_queue_index, source_boot_uuid, &monotonic_sent_time_,
         &realtime_sent_time_, &sent_queue_index_);
 
-    CHECK_NE(result, ipc_lib::LocklessQueueSender::Result::INVALID_REDZONE)
+    ABSL_CHECK_NE(result, ipc_lib::LocklessQueueSender::Result::INVALID_REDZONE)
         << ": Somebody wrote outside the buffer of their message on "
            "channel "
         << configuration::CleanedChannelToString(channel());
@@ -556,8 +554,8 @@ class ShmSender : public RawSender {
       case ipc_lib::LocklessQueueSender::Result::INVALID_REDZONE:
         return Error::kInvalidRedzone;
     }
-    LOG(FATAL) << "Unknown lockless queue sender result"
-               << static_cast<int>(result);
+    ABSL_LOG(FATAL) << "Unknown lockless queue sender result"
+                    << static_cast<int>(result);
   }
 
   ipc_lib::MemoryMappedQueue lockless_queue_memory_;
@@ -589,7 +587,7 @@ class ShmWatcherState : public WatcherState {
 
   void Construct() override {
     event_loop_->CheckCurrentThread();
-    CHECK(RegisterWakeup(event_loop_->runtime_realtime_priority()));
+    ABSL_CHECK(RegisterWakeup(event_loop_->runtime_realtime_priority()));
   }
 
   void Startup() override {
@@ -614,7 +612,7 @@ class ShmWatcherState : public WatcherState {
 
   // Consumes the data by calling the callback.
   void HandleEvent() {
-    CHECK(has_new_data_);
+    ABSL_CHECK(has_new_data_);
     DoCallCallback(monotonic_clock::now, simple_shm_fetcher_.context());
     has_new_data_ = false;
     CheckForNewData();
@@ -667,7 +665,7 @@ class ShmTimerHandler final : public TimerHandler {
   }
 
   void HandleEvent() {
-    CHECK(!event_.valid());
+    ABSL_CHECK(!event_.valid());
     disabled_ = false;
     const auto monotonic_now = Call(monotonic_clock::now, base_);
     if (event_.valid()) {
@@ -795,13 +793,14 @@ class ShmPhasedLoopHandler final : public PhasedLoopHandler {
 
 ::std::unique_ptr<RawFetcher> ShmEventLoop::MakeRawFetcher(
     const Channel *channel) {
-  CHECK(!is_running()) << ": Can't make Fetcher while running";
+  ABSL_CHECK(!is_running()) << ": Can't make Fetcher while running";
   CheckCurrentThread();
   if (!configuration::ChannelIsReadableOnNode(channel, node())) {
-    LOG(FATAL) << "Channel { \"name\": \"" << channel->name()->string_view()
-               << "\", \"type\": \"" << channel->type()->string_view()
-               << "\" } is not able to be fetched on this node.  Check your "
-                  "configuration.";
+    ABSL_LOG(FATAL)
+        << "Channel { \"name\": \"" << channel->name()->string_view()
+        << "\", \"type\": \"" << channel->type()->string_view()
+        << "\" } is not able to be fetched on this node.  Check your "
+           "configuration.";
   }
 
   return ::std::unique_ptr<RawFetcher>(
@@ -860,12 +859,12 @@ void ShmEventLoop::OnRun(::std::function<void()> on_run) {
 
 void ShmEventLoop::CheckCurrentThread() const {
   if (__builtin_expect(check_mutex_ != nullptr, false)) {
-    CHECK(check_mutex_->is_locked())
+    ABSL_CHECK(check_mutex_->is_locked())
         << ": The configured mutex is not locked while calling a "
            "ShmEventLoop function";
   }
   if (__builtin_expect(!!check_tid_, false)) {
-    CHECK_EQ(syscall(SYS_gettid), *check_tid_)
+    ABSL_CHECK_EQ(syscall(SYS_gettid), *check_tid_)
         << ": Being called from the wrong thread";
   }
 }
@@ -881,7 +880,7 @@ void ShmEventLoop::HandleEvent() {
   if (!signalfd_) {
     // Nothing to check, so we can bail out immediately once we're out of
     // events.
-    CHECK(watchers_.empty());
+    ABSL_CHECK(watchers_.empty());
     checked_until = monotonic_clock::max_time;
   }
 
@@ -922,7 +921,7 @@ void ShmEventLoop::HandleEvent() {
         if (result.ssi_signo == 0) {
           break;
         }
-        CHECK_EQ(result.ssi_signo, ipc_lib::kWakeupSignal);
+        ABSL_CHECK_EQ(result.ssi_signo, ipc_lib::kWakeupSignal);
       }
       // This is the last time we can guarantee that if a message is published
       // before, we will notice it.
@@ -972,15 +971,17 @@ class ScopedSignalMask {
  public:
   ScopedSignalMask(std::initializer_list<int> signals) {
     sigset_t sigset;
-    PCHECK(sigemptyset(&sigset) == 0);
+    ABSL_PCHECK(sigemptyset(&sigset) == 0);
     for (int signal : signals) {
-      PCHECK(sigaddset(&sigset, signal) == 0);
+      ABSL_PCHECK(sigaddset(&sigset, signal) == 0);
     }
 
-    PCHECK(sigprocmask(SIG_BLOCK, &sigset, &old_) == 0);
+    ABSL_PCHECK(sigprocmask(SIG_BLOCK, &sigset, &old_) == 0);
   }
 
-  ~ScopedSignalMask() { PCHECK(sigprocmask(SIG_SETMASK, &old_, nullptr) == 0); }
+  ~ScopedSignalMask() {
+    ABSL_PCHECK(sigprocmask(SIG_SETMASK, &old_, nullptr) == 0);
+  }
 
  private:
   sigset_t old_;
@@ -1014,9 +1015,9 @@ class SignalHandler {
       new_action.sa_flags = SA_RESETHAND;
       new_action.sa_handler = &HandleSignal;
 
-      PCHECK(sigaction(SIGINT, &new_action, &old_action_int_) == 0);
-      PCHECK(sigaction(SIGHUP, &new_action, &old_action_hup_) == 0);
-      PCHECK(sigaction(SIGTERM, &new_action, &old_action_term_) == 0);
+      ABSL_PCHECK(sigaction(SIGINT, &new_action, &old_action_int_) == 0);
+      ABSL_PCHECK(sigaction(SIGHUP, &new_action, &old_action_hup_) == 0);
+      ABSL_PCHECK(sigaction(SIGTERM, &new_action, &old_action_term_) == 0);
     }
 
     event_loops_.push_back(event_loop);
@@ -1034,9 +1035,9 @@ class SignalHandler {
 
     if (event_loops_.size() == 0u) {
       // The last caller restores the original signal handlers.
-      PCHECK(sigaction(SIGINT, &old_action_int_, nullptr) == 0);
-      PCHECK(sigaction(SIGHUP, &old_action_hup_, nullptr) == 0);
-      PCHECK(sigaction(SIGTERM, &old_action_term_, nullptr) == 0);
+      ABSL_PCHECK(sigaction(SIGINT, &old_action_int_, nullptr) == 0);
+      ABSL_PCHECK(sigaction(SIGHUP, &old_action_hup_, nullptr) == 0);
+      ABSL_PCHECK(sigaction(SIGTERM, &old_action_term_, nullptr) == 0);
     }
   }
 
@@ -1044,8 +1045,9 @@ class SignalHandler {
   void DoHandleSignal() {
     // We block signals while grabbing the lock, so there should never be a
     // race.  Confirm that this is true using trylock.
-    CHECK(mutex_.try_lock()) << ": sigprocmask failed to block signals while "
-                                "modifing the event loop list.";
+    ABSL_CHECK(mutex_.try_lock())
+        << ": sigprocmask failed to block signals while "
+           "modifing the event loop list.";
     for (ShmEventLoop *event_loop : event_loops_) {
       event_loop->Exit();
     }
@@ -1060,7 +1062,7 @@ class SignalHandler {
   struct sigaction old_action_term_;
 };
 
-Result<void> ShmEventLoop::Run() {
+Status ShmEventLoop::Run() {
   CheckCurrentThread();
   SignalHandler::global()->Register(this);
 
@@ -1102,7 +1104,7 @@ Result<void> ShmEventLoop::Run() {
     if (priority_ != 0) {
       ::aos::InitRT();
 
-      LOG(INFO) << "Setting priority to " << priority_;
+      ABSL_LOG(INFO) << "Setting priority to " << priority_;
       ::aos::SetCurrentThreadRealtimePriority(priority_);
     }
 
@@ -1151,10 +1153,10 @@ Result<void> ShmEventLoop::Run() {
   timing_report_sender_.reset();
   ClearContext();
   std::unique_lock<aos::stl_mutex> locker(exit_status_mutex_);
-  std::optional<Result<void>> exit_status;
+  std::optional<Status> exit_status;
   // Clear the stored exit_status_ and extract it to be returned.
   exit_status_.swap(exit_status);
-  return exit_status.value_or(Result<void>{});
+  return exit_status.value_or(Status{});
 }
 
 void ShmEventLoop::Exit() {
@@ -1164,13 +1166,13 @@ void ShmEventLoop::Exit() {
   epoll_.Quit();
 }
 
-void ShmEventLoop::ExitWithStatus(Result<void> status) {
+void ShmEventLoop::ExitWithStatus(Status status) {
   // Only set the exit status if no other Exit*() call got here first.
   if (!observed_exit_.test_and_set()) {
     std::unique_lock<aos::stl_mutex> locker(exit_status_mutex_);
     exit_status_ = std::move(status);
   } else {
-    VLOG(1) << "Exit status is already set; not setting it again.";
+    ABSL_VLOG(1) << "Exit status is already set; not setting it again.";
   }
   Exit();
 }
@@ -1186,15 +1188,15 @@ ShmEventLoop::~ShmEventLoop() {
   phased_loops_.clear();
   watchers_.clear();
 
-  CHECK(!is_running()) << ": ShmEventLoop destroyed while running";
-  CHECK_EQ(0, exit_handle_count_)
+  ABSL_CHECK(!is_running()) << ": ShmEventLoop destroyed while running";
+  ABSL_CHECK_EQ(0, exit_handle_count_)
       << ": All ExitHandles must be destroyed before the ShmEventLoop";
 }
 
 void ShmEventLoop::SetRuntimeRealtimePriority(int priority) {
   CheckCurrentThread();
   if (is_running()) {
-    LOG(FATAL) << "Cannot set realtime priority while running.";
+    ABSL_LOG(FATAL) << "Cannot set realtime priority while running.";
   }
   priority_ = priority;
 }
@@ -1202,7 +1204,7 @@ void ShmEventLoop::SetRuntimeRealtimePriority(int priority) {
 void ShmEventLoop::SetRuntimeAffinity(const cpu_set_t &cpuset) {
   CheckCurrentThread();
   if (is_running()) {
-    LOG(FATAL) << "Cannot set affinity while running.";
+    ABSL_LOG(FATAL) << "Cannot set affinity while running.";
   }
   affinity_ = cpuset;
 }

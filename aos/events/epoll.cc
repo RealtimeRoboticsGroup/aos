@@ -17,8 +17,8 @@
 #include <utility>
 #include <vector>
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/time/time.h"
 
@@ -26,19 +26,20 @@ namespace aos::internal {
 
 TimerFd::TimerFd()
     : fd_(timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK)) {
-  PCHECK(fd_ != -1);
+  ABSL_PCHECK(fd_ != -1);
   Disable();
 }
 
-TimerFd::~TimerFd() { PCHECK(close(fd_) == 0); }
+TimerFd::~TimerFd() { ABSL_PCHECK(close(fd_) == 0); }
 
 void TimerFd::SetTime(monotonic_clock::time_point start,
                       monotonic_clock::duration interval) {
-  CHECK_GE(start, monotonic_clock::epoch());
+  ABSL_CHECK_GE(start, monotonic_clock::epoch());
   struct itimerspec new_value;
   new_value.it_interval = ::aos::time::to_timespec(interval);
   new_value.it_value = ::aos::time::to_timespec(start);
-  PCHECK(timerfd_settime(fd_, TFD_TIMER_ABSTIME, &new_value, nullptr) == 0);
+  ABSL_PCHECK(timerfd_settime(fd_, TFD_TIMER_ABSTIME, &new_value, nullptr) ==
+              0);
 }
 
 uint64_t TimerFd::Read() {
@@ -49,26 +50,26 @@ uint64_t TimerFd::Read() {
       return 0;
     }
   }
-  PCHECK(result != -1);
-  CHECK_EQ(result, static_cast<int>(sizeof(buf)));
+  ABSL_PCHECK(result != -1);
+  ABSL_CHECK_EQ(result, static_cast<int>(sizeof(buf)));
 
   return buf;
 }
 
 EPoll::EPoll() : epoll_fd_(epoll_create1(EPOLL_CLOEXEC)) {
-  PCHECK(epoll_fd_ > 0);
+  ABSL_PCHECK(epoll_fd_ > 0);
 
   // Create a pipe for the Quit function.  We want to use a pipe to be async
   // safe so this can be called from signal handlers.
   int pipefd[2];
-  PCHECK(pipe2(pipefd, O_CLOEXEC | O_NONBLOCK) == 0);
+  ABSL_PCHECK(pipe2(pipefd, O_CLOEXEC | O_NONBLOCK) == 0);
   quit_epoll_fd_ = pipefd[0];
   quit_signal_fd_ = pipefd[1];
   // Read the fd when data is sent and set run_ to false.
   OnReadable(quit_epoll_fd_, [this]() {
     run_ = false;
     char buf[1];
-    PCHECK(read(quit_epoll_fd_, &buf[0], 1) == 1);
+    ABSL_PCHECK(read(quit_epoll_fd_, &buf[0], 1) == 1);
   });
 }
 
@@ -77,7 +78,7 @@ EPoll::~EPoll() {
   DeleteFd(quit_epoll_fd_);
   close(quit_signal_fd_);
   close(quit_epoll_fd_);
-  CHECK_EQ(fns_.size(), 0u)
+  ABSL_CHECK_EQ(fns_.size(), 0u)
       << ": Not all file descriptors were unregistered before shutting down.";
   close(epoll_fd_);
 }
@@ -113,7 +114,7 @@ bool EPoll::Poll(bool block) {
     if (errno == EINTR) {
       return false;
     }
-    PCHECK(num_events != -1);
+    ABSL_PCHECK(num_events != -1);
   }
 
   if (num_events == 0) {
@@ -131,7 +132,7 @@ void EPoll::Quit() {
   if (!run_) {
     return;
   }
-  PCHECK(write(quit_signal_fd_, "q", 1) == 1);
+  ABSL_PCHECK(write(quit_signal_fd_, "q", 1) == 1);
 }
 
 void EPoll::OnReadable(int fd, ::std::function<void()> function) {
@@ -140,7 +141,7 @@ void EPoll::OnReadable(int fd, ::std::function<void()> function) {
     fns_.emplace_back(std::make_unique<InOutEventData>(fd));
     event_data = fns_.back().get();
   } else {
-    CHECK(!static_cast<InOutEventData *>(event_data)->in_fn)
+    ABSL_CHECK(!static_cast<InOutEventData *>(event_data)->in_fn)
         << ": Duplicate in functions for " << fd;
   }
   static_cast<InOutEventData *>(event_data)->in_fn = ::std::move(function);
@@ -153,7 +154,7 @@ void EPoll::OnError(int fd, ::std::function<void()> function) {
     fns_.emplace_back(std::make_unique<InOutEventData>(fd));
     event_data = fns_.back().get();
   } else {
-    CHECK(!static_cast<InOutEventData *>(event_data)->err_fn)
+    ABSL_CHECK(!static_cast<InOutEventData *>(event_data)->err_fn)
         << ": Duplicate error functions for " << fd;
   }
   static_cast<InOutEventData *>(event_data)->err_fn = ::std::move(function);
@@ -166,7 +167,7 @@ void EPoll::OnWriteable(int fd, ::std::function<void()> function) {
     fns_.emplace_back(std::make_unique<InOutEventData>(fd));
     event_data = fns_.back().get();
   } else {
-    CHECK(!static_cast<InOutEventData *>(event_data)->out_fn)
+    ABSL_CHECK(!static_cast<InOutEventData *>(event_data)->out_fn)
         << ": Duplicate out functions for " << fd;
   }
   static_cast<InOutEventData *>(event_data)->out_fn = ::std::move(function);
@@ -175,7 +176,7 @@ void EPoll::OnWriteable(int fd, ::std::function<void()> function) {
 
 void EPoll::OnEvents(int fd, ::std::function<void(uint32_t)> function) {
   if (GetEventData(fd) != nullptr) {
-    LOG(FATAL) << "May not replace OnEvents handlers";
+    ABSL_LOG(FATAL) << "May not replace OnEvents handlers";
   }
   fns_.emplace_back(std::make_unique<SingleEventData>(fd));
   static_cast<SingleEventData *>(fns_.back().get())->fn = std::move(function);
@@ -190,12 +191,12 @@ void EPoll::ForgetClosedFd(int fd) {
     }
     ++element;
   }
-  LOG(FATAL) << "fd " << fd << " not found";
+  ABSL_LOG(FATAL) << "fd " << fd << " not found";
 }
 
 void EPoll::SetEvents(int fd, uint32_t events) {
   EventData *event_data;
-  CHECK((event_data = GetEventData(fd)) != nullptr);
+  ABSL_CHECK((event_data = GetEventData(fd)) != nullptr);
   DoEpollCtl(event_data, events);
 }
 
@@ -205,13 +206,13 @@ void EPoll::DeleteFd(int fd) {
   while (fns_.end() != element) {
     if (element->get()->fd == fd) {
       fns_.erase(element);
-      PCHECK(epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, nullptr) == 0)
+      ABSL_PCHECK(epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, nullptr) == 0)
           << "Failed to delete fd " << fd;
       return;
     }
     ++element;
   }
-  LOG(FATAL) << "fd " << fd << " not found";
+  ABSL_LOG(FATAL) << "fd " << fd << " not found";
 }
 
 namespace {
@@ -240,34 +241,35 @@ bool IsSocket(int fd) {
 
 void EPoll::InOutEventData::DoCallbacks(uint32_t events) {
   if (events & kInEvents) {
-    CHECK(in_fn) << ": No handler registered for input events on descriptor "
-                 << fd << ". Received events = 0x" << std::hex << events
-                 << std::dec;
+    ABSL_CHECK(in_fn)
+        << ": No handler registered for input events on descriptor " << fd
+        << ". Received events = 0x" << std::hex << events << std::dec;
     in_fn();
   }
   if (events & kOutEvents) {
-    CHECK(out_fn) << ": No handler registered for output events on descriptor "
-                  << fd << ". Received events = 0x" << std::hex << events
-                  << std::dec;
+    ABSL_CHECK(out_fn)
+        << ": No handler registered for output events on descriptor " << fd
+        << ". Received events = 0x" << std::hex << events << std::dec;
     out_fn();
   }
   if (events & kErrorEvents) {
-    CHECK(err_fn) << ": No handler registered for error events on descriptor "
-                  << fd << ". Received events = 0x" << std::hex << events
-                  << std::dec << ". " << GetSocketErrorStr(fd);
+    ABSL_CHECK(err_fn)
+        << ": No handler registered for error events on descriptor " << fd
+        << ". Received events = 0x" << std::hex << events << std::dec << ". "
+        << GetSocketErrorStr(fd);
     err_fn();
   }
 }
 
 void EPoll::EnableEvents(int fd, uint32_t events) {
   EventData *const event_data = GetEventData(fd);
-  CHECK(event_data != nullptr);
+  ABSL_CHECK(event_data != nullptr);
   DoEpollCtl(event_data, event_data->events | events);
 }
 
 void EPoll::DisableEvents(int fd, uint32_t events) {
   EventData *const event_data = GetEventData(fd);
-  CHECK(event_data != nullptr);
+  ABSL_CHECK(event_data != nullptr);
   DoEpollCtl(event_data, event_data->events & ~events);
 }
 
@@ -292,7 +294,8 @@ void EPoll::DoEpollCtl(EventData *event_data, const uint32_t new_events) {
   event_data->events = new_events;
   if (new_events == 0) {
     // It was added, but should now be removed.
-    PCHECK(epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, event_data->fd, nullptr) == 0);
+    ABSL_PCHECK(epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, event_data->fd, nullptr) ==
+                0);
     return;
   }
 
@@ -304,7 +307,7 @@ void EPoll::DoEpollCtl(EventData *event_data, const uint32_t new_events) {
   struct epoll_event event;
   event.events = event_data->events;
   event.data.ptr = event_data;
-  PCHECK(epoll_ctl(epoll_fd_, operation, event_data->fd, &event) == 0)
+  ABSL_PCHECK(epoll_ctl(epoll_fd_, operation, event_data->fd, &event) == 0)
       << ": Failed to " << operation << " epoll fd: " << event_data->fd;
 }
 

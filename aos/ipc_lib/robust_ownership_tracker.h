@@ -13,8 +13,8 @@
 #include <ostream>
 #include <string>
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/ipc_lib/aos_sync.h"
 #include "aos/util/top.h"
@@ -106,13 +106,13 @@ class RobustOwnershipTracker {
     }
     const uint64_t proc_start_time_ticks = ReadStartTimeTicks(loaded.tid());
     if (proc_start_time_ticks == kNoStartTimeTicks) {
-      LOG(ERROR) << "Detected that PID " << loaded.tid() << " died.";
+      ABSL_LOG(ERROR) << "Detected that PID " << loaded.tid() << " died.";
       return true;
     }
 
     if (proc_start_time_ticks != start_time_ticks_) {
-      LOG(ERROR) << "Detected that PID " << loaded.tid()
-                 << " died from a starttime missmatch.";
+      ABSL_LOG(ERROR) << "Detected that PID " << loaded.tid()
+                      << " died from a starttime missmatch.";
       return true;
     }
     return false;
@@ -146,7 +146,7 @@ class RobustOwnershipTracker {
     pid_t tid = syscall(SYS_gettid);
     assert(tid > 0);
     const uint64_t proc_start_time_ticks = ReadStartTimeTicks(tid);
-    CHECK_NE(proc_start_time_ticks, kNoStartTimeTicks);
+    ABSL_CHECK_NE(proc_start_time_ticks, kNoStartTimeTicks);
 
     start_time_ticks_ = proc_start_time_ticks;
     death_notification_init(&mutex_);

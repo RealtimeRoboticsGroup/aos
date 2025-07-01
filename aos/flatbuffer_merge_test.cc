@@ -2,6 +2,7 @@
 
 #include <string_view>
 
+#include "absl/log/absl_log.h"
 #include "absl/strings/escaping.h"
 #include "flatbuffers/minireflect.h"
 #include "gtest/gtest.h"
@@ -43,8 +44,8 @@ class FlatbufferMerge : public ::testing::Test {
 
   void JsonMerge(const ::std::string in1, const ::std::string in2,
                  const ::std::string out) {
-    LOG(INFO) << "Merging: " << in1.c_str();
-    LOG(INFO) << "Merging: " << in2.c_str();
+    ABSL_LOG(INFO) << "Merging: " << in1.c_str();
+    ABSL_LOG(INFO) << "Merging: " << in2.c_str();
     const FlatbufferDetachedBuffer<Configuration> fb1 = JsonToFlatbuffer(
         static_cast<const char *>(in1.c_str()), ConfigurationTypeTable());
 
@@ -238,10 +239,10 @@ class FlatbufferMerge : public ::testing::Test {
       flatbuffers::FlatBufferBuilder aos_flatbuffer_copy_fbb;
       aos_flatbuffer_copy_fbb.ForceDefaults(true);
 
-      LOG(INFO) << "Copying " << in1 << " "
-                << absl::BytesToHexString(FromFbb(fb1)) << " at "
-                << reinterpret_cast<const void *>(fb1.span().data()) << " size "
-                << fb1.span().size();
+      ABSL_LOG(INFO) << "Copying " << in1 << " "
+                     << absl::BytesToHexString(FromFbb(fb1)) << " at "
+                     << reinterpret_cast<const void *>(fb1.span().data())
+                     << " size " << fb1.span().size();
       aos_flatbuffer_copy_fbb.Finish(CopyFlatBuffer<Configuration>(
           &fb1.message(), &aos_flatbuffer_copy_fbb));
 
@@ -260,10 +261,10 @@ class FlatbufferMerge : public ::testing::Test {
       flatbuffers::FlatBufferBuilder aos_flatbuffer_copy_fbb;
       aos_flatbuffer_copy_fbb.ForceDefaults(false);
 
-      LOG(INFO) << "Copying without defaults " << in1 << " "
-                << absl::BytesToHexString(FromFbb(fb1)) << " at "
-                << reinterpret_cast<const void *>(fb1.span().data()) << " size "
-                << fb1.span().size();
+      ABSL_LOG(INFO) << "Copying without defaults " << in1 << " "
+                     << absl::BytesToHexString(FromFbb(fb1)) << " at "
+                     << reinterpret_cast<const void *>(fb1.span().data())
+                     << " size " << fb1.span().size();
       aos_flatbuffer_copy_fbb.Finish(CopyFlatBuffer<Configuration>(
           &fb1.message(), &aos_flatbuffer_copy_fbb));
 
@@ -302,9 +303,9 @@ class FlatbufferMerge : public ::testing::Test {
 
       EXPECT_TRUE(fb2.Verify());
 
-      LOG(INFO) << "Verifying copy of " << in2;
+      ABSL_LOG(INFO) << "Verifying copy of " << in2;
       ASSERT_TRUE(fb_copy_message_ptr.Verify()) << in2;
-      LOG(INFO) << "Verifying full of " << in2;
+      ABSL_LOG(INFO) << "Verifying full of " << in2;
       ASSERT_TRUE(fb_copy_full.Verify()) << in2;
 
       EXPECT_EQ(in2, FlatbufferToJson(fb_copy_message_ptr));
@@ -485,14 +486,15 @@ TEST(FlatbufferCopy, WholesaleCopy) {
     fbb_expected.Finish(configuration_builder.Finish());
   }
 
-  LOG(INFO) << "Initial alignment " << fbb_expected.GetBufferMinAlignment();
+  ABSL_LOG(INFO) << "Initial alignment "
+                 << fbb_expected.GetBufferMinAlignment();
 
   aos::FlatbufferDetachedBuffer<Configuration> expected(fbb_expected.Release());
 
-  LOG(INFO) << "Expected "
-            << absl::BytesToHexString(std::string_view(
-                   reinterpret_cast<char *>(expected.span().data()),
-                   expected.span().size()));
+  ABSL_LOG(INFO) << "Expected "
+                 << absl::BytesToHexString(std::string_view(
+                        reinterpret_cast<char *>(expected.span().data()),
+                        expected.span().size()));
 
   aos::FlatbufferDetachedBuffer<Application> a1 = []() {
     flatbuffers::FlatBufferBuilder fbb;
@@ -533,10 +535,10 @@ TEST(FlatbufferCopy, WholesaleCopy) {
     return fbb.Release();
   }();
 
-  LOG(INFO) << "Got      "
-            << absl::BytesToHexString(
-                   std::string_view(reinterpret_cast<char *>(c1.span().data()),
-                                    c1.span().size()));
+  ABSL_LOG(INFO) << "Got      "
+                 << absl::BytesToHexString(std::string_view(
+                        reinterpret_cast<char *>(c1.span().data()),
+                        c1.span().size()));
 
   aos::FlatbufferDetachedBuffer<Configuration> c2 = [&a1, &a2]() {
     flatbuffers::FlatBufferBuilder fbb;
@@ -556,18 +558,18 @@ TEST(FlatbufferCopy, WholesaleCopy) {
     return fbb.Release();
   }();
 
-  LOG(INFO) << "Got      "
-            << absl::BytesToHexString(
-                   std::string_view(reinterpret_cast<char *>(c2.span().data()),
-                                    c2.span().size()));
+  ABSL_LOG(INFO) << "Got      "
+                 << absl::BytesToHexString(std::string_view(
+                        reinterpret_cast<char *>(c2.span().data()),
+                        c2.span().size()));
 
   ASSERT_TRUE(expected.Verify());
   ASSERT_TRUE(c1.Verify());
   ASSERT_TRUE(c2.Verify());
 
-  LOG(INFO) << FlatbufferToJson(expected);
-  LOG(INFO) << FlatbufferToJson(c1);
-  LOG(INFO) << FlatbufferToJson(c2);
+  ABSL_LOG(INFO) << FlatbufferToJson(expected);
+  ABSL_LOG(INFO) << FlatbufferToJson(c1);
+  ABSL_LOG(INFO) << FlatbufferToJson(c2);
   EXPECT_EQ(FlatbufferToJson(expected), FlatbufferToJson(c1));
   EXPECT_EQ(FlatbufferToJson(expected), FlatbufferToJson(c2));
 }

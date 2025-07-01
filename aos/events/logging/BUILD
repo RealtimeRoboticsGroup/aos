@@ -60,6 +60,8 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//aos/time",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
     ],
 )
 
@@ -458,6 +460,7 @@ cc_library(
     hdrs = [
         "log_namer.h",
     ],
+    visibility = ["//visibility:public"],
     deps = [
         ":logfile_utils",
         ":logger_fbs",
@@ -515,10 +518,10 @@ cc_library(
         "//aos/mutex",
         "//aos/network:message_bridge_server_fbs",
         "//aos/network:multinode_timestamp_filter",
+        "//aos/network:noncausal_timestamp_filter",
         "//aos/network:remote_message_fbs",
         "//aos/network:remote_message_schema",
         "//aos/network:team_number",
-        "//aos/network:timestamp_filter",
         "//aos/time",
         "//aos/util:file",
         "//aos/util:threaded_queue",
@@ -544,10 +547,10 @@ cc_library(
         "//aos/events:event_loop",
         "//aos/network:message_bridge_server_fbs",
         "//aos/network:multinode_timestamp_filter",
+        "//aos/network:noncausal_timestamp_filter",
         "//aos/network:remote_message_fbs",
         "//aos/network:remote_message_schema",
         "//aos/network:team_number",
-        "//aos/network:timestamp_filter",
         "@com_github_google_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/strings",
     ],

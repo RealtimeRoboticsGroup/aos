@@ -48,16 +48,30 @@ py_library(
     ],
 )
 
-cc_binary(
-    name = "log_to_mcap",
-    srcs = ["log_to_mcap.cc"],
-    deps = [
+cc_library(
+    name = "log_to_mcap_lib",
+    srcs = ["log_to_mcap_lib.cc"],
+    hdrs = ["log_to_mcap_lib.h"],
+    implementation_deps = [
         ":clock_publisher",
         ":clock_timepoints_schema",
         ":mcap_logger",
         "//aos:configuration",
-        "//aos:init",
+        "@com_google_absl//absl/flags:flag",
+    ],
+    deps = [
+        "//aos:configuration_fbs",
         "//aos/events/logging:log_reader",
+    ],
+)
+
+cc_binary(
+    name = "log_to_mcap",
+    srcs = ["log_to_mcap.cc"],
+    deps = [
+        ":log_to_mcap_lib",
+        "//aos:init",
+        "@com_google_absl//absl/log:check",
     ],
 )
 
@@ -67,8 +81,7 @@ cc_library(
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@com_github_google_flatbuffers//:flatbuffers",
-        "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -115,6 +128,17 @@ cc_static_flatbuffer(
     name = "log_conversion_metadata_schema",
     function = "aos::LogConversionMetadataSchema",
     target = ":log_conversion_metadata_fbs_reflection_out",
+)
+
+static_flatbuffer(
+    name = "live_metadata_fbs",
+    srcs = ["live_metadata.fbs"],
+)
+
+cc_static_flatbuffer(
+    name = "live_metadata_schema",
+    function = "aos::LiveMetadataSchema",
+    target = ":live_metadata_fbs_reflection_out",
 )
 
 cc_library(
@@ -221,8 +245,7 @@ cc_library(
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos/time",
-        "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -389,8 +412,8 @@ cc_library(
         "//aos:sanitizers",
         "//aos/scoped:scoped_fd",
         "@com_github_google_flatbuffers//:flatbuffers",
-        "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:span",
     ],
@@ -441,8 +464,7 @@ cc_library(
         ":process_info_fbs",
         "//aos/containers:ring_buffer",
         "//aos/events:event_loop",
-        "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/strings",
     ],
 )
@@ -551,9 +573,16 @@ cc_library(
     srcs = ["foxglove_websocket_lib.cc"],
     hdrs = ["foxglove_websocket_lib.h"],
     deps = [
+        ":live_metadata_fbs",
+        ":live_metadata_schema",
         ":mcap_logger",
+        "//aos:configuration_fbs",
+        "//aos:configuration_schema",
         "//aos/events:event_loop",
         "@com_github_foxglove_ws-protocol",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:die_if_null",
+        "@com_google_absl//absl/strings",
     ],
 )
 
@@ -673,7 +702,7 @@ cc_library(
     deps = [
         "//aos/containers:inlined_vector",
         "@com_github_tartanllama_expected",
-        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/strings:str_format",
     ],
 )

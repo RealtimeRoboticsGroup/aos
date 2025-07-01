@@ -808,7 +808,9 @@ class String : public Vector<char, kStaticLength, true, 0, true> {
   void SetString(std::string_view string) {
     CHECK_LE(string.size(), VectorType::capacity());
     VectorType::resize_inline(string.size(), SetZero::kNo);
-    memcpy(VectorType::data(), string.data(), string.size());
+    if (string.size() > 0) {
+      memcpy(VectorType::data(), string.data(), string.size());
+    }
   }
   using VectorType::FromFlatbuffer;
   [[nodiscard]] bool FromFlatbuffer(const std::string &string) {

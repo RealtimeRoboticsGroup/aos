@@ -6,6 +6,9 @@
 
 #include <unordered_set>
 
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
+
 #include "aos/events/shm_event_loop.h"
 
 namespace aos {
@@ -26,7 +29,7 @@ class GlibSourceCallback {
     static TResult Invoke(TArgs... args, gpointer user_data) {
       GlibSourceCallback *const pointer =
           reinterpret_cast<GlibSourceCallback *>(user_data);
-      CHECK(g_main_context_is_owner(pointer->g_main_context_))
+      ABSL_CHECK(g_main_context_is_owner(pointer->g_main_context_))
           << ": Callback being called from the wrong thread";
       return pointer->function_(args...);
     }
@@ -165,7 +168,7 @@ class GlibMainLoop {
   void AddChild() { ++children_; }
 
   void RemoveChild() {
-    CHECK_GT(children_, 0);
+    ABSL_CHECK_GT(children_, 0);
     --children_;
   }
 
@@ -202,17 +205,17 @@ inline GlibSourceCallback<T>::GlibSourceCallback(Function function,
                                                  GMainContext *g_main_context)
     : function_(function), source_(source), g_main_context_(g_main_context) {
   g_source_set_callback(source_, g_source_func(), user_data(), nullptr);
-  CHECK_GT(g_source_attach(source_, g_main_context_), 0u);
-  VLOG(1) << "Attached source " << source_ << " to " << g_main_context_;
+  ABSL_CHECK_GT(g_source_attach(source_, g_main_context_), 0u);
+  ABSL_VLOG(1) << "Attached source " << source_ << " to " << g_main_context_;
 }
 
 template <typename T>
 inline GlibSourceCallback<T>::~GlibSourceCallback() {
-  CHECK(g_main_context_is_owner(g_main_context_))
+  ABSL_CHECK(g_main_context_is_owner(g_main_context_))
       << ": May only be destroyed from the main thread";
 
   g_source_destroy(source_);
-  VLOG(1) << "Destroyed source " << source_;
+  ABSL_VLOG(1) << "Destroyed source " << source_;
   // Now, the callback won't be called any more (because this source is no
   // longer attached to a context), even if refcounts remain that hold the
   // source itself alive. That's not safe in a multithreaded context, but we
@@ -247,37 +250,38 @@ GlibSignalCallback<Args...>::GlibSignalCallback(
       signal_handler_id_(g_signal_connect(
           instance, detailed_signal,
           G_CALLBACK(&GlibSignalCallback::InvokeSignal), user_data())) {
-  CHECK_GT(signal_handler_id_, 0u);
-  VLOG(1) << this << " connected glib signal with " << user_data() << " as "
-          << signal_handler_id_ << " on " << instance << ": "
-          << detailed_signal;
+  ABSL_CHECK_GT(signal_handler_id_, 0u);
+  ABSL_VLOG(1) << this << " connected glib signal with " << user_data()
+               << " as " << signal_handler_id_ << " on " << instance << ": "
+               << detailed_signal;
   glib_main_loop_->AddChild();
 }
 
 template <typename... Args>
 GlibSignalCallback<Args...>::~GlibSignalCallback() {
   g_signal_handler_disconnect(instance_, signal_handler_id_);
-  VLOG(1) << this << " disconnected glib signal on " << instance_ << ": "
-          << signal_handler_id_;
+  ABSL_VLOG(1) << this << " disconnected glib signal on " << instance_ << ": "
+               << signal_handler_id_;
   glib_main_loop_->RemoveChild();
 }
 
 template <typename... Args>
 void GlibSignalCallback<Args...>::InvokeSignal(Args... args,
                                                gpointer user_data) {
-  CHECK(user_data != nullptr) << ": invalid glib signal callback";
+  ABSL_CHECK(user_data != nullptr) << ": invalid glib signal callback";
   GlibSignalCallback *const pointer =
       reinterpret_cast<GlibSignalCallback *>(user_data);
-  VLOG(1) << "Adding invocation of signal " << pointer;
+  ABSL_CHECK(pointer != nullptr);
+  ABSL_VLOG(1) << "Adding invocation of signal " << pointer;
   std::unique_lock<aos::stl_mutex> locker(pointer->lock_);
-  CHECK_EQ(!!pointer->idle_callback_, !pointer->invocations_.empty());
+  ABSL_CHECK_EQ(!!pointer->idle_callback_, !pointer->invocations_.empty());
   if (!pointer->idle_callback_) {
     // If we don't already have a callback set, then schedule a new one.
     pointer->idle_callback_.emplace(
         [pointer]() {
           std::unique_lock<aos::stl_mutex> locker(pointer->lock_);
           for (const auto &args : pointer->invocations_) {
-            VLOG(1) << "Calling signal handler for " << pointer;
+            ABSL_VLOG(1) << "Calling signal handler for " << pointer;
             std::apply(pointer->function_, args);
           }
           pointer->invocations_.clear();

@@ -2,6 +2,8 @@
 #include <iostream>
 #include <sstream>
 
+#include "absl/log/absl_check.h"
+
 #include "aos/json_to_flatbuffer.h"
 #include "aos/util/string_formatting.h"
 
@@ -437,8 +439,8 @@ std::string FlatbufferToJson(const reflection::Schema *schema,
 void FlatbufferToJson(FastStringBuilder *builder,
                       const reflection::Schema *schema, const uint8_t *data,
                       JsonOptions json_options) {
-  CHECK(schema != nullptr) << ": Need to provide a schema";
-  CHECK(builder != nullptr) << ": Need to provide an output builder";
+  ABSL_CHECK(schema != nullptr) << ": Need to provide a schema";
+  ABSL_CHECK(builder != nullptr) << ": Need to provide an output builder";
 
   // It is pretty common to get passed in a nullptr when a test fails.  Rather
   // than CHECK, return a more user friendly result.

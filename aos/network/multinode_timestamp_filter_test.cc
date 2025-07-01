@@ -7,8 +7,8 @@
 #include "aos/configuration.h"
 #include "aos/json_to_flatbuffer.h"
 #include "aos/macros.h"
+#include "aos/network/noncausal_timestamp_filter.h"
 #include "aos/network/testing_time_converter.h"
-#include "aos/network/timestamp_filter.h"
 
 namespace aos::message_bridge::testing {
 

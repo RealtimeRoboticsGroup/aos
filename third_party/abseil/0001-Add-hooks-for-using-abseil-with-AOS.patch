@@ -1,3 +1,21 @@
+From df5d29bd7a0aaecf80383c22ae2debb92e384adc Mon Sep 17 00:00:00 2001
+From: Philipp Schrader <philipp.schrader@bluerivertech.com>
+Date: Tue, 25 Mar 2025 06:44:36 -0700
+Subject: [PATCH] Add hooks for using abseil with AOS
+
+---
+ absl/base/attributes.h                 |  2 +-
+ absl/copts/GENERATED_AbseilCopts.cmake | 30 ++++++++++++++++++++++++--
+ absl/copts/GENERATED_copts.bzl         | 30 ++++++++++++++++++++++++--
+ absl/copts/configure_copts.bzl         |  9 ++------
+ absl/copts/copts.py                    | 15 ++++++++++++-
+ absl/log/internal/check_op.cc          | 12 +++++++++++
+ absl/log/internal/log_message.cc       | 22 ++++++++++++++++---
+ absl/random/internal/BUILD.bazel       |  1 +
+ absl/strings/BUILD.bazel               |  1 +
+ absl/time/internal/cctz/BUILD.bazel    |  9 ++++++++
+ 10 files changed, 115 insertions(+), 16 deletions(-)
+
 diff --git a/absl/base/attributes.h b/absl/base/attributes.h
 index d4f67a12..e10f3957 100644
 --- a/absl/base/attributes.h

@@ -5,8 +5,10 @@ package(default_applicable_licenses = [":license"])
 
 license(
     name = "license",
+    package_name = "AWS SDK for C++",
     license_kinds = ["@rules_license//licenses/spdx:Apache-2.0"],
     license_text = "LICENSE.txt",
+    package_version = "1.11.321",
 )
 
 common_copts = [

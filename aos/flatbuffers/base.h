@@ -12,8 +12,7 @@
 #include <utility>
 #include <vector>
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 #include "flatbuffers/base.h"
 
@@ -200,10 +199,11 @@ class Allocator {
                                                          SetZero set_zero) {
     std::optional<std::span<uint8_t>> span =
         Allocate(size, alignment, set_zero);
-    CHECK(span.has_value()) << ": Failed to allocate " << size << " bytes.";
-    CHECK_EQ(size, span.value().size())
+    ABSL_CHECK(span.has_value())
         << ": Failed to allocate " << size << " bytes.";
-    CHECK_EQ(reinterpret_cast<size_t>(span.value().data()) % alignment, 0u)
+    ABSL_CHECK_EQ(size, span.value().size())
+        << ": Failed to allocate " << size << " bytes.";
+    ABSL_CHECK_EQ(reinterpret_cast<size_t>(span.value().data()) % alignment, 0u)
         << "Failed to allocate data of length " << size << " with alignment "
         << alignment;
 
@@ -243,7 +243,7 @@ class SpanAllocator : public Allocator {
  public:
   SpanAllocator(std::span<uint8_t> buffer) : buffer_(buffer) {}
   ~SpanAllocator() {
-    CHECK(!allocated_)
+    ABSL_CHECK(!allocated_)
         << ": Must deallocate before destroying the SpanAllocator.";
   }
 
@@ -339,7 +339,7 @@ template <typename T>
 inline std::span<T> GetSubSpan(std::span<T> span, size_t offset,
                                size_t count = std::dynamic_extent) {
   if (count != std::dynamic_extent) {
-    CHECK_LE(offset + count, span.size());
+    ABSL_CHECK_LE(offset + count, span.size());
   }
   return span.subspan(offset, count);
 }

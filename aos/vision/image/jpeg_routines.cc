@@ -18,7 +18,7 @@ void decompress_add_huff_table(j_decompress_ptr cinfo, JHUFF_TBL **htblptr,
 
 void standard_huff_tables(j_decompress_ptr cinfo);
 
-// Error handling form libjpeg
+// Error handling from libjpeg
 struct JpegErrorManager {
   /// "public" fields
   struct jpeg_error_mgr pub;
@@ -28,7 +28,7 @@ struct JpegErrorManager {
 
 char JpegLastErrorMsg[JMSG_LENGTH_MAX];
 
-// TODO(parker): Error handling needs to be investigated bettter.
+// TODO(parker): Error handling needs to be investigated better.
 void JpegErrorExit(j_common_ptr cinfo) {
   JpegErrorManager myerr;
   // cinfo->err actually points to a JpegErrorManager struct
@@ -235,7 +235,7 @@ bool ProcessJpeg(DataRef data, PixelRef *out) {
   jpeg_destroy_decompress(&cinfo);
 
   if (lost_camera_connect) {
-    printf("Camera connection restablished.\n");
+    printf("Camera connection reestablished.\n");
     fflush(stdout);
     lost_camera_connect = false;
   }

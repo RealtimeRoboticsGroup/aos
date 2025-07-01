@@ -192,7 +192,7 @@ ConfigRemapper::ConfigRemapper(const Configuration *config,
           // channel from.  It is more efficient to compare nodes than channels.
           LOG(WARNING) << "Failed to find channel "
                        << finder.SplitChannelName(channel, connection)
-                       << " on node " << FlatbufferToJson(node);
+                       << " on node " << FlatbufferToJson(node) << ".";
           remote_nodes.insert(connection->name()->string_view());
         }
       }
@@ -285,9 +285,7 @@ std::vector<const Channel *> ConfigRemapper::RemappedChannels() const {
   return result;
 }
 
-const Channel *ConfigRemapper::RemapChannel(const EventLoop *event_loop,
-                                            const Node *node,
-                                            const Channel *channel) {
+const Channel *ConfigRemapper::RemapChannel(const Channel *channel) {
   std::string_view channel_name = channel->name()->string_view();
   std::string_view channel_type = channel->type()->string_view();
   const int channel_index =
@@ -300,9 +298,8 @@ const Channel *ConfigRemapper::RemapChannel(const EventLoop *event_loop,
   }
 
   VLOG(2) << "Going to remap channel " << channel_name << " " << channel_type;
-  const Channel *remapped_channel = configuration::GetChannel(
-      remapped_configuration(), channel_name, channel_type,
-      event_loop ? event_loop->name() : "log_reader", node);
+  const Channel *remapped_channel = configuration::GetFullySpecifiedChannel(
+      remapped_configuration(), channel_name, channel_type);
 
   CHECK(remapped_channel != nullptr)
       << ": Unable to send {\"name\": \"" << channel_name << "\", \"type\": \""
@@ -475,9 +472,11 @@ void ConfigRemapper::MakeRemappedConfig() {
 
   // Reconstruct the remapped channels.
   for (auto &pair : remapped_channels_) {
-    const Channel *const c = configuration::GetChannel(
-        base_config, original_configuration()->channels()->Get(pair.first), "",
-        nullptr);
+    const Channel *const original_channel =
+        original_configuration()->channels()->Get(pair.first);
+    const Channel *const c = configuration::GetFullySpecifiedChannel(
+        base_config, original_channel->name()->string_view(),
+        original_channel->type()->string_view());
     CHECK(c != nullptr);
     channel_offsets.emplace_back(
         CopyChannel(c, pair.second.remapped_name, "", &fbb));

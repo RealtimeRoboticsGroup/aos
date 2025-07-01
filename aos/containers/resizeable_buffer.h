@@ -8,8 +8,7 @@
 #include <cstdlib>
 #include <memory>
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
 
 namespace aos {
 
@@ -75,7 +74,7 @@ class AllocatorResizeableBuffer {
     if (count == 0) {
       return;
     }
-    CHECK_LE(count, size_);
+    ABSL_CHECK_LE(count, size_);
     memmove(static_cast<void *>(data()), static_cast<void *>(data() + count),
             size_ - count);
     size_ -= count;
@@ -87,7 +86,7 @@ class AllocatorResizeableBuffer {
     }
     *end() = x;
     ++size_;
-    CHECK_LE(size_, capacity_);
+    ABSL_CHECK_LE(size_, capacity_);
   }
 
  private:
@@ -110,7 +109,7 @@ class AllocatorResizeableBuffer {
   void Allocate(size_t new_capacity) {
     void *const old = storage_.release();
     void *new_ptr = F::Realloc(old, capacity_, new_capacity);
-    CHECK(new_ptr != nullptr);
+    ABSL_CHECK(new_ptr != nullptr);
     storage_.reset(new_ptr);
     capacity_ = new_capacity;
   }

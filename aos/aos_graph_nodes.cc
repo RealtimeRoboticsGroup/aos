@@ -3,6 +3,8 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/usage.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/configuration.h"
 #include "aos/events/shm_event_loop.h"
@@ -40,7 +42,7 @@ int main(int argc, char **argv) {
   std::map<std::string, std::string> color_map;
 
   if (argc > 1) {
-    LOG(ERROR) << "ERROR: Got unexpected arguments";
+    ABSL_LOG(ERROR) << "ERROR: Got unexpected arguments";
     return -1;
   }
 
@@ -57,7 +59,7 @@ int main(int argc, char **argv) {
   graph_out << "digraph g {" << std::endl;
 
   for (const aos::Channel *channel : *config_msg->channels()) {
-    VLOG(1) << "Found channel " << channel->type()->string_view();
+    ABSL_VLOG(1) << "Found channel " << channel->type()->string_view();
     if (absl::GetFlag(FLAGS_all) || aos::configuration::ChannelIsReadableOnNode(
                                         channel, event_loop.node())) {
       flatbuffers::string_view type_name = channel->type()->string_view();
@@ -67,14 +69,14 @@ int main(int argc, char **argv) {
             channel->type()->string_view().rfind(".") + 1, std::string::npos);
       }
 
-      VLOG(1) << "Found: " << channel->name()->string_view() << ' '
-              << channel->type()->string_view();
+      ABSL_VLOG(1) << "Found: " << channel->name()->string_view() << ' '
+                   << channel->type()->string_view();
 
-      CHECK(channel->has_source_node())
+      ABSL_CHECK(channel->has_source_node())
           << ": Could not find source node for channel "
           << channel->type()->string_view();
       std::string source_node_name = channel->source_node()->c_str();
-      VLOG(1) << "Source node name:" << channel->source_node()->c_str();
+      ABSL_VLOG(1) << "Source node name:" << channel->source_node()->c_str();
 
       // If we haven't seen this node yet, add to our list, with new color
       if (color_map.count(source_node_name) == 0) {
@@ -85,7 +87,8 @@ int main(int argc, char **argv) {
       if (channel->has_destination_nodes()) {
         for (const aos::Connection *connection :
              *channel->destination_nodes()) {
-          VLOG(1) << "Destination Node: " << connection->name()->string_view();
+          ABSL_VLOG(1) << "Destination Node: "
+                       << connection->name()->string_view();
           graph_out << "\t\"" << source_node_name << "\" -> \""
                     << connection->name()->c_str() << "\" [label=\""
                     << channel->name()->c_str() << "\\n"

@@ -2,6 +2,7 @@
 
 #include <string_view>
 
+#include "absl/log/absl_check.h"
 #include "flatbuffers/flatbuffers.h"
 
 #include "aos/configuration.h"
@@ -15,7 +16,7 @@ aos::FlatbufferDetachedBuffer<aos::message_bridge::Connect> MakeConnectMessage(
     const Configuration *config, const Node *my_node,
     std::string_view remote_name, const UUID &boot_uuid,
     std::string_view config_sha256) {
-  CHECK(config->has_nodes()) << ": Config must have nodes to transfer.";
+  ABSL_CHECK(config->has_nodes()) << ": Config must have nodes to transfer.";
 
   flatbuffers::FlatBufferBuilder fbb;
   fbb.ForceDefaults(true);

@@ -21,6 +21,8 @@ cc_library(
         "//aos:realtime",
         "//aos/logging",
         "//third_party:wpilib_hal",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/types:span",
     ],
 )

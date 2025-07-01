@@ -385,6 +385,8 @@ cc_library(
     deps = [
         "//aos:macros",
         "//frc/zeroing:wrap",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
         "@org_tuxfamily_eigen//:eigen",
     ] + select({
         "@platforms//os:linux": ["//aos/logging"],

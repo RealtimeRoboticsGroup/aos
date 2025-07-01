@@ -778,7 +778,7 @@ class SplitTimestampBootMerger {
   // array index.
   // Returns an error if there were any issues while attempting to read the
   // logfile.
-  [[nodiscard]] Result<void> QueueTimestamps(
+  [[nodiscard]] Status QueueTimestamps(
       std::function<void(TimestampedMessage *)> fn,
       const std::vector<size_t> &source_node);
 
@@ -888,7 +888,7 @@ class TimestampMapper {
   [[nodiscard]] Result<TimestampedMessage *> Front();
   // Pops the next message.  Front must be called first.
   // Returns
-  [[nodiscard]] Result<void> PopFront();
+  [[nodiscard]] Status PopFront();
 
   // Returns debug information about this node.
   std::string DebugString() const;
@@ -896,24 +896,24 @@ class TimestampMapper {
   // Queues just the timestamps so that the timestamp callback gets called.
   // Note, the timestamp callback will get called when they get returned too, so
   // make sure to unset it if you don't want to be called twice.
-  [[nodiscard]] Result<void> QueueTimestamps();
+  [[nodiscard]] Status QueueTimestamps();
 
   // Queues data the provided time.
-  [[nodiscard]] Result<void> QueueUntil(BootTimestamp queue_time);
+  [[nodiscard]] Status QueueUntil(BootTimestamp queue_time);
   // Queues until we have time_estimation_buffer of data in the queue.
-  [[nodiscard]] Result<void> QueueFor(
+  [[nodiscard]] Status QueueFor(
       std::chrono::nanoseconds time_estimation_buffer);
 
   // Queues until the condition is met.
   template <typename T>
-  [[nodiscard]] Result<void> QueueUntilCondition(T fn) {
+  [[nodiscard]] Status QueueUntilCondition(T fn) {
     while (true) {
       if (fn()) {
         break;
       }
       const Result<bool> queued_message = QueueMatched();
       if (!queued_message.has_value()) {
-        return Error::MakeUnexpected(queued_message.error());
+        return MakeError(queued_message.error());
       }
       if (!queued_message.value()) {
         return Ok();
@@ -993,7 +993,7 @@ class TimestampMapper {
   // Queues up data until we have at least one message >= to time t.
   // Useful for triggering a remote node to read enough data to have the
   // timestamp you care about available.
-  [[nodiscard]] Result<void> QueueUnmatchedUntil(BootTimestamp t);
+  [[nodiscard]] Status QueueUnmatchedUntil(BootTimestamp t);
 
   // Queues m into matched_messages_.
   void QueueMessage(const Message *m);

@@ -13,8 +13,7 @@
 #include <string_view>
 #include <vector>
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 
 #include "aos/scoped/scoped_fd.h"
@@ -51,7 +50,7 @@ bool MkdirPIfSpace(std::string_view path, mode_t mode, bool sync = false);
 void SyncDirectory(const std::filesystem::path &path);
 
 inline void MkdirP(std::string_view path, mode_t mode) {
-  CHECK(MkdirPIfSpace(path, mode));
+  ABSL_CHECK(MkdirPIfSpace(path, mode));
 }
 
 bool PathExists(std::string_view path);

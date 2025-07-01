@@ -304,7 +304,7 @@ void LogReader::State::QueueThreadUntil(BootTimestamp time) {
           if (!message.has_value()) {
             return util::ThreadedQueue<Result<TimestampedMessage>,
                                        BootTimestamp>::PushResult{
-                Error::MakeUnexpected(message.error()), /*more_to_push=*/false,
+                MakeError(message.error()), /*more_to_push=*/false,
                 /*done=*/true};
           }
           // Upon reaching the end of the log, exit.
@@ -320,19 +320,19 @@ void LogReader::State::QueueThreadUntil(BootTimestamp time) {
           const util::ThreadedQueue<Result<TimestampedMessage>,
                                     BootTimestamp>::PushResult result{
               *message.value(), queue_until >= last_queued_message_, false};
-          const Result<void> pop_result = timestamp_mapper_->PopFront();
+          const Status pop_result = timestamp_mapper_->PopFront();
           if (!pop_result.has_value()) {
             return util::ThreadedQueue<Result<TimestampedMessage>,
                                        BootTimestamp>::PushResult{
-                Error::MakeUnexpected(pop_result.error()),
+                MakeError(pop_result.error()),
                 /*more_to_push=*/false,
                 /*done=*/true};
           }
-          const Result<void> seed_result = MaybeSeedSortedMessages();
+          const Status seed_result = MaybeSeedSortedMessages();
           if (!seed_result.has_value()) {
             return util::ThreadedQueue<Result<TimestampedMessage>,
                                        BootTimestamp>::PushResult{
-                Error::MakeUnexpected(pop_result.error()),
+                MakeError(pop_result.error()),
                 /*more_to_push=*/false,
                 /*done=*/true};
           }
@@ -460,7 +460,7 @@ void LogReader::RegisterWithoutStarting(
   CheckExpected(NonFatalRegisterWithoutStarting(event_loop_factory));
 }
 
-Result<void> LogReader::NonFatalRegisterWithoutStarting(
+Status LogReader::NonFatalRegisterWithoutStarting(
     SimulatedEventLoopFactory *event_loop_factory) {
   event_loop_factory_ = event_loop_factory;
   config_remapper_.set_configuration(event_loop_factory_->configuration());
@@ -582,14 +582,8 @@ Result<void> LogReader::NonFatalRegisterWithoutStarting(
   if (configuration::NodesCount(event_loop_factory_->configuration()) > 1u) {
     for (size_t i = 0; i < logged_configuration()->channels()->size(); ++i) {
       const Channel *channel = logged_configuration()->channels()->Get(i);
-      const Node *node = configuration::GetNode(
-          configuration(), channel->source_node()->string_view());
 
-      State *state =
-          states_[configuration::GetNodeIndex(configuration(), node)].get();
-
-      const Channel *remapped_channel =
-          config_remapper_.RemapChannel(state->event_loop(), node, channel);
+      const Channel *remapped_channel = config_remapper_.RemapChannel(channel);
 
       event_loop_factory_->DisableForwarding(remapped_channel);
     }
@@ -757,7 +751,7 @@ void LogReader::Register(EventLoop *event_loop) {
   }
 }
 
-Result<void> LogReader::Register(EventLoop *event_loop, const Node *node) {
+Status LogReader::Register(EventLoop *event_loop, const Node *node) {
   State *state =
       states_[configuration::GetNodeIndex(configuration(), node)].get();
 
@@ -822,7 +816,6 @@ Result<void> LogReader::RegisterDuringStartup(EventLoop *event_loop,
     }
 
     const Channel *channel = config_remapper_.RemapChannel(
-        event_loop, node,
         logged_configuration()->channels()->Get(logged_channel_index));
 
     const bool logged = channel->logger() != LoggerConfig::NOT_LOGGED;
@@ -981,9 +974,10 @@ Result<void> LogReader::RegisterDuringStartup(EventLoop *event_loop,
                 << " " << state->DebugString();
           } else if (monotonic_remote_now.boot !=
                      timestamped_message.monotonic_remote_time.boot) {
-            LOG(WARNING) << "Missmatched boots, " << monotonic_remote_now.boot
+            LOG(WARNING) << "Mismatched boots, " << monotonic_remote_now.boot
                          << " vs "
-                         << timestamped_message.monotonic_remote_time.boot;
+                         << timestamped_message.monotonic_remote_time.boot
+                         << ".";
           } else if (timestamped_message.monotonic_remote_time >
                      monotonic_remote_now) {
             LOG(WARNING)
@@ -1358,10 +1352,8 @@ std::vector<const Channel *> LogReader::RemappedChannels() const {
   return config_remapper_.RemappedChannels();
 }
 
-const Channel *LogReader::RemapChannel(const EventLoop *event_loop,
-                                       const Node *node,
-                                       const Channel *channel) {
-  return config_remapper_.RemapChannel(event_loop, node, channel);
+const Channel *LogReader::RemapChannel(const Channel *channel) {
+  return config_remapper_.RemapChannel(channel);
 }
 
 LogReader::State::State(
@@ -1856,7 +1848,7 @@ Result<TimestampedMessage> LogReader::State::PopOldest() {
     CHECK(message.has_value()) << ": Unexpectedly ran out of messages.";
     // If there is an error during message reading, propagate it up.
     if (!message.value().has_value()) {
-      return Error::MakeUnexpected(message.value().error());
+      return MakeError(message.value().error());
     }
     message_queuer_->SetState(
         message.value().value().monotonic_event_time +
@@ -1901,7 +1893,7 @@ Result<BootTimestamp> LogReader::State::MultiThreadedOldestMessageTime() {
     return BootTimestamp::max_time();
   }
   if (!message.value().has_value()) {
-    return Error::MakeUnexpected(message.value().error());
+    return MakeError(message.value().error());
   }
   if (message.value().value().monotonic_event_time.boot == boot_count()) {
     ObserveNextMessage(message.value().value().monotonic_event_time.time,

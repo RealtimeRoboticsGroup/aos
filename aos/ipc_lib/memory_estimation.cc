@@ -2,6 +2,9 @@
 
 #include <map>
 
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
+
 #include "aos/ipc_lib/memory_mapped_queue.h"
 namespace aos::ipc_lib {
 size_t TotalSharedMemoryUsage(const aos::Configuration *config,
@@ -9,7 +12,7 @@ size_t TotalSharedMemoryUsage(const aos::Configuration *config,
   size_t total_size = 0;
   const flatbuffers::Vector<flatbuffers::Offset<aos::Channel>> *channels =
       config->channels();
-  CHECK(channels != nullptr);
+  ABSL_CHECK(channels != nullptr);
   // Stores all channels by size, for sorted displays.
   // Indexed by channel memory usage, with elements that are a displayable name
   // of the channel.
@@ -18,7 +21,7 @@ size_t TotalSharedMemoryUsage(const aos::Configuration *config,
     if (aos::configuration::ChannelIsReadableOnNode(channel, node)) {
       total_size +=
           LocklessQueueMemorySize(MakeQueueConfiguration(config, channel));
-      if (VLOG_IS_ON(1)) {
+      if (ABSL_VLOG_IS_ON(1)) {
         channel_sizes.emplace(
             LocklessQueueMemorySize(MakeQueueConfiguration(config, channel)),
             configuration::CleanedChannelToString(channel));
@@ -26,9 +29,10 @@ size_t TotalSharedMemoryUsage(const aos::Configuration *config,
     }
   }
 
-  if (VLOG_IS_ON(1)) {
+  if (ABSL_VLOG_IS_ON(1)) {
     for (const auto &pair : channel_sizes) {
-      LOG(INFO) << "Channel size (bytes): " << pair.first << " " << pair.second;
+      ABSL_LOG(INFO) << "Channel size (bytes): " << pair.first << " "
+                     << pair.second;
     }
   }
   return total_size;

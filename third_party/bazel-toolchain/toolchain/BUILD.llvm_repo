@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_license//rules:license.bzl", "license")
+
 package(default_visibility = ["//visibility:public"])
 
 # Some targets may need to directly depend on these files.
@@ -19,6 +21,17 @@ exports_files(glob([
     "bin/*",
     "lib/*",
 ]))
+
+# License declarations.
+license(
+    name = "libunwind_license",
+    package_name = "libunwind",
+    license_text = "@aos//third_party/licenses:libunwind/LICENSE.txt",
+    license_kinds = [
+        # https://github.com/libunwind/libunwind/blob/master/LICENSE
+        "@rules_license//licenses/spdx:MIT",
+    ],
+)
 
 ## LLVM toolchain files
 
@@ -128,4 +141,16 @@ filegroup(
 filegroup(
     name = "libclang",
     srcs = ["lib/libclang.so"],
+)
+
+cc_library(
+    name = "libunwind",
+    hdrs = [
+        "include/libunwind.h",
+        "include/__libunwind_config.h",
+    ],
+    includes = [
+        "include",
+    ],
+    applicable_licenses = [":libunwind_license"],
 )

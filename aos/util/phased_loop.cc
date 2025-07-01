@@ -3,8 +3,7 @@
 #include <compare>
 #include <ratio>
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
 
 namespace aos::time {
 
@@ -12,9 +11,9 @@ PhasedLoop::PhasedLoop(const monotonic_clock::duration interval,
                        const monotonic_clock::time_point monotonic_now,
                        const monotonic_clock::duration offset)
     : interval_(interval), offset_(offset), last_time_(offset) {
-  CHECK(offset >= monotonic_clock::duration(0));
-  CHECK(interval > monotonic_clock::duration(0));
-  CHECK(offset < interval);
+  ABSL_CHECK(offset >= monotonic_clock::duration(0));
+  ABSL_CHECK(interval > monotonic_clock::duration(0));
+  ABSL_CHECK(offset < interval);
   Reset(monotonic_now);
 }
 
@@ -30,9 +29,9 @@ void PhasedLoop::set_interval_and_offset(
 
   interval_ = interval;
   offset_ = offset;
-  CHECK(offset_ >= monotonic_clock::duration(0));
-  CHECK(interval_ > monotonic_clock::duration(0));
-  CHECK(offset_ < interval_);
+  ABSL_CHECK(offset_ >= monotonic_clock::duration(0));
+  ABSL_CHECK(interval_ > monotonic_clock::duration(0));
+  ABSL_CHECK(offset_ < interval_);
   // Reset effectively clears the skipped iteration count and ensures that the
   // last time is in the interval (monotonic_now - interval, monotonic_now],
   // which means that a call to Iterate(monotonic_now) will return 1 and set a
@@ -45,7 +44,7 @@ void PhasedLoop::set_interval_and_offset(
 monotonic_clock::duration PhasedLoop::OffsetFromIntervalAndTime(
     const monotonic_clock::duration interval,
     const monotonic_clock::time_point monotonic_trigger) {
-  CHECK(interval > monotonic_clock::duration(0));
+  ABSL_CHECK(interval > monotonic_clock::duration(0));
   return monotonic_trigger.time_since_epoch() -
          (monotonic_trigger.time_since_epoch() / interval) * interval +
          ((monotonic_trigger.time_since_epoch() >= monotonic_clock::zero())
@@ -74,10 +73,10 @@ int PhasedLoop::Iterate(const monotonic_clock::time_point now) {
   const monotonic_clock::duration difference = next_time - last_time_;
 
   const int result = difference / interval_;
-  CHECK_EQ(
+  ABSL_CHECK_EQ(
       0, (next_time - offset_).time_since_epoch().count() % interval_.count());
-  CHECK(next_time > now);
-  CHECK(next_time - now <= interval_);
+  ABSL_CHECK(next_time > now);
+  ABSL_CHECK(next_time - now <= interval_);
   last_time_ = next_time;
   return result;
 }

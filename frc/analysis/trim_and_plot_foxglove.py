@@ -9,7 +9,7 @@ from tempfile import mkdtemp
 parser = argparse.ArgumentParser(
     description="""Trims & generates MCAP file from log.
 
-Serves foxglove locally, and prints out a URL by which the log can be accessed.
+Prints out a URL by which the log can be accessed.
 
 By default, will trim a log to the time period during which the robot was
 enabled. Skips this stip if --skip_trim is passed.""")
@@ -31,7 +31,6 @@ parser.add_argument('log',
 args = parser.parse_args()
 
 tmpdir = mkdtemp(prefix="foxglove_")
-shutil.copytree("external/foxglove_studio", tmpdir, dirs_exist_ok=True)
 
 trimmed_aos_log = args.log if args.skip_trim else [tmpdir + "/trimmed/"]
 output_mcap = tmpdir + "/log.mcap"

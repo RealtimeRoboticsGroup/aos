@@ -2,6 +2,8 @@
 
 #include <cstdio>
 
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "flatbuffers/flatbuffers.h"
 #include "flatbuffers/minireflect.h"
 
@@ -628,7 +630,7 @@ std::pair<absl::Span<const uint8_t>, size_t> ExtentsTable(
         for (size_t i = 0; i < vec->size(); ++i) {
           const uint8_t *field_ptr =
               vec->Data() + i * InlineSize(elementary_type, field_type_table);
-          CHECK(type_table->st == flatbuffers::ST_TABLE)
+          ABSL_CHECK(type_table->st == flatbuffers::ST_TABLE)
               << ": Only tables are supported right now.  Patches welcome.";
 
           std::pair<absl::Span<const uint8_t>, size_t> sub_data = ExtentsTable(
@@ -678,11 +680,11 @@ std::pair<absl::Span<const uint8_t>, size_t> ExtentsTable(
             Extend(&b, sub_data.first);
           } break;
           case flatbuffers::ST_ENUM:
-            LOG(FATAL) << "Copying enums not implemented yet";
+            ABSL_LOG(FATAL) << "Copying enums not implemented yet";
           case flatbuffers::ST_STRUCT:
-            LOG(FATAL) << "Copying structs not implemented yet";
+            ABSL_LOG(FATAL) << "Copying structs not implemented yet";
           case flatbuffers::ST_UNION:
-            LOG(FATAL) << "Copying unions not implemented yet";
+            ABSL_LOG(FATAL) << "Copying unions not implemented yet";
         }
       }
     }
@@ -692,7 +694,7 @@ std::pair<absl::Span<const uint8_t>, size_t> ExtentsTable(
   // maximum internal alignment.  Both in length and starting point.  We know
   // that for this to be actually true, the start and end pointers will need to
   // be aligned to the required alignment.
-  CHECK((alignment & (alignment - 1)) == 0)
+  ABSL_CHECK((alignment & (alignment - 1)) == 0)
       << ": Invalid alignment: " << alignment << ", needs to be a power of 2.";
   while (reinterpret_cast<uintptr_t>(b.min) & (alignment - 1)) {
     --b.min;

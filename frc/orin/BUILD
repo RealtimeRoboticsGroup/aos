@@ -86,6 +86,7 @@ cc_test(
         "//aos/testing:googletest",
         "//aos/testing:path",
         "//frc/vision:vision_fbs",
+        "@com_google_absl//absl/log",
     ],
 )
 
@@ -280,6 +281,7 @@ cc_binary(
         ":hardware_stats_fbs",
         "//aos:init",
         "//aos/events:shm_event_loop",
+        "@com_google_absl//absl/log",
         "@com_google_absl//absl/strings",
     ],
 )

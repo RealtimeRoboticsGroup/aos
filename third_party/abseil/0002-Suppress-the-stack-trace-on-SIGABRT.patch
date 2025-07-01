@@ -1,0 +1,61 @@
+From 3a1f6338e011d9d44e7406e4c14ef1036fcbdc7f Mon Sep 17 00:00:00 2001
+From: Philipp Schrader <philipp.schrader@bluerivertech.com>
+Date: Tue, 25 Mar 2025 06:40:57 -0700
+Subject: [PATCH] Suppress the stack trace on SIGABRT
+
+The hooks are all there, but they weren't being used for some reason.
+---
+ absl/debugging/BUILD.bazel               | 1 +
+ absl/debugging/failure_signal_handler.cc | 7 +++++--
+ absl/log/internal/BUILD.bazel            | 1 +
+ 3 files changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/absl/debugging/BUILD.bazel b/absl/debugging/BUILD.bazel
+index 5baff7a1..a0fcb4de 100644
+--- a/absl/debugging/BUILD.bazel
++++ b/absl/debugging/BUILD.bazel
+@@ -169,6 +169,7 @@ cc_library(
+         "//absl/base:config",
+         "//absl/base:core_headers",
+         "//absl/base:raw_logging_internal",
++        "//absl/log/internal:globals",
+     ],
+ )
+ 
+diff --git a/absl/debugging/failure_signal_handler.cc b/absl/debugging/failure_signal_handler.cc
+index 570d1e50..888e5750 100644
+--- a/absl/debugging/failure_signal_handler.cc
++++ b/absl/debugging/failure_signal_handler.cc
+@@ -53,6 +53,7 @@
+ #include "absl/base/internal/sysinfo.h"
+ #include "absl/debugging/internal/examine_stack.h"
+ #include "absl/debugging/stacktrace.h"
++#include "absl/log/internal/globals.h"
+ 
+ #if !defined(_WIN32) && !defined(__wasi__)
+ #define ABSL_HAVE_SIGACTION
+@@ -297,8 +298,10 @@ static void WriteFailureInfo(int signo, void* ucontext, int cpu,
+                              void (*writerfn)(const char*)) {
+   WriterFnStruct writerfn_struct{writerfn};
+   WriteSignalMessage(signo, cpu, writerfn);
+-  WriteStackTrace(ucontext, fsh_options.symbolize_stacktrace, WriterFnWrapper,
+-                  &writerfn_struct);
++  if (!(signo == SIGABRT && log_internal::SuppressSigabortTrace())) {
++    WriteStackTrace(ucontext, fsh_options.symbolize_stacktrace, WriterFnWrapper,
++                    &writerfn_struct);
++  }
+ }
+ 
+ // absl::SleepFor() can't be used here since AbslInternalSleepFor()
+diff --git a/absl/log/internal/BUILD.bazel b/absl/log/internal/BUILD.bazel
+index 1be13499..65d1ebaa 100644
+--- a/absl/log/internal/BUILD.bazel
++++ b/absl/log/internal/BUILD.bazel
+@@ -133,6 +133,7 @@ cc_library(
+     linkopts = ABSL_DEFAULT_LINKOPTS,
+     visibility = [
+         "//absl/log:__pkg__",
++        "//absl/debugging:__pkg__",
+     ],
+     deps = [
+         "//absl/base:config",

@@ -72,8 +72,8 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//aos/time",
-        "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -136,6 +136,8 @@ cc_library(
         "@com_github_google_flatbuffers//:flatbuffers",
         "@com_github_tartanllama_expected",
         "@com_google_absl//absl/container:btree",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -150,6 +152,8 @@ cc_library(
     deps = [
         ":event_loop",
         "//aos:for_rust",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@crate_index//:cxx_cc",
     ],
 )
@@ -205,8 +209,8 @@ cc_test(
         ":simulated_event_loop",
         "//aos/testing:googletest",
         "//aos/testing:path",
-        "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -482,6 +486,8 @@ cc_library(
         "//aos/stl_mutex",
         "//aos/util:phased_loop",
         "@com_google_absl//absl/base",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -539,6 +545,8 @@ cc_test(
         "//aos/network:testing_time_converter",
         "//aos/testing:googletest",
         "//aos/testing:path",
+        "//aos/testing:tmpdir",
+        "//aos/util:file",
     ],
 )
 
@@ -587,6 +595,9 @@ cc_library(
         "//aos/network:timestamp_channel",
         "//aos/util:phased_loop",
         "@com_google_absl//absl/container:btree",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/log:die_if_null",
+        "@com_google_absl//absl/log:log_sink",
     ],
 )
 

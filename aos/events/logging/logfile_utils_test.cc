@@ -30,13 +30,12 @@ using aos::testing::ArtifactPath;
 
 // Adapter class to make it easy to test DetachedBufferWriter without adding
 // test only boilerplate to DetachedBufferWriter.
-class TestDetachedBufferWriter : public FileBackend,
-                                 public DetachedBufferWriter {
+class TestDetachedBufferWriter : public LogFolder, public DetachedBufferWriter {
  public:
   // Pick a max size that is rather conservative.
   static constexpr size_t kMaxMessageSize = 128 * 1024;
   TestDetachedBufferWriter(std::string_view filename)
-      : FileBackend("/", false),
+      : LogFolder("/", false),
         DetachedBufferWriter(FileBackend::RequestFile(filename),
                              std::make_unique<DummyEncoder>(kMaxMessageSize)) {}
   void WriteSizedFlatbuffer(flatbuffers::DetachedBuffer &&buffer) {

@@ -401,9 +401,7 @@ static void GenerateSection(std::ostream &os, const BinarySection &section,
 }
 }  // namespace
 
-bool AnnotatedBinaryTextGenerator::Generate(
-    const std::string &filename, const std::string &schema_filename,
-    const std::string &output_filename) {
+std::string AnnotatedBinaryTextGenerator::GenerateString() {
   OutputConfig output_config;
   output_config.max_bytes_per_line = options_.max_bytes_per_line;
   output_config.include_vector_contents = options_.include_vector_contents;
@@ -436,6 +434,19 @@ bool AnnotatedBinaryTextGenerator::Generate(
     }
   }
 
+  std::stringstream os;
+
+  for (const auto &section : annotations_) {
+    GenerateSection(os, section.second, binary_, output_config);
+  }
+
+  return os.str();
+}
+
+
+bool AnnotatedBinaryTextGenerator::Generate(
+    const std::string &filename, const std::string &schema_filename,
+    const std::string &output_filename) {
   std::string out = output_filename;
   if (out.empty()) {
     // Modify the output filename.
@@ -455,10 +466,7 @@ bool AnnotatedBinaryTextGenerator::Generate(
   }
   ofs << "// Binary file: " << filename << std::endl;
 
-  // Generate each of the binary sections
-  for (const auto &section : annotations_) {
-    GenerateSection(ofs, section.second, binary_, output_config);
-  }
+  ofs << GenerateString();
 
   ofs.close();
   return true;

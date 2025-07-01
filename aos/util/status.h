@@ -4,22 +4,22 @@
 #include <source_location>
 #include <string_view>
 
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_format.h"
 #include "tl/expected.hpp"
 
 #include "aos/containers/inlined_vector.h"
 
 namespace aos {
-// The Error class provides a means by which errors can be readily returned
+// The ErrorType class provides a means by which errors can be readily returned
 // from methods. It will typically be wrapped by an std::expected<> to
 // accommodate a return value or the Error.
 //
-// The Error class is similar to the absl::Status or std::error_code classes,
-// in that it consists of an integer error code of some sort (where 0 implicitly
-// would indicate "ok", although we assume that if there is no error then
-// you will be using an expected<> to return void or your actual return type)
-// and a string error message of some sort. The main additions of this
+// The ErrorType class is similar to the absl::Status or std::error_code
+// classes, in that it consists of an integer error code of some sort (where 0
+// implicitly would indicate "ok", although we assume that if there is no error
+// then you will be using an expected<> to return void or your actual return
+// type) and a string error message of some sort. The main additions of this
 // class are:
 // 1. Adding a first-class exposure of an std::source_location to make exposure
 //    of the sources of errors easier.
@@ -37,11 +37,11 @@ namespace aos {
 //
 // Users should typically use the Result<T> convenience method when returning
 // Errors from methods. In the case where the method would normally return void,
-// use Result<void>. Result<> is just a wrapper for tl::expected; when our
+// use Status. Result<> is just a wrapper for tl::expected; when our
 // compilers upgrade to support std::expected this should ease the transition,
 // in addition to just providing a convenience wrapper to encourage a standard
 // pattern of use.
-class Error {
+class ErrorType {
  public:
   // In order to allow simple error messages without memory allocation, we
   // reserve a small amount of stack space for error messages. This constant
@@ -61,51 +61,20 @@ class Error {
     kError = 1,
   };
 
-  // Wraps an Error with an unexpected<> so that a Result<> may be constructed
-  // from the Error.
-  static tl::unexpected<Error> MakeUnexpected(const Error &error) {
-    return tl::unexpected<Error>(error);
-  }
+  ErrorType(ErrorType &&other);
+  ErrorType &operator=(ErrorType &&other);
+  ErrorType(const ErrorType &other);
 
   // Constructs an Error, copying the provided message. If the message is
   // shorter than kStaticMessageLength, then the message will be stored entirely
   // on the stack; longer messages will require dynamic memory allocation.
-  // The default source_location will correspond to the call-site of the
-  // Error::Error() method. This should only be overridden by wrappers that
-  // want to present a fancier interface to users.
-  static Error MakeError(
+  explicit ErrorType(
       std::string_view message,
-      std::source_location source_location = std::source_location::current()) {
-    return Error(StatusCode::kError, message, std::move(source_location));
-  }
-  static tl::unexpected<Error> MakeUnexpectedError(
-      std::string_view message,
-      std::source_location source_location = std::source_location::current()) {
-    return MakeUnexpected(MakeError(message, std::move(source_location)));
-  }
-
-  // Constructs an error, retaining the provided pointer to a null-terminated
-  // error message. It is assumed that the message pointer will stay valid
-  // ~indefinitely. This is generally only appropriate to use with string
-  // literals (e.g., Error::StringLiteralError("Hello, World!")).
-  // The default source_location will correspond to the call-site of the
-  // Error::Error() method. This should only be overridden by wrappers that
-  // want to present a fancier interface to users.
-  static Error MakeStringLiteralError(
-      const char *message,
-      std::source_location source_location = std::source_location::current()) {
-    return Error(StatusCode::kError, message, std::move(source_location));
-  }
-  static tl::unexpected<Error> MakeUnexpectedStringLiteralError(
-      const char *message,
-      std::source_location source_location = std::source_location::current()) {
-    return MakeUnexpected(
-        MakeStringLiteralError(message, std::move(source_location)));
-  }
-
-  Error(Error &&other);
-  Error &operator=(Error &&other);
-  Error(const Error &other);
+      std::source_location source_location = std::source_location::current())
+      : ErrorType(StatusCode::kError, message, std::move(source_location)) {}
+  explicit ErrorType(const char *message, std::source_location source_location =
+                                              std::source_location::current())
+      : ErrorType(StatusCode::kError, message, std::move(source_location)) {}
 
   // Returns a numeric value for the status code. Zero will always indicate
   // success; non-zero values will always indicate an error.
@@ -123,10 +92,10 @@ class Error {
   std::string ToString() const;
 
  private:
-  Error(StatusCode code, std::string_view message,
-        std::optional<std::source_location> source_location);
-  Error(StatusCode code, const char *message,
-        std::optional<std::source_location> source_location);
+  ErrorType(StatusCode code, std::string_view message,
+            std::optional<std::source_location> source_location);
+  ErrorType(StatusCode code, const char *message,
+            std::optional<std::source_location> source_location);
 
   StatusCode code_;
   aos::InlinedVector<char, kStaticMessageLength> owned_message_;
@@ -139,9 +108,16 @@ class Error {
 // tl::expected) then converting between expected's and Results becomes a lot
 // messier. In lieu of [[nodiscard]] being specified here, it is strongly
 // advised the functions returning Result<>'s---especially those returning
-// Result<void>---be marked [[nodiscard]].
+// Status---be marked [[nodiscard]].
+template <typename T = void>
+using Result = tl::expected<T, ErrorType>;
+
+// Status is a convenience type for functions that return Result<void>.
 template <typename T>
-using Result = tl::expected<T, Error>;
+using StatusOr = Result<T>;
+using Status = StatusOr<void>;
+
+using Error = tl::unexpected<ErrorType>;
 
 // Dies fatally if the provided expected does not include the value T, printing
 // out an error message that includes the Error on the way out.
@@ -149,20 +125,69 @@ using Result = tl::expected<T, Error>;
 template <typename T>
 T CheckExpected(const Result<T> &expected) {
   if (expected.has_value()) {
-    return expected.value();
+    if constexpr (std::is_same_v<T, void>) {
+      return;
+    } else {
+      return expected.value();
+    }
   }
-  LOG(FATAL) << expected.error().ToString();
+  ABSL_LOG(FATAL) << expected.error().ToString();
 }
 
-template <>
-void CheckExpected<void>(const Result<void> &expected);
+// An overload for directly checking an error. The compiler doesn't
+// automatically use the templated version above in all instances.
+inline void CheckExpected(const Error &error) {
+  ABSL_LOG(FATAL) << error.value().ToString();
+}
 
-// Convenience method to explicitly construct an "okay" Result<void>.
-inline Result<void> Ok() { return Result<void>{}; }
+// Wraps an ErrorType with an unexpected<> so that a Result<> may be
+// constructed from the ErrorType.
+inline Error MakeError(const ErrorType &error) {
+  return tl::unexpected<ErrorType>(error);
+}
 
-int ResultExitCode(const Result<void> &expected);
+// Constructs an error, retaining the provided pointer to a null-terminated
+// error message. It is assumed that the message pointer will stay valid
+// ~indefinitely. This is generally only appropriate to use with string
+// literals (e.g., aos::MakeStringLiteralError("Hello, World!")).
+inline Error MakeStringLiteralError(
+    const char *message,
+    std::source_location source_location = std::source_location::current()) {
+  return MakeError(ErrorType(message, std::move(source_location)));
+}
 
-inline std::ostream &operator<<(std::ostream &stream, const Error &error) {
+// Makes an Error, copying the provided message. If the message is
+// shorter than kStaticMessageLength, then the message will be stored entirely
+// on the stack; longer messages will require dynamic memory allocation.
+inline Error MakeError(
+    std::string_view message,
+    std::source_location source_location = std::source_location::current()) {
+  return MakeError(ErrorType(message, std::move(source_location)));
+}
+
+// Convenience method to explicitly construct an "okay" Status.
+inline Status Ok() { return Status{}; }
+
+// Convenience method to check for an "okay" status.
+inline bool IsOk(const Result<> &result) { return result.has_value(); }
+
+// This is a work around to `std::expected` not having a `has_error` member
+// function. It's often more readable to explicitly check for an error in the
+// code.
+template <typename T>
+bool HasError(const Result<T> &result) {
+  return !result.has_value();
+}
+
+// A complementary function to HasError above.
+template <typename T>
+bool HasValue(const Result<T> &result) {
+  return result.has_value();
+}
+
+int ResultExitCode(const Status &expected);
+
+inline std::ostream &operator<<(std::ostream &stream, const ErrorType &error) {
   stream << error.ToString();
   return stream;
 }
@@ -177,8 +202,7 @@ std::ostream &operator<<(std::ostream &stream, const Result<T> &result) {
   return stream;
 }
 
-inline std::ostream &operator<<(std::ostream &stream,
-                                const Result<void> &result) {
+inline std::ostream &operator<<(std::ostream &stream, const Status &result) {
   if (result.has_value()) {
     stream << "<void>";
   } else {
@@ -187,29 +211,29 @@ inline std::ostream &operator<<(std::ostream &stream,
   return stream;
 }
 
-// Takes an expression that evalutes to a Result<> and returns the error if
+// Takes an expression that evaluates to a Result<> and returns the error if
 // there is one.
-#define AOS_RETURN_IF_ERROR(result)                                           \
-  {                                                                           \
-    /* Ensure that we only evalute result once. (reference lifetime extension \
-     * should prevent lifetime issues here). */                               \
-    const auto &tmp = (result);                                               \
-    if (!tmp.has_value()) {                                                   \
-      return ::aos::Error::MakeUnexpected(tmp.error());                       \
-    }                                                                         \
+#define AOS_RETURN_IF_ERROR(result)                                            \
+  {                                                                            \
+    /* Ensure that we only evaluate result once. (reference lifetime extension \
+     * should prevent lifetime issues here). */                                \
+    const auto &tmp = (result);                                                \
+    if (!tmp.has_value()) {                                                    \
+      return ::aos::MakeError(tmp.error());                                    \
+    }                                                                          \
   }
 
-// If expression evalutes to a type of Result<T> then a variable named variable
+// If expression evaluates to a type of Result<T> then a variable named variable
 // of type const T& will be declared that is initialized to refer to the result
 // of evaluating the expression. If expression evaluates to an error state,
 // returns the error prior to initializing the variable.
-#define AOS_DECLARE_OR_RETURN_IF_ERROR(variable, expression)                \
-  /* Ensure that we only evalute result once. (reference lifetime extension \
-   * should prevent lifetime issues here). */                               \
-  const auto &variable##__tmp = (expression);                               \
-  if (!variable##__tmp.has_value()) {                                       \
-    return ::aos::Error::MakeUnexpected(variable##__tmp.error());           \
-  }                                                                         \
+#define AOS_DECLARE_OR_RETURN_IF_ERROR(variable, expression)                 \
+  /* Ensure that we only evaluate result once. (reference lifetime extension \
+   * should prevent lifetime issues here). */                                \
+  const auto &variable##__tmp = (expression);                                \
+  if (!variable##__tmp.has_value()) {                                        \
+    return ::aos::MakeError(variable##__tmp.error());                        \
+  }                                                                          \
   const auto &variable = variable##__tmp.value();
 
 namespace internal {
@@ -245,14 +269,14 @@ T ForwardExpression(T &&rvalue) {
 // this would result in a copy or a move of the provided lvalue, and most
 // use-cases will take an rvalue of some sort.
 #define AOS_GET_VALUE_OR_RETURN_ERROR(variable, expression)                  \
-  /* Ensure that we only evalute result once. Note that we use decltype()    \
+  /* Ensure that we only evaluate result once. Note that we use decltype()   \
    * rather than auto to preserve any reference type returned by             \
    * ForwardExpression() (not currently relevant, but may become relevant if \
    * we support lvalues in (expression). */                                  \
   decltype(::aos::internal::ForwardExpression(expression)) variable##__tmp = \
       ::aos::internal::ForwardExpression(expression);                        \
   if (!variable##__tmp.has_value()) {                                        \
-    return ::aos::Error::MakeUnexpected(variable##__tmp.error());            \
+    return ::aos::MakeError(variable##__tmp.error());                        \
   }                                                                          \
   variable = std::move(variable##__tmp.value());
 }  // namespace aos

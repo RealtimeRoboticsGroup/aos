@@ -4,12 +4,14 @@
 
 #include <map>
 #include <memory>
+#include <regex>
 #include <set>
 
 #include "foxglove/websocket/websocket_notls.hpp"
 #include "foxglove/websocket/websocket_server.hpp"
 
 #include "aos/events/event_loop.h"
+#include "aos/util/live_metadata_static.h"
 
 namespace aos {
 // This class implements a live AOS -> Foxglove Websocket Protocol connection,
@@ -39,10 +41,16 @@ class FoxgloveWebsocketServer {
     // the channel names that are used in "real" applications.
     kShortened,
   };
+
+  // The client_topic_patterns is a list of regexes that are tested against
+  // foxglove topics (channel name plus type). When a topic matches, the
+  // foxglove client is allowed to send messages on that topic. Those messages
+  // will be be sent to the corresponding AOS channel.
   FoxgloveWebsocketServer(aos::EventLoop *event_loop, uint32_t port,
                           Serialization serialization,
                           FetchPinnedChannels fetch_pinned_channels,
-                          CanonicalChannelNames canonical_channels);
+                          CanonicalChannelNames canonical_channels,
+                          std::vector<std::regex> client_topic_patterns);
   ~FoxgloveWebsocketServer();
 
  private:
@@ -64,11 +72,32 @@ class FoxgloveWebsocketServer {
     bool fetch_next = true;
   };
 
+  // A special channel is a channel that doesn't exist in the AOS configuration.
+  // It's a purely virtual channel that is useful for conveying metadata to the
+  // client. For example, there is no real channel that contains the AOS
+  // configuration. If a client wants to use the configuration for something,
+  // however, then they need access to it somehow. That's where special channels
+  // come in. Each special channel has a unique ChannelId, separate from the
+  // ChannelId's of the real channels.
+  //
+  // At the moment special channels only contain a single message. We have no
+  // use case for special channels to contain more than a single message.
+  struct SpecialChannelState {
+    // Non-owning reference to the special message.
+    absl::Span<const uint8_t> message;
+    // A list of connections that still need the special message.
+    std::set<foxglove::ConnHandle, std::owner_less<>> pending_sends;
+  };
+
   aos::EventLoop *event_loop_;
+  FlatbufferDetachedBuffer<Configuration> stripped_configuration_;
+  fbs::Builder<LiveMetadataStatic> live_metadata_;
   const Serialization serialization_;
   const FetchPinnedChannels fetch_pinned_channels_;
   const CanonicalChannelNames canonical_channels_;
   foxglove::Server<foxglove::WebSocketNoTls> server_;
+  // A map of the state for every special channel.
+  std::map<ChannelId, SpecialChannelState> special_channels_;
   // A map of fetchers for every single channel that could be subscribed to.
   std::map<ChannelId, FetcherState> fetchers_;
   // The set of channels that we have clients actively subscribed to. Each
@@ -76,6 +105,9 @@ class FoxgloveWebsocketServer {
   std::unordered_map<ChannelId,
                      std::set<foxglove::ConnHandle, std::owner_less<>>>
       active_channels_;
+
+  // The sender for a specific topic.
+  std::map<std::string, std::unique_ptr<RawSender>> senders_;
 };
 }  // namespace aos
 #endif  // AOS_UTIL_FOXGLOVE_WEBSOCKET_LIB_H_

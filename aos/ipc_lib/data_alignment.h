@@ -1,8 +1,7 @@
 #ifndef AOS_IPC_LIB_DATA_ALIGNMENT_H_
 #define AOS_IPC_LIB_DATA_ALIGNMENT_H_
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
 
 namespace aos {
 
@@ -20,8 +19,8 @@ static constexpr size_t kChannelDataAlignment = 128;
 
 template <typename T>
 inline void CheckChannelDataAlignment(T *data, size_t size) {
-  CHECK_EQ((reinterpret_cast<uintptr_t>(data) + size) % kChannelDataAlignment,
-           0u)
+  ABSL_CHECK_EQ(
+      (reinterpret_cast<uintptr_t>(data) + size) % kChannelDataAlignment, 0u)
       << ": data pointer is not end aligned as it should be: " << data << " + "
       << size;
 }

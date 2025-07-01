@@ -1,10 +1,12 @@
 #include "aos/flatbuffers.h"
 
+#include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
 #include "gtest/gtest.h"
 
 #include "aos/json_to_flatbuffer.h"
 #include "aos/json_to_flatbuffer_generated.h"
+#include "aos/realtime.h"
 #include "aos/testing/tmpdir.h"
 
 namespace aos::testing {
@@ -85,5 +87,88 @@ TEST(FlatbufferMMapTest, Writeable) {
     EXPECT_EQ(fb_mmap.message().foo_int(), 5);
   }
 }
+
+// Validates that we can successfully instantiate and use a
+// FlatbufferFixedAllocatorArray in realtime code.
+TEST(FlatbufferFixedAllocatorArrayTest, UseInRealtime) {
+  aos::ScopedRealtime realtime;
+
+  FlatbufferFixedAllocatorArray<Configuration, 1000> allocator_array;
+
+  // Construct the message with arbitrary contents.
+  {
+    Configuration::Builder builder(*allocator_array.fbb());
+    builder.add_foo_int(1);
+    allocator_array.Finish(builder.Finish());
+
+    // Get a pointer to it and validate it's what we expect.
+    const Configuration *config = &allocator_array.message();
+    ASSERT_TRUE(config->has_foo_int());
+    EXPECT_EQ(config->foo_int(), 1);
+  }
+
+  // Perform a reset so we can rebuild the message.
+  allocator_array.Reset();
+
+  // Now construct the message slightly differently.
+  {
+    Configuration::Builder builder(*allocator_array.fbb());
+    builder.add_foo_int(2);
+    allocator_array.Finish(builder.Finish());
+
+    // Get a pointer to the new message and validate its contents.
+    const Configuration *config = &allocator_array.message();
+    ASSERT_TRUE(config->has_foo_int());
+    EXPECT_EQ(config->foo_int(), 2);
+  }
+}
+
+#if __has_feature(memory_sanitizer) || __has_feature(address_sanitizer)
+
+// Validates that we can detect bugs similar to use-after-free when using a
+// FlatbufferFixedAllocatorArray.
+TEST(FlatbufferFixedAllocatorArrayDeathTest, DetectsUseAfterReset) {
+  FlatbufferFixedAllocatorArray<Configuration, 1000> allocator_array;
+
+  // Construct the message with arbitrary contents initially.
+  {
+    Configuration::Builder builder(*allocator_array.fbb());
+    builder.add_foo_int(1);
+    allocator_array.Finish(builder.Finish());
+  }
+
+  // Get a pointer to it and validate it's what we expect.
+  const Configuration *config1 = &allocator_array.message();
+  ASSERT_TRUE(config1->has_foo_int());
+  EXPECT_EQ(config1->foo_int(), 1);
+
+  // Perform the reset that should trigger an error.
+  allocator_array.Reset();
+
+  // Now construct the message slightly differently.
+  {
+    Configuration::Builder builder(*allocator_array.fbb());
+    builder.add_foo_int(2);
+    allocator_array.Finish(builder.Finish());
+  }
+
+  // Get a pointer to the new message and validate its contents.
+  const Configuration *config2 = &allocator_array.message();
+  ASSERT_TRUE(config2->has_foo_int());
+  EXPECT_EQ(config2->foo_int(), 2);
+
+  // Now accessing the old message we initially constructed should result in a
+  // failure.
+  EXPECT_DEATH(
+      { ABSL_LOG(INFO) << "config1->foo_int() = " << config1->foo_int(); },
+#if __has_feature(memory_sanitizer)
+      "use-of-uninitialized-value"
+#else
+      "heap-use-after-free"
+#endif
+  );
+}
+
+#endif
 
 }  // namespace aos::testing

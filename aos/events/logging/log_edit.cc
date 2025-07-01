@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
     aos::logger::SpanReader span_reader(orig_path);
     CHECK(!span_reader.ReadMessage().empty()) << ": Empty header, aborting";
 
-    aos::logger::FileBackend file_backend("/", absl::GetFlag(FLAGS_direct));
+    aos::logger::LogFolder file_backend("/", absl::GetFlag(FLAGS_direct));
     aos::logger::DetachedBufferWriter buffer_writer(
         file_backend.RequestFile(absl::GetFlag(FLAGS_logfile)),
         std::make_unique<aos::logger::DummyEncoder>(

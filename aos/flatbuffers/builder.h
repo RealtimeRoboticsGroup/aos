@@ -1,5 +1,8 @@
 #ifndef AOS_FLATBUFFERS_BUILDER_H_
 #define AOS_FLATBUFFERS_BUILDER_H_
+
+#include "absl/log/absl_check.h"
+
 #include "aos/flatbuffers.h"
 #include "aos/flatbuffers/static_table.h"
 
@@ -99,13 +102,14 @@ class Builder final : public ResizeableObject {
     // We can't do much if the provided buffer isn't at least 4-byte aligned,
     // because we are required to put the root table offset at the start of the
     // buffer.
-    CHECK_EQ(reinterpret_cast<size_t>(buffer_.data()) % alignof(uoffset_t), 0u);
+    ABSL_CHECK_EQ(reinterpret_cast<size_t>(buffer_.data()) % alignof(uoffset_t),
+                  0u);
     *reinterpret_cast<uoffset_t *>(buffer_.data()) = flatbuffer_start_;
   }
   // Manually aligns the start of the actual flatbuffer to handle the alignment
   // offset.
   static size_t BufferStart(std::span<uint8_t> buffer) {
-    CHECK_EQ(reinterpret_cast<size_t>(buffer.data()) % T::kAlign, 0u)
+    ABSL_CHECK_EQ(reinterpret_cast<size_t>(buffer.data()) % T::kAlign, 0u)
         << "Failed to allocate data of length " << buffer.size()
         << " with alignment " << T::kAlign;
 
@@ -122,8 +126,8 @@ class Builder final : public ResizeableObject {
     const size_t new_start = BufferStart(buffer_);
     if (new_start != flatbuffer_start_) {
       const size_t used_size = flatbuffer_.t.buffer().size();
-      CHECK_LT(flatbuffer_start_ + used_size, buffer_.size());
-      CHECK_LT(new_start + used_size, buffer_.size());
+      ABSL_CHECK_LT(flatbuffer_start_ + used_size, buffer_.size());
+      ABSL_CHECK_LT(new_start + used_size, buffer_.size());
       memmove(buffer_.data() + new_start, buffer_.data() + flatbuffer_start_,
               used_size);
       flatbuffer_.t.UpdateBuffer(
@@ -135,7 +139,7 @@ class Builder final : public ResizeableObject {
   }
   using ResizeableObject::SubObject;
   SubObject GetSubObject(size_t index) override {
-    CHECK_EQ(0u, index);
+    ABSL_CHECK_EQ(0u, index);
     return {reinterpret_cast<uoffset_t *>(buffer_.data()), &flatbuffer_.t,
             &flatbuffer_start_};
   }

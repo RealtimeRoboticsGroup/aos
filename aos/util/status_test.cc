@@ -18,10 +18,10 @@ class ErrorTest : public ::testing::Test {
 
 // Tests that we can construct an errored status in realtime code.
 TEST_F(ErrorTest, RealtimeError) {
-  std::optional<Error> error;
+  std::optional<ErrorType> error;
   {
     aos::ScopedRealtime realtime;
-    error = Error::MakeError("Hello, World!");
+    error = ErrorType("Hello, World!");
   }
   const int line = __LINE__ - 2;
   ASSERT_TRUE(error.has_value());
@@ -49,10 +49,10 @@ TEST_F(ErrorTest, RealtimeError) {
 // Tests that the ResultExitCode() function will correctly transform a Result<>
 // object into an exit code suitable for exiting a program.
 TEST_F(ErrorTest, ExitCode) {
-  static_assert(0 == static_cast<int>(Error::StatusCode::kOk));
-  EXPECT_EQ(static_cast<int>(Error::StatusCode::kOk), ResultExitCode(Ok()));
-  EXPECT_EQ(static_cast<int>(Error::StatusCode::kError),
-            ResultExitCode(Error::MakeUnexpectedError("")));
+  static_assert(0 == static_cast<int>(ErrorType::StatusCode::kOk));
+  EXPECT_EQ(static_cast<int>(ErrorType::StatusCode::kOk), ResultExitCode(Ok()));
+  EXPECT_EQ(static_cast<int>(ErrorType::StatusCode::kError),
+            ResultExitCode(MakeError("")));
 }
 
 // Malloc hooks don't work with asan/msan.
@@ -60,12 +60,12 @@ TEST_F(ErrorTest, ExitCode) {
 // Tests that we do indeed malloc (and catch it) on an extra-long error message
 // (this is mostly intended to ensure that the test setup is working correctly).
 TEST(ErrorDeathTest, BlowsUpOnRealtimeAllocation) {
-  std::string message(" ", Error::kStaticMessageLength + 1);
+  std::string message(" ", ErrorType::kStaticMessageLength + 1);
   EXPECT_DEATH(
       {
         aos::ScopedRealtime realtime;
         aos::CheckRealtime();
-        Error foo = Error::MakeError(message);
+        ErrorType foo = ErrorType(message);
       },
       "Malloced");
 }
@@ -74,16 +74,17 @@ TEST(ErrorDeathTest, BlowsUpOnRealtimeAllocation) {
 
 // Tests that we can use arbitrarily-sized string literals for error messages.
 TEST_F(ErrorTest, StringLiteralError) {
-  std::optional<Error> error;
+  std::optional<ErrorType> error;
   const char *message =
       "Hellllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll"
       "llllllllllllllloooooooooooooooooooooooooooooooooooooooooooo, "
       "World!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
       "!!!!!!!!!!!!!!";
-  ASSERT_LT(Error::kStaticMessageLength, strlen(message));
+  ASSERT_LT(ErrorType::kStaticMessageLength, strlen(message));
   {
     aos::ScopedRealtime realtime;
-    error = Error::MakeStringLiteralError(message);
+    auto unexpected = MakeStringLiteralError(message);
+    error = unexpected.value();
   }
   ASSERT_TRUE(error.has_value());
   EXPECT_EQ(message, error->message());
@@ -95,16 +96,18 @@ TEST_F(ErrorTest, StringLiteralError) {
 
 // Tests that the CheckExpected() call works as intended.
 TEST(ErrorDeathTest, CheckExpected) {
-  tl::expected<int, Error> expected;
+  tl::expected<int, ErrorType> expected;
   expected.emplace(118);
   EXPECT_EQ(118, CheckExpected(expected))
       << "Should have gotten out the emplaced value on no error.";
-  expected = Error::MakeUnexpectedError("Hello, World!");
+  expected = MakeError("Hello, World!");
   EXPECT_DEATH(CheckExpected(expected), "Hello, World!")
       << "An error message including the error string should have been printed "
          "on death.";
-  EXPECT_DEATH(CheckExpected<void>(Error::MakeUnexpectedError("void expected")),
-               "void expected")
+  EXPECT_DEATH(CheckExpected(MakeError("void expected")), "void expected")
+      << "A void expected should work with CheckExpected().";
+  tl::expected<void, ErrorType> void_expected = MakeError("void expected");
+  EXPECT_DEATH(CheckExpected(void_expected), "void expected")
       << "A void expected should work with CheckExpected().";
 }
 
@@ -120,12 +123,11 @@ struct DisallowCopy {
 TEST_F(ErrorTest, ReturnResultIfErrorNoExtraCopies) {
   Result<DisallowCopy> test_value = {};
   bool executed = false;
-  const Result<void> result = [&test_value, &executed]() -> Result<void> {
+  const Status result = [&test_value, &executed]() -> Status {
     AOS_RETURN_IF_ERROR(test_value);
     executed = true;
     // next, confirm that we do actually return early on an unexpected.
-    AOS_RETURN_IF_ERROR(
-        Result<void>(Error::MakeUnexpectedError("Hello, World!")));
+    AOS_RETURN_IF_ERROR(Status(MakeError("Hello, World!")));
     return {};
   }();
   EXPECT_FALSE(result.has_value());
@@ -137,9 +139,8 @@ TEST_F(ErrorTest, ReturnResultIfErrorNoExtraCopies) {
 // the lifetime of any temporaries in AOS_RETURN_IF_ERROR are handled
 // incorrectly.
 TEST_F(ErrorTest, ReturnResultHandlesLifetime) {
-  const Result<void> result = []() -> Result<void> {
-    AOS_RETURN_IF_ERROR(
-        Result<void>(Error::MakeUnexpectedError("Hello, World!")));
+  const Status result = []() -> Status {
+    AOS_RETURN_IF_ERROR(Status(MakeError("Hello, World!")));
     return {};
   }();
   EXPECT_FALSE(result.has_value());
@@ -149,8 +150,8 @@ TEST_F(ErrorTest, ReturnResultHandlesLifetime) {
 // AOS_RETURN_IF_ERROR exactly one.
 TEST_F(ErrorTest, ReturnResultEvaluatesOnce) {
   int counter = 0;
-  const Result<void> result = [&counter]() -> Result<void> {
-    AOS_RETURN_IF_ERROR([&counter]() -> Result<void> {
+  const Result<> result = [&counter]() -> Result<> {
+    AOS_RETURN_IF_ERROR([&counter]() -> Result<> {
       counter++;
       return {};
     }());
@@ -164,14 +165,13 @@ TEST_F(ErrorTest, ReturnResultEvaluatesOnce) {
 TEST_F(ErrorTest, DeclareVariableNoExtraCopies) {
   Result<DisallowCopy> test_value = {};
   bool executed = false;
-  const Result<void> result = [&test_value, &executed]() -> Result<void> {
+  const Result<> result = [&test_value, &executed]() -> Result<> {
     AOS_DECLARE_OR_RETURN_IF_ERROR(expected, test_value);
     (void)expected;
     executed = true;
     // next, confirm that we do actually return early on an unexpected.
     AOS_DECLARE_OR_RETURN_IF_ERROR(
-        never_reached,
-        Result<DisallowCopy>(Error::MakeUnexpectedError("Hello, World!")));
+        never_reached, Result<DisallowCopy>(MakeError("Hello, World!")));
     (void)never_reached;
     return {};
   }();
@@ -184,9 +184,9 @@ TEST_F(ErrorTest, DeclareVariableNoExtraCopies) {
 // validate if the lifetime of any temporaries in
 // AOS_DECLARE_OR_RETURN_IF_ERROR are handled incorrectly.
 TEST_F(ErrorTest, DeclareVariableLifetime) {
-  const Result<void> result = []() -> Result<void> {
-    AOS_DECLARE_OR_RETURN_IF_ERROR(
-        tmp, Result<int>(Error::MakeUnexpectedError("Hello, World!")));
+  const Result<> result = []() -> Result<> {
+    AOS_DECLARE_OR_RETURN_IF_ERROR(tmp,
+                                   Result<int>(MakeError("Hello, World!")));
     (void)tmp;
     return {};
   }();
@@ -197,7 +197,7 @@ TEST_F(ErrorTest, DeclareVariableLifetime) {
 // AOS_DECLARE_OR_RETURN_IF_ERROR exactly one.
 TEST_F(ErrorTest, DeclareVariableEvaluatesOnce) {
   int counter = 0;
-  const Result<void> result = [&counter]() -> Result<void> {
+  const Result<> result = [&counter]() -> Result<> {
     AOS_DECLARE_OR_RETURN_IF_ERROR(tmp, [&counter]() -> Result<int> {
       counter++;
       return {};
@@ -212,15 +212,14 @@ TEST_F(ErrorTest, DeclareVariableEvaluatesOnce) {
 
 TEST_F(ErrorTest, InitializeVariableNoExtraCopies) {
   bool executed = false;
-  const Result<void> result = [&executed]() -> Result<void> {
+  const Result<> result = [&executed]() -> Result<> {
     DisallowCopy tmp;
     AOS_GET_VALUE_OR_RETURN_ERROR(tmp, Result<DisallowCopy>{});
     executed = true;
     DisallowCopy tmp2;
     // next, confirm that we do actually return early on an unexpected.
     AOS_GET_VALUE_OR_RETURN_ERROR(
-        tmp2,
-        Result<DisallowCopy>(Error::MakeUnexpectedError("Hello, World!")));
+        tmp2, Result<DisallowCopy>(MakeError("Hello, World!")));
     return {};
   }();
   EXPECT_FALSE(result.has_value());
@@ -232,10 +231,10 @@ TEST_F(ErrorTest, InitializeVariableNoExtraCopies) {
 // help to validate if the lifetime of any temporaries in
 // AOS_GET_VALUE_OR_RETURN_ERROR are handled incorrectly.
 TEST_F(ErrorTest, InitializeVariableLifetime) {
-  const Result<void> result = []() -> Result<void> {
+  const Result<> result = []() -> Result<> {
     DisallowCopy tmp;
     AOS_GET_VALUE_OR_RETURN_ERROR(
-        tmp, Result<DisallowCopy>(Error::MakeUnexpectedError("Hello, World!")));
+        tmp, Result<DisallowCopy>(MakeError("Hello, World!")));
     return {};
   }();
   EXPECT_FALSE(result.has_value());
@@ -245,7 +244,7 @@ TEST_F(ErrorTest, InitializeVariableLifetime) {
 // AOS_GET_VALUE_OR_RETURN_ERROR exactly one.
 TEST_F(ErrorTest, InitializeVariableEvaluatesOnce) {
   int counter = 0;
-  const Result<void> result = [&counter]() -> Result<void> {
+  const Result<> result = [&counter]() -> Result<> {
     int tmp;
     AOS_GET_VALUE_OR_RETURN_ERROR(tmp, [&counter]() -> Result<int> {
       counter++;
@@ -258,4 +257,22 @@ TEST_F(ErrorTest, InitializeVariableEvaluatesOnce) {
   EXPECT_EQ(1, counter) << "The expression passed to AOS_RETURN_IF_ERROR "
                            "should have been evaluated exactly once.";
 }
+
+// Validates that the "value vs. error" functions do what we expect them to do.
+TEST_F(ErrorTest, ResultHasValue) {
+  Result<> result = Ok();
+  EXPECT_TRUE(result);
+  EXPECT_TRUE(result.has_value());
+  EXPECT_TRUE(IsOk(result));
+  EXPECT_TRUE(HasValue(result));
+  EXPECT_FALSE(HasError(result));
+
+  result = MakeError("error");
+  EXPECT_FALSE(result);
+  EXPECT_FALSE(result.has_value());
+  EXPECT_FALSE(IsOk(result));
+  EXPECT_FALSE(HasValue(result));
+  EXPECT_TRUE(HasError(result));
+}
+
 }  // namespace aos::testing

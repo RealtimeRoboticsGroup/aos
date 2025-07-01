@@ -18,6 +18,8 @@
 #include <type_traits>
 
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 
 #include "aos/events/epoll.h"
@@ -479,7 +481,7 @@ int VerifyMessages(LocklessQueue *queue, LocklessQueueMemory *memory) {
         ++i;
         continue;
       }
-      CHECK(read_result == LocklessQueueReader::Result::NOTHING_NEW)
+      ABSL_CHECK(read_result == LocklessQueueReader::Result::NOTHING_NEW)
           << ": " << static_cast<int>(read_result);
       break;
     }
@@ -552,7 +554,7 @@ TEST_F(LocklessQueueTest, FetchEqFetchNext) {
         LocklessQueue queue(memory, memory, config);
         PretendThatOwnerIsDeadForTesting(&memory->queue_setup_lock, tid.Get());
 
-        if (VLOG_IS_ON(1)) {
+        if (ABSL_VLOG_IS_ON(1)) {
           PrintLocklessQueueMemory(memory);
         }
 

@@ -17,8 +17,8 @@
 #include <string_view>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/escaping.h"
 
 #include "aos/ipc_lib/lockless_queue_memory.h"
@@ -35,7 +35,7 @@ class GrabQueueSetupLockOrDie {
  public:
   GrabQueueSetupLockOrDie(LocklessQueueMemory *memory) : memory_(memory) {
     const int result = mutex_grab(&(memory->queue_setup_lock));
-    CHECK(result == 0 || result == 1) << ": " << result;
+    ABSL_CHECK(result == 0 || result == 1) << ": " << result;
   }
 
   ~GrabQueueSetupLockOrDie() { mutex_unlock(&(memory_->queue_setup_lock)); }
@@ -48,14 +48,14 @@ class GrabQueueSetupLockOrDie {
 };
 
 bool IsPinned(LocklessQueueMemory *memory, Index index) {
-  DCHECK(index.valid());
+  ABSL_DCHECK(index.valid());
   const size_t queue_size = memory->queue_size();
   const QueueIndex message_index =
       memory->GetMessage(index)->header.queue_index.Load(queue_size);
   if (!message_index.valid()) {
     return false;
   }
-  DCHECK(memory->GetQueue(message_index.Wrapped())->Load() != index)
+  ABSL_DCHECK(memory->GetQueue(message_index.Wrapped())->Load() != index)
       << ": Message is in the queue";
   for (int pinner_index = 0;
        pinner_index < static_cast<int>(memory->config.num_pinners);
@@ -91,19 +91,19 @@ Index SwapPinnedSenderScratch(LocklessQueueMemory *const memory,
        pinner_index = (pinner_index + 1) % memory->config.num_pinners) {
     if (!IsPinned(memory, to_replace)) {
       // No pinners on our current scratch_index, so we're fine now.
-      VLOG(3) << "No pinners: " << to_replace.DebugString();
+      ABSL_VLOG(3) << "No pinners: " << to_replace.DebugString();
       return to_replace;
     }
 
     ipc_lib::Pinner *const pinner = memory->GetPinner(pinner_index);
 
     const Index pinner_scratch = pinner->scratch_index.RelaxedLoad();
-    CHECK(pinner_scratch.valid())
+    ABSL_CHECK(pinner_scratch.valid())
         << ": Pinner scratch_index should always be valid";
     if (IsPinned(memory, pinner_scratch)) {
       // Wouldn't do us any good to swap with this one, so don't bother, and
       // move onto the next one.
-      VLOG(3) << "Also pinned: " << pinner_scratch.DebugString();
+      ABSL_VLOG(3) << "Also pinned: " << pinner_scratch.DebugString();
       continue;
     }
 
@@ -115,9 +115,9 @@ Index SwapPinnedSenderScratch(LocklessQueueMemory *const memory,
                                                         to_replace)) {
       // Somebody swapped into this pinner before us. The new value is probably
       // pinned, so we don't want to look at it again immediately.
-      VLOG(3) << "Pinner " << pinner_index
-              << " scratch_index changed: " << pinner_scratch.DebugString()
-              << ", " << to_replace.DebugString();
+      ABSL_VLOG(3) << "Pinner " << pinner_index
+                   << " scratch_index changed: " << pinner_scratch.DebugString()
+                   << ", " << to_replace.DebugString();
       sender->to_replace.RelaxedInvalidate();
       continue;
     }
@@ -128,7 +128,7 @@ Index SwapPinnedSenderScratch(LocklessQueueMemory *const memory,
     // And then record that we succeeded, but definitely after the above
     // store.
     sender->to_replace.RelaxedInvalidate();
-    VLOG(3) << "Got new scratch message: " << pinner_scratch.DebugString();
+    ABSL_VLOG(3) << "Got new scratch message: " << pinner_scratch.DebugString();
 
     // If it's in a pinner's scratch_index, it should not be in the queue, which
     // means nobody new can pin it for real. However, they can still attempt to
@@ -182,7 +182,7 @@ bool DoCleanup(LocklessQueueMemory *memory, const GrabQueueSetupLockOrDie &) {
       ++valid_senders;
       continue;
     }
-    VLOG(3) << "Found an easy death for sender " << i;
+    ABSL_VLOG(3) << "Found an easy death for sender " << i;
     // We can do a relaxed load here because we're the only person touching
     // this sender at this point.
     const Index to_replace = sender->to_replace.RelaxedLoad();
@@ -220,7 +220,7 @@ bool DoCleanup(LocklessQueueMemory *memory, const GrabQueueSetupLockOrDie &) {
 
     if (!to_replace.valid()) {
       // 1) or 4).  Make sure we aren't corrupted and declare victory.
-      CHECK(scratch_index.valid());
+      ABSL_CHECK(scratch_index.valid());
 
       // If it's in 1) with a pinner, the sender might have a pinned message,
       // so fix that.
@@ -275,7 +275,7 @@ bool DoCleanup(LocklessQueueMemory *memory, const GrabQueueSetupLockOrDie &) {
     return true;
   }
 
-  VLOG(3) << "Starting hard cleanup";
+  ABSL_VLOG(3) << "Starting hard cleanup";
 
   size_t num_accounted_for = 0;
   size_t num_missing = 0;
@@ -292,7 +292,8 @@ bool DoCleanup(LocklessQueueMemory *memory, const GrabQueueSetupLockOrDie &) {
         ++num_missing;
         continue;
       }
-      CHECK(!need_recovery[i]) << ": Somebody else recovered a sender: " << i;
+      ABSL_CHECK(!need_recovery[i])
+          << ": Somebody else recovered a sender: " << i;
       // We can do a relaxed load here because we're the only person touching
       // this sender at this point, if it matters. If it's not a dead sender,
       // then any message it ever has will eventually be accounted for if we
@@ -323,7 +324,7 @@ bool DoCleanup(LocklessQueueMemory *memory, const GrabQueueSetupLockOrDie &) {
       accounted_for[index.message_index()] = true;
     }
 
-    CHECK_LE(num_accounted_for + num_missing, num_messages);
+    ABSL_CHECK_LE(num_accounted_for + num_missing, num_messages);
   }
 
   while (num_missing != 0) {
@@ -331,7 +332,8 @@ bool DoCleanup(LocklessQueueMemory *memory, const GrabQueueSetupLockOrDie &) {
     for (size_t i = 0; i < num_senders; ++i) {
       Sender *sender = memory->GetSender(i);
       if (!sender->ownership_tracker.OwnerIsDefinitelyAbsolutelyDead()) {
-        CHECK(!need_recovery[i]) << ": Somebody else recovered a sender: " << i;
+        ABSL_CHECK(!need_recovery[i])
+            << ": Somebody else recovered a sender: " << i;
         continue;
       }
       if (!need_recovery[i]) {
@@ -344,17 +346,17 @@ bool DoCleanup(LocklessQueueMemory *memory, const GrabQueueSetupLockOrDie &) {
 
       // Candidate.
       if (to_replace.valid()) {
-        CHECK_LE(to_replace.message_index(), accounted_for.size());
+        ABSL_CHECK_LE(to_replace.message_index(), accounted_for.size());
       }
       if (scratch_index.valid()) {
-        CHECK_LE(scratch_index.message_index(), accounted_for.size());
+        ABSL_CHECK_LE(scratch_index.message_index(), accounted_for.size());
       }
       if (!to_replace.valid() || accounted_for[to_replace.message_index()]) {
-        CHECK(scratch_index.valid());
-        VLOG(3) << "Sender " << i
-                << " died, to_replace is already accounted for";
+        ABSL_CHECK(scratch_index.valid());
+        ABSL_VLOG(3) << "Sender " << i
+                     << " died, to_replace is already accounted for";
         // If both are accounted for, we are corrupt...
-        CHECK(!accounted_for[scratch_index.message_index()]);
+        ABSL_CHECK(!accounted_for[scratch_index.message_index()]);
 
         // to_replace is already accounted for.  This means that we didn't
         // atomically insert scratch_index into the queue yet.  So
@@ -374,11 +376,11 @@ bool DoCleanup(LocklessQueueMemory *memory, const GrabQueueSetupLockOrDie &) {
         ++num_accounted_for;
       } else if (!scratch_index.valid() ||
                  accounted_for[scratch_index.message_index()]) {
-        VLOG(3) << "Sender " << i
-                << " died, scratch_index is already accounted for";
+        ABSL_VLOG(3) << "Sender " << i
+                     << " died, scratch_index is already accounted for";
         // scratch_index is accounted for.  That means we did the insert,
         // but didn't record it.
-        CHECK(to_replace.valid());
+        ABSL_CHECK(to_replace.valid());
 
         // Make sure to indicate it's an unused message before a sender gets its
         // hands on it.
@@ -399,13 +401,13 @@ bool DoCleanup(LocklessQueueMemory *memory, const GrabQueueSetupLockOrDie &) {
         --num_missing;
         ++num_accounted_for;
       } else {
-        VLOG(3) << "Sender " << i << " died, neither is accounted for";
+        ABSL_VLOG(3) << "Sender " << i << " died, neither is accounted for";
         // Ambiguous.  There will be an unambiguous one somewhere that we
         // can do first.
       }
     }
     // CHECK that we are making progress.
-    CHECK_NE(num_missing, starting_num_missing);
+    ABSL_CHECK_NE(num_missing, starting_num_missing);
   }
   return true;
 }
@@ -461,21 +463,21 @@ size_t LocklessQueueMemorySize(LocklessQueueConfiguration config) {
   // As we build up the size, confirm that everything is aligned to the
   // alignment requirements of the type.
   size_t size = sizeof(LocklessQueueMemory);
-  CHECK_EQ(size % alignof(LocklessQueueMemory), 0u);
+  ABSL_CHECK_EQ(size % alignof(LocklessQueueMemory), 0u);
 
-  CHECK_EQ(size % alignof(AtomicIndex), 0u);
+  ABSL_CHECK_EQ(size % alignof(AtomicIndex), 0u);
   size += LocklessQueueMemory::SizeOfQueue(config);
 
-  CHECK_EQ(size % alignof(Message), 0u);
+  ABSL_CHECK_EQ(size % alignof(Message), 0u);
   size += LocklessQueueMemory::SizeOfMessages(config);
 
-  CHECK_EQ(size % alignof(Watcher), 0u);
+  ABSL_CHECK_EQ(size % alignof(Watcher), 0u);
   size += LocklessQueueMemory::SizeOfWatchers(config);
 
-  CHECK_EQ(size % alignof(Sender), 0u);
+  ABSL_CHECK_EQ(size % alignof(Sender), 0u);
   size += LocklessQueueMemory::SizeOfSenders(config);
 
-  CHECK_EQ(size % alignof(Pinner), 0u);
+  ABSL_CHECK_EQ(size % alignof(Pinner), 0u);
   size += LocklessQueueMemory::SizeOfPinners(config);
 
   return size;
@@ -496,8 +498,9 @@ uint8_t RedzoneStart(const LocklessQueueMemory *memory,
                      const char *starting_data) {
   const auto memory_int = reinterpret_cast<uintptr_t>(memory);
   const auto starting_int = reinterpret_cast<uintptr_t>(starting_data);
-  DCHECK(starting_int >= memory_int);
-  DCHECK(starting_int < memory_int + LocklessQueueMemorySize(memory->config));
+  ABSL_DCHECK(starting_int >= memory_int);
+  ABSL_DCHECK(starting_int <
+              memory_int + LocklessQueueMemorySize(memory->config));
   const uintptr_t starting_offset = starting_int - memory_int;
   // Just XOR the lower 2 bytes. They higher-order bytes are probably 0
   // anyways.
@@ -539,7 +542,7 @@ void FillRedzone(LocklessQueueMemory *memory, absl::Span<char> redzone) {
   }
 
   // Just double check that the implementations match.
-  CHECK(!CheckRedzone(memory, redzone));
+  ABSL_CHECK(!CheckRedzone(memory, redzone));
 }
 
 LocklessQueueMemory *InitializeLocklessQueueMemory(
@@ -577,17 +580,17 @@ LocklessQueueMemory *InitializeLocklessQueueMemory(
   uid_t uid;
   {
     uid_t ruid, euid, suid;
-    PCHECK(getresuid(&ruid, &euid, &suid) == 0);
+    ABSL_PCHECK(getresuid(&ruid, &euid, &suid) == 0);
     // If these are equal, then use them, even if that's different from the real
     // UID. This allows processes to keep a real UID of 0 (to have permissions
     // to perform system-level changes) while still being able to communicate
     // with processes running unprivileged as a distinct user.
     if (euid == suid) {
       uid = euid;
-      VLOG(1) << "Using euid==suid " << uid;
+      ABSL_VLOG(1) << "Using euid==suid " << uid;
     } else {
       uid = ruid;
-      VLOG(1) << "Using ruid " << ruid;
+      ABSL_VLOG(1) << "Using ruid " << ruid;
     }
   }
 
@@ -605,7 +608,7 @@ LocklessQueueMemory *InitializeLocklessQueueMemory(
 
     const size_t num_messages = memory->num_messages();
     // There need to be at most MaxMessages() messages allocated.
-    CHECK_LE(num_messages, Index::MaxMessages());
+    ABSL_CHECK_LE(num_messages, Index::MaxMessages());
 
     for (size_t i = 0; i < num_messages; ++i) {
       Message *const message =
@@ -661,11 +664,12 @@ LocklessQueueMemory *InitializeLocklessQueueMemory(
       std::string user_username = user_pw->pw_name;
       struct passwd const *memory_pw = getpwuid(memory->uid);
       std::string memory_username = memory_pw->pw_name;
-      LOG(FATAL) << "Current user " << user_username << " (uid:" << uid << ") "
-                 << "doesn't match shared memory user " << memory_username
-                 << " (uid:" << memory->uid << "). "
-                 << "Log in as " << memory_username
-                 << " user to access this channel.";
+      ABSL_LOG(FATAL) << "Current user " << user_username << " (uid:" << uid
+                      << ") "
+                      << "doesn't match shared memory user " << memory_username
+                      << " (uid:" << memory->uid << "). "
+                      << "Log in as " << memory_username
+                      << " user to access this channel.";
     }
   }
 
@@ -687,10 +691,11 @@ LocklessQueueWatcher::~LocklessQueueWatcher() {
   GrabQueueSetupLockOrDie grab_queue_setup_lock(memory_);
 
   // Make sure we are registered.
-  CHECK_NE(watcher_index_, -1);
+  ABSL_CHECK_NE(watcher_index_, -1);
 
   // Make sure we still own the slot we are supposed to.
-  CHECK(memory_->GetWatcher(watcher_index_)->ownership_tracker.IsHeldBySelf());
+  ABSL_CHECK(
+      memory_->GetWatcher(watcher_index_)->ownership_tracker.IsHeldBySelf());
 
   // The act of unlocking invalidates the entry.  Invalidate it.
   memory_->GetWatcher(watcher_index_)->ownership_tracker.Release();
@@ -703,7 +708,7 @@ LocklessQueueWatcher::~LocklessQueueWatcher() {
   // And confirm that nothing is owned by us.
   const int num_watchers = memory_->num_watchers();
   for (int i = 0; i < num_watchers; ++i) {
-    CHECK(!memory_->GetWatcher(i)->ownership_tracker.IsHeldBySelf())
+    ABSL_CHECK(!memory_->GetWatcher(i)->ownership_tracker.IsHeldBySelf())
         << ": " << i;
   }
 }
@@ -732,7 +737,7 @@ LocklessQueueWatcher::LocklessQueueWatcher(LocklessQueueMemory *memory,
   const int num_watchers = memory_->num_watchers();
 
   // Now, find the first empty watcher and grab it.
-  CHECK_EQ(watcher_index_, -1);
+  ABSL_CHECK_EQ(watcher_index_, -1);
   for (int i = 0; i < num_watchers; ++i) {
     // If we see a slot the kernel has marked as dead, everything we do reusing
     // it needs to happen-after whatever that process did before dying.
@@ -773,7 +778,7 @@ LocklessQueueWakeUpper::LocklessQueueWakeUpper(LocklessQueue queue)
 int LocklessQueueWakeUpper::Wakeup(const int current_priority) {
   const size_t num_watchers = memory_->num_watchers();
 
-  CHECK_EQ(watcher_copy_.size(), num_watchers);
+  ABSL_CHECK_EQ(watcher_copy_.size(), num_watchers);
 
   // Grab a copy so it won't change out from underneath us, and we can sort it
   // nicely in C++.
@@ -827,7 +832,7 @@ int LocklessQueueWakeUpper::Wakeup(const int current_priority) {
         // were before?
         struct sched_param param;
         param.sched_priority = max_priority;
-        PCHECK(sched_setscheduler(0, SCHED_FIFO, &param) == 0)
+        ABSL_PCHECK(sched_setscheduler(0, SCHED_FIFO, &param) == 0)
             << ": changing to SCHED_FIFO with " << max_priority
             << ", if you want to bypass this check for testing, use "
                "--skip_realtime_scheduler";
@@ -863,7 +868,7 @@ int LocklessQueueWakeUpper::Wakeup(const int current_priority) {
       if (!absl::GetFlag(FLAGS_skip_realtime_scheduler)) {
         struct sched_param param;
         param.sched_priority = current_priority;
-        PCHECK(sched_setscheduler(0, SCHED_FIFO, &param) == 0)
+        ABSL_PCHECK(sched_setscheduler(0, SCHED_FIFO, &param) == 0)
             << ": changing to SCHED_FIFO with " << max_priority
             << ", if you want to bypass this check for testing, use "
                "--skip_realtime_scheduler";
@@ -903,7 +908,7 @@ LocklessQueueSender::LocklessQueueSender(
   }
 
   if (sender_index_ == -1) {
-    VLOG(1) << "Too many senders, starting to bail.";
+    ABSL_VLOG(1) << "Too many senders, starting to bail.";
     return;
   }
 
@@ -915,13 +920,14 @@ LocklessQueueSender::LocklessQueueSender(
 
   const Index scratch_index = sender->scratch_index.RelaxedLoad();
   Message *const message = memory_->GetMessage(scratch_index);
-  CHECK(!message->header.queue_index.RelaxedLoad(memory_->queue_size()).valid())
+  ABSL_CHECK(
+      !message->header.queue_index.RelaxedLoad(memory_->queue_size()).valid())
       << ": " << std::hex << scratch_index.get();
 }
 
 LocklessQueueSender::~LocklessQueueSender() {
   if (sender_index_ != -1) {
-    CHECK(memory_ != nullptr);
+    ABSL_CHECK(memory_ != nullptr);
     memory_->GetSender(sender_index_)->ownership_tracker.Release();
   }
 }
@@ -947,7 +953,7 @@ void *LocklessQueueSender::Data() {
   Message *const message = memory_->GetMessage(scratch_index);
   // We should have invalidated this when we first got the buffer. Verify that
   // in debug mode.
-  DCHECK(
+  ABSL_DCHECK(
       !message->header.queue_index.RelaxedLoad(memory_->queue_size()).valid())
       << ": " << std::hex << scratch_index.get();
 
@@ -962,7 +968,7 @@ LocklessQueueSender::Result LocklessQueueSender::Send(
     uint32_t remote_queue_index, const UUID &source_boot_uuid,
     monotonic_clock::time_point *monotonic_sent_time,
     realtime_clock::time_point *realtime_sent_time, uint32_t *queue_index) {
-  CHECK_LE(length, size());
+  ABSL_CHECK_LE(length, size());
   // Flatbuffers write from the back of the buffer to the front.  If we are
   // going to write an explicit chunk of memory into the buffer, we need to
   // adhere to this convention and place it at the end.
@@ -981,7 +987,7 @@ LocklessQueueSender::Result LocklessQueueSender::Send(
     monotonic_clock::time_point *monotonic_sent_time,
     realtime_clock::time_point *realtime_sent_time, uint32_t *queue_index) {
   const size_t queue_size = memory_->queue_size();
-  CHECK_LE(length, size());
+  ABSL_CHECK_LE(length, size());
 
   ::aos::ipc_lib::Sender *const sender = memory_->GetSender(sender_index_);
   // We can do a relaxed load on our sender because we're the only person
@@ -994,7 +1000,7 @@ LocklessQueueSender::Result LocklessQueueSender::Send(
 
   // We should have invalidated this when we first got the buffer. Verify that
   // in debug mode.
-  DCHECK(
+  ABSL_DCHECK(
       !message->header.queue_index.RelaxedLoad(memory_->queue_size()).valid())
       << ": " << std::hex << scratch_index.get();
 
@@ -1040,8 +1046,9 @@ LocklessQueueSender::Result LocklessQueueSender::Send(
       memory_->next_queue_index.CompareAndExchangeStrong(
           actual_next_queue_index, incremented_queue_index);
 
-      VLOG(3) << "We were beat.  Try again.  Was " << std::hex
-              << to_replace.get() << ", is " << decremented_queue_index.index();
+      ABSL_VLOG(3) << "We were beat.  Try again.  Was " << std::hex
+                   << to_replace.get() << ", is "
+                   << decremented_queue_index.index();
       continue;
     }
 
@@ -1059,10 +1066,10 @@ LocklessQueueSender::Result LocklessQueueSender::Send(
       if (previous_index != decremented_queue_index &&
           is_previous_index_valid) {
         // Retry.
-        VLOG(3) << "Something fishy happened, queue index doesn't match.  "
-                   "Retrying.  Previous index was "
-                << std::hex << previous_index.index() << ", should be "
-                << decremented_queue_index.index();
+        ABSL_VLOG(3) << "Something fishy happened, queue index doesn't match.  "
+                        "Retrying.  Previous index was "
+                     << std::hex << previous_index.index() << ", should be "
+                     << decremented_queue_index.index();
         continue;
       }
     }
@@ -1104,15 +1111,16 @@ LocklessQueueSender::Result LocklessQueueSender::Send(
       const QueueIndex previous_index =
           message_to_replace->header.queue_index.Load(queue_size);
       if (previous_index != decremented_queue_index && previous_index.valid()) {
-        VLOG(3) << "Got beat during check for messages being sent too fast"
-                   "Retrying.";
+        ABSL_VLOG(3) << "Got beat during check for messages being sent too fast"
+                        "Retrying.";
         continue;
       } else {
-        VLOG(1) << "Messages sent too fast. Returning. Attempted index: "
-                << decremented_queue_index.index()
-                << " message sent time: " << message->header.monotonic_sent_time
-                << "  message to replace sent time: "
-                << to_replace_monotonic_sent_time;
+        ABSL_VLOG(1) << "Messages sent too fast. Returning. Attempted index: "
+                     << decremented_queue_index.index()
+                     << " message sent time: "
+                     << message->header.monotonic_sent_time
+                     << "  message to replace sent time: "
+                     << to_replace_monotonic_sent_time;
 
         // Since we are not using the message obtained from scratch_index
         // and we are not retrying, we need to invalidate its queue_index.
@@ -1150,7 +1158,7 @@ LocklessQueueSender::Result LocklessQueueSender::Send(
       // Aw, didn't succeed.  Retry.
       sender->to_replace.RelaxedInvalidate();
       aos_compiler_memory_barrier();
-      VLOG(3) << "Failed to wrap into queue";
+      ABSL_VLOG(3) << "Failed to wrap into queue";
       continue;
     }
 
@@ -1168,7 +1176,7 @@ LocklessQueueSender::Result LocklessQueueSender::Send(
     break;
   }
 
-  DCHECK(!CheckBothRedzones(memory_, memory_->GetMessage(to_replace)))
+  ABSL_DCHECK(!CheckBothRedzones(memory_, memory_->GetMessage(to_replace)))
       << ": Invalid message found in shared memory";
   // to_replace is our current scratch_index. It isn't in the queue, which means
   // nobody new can pin it. They can set their `pinned` to it, but they will
@@ -1178,7 +1186,7 @@ LocklessQueueSender::Result LocklessQueueSender::Send(
   // pinned then we'll look for a new one to use instead.
   const Index new_scratch =
       SwapPinnedSenderScratch(memory_, sender, to_replace);
-  DCHECK(!CheckBothRedzones(
+  ABSL_DCHECK(!CheckBothRedzones(
       memory_, memory_->GetMessage(sender->scratch_index.RelaxedLoad())))
       << ": Invalid message found in shared memory";
 
@@ -1218,7 +1226,7 @@ LocklessQueuePinner::LocklessQueuePinner(
   }
 
   if (pinner_index_ == -1) {
-    VLOG(1) << "Too many pinners, starting to bail.";
+    ABSL_VLOG(1) << "Too many pinners, starting to bail.";
     return;
   }
 
@@ -1232,7 +1240,7 @@ LocklessQueuePinner::LocklessQueuePinner(
 
 LocklessQueuePinner::~LocklessQueuePinner() {
   if (pinner_index_ != -1) {
-    CHECK(memory_ != nullptr);
+    ABSL_CHECK(memory_ != nullptr);
     memory_->GetPinner(pinner_index_)->pinned.Invalidate();
     aos_compiler_memory_barrier();
     memory_->GetPinner(pinner_index_)->ownership_tracker.Release();
@@ -1267,24 +1275,24 @@ int LocklessQueuePinner::PinIndex(uint32_t uint32_queue_index) {
   {
     const Index message_index = queue_slot->Load();
     Message *const message = memory_->GetMessage(message_index);
-    DCHECK(!CheckBothRedzones(memory_, message))
+    ABSL_DCHECK(!CheckBothRedzones(memory_, message))
         << ": Invalid message found in shared memory";
 
     const QueueIndex message_queue_index =
         message->header.queue_index.Load(queue_size);
     if (message_queue_index == queue_index) {
-      VLOG(3) << "Eq: " << std::hex << message_queue_index.index();
+      ABSL_VLOG(3) << "Eq: " << std::hex << message_queue_index.index();
       aos_compiler_memory_barrier();
       return message_index.message_index();
     }
-    VLOG(3) << "Message reused: " << std::hex << message_queue_index.index()
-            << ", " << queue_index.index();
+    ABSL_VLOG(3) << "Message reused: " << std::hex
+                 << message_queue_index.index() << ", " << queue_index.index();
   }
 
   // Being down here means we asked to pin a message before realizing it's no
   // longer in the queue, so back that out now.
   pinner->pinned.Invalidate();
-  VLOG(3) << "Unpinned: " << std::hex << queue_index.index();
+  ABSL_VLOG(3) << "Unpinned: " << std::hex << queue_index.index();
   return -1;
 }
 
@@ -1297,7 +1305,7 @@ const void *LocklessQueuePinner::Data() const {
   const ::aos::ipc_lib::Pinner *const pinner =
       const_memory_->GetPinner(pinner_index_);
   QueueIndex pinned = pinner->pinned.RelaxedLoad(queue_size);
-  CHECK(pinned.valid());
+  ABSL_CHECK(pinned.valid());
 
   const Message *message = use_writable_memory_
                                ? memory_->GetMessage(pinned)
@@ -1328,7 +1336,7 @@ LocklessQueueReader::Result LocklessQueueReader::Read(
                                           : const_memory_->GetMessage(mi);
 
   while (true) {
-    DCHECK(
+    ABSL_DCHECK(
         !CheckBothRedzones(use_writable_memory_ ? memory_ : const_memory_, m))
         << ": Invalid message found in shared memory";
     // We need to confirm that the data doesn't change while we are reading it.
@@ -1339,8 +1347,8 @@ LocklessQueueReader::Result LocklessQueueReader::Read(
     if (starting_queue_index != queue_index) {
       // If we found a message that is exactly 1 loop old, we just wrapped.
       if (starting_queue_index == queue_index.DecrementBy(queue_size)) {
-        VLOG(3) << "Matches: " << std::hex << starting_queue_index.index()
-                << ", " << queue_index.DecrementBy(queue_size).index();
+        ABSL_VLOG(3) << "Matches: " << std::hex << starting_queue_index.index()
+                     << ", " << queue_index.DecrementBy(queue_size).index();
         return Result::NOTHING_NEW;
       }
 
@@ -1352,7 +1360,7 @@ LocklessQueueReader::Result LocklessQueueReader::Read(
                                        : const_memory_->GetMessage(queue_index);
       if (m != new_m) {
         m = new_m;
-        VLOG(3) << "Retrying, m doesn't match";
+        ABSL_VLOG(3) << "Retrying, m doesn't match";
         continue;
       }
 
@@ -1363,14 +1371,15 @@ LocklessQueueReader::Result LocklessQueueReader::Read(
       // Either we got too far behind (signaled by this being a valid
       // message), or this is one of the initial messages which are invalid.
       if (starting_queue_index.valid()) {
-        VLOG(3) << "Too old.  Tried for " << std::hex << queue_index.index()
-                << ", got " << starting_queue_index.index() << ", behind by "
-                << std::dec
-                << (starting_queue_index.index() - queue_index.index());
+        ABSL_VLOG(3) << "Too old.  Tried for " << std::hex
+                     << queue_index.index() << ", got "
+                     << starting_queue_index.index() << ", behind by "
+                     << std::dec
+                     << (starting_queue_index.index() - queue_index.index());
         return Result::TOO_OLD;
       }
 
-      VLOG(3) << "Initial";
+      ABSL_VLOG(3) << "Initial";
 
       // There isn't a valid message at this location.
       //
@@ -1379,15 +1388,15 @@ LocklessQueueReader::Result LocklessQueueReader::Read(
       // asking for something crazy, like something before the beginning of
       // the queue.  Tell them that they are behind.
       if (uint32_queue_index < const_memory_->queue_size()) {
-        VLOG(3) << "Near zero, " << std::hex << uint32_queue_index;
+        ABSL_VLOG(3) << "Near zero, " << std::hex << uint32_queue_index;
         return Result::NOTHING_NEW;
       } else {
-        VLOG(3) << "Not near zero, " << std::hex << uint32_queue_index;
+        ABSL_VLOG(3) << "Not near zero, " << std::hex << uint32_queue_index;
         return Result::TOO_OLD;
       }
     }
-    VLOG(3) << "Eq: " << std::hex << starting_queue_index.index() << ", "
-            << queue_index.index();
+    ABSL_VLOG(3) << "Eq: " << std::hex << starting_queue_index.index() << ", "
+                 << queue_index.index();
     break;
   }
 
@@ -1420,10 +1429,10 @@ LocklessQueueReader::Result LocklessQueueReader::Read(
     aos_compiler_memory_barrier();
     const QueueIndex final_queue_index = m->header.queue_index.Load(queue_size);
     if (final_queue_index != queue_index) {
-      VLOG(3) << "Changed out from under us.  Reading " << std::hex
-              << queue_index.index() << ", finished with "
-              << final_queue_index.index() << ", delta: " << std::dec
-              << (final_queue_index.index() - queue_index.index());
+      ABSL_VLOG(3) << "Changed out from under us.  Reading " << std::hex
+                   << queue_index.index() << ", finished with "
+                   << final_queue_index.index() << ", delta: " << std::dec
+                   << (final_queue_index.index() - queue_index.index());
       return Result::OVERWROTE;
     }
 
@@ -1448,10 +1457,10 @@ LocklessQueueReader::Result LocklessQueueReader::Read(
     aos_compiler_memory_barrier();
     const QueueIndex final_queue_index = m->header.queue_index.Load(queue_size);
     if (final_queue_index != queue_index) {
-      VLOG(3) << "Changed out from under us.  Reading " << std::hex
-              << queue_index.index() << ", finished with "
-              << final_queue_index.index() << ", delta: " << std::dec
-              << (final_queue_index.index() - queue_index.index());
+      ABSL_VLOG(3) << "Changed out from under us.  Reading " << std::hex
+                   << queue_index.index() << ", finished with "
+                   << final_queue_index.index() << ", delta: " << std::dec
+                   << (final_queue_index.index() - queue_index.index());
       return Result::OVERWROTE;
     }
   }
@@ -1516,9 +1525,9 @@ QueueIndex LocklessQueueReader::LatestIndex() const {
     memory_->next_queue_index.CompareAndExchangeStrong(actual_next_queue_index,
                                                        incremented_queue_index);
 
-    VLOG(3) << "next_queue_index is lagging, fixed it.  Found " << std::hex
-            << to_replace.get() << ", expected "
-            << next_queue_index.DecrementBy(queue_size).index();
+    ABSL_VLOG(3) << "next_queue_index is lagging, fixed it.  Found " << std::hex
+                 << to_replace.get() << ", expected "
+                 << next_queue_index.DecrementBy(queue_size).index();
 
     actual_next_queue_index = incremented_queue_index;
   }

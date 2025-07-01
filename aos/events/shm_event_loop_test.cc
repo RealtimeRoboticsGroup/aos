@@ -59,7 +59,7 @@ class ShmEventLoopTestFactory : public EventLoopTestFactory {
     return loop;
   }
 
-  Result<void> Run() override {
+  Status Run() override {
     CHECK(primary_event_loop_ != nullptr);
     return primary_event_loop_->Run();
   }
@@ -318,7 +318,7 @@ TEST_P(ShmEventLoopTest, SuccessfulExitTest) {
   loop1->OnRun([this, &exit_handle]() {
     factory()->Exit();
     // The second Exit() call should get ignored.
-    exit_handle->Exit(aos::Error::MakeUnexpectedError("Hello, World!"));
+    exit_handle->Exit(MakeError("Hello, World!"));
   });
 
   EXPECT_TRUE(factory()->Run().has_value());

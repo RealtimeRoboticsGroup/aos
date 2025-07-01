@@ -9,8 +9,8 @@
 
 #include "absl/container/btree_set.h"
 #include "absl/flags/declare.h"
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "flatbuffers/flatbuffers.h"
 #include "tl/expected.hpp"
 
@@ -136,16 +136,17 @@ class RawSender {
         size_t size, size_t alignment, fbs::SetZero set_zero) override {
       std::optional<std::span<uint8_t>> span =
           Allocate(size, alignment, set_zero);
-      CHECK(span.has_value())
+      ABSL_CHECK(span.has_value())
           << ": Failed to allocate " << size << " bytes for "
           << configuration::StrippedChannelToString(channel_)
           << " with max_size of " << channel_->max_size();
       // The below checks are just sanity checks---if they fail, that implies
       // that the allocator is failing to hold to its contracts, rather than
       // just that there is insufficient memory available.
-      CHECK_EQ(size, span.value().size())
+      ABSL_CHECK_EQ(size, span.value().size())
           << ": Failed to allocate " << size << " bytes.";
-      CHECK_EQ(reinterpret_cast<size_t>(span.value().data()) % alignment, 0u)
+      ABSL_CHECK_EQ(reinterpret_cast<size_t>(span.value().data()) % alignment,
+                    0u)
           << "Failed to allocate data of length " << size << " with alignment "
           << alignment;
 
@@ -220,10 +221,10 @@ class RawSender {
   // Returns the associated flatbuffers-style allocator. This must be
   // deallocated before the message is sent.
   ChannelPreallocatedAllocator *fbb_allocator() {
-    CHECK(!static_allocator_.has_value())
+    ABSL_CHECK(!static_allocator_.has_value())
         << ": May not mix-and-match static and raw flatbuffer builders.";
     if (fbb_allocator_.has_value()) {
-      CHECK(!fbb_allocator_.value().allocated())
+      ABSL_CHECK(!fbb_allocator_.value().allocated())
           << ": May not have multiple active allocators on a single sender.";
     }
     return &fbb_allocator_.emplace(reinterpret_cast<uint8_t *>(data()), size(),
@@ -231,7 +232,7 @@ class RawSender {
   }
 
   ChannelSpanAllocator *static_allocator() {
-    CHECK(!fbb_allocator_.has_value())
+    ABSL_CHECK(!fbb_allocator_.has_value())
         << ": May not mix-and-match static and raw flatbuffer builders.";
     return &static_allocator_.emplace(
         std::span<uint8_t>{reinterpret_cast<uint8_t *>(data()), size()},
@@ -299,7 +300,7 @@ class Fetcher {
   // Fetches the next message. Returns true if it fetched a new message.  This
   // method will only return messages sent after the Fetcher was created.
   bool FetchNext() {
-    CHECK(fetcher_ != nullptr);
+    ABSL_CHECK(fetcher_ != nullptr);
     const bool result = fetcher_->FetchNext();
     if (result) {
       CheckChannelDataAlignment(fetcher_->context().data,
@@ -312,7 +313,7 @@ class Fetcher {
   // true.  The data and buffer_index are the only pieces of the Context which
   // are zeroed out.  The function must be valid.
   bool FetchNextIf(std::function<bool(const Context &)> fn) {
-    CHECK(fetcher_ != nullptr);
+    ABSL_CHECK(fetcher_ != nullptr);
     const bool result = fetcher_->FetchNextIf(std::move(fn));
     if (result) {
       CheckChannelDataAlignment(fetcher_->context().data,
@@ -325,7 +326,7 @@ class Fetcher {
   // This will return the latest message regardless of if it was sent before or
   // after the fetcher was created.
   bool Fetch() {
-    CHECK(fetcher_ != nullptr);
+    ABSL_CHECK(fetcher_ != nullptr);
     const bool result = fetcher_->Fetch();
     if (result) {
       CheckChannelDataAlignment(fetcher_->context().data,
@@ -338,7 +339,7 @@ class Fetcher {
   // new message. This will return the latest message regardless of if it was
   // sent before or after the fetcher was created.  The function must be valid.
   bool FetchIf(std::function<bool(const Context &)> fn) {
-    CHECK(fetcher_ != nullptr);
+    ABSL_CHECK(fetcher_ != nullptr);
     const bool result = fetcher_->FetchIf(std::move(fn));
     if (result) {
       CheckChannelDataAlignment(fetcher_->context().data,
@@ -350,7 +351,7 @@ class Fetcher {
   // Returns a pointer to the contained flatbuffer, or nullptr if there is no
   // available message.
   const T *get() const {
-    CHECK(fetcher_ != nullptr);
+    ABSL_CHECK(fetcher_ != nullptr);
     return fetcher_->context().data != nullptr
                ? flatbuffers::GetRoot<T>(
                      reinterpret_cast<const char *>(fetcher_->context().data))
@@ -359,14 +360,14 @@ class Fetcher {
 
   // Returns the channel this fetcher uses
   const Channel *channel() const {
-    CHECK(fetcher_ != nullptr);
+    ABSL_CHECK(fetcher_ != nullptr);
     return fetcher_->channel();
   }
 
   // Returns the context holding timestamps and other metadata about the
   // message.
   const Context &context() const {
-    CHECK(fetcher_ != nullptr);
+    ABSL_CHECK(fetcher_ != nullptr);
     return fetcher_->context();
   }
 
@@ -412,7 +413,7 @@ class Sender {
    public:
     StaticBuilder(RawSender *sender, fbs::SpanAllocator *allocator)
         : builder_(allocator), sender_(sender) {
-      CHECK(sender != nullptr);
+      ABSL_CHECK(sender != nullptr);
     }
     StaticBuilder(const StaticBuilder &) = delete;
     StaticBuilder(StaticBuilder &&) = default;
@@ -421,7 +422,7 @@ class Sender {
     StaticBuilder &operator=(StaticBuilder &&) = default;
 
     fbs::Builder<T> *builder() {
-      DCHECK(builder_.has_value());
+      ABSL_DCHECK(builder_.has_value());
       return &builder_.value();
     }
 
@@ -456,7 +457,7 @@ class Sender {
         : fbb_(allocator->size(), allocator),
           allocator_(allocator),
           sender_(sender) {
-      CHECK(sender != nullptr);
+      ABSL_CHECK(sender != nullptr);
       CheckChannelDataAlignment(allocator->data(), allocator->size());
       fbb_.ForceDefaults(true);
     }
@@ -487,7 +488,7 @@ class Sender {
 
     // CHECKs that this message was sent.
     void CheckSent() {
-      CHECK(!allocator_->is_allocated()) << ": Message was not sent yet";
+      ABSL_CHECK(!allocator_->is_allocated()) << ": Message was not sent yet";
     }
 
     // Detaches a buffer, for later use calling Sender::Send directly.
@@ -528,14 +529,14 @@ class Sender {
 
   // Equivalent to RawSender::CheckOk
   void CheckOk(const RawSender::Error err) {
-    CHECK(sender_ != nullptr);
+    ABSL_CHECK(sender_ != nullptr);
     sender_->CheckOk(err);
   };
 
   // Returns the name of the underlying queue, if valid.  You must check valid()
   // first.
   const Channel *channel() const {
-    CHECK(sender_ != nullptr);
+    ABSL_CHECK(sender_ != nullptr);
     return sender_->channel();
   }
 
@@ -548,23 +549,23 @@ class Sender {
 
   // Returns the time_points that the last message was sent at.
   aos::monotonic_clock::time_point monotonic_sent_time() const {
-    CHECK(sender_ != nullptr);
+    ABSL_CHECK(sender_ != nullptr);
     return sender_->monotonic_sent_time();
   }
   aos::realtime_clock::time_point realtime_sent_time() const {
-    CHECK(sender_ != nullptr);
+    ABSL_CHECK(sender_ != nullptr);
     return sender_->realtime_sent_time();
   }
   // Returns the queue index that this was sent with.
   uint32_t sent_queue_index() const {
-    CHECK(sender_ != nullptr);
+    ABSL_CHECK(sender_ != nullptr);
     return sender_->sent_queue_index();
   }
 
   // Returns the buffer index which MakeBuilder() will expose access to. This is
   // the buffer the caller can fill out.
   int buffer_index() const {
-    CHECK(sender_ != nullptr);
+    ABSL_CHECK(sender_ != nullptr);
     return sender_->buffer_index();
   }
 
@@ -574,7 +575,7 @@ class Sender {
     auto builder = MakeBuilder();
     flatbuffers::Offset<T> json_offset =
         aos::JsonToFlatbuffer<T>(json, builder.fbb());
-    CHECK(!json_offset.IsNull()) << ": Invalid JSON";
+    ABSL_CHECK(!json_offset.IsNull()) << ": Invalid JSON";
     return builder.Send(json_offset);
   }
 
@@ -773,16 +774,17 @@ class EventLoop {
   // sent to the provided channel.
   template <typename T>
   Fetcher<T> MakeFetcher(const std::string_view channel_name) {
-    CHECK(HasChannel<T>(channel_name))
+    ABSL_CHECK(HasChannel<T>(channel_name))
         << ": Channel { \"name\": \"" << channel_name << "\", \"type\": \""
         << T::GetFullyQualifiedName() << "\" } not found in config.";
 
     Fetcher<T> result = TryMakeFetcher<T>(channel_name);
     if (!result.valid()) {
-      LOG(FATAL) << "Channel { \"name\": \"" << channel_name
-                 << "\", \"type\": \"" << T::GetFullyQualifiedName()
-                 << "\" } is not able to be fetched on this node.  Check your "
-                    "configuration.";
+      ABSL_LOG(FATAL)
+          << "Channel { \"name\": \"" << channel_name << "\", \"type\": \""
+          << T::GetFullyQualifiedName()
+          << "\" } is not able to be fetched on this node.  Check your "
+             "configuration.";
     }
 
     return result;
@@ -809,7 +811,7 @@ class EventLoop {
   // the provided channel.
   template <typename T>
   Sender<T> MakeSender(const std::string_view channel_name) {
-    CHECK(HasChannel<T>(channel_name))
+    ABSL_CHECK(HasChannel<T>(channel_name))
         << ": Channel { \"name\": \"" << channel_name << "\", \"type\": \""
         << T::GetFullyQualifiedName() << "\" } not found in config for "
         << name()
@@ -819,10 +821,11 @@ class EventLoop {
 
     Sender<T> result = TryMakeSender<T>(channel_name);
     if (!result) {
-      LOG(FATAL) << "Channel { \"name\": \"" << channel_name
-                 << "\", \"type\": \"" << T::GetFullyQualifiedName()
-                 << "\" } is not able to be sent on this node.  Check your "
-                    "configuration.";
+      ABSL_LOG(FATAL)
+          << "Channel { \"name\": \"" << channel_name << "\", \"type\": \""
+          << T::GetFullyQualifiedName()
+          << "\" } is not able to be sent on this node.  Check your "
+             "configuration.";
     }
 
     return result;
@@ -1096,7 +1099,7 @@ class ExitHandle {
   //
   // This means no more events will be processed, but any currently being
   // processed will finish.
-  virtual void Exit(Result<void> result) = 0;
+  virtual void Exit(Status result) = 0;
   // Overload for a successful exit---equivalent to if we specified a default
   // parameter for Exit(), except that autocxx does not understand default
   // arguments and so needs an explicit overload to keep rust happy

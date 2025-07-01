@@ -15,7 +15,7 @@ function cleanup {
 trap cleanup EXIT
 trap cleanup SIGINT
 
-curl -L "${SOURCE}" -o "${FILE}"
+curl -f -L "${SOURCE}" -o "${FILE}"
 
 echo gs://austin-vpn-build-dependencies/$1
 

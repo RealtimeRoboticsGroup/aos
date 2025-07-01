@@ -85,8 +85,14 @@ def _flatbuffer_library_compile_impl(ctx):
 
         external_folder = None
         out_package_path = ctx.label.package
-        if input_dir.startswith("external/"):
-            second_slash_index = input_dir.find("/", len("external/"))
+        is_external_source_file = input_dir.startswith("external/")
+        external_bin_dir = ctx.bin_dir.path + "/external/"
+        is_external_generated_file = input_dir.startswith(external_bin_dir)
+        if is_external_source_file or is_external_generated_file:
+            if is_external_source_file:
+                second_slash_index = input_dir.find("/", len("external/"))
+            elif is_external_generated_file:
+                second_slash_index = input_dir.find("/", len(external_bin_dir))
 
             # Handle flatbuffers in the root of the repo.  Don't want to strip off the last character...
             if second_slash_index == -1:

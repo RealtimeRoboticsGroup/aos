@@ -1,3 +1,4 @@
+load("@bazel_skylib//lib:selects.bzl", "selects")
 load("//tools/build_rules:clean_dep.bzl", "clean_dep")
 
 package(default_visibility = ["//visibility:public"])
@@ -115,4 +116,13 @@ config_setting(
     flag_values = {
         "@io_bazel_rules_go//go/config:msan": "false",
     },
+)
+
+selects.config_setting_group(
+    name = "has_sanitizer",
+    match_any = [
+        ":has_msan",
+        ":has_asan",
+        ":has_ubsan",
+    ],
 )

@@ -4,8 +4,8 @@
 
 #include <iomanip>
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/realtime.h"
 
@@ -38,7 +38,7 @@ ResizeableObject::ResizeableObject(ResizeableObject &&other)
   // Sanity check that the std::unique_ptr move didn't reallocate/move memory
   // around.
   if (owned_allocator_.get() != nullptr) {
-    CHECK_EQ(owned_allocator_.get(), allocator_);
+    ABSL_CHECK_EQ(owned_allocator_.get(), allocator_);
   }
 }
 
@@ -46,8 +46,8 @@ std::optional<std::span<uint8_t>> ResizeableObject::InsertBytes(
     void *insertion_point, size_t bytes, SetZero set_zero) {
   // See comments on InsertBytes() declaration and in FixObjects()
   // implementation below.
-  CHECK_LT(reinterpret_cast<const void *>(buffer_.data()),
-           reinterpret_cast<const void *>(insertion_point))
+  ABSL_CHECK_LT(reinterpret_cast<const void *>(buffer_.data()),
+                reinterpret_cast<const void *>(insertion_point))
       << ": Insertion may not be prior to the start of the buffer.";
   // Note that we will round up the size to the current alignment, so that we
   // ultimately end up only adjusting the buffer size by a multiple of its
@@ -56,7 +56,7 @@ std::optional<std::span<uint8_t>> ResizeableObject::InsertBytes(
   if (parent_ != nullptr) {
     return parent_->InsertBytes(insertion_point, aligned_bytes, set_zero);
   } else {
-    CHECK(allocator_ != nullptr);
+    ABSL_CHECK(allocator_ != nullptr);
     std::optional<std::span<uint8_t>> new_buffer = allocator_->InsertBytes(
         insertion_point, aligned_bytes, Alignment(), set_zero);
     if (!new_buffer.has_value()) {
@@ -88,7 +88,7 @@ std::span<uint8_t> ResizeableObject::BufferForObject(size_t absolute_offset,
 
 void ResizeableObject::FixObjects(void *modification_point,
                                   ssize_t bytes_inserted) {
-  CHECK_EQ(bytes_inserted % Alignment(), 0u)
+  ABSL_CHECK_EQ(bytes_inserted % Alignment(), 0u)
       << ": We only support inserting N * Alignment() bytes at a time. This "
          "may change in the future.";
   for (size_t index = 0; index < NumberOfSubObjects(); ++index) {
@@ -98,17 +98,18 @@ void ResizeableObject::FixObjects(void *modification_point,
     if (absolute_offset >= modification_point &&
         object.inline_entry < modification_point) {
       if (*object.inline_entry != 0) {
-        CHECK(object.object != nullptr);
-        CHECK_EQ(static_cast<const void *>(
-                     static_cast<const uint8_t *>(absolute_offset)),
-                 DereferenceOffset(object.inline_entry));
+        ABSL_CHECK(object.object != nullptr);
+        ABSL_CHECK_EQ(static_cast<const void *>(
+                          static_cast<const uint8_t *>(absolute_offset)),
+                      DereferenceOffset(object.inline_entry));
         *object.inline_entry += bytes_inserted;
-        CHECK_GE(DereferenceOffset(object.inline_entry), modification_point)
+        ABSL_CHECK_GE(DereferenceOffset(object.inline_entry),
+                      modification_point)
             << ": Encountered offset which points to a now-deleted section "
                "of memory. The offset should have been null'd out prior to "
                "deleting the memory.";
       } else {
-        CHECK_EQ(nullptr, object.object);
+        ABSL_CHECK_EQ(nullptr, object.object);
       }
       *object.absolute_offset += bytes_inserted;
     }
@@ -134,7 +135,7 @@ void ResizeableObject::FixObjects(void *modification_point,
 std::optional<std::span<uint8_t>> SpanAllocator::Allocate(size_t size,
                                                           size_t alignment,
                                                           SetZero set_zero) {
-  CHECK(!allocated_);
+  ABSL_CHECK(!allocated_);
   if (size > buffer_.size()) {
     return std::nullopt;
   }
@@ -143,8 +144,8 @@ std::optional<std::span<uint8_t>> SpanAllocator::Allocate(size_t size,
   }
   allocated_size_ = size;
   allocated_ = true;
-  CHECK_GT(alignment, 0u);
-  CHECK_EQ(buffer_.size() % alignment, 0u)
+  ABSL_CHECK_GT(alignment, 0u);
+  ABSL_CHECK_EQ(buffer_.size() % alignment, 0u)
       << ": Buffer isn't a multiple of alignment " << alignment << " long, is "
       << buffer_.size() << " long";
   return internal::GetSubSpan(buffer_, buffer_.size() - size);
@@ -155,11 +156,11 @@ std::optional<std::span<uint8_t>> SpanAllocator::InsertBytes(
     SetZero set_zero) {
   uint8_t *insertion_point_typed = reinterpret_cast<uint8_t *>(insertion_point);
   const ssize_t insertion_index = insertion_point_typed - buffer_.data();
-  CHECK_LE(0, insertion_index);
-  CHECK_LE(insertion_index, static_cast<ssize_t>(buffer_.size()));
+  ABSL_CHECK_LE(0, insertion_index);
+  ABSL_CHECK_LE(insertion_index, static_cast<ssize_t>(buffer_.size()));
   const size_t new_size = allocated_size_ + bytes;
   if (new_size > buffer_.size()) {
-    VLOG(1) << ": Insufficient space to grow by " << bytes << " bytes.";
+    ABSL_VLOG(1) << ": Insufficient space to grow by " << bytes << " bytes.";
     return std::nullopt;
   }
   const size_t old_start_index = buffer_.size() - allocated_size_;
@@ -176,9 +177,9 @@ std::optional<std::span<uint8_t>> SpanAllocator::InsertBytes(
 std::span<uint8_t> SpanAllocator::RemoveBytes(std::span<uint8_t> remove_bytes) {
   const ssize_t removal_index = remove_bytes.data() - buffer_.data();
   const size_t old_start_index = buffer_.size() - allocated_size_;
-  CHECK_LE(static_cast<ssize_t>(old_start_index), removal_index);
-  CHECK_LE(removal_index, static_cast<ssize_t>(buffer_.size()));
-  CHECK_LE(removal_index + remove_bytes.size(), buffer_.size());
+  ABSL_CHECK_LE(static_cast<ssize_t>(old_start_index), removal_index);
+  ABSL_CHECK_LE(removal_index, static_cast<ssize_t>(buffer_.size()));
+  ABSL_CHECK_LE(removal_index + remove_bytes.size(), buffer_.size());
   uint8_t *old_buffer_start = buffer_.data() + old_start_index;
   memmove(old_buffer_start + remove_bytes.size(), old_buffer_start,
           removal_index - old_start_index);
@@ -187,12 +188,12 @@ std::span<uint8_t> SpanAllocator::RemoveBytes(std::span<uint8_t> remove_bytes) {
 }
 
 void SpanAllocator::Deallocate(std::span<uint8_t>) {
-  CHECK(allocated_) << ": Called Deallocate() without a prior allocation.";
+  ABSL_CHECK(allocated_) << ": Called Deallocate() without a prior allocation.";
   allocated_ = false;
 }
 
 AlignedVectorAllocator::~AlignedVectorAllocator() {
-  CHECK(buffer_.empty())
+  ABSL_CHECK(buffer_.empty())
       << ": Must deallocate before destroying the AlignedVectorAllocator.";
 }
 
@@ -200,7 +201,7 @@ void AlignedVectorAllocator::ResizeBuffer(size_t size) {
   const size_t new_buffer_size =
       ((size + kAlignment - 1) / kAlignment) * kAlignment;
   if (new_buffer_size > buffer_.capacity()) {
-    CHECK(!aos::IsDieOnMallocEnabled())
+    ABSL_CHECK(!aos::IsDieOnMallocEnabled())
         << ": Cannot resize the AlignedVectorAllocator when aos realtime mode "
            "is enabled. Verify you have allocated enough space before aos "
            "realtime mode is enabled.";
@@ -210,7 +211,7 @@ void AlignedVectorAllocator::ResizeBuffer(size_t size) {
 
 std::optional<std::span<uint8_t>> AlignedVectorAllocator::Allocate(
     size_t size, size_t /*alignment*/, fbs::SetZero set_zero) {
-  CHECK(buffer_.empty()) << ": Must deallocate before calling Allocate().";
+  ABSL_CHECK(buffer_.empty()) << ": Must deallocate before calling Allocate().";
 
   ResizeBuffer(size);
 
@@ -225,9 +226,9 @@ std::optional<std::span<uint8_t>> AlignedVectorAllocator::Allocate(
 std::optional<std::span<uint8_t>> AlignedVectorAllocator::InsertBytes(
     void *insertion_point, size_t bytes, size_t /*alignment*/,
     fbs::SetZero set_zero) {
-  DCHECK_GE(reinterpret_cast<const uint8_t *>(insertion_point), data());
-  DCHECK_LE(reinterpret_cast<const uint8_t *>(insertion_point),
-            data() + allocated_size_);
+  ABSL_DCHECK_GE(reinterpret_cast<const uint8_t *>(insertion_point), data());
+  ABSL_DCHECK_LE(reinterpret_cast<const uint8_t *>(insertion_point),
+                 data() + allocated_size_);
   const size_t buffer_offset =
       reinterpret_cast<const uint8_t *>(insertion_point) - data();
   // TODO(austin): This has an extra memcpy in it that isn't strictly needed
@@ -266,9 +267,9 @@ std::span<uint8_t> AlignedVectorAllocator::RemoveBytes(
     std::span<uint8_t> remove_bytes) {
   const ssize_t removal_index = remove_bytes.data() - buffer_.data();
   const size_t old_start_index = buffer_.size() - allocated_size_;
-  CHECK_LE(static_cast<ssize_t>(old_start_index), removal_index);
-  CHECK_LE(removal_index, static_cast<ssize_t>(buffer_.size()));
-  CHECK_LE(removal_index + remove_bytes.size(), buffer_.size());
+  ABSL_CHECK_LE(static_cast<ssize_t>(old_start_index), removal_index);
+  ABSL_CHECK_LE(removal_index, static_cast<ssize_t>(buffer_.size()));
+  ABSL_CHECK_LE(removal_index + remove_bytes.size(), buffer_.size());
   uint8_t *old_buffer_start = buffer_.data() + old_start_index;
   memmove(old_buffer_start + remove_bytes.size(), old_buffer_start,
           removal_index - old_start_index);
@@ -279,11 +280,11 @@ std::span<uint8_t> AlignedVectorAllocator::RemoveBytes(
 
 void AlignedVectorAllocator::Deallocate(std::span<uint8_t>) {
   if (!released_) {
-    CHECK(!buffer_.empty())
+    ABSL_CHECK(!buffer_.empty())
         << ": Called Deallocate() without a prior allocation.";
   }
   released_ = false;
-  CHECK(!aos::IsDieOnMallocEnabled());
+  ABSL_CHECK(!aos::IsDieOnMallocEnabled());
   buffer_.resize(0);
 }
 

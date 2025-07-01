@@ -24,8 +24,8 @@ cc_library(
         "//aos:sanitizers",
         "//aos/libc:aos_strerror",
         "//aos/time",
-        "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 

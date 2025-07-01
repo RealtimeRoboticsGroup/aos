@@ -5,8 +5,7 @@
 
 #include <chrono>
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
 
 #include "aos/time/time.h"
 
@@ -24,7 +23,7 @@ class EventLoopEvent {
   }
 
   monotonic_clock::time_point event_time() const {
-    DCHECK(valid());
+    ABSL_DCHECK(valid());
     return event_time_;
   }
   void set_event_time(monotonic_clock::time_point event_time) {
@@ -33,7 +32,7 @@ class EventLoopEvent {
 
   // Internal book-keeping for EventLoop.
   size_t generation() const {
-    DCHECK(valid());
+    ABSL_DCHECK(valid());
     return generation_;
   }
   void set_generation(size_t generation) { generation_ = generation; }

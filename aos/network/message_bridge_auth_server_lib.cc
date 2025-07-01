@@ -3,8 +3,8 @@
 #include <cstdio>
 #include <fstream>
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 
 #include "grpc/grpc.h"
 #include "grpcpp/server_context.h"
@@ -20,10 +20,10 @@ constexpr int kSctpKeySize = 16;
 
 std::string GenerateSecureRandomSequence(size_t count) {
   std::ifstream rng("/dev/random", std::ios::in | std::ios::binary);
-  CHECK(rng) << "Unable to open /dev/random";
+  ABSL_CHECK(rng) << "Unable to open /dev/random";
   std::string out(count, 0);
   rng.read(out.data(), count);
-  CHECK(rng) << "Couldn't read from random device";
+  ABSL_CHECK(rng) << "Couldn't read from random device";
   rng.close();
   return out;
 }
@@ -37,7 +37,7 @@ SctpConfigServer::SctpConfigServer()
 Status SctpConfigServer::GetActiveKey(ServerContext * /*context*/,
                                       const SctpKeyRequest * /*request*/,
                                       SctpKeyResponse *response) {
-  VLOG(1) << "Got request for SCTP authentication key";
+  ABSL_VLOG(1) << "Got request for SCTP authentication key";
   response->set_key(active_key_);
   return Status::OK;
 }

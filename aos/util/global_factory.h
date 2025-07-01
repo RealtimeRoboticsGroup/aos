@@ -21,7 +21,7 @@
 //     ExampleBaseClassGlobalFactory::Get("ExampleSubClass")();
 
 // Helper macro to set up a Factory Family for a particular type.
-// Put this is the header file along-side the base class.
+// Put this in the header file alongside the base class.
 #define SETUP_FACTORY(BaseClass, ...) \
   using BaseClass##GlobalFactory =    \
       ::aos::GlobalFactory<BaseClass, ##__VA_ARGS__>
@@ -47,7 +47,7 @@ class GlobalFactory {
   using FactoryFunction =
       std::function<std::unique_ptr<BaseClass>(FactoryArgs &&...)>;
 
-  // Gets the factory function by named. This will return a null factory
+  // Gets the factory function by name. This will return a null factory
   // std::function if the factory is not available, so one would be wise
   // to check this function before use.
   // It is an error to call this during static initialization.
@@ -62,7 +62,7 @@ class GlobalFactory {
   }
 
   // Installs a factory function for constructing SubClass
-  // using name "name". It is an error not call this at namespace scope
+  // using name "name". It is an error not to call this at namespace scope
   // through the REGISTER_SUBCLASS macro above.
   template <typename SubClass>
   class SubClassRegisterer {
@@ -82,7 +82,7 @@ class GlobalFactory {
 
  private:
   // Actual map. (Protected by static from concurrent construction
-  // if there is nothing registered at static linkage time).
+  // if there is nothing registered at static linkage time.)
   static std::unordered_map<std::string, FactoryFunction> *GetMap() {
     static std::unordered_map<std::string, FactoryFunction> map;
     return &map;

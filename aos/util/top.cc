@@ -15,8 +15,7 @@
 #include <string_view>
 #include <vector>
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/numeric/int128.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
@@ -33,7 +32,7 @@ std::optional<std::string> ReadShortFile(std::string_view file_name) {
   // Open as input and seek to end immediately.
   std::ifstream file(std::string(file_name), std::ios_base::in);
   if (!file.good()) {
-    VLOG(1) << "Can't read " << file_name;
+    ABSL_VLOG(1) << "Can't read " << file_name;
     return std::nullopt;
   }
   const size_t kMaxLineLength = 4096;
@@ -59,7 +58,7 @@ std::optional<ProcStat> ReadProcStat(const pid_t pid,
   const size_t end_name = contents->find_last_of(')');
   if (start_name == std::string::npos || end_name == std::string::npos ||
       end_name < start_name) {
-    VLOG(1) << "No name found in stat line " << contents.value();
+    ABSL_VLOG(1) << "No name found in stat line " << contents.value();
     return std::nullopt;
   }
   std::string_view name(contents->c_str() + start_name + 1,
@@ -71,19 +70,20 @@ std::optional<ProcStat> ReadProcStat(const pid_t pid,
                      ' ', absl::SkipWhitespace());
   constexpr int kNumFieldsAfterName = 50;
   if (fields.size() != kNumFieldsAfterName) {
-    VLOG(1) << "Incorrect number of fields " << fields.size();
+    ABSL_VLOG(1) << "Incorrect number of fields " << fields.size();
     return std::nullopt;
   }
   // The first field is a character for the current process state; every single
   // field after that should be an integer.
   if (fields[0].size() != 1) {
-    VLOG(1) << "State field is too long: " << fields[0];
+    ABSL_VLOG(1) << "State field is too long: " << fields[0];
     return std::nullopt;
   }
   std::array<absl::int128, kNumFieldsAfterName - 1> numbers;
   for (int ii = 1; ii < kNumFieldsAfterName; ++ii) {
     if (!absl::SimpleAtoi(fields[ii], &numbers[ii - 1])) {
-      VLOG(1) << "Failed to parse field " << ii << " as number: " << fields[ii];
+      ABSL_VLOG(1) << "Failed to parse field " << ii
+                   << " as number: " << fields[ii];
       return std::nullopt;
     }
   }
@@ -179,7 +179,7 @@ void Top::MaybeAddThreadIds(pid_t pid, std::set<pid_t> *pids) {
   std::string task_dir = absl::StrCat("/proc/", std::to_string(pid), "/task/");
   DIR *dir = opendir(task_dir.data());
   if (dir == nullptr) {
-    LOG(WARNING) << "Unable to open " << task_dir;
+    ABSL_LOG(WARNING) << "Unable to open " << task_dir;
     return;
   }
 
@@ -215,7 +215,7 @@ ThreadState CharToThreadState(const char state) {
     case 't':
       return ThreadState::TRACING_STOP;
     default:
-      LOG(FATAL) << "Invalid thread state character: " << state;
+      ABSL_LOG(FATAL) << "Invalid thread state character: " << state;
   }
 }
 
@@ -226,8 +226,9 @@ void Top::UpdateThreadReadings(pid_t pid, ProcessReadings &process) {
   // Verify we can open the directory.
   DIR *dir = opendir(task_dir.c_str());
   if (dir == nullptr) {
-    LOG_EVERY_N_SEC(WARNING, 10) << "Unable to open directory: " << task_dir
-                                 << ", error: " << strerror(errno);
+    ABSL_LOG_EVERY_N_SEC(WARNING, 10)
+        << "Unable to open directory: " << task_dir
+        << ", error: " << strerror(errno);
     return;
   }
 
@@ -261,7 +262,7 @@ void Top::UpdateThreadReadings(pid_t pid, ProcessReadings &process) {
 
     // If no stats could be read (thread may have exited), remove it.
     if (!thread_stats.has_value()) {
-      VLOG(2) << "Removing thread " << tid << " from process " << pid;
+      ABSL_VLOG(2) << "Removing thread " << tid << " from process " << pid;
       process.thread_readings.erase(tid);
       continue;
     }
@@ -327,7 +328,7 @@ void Top::UpdateReadings() {
   if (track_all_) {
     DIR *const dir = opendir("/proc");
     if (dir == nullptr) {
-      PLOG(FATAL) << "Failed to open /proc";
+      ABSL_PLOG(FATAL) << "Failed to open /proc";
     }
     while (true) {
       struct dirent *const dir_entry = readdir(dir);

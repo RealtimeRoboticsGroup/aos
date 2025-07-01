@@ -6,6 +6,7 @@
 #include <string>
 #include <string_view>
 
+#include "absl/log/absl_check.h"
 #include "flatbuffers/flatbuffers.h"
 #include "flatbuffers/reflection.h"
 
@@ -44,7 +45,7 @@ inline fbs::Builder<T> JsonToStaticFlatbuffer(const std::string_view data) {
   const aos::FlatbufferDetachedBuffer<typename T::Flatbuffer> fbs =
       JsonToFlatbuffer<typename T::Flatbuffer>(data);
   fbs::Builder<T> builder(std::make_unique<aos::fbs::AlignedVectorAllocator>());
-  CHECK(builder.get()->FromFlatbuffer(&fbs.message()));
+  ABSL_CHECK(builder.get()->FromFlatbuffer(&fbs.message()));
   return builder;
 }
 
@@ -141,7 +142,7 @@ std::string FlatbufferToJson(const T &native_table,
 template <typename T>
 inline void WriteFlatbufferToJson(std::string_view filename, const T *msg) {
   std::ofstream json_file(std::string(filename), std::ios::out);
-  CHECK(json_file) << ": Couldn't open " << filename;
+  ABSL_CHECK(json_file) << ": Couldn't open " << filename;
   json_file << FlatbufferToJson(msg);
   json_file.close();
 }
@@ -158,7 +159,7 @@ inline void WriteFlatbufferToFile(std::string_view filename,
                                   const NonSizePrefixedFlatbuffer<T> &msg) {
   std::ofstream file(std::string(filename),
                      std::ios::out | std::ofstream::binary);
-  CHECK(file) << ": Couldn't open " << filename;
+  ABSL_CHECK(file) << ": Couldn't open " << filename;
   std::copy(msg.span().begin(), msg.span().end(),
             std::ostreambuf_iterator<char>(file));
 }

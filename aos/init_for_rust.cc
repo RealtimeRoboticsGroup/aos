@@ -2,16 +2,16 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/reflection.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/log/initialize.h"
-#include "absl/log/log.h"
 
 #include "aos/init.h"
 
 namespace aos {
 
 void InitFromRust() {
-  CHECK(!aos::IsInitialized()) << "Only initialize once.";
+  ABSL_CHECK(!aos::IsInitialized()) << "Only initialize once.";
 
   absl::InitializeLog();
 
@@ -55,12 +55,12 @@ std::vector<FlagInfo> GetCppFlags() {
     } else if (flag.second->IsOfType<std::vector<std::string>>()) {
       type = "vector<string>";
     } else {
-      LOG(FATAL) << "Unknown type for flag " << flag.second->Name()
-                 << " in file " << flag.second->Filename();
+      ABSL_LOG(FATAL) << "Unknown type for flag " << flag.second->Name()
+                      << " in file " << flag.second->Filename();
     }
 
-    LOG(INFO) << "Reporting flag " << flag.second->Name() << " " << type << " "
-              << flag.second->DefaultValue();
+    ABSL_LOG(INFO) << "Reporting flag " << flag.second->Name() << " " << type
+                   << " " << flag.second->DefaultValue();
     FlagInfo out_flag = {
         .name_ = std::string(flag.second->Name()),
         .type_ = type,
@@ -86,7 +86,7 @@ bool SetCommandLineOption(const char *name, const char *value) {
 
 std::string GetCommandLineOption(const char *name) {
   absl::CommandLineFlag *flag = absl::FindCommandLineFlag(name);
-  CHECK(flag != nullptr) << "Unknown flag " << name;
+  ABSL_CHECK(flag != nullptr) << "Unknown flag " << name;
 
   return flag->CurrentValue();
 }

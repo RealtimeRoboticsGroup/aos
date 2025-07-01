@@ -4,8 +4,8 @@
 #include <cstdio>
 #include <string_view>
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "flatbuffers/flatbuffers.h"
 #include "flatbuffers/minireflect.h"
 
@@ -244,18 +244,18 @@ std::optional<Element> WriteObject(FlatbufferType type,
           }
           break;
         case Element::ElementType::STRUCT:
-          CHECK_EQ(field_size, it->element.struct_data.size());
+          ABSL_CHECK_EQ(field_size, it->element.struct_data.size());
           memcpy(field_data, it->element.struct_data.data(), field_size);
           break;
         case Element::ElementType::OFFSET:
-          LOG(FATAL)
+          ABSL_LOG(FATAL)
               << "This should be unreachable; structs cannot contain offsets.";
           break;
       }
     }
     return Element{buffer};
   }
-  LOG(FATAL) << "Unimplemented.";
+  ABSL_LOG(FATAL) << "Unimplemented.";
 }
 
 // Class to parse JSON into a flatbuffer.
@@ -419,8 +419,8 @@ bool JsonParser::DoParse(FlatbufferType type, const std::string_view data,
           stack_.pop_back();
 
           if (stack_.size() == 0) {
-            CHECK_EQ(static_cast<int>(object->type),
-                     static_cast<int>(Element::ElementType::OFFSET))
+            ABSL_CHECK_EQ(static_cast<int>(object->type),
+                          static_cast<int>(Element::ElementType::OFFSET))
                 << ": JSON parsing only supports parsing flatbuffer tables.";
             // Instead of queueing it up in the stack, return it through the
             // passed in variable.
@@ -431,7 +431,7 @@ bool JsonParser::DoParse(FlatbufferType type, const std::string_view data,
 
             // Do the right thing if we are in a vector.
             if (in_vector()) {
-              CHECK_EQ(1u, stack_.back().vector_elements.size())
+              ABSL_CHECK_EQ(1u, stack_.back().vector_elements.size())
                   << ": Lost track of vector_elements book-keeping; when we "
                      "have a vector of objects vector_elements should just "
                      "have one entry.";
@@ -599,7 +599,7 @@ bool JsonParser::AddElement(int field_index, const ::std::string &data) {
         // We have an enum.
         const FlatbufferType type = stack_.back().type;
         const FlatbufferType enum_type = type.FieldType(field_index);
-        CHECK(enum_type.IsEnum());
+        ABSL_CHECK(enum_type.IsEnum());
 
         const std::optional<absl::int128> int_value = enum_type.EnumValue(data);
 
@@ -836,7 +836,7 @@ bool AddSingleElement(FlatbufferType type, int field_index,
 
 bool JsonParser::FinishVector(int field_index) {
   const FlatbufferType &current_type = stack_.back().type;
-  CHECK(!stack_.back().vector_elements.empty());
+  ABSL_CHECK(!stack_.back().vector_elements.empty());
   const std::vector<Element> vector_elements =
       std::move(stack_.back().vector_elements.back());
   stack_.back().vector_elements.pop_back();
@@ -1135,7 +1135,7 @@ class TruncatingStringVisitor : public flatbuffers::IterationVisitor {
       if (std::isnan(value)) {                                              \
         to_string_.s += std::signbit(value) ? "\"-nan\"" : "\"nan\"";       \
       } else {                                                              \
-        DCHECK(std::isinf(value))                                           \
+        ABSL_DCHECK(std::isinf(value))                                      \
             << "All non-finite, non-nan floats should be infinite; got "    \
             << value;                                                       \
         to_string_.s += std::signbit(value) ? "\"-inf\"" : "\"inf\"";       \

@@ -6,8 +6,7 @@
 #include <random>
 #include <string>
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 #include "flatbuffers/flatbuffers.h"
 
@@ -70,7 +69,7 @@ class UUID {
 
   template <typename T>
   void PackStaticVector(T *static_vector) const {
-    CHECK(static_vector->FromData(data_.data(), data_.size()));
+    ABSL_CHECK(static_vector->FromData(data_.data(), data_.size()));
   }
 
   // Returns a human-readable string representing this UUID.

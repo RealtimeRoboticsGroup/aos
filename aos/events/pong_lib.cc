@@ -47,6 +47,7 @@ void Pong::HandlePing(const examples::Ping &ping) {
   builder->set_value(ping.value());
   builder->set_initial_send_time(ping.send_time());
   builder.CheckOk(builder.Send());
+  VLOG(2) << "Sending pong";
 }
 
 }  // namespace aos

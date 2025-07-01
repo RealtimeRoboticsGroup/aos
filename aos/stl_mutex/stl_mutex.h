@@ -4,8 +4,8 @@
 #include <mutex>
 #include <ostream>
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/ipc_lib/aos_sync.h"
 #include "aos/macros.h"
@@ -33,7 +33,8 @@ class stl_mutex {
         owner_died_ = true;
         break;
       default:
-        LOG(FATAL) << "mutex_grab(" << &native_handle_ << ") failed: " << ret;
+        ABSL_LOG(FATAL) << "mutex_grab(" << &native_handle_
+                        << ") failed: " << ret;
     }
   }
 
@@ -48,13 +49,13 @@ class stl_mutex {
       case 4:
         return false;
       default:
-        LOG(FATAL) << "mutex_trylock(" << &native_handle_
-                   << ") failed: " << ret;
+        ABSL_LOG(FATAL) << "mutex_trylock(" << &native_handle_
+                        << ") failed: " << ret;
     }
   }
 
   void unlock() {
-    CHECK(!owner_died_);
+    ABSL_CHECK(!owner_died_);
     mutex_unlock(&native_handle_);
   }
 
@@ -91,20 +92,20 @@ class stl_recursive_mutex {
 
   void lock() {
     if (mutex_.is_locked()) {
-      CHECK(!owner_died());
+      ABSL_CHECK(!owner_died());
       ++recursive_locks_;
     } else {
       mutex_.lock();
       if (mutex_.owner_died()) {
         recursive_locks_ = 0;
       } else {
-        CHECK_EQ(0, recursive_locks_);
+        ABSL_CHECK_EQ(0, recursive_locks_);
       }
     }
   }
   bool try_lock() {
     if (mutex_.is_locked()) {
-      CHECK(!owner_died());
+      ABSL_CHECK(!owner_died());
       ++recursive_locks_;
       return true;
     } else {
@@ -112,7 +113,7 @@ class stl_recursive_mutex {
         if (mutex_.owner_died()) {
           recursive_locks_ = 0;
         } else {
-          CHECK_EQ(0, recursive_locks_);
+          ABSL_CHECK_EQ(0, recursive_locks_);
         }
         return true;
       } else {

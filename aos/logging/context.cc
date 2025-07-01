@@ -18,8 +18,8 @@
 extern char *program_invocation_name;
 extern char *program_invocation_short_name;
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/sanitizers.h"
 
@@ -43,7 +43,8 @@ namespace {
 
   char thread_name_array[kThreadNameLength + 1];
   if (prctl(PR_GET_NAME, thread_name_array) != 0) {
-    PLOG(FATAL) << "prctl(PR_GET_NAME, " << thread_name_array << ") failed";
+    ABSL_PLOG(FATAL) << "prctl(PR_GET_NAME, " << thread_name_array
+                     << ") failed";
   }
 #if defined(AOS_SANITIZE_MEMORY)
   // msan doesn't understand PR_GET_NAME, so help it along.
@@ -88,7 +89,7 @@ void Context::ClearName() { name_size = std::numeric_limits<size_t>::max(); }
 std::string_view Context::MyName() {
   if (name_size == std::numeric_limits<size_t>::max()) {
     ::std::string my_name = GetMyName();
-    CHECK_LE(my_name.size() + 1, sizeof(Context::name))
+    ABSL_CHECK_LE(my_name.size() + 1, sizeof(Context::name))
         << ": process/thread name '" << my_name << "' is too long";
     strcpy(name, my_name.c_str());
     name_size = my_name.size();

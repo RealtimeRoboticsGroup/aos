@@ -122,6 +122,12 @@ inline std::set<std::string> GetChannelAliases(
 // Returns the channel index (or dies) of channel in the provided config.
 size_t ChannelIndex(const Configuration *config, const Channel *channel);
 
+// Returns the channel with the *exact* corresponding name and type. Does *not*
+// perform any channel mappings.
+const Channel *GetFullySpecifiedChannel(const Configuration *config,
+                                        const std::string_view name,
+                                        const std::string_view type);
+
 // Returns the Node out of the config with the matching name, or nullptr if it
 // can't be found.
 const Node *GetNode(const Configuration *config, std::string_view name);

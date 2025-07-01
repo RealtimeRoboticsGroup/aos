@@ -3,8 +3,7 @@
 #include <algorithm>
 #include <span>
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
 #include "flatbuffers/base.h"
 
 #include "aos/flatbuffers/base.h"
@@ -81,8 +80,9 @@ class Table : public ResizeableObject {
   template <typename T>
   void SetField(size_t absolute_offset, size_t vtable_offset, const T &value) {
     Set<T>(absolute_offset, value);
-    CHECK_EQ(0u, (absolute_offset + reinterpret_cast<size_t>(buffer_.data())) %
-                     alignof(T));
+    ABSL_CHECK_EQ(0u,
+                  (absolute_offset + reinterpret_cast<size_t>(buffer_.data())) %
+                      alignof(T));
     Set<voffset_t>(FixedVtableOffset() + vtable_offset, absolute_offset);
   }
 

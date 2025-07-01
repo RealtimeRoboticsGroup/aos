@@ -6,8 +6,8 @@
 #include <cstdlib>
 #include <ostream>
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/time/time.h"
 
@@ -104,7 +104,7 @@ void AsymmetricTrapezoidProfile::CalculateTimes(
   double maximum_acceleration_velocity =
       distance_to_target * 2 * std::abs(acceleration_) +
       current(1) * current(1);
-  CHECK_GE(maximum_acceleration_velocity, 0);
+  ABSL_CHECK_GE(maximum_acceleration_velocity, 0);
   maximum_acceleration_velocity = sqrt(maximum_acceleration_velocity);
 
   // If we could get going faster than the target, we will need to decelerate
@@ -116,7 +116,7 @@ void AsymmetricTrapezoidProfile::CalculateTimes(
     // accelerate to keep accelerating to get up to speed.
     //
     // Note: goal_velocity != 0 isn't well tested, use at your own risk.
-    LOG(FATAL) << "Untested";
+    ABSL_LOG(FATAL) << "Untested";
     deceleration_ = maximum_acceleration_;
   }
 
@@ -165,7 +165,7 @@ void AsymmetricTrapezoidProfile::CalculateTimes(
     acceleration_time_ = (top_velocity - current(1)) / acceleration_;
   }
 
-  CHECK_GT(top_velocity, -maximum_velocity_);
+  ABSL_CHECK_GT(top_velocity, -maximum_velocity_);
 
   if (current(1) > maximum_velocity_) {
     constant_time_ = 0;

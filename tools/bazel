@@ -65,7 +65,7 @@ if [[ ! -d "${VERSION_DIR}" ]]; then
         echo on terminal
         NOISINESS=
       fi
-      curl --output "${INSTALLER_NAME}" "${DOWNLOAD_URL}" ${NOISINESS}
+      curl -f --output "${INSTALLER_NAME}" "${DOWNLOAD_URL}" ${NOISINESS}
       mv "${INSTALLER_NAME}" "${HOME}/.cache/bazel/${INSTALLER_NAME}"
     fi
     rm -rf "${DOWNLOAD_TEMP_DIR}"

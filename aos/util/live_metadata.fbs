@@ -1,0 +1,13 @@
+namespace aos;
+
+// This table contains metadata about the live system that the client has connected to via
+// `foxglove_websocket`.
+table LiveMetadata {
+  // The node that the `foxglove_websocket` process is running on. This is useful for doing channel
+  // mappings with both canonical and non-canonical channel names.
+  //
+  // If this field is not set, then this is a single-node log.
+  node:string (id: 0);
+}
+
+root_type LiveMetadata;

@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
   data.fill(0);
 
   // Don't use odirect
-  aos::logger::FileBackend file_backend("/", false);
+  aos::logger::LogFolder file_backend("/", false);
   aos::logger::DetachedBufferWriter writer(
       file_backend.RequestFile(absl::GetFlag(FLAGS_tmpfs) + "/file"),
       std::make_unique<aos::logger::DummyEncoder>(data.size()));

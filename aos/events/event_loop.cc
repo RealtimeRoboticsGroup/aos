@@ -1,8 +1,8 @@
 #include "aos/events/event_loop.h"
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/configuration.h"
 #include "aos/configuration_generated.h"
@@ -17,10 +17,11 @@ namespace aos {
 namespace {
 void CheckAlignment(const Channel *channel) {
   if (channel->max_size() % alignof(flatbuffers::largest_scalar_t) != 0) {
-    LOG(FATAL) << "max_size() (" << channel->max_size()
-               << ") is not a multiple of alignment ("
-               << alignof(flatbuffers::largest_scalar_t) << ") for channel "
-               << configuration::CleanedChannelToString(channel) << ".";
+    ABSL_LOG(FATAL) << "max_size() (" << channel->max_size()
+                    << ") is not a multiple of alignment ("
+                    << alignof(flatbuffers::largest_scalar_t)
+                    << ") for channel "
+                    << configuration::CleanedChannelToString(channel) << ".";
   }
 }
 
@@ -33,7 +34,7 @@ std::string_view ErrorToString(const RawSender::Error err) {
     case RawSender::Error::kInvalidRedzone:
       return "RawSender::Error::kInvalidRedzone";
   }
-  LOG(FATAL) << "Unknown error given with code " << static_cast<int>(err);
+  ABSL_LOG(FATAL) << "Unknown error given with code " << static_cast<int>(err);
 }
 }  // namespace
 
@@ -66,7 +67,7 @@ std::ostream &operator<<(std::ostream &os, const RawSender::Error err) {
 void RawSender::CheckOk(const RawSender::Error err) {
   if (err != Error::kOk) {
     event_loop_->SendTimingReport();
-    CHECK_EQ(err, Error::kOk)
+    ABSL_CHECK_EQ(err, Error::kOk)
         << "Messages were sent too fast on channel: "
         << configuration::CleanedChannelToString(channel_);
   }
@@ -160,19 +161,20 @@ EventLoop::EventLoop(const Configuration *configuration)
     : version_string_(default_version_string_),
       timing_report_(flatbuffers::DetachedBuffer()),
       configuration_(configuration) {
-  CHECK(configuration != nullptr);
+  ABSL_CHECK(configuration != nullptr);
 }
 
 EventLoop::~EventLoop() {
   if (!senders_.empty()) {
     for (const RawSender *sender : senders_) {
-      LOG(ERROR) << "  Sender "
-                 << configuration::StrippedChannelToString(sender->channel())
-                 << " still open";
+      ABSL_LOG(ERROR) << "  Sender "
+                      << configuration::StrippedChannelToString(
+                             sender->channel())
+                      << " still open";
     }
   }
-  CHECK_EQ(senders_.size(), 0u) << ": Not all senders destroyed";
-  CHECK_EQ(events_.size(), 0u) << ": Not all events unregistered";
+  ABSL_CHECK_EQ(senders_.size(), 0u) << ": Not all senders destroyed";
+  ABSL_CHECK_EQ(events_.size(), 0u) << ": Not all events unregistered";
 }
 
 void EventLoop::SkipTimingReport() {
@@ -211,7 +213,7 @@ WatcherState *EventLoop::GetWatcherState(const Channel *channel) {
       return watcher.get();
     }
   }
-  LOG(FATAL) << "No watcher found for channel";
+  ABSL_LOG(FATAL) << "No watcher found for channel";
 }
 
 void EventLoop::NewSender(RawSender *sender) {
@@ -219,9 +221,9 @@ void EventLoop::NewSender(RawSender *sender) {
   UpdateTimingReport();
 }
 void EventLoop::DeleteSender(RawSender *sender) {
-  CHECK(!is_running());
+  ABSL_CHECK(!is_running());
   auto s = std::find(senders_.begin(), senders_.end(), sender);
-  CHECK(s != senders_.end()) << ": Sender not in senders list";
+  ABSL_CHECK(s != senders_.end()) << ": Sender not in senders list";
   senders_.erase(s);
   UpdateTimingReport();
 }
@@ -247,9 +249,9 @@ void EventLoop::NewFetcher(RawFetcher *fetcher) {
 }
 
 void EventLoop::DeleteFetcher(RawFetcher *fetcher) {
-  CHECK(!is_running());
+  ABSL_CHECK(!is_running());
   auto f = std::find(fetchers_.begin(), fetchers_.end(), fetcher);
-  CHECK(f != fetchers_.end()) << ": Fetcher not in fetchers list";
+  ABSL_CHECK(f != fetchers_.end()) << ": Fetcher not in fetchers list";
   fetchers_.erase(f);
   UpdateTimingReport();
 }
@@ -263,34 +265,35 @@ WatcherState *EventLoop::NewWatcher(std::unique_ptr<WatcherState> watcher) {
 }
 
 void EventLoop::TakeWatcher(const Channel *channel) {
-  CHECK(!is_running()) << ": Cannot add new objects while running.";
+  ABSL_CHECK(!is_running()) << ": Cannot add new objects while running.";
   ChannelIndex(channel);
 
   CheckAlignment(channel);
 
-  CHECK(taken_senders_.find(channel) == taken_senders_.end())
+  ABSL_CHECK(taken_senders_.find(channel) == taken_senders_.end())
       << ": " << configuration::CleanedChannelToString(channel)
       << " is already being used for sending. Can't make a watcher on the "
          "same event loop.";
 
   auto result = taken_watchers_.insert(channel);
-  CHECK(result.second) << ": " << configuration::CleanedChannelToString(channel)
-                       << " is already being used.";
+  ABSL_CHECK(result.second)
+      << ": " << configuration::CleanedChannelToString(channel)
+      << " is already being used.";
 
   if (!configuration::ChannelIsReadableOnNode(channel, node())) {
-    LOG(FATAL) << ": " << configuration::CleanedChannelToString(channel)
-               << " is not able to be watched on this node.  Check your "
-                  "configuration.";
+    ABSL_LOG(FATAL) << ": " << configuration::CleanedChannelToString(channel)
+                    << " is not able to be watched on this node.  Check your "
+                       "configuration.";
   }
 }
 
 void EventLoop::TakeSender(const Channel *channel) {
-  CHECK(!is_running()) << ": Cannot add new objects while running.";
+  ABSL_CHECK(!is_running()) << ": Cannot add new objects while running.";
   ChannelIndex(channel);
 
   CheckAlignment(channel);
 
-  CHECK(taken_watchers_.find(channel) == taken_watchers_.end())
+  ABSL_CHECK(taken_watchers_.find(channel) == taken_watchers_.end())
       << ": Channel " << configuration::CleanedChannelToString(channel)
       << " is already being used.";
 
@@ -311,7 +314,7 @@ void EventLoop::SendTimingReport() {
   // Also, flatbuffers build from the back end.  So place this at the back end
   // of the buffer.  We only have to care because we are using this in a very
   // raw fashion.
-  CHECK_LE(timing_report_.span().size(), timing_report_sender_->size())
+  ABSL_CHECK_LE(timing_report_.span().size(), timing_report_sender_->size())
       << ": Timing report bigger than the sender size for " << name() << ".";
   std::copy(timing_report_.span().data(),
             timing_report_.span().data() + timing_report_.span().size(),
@@ -550,27 +553,29 @@ void EventLoop::UpdateTimingReport() {
 
 void EventLoop::MaybeScheduleTimingReports() {
   if (absl::GetFlag(FLAGS_timing_reports) && !skip_timing_report_) {
-    CHECK(!timing_report_sender_) << ": Timing reports already scheduled.";
+    ABSL_CHECK(!timing_report_sender_) << ": Timing reports already scheduled.";
     // Make a raw sender for the report.
     const Channel *channel = configuration::GetChannel(
         configuration(), "/aos", timing::Report::GetFullyQualifiedName(),
         name(), node());
-    CHECK(channel != nullptr) << ": Failed to look up {\"name\": \"/aos\", "
-                                 "\"type\": \"aos.timing.Report\"} on node "
-                              << FlatbufferToJson(node());
+    ABSL_CHECK(channel != nullptr)
+        << ": Failed to look up {\"name\": \"/aos\", "
+           "\"type\": \"aos.timing.Report\"} on node "
+        << FlatbufferToJson(node());
 
     // Since we are using a RawSender, validity isn't checked.  So check it
     // ourselves.
     if (!configuration::ChannelIsSendableOnNode(channel, node())) {
-      LOG(FATAL) << "Channel { \"name\": \"/aos"
-                 << channel->name()->string_view() << "\", \"type\": \""
-                 << channel->type()->string_view()
-                 << "\" } is not able to be sent on this node.  Check your "
-                    "configuration.";
+      ABSL_LOG(FATAL)
+          << "Channel { \"name\": \"/aos" << channel->name()->string_view()
+          << "\", \"type\": \"" << channel->type()->string_view()
+          << "\" } is not able to be sent on this node.  Check your "
+             "configuration.";
     }
-    CHECK(channel != nullptr) << ": Channel { \"name\": \"/aos\", \"type\": \""
-                              << timing::Report::GetFullyQualifiedName()
-                              << "\" } not found in config.";
+    ABSL_CHECK(channel != nullptr)
+        << ": Channel { \"name\": \"/aos\", \"type\": \""
+        << timing::Report::GetFullyQualifiedName()
+        << "\" } not found in config.";
     timing_report_sender_ = MakeRawSender(channel);
 
     // Register a handler which sends the report out by copying the raw data
@@ -608,8 +613,9 @@ bool CompareEvents(const EventLoopEvent *first, const EventLoopEvent *second) {
 }  // namespace
 
 void EventLoop::AddEvent(EventLoopEvent *event) {
-  DCHECK(std::find(events_.begin(), events_.end(), event) == events_.end());
-  DCHECK(event->generation() == 0);
+  ABSL_DCHECK(std::find(events_.begin(), events_.end(), event) ==
+              events_.end());
+  ABSL_DCHECK(event->generation() == 0);
   event->set_generation(++event_generation_);
   events_.push_back(event);
   std::push_heap(events_.begin(), events_.end(), CompareEvents);
@@ -618,7 +624,7 @@ void EventLoop::AddEvent(EventLoopEvent *event) {
 void EventLoop::RemoveEvent(EventLoopEvent *event) {
   auto e = std::find(events_.begin(), events_.end(), event);
   if (e != events_.end()) {
-    DCHECK(event->generation() != 0);
+    ABSL_DCHECK(event->generation() != 0);
     events_.erase(e);
     std::make_heap(events_.begin(), events_.end(), CompareEvents);
     event->Invalidate();
@@ -669,7 +675,7 @@ void EventLoop::SetDefaultVersionString(std::string_view version) {
 }
 
 void EventLoop::SetVersionString(std::string_view version) {
-  CHECK(!is_running())
+  ABSL_CHECK(!is_running())
       << ": Can't do things that might alter the timing report while running.";
   version_string_ = version;
 

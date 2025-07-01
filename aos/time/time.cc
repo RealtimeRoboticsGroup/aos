@@ -15,8 +15,7 @@
 
 #ifdef __linux__
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
 #include "absl/strings/numbers.h"
 
 #else  // __linux__
@@ -68,7 +67,7 @@ void sleep_until(const ::aos::monotonic_clock::time_point &end_time) {
   do {
     returnval = clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME,
                                 &end_time_timespec, nullptr);
-    PCHECK(returnval == 0 || returnval == EINTR)
+    ABSL_PCHECK(returnval == 0 || returnval == EINTR)
         << ": clock_nanosleep(" << static_cast<uintmax_t>(CLOCK_MONOTONIC)
         << ", TIMER_ABSTIME, " << &end_time_timespec << ", nullptr) failed";
   } while (returnval != 0);
@@ -240,7 +239,7 @@ constexpr realtime_clock::time_point realtime_clock::max_time;
 monotonic_clock::time_point monotonic_clock::now() noexcept {
 #ifdef __linux__
   struct timespec current_time;
-  PCHECK(clock_gettime(CLOCK_MONOTONIC, &current_time) == 0)
+  ABSL_PCHECK(clock_gettime(CLOCK_MONOTONIC, &current_time) == 0)
       << ": clock_gettime(" << static_cast<uintmax_t>(CLOCK_MONOTONIC) << ", "
       << &current_time << ") failed";
 
@@ -277,7 +276,7 @@ monotonic_clock::time_point monotonic_clock::now() noexcept {
 #ifdef __linux__
 realtime_clock::time_point realtime_clock::now() noexcept {
   struct timespec current_time;
-  PCHECK(clock_gettime(CLOCK_REALTIME, &current_time) == 0)
+  ABSL_PCHECK(clock_gettime(CLOCK_REALTIME, &current_time) == 0)
       << "clock_gettime(" << static_cast<uintmax_t>(CLOCK_REALTIME) << ", "
       << &current_time << ") failed";
 

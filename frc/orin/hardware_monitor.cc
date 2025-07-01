@@ -2,6 +2,7 @@
 #include <sys/statvfs.h>
 
 #include "absl/flags/flag.h"
+#include "absl/log/log.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_format.h"
 

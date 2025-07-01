@@ -47,7 +47,7 @@ class ShmEventLoop : public EventLoop {
 
   // Runs the event loop until Exit is called, or ^C is caught.
   // TODO(james): Upgrade this to [[nodiscard]].
-  Result<void> Run();
+  Status Run();
   // Exits the event loop.  async-signal-safe (see
   // https://man7.org/linux/man-pages/man7/signal-safety.7.html).
   // Will result in Run() returning a successful result when called.
@@ -55,7 +55,7 @@ class ShmEventLoop : public EventLoop {
 
   // Exits the event loop with the provided status. Thread-safe, but not
   // async-safe.
-  void ExitWithStatus(Result<void> status = {});
+  void ExitWithStatus(Status status = {});
 
   // Constructs an exit handle for the EventLoop. The provided ExitHandle uses
   // ExitWithStatus().
@@ -247,7 +247,7 @@ class ShmEventLoop : public EventLoop {
   // actually exited. This is to try to provide consistent behavior in cases
   // where Exit() is called multiple times before Run() is aactually terminates
   // execution.
-  std::optional<Result<void>> exit_status_{};
+  std::optional<Status> exit_status_{};
   // Used by the Exit() call to provide an async-safe way of indicating that
   // Exit() was called.
   // Will be set once Exit() or ExitWithStatus() has been called.

@@ -37,7 +37,7 @@ MATCHER_P(FileEq, o, "") { return arg.name == o.name && arg.size == o.size; }
 TEST(LogBackendTest, CreateSimpleFile) {
   const std::string logevent = aos::testing::TestTmpDir() + "/logevent/";
   const std::string filename = "test.bfbs";
-  FileBackend backend(logevent, false);
+  LogFolder backend(logevent, false);
   auto file = backend.RequestFile(filename);
   ASSERT_EQ(file->OpenForWrite(), WriteCode::kOk);
   auto result = Write(file.get(), "test");
@@ -347,12 +347,12 @@ struct FileWriteTestBase : public ::testing::Test {
         buffer.data() + buffer.size() - requested_size;
 
     // logevent has to end with '/' to be recognized as a folder.
-    const std::string logevent = aos::testing::TestTmpDir() + "/";
+    const std::string logevent = aos::testing::TestTmpDir();
     const auto file = std::filesystem::path(logevent) / "test.log";
     std::filesystem::remove_all(file);
     VLOG(1) << "Writing to " << file.c_str();
 
-    FileBackend backend(logevent, false);
+    LogFolder backend(logevent, false);
     auto handler = backend.RequestFile("test.log");
     ASSERT_EQ(handler->OpenForWrite(), WriteCode::kOk);
 
@@ -453,12 +453,12 @@ TEST_F(FileWriteTestBase, AlignedToUnaligned) {
   LOG(INFO) << "Queue 0 " << queue[0].size();
   LOG(INFO) << "Queue 1 " << queue[1].size();
 
-  const std::string logevent = aos::testing::TestTmpDir() + "/";
+  const std::string logevent = aos::testing::TestTmpDir();
   const auto file = std::filesystem::path(logevent) / "test.log";
   std::filesystem::remove_all(file);
   VLOG(1) << "Writing to " << file.c_str();
 
-  FileBackend backend(logevent, false);
+  LogFolder backend(logevent, false);
   auto handler = backend.RequestFile("test.log");
   ASSERT_EQ(handler->OpenForWrite(), WriteCode::kOk);
 

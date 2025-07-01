@@ -3911,13 +3911,13 @@ TEST_P(AbstractEventLoopTest, ExitHandleExitFailure) {
 
   loop->OnRun([&exit_handle, &happened]() {
     happened = true;
-    exit_handle->Exit(Error::MakeUnexpectedError("Hello, World!"));
+    exit_handle->Exit(MakeError("Hello, World!"));
     // The second Exit() should not affect the final return value.
-    exit_handle->Exit(Error::MakeUnexpectedError("Hello, World! 2"));
+    exit_handle->Exit(MakeError("Hello, World! 2"));
   });
   const int line = __LINE__ - 4;
 
-  Result<void> status = Run();
+  Status status = Run();
 
   EXPECT_TRUE(happened);
   EXPECT_FALSE(status.has_value());

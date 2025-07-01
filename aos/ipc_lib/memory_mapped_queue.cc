@@ -11,8 +11,8 @@
 #include <ostream>
 #include <thread>
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_cat.h"
 #include "flatbuffers/string.h"
 
@@ -22,13 +22,13 @@
 namespace aos::ipc_lib {
 
 std::string ShmFolder(std::string_view shm_base, const Channel *channel) {
-  CHECK(channel->has_name());
-  CHECK_EQ(channel->name()->string_view()[0], '/');
+  ABSL_CHECK(channel->has_name());
+  ABSL_CHECK_EQ(channel->name()->string_view()[0], '/');
   return absl::StrCat(shm_base, channel->name()->string_view(), "/");
 }
 
 std::string ShmPath(std::string_view shm_base, const Channel *channel) {
-  CHECK(channel->has_type());
+  ABSL_CHECK(channel->has_type());
   return ShmFolder(shm_base, channel) + channel->type()->str() + ".v7";
 }
 
@@ -74,8 +74,8 @@ LocklessQueueConfiguration MakeQueueConfiguration(
   // copy.
   config.num_pinners = channel->num_readers();
   config.queue_size = configuration::QueueSize(configuration, channel);
-  CHECK_LT(config.queue_size,
-           std::numeric_limits<QueueIndex::PackedIndexType>::max())
+  ABSL_CHECK_LT(config.queue_size,
+                std::numeric_limits<QueueIndex::PackedIndexType>::max())
       << ": More messages/second configured than the queue can hold on "
       << configuration::CleanedChannelToString(channel) << ", "
       << channel->frequency() << "hz for "
@@ -107,15 +107,15 @@ MemoryMappedQueue::MemoryMappedQueue(std::string_view shm_base,
   int fd =
       open(path.c_str(), O_RDWR | O_CREAT | O_EXCL, O_CLOEXEC | permissions);
   if ((fd == -1) && (errno == EEXIST)) {
-    VLOG(1) << path << " already created.";
+    ABSL_VLOG(1) << path << " already created.";
     // File already exists.
     fd = open(path.c_str(), O_RDWR, O_CLOEXEC);
-    PCHECK(fd != -1) << ": Failed to open " << path;
+    ABSL_PCHECK(fd != -1) << ": Failed to open " << path;
     while (true) {
       struct stat st;
-      PCHECK(fstat(fd, &st) == 0);
+      ABSL_PCHECK(fstat(fd, &st) == 0);
       if (st.st_size != 0) {
-        CHECK_EQ(static_cast<size_t>(st.st_size), size_)
+        ABSL_CHECK_EQ(static_cast<size_t>(st.st_size), size_)
             << ": Size of " << path
             << " doesn't match expected size of backing queue file.  Did the "
                "queue definition change?";
@@ -123,20 +123,20 @@ MemoryMappedQueue::MemoryMappedQueue(std::string_view shm_base,
       } else {
         // The creating process didn't get around to it yet.  Give it a bit.
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        VLOG(1) << path << " is zero size, waiting";
+        ABSL_VLOG(1) << path << " is zero size, waiting";
       }
     }
   } else {
-    VLOG(1) << "Created " << path;
-    PCHECK(fd != -1) << ": Failed to open " << path;
-    PCHECK(ftruncate(fd, size_) == 0);
+    ABSL_VLOG(1) << "Created " << path;
+    ABSL_PCHECK(fd != -1) << ": Failed to open " << path;
+    ABSL_PCHECK(ftruncate(fd, size_) == 0);
   }
 
   data_ = mmap(NULL, size_, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-  PCHECK(data_ != MAP_FAILED);
+  ABSL_PCHECK(data_ != MAP_FAILED);
   const_data_ = mmap(NULL, size_, PROT_READ, MAP_SHARED, fd, 0);
-  PCHECK(const_data_ != MAP_FAILED);
-  PCHECK(close(fd) == 0);
+  ABSL_PCHECK(const_data_ != MAP_FAILED);
+  ABSL_PCHECK(close(fd) == 0);
   PageFaultDataWrite(static_cast<char *>(data_), size_, kSystemPageSize);
   PageFaultDataRead(static_cast<const char *>(const_data_), size_,
                     kSystemPageSize);
@@ -145,8 +145,8 @@ MemoryMappedQueue::MemoryMappedQueue(std::string_view shm_base,
 }
 
 MemoryMappedQueue::~MemoryMappedQueue() {
-  PCHECK(munmap(data_, size_) == 0);
-  PCHECK(munmap(const_cast<void *>(const_data_), size_) == 0);
+  ABSL_PCHECK(munmap(data_, size_) == 0);
+  ABSL_PCHECK(munmap(const_cast<void *>(const_data_), size_) == 0);
 }
 
 }  // namespace aos::ipc_lib

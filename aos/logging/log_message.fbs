@@ -11,7 +11,7 @@ enum Level : byte {
 }
 
 table LogMessageFbs {
-  // Text of the log message, includng file name and line
+  // Text of the log message, including file name and line
   message:string (id: 0);
 
   // Severity of the log message

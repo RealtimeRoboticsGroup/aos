@@ -62,6 +62,15 @@ TEST_F(ConfigurationTest, ChannelIndex) {
       1u);
 }
 
+// Tests that we can extract a Channel object based on the fully specified name.
+TEST_F(ConfigurationTest, GetFullySpecifiedChannel) {
+  FlatbufferDetachedBuffer<Configuration> config =
+      ReadConfig(ArtifactPath("aos/testdata/config1.json"));
+
+  EXPECT_EQ(config.message().channels()->Get(1u),
+            GetFullySpecifiedChannel(&config.message(), "/foo2", ".aos.bar"));
+}
+
 // Tests that we can read and merge a multinode configuration.
 TEST_F(ConfigurationTest, ConfigMergeMultinode) {
   FlatbufferDetachedBuffer<Configuration> config =

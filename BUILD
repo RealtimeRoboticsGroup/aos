@@ -17,8 +17,10 @@ exports_files([
 
 license(
     name = "license",
+    package_name = "AOS",
     license_kinds = ["@rules_license//licenses/spdx:Apache-2.0"],
     license_text = "LICENSE.txt",
+    package_version = "8ca89f37c1327cd59b5f1eb6be3fb7556bc0554f",
 )
 
 # The root repo tsconfig

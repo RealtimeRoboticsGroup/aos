@@ -23,7 +23,7 @@ void FunctionScheduler::RunFunctions(aos::monotonic_clock::time_point now) {
     if (functions_.begin()->first > now) {
       break;
     }
-    CHECK_EQ(functions_.begin()->first, now);
+    ABSL_CHECK_EQ(functions_.begin()->first, now);
 
     functions_.begin()->second();
     functions_.erase(functions_.begin());

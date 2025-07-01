@@ -9,8 +9,7 @@
 #include <string>
 #include <type_traits>
 
-#include "absl/log/check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/die.h"
 #include "aos/logging/context.h"
@@ -27,8 +26,8 @@ size_t ExecuteFormat(char *output, size_t output_size, const char *format,
   const int ret = vsnprintf(output, size, format, ap);
   typedef ::std::common_type<int, size_t>::type RetType;
   if (ret < 0) {
-    PLOG(FATAL) << "vsnprintf(" << output << ", " << size << ", " << format
-                << ", args) failed";
+    ABSL_PLOG(FATAL) << "vsnprintf(" << output << ", " << size << ", " << format
+                     << ", args) failed";
   } else if (static_cast<RetType>(ret) >= static_cast<RetType>(size)) {
     // Overwrite the '\0' at the end of the existing data and
     // copy in the one on the end of continued.

@@ -101,7 +101,6 @@ py_binary(
     data = [
         ":trim_log_to_enabled",
         "//aos/util:log_to_mcap",
-        "@foxglove_studio",
     ],
     deps = ["@RangeHTTPServer"],
 )

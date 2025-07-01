@@ -19,6 +19,8 @@ cc_binary(
         "//aos:init",
         "//aos/events:event_loop",
         "//frc/vision:vision_util_lib",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/strings:str_format",
         "@org_tuxfamily_eigen//:eigen",
     ],
@@ -303,6 +305,8 @@ cc_library(
     deps = [
         "//aos:init",
         "//third_party:opencv",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/strings:str_format",
         "@org_tuxfamily_eigen//:eigen",
     ],
@@ -353,6 +357,8 @@ cc_library(
         "//aos/events:event_loop",
         "//third_party:opencv",
         "@com_github_foxglove_schemas//:schemas",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
     ],
 )
 
@@ -432,6 +438,8 @@ cc_library(
         "//frc/wpilib:imu_batch_fbs",
         "//frc/wpilib:imu_fbs",
         "//third_party:opencv",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/log:die_if_null",
         "@com_google_absl//absl/strings:str_format",
         "@org_tuxfamily_eigen//:eigen",
@@ -456,6 +464,8 @@ cc_binary(
         "//frc/wpilib:imu_batch_fbs",
         "//frc/wpilib:imu_fbs",
         "//third_party:opencv",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/strings:str_format",
         "@org_tuxfamily_eigen//:eigen",
     ],
@@ -789,6 +799,8 @@ cc_binary(
         "@com_github_wpilibsuite_allwpilib//ntcore:ntcore.static",
         "@com_github_wpilibsuite_allwpilib//wpimath:wpimath.static",
         "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/log:die_if_null",
     ],
 )
