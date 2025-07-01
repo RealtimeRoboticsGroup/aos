@@ -92,11 +92,14 @@ def wheel_is_already_uploaded(wheel: Path, wheel_url: str) -> Tuple[bool, str]:
         this string contains the sha256 checksum of the wheel found on the
         mirror.
     """
-    request = requests.get(wheel_url)
+    print(f"Checking if {wheel.name} is already uploaded: ", end="")
+    request = requests.head(wheel_url)
 
     if request.status_code == 200:
+        print("yes")
         return True
     if request.status_code == 404:
+        print("no")
         return False
 
     raise RuntimeError(
@@ -150,25 +153,23 @@ def main(argv: List[str]) -> Optional[int]:
                    cwd=python_dir,
                    check=True)
 
-    # Run the wheel generation script inside the docker container provided by
-    # the pypa/manylinux project.
-    # https://github.com/pypa/manylinux/
-    subprocess.run([
-        "docker",
-        "run",
-        "-it",
-        "--net=host",
-        "-v",
-        f"{python_dir}:/opt/build/",
-        container_tag,
-        "/opt/build/generate_pip_packages_in_docker.sh",
-        PLAT,
-        ARCH,
-        str(caller_id),
-    ],
-                   check=True)
-
-    return
+    ## Run the wheel generation script inside the docker container provided by
+    ## the pypa/manylinux project.
+    ## https://github.com/pypa/manylinux/
+    #subprocess.run([
+    #    "docker",
+    #    "run",
+    #    "-it",
+    #    "--net=host",
+    #    "-v",
+    #    f"{python_dir}:/opt/build/",
+    #    container_tag,
+    #    "/opt/build/generate_pip_packages_in_docker.sh",
+    #    PLAT,
+    #    ARCH,
+    #    str(caller_id),
+    #],
+    #               check=True)
 
     # Get the list of wheels we downloaded form pypi.org or built ourselves.
     wheelhouse = python_dir / "wheelhouse"
@@ -180,9 +181,9 @@ def main(argv: List[str]) -> Optional[int]:
     override_information = {}
     for wheel in sorted(wheels):
         info = Wheel(wheel)
-        sanitized_name = sanitize_name(info.name)
+        normalized_name = normalize_name(info.name)
 
-        wheel_url = f"{WHEELHOUSE_MIRROR_URL}/{sanitized_name}/{wheel.name}"
+        wheel_url = f"{WHEELHOUSE_MIRROR_URL}/{normalized_name}/{wheel.name}"
 
         # Check if we already have the wheel uploaded. We can skip uploading
         # that.
@@ -196,15 +197,6 @@ def main(argv: List[str]) -> Optional[int]:
             wheels_to_be_uploaded.append(wheel)
         elif not wheel_found:
             wheels_to_be_uploaded.append(wheel)
-
-        # Update the override information for this wheel.
-        # We use lower-case for the package names here because that's what the
-        # requirements.lock.txt file uses.
-        info = Wheel(wheel)
-        override_information[f"{sanitize_name(info.name)}=={info.version}"] = {
-            "url": override_url,
-            "sha256": sha256,
-        }
 
     print(f"We need to upload {len(wheels_to_be_uploaded)} wheels:")
     for wheel in wheels_to_be_uploaded:
