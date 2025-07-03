@@ -68,6 +68,21 @@ cc_library(
     ],
 )
 
+cc_test(
+    name = "log_to_mcap_lib_test",
+    srcs = [
+        "log_to_mcap_lib_test.cc",
+    ],
+    deps = [
+        ":log_to_mcap_lib",
+        "//aos:configuration_fbs",
+        "//aos/testing:googletest",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:reflection",
+        "@com_google_absl//absl/log",
+    ],
+)
+
 cc_binary(
     name = "log_to_mcap",
     srcs = ["log_to_mcap.cc"],

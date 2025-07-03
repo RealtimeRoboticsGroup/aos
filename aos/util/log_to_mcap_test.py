@@ -28,6 +28,7 @@ def generate_argument_permutations():
                 ["--canonical_channel_names", "--nocanonical_channel_names"],
                 ["--mcap_chunk_size=1000", "--mcap_chunk_size=10000000"],
                 ["--fetch", "--nofetch"],
+                ["--include_channels=", "--include_channels=.*"],
                 ["--drop_channels=", "--drop_channels=.*aos.examples.Pong"]]
     permutations = make_permutations(arg_sets)
     print(permutations)
@@ -105,7 +106,12 @@ def main(argv: Sequence[Text]):
                 return 1
             num_channels = int(match.group(1))
             # We expect one fewer channels when we drop the Pong channel.
-            expected_num_channels = 10 if "--drop_channels=" in log_to_mcap_args else 9
+            if "--include_channels=" in log_to_mcap_args:
+                expected_num_channels = 0
+            elif "--drop_channels=" in log_to_mcap_args:
+                expected_num_channels = 10
+            else:
+                expected_num_channels = 9
             if num_channels != expected_num_channels:
                 print(
                     f"Expected {expected_num_channels} channels, but found {num_channels} instead."

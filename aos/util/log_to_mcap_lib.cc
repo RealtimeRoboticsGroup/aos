@@ -37,31 +37,48 @@ ABSL_FLAG(bool, fetch, false,
           "can be used to see additional data, but given that data may be "
           "incomplete prior to the start of the log, you should be careful "
           "about interpretting data flow when using this flag.");
+ABSL_FLAG(std::vector<std::string>, include_channels, {".*"},
+          "A comma-separated list of MCAP topic names to include. This looks "
+          "like so: --include_channels='/0/foo a.b.Msg1,/0/bar a.c.Msg2'. "
+          "Only topics in this list will be in the final MCAP. Topics included "
+          "by this list can still be dropped via --drop_channels.");
 ABSL_FLAG(std::vector<std::string>, drop_channels, {},
           "A comma-separated list of MCAP topic names to drop. This looks like "
-          "so: --drop_channels='/0/foo a.b.Msg1,/0/bar a.c.Msg2'.");
+          "so: --drop_channels='/0/foo a.b.Msg1,/0/bar a.c.Msg2'. Works in "
+          "conjunction with --include_channels. See that help for more "
+          "information.");
 
 namespace aos::util {
 
 std::function<bool(const Channel *)> GetChannelShouldBeDroppedTester() {
+  const std::vector<std::string> &included_channel_strings =
+      absl::GetFlag(FLAGS_include_channels);
   const std::vector<std::string> &dropped_channel_strings =
       absl::GetFlag(FLAGS_drop_channels);
 
   // Convert the strings to regex objects.
+  std::vector<std::regex> included_channels{included_channel_strings.begin(),
+                                            included_channel_strings.end()};
   std::vector<std::regex> dropped_channels{dropped_channel_strings.begin(),
                                            dropped_channel_strings.end()};
 
-  return [dropped_channels =
+  return [included_channels = std::move(included_channels),
+          dropped_channels =
               std::move(dropped_channels)](const aos::Channel *channel) {
     // Convert the channel to an MCAP-style topic.
     const std::string topic_name = absl::StrCat(
         channel->name()->string_view(), " ", channel->type()->string_view());
-    // Check if the topic matches any of the regexes the user specified.
-    const auto topic_matches =
-        [topic_name = std::move(topic_name)](const std::regex &regex) {
-          return std::regex_match(topic_name, regex);
-        };
-    return std::ranges::any_of(dropped_channels, topic_matches);
+    // Check if the topic should be included.
+    const auto topic_is_included = [&topic_name](const std::regex &regex) {
+      return std::regex_match(topic_name, regex);
+    };
+    // Check if the topic matches any of the to-be-dropped regexes the user
+    // specified.
+    const auto topic_is_dropped = [&topic_name](const std::regex &regex) {
+      return std::regex_match(topic_name, regex);
+    };
+    return std::ranges::none_of(included_channels, topic_is_included) ||
+           std::ranges::any_of(dropped_channels, topic_is_dropped);
   };
 }
 
