@@ -31,7 +31,6 @@ def generate_argument_permutations():
                 ["--include_channels=", "--include_channels=.*"],
                 ["--drop_channels=", "--drop_channels=.*aos.examples.Pong"]]
     permutations = make_permutations(arg_sets)
-    print(permutations)
     return permutations
 
 
@@ -63,6 +62,7 @@ def main(argv: Sequence[Text]):
         with tempfile.TemporaryDirectory() as tmpdir:
             log_name = tmpdir + "/test_log/"
             mcap_name = tmpdir + "/log.mcap"
+            print(f"Running with arguments: {log_to_mcap_args}")
             subprocess.run([args.generate_log, "--output_folder",
                             log_name]).check_returncode()
             # Run with a really small chunk size, to force a multi-chunk file.

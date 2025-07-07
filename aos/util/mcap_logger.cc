@@ -637,7 +637,10 @@ McapLogger::SummaryOffset McapLogger::WriteStatistics() {
   // Chunk count.
   AppendInt32(&string_builder_, chunk_indices_.size());
   // Earliest & latest message times.
-  AppendInt64(&string_builder_, earliest_message_->time_since_epoch().count());
+  AppendInt64(&string_builder_,
+              earliest_message_.has_value()
+                  ? earliest_message_->time_since_epoch().count()
+                  : 0);
   AppendInt64(&string_builder_, latest_message_.time_since_epoch().count());
   // Per-channel message counts.
   AppendChannelMap(&string_builder_, message_counts_);
