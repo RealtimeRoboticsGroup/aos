@@ -249,6 +249,7 @@ void SctpClientConnection::SendConnect() {
   // the connection.
   if (client_status_->GetClientConnection(client_index_)->state() ==
       aos::message_bridge::State::CONNECTED) {
+    VLOG(1) << "Aborting to reconnect.";
     client_.Abort();
     return;
   }

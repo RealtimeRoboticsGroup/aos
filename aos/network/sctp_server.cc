@@ -104,7 +104,34 @@ void SctpServer::SetStreamPriority([[maybe_unused]] sctp_assoc_t assoc_id,
       VLOG(1) << "Stream scheduler not supported on this kernel.";
       return;
     }
-    PLOG(FATAL) << "Failed to set scheduler.";
+    // Check the sctp_status to try to determine why we failed.
+    // Note(james): This is primarily because we have run into situations where
+    // we unexpectedly get an EINVAL from setsockopt(). The only obvious cause
+    // of this is somehow the connection getting closed asynchronously while we
+    // are trying to adjust the stream priorities. It is also possible that we
+    // are doing something wrong, but either way we have not caught it live yet.
+    //
+    // If such EINVAL's are to be expected then we need to figure out how to
+    // handle it gracefully. That may mean returning false from this method and
+    // having the next layer up retry things, or maybe it means attempting to
+    // use SCTP_FUTURE_ASSOC or the such to dynamically retrieve the association
+    // id.
+    struct sctp_status status;
+    memset(&status, 0, sizeof(status));
+    status.sstat_assoc_id = assoc_id;
+    socklen_t status_len = sizeof(status);
+    if (getsockopt(fd(), IPPROTO_SCTP, SCTP_STATUS, &status, &status_len) !=
+        0) {
+      // Note: If the getsockopt fails, it will have overridden the errno from
+      // the setsockopt call.
+      PLOG(FATAL) << "Failed to locate association id " << assoc_id
+                  << " in SetStreamPriority.";
+    }
+    PLOG(FATAL) << "Failed to set scheduler for assoc id " << assoc_id
+                << " and stream id " << stream_id
+                << ". The current assoc id is " << status.sstat_assoc_id
+                << " with " << status.sstat_outstrms
+                << " output streams and a state of " << status.sstat_state;
   }
 #endif
 }
