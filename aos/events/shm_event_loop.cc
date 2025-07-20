@@ -107,7 +107,9 @@ class SimpleShmFetcher {
         channel_(channel),
         lockless_queue_memory_(shm_base, absl::GetFlag(FLAGS_permissions),
                                event_loop->configuration(), channel),
-        reader_(lockless_queue_memory_.queue()) {
+        reader_(lockless_queue_memory_.queue()),
+        strategy_(FallBehindStrategy::CRASH),
+        num_skipped_msgs_(0) {
     context_.data = nullptr;
     // Point the queue index at the next index to read starting now.  This
     // makes it such that FetchNext will read the next message sent after
@@ -161,16 +163,16 @@ class SimpleShmFetcher {
     }
   }
 
-  bool FetchNext() { return FetchNextIf(should_fetch_); }
+  ipc_lib::LocklessQueueReader::Result FetchNext() { return FetchNextIf(should_fetch_); }
 
-  bool FetchNextIf(std::function<bool(const Context &)> fn) {
+  ipc_lib::LocklessQueueReader::Result FetchNextIf(std::function<bool(const Context &)> fn) {
     const ipc_lib::LocklessQueueReader::Result read_result =
         DoFetch(actual_queue_index_, std::move(fn));
 
-    return read_result == ipc_lib::LocklessQueueReader::Result::GOOD;
+    return read_result;
   }
 
-  bool FetchIf(std::function<bool(const Context &)> fn) {
+  ipc_lib::LocklessQueueReader::Result FetchIf(std::function<bool(const Context &)> fn) {
     const ipc_lib::QueueIndex queue_index = reader_.LatestIndex();
     // actual_queue_index_ is only meaningful if it was set by Fetch or
     // FetchNext.  This happens when valid_data_ has been set.  So, only
@@ -181,7 +183,7 @@ class SimpleShmFetcher {
     if ((context_.data != nullptr &&
          queue_index == actual_queue_index_.DecrementBy(1u)) ||
         !queue_index.valid()) {
-      return false;
+      return ipc_lib::LocklessQueueReader::Result::NOTHING_NEW;
     }
 
     const ipc_lib::LocklessQueueReader::Result read_result =
@@ -191,10 +193,10 @@ class SimpleShmFetcher {
         << ": Queue index went backwards.  This should never happen.  "
         << configuration::CleanedChannelToString(channel_);
 
-    return read_result == ipc_lib::LocklessQueueReader::Result::GOOD;
+    return read_result;
   }
 
-  bool Fetch() { return FetchIf(should_fetch_); }
+  ipc_lib::LocklessQueueReader::Result Fetch() { return FetchIf(should_fetch_); }
 
   Context context() const { return context_; }
 
@@ -234,6 +236,14 @@ class SimpleShmFetcher {
     reader_.set_use_writable_memory(use_writable_memory);
   }
 
+  void ConfigureFallBehindStrategy(FallBehindStrategy strategy) {
+    strategy_ = strategy;
+  }
+
+  uint32_t GetNumSkippedMsgs() {
+    return reader_.GetNumSkippedMsgs();
+  }
+
  private:
   ipc_lib::LocklessQueueReader::Result DoFetch(
       ipc_lib::QueueIndex queue_index,
@@ -243,6 +253,7 @@ class SimpleShmFetcher {
     if (copy_data()) {
       copy_buffer = data_storage_start();
     }
+
     ipc_lib::LocklessQueueReader::Result read_result = reader_.Read(
         queue_index.index(), &context_.monotonic_event_time,
         &context_.realtime_event_time, &context_.monotonic_remote_time,
@@ -299,8 +310,13 @@ class SimpleShmFetcher {
     // for a long time in the middle of this function.
     if (read_result == ipc_lib::LocklessQueueReader::Result::TOO_OLD) {
       event_loop_->SendTimingReport();
-      ABSL_LOG(FATAL) << "The next message is no longer available.  "
-                      << configuration::CleanedChannelToString(channel_);
+
+      num_skipped_msgs_ = reader_.GetNumSkippedMsgs();
+
+      if (strategy_ == FallBehindStrategy::CRASH) {
+        ABSL_LOG(FATAL) << "The next message is no longer available.  "
+                        << configuration::CleanedChannelToString(channel_);
+      }
     }
 
     return read_result;
@@ -343,6 +359,9 @@ class SimpleShmFetcher {
 
   Context context_;
 
+  FallBehindStrategy strategy_;
+  uint32_t num_skipped_msgs_;
+
   // Pre-allocated should_fetch function so we don't allocate.
   const std::function<bool(const Context &)> should_fetch_;
 };
@@ -363,42 +382,56 @@ class ShmFetcher : public RawFetcher {
     context_.data = nullptr;
   }
 
+  void ConfigureFallBehindStrategy(FallBehindStrategy strategy) override { 
+    RawFetcher::ConfigureFallBehindStrategy(strategy);
+
+    simple_shm_fetcher_.ConfigureFallBehindStrategy(strategy);
+  }
+
   std::pair<bool, monotonic_clock::time_point> DoFetchNext() override {
     shm_event_loop()->CheckCurrentThread();
-    if (simple_shm_fetcher_.FetchNext()) {
+    auto result = simple_shm_fetcher_.FetchNext();
+    if (result == ipc_lib::LocklessQueueReader::Result::GOOD) {
       context_ = simple_shm_fetcher_.context();
       return std::make_pair(true, monotonic_clock::now());
+    } else {
+      return handle_fall_behind(result);
     }
-    return std::make_pair(false, monotonic_clock::min_time);
   }
 
   std::pair<bool, monotonic_clock::time_point> DoFetchNextIf(
       std::function<bool(const Context &context)> fn) override {
     shm_event_loop()->CheckCurrentThread();
-    if (simple_shm_fetcher_.FetchNextIf(std::move(fn))) {
+    auto result = simple_shm_fetcher_.FetchNextIf(std::move(fn));
+    if (result == ipc_lib::LocklessQueueReader::Result::GOOD) {
       context_ = simple_shm_fetcher_.context();
       return std::make_pair(true, monotonic_clock::now());
+    } else {
+      return handle_fall_behind(result);
     }
-    return std::make_pair(false, monotonic_clock::min_time);
   }
 
   std::pair<bool, monotonic_clock::time_point> DoFetch() override {
     shm_event_loop()->CheckCurrentThread();
-    if (simple_shm_fetcher_.Fetch()) {
+    auto result = simple_shm_fetcher_.Fetch();
+    if (result == ipc_lib::LocklessQueueReader::Result::GOOD) {
       context_ = simple_shm_fetcher_.context();
       return std::make_pair(true, monotonic_clock::now());
+    } else {
+      return handle_fall_behind(result);
     }
-    return std::make_pair(false, monotonic_clock::min_time);
   }
 
   std::pair<bool, monotonic_clock::time_point> DoFetchIf(
       std::function<bool(const Context &context)> fn) override {
     shm_event_loop()->CheckCurrentThread();
-    if (simple_shm_fetcher_.FetchIf(std::move(fn))) {
+    auto result = simple_shm_fetcher_.FetchIf(std::move(fn));
+    if (result == ipc_lib::LocklessQueueReader::Result::GOOD) {
       context_ = simple_shm_fetcher_.context();
       return std::make_pair(true, monotonic_clock::now());
+    } else {
+      return handle_fall_behind(result);
     }
-    return std::make_pair(false, monotonic_clock::min_time);
   }
 
   absl::Span<const char> GetPrivateMemory() const {
@@ -416,6 +449,28 @@ class ShmFetcher : public RawFetcher {
  private:
   const ShmEventLoop *shm_event_loop() const {
     return static_cast<const ShmEventLoop *>(event_loop());
+  }
+
+  // As more FallBehindStrategy get built out, this function will handle them
+    std::pair<bool, monotonic_clock::time_point> handle_fall_behind(ipc_lib::LocklessQueueReader::Result result) {
+    if (result == ipc_lib::LocklessQueueReader::Result::TOO_OLD)
+    {
+      std::pair<bool, monotonic_clock::time_point> fetch_result;
+      switch (strategy_)
+      {
+        case FallBehindStrategy::USE_LATEST:
+          fetch_result = DoFetchNext();
+          break;
+        default:
+          ABSL_LOG(FATAL) << ": Unsupported FallbehindStrategy";
+      }
+
+      num_skipped_msgs_ = simple_shm_fetcher_.GetNumSkippedMsgs();
+
+      return fetch_result;
+    }
+
+    return std::make_pair(false, monotonic_clock::min_time);
   }
 
   SimpleShmFetcher simple_shm_fetcher_;
@@ -585,6 +640,12 @@ class ShmWatcherState : public WatcherState {
     event_loop_->RemoveEvent(&event_);
   }
 
+  void ConfigureFallBehindStrategy(FallBehindStrategy strategy) override {
+    WatcherState::ConfigureFallBehindStrategy(strategy);
+
+    simple_shm_fetcher_.ConfigureFallBehindStrategy(strategy);
+  }
+
   void Construct() override {
     event_loop_->CheckCurrentThread();
     ABSL_CHECK(RegisterWakeup(event_loop_->runtime_realtime_priority()));
@@ -598,12 +659,18 @@ class ShmWatcherState : public WatcherState {
   // Returns true if there is new data available.
   bool CheckForNewData() {
     if (!has_new_data_) {
-      has_new_data_ = simple_shm_fetcher_.FetchNext();
-
-      if (has_new_data_) {
+      ipc_lib::LocklessQueueReader::Result result = simple_shm_fetcher_.FetchNext();
+      if (result == ipc_lib::LocklessQueueReader::Result::GOOD) {
         event_.set_event_time(
             simple_shm_fetcher_.context().monotonic_event_time);
         event_loop_->AddEvent(&event_);
+        has_new_data_ = true;
+      } else {
+        has_new_data_ = false;
+        if (result == ipc_lib::LocklessQueueReader::Result::TOO_OLD)
+        {
+          handle_fall_behind();
+        }
       }
     }
 
@@ -634,6 +701,21 @@ class ShmWatcherState : public WatcherState {
   }
 
  private:
+  std::pair<bool, monotonic_clock::time_point> handle_fall_behind() {
+    switch (strategy_)
+    {
+      case FallBehindStrategy::USE_LATEST:
+        simple_shm_fetcher_.Fetch();
+        break;
+      default:
+        ABSL_LOG(FATAL) << ": Unsupported FallbehindStrategy";
+    }
+
+    num_skipped_msgs_ = simple_shm_fetcher_.GetNumSkippedMsgs();
+
+    return std::make_pair(true, monotonic_clock::now());
+  }
+
   bool has_new_data_ = false;
 
   ShmEventLoop *event_loop_;
@@ -815,13 +897,13 @@ class ShmPhasedLoopHandler final : public PhasedLoopHandler {
   return ::std::unique_ptr<RawSender>(new ShmSender(shm_base_, this, channel));
 }
 
-void ShmEventLoop::MakeRawWatcher(
+WatcherState *ShmEventLoop::MakeRawWatcher(
     const Channel *channel,
     std::function<void(const Context &context, const void *message)> watcher) {
   CheckCurrentThread();
   TakeWatcher(channel);
 
-  NewWatcher(::std::unique_ptr<WatcherState>(
+  return NewWatcher(::std::unique_ptr<WatcherState>(
       new ShmWatcherState(shm_base_, this, channel, std::move(watcher), true)));
 }
 

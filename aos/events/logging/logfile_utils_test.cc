@@ -3363,7 +3363,7 @@ class TimeEventLoop : public EventLoop {
     return nullptr;
   }
 
-  void MakeRawWatcher(
+  WatcherState *MakeRawWatcher(
       const Channel * /*channel*/,
       std::function<void(const Context &context, const void *message)>
       /*watcher*/) final {

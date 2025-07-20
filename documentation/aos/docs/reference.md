@@ -897,6 +897,19 @@ class Pong {
 };
 ```
 
+Fetchers can also be configured to register a callback. Registering a callback on a Fetcher enables similar functionality to a Watcher except the callback is bound to the Fetcher. Only one callback can be set on a Fetcher at one time. 
+
+```cpp
+Pong::Pong(EventLoop *event_loop)
+    : event_loop_(event_loop),
+      fetcher_(event_loop_->MakeFetcher<examples::Ping>("/test")),
+      sender_(event_loop_->MakeSender<examples::PongStatic>("/test")) {
+  fetcher_.ConfigureFallBehindStrategy(FallBehindStrategy::CRASH);
+  fetcher_.RegisterCallback( event_loop_->MakeWatcher("/test", [this](const examples::Ping &ping) { std::this_thread::sleep_for(std::chrono::seconds(10)); HandlePing(ping); }) );
+}
+```
+
+Attempting to register a callback to a Fetcher that already has a callback registered or attempting to unregister a callback from a Fetcher that does not have a callback registered will cause the program to explode with an error message. Additionally, register or unregistering a callback must be done before the event loop starts running.
 
 ### Advanced Message Passing
 

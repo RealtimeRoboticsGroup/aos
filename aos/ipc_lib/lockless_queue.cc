@@ -1323,7 +1323,7 @@ LocklessQueueReader::Result LocklessQueueReader::Read(
     realtime_clock::time_point *realtime_remote_time,
     uint32_t *remote_queue_index, UUID *source_boot_uuid, size_t *length,
     char *data,
-    std::function<bool(const Context &)> should_read_callback) const {
+    std::function<bool(const Context &)> should_read_callback) {
   const size_t queue_size = const_memory_->queue_size();
 
   // Build up the QueueIndex.
@@ -1376,6 +1376,7 @@ LocklessQueueReader::Result LocklessQueueReader::Read(
                      << starting_queue_index.index() << ", behind by "
                      << std::dec
                      << (starting_queue_index.index() - queue_index.index());
+        num_skipped_msgs_ += starting_queue_index.index() - queue_index.index();
         return Result::TOO_OLD;
       }
 
@@ -1433,6 +1434,7 @@ LocklessQueueReader::Result LocklessQueueReader::Read(
                    << queue_index.index() << ", finished with "
                    << final_queue_index.index() << ", delta: " << std::dec
                    << (final_queue_index.index() - queue_index.index());
+      num_skipped_msgs_ += final_queue_index.index() - queue_index.index();
       return Result::OVERWROTE;
     }
 
@@ -1461,6 +1463,7 @@ LocklessQueueReader::Result LocklessQueueReader::Read(
                    << queue_index.index() << ", finished with "
                    << final_queue_index.index() << ", delta: " << std::dec
                    << (final_queue_index.index() - queue_index.index());
+      num_skipped_msgs_ += final_queue_index.index() - queue_index.index();
       return Result::OVERWROTE;
     }
   }

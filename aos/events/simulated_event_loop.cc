@@ -793,7 +793,7 @@ class SimulatedEventLoop : public EventLoop {
 
   std::unique_ptr<RawFetcher> MakeRawFetcher(const Channel *channel) override;
 
-  void MakeRawWatcher(
+  WatcherState *MakeRawWatcher(
       const Channel *channel,
       ::std::function<void(const Context &context, const void *message)>
           watcher) override;
@@ -967,7 +967,7 @@ void SimulatedEventLoopFactory::SetRealtimeReplayRate(double replay_rate) {
   scheduler_scheduler_.SetReplayRate(replay_rate);
 }
 
-void SimulatedEventLoop::MakeRawWatcher(
+WatcherState *SimulatedEventLoop::MakeRawWatcher(
     const Channel *channel,
     std::function<void(const Context &channel, const void *message)> watcher) {
   TakeWatcher(channel);
@@ -978,7 +978,7 @@ void SimulatedEventLoop::MakeRawWatcher(
 
   GetSimulatedChannel(channel)->MakeRawWatcher(shm_watcher.get());
 
-  NewWatcher(std::move(shm_watcher));
+  WatcherState *watcher_state = NewWatcher(std::move(shm_watcher));
   VLOG(1) << distributed_now() << " " << NodeName(node()) << monotonic_now()
           << " " << name() << " MakeRawWatcher(\""
           << configuration::StrippedChannelToString(channel) << "\")";
@@ -986,6 +986,8 @@ void SimulatedEventLoop::MakeRawWatcher(
   // Order of operations gets kinda wonky if we let people make watchers after
   // running once.  If someone has a valid use case, we can reconsider.
   CHECK(!has_run()) << ": Can't add a watcher after running.";
+
+  return watcher_state;
 }
 
 std::unique_ptr<RawSender> SimulatedEventLoop::MakeRawSender(

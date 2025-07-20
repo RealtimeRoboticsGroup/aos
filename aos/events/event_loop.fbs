@@ -58,6 +58,9 @@ table Watcher {
 
   // Channel for this watcher.  Not filled out by default.
   channel:Channel (id: 4);
+
+  // A count of the number of skipped messages since last query
+  num_skipped_msgs:uint (id: 5);
 }
 
 table Fetcher {
@@ -72,6 +75,9 @@ table Fetcher {
 
   // Channel for this fetcher.  Not filled out by default.
   channel:Channel (id: 3);
+
+  // A count of the number of skipped messages since last query
+  num_skipped_msgs:uint (id: 4);
 }
 
 table Timer {

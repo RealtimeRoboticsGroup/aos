@@ -447,44 +447,108 @@ TEST(SimulatedEventLoopDeathTest, MakeWatcherAfterRunning) {
       "Can't add a watcher after running");
 }
 
-// Test that running for a time period with no handlers causes time to progress
-// correctly.
-TEST(SimulatedEventLoopTest, RunForNoHandlers) {
+// Tests that registering a callback on a Fetcher calls callback when message received and updates timing report
+TEST(SimulatedEventLoopTest, FetcherRegisterCallbackTimingReport) {
+  absl::FlagSaver flag_saver;
   SimulatedEventLoopTestFactory factory;
+  factory.set_send_delay(std::chrono::microseconds(50));
 
-  SimulatedEventLoopFactory simulated_event_loop_factory(
-      factory.configuration());
-  ::std::unique_ptr<EventLoop> event_loop =
-      simulated_event_loop_factory.MakeEventLoop("loop");
+  absl::SetFlag(&FLAGS_timing_report_ms, 1000);
+  auto loop1 = factory.MakePrimary("primary");
+  auto fetcher = loop1->MakeFetcher<TestMessage>("/test");
+  fetcher.RegisterCallback(loop1.get(), "/test", [](const TestMessage &) {});
 
-  simulated_event_loop_factory.RunFor(chrono::seconds(1));
+  auto loop2 = factory.Make("sender_loop");
 
-  EXPECT_EQ(::aos::monotonic_clock::epoch() + chrono::seconds(1),
-            event_loop->monotonic_now());
-}
+  auto loop3 = factory.Make("report_fetcher");
 
-// Test that running for a time with a periodic handler causes time to end
-// correctly.
-TEST(SimulatedEventLoopTest, RunForTimerHandler) {
-  SimulatedEventLoopTestFactory factory;
+  Fetcher<timing::Report> report_fetcher =
+      loop3->MakeFetcher<timing::Report>("/aos");
+  EXPECT_FALSE(report_fetcher.Fetch());
 
-  SimulatedEventLoopFactory simulated_event_loop_factory(
-      factory.configuration());
-  ::std::unique_ptr<EventLoop> event_loop =
-      simulated_event_loop_factory.MakeEventLoop("loop");
+  auto sender = loop2->MakeSender<TestMessage>("/test");
 
-  int counter = 0;
-  auto timer = event_loop->AddTimer([&counter]() { ++counter; });
-  event_loop->OnRun([&event_loop, &timer] {
-    timer->Schedule(event_loop->monotonic_now() + chrono::milliseconds(50),
-                    chrono::milliseconds(100));
+  // Send 10 messages in the middle of a timing report period so we get
+  // something interesting back.
+  auto test_timer = loop2->AddTimer([&sender]() {
+    for (int i = 0; i < 10; ++i) {
+      aos::Sender<TestMessage>::Builder msg = sender.MakeBuilder();
+      TestMessage::Builder builder = msg.MakeBuilder<TestMessage>();
+      builder.add_value(200 + i);
+      msg.CheckOk(msg.Send(builder.Finish()));
+    }
   });
 
-  simulated_event_loop_factory.RunFor(chrono::seconds(1));
+  // Quit after 1 timing report, mid way through the next cycle.
+  {
+    auto end_timer = loop1->AddTimer([&factory]() { factory.Exit(); });
+    end_timer->Schedule(loop1->monotonic_now() + chrono::milliseconds(2500));
+    end_timer->set_name("end");
+  }
 
-  EXPECT_EQ(::aos::monotonic_clock::epoch() + chrono::seconds(1),
-            event_loop->monotonic_now());
-  EXPECT_EQ(counter, 10);
+  loop1->OnRun([&test_timer, &loop1]() {
+    test_timer->Schedule(loop1->monotonic_now() + chrono::milliseconds(1500));
+  });
+
+  factory.Run();
+
+  // And, since we are here, check that the timing report makes sense.
+  // Start by looking for our event loop's timing.
+  FlatbufferDetachedBuffer<timing::Report> primary_report =
+      FlatbufferDetachedBuffer<timing::Report>::Empty();
+  while (report_fetcher.FetchNext()) {
+    LOG(INFO) << "Report " << FlatbufferToJson(report_fetcher.get());
+    if (report_fetcher->name()->string_view() == "primary") {
+      primary_report = CopyFlatBuffer(report_fetcher.get());
+    }
+  }
+
+  // Check the watcher report.
+  VLOG(1) << FlatbufferToJson(primary_report, {.multi_line = true});
+
+  EXPECT_EQ(primary_report.message().name()->string_view(), "primary");
+
+  // Just the timing report timer.
+  ASSERT_NE(primary_report.message().timers(), nullptr);
+  EXPECT_EQ(primary_report.message().timers()->size(), 2);
+
+  // No phased loops
+  ASSERT_EQ(primary_report.message().phased_loops(), nullptr);
+
+  // And now confirm that the watcher received all 10 messages, and has latency.
+  ASSERT_NE(primary_report.message().watchers(), nullptr);
+  ASSERT_EQ(primary_report.message().watchers()->size(), 1);
+  EXPECT_EQ(primary_report.message().watchers()->Get(0)->count(), 10);
+  EXPECT_EQ(primary_report.message().watchers()->Get(0)->num_skipped_msgs(), 0);
+  EXPECT_NEAR(
+      primary_report.message().watchers()->Get(0)->wakeup_latency()->average(),
+      0.00005, 1e-9);
+  EXPECT_NEAR(
+      primary_report.message().watchers()->Get(0)->wakeup_latency()->min(),
+      0.00005, 1e-9);
+  EXPECT_NEAR(
+      primary_report.message().watchers()->Get(0)->wakeup_latency()->max(),
+      0.00005, 1e-9);
+  EXPECT_EQ(primary_report.message()
+                .watchers()
+                ->Get(0)
+                ->wakeup_latency()
+                ->standard_deviation(),
+            0.0);
+
+  EXPECT_EQ(
+      primary_report.message().watchers()->Get(0)->handler_time()->average(),
+      0.0);
+  EXPECT_EQ(primary_report.message().watchers()->Get(0)->handler_time()->min(),
+            0.0);
+  EXPECT_EQ(primary_report.message().watchers()->Get(0)->handler_time()->max(),
+            0.0);
+  EXPECT_EQ(primary_report.message()
+                .watchers()
+                ->Get(0)
+                ->handler_time()
+                ->standard_deviation(),
+            0.0);
 }
 
 // Tests that watchers have latency in simulation.
@@ -558,6 +622,7 @@ TEST(SimulatedEventLoopTest, WatcherTimingReport) {
   ASSERT_NE(primary_report.message().watchers(), nullptr);
   ASSERT_EQ(primary_report.message().watchers()->size(), 1);
   EXPECT_EQ(primary_report.message().watchers()->Get(0)->count(), 10);
+  EXPECT_EQ(primary_report.message().watchers()->Get(0)->num_skipped_msgs(), 0);
   EXPECT_NEAR(
       primary_report.message().watchers()->Get(0)->wakeup_latency()->average(),
       0.00005, 1e-9);

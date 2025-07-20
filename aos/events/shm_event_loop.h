@@ -71,7 +71,7 @@ class ShmEventLoop : public EventLoop {
   std::unique_ptr<RawSender> MakeRawSender(const Channel *channel) override;
   std::unique_ptr<RawFetcher> MakeRawFetcher(const Channel *channel) override;
 
-  void MakeRawWatcher(
+  WatcherState *MakeRawWatcher(
       const Channel *channel,
       std::function<void(const Context &context, const void *message)> watcher)
       override;

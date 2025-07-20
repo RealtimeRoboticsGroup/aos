@@ -430,7 +430,7 @@ Ping::Ping(EventLoop *event_loop)
 
   event_loop_->OnRun([this]() {
     timer_handle_->Schedule(event_loop_->monotonic_now(),
-                            chrono::milliseconds(FLAGS_sleep_ms));
+                            chrono::milliseconds(absl::GetFlag(FLAGS_sleep_ms)));
   });
 }
 
@@ -529,7 +529,7 @@ received on the `/test` `aos.examples.Pong` channel.
 ```cpp
   event_loop_->OnRun([this]() {
     timer_handle_->Schedule(event_loop_->monotonic_now(),
-                            chrono::milliseconds(FLAGS_sleep_ms));
+                            chrono::milliseconds(absl::GetFlag(FLAGS_sleep_ms)));
   });
 ```
 
@@ -748,7 +748,7 @@ int main(int argc, char **argv) {
   aos::InitGoogle(&argc, &argv);
 
   aos::FlatbufferDetachedBuffer<aos::Configuration> config =
-      aos::configuration::ReadConfig(FLAGS_config);
+      aos::configuration::ReadConfig(absl::GetFlag(FLAGS_config));
 
   // Create a shared-memory based EventLoop using the provided config.
   // This is currently the only EventLoop implementation for using on realtime

@@ -324,6 +324,199 @@ TEST_P(ShmEventLoopTest, SuccessfulExitTest) {
   EXPECT_TRUE(factory()->Run().has_value());
 }
 
+// Tests that calling RegisterCallback on a Fetcher enables both the Watcher callback and Fetch to still be executed
+TEST_P(ShmEventLoopTest, FetcherRegisterCallbackCreatesWatcher) {
+  auto loopPub = factory()->MakePrimary("publisher");
+  auto loop = factory()->MakePrimary("subscriber");
+  loop->SetRuntimeRealtimePriority(1);
+
+  auto sender = loopPub->MakeSender<TestMessage>("/test");
+
+  bool did_timer = false;
+  bool did_onrun = false;
+  bool did_watcher = false;
+
+  auto timer = loop->AddTimer([this, &did_timer]() {
+    EXPECT_TRUE(IsRealtime());
+    did_timer = true;
+    factory()->Exit();
+  });
+
+  auto fetcher = loop->MakeFetcher<TestMessage>("/test");
+
+  // FUT
+  fetcher.RegisterCallback(
+    loop.get(), "/test", [&did_watcher](const TestMessage &) {
+      EXPECT_TRUE(IsRealtime());
+      did_watcher = true;
+    }
+  );
+
+  loop->OnRun([&loop, &did_onrun, &sender, timer]() {
+    EXPECT_TRUE(IsRealtime());
+    did_onrun = true;
+    timer->Schedule(loop->monotonic_now() + chrono::milliseconds(100));
+
+    aos::Sender<TestMessage>::Builder msg = sender.MakeBuilder();
+    TestMessage::Builder builder = msg.MakeBuilder<TestMessage>();
+    builder.add_value(200);
+    msg.CheckOk(msg.Send(builder.Finish()));
+  });
+
+  factory()->Run();
+
+  EXPECT_TRUE(did_timer);
+  EXPECT_TRUE(did_onrun);
+  EXPECT_TRUE(did_watcher);
+  ASSERT_TRUE(fetcher.Fetch());
+}
+
+// Tests that calling UnregisterCallback on a Fetcher, removes any existing callback
+TEST_P(ShmEventLoopTest, FetcherUnregisterCallbackRemovesAnyExistingCallbacks) {
+  auto loopPub = factory()->MakePrimary("publisher");
+  auto loop = factory()->MakePrimary("subscriber");
+  loop->SetRuntimeRealtimePriority(1);
+
+  auto sender = loopPub->MakeSender<TestMessage>("/test");
+
+  bool did_timer = false;
+  bool did_onrun = false;
+  bool did_watcher = false;
+
+  auto timer = loop->AddTimer([this, &did_timer]() {
+    EXPECT_TRUE(IsRealtime());
+    did_timer = true;
+    factory()->Exit();
+  });
+
+  auto fetcher = loop->MakeFetcher<TestMessage>("/test");
+
+  fetcher.RegisterCallback(
+    loop.get(), "/test", [&did_watcher](const TestMessage &) {
+      EXPECT_TRUE(IsRealtime());
+      did_watcher = true;
+    }
+  );
+
+  // FUT
+  fetcher.UnregisterCallback(loop.get());
+
+  loop->OnRun([&loop, &did_onrun, &sender, timer]() {
+    EXPECT_TRUE(IsRealtime());
+    did_onrun = true;
+    timer->Schedule(loop->monotonic_now() + chrono::milliseconds(100));
+
+    aos::Sender<TestMessage>::Builder msg = sender.MakeBuilder();
+    TestMessage::Builder builder = msg.MakeBuilder<TestMessage>();
+    builder.add_value(200);
+    msg.CheckOk(msg.Send(builder.Finish()));
+  });
+
+  factory()->Run();
+
+  EXPECT_TRUE(did_timer);
+  EXPECT_TRUE(did_onrun);
+  EXPECT_FALSE(did_watcher);
+  ASSERT_TRUE(fetcher.Fetch());
+}
+
+// Tests that calling UnregisterCallback on a Fetcher on a Fetcher with no callback
+// registered explodes
+TEST_P(ShmEventLoopTest, FetcherUnregisterCallbackWhenNoCallbackRegisteredExplodes) {
+  auto loop = factory()->MakePrimary("subscriber");
+  loop->SetRuntimeRealtimePriority(1);
+
+  auto fetcher = loop->MakeFetcher<TestMessage>("/test");
+
+  // FUT
+  EXPECT_DEATH(
+    fetcher.UnregisterCallback(loop.get()),
+    ": No callback registered to unregister"
+  );
+}
+
+// Tests that if we attempt to RegisterCallback on a Fetcher that has already registered a callback,
+// that a log FATAL will occur
+TEST_P(ShmEventLoopTest, FetcherRegisterMultipleCallbacksWillThrowAFault) {
+  auto loop = factory()->MakePrimary("primary");
+  loop->SetRuntimeRealtimePriority(1);
+
+  auto fetcher = loop->MakeFetcher<TestMessage>("/test");
+
+  fetcher.RegisterCallback(
+    loop.get(), "/test", [](const TestMessage &) { }
+  );
+
+  EXPECT_DEATH(
+    // FUT
+    fetcher.RegisterCallback(
+      loop.get(), "/test", [](const TestMessage &) { }
+    ),
+    ": A callback has only been registered. Only one callback can be registered at one time"
+  );
+}
+
+// Tests that fall behind logic reads the latest message when it gets sufficiently behind
+TEST_P(ShmEventLoopTest, FetcherFallBehindStrategyUSE_LATESTReadsLatestMessage) {
+  // Number of messages to trigger fall behind logic
+  constexpr int NUM_FALL_BEHIND_MESSAGES = 22500; // determined via experimentation
+
+  auto loopPub = factory()->MakePrimary("publisher");
+  auto loop = factory()->MakePrimary("subscriber");
+  loop->SetRuntimeRealtimePriority(1);
+
+  auto sender = loopPub->MakeSender<TestMessage>("/test");
+
+  bool did_timer = false;
+  bool did_onrun = false;
+  bool did_watcher = false;
+
+  auto timer = loop->AddTimer([this, &did_timer]() {
+    EXPECT_TRUE(IsRealtime());
+    did_timer = true;
+    factory()->Exit();
+  });
+
+  auto fetcher = loop->MakeFetcher<TestMessage>("/test");
+  // FUT
+  fetcher.ConfigureFallBehindStrategy(FallBehindStrategy::USE_LATEST);
+
+  fetcher.RegisterCallback(
+    loop.get(), "/test", [this, &did_watcher, NUM_FALL_BEHIND_MESSAGES](const TestMessage &m) {
+      EXPECT_TRUE(IsRealtime());
+      factory()->SleepFor(std::chrono::seconds(10)); // This triggers falling behind
+
+      // Ensure latest message is fetched when we fall behind
+      EXPECT_EQ(m.value(), NUM_FALL_BEHIND_MESSAGES);
+
+      did_watcher = true;
+    }
+  );
+
+  loop->OnRun([this, &loop, &did_onrun, &sender, timer]() {
+    EXPECT_TRUE(IsRealtime());
+    did_onrun = true;
+    timer->Schedule(loop->monotonic_now() + chrono::milliseconds(100));
+
+    // Trigger a fall behind
+    for (int i = 0; i < NUM_FALL_BEHIND_MESSAGES; i++)
+    {
+      aos::Sender<TestMessage>::Builder msg = sender.MakeBuilder();
+      TestMessage::Builder builder = msg.MakeBuilder<TestMessage>();
+      builder.add_value(i);
+      msg.CheckOk(msg.Send(builder.Finish()));
+
+      factory()->SleepFor(std::chrono::microseconds(1250));
+    }
+  });
+
+  factory()->Run();
+
+  EXPECT_TRUE(did_onrun);
+  EXPECT_FALSE(did_watcher);
+  ASSERT_TRUE(fetcher.Fetch());
+}
+
 // Test GetWatcherSharedMemory in a few basic scenarios.
 TEST_P(ShmEventLoopDeathTest, GetWatcherSharedMemory) {
   auto generic_loop1 = factory()->MakePrimary("primary");
@@ -513,6 +706,7 @@ TEST_P(ShmEventLoopDeathTest, OutOfBoundsWrite) {
   }
 }
 
+// The default FallBehindStrategy is CRASH, so no configuration needs to occur for these unit tests
 // Tests that the next message not being available prints a helpful error in the
 // normal case.
 TEST_P(ShmEventLoopDeathTest, NextMessageNotAvailable) {

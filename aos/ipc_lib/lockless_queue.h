@@ -447,7 +447,7 @@ class LocklessQueueReader {
   };
 
   LocklessQueueReader(LocklessQueue queue)
-      : memory_(queue.memory()), const_memory_(queue.const_memory()) {
+      : memory_(queue.memory()), const_memory_(queue.const_memory()), num_skipped_msgs_(0) {
     queue.Initialize();
   }
 
@@ -467,7 +467,7 @@ class LocklessQueueReader {
       realtime_clock::time_point *realtime_remote_time,
       uint32_t *remote_queue_index, UUID *source_boot_uuid, size_t *length,
       char *data,
-      std::function<bool(const Context &context)> should_read_callback) const;
+      std::function<bool(const Context &context)> should_read_callback);
 
   // Returns the index to the latest queue message.  Returns empty_queue_index()
   // if there are no messages in the queue.  Do note that this index wraps if
@@ -483,11 +483,18 @@ class LocklessQueueReader {
     use_writable_memory_ = use_writable_memory;
   }
 
+  // Return the number of skipped messages since the last query of this function
+  uint32_t GetNumSkippedMsgs() const {
+    return num_skipped_msgs_;
+  }
+
  private:
   LocklessQueueMemory *const memory_;
   const LocklessQueueMemory *const_memory_;
 
   bool use_writable_memory_ = false;
+
+  uint32_t num_skipped_msgs_;
 };
 
 // Returns the number of messages which are logically in the queue at a time.

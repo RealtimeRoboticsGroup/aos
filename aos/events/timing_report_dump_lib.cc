@@ -88,9 +88,9 @@ void TimingReportDump::PrintWatchers(
     std::ostream *os,
     const flatbuffers::Vector<flatbuffers::Offset<timing::Watcher>> &watchers) {
   *os << kIndent << "Watchers (" << watchers.size() << "):" << std::endl;
-  std::vector<std::array<std::string, 5>> rows;
+  std::vector<std::array<std::string, 6>> rows;
   rows.push_back(
-      {"Channel Name", "Type", "Count", "Wakeup Latency", "Handler Time"});
+      {"Channel Name", "Type", "Count", "Skipped", "Wakeup Latency", "Handler Time"});
   for (const timing::Watcher *watcher : watchers) {
     const Channel *channel = GetChannel(watcher->channel_index());
     std::stringstream latency_stats;
@@ -99,9 +99,10 @@ void TimingReportDump::PrintWatchers(
     CHECK(watcher->has_handler_time());
     latency_stats << *watcher->wakeup_latency();
     handler_stats << *watcher->handler_time();
+
     rows.push_back({channel->name()->str(), channel->type()->str(),
-                    std::to_string(watcher->count()), latency_stats.str(),
-                    handler_stats.str()});
+                    std::to_string(watcher->count()), std::to_string(watcher->num_skipped_msgs()),
+                    latency_stats.str(), handler_stats.str()});
   }
   PrintTable(os, kIndent + kIndent, rows);
 }
@@ -148,15 +149,17 @@ void TimingReportDump::PrintFetchers(
     std::ostream *os,
     const flatbuffers::Vector<flatbuffers::Offset<timing::Fetcher>> &fetchers) {
   *os << kIndent << "Fetchers (" << fetchers.size() << "):" << std::endl;
-  std::vector<std::array<std::string, 4>> rows;
-  rows.push_back({"Channel Name", "Type", "Count", "Latency"});
+  std::vector<std::array<std::string, 5>> rows;
+  rows.push_back({"Channel Name", "Type", "Count", "Skipped", "Latency"});
   for (const timing::Fetcher *fetcher : fetchers) {
     const Channel *channel = GetChannel(fetcher->channel_index());
     std::stringstream latency_stats;
     CHECK(fetcher->has_latency());
     latency_stats << *fetcher->latency();
+
     rows.push_back({channel->name()->str(), channel->type()->str(),
-                    std::to_string(fetcher->count()), latency_stats.str()});
+                    std::to_string(fetcher->count()), std::to_string(fetcher->num_skipped_msgs()),
+                    latency_stats.str()});
   }
   PrintTable(os, kIndent + kIndent, rows);
 }
