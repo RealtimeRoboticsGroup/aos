@@ -1,0 +1,10 @@
+site_name: AOS Documentation
+
+nav:
+  - "Home": "index.md"
+  - "AOS Reference Docs":
+    - "Flatbuffers": "flatbuffers.md"
+    - "Reference": "reference.md"
+  - "Examples":
+    - "Building Ping/Pong ": "build_ping_pong.md"
+    - "Running Ping/Pong ": "run_ping_pong.md"
