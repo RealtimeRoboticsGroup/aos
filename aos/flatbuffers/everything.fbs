@@ -1,0 +1,38 @@
+include "aos/flatbuffers/generated.fbs";
+include "aos/flatbuffers/test_dir/something.fbs";
+
+namespace aos.flatbuffers.fbs;
+
+enum MyEnum : ubyte {
+  FOO = 0,
+  BAR = 1,
+}
+
+struct SubStruct {
+  x:double (id: 0);
+  y:double (id: 1);
+}
+
+table SubTable {
+  foo:short (id: 0);
+  bar:int (id: 1, deprecated);
+  baz:long (id: 2);
+}
+
+namespace aos.flatbuffers;
+
+table MainTable {
+  scalar:int = 99 (id: 0);
+  vector_of_scalars:[int] (id: 1);
+  string:string (id: 2);
+  vector_of_strings:[string] (id: 3);
+  enum:fbs.MyEnum (id: 4);
+  sub_struct:fbs.SubStruct (id: 5);
+  sub_table:fbs.SubTable (id: 6);
+  vector_of_structs:[aos.flatbuffers.fbs.SubStruct] (id: 7);
+  vector_of_tables:[aos.flatbuffers.fbs.SubTable] (id: 8);
+  included_table:test_dir.IncludedTable (id: 9);
+  generated_table:fbs.GeneratedTable (id: 10);
+}
+
+root_type MainTable;

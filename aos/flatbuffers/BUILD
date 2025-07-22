@@ -1,4 +1,5 @@
 load("@com_github_google_flatbuffers//:build_defs.bzl", "flatbuffer_cc_library")
+load("@com_github_google_flatbuffers//:flatbuffers_python.bzl", "flatbuffer_py_library")
 load("//aos:flatbuffers.bzl", "cc_static_flatbuffer")
 load("//aos/flatbuffers:generate.bzl", "static_flatbuffer")
 load("//tools/build_rules:clean_dep.bzl", "aos_repo_name")
@@ -218,5 +219,50 @@ cc_test(
         "//aos:json_to_flatbuffer",
         "//aos/testing:googletest",
         "//aos/testing:path",
+    ],
+)
+
+genrule(
+    name = "generate_fbs",
+    outs = ["generated.fbs"],
+    cmd = """
+cat <<EOF > $@
+namespace aos.flatbuffers.fbs;
+
+table GeneratedTable {
+  value:int (id: 0);
+}
+
+root_type GeneratedTable;
+EOF
+""",
+)
+
+flatbuffer_py_library(
+    name = "generated_fbs_py",
+    src = "generated.fbs",
+    visibility = ["//visibility:public"],
+)
+
+flatbuffer_py_library(
+    name = "everything_fbs_py",
+    src = "everything.fbs",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":generated_fbs_py_srcs",
+        "//aos/flatbuffers/test_dir:something_fbs_py_srcs",
+    ],
+)
+
+py_test(
+    name = "test_py",
+    srcs = ["test.py"],
+    main = "test.py",
+    deps = [
+        ":everything_fbs_py",
+        ":generated_fbs_py",
+        "@com_github_google_flatbuffers//:flatpy",
+        "@com_github_google_flatbuffers//tests:foo_fbs_py",
+        "@pip//absl_py",
     ],
 )

@@ -1,0 +1,9 @@
+include "tests/bar.fbs";
+
+namespace tests.fbs;
+
+table Foo {
+  bar:include.fbs.Bar (id: 0);
+}
+
+root_type Foo;

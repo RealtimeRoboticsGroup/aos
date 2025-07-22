@@ -726,6 +726,10 @@ struct IDLOptions {
   // Whether to generate numpy helpers.
   bool python_gen_numpy;
 
+  // If specified, this is added as a prefix to the paths of generated modules
+  // in import statements.
+  std::string python_import_prefix;
+
   bool ts_omit_entrypoint;
   ProtoIdGapAction proto_id_gap_action;
 

@@ -1,6 +1,7 @@
 load("@aspect_bazel_lib//lib:copy_to_bin.bzl", "copy_to_bin")
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 load("//:build_defs.bzl", "DEFAULT_FLATC_ARGS", "flatbuffer_cc_library")
+load("//:flatbuffers_python.bzl", "flatbuffer_py_library")
 
 package(default_visibility = ["//visibility:private"])
 
@@ -193,7 +194,6 @@ flatbuffer_cc_library(
 flatbuffer_cc_library(
     name = "monster_test_cc_fbs",
     srcs = ["monster_test.fbs"],
-    outs = ["monster_test_bfbs_generated.h"],
     flatc_args = DEFAULT_FLATC_ARGS + [
         "--bfbs-comments",
         "--bfbs-builtins",
@@ -264,16 +264,22 @@ flatbuffer_cc_library(
     ],
 )
 
-flatbuffer_ts_library(
-    name = "typescript_ts_fbs",
-    srcs = ["typescript_keywords.fbs"],
-    deps = [
-        "//tests/test_dir:include_ts_ts_fbs",
-        "//tests/test_dir:typescript_transitive_ts_ts_fbs",
-    ],
-)
-
 flatbuffer_cc_library(
     name = "alignment_test_cc_fbs",
     srcs = ["alignment_test.fbs"],
+)
+
+flatbuffer_py_library(
+    name = "bar_fbs_py",
+    src = "bar.fbs",
+    visibility = ["//visibility:public"],
+)
+
+flatbuffer_py_library(
+    name = "foo_fbs_py",
+    src = "foo.fbs",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":bar_fbs_py_srcs",
+    ],
 )

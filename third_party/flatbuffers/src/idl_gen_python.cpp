@@ -2665,13 +2665,21 @@ class PythonGenerator : public BaseGenerator {
         code += "from typing import Any\n";
 
         for (auto import_entry : imports) {
+          std::string prefix{""};
+          // TODO(Sanjay): Can we do better with detecting import entries for
+          // generated modules here?
+          if (!parser_.opts.python_import_prefix.empty() &&
+              import_entry.first != "typing" &&
+              import_entry.first != "flatbuffers.table") {
+            prefix = parser_.opts.python_import_prefix + ".";
+          }
           // If we have a file called, say, "MyType.py" and in it we have a
           // class "MyType", we can generate imports -- usually when we
           // have a type that contains arrays of itself -- of the type
           // "from .MyType import MyType", which Python can't resolve. So
           // if we are trying to import ourself, we skip.
           if (import_entry.first != local_import) {
-            code += "from " + import_entry.first + " import " +
+            code += "from " + prefix + import_entry.first + " import " +
                     import_entry.second + "\n";
           }
         }

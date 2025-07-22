@@ -1,3 +1,4 @@
+load("@com_github_google_flatbuffers//:flatbuffers_python.bzl", "flatbuffer_py_library")
 load("//aos/flatbuffers:generate.bzl", "static_flatbuffer")
 
 static_flatbuffer(
@@ -42,5 +43,14 @@ sh_test(
     data = [
         "//aos/flatbuffers:test_static_file",
         "@aos//aos/flatbuffers/test_dir:sample_test_static.h",
+    ],
+)
+
+flatbuffer_py_library(
+    name = "something_fbs_py",
+    src = "something.fbs",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_google_flatbuffers//tests:foo_fbs_py_srcs",
     ],
 )

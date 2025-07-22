@@ -1,0 +1,13 @@
+include "tests/foo.fbs";
+
+namespace aos.flatbuffers.test_dir;
+
+table IncludedTable {
+  foo:tests.fbs.Foo (id: 0);
+}
+
+table UnusedTable {
+  value:int (id: 0);
+}
+
+root_type IncludedTable;

@@ -153,6 +153,8 @@ system_libraries = [
     "libgobject-2.0.so*",
     "libgthread-2.0.so*",
     "libglib-2.0.so*",
+    "libcuda.so*",
+    "libcudart.so*",
 ]
 
 filegroup(

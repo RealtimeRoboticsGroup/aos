@@ -688,6 +688,17 @@ FlatCOptions FlatCompiler::ParseFromCommandLineArguments(int argc,
       } else if (arg == "--no-python-gen-numpy" ||
                  arg == "--python-gen-numpy=false") {
         opts.python_gen_numpy = false;
+      } else if (arg.rfind("--python-import-prefix=", 0) == 0) {
+        opts.python_import_prefix =
+            arg.substr(std::string("--python-import-prefix=").size());
+      } else if (arg == "--python-import-prefix") {
+        if (++argi >= argc) {
+          Error("Missing value following: " + arg, true);
+        }
+        if (argv[argi][0] == '-') {
+          Error("Invalid value for " + arg + ": " + argv[argi], true);
+        }
+        opts.python_import_prefix = argv[argi];
       } else if (arg == "--ts-omit-entrypoint") {
         opts.ts_omit_entrypoint = true;
       } else if (arg == "--annotate-sparse-vectors") {

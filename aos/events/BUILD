@@ -1,3 +1,4 @@
+load("@com_github_google_flatbuffers//:flatbuffers_python.bzl", "flatbuffer_py_library")
 load("@com_github_google_flatbuffers//:typescript.bzl", "flatbuffer_ts_library")
 load("//aos:config.bzl", "aos_config")
 load("//aos:flatbuffers.bzl", "cc_static_flatbuffer")
@@ -141,6 +142,104 @@ cc_library(
     ],
 )
 
+cc_binary(
+    name = "event_loop_c",
+    srcs = [
+        "event_loop_c.cc",
+        "event_loop_c.h",
+    ],
+    linkshared = True,
+    deps = [
+        ":context",
+        ":event_loop",
+        ":shm_event_loop",
+        ":simulated_event_loop",
+        "//aos:configuration",
+        "//aos:configuration_fbs",
+        "//aos:init",
+        "@com_github_google_flatbuffers//:flatbuffers",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:die_if_null",
+    ],
+)
+
+py_library(
+    name = "event_loop_c_py",
+    srcs = [
+        "event_loop_c.py",
+    ],
+    data = [
+        ":event_loop_c",
+    ],
+    deps = [
+        "@pip//cffi",
+        "@rules_python//python/runfiles",
+    ],
+)
+
+py_library(
+    name = "util_py",
+    srcs = [
+        "util.py",
+    ],
+    deps = [
+        ":event_loop_c_py",
+    ],
+)
+
+py_library(
+    name = "event_loop_runtime_py",
+    srcs = [
+        "event_loop_runtime.py",
+    ],
+    deps = [
+        ":event_loop_c_py",
+    ],
+)
+
+py_library(
+    name = "shm_event_loop_py",
+    srcs = [
+        "shm_event_loop.py",
+    ],
+    deps = [
+        ":event_loop_c_py",
+        ":event_loop_runtime_py",
+    ],
+)
+
+py_library(
+    name = "simulated_event_loop_py",
+    srcs = [
+        "simulated_event_loop.py",
+    ],
+    deps = [
+        ":event_loop_c_py",
+        ":event_loop_runtime_py",
+    ],
+)
+
+py_test(
+    name = "pingpong_test_py",
+    srcs = [
+        "pingpong_test.py",
+    ],
+    main = "pingpong_test.py",
+    deps = [
+        ":event_loop_runtime_py",
+        ":ping_fbs_py",
+        ":ping_py",
+        ":pong_fbs_py",
+        ":pong_py",
+        ":simulated_event_loop_py",
+        ":util_py",
+        "@pip//absl_py",
+        "@pip//numpy",
+        "@pip//typing_extensions",
+    ],
+)
+
 cc_library(
     name = "event_loop_runtime_cc",
     srcs = [
@@ -248,6 +347,54 @@ cc_binary(
         "//aos:json_to_flatbuffer",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
+    ],
+)
+
+flatbuffer_py_library(
+    name = "ping_fbs_py",
+    src = "ping.fbs",
+)
+
+flatbuffer_py_library(
+    name = "pong_fbs_py",
+    src = "pong.fbs",
+)
+
+py_binary(
+    name = "ping_py",
+    srcs = [
+        "ping.py",
+    ],
+    data = [
+        ":pingpong_config",
+    ],
+    main = "ping.py",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":ping_fbs_py",
+        ":pong_fbs_py",
+        ":shm_event_loop_py",
+        ":util_py",
+        "@pip//absl_py",
+    ],
+)
+
+py_binary(
+    name = "pong_py",
+    srcs = [
+        "pong.py",
+    ],
+    data = [
+        ":pingpong_config",
+    ],
+    main = "pong.py",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":ping_fbs_py",
+        ":pong_fbs_py",
+        ":shm_event_loop_py",
+        ":util_py",
+        "@pip//absl_py",
     ],
 )
 
