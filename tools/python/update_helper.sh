@@ -26,6 +26,12 @@ docker build \
   --tag="${CONTAINER_TAG}" \
   "${CONTEXT_DIR}"
 
+set -x
+
+# Clear out the existing dependencies so that uv actually grabs the latest
+# hashes. This slows down the process a tiny bit, but it's worth doing for now.
+echo > tools/python/requirements.lock.txt
+
 # Run the actual update. The assumption here is that mounting the user's home
 # directory is sufficient to allow the tool to run inside the container without
 # any issues. I.e. the cache and the source tree are available in the
@@ -34,6 +40,7 @@ docker run \
   --rm \
   --tty \
   --env BUILD_WORKSPACE_DIRECTORY="${BUILD_WORKSPACE_DIRECTORY}" \
+  --env UV_HTTP_TIMEOUT=300 \
   --workdir "${PWD}" \
   --volume "${HOME}:${HOME}" \
   "${CONTAINER_TAG}" \

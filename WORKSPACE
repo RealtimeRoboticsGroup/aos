@@ -81,9 +81,9 @@ pip_parse(
     download_only = True,
     extra_pip_args = [
         "--index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
-    ] + [] if RUNNING_IN_CI else [
+    ] + ([] if RUNNING_IN_CI else [
         "--extra-index-url=https://pypi.org/simple",
-    ],
+    ]),
     requirements_lock = "//tools/python:requirements.lock.txt",
     python_interpreter_target = "@python3_9_host//:python",
 )
