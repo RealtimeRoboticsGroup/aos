@@ -4,6 +4,7 @@
 #include <sched.h>
 
 #include <ostream>
+#include <span>
 #include <string_view>
 
 #include "absl/log/absl_check.h"
@@ -50,13 +51,17 @@ void ExpandStackSize();
 void SetCurrentThreadName(const std::string_view name);
 
 // Creates a cpu_set_t from a list of CPUs.
-inline cpu_set_t MakeCpusetFromCpus(std::initializer_list<int> cpus) {
+inline cpu_set_t MakeCpusetFromCpus(std::span<const int> cpus) {
   cpu_set_t result;
   CPU_ZERO(&result);
   for (int cpu : cpus) {
     CPU_SET(cpu, &result);
   }
   return result;
+}
+
+inline cpu_set_t MakeCpusetFromCpus(std::initializer_list<int> cpus) {
+  return MakeCpusetFromCpus(std::span<const int>(cpus.begin(), cpus.end()));
 }
 
 // Returns the affinity representing all the CPUs.
@@ -78,7 +83,17 @@ void SetCurrentThreadAffinity(const cpu_set_t &cpuset);
 // properly.
 
 // Sets the current thread's realtime priority.
-void SetCurrentThreadRealtimePriority(int priority);
+// Takes in an integer argument for the realtime priority value between [1,99],
+// and an optional integer for the scheduling_policy as defined in
+// `include/linux/sched.h` (otherwise defaults to SCHED_FIFO).
+void SetCurrentThreadRealtimePriority(int priority,
+                                      int scheduling_policy = SCHED_FIFO);
+
+// Returns the current thread's realtime priority.
+int GetCurrentThreadRealtimePriority();
+
+// Returns the current thread's scheduling policy.
+int GetCurrentThreadSchedulingPolicy();
 
 // Unsets all threads realtime priority in preparation for exploding.
 void FatalUnsetRealtimePriority();

@@ -188,7 +188,7 @@ cpu_set_t GetCurrentThreadAffinity() {
   return result;
 }
 
-void SetCurrentThreadRealtimePriority(int priority) {
+void SetCurrentThreadRealtimePriority(int priority, int scheduling_policy) {
   // Ensure that we won't get expensive reads of /dev/random when the realtime
   // scheduler is running.
   UUID::Random();
@@ -212,13 +212,33 @@ void SetCurrentThreadRealtimePriority(int priority) {
       "warning.",
       AllowSoftLimitDecrease::kNo);
 
+  ABSL_CHECK(scheduling_policy == SCHED_FIFO || scheduling_policy == SCHED_RR)
+      << "Specified non-realtime scheduling policy with realtime priority";
+  ABSL_CHECK(priority > 0 && priority < 100)
+      << "Realtime priority must fall within [1,99]";
   struct sched_param param;
   param.sched_priority = priority;
   MarkRealtime(true);
-  ABSL_PCHECK(sched_setscheduler(0, SCHED_FIFO, &param) == 0)
-      << ": changing to SCHED_FIFO with " << priority
+  ABSL_PCHECK(sched_setscheduler(0, scheduling_policy, &param) == 0)
+      << ": changing to realtime scheduler ("
+      << (scheduling_policy == SCHED_FIFO ? "SCHED_FIFO" : "SCHED_RR")
+      << ") with priority " << priority
       << ", if you want to bypass this check for testing, use "
          "--skip_realtime_scheduler";
+}
+
+int GetCurrentThreadRealtimePriority() {
+  struct sched_param result;
+  ABSL_PCHECK(sched_getparam(0, &result) == 0)
+      << ": Failed to retrieve the Realtime Priority";
+  return result.sched_priority;
+}
+
+int GetCurrentThreadSchedulingPolicy() {
+  int scheduling_policy = sched_getscheduler(0);
+  ABSL_PCHECK(scheduling_policy >= 0)
+      << ": Failed to retrieve the scheduling policy";
+  return scheduling_policy;
 }
 
 void WriteCoreDumps() {

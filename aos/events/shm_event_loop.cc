@@ -80,11 +80,10 @@ void IgnoreWakeupSignal() {
 }  // namespace
 
 ShmEventLoop::ShmEventLoop(const Configuration *configuration)
-    : EventLoop(configuration),
+    : EventLoop(configuration, absl::GetFlag(FLAGS_application_name),
+                MaybeMyNode(configuration)),
       boot_uuid_(UUID::BootUUID()),
-      shm_base_(absl::GetFlag(FLAGS_shm_base)),
-      name_(absl::GetFlag(FLAGS_application_name)),
-      node_(MaybeMyNode(configuration)) {
+      shm_base_(absl::GetFlag(FLAGS_shm_base)) {
   // Ignore the wakeup signal by default. Otherwise, we have race conditions on
   // shutdown where a wakeup signal will uncleanly terminate the process.
   // See LocklessQueueWakeUpper::Wakeup() for some more information.
@@ -1101,11 +1100,17 @@ Status ShmEventLoop::Run() {
     }
 
     // Now, all the callbacks are setup.  Lock everything into memory and go RT.
-    if (priority_ != 0) {
+    if (scheduling_policy_ == SchedulingPolicy::SCHEDULER_FIFO ||
+        scheduling_policy_ == SchedulingPolicy::SCHEDULER_RR) {
       ::aos::InitRT();
+      const int scheduling_policy_id =
+          (scheduling_policy_ == SchedulingPolicy::SCHEDULER_FIFO) ? SCHED_FIFO
+                                                                   : SCHED_RR;
 
-      ABSL_LOG(INFO) << "Setting priority to " << priority_;
-      ::aos::SetCurrentThreadRealtimePriority(priority_);
+      ABSL_LOG(INFO) << "Setting scheduling policy to " << scheduling_policy_
+                     << " and realtime priority to " << priority_ << " for "
+                     << name_;
+      ::aos::SetCurrentThreadRealtimePriority(priority_, scheduling_policy_id);
     }
 
     set_is_running(true);
@@ -1193,12 +1198,24 @@ ShmEventLoop::~ShmEventLoop() {
       << ": All ExitHandles must be destroyed before the ShmEventLoop";
 }
 
-void ShmEventLoop::SetRuntimeRealtimePriority(int priority) {
+void ShmEventLoop::SetRuntimeRealtimePriority(
+    int priority, SchedulingPolicy scheduling_policy) {
   CheckCurrentThread();
   if (is_running()) {
     ABSL_LOG(FATAL) << "Cannot set realtime priority while running.";
   }
-  priority_ = priority;
+
+  if (priority == 0) {
+    priority_ = 0;
+    scheduling_policy_ = SchedulingPolicy::SCHEDULER_OTHER;
+  } else {
+    ABSL_CHECK(scheduling_policy == SchedulingPolicy::SCHEDULER_FIFO ||
+               scheduling_policy == SchedulingPolicy::SCHEDULER_RR)
+        << ": Attempted to set realtime priority without a realtime scheduling "
+           "policy";
+    priority_ = priority;
+    scheduling_policy_ = scheduling_policy;
+  }
 }
 
 void ShmEventLoop::SetRuntimeAffinity(const cpu_set_t &cpuset) {
@@ -1212,6 +1229,7 @@ void ShmEventLoop::SetRuntimeAffinity(const cpu_set_t &cpuset) {
 void ShmEventLoop::set_name(const std::string_view name) {
   CheckCurrentThread();
   name_ = std::string(name);
+  ParseSchedulingSettings();
   UpdateTimingReport();
 }
 

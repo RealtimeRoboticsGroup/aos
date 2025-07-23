@@ -223,6 +223,9 @@ static_flatbuffer(
     srcs = ["kthread.fbs"],
     target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
+    deps = [
+        "//aos:configuration_fbs",
+    ],
 )
 
 static_flatbuffer(

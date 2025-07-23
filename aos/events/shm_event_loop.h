@@ -87,15 +87,25 @@ class ShmEventLoop : public EventLoop {
 
   void OnRun(std::function<void()> on_run) override;
 
-  void SetRuntimeRealtimePriority(int priority) override;
   void SetRuntimeAffinity(const cpu_set_t &cpuset) override;
+  void SetRuntimeRealtimePriority(
+      int priority, SchedulingPolicy scheduling_policy =
+                        SchedulingPolicy::SCHEDULER_FIFO) override;
 
   void set_name(const std::string_view name) override;
   const std::string_view name() const override { return name_; }
   const Node *node() const override { return node_; }
 
-  int runtime_realtime_priority() const override { return priority_; }
   const cpu_set_t &runtime_affinity() const override { return affinity_; }
+  SchedulingPolicy runtime_scheduling_policy() const override {
+    return scheduling_policy_;
+  }
+  int runtime_realtime_priority() const override {
+    return (scheduling_policy_ == SchedulingPolicy::SCHEDULER_FIFO ||
+            scheduling_policy_ == SchedulingPolicy::SCHEDULER_RR)
+               ? priority_
+               : 0;
+  }
   const UUID &boot_uuid() const override { return boot_uuid_; }
 
   // Returns the epoll loop used to run the event loop.
@@ -227,10 +237,6 @@ class ShmEventLoop : public EventLoop {
   std::string shm_base_;
 
   std::vector<std::function<void()>> on_run_;
-  int priority_ = 0;
-  cpu_set_t affinity_ = DefaultAffinity();
-  std::string name_;
-  const Node *const node_;
 
   aos::stl_mutex *check_mutex_ = nullptr;
   std::optional<pid_t> check_tid_;

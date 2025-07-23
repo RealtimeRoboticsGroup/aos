@@ -706,14 +706,14 @@ class SimulatedEventLoop : public EventLoop {
       absl::btree_map<SimpleChannel, std::unique_ptr<SimulatedChannel>>
           *channels,
       const Configuration *configuration,
-      std::vector<SimulatedEventLoop *> *event_loops_, const Node *node,
-      pid_t tid, EventLoopOptions options)
-      : EventLoop(configuration),
+      std::vector<SimulatedEventLoop *> *event_loops_,
+      const std::string_view name, const Node *node, pid_t tid,
+      EventLoopOptions options)
+      : EventLoop(configuration, name, node),
         scheduler_(scheduler),
         node_event_loop_factory_(node_event_loop_factory),
         channels_(channels),
         event_loops_(event_loops_),
-        node_(node),
         tid_(tid),
         startup_tracker_(std::make_shared<StartupTracker>()),
         options_(options) {
@@ -854,22 +854,45 @@ class SimulatedEventLoop : public EventLoop {
 
   void set_name(const std::string_view name) override {
     name_ = std::string(name);
+    ParseSchedulingSettings();
   }
   const std::string_view name() const override { return name_; }
 
   SimulatedChannel *GetSimulatedChannel(const Channel *channel);
 
-  void SetRuntimeRealtimePriority(int priority) override {
-    CHECK(!is_running()) << ": Cannot set realtime priority while running.";
-    priority_ = priority;
-  }
-
-  int runtime_realtime_priority() const override { return priority_; }
-  const cpu_set_t &runtime_affinity() const override { return affinity_; }
-
   void SetRuntimeAffinity(const cpu_set_t &affinity) override {
     CHECK(!is_running()) << ": Cannot set affinity while running.";
     affinity_ = affinity;
+  }
+
+  void SetRuntimeRealtimePriority(
+      int priority, SchedulingPolicy scheduling_policy =
+                        SchedulingPolicy::SCHEDULER_FIFO) override {
+    CHECK(!is_running()) << ": Cannot set realtime priority while running.";
+
+    if (priority == 0) {
+      priority_ = 0;
+      scheduling_policy_ = SchedulingPolicy::SCHEDULER_OTHER;
+    } else {
+      CHECK(scheduling_policy == SchedulingPolicy::SCHEDULER_FIFO ||
+            scheduling_policy == SchedulingPolicy::SCHEDULER_RR)
+          << ": Attempted to set realtime priority without a realtime "
+             "scheduling "
+             "policy";
+      priority_ = priority;
+      scheduling_policy_ = scheduling_policy;
+    }
+  }
+
+  const cpu_set_t &runtime_affinity() const override { return affinity_; }
+  SchedulingPolicy runtime_scheduling_policy() const override {
+    return scheduling_policy_;
+  }
+  int runtime_realtime_priority() const override {
+    return (scheduling_policy_ == SchedulingPolicy::SCHEDULER_FIFO ||
+            scheduling_policy_ == SchedulingPolicy::SCHEDULER_RR)
+               ? priority_
+               : 0;
   }
 
   void Setup() {
@@ -922,14 +945,8 @@ class SimulatedEventLoop : public EventLoop {
   absl::btree_map<SimpleChannel, std::unique_ptr<SimulatedChannel>> *channels_;
   std::vector<SimulatedEventLoop *> *event_loops_;
 
-  ::std::string name_;
-
-  int priority_ = 0;
-  cpu_set_t affinity_ = DefaultAffinity();
-
   std::chrono::nanoseconds send_delay_;
 
-  const Node *const node_;
   const pid_t tid_;
 
   AosLogToFbs log_sender_;
@@ -1852,8 +1869,7 @@ void NodeEventLoopFactory::DisableStatistics() {
   ++tid_;
   ::std::unique_ptr<SimulatedEventLoop> result(new SimulatedEventLoop(
       &scheduler_, this, &channels_, factory_->configuration(), &event_loops_,
-      node_, tid, options));
-  result->set_name(name);
+      name, node_, tid, options));
   result->set_send_delay(factory_->send_delay());
   if (skip_timing_report_) {
     result->SkipTimingReport();

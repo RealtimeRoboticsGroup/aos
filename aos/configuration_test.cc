@@ -281,6 +281,47 @@ TEST_F(ConfigurationTest, AddSchemasKeepsNewestSchema) {
       FlatbufferToJson(updated_config, {.multi_line = true}));
 }
 
+// Tests that MergeConfiguration uses the latest priority and cpu_affinity
+// values provided on any given channel type.
+TEST_F(ConfigurationTest, MergeConfigurationKeepsNewestPriorities) {
+  FlatbufferDetachedBuffer<Configuration> updated_config =
+      MergeConfiguration(aos::FlatbufferDetachedBuffer<Configuration>(
+          aos::JsonToFlatbuffer<Configuration>(R"json({
+  "applications": [
+    {
+      "name": "app",
+      "cpu_affinity": [0, 1, 2, 3],
+      "priority": 5,
+      "scheduling_policy": "SCHEDULER_OTHER"
+    },
+    {
+      "name": "app",
+      "cpu_affinity": [0],
+      "priority": 30,
+      "scheduling_policy": "SCHEDULER_FIFO"
+    }
+  ]
+})json")));
+
+  EXPECT_EQ(
+      R"json({
+ "channels": [
+  
+ ],
+ "applications": [
+  {
+   "name": "app",
+   "cpu_affinity": [
+    0
+   ],
+   "scheduling_policy": "SCHEDULER_FIFO",
+   "priority": 30
+  }
+ ]
+})json",
+      FlatbufferToJson(updated_config, {.multi_line = true}));
+}
+
 // Tests that we can modify a config with a static flatbuffer.
 TEST_F(ConfigurationTest, MergeWithConfigFromStatic) {
   FlatbufferDetachedBuffer<Configuration> config =

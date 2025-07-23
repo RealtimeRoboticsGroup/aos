@@ -165,6 +165,9 @@ struct MutableApplication {
   std::optional<bool> autorestart;
   std::optional<uint64_t> memory_limit;
   std::optional<int64_t> stop_time;
+  std::vector<int> cpu_affinity;
+  std::optional<int> priority;
+  std::optional<SchedulingPolicy> scheduling_policy;
 
   bool operator==(const MutableApplication &other) const {
     return name == other.name;
@@ -358,6 +361,22 @@ void UnpackApplication(const Application *application,
   if (application->has_stop_time()) {
     result->stop_time = application->stop_time();
   }
+
+  if (application->has_cpu_affinity()) {
+    // Very important, new affinities replace old affinities.
+    result->cpu_affinity.clear();
+    for (const int cpu : *application->cpu_affinity()) {
+      result->cpu_affinity.emplace_back(cpu);
+    }
+  }
+
+  if (application->has_priority()) {
+    result->priority = application->priority();
+  }
+
+  if (application->has_scheduling_policy()) {
+    result->scheduling_policy = application->scheduling_policy();
+  }
 }
 
 void UnpackConfiguration(const Configuration *configuration,
@@ -452,6 +471,9 @@ void UnpackConfiguration(const Configuration *configuration,
                                .autorestart = std::nullopt,
                                .memory_limit = std::nullopt,
                                .stop_time = std::nullopt,
+                               .cpu_affinity = {},
+                               .priority = std::nullopt,
+                               .scheduling_policy = std::nullopt,
                            })
               .first->second;
       UnpackApplication(application, &unpacked_application);
@@ -686,6 +708,11 @@ flatbuffers::Offset<Application> PackApplication(
     args_offset = fbb->CreateVector(args_offsets);
   }
 
+  flatbuffers::Offset<flatbuffers::Vector<int>> cpu_affinity_offset;
+  if (!application.cpu_affinity.empty()) {
+    cpu_affinity_offset = fbb->CreateVector(application.cpu_affinity);
+  }
+
   Application::Builder application_builder(*fbb);
   application_builder.add_name(name_offset);
   if (!executable_name_offset.IsNull()) {
@@ -714,6 +741,16 @@ flatbuffers::Offset<Application> PackApplication(
   }
   if (application.stop_time) {
     application_builder.add_stop_time(application.stop_time.value());
+  }
+  if (!cpu_affinity_offset.IsNull()) {
+    application_builder.add_cpu_affinity(cpu_affinity_offset);
+  }
+  if (application.priority) {
+    application_builder.add_priority(application.priority.value());
+  }
+  if (application.scheduling_policy) {
+    application_builder.add_scheduling_policy(
+        application.scheduling_policy.value());
   }
   return application_builder.Finish();
 }

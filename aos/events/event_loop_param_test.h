@@ -57,6 +57,20 @@ class EventLoopTestFactory {
       "type": "aos.TestMessage",
       "max_size": 8
     }
+  ],
+  "applications": [
+    {
+      "name": "app1",
+      "cpu_affinity": [0, 1, 2, 3],
+      "priority": 20,
+      "scheduling_policy": "SCHEDULER_RR"
+    },
+    {
+      "name": "app2",
+      "cpu_affinity": [4],
+      "priority": 5,
+      "scheduling_policy": "SCHEDULER_OTHER"
+    }
   ]
 })config",
             {aos::FlatbufferSpan<reflection::Schema>(
@@ -174,6 +188,20 @@ class EventLoopTestFactory {
       "read_method": "PIN",
       "num_readers": 10,
       "max_size": 8
+    }
+  ],
+  "applications": [
+    {
+      "name": "app1",
+      "cpu_affinity": [0, 1, 2, 3],
+      "priority": 20,
+      "scheduling_policy": "SCHEDULER_RR"
+    },
+    {
+      "name": "app2",
+      "cpu_affinity": [4],
+      "priority": 5,
+      "scheduling_policy": "SCHEDULER_OTHER"
     }
   ]
 })config";
@@ -306,6 +334,20 @@ class EventLoopTestFactory {
       "rename": {
         "name": "/them/aos"
       }
+    }
+  ],
+  "applications": [
+    {
+      "name": "app1",
+      "cpu_affinity": [0, 1, 2, 3],
+      "priority": 20,
+      "scheduling_policy": "SCHEDULER_RR"
+    },
+    {
+      "name": "app2",
+      "cpu_affinity": [4],
+      "priority": 5,
+      "scheduling_policy": "SCHEDULER_OTHER"
     }
   ]
 })config";

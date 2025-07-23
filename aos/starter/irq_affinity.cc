@@ -109,7 +109,7 @@ struct ParsedKThreadConfig {
   bool full_match = false;
   std::string prefix;
   std::string postfix;
-  starter::Scheduler scheduler;
+  SchedulingPolicy scheduler;
   int priority;
   std::optional<int> nice;
   cpu_set_t affinity;
@@ -137,13 +137,13 @@ struct ParsedKThreadConfig {
     param.sched_priority = priority;
     int new_scheduler;
     switch (scheduler) {
-      case starter::Scheduler::SCHEDULER_OTHER:
+      case SchedulingPolicy::SCHEDULER_OTHER:
         new_scheduler = SCHED_OTHER;
         break;
-      case starter::Scheduler::SCHEDULER_RR:
+      case SchedulingPolicy::SCHEDULER_RR:
         new_scheduler = SCHED_RR;
         break;
-      case starter::Scheduler::SCHEDULER_FIFO:
+      case SchedulingPolicy::SCHEDULER_FIFO:
         new_scheduler = SCHED_FIFO;
         break;
       default:
@@ -155,7 +155,7 @@ struct ParsedKThreadConfig {
                 ? "SCHED_OTHER"
                 : (new_scheduler == SCHED_RR ? "SCHED_RR" : "SCHED_FIFO"));
 
-    if (scheduler == starter::Scheduler::SCHEDULER_OTHER && nice.has_value()) {
+    if (scheduler == SchedulingPolicy::SCHEDULER_OTHER && nice.has_value()) {
       PCHECK(setpriority(PRIO_PROCESS, pid, *nice) == 0)
           << ": Failed to set priority";
     }

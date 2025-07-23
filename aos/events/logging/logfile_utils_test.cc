@@ -3295,7 +3295,8 @@ std::string AnnotateBinaries(
 // tested below.
 class TimeEventLoop : public EventLoop {
  public:
-  TimeEventLoop(const aos::Configuration *config) : EventLoop(config) {}
+  TimeEventLoop(const aos::Configuration *config)
+      : EventLoop(config, "time", nullptr) {}
 
   aos::monotonic_clock::time_point monotonic_now() const final {
     return aos::monotonic_clock::min_time;
@@ -3306,15 +3307,18 @@ class TimeEventLoop : public EventLoop {
 
   void OnRun(::std::function<void()> /*on_run*/) final { LOG(FATAL); }
 
-  const std::string_view name() const final { return "time"; }
-  const Node *node() const final { return nullptr; }
+  const std::string_view name() const final { return name_; }
+  const Node *node() const final { return node_; }
 
   void SetRuntimeAffinity(const cpu_set_t & /*cpuset*/) final { LOG(FATAL); }
-  void SetRuntimeRealtimePriority(int /*priority*/) final { LOG(FATAL); }
+  void SetRuntimeRealtimePriority(
+      int /*priority*/, SchedulingPolicy /*scheduling_policy*/) final {
+    LOG(FATAL);
+  }
 
   const cpu_set_t &runtime_affinity() const final {
     LOG(FATAL);
-    return cpuset_;
+    return affinity_;
   }
 
   TimerHandler *AddTimer(::std::function<void()> /*callback*/) final {
@@ -3346,7 +3350,12 @@ class TimeEventLoop : public EventLoop {
 
   int runtime_realtime_priority() const final {
     LOG(FATAL);
-    return 0;
+    return priority_;
+  }
+
+  SchedulingPolicy runtime_scheduling_policy() const final {
+    LOG(FATAL);
+    return scheduling_policy_;
   }
 
   std::unique_ptr<RawFetcher> MakeRawFetcher(
@@ -3371,7 +3380,6 @@ class TimeEventLoop : public EventLoop {
   }
 
  private:
-  const cpu_set_t cpuset_ = DefaultAffinity();
   UUID boot_uuid_ = UUID ::Zero();
 };
 

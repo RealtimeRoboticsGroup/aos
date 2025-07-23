@@ -81,6 +81,28 @@ TEST(RealtimeTest, ScopedRealtimeRestorer) {
   CheckNotRealtime();
 }
 
+// Tests that getters and setters properly interact with thread realtime
+// priority.
+TEST(RealtimeTest, GetSetRealtimePriority) {
+  UnsetCurrentThreadRealtimePriority();
+  EXPECT_EQ(GetCurrentThreadRealtimePriority(), 0);
+  SetCurrentThreadRealtimePriority(30);
+  EXPECT_EQ(GetCurrentThreadRealtimePriority(), 30);
+  UnsetCurrentThreadRealtimePriority();
+}
+
+// Tests that getters and setters properly interact with thread scheduling
+// policy.
+TEST(RealtimeTest, GetSetSchedulingPolicy) {
+  UnsetCurrentThreadRealtimePriority();
+  EXPECT_EQ(GetCurrentThreadSchedulingPolicy(), SCHED_OTHER);
+  SetCurrentThreadRealtimePriority(1, SCHED_FIFO);
+  EXPECT_EQ(GetCurrentThreadSchedulingPolicy(), SCHED_FIFO);
+  SetCurrentThreadRealtimePriority(1, SCHED_RR);
+  EXPECT_EQ(GetCurrentThreadSchedulingPolicy(), SCHED_RR);
+  UnsetCurrentThreadRealtimePriority();
+}
+
 // Malloc hooks don't work with asan/msan.
 #if !defined(AOS_SANITIZE_MEMORY) && !defined(AOS_SANITIZE_ADDRESS)
 

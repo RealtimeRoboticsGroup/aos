@@ -123,7 +123,19 @@ table Map {
   rename:Channel (id: 1);
 }
 
+// Enum for potential scheduling policies.
+enum SchedulingPolicy : uint8 {
+  SCHEDULER_OTHER = 0,
+  SCHEDULER_FIFO = 1,
+  SCHEDULER_RR = 2,
+}
+
 // Application specific information.
+// If two applications are defined in the configuration with the same name,
+// then the defined properties of the latter application will override the
+// defined properties of the former, with the exception of the `maps` and
+// `nodes` properties, which will instead concatenate the entries of both defined
+// applications.
 table Application {
   // Name of the application.
   name:string (id: 0);
@@ -173,6 +185,25 @@ table Application {
   // If set, this is the number of nanoseconds the application has to stop. If the application
   // doesn't stop within the specified time, then it is killed.
   stop_time:int64 = 1000000000 (id: 9);
+
+  // If set, this is the list of CPU numbers the application's event loop is affined to.
+  // This value can also be overridden during code via a call to the SetRuntimeAffinity()
+  // method before running the event loop.
+  cpu_affinity:[int] (id: 10);
+
+  // If set, this is the scheduling policy of the event loop. Specifying a realtime
+  // scheduling policy (i.e. SCHEDULER_FIFO or SCHEDULER_RR) will cause the `priority`
+  // property to be interpreted as the event loop's realtime priority. This value can
+  // be overridden during runtime via the SetRuntimeRealtimePriority() method before
+  // running the event loop.
+  scheduling_policy:SchedulingPolicy = SCHEDULER_OTHER (id: 11);
+
+  // If set with a realtime `scheduling_policy`, this is the realtime priority of the
+  // application's event loop. A process' preemptive ability increases proportionally
+  // with realtime priority, which has a compatible range of (0,100]. This value can
+  // also be overridden during runtime via a call to the SetRuntimeRealtimePriority()
+  // method before running the event loop.
+  priority:int = 0 (id: 12);
 }
 
 // Per node data and connection information.

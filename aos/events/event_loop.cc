@@ -157,11 +157,15 @@ PhasedLoopHandler::PhasedLoopHandler(EventLoop *event_loop,
 
 PhasedLoopHandler::~PhasedLoopHandler() {}
 
-EventLoop::EventLoop(const Configuration *configuration)
-    : version_string_(default_version_string_),
+EventLoop::EventLoop(const Configuration *configuration, std::string_view name,
+                     const Node *node)
+    : name_(std::string(name)),
+      node_(node),
+      version_string_(default_version_string_),
       timing_report_(flatbuffers::DetachedBuffer()),
       configuration_(configuration) {
-  ABSL_CHECK(configuration != nullptr);
+  ABSL_CHECK(configuration_ != nullptr);
+  ParseSchedulingSettings();
 }
 
 EventLoop::~EventLoop() {
@@ -214,6 +218,32 @@ WatcherState *EventLoop::GetWatcherState(const Channel *channel) {
     }
   }
   ABSL_LOG(FATAL) << "No watcher found for channel";
+}
+
+void EventLoop::ParseSchedulingSettings() {
+  const aos::Application *app =
+      configuration::GetApplication(configuration_, node_, name_);
+  if (app) {
+    if (app->has_cpu_affinity()) {
+      affinity_ =
+          aos::MakeCpusetFromCpus(flatbuffers::make_span(app->cpu_affinity()));
+    }
+    if (app->has_priority()) {
+      priority_ = app->priority();
+    }
+    if (app->has_scheduling_policy()) {
+      scheduling_policy_ = app->scheduling_policy();
+
+      if ((scheduling_policy_ == SchedulingPolicy::SCHEDULER_FIFO ||
+           scheduling_policy_ == SchedulingPolicy::SCHEDULER_RR) &&
+          (priority_ < 1 || priority_ > 99)) {
+        ABSL_LOG(FATAL) << "Specified realtime scheduling policy "
+                        << scheduling_policy_
+                        << " with an incompatible realtime priority "
+                        << priority_ << ".";
+      }
+    }
+  }
 }
 
 void EventLoop::NewSender(RawSender *sender) {

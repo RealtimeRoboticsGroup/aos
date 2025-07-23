@@ -310,6 +310,7 @@ flatbuffer_ts_library(
         "ReadMethod",
         "Channel",
         "Map",
+        "SchedulingPolicy",
         "Application",
         "Node",
         "Configuration",

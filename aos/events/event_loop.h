@@ -726,7 +726,8 @@ class EventLoop {
  public:
   // Holds configuration by reference for the lifetime of this object. It may
   // never be mutated externally in any way.
-  EventLoop(const Configuration *configuration);
+  EventLoop(const Configuration *configuration, std::string_view name,
+            const Node *node);
 
   virtual ~EventLoop();
 
@@ -891,15 +892,19 @@ class EventLoop {
   // May be safely called from any thread.
   bool is_running() const { return is_running_.load(); }
 
-  // Sets the scheduler priority to run the event loop at.  This may not be
+  // Sets the realtime priority to run the event loop at.  This may not be
   // called after we go into "real-time-mode".
-  virtual void SetRuntimeRealtimePriority(int priority) = 0;
+  virtual void SetRuntimeRealtimePriority(
+      int priority, SchedulingPolicy scheduling_policy =
+                        SchedulingPolicy::SCHEDULER_FIFO) = 0;
   // Defaults to 0 if this loop will not run realtime.
   virtual int runtime_realtime_priority() const = 0;
 
+  virtual SchedulingPolicy runtime_scheduling_policy() const = 0;
+
   static cpu_set_t DefaultAffinity();
 
-  // Sets the scheduler affinity to run the event loop with. This may only be
+  // Sets the cpu affinity to run the event loop with. This may only be
   // called before Run().
   virtual void SetRuntimeAffinity(const cpu_set_t &cpuset) = 0;
   // Defaults to DefaultAffinity() if this loop will not run pinned.
@@ -996,6 +1001,15 @@ class EventLoop {
 
   // Context available for watchers, timers, and phased loops.
   Context context_;
+  std::string name_;
+  const Node *const node_;
+  cpu_set_t affinity_ = DefaultAffinity();
+  int priority_ = 0;
+  SchedulingPolicy scheduling_policy_ = SchedulingPolicy::SCHEDULER_OTHER;
+
+  // Parse the scheduling settings (affinity, realtime priority) from the
+  // configuration
+  void ParseSchedulingSettings();
 
   friend class RawSender;
   friend class TimerHandler;

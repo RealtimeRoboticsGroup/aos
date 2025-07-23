@@ -24,6 +24,14 @@ namespace {
 namespace chrono = ::std::chrono;
 }  // namespace
 
+namespace {
+
+bool CpuSetEqual(const cpu_set_t &a, const cpu_set_t &b) {
+  return CPU_EQUAL(&a, &b);
+}
+
+}  // namespace
+
 ::std::unique_ptr<EventLoop> AbstractEventLoopTest::Make(
     std::string_view name) {
   std::string name_copy(name);
@@ -1169,6 +1177,29 @@ TEST_P(AbstractEventLoopDeathTest, InvalidChannelName) {
       "/test/invalid");
 }
 
+// Verify that event loops can parse their realtime priority and affinity from
+// the configuration.
+TEST_P(AbstractEventLoopDeathTest, ParsePrioritiesFromConfig) {
+  auto loop1 = Make("app1");
+  EXPECT_TRUE(
+      CpuSetEqual(MakeCpusetFromCpus({0, 1, 2, 3}), loop1->runtime_affinity()));
+  EXPECT_EQ(SchedulingPolicy::SCHEDULER_RR, loop1->runtime_scheduling_policy());
+  EXPECT_EQ(20, loop1->runtime_realtime_priority());
+
+  auto loop2 = Make("app2");
+  EXPECT_TRUE(CpuSetEqual(MakeCpusetFromCpus({4}), loop2->runtime_affinity()));
+  EXPECT_EQ(SchedulingPolicy::SCHEDULER_OTHER,
+            loop2->runtime_scheduling_policy());
+  EXPECT_EQ(0, loop2->runtime_realtime_priority());
+
+  auto loop3 = Make("app3");
+  EXPECT_TRUE(
+      CpuSetEqual(EventLoop::DefaultAffinity(), loop3->runtime_affinity()));
+  EXPECT_EQ(SchedulingPolicy::SCHEDULER_OTHER,
+            loop3->runtime_scheduling_policy());
+  EXPECT_EQ(0, loop3->runtime_realtime_priority());
+}
+
 // Verify that setting up a timer before monotonic_clock::epoch() fails.
 TEST_P(AbstractEventLoopDeathTest, NegativeTimeTimer) {
   auto loop = Make();
@@ -1208,14 +1239,6 @@ TEST_P(AbstractEventLoopDeathTest, SetRuntimeRealtimePriority) {
 
   EXPECT_DEATH(Run(), "realtime");
 }
-
-namespace {
-
-bool CpuSetEqual(const cpu_set_t &a, const cpu_set_t &b) {
-  return CPU_EQUAL(&a, &b);
-}
-
-}  // namespace
 
 // Verify that SetRuntimeAffinity fails while running.
 TEST_P(AbstractEventLoopDeathTest, SetRuntimeAffinity) {
