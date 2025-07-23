@@ -41,7 +41,10 @@ docker run \
   --tty \
   --env BUILD_WORKSPACE_DIRECTORY="${BUILD_WORKSPACE_DIRECTORY}" \
   --env UV_HTTP_TIMEOUT=300 \
+  --env UV_CACHE_DIR=$HOME/.cache/uv \
   --workdir "${PWD}" \
   --volume "${HOME}:${HOME}" \
   "${CONTAINER_TAG}" \
   "$@"
+
+# TODO(phil): Re-own the cache files to the user.
