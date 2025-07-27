@@ -26,12 +26,6 @@ docker build \
   --tag="${CONTAINER_TAG}" \
   "${CONTEXT_DIR}"
 
-set -x
-
-# Clear out the existing dependencies so that uv actually grabs the latest
-# hashes. This slows down the process a tiny bit, but it's worth doing for now.
-#echo > tools/python/requirements.lock.txt
-
 perform_cleanup() {
   set -x
   # Restore permissions on the uv cache directory on exit.
@@ -46,6 +40,7 @@ trap perform_cleanup EXIT
 # directory is sufficient to allow the tool to run inside the container without
 # any issues. I.e. the cache and the source tree are available in the
 # container.
+set -x
 docker run \
   --rm \
   --tty \
