@@ -13,8 +13,8 @@ pip_compile(
         # Grab the hashes from both our own index and the upstream index. This
         # lets the `pip wheel` command generate wheels properly. We restrict the
         # downloads in WORKSPACE sufficiently for CI purposes.
-        "--index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
-        "--extra-index-url=https://pypi.org/simple",
+        "--default-index=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
+        "--index=https://pypi.org/simple",
     ],
     requirements_in = "requirements.txt",
     requirements_txt = "requirements.lock.txt",
