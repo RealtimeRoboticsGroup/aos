@@ -100,10 +100,6 @@ cloudpickle==3.1.0 \
 clu==0.0.12 \
     --hash=sha256:0d183e7d25f7dd0700444510a264e24700e2f068bdabd199ed22866f7e54edba
     # via -r tools/python/requirements.txt
-colorama==0.4.6 \
-    --hash=sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44 \
-    --hash=sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6
-    # via -r tools/python/requirements.txt
 contextlib2==21.6.0 \
     --hash=sha256:3fbdb64466afd23abaf6c977627b75b6139a5a3e8ce38405c5b413aed7a0471f
     # via ml-collections
