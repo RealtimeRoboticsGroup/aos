@@ -32,6 +32,13 @@ set -x
 # hashes. This slows down the process a tiny bit, but it's worth doing for now.
 echo > tools/python/requirements.lock.txt
 
+perform_cleanup() {
+  # Restore permissions on the uv cache directory on exit.
+  chown -R "${USER}:${USER}" "${HOME}"/.cache/uv
+}
+
+trap perform_cleanup EXIT
+
 # Run the actual update. The assumption here is that mounting the user's home
 # directory is sufficient to allow the tool to run inside the container without
 # any issues. I.e. the cache and the source tree are available in the
@@ -46,5 +53,3 @@ docker run \
   --volume "${HOME}:${HOME}" \
   "${CONTAINER_TAG}" \
   "$@"
-
-# TODO(phil): Re-own the cache files to the user.

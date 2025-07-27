@@ -85,13 +85,3 @@ py_binary(
         "@pip//requests",
     ],
 )
-
-py_binary(
-    name = "create_simple_pypi",
-    srcs = [
-        "create_simple_pypi.py",
-    ],
-    deps = [
-        "@pip//pkginfo",
-    ],
-)
