@@ -53,7 +53,3 @@ mirrored on aos infrastructure.
         bazel run //tools/python:mirror_pip_packages
 
     This assumes that you have access to the correct GCS bucket.
-3. Regenerate the lock file. This time you don't need to specify the extra index
-   URL. All packages are coming from the
-
-        bazel run --run_under=//tools/python:update_helper //tools/python:requirements.update

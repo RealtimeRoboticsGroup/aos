@@ -6,8 +6,6 @@ each entry. Those wheels are then mirrored.
 See tools/python/README.md for some more information.
 """
 
-# TODO(philsc): Remove this whole file and use rules_uv instead.
-
 import argparse
 import hashlib
 import json
@@ -23,7 +21,9 @@ from typing import List, Optional, Tuple
 import requests
 from pkginfo import Wheel
 
-PLAT = "manylinux_2_34"
+# This must match the libc version of the container we're using to compile the
+# wheels. In this case it's debian:bullseye.
+PLAT = "manylinux_2_31"
 ARCH = "x86_64"
 WHEELHOUSE_MIRROR_URL = "https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple"
 WHEELHOUSE_GCS_URL = "gs://austin-vpn-build-dependencies/wheelhouse/simple"
@@ -81,7 +81,7 @@ def compute_file_sha256(filename: Path) -> str:
     return compute_sha256(filename.read_bytes())
 
 
-def wheel_is_already_uploaded(wheel: Path, wheel_url: str) -> Tuple[bool, str]:
+def wheel_is_already_uploaded(wheel: Path, wheel_url: str) -> bool:
     """Searches for this wheel on our internal mirror.
 
     Since we can't build wheels reproducibly, our best option is to check
@@ -93,11 +93,7 @@ def wheel_is_already_uploaded(wheel: Path, wheel_url: str) -> Tuple[bool, str]:
         wheel_url: The URL where the wheel is expected if it exists on the mirror.
 
     Returns:
-        A two-tuple. The first value is a boolean that signifies whether the
-        wheel was found on the mirror. The second value is a string. If the
-        wheel was not found on the mirror, this is an empty string. Otherwise,
-        this string contains the sha256 checksum of the wheel found on the
-        mirror.
+        A boolean that signifies whether the wheel was found on the mirror.
     """
     print(f"Checking if {wheel.name} is already uploaded: ", end="")
     request = requests.head(wheel_url)

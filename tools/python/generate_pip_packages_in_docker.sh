@@ -66,6 +66,7 @@ mkdir "${SCRIPT_DIR}"/wheelhouse
   -r "${SCRIPT_DIR}/requirements.lock.txt" \
   -w "${SCRIPT_DIR}/wheelhouse_tmp/" \
   --index-url="${WHEELHOUSE_MIRROR_URL}" \
+  --extra-index-url=https://pypi.org/simple \
   --prefer-binary \
   --timeout=500 \
   | tee /tmp/pip-wheel.log
