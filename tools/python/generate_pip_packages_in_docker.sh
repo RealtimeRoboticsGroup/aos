@@ -58,9 +58,6 @@ readonly -a PIP_BIN=(pip)
 
 mkdir "${SCRIPT_DIR}"/wheelhouse
 
-"${PIP_BIN[@]}" debug --verbose
-exit 1
-
 # Get wheels for everything. Everything is stored in a temporary wheelhouse in
 # case we need to run the "auditwheel" tool against them.
 "${PIP_BIN[@]}" install wheel
@@ -69,8 +66,7 @@ exit 1
   -r "${SCRIPT_DIR}/requirements.lock.txt" \
   -w "${SCRIPT_DIR}/wheelhouse_tmp/" \
   --index-url="${WHEELHOUSE_MIRROR_URL}" \
-  --only-binary :all: \
-  -vvv \
+  --prefer-binary \
   --timeout=500 \
   | tee /tmp/pip-wheel.log
 

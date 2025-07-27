@@ -6,7 +6,11 @@ pip_compile(
     name = "requirements.update",
     args = [
         # Generate hashes for reproducibility.
-        "--generate-hashes",
+        # TODO(philsc): Uncomment once we migrate to blzmod and a uv lock file.
+        #"--generate-hashes",
+        # Work around dependencies only being pulled from the same mirror.
+        # https://github.com/astral-sh/uv/pull/2083
+        "--index-strategy=unsafe-any-match",
         # For compatibility with rules_python and pip, we keep the extras in the
         # requirements.
         "--no-strip-extras",

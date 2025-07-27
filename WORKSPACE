@@ -78,14 +78,19 @@ pip_parse(
     name = "pip_deps",
     annotations = PYTHON_ANNOTATIONS,
     enable_implicit_namespace_pkgs = True,
-    download_only = True,
+    download_only = RUNNING_IN_CI,
     extra_pip_args = [
-        "--index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
+        # The https://realtimeroboticsgroup.org mirror can be slower than the
+        # upstream index. Bump the timeout to avoid issues.
+        "--timeout=1800",
     ] + ([
-        "--only-binary",
+        "--index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
     ] if RUNNING_IN_CI else [
-        "--extra-index-url=https://pypi.org/simple",
+        "--index-url=https://pypi.org/simple",
+        "--extra-index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
+        "--prefer-binary",
     ]),
+    timeout = 1800,
     requirements_lock = "//tools/python:requirements.lock.txt",
     python_interpreter_target = "@python3_9_host//:python",
 )
