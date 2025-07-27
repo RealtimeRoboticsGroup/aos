@@ -39,7 +39,7 @@ How to add new pip packages
 1. Add the new package you're interested in to `tools/python/requirements.txt`.
 2. Run the lock file generation script.
 
-        bazel run --run_under=//tools/python:update_helper //tools/python:requirements.update
+        bazel run --run_under=//tools/python:update_helper //tools/python:requirements.update -- --extra-index-url=https://pypi.org/simple
 
 
 How to make buildkite happy with new pip packages
@@ -52,7 +52,8 @@ mirrored on aos infrastructure.
 
         bazel run //tools/python:mirror_pip_packages
 
-    where `<software>` is the `ssh(1)` target for reaching the server that hosts
-    the AOS mirror.
+    This assumes that you have access to the correct GCS bucket.
+3. Regenerate the lock file. This time you don't need to specify the extra index
+   URL. All packages are coming from the
 
-    TODO(austin): Update this for our new GCS bucket solution.
+        bazel run --run_under=//tools/python:update_helper //tools/python:requirements.update

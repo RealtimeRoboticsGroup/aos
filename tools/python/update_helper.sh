@@ -30,11 +30,14 @@ set -x
 
 # Clear out the existing dependencies so that uv actually grabs the latest
 # hashes. This slows down the process a tiny bit, but it's worth doing for now.
-echo > tools/python/requirements.lock.txt
+#echo > tools/python/requirements.lock.txt
 
 perform_cleanup() {
+  set -x
   # Restore permissions on the uv cache directory on exit.
-  chown -R "${USER}:${USER}" "${HOME}"/.cache/uv
+  sudo chown -R "${USER}:${USER}" \
+    "${HOME}"/.cache/uv \
+    tools/python/requirements.lock.txt
 }
 
 trap perform_cleanup EXIT

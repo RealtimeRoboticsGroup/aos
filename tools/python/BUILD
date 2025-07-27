@@ -7,14 +7,10 @@ pip_compile(
     args = [
         # Generate hashes for reproducibility.
         "--generate-hashes",
-        # Work around dependencies only being pulled from the same mirror.
-        # https://github.com/astral-sh/uv/pull/2083
-        "--index-strategy=unsafe-any-match",
         # For compatibility with rules_python and pip, we keep the extras in the
         # requirements.
         "--no-strip-extras",
         "--index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
-        #"--extra-index-url=https://pypi.org/simple",
     ],
     requirements_in = "requirements.txt",
     requirements_txt = "requirements.lock.txt",

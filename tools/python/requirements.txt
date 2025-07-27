@@ -52,3 +52,6 @@ flashbax
 # Experiment tracking
 aim
 plotly
+
+termcolor
+colorama
