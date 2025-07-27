@@ -130,9 +130,9 @@ bazel_features_deps()
 
 http_archive(
     name = "rules_multitool",
-    sha256 = "b354be5278ef326dbf613e5d52ac5d897c0b410bcdc2b577b8a7a682ed1c5a37",
-    strip_prefix = "rules_multitool-0.7.1",
-    url = "https://github.com/theoremlp/rules_multitool/releases/download/v0.7.1/rules_multitool-0.7.1.tar.gz",
+    sha256 = "1037e1b11d42ee56751449b3b1e995ca7b9af76d7665dfefcc7112919551d45b",
+    strip_prefix = "rules_multitool-1.4.0",
+    url = "https://github.com/theoremlp/rules_multitool/releases/download/v1.4.0/rules_multitool-1.4.0.tar.gz",
 )
 
 load("@rules_multitool//multitool:multitool.bzl", "multitool")
@@ -146,10 +146,14 @@ multitool(
 
 http_archive(
     name = "rules_uv",
-    sha256 = "ec6c758b946db1ff0af0aec4f4b96ca91c2fb0ded6ec9b8c4e815d157dc9705b",
-    strip_prefix = "rules_uv-0.13.0",
-    url = "https://github.com/theoremlp/rules_uv/releases/download/v0.13.0/rules_uv-0.13.0.tar.gz",
+    sha256 = "bfbe18fed6242e47f4b22918f43abdc0e274d07c3174d44ef1d29f7aa3d3bb4c",
+    strip_prefix = "rules_uv-0.75.0",
+    url = "https://github.com/theoremlp/rules_uv/releases/download/v0.75.0/rules_uv-0.75.0.tar.gz",
 )
+
+load("@multitool//:tools.bzl", "register_tools")
+
+register_tools()
 
 http_archive(
     name = "rules_pkg",
