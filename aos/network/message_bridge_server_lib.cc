@@ -602,6 +602,9 @@ MessageBridgeServer::MessageBridgeServer(
   allocator_ = FixedAllocator(max_channel_size);
 
   reconnected_.reserve(max_channels());
+
+  LOG_IF(WARNING, event_loop_->runtime_realtime_priority() <= 0)
+      << ": Suggested to use a realtime priority >0.";
 }
 
 void MessageBridgeServer::NodeConnected(sctp_assoc_t assoc_id) {

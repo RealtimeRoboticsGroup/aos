@@ -566,6 +566,9 @@ MessageBridgeClient::MessageBridgeClient(
         client_status_.FindClientIndex(source_node), &client_status_,
         config_sha256_, requested_authentication));
   }
+
+  LOG_IF(WARNING, event_loop_->runtime_realtime_priority() <= 0)
+      << ": Suggested to use a realtime priority >0.";
 }
 
 void MessageBridgeClient::RequestAuthKey() {
