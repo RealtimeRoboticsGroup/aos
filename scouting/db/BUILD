@@ -7,10 +7,10 @@ go_library(
     target_compatible_with = ["@platforms//cpu:x86_64"],
     visibility = ["//visibility:public"],
     deps = [
-        "@io_gorm_driver_postgres//:postgres",
-        "@io_gorm_gorm//:gorm",
-        "@io_gorm_gorm//clause",
-        "@io_gorm_gorm//logger",
+        "@io_gorm_driver_postgres//:go_default_library",
+        "@io_gorm_gorm//:go_default_library",
+        "@io_gorm_gorm//clause:go_default_library",
+        "@io_gorm_gorm//logger:go_default_library",
     ],
 )
 
@@ -21,5 +21,5 @@ go_test(
     data = ["//scouting/db/testdb_server"],
     embed = [":db"],
     target_compatible_with = ["@platforms//cpu:x86_64"],
-    deps = ["@com_github_davecgh_go_spew//spew"],
+    deps = ["@com_github_davecgh_go_spew//spew:go_default_library"],
 )

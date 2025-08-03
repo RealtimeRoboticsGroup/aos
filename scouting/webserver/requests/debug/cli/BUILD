@@ -13,7 +13,7 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//scouting/webserver/requests/debug",
-        "@com_github_davecgh_go_spew//spew",
+        "@com_github_davecgh_go_spew//spew:go_default_library",
     ],
 )
 

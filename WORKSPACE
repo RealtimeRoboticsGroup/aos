@@ -1153,16 +1153,16 @@ local_repository(
 
 http_archive(
     name = "io_bazel_rules_go",
-    patch_args = [
-        "-p1",
-    ],
-    patches = [
-        "@//third_party:rules_go/0001-Disable-warnings-for-external-repositories.patch",
-    ],
-    sha256 = "af47f30e9cbd70ae34e49866e201b3f77069abb111183f2c0297e7e74ba6bbc0",
+    #patch_args = [
+    #"-p1",
+    #],
+    #patches = [
+    #"@//third_party:rules_go/0001-Disable-warnings-for-external-repositories.patch",
+    #],
+    sha256 = "94643c4ce02f3b62f3be7d13d527a5c780a568073b7562606e78399929005f98",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.47.0/rules_go-v0.47.0.zip",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.47.0/rules_go-v0.47.0.zip",
+        "https://mirror.bazel.build/github.com/bazel-contrib/rules_go/releases/download/v0.56.0/rules_go-v0.56.0.zip",
+        "https://github.com/bazel-contrib/rules_go/releases/download/v0.56.0/rules_go-v0.56.0.zip",
     ],
 )
 
@@ -1189,9 +1189,9 @@ go_download_sdk(
     goos = "linux",
     sdks = {
         # Pulled from https://go.dev/dl/ to avoid the external dependency.
-        "linux_amd64": ("go1.19.5.linux-amd64.tar.gz", "36519702ae2fd573c9869461990ae550c8c0d955cd28d2827a6b159fda81ff95"),
+        "linux_amd64": ("go1.24.5.linux-amd64.tar.gz", "10ad9e86233e74c0f6590fe5426895de6bf388964210eac34a6d83f38918ecdc"),
     },
-    version = "1.19.5",
+    version = "1.24.5",
 )
 
 go_rules_dependencies()

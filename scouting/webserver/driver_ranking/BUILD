@@ -26,7 +26,7 @@ go_test(
     target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         "//scouting/db",
-        "@com_github_davecgh_go_spew//spew",
+        "@com_github_davecgh_go_spew//spew:go_default_library",
     ],
 )
 
