@@ -1,0 +1,65 @@
+From 2ca1267768422a838b7aa044480bfc74b1f973ff Mon Sep 17 00:00:00 2001
+From: Philipp Schrader <philipp.schrader@gmail.com>
+Date: Sun, 15 Jun 2025 17:14:39 -0700
+Subject: [PATCH] Allow WORKSPACE users to patch wheels
+
+This is a quick hack to access the normally bzlmod-only patching
+feature through for WORKSPACE users.
+
+I removed at least one debug print statement that we don't really
+need.
+---
+ python/private/pypi/patch_whl.bzl                   | 1 -
+ python/private/pypi/requirements.bzl.tmpl.workspace | 7 ++++++-
+ python/private/pypi/whl_library.bzl                 | 3 +--
+ 3 files changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/python/private/pypi/patch_whl.bzl b/python/private/pypi/patch_whl.bzl
+index 7af9c4da..3b1cb52e 100644
+--- a/python/private/pypi/patch_whl.bzl
++++ b/python/private/pypi/patch_whl.bzl
+@@ -136,6 +136,5 @@ def patch_whl(rctx, *, python_interpreter, whl_path, patches, **kwargs):
+             record_patch = record_patch,
+             record_patch_contents = record_patch_contents,
+         )
+-        print(warning_msg)  # buildifier: disable=print
+ 
+     return rctx.path(whl_patched)
+diff --git a/python/private/pypi/requirements.bzl.tmpl.workspace b/python/private/pypi/requirements.bzl.tmpl.workspace
+index 2f4bcd69..0d6c13a0 100644
+--- a/python/private/pypi/requirements.bzl.tmpl.workspace
++++ b/python/private/pypi/requirements.bzl.tmpl.workspace
+@@ -35,7 +35,11 @@ def _get_annotation(requirement):
+     name = requirement.split(" ")[0].split("=")[0].split("[")[0]
+     return _annotations.get(name)
+ 
+-def install_deps(**whl_library_kwargs):
++def _get_patches(patch_spec, requirement):
++    name = requirement.split(" ")[0].split("=")[0].split("[")[0]
++    return patch_spec.get(name)
++
++def install_deps(patch_spec = {}, **whl_library_kwargs):
+     """Repository rule macro. Install dependencies from `pip_parse`.
+ 
+     Args:
+@@ -68,5 +72,6 @@ def install_deps(**whl_library_kwargs):
+             group_name = group_name,
+             group_deps = group_deps,
+             annotation = _get_annotation(requirement),
++            whl_patches = _get_patches(patch_spec, requirement),
+             **whl_config
+         )
+diff --git a/python/private/pypi/whl_library.bzl b/python/private/pypi/whl_library.bzl
+index 0c09f796..ee62dc27 100644
+--- a/python/private/pypi/whl_library.bzl
++++ b/python/private/pypi/whl_library.bzl
+@@ -326,8 +326,7 @@ def _whl_library_impl(rctx):
+         patches = {}
+         for patch_file, json_args in rctx.attr.whl_patches.items():
+             patch_dst = struct(**json.decode(json_args))
+-            if whl_path.basename in patch_dst.whls:
+-                patches[patch_file] = patch_dst.patch_strip
++            patches[patch_file] = patch_dst.patch_strip
+ 
+         if patches:
+             whl_path = patch_whl(

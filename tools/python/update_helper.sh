@@ -26,14 +26,27 @@ docker build \
   --tag="${CONTAINER_TAG}" \
   "${CONTEXT_DIR}"
 
+perform_cleanup() {
+  set -x
+  # Restore permissions on the uv cache directory on exit.
+  sudo chown -R "${USER}:${USER}" \
+    "${HOME}"/.cache/uv \
+    tools/python/requirements.lock.txt
+}
+
+trap perform_cleanup EXIT
+
 # Run the actual update. The assumption here is that mounting the user's home
 # directory is sufficient to allow the tool to run inside the container without
 # any issues. I.e. the cache and the source tree are available in the
 # container.
+set -x
 docker run \
   --rm \
   --tty \
   --env BUILD_WORKSPACE_DIRECTORY="${BUILD_WORKSPACE_DIRECTORY}" \
+  --env UV_HTTP_TIMEOUT=300 \
+  --env UV_CACHE_DIR=$HOME/.cache/uv \
   --workdir "${PWD}" \
   --volume "${HOME}:${HOME}" \
   "${CONTAINER_TAG}" \

@@ -11,7 +11,7 @@ source "${RUNFILES_DIR:-/dev/null}/$f" 2>/dev/null || \
   { echo>&2 "ERROR: cannot find $f"; exit 1; }; f=; set -e
 # --- end runfiles.bash initialization v2 ---
 
-YAPF="$(rlocation pip_deps_yapf/rules_python_wheel_entry_point_yapf)"
+YAPF="$(rlocation aos/tools/lint/yapf_binary)"
 readonly YAPF
 
 # Run everything from the root of the tree.

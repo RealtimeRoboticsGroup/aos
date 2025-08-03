@@ -23,6 +23,7 @@ readonly ARCH="$2"
 readonly CALLER_ID="$3"
 
 readonly PYTHON_BIN="/opt/python/bin/python3"
+readonly WHEELHOUSE_MIRROR_URL="https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple"
 
 # Try to make the wheels reproducible by telling them we're in 1980.
 # Unfortunately, this is insufficient due to a pip bug.
@@ -64,6 +65,10 @@ mkdir "${SCRIPT_DIR}"/wheelhouse
   --no-deps \
   -r "${SCRIPT_DIR}/requirements.lock.txt" \
   -w "${SCRIPT_DIR}/wheelhouse_tmp/" \
+  --index-url="${WHEELHOUSE_MIRROR_URL}" \
+  --extra-index-url=https://pypi.org/simple \
+  --prefer-binary \
+  --timeout=500 \
   | tee /tmp/pip-wheel.log
 
 # Find the list of packages that were built from source.

@@ -1,12 +1,24 @@
 load("@rules_python//python:defs.bzl", "py_binary", "py_runtime_pair")
-load("@rules_python//python:pip.bzl", "compile_pip_requirements")
+load("@rules_uv//uv:pip.bzl", "pip_compile")
 
 # Invoke this via "bazel run //tools/python:requirements.update".
-compile_pip_requirements(
-    name = "requirements",
-    extra_args = [
-        # Make it so we can depend on setuptools.
-        "--allow-unsafe",
+pip_compile(
+    name = "requirements.update",
+    args = [
+        # Generate hashes for reproducibility.
+        # TODO(philsc): Uncomment once we migrate to blzmod and a uv lock file.
+        #"--generate-hashes",
+        # Work around dependencies only being pulled from the same mirror.
+        # https://github.com/astral-sh/uv/pull/2083
+        "--index-strategy=unsafe-any-match",
+        # For compatibility with rules_python and pip, we keep the extras in the
+        # requirements.
+        "--no-strip-extras",
+        # Grab the hashes from both our own index and the upstream index. This
+        # lets the `pip wheel` command generate wheels properly. We restrict the
+        # downloads in WORKSPACE sufficiently for CI purposes.
+        "--default-index=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
+        "--index=https://pypi.org/simple",
     ],
     requirements_in = "requirements.txt",
     requirements_txt = "requirements.lock.txt",
@@ -19,6 +31,10 @@ compile_pip_requirements(
         # not good for our hermeticity assumptions. Disable the test lock file
         # test for now.
         "manual",
+    ],
+    target_compatible_with = [
+        # TODO(philsc): Make Python work for other platforms too.
+        "@platforms//cpu:x86_64",
     ],
 )
 
