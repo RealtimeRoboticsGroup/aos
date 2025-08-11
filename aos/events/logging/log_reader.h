@@ -40,39 +40,91 @@ namespace testing {
 class MultinodeLoggerTest;
 }
 
-// We end up with one of the following 3 log file types.
+// The LogReader classes takes in a set of files which constitute a log and
+// replays the messages in those logs into an EventLoop.
 //
-// Single node logged as the source node.
-//   -> Replayed just on the source node.
+// Typically, the log writer will be configured in a way that produces multiple
+// .bfbs files which, taken together, constitute a single log. A single log will
+// generally be organized into a folder which contains all the data for that
+// log. However, it is not required that this be the case. The LogReader can
+// process any set of files which, when taken together:
 //
-// Forwarding timestamps only logged from the perspective of the destination
-// node.
-//   -> Matched with data on source node and logged.
+// * Do not contain gaps in data (e.g., if using log rotation via
+//   Logger::Rotate, any set of logs adjacent in time may be played together;
+//   however, if you were to rotate logs by shutting down and restarting the
+//   entire logger process you would likely end up missing data on some channels
+//   and be unable to replay).
+// * Use the same AOS configuration.
+// * Form a fully-connected graph of node boots. For instance, given a 2-node
+//   system with nodes A and B where each node has a logger and where the
+//   following sequence occurs:
 //
-// Forwarding timestamps with data logged as the destination node.
-//   -> Replayed just as the destination
-//   -> Replayed as the source (Much harder, ordering is not defined)
+//   Time | Node A    | Node B    | Notes
+//   0    | boot 1    | boot 1    | Both loggers running
+//   1    | rebooting | boot 1    |
+//   2    | boot 2    | boot 1    | Both nodes have loggers running again.
+//   3    | boot 2    | rebooting |
+//   4    | boot 2    | boot 2    | Both nodes have loggers runnign again.
 //
-// Duplicate data logged. -> CHECK that it matches and explode otherwise.
+//   We will have logs from the first and second time each node was booted.
 //
-// This can be boiled down to a set of constraints and tools.
+//   * If you have the node A-boot 1 log from boot 1 and the node B-boot 2 log,
+//     you will not be able to replay them in the same logger because the logger
+//     will have no way of determining when events from the node B-boot 2 log
+//     should be replayed.
+//   * If you have all four logs (node A-boot 1, node A-boot 2, node B-boot 1,
+//     nodeB-boot2), the log reader will be able to replay the logs all
+//     together.
+//   * If you have just the node B-boot1 and node A-boot 2 logs then the log
+//     reader will be able to replay any events that are present in those two
+//     logs, because they do overlap with one another.
 //
-// 1) Forwarding timestamps and data need to be logged separately.
-// 2) Any forwarded data logged on the destination node needs to be logged
-//   separately such that it can be sorted.
+//   Note that this does assume an AOS configuration where node A and node B
+//   do talk to one another. It is technically possible to have multinode AOS
+//   configurations where the separate nodes do not actually communicate, or
+//   do not log any information about their communnication; this is generally
+//   strongly discouraged, but is possible.
 //
-// 1) Log reader needs to be able to sort a list of log files.
-// 2) Log reader needs to be able to merge sorted lists of log files.
-// 3) Log reader needs to be able to match timestamps with messages.
+// In order to pass these logs to the LogReader, you will typically end up using
+// a pattern like:
+// LogReader reader(aos::logger::SortParts(aos::logger::FindLogs(folder)));
+// This is because the LogReader expects a list of specific files, grouped by
+// node boots, to look at. However, in most cases the user will be specifying a
+// set of directories.
 //
-// We also need to be able to generate multiple views of a log file depending on
-// the target.
+// When you go to actually replay the log, the LogReader will replay all the
+// messages in the log as accurately as feasible, including:
+// * Having each message be sent in simulation at the time that it was sent on
+//   the live system.
+// * Providing callbacks for when the logger logically "started" and "ended."
+// * Ensuring that every message between the start and end times is replayed.
+// * Ensuring that the most recent message from every channel before the start
+//   time is available.
+// * Delaying messages forwarded across nodes by the same amount of time that
+//   they were delayed in the original system (this is done by having the logger
+//   store receive timestamps for each forwarded message).
+// * Dropping messages that were dropped when forwarded across the network.
+// * Estimating the offsets between clocks on different devices in order to
+//   generate a reasonable ordering of global events, while guaranteeing that
+//   causality is respected (i.e., we won't have a forwarded message appear on a
+//   receive node earlier than it was sent on the send node). Note that
+//   attempting to satisfy this goal is one of the more common reasons that
+//   people encounter "unreadable" logs which the LogReader struggles to handle
+//   correctly.
+// * Setting the boot UUIDs on the simulated event loops to match the original
+//   boot UUIDS.
+// * Rebooting simulated nodes when nodes rebooted in the logfiles.
 //
-// In general, we aim to guarantee that if you are using the LogReader
-// "normally" you should be able to observe all the messages that existed on the
-// live system between the start time and the end of the logfile, and that
-// CHECK-failures will be generated if the LogReader cannot satisfy that
-// guarantee. There are currently a few deliberate exceptions to this:
+// As a note on data integrity: We generally aim to ensure that users of the
+// log reading code be made aware when data is missing; e.g., if a
+// corrupted log has caused for some number of messages to be missing in the
+// middle of the log. However, we only provide these guarantees between the
+// start and end time of the log for any given node boot. Because of how the log
+// writers work, we sometimes have indeterminate amounts of data before and
+// after the time bounded by the start/end time (while we do guarantee the
+// presence of the most recent message from every channel before the start time,
+// there may be more than one pre-start time message on some channels).
+// Additionally:
 // * Any channel marked NOT_LOGGED in the configuration is known not to
 //   have been logged and thus will be silently absent in log replay.
 // * If an incomplete set of log files is provided to the reader (e.g.,
@@ -85,6 +137,54 @@ class MultinodeLoggerTest;
 //   messages. This will be most obvious on uncleanly terminated logs or
 //   when merging logfiles across nodes (as the logs on different nodes
 //   will not finish at identical times).
+//
+// As the log replays, there are several things that you can register callbacks
+// for at different stages. The common callbacks users may register are:
+// * NodeEventLoopFactory::OnStartup(): Occurs at time t=0 for each node boot.
+// * LogReader::OnStart(): Occurs at the log start time for each node boot.
+// * EventLoop::OnRun(): Called when the event loop begins running for each
+//   event loop.
+// * LogReader::OnEnd(): Occurs at the log end time for each node boot.
+// * NodeEventLoopFactory::OnShutdown(): Occurs when each node stops executing
+//   events entirely.
+// Note that EventLoops may be created during any of the LogReader or
+// NodeEventLoopFactory start/end callbacks; the OnRun callbacks for any given
+// EventLoop will be executed immediately after the
+// LogReader/NodeEventLoopFactory callbacks finish.
+//
+// The NodeEventLoopFactory callbacks are present in any simulated event loop
+// execution; the reason that they are separate from the LogReader callbacks is
+// that logs will typically contain data outside of the strict start/end times
+// of the log. It is just that outside of the start/end time interval it may be
+// the case that not all channels have messages available. As such, you will
+// typically use the NodeEventLoopFactory-based methods when you want to
+// register applications that will process _all_ the data available in the log,
+// but that the LogReader callbacks are preferred in the vast majority of cases,
+// where you want to be able to trust that all channels will have data
+// available while your applications are running.
+//
+// This corresponds to the following tyipcal sequence of events:
+// 1. LogReader is constructed.
+// 2. User calls LogReader::RegisterWithoutStarting()
+// 3. User calls SimulatedEventLoopFactory::Run(). While this is executing:
+//    a. NodeEventLoopFactory::OnStartup() methods are called immediately.
+//    b. Any pre-"start time" messaegs from the logger are replayed
+//    c. LogReader::OnStart() methods are called as each node reaches its start
+//       time.
+//    d. Every logged channel is expected to have every message available.
+//    e. LogReader::OnEnd() methods are called as each node reaches the end time
+//       for its logger.
+//    f. NodeEventLoopFactory::OnShutdown() methods are called whenever a node
+//       reboots; that node then gets started back up with the OnStartup() calls
+//       and will go back to step (a).
+//    g. When every logged message is replayed, all
+//       NodeEventLoopFactory::OnShutdown() callbacks that have not yet been
+//       called will be called and Run() will return.
+//
+// It is strongly encourage that any application creation during log replay use
+// the NodeEventLoopFactory AlwaysStart() or MaybeStart() methods called from
+// the LogReader::OnStart() method, and that you only deviate from that pattern
+// when you have a specific reason to do so.
 
 // Replays all the channels in the logfile to the event loop.
 class LogReader {
@@ -159,8 +259,8 @@ class LogReader {
   // occurs entirely before the realtime_start_time, the OnStart handler will
   // never get called for that boot.
   //
-  // realtime_start_time is defined below, but/ essentially is the time at which
-  // message channels will start being internall consistent on a given node
+  // realtime_start_time is defined below, but essentially is the time at which
+  // message channels will start being internally consistent on a given node
   // (i.e., when the logger started). Note: If you wish to see a watcher
   // triggered for *every* message in a log, OnStart() will not be
   // sufficient--messages (possibly multiple messages) may be present on
