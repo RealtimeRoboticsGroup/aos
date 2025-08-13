@@ -1,0 +1,29 @@
+include "frc/zeroing/constants.fbs";
+include "frc/control_loops/swerve/swerve_zeroing.fbs";
+include "frc/vision/calibration.fbs";
+include "frc/wpilib/swerve/swerve_constants.fbs";
+include "frc/control_loops/profiled_subsystem.fbs";
+
+namespace y2024_swerve;
+
+table CameraConfiguration {
+  calibration:frc.vision.calibration.CameraCalibration (id: 0);
+}
+
+table Common {
+  rotation:frc.control_loops.StaticZeroingSingleDOFProfiledSubsystemCommonParams (id: 0);
+  swerve_positions_constants:frc.wpilib.swerve.SwervePositionConstants (id: 1);
+}
+
+table RobotConstants {
+    swerve_zeroing:frc.control_loops.swerve.SwerveZeroing (id: 0);
+    cameras:[CameraConfiguration] (id: 1);
+}
+
+table Constants{
+    cameras:[CameraConfiguration] (id: 0, deprecated);
+    robot:RobotConstants (id: 1);
+    common:Common (id: 2);
+}
+
+root_type Constants;

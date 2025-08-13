@@ -7,6 +7,7 @@ cc_library(
 
 cc_library(
     name = "wpilib",
+    linkopts = ["-ldl"],
     linkstatic = True,
     target_compatible_with = ["//tools/platforms/hardware:roborio"],
     visibility = ["//visibility:public"],
