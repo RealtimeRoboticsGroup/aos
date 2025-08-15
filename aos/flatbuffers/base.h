@@ -47,6 +47,16 @@ constexpr size_t AlignOffset(size_t starting_offset, size_t alignment,
 // may not want to clear it to zeroes.
 enum class SetZero { kYes, kNo };
 
+// Used as a parameter to FromFlatbuffer methods to specify whether to replace
+// or merge the data.
+enum class FlatbufferCopyMode {
+  // Clear existing data before copying.
+  kReplace,
+  // Merge new data with existing data, overwriting existing vectors and
+  // strings.
+  kMergeWithVectorOverwrite,
+};
+
 class Allocator;
 
 // Parent type of any object that may need to dynamically change size at

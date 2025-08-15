@@ -157,6 +157,15 @@ All created types have an `AsFlatbuffer()` method which allows you to access the
 type using the regular generated flatbuffer API and a `FromFlatbuffer()` method
 which attempts to copy the specified flatbuffer into the current object.
 
+The `FromFlatbuffer()` method accepts an optional `FlatbufferCopyMode` parameter
+that controls how the copy is performed:
+
+* `FlatbufferCopyMode::kReplace` (default): Clears all existing data before
+  copying, replacing the entire contents.
+* `FlatbufferCopyMode::kMergeWithVectorOverwrite`: Merges the new data with
+  existing data without clearing first. Vectors and strings are overwritten.
+  They do not get appended.
+
 The `FromFlatbuffer()` method works on both the "raw" flatbuffer type, as well
 as on the [Flatbuffer Object
 API](https://flatbuffers.dev/flatbuffers_guide_use_cpp.html) (i.e. the
@@ -312,10 +321,10 @@ TEST_F(StaticFlatbuffersTest, PopulateMethodConversionExample) {
 
 ### Default Value Accessors
 
-For scalar fields with default values specified in the schema, an additional 
-`_or_default()` method is generated. This method returns the current value if 
-the field is set, or the schema-defined default if the field is unset or 
-cleared. These accessors are only created for scalar fields with explicit 
+For scalar fields with default values specified in the schema, an additional
+`_or_default()` method is generated. This method returns the current value if
+the field is set, or the schema-defined default if the field is unset or
+cleared. These accessors are only created for scalar fields with explicit
 default values in the .fbs file.
 
 Example:
@@ -354,7 +363,7 @@ void clear_scalar();
 // Returns true if the scalar field is populated.
 bool has_scalar() const;
 
-// Returns the value of scalar if has_scalar() is true, 
+// Returns the value of scalar if has_scalar() is true,
 // otherwise return the default value from the fbs file.
 int32_t scalar_or_default() const;
 ```
@@ -470,17 +479,19 @@ some changes to accommodate better error-handling. Common accessors:
   space allocated for the vector; returns false on failure (e.g., if you are in
   a fixed-size allocator that does not support increasing the size past a
   certain point).
-* `bool FromFlatbuffer(const flatbuffers::Vector<>&)`: Attempts to copy an
-  existing vector into this `Vector`. This may attempt to call `reserve()`
+* `bool FromFlatbuffer(const flatbuffers::Vector<>&, FlatbufferCopyMode mode = FlatbufferCopyMode::kReplace)`:
+  Attempts to copy an existing vector into this `Vector`. This may attempt to call `reserve()`
   if the new vector is longer than `capacity()`. If the copy fails for
-  any reason, returns `false`.
-* `bool FromFlatbuffer(const std::vector<>&)`: Attempts to copy an
-  existing vector into this `Vector`. This may attempt to call `reserve()`
+  any reason, returns `false`. All supported values of the `mode` parameter
+  will clear the existing data before copying.
+* `bool FromFlatbuffer(const std::vector<>&, FlatbufferCopyMode mode = FlatbufferCopyMode::kReplace)`:
+  Attempts to copy an existing vector into this `Vector`. This may attempt to call `reserve()`
   if the new vector is longer than `capacity()`. If the copy fails for
   any reason, returns `false`. This is called "`FromFlatbuffer`" because
   the [Flatbuffer Object
   API](https://flatbuffers.dev/flatbuffers_guide_use_cpp.html) uses
-  `std::vector<>` to represent vectors.
+  `std::vector<>` to represent vectors. All supported values of the `mode`
+  parameter will clear the existing data before copying.
 * `bool FromData(const T*, size_t)`: Attempts to copy a contiguous set of data
   from the provided pointer. Only applies to inline types. This may attempt to
   call `reserve()`, and if the call fails, it returns `false`.

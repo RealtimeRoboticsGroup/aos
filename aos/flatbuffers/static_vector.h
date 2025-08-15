@@ -411,20 +411,30 @@ class Vector : public ResizeableObject {
   // we can allocate through reserve()).
   // This is a deep copy, and will call FromFlatbuffer on any constituent
   // objects.
-  [[nodiscard]] bool FromFlatbuffer(ConstFlatbuffer *vector) {
+  [[nodiscard]] bool FromFlatbuffer(
+      ConstFlatbuffer *vector, ::aos::fbs::FlatbufferCopyMode mode =
+                                   ::aos::fbs::FlatbufferCopyMode::kReplace) {
     CHECK(vector != nullptr);
-    return FromFlatbuffer(*vector);
+    return FromFlatbuffer(*vector, mode);
   }
-  [[nodiscard]] bool FromFlatbuffer(ConstFlatbuffer &vector);
+  [[nodiscard]] bool FromFlatbuffer(
+      ConstFlatbuffer &vector, ::aos::fbs::FlatbufferCopyMode mode =
+                                   ::aos::fbs::FlatbufferCopyMode::kReplace);
   // The remaining FromFlatbuffer() overloads are for when using the flatbuffer
   // "object" API, which uses std::vector's for representing vectors.
-  [[nodiscard]] bool FromFlatbuffer(const std::vector<InlineType> &vector) {
+  [[nodiscard]] bool FromFlatbuffer(
+      const std::vector<InlineType> &vector,
+      ::aos::fbs::FlatbufferCopyMode /*mode*/ =
+          ::aos::fbs::FlatbufferCopyMode::kReplace) {
     static_assert(kInline);
     return FromData(vector.data(), vector.size());
   }
   // Overload for vectors of bools, since the standard library may not use a
   // full byte per vector element.
-  [[nodiscard]] bool FromFlatbuffer(const std::vector<bool> &vector) {
+  [[nodiscard]] bool FromFlatbuffer(
+      const std::vector<bool> &vector,
+      ::aos::fbs::FlatbufferCopyMode /*mode*/ =
+          ::aos::fbs::FlatbufferCopyMode::kReplace) {
     static_assert(kInline);
     // We won't be able to do a clean memcpy because std::vector<bool> may be
     // implemented using bit-packing.
@@ -433,9 +443,11 @@ class Vector : public ResizeableObject {
   // Overload for non-inline types. Note that to avoid having this overload get
   // resolved with inline types, we make FlatbufferObjectType != InlineType.
   [[nodiscard]] bool FromFlatbuffer(
-      const std::vector<FlatbufferObjectType> &vector) {
+      const std::vector<FlatbufferObjectType> &vector,
+      ::aos::fbs::FlatbufferCopyMode mode =
+          ::aos::fbs::FlatbufferCopyMode::kReplace) {
     static_assert(!kInline);
-    return FromNotInlineIterable(vector);
+    return FromNotInlineIterable(vector, mode);
   }
 
   // Copies values from the provided data pointer into the vector, resizing the
@@ -713,7 +725,9 @@ class Vector : public ResizeableObject {
   }
   // Implementation that handles copying from a flatbuffers::Vector of an inline
   // data type.
-  [[nodiscard]] bool FromInlineFlatbuffer(ConstFlatbuffer &vector) {
+  [[nodiscard]] bool FromInlineFlatbuffer(
+      ConstFlatbuffer &vector, ::aos::fbs::FlatbufferCopyMode /*mode*/ =
+                                   ::aos::fbs::FlatbufferCopyMode::kReplace) {
     return FromData(reinterpret_cast<const InlineType *>(vector.Data()),
                     vector.size());
   }
@@ -721,25 +735,31 @@ class Vector : public ResizeableObject {
   // Implementation that handles copying from a flatbuffers::Vector of a
   // not-inline data type.
   template <typename Iterable>
-  [[nodiscard]] bool FromNotInlineIterable(const Iterable &vector) {
+  [[nodiscard]] bool FromNotInlineIterable(
+      const Iterable &vector, ::aos::fbs::FlatbufferCopyMode mode =
+                                  ::aos::fbs::FlatbufferCopyMode::kReplace) {
     if (!reserve(vector.size())) {
       return false;
     }
-    // "Clear" the vector.
-    resize_not_inline(0);
+    // "Clear" the vector if in replace mode.
+    if (mode == ::aos::fbs::FlatbufferCopyMode::kReplace) {
+      resize_not_inline(0);
+    }
 
     for (const auto &entry : vector) {
       T *emplaced_entry = emplace_back();
       CHECK(emplaced_entry != nullptr);
-      if (!emplaced_entry->FromFlatbuffer(entry)) {
+      if (!emplaced_entry->FromFlatbuffer(entry, mode)) {
         return false;
       }
     }
     return true;
   }
 
-  [[nodiscard]] bool FromNotInlineFlatbuffer(const Flatbuffer &vector) {
-    return FromNotInlineIterable(vector);
+  [[nodiscard]] bool FromNotInlineFlatbuffer(
+      const Flatbuffer &vector, ::aos::fbs::FlatbufferCopyMode mode =
+                                    ::aos::fbs::FlatbufferCopyMode::kReplace) {
+    return FromNotInlineIterable(vector, mode);
   }
 
   // In order to allow for easy partial template specialization, we use a
@@ -814,7 +834,9 @@ class String : public Vector<char, kStaticLength, true, 0, true> {
     }
   }
   using VectorType::FromFlatbuffer;
-  [[nodiscard]] bool FromFlatbuffer(const std::string &string) {
+  [[nodiscard]] bool FromFlatbuffer(
+      const std::string &string, ::aos::fbs::FlatbufferCopyMode /*mode*/ =
+                                     ::aos::fbs::FlatbufferCopyMode::kReplace) {
     return VectorType::FromData(string.data(), string.size());
   }
   std::string_view string_view() const {
@@ -862,9 +884,11 @@ struct InlineWrapper<T, false, void> {
       ((T::kSize + T::kAlign - 1) / T::kAlign) * T::kAlign;
   static_assert((kDataElementSize % kDataElementAlign) == 0);
   template <typename StaticVector>
-  static bool FromFlatbuffer(
-      StaticVector *to, const typename StaticVector::ConstFlatbuffer &from) {
-    return to->FromNotInlineFlatbuffer(from);
+  static bool FromFlatbuffer(StaticVector *to,
+                             const typename StaticVector::ConstFlatbuffer &from,
+                             ::aos::fbs::FlatbufferCopyMode mode =
+                                 ::aos::fbs::FlatbufferCopyMode::kReplace) {
+    return to->FromNotInlineFlatbuffer(from, mode);
   }
   template <typename StaticVector>
   static void ResizeVector(StaticVector *target, size_t size) {
@@ -885,9 +909,11 @@ struct InlineWrapper<T, true,
   static constexpr size_t kDataElementAlignOffset = 0;
   static constexpr size_t kDataElementSize = sizeof(T);
   template <typename StaticVector>
-  static bool FromFlatbuffer(
-      StaticVector *to, const typename StaticVector::ConstFlatbuffer &from) {
-    return to->FromInlineFlatbuffer(from);
+  static bool FromFlatbuffer(StaticVector *to,
+                             const typename StaticVector::ConstFlatbuffer &from,
+                             ::aos::fbs::FlatbufferCopyMode mode =
+                                 ::aos::fbs::FlatbufferCopyMode::kReplace) {
+    return to->FromInlineFlatbuffer(from, mode);
   }
   template <typename StaticVector>
   static void ResizeVector(StaticVector *target, size_t size) {
@@ -906,9 +932,11 @@ struct InlineWrapper<bool, true, void> {
   static constexpr size_t kDataElementAlignOffset = 0;
   static constexpr size_t kDataElementSize = 1u;
   template <typename StaticVector>
-  static bool FromFlatbuffer(
-      StaticVector *to, const typename StaticVector::ConstFlatbuffer &from) {
-    return to->FromInlineFlatbuffer(from);
+  static bool FromFlatbuffer(StaticVector *to,
+                             const typename StaticVector::ConstFlatbuffer &from,
+                             ::aos::fbs::FlatbufferCopyMode mode =
+                                 ::aos::fbs::FlatbufferCopyMode::kReplace) {
+    return to->FromInlineFlatbuffer(from, mode);
   }
   template <typename StaticVector>
   static void ResizeVector(StaticVector *target, size_t size) {
@@ -930,9 +958,11 @@ struct InlineWrapper<T, true,
   static constexpr size_t kDataElementAlignOffset = 0;
   static constexpr size_t kDataElementSize = sizeof(T);
   template <typename StaticVector>
-  static bool FromFlatbuffer(
-      StaticVector *to, const typename StaticVector::ConstFlatbuffer &from) {
-    return to->FromInlineFlatbuffer(from);
+  static bool FromFlatbuffer(StaticVector *to,
+                             const typename StaticVector::ConstFlatbuffer &from,
+                             ::aos::fbs::FlatbufferCopyMode mode =
+                                 ::aos::fbs::FlatbufferCopyMode::kReplace) {
+    return to->FromInlineFlatbuffer(from, mode);
   }
   template <typename StaticVector>
   static void ResizeVector(StaticVector *target, size_t size) {
@@ -944,8 +974,11 @@ struct InlineWrapper<T, true,
 template <typename T, size_t kStaticLength, bool kInline, size_t kForceAlign,
           bool kNullTerminate>
 bool Vector<T, kStaticLength, kInline, kForceAlign,
-            kNullTerminate>::FromFlatbuffer(ConstFlatbuffer &vector) {
-  return internal::InlineWrapper<T, kInline>::FromFlatbuffer(this, vector);
+            kNullTerminate>::FromFlatbuffer(ConstFlatbuffer &vector,
+                                            ::aos::fbs::FlatbufferCopyMode
+                                                mode) {
+  return internal::InlineWrapper<T, kInline>::FromFlatbuffer(this, vector,
+                                                             mode);
 }
 
 template <typename T, size_t kStaticLength, bool kInline, size_t kForceAlign,

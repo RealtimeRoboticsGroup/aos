@@ -1234,4 +1234,173 @@ TEST_F(StaticFlatbuffersTest, SetStringOrDie) {
   EXPECT_EQ(vector->at(0).string_view(), "World");
 }
 
+// Validates that the kMergeWithVectorOverwrite mode behaves correctly with
+// FromFlatbuffer, demonstrating that vectors are replaced and table fields are
+// merged.
+class StaticFlatbuffersMergeTest : public StaticFlatbuffersTest {
+ public:
+  void SetUp() override {
+    // Create source flatbuffer with data.
+    source_builder_->set_scalar(100);
+
+    SubTableStatic *const source_subtable = source_builder_->add_subtable();
+    source_subtable->set_foo(42);
+    source_subtable->set_baz(3.14);
+
+    ASSERT_TRUE(source_builder_.AsFlatbufferSpan().Verify());
+  }
+
+ protected:
+  Builder<TestTableStatic> source_builder_;
+};
+
+// Validate the default mode.
+TEST_F(StaticFlatbuffersMergeTest, DefaultReplaceModeBehavior) {
+  const TestTableStatic *const source = source_builder_.get();
+
+  Builder<TestTableStatic> replace_target_builder;
+  TestTableStatic *const replace_target = replace_target_builder.get();
+
+  // Set different values in target.
+  replace_target->set_scalar(999);
+  SubTableStatic *const target_subtable = replace_target->add_subtable();
+  target_subtable->set_foo(99);
+  // Don't set baz in target.
+
+  // Apply source with kReplace mode.
+  ASSERT_TRUE(replace_target->FromFlatbuffer(source->AsFlatbuffer(),
+                                             FlatbufferCopyMode::kReplace));
+
+  // Verify scalar was replaced.
+  EXPECT_EQ(replace_target->scalar(), 100);
+
+  // Verify subtable fields were replaced.
+  ASSERT_TRUE(replace_target->has_subtable());
+  EXPECT_EQ(replace_target->subtable()->foo(), 42);
+  ASSERT_TRUE(replace_target->subtable()->baz().has_value());
+  EXPECT_FLOAT_EQ(replace_target->subtable()->baz().value(), 3.14f);
+}
+
+// Test kMergeWithVectorOverwrite mode.
+TEST_F(StaticFlatbuffersMergeTest, MergingBehavior) {
+  const TestTableStatic *const source = source_builder_.get();
+
+  Builder<TestTableStatic> merge_target_builder;
+  TestTableStatic *const merge_target = merge_target_builder.get();
+
+  // Set different values in target.
+  merge_target->set_scalar(999);
+  SubTableStatic *const target_subtable = merge_target->add_subtable();
+  target_subtable->set_foo(99);
+  // Don't set baz in target.
+
+  // Apply source with kMergeWithVectorOverwrite mode.
+  ASSERT_TRUE(merge_target->FromFlatbuffer(
+      source->AsFlatbuffer(), FlatbufferCopyMode::kMergeWithVectorOverwrite));
+
+  // Verify scalar was replaced (kMergeWithVectorOverwrite still replaces
+  // individual fields when present in source).
+  EXPECT_EQ(merge_target->scalar(), 100);
+
+  // Verify subtable fields were merged (source fields overwrite,
+  // but unset source fields preserve target values).
+  ASSERT_TRUE(merge_target->has_subtable());
+  EXPECT_EQ(merge_target->subtable()->foo(), 42);  // From source.
+  ASSERT_TRUE(merge_target->subtable()->baz().has_value());
+  EXPECT_FLOAT_EQ(merge_target->subtable()->baz().value(),
+                  3.14f);  // From source.
+}
+
+// Validate that copying from NativeTableType (object API) works as expected.
+TEST_F(StaticFlatbuffersMergeTest, CopyFromNativeTableType) {
+  const TestTableStatic *const source = source_builder_.get();
+
+  Builder<TestTableStatic> native_target_builder;
+  TestTableStatic *const native_target = native_target_builder.get();
+
+  // Set different values in target.
+  native_target->set_scalar(999);
+  SubTableStatic *const target_subtable = native_target->add_subtable();
+  target_subtable->set_foo(99);
+
+  // Create native table type from source.
+  aos::fbs::testing::TestTableT source_native;
+  source->AsFlatbuffer().UnPackTo(&source_native);
+
+  // Apply source with kMergeWithVectorOverwrite mode using native table type.
+  ASSERT_TRUE(native_target->FromFlatbuffer(
+      source_native, FlatbufferCopyMode::kMergeWithVectorOverwrite));
+
+  // Verify values are the same as source_native.
+  EXPECT_EQ(native_target->scalar(), 100);
+  ASSERT_TRUE(native_target->has_subtable());
+  EXPECT_EQ(native_target->subtable()->foo(), 42);
+  ASSERT_TRUE(native_target->subtable()->baz().has_value());
+  EXPECT_FLOAT_EQ(native_target->subtable()->baz().value(), 3.14f);
+}
+
+// Test simple vector behavior (demonstrate vector replacement).
+TEST_F(StaticFlatbuffersMergeTest, CopyFromVector) {
+  Builder<TestTableStatic> vector_source_builder;
+  {
+    Vector<int32_t, 3, true, 0> *const scalars =
+        vector_source_builder->add_vector_of_scalars();
+    ASSERT_TRUE(scalars->emplace_back(10));
+    ASSERT_TRUE(scalars->emplace_back(20));
+  }
+
+  const TestTableStatic *const vector_source = vector_source_builder.get();
+
+  Builder<TestTableStatic> vector_target_builder;
+  TestTableStatic *const vector_target = vector_target_builder.get();
+  Vector<int32_t, 3, true, 0> *const target_scalars =
+      vector_target->add_vector_of_scalars();
+  ASSERT_TRUE(target_scalars->emplace_back(999));
+
+  // Apply source vector with kMergeWithVectorOverwrite mode - should replace
+  // entire vector.
+  ASSERT_TRUE(vector_target->FromFlatbuffer(
+      vector_source->AsFlatbuffer(),
+      FlatbufferCopyMode::kMergeWithVectorOverwrite));
+
+  // Vector should be completely replaced (2 elements, not 1).
+  ASSERT_TRUE(vector_target->has_vector_of_scalars());
+  ASSERT_EQ(vector_target->vector_of_scalars()->size(), 2);
+  EXPECT_EQ(vector_target->vector_of_scalars()->at(0), 10);
+  EXPECT_EQ(vector_target->vector_of_scalars()->at(1), 20);
+}
+
+// Test that merge mode preserves target fields when source doesn't have them.
+TEST_F(StaticFlatbuffersMergeTest, CopyFromPartialTable) {
+  Builder<TestTableStatic> partial_source_builder;
+  {
+    SubTableStatic *const subtable = partial_source_builder->add_subtable();
+    subtable->set_foo(999);
+  }
+
+  Builder<TestTableStatic> merge_target_builder;
+  // Set both scalar and subtable.
+  merge_target_builder->set_scalar(123);
+  SubTableStatic *const target_sub = merge_target_builder->add_subtable();
+  target_sub->set_foo(456);
+  target_sub->set_baz(7.89);
+
+  const TestTableStatic *const merge_target = merge_target_builder.get();
+
+  // Apply partial source with kMergeWithVectorOverwrite mode.
+  ASSERT_TRUE(merge_target_builder->FromFlatbuffer(
+      partial_source_builder->AsFlatbuffer(),
+      FlatbufferCopyMode::kMergeWithVectorOverwrite));
+
+  // Scalar should be preserved since source doesn't have it.
+  EXPECT_EQ(merge_target->scalar(), 123);
+
+  // Subtable should be merged.
+  ASSERT_TRUE(merge_target->has_subtable());
+  EXPECT_EQ(merge_target->subtable()->foo(), 999);  // From source.
+  ASSERT_TRUE(merge_target->subtable()->baz().has_value());
+  EXPECT_FLOAT_EQ(merge_target_builder->subtable()->baz().value(),
+                  7.89f);  // Preserved from target.
+}
+
 }  // namespace aos::fbs::testing

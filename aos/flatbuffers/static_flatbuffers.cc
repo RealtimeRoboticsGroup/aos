@@ -796,6 +796,7 @@ std::string MakeObjectCopier(const std::vector<FieldData> &fields) {
     if (field.is_struct) {
       // Structs are stored as unique_ptr<FooStruct>
       copiers.emplace_back(absl::StrFormat(R"code(
+    // No merge logic required for structs since we always take the other's value.
     if (other.%s) {
       set_%s(*other.%s);
     }
@@ -804,6 +805,7 @@ std::string MakeObjectCopier(const std::vector<FieldData> &fields) {
     } else if (field.is_inline) {
       // Inline non-struct elements are stored as FooType.
       copiers.emplace_back(absl::StrFormat(R"code(
+    // No merge logic required for inline data since we always take the other's value.
     set_%s(other.%s);
 )code",
                                            field.name, field.name));
@@ -815,34 +817,50 @@ std::string MakeObjectCopier(const std::vector<FieldData> &fields) {
     // being 0-length (this maintains consistency with the flatbuffer Pack()
     // behavior).
     {
+      // Vectors are overwritten in all supported `mode` values.
+      clear_%s();
       %s *added_%s =
-          add_%s();
+        add_%s();
       ABSL_CHECK(added_%s != nullptr);
-      if (!added_%s->FromFlatbuffer(other.%s)) {
+      if (!added_%s->FromFlatbuffer(other.%s, mode)) {
         // Fail if we were unable to copy (e.g., if we tried to copy in a long
         // vector and do not have the space for it).
         return false;
       }
     }
 )code",
-          field.full_type, field.name, field.name, field.name, field.name,
-          field.name));
+          field.name, field.full_type, field.name, field.name, field.name,
+          field.name, field.name));
     } else {
       // Tables are stored as unique_ptr<FooTable>
-      copiers.emplace_back(absl::StrFormat(R"code(    if (other.%s) {
-      %s *added_%s =
-          add_%s();
-      ABSL_CHECK(added_%s != nullptr);
-      if (!added_%s->FromFlatbuffer(*other.%s)) {
+      copiers.emplace_back(absl::StrFormat(
+          R"code(    if (other.%s) {
+      %s *target_%s = nullptr;
+      switch (mode) {
+      case ::aos::fbs::FlatbufferCopyMode::kReplace:
+        // In replace mode, the field is already cleared. We can add it directly.
+        target_%s = add_%s();
+        break;
+      case ::aos::fbs::FlatbufferCopyMode::kMergeWithVectorOverwrite:
+        // In merge mode, we need to check if the field exists.
+        if (has_%s()) {
+          target_%s = mutable_%s();
+        } else {
+          target_%s = add_%s();
+        }
+        break;
+      }
+      ABSL_CHECK(target_%s != nullptr);
+      if (!target_%s->FromFlatbuffer(*other.%s, mode)) {
         // Fail if we were unable to copy (e.g., if we tried to copy in a long
         // vector and do not have the space for it).
         return false;
       }
     }
 )code",
-                                           field.name, field.full_type,
-                                           field.name, field.name, field.name,
-                                           field.name, field.name));
+          field.name, field.full_type, field.name, field.name, field.name,
+          field.name, field.name, field.name, field.name, field.name,
+          field.name, field.name, field.name));
     }
   }
   return absl::StrFormat(
@@ -850,18 +868,28 @@ std::string MakeObjectCopier(const std::vector<FieldData> &fields) {
   // returning true on success.
   // Because the Flatbuffer Object API does not provide any concept of an
   // optionally populated scalar field, all scalar fields will be populated
-  // after a call to FromFlatbufferObject().
-  // This is a deep copy, and will call FromFlatbufferObject on
+  // after a call to FromFlatbuffer().
+  // This is a deep copy, and will call FromFlatbuffer on
   // any constituent objects.
   [[nodiscard]] bool FromFlatbuffer(
-      [[maybe_unused]] const Flatbuffer::NativeTableType &other) {
-    Clear();
+      [[maybe_unused]] const Flatbuffer::NativeTableType &other,
+      ::aos::fbs::FlatbufferCopyMode mode =
+          ::aos::fbs::FlatbufferCopyMode::kReplace) {
+    switch (mode) {
+    case ::aos::fbs::FlatbufferCopyMode::kReplace:
+      Clear();
+      break;
+    case ::aos::fbs::FlatbufferCopyMode::kMergeWithVectorOverwrite:
+      break;
+    }
 %s
     return true;
   }
   [[nodiscard]] bool FromFlatbuffer(
-      const flatbuffers::unique_ptr<Flatbuffer::NativeTableType> &other) {
-    return FromFlatbuffer(*other);
+      const flatbuffers::unique_ptr<Flatbuffer::NativeTableType> &other,
+      ::aos::fbs::FlatbufferCopyMode mode =
+          ::aos::fbs::FlatbufferCopyMode::kReplace) {
+    return FromFlatbuffer(*other, mode);
   }
 )code",
       absl::StrJoin(copiers, "\n"));
@@ -873,23 +901,33 @@ std::string MakeCopier(const std::vector<FieldData> &fields) {
   std::vector<std::string> copiers;
   for (const FieldData &field : fields) {
     if (field.is_struct) {
-      copiers.emplace_back(absl::StrFormat(R"code(    if (other.has_%s()) {
+      copiers.emplace_back(absl::StrFormat(
+          R"code(    // No merge logic required for structs since we always take the other's value.
+    if (other.has_%s()) {
       set_%s(*other.%s());
     }
 )code",
-                                           field.name, field.name, field.name));
+          field.name, field.name, field.name));
     } else if (field.is_inline) {
-      copiers.emplace_back(absl::StrFormat(R"code(    if (other.has_%s()) {
+      copiers.emplace_back(absl::StrFormat(
+          R"code(    // No merge logic required for inline data since we always take the other's value.
+    if (other.has_%s()) {
       set_%s(other.%s());
     }
 )code",
-                                           field.name, field.name, field.name));
+          field.name, field.name, field.name));
     } else {
       copiers.emplace_back(absl::StrFormat(R"code(    if (other.has_%s()) {
-      %s *added_%s =
-          add_%s();
-      ABSL_CHECK(added_%s != nullptr);
-      if (!added_%s->FromFlatbuffer(other.%s())) {
+      %s *target_%s = nullptr;
+      if (has_%s()) {
+        // Use the existing field if it exists.
+        target_%s = mutable_%s();
+      } else {
+        // If the field doesn't exist, add a new one.
+        target_%s = add_%s();
+      }
+      ABSL_CHECK(target_%s != nullptr);
+      if (!target_%s->FromFlatbuffer(other.%s(), mode)) {
         // Fail if we were unable to copy (e.g., if we tried to copy in a long
         // vector and do not have the space for it).
         return false;
@@ -898,7 +936,8 @@ std::string MakeCopier(const std::vector<FieldData> &fields) {
 )code",
                                            field.name, field.full_type,
                                            field.name, field.name, field.name,
-                                           field.name, field.name));
+                                           field.name, field.name, field.name,
+                                           field.name, field.name, field.name));
     }
   }
   return absl::StrFormat(
@@ -907,16 +946,28 @@ std::string MakeCopier(const std::vector<FieldData> &fields) {
   // returning true on success.
   // This is a deep copy, and will call FromFlatbuffer on any constituent
   // objects.
-  [[nodiscard]] bool FromFlatbuffer([[maybe_unused]] const Flatbuffer &other) {
-    Clear();
+  [[nodiscard]] bool FromFlatbuffer(
+      [[maybe_unused]] const Flatbuffer &other,
+      ::aos::fbs::FlatbufferCopyMode mode =
+          ::aos::fbs::FlatbufferCopyMode::kReplace) {
+    switch (mode) {
+    case ::aos::fbs::FlatbufferCopyMode::kReplace:
+      Clear();
+      break;
+    case ::aos::fbs::FlatbufferCopyMode::kMergeWithVectorOverwrite:
+      break;
+    }
 %s
     return true;
   }
   // Equivalent to FromFlatbuffer(const Flatbuffer&); this overload is provided
   // to ease implementation of the aos::fbs::Vector internals.
-  [[nodiscard]] bool FromFlatbuffer(const Flatbuffer *other) {
+  [[nodiscard]] bool FromFlatbuffer(
+      const Flatbuffer *other,
+      ::aos::fbs::FlatbufferCopyMode mode =
+          ::aos::fbs::FlatbufferCopyMode::kReplace) {
     ABSL_CHECK(other != nullptr);
-    return FromFlatbuffer(*other);
+    return FromFlatbuffer(*other, mode);
   }
 )code",
       absl::StrJoin(copiers, "\n"));
