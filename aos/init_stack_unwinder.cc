@@ -1,6 +1,12 @@
 #include "aos/init_stack_unwinder.h"
 
+#include <string.h>
+
 #include <algorithm>
+
+// Disable remote unwinding. We only care about local support.
+// https://www.nongnu.org/libunwind/man/libunwind(3).html
+#define UNW_LOCAL_ONLY
 
 #include "absl/debugging/stacktrace.h"
 #include <libunwind.h>

@@ -616,6 +616,9 @@ const uint8_t *AddFlatBuffer(std::vector<uint8_t> &flatbuf,
          !(flatbuf.size() & (sizeof(largest_scalar_t) - 1))) {
     flatbuf.push_back(0);
   }
+  if (sizeof(uoffset_t) <= newlen) {
+    std::abort();
+  }
   auto insertion_point = static_cast<uoffset_t>(flatbuf.size());
   // Insert the entire FlatBuffer minus the root pointer.
   flatbuf.insert(flatbuf.end(), newbuf + sizeof(uoffset_t), newbuf + newlen);

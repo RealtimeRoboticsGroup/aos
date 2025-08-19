@@ -143,14 +143,16 @@ filegroup(
     srcs = ["lib/libclang.so"],
 )
 
-cc_library(
+cc_import(
     name = "libunwind",
     hdrs = [
         "include/libunwind.h",
         "include/__libunwind_config.h",
     ],
+    interface_library = glob(["lib/*/libunwind.so"], allow_empty=False)[0],
     includes = [
         "include",
     ],
+    system_provided = True,
     applicable_licenses = [":libunwind_license"],
 )
