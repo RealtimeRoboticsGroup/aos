@@ -17,7 +17,7 @@ import shutil
 def call(args, **kwargs):
     # Make sure the environmental variables for the ssh agent get through.
     env = os.environ.copy()
-    env["LD_LIBRARY_PATH"] = "external/amd64_debian_sysroot/usr/lib/x86_64-linux-gnu/:external/amd64_debian_sysroot/lib/x86_64-linux-gnu/"
+    #env["LD_LIBRARY_PATH"] = "external/amd64_debian_sysroot/usr/lib/x86_64-linux-gnu/:external/amd64_debian_sysroot/lib/x86_64-linux-gnu/"
     subprocess.check_call(
         args,
         **kwargs,
@@ -81,8 +81,8 @@ def main(argv):
 
     ssh_target = "%s@%s" % (user, hostname)
 
-    ssh_path = "external/amd64_debian_sysroot/usr/bin/ssh"
-    scp_path = "external/amd64_debian_sysroot/usr/bin/scp"
+    ssh_path = "ssh"
+    scp_path = "scp"
 
     # install jq
     try:
@@ -137,7 +137,7 @@ def main(argv):
             os.chmod(os.path.join(temp_dir, "starterd"), 0o775 | stat.S_ISUID)
 
         rsync_cmd = ([
-            "external/amd64_debian_sysroot/usr/bin/rsync",
+            "rsync",
             "-e",
             ssh_path,
             "-c",

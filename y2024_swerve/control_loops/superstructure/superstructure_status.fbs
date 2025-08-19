@@ -1,0 +1,6 @@
+namespace y2024_swerve.control_loops.superstructure;
+
+table Status {
+}
+
+root_type Status;

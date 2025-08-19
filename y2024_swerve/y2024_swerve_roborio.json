@@ -192,6 +192,34 @@
             "frequency": 10
         },
         {
+            "name": "/roborio/superstructure",
+            "type": "y2024_swerve.control_loops.superstructure.Goal",
+            "source_node": "roborio",
+            "max_size": 224,
+            "frequency": 250
+        },
+        {
+            "name": "/roborio/superstructure",
+            "type": "y2024_swerve.control_loops.superstructure.Position",
+            "source_node": "roborio",
+            "max_size": 224,
+            "frequency": 250
+        },
+        {
+            "name": "/roborio/superstructure",
+            "type": "y2024_swerve.control_loops.superstructure.Status",
+            "source_node": "roborio",
+            "max_size": 224,
+            "frequency": 250
+        },
+        {
+            "name": "/roborio/superstructure",
+            "type": "y2024_swerve.control_loops.superstructure.Output",
+            "source_node": "roborio",
+            "max_size": 224,
+            "frequency": 250
+        },
+        {
             "name": "/roborio/drivetrain",
             "type": "frc.control_loops.drivetrain.Goal",
             "source_node": "roborio",
@@ -317,6 +345,13 @@
             "args": [
               "--nodie_on_malloc"
             ],
+            "nodes": [
+                "roborio"
+            ]
+        },
+        {
+            "name": "superstructure",
+            "executable_name": "superstructure",
             "nodes": [
                 "roborio"
             ]

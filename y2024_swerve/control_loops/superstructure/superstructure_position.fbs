@@ -1,0 +1,13 @@
+include "frc/control_loops/control_loops.fbs";
+include "frc/control_loops/profiled_subsystem.fbs";
+
+namespace y2024_swerve.control_loops.superstructure;
+
+table Position {
+    // Values of the encoder and potentiometer at the intake pivot
+    // Zero is when the lowest extent of the lexan is level with the
+    // bellypan, positive is retracted inward.
+    the_arm:frc.AbsolutePosition (id: 0);
+}
+
+root_type Position;

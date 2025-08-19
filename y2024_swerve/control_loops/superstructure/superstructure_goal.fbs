@@ -1,0 +1,8 @@
+namespace y2024_swerve.control_loops.superstructure;
+
+table Goal {
+    // Speed at which to spin the arm, in radians / second.
+    the_arm:double (id: 0);
+}
+
+root_type Goal;

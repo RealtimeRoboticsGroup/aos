@@ -1,0 +1,9 @@
+namespace y2024_swerve.control_loops.superstructure;
+
+table Output {
+    // Output current of The Arm, in amperes.
+    // Positive is Counter-Clockwise when you look at the arm from the side that has the orange mount for the CANCoder.
+    the_arm:double (id: 0);
+}
+
+root_type Output;
