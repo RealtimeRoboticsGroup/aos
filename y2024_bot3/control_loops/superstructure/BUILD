@@ -1,4 +1,4 @@
-load("@com_github_google_flatbuffers//:typescript.bzl", "flatbuffer_ts_library")
+#load("@com_github_google_flatbuffers//:typescript.bzl", "flatbuffer_ts_library")
 load("//aos/flatbuffers:generate.bzl", "static_flatbuffer")
 load("//tools/build_rules:js.bzl", "ts_project")
 
@@ -10,8 +10,8 @@ static_flatbuffer(
         "superstructure_goal.fbs",
     ],
     deps = [
-        "//frc971/control_loops:control_loops_fbs",
-        "//frc971/control_loops:profiled_subsystem_fbs",
+        "//frc/control_loops:control_loops_fbs",
+        "//frc/control_loops:profiled_subsystem_fbs",
     ],
 )
 
@@ -28,21 +28,21 @@ static_flatbuffer(
         "superstructure_status.fbs",
     ],
     deps = [
-        "//frc971/control_loops:control_loops_fbs",
-        "//frc971/control_loops:profiled_subsystem_fbs",
+        "//frc/control_loops:control_loops_fbs",
+        "//frc/control_loops:profiled_subsystem_fbs",
     ],
 )
 
-flatbuffer_ts_library(
-    name = "superstructure_status_ts_fbs",
-    srcs = [
-        "superstructure_status.fbs",
-    ],
-    deps = [
-        "//frc971/control_loops:control_loops_ts_fbs",
-        "//frc971/control_loops:profiled_subsystem_ts_fbs",
-    ],
-)
+#flatbuffer_ts_library(
+#    name = "superstructure_status_ts_fbs",
+#    srcs = [
+#        "superstructure_status.fbs",
+#    ],
+#    deps = [
+#        "//frc/control_loops:control_loops_ts_fbs",
+#        "//frc/control_loops:profiled_subsystem_ts_fbs",
+#    ],
+#)
 
 static_flatbuffer(
     name = "superstructure_position_fbs",
@@ -50,34 +50,34 @@ static_flatbuffer(
         "superstructure_position.fbs",
     ],
     deps = [
-        "//frc971/control_loops:control_loops_fbs",
-        "//frc971/control_loops:profiled_subsystem_fbs",
+        "//frc/control_loops:control_loops_fbs",
+        "//frc/control_loops:profiled_subsystem_fbs",
     ],
 )
 
-flatbuffer_ts_library(
-    name = "superstructure_position_ts_fbs",
-    srcs = [
-        "superstructure_position.fbs",
-    ],
-    deps = [
-        "//frc971/control_loops:control_loops_ts_fbs",
-        "//frc971/control_loops:profiled_subsystem_ts_fbs",
-    ],
-)
+#flatbuffer_ts_library(
+#    name = "superstructure_position_ts_fbs",
+#    srcs = [
+#        "superstructure_position.fbs",
+#    ],
+#    deps = [
+#        "//frc/control_loops:control_loops_ts_fbs",
+#        "//frc/control_loops:profiled_subsystem_ts_fbs",
+#    ],
+#)
 
 static_flatbuffer(
     name = "superstructure_can_position_fbs",
     srcs = ["superstructure_can_position.fbs"],
-    deps = ["//frc971/control_loops:can_talonfx_fbs"],
+    deps = ["//frc/control_loops:can_talonfx_fbs"],
 )
 
-flatbuffer_ts_library(
-    name = "superstructure_can_position_ts_fbs",
-    srcs = ["superstructure_can_position.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
-    deps = ["//frc971/control_loops:can_talonfx_ts_fbs"],
-)
+#flatbuffer_ts_library(
+#    name = "superstructure_can_position_ts_fbs",
+#    srcs = ["superstructure_can_position.fbs"],
+#    target_compatible_with = ["@platforms//os:linux"],
+#    deps = ["//frc/control_loops:can_talonfx_ts_fbs"],
+#)
 
 cc_library(
     name = "superstructure_lib",
@@ -96,10 +96,10 @@ cc_library(
         ":superstructure_status_fbs",
         "//aos:flatbuffer_merge",
         "//aos/events:event_loop",
-        "//frc971/constants:constants_sender_lib",
-        "//frc971/control_loops:control_loop",
-        "//frc971/zeroing:absolute_encoder",
-        "//frc971/zeroing:pot_and_absolute_encoder",
+        "//frc/constants:constants_sender_lib",
+        "//frc/control_loops:control_loop",
+        "//frc/zeroing:absolute_encoder",
+        "//frc/zeroing:pot_and_absolute_encoder",
         "//y2024_bot3:constants",
         "//y2024_bot3/constants:constants_fbs",
         "//y2024_bot3/constants:simulated_constants_sender",
@@ -138,11 +138,11 @@ cc_test(
         "//aos/events/logging:log_writer",
         "//aos/testing:googletest",
         "//aos/time",
-        "//frc971/control_loops:capped_test_plant",
-        "//frc971/control_loops:control_loop_test",
-        "//frc971/control_loops:position_sensor_sim",
-        "//frc971/control_loops:subsystem_simulator",
-        "//frc971/control_loops:team_number_test_environment",
+        "//frc/control_loops:capped_test_plant",
+        "//frc/control_loops:control_loop_test",
+        "//frc/control_loops:position_sensor_sim",
+        "//frc/control_loops:subsystem_simulator",
+        "//frc/control_loops:team_number_test_environment",
         "//y2024_bot3/control_loops/superstructure/arm:arm_plants",
     ],
 )

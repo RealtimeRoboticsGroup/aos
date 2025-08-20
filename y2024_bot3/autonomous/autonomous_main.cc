@@ -1,6 +1,6 @@
 #include "aos/events/shm_event_loop.h"
 #include "aos/init.h"
-#include "frc971/control_loops/swerve/autonomous_pd_loop.h"
+#include "frc/control_loops/swerve/autonomous_pd_loop.h"
 #include "y2024_bot3/control_loops/superstructure/superstructure_goal_static.h"
 
 namespace y2024_bot3::autonomous {
@@ -23,7 +23,7 @@ class AutoGoalSender {
         {2.5, [this]() { set_goals(PivotGoal::IDLE, IntakeGoal::NONE); }}*/};
 
     autonomous_pd_loop_ =
-        std::make_unique<frc971::control_loops::swerve::AutonomousPDLoop>(
+        std::make_unique<frc::control_loops::swerve::AutonomousPDLoop>(
             event_loop, path_to_trajectory, callbacks);
   }
 
@@ -38,7 +38,7 @@ class AutoGoalSender {
 
  private:
   aos::Sender<GoalStatic> superstructure_goal_sender_;
-  std::unique_ptr<frc971::control_loops::swerve::AutonomousPDLoop>
+  std::unique_ptr<frc::control_loops::swerve::AutonomousPDLoop>
       autonomous_pd_loop_;
 };
 

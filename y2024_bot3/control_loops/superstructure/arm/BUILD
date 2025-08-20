@@ -30,8 +30,8 @@ cc_library(
     target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
-        "//frc971/control_loops:hybrid_state_feedback_loop",
-        "//frc971/control_loops:state_feedback_loop",
+        "//frc/control_loops:hybrid_state_feedback_loop",
+        "//frc/control_loops:state_feedback_loop",
     ],
 )
 

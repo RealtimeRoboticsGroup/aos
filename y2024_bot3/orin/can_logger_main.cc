@@ -1,6 +1,6 @@
 #include "aos/events/shm_event_loop.h"
 #include "aos/init.h"
-#include "frc971/can_logger/can_logger.h"
+#include "frc/can_logger/can_logger.h"
 
 int main(int argc, char **argv) {
   ::aos::InitGoogle(&argc, &argv);
@@ -10,7 +10,7 @@ int main(int argc, char **argv) {
 
   ::aos::ShmEventLoop event_loop(&config.message());
 
-  frc971::can_logger::CanLogger cana_logger(&event_loop, "/can/cana", "cana");
+  frc::can_logger::CanLogger cana_logger(&event_loop, "/can/cana", "cana");
 
   event_loop.Run();
 

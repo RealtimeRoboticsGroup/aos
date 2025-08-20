@@ -5,11 +5,11 @@
 #include <cmath>
 #include <cstdint>
 
-#include "frc971/constants.h"
-#include "frc971/control_loops/pose.h"
-#include "frc971/control_loops/static_zeroing_single_dof_profiled_subsystem.h"
-#include "frc971/zeroing/absolute_encoder.h"
-#include "frc971/zeroing/pot_and_absolute_encoder.h"
+#include "frc/constants.h"
+#include "frc/control_loops/pose.h"
+#include "frc/control_loops/static_zeroing_single_dof_profiled_subsystem.h"
+#include "frc/zeroing/absolute_encoder.h"
+#include "frc/zeroing/pot_and_absolute_encoder.h"
 #include "y2024_bot3/constants/constants_generated.h"
 
 namespace y2024_bot3::constants {
@@ -23,21 +23,21 @@ struct Values {
   static const int kDrivetrainRxPriority = 36;
 
   struct PotAndAbsEncoderConstants {
-    ::frc971::control_loops::StaticZeroingSingleDOFProfiledSubsystemParams<
-        ::frc971::zeroing::PotAndAbsoluteEncoderZeroingEstimator>
+    ::frc::control_loops::StaticZeroingSingleDOFProfiledSubsystemParams<
+        ::frc::zeroing::PotAndAbsoluteEncoderZeroingEstimator>
         subsystem_params;
     double potentiometer_offset;
   };
 
   struct AbsoluteEncoderConstants {
-    ::frc971::control_loops::StaticZeroingSingleDOFProfiledSubsystemParams<
-        ::frc971::zeroing::AbsoluteEncoderZeroingEstimator>
+    ::frc::control_loops::StaticZeroingSingleDOFProfiledSubsystemParams<
+        ::frc::zeroing::AbsoluteEncoderZeroingEstimator>
         subsystem_params;
   };
 
   struct PotConstants {
-    ::frc971::control_loops::StaticZeroingSingleDOFProfiledSubsystemParams<
-        ::frc971::zeroing::RelativeEncoderZeroingEstimator>
+    ::frc::control_loops::StaticZeroingSingleDOFProfiledSubsystemParams<
+        ::frc::zeroing::RelativeEncoderZeroingEstimator>
         subsystem_params;
     double potentiometer_offset;
   };

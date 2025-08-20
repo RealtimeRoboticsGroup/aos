@@ -1,5 +1,5 @@
-include "frc971/control_loops/control_loops.fbs";
-include "frc971/control_loops/profiled_subsystem.fbs";
+include "frc/control_loops/control_loops.fbs";
+include "frc/control_loops/profiled_subsystem.fbs";
 
 namespace y2024_bot3.control_loops.superstructure;
 
@@ -26,7 +26,7 @@ table Status {
     estopped:bool (id: 1);
 
     // Estimated Angles + Velocities of the Intake
-    arm:frc971.control_loops.PotAndAbsoluteEncoderProfiledJointStatus (id: 2);
+    arm:frc.control_loops.PotAndAbsoluteEncoderProfiledJointStatus (id: 2);
 
     // Tells us what IntakeGoal is
     intake_roller_status: IntakeRollerStatus (id: 3);

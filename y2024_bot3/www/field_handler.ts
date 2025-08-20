@@ -2,13 +2,13 @@ import {ByteBuffer} from 'flatbuffers'
 import {ClientStatistics} from '../../aos/network/message_bridge_client_generated'
 import {ServerStatistics, State as ConnectionState} from '../../aos/network/message_bridge_server_generated'
 import {Connection} from '../../aos/network/www/proxy'
-import {ZeroingError} from '../../frc971/control_loops/control_loops_generated'
-import {Position as DrivetrainPosition} from '../../frc971/control_loops/drivetrain/drivetrain_position_generated'
-import {CANPosition as DrivetrainCANPosition} from '../../frc971/control_loops/drivetrain/drivetrain_can_position_generated'
-import {Status as DrivetrainStatus} from '../../frc971/control_loops/drivetrain/drivetrain_status_generated'
+import {ZeroingError} from '../../frc/control_loops/control_loops_generated'
+import {Position as DrivetrainPosition} from '../../frc/control_loops/drivetrain/drivetrain_position_generated'
+import {CANPosition as DrivetrainCANPosition} from '../../frc/control_loops/drivetrain/drivetrain_can_position_generated'
+import {Status as DrivetrainStatus} from '../../frc/control_loops/drivetrain/drivetrain_status_generated'
 import {ArmStatus, IntakeRollerStatus, Status as SuperstructureStatus} from '../control_loops/superstructure/superstructure_status_generated'
 import {Position as SuperstructurePosition} from  '../control_loops/superstructure/superstructure_position_generated'
-import {TargetMap} from '../../frc971/vision/target_map_generated'
+import {TargetMap} from '../../frc/vision/target_map_generated'
 
 
 import {FIELD_LENGTH, FIELD_WIDTH, FT_TO_M, IN_TO_M} from './constants';
@@ -59,7 +59,7 @@ export class FieldHandler {
   private rollerBeambreak: HTMLElement =
       (document.getElementById('roller_beambreak') as HTMLElement);
 
-  // there is a encoder:double field in frc971.PotAndAbsolutePosition, do we need to include that as well?
+  // there is a encoder:double field in frc.PotAndAbsolutePosition, do we need to include that as well?
   private armAbsolutePosition: HTMLElement =
       (document.getElementById('arm_absolute_position') as HTMLElement);
   private armPotPosition: HTMLElement =
@@ -128,7 +128,7 @@ export class FieldHandler {
       for (const camera in CAMERAS) {
         // Make unreliable to reduce network spam.
         this.connection.addHandler(
-          CAMERAS[camera], 'frc971.vision.TargetMap', (data) => {
+          CAMERAS[camera], 'frc.vision.TargetMap', (data) => {
               this.handleCameraTargetMap(camera, data);
             });
       }

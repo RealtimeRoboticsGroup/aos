@@ -11,8 +11,8 @@ cc_binary(
         "//aos:init",
         "//aos/events:shm_event_loop",
         "//aos/time",
-        "//frc971/constants:constants_sender_lib",
-        "//frc971/control_loops/swerve:swerve_control_loops",
+        "//frc/constants:constants_sender_lib",
+        "//frc/control_loops/swerve:swerve_control_loops",
         "//y2024_swerve/constants:constants_fbs",
     ],
 )
@@ -25,7 +25,7 @@ cc_binary(
         ":parameters",
         "//aos:init",
         "//aos/events:shm_event_loop",
-        "//frc971/control_loops/swerve:goal_solver",
+        "//frc/control_loops/swerve:goal_solver",
     ],
 )
 
@@ -45,7 +45,7 @@ cc_library(
     name = "parameters",
     hdrs = ["parameters.h"],
     deps = [
-        "//frc971/control_loops/swerve:simplified_dynamics",
+        "//frc/control_loops/swerve:simplified_dynamics",
         "//y2024_swerve:constants",
     ],
 )

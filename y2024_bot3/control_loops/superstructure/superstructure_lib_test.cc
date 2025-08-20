@@ -5,12 +5,12 @@
 #include "gtest/gtest.h"
 
 #include "aos/events/logging/log_writer.h"
-#include "frc971/control_loops/capped_test_plant.h"
-#include "frc971/control_loops/control_loop_test.h"
-#include "frc971/control_loops/position_sensor_sim.h"
-#include "frc971/control_loops/subsystem_simulator.h"
-#include "frc971/control_loops/team_number_test_environment.h"
-#include "frc971/zeroing/absolute_encoder.h"
+#include "frc/control_loops/capped_test_plant.h"
+#include "frc/control_loops/control_loop_test.h"
+#include "frc/control_loops/position_sensor_sim.h"
+#include "frc/control_loops/subsystem_simulator.h"
+#include "frc/control_loops/team_number_test_environment.h"
+#include "frc/zeroing/absolute_encoder.h"
 #include "y2024_bot3/constants/simulated_constants_sender.h"
 #include "y2024_bot3/control_loops/superstructure/arm/arm_plant.h"
 #include "y2024_bot3/control_loops/superstructure/superstructure.h"
@@ -23,22 +23,22 @@ namespace y2024_bot3::control_loops::superstructure::testing {
 namespace chrono = std::chrono;
 
 using ::aos::monotonic_clock;
-using ::frc971::CreateProfileParameters;
-using ::frc971::control_loops::CappedTestPlant;
-using ::frc971::control_loops::
+using ::frc::CreateProfileParameters;
+using ::frc::control_loops::CappedTestPlant;
+using ::frc::control_loops::
     CreateStaticZeroingSingleDOFProfiledSubsystemGoal;
-using ::frc971::control_loops::PositionSensorSimulator;
-using ::frc971::control_loops::StaticZeroingSingleDOFProfiledSubsystemGoal;
+using ::frc::control_loops::PositionSensorSimulator;
+using ::frc::control_loops::StaticZeroingSingleDOFProfiledSubsystemGoal;
 typedef Superstructure::PotAndAbsoluteEncoderSubsystem
     PotAndAbsoluteEncoderSubsystem;
 typedef Superstructure::AbsoluteEncoderSubsystem AbsoluteEncoderSubsystem;
 using PotAndAbsoluteEncoderSimulator =
-    frc971::control_loops::SubsystemSimulator<
-        frc971::control_loops::PotAndAbsoluteEncoderProfiledJointStatus,
+    frc::control_loops::SubsystemSimulator<
+        frc::control_loops::PotAndAbsoluteEncoderProfiledJointStatus,
         PotAndAbsoluteEncoderSubsystem::State,
         constants::Values::PotAndAbsEncoderConstants>;
-using AbsoluteEncoderSimulator = frc971::control_loops::SubsystemSimulator<
-    frc971::control_loops::AbsoluteEncoderProfiledJointStatus,
+using AbsoluteEncoderSimulator = frc::control_loops::SubsystemSimulator<
+    frc::control_loops::AbsoluteEncoderProfiledJointStatus,
     AbsoluteEncoderSubsystem::State,
     constants::Values::AbsoluteEncoderConstants>;
 
@@ -68,7 +68,7 @@ class SuperstructureSimulation {
               .potentiometer_offset = simulated_robot_constants->robot()
                                           ->arm_constants()
                                           ->arm_potentiometer_offset()},
-             frc971::constants::Range::FromFlatbuffer(
+             frc::constants::Range::FromFlatbuffer(
                  simulated_robot_constants->common()->arm()->range()),
              simulated_robot_constants->robot()
                  ->arm_constants()
@@ -95,9 +95,9 @@ class SuperstructureSimulation {
     ::aos::Sender<Position>::Builder builder =
         superstructure_position_sender_.MakeBuilder();
 
-    frc971::PotAndAbsolutePosition::Builder arm_builder =
-        builder.MakeBuilder<frc971::PotAndAbsolutePosition>();
-    flatbuffers::Offset<frc971::PotAndAbsolutePosition> arm_offset =
+    frc::PotAndAbsolutePosition::Builder arm_builder =
+        builder.MakeBuilder<frc::PotAndAbsolutePosition>();
+    flatbuffers::Offset<frc::PotAndAbsolutePosition> arm_offset =
         arm_.encoder()->GetSensorValues(&arm_builder);
 
     Position::Builder position_builder = builder.MakeBuilder<Position>();
@@ -126,10 +126,10 @@ class SuperstructureSimulation {
   bool first_ = true;
 };
 
-class SuperstructureTest : public ::frc971::testing::ControlLoopTest {
+class SuperstructureTest : public ::frc::testing::ControlLoopTest {
  public:
   SuperstructureTest()
-      : ::frc971::testing::ControlLoopTest(
+      : ::frc::testing::ControlLoopTest(
             aos::configuration::ReadConfig("y2024_bot3/aos_config.json"),
             std::chrono::microseconds(5000)),
         simulated_constants_dummy_(SendSimulationConstants(
@@ -157,7 +157,7 @@ class SuperstructureTest : public ::frc971::testing::ControlLoopTest {
         superstructure_plant_event_loop_(MakeEventLoop("plant", roborio_)),
         superstructure_plant_(superstructure_plant_event_loop_.get(),
                               simulated_robot_constants_, dt()) {
-    set_team_id(frc971::control_loops::testing::kTeamNumber);
+    set_team_id(frc::control_loops::testing::kTeamNumber);
 
     SetEnabled(true);
 
@@ -266,7 +266,7 @@ class SuperstructureTest : public ::frc971::testing::ControlLoopTest {
   ::std::unique_ptr<::aos::EventLoop> test_event_loop_;
   ::aos::PhasedLoopHandler *phased_loop_handle_ = nullptr;
 
-  frc971::constants::ConstantsFetcher<Constants> constants_fetcher_;
+  frc::constants::ConstantsFetcher<Constants> constants_fetcher_;
   const Constants *simulated_robot_constants_;
 
   ::aos::Fetcher<Goal> superstructure_goal_fetcher_;

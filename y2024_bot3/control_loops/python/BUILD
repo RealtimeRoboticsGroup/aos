@@ -16,8 +16,8 @@ py_binary(
     target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         ":python_init",
-        "//frc971/control_loops/python:angular_system",
-        "//frc971/control_loops/python:controls",
+        "//frc/control_loops/python:angular_system",
+        "//frc/control_loops/python:controls",
         "@pip//glog",
         "@pip//python_gflags",
     ],
@@ -31,8 +31,8 @@ py_binary(
     target_compatible_with = ["@platforms//cpu:x86_64"],
     visibility = ["//y2024_bot3:__subpackages__"],
     deps = [
-        "//frc971/control_loops/python:angular_system_current",
-        "//frc971/control_loops/python:controls",
+        "//frc/control_loops/python:angular_system_current",
+        "//frc/control_loops/python:controls",
         "@pip//glog",
         "@pip//python_gflags",
     ],

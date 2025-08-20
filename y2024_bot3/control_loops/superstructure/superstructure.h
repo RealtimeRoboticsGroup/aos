@@ -4,10 +4,10 @@
 #include "aos/events/event_loop.h"
 #include "aos/json_to_flatbuffer.h"
 #include "aos/time/time.h"
-#include "frc971/constants/constants_sender_lib.h"
-#include "frc971/control_loops/control_loop.h"
-#include "frc971/zeroing/absolute_encoder.h"
-#include "frc971/zeroing/pot_and_absolute_encoder.h"
+#include "frc/constants/constants_sender_lib.h"
+#include "frc/control_loops/control_loop.h"
+#include "frc/zeroing/absolute_encoder.h"
+#include "frc/zeroing/pot_and_absolute_encoder.h"
 #include "y2024_bot3/constants.h"
 #include "y2024_bot3/constants/constants_generated.h"
 #include "y2024_bot3/control_loops/superstructure/superstructure_goal_generated.h"
@@ -18,17 +18,17 @@
 namespace y2024_bot3::control_loops::superstructure {
 
 class Superstructure
-    : public ::frc971::controls::ControlLoop<Goal, Position, Status, Output> {
+    : public ::frc::controls::ControlLoop<Goal, Position, Status, Output> {
  public:
   using AbsoluteEncoderSubsystem =
-      ::frc971::control_loops::StaticZeroingSingleDOFProfiledSubsystem<
-          ::frc971::zeroing::AbsoluteEncoderZeroingEstimator,
-          ::frc971::control_loops::AbsoluteEncoderProfiledJointStatus>;
+      ::frc::control_loops::StaticZeroingSingleDOFProfiledSubsystem<
+          ::frc::zeroing::AbsoluteEncoderZeroingEstimator,
+          ::frc::control_loops::AbsoluteEncoderProfiledJointStatus>;
 
   using PotAndAbsoluteEncoderSubsystem =
-      ::frc971::control_loops::StaticZeroingSingleDOFProfiledSubsystem<
-          ::frc971::zeroing::PotAndAbsoluteEncoderZeroingEstimator,
-          ::frc971::control_loops::PotAndAbsoluteEncoderProfiledJointStatus>;
+      ::frc::control_loops::StaticZeroingSingleDOFProfiledSubsystem<
+          ::frc::zeroing::PotAndAbsoluteEncoderZeroingEstimator,
+          ::frc::control_loops::PotAndAbsoluteEncoderProfiledJointStatus>;
 
   explicit Superstructure(::aos::EventLoop *event_loop,
                           const ::std::string &name = "/superstructure");
@@ -43,11 +43,11 @@ class Superstructure
                             aos::Sender<Status>::Builder *status) override;
 
  private:
-  frc971::constants::ConstantsFetcher<Constants> constants_fetcher_;
+  frc::constants::ConstantsFetcher<Constants> constants_fetcher_;
   const Constants *robot_constants_;
-  aos::Fetcher<aos::JoystickState> joystick_state_fetcher_;
+  aos::Fetcher<frc::JoystickState> joystick_state_fetcher_;
 
-  aos::Alliance alliance_ = aos::Alliance::kInvalid;
+  frc::Alliance alliance_ = frc::Alliance::kInvalid;
 
   PotAndAbsoluteEncoderSubsystem arm_;
 

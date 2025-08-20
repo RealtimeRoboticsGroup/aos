@@ -106,13 +106,13 @@ export function plotSwerve(conn: Connection, element: Element): void {
   }
 
   const goal = aosPlotter.addMessageSource(
-      '/drivetrain', 'frc971.control_loops.swerve.Goal');
+      '/drivetrain', 'frc.control_loops.swerve.Goal');
   const output = aosPlotter.addMessageSource(
-      '/drivetrain', 'frc971.control_loops.swerve.Output');
+      '/drivetrain', 'frc.control_loops.swerve.Output');
   const status = aosPlotter.addMessageSource(
-      '/drivetrain', 'frc971.control_loops.swerve.Status');
+      '/drivetrain', 'frc.control_loops.swerve.Status');
   const position = aosPlotter.addMessageSource(
-      '/drivetrain', 'frc971.control_loops.swerve.Position');
+      '/drivetrain', 'frc.control_loops.swerve.Position');
 
   plotModule(
       'Front Left', aosPlotter, element, position, ['front_left', 'rotation_position'], status, ['front_left_status', 'rotation'],

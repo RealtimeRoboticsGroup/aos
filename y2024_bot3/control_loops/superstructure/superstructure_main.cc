@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
 
   ::aos::ShmEventLoop event_loop(&config.message());
 
-  frc971::constants::WaitForConstants<y2024_bot3::Constants>(&config.message());
+  frc::constants::WaitForConstants<y2024_bot3::Constants>(&config.message());
 
   Superstructure superstructure(&event_loop);
 

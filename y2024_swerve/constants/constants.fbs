@@ -1,13 +1,13 @@
-include "frc971/zeroing/constants.fbs";
-include "frc971/control_loops/swerve/swerve_zeroing.fbs";
-include "frc971/vision/calibration.fbs";
-include "frc971/wpilib/swerve/swerve_constants.fbs";
-include "frc971/control_loops/profiled_subsystem.fbs";
+include "frc/zeroing/constants.fbs";
+include "frc/control_loops/swerve/swerve_zeroing.fbs";
+include "frc/vision/calibration.fbs";
+include "frc/wpilib/swerve/swerve_constants.fbs";
+include "frc/control_loops/profiled_subsystem.fbs";
 
 namespace y2024_swerve;
 
 table CameraConfiguration {
-  calibration:frc971.vision.calibration.CameraCalibration (id: 0);
+  calibration:frc.vision.calibration.CameraCalibration (id: 0);
 }
 
 table VelocityControllerWeights {
@@ -21,14 +21,14 @@ table VelocityControllerWeights {
 }
 
 table Common {
-  rotation:frc971.control_loops.StaticZeroingSingleDOFProfiledSubsystemCommonParams (id: 0);
-  swerve_positions_constants:frc971.wpilib.swerve.SwervePositionConstants (id: 1);
+  rotation:frc.control_loops.StaticZeroingSingleDOFProfiledSubsystemCommonParams (id: 0);
+  swerve_positions_constants:frc.wpilib.swerve.SwervePositionConstants (id: 1);
   weights: VelocityControllerWeights (id: 2);
 }
 
 
 table RobotConstants {
-    swerve_zeroing:frc971.control_loops.swerve.SwerveZeroing (id: 0);
+    swerve_zeroing:frc.control_loops.swerve.SwerveZeroing (id: 0);
     cameras:[CameraConfiguration] (id: 1);
 }
 

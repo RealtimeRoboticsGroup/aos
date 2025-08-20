@@ -7,8 +7,8 @@
       "frequency": 2
     },
     {
-      "name": "/imu/aos",
-      "type": "aos.JoystickState",
+      "name": "/imu/frc",
+      "type": "frc.JoystickState",
       "source_node": "imu",
       "frequency": 100,
       "logger": "LOCAL_AND_REMOTE_LOGGER",
@@ -28,7 +28,7 @@
       ]
     },
     {
-      "name": "/imu/aos/remote_timestamps/orin1/imu/aos/aos-JoystickState",
+      "name": "/imu/aos/remote_timestamps/orin1/imu/aos/frc-JoystickState",
       "type": "aos.message_bridge.RemoteMessage",
       "source_node": "imu",
       "logger": "NOT_LOGGED",
@@ -46,7 +46,7 @@
     },
     {
       "name": "/imu/localizer",
-      "type": "frc971.IMUValuesBatch",
+      "type": "frc.IMUValuesBatch",
       "source_node": "imu",
       "frequency": 2200,
       "max_size": 1600,
@@ -54,7 +54,7 @@
     },
     {
       "name": "/imu",
-      "type": "frc971.imu.DualImuBlenderStatus",
+      "type": "frc.imu.DualImuBlenderStatus",
       "source_node": "imu",
       "frequency": 1100,
       "num_senders": 1,
@@ -164,7 +164,7 @@
     },
     {
       "name": "/imu/camera0",
-      "type": "frc971.vision.CameraImage",
+      "type": "frc.vision.CameraImage",
       "source_node": "imu",
       "channel_storage_duration": 1000000000,
       "frequency": 70,
@@ -175,7 +175,7 @@
     },
     {
       "name": "/imu/camera1",
-      "type": "frc971.vision.CameraImage",
+      "type": "frc.vision.CameraImage",
       "source_node": "imu",
       "channel_storage_duration": 1000000000,
       "frequency": 70,
@@ -218,7 +218,7 @@
     },
     {
       "name": "/imu/camera0",
-      "type": "frc971.vision.TargetMap",
+      "type": "frc.vision.TargetMap",
       "source_node": "imu",
       "frequency": 70,
       "num_senders": 2,
@@ -226,7 +226,7 @@
     },
     {
       "name": "/imu/camera1",
-      "type": "frc971.vision.TargetMap",
+      "type": "frc.vision.TargetMap",
       "source_node": "imu",
       "frequency": 70,
       "num_senders": 2,
@@ -234,7 +234,7 @@
     },
     {
       "name": "/imu",
-      "type": "frc971.imu.DualImu",
+      "type": "frc.imu.DualImu",
       "source_node": "imu",
       "frequency": 1100,
       "num_senders": 1,
@@ -242,7 +242,7 @@
     },
     {
       "name": "/imu",
-      "type": "frc971.imu.CanTranslatorStatus",
+      "type": "frc.imu.CanTranslatorStatus",
       "source_node": "imu",
       "frequency": 1000,
       "num_senders": 1,
@@ -250,7 +250,7 @@
     },
     {
       "name": "/imu/can",
-      "type": "frc971.can_logger.CanFrame",
+      "type": "frc.can_logger.CanFrame",
       "source_node": "imu",
       "frequency": 9000,
       "channel_storage_duration": 7000000000,
@@ -259,7 +259,7 @@
     },
     {
       "name": "/imu",
-      "type": "frc971.imu.DualImuBlenderStatus",
+      "type": "frc.imu.DualImuBlenderStatus",
       "source_node": "imu",
       "frequency": 1100,
       "num_senders": 1,
@@ -267,7 +267,7 @@
     },
     {
       "name": "/imu/hardware_monitor",
-      "type": "frc971.orin.HardwareStats",
+      "type": "frc.orin.HardwareStats",
       "source_node": "imu",
       "frequency": 2
     },
@@ -281,14 +281,14 @@
     },
     {
         "name": "/imu/drivetrain",
-        "type": "frc971.control_loops.swerve.Status",
+        "type": "frc.control_loops.swerve.Status",
         "source_node": "imu",
         "max_size": 10000,
         "frequency": 250
     },
     {
         "name": "/imu/drivetrain",
-        "type": "frc971.control_loops.swerve.CanPosition",
+        "type": "frc.control_loops.swerve.CanPosition",
         "source_node": "imu",
         "frequency": 250,
         "num_senders": 1,
@@ -296,7 +296,7 @@
     },
     {
         "name": "/imu/drivetrain",
-        "type": "frc971.control_loops.swerve.Output",
+        "type": "frc.control_loops.swerve.Output",
         "source_node": "imu",
         "frequency": 400,
         "max_size": 200,
@@ -471,9 +471,9 @@
       "executable_name": "argus_monitor",
       "args": [
         "/imu/camera0",
-        "frc971.vision.TargetMap",
+        "frc.vision.TargetMap",
         "/imu/camera1",
-        "frc971.vision.TargetMap",
+        "frc.vision.TargetMap",
       ],
       "user": "pi",
       "nodes": [
@@ -592,7 +592,7 @@
     {
       "match": {
         "name": "/drivetrain",
-        "type": "frc971.control_loops.swerve.Goal",
+        "type": "frc.control_loops.swerve.Goal",
         "source_node": "imu"
       },
       "rename": {
@@ -602,7 +602,7 @@
     {
       "match": {
         "name": "/drivetrain",
-        "type": "frc971.control_loops.swerve.Position",
+        "type": "frc.control_loops.swerve.Position",
         "source_node": "imu"
       },
       "rename": {
@@ -612,7 +612,7 @@
     {
       "match": {
         "name": "/drivetrain",
-        "type": "frc971.control_loops.swerve.Status",
+        "type": "frc.control_loops.swerve.Status",
         "source_node": "imu"
       },
       "rename": {
@@ -622,7 +622,7 @@
     {
       "match": {
         "name": "/drivetrain",
-        "type": "frc971.control_loops.swerve.CanPosition",
+        "type": "frc.control_loops.swerve.CanPosition",
         "source_node": "imu"
       },
       "rename": {
@@ -632,7 +632,7 @@
     {
       "match": {
         "name": "/drivetrain",
-        "type": "frc971.control_loops.swerve.Output",
+        "type": "frc.control_loops.swerve.Output",
         "source_node": "imu"
       },
       "rename": {
@@ -641,8 +641,8 @@
     },
     {
       "match": {
-        "name": "/aos",
-        "type": "aos.RobotState",
+        "name": "/frc",
+        "type": "frc.RobotState",
         "source_node": "imu"
       },
       "rename": {

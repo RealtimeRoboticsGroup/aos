@@ -13,7 +13,7 @@ cc_library(
         ":constants_list_fbs",
         "//aos/events:simulated_event_loop",
         "//aos/testing:path",
-        "//frc971/constants:constants_sender_lib",
+        "//frc/constants:constants_sender_lib",
     ],
 )
 
@@ -54,13 +54,13 @@ static_flatbuffer(
     srcs = ["constants.fbs"],
     visibility = ["//visibility:public"],
     deps = [
-        "//frc971/control_loops:profiled_subsystem_fbs",
-        "//frc971/control_loops/drivetrain:drivetrain_config_fbs",
-        "//frc971/control_loops/swerve:swerve_zeroing_fbs",
-        "//frc971/vision:calibration_fbs",
-        "//frc971/vision:target_map_fbs",
-        "//frc971/wpilib/swerve:swerve_constants_fbs",
-        "//frc971/zeroing:constants_fbs",
+        "//frc/control_loops:profiled_subsystem_fbs",
+        "//frc/control_loops/drivetrain:drivetrain_config_fbs",
+        "//frc/control_loops/swerve:swerve_zeroing_fbs",
+        "//frc/vision:calibration_fbs",
+        "//frc/vision:target_map_fbs",
+        "//frc/wpilib/swerve:swerve_constants_fbs",
+        "//frc/zeroing:constants_fbs",
     ],
 )
 
@@ -81,7 +81,7 @@ cc_binary(
         "//aos:init",
         "//aos/events:shm_event_loop",
         "//aos/testing:path",
-        "//frc971/constants:constants_sender_lib",
+        "//frc/constants:constants_sender_lib",
     ],
 )
 

@@ -6,25 +6,25 @@
 #include "aos/flatbuffer_merge.h"
 #include "aos/network/team_number.h"
 #include "aos/time/time.h"
-#include "frc971/zeroing/wrap.h"
+#include "frc/zeroing/wrap.h"
 
 ABSL_FLAG(bool, ignore_distance, false,
           "If true, ignore distance when shooting and obey joystick_reader");
 
 namespace y2024_bot3::control_loops::superstructure {
 
-using frc971::control_loops::AbsoluteEncoderProfiledJointStatus;
-using frc971::control_loops::PotAndAbsoluteEncoderProfiledJointStatus;
-using frc971::control_loops::RelativeEncoderProfiledJointStatus;
+using frc::control_loops::AbsoluteEncoderProfiledJointStatus;
+using frc::control_loops::PotAndAbsoluteEncoderProfiledJointStatus;
+using frc::control_loops::RelativeEncoderProfiledJointStatus;
 
 Superstructure::Superstructure(::aos::EventLoop *event_loop,
                                const ::std::string &name)
-    : frc971::controls::ControlLoop<Goal, Position, Status, Output>(event_loop,
-                                                                    name),
+    : frc::controls::ControlLoop<Goal, Position, Status, Output>(event_loop,
+                                                                 name),
       constants_fetcher_(event_loop),
       robot_constants_(&constants_fetcher_.constants()),
       joystick_state_fetcher_(
-          event_loop->MakeFetcher<aos::JoystickState>("/aos")),
+          event_loop->MakeFetcher<frc::JoystickState>("/frc")),
       arm_(robot_constants_->common()->arm(),
            robot_constants_->robot()->arm_constants()->zeroing_constants()) {
   event_loop->SetRuntimeRealtimePriority(30);
@@ -50,7 +50,7 @@ void Superstructure::RunIteration(const Goal *unsafe_goal,
   }
 
   aos::FlatbufferFixedAllocatorArray<
-      frc971::control_loops::StaticZeroingSingleDOFProfiledSubsystemGoal, 512>
+      frc::control_loops::StaticZeroingSingleDOFProfiledSubsystemGoal, 512>
       arm_goal_buffer;
 
   ArmStatus arm_status = ArmStatus::IDLE;
@@ -106,10 +106,10 @@ void Superstructure::RunIteration(const Goal *unsafe_goal,
   output_struct.roller_voltage = roller_voltage;
 
   arm_goal_buffer.Finish(
-      frc971::control_loops::CreateStaticZeroingSingleDOFProfiledSubsystemGoal(
+      frc::control_loops::CreateStaticZeroingSingleDOFProfiledSubsystemGoal(
           *arm_goal_buffer.fbb(), arm_position));
 
-  const frc971::control_loops::StaticZeroingSingleDOFProfiledSubsystemGoal
+  const frc::control_loops::StaticZeroingSingleDOFProfiledSubsystemGoal
       *arm_goal = &arm_goal_buffer.message();
 
   // static_zeroing_single_dof_profiled_subsystem.h

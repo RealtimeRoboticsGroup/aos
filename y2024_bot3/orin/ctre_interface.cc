@@ -2,20 +2,20 @@
 #include "ctre/phoenix/cci/Diagnostics_CCI.h"
 
 #include "aos/init.h"
-#include "frc971/can_configuration_generated.h"
-#include "frc971/constants/constants_sender_lib.h"
-#include "frc971/control_loops/swerve/swerve_drivetrain_can_position_static.h"
-#include "frc971/control_loops/swerve/swerve_drivetrain_output_static.h"
-#include "frc971/wpilib/can_sensor_reader.h"
-#include "frc971/wpilib/loop_output_handler.h"
-#include "frc971/wpilib/talonfx.h"
+#include "frc/can_configuration_generated.h"
+#include "frc/constants/constants_sender_lib.h"
+#include "frc/control_loops/swerve/swerve_drivetrain_can_position_static.h"
+#include "frc/control_loops/swerve/swerve_drivetrain_output_static.h"
+#include "frc/wpilib/can_sensor_reader.h"
+#include "frc/wpilib/loop_output_handler.h"
+#include "frc/wpilib/talonfx.h"
 #include "y2024_bot3/constants.h"
 #include "y2024_bot3/constants/constants_generated.h"
 
-using frc971::control_loops::swerve::SwerveModuleCanPositionStatic;
-using frc971::wpilib::CANSensorReader;
-using frc971::wpilib::TalonFX;
-using frc971::wpilib::TalonFXParams;
+using frc::control_loops::swerve::SwerveModuleCanPositionStatic;
+using frc::wpilib::CANSensorReader;
+using frc::wpilib::TalonFX;
+using frc::wpilib::TalonFXParams;
 
 ABSL_FLAG(bool, ctre_diag_server, false,
           "If true, enable the diagnostics server for interacting with "
@@ -39,7 +39,7 @@ struct SwerveModule {
   // Writes the requested torque currents from the module_output to the motors,
   // setting the maximum voltage of the motor outputs to the requested value.
   void WriteModule(
-      const frc971::control_loops::swerve::SwerveModuleOutput *module_output,
+      const frc::control_loops::swerve::SwerveModuleOutput *module_output,
       double max_voltage) {
     double rotation_current = 0.0;
     double translation_current = 0.0;
@@ -62,7 +62,7 @@ struct SwerveModule {
   // just the motors themselves).
   // Scales the motors' position values by the provided gear ratios.
   void PopulateCanPosition(
-      frc971::control_loops::swerve::SwerveModuleCanPositionStatic
+      frc::control_loops::swerve::SwerveModuleCanPositionStatic
           *can_position,
       const ModuleGearRatios &ratios) {
     rotation->SerializePosition(can_position->add_rotation(), ratios.rotation);
@@ -97,13 +97,13 @@ struct SwerveModules {
   std::shared_ptr<SwerveModule> back_right;
 };
 
-class DrivetrainWriter : public ::frc971::wpilib::LoopOutputHandler<
-                             ::frc971::control_loops::swerve::Output> {
+class DrivetrainWriter : public ::frc::wpilib::LoopOutputHandler<
+                             ::frc::control_loops::swerve::Output> {
  public:
   DrivetrainWriter(::aos::EventLoop *event_loop, int drivetrain_writer_priority,
                    double max_voltage)
-      : ::frc971::wpilib::LoopOutputHandler<
-            ::frc971::control_loops::swerve::Output>(event_loop, "/drivetrain"),
+      : ::frc::wpilib::LoopOutputHandler<
+            ::frc::control_loops::swerve::Output>(event_loop, "/drivetrain"),
         max_voltage_(max_voltage) {
     event_loop->SetRuntimeRealtimePriority(drivetrain_writer_priority);
 
@@ -112,7 +112,7 @@ class DrivetrainWriter : public ::frc971::wpilib::LoopOutputHandler<
 
   void set_talonfxs(SwerveModules modules) { modules_ = std::move(modules); }
 
-  void HandleCANConfiguration(const frc971::CANConfiguration &configuration) {
+  void HandleCANConfiguration(const frc::CANConfiguration &configuration) {
     for (auto module : {modules_.front_left, modules_.front_right,
                         modules_.back_left, modules_.back_right}) {
       module->rotation->PrintConfigs();
@@ -132,7 +132,7 @@ class DrivetrainWriter : public ::frc971::wpilib::LoopOutputHandler<
     }
   }
 
-  void Write(const ::frc971::control_loops::swerve::Output &output) {
+  void Write(const ::frc::control_loops::swerve::Output &output) {
     modules_.front_left->WriteModule(output.front_left_output(), max_voltage_);
     modules_.front_right->WriteModule(output.front_right_output(),
                                       max_voltage_);
@@ -163,10 +163,10 @@ int main(int argc, char **argv) {
   std::vector<aos::ShmEventLoop *> loops;
 
   // Thread 1
-  frc971::constants::WaitForConstants<y2024_bot3::Constants>(&config.message());
+  frc::constants::WaitForConstants<y2024_bot3::Constants>(&config.message());
 
   ::aos::ShmEventLoop constant_fetcher_event_loop(&config.message());
-  frc971::constants::ConstantsFetcher<y2024_bot3::Constants> constants_fetcher(
+  frc::constants::ConstantsFetcher<y2024_bot3::Constants> constants_fetcher(
       &constant_fetcher_event_loop);
   const y2024_bot3::Constants *robot_constants = &constants_fetcher.constants();
 
@@ -180,23 +180,23 @@ int main(int argc, char **argv) {
 
   SwerveModules modules{
       .front_left = std::make_shared<SwerveModule>(
-          frc971::wpilib::TalonFXParams{6, true},
-          frc971::wpilib::TalonFXParams{5, false}, "Drivetrain Bus",
+          frc::wpilib::TalonFXParams{6, true},
+          frc::wpilib::TalonFXParams{5, false}, "Drivetrain Bus",
           &signals_registry, current_limits->drivetrain_stator_current_limit(),
           current_limits->drivetrain_supply_current_limit()),
       .front_right = std::make_shared<SwerveModule>(
-          frc971::wpilib::TalonFXParams{3, true},
-          frc971::wpilib::TalonFXParams{4, false}, "Drivetrain Bus",
+          frc::wpilib::TalonFXParams{3, true},
+          frc::wpilib::TalonFXParams{4, false}, "Drivetrain Bus",
           &signals_registry, current_limits->drivetrain_stator_current_limit(),
           current_limits->drivetrain_supply_current_limit()),
       .back_left = std::make_shared<SwerveModule>(
-          frc971::wpilib::TalonFXParams{7, true},
-          frc971::wpilib::TalonFXParams{8, false}, "Drivetrain Bus",
+          frc::wpilib::TalonFXParams{7, true},
+          frc::wpilib::TalonFXParams{8, false}, "Drivetrain Bus",
           &signals_registry, current_limits->drivetrain_stator_current_limit(),
           current_limits->drivetrain_supply_current_limit()),
       .back_right = std::make_shared<SwerveModule>(
-          frc971::wpilib::TalonFXParams{2, true},
-          frc971::wpilib::TalonFXParams{1, false}, "Drivetrain Bus",
+          frc::wpilib::TalonFXParams{2, true},
+          frc::wpilib::TalonFXParams{1, false}, "Drivetrain Bus",
           &signals_registry, current_limits->drivetrain_stator_current_limit(),
           current_limits->drivetrain_supply_current_limit())};
 
@@ -206,10 +206,10 @@ int main(int argc, char **argv) {
 
   modules.PopulateFalconsVector(&falcons);
 
-  aos::Sender<frc971::control_loops::swerve::CanPositionStatic>
+  aos::Sender<frc::control_loops::swerve::CanPositionStatic>
       can_position_sender =
           can_sensor_reader_event_loop
-              .MakeSender<frc971::control_loops::swerve::CanPositionStatic>(
+              .MakeSender<frc::control_loops::swerve::CanPositionStatic>(
                   "/drivetrain");
 
   CANSensorReader can_sensor_reader(
@@ -219,7 +219,7 @@ int main(int argc, char **argv) {
         // TODO(max): use status properly in the flatbuffer.
         (void)status;
 
-        aos::Sender<frc971::control_loops::swerve::CanPositionStatic>::
+        aos::Sender<frc::control_loops::swerve::CanPositionStatic>::
             StaticBuilder builder = can_position_sender.MakeStaticBuilder();
 
         for (auto falcon : falcons) {

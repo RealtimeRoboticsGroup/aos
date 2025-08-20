@@ -1,4 +1,4 @@
-load("//frc971/downloader:downloader.bzl", "aos_downloader_dir")
+load("//frc/downloader:downloader.bzl", "aos_downloader_dir")
 load("//tools/build_rules:js.bzl", "rollup_bundle", "ts_project")
 
 filegroup(
@@ -32,14 +32,14 @@ ts_project(
         "//aos/network:message_bridge_server_ts_fbs",
         "//aos/network:web_proxy_ts_fbs",
         "//aos/network/www:proxy",
-        "//frc971/control_loops:control_loops_ts_fbs",
-        "//frc971/control_loops/drivetrain:drivetrain_can_position_ts_fbs",
-        "//frc971/control_loops/drivetrain:drivetrain_position_ts_fbs",
-        "//frc971/control_loops/drivetrain:drivetrain_status_ts_fbs",
-        "//frc971/control_loops/drivetrain/localization:localizer_output_ts_fbs",
-        "//frc971/vision:target_map_ts_fbs",
-        "//y2024_bot3/control_loops/superstructure:superstructure_position_ts_fbs",
-        "//y2024_bot3/control_loops/superstructure:superstructure_status_ts_fbs",
+        "//frc/control_loops:control_loops_ts_fbs",
+        "//frc/control_loops/drivetrain:drivetrain_can_position_ts_fbs",
+        "//frc/control_loops/drivetrain:drivetrain_position_ts_fbs",
+        "//frc/control_loops/drivetrain:drivetrain_status_ts_fbs",
+        "//frc/control_loops/drivetrain/localization:localizer_output_ts_fbs",
+        "//frc/vision:target_map_ts_fbs",
+        #"//y2024_bot3/control_loops/superstructure:superstructure_position_ts_fbs",
+        #"//y2024_bot3/control_loops/superstructure:superstructure_status_ts_fbs",
         "@com_github_google_flatbuffers//ts:flatbuffers_ts",
     ],
 )
@@ -59,8 +59,8 @@ aos_downloader_dir(
     srcs = [
         ":field_main_bundle.min.js",
         ":files",
-        "//frc971/analysis:plot_index_bundle.min.js",
-        "//frc971/www:starter_files",
+        "//frc/analysis:plot_index_bundle.min.js",
+        "//frc/www:starter_files",
     ],
     dir = "www",
     target_compatible_with = ["@platforms//os:linux"],

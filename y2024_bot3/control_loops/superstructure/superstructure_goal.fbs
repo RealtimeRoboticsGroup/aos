@@ -1,4 +1,4 @@
-include "frc971/control_loops/profiled_subsystem.fbs";
+include "frc/control_loops/profiled_subsystem.fbs";
 
 namespace y2024_bot3.control_loops.superstructure;
 

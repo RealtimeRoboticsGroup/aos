@@ -1,15 +1,15 @@
-include "frc971/vision/calibration.fbs";
-include "frc971/vision/target_map.fbs";
-include "frc971/control_loops/profiled_subsystem.fbs";
-include "frc971/zeroing/constants.fbs";
-include "frc971/wpilib/swerve/swerve_constants.fbs";
-include "frc971/control_loops/swerve/swerve_zeroing.fbs";
-include "frc971/math/matrix.fbs";
+include "frc/vision/calibration.fbs";
+include "frc/vision/target_map.fbs";
+include "frc/control_loops/profiled_subsystem.fbs";
+include "frc/zeroing/constants.fbs";
+include "frc/wpilib/swerve/swerve_constants.fbs";
+include "frc/control_loops/swerve/swerve_zeroing.fbs";
+include "frc/math/matrix.fbs";
 
 namespace y2024_bot3;
 
 table CameraConfiguration {
-  calibration:frc971.vision.calibration.CameraCalibration (id: 0);
+  calibration:frc.vision.calibration.CameraCalibration (id: 0);
 }
 
 table ArmPositions {
@@ -19,7 +19,7 @@ table ArmPositions {
 }
 
 table PotAndAbsEncoderConstants {
-  zeroing_constants:frc971.zeroing.PotAndAbsoluteEncoderZeroingConstants (id: 0);
+  zeroing_constants:frc.zeroing.PotAndAbsoluteEncoderZeroingConstants (id: 0);
   arm_potentiometer_offset:double (id: 1);
   arm_positions:ArmPositions (id: 2);
 }
@@ -31,7 +31,7 @@ table IntakeVoltages {
 
 table RobotConstants {
   arm_constants:PotAndAbsEncoderConstants (id: 0);
-  swerve_zeroing:frc971.control_loops.swerve.SwerveZeroing (id: 1);
+  swerve_zeroing:frc.control_loops.swerve.SwerveZeroing (id: 1);
 }
 
 table CurrentLimits {
@@ -55,10 +55,10 @@ table VelocityControllerWeights {
 
 // Common table for constants unrelated to the robot
 table Common {
-  target_map:frc971.vision.TargetMap (id: 0);
-  arm:frc971.control_loops.StaticZeroingSingleDOFProfiledSubsystemCommonParams (id: 1);
-  rotation:frc971.control_loops.StaticZeroingSingleDOFProfiledSubsystemCommonParams (id: 2);
-  swerve_positions_constants:frc971.wpilib.swerve.SwervePositionConstants (id: 3);
+  target_map:frc.vision.TargetMap (id: 0);
+  arm:frc.control_loops.StaticZeroingSingleDOFProfiledSubsystemCommonParams (id: 1);
+  rotation:frc.control_loops.StaticZeroingSingleDOFProfiledSubsystemCommonParams (id: 2);
+  swerve_positions_constants:frc.wpilib.swerve.SwervePositionConstants (id: 3);
   arm_loading_position:double (id: 4);
   intake_voltages:IntakeVoltages (id: 5);
   current_limits:CurrentLimits (id: 6);

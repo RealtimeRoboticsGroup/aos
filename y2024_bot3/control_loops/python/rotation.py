@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 
 from aos.util.trapezoid_profile import TrapezoidProfile
-from frc971.control_loops.python import control_loop
-from frc971.control_loops.python import angular_system_current
-from frc971.control_loops.python import controls
+from frc.control_loops.python import control_loop
+from frc.control_loops.python import angular_system_current
+from frc.control_loops.python import controls
 import numpy
 import sys
 from matplotlib import pylab

@@ -5,12 +5,12 @@ cc_binary(
     visibility = ["//visibility:public"],
     deps = [
         "//aos:init",
-        "//frc971:can_configuration_fbs",
-        "//frc971/control_loops/swerve:swerve_drivetrain_can_position_fbs",
-        "//frc971/control_loops/swerve:swerve_drivetrain_output_fbs",
-        "//frc971/wpilib:can_sensor_reader",
-        "//frc971/wpilib:loop_output_handler",
-        "//frc971/wpilib:talonfx",
+        "//frc:can_configuration_fbs",
+        "//frc/control_loops/swerve:swerve_drivetrain_can_position_fbs",
+        "//frc/control_loops/swerve:swerve_drivetrain_output_fbs",
+        "//frc/wpilib:can_sensor_reader",
+        "//frc/wpilib:loop_output_handler",
+        "//frc/wpilib:talonfx",
         "//y2024_swerve:constants",
     ],
 )

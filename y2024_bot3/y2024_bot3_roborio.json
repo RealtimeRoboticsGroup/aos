@@ -1,8 +1,8 @@
 {
   "channels": [
     {
-      "name": "/roborio/aos",
-      "type": "aos.JoystickState",
+      "name": "/roborio/frc",
+      "type": "frc.JoystickState",
       "source_node": "roborio",
       "frequency": 100,
       "logger": "LOCAL_AND_REMOTE_LOGGER",
@@ -19,21 +19,21 @@
     },
     {
       "name": "/roborio/drivetrain",
-      "type": "frc971.sensors.GyroReading",
+      "type": "frc.sensors.GyroReading",
       "source_node": "roborio",
       "frequency": 250,
       "num_senders": 2
     },
     {
       "name": "/roborio/aos",
-      "type": "frc971.PDPValues",
+      "type": "frc.PDPValues",
       "source_node": "roborio",
       "frequency": 55,
       "max_size": 368
     },
     {
-        "name": "/roborio/aos",
-        "type": "aos.RobotState",
+        "name": "/roborio/frc",
+        "type": "frc.RobotState",
         "source_node": "roborio",
         "frequency": 250,
         "num_senders": 20,
@@ -60,7 +60,7 @@
     },
     {
         "name": "/roborio/drivetrain",
-        "type": "frc971.control_loops.swerve.Position",
+        "type": "frc.control_loops.swerve.Position",
         "source_node": "roborio",
         "frequency": 250,
         "num_senders": 1,
@@ -170,7 +170,7 @@
     },
     {
       "name": "/roborio/drivetrain",
-      "type": "frc971.control_loops.swerve.Goal",
+      "type": "frc.control_loops.swerve.Goal",
       "source_node": "roborio",
       "frequency": 250,
       "logger": "LOCAL_AND_REMOTE_LOGGER",
@@ -211,7 +211,7 @@
     },
         {
             "name": "/roborio/can",
-            "type": "frc971.can_logger.CanFrame",
+            "type": "frc.can_logger.CanFrame",
             "source_node": "roborio",
             "frequency": 6000,
             "num_senders": 2,
@@ -219,7 +219,7 @@
         },
     {
         "name": "/roborio/drivetrain",
-        "type": "frc971.control_loops.swerve.CanPosition",
+        "type": "frc.control_loops.swerve.CanPosition",
         "source_node": "roborio",
         "frequency": 250,
         "num_senders": 1,
@@ -227,7 +227,7 @@
     },
     {
         "name": "/roborio/drivetrain",
-        "type": "frc971.control_loops.drivetrain.LocalizerControl",
+        "type": "frc.control_loops.drivetrain.LocalizerControl",
         "source_node": "roborio",
         "frequency": 250,
         "max_size": 96,
@@ -248,7 +248,7 @@
         ]
     },
     {
-        "name": "/roborio/aos/remote_timestamps/imu/roborio/drivetrain/frc971-control_loops-drivetrain-LocalizerControl",
+        "name": "/roborio/aos/remote_timestamps/imu/roborio/drivetrain/frc-control_loops-drivetrain-LocalizerControl",
         "type": "aos.message_bridge.RemoteMessage",
         "source_node": "roborio",
         "logger": "NOT_LOGGED",
@@ -258,7 +258,7 @@
     },
     {
       "name": "/roborio",
-      "type": "frc971.CANConfiguration",
+      "type": "frc.CANConfiguration",
       "source_node": "roborio",
       "frequency": 2
     },

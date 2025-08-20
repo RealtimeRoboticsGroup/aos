@@ -1,9 +1,9 @@
 #include "aos/events/shm_event_loop.h"
 #include "aos/init.h"
-#include "frc971/control_loops/swerve/goal_solver.h"
+#include "frc/control_loops/swerve/goal_solver.h"
 #include "y2024_swerve/control_loops/parameters.h"
 
-using frc971::control_loops::swerve::GoalSolver;
+using frc::control_loops::swerve::GoalSolver;
 
 int main(int argc, char **argv) {
   ::aos::InitGoogle(&argc, &argv);

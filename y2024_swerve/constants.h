@@ -7,7 +7,7 @@
 
 #include <cstdint>
 
-#include "frc971/constants.h"
+#include "frc/constants.h"
 
 namespace y2024_swerve::constants {
 struct Values {

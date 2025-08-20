@@ -1,4 +1,4 @@
-load("//frc971/downloader:downloader.bzl", "aos_downloader_dir")
+load("//frc/downloader:downloader.bzl", "aos_downloader_dir")
 package(default_visibility = ["//visibility:public"])
 
 filegroup(
@@ -26,7 +26,7 @@ cc_binary(
     deps = [
         "//aos:init",
         "//aos/events:shm_event_loop",
-        "//frc971/control_loops/swerve:autonomous_pd_loop",
+        "//frc/control_loops/swerve:autonomous_pd_loop",
         "//y2024_bot3/control_loops/superstructure:superstructure_goal_fbs",
     ]
 )

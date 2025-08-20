@@ -1,17 +1,17 @@
-#include "frc971/control_loops/swerve/simplified_dynamics.h"
+#include "frc/control_loops/swerve/simplified_dynamics.h"
 #include "y2024_swerve/constants.h"
 namespace y2024_swerve::control_loops {
 template <typename Scalar>
-frc971::control_loops::swerve::SimplifiedDynamics<Scalar>::Parameters
+frc::control_loops::swerve::SimplifiedDynamics<Scalar>::Parameters
 MakeSwerveParameters() {
   auto make_module = [](const Eigen::Matrix<Scalar, 2, 1> &position) {
-    return frc971::control_loops::swerve::LinearVelocityController::Dynamics::
+    return frc::control_loops::swerve::LinearVelocityController::Dynamics::
         ModuleParams{
             .position = position,
             .slip_angle_coefficient = 0.0,
             .slip_angle_alignment_coefficient = 0.0,
-            .steer_motor = frc971::control_loops::swerve::KrakenFOC(),
-            .drive_motor = frc971::control_loops::swerve::KrakenFOC(),
+            .steer_motor = frc::control_loops::swerve::KrakenFOC(),
+            .drive_motor = frc::control_loops::swerve::KrakenFOC(),
             .steer_ratio = constants::Values::kRotationModuleRatio(),
             .drive_ratio = constants::Values::kTranslationModuleRatio(),
             .extra_steer_inertia = 0.01};

@@ -6,7 +6,7 @@
 #include "aos/events/shm_event_loop.h"
 #include "aos/init.h"
 #include "aos/json_to_flatbuffer.h"
-#include "frc971/constants/constants_sender_lib.h"
+#include "frc/constants/constants_sender_lib.h"
 #include "y2024_swerve/constants/constants_generated.h"
 #include "y2024_swerve/constants/constants_list_generated.h"
 
@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
   aos::FlatbufferDetachedBuffer<aos::Configuration> config =
       aos::configuration::ReadConfig(absl::GetFlag(FLAGS_config));
   aos::ShmEventLoop event_loop(&config.message());
-  frc971::constants::ConstantSender<y2024_swerve::Constants,
+  frc::constants::ConstantSender<y2024_swerve::Constants,
                                     y2024_swerve::ConstantsList>
       constants_sender(&event_loop, absl::GetFlag(FLAGS_constants_path));
   // Don't need to call Run().
