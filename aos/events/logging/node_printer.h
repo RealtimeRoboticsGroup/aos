@@ -19,6 +19,16 @@ namespace aos::logging {
 // specified.
 aos::Printer MakePrinter();
 
+// Returns a test function that checks if a channel will be printed to the
+// screen. This is called internally by NodePrinter. It can also be useful to
+// determine whether a channel will be printed before instantiating a
+// NodePrinter.
+//
+// The argument is the channel definition. The return value is true if the
+// channel will be printed. The return value is false if the channel will not be
+// printed.
+std::function<bool(const aos::Channel *)> GetChannelShouldBePrintedTester();
+
 // This class prints out all data from a node on a boot.
 class NodePrinter {
  public:

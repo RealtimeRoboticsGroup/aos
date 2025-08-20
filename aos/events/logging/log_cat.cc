@@ -2,6 +2,7 @@
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <ranges>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -221,22 +222,11 @@ int main(int argc, char **argv) {
   }
 
   {
-    bool found_channel = false;
-    const flatbuffers::Vector<flatbuffers::Offset<aos::Channel>> *channels =
-        reader.configuration()->channels();
-
-    for (flatbuffers::uoffset_t i = 0; i < channels->size(); i++) {
-      const aos::Channel *channel = channels->Get(i);
-      const flatbuffers::string_view name = channel->name()->string_view();
-      const flatbuffers::string_view type = channel->type()->string_view();
-      if (name.find(absl::GetFlag(FLAGS_name)) != std::string::npos &&
-          type.find(absl::GetFlag(FLAGS_type)) != std::string::npos) {
-        found_channel = true;
-      }
-    }
-    if (!found_channel) {
-      LOG(FATAL) << "Could not find any channels";
-    }
+    std::function<bool(const aos::Channel *)> channel_should_be_printed =
+        aos::logging::GetChannelShouldBePrintedTester();
+    CHECK(std::ranges::any_of(*reader.configuration()->channels(),
+                              channel_should_be_printed))
+        << ": Could not find any channels";
   }
 
   aos::Printer printer = aos::logging::MakePrinter();

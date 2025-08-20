@@ -1,11 +1,19 @@
 #include "aos/events/logging/node_printer.h"
 
+#include <functional>
+#include <regex>
+#include <string_view>
+
 ABSL_FLAG(
     std::string, name, "",
     "Name to match for printing out channels. Empty means no name filter.");
 ABSL_FLAG(std::string, type, "",
           "Channel type to match for printing out channels. Empty means no "
           "type filter.");
+ABSL_FLAG(bool, regex_match, false,
+          "If true, interpret --name and --type as regular expressions. The "
+          "regular expressions are matched against the entire strings. If "
+          "false (i.e. default), use substring matching instead.");
 ABSL_FLAG(bool, json, false, "If true, print fully valid JSON");
 ABSL_FLAG(bool, fetch, false,
           "If true, also print out the messages from before the start of the "
@@ -56,6 +64,29 @@ aos::Printer MakePrinter() {
       absl::GetFlag(FLAGS_flush));
 }
 
+std::function<bool(const aos::Channel *)> GetChannelShouldBePrintedTester() {
+  if (absl::GetFlag(FLAGS_regex_match)) {
+    // The user requested regex matching.
+    std::regex name_regex(absl::GetFlag(FLAGS_name));
+    std::regex type_regex(absl::GetFlag(FLAGS_type));
+    return [name_regex = std::move(name_regex),
+            type_regex = std::move(type_regex)](const aos::Channel *channel) {
+      const std::string_view name = channel->name()->string_view();
+      const std::string_view type = channel->type()->string_view();
+      return std::regex_match(name.begin(), name.end(), name_regex) &&
+             std::regex_match(type.begin(), type.end(), type_regex);
+    };
+  } else {
+    // We're using substring matching.
+    return [](const aos::Channel *channel) {
+      const std::string_view name = channel->name()->string_view();
+      const std::string_view type = channel->type()->string_view();
+      return name.find(absl::GetFlag(FLAGS_name)) != std::string_view::npos &&
+             type.find(absl::GetFlag(FLAGS_type)) != std::string_view::npos;
+    };
+  }
+}
+
 NodePrinter::NodePrinter(aos::EventLoop *event_loop,
                          aos::SimulatedEventLoopFactory *factory,
                          aos::Printer *printer)
@@ -87,16 +118,17 @@ NodePrinter::NodePrinter(aos::EventLoop *event_loop,
                      std::chrono::duration<double>(
                          absl::GetFlag(FLAGS_monotonic_end_time)))));
 
-  for (flatbuffers::uoffset_t i = 0; i < channels->size(); i++) {
-    const aos::Channel *channel = channels->Get(i);
-    const flatbuffers::string_view name = channel->name()->string_view();
-    const flatbuffers::string_view type = channel->type()->string_view();
-    if (name.find(absl::GetFlag(FLAGS_name)) != std::string::npos &&
-        type.find(absl::GetFlag(FLAGS_type)) != std::string::npos) {
+  std::function<bool(const aos::Channel *)> channel_should_be_printed =
+      GetChannelShouldBePrintedTester();
+
+  for (const aos::Channel *channel : *channels) {
+    if (channel_should_be_printed(channel)) {
       if (!aos::configuration::ChannelIsReadableOnNode(channel,
                                                        event_loop_->node())) {
         continue;
       }
+      const flatbuffers::string_view name = channel->name()->string_view();
+      const flatbuffers::string_view type = channel->type()->string_view();
       VLOG(1) << "Listening on " << name << " " << type;
 
       CHECK(channel->schema() != nullptr);
