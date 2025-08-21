@@ -373,14 +373,6 @@
       "nodes": [
         "roborio"
       ]
-    },
-    {
-      "name": "autonomous",
-      "executable_name": "autonomous_main",
-      "autostart": true,
-      "nodes": [
-        "roborio"
-      ]
     }
   ],
   "maps": [
@@ -391,6 +383,15 @@
         },
         "rename": {
             "name": "/roborio/aos"
+        }
+    },
+    {
+        "match": {
+            "name": "/frc*",
+            "source_node": "roborio"
+        },
+        "rename": {
+            "name": "/roborio/frc"
         }
     },
     {
@@ -437,7 +438,7 @@
       "hostnames": [
         "roboRIO-971-FRC",
         "roboRIO-6971-FRC",
-        "roboRIO-7971-FRC",
+        "roboRIO-1868-FRC",
         "roboRIO-8971-FRC",
         "roboRIO-9971-FRC"
       ],

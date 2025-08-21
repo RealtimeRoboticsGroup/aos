@@ -28,7 +28,7 @@
       ]
     },
     {
-      "name": "/imu/aos/remote_timestamps/orin1/imu/aos/frc-JoystickState",
+      "name": "/imu/aos/remote_timestamps/orin1/imu/frc/frc-JoystickState",
       "type": "aos.message_bridge.RemoteMessage",
       "source_node": "imu",
       "logger": "NOT_LOGGED",
@@ -674,7 +674,7 @@
       "hostname": "orin2",
       "hostnames": [
         "orin-971-2",
-        "orin-7971-2",
+        "orin-1868-2",
         "orin-8971-2",
         "orin-9971-2"
       ],
