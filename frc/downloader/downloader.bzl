@@ -7,7 +7,10 @@ def _aos_downloader_impl(ctx):
     # downloader looks for : in the inputs and uses the part after the : as
     # the directory to copy to.
     for d in ctx.attr.dirs:
-        target_files += [src.short_path + ":" + d.downloader_dir for src in d.downloader_srcs]
+        if d.flatten:
+            target_files += [src.short_path + ":" + d.downloader_dir for src in d.downloader_srcs]
+        else:
+            target_files += ["^" + d.downloader_dir + "/" + src.short_path for src in d.downloader_srcs]
 
     ctx.actions.write(
         output = ctx.outputs.executable,
@@ -48,6 +51,7 @@ def _aos_downloader_dir_impl(ctx):
     return struct(
         downloader_dir = ctx.attr.dir,
         downloader_srcs = ctx.files.srcs,
+        flatten = ctx.attr.flatten,
     )
 
 """Creates a binary which downloads code to a robot.
@@ -106,6 +110,7 @@ aos_downloader_dir = rule(
         "dir": attr.string(
             mandatory = True,
         ),
+        "flatten": attr.bool(default = True),
     },
     implementation = _aos_downloader_dir_impl,
 )
