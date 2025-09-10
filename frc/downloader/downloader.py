@@ -135,7 +135,14 @@ def main(argv):
         # in starlark
         copied = set()
         for s in srcs:
-            if ":" in s:
+            print(s)
+            if s[0] == "^":
+                s = s[1:]
+                folder = os.path.dirname(os.path.join(temp_dir, s))
+                os.makedirs(folder, exist_ok=True)
+                s = os.path.join(pwd, s)
+                destination = os.path.join(folder, os.path.basename(s))
+            elif ":" in s:
                 folder = os.path.join(temp_dir, s[s.find(":") + 1:])
                 os.makedirs(folder, exist_ok=True)
                 s = os.path.join(pwd, s[:s.find(":")])
@@ -149,6 +156,7 @@ def main(argv):
             copied.add(s)
             if s.endswith(".stripped"):
                 destination = destination[:destination.find(".stripped")]
+            print(f"from {s} to {destination}")
             shutil.copy2(s, destination)
         # Make sure the folder that gets created on the roboRIO has open
         # permissions or the executables won't be visible to init.
@@ -157,7 +165,11 @@ def main(argv):
         # TODO(james): Get things fixed up so that systemcore doesn't need this.
         # (it may not even need it now).
         if args.type != "pi" and args.type != "orin":
-            os.chmod(os.path.join(temp_dir, "starterd"), 0o775 | stat.S_ISUID)
+            try:
+              os.chmod(os.path.join(temp_dir, "starterd"), 0o775 | stat.S_ISUID)
+            except FileNotFoundError as e:
+              print("No starterd provided; was this intentional?",
+                    file=sys.stderr)
 
         rsync_cmd = ([
             "external/amd64_debian_sysroot/usr/bin/rsync"
