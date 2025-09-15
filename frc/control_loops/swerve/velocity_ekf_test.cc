@@ -1,4 +1,4 @@
-#include "frc971/control_loops/swerve/velocity_ekf.h"
+#include "frc/control_loops/swerve/velocity_ekf.h"
 
 #include <random>
 
@@ -6,10 +6,10 @@
 
 #include "aos/flatbuffers/builder.h"
 #include "aos/json_to_flatbuffer.h"
-#include "frc971/control_loops/runge_kutta.h"
-#include "frc971/math/eigen_matchers.h"
+#include "frc/control_loops/runge_kutta.h"
+#include "frc/math/eigen_matchers.h"
 
-namespace frc971::control_loops::swerve::testing {
+namespace frc::control_loops::swerve::testing {
 class VelocityEkfTest : public ::testing::Test {
  protected:
   typedef double Scalar;
@@ -128,7 +128,7 @@ TEST_F(VelocityEkfTest, PerfectCorrections) {
     // Once we start moving we can get some numerical errors starting to
     // accumulate, so use a threshold.
     EXPECT_THAT(ekf_.X_hat(),
-                frc971::math::IsEigenMatrixNear(true_state_, 1e-10));
+                frc::math::IsEigenMatrixNear(true_state_, 1e-10));
     // Sanity check that the velocity of the robot has actually increased.
     EXPECT_LT(0.0, ekf_.X_hat()(States::kVx));
   }
@@ -141,7 +141,7 @@ TEST_F(VelocityEkfTest, NoisyCorrections) {
   for (int i = 0; i < 1000; ++i) {
     DoStep(Input::Zero(), kDt, DoNoisyUpdate::kYes);
     EXPECT_THAT(true_state_,
-                frc971::math::IsEigenMatrixNear(ekf_.X_hat(), 1e-1));
+                frc::math::IsEigenMatrixNear(ekf_.X_hat(), 1e-1));
   }
   for (int i = 0; i < 1000; ++i) {
     DoStep(Input::Ones(), kDt, DoNoisyUpdate::kYes);
@@ -149,9 +149,9 @@ TEST_F(VelocityEkfTest, NoisyCorrections) {
     // Because we have no absolute sensor reading for theta, it will drift over
     // time; all other states should be kept near their true values.
     threshold(States::kTheta) = 1.0;
-    EXPECT_THAT(true_state_, frc971::math::AreEigenMatrixElementsNear(
+    EXPECT_THAT(true_state_, frc::math::AreEigenMatrixElementsNear(
                                  ekf_.X_hat(), threshold));
   }
 }
 
-}  // namespace frc971::control_loops::swerve::testing
+}  // namespace frc::control_loops::swerve::testing

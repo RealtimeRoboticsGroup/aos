@@ -81,9 +81,12 @@ class MoveDetector {
   // by buffer_size.
   bool Update(const PositionBuffer &position_buffer, size_t buffer_size,
               double zeroing_threshold) {
+    return Update(Position(position_buffer), buffer_size, zeroing_threshold);
+  }
+  bool Update(const Position &position, size_t buffer_size,
+              double zeroing_threshold) {
     CHECK_LT(0u, buffer_size);
     bool moving = true;
-    Position position(position_buffer);
     if (buffered_samples_.size() < buffer_size) {
       // Not enough samples to start determining if the robot is moving or not,
       // don't use the samples yet.

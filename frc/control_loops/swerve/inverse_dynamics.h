@@ -3,16 +3,17 @@
 #include <memory>
 
 #include "absl/log/log.h"
+#include "absl/log/vlog_is_on.h"
 #include "absl/strings/str_format.h"
 
 #include "aos/time/time.h"
-#include "frc971/control_loops/jacobian.h"
-#include "frc971/control_loops/swerve/auto_diff_jacobian.h"
-#include "frc971/control_loops/swerve/linearization_utils.h"
+#include "frc/control_loops/jacobian.h"
+#include "frc/control_loops/swerve/auto_diff_jacobian.h"
+#include "frc/control_loops/swerve/linearization_utils.h"
 #include "include/ceres/tiny_solver.h"
 #include "include/ceres/tiny_solver_autodiff_function.h"
 
-namespace frc971::control_loops::swerve {
+namespace frc::control_loops::swerve {
 
 template <typename ScalarT, typename State, typename Input,
           typename CeresFunctor>
@@ -415,5 +416,5 @@ class AutoDiffInverseDynamics
   std::optional<CeresFunctor> functor_;
 };
 
-}  // namespace frc971::control_loops::swerve
+}  // namespace frc::control_loops::swerve
 #endif  // FRC971_CONTROL_LOOPS_SWERVE_INVERSE_DYNAMICS_H_

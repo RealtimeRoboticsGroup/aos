@@ -3,11 +3,11 @@
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
 
-#include "frc971/control_loops/swerve/linearization_utils.h"
-#include "frc971/control_loops/swerve/simplified_dynamics.h"
-#include "frc971/control_loops/swerve/swerve_drivetrain_status_static.h"
-#include "frc971/estimation/ekf.h"
-#include "frc971/math/flatbuffers_matrix.h"
+#include "frc/control_loops/swerve/linearization_utils.h"
+#include "frc/control_loops/swerve/simplified_dynamics.h"
+#include "frc/control_loops/swerve/swerve_drivetrain_status_static.h"
+#include "frc/estimation/ekf.h"
+#include "frc/math/flatbuffers_matrix.h"
 
 ABSL_DECLARE_FLAG(double, velocity_ekf_q_thetas);
 ABSL_DECLARE_FLAG(double, velocity_ekf_q_omegas);
@@ -15,7 +15,7 @@ ABSL_DECLARE_FLAG(double, velocity_ekf_q_theta);
 ABSL_DECLARE_FLAG(double, velocity_ekf_q_omega);
 ABSL_DECLARE_FLAG(double, velocity_ekf_q_velocity);
 
-namespace frc971::control_loops::swerve {
+namespace frc::control_loops::swerve {
 // Implements an Extended Kalman Filter for estimating the velocity states of a
 // swerve drivebase using the SimplifiedDynamics class.
 template <typename Scalar>
@@ -260,5 +260,5 @@ class VelocityEkf {
       last_drive_encoder_update_;
   ExpectedDriveVelocity H_drive_encoder_;
 };
-}  // namespace frc971::control_loops::swerve
+}  // namespace frc::control_loops::swerve
 #endif  // FRC971_CONTROL_LOOPS_SWERVE_VELOCITY_EKF_H_

@@ -269,6 +269,29 @@
       "frequency": 1,
       "num_senders": 2,
       "max_size": 65536
+    },
+    {
+        "name": "/roborio/drivetrain",
+        "type": "frc.control_loops.swerve.Status",
+        "source_node": "roborio",
+        "max_size": 10000,
+        "frequency": 250
+    },
+    {
+        "name": "/roborio/drivetrain",
+        "type": "frc.control_loops.swerve.CanPosition",
+        "source_node": "roborio",
+        "frequency": 250,
+        "num_senders": 1,
+        "max_size": 1024
+    },
+    {
+        "name": "/roborio/drivetrain",
+        "type": "frc.control_loops.swerve.Output",
+        "source_node": "roborio",
+        "frequency": 400,
+        "max_size": 200,
+        "num_senders": 2
     }
   ],
   "applications": [
@@ -346,6 +369,7 @@
     {
       "name": "logger",
       "executable_name": "logger_main",
+      "autostart": false,
       "args": [
         "--snappy_compress",
         "--logging_folder=/home/admin/logs/",
@@ -362,6 +386,20 @@
       "nodes": [
         "roborio"
       ]
+    },
+    {
+      "name": "foxglove_websocket_roborio",
+      "executable_name": "foxglove_websocket",
+      "autorestart": false,
+      "nodes": [
+        "roborio"
+      ]
+    },
+    {
+        "name": "swerve_control_loops",
+        "nodes": [
+            "roborio"
+        ]
     },
     {
       "name": "roborio_can_logger",

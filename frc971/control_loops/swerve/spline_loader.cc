@@ -3,7 +3,7 @@
 #include "aos/events/shm_event_loop.h"
 #include "aos/init.h"
 #include "aos/json_to_flatbuffer.h"
-#include "frc971/control_loops/swerve/autonomous_pd_loop.h"
+#include "frc/control_loops/swerve/autonomous_pd_loop.h"
 
 int main(int argc, char **argv) {
   aos::InitGoogle(&argc, &argv);
@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
 
   aos::ShmEventLoop event_loop(&config.message());
 
-  frc971::control_loops::swerve::AutonomousPDLoop pd_loop(
+  frc::control_loops::swerve::AutonomousPDLoop pd_loop(
       &event_loop, "/home/max/Downloads/solutions.json(2).json");
 
   event_loop.Run();

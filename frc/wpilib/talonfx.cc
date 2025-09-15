@@ -21,22 +21,30 @@ TalonFX::TalonFX(int device_id, bool inverted, std::string canbus,
   // device temp is not timesynced so don't add it to the list of signals
   device_temp_.SetUpdateFrequency(kCANUpdateFreqHz);
 
-  CHECK(signals != nullptr);
-
   supply_voltage_.SetUpdateFrequency(kCANUpdateFreqHz);
-  signals->push_back(&supply_voltage_);
+  if (signals != nullptr) {
+    signals->push_back(&supply_voltage_);
+  }
 
   supply_current_.SetUpdateFrequency(kCANUpdateFreqHz);
-  signals->push_back(&supply_current_);
+  if (signals != nullptr) {
+    signals->push_back(&supply_current_);
+  }
 
   torque_current_.SetUpdateFrequency(kCANUpdateFreqHz);
-  signals->push_back(&torque_current_);
+  if (signals != nullptr) {
+    signals->push_back(&torque_current_);
+  }
 
   position_.SetUpdateFrequency(kCANUpdateFreqHz);
-  signals->push_back(&position_);
+  if (signals != nullptr) {
+    signals->push_back(&position_);
+  }
 
   duty_cycle_.SetUpdateFrequency(kCANUpdateFreqHz);
-  signals->push_back(&duty_cycle_);
+  if (signals != nullptr) {
+    signals->push_back(&duty_cycle_);
+  }
 }
 
 TalonFX::TalonFX(TalonFXParams params, std::string canbus,

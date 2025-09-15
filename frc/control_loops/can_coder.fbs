@@ -1,0 +1,17 @@
+namespace frc.control_loops;
+
+table CanCoderReading {
+  // The CAN ID of the cancoder
+  id:int (id: 0);
+
+  // In radians.
+  encoder:float (id: 1);
+
+  // In radians
+  absolute_encoder:float (id: 2);
+
+  // The timestamp of the measurement on the canivore clock in nanoseconds
+  // This will have less jitter than the
+  // timestamp of the message being sent out.
+  timestamp:int64 (id: 3);
+}

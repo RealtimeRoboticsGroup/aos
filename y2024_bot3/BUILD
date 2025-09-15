@@ -19,7 +19,9 @@ robot_downloader(
         ":wpilib_interface",
         "//frc/can_logger",
         "//aos/network:message_bridge_client",
+        "//aos/util:foxglove_websocket",
         "//aos/network:message_bridge_server",
+        "//y2024_bot3/control_loops/swerve:swerve_control_loops",
         "//y2024_bot3/control_loops/superstructure:superstructure",
     ],
     data = [
@@ -251,6 +253,7 @@ cc_binary(
         "//frc/wpilib:buffered_pcm",
         "//frc/wpilib:can_drivetrain_writer",
         "//frc/wpilib:can_sensor_reader",
+        "//frc/wpilib:cancoder",
         "//frc/wpilib:dma",
         "//frc/wpilib:drivetrain_writer",
         "//frc/wpilib:encoder_and_potentiometer",

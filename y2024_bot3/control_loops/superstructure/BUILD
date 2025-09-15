@@ -69,7 +69,10 @@ static_flatbuffer(
 static_flatbuffer(
     name = "superstructure_can_position_fbs",
     srcs = ["superstructure_can_position.fbs"],
-    deps = ["//frc/control_loops:can_talonfx_fbs"],
+    deps = [
+        "//frc/control_loops:can_coder_fbs",
+        "//frc/control_loops:can_talonfx_fbs",
+    ],
 )
 
 #flatbuffer_ts_library(

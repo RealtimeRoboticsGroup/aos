@@ -44,8 +44,7 @@ struct Values {
 
   // todo: get the correct values for all these constants
   static constexpr double kIntakeRollerOutputRatio = (16.0 / 34.0);
-  static constexpr double kArmOutputRatio =
-      (14.0 / 50.0) * (24.0 / 64.0) * (24.0 / 64.0) * (12.0 / 48.0);
+  static constexpr double kArmOutputRatio = 1.0 / 32.0;
 
   static constexpr double kArmPotRatio() { return (12.0 / 48.0); }
 

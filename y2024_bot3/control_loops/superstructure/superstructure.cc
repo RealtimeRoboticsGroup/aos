@@ -115,7 +115,9 @@ void Superstructure::RunIteration(const Goal *unsafe_goal,
   // static_zeroing_single_dof_profiled_subsystem.h
   const flatbuffers::Offset<PotAndAbsoluteEncoderProfiledJointStatus>
       arm_offset =
-          arm_.Iterate(arm_goal, position->arm(),
+          arm_.Iterate(arm_goal, /* TODO: Make this use the CANCoder instead of
+                                    the non-existent mag encoder*/
+                                 position->arm(),
                        output != nullptr ? &output_struct.arm_voltage : nullptr,
                        status->fbb());
 

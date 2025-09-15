@@ -4,11 +4,11 @@
 #include <Eigen/Dense>
 
 #include "aos/events/event_loop.h"
-#include "frc971/control_loops/swerve/swerve_drivetrain_goal_static.h"
-#include "frc971/control_loops/swerve/swerve_drivetrain_status_generated.h"
-#include "frc971/input/joystick_state_generated.h"
+#include "frc/control_loops/swerve/swerve_drivetrain_goal_static.h"
+#include "frc/control_loops/swerve/swerve_drivetrain_status_generated.h"
+#include "frc/input/joystick_state_generated.h"
 
-namespace frc971::control_loops::swerve {
+namespace frc::control_loops::swerve {
 
 class AutonomousPDLoop {
  public:
@@ -45,6 +45,6 @@ class AutonomousPDLoop {
   aos::EventLoop *event_loop_;
 };
 
-}  // namespace frc971::control_loops::swerve
+}  // namespace frc::control_loops::swerve
 
 #endif  // FRC971_CONTROL_LOOPS_SWERVE

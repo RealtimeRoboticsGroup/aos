@@ -1,4 +1,4 @@
-#include "frc971/control_loops/swerve/linear_velocity_controller.h"
+#include "frc/control_loops/swerve/linear_velocity_controller.h"
 
 #include "absl/flags/flag.h"
 
@@ -9,7 +9,7 @@ ABSL_FLAG(double, is_t, 1e-3, "");
 ABSL_FLAG(double, vel_q, 20.0, "");
 ABSL_FLAG(double, omega_q, 3.0, "");
 
-namespace frc971::control_loops::swerve {
+namespace frc::control_loops::swerve {
 
 LinearVelocityController::Parameters LinearVelocityController::MakeParameters(
     const ControllerWeights weights,
@@ -119,4 +119,4 @@ LinearVelocityController::RunRawController(const State &X, const State &goal,
                 .goal = goal,
                 .sb02od_exit_code = result.debug.sb02od_exit_code}};
 }
-}  // namespace frc971::control_loops::swerve
+}  // namespace frc::control_loops::swerve

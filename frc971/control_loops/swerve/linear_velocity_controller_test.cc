@@ -1,10 +1,10 @@
-#include "frc971/control_loops/swerve/linear_velocity_controller.h"
+#include "frc/control_loops/swerve/linear_velocity_controller.h"
 
 #include "gtest/gtest.h"
 
 #include "aos/realtime.h"
 
-namespace frc971::control_loops::swerve::test {
+namespace frc::control_loops::swerve::test {
 class LinearVelocityControllerTest : public ::testing::Test {
  protected:
   typedef LinearVelocityController::States States;
@@ -94,4 +94,4 @@ TEST_F(LinearVelocityControllerTest, SpinInPlace) {
   EXPECT_EQ(Input::Zero(), result.debug.U_feedback);
 }
 
-}  // namespace frc971::control_loops::swerve::test
+}  // namespace frc::control_loops::swerve::test

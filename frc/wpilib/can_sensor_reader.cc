@@ -30,6 +30,9 @@ CANSensorReader::CANSensorReader(
 }
 
 void CANSensorReader::Loop() {
+  //if (signals_.empty()) {
+  //  return;
+  //}
   ctre::phoenix::StatusCode status;
   if (sync_ == SignalSync::kDoSync) {
     status = ctre::phoenix6::BaseStatusSignal::WaitForAll(20_ms, signals_);

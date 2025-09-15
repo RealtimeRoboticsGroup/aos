@@ -288,6 +288,13 @@ flatbuffer_ts_library(
 )
 
 static_flatbuffer(
+    name = "can_coder_fbs",
+    srcs = [
+        "can_coder.fbs",
+    ],
+)
+
+static_flatbuffer(
     name = "can_talonfx_fbs",
     srcs = [
         "can_talonfx.fbs",

@@ -46,11 +46,12 @@ NaiveEstimator::State NaiveEstimator::Update(
       can_position->front_right()->translation()->position(),
       can_position->back_left()->translation()->position(),
       can_position->back_right()->translation()->position()};
-  const std::array<const AbsolutePosition *, 4> rotation_positions{
-      position->front_left()->rotation_position(),
-      position->front_right()->rotation_position(),
-      position->back_left()->rotation_position(),
-      position->back_right()->rotation_position()};
+  (void)position;
+  const std::array<const CanCoderReading *, 4> rotation_positions{
+      can_position->front_left()->encoder(),
+      can_position->front_right()->encoder(),
+      can_position->back_left()->encoder(),
+      can_position->back_right()->encoder()};
   // Constants for a very simple IIR on the various velocities. Currently set to
   // do no filtering.
   constexpr Scalar kAlpha = 1.0;

@@ -54,7 +54,10 @@ static_flatbuffer(
 static_flatbuffer(
     name = "swerve_drivetrain_can_position_fbs",
     srcs = ["swerve_drivetrain_can_position.fbs"],
-    deps = ["//frc/control_loops:can_talonfx_fbs"],
+    deps = [
+        "//frc/control_loops:can_coder_fbs",
+        "//frc/control_loops:can_talonfx_fbs",
+    ],
 )
 
 static_flatbuffer(
@@ -538,6 +541,7 @@ cc_library(
         ":linearization_utils",
         "//aos/time",
         "//frc/control_loops:jacobian",
+        "@com_google_absl//absl/log:vlog_is_on",
         "@com_google_absl//absl/strings:str_format",
         "@com_google_ceres_solver//:ceres",
     ],

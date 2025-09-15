@@ -110,6 +110,7 @@ cc_library(
                 "//aos/containers:error_list",
                 "//aos/logging",
                 "//frc:constants",
+                "//frc/control_loops:can_coder_fbs",
                 "//frc/control_loops:control_loops_fbs",
                 "@com_google_absl//absl/log",
                 "@com_google_absl//absl/log:check",

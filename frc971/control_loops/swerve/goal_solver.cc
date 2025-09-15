@@ -1,9 +1,9 @@
-#include "frc971/control_loops/swerve/goal_solver.h"
+#include "frc/control_loops/swerve/goal_solver.h"
 
-#include "frc971/control_loops/swerve/motors.h"
-#include "frc971/math/flatbuffers_matrix.h"
+#include "frc/control_loops/swerve/motors.h"
+#include "frc/math/flatbuffers_matrix.h"
 
-namespace frc971::control_loops::swerve {
+namespace frc::control_loops::swerve {
 GoalSolver::GoalSolver(
     aos::EventLoop *event_loop,
     const LinearVelocityController::DynamicsParameters &params)
@@ -23,4 +23,4 @@ void GoalSolver::HandleJoystickGoal(const JoystickGoal &msg) {
   FromEigen(feedforwards.input.cast<double>(), goal->add_input());
   builder.CheckOk(builder.Send());
 }
-}  // namespace frc971::control_loops::swerve
+}  // namespace frc::control_loops::swerve

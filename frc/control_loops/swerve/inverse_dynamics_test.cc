@@ -1,10 +1,10 @@
-#include "frc971/control_loops/swerve/inverse_dynamics.h"
+#include "frc/control_loops/swerve/inverse_dynamics.h"
 
 #include "gtest/gtest.h"
 
 #include "aos/realtime.h"
 
-namespace frc971::control_loops::swerve::test {
+namespace frc::control_loops::swerve::test {
 
 using SimpleInverseDynamics =
     NumericalInverseDynamics<double, Eigen::Vector2d,
@@ -232,4 +232,4 @@ TEST_F(InverseDynamicsTest, UnderconstrainedWithCost) {
   EXPECT_NEAR(-2.0 / 3.0, result.input(0), 1e-6);
 }
 
-}  // namespace frc971::control_loops::swerve::test
+}  // namespace frc::control_loops::swerve::test

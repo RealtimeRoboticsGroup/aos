@@ -16,6 +16,7 @@
 #include "frc/wpilib/ahal/DriverStation.h"
 #include "frc/wpilib/ahal/Encoder.h"
 #include "frc/wpilib/ahal/TalonFX.h"
+#include "frc/wpilib/cancoder.h"
 #include "frc/wpilib/ahal/VictorSP.h"
 #undef ERROR
 
@@ -25,6 +26,7 @@
 #include "aos/containers/sized_array.h"
 #include "aos/events/event_loop.h"
 #include "aos/events/shm_event_loop.h"
+#include "ctre/phoenix6/CANcoder.hpp"
 #include "aos/init.h"
 #include "aos/logging/logging.h"
 #include "aos/realtime.h"
@@ -145,6 +147,7 @@ class SensorReader : public ::frc::wpilib::SensorReader {
       builder.CheckOk(builder.Send());
     }
 
+#if 1
     {
       auto builder = drivetrain_position_sender_.MakeStaticBuilder();
       auto swerve_position_constants =
@@ -161,6 +164,7 @@ class SensorReader : public ::frc::wpilib::SensorReader {
 
       builder.CheckOk(builder.Send());
     }
+#endif
 
     {
       auto builder = gyro_sender_.MakeBuilder();
@@ -212,6 +216,7 @@ class SensorReader : public ::frc::wpilib::SensorReader {
                                               std::move(absolute_pwm));
   }
 
+
  private:
   const Constants *robot_constants_;
 
@@ -239,6 +244,12 @@ class WPILibRobot : public ::frc::wpilib::WPILibRobotBase {
   }
 
   void Run() override {
+    ctre::phoenix::platform::can::CANComm_SetRxSchedPriority(
+        y2024_bot3::constants::Values::kDrivetrainRxPriority, true,
+        "Drivetrain Bus");
+    ctre::phoenix::platform::can::CANComm_SetTxSchedPriority(
+        y2024_bot3::constants::Values::kDrivetrainTxPriority, true,
+        "Drivetrain Bus");
     aos::FlatbufferDetachedBuffer<aos::Configuration> config =
         aos::configuration::ReadConfig("aos_config.json");
 
@@ -270,25 +281,25 @@ class WPILibRobot : public ::frc::wpilib::WPILibRobotBase {
     frc::wpilib::swerve::SwerveModules modules{
         .front_left = std::make_shared<SwerveModule>(
             frc::wpilib::TalonFXParams{6, true},
-            frc::wpilib::TalonFXParams{5, false}, "Drivetrain Bus",
+            frc::wpilib::TalonFXParams{5, false}, 10, "Drivetrain Bus",
             &signals_registry,
             current_limits->drivetrain_stator_current_limit(),
             current_limits->drivetrain_supply_current_limit()),
         .front_right = std::make_shared<SwerveModule>(
             frc::wpilib::TalonFXParams{3, true},
-            frc::wpilib::TalonFXParams{4, false}, "Drivetrain Bus",
+            frc::wpilib::TalonFXParams{4, false}, 11, "Drivetrain Bus",
             &signals_registry,
             current_limits->drivetrain_stator_current_limit(),
             current_limits->drivetrain_supply_current_limit()),
         .back_left = std::make_shared<SwerveModule>(
             frc::wpilib::TalonFXParams{7, true},
-            frc::wpilib::TalonFXParams{8, false}, "Drivetrain Bus",
+            frc::wpilib::TalonFXParams{8, false}, 12, "Drivetrain Bus",
             &signals_registry,
             current_limits->drivetrain_stator_current_limit(),
             current_limits->drivetrain_supply_current_limit()),
         .back_right = std::make_shared<SwerveModule>(
             frc::wpilib::TalonFXParams{2, true},
-            frc::wpilib::TalonFXParams{1, false}, "Drivetrain Bus",
+            frc::wpilib::TalonFXParams{1, false}, 13, "Drivetrain Bus",
             &signals_registry,
             current_limits->drivetrain_stator_current_limit(),
             current_limits->drivetrain_supply_current_limit())};
@@ -298,6 +309,8 @@ class WPILibRobot : public ::frc::wpilib::WPILibRobotBase {
     SensorReader sensor_reader(&sensor_reader_event_loop, robot_constants,
                                modules);
     sensor_reader.set_pwm_trigger(false);
+
+    /*
     sensor_reader.set_front_left_encoder(
         make_encoder(3), std::make_unique<frc::DigitalInput>(3));
     sensor_reader.set_front_right_encoder(
@@ -306,6 +319,7 @@ class WPILibRobot : public ::frc::wpilib::WPILibRobotBase {
                                         std::make_unique<frc::DigitalInput>(2));
     sensor_reader.set_back_right_encoder(
         make_encoder(5), std::make_unique<frc::DigitalInput>(5));
+        */
     sensor_reader.set_yaw_rate_input(make_unique<frc::DigitalInput>(25));
     sensor_reader.set_intake_beambreak(make_unique<frc::DigitalInput>(0));
     sensor_reader.set_arm(make_encoder(4), make_unique<frc::DigitalInput>(4),
@@ -313,6 +327,17 @@ class WPILibRobot : public ::frc::wpilib::WPILibRobotBase {
     // todo set the numbers
 
     AddLoop(&sensor_reader_event_loop);
+
+    aos::ShmEventLoop drivetrain_writer_event_loop(&config.message());
+    drivetrain_writer_event_loop.set_name("DrivetrainWriter");
+
+    DrivetrainWriter drivetrain_writer(
+        &drivetrain_writer_event_loop,
+        constants::Values::kDrivetrainWriterPriority, 12);
+
+    drivetrain_writer.set_talonfxs(modules);
+
+    AddLoop(&drivetrain_writer_event_loop);
 
     // Thread 4.
     // Set up CAN.
@@ -326,16 +351,22 @@ class WPILibRobot : public ::frc::wpilib::WPILibRobotBase {
     modules.PopulateFalconsVector(&falcons);
 
     std::shared_ptr<TalonFX> arm =
-        std::make_shared<TalonFX>(9, true, "Drivetrain Bus", &signals_registry,
+        std::make_shared<TalonFX>(33, true, "", &signals_registry,
                                   current_limits->arm_stator_current_limit(),
                                   current_limits->arm_supply_current_limit());
     falcons.push_back(arm);
 
+    std::shared_ptr<frc::wpilib::CanCoder> arm_cancoder =
+        std::make_shared<frc::wpilib::CanCoder>(11, /*roborio bus*/ "",
+                                                &signals_registry);
+
+    /*
     std::shared_ptr<TalonFX> intake_roller = std::make_shared<TalonFX>(
         10, false, "Drivetrain Bus", &signals_registry,
         current_limits->intake_roller_stator_current_limit(),
         current_limits->intake_roller_supply_current_limit());
     falcons.push_back(intake_roller);
+    */
 
     ::aos::ShmEventLoop can_sensor_reader_event_loop(&config.message());
     can_sensor_reader_event_loop.set_name("CANSensorReader");
@@ -354,8 +385,8 @@ class WPILibRobot : public ::frc::wpilib::WPILibRobotBase {
 
     frc::wpilib::CANSensorReader canivore_can_sensor_reader(
         &can_sensor_reader_event_loop, std::move(signals_registry), falcons,
-        [&arm, &intake_roller, &superstructure_can_position_sender, &falcons,
-         &can_position_sender, &modules](ctre::phoenix::StatusCode status) {
+        [&arm, &arm_cancoder, &superstructure_can_position_sender, &falcons,
+         &can_position_sender/*, &modules*/](ctre::phoenix::StatusCode status) {
           for (auto falcon : falcons) {
             falcon->RefreshNontimesyncedSignals();
           }
@@ -366,9 +397,13 @@ class WPILibRobot : public ::frc::wpilib::WPILibRobotBase {
                   superstructure_can_position_sender.MakeStaticBuilder();
           arm->SerializePosition(superstructure_can_builder->add_arm(),
                                  constants::Values::kArmOutputRatio);
+          arm_cancoder->SerializePosition(
+              superstructure_can_builder->add_arm_cancoder(), 1.0);
+          /*
           intake_roller->SerializePosition(
               superstructure_can_builder->add_intake_roller(),
               constants::Values::kIntakeRollerOutputRatio);
+              */
 
           superstructure_can_builder->set_status(static_cast<int>(status));
           superstructure_can_builder.CheckOk(superstructure_can_builder.Send());
@@ -376,6 +411,7 @@ class WPILibRobot : public ::frc::wpilib::WPILibRobotBase {
           aos::Sender<frc::control_loops::swerve::CanPositionStatic>::
               StaticBuilder builder = can_position_sender.MakeStaticBuilder();
 
+          /*
           const frc::wpilib::swerve::SwerveModule::ModuleGearRatios
               gear_ratios{
                   .rotation = constants::Values::kRotationModuleRatio(),
@@ -388,6 +424,7 @@ class WPILibRobot : public ::frc::wpilib::WPILibRobotBase {
                                                  gear_ratios);
           modules.back_right->PopulateCanPosition(builder->add_back_right(),
                                                   gear_ratios);
+                                                  */
 
           builder.CheckOk(builder.Send());
         },
@@ -408,12 +445,12 @@ class WPILibRobot : public ::frc::wpilib::WPILibRobotBase {
               // Double check if it is supposed to be "arm"?
               talonfx_map.find("arm")->second->WriteVoltage(
                   output.arm_voltage());
-              talonfx_map.find("intake_roller")
-                  ->second->WriteVoltage(output.roller_voltage());
+              //talonfx_map.find("intake_roller")
+              //    ->second->WriteVoltage(output.roller_voltage());
             });
 
     can_superstructure_writer.add_talonfx("arm", arm);
-    can_superstructure_writer.add_talonfx("intake_roller", intake_roller);
+    //can_superstructure_writer.add_talonfx("intake_roller", intake_roller);
 
     can_output_event_loop.MakeWatcher(
         "/roborio", [&can_superstructure_writer](

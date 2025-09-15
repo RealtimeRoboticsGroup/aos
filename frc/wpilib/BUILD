@@ -505,6 +505,20 @@ ts_project(
 )
 
 cc_library(
+    name = "cancoder",
+    srcs = [
+        "cancoder.cc",
+    ],
+    hdrs = [
+        "cancoder.h",
+    ],
+    deps = [
+        "//frc/control_loops:can_coder_fbs",
+        "//third_party:phoenix6",
+    ],
+)
+
+cc_library(
     name = "talonfx",
     srcs = [
         "talonfx.cc",

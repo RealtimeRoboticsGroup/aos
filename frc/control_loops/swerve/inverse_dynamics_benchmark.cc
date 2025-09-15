@@ -1,16 +1,16 @@
 #include "aos/init.h"
 #include "aos/realtime.h"
-#include "frc971/control_loops/swerve/inverse_dynamics.h"
-#include "frc971/control_loops/swerve/linear_velocity_controller.h"
-#include "frc971/control_loops/swerve/linearization_utils.h"
-#include "frc971/control_loops/swerve/simplified_dynamics.h"
+#include "frc/control_loops/swerve/inverse_dynamics.h"
+#include "frc/control_loops/swerve/linear_velocity_controller.h"
+#include "frc/control_loops/swerve/linearization_utils.h"
+#include "frc/control_loops/swerve/simplified_dynamics.h"
 
 ABSL_FLAG(int, iterations, 100, "Number of iterations to run solvers for.");
 ABSL_FLAG(
     int, max_inverse_dynamics_solver_iterations, 50,
     "Maximum number of iterations to run the inverse dynamics solver for.");
 
-namespace frc971::control_loops::swerve {
+namespace frc::control_loops::swerve {
 
 namespace {
 constexpr int kNumStates = SimplifiedDynamics<double>::kNumVelocityStates;
@@ -172,10 +172,10 @@ int Main() {
   }
   return EXIT_SUCCESS;
 }
-}  // namespace frc971::control_loops::swerve
+}  // namespace frc::control_loops::swerve
 int main(int argc, char *argv[]) {
   aos::InitGoogle(&argc, &argv);
-  return frc971::control_loops::swerve::Main();
+  return frc::control_loops::swerve::Main();
 }
 
 // NOTES:

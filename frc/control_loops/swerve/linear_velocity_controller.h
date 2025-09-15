@@ -1,10 +1,10 @@
 #ifndef FRC971_CONTROL_LOOPS_SWERVE_LINEAR_VELOCITY_CONTROLLER_H_
 #define FRC971_CONTROL_LOOPS_SWERVE_LINEAR_VELOCITY_CONTROLLER_H_
-#include "frc971/control_loops/swerve/inverse_dynamics.h"
-#include "frc971/control_loops/swerve/linearized_controller.h"
-#include "frc971/control_loops/swerve/simplified_dynamics.h"
+#include "frc/control_loops/swerve/inverse_dynamics.h"
+#include "frc/control_loops/swerve/linearized_controller.h"
+#include "frc/control_loops/swerve/simplified_dynamics.h"
 
-namespace frc971::control_loops::swerve {
+namespace frc::control_loops::swerve {
 
 class LinearVelocityController {
  public:
@@ -99,5 +99,5 @@ class LinearVelocityController {
   InverseDynamics inverse_dynamics_;
 };
 
-}  // namespace frc971::control_loops::swerve
+}  // namespace frc::control_loops::swerve
 #endif  // FRC971_CONTROL_LOOPS_SWERVE_LINEAR_VELOCITY_CONTROLLER_H_

@@ -7,6 +7,7 @@
 
 #include "aos/containers/error_list.h"
 #include "frc/zeroing/zeroing.h"
+#include "frc/control_loops/can_coder_generated.h"
 
 namespace frc::zeroing {
 
@@ -28,6 +29,7 @@ class ContinuousAbsoluteEncoderZeroingEstimator
 
   // Updates the sensor values for the zeroing logic.
   void UpdateEstimate(const AbsolutePosition &info) override;
+  void UpdateEstimate(const control_loops::CanCoderReading &info);
 
   void TriggerError() override { error_ = true; }
 
@@ -50,8 +52,13 @@ class ContinuousAbsoluteEncoderZeroingEstimator
   void GetEstimatorState(AbsoluteEncoderEstimatorStateStatic *fbs) const;
 
  private:
+  template <typename T>
+  void UpdateEstimateRaw(const T &info);
   struct PositionStruct {
     PositionStruct(const AbsolutePosition &position_buffer)
+        : absolute_encoder(position_buffer.absolute_encoder()),
+          encoder(position_buffer.encoder()) {}
+    PositionStruct(const control_loops::CanCoderReading &position_buffer)
         : absolute_encoder(position_buffer.absolute_encoder()),
           encoder(position_buffer.encoder()) {}
     double absolute_encoder;

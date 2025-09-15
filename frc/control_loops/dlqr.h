@@ -40,12 +40,12 @@ int Controllability(const ::Eigen::Matrix<Scalar, num_states, num_states> &A,
  *   user is sure preconditions are already met).
  * @return The controller gain K on success, or DAREError on failure.
  */
-template <int num_states, int num_inputs>
-tl::expected<Eigen::Matrix<double, num_inputs, num_states>, DareError> dlqr(
-    const Eigen::Matrix<double, num_states, num_states> &A,
-    const Eigen::Matrix<double, num_states, num_inputs> &B,
-    const Eigen::Matrix<double, num_states, num_states> &Q,
-    const Eigen::Matrix<double, num_inputs, num_inputs> &R,
+template <int num_states, int num_inputs, typename Scalar=double>
+tl::expected<Eigen::Matrix<Scalar, num_inputs, num_states>, DareError> dlqr(
+    const Eigen::Matrix<Scalar, num_states, num_states> &A,
+    const Eigen::Matrix<Scalar, num_states, num_inputs> &B,
+    const Eigen::Matrix<Scalar, num_states, num_states> &Q,
+    const Eigen::Matrix<Scalar, num_inputs, num_inputs> &R,
     bool check_preconditions = true) {
   if (auto X = dare<num_states, num_inputs>(A, B, Q, R, check_preconditions)) {
     // K = (BᵀSB + R)⁻¹BᵀSA

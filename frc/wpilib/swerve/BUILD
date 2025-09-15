@@ -33,6 +33,7 @@ cc_library(
         "//frc/control_loops/swerve:swerve_drivetrain_can_position_fbs",
         "//frc/control_loops/swerve:swerve_drivetrain_output_fbs",
         "//frc/control_loops/swerve:swerve_drivetrain_position_fbs",
+        "//frc/wpilib:cancoder",
         "//frc/wpilib:encoder_and_potentiometer",
         "//frc/wpilib:talonfx",
     ],

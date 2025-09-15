@@ -1,23 +1,23 @@
 #include "autonomous_pd_loop.h"
 
-#include "frc971/control_loops/swerve/autonomous_pd_loop.h"
-#include "frc971/control_loops/swerve/swerve_path_generated.h"
+#include "frc/control_loops/swerve/autonomous_pd_loop.h"
+#include "frc/control_loops/swerve/swerve_path_generated.h"
 
-using frc971::control_loops::swerve::AutonomousPDLoop;
+using frc::control_loops::swerve::AutonomousPDLoop;
 
 AutonomousPDLoop::AutonomousPDLoop(
     aos::EventLoop *event_loop, std::string_view spline_path,
     std::vector<std::pair<double, std::function<void()>>> callbacks)
     : path_index_(std::nullopt),
       swerve_goal_sender_(
-          event_loop->MakeSender<frc971::control_loops::swerve::GoalStatic>(
+          event_loop->MakeSender<frc::control_loops::swerve::GoalStatic>(
               "/drivetrain")),
       joystick_state_fetcher_(
           event_loop->MakeFetcher<aos::JoystickState>("/aos")),
       callbacks_(callbacks),
       event_loop_(event_loop) {
   auto spline_fbs =
-      aos::JsonFileToFlatbuffer<frc971::control_loops::swerve::SwervePath>(
+      aos::JsonFileToFlatbuffer<frc::control_loops::swerve::SwervePath>(
           spline_path);
 
   // Eigenify

@@ -278,29 +278,6 @@
       "frequency": 1,
       "num_senders": 2,
       "max_size": 65536
-    },
-    {
-        "name": "/imu/drivetrain",
-        "type": "frc.control_loops.swerve.Status",
-        "source_node": "imu",
-        "max_size": 10000,
-        "frequency": 250
-    },
-    {
-        "name": "/imu/drivetrain",
-        "type": "frc.control_loops.swerve.CanPosition",
-        "source_node": "imu",
-        "frequency": 250,
-        "num_senders": 1,
-        "max_size": 656
-    },
-    {
-        "name": "/imu/drivetrain",
-        "type": "frc.control_loops.swerve.Output",
-        "source_node": "imu",
-        "frequency": 400,
-        "max_size": 200,
-        "num_senders": 2
     }
   ],
   "applications": [
@@ -607,36 +584,6 @@
       },
       "rename": {
         "name":"/roborio/drivetrain"
-      }
-    },
-    {
-      "match": {
-        "name": "/drivetrain",
-        "type": "frc.control_loops.swerve.Status",
-        "source_node": "imu"
-      },
-      "rename": {
-        "name":"/imu/drivetrain"
-      }
-    },
-    {
-      "match": {
-        "name": "/drivetrain",
-        "type": "frc.control_loops.swerve.CanPosition",
-        "source_node": "imu"
-      },
-      "rename": {
-        "name":"/imu/drivetrain"
-      }
-    },
-    {
-      "match": {
-        "name": "/drivetrain",
-        "type": "frc.control_loops.swerve.Output",
-        "source_node": "imu"
-      },
-      "rename": {
-        "name":"/imu/drivetrain"
       }
     },
     {

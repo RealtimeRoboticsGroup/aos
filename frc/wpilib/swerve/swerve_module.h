@@ -4,6 +4,7 @@
 #include "frc/control_loops/swerve/swerve_drivetrain_can_position_static.h"
 #include "frc/control_loops/swerve/swerve_drivetrain_output_generated.h"
 #include "frc/control_loops/swerve/swerve_drivetrain_position_static.h"
+#include "frc/wpilib/cancoder.h"
 #include "frc/wpilib/encoder_and_potentiometer.h"
 #include "frc/wpilib/swerve/swerve_constants_static.h"
 #include "frc/wpilib/talonfx.h"
@@ -15,7 +16,7 @@ namespace frc::wpilib::swerve {
 // has a CTRE mag encoder on the rotation of the module.
 struct SwerveModule {
   SwerveModule(TalonFXParams rotation_params, TalonFXParams translation_params,
-               std::string canbus,
+               std::optional<int> cancoder_id, std::string canbus,
                std::vector<ctre::phoenix6::BaseStatusSignal *> *signals,
                double stator_current_limit, double supply_current_limit)
       : rotation(std::make_shared<TalonFX>(rotation_params, canbus, signals,
@@ -23,7 +24,12 @@ struct SwerveModule {
                                            supply_current_limit)),
         translation(std::make_shared<TalonFX>(translation_params, canbus,
                                               signals, stator_current_limit,
-                                              supply_current_limit)) {}
+                                              supply_current_limit)) {
+          if (cancoder_id.has_value()) {
+            set_rotation_encoder(std::make_unique<frc::wpilib::CanCoder>(
+                cancoder_id.value(), canbus, signals));
+          }
+        }
 
   // Writes the requested torque currents from the module_output to the motors,
   // setting the maximum voltage of the motor outputs to the requested value.
@@ -46,20 +52,28 @@ struct SwerveModule {
   // encoder on the rotation joint.
   void set_rotation_encoder(std::unique_ptr<frc::Encoder> encoder,
                             std::unique_ptr<frc::DigitalInput> absolute_pwm) {
-    rotation_encoder.set_encoder(std::move(encoder));
-    rotation_encoder.set_absolute_pwm(std::move(absolute_pwm));
+    rotation_encoder.emplace();
+    rotation_encoder.value().set_encoder(std::move(encoder));
+    rotation_encoder.value().set_absolute_pwm(std::move(absolute_pwm));
+  }
+
+  void set_rotation_encoder(std::unique_ptr<frc::wpilib::CanCoder> encoder) {
+    cancoder = std::move(encoder);
   }
 
   // Populates the Position message with the mag encoder values.
   void PopulatePosition(
       frc::control_loops::swerve::SwerveModulePositionStatic *fbs,
       const SwervePositionConstants *constants) {
-    auto rotation_position = fbs->add_rotation_position();
-    rotation_position->set_encoder(rotation_encoder.ReadRelativeEncoder() *
-                                   constants->relative_encoder_scale());
-    rotation_position->set_absolute_encoder(
-        rotation_encoder.ReadAbsoluteEncoder() *
-        constants->absolute_encoder_scale());
+    if (rotation_encoder.has_value()) {
+      auto rotation_position = fbs->add_rotation_position();
+      rotation_position->set_encoder(
+          rotation_encoder.value().ReadRelativeEncoder() *
+          constants->relative_encoder_scale());
+      rotation_position->set_absolute_encoder(
+          rotation_encoder.value().ReadAbsoluteEncoder() *
+          constants->absolute_encoder_scale());
+    }
   }
 
   struct ModuleGearRatios {
@@ -75,11 +89,16 @@ struct SwerveModule {
     rotation->SerializePosition(can_position->add_rotation(), ratios.rotation);
     translation->SerializePosition(can_position->add_translation(),
                                    ratios.translation);
+    if (cancoder) {
+      cancoder->SerializePosition(can_position->add_encoder(),
+                                  /*values already in radians=*/1.0);
+    }
   }
 
   std::shared_ptr<TalonFX> rotation;
   std::shared_ptr<TalonFX> translation;
-  frc::wpilib::AbsoluteEncoder rotation_encoder;
+  std::optional<frc::wpilib::AbsoluteEncoder> rotation_encoder;
+  std::unique_ptr<frc::wpilib::CanCoder> cancoder;
 };
 
 // Represents all the modules in a swerve drivetrain.

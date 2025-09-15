@@ -1,10 +1,12 @@
 include "frc/control_loops/can_talonfx.fbs";
+include "frc/control_loops/can_coder.fbs";
 
 namespace frc.control_loops.swerve;
 
 table SwerveModuleCanPosition {
   rotation: frc.control_loops.CANTalonFX (id: 0);
   translation: frc.control_loops.CANTalonFX (id: 1);
+  encoder:frc.control_loops.CanCoderReading (id: 2);
 }
 
 // CAN Readings from the CAN sensor reader loop for each swerve module

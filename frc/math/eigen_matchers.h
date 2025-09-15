@@ -4,7 +4,7 @@
 #include "gmock/gmock.h"
 
 // This header provides useful gtest matchers for working with Eigen matrices.
-namespace frc971::math {
+namespace frc::math {
 
 MATCHER_P2(IsEigenMatrixNear, expected, threshold, "") {
   double difference_magnitude = (arg - expected).norm();

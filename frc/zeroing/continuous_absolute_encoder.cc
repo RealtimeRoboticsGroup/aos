@@ -45,6 +45,16 @@ void ContinuousAbsoluteEncoderZeroingEstimator::Reset() {
 // update estimates based on those samples.
 void ContinuousAbsoluteEncoderZeroingEstimator::UpdateEstimate(
     const AbsolutePosition &info) {
+  UpdateEstimateRaw(info);
+}
+
+void ContinuousAbsoluteEncoderZeroingEstimator::UpdateEstimate(
+    const control_loops::CanCoderReading &info) {
+  UpdateEstimateRaw(info);
+}
+
+template <typename T>
+void ContinuousAbsoluteEncoderZeroingEstimator::UpdateEstimateRaw(const T &info) {
   // Check for Abs Encoder NaN value that would mess up the rest of the zeroing
   // code below. NaN values are given when the Absolute Encoder is disconnected.
   if (::std::isnan(info.absolute_encoder())) {
@@ -67,8 +77,9 @@ void ContinuousAbsoluteEncoderZeroingEstimator::UpdateEstimate(
     return;
   }
 
-  const bool moving = move_detector_.Update(info, constants_.moving_buffer_size,
-                                            constants_.zeroing_threshold);
+  const bool moving =
+      move_detector_.Update(PositionStruct(info), constants_.moving_buffer_size,
+                            constants_.zeroing_threshold);
 
   if (!moving) {
     const PositionStruct &sample = move_detector_.GetSample();
