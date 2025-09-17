@@ -41,6 +41,20 @@ void CANSensorReader::Loop() {
   }
 
   if (!status.IsOK()) {
+    for (const auto &talon : talonfxs_) {
+      VLOG(1) << "ID " << talon->talon()->GetDeviceID() << " net \""
+                 << talon->talon()->GetNetwork() << "\"";
+    }
+    for (const auto &signal : signals_) {
+      auto individual_status = signal->GetStatus();
+      if (!individual_status.IsOK()) {
+        VLOG(1) << "Failed to read signals from " << signal->GetName()
+                   << ": " << status.GetName() << ": "
+                   << status.GetDescription();
+      }
+    }
+    VLOG(1) << "Failed to read signals from can devices: "
+               << status.GetName() << ": " << status.GetDescription();
     AOS_LOG(ERROR, "Failed to read signals from talonfx motors: %s: %s",
             status.GetName(), status.GetDescription());
   }

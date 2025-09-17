@@ -9,22 +9,22 @@
     "swerve_zeroing": {
       {% set _ = front_left_zero.update(
           {
-              "measured_absolute_position" : 2.934639251458032
+              "measured_absolute_position" : 6.226428
           }
       ) %}
       {% set _ = front_right_zero.update(
           {
-              "measured_absolute_position" : 4.872094665936765
+              "measured_absolute_position" : 6.25404
           }
       ) %}
       {% set _ = back_left_zero.update(
           {
-              "measured_absolute_position" : 0.05358620595755559
+              "measured_absolute_position" : 6.25404
           }
       ) %}
       {% set _ = back_right_zero.update(
           {
-              "measured_absolute_position" : 5.672941265642591
+              "measured_absolute_position" : 6.2724476
           }
       ) %}
       "front_left":  {{ front_left_zero | tojson(indent=2)}},
