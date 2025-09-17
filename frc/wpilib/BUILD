@@ -504,6 +504,25 @@ ts_project(
     ],
 )
 
+static_flatbuffer(
+    name = "pigeon_fbs",
+    srcs = [":pigeon.fbs"],
+)
+
+cc_library(
+    name = "pigeon",
+    srcs = [
+        "pigeon.cc",
+    ],
+    hdrs = [
+        "pigeon.h",
+    ],
+    deps = [
+        ":pigeon_fbs",
+        "//third_party:phoenix6",
+    ],
+)
+
 cc_library(
     name = "cancoder",
     srcs = [

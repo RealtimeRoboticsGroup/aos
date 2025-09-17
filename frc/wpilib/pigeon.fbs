@@ -1,0 +1,11 @@
+namespace frc.wpilib.fbs;
+
+table Pigeon2 {
+  id:int64 (id: 0);
+  timestamp:int64 (id: 1);
+  gyro_x:double (id: 2);
+  gyro_y:double (id: 3);
+  gyro_z:double (id: 4);
+}
+
+root_type Pigeon2;

@@ -17,6 +17,7 @@
 #include "frc/wpilib/ahal/Encoder.h"
 #include "frc/wpilib/ahal/TalonFX.h"
 #include "frc/wpilib/cancoder.h"
+#include "frc/wpilib/pigeon.h"
 #include "frc/wpilib/ahal/VictorSP.h"
 #undef ERROR
 
@@ -359,6 +360,9 @@ class WPILibRobot : public ::frc::wpilib::WPILibRobotBase {
     std::shared_ptr<frc::wpilib::CanCoder> arm_cancoder =
         std::make_shared<frc::wpilib::CanCoder>(11, /*roborio bus*/ "",
                                                 &signals_registry);
+    std::shared_ptr<frc::wpilib::Pigeon2> pigeon =
+        std::make_shared<frc::wpilib::Pigeon2>(1, /*roborio bus*/ "",
+                                               &signals_registry);
 
     /*
     std::shared_ptr<TalonFX> intake_roller = std::make_shared<TalonFX>(
@@ -383,10 +387,15 @@ class WPILibRobot : public ::frc::wpilib::WPILibRobotBase {
                 .MakeSender<frc::control_loops::swerve::CanPositionStatic>(
                     "/roborio/drivetrain");
 
+    aos::Sender<frc::wpilib::fbs::Pigeon2Static> pigeon_sender =
+        can_sensor_reader_event_loop
+            .MakeSender<frc::wpilib::fbs::Pigeon2Static>("/roborio/drivetrain");
+
     frc::wpilib::CANSensorReader canivore_can_sensor_reader(
         &can_sensor_reader_event_loop, std::move(signals_registry), falcons,
-        [&arm, &arm_cancoder, &superstructure_can_position_sender, &falcons,
-         &can_position_sender/*, &modules*/](ctre::phoenix::StatusCode status) {
+        [&arm, &arm_cancoder, &pigeon, &superstructure_can_position_sender,
+         &falcons, &can_position_sender, &pigeon_sender,
+         &modules](ctre::phoenix::StatusCode status) {
           for (auto falcon : falcons) {
             falcon->RefreshNontimesyncedSignals();
           }
@@ -411,7 +420,6 @@ class WPILibRobot : public ::frc::wpilib::WPILibRobotBase {
           aos::Sender<frc::control_loops::swerve::CanPositionStatic>::
               StaticBuilder builder = can_position_sender.MakeStaticBuilder();
 
-          /*
           const frc::wpilib::swerve::SwerveModule::ModuleGearRatios
               gear_ratios{
                   .rotation = constants::Values::kRotationModuleRatio(),
@@ -424,9 +432,15 @@ class WPILibRobot : public ::frc::wpilib::WPILibRobotBase {
                                                  gear_ratios);
           modules.back_right->PopulateCanPosition(builder->add_back_right(),
                                                   gear_ratios);
-                                                  */
 
           builder.CheckOk(builder.Send());
+
+          {
+            auto pigeon_builder = pigeon_sender.MakeStaticBuilder();
+            pigeon->SerializePosition(pigeon_builder.get());
+
+            pigeon_builder.CheckOk(pigeon_builder.Send());
+          }
         },
         frc::wpilib::CANSensorReader::SignalSync::kNoSync);
 

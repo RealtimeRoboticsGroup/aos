@@ -25,6 +25,13 @@
       "num_senders": 2
     },
     {
+      "name": "/roborio/drivetrain",
+      "type": "frc.wpilib.fbs.Pigeon2",
+      "source_node": "roborio",
+      "frequency": 250,
+      "num_senders": 2
+    },
+    {
       "name": "/roborio/aos",
       "type": "frc.PDPValues",
       "source_node": "roborio",

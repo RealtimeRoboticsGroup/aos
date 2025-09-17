@@ -18,6 +18,7 @@
 #include "frc/control_loops/swerve/velocity_ekf.h"
 #include "frc/queues/gyro_generated.h"
 #include "frc/wpilib/imu_batch_generated.h"
+#include "frc/wpilib/pigeon_generated.h"
 #include "frc/zeroing/continuous_absolute_encoder.h"
 #include "frc/zeroing/imu_zeroer.h"
 
@@ -59,6 +60,7 @@ class SwerveControlLoops
       aos::Sender<StatusStatic>::StaticBuilder *status_builder) override;
   int iteration_counter_ = 0;
   aos::Fetcher<CanPosition> can_position_fetcher_;
+  aos::Fetcher<frc::wpilib::fbs::Pigeon2> pigeon_fetcher_;
   aos::Fetcher<frc::sensors::GyroReading> gyro_fetcher_;
   aos::Fetcher<frc::IMUValuesBatch> imu_fetcher_;
   std::optional<double> yaw_gyro_zero_;

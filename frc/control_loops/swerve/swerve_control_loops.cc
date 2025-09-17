@@ -20,6 +20,8 @@ SwerveControlLoops::SwerveControlLoops(
           event_loop, name),
       can_position_fetcher_(
           event_loop->MakeFetcher<CanPosition>("/drivetrain")),
+      pigeon_fetcher_(event_loop->TryMakeFetcher<::frc::wpilib::fbs::Pigeon2>(
+          "/drivetrain")),
       gyro_fetcher_(event_loop->TryMakeFetcher<::frc::sensors::GyroReading>(
           "/drivetrain")),
       imu_fetcher_(
@@ -51,8 +53,15 @@ void SwerveControlLoops::RunIteration(
 
   can_position_fetcher_.Fetch();
 
+  bool gyro_pwm_has_data = false;
   if (gyro_fetcher_.valid()) {
     gyro_fetcher_.Fetch();
+    gyro_pwm_has_data = gyro_fetcher_.get() != nullptr;
+  }
+  bool pigeon_has_data = false;
+  if (pigeon_fetcher_.valid()) {
+    pigeon_fetcher_.Fetch();
+    pigeon_has_data = pigeon_fetcher_.get() != nullptr;
   }
   if (imu_fetcher_.valid()) {
     while (imu_fetcher_.FetchNext()) {
@@ -65,8 +74,9 @@ void SwerveControlLoops::RunIteration(
 
   std::optional<NaiveEstimator::State> current_state;
   std::optional<double> gyro_rate;
-  if (gyro_fetcher_.valid() && gyro_fetcher_.get() != nullptr) {
-    gyro_rate = gyro_fetcher_->velocity();
+  if (gyro_pwm_has_data || pigeon_has_data) {
+    gyro_rate =
+        pigeon_has_data ? pigeon_fetcher_->gyro_z() : gyro_fetcher_->velocity();
     if (!yaw_gyro_zero_.has_value()) {
       yaw_gyro_zeroer_.AddData(gyro_rate.value());
       // Maximum variation to allow in the gyro when zeroing.
@@ -93,6 +103,7 @@ void SwerveControlLoops::RunIteration(
   if (gyro_rate.has_value() && can_position_fetcher_.get() != nullptr) {
     current_state = naive_estimator_.Update(
         now, position, can_position_fetcher_.get(), gyro_rate.value());
+#if 0
     if (!ekf_initialized_) {
       velocity_ekf_.Initialize(now, current_state.value());
       ekf_initialized_ = true;
@@ -129,6 +140,7 @@ void SwerveControlLoops::RunIteration(
         gyro_rate.value(), U_,
         (status_builder != nullptr) ? status_builder->get()->add_velocity_ekf()
                                     : nullptr);
+#endif
   }
 
   const aos::monotonic_clock::time_point estimation_done =

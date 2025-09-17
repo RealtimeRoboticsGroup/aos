@@ -101,6 +101,7 @@ cc_library(
         "//frc/control_loops:static_zeroing_single_dof_profiled_subsystem",
         "//frc/queues:gyro_fbs",
         "//frc/wpilib:imu_batch_fbs",
+        "//frc/wpilib:pigeon_fbs",
         "//frc/zeroing:continuous_absolute_encoder",
         "//frc/zeroing:imu_zeroer",
     ],
