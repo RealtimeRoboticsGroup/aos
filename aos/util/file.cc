@@ -31,7 +31,8 @@ namespace aos::util {
 
 std::string ReadFileToStringOrDie(const std::string_view filename) {
   std::optional<std::string> r = MaybeReadFileToString(filename);
-  ABSL_PCHECK(r.has_value()) << "Failed to read " << filename << " to string";
+  ABSL_PCHECK(r.has_value()) << "REALLY REALLY Failed to read " << filename << " to string";
+  //exit(1);
   return r.value();
 }
 
@@ -40,7 +41,8 @@ std::optional<std::string> MaybeReadFileToString(
   std::string r;
   ScopedFD fd(open(::std::string(filename).c_str(), O_RDONLY));
   if (fd.get() == -1) {
-    ABSL_PLOG(ERROR) << "Failed to open " << filename;
+    ABSL_PLOG(ERROR) << "REALLY Failed to open " << filename;
+    //exit(1);
     return std::nullopt;
   }
   while (true) {

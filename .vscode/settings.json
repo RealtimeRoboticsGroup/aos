@@ -37,5 +37,12 @@
 
   // CSpell
   "cSpell.words": ["stlink"],
-  "git.ignoreLimitWarning": true
+  "git.ignoreLimitWarning": true,
+  "files.associations": {
+    "*.inc": "cpp",
+    "__node_handle": "cpp",
+    "optional": "cpp",
+    "regex": "cpp",
+    "expected": "cpp"
+  }
 }
