@@ -28,203 +28,156 @@ namespace aos::starter::testing {
 
 class SubprocessTest : public ::testing::Test {
  protected:
-  SubprocessTest() {
+  SubprocessTest()
+      : config_file_(::aos::testing::ArtifactPath(
+            "aos/testing/ping_pong/pingpong_config.json")),
+        config_(aos::configuration::ReadConfig(config_file_)),
+        event_loop_(&config_.message()),
+        exit_timer_(event_loop_.AddTimer([this]() {
+          event_loop_.Exit();
+          FAIL() << "We should have already exited.";
+        })) {
     // Nuke the shm dir:
     aos::util::UnlinkRecursive(absl::GetFlag(FLAGS_shm_base));
+    event_loop_.OnRun([this]() {
+      // Note: we are using the backup poll in this test to capture SIGCHLD.
+      // This runs at 1 hz, so make sure we let the polling occur at least once.
+      // From there, we add a bit of extra buffer to account for any variability
+      // in test timing. Typically this timeout should not get hit, so adding
+      // extra time here should not impact normal test runtime too much.
+      exit_timer_->Schedule(event_loop_.monotonic_now() +
+                            std::chrono::milliseconds(1500));
+    });
   }
+  const std::string config_file_;
+  aos::FlatbufferDetachedBuffer<aos::Configuration> config_;
+  aos::ShmEventLoop event_loop_;
+  aos::TimerHandler *exit_timer_;
 };
 
 TEST_F(SubprocessTest, CaptureOutputs) {
-  const std::string config_file = ::aos::testing::ArtifactPath(
-      "aos/testing/ping_pong/pingpong_config.json");
-
-  aos::FlatbufferDetachedBuffer<aos::Configuration> config =
-      aos::configuration::ReadConfig(config_file);
-  aos::ShmEventLoop event_loop(&config.message());
-  bool observed_stopped = false;
-  Application echo_stdout(
-      "echo", "echo", &event_loop, [&observed_stopped, &echo_stdout]() {
-        if (echo_stdout.status() == aos::starter::State::STOPPED) {
-          observed_stopped = true;
-        }
-      });
+  Application echo_stdout("echo", "echo", &event_loop_, [this, &echo_stdout]() {
+    if (echo_stdout.status() == aos::starter::State::STOPPED) {
+      event_loop_.Exit();
+    }
+  });
   ASSERT_FALSE(echo_stdout.autorestart());
   echo_stdout.set_args({"abcdef"});
   echo_stdout.set_capture_stdout(true);
   echo_stdout.set_capture_stderr(true);
 
   echo_stdout.Start();
-  aos::TimerHandler *exit_timer =
-      event_loop.AddTimer([&event_loop]() { event_loop.Exit(); });
-  event_loop.OnRun([&event_loop, exit_timer]() {
-    // Note: we are using the backup poll in this test to capture SIGCHLD.  This
-    // runs at 1 hz, so make sure we let it run at least once.
-    exit_timer->Schedule(event_loop.monotonic_now() +
-                         std::chrono::milliseconds(1500));
-  });
 
-  event_loop.Run();
+  event_loop_.Run();
 
   ASSERT_EQ("abcdef\n", echo_stdout.GetStdout());
   ASSERT_TRUE(echo_stdout.GetStderr().empty());
-  EXPECT_TRUE(observed_stopped);
   EXPECT_EQ(aos::starter::State::STOPPED, echo_stdout.status());
-
-  observed_stopped = false;
 
   // Run again, the output should've been cleared.
   echo_stdout.set_args({"ghijkl"});
   echo_stdout.Start();
-  event_loop.Run();
+  event_loop_.Run();
   ASSERT_EQ("ghijkl\n", echo_stdout.GetStdout());
-  EXPECT_TRUE(observed_stopped);
 }
 
 TEST_F(SubprocessTest, CaptureStderr) {
-  const std::string config_file = ::aos::testing::ArtifactPath(
-      "aos/testing/ping_pong/pingpong_config.json");
-
-  aos::FlatbufferDetachedBuffer<aos::Configuration> config =
-      aos::configuration::ReadConfig(config_file);
-  aos::ShmEventLoop event_loop(&config.message());
-  bool observed_stopped = false;
-  Application echo_stderr(
-      "echo", "sh", &event_loop, [&observed_stopped, &echo_stderr]() {
-        if (echo_stderr.status() == aos::starter::State::STOPPED) {
-          observed_stopped = true;
-        }
-      });
+  Application echo_stderr("echo", "sh", &event_loop_, [&echo_stderr, this]() {
+    if (echo_stderr.status() == aos::starter::State::STOPPED) {
+      event_loop_.Exit();
+    }
+  });
   echo_stderr.set_args({"-c", "echo abcdef >&2"});
   echo_stderr.set_capture_stdout(true);
   echo_stderr.set_capture_stderr(true);
 
   echo_stderr.Start();
-  // Note: we are using the backup poll in this test to capture SIGCHLD.  This
-  // runs at 1 hz, so make sure we let it run at least once.
-  event_loop.AddTimer([&event_loop]() { event_loop.Exit(); })
-      ->Schedule(event_loop.monotonic_now() + std::chrono::milliseconds(1500));
 
-  event_loop.Run();
+  event_loop_.Run();
 
   ASSERT_EQ("abcdef\n", echo_stderr.GetStderr());
   ASSERT_TRUE(echo_stderr.GetStdout().empty());
-  ASSERT_TRUE(observed_stopped);
   ASSERT_EQ(aos::starter::State::STOPPED, echo_stderr.status());
 }
 
 // Checks that when a child application crashing results in the starter printing
 // out its own version by default.
 TEST_F(SubprocessTest, PrintNoTimingReportVersionString) {
-  const std::string config_file = ::aos::testing::ArtifactPath(
-      "aos/testing/ping_pong/pingpong_config.json");
-
   ::testing::internal::CaptureStderr();
 
   // Set up application without quiet flag active
-  aos::FlatbufferDetachedBuffer<aos::Configuration> config =
-      aos::configuration::ReadConfig(config_file);
-  aos::ShmEventLoop event_loop(&config.message());
-  event_loop.SetVersionString("version_string");
-  bool observed_stopped = false;
+  event_loop_.SetVersionString("version_string");
   Application error_out(
-      "false", "bash", &event_loop,
-      [&observed_stopped, &error_out]() {
+      "false", "bash", &event_loop_,
+      [this, &error_out]() {
         if (error_out.status() == aos::starter::State::STOPPED) {
-          observed_stopped = true;
+          event_loop_.Exit();
         }
       },
       Application::QuietLogging::kNo);
   error_out.set_args({"-c", "sleep 3; false"});
 
   error_out.Start();
-  aos::TimerHandler *exit_timer =
-      event_loop.AddTimer([&event_loop]() { event_loop.Exit(); });
-  event_loop.OnRun([&event_loop, exit_timer]() {
-    exit_timer->Schedule(event_loop.monotonic_now() +
-                         std::chrono::milliseconds(5000));
+  event_loop_.OnRun([this]() {
+    // Don't use the default exit timeout; this test specifically sleeps longer
+    // than normal to get the process past the initial STARTING state.
+    exit_timer_->Schedule(event_loop_.monotonic_now() +
+                          std::chrono::milliseconds(5000));
   });
 
-  event_loop.Run();
+  event_loop_.Run();
 
   // Ensure presence of logs without quiet flag
   std::string output = ::testing::internal::GetCapturedStderr();
   std::string expected = "starter version 'version_string'";
 
   ASSERT_TRUE(output.find(expected) != std::string::npos) << output;
-  EXPECT_TRUE(observed_stopped);
   EXPECT_EQ(aos::starter::State::STOPPED, error_out.status());
 }
 
 TEST_F(SubprocessTest, PrintFailedToStartVersionString) {
-  const std::string config_file = ::aos::testing::ArtifactPath(
-      "aos/testing/ping_pong/pingpong_config.json");
-
   ::testing::internal::CaptureStderr();
 
   // Set up application without quiet flag active
-  aos::FlatbufferDetachedBuffer<aos::Configuration> config =
-      aos::configuration::ReadConfig(config_file);
-  aos::ShmEventLoop event_loop(&config.message());
-  event_loop.SetVersionString("version_string");
-  bool observed_stopped = false;
+  event_loop_.SetVersionString("version_string");
   Application error_out(
-      "false", "false", &event_loop,
-      [&observed_stopped, &error_out]() {
+      "false", "false", &event_loop_,
+      [this, &error_out]() {
         if (error_out.status() == aos::starter::State::STOPPED) {
-          observed_stopped = true;
+          event_loop_.Exit();
         }
       },
       Application::QuietLogging::kNo);
 
   error_out.Start();
-  aos::TimerHandler *exit_timer =
-      event_loop.AddTimer([&event_loop]() { event_loop.Exit(); });
-  event_loop.OnRun([&event_loop, exit_timer]() {
-    exit_timer->Schedule(event_loop.monotonic_now() +
-                         std::chrono::milliseconds(1500));
-  });
 
-  event_loop.Run();
+  event_loop_.Run();
 
   // Ensure presence of logs without quiet flag
   std::string output = ::testing::internal::GetCapturedStderr();
   std::string expected = "starter version 'version_string'";
 
   ASSERT_TRUE(output.find(expected) != std::string::npos) << output;
-  EXPECT_TRUE(observed_stopped);
   EXPECT_EQ(aos::starter::State::STOPPED, error_out.status());
 }
 
 TEST_F(SubprocessTest, UnactiveQuietFlag) {
-  const std::string config_file = ::aos::testing::ArtifactPath(
-      "aos/testing/ping_pong/pingpong_config.json");
-
   ::testing::internal::CaptureStderr();
 
   // Set up application without quiet flag active
-  aos::FlatbufferDetachedBuffer<aos::Configuration> config =
-      aos::configuration::ReadConfig(config_file);
-  aos::ShmEventLoop event_loop(&config.message());
-  bool observed_stopped = false;
   Application error_out(
-      "false", "false", &event_loop,
-      [&observed_stopped, &error_out]() {
+      "false", "false", &event_loop_,
+      [this, &error_out]() {
         if (error_out.status() == aos::starter::State::STOPPED) {
-          observed_stopped = true;
+          event_loop_.Exit();
         }
       },
       Application::QuietLogging::kNo);
   ASSERT_FALSE(error_out.autorestart());
 
   error_out.Start();
-  aos::TimerHandler *exit_timer =
-      event_loop.AddTimer([&event_loop]() { event_loop.Exit(); });
-  event_loop.OnRun([&event_loop, exit_timer]() {
-    exit_timer->Schedule(event_loop.monotonic_now() +
-                         std::chrono::milliseconds(1500));
-  });
 
-  event_loop.Run();
+  event_loop_.Run();
 
   // Ensure presence of logs without quiet flag
   std::string output = ::testing::internal::GetCapturedStderr();
@@ -234,44 +187,28 @@ TEST_F(SubprocessTest, UnactiveQuietFlag) {
   ASSERT_TRUE(output.find(expectedStart) != std::string::npos ||
               output.find(expectedRun) != std::string::npos)
       << output;
-  EXPECT_TRUE(observed_stopped);
   EXPECT_EQ(aos::starter::State::STOPPED, error_out.status());
 }
 
 TEST_F(SubprocessTest, ActiveQuietFlag) {
-  const std::string config_file = ::aos::testing::ArtifactPath(
-      "aos/testing/ping_pong/pingpong_config.json");
-
   ::testing::internal::CaptureStderr();
 
-  // Set up application with quiet flag active
-  aos::FlatbufferDetachedBuffer<aos::Configuration> config =
-      aos::configuration::ReadConfig(config_file);
-  aos::ShmEventLoop event_loop(&config.message());
-  bool observed_stopped = false;
   Application error_out(
-      "false", "false", &event_loop,
-      [&observed_stopped, &error_out]() {
+      "false", "false", &event_loop_,
+      [this, &error_out]() {
         if (error_out.status() == aos::starter::State::STOPPED) {
-          observed_stopped = true;
+          event_loop_.Exit();
         }
       },
       Application::QuietLogging::kYes);
   ASSERT_FALSE(error_out.autorestart());
 
   error_out.Start();
-  aos::TimerHandler *exit_timer =
-      event_loop.AddTimer([&event_loop]() { event_loop.Exit(); });
-  event_loop.OnRun([&event_loop, exit_timer]() {
-    exit_timer->Schedule(event_loop.monotonic_now() +
-                         std::chrono::milliseconds(1500));
-  });
 
-  event_loop.Run();
+  event_loop_.Run();
 
   // Ensure lack of logs with quiet flag
   ASSERT_TRUE(::testing::internal::GetCapturedStderr().empty());
-  EXPECT_TRUE(observed_stopped);
   EXPECT_EQ(aos::starter::State::STOPPED, error_out.status());
 }
 
@@ -281,22 +218,15 @@ TEST_F(SubprocessTest, ActiveQuietFlag) {
 // will trigger a crash even if the resources tied to the event loop in the
 // aos::Application aren't properly released.
 TEST_F(SubprocessTest, ShortLivedApp) {
-  const std::string config_file = ::aos::testing::ArtifactPath(
-      "aos/testing/ping_pong/pingpong_config.json");
-
-  aos::FlatbufferDetachedBuffer<aos::Configuration> config =
-      aos::configuration::ReadConfig(config_file);
-  aos::ShmEventLoop event_loop(&config.message());
-
   auto application =
-      std::make_unique<Application>("sleep", "sleep", &event_loop, []() {});
+      std::make_unique<Application>("sleep", "sleep", &event_loop_, []() {});
   application->set_args({"10"});
   application->Start();
   pid_t pid = application->get_pid();
 
   int ticks = 0;
-  aos::TimerHandler *exit_timer = event_loop.AddTimer([&event_loop, &ticks,
-                                                       &application, pid]() {
+  aos::TimerHandler *exit_timer = event_loop_.AddTimer([this, &ticks,
+                                                        &application, pid]() {
     ticks++;
     if (application && application->status() == aos::starter::State::RUNNING) {
       // Kill the application, it will autorestart.
@@ -307,28 +237,24 @@ TEST_F(SubprocessTest, ShortLivedApp) {
     // event loop lives for longer.
     if (ticks >= 5) {
       // Now we exit.
-      event_loop.Exit();
+      event_loop_.Exit();
     }
   });
 
-  event_loop.OnRun([&event_loop, exit_timer]() {
-    exit_timer->Schedule(event_loop.monotonic_now(),
+  event_loop_.OnRun([this, exit_timer]() {
+    // Disable the normal exit timer, and schedule a wakeup for our checks once
+    // per polling period (every second).
+    exit_timer_->Disable();
+    exit_timer->Schedule(event_loop_.monotonic_now(),
                          std::chrono::milliseconds(1000));
   });
 
-  event_loop.Run();
+  event_loop_.Run();
 }
 
 // Test that if the binary changes out from under us that we note it in the
 // FileState.
 TEST_F(SubprocessTest, ChangeBinaryContents) {
-  const std::string config_file = ::aos::testing::ArtifactPath(
-      "aos/testing/ping_pong/pingpong_config.json");
-
-  aos::FlatbufferDetachedBuffer<aos::Configuration> config =
-      aos::configuration::ReadConfig(config_file);
-  aos::ShmEventLoop event_loop(&config.message());
-
   // Create a local copy of the sleep binary so that we can delete it.
   const std::filesystem::path full_executable_path =
       absl::StrCat(aos::testing::TestTmpDir(), "/", "sleep_binary");
@@ -348,55 +274,48 @@ TEST_F(SubprocessTest, ChangeBinaryContents) {
 
   // Wait until we are running, go through and test that various variations in
   // file state result in the expected behavior, and then exit.
-  Application sleep(
-      "sleep", executable_name.native(), &event_loop,
-      [&sleep, &event_loop, executable_name, full_executable_path]() {
-        switch (sleep.status()) {
-          case aos::starter::State::RUNNING:
-            EXPECT_EQ(aos::starter::FileState::NO_CHANGE,
-                      sleep.UpdateFileState());
-            // Delete the symlink; this should have no effect, because the
-            // Application class should be looking at the original path.
-            std::filesystem::remove(executable_name);
-            EXPECT_EQ(aos::starter::FileState::NO_CHANGE,
-                      sleep.UpdateFileState());
-            // Delete the executable; it should be changed.
-            std::filesystem::remove(full_executable_path);
-            EXPECT_EQ(aos::starter::FileState::CHANGED,
-                      sleep.UpdateFileState());
-            // Replace the executable itself; it should be changed.
-            aos::util::WriteStringToFileOrDie(full_executable_path.native(),
-                                              "abcdef");
-            EXPECT_EQ(aos::starter::FileState::CHANGED,
-                      sleep.UpdateFileState());
-            // Terminate.
-            event_loop.Exit();
-            break;
-          case aos::starter::State::WAITING:
-          case aos::starter::State::STARTING:
-          case aos::starter::State::STOPPING:
-          case aos::starter::State::STOPPED:
-            EXPECT_EQ(aos::starter::FileState::NOT_RUNNING,
-                      sleep.UpdateFileState());
-            break;
-        }
-      });
+  Application sleep("sleep", executable_name.native(), &event_loop_,
+                    [&sleep, this, executable_name, full_executable_path]() {
+                      switch (sleep.status()) {
+                        case aos::starter::State::RUNNING:
+                          EXPECT_EQ(aos::starter::FileState::NO_CHANGE,
+                                    sleep.UpdateFileState());
+                          // Delete the symlink; this should have no effect,
+                          // because the Application class should be looking at
+                          // the original path.
+                          std::filesystem::remove(executable_name);
+                          EXPECT_EQ(aos::starter::FileState::NO_CHANGE,
+                                    sleep.UpdateFileState());
+                          // Delete the executable; it should be changed.
+                          std::filesystem::remove(full_executable_path);
+                          EXPECT_EQ(aos::starter::FileState::CHANGED,
+                                    sleep.UpdateFileState());
+                          // Replace the executable itself; it should be
+                          // changed.
+                          aos::util::WriteStringToFileOrDie(
+                              full_executable_path.native(), "abcdef");
+                          EXPECT_EQ(aos::starter::FileState::CHANGED,
+                                    sleep.UpdateFileState());
+                          // Terminate.
+                          event_loop_.Exit();
+                          break;
+                        case aos::starter::State::WAITING:
+                        case aos::starter::State::STARTING:
+                        case aos::starter::State::STOPPING:
+                        case aos::starter::State::STOPPED:
+                          EXPECT_EQ(aos::starter::FileState::NOT_RUNNING,
+                                    sleep.UpdateFileState());
+                          break;
+                      }
+                    });
   ASSERT_FALSE(sleep.autorestart());
   // Ensure that the subprocess will run longer than we care about (we just call
   // Terminate() below to stop it).
   sleep.set_args({"1000"});
 
   sleep.Start();
-  aos::TimerHandler *exit_timer = event_loop.AddTimer([&event_loop]() {
-    event_loop.Exit();
-    FAIL() << "We should have already exited.";
-  });
-  event_loop.OnRun([&event_loop, exit_timer]() {
-    exit_timer->Schedule(event_loop.monotonic_now() +
-                         std::chrono::milliseconds(5000));
-  });
 
-  event_loop.Run();
+  event_loop_.Run();
   sleep.Terminate();
 }
 
@@ -446,7 +365,8 @@ TEST_F(ResolvePathTest, ResolveWithUnsetPath) {
   // to choose some utility that we can reasonably expect to be available in the
   // test environment.
   const std::filesystem::path echo_path = ResolvePath("echo");
-  EXPECT_THAT((std::vector<std::string>{"/bin/echo", "/usr/bin/echo"}),
+  EXPECT_THAT((std::vector<std::string>{"/bin/echo", "/usr/bin/echo",
+                                        "/bin/echo.coreutils"}),
               ::testing::Contains(echo_path.native()));
 
   // Test that a file with /'s in the name ignores the PATH.
