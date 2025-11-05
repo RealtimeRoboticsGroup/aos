@@ -5430,4 +5430,118 @@ TEST(MultinodeLoggerLoopTest, StaggeredConnect) {
   auto result = ConfirmReadable(filenames);
 }
 
+// Tests that per-channel network delays actually affect message arrival times.
+TEST(MultinodeLoggerLoopTest, ChannelNetworkDelayEffects) {
+  const aos::FlatbufferDetachedBuffer<aos::Configuration> config =
+      aos::configuration::ReadConfig(ArtifactPath(
+          "aos/events/logging/multinode_pingpong_reboot_ooo_config.json"));
+
+  SimulatedEventLoopFactory event_loop_factory(&config.message());
+  event_loop_factory.set_send_delay(chrono::microseconds(0));
+
+  NodeEventLoopFactory *const pi1 =
+      event_loop_factory.GetNodeEventLoopFactory("pi1");
+  NodeEventLoopFactory *const pi2 =
+      event_loop_factory.GetNodeEventLoopFactory("pi2");
+
+  // Set different delays for different channels.
+  // 100ms chosen as a baseline global delay.
+  constexpr chrono::milliseconds kGlobalDelay(100);
+  // 500ms chosen to be 10x the fast channel's delay, making the difference
+  // measurable and testable with tight tolerances.
+  constexpr chrono::milliseconds kChannel1Delay(
+      500);  // /atest1 gets 500ms delay.
+  // 50ms chosen to be 10x faster than the slow channel, ensuring a clear
+  // observable difference in arrival times.
+  constexpr chrono::milliseconds kChannel2Delay(
+      50);  // /atest2 gets 50ms delay.
+
+  const Channel *atest1_pong_channel = configuration::GetChannel(
+      &config.message(), "/atest1", "aos.examples.Pong", "", nullptr);
+  const Channel *atest2_pong_channel = configuration::GetChannel(
+      &config.message(), "/atest2", "aos.examples.Pong", "", nullptr);
+
+  event_loop_factory.set_network_delay(kGlobalDelay);
+  event_loop_factory.set_channel_network_delay_override(atest1_pong_channel,
+                                                        kChannel1Delay);
+  event_loop_factory.set_channel_network_delay_override(atest2_pong_channel,
+                                                        kChannel2Delay);
+
+  // Create sender on pi2.
+  std::unique_ptr<EventLoop> pi2_event_loop = pi2->MakeEventLoop("sender");
+  aos::Sender<examples::Pong> pong_sender1 =
+      pi2_event_loop->MakeSender<examples::Pong>("/atest1");
+  aos::Sender<examples::Pong> pong_sender2 =
+      pi2_event_loop->MakeSender<examples::Pong>("/atest2");
+
+  // Track receive times on pi1.
+  std::unique_ptr<EventLoop> pi1_event_loop = pi1->MakeEventLoop("receiver");
+
+  aos::monotonic_clock::time_point atest1_receive_time =
+      aos::monotonic_clock::min_time;
+  aos::monotonic_clock::time_point atest2_receive_time =
+      aos::monotonic_clock::min_time;
+  aos::monotonic_clock::time_point send_time = aos::monotonic_clock::min_time;
+
+  pi1_event_loop->MakeWatcher(
+      "/atest1", [&atest1_receive_time, &pi1](const examples::Pong &) {
+        atest1_receive_time = pi1->monotonic_now();
+      });
+
+  pi1_event_loop->MakeWatcher(
+      "/atest2", [&atest2_receive_time, &pi1](const examples::Pong &) {
+        atest2_receive_time = pi1->monotonic_now();
+      });
+
+  // Set up OnRun to send messages after startup.
+  pi2_event_loop->OnRun([&send_time, &pong_sender1, &pong_sender2, &pi2]() {
+    send_time = pi2->monotonic_now();
+
+    {
+      aos::Sender<examples::Pong>::Builder builder = pong_sender1.MakeBuilder();
+      examples::Pong::Builder pong_builder =
+          builder.MakeBuilder<examples::Pong>();
+      CHECK_EQ(builder.Send(pong_builder.Finish()), RawSender::Error::kOk);
+    }
+
+    {
+      aos::Sender<examples::Pong>::Builder builder = pong_sender2.MakeBuilder();
+      examples::Pong::Builder pong_builder =
+          builder.MakeBuilder<examples::Pong>();
+      CHECK_EQ(builder.Send(pong_builder.Finish()), RawSender::Error::kOk);
+    }
+  });
+
+  // Run long enough for both messages to arrive.
+  // kChannel1Delay (500ms) + 200ms buffer to ensure delivery completion.
+  constexpr chrono::milliseconds kDeliveryBuffer(200);
+  event_loop_factory.RunFor(kChannel1Delay + kDeliveryBuffer);
+
+  // Verify messages were received.
+  EXPECT_NE(atest1_receive_time, aos::monotonic_clock::min_time);
+  EXPECT_NE(atest2_receive_time, aos::monotonic_clock::min_time);
+
+  // Calculate actual delays (allowing for some simulation overhead).
+  const chrono::nanoseconds atest1_delay = atest1_receive_time - send_time;
+  const chrono::nanoseconds atest2_delay = atest2_receive_time - send_time;
+
+  LOG(INFO) << "Send time: " << send_time;
+  LOG(INFO) << "/atest1 receive time: " << atest1_receive_time
+            << ", delay: " << atest1_delay;
+  LOG(INFO) << "/atest2 receive time: " << atest2_receive_time
+            << ", delay: " << atest2_delay;
+
+  // Verify delays match configuration exactly.
+  // We expect atest1 to have exactly 500ms delay and atest2 to have exactly
+  // 50ms delay. set_send_delay(0) eliminates simulation overhead.
+  EXPECT_EQ(atest1_delay, kChannel1Delay);
+  EXPECT_EQ(atest2_delay, kChannel2Delay);
+
+  // Verify atest1 took significantly longer than atest2.
+  // 400ms threshold chosen as 80% of the expected 450ms difference
+  // (500ms - 50ms), providing a clear margin above noise.
+  constexpr chrono::milliseconds kSignificantDifferenceThreshold(400);
+  EXPECT_GT(atest1_delay, atest2_delay + kSignificantDifferenceThreshold);
+}
+
 }  // namespace aos::logger::testing
