@@ -55,6 +55,93 @@ class SubprocessTest : public ::testing::Test {
   aos::TimerHandler *exit_timer_;
 };
 
+TEST_F(SubprocessTest, CaptureStatus) {
+  Application application("exit", "sh", &event_loop_, [this, &application]() {
+    if (application.status() == aos::starter::State::STOPPED) {
+      event_loop_.Exit();
+    }
+  });
+  ASSERT_FALSE(application.autorestart());
+  application.set_args({"-c", "exit 0"});
+
+  flatbuffers::FlatBufferBuilder fbb;
+  fbb.Finish(application.PopulateStatus(&fbb, nullptr));
+  aos::FlatbufferDetachedBuffer<ApplicationStatus> status = fbb.Release();
+  EXPECT_THAT(aos::FlatbufferToJson(status, {.multi_line = true}),
+              ::testing::MatchesRegex(R"json(\{
+ "name": "exit",
+ "state": "STOPPED",
+ "last_stop_reason": "STOP_REQUESTED",
+ "has_active_timing_report": false,
+ "file_state": "NOT_RUNNING"
+\})json"))
+      << "Application status pre-start should not contain exit code/time "
+         "values.";
+
+  application.Start();
+
+  event_loop_.Run();
+
+  fbb.Finish(application.PopulateStatus(&fbb, nullptr));
+  status = fbb.Release();
+  EXPECT_THAT(aos::FlatbufferToJson(status, {.multi_line = true}),
+              ::testing::MatchesRegex(R"json(\{
+ "name": "exit",
+ "state": "STOPPED",
+ "last_exit_code": 0,
+ "pid": [0-9]*,
+ "id": 0,
+ "last_start_time": [0-9]*,
+ "last_stop_reason": "STOP_REQUESTED",
+ "has_active_timing_report": false,
+ "file_state": "NOT_RUNNING",
+ "last_exit_time": [0-9]*
+\})json"));
+  EXPECT_LT(status.message().last_start_time(),
+            status.message().last_exit_time())
+      << "Exit time should be greater than start time when application is "
+         "stopped.";
+  EXPECT_LT(std::chrono::nanoseconds(status.message().last_exit_time() -
+                                     status.message().last_start_time()),
+            std::chrono::milliseconds(1000))
+      << "The application should have completed running in a sane amount of "
+         "time.";
+  aos::monotonic_clock::time_point initial_stop_time =
+      event_loop_.monotonic_now();
+  EXPECT_LT(std::chrono::nanoseconds(status.message().last_exit_time()),
+            initial_stop_time.time_since_epoch());
+
+  EXPECT_EQ(aos::starter::State::STOPPED, application.status());
+
+  application.set_args({"-c", "exit 1"});
+  application.Start();
+  event_loop_.Run();
+
+  fbb.Finish(application.PopulateStatus(&fbb, nullptr));
+  status = fbb.Release();
+  EXPECT_THAT(aos::FlatbufferToJson(status, {.multi_line = true}),
+              ::testing::MatchesRegex(R"json(\{
+ "name": "exit",
+ "state": "STOPPED",
+ "last_exit_code": 1,
+ "pid": [0-9]*,
+ "id": 1,
+ "last_start_time": [0-9]*,
+ "last_stop_reason": "STOP_REQUESTED",
+ "has_active_timing_report": false,
+ "file_state": "NOT_RUNNING",
+ "last_exit_time": [0-9]*
+\})json"));
+  EXPECT_LT(status.message().last_start_time(),
+            status.message().last_exit_time())
+      << "Exit time should be greater than start time when application is "
+         "stopped.";
+  EXPECT_LT(initial_stop_time.time_since_epoch(),
+            std::chrono::nanoseconds(status.message().last_start_time()))
+      << "Updated start time should be entirely after the original application "
+         "stopped.";
+}
+
 TEST_F(SubprocessTest, CaptureOutputs) {
   Application echo_stdout("echo", "echo", &event_loop_, [this, &echo_stdout]() {
     if (echo_stdout.status() == aos::starter::State::STOPPED) {

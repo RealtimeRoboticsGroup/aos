@@ -275,7 +275,7 @@ class Application {
   PipePair status_pipes_;
   uint64_t id_ = 0;
   std::optional<int> exit_code_;
-  aos::monotonic_clock::time_point start_time_, exit_time_;
+  std::optional<aos::monotonic_clock::time_point> start_time_, exit_time_;
   bool queue_restart_ = false;
   bool terminating_ = false;
   bool autostart_ = false;
