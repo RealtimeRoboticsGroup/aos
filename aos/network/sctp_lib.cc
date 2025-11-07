@@ -450,6 +450,7 @@ void SctpReadWrite::FreeMessage(aos::unique_c_ptr<Message> &&message) {
 
 void SctpReadWrite::SetPoolSize(size_t pool_size) {
   CHECK(!use_pool_);
+  partial_messages_.reserve(pool_size);
   free_messages_.reserve(pool_size);
   for (size_t i = 0; i < pool_size; ++i) {
     free_messages_.emplace_back(AcquireMessage());
