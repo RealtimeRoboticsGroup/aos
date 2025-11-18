@@ -23,6 +23,8 @@
 #include "src/annotated_binary_text_gen.h"
 #include "src/binary_annotator.h"
 
+ABSL_DECLARE_FLAG(double, max_network_delay);
+
 namespace aos::logger::testing {
 namespace chrono = std::chrono;
 using aos::message_bridge::RemoteMessage;
@@ -661,6 +663,10 @@ using TimestampMapperTest =
     SortingElementTest<SortingElementConfig::kMultiNode>;
 using SingleNodeTimestampMapperTest =
     SortingElementTest<SortingElementConfig::kSingleNode>;
+
+class TimestampMapperExpirationTest
+    : public TimestampMapperTest,
+      public ::testing::WithParamInterface<bool> {};
 
 // Tests that we can pull messages out of a log sorted in order.
 TEST_F(MessageSorterTest, Pull) {
@@ -3544,5 +3550,380 @@ TEST_F(InlinePackMessage, RemoteEquivilent) {
     }
   }
 }
+
+// Tests message expiration and preceded_by_expired_message flag with TTL
+// channels.
+//
+// WHAT THIS TEST VALIDATES:
+// 1. Expired messages return .data = nullptr (data evicted before timestamp
+// matching)
+// 2. Messages following expired messages have preceded_by_expired_message =
+// true
+// 3. Expiration is triggered when: last_popped > (send_time + TTL +
+// max_network_delay)
+//
+// Creates a custom configuration with 2 channels using ramping network delays.
+// Parameterized to test both scenarios:
+// - WithinThreshold (false): All messages arrive before expiry → all have data
+// - ExceedsThreshold (true): Some messages expire before matching → .data =
+// nullptr
+TEST_P(TimestampMapperExpirationTest, PrecededByExpiredMessageWithTTL) {
+  const bool exceeds_replay_threshold = GetParam();
+  // Create configuration with TTL on channels.
+  const aos::FlatbufferDetachedBuffer<Configuration> config_ttl =
+      JsonToFlatbuffer<Configuration>(R"({
+  "channels": [
+    {
+      "name": "/low_delay",
+      "type": "aos.logger.testing.TestMessage",
+      "source_node": "pi2",
+      "destination_nodes": [
+        {
+          "name": "pi1",
+          "time_to_live": 5000000
+        }
+      ]
+    },
+    {
+      "name": "/high_delay",
+      "type": "aos.logger.testing.TestMessage",
+      "source_node": "pi2",
+      "destination_nodes": [
+        {
+          "name": "pi1",
+          "time_to_live": 5000000
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "pi1"
+    },
+    {
+      "name": "pi2"
+    }
+  ]
+})");
+
+  // Resize queue_index_ for the new configuration.
+  queue_index_.clear();
+  queue_index_.resize(2);  // Two channels: low_delay and high_delay.
+
+  // Use test name to create unique filenames for each test parameter.
+  const std::string test_name =
+      ::testing::UnitTest::GetInstance()->current_test_info()->name();
+  const std::string logfile_ttl0 =
+      aos::testing::TestTmpDir() + "/" + test_name + "_ttl_log0.bfbs";
+  const std::string logfile_ttl1 =
+      aos::testing::TestTmpDir() + "/" + test_name + "_ttl_log1.bfbs";
+
+  // Pi1's logger creates two log files for the same logging session:
+  // - logfile0: pi1 as source (empty - no pi1→pi2 messages in this test)
+  // - logfile1: pi2 as source (DATA from pi2, TIMESTAMPS from pi1)
+  // Both share the same log_event_uuid since they're from the same session.
+  const aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader> config_ttl0 =
+      MakeHeader(config_ttl, R"({
+  "max_out_of_order_duration": 10000000000,
+  "node": { "name": "pi1" },
+  "logger_node": { "name": "pi1" },
+  "monotonic_start_time": 1000000,
+  "realtime_start_time": 1000000000000,
+  "log_event_uuid": "ttl-test",
+  "source_node_boot_uuid": "ttl-boot-1",
+  "logger_node_boot_uuid": "ttl-boot-1",
+  "boot_uuids": ["ttl-boot-1", "ttl-boot-2"],
+  "parts_uuid": "ttl-parts-1",
+  "parts_index": 0
+})");
+
+  const aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader> config_ttl1 =
+      MakeHeader(config_ttl, R"({
+  "max_out_of_order_duration": 10000000000,
+  "node": { "name": "pi2" },
+  "logger_node": { "name": "pi1" },
+  "monotonic_start_time": 0,
+  "realtime_start_time": 1000000000000,
+  "log_event_uuid": "ttl-test",
+  "source_node_boot_uuid": "ttl-boot-2",
+  "logger_node_boot_uuid": "ttl-boot-1",
+  "boot_uuids": ["ttl-boot-1", "ttl-boot-2"],
+  "parts_uuid": "ttl-parts-2",
+  "parts_index": 0
+})");
+
+  const aos::monotonic_clock::time_point monotonic_epoch =
+      monotonic_clock::epoch();
+
+  // TEST STRATEGY: Trigger message expiration by causing data to be evicted
+  // from the queue before its corresponding timestamp tries to match with it.
+  //
+  // EXPIRATION FORMULA: Message expires at send_time + TTL + max_network_delay
+  // - TTL is configured in the channel config (5ms)
+  // - max_network_delay is set here via FLAGS_max_network_delay
+  //
+  // Set max_network_delay based on test parameter:
+  // - ExceedsThreshold: 100ms → allows expiration to occur
+  // - WithinThreshold: 200ms → all messages arrive before expiry, no expiration
+  absl::FlagSaver flag_saver;
+  const chrono::milliseconds kReplayMaxNetworkDelay =
+      exceeds_replay_threshold ? chrono::milliseconds(100)
+                               : chrono::milliseconds(200);
+  absl::SetFlag(&FLAGS_max_network_delay,
+                chrono::duration<double>(kReplayMaxNetworkDelay).count());
+
+  // TIMING CONSTANTS chosen to trigger the expiration mechanism:
+  //
+  // Message send interval: 20ms
+  // - Messages sent every 20ms from the remote node (pi2)
+  // - Determines the baseline cadence of message generation
+  constexpr chrono::milliseconds kMessageSendInterval(20);
+
+  // Channel 0: 100ms constant delay (control/baseline)
+  // - Arrives predictably: 100, 120, 140, 160, 180, 200, 220, 240ms
+  // - Never expires because delay (100ms) ≤ max_network_delay (100ms)
+  // - Provides steady advancement of last_popped_message_time_
+  constexpr chrono::milliseconds kCh0Delay(100);
+
+  // Channel 1: Ramping delay from 100ms → 300ms in 40ms increments.
+  // - First message: 100ms delay (same as Ch0).
+  // - Subsequent messages: 140ms, 180ms, 220ms, 260ms, then 300ms (max).
+  // - Ramping creates growing gap between Ch1 arrival times, causing early
+  //   Ch1 messages to expire before their timestamps can match.
+  constexpr chrono::milliseconds kCh1StartDelay(100);
+  constexpr chrono::milliseconds kCh1EndDelay(300);
+  constexpr chrono::milliseconds kDelayIncrement(40);
+  const int kRampSteps =
+      (kCh1EndDelay - kCh1StartDelay).count() / kDelayIncrement.count();
+
+  // Number of messages: 8 is sufficient to create expiration gap without
+  // excessive test runtime.
+  // - With 8 messages, Ch1 arrival pattern is: 100, 160, 220, 280, 340, 400,
+  //   420, 440ms.
+  // - Ch0 advances last_popped steadily, causing Ch1[1] to expire:
+  //   * Ch1[1] expiry: 20ms (sent) + 5ms (TTL) + 100ms (max_network_delay) =
+  //     125ms.
+  //   * Ch1[1] arrives: 160ms (already expired!).
+  //   * By 160ms, last_popped has advanced past 125ms due to Ch0 messages.
+  //   * Result: Ch1[1]'s data is popped from queue before timestamp matches.
+  constexpr int kMessageCount = 8;
+
+  // Clock offset between nodes simulates real distributed systems where each
+  // node has its own independent clock. By adding this offset to one node's
+  // timestamps, we ensure clocks from different nodes are never compared
+  // directly. This validates that our implementation and tests only perform
+  // relative comparisons within each node's clock domain, not absolute
+  // comparisons across nodes.
+  std::chrono::milliseconds clock_offset = std::chrono::seconds(1000);
+
+  // Create log files from pi1's logger perspective.
+  {
+    TestDetachedBufferWriter writer0(logfile_ttl0);
+    writer0.QueueSpan(config_ttl0.span());
+    TestDetachedBufferWriter writer1(logfile_ttl1);
+    writer1.QueueSpan(config_ttl1.span());
+
+    // Pi1's logger writes:
+    // - writer0: timestamps from pi1 for messages received from pi2.
+    // - writer1: data messages from pi2.
+    //
+    // Both channels send messages at the same times (0, 20, 40, 60, 80, 100,
+    // 120, 140ms), but they arrive at pi1's logger at different times due to
+    // network delay:
+    //
+    // Ch0 (constant 100ms): Arrives at 100, 120, 140, 160, 180, 200, 220,
+    //                       240ms.
+    // Ch1 (ramping):        Arrives at 100, 160, 220, 280, 340, 400, 420,
+    //                       440ms (some messages expire before matching).
+    //
+    // KEY INSIGHT: Messages are processed in chronological order by arrival
+    // time. As Ch0 messages arrive and are popped, last_popped_message_time_
+    // advances. When it advances past Ch1[1]'s expiry (125ms), Ch1[1]'s data is
+    // popped from the queue. Later, when Ch1[1]'s timestamp arrives (160ms), it
+    // tries to match but finds queue_index=1 is out of range (queue now has
+    // front=2), so it returns .data = nullptr.
+    LOG(INFO) << "=== Sending " << kMessageCount
+              << " messages: ch0=" << kCh0Delay.count()
+              << "ms (constant), ch1=" << kCh1StartDelay.count() << "→"
+              << kCh1EndDelay.count() << "ms (ramping) ===";
+
+    int ch0_queue_idx = 0;
+    int ch1_queue_idx = 0;
+
+    auto write_messages = [&](chrono::milliseconds send_time,
+                              chrono::milliseconds ch1_delay) {
+      // Write data messages for both channels.
+      writer1.WriteSizedFlatbuffer(
+          MakeLogMessage(monotonic_epoch + send_time, 0, ch0_queue_idx));
+      writer1.WriteSizedFlatbuffer(
+          MakeLogMessage(monotonic_epoch + send_time, 1, ch1_queue_idx));
+
+      // Write timestamp messages for both channels.
+      queue_index_[0] = ch0_queue_idx + 1;
+      writer0.WriteSizedFlatbuffer(MakeTimestampMessage(
+          monotonic_epoch + send_time, 0, kCh0Delay + clock_offset,
+          monotonic_epoch + send_time + kCh0Delay + clock_offset));
+
+      queue_index_[1] = ch1_queue_idx + 1;
+      writer0.WriteSizedFlatbuffer(MakeTimestampMessage(
+          monotonic_epoch + send_time, 1, ch1_delay + clock_offset,
+          monotonic_epoch + send_time + ch1_delay + clock_offset));
+
+      // Increment queue indices.
+      ch0_queue_idx++;
+      ch1_queue_idx++;
+    };
+
+    // Phase 1: Ramping delay from kCh1StartDelay to kCh1EndDelay.
+    for (int i = 0; i < kRampSteps; ++i) {
+      const chrono::milliseconds send_time = i * kMessageSendInterval;
+      const chrono::milliseconds ch1_delay =
+          kCh1StartDelay + (kDelayIncrement * i);
+      write_messages(send_time, ch1_delay);
+    }
+
+    // Phase 2: Steady state at kCh1EndDelay.
+    for (int i = kRampSteps; i < kMessageCount; ++i) {
+      const chrono::milliseconds send_time = i * kMessageSendInterval;
+      write_messages(send_time, kCh1EndDelay);
+    }
+  }
+
+  const std::vector<LogFile> parts = SortParts({logfile_ttl0, logfile_ttl1});
+  LogFilesContainer log_files(parts);
+
+  std::vector<TimestampedMessage> output0;
+
+  // Create mappers using kQueueTogether (default LogReader behavior).
+  // kQueueTogether processes messages in chronological order, allowing
+  // last_popped_message_time_ to advance and trigger expiration checks during
+  // Queue().
+  //
+  // mapper0 (pi1, receiver): Reads timestamps and matches with data from
+  //                          mapper1's queue.
+  // mapper1 (pi2, sender): Provides data queue for matching.
+  TimestampMapper mapper0("pi1", log_files,
+                          TimestampQueueStrategy::kQueueTogether);
+  mapper0.set_timestamp_callback(
+      [&](TimestampedMessage *msg) { output0.push_back(*msg); });
+
+  TimestampMapper mapper1("pi2", log_files,
+                          TimestampQueueStrategy::kQueueTogether);
+  mapper1.set_timestamp_callback([&](TimestampedMessage *) {});
+
+  // AddPeer establishes the relationship and enables expiration checks by
+  // setting save_for_peer flag, which activates the expiration loop in Queue()
+  // that compares last_popped_message_time_ against message expiry times.
+  mapper0.AddPeer(&mapper1);
+  mapper1.AddPeer(&mapper0);
+
+  // With kQueueTogether, mappers automatically read from log files on-demand
+  // when we call Front(). Process messages in chronological order like
+  // LogReader does: compare oldest message from each mapper and pop whichever
+  // is earlier.
+  LOG(INFO)
+      << "=== Processing messages with kQueueTogether (chronological order)";
+
+  while (true) {
+    TimestampedMessage *msg0 = CheckExpected(mapper0.Front());
+    TimestampedMessage *msg1 = CheckExpected(mapper1.Front());
+
+    if (msg0 == nullptr && msg1 == nullptr) {
+      break;  // Both exhausted.
+    }
+
+    // Pop whichever mapper has the earliest message (by monotonic_event_time).
+    // This mimics LogReader comparing OldestMessageTime across all States.
+    if (msg0 != nullptr &&
+        (msg1 == nullptr || (msg0->monotonic_event_time.time - clock_offset) <=
+                                msg1->monotonic_event_time.time)) {
+      CheckExpected(mapper0.PopFront());
+    } else if (msg1 != nullptr) {
+      CheckExpected(mapper1.PopFront());
+    }
+  }
+
+  // Verify the test ran and produced output.
+  LOG(INFO) << "Received " << output0.size() << " messages";
+  EXPECT_GT(output0.size(), 0u) << "Should have received some messages.";
+
+  // Verify messages and check expiration flags.
+  int channel_0_count = 0;
+  int channel_0_with_data = 0;
+  int channel_1_count = 0;
+  int channel_1_with_data = 0;
+  bool found_preceded_by_expired = false;
+  for (const auto &msg : output0) {
+    if (msg.channel_index == 0) {
+      channel_0_count++;
+      if (msg.data) {
+        channel_0_with_data++;
+      }
+    } else if (msg.channel_index == 1) {
+      channel_1_count++;
+      if (msg.data) {
+        channel_1_with_data++;
+      }
+      const auto delay = (msg.monotonic_event_time.time - clock_offset) -
+                         (msg.monotonic_remote_time.time);
+      LOG(INFO) << "Channel 1: sent=" << msg.monotonic_remote_time
+                << " arrived=" << msg.monotonic_event_time << " delay="
+                << chrono::duration_cast<chrono::milliseconds>(delay).count()
+                << "ms"
+                << " has_data=" << (msg.data ? "true" : "false")
+                << " preceded_by_expired=" << msg.preceded_by_expired_message;
+      if (msg.preceded_by_expired_message) {
+        found_preceded_by_expired = true;
+      }
+    }
+  }
+
+  // Verify channel 0 received all messages with data (no expiration).
+  LOG(INFO) << "Received " << channel_0_count << " channel 0 messages ("
+            << channel_0_with_data << " with data)";
+  EXPECT_EQ(channel_0_count, kMessageCount)
+      << "Should receive all " << kMessageCount << " channel 0 messages.";
+  EXPECT_EQ(channel_0_with_data, kMessageCount)
+      << "All channel 0 messages should have data.";
+
+  // Verify channel 1 received all timestamp messages.
+  // ExceedsThreshold: Multiple messages expire, fewer have data.
+  // WithinThreshold: All messages have data, no expiration.
+  LOG(INFO) << "Received " << channel_1_count << " channel 1 messages ("
+            << channel_1_with_data << " with data)";
+  EXPECT_EQ(channel_1_count, kMessageCount)
+      << "Should receive all " << kMessageCount
+      << " channel 1 timestamp messages.";
+
+  if (exceeds_replay_threshold) {
+    // With aggressive ramping, multiple messages expire before matching.
+    EXPECT_EQ(channel_1_with_data, kMessageCount - 1)
+        << "ExceedsThreshold: Some Ch1 messages should expire before matching.";
+  } else {
+    EXPECT_EQ(channel_1_with_data, kMessageCount)
+        << "WithinThreshold: Should have data for all " << kMessageCount
+        << " messages.";
+  }
+
+  // Verify preceded_by_expired_message flag based on test parameter.
+  // Note: We check mapper0 (receiver) output because that's where the flag
+  // appears after matching data from mapper1's queue.
+  if (exceeds_replay_threshold) {
+    EXPECT_TRUE(found_preceded_by_expired)
+        << "Expected to find preceded_by_expired_message=true when "
+           "exceeds_replay_threshold is true.";
+  } else {
+    EXPECT_FALSE(found_preceded_by_expired)
+        << "Expected preceded_by_expired_message=false when "
+           "exceeds_replay_threshold is false.";
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(ExpirationScenarios, TimestampMapperExpirationTest,
+                         ::testing::Values(false, true),
+                         [](const ::testing::TestParamInfo<bool> &info) {
+                           return info.param ? "ExceedsThreshold"
+                                             : "WithinThreshold";
+                         });
 
 }  // namespace aos::logger::testing

@@ -11,6 +11,7 @@
 #include <string>
 #include <string_view>
 #include <tuple>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -532,6 +533,11 @@ struct Message {
   // sending inside the log reader.
   std::shared_ptr<SharedSpan> data;
 
+  // Set to true if this message comes after an expired message (on the same
+  // channel/boot). Used by LogReader to provide more helpful error messages
+  // when these messages cause "missing data in the middle" errors.
+  bool preceded_by_expired_message = false;
+
   bool operator<(const Message &m2) const;
   bool operator<=(const Message &m2) const;
   bool operator>=(const Message &m2) const;
@@ -562,6 +568,9 @@ struct TimestampedMessage {
   // data exists to send, we only have the timestamps. If the inner pointer is
   // nullptr, the user has marked the message as something to not send.
   std::shared_ptr<SharedSpan> data;
+
+  // Set to true if this message comes after an expired message.
+  bool preceded_by_expired_message = false;
 };
 
 std::ostream &operator<<(std::ostream &os, const TimestampedMessage &m);
@@ -1003,6 +1012,15 @@ class TimestampMapper {
   // returned.
   bool CheckReplayChannelsAndMaybePop(const TimestampedMessage &message);
 
+  // Tracks expired messages per channel to detect when a channel resumes (on
+  // the same boot) after expiration. When an expired message is followed by a
+  // non-expired message on the same channel/boot, marks the non-expired message
+  // with preceded_by_expired_message so LogReader can provide a more helpful
+  // error message. This prevents downstream handlers from crashing without
+  // understanding why there is missing data in the middle of a message
+  // sequence.
+  void CheckAndHandleMessageExpiration(Message *message, bool message_expired);
+
   // Returns the name of the node this class is sorting for.
   std::string_view node_name() const {
     return configuration::NodeName(configuration(), node());
@@ -1043,6 +1061,13 @@ class TimestampMapper {
 
   std::function<void(TimestampedMessage *)> timestamp_callback_;
   std::function<bool(TimestampedMessage &)> replay_channels_callback_;
+
+  // Tracks channels that have had expired messages. Outer map key is boot
+  // index, inner map key is channel index. The value is a string representation
+  // of the first expired message on that channel, stored for debugging purposes
+  // to help identify which message initially expired on the channel.
+  std::unordered_map<int, std::unordered_map<int, std::string>>
+      expired_channels_;
 };
 
 // Returns the node name, or an empty string if we are a single node.

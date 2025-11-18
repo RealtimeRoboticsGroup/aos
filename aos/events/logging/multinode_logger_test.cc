@@ -1,5 +1,6 @@
 #include <algorithm>
 
+#include "absl/flags/flag.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -11,6 +12,8 @@
 #include "aos/testing/ping_pong/ping_lib.h"
 #include "aos/testing/ping_pong/pong_lib.h"
 #include "aos/testing/tmpdir.h"
+
+ABSL_DECLARE_FLAG(double, max_network_delay);
 
 namespace aos::logger::testing {
 
@@ -5543,5 +5546,313 @@ TEST(MultinodeLoggerLoopTest, ChannelNetworkDelayEffects) {
   constexpr chrono::milliseconds kSignificantDifferenceThreshold(400);
   EXPECT_GT(atest1_delay, atest2_delay + kSignificantDifferenceThreshold);
 }
+
+class MultinodeLoggerLoopMaxNetworkDelayTest
+    : public ::testing::TestWithParam<bool> {};
+
+// Tests that messages exceeding max_network_delay during log replay are
+// properly detected and reported with a helpful error message. Previously,
+// this condition resulted in a non-descriptive LOG(FATAL) about "missing data
+// in the middle of the log file". Now we detect when a channel has expired
+// messages followed by non-expired messages and provide clear instructions to
+// increase --max_network_delay.
+//
+// Here's an explanation of the bug that this test is designed to avoid:
+// During replay with TTL-based eviction enabled, data messages were evicted
+// from TimestampMapper::Queue() when:
+//   message_timestamp + TTL + max_network_delay < last_popped_message_time_
+//
+// The bug occurred because:
+// 1. Data messages are queued incrementally as they're read
+// 2. last_popped_message_time_ advances as messages are processed
+// 3. Data for "late" timestamps gets evicted before matching can occur
+// 4. When LogReader::ProcessTimestampedMessage() receives a timestamp without
+//    data (has_data=false), it assumes this is the end of the log file
+// 5. When the next message arrives WITH data, the code detects the
+//    inconsistency and calls LOG(FATAL): "Found missing data in the middle of
+//    the log file"
+//
+// DATA PATH DURING REPLAY:
+// 1. TimestampMapper::Queue() - Data messages queued here (on RECEIVING node)
+//    - Log shows "[TTL_EVICTION_POP] pi1 channel=X, queue_index=Y"
+//    - The queue_index here is the SENDER's queue_index
+//    - The node shown is the RECEIVER (pi1 receives from pi2)
+// 2. MatchingMessageFor() - Matches timestamps with data
+//    - Uses the remote_queue_index from timestamp to find data
+// 3. LogReader::ProcessTimestampedMessage() - Processes matched messages
+//    - Log shows "node='pi1'" (receiving node)
+//    - remote_queue_index in logs matches queue_index from eviction logs
+//    - has_data=false indicates data was already evicted
+//
+// TEST STRATEGY:
+// We create a scenario where messages sent with HIGH delay (1040ms) during
+// recording will be evicted during replay with max_network_delay=1.0s:
+// - Phase 0: Ramp /atest1 delay from 960ms to 1040ms (creates late messages)
+// - Phase 1: Send steady stream at 1040ms on /atest1
+//
+// EVICTION MECHANISM:
+// During replay, last_popped_message_time_ is advanced by OTHER channels that
+// have lower network delays and arrive earlier than /atest1. As these faster
+// channels are processed chronologically, last_popped_message_time_ advances
+// past the eviction deadline (timestamp + TTL + max_network_delay) of early
+// /atest1 messages from Phase 0, causing their data to be evicted before
+// timestamp matching can occur.
+//
+// This eviction happens because ramping /atest1's delay creates a change in
+// RELATIVE delay between /atest1 and other channels. Early /atest1 messages
+// sent during the ramp have delays exceeding max_network_delay, making them
+// vulnerable to eviction as faster channels drive time forward
+//
+// Real-world example that triggers this bug:
+// /bot_data/PRO-30407/1N0616RXPLD229997/0/diagnostic/2025-09-08_11-54-35.928298613_2301_99799.997824656_S
+TEST_P(MultinodeLoggerLoopMaxNetworkDelayTest, MaxNetworkDelay) {
+  //==========================================================================
+  // SECTION 1: TEST SETUP & CONFIGURATION
+  //==========================================================================
+  util::UnlinkRecursive(aos::testing::TestTmpDir() + "/logs");
+  std::filesystem::create_directory(aos::testing::TestTmpDir() + "/logs");
+
+  const std::string kLogfile =
+      aos::testing::TestTmpDir() + "/logs/max_network_delay_test/";
+
+  std::vector<std::string> filenames;
+
+  constexpr double kReplayMaxNetworkDelay = 1.0;
+  const bool exceeds_replay_threshold = GetParam();
+
+  // Timing constants for delay ramping test.
+  //
+  // STRATEGY:
+  // Phase 0: Ramp /atest1 network delay UP from LOW to HIGH while sending
+  //          messages at regular intervals. This creates messages that exceed
+  //          the replay max_network_delay threshold.
+  // Phase 1: Continue sending messages at HIGH delay (steady state). During
+  //          replay, OTHER channels with lower delays advance
+  //          last_popped_message_time_, causing early high-delay messages from
+  //          Phase 0 to exceed their eviction deadline (timestamp + TTL +
+  //          max_network_delay) and be dropped before matching can occur.
+  //
+  // 20ms chosen to send messages at a reasonable rate
+  constexpr chrono::milliseconds kMessageSendInterval(20);
+  // 960ms chosen as baseline - just below replay max_network_delay (1.0s)
+  constexpr chrono::milliseconds kLowDelay(960);
+  // For the parameterized "exceeds" run, 1040ms > kReplayMaxNetworkDelay and
+  // will trigger eviction. For the within-threshold run, 960ms keeps all
+  // messages safely below the replay threshold (no ramping occurs).
+  const chrono::milliseconds kHighDelay = exceeds_replay_threshold
+                                              ? chrono::milliseconds(1040)
+                                              : chrono::milliseconds(960);
+  const chrono::milliseconds replay_threshold_ms =
+      chrono::duration_cast<chrono::milliseconds>(
+          chrono::duration<double>(kReplayMaxNetworkDelay));
+  if (exceeds_replay_threshold) {
+    ASSERT_GT(kHighDelay, replay_threshold_ms);
+  } else {
+    ASSERT_LT(kHighDelay, replay_threshold_ms);
+  }
+  // 20ms increment provides gradual ramping (avoids causality violations)
+  constexpr chrono::milliseconds kDelayIncrement(20);
+  // Number of steps depends on the parameterized high delay. When exceeding
+  // the threshold we walk 4 steps up and down (960→1040ms), otherwise we only
+  // take a single step (960→980ms).
+  ASSERT_EQ((kHighDelay - kLowDelay).count() % kDelayIncrement.count(), 0);
+  const int kNumIncreaseSteps =
+      (kHighDelay - kLowDelay).count() / kDelayIncrement.count();
+
+  //==========================================================================
+  // SECTION 2: SIMULATION INFRASTRUCTURE SETUP
+  //==========================================================================
+  {
+    const aos::FlatbufferDetachedBuffer<aos::Configuration> config =
+        aos::configuration::ReadConfig(ArtifactPath(
+            "aos/events/logging/multinode_pingpong_reboot_ooo_config.json"));
+
+    SimulatedEventLoopFactory event_loop_factory(&config.message());
+
+    NodeEventLoopFactory *const pi1 =
+        event_loop_factory.GetNodeEventLoopFactory("pi1");
+    NodeEventLoopFactory *const pi2 =
+        event_loop_factory.GetNodeEventLoopFactory("pi2");
+
+    // Start logger on pi1 only.
+    // pi1 will log both timestamps and data for /atest1 messages.
+    LoggerState pi1_logger = MakeLoggerState(
+        pi1, &event_loop_factory, SupportedCompressionAlgorithms()[0],
+        FileStrategy::kKeepSeparate);
+    pi1_logger.StartLogger(kLogfile + "pi1/");
+
+    // Create event loops on both nodes
+    // pi2 sends Pong on /atest1 to pi1
+    std::unique_ptr<EventLoop> pi2_event_loop = pi2->MakeEventLoop("pong");
+    aos::Sender<examples::Pong> pong_sender1 =
+        pi2_event_loop->MakeSender<examples::Pong>("/atest1");
+
+    // pi1 needs an event loop to receive and log the forwarded messages
+    std::unique_ptr<EventLoop> pi1_event_loop = pi1->MakeEventLoop("receiver");
+    // Create watcher on pi1 for received Pong messages
+    std::atomic<int> pi1_pong1_count{0};
+    pi1_event_loop->MakeWatcher(
+        "/atest1",
+        [&pi1_pong1_count](const examples::Pong &) { ++pi1_pong1_count; });
+
+    // Helper lambda to send on /atest1 manually.
+    auto send_on_atest1 = [&pong_sender1]() {
+      aos::Sender<examples::Pong>::Builder builder = pong_sender1.MakeBuilder();
+      examples::Pong::Builder pong_builder =
+          builder.MakeBuilder<examples::Pong>();
+      CHECK_EQ(builder.Send(pong_builder.Finish()), RawSender::Error::kOk);
+    };
+
+    // Get the /atest1 channel for per-channel network delay configuration.
+    // Delays will be set dynamically in Phase 0 (ramp up) and Phase 1 (steady).
+    const Channel *atest1_channel = configuration::GetChannel(
+        &config.message(), "/atest1", "aos.examples.Pong", "", nullptr);
+    ASSERT_NE(atest1_channel, nullptr);
+
+    const int atest1_channel_index =
+        configuration::ChannelIndex(&config.message(), atest1_channel);
+
+    LOG(INFO) << "=== Channel index: /atest1=" << atest1_channel_index
+              << " ===";
+
+    //========================================================================
+    // SECTION 3: SIMULATION EXECUTION - MESSAGE SENDING
+    //========================================================================
+
+    // PHASE 0: Ramp /atest1 network delay from LOW (960ms) to HIGH (1040ms).
+    //
+    // TIMING STRATEGY:
+    // - Messages SENT at regular intervals: 0, 20, 40, 60, 80ms
+    // - Network delays ramp UP: 960, 980, 1000, 1020, 1040ms
+    // - Messages ARRIVE at: 960, 1000, 1040, 1080, 1120ms
+    //
+    // PURPOSE: Create messages with progressively higher network delays. When
+    // exceeds_replay_threshold=true, messages sent with 1040ms delay will
+    // exceed the replay max_network_delay threshold (1.0s). During replay,
+    // OTHER channels with lower delays will advance last_popped_message_time_,
+    // causing these high-delay messages to be evicted before matching can
+    // occur.
+    LOG(INFO) << "=== PHASE 0: Incrementally INCREASING delay from "
+              << kLowDelay.count() << "ms to " << kHighDelay.count()
+              << "ms ===";
+
+    for (int step = 0; step <= kNumIncreaseSteps; ++step) {
+      const chrono::milliseconds delay = kLowDelay + (kDelayIncrement * step);
+
+      event_loop_factory.set_channel_network_delay_override(atest1_channel,
+                                                            delay);
+
+      // Send message on /atest1 at current simulation time
+      send_on_atest1();
+
+      LOG(INFO) << "  Step " << step << "/" << kNumIncreaseSteps
+                << ": delay=" << delay.count() << "ms, sent at "
+                << pi2->monotonic_now();
+
+      // Advance time by constant interval to send next message later.
+      // This keeps send times regular (0, 20, 40, 60...), regardless of delay.
+      event_loop_factory.RunFor(kMessageSendInterval);
+    }
+
+    // Run simulation long enough to deliver all Phase 0 messages.
+    // Last message was sent with kHighDelay, so run at least that long.
+    LOG(INFO) << "=== Running simulation to deliver Phase 0 messages ===";
+    event_loop_factory.RunFor(kHighDelay + chrono::milliseconds(100));
+
+    LOG(INFO) << "=== PHASE 0 complete: delay now at " << kHighDelay.count()
+              << "ms ===";
+
+    // PHASE 1: Steady state - send messages at constant HIGH delay.
+    //
+    // PURPOSE: During replay, OTHER channels with lower network delays are
+    // processed chronologically and advance last_popped_message_time_. This
+    // causes it to surpass the eviction deadline (timestamp + TTL +
+    // max_network_delay) of the early high-delay /atest1 messages from Phase 0,
+    // triggering data expiration before timestamp matching can occur. We send
+    // for 2x max_network_delay to ensure sufficient time advancement to trigger
+    // expiration.
+    const chrono::duration<double> max_network_delay_duration(
+        absl::GetFlag(FLAGS_max_network_delay));
+    const chrono::milliseconds kPhase1Duration =
+        chrono::duration_cast<chrono::milliseconds>(
+            max_network_delay_duration) *
+        2;
+
+    const int kPhase1MessageCount =
+        kPhase1Duration.count() / kMessageSendInterval.count();
+
+    LOG(INFO) << "=== PHASE 1: Steady state - sending " << kPhase1MessageCount
+              << " messages over " << kPhase1Duration.count()
+              << "ms at HIGH delay ===";
+
+    for (int i = 0; i < kPhase1MessageCount; ++i) {
+      send_on_atest1();
+      event_loop_factory.RunFor(kMessageSendInterval);
+    }
+
+    // Run simulation to deliver all remaining Phase 1 messages.
+    LOG(INFO) << "=== Running simulation to deliver remaining messages ===";
+    event_loop_factory.RunFor(kHighDelay + chrono::milliseconds(100));
+
+    LOG(INFO) << "=== PHASE 1 complete ===";
+
+    LOG(INFO) << "=== FINAL: Simulation time on pi2: " << pi2->monotonic_now()
+              << ", pi1: " << pi1->monotonic_now();
+    LOG(INFO) << "=== TOTAL: pi1 received " << pi1_pong1_count
+              << " Pong(atest1) messages";
+
+    // Collect filenames from pi1 only.
+    pi1_logger.AppendAllFilenames(&filenames);
+  }
+
+  //==========================================================================
+  // SECTION 4: LOG REPLAY & VERIFICATION
+  //==========================================================================
+  const std::vector<LogFile> sorted_parts = SortParts(filenames);
+
+  // Replay the log with max_network_delay=1.0 using production code path.
+  // This should reproduce the crash: as messages are processed chronologically
+  // during replay, data from channels with high network delays can be evicted
+  // before timestamp matching occurs.
+  LOG(INFO) << "=== Replaying log with max_network_delay=1.0 ("
+            << (exceeds_replay_threshold ? "expect crash" : "expect success")
+            << ") ===";
+  auto replay_log = [&]() {
+    absl::FlagSaver flag_saver;
+    absl::SetFlag(&FLAGS_max_network_delay, kReplayMaxNetworkDelay);
+
+    LogReader reader(sorted_parts);
+
+    LOG(INFO) << "TimestampsStoredSeparately: "
+              << reader.log_files().TimestampsStoredSeparately();
+    LOG(INFO) << "Using strategy: "
+              << (reader.log_files().TimestampsStoredSeparately()
+                      ? "kQueueTimestampsAtStartup"
+                      : "kQueueTogether");
+
+    SimulatedEventLoopFactory log_reader_factory(reader.configuration());
+    reader.Register(&log_reader_factory);
+    log_reader_factory.Run();
+    reader.Deregister();
+  };
+
+  constexpr const char *kFatalMessage =
+      "A previous message on this channel exceeded the max_network_delay "
+      "threshold";
+
+  if (exceeds_replay_threshold) {
+    EXPECT_DEATH(replay_log(), kFatalMessage);
+  } else {
+    replay_log();
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(MaxNetworkDelayScenarios,
+                         MultinodeLoggerLoopMaxNetworkDelayTest,
+                         ::testing::Bool(),
+                         [](const ::testing::TestParamInfo<bool> &info) {
+                           return info.param ? "ExceedsThreshold"
+                                             : "WithinThreshold";
+                         });
 
 }  // namespace aos::logger::testing

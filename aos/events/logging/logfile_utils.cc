@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <climits>
 #include <filesystem>
+#include <sstream>
 
 #include "absl/flags/flag.h"
 #include "absl/log/check.h"
@@ -2226,7 +2227,8 @@ void TimestampMapper::QueueMessage(const Message *msg) {
       .realtime_remote_time = realtime_clock::min_time,
       .monotonic_remote_transmit_time = BootTimestamp::min_time(),
       .monotonic_timestamp_time = BootTimestamp::min_time(),
-      .data = std::move(msg->data)});
+      .data = std::move(msg->data),
+      .preceded_by_expired_message = msg->preceded_by_expired_message});
   VLOG(1) << node_name() << " Inserted " << matched_messages_.back();
 }
 
@@ -2356,7 +2358,8 @@ Result<TimestampMapper::MatchResult> TimestampMapper::MaybeQueueMatched() {
              msg->header->monotonic_remote_transmit_time},
         .monotonic_timestamp_time = {msg->monotonic_timestamp_boot,
                                      msg->header->monotonic_timestamp_time},
-        .data = std::move(data.data)});
+        .data = std::move(data.data),
+        .preceded_by_expired_message = data.preceded_by_expired_message});
     VLOG(1) << node_name() << " Inserted timestamp "
             << matched_messages_.back();
     CHECK_GE(matched_messages_.back().monotonic_event_time, last_message_time_)
@@ -2603,13 +2606,40 @@ Result<bool> TimestampMapper::Queue() {
           //
           // Leave at least 1 message in here so we can handle reboots and
           // messages getting sent twice.
-          while (messages.size() > 1u &&
-                 messages.begin()->timestamp +
-                         node_data.channels[msg->channel_index].time_to_live +
-                         chrono::duration_cast<chrono::nanoseconds>(
-                             chrono::duration<double>(
-                                 absl::GetFlag(FLAGS_max_network_delay))) <
-                     last_popped_message_time_) {
+
+          while (true) {
+            if (last_popped_message_time_ == BootTimestamp::min_time()) {
+              break;
+            }
+            if (messages.size() <= 1u) {
+              break;
+            }
+            Message &message = *messages.begin();
+            if (message.timestamp.boot == last_popped_message_time_.boot) {
+              const aos::monotonic_clock::time_point message_expiry_time =
+                  message.timestamp.time +
+                  node_data.channels[msg->channel_index].time_to_live +
+                  chrono::duration_cast<chrono::nanoseconds>(
+                      chrono::duration<double>(
+                          absl::GetFlag(FLAGS_max_network_delay)));
+
+              const bool message_expired =
+                  last_popped_message_time_.time > message_expiry_time;
+
+              // Check and handle message expiration on every message.
+              CheckAndHandleMessageExpiration(&message, message_expired);
+
+              // If not expired, break out of the eviction loop.
+              if (!message_expired) {
+                break;
+              }
+            } else {
+              // We should never have a message that is newer than the last
+              // message we popped, because these messages should have been
+              // sorted earlier.
+              CHECK_LT(message.timestamp.boot, last_popped_message_time_.boot);
+            }
+
             messages.pop_front();
           }
         }
@@ -2620,6 +2650,49 @@ Result<bool> TimestampMapper::Queue() {
     messages_.emplace_back(std::move(*msg));
     return true;
   });
+}
+
+void TimestampMapper::CheckAndHandleMessageExpiration(Message *message,
+                                                      bool message_expired) {
+  const int boot_index = message->timestamp.boot;
+  const int channel_index = message->channel_index;
+
+  if (!message_expired) {
+    // Fast path: message is not expired.
+    // Check if this channel previously had an expired message.
+    if (expired_channels_.empty()) {
+      return;  // No expired channels at all, nothing to do.
+    }
+
+    auto boot_it = expired_channels_.find(boot_index);
+    if (boot_it == expired_channels_.end()) {
+      return;  // No expired channels on this boot.
+    }
+
+    auto channel_it = boot_it->second.find(channel_index);
+    if (channel_it == boot_it->second.end()) {
+      return;  // This channel hasn't expired.
+    }
+
+    // Warning: we previously had an expired message on this channel,
+    // but now we have a non-expired message.
+    // Mark this message so LogReader can provide a better error message.
+    message->preceded_by_expired_message = true;
+
+    // Remove this channel from tracking so we don't warn again for this
+    // channel.
+    boot_it->second.erase(channel_it);
+  } else {
+    // Message is expired.
+
+    // Store the first expired message on this channel (if not already stored).
+    auto &boot_channels = expired_channels_[boot_index];
+    if (!boot_channels.contains(channel_index)) {
+      std::ostringstream oss;
+      oss << *message;
+      boot_channels[channel_index] = oss.str();
+    }
+  }
 }
 
 Result<void> TimestampMapper::QueueTimestamps() {

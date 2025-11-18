@@ -31,6 +31,8 @@
 #include "aos/util/file.h"
 #include "aos/uuid.h"
 
+ABSL_DECLARE_FLAG(double, max_network_delay);
+
 ABSL_FLAG(bool, skip_missing_forwarding_entries, false,
           "If true, drop any forwarding entries with missing data.  If "
           "false, CHECK.");
@@ -933,13 +935,30 @@ void LogReader::ProcessTimestampedMessage(
       state->set_last_message(timestamped_message.channel_index);
     } else {
       if (state->last_message(timestamped_message.channel_index)) {
-        LOG(FATAL) << "Found missing data in the middle of the log file on "
-                      "channel "
-                   << timestamped_message.channel_index << " "
-                   << configuration::StrippedChannelToString(
-                          logged_configuration()->channels()->Get(
-                              timestamped_message.channel_index))
-                   << " " << timestamped_message << " " << state->DebugString();
+        if (timestamped_message.preceded_by_expired_message) {
+          LOG(FATAL)
+              << "Found missing data in the middle of the log file on channel "
+              << timestamped_message.channel_index << " "
+              << configuration::StrippedChannelToString(
+                     logged_configuration()->channels()->Get(
+                         timestamped_message.channel_index))
+              << ". A previous message on this channel exceeded the "
+                 "max_network_delay threshold during replay and was evicted "
+                 "from the data queue, causing a gap in the message sequence. "
+                 "To replay this log, rerun with a higher --max_network_delay "
+                 "flag value (current value: "
+              << absl::GetFlag(FLAGS_max_network_delay)
+              << " seconds). Current message: " << timestamped_message << " "
+              << state->DebugString();
+        } else {
+          LOG(FATAL)
+              << "Found missing data in the middle of the log file on channel "
+              << timestamped_message.channel_index << " "
+              << configuration::StrippedChannelToString(
+                     logged_configuration()->channels()->Get(
+                         timestamped_message.channel_index))
+              << " " << timestamped_message << " " << state->DebugString();
+        }
       }
     }
   }
