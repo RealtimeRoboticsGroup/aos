@@ -29,7 +29,7 @@ ABSL_FLAG(double, flush_period, 5.0,
           "Max time to let data sit in the queue before flushing in seconds.");
 
 ABSL_FLAG(
-    double, max_network_delay, 1.0,
+    double, max_network_delay, 4.0,
     "Max time to assume a message takes to cross the network before we are "
     "willing to drop it from our buffers and assume it didn't make it.  "
     "Increasing this number can increase memory usage depending on the packet "
