@@ -127,7 +127,7 @@ Starter::Starter(const aos::Configuration *event_loop_config)
 
   // Catalogue all the intranode channels for this node, and create
   // MemoryMappedQueues for each one to allocate the shared memory before
-  // spawning any shasta process.
+  // spawning any child process.
   if (config_msg_->has_channels()) {
     LOG(INFO) << "Starting to initialize shared memory.";
     const aos::Node *this_node = event_loop_.node();
