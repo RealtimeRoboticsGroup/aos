@@ -17,6 +17,27 @@
       }
     },
     {
+      "team": 1868,
+      "robot_name": "deb",
+      "data": {
+        "calibration": [
+          {% include 'frc/vision/constants/calibration_orin-1868-0_cam-25-00_2025-03-01_17-22-45.json' %},
+          {% include 'frc/vision/constants/calibration_orin-1868-1_cam-25-01_2025-03-01_17-26-45.json' %},
+          {% include 'frc/vision/constants/calibration_orin1-4646-2_cam-25-03_fake.json' %},
+          {% include 'frc/vision/constants/calibration_orin1-4646-3_cam-25-04_fake.json' %}
+        ],
+        "default_camera_stream_settings": {
+          "image_width": 1280,
+          "image_height": 800,
+          "exposure_100us": 30,
+          "frame_period": {
+            "numerator": 1,
+            "denominator": 120
+          }
+        }
+      }
+    },
+    {
       "team": 4646,
       "robot_name": "austin",
       "data": {

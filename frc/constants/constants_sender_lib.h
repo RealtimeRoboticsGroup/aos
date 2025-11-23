@@ -105,6 +105,8 @@ class NameConstantSender {
     // Search through the constants for the one matching our team number.
     for (const auto &constant_data : *constants) {
       CHECK(constant_data->has_robot_name());
+      LOG(INFO) << constant_data->team();
+      LOG(INFO) << constant_data->robot_name()->string_view();
       if (team_number_ == constant_data->team() &&
           robot_name_ == constant_data->robot_name()->string_view()) {
         // Values is equal to the constants meant for the specific robot.
@@ -114,7 +116,8 @@ class NameConstantSender {
         return flatbuffer_constants;
       }
     }
-    LOG(FATAL) << "There was no match for " << team_number_
+    LOG(FATAL) << "There was no match for " << team_number_ << " and "
+               << robot_name_
                << ". Check the constants.json file for the team number that is "
                   "missing.";
   }

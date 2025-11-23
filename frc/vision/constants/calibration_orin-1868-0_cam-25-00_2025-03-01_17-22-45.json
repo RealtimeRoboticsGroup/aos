@@ -1,0 +1,56 @@
+{
+ "node_name": "orin",
+ "team_number": 1868,
+ "intrinsics": [
+  1141.3193,
+  0,
+  624.53906,
+  0,
+  1141.409,
+  407.9283,
+  0,
+  0,
+  1
+ ],
+ /* see src/main/java/frc/robot/subsystems/confs/vision/CompbotVisionConf.java */
+ "fixed_extrinsics": {
+  "data": [
+   0.0,
+   0.0,
+   1.0,
+   0.0,
+   -1.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   -1.0,
+   0.0,
+   0.0,
+   0,
+   0,
+   0,
+   1
+  ]
+ },
+ "dist_coeffs": [
+  3.482179,
+  16.153578,
+  -0.0007910042,
+  0.00056308217,
+  8.778807,
+  3.4780326,
+  15.78329,
+  9.369266,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0
+ ],
+ "calibration_timestamp": 1740878565455519250,
+ "camera_id": "25-00",
+ "camera_number": 0,
+ "reprojection_error": 0.5397098
+}

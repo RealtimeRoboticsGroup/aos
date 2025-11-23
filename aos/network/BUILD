@@ -90,8 +90,12 @@ flatbuffer_ts_library(
     name = "message_bridge_client_ts_fbs",
     srcs = ["message_bridge_client.fbs"],
     ts_files = [
+        "aos/message-bridge.ts",
         "aos/message-bridge/client-connection.ts",
         "aos/message-bridge/client-statistics.ts",
+        "aos/message-bridge/server-connection.ts",
+        "aos/message-bridge/server-statistics.ts",
+        "aos/message-bridge/server-channel-statistics.ts",
         "aos/message-bridge/state.ts",
         "aos/node.ts",
     ],

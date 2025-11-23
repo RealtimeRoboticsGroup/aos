@@ -40,6 +40,9 @@ table LocalizerOutput {
 
   // Is true if all vision pis are connected to the IMU pi
   all_pis_connected:bool (id: 8);
+
+  // Number of heading resets
+  heading_resets:uint (id: 9);
 }
 
 root_type LocalizerOutput;

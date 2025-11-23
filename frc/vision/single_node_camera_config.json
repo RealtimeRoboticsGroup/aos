@@ -45,6 +45,13 @@
     },
     {
       "name": "/frc",
+      "type": "frc.vision.swerve_localizer.UdpStatus",
+      "source_node": "orin",
+      "frequency": 10,
+      "max_size": 256
+    },
+    {
+      "name": "/frc",
       "type": "frc.JoystickState",
       "source_node": "orin",
       "max_size": 256
@@ -65,6 +72,13 @@
     {
       "name": "/drivetrain",
       "type": "frc.vision.swerve_localizer.Pose2d",
+      "source_node": "orin",
+      "max_size": 128,
+      "frequency": 500
+    },
+    {
+      "name": "/drivetrain",
+      "type": "frc.control_loops.drivetrain.LocalizerControl",
       "source_node": "orin",
       "max_size": 128,
       "frequency": 500
@@ -152,6 +166,13 @@
       "frequency": 2
     },
     {
+      "name": "/camera0/gray",
+      "type": "frc.vision.swerve_localizer.Visualization",
+      "source_node": "orin",
+      "max_size": 50000,
+      "frequency": 125
+    },
+    {
       "name": "/camera1",
       "type": "frc.vision.CameraImage",
       "read_method": "PIN",
@@ -196,6 +217,13 @@
       "type": "frc.vision.TurboJpegDecoderStatus",
       "source_node": "orin",
       "frequency": 2
+    },
+    {
+      "name": "/camera1/gray",
+      "type": "frc.vision.swerve_localizer.Visualization",
+      "source_node": "orin",
+      "max_size": 50000,
+      "frequency": 125
     },
     {
       "name": "/camera2",
@@ -244,6 +272,13 @@
       "frequency": 2
     },
     {
+      "name": "/camera2/gray",
+      "type": "frc.vision.swerve_localizer.Visualization",
+      "source_node": "orin",
+      "max_size": 50000,
+      "frequency": 125
+    },
+    {
       "name": "/camera3",
       "type": "frc.vision.CameraImage",
       "read_method": "PIN",
@@ -288,12 +323,31 @@
       "type": "frc.vision.TurboJpegDecoderStatus",
       "source_node": "orin",
       "frequency": 2
+    },
+    {
+      "name": "/camera3/gray",
+      "type": "frc.vision.swerve_localizer.Visualization",
+      "source_node": "orin",
+      "max_size": 50000,
+      "frequency": 125
     },
     {
       "name": "/aos",
       "type": "aos.util.FilesystemStatus",
       "source_node": "orin",
       "frequency": 1
+    },
+    {
+      "name": "/localizer",
+      "type": "frc.vision.swerve_localizer.Status",
+      "source_node": "orin",
+      "frequency": 500
+    },
+    {
+      "name": "/localizer",
+      "type": "frc.controls.LocalizerOutput",
+      "source_node": "orin",
+      "frequency": 500
     },
     {
       "name": "/hardware_monitor",
@@ -306,7 +360,7 @@
     {
       "name": "camera_reader0",
       "executable_name": "camera_reader",
-      "args": ["--ignore_timestamps", "--viddevice=/dev/videoa"],
+      "args": ["--ignore_timestamps", "--viddevice=/dev/videoa", "--isp_latency_ms=0"],
       "maps": [{
         "match": {
           "name": "/camera"
@@ -320,7 +374,7 @@
     {
       "name": "camera_reader1",
       "executable_name": "camera_reader",
-      "args": ["--ignore_timestamps", "--viddevice=/dev/videob"],
+      "args": ["--ignore_timestamps", "--viddevice=/dev/videob", "--isp_latency_ms=0"],
       "maps": [{
         "match": {
           "name": "/camera"
@@ -334,7 +388,7 @@
     {
       "name": "camera_reader2",
       "executable_name": "camera_reader",
-      "args": ["--ignore_timestamps", "--viddevice=/dev/videoc"],
+      "args": ["--ignore_timestamps", "--viddevice=/dev/videoc", "--isp_latency_ms=0"],
       "maps": [{
         "match": {
           "name": "/camera"
@@ -348,7 +402,7 @@
     {
       "name": "camera_reader3",
       "executable_name": "camera_reader",
-      "args": ["--ignore_timestamps", "--viddevice=/dev/videod"],
+      "args": ["--ignore_timestamps", "--viddevice=/dev/videod", "--isp_latency_ms=0"],
       "maps": [{
         "match": {
           "name": "/camera"
@@ -447,25 +501,25 @@
     {
       "name": "apriltag_detector0",
       "executable_name": "apriltag_detector",
-      "args": ["--channel", "/camera0/gray", "--image_format=MONO8", "--min_white_black_diff=20", "--use_neon", "--max_image_age_ms=35"],
+      "args": ["--channel", "/camera0/gray", "--image_format=MONO8", "--min_white_black_diff=20", "--use_neon", "--max_image_age_ms=55", "--pixel_border=25"],
       "nodes": ["orin"]
     },
     {
       "name": "apriltag_detector1",
       "executable_name": "apriltag_detector",
-      "args": ["--channel", "/camera1/gray", "--image_format=MONO8", "--min_white_black_diff=20", "--use_neon", "--max_image_age_ms=35"],
+      "args": ["--channel", "/camera1/gray", "--image_format=MONO8", "--min_white_black_diff=20", "--use_neon", "--max_image_age_ms=55", "--pixel_border=25"],
       "nodes": ["orin"]
     },
     {
       "name": "apriltag_detector2",
       "executable_name": "apriltag_detector",
-      "args": ["--channel", "/camera2/gray", "--image_format=MONO8", "--min_white_black_diff=20", "--use_neon", "--max_image_age_ms=35"],
+      "args": ["--channel", "/camera2/gray", "--image_format=MONO8", "--min_white_black_diff=20", "--use_neon", "--max_image_age_ms=55", "--pixel_border=25"],
       "nodes": ["orin"]
     },
     {
       "name": "apriltag_detector3",
       "executable_name": "apriltag_detector",
-      "args": ["--channel", "/camera3/gray", "--image_format=MONO8", "--min_white_black_diff=20", "--use_neon", "--max_image_age_ms=35"],
+      "args": ["--channel", "/camera3/gray", "--image_format=MONO8", "--min_white_black_diff=20", "--use_neon", "--max_image_age_ms=55", "--pixel_border=25"],
       "nodes": ["orin"]
     },
     {
@@ -474,10 +528,25 @@
     },
     {
       "name": "foxglove_websocket",
+      "args": [ "--poll_period_ms=100" ],
+      "nodes": ["orin"]
+    },
+    {
+      "name": "web_proxy",
+      "executable_name": "web_proxy_main",
+      "args": [
+        "--min_ice_port=5800",
+        "--max_ice_port=5810"
+      ],
       "nodes": ["orin"]
     },
     {
       "name": "vision_constants_sender",
+      "nodes": ["orin"],
+      "autorestart": false
+    },
+    {
+      "name": "field_map_constants_sender",
       "nodes": ["orin"],
       "autorestart": false
     },
@@ -504,8 +573,21 @@
       "nodes": [ "orin" ]
     },
     {
+      "name": "field_side_exposure_adjuster",
+      "executable_name": "field_side_exposure_adjuster",
+      "args": ["--red_exposure=30", "--blue_exposure=30"],
+      "nodes": [ "orin" ]
+    },
+    {
+      "name": "localizer_main",
+      "args": ["--max_implied_teleop_yaw_error=90"],
+      "nodes": [ "orin" ]
+    },
+    {
       "name": "yolo",
-      "autostart": true,
+      "autostart": false,
+      /*"args": ["--engine_path=/home/pi/bin/best416x.engine", "--nodie_on_malloc"],*/
+      /*"args": ["--engine_path=/home/pi/bin/reexported29.engine", "--nodie_on_malloc", "--skip=0"],*/
       "args": ["--engine_path=/home/pi/bin/with_auto.engine", "--nodie_on_malloc", "--skip=0"],
       "nodes": [ "orin" ]
     },

@@ -4,6 +4,7 @@ table ChassisSpeeds {
   vx:double (id: 0);
   vy:double (id: 1);
   omega:double (id: 2);
+  age:double (id: 3);
 }
 
 root_type ChassisSpeeds;

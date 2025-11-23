@@ -68,12 +68,28 @@ in `frc/vision/constants/` and referenced in `frc/vision/constants.jinja2.json`.
 If you want to copy the images off and run intrinsics calibration on your
 machine, `scp` them back to your device and run:
 ```
-$ bazel run -c opt //frc/vision:intrinsics_calibration  -- --twenty_inch_large_board --grayscale --override_hostname orin-1868-1 --base_intrinsics ~/aos/frc/vision/constants/calibration_orin1-1868-0_cam-25-11_1970-01-01_03-17-57.json --camera_id 25-99 --channel /camera0/gray --image_load_path ~/logs/2025/intrinsics/test_cal0/ --config frc/vision/aos_config.json
+$ bazel run -c opt //frc/vision:intrinsics_calibration -- --base_intrinsics /home/austin/local/aos/frc/vision/constants/calibration_orin1-4646-0_cam-25-07_2025-02-18_13-23-39.json --channel=/camera0/gray --camera_id=[CAMERA ID] --grayscale --image_load_path=/tmp/[CAMERA ID]/ --twenty_inch_large_board --config=/home/austin/local/aos/bazel-bin/frc/vision/aos_config.bfbs --override_hostname=orin-4646-1
 ```
 
 With similar notes about the flags to before; update the `--override_hostname`
 to match your team number. Make sure you are using the same `--base_intrinsics`
 that you used in the live capture.
+
+Copy the generated JSON files, and update `constants.jinja.json` to point to the new constants.
+
+## Extrinsics calibration
+
+```
+bazel run -c opt //frc/vision:calibrate_multi_cameras -- `realpath pre-champs-calibration2/` --team_number 4646 --vmodule=calibrate_multi_cameras_lib=0 --visualize
+```
+
+Do the same, copy the constants over and update `constants.jinja.json`.
+
+## Replaying the localizer
+
+```
+rm -rf /tmp/replayed/ && bazel run -c opt //frc/vision/swerve_localizer:localizer_replay -- /home/austin/local/aos/frc/vision/logs/image_log-060_1970-01-01_00-02-15-MOSE-e11/ --vmodule=simulated_event_loop=0
+```
 
 ## Adjusting exposure settings
 
