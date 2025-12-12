@@ -759,6 +759,7 @@ bool SctpReadWrite::ProcessNotification(const Message *message) {
                   << iterator->get()->header.rcvinfo.rcv_sid << ","
                   << iterator->get()->header.rcvinfo.rcv_ssn << ","
                   << iterator->get()->header.rcvinfo.rcv_assoc_id;
+          FreeMessage(std::move(*iterator));
           partial_messages_.erase(iterator);
         }
           return true;
