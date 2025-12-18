@@ -1,12 +1,29 @@
+From abe3de2452fee5e396a6787bbb554356a071b411 Mon Sep 17 00:00:00 2001
+From: Philipp Schrader <philipp.schrader@bluerivertech.com>
+Date: Tue, 16 Dec 2025 17:51:53 -0800
+Subject: [PATCH] Make benchmark compile for AOS
+
+We need to silence some warnings and disable some build targets that
+we don't use.
+---
+ BUILD.bazel                            |  2 ++
+ bindings/python/google_benchmark/BUILD | 27 --------------------------
+ test/BUILD                             |  3 +++
+ tools/BUILD.bazel                      | 20 -------------------
+ 4 files changed, 5 insertions(+), 47 deletions(-)
+ delete mode 100644 bindings/python/google_benchmark/BUILD
+ delete mode 100644 tools/BUILD.bazel
+
 diff --git a/BUILD.bazel b/BUILD.bazel
-index 15d8369..768e9f3 100644
+index 15d8369..20936e2 100644
 --- a/BUILD.bazel
 +++ b/BUILD.bazel
-@@ -15,6 +15,7 @@ COPTS = [
+@@ -15,6 +15,8 @@ COPTS = [
      ## unused-variable warning.
      "-Wno-unused-variable",
      "-Werror=old-style-cast",
 +    "-Wno-format-nonliteral",
++    "-Wno-thread-safety-analysis",
  ]
  
  config_setting(
