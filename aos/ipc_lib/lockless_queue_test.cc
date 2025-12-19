@@ -248,6 +248,7 @@ TEST_F(LocklessQueueTest, FetchOnEndOfQueue) {
   std::mutex ready_mutex, sender_running;
   std::condition_variable ready_condition;
   std::unique_lock<std::mutex> ready_lock(ready_mutex);
+  std::unique_lock<std::mutex> sender_lock(sender_running, std::defer_lock);
   std::thread sender_thread([this, &ready_mutex, &ready_condition,
                              &sender_running]() {
     LocklessQueueSender sender =
@@ -291,7 +292,7 @@ TEST_F(LocklessQueueTest, FetchOnEndOfQueue) {
   // the queue. This will always involve lots of dropping off the end of the
   // queue itself, but the goal is to ensure that we don't clobber any state
   // while doing so.
-  while (!sender_running.try_lock()) {
+  while (!sender_lock.try_lock()) {
     // Confirm that the queue index makes sense given the number of sends.
     const QueueIndex latest = reader.LatestIndex();
     const QueueIndex query_index =
