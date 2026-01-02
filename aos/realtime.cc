@@ -216,7 +216,7 @@ void LockAllMemory() {
   SetSoftRLimit(RLIMIT_MEMLOCK, RLIM_INFINITY, SetLimitForRoot::kNo,
                 "use --skip_locking_memory to not lock memory.");
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
   ABSL_PCHECK(mlockall(MCL_CURRENT | MCL_FUTURE) == 0)
       << ": Failed to lock memory, use --skip_locking_memory to bypass this.  "
          "Bypassing will impact RT performance.";
@@ -433,6 +433,7 @@ void SetCurrentThreadRealtimePriority(int priority, int scheduling_policy) {
       << ") with priority " << priority
       << ", if you want to bypass this check for testing, use "
          "--skip_realtime_scheduler";
+#elif defined(__APPLE__)
 #else
 #error "Only linux and apple (Mac OS X) are supported"
 #endif
@@ -598,6 +599,7 @@ void FatalUnsetRealtimePriority() {
   param.sched_priority = 0;
 #ifdef __linux__
   sched_setscheduler(0, SCHED_OTHER, &param);
+#elif defined(__APPLE__)
 #else
 #error "Only linux and apple (Mac OS X) are supported"
 #endif
@@ -621,6 +623,7 @@ void FatalUnsetRealtimePriority() {
     }
     closedir(dirp);
   }
+#elif defined(__APPLE__)
 #else
 #error "Only linux and apple (Mac OS X) are supported"
 #endif
