@@ -1,7 +1,9 @@
 #include "aos/realtime.h"
 
 #include <dirent.h>
+#ifdef __linux__
 #include <malloc.h>
+#endif
 #include <sched.h>
 #include <sys/mman.h>
 #include <sys/prctl.h>
@@ -200,10 +202,12 @@ void LockAllMemory() {
          "Bypassing will impact RT performance.";
 
 #if !defined(AOS_SANITIZE_ADDRESS) && !defined(AOS_SANITIZE_MEMORY)
+#ifdef __linux__
   // Don't give freed memory back to the OS.
   ABSL_CHECK_EQ(1, mallopt(M_TRIM_THRESHOLD, -1));
   // Don't use mmap for large malloc chunks.
   ABSL_CHECK_EQ(1, mallopt(M_MMAP_MAX, 0));
+#endif
 #endif
 
   // TODO(austin): new tcmalloc does this differently...
@@ -322,8 +326,12 @@ void SetCurrentThreadName(const std::string_view name) {
   ABSL_CHECK_LE(name.size(), 16u) << ": thread name '" << name << "' too long";
   ABSL_VLOG(1) << "This thread is changing to '" << name << "'";
   std::string string_name(name);
+#ifdef __linux__
   ABSL_PCHECK(prctl(PR_SET_NAME, string_name.c_str()) == 0)
       << ": changing name to " << string_name;
+#elif defined(__APPLE__)
+  pthread_setname_np(string_name.c_str());
+#endif
   if (&logging::internal::ReloadThreadName != nullptr) {
     logging::internal::ReloadThreadName();
   }
