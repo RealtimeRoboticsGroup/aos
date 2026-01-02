@@ -14,6 +14,7 @@
 #if defined(__APPLE__)
 #include <mach/mach.h>
 #include <mach/thread_policy.h>
+#include <malloc/malloc.h>
 #include <pthread.h>
 #endif
 
@@ -220,7 +221,7 @@ void LockAllMemory() {
       << ": Failed to lock memory, use --skip_locking_memory to bypass this.  "
          "Bypassing will impact RT performance.";
 #else
-  // TODO(austin): Implement me on other platforms?  Maybe not needed?
+#error "Only linux and apple (Mac OS X) are supported"
 #endif
 
 #if !defined(AOS_SANITIZE_ADDRESS) && !defined(AOS_SANITIZE_MEMORY)
@@ -288,8 +289,7 @@ void UnsetCurrentThreadRealtimePriority() {
 #elif defined(__APPLE__)
   ABSL_LOG(WARNING) << "No RT scheduler on OSX, ignoring";
 #else
-  // TODO(austin): Do we want to support unsetting realtime on non-linux?
-  (void)param;
+#error "Only linux and apple (Mac OS X) are supported"
 #endif
   MarkRealtime(false);
 }
@@ -434,9 +434,7 @@ void SetCurrentThreadRealtimePriority(int priority, int scheduling_policy) {
       << ", if you want to bypass this check for testing, use "
          "--skip_realtime_scheduler";
 #else
-  // TODO(austin): Implement me on other platforms?  Maybe not needed?
-  (void)scheduling_policy;
-  (void)param;
+#error "Only linux and apple (Mac OS X) are supported"
 #endif
 }
 
@@ -582,12 +580,14 @@ void *aos_calloc_hook(size_t n, size_t elem_size) {
   }
 }
 
+#ifdef __linux__
 void *malloc(size_t size) __attribute__((weak, alias("aos_malloc_hook")));
 void free(void *ptr) __attribute__((weak, alias("aos_free_hook")));
 void *realloc(void *ptr, size_t size)
     __attribute__((weak, alias("aos_realloc_hook")));
 void *calloc(size_t n, size_t elem_size)
     __attribute__((weak, alias("aos_calloc_hook")));
+#endif
 }
 
 void FatalUnsetRealtimePriority() {
@@ -599,7 +599,7 @@ void FatalUnsetRealtimePriority() {
 #ifdef __linux__
   sched_setscheduler(0, SCHED_OTHER, &param);
 #else
-  (void)param;
+#error "Only linux and apple (Mac OS X) are supported"
 #endif
 
   is_realtime = false;
@@ -622,11 +622,12 @@ void FatalUnsetRealtimePriority() {
     closedir(dirp);
   }
 #else
-  // TODO(austin): Implement me on other platforms?  Maybe not needed?
+#error "Only linux and apple (Mac OS X) are supported"
 #endif
   errno = saved_errno;
 }
 
+#ifdef __linux__
 void RegisterMallocHook() {
   if (absl::GetFlag(FLAGS_die_on_malloc)) {
     // tcmalloc redefines __libc_malloc, so use this as a feature test.
@@ -657,5 +658,120 @@ void RegisterMallocHook() {
     }
   }
 }
+#elif defined(__APPLE__)
+
+typedef struct {
+  malloc_zone_t zone;
+  malloc_zone_t *wrapped_zone;
+} rt_check_zone_t;
+
+static void *rt_malloc(struct _malloc_zone_t *zone, size_t size) {
+  rt_check_zone_t *rt_zone = (rt_check_zone_t *)zone;
+
+  if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc)) {
+    aos::is_realtime = false;
+    ABSL_RAW_LOG(FATAL, "Malloced %zu bytes", size);
+  }
+
+  return rt_zone->wrapped_zone->malloc(rt_zone->wrapped_zone, size);
+}
+
+static void *rt_calloc(struct _malloc_zone_t *zone, size_t num_items,
+                       size_t size) {
+  rt_check_zone_t *rt_zone = (rt_check_zone_t *)zone;
+
+  if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc)) {
+    aos::is_realtime = false;
+    ABSL_RAW_LOG(FATAL, "Malloced %zu * %zu bytes", num_items, size);
+  }
+
+  return rt_zone->wrapped_zone->calloc(rt_zone->wrapped_zone, num_items, size);
+}
+
+static void *rt_valloc(struct _malloc_zone_t *zone, size_t size) {
+  rt_check_zone_t *rt_zone = (rt_check_zone_t *)zone;
+
+  if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc)) {
+    aos::is_realtime = false;
+    ABSL_RAW_LOG(FATAL, "Malloced %zu bytes", size);
+  }
+
+  return rt_zone->wrapped_zone->valloc(rt_zone->wrapped_zone, size);
+}
+
+static void rt_free(struct _malloc_zone_t *zone, void *ptr) {
+  rt_check_zone_t *rt_zone = (rt_check_zone_t *)zone;
+
+  if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc) &&
+      ptr != nullptr) {
+    aos::is_realtime = false;
+    ABSL_RAW_LOG(FATAL, "Deleted %p", ptr);
+  }
+
+  rt_zone->wrapped_zone->free(rt_zone->wrapped_zone, ptr);
+}
+
+static void *rt_realloc(struct _malloc_zone_t *zone, void *ptr, size_t size) {
+  rt_check_zone_t *rt_zone = (rt_check_zone_t *)zone;
+
+  if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc)) {
+    aos::is_realtime = false;
+    ABSL_RAW_LOG(FATAL, "Malloced %p -> %zu bytes", ptr, size);
+  }
+
+  return rt_zone->wrapped_zone->realloc(rt_zone->wrapped_zone, ptr, size);
+}
+
+static void rt_free_definite_size(struct _malloc_zone_t *zone, void *ptr,
+                                  size_t size) {
+  rt_check_zone_t *rt_zone = (rt_check_zone_t *)zone;
+
+  if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc) &&
+      ptr != nullptr) {
+    aos::is_realtime = false;
+    ABSL_RAW_LOG(FATAL, "Deleted %p", ptr);
+  }
+
+  rt_zone->wrapped_zone->free_definite_size(rt_zone->wrapped_zone, ptr, size);
+}
+
+void RegisterMallocHook() {
+  if (absl::GetFlag(FLAGS_die_on_malloc)) {
+    if (ABSL_VLOG_IS_ON(1)) {
+      ABSL_RAW_LOG(INFO, "Hooking malloc zone for die_on_malloc");
+    }
+
+    malloc_zone_t *default_zone = malloc_default_zone();
+    static rt_check_zone_t my_zone;
+    // We want to make sure we don't accidentally recurse and explode if this
+    // function triggers a malloc, so stash is_realtime and clear it.
+    bool old_is_realtime = MarkRealtime(false);
+
+    // Copy the function pointers from the default zone
+    memcpy(&my_zone.zone, default_zone, sizeof(malloc_zone_t));
+    my_zone.wrapped_zone = default_zone;
+
+    // Override the malloc function
+    my_zone.zone.malloc = rt_malloc;
+    my_zone.zone.calloc = rt_calloc;
+    my_zone.zone.valloc = rt_valloc;
+    my_zone.zone.free = rt_free;
+    my_zone.zone.realloc = rt_realloc;
+    my_zone.zone.free_definite_size = rt_free_definite_size;
+
+    // Unregister the old and register the new as the default
+    malloc_zone_unregister(default_zone);
+    malloc_zone_register(&my_zone.zone);
+    // Restore is_realtime.
+    MarkRealtime(old_is_realtime);
+  }
+}
+#else
+void RegisterMallocHook() {
+  // If we are on a platform that doesn't support malloc hooks, we can't die on
+  // malloc.
+#error "Only linux and apple (Mac OS X) are supported"
+}
+#endif
 
 }  // namespace aos
