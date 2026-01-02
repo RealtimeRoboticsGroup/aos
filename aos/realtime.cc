@@ -286,7 +286,7 @@ void UnsetCurrentThreadRealtimePriority() {
 #ifdef __linux__
   ABSL_PCHECK(sched_setscheduler(0, SCHED_OTHER, &param) == 0);
 #elif defined(__APPLE__)
-  LOG(WARNING) << "No RT scheduler on OSX, ignoring";
+  ABSL_LOG(WARNING) << "No RT scheduler on OSX, ignoring";
 #else
   // TODO(austin): Do we want to support unsetting realtime on non-linux?
   (void)param;
@@ -423,7 +423,7 @@ void SetCurrentThreadRealtimePriority(int priority, int scheduling_policy) {
   struct sched_param param;
   param.sched_priority = priority;
 #if defined(__APPLE__)
-  LOG(INFO) << "RT priority not implemented on OSX, pretending to be RT";
+  ABSL_LOG(INFO) << "RT priority not implemented on OSX, pretending to be RT";
 #endif
   MarkRealtime(true);
 #ifdef __linux__
