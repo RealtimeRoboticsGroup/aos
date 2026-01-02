@@ -18,7 +18,6 @@ cc_library(
         "interface.h",
         "logging.h",
     ],
-    #target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos:die",
@@ -50,7 +49,6 @@ cc_test(
     srcs = [
         "implementations_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":logging",
         "//aos/testing:googletest",
@@ -62,7 +60,6 @@ cc_test(
 static_flatbuffer(
     name = "log_message_fbs",
     srcs = ["log_message.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
