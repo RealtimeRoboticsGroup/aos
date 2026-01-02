@@ -51,7 +51,7 @@ pip.parse(
         "--index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
         "--trusted-host=realtimeroboticsgroup.org",
     ],
-    hub_name = "pip_deps",
+    hub_name = "aos_pip_deps",
     python_version = "3.10",
     requirements_lock = "//tools/python:requirements.lock.txt",
     whl_modifications = {
@@ -69,7 +69,7 @@ pip.override(
     patch_strip = 2,
     patches = ["//third_party/python:pygobject/init.patch"],
 )
-use_repo(pip, "pip_deps")
+use_repo(pip, pip_deps = "aos_pip_deps")
 
 bazel_dep(name = "grpc", version = "1.74.1", repo_name = "com_github_grpc_grpc")
 bazel_dep(name = "protobuf", version = "32.1", repo_name = "com_google_protobuf")
