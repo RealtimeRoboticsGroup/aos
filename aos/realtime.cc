@@ -3,10 +3,10 @@
 #include <dirent.h>
 #ifdef __linux__
 #include <malloc.h>
+#include <sys/prctl.h>
 #endif
 #include <sched.h>
 #include <sys/mman.h>
-#include <sys/prctl.h>
 #include <sys/resource.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -166,15 +166,27 @@ enum class SetLimitForRoot { kYes, kNo };
 
 enum class AllowSoftLimitDecrease { kYes, kNo };
 
+#ifdef __linux__
+using RlimT = rlim64_t;
+#else
+using RlimT = rlim_t;
+#endif
+
 void SetSoftRLimit(
-    int resource, rlim64_t soft, SetLimitForRoot set_for_root,
+    int resource, RlimT soft, SetLimitForRoot set_for_root,
     std::string_view help_string,
     AllowSoftLimitDecrease allow_decrease = AllowSoftLimitDecrease::kYes) {
   bool am_root = getuid() == 0;
   if (set_for_root == SetLimitForRoot::kYes || !am_root) {
+#ifdef __linux__
     struct rlimit64 rlim;
     ABSL_PCHECK(getrlimit64(resource, &rlim) == 0)
         << ": getting limit for " << resource;
+#else
+    struct rlimit rlim;
+    ABSL_PCHECK(getrlimit(resource, &rlim) == 0)
+        << ": getting limit for " << resource;
+#endif
 
     if (allow_decrease == AllowSoftLimitDecrease::kYes) {
       rlim.rlim_cur = soft;
@@ -183,9 +195,15 @@ void SetSoftRLimit(
     }
     rlim.rlim_max = ::std::max(rlim.rlim_max, soft);
 
+#ifdef __linux__
     ABSL_PCHECK(setrlimit64(resource, &rlim) == 0)
         << ": changing limit for " << resource << " to " << rlim.rlim_cur
         << " with max of " << rlim.rlim_max << " (" << help_string << ")";
+#else
+    ABSL_PCHECK(setrlimit(resource, &rlim) == 0)
+        << ": changing limit for " << resource << " to " << rlim.rlim_cur
+        << " with max of " << rlim.rlim_max << " (" << help_string << ")";
+#endif
   }
 }
 
@@ -197,9 +215,13 @@ void LockAllMemory() {
   SetSoftRLimit(RLIMIT_MEMLOCK, RLIM_INFINITY, SetLimitForRoot::kNo,
                 "use --skip_locking_memory to not lock memory.");
 
+#ifdef __linux__
   ABSL_PCHECK(mlockall(MCL_CURRENT | MCL_FUTURE) == 0)
       << ": Failed to lock memory, use --skip_locking_memory to bypass this.  "
          "Bypassing will impact RT performance.";
+#else
+  // TODO(austin): Implement me on other platforms?  Maybe not needed?
+#endif
 
 #if !defined(AOS_SANITIZE_ADDRESS) && !defined(AOS_SANITIZE_MEMORY)
 #ifdef __linux__
@@ -243,6 +265,7 @@ void InitRT() {
   if (absl::GetFlag(FLAGS_skip_realtime_scheduler)) {
     return;
   }
+#ifdef __linux__
   // Only let rt processes run for 3 seconds straight.
   SetSoftRLimit(
       RLIMIT_RTTIME, 3000000, SetLimitForRoot::kYes,
@@ -254,12 +277,20 @@ void InitRT() {
       RLIMIT_RTPRIO, 40, SetLimitForRoot::kNo,
       ", use --skip_realtime_scheduler to stay non-rt and bypass this "
       "warning.");
+#endif
 }
 
 void UnsetCurrentThreadRealtimePriority() {
   struct sched_param param;
   param.sched_priority = 0;
+#ifdef __linux__
   ABSL_PCHECK(sched_setscheduler(0, SCHED_OTHER, &param) == 0);
+#elif defined(__APPLE__)
+  LOG(WARNING) << "No RT scheduler on OSX, ignoring";
+#else
+  // TODO(austin): Do we want to support unsetting realtime on non-linux?
+  (void)param;
+#endif
   MarkRealtime(false);
 }
 
@@ -370,6 +401,7 @@ void SetCurrentThreadRealtimePriority(int priority, int scheduling_policy) {
            "--skip_realtime_scheduler.";
     return;
   }
+#ifdef __linux__
   // Make sure we will only be allowed to run for 3 seconds straight.
   SetSoftRLimit(
       RLIMIT_RTTIME, 3000000, SetLimitForRoot::kYes,
@@ -382,6 +414,7 @@ void SetCurrentThreadRealtimePriority(int priority, int scheduling_policy) {
       ", use --skip_realtime_scheduler to stay non-rt and bypass this "
       "warning.",
       AllowSoftLimitDecrease::kNo);
+#endif
 
   ABSL_CHECK(scheduling_policy == SCHED_FIFO || scheduling_policy == SCHED_RR)
       << "Specified non-realtime scheduling policy with realtime priority";
@@ -389,13 +422,22 @@ void SetCurrentThreadRealtimePriority(int priority, int scheduling_policy) {
       << "Realtime priority must fall within [1,99]";
   struct sched_param param;
   param.sched_priority = priority;
+#if defined(__APPLE__)
+  LOG(INFO) << "RT priority not implemented on OSX, pretending to be RT";
+#endif
   MarkRealtime(true);
+#ifdef __linux__
   ABSL_PCHECK(sched_setscheduler(0, scheduling_policy, &param) == 0)
       << ": changing to realtime scheduler ("
       << (scheduling_policy == SCHED_FIFO ? "SCHED_FIFO" : "SCHED_RR")
       << ") with priority " << priority
       << ", if you want to bypass this check for testing, use "
          "--skip_realtime_scheduler";
+#else
+  // TODO(austin): Implement me on other platforms?  Maybe not needed?
+  (void)scheduling_policy;
+  (void)param;
+#endif
 }
 
 int GetCurrentThreadRealtimePriority() {
@@ -536,11 +578,16 @@ void FatalUnsetRealtimePriority() {
   // everything, don't get overly clever.
   struct sched_param param;
   param.sched_priority = 0;
+#ifdef __linux__
   sched_setscheduler(0, SCHED_OTHER, &param);
+#else
+  (void)param;
+#endif
 
   is_realtime = false;
 
   // Put all sub-tasks back to non-rt priority too.
+#ifdef __linux__
   DIR *dirp = opendir("/proc/self/task");
   if (dirp) {
     struct dirent *directory_entry;
@@ -556,6 +603,9 @@ void FatalUnsetRealtimePriority() {
     }
     closedir(dirp);
   }
+#else
+  // TODO(austin): Implement me on other platforms?  Maybe not needed?
+#endif
   errno = saved_errno;
 }
 
