@@ -30,7 +30,6 @@ cc_static_flatbuffer(
 static_flatbuffer(
     name = "connect_fbs",
     srcs = ["connect.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos:configuration_fbs",
     ],
@@ -40,7 +39,6 @@ flatbuffer_ts_library(
     name = "connect_ts_fbs",
     srcs = ["connect.fbs"],
     include_reflection = True,
-    target_compatible_with = ["@platforms//os:linux"],
     ts_files = [
         "aos/message-bridge/connect.ts",
         "aos/channel.ts",
@@ -57,13 +55,11 @@ flatbuffer_ts_library(
 static_flatbuffer(
     name = "remote_data_fbs",
     srcs = ["remote_data.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 static_flatbuffer(
     name = "timestamp_fbs",
     srcs = ["timestamp.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos:configuration_fbs",
     ],
@@ -79,7 +75,6 @@ cc_static_flatbuffer(
 static_flatbuffer(
     name = "message_bridge_client_fbs",
     srcs = ["message_bridge_client.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":message_bridge_server_fbs",
         "//aos:configuration_fbs",
@@ -133,7 +128,6 @@ cc_static_flatbuffer(
 static_flatbuffer(
     name = "message_bridge_server_fbs",
     srcs = ["message_bridge_server.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos:configuration_fbs",
     ],
@@ -167,13 +161,11 @@ proto_library(
     srcs = [
         "message_bridge_auth.proto",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = [":__pkg__"],
 )
 
 cc_proto_library(
     name = "message_bridge_auth_proto_cc",
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":message_bridge_auth_proto",
@@ -186,7 +178,6 @@ cc_grpc_library(
         ":message_bridge_auth_proto",
     ],
     grpc_only = True,
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":message_bridge_auth_proto_cc",
     ],
@@ -307,7 +298,6 @@ cc_library(
     hdrs = [
         "message_bridge_protocol.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":connect_fbs",
         "//aos:configuration",
@@ -326,7 +316,6 @@ cc_library(
     hdrs = [
         "message_bridge_server_status.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":message_bridge_client_fbs",
         ":message_bridge_server_fbs",
@@ -423,7 +412,6 @@ cc_library(
     hdrs = [
         "message_bridge_client_status.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":message_bridge_client_fbs",
         ":message_bridge_server_fbs",
@@ -557,7 +545,6 @@ aos_config(
         "//aos/network:message_bridge_server_fbs",
         "//aos/network:timestamp_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = ["//aos/events:aos_config"],
 )
 
@@ -570,7 +557,6 @@ aos_config(
         "//aos/network:message_bridge_server_fbs",
         "//aos/network:timestamp_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = ["//aos/events:aos_config"],
 )
 
@@ -583,7 +569,6 @@ aos_config(
         "//aos/network:message_bridge_server_fbs",
         "//aos/network:timestamp_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = ["//aos/events:aos_config"],
 )
 
@@ -594,7 +579,6 @@ aos_config(
         ":sctp_config_fbs",
         ":sctp_config_request_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = ["//aos/events:aos_config"],
 )
 
@@ -611,7 +595,6 @@ aos_config(
         "//aos/network:message_bridge_server_fbs",
         "//aos/network:timestamp_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = ["//aos/events:aos_config"],
 )
 
@@ -626,7 +609,6 @@ aos_config(
         "//aos/network:message_bridge_server_fbs",
         "//aos/network:timestamp_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = ["//aos/events:aos_config"],
 )
 
@@ -717,7 +699,6 @@ cc_test(
     data = [
         ":message_bridge_test_combined_timestamps_common_config",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":message_bridge_server_status",
         "//aos/events:simulated_event_loop",
@@ -730,7 +711,6 @@ flatbuffer_cc_library(
     name = "web_proxy_fbs",
     srcs = ["web_proxy.fbs"],
     gen_reflections = True,
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":connect_fbs_fbs",
         "//aos:configuration_fbs_fbs",
@@ -741,7 +721,6 @@ flatbuffer_ts_library(
     name = "web_proxy_ts_fbs",
     srcs = ["web_proxy.fbs"],
     include_reflection = True,
-    target_compatible_with = ["@platforms//os:linux"],
     ts_files = [
         "aos/web-proxy/sdp-type.ts",
         "aos/web-proxy/web-socket-sdp.ts",
@@ -771,7 +750,6 @@ cc_library(
     name = "web_proxy_utils",
     srcs = ["web_proxy_utils.cc"],
     hdrs = ["web_proxy_utils.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":connect_fbs",
         ":web_proxy_fbs",
@@ -791,7 +769,6 @@ cc_library(
         "rawrtc.h",
         "web_proxy.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":connect_fbs",
         ":gen_embedded",
@@ -813,7 +790,6 @@ gen_embedded(
         include = ["www_defaults/**/*"],
         exclude = ["www/**/*"],
     ),
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
@@ -825,7 +801,6 @@ cc_binary(
         "//aos/network/www:main_bundle.min.js",
         "@com_github_google_flatbuffers//:flatjs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":web_proxy",
         "//aos:init",
@@ -857,7 +832,6 @@ cc_library(
     hdrs = [
         "timestamp_filter.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":noncausal_timestamp_filter",
         "//aos:configuration",
@@ -876,7 +850,6 @@ cc_library(
     hdrs = [
         "noncausal_timestamp_filter.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos:configuration",
         "//aos/events/logging:boot_timestamp",
@@ -890,7 +863,6 @@ cc_library(
     name = "multinode_timestamp_filter",
     srcs = ["multinode_timestamp_filter.cc"],
     hdrs = ["multinode_timestamp_filter.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":noncausal_timestamp_filter",
         "//aos:configuration",
@@ -907,7 +879,6 @@ cc_test(
     srcs = [
         "timestamp_filter_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":timestamp_filter",
         "//aos:json_to_flatbuffer",
@@ -920,7 +891,6 @@ cc_test(
     srcs = [
         "noncausal_timestamp_filter_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":noncausal_timestamp_filter",
         "//aos:json_to_flatbuffer",
@@ -992,7 +962,6 @@ cc_test(
     srcs = [
         "multinode_timestamp_filter_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":multinode_timestamp_filter",
         ":testing_time_converter",
@@ -1060,7 +1029,6 @@ cc_library(
     name = "udp",
     srcs = ["udp.cc"],
     hdrs = ["udp.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos:macros",
         "//aos/scoped:scoped_fd",
@@ -1072,7 +1040,6 @@ cc_library(
 cc_test(
     name = "udp_test",
     srcs = ["udp_test.cc"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":udp",
         "//aos/testing:googletest",
