@@ -441,17 +441,35 @@ void SetCurrentThreadRealtimePriority(int priority, int scheduling_policy) {
 }
 
 int GetCurrentThreadRealtimePriority() {
+#ifdef __linux__
   struct sched_param result;
   ABSL_PCHECK(sched_getparam(0, &result) == 0)
       << ": Failed to retrieve the Realtime Priority";
   return result.sched_priority;
+#elif defined(__APPLE__)
+  struct sched_param param;
+  int policy;
+  ABSL_PCHECK(pthread_getschedparam(pthread_self(), &policy, &param) == 0);
+  return param.sched_priority;
+#else
+#error "Only linux and apple (Mac OS X) are supported"
+#endif
 }
 
 int GetCurrentThreadSchedulingPolicy() {
+#ifdef __linux__
   int scheduling_policy = sched_getscheduler(0);
   ABSL_PCHECK(scheduling_policy >= 0)
       << ": Failed to retrieve the scheduling policy";
   return scheduling_policy;
+#elif defined(__APPLE__)
+  struct sched_param param;
+  int policy;
+  ABSL_PCHECK(pthread_getschedparam(pthread_self(), &policy, &param) == 0);
+  return policy;
+#else
+#error "Only linux and apple (Mac OS X) are supported"
+#endif
 }
 
 void WriteCoreDumps() {
