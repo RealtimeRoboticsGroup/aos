@@ -65,7 +65,6 @@ cc_library(
     hdrs = [
         "context.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos:uuid",
@@ -84,7 +83,6 @@ cc_library(
         "channel_preallocated_allocator.h",
         "event_loop.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":context",
@@ -272,14 +270,12 @@ aos_config(
         "//aos/starter:starter_fbs",
         "//aos/starter:starter_rpc_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 cc_library(
     name = "timing_statistics",
     srcs = ["timing_statistics.cc"],
     hdrs = ["timing_statistics.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":event_loop_fbs",
         "//aos:configuration",
@@ -292,7 +288,6 @@ cc_library(
 cc_test(
     name = "timing_statistics_test",
     srcs = ["timing_statistics_test.cc"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":timing_statistics",
         "//aos:configuration",
@@ -347,7 +342,6 @@ cc_library(
     testonly = True,
     srcs = ["event_loop_param_test.cc"],
     hdrs = ["event_loop_param_test.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":event_loop",
         ":test_message_fbs",
@@ -371,7 +365,6 @@ cc_test(
         "//aos/testing/ping_pong:multinode_pingpong_test_split_config",
     ],
     shard_count = 16,
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":event_loop_param_test",
         ":function_scheduler",
@@ -453,7 +446,6 @@ cc_library(
     name = "simple_channel",
     srcs = ["simple_channel.cc"],
     hdrs = ["simple_channel.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos:configuration_fbs",
         "@com_github_google_flatbuffers//:flatbuffers",
@@ -475,7 +467,6 @@ cc_library(
         "simulated_event_loop.h",
         "simulated_network_bridge.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":aos_logging",
@@ -604,7 +595,6 @@ cc_library(
     hdrs = [
         "aos_logging.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":event_loop",
@@ -616,7 +606,6 @@ cc_library(
 cc_library(
     name = "message_counter",
     hdrs = ["message_counter.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":event_loop",
