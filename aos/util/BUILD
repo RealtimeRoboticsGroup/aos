@@ -33,7 +33,6 @@ cc_test(
     srcs = [
         "bitpacking_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":bitpacking",
         "//aos/testing:googletest",
@@ -45,7 +44,6 @@ py_library(
     srcs = [
         "trapezoid_profile.py",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":python_init",
     ],
@@ -96,7 +94,6 @@ cc_binary(
 cc_library(
     name = "error_counter",
     hdrs = ["error_counter.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@com_github_google_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/log:absl_check",
@@ -106,7 +103,6 @@ cc_library(
 cc_test(
     name = "error_counter_test",
     srcs = ["error_counter_test.cc"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":error_counter",
         "//aos:flatbuffers",
@@ -163,7 +159,6 @@ cc_library(
     name = "mcap_logger",
     srcs = ["mcap_logger.cc"],
     hdrs = ["mcap_logger.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":log_conversion_metadata_fbs",
         ":log_conversion_metadata_schema",
@@ -215,7 +210,6 @@ py_test(
 cc_test(
     name = "mcap_logger_test",
     srcs = ["mcap_logger_test.cc"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":mcap_logger",
         "//aos/testing:googletest",
@@ -226,7 +220,6 @@ cc_test(
 cc_library(
     name = "math",
     hdrs = ["math.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@eigen",
     ],
@@ -235,7 +228,6 @@ cc_library(
 cc_test(
     name = "math_test",
     srcs = ["math_test.cc"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":math",
         "//aos/testing:googletest",
@@ -247,7 +239,6 @@ cc_library(
     hdrs = [
         "death_test_log_implementation.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos/logging",
     ],
@@ -261,7 +252,6 @@ cc_library(
     hdrs = [
         "phased_loop.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos/time",
         "@com_google_absl//absl/log:absl_check",
@@ -273,7 +263,6 @@ cc_library(
     hdrs = [
         "log_interval.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos/logging",
         "//aos/time",
@@ -288,7 +277,6 @@ cc_library(
     hdrs = [
         "string_formatting.h",
     ],
-    #target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@com_github_google_flatbuffers//:flatbuffers",
     ],
@@ -314,7 +302,6 @@ cc_library(
     linkopts = [
         "-lm",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos/logging",
         "//aos/time",
@@ -327,7 +314,6 @@ cc_test(
     srcs = [
         "trapezoid_profile_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":trapezoid_profile",
         "//aos/testing:googletest",
@@ -342,7 +328,6 @@ cc_library(
     hdrs = [
         "wrapping_counter.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 cc_test(
@@ -350,7 +335,6 @@ cc_test(
     srcs = [
         "wrapping_counter_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":wrapping_counter",
         "//aos/testing:googletest",
@@ -362,7 +346,6 @@ cc_library(
     hdrs = [
         "options.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 cc_test(
@@ -370,7 +353,6 @@ cc_test(
     srcs = [
         "options_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":options",
         "//aos/testing:googletest",
@@ -382,7 +364,6 @@ cc_library(
     hdrs = [
         "compiler_memory_barrier.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 cc_library(
@@ -390,7 +371,6 @@ cc_library(
     hdrs = [
         "global_factory.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 cc_test(
@@ -398,7 +378,6 @@ cc_test(
     srcs = [
         "global_factory_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":global_factory",
         "//aos/testing:googletest",
@@ -410,7 +389,6 @@ cc_test(
     srcs = [
         "phased_loop_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":phased_loop",
         "//aos/testing:googletest",
@@ -426,7 +404,6 @@ cc_library(
     hdrs = [
         "file.h",
     ],
-    #target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos:sanitizers",
         "//aos/scoped:scoped_fd",
@@ -444,7 +421,6 @@ cc_test(
     srcs = [
         "file_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":file",
         "//aos:realtime",
@@ -456,7 +432,6 @@ cc_test(
 static_flatbuffer(
     name = "process_info_fbs",
     srcs = ["process_info.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
@@ -470,7 +445,6 @@ flatbuffer_ts_library(
         "ProcessInfo",
         "TopProcessesFbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
@@ -478,7 +452,6 @@ cc_library(
     name = "proc_stat",
     srcs = ["proc_stat.cc"],
     hdrs = ["proc_stat.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/log:absl_log",
@@ -508,7 +481,6 @@ cc_test(
         "//aos/testing/ping_pong:pingpong_config",
     ],
     flaky = True,
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":top",
         "//aos/events:shm_event_loop",
@@ -522,7 +494,6 @@ cc_library(
     name = "scoped_pipe",
     srcs = ["scoped_pipe.cc"],
     hdrs = ["scoped_pipe.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
@@ -533,7 +504,6 @@ cc_library(
 cc_test(
     name = "scoped_pipe_test",
     srcs = ["scoped_pipe_test.cc"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":scoped_pipe",
         "//aos/testing:googletest",
@@ -552,7 +522,6 @@ cc_library(
 py_library(
     name = "python_init",
     srcs = ["__init__.py"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = ["//aos:python_init"],
 )
@@ -622,7 +591,6 @@ cc_library(
     name = "config_validator",
     testonly = True,
     srcs = ["config_validator.cc"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":config_validator_lib",
         "//aos:json_to_flatbuffer",
@@ -660,7 +628,6 @@ cc_library(
 static_flatbuffer(
     name = "config_validator_config_fbs",
     srcs = ["config_validator_config.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
@@ -730,7 +697,6 @@ cc_library(
     name = "status",
     srcs = ["status.cc"],
     hdrs = ["status.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos/containers:inlined_vector",
         "@com_google_absl//absl/log:absl_log",
