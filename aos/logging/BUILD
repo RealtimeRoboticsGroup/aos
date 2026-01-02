@@ -18,7 +18,7 @@ cc_library(
         "interface.h",
         "logging.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
+    #target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos:die",

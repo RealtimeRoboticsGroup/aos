@@ -26,7 +26,6 @@ cc_static_flatbuffer(
 static_flatbuffer(
     name = "event_loop_fbs",
     srcs = ["event_loop.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = ["//aos:configuration_fbs"],
 )
 

@@ -89,7 +89,7 @@ cc_library(
     hdrs = [
         "unique_malloc_ptr.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
+    #target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
@@ -119,7 +119,7 @@ cc_test(
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":condition",
-        "//aos:die",
+        ":die",
         "//aos/ipc_lib:aos_sync",
         "//aos/ipc_lib:core_lib",
         "//aos/logging",
@@ -139,7 +139,6 @@ cc_library(
     hdrs = [
         "die.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos:macros",
@@ -183,12 +182,12 @@ cc_library(
     hdrs = [
         "init.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
+    #target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":realtime",
         ":uuid",
-        "//aos:die",
+        ":die",
         "//aos/logging",
         "@com_google_absl//absl/debugging:failure_signal_handler",
         "@com_google_absl//absl/flags:flag",
@@ -274,7 +273,6 @@ cc_library(
     hdrs = [
         "realtime.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":sanitizers",
@@ -287,7 +285,7 @@ cc_library(
 static_flatbuffer(
     name = "configuration_fbs",
     srcs = ["configuration.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
+    #target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = ["//aos/flatbuffers/reflection:reflection_fbs"],
 )
@@ -339,7 +337,7 @@ cc_library(
         "clang": [],
         "gcc": ["-Wno-missing-field-initializers"],
     }),
-    target_compatible_with = ["@platforms//os:linux"],
+    #target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":configuration_fbs",
@@ -437,7 +435,6 @@ cc_library(
     name = "flatbuffer_utils",
     srcs = ["flatbuffer_utils.cc"],
     hdrs = ["flatbuffer_utils.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_google_flatbuffers//:flatbuffers",
@@ -450,7 +447,7 @@ cc_library(
     name = "json_tokenizer",
     srcs = ["json_tokenizer.cc"],
     hdrs = ["json_tokenizer.h"],
-    target_compatible_with = ["@platforms//os:linux"],
+    #target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@com_github_google_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/log",
@@ -466,7 +463,6 @@ cc_library(
         "json_to_flatbuffer.cc",
     ],
     hdrs = ["json_to_flatbuffer.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":fast_string_builder",
@@ -526,7 +522,7 @@ cc_library(
     srcs = ["flatbuffer_merge.cc"],
     hdrs = ["flatbuffer_merge.h"],
     copts = ["-Wno-cast-align"],
-    target_compatible_with = ["@platforms//os:linux"],
+    #target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":flatbuffer_utils",
@@ -559,7 +555,7 @@ cc_library(
     hdrs = [
         "flatbuffers.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
+    #target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos:macros",
@@ -617,7 +613,7 @@ cc_binary(
     srcs = [
         "config_flattener.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
+    #target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":configuration",
@@ -743,7 +739,6 @@ cc_library(
     hdrs = [
         "fast_string_builder.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/log:absl_check",
@@ -797,7 +792,7 @@ cc_library(
     name = "uuid",
     srcs = ["uuid.cc"],
     hdrs = ["uuid.h"],
-    target_compatible_with = ["@platforms//os:linux"],
+    #target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_google_flatbuffers//:flatbuffers",
@@ -862,7 +857,7 @@ cc_binary(
     deps = [
         "//aos:configuration",
         "//aos:init",
-        "//aos:json_to_flatbuffer",
+        ":json_to_flatbuffer",
         "//aos/events:simulated_event_loop",
         "//aos/events/logging:log_reader",
         "//aos/time",

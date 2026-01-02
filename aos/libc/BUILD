@@ -65,7 +65,7 @@ cc_library(
     hdrs = [
         "aos_strerror.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
+    #target_compatible_with = ["@platforms//os:linux"],
 )
 
 cc_test(

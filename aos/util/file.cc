@@ -245,9 +245,11 @@ std::optional<absl::Span<char>> FileReader::ReadContents(
   const ssize_t result = read(file_.get(), buffer.data(), buffer.size());
   if (result < 0) {
     // Read timeout for an i2c request returns this.
+#ifdef __linux__
     if (errno == EREMOTEIO) {
       return std::nullopt;
     }
+#endif
   }
 
   ABSL_PCHECK(result >= 0);

@@ -200,7 +200,6 @@ cc_library(
     hdrs = [
         "team_number.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log:absl_check",

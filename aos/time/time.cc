@@ -13,7 +13,7 @@
 #include <ratio>
 #include <sstream>
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 
 #include "absl/log/absl_check.h"
 #include "absl/strings/numbers.h"
@@ -237,7 +237,7 @@ constexpr realtime_clock::time_point realtime_clock::min_time;
 constexpr realtime_clock::time_point realtime_clock::max_time;
 
 monotonic_clock::time_point monotonic_clock::now() noexcept {
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
   struct timespec current_time;
   ABSL_PCHECK(clock_gettime(CLOCK_MONOTONIC, &current_time) == 0)
       << ": clock_gettime(" << static_cast<uintmax_t>(CLOCK_MONOTONIC) << ", "
@@ -273,7 +273,7 @@ monotonic_clock::time_point monotonic_clock::now() noexcept {
 #endif  // __linux__
 }
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 realtime_clock::time_point realtime_clock::now() noexcept {
   struct timespec current_time;
   ABSL_PCHECK(clock_gettime(CLOCK_REALTIME, &current_time) == 0)

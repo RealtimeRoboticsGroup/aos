@@ -40,8 +40,16 @@ if [[ ! -d "${DOWNLOAD_DIR}" ]]; then
   exit 1
 fi
 
-readonly INSTALLER_NAME="bazel-${VERSION}-linux-x86_64"
+if [[ "$(uname)" == "Linux" ]]; then
+  readonly INSTALLER_NAME="bazel-${VERSION}-linux-x86_64"
+elif [[ "$(uname)" == "Darwin" ]]; then
+  readonly INSTALLER_NAME="bazel-${VERSION}-darwin-arm64"
+else
+  echo "Unknown OS $(uname -a)" >&2
+  exit 1
+fi
 readonly DOWNLOAD_URL="https://realtimeroboticsgroup.org/build-dependencies/github.com/bazelbuild/bazel/releases/download/${VERSION}/${INSTALLER_NAME}"
+
 
 if [[ ! -d "${VERSION_DIR}" ]]; then
   echo "Downloading Bazel version ${VERSION} from ${DOWNLOAD_URL}..." >&2

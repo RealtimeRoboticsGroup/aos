@@ -4,8 +4,14 @@
 #define _GNU_SOURCE /* See feature_test_macros(7) */
 #endif
 
-#include <sys/prctl.h>
 #include <unistd.h>
+#ifdef __APPLE__
+#include <pthread.h>
+#include <stdlib.h>
+#else
+#include <sys/prctl.h>
+#include <errno.h>
+#endif
 
 #include <algorithm>
 #include <cstddef>
@@ -37,15 +43,28 @@ namespace {
   // The maximum number of characters that can make up a thread name.
   // The docs are unclear if it can be 16 characters with no '\0', so we'll be
   // safe by adding our own where necessary.
-  static const size_t kThreadNameLength = 16;
+  std::string process_name;
 
-  ::std::string process_name(program_invocation_short_name);
+#ifdef __APPLE__
+  static const size_t kThreadNameLength = 64;
+  process_name = getprogname();
+#else
+  static const size_t kThreadNameLength = 16;
+  process_name = program_invocation_short_name;
+#endif
 
   char thread_name_array[kThreadNameLength + 1];
+#ifdef __APPLE__
+  // macOS pthread_getname_np returns 0 on success
+  if (pthread_getname_np(pthread_self(), thread_name_array, sizeof(thread_name_array)) != 0) {
+    ABSL_PLOG(FATAL) << "pthread_getname_np failed";
+  }
+#else
   if (prctl(PR_GET_NAME, thread_name_array) != 0) {
     ABSL_PLOG(FATAL) << "prctl(PR_GET_NAME, " << thread_name_array
                      << ") failed";
   }
+#endif
 #if defined(AOS_SANITIZE_MEMORY)
   // msan doesn't understand PR_GET_NAME, so help it along.
   __msan_unpoison(thread_name_array, sizeof(thread_name_array));

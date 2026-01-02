@@ -179,7 +179,6 @@ cc_library(
     name = "index",
     srcs = ["index.cc"],
     hdrs = ["index.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":shm_observers",
@@ -428,7 +427,6 @@ cc_library(
     hdrs = [
         "data_alignment.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/log:absl_check",

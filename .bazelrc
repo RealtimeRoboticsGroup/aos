@@ -1,6 +1,8 @@
 # Use platforms to build our code.
 build --incompatible_enable_cc_toolchain_resolution
 
+build --enable_platform_specific_config
+
 # Rewrite all URLs to be on realtimeroboticsgroup.org
 common --downloader_config=tools/dependency_rewrite
 
@@ -13,7 +15,7 @@ build --@rules_python//python/config_settings:venvs_use_declare_symlink=no
 
 # For now we only support building on x86 Linux so we can hard-code the host
 # platform.
-build --host_platform=//tools/platforms:linux_x86
+build:linux --host_platform=//tools/platforms:linux_x86
 
 # Always include debug information in the non-.stripped binaries.
 build --strip=never
@@ -85,7 +87,7 @@ build --show_result 5
 # Keep the default test timeouts except make 'eternal'=4500 secs
 test --test_output=errors --test_timeout=-1,-1,-1,5500
 
-build --sandbox_base=/dev/shm/
+build:linux --sandbox_base=/dev/shm/
 
 build --sandbox_fake_hostname=true
 build --sandbox_fake_username=true

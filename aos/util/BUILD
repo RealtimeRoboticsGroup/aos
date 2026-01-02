@@ -288,7 +288,7 @@ cc_library(
     hdrs = [
         "string_formatting.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
+    #target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@com_github_google_flatbuffers//:flatbuffers",
     ],
@@ -426,7 +426,7 @@ cc_library(
     hdrs = [
         "file.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
+    #target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos:sanitizers",
         "//aos/scoped:scoped_fd",
