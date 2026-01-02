@@ -63,7 +63,6 @@ cc_library(
 py_library(
     name = "python_init",
     srcs = ["__init__.py"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
@@ -80,7 +79,6 @@ cc_library(
     hdrs = [
         "gtest_prod.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
@@ -89,7 +87,6 @@ cc_library(
     hdrs = [
         "unique_malloc_ptr.h",
     ],
-    #target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
@@ -151,7 +148,6 @@ cc_test(
     srcs = [
         "die_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":die",
         "//aos/testing:googletest",
@@ -182,7 +178,6 @@ cc_library(
     hdrs = [
         "init.h",
     ],
-    #target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":realtime",
@@ -285,7 +280,6 @@ cc_library(
 static_flatbuffer(
     name = "configuration_fbs",
     srcs = ["configuration.fbs"],
-    #target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = ["//aos/flatbuffers/reflection:reflection_fbs"],
 )
@@ -314,7 +308,6 @@ flatbuffer_ts_library(
         "Node",
         "Configuration",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
@@ -337,7 +330,6 @@ cc_library(
         "clang": [],
         "gcc": ["-Wno-missing-field-initializers"],
     }),
-    #target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":configuration_fbs",
@@ -412,7 +404,6 @@ flatbuffer_ts_library(
         "ScalarSweepStruct",
         "StructEnum",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//aos:__subpackages__"],
 )
 
@@ -420,7 +411,6 @@ flatbuffer_cc_library(
     name = "json_to_flatbuffer_fbs",
     srcs = ["json_to_flatbuffer.fbs"],
     gen_reflections = True,
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//aos:__subpackages__"],
 )
 
@@ -447,7 +437,6 @@ cc_library(
     name = "json_tokenizer",
     srcs = ["json_tokenizer.cc"],
     hdrs = ["json_tokenizer.h"],
-    #target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@com_github_google_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/log",
@@ -488,7 +477,6 @@ cc_test(
         ":json_to_flatbuffer_fbs_reflection_out",
         ":json_to_flatbuffer_test_spaces.json",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":flatbuffer_merge",
         ":json_to_flatbuffer",
@@ -506,7 +494,6 @@ cc_test(
     data = [
         ":json_to_flatbuffer_fbs_reflection_out",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":json_to_flatbuffer",
         ":json_to_flatbuffer_fbs",
@@ -522,7 +509,6 @@ cc_library(
     srcs = ["flatbuffer_merge.cc"],
     hdrs = ["flatbuffer_merge.h"],
     copts = ["-Wno-cast-align"],
-    #target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":flatbuffer_utils",
@@ -538,7 +524,6 @@ cc_test(
     srcs = [
         "flatbuffer_merge_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":flatbuffer_merge",
         ":json_to_flatbuffer",
@@ -555,7 +540,6 @@ cc_library(
     hdrs = [
         "flatbuffers.h",
     ],
-    #target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos:macros",
@@ -597,7 +581,6 @@ cc_test(
         "//aos/testing/ping_pong:pingpong_config",
         "//aos/testing/ping_pong:pong_fbs_reflection_out",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":configuration",
         "//aos/testing:flatbuffer_eq",
@@ -613,7 +596,6 @@ cc_binary(
     srcs = [
         "config_flattener.cc",
     ],
-    #target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":configuration",
@@ -632,7 +614,6 @@ cc_library(
     hdrs = [
         "aos_cli_utils.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":configuration",
@@ -702,7 +683,6 @@ cc_binary(
     srcs = [
         "aos_graph_nodes.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":configuration",
@@ -722,7 +702,6 @@ cc_library(
     hdrs = [
         "ftrace.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/flags:flag",
@@ -752,7 +731,6 @@ cc_test(
     srcs = [
         "realtime_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":init",
@@ -792,7 +770,6 @@ cc_library(
     name = "uuid",
     srcs = ["uuid.cc"],
     hdrs = ["uuid.h"],
-    #target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_google_flatbuffers//:flatbuffers",
@@ -807,7 +784,6 @@ cc_test(
     timeout = "eternal",
     srcs = ["uuid_collision_test.cc"],
     shard_count = 2,
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":uuid",
         "//aos/testing:googletest",
@@ -818,7 +794,6 @@ cc_test(
 cc_test(
     name = "uuid_test",
     srcs = ["uuid_test.cc"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":uuid",
         "//aos/testing:googletest",
@@ -853,7 +828,6 @@ cc_binary(
     srcs = [
         "aos_graph_channels.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos:configuration",
         "//aos:init",
@@ -884,7 +858,6 @@ cc_library(
         "sha256.cc",
     ],
     hdrs = ["sha256.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos/util:file",
