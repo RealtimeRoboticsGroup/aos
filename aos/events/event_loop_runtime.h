@@ -15,6 +15,7 @@
 
 #include "aos/events/event_loop.h"
 #include "aos/for_rust.h"
+#include "aos/realtime.h"
 #include "cxx.h"
 
 namespace aos {
@@ -258,7 +259,7 @@ class EventLoopRuntime {
     event_loop_->SetRuntimeRealtimePriority(priority);
   }
 
-  void SetRuntimeAffinity(const cpu_set_t &cpuset) const {
+  void SetRuntimeAffinity(const CpuSet &cpuset) const {
     event_loop_->SetRuntimeAffinity(cpuset);
   }
 

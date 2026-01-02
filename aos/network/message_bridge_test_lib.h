@@ -30,7 +30,7 @@ class PinForTest {
   ~PinForTest() { SetCurrentThreadAffinity(old_); }
 
  private:
-  cpu_set_t old_;
+  CpuSet old_;
 };
 
 // Class to manage starting and stopping a thread with an event loop in it.  The

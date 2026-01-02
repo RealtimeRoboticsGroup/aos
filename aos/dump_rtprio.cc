@@ -62,23 +62,24 @@ const char *policy_string(uint32_t policy) {
   return str.substr(0, str.size() - 1);
 }
 
-cpu_set_t FindAllCpus() {
+aos::CpuSet FindAllCpus() {
   long nproc = sysconf(_SC_NPROCESSORS_CONF);
   PCHECK(nproc != -1);
-  cpu_set_t r;
-  CPU_ZERO(&r);
+  aos::CpuSet r;
+  r.Clear();
   for (long i = 0; i < nproc; ++i) {
-    CPU_SET(i, &r);
+    r.Set(i);
   }
   return r;
 }
 
-cpu_set_t find_cpu_mask(int process, bool *not_there) {
-  cpu_set_t r;
-  const int result = sched_getaffinity(process, sizeof(r), &r);
+aos::CpuSet find_cpu_mask(int process, bool *not_there) {
+  aos::CpuSet r;
+  const int result =
+      sched_getaffinity(process, sizeof(cpu_set_t), r.native_handle());
   if (result == -1 && errno == ESRCH) {
     *not_there = true;
-    return cpu_set_t();
+    return aos::CpuSet();
   }
   PCHECK(result == 0) << ": sched_getaffinity of " << process;
   return r;
@@ -265,7 +266,7 @@ int main(int argc, char **argv) {
                      aos::util::Top::TrackPerThreadInfoMode::kDisabled);
   top.set_track_top_processes(true);
 
-  const cpu_set_t all_cpus = FindAllCpus();
+  const aos::CpuSet all_cpus = FindAllCpus();
 
   top.set_on_reading_update([&]() {
     std::multiset<Thread> threads;
@@ -275,7 +276,7 @@ int main(int argc, char **argv) {
       pid_t tid = reading.first;
       bool not_there = false;
 
-      const cpu_set_t cpu_mask = find_cpu_mask(tid, &not_there);
+      const aos::CpuSet cpu_mask = find_cpu_mask(tid, &not_there);
       const sched_param param = find_sched_param(tid, &not_there);
       const int scheduler = find_scheduler(tid, &not_there);
       const ::std::string exe = find_exe(tid, &not_there);
@@ -291,17 +292,10 @@ int main(int argc, char **argv) {
       if (not_there) continue;
 
       std::string cpu_mask_string;
-      if (CPU_EQUAL(&cpu_mask, &all_cpus)) {
+      if (cpu_mask == all_cpus) {
         cpu_mask_string = "all";
       } else {
-        // Convert the CPU mask to a bitset
-        std::bitset<CPU_SETSIZE> bitset;
-        for (size_t i = 0; i < CPU_SETSIZE; i++) {
-          bitset[i] = CPU_ISSET(i, &cpu_mask);
-        }
-        std::stringstream ss;
-        ss << std::hex << bitset.to_ulong();
-        cpu_mask_string = ss.str();
+        cpu_mask_string = absl::StrCat(cpu_mask);
       }
 
       threads.emplace(Thread{.policy = static_cast<uint32_t>(scheduler),

@@ -44,16 +44,14 @@ ABSL_FLAG(std::string, irq_config, "rockpi_config.json",
 
 namespace aos {
 
-cpu_set_t AffinityFromFlatbuffer(const flatbuffers::Vector<uint8_t> *v) {
-  cpu_set_t affinity;
-  CPU_ZERO(&affinity);
+aos::CpuSet AffinityFromFlatbuffer(const flatbuffers::Vector<uint8_t> *v) {
+  aos::CpuSet affinity;
+  affinity.Clear();
   if (v == nullptr) {
-    for (int i = 0; i < CPU_SETSIZE; ++i) {
-      CPU_SET(i, &affinity);
-    }
+    affinity = aos::DefaultAffinity();
   } else {
     for (uint8_t cpu : *v) {
-      CPU_SET(cpu, &affinity);
+      affinity.Set(cpu);
     }
   }
   return affinity;
@@ -62,7 +60,7 @@ cpu_set_t AffinityFromFlatbuffer(const flatbuffers::Vector<uint8_t> *v) {
 // Class to hold the configuration for an IRQ.
 struct ParsedIrqConfig {
   std::string name;
-  cpu_set_t affinity;
+  aos::CpuSet affinity;
 
   void ConfigureIrq(int interrupt_number) const {
     const std::string affinity_filename =
@@ -79,16 +77,16 @@ struct ParsedIrqConfig {
         break;
       }
       uint8_t byte = 0;
-      if (CPU_ISSET(i + 0, &affinity)) {
+      if (affinity.IsSet(i + 0)) {
         byte |= 1;
       }
-      if (CPU_ISSET(i + 1, &affinity)) {
+      if (affinity.IsSet(i + 1)) {
         byte |= 2;
       }
-      if (CPU_ISSET(i + 2, &affinity)) {
+      if (affinity.IsSet(i + 2)) {
         byte |= 4;
       }
-      if (CPU_ISSET(i + 3, &affinity)) {
+      if (affinity.IsSet(i + 3)) {
         byte |= 8;
       }
       if (byte < 10) {
@@ -112,7 +110,7 @@ struct ParsedKThreadConfig {
   SchedulingPolicy scheduler;
   int priority;
   std::optional<int> nice;
-  cpu_set_t affinity;
+  aos::CpuSet affinity;
 
   bool Matches(std::string_view candidate) const {
     if (full_match) {
@@ -160,7 +158,8 @@ struct ParsedKThreadConfig {
           << ": Failed to set priority";
     }
 
-    PCHECK(sched_setaffinity(pid, sizeof(affinity), &affinity) == 0);
+    PCHECK(sched_setaffinity(pid, sizeof(cpu_set_t),
+                             affinity.native_handle()) == 0);
   }
 };
 

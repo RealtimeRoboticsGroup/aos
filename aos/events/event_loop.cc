@@ -707,7 +707,7 @@ void EventLoop::SetTimerContext(
   context_.source_boot_uuid = boot_uuid();
 }
 
-cpu_set_t EventLoop::DefaultAffinity() { return aos::DefaultAffinity(); }
+CpuSet EventLoop::DefaultAffinity() { return aos::DefaultAffinity(); }
 
 const ThreadConfiguration &EventLoop::ValidateAndFindThreadConfiguration(
     std::string_view thread_name) {

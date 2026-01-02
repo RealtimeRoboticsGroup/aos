@@ -221,11 +221,13 @@ TEST(RealtimeDeathTest, RawFatal) {
 TEST(RealtimeDeathTest, SetAffinityErrorMessage) {
   EXPECT_DEATH(
       { SetCurrentThreadAffinity(MakeCpusetFromCpus({1000})); },
-      "sched_setaffinity\\(0, sizeof\\(cpuset\\), &cpuset\\) == 0 "
+      "sched_setaffinity\\(0, sizeof\\(cpu_set_t\\), "
+      "cpuset\\.native_handle\\(\\)\\) == 0 "
       "\\{CPUs 1000\\}: Invalid argument");
   EXPECT_DEATH(
       { SetCurrentThreadAffinity(MakeCpusetFromCpus({1000, 1001})); },
-      "sched_setaffinity\\(0, sizeof\\(cpuset\\), &cpuset\\) == 0 "
+      "sched_setaffinity\\(0, sizeof\\(cpu_set_t\\), "
+      "cpuset\\.native_handle\\(\\)\\) == 0 "
       "\\{CPUs 1000, 1001\\}: Invalid argument");
 }
 

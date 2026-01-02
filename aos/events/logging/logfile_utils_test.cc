@@ -3310,13 +3310,13 @@ class TimeEventLoop : public EventLoop {
   const std::string_view name() const final { return name_; }
   const Node *node() const final { return node_; }
 
-  void SetRuntimeAffinity(const cpu_set_t & /*cpuset*/) final { LOG(FATAL); }
+  void SetRuntimeAffinity(const CpuSet & /*cpuset*/) final { LOG(FATAL); }
   void SetRuntimeRealtimePriority(
       int /*priority*/, SchedulingPolicy /*scheduling_policy*/) final {
     LOG(FATAL);
   }
 
-  const cpu_set_t &runtime_affinity() const final {
+  const CpuSet &runtime_affinity() const final {
     LOG(FATAL);
     return affinity_;
   }

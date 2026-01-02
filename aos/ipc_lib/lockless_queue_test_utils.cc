@@ -9,20 +9,20 @@ ABSL_FLAG(uint32_t, start_core_index, 0, "The core to start pinning on");
 namespace aos::ipc_lib::testing {
 
 LocklessQueueTest::PinForTest::PinForTest() {
-  cpu_set_t cpus = GetCurrentThreadAffinity();
+  CpuSet cpus = GetCurrentThreadAffinity();
   old_ = cpus;
   int number_found = 0;
-  for (int i = 0; i < CPU_SETSIZE; ++i) {
+  for (int i = 0; i < static_cast<int>(CpuSet::kSize); ++i) {
     // We don't want to exclude cores, but start at a different spot in the core
     // index.  This makes it so on a box with a reasonable set of cores
     // available, the test variants won't all end up on core's 0 and 1.
     const int actual_i =
-        (i + absl::GetFlag(FLAGS_start_core_index)) % CPU_SETSIZE;
-    if (CPU_ISSET(actual_i, &cpus)) {
+        (i + absl::GetFlag(FLAGS_start_core_index)) % CpuSet::kSize;
+    if (cpus.IsSet(actual_i)) {
       if (number_found < 2) {
         ++number_found;
       } else {
-        CPU_CLR(actual_i, &cpus);
+        cpus.Clear(actual_i);
       }
     }
   }

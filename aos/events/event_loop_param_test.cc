@@ -24,14 +24,6 @@ namespace {
 namespace chrono = ::std::chrono;
 }  // namespace
 
-namespace {
-
-bool CpuSetEqual(const cpu_set_t &a, const cpu_set_t &b) {
-  return CPU_EQUAL(&a, &b);
-}
-
-}  // namespace
-
 ::std::unique_ptr<EventLoop> AbstractEventLoopTest::Make(
     std::string_view name) {
   std::string name_copy(name);
@@ -1181,20 +1173,18 @@ TEST_P(AbstractEventLoopDeathTest, InvalidChannelName) {
 // the configuration.
 TEST_P(AbstractEventLoopDeathTest, ParsePrioritiesFromConfig) {
   auto loop1 = Make("app1");
-  EXPECT_TRUE(
-      CpuSetEqual(MakeCpusetFromCpus({0, 1, 2, 3}), loop1->runtime_affinity()));
+  EXPECT_EQ(MakeCpusetFromCpus({0, 1, 2, 3}), loop1->runtime_affinity());
   EXPECT_EQ(SchedulingPolicy::SCHEDULER_RR, loop1->runtime_scheduling_policy());
   EXPECT_EQ(20, loop1->runtime_realtime_priority());
 
   auto loop2 = Make("app2");
-  EXPECT_TRUE(CpuSetEqual(MakeCpusetFromCpus({4}), loop2->runtime_affinity()));
+  EXPECT_EQ(MakeCpusetFromCpus({4}), loop2->runtime_affinity());
   EXPECT_EQ(SchedulingPolicy::SCHEDULER_OTHER,
             loop2->runtime_scheduling_policy());
   EXPECT_EQ(0, loop2->runtime_realtime_priority());
 
   auto loop3 = Make("app3");
-  EXPECT_TRUE(
-      CpuSetEqual(EventLoop::DefaultAffinity(), loop3->runtime_affinity()));
+  EXPECT_EQ(EventLoop::DefaultAffinity(), loop3->runtime_affinity());
   EXPECT_EQ(SchedulingPolicy::SCHEDULER_OTHER,
             loop3->runtime_scheduling_policy());
   EXPECT_EQ(0, loop3->runtime_realtime_priority());
@@ -1242,10 +1232,10 @@ TEST_P(AbstractEventLoopDeathTest, SetRuntimeRealtimePriority) {
 
 // Verify that SetRuntimeAffinity fails while running.
 TEST_P(AbstractEventLoopDeathTest, SetRuntimeAffinity) {
-  const cpu_set_t available = GetCurrentThreadAffinity();
+  const CpuSet available = GetCurrentThreadAffinity();
   int first_cpu = -1;
-  for (int i = 0; i < CPU_SETSIZE; ++i) {
-    if (CPU_ISSET(i, &available)) {
+  for (int i = 0; i < static_cast<int>(CpuSet::kSize); ++i) {
+    if (available.IsSet(i)) {
       first_cpu = i;
       break;
       continue;
@@ -1254,12 +1244,11 @@ TEST_P(AbstractEventLoopDeathTest, SetRuntimeAffinity) {
   CHECK_NE(first_cpu, -1) << ": Default affinity has no CPUs?";
 
   auto loop = MakePrimary();
-  EXPECT_TRUE(
-      CpuSetEqual(EventLoop::DefaultAffinity(), loop->runtime_affinity()));
-  const cpu_set_t new_affinity = MakeCpusetFromCpus({first_cpu});
+  EXPECT_EQ(EventLoop::DefaultAffinity(), loop->runtime_affinity());
+  const CpuSet new_affinity = MakeCpusetFromCpus({first_cpu});
   // Confirm that runtime priority calls work when not running.
   loop->SetRuntimeAffinity(new_affinity);
-  EXPECT_TRUE(CpuSetEqual(new_affinity, loop->runtime_affinity()));
+  EXPECT_EQ(new_affinity, loop->runtime_affinity());
 
   loop->OnRun(
       [&]() { loop->SetRuntimeAffinity(MakeCpusetFromCpus({first_cpu})); });

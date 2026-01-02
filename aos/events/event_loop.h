@@ -28,6 +28,7 @@
 #include "aos/ftrace.h"
 #include "aos/ipc_lib/data_alignment.h"
 #include "aos/json_to_flatbuffer.h"
+#include "aos/realtime.h"
 #include "aos/shared_span.h"
 #include "aos/time/time.h"
 #include "aos/util/phased_loop.h"
@@ -925,13 +926,13 @@ class EventLoop {
 
   virtual SchedulingPolicy runtime_scheduling_policy() const = 0;
 
-  static cpu_set_t DefaultAffinity();
+  static CpuSet DefaultAffinity();
 
   // Sets the cpu affinity to run the event loop with. This may only be
   // called before Run().
-  virtual void SetRuntimeAffinity(const cpu_set_t &cpuset) = 0;
+  virtual void SetRuntimeAffinity(const CpuSet &cpuset) = 0;
   // Defaults to DefaultAffinity() if this loop will not run pinned.
-  virtual const cpu_set_t &runtime_affinity() const = 0;
+  virtual const CpuSet &runtime_affinity() const = 0;
 
   // The ConfigureThreadAndWaitForRun function sets the configuration for the
   // specified thread. Only call this from the corresponding thread at the
@@ -1085,7 +1086,7 @@ class EventLoop {
   Context context_;
   std::string name_;
   const Node *const node_;
-  cpu_set_t affinity_ = DefaultAffinity();
+  CpuSet affinity_ = DefaultAffinity();
   int priority_ = 0;
   SchedulingPolicy scheduling_policy_ = SchedulingPolicy::SCHEDULER_OTHER;
 

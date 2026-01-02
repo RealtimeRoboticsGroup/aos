@@ -23,7 +23,7 @@ class LocklessQueueTest : public ::testing::Test {
     ~PinForTest() { SetCurrentThreadAffinity(old_); }
 
    private:
-    cpu_set_t old_;
+    CpuSet old_;
   };
 
   LocklessQueueTest();

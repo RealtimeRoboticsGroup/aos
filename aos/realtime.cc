@@ -9,6 +9,12 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#if defined(__APPLE__)
+#include <mach/mach.h>
+#include <mach/thread_policy.h>
+#include <pthread.h>
+#endif
+
 #include <cerrno>
 #include <cstdint>
 #include <cstdio>
@@ -58,6 +64,92 @@ using FLAG__namespace_do_not_use_directly_use_DECLARE_double_instead::
     FLAGS_tcmalloc_release_rate;
 
 namespace aos {
+
+CpuSet::CpuSet() {
+#ifdef __linux__
+  CPU_ZERO(&set_);
+#elif defined(__APPLE__)
+#else
+#error "Only linux and apple (Mac OS X) are supported"
+#endif
+}
+
+void CpuSet::Set(int cpu) {
+#ifdef __linux__
+  CPU_SET(cpu, &set_);
+#elif defined(__APPLE__)
+  if (cpu >= 0 && cpu < static_cast<int>(set_.size())) {
+    set_.set(cpu);
+  }
+#else
+#error "Only linux and apple (Mac OS X) are supported"
+#endif
+}
+
+void CpuSet::Clear(int cpu) {
+#ifdef __linux__
+  CPU_CLR(cpu, &set_);
+#elif defined(__APPLE__)
+  if (cpu >= 0 && cpu < static_cast<int>(set_.size())) {
+    set_.reset(cpu);
+  }
+#else
+#error "Only linux and apple (Mac OS X) are supported"
+#endif
+}
+
+void CpuSet::Clear() {
+#ifdef __linux__
+  CPU_ZERO(&set_);
+#elif defined(__APPLE__)
+  set_.reset();
+#else
+#error "Only linux and apple (Mac OS X) are supported"
+#endif
+}
+
+bool CpuSet::IsSet(int cpu) const {
+#ifdef __linux__
+  return CPU_ISSET(cpu, &set_);
+#elif defined(__APPLE__)
+  if (cpu >= 0 && cpu < static_cast<int>(set_.size())) {
+    return set_.test(cpu);
+  }
+  return false;
+#else
+#error "Only linux and apple (Mac OS X) are supported"
+#endif
+}
+
+bool CpuSet::Empty() const {
+#ifdef __linux__
+  return CPU_COUNT(&set_) == 0;
+#elif defined(__APPLE__)
+  return set_.none();
+#else
+#error "Only linux and apple (Mac OS X) are supported"
+#endif
+}
+
+bool CpuSet::operator==(const CpuSet &other) const {
+#ifdef __linux__
+  return CPU_EQUAL(&set_, &other.set_);
+#elif defined(__APPLE__)
+  return set_ == other.set_;
+#else
+#error "Only linux and apple (Mac OS X) are supported"
+#endif
+}
+
+bool CpuSet::operator!=(const CpuSet &other) const {
+#ifdef __linux__
+  return !CPU_EQUAL(&set_, &other.set_);
+#elif defined(__APPLE__)
+  return set_ != other.set_;
+#else
+#error "Only linux and apple (Mac OS X) are supported"
+#endif
+}
 
 namespace logging::internal {
 
@@ -167,8 +259,63 @@ void UnsetCurrentThreadRealtimePriority() {
   MarkRealtime(false);
 }
 
-void SetCurrentThreadAffinity(const cpu_set_t &cpuset) {
-  ABSL_PCHECK(sched_setaffinity(0, sizeof(cpuset), &cpuset) == 0) << cpuset;
+namespace {
+#if defined(__APPLE__)
+pthread_key_t kCpuSetKey;
+pthread_once_t kCpuSetKeyOnce = PTHREAD_ONCE_INIT;
+
+void FreeCpuSet(void *p) { delete static_cast<CpuSet *>(p); }
+
+void CreateCpuSetKey() {
+  ABSL_PCHECK(pthread_key_create(&kCpuSetKey, FreeCpuSet) == 0);
+}
+#endif
+}  // namespace
+
+void SetCurrentThreadAffinity(const CpuSet &cpuset) {
+#ifdef __linux__
+  ABSL_PCHECK(sched_setaffinity(0, sizeof(cpu_set_t), cpuset.native_handle()) ==
+              0)
+      << cpuset;
+#elif defined(__APPLE__)
+  pthread_once(&kCpuSetKeyOnce, CreateCpuSetKey);
+  CpuSet *current_affinity =
+      static_cast<CpuSet *>(pthread_getspecific(kCpuSetKey));
+  if (current_affinity == nullptr) {
+    current_affinity = new CpuSet();
+    ABSL_PCHECK(pthread_setspecific(kCpuSetKey, current_affinity) == 0);
+  }
+  *current_affinity = cpuset;
+
+  if (cpuset.Empty() || cpuset == DefaultAffinity()) {
+    thread_affinity_policy_data_t policy = {THREAD_AFFINITY_TAG_NULL};
+    ABSL_CHECK_EQ(thread_policy_set(pthread_mach_thread_np(pthread_self()),
+                                    THREAD_AFFINITY_POLICY,
+                                    (thread_policy_t)&policy,
+                                    THREAD_AFFINITY_POLICY_COUNT),
+                  KERN_SUCCESS);
+  } else {
+    integer_t tag = 0;
+    // We want to map the cpuset to an affinity tag.  The kernel doesn't give us
+    // enough control to do this perfectly, but we can do a decent job by hashing
+    // the cpuset.
+    for (size_t i = 0; i < CpuSet::kSize; ++i) {
+      if (cpuset.IsSet(i)) {
+        tag = (tag << 1) ^ i;
+      }
+    }
+
+    thread_affinity_policy_data_t policy = {tag};
+
+    ABSL_CHECK_EQ(thread_policy_set(pthread_mach_thread_np(pthread_self()),
+                                    THREAD_AFFINITY_POLICY,
+                                    (thread_policy_t)&policy,
+                                    THREAD_AFFINITY_POLICY_COUNT),
+                  KERN_SUCCESS);
+  }
+#else
+#error "Only linux and apple (Mac OS X) are supported"
+#endif
 }
 
 void SetCurrentThreadName(const std::string_view name) {
@@ -182,9 +329,25 @@ void SetCurrentThreadName(const std::string_view name) {
   }
 }
 
-cpu_set_t GetCurrentThreadAffinity() {
-  cpu_set_t result;
-  ABSL_PCHECK(sched_getaffinity(0, sizeof(result), &result) == 0);
+CpuSet GetCurrentThreadAffinity() {
+  CpuSet result;
+#ifdef __linux__
+  ABSL_PCHECK(sched_getaffinity(0, sizeof(cpu_set_t), result.native_handle()) ==
+              0);
+#elif defined(__APPLE__)
+  // There is no way to query the affinity back from the kernel, so just return
+  // what we were last set to.
+  pthread_once(&kCpuSetKeyOnce, CreateCpuSetKey);
+  CpuSet *current_affinity =
+      static_cast<CpuSet *>(pthread_getspecific(kCpuSetKey));
+  if (current_affinity == nullptr) {
+    result = DefaultAffinity();
+  } else {
+    result = *current_affinity;
+  }
+#else
+#error "Only linux and apple (Mac OS X) are supported"
+#endif
   return result;
 }
 

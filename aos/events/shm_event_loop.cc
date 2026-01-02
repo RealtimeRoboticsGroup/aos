@@ -1165,8 +1165,8 @@ Status ShmEventLoop::Run() {
     }
 
     aos::SetCurrentThreadName(name_.substr(0, 16));
-    const cpu_set_t default_affinity = DefaultAffinity();
-    if (!CPU_EQUAL(&affinity_, &default_affinity)) {
+    const CpuSet default_affinity = DefaultAffinity();
+    if (affinity_ != default_affinity) {
       ::aos::SetCurrentThreadAffinity(affinity_);
     }
 
@@ -1311,7 +1311,7 @@ void ShmEventLoop::SetRuntimeRealtimePriority(
   }
 }
 
-void ShmEventLoop::SetRuntimeAffinity(const cpu_set_t &cpuset) {
+void ShmEventLoop::SetRuntimeAffinity(const CpuSet &cpuset) {
   CheckCurrentThread();
   if (is_running()) {
     ABSL_LOG(FATAL) << "Cannot set affinity while running.";

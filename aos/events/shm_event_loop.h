@@ -88,7 +88,7 @@ class ShmEventLoop : public EventLoop {
 
   void OnRun(std::function<void()> on_run) override;
 
-  void SetRuntimeAffinity(const cpu_set_t &cpuset) override;
+  void SetRuntimeAffinity(const CpuSet &cpuset) override;
   void SetRuntimeRealtimePriority(
       int priority, SchedulingPolicy scheduling_policy =
                         SchedulingPolicy::SCHEDULER_FIFO) override;
@@ -97,7 +97,7 @@ class ShmEventLoop : public EventLoop {
   const std::string_view name() const override { return name_; }
   const Node *node() const override { return node_; }
 
-  const cpu_set_t &runtime_affinity() const override { return affinity_; }
+  const CpuSet &runtime_affinity() const override { return affinity_; }
   SchedulingPolicy runtime_scheduling_policy() const override {
     return scheduling_policy_;
   }

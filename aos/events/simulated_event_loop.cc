@@ -821,7 +821,7 @@ class SimulatedEventLoop : public EventLoop {
 
   SimulatedChannel *GetSimulatedChannel(const Channel *channel);
 
-  void SetRuntimeAffinity(const cpu_set_t &affinity) override {
+  void SetRuntimeAffinity(const CpuSet &affinity) override {
     CHECK(!is_running()) << ": Cannot set affinity while running.";
     affinity_ = affinity;
   }
@@ -845,7 +845,7 @@ class SimulatedEventLoop : public EventLoop {
     }
   }
 
-  const cpu_set_t &runtime_affinity() const override { return affinity_; }
+  const CpuSet &runtime_affinity() const override { return affinity_; }
   SchedulingPolicy runtime_scheduling_policy() const override {
     return scheduling_policy_;
   }
