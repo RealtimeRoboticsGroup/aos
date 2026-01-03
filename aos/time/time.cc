@@ -97,7 +97,7 @@ std::string ToString(const aos::realtime_clock::time_point &now) {
   return stream.str();
 }
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 std::optional<monotonic_clock::time_point> monotonic_clock::FromString(
     const std::string_view now) {
   // This should undo the operator << above.
