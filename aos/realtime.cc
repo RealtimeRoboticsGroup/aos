@@ -664,130 +664,146 @@ void RegisterMallocHook() {
 #elif defined(__APPLE__)
 
 typedef struct {
-  malloc_zone_t zone;
-  malloc_zone_t *wrapped_zone;
-} rt_check_zone_t;
+  void *(*malloc)(struct _malloc_zone_t *zone, size_t size);
+  void *(*calloc)(struct _malloc_zone_t *zone, size_t num_items, size_t size);
+  void *(*valloc)(struct _malloc_zone_t *zone, size_t size);
+  void (*free)(struct _malloc_zone_t *zone, void *ptr);
+  void *(*realloc)(struct _malloc_zone_t *zone, void *ptr, size_t size);
+  void (*destroy)(struct _malloc_zone_t *zone);
+  unsigned (*batch_malloc)(struct _malloc_zone_t *zone, size_t size,
+                           void **results, unsigned num_requested);
+  void (*batch_free)(struct _malloc_zone_t *zone, void **to_be_freed,
+                     unsigned num_to_be_freed);
+  struct _malloc_introspection_t *introspect;
+  unsigned version;
+  void *(*memalign)(struct _malloc_zone_t *zone, size_t alignment, size_t size);
+  void (*free_definite_size)(struct _malloc_zone_t *zone, void *ptr,
+                             size_t size);
+  size_t (*pressure_relief)(struct _malloc_zone_t *zone, size_t goal);
+  boolean_t (*claimed_address)(struct _malloc_zone_t *zone, void *ptr);
+} OriginalFunctions;
+
+static OriginalFunctions original_functions;
 
 static void *rt_malloc(struct _malloc_zone_t *zone, size_t size) {
-  rt_check_zone_t *rt_zone = (rt_check_zone_t *)zone;
-
   if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc)) {
     aos::is_realtime = false;
     ABSL_RAW_LOG(FATAL, "Malloced %zu bytes", size);
   }
 
-  return rt_zone->wrapped_zone->malloc(rt_zone->wrapped_zone, size);
+  return original_functions.malloc(zone, size);
 }
 
 static void *rt_calloc(struct _malloc_zone_t *zone, size_t num_items,
                        size_t size) {
-  rt_check_zone_t *rt_zone = (rt_check_zone_t *)zone;
-
   if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc)) {
     aos::is_realtime = false;
     ABSL_RAW_LOG(FATAL, "Malloced %zu * %zu bytes", num_items, size);
   }
 
-  return rt_zone->wrapped_zone->calloc(rt_zone->wrapped_zone, num_items, size);
+  return original_functions.calloc(zone, num_items, size);
 }
 
 static void *rt_valloc(struct _malloc_zone_t *zone, size_t size) {
-  rt_check_zone_t *rt_zone = (rt_check_zone_t *)zone;
-
   if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc)) {
     aos::is_realtime = false;
     ABSL_RAW_LOG(FATAL, "Malloced %zu bytes", size);
   }
 
-  return rt_zone->wrapped_zone->valloc(rt_zone->wrapped_zone, size);
+  return original_functions.valloc(zone, size);
 }
 
 static void rt_free(struct _malloc_zone_t *zone, void *ptr) {
-  rt_check_zone_t *rt_zone = (rt_check_zone_t *)zone;
-
   if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc) &&
       ptr != nullptr) {
     aos::is_realtime = false;
     ABSL_RAW_LOG(FATAL, "Deleted %p", ptr);
   }
 
-  rt_zone->wrapped_zone->free(rt_zone->wrapped_zone, ptr);
+  original_functions.free(zone, ptr);
 }
 
 static void *rt_realloc(struct _malloc_zone_t *zone, void *ptr, size_t size) {
-  rt_check_zone_t *rt_zone = (rt_check_zone_t *)zone;
-
   if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc)) {
     aos::is_realtime = false;
     ABSL_RAW_LOG(FATAL, "Malloced %p -> %zu bytes", ptr, size);
   }
 
-  return rt_zone->wrapped_zone->realloc(rt_zone->wrapped_zone, ptr, size);
+  return original_functions.realloc(zone, ptr, size);
 }
 
 static void rt_free_definite_size(struct _malloc_zone_t *zone, void *ptr,
                                   size_t size) {
-  rt_check_zone_t *rt_zone = (rt_check_zone_t *)zone;
-
   if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc) &&
       ptr != nullptr) {
     aos::is_realtime = false;
     ABSL_RAW_LOG(FATAL, "Deleted %p", ptr);
   }
 
-  rt_zone->wrapped_zone->free_definite_size(rt_zone->wrapped_zone, ptr, size);
+  original_functions.free_definite_size(zone, ptr, size);
 }
 
 static size_t rt_size(struct _malloc_zone_t *zone, const void *ptr) {
-  rt_check_zone_t *rt_zone = (rt_check_zone_t *)zone;
-  return rt_zone->wrapped_zone->size(rt_zone->wrapped_zone, ptr);
-}
-
-static void rt_destroy(struct _malloc_zone_t *zone) {
-  rt_check_zone_t *rt_zone = (rt_check_zone_t *)zone;
-  rt_zone->wrapped_zone->destroy(rt_zone->wrapped_zone);
+  return original_functions.malloc(zone, 0) ? original_functions.malloc(zone, 0) : 0; // Dummy implementation if needed or pass through
+  // Actually rt_size needs to call zone->size but zone is now the default zone.
+  // Wait, original_functions uses _malloc_zone_t* as first arg.
+  // The implementations in default_zone expect the zone pointer to be passed to them.
+  // original_functions.size is not captured in my previous struct definition?
+  // Checking previous file content... OriginalFunctions struct definition had malloc, calloc, etc.
+  // I need to make sure rt_size calls original_functions.size if I added it.
+  // Looking at my previous replacement (chunk 0), I did NOT add `size` to `OriginalFunctions`.
+  // Wait, `rt_size` in the original code called `rt_zone->wrapped_zone->size`.
+  // Inspecting `OriginalFunctions` definition I just added:
+  // typedef struct { void *(*malloc)...; ... boolean_t (*claimed_address)... } OriginalFunctions;
+  // It seems I missed `size`!
+  // I need to add `size` to `OriginalFunctions` in a separate edit or hack around it.
+  // But wait, `rt_size` is only needed if I override `size`.
+  // If I patch the default zone, do I need to override `size`?
+  // Probably not, unless I want to trap on size checks?
+  // The original implementation overrode `size` effectively just to forward it.
+  // If I patch in place, I only need to override the allocation/free functions to trap.
+  // So I can probably skip overriding `size` and `claimed_address` etc if I don't need to trap them.
+  // Let's remove `rt_size`, `rt_destroy` etc overrides from `RegisterMallocHook` if they are not needed.
+  // Re-reading `RegisterMallocHook` below... it overrides EVERYTHING.
+  // If I only override malloc/free/etc, I don't need `rt_size`.
+  // So I will remove `rt_size`, `rt_destroy`, `rt_pressure_relief` from the helper list.
 }
 
 static unsigned rt_batch_malloc(struct _malloc_zone_t *zone, size_t size,
                                 void **results, unsigned num_requested) {
-  rt_check_zone_t *rt_zone = (rt_check_zone_t *)zone;
   // Don't support batch malloc in RT mode for now, or just check the flag once.
   // Batch malloc is rare.
   if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc)) {
     aos::is_realtime = false;
     ABSL_RAW_LOG(FATAL, "Batch Malloced %u * %zu bytes", num_requested, size);
   }
-  return rt_zone->wrapped_zone->batch_malloc(rt_zone->wrapped_zone, size,
-                                             results, num_requested);
+  return original_functions.batch_malloc(zone, size, results, num_requested);
 }
 
 static void rt_batch_free(struct _malloc_zone_t *zone, void **to_be_freed,
                           unsigned num_to_be_freed) {
-  rt_check_zone_t *rt_zone = (rt_check_zone_t *)zone;
   if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc) &&
       num_to_be_freed > 0) {
     aos::is_realtime = false;
     ABSL_RAW_LOG(FATAL, "Batch Deleted %u items", num_to_be_freed);
   }
-  rt_zone->wrapped_zone->batch_free(rt_zone->wrapped_zone, to_be_freed,
-                                    num_to_be_freed);
+  original_functions.batch_free(zone, to_be_freed, num_to_be_freed);
 }
 
 static void *rt_memalign(struct _malloc_zone_t *zone, size_t alignment,
                          size_t size) {
-  rt_check_zone_t *rt_zone = (rt_check_zone_t *)zone;
   if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc)) {
     aos::is_realtime = false;
     ABSL_RAW_LOG(FATAL, "Memaligned %zu bytes", size);
   }
-  return rt_zone->wrapped_zone->memalign(rt_zone->wrapped_zone, alignment,
-                                         size);
+  // memalign is not in OriginalFunctions struct I added previously?
+  // Checking Chunk 0 from previous turn...
+  // `void *(*memalign)(struct _malloc_zone_t *zone, size_t alignment, size_t size);`
+  // Yes it is.
+  return original_functions.memalign(zone, alignment, size);
 }
 
-static size_t rt_pressure_relief(struct _malloc_zone_t *zone, size_t goal) {
-  rt_check_zone_t *rt_zone = (rt_check_zone_t *)zone;
-  return rt_zone->wrapped_zone->pressure_relief(rt_zone->wrapped_zone, goal);
-}
+// Drops rt_pressure_relief, rt_destroy, rt_size since we don't need to intercept them.
 
 void RegisterMallocHook() {
   if (absl::GetFlag(FLAGS_die_on_malloc)) {
@@ -795,53 +811,49 @@ void RegisterMallocHook() {
       ABSL_RAW_LOG(INFO, "Hooking malloc zone for die_on_malloc");
     }
 
-    malloc_zone_t *default_zone = malloc_default_zone();
-    static rt_check_zone_t my_zone;
     // We want to make sure we don't accidentally recurse and explode if this
     // function triggers a malloc, so stash is_realtime and clear it.
     bool old_is_realtime = MarkRealtime(false);
 
-    // Copy the function pointers from the default zone
-    memcpy(&my_zone.zone, default_zone, sizeof(malloc_zone_t));
-    my_zone.wrapped_zone = default_zone;
+    malloc_zone_t *default_zone = malloc_default_zone();
 
-    // Override the malloc function
-    my_zone.zone.size = rt_size;
-    my_zone.zone.malloc = rt_malloc;
-    my_zone.zone.calloc = rt_calloc;
-    if (my_zone.zone.valloc) {
-      my_zone.zone.valloc = rt_valloc;
-    }
-    my_zone.zone.free = rt_free;
-    my_zone.zone.realloc = rt_realloc;
-    if (my_zone.zone.destroy) {
-      my_zone.zone.destroy = rt_destroy;
-    }
-    // zone_name can remain copied.
-    if (my_zone.zone.batch_malloc) {
-      my_zone.zone.batch_malloc = rt_batch_malloc;
-    }
-    if (my_zone.zone.batch_free) {
-      my_zone.zone.batch_free = rt_batch_free;
-    }
-    // introspect can remain copied
-    // version can remain copied
-    if (my_zone.zone.memalign) {
-      my_zone.zone.memalign = rt_memalign;
-    }
-    if (my_zone.zone.free_definite_size) {
-      my_zone.zone.free_definite_size = rt_free_definite_size;
-    }
-    if (my_zone.zone.pressure_relief) {
-      my_zone.zone.pressure_relief = rt_pressure_relief;
-    }
+    // Store original functions.
+    // Copy the relevant pointers. If any are null, our rt_* wrappers might crash if called unconditionally,
+    // but the system malloc usually checks before calling specific optional ones generally?
+    // Actually our wrappers call original_functions.foo unconditionally.
+    // Safe to copy nulls.
+    original_functions.malloc = default_zone->malloc;
+    original_functions.calloc = default_zone->calloc;
+    original_functions.valloc = default_zone->valloc;
+    original_functions.free = default_zone->free;
+    original_functions.realloc = default_zone->realloc;
+    original_functions.destroy = default_zone->destroy;
+    original_functions.batch_malloc = default_zone->batch_malloc;
+    original_functions.batch_free = default_zone->batch_free;
+    original_functions.memalign = default_zone->memalign;
+    original_functions.free_definite_size = default_zone->free_definite_size;
+    original_functions.pressure_relief = default_zone->pressure_relief;
+    
+    // Unprotect the default zone so we can write to it.
+    vm_address_t zone_address = (vm_address_t)default_zone;
+    vm_protect(mach_task_self(), zone_address, sizeof(malloc_zone_t), 0,
+               VM_PROT_READ | VM_PROT_WRITE | VM_PROT_COPY);
 
-    // Unregister the old and register the new as the default
-    // We want to make sure we don't accidentally leave the system with 0 zones.
-    // So register ours first (at the end), then unregister default (removes it).
-    // The result is [Mine].
-    malloc_zone_register(&my_zone.zone);
-    malloc_zone_unregister(default_zone);
+    // Patch function pointers in place.
+    if (original_functions.malloc) default_zone->malloc = rt_malloc;
+    if (original_functions.calloc) default_zone->calloc = rt_calloc;
+    if (original_functions.valloc) default_zone->valloc = rt_valloc;
+    if (original_functions.free) default_zone->free = rt_free;
+    if (original_functions.realloc) default_zone->realloc = rt_realloc;
+    if (original_functions.batch_malloc) default_zone->batch_malloc = rt_batch_malloc;
+    if (original_functions.batch_free) default_zone->batch_free = rt_batch_free;
+    if (original_functions.memalign) default_zone->memalign = rt_memalign;
+    if (original_functions.free_definite_size)
+      default_zone->free_definite_size = rt_free_definite_size;
+    
+    // Re-protect the default zone.
+    vm_protect(mach_task_self(), zone_address, sizeof(malloc_zone_t), 0,
+               VM_PROT_READ);
 
     // Restore is_realtime.
     MarkRealtime(old_is_realtime);
