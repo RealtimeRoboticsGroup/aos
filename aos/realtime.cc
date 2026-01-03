@@ -805,7 +805,7 @@ static boolean_t aos_claimed_address(struct _malloc_zone_t *zone, void *ptr) {
     return 0; // false
 }
 
-static struct _malloc_introspection_t aos_introspect; // Zeroed
+static malloc_introspection_t aos_introspect; // Zeroed
 
 void RegisterMallocHook() {
   if (absl::GetFlag(FLAGS_die_on_malloc)) {
