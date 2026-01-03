@@ -757,10 +757,14 @@ void RegisterMallocHook() {
     // Override the malloc function
     my_zone.zone.malloc = rt_malloc;
     my_zone.zone.calloc = rt_calloc;
-    my_zone.zone.valloc = rt_valloc;
+    if (my_zone.zone.valloc) {
+      my_zone.zone.valloc = rt_valloc;
+    }
     my_zone.zone.free = rt_free;
     my_zone.zone.realloc = rt_realloc;
-    my_zone.zone.free_definite_size = rt_free_definite_size;
+    if (my_zone.zone.free_definite_size) {
+      my_zone.zone.free_definite_size = rt_free_definite_size;
+    }
 
     // Unregister the old and register the new as the default
     malloc_zone_unregister(default_zone);
