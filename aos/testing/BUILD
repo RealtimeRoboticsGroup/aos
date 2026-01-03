@@ -9,7 +9,6 @@ cc_library(
     srcs = [
         "gtest_main.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos:init",
@@ -30,7 +29,6 @@ cc_library(
     hdrs = [
         "test_logging.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":googletest",
@@ -45,7 +43,6 @@ cc_test(
     srcs = [
         "test_logging_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":googletest",
         ":test_logging",
@@ -62,7 +59,6 @@ cc_library(
     hdrs = [
         "prevent_exit.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/log",
@@ -79,7 +75,6 @@ cc_library(
     hdrs = [
         "test_shm.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":test_logging",
@@ -97,7 +92,6 @@ cc_library(
     hdrs = [
         "random_seed.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
@@ -106,7 +100,6 @@ cc_library(
     testonly = True,
     srcs = ["tmpdir.cc"],
     hdrs = ["tmpdir.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos/ipc_lib:shm_base",
@@ -133,7 +126,6 @@ cc_library(
     srcs = ["path.cc"],
     hdrs = ["path.h"],
     local_defines = ["AOS_REPO_NAME=\\\"" + aos_repo_name() + "\\\""],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/strings",
