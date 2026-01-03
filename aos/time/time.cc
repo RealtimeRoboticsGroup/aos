@@ -18,6 +18,13 @@
 #include "absl/log/absl_check.h"
 #include "absl/strings/numbers.h"
 
+#if defined(__APPLE__)
+#include <mach/mach.h>
+#include <mach/mach_time.h>
+
+#include "absl/numeric/int128.h"
+#endif
+
 #else  // __linux__
 
 #include "motors/core/kinetis.h"
@@ -49,7 +56,7 @@ void PrintToStream(std::ostream &stream, chrono::nanoseconds duration) {
 
 }  // namespace
 
-#if defined(__linux__) || defined(__APPLE__)
+#if defined(__linux__)
 
 namespace aos::this_thread {
 
@@ -71,6 +78,43 @@ void sleep_until(const ::aos::monotonic_clock::time_point &end_time) {
         << ": clock_nanosleep(" << static_cast<uintmax_t>(CLOCK_MONOTONIC)
         << ", TIMER_ABSTIME, " << &end_time_timespec << ", nullptr) failed";
   } while (returnval != 0);
+}
+
+}  // namespace aos::this_thread
+
+#elif defined(__APPLE__)
+
+namespace aos::this_thread {
+
+void sleep_until(const ::aos::monotonic_clock::time_point &end_time) {
+  static mach_timebase_info_data_t timebase_info = []() {
+    mach_timebase_info_data_t info;
+    mach_timebase_info(&info);
+    return info;
+  }();
+
+  // Convert aos::monotonic_clock to total nanoseconds
+  uint64_t end_nanos =
+      std::chrono::nanoseconds(end_time.time_since_epoch()).count();
+
+  // Convert nanoseconds to Mach absolute time units (ticks)
+  // Formula: ticks = (nanos * denom) / numer
+  // Using absl::uint128 to ensure no overflow during the multiplication
+  uint64_t end_ticks = static_cast<uint64_t>(
+      (absl::uint128(end_nanos) * timebase_info.denom) / timebase_info.numer);
+
+  kern_return_t result;
+  do {
+    result = mach_wait_until(end_ticks);
+
+    // Check for success or interruption
+    if (result == KERN_SUCCESS) break;
+
+    ABSL_PCHECK(result == KERN_ABORTED)
+        << ": mach_wait_until(" << end_ticks
+        << ") failed with unexpected error: " << result;
+
+  } while (result == KERN_ABORTED);
 }
 
 }  // namespace aos::this_thread
