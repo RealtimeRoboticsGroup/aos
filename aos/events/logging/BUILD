@@ -1050,6 +1050,7 @@ cc_binary(
     srcs = [
         "ssd_profiler.cc",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":log_backend",
