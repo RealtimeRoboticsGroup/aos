@@ -49,7 +49,7 @@ void PrintToStream(std::ostream &stream, chrono::nanoseconds duration) {
 
 }  // namespace
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 
 namespace aos::this_thread {
 
