@@ -148,6 +148,10 @@ cc_test(
     srcs = [
         "die_test.cc",
     ],
+    linkstatic = select({
+        "@platforms//os:macos": False,
+        "//conditions:default": True,
+    }),
     deps = [
         ":die",
         "//aos/testing:googletest",
@@ -731,6 +735,10 @@ cc_test(
     srcs = [
         "realtime_test.cc",
     ],
+    linkstatic = select({
+        "@platforms//os:macos": False,
+        "//conditions:default": True,
+    }),
     visibility = ["//visibility:public"],
     deps = [
         ":init",
