@@ -32,19 +32,9 @@ class MacTimerFd {
                                            dispatch_get_global_queue(0, 0));
     ABSL_CHECK(timer_source_ != nullptr);
 
-    dispatch_source_set_event_handler(timer_source_, [this]() {
-      uint64_t count = dispatch_source_get_data(timer_source_);
-      // Write the number of expirations to the pipe.
-      // This mimics timerfd behavior where read() returns the number of
-      // expirations.
-      if (write(write_fd_, &count, sizeof(count)) != sizeof(count)) {
-        // If the pipe is full, we might lose expirations, but that's expected
-        // for non-blocking IO.  However, we should probably warn.
-        // For strict timerfd conformance we'd want to handle this better, but
-        // for general event loop usage this is likely sufficient/equivalent to
-        // unread notifications.
-      }
-    });
+    dispatch_set_context(timer_source_, this);
+    dispatch_source_set_event_handler_f(timer_source_,
+                                        &MacTimerFd::StaticHandleTimer);
     dispatch_resume(timer_source_);
   }
 
@@ -52,19 +42,32 @@ class MacTimerFd {
     dispatch_source_cancel(timer_source_);
     // We need to release the source, but it might already be cancelled?
     // dispatch_release is automatic in newer C++, but manual here.
-    // Actually, std::shared_ptr or similar management of the source is tricky.
-    // Assuming dispatch_source_cancel is enough to stop it.
     // We must close fds.
     close(read_fd_);
     close(write_fd_);
     dispatch_release(timer_source_);
   }
 
+  static void StaticHandleTimer(void *ctx) {
+    static_cast<MacTimerFd *>(ctx)->HandleTimer();
+  }
+
+  void HandleTimer() {
+    uint64_t count = dispatch_source_get_data(timer_source_);
+    // Write the number of expirations to the pipe.
+    // This mimics timerfd behavior where read() returns the number of
+    // expirations.
+    if (write(write_fd_, &count, sizeof(count)) != sizeof(count)) {
+      // If the pipe is full, we might lose expirations, but that's expected
+      // for non-blocking IO.  However, we should probably warn.
+      // For strict timerfd conformance we'd want to handle this better, but
+      // for general event loop usage this is likely sufficient/equivalent to
+      // unread notifications.
+    }
+  }
+
   void SetTime(monotonic_clock::time_point start,
                monotonic_clock::duration interval) {
-    uint64_t start_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                            start.time_since_epoch())
-                            .count();
     uint64_t interval_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
                                interval)
                                .count();
