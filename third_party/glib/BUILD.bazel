@@ -7,23 +7,7 @@ cc_library(
     target_compatible_with = ["@platforms//:incompatible"],
 )
 
-alias(
-    name = "glib",
-    actual = select({
-        "@platforms//cpu:arm64": "@arm64_debian_sysroot//:glib-2.0",
-        "@platforms//cpu:x86_64": "@amd64_debian_sysroot//:glib-2.0",
-        "//conditions:default": ":unavailable",
-    }),
-)
 
-alias(
-    name = "gobject",
-    actual = select({
-        "@platforms//cpu:arm64": "@arm64_debian_sysroot//:gobject-2.0",
-        "@platforms//cpu:x86_64": "@amd64_debian_sysroot//:gobject-2.0",
-        "//conditions:default": ":unavailable",
-    }),
-)
 
 # Alias for gio-2.0 if needed later
 alias(
