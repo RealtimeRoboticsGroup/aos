@@ -1,5 +1,6 @@
 #include "aos/json_to_flatbuffer.h"
 
+#include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <string_view>
@@ -1129,16 +1130,27 @@ class TruncatingStringVisitor : public flatbuffers::IterationVisitor {
 #define STRINGIFY_FLOAT(type, Method)                                       \
   void Method(type value) override {                                        \
     if (should_skip()) return;                                              \
-    if (use_standard_json_ && !std::isfinite(value)) {                      \
-      /* When using standards-compliant JSON, use strings to represent      \
-       * numbers.*/                                                         \
-      if (std::isnan(value)) {                                              \
-        to_string_.s += std::signbit(value) ? "\"-nan\"" : "\"nan\"";       \
+    if (!std::isfinite(value)) {                                            \
+      if (use_standard_json_) {                                             \
+        /* When using standards-compliant JSON, use strings to represent    \
+         * numbers.*/                                                       \
+        if (std::isnan(value)) {                                            \
+          to_string_.s += std::signbit(value) ? "\"-nan\"" : "\"nan\"";     \
+        } else {                                                            \
+          ABSL_DCHECK(std::isinf(value))                                    \
+              << "All non-finite, non-nan floats should be infinite; got "  \
+              << value;                                                     \
+          to_string_.s += std::signbit(value) ? "\"-inf\"" : "\"inf\"";     \
+        }                                                                   \
       } else {                                                              \
-        ABSL_DCHECK(std::isinf(value))                                      \
-            << "All non-finite, non-nan floats should be infinite; got "    \
-            << value;                                                       \
-        to_string_.s += std::signbit(value) ? "\"-inf\"" : "\"inf\"";       \
+        if (std::isnan(value)) {                                            \
+          to_string_.s += std::signbit(value) ? "-nan" : "nan";             \
+        } else {                                                            \
+          ABSL_DCHECK(std::isinf(value))                                    \
+              << "All non-finite, non-nan floats should be infinite; got "  \
+              << value;                                                     \
+          to_string_.s += std::signbit(value) ? "-inf" : "inf";             \
+        }                                                                   \
       }                                                                     \
       return;                                                               \
     }                                                                       \
