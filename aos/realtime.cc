@@ -895,10 +895,11 @@ static boolean_t aos_zone_locked(malloc_zone_t *zone) {
   return 0;
 }
 
-static void aos_enable_discharge_checking(malloc_zone_t *zone) {
+static boolean_t aos_enable_discharge_checking(malloc_zone_t *zone) {
     if (system_zone && system_zone->introspect && system_zone->introspect->enable_discharge_checking) {
-        system_zone->introspect->enable_discharge_checking(system_zone);
+        return system_zone->introspect->enable_discharge_checking(system_zone);
     }
+    return 0;
 }
 
 static void aos_disable_discharge_checking(malloc_zone_t *zone) {
