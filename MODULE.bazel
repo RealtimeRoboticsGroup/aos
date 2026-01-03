@@ -226,11 +226,10 @@ npm.npm_translate_lock(
 use_repo(npm, "npm")
 
 rules_ts_ext = use_extension("@aspect_rules_ts//ts:extensions.bzl", "ext")
-rules_ts_ext.deps(
-    name = "npm_typescript",
-    dev_dependency = True,
-    ts_version_from = "//:package.json",
-)
+#rules_ts_ext.deps(
+    #name = "npm_typescript",
+    #ts_version_from = "//:package.json",
+#)
 use_repo(rules_ts_ext, "npm_typescript")
 
 crate = use_extension("@rules_rust//crate_universe:extension.bzl", "crate")
