@@ -21,7 +21,10 @@ __attribute__((weak)) void ForcePrintLogsDuringTests() {}
 }  // namespace aos::testing
 
 GTEST_API_ int main(int argc, char **argv) {
-  ::testing::InitGoogleTest(&argc, argv);
+::testing::InitGoogleTest(&argc, argv);
+#ifdef __APPLE__
+  ::testing::FLAGS_gtest_death_test_style = "threadsafe";
+#endif
   aos::InitGoogle(&argc, &argv);
 
   if (absl::GetFlag(FLAGS_print_logs)) {
