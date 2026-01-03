@@ -14,8 +14,9 @@ ABSL_FLAG(std::string, log_file, "",
 namespace aos::testing {
 
 // Actually declared/defined in //aos/testing:test_logging.
-void SetLogFileName(const char *filename) __attribute__((weak));
-void ForcePrintLogsDuringTests() __attribute__((weak));
+// Actually declared/defined in //aos/testing:test_logging.
+__attribute__((weak)) void SetLogFileName(const char *) {}
+__attribute__((weak)) void ForcePrintLogsDuringTests() {}
 
 }  // namespace aos::testing
 
@@ -24,18 +25,12 @@ GTEST_API_ int main(int argc, char **argv) {
   aos::InitGoogle(&argc, &argv);
 
   if (absl::GetFlag(FLAGS_print_logs)) {
-    if (::aos::testing::ForcePrintLogsDuringTests) {
-      ::aos::testing::ForcePrintLogsDuringTests();
-    }
+    ::aos::testing::ForcePrintLogsDuringTests();
   }
 
   if (!absl::GetFlag(FLAGS_log_file).empty()) {
-    if (::aos::testing::ForcePrintLogsDuringTests) {
-      ::aos::testing::ForcePrintLogsDuringTests();
-    }
-    if (::aos::testing::SetLogFileName) {
-      ::aos::testing::SetLogFileName(absl::GetFlag(FLAGS_log_file).c_str());
-    }
+    ::aos::testing::ForcePrintLogsDuringTests();
+    ::aos::testing::SetLogFileName(absl::GetFlag(FLAGS_log_file).c_str());
   }
 
   // Point shared memory away from /dev/shm if we are testing.  We don't care
