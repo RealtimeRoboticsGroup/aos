@@ -168,6 +168,7 @@ WriteCode FileHandler::OpenForWrite() {
 
 void FileHandler::EnableDirect() {
   if (supports_odirect_ && !ODirectEnabled()) {
+#ifdef O_DIRECT
     const int new_flags = flags_ | O_DIRECT;
     // Track if we failed to set O_DIRECT.  Note: Austin hasn't seen this call
     // fail.  The write call tends to fail instead.
@@ -175,26 +176,32 @@ void FileHandler::EnableDirect() {
       PLOG(WARNING) << "Failed to set O_DIRECT on " << filename_;
       supports_odirect_ = false;
     } else {
-      VLOG(1) << "Enabled O_DIRECT on " << filename_;
       flags_ = new_flags;
+      odirect_enabled_ = true;
+      VLOG(1) << "Enabled O_DIRECT on " << filename_;
     }
+#else
+    // OSX likes aligned blocks to write efficiently, but does it implicitly rather
+    // than explicitly.
+    odirect_enabled_ = true;
+    VLOG(1) << "Enabled O_DIRECT on " << filename_;
+#endif
   }
 }
 
 void FileHandler::DisableDirect() {
   if (supports_odirect_ && ODirectEnabled()) {
+#ifdef O_DIRECT
     flags_ = flags_ & (~O_DIRECT);
     PCHECK(fcntl(fd_, F_SETFL, flags_) != -1) << ": Failed to disable O_DIRECT";
+#endif
+    odirect_enabled_ = false;
     VLOG(1) << "Disabled O_DIRECT on " << filename_;
   }
 }
 
 bool FileHandler::ODirectEnabled() const {
-#ifdef O_DIRECT
-  return !!(flags_ & O_DIRECT);
-#else
-  return false;
-#endif
+  return odirect_enabled_;
 }
 
 WriteResult FileHandler::Write(

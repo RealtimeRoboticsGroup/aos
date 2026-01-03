@@ -259,6 +259,7 @@ class FileHandler : public LogSink {
   size_t written_aligned_ = 0;
 
   bool supports_odirect_ = true;
+  bool odirect_enabled_ = false;
   int flags_ = 0;
 };
 
