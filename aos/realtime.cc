@@ -663,179 +663,68 @@ void RegisterMallocHook() {
 }
 #elif defined(__APPLE__)
 
-typedef struct {
-  void *(*malloc)(struct _malloc_zone_t *zone, size_t size);
-  void *(*calloc)(struct _malloc_zone_t *zone, size_t num_items, size_t size);
-  void *(*valloc)(struct _malloc_zone_t *zone, size_t size);
-  void (*free)(struct _malloc_zone_t *zone, void *ptr);
-  void *(*realloc)(struct _malloc_zone_t *zone, void *ptr, size_t size);
-  void (*destroy)(struct _malloc_zone_t *zone);
-  unsigned (*batch_malloc)(struct _malloc_zone_t *zone, size_t size,
-                           void **results, unsigned num_requested);
-  void (*batch_free)(struct _malloc_zone_t *zone, void **to_be_freed,
-                     unsigned num_to_be_freed);
-  struct _malloc_introspection_t *introspect;
-  unsigned version;
-  void *(*memalign)(struct _malloc_zone_t *zone, size_t alignment, size_t size);
-  void (*free_definite_size)(struct _malloc_zone_t *zone, void *ptr,
-                             size_t size);
-  size_t (*pressure_relief)(struct _malloc_zone_t *zone, size_t goal);
-  boolean_t (*claimed_address)(struct _malloc_zone_t *zone, void *ptr);
-} OriginalFunctions;
+#define DYLD_INTERPOSE(_replacement, _replacee) \
+  __attribute__((used)) static struct { \
+    const void *replacement; \
+    const void *replacee; \
+  } _interpose_##_replacement \
+  __attribute__((section("__DATA,__interpose"))) = { \
+    (const void *)(unsigned long)&_replacement, \
+    (const void *)(unsigned long)&_replacee \
+  }
 
-static OriginalFunctions original_functions;
-
-static void *rt_malloc(struct _malloc_zone_t *zone, size_t size) {
+void *aos_malloc(size_t size) {
   if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc)) {
     aos::is_realtime = false;
     ABSL_RAW_LOG(FATAL, "Malloced %zu bytes", size);
   }
-
-  return original_functions.malloc(zone, size);
+  return malloc(size);
 }
+DYLD_INTERPOSE(aos_malloc, malloc);
 
-static void *rt_calloc(struct _malloc_zone_t *zone, size_t num_items,
-                       size_t size) {
+void *aos_calloc(size_t n, size_t size) {
   if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc)) {
     aos::is_realtime = false;
-    ABSL_RAW_LOG(FATAL, "Malloced %zu * %zu bytes", num_items, size);
+    ABSL_RAW_LOG(FATAL, "Malloced %zu * %zu bytes", n, size);
   }
-
-  return original_functions.calloc(zone, num_items, size);
+  return calloc(n, size);
 }
+DYLD_INTERPOSE(aos_calloc, calloc);
 
-static void *rt_valloc(struct _malloc_zone_t *zone, size_t size) {
+void *aos_valloc(size_t size) {
   if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc)) {
     aos::is_realtime = false;
     ABSL_RAW_LOG(FATAL, "Malloced %zu bytes", size);
   }
-
-  return original_functions.valloc(zone, size);
+  return valloc(size);
 }
+DYLD_INTERPOSE(aos_valloc, valloc);
 
-static void rt_free(struct _malloc_zone_t *zone, void *ptr) {
+void aos_free(void *ptr) {
   if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc) &&
       ptr != nullptr) {
     aos::is_realtime = false;
     ABSL_RAW_LOG(FATAL, "Deleted %p", ptr);
   }
-
-  original_functions.free(zone, ptr);
+  free(ptr);
 }
+DYLD_INTERPOSE(aos_free, free);
 
-static void *rt_realloc(struct _malloc_zone_t *zone, void *ptr, size_t size) {
+void *aos_realloc(void *ptr, size_t size) {
   if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc)) {
     aos::is_realtime = false;
     ABSL_RAW_LOG(FATAL, "Malloced %p -> %zu bytes", ptr, size);
   }
-
-  return original_functions.realloc(zone, ptr, size);
+  return realloc(ptr, size);
 }
-
-static void rt_free_definite_size(struct _malloc_zone_t *zone, void *ptr,
-                                  size_t size) {
-  if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc) &&
-      ptr != nullptr) {
-    aos::is_realtime = false;
-    ABSL_RAW_LOG(FATAL, "Deleted %p", ptr);
-  }
-
-  original_functions.free_definite_size(zone, ptr, size);
-}
-
-
-
-static unsigned rt_batch_malloc(struct _malloc_zone_t *zone, size_t size,
-                                void **results, unsigned num_requested) {
-  // Don't support batch malloc in RT mode for now, or just check the flag once.
-  // Batch malloc is rare.
-  if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc)) {
-    aos::is_realtime = false;
-    ABSL_RAW_LOG(FATAL, "Batch Malloced %u * %zu bytes", num_requested, size);
-  }
-  return original_functions.batch_malloc(zone, size, results, num_requested);
-}
-
-static void rt_batch_free(struct _malloc_zone_t *zone, void **to_be_freed,
-                          unsigned num_to_be_freed) {
-  if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc) &&
-      num_to_be_freed > 0) {
-    aos::is_realtime = false;
-    ABSL_RAW_LOG(FATAL, "Batch Deleted %u items", num_to_be_freed);
-  }
-  original_functions.batch_free(zone, to_be_freed, num_to_be_freed);
-}
-
-static void *rt_memalign(struct _malloc_zone_t *zone, size_t alignment,
-                         size_t size) {
-  if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc)) {
-    aos::is_realtime = false;
-    ABSL_RAW_LOG(FATAL, "Memaligned %zu bytes", size);
-  }
-  // memalign is not in OriginalFunctions struct I added previously?
-  // Checking Chunk 0 from previous turn...
-  // `void *(*memalign)(struct _malloc_zone_t *zone, size_t alignment, size_t size);`
-  // Yes it is.
-  return original_functions.memalign(zone, alignment, size);
-}
-
-// Drops rt_pressure_relief, rt_destroy, rt_size since we don't need to intercept them.
+DYLD_INTERPOSE(aos_realloc, realloc);
 
 void RegisterMallocHook() {
-  if (absl::GetFlag(FLAGS_die_on_malloc)) {
-    if (ABSL_VLOG_IS_ON(1)) {
-      ABSL_RAW_LOG(INFO, "Hooking malloc zone for die_on_malloc");
-    }
-
-    // We want to make sure we don't accidentally recurse and explode if this
-    // function triggers a malloc, so stash is_realtime and clear it.
-    bool old_is_realtime = MarkRealtime(false);
-
-    malloc_zone_t *default_zone = malloc_default_zone();
-
-    // Store original functions.
-    // Copy the relevant pointers. If any are null, our rt_* wrappers might crash if called unconditionally,
-    // but the system malloc usually checks before calling specific optional ones generally?
-    // Actually our wrappers call original_functions.foo unconditionally.
-    // Safe to copy nulls.
-    original_functions.malloc = default_zone->malloc;
-    original_functions.calloc = default_zone->calloc;
-    original_functions.valloc = default_zone->valloc;
-    original_functions.free = default_zone->free;
-    original_functions.realloc = default_zone->realloc;
-    original_functions.destroy = default_zone->destroy;
-    original_functions.batch_malloc = default_zone->batch_malloc;
-    original_functions.batch_free = default_zone->batch_free;
-    original_functions.memalign = default_zone->memalign;
-    original_functions.free_definite_size = default_zone->free_definite_size;
-    original_functions.pressure_relief = default_zone->pressure_relief;
-    
-    // Unprotect the default zone so we can write to it.
-    vm_address_t zone_address = (vm_address_t)default_zone;
-    vm_protect(mach_task_self(), zone_address, sizeof(malloc_zone_t), 0,
-               VM_PROT_READ | VM_PROT_WRITE | VM_PROT_COPY);
-
-    // Patch function pointers in place.
-    if (original_functions.malloc) default_zone->malloc = rt_malloc;
-    if (original_functions.calloc) default_zone->calloc = rt_calloc;
-    if (original_functions.valloc) default_zone->valloc = rt_valloc;
-    if (original_functions.free) default_zone->free = rt_free;
-    if (original_functions.realloc) default_zone->realloc = rt_realloc;
-    if (original_functions.batch_malloc) default_zone->batch_malloc = rt_batch_malloc;
-    if (original_functions.batch_free) default_zone->batch_free = rt_batch_free;
-    if (original_functions.memalign) default_zone->memalign = rt_memalign;
-    if (original_functions.free_definite_size)
-      default_zone->free_definite_size = rt_free_definite_size;
-    
-    // Re-protect the default zone.
-    vm_protect(mach_task_self(), zone_address, sizeof(malloc_zone_t), 0,
-               VM_PROT_READ);
-
-    // Restore is_realtime.
-    MarkRealtime(old_is_realtime);
-  }
+  // Malloc hooks are handled by DYLD_INTERPOSE on load.
 }
+
 #else
+
 void RegisterMallocHook() {
   // If we are on a platform that doesn't support malloc hooks, we can't die on
   // malloc.
