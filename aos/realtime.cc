@@ -743,31 +743,7 @@ static void rt_free_definite_size(struct _malloc_zone_t *zone, void *ptr,
   original_functions.free_definite_size(zone, ptr, size);
 }
 
-static size_t rt_size(struct _malloc_zone_t *zone, const void *ptr) {
-  return original_functions.malloc(zone, 0) ? original_functions.malloc(zone, 0) : 0; // Dummy implementation if needed or pass through
-  // Actually rt_size needs to call zone->size but zone is now the default zone.
-  // Wait, original_functions uses _malloc_zone_t* as first arg.
-  // The implementations in default_zone expect the zone pointer to be passed to them.
-  // original_functions.size is not captured in my previous struct definition?
-  // Checking previous file content... OriginalFunctions struct definition had malloc, calloc, etc.
-  // I need to make sure rt_size calls original_functions.size if I added it.
-  // Looking at my previous replacement (chunk 0), I did NOT add `size` to `OriginalFunctions`.
-  // Wait, `rt_size` in the original code called `rt_zone->wrapped_zone->size`.
-  // Inspecting `OriginalFunctions` definition I just added:
-  // typedef struct { void *(*malloc)...; ... boolean_t (*claimed_address)... } OriginalFunctions;
-  // It seems I missed `size`!
-  // I need to add `size` to `OriginalFunctions` in a separate edit or hack around it.
-  // But wait, `rt_size` is only needed if I override `size`.
-  // If I patch the default zone, do I need to override `size`?
-  // Probably not, unless I want to trap on size checks?
-  // The original implementation overrode `size` effectively just to forward it.
-  // If I patch in place, I only need to override the allocation/free functions to trap.
-  // So I can probably skip overriding `size` and `claimed_address` etc if I don't need to trap them.
-  // Let's remove `rt_size`, `rt_destroy` etc overrides from `RegisterMallocHook` if they are not needed.
-  // Re-reading `RegisterMallocHook` below... it overrides EVERYTHING.
-  // If I only override malloc/free/etc, I don't need `rt_size`.
-  // So I will remove `rt_size`, `rt_destroy`, `rt_pressure_relief` from the helper list.
-}
+
 
 static unsigned rt_batch_malloc(struct _malloc_zone_t *zone, size_t size,
                                 void **results, unsigned num_requested) {
