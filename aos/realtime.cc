@@ -738,6 +738,57 @@ static void rt_free_definite_size(struct _malloc_zone_t *zone, void *ptr,
   rt_zone->wrapped_zone->free_definite_size(rt_zone->wrapped_zone, ptr, size);
 }
 
+static size_t rt_size(struct _malloc_zone_t *zone, const void *ptr) {
+  rt_check_zone_t *rt_zone = (rt_check_zone_t *)zone;
+  return rt_zone->wrapped_zone->size(rt_zone->wrapped_zone, ptr);
+}
+
+static void rt_destroy(struct _malloc_zone_t *zone) {
+  rt_check_zone_t *rt_zone = (rt_check_zone_t *)zone;
+  rt_zone->wrapped_zone->destroy(rt_zone->wrapped_zone);
+}
+
+static unsigned rt_batch_malloc(struct _malloc_zone_t *zone, size_t size,
+                                void **results, unsigned num_requested) {
+  rt_check_zone_t *rt_zone = (rt_check_zone_t *)zone;
+  // Don't support batch malloc in RT mode for now, or just check the flag once.
+  // Batch malloc is rare.
+  if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc)) {
+    aos::is_realtime = false;
+    ABSL_RAW_LOG(FATAL, "Batch Malloced %u * %zu bytes", num_requested, size);
+  }
+  return rt_zone->wrapped_zone->batch_malloc(rt_zone->wrapped_zone, size,
+                                             results, num_requested);
+}
+
+static void rt_batch_free(struct _malloc_zone_t *zone, void **to_be_freed,
+                          unsigned num_to_be_freed) {
+  rt_check_zone_t *rt_zone = (rt_check_zone_t *)zone;
+  if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc) &&
+      num_to_be_freed > 0) {
+    aos::is_realtime = false;
+    ABSL_RAW_LOG(FATAL, "Batch Deleted %u items", num_to_be_freed);
+  }
+  rt_zone->wrapped_zone->batch_free(rt_zone->wrapped_zone, to_be_freed,
+                                    num_to_be_freed);
+}
+
+static void *rt_memalign(struct _malloc_zone_t *zone, size_t alignment,
+                         size_t size) {
+  rt_check_zone_t *rt_zone = (rt_check_zone_t *)zone;
+  if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc)) {
+    aos::is_realtime = false;
+    ABSL_RAW_LOG(FATAL, "Memaligned %zu bytes", size);
+  }
+  return rt_zone->wrapped_zone->memalign(rt_zone->wrapped_zone, alignment,
+                                         size);
+}
+
+static size_t rt_pressure_relief(struct _malloc_zone_t *zone, size_t goal) {
+  rt_check_zone_t *rt_zone = (rt_check_zone_t *)zone;
+  return rt_zone->wrapped_zone->pressure_relief(rt_zone->wrapped_zone, goal);
+}
+
 void RegisterMallocHook() {
   if (absl::GetFlag(FLAGS_die_on_malloc)) {
     if (ABSL_VLOG_IS_ON(1)) {
@@ -755,6 +806,7 @@ void RegisterMallocHook() {
     my_zone.wrapped_zone = default_zone;
 
     // Override the malloc function
+    my_zone.zone.size = rt_size;
     my_zone.zone.malloc = rt_malloc;
     my_zone.zone.calloc = rt_calloc;
     if (my_zone.zone.valloc) {
@@ -762,13 +814,37 @@ void RegisterMallocHook() {
     }
     my_zone.zone.free = rt_free;
     my_zone.zone.realloc = rt_realloc;
+    if (my_zone.zone.destroy) {
+      my_zone.zone.destroy = rt_destroy;
+    }
+    // zone_name can remain copied.
+    if (my_zone.zone.batch_malloc) {
+      my_zone.zone.batch_malloc = rt_batch_malloc;
+    }
+    if (my_zone.zone.batch_free) {
+      my_zone.zone.batch_free = rt_batch_free;
+    }
+    // introspect can remain copied
+    // version can remain copied
+    if (my_zone.zone.memalign) {
+      my_zone.zone.memalign = rt_memalign;
+    }
     if (my_zone.zone.free_definite_size) {
       my_zone.zone.free_definite_size = rt_free_definite_size;
     }
+    if (my_zone.zone.pressure_relief) {
+      my_zone.zone.pressure_relief = rt_pressure_relief;
+    }
 
     // Unregister the old and register the new as the default
-    malloc_zone_unregister(default_zone);
+    // We want to make sure we don't accidentally leave the system with 0 zones.
+    // So register ours first (at the end), then unregister default (removes it),
+    // then re-register default (adds it back at the end).
+    // The result is [Mine, Default] (assuming list was [Default]).
     malloc_zone_register(&my_zone.zone);
+    malloc_zone_unregister(default_zone);
+    malloc_zone_register(default_zone);
+
     // Restore is_realtime.
     MarkRealtime(old_is_realtime);
   }
