@@ -2,7 +2,12 @@
 #define AOS_EVENTS_EPOLL_H_
 
 #include <stdint.h>
+#if defined(__linux__)
 #include <sys/epoll.h>
+#elif defined(__APPLE__)
+#include <sys/event.h>
+#include <sys/time.h>
+#endif
 
 #include <atomic>
 #include <functional>
@@ -10,6 +15,9 @@
 #include <vector>
 
 #include "aos/time/time.h"
+
+
+
 
 namespace aos::internal {
 
@@ -26,8 +34,8 @@ class TimerFd {
 
   // Sets the trigger time and repeat for the timerfd.
   // An interval of 0 results in a single expiration.
-  void SetTime(monotonic_clock::time_point start,
-               monotonic_clock::duration interval);
+  void SetTime(::aos::monotonic_clock::time_point start,
+               ::aos::monotonic_clock::duration interval);
 
   // Disarms the timer.
   void Disable() {
@@ -165,11 +173,18 @@ class EPoll {
 
   void DoEpollCtl(EventData *event_data, uint32_t new_events);
 
+  void DeleteFdFromEpoll(int fd);
+
+  static constexpr uint32_t kIn = 0x01;
+  static constexpr uint32_t kPri = 0x02;
+  static constexpr uint32_t kOut = 0x04;
+  static constexpr uint32_t kErr = 0x08;
+
   // TODO(Brian): Figure out a nicer way to handle EPOLLPRI than lumping it in
   // with input.
-  static constexpr uint32_t kInEvents = EPOLLIN | EPOLLPRI;
-  static constexpr uint32_t kOutEvents = EPOLLOUT;
-  static constexpr uint32_t kErrorEvents = EPOLLERR;
+  static constexpr uint32_t kInEvents = kIn | kPri;
+  static constexpr uint32_t kOutEvents = kOut;
+  static constexpr uint32_t kErrorEvents = kErr;
 
   ::std::atomic<bool> run_{true};
 

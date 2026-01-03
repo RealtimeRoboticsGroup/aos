@@ -1,0 +1,143 @@
+#include <sys/epoll.h>
+#include <sys/timerfd.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+#include <vector>
+
+#include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
+#include "aos/events/epoll.h"
+
+namespace aos::internal {
+
+TimerFd::TimerFd()
+    : fd_(timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK)) {
+  ABSL_PCHECK(fd_ != -1);
+  Disable();
+}
+
+TimerFd::~TimerFd() { ABSL_PCHECK(close(fd_) == 0); }
+
+void TimerFd::SetTime(monotonic_clock::time_point start,
+                      monotonic_clock::duration interval) {
+  ABSL_CHECK_GE(start, monotonic_clock::epoch());
+  struct itimerspec new_value;
+  new_value.it_interval = ::aos::time::to_timespec(interval);
+  new_value.it_value = ::aos::time::to_timespec(start);
+  ABSL_PCHECK(timerfd_settime(fd_, TFD_TIMER_ABSTIME, &new_value, nullptr) ==
+              0);
+}
+
+uint64_t TimerFd::Read() {
+  uint64_t buf;
+  ssize_t result = read(fd_, &buf, sizeof(buf));
+  if (result == -1) {
+    if (errno == EAGAIN) {
+      return 0;
+    }
+  }
+  ABSL_PCHECK(result != -1);
+  ABSL_CHECK_EQ(result, static_cast<int>(sizeof(buf)));
+
+  return buf;
+}
+
+EPoll::EPoll() : epoll_fd_(epoll_create1(EPOLL_CLOEXEC)) {
+  ABSL_PCHECK(epoll_fd_ > 0);
+
+  // Create a pipe for the Quit function.  We want to use a pipe to be async
+  // safe so this can be called from signal handlers.
+  int pipefd[2];
+  ABSL_PCHECK(pipe2(pipefd, O_CLOEXEC | O_NONBLOCK) == 0);
+  quit_epoll_fd_ = pipefd[0];
+  quit_signal_fd_ = pipefd[1];
+  // Read the fd when data is sent and set run_ to false.
+  OnReadable(quit_epoll_fd_, [this]() {
+    run_ = false;
+    char buf[1];
+    ABSL_PCHECK(read(quit_epoll_fd_, &buf[0], 1) == 1);
+  });
+}
+
+EPoll::~EPoll() {
+  // Clean up the quit pipe and epoll fd.
+  DeleteFd(quit_epoll_fd_);
+  close(quit_signal_fd_);
+  close(quit_epoll_fd_);
+  ABSL_CHECK_EQ(fns_.size(), 0u)
+      << ": Not all file descriptors were unregistered before shutting down.";
+  close(epoll_fd_);
+}
+
+bool EPoll::Poll(bool block) {
+  for (const std::function<void()> &function : before_epoll_wait_functions_) {
+    function();
+  }
+  // Pull a single event out.  Infinite timeout if we are supposed to be
+  // running, and 0 length timeout otherwise.  This lets us flush the event
+  // queue before quitting.
+  struct epoll_event event;
+  int num_events = epoll_wait(epoll_fd_, &event, 1, block ? -1 : 0);
+  // Retry on EINTR and nothing else.
+  if (num_events == -1) {
+    if (errno == EINTR) {
+      return false;
+    }
+    ABSL_PCHECK(num_events != -1);
+  }
+
+  if (num_events == 0) {
+    return false;
+  }
+
+  EventData *const event_data = static_cast<struct EventData *>(event.data.ptr);
+  uint32_t events = 0;
+  if (event.events & EPOLLIN) events |= kIn;
+  if (event.events & EPOLLPRI) events |= kPri;
+  if (event.events & EPOLLOUT) events |= kOut;
+  if (event.events & EPOLLERR) events |= kErr;
+
+  event_data->DoCallbacks(events);
+  return true;
+}
+
+void EPoll::DoEpollCtl(EventData *event_data, const uint32_t new_events) {
+  const uint32_t old_events = event_data->events;
+  if (old_events == new_events) {
+    // Shortcut without calling into the kernel. This happens often with
+    // external event loop integrations that are emulating poll, so make it
+    // fast.
+    return;
+  }
+  event_data->events = new_events;
+  if (new_events == 0) {
+    // It was added, but should now be removed.
+    ABSL_PCHECK(epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, event_data->fd, nullptr) ==
+                0);
+    return;
+  }
+
+  int operation = EPOLL_CTL_MOD;
+  if (old_events == 0) {
+    // If it wasn't added before, then this is the first time it's being added.
+    operation = EPOLL_CTL_ADD;
+  }
+  struct epoll_event event;
+  event.events = 0;
+  if (new_events & kIn) event.events |= EPOLLIN;
+  if (new_events & kPri) event.events |= EPOLLPRI;
+  if (new_events & kOut) event.events |= EPOLLOUT;
+  if (new_events & kErr) event.events |= EPOLLERR;
+  
+  event.data.ptr = event_data;
+  ABSL_PCHECK(epoll_ctl(epoll_fd_, operation, event_data->fd, &event) == 0)
+      << ": Failed to " << operation << " epoll fd: " << event_data->fd;
+}
+
+void EPoll::DeleteFdFromEpoll(int fd) {
+  ABSL_PCHECK(epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, nullptr) == 0)
+      << "Failed to delete fd " << fd;
+}
+
+}  // namespace aos::internal

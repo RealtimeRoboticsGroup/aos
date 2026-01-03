@@ -37,9 +37,13 @@ cc_static_flatbuffer(
 
 cc_library(
     name = "epoll",
-    srcs = ["epoll.cc"],
+    srcs = [
+        "epoll.cc",
+    ] + select({
+        "@platforms//os:linux": ["epoll_linux.cc"],
+        "@platforms//os:macos": ["epoll_darwin.cc"],
+    }),
     hdrs = ["epoll.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos/time",
@@ -51,7 +55,7 @@ cc_library(
 cc_test(
     name = "epoll_test",
     srcs = ["epoll_test.cc"],
-    target_compatible_with = ["@platforms//os:linux"],
+
     deps = [
         ":epoll",
         "//aos/testing:googletest",
