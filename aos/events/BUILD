@@ -55,7 +55,6 @@ cc_library(
 cc_test(
     name = "epoll_test",
     srcs = ["epoll_test.cc"],
-
     deps = [
         ":epoll",
         "//aos/testing:googletest",
@@ -624,6 +623,7 @@ cc_library(
     hdrs = [
         "glib_main_loop.h",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos/events:shm_event_loop",
