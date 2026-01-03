@@ -189,6 +189,14 @@ void FileHandler::DisableDirect() {
   }
 }
 
+bool FileHandler::ODirectEnabled() const {
+#ifdef O_DIRECT
+  return !!(flags_ & O_DIRECT);
+#else
+  return false;
+#endif
+}
+
 WriteResult FileHandler::Write(
     const absl::Span<const absl::Span<const uint8_t>> &queue) {
   iovec_.clear();
