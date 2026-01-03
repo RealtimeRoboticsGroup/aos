@@ -831,6 +831,90 @@ static boolean_t aos_claimed_address(struct _malloc_zone_t *zone, void *ptr) {
     return 0; // false
 }
 
+static kern_return_t aos_enumerator(task_t task, void *context,
+                                    unsigned type_mask, vm_address_t zone_address,
+                                    memory_reader_t reader,
+                                    vm_range_recorder_t recorder) {
+  if (system_zone && system_zone->introspect && system_zone->introspect->enumerator) {
+    return system_zone->introspect->enumerator(task, context, type_mask,
+                                               zone_address, reader, recorder);
+  }
+  return KERN_SUCCESS;
+}
+
+static size_t aos_good_size(malloc_zone_t *zone, size_t size) {
+  if (system_zone && system_zone->introspect && system_zone->introspect->good_size) {
+    return system_zone->introspect->good_size(system_zone, size);
+  }
+  return size;
+}
+
+static boolean_t aos_check(malloc_zone_t *zone) {
+  if (system_zone && system_zone->introspect && system_zone->introspect->check) {
+    return system_zone->introspect->check(system_zone);
+  }
+  return 1;
+}
+
+static void aos_print(malloc_zone_t *zone, boolean_t verbose) {
+  if (system_zone && system_zone->introspect && system_zone->introspect->print) {
+    system_zone->introspect->print(system_zone, verbose);
+  }
+}
+
+static void aos_log(malloc_zone_t *zone, void *address) {
+  if (system_zone && system_zone->introspect && system_zone->introspect->log) {
+    system_zone->introspect->log(system_zone, address);
+  }
+}
+
+static void aos_force_lock(malloc_zone_t *zone) {
+  if (system_zone && system_zone->introspect && system_zone->introspect->force_lock) {
+    system_zone->introspect->force_lock(system_zone);
+  }
+}
+
+static void aos_force_unlock(malloc_zone_t *zone) {
+  if (system_zone && system_zone->introspect && system_zone->introspect->force_unlock) {
+    system_zone->introspect->force_unlock(system_zone);
+  }
+}
+
+static void aos_statistics(malloc_zone_t *zone, malloc_statistics_t *stats) {
+  if (system_zone && system_zone->introspect && system_zone->introspect->statistics) {
+    system_zone->introspect->statistics(system_zone, stats);
+  } else {
+      bzero(stats, sizeof(malloc_statistics_t));
+  }
+}
+
+static boolean_t aos_zone_locked(malloc_zone_t *zone) {
+  if (system_zone && system_zone->introspect && system_zone->introspect->zone_locked) {
+      return system_zone->introspect->zone_locked(system_zone);
+  }
+  return 0;
+}
+
+static boolean_t aos_enable_discharge_checking(malloc_zone_t *zone) {
+    if (system_zone && system_zone->introspect && system_zone->introspect->enable_discharge_checking) {
+        return system_zone->introspect->enable_discharge_checking(system_zone);
+    }
+    return 0;
+}
+
+static boolean_t aos_disable_discharge_checking(malloc_zone_t *zone) {
+    if (system_zone && system_zone->introspect && system_zone->introspect->disable_discharge_checking) {
+        return system_zone->introspect->disable_discharge_checking(system_zone);
+    }
+    return 0;
+}
+
+static void aos_discharge(malloc_zone_t *zone, void *memory) {
+    if (system_zone && system_zone->introspect && system_zone->introspect->discharge) {
+        system_zone->introspect->discharge(system_zone, memory);
+    }
+}
+
 static malloc_introspection_t aos_introspect; // Zeroed
 
 static malloc_zone_t *
@@ -912,6 +996,18 @@ print_zones();
     // But we are a new zone.
     aos_zone.introspect = &aos_introspect;
     memset(&aos_introspect, 0, sizeof(aos_introspect));
+    aos_introspect.enumerator = aos_enumerator;
+    aos_introspect.good_size = aos_good_size;
+    aos_introspect.check = aos_check;
+    aos_introspect.print = aos_print;
+    aos_introspect.log = aos_log;
+    aos_introspect.force_lock = aos_force_lock;
+    aos_introspect.force_unlock = aos_force_unlock;
+    aos_introspect.statistics = aos_statistics;
+    aos_introspect.zone_locked = aos_zone_locked;
+    aos_introspect.enable_discharge_checking = aos_enable_discharge_checking;
+    aos_introspect.disable_discharge_checking = aos_disable_discharge_checking;
+    aos_introspect.discharge = aos_discharge;
     
     // Important: To verify `free` works?
     // If we want `free` hooks, we might need `aos_claimed_address` to return true?
