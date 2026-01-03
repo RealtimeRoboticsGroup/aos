@@ -838,12 +838,10 @@ void RegisterMallocHook() {
 
     // Unregister the old and register the new as the default
     // We want to make sure we don't accidentally leave the system with 0 zones.
-    // So register ours first (at the end), then unregister default (removes it),
-    // then re-register default (adds it back at the end).
-    // The result is [Mine, Default] (assuming list was [Default]).
+    // So register ours first (at the end), then unregister default (removes it).
+    // The result is [Mine].
     malloc_zone_register(&my_zone.zone);
     malloc_zone_unregister(default_zone);
-    malloc_zone_register(default_zone);
 
     // Restore is_realtime.
     MarkRealtime(old_is_realtime);
