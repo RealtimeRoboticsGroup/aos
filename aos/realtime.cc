@@ -663,6 +663,31 @@ void RegisterMallocHook() {
 }
 #elif defined(__APPLE__)
 
+void print_zones() {
+    vm_address_t *zones = nullptr;
+    unsigned int count = 0;
+    kern_return_t kr = malloc_get_all_zones(mach_task_self(), nullptr, &zones, &count);
+    
+    if (kr != KERN_SUCCESS) {
+        perror("malloc_get_all_zones failed");
+        return;
+    }
+
+    ABSL_RAW_LOG(INFO, "Found %u active malloc zones", count);
+
+    for (unsigned int i = 0; i < count; ++i) {
+        malloc_zone_t *zone = (malloc_zone_t *)zones[i];
+        const char *name = zone->version >= 4 ? zone->zone_name : "unknown";
+        
+        ABSL_RAW_LOG(INFO, "Zone [%u]: %s at %p", i, name, zone);
+        ABSL_RAW_LOG(INFO, "Zone [%u]: %s->malloc %p", i, name, zone->malloc);
+
+        // If you want to trap, you have to patch EACH zone's function table
+        // because the OS will cycle between them or use specific ones for 
+        // different allocation sizes (e.g., NanoZone for < 256 bytes).
+    }
+}
+
 // Basic proxy zone structure
 static malloc_zone_t aos_zone;
 static malloc_zone_t *system_zone = nullptr;
@@ -717,6 +742,7 @@ static size_t aos_size(struct _malloc_zone_t *zone, const void *ptr) {
 }
 
 static void *aos_malloc(struct _malloc_zone_t *zone, size_t size) {
+	ABSL_RAW_LOG(INFO, "Malloced %zu bytes",size);
   if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc)) {
     aos::is_realtime = false;
     ABSL_RAW_LOG(FATAL, "Malloced %zu bytes", size);
@@ -807,6 +833,38 @@ static boolean_t aos_claimed_address(struct _malloc_zone_t *zone, void *ptr) {
 
 static malloc_introspection_t aos_introspect; // Zeroed
 
+static malloc_zone_t *
+zone_default_get(void) {
+	malloc_zone_t **zones = NULL;
+	unsigned int num_zones = 0;
+
+	/*
+	 * On OSX 10.12, malloc_default_zone returns a special zone that is not
+	 * present in the list of registered zones. That zone uses a "lite zone"
+	 * if one is present (apparently enabled when malloc stack logging is
+	 * enabled), or the first registered zone otherwise. In practice this
+	 * means unless malloc stack logging is enabled, the first registered
+	 * zone is the default.  So get the list of zones to get the first one,
+	 * instead of relying on malloc_default_zone.
+	 */
+	if (KERN_SUCCESS != malloc_get_all_zones(0, NULL,
+	    (vm_address_t**)&zones, &num_zones)) {
+		/*
+		 * Reset the value in case the failure happened after it was
+		 * set.
+		 */
+		num_zones = 0;
+	}
+
+	if (num_zones) {
+		ABSL_RAW_LOG(INFO, "Got %d zones, returning %p", num_zones, zones[0]);
+		return zones[0];
+	}
+
+		ABSL_RAW_LOG(INFO, "Got 0 zones, returning %p", malloc_default_zone());
+	return malloc_default_zone();
+}
+
 void RegisterMallocHook() {
   if (absl::GetFlag(FLAGS_die_on_malloc)) {
     static bool registered = false;
@@ -816,10 +874,17 @@ void RegisterMallocHook() {
     if (ABSL_VLOG_IS_ON(1)) {
       ABSL_RAW_LOG(INFO, "Installing Proxy Malloc Zone");
     }
+      ABSL_RAW_LOG(INFO, "Installing Proxy Malloc Zone");
+print_zones();
 
     // Capture the current default zone.
-    system_zone = malloc_default_zone();
+    system_zone = zone_default_get();
     ABSL_CHECK(system_zone != nullptr) << "Could not get default malloc zone";
+
+    	if (!system_zone->zone_name || strcmp(system_zone->zone_name,
+	    "DefaultMallocZone") != 0) {
+		ABSL_RAW_LOG(FATAL, "Alternative malloc zone registered, %s, aborting", system_zone->zone_name);
+	}
 
     // Initialize aos_zone.
     memset(&aos_zone, 0, sizeof(aos_zone));
@@ -854,15 +919,35 @@ void RegisterMallocHook() {
     // If we claim it, we MUST be able to handle it.
     // If we forward `size` to `system_zone`, maybe that works?
     
+    ABSL_RAW_LOG(INFO, "Before register");
+print_zones();
     // Register our zone.
     malloc_zone_register(&aos_zone);
+
+    size_t loops = 0;
+malloc_zone_t *zone;
+do {
+    ABSL_RAW_LOG(INFO, "Before unregister system, system %p, default %p", system_zone, malloc_default_zone());
+print_zones();
     
     // Promote to default by making it the "first" zone.
     // We do this by unregistering the system zone and re-registering it.
     // This bumps system zone to the end of the list, leaving aos_zone (added just before) ahead of it.
     malloc_zone_unregister(system_zone);
+    ABSL_RAW_LOG(INFO, "Before register system, system %p, default %p", system_zone, malloc_default_zone());
+print_zones();
     malloc_zone_register(system_zone);
+    ABSL_RAW_LOG(INFO, "end, system %p, default %p", system_zone, malloc_default_zone());
+print_zones();
     
+
+zone = zone_default_get();
+
+++loops;
+if (loops > 10) {
+	ABSL_RAW_LOG(FATAL, "Too many loops");
+}
+} while (zone != &aos_zone);
     // Double check we are default?
     // malloc_zone_t *new_default = malloc_default_zone();
     // if (new_default != &aos_zone) { 

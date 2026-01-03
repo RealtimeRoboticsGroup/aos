@@ -2,6 +2,10 @@
 
 #include "absl/base/internal/raw_logging.h"
 #include "absl/flags/declare.h"
+#include <mach/mach.h>
+#include <mach/thread_policy.h>
+#include <malloc/malloc.h>
+#include <pthread.h>
 #include "absl/flags/flag.h"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
@@ -135,6 +139,28 @@ TEST(RealtimeDeathTest, Fatal) {
 }
 
 TEST(RealtimeDeathTest, Malloc) {
+    vm_address_t *zones = nullptr;
+    unsigned int count = 0;
+    kern_return_t kr = malloc_get_all_zones(mach_task_self(), nullptr, &zones, &count);
+    
+    if (kr != KERN_SUCCESS) {
+        perror("malloc_get_all_zones failed");
+        return;
+    }
+
+    printf("Found %u active malloc zones\n", count);
+
+    for (unsigned int i = 0; i < count; ++i) {
+        malloc_zone_t *zone = (malloc_zone_t *)zones[i];
+        const char *name = zone->version >= 4 ? zone->zone_name : "unknown";
+        
+        printf("Zone [%u]: %s at %p\n", i, name, zone);
+        printf("Zone [%u]: %s->malloc %p\n", i, name, zone->malloc);
+
+        // If you want to trap, you have to patch EACH zone's function table
+        // because the OS will cycle between them or use specific ones for 
+        // different allocation sizes (e.g., NanoZone for < 256 bytes).
+    }
   EXPECT_DEATH(
       {
         ScopedRealtime rt;
