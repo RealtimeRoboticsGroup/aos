@@ -204,7 +204,6 @@ cc_test(
     srcs = [
         "team_number_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":team_number",
         "//aos:configuration",
