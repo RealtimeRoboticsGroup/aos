@@ -665,20 +665,20 @@ inline aos_mutex *next_to_mutex(uintptr_t next) {
 
 // Sets up the robust list for each thread.
 void Init() {
-#ifdef __linux__
   // It starts out just pointing back to itself.
   robust_head.next = robust_head_next_value();
   robust_head.futex_offset = static_cast<ssize_t>(offsetof(aos_mutex, futex)) -
                              static_cast<ssize_t>(offsetof(aos_mutex, next));
   robust_head.pending_next = 0;
+#ifdef __linux__
   ABSL_PCHECK(syscall(SYS_set_robust_list, robust_head_next_value(),
                       sizeof(robust_head)) == 0)
       << ": set_robust_list(" << reinterpret_cast<void *>(robust_head.next)
       << ", " << sizeof(robust_head) << ") failed";
+#endif
   if (kRobustListDebug) {
     printf("%" PRId32 ": init done\n", get_tid());
   }
-#endif
 }
 
 // Updating the offset with locked mutexes is important during robustness
@@ -701,6 +701,9 @@ bool HaveLockedMutexes() {
   return robust_head.next != robust_head_next_value();
 }
 
+// Handles adding a mutex to the robust list.
+// The idea is to create one of these at the beginning of a function that needs
+// to do this and then call Add() iff it should actually be added.
 // Handles adding a mutex to the robust list.
 // The idea is to create one of these at the beginning of a function that needs
 // to do this and then call Add() iff it should actually be added.
