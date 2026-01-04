@@ -32,11 +32,13 @@ ABSL_FLAG(bool, skip_realtime_scheduler, false,
 ABSL_FLAG(bool, skip_locking_memory, false,
           "If true, skip locking memory.  Pretend that we did it instead.");
 
+#if !defined(__APPLE__)
 namespace FLAG__namespace_do_not_use_directly_use_DECLARE_double_instead {
 extern double FLAGS_tcmalloc_release_rate __attribute__((weak));
 }
 using FLAG__namespace_do_not_use_directly_use_DECLARE_double_instead::
     FLAGS_tcmalloc_release_rate;
+#endif
 
 namespace aos {
 
@@ -112,11 +114,13 @@ void LockAllMemory() {
 #endif
 #endif
 
+#if !defined(__APPLE__)
   // TODO(austin): new tcmalloc does this differently...
   if (&FLAGS_tcmalloc_release_rate) {
     // Tell tcmalloc not to return memory.
     FLAGS_tcmalloc_release_rate = 0.0;
   }
+#endif
 
   // Forces the memory pages for all the stack space that we're ever going to
   // use to be loaded into memory (so it can be locked there).

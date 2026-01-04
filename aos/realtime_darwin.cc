@@ -19,7 +19,7 @@ ABSL_DECLARE_FLAG(bool, skip_realtime_scheduler);
 namespace logging::internal {
 
 // Implemented in aos/logging/context.cc.
-void ReloadThreadName() __attribute__((weak));
+void ReloadThreadName() __attribute__((weak)) {}
 
 }  // namespace logging::internal
 
@@ -27,6 +27,8 @@ namespace aos {
 
 extern bool has_malloc_hook;
 extern thread_local bool is_realtime;
+thread_local int fake_rt_priority;
+thread_local int fake_rt_policy;
 
 CpuSet::CpuSet() {}
 
@@ -62,8 +64,12 @@ bool CpuSet::operator!=(const CpuSet &other) const {
 }
 
 void UnsetCurrentThreadRealtimePriority() {
-  ABSL_LOG(WARNING) << "No RT scheduler on OSX, ignoring";
   MarkRealtime(false);
+  fake_rt_priority = 0;
+  fake_rt_policy = SCHED_OTHER;
+  if (ABSL_VLOG_IS_ON(1)) {
+    ABSL_LOG(WARNING) << "No RT scheduler on OSX, ignoring";
+  }
 }
 
 namespace {
@@ -156,22 +162,20 @@ void SetCurrentThreadRealtimePriority(int priority, int scheduling_policy) {
       << "Specified non-realtime scheduling policy with realtime priority";
   ABSL_CHECK(priority > 0 && priority < 100)
       << "Realtime priority must fall within [1,99]";
-  ABSL_LOG(INFO) << "RT priority not implemented on OSX, pretending to be RT";
+  if (ABSL_VLOG_IS_ON(1)) {
+    ABSL_LOG(INFO) << "RT priority not implemented on OSX, pretending to be RT";
+  }
+  fake_rt_priority = priority;
+  fake_rt_policy = scheduling_policy;
   MarkRealtime(true);
 }
 
 int GetCurrentThreadRealtimePriority() {
-  struct sched_param param;
-  int policy;
-  ABSL_PCHECK(pthread_getschedparam(pthread_self(), &policy, &param) == 0);
-  return param.sched_priority;
+  return fake_rt_priority;
 }
 
 int GetCurrentThreadSchedulingPolicy() {
-  struct sched_param param;
-  int policy;
-  ABSL_PCHECK(pthread_getschedparam(pthread_self(), &policy, &param) == 0);
-  return policy;
+  return fake_rt_policy;
 }
 
 void print_zones() {
