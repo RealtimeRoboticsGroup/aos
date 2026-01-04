@@ -308,12 +308,12 @@ inline int sys_futex_wake(aos_futex *addr1, int val1) {
 #ifndef __linux__
 // Used by both normal wake and unlock_pi
 inline int sys_futex_wake(aos_futex *addr1, int val1) {
-  uint32_t op_code = IsMemShared(addr1) ? UL_COMPARE_AND_WAIT_SHARED : UL_COMPARE_AND_WAIT;
+  uint32_t flags = IsMemShared(addr1) ? OS_SYNC_WAIT_ON_ADDRESS_SHARED : 0;
   if (val1 == 1) {
-    __ulock_wake(op_code, addr1, 0);
+    os_sync_wake_by_address_any(addr1, sizeof(*addr1), flags);
     return 1;
   } else {
-    __ulock_wake(op_code | ULF_WAKE_ALL, addr1, 0);
+    os_sync_wake_by_address_all(addr1, sizeof(*addr1), flags);
     return 1;
   }
 }
