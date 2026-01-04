@@ -28,7 +28,11 @@ __attribute__((unused)) char *aos_strerror_handle_result(int error, int ret,
     // assert doesn't use the return value when building optimized.
     const int r =
 #endif
-        snprintf(buffer, kBufferSize, "Unknown error %d", error);
+    #ifdef __APPLE__
+    snprintf(buffer, kBufferSize, "Unknown error: %d", error);
+#else
+    snprintf(buffer, kBufferSize, "Unknown error %d", error);
+#endif
     assert(r > 0);
   }
   return buffer;
