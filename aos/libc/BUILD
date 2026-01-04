@@ -14,7 +14,6 @@ cc_library(
     hdrs = [
         "aos_strsignal.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
@@ -26,7 +25,6 @@ cc_test(
     srcs = [
         "aos_strsignal_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":aos_strsignal",
         "//aos:sanitizers",
@@ -42,7 +40,6 @@ cc_library(
     hdrs = [
         "dirname.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 cc_test(
@@ -50,7 +47,6 @@ cc_test(
     srcs = [
         "dirname_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":dirname",
         "//aos/testing:googletest",
@@ -65,7 +61,6 @@ cc_library(
     hdrs = [
         "aos_strerror.h",
     ],
-    #target_compatible_with = ["@platforms//os:linux"],
 )
 
 cc_test(
@@ -73,7 +68,6 @@ cc_test(
     srcs = [
         "aos_strerror_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":aos_strerror",
         "//aos/testing:googletest",

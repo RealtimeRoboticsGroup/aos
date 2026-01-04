@@ -387,8 +387,11 @@ register_toolchains(
     dev_dependency = True,
 )
 
-dev_toolchains_ext = use_extension("//tools/cpp:extensions.bzl", "dev_toolchains_extension", dev_dependency = True)
-use_repo(dev_toolchains_ext, "arm_frc_linux_gnueabi_repo", "gcc_arm_none_eabi")
+    "superstructure_replay",
+)
+
+aos_deps_ext = use_extension("//tools/aos:extensions.bzl", "aos_deps_extension")
+use_repo(aos_deps_ext, "sample_logfile")
 
 frc_deps_ext = use_extension("//tools/frc:extensions.bzl", "frc_deps_extension", dev_dependency = True)
 use_repo(
@@ -406,7 +409,7 @@ use_repo(
     "orin_capture_24_04_side",
     "orin_image_apriltag",
     "orin_large_image_apriltag",
-    "sample_logfile",
+
     "superstructure_replay",
 )
 
