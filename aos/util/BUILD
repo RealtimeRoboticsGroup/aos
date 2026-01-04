@@ -590,6 +590,7 @@ cc_library(
 cc_library(
     name = "config_validator",
     testonly = True,
+    alwayslink = True,
     srcs = ["config_validator.cc"],
     deps = [
         ":config_validator_lib",
