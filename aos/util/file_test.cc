@@ -35,6 +35,7 @@ TEST(FileTest, ReadNormalFileToBytes) {
               ElementsAre('c', 'o', 'n', 't', 'e', 'n', 't', 's', '\n'));
 }
 
+#ifdef __linux__
 // Tests reading a file with 0 size, among other weird things.
 TEST(FileTest, ReadSpecialFile) {
   const std::string stat = ReadFileToStringOrDie("/proc/self/stat");
@@ -42,6 +43,7 @@ TEST(FileTest, ReadSpecialFile) {
   const std::string my_pid = ::std::to_string(getpid());
   EXPECT_EQ(my_pid, stat.substr(0, my_pid.size()));
 }
+#endif
 
 // Basic test of maybe reading a normal file.
 TEST(FileTest, MaybeReadNormalFile) {
@@ -51,6 +53,7 @@ TEST(FileTest, MaybeReadNormalFile) {
   EXPECT_EQ("contents\n", MaybeReadFileToString(test_file).value());
 }
 
+#ifdef __linux__
 // Tests maybe reading a file with 0 size, among other weird things.
 TEST(FileTest, MaybeReadSpecialFile) {
   const std::optional<std::string> stat =
@@ -60,6 +63,7 @@ TEST(FileTest, MaybeReadSpecialFile) {
   const std::string my_pid = std::to_string(getpid());
   EXPECT_EQ(my_pid, stat->substr(0, my_pid.size()));
 }
+#endif
 
 // Tests maybe reading a non-existent file, and not fatally erroring.
 TEST(FileTest, MaybeReadNonexistentFile) {
