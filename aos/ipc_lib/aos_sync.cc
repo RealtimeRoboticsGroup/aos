@@ -142,6 +142,7 @@ extern "C" void AnnotateHappensAfter(const char *file, int line,
 #ifdef __APPLE__
 #include <mach/mach.h>
 #include <mach/vm_map.h>
+#include <mach/mach_vm.h>
 #endif
 
 #define FUTEX_WAITERS 0x80000000
@@ -167,14 +168,25 @@ static bool IsMemShared(void *addr) {
   mach_vm_address_t address = (mach_vm_address_t)addr;
   vm_region_basic_info_data_64_t info;
   mach_msg_type_number_t infoCount = VM_REGION_BASIC_INFO_COUNT_64;
-  mach_port_t object_name;
+  mach_port_t object_name = MACH_PORT_NULL;
 
   kern_return_t kr = mach_vm_region(task, &address, &size, VM_REGION_BASIC_INFO_64,
                                     (vm_region_info_t)&info, &infoCount, &object_name);
+  
+  if (object_name != MACH_PORT_NULL) {
+    mach_port_deallocate(task, object_name);
+  }
+
   if (kr != KERN_SUCCESS) {
       return false;
   }
-  return (info.share_mode != SM_PRIVATE && info.share_mode != SM_COW);
+  
+  // Verify the region covers the address we asked for
+  if (address > (mach_vm_address_t)addr) {
+      return false;
+  }
+  
+  return info.shared;
 }
 #else
 static bool IsMemShared(void *) { return false; }
