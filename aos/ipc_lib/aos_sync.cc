@@ -663,9 +663,7 @@ inline int sys_futex_wait(int op, aos_futex *addr1, int val1,
   }
   
   if (ret == 0) return 0;
-  // If ETIMEDOUT (POSIX) is returned, os_sync usually uses its own or standard errno.
-  // We assume ret is positive errno.
-  if (ret == ETIMEDOUT) return -ETIMEDOUT;
+  if (ret == -1) return -errno;
   return -ret;
 }
 #endif
