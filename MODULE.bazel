@@ -390,8 +390,14 @@ register_toolchains(
 dev_toolchains_ext = use_extension("//tools/cpp:extensions.bzl", "dev_toolchains_extension", dev_dependency = True)
 use_repo(dev_toolchains_ext, "arm_frc_linux_gnueabi_repo", "gcc_arm_none_eabi")
 
-aos_deps_ext = use_extension("//tools/aos:extensions.bzl", "aos_deps_extension")
-use_repo(aos_deps_ext, "sample_logfile")
+
+http_file(
+    name = "sample_logfile",
+    downloaded_file_path = "log.fbs",
+    sha256 = "45d1d19fb82786c476d3f21a8d62742abaeeedf4c16a00ec37ae350dcb61f1fc",
+    urls = ["https://realtimeroboticsgroup.org/build-dependencies/small_sample_logfile2.fbs"],
+)
+
 
 frc_deps_ext = use_extension("//tools/frc:extensions.bzl", "frc_deps_extension", dev_dependency = True)
 use_repo(

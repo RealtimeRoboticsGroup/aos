@@ -1,12 +1,6 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
 
-def sample_logfile_repo():
-    http_file(
-        name = "sample_logfile",
-        downloaded_file_path = "log.fbs",
-        sha256 = "45d1d19fb82786c476d3f21a8d62742abaeeedf4c16a00ec37ae350dcb61f1fc",
-        urls = ["https://realtimeroboticsgroup.org/build-dependencies/small_sample_logfile2.fbs"],
-    )
+
 
 def com_github_foxglove_mcap_mcap_repo():
     http_file(
