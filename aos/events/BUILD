@@ -63,6 +63,17 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "timerfd_test",
+    srcs = ["timerfd_test.cc"],
+    deps = [
+        ":epoll",
+        "//aos/testing:googletest",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
+    ],
+)
+
 cc_library(
     name = "context",
     hdrs = [

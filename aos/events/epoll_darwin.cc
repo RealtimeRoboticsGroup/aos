@@ -15,93 +15,103 @@
 
 namespace aos::internal {
 
-namespace {
 class MacTimerFd {
  public:
   MacTimerFd() {
-    int pipefd[2];
-    ABSL_PCHECK(socketpair(AF_UNIX, SOCK_STREAM, 0, pipefd) == 0);
-    ABSL_PCHECK(fcntl(pipefd[0], F_SETFL, O_NONBLOCK) == 0);
-    ABSL_PCHECK(fcntl(pipefd[1], F_SETFL, O_NONBLOCK) == 0);
-    int on = 1;
-    ABSL_PCHECK(setsockopt(pipefd[1], SOL_SOCKET, SO_NOSIGPIPE, &on,
-                           sizeof(on)) == 0);
-    read_fd_ = pipefd[0];
-    write_fd_ = pipefd[1];
-
-
-    // We can use the global queue for the timer.
-    timer_source_ = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0,
-                                           dispatch_get_global_queue(0, 0));
-    ABSL_CHECK(timer_source_ != nullptr);
-
-    dispatch_set_context(timer_source_, this);
-    dispatch_source_set_event_handler_f(timer_source_,
-                                        &MacTimerFd::StaticHandleTimer);
-    dispatch_resume(timer_source_);
+    fd_ = kqueue();
+    ABSL_PCHECK(fd_ >= 0);
+    ABSL_PCHECK(fcntl(fd_, F_SETFD, FD_CLOEXEC) == 0);
   }
 
-  ~MacTimerFd() {
-    dispatch_source_cancel(timer_source_);
-    // We need to release the source, but it might already be cancelled?
-    // dispatch_release is automatic in newer C++, but manual here.
-    // We must close fds.
-    close(read_fd_);
-    close(write_fd_);
-    dispatch_release(timer_source_);
-  }
-
-  static void StaticHandleTimer(void *ctx) {
-    static_cast<MacTimerFd *>(ctx)->HandleTimer();
-  }
-
-  void HandleTimer() {
-    uint64_t count = dispatch_source_get_data(timer_source_);
-    // Write the number of expirations to the pipe.
-    // This mimics timerfd behavior where read() returns the number of
-    // expirations.
-    if (write(write_fd_, &count, sizeof(count)) != sizeof(count)) {
-      // If the pipe is full, we might lose expirations, but that's expected
-      // for non-blocking IO.  However, we should probably warn.
-      // For strict timerfd conformance we'd want to handle this better, but
-      // for general event loop usage this is likely sufficient/equivalent to
-      // unread notifications.
-    }
-  }
+  ~MacTimerFd() { close(fd_); }
 
   void SetTime(monotonic_clock::time_point start,
                monotonic_clock::duration interval) {
-    uint64_t interval_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                               interval)
-                               .count();
+    // If we are disabling the timer.
+    if (interval == monotonic_clock::zero() &&
+        start == monotonic_clock::epoch()) {
+      struct kevent ev;
+      EV_SET(&ev, 1, EVFILT_TIMER, EV_DELETE, 0, 0, NULL);
+      // Ignore errors if it didn't exist.
+      kevent(fd_, &ev, 1, NULL, 0, NULL);
+      return;
+    }
+
+    interval_ = interval;
 
     monotonic_clock::time_point now = monotonic_clock::now();
-
     int64_t delay_ns = 0;
     if (start > now) {
       delay_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(start -
                                                                       now)
                      .count();
-    }
-
-    dispatch_time_t start_time = dispatch_time(DISPATCH_TIME_NOW, delay_ns);
-
-    if (interval_ns == 0) {
-      // One-shot
-      dispatch_source_set_timer(timer_source_, start_time,
-                                DISPATCH_TIME_FOREVER, 0);
+      // kqueue treats 0 as "fire immediately" but sometimes minimal delay is safer?
+      // NOTE_NSECONDS with 0 is fine.
     } else {
-      // Repeating
-      dispatch_source_set_timer(timer_source_, start_time, interval_ns, 0);
+      // If start is in the past, fire immediately.
+      delay_ns = 0;
     }
+
+    // We use a one-shot timer for the initial expiration.
+    // If there is an interval, we will re-arm it in Read().
+    struct kevent ev;
+    EV_SET(&ev, 1, EVFILT_TIMER, EV_ADD | EV_ENABLE | EV_ONESHOT, NOTE_NSECONDS,
+           delay_ns, NULL);
+    ABSL_PCHECK(kevent(fd_, &ev, 1, NULL, 0, NULL) == 0);
   }
 
-  int fd() { return read_fd_; }
+  uint64_t Read() {
+    struct kevent ev;
+    struct timespec ts = {0, 0};
+    int nev = kevent(fd_, NULL, 0, &ev, 1, &ts);
+    if (nev == 0) {
+      return 0;
+    }
+    ABSL_PCHECK(nev > 0);
+    
+    // Checks if we need to re-arm for an interval.
+    if (interval_ > monotonic_clock::zero()) {
+        int64_t interval_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(interval_).count();
+        struct kevent arm_ev;
+        // Re-add as a repeating timer (remove EV_ONESHOT).
+        EV_SET(&arm_ev, 1, EVFILT_TIMER, EV_ADD | EV_ENABLE, NOTE_NSECONDS, interval_ns, NULL);
+        ABSL_PCHECK(kevent(fd_, &arm_ev, 1, NULL, 0, NULL) == 0);
+        // We set interval_ to zero so we don't keep resetting it every read? 
+        // No, if it's repeating, it stays repeating.
+        // But wait, if we just set it to repeating, it will fire every X ns from NOW.
+        // There will be skew.
+        // Ideally we wouldn't re-arm if it's already repeating.
+        // But we transitioned from OneShot (initial) to Repeating (interval).
+        // Since we can't easily query the state, and we want to switch modes...
+        // We can check user_data or flags?
+        // Simpler: Just rely on the fact that SetTime calls force a reset anyway.
+        // So we only transition ONCE from initial -> repeating.
+        // But Read() is called multiple times.
+        // We need state to know if we are currently "in initial delay" or "in interval mode".
+        // But wait, SetTime sets ONESHOT.
+        // Read detects fire.
+        // If we simply set REPEATING now, it will continue indefinitely.
+        // So we don't need to re-arm every Read(). Just the first time.
+        // But how do we distinguish first Time vs subsequent?
+        // We can just set it to repeating every time if it was one-shot?
+        // kevent flags return EV_ONESHOT?
+        if (ev.flags & EV_ONESHOT) {
+             // It was the one-shot initial timer. Switch to repeating.
+             int64_t interval_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(interval_).count();
+             struct kevent arm_ev;
+             EV_SET(&arm_ev, 1, EVFILT_TIMER, EV_ADD | EV_ENABLE, NOTE_NSECONDS, interval_ns, NULL);
+             ABSL_PCHECK(kevent(fd_, &arm_ev, 1, NULL, 0, NULL) == 0);
+        }
+    }
+    
+    return ev.data;
+  }
+
+  int fd() { return fd_; }
 
  private:
-  int read_fd_;
-  int write_fd_;
-  dispatch_source_t timer_source_;
+  int fd_;
+  monotonic_clock::duration interval_ = monotonic_clock::zero();
 };
 }  // namespace
 
