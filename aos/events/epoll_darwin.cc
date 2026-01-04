@@ -179,6 +179,7 @@ EPoll::EPoll() : epoll_fd_(kqueue()) {
     char buf[1];
     ABSL_PCHECK(read(quit_epoll_fd_, &buf[0], 1) == 1);
   });
+  owner_pid_ = getpid();
 }
 
 EPoll::~EPoll() {
@@ -191,7 +192,62 @@ EPoll::~EPoll() {
   close(epoll_fd_);
 }
 
+void EPoll::CheckFork() {
+  if (owner_pid_ == getpid()) {
+    return;
+  }
+  owner_pid_ = getpid();
+  epoll_fd_ = kqueue();
+  ABSL_PCHECK(epoll_fd_ > 0);
+
+  // Set CLOEXEC on kqueue fd.
+  int flags = fcntl(epoll_fd_, F_GETFD);
+  ABSL_PCHECK(flags != -1);
+  ABSL_PCHECK(fcntl(epoll_fd_, F_SETFD, flags | FD_CLOEXEC) == 0);
+
+  for (const auto &event_data : fns_) {
+    if (!event_data) {
+      continue;
+    }
+    uint32_t new_events = event_data->events;
+    // Replay logic from DoEpollCtl but forcing registration.
+    
+    // Handle Read
+    bool new_in = (new_events & (kIn | kPri)) || (new_events & kErr);
+    if (new_in) {
+      struct kevent ev;
+      int flags = EV_ADD | EV_ENABLE;
+      if (!(new_events & (kIn | kPri)) && (new_events & kErr)) {
+        flags |= EV_CLEAR;
+      }
+      EV_SET(&ev, event_data->fd, EVFILT_READ, flags, 0, 0, event_data.get());
+       if (kevent(epoll_fd_, &ev, 1, NULL, 0, NULL) == -1) {
+        if (new_in && (new_events & (kIn | kPri))) {
+          ABSL_PCHECK(false) << ": Failed to update READ events for fd " << event_data->fd;
+        }
+      }
+    }
+
+    // Handle Write
+    bool new_out = (new_events & kOut) || (new_events & kErr);
+    if (new_out) {
+      struct kevent ev;
+      int flags = EV_ADD | EV_ENABLE;
+      if (!(new_events & kOut) && (new_events & kErr)) {
+         flags |= EV_CLEAR;
+      }
+      EV_SET(&ev, event_data->fd, EVFILT_WRITE, flags, 0, 0, event_data.get());
+      if (kevent(epoll_fd_, &ev, 1, NULL, 0, NULL) == -1) {
+         if (new_out && (new_events & kOut)) {
+           ABSL_PCHECK(false) << ": Failed to update WRITE events for fd " << event_data->fd;
+         }
+      }
+    }
+  }
+}
+
 bool EPoll::Poll(bool block) {
+  CheckFork();
   for (const std::function<void()> &function : before_epoll_wait_functions_) {
     function();
   }
@@ -249,6 +305,7 @@ bool EPoll::Poll(bool block) {
 }
 
 void EPoll::DoEpollCtl(EventData *event_data, const uint32_t new_events) {
+  CheckFork();
   const uint32_t old_events = event_data->events;
   if (old_events == new_events) {
     return;
@@ -310,6 +367,7 @@ void EPoll::DoEpollCtl(EventData *event_data, const uint32_t new_events) {
 }
 
 void EPoll::DeleteFdFromEpoll(int fd) {
+  CheckFork();
   // Best effort delete both filters.
   struct kevent events[2];
   int n = 0;

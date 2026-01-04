@@ -196,6 +196,11 @@ class EPoll {
   // Pipe pair for handling quit.
   int quit_signal_fd_;
   int quit_epoll_fd_;
+#if defined(__APPLE__)
+  pid_t owner_pid_;
+  void CheckFork();
+#endif
+
 
   std::vector<std::function<void()>> before_epoll_wait_functions_;
 };
