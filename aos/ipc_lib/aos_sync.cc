@@ -285,12 +285,6 @@ inline int sys_futex_wake(aos_futex *addr1, int val1) {
     return 1;
   } else {
     __ulock_wake(UL_COMPARE_AND_WAIT | ULF_WAKE_ALL, addr1, 0);
-    return val1; // We don't know exact number woken, but returning requested is usually fine or ignored.
-                 // Actually futex returns number woken. ulock doesn't tell us.
-                 // aos code typically checks failure (<0).
-                 // The implementation returns 1 in the old code.
-                 // Let's return val1 or 1?
-                 // Old code returned 1.
     return 1;
   }
 }
