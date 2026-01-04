@@ -899,6 +899,9 @@ inline int mutex_do_get(aos_mutex *m, bool signals_fail,
     }
 
     uint32_t v = __atomic_load_n(&m->futex, __ATOMIC_ACQUIRE);
+    if ((v & FUTEX_TID_MASK) == tid) {
+      ABSL_LOG(FATAL) << "multiple lock of " << m << " by " << tid;
+    }
     if (v == 0) continue;
 
     if (!(v & FUTEX_WAITERS)) {
