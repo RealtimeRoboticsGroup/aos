@@ -229,8 +229,21 @@ int os_sync_wake_by_address_any(void *addr, size_t size, uint32_t flags);
 int os_sync_wake_by_address_all(void *addr, size_t size, uint32_t flags);
 }
 
-inline int sys_futex_wait(int, aos_futex *addr1, int val1,
+inline int sys_futex_wait(int op, aos_futex *addr1, int val1,
                           const struct timespec *timeout) {
+  if (op == FUTEX_TRYLOCK_PI) {
+    uint32_t tid = get_tid();
+    uint32_t val = __atomic_load_n(addr1, __ATOMIC_ACQUIRE);
+    if ((val & FUTEX_TID_MASK) == 0) {
+      uint32_t new_val = tid;
+      if (val & FUTEX_OWNER_DIED) new_val |= FUTEX_OWNER_DIED;
+      if (val & FUTEX_WAITERS) new_val |= FUTEX_WAITERS;
+      if (compare_and_swap(addr1, val, new_val)) {
+        return 0;
+      }
+    }
+    return -EWOULDBLOCK;
+  }
   uint64_t timeout_ns = 0;
   if (timeout != nullptr) {
     timeout_ns = timeout->tv_sec * 1000000000UL + timeout->tv_nsec;
