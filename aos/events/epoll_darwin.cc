@@ -15,6 +15,7 @@
 
 namespace aos::internal {
 
+namespace {
 class MacTimerFd {
  public:
   MacTimerFd() {
