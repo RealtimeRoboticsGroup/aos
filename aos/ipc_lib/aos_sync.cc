@@ -647,6 +647,9 @@ inline int sys_futex_wait(int op, aos_futex *addr1, int val1,
   }
 
   uint32_t flags = IsMemShared(addr1) ? OS_SYNC_WAIT_ON_ADDRESS_SHARED : 0;
+  // printf("sys_futex_wait(%p, %d, timeout) shared=%d flags=%d\n", addr1, val1, IsMemShared(addr1), flags);
+  fprintf(stderr, "sys_futex_wait(%p, %d, %s) shared=%d flags=%d\n", addr1, val1, timeout ? "yes" : "no", IsMemShared(addr1), flags);
+  
   int ret;
   if (timeout != nullptr) {
      ret = os_sync_wait_on_address_with_timeout(
