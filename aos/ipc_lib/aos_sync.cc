@@ -927,8 +927,7 @@ inline int mutex_do_get(aos_mutex *m, bool signals_fail,
       if (v & FUTEX_WAITERS) new_val |= FUTEX_WAITERS;
 
       if (compare_and_swap(&m->futex, v, new_val)) {
-        lock_pthread_mutex(m);
-        return 0;
+        return mutex_finish_lock(m);
       }
       // Retry if CAS failed.
       continue;
