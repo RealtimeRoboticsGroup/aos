@@ -533,7 +533,7 @@
     },
     "//tools/cpp:extensions.bzl%dev_toolchains_extension": {
       "general": {
-        "bzlTransitiveDigest": "WuRZ7PRLBexTqtzIPgPeOkAyPnbXidjXJ95fFyPRXRA=",
+        "bzlTransitiveDigest": "vv2NZY1qn+jfgNPGgEWQ9egy12pmLwWMXzp2Diyzdmo=",
         "usagesDigest": "lLLJpwFDW4jsRyag0p47iIByB/3D75KpYBRl4SjoPYo=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -582,7 +582,7 @@
     },
     "//tools/cpp:extensions.bzl%llvm_toolchain_extension": {
       "general": {
-        "bzlTransitiveDigest": "WuRZ7PRLBexTqtzIPgPeOkAyPnbXidjXJ95fFyPRXRA=",
+        "bzlTransitiveDigest": "vv2NZY1qn+jfgNPGgEWQ9egy12pmLwWMXzp2Diyzdmo=",
         "usagesDigest": "BbuCooWESKfKJEQTjlyiuF//9VjiRAx8bsw+K0vbzNY=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -710,22 +710,12 @@
     },
     "//tools/frc:extensions.bzl%frc_deps_extension": {
       "general": {
-        "bzlTransitiveDigest": "+JOLloLeIMEj6mWBkMct+RY6ByMZo9wFOY/p/Nydyco=",
+        "bzlTransitiveDigest": "32ZM0gg1tkscymU8yfrNswAG1VumlDNBK8gkKtwMvck=",
         "usagesDigest": "LNojzjbeMVSfZXgWCJWiq1Cjot/rHzz5Rzf/cq8saR4=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
         "generatedRepoSpecs": {
-          "sample_logfile": {
-            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_file",
-            "attributes": {
-              "downloaded_file_path": "log.fbs",
-              "sha256": "45d1d19fb82786c476d3f21a8d62742abaeeedf4c16a00ec37ae350dcb61f1fc",
-              "urls": [
-                "https://realtimeroboticsgroup.org/build-dependencies/small_sample_logfile2.fbs"
-              ]
-            }
-          },
           "com_github_foxglove_mcap_mcap": {
             "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_file",
             "attributes": {
@@ -1188,31 +1178,11 @@
     "@@aspect_rules_ts+//ts:extensions.bzl%ext": {
       "general": {
         "bzlTransitiveDigest": "l0y/rFY9e6PRJzN9/6ytBRu/W8B64s5Nr/+xMuE47Qo=",
-        "usagesDigest": "f2BQppgg47PVyK5VQUyMUMc8EObSfNXLXviCpGuXDh4=",
-        "recordedFileInputs": {
-          "@@//package.json": "22ea6786b1941d1ae192ff21d147a21e149c8e95bf67351c7278b789ebf431e6"
-        },
+        "usagesDigest": "iAF20EDJHZ5Ap1+aRW1bX3h0vwr4P4sdDGnbfAuceIc=",
+        "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
-        "generatedRepoSpecs": {
-          "npm_typescript": {
-            "repoRuleId": "@@aspect_rules_ts+//ts/private:npm_repositories.bzl%http_archive_version",
-            "attributes": {
-              "bzlmod": true,
-              "version": "",
-              "version_from": "@@//:package.json",
-              "integrity": "",
-              "build_file": "@@aspect_rules_ts+//ts:BUILD.typescript",
-              "build_file_substitutions": {
-                "bazel_worker_version": "5.4.2",
-                "google_protobuf_version": "3.20.1"
-              },
-              "urls": [
-                "https://registry.npmjs.org/typescript/-/typescript-{}.tgz"
-              ]
-            }
-          }
-        },
+        "generatedRepoSpecs": {},
         "recordedRepoMappingEntries": [
           [
             "aspect_rules_ts+",

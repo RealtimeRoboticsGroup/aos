@@ -1,5 +1,5 @@
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-load("//:repositories_internal.bzl", "april_tag_test_image_repo", "apriltag_test_bfbs_images_repo", "arm_frc_linux_gnueabi_repo_repo", "calibrate_multi_cameras_data_repo", "com_github_foxglove_mcap_mcap_repo", "com_github_nvidia_cccl_repo", "coral_image_thriftycam_2025_repo", "drivetrain_replay_repo", "frc2025_field_map_welded_repo", "intrinsic_calibration_test_images_repo", "orin_capture_24_04_repo", "orin_capture_24_04_side_repo", "orin_image_apriltag_repo", "orin_large_image_apriltag_repo", "sample_logfile_repo", "superstructure_replay_repo")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
+load("//:repositories_internal.bzl", "april_tag_test_image_repo", "apriltag_test_bfbs_images_repo", "arm_frc_linux_gnueabi_repo_repo", "calibrate_multi_cameras_data_repo", "com_github_foxglove_mcap_mcap_repo", "com_github_nvidia_cccl_repo", "coral_image_thriftycam_2025_repo", "drivetrain_replay_repo", "frc2025_field_map_welded_repo", "intrinsic_calibration_test_images_repo", "orin_capture_24_04_repo", "orin_capture_24_04_side_repo", "orin_image_apriltag_repo", "orin_large_image_apriltag_repo", "superstructure_replay_repo")
 
 def _compat_repository_impl(ctx):
     ctx.file("BUILD", ctx.attr.build_file_content)
@@ -271,7 +271,13 @@ alias(
         url = "https://github.com/rawrtc/rawrtc/archive/aa3ae4b247275cc6e69c30613b3a4ba7fdc82d1b.tar.gz",
     )
 
-    sample_logfile_repo()
+
+    http_file(
+        name = "sample_logfile",
+        downloaded_file_path = "log.fbs",
+        sha256 = "45d1d19fb82786c476d3f21a8d62742abaeeedf4c16a00ec37ae350dcb61f1fc",
+        urls = ["https://realtimeroboticsgroup.org/build-dependencies/small_sample_logfile2.fbs"],
+    )
 
     com_github_foxglove_mcap_mcap_repo()
 

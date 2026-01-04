@@ -13,7 +13,11 @@ namespace aos::libc::testing {
 TEST(StrerrorTest, Basic) {
   EXPECT_STREQ("Argument list too long", aos_strerror(E2BIG));
   EXPECT_STREQ("Bad file descriptor", aos_strerror(EBADF));
+#ifdef __APPLE__
+  EXPECT_STREQ("Unknown error: 4021", aos_strerror(4021));
+#else
   EXPECT_STREQ("Unknown error 4021", aos_strerror(4021));
+#endif
 }
 
 // Runs through all errno values and makes sure it gives the same result as
