@@ -143,6 +143,7 @@ extern "C" void AnnotateHappensAfter(const char *file, int line,
 #include <mach/mach.h>
 #include <mach/vm_map.h>
 #include <mach/mach_vm.h>
+#include <os/clock.h>
 #endif
 
 #define FUTEX_WAITERS 0x80000000
