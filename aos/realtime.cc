@@ -972,106 +972,124 @@ zone_default_get(void) {
 	return malloc_default_zone();
 }
 
+void InstallHooks() {
+  if (ABSL_VLOG_IS_ON(1)) {
+    ABSL_RAW_LOG(INFO, "Installing Proxy Malloc Zone");
+  }
+  ABSL_RAW_LOG(INFO, "Installing Proxy Malloc Zone");
+  print_zones();
+
+  // Initialize aos_zone.
+  memset(&aos_zone, 0, sizeof(aos_zone));
+
+  // Version 8 seems standard for modern macOS
+  aos_zone.version = 8;
+  aos_zone.zone_name = "aos_realtime_proxy_zone";
+
+  aos_zone.size = aos_size;
+  aos_zone.malloc = aos_malloc;
+  aos_zone.calloc = aos_calloc;
+  aos_zone.valloc = aos_valloc;
+  aos_zone.free = aos_free;
+  aos_zone.realloc = aos_realloc;
+  aos_zone.destroy = aos_destroy;
+  aos_zone.batch_malloc = aos_batch_malloc;
+  aos_zone.batch_free = aos_batch_free;
+  aos_zone.memalign = aos_memalign;
+  aos_zone.free_definite_size = aos_free_definite_size;
+  aos_zone.pressure_relief = aos_pressure_relief;
+  aos_zone.claimed_address = aos_claimed_address;
+
+  // We need to provide introspection struct even if empty/minimal to avoid
+  // crashes? Copies usually have `introspect` from original. But we are a new
+  // zone.
+  aos_zone.introspect = &aos_introspect;
+  memset(&aos_introspect, 0, sizeof(aos_introspect));
+  aos_introspect.enumerator = aos_enumerator;
+  aos_introspect.good_size = aos_good_size;
+  aos_introspect.check = aos_check;
+  aos_introspect.print = aos_print;
+  aos_introspect.log = aos_log;
+  aos_introspect.force_lock = aos_force_lock;
+  aos_introspect.force_unlock = aos_force_unlock;
+  aos_introspect.statistics = aos_statistics;
+  aos_introspect.zone_locked = aos_zone_locked;
+  aos_introspect.enable_discharge_checking = aos_enable_discharge_checking;
+  aos_introspect.disable_discharge_checking = aos_disable_discharge_checking;
+  aos_introspect.discharge = aos_discharge;
+
+  // Important: To verify `free` works?
+  // If we want `free` hooks, we might need `aos_claimed_address` to return
+  // true? But then `aos_size` needs to work. If we claim it, we MUST be able to
+  // handle it. If we forward `size` to `system_zone`, maybe that works?
+
+  ABSL_RAW_LOG(INFO, "Before register");
+  print_zones();
+  // Register our zone.
+  malloc_zone_register(&aos_zone);
+
+  size_t loops = 0;
+  malloc_zone_t *zone;
+  do {
+    ABSL_RAW_LOG(INFO, "Before unregister system, system %p, default %p",
+                 system_zone, malloc_default_zone());
+    print_zones();
+
+    // Promote to default by making it the "first" zone.
+    // We do this by unregistering the system zone and re-registering it.
+    // This bumps system zone to the end of the list, leaving aos_zone (added
+    // just before) ahead of it.
+    malloc_zone_unregister(system_zone);
+    ABSL_RAW_LOG(INFO, "Before register system, system %p, default %p",
+                 system_zone, malloc_default_zone());
+    print_zones();
+    malloc_zone_register(system_zone);
+    ABSL_RAW_LOG(INFO, "end, system %p, default %p", system_zone,
+                 malloc_default_zone());
+    print_zones();
+
+    zone = zone_default_get();
+
+    ++loops;
+    if (loops > 10) {
+      ABSL_RAW_LOG(FATAL, "Too many loops");
+    }
+  } while (zone != &aos_zone);
+}
+
+void UninstallHooks() { malloc_zone_unregister(&aos_zone); }
+
+void PrepareFork() {
+  if (absl::GetFlag(FLAGS_die_on_malloc)) {
+    UninstallHooks();
+  }
+}
+
+void PostFork() {
+  if (absl::GetFlag(FLAGS_die_on_malloc)) {
+    InstallHooks();
+  }
+}
+
 void RegisterMallocHook() {
   if (absl::GetFlag(FLAGS_die_on_malloc)) {
     static bool registered = false;
     if (registered) return;
     registered = true;
 
-    if (ABSL_VLOG_IS_ON(1)) {
-      ABSL_RAW_LOG(INFO, "Installing Proxy Malloc Zone");
-    }
-      ABSL_RAW_LOG(INFO, "Installing Proxy Malloc Zone");
-print_zones();
-
     // Capture the current default zone.
     system_zone = zone_default_get();
     ABSL_CHECK(system_zone != nullptr) << "Could not get default malloc zone";
 
-    	if (!system_zone->zone_name || strcmp(system_zone->zone_name,
-	    "DefaultMallocZone") != 0) {
-		ABSL_RAW_LOG(FATAL, "Alternative malloc zone registered, %s, aborting", system_zone->zone_name);
-	}
+    if (!system_zone->zone_name ||
+        strcmp(system_zone->zone_name, "DefaultMallocZone") != 0) {
+      ABSL_RAW_LOG(FATAL, "Alternative malloc zone registered, %s, aborting",
+                   system_zone->zone_name);
+    }
 
-    // Initialize aos_zone.
-    memset(&aos_zone, 0, sizeof(aos_zone));
-    
-    // Version 8 seems standard for modern macOS
-    aos_zone.version = 8;
-    aos_zone.zone_name = "aos_realtime_proxy_zone";
-    
-    aos_zone.size = aos_size;
-    aos_zone.malloc = aos_malloc;
-    aos_zone.calloc = aos_calloc;
-    aos_zone.valloc = aos_valloc;
-    aos_zone.free = aos_free;
-    aos_zone.realloc = aos_realloc;
-    aos_zone.destroy = aos_destroy;
-    aos_zone.batch_malloc = aos_batch_malloc;
-    aos_zone.batch_free = aos_batch_free;
-    aos_zone.memalign = aos_memalign;
-    aos_zone.free_definite_size = aos_free_definite_size;
-    aos_zone.pressure_relief = aos_pressure_relief;
-    aos_zone.claimed_address = aos_claimed_address;
-    
-    // We need to provide introspection struct even if empty/minimal to avoid crashes?
-    // Copies usually have `introspect` from original. 
-    // But we are a new zone.
-    aos_zone.introspect = &aos_introspect;
-    memset(&aos_introspect, 0, sizeof(aos_introspect));
-    aos_introspect.enumerator = aos_enumerator;
-    aos_introspect.good_size = aos_good_size;
-    aos_introspect.check = aos_check;
-    aos_introspect.print = aos_print;
-    aos_introspect.log = aos_log;
-    aos_introspect.force_lock = aos_force_lock;
-    aos_introspect.force_unlock = aos_force_unlock;
-    aos_introspect.statistics = aos_statistics;
-    aos_introspect.zone_locked = aos_zone_locked;
-    aos_introspect.enable_discharge_checking = aos_enable_discharge_checking;
-    aos_introspect.disable_discharge_checking = aos_disable_discharge_checking;
-    aos_introspect.discharge = aos_discharge;
-    
-    // Important: To verify `free` works?
-    // If we want `free` hooks, we might need `aos_claimed_address` to return true?
-    // But then `aos_size` needs to work.
-    // If we claim it, we MUST be able to handle it.
-    // If we forward `size` to `system_zone`, maybe that works?
-    
-    ABSL_RAW_LOG(INFO, "Before register");
-print_zones();
-    // Register our zone.
-    malloc_zone_register(&aos_zone);
+    InstallHooks();
 
-    size_t loops = 0;
-malloc_zone_t *zone;
-do {
-    ABSL_RAW_LOG(INFO, "Before unregister system, system %p, default %p", system_zone, malloc_default_zone());
-print_zones();
-    
-    // Promote to default by making it the "first" zone.
-    // We do this by unregistering the system zone and re-registering it.
-    // This bumps system zone to the end of the list, leaving aos_zone (added just before) ahead of it.
-    malloc_zone_unregister(system_zone);
-    ABSL_RAW_LOG(INFO, "Before register system, system %p, default %p", system_zone, malloc_default_zone());
-print_zones();
-    malloc_zone_register(system_zone);
-    ABSL_RAW_LOG(INFO, "end, system %p, default %p", system_zone, malloc_default_zone());
-print_zones();
-    
-
-zone = zone_default_get();
-
-++loops;
-if (loops > 10) {
-	ABSL_RAW_LOG(FATAL, "Too many loops");
-}
-} while (zone != &aos_zone);
-    // Double check we are default?
-    // malloc_zone_t *new_default = malloc_default_zone();
-    // if (new_default != &aos_zone) { 
-    //   ABSL_RAW_LOG(WARNING, "aos_zone is not default zone!");
-    // }
+    pthread_atfork(PrepareFork, PostFork, PostFork);
   }
 }
 #else
