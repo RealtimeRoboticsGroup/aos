@@ -3,19 +3,15 @@
 
 #include <mutex>
 #include <ostream>
-#include <thread>
 
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 
-#ifdef __linux__
 #include "aos/ipc_lib/aos_sync.h"
-#endif
 #include "aos/macros.h"
 
 namespace aos {
 
-#ifdef __linux__
 // A mutex with the same API and semantics as ::std::mutex, with the addition of
 // methods for checking if the previous owner died and a constexpr default
 // constructor.
@@ -81,38 +77,6 @@ class stl_mutex {
 
   DISALLOW_COPY_AND_ASSIGN(stl_mutex);
 };
-#else
-class stl_mutex {
- public:
-  stl_mutex() {}
-
-  void lock() {
-    mutex_.lock();
-  }
-
-  bool try_lock() {
-    if (mutex_.try_lock()) {
-      return true;
-    }
-    return false;
-  }
-
-  void unlock() {
-    mutex_.unlock();
-  }
-
-  typedef std::mutex *native_handle_type;
-  native_handle_type native_handle() { return &mutex_; }
-
-  bool owner_died() const { return false; }
-  void consistent() {}
-
- private:
-  std::mutex mutex_;
-
-  DISALLOW_COPY_AND_ASSIGN(stl_mutex);
-};
-#endif
 
 // A mutex with the same API and semantics as ::std::recursive_mutex, with the
 // addition of methods for checking if the previous owner died and a constexpr
@@ -122,7 +86,6 @@ class stl_mutex {
 // the lock held, anybody else who takes it will see true for owner_died() until
 // one of them calls consistent(). It is an error to call unlock() or lock()
 // again when owner_died() returns true.
-#ifdef __linux__
 class stl_recursive_mutex {
  public:
   constexpr stl_recursive_mutex() {}
@@ -178,27 +141,6 @@ class stl_recursive_mutex {
 
   DISALLOW_COPY_AND_ASSIGN(stl_recursive_mutex);
 };
-#else
-class stl_recursive_mutex {
- public:
-  stl_recursive_mutex() {}
-
-  void lock() { mutex_.lock(); }
-  bool try_lock() { return mutex_.try_lock(); }
-  void unlock() { mutex_.unlock(); }
-
-  typedef std::recursive_mutex *native_handle_type;
-  native_handle_type native_handle() { return &mutex_; }
-
-  bool owner_died() const { return false; }
-  void consistent() {}
-
- private:
-  std::recursive_mutex mutex_;
-
-  DISALLOW_COPY_AND_ASSIGN(stl_recursive_mutex);
-};
-#endif
 
 // Convenient typedefs for various types of locking objects.
 typedef ::std::lock_guard<stl_mutex> mutex_lock_guard;

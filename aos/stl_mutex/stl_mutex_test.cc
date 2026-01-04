@@ -31,7 +31,6 @@ TEST(StlMutexTest, Basic) {
   mutex.unlock();
 }
 
-#ifdef __linux__
 // Tests that unlocking an unlocked mutex fails.
 TEST_F(StlMutexDeathTest, MultipleUnlock) {
   stl_mutex mutex;
@@ -39,7 +38,6 @@ TEST_F(StlMutexDeathTest, MultipleUnlock) {
   mutex.unlock();
   EXPECT_DEATH(mutex.unlock(), ".*multiple unlock.*");
 }
-#endif
 
 // Tests that locking/unlocking (including recursively) without any blocking
 // works.
@@ -60,7 +58,6 @@ TEST(StlRecursiveMutexTest, Basic) {
   mutex.unlock();
 }
 
-#ifdef __linux__
 // Tests that unlocking an unlocked recursive mutex fails.
 TEST_F(StlRecursiveMutexDeathTest, MultipleUnlock) {
   stl_recursive_mutex mutex;
@@ -68,6 +65,5 @@ TEST_F(StlRecursiveMutexDeathTest, MultipleUnlock) {
   mutex.unlock();
   EXPECT_DEATH(mutex.unlock(), ".*multiple unlock.*");
 }
-#endif
 
 }  // namespace aos::testing

@@ -13,7 +13,6 @@ cc_library(
     linkopts = [
         "-lpthread",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":shm_observers",

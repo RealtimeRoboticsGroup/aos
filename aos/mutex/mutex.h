@@ -6,9 +6,12 @@
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 
-#include "aos/ipc_lib/aos_sync.h"
 #include "aos/macros.h"
 #include "aos/type_traits/type_traits.h"
+#include <mutex>
+#include <thread>
+
+#include "aos/ipc_lib/aos_sync.h"
 
 namespace aos {
 // An abstraction of a mutex that is easy to implement for environments other
@@ -57,6 +60,10 @@ class Mutex {
   // Returns true iff the current task has this mutex locked.
   // This is mainly for IPCRecursiveMutexLocker to use.
   bool OwnedBySelf() const;
+
+  // BasicLockable compatibility for std::condition_variable_any
+  void lock() { (void)Lock(); }
+  void unlock() { Unlock(); }
 
  private:
   aos_mutex impl_;
