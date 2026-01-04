@@ -447,11 +447,11 @@ static malloc_zone_t *zone_default_get(void) {
   }
 
   if (num_zones) {
-    ABSL_RAW_LOG(INFO, "Got %d zones, returning %p", num_zones, zones[0]);
+    //ABSL_RAW_LOG(INFO, "Got %d zones, returning %p", num_zones, zones[0]);
     return zones[0];
   }
 
-  ABSL_RAW_LOG(INFO, "Got 0 zones, returning %p", malloc_default_zone());
+  //ABSL_RAW_LOG(INFO, "Got 0 zones, returning %p", malloc_default_zone());
   return malloc_default_zone();
 }
 
@@ -459,7 +459,7 @@ void InstallHooks() {
   if (ABSL_VLOG_IS_ON(1)) {
     ABSL_RAW_LOG(INFO, "Installing Proxy Malloc Zone");
   }
-  ABSL_RAW_LOG(INFO, "Installing Proxy Malloc Zone");
+  //ABSL_RAW_LOG(INFO, "Installing Proxy Malloc Zone");
   print_zones();
 
   // Initialize aos_zone.
@@ -506,30 +506,30 @@ void InstallHooks() {
   // true? But then `aos_size` needs to work. If we claim it, we MUST be able to
   // handle it. If we forward `size` to `system_zone`, maybe that works?
 
-  ABSL_RAW_LOG(INFO, "Before register");
-  print_zones();
+  //ABSL_RAW_LOG(INFO, "Before register");
+  //print_zones();
   // Register our zone.
   malloc_zone_register(&aos_zone);
 
   size_t loops = 0;
   malloc_zone_t *zone;
   do {
-    ABSL_RAW_LOG(INFO, "Before unregister system, system %p, default %p",
-                 system_zone, malloc_default_zone());
-    print_zones();
+    //ABSL_RAW_LOG(INFO, "Before unregister system, system %p, default %p",
+                 //system_zone, malloc_default_zone());
+    //print_zones();
 
     // Promote to default by making it the "first" zone.
     // We do this by unregistering the system zone and re-registering it.
     // This bumps system zone to the end of the list, leaving aos_zone (added
     // just before) ahead of it.
     malloc_zone_unregister(system_zone);
-    ABSL_RAW_LOG(INFO, "Before register system, system %p, default %p",
-                 system_zone, malloc_default_zone());
-    print_zones();
+    //ABSL_RAW_LOG(INFO, "Before register system, system %p, default %p",
+                 //system_zone, malloc_default_zone());
+    //print_zones();
     malloc_zone_register(system_zone);
-    ABSL_RAW_LOG(INFO, "end, system %p, default %p", system_zone,
-                 malloc_default_zone());
-    print_zones();
+    //ABSL_RAW_LOG(INFO, "end, system %p, default %p", system_zone,
+                 //malloc_default_zone());
+    //print_zones();
 
     zone = zone_default_get();
 
