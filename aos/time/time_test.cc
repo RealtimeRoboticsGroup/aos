@@ -211,6 +211,7 @@ TEST(TimeTest, OperatorStreamRealtimeNegative) {
     EXPECT_EQ(s.str(), "(unrepresentable realtime -9223372036854775808)");
   }
 
+#ifdef __linux__
   {
     const realtime_clock::time_point t =
         realtime_clock::min_time + std::chrono::nanoseconds(999999999);
@@ -221,6 +222,7 @@ TEST(TimeTest, OperatorStreamRealtimeNegative) {
     EXPECT_EQ(s.str(), "1677-09-21_00-12-44.145224191");
     EXPECT_EQ(realtime_clock::FromString(s.str()).value(), t);
   }
+#endif
 }
 
 // Test that ToString works for monotonic and realtime time points.
