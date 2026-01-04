@@ -148,17 +148,10 @@ void TimerFd::SetTime(monotonic_clock::time_point start,
 }
 
 uint64_t TimerFd::Read() {
-  uint64_t buf;
-  ssize_t result = read(fd_, &buf, sizeof(buf));
-  if (result == -1) {
-    if (errno == EAGAIN) {
-      return 0;
-    }
-  }
-  ABSL_PCHECK(result != -1);
-  ABSL_CHECK_EQ(result, static_cast<int>(sizeof(buf)));
-
-  return buf;
+  absl::MutexLock lock(&kTimerMapMutex);
+  auto it = kTimerMap.find(fd_);
+  ABSL_CHECK(it != kTimerMap.end());
+  return it->second->Read();
 }
 
 EPoll::EPoll() : epoll_fd_(kqueue()) {
