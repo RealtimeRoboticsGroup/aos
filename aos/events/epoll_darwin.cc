@@ -1,6 +1,7 @@
 #include <dispatch/dispatch.h>
 #include <fcntl.h>
 #include <sys/event.h>
+#include <sys/socket.h>
 #include <unistd.h>
 
 #include <map>
@@ -19,9 +20,12 @@ class MacTimerFd {
  public:
   MacTimerFd() {
     int pipefd[2];
-    ABSL_PCHECK(pipe(pipefd) == 0);
+    ABSL_PCHECK(socketpair(AF_UNIX, SOCK_STREAM, 0, pipefd) == 0);
     ABSL_PCHECK(fcntl(pipefd[0], F_SETFL, O_NONBLOCK) == 0);
     ABSL_PCHECK(fcntl(pipefd[1], F_SETFL, O_NONBLOCK) == 0);
+    int on = 1;
+    ABSL_PCHECK(setsockopt(pipefd[1], SOL_SOCKET, SO_NOSIGPIPE, &on,
+                           sizeof(on)) == 0);
     read_fd_ = pipefd[0];
     write_fd_ = pipefd[1];
 
