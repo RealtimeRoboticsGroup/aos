@@ -279,7 +279,7 @@ TEST_F(LoggerDeathTest, ExtraStop) {
   const ::std::string base_name = tmpdir + "/logfile";
   const ::std::string config =
       absl::StrCat(base_name, kSingleConfigSha256, ".bfbs");
-  const ::std::string logfile = base_name + ".part0.bfbs";
+  const ::std::string logfile = base_name + "_data.part0.bfbs";
   // Remove it.
   unlink(config.c_str());
   unlink(logfile.c_str());
