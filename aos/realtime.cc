@@ -194,7 +194,7 @@ static pthread_once_t kIsRealtimeKeyOnce = PTHREAD_ONCE_INIT;
 
 static void MakeIsRealtimeKey() {
   // Destructor is null because we store a simple value (casted to void*).
-  PCHECK(pthread_key_create(&kIsRealtimeKey, nullptr) == 0);
+  ABSL_PCHECK(pthread_key_create(&kIsRealtimeKey, nullptr) == 0);
 }
 
 bool GetIsRealtime() {
@@ -205,7 +205,7 @@ bool GetIsRealtime() {
 
 void SetIsRealtime(bool realtime) {
   pthread_once(&kIsRealtimeKeyOnce, MakeIsRealtimeKey);
-  PCHECK(pthread_setspecific(
+  ABSL_PCHECK(pthread_setspecific(
              kIsRealtimeKey,
              reinterpret_cast<void *>(static_cast<uintptr_t>(realtime))) == 0);
 }
