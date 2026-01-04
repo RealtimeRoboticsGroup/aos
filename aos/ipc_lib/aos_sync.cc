@@ -920,6 +920,12 @@ inline int mutex_do_get(aos_mutex *m, bool signals_fail,
   }
 
   while (true) {
+    uint32_t v = __atomic_load_n(&m->futex, __ATOMIC_ACQUIRE);
+
+    if ((v & FUTEX_TID_MASK) == tid) {
+      ABSL_LOG(FATAL) << "multiple lock of " << m << " by " << tid;
+    }
+
     // If it's unlocked (0) or marked as owner died (but no owner TID), we can take it.
     if ((v & FUTEX_TID_MASK) == 0) {
       uint32_t new_val = tid;
