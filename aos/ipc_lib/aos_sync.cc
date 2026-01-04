@@ -230,39 +230,7 @@ int os_sync_wake_by_address_all(void *addr, size_t size, uint32_t flags);
 }
 
 inline int sys_futex_wait(int op, aos_futex *addr1, int val1,
-                          const struct timespec *timeout) {
-  if (op == FUTEX_TRYLOCK_PI) {
-    uint32_t tid = get_tid();
-    uint32_t val = __atomic_load_n(addr1, __ATOMIC_ACQUIRE);
-    if ((val & FUTEX_TID_MASK) == 0) {
-      uint32_t new_val = tid;
-      if (val & FUTEX_OWNER_DIED) new_val |= FUTEX_OWNER_DIED;
-      if (val & FUTEX_WAITERS) new_val |= FUTEX_WAITERS;
-      if (compare_and_swap(addr1, val, new_val)) {
-        return 0;
-      }
-    }
-    return -EWOULDBLOCK;
-  }
-  uint64_t timeout_ns = 0;
-  if (timeout != nullptr) {
-    timeout_ns = timeout->tv_sec * 1000000000UL + timeout->tv_nsec;
-  }
-
-  int ret;
-  if (timeout != nullptr) {
-     ret = os_sync_wait_on_address_with_timeout(
-        addr1, val1, sizeof(*addr1), OS_SYNC_WAIT_ON_ADDRESS_SHARED,
-        OS_CLOCK_MONOTONIC, timeout_ns);
-  } else {
-     ret = os_sync_wait_on_address(
-        addr1, val1, sizeof(*addr1), OS_SYNC_WAIT_ON_ADDRESS_SHARED);
-  }
-  
-  if (ret == 0) return 0;
-  // If we can't map errno easily, just return something generic or try to verify.
-  return -1; 
-}
+                          const struct timespec *timeout);
 #endif
 
 #ifdef __linux__
@@ -610,6 +578,44 @@ inline uint32_t get_tid() {
   static_assert(sizeof(my_tid) <= sizeof(uint32_t), "pid_t is too big");
   return static_cast<uint32_t>(my_tid);
 }
+
+#ifndef __linux__
+inline int sys_futex_wait(int op, aos_futex *addr1, int val1,
+                          const struct timespec *timeout) {
+  if (op == FUTEX_TRYLOCK_PI) {
+    uint32_t tid = get_tid();
+    uint32_t val = __atomic_load_n(addr1, __ATOMIC_ACQUIRE);
+    if ((val & FUTEX_TID_MASK) == 0) {
+      uint32_t new_val = tid;
+      if (val & FUTEX_OWNER_DIED) new_val |= FUTEX_OWNER_DIED;
+      if (val & FUTEX_WAITERS) new_val |= FUTEX_WAITERS;
+      if (compare_and_swap(addr1, val, new_val)) {
+        return 0;
+      }
+    }
+    return -EWOULDBLOCK;
+  }
+
+  uint64_t timeout_ns = 0;
+  if (timeout != nullptr) {
+    timeout_ns = timeout->tv_sec * 1000000000UL + timeout->tv_nsec;
+  }
+
+  int ret;
+  if (timeout != nullptr) {
+     ret = os_sync_wait_on_address_with_timeout(
+        addr1, val1, sizeof(*addr1), OS_SYNC_WAIT_ON_ADDRESS_SHARED,
+        OS_CLOCK_MONOTONIC, timeout_ns);
+  } else {
+     ret = os_sync_wait_on_address(
+        addr1, val1, sizeof(*addr1), OS_SYNC_WAIT_ON_ADDRESS_SHARED);
+  }
+  
+  if (ret == 0) return 0;
+  // If we can't map errno easily, just return something generic or try to verify.
+  return -1; 
+}
+#endif
 
 // Contains all of the stuff for dealing with the robust list. Nothing outside
 // this namespace should touch anything inside it except Init, Adder, and
