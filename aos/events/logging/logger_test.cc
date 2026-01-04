@@ -22,6 +22,7 @@
 #include "aos/testing/ping_pong/pong_lib.h"
 #include "aos/testing/tmpdir.h"
 #include "aos/util/file.h"
+#include "aos/sha256.h"
 
 #ifdef LZMA
 #include "aos/events/logging/lzma_encoder.h"
@@ -46,7 +47,13 @@ class LoggerTest : public ::testing::Test {
         ping_event_loop_(event_loop_factory_.MakeEventLoop("ping")),
         ping_(ping_event_loop_.get()),
         pong_event_loop_(event_loop_factory_.MakeEventLoop("pong")),
-        pong_(pong_event_loop_.get()) {}
+        pong_(pong_event_loop_.get()) {
+    std::string expected_sha256 = aos::Sha256(
+        aos::logger::PackConfiguration(&config_.message()).span());
+    EXPECT_EQ(kSingleConfigSha256, expected_sha256)
+        << "kSingleConfigSha256 in logger_test.cc is out of date.  Please "
+           "update it to match pingpong_config.json.";
+  }
 
   // Config and factory.
   aos::FlatbufferDetachedBuffer<aos::Configuration> config_;

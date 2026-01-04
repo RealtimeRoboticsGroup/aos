@@ -991,6 +991,7 @@ cc_test(
         "//aos/testing:tmpdir",
         "//aos/testing/ping_pong:ping_lib",
         "//aos/testing/ping_pong:pong_lib",
+        "//aos:sha256",
     ],
 )
 
