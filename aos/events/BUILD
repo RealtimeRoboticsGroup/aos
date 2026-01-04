@@ -580,7 +580,6 @@ autocxx_library(
 cc_test(
     name = "event_scheduler_test",
     srcs = ["event_scheduler_test.cc"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":simulated_event_loop",
         "//aos/network:testing_time_converter",
