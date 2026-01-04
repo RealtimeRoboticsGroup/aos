@@ -281,7 +281,7 @@ constexpr realtime_clock::time_point realtime_clock::min_time;
 constexpr realtime_clock::time_point realtime_clock::max_time;
 
 monotonic_clock::time_point monotonic_clock::now() noexcept {
-#if defined(__linux__) || defined(__APPLE__)
+#if defined(__linux__)
   struct timespec current_time;
   ABSL_PCHECK(clock_gettime(CLOCK_MONOTONIC, &current_time) == 0)
       << ": clock_gettime(" << static_cast<uintmax_t>(CLOCK_MONOTONIC) << ", "
@@ -289,8 +289,19 @@ monotonic_clock::time_point monotonic_clock::now() noexcept {
 
   return time_point(::std::chrono::seconds(current_time.tv_sec) +
                     ::std::chrono::nanoseconds(current_time.tv_nsec));
+#elif defined(__APPLE__)
+  static mach_timebase_info_data_t timebase_info = []() {
+    mach_timebase_info_data_t info;
+    mach_timebase_info(&info);
+    return info;
+  }();
 
-#else  // __linux__
+  uint64_t current_ticks = mach_absolute_time();
+  uint64_t current_nanos = static_cast<uint64_t>(
+      (absl::uint128(current_ticks) * timebase_info.numer) /
+      timebase_info.denom);
+  return time_point(::std::chrono::nanoseconds(current_nanos));
+#else  // __linux__ || __APPLE__
 
   __disable_irq();
   const uint32_t current_counter = SYST_CVR;
