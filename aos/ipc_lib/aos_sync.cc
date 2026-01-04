@@ -652,22 +652,20 @@ inline int sys_futex_wait(int op, aos_futex *addr1, int val1,
   int ret;
   if (timeout != nullptr) {
      uint64_t timeout_ns = timeout->tv_sec * 1000000000UL + timeout->tv_nsec;
-     struct timespec now;
-     clock_gettime(CLOCK_MONOTONIC, &now);
-     uint64_t now_ns = now.tv_sec * 1000000000UL + now.tv_nsec;
-     uint64_t deadline_ns = now_ns + timeout_ns;
-     
-     ret = os_sync_wait_on_address_with_deadline(
+     // Note: OS_CLOCK_MACH_ABSOLUTE_TIME is 32.
+     ret = os_sync_wait_on_address_with_timeout(
         addr1, val1, sizeof(*addr1), flags,
-        CLOCK_MONOTONIC, deadline_ns);
+        OS_CLOCK_MACH_ABSOLUTE_TIME, timeout_ns);
   } else {
      ret = os_sync_wait_on_address(
         addr1, val1, sizeof(*addr1), flags);
   }
   
   if (ret == 0) return 0;
-  // If we can't map errno easily, just return something generic or try to verify.
-  return -1; 
+  // If ETIMEDOUT (POSIX) is returned, os_sync usually uses its own or standard errno.
+  // We assume ret is positive errno.
+  if (ret == ETIMEDOUT) return -ETIMEDOUT;
+  return -ret;
 }
 #endif
 
