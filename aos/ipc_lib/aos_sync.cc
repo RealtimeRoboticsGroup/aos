@@ -450,8 +450,8 @@ inline int sys_futex_unlock_pi(aos_futex *addr1) {
     // Just wake as we are not using PI locks on macOS.
     // Also clear the lock value because mutex_unlock expects us to do it if it called us.
     __atomic_store_n(addr1, 0, __ATOMIC_RELEASE);
-    uint32_t op_code = IsMemShared(addr1) ? UL_COMPARE_AND_WAIT_SHARED : UL_COMPARE_AND_WAIT;
-    __ulock_wake(op_code, addr1, 0);
+    uint32_t flags = IsMemShared(addr1) ? OS_SYNC_WAIT_ON_ADDRESS_SHARED : 0;
+    os_sync_wake_by_address_any(addr1, sizeof(*addr1), flags);
     return 0;
 }
 
