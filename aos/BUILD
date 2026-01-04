@@ -273,6 +273,7 @@ cc_library(
     deps = [
         ":sanitizers",
         ":uuid",
+        "//aos/ipc_lib:aos_sync",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
     ],

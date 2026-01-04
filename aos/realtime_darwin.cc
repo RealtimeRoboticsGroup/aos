@@ -12,6 +12,7 @@
 #include "absl/log/absl_log.h"
 
 #include "aos/uuid.h"
+#include "aos/ipc_lib/aos_sync.h"
 
 ABSL_DECLARE_FLAG(bool, die_on_malloc);
 ABSL_DECLARE_FLAG(bool, skip_realtime_scheduler);
@@ -151,6 +152,14 @@ void SetCurrentThreadRealtimePriority(int priority, int scheduling_policy) {
   // Ensure that we won't get expensive reads of /dev/random when the realtime
   // scheduler is running.
   UUID::Random();
+
+  // Force initialization of the aos_sync primitives on this thread so that we
+  // don't take a malloc inside lock/unlock later.
+  {
+    static aos_mutex kInitMutex = {0};
+    mutex_lock(&kInitMutex);
+    mutex_unlock(&kInitMutex);
+  }
 
   if (absl::GetFlag(FLAGS_skip_realtime_scheduler)) {
     ABSL_LOG(WARNING)
