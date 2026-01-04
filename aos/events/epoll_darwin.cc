@@ -215,10 +215,14 @@ bool EPoll::Poll(bool block) {
   EventData *const event_data = (EventData *)event.udata;
   uint32_t events = 0;
   if (event.filter == EVFILT_READ) {
-    events |= kIn;
+    if (event_data->events & (kIn | kPri)) {
+      events |= kIn;
+    }
   }
   if (event.filter == EVFILT_WRITE) {
-    events |= kOut;
+    if (event_data->events & kOut) {
+      events |= kOut;
+    }
     // If the writer side of the pipe is closed (broken pipe), EV_EOF is set.
     // This corresponds to EPOLLERR/EPOLLHUP on Linux.
     if (event.flags & EV_EOF) {
@@ -227,6 +231,14 @@ bool EPoll::Poll(bool block) {
   }
   if (event.flags & EV_ERROR) {
     events |= kErr;
+  }
+  
+  // If we found an EOF/Error, make sure we report it if kErr was requested,
+  // regardless of which filter triggered it.
+  if ((event.flags & EV_EOF) || (event.flags & EV_ERROR)) {
+    if (event_data->events & kErr) {
+       events |= kErr;
+    }
   }
 
   event_data->DoCallbacks(events);
@@ -240,36 +252,57 @@ void EPoll::DoEpollCtl(EventData *event_data, const uint32_t new_events) {
   }
   event_data->events = new_events;
 
-  struct kevent events[2];
-  int n = 0;
-
   // Handle Read
-  bool old_in = old_events & (kIn | kPri);
-  bool new_in = new_events & (kIn | kPri);
+  // We enable READ if the user wants In/Pri OR if they want Error (to catch EOFs).
+  bool old_in = (old_events & (kIn | kPri)) || (old_events & kErr);
+  bool new_in = (new_events & (kIn | kPri)) || (new_events & kErr);
   if (old_in != new_in) {
+    struct kevent ev;
     if (new_in) {
-      EV_SET(&events[n++], event_data->fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0,
-             0, event_data);
+      // If we only want Error, use EV_CLEAR (Edge Triggered) to avoid continuous
+      // "readable" events if we aren't draining the buffer.
+      int flags = EV_ADD | EV_ENABLE;
+      if (!(new_events & (kIn | kPri)) && (new_events & kErr)) {
+        flags |= EV_CLEAR;
+      }
+      EV_SET(&ev, event_data->fd, EVFILT_READ, flags, 0, 0, event_data);
     } else {
-      EV_SET(&events[n++], event_data->fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
+      EV_SET(&ev, event_data->fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
+    }
+    
+    // We only strictly require success if the user *explicitly* requested READ/PRI.
+    // If we are just enabling it for kErr, we tolerate failure (e.g. write-only FD).
+    if (kevent(epoll_fd_, &ev, 1, NULL, 0, NULL) == -1) {
+      if (new_in && (new_events & (kIn | kPri))) {
+        ABSL_PCHECK(false) << ": Failed to update READ events for fd " << event_data->fd;
+      }
     }
   }
 
   // Handle Write
-  bool old_out = old_events & kOut;
-  bool new_out = new_events & kOut;
+  // We enable WRITE if user wants Out OR if they want Error (to catch broken pipes).
+  bool old_out = (old_events & kOut) || (old_events & kErr);
+  bool new_out = (new_events & kOut) || (new_events & kErr);
   if (old_out != new_out) {
+    struct kevent ev;
     if (new_out) {
-      EV_SET(&events[n++], event_data->fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0,
-             0, event_data);
+      // If we only want Error, use EV_CLEAR (Edge Triggered) to avoid continuous
+      // "writable" events.
+      int flags = EV_ADD | EV_ENABLE;
+      if (!(new_events & kOut) && (new_events & kErr)) {
+         flags |= EV_CLEAR;
+      }
+      EV_SET(&ev, event_data->fd, EVFILT_WRITE, flags, 0, 0, event_data);
     } else {
-      EV_SET(&events[n++], event_data->fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
+      EV_SET(&ev, event_data->fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
     }
-  }
 
-  if (n > 0) {
-    ABSL_PCHECK(kevent(epoll_fd_, events, n, NULL, 0, NULL) != -1)
-        << ": Failed to update events for fd " << event_data->fd;
+    // Only strictly require success if kOut explictly requested.
+    if (kevent(epoll_fd_, &ev, 1, NULL, 0, NULL) == -1) {
+       if (new_out && (new_events & kOut)) {
+         ABSL_PCHECK(false) << ": Failed to update WRITE events for fd " << event_data->fd;
+       }
+    }
   }
 }
 
