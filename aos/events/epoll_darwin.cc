@@ -24,8 +24,7 @@ class MacTimerFd {
     ABSL_PCHECK(fcntl(pipefd[1], F_SETFL, O_NONBLOCK) == 0);
     read_fd_ = pipefd[0];
     write_fd_ = pipefd[1];
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
+
 
     // We can use the global queue for the timer.
     timer_source_ = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0,
@@ -72,11 +71,7 @@ class MacTimerFd {
                                interval)
                                .count();
 
-    struct timespec now_ts;
-    clock_gettime(CLOCK_MONOTONIC, &now_ts);
-    monotonic_clock::time_point now =
-        monotonic_clock::time_point(std::chrono::seconds(now_ts.tv_sec) +
-                                    std::chrono::nanoseconds(now_ts.tv_nsec));
+    monotonic_clock::time_point now = monotonic_clock::now();
 
     int64_t delay_ns = 0;
     if (start > now) {
