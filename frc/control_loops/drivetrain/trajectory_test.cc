@@ -7,7 +7,6 @@
 #include "absl/flags/flag.h"
 #include "gtest/gtest.h"
 
-#include "aos/testing/test_shm.h"
 #include "frc/control_loops/drivetrain/drivetrain_test_lib.h"
 #if defined(SUPPORT_PLOT)
 #include "third_party/matplotlib-cpp/matplotlibcpp.h"
@@ -54,8 +53,6 @@ void NullTrajectoryModificationFunction(Trajectory *) {}
 class ParameterizedSplineTest
     : public ::testing::TestWithParam<SplineTestParams> {
  public:
-  ::aos::testing::TestSharedMemory shm_;
-
   const DistanceSpline *distance_spline_;
   ::std::unique_ptr<Trajectory> trajectory_;
   std::unique_ptr<aos::FlatbufferDetachedBuffer<fb::Trajectory>>

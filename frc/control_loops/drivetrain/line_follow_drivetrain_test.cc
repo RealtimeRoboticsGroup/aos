@@ -6,7 +6,6 @@
 #include "gtest/gtest.h"
 #include "third_party/matplotlib-cpp/matplotlibcpp.h"
 
-#include "aos/testing/test_shm.h"
 #include "frc/control_loops/drivetrain/drivetrain_test_lib.h"
 #include "frc/control_loops/drivetrain/trajectory.h"
 
@@ -19,8 +18,6 @@ namespace frc::control_loops::drivetrain::testing {
 class LineFollowDrivetrainTest : public ::testing::Test {
  public:
   typedef TypedPose<double> Pose;
-
-  ::aos::testing::TestSharedMemory shm_;
 
   LineFollowDrivetrainTest()
       : config_(GetTestDrivetrainConfig()),

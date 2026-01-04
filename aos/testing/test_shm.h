@@ -1,20 +1,45 @@
 #ifndef AOS_TESTING_TEST_SHM_H_
 #define AOS_TESTING_TEST_SHM_H_
 
-#include "aos/ipc_lib/shared_mem_types.h"
+#include <memory>
+#include <stdexcept>
 
 namespace aos::testing {
 
-// Manages creating and cleaning up "shared memory" which works within this
-// process and any that it fork(2)s.
-class TestSharedMemory {
+class SharedMemoryBlock {
  public:
-  // Calls EnableTestLogging().
-  TestSharedMemory();
-  ~TestSharedMemory();
+  explicit SharedMemoryBlock(size_t size);
+
+  // Corrected Destructor: Now actually frees the memory
+  ~SharedMemoryBlock();
+
+  // Delete copy constructors
+  SharedMemoryBlock(const SharedMemoryBlock &) = delete;
+  SharedMemoryBlock &operator=(const SharedMemoryBlock &) = delete;
+
+  // Move support
+  SharedMemoryBlock(SharedMemoryBlock &&other) noexcept
+      : addr_(other.addr_), size_(other.size_) {
+    other.addr_ = nullptr;
+    other.size_ = 0;
+  }
+
+  SharedMemoryBlock &operator=(SharedMemoryBlock &&other) noexcept;
+
+  void *get() const { return addr_; }
+  size_t size() const { return size_; }
+
+  template <typename T, typename... Args>
+  T *construct(Args &&...args) {
+    if (sizeof(T) > size_) {
+      throw std::runtime_error("Shared memory block too small for type T");
+    }
+    return new (addr_) T(std::forward<Args>(args)...);
+  }
 
  private:
-  struct aos_core global_core_data_;
+  void *addr_ = nullptr;
+  size_t size_ = 0;
 };
 
 }  // namespace aos::testing

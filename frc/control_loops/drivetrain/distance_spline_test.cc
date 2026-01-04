@@ -6,7 +6,6 @@
 #include "gtest/gtest.h"
 
 #include "aos/flatbuffers.h"
-#include "aos/testing/test_shm.h"
 #if defined(SUPPORT_PLOT)
 #include "third_party/matplotlib-cpp/matplotlibcpp.h"
 #endif
@@ -21,7 +20,6 @@ class ParameterizedDistanceSplineTest
  protected:
   ParameterizedDistanceSplineTest()
       : distance_spline_(::std::vector<Spline>(GetParam())) {}
-  ::aos::testing::TestSharedMemory shm_;
   DistanceSpline distance_spline_;
 };
 

@@ -116,7 +116,6 @@ cc_test(
         ":condition",
         ":die",
         "//aos/ipc_lib:aos_sync",
-        "//aos/ipc_lib:core_lib",
         "//aos/logging",
         "//aos/mutex",
         "//aos/testing:googletest",

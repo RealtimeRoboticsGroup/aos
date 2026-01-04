@@ -324,7 +324,6 @@ cc_test(
         ":trajectory",
         "//aos/testing:googletest",
         "//aos/testing:random_seed",
-        "//aos/testing:test_shm",
     ],
 )
 
@@ -417,7 +416,6 @@ cc_test(
         ":line_follow_drivetrain",
         ":trajectory",
         "//aos/testing:googletest",
-        "//aos/testing:test_shm",
         "//third_party/matplotlib-cpp",
         "@com_google_absl//absl/flags:flag",
     ],
@@ -754,7 +752,6 @@ cc_test(
         ":distance_spline",
         "//aos:flatbuffers",
         "//aos/testing:googletest",
-        "//aos/testing:test_shm",
         "@com_google_absl//absl/flags:flag",
     ] + cpu_select({
         "amd64": [
@@ -834,7 +831,6 @@ cc_test(
         ":drivetrain_test_lib",
         ":trajectory",
         "//aos/testing:googletest",
-        "//aos/testing:test_shm",
     ] + cpu_select({
         "amd64": [
             "//third_party/matplotlib-cpp",

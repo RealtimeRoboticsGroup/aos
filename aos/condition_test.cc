@@ -12,7 +12,6 @@
 
 #include "aos/die.h"
 #include "aos/ipc_lib/aos_sync.h"
-#include "aos/ipc_lib/core_lib.h"
 #include "aos/logging/logging.h"
 #include "aos/macros.h"
 #include "aos/mutex/mutex.h"
@@ -98,13 +97,13 @@ class ConditionTest : public ConditionTestCommon {
   static_assert(shm_ok<Shared>::value,
                 "it's going to get shared between forked processes");
 
-  ConditionTest() : shared_(static_cast<Shared *>(shm_malloc(sizeof(Shared)))) {
+  ConditionTest()
+      : mem_(sizeof(Shared)), shared_(static_cast<Shared *>(mem_.get())) {
     new (shared_) Shared();
   }
   ~ConditionTest() { shared_->~Shared(); }
 
-  ::aos::testing::TestSharedMemory my_shm_;
-
+  SharedMemoryBlock mem_;
   Shared *const shared_;
 
  protected:
@@ -138,7 +137,8 @@ class ConditionTestProcess {
         condition_(condition),
         timeout_(delay_ + timeout),
         child_(-1),
-        shared_(static_cast<Shared *>(shm_malloc(sizeof(Shared)))) {
+        mem_(sizeof(Shared)),
+        shared_(static_cast<Shared *>(mem_.get())) {
     new (shared_) Shared();
   }
   ~ConditionTestProcess() { AOS_CHECK_EQ(child_, -1); }
@@ -258,6 +258,7 @@ class ConditionTestProcess {
 
   pid_t child_;
 
+  SharedMemoryBlock mem_;
   Shared *const shared_;
 
   DISALLOW_COPY_AND_ASSIGN(ConditionTestProcess);

@@ -8,7 +8,6 @@
 #include "gtest/gtest.h"
 
 #include "aos/die.h"
-#include "aos/ipc_lib/core_lib.h"
 #include "aos/logging/implementations.h"
 #include "aos/testing/test_logging.h"
 #include "aos/testing/test_shm.h"
@@ -99,9 +98,8 @@ TEST_F(MutexDeathTest, RepeatLock) {
 // Tests that Lock behaves correctly when the previous owner exits with the lock
 // held (which is the same as dying any other way).
 TEST_F(MutexTest, OwnerDiedDeathLock) {
-  testing::TestSharedMemory my_shm;
   Mutex *mutex =
-      static_cast<Mutex *>(shm_malloc_aligned(sizeof(Mutex), alignof(Mutex)));
+      static_cast<Mutex *>(std::aligned_alloc(alignof(Mutex), sizeof(Mutex)));
   new (mutex) Mutex();
 
   std::thread thread([&]() { ASSERT_FALSE(mutex->Lock()); });
@@ -110,13 +108,13 @@ TEST_F(MutexTest, OwnerDiedDeathLock) {
 
   mutex->Unlock();
   mutex->~Mutex();
+  std::free(mutex);
 }
 
 // Tests that TryLock behaves correctly when the previous owner dies.
 TEST_F(MutexTest, OwnerDiedDeathTryLock) {
-  testing::TestSharedMemory my_shm;
   Mutex *mutex =
-      static_cast<Mutex *>(shm_malloc_aligned(sizeof(Mutex), alignof(Mutex)));
+      static_cast<Mutex *>(std::aligned_alloc(alignof(Mutex), sizeof(Mutex)));
   new (mutex) Mutex();
 
   std::thread thread([&]() { ASSERT_FALSE(mutex->Lock()); });
@@ -125,6 +123,7 @@ TEST_F(MutexTest, OwnerDiedDeathTryLock) {
 
   mutex->Unlock();
   mutex->~Mutex();
+  std::free(mutex);
 }
 
 // TODO(brians): Test owner dying by being SIGKILLed and SIGTERMed.
@@ -233,9 +232,8 @@ TEST_F(MutexLockerTest, Basic) {
 
 // Tests that MutexLocker behaves correctly when the previous owner dies.
 TEST_F(MutexLockerDeathTest, OwnerDied) {
-  testing::TestSharedMemory my_shm;
   Mutex *mutex =
-      static_cast<Mutex *>(shm_malloc_aligned(sizeof(Mutex), alignof(Mutex)));
+      static_cast<Mutex *>(std::aligned_alloc(alignof(Mutex), sizeof(Mutex)));
   new (mutex) Mutex();
 
   EXPECT_DEATH(
@@ -250,6 +248,7 @@ TEST_F(MutexLockerDeathTest, OwnerDied) {
       ".*previous owner of mutex [^ ]+ died.*");
 
   mutex->~Mutex();
+  std::free(mutex);
 }
 
 TEST_F(IPCMutexLockerTest, Basic) {
@@ -302,9 +301,8 @@ TEST_F(IPCRecursiveMutexLockerTest, RecursiveLock) {
 
 // Tests that IPCMutexLocker behaves correctly when the previous owner dies.
 TEST_F(IPCMutexLockerTest, OwnerDied) {
-  testing::TestSharedMemory my_shm;
   Mutex *mutex =
-      static_cast<Mutex *>(shm_malloc_aligned(sizeof(Mutex), alignof(Mutex)));
+      static_cast<Mutex *>(std::aligned_alloc(alignof(Mutex), sizeof(Mutex)));
   new (mutex) Mutex();
 
   std::thread thread([&]() { ASSERT_FALSE(mutex->Lock()); });
@@ -318,6 +316,8 @@ TEST_F(IPCMutexLockerTest, OwnerDied) {
 
   mutex->Unlock();
   mutex->~Mutex();
+
+  std::free(mutex);
 }
 
 }  // namespace aos::testing

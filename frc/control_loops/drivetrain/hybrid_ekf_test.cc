@@ -5,7 +5,6 @@
 #include "gtest/gtest.h"
 
 #include "aos/testing/random_seed.h"
-#include "aos/testing/test_shm.h"
 #include "frc/control_loops/drivetrain/drivetrain_test_lib.h"
 #include "frc/control_loops/drivetrain/trajectory.h"
 
@@ -19,7 +18,6 @@ typedef HybridEkf<>::Input Input;
 
 class HybridEkfTest : public ::testing::Test {
  public:
-  ::aos::testing::TestSharedMemory shm_;
   HybridEkfTest()
       : dt_config_(GetTestDrivetrainConfig()),
         ekf_(dt_config_),

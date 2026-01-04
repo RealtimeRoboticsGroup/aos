@@ -78,7 +78,6 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":test_logging",
-        "//aos/ipc_lib:shared_mem",
         "//aos/logging",
     ],
 )

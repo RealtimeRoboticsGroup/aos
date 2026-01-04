@@ -10,7 +10,6 @@
 #include <string>
 
 #include "aos/die.h"
-#include "aos/ipc_lib/core_lib.h"
 #include "aos/libc/aos_strsignal.h"
 #include "aos/libc/dirname.h"
 #include "aos/logging/logging.h"
@@ -214,9 +213,9 @@ int Main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
-  ::aos::testing::TestSharedMemory my_shm_;
+  aos::testing::SharedMemoryBlock mem(sizeof(Shared));
 
-  Shared *shared = static_cast<Shared *>(shm_malloc(sizeof(Shared)));
+  Shared *shared = static_cast<Shared *>(mem.get());
   new (shared) Shared(monotonic_clock::now() + kTestTime);
 
   if (asprintf(const_cast<char **>(&shared->path), "%s/../tests",

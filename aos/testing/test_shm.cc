@@ -3,35 +3,38 @@
 #include <stddef.h>
 #include <sys/mman.h>
 
-#include "aos/ipc_lib/shared_mem.h"
-#include "aos/logging/logging.h"
-#include "aos/testing/test_logging.h"
-
 namespace aos::testing {
-namespace {
 
-const size_t kCoreSize = 0x100000;
+#if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
+#define MAP_ANONYMOUS MAP_ANON
+#endif
 
-}  // namespace
+SharedMemoryBlock::SharedMemoryBlock(size_t size) : size_(size) {
+  addr_ = mmap(nullptr, size_, PROT_READ | PROT_WRITE,
+               MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
-TestSharedMemory::TestSharedMemory() {
-  global_core = &global_core_data_;
-  global_core->owner = true;
-  // Use mmap(2) manually instead of through malloc(3) so that we can pass
-  // MAP_SHARED which allows forked processes to communicate using the
-  // "shared" memory.
-  void *memory = mmap(NULL, kCoreSize, PROT_READ | PROT_WRITE,
-                      MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-  AOS_CHECK_NE(memory, MAP_FAILED);
-
-  aos_core_use_address_as_shared_mem(memory, kCoreSize);
-
-  ::aos::testing::EnableTestLogging();
+  if (addr_ == MAP_FAILED) {
+    throw std::system_error(errno, std::generic_category(), "mmap failed");
+  }
 }
 
-TestSharedMemory::~TestSharedMemory() {
-  AOS_PCHECK(munmap(global_core->mem_struct, kCoreSize));
-  global_core = NULL;
+// Corrected Destructor: Now actually frees the memory
+SharedMemoryBlock::~SharedMemoryBlock() {
+  if (addr_ != nullptr && addr_ != MAP_FAILED) {
+    munmap(addr_, size_);
+  }
+}
+
+SharedMemoryBlock &SharedMemoryBlock::operator=(
+    SharedMemoryBlock &&other) noexcept {
+  if (this != &other) {
+    if (addr_ != nullptr) munmap(addr_, size_);
+    addr_ = other.addr_;
+    size_ = other.size_;
+    other.addr_ = nullptr;
+    other.size_ = 0;
+  }
+  return *this;
 }
 
 }  // namespace aos::testing
