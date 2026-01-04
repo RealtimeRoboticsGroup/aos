@@ -135,7 +135,7 @@ TEST_F(LoggingDeathTest, Fatal) {
 
 TEST_F(LoggingDeathTest, PCHECK) {
   EXPECT_DEATH(AOS_PCHECK(fprintf(stdin, "nope")),
-               ".*fprintf\\(stdin, \"nope\"\\).*failed.*");
+               ".*fprintf\\((stdin|__stdinp), \"nope\"\\).*failed.*");
 }
 
 TEST_F(LoggingTest, PCHECK) { EXPECT_EQ(7, AOS_PCHECK(printf("abc123\n"))); }
