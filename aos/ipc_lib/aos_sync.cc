@@ -800,31 +800,26 @@ class Remover {
  private:
   DISALLOW_COPY_AND_ASSIGN(Remover);
 };
+#ifndef __linux__
+struct RobustListCleaner {
+  ~RobustListCleaner() {
+    while (!next_is_head(robust_head.next)) {
+      aos_mutex *m = next_to_mutex(robust_head.next);
+      robust_head.next = m->next;
+
+      uint32_t val = __atomic_load_n(&m->futex, __ATOMIC_RELAXED);
+      uint32_t new_val = FUTEX_OWNER_DIED;
+      if (val & FUTEX_WAITERS) new_val |= FUTEX_WAITERS;
+      __atomic_store_n(&m->futex, new_val, __ATOMIC_SEQ_CST);
+      sys_futex_wake(&m->futex, 1);
+    }
+  }
+  void Touch() const {}
+};
+thread_local RobustListCleaner robust_list_cleaner;
+#endif
 
 }  // namespace my_robust_list
-
-#ifndef __linux__
-static pthread_key_t robust_list_cleanup_key;
-static pthread_once_t robust_list_cleanup_key_once = PTHREAD_ONCE_INIT;
-
-static void RobustListCleanup(void *) {
-  using namespace my_robust_list;
-  while (!next_is_head(robust_head.next)) {
-    aos_mutex *m = next_to_mutex(robust_head.next);
-    robust_head.next = m->next;
-
-    uint32_t val = __atomic_load_n(&m->futex, __ATOMIC_RELAXED);
-    uint32_t new_val = FUTEX_OWNER_DIED;
-    if (val & FUTEX_WAITERS) new_val |= FUTEX_WAITERS;
-    __atomic_store_n(&m->futex, new_val, __ATOMIC_SEQ_CST);
-    sys_futex_wake(&m->futex, 1);
-  }
-}
-
-static void InitRobustListCleanupKey() {
-  pthread_key_create(&robust_list_cleanup_key, RobustListCleanup);
-}
-#endif
 
 void initialize_in_new_thread() {
   // No synchronization necessary in most of this because it's all thread-local!
@@ -836,8 +831,7 @@ void initialize_in_new_thread() {
 
   my_robust_list::Init();
 #ifndef __linux__
-  pthread_once(&robust_list_cleanup_key_once, InitRobustListCleanupKey);
-  pthread_setspecific(robust_list_cleanup_key, (void*)1);
+  my_robust_list::robust_list_cleaner.Touch();
 #endif
 }
 
