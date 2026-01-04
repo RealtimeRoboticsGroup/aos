@@ -624,10 +624,17 @@ inline uint32_t get_tid() {
 }
 
 #ifndef __linux__
+extern "C" {
+int os_sync_wait_on_address(void *addr, uint64_t value, size_t size, uint32_t flags);
+int os_sync_wait_on_address_with_deadline(void *addr, uint64_t value, size_t size, uint32_t flags, int clockid, uint64_t deadline_ns);
+int os_sync_wait_on_address_with_timeout(void *addr, uint64_t value, size_t size, uint32_t flags, int clockid, uint64_t timeout_ns);
+int os_sync_wake_by_address_any(void *addr, size_t size, uint32_t flags);
+int os_sync_wake_by_address_all(void *addr, size_t size, uint32_t flags);
+}
+
 inline int sys_futex_wait(int op, aos_futex *addr1, int val1,
                           const struct timespec *timeout) {
   if (op == FUTEX_TRYLOCK_PI) {
-    // ... existing TRYLOCK_PI logic same as before ...
     uint32_t tid = get_tid();
     uint32_t val = __atomic_load_n(addr1, __ATOMIC_ACQUIRE);
     if ((val & FUTEX_TID_MASK) == 0) {
@@ -641,20 +648,18 @@ inline int sys_futex_wait(int op, aos_futex *addr1, int val1,
     return -EWOULDBLOCK;
   }
 
-  uint64_t timeout_ns = 0;
-  if (timeout != nullptr) {
-    timeout_ns = timeout->tv_sec * 1000000000UL + timeout->tv_nsec;
-  }
-
   uint32_t flags = IsMemShared(addr1) ? OS_SYNC_WAIT_ON_ADDRESS_SHARED : 0;
-  // printf("sys_futex_wait(%p, %d, timeout) shared=%d flags=%d\n", addr1, val1, IsMemShared(addr1), flags);
-  fprintf(stderr, "sys_futex_wait(%p, %d, %s) shared=%d flags=%d\n", addr1, val1, timeout ? "yes" : "no", IsMemShared(addr1), flags);
-  
   int ret;
   if (timeout != nullptr) {
-     ret = os_sync_wait_on_address_with_timeout(
+     uint64_t timeout_ns = timeout->tv_sec * 1000000000UL + timeout->tv_nsec;
+     struct timespec now;
+     clock_gettime(CLOCK_MONOTONIC, &now);
+     uint64_t now_ns = now.tv_sec * 1000000000UL + now.tv_nsec;
+     uint64_t deadline_ns = now_ns + timeout_ns;
+     
+     ret = os_sync_wait_on_address_with_deadline(
         addr1, val1, sizeof(*addr1), flags,
-        CLOCK_MONOTONIC, timeout_ns);
+        CLOCK_MONOTONIC, deadline_ns);
   } else {
      ret = os_sync_wait_on_address(
         addr1, val1, sizeof(*addr1), flags);
