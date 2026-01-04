@@ -256,8 +256,8 @@ inline int sys_futex_wait(int op, aos_futex *addr1, int val1,
 #ifndef OS_SYNC_WAIT_ON_ADDRESS_SHARED
 #define OS_SYNC_WAIT_ON_ADDRESS_SHARED 0x1
 #endif
-#ifndef OS_CLOCK_MONOTONIC
-#define OS_CLOCK_MONOTONIC 1
+#ifndef OS_SYNC_WAIT_ON_ADDRESS_SHARED
+#define OS_SYNC_WAIT_ON_ADDRESS_SHARED 0x1
 #endif
 
 extern "C" {
@@ -651,7 +651,7 @@ inline int sys_futex_wait(int op, aos_futex *addr1, int val1,
   if (timeout != nullptr) {
      ret = os_sync_wait_on_address_with_timeout(
         addr1, val1, sizeof(*addr1), flags,
-        OS_CLOCK_MONOTONIC, timeout_ns);
+        CLOCK_MONOTONIC, timeout_ns);
   } else {
      ret = os_sync_wait_on_address(
         addr1, val1, sizeof(*addr1), flags);
