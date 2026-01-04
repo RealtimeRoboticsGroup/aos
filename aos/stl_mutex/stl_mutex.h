@@ -84,7 +84,7 @@ class stl_mutex {
 #else
 class stl_mutex {
  public:
-  constexpr stl_mutex() {}
+  stl_mutex() {}
 
   void lock() {
     mutex_.lock();
@@ -181,7 +181,7 @@ class stl_recursive_mutex {
 #else
 class stl_recursive_mutex {
  public:
-  constexpr stl_recursive_mutex() {}
+  stl_recursive_mutex() {}
 
   void lock() { mutex_.lock(); }
   bool try_lock() { return mutex_.try_lock(); }
