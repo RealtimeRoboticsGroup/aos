@@ -468,7 +468,6 @@ cc_library(
     hdrs = [
         "event.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos/ipc_lib:aos_sync",
@@ -484,7 +483,6 @@ cc_test(
     srcs = [
         "event_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":event",
         "//aos/testing:googletest",
