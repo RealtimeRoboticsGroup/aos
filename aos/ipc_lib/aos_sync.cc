@@ -544,9 +544,15 @@ static inline void unlock_pthread_mutex(aos_mutex *) {}
 #endif
 
 pid_t do_get_tid() {
+#ifdef __linux__
   pid_t r = syscall(SYS_gettid);
   assert(r > 0);
   return r;
+#else
+  uint64_t tid;
+  pthread_threadid_np(NULL, &tid);
+  return static_cast<pid_t>(tid) & FUTEX_TID_MASK;
+#endif
 }
 
 // This gets called by functions before LOG(FATAL)ing with error messages
