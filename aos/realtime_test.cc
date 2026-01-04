@@ -2,9 +2,11 @@
 
 #include "absl/base/internal/raw_logging.h"
 #include "absl/flags/declare.h"
+#ifdef __APPLE__
 #include <mach/mach.h>
 #include <mach/thread_policy.h>
 #include <malloc/malloc.h>
+#endif
 #include <pthread.h>
 #include "absl/flags/flag.h"
 #include "absl/log/check.h"
@@ -139,6 +141,7 @@ TEST(RealtimeDeathTest, Fatal) {
 }
 
 TEST(RealtimeDeathTest, Malloc) {
+#ifdef __APPLE__
     vm_address_t *zones = nullptr;
     unsigned int count = 0;
     kern_return_t kr = malloc_get_all_zones(mach_task_self(), nullptr, &zones, &count);
@@ -161,6 +164,7 @@ TEST(RealtimeDeathTest, Malloc) {
         // because the OS will cycle between them or use specific ones for 
         // different allocation sizes (e.g., NanoZone for < 256 bytes).
     }
+#endif
   EXPECT_DEATH(
       {
         ScopedRealtime rt;
