@@ -140,47 +140,13 @@ extern "C" void AnnotateHappensAfter(const char *file, int line,
 #define FUTEX_CMP_REQUEUE_PI_PRIVATE (FUTEX_CMP_REQUEUE_PI | FUTEX_PRIVATE_FLAG)
 
 #ifdef __APPLE__
-#include <mach/mach.h>
-#include <mach/vm_map.h>
-#include <mach/mach_vm.h>
 #include <os/clock.h>
+#include <os/os_sync_wait_on_address.h>
 #endif
 
 #define FUTEX_WAITERS 0x80000000
 #define FUTEX_OWNER_DIED 0x40000000
 #define FUTEX_TID_MASK 0x3fffffff
-
-#ifdef __APPLE__
-static bool IsMemShared(void *addr) {
-  mach_port_t task = mach_task_self();
-  mach_vm_size_t size = 0;
-  mach_vm_address_t address = (mach_vm_address_t)addr;
-  vm_region_basic_info_data_64_t info;
-  mach_msg_type_number_t infoCount = VM_REGION_BASIC_INFO_COUNT_64;
-  mach_port_t object_name = MACH_PORT_NULL;
-
-  kern_return_t kr = mach_vm_region(task, &address, &size, VM_REGION_BASIC_INFO_64,
-                                    (vm_region_info_t)&info, &infoCount, &object_name);
-  
-  if (object_name != MACH_PORT_NULL) {
-    mach_port_deallocate(task, object_name);
-  }
-
-  if (kr != KERN_SUCCESS) {
-      return false;
-  }
-  
-  // Verify the region covers the address we asked for
-  if (address > (mach_vm_address_t)addr) {
-      return false;
-  }
-  
-  return info.shared;
-}
-#else
-static bool IsMemShared(void *) { return false; }
-#endif
-
 #endif
 
 namespace {
@@ -252,25 +218,6 @@ inline int sys_futex_wait(int op, aos_futex *addr1, int val1,
 }
 #endif
 
-#ifndef __linux__
-// Define symbols if missing
-#ifndef OS_SYNC_WAIT_ON_ADDRESS_SHARED
-#define OS_SYNC_WAIT_ON_ADDRESS_SHARED 0x1
-#endif
-#ifndef OS_SYNC_WAIT_ON_ADDRESS_SHARED
-#define OS_SYNC_WAIT_ON_ADDRESS_SHARED 0x1
-#endif
-
-extern "C" {
-int os_sync_wait_on_address(void *addr, uint64_t value, size_t size, uint32_t flags);
-int os_sync_wait_on_address_with_timeout(void *addr, uint64_t value, size_t size, uint32_t flags, int clockid, uint64_t timeout_ns);
-int os_sync_wake_by_address_any(void *addr, size_t size, uint32_t flags);
-int os_sync_wake_by_address_all(void *addr, size_t size, uint32_t flags);
-}
-
-inline int sys_futex_wait(int op, aos_futex *addr1, int val1,
-                          const struct timespec *timeout);
-#endif
 
 #ifdef __linux__
 inline int sys_futex_wake(aos_futex *addr1, int val1) {
@@ -309,12 +256,11 @@ inline int sys_futex_wake(aos_futex *addr1, int val1) {
 #ifndef __linux__
 // Used by both normal wake and unlock_pi
 inline int sys_futex_wake(aos_futex *addr1, int val1) {
-  uint32_t flags = IsMemShared(addr1) ? OS_SYNC_WAIT_ON_ADDRESS_SHARED : 0;
   if (val1 == 1) {
-    os_sync_wake_by_address_any(addr1, sizeof(*addr1), flags);
+    os_sync_wake_by_address_any(addr1, sizeof(*addr1), OS_SYNC_WAIT_ON_ADDRESS_SHARED);
     return 1;
   } else {
-    os_sync_wake_by_address_all(addr1, sizeof(*addr1), flags);
+    os_sync_wake_by_address_all(addr1, sizeof(*addr1), OS_SYNC_WAIT_ON_ADDRESS_SHARED);
     return 1;
   }
 }
@@ -625,13 +571,7 @@ inline uint32_t get_tid() {
 }
 
 #ifndef __linux__
-extern "C" {
-int os_sync_wait_on_address(void *addr, uint64_t value, size_t size, uint32_t flags);
-int os_sync_wait_on_address_with_deadline(void *addr, uint64_t value, size_t size, uint32_t flags, int clockid, uint64_t deadline_ns);
-int os_sync_wait_on_address_with_timeout(void *addr, uint64_t value, size_t size, uint32_t flags, int clockid, uint64_t timeout_ns);
-int os_sync_wake_by_address_any(void *addr, size_t size, uint32_t flags);
-int os_sync_wake_by_address_all(void *addr, size_t size, uint32_t flags);
-}
+// XNU private os_sync API provided by <os/os_sync_wait_on_address.h>
 
 inline int sys_futex_wait(int op, aos_futex *addr1, int val1,
                           const struct timespec *timeout) {
@@ -649,17 +589,16 @@ inline int sys_futex_wait(int op, aos_futex *addr1, int val1,
     return -EWOULDBLOCK;
   }
 
-  uint32_t flags = IsMemShared(addr1) ? OS_SYNC_WAIT_ON_ADDRESS_SHARED : 0;
   int ret;
   if (timeout != nullptr) {
      uint64_t timeout_ns = timeout->tv_sec * 1000000000UL + timeout->tv_nsec;
      // Note: OS_CLOCK_MACH_ABSOLUTE_TIME is 32.
      ret = os_sync_wait_on_address_with_timeout(
-        addr1, val1, sizeof(*addr1), flags,
+        addr1, val1, sizeof(*addr1), OS_SYNC_WAIT_ON_ADDRESS_SHARED,
         OS_CLOCK_MACH_ABSOLUTE_TIME, timeout_ns);
   } else {
      ret = os_sync_wait_on_address(
-        addr1, val1, sizeof(*addr1), flags);
+        addr1, val1, sizeof(*addr1), OS_SYNC_WAIT_ON_ADDRESS_SHARED);
   }
   
   if (ret == 0) return 0;
