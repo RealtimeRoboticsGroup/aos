@@ -469,8 +469,13 @@ static malloc_zone_t *zone_default_get(void) {
   return malloc_default_zone();
 }
 
-// Initialize the aos_zone structure. This should only be done once.
-void InitializeHooks() {
+void InstallHooks() {
+  if (ABSL_VLOG_IS_ON(1)) {
+    ABSL_RAW_LOG(INFO, "Installing Proxy Malloc Zone");
+  }
+  //ABSL_RAW_LOG(INFO, "Installing Proxy Malloc Zone");
+  //print_zones();
+
   // Initialize aos_zone.
   memset(&aos_zone, 0, sizeof(aos_zone));
 
@@ -491,6 +496,7 @@ void InitializeHooks() {
   aos_zone.free_definite_size = aos_free_definite_size;
   aos_zone.pressure_relief = aos_pressure_relief;
   aos_zone.claimed_address = aos_claimed_address;
+
   // We need to provide introspection struct even if empty/minimal to avoid
   // crashes? Copies usually have `introspect` from original. But we are a new
   // zone.
@@ -508,13 +514,14 @@ void InitializeHooks() {
   aos_introspect.enable_discharge_checking = aos_enable_discharge_checking;
   aos_introspect.disable_discharge_checking = aos_disable_discharge_checking;
   aos_introspect.discharge = aos_discharge;
-}
 
-void InstallHooks() {
-  if (ABSL_VLOG_IS_ON(1)) {
-    ABSL_RAW_LOG(INFO, "Installing Proxy Malloc Zone");
-  }
+  // Important: To verify `free` works?
+  // If we want `free` hooks, we might need `aos_claimed_address` to return
+  // true? But then `aos_size` needs to work. If we claim it, we MUST be able to
+  // handle it. If we forward `size` to `system_zone`, maybe that works?
 
+  //ABSL_RAW_LOG(INFO, "Before register");
+  //print_zones();
   // Register our zone.
   malloc_zone_register(&aos_zone);
 
@@ -586,9 +593,6 @@ void RegisterMallocHook() {
       ABSL_RAW_LOG(FATAL, "Alternative malloc zone registered, %s, aborting",
                    system_zone->zone_name);
     }
-
-    static pthread_once_t hooks_once = PTHREAD_ONCE_INIT;
-    pthread_once(&hooks_once, InitializeHooks);
 
     InstallHooks();
 
