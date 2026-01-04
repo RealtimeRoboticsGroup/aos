@@ -460,7 +460,7 @@ void InstallHooks() {
     ABSL_RAW_LOG(INFO, "Installing Proxy Malloc Zone");
   }
   //ABSL_RAW_LOG(INFO, "Installing Proxy Malloc Zone");
-  print_zones();
+  //print_zones();
 
   // Initialize aos_zone.
   memset(&aos_zone, 0, sizeof(aos_zone));
