@@ -257,10 +257,10 @@ inline int sys_futex_wake(aos_futex *addr1, int val1) {
 // Used by both normal wake and unlock_pi
 inline int sys_futex_wake(aos_futex *addr1, int val1) {
   if (val1 == 1) {
-    os_sync_wake_by_address_any(addr1, sizeof(*addr1), OS_SYNC_WAIT_ON_ADDRESS_SHARED);
+    os_sync_wake_by_address_any(addr1, sizeof(*addr1), OS_SYNC_WAKE_BY_ADDRESS_SHARED);
     return 1;
   } else {
-    os_sync_wake_by_address_all(addr1, sizeof(*addr1), OS_SYNC_WAIT_ON_ADDRESS_SHARED);
+    os_sync_wake_by_address_all(addr1, sizeof(*addr1), OS_SYNC_WAKE_BY_ADDRESS_SHARED);
     return 1;
   }
 }
@@ -397,8 +397,7 @@ inline int sys_futex_unlock_pi(aos_futex *addr1) {
     // Just wake as we are not using PI locks on macOS.
     // Also clear the lock value because mutex_unlock expects us to do it if it called us.
     __atomic_store_n(addr1, 0, __ATOMIC_RELEASE);
-    uint32_t flags = IsMemShared(addr1) ? OS_SYNC_WAIT_ON_ADDRESS_SHARED : 0;
-    os_sync_wake_by_address_any(addr1, sizeof(*addr1), flags);
+    os_sync_wake_by_address_any(addr1, sizeof(*addr1), OS_SYNC_WAKE_BY_ADDRESS_SHARED);
     return 0;
 }
 
