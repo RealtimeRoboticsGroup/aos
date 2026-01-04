@@ -264,9 +264,10 @@ cc_library(
     name = "realtime",
     srcs = [
         "realtime.cc",
+        "realtime_internal.h",
     ] + select({
-        "@platforms//os:linux": ["realtime_linux.cc"],
-        "@platforms//os:macos": ["realtime_darwin.cc"],
+        "@io_bazel_rules_go//go/platform:linux": ["realtime_linux.cc"],
+        "@io_bazel_rules_go//go/platform:darwin": ["realtime_darwin.cc"],
     }),
     hdrs = [
         "realtime.h",

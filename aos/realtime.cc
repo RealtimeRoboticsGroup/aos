@@ -40,6 +40,8 @@ using FLAG__namespace_do_not_use_directly_use_DECLARE_double_instead::
     FLAGS_tcmalloc_release_rate;
 #endif
 
+#include "aos/realtime_internal.h"
+
 namespace aos {
 
 namespace {
@@ -177,7 +179,37 @@ void ExpandStackSize() {
 // Bool to track if malloc hooks have failed to be configured.
 // Exposed to platform specific files so they can set it to false on failure.
 bool has_malloc_hook = true;
+
+#ifdef __linux__
 thread_local bool is_realtime = false;
+
+bool GetIsRealtime() { return is_realtime; }
+void SetIsRealtime(bool realtime) { is_realtime = realtime; }
+
+#elif defined(__APPLE__)
+#include <pthread.h>
+
+static pthread_key_t kIsRealtimeKey;
+static pthread_once_t kIsRealtimeKeyOnce = PTHREAD_ONCE_INIT;
+
+static void MakeIsRealtimeKey() {
+  // Destructor is null because we store a simple value (casted to void*).
+  PCHECK(pthread_key_create(&kIsRealtimeKey, nullptr) == 0);
+}
+
+bool GetIsRealtime() {
+  pthread_once(&kIsRealtimeKeyOnce, MakeIsRealtimeKey);
+  return static_cast<bool>(
+      reinterpret_cast<uintptr_t>(pthread_getspecific(kIsRealtimeKey)));
+}
+
+void SetIsRealtime(bool realtime) {
+  pthread_once(&kIsRealtimeKeyOnce, MakeIsRealtimeKey);
+  PCHECK(pthread_setspecific(
+             kIsRealtimeKey,
+             reinterpret_cast<void *>(static_cast<uintptr_t>(realtime))) == 0);
+}
+#endif
 
 bool MarkRealtime(bool realtime) {
   if (realtime) {
@@ -191,25 +223,25 @@ bool MarkRealtime(bool realtime) {
            "Disable --die_on_malloc to continue.";
 #endif
   }
-  const bool prior = is_realtime;
-  is_realtime = realtime;
+  const bool prior = GetIsRealtime();
+  SetIsRealtime(realtime);
   return prior;
 }
 
 bool IsDieOnMallocEnabled() {
-  return absl::GetFlag(FLAGS_die_on_malloc) && aos::is_realtime &&
+  return absl::GetFlag(FLAGS_die_on_malloc) && GetIsRealtime() &&
          has_malloc_hook;
 }
 
-void CheckRealtime() { ABSL_CHECK(is_realtime); }
+void CheckRealtime() { ABSL_CHECK(GetIsRealtime()); }
 
-void CheckNotRealtime() { ABSL_CHECK(!is_realtime); }
+void CheckNotRealtime() { ABSL_CHECK(!GetIsRealtime()); }
 
-ScopedRealtimeRestorer::ScopedRealtimeRestorer() : prior_(is_realtime) {}
+ScopedRealtimeRestorer::ScopedRealtimeRestorer() : prior_(GetIsRealtime()) {}
 
 void NewHook(const void *ptr, size_t size) {
-  if (is_realtime) {
-    is_realtime = false;
+  if (GetIsRealtime()) {
+    SetIsRealtime(false);
     ABSL_RAW_LOG(FATAL, "Malloced %p -> %zu bytes", ptr, size);
   }
 }
@@ -218,8 +250,8 @@ void DeleteHook(const void *ptr) {
   // It is legal to call free(nullptr) unconditionally and assume that it won't
   // do anything.  Eigen does this.  So, if we are RT, ignore any of these
   // calls.
-  if (is_realtime && ptr != nullptr) {
-    is_realtime = false;
+  if (GetIsRealtime() && ptr != nullptr) {
+    SetIsRealtime(false);
     ABSL_RAW_LOG(FATAL, "Delete Hook %p", ptr);
   }
 }
@@ -230,7 +262,7 @@ void FatalUnsetRealtimePriority() {
   // everything, don't get overly clever.
   UnsetCurrentThreadRealtimePriority();
 
-  is_realtime = false;
+  SetIsRealtime(false);
 
   // Put all sub-tasks back to non-rt priority too.
 #ifdef __linux__

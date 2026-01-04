@@ -1,4 +1,5 @@
 #include "aos/realtime.h"
+#include "aos/realtime_internal.h"
 
 #include <malloc.h>
 #include <sched.h>
@@ -45,7 +46,6 @@ void ReloadThreadName() __attribute__((weak));
 namespace aos {
 
 extern bool has_malloc_hook;
-extern thread_local bool is_realtime;
 
 void NewHook(const void *ptr, size_t size);
 void DeleteHook(const void *ptr);
@@ -55,8 +55,8 @@ extern "C" {
 // malloc hooks for libc. Tcmalloc will replace everything it finds (malloc,
 // __libc_malloc, etc.), so we need its specific hook above as well.
 void *aos_malloc_hook(size_t size) {
-  if (absl::GetFlag(FLAGS_die_on_malloc) && aos::is_realtime) {
-    aos::is_realtime = false;
+  if (absl::GetFlag(FLAGS_die_on_malloc) && GetIsRealtime()) {
+    SetIsRealtime(false);
     ABSL_RAW_LOG(FATAL,
                  "Malloced %zu bytes: This error usually happens when a user "
                  "does something that is not realtime. Either change the "
@@ -70,9 +70,9 @@ void *aos_malloc_hook(size_t size) {
 }
 
 void aos_free_hook(void *ptr) {
-  if (absl::GetFlag(FLAGS_die_on_malloc) && aos::is_realtime &&
+  if (absl::GetFlag(FLAGS_die_on_malloc) && GetIsRealtime() &&
       ptr != nullptr) {
-    aos::is_realtime = false;
+    SetIsRealtime(false);
     ABSL_RAW_LOG(FATAL, "Deleted %p", ptr);
   } else {
     __libc_free(ptr);
@@ -80,8 +80,8 @@ void aos_free_hook(void *ptr) {
 }
 
 void *aos_realloc_hook(void *ptr, size_t size) {
-  if (absl::GetFlag(FLAGS_die_on_malloc) && aos::is_realtime) {
-    aos::is_realtime = false;
+  if (absl::GetFlag(FLAGS_die_on_malloc) && GetIsRealtime()) {
+    SetIsRealtime(false);
     ABSL_RAW_LOG(FATAL, "Malloced %p -> %zu bytes", ptr, size);
     return nullptr;
   } else {
@@ -90,8 +90,8 @@ void *aos_realloc_hook(void *ptr, size_t size) {
 }
 
 void *aos_calloc_hook(size_t n, size_t elem_size) {
-  if (absl::GetFlag(FLAGS_die_on_malloc) && aos::is_realtime) {
-    aos::is_realtime = false;
+  if (absl::GetFlag(FLAGS_die_on_malloc) && GetIsRealtime()) {
+    SetIsRealtime(false);
     ABSL_RAW_LOG(FATAL, "Malloced %zu * %zu bytes", n, elem_size);
     return nullptr;
   } else {

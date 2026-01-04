@@ -23,10 +23,11 @@ void ReloadThreadName() __attribute__((weak)) {}
 
 }  // namespace logging::internal
 
+#include "aos/realtime_internal.h"
+
 namespace aos {
 
 extern bool has_malloc_hook;
-extern thread_local bool is_realtime;
 thread_local int fake_rt_priority;
 thread_local int fake_rt_policy;
 
@@ -214,8 +215,8 @@ static size_t aos_size(struct _malloc_zone_t *zone, const void *ptr) {
 
 static void *aos_malloc(struct _malloc_zone_t *zone, size_t size) {
   //ABSL_RAW_LOG(INFO, "aos_malloc(%zu)", size);
-  if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc)) {
-    aos::is_realtime = false;
+  if (GetIsRealtime() && absl::GetFlag(FLAGS_die_on_malloc)) {
+    SetIsRealtime(false);
     ABSL_RAW_LOG(FATAL, "Malloced %zu bytes", size);
   }
   return system_zone->malloc(system_zone, size);
@@ -224,8 +225,8 @@ static void *aos_malloc(struct _malloc_zone_t *zone, size_t size) {
 static void *aos_calloc(struct _malloc_zone_t *zone, size_t num_items,
                         size_t size) {
   //ABSL_RAW_LOG(INFO, "aos_calloc(%zu, %zu)", num_items, size);
-  if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc)) {
-    aos::is_realtime = false;
+  if (GetIsRealtime() && absl::GetFlag(FLAGS_die_on_malloc)) {
+    SetIsRealtime(false);
     ABSL_RAW_LOG(FATAL, "Malloced %zu * %zu bytes", num_items, size);
   }
   return system_zone->calloc(system_zone, num_items, size);
@@ -233,8 +234,8 @@ static void *aos_calloc(struct _malloc_zone_t *zone, size_t num_items,
 
 static void *aos_valloc(struct _malloc_zone_t *zone, size_t size) {
   //ABSL_RAW_LOG(INFO, "aos_valloc(%zu)", size);
-  if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc)) {
-    aos::is_realtime = false;
+  if (GetIsRealtime() && absl::GetFlag(FLAGS_die_on_malloc)) {
+    SetIsRealtime(false);
     ABSL_RAW_LOG(FATAL, "Malloced %zu bytes", size);
   }
   return system_zone->valloc(system_zone, size);
@@ -243,9 +244,9 @@ static void *aos_valloc(struct _malloc_zone_t *zone, size_t size) {
 static void aos_free(struct _malloc_zone_t *zone, void *ptr) {
   //ABSL_RAW_LOG(INFO, "aos_free(%p)", ptr);
   // This might not be called if system_zone owns ptr.
-  if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc) &&
+  if (GetIsRealtime() && absl::GetFlag(FLAGS_die_on_malloc) &&
       ptr != nullptr) {
-    aos::is_realtime = false;
+    SetIsRealtime(false);
     ABSL_RAW_LOG(FATAL, "Deleted %p", ptr);
   }
   system_zone->free(system_zone, ptr);
@@ -253,8 +254,8 @@ static void aos_free(struct _malloc_zone_t *zone, void *ptr) {
 
 static void *aos_realloc(struct _malloc_zone_t *zone, void *ptr, size_t size) {
   //ABSL_RAW_LOG(INFO, "aos_realloc(%p, %zu)", ptr, size);
-  if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc)) {
-    aos::is_realtime = false;
+  if (GetIsRealtime() && absl::GetFlag(FLAGS_die_on_malloc)) {
+    SetIsRealtime(false);
     ABSL_RAW_LOG(FATAL, "Malloced %p -> %zu bytes", ptr, size);
   }
   return system_zone->realloc(system_zone, ptr, size);
@@ -268,8 +269,8 @@ static void aos_destroy(struct _malloc_zone_t *zone) {
 static unsigned aos_batch_malloc(struct _malloc_zone_t *zone, size_t size,
                                  void **results, unsigned num_requested) {
   //ABSL_RAW_LOG(INFO, "aos_batch_malloc(%zu, %u)", size, num_requested);
-  if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc)) {
-    aos::is_realtime = false;
+  if (GetIsRealtime() && absl::GetFlag(FLAGS_die_on_malloc)) {
+    SetIsRealtime(false);
     ABSL_RAW_LOG(FATAL, "Batch Malloced %u * %zu bytes", num_requested, size);
   }
   return system_zone->batch_malloc(system_zone, size, results, num_requested);
@@ -278,9 +279,9 @@ static unsigned aos_batch_malloc(struct _malloc_zone_t *zone, size_t size,
 static void aos_batch_free(struct _malloc_zone_t *zone, void **to_be_freed,
                            unsigned num_to_be_freed) {
   //ABSL_RAW_LOG(INFO, "aos_batch_free(%u)", num_to_be_freed);
-  if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc) &&
+  if (aos::GetIsRealtime() && absl::GetFlag(FLAGS_die_on_malloc) &&
       num_to_be_freed > 0) {
-    aos::is_realtime = false;
+    SetIsRealtime(false);
     ABSL_RAW_LOG(FATAL, "Batch Deleted %u items", num_to_be_freed);
   }
   system_zone->batch_free(system_zone, to_be_freed, num_to_be_freed);
@@ -289,8 +290,8 @@ static void aos_batch_free(struct _malloc_zone_t *zone, void **to_be_freed,
 static void *aos_memalign(struct _malloc_zone_t *zone, size_t alignment,
                           size_t size) {
   //ABSL_RAW_LOG(INFO, "aos_memalign(%zu, %zu)", alignment, size);
-  if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc)) {
-    aos::is_realtime = false;
+  if (GetIsRealtime() && absl::GetFlag(FLAGS_die_on_malloc)) {
+    SetIsRealtime(false);
     ABSL_RAW_LOG(FATAL, "Memaligned %zu bytes", size);
   }
   return system_zone->memalign(system_zone, alignment, size);
@@ -299,9 +300,9 @@ static void *aos_memalign(struct _malloc_zone_t *zone, size_t alignment,
 static void aos_free_definite_size(struct _malloc_zone_t *zone, void *ptr,
                                    size_t size) {
   //ABSL_RAW_LOG(INFO, "aos_free_definite_size(%p, %zu)", ptr, size);
-  if (aos::is_realtime && absl::GetFlag(FLAGS_die_on_malloc) &&
+  if (GetIsRealtime() && absl::GetFlag(FLAGS_die_on_malloc) &&
       ptr != nullptr) {
-    aos::is_realtime = false;
+    SetIsRealtime(false);
     ABSL_RAW_LOG(FATAL, "Deleted %p", ptr);
   }
   system_zone->free_definite_size(system_zone, ptr, size);
