@@ -612,6 +612,7 @@ struct aos_robust_list_head {
   uintptr_t pending_next;
 };
 
+#ifdef __linux__
 static_assert(offsetof(aos_robust_list_head, next) ==
                   offsetof(robust_list_head, list),
               "Our aos_robust_list_head doesn't match the kernel's");
@@ -623,6 +624,7 @@ static_assert(offsetof(aos_robust_list_head, pending_next) ==
               "Our aos_robust_list_head doesn't match the kernel's");
 static_assert(sizeof(aos_robust_list_head) == sizeof(robust_list_head),
               "Our aos_robust_list_head doesn't match the kernel's");
+#endif
 
 thread_local aos_robust_list_head robust_head;
 
@@ -1188,7 +1190,7 @@ int condition_wait(aos_condition *c, aos_mutex *m, struct timespec *end_time) {
   int ret = sys_futex_wait(FUTEX_WAIT, c, wait_start, end_time);
   
   // Re-lock
-  mutex_lock(m);
+  (void)mutex_lock(m);
 
   if (ret == -ETIMEDOUT) {
     return -1;
