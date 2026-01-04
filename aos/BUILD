@@ -98,7 +98,6 @@ cc_library(
     hdrs = [
         "condition.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos/ipc_lib:aos_sync",
@@ -113,7 +112,6 @@ cc_test(
     srcs = [
         "condition_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":condition",
         ":die",
