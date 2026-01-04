@@ -219,6 +219,11 @@ bool EPoll::Poll(bool block) {
   }
   if (event.filter == EVFILT_WRITE) {
     events |= kOut;
+    // If the writer side of the pipe is closed (broken pipe), EV_EOF is set.
+    // This corresponds to EPOLLERR/EPOLLHUP on Linux.
+    if (event.flags & EV_EOF) {
+      events |= kErr;
+    }
   }
   if (event.flags & EV_ERROR) {
     events |= kErr;

@@ -420,6 +420,7 @@ cc_test(
 cc_library(
     name = "buffer_encoder_param_test",
     testonly = True,
+    alwayslink = True,
     srcs = [
         "buffer_encoder_param_test.cc",
     ],

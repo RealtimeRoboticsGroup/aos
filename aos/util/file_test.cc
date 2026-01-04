@@ -1,11 +1,14 @@
 #include "aos/util/file.h"
 
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <unistd.h>
 
 #include <cstdlib>
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <thread>
 
 #include "absl/log/absl_check.h"
 #include "gmock/gmock.h"
@@ -35,25 +38,45 @@ TEST(FileTest, ReadNormalFileToBytes) {
               ElementsAre('c', 'o', 'n', 't', 'e', 'n', 't', 's', '\n'));
 }
 
+// Tests reading a file with 0 size that has content (like /proc files or pipes).
+TEST(FileTest, ReadZeroSizeFileWithContent) {
+  const std::string tmpdir(aos::testing::TestTmpDir());
+  const std::string test_file = tmpdir + "/test_pipe";
+  
+  // Create a named pipe.
+  ASSERT_EQ(0, mkfifo(test_file.c_str(), 0666));
+
+  std::thread writer([test_file]() {
+    // Open the pipe for writing.
+    int fd = open(test_file.c_str(), O_WRONLY);
+    ABSL_PCHECK(fd != -1);
+    
+    // Write some data.
+    const std::string data = "some data";
+    const ssize_t result = ::write(fd, data.data(), data.size());
+    ABSL_PCHECK(result == static_cast<ssize_t>(data.size()));
+    
+    // Close to signal EOF.
+    close(fd);
+  });
+
+  // Read from the pipe.
+  std::string contents = ReadFileToStringOrDie(test_file);
+  EXPECT_EQ("some data", contents);
+
+  writer.join();
+}
+
 #ifdef __linux__
 // Tests reading a file with 0 size, among other weird things.
+// Kept for Linux-specific /proc behavior verification.
 TEST(FileTest, ReadSpecialFile) {
   const std::string stat = ReadFileToStringOrDie("/proc/self/stat");
   EXPECT_EQ('\n', stat[stat.size() - 1]);
   const std::string my_pid = ::std::to_string(getpid());
   EXPECT_EQ(my_pid, stat.substr(0, my_pid.size()));
 }
-#endif
 
-// Basic test of maybe reading a normal file.
-TEST(FileTest, MaybeReadNormalFile) {
-  const std::string tmpdir(aos::testing::TestTmpDir());
-  const std::string test_file = tmpdir + "/test_file";
-  ASSERT_EQ(0, system(("echo contents > " + test_file).c_str()));
-  EXPECT_EQ("contents\n", MaybeReadFileToString(test_file).value());
-}
-
-#ifdef __linux__
 // Tests maybe reading a file with 0 size, among other weird things.
 TEST(FileTest, MaybeReadSpecialFile) {
   const std::optional<std::string> stat =

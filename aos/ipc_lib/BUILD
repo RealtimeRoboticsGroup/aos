@@ -154,7 +154,6 @@ cc_library(
     defines = [
         "AOS_QUEUE_ATOMIC_SIZE=32",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":shm_observers",
@@ -166,7 +165,6 @@ cc_library(
 cc_test(
     name = "index32_test",
     srcs = ["index_test.cc"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":index32",
         "//aos/testing:googletest",
@@ -190,7 +188,6 @@ cc_library(
 cc_test(
     name = "index_test",
     srcs = ["index_test.cc"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":index",
         "//aos/testing:googletest",
