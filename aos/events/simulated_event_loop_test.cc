@@ -3365,37 +3365,37 @@ TEST(SimulatedEventLoopTest, SimulatedLogSink) {
 
   const std::string output = util::ReadFileToStringOrDie(output_path.string());
   EXPECT_THAT(output, ::testing::ContainsRegex(R"(
-I0106 00:00:00\.000000 pi1 .*? ping_lib\.cc:.*?] Sending ping
-I0429 04:30:00\.000200 pi2 .*? pong_lib\.cc:.*?] Sending pong
-I0106 00:00:00\.000400 pi1 .*? ping_lib\.cc:.*?] Elapsed time 400000 ns \{ "value": 1, "initial_send_time": 0 \}
-I0106 00:00:00\.010000 pi1 .*? ping_lib\.cc:.*?] Sending ping
-I0429 04:30:00\.010200 pi2 .*? pong_lib\.cc:.*?] Sending pong
-I0106 00:00:00\.010400 pi1 .*? ping_lib\.cc:.*?] Elapsed time 400000 ns \{ "value": 2, "initial_send_time": 10000000 \}
-I0106 00:00:00\.020000 pi1 .*? ping_lib\.cc:.*?] Sending ping
-I0429 04:30:00\.020200 pi2 .*? pong_lib\.cc:.*?] Sending pong
-I0106 00:00:00\.020400 pi1 .*? ping_lib\.cc:.*?] Elapsed time 400000 ns \{ "value": 3, "initial_send_time": 20000000 \}
-I0106 00:00:00\.030000 pi1 .*? ping_lib\.cc:.*?] Sending ping
-I0429 04:30:00\.030200 pi2 .*? pong_lib\.cc:.*?] Sending pong
-I0106 00:00:00\.030400 pi1 .*? ping_lib\.cc:.*?] Elapsed time 400000 ns \{ "value": 4, "initial_send_time": 30000000 \}
-I0106 00:00:00\.040000 pi1 .*? ping_lib\.cc:.*?] Sending ping
-I0429 04:30:00\.040200 pi2 .*? pong_lib\.cc:.*?] Sending pong
-I0106 00:00:00\.040400 pi1 .*? ping_lib\.cc:.*?] Elapsed time 400000 ns \{ "value": 5, "initial_send_time": 40000000 \}
-I0106 00:00:00\.050000 pi1 .*? ping_lib\.cc:.*?] Sending ping
-I0429 04:30:00\.050200 pi2 .*? pong_lib\.cc:.*?] Sending pong
-I0106 00:00:00\.050400 pi1 .*? ping_lib\.cc:.*?] Elapsed time 400000 ns \{ "value": 6, "initial_send_time": 50000000 \}
-I0106 00:00:00\.060000 pi1 .*? ping_lib\.cc:.*?] Sending ping
-I0429 04:30:00\.060200 pi2 .*? pong_lib\.cc:.*?] Sending pong
-I0106 00:00:00\.060400 pi1 .*? ping_lib\.cc:.*?] Elapsed time 400000 ns \{ "value": 7, "initial_send_time": 60000000 \}
-I0106 00:00:00\.070000 pi1 .*? ping_lib\.cc:.*?] Sending ping
-I0429 04:30:00\.070200 pi2 .*? pong_lib\.cc:.*?] Sending pong
-I0106 00:00:00\.070400 pi1 .*? ping_lib\.cc:.*?] Elapsed time 400000 ns \{ "value": 8, "initial_send_time": 70000000 \}
-I0106 00:00:00\.080000 pi1 .*? ping_lib\.cc:.*?] Sending ping
-I0429 04:30:00\.080200 pi2 .*? pong_lib\.cc:.*?] Sending pong
-I0106 00:00:00\.080400 pi1 .*? ping_lib\.cc:.*?] Elapsed time 400000 ns \{ "value": 9, "initial_send_time": 80000000 \}
-I0106 00:00:00\.090000 pi1 .*? ping_lib\.cc:.*?] Sending ping
-I0429 04:30:00\.090200 pi2 .*? pong_lib\.cc:.*?] Sending pong
-I0106 00:00:00\.090400 pi1 .*? ping_lib\.cc:.*?] Elapsed time 400000 ns \{ "value": 10, "initial_send_time": 90000000 \}
-I0106 00:00:00\.100000 pi1 .*? ping_lib\.cc:.*?] Sending ping
+I0106 00:00:00\.000000 pi1 .* ping_lib\.cc:.*] Sending ping
+I0429 04:30:00\.000200 pi2 .* pong_lib\.cc:.*] Sending pong
+I0106 00:00:00\.000400 pi1 .* ping_lib\.cc:.*] Elapsed time 400000 ns { "value": 1, "initial_send_time": 0 }
+I0106 00:00:00\.010000 pi1 .* ping_lib\.cc:.*] Sending ping
+I0429 04:30:00\.010200 pi2 .* pong_lib\.cc:.*] Sending pong
+I0106 00:00:00\.010400 pi1 .* ping_lib\.cc:.*] Elapsed time 400000 ns { "value": 2, "initial_send_time": 10000000 }
+I0106 00:00:00\.020000 pi1 .* ping_lib\.cc:.*] Sending ping
+I0429 04:30:00\.020200 pi2 .* pong_lib\.cc:.*] Sending pong
+I0106 00:00:00\.020400 pi1 .* ping_lib\.cc:.*] Elapsed time 400000 ns { "value": 3, "initial_send_time": 20000000 }
+I0106 00:00:00\.030000 pi1 .* ping_lib\.cc:.*] Sending ping
+I0429 04:30:00\.030200 pi2 .* pong_lib\.cc:.*] Sending pong
+I0106 00:00:00\.030400 pi1 .* ping_lib\.cc:.*] Elapsed time 400000 ns { "value": 4, "initial_send_time": 30000000 }
+I0106 00:00:00\.040000 pi1 .* ping_lib\.cc:.*] Sending ping
+I0429 04:30:00\.040200 pi2 .* pong_lib\.cc:.*] Sending pong
+I0106 00:00:00\.040400 pi1 .* ping_lib\.cc:.*] Elapsed time 400000 ns { "value": 5, "initial_send_time": 40000000 }
+I0106 00:00:00\.050000 pi1 .* ping_lib\.cc:.*] Sending ping
+I0429 04:30:00\.050200 pi2 .* pong_lib\.cc:.*] Sending pong
+I0106 00:00:00\.050400 pi1 .* ping_lib\.cc:.*] Elapsed time 400000 ns { "value": 6, "initial_send_time": 50000000 }
+I0106 00:00:00\.060000 pi1 .* ping_lib\.cc:.*] Sending ping
+I0429 04:30:00\.060200 pi2 .* pong_lib\.cc:.*] Sending pong
+I0106 00:00:00\.060400 pi1 .* ping_lib\.cc:.*] Elapsed time 400000 ns { "value": 7, "initial_send_time": 60000000 }
+I0106 00:00:00\.070000 pi1 .* ping_lib\.cc:.*] Sending ping
+I0429 04:30:00\.070200 pi2 .* pong_lib\.cc:.*] Sending pong
+I0106 00:00:00\.070400 pi1 .* ping_lib\.cc:.*] Elapsed time 400000 ns { "value": 8, "initial_send_time": 70000000 }
+I0106 00:00:00\.080000 pi1 .* ping_lib\.cc:.*] Sending ping
+I0429 04:30:00\.080200 pi2 .* pong_lib\.cc:.*] Sending pong
+I0106 00:00:00\.080400 pi1 .* ping_lib\.cc:.*] Elapsed time 400000 ns { "value": 9, "initial_send_time": 80000000 }
+I0106 00:00:00\.090000 pi1 .* ping_lib\.cc:.*] Sending ping
+I0429 04:30:00\.090200 pi2 .* pong_lib\.cc:.*] Sending pong
+I0106 00:00:00\.090400 pi1 .* ping_lib\.cc:.*] Elapsed time 400000 ns { "value": 10, "initial_send_time": 90000000 }
+I0106 00:00:00\.100000 pi1 .* ping_lib\.cc:.*] Sending ping
 )"));
 }
 
