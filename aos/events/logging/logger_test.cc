@@ -35,7 +35,7 @@ using aos::testing::ArtifactPath;
 using aos::testing::MessageCounter;
 
 constexpr std::string_view kSingleConfigSha256(
-    "bbe1b563139273b23a5405eebc2f2740cefcda5f96681acd0a84b8ff9ab93ea4");
+    "a1d68e789fe4ccfc56b8d64f143dbd19165792a2b9a5fb1033c9275ac7e313df");
 
 class LoggerTest : public ::testing::Test {
  public:
