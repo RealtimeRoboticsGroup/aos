@@ -149,18 +149,6 @@ extern "C" void AnnotateHappensAfter(const char *file, int line,
 #define FUTEX_OWNER_DIED 0x40000000
 #define FUTEX_TID_MASK 0x3fffffff
 
-// XNU private ulock API
-extern "C" {
-int __ulock_wait(uint32_t operation, void *addr, uint64_t value,
-                 uint32_t timeout); /* timeout is microseconds */
-int __ulock_wake(uint32_t operation, void *addr, uint64_t wake_value);
-}
-
-#define UL_COMPARE_AND_WAIT 1
-#define UL_COMPARE_AND_WAIT_SHARED 3
-#define ULF_WAKE_ALL 0x00000100
-#define ULF_NO_ERRNO 0x00000200
-
 #ifdef __APPLE__
 static bool IsMemShared(void *addr) {
   mach_port_t task = mach_task_self();
@@ -653,36 +641,25 @@ inline int sys_futex_wait(int op, aos_futex *addr1, int val1,
     return -EWOULDBLOCK;
   }
 
-  uint32_t timeout_us = 0;
+  uint64_t timeout_ns = 0;
   if (timeout != nullptr) {
-    uint64_t us = timeout->tv_sec * 1000000UL + (timeout->tv_nsec + 999) / 1000;
-    if (us > UINT32_MAX) {
-      timeout_us = UINT32_MAX;
-    } else {
-      timeout_us = static_cast<uint32_t>(us);
-    }
+    timeout_ns = timeout->tv_sec * 1000000000UL + timeout->tv_nsec;
   }
 
-  // Darwin's __ulock_wait takes the value to check against (val1).
-  // It returns 0 on success (woken), -1 on error.
-  // errno is set: ETIMEDOUT, EINTR, etc.
+  uint32_t flags = IsMemShared(addr1) ? OS_SYNC_WAIT_ON_ADDRESS_SHARED : 0;
   int ret;
-  uint32_t op_code = IsMemShared(addr1) ? UL_COMPARE_AND_WAIT_SHARED : UL_COMPARE_AND_WAIT;
-
-  if (timeout == nullptr) {
-      // Loop with large timeouts until woken or error not ETIMEDOUT.
-      while (true) {
-         ret = __ulock_wait(op_code, addr1, val1, UINT32_MAX);
-         if (ret == -1 && errno == ETIMEDOUT) continue;
-         break;
-      }
+  if (timeout != nullptr) {
+     ret = os_sync_wait_on_address_with_timeout(
+        addr1, val1, sizeof(*addr1), flags,
+        OS_CLOCK_MONOTONIC, timeout_ns);
   } else {
-      ret = __ulock_wait(op_code, addr1, val1, timeout_us);
+     ret = os_sync_wait_on_address(
+        addr1, val1, sizeof(*addr1), flags);
   }
-
+  
   if (ret == 0) return 0;
-  // Map errno
-  return -errno;
+  // If we can't map errno easily, just return something generic or try to verify.
+  return -1; 
 }
 #endif
 
