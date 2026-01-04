@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <stdexcept>
+#include <system_error>
 
 namespace aos::testing {
 
