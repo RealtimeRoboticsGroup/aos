@@ -11,7 +11,6 @@ cc_library(
     hdrs = [
         "ring_buffer.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 cc_test(
@@ -19,7 +18,6 @@ cc_test(
     srcs = [
         "ring_buffer_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":ring_buffer",
         "//aos/testing:googletest",
@@ -33,7 +31,6 @@ cc_library(
     hdrs = [
         "priority_queue.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 cc_test(
@@ -41,7 +38,6 @@ cc_test(
     srcs = [
         "priority_queue_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":priority_queue",
         "//aos/testing:googletest",
@@ -63,7 +59,6 @@ cc_test(
     srcs = [
         "inlined_vector_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":inlined_vector",
         "//aos:realtime",
@@ -88,7 +83,6 @@ cc_test(
     srcs = [
         "sized_array_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":sized_array",
         "//aos/testing:googletest",
@@ -111,7 +105,6 @@ cc_test(
     srcs = [
         "error_list_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":error_list",
         "//aos:json_to_flatbuffer_fbs",
@@ -134,7 +127,6 @@ cc_test(
     srcs = [
         "resizeable_buffer_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":resizeable_buffer",
         "//aos/testing:googletest",

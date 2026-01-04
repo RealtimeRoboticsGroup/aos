@@ -3,13 +3,15 @@
 #include "gtest/gtest.h"
 
 #include "aos/events/simulated_event_loop.h"
+#include "aos/testing/path.h"
 
 namespace aos::message_bridge::testing {
 
 TEST(MessageBridgeServerStatus, NoThrowOnInvalidServerNode) {
   aos::FlatbufferDetachedBuffer<aos::Configuration> config(
-      aos::configuration::ReadConfig(
-          "message_bridge_test_combined_timestamps_common_config.json"));
+      aos::configuration::ReadConfig(aos::testing::ArtifactPath(
+          "aos/network/"
+          "message_bridge_test_combined_timestamps_common_config.json")));
   aos::SimulatedEventLoopFactory factory(&config.message());
   // Configure the server node to be `pi1` - for details
   // on the configuration, refer to

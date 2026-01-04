@@ -16,7 +16,6 @@ cc_binary(
     name = "py_log_reader.so",
     srcs = ["py_log_reader.cc"],
     linkshared = True,
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos:configuration",
         "//aos:json_to_flatbuffer",
@@ -36,7 +35,6 @@ py_test(
         ":py_log_reader.so",
         "@sample_logfile//file",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@rules_python//python/runfiles",
     ],
@@ -47,7 +45,6 @@ static_flatbuffer(
     srcs = [
         "plot_data.fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 flatbuffer_ts_library(
@@ -65,7 +62,6 @@ flatbuffer_ts_library(
         "Figure",
         "Plot",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 ts_project(
@@ -88,7 +84,6 @@ aos_config(
     name = "plotter",
     src = "plotter_config.json",
     flatbuffers = [":plot_data_fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = ["//aos/events:aos_config"],
 )
 
