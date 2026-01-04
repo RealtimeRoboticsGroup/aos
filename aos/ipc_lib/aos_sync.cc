@@ -293,7 +293,7 @@ inline int sys_futex_wake(aos_futex *addr1, int val1) {
     return 1;
   } else {
     os_sync_wake_by_address_all(addr1, sizeof(*addr1), OS_SYNC_WAIT_ON_ADDRESS_SHARED);
-    return val1;
+    return 1;
   }
 }
 #endif
