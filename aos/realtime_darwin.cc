@@ -562,20 +562,10 @@ void PrepareFork() {
   }
 }
 
-void ParentPostFork() {
+void PostFork() {
   if (absl::GetFlag(FLAGS_die_on_malloc)) {
     InstallHooks();
   }
-}
-
-void ChildPostFork() {
-  // In the child, we do not want to re-install the hooks.
-  // 1. malloc_zone_register is not async-signal-safe, so calling it in the child
-  //    of a multi-threaded parent (which fork() assumes) is a risk of deadlock.
-  // 2. The child is likely just going to exec() or die (as in death tests).
-  //    We don't need realtime checks there.
-  //    If we re-installed hooks, a CHECK() failure (which allocates) would cause
-  //    aos_malloc to SIGABRT, potentially interfering with EXPECT_DEATH.
 }
 
 void RegisterMallocHook() {
@@ -596,7 +586,7 @@ void RegisterMallocHook() {
 
     InstallHooks();
 
-    pthread_atfork(PrepareFork, ParentPostFork, ChildPostFork);
+    pthread_atfork(PrepareFork, PostFork, PostFork);
   }
 }
 
