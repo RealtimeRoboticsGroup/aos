@@ -157,7 +157,7 @@ void SetCurrentThreadRealtimePriority(int priority, int scheduling_policy) {
   // don't take a malloc inside lock/unlock later.
   {
     static aos_mutex kInitMutex = {0};
-    mutex_lock(&kInitMutex);
+    (void)mutex_lock(&kInitMutex);
     mutex_unlock(&kInitMutex);
   }
 
