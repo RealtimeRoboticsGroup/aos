@@ -139,6 +139,11 @@ extern "C" void AnnotateHappensAfter(const char *file, int line,
 #define FUTEX_WAIT_REQUEUE_PI_PRIVATE (FUTEX_WAIT_REQUEUE_PI | FUTEX_PRIVATE_FLAG)
 #define FUTEX_CMP_REQUEUE_PI_PRIVATE (FUTEX_CMP_REQUEUE_PI | FUTEX_PRIVATE_FLAG)
 
+#ifdef __APPLE__
+#include <mach/mach.h>
+#include <mach/vm_map.h>
+#endif
+
 #define FUTEX_WAITERS 0x80000000
 #define FUTEX_OWNER_DIED 0x40000000
 #define FUTEX_TID_MASK 0x3fffffff
@@ -151,8 +156,30 @@ int __ulock_wake(uint32_t operation, void *addr, uint64_t wake_value);
 }
 
 #define UL_COMPARE_AND_WAIT 1
+#define UL_COMPARE_AND_WAIT_SHARED 3
 #define ULF_WAKE_ALL 0x00000100
 #define ULF_NO_ERRNO 0x00000200
+
+#ifdef __APPLE__
+static bool IsMemShared(void *addr) {
+  mach_port_t task = mach_task_self();
+  mach_vm_size_t size = 0;
+  mach_vm_address_t address = (mach_vm_address_t)addr;
+  vm_region_basic_info_data_64_t info;
+  mach_msg_type_number_t infoCount = VM_REGION_BASIC_INFO_COUNT_64;
+  mach_port_t object_name;
+
+  kern_return_t kr = mach_vm_region(task, &address, &size, VM_REGION_BASIC_INFO_64,
+                                    (vm_region_info_t)&info, &infoCount, &object_name);
+  if (kr != KERN_SUCCESS) {
+      return false;
+  }
+  return (info.share_mode != SM_PRIVATE && info.share_mode != SM_COW);
+}
+#else
+static bool IsMemShared(void *) { return false; }
+#endif
+
 #endif
 
 namespace {
@@ -279,12 +306,14 @@ inline int sys_futex_wake(aos_futex *addr1, int val1) {
 #endif
 
 #ifndef __linux__
+// Used by both normal wake and unlock_pi
 inline int sys_futex_wake(aos_futex *addr1, int val1) {
+  uint32_t op_code = IsMemShared(addr1) ? UL_COMPARE_AND_WAIT_SHARED : UL_COMPARE_AND_WAIT;
   if (val1 == 1) {
-    __ulock_wake(UL_COMPARE_AND_WAIT, addr1, 0);
+    __ulock_wake(op_code, addr1, 0);
     return 1;
   } else {
-    __ulock_wake(UL_COMPARE_AND_WAIT | ULF_WAKE_ALL, addr1, 0);
+    __ulock_wake(op_code | ULF_WAKE_ALL, addr1, 0);
     return 1;
   }
 }
@@ -421,9 +450,11 @@ inline int sys_futex_unlock_pi(aos_futex *addr1) {
     // Just wake as we are not using PI locks on macOS.
     // Also clear the lock value because mutex_unlock expects us to do it if it called us.
     __atomic_store_n(addr1, 0, __ATOMIC_RELEASE);
-    __ulock_wake(UL_COMPARE_AND_WAIT, addr1, 0);
+    uint32_t op_code = IsMemShared(addr1) ? UL_COMPARE_AND_WAIT_SHARED : UL_COMPARE_AND_WAIT;
+    __ulock_wake(op_code, addr1, 0);
     return 0;
 }
+
 
 #endif
 
@@ -624,42 +655,17 @@ inline int sys_futex_wait(int op, aos_futex *addr1, int val1,
   // It returns 0 on success (woken), -1 on error.
   // errno is set: ETIMEDOUT, EINTR, etc.
   int ret;
-  if (timeout != nullptr) {
-    ret = __ulock_wait(UL_COMPARE_AND_WAIT, addr1, val1, timeout_us);
-  } else {
-     // 0 timeout means 0 wait in ulock? No, usually 0 means infinite/poll?
-     // Wait, for ulock_wait, timeout 0 is poll.
-     // But sys_futex_wait(..., NULL) means infinite.
-     // ulock infinite is usually large value? Or proper flags?
-     // XNU ulock_wait: timeout 0 means return immediately (poll).
-     // Setting timeout=0 in ulock means NO wait.
-     // So we pass 0 only if we want to poll.
-     // But wait! sys_futex_wait with timeout=NULL means infinite.
-     // How to do infinite in ulock_wait?
-     // Pass UL_NO_ERRNO? No.
-     // Use 0 as "infinite"?
-     // According to source, ulock_wait(..., 0) = poll.
-     // So we need a large timeout.
-     ret = __ulock_wait(UL_COMPARE_AND_WAIT, addr1, val1, 0); // WAIT! This will poll!
-     // We need infinite wait.
-     // ulock doesn't seemingly have infinite constant exposed easily.
-     // Using UINT32_MAX us is ~71 minutes.
-     // Loop?
-     // Actually, let's verify if timeout 0 means infinite. 
-     // Thread_native.h says: "If timeout is 0, the function returns immediately."
-     // So we MUST pass a large value for infinite.
-  }
-  
-  // Revised infinite wait logic:
+  uint32_t op_code = IsMemShared(addr1) ? UL_COMPARE_AND_WAIT_SHARED : UL_COMPARE_AND_WAIT;
+
   if (timeout == nullptr) {
       // Loop with large timeouts until woken or error not ETIMEDOUT.
       while (true) {
-         ret = __ulock_wait(UL_COMPARE_AND_WAIT, addr1, val1, UINT32_MAX);
+         ret = __ulock_wait(op_code, addr1, val1, UINT32_MAX);
          if (ret == -1 && errno == ETIMEDOUT) continue;
          break;
       }
   } else {
-      ret = __ulock_wait(UL_COMPARE_AND_WAIT, addr1, val1, timeout_us);
+      ret = __ulock_wait(op_code, addr1, val1, timeout_us);
   }
 
   if (ret == 0) return 0;
