@@ -14,6 +14,7 @@ cc_library(
     hdrs = [
         "aos_strsignal.h",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
@@ -25,6 +26,7 @@ cc_test(
     srcs = [
         "aos_strsignal_test.cc",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":aos_strsignal",
         "//aos:sanitizers",
