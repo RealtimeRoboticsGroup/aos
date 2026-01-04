@@ -316,6 +316,7 @@ TEST_F(ConditionTest, LockFirst) {
 }
 
 // Tests that the mutex gets relocked after Wait() returns.
+#ifdef __linux__
 TEST_F(ConditionTest, Relocking) {
   ConditionTestProcess child(chrono::milliseconds(0),
                              ConditionTestProcess::Action::kWaitNoUnlock,

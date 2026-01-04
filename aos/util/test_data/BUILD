@@ -11,7 +11,6 @@ load("//aos:config.bzl", "aos_config")
             "//aos/network:message_bridge_server_fbs",
             "//aos/network:timestamp_fbs",
         ],
-        target_compatible_with = ["@platforms//os:linux"],
         visibility = ["//visibility:public"],
         deps = ["//aos/events:aos_config"],
     )
