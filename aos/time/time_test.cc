@@ -22,6 +22,14 @@ TEST(TimeTest, MonotonicClockSleepAndNow) {
   EXPECT_LT(end - start, kSleepTime + chrono::milliseconds(200));
 }
 
+TEST(TimeTest, MonotonicClockSleepUntilPastTime) {
+  // sleep_until should return promptly when the requested time is in the past.
+  monotonic_clock::time_point start = monotonic_clock::now();
+  ::std::this_thread::sleep_until(start - chrono::milliseconds(200));
+  monotonic_clock::time_point end = monotonic_clock::now();
+  EXPECT_LT(end - start, chrono::milliseconds(20));
+}
+
 // Test to_timespec for a duration.
 TEST(TimeTest, DurationToTimespec) {
   struct timespec pos_time = to_timespec(chrono::milliseconds(56262));
@@ -211,6 +219,7 @@ TEST(TimeTest, OperatorStreamRealtimeNegative) {
     EXPECT_EQ(s.str(), "(unrepresentable realtime -9223372036854775808)");
   }
 
+#ifdef __linux__
   {
     const realtime_clock::time_point t =
         realtime_clock::min_time + std::chrono::nanoseconds(999999999);
@@ -221,6 +230,7 @@ TEST(TimeTest, OperatorStreamRealtimeNegative) {
     EXPECT_EQ(s.str(), "1677-09-21_00-12-44.145224191");
     EXPECT_EQ(realtime_clock::FromString(s.str()).value(), t);
   }
+#endif
 }
 
 // Test that ToString works for monotonic and realtime time points.

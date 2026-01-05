@@ -13,10 +13,17 @@
 #include <ratio>
 #include <sstream>
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 
 #include "absl/log/absl_check.h"
 #include "absl/strings/numbers.h"
+
+#if defined(__APPLE__)
+#include <mach/mach.h>
+#include <mach/mach_time.h>
+
+#include "absl/numeric/int128.h"
+#endif
 
 #else  // __linux__
 
@@ -47,9 +54,22 @@ void PrintToStream(std::ostream &stream, chrono::nanoseconds duration) {
   }
 }
 
+#if defined(__APPLE__)
+mach_timebase_info_data_t LoadMachTimebaseInfo() {
+  mach_timebase_info_data_t info;
+  ABSL_CHECK_EQ(mach_timebase_info(&info), KERN_SUCCESS);
+  return info;
+}
+
+const mach_timebase_info_data_t &MachTimebaseInfo() {
+  static const mach_timebase_info_data_t timebase_info = LoadMachTimebaseInfo();
+  return timebase_info;
+}
+#endif
+
 }  // namespace
 
-#ifdef __linux__
+#if defined(__linux__)
 
 namespace aos::this_thread {
 
@@ -75,7 +95,42 @@ void sleep_until(const ::aos::monotonic_clock::time_point &end_time) {
 
 }  // namespace aos::this_thread
 
-#endif  // __linux__
+#elif defined(__APPLE__)
+
+namespace aos::this_thread {
+
+void sleep_until(const ::aos::monotonic_clock::time_point &end_time) {
+  const mach_timebase_info_data_t &timebase_info = MachTimebaseInfo();
+
+  // Convert aos::monotonic_clock to total nanoseconds
+  uint64_t end_nanos =
+      std::chrono::nanoseconds(end_time.time_since_epoch()).count();
+
+  // Convert nanoseconds to Mach absolute time units (ticks)
+  // Formula: ticks = (nanos * denom) / numer
+  // Using absl::uint128 to ensure no overflow during the multiplication
+  uint64_t end_ticks = static_cast<uint64_t>(
+      (absl::uint128(end_nanos) * timebase_info.denom) / timebase_info.numer);
+
+  kern_return_t result;
+  do {
+    result = mach_wait_until(end_ticks);
+
+    // KERN_ABORTED is the Mach equivalent of an interrupt (like EINTR on
+    // Linux), including handled signals. Retry so this matches the Linux
+    // sleep_until implementation above and still waits until end_time.
+    if (result == KERN_SUCCESS) break;
+
+    ABSL_PCHECK(result == KERN_ABORTED)
+        << ": mach_wait_until(" << end_ticks
+        << ") failed with unexpected error: " << result;
+
+  } while (result == KERN_ABORTED);
+}
+
+}  // namespace aos::this_thread
+
+#endif  // defined(__linux__) || defined(__APPLE__)
 
 namespace aos {
 
@@ -97,7 +152,7 @@ std::string ToString(const aos::realtime_clock::time_point &now) {
   return stream.str();
 }
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 std::optional<monotonic_clock::time_point> monotonic_clock::FromString(
     const std::string_view now) {
   // This should undo the operator << above.
@@ -237,7 +292,7 @@ constexpr realtime_clock::time_point realtime_clock::min_time;
 constexpr realtime_clock::time_point realtime_clock::max_time;
 
 monotonic_clock::time_point monotonic_clock::now() noexcept {
-#ifdef __linux__
+#if defined(__linux__)
   struct timespec current_time;
   ABSL_PCHECK(clock_gettime(CLOCK_MONOTONIC, &current_time) == 0)
       << ": clock_gettime(" << static_cast<uintmax_t>(CLOCK_MONOTONIC) << ", "
@@ -245,8 +300,15 @@ monotonic_clock::time_point monotonic_clock::now() noexcept {
 
   return time_point(::std::chrono::seconds(current_time.tv_sec) +
                     ::std::chrono::nanoseconds(current_time.tv_nsec));
+#elif defined(__APPLE__)
+  const mach_timebase_info_data_t &timebase_info = MachTimebaseInfo();
 
-#else  // __linux__
+  uint64_t current_ticks = mach_absolute_time();
+  uint64_t current_nanos = static_cast<uint64_t>(
+      (absl::uint128(current_ticks) * timebase_info.numer) /
+      timebase_info.denom);
+  return time_point(::std::chrono::nanoseconds(current_nanos));
+#else  // __linux__ || __APPLE__
 
   __disable_irq();
   const uint32_t current_counter = SYST_CVR;
@@ -273,7 +335,7 @@ monotonic_clock::time_point monotonic_clock::now() noexcept {
 #endif  // __linux__
 }
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 realtime_clock::time_point realtime_clock::now() noexcept {
   struct timespec current_time;
   ABSL_PCHECK(clock_gettime(CLOCK_REALTIME, &current_time) == 0)
