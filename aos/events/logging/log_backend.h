@@ -237,7 +237,7 @@ class FileHandler : public LogSink {
   // is already disabld.
   void DisableDirect();
 
-  bool ODirectEnabled() const { return !!(flags_ & O_DIRECT); }
+  bool ODirectEnabled() const;
 
   // Writes a chunk of iovecs. aligned is true if all the data is kSector byte
   // aligned and multiples of it in length.
@@ -259,6 +259,7 @@ class FileHandler : public LogSink {
   size_t written_aligned_ = 0;
 
   bool supports_odirect_ = true;
+  bool odirect_enabled_ = false;
   int flags_ = 0;
 };
 
