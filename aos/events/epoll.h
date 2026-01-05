@@ -165,11 +165,21 @@ class EPoll {
 
   void DoEpollCtl(EventData *event_data, uint32_t new_events);
 
+  void DeleteFdFromEpoll(int fd);
+
+  // Provide an abstraction which is pretty close to the Linux abstraction.
+  // The underlying datastructures want to track this as a bitmask to track if
+  // multiple things are set, so lean in to that abstraction.
+  static constexpr uint32_t kIn = 0x01;
+  static constexpr uint32_t kPri = 0x02;
+  static constexpr uint32_t kOut = 0x04;
+  static constexpr uint32_t kErr = 0x08;
+
   // TODO(Brian): Figure out a nicer way to handle EPOLLPRI than lumping it in
   // with input.
-  static constexpr uint32_t kInEvents = EPOLLIN | EPOLLPRI;
-  static constexpr uint32_t kOutEvents = EPOLLOUT;
-  static constexpr uint32_t kErrorEvents = EPOLLERR;
+  static constexpr uint32_t kInEvents = kIn | kPri;
+  static constexpr uint32_t kOutEvents = kOut;
+  static constexpr uint32_t kErrorEvents = kErr;
 
   ::std::atomic<bool> run_{true};
 

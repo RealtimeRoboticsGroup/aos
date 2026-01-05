@@ -38,7 +38,11 @@ cc_static_flatbuffer(
 
 cc_library(
     name = "epoll",
-    srcs = ["epoll.cc"],
+    srcs = [
+        "epoll.cc",
+    ] + select({
+        "@platforms//os:linux": ["epoll_linux.cc"],
+    }),
     hdrs = ["epoll.h"],
     target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
