@@ -179,6 +179,71 @@ All fields must be specified for struct types (field nested_struct missing).
       output);
 }
 
+// Tests that floatig-point overflow is handled correctly.
+TEST_F(JsonToFlatbufferTest, FloatingPointOverflow) {
+  // Sanity check some large-but-still-valid numbers.
+  ASSERT_LT(2e+38, std::numeric_limits<float>::max());
+  ASSERT_GT(4e+38, std::numeric_limits<float>::max());
+  EXPECT_TRUE(JsonAndBack("{ \"foo_float\": 2e+38 }"));
+  ASSERT_LT(1e+308, std::numeric_limits<double>::max());
+  ASSERT_EQ(1.7976931348623157e+308, std::numeric_limits<double>::max());
+  EXPECT_TRUE(JsonAndBack("{ \"foo_double\": 1e+308 }"));
+  // Overflow floats get truncated to infinity.
+  EXPECT_TRUE(
+      JsonAndBack("{ \"foo_float\": 4e+38 }", "{ \"foo_float\": inf }"));
+  EXPECT_TRUE(
+      JsonAndBack("{ \"foo_float\": -4e+38 }", "{ \"foo_float\": -inf }"));
+  EXPECT_TRUE(JsonAndBack("{ \"vector_foo_float\": [ 4e+38 ] }",
+                          "{ \"vector_foo_float\": [ inf ] }"));
+  EXPECT_TRUE(
+      JsonAndBack("{ \"foo_double\": 4e+308 }", "{ \"foo_double\": inf }"));
+  EXPECT_TRUE(
+      JsonAndBack("{ \"foo_double\": -4e+308 }", "{ \"foo_double\": -inf }"));
+  EXPECT_TRUE(JsonAndBack("{ \"vector_foo_double\": [ 4e+308 ] }",
+                          "{ \"vector_foo_double\": [ inf ] }"));
+}
+
+// Tests that floating-point underflow is handled reasonably. Note that there
+// are two relevant thresholds when dealing with underflow; as a reminder,
+// sub-normal numbers are those where the exponent bits are zero and the
+// mantissa is interpretted without a leading 1, allowing for very-low-magnitude
+// numbers to be represented.
+// The relevant thresholds are:
+// 1. When a number is small enough to be sub-normal but still larger than the
+//    smallest sub-normal number, we expect the JSON conversion to faithfully
+//    convert to/from the relevant number. Note that some string parsers throw
+//    out-of-range errors when dealing with sub-normal numbers.
+// 2. When numbers underflow below the smallest representible number, we expect
+//    rounding to occur and an error to be thrown.
+TEST_F(JsonToFlatbufferTest, FloatingPointUnderflow) {
+  ASSERT_EQ(1.17549435e-38f, std::numeric_limits<float>::min());
+  ASSERT_EQ(1.40129846e-45f, std::numeric_limits<float>::denorm_min());
+  ASSERT_EQ(2.2250738585072014e-308, std::numeric_limits<double>::min());
+  ASSERT_EQ(4.9406564584124654e-324, std::numeric_limits<double>::denorm_min());
+  // Sanity check some small-but-still-normal floating-point numbers.
+  EXPECT_TRUE(JsonAndBack("{ \"foo_float\": 2e-38 }"));
+  EXPECT_TRUE(JsonAndBack("{ \"foo_double\": 4e-308 }"));
+  // Test sub-normal numbers; JSON parsing should still work.
+  EXPECT_TRUE(JsonAndBack("{ \"foo_float\": 1e-40 }"));
+  EXPECT_TRUE(JsonAndBack("{ \"foo_float\": -1e-40 }"));
+  EXPECT_TRUE(JsonAndBack("{ \"vector_foo_float\": [ 1e-40 ] }"));
+  EXPECT_TRUE(JsonAndBack("{ \"foo_double\": 1e-310 }"));
+  EXPECT_TRUE(JsonAndBack("{ \"foo_double\": -1e-310 }"));
+  EXPECT_TRUE(JsonAndBack("{ \"vector_foo_double\": [ 1e-310 ] }"));
+  // Test truly unrepresentably small numbers; floats should round to zero.
+  EXPECT_TRUE(JsonAndBack("{ \"foo_float\": 1e-50 }", "{ \"foo_float\": 0 }"));
+  EXPECT_TRUE(
+      JsonAndBack("{ \"foo_float\": -1e-50 }", "{ \"foo_float\": -0.0 }"));
+  EXPECT_TRUE(JsonAndBack("{ \"vector_foo_float\": [ 1e-50 ] }",
+                          "{ \"vector_foo_float\": [ 0 ] }"));
+  EXPECT_TRUE(
+      JsonAndBack("{ \"foo_double\": 1e-350 }", "{ \"foo_double\": 0 }"));
+  EXPECT_TRUE(
+      JsonAndBack("{ \"foo_double\": -1e-350 }", "{ \"foo_double\": -0.0 }"));
+  EXPECT_TRUE(JsonAndBack("{ \"vector_foo_double\": [ 1e-350 ] }",
+                          "{ \"vector_foo_double\": [ 0 ] }"));
+}
+
 // Tests that Inf is handled correctly
 TEST_F(JsonToFlatbufferTest, Inf) {
   EXPECT_TRUE(JsonAndBack("{ \"foo_float\": inf }"));

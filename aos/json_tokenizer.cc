@@ -3,6 +3,8 @@
 #include <cerrno>
 #include <limits>
 
+#include "absl/strings/numbers.h"
+
 namespace aos {
 
 void Tokenizer::ConsumeWhitespace() {
@@ -572,8 +574,6 @@ bool Tokenizer::FieldAsInt(absl::int128 *value) {
 }
 
 bool Tokenizer::FieldAsDouble(double *value) {
-  const char *pos = field_value().c_str();
-  errno = 0;
   if (field_value() == "nan") {
     *value = std::numeric_limits<double>::quiet_NaN();
     return true;
@@ -590,11 +590,13 @@ bool Tokenizer::FieldAsDouble(double *value) {
     return true;
   }
 
-  *value = strtod(field_value().c_str(), const_cast<char **>(&pos));
-
-  if (pos != field_value().c_str() + field_value().size() || errno != 0) {
+  // Over/underflow is not considered an error in SimpleAtod and instead results
+  // in rounding to infinity (in the case of overflow) or zero (in the case of
+  // udnerflow which occurs below denorm_min()).
+  if (!absl::SimpleAtod(field_value(), value)) {
     return false;
   }
+
   return true;
 }
 

@@ -486,7 +486,7 @@ bool JsonParser::DoParse(FlatbufferType type, const std::string_view data,
           if (t.FieldAsDouble(&double_value)) {
             is_int = false;
           } else {
-            fprintf(stderr, "Got a invalid number '%s'\n",
+            fprintf(stderr, "Got an invalid number '%s'\n",
                     t.field_value().c_str());
             return false;
           }
