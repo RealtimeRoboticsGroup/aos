@@ -269,6 +269,7 @@ cc_library(
     name = "realtime",
     srcs = [
         "realtime.cc",
+        "realtime_internal.h",
     ] + select({
         "@platforms//os:linux": ["realtime_linux.cc"],
         "@platforms//os:osx": ["realtime_darwin.cc"],

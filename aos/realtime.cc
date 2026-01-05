@@ -4,7 +4,6 @@
 #include <malloc.h>
 #include <sched.h>
 #include <sys/mman.h>
-#include <sys/prctl.h>
 #include <sys/resource.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -21,7 +20,6 @@
 #include "absl/log/absl_log.h"
 
 #include "aos/sanitizers.h"
-#include "aos/uuid.h"
 
 ABSL_FLAG(
     bool, die_on_malloc, true,
@@ -32,50 +30,19 @@ ABSL_FLAG(bool, skip_realtime_scheduler, false,
 ABSL_FLAG(bool, skip_locking_memory, false,
           "If true, skip locking memory.  Pretend that we did it instead.");
 
-extern "C" {
-typedef void (*MallocHook_NewHook)(const void *ptr, size_t size);
-int MallocHook_AddNewHook(MallocHook_NewHook hook) __attribute__((weak));
-int MallocHook_RemoveNewHook(MallocHook_NewHook hook) __attribute__((weak));
-
-typedef void (*MallocHook_DeleteHook)(const void *ptr);
-int MallocHook_AddDeleteHook(MallocHook_DeleteHook hook) __attribute__((weak));
-int MallocHook_RemoveDeleteHook(MallocHook_DeleteHook hook)
-    __attribute__((weak));
-
-// Declare tc_malloc weak so we can check if it exists.
-void *tc_malloc(size_t size) __attribute__((weak));
-
-void *__libc_malloc(size_t size);
-void __libc_free(void *ptr);
-void *__libc_realloc(void *ptr, size_t size);
-void *__libc_calloc(size_t n, size_t elem_size);
-}  // extern "C"
-
 namespace FLAG__namespace_do_not_use_directly_use_DECLARE_double_instead {
 extern double FLAGS_tcmalloc_release_rate __attribute__((weak));
 }
 using FLAG__namespace_do_not_use_directly_use_DECLARE_double_instead::
     FLAGS_tcmalloc_release_rate;
 
+#include "aos/realtime_internal.h"
+
 namespace aos {
 
-namespace logging::internal {
-
-// Implemented in aos/logging/context.cc.
-void ReloadThreadName() __attribute__((weak));
-
-}  // namespace logging::internal
-
-namespace {
-
-enum class SetLimitForRoot { kYes, kNo };
-
-enum class AllowSoftLimitDecrease { kYes, kNo };
-
-void SetSoftRLimit(
-    int resource, rlim64_t soft, SetLimitForRoot set_for_root,
-    std::string_view help_string,
-    AllowSoftLimitDecrease allow_decrease = AllowSoftLimitDecrease::kYes) {
+void SetSoftRLimit(int resource, RlimT soft, SetLimitForRoot set_for_root,
+                   std::string_view help_string,
+                   AllowSoftLimitDecrease allow_decrease) {
   bool am_root = getuid() == 0;
   if (set_for_root == SetLimitForRoot::kYes || !am_root) {
     struct rlimit64 rlim;
@@ -94,8 +61,6 @@ void SetSoftRLimit(
         << " with max of " << rlim.rlim_max << " (" << help_string << ")";
   }
 }
-
-}  // namespace
 
 void LockAllMemory() {
   CheckNotRealtime();
@@ -160,77 +125,6 @@ void InitRT() {
       "warning.");
 }
 
-void UnsetCurrentThreadRealtimePriority() {
-  struct sched_param param;
-  param.sched_priority = 0;
-  ABSL_PCHECK(sched_setscheduler(0, SCHED_OTHER, &param) == 0);
-  MarkRealtime(false);
-}
-
-void SetCurrentThreadName(const std::string_view name) {
-  ABSL_CHECK_LE(name.size(), 16u) << ": thread name '" << name << "' too long";
-  ABSL_VLOG(1) << "This thread is changing to '" << name << "'";
-  std::string string_name(name);
-  ABSL_PCHECK(prctl(PR_SET_NAME, string_name.c_str()) == 0)
-      << ": changing name to " << string_name;
-  if (&logging::internal::ReloadThreadName != nullptr) {
-    logging::internal::ReloadThreadName();
-  }
-}
-
-void SetCurrentThreadRealtimePriority(int priority, int scheduling_policy) {
-  // Ensure that we won't get expensive reads of /dev/random when the realtime
-  // scheduler is running.
-  UUID::Random();
-
-  if (absl::GetFlag(FLAGS_skip_realtime_scheduler)) {
-    ABSL_LOG(WARNING)
-        << "Ignoring request to switch to the RT scheduler due to "
-           "--skip_realtime_scheduler.";
-    return;
-  }
-  // Make sure we will only be allowed to run for 3 seconds straight.
-  SetSoftRLimit(
-      RLIMIT_RTTIME, 3000000, SetLimitForRoot::kYes,
-      ", use --skip_realtime_scheduler to stay non-rt and bypass this "
-      "warning.");
-
-  // Raise our soft rlimit if necessary.
-  SetSoftRLimit(
-      RLIMIT_RTPRIO, priority, SetLimitForRoot::kNo,
-      ", use --skip_realtime_scheduler to stay non-rt and bypass this "
-      "warning.",
-      AllowSoftLimitDecrease::kNo);
-
-  ABSL_CHECK(scheduling_policy == SCHED_FIFO || scheduling_policy == SCHED_RR)
-      << "Specified non-realtime scheduling policy with realtime priority";
-  ABSL_CHECK(priority > 0 && priority < 100)
-      << "Realtime priority must fall within [1,99]";
-  struct sched_param param;
-  param.sched_priority = priority;
-  MarkRealtime(true);
-  ABSL_PCHECK(sched_setscheduler(0, scheduling_policy, &param) == 0)
-      << ": changing to realtime scheduler ("
-      << (scheduling_policy == SCHED_FIFO ? "SCHED_FIFO" : "SCHED_RR")
-      << ") with priority " << priority
-      << ", if you want to bypass this check for testing, use "
-         "--skip_realtime_scheduler";
-}
-
-int GetCurrentThreadRealtimePriority() {
-  struct sched_param result;
-  ABSL_PCHECK(sched_getparam(0, &result) == 0)
-      << ": Failed to retrieve the Realtime Priority";
-  return result.sched_priority;
-}
-
-int GetCurrentThreadSchedulingPolicy() {
-  int scheduling_policy = sched_getscheduler(0);
-  ABSL_PCHECK(scheduling_policy >= 0)
-      << ": Failed to retrieve the scheduling policy";
-  return scheduling_policy;
-}
-
 void WriteCoreDumps() {
   // Do create core files of unlimited size.
   SetSoftRLimit(RLIMIT_CORE, RLIM_INFINITY, SetLimitForRoot::kYes, "");
@@ -241,11 +135,9 @@ void ExpandStackSize() {
                 AllowSoftLimitDecrease::kNo);
 }
 
-namespace {
 // Bool to track if malloc hooks have failed to be configured.
+// Exposed to platform specific files so they can set it to false on failure.
 bool has_malloc_hook = true;
-thread_local bool is_realtime = false;
-}  // namespace
 
 bool MarkRealtime(bool realtime) {
   if (realtime) {
@@ -259,25 +151,25 @@ bool MarkRealtime(bool realtime) {
            "Disable --die_on_malloc to continue.";
 #endif
   }
-  const bool prior = is_realtime;
-  is_realtime = realtime;
+  const bool prior = GetIsRealtime();
+  SetIsRealtime(realtime);
   return prior;
 }
 
 bool IsDieOnMallocEnabled() {
-  return absl::GetFlag(FLAGS_die_on_malloc) && aos::is_realtime &&
+  return absl::GetFlag(FLAGS_die_on_malloc) && GetIsRealtime() &&
          has_malloc_hook;
 }
 
-void CheckRealtime() { ABSL_CHECK(is_realtime); }
+void CheckRealtime() { ABSL_CHECK(GetIsRealtime()); }
 
-void CheckNotRealtime() { ABSL_CHECK(!is_realtime); }
+void CheckNotRealtime() { ABSL_CHECK(!GetIsRealtime()); }
 
-ScopedRealtimeRestorer::ScopedRealtimeRestorer() : prior_(is_realtime) {}
+ScopedRealtimeRestorer::ScopedRealtimeRestorer() : prior_(GetIsRealtime()) {}
 
 void NewHook(const void *ptr, size_t size) {
-  if (is_realtime) {
-    is_realtime = false;
+  if (GetIsRealtime()) {
+    SetIsRealtime(false);
     ABSL_RAW_LOG(FATAL, "Malloced %p -> %zu bytes", ptr, size);
   }
 }
@@ -286,78 +178,19 @@ void DeleteHook(const void *ptr) {
   // It is legal to call free(nullptr) unconditionally and assume that it won't
   // do anything.  Eigen does this.  So, if we are RT, ignore any of these
   // calls.
-  if (is_realtime && ptr != nullptr) {
-    is_realtime = false;
+  if (GetIsRealtime() && ptr != nullptr) {
+    SetIsRealtime(false);
     ABSL_RAW_LOG(FATAL, "Delete Hook %p", ptr);
   }
-}
-
-extern "C" {
-
-// malloc hooks for libc. Tcmalloc will replace everything it finds (malloc,
-// __libc_malloc, etc.), so we need its specific hook above as well.
-void *aos_malloc_hook(size_t size) {
-  if (absl::GetFlag(FLAGS_die_on_malloc) && aos::is_realtime) {
-    aos::is_realtime = false;
-    ABSL_RAW_LOG(FATAL,
-                 "Malloced %zu bytes: This error usually happens when a user "
-                 "does something that is not realtime. Either change the "
-                 "implementation to be realtime compatible or disable the "
-                 "die_on_malloc flag to run without this constraint.",
-                 size);
-    return nullptr;
-  } else {
-    return __libc_malloc(size);
-  }
-}
-
-void aos_free_hook(void *ptr) {
-  if (absl::GetFlag(FLAGS_die_on_malloc) && aos::is_realtime &&
-      ptr != nullptr) {
-    aos::is_realtime = false;
-    ABSL_RAW_LOG(FATAL, "Deleted %p", ptr);
-  } else {
-    __libc_free(ptr);
-  }
-}
-
-void *aos_realloc_hook(void *ptr, size_t size) {
-  if (absl::GetFlag(FLAGS_die_on_malloc) && aos::is_realtime) {
-    aos::is_realtime = false;
-    ABSL_RAW_LOG(FATAL, "Malloced %p -> %zu bytes", ptr, size);
-    return nullptr;
-  } else {
-    return __libc_realloc(ptr, size);
-  }
-}
-
-void *aos_calloc_hook(size_t n, size_t elem_size) {
-  if (absl::GetFlag(FLAGS_die_on_malloc) && aos::is_realtime) {
-    aos::is_realtime = false;
-    ABSL_RAW_LOG(FATAL, "Malloced %zu * %zu bytes", n, elem_size);
-    return nullptr;
-  } else {
-    return __libc_calloc(n, elem_size);
-  }
-}
-
-void *malloc(size_t size) __attribute__((weak, alias("aos_malloc_hook")));
-void free(void *ptr) __attribute__((weak, alias("aos_free_hook")));
-void *realloc(void *ptr, size_t size)
-    __attribute__((weak, alias("aos_realloc_hook")));
-void *calloc(size_t n, size_t elem_size)
-    __attribute__((weak, alias("aos_calloc_hook")));
 }
 
 void FatalUnsetRealtimePriority() {
   int saved_errno = errno;
   // Drop our priority first.  We are about to do lots of work to undo
   // everything, don't get overly clever.
-  struct sched_param param;
-  param.sched_priority = 0;
-  sched_setscheduler(0, SCHED_OTHER, &param);
+  UnsetCurrentThreadRealtimePriority();
 
-  is_realtime = false;
+  SetIsRealtime(false);
 
   // Put all sub-tasks back to non-rt priority too.
   DIR *dirp = opendir("/proc/self/task");
@@ -376,37 +209,6 @@ void FatalUnsetRealtimePriority() {
     closedir(dirp);
   }
   errno = saved_errno;
-}
-
-void RegisterMallocHook() {
-  if (absl::GetFlag(FLAGS_die_on_malloc)) {
-    // tcmalloc redefines __libc_malloc, so use this as a feature test.
-    if (&__libc_malloc == &tc_malloc) {
-      if (ABSL_VLOG_IS_ON(1)) {
-        ABSL_RAW_LOG(INFO, "Hooking tcmalloc for die_on_malloc");
-      }
-      if (&MallocHook_AddNewHook != nullptr) {
-        ABSL_CHECK(MallocHook_AddNewHook(&NewHook));
-      } else {
-        has_malloc_hook = false;
-      }
-      if (&MallocHook_AddDeleteHook != nullptr) {
-        ABSL_CHECK(MallocHook_AddDeleteHook(&DeleteHook));
-      } else {
-        has_malloc_hook = false;
-      }
-    } else {
-      if (ABSL_VLOG_IS_ON(1)) {
-        ABSL_RAW_LOG(INFO, "Replacing glibc malloc");
-      }
-      if (&malloc != &aos_malloc_hook) {
-        has_malloc_hook = false;
-      }
-      if (&free != &aos_free_hook) {
-        has_malloc_hook = false;
-      }
-    }
-  }
 }
 
 }  // namespace aos
