@@ -2,7 +2,12 @@
 #define AOS_EVENTS_EPOLL_H_
 
 #include <stdint.h>
+#if defined(__linux__)
 #include <sys/epoll.h>
+#elif defined(__APPLE__)
+#include <sys/event.h>
+#include <sys/time.h>
+#endif
 
 #include <atomic>
 #include <functional>
@@ -32,7 +37,7 @@ class TimerFd {
   // Disarms the timer.
   void Disable() {
     // Disarm the timer by feeding zero values
-    SetTime(::aos::monotonic_clock::epoch(), ::aos::monotonic_clock::zero());
+    SetTime(monotonic_clock::epoch(), monotonic_clock::zero());
   }
 
   // Reads the event.  Returns the number of elapsed cycles.
@@ -42,7 +47,15 @@ class TimerFd {
   int fd() { return fd_; }
 
  private:
+  friend class EPoll;
   int fd_ = -1;
+#if defined(__APPLE__)
+  ::aos::monotonic_clock::duration interval_ = ::aos::monotonic_clock::zero();
+  ::aos::monotonic_clock::time_point next_expiration_ =
+      ::aos::monotonic_clock::min_time;
+  void ResetOnFork();
+  friend void ResetTimerFdOnFork(TimerFd *timer);
+#endif
 };
 
 // Class to wrap epoll and call a callback when an event happens.
@@ -193,6 +206,11 @@ class EPoll {
   int quit_epoll_fd_;
 
   std::vector<std::function<void()>> before_epoll_wait_functions_;
+
+#if defined(__APPLE__)
+  void ResetOnFork();
+  friend void ResetEPollOnFork(EPoll *epoll);
+#endif
 };
 
 }  // namespace aos::internal
