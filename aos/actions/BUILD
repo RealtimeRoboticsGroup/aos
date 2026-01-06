@@ -18,7 +18,6 @@ cc_library(
         "actions.h",
         "actor.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":actions_fbs",
         "//aos/events:event_loop",
@@ -31,19 +30,16 @@ cc_library(
 static_flatbuffer(
     name = "actions_fbs",
     srcs = ["actions.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 static_flatbuffer(
     name = "test_action_fbs",
     srcs = ["test_action.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 static_flatbuffer(
     name = "test_action2_fbs",
     srcs = ["test_action2.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 aos_config(
@@ -54,7 +50,6 @@ aos_config(
         ":test_action_fbs",
         ":test_action2_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos/events:aos_config",
     ],
@@ -66,7 +61,6 @@ cc_test(
         "action_test.cc",
     ],
     data = [":action_test_config"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":action_lib",
         ":actions_fbs",

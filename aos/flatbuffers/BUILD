@@ -34,7 +34,6 @@ cc_library(
     hdrs = [
         "base.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos:shared_span",
@@ -76,7 +75,6 @@ cc_library(
 cc_library(
     name = "static_vector",
     hdrs = ["static_vector.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos/containers:inlined_vector",

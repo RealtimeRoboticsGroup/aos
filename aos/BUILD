@@ -98,7 +98,6 @@ cc_library(
     hdrs = [
         "condition.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos/ipc_lib:aos_sync",
@@ -113,7 +112,6 @@ cc_test(
     srcs = [
         "condition_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":condition",
         ":die",
@@ -599,7 +597,6 @@ cc_binary(
     srcs = [
         "config_flattener.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":configuration",
@@ -618,7 +615,6 @@ cc_library(
     hdrs = [
         "aos_cli_utils.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":configuration",
@@ -635,7 +631,6 @@ cc_binary(
     srcs = [
         "aos_dump.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":aos_cli_utils",
@@ -652,7 +647,6 @@ cc_binary(
     srcs = [
         "aos_jitter.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":aos_cli_utils",
@@ -670,7 +664,6 @@ cc_binary(
     srcs = [
         "aos_send.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":aos_cli_utils",
@@ -688,7 +681,6 @@ cc_binary(
     srcs = [
         "aos_graph_nodes.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":configuration",
@@ -834,7 +826,6 @@ cc_binary(
     srcs = [
         "aos_graph_channels.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":json_to_flatbuffer",
         "//aos:configuration",

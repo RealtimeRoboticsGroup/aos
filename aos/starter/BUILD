@@ -77,7 +77,6 @@ aos_config(
         "//aos/network:timestamp_fbs",
         "//aos/network:message_bridge_server_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 cc_test(
@@ -165,7 +164,6 @@ cc_library(
     name = "starter_rpc_lib",
     srcs = ["starter_rpc_lib.cc"],
     hdrs = ["starter_rpc_lib.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":starter_fbs",
@@ -180,7 +178,6 @@ cc_library(
 cc_binary(
     name = "aos_starter",
     srcs = ["starter_cmd.cc"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":starter_rpc_lib",
@@ -194,7 +191,6 @@ cc_binary(
 static_flatbuffer(
     name = "starter_fbs",
     srcs = ["starter.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = ["//aos/util:process_info_fbs"],
 )
@@ -202,7 +198,6 @@ static_flatbuffer(
 flatbuffer_ts_library(
     name = "starter_ts_fbs",
     srcs = ["starter.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     ts_files = [
         "aos/starter/state.ts",
         "aos/starter.ts",
@@ -221,7 +216,6 @@ flatbuffer_ts_library(
 static_flatbuffer(
     name = "kthread_fbs",
     srcs = ["kthread.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos:configuration_fbs",
@@ -231,7 +225,6 @@ static_flatbuffer(
 static_flatbuffer(
     name = "starter_rpc_fbs",
     srcs = ["starter_rpc.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 

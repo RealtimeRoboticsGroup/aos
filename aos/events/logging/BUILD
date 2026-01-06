@@ -9,7 +9,6 @@ load("//tools/python:defs.bzl", "py_binary", "py_test")
 static_flatbuffer(
     name = "logger_fbs",
     srcs = ["logger.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos:configuration_fbs",
@@ -19,7 +18,6 @@ static_flatbuffer(
 static_flatbuffer(
     name = "replay_timing_fbs",
     srcs = ["replay_timing.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 cc_static_flatbuffer(
@@ -32,7 +30,6 @@ cc_static_flatbuffer(
 static_flatbuffer(
     name = "log_replayer_stats_fbs",
     srcs = ["log_replayer_stats.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":replay_config_fbs",
     ],
@@ -48,7 +45,6 @@ cc_static_flatbuffer(
 static_flatbuffer(
     name = "replay_config_fbs",
     srcs = ["log_replayer_config.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos:configuration_fbs",
@@ -59,7 +55,6 @@ cc_library(
     name = "boot_timestamp",
     srcs = ["boot_timestamp.cc"],
     hdrs = ["boot_timestamp.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos/time",
@@ -73,7 +68,6 @@ cc_binary(
     srcs = [
         "log_replayer.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":log_reader",
@@ -99,7 +93,6 @@ cc_library(
     name = "file_operations",
     srcs = ["file_operations.cc"],
     hdrs = ["file_operations.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
@@ -188,7 +181,6 @@ cc_library(
     hdrs = [
         "log_reader_utils.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":log_reader",
@@ -213,7 +205,6 @@ cc_library(
         "logfile_sorting.h",
         "logfile_utils.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":boot_timestamp",
@@ -255,7 +246,6 @@ cc_binary(
     srcs = [
         "logfile_utils_out_of_space_test_runner.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":logfile_utils",
         "//aos:init",
@@ -296,7 +286,6 @@ cc_library(
     hdrs = [
         "buffer_encoder.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":logger_fbs",
@@ -317,7 +306,6 @@ cc_test(
         "buffer_encoder_test.cc",
     ],
     shard_count = 4,
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":buffer_encoder",
         ":buffer_encoder_param_test",
@@ -335,7 +323,6 @@ cc_library(
     hdrs = [
         "snappy_encoder.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":buffer_encoder",
@@ -357,7 +344,6 @@ cc_test(
         "snappy_encoder_test.cc",
     ],
     shard_count = 4,
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":buffer_encoder_param_test",
         ":snappy_encoder",
@@ -375,7 +361,6 @@ cc_library(
     hdrs = [
         "lzma_encoder.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":buffer_encoder",
@@ -422,7 +407,6 @@ cc_test(
         "lzma_encoder_test.cc",
     ],
     shard_count = 8,
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":buffer_encoder_param_test",
         ":lzma_encoder",
@@ -442,7 +426,6 @@ cc_library(
     hdrs = [
         "buffer_encoder_param_test.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":logfile_utils",
         ":logger_fbs",
@@ -451,6 +434,7 @@ cc_library(
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
     ],
+    alwayslink = True,
 )
 
 cc_library(
@@ -503,7 +487,6 @@ cc_library(
         "log_reader.h",
         "replay_channels.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":config_remapper",
@@ -540,7 +523,6 @@ cc_library(
         "config_remapper.h",
         "replay_channels.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":logfile_utils",
@@ -576,7 +558,6 @@ cc_test(
         ":multinode_pingpong_triangle_split_config",
         "//aos/testing/ping_pong:pingpong_config",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":config_remapper",
         ":multinode_logger_test_lib",
@@ -604,7 +585,6 @@ cc_binary(
     srcs = [
         "log_cat.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":log_reader",
@@ -627,7 +607,6 @@ cc_library(
         "logfile_validator.cc",
     ],
     hdrs = ["logfile_validator.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":logfile_utils",
@@ -645,7 +624,6 @@ cc_binary(
     srcs = [
         "timestamp_extractor.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":logfile_utils",
@@ -665,7 +643,6 @@ cc_binary(
     srcs = [
         "single_node_merge.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":logfile_utils",
@@ -684,7 +661,6 @@ cc_binary(
     srcs = [
         "log_edit.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":log_reader",
         "//aos:configuration",
@@ -702,7 +678,6 @@ cc_binary(
     srcs = [
         "log_stats.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":log_reader",
         "//aos:configuration",
@@ -726,7 +701,6 @@ cc_binary(
         "//tools:cpu_k8": ["-DLZMA=1"],
         "//conditions:default": [],
     }),
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":log_writer",
@@ -748,7 +722,6 @@ cc_library(
         "multinode_logger_test_lib.cc",
     ],
     hdrs = ["multinode_logger_test_lib.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":log_reader",
@@ -777,7 +750,6 @@ aos_config(
         "//aos/network:remote_message_fbs",
         "//aos/network:timestamp_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = ["//aos/testing/ping_pong:aos_config"],
 )
 
@@ -792,7 +764,6 @@ aos_config(
         "//aos/network:remote_message_fbs",
         "//aos/network:timestamp_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = ["//aos/testing/ping_pong:aos_config"],
 )
 
@@ -807,7 +778,6 @@ aos_config(
         "//aos/network:remote_message_fbs",
         "//aos/network:timestamp_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = ["//aos/testing/ping_pong:aos_config"],
 )
 
@@ -822,7 +792,6 @@ aos_config(
         "//aos/network:remote_message_fbs",
         "//aos/network:timestamp_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = ["//aos/testing/ping_pong:aos_config"],
 )
 
@@ -837,7 +806,6 @@ aos_config(
         "//aos/network:remote_message_fbs",
         "//aos/network:timestamp_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = ["//aos/testing/ping_pong:aos_config"],
 )
 
@@ -852,7 +820,6 @@ aos_config(
         "//aos/network:remote_message_fbs",
         "//aos/network:timestamp_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = ["//aos/testing/ping_pong:aos_config"],
 )
 
@@ -867,7 +834,6 @@ aos_config(
         "//aos/network:remote_message_fbs",
         "//aos/network:timestamp_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = ["//aos/testing/ping_pong:aos_config"],
 )
 
@@ -882,7 +848,6 @@ aos_config(
         "//aos/network:remote_message_fbs",
         "//aos/network:timestamp_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = ["//aos/testing/ping_pong:aos_config"],
 )
 
@@ -896,7 +861,6 @@ aos_config(
         "//aos/network:remote_message_fbs",
         "//aos/network:timestamp_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = ["//aos/testing/ping_pong:aos_config"],
 )
 
@@ -911,7 +875,6 @@ aos_config(
         "//aos/network:remote_message_fbs",
         "//aos/network:timestamp_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = ["//aos/testing/ping_pong:aos_config"],
 )
 
@@ -926,7 +889,6 @@ aos_config(
         "//aos/network:remote_message_fbs",
         "//aos/network:timestamp_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = ["//aos/testing/ping_pong:aos_config"],
 )
 
@@ -939,7 +901,6 @@ aos_config(
         "//aos/network:remote_message_fbs",
         "//aos/network:timestamp_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = ["//aos/testing/ping_pong:aos_config"],
 )
 
@@ -950,7 +911,6 @@ cc_test(
         ":multinode_pingpong_combined_config",
         "//aos/testing/ping_pong:pingpong_config",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":log_reader",
         ":log_writer",
@@ -970,7 +930,6 @@ cc_test(
     data = [
         ":multinode_pingpong_combined_config",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":log_reader_utils",
         ":multinode_logger_test_lib",
@@ -1002,7 +961,6 @@ cc_test(
         "//aos/testing/ping_pong:pingpong_config",
     ],
     shard_count = 10,
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":multinode_logger_test_lib",
         "//aos/flatbuffers:base",
@@ -1021,7 +979,6 @@ cc_test(
         "//aos/testing/ping_pong:pingpong_config",
     ],
     shard_count = 10,
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":log_reader",
         ":log_writer",
@@ -1045,7 +1002,6 @@ cc_test(
         ":logger_fbs_reflection_out",
         "//aos/network:remote_message_fbs_reflection_out",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":logfile_utils",
         ":logger_fbs",
@@ -1061,7 +1017,6 @@ cc_test(
 static_flatbuffer(
     name = "test_message_fbs",
     srcs = ["test_message.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 cc_binary(
@@ -1079,7 +1034,6 @@ cc_binary(
     srcs = [
         "log_config_extractor.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos:aos_cli_utils",
@@ -1098,6 +1052,7 @@ cc_binary(
     srcs = [
         "ssd_profiler.cc",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":log_backend",
@@ -1131,7 +1086,6 @@ py_test(
     srcs = [
         "plot_logger_profile_test.py",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":plot_logger_profile",
