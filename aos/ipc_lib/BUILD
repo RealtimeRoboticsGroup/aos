@@ -26,7 +26,6 @@ cc_library(
     linkopts = [
         "-lpthread",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":shm_observers",
@@ -115,7 +114,6 @@ cc_library(
     defines = [
         "AOS_QUEUE_ATOMIC_SIZE=32",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":shm_observers",
@@ -127,7 +125,6 @@ cc_library(
 cc_test(
     name = "index32_test",
     srcs = ["index_test.cc"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":index32",
         "//aos/testing:googletest",
@@ -140,7 +137,6 @@ cc_library(
     name = "index",
     srcs = ["index.cc"],
     hdrs = ["index.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":shm_observers",
@@ -152,7 +148,6 @@ cc_library(
 cc_test(
     name = "index_test",
     srcs = ["index_test.cc"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":index",
         "//aos/testing:googletest",
@@ -389,7 +384,6 @@ cc_library(
     hdrs = [
         "data_alignment.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/log:absl_check",
@@ -487,7 +481,6 @@ cc_library(
     hdrs = [
         "event.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos/ipc_lib:aos_sync",
@@ -503,7 +496,6 @@ cc_test(
     srcs = [
         "event_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":event",
         "//aos/testing:googletest",
@@ -526,7 +518,6 @@ cc_library(
     name = "shm_base",
     srcs = ["shm_base.cc"],
     hdrs = ["shm_base.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/flags:flag",

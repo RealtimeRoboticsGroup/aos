@@ -8,6 +8,7 @@
 #include <atomic>
 #include <chrono>
 #include <thread>
+#include <vector>
 
 #include "gtest/gtest.h"
 
@@ -69,6 +70,184 @@ TEST_F(SimpleConditionTest, Basic) {
   mutex_.Unlock();
   child.join();
   EXPECT_TRUE(child_finished.load());
+}
+
+// Verifies that WaitTimed respects its timeout when nobody signals the
+// condition: it must block for at least the requested duration, but return
+// kTimeout in a bounded amount of time above it.
+//
+// This is a regression test for a bug in the macOS aos_sync shim where the
+// absolute CLOCK_MONOTONIC deadline constructed by WaitTimed was passed
+// straight into os_sync_wait_on_address_with_timeout as if it were a relative
+// nanosecond duration, causing WaitTimed to block for roughly the system's
+// uptime (many minutes to hours) instead of the requested timeout.
+TEST_F(SimpleConditionTest, WaitTimedBoundedByTimeout) {
+  constexpr auto kTimeout = chrono::milliseconds(50);
+  // Allow substantial slack for loaded/sanitizer builds, but keep it well
+  // under anything that would look like "uptime seconds".
+  constexpr auto kUpperBound = chrono::seconds(2);
+
+  ASSERT_FALSE(mutex_.Lock());
+  const auto start = chrono::steady_clock::now();
+  const Condition::WaitResult result = condition_.WaitTimed(kTimeout);
+  const auto elapsed = chrono::steady_clock::now() - start;
+  mutex_.Unlock();
+
+  EXPECT_EQ(Condition::WaitResult::kTimeout, result);
+  EXPECT_GE(elapsed, kTimeout) << "WaitTimed returned before its timeout";
+  EXPECT_LT(elapsed, kUpperBound)
+      << "WaitTimed slept far longer than its timeout "
+      << "(elapsed = "
+      << chrono::duration_cast<chrono::milliseconds>(elapsed).count()
+      << "ms); likely an absolute-vs-relative deadline bug in the futex "
+         "timeout path.";
+}
+
+// Parks many threads on the same mutex and then releases them one at a time.
+// Regression test for a bug in the macOS aos_sync shim where
+// os_sync_wait_on_address's success return value (the number of waiters still
+// blocked on the address after this thread was woken) was reinterpreted as a
+// negative errno, causing mutex_do_get to LOG(FATAL) whenever the kernel
+// reported >= 2 waiters still parked on the mutex's futex.
+TEST_F(SimpleConditionTest, ManyMutexWaiters) {
+  constexpr int kNumWaiters = 16;
+  std::atomic<int> running{0};
+  std::atomic<int> done{0};
+
+  ASSERT_FALSE(mutex_.Lock());
+
+  std::vector<std::thread> threads;
+  threads.reserve(kNumWaiters);
+  for (int i = 0; i < kNumWaiters; ++i) {
+    threads.emplace_back([this, &running, &done] {
+      ++running;
+      ASSERT_FALSE(mutex_.Lock());
+      ++done;
+      mutex_.Unlock();
+    });
+  }
+
+  // Wait for all workers to be launched and (racily) be parked in Lock().
+  while (running.load() < kNumWaiters) {
+    ::std::this_thread::sleep_for(chrono::milliseconds(1));
+  }
+  // Extra settle so every worker has actually entered the kernel futex wait
+  // rather than just being scheduled to call Lock().
+  ::std::this_thread::sleep_for(chrono::milliseconds(100));
+
+  // Release. As each waiter wakes, kNumWaiters-1 others are still parked on
+  // the mutex futex -- that's the path that used to LOG(FATAL) for all but
+  // the last waiter.
+  mutex_.Unlock();
+
+  for (auto &t : threads) {
+    t.join();
+  }
+  EXPECT_EQ(kNumWaiters, done.load());
+}
+
+// Wakes several in-process waiters with Broadcast(). Regression test for a bug
+// in the macOS aos_sync shim where os_sync_wait_on_address's success return
+// value (the number of waiters still blocked) was being reinterpreted as a
+// negative errno, causing broadcast wakes of multiple waiters to LOG(FATAL) in
+// mutex_do_get on the subsequent mutex relock.
+TEST_F(SimpleConditionTest, BroadcastWakesMultipleWaiters) {
+  constexpr int kNumWaiters = 4;
+  int waiters_running = 0;  // protected by mutex_
+  std::atomic<int> waiters_woken{0};
+
+  std::vector<std::thread> threads;
+  threads.reserve(kNumWaiters);
+  for (int i = 0; i < kNumWaiters; ++i) {
+    threads.emplace_back([this, &waiters_running, &waiters_woken] {
+      ASSERT_FALSE(mutex_.Lock());
+      ++waiters_running;
+      ASSERT_FALSE(condition_.Wait());
+      ++waiters_woken;
+      mutex_.Unlock();
+    });
+  }
+
+  // Repeatedly take mutex_ and check waiters_running. Holding mutex_ while
+  // observing waiters_running == kNumWaiters guarantees every worker has
+  // released the mutex inside Wait() and is parked in the kernel, so the
+  // following Broadcast() is guaranteed to wake all of them.
+  while (true) {
+    ASSERT_FALSE(mutex_.Lock());
+    if (waiters_running == kNumWaiters) {
+      condition_.Broadcast();
+      mutex_.Unlock();
+      break;
+    }
+    mutex_.Unlock();
+    ::std::this_thread::sleep_for(chrono::milliseconds(1));
+  }
+
+  for (auto &t : threads) {
+    t.join();
+  }
+  EXPECT_EQ(kNumWaiters, waiters_woken.load());
+}
+
+// Verifies that Condition::Wait() correctly propagates owner-died from the
+// internal mutex relock: if another thread dies while holding the mutex
+// between when our Wait() released it and when Wait() relocks on wake-up,
+// Wait() must return true.
+//
+// Regression test for a bug where the macOS aos_sync condition_wait discarded
+// mutex_lock's return value and always returned 0, silently swallowing the
+// owner-died signal that the caller relies on to run recovery logic.
+TEST_F(SimpleConditionTest, WaitPropagatesOwnerDied) {
+  std::atomic<bool> b_has_mutex{false};
+  std::atomic<bool> b_saw_owner_died{false};
+
+  // Hold the mutex so B has to wait to take it.
+  ASSERT_FALSE(mutex_.Lock());
+
+  std::thread b([this, &b_has_mutex, &b_saw_owner_died] {
+    ASSERT_FALSE(mutex_.Lock());
+    b_has_mutex.store(true);
+    // Wait() internally unlocks the mutex, parks on the condvar, and relocks
+    // on wake-up. We expect it to return true because another thread will
+    // die while holding the mutex before we re-acquire it.
+    const bool owner_died = condition_.Wait();
+    b_saw_owner_died.store(owner_died);
+    mutex_.Unlock();
+  });
+
+  // Let B take the mutex.
+  mutex_.Unlock();
+  while (!b_has_mutex.load()) {
+    ::std::this_thread::yield();
+  }
+
+  // Spawn a thread that locks the mutex and then exits without unlocking.
+  // D's Lock() will block until B releases the mutex inside Wait() -- no
+  // sleeps needed, the kernel does the synchronization for us. When D's
+  // thread terminates, the robust-list cleanup (the kernel on Linux;
+  // RobustListCleaner on macOS) sets FUTEX_OWNER_DIED on the mutex so that
+  // the next locker observes the owner died.
+  //
+  // This ordering also avoids any lost-broadcast risk: condition_wait reads
+  // its wait-token from the condvar *before* unlocking the mutex, so by the
+  // time D successfully acquires (and therefore by the time d.join() below
+  // returns), B has already committed to waiting on the current condvar
+  // value. Any Broadcast() we issue afterwards is guaranteed to be observed.
+  std::thread d([this] {
+    ASSERT_FALSE(mutex_.Lock());
+    // Deliberately do not Unlock(); let the thread terminate with the mutex
+    // held so the robust-list cleanup marks it as owner-died.
+  });
+  d.join();
+
+  // Broadcast without holding the mutex on purpose -- if we re-locked here we
+  // would clear FUTEX_OWNER_DIED before B could observe it.
+  condition_.Broadcast();
+
+  b.join();
+  EXPECT_TRUE(b_saw_owner_died.load())
+      << "Condition::Wait() must return true when the mutex's previous owner "
+         "died between the Wait's unlock and relock.";
 }
 
 // Tests that contention on the associated mutex doesn't break anything.

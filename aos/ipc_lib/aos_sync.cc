@@ -5,7 +5,12 @@
 
 #include "aos/ipc_lib/aos_sync.h"
 
+#ifdef __linux__
 #include <linux/futex.h>
+#else
+#include <os/lock.h>
+#include <os/proc.h>
+#endif
 #include <pthread.h>
 #include <signal.h>
 #include <stdio.h>
@@ -102,10 +107,62 @@ extern "C" void AnnotateHappensAfter(const char *file, int line,
 #define ANNOTATE_HAPPENS_AFTER(address)
 #endif
 
+#ifndef __linux__
+#define FUTEX_WAIT 0
+#define FUTEX_WAKE 1
+#define FUTEX_FD 2
+#define FUTEX_REQUEUE 3
+#define FUTEX_CMP_REQUEUE 4
+#define FUTEX_WAKE_OP 5
+#define FUTEX_LOCK_PI 6
+#define FUTEX_UNLOCK_PI 7
+#define FUTEX_TRYLOCK_PI 8
+#define FUTEX_WAIT_BITSET 9
+#define FUTEX_WAKE_BITSET 10
+#define FUTEX_WAIT_REQUEUE_PI 11
+#define FUTEX_CMP_REQUEUE_PI 12
+
+#define FUTEX_PRIVATE_FLAG 128
+#define FUTEX_CLOCK_REALTIME 256
+#define FUTEX_CMD_MASK ~(FUTEX_PRIVATE_FLAG | FUTEX_CLOCK_REALTIME)
+
+#define FUTEX_WAIT_PRIVATE (FUTEX_WAIT | FUTEX_PRIVATE_FLAG)
+#define FUTEX_WAKE_PRIVATE (FUTEX_WAKE | FUTEX_PRIVATE_FLAG)
+#define FUTEX_REQUEUE_PRIVATE (FUTEX_REQUEUE | FUTEX_PRIVATE_FLAG)
+#define FUTEX_CMP_REQUEUE_PRIVATE (FUTEX_CMP_REQUEUE | FUTEX_PRIVATE_FLAG)
+#define FUTEX_WAKE_OP_PRIVATE (FUTEX_WAKE_OP | FUTEX_PRIVATE_FLAG)
+#define FUTEX_LOCK_PI_PRIVATE (FUTEX_LOCK_PI | FUTEX_PRIVATE_FLAG)
+#define FUTEX_UNLOCK_PI_PRIVATE (FUTEX_UNLOCK_PI | FUTEX_PRIVATE_FLAG)
+#define FUTEX_TRYLOCK_PI_PRIVATE (FUTEX_TRYLOCK_PI | FUTEX_PRIVATE_FLAG)
+#define FUTEX_WAIT_BITSET_PRIVATE (FUTEX_WAIT_BITSET | FUTEX_PRIVATE_FLAG)
+#define FUTEX_WAKE_BITSET_PRIVATE (FUTEX_WAKE_BITSET | FUTEX_PRIVATE_FLAG)
+#define FUTEX_WAIT_REQUEUE_PI_PRIVATE \
+  (FUTEX_WAIT_REQUEUE_PI | FUTEX_PRIVATE_FLAG)
+#define FUTEX_CMP_REQUEUE_PI_PRIVATE (FUTEX_CMP_REQUEUE_PI | FUTEX_PRIVATE_FLAG)
+
+#ifdef __APPLE__
+#include <os/clock.h>
+#include <os/os_sync_wait_on_address.h>
+
+// OS_CLOCK_MACH_ABSOLUTE_TIME is only measured in nanoseconds on Apple Silicon;
+// on Intel Macs it uses host-specific mach tick units that require conversion
+// via mach_timebase_info(). We don't bother supporting Intel here.
+#if !defined(__aarch64__) && !defined(__arm64__)
+#error \
+    "aos_sync OSX support requires Apple Silicon (arm64); " \
+    "OS_CLOCK_MACH_ABSOLUTE_TIME is not nanoseconds on Intel Macs."
+#endif
+#endif
+
+#define FUTEX_WAITERS 0x80000000
+#define FUTEX_OWNER_DIED 0x40000000
+#define FUTEX_TID_MASK 0x3fffffff
+#endif
+
 namespace {
 
 const bool kRobustListDebug = false;
-const bool kLockDebug = false;
+const bool kLockDebug __attribute__((unused)) = false;
 const bool kPrintOperations = false;
 
 // These sys_futex_* functions are wrappers around syscall(SYS_futex). They each
@@ -134,6 +191,7 @@ const bool kPrintOperations = false;
 #endif
 
 // Used for FUTEX_WAIT, FUTEX_LOCK_PI, and FUTEX_TRYLOCK_PI.
+#ifdef __linux__
 inline int sys_futex_wait(int op, aos_futex *addr1, int val1,
                           const struct timespec *timeout) {
 #if ARM_EABI_INLINE_SYSCALL
@@ -168,7 +226,9 @@ inline int sys_futex_wait(int op, aos_futex *addr1, int val1,
   return r;
 #endif
 }
+#endif
 
+#ifdef __linux__
 inline int sys_futex_wake(aos_futex *addr1, int val1) {
 #if ARM_EABI_INLINE_SYSCALL
   register aos_futex *addr1_reg __asm__("r0") = addr1;
@@ -200,7 +260,47 @@ inline int sys_futex_wake(aos_futex *addr1, int val1) {
   return r;
 #endif
 }
+#endif
 
+#ifndef __linux__
+// Used by both normal wake and unlock_pi.
+//
+// Return value mirrors the Linux FUTEX_WAKE return contract as closely as macOS
+// allows:
+//   >= 0 : number of waiters that were woken (approximate, see below).
+//   <  0 : -errno.
+//
+// `val1` mirrors the Linux FUTEX_WAKE semantics as closely as macOS allows:
+//   1 : wake 1 waiter
+//   any other value: wake all waiters
+//
+// The os_sync_wake_by_address_{any,all} APIs only report success (0) or
+// failure (-1 with errno), and in particular ENOENT when there were no
+// waiters. They don't tell us how many threads were actually woken, so we
+// approximate "success" as 1 -- enough to let callers distinguish
+// "woke at least one" from "woke none" from "error".
+inline int sys_futex_wake(aos_futex *addr1, int val1) {
+  int ret;
+  if (val1 == 1) {
+    ret = os_sync_wake_by_address_any(addr1, sizeof(*addr1),
+                                      OS_SYNC_WAKE_BY_ADDRESS_SHARED);
+  } else {
+    ret = os_sync_wake_by_address_all(addr1, sizeof(*addr1),
+                                      OS_SYNC_WAKE_BY_ADDRESS_SHARED);
+  }
+  if (ret == 0) {
+    return 1;
+  }
+  if (errno == ENOENT) {
+    // No waiters; nothing was woken. Matches Linux FUTEX_WAKE's return of 0.
+    return 0;
+  }
+  return -errno;
+}
+
+#endif
+
+#ifdef __linux__
 inline int sys_futex_cmp_requeue_pi(aos_futex *addr1, int num_wake,
                                     int num_requeue, aos_futex *m,
                                     uint32_t val) {
@@ -243,7 +343,9 @@ inline int sys_futex_cmp_requeue_pi(aos_futex *addr1, int num_wake,
   return r;
 #endif
 }
+#endif
 
+#ifdef __linux__
 inline int sys_futex_wait_requeue_pi(aos_condition *addr1, uint32_t start_val,
                                      const struct timespec *timeout,
                                      aos_futex *m) {
@@ -310,6 +412,38 @@ inline int sys_futex_unlock_pi(aos_futex *addr1) {
   return r;
 #endif
 }
+#else
+__attribute__((unused)) inline int sys_futex_cmp_requeue_pi(
+    aos_futex * /*addr1*/, int /*num_wake*/, int /*num_requeue*/,
+    aos_futex * /*m*/, uint32_t /*val*/) {
+  // Not supported on macOS
+  return -ENOSYS;
+}
+
+__attribute__((unused)) inline int sys_futex_wait_requeue_pi(
+    aos_condition * /*addr1*/, uint32_t /*start_val*/,
+    const struct timespec * /*timeout*/, aos_futex * /*m*/) {
+  // Not supported on macOS
+  return -ENOSYS;
+}
+
+inline int sys_futex_unlock_pi(aos_futex *addr1) {
+  // Just wake as we are not using PI locks on macOS.
+  // Also clear the lock value because mutex_unlock expects us to do it if it
+  // called us.
+  __atomic_store_n(addr1, 0, __ATOMIC_RELEASE);
+  const int ret = os_sync_wake_by_address_any(addr1, sizeof(*addr1),
+                                              OS_SYNC_WAKE_BY_ADDRESS_SHARED);
+  if (ret == 0 || errno == ENOENT) {
+    // Success, or there were simply no waiters to wake (which is normal when
+    // the last unlock races with an interrupted waiter). Match Linux
+    // FUTEX_UNLOCK_PI's 0-on-success contract.
+    return 0;
+  }
+  return -errno;
+}
+
+#endif
 
 // Returns the previous value of f.
 inline uint32_t compare_and_swap_val(aos_futex *f, uint32_t before,
@@ -422,9 +556,15 @@ static inline void unlock_pthread_mutex(aos_mutex *) {}
 #endif
 
 pid_t do_get_tid() {
+#ifdef __linux__
   pid_t r = syscall(SYS_gettid);
   assert(r > 0);
   return r;
+#else
+  uint64_t tid;
+  pthread_threadid_np(NULL, &tid);
+  return static_cast<pid_t>(tid) & FUTEX_TID_MASK;
+#endif
 }
 
 // This gets called by functions before LOG(FATAL)ing with error messages
@@ -470,6 +610,62 @@ inline uint32_t get_tid() {
   return static_cast<uint32_t>(my_tid);
 }
 
+#ifndef __linux__
+// XNU private os_sync API provided by <os/os_sync_wait_on_address.h>
+
+inline int sys_futex_wait(int op, aos_futex *addr1, int val1,
+                          const struct timespec *timeout) {
+  if (op == FUTEX_TRYLOCK_PI) {
+    uint32_t tid = get_tid();
+    uint32_t val = __atomic_load_n(addr1, __ATOMIC_ACQUIRE);
+    if ((val & FUTEX_TID_MASK) == 0) {
+      uint32_t new_val = tid;
+      if (val & FUTEX_OWNER_DIED) new_val |= FUTEX_OWNER_DIED;
+      if (val & FUTEX_WAITERS) new_val |= FUTEX_WAITERS;
+      if (compare_and_swap(addr1, val, new_val)) {
+        return 0;
+      }
+    }
+    return -EWOULDBLOCK;
+  }
+
+  int ret;
+  if (timeout != nullptr) {
+    // Match Linux's FUTEX_WAIT semantics: the timespec is a *relative* timeout.
+    // Callers that want an absolute deadline (e.g. the OSX condition_wait
+    // path) must convert to a relative duration before calling.
+    //
+    // os_sync_wait_on_address_with_timeout takes its timeout in
+    // OS_CLOCK_MACH_ABSOLUTE_TIME units; on Apple Silicon those are
+    // nanoseconds (enforced by the arm64 #error check at the top of the file).
+    int64_t timeout_ns = static_cast<int64_t>(timeout->tv_sec) * 1000000000LL +
+                         static_cast<int64_t>(timeout->tv_nsec);
+    if (timeout_ns <= 0) {
+      return -ETIMEDOUT;
+    }
+    ret = os_sync_wait_on_address_with_timeout(
+        addr1, val1, sizeof(*addr1), OS_SYNC_WAIT_ON_ADDRESS_SHARED,
+        OS_CLOCK_MACH_ABSOLUTE_TIME, static_cast<uint64_t>(timeout_ns));
+  } else {
+    ret = os_sync_wait_on_address(addr1, val1, sizeof(*addr1),
+                                  OS_SYNC_WAIT_ON_ADDRESS_SHARED);
+  }
+
+  // Per <os/os_sync_wait_on_address.h>, any non-negative return indicates
+  // success -- the value is the number of waiters that remain blocked on the
+  // address after this thread was woken. The Linux FUTEX_WAIT contract
+  // doesn't expose that count, so we normalize any success to 0.
+  if (ret >= 0) return 0;
+  // Per <os/os_sync_wait_on_address.h>, EFAULT can be returned as a transient
+  // error (e.g. low-memory / page-fault races) even for a valid address, and
+  // the documented contract is for the caller to retry. Map it to
+  // -EWOULDBLOCK so the existing wait/retry loops handle it like a spurious
+  // wake instead of LOG(FATAL)ing.
+  if (errno == EFAULT) return -EWOULDBLOCK;
+  return -errno;
+}
+#endif
+
 // Contains all of the stuff for dealing with the robust list. Nothing outside
 // this namespace should touch anything inside it except Init, Adder, and
 // Remover.
@@ -490,6 +686,7 @@ struct aos_robust_list_head {
   uintptr_t pending_next;
 };
 
+#ifdef __linux__
 static_assert(offsetof(aos_robust_list_head, next) ==
                   offsetof(robust_list_head, list),
               "Our aos_robust_list_head doesn't match the kernel's");
@@ -501,6 +698,7 @@ static_assert(offsetof(aos_robust_list_head, pending_next) ==
               "Our aos_robust_list_head doesn't match the kernel's");
 static_assert(sizeof(aos_robust_list_head) == sizeof(robust_list_head),
               "Our aos_robust_list_head doesn't match the kernel's");
+#endif
 
 thread_local aos_robust_list_head robust_head;
 
@@ -546,10 +744,12 @@ void Init() {
   robust_head.futex_offset = static_cast<ssize_t>(offsetof(aos_mutex, futex)) -
                              static_cast<ssize_t>(offsetof(aos_mutex, next));
   robust_head.pending_next = 0;
+#ifdef __linux__
   ABSL_PCHECK(syscall(SYS_set_robust_list, robust_head_next_value(),
                       sizeof(robust_head)) == 0)
       << ": set_robust_list(" << reinterpret_cast<void *>(robust_head.next)
       << ", " << sizeof(robust_head) << ") failed";
+#endif
   if (kRobustListDebug) {
     printf("%" PRId32 ": init done\n", get_tid());
   }
@@ -665,6 +865,42 @@ class Remover {
  private:
   DISALLOW_COPY_AND_ASSIGN(Remover);
 };
+#ifndef __linux__
+// Userspace fallback for the kernel's robust-futex list on macOS.
+//
+// On Linux the kernel walks robust_head on thread death and marks any
+// still-held mutexes with FUTEX_OWNER_DIED, even if the thread died abruptly
+// (abort, signal, etc.). macOS has no equivalent, so we piggy-back on
+// thread_local destruction instead. That means:
+//   * We only run when the thread exits cleanly through pthread's TLS
+//     teardown. If the whole process is going down, we don't really care.
+//   * Destruction order between thread_local objects is unspecified, so in
+//     the pathological case where another thread_local destructor is still
+//     holding an aos_mutex when this cleaner runs (or vice versa), the
+//     cleanup might miss that mutex.
+// Note that the kernel-backed path on Linux isn't a complete guarantee
+// either -- the OOM killer, in particular, skips robust-futex processing --
+// so callers already have to cope with mutexes that never get the
+// FUTEX_OWNER_DIED treatment on owner death. In practice thread death on
+// macOS almost always means process death, and this codepath is only used
+// for intra-process dev/test, so the looser guarantee is acceptable.
+struct RobustListCleaner {
+  ~RobustListCleaner() {
+    while (!next_is_head(robust_head.next)) {
+      aos_mutex *m = next_to_mutex(robust_head.next);
+      robust_head.next = m->next;
+
+      uint32_t val = __atomic_load_n(&m->futex, __ATOMIC_RELAXED);
+      uint32_t new_val = FUTEX_OWNER_DIED;
+      if (val & FUTEX_WAITERS) new_val |= FUTEX_WAITERS;
+      __atomic_store_n(&m->futex, new_val, __ATOMIC_SEQ_CST);
+      sys_futex_wake(&m->futex, 1);
+    }
+  }
+  void Touch() const {}
+};
+thread_local RobustListCleaner robust_list_cleaner;
+#endif
 
 }  // namespace my_robust_list
 
@@ -677,6 +913,9 @@ void initialize_in_new_thread() {
   absl::call_once(once, InstallAtforkHook);
 
   my_robust_list::Init();
+#ifndef __linux__
+  my_robust_list::robust_list_cleaner.Touch();
+#endif
 }
 
 // Finishes the locking of a mutex by potentially clearing FUTEX_OWNER_DIED in
@@ -693,6 +932,7 @@ inline int mutex_finish_lock(aos_mutex *m) {
   }
 }
 
+#ifdef __linux__
 // Split out separately from mutex_get so condition_wait can call it and use its
 // own my_robust_list::Adder.
 inline int mutex_do_get(aos_mutex *m, bool signals_fail,
@@ -748,6 +988,56 @@ inline int mutex_do_get(aos_mutex *m, bool signals_fail,
 
   return mutex_finish_lock(m);
 }
+#else
+inline int mutex_do_get(aos_mutex *m, bool signals_fail,
+                        const struct timespec *timeout, uint32_t tid) {
+  RunShmObservers run_observers(m, true);
+  if (kPrintOperations) {
+    printf("%" PRId32 ": %p do_get\n", tid, m);
+  }
+
+  while (true) {
+    uint32_t v = __atomic_load_n(&m->futex, __ATOMIC_ACQUIRE);
+
+    if ((v & FUTEX_TID_MASK) == tid) {
+      ABSL_LOG(FATAL) << "multiple lock of " << m << " by " << tid;
+    }
+
+    // If it's unlocked (0) or marked as owner died (but no owner TID), we can
+    // take it.
+    if ((v & FUTEX_TID_MASK) == 0) {
+      uint32_t new_val = tid;
+      if (v & FUTEX_OWNER_DIED) new_val |= FUTEX_OWNER_DIED;
+      if (v & FUTEX_WAITERS) new_val |= FUTEX_WAITERS;
+
+      if (compare_and_swap(&m->futex, v, new_val)) {
+        return mutex_finish_lock(m);
+      }
+      // Retry if CAS failed.
+      continue;
+    }
+
+    if (!(v & FUTEX_WAITERS)) {
+      if (!compare_and_swap(&m->futex, v, v | FUTEX_WAITERS)) continue;
+      v |= FUTEX_WAITERS;
+    }
+
+    const int ret = sys_futex_wait(FUTEX_WAIT, &m->futex, v, timeout);
+    if (ret != 0) {
+      if (ret == -ETIMEDOUT) return 3;
+      if (ret == -EINTR) {
+        if (signals_fail) return 2;
+        continue;
+      }
+      // EWOULDBLOCK (or similar from os_sync emulation) just means retry
+      if (ret == -EWOULDBLOCK) continue;
+
+      errno = -ret;
+      ABSL_PLOG(FATAL) << "sys_futex_wait failed";
+    }
+  }
+}
+#endif
 
 // The common implementation for everything that wants to lock a mutex.
 // If signals_fail is false, the function will try again if the wait syscall is
@@ -762,6 +1052,7 @@ inline int mutex_get(aos_mutex *m, bool signals_fail,
   return r;
 }
 
+#ifdef __linux__
 // The common implementation for broadcast and signal.
 // number_requeue is the number of waiters to requeue (probably INT_MAX or 0). 1
 // will always be woken.
@@ -801,6 +1092,14 @@ void condition_wake(aos_condition *c, aos_mutex *m, int number_requeue) {
     }
   }
 }
+#else
+void condition_wake(aos_condition *c, aos_mutex * /*m*/, int number_requeue) {
+  RunShmObservers run_observers(c, true);
+  __atomic_add_fetch(c, 1, __ATOMIC_SEQ_CST);
+  // Simple wake
+  sys_futex_wake(c, number_requeue == 0 ? 1 : INT_MAX);
+}
+#endif
 
 }  // namespace
 
@@ -933,6 +1232,7 @@ void death_notification_release(aos_mutex *m) {
   }
 }
 
+#ifdef __linux__
 int condition_wait(aos_condition *c, aos_mutex *m, struct timespec *end_time) {
   RunShmObservers run_observers(c, false);
   const uint32_t tid = get_tid();
@@ -1004,6 +1304,49 @@ int condition_wait(aos_condition *c, aos_mutex *m, struct timespec *end_time) {
     }
   }
 }
+#else
+int condition_wait(aos_condition *c, aos_mutex *m, struct timespec *end_time) {
+  RunShmObservers run_observers(c, false);
+  const uint32_t wait_start = __atomic_load_n(c, __ATOMIC_SEQ_CST);
+
+  mutex_unlock(m);
+
+  // Callers (e.g. Condition::WaitTimed) pass an absolute CLOCK_MONOTONIC
+  // deadline, but our sys_futex_wait shim on macOS mirrors Linux FUTEX_WAIT
+  // and takes a relative timeout. Convert here.
+  struct timespec relative_timeout;
+  struct timespec *relative_timeout_ptr = nullptr;
+  if (end_time != nullptr) {
+    struct timespec now;
+    ABSL_PCHECK(clock_gettime(CLOCK_MONOTONIC, &now) == 0);
+    int64_t ns =
+        static_cast<int64_t>(end_time->tv_sec - now.tv_sec) * 1000000000LL +
+        static_cast<int64_t>(end_time->tv_nsec - now.tv_nsec);
+    if (ns < 0) ns = 0;
+    relative_timeout.tv_sec = static_cast<time_t>(ns / 1000000000LL);
+    relative_timeout.tv_nsec = static_cast<long>(ns % 1000000000LL);
+    relative_timeout_ptr = &relative_timeout;
+  }
+
+  // Wait
+  int ret = sys_futex_wait(FUTEX_WAIT, c, wait_start, relative_timeout_ptr);
+
+  // Re-lock. mutex_lock returns 1 if the previous owner died while holding
+  // the mutex; match the Linux condition_wait path and propagate that (it
+  // takes priority over a timeout, since the caller needs to know it now
+  // owns recovery of whatever the dead owner was protecting).
+  const int relock = mutex_lock(m);
+  assert(relock == 0 || relock == 1);
+
+  if (relock == 1) {
+    return 1;
+  }
+  if (ret == -ETIMEDOUT) {
+    return -1;
+  }
+  return 0;
+}
+#endif
 
 void condition_signal(aos_condition *c, aos_mutex *m) {
   condition_wake(c, m, 0);
