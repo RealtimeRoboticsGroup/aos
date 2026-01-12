@@ -248,11 +248,11 @@ class Logger {
     // logic determining whether each writer should be initialized, we just
     // stash the answer in separate member variables.
     bool wants_writer = false;
-    NewDataWriter *writer = nullptr;
+    DataWriter *writer = nullptr;
     bool wants_timestamp_writer = false;
-    NewDataWriter *timestamp_writer = nullptr;
+    DataWriter *timestamp_writer = nullptr;
     bool wants_contents_writer = false;
-    NewDataWriter *contents_writer = nullptr;
+    DataWriter *contents_writer = nullptr;
 
     // Node which this data is from, or -1 if it is unknown.
     int data_node_index = -1;
@@ -308,10 +308,9 @@ class Logger {
 
   void WriteMissingTimestamps();
 
-  void WriteData(NewDataWriter *writer, const FetcherStruct &f);
-  void WriteTimestamps(NewDataWriter *timestamps_writer,
-                       const FetcherStruct &f);
-  void WriteContent(NewDataWriter *contents_writer, const FetcherStruct &f);
+  void WriteData(DataWriter *writer, const FetcherStruct &f);
+  void WriteTimestamps(DataWriter *timestamps_writer, const FetcherStruct &f);
+  void WriteContent(DataWriter *contents_writer, const FetcherStruct &f);
 
   void WriteFetchedRecord(FetcherStruct &f);
 

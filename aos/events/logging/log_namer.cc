@@ -23,12 +23,12 @@ ABSL_DECLARE_FLAG(int32_t, flush_size);
 
 namespace aos::logger {
 
-NewDataWriter::NewDataWriter(LogNamer *log_namer, const Node *node,
-                             const Node *logger_node,
-                             std::function<void(NewDataWriter *)> reopen,
-                             std::function<void(NewDataWriter *)> close,
-                             size_t max_message_size,
-                             std::initializer_list<StoredDataType> types)
+DataWriter::DataWriter(LogNamer *log_namer, const Node *node,
+                       const Node *logger_node,
+                       std::function<void(DataWriter *)> reopen,
+                       std::function<void(DataWriter *)> close,
+                       size_t max_message_size,
+                       std::initializer_list<StoredDataType> types)
     : node_(node),
       node_index_(configuration::GetNodeIndex(log_namer->configuration_, node)),
       logger_node_index_(
@@ -48,13 +48,13 @@ NewDataWriter::NewDataWriter(LogNamer *log_namer, const Node *node,
   }
 }
 
-NewDataWriter::~NewDataWriter() {
+DataWriter::~DataWriter() {
   if (writer) {
     Close();
   }
 }
 
-void NewDataWriter::Rotate() {
+void DataWriter::Rotate() {
   // No need to rotate if nothing has been written.
   if (header_written_) {
     VLOG(1) << "Rotated " << name();
@@ -73,7 +73,7 @@ void NewDataWriter::Rotate() {
   }
 }
 
-void NewDataWriter::Reboot(const UUID &source_node_boot_uuid) {
+void DataWriter::Reboot(const UUID &source_node_boot_uuid) {
   parts_uuid_ = UUID::Random();
   ++parts_index_;
   reopen_(this);
@@ -109,7 +109,7 @@ void NewDataWriter::Reboot(const UUID &source_node_boot_uuid) {
   max_out_of_order_duration_ = log_namer_->base_max_out_of_order_duration();
 }
 
-void NewDataWriter::UpdateBoot(const UUID &source_node_boot_uuid) {
+void DataWriter::UpdateBoot(const UUID &source_node_boot_uuid) {
   if (state_[node_index_].boot_uuid != source_node_boot_uuid) {
     state_[node_index_].boot_uuid = source_node_boot_uuid;
     if (header_written_) {
@@ -118,7 +118,7 @@ void NewDataWriter::UpdateBoot(const UUID &source_node_boot_uuid) {
   }
 }
 
-void NewDataWriter::UpdateRemote(
+void DataWriter::UpdateRemote(
     const size_t remote_node_index, const UUID &remote_node_boot_uuid,
     const monotonic_clock::time_point monotonic_remote_time,
     const monotonic_clock::time_point monotonic_remote_transmit_time,
@@ -233,7 +233,7 @@ void NewDataWriter::UpdateRemote(
   }
 }
 
-std::chrono::nanoseconds NewDataWriter::CopyDataMessage(
+std::chrono::nanoseconds DataWriter::CopyDataMessage(
     DataEncoder::Copier *coppier, const UUID &source_node_boot_uuid,
     aos::monotonic_clock::time_point now,
     aos::monotonic_clock::time_point message_time) {
@@ -242,7 +242,7 @@ std::chrono::nanoseconds NewDataWriter::CopyDataMessage(
   return CopyMessage(coppier, source_node_boot_uuid, now, message_time);
 }
 
-void NewDataWriter::CopyTimestampMessage(
+void DataWriter::CopyTimestampMessage(
     DataEncoder::Copier *coppier, const UUID &source_node_boot_uuid,
     aos::monotonic_clock::time_point now,
     aos::monotonic_clock::time_point message_time) {
@@ -251,7 +251,7 @@ void NewDataWriter::CopyTimestampMessage(
   CopyMessage(coppier, source_node_boot_uuid, now, message_time);
 }
 
-void NewDataWriter::CopyRemoteTimestampMessage(
+void DataWriter::CopyRemoteTimestampMessage(
     DataEncoder::Copier *coppier, const UUID &source_node_boot_uuid,
     aos::monotonic_clock::time_point now,
     aos::monotonic_clock::time_point message_time) {
@@ -261,7 +261,7 @@ void NewDataWriter::CopyRemoteTimestampMessage(
   CopyMessage(coppier, source_node_boot_uuid, now, message_time);
 }
 
-std::chrono::nanoseconds NewDataWriter::CopyMessage(
+std::chrono::nanoseconds DataWriter::CopyMessage(
     DataEncoder::Copier *coppier, const UUID &source_node_boot_uuid,
     aos::monotonic_clock::time_point now,
     aos::monotonic_clock::time_point message_time) {
@@ -347,7 +347,7 @@ std::chrono::nanoseconds NewDataWriter::CopyMessage(
 }
 
 aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader>
-NewDataWriter::MakeHeader() {
+DataWriter::MakeHeader() {
   const size_t logger_node_index = log_namer_->logger_node_index();
   const UUID &logger_node_boot_uuid = log_namer_->logger_node_boot_uuid();
   if (state_[logger_node_index].boot_uuid == UUID::Zero()) {
@@ -362,7 +362,7 @@ NewDataWriter::MakeHeader() {
                                 allowed_data_types_);
 }
 
-void NewDataWriter::QueueHeader(
+void DataWriter::QueueHeader(
     aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader> &&header) {
   CHECK(!header_written_) << ": Attempting to write duplicate header to "
                           << writer->name();
@@ -396,7 +396,7 @@ void NewDataWriter::QueueHeader(
       node_index_, state_[node_index_].boot_uuid);
 }
 
-void NewDataWriter::Close() {
+void DataWriter::Close() {
   CHECK(writer);
   close_(this);
   writer.reset();
@@ -415,7 +415,7 @@ LogNamer::NodeState *LogNamer::GetNodeState(size_t node_index,
 }
 
 aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader> LogNamer::MakeHeader(
-    size_t node_index, const std::vector<NewDataWriter::State> &state,
+    size_t node_index, const std::vector<DataWriter::State> &state,
     const UUID &parts_uuid, int parts_index,
     std::chrono::nanoseconds max_out_of_order_duration,
     const std::array<bool, static_cast<size_t>(StoredDataType::MAX) + 1>
@@ -812,8 +812,8 @@ void MultiNodeLogNamer::NoticeNode(const Node *source_node) {
   }
 }
 
-NewDataWriter *MultiNodeLogNamer::FindNodeDataWriter(const Node *source_node,
-                                                     size_t max_message_size) {
+DataWriter *MultiNodeLogNamer::FindNodeDataWriter(const Node *source_node,
+                                                  size_t max_message_size) {
   NoticeNode(source_node);
 
   auto it = node_data_writers_.find(source_node);
@@ -824,7 +824,7 @@ NewDataWriter *MultiNodeLogNamer::FindNodeDataWriter(const Node *source_node,
   return nullptr;
 }
 
-NewDataWriter *MultiNodeLogNamer::FindNodeTimestampWriter(
+DataWriter *MultiNodeLogNamer::FindNodeTimestampWriter(
     const Node *source_node, size_t max_message_size) {
   NoticeNode(source_node);
 
@@ -836,21 +836,21 @@ NewDataWriter *MultiNodeLogNamer::FindNodeTimestampWriter(
   return nullptr;
 }
 
-NewDataWriter *MultiNodeLogNamer::AddNodeDataWriter(const Node *source_node,
-                                                    NewDataWriter &&writer) {
+DataWriter *MultiNodeLogNamer::AddNodeDataWriter(const Node *source_node,
+                                                 DataWriter &&writer) {
   auto result = node_data_writers_.emplace(source_node, std::move(writer));
   CHECK(result.second);
   return &(result.first->second);
 }
 
-NewDataWriter *MultiNodeLogNamer::AddNodeTimestampWriter(
-    const Node *source_node, NewDataWriter &&writer) {
+DataWriter *MultiNodeLogNamer::AddNodeTimestampWriter(const Node *source_node,
+                                                      DataWriter &&writer) {
   auto result = node_timestamp_writers_.emplace(source_node, std::move(writer));
   CHECK(result.second);
   return &(result.first->second);
 }
 
-NewDataWriter *MultiNodeLogNamer::MakeWriter(const Channel *channel) {
+DataWriter *MultiNodeLogNamer::MakeWriter(const Channel *channel) {
   // See if we can read the data on this node at all.
   const bool is_readable =
       configuration::ChannelIsReadableOnNode(channel, this->node());
@@ -878,7 +878,7 @@ NewDataWriter *MultiNodeLogNamer::MakeWriter(const Channel *channel) {
 
   // If we already have a data writer for the node, then use the same writer for
   // all channels of that node.
-  NewDataWriter *result = FindNodeDataWriter(
+  DataWriter *result = FindNodeDataWriter(
       source_node,
       PackMessageSize(LogType::kLogRemoteMessage, channel->max_size()));
   if (result != nullptr) {
@@ -887,22 +887,21 @@ NewDataWriter *MultiNodeLogNamer::MakeWriter(const Channel *channel) {
 
   // If we don't have a data writer for the node, create one.
   return AddNodeDataWriter(
-      source_node,
-      NewDataWriter{
-          this,
-          source_node,
-          node_,
-          [this, source_node](NewDataWriter *data_writer) {
-            OpenDataWriter(source_node, data_writer);
-          },
-          [this](NewDataWriter *data_writer) {
-            CloseWriter(&data_writer->writer);
-          },
-          PackMessageSize(LogType::kLogRemoteMessage, channel->max_size()),
-          {StoredDataType::DATA}});
+      source_node, DataWriter{this,
+                              source_node,
+                              node_,
+                              [this, source_node](DataWriter *data_writer) {
+                                OpenDataWriter(source_node, data_writer);
+                              },
+                              [this](DataWriter *data_writer) {
+                                CloseWriter(&data_writer->writer);
+                              },
+                              PackMessageSize(LogType::kLogRemoteMessage,
+                                              channel->max_size()),
+                              {StoredDataType::DATA}});
 }
 
-NewDataWriter *MultiNodeLogNamer::MakeForwardedTimestampWriter(
+DataWriter *MultiNodeLogNamer::MakeForwardedTimestampWriter(
     const Channel *channel, const Node *node) {
   // See if we can read the data on this node at all.
   const bool is_readable =
@@ -913,28 +912,27 @@ NewDataWriter *MultiNodeLogNamer::MakeForwardedTimestampWriter(
 
   // If we have a remote timestamp writer for a particular node, use the same
   // writer for all remote timestamp channels of that node.
-  NewDataWriter *result =
-      FindNodeTimestampWriter(node, PackRemoteMessageSize());
+  DataWriter *result = FindNodeTimestampWriter(node, PackRemoteMessageSize());
   if (result != nullptr) {
     return result;
   }
 
   // If there are no remote timestamp writers for the node, create one.
   return AddNodeTimestampWriter(
-      node, NewDataWriter{this,
-                          configuration::GetNode(configuration_, node),
-                          node_,
-                          [this](NewDataWriter *data_writer) {
-                            OpenForwardedTimestampWriter(node_, data_writer);
-                          },
-                          [this](NewDataWriter *data_writer) {
-                            CloseWriter(&data_writer->writer);
-                          },
-                          PackRemoteMessageSize(),
-                          {StoredDataType::REMOTE_TIMESTAMPS}});
+      node, DataWriter{this,
+                       configuration::GetNode(configuration_, node),
+                       node_,
+                       [this](DataWriter *data_writer) {
+                         OpenForwardedTimestampWriter(node_, data_writer);
+                       },
+                       [this](DataWriter *data_writer) {
+                         CloseWriter(&data_writer->writer);
+                       },
+                       PackRemoteMessageSize(),
+                       {StoredDataType::REMOTE_TIMESTAMPS}});
 }
 
-NewDataWriter *MultiNodeLogNamer::MakeTimestampWriter(const Channel *channel) {
+DataWriter *MultiNodeLogNamer::MakeTimestampWriter(const Channel *channel) {
   bool log_delivery_times = false;
   if (this->node() != nullptr) {
     log_delivery_times = configuration::ConnectionDeliveryTimeIsLoggedOnNode(
@@ -945,24 +943,24 @@ NewDataWriter *MultiNodeLogNamer::MakeTimestampWriter(const Channel *channel) {
   }
 
   // There is only one of these.
-  NewDataWriter *result = FindNodeTimestampWriter(
+  DataWriter *result = FindNodeTimestampWriter(
       this->node(), PackMessageSize(LogType::kLogDeliveryTimeOnly, 0));
   if (result != nullptr) {
     return result;
   }
 
   return AddNodeTimestampWriter(
-      node_, NewDataWriter{this,
-                           node_,
-                           node_,
-                           [this](NewDataWriter *data_writer) {
-                             OpenTimestampWriter(data_writer);
-                           },
-                           [this](NewDataWriter *data_writer) {
-                             CloseWriter(&data_writer->writer);
-                           },
-                           PackMessageSize(LogType::kLogDeliveryTimeOnly, 0),
-                           {StoredDataType::TIMESTAMPS}});
+      node_, DataWriter{this,
+                        node_,
+                        node_,
+                        [this](DataWriter *data_writer) {
+                          OpenTimestampWriter(data_writer);
+                        },
+                        [this](DataWriter *data_writer) {
+                          CloseWriter(&data_writer->writer);
+                        },
+                        PackMessageSize(LogType::kLogDeliveryTimeOnly, 0),
+                        {StoredDataType::TIMESTAMPS}});
 }
 
 WriteCode MultiNodeLogNamer::Close() {
@@ -975,12 +973,12 @@ WriteCode MultiNodeLogNamer::Close() {
 }
 
 void MultiNodeLogNamer::ResetStatistics() {
-  for (std::pair<const Node *const, NewDataWriter> &data_writer :
+  for (std::pair<const Node *const, DataWriter> &data_writer :
        node_data_writers_) {
     if (!data_writer.second.writer) continue;
     data_writer.second.writer->WriteStatistics()->ResetStats();
   }
-  for (std::pair<const Node *const, NewDataWriter> &data_writer :
+  for (std::pair<const Node *const, DataWriter> &data_writer :
        node_timestamp_writers_) {
     if (!data_writer.second.writer) continue;
     data_writer.second.writer->WriteStatistics()->ResetStats();
@@ -995,7 +993,7 @@ void MultiNodeLogNamer::ResetStatistics() {
 }
 
 void MultiNodeLogNamer::OpenForwardedTimestampWriter(
-    const Node * /*source_node*/, NewDataWriter *data_writer) {
+    const Node * /*source_node*/, DataWriter *data_writer) {
   const std::string filename = absl::StrCat(
       "timestamps/remote_", data_writer->node()->name()->string_view(), ".part",
       data_writer->parts_index(), ".bfbs", extension_);
@@ -1004,7 +1002,7 @@ void MultiNodeLogNamer::OpenForwardedTimestampWriter(
 }
 
 void MultiNodeLogNamer::OpenDataWriter(const Node *source_node,
-                                       NewDataWriter *data_writer) {
+                                       DataWriter *data_writer) {
   std::string filename;
 
   if (source_node != nullptr) {
@@ -1021,7 +1019,7 @@ void MultiNodeLogNamer::OpenDataWriter(const Node *source_node,
                      &data_writer->writer);
 }
 
-void MultiNodeLogNamer::OpenTimestampWriter(NewDataWriter *data_writer) {
+void MultiNodeLogNamer::OpenTimestampWriter(DataWriter *data_writer) {
   std::string filename =
       absl::StrCat(node()->name()->string_view(), "_timestamps.part",
                    data_writer->parts_index(), ".bfbs", extension_);
@@ -1091,8 +1089,7 @@ void MultiNodeLogNamer::CloseWriter(
   }
 }
 
-NewDataWriter *MinimalFileMultiNodeLogNamer::MakeWriter(
-    const Channel *channel) {
+DataWriter *MinimalFileMultiNodeLogNamer::MakeWriter(const Channel *channel) {
   // See if we can read the data on this node at all.
   const bool is_readable =
       configuration::ChannelIsReadableOnNode(channel, this->node());
@@ -1122,7 +1119,7 @@ NewDataWriter *MinimalFileMultiNodeLogNamer::MakeWriter(
   if (this->node() == source_node) {
     // If we already have a data writer for the node, then use the same writer
     // for all channels of that node.
-    NewDataWriter *result = FindNodeDataWriter(
+    DataWriter *result = FindNodeDataWriter(
         source_node,
         PackMessageSize(LogType::kLogMessage, channel->max_size()));
     if (result != nullptr) {
@@ -1131,22 +1128,21 @@ NewDataWriter *MinimalFileMultiNodeLogNamer::MakeWriter(
 
     return AddNodeDataWriter(
         source_node,
-        NewDataWriter{
-            this,
-            source_node,
-            node_,
-            [this, source_node](NewDataWriter *data_writer) {
-              OpenNodeWriter(source_node, data_writer);
-            },
-            [this](NewDataWriter *data_writer) {
-              CloseWriter(&data_writer->writer);
-            },
-            PackMessageSize(LogType::kLogMessage, channel->max_size()),
-            {StoredDataType::DATA, StoredDataType::TIMESTAMPS}});
+        DataWriter{this,
+                   source_node,
+                   node_,
+                   [this, source_node](DataWriter *data_writer) {
+                     OpenNodeWriter(source_node, data_writer);
+                   },
+                   [this](DataWriter *data_writer) {
+                     CloseWriter(&data_writer->writer);
+                   },
+                   PackMessageSize(LogType::kLogMessage, channel->max_size()),
+                   {StoredDataType::DATA, StoredDataType::TIMESTAMPS}});
   } else {
     // If we already have a data writer for the node, then use the same writer
     // for all channels of that node.
-    NewDataWriter *result = FindNodeDataWriter(
+    DataWriter *result = FindNodeDataWriter(
         source_node,
         PackMessageSize(LogType::kLogRemoteMessage, channel->max_size()));
     if (result != nullptr) {
@@ -1155,14 +1151,14 @@ NewDataWriter *MinimalFileMultiNodeLogNamer::MakeWriter(
 
     return AddNodeDataWriter(
         source_node,
-        NewDataWriter{
+        DataWriter{
             this,
             source_node,
             node_,
-            [this, source_node](NewDataWriter *data_writer) {
+            [this, source_node](DataWriter *data_writer) {
               OpenNodeWriter(source_node, data_writer);
             },
-            [this](NewDataWriter *data_writer) {
+            [this](DataWriter *data_writer) {
               CloseWriter(&data_writer->writer);
             },
             PackMessageSize(LogType::kLogRemoteMessage, channel->max_size()),
@@ -1170,7 +1166,7 @@ NewDataWriter *MinimalFileMultiNodeLogNamer::MakeWriter(
   }
 }
 
-NewDataWriter *MinimalFileMultiNodeLogNamer::MakeTimestampWriter(
+DataWriter *MinimalFileMultiNodeLogNamer::MakeTimestampWriter(
     const Channel *channel) {
   bool log_delivery_times = false;
   if (this->node() != nullptr) {
@@ -1182,27 +1178,27 @@ NewDataWriter *MinimalFileMultiNodeLogNamer::MakeTimestampWriter(
   }
 
   // There is only one of these.
-  NewDataWriter *result = FindNodeDataWriter(
+  DataWriter *result = FindNodeDataWriter(
       this->node(), PackMessageSize(LogType::kLogDeliveryTimeOnly, 0));
   if (result != nullptr) {
     return result;
   }
 
   return AddNodeDataWriter(
-      node_, NewDataWriter{this,
-                           node_,
-                           node_,
-                           [this](NewDataWriter *data_writer) {
-                             OpenNodeWriter(node_, data_writer);
-                           },
-                           [this](NewDataWriter *data_writer) {
-                             CloseWriter(&data_writer->writer);
-                           },
-                           PackMessageSize(LogType::kLogDeliveryTimeOnly, 0),
-                           {StoredDataType::DATA, StoredDataType::TIMESTAMPS}});
+      node_, DataWriter{this,
+                        node_,
+                        node_,
+                        [this](DataWriter *data_writer) {
+                          OpenNodeWriter(node_, data_writer);
+                        },
+                        [this](DataWriter *data_writer) {
+                          CloseWriter(&data_writer->writer);
+                        },
+                        PackMessageSize(LogType::kLogDeliveryTimeOnly, 0),
+                        {StoredDataType::DATA, StoredDataType::TIMESTAMPS}});
 }
 
-NewDataWriter *MinimalFileMultiNodeLogNamer::MakeForwardedTimestampWriter(
+DataWriter *MinimalFileMultiNodeLogNamer::MakeForwardedTimestampWriter(
     const Channel *channel, const Node *node) {
   // See if we can read the data on this node at all.
   const bool is_readable =
@@ -1213,7 +1209,7 @@ NewDataWriter *MinimalFileMultiNodeLogNamer::MakeForwardedTimestampWriter(
 
   // If we have a remote timestamp writer for a particular node, use the same
   // writer for all remote timestamp channels of that node.
-  NewDataWriter *result = FindNodeDataWriter(node, PackRemoteMessageSize());
+  DataWriter *result = FindNodeDataWriter(node, PackRemoteMessageSize());
   if (result != nullptr) {
     return result;
   }
@@ -1221,21 +1217,21 @@ NewDataWriter *MinimalFileMultiNodeLogNamer::MakeForwardedTimestampWriter(
   // If there are no remote timestamp writers for the node, create one.
   return AddNodeDataWriter(
       node,
-      NewDataWriter{this,
-                    configuration::GetNode(configuration_, node),
-                    node_,
-                    [this, node](NewDataWriter *data_writer) {
-                      OpenNodeWriter(node, data_writer);
-                    },
-                    [this](NewDataWriter *data_writer) {
-                      CloseWriter(&data_writer->writer);
-                    },
-                    PackRemoteMessageSize(),
-                    {StoredDataType::DATA, StoredDataType::REMOTE_TIMESTAMPS}});
+      DataWriter{this,
+                 configuration::GetNode(configuration_, node),
+                 node_,
+                 [this, node](DataWriter *data_writer) {
+                   OpenNodeWriter(node, data_writer);
+                 },
+                 [this](DataWriter *data_writer) {
+                   CloseWriter(&data_writer->writer);
+                 },
+                 PackRemoteMessageSize(),
+                 {StoredDataType::DATA, StoredDataType::REMOTE_TIMESTAMPS}});
 }
 
 void MinimalFileMultiNodeLogNamer::OpenNodeWriter(const Node *source_node,
-                                                  NewDataWriter *data_writer) {
+                                                  DataWriter *data_writer) {
   std::string filename;
 
   if (node() != nullptr) {
