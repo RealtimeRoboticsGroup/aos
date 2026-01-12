@@ -89,6 +89,23 @@ std::vector<bool> StreamReplyWithTimestamp(const Configuration *config,
   return stream_reply_with_timestamp;
 }
 
+std::vector<bool> StreamIsReliable(const Configuration *config,
+                                   const Node *my_node,
+                                   const Node *other_node) {
+  std::vector<bool> stream_is_reliable;
+  for (const Channel *channel : *config->channels()) {
+    if (configuration::ChannelIsSendableOnNode(channel, other_node)) {
+      const Connection *connection =
+          configuration::ConnectionToNode(channel, my_node);
+      if (connection != nullptr) {
+        stream_is_reliable.emplace_back(connection->time_to_live() == 0);
+      }
+    }
+  }
+
+  return stream_is_reliable;
+}
+
 aos::FlatbufferDetachedBuffer<aos::logger::MessageHeader>
 MakeMessageHeaderReply() {
   flatbuffers::FlatBufferBuilder fbb;
@@ -135,6 +152,8 @@ SctpClientConnection::SctpClientConnection(
           StreamToChannel(event_loop->configuration(), my_node, remote_node_)),
       stream_reply_with_timestamp_(StreamReplyWithTimestamp(
           event_loop->configuration(), my_node, remote_node_)),
+      stream_is_reliable_(
+          StreamIsReliable(event_loop->configuration(), my_node, remote_node_)),
       client_status_(client_status),
       client_index_(client_index),
       connection_(client_status_->GetClientConnection(client_index_)) {
@@ -330,7 +349,7 @@ void SctpClientConnection::HandleData(const Message *message) {
     // Publish the message.
     UUID remote_boot_uuid = UUID::FromVector(remote_data->boot_uuid());
     RawSender *sender = channel_state->sender.get();
-    sender->CheckOk(sender->Send(
+    RawSender::Error result = sender->Send(
         remote_data->data()->data(), remote_data->data()->size(),
         monotonic_clock::time_point(
             chrono::nanoseconds(remote_data->monotonic_sent_time())),
@@ -338,8 +357,22 @@ void SctpClientConnection::HandleData(const Message *message) {
             chrono::nanoseconds(remote_data->realtime_sent_time())),
         monotonic_clock::time_point(
             chrono::nanoseconds(remote_data->monotonic_remote_transmit_time())),
-        remote_data->queue_index(), remote_boot_uuid));
-    VLOG(2) << "Sent "
+        remote_data->queue_index(), remote_boot_uuid);
+
+    const bool send_was_successful = result == RawSender::Error::kOk;
+    const bool channel_is_reliable = stream_is_reliable_[stream];
+
+    // Sent-too-fast errors are reported via the aos.timing.Report message, but
+    // for unreliable channels we don't want to crash the whole program just
+    // because of such an error. Account for it gracefully. Sends for reliable
+    // channels are expected to pass. Those are generally one-time messages.
+    if (!send_was_successful &&
+        (channel_is_reliable ||
+         result != RawSender::Error::kMessagesSentTooFast)) {
+      sender->CheckOk(result);
+    }
+
+    VLOG(2) << (send_was_successful ? "Sent " : "Failed to send ")
             << configuration::StrippedChannelToString(
                    channel_state->sender->channel())
             << " -> {\"channel_index\": " << remote_data->channel_index()
@@ -354,61 +387,65 @@ void SctpClientConnection::HandleData(const Message *message) {
             << ", \"remote_queue_index\": " << sender->sent_queue_index()
             << "}";
 
-    client_status_->SampleFilter(
-        client_index_,
-        monotonic_clock::time_point(
-            chrono::nanoseconds(remote_data->monotonic_remote_transmit_time())),
-        sender->monotonic_sent_time(), remote_boot_uuid);
+    // Only perform filtering and forwarding on the timestamps if the send was
+    // successful. We don't have meaningful data otherwise.
+    if (send_was_successful) {
+      client_status_->SampleFilter(
+          client_index_,
+          monotonic_clock::time_point(chrono::nanoseconds(
+              remote_data->monotonic_remote_transmit_time())),
+          sender->monotonic_sent_time(), remote_boot_uuid);
 
-    if (stream_reply_with_timestamp_[stream]) {
-      SavedTimestamp timestamp{
-          .channel_index = remote_data->channel_index(),
-          .monotonic_sent_time = remote_data->monotonic_sent_time(),
-          .realtime_sent_time = remote_data->realtime_sent_time(),
-          .queue_index = remote_data->queue_index(),
-          .monotonic_remote_time =
-              sender->monotonic_sent_time().time_since_epoch().count(),
-          .monotonic_remote_transmit_time =
-              remote_data->monotonic_remote_transmit_time(),
-          .realtime_remote_time =
-              sender->realtime_sent_time().time_since_epoch().count(),
-          .remote_queue_index = sender->sent_queue_index(),
-      };
+      if (stream_reply_with_timestamp_[stream]) {
+        SavedTimestamp timestamp{
+            .channel_index = remote_data->channel_index(),
+            .monotonic_sent_time = remote_data->monotonic_sent_time(),
+            .realtime_sent_time = remote_data->realtime_sent_time(),
+            .queue_index = remote_data->queue_index(),
+            .monotonic_remote_time =
+                sender->monotonic_sent_time().time_since_epoch().count(),
+            .monotonic_remote_transmit_time =
+                remote_data->monotonic_remote_transmit_time(),
+            .realtime_remote_time =
+                sender->realtime_sent_time().time_since_epoch().count(),
+            .remote_queue_index = sender->sent_queue_index(),
+        };
 
-      // Sort out if we should try to queue the timestamp or just send it
-      // directly.  We don't want to get too far ahead.
-      //
-      // In this case, the other side rebooted.  There is no sense telling it
-      // about previous timestamps.  Wipe them and reset which boot we are.
-      if (remote_boot_uuid != timestamps_uuid_) {
-        timestamp_buffer_.Reset();
-        timestamps_uuid_ = remote_boot_uuid;
-      }
+        // Sort out if we should try to queue the timestamp or just send it
+        // directly.  We don't want to get too far ahead.
+        //
+        // In this case, the other side rebooted.  There is no sense telling it
+        // about previous timestamps.  Wipe them and reset which boot we are.
+        if (remote_boot_uuid != timestamps_uuid_) {
+          timestamp_buffer_.Reset();
+          timestamps_uuid_ = remote_boot_uuid;
+        }
 
-      // Then, we only can send if there are no pending timestamps.
-      bool push_timestamp = false;
-      if (timestamp_buffer_.empty()) {
-        if (!SendTimestamp(timestamp)) {
-          // Whops, we failed to send, queue and try again.
+        // Then, we only can send if there are no pending timestamps.
+        bool push_timestamp = false;
+        if (timestamp_buffer_.empty()) {
+          if (!SendTimestamp(timestamp)) {
+            // Whops, we failed to send, queue and try again.
+            push_timestamp = true;
+          }
+        } else {
           push_timestamp = true;
         }
-      } else {
-        push_timestamp = true;
-      }
 
-      if (push_timestamp) {
-        // Trigger the timer if we are the first timestamp added, or if the
-        // timer was disabled because the far side disconnected.
-        if (timestamp_buffer_.empty() ||
-            timestamp_retry_buffer_->IsDisabled()) {
-          timestamp_retry_buffer_->Schedule(event_loop_->monotonic_now() +
-                                            chrono::milliseconds(100));
+        if (push_timestamp) {
+          // Trigger the timer if we are the first timestamp added, or if the
+          // timer was disabled because the far side disconnected.
+          if (timestamp_buffer_.empty() ||
+              timestamp_retry_buffer_->IsDisabled()) {
+            timestamp_retry_buffer_->Schedule(event_loop_->monotonic_now() +
+                                              chrono::milliseconds(100));
+          }
+          VLOG(1) << this << " Queued timestamp " << timestamp.channel_index
+                  << " " << timestamp.queue_index;
+          // TODO: Track timestamps that get overwritten in the
+          // statistics message we send out.
+          timestamp_buffer_.Push(timestamp);
         }
-        VLOG(1) << this << " Queued timestamp " << timestamp.channel_index
-                << " " << timestamp.queue_index;
-        // TODO: Track timestamps that get overwritten in the
-        // statistics message we send out.
-        timestamp_buffer_.Push(timestamp);
       }
     }
   }

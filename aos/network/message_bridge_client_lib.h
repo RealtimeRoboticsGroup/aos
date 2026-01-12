@@ -112,6 +112,8 @@ class SctpClientConnection {
   std::vector<int> stream_to_channel_;
   // Bitmask signaling if we should be replying back with delivery times.
   std::vector<bool> stream_reply_with_timestamp_;
+  // Bitmask signaling if the channel is reliable.
+  std::vector<bool> stream_is_reliable_;
 
   // Timer which fires to handle reconnections.
   aos::TimerHandler *connect_timer_;
