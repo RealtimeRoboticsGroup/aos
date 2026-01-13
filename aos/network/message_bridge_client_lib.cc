@@ -44,66 +44,36 @@ namespace chrono = std::chrono;
 // How often we should poll for the active SCTP authentication key.
 constexpr chrono::seconds kRefreshAuthKeyPeriod{3};
 
-std::vector<int> StreamToChannel(const Configuration *config,
-                                 const Node *my_node, const Node *other_node) {
-  std::vector<int> stream_to_channel;
+std::vector<StreamData> MakeStreamData(const Configuration *config,
+                                       const Node *my_node,
+                                       const Node *remote_node) {
+  std::vector<StreamData> stream_data;
   int channel_index = 0;
   for (const Channel *channel : *config->channels()) {
-    if (configuration::ChannelIsSendableOnNode(channel, other_node)) {
+    if (configuration::ChannelIsSendableOnNode(channel, remote_node)) {
       const Connection *connection =
           configuration::ConnectionToNode(channel, my_node);
       if (connection != nullptr) {
         VLOG(1) << "Channel " << channel->name()->string_view() << " "
                 << channel->type()->string_view() << " mapped to stream "
-                << stream_to_channel.size() + kControlStreams();
-        stream_to_channel.emplace_back(channel_index);
+                << stream_data.size() + kControlStreams();
+        stream_data.push_back(StreamData{
+            .channel = channel_index,
+            // We want to reply with a timestamp if the other node is logging
+            // the timestamp (and it therefore needs the timestamp), or if we
+            // are logging the message and it needs to know if we received it so
+            // it can log (in the future) it through different mechanisms on
+            // failure.
+            .reply_with_timestamp =
+                configuration::ConnectionDeliveryTimeIsLoggedOnNode(
+                    connection, remote_node) ||
+                configuration::ChannelMessageIsLoggedOnNode(channel, my_node),
+            .is_reliable = connection->time_to_live() == 0});
       }
     }
     ++channel_index;
   }
-
-  return stream_to_channel;
-}
-
-std::vector<bool> StreamReplyWithTimestamp(const Configuration *config,
-                                           const Node *my_node,
-                                           const Node *other_node) {
-  std::vector<bool> stream_reply_with_timestamp;
-  for (const Channel *channel : *config->channels()) {
-    if (configuration::ChannelIsSendableOnNode(channel, other_node)) {
-      const Connection *connection =
-          configuration::ConnectionToNode(channel, my_node);
-      if (connection != nullptr) {
-        // We want to reply with a timestamp if the other node is logging the
-        // timestamp (and it therefore needs the timestamp), or if we are
-        // logging the message and it needs to know if we received it so it can
-        // log (in the future) it through different mechanisms on failure.
-        stream_reply_with_timestamp.emplace_back(
-            configuration::ConnectionDeliveryTimeIsLoggedOnNode(connection,
-                                                                other_node) ||
-            configuration::ChannelMessageIsLoggedOnNode(channel, my_node));
-      }
-    }
-  }
-
-  return stream_reply_with_timestamp;
-}
-
-std::vector<bool> StreamIsReliable(const Configuration *config,
-                                   const Node *my_node,
-                                   const Node *other_node) {
-  std::vector<bool> stream_is_reliable;
-  for (const Channel *channel : *config->channels()) {
-    if (configuration::ChannelIsSendableOnNode(channel, other_node)) {
-      const Connection *connection =
-          configuration::ConnectionToNode(channel, my_node);
-      if (connection != nullptr) {
-        stream_is_reliable.emplace_back(connection->time_to_live() == 0);
-      }
-    }
-  }
-
-  return stream_is_reliable;
+  return stream_data;
 }
 
 aos::FlatbufferDetachedBuffer<aos::logger::MessageHeader>
@@ -148,12 +118,8 @@ SctpClientConnection::SctpClientConnection(
                   kControlStreams(),
               local_host, 0, requested_authentication),
       channels_(channels),
-      stream_to_channel_(
-          StreamToChannel(event_loop->configuration(), my_node, remote_node_)),
-      stream_reply_with_timestamp_(StreamReplyWithTimestamp(
-          event_loop->configuration(), my_node, remote_node_)),
-      stream_is_reliable_(
-          StreamIsReliable(event_loop->configuration(), my_node, remote_node_)),
+      stream_data_(
+          MakeStreamData(event_loop->configuration(), my_node, remote_node_)),
       client_status_(client_status),
       client_index_(client_index),
       connection_(client_status_->GetClientConnection(client_index_)) {
@@ -328,7 +294,7 @@ void SctpClientConnection::HandleData(const Message *message) {
 
   const int stream = message->header.rcvinfo.rcv_sid - kControlStreams();
   SctpClientChannelState *channel_state =
-      &((*channels_)[stream_to_channel_[stream]]);
+      &((*channels_)[stream_data_[stream].channel]);
 
   if (remote_data->queue_index() == channel_state->last_queue_index &&
       monotonic_clock::time_point(
@@ -360,7 +326,7 @@ void SctpClientConnection::HandleData(const Message *message) {
         remote_data->queue_index(), remote_boot_uuid);
 
     const bool send_was_successful = result == RawSender::Error::kOk;
-    const bool channel_is_reliable = stream_is_reliable_[stream];
+    const bool channel_is_reliable = stream_data_[stream].is_reliable;
 
     // Sent-too-fast errors are reported via the aos.timing.Report message, but
     // for unreliable channels we don't want to crash the whole program just
@@ -396,7 +362,7 @@ void SctpClientConnection::HandleData(const Message *message) {
               remote_data->monotonic_remote_transmit_time())),
           sender->monotonic_sent_time(), remote_boot_uuid);
 
-      if (stream_reply_with_timestamp_[stream]) {
+      if (stream_data_[stream].reply_with_timestamp) {
         SavedTimestamp timestamp{
             .channel_index = remote_data->channel_index(),
             .monotonic_sent_time = remote_data->monotonic_sent_time(),
