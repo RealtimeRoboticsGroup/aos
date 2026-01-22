@@ -13,8 +13,10 @@
 #include "aos/json_to_flatbuffer.h"
 
 ABSL_FLAG(double, rate, -1,
-          "Rate at which to send the message (-1 to send once).");
+          "Rate in hz at which to send the message (-1 to send once).");
 ABSL_FLAG(bool, bfbs, false, "If true, treat message as a binary flatbuffer.");
+ABSL_FLAG(uint32_t, count, 0,
+          "If nonzero and rate is > 0, send this many messages out.");
 
 int main(int argc, char **argv) {
   absl::SetProgramUsageMessage(
@@ -58,15 +60,21 @@ int main(int argc, char **argv) {
   const aos::Channel *const channel = cli_info.found_channels[0];
   const std::unique_ptr<aos::RawSender> sender =
       cli_info.event_loop->MakeRawSender(channel);
+  size_t count = 0;
   if (absl::GetFlag(FLAGS_bfbs)) {
     if (absl::GetFlag(FLAGS_rate) < 0) {
       sender->CheckOk(
           sender->Send(message_to_send.data(), message_to_send.size()));
     } else {
       cli_info.event_loop
-          ->AddTimer([&message_to_send, &sender]() {
+          ->AddTimer([&message_to_send, &sender, &count, &cli_info]() {
+            ++count;
             sender->CheckOk(
                 sender->Send(message_to_send.data(), message_to_send.size()));
+            if (absl::GetFlag(FLAGS_count) > 0u &&
+                absl::GetFlag(FLAGS_count) <= count) {
+              cli_info.event_loop->Exit();
+            }
           })
           ->Schedule(cli_info.event_loop->monotonic_now(),
                      std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -91,9 +99,14 @@ int main(int argc, char **argv) {
       sender->CheckOk(sender->Send(fbb.GetSize()));
     } else {
       cli_info.event_loop
-          ->AddTimer([&fbb, &sender]() {
+          ->AddTimer([&fbb, &sender, &count, &cli_info]() {
+            ++count;
             sender->CheckOk(
                 sender->Send(fbb.GetBufferPointer(), fbb.GetSize()));
+            if (absl::GetFlag(FLAGS_count) > 0 &&
+                absl::GetFlag(FLAGS_count) <= count) {
+              cli_info.event_loop->Exit();
+            }
           })
           ->Schedule(cli_info.event_loop->monotonic_now(),
                      std::chrono::duration_cast<std::chrono::nanoseconds>(
