@@ -23,12 +23,21 @@
 #include "aos/events/context.h"
 #include "aos/json_to_flatbuffer.h"
 
+#if SYSTEMD_AVAILABLE
+#include "systemd/sd-daemon.h"
+#endif
+
 // FLAGS_shm_base is defined elsewhere, declare it here so it can be used
 // to override the shared memory folder for unit testing.
 ABSL_DECLARE_FLAG(std::string, shm_base);
 // FLAGS_permissions is defined elsewhere, declare it here so it can be used
 // to set the file permissions on the shared memory block.
 ABSL_DECLARE_FLAG(uint32_t, permissions);
+
+#if SYSTEMD_AVAILABLE
+ABSL_FLAG(bool, systemd_watchdog, true,
+          "If true, poke the systemd watchdog to keep it happy.");
+#endif
 
 ABSL_FLAG(uint32_t, queue_initialization_threads, 0,
           "Number of threads to spin up to initialize the queue.  0 means "
@@ -287,7 +296,23 @@ void Starter::Run() {
     }
   }
 
+#if SYSTEMD_AVAILABLE
+  if (absl::GetFlag(FLAGS_systemd_watchdog)) {
+    aos::TimerHandler *timer =
+        event_loop_.AddTimer([]() { sd_notify(0, "WATCHDOG=1"); });
+    event_loop_.OnRun([this, timer]() {
+      sd_notify(0, "READY=1");
+      timer->Schedule(event_loop_.monotonic_now(), std::chrono::seconds(1));
+    });
+  }
+#endif
+
   event_loop_.Run();
+#if SYSTEMD_AVAILABLE
+  if (absl::GetFlag(FLAGS_systemd_watchdog)) {
+    sd_notify(0, "Stopping=1");
+  }
+#endif
 }
 
 void Starter::ServiceTimingReportFetcher(int elapsed_cycles) {

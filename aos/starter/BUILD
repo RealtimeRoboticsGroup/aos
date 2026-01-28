@@ -49,6 +49,11 @@ cc_library(
     name = "starterd_lib",
     srcs = ["starterd_lib.cc"],
     hdrs = ["starterd_lib.h"],
+    local_defines = select({
+        # TODO(james): Actually import systemd so that we have it available.
+        # The current BCR entry only supports libudev.
+        "//conditions:default": ["SYSTEMD_AVAILABLE=0"],
+    }),
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":starter_fbs",
