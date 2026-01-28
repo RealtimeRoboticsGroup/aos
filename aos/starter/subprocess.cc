@@ -18,13 +18,16 @@
 #include <vector>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 
 #include "aos/util/file.h"
 #include "aos/util/process_info_generated.h"
+
+ABSL_FLAG(bool, require_path_resolution, true,
+          "If set, names passed to Subprocess must correspond to a real file.");
 
 namespace aos::starter {
 
@@ -35,12 +38,12 @@ class ScopedCompleteSignalBlocker {
     sigset_t mask;
     sigfillset(&mask);
     // Remember the current mask.
-    PCHECK(sigprocmask(SIG_SETMASK, &mask, &old_mask_) == 0);
+    ABSL_PCHECK(sigprocmask(SIG_SETMASK, &mask, &old_mask_) == 0);
   }
 
   ~ScopedCompleteSignalBlocker() {
     // Restore the remembered mask.
-    PCHECK(sigprocmask(SIG_SETMASK, &old_mask_, nullptr) == 0);
+    ABSL_PCHECK(sigprocmask(SIG_SETMASK, &old_mask_, nullptr) == 0);
   }
 
  private:
@@ -67,20 +70,25 @@ bool InodeChanged(const std::filesystem::path &path, ino_t previous_inode) {
 std::filesystem::path ResolvePath(std::string_view command) {
   std::filesystem::path command_path = command;
   if (command.find("/") != std::string_view::npos) {
-    CHECK(std::filesystem::exists(command_path))
-        << ": " << command << " does not exist.";
+    if (!std::filesystem::exists(command_path)) {
+      if (absl::GetFlag(FLAGS_require_path_resolution)) {
+        ABSL_LOG(FATAL) << ": " << command << " does not exist.";
+      } else {
+        return "";
+      }
+    }
     return std::filesystem::canonical(command_path);
   }
   const char *system_path = getenv("PATH");
   std::string system_path_buffer;
   if (system_path == nullptr) {
     const size_t default_path_length = confstr(_CS_PATH, nullptr, 0);
-    PCHECK(default_path_length != 0) << ": Unable to resolve " << command;
+    ABSL_PCHECK(default_path_length != 0) << ": Unable to resolve " << command;
     system_path_buffer.resize(default_path_length);
     confstr(_CS_PATH, system_path_buffer.data(), system_path_buffer.size());
     system_path = system_path_buffer.c_str();
-    VLOG(2) << "Using default path of " << system_path
-            << " in the absence of PATH being set.";
+    ABSL_VLOG(2) << "Using default path of " << system_path
+                 << " in the absence of PATH being set.";
   }
   const std::vector<std::string_view> search_paths =
       absl::StrSplit(system_path, ':');
@@ -91,7 +99,11 @@ std::filesystem::path ResolvePath(std::string_view command) {
       return std::filesystem::canonical(candidate);
     }
   }
-  LOG(FATAL) << "Unable to resolve " << command;
+  if (absl::GetFlag(FLAGS_require_path_resolution)) {
+    ABSL_LOG(FATAL) << "Unable to resolve " << command;
+  } else {
+    return "";
+  }
 }
 
 // RAII class to become root and restore back to the original user and group
@@ -100,20 +112,22 @@ class Sudo {
  public:
   Sudo() {
     // Save what we were.
-    PCHECK(getresuid(&ruid_, &euid_, &suid_) == 0);
-    PCHECK(getresgid(&rgid_, &egid_, &sgid_) == 0);
+    ABSL_PCHECK(getresuid(&ruid_, &euid_, &suid_) == 0);
+    ABSL_PCHECK(getresgid(&rgid_, &egid_, &sgid_) == 0);
 
     // Become root.
-    PCHECK(setresuid(/* ruid */ 0 /* root */, /* euid */ 0, /* suid */ 0) == 0)
+    ABSL_PCHECK(
+        setresuid(/* ruid */ 0 /* root */, /* euid */ 0, /* suid */ 0) == 0)
         << ": Failed to become root";
-    PCHECK(setresgid(/* ruid */ 0 /* root */, /* euid */ 0, /* suid */ 0) == 0)
+    ABSL_PCHECK(
+        setresgid(/* ruid */ 0 /* root */, /* euid */ 0, /* suid */ 0) == 0)
         << ": Failed to become root";
   }
 
   ~Sudo() {
     // And recover.
-    PCHECK(setresgid(rgid_, egid_, sgid_) == 0);
-    PCHECK(setresuid(ruid_, euid_, suid_) == 0);
+    ABSL_PCHECK(setresgid(rgid_, egid_, sgid_) == 0);
+    ABSL_PCHECK(setresuid(ruid_, euid_, suid_) == 0);
   }
 
   uid_t ruid_, euid_, suid_;
@@ -129,15 +143,15 @@ MemoryCGroup::MemoryCGroup(std::string_view name, Create should_create)
 
     if (ret != 0) {
       if (errno == EEXIST) {
-        PCHECK(rmdir(cgroup_.c_str()) == 0)
+        ABSL_PCHECK(rmdir(cgroup_.c_str()) == 0)
             << ": Failed to remove previous cgroup " << cgroup_;
         ret = mkdir(cgroup_.c_str(), 0755);
       }
     }
 
     if (ret != 0) {
-      PLOG(FATAL) << ": Failed to create cgroup aos_" << cgroup_
-                  << ", do you have permission?";
+      ABSL_PLOG(FATAL) << ": Failed to create cgroup aos_" << cgroup_
+                       << ", do you have permission?";
     }
   }
 }
@@ -230,8 +244,8 @@ std::string GetCGroupProcessesInfo(const std::filesystem::path &cgroup_path) {
 void RemoveCGroupWithRetry(const std::filesystem::path &cgroup_path) {
   // Check if the path exists first to avoid retrying on non-existent paths.
   if (!std::filesystem::exists(cgroup_path)) {
-    LOG(WARNING) << "Cgroup " << cgroup_path
-                 << " does not exist, nothing to remove";
+    ABSL_LOG(WARNING) << "Cgroup " << cgroup_path
+                      << " does not exist, nothing to remove";
     return;
   }
 
@@ -243,8 +257,8 @@ void RemoveCGroupWithRetry(const std::filesystem::path &cgroup_path) {
     std::error_code ec;
     if (std::filesystem::remove(cgroup_path, ec)) {
       if (attempt > 0) {
-        LOG(INFO) << "Successfully removed cgroup " << cgroup_path << " after "
-                  << (attempt + 1) << " attempts";
+        ABSL_LOG(INFO) << "Successfully removed cgroup " << cgroup_path
+                       << " after " << (attempt + 1) << " attempts";
       }
       return;
     }
@@ -254,10 +268,10 @@ void RemoveCGroupWithRetry(const std::filesystem::path &cgroup_path) {
     // Cgroup is busy or not empty, wait and retry.
     if (attempt < kMaxRetries - 1) {
       const std::string process_info = GetCGroupProcessesInfo(cgroup_path);
-      LOG(WARNING) << "Failed to remove cgroup " << cgroup_path << " (attempt "
-                   << (attempt + 1) << "/" << kMaxRetries
-                   << "): " << ec.message() << ". Retrying in 1 second... "
-                   << (process_info.empty() ? "" : process_info);
+      ABSL_LOG(WARNING) << "Failed to remove cgroup " << cgroup_path
+                        << " (attempt " << (attempt + 1) << "/" << kMaxRetries
+                        << "): " << ec.message() << ". Retrying in 1 second... "
+                        << (process_info.empty() ? "" : process_info);
 
       std::this_thread::sleep_for(kRetryDelay);
     }
@@ -265,13 +279,14 @@ void RemoveCGroupWithRetry(const std::filesystem::path &cgroup_path) {
 
   // All attempts failed, log final state.
   const std::string final_process_info = GetCGroupProcessesInfo(cgroup_path);
-  LOG(ERROR) << "Failed to remove cgroup " << cgroup_path << " after "
-             << kMaxRetries << " attempts. Last error: " << last_error.message()
-             << " (" << last_error.value() << "). Final cgroup state: "
-             << (final_process_info.empty() ? "(no processes found)"
-                                            : final_process_info);
+  ABSL_LOG(ERROR) << "Failed to remove cgroup " << cgroup_path << " after "
+                  << kMaxRetries
+                  << " attempts. Last error: " << last_error.message() << " ("
+                  << last_error.value() << "). Final cgroup state: "
+                  << (final_process_info.empty() ? "(no processes found)"
+                                                 : final_process_info);
 
-  LOG(FATAL) << "Giving up on removing cgroup " << cgroup_path;
+  ABSL_LOG(FATAL) << "Giving up on removing cgroup " << cgroup_path;
 }
 
 MemoryCGroup::~MemoryCGroup() {
@@ -304,7 +319,8 @@ SignalListener::SignalListener(aos::internal::EPoll *epoll,
     signalfd_siginfo info = signalfd_.Read();
 
     if (info.ssi_signo == 0) {
-      LOG(WARNING) << "Could not read " << sizeof(signalfd_siginfo) << " bytes";
+      ABSL_LOG(WARNING) << "Could not read " << sizeof(signalfd_siginfo)
+                        << " bytes";
       return;
     }
 
@@ -324,7 +340,7 @@ Application::Application(std::string_view name,
       event_loop_(event_loop),
       start_timer_(event_loop_->AddTimer([this] {
         status_ = aos::starter::State::RUNNING;
-        LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo)
+        ABSL_LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo)
             << "Started '" << name_ << "' pid: " << pid_;
         // Check if the file on disk changed while we were starting up. We allow
         // this state for the same reason that we don't just use /proc/$pid/exe
@@ -342,13 +358,15 @@ Application::Application(std::string_view name,
       restart_timer_(event_loop_->AddTimer([this] { DoStart(); })),
       stop_timer_(event_loop_->AddTimer([this] {
         if (kill(pid_, SIGKILL) == 0) {
-          LOG_IF(WARNING, quiet_flag_ == QuietLogging::kNo ||
-                              quiet_flag_ == QuietLogging::kNotForDebugging)
+          ABSL_LOG_IF(WARNING,
+                      quiet_flag_ == QuietLogging::kNo ||
+                          quiet_flag_ == QuietLogging::kNotForDebugging)
               << "Failed to stop, sending SIGKILL to '" << name_
               << "' pid: " << pid_;
         } else {
-          PLOG_IF(WARNING, quiet_flag_ == QuietLogging::kNo ||
-                               quiet_flag_ == QuietLogging::kNotForDebugging)
+          ABSL_PLOG_IF(WARNING,
+                       quiet_flag_ == QuietLogging::kNo ||
+                           quiet_flag_ == QuietLogging::kNotForDebugging)
               << "Failed to send SIGKILL to '" << name_ << "' pid: " << pid_;
           stop_timer_->Schedule(event_loop_->monotonic_now() +
                                 std::chrono::seconds(1));
@@ -430,16 +448,21 @@ void Application::DoStart() {
     ScopedCompleteSignalBlocker signal_blocker;
     {
       const std::optional<ino_t> inode = GetInodeForPath(path_);
-      CHECK(inode.has_value())
-          << ": " << path_ << " does not seem to be stat'able.";
-      pre_fork_inode_ = inode.value();
+      if (inode.has_value()) {
+        pre_fork_inode_ = inode.value();
+      } else {
+        if (absl::GetFlag(FLAGS_require_path_resolution)) {
+          ABSL_CHECK(inode.has_value())
+              << ": " << path_ << " does not seem to be stat'able.";
+        }
+      }
     }
     const pid_t pid = fork();
 
     if (pid != 0) {
       if (pid == -1) {
-        PLOG_IF(WARNING, quiet_flag_ == QuietLogging::kNo ||
-                             quiet_flag_ == QuietLogging::kNotForDebugging)
+        ABSL_PLOG_IF(WARNING, quiet_flag_ == QuietLogging::kNo ||
+                                  quiet_flag_ == QuietLogging::kNotForDebugging)
             << "Failed to fork '" << name_ << "'";
         stop_reason_ = aos::starter::LastStopReason::FORK_ERR;
         status_ = aos::starter::State::STOPPED;
@@ -449,7 +472,7 @@ void Application::DoStart() {
         start_time_ = event_loop_->monotonic_now();
         status_ = aos::starter::State::STARTING;
         latest_timing_report_version_.reset();
-        LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo)
+        ABSL_LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo)
             << "Starting '" << name_ << "' pid " << pid_;
 
         // Set up timer which moves application to RUNNING state if it is still
@@ -474,7 +497,7 @@ void Application::DoStart() {
       sigemptyset(&action.sa_mask);
       action.sa_flags = 0;
       action.sa_handler = SIG_DFL;
-      PCHECK(sigaction(signal, &action, nullptr) == 0);
+      ABSL_PCHECK(sigaction(signal, &action, nullptr) == 0);
     }
   }
 
@@ -500,31 +523,32 @@ void Application::DoStart() {
   if (prctl(PR_SET_PDEATHSIG, SIGKILL) == -1) {
     status_pipes_.write->Write(
         static_cast<uint32_t>(aos::starter::LastStopReason::SET_PRCTL_ERR));
-    PLOG(FATAL) << "Could not set PR_SET_PDEATHSIG to SIGKILL";
+    ABSL_PLOG(FATAL) << "Could not set PR_SET_PDEATHSIG to SIGKILL";
   }
 
   if (group_) {
-    CHECK(!user_name_.empty());
+    ABSL_CHECK(!user_name_.empty());
     // The manpage for setgroups says we just need CAP_SETGID, but empirically
     // we also need the effective UID to be 0 to make it work. user_ must also
     // be set so we change this effective UID back later.
-    CHECK(user_);
+    ABSL_CHECK(user_);
     if (seteuid(0) == -1) {
       status_pipes_.write->Write(
           static_cast<uint32_t>(aos::starter::LastStopReason::SET_GRP_ERR));
-      PLOG(FATAL) << "Could not seteuid(0) for " << name_
-                  << " in preparation for setting groups";
+      ABSL_PLOG(FATAL) << "Could not seteuid(0) for " << name_
+                       << " in preparation for setting groups";
     }
     if (initgroups(user_name_.c_str(), *group_) == -1) {
       status_pipes_.write->Write(
           static_cast<uint32_t>(aos::starter::LastStopReason::SET_GRP_ERR));
-      PLOG(FATAL) << "Could not initialize normal groups for " << name_
-                  << " as " << user_name_ << " with " << *group_;
+      ABSL_PLOG(FATAL) << "Could not initialize normal groups for " << name_
+                       << " as " << user_name_ << " with " << *group_;
     }
     if (setgid(*group_) == -1) {
       status_pipes_.write->Write(
           static_cast<uint32_t>(aos::starter::LastStopReason::SET_GRP_ERR));
-      PLOG(FATAL) << "Could not set group for " << name_ << " to " << *group_;
+      ABSL_PLOG(FATAL) << "Could not set group for " << name_ << " to "
+                       << *group_;
     }
   }
 
@@ -532,17 +556,20 @@ void Application::DoStart() {
     if (setuid(*user_) == -1) {
       status_pipes_.write->Write(
           static_cast<uint32_t>(aos::starter::LastStopReason::SET_USR_ERR));
-      PLOG(FATAL) << "Could not set user for " << name_ << " to " << *user_;
+      ABSL_PLOG(FATAL) << "Could not set user for " << name_ << " to "
+                       << *user_;
     }
   }
 
   if (capture_stdout_) {
-    PCHECK(STDOUT_FILENO == dup2(stdout_pipes_.write->fd(), STDOUT_FILENO));
+    ABSL_PCHECK(STDOUT_FILENO ==
+                dup2(stdout_pipes_.write->fd(), STDOUT_FILENO));
     stdout_pipes_.write.reset();
   }
 
   if (capture_stderr_) {
-    PCHECK(STDERR_FILENO == dup2(stderr_pipes_.write->fd(), STDERR_FILENO));
+    ABSL_PCHECK(STDERR_FILENO ==
+                dup2(stderr_pipes_.write->fd(), STDERR_FILENO));
     stderr_pipes_.write.reset();
   }
 
@@ -562,8 +589,8 @@ void Application::DoStart() {
   // If we got here, something went wrong
   status_pipes_.write->Write(
       static_cast<uint32_t>(aos::starter::LastStopReason::EXECV_ERR));
-  PLOG_IF(WARNING, quiet_flag_ == QuietLogging::kNo ||
-                       quiet_flag_ == QuietLogging::kNotForDebugging)
+  ABSL_PLOG_IF(WARNING, quiet_flag_ == QuietLogging::kNo ||
+                            quiet_flag_ == QuietLogging::kNotForDebugging)
       << "Could not execute " << name_ << " (" << path_ << ')';
 
   _exit(EXIT_FAILURE);
@@ -589,13 +616,13 @@ void Application::FetchOutputs() {
 }
 
 const std::string &Application::GetStdout() {
-  CHECK(capture_stdout_);
+  ABSL_CHECK(capture_stdout_);
   FetchOutputs();
   return stdout_;
 }
 
 const std::string &Application::GetStderr() {
-  CHECK(capture_stderr_);
+  ABSL_CHECK(capture_stderr_);
   FetchOutputs();
   return stderr_;
 }
@@ -612,15 +639,15 @@ void Application::DoStop(bool restart) {
     case aos::starter::State::STARTING:
     case aos::starter::State::RUNNING: {
       file_state_ = FileState::NOT_RUNNING;
-      LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo ||
-                       quiet_flag_ == QuietLogging::kNotForDebugging)
+      ABSL_LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo ||
+                            quiet_flag_ == QuietLogging::kNotForDebugging)
           << "Stopping '" << name_ << "' pid: " << pid_ << " with signal "
           << SIGINT;
       status_ = aos::starter::State::STOPPING;
 
       if (kill(pid_, SIGINT) != 0) {
-        PLOG_IF(INFO, quiet_flag_ == QuietLogging::kNo ||
-                          quiet_flag_ == QuietLogging::kNotForDebugging)
+        ABSL_PLOG_IF(INFO, quiet_flag_ == QuietLogging::kNo ||
+                               quiet_flag_ == QuietLogging::kNotForDebugging)
             << "Failed to send signal " << SIGINT << " to '" << name_
             << "' pid: " << pid_;
       }
@@ -664,7 +691,7 @@ void Application::DoStop(bool restart) {
 void Application::QueueStart() {
   status_ = aos::starter::State::WAITING;
 
-  LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo)
+  ABSL_LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo)
       << "Restarting " << name_ << " in 3 seconds";
   restart_timer_->Schedule(event_loop_->monotonic_now() +
                            std::chrono::seconds(3));
@@ -706,7 +733,7 @@ std::optional<uid_t> Application::FindUid(const char *name) {
   if (user_data != nullptr) {
     return user_data->pw_uid;
   } else {
-    LOG(FATAL) << "Could not find user " << name;
+    ABSL_LOG(FATAL) << "Could not find user " << name;
     return std::nullopt;
   }
 }
@@ -717,7 +744,7 @@ std::optional<gid_t> Application::FindPrimaryGidForUser(const char *name) {
   if (user_data != nullptr) {
     return user_data->pw_gid;
   } else {
-    LOG(FATAL) << "Could not find user " << name;
+    ABSL_LOG(FATAL) << "Could not find user " << name;
     return std::nullopt;
   }
 }
@@ -748,7 +775,7 @@ Application::PopulateStatus(flatbuffers::FlatBufferBuilder *builder,
                             util::Top *top) {
   UpdateFileState();
 
-  CHECK(builder != nullptr);
+  ABSL_CHECK(builder != nullptr);
   auto name_fbs = builder->CreateString(name_);
 
   const bool valid_pid = pid_ > 0 && status_ != aos::starter::State::STOPPED;
@@ -868,13 +895,13 @@ bool Application::MaybeHandleSignal() {
   switch (status_) {
     case aos::starter::State::STARTING: {
       if (exit_code_.value() == 0) {
-        LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo)
+        ABSL_LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo)
             << "Application '" << name_ << "' pid " << pid_
             << " exited with status " << exit_code_.value() << " and "
             << starter_version_string;
       } else {
-        LOG_IF(WARNING, quiet_flag_ == QuietLogging::kNo ||
-                            quiet_flag_ == QuietLogging::kNotForDebugging)
+        ABSL_LOG_IF(WARNING, quiet_flag_ == QuietLogging::kNo ||
+                                 quiet_flag_ == QuietLogging::kNotForDebugging)
             << "Failed to start '" << name_ << "' on pid " << pid_
             << " : Exited with status " << exit_code_.value() << " and "
             << starter_version_string;
@@ -889,7 +916,7 @@ bool Application::MaybeHandleSignal() {
     }
     case aos::starter::State::RUNNING: {
       if (exit_code_.value() == 0) {
-        LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo)
+        ABSL_LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo)
             << "Application '" << name_ << "' pid " << pid_
             << " exited with status " << exit_code_.value();
       } else {
@@ -900,7 +927,7 @@ bool Application::MaybeHandleSignal() {
                   ? absl::StrCat("version '",
                                  latest_timing_report_version_.value(), "'")
                   : starter_version_string;
-          LOG_IF(WARNING, quiet_flag_ == QuietLogging::kNo)
+          ABSL_LOG_IF(WARNING, quiet_flag_ == QuietLogging::kNo)
               << "Application '" << name_ << "' pid " << pid_ << " "
               << version_string << " exited unexpectedly with status "
               << exit_code_.value();
@@ -915,7 +942,7 @@ bool Application::MaybeHandleSignal() {
       break;
     }
     case aos::starter::State::STOPPING: {
-      LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo)
+      ABSL_LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo)
           << "Successfully stopped '" << name_ << "' pid: " << pid_
           << " with status " << exit_code_.value();
       status_ = aos::starter::State::STOPPED;
