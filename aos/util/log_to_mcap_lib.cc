@@ -47,8 +47,58 @@ ABSL_FLAG(std::vector<std::string>, drop_channels, {},
           "so: --drop_channels='/0/foo a.b.Msg1,/0/bar a.c.Msg2'. Works in "
           "conjunction with --include_channels. See that help for more "
           "information.");
+ABSL_FLAG(int, progress_update_interval_seconds, 5,
+          "If set to a positive value, print a conversion progress update "
+          "every time this many seconds of real time have passed. If set to "
+          "a non-positive value, no progress updates will be printed.");
 
 namespace aos::util {
+
+namespace {
+
+// Helper class to print progress updates during conversion.
+class ProgressUpdatePrinter {
+ public:
+  ProgressUpdatePrinter(EventLoop *event_loop) : event_loop_(event_loop) {
+    // Initialize all the tracking variables.
+    last_print_time_ = monotonic_clock::now();
+    virtual_start_time_ = event_loop->monotonic_now();
+
+    aos::TimerHandler *timer = event_loop->AddTimer([this]() {
+      // Check to see if we should print an update.
+      monotonic_clock::time_point now = monotonic_clock::now();
+      if (now >
+          last_print_time_ + std::chrono::seconds(absl::GetFlag(
+                                 FLAGS_progress_update_interval_seconds))) {
+        // Calculate how much time of the log we have processed since the last
+        // update.
+        monotonic_clock::time_point virtual_now = event_loop_->monotonic_now();
+        monotonic_clock::duration total_virtual_duration =
+            virtual_now - virtual_start_time_;
+
+        LOG(INFO) << "Processed a total of "
+                  << std::chrono::duration<double>(total_virtual_duration)
+                  << " of the log.";
+
+        // Update the tracking variables for the next iteration.
+        last_print_time_ = now;
+      }
+    });
+
+    event_loop_->OnRun([this, timer] {
+      // Check every virtual second.
+      timer->Schedule(virtual_start_time_ + std::chrono::seconds(1),
+                      std::chrono::seconds(1));
+    });
+  }
+
+ private:
+  EventLoop *event_loop_;
+  monotonic_clock::time_point last_print_time_;
+  monotonic_clock::time_point virtual_start_time_;
+};
+
+}  // namespace
 
 std::function<bool(const Channel *)> GetChannelShouldBeDroppedTester() {
   const std::vector<std::string> &included_channel_strings =
@@ -142,6 +192,9 @@ int ConvertLogToMcap(const std::vector<std::string> &log_paths,
           ? nullptr
           : configuration::GetNode(reader.configuration(), replay_node);
 
+  std::unique_ptr<EventLoop> progress_update_printer_event_loop;
+  std::unique_ptr<ProgressUpdatePrinter> progress_update_printer;
+
   std::unique_ptr<EventLoop> clock_event_loop;
   std::unique_ptr<ClockPublisher> clock_publisher;
 
@@ -180,6 +233,19 @@ int ConvertLogToMcap(const std::vector<std::string> &log_paths,
   } else {
     reader.OnStart(node, startup_handler);
   }
+
+  // Set up the tool to print conversion progress to the terminal.
+  if (absl::GetFlag(FLAGS_progress_update_interval_seconds) > 0) {
+    reader.OnStart(node, [&progress_update_printer_event_loop,
+                          &progress_update_printer, &reader, node] {
+      progress_update_printer_event_loop =
+          reader.event_loop_factory()->MakeEventLoop("progress_update_printer",
+                                                     node);
+      progress_update_printer = std::make_unique<ProgressUpdatePrinter>(
+          progress_update_printer_event_loop.get());
+    });
+  }
+
   reader.event_loop_factory()->Run();
   reader.Deregister();
 
