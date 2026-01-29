@@ -145,6 +145,7 @@ cc_test(
         },
     ),
     deps = [
+        ":dummy_cgroup_manager",
         ":starter_rpc_lib",
         ":starterd_lib",
         "//aos/events:simulated_event_loop",
@@ -283,5 +284,15 @@ cc_library(
         "//aos/starter:starter_fbs",
         "//aos/starter:starter_rpc_fbs",
         "//aos/starter:starter_rpc_lib",
+    ],
+)
+
+cc_library(
+    name = "dummy_cgroup_manager",
+    hdrs = ["dummy_cgroup_manager.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":starterd_lib",
+        "@com_google_absl//absl/log",
     ],
 )

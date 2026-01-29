@@ -91,7 +91,7 @@ int main(int argc, char **argv) {
 
   const aos::Configuration *config_msg = &config.message();
 
-  aos::starter::Starter starter(config_msg);
+  aos::starter::Starter starter(config_msg, aos::starter::MakeCGroupManager());
   if (!absl::GetFlag(FLAGS_version_string).empty()) {
     starter.event_loop()->SetVersionString(absl::GetFlag(FLAGS_version_string));
   }

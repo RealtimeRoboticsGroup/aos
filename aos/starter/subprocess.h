@@ -17,6 +17,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/log/absl_check.h"
 #include "flatbuffers/buffer.h"
 #include "flatbuffers/flatbuffer_builder.h"
 #include "flatbuffers/string.h"
@@ -92,19 +93,34 @@ class MemoryCGroup {
     kDoNotCreate,
   };
 
-  MemoryCGroup(std::string_view name, Create should_create = Create::kDoCreate);
-  ~MemoryCGroup();
+  virtual ~MemoryCGroup() {}
 
   // Adds a thread ID to be managed by the cgroup.
-  void AddTid(pid_t pid = 0);
+  virtual void AddTid(pid_t pid = 0) = 0;
 
   // Sets the provided limit to the provided value.
-  void SetLimit(std::string_view limit_name, uint64_t limit_value);
-
- private:
-  std::string cgroup_;
-  Create should_create_;
+  virtual void SetMemoryLimit(uint64_t limit_value) = 0;
 };
+
+// Factory class to create cgroups for applications.
+//
+// This needs to be a factory because cgroups v1 is very different from cgroups
+// v2.  With cgroups v2, we need kernel resources to be allocated with a
+// lifetime > the lifetime of the created sub-cgroups.
+//
+// Our Cgroups v1 usage is much more flat.
+class CGroupManager {
+ public:
+  virtual ~CGroupManager() {}
+
+  virtual std::unique_ptr<MemoryCGroup> MakeCGroup(
+      std::string_view name,
+      MemoryCGroup::Create should_create = MemoryCGroup::Create::kDoCreate) = 0;
+};
+
+// Auto-detects what cgroups version is on this machine and constructs a manager
+// for it.
+std::unique_ptr<CGroupManager> MakeCGroupManager();
 
 // Manages a running process, allowing starting and stopping, and restarting
 // automatically.
@@ -120,6 +136,7 @@ class Application {
   };
   Application(const aos::Application *application, aos::EventLoop *event_loop,
               std::function<void()> on_change,
+              std::unique_ptr<MemoryCGroup> memory_cgroup,
               QuietLogging quiet_flag = QuietLogging::kNo);
 
   // executable_name is the actual executable path.
@@ -128,6 +145,7 @@ class Application {
   // distinct argv[0].
   Application(std::string_view name, std::string_view executable_name,
               aos::EventLoop *event_loop, std::function<void()> on_change,
+              std::unique_ptr<MemoryCGroup> memory_cgroup,
               QuietLogging quiet_flag = QuietLogging::kNo);
 
   ~Application();
@@ -192,21 +210,18 @@ class Application {
 
   // Sets the memory limit for the application to the provided limit.
   void SetMemoryLimit(size_t limit) {
-    if (!memory_cgroup_) {
-      memory_cgroup_ = std::make_unique<MemoryCGroup>(name_);
-    }
-    memory_cgroup_->SetLimit("memory.limit_in_bytes", limit);
+    ABSL_CHECK(memory_cgroup_);
+
+    memory_cgroup_->SetMemoryLimit(limit);
   }
 
   // Sets the cgroup and memory limit to a pre-existing cgroup which is
   // externally managed.  This lets us configure the cgroup of an application
   // without root access.
-  void SetExistingCgroupMemoryLimit(std::string_view name, size_t limit) {
-    if (!memory_cgroup_) {
-      memory_cgroup_ = std::make_unique<MemoryCGroup>(
-          name, MemoryCGroup::Create::kDoNotCreate);
-    }
-    memory_cgroup_->SetLimit("memory.limit_in_bytes", limit);
+  void SetExistingCgroupMemoryLimit(size_t limit) {
+    ABSL_CHECK(memory_cgroup_);
+
+    memory_cgroup_->SetMemoryLimit(limit);
   }
 
   // Observe a timing report message, and save it if it is relevant to us.

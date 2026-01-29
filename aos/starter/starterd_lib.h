@@ -31,7 +31,8 @@ const aos::Channel *StarterRpcChannelForNode(const aos::Configuration *config,
 
 class Starter {
  public:
-  Starter(const aos::Configuration *event_loop_config);
+  Starter(const aos::Configuration *event_loop_config,
+          std::unique_ptr<CGroupManager> cgroup_manager);
 
   // Inserts a new application from config. Returns the inserted application if
   // it was successful, otherwise nullptr if an application already exists
@@ -107,6 +108,8 @@ class Starter {
   SignalListener listener_;
 
   util::Top top_;
+
+  std::unique_ptr<CGroupManager> cgroup_manager_;
 
   DISALLOW_COPY_AND_ASSIGN(Starter);
 };

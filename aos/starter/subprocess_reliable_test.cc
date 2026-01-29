@@ -53,8 +53,8 @@ TEST(SubprocessTest, KillDuringStartup) {
   // Run an application that takes a really long time to exit. The exact details
   // here don't matter. We just need to to survive long enough until we can call
   // Terminate() below.
-  auto application =
-      std::make_unique<Application>("sleep", "sleep", &event_loop, []() {});
+  auto application = std::make_unique<Application>(
+      "sleep", "sleep", &event_loop, []() {}, nullptr);
   application->set_args({"100"});
 
   // Track whether we exit via our own timer callback. We don't want to exit
@@ -113,8 +113,8 @@ TEST(SubprocessTest, CanKillAfterStartup) {
   auto startup_signal_file = signal_dir / "startup";
   auto shutdown_signal_file = signal_dir / "shutdown";
 
-  auto application = std::make_unique<Application>("/bin/bash", "/bin/bash",
-                                                   &event_loop, []() {});
+  auto application = std::make_unique<Application>(
+      "/bin/bash", "/bin/bash", &event_loop, []() {}, nullptr);
   application->set_args(
       {"-c", absl::StrCat("cleanup() { touch ", shutdown_signal_file.string(),
                           "; exit 0; }; trap cleanup SIGTERM; touch ",
@@ -157,8 +157,8 @@ TEST(SubprocessTest, CanSlowlyStopGracefully) {
   // Create an application that should never get killed automatically. It should
   // have plenty of time to shut down on its own. In this case, we use 2 seconds
   // to mean "plenty of time".
-  auto application = std::make_unique<Application>("/bin/bash", "/bin/bash",
-                                                   &event_loop, [] {});
+  auto application = std::make_unique<Application>(
+      "/bin/bash", "/bin/bash", &event_loop, [] {}, nullptr);
   application->set_args(
       {"-c",
        absl::StrCat(

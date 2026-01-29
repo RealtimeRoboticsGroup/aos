@@ -134,52 +134,229 @@ class Sudo {
   gid_t rgid_, egid_, sgid_;
 };
 
-MemoryCGroup::MemoryCGroup(std::string_view name, Create should_create)
-    : cgroup_(absl::StrCat("/sys/fs/cgroup/memory/aos_", name)),
-      should_create_(should_create) {
-  if (should_create_ == Create::kDoCreate) {
+class MemoryCGroupV1 : public MemoryCGroup {
+ public:
+  MemoryCGroupV1(std::string_view name,
+                 Create should_create = Create::kDoCreate)
+      : cgroup_(absl::StrCat("/sys/fs/cgroup/memory/aos_", name)),
+        should_create_(should_create) {
+    if (should_create_ == Create::kDoCreate) {
+      Sudo sudo;
+      int ret = mkdir(cgroup_.c_str(), 0755);
+
+      if (ret != 0) {
+        if (errno == EEXIST) {
+          ABSL_PCHECK(rmdir(cgroup_.c_str()) == 0)
+              << ": Failed to remove previous cgroup " << cgroup_;
+          ret = mkdir(cgroup_.c_str(), 0755);
+        }
+      }
+
+      if (ret != 0) {
+        ABSL_PLOG(FATAL) << ": Failed to create cgroup " << cgroup_
+                         << ", do you have permission?";
+      }
+    }
+  }
+  ~MemoryCGroupV1() {
+    if (should_create_ == Create::kDoCreate) {
+      Sudo sudo;
+      RemoveCGroupWithRetry(cgroup_);
+    }
+  }
+
+  void AddTid(pid_t pid) override {
+    if (pid == 0) {
+      pid = getpid();
+    }
+    if (should_create_ == Create::kDoCreate) {
+      Sudo sudo;
+      util::WriteStringToFileOrDie(absl::StrCat(cgroup_, "/tasks").c_str(),
+                                   std::to_string(pid));
+    } else {
+      util::WriteStringToFileOrDie(absl::StrCat(cgroup_, "/tasks").c_str(),
+                                   std::to_string(pid));
+    }
+  }
+
+  void SetMemoryLimit(uint64_t limit_value) override {
+    if (should_create_ == Create::kDoCreate) {
+      Sudo sudo;
+      util::WriteStringToFileOrDie(
+          absl::StrCat(cgroup_, "/memory.limit_in_bytes").c_str(),
+          std::to_string(limit_value));
+    } else {
+      util::WriteStringToFileOrDie(
+          absl::StrCat(cgroup_, "/memory.limit_in_bytes").c_str(),
+          std::to_string(limit_value));
+    }
+  }
+
+ private:
+  std::string cgroup_;
+  Create should_create_;
+};
+
+class CGroupManagerV1 : public CGroupManager {
+ public:
+  CGroupManagerV1() {}
+  virtual ~CGroupManagerV1() {}
+
+  std::unique_ptr<MemoryCGroup> MakeCGroup(
+      std::string_view name,
+      MemoryCGroup::Create should_create = MemoryCGroup::Create::kDoCreate) {
+    return std::make_unique<MemoryCGroupV1>(name, should_create);
+  }
+};
+
+class MemoryCGroupV2 : public MemoryCGroup {
+ public:
+  MemoryCGroupV2(std::string_view name,
+                 Create should_create = Create::kDoCreate)
+      : cgroup_(name), should_create_(should_create) {
+    if (should_create_ == Create::kDoCreate) {
+      Sudo sudo;
+      int ret = mkdir(cgroup_.c_str(), 0755);
+
+      if (ret != 0) {
+        if (errno == EEXIST) {
+          ABSL_PCHECK(rmdir(cgroup_.c_str()) == 0)
+              << ": Failed to remove previous cgroup " << cgroup_;
+          ret = mkdir(cgroup_.c_str(), 0755);
+        }
+      }
+
+      if (ret != 0) {
+        ABSL_PLOG(FATAL) << ": Failed to create cgroup aos_" << cgroup_
+                         << ", do you have permission?";
+      }
+    }
+  }
+  ~MemoryCGroupV2() {
+    if (should_create_ == Create::kDoCreate) {
+      Sudo sudo;
+      ABSL_PCHECK(rmdir(absl::StrCat(cgroup_).c_str()) == 0);
+    }
+  }
+
+  void AddTid(pid_t pid) override {
+    if (pid == 0) {
+      pid = getpid();
+    }
+    if (should_create_ == Create::kDoCreate) {
+      Sudo sudo;
+      util::WriteStringToFileOrDie(
+          absl::StrCat(cgroup_, "/cgroup.procs").c_str(), std::to_string(pid));
+    } else {
+      util::WriteStringToFileOrDie(
+          absl::StrCat(cgroup_, "/cgroup.procs").c_str(), std::to_string(pid));
+    }
+  }
+
+  void SetMemoryLimit(uint64_t limit_value) override {
+    if (should_create_ == Create::kDoCreate) {
+      Sudo sudo;
+      util::WriteStringToFileOrDie(absl::StrCat(cgroup_, "/memory.max").c_str(),
+                                   std::to_string(limit_value));
+    } else {
+      util::WriteStringToFileOrDie(absl::StrCat(cgroup_, "/memory.max").c_str(),
+                                   std::to_string(limit_value));
+    }
+  }
+
+ private:
+  std::string cgroup_;
+  Create should_create_;
+};
+
+// cgroups v2 won't let you enable cgroups managers on cgroups which have
+// anything in them directly.  This requires us to move ourselves (starter) to a
+// nested cgroup.
+//
+// Step 1, make a new cgroup for starterd.
+// Step 2, move starterd to a new cgroup inside the current cgroup.
+// Step 3, Enable memory cgroups on the original cgroup, so the nested cgroups
+// we create can limit memory usage.
+
+class CGroupManagerV2 : public CGroupManager {
+ public:
+  CGroupManagerV2(std::string name)
+      : cgroup_(name), starter_cgroup_(absl::StrCat(cgroup_, "/starter")) {
     Sudo sudo;
-    int ret = mkdir(cgroup_.c_str(), 0755);
+    // First, make a cgroup to move ourselves to.
+    int ret = mkdir(starter_cgroup_.c_str(), 0755);
 
     if (ret != 0) {
       if (errno == EEXIST) {
-        ABSL_PCHECK(rmdir(cgroup_.c_str()) == 0)
-            << ": Failed to remove previous cgroup " << cgroup_;
-        ret = mkdir(cgroup_.c_str(), 0755);
+        // Nuke the previous one so we don't retain any memory or processes that
+        // were in it.  Also, cgroups v2 can manage more than memory, so there
+        // is more to diverge.
+        ABSL_PCHECK(rmdir(starter_cgroup_.c_str()) == 0)
+            << ": Failed to remove previous cgroup " << starter_cgroup_;
+        ret = mkdir(starter_cgroup_.c_str(), 0755);
       }
     }
 
-    if (ret != 0) {
-      ABSL_PLOG(FATAL) << ": Failed to create cgroup aos_" << cgroup_
-                       << ", do you have permission?";
-    }
-  }
-}
+    ABSL_PCHECK(ret != 0) << ": Failed to create cgroup " << starter_cgroup_
+                          << ", do you have permission?";
 
-void MemoryCGroup::AddTid(pid_t pid) {
-  if (pid == 0) {
-    pid = getpid();
-  }
-  if (should_create_ == Create::kDoCreate) {
-    Sudo sudo;
-    util::WriteStringToFileOrDie(absl::StrCat(cgroup_, "/tasks").c_str(),
-                                 std::to_string(pid));
-  } else {
-    util::WriteStringToFileOrDie(absl::StrCat(cgroup_, "/tasks").c_str(),
-                                 std::to_string(pid));
-  }
-}
+    const pid_t pid = getpid();
 
-void MemoryCGroup::SetLimit(std::string_view limit_name, uint64_t limit_value) {
-  if (should_create_ == Create::kDoCreate) {
-    Sudo sudo;
-    util::WriteStringToFileOrDie(absl::StrCat(cgroup_, "/", limit_name).c_str(),
-                                 std::to_string(limit_value));
-  } else {
-    util::WriteStringToFileOrDie(absl::StrCat(cgroup_, "/", limit_name).c_str(),
-                                 std::to_string(limit_value));
+    // Then, move ourselves to the sub cgroup.
+    util::WriteStringToFileOrDie(absl::StrCat(starter_cgroup_, "/cgroup.procs"),
+                                 std::to_string(pid));
+
+    // Now, enable memory
+    util::WriteStringToFileOrDie(
+        absl::StrCat(cgroup_, "/cgroup.subtree_control"), "+memory");
   }
-}
+
+  ~CGroupManagerV2() override {
+    const pid_t pid = getpid();
+
+    Sudo sudo;
+    // Remove memory.
+    util::WriteStringToFileOrDie(
+        absl::StrCat(cgroup_, "/cgroup.subtree_control"), "-memory");
+
+    // Move ourselves out.
+    util::WriteStringToFileOrDie(absl::StrCat(cgroup_, "/cgroup.procs"),
+                                 std::to_string(pid));
+
+    // Then clean up the cgroup we made.
+    ABSL_PCHECK(rmdir(starter_cgroup_.c_str()) == 0)
+        << ": Failed to remove cgroup " << starter_cgroup_;
+  }
+
+  std::unique_ptr<MemoryCGroup> MakeCGroup(
+      std::string_view name, MemoryCGroup::Create should_create =
+                                 MemoryCGroup::Create::kDoCreate) override {
+    return std::make_unique<MemoryCGroupV2>(
+        absl::StrCat(cgroup_, "/aos_", name), should_create);
+  }
+
+ private:
+  std::string cgroup_;
+  std::string starter_cgroup_;
+};
+
+std::unique_ptr<CGroupManager> MakeCGroupManager() {
+  // The kernel only supports cgroups v1 or v2, not both.  The standard
+  // autodetection mechanism for other programs appears to be to check for the
+  // cgroup.controllers file, which signifies that cgroups v2 is in use.
+  if (!std::filesystem::exists("/sys/fs/cgroup/cgroup.controllers")) {
+    return std::make_unique<CGroupManagerV1>();
+  } else {
+    // Read the current cgroup out of /proc/self/cgroup
+    std::string cgroup = util::ReadFileToStringOrDie("/proc/self/cgroup");
+    // Remove the trailing newline.
+    cgroup.erase(cgroup.length() - 1);
+    ABSL_CHECK(cgroup.starts_with("0::"));
+    cgroup = "/sys/fs/cgroup" + cgroup.substr(3);
+    ABSL_LOG(INFO) << "Cgroup of: " << cgroup;
+    return std::make_unique<CGroupManagerV2>(cgroup);
+  }
+};
 
 std::string GetCGroupProcessesInfo(const std::filesystem::path &cgroup_path) {
   const std::filesystem::path tasks_file = cgroup_path / "tasks";
@@ -289,13 +466,6 @@ void RemoveCGroupWithRetry(const std::filesystem::path &cgroup_path) {
   ABSL_LOG(FATAL) << "Giving up on removing cgroup " << cgroup_path;
 }
 
-MemoryCGroup::~MemoryCGroup() {
-  if (should_create_ == Create::kDoCreate) {
-    Sudo sudo;
-    RemoveCGroupWithRetry(cgroup_);
-  }
-}
-
 SignalListener::SignalListener(aos::ShmEventLoop *loop,
                                std::function<void(signalfd_siginfo)> callback)
     : SignalListener(loop->epoll(), std::move(callback)) {}
@@ -334,6 +504,7 @@ Application::Application(std::string_view name,
                          std::string_view executable_name,
                          aos::EventLoop *event_loop,
                          std::function<void()> on_change,
+                         std::unique_ptr<MemoryCGroup> memory_cgroup,
                          QuietLogging quiet_flag)
     : name_(name),
       path_(ResolvePath(executable_name)),
@@ -376,6 +547,7 @@ Application::Application(std::string_view name,
       child_status_handler_(
           event_loop_->AddTimer([this]() { MaybeHandleSignal(); })),
       on_change_({on_change}),
+      memory_cgroup_(std::move(memory_cgroup)),
       quiet_flag_(quiet_flag) {
   // Keep the length of the timer name bounded to some reasonable length.
   start_timer_->set_name(absl::StrCat("app_start_", name.substr(0, 10)));
@@ -394,12 +566,13 @@ Application::Application(std::string_view name,
 Application::Application(const aos::Application *application,
                          aos::EventLoop *event_loop,
                          std::function<void()> on_change,
+                         std::unique_ptr<MemoryCGroup> memory_cgroup,
                          QuietLogging quiet_flag)
     : Application(application->name()->string_view(),
                   application->has_executable_name()
                       ? application->executable_name()->string_view()
                       : application->name()->string_view(),
-                  event_loop, on_change, quiet_flag) {
+                  event_loop, on_change, std::move(memory_cgroup), quiet_flag) {
   user_name_ = application->has_user() ? application->user()->str() : "";
   user_ = application->has_user() ? FindUid(user_name_.c_str()) : std::nullopt;
   group_ = application->has_user() ? FindPrimaryGidForUser(user_name_.c_str())

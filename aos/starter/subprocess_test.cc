@@ -56,11 +56,14 @@ class SubprocessTest : public ::testing::Test {
 };
 
 TEST_F(SubprocessTest, CaptureStatus) {
-  Application application("exit", "sh", &event_loop_, [this, &application]() {
-    if (application.status() == aos::starter::State::STOPPED) {
-      event_loop_.Exit();
-    }
-  });
+  Application application(
+      "exit", "sh", &event_loop_,
+      [this, &application]() {
+        if (application.status() == aos::starter::State::STOPPED) {
+          event_loop_.Exit();
+        }
+      },
+      nullptr);
   ASSERT_FALSE(application.autorestart());
   application.set_args({"-c", "exit 0"});
 
@@ -143,11 +146,14 @@ TEST_F(SubprocessTest, CaptureStatus) {
 }
 
 TEST_F(SubprocessTest, CaptureOutputs) {
-  Application echo_stdout("echo", "echo", &event_loop_, [this, &echo_stdout]() {
-    if (echo_stdout.status() == aos::starter::State::STOPPED) {
-      event_loop_.Exit();
-    }
-  });
+  Application echo_stdout(
+      "echo", "echo", &event_loop_,
+      [this, &echo_stdout]() {
+        if (echo_stdout.status() == aos::starter::State::STOPPED) {
+          event_loop_.Exit();
+        }
+      },
+      nullptr);
   ASSERT_FALSE(echo_stdout.autorestart());
   echo_stdout.set_args({"abcdef"});
   echo_stdout.set_capture_stdout(true);
@@ -169,11 +175,14 @@ TEST_F(SubprocessTest, CaptureOutputs) {
 }
 
 TEST_F(SubprocessTest, CaptureStderr) {
-  Application echo_stderr("echo", "sh", &event_loop_, [&echo_stderr, this]() {
-    if (echo_stderr.status() == aos::starter::State::STOPPED) {
-      event_loop_.Exit();
-    }
-  });
+  Application echo_stderr(
+      "echo", "sh", &event_loop_,
+      [&echo_stderr, this]() {
+        if (echo_stderr.status() == aos::starter::State::STOPPED) {
+          event_loop_.Exit();
+        }
+      },
+      nullptr);
   echo_stderr.set_args({"-c", "echo abcdef >&2"});
   echo_stderr.set_capture_stdout(true);
   echo_stderr.set_capture_stderr(true);
@@ -201,7 +210,7 @@ TEST_F(SubprocessTest, PrintNoTimingReportVersionString) {
           event_loop_.Exit();
         }
       },
-      Application::QuietLogging::kNo);
+      nullptr, Application::QuietLogging::kNo);
   error_out.set_args({"-c", "sleep 3; false"});
 
   error_out.Start();
@@ -234,7 +243,7 @@ TEST_F(SubprocessTest, PrintFailedToStartVersionString) {
           event_loop_.Exit();
         }
       },
-      Application::QuietLogging::kNo);
+      nullptr, Application::QuietLogging::kNo);
 
   error_out.Start();
 
@@ -259,7 +268,7 @@ TEST_F(SubprocessTest, UnactiveQuietFlag) {
           event_loop_.Exit();
         }
       },
-      Application::QuietLogging::kNo);
+      nullptr, Application::QuietLogging::kNo);
   ASSERT_FALSE(error_out.autorestart());
 
   error_out.Start();
@@ -287,7 +296,7 @@ TEST_F(SubprocessTest, ActiveQuietFlag) {
           event_loop_.Exit();
         }
       },
-      Application::QuietLogging::kYes);
+      nullptr, Application::QuietLogging::kYes);
   ASSERT_FALSE(error_out.autorestart());
 
   error_out.Start();
@@ -305,8 +314,8 @@ TEST_F(SubprocessTest, ActiveQuietFlag) {
 // will trigger a crash even if the resources tied to the event loop in the
 // aos::Application aren't properly released.
 TEST_F(SubprocessTest, ShortLivedApp) {
-  auto application =
-      std::make_unique<Application>("sleep", "sleep", &event_loop_, []() {});
+  auto application = std::make_unique<Application>(
+      "sleep", "sleep", &event_loop_, []() {}, nullptr);
   application->set_args({"10"});
   application->Start();
   pid_t pid = application->get_pid();
@@ -361,40 +370,42 @@ TEST_F(SubprocessTest, ChangeBinaryContents) {
 
   // Wait until we are running, go through and test that various variations in
   // file state result in the expected behavior, and then exit.
-  Application sleep("sleep", executable_name.native(), &event_loop_,
-                    [&sleep, this, executable_name, full_executable_path]() {
-                      switch (sleep.status()) {
-                        case aos::starter::State::RUNNING:
-                          EXPECT_EQ(aos::starter::FileState::NO_CHANGE,
-                                    sleep.UpdateFileState());
-                          // Delete the symlink; this should have no effect,
-                          // because the Application class should be looking at
-                          // the original path.
-                          std::filesystem::remove(executable_name);
-                          EXPECT_EQ(aos::starter::FileState::NO_CHANGE,
-                                    sleep.UpdateFileState());
-                          // Delete the executable; it should be changed.
-                          std::filesystem::remove(full_executable_path);
-                          EXPECT_EQ(aos::starter::FileState::CHANGED,
-                                    sleep.UpdateFileState());
-                          // Replace the executable itself; it should be
-                          // changed.
-                          aos::util::WriteStringToFileOrDie(
-                              full_executable_path.native(), "abcdef");
-                          EXPECT_EQ(aos::starter::FileState::CHANGED,
-                                    sleep.UpdateFileState());
-                          // Terminate.
-                          event_loop_.Exit();
-                          break;
-                        case aos::starter::State::WAITING:
-                        case aos::starter::State::STARTING:
-                        case aos::starter::State::STOPPING:
-                        case aos::starter::State::STOPPED:
-                          EXPECT_EQ(aos::starter::FileState::NOT_RUNNING,
-                                    sleep.UpdateFileState());
-                          break;
-                      }
-                    });
+  Application sleep(
+      "sleep", executable_name.native(), &event_loop_,
+      [&sleep, this, executable_name, full_executable_path]() {
+        switch (sleep.status()) {
+          case aos::starter::State::RUNNING:
+            EXPECT_EQ(aos::starter::FileState::NO_CHANGE,
+                      sleep.UpdateFileState());
+            // Delete the symlink; this should have no effect,
+            // because the Application class should be looking at
+            // the original path.
+            std::filesystem::remove(executable_name);
+            EXPECT_EQ(aos::starter::FileState::NO_CHANGE,
+                      sleep.UpdateFileState());
+            // Delete the executable; it should be changed.
+            std::filesystem::remove(full_executable_path);
+            EXPECT_EQ(aos::starter::FileState::CHANGED,
+                      sleep.UpdateFileState());
+            // Replace the executable itself; it should be
+            // changed.
+            aos::util::WriteStringToFileOrDie(full_executable_path.native(),
+                                              "abcdef");
+            EXPECT_EQ(aos::starter::FileState::CHANGED,
+                      sleep.UpdateFileState());
+            // Terminate.
+            event_loop_.Exit();
+            break;
+          case aos::starter::State::WAITING:
+          case aos::starter::State::STARTING:
+          case aos::starter::State::STOPPING:
+          case aos::starter::State::STOPPED:
+            EXPECT_EQ(aos::starter::FileState::NOT_RUNNING,
+                      sleep.UpdateFileState());
+            break;
+        }
+      },
+      nullptr);
   ASSERT_FALSE(sleep.autorestart());
   // Ensure that the subprocess will run longer than we care about (we just call
   // Terminate() below to stop it).

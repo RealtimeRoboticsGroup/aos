@@ -55,7 +55,8 @@ const aos::Channel *StarterRpcChannelForNode(const aos::Configuration *config,
   return configuration::GetChannel<StarterRpc>(config, "/aos", "", node);
 }
 
-Starter::Starter(const aos::Configuration *event_loop_config)
+Starter::Starter(const aos::Configuration *event_loop_config,
+                 std::unique_ptr<CGroupManager> cgroup_manager)
     : config_msg_(event_loop_config),
       event_loop_(event_loop_config),
       status_sender_(event_loop_.MakeSender<aos::starter::Status>("/aos")),
@@ -79,7 +80,8 @@ Starter::Starter(const aos::Configuration *event_loop_config)
       listener_(&event_loop_,
                 [this](signalfd_siginfo signal) { OnSignal(signal); }),
       top_(&event_loop_, aos::util::Top::TrackThreadsMode::kDisabled,
-           aos::util::Top::TrackPerThreadInfoMode::kEnabled) {
+           aos::util::Top::TrackPerThreadInfoMode::kEnabled),
+      cgroup_manager_(std::move(cgroup_manager)) {
   event_loop_.SkipAosLog();
 
   cleanup_timer_->set_name("cleanup");
@@ -273,7 +275,8 @@ void Starter::OnSignal(signalfd_siginfo info) {
 Application *Starter::AddApplication(const aos::Application *application) {
   auto [iter, success] = applications_.try_emplace(
       application->name()->str(), application, &event_loop_,
-      [this]() { HandleStateChange(); });
+      [this]() { HandleStateChange(); },
+      cgroup_manager_->MakeCGroup(application->name()->string_view()));
   if (success) {
     // We should be catching and handling SIGCHLD correctly in the starter, so
     // don't leave in the crutch for polling for the child process status (this

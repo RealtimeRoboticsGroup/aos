@@ -24,6 +24,7 @@
 #include "aos/ipc_lib/shm_base.h"
 #include "aos/json_to_flatbuffer.h"
 #include "aos/network/team_number.h"
+#include "aos/starter/dummy_cgroup_manager.h"
 #include "aos/starter/starter_generated.h"
 #include "aos/starter/starter_rpc_generated.h"
 #include "aos/starter/starter_rpc_lib.h"
@@ -122,7 +123,8 @@ TEST_P(StarterdConfigParamTest, MultiNodeStartStopTest) {
   const aos::Configuration *config_msg = &new_config.message();
 
   // Set up starter with config file
-  aos::starter::Starter starter(config_msg);
+  aos::starter::Starter starter(config_msg,
+                                std::make_unique<DummyCGroupManager>());
 
   // Create an event loop to watch for ping messages, verifying it actually
   // started.
@@ -246,7 +248,8 @@ TEST_F(StarterdTest, DeathTest) {
   const aos::Configuration *config_msg = &new_config.message();
 
   // Set up starter with config file
-  aos::starter::Starter starter(config_msg);
+  aos::starter::Starter starter(config_msg,
+                                std::make_unique<DummyCGroupManager>());
 
   // Create an event loop to watch for ping messages, verifying it actually
   // started.
@@ -337,7 +340,8 @@ TEST_F(StarterdTest, Autostart) {
   const aos::Configuration *config_msg = &new_config.message();
 
   // Set up starter with config file
-  aos::starter::Starter starter(config_msg);
+  aos::starter::Starter starter(config_msg,
+                                std::make_unique<DummyCGroupManager>());
 
   // Create an event loop to watch for the application starting up.
   aos::ShmEventLoop watcher_loop(config_msg);
@@ -430,7 +434,8 @@ TEST_F(StarterdTest, DeathNoRestartTest) {
   const aos::Configuration *config_msg = &new_config.message();
 
   // Set up starter with config file
-  aos::starter::Starter starter(config_msg);
+  aos::starter::Starter starter(config_msg,
+                                std::make_unique<DummyCGroupManager>());
 
   // Create an event loop to watch for the Status message to watch the state
   // transitions.
@@ -523,7 +528,8 @@ TEST_F(StarterdTest, StarterChainTest) {
 
   const aos::Configuration *config_msg = &new_config.message();
   // Set up starter with config file
-  aos::starter::Starter starter(config_msg);
+  aos::starter::Starter starter(config_msg,
+                                std::make_unique<DummyCGroupManager>());
   aos::ShmEventLoop client_loop(config_msg);
   client_loop.SkipAosLog();
   StarterClient client(&client_loop);
