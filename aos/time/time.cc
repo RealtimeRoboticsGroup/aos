@@ -107,23 +107,25 @@ std::optional<monotonic_clock::time_point> monotonic_clock::FromString(
 std::optional<realtime_clock::time_point> realtime_clock::FromString(
     const std::string_view now) {
   // This should undo the operator << above.
+  // Supporting format: 1970-01-06_00-00-11.005000000
+  constexpr int kFormatLength = 29;
 
-  if (now.size() < 25) {
+  if (now.size() < kFormatLength) {
     return std::nullopt;
   }
 
-  if (now[now.size() - 10] != '.') {
+  if (now[kFormatLength - 10] != '.') {
     return std::nullopt;
   }
 
-  std::string_view nsec(now.substr(now.size() - 9, 9));
+  std::string_view nsec(now.substr(kFormatLength - 9, 9));
 
   if (!std::all_of(nsec.begin(), nsec.end(), ::isdigit)) {
     return std::nullopt;
   }
 
   std::tm tm = {};
-  std::istringstream ss(std::string(now.substr(0, now.size() - 10)));
+  std::istringstream ss(std::string(now.substr(0, kFormatLength - 10)));
   ss >> std::get_time(&tm, "%Y-%m-%d_%H-%M-%S");
   if (ss.fail()) {
     return std::nullopt;
