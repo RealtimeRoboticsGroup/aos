@@ -405,13 +405,10 @@ template <typename F>
 Result<void> EventSchedulerScheduler::RunMaybeRealtimeLoop(F loop_body) {
   internal::TimerFd timerfd;
   CHECK_LT(0.0, replay_rate_) << "Replay rate must be positive.";
-  const Result<std::tuple<distributed_clock::time_point, EventScheduler *>>
-      oldest_event = OldestEvent();
-  if (!oldest_event.has_value()) {
-    return MakeError(oldest_event.error());
-  }
+  const std::tuple<distributed_clock::time_point, EventScheduler *>
+      oldest_event = AOS_GET_VALUE_OR_RETURN_ERROR(OldestEvent());
   distributed_clock::time_point last_distributed_clock =
-      std::get<0>(oldest_event.value());
+      std::get<0>(oldest_event);
   monotonic_clock::time_point last_monotonic_clock = monotonic_clock::now();
   timerfd.SetTime(last_monotonic_clock, std::chrono::seconds(0));
   Result<void> result{};
