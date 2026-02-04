@@ -85,6 +85,16 @@ class McapLogger {
       std::function<bool(const Channel *)> channel_should_be_dropped = {});
   ~McapLogger();
 
+  // Forces all messages being saved to the MCAP file to have the specified
+  // timestamps. The timestamps will be used until OverrideMessageTimestamps is
+  // called again with `std::nullopt` specified.
+  void OverrideMessageTimestamps(
+      std::optional<monotonic_clock::time_point> monotonic_time,
+      std::optional<realtime_clock::time_point> realtime_time) {
+    monotonic_time_override_ = monotonic_time;
+    realtime_time_override_ = realtime_time;
+  }
+
  private:
   enum class OpCode {
     kHeader = 0x01,
@@ -218,6 +228,10 @@ class McapLogger {
   size_t total_message_bytes_ = 0;
   std::map<const Channel *, size_t> total_channel_bytes_;
   FastStringBuilder string_builder_;
+
+  // If set, these will override the timestamps of messages written to the MCAP.
+  std::optional<monotonic_clock::time_point> monotonic_time_override_;
+  std::optional<realtime_clock::time_point> realtime_time_override_;
 
   // Earliest message observed in this logfile.
   std::optional<aos::monotonic_clock::time_point> earliest_message_;

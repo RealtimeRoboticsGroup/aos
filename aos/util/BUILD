@@ -182,6 +182,7 @@ cc_binary(
         "//aos:configuration",
         "//aos/events:simulated_event_loop",
         "//aos/events/logging:log_writer",
+        "//aos/logging:log_message_fbs",
         "//aos/testing:path",
         "//aos/testing/ping_pong:ping_lib",
         "//aos/testing/ping_pong:pong_lib",

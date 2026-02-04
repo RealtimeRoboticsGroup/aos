@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <chrono>
 #include <memory>
 #include <optional>
 #include <ostream>
@@ -37,6 +38,21 @@ ABSL_FLAG(bool, fetch, false,
           "can be used to see additional data, but given that data may be "
           "incomplete prior to the start of the log, you should be careful "
           "about interpretting data flow when using this flag.");
+ABSL_FLAG(bool, fetch_and_rewrite_timestamps, false,
+          "If set, behaves the same as --fetch with one exception: Messages "
+          "from before the log start time have their timestamp rewritten to "
+          "to match the behavior described in "
+          "--rewrite_timestamp_delta_seconds.");
+ABSL_FLAG(int, rewrite_timestamp_delta_seconds, 10,
+          "When --fetch_and_rewrite_timestamps is used, this determines the "
+          "number of seconds by which the latched messages are shifted. The "
+          "final timestamp of latched messages will be the log's start time "
+          "rounded down to the nearest second and moved back this many "
+          "seconds. All latched messages will have this timestamp. If this "
+          "timestamp modification would put messages before time 0, then the "
+          "latched messages will show up at time zero. Note that if multiple "
+          "messages exist on a channel before log start then they will all "
+          "have the same timestamp.");
 ABSL_FLAG(std::vector<std::string>, include_channels, {".*"},
           "A comma-separated list of MCAP topic names to include. This looks "
           "like so: --include_channels='/0/foo a.b.Msg1,/0/bar a.c.Msg2'. "
@@ -98,6 +114,27 @@ class ProgressUpdatePrinter {
   monotonic_clock::time_point virtual_start_time_;
 };
 
+using namespace std::literals::chrono_literals;
+
+// Round down to the nearest second and then remove
+// --rewrite_timestamp_delta_seconds seconds. The goal here is to make a time
+// point that people will perceive as "latched". We remove an extra second just
+// to make it a little more obvious in case the log starts on or shortly after
+// the top of a second.
+template <typename Clock>
+auto MakeLatchedTimestamp(typename Clock::time_point time)
+    -> Clock::time_point {
+  // The duration_cast rounds down.
+  const auto seconds =
+      std::chrono::duration_cast<std::chrono::seconds>(time.time_since_epoch());
+  // Don't go below a timestamp of zero seconds. The mcap CLI tool experiences
+  // some underflows otherwise.
+  const auto adjusted_seconds = std::max(
+      0s, seconds - std::chrono::seconds(
+                        absl::GetFlag(FLAGS_rewrite_timestamp_delta_seconds)));
+  return Clock::epoch() + adjusted_seconds;
+}
+
 }  // namespace
 
 std::function<bool(const Channel *)> GetChannelShouldBeDroppedTester() {
@@ -135,6 +172,10 @@ std::function<bool(const Channel *)> GetChannelShouldBeDroppedTester() {
 int ConvertLogToMcap(const std::vector<std::string> &log_paths,
                      std::string output_path,
                      std::function<void(logger::LogReader &)> setup_callback) {
+  CHECK(!(absl::GetFlag(FLAGS_fetch) &&
+          absl::GetFlag(FLAGS_fetch_and_rewrite_timestamps)))
+      << ": Don't use --fetch and --fetch_and_rewrite_timestamps together.";
+
   const std::vector<logger::LogFile> logfiles =
       logger::SortParts(logger::FindLogs(log_paths));
   CHECK(!logfiles.empty());
@@ -177,6 +218,7 @@ int ConvertLogToMcap(const std::vector<std::string> &log_paths,
 
   logger::LogReader reader(
       logfiles, config.has_value() ? &config.value().message() : nullptr);
+
   if (setup_callback) {
     setup_callback(reader);
   }
@@ -200,8 +242,22 @@ int ConvertLogToMcap(const std::vector<std::string> &log_paths,
 
   std::unique_ptr<EventLoop> mcap_event_loop;
   std::unique_ptr<McapLogger> relogger;
-  auto startup_handler = [&relogger, &mcap_event_loop, &reader,
-                          &clock_event_loop, &clock_publisher, &factory, node,
+
+  if (absl::GetFlag(FLAGS_fetch_and_rewrite_timestamps)) {
+    // Add this early as possible so that it is one of the earliest callbacks
+    // actually invoked.
+    reader.OnStart(node, [&relogger] {
+      ABSL_CHECK(relogger) << ": Internal bug. Startup order violated.";
+      // Stop overriding timestamps once the log has started. We just want
+      // real timestamps from now on.
+      relogger->OverrideMessageTimestamps(std::nullopt, std::nullopt);
+    });
+  }
+
+  // Handles the logic that needs to happen when we want the MCAP to start. This
+  // primarily deals with setting up the McapLogger instance. When exactly this
+  // happens depends on the fetch-related command line flags.
+  auto startup_handler = [&relogger, &mcap_event_loop, &reader, node,
                           output_path]() {
     CHECK(!mcap_event_loop) << ": log_to_mcap does not support generating MCAP "
                                "files from multi-boot logs.";
@@ -217,6 +273,25 @@ int ConvertLogToMcap(const std::vector<std::string> &log_paths,
         absl::GetFlag(FLAGS_compress) ? McapLogger::Compression::kLz4
                                       : McapLogger::Compression::kNone,
         GetChannelShouldBeDroppedTester());
+
+    if (absl::GetFlag(FLAGS_fetch_and_rewrite_timestamps)) {
+      // Override the timestamps for all latched messages so that they show up
+      // near the beginning of the log. All latched messages will have the same
+      // timestamp. Overriding will stop in the `OnStart` callback we added
+      // above.
+      relogger->OverrideMessageTimestamps(
+          MakeLatchedTimestamp<aos::monotonic_clock>(
+              reader.monotonic_start_time(node)),
+          MakeLatchedTimestamp<aos::realtime_clock>(
+              reader.realtime_start_time(node)));
+    }
+  };
+
+  // Handles the logic that needs to happen to start publishing to the
+  // ClockTimepoints channel. When exactly this happens depends on the
+  // fetch-related command line flags.
+  auto clock_setup_handler = [&clock_event_loop, &clock_publisher, &reader,
+                              &factory, node] {
     if (absl::GetFlag(FLAGS_include_clocks)) {
       clock_event_loop =
           reader.event_loop_factory()->MakeEventLoop("clock", node);
@@ -224,14 +299,29 @@ int ConvertLogToMcap(const std::vector<std::string> &log_paths,
           std::make_unique<ClockPublisher>(&factory, clock_event_loop.get());
     }
   };
+
   if (absl::GetFlag(FLAGS_fetch)) {
     // Note: This condition is subtly different from just calling Fetch() on
     // every channel in OnStart(). Namely, if there is >1 message on a given
     // channel prior to the logfile start, then fetching in the reader OnStart()
     // is insufficient to get *all* log data.
     factory.GetNodeEventLoopFactory(node)->OnStartup(startup_handler);
+    // We don't have a good way of starting the simulation at the first fetched
+    // message. But we want ClockTimepoints messages for all fetched messages.
+    // So we bite the bullet and start up the clock publisher at time zero.
+    factory.GetNodeEventLoopFactory(node)->OnStartup(clock_setup_handler);
+  } else if (absl::GetFlag(FLAGS_fetch_and_rewrite_timestamps)) {
+    // Same notes here for startup_handler as for --fetch above.
+    factory.GetNodeEventLoopFactory(node)->OnStartup(startup_handler);
+    // Since we are rewriting the timestamps for fetched messages to be very
+    // close to the beginning of the log, we don't want superfluous
+    // ClockTimepoints messages. Start those messages at the beginning of the
+    // log.
+    reader.OnStart(node, clock_setup_handler);
   } else {
+    // No messages are fetched. Start everything at the beginning of the log.
     reader.OnStart(node, startup_handler);
+    reader.OnStart(node, clock_setup_handler);
   }
 
   // Set up the tool to print conversion progress to the terminal.

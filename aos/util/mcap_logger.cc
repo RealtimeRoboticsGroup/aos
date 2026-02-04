@@ -480,20 +480,22 @@ void McapLogger::WriteMessage(uint16_t channel_id, const Channel *channel,
 
   message_counts_[channel_id]++;
 
+  const monotonic_clock::time_point event_time =
+      monotonic_time_override_.value_or(context.monotonic_event_time);
+
   if (!earliest_message_.has_value()) {
-    earliest_message_ = context.monotonic_event_time;
+    earliest_message_ = event_time;
   } else {
-    earliest_message_ =
-        std::min(context.monotonic_event_time, earliest_message_.value());
+    earliest_message_ = std::min(event_time, earliest_message_.value());
   }
   if (!chunk->earliest_message.has_value()) {
-    chunk->earliest_message = context.monotonic_event_time;
+    chunk->earliest_message = event_time;
   } else {
     chunk->earliest_message =
-        std::min(context.monotonic_event_time, chunk->earliest_message.value());
+        std::min(event_time, chunk->earliest_message.value());
   }
-  chunk->latest_message = context.monotonic_event_time;
-  latest_message_ = context.monotonic_event_time;
+  chunk->latest_message = event_time;
+  latest_message_ = event_time;
 
   string_builder_.Reset();
   // Channel ID
@@ -503,12 +505,10 @@ void McapLogger::WriteMessage(uint16_t channel_id, const Channel *channel,
   // Log time, and publish time. Since we don't log a logged time, just use
   // published time.
   // TODO(james): If we use this for multi-node logfiles, use distributed clock.
-  AppendInt64(&string_builder_,
-              context.monotonic_event_time.time_since_epoch().count());
+  AppendInt64(&string_builder_, event_time.time_since_epoch().count());
   // Note: Foxglove Studio doesn't appear to actually support using publish time
   // right now.
-  AppendInt64(&string_builder_,
-              context.monotonic_event_time.time_since_epoch().count());
+  AppendInt64(&string_builder_, event_time.time_since_epoch().count());
 
   CHECK(flatbuffers::Verify(*channel->schema(),
                             *channel->schema()->root_table(),
@@ -531,9 +531,8 @@ void McapLogger::WriteMessage(uint16_t channel_id, const Channel *channel,
   total_channel_bytes_[channel] += context.size;
 
   chunk->message_indices[channel_id].push_back(
-      std::make_pair<uint64_t, uint64_t>(
-          context.monotonic_event_time.time_since_epoch().count(),
-          chunk->data.tellp()));
+      std::make_pair<uint64_t, uint64_t>(event_time.time_since_epoch().count(),
+                                         chunk->data.tellp()));
 
   WriteRecord(OpCode::kMessage, string_builder_.Result(), &chunk->data);
 }
