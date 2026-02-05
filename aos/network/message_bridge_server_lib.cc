@@ -53,6 +53,8 @@ ABSL_FLAG(uint32_t, max_retry_period_ms, 10000,
           "Maximum retry timer period--the additive backoff will not "
           "exceed this period, in milliseconds.");
 
+ABSL_FLAG(std::string, bind_address, "", "Address to bind to to listen.");
+
 ABSL_DECLARE_FLAG(bool, use_sctp_authentication);
 
 namespace aos::message_bridge {
@@ -434,8 +436,9 @@ MessageBridgeServer::MessageBridgeServer(
     SctpAuthMethod requested_authentication)
     : event_loop_(event_loop),
       timestamp_loggers_(event_loop_),
-      server_(max_channels() + kControlStreams(), "",
-              event_loop->node()->port(), requested_authentication),
+      server_(max_channels() + kControlStreams(),
+              absl::GetFlag(FLAGS_bind_address), event_loop->node()->port(),
+              requested_authentication),
       server_status_(event_loop,
                      [this](uint32_t, monotonic_clock::time_point) {
                        timestamp_state_->SendData();
