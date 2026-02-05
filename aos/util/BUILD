@@ -59,6 +59,7 @@ cc_library(
         ":mcap_logger",
         "//aos:configuration",
         "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/strings",
     ],
     deps = [
         "//aos:configuration_fbs",

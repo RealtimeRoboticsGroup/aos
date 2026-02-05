@@ -41,7 +41,7 @@ def generate_argument_permutations():
                 ["--mode=flatbuffer", "--mode=json"],
                 ["--canonical_channel_names", "--nocanonical_channel_names"],
                 ["--mcap_chunk_size=1000", "--mcap_chunk_size=10000000"],
-                ["--fetch", "--nofetch", "--fetch_and_rewrite_timestamps"],
+                ["--fetch=none", "--fetch=all", "--fetch=rewrite"],
                 ["--include_channels=", "--include_channels=.*"],
                 ["--drop_channels=", "--drop_channels=.*aos.examples.Pong"]]
     permutations = make_permutations(arg_sets)
@@ -126,7 +126,7 @@ def main(argv: Sequence[Text]):
             # Validate that log_to_mcap can fetch messages appropriately. This is only possible when
             # we're not dropping all messages.
             if "--include_channels=" not in log_to_mcap_args:
-                if "--fetch" in log_to_mcap_args:
+                if "--fetch=all" in log_to_mcap_args:
                     # We expect this message to be in the log.
                     expected_num_log_message_fbs = 1
                     # ClockTimepoints messages start at time zero. So the MCAP starts then too. That
@@ -138,7 +138,7 @@ def main(argv: Sequence[Text]):
                     expected_start_time = "0.000000000"
                     expected_num_clock_timepoints = 20
 
-                elif "--fetch_and_rewrite_timestamps" in log_to_mcap_args:
+                elif "--fetch=rewrite" in log_to_mcap_args:
                     # We expect this message to be in the MCAP, but the timestamp will be rewritten.
                     expected_num_log_message_fbs = 1
                     # Since we rewrite fetched messages' timestamps to ~1s before the start of the

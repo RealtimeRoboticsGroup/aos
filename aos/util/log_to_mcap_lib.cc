@@ -1,8 +1,11 @@
 #include <algorithm>
 #include <chrono>
+#include <functional>
+#include <map>
 #include <memory>
 #include <optional>
 #include <ostream>
+#include <ranges>
 #include <set>
 #include <string>
 #include <vector>
@@ -10,6 +13,7 @@
 #include "absl/flags/flag.h"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
+#include "absl/strings/str_join.h"
 #include "flatbuffers/reflection_generated.h"
 
 #include "aos/configuration.h"
@@ -22,6 +26,22 @@
 #include "aos/util/clock_timepoints_schema.h"
 #include "aos/util/mcap_logger.h"
 
+namespace aos::util {
+
+// The enum value for the --fetch flag. See the flag description below for
+// more information.
+enum class FetchMode {
+  kNone,
+  kAll,
+  kRewrite,
+};
+
+// Forward-declare the absl helpers for simplicity.
+bool AbslParseFlag(absl::string_view text, FetchMode *flag, std::string *err);
+std::string AbslUnparseFlag(const FetchMode &fetch_mode);
+
+}  // namespace aos::util
+
 ABSL_FLAG(std::string, node, "", "Node to replay from the perspective of.");
 ABSL_FLAG(std::string, mode, "flatbuffer", "json or flatbuffer serialization.");
 ABSL_FLAG(
@@ -32,16 +52,16 @@ ABSL_FLAG(bool, compress, true, "Whether to use LZ4 compression in MCAP file.");
 ABSL_FLAG(bool, include_clocks, true,
           "Whether to add a /clocks channel that publishes all nodes' clock "
           "offsets.");
-ABSL_FLAG(bool, fetch, false,
-          "If set, *all* messages in the logfile will be included, including "
-          "any that may have occurred prior to the start of the log. This "
-          "can be used to see additional data, but given that data may be "
+ABSL_FLAG(aos::util::FetchMode, fetch, aos::util::FetchMode::kNone,
+          "Determines the fetch mode. Valid options are: \"none\", \"all\", "
+          "and \"rewrite\". If set to \"none\", will not fetch any messages. "
+          "If set to \"all\", *all* messages in the logfile will be included, "
+          "including any that may have occurred prior to the start of the log. "
+          "This can be used to see additional data, but given that data may be "
           "incomplete prior to the start of the log, you should be careful "
-          "about interpretting data flow when using this flag.");
-ABSL_FLAG(bool, fetch_and_rewrite_timestamps, false,
-          "If set, behaves the same as --fetch with one exception: Messages "
-          "from before the log start time have their timestamp rewritten to "
-          "to match the behavior described in "
+          "about interpretting data flow when using this flag. If set to "
+          "\"rewrite\", it behaves the same as \"all\", but with the "
+          "additional behavior described in "
           "--rewrite_timestamp_delta_seconds.");
 ABSL_FLAG(int, rewrite_timestamp_delta_seconds, 10,
           "When --fetch_and_rewrite_timestamps is used, this determines the "
@@ -69,6 +89,46 @@ ABSL_FLAG(int, progress_update_interval_seconds, 5,
           "a non-positive value, no progress updates will be printed.");
 
 namespace aos::util {
+
+namespace {
+
+// Use std::less<void> here so that we can use std::string_view for lookup.
+// https://en.cppreference.com/w/cpp/utility/functional/less_void.html
+using FetchModeLookupMap = std::map<std::string, FetchMode, std::less<void>>;
+
+const FetchModeLookupMap &GetFetchModeMap() {
+  static FetchModeLookupMap kFetchModeMap{
+      {"none", FetchMode::kNone},
+      {"all", FetchMode::kAll},
+      {"rewrite", FetchMode::kRewrite},
+  };
+  return kFetchModeMap;
+}
+
+}  // namespace
+
+bool AbslParseFlag(absl::string_view text, FetchMode *flag, std::string *err) {
+  const FetchModeLookupMap &fetch_modes = GetFetchModeMap();
+  if (auto it = fetch_modes.find(text); it != fetch_modes.end()) {
+    *flag = it->second;
+    return true;
+  }
+  *err = "Unknown value. Allowed values are: ";
+  *err += absl::StrJoin(fetch_modes | std::views::transform([](auto &element) {
+                          return element.first;
+                        }),
+                        ", ");
+  return false;
+}
+
+std::string AbslUnparseFlag(const FetchMode &fetch_mode) {
+  for (const auto &[flag_value, flag_mode] : GetFetchModeMap()) {
+    if (flag_mode == fetch_mode) {
+      return flag_value;
+    }
+  }
+  ABSL_LOG(FATAL) << "Unhandled FetchMode: " << static_cast<int>(fetch_mode);
+}
 
 namespace {
 
@@ -172,10 +232,6 @@ std::function<bool(const Channel *)> GetChannelShouldBeDroppedTester() {
 int ConvertLogToMcap(const std::vector<std::string> &log_paths,
                      std::string output_path,
                      std::function<void(logger::LogReader &)> setup_callback) {
-  CHECK(!(absl::GetFlag(FLAGS_fetch) &&
-          absl::GetFlag(FLAGS_fetch_and_rewrite_timestamps)))
-      << ": Don't use --fetch and --fetch_and_rewrite_timestamps together.";
-
   const std::vector<logger::LogFile> logfiles =
       logger::SortParts(logger::FindLogs(log_paths));
   CHECK(!logfiles.empty());
@@ -243,7 +299,9 @@ int ConvertLogToMcap(const std::vector<std::string> &log_paths,
   std::unique_ptr<EventLoop> mcap_event_loop;
   std::unique_ptr<McapLogger> relogger;
 
-  if (absl::GetFlag(FLAGS_fetch_and_rewrite_timestamps)) {
+  const FetchMode fetch_mode = absl::GetFlag(FLAGS_fetch);
+
+  if (fetch_mode == FetchMode::kRewrite) {
     // Add this early as possible so that it is one of the earliest callbacks
     // actually invoked.
     reader.OnStart(node, [&relogger] {
@@ -258,7 +316,7 @@ int ConvertLogToMcap(const std::vector<std::string> &log_paths,
   // primarily deals with setting up the McapLogger instance. When exactly this
   // happens depends on the fetch-related command line flags.
   auto startup_handler = [&relogger, &mcap_event_loop, &reader, node,
-                          output_path]() {
+                          fetch_mode, output_path]() {
     CHECK(!mcap_event_loop) << ": log_to_mcap does not support generating MCAP "
                                "files from multi-boot logs.";
     mcap_event_loop = reader.event_loop_factory()->MakeEventLoop("mcap", node);
@@ -274,7 +332,7 @@ int ConvertLogToMcap(const std::vector<std::string> &log_paths,
                                       : McapLogger::Compression::kNone,
         GetChannelShouldBeDroppedTester());
 
-    if (absl::GetFlag(FLAGS_fetch_and_rewrite_timestamps)) {
+    if (fetch_mode == FetchMode::kRewrite) {
       // Override the timestamps for all latched messages so that they show up
       // near the beginning of the log. All latched messages will have the same
       // timestamp. Overriding will stop in the `OnStart` callback we added
@@ -300,28 +358,32 @@ int ConvertLogToMcap(const std::vector<std::string> &log_paths,
     }
   };
 
-  if (absl::GetFlag(FLAGS_fetch)) {
-    // Note: This condition is subtly different from just calling Fetch() on
-    // every channel in OnStart(). Namely, if there is >1 message on a given
-    // channel prior to the logfile start, then fetching in the reader OnStart()
-    // is insufficient to get *all* log data.
-    factory.GetNodeEventLoopFactory(node)->OnStartup(startup_handler);
-    // We don't have a good way of starting the simulation at the first fetched
-    // message. But we want ClockTimepoints messages for all fetched messages.
-    // So we bite the bullet and start up the clock publisher at time zero.
-    factory.GetNodeEventLoopFactory(node)->OnStartup(clock_setup_handler);
-  } else if (absl::GetFlag(FLAGS_fetch_and_rewrite_timestamps)) {
-    // Same notes here for startup_handler as for --fetch above.
-    factory.GetNodeEventLoopFactory(node)->OnStartup(startup_handler);
-    // Since we are rewriting the timestamps for fetched messages to be very
-    // close to the beginning of the log, we don't want superfluous
-    // ClockTimepoints messages. Start those messages at the beginning of the
-    // log.
-    reader.OnStart(node, clock_setup_handler);
-  } else {
-    // No messages are fetched. Start everything at the beginning of the log.
-    reader.OnStart(node, startup_handler);
-    reader.OnStart(node, clock_setup_handler);
+  switch (fetch_mode) {
+    case FetchMode::kAll:
+      // Note: This condition is subtly different from just calling Fetch() on
+      // every channel in OnStart(). Namely, if there is >1 message on a given
+      // channel prior to the logfile start, then fetching in the reader
+      // OnStart() is insufficient to get *all* log data.
+      factory.GetNodeEventLoopFactory(node)->OnStartup(startup_handler);
+      // We don't have a good way of starting the simulation at the first
+      // fetched message. But we want ClockTimepoints messages for all fetched
+      // messages. So we bite the bullet and start up the clock publisher at
+      // time zero.
+      factory.GetNodeEventLoopFactory(node)->OnStartup(clock_setup_handler);
+      break;
+    case FetchMode::kRewrite:
+      // Same notes here for startup_handler as for --fetch above.
+      factory.GetNodeEventLoopFactory(node)->OnStartup(startup_handler);
+      // Since we are rewriting the timestamps for fetched messages to be very
+      // close to the beginning of the log, we don't want superfluous
+      // ClockTimepoints messages. Start those messages at the beginning of the
+      // log.
+      reader.OnStart(node, clock_setup_handler);
+      break;
+    case FetchMode::kNone:
+      // No messages are fetched. Start everything at the beginning of the log.
+      reader.OnStart(node, startup_handler);
+      reader.OnStart(node, clock_setup_handler);
   }
 
   // Set up the tool to print conversion progress to the terminal.
