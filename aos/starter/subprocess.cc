@@ -297,7 +297,7 @@ class CGroupManagerV2 : public CGroupManager {
       }
     }
 
-    ABSL_PCHECK(ret != 0) << ": Failed to create cgroup " << starter_cgroup_
+    ABSL_PCHECK(ret == 0) << ": Failed to create cgroup " << starter_cgroup_
                           << ", do you have permission?";
 
     const pid_t pid = getpid();
