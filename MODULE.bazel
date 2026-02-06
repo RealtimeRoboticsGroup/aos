@@ -10,7 +10,7 @@ bazel_dep(name = "aspect_bazel_lib", version = "2.14.0")
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_uv", version = "0.77.0", dev_dependency = True)
-bazel_dep(name = "rules_python", version = "1.5.3", dev_dependency = True)
+bazel_dep(name = "rules_python", version = "1.5.3")
 single_version_override(
     module_name = "rules_python",
     patch_strip = 1,
