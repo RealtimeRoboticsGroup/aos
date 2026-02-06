@@ -349,7 +349,7 @@ local_path_override(
     path = "third_party/allwpilib",
 )
 
-bazel_dep(name = "flatbuffers", version = "24.3.25", repo_name = "com_github_google_flatbuffers")
+bazel_dep(name = "flatbuffers", version = "25.2.10", repo_name = "com_github_google_flatbuffers")
 local_path_override(
     module_name = "flatbuffers",
     path = "third_party/flatbuffers",
