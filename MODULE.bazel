@@ -3,14 +3,14 @@ module(
     version = "0.0.0",
 )
 
-bazel_dep(name = "bazel_features", version = "1.33.0")
+bazel_dep(name = "bazel_features", version = "1.33.0", dev_dependency = True)
 bazel_dep(name = "rules_cc", version = "0.2.13")
-bazel_dep(name = "rules_java", version = "9.3.0")
+bazel_dep(name = "rules_java", version = "9.3.0", dev_dependency = True)
 bazel_dep(name = "aspect_bazel_lib", version = "2.14.0")
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
 bazel_dep(name = "platforms", version = "1.0.0")
-bazel_dep(name = "rules_uv", version = "0.77.0")
-bazel_dep(name = "rules_python", version = "1.5.3")
+bazel_dep(name = "rules_uv", version = "0.77.0", dev_dependency = True)
+bazel_dep(name = "rules_python", version = "1.5.3", dev_dependency = True)
 single_version_override(
     module_name = "rules_python",
     patch_strip = 1,
@@ -23,9 +23,9 @@ single_version_override(
     version = "1.5.3",
 )
 
-bazel_dep(name = "glib", version = "2.82.2.bcr.7", repo_name = "glib")
+bazel_dep(name = "glib", version = "2.82.2.bcr.7", repo_name = "glib", dev_dependency = True)
 
-python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+python = use_extension("@rules_python//python/extensions:python.bzl", "python", dev_dependency = True)
 python.toolchain(
     python_version = "3.10",
 )
@@ -35,7 +35,7 @@ use_repo(
     "python_3_10_x86_64-unknown-linux-gnu",
 )
 
-pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
+pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip", dev_dependency = True)
 pip.parse(
     enable_implicit_namespace_pkgs = True,
     extra_pip_args = [
@@ -73,18 +73,18 @@ use_repo(pip, pip_deps = "aos_pip_deps")
 
 bazel_dep(name = "grpc", version = "1.74.1", repo_name = "com_github_grpc_grpc")
 bazel_dep(name = "protobuf", version = "32.1", repo_name = "com_google_protobuf")
-bazel_dep(name = "rules_proto", version = "7.1.0")
-bazel_dep(name = "aspect_rules_ts", version = "3.6.3")
-bazel_dep(name = "aspect_rules_js", version = "2.4.2")
-bazel_dep(name = "rules_nodejs", version = "6.3.0")
+bazel_dep(name = "rules_proto", version = "7.1.0", dev_dependency = True)
+bazel_dep(name = "aspect_rules_ts", version = "3.6.3", dev_dependency = True)
+bazel_dep(name = "aspect_rules_js", version = "2.4.2", dev_dependency = True)
+bazel_dep(name = "rules_nodejs", version = "6.3.0", dev_dependency = True)
 
-node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node")
+node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node", dev_dependency = True)
 use_repo(node, "nodejs_linux_amd64")
 
-bazel_dep(name = "aspect_rules_esbuild", version = "0.22.1")
-bazel_dep(name = "aspect_rules_rollup", version = "2.0.1")
-bazel_dep(name = "aspect_rules_terser", version = "2.0.1")
-bazel_dep(name = "gazelle", version = "0.37.0", repo_name = "bazel_gazelle")
+bazel_dep(name = "aspect_rules_esbuild", version = "0.22.1", dev_dependency = True)
+bazel_dep(name = "aspect_rules_rollup", version = "2.0.1", dev_dependency = True)
+bazel_dep(name = "aspect_rules_terser", version = "2.0.1", dev_dependency = True)
+bazel_dep(name = "gazelle", version = "0.37.0", repo_name = "bazel_gazelle", dev_dependency = True)
 single_version_override(
     module_name = "gazelle",
     patch_strip = 1,
@@ -92,8 +92,8 @@ single_version_override(
     version = "0.37.0",
 )
 
-bazel_dep(name = "rules_license", version = "1.0.0")
-bazel_dep(name = "rules_go", version = "0.59.0", repo_name = "io_bazel_rules_go")
+bazel_dep(name = "rules_license", version = "1.0.0", dev_dependency = True)
+bazel_dep(name = "rules_go", version = "0.59.0", repo_name = "io_bazel_rules_go", dev_dependency = True)
 single_version_override(
     module_name = "rules_go",
     patch_strip = 1,
@@ -113,7 +113,7 @@ go_sdk.download(
 )
 use_repo(go_sdk, "go_sdk")
 
-bazel_dep(name = "rules_pkg", version = "1.1.0")
+bazel_dep(name = "rules_pkg", version = "1.1.0", dev_dependency = True)
 bazel_dep(name = "abseil-cpp", version = "20250512.1", repo_name = "com_google_absl")
 single_version_override(
     module_name = "abseil-cpp",
@@ -129,7 +129,7 @@ single_version_override(
 
 http_file = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
 
-bazel_dep(name = "googletest", version = "1.17.0.bcr.1", repo_name = "com_google_googletest")
+bazel_dep(name = "googletest", version = "1.17.0.bcr.1", repo_name = "com_google_googletest", dev_dependency = True)
 single_version_override(
     module_name = "googletest",
     patch_strip = 1,
@@ -137,7 +137,7 @@ single_version_override(
     version = "1.17.0.bcr.1",
 )
 
-bazel_dep(name = "google_benchmark", version = "1.9.2")
+bazel_dep(name = "google_benchmark", version = "1.9.2", dev_dependency = True)
 bazel_dep(name = "snappy", version = "1.2.2")
 bazel_dep(name = "nlohmann_json", version = "3.11.3", repo_name = "com_github_nlohmann_json")
 bazel_dep(name = "lz4", version = "1.9.4")
@@ -149,13 +149,13 @@ local_path_override(
     path = "third_party/xz",
 )
 
-bazel_dep(name = "aws_sdk", version = "1.11.321")
+bazel_dep(name = "aws_sdk", version = "1.11.321", dev_dependency = True)
 bazel_dep(name = "boringssl", version = "0.20251110.0")
-bazel_dep(name = "apple_support", version = "1.23.1", repo_name = "build_bazel_apple_support")
-bazel_dep(name = "foxglove_ws_protocol", version = "0.8.1")
-bazel_dep(name = "rules_m4", version = "0.2.4")
-bazel_dep(name = "rawrtc", version = "0.5.2")
-bazel_dep(name = "bazel_iwyu", version = "0.0.0", repo_name = "com_github_storypku_bazel_iwyu")
+bazel_dep(name = "apple_support", version = "1.23.1", repo_name = "build_bazel_apple_support", dev_dependency = True)
+bazel_dep(name = "foxglove_ws_protocol", version = "0.8.1", dev_dependency = True)
+bazel_dep(name = "rules_m4", version = "0.2.4", dev_dependency = True)
+bazel_dep(name = "rawrtc", version = "0.5.2", dev_dependency = True)
+bazel_dep(name = "bazel_iwyu", version = "0.0.0", repo_name = "com_github_storypku_bazel_iwyu", dev_dependency = True)
 
 bazel_dep(name = "amd64_tensorrt", version = "10.9.0", dev_dependency = True)
 bazel_dep(name = "amd64_debian_sysroot", version = "2025.04.20", dev_dependency = True)
@@ -166,9 +166,9 @@ git_override(
     remote = "https://github.com/storypku/bazel_iwyu.git",
 )
 
-bazel_dep(name = "rules_rust", version = "0.63.0")
+bazel_dep(name = "rules_rust", version = "0.63.0", dev_dependency = True)
 
-rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
+rust = use_extension("@rules_rust//rust:extensions.bzl", "rust", dev_dependency = True)
 rust.toolchain(
     edition = "2021",
     extra_target_triples = [
@@ -181,9 +181,9 @@ rust.toolchain(
 )
 use_repo(rust, "rust_toolchains")
 
-register_toolchains("@rust_toolchains//:all")
+register_toolchains("@rust_toolchains//:all", dev_dependency = True)
 
-rust_host_tools = use_extension("@rules_rust//rust:extensions.bzl", "rust_host_tools")
+rust_host_tools = use_extension("@rules_rust//rust:extensions.bzl", "rust_host_tools", dev_dependency = True)
 rust_host_tools.host_tools(
     name = "aos_rust_host_tools",
     rustfmt_version = "1.81.0",
@@ -204,10 +204,10 @@ http_archive(
 
 bazel_dep(name = "arm64_debian_sysroot", version = "2025.10.25", dev_dependency = True)
 
-bazel_dep(name = "buildifier_prebuilt", version = "7.3.1")
-bazel_dep(name = "buildozer", version = "8.2.1")
+bazel_dep(name = "buildifier_prebuilt", version = "7.3.1", dev_dependency = True)
+bazel_dep(name = "buildozer", version = "8.2.1", dev_dependency = True)
 
-npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
+npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm", dev_dependency = True)
 npm.npm_translate_lock(
     name = "npm",
     data = [
@@ -231,7 +231,7 @@ rules_ts_ext.deps(
 )
 use_repo(rules_ts_ext, "npm_typescript")
 
-crate = use_extension("@rules_rust//crate_universe:extension.bzl", "crate")
+crate = use_extension("@rules_rust//crate_universe:extension.bzl", "crate", dev_dependency = True)
 crate.from_cargo(
     name = "cxxbridge_cmd_deps",
     cargo_lockfile = "//third_party/cargo:cxxbridge-cmd/Cargo.lock",
@@ -298,10 +298,10 @@ override_repo(
     flatbuffers_crate_index = "crate_index",
 )
 
-bazel_dep(name = "rules_bzlmodrio_toolchains", version = "2025-1")
-bazel_dep(name = "bzlmodrio-ni", version = "2025.2.0")
-bazel_dep(name = "range_http_server", version = "0.0.1", repo_name = "RangeHTTPServer")
-bazel_dep(name = "ceres-solver", version = "2.2.0")
+bazel_dep(name = "rules_bzlmodrio_toolchains", version = "2025-1", dev_dependency = True)
+bazel_dep(name = "bzlmodrio-ni", version = "2025.2.0", dev_dependency = True)
+bazel_dep(name = "range_http_server", version = "0.0.1", repo_name = "RangeHTTPServer", dev_dependency = True)
+bazel_dep(name = "ceres-solver", version = "2.2.0", dev_dependency = True)
 
 # TODO(austin): Need to apply patch file so the tests pass.
 git_override(
@@ -323,14 +323,14 @@ git_override(
     remote = "https://github.com/hedronvision/bazel-compile-commands-extractor.git",
 )
 
-bazel_dep(name = "websocketpp", version = "0.8.2.bcr.5")
+bazel_dep(name = "websocketpp", version = "0.8.2.bcr.5", dev_dependency = True)
 single_version_override(
     module_name = "websocketpp",
     patch_strip = 1,
     patches = ["third_party/websocketpp/websocketpp.patch"],
 )
 
-bazel_dep(name = "asio", version = "1.28.2")
+bazel_dep(name = "asio", version = "1.28.2", dev_dependency = True)
 
 bazel_dep(name = "ctre_phoenix6_api_cpp_headers", version = "25.3.2", dev_dependency = True)
 bazel_dep(name = "ctre_phoenix6_tools_headers", version = "25.3.2", dev_dependency = True)
@@ -360,16 +360,16 @@ local_path_override(
     path = "third_party/glib",
 )
 
-bazel_dep(name = "foxglove_schemas", version = "0.16.2", repo_name = "com_github_foxglove_schemas")
-bazel_dep(name = "symengine", version = "0.12.0")
-bazel_dep(name = "gmp", version = "6.2.0")
-bazel_dep(name = "aspect_rules_cypress", version = "0.7.2")
+bazel_dep(name = "foxglove_schemas", version = "0.16.2", repo_name = "com_github_foxglove_schemas", dev_dependency = True)
+bazel_dep(name = "symengine", version = "0.12.0", dev_dependency = True)
+bazel_dep(name = "gmp", version = "6.2.0", dev_dependency = True)
+bazel_dep(name = "aspect_rules_cypress", version = "0.7.2", dev_dependency = True)
 
-cypress = use_extension("@aspect_rules_cypress//cypress:extensions.bzl", "cypress")
+cypress = use_extension("@aspect_rules_cypress//cypress:extensions.bzl", "cypress", dev_dependency = True)
 cypress.toolchain(cypress_version = "13.6.6")
 use_repo(cypress, "cypress_toolchains")
 
-register_toolchains("@cypress_toolchains//:all")
+register_toolchains("@cypress_toolchains//:all", dev_dependency = True)
 
 # Local toolchain repo
 bazel_dep(name = "com_grail_bazel_toolchain", version = "0.0.0", dev_dependency = True)
@@ -415,10 +415,10 @@ use_repo(
     "superstructure_replay",
 )
 
-ci_configure_extension = use_extension("//tools/ci:extensions.bzl", "ci_configure_extension")
+ci_configure_extension = use_extension("//tools/ci:extensions.bzl", "ci_configure_extension", dev_dependency = True)
 use_repo(ci_configure_extension, "ci_configure")
 
-debian_deps_extension = use_extension("//debian:extensions.bzl", "debian_deps_extension")
+debian_deps_extension = use_extension("//debian:extensions.bzl", "debian_deps_extension", dev_dependency = True)
 use_repo(
     debian_deps_extension,
     "deb_can_utils_2020_11_0_1_arm64_deb_repo",
@@ -442,6 +442,7 @@ register_toolchains(
     # //tools/platforms:linux_roborio for details.
     #"//tools/rust:rust-toolchain-roborio",
     "//tools/rust:noop_rust_toolchain",
+    dev_dependency = True,
 )
 
 # TODO(austin): Rust can't mention llvm_toolchain, otherwise wpilib needs llvm_toolchain + the sysroot.  Which is bad.
