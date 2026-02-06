@@ -166,7 +166,7 @@ git_override(
     remote = "https://github.com/storypku/bazel_iwyu.git",
 )
 
-bazel_dep(name = "rules_rust", version = "0.63.0", dev_dependency = True)
+bazel_dep(name = "rules_rust", version = "0.63.0")
 
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust", dev_dependency = True)
 rust.toolchain(
