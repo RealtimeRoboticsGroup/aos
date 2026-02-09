@@ -12,7 +12,6 @@ load("//aos/flatbuffers:generate.bzl", "static_flatbuffer")
 load("//aos/seasocks:gen_embedded.bzl", "gen_embedded")
 
 package(
-    default_applicable_licenses = ["//:license"],
     default_visibility = ["//visibility:public"],
 )
 

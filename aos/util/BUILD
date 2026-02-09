@@ -8,7 +8,6 @@ load("//tools/python:defs.bzl", "py_library", "py_test")
 load("config_validator_macro.bzl", "config_validator_test")
 
 package(
-    default_applicable_licenses = ["//:license"],
     default_visibility = ["//visibility:public"],
 )
 

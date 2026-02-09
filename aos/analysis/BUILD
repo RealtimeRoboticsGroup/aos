@@ -8,7 +8,6 @@ load("//tools/build_rules:js.bzl", "ts_project")
 load("//tools/python:defs.bzl", "py_test")
 
 package(
-    default_applicable_licenses = ["//:license"],
     default_visibility = ["//visibility:public"],
 )
 
