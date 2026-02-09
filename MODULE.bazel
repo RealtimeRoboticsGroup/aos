@@ -71,7 +71,8 @@ pip.override(
 )
 use_repo(pip, pip_deps = "aos_pip_deps")
 
-bazel_dep(name = "grpc", version = "1.74.1", repo_name = "com_github_grpc_grpc", dev_dependency = True)
+bazel_dep(name = "grpc", version = "1.74.1", repo_name = "com_github_grpc_grpc")
+bazel_dep(name = "grpc-java", version = "1.74.0", dev_dependency = True)
 bazel_dep(name = "protobuf", version = "32.1", repo_name = "com_google_protobuf")
 bazel_dep(name = "rules_proto", version = "7.1.0", dev_dependency = True)
 bazel_dep(name = "aspect_rules_ts", version = "3.6.3", dev_dependency = True)
