@@ -795,13 +795,13 @@ void EventLoop::WaitForNonIgnoredThreads() {
         absl::GetFlag(FLAGS_thread_configuration_timeout_seconds));
     std::chrono::time_point deadline =
         std::chrono::system_clock::now() + timeout;
-    ABSL_LOG(INFO) << "Waiting " << timeout << " for "
+    ABSL_LOG(INFO) << "Waiting " << timeout.count() << "s for "
                    << num_non_ignored_threads << " thread"
                    << (num_non_ignored_threads == 1 ? "" : "s") << " to start.";
     for ([[maybe_unused]] int i :
          std::views::iota(0, num_non_ignored_threads)) {
       ABSL_CHECK(thread_ready_semaphore_.try_acquire_until(deadline))
-          << "Not all threads started within " << timeout
+          << "Not all threads started within " << timeout.count() << "s"
           << ". This might indicate a need to call IgnoreThread or "
              "ConfigureThreadAndWaitForRun. If thread startup is expected to "
              "take longer, "
