@@ -369,3 +369,16 @@ def flatbuffer_cc_library(
         visibility = visibility,
     )
 
+def flatbuffer_go_library(name, **kwargs):
+    native.filegroup(
+        name = name,
+        tags = ["manual"],
+        visibility = kwargs.get("visibility"),
+    )
+
+def flatbuffer_rust_library(name, **kwargs):
+    native.filegroup(
+        name = name,
+        tags = ["manual"],
+        visibility = kwargs.get("visibility"),
+    )
