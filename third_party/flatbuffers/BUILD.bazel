@@ -1,37 +1,8 @@
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
-load("@aspect_rules_js//npm:defs.bzl", "npm_link_package")
-load("@flatbuffers_npm//:defs.bzl", "npm_link_all_packages")
-load("@rules_license//rules:license.bzl", "license")
 load("@rules_python//python:defs.bzl", "py_library")
 
-npm_link_all_packages(name = "node_modules")
-
-npm_link_package(
-    name = "node_modules/flatbuffers",
-    src = "//ts:flatbuffers",
-    visibility = ["//visibility:public"],
-)
-
-npm_link_package(
-    name = "node_modules/flatbuffers_reflection",
-    src = "//reflection:flatbuffers_reflection",
-    visibility = ["//visibility:public"],
-)
-
-
-
 package(
-    default_applicable_licenses = [":license"],
     default_visibility = ["//visibility:public"],
-)
-
-license(
-    name = "license",
-    package_name = "Flatbuffers",
-    license_kinds = ["@rules_license//licenses/spdx:Apache-2.0"],
-    license_text = "LICENSE.txt",
-    package_url = "https://flatbuffers.dev/",
-    package_version = "65e49faf7",
 )
 
 licenses(["notice"])
