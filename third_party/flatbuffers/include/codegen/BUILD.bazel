@@ -37,3 +37,5 @@ cc_library(
     ],
     deps = [":namer"],
 )
+
+filegroup(name = "all_files", srcs = glob(["**"]), visibility = ["//:__pkg__"])

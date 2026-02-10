@@ -163,3 +163,5 @@ cc_library(
         "//include/codegen:python",
     ],
 )
+
+filegroup(name = "all_files", srcs = glob(["**"]), visibility = ["//:__pkg__"])

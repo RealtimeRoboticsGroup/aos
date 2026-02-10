@@ -15,3 +15,5 @@ rust_library(
         "@crate_index//:thiserror",
     ],
 )
+
+filegroup(name = "all_files", srcs = glob(["**"]), visibility = ["//:__pkg__"])

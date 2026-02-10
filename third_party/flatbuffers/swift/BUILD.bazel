@@ -6,3 +6,5 @@ swift_library(
     module_name = "FlatBuffers",
     visibility = ["//visibility:public"],
 )
+
+filegroup(name = "all_files", srcs = glob(["**"]), visibility = ["//:__pkg__"])

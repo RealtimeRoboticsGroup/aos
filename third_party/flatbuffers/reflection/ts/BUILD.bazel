@@ -6,3 +6,5 @@ flatbuffer_ts_library(
     gen_reflections = True,
     visibility = ["//visibility:public"],
 )
+
+filegroup(name = "all_files", srcs = glob(["**"]), visibility = ["//:__pkg__"])

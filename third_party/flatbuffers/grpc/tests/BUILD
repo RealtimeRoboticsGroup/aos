@@ -17,3 +17,5 @@ cc_test(
         "@com_github_grpc_grpc//:grpc++",
     ],
 )
+
+filegroup(name = "all_files", srcs = glob(["**"]), visibility = ["//:__pkg__"])
