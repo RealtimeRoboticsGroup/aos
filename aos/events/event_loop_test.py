@@ -18,7 +18,7 @@ class EventLoopTest(absltest.TestCase):
 
     def setUp(self):
         self._config = util.Configuration(
-            "aos/aos/events/event_loop_py_config.bfbs")
+            util.locate("aos/aos/events/event_loop_py_config.bfbs"))
         with contextlib.ExitStack() as stack:
             self._factory = stack.enter_context(
                 SimulatedEventLoopFactory(self._config))

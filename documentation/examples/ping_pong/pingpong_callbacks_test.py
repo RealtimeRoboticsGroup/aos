@@ -15,7 +15,8 @@ class PingPongTests(absltest.TestCase):
 
     def setUp(self):
         self._config = util.Configuration(
-            "aos/documentation/examples/ping_pong/pingpong_config.bfbs")
+            util.locate(
+                "aos/documentation/examples/ping_pong/pingpong_config.bfbs"))
         with contextlib.ExitStack() as stack:
             self._factory = stack.enter_context(
                 SimulatedEventLoopFactory(self._config))
@@ -69,8 +70,9 @@ class MultiNodePingPongTest(absltest.TestCase):
 
     def setUp(self):
         self._config = util.Configuration(
-            "aos/documentation/examples/ping_pong/multinode_pingpong_test_split_config.bfbs"
-        )
+            util.locate(
+                "aos/documentation/examples/ping_pong/multinode_pingpong_test_split_config.bfbs"
+            ))
         with contextlib.ExitStack() as stack:
             self._factory = stack.enter_context(
                 SimulatedEventLoopFactory(self._config))

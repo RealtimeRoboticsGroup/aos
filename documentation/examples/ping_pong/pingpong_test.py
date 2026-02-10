@@ -51,7 +51,8 @@ class PingPongTest(absltest.TestCase):
         spawns Ping and Pong tasks.
         """
         self._config = util.Configuration(
-            "aos/documentation/examples/ping_pong/pingpong_config.bfbs")
+            util.locate(
+                "aos/documentation/examples/ping_pong/pingpong_config.bfbs"))
         with contextlib.ExitStack() as stack:
             self._factory = stack.enter_context(
                 SimulatedEventLoopFactory(self._config))

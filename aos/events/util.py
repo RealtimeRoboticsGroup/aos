@@ -2,6 +2,12 @@ from typing import List
 
 from aos.events.event_loop_c import ffi, lib, locate
 
+__all__ = [
+    "Configuration",
+    "init",
+    "locate",
+]
+
 
 def init(argv: List[str]) -> None:
     argc = len(argv)
@@ -14,8 +20,7 @@ def init(argv: List[str]) -> None:
 
 class Configuration:
 
-    def __init__(self, relative_config_path: str) -> None:
-        config_path = locate(relative_config_path)
+    def __init__(self, config_path: str) -> None:
         c_config_path = ffi.new("char[]", str(config_path).encode("utf-8"))
         self._config = lib.aos_configuration_read_from_file(c_config_path)
 
