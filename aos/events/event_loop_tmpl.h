@@ -81,7 +81,7 @@ void EventLoop::MakeNoArgWatcher(const std::string_view channel_name,
 
 inline bool RawFetcher::FetchNext() {
   const auto result = DoFetchNext();
-  if (result.first) {
+  if (ConvertReaderResultToBoolOrDie(result.first)) {
     if (timing_.fetcher) {
       timing_.fetcher->mutate_count(timing_.fetcher->count() + 1);
     }
@@ -109,10 +109,33 @@ inline bool RawFetcher::FetchNext() {
   return false;
 }
 
+inline bool RawFetcher::ConvertReaderResultToBoolOrDie(Result result) {
+  switch (result) {
+    case Result::GOOD:
+      return true;
+    case Result::NOTHING_NEW:
+    case Result::FILTERED:
+      return false;
+    case Result::TOO_OLD:
+    case Result::OVERWROTE:
+      event_loop_->SendTimingReport();
+      ABSL_LOG(FATAL) << "The next message is no longer available.  "
+                      << configuration::CleanedChannelToString(channel_)
+                      << " error: "
+                      << (result == Result::TOO_OLD ? "TOO_OLD" : "OVERWROTE");
+  }
+  ABSL_LOG(FATAL) << "Unreachable.";
+}
+
 inline bool RawFetcher::FetchNextIf(std::function<bool(const Context &)> fn) {
+  return ConvertReaderResultToBoolOrDie(FetchNextIfWithStatus(fn));
+}
+
+inline RawFetcher::Result RawFetcher::FetchNextIfWithStatus(
+    std::function<bool(const Context &)> fn) {
   ABSL_DCHECK(fn);
   const auto result = DoFetchNextIf(std::move(fn));
-  if (result.first) {
+  if (result.first == Result::GOOD) {
     if (timing_.fetcher) {
       timing_.fetcher->mutate_count(timing_.fetcher->count() + 1);
     }
@@ -129,7 +152,7 @@ inline bool RawFetcher::FetchNextIf(std::function<bool(const Context &)> fn) {
             monotonic_time - context_.monotonic_event_time)
             .count();
     timing_.latency.Add(latency);
-    return true;
+    return result.first;
   }
   ftrace_.FormatMessage(
       "%.*s: fetch next: still event=%" PRId64 " queue=%" PRIu32,
@@ -137,7 +160,7 @@ inline bool RawFetcher::FetchNextIf(std::function<bool(const Context &)> fn) {
       static_cast<int64_t>(
           context_.monotonic_event_time.time_since_epoch().count()),
       context_.queue_index);
-  return false;
+  return result.first;
 }
 
 inline bool RawFetcher::Fetch() {

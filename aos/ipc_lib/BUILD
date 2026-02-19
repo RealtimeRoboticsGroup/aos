@@ -194,6 +194,7 @@ cc_library(
                 "//aos:uuid",
                 "//aos/containers:ring_buffer",
                 "//aos/events:context",
+                "//aos/events:fetch_result",
                 "//aos/time",
                 "//aos/util:compiler_memory_barrier",
                 "//aos/util:proc_stat",

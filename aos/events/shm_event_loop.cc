@@ -117,8 +117,7 @@ class SimpleShmFetcher {
  public:
   explicit SimpleShmFetcher(std::string_view shm_base, ShmEventLoop *event_loop,
                             const Channel *channel)
-      : event_loop_(event_loop),
-        channel_(channel),
+      : channel_(channel),
         lockless_queue_memory_(shm_base, absl::GetFlag(FLAGS_permissions),
                                event_loop->configuration(), channel),
         reader_(lockless_queue_memory_.queue()) {
@@ -175,16 +174,16 @@ class SimpleShmFetcher {
     }
   }
 
-  bool FetchNext() { return FetchNextIf(should_fetch_); }
+  RawFetcher::Result FetchNext() { return FetchNextIf(should_fetch_); }
 
-  bool FetchNextIf(std::function<bool(const Context &)> fn) {
+  RawFetcher::Result FetchNextIf(std::function<bool(const Context &)> fn) {
     const ipc_lib::LocklessQueueReader::Result read_result =
         DoFetch(actual_queue_index_, std::move(fn));
 
-    return read_result == ipc_lib::LocklessQueueReader::Result::GOOD;
+    return read_result;
   }
 
-  bool FetchIf(std::function<bool(const Context &)> fn) {
+  RawFetcher::Result FetchIf(std::function<bool(const Context &)> fn) {
     const ipc_lib::QueueIndex queue_index = reader_.LatestIndex();
     // actual_queue_index_ is only meaningful if it was set by Fetch or
     // FetchNext.  This happens when valid_data_ has been set.  So, only
@@ -195,20 +194,19 @@ class SimpleShmFetcher {
     if ((context_.data != nullptr &&
          queue_index == actual_queue_index_.DecrementBy(1u)) ||
         !queue_index.valid()) {
-      return false;
+      return RawFetcher::Result::NOTHING_NEW;
     }
 
-    const ipc_lib::LocklessQueueReader::Result read_result =
-        DoFetch(queue_index, std::move(fn));
+    const RawFetcher::Result read_result = DoFetch(queue_index, std::move(fn));
 
     ABSL_CHECK(read_result != ipc_lib::LocklessQueueReader::Result::NOTHING_NEW)
         << ": Queue index went backwards.  This should never happen.  "
         << configuration::CleanedChannelToString(channel_);
 
-    return read_result == ipc_lib::LocklessQueueReader::Result::GOOD;
+    return read_result;
   }
 
-  bool Fetch() { return FetchIf(should_fetch_); }
+  RawFetcher::Result Fetch() { return FetchIf(should_fetch_); }
 
   Context context() const { return context_; }
 
@@ -298,25 +296,6 @@ class SimpleShmFetcher {
       }
       actual_queue_index_ = queue_index.Increment();
     }
-
-    // Make sure the data wasn't modified while we were reading it.  This
-    // can only happen if you are reading the last message *while* it is
-    // being written to, which means you are pretty far behind.
-    ABSL_CHECK(read_result != ipc_lib::LocklessQueueReader::Result::OVERWROTE)
-        << ": Got behind while reading and the last message was modified "
-           "out from under us while we were reading it.  Don't get so far "
-           "behind on: "
-        << configuration::CleanedChannelToString(channel_);
-
-    // We fell behind between when we read the index and read the value.
-    // This isn't worth recovering from since this means we went to sleep
-    // for a long time in the middle of this function.
-    if (read_result == ipc_lib::LocklessQueueReader::Result::TOO_OLD) {
-      event_loop_->SendTimingReport();
-      ABSL_LOG(FATAL) << "The next message is no longer available.  "
-                      << configuration::CleanedChannelToString(channel_);
-    }
-
     return read_result;
   }
 
@@ -340,7 +319,6 @@ class SimpleShmFetcher {
   bool copy_data() const { return static_cast<bool>(data_storage_); }
   bool pin_data() const { return static_cast<bool>(pinner_); }
 
-  aos::ShmEventLoop *event_loop_;
   const Channel *const channel_;
   ipc_lib::MemoryMappedQueue lockless_queue_memory_;
   ipc_lib::LocklessQueueReader reader_;
@@ -377,28 +355,31 @@ class ShmFetcher : public RawFetcher {
     context_.data = nullptr;
   }
 
-  std::pair<bool, monotonic_clock::time_point> DoFetchNext() override {
+  std::pair<RawFetcher::Result, monotonic_clock::time_point> DoFetchNext()
+      override {
     shm_event_loop()->CheckCurrentThread();
-    if (simple_shm_fetcher_.FetchNext()) {
+    RawFetcher::Result result = simple_shm_fetcher_.FetchNext();
+    if (result == RawFetcher::Result::GOOD) {
       context_ = simple_shm_fetcher_.context();
-      return std::make_pair(true, monotonic_clock::now());
+      return std::make_pair(result, monotonic_clock::now());
     }
-    return std::make_pair(false, monotonic_clock::min_time);
+    return std::make_pair(result, monotonic_clock::min_time);
   }
 
-  std::pair<bool, monotonic_clock::time_point> DoFetchNextIf(
+  std::pair<RawFetcher::Result, monotonic_clock::time_point> DoFetchNextIf(
       std::function<bool(const Context &context)> fn) override {
     shm_event_loop()->CheckCurrentThread();
-    if (simple_shm_fetcher_.FetchNextIf(std::move(fn))) {
+    RawFetcher::Result result = simple_shm_fetcher_.FetchNextIf(std::move(fn));
+    if (result == RawFetcher::Result::GOOD) {
       context_ = simple_shm_fetcher_.context();
-      return std::make_pair(true, monotonic_clock::now());
+      return std::make_pair(result, monotonic_clock::now());
     }
-    return std::make_pair(false, monotonic_clock::min_time);
+    return std::make_pair(result, monotonic_clock::min_time);
   }
 
   std::pair<bool, monotonic_clock::time_point> DoFetch() override {
     shm_event_loop()->CheckCurrentThread();
-    if (simple_shm_fetcher_.Fetch()) {
+    if (ConvertReaderResultToBoolOrDie(simple_shm_fetcher_.Fetch())) {
       context_ = simple_shm_fetcher_.context();
       return std::make_pair(true, monotonic_clock::now());
     }
@@ -408,7 +389,8 @@ class ShmFetcher : public RawFetcher {
   std::pair<bool, monotonic_clock::time_point> DoFetchIf(
       std::function<bool(const Context &context)> fn) override {
     shm_event_loop()->CheckCurrentThread();
-    if (simple_shm_fetcher_.FetchIf(std::move(fn))) {
+    if (ConvertReaderResultToBoolOrDie(
+            simple_shm_fetcher_.FetchIf(std::move(fn)))) {
       context_ = simple_shm_fetcher_.context();
       return std::make_pair(true, monotonic_clock::now());
     }
@@ -612,7 +594,8 @@ class ShmWatcherState : public WatcherState {
   // Returns true if there is new data available.
   bool CheckForNewData() {
     if (!has_new_data_) {
-      has_new_data_ = simple_shm_fetcher_.FetchNext();
+      has_new_data_ =
+          simple_shm_fetcher_.FetchNext() == RawFetcher::Result::GOOD;
 
       if (has_new_data_) {
         event_.set_event_time(

@@ -103,6 +103,7 @@ cc_library(
     deps = [
         ":context",
         ":event_loop_fbs",
+        ":fetch_result",
         ":timing_statistics",
         "//aos:configuration",
         "//aos:configuration_fbs",
@@ -768,4 +769,9 @@ cc_binary(
         "//aos:init",
         "//aos/events:shm_event_loop",
     ],
+)
+
+cc_library(
+    name = "fetch_result",
+    hdrs = ["fetch_result.h"],
 )

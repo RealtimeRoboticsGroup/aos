@@ -541,11 +541,12 @@ class SimulatedFetcher : public RawFetcher {
     simulated_channel_->UnregisterFetcher(this);
   }
 
-  std::pair<bool, monotonic_clock::time_point> DoFetchNext() override {
+  std::pair<RawFetcher::Result, monotonic_clock::time_point> DoFetchNext()
+      override {
     return DoFetchNextIf(std::function<bool(const Context &context)>());
   }
 
-  std::pair<bool, monotonic_clock::time_point> DoFetchNextIf(
+  std::pair<RawFetcher::Result, monotonic_clock::time_point> DoFetchNextIf(
       std::function<bool(const Context &context)> fn) override;
 
   std::pair<bool, monotonic_clock::time_point> DoFetch() override {
@@ -1405,7 +1406,8 @@ SimulatedFetcher::SimulatedFetcher(SimulatedEventLoop *event_loop,
           << configuration::StrippedChannelToString(channel());
 }
 
-std::pair<bool, monotonic_clock::time_point> SimulatedFetcher::DoFetchNextIf(
+std::pair<RawFetcher::Result, monotonic_clock::time_point>
+SimulatedFetcher::DoFetchNextIf(
     std::function<bool(const Context &context)> fn) {
   monotonic_clock::time_point monotonic_now = event_loop()->monotonic_now();
   VLOG(2) << simulated_event_loop_->distributed_now() << " "
@@ -1416,14 +1418,18 @@ std::pair<bool, monotonic_clock::time_point> SimulatedFetcher::DoFetchNextIf(
   // no mallocs in RT code.
   ScopedNotRealtime nrt;
   if (msgs_.size() == 0) {
-    return std::make_pair(false, monotonic_clock::min_time);
+    return std::make_pair(RawFetcher::Result::NOTHING_NEW,
+                          monotonic_clock::min_time);
   }
 
-  CHECK(!fell_behind_) << ": Got behind on "
-                       << configuration::StrippedChannelToString(
-                              simulated_channel_->channel())
-                       << " on " << NodeName(event_loop()->node()) << " "
-                       << this;
+  if (fell_behind_) {
+    ABSL_VLOG(1) << ": Got behind on "
+                 << configuration::StrippedChannelToString(
+                        simulated_channel_->channel())
+                 << " on " << NodeName(event_loop()->node()) << " " << this;
+    return std::make_pair(RawFetcher::Result::TOO_OLD,
+                          monotonic_clock::min_time);
+  }
 
   if (fn) {
     Context context = msgs_.front()->context;
@@ -1431,13 +1437,14 @@ std::pair<bool, monotonic_clock::time_point> SimulatedFetcher::DoFetchNextIf(
     context.buffer_index = -1;
 
     if (!fn(context)) {
-      return std::make_pair(false, monotonic_clock::min_time);
+      return std::make_pair(RawFetcher::Result::FILTERED,
+                            monotonic_clock::min_time);
     }
   }
 
   SetMsg(std::move(msgs_.front()));
   msgs_.pop_front();
-  return std::make_pair(true, monotonic_now);
+  return std::make_pair(RawFetcher::Result::GOOD, monotonic_now);
 }
 
 std::pair<bool, monotonic_clock::time_point> SimulatedFetcher::DoFetchIf(

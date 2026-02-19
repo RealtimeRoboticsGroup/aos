@@ -22,6 +22,7 @@
 #include "aos/events/context.h"
 #include "aos/events/event_loop_event.h"
 #include "aos/events/event_loop_generated.h"
+#include "aos/events/fetch_result.h"
 #include "aos/events/timing_statistics.h"
 #include "aos/flatbuffers.h"
 #include "aos/flatbuffers/builder.h"
@@ -52,6 +53,7 @@ class RawFetcher {
   RawFetcher(const RawFetcher &) = delete;
   RawFetcher &operator=(const RawFetcher &) = delete;
   virtual ~RawFetcher();
+  typedef internal::FetchResult Result;
 
   // Fetches the next message in the queue without blocking. Returns true if
   // there was a new message and this function retrieved it.
@@ -60,6 +62,8 @@ class RawFetcher {
   // true.  The data and buffer_index are the only pieces of the Context which
   // are zeroed out.  The function must be valid.
   bool FetchNextIf(std::function<bool(const Context &context)> fn);
+  [[nodiscard]] Result FetchNextIfWithStatus(
+      std::function<bool(const Context &context)> fn);
 
   // Fetches the latest message without blocking. Returns true if there was any
   // message (whether this object previously retrieved it or not).
@@ -76,14 +80,18 @@ class RawFetcher {
  protected:
   EventLoop *event_loop() { return event_loop_; }
   const EventLoop *event_loop() const { return event_loop_; }
+  // Converts a fetch Result to a boolean, where true indicates a new message, a
+  // false indicates no new message, and a fatal failure indicates an error of
+  // some sort.
+  bool ConvertReaderResultToBoolOrDie(Result result);
 
   Context context_;
 
  private:
   friend class EventLoop;
   // Implementation
-  virtual std::pair<bool, monotonic_clock::time_point> DoFetchNext() = 0;
-  virtual std::pair<bool, monotonic_clock::time_point> DoFetchNextIf(
+  virtual std::pair<Result, monotonic_clock::time_point> DoFetchNext() = 0;
+  virtual std::pair<Result, monotonic_clock::time_point> DoFetchNextIf(
       std::function<bool(const Context &)> fn) = 0;
   virtual std::pair<bool, monotonic_clock::time_point> DoFetch() = 0;
   virtual std::pair<bool, monotonic_clock::time_point> DoFetchIf(

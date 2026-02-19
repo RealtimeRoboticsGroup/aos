@@ -15,6 +15,7 @@
 #include "absl/types/span.h"
 
 #include "aos/events/context.h"
+#include "aos/events/fetch_result.h"
 #include "aos/ipc_lib/aos_sync.h"
 #include "aos/ipc_lib/data_alignment.h"
 #include "aos/ipc_lib/index.h"
@@ -502,19 +503,7 @@ class LocklessQueuePinner {
 
 class LocklessQueueReader {
  public:
-  enum class Result {
-    // Message we read was too old and no longer is in the queue.
-    TOO_OLD,
-    // Success!
-    GOOD,
-    // The message is in the future and we haven't written it yet.
-    NOTHING_NEW,
-    // There is a message, but should_read_callback() returned false so we
-    // didn't fetch it.
-    FILTERED,
-    // The message got overwritten while we were reading it.
-    OVERWROTE,
-  };
+  typedef aos::internal::FetchResult Result;
 
   LocklessQueueReader(LocklessQueue queue)
       : memory_(queue.memory()), const_memory_(queue.const_memory()) {

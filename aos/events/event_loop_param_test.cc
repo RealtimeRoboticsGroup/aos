@@ -1045,6 +1045,46 @@ TEST_P(AbstractEventLoopTest, FetchNextIfTest) {
   EXPECT_EQ(200, fetcher.get()->value());
 }
 
+// Verify that a fetcher can fall behind and that if we use
+// FetchNextIfWithStatus it returns an error code and that if we call
+// FetchNext() it dies.
+TEST_P(AbstractEventLoopDeathTest, RawFetcherFallBehind) {
+  auto loop = MakePrimary();
+  auto sender = loop->MakeSender<TestMessage>("/test");
+  std::unique_ptr<RawFetcher> fetcher =
+      loop->MakeRawFetcher(loop->GetChannel<TestMessage>("/test"));
+  ABSL_LOG(INFO) << aos::configuration::StrippedChannelToString(
+      fetcher->channel());
+  {
+    aos::Sender<TestMessage>::Builder msg = sender.MakeBuilder();
+    TestMessage::Builder builder = msg.MakeBuilder<TestMessage>();
+    builder.add_value(1);
+    msg.CheckOk(msg.Send(builder.Finish()));
+  }
+  ASSERT_TRUE(fetcher->Fetch());
+  std::unique_ptr<ExitHandle> exit_handle = MakeExitHandle();
+  int message_count = 0;
+  TimerHandler *timer =
+      loop->AddTimer([&sender, &exit_handle, &message_count]() {
+        aos::Sender<TestMessage>::Builder msg = sender.MakeBuilder();
+        TestMessage::Builder builder = msg.MakeBuilder<TestMessage>();
+        builder.add_value(message_count + 2);
+        msg.CheckOk(msg.Send(builder.Finish()));
+        if (++message_count > 2000) {
+          exit_handle->Exit();
+        }
+      });
+  loop->OnRun([timer, &loop]() {
+    timer->Schedule(loop->monotonic_now(), std::chrono::milliseconds(10));
+  });
+  Run();
+
+  EXPECT_EQ(
+      RawFetcher::Result::TOO_OLD,
+      fetcher->FetchNextIfWithStatus([](const Context &) { return true; }));
+  EXPECT_DEATH(fetcher->FetchNext(), "no longer available");
+}
+
 // Verify that a fetcher still holds its data, even after falling behind.
 TEST_P(AbstractEventLoopTest, FetcherBehindData) {
   auto send_loop = Make();
