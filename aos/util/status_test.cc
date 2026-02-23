@@ -120,6 +120,9 @@ struct DisallowCopy {
   DisallowCopy &operator=(DisallowCopy &&) = default;
 };
 
+// Tests that the CheckExpected() does not cause copies when we can avoid it.
+TEST_F(ErrorTest, CheckExpectedMove) { CheckExpected(Result<DisallowCopy>{}); }
+
 TEST_F(ErrorTest, ReturnResultIfErrorNoExtraCopies) {
   Result<DisallowCopy> test_value = {};
   bool executed = false;

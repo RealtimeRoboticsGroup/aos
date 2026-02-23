@@ -141,6 +141,17 @@ T CheckExpected(const Result<T> &expected) {
   }
   ABSL_LOG(FATAL) << expected.error().ToString();
 }
+template <typename T>
+T CheckExpected(Result<T> &&expected) {
+  if (expected.has_value()) {
+    if constexpr (std::is_same_v<T, void>) {
+      return;
+    } else {
+      return std::move(expected.value());
+    }
+  }
+  ABSL_LOG(FATAL) << expected.error().ToString();
+}
 
 // An overload for directly checking an error. The compiler doesn't
 // automatically use the templated version above in all instances.
