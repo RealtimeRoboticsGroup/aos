@@ -343,7 +343,7 @@ void TypedAction<T>::CheckStarted() {
       interrupted_ = true;
     }
   } else {
-    AOS_LOG(WARNING, "No status message recieved.\n");
+    AOS_LOG(WARNING, "No status message received.\n");
   }
 }
 

@@ -693,7 +693,7 @@ int main() {
     // one printf is faster than many printfs
     printf(
         "z vel: %f, encoder: %d %d\n"
-        "Num failed checksums: %d, Total messages recieved: %d,\n"
+        "Num failed checksums: %d, Total messages received: %d,\n"
         "Num messages to pi: %d, Timing overrun count: %d,\n"
         "Send time: %d us, suspicious checksum count: %u,\n"
         "IMU reset count: %d, checksum: %u,\n",

@@ -37,7 +37,7 @@ table WebSocketMessage {
 }
 
 // WebRTC has size limits on the messages sent on datachannels. This message
-// ensures that parts are recieved in the correct order. If there is any
+// ensures that parts are received in the correct order. If there is any
 // mismatch, all the existing work should be dropped and restart when reasonable
 // data starts again.
 table MessageHeader {
