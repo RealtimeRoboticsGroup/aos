@@ -162,7 +162,7 @@ std::chrono::nanoseconds DetachedBufferWriter::CopyMessage(
       Flush(now);
     }
     total_encode_duration += encode_duration;
-  } while (overall_bytes_written < message_size);
+  } while (overall_bytes_written < message_size && !ran_out_of_space_);
 
   WriteStatistics()->UpdateEncodeDuration(total_encode_duration);
 
