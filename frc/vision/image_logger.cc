@@ -219,7 +219,7 @@ int main(int argc, char *argv[]) {
       // Stop logging if we've been disabled for a non-negligible amount of
       // time
       LOG(INFO) << "Stopping logging";
-      logger.StopLogging(event_loop.monotonic_now());
+      aos::CheckExpected(logger.StopLogging(event_loop.monotonic_now()));
       logging = false;
       current_log_namer = nullptr;
     }

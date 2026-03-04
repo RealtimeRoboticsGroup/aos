@@ -21,8 +21,8 @@ LoggerState::LoggerState(aos::SimulatedEventLoopFactory *factory,
           event_loop_.get())),
       logger_(std::make_unique<aos::logger::Logger>(
           event_loop_.get(), event_loop_->configuration(),
-          should_log ? should_log
-                     : [](const aos::Channel *) { return true; })) {
+          should_log ? should_log : [](const aos::Channel *) { return true; },
+          nullptr)) {
   if (do_skip_timing_report) {
     event_loop_->SkipTimingReport();
   }

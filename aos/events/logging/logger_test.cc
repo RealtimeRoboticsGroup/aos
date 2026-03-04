@@ -201,6 +201,74 @@ TEST_F(LoggerTest, MutateCallback) {
   EXPECT_EQ(ping_count, 12010);
 }
 
+// Tests that if the logger falls behind then it calls the provided exit handler
+// and that an error code gets returned on the EventLoopFactory Run().
+TEST_F(LoggerTest, ExitOnFallBehind) {
+  const ::std::string tmpdir = aos::testing::TestTmpDir();
+  const ::std::string base_name = tmpdir + "/logfile";
+  const ::std::string config =
+      absl::StrCat(base_name, kSingleConfigSha256, ".bfbs");
+  const ::std::string logfile = base_name + "_data.part0.bfbs";
+  // Remove any pre-existing logfiles.
+  unlink(config.c_str());
+  unlink(logfile.c_str());
+
+  LOG(INFO) << "Logging data to " << logfile;
+
+  {
+    event_loop_factory_.RunFor(chrono::milliseconds(95));
+
+    std::unique_ptr<EventLoop> logger_event_loop =
+        event_loop_factory_.MakeEventLoop("logger");
+    std::unique_ptr<ExitHandle> exit_handle =
+        event_loop_factory_.MakeExitHandle();
+    Logger logger(
+        logger_event_loop.get(), logger_event_loop->configuration(),
+        [](const Channel *) { return true; }, exit_handle.get());
+    // Poll so infrequently that we end up falling behind.
+    logger.set_polling_period(std::chrono::seconds(100));
+    logger.StartLoggingOnRun(base_name);
+    Status status = event_loop_factory_.NonFatalRunFor(chrono::seconds(101));
+    ASSERT_FALSE(IsOk(status));
+    EXPECT_THAT(status.error().message(),
+                ::testing::ContainsRegex("Fell too far behind on channel"));
+    Result<std::unique_ptr<LogNamer>> stop_result =
+        logger.StopLogging(logger_event_loop->monotonic_now());
+    ASSERT_TRUE(HasError(stop_result));
+    EXPECT_THAT(stop_result.error().message(),
+                ::testing::ContainsRegex("Fell too far behind on channel"));
+  }
+}
+
+// Tests that if the logger falls behind with no exit handler provided then it
+// crashes.
+TEST_F(LoggerDeathTest, CrashOnFallBehind) {
+  const ::std::string tmpdir = aos::testing::TestTmpDir();
+  const ::std::string base_name = tmpdir + "/logfile";
+  const ::std::string config =
+      absl::StrCat(base_name, kSingleConfigSha256, ".bfbs");
+  const ::std::string logfile = base_name + "_data.part0.bfbs";
+  // Remove any pre-existing logfiles.
+  unlink(config.c_str());
+  unlink(logfile.c_str());
+
+  LOG(INFO) << "Logging data to " << logfile;
+
+  {
+    event_loop_factory_.RunFor(chrono::milliseconds(95));
+
+    std::unique_ptr<EventLoop> logger_event_loop =
+        event_loop_factory_.MakeEventLoop("logger");
+    Logger logger(logger_event_loop.get());
+    logger.set_separate_config(false);
+    // Poll so infrequently that we end up falling behind.
+    logger.set_polling_period(std::chrono::seconds(100));
+    logger.StartLoggingOnRun(base_name);
+    EXPECT_DEATH(event_loop_factory_.RunFor(chrono::seconds(101)),
+                 "Fell too far behind on channel");
+  }
+}
+
 // Tests calling StartLogging twice.
 TEST_F(LoggerDeathTest, ExtraStart) {
   const ::std::string tmpdir = aos::testing::TestTmpDir();
@@ -305,8 +373,9 @@ TEST_F(LoggerDeathTest, ExtraStop) {
       logger.StartLogging(std::make_unique<MultiNodeFilesLogNamer>(
           base_name, logger_event_loop->configuration(),
           logger_event_loop.get(), logger_event_loop->node()));
-      logger.StopLogging(aos::monotonic_clock::min_time);
-      EXPECT_DEATH(logger.StopLogging(aos::monotonic_clock::min_time),
+      aos::CheckExpected(logger.StopLogging(aos::monotonic_clock::min_time));
+      EXPECT_DEATH(aos::CheckExpected(
+                       logger.StopLogging(aos::monotonic_clock::min_time)),
                    "Not logging right now");
     });
     event_loop_factory_.RunFor(chrono::milliseconds(20000));
@@ -343,7 +412,7 @@ TEST_F(LoggerTest, StartsTwice) {
         base_name1, logger_event_loop->configuration(), logger_event_loop.get(),
         logger_event_loop->node()));
     event_loop_factory_.RunFor(chrono::milliseconds(10000));
-    logger.StopLogging(logger_event_loop->monotonic_now());
+    aos::CheckExpected(logger.StopLogging(logger_event_loop->monotonic_now()));
     event_loop_factory_.RunFor(chrono::milliseconds(10000));
     logger.StartLogging(std::make_unique<MultiNodeFilesLogNamer>(
         base_name2, logger_event_loop->configuration(), logger_event_loop.get(),

@@ -65,10 +65,12 @@ class Logger {
   Logger(EventLoop *event_loop)
       : Logger(event_loop, event_loop->configuration()) {}
   Logger(EventLoop *event_loop, const Configuration *configuration)
-      : Logger(event_loop, configuration,
-               [](const Channel *) { return true; }) {}
+      : Logger(
+            event_loop, configuration, [](const Channel *) { return true; },
+            nullptr) {}
   Logger(EventLoop *event_loop, const Configuration *configuration,
-         std::function<bool(const Channel *)> should_log);
+         std::function<bool(const Channel *)> should_log,
+         ExitHandle *exit_handle);
   ~Logger();
 
   // Overrides the name in the log file header.
@@ -203,7 +205,7 @@ class Logger {
   //
   // Returns the LogNamer in case the caller wants to do anything else with it
   // before destroying it.
-  std::unique_ptr<LogNamer> StopLogging(
+  [[nodiscard]] Result<std::unique_ptr<LogNamer>> StopLogging(
       aos::monotonic_clock::time_point end_time);
 
   // Returns whether a log is currently being written.
@@ -303,8 +305,8 @@ class Logger {
       aos::monotonic_clock::time_point monotonic_start_time,
       aos::realtime_clock::time_point realtime_start_time);
 
-  void DoLogData(const monotonic_clock::time_point end_time,
-                 bool run_on_logged);
+  [[nodiscard]] Status DoLogData(const monotonic_clock::time_point end_time,
+                                 bool run_on_logged);
 
   void WriteMissingTimestamps();
 
@@ -318,11 +320,10 @@ class Logger {
   // because it lets you log for more than 1 period.  All calls need to verify
   // that t isn't greater than 1 period in the future.
   //
-  // Returns true if there is at least one message written, and also returns the
-  // timestamp of the newest record that any fetcher is pointing to, or min_time
-  // if there are no messages published on any logged channels.
-  std::pair<bool, monotonic_clock::time_point> LogUntil(
-      monotonic_clock::time_point t);
+  // Returns an Ok status if no errors were encountered, and an error otherwise.
+  // On errors, we will not have successfully logged until t and generally
+  // cannot continue logging.
+  [[nodiscard]] Status LogUntil(monotonic_clock::time_point t);
 
   void RecordFetchResult(aos::monotonic_clock::time_point start,
                          aos::monotonic_clock::time_point end, bool got_new,

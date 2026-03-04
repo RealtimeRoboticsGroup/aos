@@ -23,14 +23,23 @@ namespace chrono = std::chrono;
 }  // namespace
 
 Logger::Logger(EventLoop *event_loop, const Configuration *configuration,
-               std::function<bool(const Channel *)> should_log)
+               std::function<bool(const Channel *)> should_log,
+               ExitHandle *exit_handle)
     : event_loop_(event_loop),
       configuration_(configuration),
       node_(configuration::GetNode(configuration_, event_loop->node())),
       node_index_(configuration::GetNodeIndex(configuration_, node_)),
       name_(network::GetHostname()),
-      timer_handler_(event_loop_->AddTimer([this]() {
-        DoLogData(event_loop_->monotonic_now() - logging_delay_, true);
+      timer_handler_(event_loop_->AddTimer([this, exit_handle]() {
+        Status status =
+            DoLogData(event_loop_->monotonic_now() - logging_delay_, true);
+        if (exit_handle == nullptr) {
+          CheckExpected(status);
+        } else {
+          if (!aos::IsOk(status)) {
+            exit_handle->Exit(status);
+          }
+        }
       })),
       server_statistics_fetcher_(
           configuration::NodesCount(event_loop_->configuration()) > 1u
@@ -241,7 +250,7 @@ Logger::~Logger() {
     // last bit of data to be logged.  The easiest way to deal with this is to
     // poll everything as we go to destroy the class, ie, shut down the
     // logger, and write it to disk.
-    StopLogging(event_loop_->monotonic_now());
+    CheckExpected(StopLogging(event_loop_->monotonic_now()));
   }
 }
 
@@ -348,7 +357,7 @@ void Logger::StartLogging(std::unique_ptr<LogNamer> log_namer,
   // This is safe to call here since we have set last_synchronized_time_ as
   // the same time as in the header, and all the data before it should be
   // logged without ordering concerns.
-  LogUntil(last_synchronized_time_);
+  CheckExpected(LogUntil(last_synchronized_time_));
 
   timer_handler_->Schedule(event_loop_->monotonic_now() + polling_period_,
                            polling_period_);
@@ -375,7 +384,7 @@ std::unique_ptr<LogNamer> Logger::RestartLogging(
     CHECK_LE(*end_time, monotonic_now1) << ": Can't log into the future.";
     // DoLogData is a bit fragile.
     if (*end_time > last_synchronized_time_) {
-      DoLogData(*end_time, false);
+      CheckExpected(DoLogData(*end_time, false));
     }
   }
 
@@ -439,7 +448,7 @@ std::unique_ptr<LogNamer> Logger::RestartLogging(
 
   // And now make sure to log everything up to the start time in 1 big go so we
   // make sure we have it before we let the world start logging normally again.
-  LogUntil(monotonic_start_time);
+  CheckExpected(LogUntil(monotonic_start_time));
 
   const aos::monotonic_clock::time_point channel_time =
       event_loop_->monotonic_now();
@@ -455,16 +464,19 @@ std::unique_ptr<LogNamer> Logger::RestartLogging(
   return old_log_namer;
 }
 
-std::unique_ptr<LogNamer> Logger::StopLogging(
+Result<std::unique_ptr<LogNamer>> Logger::StopLogging(
     aos::monotonic_clock::time_point end_time) {
   CHECK(log_namer_) << ": Not logging right now";
 
+  // If the DoLogData() fails, we still want to close out the internal state of
+  // the logger, so defer propagating the error until the end of the function.
+  Status log_data_result = aos::Ok();
   if (end_time != aos::monotonic_clock::min_time) {
     // Folks like to use the on_logged_period_ callback to trigger stop and
     // start events.  We can't have those then recurse and try to stop again.
     // Rather than making everything reentrant, let's just instead block the
     // callback here.
-    DoLogData(end_time, false);
+    log_data_result = DoLogData(end_time, false);
   }
   timer_handler_->Disable();
 
@@ -478,8 +490,10 @@ std::unique_ptr<LogNamer> Logger::StopLogging(
   log_start_uuid_ = std::nullopt;
 
   log_namer_->Close();
+  std::unique_ptr<LogNamer> old_log_namer = std::move(log_namer_);
 
-  return std::move(log_namer_);
+  return log_data_result.transform(
+      [&old_log_namer]() { return std::move(old_log_namer); });
 }
 
 void Logger::WriteHeader(aos::monotonic_clock::time_point monotonic_start_time,
@@ -833,11 +847,7 @@ void Logger::WriteFetchedRecord(FetcherStruct &f) {
   WriteContent(f.contents_writer, f);
 }
 
-std::pair<bool, monotonic_clock::time_point> Logger::LogUntil(
-    monotonic_clock::time_point t) {
-  bool wrote_messages = false;
-  monotonic_clock::time_point newest_record = monotonic_clock::min_time;
-
+Status Logger::LogUntil(monotonic_clock::time_point t) {
   log_until_time_ = t;
 
   // Grab the latest ServerStatistics message.  This will always have the
@@ -847,17 +857,26 @@ std::pair<bool, monotonic_clock::time_point> Logger::LogUntil(
 
   // Write each channel to disk, one at a time.
   for (FetcherStruct &f : fetchers_) {
-    if (f.fetcher->context().data != nullptr) {
-      newest_record =
-          std::max(newest_record, f.fetcher->context().monotonic_event_time);
-    }
-
     while (true) {
       if (f.written) {
         const auto start = event_loop_->monotonic_now();
-        const bool got_new =
-            f.fetcher->FetchNextIf(std::ref(fetch_next_if_fn_));
+        const RawFetcher::Result fetch_result =
+            f.fetcher->FetchNextIfWithStatus(std::ref(fetch_next_if_fn_));
+        switch (fetch_result) {
+          case RawFetcher::Result::GOOD:
+          case RawFetcher::Result::NOTHING_NEW:
+          case RawFetcher::Result::FILTERED:
+            break;
+          case RawFetcher::Result::TOO_OLD:
+          case RawFetcher::Result::OVERWROTE:
+            return ErrFormat(
+                       "Fell too far behind on channel %s while writing log.",
+                       configuration::CleanedChannelToString(
+                           f.fetcher->channel()))
+                .MakeError();
+        }
         const auto end = event_loop_->monotonic_now();
+        const bool got_new = fetch_result == RawFetcher::Result::GOOD;
         RecordFetchResult(start, end, got_new, &f);
         if (!got_new) {
           VLOG(2) << "No new data on "
@@ -865,8 +884,6 @@ std::pair<bool, monotonic_clock::time_point> Logger::LogUntil(
                          f.fetcher->channel());
           break;
         }
-        newest_record =
-            std::max(newest_record, f.fetcher->context().monotonic_event_time);
         f.written = false;
       }
 
@@ -880,19 +897,18 @@ std::pair<bool, monotonic_clock::time_point> Logger::LogUntil(
       }
 
       WriteFetchedRecord(f);
-      wrote_messages = true;
 
       f.written = true;
     }
   }
   last_synchronized_time_ = t;
 
-  return std::make_pair(wrote_messages, newest_record);
+  return Ok();
 }
 
-void Logger::DoLogData(const monotonic_clock::time_point end_time,
-                       bool run_on_logged) {
-  if (end_time < last_synchronized_time_) return;
+Status Logger::DoLogData(const monotonic_clock::time_point end_time,
+                         bool run_on_logged) {
+  if (end_time < last_synchronized_time_) return aos::Ok();
 
   DCHECK(is_started());
   // We want to guarantee that messages aren't out of order by more than
@@ -902,7 +918,8 @@ void Logger::DoLogData(const monotonic_clock::time_point end_time,
   do {
     // Move the sync point up by at most polling_period.  This forces one sync
     // per iteration, even if it is small.
-    LogUntil(std::min(last_synchronized_time_ + polling_period_, end_time));
+    AOS_RETURN_IF_ERROR(LogUntil(
+        std::min(last_synchronized_time_ + polling_period_, end_time)));
 
     if (run_on_logged) {
       on_logged_period_(last_synchronized_time_);
@@ -911,6 +928,7 @@ void Logger::DoLogData(const monotonic_clock::time_point end_time,
     // If we missed cycles, we could be pretty far behind.  Spin until we are
     // caught up.
   } while (last_synchronized_time_ + polling_period_ < end_time);
+  return aos::Ok();
 }
 
 void Logger::RecordFetchResult(aos::monotonic_clock::time_point start,

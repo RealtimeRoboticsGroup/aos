@@ -53,7 +53,8 @@ int main(int argc, char *argv[]) {
       // Only log channels smaller than ~10 MB / sec.
       [](const aos::Channel *channel) {
         return (channel->max_size() * channel->frequency()) < 10e6;
-      });
+      },
+      nullptr);
 
   if (absl::GetFlag(FLAGS_rotate_every) != 0.0) {
     logger.set_on_logged_period(
