@@ -30,12 +30,16 @@ WriteResult Write(LogSink *log_sink, std::string_view content) {
   auto queue = absl::Span<const absl::Span<const uint8_t>>(&span, 1);
   return log_sink->Write(queue);
 }
+std::string TestTmpDir() {
+  return aos::testing::TestTmpDir() + "/" +
+         ::testing::UnitTest::GetInstance()->current_test_info()->name();
+}
 }  // namespace
 
 MATCHER_P(FileEq, o, "") { return arg.name == o.name && arg.size == o.size; }
 
 TEST(LogBackendTest, CreateSimpleFile) {
-  const std::string logevent = aos::testing::TestTmpDir() + "/logevent/";
+  const std::string logevent = TestTmpDir() + "/logevent/";
   const std::string filename = "test.bfbs";
   LogFolder backend(logevent, false);
   auto file = backend.RequestFile(filename);
@@ -66,7 +70,7 @@ TEST(FileHandlerTest, CloseSyncsDirectory) {
   absl::FlagSaver flag_saver;
   absl::SetFlag(&FLAGS_sync, true);
 
-  const std::string logevent = aos::testing::TestTmpDir() + "/";
+  const std::string logevent = TestTmpDir() + "/";
   const std::string filename = "test.log";
   const std::string filepath = logevent + filename;
 
@@ -91,7 +95,7 @@ TEST(FileHandlerTest, CloseSyncsDirectory) {
 }
 
 TEST(LogBackendTest, CreateRenamableFile) {
-  const std::string logevent = aos::testing::TestTmpDir() + "/logevent/";
+  const std::string logevent = TestTmpDir() + "/logevent/";
   RenamableFileBackend backend(logevent, false);
   auto file = backend.RequestFile("test.log");
   ASSERT_EQ(file->OpenForWrite(), WriteCode::kOk);
@@ -103,7 +107,7 @@ TEST(LogBackendTest, CreateRenamableFile) {
 }
 
 TEST(LogBackendTest, UseTempRenamableFile) {
-  const std::string logevent = aos::testing::TestTmpDir() + "/logevent/";
+  const std::string logevent = TestTmpDir() + "/logevent/";
   RenamableFileBackend backend(logevent, false);
   backend.EnableTempFiles();
   auto file = backend.RequestFile("test.log");
@@ -119,7 +123,7 @@ TEST(LogBackendTest, UseTempRenamableFile) {
 }
 
 TEST(LogBackendTest, RenameBaseAfterWrite) {
-  const std::string logevent = aos::testing::TestTmpDir() + "/logevent/";
+  const std::string logevent = TestTmpDir() + "/logevent/";
   RenamableFileBackend backend(logevent, false);
   auto file = backend.RequestFile("test.log");
   ASSERT_EQ(file->OpenForWrite(), WriteCode::kOk);
@@ -128,7 +132,7 @@ TEST(LogBackendTest, RenameBaseAfterWrite) {
   EXPECT_EQ(result.messages_written, 1);
   EXPECT_TRUE(std::filesystem::exists(logevent + "test.log"));
 
-  std::string renamed = aos::testing::TestTmpDir() + "/renamed/";
+  std::string renamed = TestTmpDir() + "/renamed/";
   backend.RenameLogBase(renamed);
 
   EXPECT_FALSE(std::filesystem::exists(logevent + "test.log"));
@@ -146,10 +150,8 @@ TEST(LogBackendTest, RenameBaseWithSync) {
   absl::SetFlag(&FLAGS_sync, true);
 
   // Use unique directory names for this test.
-  const std::string logevent =
-      aos::testing::TestTmpDir() + "/logevent_with_sync/";
-  const std::string renamed =
-      aos::testing::TestTmpDir() + "/renamed_with_sync/";
+  const std::string logevent = TestTmpDir() + "/logevent_with_sync/";
+  const std::string renamed = TestTmpDir() + "/renamed_with_sync/";
 
   RenamableFileBackend backend(logevent, false);
   auto file = backend.RequestFile("test.log");
@@ -171,7 +173,7 @@ TEST(LogBackendTest, RenameBaseWithSync) {
 }
 
 TEST(LogBackendTest, UseTestAndRenameBaseAfterWrite) {
-  const std::string logevent = aos::testing::TestTmpDir() + "/logevent/";
+  const std::string logevent = TestTmpDir() + "/logevent/";
   RenamableFileBackend backend(logevent, false);
   backend.EnableTempFiles();
   auto file = backend.RequestFile("test.log");
@@ -181,7 +183,7 @@ TEST(LogBackendTest, UseTestAndRenameBaseAfterWrite) {
   EXPECT_EQ(result.messages_written, 1);
   EXPECT_TRUE(std::filesystem::exists(logevent + "test.log.tmp"));
 
-  std::string renamed = aos::testing::TestTmpDir() + "/renamed/";
+  std::string renamed = TestTmpDir() + "/renamed/";
   backend.RenameLogBase(renamed);
 
   EXPECT_FALSE(std::filesystem::exists(logevent + "test.log.tmp"));
@@ -347,7 +349,7 @@ struct FileWriteTestBase : public ::testing::Test {
         buffer.data() + buffer.size() - requested_size;
 
     // logevent has to end with '/' to be recognized as a folder.
-    const std::string logevent = aos::testing::TestTmpDir();
+    const std::string logevent = TestTmpDir();
     const auto file = std::filesystem::path(logevent) / "test.log";
     std::filesystem::remove_all(file);
     VLOG(1) << "Writing to " << file.c_str();
@@ -453,7 +455,7 @@ TEST_F(FileWriteTestBase, AlignedToUnaligned) {
   LOG(INFO) << "Queue 0 " << queue[0].size();
   LOG(INFO) << "Queue 1 " << queue[1].size();
 
-  const std::string logevent = aos::testing::TestTmpDir();
+  const std::string logevent = TestTmpDir();
   const auto file = std::filesystem::path(logevent) / "test.log";
   std::filesystem::remove_all(file);
   VLOG(1) << "Writing to " << file.c_str();
