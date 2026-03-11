@@ -104,6 +104,30 @@ TEST(LogBackendTest, CreateRenamableFile) {
   EXPECT_EQ(result.messages_written, 1);
   EXPECT_EQ(file->Close(), WriteCode::kOk);
   EXPECT_TRUE(std::filesystem::exists(logevent + "test.log"));
+  EXPECT_EQ(4, std::filesystem::file_size(logevent + "test.log"));
+}
+
+TEST(LogBackendTest, CreateFileMassiveWrite) {
+  const std::string logevent = TestTmpDir() + "/logevent/";
+  RenamableFileBackend backend(logevent, false);
+  auto file = backend.RequestFile("test.log");
+  ASSERT_EQ(file->OpenForWrite(), WriteCode::kOk);
+  std::vector<uint8_t> buffer1(3e9, 0);
+  std::vector<uint8_t> buffer2(3, 0);
+  std::array<absl::Span<const uint8_t>, 2> spans{
+      {{buffer1.data(), buffer1.size()}, {buffer2.data(), buffer2.size()}}};
+  auto queue =
+      absl::Span<const absl::Span<const uint8_t>>(spans.data(), spans.size());
+  auto result = file->Write(queue);
+  EXPECT_EQ(result.code, WriteCode::kOk);
+  EXPECT_EQ(result.messages_written, 2);
+  EXPECT_EQ(file->Close(), WriteCode::kOk);
+  EXPECT_TRUE(std::filesystem::exists(logevent + "test.log"));
+  EXPECT_EQ(buffer1.size() + buffer2.size(),
+            std::filesystem::file_size(logevent + "test.log"));
+  ASSERT_TRUE(
+      dynamic_cast<FileHandler *>(file.get())->encountered_incomplete_write());
+  std::filesystem::remove(logevent + "test.log");
 }
 
 TEST(LogBackendTest, UseTempRenamableFile) {

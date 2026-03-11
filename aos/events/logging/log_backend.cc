@@ -3,10 +3,12 @@
 #include <dirent.h>
 
 #include <filesystem>
+#include <numeric>
 
 #include "absl/flags/flag.h"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
+#include "absl/log/vlog_is_on.h"
 #include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
 
@@ -238,7 +240,7 @@ WriteResult FileHandler::Write(
       // Switching aligned context. Let's flush current batch.
       if (!iovec_.empty()) {
         // Flush current queue if we need.
-        const auto code = WriteV(iovec_, was_aligned);
+        const WriteCode code = WriteV(was_aligned);
         if (code == WriteCode::kOutOfSpace) {
           // We cannot say anything about what number of messages was written
           // for sure.
@@ -259,7 +261,7 @@ WriteResult FileHandler::Write(
   WriteCode result_code = WriteCode::kOk;
   if (!iovec_.empty()) {
     // Flush current queue if we need.
-    result_code = WriteV(iovec_, was_aligned);
+    result_code = WriteV(was_aligned);
   }
   return {
       .code = result_code,
@@ -267,8 +269,7 @@ WriteResult FileHandler::Write(
   };
 }
 
-WriteCode FileHandler::WriteV(const std::vector<struct iovec> &iovec,
-                              bool aligned) {
+WriteCode FileHandler::WriteV(bool aligned) {
   // Configure the file descriptor to match the mode we should be in.  This is
   // safe to over-call since it only does the syscall if needed.
   if (aligned) {
@@ -277,10 +278,10 @@ WriteCode FileHandler::WriteV(const std::vector<struct iovec> &iovec,
     DisableDirect();
   }
 
-  VLOG(2) << "Flushing queue of " << iovec.size() << " elements, "
+  VLOG(2) << "Flushing queue of " << iovec_.size() << " elements, "
           << (aligned ? "aligned" : "unaligned");
 
-  CHECK_GT(iovec.size(), 0u);
+  CHECK_GT(iovec_.size(), 0u);
   const auto start = aos::monotonic_clock::now();
 
   // Validation of alignment assumptions.
@@ -289,7 +290,7 @@ WriteCode FileHandler::WriteV(const std::vector<struct iovec> &iovec,
         << ": Failed after writing " << total_write_bytes_
         << " to the file, attempting aligned write with unaligned start.";
 
-    for (const auto &iovec_item : iovec) {
+    for (const auto &iovec_item : iovec_) {
       absl::Span<const uint8_t> data(
           reinterpret_cast<const uint8_t *>(iovec_item.iov_base),
           iovec_item.iov_len);
@@ -299,36 +300,76 @@ WriteCode FileHandler::WriteV(const std::vector<struct iovec> &iovec,
     }
   }
 
-  // Calculation of expected written size.
-  size_t counted_size = 0;
-  for (const auto &iovec_item : iovec) {
-    CHECK_GT(iovec_item.iov_len, 0u);
-    counted_size += iovec_item.iov_len;
+  size_t iovecs_index = 0;
+  size_t total_written = 0;
+  // Iterate until we write all the bytes or get an error.
+  while (true) {
+    // Calculation of expected written size.
+    size_t counted_size =
+        std::accumulate(iovec_.begin() + iovecs_index, iovec_.end(), size_t(0),
+                        [](size_t count, const struct iovec &next_iovec) {
+                          return count + next_iovec.iov_len;
+                        });
+
+    VLOG(2) << "Going to write " << counted_size;
+    CHECK_GT(counted_size, 0u);
+
+    const ssize_t written =
+        writev(fd_, iovec_.data() + iovecs_index, iovec_.size() - iovecs_index);
+    VLOG(2) << "Wrote " << written << ", for iovec size " << iovec_.size();
+
+    if (written == -1 && errno == ENOSPC) {
+      PLOG(ERROR) << "Wrote " << written << " bytes of " << counted_size;
+      return WriteCode::kOutOfSpace;
+    }
+    PCHECK(written >= 0) << ": write failed, got " << written << " for "
+                         << filename_;
+    total_written += written;
+    if (written < static_cast<ssize_t>(counted_size)) {
+      // Note that we have observed this condition (less data being written than
+      // requested) when:
+      // 1. We try to write a massive buffer (over 2 GiB typically).
+      // 2. We run out of space on the filesystem.
+      // For both cases, we want to remove the bytes that we have successfully
+      // written from the iovecs_ vector and attempt to write the case. In the
+      // first case, we will eventually finish writing everything. In the latter
+      // case we will get an ENOSPC on any subsequent writes.
+      //
+      // Future work may also create situations where we e.g. attempt to write
+      // to sockets where we may more frequently encounter incomplete writes.
+      if (VLOG_IS_ON(1)) {
+        PLOG(WARNING) << "Wrote " << written << " bytes of " << counted_size;
+      }
+      encountered_incomplete_write_ = true;
+      ssize_t bytes_to_evict = written;
+      while (iovec_.at(iovecs_index).iov_len <=
+             static_cast<size_t>(bytes_to_evict)) {
+        bytes_to_evict -= iovec_.at(iovecs_index).iov_len;
+        ++iovecs_index;
+        // Mostly a sanity check.
+        // If iovecs_index > iovec_.size() then we wrote more bytes than we
+        // had in iovec_. If iovecs_index == iovec_.size() then written
+        // should strictly equal counted_size and we should not have ended up
+        // here.
+        CHECK(iovecs_index < iovec_.size());
+      }
+      iovec_.at(iovecs_index).iov_base =
+          reinterpret_cast<uint8_t *>(iovec_.at(iovecs_index).iov_base) +
+          bytes_to_evict;
+      iovec_.at(iovecs_index).iov_len -= bytes_to_evict;
+    } else {
+      iovecs_index = iovec_.size();
+      break;
+    }
   }
-
-  VLOG(2) << "Going to write " << counted_size;
-  CHECK_GT(counted_size, 0u);
-
-  const ssize_t written = writev(fd_, iovec.data(), iovec.size());
-  VLOG(2) << "Wrote " << written << ", for iovec size " << iovec.size();
 
   const auto end = aos::monotonic_clock::now();
-  if (written == -1 && errno == ENOSPC) {
-    return WriteCode::kOutOfSpace;
-  }
-  PCHECK(written >= 0) << ": write failed, got " << written;
-  if (written < static_cast<ssize_t>(counted_size)) {
-    // Sometimes this happens instead of ENOSPC. On a real filesystem, this
-    // never seems to happen in any other case. If we ever want to log to a
-    // socket, this will happen more often. However, until we get there, we'll
-    // just assume it means we ran out of space.
-    return WriteCode::kOutOfSpace;
-  }
 
   if (absl::GetFlag(FLAGS_sync)) {
 #ifdef __linux__
     // Flush asynchronously and force the data out of the cache.
-    sync_file_range(fd_, total_write_bytes_, written, SYNC_FILE_RANGE_WRITE);
+    sync_file_range(fd_, total_write_bytes_, total_written,
+                    SYNC_FILE_RANGE_WRITE);
     if (last_synced_bytes_ != 0) {
       // Per Linus' recommendation online on how to do fast file IO, do a
       // blocking flush of the previous write chunk, and then tell the kernel to
@@ -350,11 +391,11 @@ WriteCode FileHandler::WriteV(const std::vector<struct iovec> &iovec,
     last_synced_bytes_ = total_write_bytes_;
   }
 
-  total_write_bytes_ += written;
+  total_write_bytes_ += total_written;
   if (aligned) {
-    written_aligned_ += written;
+    written_aligned_ += total_written;
   }
-  WriteStatistics()->UpdateStats(end - start, written, iovec.size());
+  WriteStatistics()->UpdateStats(end - start, total_written, iovecs_index);
   return WriteCode::kOk;
 }
 

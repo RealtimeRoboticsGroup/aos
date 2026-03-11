@@ -216,8 +216,15 @@ class FileHandler : public LogSink {
   // Name of the log sink mostly for informational purposes.
   std::string_view name() const override { return filename_; }
 
-  // Number of bytes written in aligned mode. It is mostly for testing.
+  // Number of bytes written in aligned mode. Mostly for testing.
   size_t written_aligned() const { return written_aligned_; }
+
+  // For testing; indicates whether we actually encountered a situation where
+  // not all the data was able to be flushed to the buffer at once, to validate
+  // that we handle massive data writes correctly.
+  bool encountered_incomplete_write() const {
+    return encountered_incomplete_write_;
+  }
 
  protected:
   // This is used by subclasses who need to access filename.
@@ -239,9 +246,10 @@ class FileHandler : public LogSink {
 
   bool ODirectEnabled() const;
 
-  // Writes a chunk of iovecs. aligned is true if all the data is kSector byte
-  // aligned and multiples of it in length.
-  WriteCode WriteV(const std::vector<struct iovec> &iovec, bool aligned);
+  // Writes a chunk of iovecs from iovec_. aligned is true if all the data is
+  // kSector byte aligned and multiples of it in length.
+  // May modify iovec_.
+  WriteCode WriteV(bool aligned);
 
   std::string filename_;
 
@@ -261,6 +269,10 @@ class FileHandler : public LogSink {
   bool supports_odirect_ = true;
   bool odirect_enabled_ = false;
   int flags_ = 0;
+
+  // Used for unit tests to ensure that we have coverage of handling certain
+  // corner-cases.
+  bool encountered_incomplete_write_ = false;
 };
 
 // Interface to decouple reading of logs and media (file system, memory or S3).
