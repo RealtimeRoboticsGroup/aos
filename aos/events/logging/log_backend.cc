@@ -14,6 +14,7 @@
 
 #include "aos/events/logging/file_operations.h"
 #include "aos/events/logging/logfile_decoder_options.h"
+#include "aos/realtime.h"
 #include "aos/util/file.h"
 
 ABSL_FLAG(
@@ -128,6 +129,16 @@ void logger::QueueAligner::FillAlignedQueue(
 FileHandler::FileHandler(std::string filename, bool supports_odirect)
     : filename_(std::move(filename)), supports_odirect_(supports_odirect) {}
 
+BufferedFileHandler::BufferedFileHandler(std::string filename,
+                                         bool supports_odirect,
+                                         size_t memory_buffer_size)
+    : FileHandler(filename, supports_odirect),
+      memory_buffer_size_(memory_buffer_size) {
+  VLOG(1) << "Allocating a memory buffer of " << memory_buffer_size << " for "
+          << filename;
+  buffer_.resize(AlignToLeft(memory_buffer_size_) + kSector);
+}
+
 FileHandler::~FileHandler() { Close(); }
 
 void FileHandler::UpdateFilenameBase(const std::string_view old_base_name,
@@ -142,6 +153,27 @@ void FileHandler::UpdateFilenameBase(const std::string_view old_base_name,
       << "Expected old_base_name '" << old_base_name
       << "' to be at the start of filename '" << filename_ << "'";
   filename_.replace(0, old_base_name.length(), new_base_name);
+}
+
+WriteCode BufferedFileHandler::OpenForWrite() {
+  if (memory_buffer_size_ > 0) {
+    closing_ = false;
+    CHECK(!file_writer_.has_value());
+    file_writer_.emplace([this]() {
+      SetCurrentThreadName(
+          ("writer_" + std::filesystem::path(filename()).filename().string())
+              .substr(0, 16));
+      std::unique_lock lock(buffer_index_mutex_);
+      while (!closing_ || (!buffer_empty_ && !ran_out_of_space_in_thread_)) {
+        if (buffer_empty_ || ran_out_of_space_in_thread_) {
+          buffer_index_update_.wait(lock);
+        }
+        WriteCurrentBufferContents(lock);
+        buffer_index_update_.notify_all();
+      }
+    });
+  }
+  return FileHandler::OpenForWrite();
 }
 
 WriteCode FileHandler::OpenForWrite() {
@@ -210,6 +242,139 @@ void FileHandler::DisableDirect() {
     odirect_enabled_ = false;
     VLOG(1) << "Disabled O_DIRECT on " << filename_;
   }
+}
+
+void BufferedFileHandler::WriteCurrentBufferContents(
+    std::unique_lock<std::mutex> &buffer_index_lock) {
+  CHECK(buffer_index_lock.owns_lock());
+  if (buffer_empty_ || ran_out_of_space_in_thread_) {
+    return;
+  }
+  // To write the data in the buffer, we will create either 1 or two spans to
+  // pass into the Write() call, depending on if the current buffer chunk
+  // includes the wrap point of the buffer_.
+  // TODO(jkuszmaul): Consider writing smaller chunks than just "as much as
+  // possible" so that we can free up space in the internal memory buffer as
+  // fast as possible. Experimentation would be required to figure out what
+  // actually made sense.
+  std::array<absl::Span<const uint8_t>, 2> data;
+  absl::Span<const absl::Span<const uint8_t>> queue;
+  if (buffer_end_ > buffer_start_) {
+    data[0] = {buffer_.data() + buffer_start_, buffer_end_ - buffer_start_};
+    queue = absl::Span<const absl::Span<const uint8_t>>{data.data(), 1u};
+  } else {
+    data[0] = {buffer_.data() + buffer_start_, buffer_.size() - buffer_start_};
+    if (buffer_end_ != 0) {
+      data[1] = {buffer_.data(), buffer_end_};
+      queue = absl::Span<const absl::Span<const uint8_t>>{data.data(), 2u};
+    } else {
+      queue = absl::Span<const absl::Span<const uint8_t>>{data.data(), 1u};
+    }
+  }
+  const size_t new_buffer_start = buffer_end_;
+  // Don't hold the lock while actually writing to disk.
+  // Note that this does mean that buffer_end_ may be updated while doing the
+  // Write() call; however, because buffer_start_ is not updated by WriteAsync()
+  // we can trust that the data we are copying from will not be affected.
+  buffer_index_lock.unlock();
+  const WriteResult result = FileHandler::Write(queue);
+  buffer_index_lock.lock();
+  switch (result.code) {
+    case WriteCode::kOk:
+      CHECK_EQ(result.messages_written, queue.size())
+          << ": Expected to write all of the data if there was space on disk.";
+      break;
+    case WriteCode::kOutOfSpace:
+      ran_out_of_space_in_thread_ = true;
+      break;
+  }
+  // Note: This isn't entirely correct in the case where we ran out of space.
+  buffer_start_ = new_buffer_start;
+  buffer_empty_ = buffer_start_ == buffer_end_;
+}
+
+WriteResult BufferedFileHandler::WriteAsync(
+    const absl::Span<const absl::Span<const uint8_t>> &queue) {
+  size_t messages_written = 0;
+  std::unique_lock<std::mutex> lock(buffer_index_mutex_);
+  if (ran_out_of_space_in_thread_) {
+    return {.code = WriteCode::kOutOfSpace, .messages_written = 0};
+  }
+  for (const absl::Span<const uint8_t> &message : queue) {
+    size_t message_bytes_written = 0;
+    // Copy as many bytes as possible at a time into the internal buffer; this
+    // loop will iterate multiple times when either:
+    // 1. The buffer is full and we must wait for the write thread to clear
+    // space.
+    // 2. When we reach the end of the buffer_ variable and have to do a
+    // separate memcpy to point at the start of the memory chunk.
+    while (true) {
+      const size_t buffer_space =
+          (buffer_start_ > buffer_end_ || !buffer_empty_)
+              ? buffer_start_ - buffer_end_
+              : buffer_start_ + buffer_.size() - buffer_end_;
+      if (buffer_space == 0) {
+        // Wait for more space to be available to write to.
+        buffer_index_update_.wait(lock);
+        if (ran_out_of_space_in_thread_) {
+          return {.code = WriteCode::kOutOfSpace,
+                  .messages_written = messages_written};
+        }
+        // Reset the while loop so that we recalculate buffer_space.
+        continue;
+      }
+      // Memory span into which we will copy data from this message.
+      absl::Span<uint8_t> target_buffer(
+          buffer_.data() + buffer_end_,
+          std::min(buffer_space, message.size() - message_bytes_written));
+      const size_t space_until_buffer_wraps = buffer_.size() - buffer_end_;
+      const bool wrap_required =
+          target_buffer.size() > space_until_buffer_wraps;
+      if (wrap_required) {
+        target_buffer = target_buffer.subspan(0, space_until_buffer_wraps);
+      }
+
+      // Memory span that we will be copying from.
+      const absl::Span<const uint8_t> copy_from =
+          message.subspan(message_bytes_written, target_buffer.size());
+
+      // Don't hold the lock while actually copying into the buffer, since this
+      // may be expensive.
+      // At this point we have not modified buffer_end_, so the file_writer_
+      // thread will not attempt to read this data while we are writing it.
+      // TODO(james.kuszmaul): Evaluate whether the lock/unlock actually is
+      // worse for performance than just doing the memcopy.
+      lock.unlock();
+      std::copy(copy_from.cbegin(), copy_from.cend(), target_buffer.begin());
+      lock.lock();
+      message_bytes_written += target_buffer.size();
+      DCHECK_NE(0u, message_bytes_written)
+          << "buffer_end: " << buffer_end_ << " buffer size " << buffer_.size()
+          << " buffer start " << buffer_start_ << " empty " << buffer_empty_
+          << " buffer space " << buffer_space;
+      buffer_end_ = (buffer_end_ + target_buffer.size()) % buffer_.size();
+      buffer_empty_ = false;
+      buffer_index_update_.notify_all();
+
+      if (wrap_required) {
+        continue;
+      }
+
+      if (message_bytes_written == message.size()) {
+        ++messages_written;
+        break;
+      }
+    }
+  }
+  return {.code = WriteCode::kOk, .messages_written = messages_written};
+}
+
+WriteResult BufferedFileHandler::Write(
+    const absl::Span<const absl::Span<const uint8_t>> &queue) {
+  if (memory_buffer_size_ > 0) {
+    return WriteAsync(queue);
+  }
+  return FileHandler::Write(queue);
 }
 
 bool FileHandler::ODirectEnabled() const { return odirect_enabled_; }
@@ -399,6 +564,19 @@ WriteCode FileHandler::WriteV(bool aligned) {
   return WriteCode::kOk;
 }
 
+WriteCode BufferedFileHandler::Close() {
+  closing_ = true;
+  if (file_writer_.has_value()) {
+    {
+      std::unique_lock lock(buffer_index_mutex_);
+      buffer_index_update_.notify_all();
+    }
+    file_writer_.value().join();
+    file_writer_.reset();
+  }
+  return FileHandler::Close();
+}
+
 WriteCode FileHandler::Close() {
   if (!is_open()) {
     return WriteCode::kOk;
@@ -438,7 +616,10 @@ FileBackend::FileBackend(std::string_view base_name, bool supports_odirect)
       base_name_(base_name),
       separator_(base_name_.back() == '/' ? "" : "_") {}
 
-std::unique_ptr<LogSink> FileBackend::RequestFile(const std::string_view id) {
+std::unique_ptr<LogSink> FileBackend::RequestFile(
+    const std::string_view id, const size_t memory_buffer_size) {
+  CHECK_EQ(memory_buffer_size, 0u)
+      << ": Memory buffer unsupported on regular FileBackend.";
   const std::string filename = absl::StrCat(base_name_, separator_, id);
   return std::make_unique<FileHandler>(filename, supports_odirect_);
 }
@@ -479,11 +660,11 @@ RenamableFileBackend::RenamableFileBackend(std::string_view base_name,
       separator_(base_name_.back() == '/' ? "" : "_") {}
 
 std::unique_ptr<LogSink> RenamableFileBackend::RequestFile(
-    const std::string_view id) {
+    const std::string_view id, const size_t memory_buffer_size) {
   const std::string filename =
       absl::StrCat(base_name_, separator_, id, temp_suffix_);
-  return std::make_unique<RenamableFileHandler>(this, filename,
-                                                supports_odirect_);
+  return std::make_unique<RenamableFileHandler>(
+      this, filename, supports_odirect_, memory_buffer_size);
 }
 
 void RenamableFileBackend::EnableTempFiles() {
@@ -641,7 +822,7 @@ WriteCode RenamableFileBackend::RenamableFileHandler::Close() {
   }
 
   // Continue with the standard close logic.
-  if (FileHandler::Close() == WriteCode::kOutOfSpace) {
+  if (BufferedFileHandler::Close() == WriteCode::kOutOfSpace) {
     return WriteCode::kOutOfSpace;
   }
   if (owner_->RenameFileAfterClose(filename()) == WriteCode::kOutOfSpace) {

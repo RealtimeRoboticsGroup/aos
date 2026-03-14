@@ -5,8 +5,10 @@
 #include <sys/types.h>
 #include <sys/uio.h>
 
+#include <condition_variable>
 #include <filesystem>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -14,6 +16,7 @@
 #include "absl/types/span.h"
 
 #include "aos/events/logging/buffer_encoder.h"
+#include "aos/gtest_prod.h"
 #include "aos/time/time.h"
 
 namespace aos::logger {
@@ -186,7 +189,7 @@ class FileHandler : public LogSink {
   static constexpr size_t kSector = 512u;
 
   explicit FileHandler(std::string filename, bool supports_odirect);
-  ~FileHandler() override;
+  virtual ~FileHandler() override;
 
   FileHandler(const FileHandler &) = delete;
   FileHandler &operator=(const FileHandler &) = delete;
@@ -275,6 +278,91 @@ class FileHandler : public LogSink {
   bool encountered_incomplete_write_ = false;
 };
 
+namespace testing {
+FORWARD_DECLARE_TEST_CASE(LogBackendTest, OutOfSpaceTest);
+}
+
+// Provides an implementation of the FileHandler which maintains an in-memory
+// buffer of memory_buffer_size.
+// Writes will cause the internal memory buffer to be filled, while a separate
+// thread removes data from the buffer and writes it to disk. If the thread
+// writing to disk cannot keep up with incoming data, then eventually the
+// internal memory buffer will fill up. When this happens, calls to Write() will
+// block in the same way that they would on the FileHandler.
+class BufferedFileHandler : public FileHandler {
+ public:
+  // If memory_buffer_size is set to zero, will not perform any threading or
+  // buffering.
+  BufferedFileHandler(std::string filename, bool supports_odirect,
+                      size_t memory_buffer_size);
+  virtual ~BufferedFileHandler() { Close(); }
+
+  // Writes the provided messages. Will return once the messages are in the
+  // internal memory buffer. This does mean that messages provided here may not
+  // make it to disk if we terminate or run out of disk space before the
+  // messages are written. Blocks if there is no space remaining in the internal
+  // memory buffer, and waits for the disk writing thread to free up space.
+  WriteResult Write(
+      const absl::Span<const absl::Span<const uint8_t>> &queue) override;
+  WriteCode OpenForWrite() override;
+  WriteCode Close() override;
+
+ private:
+  // In order to exercise the out-of-space logic, we manually alter the internal
+  // state of this class rather than trying to actually run out of space on a
+  // filesystem.
+  FRIEND_TEST_NAMESPACE(LogBackendTest, OutOfSpaceTest, testing);
+  WriteResult WriteAsync(
+      const absl::Span<const absl::Span<const uint8_t>> &queue);
+
+  // Should provide a lock or buffer_index_update_ that is already held.
+  // Attempts to write out the current contents of the buffer.
+  void WriteCurrentBufferContents(
+      std::unique_lock<std::mutex> &buffer_index_lock);
+
+  const size_t memory_buffer_size_;
+  // Indicates that Close() has been called and that the writing thread should
+  // exit.
+  std::atomic<bool> closing_ = false;
+  // Indicates that the thread writing to disk encountered ENOSPC and that we
+  // should propagate said fault to the user, on the basis that there is no
+  // point in continuing to write data.
+  // TODO(james): Future optimizations could choose not to propagate the ENOSPC
+  // until the internal memory buffer fills up, such that if space *does* free
+  // up on the filesystem then we can continue to write.
+  bool ran_out_of_space_in_thread_ = false;
+  // Guards access to buffer_start_ , buffer_end_, ran_out_of_space_in_thread_,
+  // and buffer_empty_.
+  std::mutex buffer_index_mutex_;
+  // Index into buffer_ for where the current start of the buffer is. The
+  // disk-writing thread will start reading data from here. Only the
+  // disk-writing thread should be modifying this value.
+  size_t buffer_start_ = 0;
+  // Index into buffer_ for where one-past the current end of the buffer is. The
+  // data insertion thread will insert data starting at buffer_end_. Only the
+  // data-insertion thread should be modifying this value.
+  size_t buffer_end_ = 0;
+  // Indicates whether the buffer is empty. When buffer_start_ == buffer_end_ it
+  // is ambiguous whether the buffer is empty or full, necessitating this.
+  bool buffer_empty_ = true;
+  // A notify will be sent out on buffer_index_update_ whenever buffer_start_,
+  // buffer_end_, or buffer_empty_ are updated.
+  std::condition_variable buffer_index_update_;
+  // The actual buffer to use for storing the data to be written to file.
+  // Aligned to the same alignment that we expect to use when actually doing our
+  // write() calls.
+  // Note that access to buffer_ is not currently guarded by the
+  // buffer_index_mutex_ directly. Because only one thread is writing to the
+  // buffer, only one is reading, and only one thread is responsible for each of
+  // buffer_start_ and buffer_end_, we can safely have the write thread by
+  // copying data out of this buffer while the insertion thread copies data into
+  // another part of the buffer.
+  aos::AllocatorResizeableBuffer<aos::AlignedReallocator<kSector>> buffer_;
+  // Thread for file writing. Only set while the file is open and if
+  // memory_buffer_size_ is greater than zero.
+  std::optional<std::thread> file_writer_;
+};
+
 // Interface to decouple reading of logs and media (file system, memory or S3).
 class LogSource {
  public:
@@ -305,7 +393,8 @@ class LogBackend {
   // Request file-like object from the log backend. It maybe a file on a disk or
   // in memory. id is usually generated by log namer and looks like name of the
   // file within a log folder.
-  virtual std::unique_ptr<LogSink> RequestFile(const std::string_view id) = 0;
+  virtual std::unique_ptr<LogSink> RequestFile(
+      const std::string_view id, const size_t memory_buffer_size = 0) = 0;
 };
 
 // Implements requests log files from file system.
@@ -317,7 +406,8 @@ class FileBackend : public LogBackend, public LogSource {
   ~FileBackend() override = default;
 
   // Request file from a file system. It is not open yet.
-  std::unique_ptr<LogSink> RequestFile(const std::string_view id) override;
+  std::unique_ptr<LogSink> RequestFile(
+      const std::string_view id, const size_t memory_buffer_size = 0) override;
 
   // List all files that looks like log files under base_name.
   std::vector<File> ListFiles() const override;
@@ -357,11 +447,13 @@ class LogFolder : public FileBackend {
 class RenamableFileBackend : public LogBackend {
  public:
   // Adds call to rename, when closed.
-  class RenamableFileHandler final : public FileHandler {
+  class RenamableFileHandler final : public BufferedFileHandler {
    public:
     RenamableFileHandler(RenamableFileBackend *owner, std::string filename,
-                         bool supports_odirect)
-        : FileHandler(std::move(filename), supports_odirect), owner_(owner) {}
+                         bool supports_odirect, size_t memory_buffer_size)
+        : BufferedFileHandler(std::move(filename), supports_odirect,
+                              memory_buffer_size),
+          owner_(owner) {}
     ~RenamableFileHandler() final = default;
 
     // Closes and if needed renames file.
@@ -376,7 +468,8 @@ class RenamableFileBackend : public LogBackend {
   ~RenamableFileBackend() = default;
 
   // Request file from a file system. It is not open yet.
-  std::unique_ptr<LogSink> RequestFile(const std::string_view id) override;
+  std::unique_ptr<LogSink> RequestFile(
+      const std::string_view id, const size_t memory_buffer_size = 0) override;
 
   // TODO (Alexei): it is called by Logger, and left here for compatibility.
   // Logger should not call it.

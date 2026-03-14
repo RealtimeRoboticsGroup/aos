@@ -119,6 +119,7 @@ cc_library(
         ":buffer_encoder",
         ":file_operations",
         ":logfile_decoder_options",
+        "//aos:gtest_prod",
         "//aos/time",
         "//aos/util:file",
         "@com_google_absl//absl/flags:flag",
@@ -132,7 +133,8 @@ cc_library(
 cc_test(
     name = "log_backend_test",
     srcs = ["log_backend_test.cc"],
-    shard_count = 4,
+    # One shard per test in log_backend_test.cc
+    shard_count = 22,
     deps = [
         ":log_backend",
         "//aos/containers:resizeable_buffer",

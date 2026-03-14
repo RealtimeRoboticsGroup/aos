@@ -107,6 +107,73 @@ TEST(LogBackendTest, CreateRenamableFile) {
   EXPECT_EQ(4, std::filesystem::file_size(logevent + "test.log"));
 }
 
+TEST(LogBackendTest, CreateAsyncFile) {
+  const std::string logevent = TestTmpDir() + "/logevent/";
+  // Test this a bunch of times to try to exercise any potential deadlocks/races
+  // in the threading code.
+  for (int i = 0; i < 1000; ++i) {
+    SCOPED_TRACE(i);
+    RenamableFileBackend backend(logevent, false);
+    auto file = backend.RequestFile("test.log", 1024);
+    ASSERT_EQ(file->OpenForWrite(), WriteCode::kOk);
+    for (int i = 0; i < 1000; ++i) {
+      auto result = Write(file.get(), "testing");
+      EXPECT_EQ(result.code, WriteCode::kOk);
+      EXPECT_EQ(result.messages_written, 1);
+    }
+    EXPECT_EQ(file->Close(), WriteCode::kOk);
+    EXPECT_TRUE(std::filesystem::exists(logevent + "test.log"));
+    EXPECT_EQ(7000, std::filesystem::file_size(logevent + "test.log"));
+    std::filesystem::remove(logevent + "test.log");
+  }
+}
+
+TEST(LogBackendTest, OutOfSpaceTest) {
+  const std::string logevent = TestTmpDir() + "/logevent/";
+  // Test this a bunch of times to try to exercise any potential deadlocks/races
+  // in the threading code.
+  for (int i = 0; i < 1000; ++i) {
+    SCOPED_TRACE(i);
+    RenamableFileBackend backend(logevent, false);
+    auto file = backend.RequestFile("test.log", 1024);
+    BufferedFileHandler *file_handler =
+        dynamic_cast<BufferedFileHandler *>(file.get());
+    ASSERT_EQ(file->OpenForWrite(), WriteCode::kOk);
+    std::array<char, 700> buffer;
+    for (size_t j = 0; j < buffer.size(); ++j) {
+      buffer[j] = j;
+    }
+    for (int i = 0; i < 100; ++i) {
+      auto result = Write(file.get(), {buffer.data(), buffer.size()});
+      EXPECT_EQ(result.code, WriteCode::kOk);
+      EXPECT_EQ(result.messages_written, 1);
+    }
+    // Force the LogBackend to pretend that it ran out of space (note that this
+    // does not directly stop it from writing to disk, and so is not a perfect
+    // simulation of actually running out of space).
+    // Trigger this in a separate thread so that we exercise multiple
+    // code-paths.
+    std::thread out_of_space_trigger([&file_handler]() {
+      std::unique_lock lock(file_handler->buffer_index_mutex_);
+      file_handler->ran_out_of_space_in_thread_ = true;
+    });
+    // Write a bunch of times, and force the signalling thread to join partway
+    // through so that we guarantee a trigger.
+    bool got_out_of_space = false;
+    for (int i = 0; i < 100; ++i) {
+      if (i == 50) {
+        out_of_space_trigger.join();
+      }
+      if (Write(file.get(), {buffer.data(), buffer.size()}).code ==
+          WriteCode::kOutOfSpace) {
+        got_out_of_space = true;
+      }
+    }
+    EXPECT_TRUE(got_out_of_space);
+    std::filesystem::remove(logevent + "test.log");
+  }
+}
+
 TEST(LogBackendTest, CreateFileMassiveWrite) {
   const std::string logevent = TestTmpDir() + "/logevent/";
   RenamableFileBackend backend(logevent, false);
@@ -128,6 +195,34 @@ TEST(LogBackendTest, CreateFileMassiveWrite) {
   ASSERT_TRUE(
       dynamic_cast<FileHandler *>(file.get())->encountered_incomplete_write());
   std::filesystem::remove(logevent + "test.log");
+}
+
+TEST(LogBackendTest, CreateAsyncFileLargeWrites) {
+  const std::string logevent = TestTmpDir() + "/logevent/";
+  RenamableFileBackend backend(logevent, false);
+  auto file = backend.RequestFile("test.log", 1024);
+  ASSERT_EQ(file->OpenForWrite(), WriteCode::kOk);
+  std::array<char, 700> buffer;
+  for (size_t i = 0; i < buffer.size(); ++i) {
+    buffer[i] = i;
+  }
+  for (int i = 0; i < 1000; ++i) {
+    auto result = Write(file.get(), {buffer.data(), buffer.size()});
+    EXPECT_EQ(result.code, WriteCode::kOk);
+    EXPECT_EQ(result.messages_written, 1);
+  }
+  EXPECT_EQ(file->Close(), WriteCode::kOk);
+  EXPECT_TRUE(std::filesystem::exists(logevent + "test.log"));
+  EXPECT_EQ(700'000, std::filesystem::file_size(logevent + "test.log"));
+  std::string file_contents =
+      aos::util::ReadFileToStringOrDie(logevent + "test.log");
+  while (!file_contents.empty()) {
+    for (size_t i = 0; i < buffer.size(); ++i) {
+      SCOPED_TRACE(i);
+      ASSERT_EQ(file_contents[i], buffer[i]);
+    }
+    file_contents = file_contents.substr(buffer.size());
+  }
 }
 
 TEST(LogBackendTest, UseTempRenamableFile) {
@@ -218,7 +313,7 @@ TEST(LogBackendTest, UseTestAndRenameBaseAfterWrite) {
   EXPECT_TRUE(std::filesystem::exists(renamed + "test.log"));
 }
 
-TEST(QueueAlignmentTest, Cases) {
+TEST(QueueAlignmentDeathTest, Cases) {
   QueueAligner aligner;
 
   // Get a 512-byte-aligned pointer to a buffer. That buffer needs to be at
