@@ -2,6 +2,7 @@
 
 #include <filesystem>
 
+#include "absl/flags/flag.h"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
@@ -38,7 +39,8 @@ using aos::testing::MessageCounter;
 constexpr std::string_view kSingleConfigSha256(
     "954d6feb2421285836228eb55763e5e18b624456bb43359f48db8b48fc4b5a54");
 
-class LoggerTest : public ::testing::Test {
+// Parameterize on the memory buffer size.
+class LoggerTest : public ::testing::TestWithParam<double> {
  public:
   LoggerTest()
       : config_(aos::configuration::ReadConfig(
@@ -55,6 +57,19 @@ class LoggerTest : public ::testing::Test {
            "update it to match pingpong_config.json.";
   }
 
+  void StartLoggingOnRun(aos::EventLoop *event_loop, Logger *logger,
+                         std::string base_name) {
+    event_loop->OnRun([event_loop, logger, base_name]() {
+      std::unique_ptr<MultiNodeFilesLogNamer> namer =
+          std::make_unique<MultiNodeFilesLogNamer>(
+              base_name, event_loop->configuration(), event_loop,
+              event_loop->node());
+      namer->set_memory_buffer_duration(
+          std::chrono::nanoseconds(static_cast<size_t>(GetParam() * 1e9)));
+      logger->StartLogging(std::move(namer));
+    });
+  }
+
   // Config and factory.
   aos::FlatbufferDetachedBuffer<aos::Configuration> config_;
   SimulatedEventLoopFactory event_loop_factory_;
@@ -68,11 +83,11 @@ class LoggerTest : public ::testing::Test {
   Pong pong_;
 };
 
-using LoggerDeathTest = LoggerTest;
+typedef LoggerTest LoggerDeathTest;
 
 // Tests that we can startup at all.  This confirms that the channels are all in
 // the config.
-TEST_F(LoggerTest, Starts) {
+TEST_P(LoggerTest, Starts) {
   const ::std::string tmpdir = aos::testing::TestTmpDir();
   const ::std::string base_name = tmpdir + "/logfile";
   const ::std::string config =
@@ -92,7 +107,7 @@ TEST_F(LoggerTest, Starts) {
     Logger logger(logger_event_loop.get());
     logger.set_separate_config(false);
     logger.set_polling_period(std::chrono::milliseconds(100));
-    logger.StartLoggingOnRun(base_name);
+    StartLoggingOnRun(logger_event_loop.get(), &logger, base_name);
     event_loop_factory_.RunFor(chrono::milliseconds(20000));
   }
 
@@ -135,7 +150,7 @@ TEST_F(LoggerTest, Starts) {
 }
 
 // Tests that we can mutate a message before sending
-TEST_F(LoggerTest, MutateCallback) {
+TEST_P(LoggerTest, MutateCallback) {
   const ::std::string tmpdir = aos::testing::TestTmpDir();
   const ::std::string base_name = tmpdir + "/logfile";
   const ::std::string config =
@@ -155,7 +170,7 @@ TEST_F(LoggerTest, MutateCallback) {
     Logger logger(logger_event_loop.get());
     logger.set_separate_config(false);
     logger.set_polling_period(std::chrono::milliseconds(100));
-    logger.StartLoggingOnRun(base_name);
+    StartLoggingOnRun(logger_event_loop.get(), &logger, base_name);
     event_loop_factory_.RunFor(chrono::milliseconds(20000));
   }
 
@@ -203,7 +218,7 @@ TEST_F(LoggerTest, MutateCallback) {
 
 // Tests that if the logger falls behind then it calls the provided exit handler
 // and that an error code gets returned on the EventLoopFactory Run().
-TEST_F(LoggerTest, ExitOnFallBehind) {
+TEST_P(LoggerTest, ExitOnFallBehind) {
   const ::std::string tmpdir = aos::testing::TestTmpDir();
   const ::std::string base_name = tmpdir + "/logfile";
   const ::std::string config =
@@ -242,7 +257,7 @@ TEST_F(LoggerTest, ExitOnFallBehind) {
 
 // Tests that if the logger falls behind with no exit handler provided then it
 // crashes.
-TEST_F(LoggerDeathTest, CrashOnFallBehind) {
+TEST_P(LoggerDeathTest, CrashOnFallBehind) {
   const ::std::string tmpdir = aos::testing::TestTmpDir();
   const ::std::string base_name = tmpdir + "/logfile";
   const ::std::string config =
@@ -270,7 +285,7 @@ TEST_F(LoggerDeathTest, CrashOnFallBehind) {
 }
 
 // Tests calling StartLogging twice.
-TEST_F(LoggerDeathTest, ExtraStart) {
+TEST_P(LoggerDeathTest, ExtraStart) {
   const ::std::string tmpdir = aos::testing::TestTmpDir();
   const ::std::string base_name1 = tmpdir + "/logfile1";
   const ::std::string config1 =
@@ -309,7 +324,7 @@ TEST_F(LoggerDeathTest, ExtraStart) {
 }
 
 // Tests that we die if the replayer attempts to send on a logged channel.
-TEST_F(LoggerDeathTest, DieOnDuplicateReplayChannels) {
+TEST_P(LoggerDeathTest, DieOnDuplicateReplayChannels) {
   aos::FlatbufferDetachedBuffer<aos::Configuration> config =
       aos::configuration::ReadConfig(
           ArtifactPath("aos/testing/ping_pong/pingpong_config.json"));
@@ -332,7 +347,7 @@ TEST_F(LoggerDeathTest, DieOnDuplicateReplayChannels) {
     Logger logger(logger_event_loop.get());
     logger.set_separate_config(false);
     logger.set_polling_period(std::chrono::milliseconds(100));
-    logger.StartLoggingOnRun(base_name);
+    StartLoggingOnRun(logger_event_loop.get(), &logger, base_name);
 
     event_loop_factory.RunFor(chrono::seconds(2));
   }
@@ -349,7 +364,7 @@ TEST_F(LoggerDeathTest, DieOnDuplicateReplayChannels) {
 }
 
 // Tests calling StopLogging twice.
-TEST_F(LoggerDeathTest, ExtraStop) {
+TEST_P(LoggerDeathTest, ExtraStop) {
   const ::std::string tmpdir = aos::testing::TestTmpDir();
   const ::std::string base_name = tmpdir + "/logfile";
   const ::std::string config =
@@ -383,7 +398,7 @@ TEST_F(LoggerDeathTest, ExtraStop) {
 }
 
 // Tests that we can startup twice.
-TEST_F(LoggerTest, StartsTwice) {
+TEST_P(LoggerTest, StartsTwice) {
   const ::std::string tmpdir = aos::testing::TestTmpDir();
   const ::std::string base_name1 = tmpdir + "/logfile1";
   const ::std::string config1 =
@@ -454,7 +469,7 @@ TEST_F(LoggerTest, StartsTwice) {
 }
 
 // Tests that we can read and write rotated log files.
-TEST_F(LoggerTest, RotatedLogFile) {
+TEST_P(LoggerTest, RotatedLogFile) {
   const ::std::string tmpdir = aos::testing::TestTmpDir();
   const ::std::string base_name = tmpdir + "/logfile";
   const ::std::string config =
@@ -476,7 +491,7 @@ TEST_F(LoggerTest, RotatedLogFile) {
     Logger logger(logger_event_loop.get());
     logger.set_separate_config(false);
     logger.set_polling_period(std::chrono::milliseconds(100));
-    logger.StartLoggingOnRun(base_name);
+    StartLoggingOnRun(logger_event_loop.get(), &logger, base_name);
     event_loop_factory_.RunFor(chrono::milliseconds(10000));
     logger.Rotate();
     event_loop_factory_.RunFor(chrono::milliseconds(10000));
@@ -538,12 +553,12 @@ TEST_F(LoggerTest, RotatedLogFile) {
 }
 
 // Tests that a large number of messages per second doesn't overwhelm writev.
-TEST_F(LoggerTest, ManyMessages) {
+TEST_P(LoggerTest, ManyMessages) {
   const ::std::string tmpdir = aos::testing::TestTmpDir();
   const ::std::string base_name = tmpdir + "/logfile";
   const ::std::string config =
       absl::StrCat(base_name, "_", kSingleConfigSha256, ".bfbs");
-  const ::std::string logfile = base_name + ".part0.bfbs";
+  const ::std::string logfile = base_name + "_data.part0.bfbs";
   // Remove the log file.
   unlink(config.c_str());
   unlink(logfile.c_str());
@@ -578,7 +593,7 @@ TEST_F(LoggerTest, ManyMessages) {
     Logger logger(logger_event_loop.get());
     logger.set_separate_config(false);
     logger.set_polling_period(std::chrono::milliseconds(100));
-    logger.StartLoggingOnRun(base_name);
+    StartLoggingOnRun(logger_event_loop.get(), &logger, base_name);
 
     event_loop_factory_.RunFor(chrono::milliseconds(1000));
   }
@@ -739,18 +754,19 @@ void VerifyProfilingData(const std::filesystem::path &profiling_path) {
 }
 
 // Tests logging many messages with LZMA compression.
-TEST_F(LoggerTest, ManyMessagesLzmaWithProfiling) {
+TEST_P(LoggerTest, ManyMessagesLzmaWithProfiling) {
   const std::string tmpdir = aos::testing::TestTmpDir();
   const std::string base_name = tmpdir + "/lzma_logfile";
   const std::string config_sha256 =
       absl::StrCat(base_name, "_", kSingleConfigSha256, ".bfbs");
-  const std::string logfile = absl::StrCat(base_name, ".part0.xz");
+  const std::string logfile = absl::StrCat(base_name, "_data.part0.xz");
   const std::string profiling_path =
       absl::StrCat(tmpdir, "/encoding_profile.csv");
 
   // Clean up any previous test artifacts.
   unlink(config_sha256.c_str());
   unlink(logfile.c_str());
+  unlink((logfile + ".xz").c_str());
 
   LOG(INFO) << "Logging data to " << logfile;
   ping_.set_quiet(true);
@@ -807,5 +823,11 @@ TEST_F(LoggerTest, ManyMessagesLzmaWithProfiling) {
   VerifyProfilingData(profiling_path);
 #endif
 }
+
+INSTANTIATE_TEST_SUITE_P(BufferSweep, LoggerTest,
+                         ::testing::Values(0.0, 0.01, 1.0, 1000.0));
+// Death tests can't deal with threads, so don't test non-zero memory buffer
+// lengths.
+INSTANTIATE_TEST_SUITE_P(ZeroBuffer, LoggerDeathTest, ::testing::Values(0.0));
 
 }  // namespace aos::logger::testing

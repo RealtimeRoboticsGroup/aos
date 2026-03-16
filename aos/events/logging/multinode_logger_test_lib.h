@@ -23,10 +23,12 @@ class LogReader;
 
 namespace aos::logger::testing {
 
-struct CompressionParams {
+struct FileEncodingParams {
   std::string_view extension;
   std::function<std::unique_ptr<DataEncoder>(size_t max_message_size)>
       encoder_factory;
+  // Value to provide to set_memory_buffer_duration().
+  std::chrono::seconds log_memory_buffer;
 };
 
 enum class FileStrategy {
@@ -71,7 +73,7 @@ struct LoggerState {
   const Configuration *configuration;
   const Node *node;
   MultiNodeFilesLogNamer *log_namer;
-  CompressionParams params;
+  FileEncodingParams params;
   FileStrategy file_strategy;
   aos::TimerHandler *start_timer;
 
@@ -93,14 +95,14 @@ constexpr std::string_view kReloggedSplitConfigSha1() {
 
 LoggerState MakeLoggerState(NodeEventLoopFactory *node,
                             SimulatedEventLoopFactory *factory,
-                            CompressionParams params,
+                            FileEncodingParams params,
                             FileStrategy file_strategy,
                             const Configuration *configuration = nullptr);
 std::vector<std::vector<std::string>> ToLogReaderVector(
     const std::vector<LogFile> &log_files);
-std::vector<CompressionParams> SupportedCompressionAlgorithms();
+std::vector<FileEncodingParams> SupportedCompressionAlgorithms();
 std::ostream &operator<<(std::ostream &ostream,
-                         const CompressionParams &params);
+                         const FileEncodingParams &params);
 std::ostream &operator<<(std::ostream &ostream, const ConfigParams &params);
 std::vector<std::pair<std::vector<realtime_clock::time_point>,
                       std::vector<realtime_clock::time_point>>>
@@ -136,7 +138,7 @@ bool AllRebootPartsMatchOutOfOrderDuration(
         std::chrono::milliseconds(300));
 
 class MultinodeLoggerTest : public ::testing::TestWithParam<
-                                std::tuple<ConfigParams, CompressionParams>> {
+                                std::tuple<ConfigParams, FileEncodingParams>> {
  public:
   MultinodeLoggerTest();
 

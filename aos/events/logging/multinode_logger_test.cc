@@ -22,6 +22,17 @@ using aos::message_bridge::RemoteMessage;
 using aos::testing::ArtifactPath;
 using aos::testing::MessageCounter;
 
+std::vector<FileEncodingParams> NonDeathTestCompressionParams() {
+  std::vector<FileEncodingParams> params = SupportedCompressionAlgorithms();
+  size_t num_supported_params = params.size();
+  for (size_t i = 0; i < num_supported_params; ++i) {
+    FileEncodingParams new_params = params[i];
+    new_params.log_memory_buffer = std::chrono::seconds(1);
+    params.emplace_back(new_params);
+  }
+  return params;
+}
+
 INSTANTIATE_TEST_SUITE_P(
     All, MultinodeLoggerTest,
     ::testing::Combine(
@@ -50,7 +61,7 @@ INSTANTIATE_TEST_SUITE_P(
                          kSplitConfigSha1(), kReloggedSplitConfigSha1(),
                          FileStrategy::kCombine,
                          ForceTimestampBuffering::kAutoBuffer}),
-        ::testing::ValuesIn(SupportedCompressionAlgorithms())));
+        ::testing::ValuesIn(NonDeathTestCompressionParams())));
 
 INSTANTIATE_TEST_SUITE_P(
     All, MultinodeLoggerDeathTest,
@@ -838,6 +849,8 @@ TEST_P(MultinodeLoggerTest, OnlyDoBeforeSendCallbackOnSenderNode) {
 
 // MultinodeLoggerTest that tests the mutate callback can fully replace the
 // message.
+// TODO(james): Did I make this flaky with threading stuff? Failing in at least
+// /3 variant.
 TEST_P(MultinodeLoggerTest, MultiNodeMutateCallbackReplacement) {
   time_converter_.StartEqual();
   std::vector<std::string> actual_filenames;
@@ -3387,7 +3400,7 @@ TEST_P(MultinodeLoggerTest, OneDirectionWithPositiveSlope) {
 
 // Tests that we explode if someone passes in a part file twice with a better
 // error than an out of order error.
-TEST_P(MultinodeLoggerTest, DuplicateLogFiles) {
+TEST_P(MultinodeLoggerDeathTest, DuplicateLogFiles) {
   time_converter_.AddMonotonic(
       {BootTimestamp::epoch(), BootTimestamp::epoch() + chrono::seconds(1000)});
 
@@ -3413,7 +3426,7 @@ TEST_P(MultinodeLoggerTest, DuplicateLogFiles) {
 }
 
 // Tests that we explode if someone loses a part out of the middle of a log.
-TEST_P(MultinodeLoggerTest, MissingPartsFromMiddle) {
+TEST_P(MultinodeLoggerDeathTest, MissingPartsFromMiddle) {
   if (file_strategy() == FileStrategy::kCombine) {
     GTEST_SKIP() << "We don't need to test the combined file writer this deep.";
   }

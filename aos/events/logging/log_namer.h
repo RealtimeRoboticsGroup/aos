@@ -14,6 +14,7 @@
 
 #include "aos/events/logging/logfile_utils.h"
 #include "aos/events/logging/logger_generated.h"
+#include "aos/ipc_lib/memory_estimation.h"
 #include "aos/uuid.h"
 
 namespace aos::logger {
@@ -38,7 +39,13 @@ class DataWriter {
   DataWriter(LogNamer *log_namer, const Node *node, const Node *logger_node,
              std::function<void(DataWriter *)> reopen,
              std::function<void(DataWriter *)> close, size_t max_message_size,
+             size_t initial_memory_buffer,
              std::initializer_list<StoredDataType> types);
+
+  void AddToMessageMemoryBuffer(size_t additional_buffer) {
+    memory_buffer_size_ += additional_buffer;
+  }
+  size_t memory_buffer_size() const { return memory_buffer_size_; }
 
   void UpdateMaxMessageSize(size_t new_size) {
     if (new_size > max_message_size_) {
@@ -201,6 +208,7 @@ class DataWriter {
   std::vector<State> state_;
 
   size_t max_message_size_;
+  size_t memory_buffer_size_;
 
   // Each data writer logs the channels for that node, i.e.
   // each data writer writes one file. We may encounter messages which
@@ -363,6 +371,14 @@ class LogNamer {
       std::chrono::nanoseconds max_out_of_order_duration,
       const std::array<bool, static_cast<size_t>(StoredDataType::MAX) + 1>
           &allowed_data_types);
+  size_t MemoryBufferSizeForChannel(const aos::Channel *channel) {
+    return ipc_lib::LogMemoryBufferSizeForChannel(channel,
+                                                  memory_buffer_duration_);
+  }
+  size_t MemoryBufferSizeForTimestampsForChannel(const aos::Channel *channel) {
+    return ipc_lib::LogMemoryBufferSizeForChannelTimestamps(
+        channel, memory_buffer_duration_);
+  }
 
   EventLoop *event_loop_;
   const Configuration *const configuration_;
@@ -562,9 +578,15 @@ class MultiNodeLogNamer : public LogNamer {
 
   // Returns the data writer or timestamp writer if we find one for the provided
   // node.
-  DataWriter *FindNodeDataWriter(const Node *node, size_t max_message_size);
-  DataWriter *FindNodeTimestampWriter(const Node *node,
-                                      size_t max_message_size);
+  // Note that when doing so the max_message_size and memory_buffer_duration
+  // will be accounted for in the DataWriter, meaning that these methods cannot
+  // be called multiple times without side-effects.
+  DataWriter *FindNodeDataWriterAndAddChannel(const Node *node,
+                                              size_t max_message_size,
+                                              size_t memory_buffer_allocation);
+  DataWriter *FindNodeTimestampWriterAndAddChannel(
+      const Node *node, size_t max_message_size,
+      size_t memory_buffer_allocation);
 
   // Saves the data writer or timestamp writer for the provided node.
   DataWriter *AddNodeDataWriter(const Node *node, DataWriter &&writer);

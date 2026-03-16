@@ -1,6 +1,7 @@
 #include "aos/events/logging/multinode_logger_test_lib.h"
 
 #include "absl/flags/flag.h"
+#include "absl/flags/reflection.h"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 
@@ -21,7 +22,7 @@ using aos::testing::ArtifactPath;
 
 LoggerState MakeLoggerState(NodeEventLoopFactory *node,
                             SimulatedEventLoopFactory *factory,
-                            CompressionParams params,
+                            FileEncodingParams params,
                             FileStrategy file_strategy,
                             const Configuration *configuration) {
   if (configuration == nullptr) {
@@ -47,6 +48,7 @@ std::unique_ptr<MultiNodeFilesLogNamer> LoggerState::MakeLogNamer(
                 logfile_base, configuration, event_loop.get(), node);
   namer->set_extension(params.extension);
   namer->set_encoder_factory(params.encoder_factory);
+  namer->set_memory_buffer_duration(params.log_memory_buffer);
   return namer;
 }
 
@@ -405,27 +407,31 @@ std::vector<std::vector<std::string>> ToLogReaderVector(
   return result;
 }
 
-std::vector<CompressionParams> SupportedCompressionAlgorithms() {
+std::vector<FileEncodingParams> SupportedCompressionAlgorithms() {
   return {{"",
            [](size_t max_message_size) {
              return std::make_unique<DummyEncoder>(max_message_size);
-           }},
+           },
+           std::chrono::seconds(0)},
           {SnappyDecoder::kExtension,
            [](size_t max_message_size) {
              return std::make_unique<SnappyEncoder>(max_message_size, 32768);
-           }},
+           },
+           std::chrono::seconds(0)},
 #ifdef LZMA
           {LzmaDecoder::kExtension,
            [](size_t max_message_size) {
              return std::make_unique<LzmaEncoder>(max_message_size, 3);
-           }}
+           },
+           std::chrono::seconds(0)}
 #endif  // LZMA
   };
 }
 
 std::ostream &operator<<(std::ostream &ostream,
-                         const CompressionParams &params) {
-  ostream << "\"" << params.extension << "\"";
+                         const FileEncodingParams &params) {
+  ostream << "{ extension: \"" << params.extension << "\", log_memory_buffer: "
+          << aos::time::DurationInSeconds(params.log_memory_buffer) << " }";
   return ostream;
 }
 

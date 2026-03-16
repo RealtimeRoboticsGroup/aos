@@ -27,7 +27,7 @@ DataWriter::DataWriter(LogNamer *log_namer, const Node *node,
                        const Node *logger_node,
                        std::function<void(DataWriter *)> reopen,
                        std::function<void(DataWriter *)> close,
-                       size_t max_message_size,
+                       size_t max_message_size, size_t initial_memory_buffer,
                        std::initializer_list<StoredDataType> types)
     : node_(node),
       node_index_(configuration::GetNodeIndex(log_namer->configuration_, node)),
@@ -37,6 +37,7 @@ DataWriter::DataWriter(LogNamer *log_namer, const Node *node,
       reopen_(std::move(reopen)),
       close_(std::move(close)),
       max_message_size_(max_message_size),
+      memory_buffer_size_(initial_memory_buffer),
       max_out_of_order_duration_(log_namer_->base_max_out_of_order_duration()) {
   allowed_data_types_.fill(false);
 
@@ -791,7 +792,8 @@ void MultiNodeLogNamer::WriteConfiguration(
   }
 
   const std::string filename = absl::StrCat(config_sha256, ".bfbs", extension_);
-  auto file_handle = log_backend_->RequestFile(filename);
+  auto file_handle =
+      log_backend_->RequestFile(filename, /*memory_buffer_size=*/0);
   std::unique_ptr<DetachedBufferWriter> writer =
       std::make_unique<DetachedBufferWriter>(
           std::move(file_handle), encoder_factory_(header->span().size()));
@@ -812,25 +814,29 @@ void MultiNodeLogNamer::NoticeNode(const Node *source_node) {
   }
 }
 
-DataWriter *MultiNodeLogNamer::FindNodeDataWriter(const Node *source_node,
-                                                  size_t max_message_size) {
+DataWriter *MultiNodeLogNamer::FindNodeDataWriterAndAddChannel(
+    const Node *source_node, size_t max_message_size,
+    size_t memory_buffer_allocation) {
   NoticeNode(source_node);
 
   auto it = node_data_writers_.find(source_node);
   if (it != node_data_writers_.end()) {
     it->second.UpdateMaxMessageSize(max_message_size);
+    it->second.AddToMessageMemoryBuffer(memory_buffer_allocation);
     return &(it->second);
   }
   return nullptr;
 }
 
-DataWriter *MultiNodeLogNamer::FindNodeTimestampWriter(
-    const Node *source_node, size_t max_message_size) {
+DataWriter *MultiNodeLogNamer::FindNodeTimestampWriterAndAddChannel(
+    const Node *source_node, size_t max_message_size,
+    size_t memory_buffer_allocation) {
   NoticeNode(source_node);
 
   auto it = node_timestamp_writers_.find(source_node);
   if (it != node_timestamp_writers_.end()) {
     it->second.UpdateMaxMessageSize(max_message_size);
+    it->second.AddToMessageMemoryBuffer(memory_buffer_allocation);
     return &(it->second);
   }
   return nullptr;
@@ -878,9 +884,12 @@ DataWriter *MultiNodeLogNamer::MakeWriter(const Channel *channel) {
 
   // If we already have a data writer for the node, then use the same writer for
   // all channels of that node.
-  DataWriter *result = FindNodeDataWriter(
+  DataWriter *result = FindNodeDataWriterAndAddChannel(
       source_node,
-      PackMessageSize(LogType::kLogRemoteMessage, channel->max_size()));
+      PackMessageSize(LogType::kLogRemoteMessage, channel->max_size()),
+      // TODO(james): It would be a bit more precise to use PackMessageSize, but
+      // in practice shouldn't matter.
+      MemoryBufferSizeForChannel(channel));
   if (result != nullptr) {
     return result;
   }
@@ -898,6 +907,7 @@ DataWriter *MultiNodeLogNamer::MakeWriter(const Channel *channel) {
                               },
                               PackMessageSize(LogType::kLogRemoteMessage,
                                               channel->max_size()),
+                              MemoryBufferSizeForChannel(channel),
                               {StoredDataType::DATA}});
 }
 
@@ -912,7 +922,9 @@ DataWriter *MultiNodeLogNamer::MakeForwardedTimestampWriter(
 
   // If we have a remote timestamp writer for a particular node, use the same
   // writer for all remote timestamp channels of that node.
-  DataWriter *result = FindNodeTimestampWriter(node, PackRemoteMessageSize());
+  DataWriter *result = FindNodeTimestampWriterAndAddChannel(
+      node, PackRemoteMessageSize(),
+      MemoryBufferSizeForTimestampsForChannel(channel));
   if (result != nullptr) {
     return result;
   }
@@ -929,6 +941,7 @@ DataWriter *MultiNodeLogNamer::MakeForwardedTimestampWriter(
                          CloseWriter(data_writer->writer());
                        },
                        PackRemoteMessageSize(),
+                       MemoryBufferSizeForTimestampsForChannel(channel),
                        {StoredDataType::REMOTE_TIMESTAMPS}});
 }
 
@@ -943,8 +956,9 @@ DataWriter *MultiNodeLogNamer::MakeTimestampWriter(const Channel *channel) {
   }
 
   // There is only one of these.
-  DataWriter *result = FindNodeTimestampWriter(
-      this->node(), PackMessageSize(LogType::kLogDeliveryTimeOnly, 0));
+  DataWriter *result = FindNodeTimestampWriterAndAddChannel(
+      this->node(), PackMessageSize(LogType::kLogDeliveryTimeOnly, 0),
+      MemoryBufferSizeForTimestampsForChannel(channel));
   if (result != nullptr) {
     return result;
   }
@@ -960,6 +974,7 @@ DataWriter *MultiNodeLogNamer::MakeTimestampWriter(const Channel *channel) {
                           CloseWriter(data_writer->writer());
                         },
                         PackMessageSize(LogType::kLogDeliveryTimeOnly, 0),
+                        MemoryBufferSizeForTimestampsForChannel(channel),
                         {StoredDataType::TIMESTAMPS}});
 }
 
@@ -1054,7 +1069,8 @@ void MultiNodeLogNamer::CreateBufferWriter(std::string_view path,
 
   const std::string filename(path);
   data_writer->set_writer(std::make_unique<DetachedBufferWriter>(
-      log_backend_->RequestFile(filename), encoder_factory_(max_message_size)));
+      log_backend_->RequestFile(filename, data_writer->memory_buffer_size()),
+      encoder_factory_(max_message_size)));
   if (!data_writer->writer()->ran_out_of_space()) {
     all_filenames_.emplace_back(path);
   }
@@ -1113,9 +1129,9 @@ DataWriter *MinimalFileMultiNodeLogNamer::MakeWriter(const Channel *channel) {
   if (this->node() == source_node) {
     // If we already have a data writer for the node, then use the same writer
     // for all channels of that node.
-    DataWriter *result = FindNodeDataWriter(
-        source_node,
-        PackMessageSize(LogType::kLogMessage, channel->max_size()));
+    DataWriter *result = FindNodeDataWriterAndAddChannel(
+        source_node, PackMessageSize(LogType::kLogMessage, channel->max_size()),
+        MemoryBufferSizeForChannel(channel));
     if (result != nullptr) {
       return result;
     }
@@ -1132,13 +1148,15 @@ DataWriter *MinimalFileMultiNodeLogNamer::MakeWriter(const Channel *channel) {
                      CloseWriter(data_writer->writer());
                    },
                    PackMessageSize(LogType::kLogMessage, channel->max_size()),
+                   MemoryBufferSizeForChannel(channel),
                    {StoredDataType::DATA, StoredDataType::TIMESTAMPS}});
   } else {
     // If we already have a data writer for the node, then use the same writer
     // for all channels of that node.
-    DataWriter *result = FindNodeDataWriter(
+    DataWriter *result = FindNodeDataWriterAndAddChannel(
         source_node,
-        PackMessageSize(LogType::kLogRemoteMessage, channel->max_size()));
+        PackMessageSize(LogType::kLogRemoteMessage, channel->max_size()),
+        MemoryBufferSizeForChannel(channel));
     if (result != nullptr) {
       return result;
     }
@@ -1156,6 +1174,7 @@ DataWriter *MinimalFileMultiNodeLogNamer::MakeWriter(const Channel *channel) {
               CloseWriter(data_writer->writer());
             },
             PackMessageSize(LogType::kLogRemoteMessage, channel->max_size()),
+            MemoryBufferSizeForChannel(channel),
             {StoredDataType::DATA, StoredDataType::REMOTE_TIMESTAMPS}});
   }
 }
@@ -1172,8 +1191,9 @@ DataWriter *MinimalFileMultiNodeLogNamer::MakeTimestampWriter(
   }
 
   // There is only one of these.
-  DataWriter *result = FindNodeDataWriter(
-      this->node(), PackMessageSize(LogType::kLogDeliveryTimeOnly, 0));
+  DataWriter *result = FindNodeDataWriterAndAddChannel(
+      this->node(), PackMessageSize(LogType::kLogDeliveryTimeOnly, 0),
+      MemoryBufferSizeForTimestampsForChannel(channel));
   if (result != nullptr) {
     return result;
   }
@@ -1189,6 +1209,7 @@ DataWriter *MinimalFileMultiNodeLogNamer::MakeTimestampWriter(
                           CloseWriter(data_writer->writer());
                         },
                         PackMessageSize(LogType::kLogDeliveryTimeOnly, 0),
+                        MemoryBufferSizeForTimestampsForChannel(channel),
                         {StoredDataType::DATA, StoredDataType::TIMESTAMPS}});
 }
 
@@ -1203,7 +1224,9 @@ DataWriter *MinimalFileMultiNodeLogNamer::MakeForwardedTimestampWriter(
 
   // If we have a remote timestamp writer for a particular node, use the same
   // writer for all remote timestamp channels of that node.
-  DataWriter *result = FindNodeDataWriter(node, PackRemoteMessageSize());
+  DataWriter *result = FindNodeDataWriterAndAddChannel(
+      node, PackRemoteMessageSize(),
+      MemoryBufferSizeForTimestampsForChannel(channel));
   if (result != nullptr) {
     return result;
   }
@@ -1221,6 +1244,7 @@ DataWriter *MinimalFileMultiNodeLogNamer::MakeForwardedTimestampWriter(
                    CloseWriter(data_writer->writer());
                  },
                  PackRemoteMessageSize(),
+                 MemoryBufferSizeForTimestampsForChannel(channel),
                  {StoredDataType::DATA, StoredDataType::REMOTE_TIMESTAMPS}});
 }
 
