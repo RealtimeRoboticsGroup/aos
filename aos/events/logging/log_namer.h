@@ -328,6 +328,18 @@ class LogNamer {
         header_.message().max_out_of_order_duration());
   }
 
+  // Configures how much in-memory buffer to use when logging, in seconds worth
+  // of data. Uses the statically-configured message sizes & rates from the aos
+  // config to allocate enough memory to guarantee that we can hold at least
+  // this many seconds worth of data.
+  void set_memory_buffer_duration(
+      std::chrono::nanoseconds memory_buffer_duration) {
+    memory_buffer_duration_ = memory_buffer_duration;
+  }
+  std::chrono::nanoseconds memory_buffer_duration() const {
+    return memory_buffer_duration_;
+  };
+
  protected:
   // Structure with state per node about times and such.
   struct NodeState {
@@ -370,6 +382,8 @@ class LogNamer {
 
   aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader> header_ =
       aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader>::Empty();
+
+  std::chrono::nanoseconds memory_buffer_duration_{0};
 };
 
 // Log namer which uses a config to name a bunch of files.

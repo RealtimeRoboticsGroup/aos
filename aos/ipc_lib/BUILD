@@ -533,5 +533,17 @@ cc_library(
         ":lockless_queue",
         ":memory_mapped_queue",
         "//aos:configuration",
+        "//aos/events/logging:logfile_utils",
+    ],
+)
+
+cc_test(
+    name = "memory_estimation_test",
+    srcs = ["memory_estimation_test.cc"],
+    deps = [
+        ":memory_estimation",
+        "//aos/testing:googletest",
+        "@aos//aos:json_to_flatbuffer",
+        "@com_google_googletest//:gtest",
     ],
 )
