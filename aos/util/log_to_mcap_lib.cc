@@ -52,7 +52,7 @@ ABSL_FLAG(bool, compress, true, "Whether to use LZ4 compression in MCAP file.");
 ABSL_FLAG(bool, include_clocks, true,
           "Whether to add a /clocks channel that publishes all nodes' clock "
           "offsets.");
-ABSL_FLAG(aos::util::FetchMode, fetch, aos::util::FetchMode::kNone,
+ABSL_FLAG(aos::util::FetchMode, fetch, aos::util::FetchMode::kRewrite,
           "Determines the fetch mode. Valid options are: \"none\", \"all\", "
           "and \"rewrite\". If set to \"none\", will not fetch any messages. "
           "If set to \"all\", *all* messages in the logfile will be included, "
