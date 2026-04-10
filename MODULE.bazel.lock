@@ -1154,7 +1154,7 @@
     "@@aspect_rules_ts+//ts:extensions.bzl%ext": {
       "general": {
         "bzlTransitiveDigest": "l0y/rFY9e6PRJzN9/6ytBRu/W8B64s5Nr/+xMuE47Qo=",
-        "usagesDigest": "f2BQppgg47PVyK5VQUyMUMc8EObSfNXLXviCpGuXDh4=",
+        "usagesDigest": "aOo0zhwCsXc3gOziQUHwigkb6eMskBnYLq+ficD1+DY=",
         "recordedFileInputs": {
           "@@//package.json": "22ea6786b1941d1ae192ff21d147a21e149c8e95bf67351c7278b789ebf431e6"
         },
