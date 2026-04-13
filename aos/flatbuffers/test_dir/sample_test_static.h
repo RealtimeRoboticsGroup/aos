@@ -657,7 +657,7 @@ class TestTableStatic : public ::aos::fbs::Table {
   // then populate/modify as desired.
   // The field must not be populated yet.
   ::aos::fbs::Vector<aos::fbs::testing::SubStruct, 3, true, 0> *add_vector_of_structs() {
-    ABSL_CHECK(!vector_of_structs_.has_value());
+    ABSL_CHECK(!vector_of_structs_.has_value()) << "Attempted to create an object for a field that is already populated";
     constexpr size_t kVtableIndex = 18;
     // If this object does not normally have its initial memory statically
     // allocated, allocate it now (this is used for zero-length vectors).
@@ -733,7 +733,7 @@ class TestTableStatic : public ::aos::fbs::Table {
   // then populate/modify as desired.
   // The field must not be populated yet.
   ::aos::fbs::Vector<::aos::fbs::String<0>, 0, false, 0> *add_unspecified_length_vector_of_strings() {
-    ABSL_CHECK(!unspecified_length_vector_of_strings_.has_value());
+    ABSL_CHECK(!unspecified_length_vector_of_strings_.has_value()) << "Attempted to create an object for a field that is already populated";
     constexpr size_t kVtableIndex = 28;
     // If this object does not normally have its initial memory statically
     // allocated, allocate it now (this is used for zero-length vectors).
@@ -809,7 +809,7 @@ class TestTableStatic : public ::aos::fbs::Table {
   // then populate/modify as desired.
   // The field must not be populated yet.
   ::aos::fbs::Vector<aos::fbs::testing::SubTableStatic, 3, false, 0> *add_vector_of_tables() {
-    ABSL_CHECK(!vector_of_tables_.has_value());
+    ABSL_CHECK(!vector_of_tables_.has_value()) << "Attempted to create an object for a field that is already populated";
     constexpr size_t kVtableIndex = 20;
     // If this object does not normally have its initial memory statically
     // allocated, allocate it now (this is used for zero-length vectors).
@@ -885,7 +885,7 @@ class TestTableStatic : public ::aos::fbs::Table {
   // then populate/modify as desired.
   // The field must not be populated yet.
   ::aos::fbs::Vector<int32_t, 3, true, 64> *add_vector_aligned() {
-    ABSL_CHECK(!vector_aligned_.has_value());
+    ABSL_CHECK(!vector_aligned_.has_value()) << "Attempted to create an object for a field that is already populated";
     constexpr size_t kVtableIndex = 16;
     // If this object does not normally have its initial memory statically
     // allocated, allocate it now (this is used for zero-length vectors).
@@ -961,7 +961,7 @@ class TestTableStatic : public ::aos::fbs::Table {
   // then populate/modify as desired.
   // The field must not be populated yet.
   ::aos::fbs::Vector<::aos::fbs::String<10>, 3, false, 0> *add_vector_of_strings() {
-    ABSL_CHECK(!vector_of_strings_.has_value());
+    ABSL_CHECK(!vector_of_strings_.has_value()) << "Attempted to create an object for a field that is already populated";
     constexpr size_t kVtableIndex = 10;
     // If this object does not normally have its initial memory statically
     // allocated, allocate it now (this is used for zero-length vectors).
@@ -1037,7 +1037,7 @@ class TestTableStatic : public ::aos::fbs::Table {
   // then populate/modify as desired.
   // The field must not be populated yet.
   ::aos::fbs::Vector<int32_t, 3, true, 0> *add_vector_of_scalars() {
-    ABSL_CHECK(!vector_of_scalars_.has_value());
+    ABSL_CHECK(!vector_of_scalars_.has_value()) << "Attempted to create an object for a field that is already populated";
     constexpr size_t kVtableIndex = 6;
     // If this object does not normally have its initial memory statically
     // allocated, allocate it now (this is used for zero-length vectors).
@@ -1113,7 +1113,7 @@ class TestTableStatic : public ::aos::fbs::Table {
   // then populate/modify as desired.
   // The field must not be populated yet.
   ::aos::fbs::String<0> *add_unspecified_length_string() {
-    ABSL_CHECK(!unspecified_length_string_.has_value());
+    ABSL_CHECK(!unspecified_length_string_.has_value()) << "Attempted to create an object for a field that is already populated";
     constexpr size_t kVtableIndex = 26;
     // If this object does not normally have its initial memory statically
     // allocated, allocate it now (this is used for zero-length vectors).
@@ -1189,7 +1189,7 @@ class TestTableStatic : public ::aos::fbs::Table {
   // then populate/modify as desired.
   // The field must not be populated yet.
   ::aos::fbs::Vector<uint8_t, 0, true, 0> *add_unspecified_length_vector() {
-    ABSL_CHECK(!unspecified_length_vector_.has_value());
+    ABSL_CHECK(!unspecified_length_vector_.has_value()) << "Attempted to create an object for a field that is already populated";
     constexpr size_t kVtableIndex = 24;
     // If this object does not normally have its initial memory statically
     // allocated, allocate it now (this is used for zero-length vectors).
@@ -1265,7 +1265,7 @@ class TestTableStatic : public ::aos::fbs::Table {
   // then populate/modify as desired.
   // The field must not be populated yet.
   aos::fbs::testing::included::IncludedTableStatic *add_included_table() {
-    ABSL_CHECK(!included_table_.has_value());
+    ABSL_CHECK(!included_table_.has_value()) << "Attempted to create an object for a field that is already populated";
     constexpr size_t kVtableIndex = 22;
     // If this object does not normally have its initial memory statically
     // allocated, allocate it now (this is used for zero-length vectors).
@@ -1341,7 +1341,7 @@ class TestTableStatic : public ::aos::fbs::Table {
   // then populate/modify as desired.
   // The field must not be populated yet.
   aos::fbs::testing::SubTableStatic *add_subtable() {
-    ABSL_CHECK(!subtable_.has_value());
+    ABSL_CHECK(!subtable_.has_value()) << "Attempted to create an object for a field that is already populated";
     constexpr size_t kVtableIndex = 14;
     // If this object does not normally have its initial memory statically
     // allocated, allocate it now (this is used for zero-length vectors).
@@ -1417,7 +1417,7 @@ class TestTableStatic : public ::aos::fbs::Table {
   // then populate/modify as desired.
   // The field must not be populated yet.
   ::aos::fbs::String<20> *add_string() {
-    ABSL_CHECK(!string_.has_value());
+    ABSL_CHECK(!string_.has_value()) << "Attempted to create an object for a field that is already populated";
     constexpr size_t kVtableIndex = 8;
     // If this object does not normally have its initial memory statically
     // allocated, allocate it now (this is used for zero-length vectors).

@@ -606,7 +606,7 @@ std::string MakeOffsetDataAccessors(const FieldData &field) {
   // then populate/modify as desired.
   // The field must not be populated yet.
   $1 *add_$0() {
-    ABSL_CHECK(!$2.has_value());
+    ABSL_CHECK(!$2.has_value()) << "Attempted to create an object for a field that is already populated";
     constexpr size_t kVtableIndex = $3;
     // If this object does not normally have its initial memory statically
     // allocated, allocate it now (this is used for zero-length vectors).
