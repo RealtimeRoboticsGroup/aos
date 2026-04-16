@@ -178,7 +178,7 @@ void DetachedBufferWriter::Close() {
   // encode duration for a single message.
   std::chrono::nanoseconds encode_duration = std::chrono::nanoseconds::zero();
   encoder_->Finish(&encode_duration);
-  WriteStats().UpdateEncodeDuration(encode_duration);
+  WriteStatistics()->UpdateEncodeDuration(encode_duration);
   while (encoder_->queue_size() > 0) {
     Flush(monotonic_clock::max_time);
   }

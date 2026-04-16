@@ -119,6 +119,7 @@ cc_library(
         ":buffer_encoder",
         ":file_operations",
         ":logfile_decoder_options",
+        ":logger_statistics",
         "//aos:gtest_prod",
         "//aos/time",
         "//aos/util:file",
@@ -1084,5 +1085,31 @@ py_test(
     deps = [
         ":plot_logger_profile",
         "@pip_deps//numpy",
+    ],
+)
+
+static_flatbuffer(
+    name = "logger_statistics_fbs",
+    srcs = ["logger_statistics.fbs"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "logger_statistics",
+    srcs = ["logger_statistics.cc"],
+    hdrs = ["logger_statistics.h"],
+    deps = [
+        ":logger_statistics_fbs",
+        "@com_google_absl//absl/log:die_if_null",
+    ],
+)
+
+cc_test(
+    name = "logger_statistics_test",
+    srcs = [":logger_statistics_test.cc"],
+    deps = [
+        ":logger_statistics",
+        "//aos:json_to_flatbuffer",
+        "//aos/testing:googletest",
     ],
 )

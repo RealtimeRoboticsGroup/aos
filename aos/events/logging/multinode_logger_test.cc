@@ -881,7 +881,7 @@ TEST_P(MultinodeLoggerTest, MultiNodeMutateCallbackReplacement) {
       "/test",
       [&pong_count, &data_ptr](aos::examples::Pong *pong,
                                const TimestampedMessage &) -> SharedSpan {
-        fbs::AlignedVectorAllocator allocator;
+        aos::fbs::AlignedVectorAllocator allocator;
         aos::fbs::Builder<aos::examples::PongStatic> pong_static(&allocator);
         CHECK(pong_static->FromFlatbuffer(*pong));
 
@@ -976,7 +976,7 @@ TEST_P(MultinodeLoggerTest, MultiNodeMutateCallbackDelete) {
       "/test",
       [&pong_count, &data_ptr](aos::examples::Pong *pong,
                                const TimestampedMessage &) -> SharedSpan {
-        fbs::AlignedVectorAllocator allocator;
+        aos::fbs::AlignedVectorAllocator allocator;
         aos::fbs::Builder<aos::examples::PongStatic> pong_static(&allocator);
         CHECK(pong_static->FromFlatbuffer(*pong));
 
@@ -1079,7 +1079,7 @@ TEST_P(MultinodeLoggerTest, MultiNodeMutateCallbackNotForwarded) {
       "/pi1/aos",
       [&ping_count, &data_ptr](aos::examples::Ping *ping,
                                const TimestampedMessage &) -> SharedSpan {
-        fbs::AlignedVectorAllocator allocator;
+        aos::fbs::AlignedVectorAllocator allocator;
         aos::fbs::Builder<aos::examples::PingStatic> ping_static(&allocator);
         CHECK(ping_static->FromFlatbuffer(*ping));
 

@@ -274,10 +274,11 @@ void BufferedFileHandler::WriteCurrentBufferContents(
   const size_t new_buffer_start = buffer_end_;
   // Don't hold the lock while actually writing to disk.
   // Note that this does mean that buffer_end_ may be updated while doing the
-  // Write() call; however, because buffer_start_ is not updated by WriteAsync()
-  // we can trust that the data we are copying from will not be affected.
+  // Write() call; however, because buffer_start_ is not updated by
+  // DoWriteAsync() we can trust that the data we are copying from will not be
+  // affected.
   buffer_index_lock.unlock();
-  const WriteResult result = FileHandler::Write(queue);
+  const WriteResult result = FileHandler::DoWrite(queue);
   buffer_index_lock.lock();
   switch (result.code) {
     case WriteCode::kOk:
@@ -291,14 +292,21 @@ void BufferedFileHandler::WriteCurrentBufferContents(
   // Note: This isn't entirely correct in the case where we ran out of space.
   buffer_start_ = new_buffer_start;
   buffer_empty_ = buffer_start_ == buffer_end_;
+  // Note: Ideally we would call UpdateMemoryBufferBytesAvailable, but we don't
+  // currently manage asynchronous access to that object, and in practice
+  // DoWriteAsync() should be called frequently enough to keep the statistics
+  // usefully refreshed.
 }
 
-WriteResult BufferedFileHandler::WriteAsync(
+WriteResult BufferedFileHandler::DoWriteAsync(
     const absl::Span<const absl::Span<const uint8_t>> &queue) {
   size_t messages_written = 0;
+  size_t bytes_written = 0;
   std::unique_lock<std::mutex> lock(buffer_index_mutex_);
   if (ran_out_of_space_in_thread_) {
-    return {.code = WriteCode::kOutOfSpace, .messages_written = 0};
+    return {.code = WriteCode::kOutOfSpace,
+            .messages_written = 0,
+            .bytes_written = 0};
   }
   for (const absl::Span<const uint8_t> &message : queue) {
     size_t message_bytes_written = 0;
@@ -309,16 +317,14 @@ WriteResult BufferedFileHandler::WriteAsync(
     // 2. When we reach the end of the buffer_ variable and have to do a
     // separate memcpy to point at the start of the memory chunk.
     while (true) {
-      const size_t buffer_space =
-          (buffer_start_ > buffer_end_ || !buffer_empty_)
-              ? buffer_start_ - buffer_end_
-              : buffer_start_ + buffer_.size() - buffer_end_;
+      const size_t buffer_space = buffer_space_available();
       if (buffer_space == 0) {
         // Wait for more space to be available to write to.
         buffer_index_update_.wait(lock);
         if (ran_out_of_space_in_thread_) {
           return {.code = WriteCode::kOutOfSpace,
-                  .messages_written = messages_written};
+                  .messages_written = messages_written,
+                  .bytes_written = bytes_written};
         }
         // Reset the while loop so that we recalculate buffer_space.
         continue;
@@ -348,6 +354,7 @@ WriteResult BufferedFileHandler::WriteAsync(
       std::copy(copy_from.cbegin(), copy_from.cend(), target_buffer.begin());
       lock.lock();
       message_bytes_written += target_buffer.size();
+      bytes_written += target_buffer.size();
       DCHECK_NE(0u, message_bytes_written)
           << "buffer_end: " << buffer_end_ << " buffer size " << buffer_.size()
           << " buffer start " << buffer_start_ << " empty " << buffer_empty_
@@ -355,6 +362,8 @@ WriteResult BufferedFileHandler::WriteAsync(
       buffer_end_ = (buffer_end_ + target_buffer.size()) % buffer_.size();
       buffer_empty_ = false;
       buffer_index_update_.notify_all();
+      WriteStatistics()->UpdateMemoryBufferBytesAvailable(
+          buffer_space_available());
 
       if (wrap_required) {
         continue;
@@ -366,20 +375,33 @@ WriteResult BufferedFileHandler::WriteAsync(
       }
     }
   }
-  return {.code = WriteCode::kOk, .messages_written = messages_written};
+  return {.code = WriteCode::kOk,
+          .messages_written = messages_written,
+          .bytes_written = bytes_written};
 }
 
-WriteResult BufferedFileHandler::Write(
+WriteResult BufferedFileHandler::DoWrite(
     const absl::Span<const absl::Span<const uint8_t>> &queue) {
   if (memory_buffer_size_ > 0) {
-    return WriteAsync(queue);
+    return DoWriteAsync(queue);
   }
-  return FileHandler::Write(queue);
+  return FileHandler::DoWrite(queue);
 }
 
 bool FileHandler::ODirectEnabled() const { return odirect_enabled_; }
 
 WriteResult FileHandler::Write(
+    const absl::Span<const absl::Span<const uint8_t>> &queue) {
+  const aos::monotonic_clock::time_point start_time =
+      aos::monotonic_clock::now();
+  WriteResult result = DoWrite(queue);
+  const aos::monotonic_clock::time_point end_time = aos::monotonic_clock::now();
+  WriteStatistics()->UpdateHandlerStats(
+      end_time - start_time, result.bytes_written, result.messages_written);
+  return result;
+}
+
+WriteResult FileHandler::DoWrite(
     const absl::Span<const absl::Span<const uint8_t>> &queue) {
   iovec_.clear();
   CHECK_LE(queue.size(), static_cast<size_t>(IOV_MAX));
@@ -398,6 +420,7 @@ WriteResult FileHandler::Write(
   bool was_aligned = IsAligned(total_write_bytes_);
   VLOG(1) << "Started " << (was_aligned ? "aligned" : "unaligned")
           << " at offset " << total_write_bytes_ << " on " << filename();
+  size_t total_bytes_written = 0;
 
   // Walk through aligned queue and batch writes based on aligned flag
   for (const auto &item : queue_aligner_.aligned_queue()) {
@@ -405,13 +428,15 @@ WriteResult FileHandler::Write(
       // Switching aligned context. Let's flush current batch.
       if (!iovec_.empty()) {
         // Flush current queue if we need.
-        const WriteCode code = WriteV(was_aligned);
+        const auto [code, bytes_written] = WriteV(was_aligned);
+        total_bytes_written += bytes_written;
         if (code == WriteCode::kOutOfSpace) {
           // We cannot say anything about what number of messages was written
           // for sure.
           return {
               .code = code,
               .messages_written = queue.size(),
+              .bytes_written = total_bytes_written,
           };
         }
         iovec_.clear();
@@ -425,16 +450,19 @@ WriteResult FileHandler::Write(
 
   WriteCode result_code = WriteCode::kOk;
   if (!iovec_.empty()) {
+    size_t bytes_written;
     // Flush current queue if we need.
-    result_code = WriteV(was_aligned);
+    std::tie(result_code, bytes_written) = WriteV(was_aligned);
+    total_bytes_written += bytes_written;
   }
   return {
       .code = result_code,
       .messages_written = queue.size(),
+      .bytes_written = total_bytes_written,
   };
 }
 
-WriteCode FileHandler::WriteV(bool aligned) {
+std::pair<WriteCode, size_t> FileHandler::WriteV(bool aligned) {
   // Configure the file descriptor to match the mode we should be in.  This is
   // safe to over-call since it only does the syscall if needed.
   if (aligned) {
@@ -485,7 +513,7 @@ WriteCode FileHandler::WriteV(bool aligned) {
 
     if (written == -1 && errno == ENOSPC) {
       PLOG(ERROR) << "Wrote " << written << " bytes of " << counted_size;
-      return WriteCode::kOutOfSpace;
+      return std::make_pair(WriteCode::kOutOfSpace, 0);
     }
     PCHECK(written >= 0) << ": write failed, got " << written << " for "
                          << filename_;
@@ -560,8 +588,8 @@ WriteCode FileHandler::WriteV(bool aligned) {
   if (aligned) {
     written_aligned_ += total_written;
   }
-  WriteStatistics()->UpdateStats(end - start, total_written, iovecs_index);
-  return WriteCode::kOk;
+  WriteStatistics()->UpdateDiskStats(end - start, total_written);
+  return std::make_pair(WriteCode::kOk, total_written);
 }
 
 WriteCode BufferedFileHandler::Close() {

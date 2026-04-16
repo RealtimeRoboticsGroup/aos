@@ -16,80 +16,11 @@
 #include "absl/types/span.h"
 
 #include "aos/events/logging/buffer_encoder.h"
+#include "aos/events/logging/logger_statistics.h"
 #include "aos/gtest_prod.h"
 #include "aos/time/time.h"
 
 namespace aos::logger {
-
-class WriteStats {
- public:
-  // The maximum time for a single write call, or 0 if none have been performed.
-  std::chrono::nanoseconds max_write_time() const { return max_write_time_; }
-  // The number of bytes in the longest write call, or -1 if none have been
-  // performed.
-  int max_write_time_bytes() const { return max_write_time_bytes_; }
-  // The number of buffers in the longest write call, or -1 if none have been
-  // performed.
-  int max_write_time_messages() const { return max_write_time_messages_; }
-  // The total time spent in write calls.
-  std::chrono::nanoseconds total_write_time() const {
-    return total_write_time_;
-  }
-
-  // The total time spent encoding.
-  std::chrono::nanoseconds total_encode_duration() const {
-    return total_encode_duration_;
-  }
-
-  // The total number of writes which have been performed.
-  int total_write_count() const { return total_write_count_; }
-  // The total number of messages which have been written.
-  int total_write_messages() const { return total_write_messages_; }
-  // The total number of bytes which have been written.
-  int total_write_bytes() const { return total_write_bytes_; }
-
-  void ResetStats() {
-    max_write_time_ = std::chrono::nanoseconds::zero();
-    max_write_time_bytes_ = -1;
-    max_write_time_messages_ = -1;
-    total_write_time_ = std::chrono::nanoseconds::zero();
-    total_write_count_ = 0;
-    total_write_messages_ = 0;
-    total_write_bytes_ = 0;
-    total_encode_duration_ = std::chrono::nanoseconds::zero();
-  }
-
-  void UpdateStats(std::chrono::nanoseconds duration, ssize_t written,
-                   int iovec_size) {
-    if (duration > max_write_time_) {
-      max_write_time_ = duration;
-      max_write_time_bytes_ = written;
-      max_write_time_messages_ = iovec_size;
-    }
-    total_write_time_ += duration;
-    ++total_write_count_;
-    total_write_messages_ += iovec_size;
-    total_write_bytes_ += written;
-  }
-
-  // Update our total_encode_duration_ stat. This needs to be a separate
-  // function from UpdateStats because it's called from a different level in the
-  // stack.
-  void UpdateEncodeDuration(std::chrono::nanoseconds duration) {
-    total_encode_duration_ += duration;
-  }
-
- private:
-  std::chrono::nanoseconds max_write_time_ = std::chrono::nanoseconds::zero();
-  int max_write_time_bytes_ = -1;
-  int max_write_time_messages_ = -1;
-  std::chrono::nanoseconds total_write_time_ = std::chrono::nanoseconds::zero();
-  std::chrono::nanoseconds total_encode_duration_ =
-      std::chrono::nanoseconds::zero();
-  int total_write_count_ = 0;
-  int total_write_messages_ = 0;
-  int total_write_bytes_ = 0;
-};
 
 // Currently, all write operations only cares about out-of-space error. This is
 // a simple representation of write result.
@@ -98,6 +29,7 @@ enum class WriteCode { kOk, kOutOfSpace };
 struct WriteResult {
   WriteCode code = WriteCode::kOk;
   size_t messages_written = 0;
+  size_t bytes_written = 0;
 };
 
 // Interface that abstract writing to log from media.
@@ -126,13 +58,13 @@ class LogSink {
       const absl::Span<const absl::Span<const uint8_t>> &queue) = 0;
 
   // Get access to statistics related to the write operations.
-  WriteStats *WriteStatistics() { return &write_stats_; }
+  LoggerStatistics *WriteStatistics() { return &write_stats_; }
 
   // Name of the log sink.
   virtual std::string_view name() const = 0;
 
  private:
-  WriteStats write_stats_;
+  LoggerStatistics write_stats_;
 };
 
 // Source for iovec with an additional flag that pointer and size of data is
@@ -214,7 +146,7 @@ class FileHandler : public LogSink {
   // multiples of kSector long (and the data written so far is also a multiple
   // of kSector length).
   WriteResult Write(
-      const absl::Span<const absl::Span<const uint8_t>> &queue) override;
+      const absl::Span<const absl::Span<const uint8_t>> &queue) final override;
 
   // Name of the log sink mostly for informational purposes.
   std::string_view name() const override { return filename_; }
@@ -239,6 +171,11 @@ class FileHandler : public LogSink {
   void UpdateFilenameBase(const std::string_view old_base_name,
                           const std::string_view new_base_name);
 
+  // Actually implements the bulk of the Write() call; to be overridden by
+  // subclasses.
+  virtual WriteResult DoWrite(
+      const absl::Span<const absl::Span<const uint8_t>> &queue);
+
  private:
   // Enables O_DIRECT on the open file if it is supported.  Cheap to call if it
   // is already enabled.
@@ -252,7 +189,8 @@ class FileHandler : public LogSink {
   // Writes a chunk of iovecs from iovec_. aligned is true if all the data is
   // kSector byte aligned and multiples of it in length.
   // May modify iovec_.
-  WriteCode WriteV(bool aligned);
+  // Returns a write code and a number of bytes written.
+  std::pair<WriteCode, size_t> WriteV(bool aligned);
 
   std::string filename_;
 
@@ -297,13 +235,6 @@ class BufferedFileHandler : public FileHandler {
                       size_t memory_buffer_size);
   virtual ~BufferedFileHandler() { Close(); }
 
-  // Writes the provided messages. Will return once the messages are in the
-  // internal memory buffer. This does mean that messages provided here may not
-  // make it to disk if we terminate or run out of disk space before the
-  // messages are written. Blocks if there is no space remaining in the internal
-  // memory buffer, and waits for the disk writing thread to free up space.
-  WriteResult Write(
-      const absl::Span<const absl::Span<const uint8_t>> &queue) override;
   WriteCode OpenForWrite() override;
   WriteCode Close() override;
 
@@ -312,8 +243,27 @@ class BufferedFileHandler : public FileHandler {
   // state of this class rather than trying to actually run out of space on a
   // filesystem.
   FRIEND_TEST_NAMESPACE(LogBackendTest, OutOfSpaceTest, testing);
-  WriteResult WriteAsync(
+
+  // Writes the provided messages. Will return once the messages are in the
+  // internal memory buffer. This does mean that messages provided here may not
+  // make it to disk if we terminate or run out of disk space before the
+  // messages are written. Blocks if there is no space remaining in the internal
+  // memory buffer, and waits for the disk writing thread to free up space.
+  WriteResult DoWrite(
+      const absl::Span<const absl::Span<const uint8_t>> &queue) override;
+  WriteResult DoWriteAsync(
       const absl::Span<const absl::Span<const uint8_t>> &queue);
+
+  // Returns the total buffer space available.
+  // buffer_index_mutex_ must be acquired before calling this.
+  ssize_t buffer_space_available() const {
+    if (buffer_start_ == buffer_end_) {
+      return buffer_empty_ ? buffer_.size() : 0;
+    }
+    return (buffer_start_ > buffer_end_)
+               ? (buffer_start_ - buffer_end_)
+               : ((buffer_start_ + buffer_.size()) - buffer_end_);
+  }
 
   // Should provide a lock or buffer_index_update_ that is already held.
   // Attempts to write out the current contents of the buffer.

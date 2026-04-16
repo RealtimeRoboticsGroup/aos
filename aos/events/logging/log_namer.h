@@ -479,92 +479,15 @@ class MultiNodeLogNamer : public LogNamer {
   // This may set ran_out_of_space().
   WriteCode Close() override;
 
-  // Accessors for various statistics. See the identically-named methods in
-  // DetachedBufferWriter for documentation. These are aggregated across all
-  // past and present DetachedBufferWriters.
-  std::chrono::nanoseconds max_write_time() const {
+  // Accessors for various statistics. See the LoggerStatistics and
+  // WriteStatistics classes for documentation.
+  LoggerStatistics logger_statistics() const {
     return accumulate_data_writers(
-        max_write_time_,
-        [](std::chrono::nanoseconds x, const DataWriter &data_writer) {
+        logger_statistics_,
+        [](LoggerStatistics result, const DataWriter &data_writer) {
           CHECK(data_writer.writer() != nullptr);
-          return std::max(
-              x, data_writer.writer()->WriteStatistics()->max_write_time());
-        });
-  }
-  int max_write_time_bytes() const {
-    return std::get<0>(accumulate_data_writers(
-        std::make_tuple(max_write_time_bytes_, max_write_time_),
-        [](std::tuple<int, std::chrono::nanoseconds> x,
-           const DataWriter &data_writer) {
-          CHECK(data_writer.writer() != nullptr);
-          if (data_writer.writer()->WriteStatistics()->max_write_time() >
-              std::get<1>(x)) {
-            return std::make_tuple(
-                data_writer.writer()->WriteStatistics()->max_write_time_bytes(),
-                data_writer.writer()->WriteStatistics()->max_write_time());
-          }
-          return x;
-        }));
-  }
-  int max_write_time_messages() const {
-    return std::get<0>(accumulate_data_writers(
-        std::make_tuple(max_write_time_messages_, max_write_time_),
-        [](std::tuple<int, std::chrono::nanoseconds> x,
-           const DataWriter &data_writer) {
-          CHECK(data_writer.writer() != nullptr);
-          if (data_writer.writer()->WriteStatistics()->max_write_time() >
-              std::get<1>(x)) {
-            return std::make_tuple(
-                data_writer.writer()
-                    ->WriteStatistics()
-                    ->max_write_time_messages(),
-                data_writer.writer()->WriteStatistics()->max_write_time());
-          }
-          return x;
-        }));
-  }
-  std::chrono::nanoseconds total_write_time() const {
-    return accumulate_data_writers(
-        total_write_time_,
-        [](std::chrono::nanoseconds x, const DataWriter &data_writer) {
-          CHECK(data_writer.writer() != nullptr);
-          return x +
-                 data_writer.writer()->WriteStatistics()->total_write_time();
-        });
-  }
-  int total_write_count() const {
-    return accumulate_data_writers(
-        total_write_count_, [](int x, const DataWriter &data_writer) {
-          CHECK(data_writer.writer() != nullptr);
-          return x +
-                 data_writer.writer()->WriteStatistics()->total_write_count();
-        });
-  }
-  int total_write_messages() const {
-    return accumulate_data_writers(total_write_messages_,
-                                   [](int x, const DataWriter &data_writer) {
-                                     return x + data_writer.writer()
-                                                    ->WriteStatistics()
-                                                    ->total_write_messages();
-                                   });
-  }
-  int total_write_bytes() const {
-    return accumulate_data_writers(
-        total_write_bytes_, [](int x, const DataWriter &data_writer) {
-          CHECK(data_writer.writer() != nullptr);
-          return x +
-                 data_writer.writer()->WriteStatistics()->total_write_bytes();
-        });
-  }
-
-  std::chrono::nanoseconds total_encode_duration() const {
-    return accumulate_data_writers(
-        total_encode_duration_,
-        [](std::chrono::nanoseconds x, const DataWriter &data_writer) {
-          CHECK(data_writer.writer() != nullptr);
-          return x + data_writer.writer()
-                         ->WriteStatistics()
-                         ->total_encode_duration();
+          result.UpdateWithStats(*data_writer.writer()->WriteStatistics());
+          return result;
         });
   }
 
@@ -637,15 +560,7 @@ class MultiNodeLogNamer : public LogNamer {
   std::function<std::unique_ptr<DataEncoder>(size_t)> encoder_factory_;
 
   // Storage for statistics from previously-rotated DetachedBufferWriters.
-  std::chrono::nanoseconds max_write_time_ = std::chrono::nanoseconds::zero();
-  int max_write_time_bytes_ = -1;
-  int max_write_time_messages_ = -1;
-  std::chrono::nanoseconds total_write_time_ = std::chrono::nanoseconds::zero();
-  std::chrono::nanoseconds total_encode_duration_ =
-      std::chrono::nanoseconds::zero();
-  int total_write_count_ = 0;
-  int total_write_messages_ = 0;
-  int total_write_bytes_ = 0;
+  LoggerStatistics logger_statistics_;
 
   // Data writer per remote node.
   std::map<const Node *, DataWriter> node_data_writers_;

@@ -998,13 +998,7 @@ void MultiNodeLogNamer::ResetStatistics() {
     if (!data_writer.second.writer()) continue;
     data_writer.second.writer()->WriteStatistics()->ResetStats();
   }
-  max_write_time_ = std::chrono::nanoseconds::zero();
-  max_write_time_bytes_ = -1;
-  max_write_time_messages_ = -1;
-  total_write_time_ = std::chrono::nanoseconds::zero();
-  total_write_count_ = 0;
-  total_write_messages_ = 0;
-  total_write_bytes_ = 0;
+  logger_statistics_.ResetStats();
 }
 
 void MultiNodeLogNamer::OpenForwardedTimestampWriter(
@@ -1082,16 +1076,7 @@ void MultiNodeLogNamer::CloseWriter(DetachedBufferWriter *const writer) {
   }
   writer->Close();
 
-  const auto *stats = writer->WriteStatistics();
-  if (stats->max_write_time() > max_write_time_) {
-    max_write_time_ = stats->max_write_time();
-    max_write_time_bytes_ = stats->max_write_time_bytes();
-    max_write_time_messages_ = stats->max_write_time_messages();
-  }
-  total_write_time_ += stats->total_write_time();
-  total_write_count_ += stats->total_write_count();
-  total_write_messages_ += stats->total_write_messages();
-  total_write_bytes_ += stats->total_write_bytes();
+  logger_statistics_.UpdateWithStats(*writer->WriteStatistics());
 
   if (writer->ran_out_of_space()) {
     ran_out_of_space_ = true;

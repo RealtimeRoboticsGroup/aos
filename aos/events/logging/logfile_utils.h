@@ -107,7 +107,9 @@ class DetachedBufferWriter {
     return encoder_->total_bytes();
   }
 
-  WriteStats *WriteStatistics() const { return log_sink_->WriteStatistics(); }
+  LoggerStatistics *WriteStatistics() const {
+    return log_sink_->WriteStatistics();
+  }
 
  private:
   // Performs a single writev call with as much of the data we have queued up as

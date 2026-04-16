@@ -1,0 +1,29 @@
+namespace aos.logger.fbs;
+
+table WriteStatistics {
+  // Total number of messages written.
+  total_write_messages:int64 (id: 0);
+  // Total number of bytes passed to Write().
+  total_write_bytes:int64 (id: 1);
+  // Total number of Write() calls.
+  total_write_count:int64 (id: 2);
+  // Total time spent in the write calls, in nanoseconds.
+  total_write_time_ns:int64 (id: 3);
+  // Maximum time spent in any single write call.
+  max_write_time_ns:int64 (id: 4);
+  // Number of bytes received in the longest write call.
+  max_write_time_bytes:int64 (id: 5);
+  // Number of messages received in the longest write call.
+  max_write_time_messages:int64 (id: 6);
+}
+
+table LoggerStatistics {
+  disk_statistics:WriteStatistics (id: 0);
+  handler_statistics:WriteStatistics (id: 1);
+  // Total time spent encoding data (for tracking time spent compressing).
+  total_encode_duration_ns:int64 (id: 2);
+  // Total bytes available in the BufferedFileHandler memory buffer.
+  memory_buffer_bytes_available:uint64 (id: 3);
+}
+
+root_type LoggerStatistics;
