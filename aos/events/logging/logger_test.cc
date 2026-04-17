@@ -59,11 +59,12 @@ class LoggerTest : public ::testing::TestWithParam<double> {
 
   void StartLoggingOnRun(aos::EventLoop *event_loop, Logger *logger,
                          std::string base_name) {
-    event_loop->OnRun([event_loop, logger, base_name]() {
+    event_loop->OnRun([this, event_loop, logger, base_name]() {
       std::unique_ptr<MultiNodeFilesLogNamer> namer =
           std::make_unique<MultiNodeFilesLogNamer>(
               base_name, event_loop->configuration(), event_loop,
               event_loop->node());
+      log_namer_ = namer.get();
       namer->set_memory_buffer_duration(
           std::chrono::nanoseconds(static_cast<size_t>(GetParam() * 1e9)));
       logger->StartLogging(std::move(namer));
@@ -73,6 +74,7 @@ class LoggerTest : public ::testing::TestWithParam<double> {
   // Config and factory.
   aos::FlatbufferDetachedBuffer<aos::Configuration> config_;
   SimulatedEventLoopFactory event_loop_factory_;
+  MultiNodeFilesLogNamer *log_namer_ = nullptr;
 
   // Event loop and app for Ping
   std::unique_ptr<EventLoop> ping_event_loop_;
@@ -147,6 +149,49 @@ TEST_P(LoggerTest, Starts) {
   reader.event_loop_factory()->RunFor(std::chrono::seconds(100));
   EXPECT_EQ(ping_count, 2010);
   EXPECT_EQ(pong_count, ping_count);
+}
+
+// Tests that the reported logger statistics reflect whether we are configured
+// asynchronously or not.
+TEST_P(LoggerTest, LoggerStatistics) {
+  const ::std::string tmpdir = aos::testing::TestTmpDir();
+  const ::std::string base_name = tmpdir + "/logfile";
+  const ::std::string config =
+      absl::StrCat(base_name, kSingleConfigSha256, ".bfbs");
+  const ::std::string logfile = base_name + "_data.part0.bfbs";
+  // Remove it.
+  unlink(config.c_str());
+  unlink(logfile.c_str());
+
+  LOG(INFO) << "Logging data to " << logfile;
+
+  {
+    event_loop_factory_.RunFor(chrono::milliseconds(95));
+
+    std::unique_ptr<EventLoop> logger_event_loop =
+        event_loop_factory_.MakeEventLoop("logger");
+    Logger logger(logger_event_loop.get());
+    logger.set_separate_config(false);
+    logger.set_polling_period(std::chrono::milliseconds(100));
+    StartLoggingOnRun(logger_event_loop.get(), &logger, base_name);
+    event_loop_factory_.RunFor(chrono::milliseconds(20000));
+    if (GetParam() == 0) {
+      EXPECT_FALSE(log_namer_->logger_statistics()
+                       .memory_buffer_bytes_available()
+                       .has_value());
+    } else {
+      EXPECT_TRUE(log_namer_->logger_statistics()
+                      .memory_buffer_bytes_available()
+                      .has_value());
+      EXPECT_LT(0, log_namer_->logger_statistics()
+                       .memory_buffer_bytes_available()
+                       .value())
+          << "Should have some memory buffer space available when using the "
+             "memory buffers.";
+    }
+  }
+
+  ASSERT_TRUE(std::filesystem::exists(logfile));
 }
 
 // Tests that we can mutate a message before sending
