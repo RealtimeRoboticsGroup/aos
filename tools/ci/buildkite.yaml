@@ -7,7 +7,7 @@ env:
 steps:
   - label: "lint"
     commands:
-      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../k8_output_base run ${COMMON} --remote_download_outputs=toplevel //tools/lint:run-ci
+      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../k8_output_base run ${COMMON} --remote_download_outputs=toplevel //tools/lint:run-ci --noenable_bzlmod --enable_workspace
     retry:
       automatic:
         - exit_status: -1  # Connection to the Agent was lost
@@ -18,7 +18,7 @@ steps:
 
   - label: "x86_64"
     commands:
-      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../k8_output_base test ${COMMON} --config=eigen ${TARGETS} --remote_download_outputs=minimal -- -@ceres-solver//:polynomial_test
+      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../k8_output_base test ${COMMON} --config=eigen ${TARGETS} --remote_download_outputs=minimal --noenable_bzlmod --enable_workspace -- -@ceres-solver//:polynomial_test
     retry:
       automatic:
         - exit_status: -1  # Connection to the Agent was lost
@@ -40,7 +40,7 @@ steps:
 
   - label: "arm64"
     commands:
-      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../common_output_base build ${COMMON} --remote_download_outputs=minimal --config=arm64 ${TARGETS}
+      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../common_output_base build ${COMMON} --remote_download_outputs=minimal --config=arm64 ${TARGETS} --noenable_bzlmod --enable_workspace
     retry:
       automatic:
         - exit_status: -1  # Connection to the Agent was lost
@@ -62,7 +62,7 @@ steps:
 
   - label: "roborio"
     commands:
-      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../common_output_base build ${COMMON} --remote_download_outputs=minimal --config=roborio ${ROBORIO_TARGETS}
+      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../common_output_base build ${COMMON} --remote_download_outputs=minimal --config=roborio ${ROBORIO_TARGETS} --noenable_bzlmod --enable_workspace
     retry:
       automatic:
         - exit_status: -1  # Connection to the Agent was lost

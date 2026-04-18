@@ -149,12 +149,11 @@ build --per_file_copt=-third_party/.*,-external/.*@-Werror,-Wextra,-Wpointer-ari
 # NOTE: Explicitly disable -Werror because the `-external/.*` filter does not work
 build --per_file_copt=third_party/.*,external/.*@-Wno-sign-compare,-Wno-cast-align,-Wno-error,-Wno-unused-parameter,-Wno-cast-qual,-Wno-format-nonliteral,-Wno-tautological-type-limit-compare,-Wno-missing-field-initializers,-Wno-unused-function,-Wno-cast-function-type,-Wno-comment,-Wno-typedef-redefinition,-Wno-tautological-unsigned-enum-zero-compare,-Wno-extra,-Wno-type-limits,-Wno-attributes,-Wno-deprecated,-Wno-deprecated-declarations,-Wno-missing-template-arg-list-after-template-kw
 
-# bzlmod breaks our code base right now, deal with this later.
-common --enable_bzlmod=false
+common --enable_bzlmod=true
 common --registry=file://%workspace%/registry
 common --registry=https://bcr.bazel.build
-# TODO(austin): Finish this migration...
-common --enable_workspace --noincompatible_disallow_empty_glob --incompatible_disallow_struct_provider_syntax=false
+# TODO(austin): Finish this migration...  Remove workspace support when users are done.
+common --noenable_workspace --noincompatible_disallow_empty_glob --incompatible_disallow_struct_provider_syntax=false
 
 # Disable warnings about using directories in Bazel.
 startup --host_jvm_args=-DBAZEL_TRACK_SOURCE_DIRECTORIES=1
