@@ -3441,7 +3441,7 @@ TEST_P(AbstractEventLoopTest, NodeSender) {
   aos::Sender<TestMessage> sender = loop1->MakeSender<TestMessage>("/test");
 }
 
-// Tests that sending from a realtime event loop callback works.
+// Tests that a realtime event loop can Send() in the OnRun.
 TEST_P(AbstractEventLoopTest, RealtimeSend) {
   auto loop1 = MakePrimary();
 
@@ -3477,6 +3477,28 @@ TEST_P(AbstractEventLoopTest, NonRealtimeEventLoopTimer) {
     CheckNotRealtime();
     test_timer->Schedule(loop1->monotonic_now(),
                          ::std::chrono::milliseconds(100));
+  });
+
+  Run();
+}
+
+// Tests that a realtime event loop can Send() using the Sender<>::Send()
+// copy-based overload.
+TEST_P(AbstractEventLoopTest, RealtimeCopySend) {
+  auto loop1 = MakePrimary();
+
+  loop1->SetRuntimeRealtimePriority(1);
+
+  auto sender = loop1->MakeSender<TestMessage>("/test2");
+  aos::FlatbufferDetachedBuffer<TestMessage> message =
+      aos::JsonToFlatbuffer<TestMessage>(R"json({"value": 200})json");
+
+  loop1->OnRun([&]() {
+    CheckRealtime();
+
+    sender.CheckOk(sender.Send(message));
+
+    this->Exit();
   });
 
   Run();

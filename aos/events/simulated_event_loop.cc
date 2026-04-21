@@ -1362,6 +1362,11 @@ RawSender::Error SimulatedSender::DoSend(
       << ": Attempting to send too big a message on "
       << configuration::CleanedChannelToString(simulated_channel_->channel());
 
+  // The allocations in here are due to the simulated event loop infrastructure
+  // itself and don't count as violations of the "no mallocs in realtime code"
+  // policy (i.e., they would not exist in a ShmEventLoop).
+  ScopedNotRealtime nrt;
+
   // Allocates an aligned buffer in which to copy unaligned msg.
   auto [span, mutable_span] = MakeSharedSpan(size);
   message_ = SimulatedMessage::Make(simulated_channel_, span);
