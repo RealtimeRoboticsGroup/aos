@@ -63,7 +63,6 @@ cc_library(
 py_library(
     name = "python_init",
     srcs = ["__init__.py"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
@@ -80,7 +79,6 @@ cc_library(
     hdrs = [
         "gtest_prod.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
@@ -89,7 +87,6 @@ cc_library(
     hdrs = [
         "unique_malloc_ptr.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
@@ -138,7 +135,6 @@ cc_library(
     hdrs = [
         "die.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos:macros",
@@ -151,7 +147,6 @@ cc_test(
     srcs = [
         "die_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":die",
         "//aos/testing:googletest",
@@ -163,7 +158,6 @@ cc_binary(
     srcs = [
         "dump_rtprio.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos:init",
         "//aos/events:shm_event_loop",
@@ -182,7 +176,6 @@ cc_library(
     hdrs = [
         "init.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":die",
@@ -277,11 +270,11 @@ cc_library(
     hdrs = [
         "realtime.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":sanitizers",
         ":uuid",
+        "//aos/ipc_lib:aos_sync",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
     ],
@@ -290,7 +283,6 @@ cc_library(
 static_flatbuffer(
     name = "configuration_fbs",
     srcs = ["configuration.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = ["//aos/flatbuffers/reflection:reflection_fbs"],
 )
@@ -319,7 +311,6 @@ flatbuffer_ts_library(
         "Node",
         "Configuration",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
@@ -342,7 +333,6 @@ cc_library(
         "clang": [],
         "gcc": ["-Wno-missing-field-initializers"],
     }),
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":configuration_fbs",
@@ -417,7 +407,6 @@ flatbuffer_ts_library(
         "ScalarSweepStruct",
         "StructEnum",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//aos:__subpackages__"],
 )
 
@@ -595,7 +584,6 @@ cc_test(
         "//aos/testing/ping_pong:pingpong_config",
         "//aos/testing/ping_pong:pong_fbs_reflection_out",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":configuration",
         "//aos/testing:flatbuffer_eq",
@@ -750,7 +738,6 @@ cc_test(
     srcs = [
         "realtime_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":init",
@@ -790,7 +777,6 @@ cc_library(
     name = "uuid",
     srcs = ["uuid.cc"],
     hdrs = ["uuid.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_google_flatbuffers//:flatbuffers",
@@ -805,7 +791,6 @@ cc_test(
     timeout = "eternal",
     srcs = ["uuid_collision_test.cc"],
     shard_count = 2,
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":uuid",
         "//aos/testing:googletest",
@@ -816,7 +801,6 @@ cc_test(
 cc_test(
     name = "uuid_test",
     srcs = ["uuid_test.cc"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":uuid",
         "//aos/testing:googletest",

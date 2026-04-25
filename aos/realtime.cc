@@ -1,8 +1,10 @@
 #include "aos/realtime.h"
 
 #include <dirent.h>
+#ifdef __linux__
 #include <malloc.h>
-#include <sched.h>
+#endif
+
 #include <sys/mman.h>
 #include <sys/resource.h>
 #include <sys/types.h>
@@ -30,11 +32,13 @@ ABSL_FLAG(bool, skip_realtime_scheduler, false,
 ABSL_FLAG(bool, skip_locking_memory, false,
           "If true, skip locking memory.  Pretend that we did it instead.");
 
+#if !defined(__APPLE__)
 namespace FLAG__namespace_do_not_use_directly_use_DECLARE_double_instead {
 extern double FLAGS_tcmalloc_release_rate __attribute__((weak));
 }
 using FLAG__namespace_do_not_use_directly_use_DECLARE_double_instead::
     FLAGS_tcmalloc_release_rate;
+#endif
 
 #include "aos/realtime_internal.h"
 
@@ -45,9 +49,15 @@ void SetSoftRLimit(int resource, RlimT soft, SetLimitForRoot set_for_root,
                    AllowSoftLimitDecrease allow_decrease) {
   bool am_root = getuid() == 0;
   if (set_for_root == SetLimitForRoot::kYes || !am_root) {
+#ifdef __linux__
     struct rlimit64 rlim;
     ABSL_PCHECK(getrlimit64(resource, &rlim) == 0)
         << ": getting limit for " << resource;
+#else
+    struct rlimit rlim;
+    ABSL_PCHECK(getrlimit(resource, &rlim) == 0)
+        << ": getting limit for " << resource;
+#endif
 
     if (allow_decrease == AllowSoftLimitDecrease::kYes) {
       rlim.rlim_cur = soft;
@@ -56,9 +66,15 @@ void SetSoftRLimit(int resource, RlimT soft, SetLimitForRoot set_for_root,
     }
     rlim.rlim_max = ::std::max(rlim.rlim_max, soft);
 
+#ifdef __linux__
     ABSL_PCHECK(setrlimit64(resource, &rlim) == 0)
         << ": changing limit for " << resource << " to " << rlim.rlim_cur
         << " with max of " << rlim.rlim_max << " (" << help_string << ")";
+#else
+    ABSL_PCHECK(setrlimit(resource, &rlim) == 0)
+        << ": changing limit for " << resource << " to " << rlim.rlim_cur
+        << " with max of " << rlim.rlim_max << " (" << help_string << ")";
+#endif
   }
 }
 
@@ -68,22 +84,30 @@ void LockAllMemory() {
   SetSoftRLimit(RLIMIT_MEMLOCK, RLIM_INFINITY, SetLimitForRoot::kNo,
                 "use --skip_locking_memory to not lock memory.");
 
+#if defined(__linux__) || defined(__APPLE__)
   ABSL_PCHECK(mlockall(MCL_CURRENT | MCL_FUTURE) == 0)
       << ": Failed to lock memory, use --skip_locking_memory to bypass this.  "
          "Bypassing will impact RT performance.";
+#else
+#error "Only linux and apple (Mac OS X) are supported"
+#endif
 
 #if !defined(AOS_SANITIZE_ADDRESS) && !defined(AOS_SANITIZE_MEMORY)
+#ifdef __linux__
   // Don't give freed memory back to the OS.
   ABSL_CHECK_EQ(1, mallopt(M_TRIM_THRESHOLD, -1));
   // Don't use mmap for large malloc chunks.
   ABSL_CHECK_EQ(1, mallopt(M_MMAP_MAX, 0));
 #endif
+#endif
 
+#if !defined(__APPLE__)
   // TODO(austin): new tcmalloc does this differently...
   if (&FLAGS_tcmalloc_release_rate) {
     // Tell tcmalloc not to return memory.
     FLAGS_tcmalloc_release_rate = 0.0;
   }
+#endif
 
   // Forces the memory pages for all the stack space that we're ever going to
   // use to be loaded into memory (so it can be locked there).
@@ -112,6 +136,7 @@ void InitRT() {
   if (absl::GetFlag(FLAGS_skip_realtime_scheduler)) {
     return;
   }
+#ifdef __linux__
   // Only let rt processes run for 3 seconds straight.
   SetSoftRLimit(
       RLIMIT_RTTIME, 3000000, SetLimitForRoot::kYes,
@@ -123,6 +148,7 @@ void InitRT() {
       RLIMIT_RTPRIO, 40, SetLimitForRoot::kNo,
       ", use --skip_realtime_scheduler to stay non-rt and bypass this "
       "warning.");
+#endif
 }
 
 void WriteCoreDumps() {
@@ -193,6 +219,7 @@ void FatalUnsetRealtimePriority() {
   SetIsRealtime(false);
 
   // Put all sub-tasks back to non-rt priority too.
+#ifdef __linux__
   DIR *dirp = opendir("/proc/self/task");
   if (dirp) {
     struct dirent *directory_entry;
@@ -208,6 +235,10 @@ void FatalUnsetRealtimePriority() {
     }
     closedir(dirp);
   }
+#elif defined(__APPLE__)
+#else
+#error "Only linux and apple (Mac OS X) are supported"
+#endif
   errno = saved_errno;
 }
 
