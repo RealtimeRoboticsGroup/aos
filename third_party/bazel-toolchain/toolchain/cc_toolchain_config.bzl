@@ -299,6 +299,8 @@ def cc_toolchain_config(
     cxx_flags = [
         "-std=" + cxx_standard,
     ]
+    compile_not_cxx_flags = []
+    sysroot_include_flags = []
 
     is_xcompile = not (exec_os == target_os and exec_arch == target_arch)
 
@@ -420,20 +422,20 @@ def cc_toolchain_config(
 
             common_include_flags = [
                 "-nostdinc",
-                "-idirafter",
+                "-isystem",
                 target_toolchain_path_prefix + "lib/clang/{}/include".format(resource_dir_version),
             ]
-            compile_flags.extend(common_include_flags)
+            compile_not_cxx_flags.extend(common_include_flags)
 
             cxx_flags.extend([
                 "-nostdinc++",
-                "-cxx-isystem",
+                "-isystem",
                 sysroot_path + "/usr/include/c++/" + libstdcxx_version,
             ])
 
             if multiarch == "aarch64-oe4t-linux":
                 cxx_flags.extend([
-                    "-cxx-isystem",
+                    "-isystem",
                     sysroot_path + "/usr/include/c++/" + libstdcxx_version + "/" + multiarch,
                 ])
                 link_flags.extend([
@@ -442,14 +444,14 @@ def cc_toolchain_config(
                 ])
             else:
                 cxx_flags.extend([
-                    "-cxx-isystem",
+                    "-isystem",
                     sysroot_path + "/usr/include/" + multiarch + "/c++/" + libstdcxx_version,
                 ])
 
             cxx_flags.extend([
-                "-cxx-isystem",
+                "-isystem",
                 sysroot_path + "/usr/include/c++/" + libstdcxx_version + "/backward",
-            ])
+            ] + common_include_flags)
 
             link_flags.extend([
                 "-L" + sysroot_path + "/usr/lib/gcc/" + multiarch + "/" + libstdcxx_version,
@@ -570,7 +572,12 @@ def cc_toolchain_config(
 
         if stdlib.startswith("stdc++-") or stdlib.startswith("dynamic-stdc++-"):
             for p in external_include_paths:
-                compile_flags.extend(["-idirafter", p])
+                sysroot_include_flags.extend(["-isystem", p])
+
+            # The compiler builtin include directory comes before the system header directories
+            # but after the C++ standard library directories
+            cxx_flags.extend(["-isystem", target_toolchain_path_prefix + "lib/clang/{}/include".format(resource_dir_version)])
+            conly_flags.extend(["-isystem", target_toolchain_path_prefix + "lib/clang/{}/include".format(resource_dir_version)])
 
     cuda_flags = [
         "-isystem",
@@ -619,6 +626,8 @@ def cc_toolchain_config(
         opt_compile_flags = opt_compile_flags,
         conly_flags = conly_flags,
         cxx_flags = cxx_flags,
+        compile_not_cxx_flags = compile_not_cxx_flags,
+        sysroot_include_flags = sysroot_include_flags,
         link_flags = link_flags + select({str(Label("@toolchains_llvm//toolchain/config:use_libunwind")): libunwind_link_flags, "//conditions:default": []}) +
                      select({str(Label("@toolchains_llvm//toolchain/config:use_compiler_rt")): compiler_rt_link_flags, "//conditions:default": []}) +
                      (non_msan_link_flags if use_toolchain_libcxx_paths else []),
