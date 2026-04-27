@@ -30,6 +30,28 @@ load(
 def _fmt_flags(flags, toolchain_path_prefix):
     return [f.format(toolchain_path_prefix = toolchain_path_prefix) for f in flags]
 
+_ALL_COMPILE_ACTIONS = [
+    "@rules_cc//cc/toolchains/actions:c_compile",
+    "@rules_cc//cc/toolchains/actions:cpp_compile",
+    "@rules_cc//cc/toolchains/actions:linkstamp_compile",
+    "@rules_cc//cc/toolchains/actions:assemble",
+    "@rules_cc//cc/toolchains/actions:preprocess_assemble",
+    "@rules_cc//cc/toolchains/actions:cpp_header_parsing",
+    "@rules_cc//cc/toolchains/actions:cpp_module_compile",
+    "@rules_cc//cc/toolchains/actions:cpp_module_codegen",
+    "@rules_cc//cc/toolchains/actions:cpp_module_deps_scanning",
+    "@rules_cc//cc/toolchains/actions:cpp20_module_compile",
+    "@rules_cc//cc/toolchains/actions:cpp20_module_codegen",
+    "@rules_cc//cc/toolchains/actions:clif_match",
+    "@rules_cc//cc/toolchains/actions:lto_backend",
+]
+
+_CUDA_SOURCE_ACTIONS = [
+    "@rules_cc//cc/toolchains/actions:cpp_compile",
+    "@rules_cc//cc/toolchains/actions:cpp_header_parsing",
+    "@rules_cc//cc/toolchains/actions:cpp_module_compile",
+]
+
 _NON_CXX_COMPILE_ACTIONS = [
     "@rules_cc//cc/toolchains/actions:c_compile_actions",
     "@rules_cc//cc/toolchains/actions:assembly_actions",
@@ -600,6 +622,41 @@ def cc_toolchain_config(
             cxx_flags.extend(["-isystem", target_toolchain_path_prefix + "lib/clang/{}/include".format(resource_dir_version)])
             conly_flags.extend(["-isystem", target_toolchain_path_prefix + "lib/clang/{}/include".format(resource_dir_version)])
 
+    cuda_wrapper_flags = [
+        "-isystem",
+        target_toolchain_path_prefix + "lib/clang/{}/include/cuda_wrappers".format(resource_dir_version),
+    ]
+
+    cuda_compile_flags = [
+        "-x",
+        "cuda",
+    ]
+
+    sysroot_prefix = ""
+    if sysroot_path != None:
+        sysroot_prefix = sysroot_path
+        if not sysroot_prefix.endswith("/"):
+            sysroot_prefix += "/"
+
+    if target_cpu == "aarch64":
+        cuda_compile_flags.extend([
+            "--cuda-gpu-arch=sm_87",
+            "--cuda-path=" + sysroot_prefix + "usr/local/cuda-12.6/",
+            "--ptxas-path=" + sysroot_prefix + "usr/local/cuda-12.6/bin/ptxas",
+            "-D__CUDACC_VER_MAJOR__=12",
+            "-D__CUDACC_VER_MINOR__=6",
+            "-Wno-unknown-cuda-version",
+        ])
+    elif target_cpu == "k8":
+        cuda_compile_flags.extend([
+            "--cuda-gpu-arch=sm_75",
+            "--cuda-gpu-arch=sm_86",
+            "--cuda-path=" + sysroot_prefix + "usr/lib/cuda/",
+            "--ptxas-path=" + sysroot_prefix + "usr/bin/ptxas",
+            "-D__CUDACC_VER_MAJOR__=11",
+            "-D__CUDACC_VER_MINOR__=8",
+        ])
+
     if compiler_configuration["extra_compile_flags"] != None:
         compile_flags.extend(_fmt_flags(compiler_configuration["extra_compile_flags"], toolchain_path_prefix))
     if compiler_configuration["extra_cxx_flags"] != None:
@@ -624,6 +681,7 @@ def cc_toolchain_config(
         unfiltered_compile_flags.extend(_fmt_flags(compiler_configuration["extra_unfiltered_compile_flags"], toolchain_path_prefix))
 
     internal_extra_enabled_features = []
+    internal_extra_known_features = []
 
     if compile_not_cxx_flags:
         compile_not_cxx_args_name = name + "_compile_not_cxx_args"
@@ -657,6 +715,30 @@ def cc_toolchain_config(
         )
         internal_extra_enabled_features.append(":" + sysroot_include_feature_name)
 
+    cuda_mode_args_name = name + "_cuda_mode_args"
+    cuda_wrapper_args_name = name + "_cuda_wrapper_args"
+    cuda_feature_name = name + "_cuda_feature"
+
+    cc_args(
+        name = cuda_mode_args_name,
+        actions = _CUDA_SOURCE_ACTIONS,
+        args = cuda_compile_flags,
+    )
+    cc_args(
+        name = cuda_wrapper_args_name,
+        actions = _ALL_COMPILE_ACTIONS,
+        args = cuda_wrapper_flags,
+    )
+    cc_feature(
+        name = cuda_feature_name,
+        feature_name = "cuda",
+        args = [
+            ":" + cuda_mode_args_name,
+            ":" + cuda_wrapper_args_name,
+        ],
+    )
+    internal_extra_known_features.append(":" + cuda_feature_name)
+
     # Source: https://cs.opensource.google/bazel/bazel/+/master:tools/cpp/unix_cc_toolchain_config.bzl
     unix_cc_toolchain_config(
         name = name,
@@ -688,5 +770,5 @@ def cc_toolchain_config(
         supports_start_end_lib = supports_start_end_lib,
         builtin_sysroot = sysroot_path,
         extra_enabled_features = extra_enabled_features + internal_extra_enabled_features,
-        extra_known_features = extra_known_features,
+        extra_known_features = extra_known_features + internal_extra_known_features,
     )
