@@ -620,7 +620,6 @@ def cc_toolchain_config(
         abi_libc_version = abi_libc_version,
         cxx_builtin_include_directories = cxx_builtin_include_directories,
         tool_paths = tool_paths,
-        archive_flags = archive_flags,
         compile_flags = compile_flags,
         fastbuild_compile_flags = fastbuild_compile_flags,
         dbg_compile_flags = dbg_compile_flags,
@@ -632,6 +631,7 @@ def cc_toolchain_config(
         link_flags = link_flags + select({str(Label("@toolchains_llvm//toolchain/config:use_libunwind")): libunwind_link_flags, "//conditions:default": []}) +
                      select({str(Label("@toolchains_llvm//toolchain/config:use_compiler_rt")): compiler_rt_link_flags, "//conditions:default": []}) +
                      (non_msan_link_flags if use_toolchain_libcxx_paths else []),
+        archive_flags = archive_flags,
         link_libs = link_libs,
         opt_link_flags = opt_link_flags,
         unfiltered_compile_flags = unfiltered_compile_flags,
@@ -639,7 +639,7 @@ def cc_toolchain_config(
         coverage_link_flags = coverage_link_flags,
         supports_start_end_lib = supports_start_end_lib,
         builtin_sysroot = sysroot_path,
-        extra_known_features = extra_known_features,
         extra_enabled_features = extra_enabled_features,
+        extra_known_features = extra_known_features,
         cuda_flags = cuda_flags,
     )
