@@ -457,14 +457,6 @@ def _impl(ctx):
                     ),
                 ] if ctx.attr.cxx_flags else []),
             ),
-            flag_set(
-                actions = [a for a in all_compile_actions if a not in all_cpp_compile_actions + [ACTION_NAMES.lto_backend]],
-                flag_groups = ([
-                    flag_group(
-                        flags = ctx.attr.compile_not_cxx_flags,
-                    ),
-                ] if ctx.attr.compile_not_cxx_flags else []),
-            ),
         ],
     )
 
@@ -1118,11 +1110,7 @@ def _impl(ctx):
                         flags = ["-isystem", "%{system_include_paths}"],
                         iterate_over = "system_include_paths",
                     ),
-                ] + ([
-                    flag_group(
-                        flags = ctx.attr.sysroot_include_flags,
-                    ),
-                ] if ctx.attr.sysroot_include_flags else []),
+                ],
             ),
         ],
     )
@@ -2062,7 +2050,6 @@ cc_toolchain_config = rule(
         "builtin_sysroot": attr.string(),
         "all_compile_flags": attr.string_list(),
         "compile_flags": attr.string_list(),
-        "compile_not_cxx_flags": attr.string_list(),
         "compiler": attr.string(mandatory = True),
         "conly_flags": attr.string_list(),
         "coverage_compile_flags": attr.string_list(),
@@ -2098,7 +2085,6 @@ This is only offered as a migration bridge for projects transitioning to rule-ba
         "opt_compile_flags": attr.string_list(),
         "opt_link_flags": attr.string_list(),
         "supports_start_end_lib": attr.bool(),
-        "sysroot_include_flags": attr.string_list(),
         "target_libc": attr.string(mandatory = True),
         "target_system_name": attr.string(mandatory = True),
         "tool_paths": attr.string_dict(),
