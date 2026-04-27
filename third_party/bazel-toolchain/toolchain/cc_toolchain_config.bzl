@@ -14,9 +14,11 @@
 
 # buildifier: disable=bzl-visibility
 load(
-    "//toolchain/internal:unix_cc_toolchain_config.bzl",
+    "@rules_cc//cc/private/toolchain:unix_cc_toolchain_config.bzl",
     unix_cc_toolchain_config = "cc_toolchain_config",
 )
+load("@rules_cc//cc/toolchains:args.bzl", "cc_args")
+load("@rules_cc//cc/toolchains:feature.bzl", "cc_feature")
 load(
     "//toolchain/internal:common.bzl",
     _check_os_arch_keys = "check_os_arch_keys",
@@ -27,6 +29,25 @@ load(
 # _fmt_flags() by defining it as a nested function.
 def _fmt_flags(flags, toolchain_path_prefix):
     return [f.format(toolchain_path_prefix = toolchain_path_prefix) for f in flags]
+
+_NON_CXX_COMPILE_ACTIONS = [
+    "@rules_cc//cc/toolchains/actions:c_compile_actions",
+    "@rules_cc//cc/toolchains/actions:assembly_actions",
+]
+
+_INCLUDE_PATHS_ACTIONS = [
+    "@rules_cc//cc/toolchains/actions:preprocess_assemble",
+    "@rules_cc//cc/toolchains/actions:linkstamp_compile",
+    "@rules_cc//cc/toolchains/actions:c_compile",
+    "@rules_cc//cc/toolchains/actions:cpp_compile",
+    "@rules_cc//cc/toolchains/actions:cpp_header_parsing",
+    "@rules_cc//cc/toolchains/actions:cpp_module_compile",
+    "@rules_cc//cc/toolchains/actions:cpp_module_deps_scanning",
+    "@rules_cc//cc/toolchains/actions:cpp20_module_compile",
+    "@rules_cc//cc/toolchains/actions:clif_match",
+    "@rules_cc//cc/toolchains/actions:objc_compile",
+    "@rules_cc//cc/toolchains/actions:objcpp_compile",
+]
 
 # Macro for calling cc_toolchain_config from @bazel_tools with setting the
 # right paths and flags for the tools.
@@ -579,11 +600,6 @@ def cc_toolchain_config(
             cxx_flags.extend(["-isystem", target_toolchain_path_prefix + "lib/clang/{}/include".format(resource_dir_version)])
             conly_flags.extend(["-isystem", target_toolchain_path_prefix + "lib/clang/{}/include".format(resource_dir_version)])
 
-    cuda_flags = [
-        "-isystem",
-        target_toolchain_path_prefix + "lib/clang/{}/include/cuda_wrappers".format(resource_dir_version),
-    ]
-
     if compiler_configuration["extra_compile_flags"] != None:
         compile_flags.extend(_fmt_flags(compiler_configuration["extra_compile_flags"], toolchain_path_prefix))
     if compiler_configuration["extra_cxx_flags"] != None:
@@ -607,6 +623,40 @@ def cc_toolchain_config(
     if compiler_configuration["extra_unfiltered_compile_flags"] != None:
         unfiltered_compile_flags.extend(_fmt_flags(compiler_configuration["extra_unfiltered_compile_flags"], toolchain_path_prefix))
 
+    internal_extra_enabled_features = []
+
+    if compile_not_cxx_flags:
+        compile_not_cxx_args_name = name + "_compile_not_cxx_args"
+        compile_not_cxx_feature_name = name + "_compile_not_cxx_feature"
+
+        cc_args(
+            name = compile_not_cxx_args_name,
+            actions = _NON_CXX_COMPILE_ACTIONS,
+            args = compile_not_cxx_flags,
+        )
+        cc_feature(
+            name = compile_not_cxx_feature_name,
+            feature_name = "toolchains_llvm_compile_not_cxx_flags",
+            args = [":" + compile_not_cxx_args_name],
+        )
+        internal_extra_enabled_features.append(":" + compile_not_cxx_feature_name)
+
+    if sysroot_include_flags:
+        sysroot_include_args_name = name + "_sysroot_include_args"
+        sysroot_include_feature_name = name + "_sysroot_include_feature"
+
+        cc_args(
+            name = sysroot_include_args_name,
+            actions = _INCLUDE_PATHS_ACTIONS,
+            args = sysroot_include_flags,
+        )
+        cc_feature(
+            name = sysroot_include_feature_name,
+            feature_name = "toolchains_llvm_sysroot_include_flags",
+            args = [":" + sysroot_include_args_name],
+        )
+        internal_extra_enabled_features.append(":" + sysroot_include_feature_name)
+
     # Source: https://cs.opensource.google/bazel/bazel/+/master:tools/cpp/unix_cc_toolchain_config.bzl
     unix_cc_toolchain_config(
         name = name,
@@ -626,8 +676,6 @@ def cc_toolchain_config(
         opt_compile_flags = opt_compile_flags,
         conly_flags = conly_flags,
         cxx_flags = cxx_flags,
-        compile_not_cxx_flags = compile_not_cxx_flags,
-        sysroot_include_flags = sysroot_include_flags,
         link_flags = link_flags + select({str(Label("@toolchains_llvm//toolchain/config:use_libunwind")): libunwind_link_flags, "//conditions:default": []}) +
                      select({str(Label("@toolchains_llvm//toolchain/config:use_compiler_rt")): compiler_rt_link_flags, "//conditions:default": []}) +
                      (non_msan_link_flags if use_toolchain_libcxx_paths else []),
@@ -639,7 +687,6 @@ def cc_toolchain_config(
         coverage_link_flags = coverage_link_flags,
         supports_start_end_lib = supports_start_end_lib,
         builtin_sysroot = sysroot_path,
-        extra_enabled_features = extra_enabled_features,
+        extra_enabled_features = extra_enabled_features + internal_extra_enabled_features,
         extra_known_features = extra_known_features,
-        cuda_flags = cuda_flags,
     )
