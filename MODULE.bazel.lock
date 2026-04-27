@@ -533,7 +533,7 @@
     },
     "//tools/cpp:extensions.bzl%dev_toolchains_extension": {
       "general": {
-        "bzlTransitiveDigest": "Bb7git1+79fbs370yYx9SuMDJV9OYD/bKu+zQ+H6efc=",
+        "bzlTransitiveDigest": "6+VcAXvvXZhVF+DvCCRQfI76JlzwLSQYaifcGDBfIgA=",
         "usagesDigest": "lLLJpwFDW4jsRyag0p47iIByB/3D75KpYBRl4SjoPYo=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -602,7 +602,7 @@
     },
     "//tools/cpp:extensions.bzl%llvm_toolchain_extension": {
       "general": {
-        "bzlTransitiveDigest": "Bb7git1+79fbs370yYx9SuMDJV9OYD/bKu+zQ+H6efc=",
+        "bzlTransitiveDigest": "6+VcAXvvXZhVF+DvCCRQfI76JlzwLSQYaifcGDBfIgA=",
         "usagesDigest": "BbuCooWESKfKJEQTjlyiuF//9VjiRAx8bsw+K0vbzNY=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},

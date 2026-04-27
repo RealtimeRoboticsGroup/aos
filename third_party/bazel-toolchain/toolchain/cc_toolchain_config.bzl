@@ -418,22 +418,21 @@ def cc_toolchain_config(
             # that it's unused, so don't use it here.
             libstdcxx_version = stdlib[len("stdc++-"):]
 
+            common_include_flags = [
+                "-nostdinc",
+                "-isystem",
+                target_toolchain_path_prefix + "lib/clang/{}/include".format(resource_dir_version),
+            ]
+
             cxx_flags.extend([
                 "-nostdinc++",
-                "-cxx-isystem",
+                "-isystem",
                 sysroot_path + "/usr/include/c++/" + libstdcxx_version,
-                "-cxx-isystem",
+                "-isystem",
                 sysroot_path + "/usr/include/" + multiarch + "/c++/" + libstdcxx_version,
-                "-cxx-isystem",
+                "-isystem",
                 sysroot_path + "/usr/include/c++/" + libstdcxx_version + "/backward",
-            ])
-
-            # Clang really wants C system header includes after C++ ones.
-            compile_flags.extend([
-                "-nostdinc",
-                "-idirafter",
-                target_toolchain_path_prefix + "lib/clang/{}/include".format(resource_dir_version),
-            ])
+            ] + common_include_flags)
 
             link_flags.extend([
                 "-L" + sysroot_path + "/usr/lib/gcc/" + multiarch + "/" + libstdcxx_version,
@@ -539,18 +538,28 @@ def cc_toolchain_config(
     # Add the sysroot flags here, as we want to check these last
     if sysroot_path != None:
         external_include_paths = [
-            sysroot_path + "usr/local/include",
+            sysroot_path + "/usr/local/include",
         ]
         if multiarch != None:
             external_include_paths.extend([
-                sysroot_path + "usr/" + multiarch + "/include",
-                sysroot_path + "usr/include/" + multiarch,
+                sysroot_path + "/usr/" + multiarch + "/include",
+                sysroot_path + "/usr/include/" + multiarch,
             ])
 
         external_include_paths.extend([
-            sysroot_path + "usr/include",
-            sysroot_path + "include",
+            sysroot_path + "/usr/include",
+            sysroot_path + "/include",
         ])
+
+        if stdlib.startswith("stdc++-") or stdlib.startswith("dynamic-stdc++-"):
+            for p in external_include_paths:
+                cxx_flags.extend(["-isystem", p])
+                conly_flags.extend(["-isystem", p])
+
+            # The compiler builtin include directory comes before the system header directories
+            # but after the C++ standard library directories
+            cxx_flags.extend(["-isystem", target_toolchain_path_prefix + "lib/clang/{}/include".format(resource_dir_version)])
+            conly_flags.extend(["-isystem", target_toolchain_path_prefix + "lib/clang/{}/include".format(resource_dir_version)])
 
     if compiler_configuration["extra_compile_flags"] != None:
         compile_flags.extend(_fmt_flags(compiler_configuration["extra_compile_flags"], toolchain_path_prefix))
