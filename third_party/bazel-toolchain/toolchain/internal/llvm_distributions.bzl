@@ -13,16 +13,12 @@
 # limitations under the License.
 
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "read_netrc", "use_netrc")
+load("@helly25_bzl//bzl/versions:versions.bzl", "versions")
 load(
     "//toolchain/internal:common.bzl",
     "attr_dict",
     "exec_os_arch_dict_value",
     "host_info",
-)
-load(
-    "//toolchain/internal:versions.bzl",
-    "check_all_requirements",
-    "parse_requirements",
 )
 
 # If a new LLVM version is missing from this list, please add the shasums here
@@ -1215,7 +1211,7 @@ def _is_requirement(version_or_requirements):
 def _parse_version_or_requirements(version_or_requirements):
     for prefix in ["latest:", "first:"]:
         if version_or_requirements.startswith(prefix):
-            return parse_requirements(version_or_requirements.removeprefix(prefix))
+            return versions.parse_requirements(version_or_requirements.removeprefix(prefix))
     if version_or_requirements in ["latest", "first"]:
         return None
     if not _is_requirement(version_or_requirements):
@@ -1241,7 +1237,7 @@ def _required_llvm_release_name(*, version_or_requirements, all_llvm_distributio
     llvm_versions = _get_llvm_versions(version_or_requirements = version_or_requirements, all_llvm_distributions = all_llvm_distributions)
     requirements = _parse_version_or_requirements(version_or_requirements)
     for llvm_version in llvm_versions:
-        if requirements and not check_all_requirements(llvm_version, requirements):
+        if requirements and not versions.check_all_requirements(llvm_version, requirements):
             continue
         basenames = _find_llvm_basename_list(llvm_version, all_llvm_distributions, host_info)
         if len(basenames) == 1:

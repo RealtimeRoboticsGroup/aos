@@ -68,9 +68,6 @@ def _join(path1, path2):
 def _is_absolute(path):
     return path[0] == "/" and (len(path) == 1 or path[1] != "/")
 
-def _merkle_cache_v2_enabled():
-    return hasattr(bazel_features.rules, "merkle_cache_v2") and bazel_features.rules.merkle_cache_v2
-
 def llvm_config_impl(rctx):
     _check_os_arch_keys(rctx.attr.toolchain_roots)
     _check_os_arch_keys(rctx.attr.target_toolchain_roots)
@@ -373,7 +370,7 @@ def _cc_toolchain_str(
             # TODO: Are there other situations where we can continue?
             return ""
 
-    extra_files_str = repr(":internal-use-tools" if _merkle_cache_v2_enabled() else ":internal-use-tools-legacy")
+    extra_files_str = repr(":internal-use-tools" if bazel_features.rules.merkle_cache_v2 else ":internal-use-tools-legacy")
 
     # C++ built-in include directories.
     # This contains both the includes shipped with the compiler as well as the sysroot (or host)
@@ -474,7 +471,6 @@ cc_toolchain_config(
       "stdlib": "{stdlib}",
       "cxx_standard": "{cxx_standard}",
       "compile_flags": {compile_flags},
-      "compile_not_cxx_flags": {compile_not_cxx_flags},
       "conly_flags": {conly_flags},
       "cxx_flags": {cxx_flags},
       "link_flags": {link_flags},
@@ -499,6 +495,8 @@ cc_toolchain_config(
       "extra_coverage_link_flags": {extra_coverage_link_flags},
       "extra_unfiltered_compile_flags": {extra_unfiltered_compile_flags},
     }},
+    extra_known_features = {extra_known_features},
+    extra_enabled_features = {extra_enabled_features},
     cxx_builtin_include_directories = {cxx_builtin_include_directories},
     llvm_version = "{llvm_version}",
 )
@@ -668,7 +666,6 @@ cc_toolchain(
         stdlib = _dict_value(toolchain_info.stdlib_dict, target_pair, "builtin-libc++"),
         cxx_standard = _dict_value(toolchain_info.cxx_standard_dict, target_pair, "c++17"),
         compile_flags = _list_to_string(_dict_value(toolchain_info.compile_flags_dict, target_pair)),
-        compile_not_cxx_flags = "[]",
         conly_flags = _list_to_string(toolchain_info.conly_flags_dict.get(target_pair, [])),
         cxx_flags = _list_to_string(_dict_value(toolchain_info.cxx_flags_dict, target_pair)),
         link_flags = _list_to_string(_dict_value(toolchain_info.link_flags_dict, target_pair)),
@@ -692,10 +689,12 @@ cc_toolchain(
         extra_coverage_compile_flags = _list_to_string(_dict_value(toolchain_info.extra_coverage_compile_flags_dict, target_pair)),
         extra_coverage_link_flags = _list_to_string(_dict_value(toolchain_info.extra_coverage_link_flags_dict, target_pair)),
         extra_unfiltered_compile_flags = _list_to_string(_dict_value(toolchain_info.extra_unfiltered_compile_flags_dict, target_pair)),
+        extra_known_features = _list_to_string(toolchain_info.extra_known_features),
+        extra_enabled_features = _list_to_string(toolchain_info.extra_enabled_features),
         extra_files_str = extra_files_str,
         cxx_builtin_include_directories = _list_to_string(filtered_cxx_builtin_include_directories),
-        cxx_builtin_include_label = "cxx_builtin_include" if _merkle_cache_v2_enabled() else "include",
-        lib_label = "lib" if _merkle_cache_v2_enabled() else "lib_legacy",
+        cxx_builtin_include_label = "cxx_builtin_include" if bazel_features.rules.merkle_cache_v2 else "include",
+        lib_label = "lib" if bazel_features.rules.merkle_cache_v2 else "lib_legacy",
         extra_compiler_files = ("\"%s\"," % str(toolchain_info.extra_compiler_files)) if toolchain_info.extra_compiler_files else "",
         llvm_version = llvm_version,
         extra_exec_compatible_with_specific = toolchain_info.extra_exec_compatible_with.get(target_pair, []),

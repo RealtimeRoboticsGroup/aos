@@ -15,9 +15,6 @@
 load("@bazel_features//:features.bzl", "bazel_features")
 load("@bazel_skylib//lib:paths.bzl", "paths")
 
-def _merkle_cache_v2_enabled():
-    return hasattr(bazel_features.rules, "merkle_cache_v2") and bazel_features.rules.merkle_cache_v2
-
 def _textual_header(file, *, include_prefixes, execroot_prefix):
     path = file.path
     for include_prefix in include_prefixes:
@@ -65,7 +62,7 @@ def _system_module_map(ctx):
 
     template_dict = ctx.actions.template_dict()
 
-    if _merkle_cache_v2_enabled():
+    if bazel_features.rules.merkle_cache_v2:
         # If provided, cxx_builtin_files should be a filegroup with 2 source directory entries:
         #  - include/c++
         #  - lib/clang/<VERSION>/include
@@ -86,7 +83,7 @@ def _system_module_map(ctx):
     if len(sysroot_files) == 1:
         template_dict.add("%sysroot%", umbrella_submodule_closure(sysroot_files[0]))
     else:
-        if sysroot_files and _merkle_cache_v2_enabled():
+        if sysroot_files and bazel_features.rules.merkle_cache_v2:
             # buildifier: disable=print
             print("WARNING: Sysroot {} resolved to {} files. Consider using the `sysroot` repository rule in @toolchains_llvm//toolchain:sysroot.bzl which provides a single-file (directory) sysroot for more efficient builds.".format(
                 ctx.attr.sysroot_files.label,

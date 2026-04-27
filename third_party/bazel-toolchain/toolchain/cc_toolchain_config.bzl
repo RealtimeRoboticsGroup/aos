@@ -43,9 +43,9 @@ def cc_toolchain_config(
         wrapper_bin_prefix,
         compiler_configuration,
         cxx_builtin_include_directories,
-        llvm_version,
-        extra_known_features = [],
-        extra_enabled_features = []):
+        extra_known_features,
+        extra_enabled_features,
+        llvm_version):
     exec_os_arch_key = _os_arch_pair(exec_os, exec_arch)
     target_os_arch_key = _os_arch_pair(target_os, target_arch)
     _check_os_arch_keys([exec_os_arch_key, target_os_arch_key])
