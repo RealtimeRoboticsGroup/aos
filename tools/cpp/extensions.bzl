@@ -30,6 +30,7 @@ def _llvm_toolchain_extension_impl(_ctx):
         "-Wno-deprecated-declarations",
         "-Wembedded-directive",
     ]
+    llvm_extra_compile_flags_aarch64 = llvm_extra_compile_flags + ["-march=armv8-a+crc"]
     llvm_cxx_standard = "gnu++20"
 
     toolchain(
@@ -43,7 +44,7 @@ def _llvm_toolchain_extension_impl(_ctx):
             "linux-x86_64": llvm_cxx_standard,
         },
         extra_compile_flags = {
-            "linux-aarch64": llvm_extra_compile_flags,
+            "linux-aarch64": llvm_extra_compile_flags_aarch64,
             "linux-x86_64": llvm_extra_compile_flags,
         },
         llvm_versions = {"": llvm_version},

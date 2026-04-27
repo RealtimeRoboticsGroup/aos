@@ -214,9 +214,6 @@ def cc_toolchain_config(
         "-B{}bin/".format(toolchain_path_prefix),
     ] + resource_dir
 
-    if target_os_arch_key == "linux-aarch64":
-        compile_flags.extend(["-march=armv8-a+crc"])
-
     dbg_compile_flags = ["-g", "-fstandalone-debug"]
 
     fastbuild_compile_flags = []
