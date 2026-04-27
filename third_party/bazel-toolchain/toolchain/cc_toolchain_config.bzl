@@ -575,9 +575,7 @@ def cc_toolchain_config(
 
         if stdlib.startswith("stdc++-") or stdlib.startswith("dynamic-stdc++-"):
             for p in external_include_paths:
-                cxx_flags.extend(["-isystem", p])
-                conly_flags.extend(["-isystem", p])
-                compile_not_cxx_flags.extend(["-isystem", p])
+                sysroot_include_flags.extend(["-isystem", p])
 
             # The compiler builtin include directory comes before the system header directories
             # but after the C++ standard library directories
