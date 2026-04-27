@@ -366,6 +366,8 @@
     "https://bcr.bazel.build/modules/rules_cc/0.2.17/source.json": "3832f45d145354049137c0090df04629d9c2b5493dc5c2bf46f1834040133a07",
     "https://bcr.bazel.build/modules/rules_cc/0.2.4/MODULE.bazel": "1ff1223dfd24f3ecf8f028446d4a27608aa43c3f41e346d22838a4223980b8cc",
     "https://bcr.bazel.build/modules/rules_cc/0.2.8/MODULE.bazel": "f1df20f0bf22c28192a794f29b501ee2018fa37a3862a1a2132ae2940a23a642",
+    "https://bcr.bazel.build/modules/rules_cuda/0.2.5/MODULE.bazel": "d06bba2b7b0aae2877306e91166c050b15a4928d6f5f7394b380e731fa270b22",
+    "https://bcr.bazel.build/modules/rules_cuda/0.2.5/source.json": "edb57bf6be69c46d3eed6638b7111b8c5628846549b41f5bc1646f9c979ea902",
     "https://bcr.bazel.build/modules/rules_foreign_cc/0.10.1/MODULE.bazel": "b9527010e5fef060af92b6724edb3691970a5b1f76f74b21d39f7d433641be60",
     "https://bcr.bazel.build/modules/rules_foreign_cc/0.9.0/MODULE.bazel": "c9e8c682bf75b0e7c704166d79b599f93b72cfca5ad7477df596947891feeef6",
     "https://bcr.bazel.build/modules/rules_fuzzing/0.5.2/MODULE.bazel": "40c97d1144356f52905566c55811f13b299453a14ac7769dfba2ac38192337a8",
@@ -2202,6 +2204,30 @@
         "recordedRepoMappingEntries": [
           [
             "rules_apple+",
+            "bazel_tools",
+            "bazel_tools"
+          ]
+        ]
+      }
+    },
+    "@@rules_cuda+//cuda:extensions.bzl%toolchain": {
+      "general": {
+        "bzlTransitiveDigest": "Rni/kG2Z3L2J0Q9BbSEuxEFk49DxGmSID4p9OcKn0A4=",
+        "usagesDigest": "2ivvhcIm5Tj/Rbc5ocW89Es1uPJTc6uFj1uWisHFht4=",
+        "recordedFileInputs": {},
+        "recordedDirentsInputs": {},
+        "envVariables": {},
+        "generatedRepoSpecs": {
+          "local_cuda": {
+            "repoRuleId": "@@rules_cuda+//cuda/private:repositories.bzl%local_cuda",
+            "attributes": {
+              "toolkit_path": ""
+            }
+          }
+        },
+        "recordedRepoMappingEntries": [
+          [
+            "rules_cuda+",
             "bazel_tools",
             "bazel_tools"
           ]

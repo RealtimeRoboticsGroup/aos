@@ -1,6 +1,7 @@
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
+load("@rules_cuda//cuda:defs.bzl", "cuda_library")
 load("//aos:flatbuffers.bzl", "cc_static_flatbuffer")
 load("//aos/flatbuffers:generate.bzl", "static_flatbuffer")
 load("//frc:halide.bzl", "halide_library")
@@ -48,6 +49,31 @@ cc_library(
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
+    ],
+)
+
+cuda_library(
+    name = "threshold_rules_cuda",
+    srcs = [
+        "threshold.cc",
+    ] + cpu_select({
+        "arm64": [
+            "neon_threshold.cc",
+        ],
+        "else": [
+            "fatal_neon_threshold.cc",
+        ],
+    }),
+    hdrs = [
+        "apriltag_types.h",
+        "threshold.h",
+    ],
+    deps = [
+        ":cuda",
+        "//aos/time",
+        "//frc/vision:vision_fbs",
+        "//third_party:cudart",
+        "@com_github_nvidia_cccl//:cccl",
     ],
 )
 

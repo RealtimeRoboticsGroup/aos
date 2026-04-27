@@ -5,6 +5,7 @@ module(
 
 bazel_dep(name = "bazel_features", version = "1.33.0")
 bazel_dep(name = "rules_cc", version = "0.2.13")
+bazel_dep(name = "rules_cuda", version = "0.2.5")
 bazel_dep(name = "rules_java", version = "9.3.0")
 bazel_dep(name = "aspect_bazel_lib", version = "2.14.0")
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
@@ -380,6 +381,13 @@ local_path_override(
 
 llvm_ext = use_extension("//tools/cpp:extensions.bzl", "llvm_toolchain_extension", dev_dependency = True)
 use_repo(llvm_ext, "llvm_aarch64", "llvm_k8", "llvm_toolchain")
+
+cuda = use_extension("@rules_cuda//cuda:extensions.bzl", "toolchain")
+cuda.local_toolchain(
+    name = "local_cuda",
+    toolkit_path = "",
+)
+use_repo(cuda, "local_cuda")
 
 register_toolchains(
     "@llvm_toolchain//:all",
