@@ -533,7 +533,7 @@
     },
     "//tools/cpp:extensions.bzl%dev_toolchains_extension": {
       "general": {
-        "bzlTransitiveDigest": "iPG4lrOnv31bcTg8+fmhQgJb4cut79aLSDNj8Vh8xLA=",
+        "bzlTransitiveDigest": "Bb7git1+79fbs370yYx9SuMDJV9OYD/bKu+zQ+H6efc=",
         "usagesDigest": "lLLJpwFDW4jsRyag0p47iIByB/3D75KpYBRl4SjoPYo=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -569,11 +569,31 @@
           ],
           [
             "",
-            "com_grail_bazel_toolchain",
-            "com_grail_bazel_toolchain+"
+            "toolchains_llvm",
+            "toolchains_llvm+"
           ],
           [
-            "com_grail_bazel_toolchain+",
+            "bazel_features+",
+            "bazel_features_globals",
+            "bazel_features++version_extension+bazel_features_globals"
+          ],
+          [
+            "bazel_features+",
+            "bazel_features_version",
+            "bazel_features++version_extension+bazel_features_version"
+          ],
+          [
+            "toolchains_llvm+",
+            "bazel_features",
+            "bazel_features+"
+          ],
+          [
+            "toolchains_llvm+",
+            "bazel_skylib",
+            "bazel_skylib+"
+          ],
+          [
+            "toolchains_llvm+",
             "bazel_tools",
             "bazel_tools"
           ]
@@ -582,31 +602,34 @@
     },
     "//tools/cpp:extensions.bzl%llvm_toolchain_extension": {
       "general": {
-        "bzlTransitiveDigest": "iPG4lrOnv31bcTg8+fmhQgJb4cut79aLSDNj8Vh8xLA=",
+        "bzlTransitiveDigest": "Bb7git1+79fbs370yYx9SuMDJV9OYD/bKu+zQ+H6efc=",
         "usagesDigest": "BbuCooWESKfKJEQTjlyiuF//9VjiRAx8bsw+K0vbzNY=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
         "generatedRepoSpecs": {
           "llvm_k8": {
-            "repoRuleId": "@@com_grail_bazel_toolchain+//toolchain:rules.bzl%llvm",
+            "repoRuleId": "@@toolchains_llvm+//toolchain:rules.bzl%llvm",
             "attributes": {
               "distribution": "clang+llvm-21.1.1-x86_64-linux-gnu-ubuntu-22.04.tar.zst",
-              "llvm_version": "21.1.1"
+              "llvm_versions": {
+                "": "21.1.1"
+              }
             }
           },
           "llvm_aarch64": {
-            "repoRuleId": "@@com_grail_bazel_toolchain+//toolchain:rules.bzl%llvm",
+            "repoRuleId": "@@toolchains_llvm+//toolchain:rules.bzl%llvm",
             "attributes": {
               "distribution": "clang+llvm-21.1.1-aarch64-linux-gnu.tar.zst",
-              "llvm_version": "21.1.1"
+              "llvm_versions": {
+                "": "21.1.1"
+              }
             }
           },
           "llvm_toolchain": {
-            "repoRuleId": "@@com_grail_bazel_toolchain+//toolchain:rules.bzl%toolchain",
+            "repoRuleId": "@@toolchains_llvm+//toolchain:rules.bzl%toolchain",
             "attributes": {
-              "additional_target_compatible_with": {},
-              "conlyopts": {
+              "conly_flags": {
                 "linux-aarch64": [
                   "-std=gnu99"
                 ],
@@ -614,7 +637,11 @@
                   "-std=gnu99"
                 ]
               },
-              "copts": {
+              "cxx_standard": {
+                "linux-aarch64": "gnu++20",
+                "linux-x86_64": "gnu++20"
+              },
+              "extra_compile_flags": {
                 "linux-aarch64": [
                   "-D__STDC_FORMAT_MACROS",
                   "-D__STDC_CONSTANT_MACROS",
@@ -638,20 +665,13 @@
                   "-Wembedded-directive"
                 ]
               },
-              "cxxopts": {
-                "linux-aarch64": [
-                  "-std=gnu++20"
-                ],
-                "linux-x86_64": [
-                  "-std=gnu++20"
-                ]
+              "llvm_versions": {
+                "": "21.1.1"
               },
-              "llvm_version": "21.1.1",
-              "standard_libraries": {
-                "linux-aarch64": "libstdc++-14.3.0",
-                "linux-x86_64": "libstdc++-12"
+              "stdlib": {
+                "linux-aarch64": "dynamic-stdc++-14.3.0",
+                "linux-x86_64": "dynamic-stdc++-12"
               },
-              "static_libstdcxx": false,
               "sysroot": {
                 "linux-aarch64": "'@@arm64_debian_sysroot+//:sysroot_files'",
                 "linux-x86_64": "'@@amd64_debian_sysroot+//:sysroot_files'"
@@ -675,11 +695,31 @@
           ],
           [
             "",
-            "com_grail_bazel_toolchain",
-            "com_grail_bazel_toolchain+"
+            "toolchains_llvm",
+            "toolchains_llvm+"
           ],
           [
-            "com_grail_bazel_toolchain+",
+            "bazel_features+",
+            "bazel_features_globals",
+            "bazel_features++version_extension+bazel_features_globals"
+          ],
+          [
+            "bazel_features+",
+            "bazel_features_version",
+            "bazel_features++version_extension+bazel_features_version"
+          ],
+          [
+            "toolchains_llvm+",
+            "bazel_features",
+            "bazel_features+"
+          ],
+          [
+            "toolchains_llvm+",
+            "bazel_skylib",
+            "bazel_skylib+"
+          ],
+          [
+            "toolchains_llvm+",
             "bazel_tools",
             "bazel_tools"
           ]

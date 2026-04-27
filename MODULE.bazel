@@ -372,9 +372,9 @@ use_repo(cypress, "cypress_toolchains")
 register_toolchains("@cypress_toolchains//:all")
 
 # Local toolchain repo
-bazel_dep(name = "com_grail_bazel_toolchain", version = "0.0.0", dev_dependency = True)
+bazel_dep(name = "toolchains_llvm", version = "0.0.0", dev_dependency = True)
 local_path_override(
-    module_name = "com_grail_bazel_toolchain",
+    module_name = "toolchains_llvm",
     path = "third_party/bazel-toolchain",
 )
 

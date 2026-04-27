@@ -15,10 +15,13 @@
 
 set -euo pipefail
 
-source "$(dirname "${BASH_SOURCE[0]}")/bazel.sh"
+scripts_dir="$(dirname "${BASH_SOURCE[0]}")"
+source "${scripts_dir}/bazel.sh"
 "${bazel}" version
 
-binpath="$("${bazel}" info bazel-bin)/tests/stdlib_test"
+cd "${scripts_dir}"
+
+binpath="$("${bazel}" info "${common_args[@]}" bazel-bin)/stdlib_test"
 
 check_with_image() {
   if "${CI:-false}"; then
@@ -26,28 +29,29 @@ check_with_image() {
     return
   fi
   local image="$1"
-  docker run --rm --mount "type=bind,source=${binpath},target=/stdlib_test" "${image}" /stdlib_test
+  docker run --rm -it --platform=linux/amd64 \
+    --mount "type=bind,source=${binpath},target=/stdlib_test" "${image}" /stdlib_test
 }
 
 echo ""
 echo "Testing static linked user libraries and dynamic linked system libraries"
 build_args=(
-  --incompatible_enable_cc_toolchain_resolution
-  --platforms=//platforms:linux-x86_64
+  "${common_args[@]}"
+  --platforms=@toolchains_llvm//platforms:linux-x86_64
   --extra_toolchains=@llvm_toolchain_with_sysroot//:cc-toolchain-x86_64-linux
   --symlink_prefix=/
   --color=yes
   --show_progress_rate_limit=30
 )
-"${bazel}" --bazelrc=/dev/null build "${build_args[@]}" //tests:stdlib_test
+"${bazel}" --bazelrc=/dev/null build "${build_args[@]}" //:stdlib_test
 file "${binpath}" | tee /dev/stderr | grep -q ELF
-check_with_image "frolvlad/alpine-glibc" # Need glibc image for system libraries.
+check_with_image "gcr.io/distroless/cc-debian11" # Need glibc image for system libraries.
 
 echo ""
 echo "Testing static linked user and system libraries"
 build_args+=(
   --features=fully_static_link
 )
-"${bazel}" --bazelrc=/dev/null build "${build_args[@]}" //tests:stdlib_test
+"${bazel}" --bazelrc=/dev/null build "${build_args[@]}" //:stdlib_test
 file "${binpath}" | tee /dev/stderr | grep -q ELF
-check_with_image "alpine"
+check_with_image "gcr.io/distroless/static-debian11"
