@@ -195,6 +195,14 @@ common --experimental_remote_merkle_tree_cache
 
 common --@rules_cuda//cuda:compiler=clang
 
+# rules_cuda implicitly adds `@rules_cuda//cuda:runtime` (default
+# `@cuda//:cuda_runtime`) as a dep of every `cuda_library`. The default
+# target is generated from rules_cuda's auto-detected host CUDA toolkit,
+# which on machines that have CUDA installed system-wide pulls in x86_64
+# libs and breaks arm64 cross-compiles. Point it at our platform-aware
+# `//third_party:cudart` instead.
+common --@rules_cuda//cuda:runtime=//third_party:cudart
+
 # CUDA target architectures, matched to the GPUs we deploy to:
 #   - x86_64 dev/test: RTX 20-series (sm_75) and 30-series (sm_86).
 #   - arm64 (Jetson Orin): sm_87.
