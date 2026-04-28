@@ -52,15 +52,6 @@ cc_library(
 )
 
 cuda_library(
-    name = "rules_cuda_smoke",
-    srcs = ["rules_cuda_smoke.cc"],
-    copts = [
-        "-nocudainc",
-        "-nocudalib",
-    ],
-)
-
-cuda_library(
     name = "threshold",
     srcs = [
         "threshold.cc",
