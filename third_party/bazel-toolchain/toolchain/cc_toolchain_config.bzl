@@ -14,7 +14,7 @@
 
 # buildifier: disable=bzl-visibility
 load(
-    "//toolchain/internal:unix_cc_toolchain_config.bzl",
+    "@rules_cc//cc/private/toolchain:unix_cc_toolchain_config.bzl",
     unix_cc_toolchain_config = "cc_toolchain_config",
 )
 load("@rules_cc//cc/toolchains:args.bzl", "cc_args")
