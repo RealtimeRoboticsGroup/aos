@@ -553,7 +553,7 @@
     },
     "//tools/cpp:extensions.bzl%dev_toolchains_extension": {
       "general": {
-        "bzlTransitiveDigest": "QZ007jGPkp1Tn7SOYxqY51mVdlpp5cztDsHPVwDsgQo=",
+        "bzlTransitiveDigest": "wUAnD8MHPKsuVA88cbTQAEv7kTIz3mUg/TwrfAvIDOg=",
         "usagesDigest": "lLLJpwFDW4jsRyag0p47iIByB/3D75KpYBRl4SjoPYo=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -627,7 +627,7 @@
     },
     "//tools/cpp:extensions.bzl%llvm_toolchain_extension": {
       "general": {
-        "bzlTransitiveDigest": "QZ007jGPkp1Tn7SOYxqY51mVdlpp5cztDsHPVwDsgQo=",
+        "bzlTransitiveDigest": "wUAnD8MHPKsuVA88cbTQAEv7kTIz3mUg/TwrfAvIDOg=",
         "usagesDigest": "BbuCooWESKfKJEQTjlyiuF//9VjiRAx8bsw+K0vbzNY=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -636,7 +636,14 @@
           "llvm_k8": {
             "repoRuleId": "@@toolchains_llvm+//toolchain:rules.bzl%llvm",
             "attributes": {
+              "alternative_llvm_sources": [
+                "https://mirror.spacecookies.dev/github.com/llvm/llvm-project/releases/download/llvmorg-{llvm_version}/{basename}"
+              ],
               "distribution": "clang+llvm-21.1.1-x86_64-linux-gnu-ubuntu-22.04.tar.zst",
+              "extra_llvm_distributions": {
+                "clang+llvm-21.1.1-x86_64-linux-gnu-ubuntu-22.04.tar.zst": "75dde978fcfe30486680e9d2fdbad7e92d9b44b48dea8193023399bc7485f885",
+                "clang+llvm-21.1.1-aarch64-linux-gnu.tar.zst": "f9b33b7ed6cd693160922873a8ae7ec1aadf6ad1efc8e2bee13625b4dc787ce6"
+              },
               "llvm_versions": {
                 "": "21.1.1"
               }
@@ -645,7 +652,14 @@
           "llvm_aarch64": {
             "repoRuleId": "@@toolchains_llvm+//toolchain:rules.bzl%llvm",
             "attributes": {
+              "alternative_llvm_sources": [
+                "https://mirror.spacecookies.dev/github.com/llvm/llvm-project/releases/download/llvmorg-{llvm_version}/{basename}"
+              ],
               "distribution": "clang+llvm-21.1.1-aarch64-linux-gnu.tar.zst",
+              "extra_llvm_distributions": {
+                "clang+llvm-21.1.1-x86_64-linux-gnu-ubuntu-22.04.tar.zst": "75dde978fcfe30486680e9d2fdbad7e92d9b44b48dea8193023399bc7485f885",
+                "clang+llvm-21.1.1-aarch64-linux-gnu.tar.zst": "f9b33b7ed6cd693160922873a8ae7ec1aadf6ad1efc8e2bee13625b4dc787ce6"
+              },
               "llvm_versions": {
                 "": "21.1.1"
               }
@@ -693,6 +707,12 @@
               },
               "llvm_versions": {
                 "": "21.1.1"
+              },
+              "multiarch": {
+                "linux-aarch64": "aarch64-oe4t-linux"
+              },
+              "cxx_include_layout": {
+                "linux-aarch64": "yocto"
               },
               "stdlib": {
                 "linux-aarch64": "dynamic-stdc++-14.3.0",

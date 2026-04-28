@@ -678,8 +678,6 @@ _llvm_distributions = {
     "clang+llvm-21.1.0-x86_64-pc-windows-msvc.tar.xz": "751aab63f074f041883a5317ad100dbe1e60794693f896df83958824cbc4962a",
 
     # 21.1.1
-    "clang+llvm-21.1.1-aarch64-linux-gnu.tar.zst": "f9b33b7ed6cd693160922873a8ae7ec1aadf6ad1efc8e2bee13625b4dc787ce6",
-    "clang+llvm-21.1.1-x86_64-linux-gnu-ubuntu-22.04.tar.zst": "75dde978fcfe30486680e9d2fdbad7e92d9b44b48dea8193023399bc7485f885",
     "LLVM-21.1.1-Linux-ARM64.tar.xz": "2764bb49ad4dab93226328d6374ca4466799bdc18372c544d8f6ebc1aa0c28a9",
     "LLVM-21.1.1-Linux-X64.tar.xz": "fe9886992273e469fbd664851cbee2f125b383664694684923a41af1c71b9632",
     "clang+llvm-21.1.1-aarch64-pc-windows-msvc.tar.xz": "93c0b2e9db00343f991cbcae11072165f19c8729440f32f8ad43f130aa96dd39",
@@ -756,7 +754,6 @@ _llvm_distributions = {
 # URLs changed when they switched to hosting the files on GitHub as of 10.0.0.
 _llvm_distributions_base_url_default = "https://github.com/llvm/llvm-project/releases/download/llvmorg-"
 _llvm_distributions_base_url = {
-    "21.1.1": "https://mirror.spacecookies.dev/github.com/llvm/llvm-project/releases/download/llvmorg-",
     "6.0.0": "https://releases.llvm.org/",
     "6.0.1": "https://releases.llvm.org/",
     "7.0.0": "https://releases.llvm.org/",

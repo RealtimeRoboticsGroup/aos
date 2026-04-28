@@ -108,7 +108,7 @@ def cc_toolchain_config(
             "clang",
             "clang",
             "glibc_unknown",
-            "aarch64-oe4t-linux",
+            "aarch64-linux-gnu",
         ),
         "linux-armv7": (
             "clang-armv7-linux",
@@ -323,6 +323,15 @@ def cc_toolchain_config(
     compile_not_cxx_flags = []
     sysroot_include_flags = []
 
+    # Allow callers to override the sysroot multiarch tuple (e.g. for
+    # Yocto-style sysroots where libstdc++ headers live under
+    # /usr/include/c++/<ver>/<multiarch> instead of the Debian
+    # /usr/include/<multiarch>/c++/<ver> layout).
+    multiarch_override = compiler_configuration.get("multiarch", "")
+    if multiarch_override:
+        multiarch = multiarch_override
+    cxx_include_layout = compiler_configuration.get("cxx_include_layout", "") or "debian"
+
     is_xcompile = not (exec_os == target_os and exec_arch == target_arch)
 
     # We only support getting libc++ from the toolchain for now. Is it worth
@@ -454,7 +463,7 @@ def cc_toolchain_config(
                 sysroot_path + "/usr/include/c++/" + libstdcxx_version,
             ])
 
-            if multiarch == "aarch64-oe4t-linux":
+            if cxx_include_layout == "yocto":
                 cxx_flags.extend([
                     "-isystem",
                     sysroot_path + "/usr/include/c++/" + libstdcxx_version + "/" + multiarch,
