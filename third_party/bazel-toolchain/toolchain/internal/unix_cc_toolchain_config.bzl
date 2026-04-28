@@ -433,15 +433,6 @@ def _impl(ctx):
                 ] if ctx.attr.all_compile_flags else []),
             ),
             flag_set(
-                actions = all_compile_actions,
-                with_features = [with_feature_set(features = ["cuda"])],
-                flag_groups = ([
-                    flag_group(
-                        flags = ctx.attr.cuda_flags,
-                    ),
-                ] if ctx.attr.cuda_flags else []),
-            ),
-            flag_set(
                 actions = [ACTION_NAMES.c_compile],
                 flag_groups = ([
                     flag_group(
@@ -1623,55 +1614,6 @@ def _impl(ctx):
         ],
     )
 
-    cuda_flags = [
-        "-x",
-        "cuda",
-    ]
-
-    sysroot_prefix = ""
-    if ctx.attr.builtin_sysroot:
-        sysroot_prefix = ctx.attr.builtin_sysroot
-        if not sysroot_prefix.endswith("/"):
-            sysroot_prefix += "/"
-
-    if ctx.attr.cpu == "aarch64":
-        cuda_flags += [
-            "--cuda-gpu-arch=sm_87",
-            "--cuda-path=" + sysroot_prefix + "usr/local/cuda-12.6/",
-            "--ptxas-path=" + sysroot_prefix + "usr/local/cuda-12.6/bin/ptxas",
-            "-D__CUDACC_VER_MAJOR__=12",
-            "-D__CUDACC_VER_MINOR__=6",
-            "-Wno-unknown-cuda-version",
-        ]
-    elif ctx.attr.cpu == "k8":
-        cuda_flags += [
-            "--cuda-gpu-arch=sm_75",
-            "--cuda-gpu-arch=sm_86",
-            "--cuda-path=" + sysroot_prefix + "usr/lib/cuda/",
-            "--ptxas-path=" + sysroot_prefix + "usr/bin/ptxas",
-            "-D__CUDACC_VER_MAJOR__=11",
-            "-D__CUDACC_VER_MINOR__=8",
-        ]
-
-    cuda_feature = feature(
-        name = "cuda",
-        provides = ["cuda"],
-        flag_sets = [
-            flag_set(
-                actions = [
-                    ACTION_NAMES.cpp_compile,
-                    ACTION_NAMES.cpp_header_parsing,
-                    ACTION_NAMES.cpp_module_compile,
-                ],
-                flag_groups = [
-                    flag_group(
-                        flags = cuda_flags,
-                    ),
-                ],
-            ),
-        ],
-    )
-
     no_use_lto_indexing_bitcode_file_feature = feature(
         name = "no_use_lto_indexing_bitcode_file",
     )
@@ -1908,7 +1850,6 @@ def _impl(ctx):
             no_use_lto_indexing_bitcode_file_feature,
             use_lto_native_object_directory_feature,
             thinlto_feature,
-            cuda_feature,
             fdo_prefetch_hints_feature,
             autofdo_feature,
             build_interface_libraries_feature,
@@ -2055,7 +1996,6 @@ cc_toolchain_config = rule(
         "coverage_compile_flags": attr.string_list(),
         "coverage_link_flags": attr.string_list(),
         "cpu": attr.string(mandatory = True),
-        "cuda_flags": attr.string_list(),
         "cxx_builtin_include_directories": attr.string_list(),
         "cxx_flags": attr.string_list(),
         "dbg_compile_flags": attr.string_list(),

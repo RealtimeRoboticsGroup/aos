@@ -2,6 +2,7 @@ load("@com_github_google_flatbuffers//:typescript.bzl", "flatbuffer_ts_library")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
+load("@rules_cuda//cuda:defs.bzl", "cuda_library")
 load("//aos:config.bzl", "aos_config")
 load("//aos/flatbuffers:generate.bzl", "static_flatbuffer")
 load("//frc:downloader.bzl", "robot_downloader")
@@ -704,14 +705,9 @@ static_flatbuffer(
     ],
 )
 
-cc_binary(
-    name = "apriltag_detector",
-    srcs = [
-        "apriltag_detector.cc",
-    ],
-    features = ["cuda"],
-    target_compatible_with = ["//tools/platforms/gpu:nvidia"],
-    visibility = ["//visibility:public"],
+cuda_library(
+    name = "apriltag_detector_lib",
+    srcs = ["apriltag_detector.cc"],
     deps = [
         ":camera_constants_fbs",
         "//aos:configuration",
@@ -725,6 +721,14 @@ cc_binary(
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
     ],
+    alwayslink = True,
+)
+
+cc_binary(
+    name = "apriltag_detector",
+    target_compatible_with = ["//tools/platforms/gpu:nvidia"],
+    visibility = ["//visibility:public"],
+    deps = [":apriltag_detector_lib"],
 )
 
 cc_binary(
@@ -894,7 +898,6 @@ cc_binary(
     srcs = [
         "yolo.cc",
     ],
-    features = ["cuda"],
     visibility = ["//visibility:public"],
     deps = [
         ":coral_detection_fbs",

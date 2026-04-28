@@ -1,0 +1,66 @@
+From 2408aee1c0e7cb313d8fdf338d6be3db64669740 Mon Sep 17 00:00:00 2001
+From: Austin Schuh <austin.linux@gmail.com>
+Date: Tue, 28 Apr 2026 14:02:23 -0700
+Subject: [PATCH] Add cuda_wrappers include feature for clang CUDA toolchains
+
+Clang ships cuda_wrappers/ shims under its resource directory that
+work around libstdc++/CUDA macro conflicts (e.g. host_defines.h's
+__noinline__ vs libstdc++'s __attribute__((__noinline__))). Surface
+those by detecting them in the cc_toolchain's built-in include
+directories and adding them via -isystem to cuda_compile actions.
+---
+ cuda/private/toolchain_configs/clang.bzl | 29 ++++++++++++++++++++++++
+ 1 file changed, 29 insertions(+)
+
+diff --git a/cuda/private/toolchain_configs/clang.bzl b/cuda/private/toolchain_configs/clang.bzl
+index 572af4c..caeedcd 100644
+--- a/cuda/private/toolchain_configs/clang.bzl
++++ b/cuda/private/toolchain_configs/clang.bzl
+@@ -55,6 +55,17 @@ def _impl(ctx):
+     env_paths, env_includes, _, libdevice_dir = collect_paths(ctx)
+     env_entry_include = [env_entry("INCLUDE", path_separator.join(env_includes))] if env_includes else []
+ 
++    # Clang ships `cuda_wrappers/` headers (e.g. bits/shared_ptr_base.h) that
++    # `#undef __noinline__` around libstdc++ headers, working around the
++    # CUDA `host_defines.h` macro conflict with libstdc++'s use of
++    # `__attribute__((__noinline__))`. They live under the clang resource
++    # directory at `lib/clang/<v>/include/cuda_wrappers/`. Detect that path
++    # from the cc_toolchain's built_in_include_directories.
++    cuda_wrappers_dirs = []
++    for d in env_includes:
++        if "/lib/clang/" in d and d.endswith("/include"):
++            cuda_wrappers_dirs.append(d + "/cuda_wrappers")
++
+     clang_compile_env_feature = feature(
+         name = "clang_compile_env",
+         enabled = True,
+@@ -560,8 +571,26 @@ def _impl(ctx):
+         cuda_compile_action,
+     ]
+ 
++    cuda_wrappers_include_feature = feature(
++        name = "cuda_wrappers_include",
++        enabled = True,
++        flag_sets = [
++            flag_set(
++                actions = [ACTION_NAMES.cuda_compile],
++                # Use -idirafter so the wrappers fall behind any user
++                # `-isystem` paths but ahead of clang's resource dir, which
++                # matches what clang's CUDA driver does internally.
++                flag_groups = [
++                    flag_group(flags = ["-isystem", d])
++                    for d in cuda_wrappers_dirs
++                ],
++            ),
++        ] if cuda_wrappers_dirs else [],
++    )
++
+     features = [
+         clang_compile_env_feature,
++        cuda_wrappers_include_feature,
+         cuda_path_feature,
+         supports_compiler_device_link_feature,
+         supports_wrapper_device_link_feature,
+-- 
+2.39.5
+

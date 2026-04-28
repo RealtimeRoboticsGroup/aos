@@ -1,6 +1,17 @@
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
+# Pieces of the CUDA 11.8 toolkit shipped inside the Debian sysroot. Exposed
+# so //tools/cuda can wire them into a rules_cuda toolchain.
+exports_files(
+    [
+        "usr/bin/ptxas",
+        "usr/lib/cuda/bin/x86_64-unknown-linux-gnu-fatbinary",
+        "usr/lib/cuda/nvvm/libdevice/libdevice.10.bc",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 filegroup(
     name = "sysroot_files",
     srcs = glob(

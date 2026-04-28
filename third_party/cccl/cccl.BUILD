@@ -5,7 +5,6 @@ cc_library(
         "libcudacxx/include/**",
         "cub/cub/**",
     ]),
-    features = ["cuda"],
     includes = [
         "cub",
         "libcudacxx/include",

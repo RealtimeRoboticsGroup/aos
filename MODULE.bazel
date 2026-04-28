@@ -5,7 +5,22 @@ module(
 
 bazel_dep(name = "bazel_features", version = "1.33.0")
 bazel_dep(name = "rules_cc", version = "0.2.13")
-bazel_dep(name = "rules_cuda", version = "0.2.5")
+bazel_dep(name = "rules_cuda", version = "0.3.0")
+
+# Pin to an upstream commit past v0.3.0 that includes the configurable
+# cc_host_compile_flags and multi-arch toolchain refactors we depend on,
+# then layer our local fixes on top.
+git_override(
+    module_name = "rules_cuda",
+    commit = "71981925b1ff7a8ab37fcf442262c571ebaf3380",
+    patch_strip = 1,
+    patches = [
+        "//third_party:rules_cuda/0001-Pass-std-through-to-clang-CUDA-compile-actions.patch",
+        "//third_party:rules_cuda/0002-Inject-BAZEL_CURRENT_REPOSITORY-into-cuda_library.patch",
+        "//third_party:rules_cuda/0003-Add-cuda_wrappers-include-feature-for-clang-CUDA-too.patch",
+    ],
+    remote = "https://github.com/bazel-contrib/rules_cuda.git",
+)
 bazel_dep(name = "rules_java", version = "9.3.0")
 bazel_dep(name = "aspect_bazel_lib", version = "2.14.0")
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
@@ -382,12 +397,10 @@ local_path_override(
 llvm_ext = use_extension("//tools/cpp:extensions.bzl", "llvm_toolchain_extension", dev_dependency = True)
 use_repo(llvm_ext, "llvm_aarch64", "llvm_k8", "llvm_toolchain")
 
-cuda = use_extension("@rules_cuda//cuda:extensions.bzl", "toolchain")
-cuda.local_toolchain(
-    name = "local_cuda",
-    toolkit_path = "",
+register_toolchains(
+    "//tools/cuda:x86_64_clang_toolchain",
+    "//tools/cuda:aarch64_clang_toolchain",
 )
-use_repo(cuda, "local_cuda")
 
 register_toolchains(
     "@llvm_toolchain//:all",

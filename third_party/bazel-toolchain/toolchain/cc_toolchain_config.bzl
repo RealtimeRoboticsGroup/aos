@@ -600,11 +600,6 @@ def cc_toolchain_config(
             cxx_flags.extend(["-isystem", target_toolchain_path_prefix + "lib/clang/{}/include".format(resource_dir_version)])
             conly_flags.extend(["-isystem", target_toolchain_path_prefix + "lib/clang/{}/include".format(resource_dir_version)])
 
-    cuda_wrapper_flags = [
-        "-isystem",
-        target_toolchain_path_prefix + "lib/clang/{}/include/cuda_wrappers".format(resource_dir_version),
-    ]
-
     if compiler_configuration["extra_compile_flags"] != None:
         compile_flags.extend(_fmt_flags(compiler_configuration["extra_compile_flags"], toolchain_path_prefix))
     if compiler_configuration["extra_cxx_flags"] != None:
@@ -680,7 +675,6 @@ def cc_toolchain_config(
         dbg_compile_flags = dbg_compile_flags,
         opt_compile_flags = opt_compile_flags,
         conly_flags = conly_flags,
-        cuda_flags = cuda_wrapper_flags,
         cxx_flags = cxx_flags,
         link_flags = link_flags + select({str(Label("@toolchains_llvm//toolchain/config:use_libunwind")): libunwind_link_flags, "//conditions:default": []}) +
                      select({str(Label("@toolchains_llvm//toolchain/config:use_compiler_rt")): compiler_rt_link_flags, "//conditions:default": []}) +
