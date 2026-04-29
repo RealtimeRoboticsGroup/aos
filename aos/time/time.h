@@ -26,7 +26,7 @@ class monotonic_clock {
 
   // Converts the time string to a time_point if it is well formatted.  This is
   // designed to reverse operator <<.
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
   static std::optional<monotonic_clock::time_point> FromString(
       const std::string_view now);
 #endif
@@ -51,14 +51,14 @@ class realtime_clock {
   typedef ::std::chrono::nanoseconds duration;
   typedef ::std::chrono::time_point<realtime_clock> time_point;
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
   static realtime_clock::time_point now() noexcept;
 #endif  // __linux__
   static constexpr bool is_steady = false;
 
   // Converts the time string to a time_point if it is well formatted.  This is
   // designed to reverse operator <<.
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
   static std::optional<realtime_clock::time_point> FromString(
       const std::string_view now);
 #endif
@@ -85,7 +85,7 @@ std::string ToString(const aos::monotonic_clock::time_point &now);
 std::string ToString(const aos::realtime_clock::time_point &now);
 
 namespace time {
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 
 // Construct a time representing the period of hertz.
 constexpr ::std::chrono::nanoseconds FromRate(int hertz) {
@@ -119,7 +119,7 @@ struct timespec to_timespec(::aos::monotonic_clock::time_point time);
 }  // namespace time
 }  // namespace aos
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 
 namespace aos::this_thread {
 void sleep_until(const ::aos::monotonic_clock::time_point &end_time);

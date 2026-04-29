@@ -14,6 +14,7 @@ namespace aos {
 
 namespace {
 int MaybeCheckOpen(const char *file) {
+#ifdef __linux__
   if (!absl::GetFlag(FLAGS_enable_ftrace)) return -1;
   int result =
       open(absl::StrCat("/sys/kernel/tracing/", file).c_str(), O_WRONLY);
@@ -28,6 +29,12 @@ int MaybeCheckOpen(const char *file) {
   PCHECK(result >= 0) << ": Failed to open /sys/kernel/tracing/" << file
                       << " or legacy /sys/kernel/debug/tracing/" << file;
   return result;
+#else
+  // Don't worry about tracing on other OSes yet.  Don't open the file and
+  // that'll pretend to be equivilent to not having permission.
+  (void)file;
+  return -1;
+#endif
 }
 }  // namespace
 
@@ -46,7 +53,11 @@ Ftrace::~Ftrace() {
 
 void Ftrace::TurnOffOrDie() {
   CHECK(on_fd_ != -1)
+#ifdef __linux__
       << ": Failed to open tracing_on earlier, cannot turn off tracing";
+#else
+      << ": Tracing is not supported on your OS.";
+#endif
   char zero = '0';
   CHECK_EQ(write(on_fd_, &zero, 1), 1) << ": Failed to turn tracing off";
 }

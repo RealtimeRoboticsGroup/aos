@@ -2,7 +2,12 @@
 #define AOS_EVENTS_EPOLL_H_
 
 #include <stdint.h>
+#if defined(__linux__)
 #include <sys/epoll.h>
+#elif defined(__APPLE__)
+#include <sys/event.h>
+#include <sys/time.h>
+#endif
 
 #include <atomic>
 #include <functional>
@@ -32,7 +37,7 @@ class TimerFd {
   // Disarms the timer.
   void Disable() {
     // Disarm the timer by feeding zero values
-    SetTime(::aos::monotonic_clock::epoch(), ::aos::monotonic_clock::zero());
+    SetTime(monotonic_clock::epoch(), monotonic_clock::zero());
   }
 
   // Reads the event.  Returns the number of elapsed cycles.
@@ -42,7 +47,15 @@ class TimerFd {
   int fd() { return fd_; }
 
  private:
+  friend class EPoll;
   int fd_ = -1;
+#if defined(__APPLE__)
+  ::aos::monotonic_clock::duration interval_ = ::aos::monotonic_clock::zero();
+  ::aos::monotonic_clock::time_point next_expiration_ =
+      ::aos::monotonic_clock::min_time;
+  void ResetOnFork();
+  friend void ResetTimerFdOnFork(TimerFd *timer);
+#endif
 };
 
 // Class to wrap epoll and call a callback when an event happens.
@@ -165,11 +178,21 @@ class EPoll {
 
   void DoEpollCtl(EventData *event_data, uint32_t new_events);
 
+  void DeleteFdFromEpoll(int fd);
+
+  // Provide an abstraction which is pretty close to the Linux abstraction.
+  // The underlying datastructures want to track this as a bitmask to track if
+  // multiple things are set, so lean in to that abstraction.
+  static constexpr uint32_t kIn = 0x01;
+  static constexpr uint32_t kPri = 0x02;
+  static constexpr uint32_t kOut = 0x04;
+  static constexpr uint32_t kErr = 0x08;
+
   // TODO(Brian): Figure out a nicer way to handle EPOLLPRI than lumping it in
   // with input.
-  static constexpr uint32_t kInEvents = EPOLLIN | EPOLLPRI;
-  static constexpr uint32_t kOutEvents = EPOLLOUT;
-  static constexpr uint32_t kErrorEvents = EPOLLERR;
+  static constexpr uint32_t kInEvents = kIn | kPri;
+  static constexpr uint32_t kOutEvents = kOut;
+  static constexpr uint32_t kErrorEvents = kErr;
 
   ::std::atomic<bool> run_{true};
 
@@ -183,6 +206,11 @@ class EPoll {
   int quit_epoll_fd_;
 
   std::vector<std::function<void()>> before_epoll_wait_functions_;
+
+#if defined(__APPLE__)
+  void ResetOnFork();
+  friend void ResetEPollOnFork(EPoll *epoll);
+#endif
 };
 
 }  // namespace aos::internal

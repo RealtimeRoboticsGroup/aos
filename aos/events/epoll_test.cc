@@ -13,7 +13,11 @@ namespace aos::internal::testing {
 // read/write data through it.
 class Pipe {
  public:
-  Pipe() { PCHECK(pipe2(fds_, O_NONBLOCK) == 0); }
+  Pipe() {
+    PCHECK(pipe(fds_) == 0);
+    PCHECK(fcntl(fds_[0], F_SETFL, O_NONBLOCK) == 0);
+    PCHECK(fcntl(fds_[1], F_SETFL, O_NONBLOCK) == 0);
+  }
   ~Pipe() {
     if (fds_[0] >= 0) {
       PCHECK(close(fds_[0]) == 0);

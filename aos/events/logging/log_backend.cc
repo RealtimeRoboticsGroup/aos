@@ -168,6 +168,7 @@ WriteCode FileHandler::OpenForWrite() {
 
 void FileHandler::EnableDirect() {
   if (supports_odirect_ && !ODirectEnabled()) {
+#ifdef O_DIRECT
     const int new_flags = flags_ | O_DIRECT;
     // Track if we failed to set O_DIRECT.  Note: Austin hasn't seen this call
     // fail.  The write call tends to fail instead.
@@ -175,19 +176,41 @@ void FileHandler::EnableDirect() {
       PLOG(WARNING) << "Failed to set O_DIRECT on " << filename_;
       supports_odirect_ = false;
     } else {
-      VLOG(1) << "Enabled O_DIRECT on " << filename_;
       flags_ = new_flags;
+      odirect_enabled_ = true;
+      VLOG(1) << "Enabled O_DIRECT on " << filename_;
     }
+#elif defined(__APPLE__)
+    if (fcntl(fd_, F_NOCACHE, 1) == -1) {
+      PLOG(WARNING) << "Failed to set F_NOCACHE on " << filename_;
+      supports_odirect_ = false;
+    } else {
+      odirect_enabled_ = true;
+      VLOG(1) << "Enabled F_NOCACHE on " << filename_;
+    }
+#else
+    // OSX likes aligned blocks to write efficiently, but does it implicitly
+    // rather than explicitly.
+    odirect_enabled_ = true;
+    VLOG(1) << "Enabled O_DIRECT on " << filename_;
+#endif
   }
 }
 
 void FileHandler::DisableDirect() {
   if (supports_odirect_ && ODirectEnabled()) {
+#ifdef O_DIRECT
     flags_ = flags_ & (~O_DIRECT);
     PCHECK(fcntl(fd_, F_SETFL, flags_) != -1) << ": Failed to disable O_DIRECT";
+#elif defined(__APPLE__)
+    PCHECK(fcntl(fd_, F_NOCACHE, 0) != -1) << ": Failed to disable F_NOCACHE";
+#endif
+    odirect_enabled_ = false;
     VLOG(1) << "Disabled O_DIRECT on " << filename_;
   }
 }
+
+bool FileHandler::ODirectEnabled() const { return odirect_enabled_; }
 
 WriteResult FileHandler::Write(
     const absl::Span<const absl::Span<const uint8_t>> &queue) {
@@ -303,6 +326,7 @@ WriteCode FileHandler::WriteV(const std::vector<struct iovec> &iovec,
   }
 
   if (absl::GetFlag(FLAGS_sync)) {
+#ifdef __linux__
     // Flush asynchronously and force the data out of the cache.
     sync_file_range(fd_, total_write_bytes_, written, SYNC_FILE_RANGE_WRITE);
     if (last_synced_bytes_ != 0) {
@@ -318,6 +342,11 @@ WriteCode FileHandler::WriteV(const std::vector<struct iovec> &iovec,
                     total_write_bytes_ - last_synced_bytes_,
                     POSIX_FADV_DONTNEED);
     }
+#elif defined(__APPLE__)
+    if (fcntl(fd_, F_FULLFSYNC) == -1) {
+      PLOG(WARNING) << "Failed to F_FULLFSYNC " << filename_;
+    }
+#endif
     last_synced_bytes_ = total_write_bytes_;
   }
 
@@ -337,7 +366,15 @@ WriteCode FileHandler::Close() {
 
   if (absl::GetFlag(FLAGS_sync)) {
     // Force everythig out at the end so we know that it hits disk.
+#ifdef __linux__
     fdatasync(fd_);
+#elif defined(__APPLE__)
+    if (fcntl(fd_, F_FULLFSYNC) == -1) {
+      PLOG(WARNING) << "Failed to F_FULLFSYNC " << filename_;
+    }
+#else
+    fsync(fd_);
+#endif
   }
 
   if (close(fd_) == -1) {

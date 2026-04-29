@@ -708,7 +708,6 @@ cc_library(
     hdrs = [
         "ftrace.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/flags:flag",

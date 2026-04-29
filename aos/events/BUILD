@@ -26,7 +26,6 @@ cc_static_flatbuffer(
 static_flatbuffer(
     name = "event_loop_fbs",
     srcs = ["event_loop.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = ["//aos:configuration_fbs"],
 )
 
@@ -38,11 +37,16 @@ cc_static_flatbuffer(
 
 cc_library(
     name = "epoll",
-    srcs = ["epoll.cc"],
+    srcs = [
+        "epoll.cc",
+    ] + select({
+        "@platforms//os:linux": ["epoll_linux.cc"],
+        "@platforms//os:macos": ["epoll_darwin.cc"],
+    }),
     hdrs = ["epoll.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
+        "//aos/mutex",
         "//aos/time",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
@@ -52,7 +56,17 @@ cc_library(
 cc_test(
     name = "epoll_test",
     srcs = ["epoll_test.cc"],
-    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        ":epoll",
+        "//aos/testing:googletest",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
+    ],
+)
+
+cc_test(
+    name = "timerfd_test",
+    srcs = ["timerfd_test.cc"],
     deps = [
         ":epoll",
         "//aos/testing:googletest",
@@ -66,7 +80,6 @@ cc_library(
     hdrs = [
         "context.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos:uuid",
@@ -85,7 +98,6 @@ cc_library(
         "channel_preallocated_allocator.h",
         "event_loop.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":context",
@@ -273,14 +285,12 @@ aos_config(
         "//aos/starter:starter_fbs",
         "//aos/starter:starter_rpc_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 cc_library(
     name = "timing_statistics",
     srcs = ["timing_statistics.cc"],
     hdrs = ["timing_statistics.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":event_loop_fbs",
         "//aos:configuration",
@@ -293,7 +303,6 @@ cc_library(
 cc_test(
     name = "timing_statistics_test",
     srcs = ["timing_statistics_test.cc"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":timing_statistics",
         "//aos:configuration",
@@ -348,7 +357,6 @@ cc_library(
     testonly = True,
     srcs = ["event_loop_param_test.cc"],
     hdrs = ["event_loop_param_test.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":event_loop",
         ":test_message_fbs",
@@ -372,7 +380,6 @@ cc_test(
         "//aos/testing/ping_pong:multinode_pingpong_test_split_config",
     ],
     shard_count = 16,
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":event_loop_param_test",
         ":function_scheduler",
@@ -454,7 +461,6 @@ cc_library(
     name = "simple_channel",
     srcs = ["simple_channel.cc"],
     hdrs = ["simple_channel.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos:configuration_fbs",
         "@com_github_google_flatbuffers//:flatbuffers",
@@ -476,7 +482,6 @@ cc_library(
         "simulated_event_loop.h",
         "simulated_network_bridge.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":aos_logging",
@@ -587,7 +592,6 @@ autocxx_library(
 cc_test(
     name = "event_scheduler_test",
     srcs = ["event_scheduler_test.cc"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":simulated_event_loop",
         "//aos/network:testing_time_converter",
@@ -605,7 +609,6 @@ cc_library(
     hdrs = [
         "aos_logging.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":event_loop",
@@ -617,7 +620,6 @@ cc_library(
 cc_library(
     name = "message_counter",
     hdrs = ["message_counter.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":event_loop",
