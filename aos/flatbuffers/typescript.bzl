@@ -119,7 +119,7 @@ def flatbuffer_ts_library(
     # third_party/.
     # TODO(james): There absolutely are better ways to do this, but this was the quick and dirty
     # one....
-    includes = [d + "_srcs" for d in deps] + (["@com_github_google_flatbuffers//reflection:reflection_ts_fbs_srcs"] if include_reflection else [])
+    includes = [d + "_srcs" for d in deps] + (["@aos//aos/flatbuffers/reflection:reflection_ts_fbs_srcs"] if include_reflection else [])
     flatbuffer_library_public(
         name = srcs_lib,
         srcs = srcs,
@@ -165,7 +165,7 @@ def flatbuffer_ts_library(
             # transitivie dependencies.
             "//:node_modules/@types/node",
             #] + (["@//:node_modules/flatbuffers_reflection"] if include_reflection else []),
-            #] + (["@com_github_google_flatbuffers//reflection:reflection_ts_fbs"] if include_reflection else []),
+            #] + (["@aos//aos/flatbuffers/reflection:reflection_ts_fbs"] if include_reflection else []),
         ],
     )
     js_library(

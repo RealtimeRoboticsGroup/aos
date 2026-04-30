@@ -412,7 +412,7 @@ cypress_register_toolchains(
 # Flatbuffers
 local_repository(
     name = "com_github_google_flatbuffers",
-    path = "third_party/flatbuffers",
+    path = "third_party/flatbuffers/",
 )
 
 load("@com_github_google_flatbuffers//ts:repositories.bzl", "flatbuffers_npm")

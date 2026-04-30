@@ -44,7 +44,7 @@ npm_link_package(
 
 npm_link_package(
     name = "node_modules/flatbuffers_reflection",
-    src = "@com_github_google_flatbuffers//reflection:flatbuffers_reflection",
+    src = "@aos//aos/flatbuffers/reflection:flatbuffers_reflection",
 )
 
 # gazelle:prefix github.com/RealtimeRoboticsGroup/aos

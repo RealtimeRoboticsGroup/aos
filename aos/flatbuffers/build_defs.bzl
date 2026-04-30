@@ -473,7 +473,7 @@ def flatbuffer_rust_library(
     lib_gen = "%s_lib_gen" % (name)
     deps = list(deps)
     if include_reflection:
-        deps.append("@com_github_google_flatbuffers//reflection:reflection_rust_fbs")
+        deps.append(clean_dep("//aos/flatbuffers/reflection:reflection_rust_fbs"))
 
     flatbuffer_library_public(
         name = srcs_lib,
@@ -501,7 +501,7 @@ def flatbuffer_rust_library(
         srcs = [srcs_lib, lib_gen],
         crate_root = lib_gen,
         crate_name = crate_name,
-        deps = ["@com_github_google_flatbuffers//rust"] + deps,
+        deps = ["//aos/flatbuffers/rust:flatbuffers"] + deps,
         edition = "2018",
         visibility = visibility,
         compatible_with = compatible_with,

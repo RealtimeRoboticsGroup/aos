@@ -14,7 +14,16 @@
     "moduleResolution": "node",
     "paths": {
       "@aos/*": ["./*", "external/aos/*"],
-      "@com_github_google_flatbuffers/*": [    "external/com_github_google_flatbuffers/reflection/reflection_ts_fbs/*", "../../external/com_github_google_flatbuffers/reflection/reflection_ts_fbs/*", "external/flatbuffers+/reflection/reflection_ts_fbs/*", "../../external/flatbuffers+/reflection/reflection_ts_fbs/*" ]
+      "@com_github_google_flatbuffers/*": [
+        "aos/flatbuffers/reflection/reflection_ts_fbs/*",
+        "../../aos/flatbuffers/reflection/reflection_ts_fbs/*",
+        "external/aos/aos/flatbuffers/reflection/reflection_ts_fbs/*",
+        "../../external/aos/aos/flatbuffers/reflection/reflection_ts_fbs/*",
+        "external/com_github_google_flatbuffers/reflection/reflection_ts_fbs/*",
+        "../../external/com_github_google_flatbuffers/reflection/reflection_ts_fbs/*",
+        "external/flatbuffers+/reflection/reflection_ts_fbs/*",
+        "../../external/flatbuffers+/reflection/reflection_ts_fbs/*"
+      ]
     }
   },
   "bazelOptions": {

@@ -26,7 +26,7 @@ ts_project(
         "//aos:configuration_ts_fbs",
         "//aos/network:connect_ts_fbs",
         "//aos/network:web_proxy_ts_fbs",
-        "@com_github_google_flatbuffers//reflection:reflection_ts_fbs",
+        "@aos//aos/flatbuffers/reflection:reflection_ts_fbs",
         "@com_github_google_flatbuffers//ts:flatbuffers_ts",
     ],
 )
@@ -92,7 +92,7 @@ ts_project(
     deps = [
         "//:node_modules/flatbuffers_reflection",
         "//aos:configuration_ts_fbs",
-        "@com_github_google_flatbuffers//reflection:reflection_ts_fbs",
+        "@aos//aos/flatbuffers/reflection:reflection_ts_fbs",
         "@com_github_google_flatbuffers//ts:flatbuffers_ts",
     ],
 )
@@ -130,7 +130,7 @@ ts_project(
         "//aos:configuration_ts_fbs",
         "//aos/network:connect_ts_fbs",
         "//aos/network:web_proxy_ts_fbs",
-        "@com_github_google_flatbuffers//reflection:reflection_ts_fbs",
+        "@aos//aos/flatbuffers/reflection:reflection_ts_fbs",
         "@com_github_google_flatbuffers//ts:flatbuffers_ts",
     ],
 )
