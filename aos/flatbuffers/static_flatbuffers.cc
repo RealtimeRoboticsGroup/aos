@@ -8,6 +8,8 @@
 #include <map>
 #include <optional>
 #include <ostream>
+#include <set>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -29,6 +31,16 @@
 
 namespace aos::fbs {
 namespace {
+// Returns the basename of a flatbuffers schema declaration_file path.
+//
+// flatc emits `reflection::Object::declaration_file()` either as a bare
+// filename (e.g. "include.fbs") or in the form `//<relative-path>` when its
+// `realpath()` resolution succeeds against the project root (e.g.
+// "//../../foo/include.fbs"). Whether realpath succeeds depends on the
+// sandbox structure of the action, so the absolute string value is not a
+// reliable identifier for the file. The basename, on the other hand, is
+// stable and is what we actually want to compare against `file_hint`
+// (which is itself just a basename).
 std::string_view StripPath(std::string_view path) {
   size_t last_slash = path.find_last_of('/');
   if (last_slash != std::string_view::npos) {
@@ -1364,7 +1376,27 @@ GeneratedCode GeneratedCode::MergeCode(
 
 std::string GenerateCodeForRootTableFile(const reflection::Schema *schema,
                                          std::string_view file_hint) {
+  // Sanity check to detect duplicate basenames in the imported schema graph.
+  // Since this generator matches objects from the root schema file by comparing
+  // basenames (to be robust against fluctuating relative paths across
+  // sandbox/Bzlmod environments), importing multiple schemas with colliding
+  // basenames (e.g., `foo/msg.fbs` and `bar/msg.fbs`) in the same compilation
+  // unit would cause objects from both files to incorrectly merge into the same
+  // generated C++ file.
+  std::set<std::string_view> basenames;
+  for (const reflection::SchemaFile *file : *schema->fbs_files()) {
+    const std::string_view filename = file->filename()->string_view();
+    const std::string_view basename = StripPath(filename);
+    ABSL_CHECK(basenames.insert(basename).second)
+        << ": Multiple files with the same basename (" << basename
+        << ") are being imported. This is not supported by the static "
+           "flatbuffer generator.";
+  }
+
   const reflection::Object *root_object = GetObject(schema, -1);
+  // Compare basenames rather than the raw declaration_file strings so the
+  // result is independent of whether flatc's `realpath()` succeeded against
+  // the project root (see comment on StripPath for context).
   const std::string_view root_file =
       (root_object == nullptr) ? file_hint
                                : root_object->declaration_file()->string_view();
