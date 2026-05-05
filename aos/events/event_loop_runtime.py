@@ -435,8 +435,6 @@ class EventLoopRuntime:
 
         This must happen before the event loop is destroyed.
         """
-        for timer in self._timers:
-            lib.destroy_timer_handler(timer._c_timer_handle)
         for _, fetcher in self._fetchers.items():
             lib.aos_fetcher_destroy(fetcher._c_fetcher)
         for _, sender in self._senders.items():
