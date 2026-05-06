@@ -120,7 +120,7 @@ class MultiNodePingPongTest : public ::testing::Test {
 };
 
 // Tests that the number of pong messages matches the number of ping messages
-// (on both nodes this time)
+// (on both nodes this time).
 TEST_F(MultiNodePingPongTest, AlwaysReplies) {
   // For grins, test that ping and pong appear on both nodes and match.
   std::unique_ptr<EventLoop> pi1_test_event_loop =

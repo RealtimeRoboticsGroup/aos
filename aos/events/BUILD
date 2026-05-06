@@ -1,3 +1,4 @@
+load("@com_github_google_flatbuffers//:flatbuffers_python.bzl", "flatbuffer_py_library")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
@@ -181,12 +182,24 @@ py_library(
 )
 
 py_library(
+    name = "event_loop_py",
+    srcs = [
+        "event_loop.py",
+    ],
+    deps = [
+        ":event_loop_c_py",
+        "@com_github_google_flatbuffers//:flatpy",
+    ],
+)
+
+py_library(
     name = "shm_event_loop_py",
     srcs = [
         "shm_event_loop.py",
     ],
     deps = [
         ":event_loop_c_py",
+        ":event_loop_py",
         ":event_loop_runtime_py",
     ],
 )
@@ -198,7 +211,41 @@ py_library(
     ],
     deps = [
         ":event_loop_c_py",
+        ":event_loop_py",
         ":event_loop_runtime_py",
+    ],
+)
+
+aos_config(
+    name = "event_loop_py_config",
+    src = "event_loop_py.json",
+    flatbuffers = [
+        ":test_message_fbs",
+    ],
+    deps = [
+        ":aos_config",
+    ],
+)
+
+flatbuffer_py_library(
+    name = "test_message_fbs_py",
+    src = "test_message.fbs",
+)
+
+py_test(
+    name = "event_loop_test_py",
+    srcs = ["event_loop_test.py"],
+    data = [
+        ":event_loop_py_config",
+    ],
+    main = "event_loop_test.py",
+    deps = [
+        ":event_loop_py",
+        ":simulated_event_loop_py",
+        ":test_message_fbs_py",
+        ":util_py",
+        "@com_github_google_flatbuffers//:flatpy",
+        "@pip_deps//absl_py",
     ],
 )
 

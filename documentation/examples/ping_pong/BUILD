@@ -131,6 +131,57 @@ py_test(
     ],
 )
 
+py_binary(
+    name = "ping_callbacks",
+    srcs = ["ping_callbacks.py"],
+    data = [
+        ":pingpong_config",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":ping_fbs_py",
+        ":pong_fbs_py",
+        "//aos/events:shm_event_loop_py",
+        "//aos/events:util_py",
+        "@pip_deps//absl_py",
+    ],
+)
+
+py_binary(
+    name = "pong_callbacks",
+    srcs = ["pong_callbacks.py"],
+    data = [
+        ":pingpong_config",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":ping_fbs_py",
+        ":pong_fbs_py",
+        "//aos/events:shm_event_loop_py",
+        "//aos/events:util_py",
+        "@pip_deps//absl_py",
+    ],
+)
+
+py_test(
+    name = "pingpong_callbacks_test",
+    srcs = ["pingpong_callbacks_test.py"],
+    data = [
+        ":multinode_pingpong_test_split_config",
+        ":pingpong_config",
+    ],
+    deps = [
+        ":ping_callbacks",
+        ":ping_fbs_py",
+        ":pong_callbacks",
+        ":pong_fbs_py",
+        "//aos/events:event_loop_py",
+        "//aos/events:simulated_event_loop_py",
+        "//aos/events:util_py",
+        "@pip_deps//absl_py",
+    ],
+)
+
 cc_binary(
     name = "ping",
     srcs = [

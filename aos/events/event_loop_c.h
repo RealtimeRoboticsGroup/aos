@@ -139,11 +139,19 @@ typedef struct aos_context_t {
 // executed, although this return value may change in future versions.
 // aos_const_raw_sender_error_* are aos::RawSender::Error values.
 // aos_const_error_status_code_* are aos::ErrorType::StatusCode vales.
+// aos_const_scheduling_policy_* are aos::SchedulingPolicy values.
+// aos_const_realtime_policy_* are aos::RealtimePolicy values.
 int aos_const_raw_sender_error_ok(void);
 int aos_const_raw_sender_error_messages_sent_too_fast(void);
 int aos_const_raw_sender_error_invalid_redzone(void);
 int aos_const_error_status_code_ok(void);
 int aos_const_error_status_code_error(void);
+int aos_const_error_status_code_python_exception(void);
+int aos_const_scheduling_policy_other(void);
+int aos_const_scheduling_policy_fifo(void);
+int aos_const_scheduling_policy_rr(void);
+int aos_const_realtime_policy_realtime_mode_deny_malloc(void);
+int aos_const_realtime_policy_no_mode(void);
 
 void aos_event_loop_destroy(aos_event_loop_t *self);
 // Creates a fetcher on the specified channel and returns it.
@@ -174,6 +182,13 @@ void aos_event_loop_on_run(aos_event_loop_t *self,
                            aos_on_run_callback_t callback, void *user_data);
 // Returns true if the event loop is running.
 bool aos_event_loop_is_running(aos_event_loop_t *self);
+// Sets the realtime priority to run the event loop at.
+// scheduling_policy must be one of the aos_const_scheduling_policy_* values.
+// realtime_policy must be one of the aos_const_realtime_policy_* values.
+void aos_event_loop_set_runtime_realtime_priority(aos_event_loop_t *self,
+                                                  int priority,
+                                                  int scheduling_policy,
+                                                  int realtime_policy);
 // Runs the event loop. This blocks until interrupted by a signal or ^C. This
 // is only available on some kinds of event loops.
 // Returns nullptr to indicate Ok().
@@ -215,9 +230,13 @@ void aos_timer_handler_schedule(aos_timer_handler_t *self, int64_t base_ns,
                                 int64_t repeat_offset_ns);
 // Cancels the timer, if scheduled.
 void aos_timer_handler_disable(aos_timer_handler_t *self);
+// Copies name_data+name_size.
+void aos_timer_set_name(aos_timer_handler_t *self, const char *name_data,
+                        size_t name_size);
 
 void aos_exit_handle_destroy(aos_exit_handle_t *self);
 void aos_exit_handle_exit(aos_exit_handle_t *self);
+void aos_exit_handle_exit_with_python_exception(aos_exit_handle_t *self);
 
 // TODO(Sanjay): How does this interact with absl-py?
 void aos_init(int *argc, char ***argv);
@@ -249,6 +268,10 @@ aos_event_loop_t *aos_simulated_event_loop_factory_make_event_loop(
     const char *node);
 void aos_simulated_event_loop_factory_run_for(
     aos_simulated_event_loop_factory_t *self, const int64_t duration_ns);
+aos_error_t *aos_simulated_event_loop_factory_non_fatal_run_for(
+    aos_simulated_event_loop_factory_t *self, const int64_t duration_ns);
+aos_exit_handle_t *aos_simulated_event_loop_factory_make_exit_handle(
+    aos_simulated_event_loop_factory_t *self);
 
 void aos_error_destroy(aos_error_t *self);
 int aos_error_code(aos_error_t *self);

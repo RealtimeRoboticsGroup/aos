@@ -59,6 +59,11 @@ class ErrorType {
   enum class StatusCode : int {
     kOk = 0,
     kError = 1,
+    // Indicates a Python exception has been saved, to be re-raised by further
+    // Python code.
+    //
+    // For exclusive use by Python bindings in //aos/events.
+    kPythonException = 2,
   };
 
   ErrorType(ErrorType &&other);
@@ -75,6 +80,11 @@ class ErrorType {
   explicit ErrorType(const char *message, std::source_location source_location =
                                               std::source_location::current())
       : ErrorType(StatusCode::kError, message, std::move(source_location)) {}
+
+  static ErrorType PythonException() {
+    return ErrorType(StatusCode::kPythonException, std::string_view(),
+                     std::nullopt);
+  }
 
   // Returns a numeric value for the status code. Zero will always indicate
   // success; non-zero values will always indicate an error.

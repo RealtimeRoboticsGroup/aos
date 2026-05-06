@@ -57,6 +57,24 @@ int aos_const_error_status_code_ok(void) {
 int aos_const_error_status_code_error(void) {
   return static_cast<int>(aos::ErrorType::StatusCode::kError);
 }
+int aos_const_error_status_code_python_exception(void) {
+  return static_cast<int>(aos::ErrorType::StatusCode::kPythonException);
+}
+int aos_const_scheduling_policy_other(void) {
+  return static_cast<int>(aos::SchedulingPolicy::SCHEDULER_OTHER);
+}
+int aos_const_scheduling_policy_fifo(void) {
+  return static_cast<int>(aos::SchedulingPolicy::SCHEDULER_FIFO);
+}
+int aos_const_scheduling_policy_rr(void) {
+  return static_cast<int>(aos::SchedulingPolicy::SCHEDULER_RR);
+}
+int aos_const_realtime_policy_realtime_mode_deny_malloc(void) {
+  return static_cast<int>(aos::RealtimePolicy::REALTIME_MODE_DENY_MALLOC);
+}
+int aos_const_realtime_policy_no_mode(void) {
+  return static_cast<int>(aos::RealtimePolicy::NO_MODE);
+}
 
 void aos_fetcher_destroy(aos_fetcher_t *self) {
   delete static_cast<aos::RawFetcher *>(ABSL_DIE_IF_NULL(self)->impl);
@@ -132,6 +150,13 @@ void aos_timer_handler_disable(aos_timer_handler_t *self) {
   ABSL_DIE_IF_NULL(timer_handler)->Disable();
 }
 
+void aos_timer_set_name(aos_timer_handler_t *self, const char *name_data,
+                        size_t name_size) {
+  aos::TimerHandler *timer_handler =
+      reinterpret_cast<aos::TimerHandler *>(ABSL_DIE_IF_NULL(self)->impl);
+  timer_handler->set_name(std::string_view(name_data, name_size));
+}
+
 void aos_exit_handle_destroy(aos_exit_handle_t *self) {
   delete static_cast<aos::ExitHandle *>(ABSL_DIE_IF_NULL(self)->impl);
   free(self);
@@ -141,6 +166,12 @@ void aos_exit_handle_exit(aos_exit_handle_t *self) {
   aos::ExitHandle *exit_handle =
       static_cast<aos::ExitHandle *>(ABSL_DIE_IF_NULL(self)->impl);
   ABSL_DIE_IF_NULL(exit_handle)->Exit();
+}
+
+void aos_exit_handle_exit_with_python_exception(aos_exit_handle_t *self) {
+  aos::ExitHandle *exit_handle =
+      reinterpret_cast<aos::ExitHandle *>(ABSL_DIE_IF_NULL(self)->impl);
+  exit_handle->Exit(aos::MakeError(aos::ErrorType::PythonException()));
 }
 
 aos_fetcher_t *aos_event_loop_make_fetcher(aos_event_loop_t *self,
@@ -271,6 +302,17 @@ bool aos_event_loop_is_running(aos_event_loop_t *self) {
   return ABSL_DIE_IF_NULL(event_loop)->is_running();
 }
 
+void aos_event_loop_set_runtime_realtime_priority(aos_event_loop_t *self,
+                                                  int priority,
+                                                  int scheduling_policy,
+                                                  int realtime_policy) {
+  aos::EventLoop *event_loop =
+      reinterpret_cast<aos::EventLoop *>(ABSL_DIE_IF_NULL(self)->impl);
+  event_loop->SetRuntimeRealtimePriority(
+      priority, static_cast<aos::SchedulingPolicy>(scheduling_policy),
+      static_cast<aos::RealtimePolicy>(realtime_policy));
+}
+
 aos_error_t *aos_shm_event_loop_run(aos_event_loop_t *self) {
   aos::ShmEventLoop *event_loop =
       static_cast<aos::ShmEventLoop *>(ABSL_DIE_IF_NULL(self)->impl);
@@ -368,6 +410,30 @@ void aos_simulated_event_loop_factory_run_for(
       static_cast<aos::SimulatedEventLoopFactory *>(
           ABSL_DIE_IF_NULL(self)->impl);
   ABSL_DIE_IF_NULL(factory)->RunFor(std::chrono::nanoseconds(duration_ns));
+}
+
+aos_error_t *aos_simulated_event_loop_factory_non_fatal_run_for(
+    aos_simulated_event_loop_factory_t *self, const int64_t duration_ns) {
+  aos::SimulatedEventLoopFactory *factory =
+      reinterpret_cast<aos::SimulatedEventLoopFactory *>(
+          ABSL_DIE_IF_NULL(self)->impl);
+  return to_error_t(
+      factory->NonFatalRunFor(std::chrono::nanoseconds(duration_ns)));
+}
+
+aos_exit_handle_t *aos_simulated_event_loop_factory_make_exit_handle(
+    aos_simulated_event_loop_factory_t *self) {
+  aos::SimulatedEventLoopFactory *factory =
+      reinterpret_cast<aos::SimulatedEventLoopFactory *>(
+          ABSL_DIE_IF_NULL(self)->impl);
+  std::unique_ptr<aos::ExitHandle> exit_handle =
+      ABSL_DIE_IF_NULL(factory)->MakeExitHandle();
+  aos_exit_handle_t *c_exit_handle =
+      (aos_exit_handle_t *)malloc(sizeof(aos_exit_handle_t));
+  CHECK(c_exit_handle != nullptr);
+  c_exit_handle->impl = exit_handle.release();
+  c_exit_handle->exit = &aos_exit_handle_exit;
+  return c_exit_handle;
 }
 
 aos_simulated_event_loop_factory_t *aos_simulated_event_loop_factory_create(

@@ -67,7 +67,7 @@ class PingPongTest(absltest.TestCase):
 
     def _run_for(self, duration_ns: int) -> None:
         """Advances simulated time by `duration_ns` nanoseconds."""
-        self._factory.run_for(duration_ns)
+        self._factory.run_for_ns(duration_ns)
 
     def test_starts(self):
         """Tests that Ping and Pong tasks start up and run successfully."""

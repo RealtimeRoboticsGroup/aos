@@ -1,0 +1,13 @@
+{
+	"channels": [
+		{
+			"name": "/test",
+			"type": "aos.TestMessage",
+			"source_node": "source",
+			"frequency": 100
+		}
+	],
+	"imports": [
+		"aos.json"
+	]
+}
