@@ -52,11 +52,15 @@ NOOPT void function4() { function3(); }
 TEST(StacktraceDeathTest, StackTraceOnCrash) {
   g_function = [] { LOG(FATAL) << "Triggering death!"; };
 
+  // NOTE(james): Depending on the platform this runs on, we sometimes get
+  // libunwind warnings in a line here. We may consider suppressing that in the
+  // future.
   EXPECT_DEATH(
       { function4(); },
       ::testing::MatchesRegex(
           R"(F.... ..:..:......... .* stacktrace_test.cc:.*] Triggering death!
-\*\*\* Check failure stack trace: \*\*\*
+.*
+?\*\*\* Check failure stack trace: \*\*\*
     @ .*  absl::.*::log_internal::LogMessage::SendToLog\(\)
     @ .*  aos::testing::StacktraceDeathTest_StackTraceOnCrash_Test::TestBody\(\)::.*
     @ .*  aos::testing::function1\(\)
@@ -75,12 +79,15 @@ TEST(StacktraceDeathTest, StackTraceOnCrash) {
 TEST(StacktraceDeathTest, DISABLED_StackTraceOnSegfault) {
   g_function = [] { CHECK_EQ(raise(SIGSEGV), 0); };
 
+  // NOTE(james): Depending on the platform this runs on, we sometimes get
+  // libunwind warnings in a line here. We may consider suppressing that in the
+  // future.
   EXPECT_DEATH(
       { function4(); },
       ::testing::MatchesRegex(
           R"(\*\*\* SIGSEGV received at time=[[:digit:]]+ on cpu [[:digit:]]+ \*\*\*
-(libunwind: unsupported .eh_frame_hdr version: [[:digit:]]+ at [[:xdigit:]]+
-)?PC: @ .*  .*
+.*
+?PC: @ .*  .*
     @ .*  absl::.*::AbslFailureSignalHandler\(\)
     @ .*  .*
     @ .*  aos::testing::StacktraceDeathTest_StackTraceOnSegfault_Test::TestBody\(\)::.*invoke\(\)
@@ -109,8 +116,8 @@ TEST(StacktraceDeathTest, DISABLED_StackTraceOnMalloc) {
       ::testing::MatchesRegex(
           R"(\[realtime\.cc : [[:digit:]]+\] RAW: Malloced [[:digit:]]+ bytes
 \*\*\* SIGABRT received at time=[[:digit:]]+ on cpu [[:digit:]]+ \*\*\*
-(libunwind: unsupported .eh_frame_hdr version: [[:digit:]]+ at [[:xdigit:]]+
-)?PC: @ .*  .*
+.*
+?PC: @ .*  .*
     @ .*  absl::.*::AbslFailureSignalHandler\(\)
     @ .*  .*
     @ .*  aos::testing::StacktraceDeathTest_StackTraceOnMalloc_Test::TestBody\(\)::.*invoke\(\)
