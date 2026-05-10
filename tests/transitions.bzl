@@ -1,10 +1,26 @@
 """Helper transitions for tests."""
 
+# Copyright 2022 The Bazel Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # This transition function sets `--features=per_object_debug_info` and
 # `--fission` as well as the compilation mode.
 #
 # These three Bazel flags influence whether or not `.dwo` and `.dwp` are
 # created.
+load("@rules_cc//cc:defs.bzl", "CcInfo", "DebugPackageInfo")
+
 def _fission_transition_impl(settings, attr):
     features = settings["//command_line_option:features"]
     if "per_object_debug_info" in features:
@@ -81,5 +97,49 @@ dwp_file = rule(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
         ),
     },
-    incompatible_use_toolchain_transition = True,
+)
+
+def _transition_to_platform_transition_impl(_, attr):
+    return {"//command_line_option:platforms": str(attr.platform)}
+
+_transition_to_platform_transition = transition(
+    implementation = _transition_to_platform_transition_impl,
+    inputs = [],
+    outputs = ["//command_line_option:platforms"],
+)
+
+def _transition_library_to_platform_impl(ctx):
+    return [
+        ctx.attr.lib[0][CcInfo],
+    ]
+
+transition_library_to_platform = rule(
+    implementation = _transition_library_to_platform_impl,
+    attrs = {
+        "lib": attr.label(mandatory = True, cfg = _transition_to_platform_transition),
+        "platform": attr.label(mandatory = True),
+        "_allowlist_function_transition": attr.label(
+            default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
+        ),
+    },
+)
+
+def _transition_binary_to_platform_impl(ctx):
+    out = ctx.actions.declare_file(ctx.attr.name)
+    ctx.actions.symlink(output = out, target_file = ctx.file.bin)
+    return DefaultInfo(files = depset([out]))
+
+transition_binary_to_platform = rule(
+    implementation = _transition_binary_to_platform_impl,
+    attrs = {
+        "bin": attr.label(
+            mandatory = True,
+            allow_single_file = True,
+            cfg = _transition_to_platform_transition,
+        ),
+        "platform": attr.label(mandatory = True),
+        "_allowlist_function_transition": attr.label(
+            default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
+        ),
+    },
 )

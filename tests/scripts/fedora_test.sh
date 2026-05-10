@@ -16,7 +16,7 @@
 set -euo pipefail
 
 images=(
-"fedora:latest"
+  "fedora:latest"
 )
 
 git_root=$(git rev-parse --show-toplevel)
@@ -24,15 +24,14 @@ readonly git_root
 
 for image in "${images[@]}"; do
   docker pull "${image}"
-  docker run --rm --entrypoint=/bin/bash --volume="${git_root}:/src:ro" "${image}" -c """
+  docker run --rm --entrypoint=/bin/bash --env USE_BZLMOD --volume="${git_root}:/src:ro" "${image}" -c """
 set -exuo pipefail
 
-# Install dependencies
-dnf install -qy dnf-plugins-core
-dnf install -qy python gcc ncurses-compat-libs
+# Need system glibc headers (e.g. features.h).
+dnf install -qy glibc-headers ncurses-compat-libs
 
 # Run tests
 cd /src
-tests/scripts/run_tests.sh
+tests/scripts/run_tests.sh -O
 """
 done

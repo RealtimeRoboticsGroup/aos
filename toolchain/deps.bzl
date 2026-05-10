@@ -19,7 +19,36 @@ def bazel_toolchain_dependencies():
     if not native.existing_rule("rules_cc"):
         http_archive(
             name = "rules_cc",
-            sha256 = "b6f34b3261ec02f85dbc5a8bdc9414ce548e1f5f67e000d7069571799cb88b25",
-            strip_prefix = "rules_cc-726dd8157557f1456b3656e26ab21a1646653405",
-            urls = ["https://github.com/bazelbuild/rules_cc/archive/726dd8157557f1456b3656e26ab21a1646653405.tar.gz"],
+            urls = ["https://github.com/bazelbuild/rules_cc/releases/download/0.2.17/rules_cc-0.2.17.tar.gz"],
+            sha256 = "283fa1cdaaf172337898749cf4b9b1ef5ea269da59540954e51fba0e7b8f277a",
+            strip_prefix = "rules_cc-0.2.17",
+        )
+
+    # Load bazel_skylib if the user has not defined them.
+    if not native.existing_rule("bazel_skylib"):
+        http_archive(
+            name = "bazel_skylib",
+            urls = [
+                "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.9.0/bazel-skylib-1.9.0.tar.gz",
+                "https://github.com/bazelbuild/bazel-skylib/releases/download/1.9.0/bazel-skylib-1.9.0.tar.gz",
+            ],
+            sha256 = "3b5b49006181f5f8ff626ef8ddceaa95e9bb8ad294f7b5d7b11ea9f7ddaf8c59",
+        )
+
+    # Load bazel_features if the user has not defined them.
+    if not native.existing_rule("bazel_features"):
+        http_archive(
+            name = "bazel_features",
+            sha256 = "ccf85bbf0613d12bf6df2c8470ecec544a6fe8ceab684e970e8ed4dde4cb24ec",
+            strip_prefix = "bazel_features-1.44.0",
+            url = "https://github.com/bazel-contrib/bazel_features/releases/download/v1.44.0/bazel_features-v1.44.0.tar.gz",
+        )
+
+    # Load helly25_bzl for version comparisons.
+    if not native.existing_rule("helly25_bzl"):
+        http_archive(
+            name = "helly25_bzl",
+            strip_prefix = "bzl-0.3.1",
+            url = "https://github.com/helly25/bzl/releases/download/0.3.1/bzl-0.3.1.tar.gz",
+            sha256 = "c8e28a3cb7e465b4b71f5d4d366c5796cc0ae822fa510a8adf12cf39a9709902",
         )
