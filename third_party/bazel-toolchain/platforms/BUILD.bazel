@@ -23,6 +23,14 @@ platform(
 )
 
 platform(
+    name = "none-x86_64",
+    constraint_values = [
+        "@platforms//os:none",
+        "@platforms//cpu:x86_64",
+    ],
+)
+
+platform(
     name = "linux-aarch64",
     constraint_values = [
         "@platforms//os:linux",
@@ -39,9 +47,57 @@ platform(
 )
 
 platform(
+    name = "linux-riscv64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:riscv64",
+    ],
+)
+
+platform(
     name = "darwin-x86_64",
     constraint_values = [
         "@platforms//os:osx",
         "@platforms//cpu:x86_64",
+    ],
+)
+
+platform(
+    name = "darwin-aarch64",
+    constraint_values = [
+        "@platforms//os:osx",
+        "@platforms//cpu:aarch64",
+    ],
+)
+
+platform(
+    name = "wasm32",
+    constraint_values = [
+        "@platforms//os:none",
+        "@platforms//cpu:wasm32",
+    ],
+)
+
+platform(
+    name = "wasm64",
+    constraint_values = [
+        "@platforms//os:none",
+        "@platforms//cpu:wasm64",
+    ],
+)
+
+platform(
+    name = "wasip1-wasm32",
+    constraint_values = [
+        "@platforms//os:wasi",
+        "@platforms//cpu:wasm32",
+    ],
+)
+
+platform(
+    name = "wasip1-wasm64",
+    constraint_values = [
+        "@platforms//os:wasi",
+        "@platforms//cpu:wasm64",
     ],
 )

@@ -4,9 +4,9 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "rules_cc",
-    sha256 = "458b658277ba51b4730ea7a2020efdf1c6dcadf7d30de72e37f4308277fa8c01",
-    strip_prefix = "rules_cc-0.2.16",
-    url = "https://github.com/bazelbuild/rules_cc/releases/download/0.2.16/rules_cc-0.2.16.tar.gz",
+    sha256 = "283fa1cdaaf172337898749cf4b9b1ef5ea269da59540954e51fba0e7b8f277a",
+    strip_prefix = "rules_cc-0.2.17",
+    url = "https://github.com/bazelbuild/rules_cc/releases/download/0.2.17/rules_cc-0.2.17.tar.gz",
 )
 
 http_archive(
@@ -14,6 +14,23 @@ http_archive(
     sha256 = "6ef26d4f978e8b4cf5ce1d47532d70cb62cd18431227a1c8007c8f7843243c06",
     urls = [
         "https://github.com/bazelbuild/rules_java/releases/download/9.3.0/rules_java-9.3.0.tar.gz",
+    ],
+)
+
+# Keep WORKSPACE mode compatible with the bzlmod setup in MODULE.bazel.
+# This matches the git_override commit and local patches used there.
+http_archive(
+    name = "rules_cuda",
+    patch_args = ["-p1"],
+    patches = [
+        "@aos//third_party:rules_cuda/0001-Pass-std-through-to-clang-CUDA-compile-actions.patch",
+        "@aos//third_party:rules_cuda/0002-Inject-BAZEL_CURRENT_REPOSITORY-into-cuda_library.patch",
+        "@aos//third_party:rules_cuda/0003-Add-cuda_wrappers-include-feature-for-clang-CUDA-too.patch",
+    ],
+    sha256 = "698493ea33914af09772d173f87efcf868930b58bc763af7f3d1103c87c1b71e",
+    strip_prefix = "rules_cuda-71981925b1ff7a8ab37fcf442262c571ebaf3380",
+    urls = [
+        "https://github.com/bazel-contrib/rules_cuda/archive/71981925b1ff7a8ab37fcf442262c571ebaf3380.tar.gz",
     ],
 )
 
@@ -26,7 +43,7 @@ load("@ci_configure//:ci.bzl", "RUNNING_IN_CI")
 load("//:repositories.bzl", "aos_repositories", "frc_repositories")
 
 local_repository(
-    name = "com_grail_bazel_toolchain",
+    name = "toolchains_llvm",
     path = "third_party/bazel-toolchain",
 )
 
@@ -40,6 +57,16 @@ http_archive(
     sha256 = "07271d0f6b12633777b69020c4cb1eb67b1939c0cf84bb3944dc85cc250c0c01",
     strip_prefix = "bazel_features-1.38.0",
     url = "https://github.com/bazel-contrib/bazel_features/releases/download/v1.38.0/bazel_features-v1.38.0.tar.gz",
+)
+
+# toolchains_llvm now loads version helpers from @helly25_bzl in WORKSPACE
+# mode. Declare it here so loading @toolchains_llvm//toolchain:rules.bzl works
+# with --enable_workspace.
+http_archive(
+    name = "helly25_bzl",
+    sha256 = "c8e28a3cb7e465b4b71f5d4d366c5796cc0ae822fa510a8adf12cf39a9709902",
+    strip_prefix = "bzl-0.3.1",
+    url = "https://github.com/helly25/bzl/releases/download/0.3.1/bzl-0.3.1.tar.gz",
 )
 
 load("@bazel_features//:deps.bzl", "bazel_features_deps")
@@ -138,27 +165,44 @@ load(
 
 generate_repositories_for_debs(phoenix6_debs)
 
-load("@com_grail_bazel_toolchain//toolchain:rules.bzl", "llvm", "llvm_toolchain")
+load("@toolchains_llvm//toolchain:rules.bzl", "llvm", "llvm_toolchain")
 
 llvm_version = "21.1.1"
 
+llvm_alternative_sources = [
+    "https://realtimeroboticsgroup.org/build-dependencies/github.com/llvm/llvm-project/releases/download/llvmorg-{llvm_version}/{basename}",
+]
+
+llvm_x86_64_basename = "clang+llvm-%s-x86_64-linux-gnu-ubuntu-22.04.tar.zst" % llvm_version
+
+llvm_aarch64_basename = "clang+llvm-%s-aarch64-linux-gnu.tar.zst" % llvm_version
+
+llvm_extra_distributions = {
+    llvm_x86_64_basename: "75dde978fcfe30486680e9d2fdbad7e92d9b44b48dea8193023399bc7485f885",
+    llvm_aarch64_basename: "f9b33b7ed6cd693160922873a8ae7ec1aadf6ad1efc8e2bee13625b4dc787ce6",
+}
+
 llvm(
     name = "llvm_k8",
-    distribution = "clang+llvm-%s-x86_64-linux-gnu-ubuntu-22.04.tar.zst" % llvm_version,
-    llvm_version = llvm_version,
+    alternative_llvm_sources = llvm_alternative_sources,
+    distribution = llvm_x86_64_basename,
+    extra_llvm_distributions = llvm_extra_distributions,
+    llvm_versions = {"": llvm_version},
 )
 
 llvm(
     name = "llvm_aarch64",
-    distribution = "clang+llvm-%s-aarch64-linux-gnu.tar.zst" % llvm_version,
-    llvm_version = llvm_version,
+    alternative_llvm_sources = llvm_alternative_sources,
+    distribution = llvm_aarch64_basename,
+    extra_llvm_distributions = llvm_extra_distributions,
+    llvm_versions = {"": llvm_version},
 )
 
-llvm_conlyopts = [
+llvm_conly_flags = [
     "-std=gnu99",
 ]
 
-llvm_copts = [
+llvm_extra_compile_flags = [
     "-D__STDC_FORMAT_MACROS",
     "-D__STDC_CONSTANT_MACROS",
     "-D__STDC_LIMIT_MACROS",
@@ -172,31 +216,35 @@ llvm_copts = [
     "-Wembedded-directive",
 ]
 
-llvm_cxxopts = [
-    "-std=gnu++20",
-]
+llvm_extra_compile_flags_aarch64 = llvm_extra_compile_flags + ["-march=armv8-a+crc"]
+
+llvm_cxx_standard = "gnu++20"
 
 llvm_toolchain(
     name = "llvm_toolchain",
-    additional_target_compatible_with = {},
-    conlyopts = {
-        "linux-aarch64": llvm_conlyopts,
-        "linux-x86_64": llvm_conlyopts,
+    conly_flags = {
+        "linux-aarch64": llvm_conly_flags,
+        "linux-x86_64": llvm_conly_flags,
     },
-    copts = {
-        "linux-aarch64": llvm_copts,
-        "linux-x86_64": llvm_copts,
+    cxx_include_layout = {
+        "linux-aarch64": "yocto",
     },
-    cxxopts = {
-        "linux-aarch64": llvm_cxxopts,
-        "linux-x86_64": llvm_cxxopts,
+    cxx_standard = {
+        "linux-aarch64": llvm_cxx_standard,
+        "linux-x86_64": llvm_cxx_standard,
+    },
+    extra_compile_flags = {
+        "linux-aarch64": llvm_extra_compile_flags_aarch64,
+        "linux-x86_64": llvm_extra_compile_flags,
     },
     llvm_version = llvm_version,
-    standard_libraries = {
-        "linux-aarch64": "libstdc++-14.3.0",
-        "linux-x86_64": "libstdc++-12",
+    multiarch = {
+        "linux-aarch64": "aarch64-oe4t-linux",
     },
-    static_libstdcxx = False,
+    stdlib = {
+        "linux-aarch64": "dynamic-stdc++-14.3.0",
+        "linux-x86_64": "dynamic-stdc++-12",
+    },
     sysroot = {
         "linux-aarch64": "@arm64_debian_sysroot//:sysroot_files",
         "linux-x86_64": "@amd64_debian_sysroot//:sysroot_files",
@@ -232,6 +280,10 @@ register_toolchains(
     #"//tools/rust:rust-toolchain-roborio",
     "//tools/rust:noop_rust_toolchain",
     "//tools/ts:noop_node_toolchain",
+    # CUDA toolchains for rules_cuda (workspace mode)
+    "//tools/cuda:x86_64_clang_toolchain",
+    "//tools/cuda:aarch64_clang_toolchain",
+    "//tools/cuda:no_gpu_clang_toolchain",
 )
 
 # Java11 JDK.

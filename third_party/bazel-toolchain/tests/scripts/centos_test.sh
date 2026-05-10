@@ -13,13 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Disable the unreachable code warning because the test is disabled.
+# shellcheck disable=SC2317
+
 echo "This test is disabled because our supported versions of LLVM do not work with CentOS."
 exit 1
 
 set -euo pipefail
 
 images=(
-"centos:7"
+  "centos:7"
 )
 
 git_root=$(git rev-parse --show-toplevel)
@@ -27,11 +30,11 @@ readonly git_root
 
 for image in "${images[@]}"; do
   docker pull "${image}"
-  docker run --rm --entrypoint=/bin/bash --volume="${git_root}:/src:ro" "${image}" -c """
+  docker run --rm --entrypoint=/bin/bash --env USE_BZLMOD --volume="${git_root}:/src:ro" "${image}" -c """
 set -exuo pipefail
 
-# Install dependencies
-yum install -y -q gcc
+# Need system glibc and headers.
+yum install -y -q glibc-headers
 
 # Run tests
 cd /src

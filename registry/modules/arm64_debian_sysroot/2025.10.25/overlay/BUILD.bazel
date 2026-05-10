@@ -1,5 +1,18 @@
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
+# Pieces of the CUDA 12.6 toolkit shipped inside the Yocto sysroot. Exposed
+# so //tools/cuda can wire them into a rules_cuda toolchain.
+exports_files(
+    [
+        "usr/local/cuda-12.6/bin/aarch64-unknown-linux-gnu-fatbinary",
+        "usr/local/cuda-12.6/bin/bin2c",
+        "usr/local/cuda-12.6/bin/nvlink",
+        "usr/local/cuda-12.6/bin/ptxas",
+        "usr/local/cuda-12.6/nvvm/libdevice/libdevice.10.bc",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 filegroup(
     name = "sysroot_files",
     srcs = glob(
