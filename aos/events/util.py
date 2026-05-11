@@ -9,7 +9,7 @@ def init(argv: List[str]) -> None:
     c_argv = [ffi.new("char[]", arg.encode("utf-8")) for arg in argv]
     c_argv_array = ffi.new("char *[]", c_argv)
     c_argv_ptr = ffi.new("char ***", c_argv_array)
-    lib.init(c_argc, c_argv_ptr)
+    lib.aos_init(c_argc, c_argv_ptr)
 
 
 class Configuration:
@@ -17,10 +17,12 @@ class Configuration:
     def __init__(self, relative_config_path: str) -> None:
         config_path = locate(relative_config_path)
         c_config_path = ffi.new("char[]", str(config_path).encode("utf-8"))
-        self._config = lib.read_configuration_from_file(c_config_path)
+        self._config = lib.aos_configuration_read_from_file(c_config_path)
 
     def __del__(self) -> None:
-        lib.destroy_configuration(self._config)
+        maybe_config = getattr(self, "_config", None)
+        if maybe_config is not None:
+            lib.aos_configuration_destroy(maybe_config)
 
     def get_config(self):
         return self._config

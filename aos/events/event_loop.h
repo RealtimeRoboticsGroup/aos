@@ -54,14 +54,15 @@ class RawFetcher {
   virtual ~RawFetcher();
 
   // Fetches the next message in the queue without blocking. Returns true if
-  // there was a new message and we got it.
+  // there was a new message and this function retrieved it.
   bool FetchNext();
   // Fetches the next message if there is one, and the provided function returns
   // true.  The data and buffer_index are the only pieces of the Context which
   // are zeroed out.  The function must be valid.
   bool FetchNextIf(std::function<bool(const Context &context)> fn);
 
-  // Fetches the latest message without blocking.
+  // Fetches the latest message without blocking. Returns true if there was any
+  // message (whether this object previously retrieved it or not).
   bool Fetch();
   // Fetches the latest message conditionally without blocking.  fn must be
   // valid.

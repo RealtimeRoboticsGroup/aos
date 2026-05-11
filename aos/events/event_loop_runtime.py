@@ -77,7 +77,7 @@ class Timer:
             raise RuntimeError()
         self._runtime = runtime
         self._handle = ffi.new_handle(self)
-        self._c_timer_handle = self._runtime._loop().add_timer(
+        self._c_timer_handle = lib.aos_event_loop_add_timer(
             self._runtime._loop(), Timer._timer_callback, self._handle)
         self._on_tick: Future = None
         # The task in which the timer was added.
@@ -96,11 +96,11 @@ class Timer:
             period (int): If specified, nanoseconds between period ticks of the timer.
                 If unspecified or set to 0, the timer will tick just once at `start`.
         """
-        self._c_timer_handle.schedule(self._c_timer_handle, start, period)
+        lib.aos_timer_handler_schedule(self._c_timer_handle, start, period)
 
     def cancel(self) -> None:
         """Cancel the timer, if scheduled."""
-        self._c_timer_handle.disable(self._c_timer_handle)
+        lib.aos_timer_handler_disable(self._c_timer_handle)
 
     async def tick(self) -> None:
         """Yield till the timer's next tick."""
@@ -207,14 +207,14 @@ class Fetcher:
         self._channel = channel
         c_channel_name = ffi.new("char[]", channel.name().encode("utf-8"))
         c_channel_type = ffi.new("char[]", channel.type().encode("utf-8"))
-        self._runtime._loop().make_watcher(
+        lib.aos_event_loop_make_watcher(
             self._runtime._loop(),
             c_channel_name,
             c_channel_type,
             Fetcher._watcher_callback,
             self._handle,
         )
-        self._c_fetcher = self._runtime._loop().make_fetcher(
+        self._c_fetcher = lib.aos_event_loop_make_fetcher(
             self._runtime._loop(), c_channel_name, c_channel_type)
         self._fetched_message = None
         # Multiple tasks can be associated with a fetcher. When a task awaits this
@@ -242,7 +242,7 @@ class Fetcher:
             bool: True if a new message was fetched.
             Any: The last message that was fetched.
         """
-        return (self._c_fetcher.fetch(self._c_fetcher), self.__get())
+        return (lib.aos_fetcher_fetch(self._c_fetcher), self.__get())
 
     # TODO(Sanjay): Can we do better than Any for the return type?
     def fetch_next(self) -> Tuple[bool, Any]:
@@ -258,7 +258,7 @@ class Fetcher:
             Any: The last message that was fetched. If accompanied with True, this is
                 the next message in the queue. Otherwise, we're all caught up.
         """
-        return (self._c_fetcher.fetch_next(self._c_fetcher), self.__get())
+        return (lib.aos_fetcher_fetch_next(self._c_fetcher), self.__get())
 
     # TODO(Sanjay): Can we do better than Any for the return type?
     async def next(self) -> Any:
@@ -280,7 +280,7 @@ class Fetcher:
         return self._channel.parse(self._last_message)
 
     def __get(self) -> Any:
-        context = self._c_fetcher.context(self._c_fetcher)
+        context = lib.aos_fetcher_context(self._c_fetcher)
         if not context.data:
             return None
         self._fetched_message = ffi.buffer(
@@ -309,7 +309,7 @@ class Fetcher:
                 self._runtime._set_current_task(None)
 
     @staticmethod
-    @ffi.callback("void(const context_t *, const void *, void *)")
+    @ffi.callback("void(const aos_context_t *, const void *, void *)")
     def _watcher_callback(context, message, fetcher_handle) -> None:
         fetcher = ffi.from_handle(fetcher_handle)
         if not fetcher._on_message or fetcher._on_message.done():
@@ -335,11 +335,10 @@ class Sender:
             raise RuntimeError()
         c_channel_name = ffi.new("char[]", channel.name().encode("utf-8"))
         c_channel_type = ffi.new("char[]", channel.type().encode("utf-8"))
-        self._c_sender = runtime._loop().make_sender(runtime._loop(),
-                                                     c_channel_name,
-                                                     c_channel_type)
+        self._c_sender = lib.aos_event_loop_make_sender(
+            runtime._loop(), c_channel_name, c_channel_type)
 
-    # TODO(Sanjay): We need a send without the extra copy.
+    # TODO(Sanjay): Use the send without the extra copy.
     def send(self, data: bytearray) -> bool:
         """Send a single block of data by copying it.
 
@@ -353,7 +352,9 @@ class Sender:
             bool: True if the data was sent successfully.
         """
         c_data = ffi.from_buffer(data)
-        return self._c_sender.send(self._c_sender, c_data, len(data))
+        return lib.aos_sender_send_copy(
+            self._c_sender, c_data,
+            len(data)) == lib.aos_const_raw_sender_error_ok()
 
 
 class Task:
@@ -423,7 +424,7 @@ class EventLoopRuntime:
         This will resume all tasks that are awaiting `on_run` when the event loop runs.
         """
         self._handle = ffi.new_handle(self)
-        self._c_event_loop.on_run(self._c_event_loop,
+        lib.aos_event_loop_on_run(self._c_event_loop,
                                   EventLoopRuntime._on_run_callback,
                                   self._handle)
         self._on_run = Future()
@@ -437,9 +438,9 @@ class EventLoopRuntime:
         for timer in self._timers:
             lib.destroy_timer_handler(timer._c_timer_handle)
         for _, fetcher in self._fetchers.items():
-            lib.destroy_fetcher(fetcher._c_fetcher)
+            lib.aos_fetcher_destroy(fetcher._c_fetcher)
         for _, sender in self._senders.items():
-            lib.destroy_sender(sender._c_sender)
+            lib.aos_sender_destroy(sender._c_sender)
 
     def is_running(self) -> bool:
         """Indicate if the event loop is running.
@@ -447,7 +448,7 @@ class EventLoopRuntime:
         Returns:
             bool: True if the event loop is running.
         """
-        return self._c_event_loop.is_running(self._c_event_loop)
+        return lib.aos_event_loop_is_running(self._c_event_loop)
 
     def monotonic_now(self) -> int:
         """Read the current time on the monotonic clock.
@@ -455,7 +456,7 @@ class EventLoopRuntime:
         Returns:
             int: Nanoseconds since epoch on the monotonic clock.
         """
-        return self._c_event_loop.monotonic_now(self._c_event_loop)
+        return lib.aos_event_loop_monotonic_now(self._c_event_loop)
 
     def add_timer(self) -> Timer:
         """Create a timer.

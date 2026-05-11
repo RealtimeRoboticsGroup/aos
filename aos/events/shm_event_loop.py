@@ -13,7 +13,7 @@ class ShmEventLoop:
         self._c_event_loop = None
 
     def __enter__(self) -> "ShmEventLoop":
-        self._c_event_loop = lib.create_shm_event_loop(
+        self._c_event_loop = lib.aos_shm_event_loop_create(
             self._config.get_config())
         return self
 
@@ -23,11 +23,13 @@ class ShmEventLoop:
         exc_value: Optional[BaseException],
         traceback: Optional[Any],
     ):
-        lib.destroy_event_loop(self._c_event_loop)
+        lib.aos_event_loop_destroy(self._c_event_loop)
+        self._c_event_loop = None
 
     def run_with(self, task: Callable[[EventLoopRuntime], None]) -> None:
         if not self._c_event_loop:
             raise RuntimeError("Use ShmEventLoop as a context manager")
         with EventLoopRuntime(self._c_event_loop) as runtime:
             task(runtime)
-            self._c_event_loop.run(self._c_event_loop)
+            lib.aos_error_destroy(
+                lib.aos_shm_event_loop_run(self._c_event_loop))

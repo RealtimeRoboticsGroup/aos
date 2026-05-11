@@ -1,5 +1,6 @@
 import sys
 from typing import Union
+import contextlib
 
 import numpy as np
 import numpy.typing as npt
@@ -51,18 +52,18 @@ class PingPongTest(absltest.TestCase):
         """
         self._config = util.Configuration(
             "aos/documentation/examples/ping_pong/pingpong_config.bfbs")
-        self._factory = SimulatedEventLoopFactory(self._config)
+        with contextlib.ExitStack() as stack:
+            self._factory = stack.enter_context(
+                SimulatedEventLoopFactory(self._config))
 
-        ping_runtime = self._factory.make_runtime("ping", "")
-        ping = Ping()
-        ping_runtime.spawn_tasks(ping.tasks(ping_runtime, 10_000_000))
+            ping_runtime = self._factory.make_runtime("ping", "")
+            ping = Ping()
+            ping_runtime.spawn_tasks(ping.tasks(ping_runtime, 10_000_000))
 
-        pong_runtime = self._factory.make_runtime("pong", "")
-        pong_runtime.spawn_task(pong(pong_runtime))
+            pong_runtime = self._factory.make_runtime("pong", "")
+            pong_runtime.spawn_task(pong(pong_runtime))
 
-    def tearDown(self):
-        """Cleans up resources allocated in the simulated event loop factory."""
-        self._factory.shut_down()
+            self.addCleanup(stack.pop_all().close)
 
     def _run_for(self, duration_ns: int) -> None:
         """Advances simulated time by `duration_ns` nanoseconds."""

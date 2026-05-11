@@ -66,7 +66,8 @@ def run_ping(runtime):
 
 def main(argv):
     util.init(argv)
-    config = util.Configuration("aos/aos/events/pingpong_config.bfbs")
+    config = util.Configuration(
+        "aos/documentation/examples/ping_pong/pingpong_config.bfbs")
     with ShmEventLoop(config) as shm_event_loop:
         shm_event_loop.run_with(run_ping)
 

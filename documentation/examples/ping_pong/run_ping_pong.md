@@ -1,6 +1,6 @@
 # How to run ping & pong
 
-Running ping<->pong is a nice way to test that you can run some basic code and shows how messaging can work between two nodes
+Running ping-pong is a nice way to test that you can run some basic code and shows how messaging can work between two nodes
 
 ## Set up real-time niceties:
   1. Add the following lines to `/etc/security/limits.d/rt.conf`, replacing "USERNAME" with the username you're running under.  You'll probably need to do this as root, e.g., `sudo nano /etc/security/limits.d/rt.conf`
@@ -13,7 +13,7 @@ USERNAME - memlock unlimited
   2. Reboot your machine to pick up the changes
 
 ## Compile and run the code
-  1. Compile the code for ping and pong, as well as aos_dump for looking at the messages.  We'll assume throughout that you're running from the top level directory of aos.
+  1. Compile the code for ping and pong, as well as `aos_dump` for looking at the messages.  We'll assume throughout that you're running from the top level directory of aos.
   ```
   bazel build -c opt //documentation/examples/ping_pong:pong //
 documentation/examples/ping_pong:ping //aos:aos_dump
@@ -21,11 +21,11 @@ documentation/examples/ping_pong:ping //aos:aos_dump
 
   2. In 2 separate windows, run the ping and pong commands using the `pingpong_config.json` config file:
     1. Run a new build.
-      1. `bazel run -c opt //aos/events:ping`
-      2. `bazel run -c opt //aos/events:pong`
+      1. `bazel run -c opt //documentation/examples/ping_pong:ping`
+      2. `bazel run -c opt //documentation/examples/ping_pong:pong`
     2. Run from pre-compiled build (useful for deploying code).
-      1. `bazel-bin/aos/events/ping --config bazel-bin/documentation/examples/ping_pong/pingpong_config.json`
-      2. `bazel-bin/aos/events/pong --config bazel-bin/documentation/examples/ping_pong/pingpong_config.json`
+      1. `bazel-bin/documentation/examples/ping_pong/ping --config bazel-bin/documentation/examples/ping_pong/pingpong_config.json`
+      2. `bazel-bin/documentation/examples/ping_pong/pong --config bazel-bin/documentation/examples/ping_pong/pingpong_config.json`
 
   3. In a third window, explore the message stream using `aos_dump`.  Some things you can do:
     1. List the channels:
@@ -50,7 +50,7 @@ In addition to running ping and pong, this is a good example to explore event lo
   bazel build -c opt //aos/events/logging:logger_main
   ```
 
-  2. Create a folder for the log files, e.g., 
+  2. Create a folder for the log files, e.g.,
   ```
   mkdir /tmp/log_folder
   ```
