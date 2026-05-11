@@ -3,10 +3,26 @@ module(
     version = "0.0.0",
 )
 
-bazel_dep(name = "bazel_features", version = "1.33.0")
-bazel_dep(name = "rules_cc", version = "0.2.13")
+bazel_dep(name = "bazel_features", version = "1.38.0")
+bazel_dep(name = "rules_cc", version = "0.2.17")
+bazel_dep(name = "rules_cuda", version = "0.3.0")
+
+# Pin to an upstream commit past v0.3.0 that includes the configurable
+# cc_host_compile_flags and multi-arch toolchain refactors we depend on,
+# then layer our local fixes on top.
+git_override(
+    module_name = "rules_cuda",
+    commit = "71981925b1ff7a8ab37fcf442262c571ebaf3380",
+    patch_strip = 1,
+    patches = [
+        "//third_party:rules_cuda/0001-Pass-std-through-to-clang-CUDA-compile-actions.patch",
+        "//third_party:rules_cuda/0002-Inject-BAZEL_CURRENT_REPOSITORY-into-cuda_library.patch",
+        "//third_party:rules_cuda/0003-Add-cuda_wrappers-include-feature-for-clang-CUDA-too.patch",
+    ],
+    remote = "https://github.com/bazel-contrib/rules_cuda.git",
+)
 bazel_dep(name = "rules_java", version = "9.3.0")
-bazel_dep(name = "aspect_bazel_lib", version = "2.14.0")
+bazel_dep(name = "aspect_bazel_lib", version = "2.19.3")
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_uv", version = "0.77.0")
@@ -372,14 +388,117 @@ use_repo(cypress, "cypress_toolchains")
 register_toolchains("@cypress_toolchains//:all")
 
 # Local toolchain repo
-bazel_dep(name = "com_grail_bazel_toolchain", version = "0.0.0", dev_dependency = True)
+bazel_dep(name = "toolchains_llvm", version = "0.0.0", dev_dependency = True)
 local_path_override(
-    module_name = "com_grail_bazel_toolchain",
+    module_name = "toolchains_llvm",
     path = "third_party/bazel-toolchain",
 )
 
-llvm_ext = use_extension("//tools/cpp:extensions.bzl", "llvm_toolchain_extension", dev_dependency = True)
-use_repo(llvm_ext, "llvm_aarch64", "llvm_k8", "llvm_toolchain")
+llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm", dev_dependency = True)
+
+llvm_version = "21.1.1"
+
+llvm_alternative_sources = [
+    "https://realtimeroboticsgroup.org/build-dependencies/github.com/llvm/llvm-project/releases/download/llvmorg-{llvm_version}/{basename}",
+]
+llvm_x86_64_basename = "clang+llvm-%s-x86_64-linux-gnu-ubuntu-22.04.tar.zst" % llvm_version
+llvm_aarch64_basename = "clang+llvm-%s-aarch64-linux-gnu.tar.zst" % llvm_version
+llvm_extra_distributions = {
+    llvm_x86_64_basename: "75dde978fcfe30486680e9d2fdbad7e92d9b44b48dea8193023399bc7485f885",
+    llvm_aarch64_basename: "f9b33b7ed6cd693160922873a8ae7ec1aadf6ad1efc8e2bee13625b4dc787ce6",
+}
+
+llvm.toolchain(
+    name = "llvm_k8",
+    alternative_llvm_sources = llvm_alternative_sources,
+    distribution = llvm_x86_64_basename,
+    extra_llvm_distributions = llvm_extra_distributions,
+    llvm_versions = {"": llvm_version},
+)
+
+llvm.toolchain(
+    name = "llvm_aarch64",
+    alternative_llvm_sources = llvm_alternative_sources,
+    distribution = llvm_aarch64_basename,
+    extra_llvm_distributions = llvm_extra_distributions,
+    llvm_versions = {"": llvm_version},
+)
+
+llvm_conly_flags = ["-std=gnu99"]
+llvm_extra_compile_flags = [
+    "-D__STDC_FORMAT_MACROS",
+    "-D__STDC_CONSTANT_MACROS",
+    "-D__STDC_LIMIT_MACROS",
+    "-D_FILE_OFFSET_BITS=64",
+    "-fmessage-length=100",
+    "-fmacro-backtrace-limit=0",
+    "-ggdb3",
+    "-Wno-deprecated-declarations",
+    "-Wembedded-directive",
+]
+llvm_extra_compile_flags_aarch64 = llvm_extra_compile_flags + ["-march=armv8-a+crc"]
+llvm_cxx_standard = "gnu++20"
+
+llvm.toolchain(
+    name = "llvm_toolchain",
+    conly_flags = {
+        "linux-aarch64": llvm_conly_flags,
+        "linux-x86_64": llvm_conly_flags,
+    },
+    cxx_include_layout = {
+        "linux-aarch64": "yocto",
+    },
+    cxx_standard = {
+        "linux-aarch64": llvm_cxx_standard,
+        "linux-x86_64": llvm_cxx_standard,
+    },
+    extra_compile_flags = {
+        "linux-aarch64": llvm_extra_compile_flags_aarch64,
+        "linux-x86_64": llvm_extra_compile_flags,
+    },
+    llvm_versions = {"": llvm_version},
+    multiarch = {
+        "linux-aarch64": "aarch64-oe4t-linux",
+    },
+    stdlib = {
+        "linux-aarch64": "dynamic-stdc++-14.3.0",
+        "linux-x86_64": "dynamic-stdc++-12",
+    },
+)
+
+llvm.toolchain_root(
+    name = "llvm_toolchain",
+    label = "@@toolchains_llvm++llvm+llvm_k8_llvm//:BUILD",
+    targets = ["linux-x86_64"],
+)
+llvm.toolchain_root(
+    name = "llvm_toolchain",
+    label = "@@toolchains_llvm++llvm+llvm_aarch64_llvm//:BUILD",
+    targets = ["linux-aarch64"],
+)
+llvm.sysroot(
+    name = "llvm_toolchain",
+    label = "@amd64_debian_sysroot//:sysroot_files",
+    targets = ["linux-x86_64"],
+)
+llvm.sysroot(
+    name = "llvm_toolchain",
+    label = "@arm64_debian_sysroot//:sysroot_files",
+    targets = ["linux-aarch64"],
+)
+
+use_repo(
+    llvm,
+    "llvm_toolchain",
+    llvm_aarch64 = "llvm_aarch64_llvm",
+    llvm_k8 = "llvm_k8_llvm",
+)
+
+register_toolchains(
+    "//tools/cuda:x86_64_clang_toolchain",
+    "//tools/cuda:aarch64_clang_toolchain",
+    "//tools/cuda:no_gpu_clang_toolchain",
+)
 
 register_toolchains(
     "@llvm_toolchain//:all",

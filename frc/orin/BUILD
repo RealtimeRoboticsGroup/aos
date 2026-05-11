@@ -4,6 +4,7 @@ load("@rules_cc//cc:cc_test.bzl", "cc_test")
 load("//aos:flatbuffers.bzl", "cc_static_flatbuffer")
 load("//aos/flatbuffers:generate.bzl", "static_flatbuffer")
 load("//frc:halide.bzl", "halide_library")
+load("//tools:cuda_library.bzl", "cuda_library")
 load("//tools/build_rules:select.bzl", "cpu_select")
 
 exports_files(["orin_irq_config.json"])
@@ -40,7 +41,6 @@ cc_library(
     hdrs = [
         "cuda.h",
     ],
-    features = ["cuda"],
     visibility = ["//visibility:public"],
     deps = [
         "//third_party:cudart",
@@ -51,7 +51,7 @@ cc_library(
     ],
 )
 
-cc_library(
+cuda_library(
     name = "threshold",
     srcs = [
         "threshold.cc",
@@ -67,7 +67,7 @@ cc_library(
         "apriltag_types.h",
         "threshold.h",
     ],
-    features = ["cuda"],
+    visibility = ["//visibility:public"],
     deps = [
         ":cuda",
         "//aos/time",
@@ -102,7 +102,6 @@ cc_test(
     data = [
         "@orin_capture_24_04_side//file",
     ],
-    features = ["cuda"],
     tags = [
         # This needs a GPU, which means we need the GPU to be accessible inside
         # the container.  Rather than solve that right now, just run it under
@@ -124,7 +123,7 @@ cc_test(
     ],
 )
 
-cc_library(
+cuda_library(
     name = "apriltag",
     srcs = [
         "apriltag.cc",
@@ -147,7 +146,6 @@ cc_library(
         #"-DCUB_DETAIL_DEBUG_ENABLE_LOG=1",
         #"-DDEBUG=1",
     ],
-    features = ["cuda"],
     visibility = ["//visibility:public"],
     deps = [
         ":cuda",
@@ -163,26 +161,10 @@ cc_library(
     ],
 )
 
-cc_test(
-    name = "cuda_april_tag_test",
-    srcs = [
-        "cuda_april_tag_test.cc",
-    ],
-    data = [
-        "@apriltag_test_bfbs_images",
-        "@orin_capture_24_04//file",
-        "@orin_capture_24_04_side//file",
-        "@orin_image_apriltag//file",
-        "@orin_large_image_apriltag//file",
-    ],
-    features = ["cuda"],
-    tags = [
-        # This needs a GPU, which means we need the GPU to be accessible inside
-        # the container.  Rather than solve that right now, just run it under
-        # linux-sandbox on the host which has a GPU already.
-        "no-remote-exec",
-    ],
-    target_compatible_with = ["//tools/platforms/gpu:nvidia"],
+cuda_library(
+    name = "cuda_april_tag_test_lib",
+    testonly = True,
+    srcs = ["cuda_april_tag_test.cc"],
     deps = [
         ":apriltag",
         ":ycbcr",
@@ -196,14 +178,42 @@ cc_test(
         "//third_party/apriltag",
         "@bazel_tools//tools/cpp/runfiles",
     ],
+    alwayslink = True,
+)
+
+cc_test(
+    name = "cuda_april_tag_test",
+    data = [
+        "@apriltag_test_bfbs_images",
+        "@orin_capture_24_04//file",
+        "@orin_capture_24_04_side//file",
+        "@orin_image_apriltag//file",
+        "@orin_large_image_apriltag//file",
+    ],
+    tags = [
+        # This needs a GPU, which means we need the GPU to be accessible inside
+        # the container.  Rather than solve that right now, just run it under
+        # linux-sandbox on the host which has a GPU already.
+        "no-remote-exec",
+    ],
+    target_compatible_with = ["//tools/platforms/gpu:nvidia"],
+    deps = [":cuda_april_tag_test_lib"],
+)
+
+cuda_library(
+    name = "output_iterator_test_lib",
+    testonly = True,
+    srcs = ["output_iterator_test.cc"],
+    deps = [
+        ":apriltag",
+        "//aos/testing:googletest",
+        "//aos/testing:random_seed",
+    ],
+    alwayslink = True,
 )
 
 cc_test(
     name = "output_iterator_test",
-    srcs = [
-        "output_iterator_test.cc",
-    ],
-    features = ["cuda"],
     tags = [
         # This needs a GPU, which means we need the GPU to be accessible inside
         # the container.  Rather than solve that right now, just run it under
@@ -211,19 +221,23 @@ cc_test(
         "no-remote-exec",
     ],
     target_compatible_with = ["//tools/platforms/gpu:nvidia"],
+    deps = [":output_iterator_test_lib"],
+)
+
+cuda_library(
+    name = "points_test_lib",
+    testonly = True,
+    srcs = ["points_test.cc"],
     deps = [
         ":apriltag",
         "//aos/testing:googletest",
         "//aos/testing:random_seed",
     ],
+    alwayslink = True,
 )
 
 cc_test(
     name = "points_test",
-    srcs = [
-        "points_test.cc",
-    ],
-    features = ["cuda"],
     tags = [
         # This needs a GPU, which means we need the GPU to be accessible inside
         # the container.  Rather than solve that right now, just run it under
@@ -231,11 +245,7 @@ cc_test(
         "no-remote-exec",
     ],
     target_compatible_with = ["//tools/platforms/gpu:nvidia"],
-    deps = [
-        ":apriltag",
-        "//aos/testing:googletest",
-        "//aos/testing:random_seed",
-    ],
+    deps = [":points_test_lib"],
 )
 
 cc_binary(
@@ -259,11 +269,10 @@ cc_binary(
     ],
 )
 
-cc_library(
+cuda_library(
     name = "gpu_apriltag_lib",
     srcs = ["gpu_apriltag.cc"],
     hdrs = ["gpu_apriltag.h"],
-    features = ["cuda"],
     visibility = ["//visibility:public"],
     deps = [
         ":apriltag",
@@ -337,22 +346,10 @@ cc_binary(
     ],
 )
 
-cc_test(
-    name = "undistort_test",
-    srcs = [
-        "undistort_test.cc",
-    ],
-    data = [
-        "//frc/vision/test_calib_files",
-    ],
-    features = ["cuda"],
-    tags = [
-        # This needs a GPU, which means we need the GPU to be accessible inside
-        # the container.  Rather than solve that right now, just run it under
-        # linux-sandbox on the host which has a GPU already.
-        "no-remote-exec",
-    ],
-    target_compatible_with = ["@platforms//os:linux"],
+cuda_library(
+    name = "undistort_test_lib",
+    testonly = True,
+    srcs = ["undistort_test.cc"],
     deps = [
         ":apriltag",
         ":gpu_apriltag_lib",
@@ -362,6 +359,21 @@ cc_test(
         "//frc/vision:calibration_fbs",
         "//frc/vision:charuco_lib",
     ],
+    alwayslink = True,
+)
+
+cc_test(
+    name = "undistort_test",
+    data = [
+        "//frc/vision/test_calib_files",
+    ],
+    tags = [
+        # This needs a GPU, which means we need the GPU to be accessible inside
+        # the container.  Rather than solve that right now, just run it under
+        # linux-sandbox on the host which has a GPU already.
+        "no-remote-exec",
+    ],
+    deps = [":undistort_test_lib"],
 )
 
 halide_library(

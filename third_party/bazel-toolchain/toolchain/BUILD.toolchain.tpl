@@ -14,23 +14,30 @@
 
 package(default_visibility = ["//visibility:public"])
 
-load("@rules_cc//cc:defs.bzl", "cc_toolchain", "cc_toolchain_suite")
+load("@bazel_skylib//rules:native_binary.bzl", "native_binary")
+load("@rules_cc//cc:defs.bzl", "cc_import", "cc_toolchain", "cc_toolchain_suite")
+load("@toolchains_llvm//toolchain/internal:system_module_map.bzl", "system_module_map")
 load("%{cc_toolchain_config_bzl}", "cc_toolchain_config")
 
-# Following filegroup targets are used when not using absolute paths and shared
+# This filegroup target is used when not using absolute paths and shared
 # between different toolchains.
 
+# Tools wrapped and symlinked through this repo. This target is for internal use in the toolchain only.
 filegroup(
-    name = "empty",
-    srcs = [],
+    name = "internal-use-tools",
+    srcs = ["%{tools_dir}"],
+    visibility = ["//visibility:private"],
 )
 
 filegroup(
-    name = "wrapper-files",
-    srcs = [
-        "bin/cc_wrapper.sh",
-        "bin/host_libtool_wrapper.sh",
+    name = "internal-use-tools-legacy",
+    srcs = [%{symlinked_tools}
+        "%{tools_dir}/cc_wrapper.sh",
     ],
+    visibility = ["//visibility:private"],
 )
 
 %{cc_toolchains}
+
+# Convenience targets from the LLVM toolchain.
+%{convenience_targets}

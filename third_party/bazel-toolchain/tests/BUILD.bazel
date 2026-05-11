@@ -14,7 +14,8 @@
 
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
-load(":transitions.bzl", "dwp_file")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load(":transitions.bzl", "dwp_file", "transition_library_to_platform")
 
 cc_library(
     name = "stdlib",
@@ -66,7 +67,7 @@ build_test(
 # (https://github.com/bazelbuild/bazel/issues/14038).
 #
 # #109 in this repo and this comment
-# (https://github.com/grailbio/bazel-toolchain/pull/108#issuecomment-928839768)
+# (https://github.com/bazel-contrib/toolchains_llvm/pull/108#issuecomment-928839768)
 # have some additional details.
 #
 # For now, we'll specify `-c dbg` when building `.dwo` and `.dwp` files.
@@ -80,7 +81,7 @@ build_test(
 dwp_file(
     name = "stdlib.dwp",
     src = ":stdlib_bin",
-    # NOTE: we should eventually we able to drop this; see #109.
+    # NOTE: we should eventually be able to drop this; see #109.
     override_compilation_mode = "dbg",
     target_compatible_with = [
         "@platforms//os:linux",
@@ -94,17 +95,120 @@ build_test(
     ],
 )
 
+# Simple test in C that depends on libomp.
 cc_test(
-    name = "pthread_link_test",
-    srcs = ["pthread_link_test.cc"],
-    linkstatic = False,
+    name = "omp_test",
+    srcs = ["omp_test.c"],
+    copts = ["-fopenmp"],
+    linkopts = ["-fopenmp"],
+    tags = ["manual"],
+    deps = ["@llvm_toolchain//:omp"],
+)
+
+# C++ variant of omp_test; needed to check that including the llvm toolchain
+# lib directory in the library search path (for including libomp.dylib) does
+# not pick up unintentional static libraries in a way that breaks the binary.
+# See note in cc_toolchain_config.bzl where we include -lc++ and -lc++abi for
+# macOS.
+cc_test(
+    name = "omp_test_cc",
+    srcs = ["omp_test.cc"],
+    copts = ["-fopenmp"],
+    linkopts = ["-fopenmp"],
+    tags = ["manual"],
+    deps = ["@llvm_toolchain//:omp"],
+)
+
+test_suite(
+    name = "omp_tests",
+    tags = ["manual"],
+    tests = [
+        ":omp_test",
+        ":omp_test_cc",
+    ],
 )
 
 sh_test(
     name = "file_dependency_test",
     srcs = ["file_dependency_test.sh"],
+    args = [
+        "$(rootpath @llvm_toolchain_llvm//:bin/clang-format)",
+        "$(rootpaths @llvm_toolchain_llvm//:lib)",
+    ],
     data = [
         "@llvm_toolchain_llvm//:bin/clang-format",
-        "@llvm_toolchain_llvm//:lib/libc++.a",
+        "@llvm_toolchain_llvm//:lib",
     ],
+)
+
+# As a workaround for https://github.com/bazelbuild/rules_foreign_cc/issues/1018.
+toolchain(
+    name = "ninja_mac_arm64_toolchain",
+    exec_compatible_with = [
+        "@platforms//cpu:arm64",
+        "@platforms//os:macos",
+    ],
+    toolchain = "@ninja_mac//:ninja_tool",
+    toolchain_type = "@rules_foreign_cc//toolchains:ninja_toolchain",
+)
+
+# Testing extra_target_compatible_with
+constraint_setting(
+    name = "cxx_standard",
+    default_constraint_value = ":cxx17",
+    visibility = ["//visibility:public"],
+)
+
+constraint_value(
+    name = "cxx20",
+    constraint_setting = ":cxx_standard",
+    visibility = ["//visibility:public"],
+)
+
+constraint_value(
+    name = "cxx17",
+    constraint_setting = ":cxx_standard",
+    visibility = ["//visibility:public"],
+)
+
+platform(
+    name = "cxx20_platform",
+    constraint_values = [
+        ":cxx20",
+    ],
+    parents = ["@platforms//host"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "test_cxx_standard_lib",
+    srcs = ["test_cxx_standard.cc"],
+)
+
+cc_test(
+    name = "test_cxx_standard_is_17",
+    size = "small",
+    srcs = ["test_cxx_standard_main.cc"],
+    args = ["201703"],
+    deps = [":test_cxx_standard_lib"],
+)
+
+transition_library_to_platform(
+    name = "test_cxx_standard_lib_transitioned",
+    lib = ":test_cxx_standard_lib",
+    platform = ":cxx20_platform",
+)
+
+cc_test(
+    name = "test_cxx_standard_is_20",
+    size = "small",
+    srcs = ["test_cxx_standard_main.cc"],
+    args = ["202002"],
+
+    # Since some platforms require special toolchains (e.g. llvm 13.0.0) this
+    # target won't build on those platforms unless we create a new toolchain per
+    # platform with c++20. So instead just only run this test on platforms that
+    # can use the default toolchain
+    tags = ["manual"],
+    deps = [":test_cxx_standard_lib_transitioned"],
 )

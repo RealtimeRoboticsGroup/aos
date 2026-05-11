@@ -2,6 +2,6 @@
     "url": "https://realtimeroboticsgroup.org/build-dependencies/2025-10-25-walnascar-arm64-nvidia-rootfs.tar.zst",
     "integrity": "sha256-YJgtujeFSQAgbmH6VyxlEBl8Ux2w9fG2DOBiOAPly5o=",
     "overlay": {
-        "BUILD.bazel": "sha256-aZerHor3N6uQoTC2h5r97pLKqU/WQlc5htT6+C6fy5M="
+        "BUILD.bazel": "sha256-POcYnGYfq6r7RMvnMEky/RRFfcePjXqkLrV1qknV91Q="
     }
 }
