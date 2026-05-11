@@ -1,4 +1,5 @@
 # Use tools/rehost.sh to rehost easily.
+# Alternatively, use tools/dependency_rewrite_for_rehosting and tools/rehost_dependency_server.py.
 
 block *
 rewrite maven.ctr-electronics.com/(.*) realtimeroboticsgroup.org/build-dependencies/maven.ctr-electronics.com/$1

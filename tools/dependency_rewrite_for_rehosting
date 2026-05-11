@@ -1,0 +1,4 @@
+# Use tools/rehost_dependency_server.py with this script to gather files to
+# rehost.
+
+rewrite (.*) http://localhost:8000/$1
