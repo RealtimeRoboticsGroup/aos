@@ -26,3 +26,13 @@ py_binary(
     visibility = ["//visibility:public"],
     deps = ["@pip_deps//jinja2"],
 )
+
+# Platform-specific libclang for autocxx
+alias(
+    name = "libclang",
+    actual = select({
+        "@platforms//os:linux": "@llvm_k8//:libclang",
+        "@platforms//os:macos": "@llvm_darwin_aarch64//:libclang",
+    }),
+    visibility = ["//visibility:public"],
+)

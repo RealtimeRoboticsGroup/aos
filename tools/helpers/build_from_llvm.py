@@ -8,8 +8,10 @@ import sys
 from pathlib import Path
 
 LLVM_RELEASE_ARCH = {
-    "x86_64": "Linux-X64",
-    "aarch64": "Linux-ARM64",
+    ("Linux", "x86_64"): "x86_64-linux-gnu-ubuntu-22.04",
+    ("Linux", "aarch64"): "aarch64-linux-gnu",
+    ("Darwin", "arm64"): "aarch64-apple-darwin",
+    ("Darwin", "x86_64"): "x86_64-apple-darwin",
 }
 
 LIBCXX_SANITIZERS = {
@@ -84,8 +86,21 @@ def build_clang_release(
     build_dir = tempdir / "clang-build"
     build_success_file = tempdir / "clang-build.success"
     install_success_file = tempdir / "clang-install.success"
+    clang_basename_file = tempdir / "clang-basename.txt"
+
+    previous_basename = None
+    if clang_basename_file.exists():
+        previous_basename = clang_basename_file.read_text().strip()
 
     if force_rebuild:
+        build_success_file.unlink(missing_ok=True)
+        install_success_file.unlink(missing_ok=True)
+
+    if previous_basename and previous_basename != clang_basename:
+        build_success_file.unlink(missing_ok=True)
+        install_success_file.unlink(missing_ok=True)
+
+    if install_success_file.exists() and not clang_dir.exists():
         build_success_file.unlink(missing_ok=True)
         install_success_file.unlink(missing_ok=True)
 
@@ -119,6 +134,7 @@ def build_clang_release(
     if not install_success_file.exists():
         run("ninja", "install", cwd=build_dir)
         install_success_file.touch()
+        clang_basename_file.write_text(clang_basename + "\n")
         print("Clang install successful", file=sys.stderr)
 
     tar_path = tempdir / (clang_basename + ".tar.zst")
@@ -144,6 +160,10 @@ def build_libcxx_variant(
     llvm_version: str,
     release_arch: str,
 ):
+    if variant == "msan" and platform.system() == "Darwin":
+        print("Skipping msan on Darwin (unsupported)", file=sys.stderr)
+        return
+
     if variant not in LIBCXX_SANITIZERS:
         raise ValueError("unsupported libcxx variant '{}'".format(variant))
 
@@ -172,9 +192,16 @@ def build_libcxx_variant(
     run("ninja", "install", cwd=build_dir)
 
     machine = platform.machine()
-    target_subdir = "{}-unknown-linux-gnu".format(machine) if machine in (
-        "x86_64", "aarch64") else ""
-    for ext in ("a", "so", "so.1", "so.1.0"):
+    system = platform.system()
+    if system == "Linux":
+        target_subdir = "{}-unknown-linux-gnu".format(machine) if machine in (
+            "x86_64", "aarch64") else ""
+    elif system == "Darwin":
+        target_subdir = "{}-apple-darwin".format(machine)
+    else:
+        target_subdir = ""
+
+    for ext in ("a", "so", "so.1", "so.1.0", "dylib"):
         src = clang_dir / "lib"
         if target_subdir:
             src = src / target_subdir
@@ -223,7 +250,7 @@ def main():
     parser.add_argument(
         "--tempdir",
         type=Path,
-        default=Path("llvm_build_temp"),
+        default=Path("/tmp/llvm_build_temp"),
         help="Top-level build directory.",
     )
     parser.add_argument(
@@ -243,16 +270,18 @@ def main():
     args = parser.parse_args()
 
     machine = platform.machine()
-    release_arch = args.release_arch or LLVM_RELEASE_ARCH.get(machine)
+    system = platform.system()
+    release_arch = args.release_arch or LLVM_RELEASE_ARCH.get(
+        (system, machine))
     if not release_arch:
         print(
-            "Unable to infer release arch from '{}'. Pass --release-arch explicitly."
-            .format(machine),
+            "Unable to infer release arch from '{}-{}'. Pass --release-arch explicitly."
+            .format(system, machine),
             file=sys.stderr,
         )
         sys.exit(2)
 
-    clang_basename = "LLVM-{}-{}".format(args.llvm_version, release_arch)
+    clang_basename = "clang+llvm-{}-{}".format(args.llvm_version, release_arch)
 
     tempdir = args.tempdir.resolve()
     source_dir = tempdir / "llvm.src"

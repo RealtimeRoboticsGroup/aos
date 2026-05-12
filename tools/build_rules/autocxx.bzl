@@ -230,7 +230,7 @@ _autocxx_library_gen = rule(
         ),
         "_libclang": attr.label(
             cfg = "exec",
-            default = Label("@llvm_k8//:libclang"),
+            default = Label("//tools/build_rules:libclang"),
             allow_single_file = True,
         ),
     },

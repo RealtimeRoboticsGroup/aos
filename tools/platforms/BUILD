@@ -122,3 +122,16 @@ platform(
 )
 
 # TODO(phil): Create something for "cortex-m4f-k22" builds.
+
+platform(
+    name = "darwin_arm64",
+    constraint_values = [
+        "@platforms//os:macos",
+        "@platforms//cpu:arm64",
+        "//tools/platforms/go:has_support",
+        "//tools/platforms/rust:has_support",
+        "//tools/platforms/nodejs:has_support",
+        "//tools/platforms/python:has_support",
+        "//tools/platforms/gpu:none",
+    ],
+)

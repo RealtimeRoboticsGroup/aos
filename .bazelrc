@@ -17,6 +17,9 @@ build --@rules_python//python/config_settings:venvs_use_declare_symlink=no
 # platform.
 build:linux --host_platform=//tools/platforms:linux_x86
 
+# macOS ARM64 (Apple Silicon) platform configuration
+build:darwin --host_platform=//tools/platforms:darwin_arm64
+
 # Always include debug information in the non-.stripped binaries.
 build --strip=never
 

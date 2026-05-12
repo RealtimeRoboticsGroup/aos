@@ -153,6 +153,13 @@ build --host_platform=//tools/platforms:linux_x86_no_gpu
 build --extra_execution_platforms=//tools/platforms:linux_x86_no_gpu
 EOF
   fi
+elif [ "$(uname -s)" == "Darwin" ]; then
+  # macOS (Darwin) platform - Apple Silicon (arm64)
+  cat > "${TMP_BAZELRC_AUTODETECTION}" <<EOF
+# Set the default host platform to Darwin ARM64
+build --host_platform=//tools/platforms:darwin_arm64
+build --extra_execution_platforms=//tools/platforms:darwin_arm64
+EOF
 fi
 # Now, do the rename atomically to avoid races.
 mv "${TMP_BAZELRC_AUTODETECTION}" "${TOP_LEVEL_DIR}/.bazelrc_autodetection"

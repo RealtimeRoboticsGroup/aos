@@ -417,9 +417,11 @@ llvm_alternative_sources = [
 ]
 llvm_x86_64_basename = "clang+llvm-%s-x86_64-linux-gnu-ubuntu-22.04.tar.zst" % llvm_version
 llvm_aarch64_basename = "clang+llvm-%s-aarch64-linux-gnu.tar.zst" % llvm_version
+llvm_darwin_aarch64_basename = "clang+llvm-%s-aarch64-apple-darwin.tar.zst" % llvm_version
 llvm_extra_distributions = {
     llvm_x86_64_basename: "75dde978fcfe30486680e9d2fdbad7e92d9b44b48dea8193023399bc7485f885",
     llvm_aarch64_basename: "f9b33b7ed6cd693160922873a8ae7ec1aadf6ad1efc8e2bee13625b4dc787ce6",
+    llvm_darwin_aarch64_basename: "61c976c4a669852c5fc0456316ee7c056ccb7193af0073432ecf279a55a1015e",
 }
 
 llvm.toolchain(
@@ -438,6 +440,14 @@ llvm.toolchain(
     llvm_versions = {"": llvm_version},
 )
 
+llvm.toolchain(
+    name = "llvm_darwin_aarch64",
+    alternative_llvm_sources = llvm_alternative_sources,
+    distribution = llvm_darwin_aarch64_basename,
+    extra_llvm_distributions = llvm_extra_distributions,
+    llvm_versions = {"": llvm_version},
+)
+
 llvm_conly_flags = ["-std=gnu99"]
 llvm_extra_compile_flags = [
     "-D__STDC_FORMAT_MACROS",
@@ -447,15 +457,20 @@ llvm_extra_compile_flags = [
     "-fmessage-length=100",
     "-fmacro-backtrace-limit=0",
     "-ggdb3",
+    # Too many core libraries have these right now.
+    # TODO(austin): Turn this off later.
     "-Wno-deprecated-declarations",
     "-Wembedded-directive",
 ]
 llvm_extra_compile_flags_aarch64 = llvm_extra_compile_flags + ["-march=armv8-a+crc"]
+llvm_extra_compile_flags_darwin_aarch64 = llvm_extra_compile_flags + ["-march=armv8-a+crc+crypto"]
 llvm_cxx_standard = "gnu++20"
+llvm_cxx_standard_darwin = "c++20"
 
 llvm.toolchain(
     name = "llvm_toolchain",
     conly_flags = {
+        "darwin-aarch64": llvm_conly_flags,
         "linux-aarch64": llvm_conly_flags,
         "linux-x86_64": llvm_conly_flags,
     },
@@ -463,10 +478,12 @@ llvm.toolchain(
         "linux-aarch64": "yocto",
     },
     cxx_standard = {
+        "darwin-aarch64": llvm_cxx_standard_darwin,
         "linux-aarch64": llvm_cxx_standard,
         "linux-x86_64": llvm_cxx_standard,
     },
     extra_compile_flags = {
+        "darwin-aarch64": llvm_extra_compile_flags_darwin_aarch64,
         "linux-aarch64": llvm_extra_compile_flags_aarch64,
         "linux-x86_64": llvm_extra_compile_flags,
     },
@@ -475,6 +492,7 @@ llvm.toolchain(
         "linux-aarch64": "aarch64-oe4t-linux",
     },
     stdlib = {
+        "darwin-aarch64": "builtin-libc++",
         "linux-aarch64": "dynamic-stdc++-14.3.0",
         "linux-x86_64": "dynamic-stdc++-12",
     },
@@ -489,6 +507,11 @@ llvm.toolchain_root(
     name = "llvm_toolchain",
     label = "@@toolchains_llvm++llvm+llvm_aarch64_llvm//:BUILD",
     targets = ["linux-aarch64"],
+)
+llvm.toolchain_root(
+    name = "llvm_toolchain",
+    label = "@@toolchains_llvm++llvm+llvm_darwin_aarch64_llvm//:BUILD",
+    targets = ["darwin-aarch64"],
 )
 llvm.sysroot(
     name = "llvm_toolchain",
@@ -505,6 +528,7 @@ use_repo(
     llvm,
     "llvm_toolchain",
     llvm_aarch64 = "llvm_aarch64_llvm",
+    llvm_darwin_aarch64 = "llvm_darwin_aarch64_llvm",
     llvm_k8 = "llvm_k8_llvm",
 )
 
