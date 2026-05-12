@@ -2,13 +2,21 @@
 
 #include <math.h>
 
+#include "aos/macros.h"
+
 namespace frc::motors {
 namespace math_internal {
 
+// Place lookup tables in fast SRAM on embedded targets
+#if AOS_OS_NONE
 float sin_float_table[SinCosFloatTableSize() + 1]
     __attribute__((section(".sram_l")));
 float cos_float_table[SinCosFloatTableSize() + 1]
     __attribute__((section(".sram_l")));
+#else
+float sin_float_table[SinCosFloatTableSize() + 1];
+float cos_float_table[SinCosFloatTableSize() + 1];
+#endif
 
 ::std::array<GenericInitializer *, 10> global_initializers{};
 

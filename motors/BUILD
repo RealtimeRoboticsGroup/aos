@@ -67,6 +67,9 @@ cc_library(
         "math.h",
     ],
     visibility = ["//visibility:public"],
+    deps = [
+        "//aos:macros",
+    ],
 )
 
 cc_test(
