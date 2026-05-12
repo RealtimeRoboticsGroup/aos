@@ -1,0 +1,82 @@
+diff --git a/BUILD.bazel b/BUILD.bazel
+index 2924e86..31b2d3f 100644
+--- a/BUILD.bazel
++++ b/BUILD.bazel
+@@ -36,6 +36,17 @@ config_setting(
+     ],
+ )
+ 
++config_setting(
++    name = "linux_arm64_no_msan",
++    constraint_values = [
++        "@platforms//os:linux",
++        "@platforms//cpu:aarch64",
++    ],
++    flag_values = {
++        "@io_bazel_rules_go//go/config:msan": "false",
++    },
++)
++
+ config_setting(
+     name = "linux_riscv64",
+     constraint_values = [
+@@ -52,6 +63,17 @@ config_setting(
+     ],
+ )
+ 
++config_setting(
++    name = "linux_x86_64_no_msan",
++    constraint_values = [
++        "@platforms//os:linux",
++        "@platforms//cpu:x86_64",
++    ],
++    flag_values = {
++        "@io_bazel_rules_go//go/config:msan": "false",
++    },
++)
++
+ config_setting(
+     name = "wasm32",
+     constraint_values = [
+@@ -135,7 +157,7 @@ alias(
+ # Note: lzma is bundled with Apple platforms, but sadly, not considered public API because its header is not exposed. lzma is not bundled on Android.
+ 
+ cc_library(
+-    name = "lzma",
++    name = "lzma_src",
+     srcs = select({
+         "@platforms//os:none": [],
+         "//conditions:default": [
+@@ -192,6 +214,19 @@ cc_library(
+     ],
+ )
+ 
++# Platform-specific lzma library:
++# - macOS, Android, Windows, iOS: built from source
++# - Linux: uses Debian sysroot
++alias(
++    name = "lzma",
++    actual = select({
++        ":linux_arm64_no_msan": "@arm64_debian_sysroot//:liblzma",
++        ":linux_x86_64_no_msan": "@amd64_debian_sysroot//:liblzma",
++        "//conditions:default": ":lzma_src",
++    }),
++    visibility = ["//visibility:public"],
++)
++
+ cc_binary(
+     name = "xz",
+     srcs = glob(
+diff --git a/MODULE.bazel b/MODULE.bazel
+index 9777c92..34ba123 100644
+--- a/MODULE.bazel
++++ b/MODULE.bazel
+@@ -7,3 +7,8 @@ module(
+ bazel_dep(name = "platforms", version = "0.0.8")
+ bazel_dep(name = "bazel_skylib", version = "1.5.0")
+ bazel_dep(name = "rules_cc", version = "0.0.10")
++
++# Sysroot dependencies for Linux builds
++bazel_dep(name = "arm64_debian_sysroot", version = "2025.10.25")
++bazel_dep(name = "amd64_debian_sysroot", version = "2025.04.20")
++bazel_dep(name = "rules_go", version = "0.59.0", repo_name = "io_bazel_rules_go")
