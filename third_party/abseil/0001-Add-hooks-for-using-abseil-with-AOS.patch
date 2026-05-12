@@ -233,7 +233,7 @@ index 23db63bf..63bbd85a 100644
  #endif
  
 +namespace aos {
-+void FatalUnsetRealtimePriority() __attribute__((weak));
++__attribute__((weak)) void FatalUnsetRealtimePriority() {}
 +}
 +
 +static void MaybeUnsetRealtime() {
@@ -263,7 +263,7 @@ index 3aed3a2f..5bb65e38 100644
  }
  
 +namespace aos {
-+void FatalUnsetRealtimePriority() __attribute__((weak));
++__attribute__((weak)) void FatalUnsetRealtimePriority() {}
 +}
 +
 +static void MaybeUnsetRealtime() {

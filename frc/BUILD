@@ -46,11 +46,17 @@ sh_binary(
     srcs = [
         "//frc:halide_generator.sh",
     ],
-    data = [
-        "@amd64_debian_sysroot//:sysroot_files",
-        "@halide_k8//:build_files",
-        "@llvm_toolchain//:all-components-x86_64-linux",
-    ],
+    data = select({
+        "@platforms//os:linux": [
+            "@amd64_debian_sysroot//:sysroot_files",
+            "@halide_k8//:build_files",
+            "@llvm_toolchain//:all-components-x86_64-linux",
+        ],
+        "@platforms//os:macos": [
+            "@halide_darwin_aarch64//:build_files",
+        ],
+        "//conditions:default": [],
+    }),
     deps = [
         "@bazel_tools//tools/bash/runfiles",
     ],

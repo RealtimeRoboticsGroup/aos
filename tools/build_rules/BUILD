@@ -10,7 +10,6 @@ sh_binary(
 py_binary(
     name = "jinja2_generator",
     srcs = ["jinja2_generator.py"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = ["@pip_deps//jinja2"],
 )

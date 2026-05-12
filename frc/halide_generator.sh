@@ -20,40 +20,67 @@ source "${RUNFILES_DIR:-/dev/null}/$f" 2>/dev/null || \
 # --- end runfiles.bash initialization v2 ---
 BINARY="$1"
 SOURCE="$2"
-HALIDE_FILE="$(rlocation halide_k8/include/Halide.h)"
-HALIDE="$(dirname "$(dirname "$HALIDE_FILE")")"
 
-SYSROOT_FILE="$(rlocation amd64_debian_sysroot/usr/include/stdlib.h)"
-SYSROOT="$(dirname "$(dirname "$(dirname "$SYSROOT_FILE")")")"
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  # macOS build - use system compiler with Halide
+  HALIDE_FILE="$(rlocation halide_darwin_aarch64/include/Halide.h)"
+  HALIDE="$(dirname "$(dirname "$HALIDE_FILE")")"
 
-LLVM_TOOLCHAIN_FILE="$(rlocation llvm_k8/bin/clang)"
-LLVM_TOOLCHAIN="$(dirname "$(dirname "$LLVM_TOOLCHAIN_FILE")")"
-TARGET=x86_64-unknown-linux-gnu
-MULTIARCH=x86_64-linux-gnu
-export LD_LIBRARY_PATH=external/llvm_toolchain/llvm/lib/
-"${LLVM_TOOLCHAIN}/bin/clang++" \
-  -fcolor-diagnostics \
-  -I"${HALIDE}/include" \
-  -nostdinc \
-  -isystem"${SYSROOT}/usr/include/c++/12" \
-  -isystem"${SYSROOT}/usr/include/${MULTIARCH}/c++/12" \
-  -isystem"${SYSROOT}/usr/include/c++/7/backward" \
-  -isystem"${LLVM_TOOLCHAIN}/lib/clang/21/include" \
-  -isystem"${SYSROOT}/usr/include/${MULTIARCH}" \
-  -isystem"${SYSROOT}/usr/include" \
-  -isystem"${SYSROOT}/include" \
-  "--sysroot=${SYSROOT}" \
-  -resource-dir "${LLVM_TOOLCHAIN}/lib/clang/21" \
-  -target "${TARGET}" \
-  -fuse-ld=lld \
-  -L"${LLVM_TOOLCHAIN}/lib" \
-  -L"${SYSROOT}/usr/lib" \
-  -L"${SYSROOT}/usr/lib/gcc/${MULTIARCH}/12" \
-  -L"${SYSROOT}/usr/lib/${MULTIARCH}" \
-  "${HALIDE}/lib/libHalide.a" \
-  -lstdc++ -lpthread -ldl -lm -lz \
-  -std=gnu++20 \
-  "${SOURCE}" \
-  "${HALIDE}/share/Halide/tools/GenGen.cpp" \
-  -ggdb3 \
-  -o "${BINARY}"
+  # Get macOS SDK path
+  SDK_PATH=$(xcrun --sdk macosx --show-sdk-path)
+
+  # Use system compiler with explicit SDK
+  clang++ \
+    -fcolor-diagnostics \
+    -isysroot "${SDK_PATH}" \
+    -I"${HALIDE}/include" \
+    -L"${HALIDE}/lib" \
+    "${HALIDE}/lib/libHalide.a" \
+    -framework Foundation \
+    -lpthread -ldl -lm -lz \
+    -std=c++20 \
+    -stdlib=libc++ \
+    "${SOURCE}" \
+    "${HALIDE}/share/Halide/tools/GenGen.cpp" \
+    -ggdb3 \
+    -o "${BINARY}"
+else
+  # Linux build
+  HALIDE_FILE="$(rlocation halide_k8/include/Halide.h)"
+  HALIDE="$(dirname "$(dirname "$HALIDE_FILE")")"
+
+  SYSROOT_FILE="$(rlocation amd64_debian_sysroot/usr/include/stdlib.h)"
+  SYSROOT="$(dirname "$(dirname "$(dirname "$SYSROOT_FILE")")")"
+
+  LLVM_TOOLCHAIN_FILE="$(rlocation llvm_k8/bin/clang)"
+  LLVM_TOOLCHAIN="$(dirname "$(dirname "$LLVM_TOOLCHAIN_FILE")")"
+  TARGET=x86_64-unknown-linux-gnu
+  MULTIARCH=x86_64-linux-gnu
+  export LD_LIBRARY_PATH=external/llvm_toolchain/llvm/lib/
+  "${LLVM_TOOLCHAIN}/bin/clang++" \
+    -fcolor-diagnostics \
+    -I"${HALIDE}/include" \
+    -nostdinc \
+    -isystem"${SYSROOT}/usr/include/c++/12" \
+    -isystem"${SYSROOT}/usr/include/${MULTIARCH}/c++/12" \
+    -isystem"${SYSROOT}/usr/include/c++/7/backward" \
+    -isystem"${LLVM_TOOLCHAIN}/lib/clang/21/include" \
+    -isystem"${SYSROOT}/usr/include/${MULTIARCH}" \
+    -isystem"${SYSROOT}/usr/include" \
+    -isystem"${SYSROOT}/include" \
+    "--sysroot=${SYSROOT}" \
+    -resource-dir "${LLVM_TOOLCHAIN}/lib/clang/21" \
+    -target "${TARGET}" \
+    -fuse-ld=lld \
+    -L"${LLVM_TOOLCHAIN}/lib" \
+    -L"${SYSROOT}/usr/lib" \
+    -L"${SYSROOT}/usr/lib/gcc/${MULTIARCH}/12" \
+    -L"${SYSROOT}/usr/lib/${MULTIARCH}" \
+    "${HALIDE}/lib/libHalide.a" \
+    -lstdc++ -lpthread -ldl -lm -lz \
+    -std=gnu++20 \
+    "${SOURCE}" \
+    "${HALIDE}/share/Halide/tools/GenGen.cpp" \
+    -ggdb3 \
+    -o "${BINARY}"
+fi

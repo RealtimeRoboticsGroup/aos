@@ -365,6 +365,7 @@ bazel_dep(name = "ctre_phoenix_cci_headers", version = "5.35.0", dev_dependency 
 bazel_dep(name = "ctre_phoenix_cci_athena", version = "5.35.0", dev_dependency = True)
 bazel_dep(name = "halide_k8", version = "14.0.0", dev_dependency = True)
 bazel_dep(name = "halide_arm64", version = "14.0.0", dev_dependency = True)
+bazel_dep(name = "halide_darwin_aarch64", version = "14.0.0", dev_dependency = True)
 bazel_dep(name = "allwpilib", version = "0.0.0", dev_dependency = True, repo_name = "com_github_wpilibsuite_allwpilib")
 local_path_override(
     module_name = "allwpilib",

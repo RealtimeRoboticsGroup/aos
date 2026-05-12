@@ -30,15 +30,14 @@ cc_library(
         "-Wno-unused-result",
         "-Wno-unused-but-set-variable",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
+    alwayslink = True,
 )
 
 cc_binary(
     name = "_cddlib.so",
     linkshared = True,
     linkstatic = False,
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [":cddlib"],
 )

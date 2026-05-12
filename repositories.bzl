@@ -660,6 +660,14 @@ def frc_repositories():
         url = "https://github.com/halide/Halide/releases/download/v14.0.0/Halide-14.0.0-arm-64-linux-6b9ed2afd1d6d0badf04986602c943e287d44e46.tar.gz",
     )
 
+    http_archive(
+        name = "halide_darwin_aarch64",
+        build_file = "@aos//:registry/modules/halide_darwin_aarch64/14.0.0/overlay/BUILD.bazel",
+        sha256 = "164e5e6e238c7c35e54776d9911f2922d92078ef79a4a1f3c1c9cd5a251f3efa",
+        strip_prefix = "Halide-14.0.0-arm-64-osx/",
+        url = "https://github.com/halide/Halide/releases/download/v14.0.0/Halide-14.0.0-arm-64-osx-6b9ed2afd1d6d0badf04986602c943e287d44e46.tar.gz",
+    )
+
     coral_image_thriftycam_2025_repo()
 
     drivetrain_replay_repo()

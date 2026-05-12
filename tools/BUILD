@@ -70,6 +70,22 @@ config_setting(
 )
 
 config_setting(
+    name = "arm64_linux",
+    constraint_values = [
+        "@platforms//cpu:arm64",
+        "@platforms//os:linux",
+    ],
+)
+
+config_setting(
+    name = "arm64_macos",
+    constraint_values = [
+        "@platforms//cpu:arm64",
+        "@platforms//os:macos",
+    ],
+)
+
+config_setting(
     name = "cpu_arm64",
     constraint_values = ["@platforms//cpu:arm64"],
 )
