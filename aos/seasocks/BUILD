@@ -6,7 +6,6 @@ py_binary(
     srcs = [
         "gen_embedded.py",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 

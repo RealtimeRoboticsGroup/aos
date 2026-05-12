@@ -14,6 +14,13 @@ package(default_applicable_licenses = ["//:license"])
 
 exports_files(["aos_dump_autocomplete.sh"])
 
+# Platform detection config_settings
+config_setting(
+    name = "os_none",
+    constraint_values = ["@platforms//os:none"],
+    visibility = ["//visibility:public"],
+)
+
 filegroup(
     name = "prime_binaries",
     srcs = [
@@ -71,6 +78,10 @@ cc_library(
     hdrs = [
         "macros.h",
     ],
+    defines = select({
+        ":os_none": ["AOS_OS_NONE=1"],
+        "//conditions:default": ["AOS_OS_NONE=0"],
+    }),
     visibility = ["//visibility:public"],
 )
 

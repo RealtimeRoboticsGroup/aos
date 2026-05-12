@@ -26,6 +26,7 @@ http_archive(
         "@aos//third_party:rules_cuda/0001-Pass-std-through-to-clang-CUDA-compile-actions.patch",
         "@aos//third_party:rules_cuda/0002-Inject-BAZEL_CURRENT_REPOSITORY-into-cuda_library.patch",
         "@aos//third_party:rules_cuda/0003-Add-cuda_wrappers-include-feature-for-clang-CUDA-too.patch",
+        "@aos//third_party:rules_cuda/0004-Pass-host_defines-through-clang-CUDA-compile-actions.patch",
     ],
     sha256 = "698493ea33914af09772d173f87efcf868930b58bc763af7f3d1103c87c1b71e",
     strip_prefix = "rules_cuda-71981925b1ff7a8ab37fcf442262c571ebaf3380",

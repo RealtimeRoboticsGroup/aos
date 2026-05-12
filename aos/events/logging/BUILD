@@ -153,19 +153,11 @@ cc_library(
     }),
     deps = [
         ":file_operations",
+        ":lzma_encoder",
         ":snappy_encoder",
         "//aos:sanitizers",
     ] + select({
-        "//tools:cpu_arm64": [":lzma_encoder"],
-        "//tools:cpu_arm64_no_msan": [
-            ":lzma_encoder",
-        ],
         "//tools:cpu_k8": [
-            ":s3_fetcher",
-            ":s3_file_operations",
-        ],
-        "//tools:cpu_k8_no_msan": [
-            ":lzma_encoder",
             ":s3_fetcher",
             ":s3_file_operations",
         ],
@@ -213,6 +205,7 @@ cc_library(
         ":log_backend",
         ":logfile_decoder_options",
         ":logger_fbs",
+        ":lzma_encoder",
         ":snappy_encoder",
         "//aos:configuration",
         "//aos:flatbuffer_merge",
@@ -230,9 +223,7 @@ cc_library(
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/types:span",
     ] + select({
-        "//tools:cpu_arm64": [":lzma_encoder"],
         "//tools:cpu_k8": [
-            ":lzma_encoder",
             ":s3_fetcher",
             ":s3_file_operations",
         ],

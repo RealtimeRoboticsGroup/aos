@@ -4,6 +4,8 @@
 #include <pthread.h>
 #include <unistd.h>
 
+#include <cstring>
+
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
@@ -20,7 +22,9 @@ ABSL_DECLARE_FLAG(bool, skip_realtime_scheduler);
 namespace logging::internal {
 
 // Implemented in aos/logging/context.cc.
-void ReloadThreadName() __attribute__((weak)) {}
+__attribute__((weak)) void ReloadThreadName();
+
+void ReloadThreadName() {}
 
 }  // namespace logging::internal
 
@@ -189,7 +193,14 @@ void SetCurrentThreadRealtimePriority(int priority, int scheduling_policy) {
   // Force initialization of the aos_sync primitives on this thread so that we
   // don't take a malloc inside lock/unlock later.
   {
-    static aos_mutex kInitMutex = {0};
+    static aos_mutex kInitMutex = {.next = 0,
+                                   .previous = nullptr,
+                                   .futex = 0
+#ifdef AOS_SANITIZER_thread
+                                   ,
+                                   .pthread_mutex_init = false
+#endif
+    };
     (void)mutex_lock(&kInitMutex);
     mutex_unlock(&kInitMutex);
   }
@@ -229,11 +240,11 @@ int GetCurrentThreadSchedulingPolicy() { return fake_rt_policy; }
 static malloc_zone_t aos_zone;
 static malloc_zone_t *system_zone = nullptr;
 
-static size_t AosSize(struct _malloc_zone_t *zone, const void *ptr) {
+static size_t AosSize(struct _malloc_zone_t * /*zone*/, const void *ptr) {
   return system_zone->size(system_zone, ptr);
 }
 
-static void *AosMalloc(struct _malloc_zone_t *zone, size_t size) {
+static void *AosMalloc(struct _malloc_zone_t * /*zone*/, size_t size) {
   if (GetIsRealtime() && absl::GetFlag(FLAGS_die_on_malloc)) {
     SetIsRealtime(false);
     ABSL_RAW_LOG(FATAL, "Malloced %zu bytes", size);
@@ -241,7 +252,7 @@ static void *AosMalloc(struct _malloc_zone_t *zone, size_t size) {
   return system_zone->malloc(system_zone, size);
 }
 
-static void *AosCalloc(struct _malloc_zone_t *zone, size_t num_items,
+static void *AosCalloc(struct _malloc_zone_t * /*zone*/, size_t num_items,
                        size_t size) {
   if (GetIsRealtime() && absl::GetFlag(FLAGS_die_on_malloc)) {
     SetIsRealtime(false);
@@ -250,7 +261,7 @@ static void *AosCalloc(struct _malloc_zone_t *zone, size_t num_items,
   return system_zone->calloc(system_zone, num_items, size);
 }
 
-static void *AosValloc(struct _malloc_zone_t *zone, size_t size) {
+static void *AosValloc(struct _malloc_zone_t * /*zone*/, size_t size) {
   if (GetIsRealtime() && absl::GetFlag(FLAGS_die_on_malloc)) {
     SetIsRealtime(false);
     ABSL_RAW_LOG(FATAL, "Malloced %zu bytes", size);
@@ -258,7 +269,7 @@ static void *AosValloc(struct _malloc_zone_t *zone, size_t size) {
   return system_zone->valloc(system_zone, size);
 }
 
-static void AosFree(struct _malloc_zone_t *zone, void *ptr) {
+static void AosFree(struct _malloc_zone_t * /*zone*/, void *ptr) {
   // This might not be called if system_zone owns ptr.
   if (GetIsRealtime() && absl::GetFlag(FLAGS_die_on_malloc) && ptr != nullptr) {
     SetIsRealtime(false);
@@ -267,7 +278,8 @@ static void AosFree(struct _malloc_zone_t *zone, void *ptr) {
   system_zone->free(system_zone, ptr);
 }
 
-static void *AosRealloc(struct _malloc_zone_t *zone, void *ptr, size_t size) {
+static void *AosRealloc(struct _malloc_zone_t * /*zone*/, void *ptr,
+                        size_t size) {
   if (GetIsRealtime() && absl::GetFlag(FLAGS_die_on_malloc)) {
     SetIsRealtime(false);
     ABSL_RAW_LOG(FATAL, "Malloced %p -> %zu bytes", ptr, size);
@@ -279,7 +291,7 @@ static void AosDestroy(struct _malloc_zone_t *zone) {
   system_zone->destroy(zone);
 }
 
-static unsigned AosBatchMalloc(struct _malloc_zone_t *zone, size_t size,
+static unsigned AosBatchMalloc(struct _malloc_zone_t * /*zone*/, size_t size,
                                void **results, unsigned num_requested) {
   if (GetIsRealtime() && absl::GetFlag(FLAGS_die_on_malloc)) {
     SetIsRealtime(false);
@@ -288,7 +300,7 @@ static unsigned AosBatchMalloc(struct _malloc_zone_t *zone, size_t size,
   return system_zone->batch_malloc(system_zone, size, results, num_requested);
 }
 
-static void AosBatchFree(struct _malloc_zone_t *zone, void **to_be_freed,
+static void AosBatchFree(struct _malloc_zone_t * /*zone*/, void **to_be_freed,
                          unsigned num_to_be_freed) {
   if (aos::GetIsRealtime() && absl::GetFlag(FLAGS_die_on_malloc) &&
       num_to_be_freed > 0) {
@@ -298,7 +310,7 @@ static void AosBatchFree(struct _malloc_zone_t *zone, void **to_be_freed,
   system_zone->batch_free(system_zone, to_be_freed, num_to_be_freed);
 }
 
-static void *AosMemalign(struct _malloc_zone_t *zone, size_t alignment,
+static void *AosMemalign(struct _malloc_zone_t * /*zone*/, size_t alignment,
                          size_t size) {
   if (GetIsRealtime() && absl::GetFlag(FLAGS_die_on_malloc)) {
     SetIsRealtime(false);
@@ -307,7 +319,7 @@ static void *AosMemalign(struct _malloc_zone_t *zone, size_t alignment,
   return system_zone->memalign(system_zone, alignment, size);
 }
 
-static void AosFreeDefiniteSize(struct _malloc_zone_t *zone, void *ptr,
+static void AosFreeDefiniteSize(struct _malloc_zone_t * /*zone*/, void *ptr,
                                 size_t size) {
   if (GetIsRealtime() && absl::GetFlag(FLAGS_die_on_malloc) && ptr != nullptr) {
     SetIsRealtime(false);
@@ -316,11 +328,12 @@ static void AosFreeDefiniteSize(struct _malloc_zone_t *zone, void *ptr,
   system_zone->free_definite_size(system_zone, ptr, size);
 }
 
-static size_t AosPressureRelief(struct _malloc_zone_t *zone, size_t goal) {
+static size_t AosPressureRelief(struct _malloc_zone_t * /*zone*/, size_t goal) {
   return system_zone->pressure_relief(system_zone, goal);
 }
 
-static boolean_t AosClaimedAddress(struct _malloc_zone_t *zone, void *ptr) {
+static boolean_t AosClaimedAddress(struct _malloc_zone_t * /*zone*/,
+                                   void *ptr) {
   return system_zone->claimed_address(system_zone, ptr);
 }
 
@@ -333,35 +346,36 @@ static kern_return_t AosEnumerator(task_t task, void *context,
                                              zone_address, reader, recorder);
 }
 
-static size_t AosGoodSize(malloc_zone_t *zone, size_t size) {
+static size_t AosGoodSize(malloc_zone_t * /*zone*/, size_t size) {
   return system_zone->introspect->good_size(system_zone, size);
 }
 
-static boolean_t AosCheck(malloc_zone_t *zone) {
+static boolean_t AosCheck(malloc_zone_t * /*zone*/) {
   return system_zone->introspect->check(system_zone);
 }
 
-static void AosPrint(malloc_zone_t *zone, boolean_t verbose) {
+static void AosPrint(malloc_zone_t * /*zone*/, boolean_t verbose) {
   system_zone->introspect->print(system_zone, verbose);
 }
 
-static void AosLog(malloc_zone_t *zone, void *address) {
+static void AosLog(malloc_zone_t * /*zone*/, void *address) {
   system_zone->introspect->log(system_zone, address);
 }
 
-static void AosForceLock(malloc_zone_t *zone) {
+static void AosForceLock(malloc_zone_t * /*zone*/) {
   system_zone->introspect->force_lock(system_zone);
 }
 
-static void AosForceUnlock(malloc_zone_t *zone) {
+static void AosForceUnlock(malloc_zone_t * /*zone*/) {
   system_zone->introspect->force_unlock(system_zone);
 }
 
-static void AosStatistics(malloc_zone_t *zone, malloc_statistics_t *stats) {
+static void AosStatistics(malloc_zone_t * /*zone*/,
+                          malloc_statistics_t *stats) {
   system_zone->introspect->statistics(system_zone, stats);
 }
 
-static boolean_t AosZoneLocked(malloc_zone_t *zone) {
+static boolean_t AosZoneLocked(malloc_zone_t * /*zone*/) {
   return system_zone->introspect->zone_locked(system_zone);
 }
 

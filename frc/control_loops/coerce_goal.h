@@ -3,6 +3,7 @@
 
 #include "Eigen/Dense"
 
+#include "aos/macros.h"
 #include "frc/control_loops/polytope.h"
 
 namespace frc::control_loops {
@@ -101,7 +102,7 @@ Eigen::Matrix<Scalar, 2, 1> DoCoerceGoal(
     // The line does not pass through the region; identify the vertex closest to
     // the line.
     Eigen::Matrix<Scalar, 2, 4> region_vertices = region.StaticVertices();
-#ifdef __linux__
+#if !AOS_OS_NONE
     CHECK_GT(reinterpret_cast<ssize_t>(region_vertices.outerSize()), 0);
 #else
     assert(region_vertices.outerSize() > 0);

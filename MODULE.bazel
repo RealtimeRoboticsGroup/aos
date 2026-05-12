@@ -18,6 +18,7 @@ git_override(
         "//third_party:rules_cuda/0001-Pass-std-through-to-clang-CUDA-compile-actions.patch",
         "//third_party:rules_cuda/0002-Inject-BAZEL_CURRENT_REPOSITORY-into-cuda_library.patch",
         "//third_party:rules_cuda/0003-Add-cuda_wrappers-include-feature-for-clang-CUDA-too.patch",
+        "//third_party:rules_cuda/0004-Pass-host_defines-through-clang-CUDA-compile-actions.patch",
     ],
     remote = "https://github.com/bazel-contrib/rules_cuda.git",
 )

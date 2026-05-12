@@ -8,9 +8,11 @@
 
 #include "aos/commonmath.h"
 #include "aos/containers/priority_queue.h"
+#include "aos/macros.h"
 #include "aos/util/math.h"
 #include "frc/control_loops/c2d.h"
 #include "frc/control_loops/drivetrain/drivetrain_config.h"
+#include "frc/control_loops/hybrid_state_feedback_loop.h"
 #include "frc/control_loops/runge_kutta.h"
 
 namespace frc::control_loops::drivetrain {
@@ -18,6 +20,8 @@ namespace frc::control_loops::drivetrain {
 namespace testing {
 class HybridEkfTest;
 }
+
+#if !AOS_OS_NONE
 
 // HybridEkf is an EKF for use in robot localization. It is currently
 // coded for use with drivetrains in particular, and so the states and inputs
@@ -949,6 +953,8 @@ void HybridEkf<Scalar>::InitializeMatrices() {
   X_hat_.setZero();
   P_.setZero();
 }
+
+#endif  // !AOS_OS_NONE
 
 }  // namespace frc::control_loops::drivetrain
 

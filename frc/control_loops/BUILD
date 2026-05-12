@@ -52,15 +52,16 @@ cc_library(
         "polytope.h",
     ],
     deps = [
+        "//aos:macros",
         "@eigen",
     ] + select({
-        "@platforms//os:linux": [
+        "@platforms//os:none": [],
+        "//conditions:default": [
             "//aos/logging",
             "//third_party/cddlib",
             "@com_google_absl//absl/log",
             "@com_google_absl//absl/log:check",
         ],
-        "//conditions:default": [],
     }),
 )
 
@@ -351,10 +352,11 @@ cc_library(
         "coerce_goal.h",
     ],
     linkopts = select({
-        "@platforms//os:linux": ["-lm"],
-        "//conditions:default": [],
+        "@platforms//os:none": [],
+        "//conditions:default": ["-lm"],
     }),
     deps = [
+        "//aos:macros",
         "//frc/control_loops:polytope",
         "@eigen",
     ],
@@ -389,8 +391,8 @@ cc_library(
         "@com_google_absl//absl/log:check",
         "@eigen",
     ] + select({
-        "@platforms//os:linux": ["//aos/logging"],
-        "//conditions:default": [],
+        "@platforms//os:none": [],
+        "//conditions:default": ["//aos/logging"],
     }),
 )
 

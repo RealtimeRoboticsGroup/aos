@@ -4,7 +4,8 @@
 #include <functional>
 
 #include "aos/flatbuffer_merge.h"
-#if defined(__linux__)
+#include "aos/macros.h"
+#if !AOS_OS_NONE
 #include "frc/control_loops/hybrid_state_feedback_loop.h"
 #include "frc/control_loops/hybrid_state_feedback_loop_converters.h"
 #endif
@@ -98,7 +99,7 @@ struct DrivetrainConfig {
   ::std::function<StateFeedbackLoop<4, 2, 2, Scalar>()> make_drivetrain_loop;
   ::std::function<StateFeedbackLoop<2, 2, 2, Scalar>()> make_v_drivetrain_loop;
   ::std::function<StateFeedbackLoop<7, 2, 4, Scalar>()> make_kf_drivetrain_loop;
-#if defined(__linux__)
+#if !AOS_OS_NONE
   ::std::function<
       StateFeedbackLoop<2, 2, 2, Scalar, StateFeedbackHybridPlant<2, 2, 2>,
                         HybridKalman<2, 2, 2>>()>
@@ -240,7 +241,7 @@ struct DrivetrainConfig {
               return MakeStateFeedbackLoop<7, 2, 4>(
                   *fbs_copy->message().loop_config()->kalman_drivetrain_loop());
             },
-#if defined(__linux__)
+#if !AOS_OS_NONE
         .make_hybrid_drivetrain_velocity_loop =
             [fbs_copy]() {
               return MakeHybridStateFeedbackLoop<2, 2, 2>(

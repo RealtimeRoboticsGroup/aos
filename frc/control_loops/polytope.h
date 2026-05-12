@@ -3,7 +3,9 @@
 
 #include "Eigen/Dense"
 
-#ifdef __linux__
+#include "aos/macros.h"
+
+#if !AOS_OS_NONE
 // For reasons I haven't looked into, these headers fail to compile when
 // included after the glog header. Prevent clang-format from ordering them.
 // clang-format off
@@ -13,7 +15,7 @@
 
 #include "absl/log/check.h"
 #include "absl/log/log.h"
-#endif  // __linux__
+#endif  // !AOS_OS_NONE
 
 namespace frc::controls {
 
@@ -112,7 +114,7 @@ class HVPolytope : public Polytope<number_of_dimensions, Scalar> {
   const Eigen::Matrix<Scalar, number_of_dimensions, num_vertices> vertices_;
 };
 
-#ifdef __linux__
+#if !AOS_OS_NONE
 
 template <int number_of_dimensions>
 class HPolytope : public Polytope<number_of_dimensions> {
@@ -158,7 +160,7 @@ class HPolytope : public Polytope<number_of_dimensions> {
       Eigen::Ref<const Eigen::Matrix<double, Eigen::Dynamic, 1>> &k);
 };
 
-#endif  // __linux__
+#endif  // !AOS_OS_NONE
 
 template <int number_of_dimensions, typename Scalar>
 bool Polytope<number_of_dimensions, Scalar>::IsInside(
@@ -173,7 +175,7 @@ bool Polytope<number_of_dimensions, Scalar>::IsInside(
   return true;
 }
 
-#ifdef __linux__
+#if !AOS_OS_NONE
 template <int number_of_dimensions>
 Eigen::Matrix<double, number_of_dimensions, Eigen::Dynamic>
 HPolytope<number_of_dimensions>::CalculateVertices(
@@ -236,7 +238,7 @@ HPolytope<number_of_dimensions>::CalculateVertices(
 
   return vertices;
 }
-#endif  // __linux__
+#endif  // !AOS_OS_NONE
 
 }  // namespace frc::controls
 

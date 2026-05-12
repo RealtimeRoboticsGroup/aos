@@ -9,6 +9,13 @@
   TypeName(const TypeName &) = delete;     \
   void operator=(const TypeName &) = delete
 
+// AOS_OS_NONE is defined to 1 if we are building for a platform without an OS
+// (like a microcontroller), and 0 otherwise. This is managed via the
+// //aos:macros target in Bazel.
+#ifndef AOS_OS_NONE
+#error "AOS_OS_NONE must be defined. Depend on //aos:macros."
+#endif
+
 #define AOS_STRINGIFY(x) AOS_TO_STRING(x)
 #define AOS_TO_STRING(x) #x
 

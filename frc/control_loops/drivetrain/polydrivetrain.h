@@ -2,10 +2,11 @@
 #define FRC_CONTROL_LOOPS_DRIVETRAIN_POLYDRIVETRAIN_H_
 
 #include "aos/commonmath.h"
+#include "aos/macros.h"
 #include "frc/control_loops/coerce_goal.h"
 #include "frc/control_loops/drivetrain/gear.h"
 #include "frc/control_loops/polytope.h"
-#ifdef __linux__
+#if !AOS_OS_NONE
 #include "aos/logging/logging.h"
 #include "frc/control_loops/control_loops_generated.h"
 #include "frc/control_loops/drivetrain/drivetrain_goal_generated.h"
@@ -18,7 +19,7 @@
 #include "frc/control_loops/drivetrain/drivetrain_output_float_generated.h"
 #include "frc/control_loops/drivetrain/drivetrain_position_float_generated.h"
 #include "frc/control_loops/drivetrain/drivetrain_status_float_generated.h"
-#endif  // __linux__
+#endif  // !AOS_OS_NONE
 #include "frc/control_loops/drivetrain/drivetrain_config.h"
 #include "frc/control_loops/drivetrain/drivetrain_states.h"
 #include "frc/control_loops/state_feedback_loop.h"
@@ -406,11 +407,11 @@ void PolyDrivetrain<Scalar>::Update(Scalar voltage_battery) {
         (R_right / dt_config_.v)(0, 0) + (IsInGear(right_gear_) ? 0 : wiggle),
         -kTwelve, kTwelve);
     ff_volts_ = loop_->U();
-#ifdef __linux__
+#if !AOS_OS_NONE
     loop_->mutable_U() *= kTwelve / voltage_battery;
 #else
     (void)voltage_battery;
-#endif  // __linux__
+#endif  // !AOS_OS_NONE
   }
 }
 

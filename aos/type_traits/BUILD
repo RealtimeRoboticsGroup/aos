@@ -18,7 +18,6 @@ cc_test(
     srcs = [
         "type_traits_test.cpp",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":type_traits",
         "//aos/testing:googletest",

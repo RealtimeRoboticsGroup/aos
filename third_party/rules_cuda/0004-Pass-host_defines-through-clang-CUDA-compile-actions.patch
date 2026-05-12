@@ -1,0 +1,66 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Austin Schuh <austin.linux@gmail.com>
+Date: Sat, 16 May 2026 12:00:00 -0700
+Subject: [PATCH] Pass host_defines through clang CUDA compile actions
+
+`cuda_helper.bzl` collects transitive cc_library `defines` into the
+`host_defines` build variable, and `compile.bzl` passes them to the
+toolchain. The nvcc toolchain config wires up a `host_defines` feature
+that turns those into `-D` flags, but the clang toolchain config never
+defined that feature, so transitive cc_library defines were silently
+dropped on clang CUDA compiles. This caused, for example, defines from
+`//aos:macros` (which sets `AOS_OS_NONE` via cc_library `defines`) to
+be ineffective for any cuda_library that depends on it transitively,
+breaking builds with errors like:
+
+  aos/macros.h:16:2: error: "AOS_OS_NONE must be defined.
+                             Depend on //aos:macros."
+
+Mirror the nvcc behavior by adding a `host_defines` feature to the
+clang toolchain config. Since clang in CUDA mode is also the host
+compiler, it accepts `-D` for both host and device just like for
+`defines`.
+---
+ cuda/private/toolchain_configs/clang.bzl | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+
+diff --git a/cuda/private/toolchain_configs/clang.bzl b/cuda/private/toolchain_configs/clang.bzl
+--- a/cuda/private/toolchain_configs/clang.bzl
++++ b/cuda/private/toolchain_configs/clang.bzl
+@@ -410,6 +410,24 @@ def _impl(ctx):
+         ],
+     )
+ 
++    host_defines_feature = feature(
++        name = "host_defines",
++        enabled = True,
++        flag_sets = [
++            flag_set(
++                actions = [
++                    ACTION_NAMES.cuda_compile,
++                ],
++                flag_groups = [
++                    flag_group(
++                        flags = ["-D%{host_defines}"],
++                        iterate_over = "host_defines",
++                    ),
++                ],
++            ),
++        ],
++    )
++
+     random_seed_feature = feature(
+         name = "random_seed",
+         enabled = True,
+@@ -597,7 +615,8 @@ def _impl(ctx):
+         dependency_file_feature,
+         random_seed_feature,
+         per_object_debug_info_feature,
+         defines_feature,
++        host_defines_feature,
+         includes_feature,
+         include_paths_feature,
+         external_include_paths_feature,
+-- 
+2.39.5
+

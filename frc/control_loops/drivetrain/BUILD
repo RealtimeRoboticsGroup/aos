@@ -287,15 +287,16 @@ cc_library(
     ],
     deps = [
         ":drivetrain_config_fbs",
+        "//aos:macros",
         "//frc:shifter_hall_effect",
         "//frc/control_loops:state_feedback_loop",
         "//frc/control_loops:state_feedback_loop_converters",
     ] + select({
-        "@platforms//os:linux": [
+        "@platforms//os:none": [],
+        "//conditions:default": [
             "//frc/control_loops:hybrid_state_feedback_loop",
             "//frc/control_loops:hybrid_state_feedback_loop_converters",
         ],
-        "//conditions:default": [],
     }),
 )
 
@@ -305,10 +306,12 @@ cc_library(
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":drivetrain_config",
+        "//aos:macros",
         "//aos:math",
         "//aos/containers:priority_queue",
         "//aos/util:math",
         "//frc/control_loops:c2d",
+        "//frc/control_loops:hybrid_state_feedback_loop",
         "//frc/control_loops:runge_kutta",
         "@eigen",
     ],
@@ -469,25 +472,26 @@ cc_library(
         ":drivetrain_states",
         ":gear",
         ":spline_goal_fbs",
+        "//aos:macros",
         "//aos:math",
         "//frc/control_loops:coerce_goal",
         "//frc/control_loops:control_loops_fbs",
         "//frc/control_loops:polytope",
         "//frc/control_loops:state_feedback_loop",
     ] + select({
-        "@platforms//os:linux": [
+        "@platforms//os:none": [
+            ":drivetrain_goal_float_fbs",
+            ":drivetrain_output_float_fbs",
+            ":drivetrain_position_float_fbs",
+            ":drivetrain_status_float_fbs",
+        ],
+        "//conditions:default": [
             ":drivetrain_goal_fbs",
             ":drivetrain_output_fbs",
             ":drivetrain_position_fbs",
             ":drivetrain_status_fbs",
             "//aos/util:log_interval",
             "//frc/input:robot_state_fbs",
-        ],
-        "@platforms//os:none": [
-            ":drivetrain_goal_float_fbs",
-            ":drivetrain_output_float_fbs",
-            ":drivetrain_position_float_fbs",
-            ":drivetrain_status_float_fbs",
         ],
     }),
 )

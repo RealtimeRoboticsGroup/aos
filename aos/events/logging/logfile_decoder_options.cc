@@ -4,32 +4,20 @@
 #include "aos/sanitizers.h"
 
 #if defined(__x86_64__)
-#if !defined(AOS_SANITIZE_MEMORY)
-#define ENABLE_LZMA 1
-#else
-#define ENABLE_LZMA 0
-#endif
 #define ENABLE_S3 1
 #elif defined(__aarch64__)
-#if !defined(AOS_SANITIZE_MEMORY)
-#define ENABLE_LZMA 1
-#else
-#define ENABLE_LZMA 0
-#endif
 #define ENABLE_S3 0
 #else
-#define ENABLE_LZMA 0
 #define ENABLE_S3 0
 #endif
 
-#if ENABLE_LZMA
 #include "aos/events/logging/lzma_encoder.h"
-#endif
 
 #if ENABLE_S3
 #include "aos/events/logging/s3_fetcher.h"
 #include "aos/events/logging/s3_file_operations.h"
 #endif
+
 namespace aos::logger::internal {
 std::unique_ptr<DataDecoder> ResolveDecoder(std::string_view filename,
                                             bool quiet) {
@@ -50,12 +38,7 @@ std::unique_ptr<DataDecoder> ResolveDecoder(std::string_view filename,
   static constexpr std::string_view kXz = ".xz";
   static constexpr std::string_view kSnappy = SnappyDecoder::kExtension;
   if (filename.substr(filename.size() - kXz.size()) == kXz) {
-#if ENABLE_LZMA
     decoder = std::make_unique<ThreadedLzmaDecoder>(std::move(decoder), quiet);
-#else
-    (void)quiet;
-    LOG(FATAL) << "Reading xz-compressed files not supported on this platform";
-#endif
   } else if (filename.substr(filename.size() - kSnappy.size()) == kSnappy) {
     decoder = std::make_unique<SnappyDecoder>(std::move(decoder));
   }

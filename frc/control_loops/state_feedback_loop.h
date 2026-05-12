@@ -11,12 +11,12 @@
 
 #include "unsupported/Eigen/MatrixFunctions"
 
-#if defined(__linux__)
+#if !AOS_OS_NONE
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 
 #include "aos/logging/logging.h"
-#endif
+#endif  // !AOS_OS_NONE
 #include "aos/macros.h"
 #include "frc/zeroing/wrap.h"
 
@@ -213,11 +213,11 @@ class StateFeedbackPlant {
     for (int i = 0; i < kNumInputs; ++i) {
       if (U(i, 0) > U_max(i, 0) + static_cast<Scalar>(0.00001) ||
           U(i, 0) < U_min(i, 0) - static_cast<Scalar>(0.00001)) {
-#if defined(__linux__)
+#if !AOS_OS_NONE
         AOS_LOG(FATAL, "U out of range\n");
 #else
         abort();
-#endif
+#endif  // !AOS_OS_NONE
       }
     }
   }
@@ -233,9 +233,9 @@ class StateFeedbackPlant {
     // that the plant should deal with.
     CheckU(U);
     if (coefficients().delayed_u > 0) {
-#if defined(__linux__)
+#if !AOS_OS_NONE
       DCHECK_EQ(static_cast<ssize_t>(coefficients().delayed_u), last_U_.cols());
-#endif
+#endif  // !AOS_OS_NONE
       X_ = Update(X(), last_U(coefficients().delayed_u - 1));
       UpdateY(last_U(coefficients().delayed_u - 1));
       for (int i = coefficients().delayed_u; i > 1; --i) {
