@@ -1,0 +1,8 @@
+namespace aos.ros2_emulation;
+
+// Our version of ROS2's "std_msgs/Int32".
+table Ros2Int32 {
+  data:int32 (id: 0);
+}
+
+root_type Ros2Int32;

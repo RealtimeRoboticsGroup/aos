@@ -99,5 +99,36 @@ _aos_config = rule(
             default = Label("//aos:config_flattener"),
         ),
     },
+    doc = "Checks and flattens an AOS config, including embedding flatbuffer schemas.",
     implementation = _aos_config_impl,
+)
+
+def aos_config_flatbuffers(name, flatbuffers = [], deps = [], visibility = None, testonly = False, target_compatible_with = None):
+    _aos_config_flatbuffers(
+        name = name,
+        deps = deps,
+        flatbuffers = [expand_label(flatbuffer) + "_reflection_out" for flatbuffer in flatbuffers],
+        visibility = visibility,
+        testonly = testonly,
+        target_compatible_with = target_compatible_with,
+    )
+
+def _aos_config_flatbuffers_impl(ctx):
+    flatbuffers_depset = depset(
+        ctx.files.flatbuffers,
+        transitive = [dep[AosConfigInfo].transitive_flatbuffers for dep in ctx.attr.deps],
+    )
+    return [AosConfigInfo(transitive_flatbuffers = flatbuffers_depset, transitive_src = depset())]
+
+_aos_config_flatbuffers = rule(
+    attrs = {
+        "deps": attr.label_list(
+            providers = [AosConfigInfo],
+        ),
+        "flatbuffers": attr.label_list(
+            mandatory = False,
+        ),
+    },
+    doc = "A group of flatbuffer schemas to embed in an AOS config (without an attached config yet).",
+    implementation = _aos_config_flatbuffers_impl,
 )

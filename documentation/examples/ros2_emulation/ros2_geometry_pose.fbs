@@ -1,0 +1,12 @@
+include "ros2_geometry_quaternion.fbs";
+include "ros2_geometry_point.fbs";
+
+namespace aos.ros2_emulation;
+
+// Our version of ROS2's "geometry_msgs/Pose".
+table Ros2Pose {
+  position:Ros2Point (id: 0);
+  orientation:Ros2Quaternion (id: 1);
+}
+
+root_type Ros2Pose;

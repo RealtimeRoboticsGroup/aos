@@ -1,0 +1,13 @@
+namespace aos.ros2_emulation;
+
+// Our version of ROS2's "geometry_msgs/Point".
+//
+// This would be more natural in flatbuffers as [float64:3], but that requires
+// updating all references.
+table Ros2Point {
+  x:float64 (id: 0);
+  y:float64 (id: 1);
+  z:float64 (id: 2);
+}
+
+root_type Ros2Point;
