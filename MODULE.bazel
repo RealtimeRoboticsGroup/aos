@@ -378,7 +378,16 @@ local_path_override(
 
 bazel_dep(name = "foxglove_schemas", version = "0.16.2", repo_name = "com_github_foxglove_schemas")
 bazel_dep(name = "symengine", version = "0.12.0")
-bazel_dep(name = "gmp", version = "6.2.0")
+bazel_dep(name = "gmp", version = "6.3.0")
+single_version_override(
+    module_name = "gmp",
+    patch_strip = 1,
+    patches = [
+        "//third_party/gmp_bzlmod:0001-Reuse-_MPN_ARCH-for-config_m4.patch",
+        "//third_party/gmp_bzlmod:0002-Use-percent-function-for-ELF-on-ARM.patch",
+        "//third_party/gmp_bzlmod:0003-Merge-_mpn-into-gmp.patch",
+    ],
+)
 bazel_dep(name = "aspect_rules_cypress", version = "0.7.2")
 
 cypress = use_extension("@aspect_rules_cypress//cypress:extensions.bzl", "cypress")

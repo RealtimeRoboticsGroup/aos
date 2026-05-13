@@ -1,0 +1,49 @@
+From: Austin Schuh <austin.schuh@bluerivertech.com>
+Subject: [PATCH] Reuse _MPN_ARCH select for gmp_config_m4
+
+The inline select() inside gmp_config_m4 only mapped a small handful of
+@platforms//cpu:* values to gmp arch names ("aarch64", "arm", "powerpc64",
+"s390_64", "x86_64"). Every other arch -- including the very common
+@platforms//cpu:armv7, @platforms//cpu:arm64, @platforms//cpu:arm64e,
+@platforms//cpu:i386, @platforms//cpu:x86_32, @platforms//cpu:mips64,
+@platforms//cpu:ppc32, @platforms//cpu:riscv32/64 -- fell through to
+"generic".
+
+The "generic" config.m4 emits ELF-flavoured `.type sym,@function` and
+omits the per-arch *-defs.m4 includes. On ARM this is fatal: `@` is the
+ARM assembler line-comment character, so `.type sym,@function` becomes
+`.type sym,` and gas fails with `unrecognized symbol type ""`. The
+missing arm-defs.m4 also leaves macros like `return` and the `C`
+single-line-comment marker untouched, producing additional assembler
+errors like `bad instruction 'return r14'` and
+`garbage following instruction -- '... C return value'`.
+
+The rest of the build (_MPN_ARCH, _MPN_ASM_SRCS, gmp_mparam_h) already
+maps all of these constraint_values correctly. Reuse _MPN_ARCH for
+gmp_config_m4 so the config.m4 stays in sync with everything else.
+
+Tested on a 32-bit ARM (roborio, armv7) toolchain, where this fixes
+assembly compilation of mpn/*.s for gmp 6.3.0.
+---
+ BUILD.bazel | 9 +--------
+ 1 file changed, 1 insertion(+), 8 deletions(-)
+
+diff --git a/BUILD.bazel b/BUILD.bazel
+--- a/BUILD.bazel
++++ b/BUILD.bazel
+@@ -746,14 +746,7 @@
+ 
+ gmp_config_m4(
+     name = "config_m4",
+-    arch = select({
+-        "@platforms//cpu:aarch64": "aarch64",
+-        "@platforms//cpu:arm": "arm",
+-        "@platforms//cpu:ppc64le": "powerpc64",
+-        "@platforms//cpu:s390x": "s390_64",
+-        "@platforms//cpu:x86_64": "x86_64",
+-        "//conditions:default": "generic",
+-    }),
++    arch = _MPN_ARCH,
+     mparam_h = ":gmp_mparam_h",
+     os = select({
+         "@platforms//os:linux": "linux",

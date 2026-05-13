@@ -1112,7 +1112,6 @@ def _impl(ctx):
                             "-Wunused-local-typedefs",
                             "-Wno-psabi",
                             "-fno-omit-frame-pointer",
-                            "-D__has_feature(x)=0",
                             "-pipe",
                             "-ggdb3",
                         ],

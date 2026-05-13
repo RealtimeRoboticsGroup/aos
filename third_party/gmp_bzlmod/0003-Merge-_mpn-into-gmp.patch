@@ -1,0 +1,101 @@
+From: Austin Schuh <austin.schuh@bluerivertech.com>
+Subject: [PATCH] Merge :_mpn cc_library into :gmp
+
+The previous layout split gmp into two cc_libraries:
+
+  * :gmp     -- the core C sources (assert.c, errno.c, memory.c,
+                primesieve.c, nextprime.c, rand/*.c, mpz/*.c, ...),
+  * :_mpn    -- the per-arch mpn function implementations
+                (assembly + generic C), which :gmp depends on.
+
+This split has two related problems on Linux when the cc_library
+boundaries become DSO boundaries or affect single-pass static linking:
+
+1. Several per-arch .asm files reference the protected-visibility table
+   `__gmp_binvert_limb_table` (defined in `mp_minv_tab.c`, which was in
+   :gmp). On 32-bit ARM, `R_ARM_REL32` against an undefined protected
+   symbol is a hard link error, so building the implicit `lib_mpn.so`
+   for :_mpn fails with:
+
+       ld: relocation R_ARM_REL32 against external or undefined symbol
+           `__gmp_binvert_limb_table' can not be used when making a
+           shared object; recompile with -fPIC
+       ld: lib_mpn.so: protected symbol `__gmp_binvert_limb_table' isn't
+           defined
+
+   On x86_64 the same undefined reference is silently tolerated in the
+   .so, so the breakage only shows up on ARM.
+
+2. The generic C sources in `mpn/generic/*.c` call back into core gmp
+   symbols defined in :gmp (`__gmp_init_primesieve`, `__gmp_nextprime`,
+   `__gmp_tmp_reentrant_alloc/free`, `__gmp_assert_fail`, ...). With the
+   split layout the static archives end up on the link line in the
+   order `libgmp.a lib_mpn.a`. A single-pass linker satisfies all of
+   libgmp.a's needs from libgmp.a first; when it then pulls
+   `perfpow.o`, `binvert.o`, etc. out of lib_mpn.a, those objects'
+   references to symbols in libgmp.a are no longer resolvable:
+
+       ld: lib_mpn.a(perfpow.o): in function `perfpow':
+           undefined reference to `__gmp_init_primesieve'
+           undefined reference to `__gmp_nextprime'
+
+The autotools build does not split mpn into its own library; everything
+lives in `libgmp.a/so`. Match that layout in the Bazel build by merging
+:_mpn's srcs into :gmp. :_mpn is preserved as an alias for backwards
+compatibility with any downstream label references.
+---
+ BUILD.bazel | 28 ++++++++++++++++------------
+ 1 file changed, 16 insertions(+), 12 deletions(-)
+
+diff --git a/BUILD.bazel b/BUILD.bazel
+--- a/BUILD.bazel
++++ b/BUILD.bazel
+@@ -852,7 +852,18 @@
+             "scanf/*.c",
+             "rand/*.c",
+         ],
+-    ),
++    ) + [
++        # MPN function implementations (assembly + generic C). Historically
++        # these lived in a separate :_mpn cc_library, but the resulting
++        # static-link order produces a circular reference: code in :_mpn
++        # references symbols defined in :gmp (e.g. __gmp_init_primesieve,
++        # __gmp_nextprime, __gmp_tmp_reentrant_alloc), and a single-pass
++        # linker scanning libgmp.a then lib_mpn.a leaves those symbols
++        # unresolved. Keep everything in a single cc_library so libgmp.a
++        # matches the autotools layout and a single linker pass resolves
++        # all internal references.
++        ":" + fn for fn in _ALL_MPN_FUNCTIONS
++    ],
+     hdrs = [":gmp_h"],
+     copts = _GMP_COPTS,
+     includes = ["."],
+@@ -868,22 +879,15 @@
+         "rand/randmt.h",
+     ],
+     visibility = ["//visibility:public"],
+-    deps = [
+-        ":_gmp_hdrs",
+-        ":_mpn",
+-    ],
++    deps = [":_gmp_hdrs"],
+ )
+ 
+-# MPN function implementations (assembly + generic C).
+-cc_library(
++# Alias kept for backwards compatibility; the MPN sources now live directly
++# in :gmp (see the comment above), but downstream users may still reference
++# the historical :_mpn label.
++alias(
+     name = "_mpn",
+-    srcs = [":" + fn for fn in _ALL_MPN_FUNCTIONS],
+-    copts = _GMP_COPTS,
+-    textual_hdrs = glob(["mpn/generic/*.c"]) + [
+-        "mpn/generic/gmp-mparam.h",
+-        "mpn/generic/hgcd2-div.h",
+-    ],
+-    deps = [":_gmp_hdrs"],
++    actual = ":gmp",
+ )
+ 
+ # =============================================================================
