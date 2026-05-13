@@ -257,6 +257,8 @@ const static FlatCOption flatc_options[] = {
   { "", "python-typing", "", "Generate Python type annotations" },
   { "", "python-version", "", "Generate code for the given Python version." },
   { "", "python-gen-numpy", "", "Whether to generate numpy helpers." },
+  {"", "python-fields-snake-case", "",
+    "Generate Python fields using snake_case naming convention."},
   { "", "ts-omit-entrypoint", "",
     "Omit emission of namespace entrypoint file" },
   { "", "file-names-only", "",
@@ -699,6 +701,8 @@ FlatCOptions FlatCompiler::ParseFromCommandLineArguments(int argc,
           Error("Invalid value for " + arg + ": " + argv[argi], true);
         }
         opts.python_import_prefix = argv[argi];
+      } else if (arg == "--python-fields-snake-case") {
+        opts.python_fields_snake_case = true;
       } else if (arg == "--ts-omit-entrypoint") {
         opts.ts_omit_entrypoint = true;
       } else if (arg == "--annotate-sparse-vectors") {
