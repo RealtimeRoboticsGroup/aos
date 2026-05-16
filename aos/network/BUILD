@@ -521,6 +521,7 @@ cc_test(
     data = [
         ":message_bridge_auth_test_config",
     ],
+    tags = ["requires-network"],
     deps = [
         ":message_bridge_auth_client_lib",
         ":message_bridge_auth_server_lib",
@@ -1004,7 +1005,6 @@ cc_test(
     deps = [
         ":timestamp_channel",
         "//aos:configuration",
-        "//aos/events:shm_event_loop",
         "//aos/events:simulated_event_loop",
         "//aos/testing:googletest",
         "//aos/testing:path",

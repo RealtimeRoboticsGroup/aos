@@ -5,7 +5,7 @@
 
 #include "aos/actions/actions.h"
 #include "aos/actions/actor.h"
-#include "aos/events/shm_event_loop.h"
+#include "aos/events/event_loop.h"
 #include "frc/autonomous/auto_generated.h"
 #include "frc/control_loops/control_loops_generated.h"
 #include "frc/control_loops/drivetrain/drivetrain_config.h"
@@ -19,10 +19,10 @@ class BaseAutonomousActor : public ::aos::common::actions::ActorBase<Goal> {
   typedef ::aos::common::actions::TypedActionFactory<Goal> Factory;
 
   explicit BaseAutonomousActor(
-      ::aos::EventLoop *event_loop,
+      aos::EventLoop *event_loop,
       const control_loops::drivetrain::DrivetrainConfig<double> &dt_config);
 
-  static Factory MakeFactory(::aos::EventLoop *event_loop) {
+  static Factory MakeFactory(aos::EventLoop *event_loop) {
     return Factory(event_loop, "/autonomous");
   }
 

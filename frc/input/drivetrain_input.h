@@ -6,6 +6,7 @@
 #include <cstring>
 #include <memory>
 
+#include "aos/events/event_loop.h"
 #include "aos/logging/logging.h"
 #include "frc/control_loops/control_loops_generated.h"
 #include "frc/control_loops/drivetrain/drivetrain_config.h"
@@ -49,7 +50,7 @@ class DrivetrainInputReader {
     kLineFollow,
   };
   // Inputs driver station button and joystick locations
-  DrivetrainInputReader(::aos::EventLoop *event_loop,
+  DrivetrainInputReader(aos::EventLoop *event_loop,
                         driver_station::JoystickAxis wheel,
                         driver_station::JoystickAxis throttle,
                         driver_station::ButtonLocation quick_turn,
@@ -82,7 +83,7 @@ class DrivetrainInputReader {
 
   // Constructs the appropriate DrivetrainInputReader.
   static std::unique_ptr<DrivetrainInputReader> Make(
-      ::aos::EventLoop *event_loop, InputType type,
+      aos::EventLoop *event_loop, InputType type,
       const ::frc::control_loops::drivetrain::DrivetrainConfig<double>
           &dt_config);
 
@@ -156,7 +157,7 @@ class DrivetrainInputReader {
 };
 
 class SwerveDrivetrainInputReader {
-  SwerveDrivetrainInputReader(::aos::EventLoop *event_loop,
+  SwerveDrivetrainInputReader(aos::EventLoop *event_loop,
                               driver_station::JoystickAxis vx_axis,
                               driver_station::JoystickAxis vy_axis,
                               driver_station::JoystickAxis omega_axis)
@@ -171,7 +172,7 @@ class SwerveDrivetrainInputReader {
 
   // Constructs the appropriate DrivetrainInputReader.
   static std::unique_ptr<SwerveDrivetrainInputReader> Make(
-      ::aos::EventLoop *event_loop);
+      aos::EventLoop *event_loop);
 
   // Processes new joystick data and publishes drivetrain goal messages.
   void HandleDrivetrain(const ::frc::input::driver_station::Data &data);
@@ -214,7 +215,7 @@ class SteeringWheelDrivetrainInputReader : public DrivetrainInputReader {
   // Creates a DrivetrainInputReader with the corresponding joystick ports and
   // axis for the big steering wheel and throttle stick.
   static std::unique_ptr<SteeringWheelDrivetrainInputReader> Make(
-      ::aos::EventLoop *event_loop, bool default_high_gear);
+      aos::EventLoop *event_loop, bool default_high_gear);
 
   // Sets the default shifter position
   void set_default_high_gear(bool default_high_gear) {
