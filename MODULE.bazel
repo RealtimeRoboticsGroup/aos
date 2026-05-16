@@ -120,11 +120,9 @@ single_version_override(
 go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk", dev_dependency = True)
 go_sdk.download(
     name = "go_sdk",
-    goarch = "amd64",
-    goos = "linux",
     sdks = {
         "linux_amd64": ("go1.24.4.linux-amd64.tar.gz", "77e5da33bb72aeaef1ba4418b6fe511bc4d041873cbf82e5aa6318740df98717"),
-        "darwin_arm64": ("go1.24.4.darwin-arm64.tar.gz", "69bef555e114b4a2252452b6e7049afc31fbdf2d39790b669165e89525cd3f5c"),
+        "darwin_arm64": ("go1.24.4.darwin-arm64.tar.gz", "27973684b515eaf461065054e6b572d9390c05e69ba4a423076c160165336470"),
     },
     version = "1.24.4",
 )

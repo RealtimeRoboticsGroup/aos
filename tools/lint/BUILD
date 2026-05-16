@@ -9,9 +9,11 @@ prettier_bin.prettier_binary(
 sh_binary(
     name = "clang_format",
     srcs = ["clang_format.sh"],
-    data = [
-        "@llvm_k8//:bin",
-    ],
+    data = select({
+        "//tools:arm64_linux": ["@llvm_aarch64//:bin"],
+        "//tools:arm64_macos": ["@llvm_darwin_aarch64//:bin"],
+        "//conditions:default": ["@llvm_k8//:bin"],
+    }),
     deps = [
         "@bazel_tools//tools/bash/runfiles",
     ],
@@ -23,6 +25,7 @@ sh_binary(
     data = [
         "@go_sdk//:bin/gofmt",
     ],
+    target_compatible_with = ["//tools/platforms/go:has_support"],
     deps = [
         "@bazel_tools//tools/bash/runfiles",
     ],
@@ -45,7 +48,6 @@ sh_binary(
     data = [
         "@buildifier_prebuilt//:buildifier",
     ],
-    target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         "@bazel_tools//tools/bash/runfiles",
     ],
@@ -74,7 +76,6 @@ sh_binary(
     data = [
         ":prettier_binary",
     ],
-    target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         "@bazel_tools//tools/bash/runfiles",
     ],
@@ -103,7 +104,7 @@ sh_binary(
         #   /var/lib/buildkite-agent/.cache/go-build: permission denied
         "RUNNING_IN_CI": "1" if RUNNING_IN_CI else "0",
     },
-    target_compatible_with = ["@platforms//cpu:x86_64"],
+    target_compatible_with = ["//tools/platforms/go:has_support"],
     deps = [
         "@bazel_tools//tools/bash/runfiles",
     ],

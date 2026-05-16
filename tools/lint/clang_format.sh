@@ -11,7 +11,11 @@ source "${RUNFILES_DIR:-/dev/null}/$f" 2>/dev/null || \
   { echo>&2 "ERROR: cannot find $f"; exit 1; }; f=; set -e
 # --- end runfiles.bash initialization v2 ---
 
-readonly CLANG_FORMAT="$(rlocation llvm_k8/bin/clang-format)"
+case "$(uname -s)/$(uname -m)" in
+    Darwin/arm64) readonly CLANG_FORMAT="$(rlocation llvm_darwin_aarch64/bin/clang-format)" ;;
+    Linux/aarch64) readonly CLANG_FORMAT="$(rlocation llvm_aarch64/bin/clang-format)" ;;
+    *) readonly CLANG_FORMAT="$(rlocation llvm_k8/bin/clang-format)" ;;
+esac
 
 # Run everything from the root of the tree.
 cd "${BUILD_WORKSPACE_DIRECTORY}"

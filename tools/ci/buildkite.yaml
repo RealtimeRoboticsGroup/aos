@@ -7,7 +7,7 @@ env:
 steps:
   - label: "lint"
     commands:
-      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../k8_output_base run ${COMMON} --remote_download_outputs=toplevel //tools/lint:run-ci --noenable_bzlmod --enable_workspace
+      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../k8_output_base run ${COMMON} --remote_download_outputs=toplevel //tools/lint:run-ci --enable_bzlmod --noenable_workspace
     retry:
       automatic:
         - exit_status: -1  # Connection to the Agent was lost

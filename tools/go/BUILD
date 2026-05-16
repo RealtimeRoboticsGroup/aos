@@ -10,7 +10,6 @@ py_library(
     data = [
         "@buildifier_prebuilt//:buildifier",
     ],
-    target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         "@rules_python//python/runfiles",
     ],
@@ -35,7 +34,7 @@ py_binary(
     data = [
         "@go_sdk//:bin/go",
     ],
-    target_compatible_with = ["@platforms//cpu:x86_64"],
+    target_compatible_with = ["//tools/platforms/go:has_support"],
     visibility = ["//visibility:public"],
     deps = [
         ":mirror_lib",
@@ -62,12 +61,18 @@ write_file(
     is_executable = True,
 )
 
+write_file(
+    name = "noop_root_file",
+    out = "noop_root_file.txt",
+    content = [],
+)
+
 go_sdk(
     name = "noop_sdk",
     go = ":noop_error_exit",
     goarch = "none",
     goos = "none",
-    root_file = "NOOP_FILE_THAT_DOES_NOT_EXIST",
+    root_file = ":noop_root_file",
 )
 
 go_toolchain(
@@ -77,7 +82,7 @@ go_toolchain(
     goarch = "none",
     goos = "none",
     link_flags = None,
-    pack = "none",
+    pack = ":noop_error_exit",
     sdk = ":noop_sdk",
     tags = ["manual"],
 )

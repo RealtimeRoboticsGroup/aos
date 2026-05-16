@@ -57,5 +57,6 @@ npm_link_package(
 
 gazelle(
     name = "gazelle",
+    target_compatible_with = ["//tools/platforms/go:has_support"],
     visibility = ["//tools/lint:__subpackages__"],
 )
