@@ -17,18 +17,28 @@ config_setting(
     },
 )
 
+config_setting(
+    name = "sandboxed_rsync_on_linux",
+    constraint_values = [
+        "@platforms//os:linux",
+    ],
+    flag_values = {
+        ":rsync_mode": "sandboxed",
+    },
+)
+
 py_binary(
     name = "downloader",
     srcs = [
         "downloader.py",
     ],
     data = select({
-        ":sandboxed_rsync": [
+        ":sandboxed_rsync_on_linux": [
             "@amd64_debian_sysroot//:rsync-filegroup",
             "@amd64_debian_sysroot//:ssh-filegroup",
         ],
         "//conditions:default": [],
     }),
-    target_compatible_with = ["@platforms//os:linux"],
+    main = "downloader.py",
     visibility = ["//visibility:public"],
 )

@@ -78,7 +78,7 @@ aos_downloader = rule(
         "_downloader": attr.label(
             executable = True,
             cfg = "exec",
-            default = Label("//frc/downloader"),
+            default = Label("//frc/downloader:downloader"),
         ),
         "_rsync_mode": attr.label(default = Label("//frc/downloader:rsync_mode")),
     },
