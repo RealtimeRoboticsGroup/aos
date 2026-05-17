@@ -1,6 +1,10 @@
 #include "frc/can_logger/asc_logger.h"
 
-#include <linux/can.h>
+#define CAN_EFF_FLAG 0x80000000u
+#define CAN_SFF_MASK 0x000007ffu
+#define CAN_EFF_MASK 0x1fffffffu
+#define CANFD_BRS 0x01
+#define CANFD_ESI 0x02
 
 namespace frc::can_logger {
 
