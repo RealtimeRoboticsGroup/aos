@@ -263,6 +263,7 @@ crate.from_cargo(
         "arm-unknown-linux-gnueabi",
         "armv7-unknown-linux-gnueabihf",
         "aarch64-unknown-linux-gnu",
+        "aarch64-apple-darwin",
     ],
 )
 use_repo(crate, "cxxbridge_cmd_deps")
@@ -288,6 +289,7 @@ crate.from_cargo(
         "arm-unknown-linux-gnueabi",
         "armv7-unknown-linux-gnueabihf",
         "aarch64-unknown-linux-gnu",
+        "aarch64-apple-darwin",
     ],
 )
 crate.annotation(

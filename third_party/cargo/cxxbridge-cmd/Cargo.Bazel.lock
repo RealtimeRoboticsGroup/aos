@@ -1,5 +1,5 @@
 {
-  "checksum": "7b2f22c0e4f0709ef2750fec546c75f47d2682e15b21957de182be1a47252734",
+  "checksum": "50b0c51e72f42c90ff85843f08dc84e64c9bac07e1c18421d8c6fbe28bf0feca",
   "crates": {
     "anstyle 1.0.1": {
       "name": "anstyle",
@@ -984,6 +984,9 @@
     "cxxbridge-cmd 1.0.100": ""
   },
   "conditions": {
+    "aarch64-apple-darwin": [
+      "aarch64-apple-darwin"
+    ],
     "aarch64-unknown-linux-gnu": [
       "aarch64-unknown-linux-gnu"
     ],

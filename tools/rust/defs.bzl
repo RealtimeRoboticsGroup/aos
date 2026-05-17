@@ -13,8 +13,7 @@ def rust_doc_test(tags = [], **kwargs):
     # in complaints about overly large files.
     _rust_doc_test(
         tags = tags,
-        # TODO(adam.snaider): Investigate why doctests only work on x86_64.
-        target_compatible_with = ["@platforms//cpu:x86_64"],
+        target_compatible_with = ["@aos//tools/platforms/rust:has_support"],
         **kwargs
     )
 
