@@ -85,7 +85,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":dynamic_log_command_fbs",
-        "//aos/events:shm_event_loop",
+        "//aos/events:event_loop",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
     ],

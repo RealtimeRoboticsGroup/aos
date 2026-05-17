@@ -804,6 +804,7 @@ cc_binary(
     deps = [
         ":distance_spline",
         ":trajectory",
+        "//aos:init",
         "//aos/logging",
         "//aos/network:team_number",
         "//frc/control_loops/drivetrain/test_robot:drivetrain_base",

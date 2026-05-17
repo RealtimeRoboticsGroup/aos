@@ -5,13 +5,10 @@
 #include "gtest/gtest.h"
 
 #include "aos/configuration.h"
-#include "aos/events/shm_event_loop.h"
 #include "aos/events/simulated_event_loop.h"
 #include "aos/testing/path.h"
 #include "aos/testing/ping_pong/ping_generated.h"
 #include "aos/testing/tmpdir.h"
-
-ABSL_DECLARE_FLAG(std::string, override_hostname);
 
 namespace aos::message_bridge::testing {
 
@@ -19,9 +16,7 @@ class TimestampChannelTest : public ::testing::Test {
  protected:
   TimestampChannelTest()
       : config_(aos::configuration::ReadConfig(aos::testing::ArtifactPath(
-            "aos/network/timestamp_channel_test_config.json"))) {
-    absl::SetFlag(&FLAGS_override_hostname, "pi1");
-  }
+            "aos/network/timestamp_channel_test_config.json"))) {}
   aos::FlatbufferDetachedBuffer<aos::Configuration> config_;
 };
 
@@ -41,10 +36,12 @@ class TimestampChannelParamTest
 // Tests whether we can or can't retrieve a timestamp channel depending on
 // whether it has a valid max frequency configured.
 TEST_P(TimestampChannelParamTest, ChannelFrequency) {
-  aos::ShmEventLoop event_loop(&config_.message());
-  ChannelTimestampSender timestamp_sender(&event_loop);
+  SimulatedEventLoopFactory factory(&config_.message());
+  std::unique_ptr<aos::EventLoop> event_loop = factory.MakeEventLoop(
+      "test", aos::configuration::GetNode(&config_.message(), "pi1"));
+  ChannelTimestampSender timestamp_sender(event_loop.get());
   const aos::Channel *channel =
-      event_loop.GetChannel<aos::examples::Ping>(std::get<0>(GetParam()));
+      event_loop->GetChannel<aos::examples::Ping>(std::get<0>(GetParam()));
   const std::optional<std::string> error_message = std::get<1>(GetParam());
   if (error_message.has_value()) {
     EXPECT_DEATH(timestamp_sender.SenderForChannel(

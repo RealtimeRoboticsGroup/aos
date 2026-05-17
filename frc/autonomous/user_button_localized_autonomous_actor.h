@@ -5,7 +5,7 @@
 
 #include "aos/actions/actions.h"
 #include "aos/actions/actor.h"
-#include "aos/events/shm_event_loop.h"
+#include "aos/events/event_loop.h"
 #include "frc/autonomous/auto_generated.h"
 #include "frc/autonomous/base_autonomous_actor.h"
 #include "frc/control_loops/control_loops_generated.h"
