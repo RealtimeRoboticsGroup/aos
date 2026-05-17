@@ -64,15 +64,6 @@ double SinXoverX(double x) {
 
 }  // namespace
 
-inline Eigen::Matrix<double, 4, 1> MaybeFlipX(
-    const Eigen::Matrix<double, 4, 1> &X) {
-  if (X(3, 0) < 0.0) {
-    return -X;
-  } else {
-    return X;
-  }
-}
-
 Eigen::Matrix<double, 4, 1> ToQuaternionFromRotationVector(
     const Eigen::Matrix<double, 3, 1> &X, const double max_angle_cap) {
   const double unclipped_angle = X.norm();

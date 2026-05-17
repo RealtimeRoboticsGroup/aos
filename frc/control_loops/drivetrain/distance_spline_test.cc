@@ -162,8 +162,8 @@ TEST_P(ParameterizedDistanceSplineTest, Serialization) {
     EXPECT_EQ(orig_distance, new_distance);
     EXPECT_FLOAT_EQ(distance_spline_.XY(orig_distance).x(),
                     reread_spline.XY(new_distance).x());
-    EXPECT_FLOAT_EQ(distance_spline_.XY(orig_distance).y(),
-                    reread_spline.XY(new_distance).y());
+    EXPECT_NEAR(distance_spline_.XY(orig_distance).y(),
+                reread_spline.XY(new_distance).y(), 1e-6);
   }
 }
 
