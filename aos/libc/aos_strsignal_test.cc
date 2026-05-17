@@ -3,8 +3,7 @@
 #include <string.h>
 
 #include <csignal>
-#include <functional>
-#include <memory>
+#include <string>
 #include <thread>
 
 #include "gtest/gtest.h"
@@ -17,15 +16,53 @@ namespace aos::libc::testing {
 TEST(StrsignalTest, Basic) {
   EXPECT_STREQ("Hangup", aos_strsignal(SIGHUP));
   EXPECT_STREQ("Broken pipe", aos_strsignal(SIGPIPE));
+#ifdef SIGRTMIN
   EXPECT_STREQ("Real-time signal 2", aos_strsignal(SIGRTMIN + 2));
+#endif
   EXPECT_STREQ("Unknown signal 155", aos_strsignal(155));
+}
+
+// macOS strsignal appends ": <number>" to some descriptions. Strip it.
+std::string NormalizeStrsignal(int signal) {
+  const char *result = strsignal(signal);
+  if (result == nullptr) return "";
+#ifdef __APPLE__
+  const char *colon = strrchr(result, ':');
+  if (colon != nullptr && colon[1] == ' ') {
+    // Check that everything after ": " is a digit
+    const char *num = colon + 2;
+    if (*num != '\0') {
+      bool all_digits = true;
+      for (const char *p = num; *p != '\0'; ++p) {
+        if (!std::isdigit(static_cast<unsigned char>(*p))) {
+          all_digits = false;
+          break;
+        }
+      }
+      if (all_digits) {
+        std::string prefix(result, colon - result);
+        // macOS "Unknown signal: N" needs to become "Unknown signal N"
+        // to match aos_strsignal.
+        if (prefix == "Unknown signal") {
+          return "Unknown signal " + std::string(num);
+        }
+        return prefix;
+      }
+    }
+  }
+#endif
+  return result;
 }
 
 class SignalNameTester {
  public:
   void operator()() {
+#ifdef SIGRTMAX
     for (int i = 0; i < SIGRTMAX + 5; ++i) {
-      EXPECT_STREQ(strsignal(i), aos_strsignal(i));
+#else
+    for (int i = 0; i < NSIG; ++i) {
+#endif
+      EXPECT_EQ(NormalizeStrsignal(i), aos_strsignal(i));
     }
   }
 };

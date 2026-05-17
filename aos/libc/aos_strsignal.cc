@@ -1,6 +1,8 @@
 #include "aos/libc/aos_strsignal.h"
 
+#ifdef __linux__
 #include <features.h>
+#endif
 #include <stdio.h>
 #include <string.h>
 
@@ -12,12 +14,14 @@
 const char *aos_strsignal(int signal) {
   thread_local char buffer[512];
 
+#if defined(SIGRTMIN) && defined(SIGRTMAX)
   if (signal >= SIGRTMIN && signal <= SIGRTMAX) {
     CHECK_GT(snprintf(buffer, sizeof(buffer), "Real-time signal %d",
                       signal - SIGRTMIN),
              0);
     return buffer;
   }
+#endif
 
 // sys_strsignal depricated in glibc2.32
 #ifdef __GLIBC__
