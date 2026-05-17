@@ -1572,9 +1572,9 @@ TEST_F(DrivetrainTest, LineFollowDefersToOpenLoop) {
 // Tests that we can reset the localizer to a new position.
 TEST_F(DrivetrainTest, ResetLocalizer) {
   SetEnabled(true);
-  EXPECT_EQ(0.0, localizer_.x());
-  EXPECT_EQ(0.0, localizer_.y());
-  EXPECT_EQ(0.0, localizer_.theta());
+  EXPECT_NEAR(0.0, localizer_.x(), 1e-12);
+  EXPECT_NEAR(0.0, localizer_.y(), 1e-12);
+  EXPECT_NEAR(0.0, localizer_.theta(), 1e-12);
   {
     auto builder = localizer_control_sender_.MakeBuilder();
     LocalizerControl::Builder localizer_control_builder =
@@ -1587,17 +1587,17 @@ TEST_F(DrivetrainTest, ResetLocalizer) {
   }
   RunFor(dt());
 
-  EXPECT_EQ(9.0, localizer_.x());
-  EXPECT_EQ(7.0, localizer_.y());
-  EXPECT_EQ(1.0, localizer_.theta());
+  EXPECT_NEAR(9.0, localizer_.x(), 1e-12);
+  EXPECT_NEAR(7.0, localizer_.y(), 1e-12);
+  EXPECT_NEAR(1.0, localizer_.theta(), 1e-12);
 }
 
 // Tests that if wpilib_interface restarts, the drivetrain handles it.
 TEST_F(DrivetrainTest, ResetDrivetrain) {
   SetEnabled(true);
-  EXPECT_EQ(0.0, localizer_.x());
-  EXPECT_EQ(0.0, localizer_.y());
-  EXPECT_EQ(0.0, localizer_.theta());
+  EXPECT_NEAR(0.0, localizer_.x(), 1e-12);
+  EXPECT_NEAR(0.0, localizer_.y(), 1e-12);
+  EXPECT_NEAR(0.0, localizer_.theta(), 1e-12);
 
   {
     auto builder = drivetrain_goal_sender_.MakeBuilder();
@@ -1626,7 +1626,7 @@ TEST_F(DrivetrainTest, ResetDrivetrain) {
 
   RunFor(dt());
 
-  EXPECT_EQ(x_pos, localizer_.x());
+  EXPECT_NEAR(x_pos, localizer_.x(), 1e-12);
   EXPECT_NEAR(0.0, localizer_.y(), 1e-5);
   EXPECT_NEAR(0.0, localizer_.theta(), 1e-5);
   EXPECT_NEAR(0.0, localizer_.left_encoder(), 1e-5);

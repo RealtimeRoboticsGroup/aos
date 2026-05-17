@@ -8,6 +8,15 @@
 
 namespace frc::controls {
 
+inline Eigen::Matrix<double, 4, 1> MaybeFlipX(
+    const Eigen::Matrix<double, 4, 1> &X) {
+  if (X(3, 0) < 0.0) {
+    return -X;
+  } else {
+    return X;
+  }
+}
+
 // Helper function to extract mean quaternion from A*A^T of quaternion list
 // This allows us to support multiple formats of the input quaternion list
 inline Eigen::Matrix<double, 4, 1> ExtractQuaternionMean(
@@ -42,7 +51,7 @@ inline Eigen::Matrix<double, 4, 1> ExtractQuaternionMean(
     CHECK_LT(eigenvectors(i, max_index).imag(), 1e-4)
         << eigenvectors(i, max_index);
   }
-  return eigenvectors.col(max_index).real().normalized();
+  return MaybeFlipX(eigenvectors.col(max_index).real().normalized());
 }
 
 // Function to compute the quaternion average of a bunch of quaternions. Each
