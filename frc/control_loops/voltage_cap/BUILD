@@ -11,7 +11,6 @@ cc_library(
     hdrs = [
         "voltage_cap.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 cc_test(
@@ -19,7 +18,6 @@ cc_test(
     srcs = [
         "voltage_cap_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":voltage_cap",
         "//aos/testing:googletest",

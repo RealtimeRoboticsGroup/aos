@@ -105,6 +105,7 @@ cc_library(
         "hybrid_ekf.h",
         "localizer.h",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":chassis_speeds_fbs",
@@ -130,6 +131,7 @@ cc_library(
 cc_binary(
     name = "localizer_main",
     srcs = ["localizer_main.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":localizer",

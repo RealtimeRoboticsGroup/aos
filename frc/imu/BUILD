@@ -72,7 +72,6 @@ cc_library(
         "imu_calibrator.h",
         "imu_calibrator-tmpl.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos/time",
         "//frc/math:interpolate",

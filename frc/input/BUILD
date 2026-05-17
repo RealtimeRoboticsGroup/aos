@@ -12,7 +12,6 @@ cc_library(
     hdrs = [
         "joystick_input.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":robot_state_fbs",
         "//aos/events:event_loop",
@@ -29,7 +28,6 @@ cc_library(
     hdrs = [
         "drivetrain_input.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":robot_state_fbs",
         "//aos:math",
@@ -53,7 +51,6 @@ cc_library(
     hdrs = [
         "driver_station_data.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":joystick_state_fbs",
         "@com_google_absl//absl/log",
@@ -69,7 +66,6 @@ cc_library(
     hdrs = [
         "redundant_joystick_data.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":driver_station_data",
         "//aos/events:event_loop",
@@ -80,7 +76,6 @@ cc_library(
     name = "action_joystick_input",
     srcs = ["action_joystick_input.cc"],
     hdrs = ["action_joystick_input.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":drivetrain_input",
         ":redundant_joystick_data",
@@ -98,7 +93,6 @@ cc_library(
     name = "swerve_joystick_input",
     srcs = ["swerve_joystick_input.cc"],
     hdrs = ["swerve_joystick_input.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":drivetrain_input",
         ":redundant_joystick_data",
@@ -112,13 +106,11 @@ cc_library(
 static_flatbuffer(
     name = "robot_state_fbs",
     srcs = ["robot_state.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 static_flatbuffer(
     name = "joystick_state_fbs",
     srcs = ["joystick_state.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 aos_config(
@@ -128,7 +120,6 @@ aos_config(
         ":joystick_state_fbs",
         ":robot_state_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = ["//aos/events:aos_config"],
 )

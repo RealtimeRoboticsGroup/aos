@@ -9,7 +9,7 @@ py_binary(
         "drivetrain.py",
     ],
     legacy_create_init = False,
-    target_compatible_with = ["@platforms//cpu:x86_64"],
+    target_compatible_with = ["//tools/platforms/python:has_support"],
     deps = [
         ":python_init",
         "//frc/control_loops/python:drivetrain",
@@ -25,7 +25,7 @@ py_binary(
         "polydrivetrain.py",
     ],
     legacy_create_init = False,
-    target_compatible_with = ["@platforms//cpu:x86_64"],
+    target_compatible_with = ["//tools/platforms/python:has_support"],
     deps = [
         ":python_init",
         "//frc/control_loops/python:polydrivetrain",
@@ -45,7 +45,7 @@ genrule(
         "kalman_drivetrain_motor_plant.json",
     ],
     cmd = "$(location :drivetrain) $(OUTS)",
-    target_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = ["//tools/platforms/python:has_support"],
     tools = [
         ":drivetrain",
     ],
@@ -65,7 +65,7 @@ genrule(
         "hybrid_velocity_drivetrain.json",
     ],
     cmd = "$(location :polydrivetrain) $(OUTS)",
-    target_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = ["//tools/platforms/python:has_support"],
     tools = [
         ":polydrivetrain",
     ],
@@ -85,7 +85,7 @@ cc_library(
         "kalman_drivetrain_motor_plant.h",
         "polydrivetrain_dog_motor_plant.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = ["//tools/platforms/python:has_support"],
     visibility = ["//visibility:public"],
     deps = [
         "//frc/control_loops:hybrid_state_feedback_loop",
@@ -105,7 +105,6 @@ cc_test(
         "polydrivetrain_cim_plant.json",
         "polydrivetrain_dog_motor_plant.json",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":polydrivetrain_plants",
         "//aos/testing:googletest",
@@ -118,7 +117,7 @@ cc_test(
 py_library(
     name = "python_init",
     srcs = ["__init__.py"],
-    target_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = ["//tools/platforms/python:has_support"],
     visibility = ["//visibility:public"],
 )
 

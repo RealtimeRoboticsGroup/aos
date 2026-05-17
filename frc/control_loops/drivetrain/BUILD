@@ -72,7 +72,6 @@ cc_static_flatbuffer(
 flatbuffer_ts_library(
     name = "drivetrain_status_ts_fbs",
     srcs = ["drivetrain_status.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     ts_files = [
         "frc.ts",
         "frc/index-position.ts",
@@ -125,7 +124,6 @@ flatbuffer_ts_library(
 flatbuffer_ts_library(
     name = "drivetrain_position_ts_fbs",
     srcs = ["drivetrain_position.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     ts_files = [
         "frc/control-loops/drivetrain.ts",
         "frc/control-loops/drivetrain/position.ts",
@@ -135,7 +133,6 @@ flatbuffer_ts_library(
 flatbuffer_ts_library(
     name = "drivetrain_can_position_ts_fbs",
     srcs = ["drivetrain_can_position.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     ts_files = [
         "frc/control-loops/drivetrain.ts",
         "frc/control-loops/drivetrain/canposition.ts",
@@ -231,7 +228,6 @@ aos_config(
         "//frc/wpilib:imu_fbs",
         "//frc/wpilib:imu_batch_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = [":__subpackages__"],
 )
 
@@ -241,14 +237,12 @@ aos_config(
     flatbuffers = [
         ":drivetrain_status_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
 aos_config(
     name = "simulation_config",
     src = "drivetrain_simulation_config.json",
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":aos_config",
@@ -273,7 +267,6 @@ aos_config(
         "//frc/wpilib:imu_fbs",
         "//frc/wpilib:imu_batch_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//frc/input:aos_config",
@@ -303,7 +296,10 @@ cc_library(
 cc_library(
     name = "hybrid_ekf",
     hdrs = ["hybrid_ekf.h"],
-    target_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = select({
+        "//aos:os_none": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
     deps = [
         ":drivetrain_config",
         "//aos:macros",
@@ -320,7 +316,6 @@ cc_library(
 cc_test(
     name = "hybrid_ekf_test",
     srcs = ["hybrid_ekf_test.cc"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":drivetrain_test_lib",
         ":hybrid_ekf",
@@ -333,13 +328,11 @@ cc_test(
 static_flatbuffer(
     name = "localizer_fbs",
     srcs = ["localizer.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 cc_library(
     name = "localizer",
     hdrs = ["localizer.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":drivetrain_config",
         ":drivetrain_status_fbs",
@@ -364,7 +357,6 @@ cc_library(
     hdrs = [
         "splinedrivetrain.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":distance_spline",
         ":drivetrain_config",
@@ -389,7 +381,6 @@ cc_library(
     hdrs = [
         "line_follow_drivetrain.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":drivetrain_config",
         ":drivetrain_goal_fbs",
@@ -412,7 +403,6 @@ cc_test(
     name = "line_follow_drivetrain_test",
     srcs = ["line_follow_drivetrain_test.cc"],
     linkstatic = True,
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":drivetrain_config",
         ":drivetrain_test_lib",
@@ -432,7 +422,6 @@ cc_library(
     hdrs = [
         "ssdrivetrain.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":drivetrain_config",
         ":drivetrain_goal_fbs",
@@ -503,7 +492,6 @@ genrule(
         "down_estimator.cc",
     ],
     cmd = "$(location //frc/control_loops/python:down_estimator) $(OUTS)",
-    target_compatible_with = ["@platforms//os:linux"],
     tools = [
         "//frc/control_loops/python:down_estimator",
     ],
@@ -518,7 +506,6 @@ cc_library(
     hdrs = [
         "down_estimator.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//frc/control_loops:state_feedback_loop",
     ],
@@ -537,7 +524,6 @@ cc_library(
     hdrs = [
         "drivetrain.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":drivetrain_goal_fbs",
         ":drivetrain_output_fbs",
@@ -576,7 +562,6 @@ cc_library(
             ],
             "arm": [],
         }),
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":drivetrain_config",
         ":drivetrain_goal_fbs",
@@ -614,7 +599,6 @@ cc_test(
             "arm": [],
         }),
     linkstatic = True,
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":drivetrain_config",
         ":drivetrain_goal_fbs",
@@ -681,7 +665,6 @@ cc_library(
     name = "spline",
     srcs = ["spline.cc"],
     hdrs = ["spline.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//frc/control_loops:binomial",
         "@eigen",
@@ -692,7 +675,6 @@ cc_binary(
     name = "spline.so",
     srcs = ["libspline.cc"],
     linkshared = True,
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":distance_spline",
         ":spline",
@@ -710,7 +692,6 @@ cc_test(
         "spline_test.cc",
     ],
     linkstatic = True,
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":spline",
         "//aos/analysis:in_process_plotter",
@@ -723,7 +704,6 @@ cc_library(
     name = "distance_spline",
     srcs = ["distance_spline.cc"],
     hdrs = ["distance_spline.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":spline",
         ":trajectory_fbs",
@@ -751,7 +731,6 @@ cc_test(
             "arm": [],
         }),
     linkstatic = True,
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":distance_spline",
         "//aos:flatbuffers",
@@ -769,7 +748,6 @@ cc_library(
     name = "trajectory",
     srcs = ["trajectory.cc"],
     hdrs = ["trajectory.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":distance_spline",
         ":drivetrain_config",
@@ -789,7 +767,6 @@ cc_library(
     name = "trajectory_generator",
     srcs = ["trajectory_generator.cc"],
     hdrs = ["trajectory_generator.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":distance_spline",
         ":drivetrain_config",
@@ -804,7 +781,6 @@ cc_binary(
     srcs = [
         "trajectory_plot.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":distance_spline",
         ":trajectory",
@@ -831,7 +807,6 @@ cc_test(
             "arm": [],
         }),
     linkstatic = True,
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":drivetrain_test_lib",
         ":trajectory",
@@ -852,7 +827,6 @@ cc_library(
     hdrs = [
         "improved_down_estimator.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":drivetrain_config",
         ":drivetrain_status_fbs",
@@ -873,7 +847,6 @@ cc_test(
     srcs = [
         "improved_down_estimator_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":drivetrain_test_lib",
         "//aos/testing:googletest",
@@ -887,7 +860,6 @@ cc_test(
 cc_library(
     name = "camera",
     srcs = ["camera.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos/containers:sized_array",
@@ -899,7 +871,6 @@ cc_library(
     name = "drivetrain_encoder_fault_detector",
     srcs = ["drivetrain_encoder_fault_detector.cc"],
     hdrs = ["drivetrain_encoder_fault_detector.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos/events:event_loop",
         "//frc/control_loops:encoder_fault_detector",
@@ -914,7 +885,6 @@ cc_test(
     name = "drivetrain_encoder_fault_detector_test",
     srcs = ["drivetrain_encoder_fault_detector_test.cc"],
     data = [":simulation_config"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":drivetrain_encoder_fault_detector",
         "//aos:json_to_flatbuffer",
@@ -927,7 +897,6 @@ cc_test(
 cc_test(
     name = "camera_test",
     srcs = ["camera_test.cc"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":camera",
         "//aos/testing:googletest",
@@ -937,7 +906,6 @@ cc_test(
 ts_project(
     name = "down_estimator_plotter",
     srcs = ["down_estimator_plotter.ts"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos/network/www:aos_plotter",
         "//aos/network/www:colors",
@@ -949,7 +917,6 @@ ts_project(
 ts_project(
     name = "spline_plotter",
     srcs = ["spline_plotter.ts"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos/network/www:aos_plotter",
         "//aos/network/www:colors",
@@ -960,7 +927,6 @@ ts_project(
 ts_project(
     name = "drivetrain_plotter",
     srcs = ["drivetrain_plotter.ts"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos/network/www:aos_plotter",
         "//aos/network/www:colors",
@@ -972,7 +938,6 @@ ts_project(
 ts_project(
     name = "robot_state_plotter",
     srcs = ["robot_state_plotter.ts"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos/network/www:aos_plotter",
         "//aos/network/www:colors",

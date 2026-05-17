@@ -13,7 +13,6 @@ static_flatbuffer(
     srcs = [
         "logging.fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 cc_library(
@@ -133,7 +132,6 @@ static_flatbuffer(
     srcs = [
         "loop_output_handler_test.fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 aos_config(
@@ -143,7 +141,6 @@ aos_config(
         ":pdp_values_fbs",
         ":logging_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 aos_config(
@@ -152,7 +149,6 @@ aos_config(
     flatbuffers = [
         ":loop_output_handler_test_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos/events:aos_config",
     ],
@@ -166,7 +162,6 @@ cc_library(
     hdrs = [
         "loop_output_handler.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos:init",
         "//aos/events:event_loop",
@@ -185,7 +180,6 @@ cc_test(
     data = [
         ":loop_output_handler_test_config",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":loop_output_handler",
         ":loop_output_handler_test_fbs",
@@ -236,7 +230,6 @@ static_flatbuffer(
     srcs = [
         "pdp_values.fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 cc_library(
@@ -274,7 +267,6 @@ static_flatbuffer(
     srcs = [
         "imu.fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 static_flatbuffer(
@@ -282,7 +274,6 @@ static_flatbuffer(
     srcs = [
         "imu_batch.fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":imu_fbs",
     ],
@@ -461,7 +452,6 @@ cc_library(
     hdrs = [
         "wpilib_utils.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//frc:constants",
     ],
@@ -474,7 +464,6 @@ cc_test(
     ],
     data = [
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos/testing:flatbuffer_eq",
         "//aos/testing:test_logging",
@@ -485,7 +474,6 @@ cc_test(
 ts_project(
     name = "imu_plot_utils",
     srcs = ["imu_plot_utils.ts"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":imu_batch_ts_fbs",
         "//:node_modules/flatbuffers_reflection",
@@ -501,7 +489,6 @@ ts_project(
 ts_project(
     name = "imu_plotter",
     srcs = ["imu_plotter.ts"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":imu_plot_utils",
         "//aos/network/www:aos_plotter",
@@ -582,7 +569,6 @@ cc_binary(
     srcs = [
         "joystick_republish.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos:configuration",

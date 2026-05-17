@@ -54,7 +54,6 @@ cc_test(
         "//frc/constants/testdata:syntax_error.json",
         "//frc/constants/testdata:test_constants.json",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":constants_sender_lib",
         "//aos:configuration",

@@ -19,7 +19,6 @@ cc_library(
     hdrs = [
         "constants.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//frc/control_loops:control_loops_fbs",
         "//frc/zeroing:constants_fbs",
@@ -29,7 +28,6 @@ cc_library(
 py_library(
     name = "python_init",
     srcs = ["__init__.py"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 

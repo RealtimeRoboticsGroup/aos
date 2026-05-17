@@ -41,6 +41,7 @@ cc_library(
     hdrs = [
         "cuda.h",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//third_party:cudart",
@@ -67,6 +68,7 @@ cuda_library(
         "apriltag_types.h",
         "threshold.h",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":cuda",
@@ -273,6 +275,7 @@ cuda_library(
     name = "gpu_apriltag_lib",
     srcs = ["gpu_apriltag.cc"],
     hdrs = ["gpu_apriltag.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":apriltag",
@@ -290,6 +293,7 @@ cuda_library(
 static_flatbuffer(
     name = "hardware_stats_fbs",
     srcs = ["hardware_stats.fbs"],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
@@ -302,6 +306,7 @@ cc_static_flatbuffer(
 cc_binary(
     name = "hardware_monitor",
     srcs = ["hardware_monitor.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":hardware_stats_fbs",
@@ -373,6 +378,7 @@ cc_test(
         # linux-sandbox on the host which has a GPU already.
         "no-remote-exec",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":undistort_test_lib"],
 )
 

@@ -52,7 +52,6 @@ cc_test(
     srcs = [
         "algorithms_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":algorithms",
         "//aos/testing:googletest",
@@ -75,7 +74,6 @@ cc_test(
     srcs = [
         "math_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":math",
         "//aos/testing:googletest",
@@ -161,6 +159,5 @@ hex_from_elf(
 py_library(
     name = "python_init",
     srcs = ["__init__.py"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )

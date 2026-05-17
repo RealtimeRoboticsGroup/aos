@@ -140,7 +140,6 @@ cc_library(
         "lin_sys/direct/qdldl/qdldl_sources/include",
     ],
     linkopts = ["-ldl"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":osqp_includes",

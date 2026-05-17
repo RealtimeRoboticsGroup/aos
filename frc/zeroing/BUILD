@@ -14,7 +14,6 @@ cc_library(
     hdrs = [
         "averager.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
@@ -27,7 +26,6 @@ cc_test(
     srcs = [
         "averager_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":averager",
         "//aos/testing:googletest",
@@ -43,7 +41,6 @@ cc_library(
     hdrs = [
         "imu_zeroer.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":averager",
         "//frc/control_loops:control_loops_fbs",
@@ -60,7 +57,6 @@ cc_test(
     srcs = [
         "imu_zeroer_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":imu_zeroer",
         "//aos:flatbuffers",
@@ -76,7 +72,6 @@ cc_library(
     hdrs = [
         "zeroing.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":wrap",
         "//aos/containers:error_list",
@@ -156,7 +151,6 @@ cc_test(
     srcs = [
         "wrap_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":wrap",
         "//aos/testing:googletest",
@@ -168,7 +162,6 @@ cc_test(
     srcs = [
         "unwrap_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":wrap",
         "//aos/testing:googletest",

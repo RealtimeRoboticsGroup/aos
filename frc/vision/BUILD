@@ -80,7 +80,6 @@ cc_binary(
 static_flatbuffer(
     name = "vision_fbs",
     srcs = ["vision.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
@@ -99,7 +98,6 @@ flatbuffer_ts_library(
 static_flatbuffer(
     name = "calibration_fbs",
     srcs = ["calibration.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
@@ -229,7 +227,6 @@ cc_library(
 static_flatbuffer(
     name = "target_map_fbs",
     srcs = ["target_map.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
@@ -238,7 +235,6 @@ cc_library(
     srcs = ["target_mapper.cc"],
     hdrs = ["target_mapper.h"],
     data = ["target_map.json"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":geometry_lib",
@@ -262,7 +258,6 @@ cc_test(
         "target_mapper_test.cc",
     ],
     data = [":target_map.json"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":target_mapper",
         "//aos/events:simulated_event_loop",
@@ -278,7 +273,6 @@ cc_library(
     hdrs = [
         "geometry.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos/util:math",
@@ -342,6 +336,7 @@ cc_library(
         "media_device.cc",
     ],
     hdrs = ["media_device.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos/scoped:scoped_fd",
@@ -648,7 +643,10 @@ robot_downloader(
         ":base_intrinsics_files",
         "//frc/vision/swerve_localizer/www:www_files",
     ],
-    target_compatible_with = ["@platforms//cpu:arm64"],
+    target_compatible_with = [
+        "@platforms//cpu:arm64",
+        "@platforms//os:linux",
+    ],
     target_type = "orin",
 )
 
@@ -676,7 +674,6 @@ cc_binary(
 static_flatbuffer(
     name = "camera_settings_fbs",
     srcs = ["camera_settings.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":calibration_fbs",
@@ -686,7 +683,6 @@ static_flatbuffer(
 static_flatbuffer(
     name = "camera_constants_fbs",
     srcs = ["camera_constants.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":calibration_fbs",
@@ -697,7 +693,6 @@ static_flatbuffer(
 static_flatbuffer(
     name = "camera_constants_list_fbs",
     srcs = ["camera_constants_list.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":calibration_fbs",
@@ -708,6 +703,7 @@ static_flatbuffer(
 cuda_library(
     name = "apriltag_detector_lib",
     srcs = ["apriltag_detector.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":camera_constants_fbs",
         "//aos:configuration",

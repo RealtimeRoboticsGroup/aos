@@ -7,6 +7,7 @@ cc_library(
     name = "utils",
     srcs = ["utils.cc"],
     hdrs = ["utils.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos/events:event_loop",
@@ -26,6 +27,7 @@ cc_library(
     name = "puppet_localizer",
     srcs = ["puppet_localizer.cc"],
     hdrs = ["puppet_localizer.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos/events:event_loop",

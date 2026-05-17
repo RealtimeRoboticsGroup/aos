@@ -7,7 +7,6 @@ static_flatbuffer(
     srcs = [
         "gyro.fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 static_flatbuffer(
@@ -15,5 +14,4 @@ static_flatbuffer(
     srcs = [
         "gyro_uid.fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )

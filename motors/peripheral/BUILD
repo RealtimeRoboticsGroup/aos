@@ -57,7 +57,6 @@ cc_test(
     srcs = [
         "uart_buffer_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":uart_buffer",
         "//aos/testing:googletest",

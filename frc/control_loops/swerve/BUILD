@@ -223,6 +223,7 @@ py_library(
         "dynamics_constants.py",
         "jax_dynamics.py",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//frc/control_loops/python:controls",
         "@pip_deps//jax",
@@ -326,6 +327,7 @@ py_binary(
     srcs = [
         "experience_collector.py",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":casadi_velocity_mpc_lib",
         ":jax_dynamics",
@@ -343,6 +345,7 @@ py_binary(
     name = "multi_experience_collector",
     srcs = ["multi_experience_collector.py"],
     data = [":experience_collector"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@pip_deps//absl_py",
     ],
@@ -462,7 +465,6 @@ cc_test(
 cc_library(
     name = "auto_diff_jacobian",
     hdrs = ["auto_diff_jacobian.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@ceres-solver//:ceres",
     ],

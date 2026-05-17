@@ -27,7 +27,6 @@ flatbuffer_ts_library(
     tables = [
         "Ping",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 flatbuffer_rust_library(
@@ -53,7 +52,6 @@ cc_library(
     hdrs = [
         "ping_lib.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":ping_fbs",
         ":pong_fbs",
@@ -139,7 +137,6 @@ cc_binary(
         "ping.cc",
     ],
     data = [":pingpong_config"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":ping_lib",
         "//aos:configuration",
@@ -243,7 +240,6 @@ aos_config(
         ":ping_fbs",
         ":pong_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [":aos_config"],
 )
 
@@ -259,7 +255,6 @@ aos_config(
             "//aos/network:timestamp_fbs",
             "//aos/network:message_bridge_server_fbs",
         ],
-        target_compatible_with = ["@platforms//os:linux"],
         deps = [":aos_config"],
     )
     for config in [
@@ -277,7 +272,6 @@ cc_library(
     hdrs = [
         "pong_lib.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":ping_fbs",
         ":pong_fbs",
@@ -294,7 +288,6 @@ cc_binary(
         "pong.cc",
     ],
     data = [":pingpong_config"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":ping_fbs",
         ":pong_fbs",
@@ -315,7 +308,6 @@ cc_test(
         ":multinode_pingpong_test_split_config",
         ":pingpong_config",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":ping_lib",
         ":pong_lib",
@@ -337,5 +329,4 @@ aos_config(
         "//aos/starter:starter_fbs",
         "//aos/starter:starter_rpc_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )

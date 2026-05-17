@@ -94,7 +94,6 @@ cc_test(
     srcs = [
         "queue_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":queue",
         "//aos/testing:googletest",
@@ -113,7 +112,6 @@ cc_test(
     srcs = [
         "constants_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":constants",
         "//aos/testing:googletest",
