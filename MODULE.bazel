@@ -160,9 +160,14 @@ bazel_dep(name = "lz4", version = "1.9.4")
 bazel_dep(name = "tl-expected", version = "1.1.0", repo_name = "tl-expected")
 bazel_dep(name = "eigen", version = "4.0.0-20241125.bcr.3")
 bazel_dep(name = "xz", version = "5.4.5.bcr.7")
-local_path_override(
+single_version_override(
     module_name = "xz",
-    path = "third_party/xz",
+    version = "5.4.5.bcr.7",
+    patch_strip = 1,
+    patches = [
+        "third_party/xz/0001-Add-sysroot-select.patch",
+        "third_party/xz/0002-Add-ARMv7-support.patch",
+    ],
 )
 
 bazel_dep(name = "aws_sdk", version = "1.11.321")

@@ -14,7 +14,6 @@ cc_library(
     hdrs = [
         "mutex.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos/ipc_lib:aos_sync",
         "//aos/type_traits",
@@ -28,7 +27,6 @@ cc_test(
     srcs = [
         "mutex_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":mutex",
         "//aos/testing:googletest",

@@ -11,7 +11,6 @@ cc_library(
     hdrs = [
         "stl_mutex.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos/ipc_lib:aos_sync",
         "@com_google_absl//absl/log:absl_check",
@@ -24,7 +23,6 @@ cc_test(
     srcs = [
         "stl_mutex_test.cc",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":stl_mutex",
         "//aos:die",
