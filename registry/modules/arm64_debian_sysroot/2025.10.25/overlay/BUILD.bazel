@@ -13,6 +13,15 @@ exports_files(
     visibility = ["//visibility:public"],
 )
 
+# Everything under the CUDA 12.6 toolkit root, so //tools/cuda can build
+# a synthetic CUDA root that mirrors include/, nvvm/, and lib/ while
+# replacing the x86_64 host tools in bin/ with wrappers.
+filegroup(
+    name = "cuda_12_6_root",
+    srcs = glob(["usr/local/cuda-12.6/**"]),
+    visibility = ["//visibility:public"],
+)
+
 filegroup(
     name = "sysroot_files",
     srcs = glob(

@@ -19,6 +19,7 @@ git_override(
         "//third_party:rules_cuda/0002-Inject-BAZEL_CURRENT_REPOSITORY-into-cuda_library.patch",
         "//third_party:rules_cuda/0003-Add-cuda_wrappers-include-feature-for-clang-CUDA-too.patch",
         "//third_party:rules_cuda/0004-Pass-host_defines-through-clang-CUDA-compile-actions.patch",
+        "//third_party:rules_cuda/0005-Resolve-cuda_toolkit-in-exec-config.patch",
     ],
     remote = "https://github.com/bazel-contrib/rules_cuda.git",
 )
@@ -212,6 +213,36 @@ rust_host_tools.host_tools(
 use_repo(rust_host_tools, "aos_rust_host_tools")
 
 http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+# Alpine Linux aarch64 netboot artifacts. These are the upstream raw
+# inputs to the macOS CUDA cross-compile vfkit boot pair; bazel
+# extracts the kernel `Image` from `vmlinuz-virt`, pulls
+# `binfmt_misc.ko` out of `modloop-virt`, and splices the in-repo
+# `tools/cuda/vm/init` plus that .ko into `initramfs-virt` to produce
+# the pair the wrapper boots. All three are rehosted with
+# `tools/rehost.sh` so we don't depend on Alpine's CDN at build time.
+ALPINE_NETBOOT_PATH = "dl-cdn.alpinelinux.org/alpine/v3.20/releases/aarch64/netboot"
+
+http_file(
+    name = "alpine_aarch64_vmlinuz_virt",
+    downloaded_file_path = "vmlinuz-virt",
+    sha256 = "573d0eb4713fc7b631e7242a95fa9d048c60365993658b24d5106a69d0a0e7f2",
+    urls = ["https://realtimeroboticsgroup.org/build-dependencies/" + ALPINE_NETBOOT_PATH + "/vmlinuz-virt"],
+)
+
+http_file(
+    name = "alpine_aarch64_initramfs_virt",
+    downloaded_file_path = "initramfs-virt",
+    sha256 = "90f5159c2cbf81b5d6ad7b14a314815589a7077d0e8fa4e8aa0403c3fef458ae",
+    urls = ["https://realtimeroboticsgroup.org/build-dependencies/" + ALPINE_NETBOOT_PATH + "/initramfs-virt"],
+)
+
+http_file(
+    name = "alpine_aarch64_modloop_virt",
+    downloaded_file_path = "modloop-virt",
+    sha256 = "3bd7260becc8629d2692261c374256c5478d1667feec7897fe4318152c4ca62b",
+    urls = ["https://realtimeroboticsgroup.org/build-dependencies/" + ALPINE_NETBOOT_PATH + "/modloop-virt"],
+)
 
 http_archive(
     name = "cxxbridge-cmd",
