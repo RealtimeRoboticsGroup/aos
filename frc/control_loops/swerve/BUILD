@@ -4,6 +4,7 @@ load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
 load("//aos:config.bzl", "aos_config")
 load("//aos/flatbuffers:generate.bzl", "static_flatbuffer")
+load("//tools/platforms:host_platform.bzl", "host_compatible_with")
 load("//tools/python:defs.bzl", "py_binary", "py_library", "py_test")
 
 package(default_visibility = ["//visibility:public"])
@@ -223,7 +224,7 @@ py_library(
         "dynamics_constants.py",
         "jax_dynamics.py",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = host_compatible_with(["@platforms//os:linux"]),
     deps = [
         "//frc/control_loops/python:controls",
         "@pip_deps//jax",
@@ -327,7 +328,7 @@ py_binary(
     srcs = [
         "experience_collector.py",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = host_compatible_with(["@platforms//os:linux"]),
     deps = [
         ":casadi_velocity_mpc_lib",
         ":jax_dynamics",
@@ -345,7 +346,7 @@ py_binary(
     name = "multi_experience_collector",
     srcs = ["multi_experience_collector.py"],
     data = [":experience_collector"],
-    target_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = host_compatible_with(["@platforms//os:linux"]),
     deps = [
         "@pip_deps//absl_py",
     ],
