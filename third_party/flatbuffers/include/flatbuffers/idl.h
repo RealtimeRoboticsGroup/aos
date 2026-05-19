@@ -730,6 +730,9 @@ struct IDLOptions {
   // in import statements.
   std::string python_import_prefix;
 
+  // Use snake-case for field names in the Python object API.
+  bool python_fields_snake_case;
+
   bool ts_omit_entrypoint;
   ProtoIdGapAction proto_id_gap_action;
 
@@ -854,6 +857,7 @@ struct IDLOptions {
         python_no_type_prefix_suffix(false),
         python_typing(false),
         python_gen_numpy(true),
+        python_fields_snake_case(false),
         ts_omit_entrypoint(false),
         proto_id_gap_action(ProtoIdGapAction::WARNING),
         mini_reflect(IDLOptions::kNone),

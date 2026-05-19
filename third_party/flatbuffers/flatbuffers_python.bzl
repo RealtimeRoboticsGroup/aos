@@ -9,6 +9,8 @@ FLATC_ARGS = [
     # Without --python-typing, flatc doesn't add import statements when --gen-all is
     # provided (it's not clear why). Type hints can't hurt, so it's all good.
     "--python-typing",
+    "--gen-object-api",
+    "--python-fields-snake-case",
 ]
 
 """Contains information about a flatbuffers schema and its dependencies.
