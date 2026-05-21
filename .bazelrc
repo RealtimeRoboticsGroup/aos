@@ -102,15 +102,26 @@ common --watchfs
 # Switch to SHA256 for compatibility with distributed caching.
 startup --host_jvm_args=-Dbazel.DigestFunction=SHA256
 
-build --spawn_strategy=sandboxed
-build --sandbox_default_allow_network=false
-build --incompatible_exclusive_test_sandboxed
+build:linux  --spawn_strategy=sandboxed
+build:darwin --spawn_strategy=sandboxed
+build:linux  --sandbox_default_allow_network=false
+build:darwin --sandbox_default_allow_network=false
+build:linux  --incompatible_exclusive_test_sandboxed
+build:darwin --incompatible_exclusive_test_sandboxed
 
-build --strategy=TsProject=remote,sandboxed
+# Windows platform overrides
+build:windows --spawn_strategy=standalone
+build:windows --sandbox_default_allow_network=true
+
+build:linux --strategy=TsProject=remote,sandboxed
+build:darwin --strategy=TsProject=remote,sandboxed
+build:windows --strategy=TsProject=remote,local
 build --strategy=CopyFile=remote,standalone
 build --strategy=CopyDirectory=remote,standalone
 build --strategy=CopyToDirectory=remote,standalone
-build --strategy=NpmLifecycleHook=remote,sandboxed,standalone
+build:linux --strategy=NpmLifecycleHook=remote,sandboxed,standalone
+build:darwin --strategy=NpmLifecycleHook=remote,sandboxed,standalone
+build:windows --strategy=NpmLifecycleHook=remote,standalone,local
 
 # Honor the setting of `skipLibCheck` in the tsconfig.json file.
 # https://www.typescriptlang.org/tsconfig#skipLibCheck
@@ -153,7 +164,9 @@ build --per_file_copt=-third_party/.*,-external/.*@-Werror,-Wextra,-Wpointer-ari
 build --per_file_copt=third_party/.*,external/.*@-Wno-sign-compare,-Wno-cast-align,-Wno-error,-Wno-unused-parameter,-Wno-cast-qual,-Wno-format-nonliteral,-Wno-tautological-type-limit-compare,-Wno-missing-field-initializers,-Wno-unused-function,-Wno-cast-function-type,-Wno-comment,-Wno-typedef-redefinition,-Wno-tautological-unsigned-enum-zero-compare,-Wno-extra,-Wno-type-limits,-Wno-attributes,-Wno-deprecated,-Wno-deprecated-declarations,-Wno-missing-template-arg-list-after-template-kw
 
 common --enable_bzlmod=true
-common --registry=file://%workspace%/registry
+common:linux --registry=file://%workspace%/registry
+common:darwin --registry=file://%workspace%/registry
+# Windows hosts get the registry path injected by tools/bazel.bat at runtime.
 common --registry=https://bcr.bazel.build
 # TODO(austin): Finish this migration...  Remove workspace support when users are done.
 common --noenable_workspace --noincompatible_disallow_empty_glob --incompatible_disallow_struct_provider_syntax=false

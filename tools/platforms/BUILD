@@ -135,3 +135,20 @@ platform(
         "//tools/platforms/gpu:none",
     ],
 )
+
+platform(
+    name = "windows_x86_64",
+    constraint_values = [
+        "@platforms//os:windows",
+        "@platforms//cpu:x86_64",
+        "//tools/platforms/go:has_support",
+        "//tools/platforms/rust:has_support",
+        "//tools/platforms/nodejs:has_support",
+        "//tools/platforms/python:has_support",
+        "//tools/platforms/gpu:none",
+    ],
+    flags = [
+        "--cxxopt=/std:c++20",
+        "--cxxopt=/Zc:preprocessor",
+    ],
+)
