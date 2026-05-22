@@ -267,6 +267,12 @@ class Timer:
         lib.aos_timer_set_name(self._c_timer, ffi.from_buffer(name_bytes),
                                len(name_bytes))
 
+    def name(self) -> str:
+        name_data = ffi.new('const char **')
+        name_size = ffi.new('size_t *')
+        lib.aos_timer_get_name(self._c_timer, name_data, name_size)
+        return ffi.unpack(name_data[0], name_size[0]).decode('utf-8')
+
     @ffi.callback("void(void *)", onerror=_intercept_exception)
     def _timer_callback(timer_handle) -> None:
         with ExceptionPassthroughInterceptor():
@@ -556,6 +562,12 @@ class EventLoop:
             int: Nanoseconds since epoch on the monotonic clock.
         """
         return lib.aos_event_loop_monotonic_now(self._c_event_loop)
+
+    def name(self) -> str:
+        name_data = ffi.new('const char **')
+        name_size = ffi.new('size_t *')
+        lib.aos_event_loop_get_name(self._c_event_loop, name_data, name_size)
+        return ffi.unpack(name_data[0], name_size[0]).decode('utf-8')
 
     def _add_proxy(self, target):
         proxy = InternalProxy(target)

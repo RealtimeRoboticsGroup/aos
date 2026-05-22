@@ -93,8 +93,13 @@ void aos_event_loop_set_runtime_realtime_priority(aos_event_loop_t *self,
                                                   int priority,
                                                   int scheduling_policy,
                                                   int realtime_policy);
+void aos_event_loop_get_name(aos_event_loop_t *self, const char **name_data,
+                             size_t *name_size);
+
 aos_error_t *aos_shm_event_loop_run(aos_event_loop_t *self);
 aos_exit_handle_t *aos_shm_event_loop_make_exit_handle(aos_event_loop_t *self);
+void aos_shm_event_loop_set_name(aos_event_loop_t *self, const char *name_data,
+                                 size_t name_size);
 
 void aos_fetcher_destroy(aos_fetcher_t *self);
 bool aos_fetcher_fetch(aos_fetcher_t *self);
@@ -112,6 +117,8 @@ void aos_timer_handler_schedule(aos_timer_handler_t *self, int64_t base_ns,
 void aos_timer_handler_disable(aos_timer_handler_t *self);
 void aos_timer_set_name(aos_timer_handler_t *self, const char *name_data,
                         size_t name_size);
+void aos_timer_get_name(aos_timer_handler_t *self, const char **name_data,
+                        size_t *name_size);
 
 void aos_exit_handle_destroy(aos_exit_handle_t *self);
 void aos_exit_handle_exit(aos_exit_handle_t *self);

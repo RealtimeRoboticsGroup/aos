@@ -204,6 +204,20 @@ py_library(
     ],
 )
 
+py_test(
+    name = "shm_event_loop_test_py",
+    srcs = ["shm_event_loop_test.py"],
+    data = [
+        ":event_loop_py_config",
+    ],
+    main = "shm_event_loop_test.py",
+    deps = [
+        ":shm_event_loop_py",
+        ":util_py",
+        "@pip_deps//absl_py",
+    ],
+)
+
 py_library(
     name = "simulated_event_loop_py",
     srcs = [
