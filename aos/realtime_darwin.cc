@@ -185,7 +185,8 @@ CpuSet GetCurrentThreadAffinity() {
   return result;
 }
 
-void SetCurrentThreadRealtimePriority(int priority, int scheduling_policy) {
+void SetCurrentThreadRealtimePriority(int priority, int scheduling_policy,
+                                      RealtimePolicy realtime_policy) {
   // Ensure that we won't get expensive reads of /dev/random when the realtime
   // scheduler is running to initialize the pseudo random number generator.
   UUID::Random();
@@ -223,7 +224,9 @@ void SetCurrentThreadRealtimePriority(int priority, int scheduling_policy) {
   }
   fake_rt_priority = priority;
   fake_rt_policy = scheduling_policy;
-  MarkRealtime(true);
+  if (realtime_policy != RealtimePolicy::NO_MODE) {
+    MarkRealtime(true);
+  }
 }
 
 int GetCurrentThreadRealtimePriority() { return fake_rt_priority; }

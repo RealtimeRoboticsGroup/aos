@@ -90,22 +90,27 @@ class ShmEventLoop : public EventLoop {
 
   void SetRuntimeAffinity(const CpuSet &cpuset) override;
   void SetRuntimeRealtimePriority(
-      int priority, SchedulingPolicy scheduling_policy =
-                        SchedulingPolicy::SCHEDULER_FIFO) override;
+      int priority,
+      SchedulingPolicy scheduling_policy = SchedulingPolicy::SCHEDULER_FIFO,
+      RealtimePolicy realtime_policy =
+          RealtimePolicy::REALTIME_MODE_DENY_MALLOC) override;
 
   void set_name(const std::string_view name) override;
   const std::string_view name() const override { return name_; }
   const Node *node() const override { return node_; }
 
-  const CpuSet &runtime_affinity() const override { return affinity_; }
-  SchedulingPolicy runtime_scheduling_policy() const override {
-    return scheduling_policy_;
-  }
+  const CpuSet &runtime_affinity() const override { return runtime_affinity_; }
   int runtime_realtime_priority() const override {
-    return (scheduling_policy_ == SchedulingPolicy::SCHEDULER_FIFO ||
-            scheduling_policy_ == SchedulingPolicy::SCHEDULER_RR)
-               ? priority_
+    return (runtime_scheduling_policy_ == SchedulingPolicy::SCHEDULER_FIFO ||
+            runtime_scheduling_policy_ == SchedulingPolicy::SCHEDULER_RR)
+               ? runtime_priority_
                : 0;
+  }
+  SchedulingPolicy runtime_scheduling_policy() const override {
+    return runtime_scheduling_policy_;
+  }
+  RealtimePolicy runtime_realtime_policy() const override {
+    return runtime_realtime_policy_;
   }
 
   const UUID &boot_uuid() const override { return boot_uuid_; }

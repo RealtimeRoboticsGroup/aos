@@ -121,12 +121,24 @@ void SetCurrentThreadAffinity(const CpuSet &cpuset);
 // Everything below here needs AOS to be initialized before it will work
 // properly.
 
+enum class RealtimePolicy {
+  // Change to "real-time-mode" and prohibit malloc.
+  REALTIME_MODE_DENY_MALLOC,
+  // Don't change to "real-time-mode", and allow malloc.
+  NO_MODE,
+
+  // It could be useful to support a REALTIME_MODE_WITH_MALLOC in the future.
+  // That will require decoupling the malloc hooks from SetIsRealtime and
+  // friends.
+};
+
 // Sets the current thread's realtime priority.
 // Takes in an integer argument for the realtime priority value between [1,99],
 // and an optional integer for the scheduling_policy as defined in
 // `include/linux/sched.h` (otherwise defaults to SCHED_FIFO).
-void SetCurrentThreadRealtimePriority(int priority,
-                                      int scheduling_policy = SCHED_FIFO);
+void SetCurrentThreadRealtimePriority(
+    int priority, int scheduling_policy = SCHED_FIFO,
+    RealtimePolicy realtime_policy = RealtimePolicy::REALTIME_MODE_DENY_MALLOC);
 
 // Returns the current thread's realtime priority.
 int GetCurrentThreadRealtimePriority();

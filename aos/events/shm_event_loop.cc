@@ -1166,8 +1166,8 @@ Status ShmEventLoop::Run() {
 
     aos::SetCurrentThreadName(name_.substr(0, 16));
     const CpuSet default_affinity = DefaultAffinity();
-    if (affinity_ != default_affinity) {
-      ::aos::SetCurrentThreadAffinity(affinity_);
+    if (runtime_affinity_ != default_affinity) {
+      ::aos::SetCurrentThreadAffinity(runtime_affinity_);
     }
 
     // Construct the watchers, but don't update the next pointer. This also
@@ -1183,7 +1183,7 @@ Status ShmEventLoop::Run() {
     WaitForNonIgnoredThreads();
 
     const bool need_realtime =
-        SchedulingPolicyIsRealtime(scheduling_policy_) ||
+        SchedulingPolicyIsRealtime(runtime_scheduling_policy_) ||
         (threads_ &&
          std::ranges::any_of(*threads_, ThreadIsConfiguredToBeRealtime));
     if (need_realtime) {
@@ -1195,15 +1195,18 @@ Status ShmEventLoop::Run() {
     AllowNonIgnoredThreadsToStart();
 
     // Now, all the callbacks are setup.  Lock everything into memory and go RT.
-    if (SchedulingPolicyIsRealtime(scheduling_policy_)) {
+    if (SchedulingPolicyIsRealtime(runtime_scheduling_policy_)) {
       const int scheduling_policy_id =
-          (scheduling_policy_ == SchedulingPolicy::SCHEDULER_FIFO) ? SCHED_FIFO
-                                                                   : SCHED_RR;
+          (runtime_scheduling_policy_ == SchedulingPolicy::SCHEDULER_FIFO)
+              ? SCHED_FIFO
+              : SCHED_RR;
 
-      ABSL_LOG(INFO) << "Setting scheduling policy to " << scheduling_policy_
-                     << " and realtime priority to " << priority_ << " for "
-                     << name_;
-      ::aos::SetCurrentThreadRealtimePriority(priority_, scheduling_policy_id);
+      ABSL_LOG(INFO) << "Setting scheduling policy to "
+                     << runtime_scheduling_policy_
+                     << " and realtime priority to " << runtime_priority_
+                     << " for " << name_;
+      ::aos::SetCurrentThreadRealtimePriority(
+          runtime_priority_, scheduling_policy_id, runtime_realtime_policy_);
     }
 
     set_is_running(true);
@@ -1292,23 +1295,23 @@ ShmEventLoop::~ShmEventLoop() {
 }
 
 void ShmEventLoop::SetRuntimeRealtimePriority(
-    int priority, SchedulingPolicy scheduling_policy) {
+    int priority, SchedulingPolicy scheduling_policy,
+    RealtimePolicy realtime_policy) {
   CheckCurrentThread();
-  if (is_running()) {
-    ABSL_LOG(FATAL) << "Cannot set realtime priority while running.";
-  }
+  ABSL_CHECK(!is_running()) << "Cannot set realtime priority while running.";
 
   if (priority == 0) {
-    priority_ = 0;
-    scheduling_policy_ = SchedulingPolicy::SCHEDULER_OTHER;
+    runtime_priority_ = 0;
+    runtime_scheduling_policy_ = SchedulingPolicy::SCHEDULER_OTHER;
   } else {
     ABSL_CHECK(scheduling_policy == SchedulingPolicy::SCHEDULER_FIFO ||
                scheduling_policy == SchedulingPolicy::SCHEDULER_RR)
         << ": Attempted to set realtime priority without a realtime scheduling "
            "policy";
-    priority_ = priority;
-    scheduling_policy_ = scheduling_policy;
+    runtime_priority_ = priority;
+    runtime_scheduling_policy_ = scheduling_policy;
   }
+  runtime_realtime_policy_ = realtime_policy;
 }
 
 void ShmEventLoop::SetRuntimeAffinity(const CpuSet &cpuset) {
@@ -1316,7 +1319,7 @@ void ShmEventLoop::SetRuntimeAffinity(const CpuSet &cpuset) {
   if (is_running()) {
     ABSL_LOG(FATAL) << "Cannot set affinity while running.";
   }
-  affinity_ = cpuset;
+  runtime_affinity_ = cpuset;
 }
 
 std::unique_ptr<ThreadHandle> ShmEventLoop::ConfigureThreadImpl(

@@ -3401,26 +3401,7 @@ TEST_P(AbstractEventLoopTest, NodeSender) {
   aos::Sender<TestMessage> sender = loop1->MakeSender<TestMessage>("/test");
 }
 
-// Tests that a non-realtime event loop timer is marked non-realtime.
-TEST_P(AbstractEventLoopTest, NonRealtimeEventLoopTimer) {
-  auto loop1 = MakePrimary();
-
-  // Add a timer to actually quit.
-  auto test_timer = loop1->AddTimer([this]() {
-    CheckNotRealtime();
-    this->Exit();
-  });
-
-  loop1->OnRun([&test_timer, &loop1]() {
-    CheckNotRealtime();
-    test_timer->Schedule(loop1->monotonic_now(),
-                         ::std::chrono::milliseconds(100));
-  });
-
-  Run();
-}
-
-// Tests that a realtime event loop timer is marked realtime.
+// Tests that sending from a realtime event loop callback works.
 TEST_P(AbstractEventLoopTest, RealtimeSend) {
   auto loop1 = MakePrimary();
 
@@ -3442,6 +3423,25 @@ TEST_P(AbstractEventLoopTest, RealtimeSend) {
   Run();
 }
 
+// Tests that a non-realtime event loop timer is marked non-realtime.
+TEST_P(AbstractEventLoopTest, NonRealtimeEventLoopTimer) {
+  auto loop1 = MakePrimary();
+
+  // Add a timer to actually quit.
+  auto test_timer = loop1->AddTimer([this]() {
+    CheckNotRealtime();
+    this->Exit();
+  });
+
+  loop1->OnRun([&test_timer, &loop1]() {
+    CheckNotRealtime();
+    test_timer->Schedule(loop1->monotonic_now(),
+                         ::std::chrono::milliseconds(100));
+  });
+
+  Run();
+}
+
 // Tests that a realtime event loop timer is marked realtime.
 TEST_P(AbstractEventLoopTest, RealtimeEventLoopTimer) {
   auto loop1 = MakePrimary();
@@ -3456,6 +3456,29 @@ TEST_P(AbstractEventLoopTest, RealtimeEventLoopTimer) {
 
   loop1->OnRun([&test_timer, &loop1]() {
     CheckRealtime();
+    test_timer->Schedule(loop1->monotonic_now(),
+                         ::std::chrono::milliseconds(100));
+  });
+
+  Run();
+}
+
+// Tests that a realtime (scheduling only) event loop timer is not marked
+// realtime.
+TEST_P(AbstractEventLoopTest, RealtimeWithoutModeEventLoopTimer) {
+  auto loop1 = MakePrimary();
+
+  loop1->SetRuntimeRealtimePriority(1, SchedulingPolicy::SCHEDULER_FIFO,
+                                    RealtimePolicy::NO_MODE);
+
+  // Add a timer to actually quit.
+  auto test_timer = loop1->AddTimer([this]() {
+    CheckNotRealtime();
+    this->Exit();
+  });
+
+  loop1->OnRun([&test_timer, &loop1]() {
+    CheckNotRealtime();
     test_timer->Schedule(loop1->monotonic_now(),
                          ::std::chrono::milliseconds(100));
   });
@@ -3495,6 +3518,25 @@ TEST_P(AbstractEventLoopTest, RealtimeEventLoopPhasedLoop) {
   Run();
 }
 
+// Tests that a realtime (scheduling only) event loop phased loop is marked
+// realtime.
+TEST_P(AbstractEventLoopTest, RealtimeWithoutModeEventLoopPhasedLoop) {
+  auto loop1 = MakePrimary();
+
+  loop1->SetRuntimeRealtimePriority(1, SchedulingPolicy::SCHEDULER_FIFO,
+                                    RealtimePolicy::NO_MODE);
+
+  // Add a timer to actually quit.
+  loop1->AddPhasedLoop(
+      [this](int) {
+        CheckNotRealtime();
+        this->Exit();
+      },
+      chrono::seconds(1), chrono::seconds(0));
+
+  Run();
+}
+
 // Tests that a non-realtime event loop watcher is marked non-realtime.
 TEST_P(AbstractEventLoopTest, NonRealtimeEventLoopWatcher) {
   auto loop1 = MakePrimary();
@@ -3503,6 +3545,7 @@ TEST_P(AbstractEventLoopTest, NonRealtimeEventLoopWatcher) {
   aos::Sender<TestMessage> sender = loop2->MakeSender<TestMessage>("/test");
 
   loop1->OnRun([&]() {
+    CheckNotRealtime();
     aos::Sender<TestMessage>::Builder msg = sender.MakeBuilder();
     TestMessage::Builder builder = msg.MakeBuilder<TestMessage>();
     msg.CheckOk(msg.Send(builder.Finish()));
@@ -3526,6 +3569,7 @@ TEST_P(AbstractEventLoopTest, RealtimeEventLoopWatcher) {
   aos::Sender<TestMessage> sender = loop2->MakeSender<TestMessage>("/test");
 
   loop1->OnRun([&]() {
+    CheckRealtime();
     aos::Sender<TestMessage>::Builder msg = sender.MakeBuilder();
     TestMessage::Builder builder = msg.MakeBuilder<TestMessage>();
     msg.CheckOk(msg.Send(builder.Finish()));
@@ -3533,6 +3577,32 @@ TEST_P(AbstractEventLoopTest, RealtimeEventLoopWatcher) {
 
   loop1->MakeWatcher("/test", [&](const TestMessage &) {
     CheckRealtime();
+    this->Exit();
+  });
+
+  Run();
+}
+
+// Tests that a realtime (scheduling only) event loop watcher is marked
+// realtime.
+TEST_P(AbstractEventLoopTest, RealtimeWithoutModeEventLoopWatcher) {
+  auto loop1 = MakePrimary();
+  auto loop2 = Make();
+
+  loop1->SetRuntimeRealtimePriority(1, SchedulingPolicy::SCHEDULER_FIFO,
+                                    RealtimePolicy::NO_MODE);
+
+  aos::Sender<TestMessage> sender = loop2->MakeSender<TestMessage>("/test");
+
+  loop1->OnRun([&]() {
+    CheckNotRealtime();
+    aos::Sender<TestMessage>::Builder msg = sender.MakeBuilder();
+    TestMessage::Builder builder = msg.MakeBuilder<TestMessage>();
+    msg.CheckOk(msg.Send(builder.Finish()));
+  });
+
+  loop1->MakeWatcher("/test", [&](const TestMessage &) {
+    CheckNotRealtime();
     this->Exit();
   });
 

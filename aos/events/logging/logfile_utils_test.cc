@@ -3311,14 +3311,15 @@ class TimeEventLoop : public EventLoop {
   const Node *node() const final { return node_; }
 
   void SetRuntimeAffinity(const CpuSet & /*cpuset*/) final { LOG(FATAL); }
-  void SetRuntimeRealtimePriority(
-      int /*priority*/, SchedulingPolicy /*scheduling_policy*/) final {
+  void SetRuntimeRealtimePriority(int /*priority*/,
+                                  SchedulingPolicy /*scheduling_policy*/,
+                                  RealtimePolicy /*realtime_policy*/) final {
     LOG(FATAL);
   }
 
   const CpuSet &runtime_affinity() const final {
     LOG(FATAL);
-    return affinity_;
+    return runtime_affinity_;
   }
 
   TimerHandler *AddTimer(::std::function<void()> /*callback*/) final {
@@ -3350,12 +3351,17 @@ class TimeEventLoop : public EventLoop {
 
   int runtime_realtime_priority() const final {
     LOG(FATAL);
-    return priority_;
+    return runtime_priority_;
   }
 
   SchedulingPolicy runtime_scheduling_policy() const final {
     LOG(FATAL);
-    return scheduling_policy_;
+    return runtime_scheduling_policy_;
+  }
+
+  RealtimePolicy runtime_realtime_policy() const final {
+    LOG(FATAL);
+    return runtime_realtime_policy_;
   }
 
   std::unique_ptr<ThreadHandle> ConfigureThreadImpl(

@@ -234,22 +234,24 @@ void EventLoop::ParseSchedulingSettings() {
       threads_ = app->threads();
     }
     if (app->has_cpu_affinity()) {
-      affinity_ =
+      runtime_affinity_ =
           aos::MakeCpusetFromCpus(flatbuffers::make_span(app->cpu_affinity()));
     }
     if (app->has_priority()) {
-      priority_ = app->priority();
+      runtime_priority_ = app->priority();
     }
     if (app->has_scheduling_policy()) {
-      scheduling_policy_ = app->scheduling_policy();
+      runtime_scheduling_policy_ = app->scheduling_policy();
 
-      if ((scheduling_policy_ == SchedulingPolicy::SCHEDULER_FIFO ||
-           scheduling_policy_ == SchedulingPolicy::SCHEDULER_RR) &&
-          (priority_ < 1 || priority_ > 99)) {
-        ABSL_LOG(FATAL) << "Specified realtime scheduling policy "
-                        << scheduling_policy_
-                        << " with an incompatible realtime priority "
-                        << priority_ << ".";
+      if ((runtime_scheduling_policy_ == SchedulingPolicy::SCHEDULER_FIFO ||
+           runtime_scheduling_policy_ == SchedulingPolicy::SCHEDULER_RR)) {
+        runtime_realtime_policy_ = RealtimePolicy::REALTIME_MODE_DENY_MALLOC;
+        if (runtime_priority_ < 1 || runtime_priority_ > 99) {
+          ABSL_LOG(FATAL) << "Specified realtime scheduling policy "
+                          << runtime_scheduling_policy_
+                          << " with an incompatible realtime priority "
+                          << runtime_priority_ << ".";
+        }
       }
     }
   }

@@ -163,7 +163,8 @@ CpuSet GetCurrentThreadAffinity() {
   return result;
 }
 
-void SetCurrentThreadRealtimePriority(int priority, int scheduling_policy) {
+void SetCurrentThreadRealtimePriority(int priority, int scheduling_policy,
+                                      RealtimePolicy realtime_policy) {
   // Ensure that we won't get expensive reads of /dev/random when the realtime
   // scheduler is running.
   UUID::Random();
@@ -193,7 +194,9 @@ void SetCurrentThreadRealtimePriority(int priority, int scheduling_policy) {
       << "Realtime priority must fall within [1,99]";
   struct sched_param param;
   param.sched_priority = priority;
-  MarkRealtime(true);
+  if (realtime_policy != RealtimePolicy::NO_MODE) {
+    MarkRealtime(true);
+  }
   ABSL_PCHECK(sched_setscheduler(0, scheduling_policy, &param) == 0)
       << ": changing to realtime scheduler ("
       << (scheduling_policy == SCHED_FIFO ? "SCHED_FIFO" : "SCHED_RR")

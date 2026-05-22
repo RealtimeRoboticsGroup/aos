@@ -804,7 +804,8 @@ class SimulatedEventLoop : public EventLoop {
       if (log_impl_) {
         prev_logger.Swap(log_impl_);
       }
-      ScopedMarkRealtimeRestorer rt(runtime_realtime_priority() > 0);
+      ScopedMarkRealtimeRestorer rt(runtime_realtime_policy() !=
+                                    RealtimePolicy::NO_MODE);
       SetTimerContext(monotonic_now());
       fn();
       ClearContext();
@@ -823,34 +824,38 @@ class SimulatedEventLoop : public EventLoop {
 
   void SetRuntimeAffinity(const CpuSet &affinity) override {
     CHECK(!is_running()) << ": Cannot set affinity while running.";
-    affinity_ = affinity;
+    runtime_affinity_ = affinity;
   }
 
-  void SetRuntimeRealtimePriority(
-      int priority, SchedulingPolicy scheduling_policy =
-                        SchedulingPolicy::SCHEDULER_FIFO) override {
+  void SetRuntimeRealtimePriority(int priority,
+                                  SchedulingPolicy scheduling_policy,
+                                  RealtimePolicy realtime_policy) override {
     CHECK(!is_running()) << ": Cannot set realtime priority while running.";
 
     if (priority == 0) {
-      priority_ = 0;
-      scheduling_policy_ = SchedulingPolicy::SCHEDULER_OTHER;
+      runtime_priority_ = 0;
+      runtime_scheduling_policy_ = SchedulingPolicy::SCHEDULER_OTHER;
     } else {
       CHECK(scheduling_policy == SchedulingPolicy::SCHEDULER_FIFO ||
             scheduling_policy == SchedulingPolicy::SCHEDULER_RR)
           << ": Attempted to set realtime priority without a realtime "
-             "scheduling "
-             "policy";
-      priority_ = priority;
-      scheduling_policy_ = scheduling_policy;
+             "scheduling policy";
+      runtime_priority_ = priority;
+      runtime_scheduling_policy_ = scheduling_policy;
     }
+    runtime_realtime_policy_ = realtime_policy;
   }
 
-  const CpuSet &runtime_affinity() const override { return affinity_; }
+  const CpuSet &runtime_affinity() const override { return runtime_affinity_; }
   SchedulingPolicy runtime_scheduling_policy() const override {
-    return scheduling_policy_;
+    return runtime_scheduling_policy_;
   }
   int runtime_realtime_priority() const override {
-    return GetRuntimeRealtimePriority(scheduling_policy_, priority_);
+    return GetRuntimeRealtimePriority(runtime_scheduling_policy_,
+                                      runtime_priority_);
+  }
+  RealtimePolicy runtime_realtime_policy() const override {
+    return runtime_realtime_policy_;
   }
 
   std::unique_ptr<ThreadHandle> ConfigureThreadImpl(
@@ -1136,7 +1141,8 @@ void SimulatedWatcher::HandleEvent() noexcept {
 
   {
     ScopedMarkRealtimeRestorer rt(
-        simulated_event_loop_->runtime_realtime_priority() > 0);
+        simulated_event_loop_->runtime_realtime_policy() !=
+        RealtimePolicy::NO_MODE);
     DoCallCallback([monotonic_now]() { return monotonic_now; }, context);
     simulated_event_loop_->ClearContext();
   }
@@ -1546,7 +1552,8 @@ void SimulatedTimerHandler::HandleEvent() noexcept {
   }
   {
     ScopedMarkRealtimeRestorer rt(
-        simulated_event_loop_->runtime_realtime_priority() > 0);
+        simulated_event_loop_->runtime_realtime_policy() !=
+        RealtimePolicy::NO_MODE);
     Call([monotonic_now]() { return monotonic_now; }, monotonic_now);
     simulated_event_loop_->ClearContext();
   }
@@ -1597,7 +1604,8 @@ void SimulatedPhasedLoopHandler::HandleEvent() noexcept {
 
   {
     ScopedMarkRealtimeRestorer rt(
-        simulated_event_loop_->runtime_realtime_priority() > 0);
+        simulated_event_loop_->runtime_realtime_policy() !=
+        RealtimePolicy::NO_MODE);
     Call([monotonic_now]() { return monotonic_now; });
     simulated_event_loop_->ClearContext();
   }

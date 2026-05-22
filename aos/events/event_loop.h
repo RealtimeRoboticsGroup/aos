@@ -918,14 +918,26 @@ class EventLoop {
   bool is_running() const { return is_running_.load(); }
 
   // Sets the realtime priority to run the event loop at.  This may not be
-  // called after we go into "real-time-mode".
+  // called while in "real-time-mode" or while this event loop is running.
+  //
+  // The realtime policy is independent of the scheduling priority and policy.
+  // It can restrict what an application may do while running to catch some
+  // common non-realtime operations, which can be combined with any scheduling
+  // policy.
   virtual void SetRuntimeRealtimePriority(
-      int priority, SchedulingPolicy scheduling_policy =
-                        SchedulingPolicy::SCHEDULER_FIFO) = 0;
+      int priority,
+      SchedulingPolicy scheduling_policy = SchedulingPolicy::SCHEDULER_FIFO,
+      RealtimePolicy realtime_policy =
+          RealtimePolicy::REALTIME_MODE_DENY_MALLOC) = 0;
+
   // Defaults to 0 if this loop will not run realtime.
   virtual int runtime_realtime_priority() const = 0;
 
+  // Defaults to SCHED_OTHER if this loop will not run realtime.
   virtual SchedulingPolicy runtime_scheduling_policy() const = 0;
+
+  // Defaults to NO_MODE if this loop will not run realtime.
+  virtual RealtimePolicy runtime_realtime_policy() const = 0;
 
   static CpuSet DefaultAffinity();
 
@@ -1087,9 +1099,11 @@ class EventLoop {
   Context context_;
   std::string name_;
   const Node *const node_;
-  CpuSet affinity_ = DefaultAffinity();
-  int priority_ = 0;
-  SchedulingPolicy scheduling_policy_ = SchedulingPolicy::SCHEDULER_OTHER;
+  CpuSet runtime_affinity_ = DefaultAffinity();
+  int runtime_priority_ = 0;
+  SchedulingPolicy runtime_scheduling_policy_ =
+      SchedulingPolicy::SCHEDULER_OTHER;
+  RealtimePolicy runtime_realtime_policy_ = RealtimePolicy::NO_MODE;
 
   // If the corresponding application has the threads field set, cache it here.
   const ::flatbuffers::Vector<::flatbuffers::Offset<aos::ThreadConfiguration>>
