@@ -60,17 +60,6 @@ steps:
         - signal_reason: agent_stop  # Agent was stopped by the OS (e.g. spot termination)
           limit: 2
 
-  - label: "roborio"
-    commands:
-      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../common_output_base build ${COMMON} --remote_download_outputs=minimal --config=roborio ${ROBORIO_TARGETS} --noenable_bzlmod --enable_workspace
-    retry:
-      automatic:
-        - exit_status: -1  # Connection to the Agent was lost
-          signal_reason: none
-          limit: 2
-        - signal_reason: agent_stop  # Agent was stopped by the OS (e.g. spot termination)
-          limit: 2
-
   - label: "roborio bzlmod"
     commands:
       - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../common_output_base build ${COMMON} --remote_download_outputs=minimal --config=roborio ${ROBORIO_TARGETS} --enable_bzlmod --noenable_workspace
