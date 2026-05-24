@@ -1,0 +1,101 @@
+#!/bin/sh
+# In-VM init for the aos ptxas microvm.
+#
+# vfkit boots this kernel + initramfs and we run a single x86_64 ptxas
+# invocation through Rosetta, write stdout/stderr/exit back to a
+# virtiofs-shared workdir, and power off. The wrapper on the host
+# tells us where each share lives via /workdir/env.
+
+set -u
+
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin
+
+exec >/dev/console 2>&1
+log() { echo "[init][$(cut -d' ' -f1 /proc/uptime 2>/dev/null)] $*"; }
+log "starting"
+
+EXPECTED_KERNEL_VERSION=6.6.134-0-virt
+RUNNING_KERNEL_VERSION=$(uname -r 2>/dev/null || echo unknown)
+
+if [ "$RUNNING_KERNEL_VERSION" != "$EXPECTED_KERNEL_VERSION" ]; then
+  log "FATAL: running kernel $RUNNING_KERNEL_VERSION but init expects $EXPECTED_KERNEL_VERSION"
+  log "       update tools/cuda/vm/init to match the Alpine kernel bump"
+  poweroff -f
+  exec /bin/sh
+fi
+
+KMV=$RUNNING_KERNEL_VERSION
+
+/bin/busybox --install -s /bin
+/bin/busybox --install -s /sbin 2>/dev/null
+
+mount -t proc proc /proc
+mount -t sysfs sys /sys
+mount -t devtmpfs dev /dev
+
+insmod /lib/modules/$KMV/kernel/fs/fuse/fuse.ko
+insmod /lib/modules/$KMV/kernel/fs/fuse/virtiofs.ko
+insmod /lib/modules/$KMV/kernel/fs/binfmt_misc.ko
+mount -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc
+
+mkdir -p /workdir
+mount -t virtiofs workdir /workdir
+
+if [ ! -r /workdir/env ]; then
+  log "FATAL: /workdir/env missing"
+  echo 127 >/workdir/exit 2>/dev/null
+  poweroff -f
+fi
+
+# Wrapper exports AMD64, ARM64, CWD.
+. /workdir/env
+
+log "AMD64=$AMD64"
+log "ARM64=$ARM64"
+log "CWD=$CWD"
+
+# Mount each sysroot share at its host path so absolute symlinks inside
+# them resolve identically inside and outside the VM. Same for the
+# bazel sandbox cwd.
+mkdir -p "$AMD64" "$ARM64" "$CWD" /rosetta /private/tmp
+mount -t virtiofs amd64_sysroot "$AMD64"
+mount -t virtiofs arm64_sysroot "$ARM64"
+mount -t virtiofs execroot "$CWD"
+mount -t virtiofs rosetta /rosetta
+# clang's intermediate PTX files land here.
+mount -t virtiofs host_tmp /private/tmp
+ln -sfn /private/tmp /tmp
+
+# ptxas's ELF interp hardcodes `/lib64/ld-linux-x86-64.so.2`; make that
+# resolve to the amd64 sysroot's loader, and bind-mount the standard
+# library directories so every NEEDED entry is on the default search
+# path without LD_LIBRARY_PATH gymnastics.
+mkdir -p /lib64 /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu
+ln -sf "$AMD64/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2" \
+       /lib64/ld-linux-x86-64.so.2
+mount --bind "$AMD64/lib/x86_64-linux-gnu"     /lib/x86_64-linux-gnu
+mount --bind "$AMD64/usr/lib/x86_64-linux-gnu" /usr/lib/x86_64-linux-gnu
+
+# Register Rosetta for x86_64 ELFs. The magic/mask matches a generic
+# linux x86_64 dynamically-linked ELF executable.
+echo ':rosetta:M::\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x3e\x00:\xff\xff\xff\xff\xff\xfe\xfe\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:/rosetta/rosetta:OCF' \
+  > /proc/sys/fs/binfmt_misc/register
+
+cd "$CWD"
+
+log "dispatching $TOOL"
+
+# /workdir/argv is a NUL-separated list of argv tokens written by the
+# host wrapper; xargs -0 dispatches it without any shell interpretation.
+xargs -0 -a /workdir/argv "$TOOL" </dev/null \
+  >/workdir/stdout 2>/workdir/stderr
+rc=$?
+echo $rc >/workdir/exit
+log "$TOOL exit=$rc"
+
+sync
+poweroff -f
+# Belt and suspenders in case poweroff is broken/missing.
+echo o > /proc/sysrq-trigger 2>/dev/null
+sleep 5
+exec /bin/sh

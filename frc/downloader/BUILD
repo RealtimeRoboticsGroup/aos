@@ -1,4 +1,5 @@
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@platforms//host:constraints.bzl", "HOST_CONSTRAINTS")
 load("//tools/python:defs.bzl", "py_binary")
 
 string_flag(
@@ -27,6 +28,8 @@ config_setting(
     },
 )
 
+_HOST_IS_LINUX = "@platforms//os:linux" in HOST_CONSTRAINTS
+
 py_binary(
     name = "downloader",
     srcs = [
@@ -38,7 +41,7 @@ py_binary(
             "@amd64_debian_sysroot//:ssh-filegroup",
         ],
         "//conditions:default": [],
-    }),
+    }) if _HOST_IS_LINUX else [],
     main = "downloader.py",
     visibility = ["//visibility:public"],
 )

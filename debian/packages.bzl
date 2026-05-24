@@ -1,6 +1,7 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
 load("//tools/build_rules:clean_dep.bzl", "clean_dep")
+load("//tools/platforms:host_platform.bzl", "host_compatible_with")
 
 # In order to use deb packages in the build you have to follow these steps.
 #
@@ -50,6 +51,11 @@ def download_packages(name, packages, excludes = [], force_includes = [], force_
     are excluded even if they're pulled in as a dependency from a
     "force_includes" package.
     """
+    if target_compatible_with == None:
+        target_compatible_with = host_compatible_with([
+            "@platforms//os:linux",
+            "@platforms//cpu:x86_64",
+        ])
     package_list = " ".join(packages)
     excludes_list = " ".join(["--exclude=%s" % e for e in excludes])
     force_includes = " ".join(["--force-include=%s" % i for i in force_includes])
@@ -121,6 +127,11 @@ def generate_deb_tarball(name, files, target_compatible_with = None):
 
     This can then be uploaded and used as another WORKSPACE entry.
     """
+    if target_compatible_with == None:
+        target_compatible_with = host_compatible_with([
+            "@platforms//os:linux",
+            "@platforms//cpu:x86_64",
+        ])
     deps = []
     for f in files.keys():
         dep = _convert_deb_to_target(f)

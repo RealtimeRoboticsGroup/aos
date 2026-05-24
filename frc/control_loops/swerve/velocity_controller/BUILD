@@ -1,3 +1,4 @@
+load("//tools/platforms:host_platform.bzl", "host_compatible_with")
 load("//tools/python:defs.bzl", "py_binary", "py_library", "py_test")
 
 package(default_visibility = ["//visibility:public"])
@@ -7,7 +8,7 @@ py_library(
     srcs = [
         "experience_buffer.py",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = host_compatible_with(["@platforms//os:linux"]),
     deps = [
         "@pip_deps//flashbax",
         "@pip_deps//jax",
@@ -19,7 +20,7 @@ py_test(
     srcs = [
         "experience_buffer_test.py",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = host_compatible_with(["@platforms//os:linux"]),
     deps = [
         ":experience_buffer",
         "@pip_deps//flashbax",
@@ -34,7 +35,7 @@ py_binary(
         "model.py",
         "train.py",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = host_compatible_with(["@platforms//os:linux"]),
     deps = [
         ":experience_buffer",
         ":physics",
@@ -57,7 +58,7 @@ py_binary(
 py_library(
     name = "physics",
     srcs = ["physics.py"],
-    target_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = host_compatible_with(["@platforms//os:linux"]),
     deps = [
         "//frc/control_loops/swerve:jax_dynamics",
         "@pip_deps//flax",
@@ -72,7 +73,7 @@ py_binary(
         "model.py",
         "plot.py",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = host_compatible_with(["@platforms//os:linux"]),
     deps = [
         ":experience_buffer",
         ":physics",
@@ -97,7 +98,7 @@ py_binary(
         "lqr_plot.py",
         "model.py",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = host_compatible_with(["@platforms//os:linux"]),
     deps = [
         ":experience_buffer",
         ":physics",
