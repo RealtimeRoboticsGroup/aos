@@ -134,4 +134,8 @@ platform(
         "//tools/platforms/python:has_support",
         "//tools/platforms/gpu:none",
     ],
+    flags = [
+        # We need at least 14.4 for os_sync_wait_on_address (used by aos_sync.cc).
+        "--macos_minimum_os=14.4",
+    ],
 )
