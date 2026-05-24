@@ -251,6 +251,50 @@ TEST(FileTest, MkdirPIfSpace) {
   ASSERT_TRUE(PathExists(new_dir_nosync));
   EXPECT_TRUE(std::filesystem::is_directory(new_dir_nosync));
 
+  // Test permissions.
+  const ::std::string new_dir_perms = base_dir + "perms/a/b/c/";
+  ASSERT_FALSE(PathExists(new_dir_perms));
+  ASSERT_TRUE(MkdirPIfSpace(new_dir_perms, 0700, false));
+  ASSERT_TRUE(PathExists(new_dir_perms));
+  EXPECT_TRUE(std::filesystem::is_directory(new_dir_perms));
+  EXPECT_EQ(std::filesystem::status(new_dir_perms).permissions(),
+            std::filesystem::perms::owner_all);
+  // Also check that parent directories have the permission applied.
+  EXPECT_EQ(std::filesystem::status(base_dir + "perms/a/b").permissions(),
+            std::filesystem::perms::owner_all);
+  EXPECT_EQ(std::filesystem::status(base_dir + "perms/a").permissions(),
+            std::filesystem::perms::owner_all);
+
+  UnlinkRecursive(base_dir);
+}
+
+TEST(FileTest, MkdirPIfSpaceEdgeCases) {
+  const ::std::string tmp_dir = aos::testing::TestTmpDir();
+  const ::std::string base_dir = tmp_dir + "/mkdir_p_edge_cases/";
+
+  // Clean-up from any previous failures.
+  UnlinkRecursive(base_dir);
+
+  // 1. Path with no parent directory component (parent_path() is empty)
+  EXPECT_TRUE(MkdirPIfSpace("just_file_name.txt", 0777, false));
+  EXPECT_TRUE(MkdirPIfSpace("", 0777, false));
+
+  // 2. Folder already exists
+  const ::std::string existing_dir_file = base_dir + "existing_dir/file.txt";
+  ASSERT_TRUE(MkdirPIfSpace(existing_dir_file, 0777, false));
+  EXPECT_TRUE(PathExists(base_dir + "existing_dir"));
+  // Calling it again on the same path where directory already exists
+  EXPECT_TRUE(MkdirPIfSpace(existing_dir_file, 0777, false));
+
+  // 3. Trailing slashes
+  const ::std::string trailing_slash_path = base_dir + "trailing_slash/";
+  ASSERT_TRUE(MkdirPIfSpace(trailing_slash_path, 0777, false));
+  EXPECT_TRUE(PathExists(base_dir + "trailing_slash"));
+
+  const ::std::string multi_trailing_slashes = base_dir + "multi_trailing///";
+  ASSERT_TRUE(MkdirPIfSpace(multi_trailing_slashes, 0777, false));
+  EXPECT_TRUE(PathExists(base_dir + "multi_trailing"));
+
   UnlinkRecursive(base_dir);
 }
 

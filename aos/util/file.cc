@@ -2,7 +2,6 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fts.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -15,6 +14,7 @@
 #include <optional>
 #include <ostream>
 #include <string_view>
+#include <system_error>
 
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
@@ -91,123 +91,79 @@ void WriteStringToFileOrDie(const std::string_view filename,
 }
 
 void SyncDirectory(const std::filesystem::path &path) {
+#ifndef _WIN32
   const int dir_fd = open(path.c_str(), O_DIRECTORY);
   ABSL_PCHECK(dir_fd != -1) << "Failed to open directory " << path;
   ABSL_PCHECK(fsync(dir_fd) != -1) << "Failed to fsync directory " << path;
   ABSL_PCHECK(close(dir_fd) != -1) << "Failed to close directory " << path;
+#else
+  // Windows does not support syncing directory handles (flushing a directory
+  // handle via FlushFileBuffers is not supported and returns an error).
+  // The alternative of flushing the entire drive/volume via FlushFileBuffers
+  // on a volume handle (e.g., \\.\C:) is not viable here because it requires
+  // administrative privileges and incurs system-wide performance overhead.
+  // In the end, this is trying to preserve data against power loss, and we
+  // aren't going to use Windows for things where that matters.
+  (void)path;
+#endif
 }
 
 bool MkdirPIfSpace(std::string_view path, mode_t mode, bool sync) {
-  auto last_slash_pos = path.find_last_of("/");
-
-  std::string folder(last_slash_pos == std::string_view::npos
-                         ? std::string_view("")
-                         : path.substr(0, last_slash_pos));
+  std::filesystem::path p(path);
+  std::filesystem::path folder = p.parent_path();
   if (folder.empty()) {
     return true;
   }
-  if (!MkdirPIfSpace(folder, mode, sync)) {
-    return false;
-  }
-  const int result = mkdir(folder.c_str(), mode);
-  if (result == -1 && errno == EEXIST) {
-    ABSL_VLOG(2) << folder << " already exists";
+
+  std::error_code ec;
+  if (std::filesystem::exists(folder, ec)) {
     return true;
-  } else if (result == -1 && errno == ENOSPC) {
-    ABSL_VLOG(2) << "Out of space";
-    return false;
-  } else {
-    ABSL_VLOG(1) << "Created " << folder;
   }
-  ABSL_PCHECK(result == 0) << ": Error creating " << folder;
+
+  if (folder.has_parent_path()) {
+    if (!MkdirPIfSpace(folder.string(), mode, sync)) {
+      return false;
+    }
+  }
+
+  if (std::filesystem::create_directory(folder, ec)) {
+    ABSL_VLOG(1) << "Created " << folder;
+    std::filesystem::permissions(folder,
+                                 static_cast<std::filesystem::perms>(mode), ec);
+    if (ec) {
+      ABSL_LOG(FATAL) << "Error setting permissions on " << folder << ": "
+                      << ec.message();
+    }
+  } else {
+    if (ec) {
+      if (ec == std::errc::no_space_on_device) {
+        ABSL_VLOG(2) << "Out of space";
+        return false;
+      }
+      ABSL_LOG(FATAL) << "Error creating " << folder << ": " << ec.message();
+    }
+  }
+
   if (sync) {
     // Sync the newly created directory.
-    SyncDirectory(std::filesystem::path(folder));
+    SyncDirectory(folder);
 
     // Also sync the parent directory to ensure the directory entry is written
     // to disk.
-    auto parent_slash_pos = folder.find_last_of("/");
-    if (parent_slash_pos != std::string::npos) {
-      std::string parent_dir = folder.substr(0, parent_slash_pos);
-      if (!parent_dir.empty()) {
-        SyncDirectory(std::filesystem::path(parent_dir));
-      }
+    if (folder.has_parent_path()) {
+      SyncDirectory(folder.parent_path());
     }
   }
   return true;
 }
 
-bool PathExists(std::string_view path) {
-  struct stat buffer;
-  return stat(path.data(), &buffer) == 0;
-}
+bool PathExists(std::string_view path) { return std::filesystem::exists(path); }
 
 void UnlinkRecursive(std::string_view path) {
-  FTS *ftsp = NULL;
-  FTSENT *curr;
-
-  // Cast needed (in C) because fts_open() takes a "char * const *", instead
-  // of a "const char * const *", which is only allowed in C++. fts_open()
-  // does not modify the argument.
-  std::string p(path);
-  char *files[] = {const_cast<char *>(p.c_str()), NULL};
-
-  // FTS_NOCHDIR  - Avoid changing cwd, which could cause unexpected behavior
-  //                in multithreaded programs
-  // FTS_PHYSICAL - Don't follow symlinks. Prevents deletion of files outside
-  //                of the specified directory
-  // FTS_XDEV     - Don't cross filesystem boundaries
-  ftsp = fts_open(files, FTS_NOCHDIR | FTS_PHYSICAL | FTS_XDEV, NULL);
-  if (!ftsp) {
-    return;
-  }
-
-  while ((curr = fts_read(ftsp))) {
-#if defined(AOS_SANITIZE_MEMORY)
-    // fts_read doesn't have proper msan interceptors.  Unpoison it ourselves.
-    if (curr) {
-      __msan_unpoison(curr, sizeof(*curr));
-      __msan_unpoison_string(curr->fts_accpath);
-      __msan_unpoison_string(curr->fts_path);
-      __msan_unpoison_string(curr->fts_name);
-    }
-#endif
-    switch (curr->fts_info) {
-      case FTS_NS:
-      case FTS_DNR:
-      case FTS_ERR:
-        ABSL_LOG(WARNING) << "Can't read " << curr->fts_accpath;
-        break;
-
-      case FTS_DC:
-      case FTS_DOT:
-      case FTS_NSOK:
-        // Not reached unless FTS_LOGICAL, FTS_SEEDOT, or FTS_NOSTAT were
-        // passed to fts_open()
-        break;
-
-      case FTS_D:
-        // Do nothing. Need depth-first search, so directories are deleted
-        // in FTS_DP
-        break;
-
-      case FTS_DP:
-      case FTS_F:
-      case FTS_SL:
-      case FTS_SLNONE:
-      case FTS_DEFAULT:
-        ABSL_VLOG(1) << "Removing " << curr->fts_path;
-        if (remove(curr->fts_accpath) < 0) {
-          ABSL_LOG(WARNING)
-              << curr->fts_path
-              << ": Failed to remove: " << strerror(curr->fts_errno);
-        }
-        break;
-    }
-  }
-
-  if (ftsp) {
-    fts_close(ftsp);
+  std::error_code ec;
+  std::filesystem::remove_all(path, ec);
+  if (ec) {
+    ABSL_LOG(WARNING) << "Failed to remove " << path << ": " << ec.message();
   }
 }
 
