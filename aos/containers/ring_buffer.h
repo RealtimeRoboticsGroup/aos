@@ -131,24 +131,13 @@ class RingBuffer {
   // Return the value of the index requested, adjusted so that the RingBuffer
   // contains the oldest element first and the newest last.
   Data &operator[](size_t index) {
-#if defined(__cpp_lib_launder) && __cpp_lib_launder >= 201606
     return *std::launder(
         reinterpret_cast<Data *>(&data_[(oldest_ + index) % buffer_size]));
-#else
-    // TODO(brian): Remove this when all our compilers are 17 or newer.
-    return *reinterpret_cast<Data *>(&data_[(oldest_ + index) % buffer_size]);
-#endif
   }
 
   const Data &operator[](size_t index) const {
-#if defined(__cpp_lib_launder) && __cpp_lib_launder >= 201606
     return *std::launder(reinterpret_cast<const Data *>(
         &data_[(oldest_ + index) % buffer_size]));
-#else
-    // TODO(brian): Remove this when all our compilers are 17 or newer.
-    return *reinterpret_cast<const Data *>(
-        &data_[(oldest_ + index) % buffer_size]);
-#endif
   }
 
   // Returns the capacity of the RingBuffer
