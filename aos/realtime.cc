@@ -1,14 +1,15 @@
 #include "aos/realtime.h"
 
+#ifndef _WIN32
 #include <dirent.h>
 #ifdef __linux__
 #include <malloc.h>
 #endif
-
 #include <sys/mman.h>
 #include <sys/resource.h>
 #include <sys/types.h>
 #include <unistd.h>
+#endif
 
 #include <cerrno>
 #include <cstdint>
@@ -32,7 +33,7 @@ ABSL_FLAG(bool, skip_realtime_scheduler, false,
 ABSL_FLAG(bool, skip_locking_memory, false,
           "If true, skip locking memory.  Pretend that we did it instead.");
 
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !defined(_WIN32)
 namespace FLAG__namespace_do_not_use_directly_use_DECLARE_double_instead {
 extern double FLAGS_tcmalloc_release_rate __attribute__((weak));
 }
@@ -44,6 +45,7 @@ using FLAG__namespace_do_not_use_directly_use_DECLARE_double_instead::
 
 namespace aos {
 
+#ifndef _WIN32
 void SetSoftRLimit(int resource, RlimT soft, SetLimitForRoot set_for_root,
                    std::string_view help_string,
                    AllowSoftLimitDecrease allow_decrease) {
@@ -77,7 +79,9 @@ void SetSoftRLimit(int resource, RlimT soft, SetLimitForRoot set_for_root,
 #endif
   }
 }
+#endif
 
+#ifndef _WIN32
 void LockAllMemory() {
   CheckNotRealtime();
   // Allow locking as much as we want into RAM.
@@ -88,8 +92,6 @@ void LockAllMemory() {
   ABSL_PCHECK(mlockall(MCL_CURRENT | MCL_FUTURE) == 0)
       << ": Failed to lock memory, use --skip_locking_memory to bypass this.  "
          "Bypassing will impact RT performance.";
-#else
-#error "Only linux and apple (Mac OS X) are supported"
 #endif
 
 #if !defined(AOS_SANITIZE_ADDRESS) && !defined(AOS_SANITIZE_MEMORY)
@@ -101,7 +103,7 @@ void LockAllMemory() {
 #endif
 #endif
 
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !defined(_WIN32)
   // TODO(austin): new tcmalloc does this differently...
   if (&FLAGS_tcmalloc_release_rate) {
     // Tell tcmalloc not to return memory.
@@ -114,15 +116,22 @@ void LockAllMemory() {
   uint8_t data[4096 * 8];
   // Not 0 because linux might optimize that to a 0-filled page.
   memset(data, 1, sizeof(data));
+#ifndef _MSC_VER
   __asm__ __volatile__("" ::"m"(data));
+#endif
 
   static const size_t kHeapPreallocSize = 512 * 1024;
   char *const heap_data = static_cast<char *>(malloc(kHeapPreallocSize));
   memset(heap_data, 1, kHeapPreallocSize);
+#ifndef _MSC_VER
   __asm__ __volatile__("" ::"m"(heap_data));
+#endif
   free(heap_data);
 }
 
+#endif  // !_WIN32
+
+#ifndef _WIN32
 void InitRT() {
   if (absl::GetFlag(FLAGS_skip_locking_memory)) {
     ABSL_LOG(WARNING) << "Ignoring request to lock all memory due to "
@@ -150,7 +159,9 @@ void InitRT() {
       "warning.");
 #endif
 }
+#endif  // !_WIN32
 
+#ifndef _WIN32
 void WriteCoreDumps() {
   // Do create core files of unlimited size.
   SetSoftRLimit(RLIMIT_CORE, RLIM_INFINITY, SetLimitForRoot::kYes, "");
@@ -160,6 +171,7 @@ void ExpandStackSize() {
   SetSoftRLimit(RLIMIT_STACK, 1000000, SetLimitForRoot::kYes, "",
                 AllowSoftLimitDecrease::kNo);
 }
+#endif  // !_WIN32
 
 // Bool to track if malloc hooks have failed to be configured.
 // Exposed to platform specific files so they can set it to false on failure.
@@ -210,7 +222,7 @@ void DeleteHook(const void *ptr) {
   }
 }
 
-void FatalUnsetRealtimePriority() {
+extern "C" void aos_FatalUnsetRealtimePriority() {
   int saved_errno = errno;
   // Drop our priority first.  We are about to do lots of work to undo
   // everything, don't get overly clever.
@@ -236,8 +248,10 @@ void FatalUnsetRealtimePriority() {
     closedir(dirp);
   }
 #elif defined(__APPLE__)
+#elif defined(_WIN32)
+  // No equivalent on Windows.
 #else
-#error "Only linux and apple (Mac OS X) are supported"
+#error "Only linux, apple, and windows are supported"
 #endif
   errno = saved_errno;
 }

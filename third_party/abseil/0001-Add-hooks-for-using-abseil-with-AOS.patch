@@ -228,25 +228,34 @@ diff --git a/absl/log/internal/check_op.cc b/absl/log/internal/check_op.cc
 index 23db63bf..63bbd85a 100644
 --- a/absl/log/internal/check_op.cc
 +++ b/absl/log/internal/check_op.cc
-@@ -31,6 +31,17 @@
+@@ -31,6 +31,28 @@
  #include <strings.h>  // for strcasecmp, but msvc does not have this header
  #endif
  
-+namespace aos {
-+__attribute__((weak)) void FatalUnsetRealtimePriority() {}
-+}
++#ifdef _WIN32
++// MSVC does not support __attribute__((weak)).  Use /alternatename to
++// provide a default implementation that the linker will use when no
++// strong definition is supplied.  The default is defined in log_message.cc.
++extern "C" void aos_FatalUnsetRealtimePriority();
++#else
++extern "C" __attribute__((weak)) void aos_FatalUnsetRealtimePriority() {}
++#endif
 +
 +static void MaybeUnsetRealtime() {
-+  if (&aos::FatalUnsetRealtimePriority != nullptr) {
-+    aos::FatalUnsetRealtimePriority();
++#ifndef _WIN32
++  if (&aos_FatalUnsetRealtimePriority != nullptr) {
++    aos_FatalUnsetRealtimePriority();
 +  }
++#else
++  aos_FatalUnsetRealtimePriority();
++#endif
 +}
 +
 +
  namespace absl {
  ABSL_NAMESPACE_BEGIN
  namespace log_internal {
-@@ -55,6 +66,7 @@ ABSL_LOG_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(const void*);
+@@ -55,6 +80,7 @@ ABSL_LOG_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(const void*);
  
  CheckOpMessageBuilder::CheckOpMessageBuilder(
      const char* absl_nonnull exprtext) {
@@ -258,24 +267,32 @@ diff --git a/absl/log/internal/log_message.cc b/absl/log/internal/log_message.cc
 index 3aed3a2f..5bb65e38 100644
 --- a/absl/log/internal/log_message.cc
 +++ b/absl/log/internal/log_message.cc
-@@ -66,6 +66,16 @@ extern "C" ABSL_ATTRIBUTE_WEAK void ABSL_INTERNAL_C_SYMBOL(
+@@ -66,6 +66,24 @@ extern "C" ABSL_ATTRIBUTE_WEAK void ABSL_INTERNAL_C_SYMBOL(
    // Default - Do nothing
  }
  
-+namespace aos {
-+__attribute__((weak)) void FatalUnsetRealtimePriority() {}
-+}
++#ifdef _WIN32
++extern "C" void aos_FatalUnsetRealtimePriority_default() {}
++extern "C" void aos_FatalUnsetRealtimePriority();
++#pragma comment(linker, "/alternatename:aos_FatalUnsetRealtimePriority=aos_FatalUnsetRealtimePriority_default")
++#else
++extern "C" __attribute__((weak)) void aos_FatalUnsetRealtimePriority() {}
++#endif
 +
 +static void MaybeUnsetRealtime() {
-+  if (&aos::FatalUnsetRealtimePriority != nullptr) {
-+    aos::FatalUnsetRealtimePriority();
++#ifndef _WIN32
++  if (&aos_FatalUnsetRealtimePriority != nullptr) {
++    aos_FatalUnsetRealtimePriority();
 +  }
++#else
++  aos_FatalUnsetRealtimePriority();
++#endif
 +}
 +
  namespace absl {
  ABSL_NAMESPACE_BEGIN
  namespace log_internal {
-@@ -267,7 +277,7 @@ void LogMessage::LogMessageData::FinalizeEncodingAndFormat() {
+@@ -267,7 +288,7 @@ void LogMessage::LogMessageData::FinalizeEncodingAndFormat() {
    }
    auto chars_written =
        static_cast<size_t>(string_remaining.data() - string_buf.data());
@@ -284,7 +301,7 @@ index 3aed3a2f..5bb65e38 100644
    string_buf[chars_written++] = '\0';
    entry.text_message_with_prefix_and_newline_and_nul_ =
        absl::MakeSpan(string_buf).subspan(0, chars_written);
-@@ -275,8 +285,14 @@ void LogMessage::LogMessageData::FinalizeEncodingAndFormat() {
+@@ -275,8 +296,14 @@ void LogMessage::LogMessageData::FinalizeEncodingAndFormat() {
  
  LogMessage::LogMessage(const char* absl_nonnull file, int line,
                         absl::LogSeverity severity)

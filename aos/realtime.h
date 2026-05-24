@@ -1,14 +1,18 @@
 #ifndef AOS_REALTIME_H_
 #define AOS_REALTIME_H_
 
+#ifndef _WIN32
 #include <sched.h>
+#else
+#define SCHED_FIFO 1
+#endif
 
 #include <cstring>
 #include <ostream>
 #include <span>
 #include <string_view>
 
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(_WIN32)
 #include <bitset>
 #endif
 
@@ -23,10 +27,10 @@ class CpuSet {
  public:
 #ifdef __linux__
   static constexpr size_t kSize = CPU_SETSIZE;
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(_WIN32)
   static constexpr size_t kSize = 1024;
 #else
-#error "Only linux and apple (Mac OS X) are supported"
+#error "Only linux, apple (Mac OS X), and Windows are supported"
 #endif
 
   CpuSet();
@@ -64,16 +68,17 @@ class CpuSet {
  private:
 #ifdef __linux__
   cpu_set_t set_;
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(_WIN32)
   std::bitset<kSize> set_;
 #else
-#error "Only linux and apple (Mac OS X) are supported"
+#error "Only linux, apple (Mac OS X), and Windows are supported"
 #endif
 };
 
 // Locks everything into memory and sets the limits.  This plus InitNRT are
 // everything you need to do before SetCurrentThreadRealtimePriority will make
 // your thread RT.  Called as part of ShmEventLoop::Run()
+#ifndef _WIN32
 void InitRT();
 
 // Sets up this process to write core dump files.
@@ -84,6 +89,7 @@ void WriteCoreDumps();
 void LockAllMemory();
 
 void ExpandStackSize();
+#endif
 
 // Sets the name of the current thread.
 // This will displayed by `top -H`, dump_rtprio, and show up in logs.
@@ -118,6 +124,16 @@ CpuSet GetCurrentThreadAffinity();
 // Sets the current thread's scheduling affinity.
 void SetCurrentThreadAffinity(const CpuSet &cpuset);
 
+// Returns the ID of the current process.
+int32_t GetProcessId();
+
+// Returns the name of the current process/program.
+std::string GetProgramName();
+
+// Returns the name of the current thread. If the OS does not support
+// thread names (e.g., Windows by default), returns an empty string.
+std::string GetThreadName();
+
 // Everything below here needs AOS to be initialized before it will work
 // properly.
 
@@ -147,7 +163,7 @@ int GetCurrentThreadRealtimePriority();
 int GetCurrentThreadSchedulingPolicy();
 
 // Unsets all threads realtime priority in preparation for exploding.
-void FatalUnsetRealtimePriority();
+extern "C" void aos_FatalUnsetRealtimePriority();
 
 // Sets the current thread back down to non-realtime priority.
 void UnsetCurrentThreadRealtimePriority();
