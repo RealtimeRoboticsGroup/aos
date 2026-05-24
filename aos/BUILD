@@ -274,7 +274,14 @@ cc_library(
         "realtime_internal.h",
     ] + select({
         "@platforms//os:linux": ["realtime_linux.cc"],
-        "@platforms//os:osx": ["realtime_darwin.cc"],
+        "@platforms//os:osx": [
+            "realtime_darwin.cc",
+            "realtime_fake_cpuset.cc",
+        ],
+        "@platforms//os:windows": [
+            "realtime_fake_cpuset.cc",
+            "realtime_windows.cc",
+        ],
     }),
     hdrs = [
         "realtime.h",
@@ -342,6 +349,7 @@ cc_library(
     copts = compiler_select({
         "clang": [],
         "gcc": ["-Wno-missing-field-initializers"],
+        "msvc": [],
     }),
     visibility = ["//visibility:public"],
     deps = [

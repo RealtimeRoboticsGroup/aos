@@ -35,38 +35,7 @@ thread_local int fake_rt_priority;
 thread_local int fake_rt_policy;
 }  // namespace
 
-CpuSet::CpuSet() {}
-
-void CpuSet::Set(int cpu) {
-  if (cpu >= 0 && cpu < static_cast<int>(set_.size())) {
-    set_.set(cpu);
-  }
-}
-
-void CpuSet::Clear(int cpu) {
-  if (cpu >= 0 && cpu < static_cast<int>(set_.size())) {
-    set_.reset(cpu);
-  }
-}
-
-void CpuSet::Clear() { set_.reset(); }
-
-bool CpuSet::IsSet(int cpu) const {
-  if (cpu >= 0 && cpu < static_cast<int>(set_.size())) {
-    return set_.test(cpu);
-  }
-  return false;
-}
-
-bool CpuSet::Empty() const { return set_.none(); }
-
-bool CpuSet::operator==(const CpuSet &other) const {
-  return set_ == other.set_;
-}
-
-bool CpuSet::operator!=(const CpuSet &other) const {
-  return set_ != other.set_;
-}
+// CpuSet methods are in realtime_fake_cpuset.cc (shared with Windows).
 
 namespace {
 // thread local variables allocate memory the first time around.  That means, if

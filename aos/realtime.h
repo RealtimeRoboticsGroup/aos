@@ -4,7 +4,9 @@
 #ifndef _WIN32
 #include <sched.h>
 #else
+#define SCHED_OTHER 0
 #define SCHED_FIFO 1
+#define SCHED_RR 2
 #endif
 
 #include <cstring>

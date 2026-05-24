@@ -43,6 +43,7 @@ cc_library(
     ] + select({
         "@platforms//os:linux": ["epoll_linux.cc"],
         "@platforms//os:macos": ["epoll_darwin.cc"],
+        "@platforms//os:windows": ["epoll_windows.cc"],
     }),
     hdrs = ["epoll.h"],
     visibility = ["//visibility:public"],
