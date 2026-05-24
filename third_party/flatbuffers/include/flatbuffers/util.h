@@ -163,9 +163,9 @@ template<typename T> std::string FloatToString(T t, int precision) {
     (void)precision;
     std::array<char, 25> buffer;
     // Should never fail; a 20 character buffer should be more than adequate
-    char *end = std::to_chars(buffer.begin(), buffer.end(), t).ptr;
-    FLATBUFFERS_ASSERT(buffer.end() != end);
-    std::string s(buffer.begin(), end);
+    char *end = std::to_chars(buffer.data(), buffer.data() + buffer.size(), t).ptr;
+    FLATBUFFERS_ASSERT(buffer.data() + buffer.size() != end);
+    std::string s(buffer.data(), end);
   #else // FLATBUFFERS_PREFER_PRINTF
     auto v = static_cast<double>(t);
     auto s = NumToStringImplWrapper(v, "%0.*f", precision);
