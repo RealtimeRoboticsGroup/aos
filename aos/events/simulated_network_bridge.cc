@@ -435,7 +435,7 @@ class RawMessageDelayer {
       remote_timestamps_.emplace_back(
           FlatbufferDetachedBuffer<RemoteMessage>(fbb.Release()),
           fetch_node_factory_->monotonic_now() +
-              send_node_factory_->network_delay());
+              send_node_factory_->network_delay_for_channel(channel_index_));
       ScheduleTimestamp();
     }
 
@@ -491,7 +491,8 @@ class RawMessageDelayer {
 
     const logger::BootTimestamp t =
         CheckExpected(send_node_factory_->FromDistributedClock(
-            distributed_sent_time + send_node_factory_->network_delay()));
+            distributed_sent_time +
+            send_node_factory_->network_delay_for_channel(channel_index_)));
     return t;
   }
 

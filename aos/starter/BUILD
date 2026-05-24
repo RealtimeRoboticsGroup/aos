@@ -85,7 +85,10 @@ cc_test(
     data = [
         "//aos/testing/ping_pong:pingpong_config",
     ],
+    # This test depends on forking and then waiting on the forked process to complete, and
+    # has a timeout on waiting for that completion, which can make the test flaky.
     flaky = True,
+    shard_count = 19,
     # The roborio compiler doesn't support <filesystem>.
     target_compatible_with = ["@platforms//os:linux"],
     deps = [

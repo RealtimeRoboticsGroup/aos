@@ -14,6 +14,7 @@
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 
+#include "aos/configuration.h"
 #include "aos/events/event_loop.h"
 #include "aos/events/event_scheduler.h"
 #include "aos/events/simple_channel.h"
@@ -142,6 +143,51 @@ class SimulatedEventLoopFactory {
   }
   std::chrono::nanoseconds network_delay() const { return network_delay_; }
 
+  // Sets per-channel network delay. If set, overrides global network_delay for
+  // that channel.
+  void set_channel_network_delay_override(int channel_index,
+                                          std::chrono::nanoseconds delay) {
+    per_channel_network_delays_[channel_index] = delay;
+  }
+
+  // Convenience overload that resolves the channel index from the provided
+  // `Channel` pointer before applying the override.
+  void set_channel_network_delay_override(const Channel *channel,
+                                          std::chrono::nanoseconds delay) {
+    set_channel_network_delay_override(
+        configuration::ChannelIndex(configuration_, channel), delay);
+  }
+
+  // Removes the per-channel override identified by the channel index.
+  void reset_channel_network_delay_override(int channel_index) {
+    per_channel_network_delays_.erase(channel_index);
+  }
+
+  // Convenience overload that removes the override for the provided
+  // `Channel` pointer.
+  void reset_channel_network_delay_override(const Channel *channel) {
+    reset_channel_network_delay_override(
+        configuration::ChannelIndex(configuration_, channel));
+  }
+
+  // Returns network delay for a specific channel (per-channel if set, else
+  // global)
+  std::chrono::nanoseconds network_delay_for_channel(int channel_index) const {
+    auto it = per_channel_network_delays_.find(channel_index);
+    if (it != per_channel_network_delays_.end()) {
+      return it->second;
+    }
+    return network_delay_;
+  }
+
+  // Convenience overload that computes the index from the provided
+  // `Channel` pointer before returning the effective delay.
+  std::chrono::nanoseconds network_delay_for_channel(
+      const Channel *channel) const {
+    return network_delay_for_channel(
+        configuration::ChannelIndex(configuration_, channel));
+  }
+
   // Returns the clock used to synchronize the nodes.
   distributed_clock::time_point distributed_now() const {
     return scheduler_scheduler_.distributed_now();
@@ -198,6 +244,7 @@ class SimulatedEventLoopFactory {
 
   std::chrono::nanoseconds send_delay_ = std::chrono::microseconds(50);
   std::chrono::nanoseconds network_delay_ = std::chrono::microseconds(100);
+  std::map<int, std::chrono::nanoseconds> per_channel_network_delays_;
 
   std::unique_ptr<message_bridge::SimulatedMessageBridge> bridge_;
 
@@ -300,6 +347,16 @@ class NodeEventLoopFactory {
   // Returns the simulated network delay for messages forwarded between nodes.
   std::chrono::nanoseconds network_delay() const {
     return factory_->network_delay();
+  }
+  // Returns the simulated network delay for a specific channel.
+  std::chrono::nanoseconds network_delay_for_channel(int channel_index) const {
+    return factory_->network_delay_for_channel(channel_index);
+  }
+  // Convenience overload that forwards to the factory using the provided
+  // `Channel` pointer.
+  std::chrono::nanoseconds network_delay_for_channel(
+      const Channel *channel) const {
+    return factory_->network_delay_for_channel(channel);
   }
   // Returns the simulated send delay for all messages sent within a single
   // node.
