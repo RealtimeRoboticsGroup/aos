@@ -25,4 +25,15 @@
 #define GOOD_PRINTF_FORMAT_TYPE gnu_printf
 #endif
 
+#if defined(__GNUC__) || defined(__clang__)
+#define AOS_PRINTF_FORMAT(string_index, first_to_check) \
+  __attribute__((format(GOOD_PRINTF_FORMAT_TYPE, string_index, first_to_check)))
+#else
+#define AOS_PRINTF_FORMAT(string_index, first_to_check)
+#endif
+
+#ifdef _WIN32
+typedef int pid_t;
+#endif
+
 #endif  // _AOS_MACROS_H_

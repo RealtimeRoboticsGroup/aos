@@ -129,8 +129,13 @@ TEST_F(LoggingTest, Basic) {
 }
 
 TEST_F(LoggingDeathTest, Fatal) {
+#ifndef _WIN32
   ASSERT_EXIT(AOS_LOG(FATAL, "this should crash it\n"),
               ::testing::KilledBySignal(SIGABRT), "this should crash it");
+#else
+  ASSERT_EXIT(AOS_LOG(FATAL, "this should crash it\n"),
+              ::testing::ExitedWithCode(3), "this should crash it");
+#endif
 }
 
 TEST_F(LoggingDeathTest, PCHECK) {

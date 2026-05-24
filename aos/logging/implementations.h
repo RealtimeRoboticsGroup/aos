@@ -74,8 +74,8 @@ class HandleMessageLogImplementation : public LogImplementation {
   }
 
  private:
-  __attribute__((format(GOOD_PRINTF_FORMAT_TYPE, 3, 0))) void DoLog(
-      log_level level, const char *format, va_list ap) override;
+  AOS_PRINTF_FORMAT(3, 0)
+  void DoLog(log_level level, const char *format, va_list ap) override;
 
   virtual void HandleMessage(const LogMessage &message) = 0;
 };
@@ -143,12 +143,13 @@ namespace internal {
 void FillInMessage(log_level level, std::string_view name,
                    ::aos::monotonic_clock::time_point monotonic_now,
                    const char *format, va_list ap, LogMessage *message)
-    __attribute__((format(GOOD_PRINTF_FORMAT_TYPE, 4, 0)));
+    AOS_PRINTF_FORMAT(4, 0);
 
-__attribute__((format(GOOD_PRINTF_FORMAT_TYPE, 5, 6))) static inline void
-FillInMessageVarargs(log_level level, std::string_view name,
-                     ::aos::monotonic_clock::time_point monotonic_now,
-                     LogMessage *message, const char *format, ...) {
+AOS_PRINTF_FORMAT(5, 6)
+static inline void FillInMessageVarargs(
+    log_level level, std::string_view name,
+    ::aos::monotonic_clock::time_point monotonic_now, LogMessage *message,
+    const char *format, ...) {
   va_list ap;
   va_start(ap, format);
   FillInMessage(level, name, monotonic_now, format, ap, message);
