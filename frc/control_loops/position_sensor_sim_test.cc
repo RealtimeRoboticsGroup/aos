@@ -8,7 +8,6 @@
 #include "flatbuffers/flatbuffers.h"
 #include "gtest/gtest.h"
 
-#include "aos/die.h"
 #include "frc/control_loops/control_loops_generated.h"
 
 namespace frc::control_loops {

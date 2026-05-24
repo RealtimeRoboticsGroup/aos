@@ -5,6 +5,8 @@
 #include <compare>
 #include <random>
 
+#include "absl/base/internal/raw_logging.h"
+
 #include "aos/logging/logging.h"
 #include "aos/realtime.h"
 #include "aos/time/time.h"
@@ -39,9 +41,9 @@ void TimerThread(const monotonic_clock::time_point end_time,
     }
   }
   UnsetCurrentThreadRealtimePriority();
-  AOS_LOG(INFO, "Max wakeup latency: %d.%d microseconds\n",
-          static_cast<int>(max_wakeup_latency.count() / 1000),
-          static_cast<int>(max_wakeup_latency.count() % 1000));
+  ABSL_RAW_LOG(INFO, "Max wakeup latency: %d.%d microseconds\n",
+               static_cast<int>(max_wakeup_latency.count() / 1000),
+               static_cast<int>(max_wakeup_latency.count() % 1000));
 }
 
 }  // namespace aos

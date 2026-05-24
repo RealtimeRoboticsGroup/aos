@@ -7,7 +7,6 @@
 
 #include "gtest/gtest.h"
 
-#include "aos/die.h"
 #include "aos/logging/implementations.h"
 #include "aos/testing/test_logging.h"
 #include "aos/testing/test_shm.h"
@@ -23,10 +22,7 @@ class MutexTest : public ::testing::Test {
   Mutex test_mutex_;
 
  protected:
-  void SetUp() override {
-    ::aos::testing::EnableTestLogging();
-    SetDieTestMode(true);
-  }
+  void SetUp() override { aos::testing::EnableTestLogging(); }
 };
 
 typedef MutexTest MutexDeathTest;

@@ -10,11 +10,10 @@
 #include <thread>
 #include <vector>
 
+#include "absl/log/absl_check.h"
 #include "gtest/gtest.h"
 
-#include "aos/die.h"
 #include "aos/ipc_lib/aos_sync.h"
-#include "aos/logging/logging.h"
 #include "aos/macros.h"
 #include "aos/mutex/mutex.h"
 #include "aos/testing/prevent_exit.h"
@@ -286,9 +285,6 @@ class ConditionTest : public ConditionTestCommon {
   SharedMemoryBlock mem_;
   Shared *const shared_;
 
- protected:
-  void SetUp() override { SetDieTestMode(true); }
-
  private:
   DISALLOW_COPY_AND_ASSIGN(ConditionTest);
 };
@@ -321,7 +317,7 @@ class ConditionTestProcess {
         shared_(static_cast<Shared *>(mem_.get())) {
     new (shared_) Shared();
   }
-  ~ConditionTestProcess() { AOS_CHECK_EQ(child_, -1); }
+  ~ConditionTestProcess() { ABSL_CHECK_EQ(child_, -1); }
 
   void Start() {
     ASSERT_FALSE(shared_->started);
@@ -332,7 +328,7 @@ class ConditionTestProcess {
       Run();
       exit(EXIT_SUCCESS);
     } else {  // in parent
-      AOS_CHECK_NE(child_, -1);
+      ABSL_CHECK_NE(child_, -1);
 
       ASSERT_EQ(0, futex_wait(&shared_->ready));
 
@@ -357,7 +353,7 @@ class ConditionTestProcess {
         return ::testing::AssertionSuccess() << "already been too long";
       }
     } else {
-      AOS_CHECK_EQ(0, futex_wait(&shared_->done_delaying));
+      ABSL_CHECK_EQ(0, futex_wait(&shared_->done_delaying));
     }
     ::std::this_thread::sleep_for(chrono::milliseconds(10));
     if (!shared_->finished) {
@@ -418,16 +414,16 @@ class ConditionTestProcess {
   }
 
   void Join() {
-    AOS_CHECK_NE(child_, -1);
+    ABSL_CHECK_NE(child_, -1);
     int status;
     do {
-      AOS_CHECK_EQ(waitpid(child_, &status, 0), child_);
+      ABSL_CHECK_EQ(waitpid(child_, &status, 0), child_);
     } while (!(WIFEXITED(status) || WIFSIGNALED(status)));
     child_ = -1;
   }
   void Kill() {
-    AOS_CHECK_NE(child_, -1);
-    AOS_PCHECK(kill(child_, SIGTERM));
+    ABSL_CHECK_NE(child_, -1);
+    ABSL_PCHECK(kill(child_, SIGTERM) != -1);
     Join();
   }
 
