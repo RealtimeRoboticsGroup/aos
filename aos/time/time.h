@@ -10,6 +10,12 @@
 #include <string_view>
 #include <thread>  // IWYU pragma: keep
 
+#include "aos/macros.h"
+
+#if defined(_WIN32) && !defined(_WINSOCKAPI_)
+#include <winsock2.h>
+#endif
+
 namespace aos {
 
 class monotonic_clock {
@@ -26,7 +32,7 @@ class monotonic_clock {
 
   // Converts the time string to a time_point if it is well formatted.  This is
   // designed to reverse operator <<.
-#if defined(__linux__) || defined(__APPLE__)
+#if !AOS_OS_NONE
   static std::optional<monotonic_clock::time_point> FromString(
       const std::string_view now);
 #endif
@@ -51,14 +57,14 @@ class realtime_clock {
   typedef ::std::chrono::nanoseconds duration;
   typedef ::std::chrono::time_point<realtime_clock> time_point;
 
-#if defined(__linux__) || defined(__APPLE__)
+#if !AOS_OS_NONE
   static realtime_clock::time_point now() noexcept;
-#endif  // __linux__
+#endif
   static constexpr bool is_steady = false;
 
   // Converts the time string to a time_point if it is well formatted.  This is
   // designed to reverse operator <<.
-#if defined(__linux__) || defined(__APPLE__)
+#if !AOS_OS_NONE
   static std::optional<realtime_clock::time_point> FromString(
       const std::string_view now);
 #endif
@@ -85,7 +91,6 @@ std::string ToString(const aos::monotonic_clock::time_point &now);
 std::string ToString(const aos::realtime_clock::time_point &now);
 
 namespace time {
-#if defined(__linux__) || defined(__APPLE__)
 
 // Construct a time representing the period of hertz.
 constexpr ::std::chrono::nanoseconds FromRate(int hertz) {
@@ -104,8 +109,6 @@ constexpr double DurationInSeconds(monotonic_clock::duration dt) {
   return TypedDurationInSeconds<double>(dt);
 }
 
-#endif  // __linux__
-
 // Converts a monotonic_clock::duration into a timespec object.
 struct timespec to_timespec(::aos::monotonic_clock::duration duration);
 
@@ -119,10 +122,10 @@ struct timespec to_timespec(::aos::monotonic_clock::time_point time);
 }  // namespace time
 }  // namespace aos
 
-#if defined(__linux__) || defined(__APPLE__)
+#if !AOS_OS_NONE
 
 namespace aos::this_thread {
-void sleep_until(const ::aos::monotonic_clock::time_point &end_time);
+void sleep_until(::aos::monotonic_clock::time_point end_time);
 }  // namespace aos::this_thread
 
 // Template specialization for monotonic_clock, since we can use clock_nanosleep
@@ -130,9 +133,9 @@ void sleep_until(const ::aos::monotonic_clock::time_point &end_time);
 template <>
 inline void std::this_thread::sleep_until(
     const ::aos::monotonic_clock::time_point &end_time) {
-  ::aos::this_thread::sleep_until(end_time);
+  ::aos::this_thread::sleep_until(std::move(end_time));
 }
 
-#endif  // __linux__
+#endif  // !AOS_OS_NONE
 
 #endif  // AOS_TIME_H_
