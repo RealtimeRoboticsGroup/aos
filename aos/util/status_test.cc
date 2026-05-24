@@ -241,4 +241,13 @@ TEST_F(ErrorTest, ResultHasValue) {
   EXPECT_TRUE(HasError(result));
 }
 
+// Validates that ErrFormat correctly formats error messages.
+TEST_F(ErrorTest, ErrFormat) {
+  const Result<> result = []() -> Result<> {
+    return ErrFormat("Error code: %d, message: %s", 42, "The answer")
+        .MakeError();
+  }();
+  EXPECT_EQ(result.error().message(), "Error code: 42, message: The answer");
+  EXPECT_TRUE(result.error().source_location().has_value());
+}
 }  // namespace aos::testing

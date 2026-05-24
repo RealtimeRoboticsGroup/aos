@@ -173,6 +173,27 @@ inline Error MakeError(
   return MakeError(ErrorType(message, std::move(source_location)));
 }
 
+// Helper struct to make constructing errors with formatted messages easier.
+// It tries to solve a problem of having variadic arguments with an argument
+// that has default value of source_location type. The proposed usage pattern
+// is: aos::ErrFormat("error code %d", err_code).MakeError()
+struct ErrorMaker {
+  std::string error_message;
+
+  // Constructs the Error with the stored error message.
+  [[nodiscard]] Error MakeError(std::source_location source_location =
+                                    std::source_location::current()) const {
+    return tl::unexpected<ErrorType>(ErrorType(error_message, source_location));
+  }
+};
+
+// Convenience method to construct an Error with a formatted error message.
+template <typename... Args>
+[[nodiscard]] ErrorMaker ErrFormat(const absl::FormatSpec<Args...> &format,
+                                   const Args &...args) {
+  return ErrorMaker{.error_message = absl::StrFormat(format, args...)};
+}
+
 // Convenience method to explicitly construct an "okay" Status.
 inline Status Ok() { return Result<>{}; }
 
