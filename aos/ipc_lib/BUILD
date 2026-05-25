@@ -47,7 +47,6 @@ cc_test(
     ],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
-        "//aos:die",
         "//aos/libc:aos_strsignal",
         "//aos/libc:dirname",
         "//aos/logging",

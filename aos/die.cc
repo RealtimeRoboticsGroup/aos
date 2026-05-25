@@ -25,12 +25,6 @@ namespace {
 
 // Calculates the filename to dump the message into.
 const std::string GetFilename() {
-#ifdef __VXWORKS__
-  const char *name = taskName(0);  // get the name of this task
-  if (name == NULL) name = "<unknown>";
-  const std::string first_part = "/aos_fatal_error.";
-  return first_part + std::string(name);
-#else
   char *filename;
   if (asprintf(&filename, "/tmp/aos_fatal_error.%jd",
                static_cast<intmax_t>(getpid())) > 0) {
@@ -44,10 +38,9 @@ const std::string GetFilename() {
             &filename, static_cast<intmax_t>(getpid()), errno);
     return std::string();
   }
-#endif
 }
 
-::std::atomic_bool test_mode(false);
+std::atomic_bool test_mode(false);
 
 }  // namespace
 

@@ -9,10 +9,8 @@
 #include <cstring>
 #include <string>
 
-#include "aos/die.h"
 #include "aos/libc/aos_strsignal.h"
 #include "aos/libc/dirname.h"
-#include "aos/logging/logging.h"
 #include "aos/mutex/mutex.h"
 #include "aos/testing/test_shm.h"
 #include "aos/time/time.h"

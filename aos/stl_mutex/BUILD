@@ -25,7 +25,6 @@ cc_test(
     ],
     deps = [
         ":stl_mutex",
-        "//aos:die",
         "//aos/testing:googletest",
     ],
 )

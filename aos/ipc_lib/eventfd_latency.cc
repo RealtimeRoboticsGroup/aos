@@ -115,14 +115,14 @@ void ReceiverThread(int fd) {
     if (wakeup_latency >
         chrono::microseconds(absl::GetFlag(FLAGS_latency_threshold))) {
       t.Stop();
-      AOS_LOG(INFO, "Stopped tracing, latency %" PRId64 "\n",
-              static_cast<int64_t>(wakeup_latency.count()));
+      ABSL_RAW_LOG(INFO, "Stopped tracing, latency %" PRId64 "\n",
+                   static_cast<int64_t>(wakeup_latency.count()));
     }
 
     if (absl::GetFlag(FLAGS_log_latency)) {
-      AOS_LOG(INFO, "dt: %8d.%03d\n",
-              static_cast<int>(wakeup_latency.count() / 1000),
-              static_cast<int>(wakeup_latency.count() % 1000));
+      ABSL_RAW_LOG(INFO, "dt: %8d.%03d\n",
+                   static_cast<int>(wakeup_latency.count() / 1000),
+                   static_cast<int>(wakeup_latency.count() % 1000));
     }
   });
 
@@ -134,17 +134,18 @@ void ReceiverThread(int fd) {
 
   const chrono::nanoseconds average_latency = sum_latency / latency_count;
 
-  AOS_LOG(INFO,
-          "Max eventfd wakeup latency: %d.%03d microseconds, average: %d.%03d "
-          "microseconds\n",
-          static_cast<int>(max_wakeup_latency.count() / 1000),
-          static_cast<int>(max_wakeup_latency.count() % 1000),
-          static_cast<int>(average_latency.count() / 1000),
-          static_cast<int>(average_latency.count() % 1000));
+  ABSL_RAW_LOG(
+      INFO,
+      "Max eventfd wakeup latency: %d.%03d microseconds, average: %d.%03d "
+      "microseconds\n",
+      static_cast<int>(max_wakeup_latency.count() / 1000),
+      static_cast<int>(max_wakeup_latency.count() % 1000),
+      static_cast<int>(average_latency.count() / 1000),
+      static_cast<int>(average_latency.count() % 1000));
 }
 
 int Main(int /*argc*/, char ** /*argv*/) {
-  AOS_LOG(INFO, "Main!\n");
+  ABSL_RAW_LOG(INFO, "Main!\n");
   ::std::thread t([]() {
     TimerThread(
         monotonic_clock::now() + chrono::seconds(absl::GetFlag(FLAGS_seconds)),

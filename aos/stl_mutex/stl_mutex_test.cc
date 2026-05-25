@@ -4,14 +4,9 @@
 
 #include "gtest/gtest.h"
 
-#include "aos/die.h"
-
 namespace aos::testing {
 
-class StlMutexDeathTest : public ::testing::Test {
- protected:
-  void SetUp() override { SetDieTestMode(true); }
-};
+class StlMutexDeathTest : public ::testing::Test {};
 
 typedef StlMutexDeathTest StlRecursiveMutexDeathTest;
 
