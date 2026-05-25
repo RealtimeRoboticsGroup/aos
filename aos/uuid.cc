@@ -5,11 +5,21 @@
 #include <sys/types.h>
 
 #include <array>
+#include <cstring>
 #include <random>
 #include <string_view>
 
+#if defined(__linux__) || defined(__APPLE__)
+#include <unistd.h>
+#endif
+
+#if defined(__APPLE__)
+#include <sys/sysctl.h>
+#endif
+
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 
 ABSL_FLAG(std::string, boot_uuid, "",
           "If set, override the boot UUID to have this value instead.");
@@ -66,6 +76,23 @@ void FromHex(const char *val, uint8_t *result, size_t count) {
   }
 }
 
+#if defined(__APPLE__)
+bool TryReadDarwinBootUUID(UUID *uuid) {
+  std::array<char, UUID::kStringSize + 1> buffer{};
+  size_t buffer_size = buffer.size();
+  if (sysctlbyname("kern.bootsessionuuid", buffer.data(), &buffer_size, nullptr,
+                   0) != 0) {
+    return false;
+  }
+  if (buffer_size < UUID::kStringSize) {
+    return false;
+  }
+
+  *uuid = UUID::FromString(std::string_view(buffer.data(), UUID::kStringSize));
+  return true;
+}
+#endif  // defined(__APPLE__)
+
 }  // namespace
 
 namespace internal {
@@ -84,7 +111,7 @@ std::mt19937 FullySeededRandomGenerator() {
       ((kInternalEntropy - 1) / sizeof(std::random_device::result_type)) + 1;
 
   std::array<std::random_device::result_type, kSeedsRequired> random_data;
-#if defined __linux__
+#if defined(__linux__) || defined(__APPLE__)
   // /dev/random is *much* faster than std::random_device on modern Linux.
   //
   // My AMD Ryzen 7 PRO 7840U w/ Radeon 780M Graphics takes ~3 hours with
@@ -219,6 +246,7 @@ UUID UUID::BootUUID() {
     return UUID::FromString(flag);
   }
 
+#if defined(__linux__)
   int fd = open("/proc/sys/kernel/random/boot_id", O_RDONLY);
   ABSL_PCHECK(fd != -1);
 
@@ -228,6 +256,17 @@ UUID UUID::BootUUID() {
   close(fd);
 
   return UUID::FromString(std::string_view(data.data(), data.size()));
+#elif defined(__APPLE__)
+  UUID darwin_uuid;
+  if (TryReadDarwinBootUUID(&darwin_uuid)) {
+    return darwin_uuid;
+  }
+  ABSL_LOG(FATAL)
+      << "TODO: Support macOS sandboxed boot UUID fallback implementation.";
+  return UUID::Zero();
+#else
+  ABSL_LOG(FATAL) << "TODO: Support windows boot UUID fallback implementation.";
+#endif
 }
 
 }  // namespace aos
