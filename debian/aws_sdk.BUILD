@@ -76,6 +76,7 @@ cc_library(
         "-DENABLE_OPENSSL_ENCRYPTION",
         "-DENABLE_CURL_CLIENT",
         "-Wno-format-nonliteral",
+        "-Wno-thread-safety-analysis",
     ],
     includes = ["src/aws-cpp-sdk-core/include"],
     target_compatible_with = ["@platforms//os:linux"],
