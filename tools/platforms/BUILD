@@ -1,5 +1,10 @@
 package(default_visibility = ["//visibility:public"])
 
+_DEFAULT_WARNING_FLAGS = [
+    "--per_file_copt=-third_party/.*,-external/.*@-Werror,-Wextra,-Wpointer-arith,-Wstrict-aliasing,-Wwrite-strings,-Wtype-limits,-Wsign-compare,-Wformat=2",
+    "--per_file_copt=third_party/.*,external/.*@-Wno-sign-compare,-Wno-cast-align,-Wno-error,-Wno-unused-parameter,-Wno-cast-qual,-Wno-format-nonliteral,-Wno-tautological-type-limit-compare,-Wno-missing-field-initializers,-Wno-unused-function,-Wno-cast-function-type,-Wno-comment,-Wno-typedef-redefinition,-Wno-tautological-unsigned-enum-zero-compare,-Wno-extra,-Wno-type-limits,-Wno-attributes,-Wno-deprecated,-Wno-deprecated-declarations,-Wno-missing-template-arg-list-after-template-kw",
+]
+
 platform(
     name = "linux_x86",
     constraint_values = [
@@ -22,6 +27,7 @@ platform(
         "dockerAddCapabilities": "SYS_PTRACE",
         "dockerReuse": "True",
     },
+    flags = _DEFAULT_WARNING_FLAGS,
 )
 
 platform(
@@ -46,6 +52,7 @@ platform(
         "dockerAddCapabilities": "SYS_PTRACE",
         "dockerReuse": "True",
     },
+    flags = _DEFAULT_WARNING_FLAGS,
 )
 
 platform(
@@ -60,6 +67,7 @@ platform(
         "//tools/platforms/python:has_support",
         "//tools/platforms/gpu:nvidia",
     ],
+    flags = _DEFAULT_WARNING_FLAGS,
 )
 
 platform(
@@ -80,6 +88,7 @@ platform(
         "//tools/platforms/gpu:none",
         "@rules_bzlmodrio_toolchains//constraints/is_roborio:true",
     ],
+    flags = _DEFAULT_WARNING_FLAGS,
 )
 
 platform(
@@ -93,6 +102,7 @@ platform(
         "//tools/platforms/python:lacks_support",
         "//tools/platforms/gpu:none",
     ],
+    flags = _DEFAULT_WARNING_FLAGS,
 )
 
 platform(
@@ -106,6 +116,7 @@ platform(
         "//tools/platforms/python:lacks_support",
         "//tools/platforms/gpu:none",
     ],
+    flags = _DEFAULT_WARNING_FLAGS,
 )
 
 platform(
@@ -119,6 +130,7 @@ platform(
         "//tools/platforms/python:lacks_support",
         "//tools/platforms/gpu:none",
     ],
+    flags = _DEFAULT_WARNING_FLAGS,
 )
 
 # TODO(phil): Create something for "cortex-m4f-k22" builds.
@@ -134,7 +146,7 @@ platform(
         "//tools/platforms/python:has_support",
         "//tools/platforms/gpu:none",
     ],
-    flags = [
+    flags = _DEFAULT_WARNING_FLAGS + [
         # We need at least 14.4 for os_sync_wait_on_address (used by aos_sync.cc).
         "--macos_minimum_os=14.4",
     ],

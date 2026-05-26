@@ -156,13 +156,6 @@ build --action_env=CYPRESS_INSTALL_BINARY=0
 # Allow spaces in runfiles filenames.
 build --experimental_inprocess_symlink_creation
 
-# From our one and only phil.schrader: https://groups.google.com/g/bazel-discuss/c/5cbRuLuTwNg :)
-# Enable -Werror and warnings for our code
-# TODO: It would be nice to enable Wcast-align and Wcast-qual.
-build --per_file_copt=-third_party/.*,-external/.*@-Werror,-Wextra,-Wpointer-arith,-Wstrict-aliasing,-Wwrite-strings,-Wtype-limits,-Wsign-compare,-Wformat=2
-# NOTE: Explicitly disable -Werror because the `-external/.*` filter does not work
-build --per_file_copt=third_party/.*,external/.*@-Wno-sign-compare,-Wno-cast-align,-Wno-error,-Wno-unused-parameter,-Wno-cast-qual,-Wno-format-nonliteral,-Wno-tautological-type-limit-compare,-Wno-missing-field-initializers,-Wno-unused-function,-Wno-cast-function-type,-Wno-comment,-Wno-typedef-redefinition,-Wno-tautological-unsigned-enum-zero-compare,-Wno-extra,-Wno-type-limits,-Wno-attributes,-Wno-deprecated,-Wno-deprecated-declarations,-Wno-missing-template-arg-list-after-template-kw
-
 common --enable_bzlmod=true
 common:linux --registry=file://%workspace%/registry
 common:macos --registry=file://%workspace%/registry
