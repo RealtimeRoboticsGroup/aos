@@ -714,7 +714,7 @@ void Logger::Rotate() {
   }
 }
 
-void Logger::WriteData(NewDataWriter *writer, const FetcherStruct &f) {
+void Logger::WriteData(DataWriter *writer, const FetcherStruct &f) {
   if (writer != nullptr) {
     const UUID source_node_boot_uuid =
         static_cast<int>(node_index_) != f.data_node_index
@@ -747,7 +747,7 @@ void Logger::WriteData(NewDataWriter *writer, const FetcherStruct &f) {
   }
 }
 
-void Logger::WriteTimestamps(NewDataWriter *timestamp_writer,
+void Logger::WriteTimestamps(DataWriter *timestamp_writer,
                              const FetcherStruct &f) {
   if (timestamp_writer != nullptr) {
     // And now handle timestamps.
@@ -775,8 +775,7 @@ void Logger::WriteTimestamps(NewDataWriter *timestamp_writer,
   }
 }
 
-void Logger::WriteContent(NewDataWriter *contents_writer,
-                          const FetcherStruct &f) {
+void Logger::WriteContent(DataWriter *contents_writer, const FetcherStruct &f) {
   if (contents_writer != nullptr) {
     const auto start = event_loop_->monotonic_now();
     // And now handle the special message contents channel.  Copy the
