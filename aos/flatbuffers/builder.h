@@ -87,7 +87,7 @@ class Builder final : public ResizeableObject {
   const T *operator->() const { return get(); }
 
  private:
-  Builder Create(std::unique_ptr<Allocator> allocator) {
+  static Builder Create(std::unique_ptr<Allocator> allocator) {
     // Allocate the buffer first.  Argument evaluation order in C++ isn't
     // defined, but we need these to happen in an order.
     std::span<uint8_t> buffer =
