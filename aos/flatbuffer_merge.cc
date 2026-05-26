@@ -499,27 +499,208 @@ flatbuffers::Offset<flatbuffers::Table> MergeFlatBuffers(
   return fbb->EndTable(start);
 }
 
+namespace {
+
+// Compares two flatbuffer strings and returns true when they're equal.
+bool StringEqual(const flatbuffers::String *a, const flatbuffers::String *b) {
+  if (a == b) return true;
+  if (a == nullptr || b == nullptr) return false;
+  if (a->size() != b->size()) return false;
+  return memcmp(a->data(), b->data(), a->size()) == 0;
+}
+
+// Forward declaration for mutual recursion with the vector-of-tables helper.
+bool CompareTable(const flatbuffers::TypeTable *typetable,
+                  const flatbuffers::Table *t1, const flatbuffers::Table *t2);
+
+// Compares two scalar vectors (vectors of arithmetic types or enums) of element
+// size `inline_size` and returns true if they're equal.
+bool CompareScalarVector(const uint8_t *vec1_ptr, const uint8_t *vec2_ptr,
+                         size_t inline_size) {
+  const flatbuffers::Vector<uint8_t> *v1 =
+      reinterpret_cast<const flatbuffers::Vector<uint8_t> *>(vec1_ptr);
+  const flatbuffers::Vector<uint8_t> *v2 =
+      reinterpret_cast<const flatbuffers::Vector<uint8_t> *>(vec2_ptr);
+  if (v1->size() != v2->size()) return false;
+  return memcmp(v1->Data(), v2->Data(), v1->size() * inline_size) == 0;
+}
+
+// Compares two vectors of strings and returns true if they're equal.
+bool CompareStringVector(const uint8_t *vec1_ptr, const uint8_t *vec2_ptr) {
+  using StringVec =
+      flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>;
+  const StringVec *v1 = reinterpret_cast<const StringVec *>(vec1_ptr);
+  const StringVec *v2 = reinterpret_cast<const StringVec *>(vec2_ptr);
+  if (v1->size() != v2->size()) return false;
+  for (flatbuffers::uoffset_t i = 0; i < v1->size(); ++i) {
+    if (!StringEqual(v1->Get(i), v2->Get(i))) return false;
+  }
+  return true;
+}
+
+// Compares two vectors of tables and returns true if they're equal.
+bool CompareTableVector(const flatbuffers::TypeTable *sub_typetable,
+                        const uint8_t *vec1_ptr, const uint8_t *vec2_ptr) {
+  using TableVec = flatbuffers::Vector<flatbuffers::Offset<flatbuffers::Table>>;
+  const TableVec *v1 = reinterpret_cast<const TableVec *>(vec1_ptr);
+  const TableVec *v2 = reinterpret_cast<const TableVec *>(vec2_ptr);
+  if (v1->size() != v2->size()) return false;
+  for (flatbuffers::uoffset_t i = 0; i < v1->size(); ++i) {
+    if (!CompareTable(sub_typetable, v1->Get(i), v2->Get(i))) return false;
+  }
+  return true;
+}
+
+// Compares two tables and returns true if they're equal.
+bool CompareTable(const flatbuffers::TypeTable *typetable,
+                  const flatbuffers::Table *t1, const flatbuffers::Table *t2) {
+  if (t1 == t2) return true;
+  if (t1 == nullptr || t2 == nullptr) return false;
+
+  for (size_t field_index = 0; field_index < typetable->num_elems;
+       ++field_index) {
+    const flatbuffers::TypeCode type_code = typetable->type_codes[field_index];
+    const flatbuffers::ElementaryType elementary_type =
+        static_cast<flatbuffers::ElementaryType>(type_code.base_type);
+
+    // Match MergeFlatBuffers: union type tags don't participate in equality.
+    if (elementary_type == flatbuffers::ElementaryType::ET_UTYPE) {
+      ABSL_LOG(FATAL)
+          << "CompareFlatbuffer doesn't support unions. Patches welcome.";
+    }
+
+    const flatbuffers::voffset_t field_offset = flatbuffers::FieldIndexToOffset(
+        static_cast<flatbuffers::voffset_t>(field_index));
+
+    const uint8_t *val1 = t1->GetAddressOf(field_offset);
+    const uint8_t *val2 = t2->GetAddressOf(field_offset);
+
+    // Presence must match. An explicitly-set default value is distinguishable
+    // from an absent field.
+    if ((val1 == nullptr) != (val2 == nullptr)) return false;
+    if (val1 == nullptr) continue;
+
+    // NOTE: For enum-typed scalar fields, `elementary_type` is the enum's
+    // underlying integer type (e.g. ET_CHAR for `enum BaseType : byte`) and
+    // `sequence_ref` points at the enum's TypeTable.  We deliberately ignore
+    // the enum metadata here and just compare the underlying scalar bytes --
+    // that is the on-wire representation.
+
+    if (type_code.is_repeating) {
+      // Follow the uoffset to the actual vector.
+      const uint8_t *vec1 =
+          val1 + flatbuffers::ReadScalar<flatbuffers::uoffset_t>(val1);
+      const uint8_t *vec2 =
+          val2 + flatbuffers::ReadScalar<flatbuffers::uoffset_t>(val2);
+
+      switch (elementary_type) {
+        case flatbuffers::ElementaryType::ET_UTYPE:
+          // Unions are filtered out above.
+          break;
+
+        case flatbuffers::ElementaryType::ET_BOOL:
+        case flatbuffers::ElementaryType::ET_CHAR:
+        case flatbuffers::ElementaryType::ET_UCHAR:
+        case flatbuffers::ElementaryType::ET_SHORT:
+        case flatbuffers::ElementaryType::ET_USHORT:
+        case flatbuffers::ElementaryType::ET_INT:
+        case flatbuffers::ElementaryType::ET_UINT:
+        case flatbuffers::ElementaryType::ET_LONG:
+        case flatbuffers::ElementaryType::ET_ULONG:
+        case flatbuffers::ElementaryType::ET_FLOAT:
+        case flatbuffers::ElementaryType::ET_DOUBLE:
+          // Vectors of scalars and enums both land here.
+          if (!CompareScalarVector(
+                  vec1, vec2,
+                  flatbuffers::InlineSize(elementary_type, nullptr))) {
+            return false;
+          }
+          break;
+
+        case flatbuffers::ElementaryType::ET_STRING:
+          if (!CompareStringVector(vec1, vec2)) return false;
+          break;
+
+        case flatbuffers::ElementaryType::ET_SEQUENCE: {
+          const flatbuffers::TypeTable *sub_typetable =
+              typetable->type_refs[type_code.sequence_ref]();
+          // Only vectors-of-tables are supported.  Vectors of structs/unions
+          // are unsupported (the same is true of MergeFlatBuffers today; this
+          // ABSL_CHECK just makes the failure explicit).
+          ABSL_CHECK(sub_typetable->st == flatbuffers::ST_TABLE)
+              << ": CompareFlatBuffer only supports vectors of tables; "
+                 "vectors of structs/unions are unsupported. Patches welcome.";
+          if (!CompareTableVector(sub_typetable, vec1, vec2)) return false;
+        } break;
+      }
+      continue;
+    }
+
+    switch (elementary_type) {
+      case flatbuffers::ElementaryType::ET_UTYPE:
+        // Filtered out above.
+        break;
+      case flatbuffers::ElementaryType::ET_BOOL:
+      case flatbuffers::ElementaryType::ET_CHAR:
+      case flatbuffers::ElementaryType::ET_UCHAR:
+      case flatbuffers::ElementaryType::ET_SHORT:
+      case flatbuffers::ElementaryType::ET_USHORT:
+      case flatbuffers::ElementaryType::ET_INT:
+      case flatbuffers::ElementaryType::ET_UINT:
+      case flatbuffers::ElementaryType::ET_LONG:
+      case flatbuffers::ElementaryType::ET_ULONG:
+      case flatbuffers::ElementaryType::ET_FLOAT:
+      case flatbuffers::ElementaryType::ET_DOUBLE:
+        // Plain scalars and enums both land here. memcmp gives us bitwise
+        // equality. This should also give us NaN==NaN support.
+        if (memcmp(val1, val2,
+                   flatbuffers::InlineSize(elementary_type, nullptr)) != 0) {
+          return false;
+        }
+        break;
+
+      case flatbuffers::ElementaryType::ET_STRING: {
+        const flatbuffers::String *s1 =
+            reinterpret_cast<const flatbuffers::String *>(
+                val1 + flatbuffers::ReadScalar<flatbuffers::uoffset_t>(val1));
+        const flatbuffers::String *s2 =
+            reinterpret_cast<const flatbuffers::String *>(
+                val2 + flatbuffers::ReadScalar<flatbuffers::uoffset_t>(val2));
+        if (!StringEqual(s1, s2)) return false;
+      } break;
+
+      case flatbuffers::ElementaryType::ET_SEQUENCE: {
+        const flatbuffers::TypeTable *sub_typetable =
+            typetable->type_refs[type_code.sequence_ref]();
+        // Sub-tables are supported; inline structs and unions are not.
+        ABSL_CHECK(sub_typetable->st == flatbuffers::ST_TABLE)
+            << ": CompareFlatBuffer only supports sub-tables; structs/"
+               "unions are unsupported. Patches welcome.";
+        const flatbuffers::Table *sub1 =
+            reinterpret_cast<const flatbuffers::Table *>(
+                val1 + flatbuffers::ReadScalar<flatbuffers::uoffset_t>(val1));
+        const flatbuffers::Table *sub2 =
+            reinterpret_cast<const flatbuffers::Table *>(
+                val2 + flatbuffers::ReadScalar<flatbuffers::uoffset_t>(val2));
+        if (!CompareTable(sub_typetable, sub1, sub2)) return false;
+      } break;
+    }
+  }
+
+  return true;
+}
+
+}  // namespace
+
 bool CompareFlatBuffer(const flatbuffers::TypeTable *typetable,
                        const flatbuffers::Table *t1,
                        const flatbuffers::Table *t2) {
-  // Copying flatbuffers is deterministic for the same typetable.  So, copy both
-  // to guarantee that they are sorted the same, then check that the memory
-  // matches.
-  //
-  // There has to be a better way to do this, but the efficiency hit of this
-  // implementation is fine for the usages that we have now.  We are better off
-  // abstracting this into a library call where we can fix it later easily.
-  flatbuffers::FlatBufferBuilder fbb1;
-  fbb1.ForceDefaults(true);
-  fbb1.Finish(MergeFlatBuffers(typetable, t1, nullptr, &fbb1));
-  flatbuffers::FlatBufferBuilder fbb2;
-  fbb2.ForceDefaults(true);
-  fbb2.Finish(MergeFlatBuffers(typetable, t2, nullptr, &fbb2));
+  // We only support tables at the top level (matching MergeFlatBuffers /
+  // ExtentsTable).
+  ABSL_CHECK(typetable->st == flatbuffers::ST_TABLE)
+      << ": CompareFlatBuffer only supports tables. Patches welcome.";
 
-  if (fbb1.GetSize() != fbb2.GetSize()) return false;
-
-  return memcmp(fbb1.GetBufferPointer(), fbb2.GetBufferPointer(),
-                fbb1.GetSize()) == 0;
+  return CompareTable(typetable, t1, t2);
 }
 
 // Struct to track a range of memory.

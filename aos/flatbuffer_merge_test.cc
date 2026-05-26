@@ -1,5 +1,7 @@
 #include "aos/flatbuffer_merge.h"
 
+#include <cmath>
+#include <limits>
 #include <string_view>
 
 #include "absl/log/absl_log.h"
@@ -9,6 +11,8 @@
 
 #include "aos/json_to_flatbuffer.h"
 #include "aos/json_to_flatbuffer_generated.h"
+#include "aos/realtime.h"
+#include "aos/sanitizers.h"
 
 namespace aos::testing {
 
@@ -574,20 +578,345 @@ TEST(FlatbufferCopy, WholesaleCopy) {
   EXPECT_EQ(FlatbufferToJson(expected), FlatbufferToJson(c2));
 }
 
-// Tests a compare of 2 basic (different) messages.
-TEST_F(FlatbufferMerge, CompareDifferent) {
-  aos::FlatbufferDetachedBuffer<Configuration> message1(JsonToFlatbuffer(
-      "{ \"single_application\": { \"name\": \"wow\", \"priority\": 7 } }",
-      ConfigurationTypeTable()));
-  aos::FlatbufferDetachedBuffer<Configuration> message2(JsonToFlatbuffer(
-      "{ \"single_application\": { \"name\": \"wow\", \"priority\": 8 } }",
-      ConfigurationTypeTable()));
+// Tests for the realtime-safe, reflection-based CompareFlatBuffer
+// implementation.  Each comparison runs inside aos::ScopedRealtime so that any
+// hidden allocation inside CompareFlatBuffer trips the malloc hook and aborts
+// the test.
+class FlatbufferCompare : public ::testing::Test {
+ protected:
+  static aos::FlatbufferDetachedBuffer<Configuration> ParseTestFb(
+      const char *json) {
+    return aos::JsonToFlatbuffer(json, ConfigurationTypeTable());
+  }
 
-  EXPECT_FALSE(CompareFlatBuffer(&message1.message(), &message2.message()));
-}
+  // Runs CompareFlatBuffer under aos::ScopedRealtime so that any malloc inside
+  // will trip the hook and crash this test.  Disabled under asan/msan since
+  // the malloc hook is incompatible with those sanitizers.
+  static bool CompareInRealtime(const Configuration *a,
+                                const Configuration *b) {
+#if !defined(AOS_SANITIZE_MEMORY) && !defined(AOS_SANITIZE_ADDRESS)
+    aos::ScopedRealtime realtime;
+#endif
+    return CompareFlatBuffer(a, b);
+  }
+};
 
-// TODO(austin): enums
+using FlatbufferCompareDeathTest = FlatbufferCompare;
+
 // TODO(austin): unions
 // TODO(austin): struct
+
+// --- Depth 0: scalars, enums, strings, and field presence ------------------
+
+TEST_F(FlatbufferCompare, CompareEqualScalarsAndEnums) {
+  aos::FlatbufferDetachedBuffer<Configuration> a =
+      ParseTestFb(R"({ "foo_int": 7, "foo_string": "hi",
+                       "foo_enum": "UType", "foo_double": 1.5 })");
+  aos::FlatbufferDetachedBuffer<Configuration> b =
+      ParseTestFb(R"({ "foo_int": 7, "foo_string": "hi",
+                       "foo_enum": "UType", "foo_double": 1.5 })");
+  EXPECT_TRUE(CompareInRealtime(&a.message(), &b.message()));
+}
+
+TEST_F(FlatbufferCompare, CompareEqualScalarsAndEnumsInDifferentOrder) {
+  aos::FlatbufferDetachedBuffer<Configuration> a =
+      ParseTestFb(R"({ "foo_double": 1.5, "foo_enum": "UType",
+                       "foo_int": 7, "foo_string": "hi" })");
+  aos::FlatbufferDetachedBuffer<Configuration> b =
+      ParseTestFb(R"({ "foo_int": 7, "foo_string": "hi",
+                       "foo_enum": "UType", "foo_double": 1.5 })");
+  EXPECT_TRUE(CompareInRealtime(&a.message(), &b.message()));
+}
+
+TEST_F(FlatbufferCompare, CompareDifferentScalar) {
+  aos::FlatbufferDetachedBuffer<Configuration> a =
+      ParseTestFb(R"({ "foo_int": 7 })");
+  aos::FlatbufferDetachedBuffer<Configuration> b =
+      ParseTestFb(R"({ "foo_int": 8 })");
+  EXPECT_FALSE(CompareInRealtime(&a.message(), &b.message()));
+}
+
+TEST_F(FlatbufferCompare, CompareDifferentEnum) {
+  aos::FlatbufferDetachedBuffer<Configuration> a =
+      ParseTestFb(R"({ "foo_enum": "UType" })");
+  aos::FlatbufferDetachedBuffer<Configuration> b =
+      ParseTestFb(R"({ "foo_enum": "Bool" })");
+  EXPECT_FALSE(CompareInRealtime(&a.message(), &b.message()));
+}
+
+TEST_F(FlatbufferCompare, CompareDifferentEnumNonConsecutive) {
+  aos::FlatbufferDetachedBuffer<Configuration> a =
+      ParseTestFb(R"({ "foo_enum_nonconsecutive": "Zero" })");
+  aos::FlatbufferDetachedBuffer<Configuration> b =
+      ParseTestFb(R"({ "foo_enum_nonconsecutive": "Big" })");
+  EXPECT_FALSE(CompareInRealtime(&a.message(), &b.message()));
+}
+
+TEST_F(FlatbufferCompare, CompareDifferentString) {
+  aos::FlatbufferDetachedBuffer<Configuration> a =
+      ParseTestFb(R"({ "foo_string": "abc" })");
+  aos::FlatbufferDetachedBuffer<Configuration> b =
+      ParseTestFb(R"({ "foo_string": "abd" })");
+  EXPECT_FALSE(CompareInRealtime(&a.message(), &b.message()));
+}
+
+TEST_F(FlatbufferCompare, CompareDifferentStringLength) {
+  aos::FlatbufferDetachedBuffer<Configuration> a =
+      ParseTestFb(R"({ "foo_string": "abc" })");
+  aos::FlatbufferDetachedBuffer<Configuration> b =
+      ParseTestFb(R"({ "foo_string": "abcd" })");
+  EXPECT_FALSE(CompareInRealtime(&a.message(), &b.message()));
+}
+
+// Presence semantic: an absent field is distinct from one explicitly set to
+// the default value.
+TEST_F(FlatbufferCompare, CompareEnumAbsentVsDefault) {
+  aos::FlatbufferDetachedBuffer<Configuration> absent = ParseTestFb(R"({})");
+  aos::FlatbufferDetachedBuffer<Configuration> present_default =
+      ParseTestFb(R"({ "foo_enum_default": "None" })");
+  EXPECT_FALSE(
+      CompareInRealtime(&absent.message(), &present_default.message()));
+}
+
+// --- Depth 1: vectors of scalars, enums, and strings -----------------------
+
+TEST_F(FlatbufferCompare, CompareDifferentScalarVectorContent) {
+  aos::FlatbufferDetachedBuffer<Configuration> a =
+      ParseTestFb(R"({ "vector_foo_int": [1, 2, 3] })");
+  aos::FlatbufferDetachedBuffer<Configuration> b =
+      ParseTestFb(R"({ "vector_foo_int": [1, 2, 4] })");
+  EXPECT_FALSE(CompareInRealtime(&a.message(), &b.message()));
+}
+
+TEST_F(FlatbufferCompare, CompareDifferentScalarVectorLength) {
+  aos::FlatbufferDetachedBuffer<Configuration> a =
+      ParseTestFb(R"({ "vector_foo_int": [1, 2, 3] })");
+  aos::FlatbufferDetachedBuffer<Configuration> b =
+      ParseTestFb(R"({ "vector_foo_int": [1, 2, 3, 4] })");
+  EXPECT_FALSE(CompareInRealtime(&a.message(), &b.message()));
+}
+
+TEST_F(FlatbufferCompare, CompareEqualEmptyVector) {
+  aos::FlatbufferDetachedBuffer<Configuration> a =
+      ParseTestFb(R"({ "vector_foo_int": [] })");
+  aos::FlatbufferDetachedBuffer<Configuration> b =
+      ParseTestFb(R"({ "vector_foo_int": [] })");
+  EXPECT_TRUE(CompareInRealtime(&a.message(), &b.message()));
+}
+
+TEST_F(FlatbufferCompare, CompareDifferentEnumVector) {
+  aos::FlatbufferDetachedBuffer<Configuration> a =
+      ParseTestFb(R"({ "vector_foo_enum": ["UType", "Bool"] })");
+  aos::FlatbufferDetachedBuffer<Configuration> b =
+      ParseTestFb(R"({ "vector_foo_enum": ["UType", "Byte"] })");
+  EXPECT_FALSE(CompareInRealtime(&a.message(), &b.message()));
+}
+
+TEST_F(FlatbufferCompare, CompareDifferentStringVector) {
+  aos::FlatbufferDetachedBuffer<Configuration> a =
+      ParseTestFb(R"({ "vector_foo_string": ["x", "y"] })");
+  aos::FlatbufferDetachedBuffer<Configuration> b =
+      ParseTestFb(R"({ "vector_foo_string": ["x", "z"] })");
+  EXPECT_FALSE(CompareInRealtime(&a.message(), &b.message()));
+}
+
+TEST_F(FlatbufferCompare, CompareDifferentStringVectorLength) {
+  aos::FlatbufferDetachedBuffer<Configuration> a =
+      ParseTestFb(R"({ "vector_foo_string": ["x"] })");
+  aos::FlatbufferDetachedBuffer<Configuration> b =
+      ParseTestFb(R"({ "vector_foo_string": ["x", "y"] })");
+  EXPECT_FALSE(CompareInRealtime(&a.message(), &b.message()));
+}
+
+// --- Depth 2: sub-tables and vectors of sub-tables -------------------------
+
+TEST_F(FlatbufferCompare, CompareDifferentSubTableScalar) {
+  aos::FlatbufferDetachedBuffer<Configuration> a = ParseTestFb(
+      R"({ "single_application": { "name": "x", "priority": 1 } })");
+  aos::FlatbufferDetachedBuffer<Configuration> b = ParseTestFb(
+      R"({ "single_application": { "name": "x", "priority": 2 } })");
+  EXPECT_FALSE(CompareInRealtime(&a.message(), &b.message()));
+}
+
+TEST_F(FlatbufferCompare, CompareDifferentSubTableString) {
+  aos::FlatbufferDetachedBuffer<Configuration> a =
+      ParseTestFb(R"({ "single_application": { "name": "alpha" } })");
+  aos::FlatbufferDetachedBuffer<Configuration> b =
+      ParseTestFb(R"({ "single_application": { "name": "beta" } })");
+  EXPECT_FALSE(CompareInRealtime(&a.message(), &b.message()));
+}
+
+TEST_F(FlatbufferCompare, CompareDifferentVectorOfTablesLength) {
+  aos::FlatbufferDetachedBuffer<Configuration> a =
+      ParseTestFb(R"({ "apps": [ { "name": "a", "priority": 1 } ] })");
+  aos::FlatbufferDetachedBuffer<Configuration> b =
+      ParseTestFb(R"({ "apps": [ { "name": "a", "priority": 1 },
+                              { "name": "b", "priority": 2 } ] })");
+  EXPECT_FALSE(CompareInRealtime(&a.message(), &b.message()));
+}
+
+TEST_F(FlatbufferCompare, CompareDifferentVectorOfTablesElement) {
+  aos::FlatbufferDetachedBuffer<Configuration> a =
+      ParseTestFb(R"({ "apps": [ { "name": "a", "priority": 1 },
+                                 { "name": "b", "priority": 2 } ] })");
+  aos::FlatbufferDetachedBuffer<Configuration> b =
+      ParseTestFb(R"({ "apps": [ { "name": "a", "priority": 1 },
+                                 { "name": "b", "priority": 3 } ] })");
+  EXPECT_FALSE(CompareInRealtime(&a.message(), &b.message()));
+}
+
+// --- Depth 3+: deeply nested and vector-of-vector-of-string ----------------
+
+TEST_F(FlatbufferCompare, CompareDifferentDeeplyNested) {
+  aos::FlatbufferDetachedBuffer<Configuration> a = ParseTestFb(R"({
+    "nested_config": {
+      "single_application": { "name": "alpha", "priority": 1 }
+    }
+  })");
+  aos::FlatbufferDetachedBuffer<Configuration> b = ParseTestFb(R"({
+    "nested_config": {
+      "single_application": { "name": "beta", "priority": 1 }
+    }
+  })");
+  EXPECT_FALSE(CompareInRealtime(&a.message(), &b.message()));
+}
+
+TEST_F(FlatbufferCompare, CompareEqualDeeplyNested) {
+  const char *json = R"({
+    "nested_config": {
+      "single_application": { "name": "alpha", "priority": 1 },
+      "apps": [ { "name": "a", "priority": 1 } ]
+    }
+  })";
+  aos::FlatbufferDetachedBuffer<Configuration> a = ParseTestFb(json);
+  aos::FlatbufferDetachedBuffer<Configuration> b = ParseTestFb(json);
+  EXPECT_TRUE(CompareInRealtime(&a.message(), &b.message()));
+}
+
+TEST_F(FlatbufferCompare, CompareDifferentVectorOfVectorOfStrings) {
+  aos::FlatbufferDetachedBuffer<Configuration> a =
+      ParseTestFb(R"({ "vov": { "v": [ { "str": ["a", "b"] },
+                                       { "str": ["c", "d"] } ] } })");
+  aos::FlatbufferDetachedBuffer<Configuration> b =
+      ParseTestFb(R"({ "vov": { "v": [ { "str": ["a", "b"] },
+                                       { "str": ["c", "e"] } ] } })");
+  EXPECT_FALSE(CompareInRealtime(&a.message(), &b.message()));
+}
+
+// Validate null-safety.
+TEST_F(FlatbufferCompare, CompareNullPointers) {
+  aos::FlatbufferDetachedBuffer<Configuration> a =
+      ParseTestFb(R"({ "foo_int": 1 })");
+  EXPECT_TRUE(CompareInRealtime(nullptr, nullptr));
+  EXPECT_FALSE(CompareInRealtime(&a.message(), nullptr));
+  EXPECT_FALSE(CompareInRealtime(nullptr, &a.message()));
+}
+
+// --- NaN handling ----------------------------------------------------------
+//
+// CompareFlatBuffer uses memcmp on scalar bytes, so two identical NaN bit
+// patterns must compare equal (unlike IEEE 754 `==`).  We build the
+// flatbuffers programmatically because JSON has no NaN literal.
+
+namespace {
+
+// Helper to build a Configuration with the given float/double values set.
+aos::FlatbufferDetachedBuffer<Configuration> BuildFloatConfig(
+    float foo_float, double foo_double) {
+  flatbuffers::FlatBufferBuilder fbb;
+  fbb.ForceDefaults(true);
+  ConfigurationBuilder builder(fbb);
+  builder.add_foo_float(foo_float);
+  builder.add_foo_double(foo_double);
+  fbb.Finish(builder.Finish());
+  return aos::FlatbufferDetachedBuffer<Configuration>(fbb.Release());
+}
+
+}  // namespace
+
+// Both sides use quiet_NaN -- identical bit patterns must compare equal.
+TEST_F(FlatbufferCompare, CompareNaNQuietEqual) {
+  aos::FlatbufferDetachedBuffer<Configuration> a =
+      BuildFloatConfig(std::numeric_limits<float>::quiet_NaN(),
+                       std::numeric_limits<double>::quiet_NaN());
+  aos::FlatbufferDetachedBuffer<Configuration> b =
+      BuildFloatConfig(std::numeric_limits<float>::quiet_NaN(),
+                       std::numeric_limits<double>::quiet_NaN());
+  EXPECT_TRUE(CompareInRealtime(&a.message(), &b.message()));
+}
+
+// std::nanf("") / std::nan("") should be the same as quiet NaNs.
+TEST_F(FlatbufferCompare, CompareNaNStdNanEqual) {
+  aos::FlatbufferDetachedBuffer<Configuration> a =
+      BuildFloatConfig(std::numeric_limits<float>::quiet_NaN(),
+                       std::numeric_limits<double>::quiet_NaN());
+  aos::FlatbufferDetachedBuffer<Configuration> b =
+      BuildFloatConfig(std::nanf(""), std::nan(""));
+  EXPECT_TRUE(CompareInRealtime(&a.message(), &b.message()));
+}
+
+// NAN should be the same as quiet NaNs.
+TEST_F(FlatbufferCompare, CompareNaNMacroEqual) {
+  aos::FlatbufferDetachedBuffer<Configuration> a =
+      BuildFloatConfig(std::numeric_limits<float>::quiet_NaN(),
+                       std::numeric_limits<double>::quiet_NaN());
+  aos::FlatbufferDetachedBuffer<Configuration> b = BuildFloatConfig(NAN, NAN);
+  EXPECT_TRUE(CompareInRealtime(&a.message(), &b.message()));
+}
+
+// Both sides use signaling_NaN -- also identical bit patterns.
+TEST_F(FlatbufferCompare, CompareNaNSignalingEqual) {
+  aos::FlatbufferDetachedBuffer<Configuration> a =
+      BuildFloatConfig(std::numeric_limits<float>::signaling_NaN(),
+                       std::numeric_limits<double>::signaling_NaN());
+  aos::FlatbufferDetachedBuffer<Configuration> b =
+      BuildFloatConfig(std::numeric_limits<float>::signaling_NaN(),
+                       std::numeric_limits<double>::signaling_NaN());
+  EXPECT_TRUE(CompareInRealtime(&a.message(), &b.message()));
+}
+
+// quiet_NaN vs signaling_NaN have different bit patterns -- must compare
+// unequal.
+TEST_F(FlatbufferCompare, CompareNaNQuietVsSignalingNotEqual) {
+  aos::FlatbufferDetachedBuffer<Configuration> a =
+      BuildFloatConfig(std::numeric_limits<float>::quiet_NaN(),
+                       std::numeric_limits<double>::quiet_NaN());
+  aos::FlatbufferDetachedBuffer<Configuration> b =
+      BuildFloatConfig(std::numeric_limits<float>::signaling_NaN(),
+                       std::numeric_limits<double>::signaling_NaN());
+  EXPECT_FALSE(CompareInRealtime(&a.message(), &b.message()));
+}
+
+// --- Death tests -----------------------------------------------------------
+
+// Struct fields are explicitly unsupported and must abort.
+TEST_F(FlatbufferCompareDeathTest, StructFieldAborts) {
+  aos::FlatbufferDetachedBuffer<Configuration> a =
+      ParseTestFb(R"({ "foo_struct": { "foo_byte": 1,
+                                       "nested_struct": { "foo_byte": 2 } } })");
+  aos::FlatbufferDetachedBuffer<Configuration> b =
+      ParseTestFb(R"({ "foo_struct": { "foo_byte": 1,
+                                       "nested_struct": { "foo_byte": 2 } } })");
+
+  EXPECT_DEATH(
+      { CompareFlatBuffer(&a.message(), &b.message()); },
+      "CompareFlatBuffer only supports sub-tables");
+}
+
+// Vectors of structs are likewise unsupported.
+TEST_F(FlatbufferCompareDeathTest, VectorOfStructFieldAborts) {
+  aos::FlatbufferDetachedBuffer<Configuration> a =
+      ParseTestFb(R"({ "vector_foo_struct": [
+                      { "foo_byte": 1, "nested_struct": { "foo_byte": 2 } }
+                    ] })");
+  aos::FlatbufferDetachedBuffer<Configuration> b =
+      ParseTestFb(R"({ "vector_foo_struct": [
+                      { "foo_byte": 1, "nested_struct": { "foo_byte": 2 } }
+                    ] })");
+
+  EXPECT_DEATH(
+      { CompareFlatBuffer(&a.message(), &b.message()); },
+      "CompareFlatBuffer only supports vectors of tables");
+}
 
 }  // namespace aos::testing

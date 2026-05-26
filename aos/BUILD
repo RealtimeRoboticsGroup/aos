@@ -540,6 +540,8 @@ cc_test(
         ":flatbuffer_merge",
         ":json_to_flatbuffer",
         ":json_to_flatbuffer_fbs",
+        ":realtime",
+        "//aos:sanitizers",
         "//aos/testing:googletest",
     ],
 )

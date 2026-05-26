@@ -192,6 +192,7 @@ inline FlatbufferDetachedBuffer<T> RecursiveCopyFlatBuffer(const T *t) {
 }
 
 // Compares 2 flatbuffers.  Returns true if they match, false otherwise.
+// This does not use dynamic memory allocation.
 bool CompareFlatBuffer(const flatbuffers::TypeTable *typetable,
                        const flatbuffers::Table *t1,
                        const flatbuffers::Table *t2);
