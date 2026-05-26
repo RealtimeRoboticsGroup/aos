@@ -784,6 +784,7 @@ cc_library(
         "@com_github_google_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/types:span",
     ],
 )

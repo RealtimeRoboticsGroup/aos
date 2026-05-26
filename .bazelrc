@@ -18,7 +18,7 @@ build --@rules_python//python/config_settings:venvs_use_declare_symlink=no
 build:linux --host_platform=//tools/platforms:linux_x86
 
 # macOS ARM64 (Apple Silicon) platform configuration
-build:darwin --host_platform=//tools/platforms:darwin_arm64
+build:macos --host_platform=//tools/platforms:darwin_arm64
 
 # Always include debug information in the non-.stripped binaries.
 build --strip=never
@@ -103,24 +103,24 @@ common --watchfs
 startup --host_jvm_args=-Dbazel.DigestFunction=SHA256
 
 build:linux  --spawn_strategy=sandboxed
-build:darwin --spawn_strategy=sandboxed
+build:macos --spawn_strategy=sandboxed
 build:linux  --sandbox_default_allow_network=false
-build:darwin --sandbox_default_allow_network=false
+build:macos --sandbox_default_allow_network=false
 build:linux  --incompatible_exclusive_test_sandboxed
-build:darwin --incompatible_exclusive_test_sandboxed
+build:macos --incompatible_exclusive_test_sandboxed
 
 # Windows platform overrides
 build:windows --spawn_strategy=standalone
 build:windows --sandbox_default_allow_network=true
 
 build:linux --strategy=TsProject=remote,sandboxed
-build:darwin --strategy=TsProject=remote,sandboxed
+build:macos --strategy=TsProject=remote,sandboxed
 build:windows --strategy=TsProject=remote,local
 build --strategy=CopyFile=remote,standalone
 build --strategy=CopyDirectory=remote,standalone
 build --strategy=CopyToDirectory=remote,standalone
 build:linux --strategy=NpmLifecycleHook=remote,sandboxed,standalone
-build:darwin --strategy=NpmLifecycleHook=remote,sandboxed,standalone
+build:macos --strategy=NpmLifecycleHook=remote,sandboxed,standalone
 build:windows --strategy=NpmLifecycleHook=remote,standalone,local
 
 # Honor the setting of `skipLibCheck` in the tsconfig.json file.
@@ -165,7 +165,7 @@ build --per_file_copt=third_party/.*,external/.*@-Wno-sign-compare,-Wno-cast-ali
 
 common --enable_bzlmod=true
 common:linux --registry=file://%workspace%/registry
-common:darwin --registry=file://%workspace%/registry
+common:macos --registry=file://%workspace%/registry
 # Windows hosts get the registry path injected by tools/bazel.bat at runtime.
 common --registry=https://bcr.bazel.build
 # TODO(austin): Finish this migration...  Remove workspace support when users are done.
