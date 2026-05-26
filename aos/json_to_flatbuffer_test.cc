@@ -214,7 +214,7 @@ TEST_F(JsonToFlatbufferTest, FloatingPointOverflow) {
 //    convert to/from the relevant number. Note that some string parsers throw
 //    out-of-range errors when dealing with sub-normal numbers.
 // 2. When numbers underflow below the smallest representible number, we expect
-//    rounding to occur and an error to be thrown.
+//    rounding to occur (no error will be thrown).
 TEST_F(JsonToFlatbufferTest, FloatingPointUnderflow) {
   ASSERT_EQ(1.17549435e-38f, std::numeric_limits<float>::min());
   ASSERT_EQ(1.40129846e-45f, std::numeric_limits<float>::denorm_min());
@@ -230,7 +230,8 @@ TEST_F(JsonToFlatbufferTest, FloatingPointUnderflow) {
   EXPECT_TRUE(JsonAndBack("{ \"foo_double\": 1e-310 }"));
   EXPECT_TRUE(JsonAndBack("{ \"foo_double\": -1e-310 }"));
   EXPECT_TRUE(JsonAndBack("{ \"vector_foo_double\": [ 1e-310 ] }"));
-  // Test truly unrepresentably small numbers; floats should round to zero.
+  // Test truly unrepresentably small numbers; floats and doubles should round
+  // to zero.
   EXPECT_TRUE(JsonAndBack("{ \"foo_float\": 1e-50 }", "{ \"foo_float\": 0 }"));
   EXPECT_TRUE(
       JsonAndBack("{ \"foo_float\": -1e-50 }", "{ \"foo_float\": -0.0 }"));
