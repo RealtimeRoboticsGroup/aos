@@ -97,11 +97,11 @@ class DataWriter {
   void UpdateBoot(const UUID &source_node_boot_uuid);
 
   // Returns the name of the writer. It may be a filename, but assume it is not.
-  std::string_view name() const { return writer ? writer->name() : "(closed)"; }
+  std::string_view name() const {
+    return writer_ ? writer_->name() : "(closed)";
+  }
 
   void Close();
-
-  std::unique_ptr<DetachedBufferWriter> writer = nullptr;
 
   size_t node_index() const { return node_index_; }
   const UUID &parts_uuid() const { return parts_uuid_; }
@@ -162,6 +162,11 @@ class DataWriter {
             monotonic_clock::max_time;
   };
 
+  DetachedBufferWriter *writer() const { return writer_.get(); }
+  void set_writer(std::unique_ptr<DetachedBufferWriter> writer) {
+    writer_ = std::move(writer);
+  }
+
  private:
   // Signals that a node has rebooted.
   void Reboot(const UUID &source_node_boot_uuid);
@@ -177,6 +182,8 @@ class DataWriter {
       aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader> &&header);
 
   aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader> MakeHeader();
+
+  std::unique_ptr<DetachedBufferWriter> writer_ = nullptr;
 
   monotonic_clock::time_point monotonic_start_time_ = monotonic_clock::min_time;
 
@@ -419,9 +426,9 @@ class MultiNodeLogNamer : public LogNamer {
   bool ran_out_of_space() const {
     return accumulate_data_writers<bool>(
         ran_out_of_space_, [](bool x, const DataWriter &data_writer) {
-          CHECK(data_writer.writer != nullptr);
-          return x ||
-                 (data_writer.writer && data_writer.writer->ran_out_of_space());
+          CHECK(data_writer.writer() != nullptr);
+          return x || (data_writer.writer() &&
+                       data_writer.writer()->ran_out_of_space());
         });
   }
 
@@ -432,8 +439,8 @@ class MultiNodeLogNamer : public LogNamer {
   size_t maximum_total_bytes() const {
     return accumulate_data_writers<size_t>(
         0, [](size_t x, const DataWriter &data_writer) {
-          CHECK(data_writer.writer != nullptr);
-          return std::max(x, data_writer.writer->total_bytes());
+          CHECK(data_writer.writer() != nullptr);
+          return std::max(x, data_writer.writer()->total_bytes());
         });
   }
 
@@ -449,9 +456,9 @@ class MultiNodeLogNamer : public LogNamer {
     return accumulate_data_writers(
         max_write_time_,
         [](std::chrono::nanoseconds x, const DataWriter &data_writer) {
-          CHECK(data_writer.writer != nullptr);
+          CHECK(data_writer.writer() != nullptr);
           return std::max(
-              x, data_writer.writer->WriteStatistics()->max_write_time());
+              x, data_writer.writer()->WriteStatistics()->max_write_time());
         });
   }
   int max_write_time_bytes() const {
@@ -459,12 +466,12 @@ class MultiNodeLogNamer : public LogNamer {
         std::make_tuple(max_write_time_bytes_, max_write_time_),
         [](std::tuple<int, std::chrono::nanoseconds> x,
            const DataWriter &data_writer) {
-          CHECK(data_writer.writer != nullptr);
-          if (data_writer.writer->WriteStatistics()->max_write_time() >
+          CHECK(data_writer.writer() != nullptr);
+          if (data_writer.writer()->WriteStatistics()->max_write_time() >
               std::get<1>(x)) {
             return std::make_tuple(
-                data_writer.writer->WriteStatistics()->max_write_time_bytes(),
-                data_writer.writer->WriteStatistics()->max_write_time());
+                data_writer.writer()->WriteStatistics()->max_write_time_bytes(),
+                data_writer.writer()->WriteStatistics()->max_write_time());
           }
           return x;
         }));
@@ -474,13 +481,14 @@ class MultiNodeLogNamer : public LogNamer {
         std::make_tuple(max_write_time_messages_, max_write_time_),
         [](std::tuple<int, std::chrono::nanoseconds> x,
            const DataWriter &data_writer) {
-          CHECK(data_writer.writer != nullptr);
-          if (data_writer.writer->WriteStatistics()->max_write_time() >
+          CHECK(data_writer.writer() != nullptr);
+          if (data_writer.writer()->WriteStatistics()->max_write_time() >
               std::get<1>(x)) {
             return std::make_tuple(
-                data_writer.writer->WriteStatistics()
+                data_writer.writer()
+                    ->WriteStatistics()
                     ->max_write_time_messages(),
-                data_writer.writer->WriteStatistics()->max_write_time());
+                data_writer.writer()->WriteStatistics()->max_write_time());
           }
           return x;
         }));
@@ -489,29 +497,33 @@ class MultiNodeLogNamer : public LogNamer {
     return accumulate_data_writers(
         total_write_time_,
         [](std::chrono::nanoseconds x, const DataWriter &data_writer) {
-          CHECK(data_writer.writer != nullptr);
-          return x + data_writer.writer->WriteStatistics()->total_write_time();
+          CHECK(data_writer.writer() != nullptr);
+          return x +
+                 data_writer.writer()->WriteStatistics()->total_write_time();
         });
   }
   int total_write_count() const {
     return accumulate_data_writers(
         total_write_count_, [](int x, const DataWriter &data_writer) {
-          CHECK(data_writer.writer != nullptr);
-          return x + data_writer.writer->WriteStatistics()->total_write_count();
+          CHECK(data_writer.writer() != nullptr);
+          return x +
+                 data_writer.writer()->WriteStatistics()->total_write_count();
         });
   }
   int total_write_messages() const {
-    return accumulate_data_writers(
-        total_write_messages_, [](int x, const DataWriter &data_writer) {
-          return x +
-                 data_writer.writer->WriteStatistics()->total_write_messages();
-        });
+    return accumulate_data_writers(total_write_messages_,
+                                   [](int x, const DataWriter &data_writer) {
+                                     return x + data_writer.writer()
+                                                    ->WriteStatistics()
+                                                    ->total_write_messages();
+                                   });
   }
   int total_write_bytes() const {
     return accumulate_data_writers(
         total_write_bytes_, [](int x, const DataWriter &data_writer) {
-          CHECK(data_writer.writer != nullptr);
-          return x + data_writer.writer->WriteStatistics()->total_write_bytes();
+          CHECK(data_writer.writer() != nullptr);
+          return x +
+                 data_writer.writer()->WriteStatistics()->total_write_bytes();
         });
   }
 
@@ -519,9 +531,10 @@ class MultiNodeLogNamer : public LogNamer {
     return accumulate_data_writers(
         total_encode_duration_,
         [](std::chrono::nanoseconds x, const DataWriter &data_writer) {
-          CHECK(data_writer.writer != nullptr);
-          return x +
-                 data_writer.writer->WriteStatistics()->total_encode_duration();
+          CHECK(data_writer.writer() != nullptr);
+          return x + data_writer.writer()
+                         ->WriteStatistics()
+                         ->total_encode_duration();
         });
   }
 
@@ -543,10 +556,10 @@ class MultiNodeLogNamer : public LogNamer {
   DataWriter *AddNodeDataWriter(const Node *node, DataWriter &&writer);
   DataWriter *AddNodeTimestampWriter(const Node *node, DataWriter &&writer);
 
-  void CloseWriter(std::unique_ptr<DetachedBufferWriter> *writer_pointer);
+  void CloseWriter(DetachedBufferWriter *writer_pointer);
 
   void CreateBufferWriter(std::string_view path, size_t max_message_size,
-                          std::unique_ptr<DetachedBufferWriter> *destination);
+                          DataWriter *data_writer);
 
   std::string extension_;
 
@@ -567,13 +580,13 @@ class MultiNodeLogNamer : public LogNamer {
   T accumulate_data_writers(T t, BinaryOperation op) const {
     for (const std::pair<const Node *const, DataWriter> &data_writer :
          node_data_writers_) {
-      if (data_writer.second.writer != nullptr) {
+      if (data_writer.second.writer() != nullptr) {
         t = op(std::move(t), data_writer.second);
       }
     }
     for (const std::pair<const Node *const, DataWriter> &data_writer :
          node_timestamp_writers_) {
-      if (data_writer.second.writer != nullptr) {
+      if (data_writer.second.writer() != nullptr) {
         t = op(std::move(t), data_writer.second);
       }
     }

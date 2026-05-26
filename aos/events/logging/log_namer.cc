@@ -49,7 +49,7 @@ DataWriter::DataWriter(LogNamer *log_namer, const Node *node,
 }
 
 DataWriter::~DataWriter() {
-  if (writer) {
+  if (writer_) {
     Close();
   }
 }
@@ -338,11 +338,11 @@ std::chrono::nanoseconds DataWriter::CopyMessage(
   CHECK_EQ(log_namer_->monotonic_start_time(node_index_, source_node_boot_uuid),
            monotonic_start_time_);
   CHECK_EQ(state_[node_index_].boot_uuid, source_node_boot_uuid);
-  CHECK(writer);
+  CHECK(writer_);
   CHECK(header_written_) << ": Attempting to write message before header to "
-                         << writer->name();
+                         << writer_->name();
   CHECK_LE(coppier->size(), max_message_size_);
-  std::chrono::nanoseconds encode_duration = writer->CopyMessage(coppier, now);
+  std::chrono::nanoseconds encode_duration = writer_->CopyMessage(coppier, now);
   return encode_duration;
 }
 
@@ -365,11 +365,11 @@ DataWriter::MakeHeader() {
 void DataWriter::QueueHeader(
     aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader> &&header) {
   CHECK(!header_written_) << ": Attempting to write duplicate header to "
-                          << writer->name();
+                          << writer_->name();
   CHECK(header.message().has_source_node_boot_uuid());
   CHECK_EQ(state_[node_index_].boot_uuid,
            UUID::FromString(header.message().source_node_boot_uuid()));
-  if (!writer) {
+  if (!writer_) {
     // Since we haven't opened the first time, it's still not too late to update
     // the max message size.  Make sure the header fits.
     //
@@ -387,19 +387,19 @@ void DataWriter::QueueHeader(
           << aos::FlatbufferToJson(
                  header, {.multi_line = false, .max_vector_size = 100});
 
-  CHECK(writer);
+  CHECK(writer_);
   DataEncoder::SpanCopier coppier(header.span());
   CHECK_LE(coppier.size(), max_message_size_);
-  writer->CopyMessage(&coppier, aos::monotonic_clock::now());
+  writer_->CopyMessage(&coppier, aos::monotonic_clock::now());
   header_written_ = true;
   monotonic_start_time_ = log_namer_->monotonic_start_time(
       node_index_, state_[node_index_].boot_uuid);
 }
 
 void DataWriter::Close() {
-  CHECK(writer);
+  CHECK(writer_);
   close_(this);
-  writer.reset();
+  writer_.reset();
   header_written_ = false;
 }
 
@@ -803,7 +803,7 @@ void MultiNodeLogNamer::WriteConfiguration(
     all_filenames_.emplace_back(filename);
   }
   // Close the file and maybe rename it too.
-  CloseWriter(&writer);
+  CloseWriter(writer.get());
 }
 
 void MultiNodeLogNamer::NoticeNode(const Node *source_node) {
@@ -894,7 +894,7 @@ DataWriter *MultiNodeLogNamer::MakeWriter(const Channel *channel) {
                                 OpenDataWriter(source_node, data_writer);
                               },
                               [this](DataWriter *data_writer) {
-                                CloseWriter(&data_writer->writer);
+                                CloseWriter(data_writer->writer());
                               },
                               PackMessageSize(LogType::kLogRemoteMessage,
                                               channel->max_size()),
@@ -926,7 +926,7 @@ DataWriter *MultiNodeLogNamer::MakeForwardedTimestampWriter(
                          OpenForwardedTimestampWriter(node_, data_writer);
                        },
                        [this](DataWriter *data_writer) {
-                         CloseWriter(&data_writer->writer);
+                         CloseWriter(data_writer->writer());
                        },
                        PackRemoteMessageSize(),
                        {StoredDataType::REMOTE_TIMESTAMPS}});
@@ -957,7 +957,7 @@ DataWriter *MultiNodeLogNamer::MakeTimestampWriter(const Channel *channel) {
                           OpenTimestampWriter(data_writer);
                         },
                         [this](DataWriter *data_writer) {
-                          CloseWriter(&data_writer->writer);
+                          CloseWriter(data_writer->writer());
                         },
                         PackMessageSize(LogType::kLogDeliveryTimeOnly, 0),
                         {StoredDataType::TIMESTAMPS}});
@@ -975,13 +975,13 @@ WriteCode MultiNodeLogNamer::Close() {
 void MultiNodeLogNamer::ResetStatistics() {
   for (std::pair<const Node *const, DataWriter> &data_writer :
        node_data_writers_) {
-    if (!data_writer.second.writer) continue;
-    data_writer.second.writer->WriteStatistics()->ResetStats();
+    if (!data_writer.second.writer()) continue;
+    data_writer.second.writer()->WriteStatistics()->ResetStats();
   }
   for (std::pair<const Node *const, DataWriter> &data_writer :
        node_timestamp_writers_) {
-    if (!data_writer.second.writer) continue;
-    data_writer.second.writer->WriteStatistics()->ResetStats();
+    if (!data_writer.second.writer()) continue;
+    data_writer.second.writer()->WriteStatistics()->ResetStats();
   }
   max_write_time_ = std::chrono::nanoseconds::zero();
   max_write_time_bytes_ = -1;
@@ -997,8 +997,7 @@ void MultiNodeLogNamer::OpenForwardedTimestampWriter(
   const std::string filename = absl::StrCat(
       "timestamps/remote_", data_writer->node()->name()->string_view(), ".part",
       data_writer->parts_index(), ".bfbs", extension_);
-  CreateBufferWriter(filename, data_writer->max_message_size(),
-                     &data_writer->writer);
+  CreateBufferWriter(filename, data_writer->max_message_size(), data_writer);
 }
 
 void MultiNodeLogNamer::OpenDataWriter(const Node *source_node,
@@ -1015,61 +1014,56 @@ void MultiNodeLogNamer::OpenDataWriter(const Node *source_node,
 
   absl::StrAppend(&filename, "data.part", data_writer->parts_index(), ".bfbs",
                   extension_);
-  CreateBufferWriter(filename, data_writer->max_message_size(),
-                     &data_writer->writer);
+  CreateBufferWriter(filename, data_writer->max_message_size(), data_writer);
 }
 
 void MultiNodeLogNamer::OpenTimestampWriter(DataWriter *data_writer) {
   std::string filename =
       absl::StrCat(node()->name()->string_view(), "_timestamps.part",
                    data_writer->parts_index(), ".bfbs", extension_);
-  CreateBufferWriter(filename, data_writer->max_message_size(),
-                     &data_writer->writer);
+  CreateBufferWriter(filename, data_writer->max_message_size(), data_writer);
 }
 
-void MultiNodeLogNamer::CreateBufferWriter(
-    std::string_view path, size_t max_message_size,
-    std::unique_ptr<DetachedBufferWriter> *destination) {
+void MultiNodeLogNamer::CreateBufferWriter(std::string_view path,
+                                           size_t max_message_size,
+                                           DataWriter *data_writer) {
   if (ran_out_of_space_) {
     // Refuse to open any new files, which might skip data. Any existing files
     // are in the same folder, which means they're on the same filesystem, which
     // means they're probably going to run out of space and get stuck too.
-    if (!(*destination)) {
+    if (data_writer->writer() == nullptr) {
       // But avoid leaving a nullptr writer if we're out of space when
       // attempting to open the first file.
-      *destination = std::make_unique<DetachedBufferWriter>(
-          DetachedBufferWriter::already_out_of_space_t());
+      data_writer->set_writer(std::make_unique<DetachedBufferWriter>(
+          DetachedBufferWriter::already_out_of_space_t()));
     }
     return;
   }
 
   // Let's check that we need to close and replace current driver.
-  if (*destination) {
+  if (data_writer->writer() != nullptr) {
     // Let's close the current writer.
-    CloseWriter(destination);
+    CloseWriter(data_writer->writer());
     // Are we out of space now?
     if (ran_out_of_space_) {
-      *destination = std::make_unique<DetachedBufferWriter>(
-          DetachedBufferWriter::already_out_of_space_t());
+      data_writer->set_writer(std::make_unique<DetachedBufferWriter>(
+          DetachedBufferWriter::already_out_of_space_t()));
       return;
     }
   }
 
   const std::string filename(path);
-  *destination = std::make_unique<DetachedBufferWriter>(
-      log_backend_->RequestFile(filename), encoder_factory_(max_message_size));
-  if (!(*destination)->ran_out_of_space()) {
+  data_writer->set_writer(std::make_unique<DetachedBufferWriter>(
+      log_backend_->RequestFile(filename), encoder_factory_(max_message_size)));
+  if (!data_writer->writer()->ran_out_of_space()) {
     all_filenames_.emplace_back(path);
   }
 }
 
-void MultiNodeLogNamer::CloseWriter(
-    std::unique_ptr<DetachedBufferWriter> *writer_pointer) {
-  CHECK(writer_pointer != nullptr);
-  if (!(*writer_pointer)) {
+void MultiNodeLogNamer::CloseWriter(DetachedBufferWriter *const writer) {
+  if (writer == nullptr) {
     return;
   }
-  DetachedBufferWriter *const writer = writer_pointer->get();
   writer->Close();
 
   const auto *stats = writer->WriteStatistics();
@@ -1135,7 +1129,7 @@ DataWriter *MinimalFileMultiNodeLogNamer::MakeWriter(const Channel *channel) {
                      OpenNodeWriter(source_node, data_writer);
                    },
                    [this](DataWriter *data_writer) {
-                     CloseWriter(&data_writer->writer);
+                     CloseWriter(data_writer->writer());
                    },
                    PackMessageSize(LogType::kLogMessage, channel->max_size()),
                    {StoredDataType::DATA, StoredDataType::TIMESTAMPS}});
@@ -1159,7 +1153,7 @@ DataWriter *MinimalFileMultiNodeLogNamer::MakeWriter(const Channel *channel) {
               OpenNodeWriter(source_node, data_writer);
             },
             [this](DataWriter *data_writer) {
-              CloseWriter(&data_writer->writer);
+              CloseWriter(data_writer->writer());
             },
             PackMessageSize(LogType::kLogRemoteMessage, channel->max_size()),
             {StoredDataType::DATA, StoredDataType::REMOTE_TIMESTAMPS}});
@@ -1192,7 +1186,7 @@ DataWriter *MinimalFileMultiNodeLogNamer::MakeTimestampWriter(
                           OpenNodeWriter(node_, data_writer);
                         },
                         [this](DataWriter *data_writer) {
-                          CloseWriter(&data_writer->writer);
+                          CloseWriter(data_writer->writer());
                         },
                         PackMessageSize(LogType::kLogDeliveryTimeOnly, 0),
                         {StoredDataType::DATA, StoredDataType::TIMESTAMPS}});
@@ -1224,7 +1218,7 @@ DataWriter *MinimalFileMultiNodeLogNamer::MakeForwardedTimestampWriter(
                    OpenNodeWriter(node, data_writer);
                  },
                  [this](DataWriter *data_writer) {
-                   CloseWriter(&data_writer->writer);
+                   CloseWriter(data_writer->writer());
                  },
                  PackRemoteMessageSize(),
                  {StoredDataType::DATA, StoredDataType::REMOTE_TIMESTAMPS}});
@@ -1245,8 +1239,7 @@ void MinimalFileMultiNodeLogNamer::OpenNodeWriter(const Node *source_node,
   absl::StrAppend(&filename, "all.part", data_writer->parts_index(), ".bfbs",
                   extension_);
   VLOG(1) << "Going to open " << filename;
-  CreateBufferWriter(filename, data_writer->max_message_size(),
-                     &data_writer->writer);
+  CreateBufferWriter(filename, data_writer->max_message_size(), data_writer);
 }
 
 }  // namespace aos::logger

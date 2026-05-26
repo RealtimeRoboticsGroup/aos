@@ -26,6 +26,16 @@ struct SctpClientChannelState {
   monotonic_clock::time_point last_timestamp = monotonic_clock::min_time;
 };
 
+// Per-stream information that we need to track.
+struct StreamData {
+  // The channel that corresponds to this stream.
+  int channel;
+  // Specifies if we should be replying back with delivery times.
+  bool reply_with_timestamp;
+  // Specifies if the connection is reliable.
+  bool is_reliable;
+};
+
 // See message_bridge_protocol.h for more details about the protocol.
 
 // This class encapsulates all the state required to connect to a server and
@@ -108,10 +118,9 @@ class SctpClientConnection {
 
   // Channels to send received messages on.
   std::vector<SctpClientChannelState> *channels_;
-  // Stream number -> channel lookup.
-  std::vector<int> stream_to_channel_;
-  // Bitmask signaling if we should be replying back with delivery times.
-  std::vector<bool> stream_reply_with_timestamp_;
+  // Stream-specific data that we need to keep track of. The vector is indexed
+  // by the stream number.
+  std::vector<StreamData> stream_data_;
 
   // Timer which fires to handle reconnections.
   aos::TimerHandler *connect_timer_;
