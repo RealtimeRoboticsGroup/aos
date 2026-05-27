@@ -1,7 +1,14 @@
 #include "aos/die.h"
 
 #include <sys/types.h>
+
+#include "aos/realtime.h"
+#ifdef _WIN32
+#include <process.h>
+#include <windows.h>
+#else
 #include <unistd.h>
+#endif
 
 #include <atomic>
 #include <cerrno>
@@ -25,19 +32,10 @@ namespace {
 
 // Calculates the filename to dump the message into.
 const std::string GetFilename() {
-  char *filename;
-  if (asprintf(&filename, "/tmp/aos_fatal_error.%jd",
-               static_cast<intmax_t>(getpid())) > 0) {
-    std::string r(filename);
-    free(filename);
-    return r;
-  } else {
-    fprintf(stderr,
-            "aos fatal: asprintf(%p, \"thingie with %%jd\", %jd)"
-            " failed with %d\n",
-            &filename, static_cast<intmax_t>(getpid()), errno);
-    return std::string();
-  }
+  intmax_t pid = static_cast<intmax_t>(aos::GetProcessId());
+  char buffer[256];
+  snprintf(buffer, sizeof(buffer), "/tmp/aos_fatal_error.%jd", pid);
+  return std::string(buffer);
 }
 
 std::atomic_bool test_mode(false);

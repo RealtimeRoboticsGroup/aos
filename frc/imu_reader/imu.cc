@@ -1,5 +1,7 @@
 #include "frc/imu_reader/imu.h"
 
+#include <fcntl.h>
+
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 
