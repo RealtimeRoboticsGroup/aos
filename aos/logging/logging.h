@@ -39,8 +39,8 @@ extern "C" {
 
 // Actually implements the basic logging call.
 // Does not check that level is valid.
-void log_do(log_level level, const char *format, ...)
-    __attribute__((format(GOOD_PRINTF_FORMAT_TYPE, 2, 3)));
+AOS_PRINTF_FORMAT(2, 3)
+void log_do(log_level level, const char *format, ...);
 
 #ifdef __cplusplus
 }
@@ -145,7 +145,7 @@ namespace aos {
 // You are crashing anyways.  If we want glog to tee to AOS_LOG as well, we'll
 // implement that through that path.
 #define AOS_CHECK(condition)                          \
-  if (__builtin_expect(!(condition), 0)) {            \
+  if (AOS_UNLIKELY(!(condition))) {                   \
     AOS_LOG(FATAL, "CHECK(%s) failed\n", #condition); \
   }
 
@@ -157,7 +157,7 @@ namespace aos {
   template <typename T1, typename T2>                               \
   inline void LogImpl##name(const T1 &v1, const T2 &v2,             \
                             const char *exprtext) {                 \
-    if (!__builtin_expect(v1 op v2, 1)) {                           \
+    if (!AOS_LIKELY(v1 op v2)) {                                    \
       log_do(FATAL,                                                 \
              LOG_SOURCENAME                                         \
              ": " AOS_STRINGIFY(__LINE__) ": CHECK(%s) failed\n",   \
@@ -208,14 +208,14 @@ inline T *CheckNotNull(const char *value_name, T *t) {
 #define AOS_CHECK_NOTNULL(val) ::aos::CheckNotNull(AOS_STRINGIFY(val), val)
 
 inline int CheckSyscall(const char *syscall_string, int value) {
-  if (__builtin_expect(value == -1, false)) {
+  if (AOS_UNLIKELY(value == -1)) {
     AOS_PLOG(FATAL, "%s failed", syscall_string);
   }
   return value;
 }
 
 inline void CheckSyscallReturn(const char *syscall_string, int value) {
-  if (__builtin_expect(value != 0, false)) {
+  if (AOS_UNLIKELY(value != 0)) {
     AOS_PELOG(FATAL, value, "%s failed", syscall_string);
   }
 }

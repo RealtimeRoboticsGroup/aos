@@ -2,6 +2,7 @@
 #include <mach/thread_policy.h>
 #include <malloc/malloc.h>
 #include <pthread.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 #include <cstring>
@@ -506,5 +507,19 @@ void RegisterMallocHook() {
     pthread_atfork(PrepareFork, PostFork, PostFork);
   }
 }
+
+std::string GetProgramName() { return getprogname(); }
+
+std::string GetThreadName() {
+  char thread_name_array[65];
+  if (pthread_getname_np(pthread_self(), thread_name_array,
+                         sizeof(thread_name_array)) != 0) {
+    ABSL_PLOG(FATAL) << "pthread_getname_np failed";
+  }
+  thread_name_array[sizeof(thread_name_array) - 1] = '\0';
+  return std::string(thread_name_array);
+}
+
+int32_t GetProcessId() { return getpid(); }
 
 }  // namespace aos

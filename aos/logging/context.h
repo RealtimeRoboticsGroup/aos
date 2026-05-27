@@ -1,11 +1,15 @@
 #ifndef AOS_LOGGING_CONTEXT_H_
 #define AOS_LOGGING_CONTEXT_H_
 
+#ifndef _WIN32
 #include <sys/types.h>
+#endif
 
 #include <cinttypes>
 #include <memory>
 #include <string_view>
+
+#include "aos/macros.h"
 
 namespace aos {
 namespace logging {

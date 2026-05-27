@@ -1,3 +1,5 @@
+#include <windows.h>
+
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
@@ -87,5 +89,16 @@ void RegisterMallocHook() {
     ABSL_LOG(WARNING) << "Malloc hooks not implemented on Windows";
   }
 }
+
+std::string GetProgramName() {
+  char exe_path[MAX_PATH];
+  GetModuleFileNameA(nullptr, exe_path, MAX_PATH);
+  const char *last_slash = strrchr(exe_path, '\\');
+  return std::string(last_slash ? (last_slash + 1) : exe_path);
+}
+
+std::string GetThreadName() { return ""; }
+
+int32_t GetProcessId() { return GetCurrentProcessId(); }
 
 }  // namespace aos

@@ -1,16 +1,9 @@
 #include "aos/logging/context.h"
 
+#include "aos/realtime.h"
+
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE /* See feature_test_macros(7) */
-#endif
-
-#include <unistd.h>
-#ifdef __APPLE__
-#include <pthread.h>
-#include <stdlib.h>
-#else
-#include <errno.h>
-#include <sys/prctl.h>
 #endif
 
 #include <algorithm>
@@ -21,12 +14,10 @@
 #include <ostream>
 #include <string>
 
-extern char *program_invocation_name;
-extern char *program_invocation_short_name;
-
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 
+#include "aos/macros.h"
 #include "aos/sanitizers.h"
 
 #if defined(AOS_SANITIZE_MEMORY)
@@ -40,45 +31,13 @@ namespace {
 // process.
 
 ::std::string GetMyName() {
-  // The maximum number of characters that can make up a thread name.
-  // The docs are unclear if it can be 16 characters with no '\0', so we'll be
-  // safe by adding our own where necessary.
-  std::string process_name;
+  std::string process_name = aos::GetProgramName();
+  std::string thread_name = aos::GetThreadName();
 
-#ifdef __APPLE__
-  static const size_t kThreadNameLength = 64;
-  process_name = getprogname();
-#else
-  static const size_t kThreadNameLength = 16;
-  process_name = program_invocation_short_name;
-#endif
-
-  char thread_name_array[kThreadNameLength + 1];
-#ifdef __APPLE__
-  // macOS pthread_getname_np returns 0 on success
-  if (pthread_getname_np(pthread_self(), thread_name_array,
-                         sizeof(thread_name_array)) != 0) {
-    ABSL_PLOG(FATAL) << "pthread_getname_np failed";
-  }
-#else
-  if (prctl(PR_GET_NAME, thread_name_array) != 0) {
-    ABSL_PLOG(FATAL) << "prctl(PR_GET_NAME, " << thread_name_array
-                     << ") failed";
-  }
-#endif
-#if defined(AOS_SANITIZE_MEMORY)
-  // msan doesn't understand PR_GET_NAME, so help it along.
-  __msan_unpoison(thread_name_array, sizeof(thread_name_array));
-#endif
-  thread_name_array[sizeof(thread_name_array) - 1] = '\0';
-  ::std::string thread_name(thread_name_array);
-
-  // If the first bunch of characters are the same.
-  // We cut off comparing at the shorter of the 2 strings because one or the
-  // other often ends up cut off.
-  if (strncmp(thread_name.c_str(), process_name.c_str(),
+  if (thread_name.empty() ||
+      strncmp(thread_name.c_str(), process_name.c_str(),
               ::std::min(thread_name.length(), process_name.length())) == 0) {
-    // This thread doesn't have an actual name.
+    // This thread doesn't have an actual name or it's the same as the process.
     return process_name;
   }
 
@@ -119,14 +78,14 @@ std::string_view Context::MyName() {
 }
 
 Context *Context::Get() {
-  if (__builtin_expect(delete_current_context, false)) {
+  if (AOS_UNLIKELY(delete_current_context)) {
     my_context.reset();
     delete_current_context = false;
   }
-  if (__builtin_expect(!my_context.has_value(), false)) {
+  if (AOS_UNLIKELY(!my_context.has_value())) {
     my_context.emplace();
     my_context->ClearName();
-    my_context->source = getpid();
+    my_context->source = aos::GetProcessId();
   }
   return &*my_context;
 }

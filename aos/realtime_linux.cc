@@ -1,4 +1,10 @@
+#include <errno.h>
 #include <malloc.h>
+#include <unistd.h>
+
+#if defined(AOS_SANITIZE_MEMORY)
+#include <sanitizer/msan_interface.h>
+#endif
 #include <sched.h>
 #include <sys/prctl.h>
 #include <sys/resource.h>
@@ -41,6 +47,8 @@ namespace logging::internal {
 void ReloadThreadName() __attribute__((weak));
 
 }  // namespace logging::internal
+
+extern "C" char *program_invocation_short_name;
 
 namespace aos {
 
@@ -249,5 +257,23 @@ void RegisterMallocHook() {
     }
   }
 }
+
+std::string GetProgramName() { return ::program_invocation_short_name; }
+
+std::string GetThreadName() {
+  char thread_name_array[17];
+  if (prctl(PR_GET_NAME, thread_name_array) != 0) {
+    ABSL_PLOG(FATAL) << "prctl(PR_GET_NAME, " << thread_name_array
+                     << ") failed";
+  }
+#if defined(AOS_SANITIZE_MEMORY)
+  // msan doesn't understand PR_GET_NAME, so help it along.
+  __msan_unpoison(thread_name_array, sizeof(thread_name_array));
+#endif
+  thread_name_array[sizeof(thread_name_array) - 1] = '\0';
+  return std::string(thread_name_array);
+}
+
+int32_t GetProcessId() { return getpid(); }
 
 }  // namespace aos

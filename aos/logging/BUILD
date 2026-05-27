@@ -22,6 +22,7 @@ cc_library(
     deps = [
         "//aos:die",
         "//aos:macros",
+        "//aos:realtime",
         "//aos:sanitizers",
         "//aos/libc:aos_strerror",
         "//aos/time",
