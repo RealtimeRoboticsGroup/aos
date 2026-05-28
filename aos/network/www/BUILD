@@ -1,3 +1,4 @@
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//aos:config.bzl", "aos_config")
 load("//tools/build_rules:js.bzl", "rollup_bundle", "ts_project")
 

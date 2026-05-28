@@ -1,4 +1,5 @@
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//tools/build_rules:js.bzl", "rollup_bundle", "ts_project")
 load("//tools/python:defs.bzl", "py_binary")
 

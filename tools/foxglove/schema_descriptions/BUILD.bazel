@@ -17,13 +17,13 @@ ts_project(
     source_map = False,
     tsconfig = {
         "compilerOptions": {
-            "target": "ES2021",
+            "esModuleInterop": True,
+            "lib": ["ES2021"],
             "module": "CommonJS",
             "moduleResolution": "node",
-            "lib": ["ES2021"],
-            "esModuleInterop": True,
             "skipLibCheck": True,
             "strict": True,
+            "target": "ES2021",
             "types": ["node"],
         },
     },

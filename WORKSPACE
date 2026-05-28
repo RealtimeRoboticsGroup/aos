@@ -28,6 +28,15 @@ http_archive(
     ],
 )
 
+# Defined early because //debian:packages.bzl is loaded below and pulls in
+# @rules_shell//shell:sh_binary.bzl.
+http_archive(
+    name = "rules_shell",
+    sha256 = "20721f63908879c083f94869e618ea8d4ff5edb91ff9a72a2ebee357fdbc352d",
+    strip_prefix = "rules_shell-0.8.0",
+    url = "https://github.com/bazel-contrib/rules_shell/releases/download/v0.8.0/rules_shell-v0.8.0.tar.gz",
+)
+
 load("@rules_java//toolchains:remote_java_repository.bzl", "remote_java_repository")
 load("//tools/ci:repo_defs.bzl", "ci_configure")
 
@@ -697,3 +706,9 @@ local_repository(
     name = "aspect_rules_lint",
     path = "tools/workspace_stubs/aspect_rules_lint",
 )
+
+load("@rules_shell//shell:repositories.bzl", "rules_shell_dependencies", "rules_shell_toolchains")
+
+rules_shell_dependencies()
+
+rules_shell_toolchains()

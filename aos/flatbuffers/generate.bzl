@@ -41,15 +41,15 @@ def _static_flatbuffer_impl(ctx):
 _static_flatbuffer = rule(
     implementation = _static_flatbuffer_impl,
     attrs = {
-        "cc_lib": attr.label(
-            mandatory = True,
-            providers = [CcInfo],
-            doc = "The underlying cc_library whose CcInfo is re-exported.",
-        ),
         "bfbs": attr.label(
             mandatory = True,
             allow_files = [".bfbs"],
             doc = "Target producing the .bfbs reflection files (one per source).",
+        ),
+        "cc_lib": attr.label(
+            mandatory = True,
+            providers = [CcInfo],
+            doc = "The underlying cc_library whose CcInfo is re-exported.",
         ),
         "fbs_names": attr.string_list(
             mandatory = True,

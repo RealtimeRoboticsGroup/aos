@@ -1,5 +1,7 @@
 load("@aos//aos/flatbuffers:build_defs.bzl", "flatbuffer_cc_library")
 load("@aos//aos/flatbuffers:flatbuffers_python.bzl", "flatbuffer_py_library", "flatbuffer_py_srcs")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//aos/flatbuffers:generate.bzl", "static_flatbuffer")
 
 static_flatbuffer(

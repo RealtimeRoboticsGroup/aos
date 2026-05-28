@@ -3,6 +3,7 @@ load("@ci_configure//:ci.bzl", "RUNNING_IN_CI")
 load("@npm//:prettier/package_json.bzl", prettier_bin = "bin")
 load("@rules_multirun//:defs.bzl", "multirun")
 load("@rules_python//python/entry_points:py_console_script_binary.bzl", "py_console_script_binary")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
 prettier_bin.prettier_binary(
     name = "prettier_binary",

@@ -1,5 +1,6 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//tools/build_rules:clean_dep.bzl", "clean_dep")
 load("//tools/platforms:host_platform.bzl", "host_compatible_with")
 
@@ -84,7 +85,7 @@ exec "$$(rlocation aos/debian/download_packages)" %s %s %s %s --release=%s "$$@"
 END""" % (force_includes, force_excludes, excludes_list, package_list, release),
         target_compatible_with = target_compatible_with,
     )
-    native.sh_binary(
+    sh_binary(
         name = name,
         srcs = ["%s.sh" % name],
         deps = [

@@ -1,4 +1,5 @@
 load("@rules_python//python:defs.bzl", "py_runtime", "py_runtime_pair")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_uv//uv:pip.bzl", "pip_compile")
 load("//tools/python:defs.bzl", "expand_template", "py_binary")
 
