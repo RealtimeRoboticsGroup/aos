@@ -26,7 +26,7 @@
 #include "flatbuffers/vector.h"
 
 #include "aos/flatbuffers/attributes.h"
-#include "aos/flatbuffers/base.h"
+#include "aos/flatbuffers/static_base.h"
 #include "aos/json_to_flatbuffer.h"
 
 namespace aos::fbs {

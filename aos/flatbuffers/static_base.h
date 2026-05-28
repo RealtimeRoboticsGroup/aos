@@ -1,5 +1,5 @@
-#ifndef AOS_FLATBUFFERS_BASE_H_
-#define AOS_FLATBUFFERS_BASE_H_
+#ifndef AOS_FLATBUFFERS_STATIC_BASE_H_
+#define AOS_FLATBUFFERS_STATIC_BASE_H_
 
 #include <stdint.h>
 #ifdef _WIN32
@@ -374,4 +374,4 @@ struct TableMover {
 }  // namespace internal
 }  // namespace aos::fbs
 
-#endif  // AOS_FLATBUFFERS_BASE_H_
+#endif  // AOS_FLATBUFFERS_STATIC_BASE_H_

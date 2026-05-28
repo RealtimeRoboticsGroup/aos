@@ -1,4 +1,4 @@
-#include "aos/flatbuffers/base.h"
+#include "aos/flatbuffers/static_base.h"
 
 #include <string.h>
 

@@ -26,10 +26,10 @@
 #include "gtest/gtest.h"
 
 #include "aos/flatbuffers.h"
-#include "aos/flatbuffers/base.h"
 #include "aos/flatbuffers/binary_annotator.h"
 #include "aos/flatbuffers/builder.h"
 #include "aos/flatbuffers/interesting_schemas.h"
+#include "aos/flatbuffers/static_base.h"
 #include "aos/flatbuffers/static_vector.h"
 #include "aos/flatbuffers/test_dir/include_generated.h"
 #include "aos/flatbuffers/test_dir/include_reflection_static.h"

@@ -6,7 +6,7 @@
 #include "absl/log/absl_check.h"
 #include "flatbuffers/base.h"
 
-#include "aos/flatbuffers/base.h"
+#include "aos/flatbuffers/static_base.h"
 namespace aos::fbs {
 
 // This Table object is used as the parent class to the generated code for every

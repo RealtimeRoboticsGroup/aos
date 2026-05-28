@@ -10,7 +10,7 @@
 
 #include "aos/containers/inlined_vector.h"
 #include "aos/containers/sized_array.h"
-#include "aos/flatbuffers/base.h"
+#include "aos/flatbuffers/static_base.h"
 #include "aos/realtime.h"
 
 namespace aos::fbs {

@@ -958,7 +958,7 @@ cc_test(
     shard_count = 10,
     deps = [
         ":multinode_logger_test_lib",
-        "//aos/flatbuffers:base",
+        "//aos/flatbuffers:static_base",
     ],
 )
 

@@ -28,12 +28,12 @@ cc_library(
 )
 
 cc_library(
-    name = "base",
+    name = "static_base",
     srcs = [
-        "base.cc",
+        "static_base.cc",
     ],
     hdrs = [
-        "base.h",
+        "static_base.h",
     ],
     visibility = ["//visibility:public"],
     deps = [
@@ -50,10 +50,10 @@ cc_library(
 )
 
 cc_test(
-    name = "base_test",
-    srcs = ["base_test.cc"],
+    name = "static_base_test",
+    srcs = ["static_base_test.cc"],
     deps = [
-        ":base",
+        ":static_base",
         ":static_flatbuffers",
         ":test_fbs",
         "//aos:sanitizers",
@@ -67,7 +67,7 @@ cc_library(
     hdrs = ["static_table.h"],
     visibility = ["//visibility:public"],
     deps = [
-        ":base",
+        ":static_base",
         "@com_github_google_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/log:absl_check",
     ],
