@@ -393,6 +393,7 @@ cc_library(
         "//aos/ipc_lib:shm_base",
         "//aos/ipc_lib:signalfd",
         "//aos/stl_mutex",
+        "//aos/util:application_name",
         "//aos/util:phased_loop",
         "@com_google_absl//absl/base",
         "@com_google_absl//absl/log:absl_check",

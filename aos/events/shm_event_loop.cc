@@ -25,22 +25,9 @@
 #include "aos/ipc_lib/memory_mapped_queue.h"
 #include "aos/realtime.h"
 #include "aos/stl_mutex/stl_mutex.h"
+#include "aos/util/application_name.h"
 #include "aos/util/file.h"
 #include "aos/util/phased_loop.h"
-
-namespace {
-
-// Returns the portion of the path after the last /.  This very much assumes
-// that the application name is null terminated.
-const char *Filename(const char *path) {
-  const std::string_view path_string_view = path;
-  auto last_slash_pos = path_string_view.find_last_of("/");
-
-  return last_slash_pos == std::string_view::npos ? path
-                                                  : path + last_slash_pos + 1;
-}
-
-}  // namespace
 
 // This value is affected by the umask of the process which is calling it
 // and is set to the user's value by default (check yours running `umask` on
@@ -54,8 +41,6 @@ ABSL_FLAG(uint32_t, permissions, 0770,
           "Permissions to make shared memory files and folders, "
           "affected by the process's umask. "
           "See shm_event_loop.cc for more details.");
-ABSL_FLAG(std::string, application_name, Filename(program_invocation_name),
-          "The application name");
 
 namespace aos {
 

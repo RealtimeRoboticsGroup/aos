@@ -632,6 +632,7 @@ cc_library(
         "//aos/testing:path",
         "//aos/testing/ping_pong:ping_fbs",
         "//aos/testing/ping_pong:pong_fbs",
+        "//aos/util:application_name",
     ],
 )
 
@@ -660,6 +661,7 @@ cc_test(
         "//aos/testing:path",
         "//aos/testing/ping_pong:ping_fbs",
         "//aos/testing/ping_pong:pong_fbs",
+        "//aos/util:application_name",
     ],
 )
 
@@ -692,6 +694,7 @@ cc_test(
         "//aos/testing:path",
         "//aos/testing/ping_pong:ping_fbs",
         "//aos/testing/ping_pong:pong_fbs",
+        "//aos/util:application_name",
     ],
 )
 

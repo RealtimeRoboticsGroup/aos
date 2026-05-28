@@ -3,6 +3,8 @@
 #include "absl/flags/flag.h"
 #include "absl/log/log.h"
 
+#include "aos/util/application_name.h"
+
 ABSL_FLAG(uint32_t, start_core_index, 0, "The core to start pinning on");
 ABSL_DECLARE_FLAG(std::string, boot_uuid);
 

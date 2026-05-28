@@ -17,6 +17,7 @@
 #include "aos/testing/path.h"
 #include "aos/testing/ping_pong/ping_generated.h"
 #include "aos/testing/ping_pong/pong_generated.h"
+#include "aos/util/application_name.h"
 #include "aos/util/file.h"
 
 namespace aos::message_bridge::testing {
