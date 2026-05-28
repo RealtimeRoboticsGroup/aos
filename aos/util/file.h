@@ -33,6 +33,14 @@ std::optional<std::string> MaybeReadFileToString(
 // any errors are encountered.
 std::vector<uint8_t> ReadFileToVecOrDie(const std::string_view filename);
 
+// Writes contents to an existing file. Returns false (never dies) if the file
+// cannot be opened or written, or if not all the bytes are written.
+// Unlike WriteStringToFileOrDie, will not be fatal on failure — suitable for
+// best-effort cleanup paths where the target may already be gone.
+bool MaybeWriteStringToFile(std::string_view filename,
+                            std::string_view contents,
+                            mode_t permissions = S_IRWXU);
+
 // Creates filename if it doesn't exist and sets the contents to contents.
 void WriteStringToFileOrDie(const std::string_view filename,
                             const std::string_view contents,

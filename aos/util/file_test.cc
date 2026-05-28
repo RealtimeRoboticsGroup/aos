@@ -254,4 +254,35 @@ TEST(FileTest, MkdirPIfSpace) {
   UnlinkRecursive(base_dir);
 }
 
+TEST(FileTest, MaybeWriteStringToExistingFile) {
+  const std::string tmpdir(aos::testing::TestTmpDir());
+  const std::string test_file = tmpdir + "/maybe_write_test";
+  WriteStringToFileOrDie(test_file, "original");
+
+  EXPECT_TRUE(MaybeWriteStringToFile(test_file, "replaced"));
+  EXPECT_EQ("replaced", ReadFileToStringOrDie(test_file));
+}
+
+TEST(FileTest, MaybeWriteStringToNonexistentFile) {
+  EXPECT_TRUE(MaybeWriteStringToFile("/tmp/dne_maybe_write_test", "data"));
+}
+
+TEST(FileTest, MaybeWriteStringTruncates) {
+  const std::string tmpdir(aos::testing::TestTmpDir());
+  const std::string test_file = tmpdir + "/maybe_write_trunc";
+  WriteStringToFileOrDie(test_file, "abcdef");
+
+  EXPECT_TRUE(MaybeWriteStringToFile(test_file, "xy"));
+  EXPECT_EQ("xy", ReadFileToStringOrDie(test_file));
+}
+
+TEST(FileTest, MaybeWriteStringEmptyContents) {
+  const std::string tmpdir(aos::testing::TestTmpDir());
+  const std::string test_file = tmpdir + "/maybe_write_empty";
+  WriteStringToFileOrDie(test_file, "original");
+
+  EXPECT_TRUE(MaybeWriteStringToFile(test_file, ""));
+  EXPECT_EQ("", ReadFileToStringOrDie(test_file));
+}
+
 }  // namespace aos::util::testing

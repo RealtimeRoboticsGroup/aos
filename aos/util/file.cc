@@ -74,6 +74,14 @@ std::vector<uint8_t> ReadFileToVecOrDie(const std::string_view filename) {
   return r;
 }
 
+bool MaybeWriteStringToFile(std::string_view filename,
+                            std::string_view contents, mode_t permissions) {
+  FileWriter writer(filename, permissions);
+  auto result = writer.WriteBytes(
+      {reinterpret_cast<const uint8_t *>(contents.data()), contents.size()});
+  return result.bytes_written == contents.size();
+}
+
 void WriteStringToFileOrDie(const std::string_view filename,
                             const std::string_view contents,
                             mode_t permissions) {
