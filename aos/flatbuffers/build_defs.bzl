@@ -139,6 +139,8 @@ def _flatbuffer_library_compile_impl(ctx):
     if ctx.attr.generated_files:
         outs = ctx.outputs.generated_files
 
+    has_root_folder = False
+
     for src in ctx.files.srcs:
         if ctx.attr.generated_files:
             root_folder = None
@@ -151,13 +153,25 @@ def _flatbuffer_library_compile_impl(ctx):
             out_dir = out.dirname
             outs.append(out)
 
-        arguments = [prefix + ctx.executable._flatc.path]
+        execroot_prefix = prefix
+        if root_folder != None:
+            # On Windows, Bazel uses directory junctions for external repositories.
+            # Changing directory into a junction (e.g. via `cd root_folder`) causes
+            # Windows' path resolution to follow the physical target path of the junction
+            # when handling parent traversal (`..`), which breaks relative prefixes like `../../`.
+            # To resolve this cleanly on both Windows and Linux, we use absolute paths
+            # prefixed with `$EXECROOT/` where the shell environment variable `$EXECROOT`
+            # is set to the workspace's root directory at runtime.
+            has_root_folder = True
+            execroot_prefix = "$EXECROOT/"
+
+        arguments = [execroot_prefix + ctx.executable._flatc.path]
         for path in ctx.attr.include_paths + workspaces:
             for subpath in ["", ctx.bin_dir.path + "/"]:
                 arguments.append("-I")
-                arguments.append(prefix + subpath + path)
+                arguments.append(execroot_prefix + subpath + path)
         arguments.append("-I")
-        arguments.append(prefix + "%s.runfiles/%s" % (
+        arguments.append(execroot_prefix + "%s.runfiles/%s" % (
             ctx.executable._flatc.path,
             ctx.executable._flatc.owner.repo_name or "_main",
         ))
@@ -168,7 +182,7 @@ def _flatbuffer_library_compile_impl(ctx):
 
         arguments.extend([
             "-o",
-            prefix + out_dir,
+            execroot_prefix + out_dir,
         ])
         arguments.append(src_path)
         if root_folder != None:
@@ -176,11 +190,15 @@ def _flatbuffer_library_compile_impl(ctx):
         else:
             commands.append("  ".join(arguments))
 
+    command_str = " && ".join(commands)
+    if has_root_folder:
+        command_str = "EXECROOT=$(pwd) && " + command_str
+
     ctx.actions.run_shell(
         outputs = outs,
         inputs = all_srcs,
         tools = [ctx.executable._flatc],
-        command = " && ".join(commands),
+        command = command_str,
         mnemonic = "Flatc",
         progress_message = "Generating flatbuffer files for %{input}:",
     )

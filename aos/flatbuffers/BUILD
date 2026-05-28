@@ -7,6 +7,7 @@ load("@rules_python//python:defs.bzl", "py_library")
 load("//aos:flatbuffers.bzl", "cc_static_flatbuffer")
 load("//aos/flatbuffers:generate.bzl", "static_flatbuffer")
 load("//tools/build_rules:clean_dep.bzl", "aos_repo_name")
+load("//tools/build_rules:select.bzl", "compiler_select")
 load("//tools/python:defs.bzl", "py_test")
 
 cc_library(
@@ -158,6 +159,11 @@ cc_test(
 cc_binary(
     name = "generate",
     srcs = ["generate.cc"],
+    linkopts = compiler_select({
+        "clang": [],
+        "gcc": [],
+        "msvc": ["/STACK:8388608"],
+    }),
     visibility = ["//visibility:public"],
     deps = [
         ":static_flatbuffers",
@@ -167,16 +173,6 @@ cc_binary(
         "//aos/util:file",
         "@com_github_google_flatbuffers//:flatbuffers",
     ],
-)
-
-sh_binary(
-    name = "generate_wrapper",
-    srcs = ["generate.sh"],
-    data = [
-        ":generate",
-    ],
-    visibility = ["//visibility:public"],
-    deps = ["@bazel_tools//tools/bash/runfiles"],
 )
 
 static_flatbuffer(

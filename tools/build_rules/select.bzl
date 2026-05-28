@@ -106,7 +106,10 @@ def compiler_select(values):
         fail("Need to handle gcc!", "values")
     if "clang" not in values:
         fail("Need to handle clang!", "values")
-    return select({
+    result = {
         clean_dep("//tools:compiler_gcc"): values["gcc"],
         clean_dep("//tools:compiler_clang"): values["clang"],
-    })
+    }
+    if "msvc" in values:
+        result[clean_dep("//tools:compiler_msvc")] = values["msvc"]
+    return select(result)

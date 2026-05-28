@@ -75,6 +75,12 @@ def flatbuffer_ts_library(
     if package_name != None:
         fail("package_name is not supported by flatbuffer_ts_library.")
 
+    if target_compatible_with == None:
+        target_compatible_with = select({
+            "@platforms//os:windows": ["@platforms//:incompatible"],
+            "//conditions:default": [],
+        })
+
     reflection_ts_files = ["reflection/%s" % (name,) for name in [
         "advanced-features.ts",
         "base-type.ts",

@@ -31,6 +31,13 @@ config_setting(
     },
 )
 
+config_setting(
+    name = "compiler_msvc",
+    flag_values = {
+        "@bazel_tools//tools/cpp:compiler": "msvc-cl",
+    },
+)
+
 # TODO(phil): Get rid of these and just use the constraint values directly
 # everywhere.
 config_setting(

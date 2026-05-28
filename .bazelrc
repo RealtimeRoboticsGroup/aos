@@ -107,6 +107,7 @@ build:macos --incompatible_exclusive_test_sandboxed
 # Windows platform overrides
 build:windows --spawn_strategy=standalone
 build:windows --sandbox_default_allow_network=true
+build:windows --enable_runfiles
 
 build:linux --strategy=TsProject=remote,sandboxed
 build:macos --strategy=TsProject=remote,sandboxed

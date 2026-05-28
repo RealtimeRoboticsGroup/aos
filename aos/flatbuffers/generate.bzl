@@ -1,7 +1,44 @@
 load("@aos//aos/flatbuffers:build_defs.bzl", "flatbuffer_cc_library")
-load("@aspect_bazel_lib//lib:run_binary.bzl", "run_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
-load("//tools/build_rules:clean_dep.bzl", "aos_repo_name", "clean_dep")
+load("//tools/build_rules:clean_dep.bzl", "clean_dep")
+
+def _static_flatbuffer_gen_impl(ctx):
+    """Implementation for generating static flatbuffer headers."""
+    inputs = ctx.files.bfbs_files
+    schema_files = ctx.attr.base_files
+    outputs = ctx.outputs.outs
+
+    for i in range(len(inputs)):
+        ctx.actions.run(
+            executable = ctx.executable._generate,
+            arguments = [
+                "--reflection_bfbs",
+                inputs[i].path,
+                "--output_file",
+                outputs[i].path,
+                "--base_file_name",
+                schema_files[i],
+            ],
+            inputs = [inputs[i]],
+            outputs = [outputs[i]],
+            mnemonic = "StaticFlatbufferGen",
+            progress_message = "Generating static flatbuffer header for %s" % schema_files[i],
+        )
+    return [DefaultInfo(files = depset(outputs))]
+
+_static_flatbuffer_gen = rule(
+    implementation = _static_flatbuffer_gen_impl,
+    attrs = {
+        "base_files": attr.string_list(mandatory = True),
+        "bfbs_files": attr.label(mandatory = True, allow_files = True),
+        "outs": attr.output_list(mandatory = True),
+        "_generate": attr.label(
+            executable = True,
+            cfg = "exec",
+            default = Label(clean_dep("//aos/flatbuffers:generate")),
+        ),
+    },
+)
 
 def static_flatbuffer(name, visibility = None, deps = [], srcs = [], **kwargs):
     """Generates the code for the static C++ flatbuffer API for the specified fbs file.
@@ -45,19 +82,11 @@ def static_flatbuffer(name, visibility = None, deps = [], srcs = [], **kwargs):
     header_names = [file.removesuffix(".fbs") + "_static.h" for file in cleaned_srcs]
     reflection_out = name + fbs_suffix + "_reflection_out"
 
-    repo_relative_srcs = [native.package_name() + "/" + file for file in cleaned_srcs]
-
-    run_binary(
+    _static_flatbuffer_gen(
         name = name + "_gen",
-        tool = clean_dep("//aos/flatbuffers:generate_wrapper"),
-        srcs = [reflection_out],
+        bfbs_files = reflection_out,
         outs = header_names,
-        env = {
-            "AOS_REPO_NAME": aos_repo_name(),
-            "BASE_FILES": " ".join(repo_relative_srcs),
-            "BFBS_FILES": "$(execpaths %s)" % (reflection_out,),
-            "OUT_FILES": " ".join(["$(execpath %s)" % (name,) for name in header_names]),
-        },
+        base_files = [native.package_name() + "/" + file for file in cleaned_srcs],
     )
     cc_library(
         name = name,
