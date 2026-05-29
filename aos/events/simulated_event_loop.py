@@ -3,13 +3,15 @@ from typing import Any, Optional, Type
 from aos.events.event_loop_c import lib, ffi
 from aos.events.event_loop_runtime import EventLoopRuntime
 from aos.events.event_loop import EventLoop, ExceptionPassthroughReceiver, ExitHandle, Error, InternalProxy
-from aos.events.util import Configuration
+from aos.events.util import ConfigurationBuffer
 
 
 class _SimulatedEventLoopFactory:
 
-    def __init__(self, c_factory) -> None:
+    def __init__(self, c_factory: ffi.CData,
+                 config_buffer: ConfigurationBuffer) -> None:
         self._c_factory = c_factory
+        self._config_buffer = config_buffer
         self._c_event_loops: list = []
         self._event_loops: list[EventLoop] = []
         self._runtimes: list[EventLoopRuntime] = []
@@ -72,7 +74,7 @@ class _SimulatedEventLoopFactory:
             self._c_factory, c_name, c_node)
         self._c_event_loops.append(c_event_loop)
 
-        event_loop = EventLoop(c_event_loop)
+        event_loop = EventLoop(c_event_loop, self._config_buffer)
         self._event_loops.append(event_loop)
         return self._add_proxy(event_loop)
 
@@ -88,14 +90,15 @@ class _SimulatedEventLoopFactory:
 
 class SimulatedEventLoopFactory:
 
-    def __init__(self, config):
+    def __init__(self, config_buffer: ConfigurationBuffer) -> None:
         self._factory = None
-        self._config = config
+        self._config_buffer = config_buffer
 
     def __enter__(self) -> _SimulatedEventLoopFactory:
         c_factory = lib.aos_simulated_event_loop_factory_create(
-            self._config.get_config())
-        self._factory = _SimulatedEventLoopFactory(c_factory)
+            self._config_buffer.c_root())
+        self._factory = _SimulatedEventLoopFactory(c_factory,
+                                                   self._config_buffer)
         return self._factory
 
     def __exit__(

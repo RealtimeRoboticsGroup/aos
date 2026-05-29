@@ -1,4 +1,5 @@
 load("@aos//aos/flatbuffers:build_defs.bzl", "flatbuffer_cc_library")
+load("@aos//aos/flatbuffers:flatbuffers_python.bzl", "flatbuffer_py_library")
 load("@aos//aos/flatbuffers:typescript.bzl", "flatbuffer_ts_library")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
@@ -343,6 +344,13 @@ flatbuffer_rust_library(
     srcs = ["configuration.fbs"],
     crate_name = "aos_configuration_fbs",
     visibility = ["//visibility:public"],
+)
+
+flatbuffer_py_library(
+    name = "configuration_fbs_py",
+    src = "configuration.fbs",
+    visibility = ["//visibility:public"],
+    deps = ["//aos/flatbuffers/reflection:reflection_fbs_py_srcs"],
 )
 
 cc_library(
@@ -943,4 +951,14 @@ cc_library(
         "sanitizers.h",
     ],
     visibility = ["//:__subpackages__"],
+)
+
+py_library(
+    name = "flatbuffers_py",
+    srcs = ["flatbuffers.py"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//aos/events:event_loop_c_py",
+        "//aos/flatbuffers:flatpy",
+    ],
 )

@@ -53,11 +53,18 @@ typedef struct aos_simulated_event_loop_factory_t
     aos_simulated_event_loop_factory_t;
 
 typedef struct aos_error_t aos_error_t;
+typedef struct aos_channel_t aos_channel_t;
+typedef struct aos_node_t aos_node_t;
+typedef struct aos_configuration_buffer_t aos_configuration_buffer_t;
+
+typedef struct aos_configuration_t aos_configuration_t;
 
 typedef void (*aos_watcher_callback_t)(const aos_context_t *context,
                                        const void *message, void *user_data);
 typedef void (*aos_timer_callback_t)(void *user_data);
 typedef void (*aos_on_run_callback_t)(void *user_data);
+typedef void (*aos_shm_event_loop_fd_callback_t)(void *user_data,
+                                                 uint32_t events);
 
 int aos_const_raw_sender_error_ok(void);
 int aos_const_raw_sender_error_messages_sent_too_fast(void);
@@ -86,6 +93,7 @@ aos_timer_handler_t *aos_event_loop_add_timer(aos_event_loop_t *self,
                                               aos_timer_callback_t callback,
                                               void *user_data);
 int64_t aos_event_loop_monotonic_now(aos_event_loop_t *self);
+int64_t aos_event_loop_realtime_now(aos_event_loop_t *self);
 void aos_event_loop_on_run(aos_event_loop_t *self, aos_on_run_callback_t callback,
                            void *user_data);
 bool aos_event_loop_is_running(aos_event_loop_t *self);
@@ -93,13 +101,27 @@ void aos_event_loop_set_runtime_realtime_priority(aos_event_loop_t *self,
                                                   int priority,
                                                   int scheduling_policy,
                                                   int realtime_policy);
+void aos_event_loop_set_runtime_affinity(aos_event_loop_t *self,
+                                         const int32_t *affinity_list,
+                                         size_t affinity_list_size);
 void aos_event_loop_get_name(aos_event_loop_t *self, const char **name_data,
                              size_t *name_size);
+const aos_node_t *aos_event_loop_node(aos_event_loop_t *self);
+const aos_configuration_t *aos_event_loop_configuration(aos_event_loop_t *self);
 
 aos_error_t *aos_shm_event_loop_run(aos_event_loop_t *self);
 aos_exit_handle_t *aos_shm_event_loop_make_exit_handle(aos_event_loop_t *self);
 void aos_shm_event_loop_set_name(aos_event_loop_t *self, const char *name_data,
                                  size_t name_size);
+void aos_shm_event_loop_lock_to_thread(aos_event_loop_t *self);
+void aos_shm_event_loop_on_fd_events(aos_event_loop_t *self, int fd,
+                                     aos_shm_event_loop_fd_callback_t callback,
+                                     void *user_data);
+void aos_shm_event_loop_delete_fd(aos_event_loop_t *self, int fd);
+void aos_shm_event_loop_set_fd_events(aos_event_loop_t *self, int fd,
+                                      uint32_t events);
+aos_event_loop_t *aos_shm_event_loop_create(
+    const aos_configuration_t *configuration);
 
 void aos_fetcher_destroy(aos_fetcher_t *self);
 bool aos_fetcher_fetch(aos_fetcher_t *self);
@@ -125,14 +147,33 @@ void aos_exit_handle_exit(aos_exit_handle_t *self);
 void aos_exit_handle_exit_with_python_exception(aos_exit_handle_t *self);
 
 void aos_init(int *argc, char ***argv);
-uint8_t *aos_configuration_read_from_file(const char *file_path);
-void aos_configuration_destroy(uint8_t *self);
 
-aos_event_loop_t *aos_shm_event_loop_create(
-    const uint8_t *configuration_buffer);
+const void *aos_configuration_buffer_get_data(
+    const aos_configuration_buffer_t *self);
+size_t aos_configuration_buffer_get_size(
+    const aos_configuration_buffer_t *self);
+aos_configuration_buffer_t *aos_configuration_buffer_read_from_file(
+    const char *file_path);
+void aos_configuration_buffer_destroy(aos_configuration_buffer_t *self);
+
+const aos_channel_t *aos_configuration_get_channel(
+    const aos_configuration_t *config, const char *name_data, size_t name_size,
+    const char *type_data, size_t type_size, const char *application_name_data,
+    size_t application_name_size, const aos_node_t *node);
+const aos_node_t *aos_configuration_get_node(const aos_configuration_t *config,
+                                             const char *name_data,
+                                             size_t name_size);
+size_t aos_configuration_get_nodes(const aos_configuration_t *config,
+                                   const aos_node_t **result,
+                                   size_t result_size);
+bool aos_configuration_multi_node(const aos_configuration_t *config);
+bool aos_configuration_channel_is_sendable_on_node(const aos_channel_t *channel,
+                                                   const aos_node_t *node);
+bool aos_configuration_channel_is_readable_on_node(const aos_channel_t *channel,
+                                                   const aos_node_t *node);
 
 aos_simulated_event_loop_factory_t *aos_simulated_event_loop_factory_create(
-    const uint8_t *configuration_buffer);
+    const aos_configuration_t *configuration);
 void aos_simulated_event_loop_factory_destroy(
     aos_simulated_event_loop_factory_t *self);
 aos_event_loop_t *aos_simulated_event_loop_factory_make_event_loop(
