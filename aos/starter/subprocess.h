@@ -83,6 +83,26 @@ std::string GetCGroupProcessesInfo(const std::filesystem::path &cgroup_path);
 // Exposed for testing purposes.
 void RemoveCGroupWithRetry(const std::filesystem::path &cgroup_path);
 
+// cgroupv2 allows removing a cgroup with rmdir if it has no children or live
+// processes (zombie processes are OK). Recursively cleans child directories
+// first, then attempts to remove the directory. Returns true if
+// cleanup succeeded, false otherwise.
+//
+// Note: We don't migrate processes from child to parent before removal.
+// Migrating orphaned live processes could put them under wrong resource
+// limits/policies. If rmdir fails due to live processes, we surface the error
+// rather than silently moving processes to an unexpected cgroup.
+// Returns true if cleanup succeeded, false otherwise.
+// Exposed for testing purposes.
+bool RemoveCGroupV2(const std::string &cgroup_path);
+
+// cgroupv2's "no internal processes" rule prevents writing to cgroup.procs
+// when child cgroups exist. Cleans all subdirectories recursively without
+// removing the parent directory. Returns true if
+// cleanup succeeded, false otherwise.
+// Exposed for testing only.
+bool RemoveCGroupV2Children(const std::string &cgroup_path);
+
 // Class to use the V1 cgroup API to limit memory usage.
 class MemoryCGroup {
  public:
@@ -100,6 +120,10 @@ class MemoryCGroup {
 
   // Sets the provided limit to the provided value.
   virtual void SetMemoryLimit(uint64_t limit_value) = 0;
+
+  // Delegates ownership of this cgroup to the given user/group so that
+  // non-root child processes can manage their own cgroup subtree.
+  virtual void Delegate(std::string_view /*username*/) {}
 };
 
 // Factory class to create cgroups for applications.
@@ -113,14 +137,22 @@ class CGroupManager {
  public:
   virtual ~CGroupManager() {}
 
+  // Under cgroups v2, the new cgroup is created or searched for as a child of a
+  // cgroup owned by this user named "user_<user_name>".
+  // Under cgroups v1, user_name has no effect.
+  // Note that if user name is empty, the current user is assumed.
   virtual std::unique_ptr<MemoryCGroup> MakeCGroup(
-      std::string_view name,
-      MemoryCGroup::Create should_create = MemoryCGroup::Create::kDoCreate) = 0;
+      std::string_view name, std::string_view user_name = "") = 0;
 };
 
 // Auto-detects what cgroups version is on this machine and constructs a manager
 // for it.
-std::unique_ptr<CGroupManager> MakeCGroupManager();
+// If should_create_cgroups is kDoCreate, the manager will create cgroups and
+// also create a new cgroup for the current process to enable memory
+// controllers. If kDoNotCreate, the manager will only manage existing cgroups.
+std::unique_ptr<CGroupManager> MakeCGroupManager(
+    MemoryCGroup::Create should_create_cgroups =
+        MemoryCGroup::Create::kDoCreate);
 
 // Manages a running process, allowing starting and stopping, and restarting
 // automatically.
@@ -137,7 +169,15 @@ class Application {
   Application(const aos::Application *application, aos::EventLoop *event_loop,
               std::function<void()> on_change,
               std::unique_ptr<MemoryCGroup> memory_cgroup,
+              std::vector<std::unique_ptr<MemoryCGroup>> extra_cgroups = {},
               QuietLogging quiet_flag = QuietLogging::kNo);
+
+  Application(const aos::Application *application, aos::EventLoop *event_loop,
+              std::function<void()> on_change,
+              std::unique_ptr<MemoryCGroup> memory_cgroup,
+              QuietLogging quiet_flag)
+      : Application(application, event_loop, on_change,
+                    std::move(memory_cgroup), {}, quiet_flag) {}
 
   // executable_name is the actual executable path.
   // When sudo is not used, name is used as argv[0] when exec'ing
@@ -146,7 +186,15 @@ class Application {
   Application(std::string_view name, std::string_view executable_name,
               aos::EventLoop *event_loop, std::function<void()> on_change,
               std::unique_ptr<MemoryCGroup> memory_cgroup,
+              std::vector<std::unique_ptr<MemoryCGroup>> extra_cgroups = {},
               QuietLogging quiet_flag = QuietLogging::kNo);
+
+  Application(std::string_view name, std::string_view executable_name,
+              aos::EventLoop *event_loop, std::function<void()> on_change,
+              std::unique_ptr<MemoryCGroup> memory_cgroup,
+              QuietLogging quiet_flag)
+      : Application(name, executable_name, event_loop, on_change,
+                    std::move(memory_cgroup), {}, quiet_flag) {}
 
   ~Application();
 
@@ -210,18 +258,18 @@ class Application {
 
   // Sets the memory limit for the application to the provided limit.
   void SetMemoryLimit(size_t limit) {
-    ABSL_CHECK(memory_cgroup_);
+    ABSL_CHECK(main_cgroup_);
 
-    memory_cgroup_->SetMemoryLimit(limit);
+    main_cgroup_->SetMemoryLimit(limit);
   }
 
   // Sets the cgroup and memory limit to a pre-existing cgroup which is
   // externally managed.  This lets us configure the cgroup of an application
   // without root access.
   void SetExistingCgroupMemoryLimit(size_t limit) {
-    ABSL_CHECK(memory_cgroup_);
+    ABSL_CHECK(main_cgroup_);
 
-    memory_cgroup_->SetMemoryLimit(limit);
+    main_cgroup_->SetMemoryLimit(limit);
   }
 
   // Observe a timing report message, and save it if it is relevant to us.
@@ -312,7 +360,8 @@ class Application {
 
   std::vector<std::function<void()>> on_change_;
 
-  std::unique_ptr<MemoryCGroup> memory_cgroup_;
+  std::unique_ptr<MemoryCGroup> main_cgroup_;
+  std::vector<std::unique_ptr<MemoryCGroup>> extra_cgroups_;
 
   QuietLogging quiet_flag_ = QuietLogging::kNo;
 

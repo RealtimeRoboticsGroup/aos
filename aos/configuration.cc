@@ -161,6 +161,13 @@ struct MutableThreadConfiguration {
   std::optional<int> priority;
 };
 
+// Struct representing a CgroupConfiguration in a way that is easy to work with.
+struct MutableCgroupConfiguration {
+  // See configuration.fbs for a description of what each of these fields
+  // represents.
+  std::string_view name;
+};
+
 // Struct representing an Application in a way that is easy to work with.
 struct MutableApplication {
   // See configuration.fbs for a description of what each of these fields
@@ -179,6 +186,7 @@ struct MutableApplication {
   std::optional<int> priority;
   std::optional<SchedulingPolicy> scheduling_policy;
   std::vector<MutableThreadConfiguration> threads;
+  std::vector<MutableCgroupConfiguration> extra_cgroups;
 
   bool operator==(const MutableApplication &other) const {
     return name == other.name;
@@ -354,6 +362,9 @@ void UnpackThreadConfiguration(const ThreadConfiguration *thread_configuration,
 
 void UnpackApplication(const Application *application,
                        MutableApplication *result) {
+  ABSL_CHECK_EQ(Application::MiniReflectTypeTable()->num_elems, 15u)
+      << ": Merging logic needs to be updated when the number of application "
+         "fields changes.";
   ABSL_CHECK_EQ(application->name()->string_view(), result->name);
 
   if (application->has_executable_name()) {
@@ -422,6 +433,18 @@ void UnpackApplication(const Application *application,
          *application->threads()) {
       UnpackThreadConfiguration(thread_configuration,
                                 &result->threads.emplace_back());
+    }
+  }
+
+  if (application->has_extra_cgroups()) {
+    result->extra_cgroups.clear();
+    result->extra_cgroups.reserve(application->extra_cgroups()->size());
+    for (const CgroupConfiguration *cgroup_config :
+         *application->extra_cgroups()) {
+      MutableCgroupConfiguration &cgroup = result->extra_cgroups.emplace_back();
+      if (cgroup_config->has_name()) {
+        cgroup.name = cgroup_config->name()->string_view();
+      }
     }
   }
 }
@@ -522,6 +545,7 @@ void UnpackConfiguration(const Configuration *configuration,
                                .priority = std::nullopt,
                                .scheduling_policy = std::nullopt,
                                .threads = {},
+                               .extra_cgroups = {},
                            })
               .first->second;
       UnpackApplication(application, &unpacked_application);
@@ -798,6 +822,21 @@ flatbuffers::Offset<Application> PackApplication(
     threads_offset = fbb->CreateVector(thread_configuration_offsets);
   }
 
+  flatbuffers::Offset<
+      flatbuffers::Vector<flatbuffers::Offset<CgroupConfiguration>>>
+      extra_cgroups_offset;
+  if (!application.extra_cgroups.empty()) {
+    std::vector<flatbuffers::Offset<CgroupConfiguration>> extra_cgroups_offsets;
+    for (const MutableCgroupConfiguration &cgroup : application.extra_cgroups) {
+      flatbuffers::Offset<flatbuffers::String> name_offset =
+          fbb->CreateSharedString(cgroup.name);
+      CgroupConfiguration::Builder cgroup_builder(*fbb);
+      cgroup_builder.add_name(name_offset);
+      extra_cgroups_offsets.emplace_back(cgroup_builder.Finish());
+    }
+    extra_cgroups_offset = fbb->CreateVector(extra_cgroups_offsets);
+  }
+
   Application::Builder application_builder(*fbb);
   application_builder.add_name(name_offset);
   if (!executable_name_offset.IsNull()) {
@@ -839,6 +878,9 @@ flatbuffers::Offset<Application> PackApplication(
   }
   if (!threads_offset.IsNull()) {
     application_builder.add_threads(threads_offset);
+  }
+  if (!extra_cgroups_offset.IsNull()) {
+    application_builder.add_extra_cgroups(extra_cgroups_offset);
   }
   return application_builder.Finish();
 }

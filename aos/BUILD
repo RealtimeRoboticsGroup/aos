@@ -315,6 +315,7 @@ flatbuffer_ts_library(
         "Channel",
         "Map",
         "SchedulingPolicy",
+        "CgroupConfiguration",
         "Application",
         "ThreadConfiguration",
         "Node",

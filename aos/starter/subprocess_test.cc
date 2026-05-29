@@ -641,4 +641,74 @@ TEST_F(RemoveCGroupTest, GetCGroupProcessesInfoNoTasksFile) {
                           "/tasks.* to read PIDs")));
 }
 
+class CleanupCGroupV2Test : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    test_dir_ = std::filesystem::temp_directory_path() /
+                ("test_cgroupv2_" + std::to_string(getpid()));
+    std::filesystem::create_directories(test_dir_);
+  }
+
+  void TearDown() override {
+    std::error_code ec;
+    std::filesystem::remove_all(test_dir_, ec);
+  }
+
+  void CreateMockCGroup(const std::filesystem::path &path) {
+    std::filesystem::create_directories(path);
+  }
+
+  std::filesystem::path test_dir_;
+};
+
+// On a real cgroup filesystem, rmdir works on dirs with virtual control
+// files. On regular filesystems, rmdir only works on truly empty dirs.
+// These tests verify the cleanup *logic* (recursive removal, selective
+// removal of parent) rather than kernel cgroup behavior.
+
+TEST_F(CleanupCGroupV2Test, CleanupStaleRemovesEmptyDir) {
+  std::filesystem::path cgroup = test_dir_ / "stale";
+  std::filesystem::create_directory(cgroup);
+
+  EXPECT_TRUE(RemoveCGroupV2(cgroup.string()));
+
+  EXPECT_FALSE(std::filesystem::exists(cgroup));
+}
+
+TEST_F(CleanupCGroupV2Test, CleanupStaleRecursesIntoChildren) {
+  std::filesystem::path parent = test_dir_ / "parent";
+  std::filesystem::path child = parent / "child";
+  std::filesystem::path grandchild = child / "grandchild";
+  CreateMockCGroup(parent);
+  CreateMockCGroup(child);
+  std::filesystem::create_directory(grandchild);
+
+  EXPECT_TRUE(RemoveCGroupV2(parent.string()));
+
+  EXPECT_FALSE(std::filesystem::exists(grandchild));
+}
+
+TEST_F(CleanupCGroupV2Test, CleanNestedStateRemovesAllSubdirs) {
+  std::filesystem::path cgroup = test_dir_ / "app";
+  std::filesystem::path starter = cgroup / "starter";
+  std::filesystem::path digest = cgroup / "aos_digest";
+  CreateMockCGroup(cgroup);
+  std::filesystem::create_directory(starter);
+  std::filesystem::create_directory(digest);
+
+  EXPECT_TRUE(RemoveCGroupV2Children(cgroup.string()));
+
+  EXPECT_FALSE(std::filesystem::exists(starter));
+  EXPECT_FALSE(std::filesystem::exists(digest));
+  EXPECT_TRUE(std::filesystem::exists(cgroup));
+}
+
+TEST_F(CleanupCGroupV2Test, CleanNestedStateNoopWhenClean) {
+  std::filesystem::path cgroup = test_dir_ / "app";
+  std::filesystem::create_directory(cgroup);
+
+  EXPECT_TRUE(RemoveCGroupV2Children(cgroup.string()));
+  EXPECT_TRUE(std::filesystem::exists(cgroup));
+}
+
 }  // namespace aos::starter::testing

@@ -398,6 +398,53 @@ TEST_F(ConfigurationTest, MergeConfigurationOverwritesThreads) {
       FlatbufferToJson(updated_config, {.multi_line = true}));
 }
 
+// Tests that MergeConfiguration overwrites the list of extra_cgroups.
+TEST_F(ConfigurationTest, MergeConfigurationOverwritesExtraCgroups) {
+  FlatbufferDetachedBuffer<Configuration> updated_config =
+      MergeConfiguration(aos::FlatbufferDetachedBuffer<Configuration>(
+          aos::JsonToFlatbuffer<Configuration>(R"json({
+  "applications": [
+    {
+      "name": "app",
+      "extra_cgroups": [
+        {
+          "name": "digest"
+        },
+        {
+          "name": "cache"
+        }
+      ]
+    },
+    {
+      "name": "app",
+      "extra_cgroups": [
+        {
+          "name": "memory_limit"
+        }
+      ]
+    }
+  ]
+})json")));
+
+  EXPECT_EQ(
+      R"json({
+ "channels": [
+  
+ ],
+ "applications": [
+  {
+   "name": "app",
+   "extra_cgroups": [
+    {
+     "name": "memory_limit"
+    }
+   ]
+  }
+ ]
+})json",
+      FlatbufferToJson(updated_config, {.multi_line = true}));
+}
+
 // Tests that we can modify a config with a static flatbuffer.
 TEST_F(ConfigurationTest, MergeWithConfigFromStatic) {
   FlatbufferDetachedBuffer<Configuration> config =

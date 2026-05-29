@@ -76,12 +76,12 @@ Starter::Starter(const aos::Configuration *event_loop_config,
           1),
       timing_report_fetcher_(
           event_loop_.MakeFetcher<aos::timing::Report>("/aos")),
+      cgroup_manager_(std::move(cgroup_manager)),
       shm_base_(absl::GetFlag(FLAGS_shm_base)),
       listener_(&event_loop_,
                 [this](signalfd_siginfo signal) { OnSignal(signal); }),
       top_(&event_loop_, aos::util::Top::TrackThreadsMode::kDisabled,
-           aos::util::Top::TrackPerThreadInfoMode::kEnabled),
-      cgroup_manager_(std::move(cgroup_manager)) {
+           aos::util::Top::TrackPerThreadInfoMode::kEnabled) {
   event_loop_.SkipAosLog();
 
   cleanup_timer_->set_name("cleanup");
@@ -273,10 +273,39 @@ void Starter::OnSignal(signalfd_siginfo info) {
 }
 
 Application *Starter::AddApplication(const aos::Application *application) {
+  // Extract user name from application configuration for cgroup v2
+  // per-user intermediate cgroups.
+  const std::string_view user_name =
+      application->has_user() ? application->user()->string_view() : "";
+
+  // Create the main cgroup for the application.
+  std::unique_ptr<aos::starter::MemoryCGroup> main_cgroup =
+      cgroup_manager_->MakeCGroup(application->name()->string_view(),
+                                  user_name);
+
+  // Create extra cgroups if specified in the application configuration.
+  std::vector<std::unique_ptr<aos::starter::MemoryCGroup>> extra_cgroups;
+  if (application->has_extra_cgroups()) {
+    for (const CgroupConfiguration *cgroup_config :
+         *application->extra_cgroups()) {
+      extra_cgroups.push_back(cgroup_manager_->MakeCGroup(
+          cgroup_config->name()->string_view(), user_name));
+    }
+    // Delegate ownership of the main cgroup and extra cgroups to the
+    // user so that non-root child processes can manage their own cgroup
+    // subtree. Only delegate if a user is specified.
+    if (!user_name.empty()) {
+      main_cgroup->Delegate(user_name);
+      for (auto &cgroup : extra_cgroups) {
+        cgroup->Delegate(user_name);
+      }
+    }
+  }
+
   auto [iter, success] = applications_.try_emplace(
       application->name()->str(), application, &event_loop_,
-      [this]() { HandleStateChange(); },
-      cgroup_manager_->MakeCGroup(application->name()->string_view()));
+      [this]() { HandleStateChange(); }, std::move(main_cgroup),
+      std::move(extra_cgroups));
   if (success) {
     // We should be catching and handling SIGCHLD correctly in the starter, so
     // don't leave in the crutch for polling for the child process status (this

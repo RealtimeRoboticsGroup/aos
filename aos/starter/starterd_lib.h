@@ -88,6 +88,11 @@ class Starter {
 
   aos::Fetcher<aos::timing::Report> timing_report_fetcher_;
 
+  // Keep before applications_ because the manager may own
+  // per-user intermediate cgroups that must be cleaned up after all child
+  // cgroups (owned by Application objects) are removed.
+  std::unique_ptr<CGroupManager> cgroup_manager_;
+
   std::unordered_map<std::string, Application> applications_;
 
   // Lock and list of all the queues.  This makes it so we can initialize the
@@ -108,8 +113,6 @@ class Starter {
   SignalListener listener_;
 
   util::Top top_;
-
-  std::unique_ptr<CGroupManager> cgroup_manager_;
 
   DISALLOW_COPY_AND_ASSIGN(Starter);
 };

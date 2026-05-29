@@ -38,6 +38,7 @@ cc_library(
         ":starter_rpc_fbs",
         "//aos/events:event_loop",
         "//aos/events:shm_event_loop",
+        "//aos/util:application_name",
         "//aos/util:scoped_pipe",
         "//aos/util:top",
         "@com_google_absl//absl/log",

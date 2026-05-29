@@ -162,6 +162,12 @@ table ThreadConfiguration {
   priority:int (id: 3);
 }
 
+
+table CgroupConfiguration {
+  // The name of the cgroup to be configured.
+  name:string (id: 0);
+}
+
 // Application specific information.
 // If two applications are defined in the configuration with the same name,
 // then the defined properties of the latter application will override the
@@ -249,6 +255,16 @@ table Application {
   //
   // See documentation/aos/docs/threading.md for more information.
   threads:[ThreadConfiguration] (id: 13);
+
+  // If set, these are additional cgroup directories to create under the
+  // application's parent cgroup (v2) or /sys/fs/cgroup/memory/ (v1), prefixed
+  // with "aos_".
+  // Both the primary cgroup and the extra cgroups will be owned by the application
+  // user. This allows the application to use the extra cgroups under cgroups v2.
+  //
+  // Note: Setting extra_cgroups replaces the entire list rather than merging with
+  // any existing configuration.
+  extra_cgroups:[CgroupConfiguration] (id: 14);
 }
 
 // Per node data and connection information.
