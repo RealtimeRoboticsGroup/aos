@@ -10,24 +10,29 @@ set -u
 
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 
-exec >/dev/console 2>&1
-log() { echo "[init][$(cut -d' ' -f1 /proc/uptime 2>/dev/null)] $*"; }
+BUSYBOX=/bin/busybox
+bb() {
+  "$BUSYBOX" "$@"
+}
+
+exec > /dev/console 2>&1
+log() { echo "[init][$(bb cut -d' ' -f1 /proc/uptime 2>/dev/null)] $*"; }
 log "starting"
 
 EXPECTED_KERNEL_VERSION=6.6.134-0-virt
-RUNNING_KERNEL_VERSION=$(uname -r 2>/dev/null || echo unknown)
+RUNNING_KERNEL_VERSION=$(bb uname -r 2>/dev/null || echo unknown)
 
 if [ "$RUNNING_KERNEL_VERSION" != "$EXPECTED_KERNEL_VERSION" ]; then
   log "FATAL: running kernel $RUNNING_KERNEL_VERSION but init expects $EXPECTED_KERNEL_VERSION"
   log "       update tools/cuda/vm/init to match the Alpine kernel bump"
-  poweroff -f
+  bb poweroff -f
   exec /bin/sh
 fi
 
 KMV=$RUNNING_KERNEL_VERSION
 
-/bin/busybox --install -s /bin
-/bin/busybox --install -s /sbin 2>/dev/null
+bb --install -s /bin
+bb --install -s /sbin 2>/dev/null
 
 mount -t proc proc /proc
 mount -t sysfs sys /sys
