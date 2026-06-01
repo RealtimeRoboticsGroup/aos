@@ -2,7 +2,9 @@
 
 #include <ctype.h>
 #include <errno.h>
+#if !defined(_WIN32)
 #include <sys/time.h>
+#endif  // !_WIN32
 
 #include <algorithm>
 #include <chrono>
@@ -10,29 +12,13 @@
 #include <cstdint>
 #include <ctime>
 #include <iomanip>
+#include <limits>
 #include <ratio>
 #include <sstream>
-
-#if defined(__linux__) || defined(__APPLE__)
+#include <thread>
 
 #include "absl/log/absl_check.h"
 #include "absl/strings/numbers.h"
-
-#if defined(__APPLE__)
-#include <mach/mach.h>
-#include <mach/mach_time.h>
-
-#include "absl/numeric/int128.h"
-#endif
-
-#else  // __linux__
-
-#include "motors/core/kinetis.h"
-
-// The systick interrupt increments this every 1ms.
-extern "C" volatile uint32_t systick_millis_count;
-
-#endif  // __linux__
 
 namespace chrono = ::std::chrono;
 
@@ -54,83 +40,7 @@ void PrintToStream(std::ostream &stream, chrono::nanoseconds duration) {
   }
 }
 
-#if defined(__APPLE__)
-mach_timebase_info_data_t LoadMachTimebaseInfo() {
-  mach_timebase_info_data_t info;
-  ABSL_CHECK_EQ(mach_timebase_info(&info), KERN_SUCCESS);
-  return info;
-}
-
-const mach_timebase_info_data_t &MachTimebaseInfo() {
-  static const mach_timebase_info_data_t timebase_info = LoadMachTimebaseInfo();
-  return timebase_info;
-}
-#endif
-
 }  // namespace
-
-#if defined(__linux__)
-
-namespace aos::this_thread {
-
-void sleep_until(const ::aos::monotonic_clock::time_point &end_time) {
-  struct timespec end_time_timespec;
-  ::std::chrono::seconds sec =
-      ::std::chrono::duration_cast<::std::chrono::seconds>(
-          end_time.time_since_epoch());
-  ::std::chrono::nanoseconds nsec =
-      ::std::chrono::duration_cast<::std::chrono::nanoseconds>(
-          end_time.time_since_epoch() - sec);
-  end_time_timespec.tv_sec = sec.count();
-  end_time_timespec.tv_nsec = nsec.count();
-  int returnval;
-  do {
-    returnval = clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME,
-                                &end_time_timespec, nullptr);
-    ABSL_PCHECK(returnval == 0 || returnval == EINTR)
-        << ": clock_nanosleep(" << static_cast<uintmax_t>(CLOCK_MONOTONIC)
-        << ", TIMER_ABSTIME, " << &end_time_timespec << ", nullptr) failed";
-  } while (returnval != 0);
-}
-
-}  // namespace aos::this_thread
-
-#elif defined(__APPLE__)
-
-namespace aos::this_thread {
-
-void sleep_until(const ::aos::monotonic_clock::time_point &end_time) {
-  const mach_timebase_info_data_t &timebase_info = MachTimebaseInfo();
-
-  // Convert aos::monotonic_clock to total nanoseconds
-  uint64_t end_nanos =
-      std::chrono::nanoseconds(end_time.time_since_epoch()).count();
-
-  // Convert nanoseconds to Mach absolute time units (ticks)
-  // Formula: ticks = (nanos * denom) / numer
-  // Using absl::uint128 to ensure no overflow during the multiplication
-  uint64_t end_ticks = static_cast<uint64_t>(
-      (absl::uint128(end_nanos) * timebase_info.denom) / timebase_info.numer);
-
-  kern_return_t result;
-  do {
-    result = mach_wait_until(end_ticks);
-
-    // KERN_ABORTED is the Mach equivalent of an interrupt (like EINTR on
-    // Linux), including handled signals. Retry so this matches the Linux
-    // sleep_until implementation above and still waits until end_time.
-    if (result == KERN_SUCCESS) break;
-
-    ABSL_PCHECK(result == KERN_ABORTED)
-        << ": mach_wait_until(" << end_ticks
-        << ") failed with unexpected error: " << result;
-
-  } while (result == KERN_ABORTED);
-}
-
-}  // namespace aos::this_thread
-
-#endif  // defined(__linux__) || defined(__APPLE__)
 
 namespace aos {
 
@@ -152,7 +62,7 @@ std::string ToString(const aos::realtime_clock::time_point &now) {
   return stream.str();
 }
 
-#if defined(__linux__) || defined(__APPLE__)
+#if !AOS_OS_NONE
 std::optional<monotonic_clock::time_point> monotonic_clock::FromString(
     const std::string_view now) {
   // This should undo the operator << above.
@@ -212,52 +122,83 @@ std::optional<realtime_clock::time_point> realtime_clock::FromString(
     return std::nullopt;
   }
 
-  struct tm tm;
+  std::tm tm = {};
   std::istringstream ss(std::string(now.substr(0, now.size() - 10)));
   ss >> std::get_time(&tm, "%Y-%m-%d_%H-%M-%S");
   if (ss.fail()) {
     return std::nullopt;
   }
-  tm.tm_isdst = -1;
 
-  time_t seconds = mktime(&tm);
+  std::chrono::year_month_day ymd(
+      std::chrono::year{tm.tm_year + 1900},
+      std::chrono::month{static_cast<unsigned>(tm.tm_mon + 1)},
+      std::chrono::day{static_cast<unsigned>(tm.tm_mday)});
+  if (!ymd.ok()) {
+    return std::nullopt;
+  }
+
+  const std::chrono::sys_days days(ymd);
+  const auto tod = std::chrono::hours{tm.tm_hour} +
+                   std::chrono::minutes{tm.tm_min} +
+                   std::chrono::seconds{tm.tm_sec};
+  const auto sys_time = days + tod;
 
   std::chrono::nanoseconds::rep nanoseconds_data;
   if (!absl::SimpleAtoi(nsec, &nanoseconds_data)) {
     return std::nullopt;
   }
 
-  return realtime_clock::time_point(std::chrono::seconds(seconds) +
-                                    std::chrono::nanoseconds(nanoseconds_data));
+  return realtime_clock::time_point(
+      std::chrono::duration_cast<std::chrono::nanoseconds>(
+          sys_time.time_since_epoch()) +
+      std::chrono::nanoseconds(nanoseconds_data));
 }
 #endif
 
 std::ostream &operator<<(std::ostream &stream,
                          const aos::realtime_clock::time_point &now) {
-  std::tm tm;
-  std::chrono::seconds seconds =
-      now < realtime_clock::epoch()
-          ? (std::chrono::duration_cast<std::chrono::seconds>(
-                 now.time_since_epoch() + std::chrono::nanoseconds(1)) -
-             std::chrono::seconds(1))
-          : std::chrono::duration_cast<std::chrono::seconds>(
-                now.time_since_epoch());
-
-  // We can run into some corner cases where the seconds value is large enough
-  // to cause the conversion to nanoseconds to overflow. That is undefined
-  // behaviour so we prevent it with this check here.
-  if (int64_t result;
-      __builtin_mul_overflow(seconds.count(), 1'000'000'000, &result)) {
+  // Guard against overflowing when converting to nanoseconds.
+  constexpr int64_t kScale = 1'000'000'000;
+  const auto seconds =
+      std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
+  const int64_t seconds_count = seconds.count();
+  const bool overflow =
+      (seconds_count > std::numeric_limits<int64_t>::max() / kScale) ||
+      (seconds_count < std::numeric_limits<int64_t>::min() / kScale);
+  if (overflow) {
     stream << "(unrepresentable realtime " << now.time_since_epoch().count()
            << ")";
     return stream;
   }
 
-  std::time_t seconds_t = seconds.count();
-  stream << std::put_time(localtime_r(&seconds_t, &tm), "%Y-%m-%d_%H-%M-%S.")
-         << std::setfill('0') << std::setw(9)
+  if (now == realtime_clock::min_time) {
+    stream << "(unrepresentable realtime " << now.time_since_epoch().count()
+           << ")";
+    return stream;
+  }
+
+  using sys_ns = std::chrono::time_point<std::chrono::system_clock,
+                                         std::chrono::nanoseconds>;
+  const sys_ns system_time(now.time_since_epoch());
+  const auto days = std::chrono::floor<std::chrono::days>(system_time);
+  const std::chrono::year_month_day ymd(days);
+
+  if (!ymd.ok()) {
+    stream << "(unrepresentable realtime " << now.time_since_epoch().count()
+           << ")";
+    return stream;
+  }
+
+  const std::chrono::hh_mm_ss<std::chrono::nanoseconds> hms(system_time - days);
+
+  stream << std::setfill('0') << std::setw(4) << static_cast<int>(ymd.year())
+         << '-' << std::setw(2) << static_cast<unsigned>(ymd.month()) << '-'
+         << std::setw(2) << static_cast<unsigned>(ymd.day()) << '_'
+         << std::setw(2) << hms.hours().count() << '-' << std::setw(2)
+         << hms.minutes().count() << '-' << std::setw(2)
+         << hms.seconds().count() << '.' << std::setw(9)
          << std::chrono::duration_cast<std::chrono::nanoseconds>(
-                now.time_since_epoch() - seconds)
+                hms.subseconds())
                 .count();
   return stream;
 }
@@ -290,61 +231,5 @@ constexpr monotonic_clock::time_point monotonic_clock::min_time;
 constexpr monotonic_clock::time_point monotonic_clock::max_time;
 constexpr realtime_clock::time_point realtime_clock::min_time;
 constexpr realtime_clock::time_point realtime_clock::max_time;
-
-monotonic_clock::time_point monotonic_clock::now() noexcept {
-#if defined(__linux__)
-  struct timespec current_time;
-  ABSL_PCHECK(clock_gettime(CLOCK_MONOTONIC, &current_time) == 0)
-      << ": clock_gettime(" << static_cast<uintmax_t>(CLOCK_MONOTONIC) << ", "
-      << &current_time << ") failed";
-
-  return time_point(::std::chrono::seconds(current_time.tv_sec) +
-                    ::std::chrono::nanoseconds(current_time.tv_nsec));
-#elif defined(__APPLE__)
-  const mach_timebase_info_data_t &timebase_info = MachTimebaseInfo();
-
-  uint64_t current_ticks = mach_absolute_time();
-  uint64_t current_nanos = static_cast<uint64_t>(
-      (absl::uint128(current_ticks) * timebase_info.numer) /
-      timebase_info.denom);
-  return time_point(::std::chrono::nanoseconds(current_nanos));
-#else  // __linux__ || __APPLE__
-
-  __disable_irq();
-  const uint32_t current_counter = SYST_CVR;
-  uint32_t ms_count = systick_millis_count;
-  const uint32_t istatus = SCB_ICSR;
-  __enable_irq();
-  // If the interrupt is pending and the timer has already wrapped from 0 back
-  // up to its max, then add another ms.
-  if ((istatus & SCB_ICSR_PENDSTSET) && current_counter > 50) {
-    ++ms_count;
-  }
-
-  // It counts down, but everything we care about counts up.
-  const uint32_t counter_up = ((F_CPU / 1000) - 1) - current_counter;
-
-  // "3.2.1.2 System Tick Timer" in the TRM says "The System Tick Timer's clock
-  // source is always the core clock, FCLK".
-  using systick_duration =
-      std::chrono::duration<uint32_t, std::ratio<1, F_CPU>>;
-
-  return time_point(std::chrono::round<std::chrono::nanoseconds>(
-      std::chrono::milliseconds(ms_count) + systick_duration(counter_up)));
-
-#endif  // __linux__
-}
-
-#if defined(__linux__) || defined(__APPLE__)
-realtime_clock::time_point realtime_clock::now() noexcept {
-  struct timespec current_time;
-  ABSL_PCHECK(clock_gettime(CLOCK_REALTIME, &current_time) == 0)
-      << "clock_gettime(" << static_cast<uintmax_t>(CLOCK_REALTIME) << ", "
-      << &current_time << ") failed";
-
-  return time_point(::std::chrono::seconds(current_time.tv_sec) +
-                    ::std::chrono::nanoseconds(current_time.tv_nsec));
-}
-#endif  // __linux__
 
 }  // namespace aos

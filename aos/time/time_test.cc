@@ -1,6 +1,8 @@
 #include "aos/time/time.h"
 
+#if !defined(_WIN32)
 #include <sys/time.h>
+#endif
 
 #include <memory>
 
@@ -19,15 +21,59 @@ TEST(TimeTest, MonotonicClockSleepAndNow) {
   ::std::this_thread::sleep_until(start + kSleepTime);
   monotonic_clock::time_point end = monotonic_clock::now();
   EXPECT_GE(end - start, kSleepTime);
-  EXPECT_LT(end - start, kSleepTime + chrono::milliseconds(200));
+  EXPECT_LT(end - start, kSleepTime + chrono::milliseconds(100));
 }
 
 TEST(TimeTest, MonotonicClockSleepUntilPastTime) {
   // sleep_until should return promptly when the requested time is in the past.
-  monotonic_clock::time_point start = monotonic_clock::now();
-  ::std::this_thread::sleep_until(start - chrono::milliseconds(200));
-  monotonic_clock::time_point end = monotonic_clock::now();
-  EXPECT_LT(end - start, chrono::milliseconds(20));
+  bool success = false;
+  chrono::nanoseconds worst_case = chrono::nanoseconds::zero();
+  for (int attempt = 0; attempt < 5 && !success; ++attempt) {
+    monotonic_clock::time_point start = monotonic_clock::now();
+    ::std::this_thread::sleep_until(start - chrono::milliseconds(200));
+    monotonic_clock::time_point end = monotonic_clock::now();
+    auto elapsed = end - start;
+    worst_case = std::max(worst_case, elapsed);
+    success = elapsed < chrono::milliseconds(5);
+  }
+  EXPECT_TRUE(success)
+      << "sleep_until took "
+      << chrono::duration_cast<chrono::milliseconds>(worst_case).count()
+      << "ms at best";
+}
+
+TEST(TimeTest, StdChronoSleepFor) {
+  const auto kSleepTime = chrono::milliseconds(200);
+  bool success = false;
+  chrono::nanoseconds last = chrono::nanoseconds::zero();
+  for (int attempt = 0; attempt < 5 && !success; ++attempt) {
+    const auto start = chrono::steady_clock::now();
+    ::std::this_thread::sleep_for(kSleepTime);
+    const auto end = chrono::steady_clock::now();
+    last = end - start;
+    success =
+        last >= kSleepTime && last < kSleepTime + chrono::milliseconds(100);
+  }
+  EXPECT_TRUE(success)
+      << "sleep_for duration "
+      << chrono::duration_cast<chrono::milliseconds>(last).count() << "ms";
+}
+
+TEST(TimeTest, StdChronoSleepUntil) {
+  const auto kSleepTime = chrono::milliseconds(300);
+  bool success = false;
+  chrono::nanoseconds last = chrono::nanoseconds::zero();
+  for (int attempt = 0; attempt < 5 && !success; ++attempt) {
+    const auto start = chrono::steady_clock::now();
+    ::std::this_thread::sleep_until(start + kSleepTime);
+    const auto end = chrono::steady_clock::now();
+    last = end - start;
+    success =
+        last >= kSleepTime && last < kSleepTime + chrono::milliseconds(100);
+  }
+  EXPECT_TRUE(success)
+      << "sleep_until duration "
+      << chrono::duration_cast<chrono::milliseconds>(last).count() << "ms";
 }
 
 // Test to_timespec for a duration.

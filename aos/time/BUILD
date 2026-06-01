@@ -3,20 +3,29 @@ load("@rules_cc//cc:cc_test.bzl", "cc_test")
 
 cc_library(
     name = "time",
-    srcs = [
-        "time.cc",
-    ],
+    srcs = ["time.cc"] + select({
+        "@platforms//os:linux": ["time_platform_linux.cc"],
+        "@platforms//os:osx": ["time_platform_osx.cc"],
+        "@platforms//os:windows": ["time_platform_windows.cc"],
+        "//conditions:default": ["time_platform_none.cc"],
+    }),
     hdrs = [
         "time.h",
     ],
     visibility = ["//visibility:public"],
-    deps = select({
+    deps = ["//aos:macros"] + select({
         "@platforms//os:linux": [
             "@com_google_absl//absl/log:absl_check",
             "@com_google_absl//absl/strings",
         ],
         "@platforms//os:osx": [
             "@com_google_absl//absl/log:absl_check",
+            "@com_google_absl//absl/numeric:int128",
+            "@com_google_absl//absl/strings",
+        ],
+        "@platforms//os:windows": [
+            "@com_google_absl//absl/log:absl_check",
+            "@com_google_absl//absl/numeric:int128",
             "@com_google_absl//absl/strings",
         ],
         "//conditions:default": ["//motors/core"],
