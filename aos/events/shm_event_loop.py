@@ -1,7 +1,7 @@
 from collections.abc import Callable
-from typing import Any, Optional, Type
+from typing import Any, Optional, Type, List
 
-from aos.events.event_loop_c import lib
+from aos.events.event_loop_c import ffi, lib
 from aos.events.event_loop import EventLoop, ExceptionPassthroughReceiver, ExitHandle, Error, InternalProxy
 from aos.events.event_loop_runtime import EventLoopRuntime
 from aos.events.util import Configuration
@@ -13,6 +13,12 @@ class _ShmEventLoop(EventLoop):
         super().__init__(c_event_loop)
         self._exit_handles: list[ExitHandle] = []
         self._proxies: List[InternalProxy] = list()
+
+    def set_name(self, name: str) -> None:
+        name_bytes = name.encode('utf-8')
+        lib.aos_shm_event_loop_set_name(self._c_event_loop,
+                                        ffi.from_buffer(name_bytes),
+                                        len(name_bytes))
 
     def close(self):
         for proxy in self._proxies:

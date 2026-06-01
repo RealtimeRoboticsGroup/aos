@@ -189,12 +189,20 @@ void aos_event_loop_set_runtime_realtime_priority(aos_event_loop_t *self,
                                                   int priority,
                                                   int scheduling_policy,
                                                   int realtime_policy);
+// "*name_data" is invalidated when the next "aos_event_loop_*" function is
+// called on "self".
+void aos_event_loop_get_name(aos_event_loop_t *self, const char **name_data,
+                             size_t *name_size);
+
 // Runs the event loop. This blocks until interrupted by a signal or ^C. This
 // is only available on some kinds of event loops.
 // Returns nullptr to indicate Ok().
 aos_error_t *aos_shm_event_loop_run(aos_event_loop_t *self);
 // Provides a handle that can be used to stop running the event loop.
 aos_exit_handle_t *aos_shm_event_loop_make_exit_handle(aos_event_loop_t *self);
+// Copies name_size bytes from name_data (no NUL terminator required).
+void aos_shm_event_loop_set_name(aos_event_loop_t *self, const char *name_data,
+                                 size_t name_size);
 
 void aos_fetcher_destroy(aos_fetcher_t *self);
 // Fetches the latest message on the channel. Returns true if a new message
@@ -230,9 +238,13 @@ void aos_timer_handler_schedule(aos_timer_handler_t *self, int64_t base_ns,
                                 int64_t repeat_offset_ns);
 // Cancels the timer, if scheduled.
 void aos_timer_handler_disable(aos_timer_handler_t *self);
-// Copies name_data+name_size.
+// Copies name_size bytes from name_data (no NUL terminator required).
 void aos_timer_set_name(aos_timer_handler_t *self, const char *name_data,
                         size_t name_size);
+// "*name_data" is invalidated when the next "aos_timer_*" function is called on
+// "self".
+void aos_timer_get_name(aos_timer_handler_t *self, const char **name_data,
+                        size_t *name_size);
 
 void aos_exit_handle_destroy(aos_exit_handle_t *self);
 void aos_exit_handle_exit(aos_exit_handle_t *self);

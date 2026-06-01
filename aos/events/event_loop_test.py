@@ -27,6 +27,7 @@ class EventLoopTest(absltest.TestCase):
     def test_basics(self):
         """Tests the basic happy paths for the common APIs."""
         send_loop = self._factory.make_event_loop("primary", "")
+        assert send_loop.name() == "primary"
         receive_loop1 = self._factory.make_event_loop("loop1", "")
         receive_loop2 = self._factory.make_event_loop("loop2", "")
 
@@ -52,6 +53,8 @@ class EventLoopTest(absltest.TestCase):
         timer = send_loop.add_timer(handle_timer)
 
         def on_run():
+            nonlocal send_loop
+            assert send_loop.is_running()
             message = TestMessageT()
             message.vector = VECTOR_VALUE
             sender.send(message)
@@ -62,6 +65,7 @@ class EventLoopTest(absltest.TestCase):
 
         assert fetcher.fetch() is None
         assert fetcher.fetch_next() is None
+        assert not send_loop.is_running()
 
         self._factory.run_for_ns(10_500_000)
 
