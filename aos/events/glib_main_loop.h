@@ -4,15 +4,21 @@
 #include <glib-object.h>
 #include <glib.h>
 
+#include <functional>
+#include <tuple>
 #include <unordered_set>
+#include <vector>
 
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 
-#include "aos/events/shm_event_loop.h"
+#include "aos/events/epoll.h"
+#include "aos/events/event_loop.h"
+#include "aos/stl_mutex/stl_mutex.h"
 
 namespace aos {
 
+class ShmEventLoop;
 class GlibMainLoop;
 
 // Adapts a std::function to a g_source-style callback.
@@ -122,6 +128,11 @@ class GlibSignalCallback {
 // Also provides C++ RAII wrappers around the related glib objects.
 class GlibMainLoop {
  public:
+  // Binds to an event loop and an EPoll object. This could be from an
+  // ShmEventLoop or from a SimulatedEventLoop.
+  GlibMainLoop(EventLoop *event_loop, internal::EPoll *epoll,
+               std::function<void()> exit_handler);
+  // Binds to an ShmEventLoop directly.
   GlibMainLoop(ShmEventLoop *event_loop);
   ~GlibMainLoop();
   GlibMainLoop(const GlibMainLoop &) = delete;
@@ -179,7 +190,9 @@ class GlibMainLoop {
   // fds which we have added to the epoll object.
   std::unordered_set<int> added_fds_;
 
-  ShmEventLoop *const event_loop_;
+  EventLoop *const event_loop_;
+  internal::EPoll *const epoll_;
+  std::function<void()> exit_handler_;
   TimerHandler *const timeout_timer_;
   GMainContext *const g_main_context_;
   GMainLoop *const g_main_loop_;
