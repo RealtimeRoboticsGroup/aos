@@ -93,6 +93,10 @@ table ApplicationStatus {
   // Start time in nanoseconds relative to monotonic clock
   last_start_time: int64 (id: 5);
 
+  // Time at which the process was last observed exiting, in nanoseconds of the monotonic clock.
+  // This will correspond to the time at which last_exit_code was observed.
+  last_exit_time: int64 (id: 10);
+
   // Indicates the reason the application is not running. Only valid if
   // application is STOPPED.
   last_stop_reason: LastStopReason (id: 6);
