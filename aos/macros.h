@@ -36,4 +36,13 @@
 typedef int pid_t;
 #endif
 
+// Branch prediction hints. MSVC doesn't support __builtin_expect.
+#if defined(__GNUC__) || defined(__clang__)
+#define AOS_LIKELY(x) __builtin_expect(!!(x), 1)
+#define AOS_UNLIKELY(x) __builtin_expect(!!(x), 0)
+#else
+#define AOS_LIKELY(x) (x)
+#define AOS_UNLIKELY(x) (x)
+#endif
+
 #endif  // _AOS_MACROS_H_
