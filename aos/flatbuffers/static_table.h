@@ -69,12 +69,13 @@ class Table : public ResizeableObject {
     internal::ClearSpan(internal::GetSubSpan(buffer_, 0, OffsetDataStart()));
     // Set the offset to the start of the vtable (points backwards, hence the
     // sign inversion).
-    Set<soffset_t>(0, -FixedVtableOffset());
+    Set<soffset_t>(0, static_cast<soffset_t>(-FixedVtableOffset()));
     // First element of the vtable is the size of the table.
-    Set<voffset_t>(FixedVtableOffset(), VtableSize());
+    Set<voffset_t>(FixedVtableOffset(), static_cast<voffset_t>(VtableSize()));
     // Second element of the vtable is the size of the inlined data (not really
     // used by anything...).
-    Set<voffset_t>(FixedVtableOffset() + sizeof(voffset_t), InlineTableSize());
+    Set<voffset_t>(FixedVtableOffset() + sizeof(voffset_t),
+                   static_cast<voffset_t>(InlineTableSize()));
   }
 
   template <typename T>
@@ -83,7 +84,8 @@ class Table : public ResizeableObject {
     ABSL_CHECK_EQ(0u,
                   (absolute_offset + reinterpret_cast<size_t>(buffer_.data())) %
                       alignof(T));
-    Set<voffset_t>(FixedVtableOffset() + vtable_offset, absolute_offset);
+    Set<voffset_t>(FixedVtableOffset() + vtable_offset,
+                   static_cast<voffset_t>(absolute_offset));
   }
 
   void ClearField(size_t absolute_offset, size_t inline_size,

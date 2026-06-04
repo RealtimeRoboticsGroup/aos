@@ -132,6 +132,8 @@ class ResizeableObject {
   // handle the fact that a ResizeableObject may be a member of an std::vector
   // in the various generated types.
   ResizeableObject(ResizeableObject &&other);
+  virtual ~ResizeableObject() = default;
+
   // Required alignment of this object.
   virtual size_t Alignment() const = 0;
   // Causes bytes bytes to be inserted between insertion_point - 1 and
