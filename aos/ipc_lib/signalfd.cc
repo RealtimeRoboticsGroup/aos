@@ -63,10 +63,10 @@ int wrapped_pthread_sigmask(int how, const sigset_t *set, sigset_t *oldset) {
 
 }  // namespace
 
-SignalFd::SignalFd(::std::initializer_list<unsigned int> signals) {
+SignalFd::SignalFd(::std::initializer_list<unsigned int> signal_list) {
   // Build up the mask with the provided signals.
   ABSL_CHECK_EQ(0, sigemptyset(&blocked_mask_));
-  for (int signal : signals) {
+  for (int signal : signal_list) {
     ABSL_CHECK_EQ(0, sigaddset(&blocked_mask_, signal));
   }
   // Then build a signalfd.  Make it nonblocking so it works well with an epoll
@@ -79,7 +79,7 @@ SignalFd::SignalFd(::std::initializer_list<unsigned int> signals) {
   sigset_t old_mask;
   ABSL_CHECK_EQ(0,
                 wrapped_pthread_sigmask(SIG_BLOCK, &blocked_mask_, &old_mask));
-  for (int signal : signals) {
+  for (int signal : signal_list) {
     if (sigismember(&old_mask, signal)) {
       LeaveSignalBlocked(signal);
     }

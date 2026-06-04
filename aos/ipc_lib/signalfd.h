@@ -13,7 +13,7 @@ class SignalFd {
  public:
   // Constructs a SignalFd for the provided list of signals.
   // Blocks the signals at the same time in this thread.
-  SignalFd(::std::initializer_list<unsigned int> signals);
+  SignalFd(::std::initializer_list<unsigned int> signal_list);
 
   SignalFd(const SignalFd &) = delete;
   SignalFd &operator=(const SignalFd &) = delete;
