@@ -184,10 +184,13 @@ bazel_dep(name = "bazel_iwyu", version = "0.0.0", repo_name = "com_github_storyp
 bazel_dep(name = "amd64_tensorrt", version = "10.9.0", dev_dependency = True)
 bazel_dep(name = "amd64_debian_sysroot", version = "2025.04.20", dev_dependency = True)
 
-git_override(
+# archive_override rather than git_override so the fetch goes through Bazel's
+# downloader and respects --downloader_config URL rewriting (mirrorable).
+archive_override(
     module_name = "bazel_iwyu",
-    commit = "85cbd99369a3ed3f8c31234d2d887026f3e66bbc",
-    remote = "https://github.com/storypku/bazel_iwyu.git",
+    integrity = "sha256-hSVfFyScxUilHCpmgQ3dLDp97EG+aIgShO2EPQnA8lk=",
+    strip_prefix = "bazel_iwyu-85cbd99369a3ed3f8c31234d2d887026f3e66bbc",
+    urls = ["https://github.com/storypku/bazel_iwyu/archive/85cbd99369a3ed3f8c31234d2d887026f3e66bbc.tar.gz"],
 )
 
 bazel_dep(name = "rules_rust", version = "0.63.0")
@@ -360,12 +363,15 @@ bazel_dep(name = "range_http_server", version = "0.0.1", repo_name = "RangeHTTPS
 bazel_dep(name = "ceres-solver", version = "2.2.0")
 
 # TODO(austin): Need to apply patch file so the tests pass.
-git_override(
+# archive_override rather than git_override so the fetch goes through Bazel's
+# downloader and respects --downloader_config URL rewriting (mirrorable).
+archive_override(
     module_name = "ceres-solver",
-    commit = "0c70ed3a1a2d6ba47c06c7e8b3b040880bc474db",
+    integrity = "sha256-vwvMeProhOWd2JNpPlJRDafMaGanRE/a6bqPGeriZs0=",
     patch_strip = 1,
     patches = ["//third_party:ceres-bzlmod.patch"],
-    remote = "https://github.com/ceres-solver/ceres-solver.git",
+    strip_prefix = "ceres-solver-0c70ed3a1a2d6ba47c06c7e8b3b040880bc474db",
+    urls = ["https://github.com/ceres-solver/ceres-solver/archive/0c70ed3a1a2d6ba47c06c7e8b3b040880bc474db.tar.gz"],
 )
 
 bazel_dep(name = "tcmalloc", version = "0.0.0-20250927-12f2552", repo_name = "com_google_tcmalloc")
@@ -373,10 +379,13 @@ bazel_dep(name = "tcmalloc", version = "0.0.0-20250927-12f2552", repo_name = "co
 # Hedron's Compile Commands Extractor for Bazel
 # https://github.com/hedronvision/bazel-compile-commands-extractor
 bazel_dep(name = "hedron_compile_commands", dev_dependency = True)
-git_override(
+# archive_override rather than git_override so the fetch goes through Bazel's
+# downloader and respects --downloader_config URL rewriting (mirrorable).
+archive_override(
     module_name = "hedron_compile_commands",
-    commit = "daae6f40adfa5fdb7c89684cbe4d88b691c63b2d",
-    remote = "https://github.com/hedronvision/bazel-compile-commands-extractor.git",
+    integrity = "sha256-Q0UaMr8nHnukY1oH95ltU1UB8GbA/o/qsE+wyR3VmG4=",
+    strip_prefix = "bazel-compile-commands-extractor-daae6f40adfa5fdb7c89684cbe4d88b691c63b2d",
+    urls = ["https://github.com/hedronvision/bazel-compile-commands-extractor/archive/daae6f40adfa5fdb7c89684cbe4d88b691c63b2d.tar.gz"],
 )
 
 bazel_dep(name = "websocketpp", version = "0.8.2.bcr.5")
