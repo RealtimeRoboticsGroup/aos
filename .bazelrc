@@ -1,7 +1,7 @@
 # Use platforms to build our code.
 build --incompatible_enable_cc_toolchain_resolution
 
-build --enable_platform_specific_config
+common --enable_platform_specific_config
 
 # Rewrite all URLs to be on realtimeroboticsgroup.org
 common --downloader_config=tools/dependency_rewrite
