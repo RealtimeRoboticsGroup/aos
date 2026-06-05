@@ -9,19 +9,19 @@ bazel_dep(name = "rules_cuda", version = "0.3.0")
 
 # Pin to an upstream commit past v0.3.0 that includes the configurable
 # cc_host_compile_flags and multi-arch toolchain refactors we depend on,
-# then layer our local fixes on top.
-git_override(
+# plus the -std=, BAZEL_CURRENT_REPOSITORY, and host_defines fixes that
+# have since merged upstream. The two remaining local patches have not
+# landed yet.
+archive_override(
     module_name = "rules_cuda",
-    commit = "71981925b1ff7a8ab37fcf442262c571ebaf3380",
+    integrity = "sha256-qlOGzpn6ecOELaXh3VpprsZSrf0Mx1mYRm8QIC8sNes=",
     patch_strip = 1,
     patches = [
-        "//third_party:rules_cuda/0001-Pass-std-through-to-clang-CUDA-compile-actions.patch",
-        "//third_party:rules_cuda/0002-Inject-BAZEL_CURRENT_REPOSITORY-into-cuda_library.patch",
-        "//third_party:rules_cuda/0003-Add-cuda_wrappers-include-feature-for-clang-CUDA-too.patch",
-        "//third_party:rules_cuda/0004-Pass-host_defines-through-clang-CUDA-compile-actions.patch",
-        "//third_party:rules_cuda/0005-Resolve-cuda_toolkit-in-exec-config.patch",
+        "//third_party:rules_cuda/0001-Add-cuda_wrappers-include-feature-for-clang-CUDA-too.patch",
+        "//third_party:rules_cuda/0002-Resolve-cuda_toolkit-in-exec-config.patch",
     ],
-    remote = "https://github.com/bazel-contrib/rules_cuda.git",
+    strip_prefix = "rules_cuda-249c9e897b6c5f29adba8a2195abadc21b4f771c",
+    urls = ["https://github.com/bazel-contrib/rules_cuda/archive/249c9e897b6c5f29adba8a2195abadc21b4f771c.tar.gz"],
 )
 
 bazel_dep(name = "rules_java", version = "9.3.0")
@@ -419,16 +419,7 @@ local_path_override(
 
 bazel_dep(name = "foxglove_schemas", version = "0.16.2", repo_name = "com_github_foxglove_schemas")
 bazel_dep(name = "symengine", version = "0.12.0")
-bazel_dep(name = "gmp", version = "6.3.0")
-single_version_override(
-    module_name = "gmp",
-    patch_strip = 1,
-    patches = [
-        "//third_party/gmp_bzlmod:0001-Reuse-_MPN_ARCH-for-config_m4.patch",
-        "//third_party/gmp_bzlmod:0002-Use-percent-function-for-ELF-on-ARM.patch",
-        "//third_party/gmp_bzlmod:0003-Merge-_mpn-into-gmp.patch",
-    ],
-)
+bazel_dep(name = "gmp", version = "6.3.0.bcr.1")
 bazel_dep(name = "aspect_rules_cypress", version = "0.7.2")
 
 cypress = use_extension("@aspect_rules_cypress//cypress:extensions.bzl", "cypress")
