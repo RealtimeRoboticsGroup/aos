@@ -157,10 +157,20 @@ build --action_env=CYPRESS_INSTALL_BINARY=0
 build --experimental_inprocess_symlink_creation
 
 common --enable_bzlmod=true
+# Consult our local registry before bcr. Every module under registry/ is
+# private to AOS and not published on bcr, so probing bcr first only records
+# useless "<bcr url>: not found" negatives in MODULE.bazel.lock. Those
+# negatives are only written when Bazel actually re-probes bcr (fresh CI
+# server / cold cache), so they churn in and out between local and CI runs.
+# Both registries live in the platform config so the local one is always
+# applied before bcr (--enable_platform_specific_config applies the
+# :linux/:macos block after plain `common` options, which would otherwise
+# put bcr first).
 common:linux --registry=file://%workspace%/registry
+common:linux --registry=https://bcr.bazel.build
 common:macos --registry=file://%workspace%/registry
-# Windows hosts get the registry path injected by tools/bazel.bat at runtime.
-common --registry=https://bcr.bazel.build
+common:macos --registry=https://bcr.bazel.build
+# Windows hosts get both registry paths injected by tools/bazel.bat at runtime.
 # TODO(austin): Finish this migration...  Remove workspace support when users are done.
 common --noenable_workspace --noincompatible_disallow_empty_glob --incompatible_disallow_struct_provider_syntax=false
 

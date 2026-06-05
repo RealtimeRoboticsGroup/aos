@@ -99,8 +99,10 @@ set "TMP_BAZELRC=%TOP_LEVEL_DIR%\.bazelrc_autodetection.tmp"
     echo build --host_platform=//tools/platforms:windows_x86_64
     echo build --extra_execution_platforms=//tools/platforms:windows_x86_64
     echo.
-    echo # Inject the locally encoded Bzlmod registry path safely bypassing workspace expansion spaces
+    echo # Inject the locally encoded Bzlmod registry path safely bypassing workspace expansion spaces.
+    echo # The local registry must come before bcr (see the registry comment in .bazelrc).
     echo common --registry=file:///!URI_PATH!/registry
+    echo common --registry=https://bcr.bazel.build
 ) > "%TMP_BAZELRC%"
 move /y "%TMP_BAZELRC%" "%TOP_LEVEL_DIR%\.bazelrc_autodetection" >nul
 
