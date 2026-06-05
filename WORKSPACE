@@ -23,16 +23,13 @@ http_archive(
     name = "rules_cuda",
     patch_args = ["-p1"],
     patches = [
-        "@aos//third_party:rules_cuda/0001-Pass-std-through-to-clang-CUDA-compile-actions.patch",
-        "@aos//third_party:rules_cuda/0002-Inject-BAZEL_CURRENT_REPOSITORY-into-cuda_library.patch",
-        "@aos//third_party:rules_cuda/0003-Add-cuda_wrappers-include-feature-for-clang-CUDA-too.patch",
-        "@aos//third_party:rules_cuda/0004-Pass-host_defines-through-clang-CUDA-compile-actions.patch",
-        "@aos//third_party:rules_cuda/0005-Resolve-cuda_toolkit-in-exec-config.patch",
+        "@aos//third_party:rules_cuda/0001-Add-cuda_wrappers-include-feature-for-clang-CUDA-too.patch",
+        "@aos//third_party:rules_cuda/0002-Resolve-cuda_toolkit-in-exec-config.patch",
     ],
-    sha256 = "698493ea33914af09772d173f87efcf868930b58bc763af7f3d1103c87c1b71e",
-    strip_prefix = "rules_cuda-71981925b1ff7a8ab37fcf442262c571ebaf3380",
+    sha256 = "aa5386ce99fa79c3842da5e1dd5a69aec652adfd0cc75998466f10202f2c35eb",
+    strip_prefix = "rules_cuda-249c9e897b6c5f29adba8a2195abadc21b4f771c",
     urls = [
-        "https://github.com/bazel-contrib/rules_cuda/archive/71981925b1ff7a8ab37fcf442262c571ebaf3380.tar.gz",
+        "https://github.com/bazel-contrib/rules_cuda/archive/249c9e897b6c5f29adba8a2195abadc21b4f771c.tar.gz",
     ],
 )
 
@@ -44,9 +41,12 @@ ci_configure(name = "ci_configure")
 load("@ci_configure//:ci.bzl", "RUNNING_IN_CI")
 load("//:repositories.bzl", "aos_repositories", "frc_repositories")
 
-local_repository(
+# Keep WORKSPACE mode in sync with the git_override commit in MODULE.bazel.
+http_archive(
     name = "toolchains_llvm",
-    path = "third_party/bazel-toolchain",
+    sha256 = "348918c0609370c18b2e320a2de08ad5ed8b4125c28891e47c9d22db32b404ac",
+    strip_prefix = "toolchains_llvm-37ccd1fc5d16b32fc7a10e6fa7f089b13efce99b",
+    url = "https://github.com/bazel-contrib/toolchains_llvm/archive/37ccd1fc5d16b32fc7a10e6fa7f089b13efce99b.tar.gz",
 )
 
 local_repository(
@@ -66,9 +66,9 @@ http_archive(
 # with --enable_workspace.
 http_archive(
     name = "helly25_bzl",
-    sha256 = "c8e28a3cb7e465b4b71f5d4d366c5796cc0ae822fa510a8adf12cf39a9709902",
-    strip_prefix = "bzl-0.3.1",
-    url = "https://github.com/helly25/bzl/releases/download/0.3.1/bzl-0.3.1.tar.gz",
+    sha256 = "91857eaa56fd0013cb9d82ef5c1c8a996d23ee3d8f40fddf125bb15f5d4f3164",
+    strip_prefix = "bzl-0.4.2",
+    url = "https://github.com/helly25/bzl/releases/download/0.4.2/bzl-0.4.2.tar.gz",
 )
 
 load("@bazel_features//:deps.bzl", "bazel_features_deps")
@@ -174,6 +174,14 @@ load(
 )
 
 generate_repositories_for_debs(phoenix6_debs)
+
+# Register @llvm_distributions_data before loading rules.bzl: rules.bzl ->
+# repo.bzl -> llvm_distributions.bzl transitively loads
+# @llvm_distributions_data//:data.bzl, so the repo must exist first. In bzlmod
+# this is done by the llvm_distributions module extension instead.
+load("@toolchains_llvm//toolchain:setup_distributions.bzl", "setup_llvm_distributions")
+
+setup_llvm_distributions()
 
 load("@toolchains_llvm//toolchain:rules.bzl", "llvm", "llvm_toolchain")
 
@@ -542,9 +550,9 @@ http_archive(
     patches = [
         "@aos//third_party:rules_go/0001-Disable-warnings-for-external-repositories.patch",
     ],
-    sha256 = "a729c8ed2447c90fe140077689079ca0acfb7580ec41637f312d650ce9d93d96",
+    sha256 = "763f4a3f6b03469fdb00a77a333dd0b5546d3ee1fa29db373128c08fee73e0e8",
     urls = [
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.57.0/rules_go-v0.57.0.zip",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.61.1/rules_go-v0.61.1.zip",
     ],
 )
 
@@ -556,10 +564,10 @@ http_archive(
     patches = [
         "@aos//third_party:bazel-gazelle/0001-Fix-visibility-of-gazelle-runner.patch",
     ],
-    sha256 = "75df288c4b31c81eb50f51e2e14f4763cb7548daae126817247064637fd9ea62",
+    sha256 = "49d9eba309b0b695824ff417d734242824ad9ab5edb56063b9d3400df1a61a56",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.36.0/bazel-gazelle-v0.36.0.tar.gz",
-        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.36.0/bazel-gazelle-v0.36.0.tar.gz",
+        "https://mirror.bazel.build/github.com/bazel-contrib/bazel-gazelle/releases/download/v0.51.3/bazel-gazelle-v0.51.3.tar.gz",
+        "https://github.com/bazel-contrib/bazel-gazelle/releases/download/v0.51.3/bazel-gazelle-v0.51.3.tar.gz",
     ],
 )
 
@@ -570,11 +578,11 @@ go_download_sdk(
     goarch = "amd64",
     goos = "linux",
     sdks = {
-        "darwin_amd64": ("go1.24.4.darwin-amd64.tar.gz", "69bef555e114b4a2252452b6e7049afc31fbdf2d39790b669165e89525cd3f5c"),
+        "darwin_amd64": ("go1.24.13.darwin-amd64.tar.gz", "6cc6549b06725220b342b740497ffd24e0ebdcef75781a77931ca199f46ad781"),
         # Pulled from https://go.dev/dl/ to avoid the external dependency.
-        "linux_amd64": ("go1.24.4.linux-amd64.tar.gz", "77e5da33bb72aeaef1ba4418b6fe511bc4d041873cbf82e5aa6318740df98717"),
+        "linux_amd64": ("go1.24.13.linux-amd64.tar.gz", "1fc94b57134d51669c72173ad5d49fd62afb0f1db9bf3f798fd98ee423f8d730"),
     },
-    version = "1.24.4",
+    version = "1.24.13",
 )
 
 go_rules_dependencies()

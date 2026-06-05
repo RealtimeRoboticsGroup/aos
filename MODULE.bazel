@@ -9,24 +9,25 @@ bazel_dep(name = "rules_cuda", version = "0.3.0")
 
 # Pin to an upstream commit past v0.3.0 that includes the configurable
 # cc_host_compile_flags and multi-arch toolchain refactors we depend on,
-# then layer our local fixes on top.
-git_override(
+# plus the -std=, BAZEL_CURRENT_REPOSITORY, and host_defines fixes that
+# have since merged upstream. The two remaining local patches have not
+# landed yet.
+archive_override(
     module_name = "rules_cuda",
-    commit = "71981925b1ff7a8ab37fcf442262c571ebaf3380",
+    integrity = "sha256-qlOGzpn6ecOELaXh3VpprsZSrf0Mx1mYRm8QIC8sNes=",
     patch_strip = 1,
     patches = [
-        "//third_party:rules_cuda/0001-Pass-std-through-to-clang-CUDA-compile-actions.patch",
-        "//third_party:rules_cuda/0002-Inject-BAZEL_CURRENT_REPOSITORY-into-cuda_library.patch",
-        "//third_party:rules_cuda/0003-Add-cuda_wrappers-include-feature-for-clang-CUDA-too.patch",
-        "//third_party:rules_cuda/0004-Pass-host_defines-through-clang-CUDA-compile-actions.patch",
-        "//third_party:rules_cuda/0005-Resolve-cuda_toolkit-in-exec-config.patch",
+        "//third_party:rules_cuda/0001-Add-cuda_wrappers-include-feature-for-clang-CUDA-too.patch",
+        "//third_party:rules_cuda/0002-Resolve-cuda_toolkit-in-exec-config.patch",
     ],
-    remote = "https://github.com/bazel-contrib/rules_cuda.git",
+    strip_prefix = "rules_cuda-249c9e897b6c5f29adba8a2195abadc21b4f771c",
+    urls = ["https://github.com/bazel-contrib/rules_cuda/archive/249c9e897b6c5f29adba8a2195abadc21b4f771c.tar.gz"],
 )
+
 bazel_dep(name = "rules_java", version = "9.3.0")
 bazel_dep(name = "aspect_bazel_lib", version = "2.19.3")
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
-bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "rules_uv", version = "0.77.0")
 bazel_dep(name = "rules_python", version = "1.5.3")
 single_version_override(
@@ -102,30 +103,32 @@ use_repo(node, "nodejs_linux_amd64")
 bazel_dep(name = "aspect_rules_esbuild", version = "0.22.1")
 bazel_dep(name = "aspect_rules_rollup", version = "2.0.1")
 bazel_dep(name = "aspect_rules_terser", version = "2.0.1")
-bazel_dep(name = "gazelle", version = "0.37.0", repo_name = "bazel_gazelle")
+bazel_dep(name = "gazelle", version = "0.51.3", repo_name = "bazel_gazelle")
 single_version_override(
     module_name = "gazelle",
     patch_strip = 1,
     patches = ["//third_party:bazel-gazelle/0001-Fix-visibility-of-gazelle-runner.patch"],
-    version = "0.37.0",
+    version = "0.51.3",
 )
 
 bazel_dep(name = "rules_license", version = "1.0.0")
-bazel_dep(name = "rules_go", version = "0.59.0", repo_name = "io_bazel_rules_go")
+bazel_dep(name = "rules_go", version = "0.61.1", repo_name = "io_bazel_rules_go")
 single_version_override(
     module_name = "rules_go",
     patch_strip = 1,
-    patches = ["third_party/rules_go/0001-Disable-warnings-for-external-repositories.patch"],
+    patches = [
+        "third_party/rules_go/0001-Disable-warnings-for-external-repositories.patch",
+    ],
 )
 
 go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk", dev_dependency = True)
 go_sdk.download(
     name = "go_sdk",
     sdks = {
-        "linux_amd64": ("go1.24.4.linux-amd64.tar.gz", "77e5da33bb72aeaef1ba4418b6fe511bc4d041873cbf82e5aa6318740df98717"),
-        "darwin_arm64": ("go1.24.4.darwin-arm64.tar.gz", "27973684b515eaf461065054e6b572d9390c05e69ba4a423076c160165336470"),
+        "linux_amd64": ("go1.24.13.linux-amd64.tar.gz", "1fc94b57134d51669c72173ad5d49fd62afb0f1db9bf3f798fd98ee423f8d730"),
+        "darwin_arm64": ("go1.24.13.darwin-arm64.tar.gz", "f282d882c3353485e2fc6c634606d85caf36e855167d59b996dbeae19fa7629a"),
     },
-    version = "1.24.4",
+    version = "1.24.13",
 )
 use_repo(go_sdk, "go_sdk")
 
@@ -162,12 +165,12 @@ bazel_dep(name = "eigen", version = "4.0.0-20241125.bcr.3")
 bazel_dep(name = "xz", version = "5.4.5.bcr.7")
 single_version_override(
     module_name = "xz",
-    version = "5.4.5.bcr.7",
     patch_strip = 1,
     patches = [
         "third_party/xz/0001-Add-sysroot-select.patch",
         "third_party/xz/0002-Add-ARMv7-support.patch",
     ],
+    version = "5.4.5.bcr.7",
 )
 
 bazel_dep(name = "aws_sdk", version = "1.11.321")
@@ -181,10 +184,13 @@ bazel_dep(name = "bazel_iwyu", version = "0.0.0", repo_name = "com_github_storyp
 bazel_dep(name = "amd64_tensorrt", version = "10.9.0", dev_dependency = True)
 bazel_dep(name = "amd64_debian_sysroot", version = "2025.04.20", dev_dependency = True)
 
-git_override(
+# archive_override rather than git_override so the fetch goes through Bazel's
+# downloader and respects --downloader_config URL rewriting (mirrorable).
+archive_override(
     module_name = "bazel_iwyu",
-    commit = "85cbd99369a3ed3f8c31234d2d887026f3e66bbc",
-    remote = "https://github.com/storypku/bazel_iwyu.git",
+    integrity = "sha256-hSVfFyScxUilHCpmgQ3dLDp97EG+aIgShO2EPQnA8lk=",
+    strip_prefix = "bazel_iwyu-85cbd99369a3ed3f8c31234d2d887026f3e66bbc",
+    urls = ["https://github.com/storypku/bazel_iwyu/archive/85cbd99369a3ed3f8c31234d2d887026f3e66bbc.tar.gz"],
 )
 
 bazel_dep(name = "rules_rust", version = "0.63.0")
@@ -357,12 +363,15 @@ bazel_dep(name = "range_http_server", version = "0.0.1", repo_name = "RangeHTTPS
 bazel_dep(name = "ceres-solver", version = "2.2.0")
 
 # TODO(austin): Need to apply patch file so the tests pass.
-git_override(
+# archive_override rather than git_override so the fetch goes through Bazel's
+# downloader and respects --downloader_config URL rewriting (mirrorable).
+archive_override(
     module_name = "ceres-solver",
-    commit = "0c70ed3a1a2d6ba47c06c7e8b3b040880bc474db",
+    integrity = "sha256-vwvMeProhOWd2JNpPlJRDafMaGanRE/a6bqPGeriZs0=",
     patch_strip = 1,
     patches = ["//third_party:ceres-bzlmod.patch"],
-    remote = "https://github.com/ceres-solver/ceres-solver.git",
+    strip_prefix = "ceres-solver-0c70ed3a1a2d6ba47c06c7e8b3b040880bc474db",
+    urls = ["https://github.com/ceres-solver/ceres-solver/archive/0c70ed3a1a2d6ba47c06c7e8b3b040880bc474db.tar.gz"],
 )
 
 bazel_dep(name = "tcmalloc", version = "0.0.0-20250927-12f2552", repo_name = "com_google_tcmalloc")
@@ -370,10 +379,13 @@ bazel_dep(name = "tcmalloc", version = "0.0.0-20250927-12f2552", repo_name = "co
 # Hedron's Compile Commands Extractor for Bazel
 # https://github.com/hedronvision/bazel-compile-commands-extractor
 bazel_dep(name = "hedron_compile_commands", dev_dependency = True)
-git_override(
+# archive_override rather than git_override so the fetch goes through Bazel's
+# downloader and respects --downloader_config URL rewriting (mirrorable).
+archive_override(
     module_name = "hedron_compile_commands",
-    commit = "daae6f40adfa5fdb7c89684cbe4d88b691c63b2d",
-    remote = "https://github.com/hedronvision/bazel-compile-commands-extractor.git",
+    integrity = "sha256-Q0UaMr8nHnukY1oH95ltU1UB8GbA/o/qsE+wyR3VmG4=",
+    strip_prefix = "bazel-compile-commands-extractor-daae6f40adfa5fdb7c89684cbe4d88b691c63b2d",
+    urls = ["https://github.com/hedronvision/bazel-compile-commands-extractor/archive/daae6f40adfa5fdb7c89684cbe4d88b691c63b2d.tar.gz"],
 )
 
 bazel_dep(name = "websocketpp", version = "0.8.2.bcr.5")
@@ -416,16 +428,7 @@ local_path_override(
 
 bazel_dep(name = "foxglove_schemas", version = "0.16.2", repo_name = "com_github_foxglove_schemas")
 bazel_dep(name = "symengine", version = "0.12.0")
-bazel_dep(name = "gmp", version = "6.3.0")
-single_version_override(
-    module_name = "gmp",
-    patch_strip = 1,
-    patches = [
-        "//third_party/gmp_bzlmod:0001-Reuse-_MPN_ARCH-for-config_m4.patch",
-        "//third_party/gmp_bzlmod:0002-Use-percent-function-for-ELF-on-ARM.patch",
-        "//third_party/gmp_bzlmod:0003-Merge-_mpn-into-gmp.patch",
-    ],
-)
+bazel_dep(name = "gmp", version = "6.3.0.bcr.1")
 bazel_dep(name = "aspect_rules_cypress", version = "0.7.2")
 
 cypress = use_extension("@aspect_rules_cypress//cypress:extensions.bzl", "cypress")
@@ -434,11 +437,16 @@ use_repo(cypress, "cypress_toolchains")
 
 register_toolchains("@cypress_toolchains//:all")
 
-# Local toolchain repo
+# Pinned to an upstream master commit that includes the multi-arch,
+# target_toolchain_roots, dynamic libstdc++, and Yocto sysroot layout support
+# we depend on (bazel-contrib/toolchains_llvm#753). Merged upstream but not yet
+# in a tagged release.
 bazel_dep(name = "toolchains_llvm", version = "0.0.0", dev_dependency = True)
-local_path_override(
+archive_override(
     module_name = "toolchains_llvm",
-    path = "third_party/bazel-toolchain",
+    integrity = "sha256-NIkYwGCTcMGLLjIKLeCK1e2LQSXCiJHkfJ0i2zK0BKw=",
+    strip_prefix = "toolchains_llvm-37ccd1fc5d16b32fc7a10e6fa7f089b13efce99b",
+    urls = ["https://github.com/bazel-contrib/toolchains_llvm/archive/37ccd1fc5d16b32fc7a10e6fa7f089b13efce99b.tar.gz"],
 )
 
 llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm", dev_dependency = True)
@@ -448,9 +456,13 @@ llvm_version = "21.1.1"
 llvm_alternative_sources = [
     "https://realtimeroboticsgroup.org/build-dependencies/github.com/llvm/llvm-project/releases/download/llvmorg-{llvm_version}/{basename}",
 ]
+
 llvm_x86_64_basename = "clang+llvm-%s-x86_64-linux-gnu-ubuntu-22.04.tar.zst" % llvm_version
+
 llvm_aarch64_basename = "clang+llvm-%s-aarch64-linux-gnu.tar.zst" % llvm_version
+
 llvm_darwin_aarch64_basename = "clang+llvm-%s-aarch64-apple-darwin.tar.zst" % llvm_version
+
 llvm_extra_distributions = {
     llvm_x86_64_basename: "75dde978fcfe30486680e9d2fdbad7e92d9b44b48dea8193023399bc7485f885",
     llvm_aarch64_basename: "f9b33b7ed6cd693160922873a8ae7ec1aadf6ad1efc8e2bee13625b4dc787ce6",
@@ -464,7 +476,6 @@ llvm.toolchain(
     extra_llvm_distributions = llvm_extra_distributions,
     llvm_versions = {"": llvm_version},
 )
-
 llvm.toolchain(
     name = "llvm_aarch64",
     alternative_llvm_sources = llvm_alternative_sources,
@@ -472,7 +483,6 @@ llvm.toolchain(
     extra_llvm_distributions = llvm_extra_distributions,
     llvm_versions = {"": llvm_version},
 )
-
 llvm.toolchain(
     name = "llvm_darwin_aarch64",
     alternative_llvm_sources = llvm_alternative_sources,
@@ -482,6 +492,7 @@ llvm.toolchain(
 )
 
 llvm_conly_flags = ["-std=gnu99"]
+
 llvm_extra_compile_flags = [
     "-D__STDC_FORMAT_MACROS",
     "-D__STDC_CONSTANT_MACROS",
@@ -495,9 +506,13 @@ llvm_extra_compile_flags = [
     "-Wno-deprecated-declarations",
     "-Wembedded-directive",
 ]
+
 llvm_extra_compile_flags_aarch64 = llvm_extra_compile_flags + ["-march=armv8-a+crc"]
+
 llvm_extra_compile_flags_darwin_aarch64 = llvm_extra_compile_flags + ["-march=armv8-a+crc+crypto"]
+
 llvm_cxx_standard = "gnu++20"
+
 llvm_cxx_standard_darwin = "c++20"
 
 llvm.toolchain(
@@ -530,20 +545,34 @@ llvm.toolchain(
         "linux-x86_64": "dynamic-stdc++-12",
     },
 )
-
 llvm.toolchain_root(
     name = "llvm_toolchain",
-    label = "@@toolchains_llvm++llvm+llvm_k8_llvm//:BUILD",
+    label = "@llvm_k8//:BUILD",
     targets = ["linux-x86_64"],
 )
 llvm.toolchain_root(
     name = "llvm_toolchain",
-    label = "@@toolchains_llvm++llvm+llvm_aarch64_llvm//:BUILD",
+    label = "@llvm_aarch64//:BUILD",
     targets = ["linux-aarch64"],
 )
 llvm.toolchain_root(
     name = "llvm_toolchain",
-    label = "@@toolchains_llvm++llvm+llvm_darwin_aarch64_llvm//:BUILD",
+    label = "@llvm_darwin_aarch64//:BUILD",
+    targets = ["darwin-aarch64"],
+)
+llvm.target_toolchain_root(
+    name = "llvm_toolchain",
+    label = "@llvm_k8//:BUILD",
+    targets = ["linux-x86_64"],
+)
+llvm.target_toolchain_root(
+    name = "llvm_toolchain",
+    label = "@llvm_aarch64//:BUILD",
+    targets = ["linux-aarch64"],
+)
+llvm.target_toolchain_root(
+    name = "llvm_toolchain",
+    label = "@llvm_darwin_aarch64//:BUILD",
     targets = ["darwin-aarch64"],
 )
 llvm.sysroot(
@@ -556,7 +585,6 @@ llvm.sysroot(
     label = "@arm64_debian_sysroot//:sysroot_files",
     targets = ["linux-aarch64"],
 )
-
 use_repo(
     llvm,
     "llvm_toolchain",
