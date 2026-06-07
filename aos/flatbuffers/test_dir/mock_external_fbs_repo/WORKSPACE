@@ -1,0 +1,1 @@
+workspace(name = "mock_external_fbs_repo")

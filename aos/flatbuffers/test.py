@@ -221,6 +221,20 @@ class TestPythonFlatbuffers(absltest.TestCase):
         self.assertIsNotNone(foo.Bar())
         self.assertEqual(foo.Bar().Value(), 42)
 
+    def test_external_generated_flatbuffer(self):
+        """Serialize and deserialize an external generated flatbuffer."""
+        import baz_fbs_py.tests.fbs.Baz as BazFbs
+
+        fbb = flatbuffers.Builder()
+        BazFbs.Start(fbb)
+        BazFbs.AddValue(fbb, 99)
+        baz = BazFbs.End(fbb)
+        fbb.Finish(baz)
+        buf = fbb.Output()
+
+        baz = BazFbs.Baz.GetRootAs(buf, 0)
+        self.assertEqual(baz.Value(), 99)
+
 
 if __name__ == "__main__":
     absltest.main()

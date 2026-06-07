@@ -39,8 +39,10 @@ std::string GenerateCodeForRootTableFile(const reflection::Schema *schema,
 // Helper functions to generate the code for individual objects; primarily
 // exposed for testing.
 GeneratedObject GenerateCodeForObject(const reflection::Schema *schema,
-                                      int object_index);
+                                      int object_index,
+                                      std::string_view file_hint = "");
 GeneratedObject GenerateCodeForObject(const reflection::Schema *schema,
-                                      const reflection::Object *object);
+                                      const reflection::Object *object,
+                                      std::string_view file_hint = "");
 }  // namespace aos::fbs
 #endif  // AOS_FLATBUFFERS_STATIC_FLATBUFFERS_H_

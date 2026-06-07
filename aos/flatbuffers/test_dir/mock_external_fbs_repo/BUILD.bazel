@@ -1,0 +1,43 @@
+load("@@//aos/flatbuffers:build_defs.bzl", "flatbuffer_cc_library")
+load("@@//aos/flatbuffers:flatbuffers_python.bzl", "flatbuffer_py_library")
+
+exports_files([
+    "reflection_test.fbs",
+    "foo.fbs",
+    "bar.fbs",
+])
+
+# Python test targets (external checked-in) compiled via flatbuffer_py_library macro
+flatbuffer_py_library(
+    name = "bar_fbs_py",
+    src = "bar.fbs",
+    visibility = ["//visibility:public"],
+)
+
+flatbuffer_py_library(
+    name = "foo_fbs_py",
+    src = "foo.fbs",
+    visibility = ["//visibility:public"],
+    deps = [":bar_fbs_py_srcs"],
+)
+
+# Python test targets (external generated)
+genrule(
+    name = "generate_baz_fbs",
+    outs = ["baz.fbs"],
+    cmd = "echo 'namespace tests.fbs; table Baz { value:int (id: 0); } root_type Baz;' > $@",
+)
+
+flatbuffer_py_library(
+    name = "baz_fbs_py",
+    src = ":baz.fbs",
+    visibility = ["//visibility:public"],
+)
+
+# Binary Identity Case 3: External, checked-in compiled directly to .bfbs with full reflection flags
+flatbuffer_cc_library(
+    name = "reflection_test_fbs",
+    srcs = ["reflection_test.fbs"],
+    gen_reflections = True,
+    visibility = ["//visibility:public"],
+)

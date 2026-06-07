@@ -1,0 +1,7 @@
+namespace tests.fbs;
+
+table ReflectionTest {
+  value:int (id: 0);
+}
+
+root_type ReflectionTest;

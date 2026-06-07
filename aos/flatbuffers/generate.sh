@@ -25,5 +25,5 @@ for ((i = 0; i < $LEN; i++)); do
   $(rlocation ${AOS_REPO_NAME}/aos/flatbuffers/generate) \
     --reflection_bfbs "${INPUTS[i]}" \
     --output_file "${OUTPUTS[i]}" \
-    --base_file_name "$(basename ${SCHEMA_FILES[i]})"
+    --base_file_name "${SCHEMA_FILES[i]}"
 done

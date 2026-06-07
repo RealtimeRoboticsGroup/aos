@@ -1,8 +1,9 @@
-load("@com_github_google_flatbuffers//:build_defs.bzl", "flatbuffer_cc_library")
-load("@com_github_google_flatbuffers//:flatbuffers_python.bzl", "flatbuffer_py_library")
+load("@aos//aos/flatbuffers:build_defs.bzl", "flatbuffer_cc_library")
+load("@aos//aos/flatbuffers:flatbuffers_python.bzl", "flatbuffer_py_library")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
+load("@rules_python//python:defs.bzl", "py_library")
 load("//aos:flatbuffers.bzl", "cc_static_flatbuffer")
 load("//aos/flatbuffers:generate.bzl", "static_flatbuffer")
 load("//tools/build_rules:clean_dep.bzl", "aos_repo_name")
@@ -257,15 +258,71 @@ flatbuffer_py_library(
     ],
 )
 
+# Verifies that the compiled reflection outputs of all 4 flavors of the same fbs
+# schema are binary identical.
+sh_test(
+    name = "compare_binary_reflection_outs",
+    srcs = ["compare_binary_reflection_outs.sh"],
+    args = [
+        # Local, checked in.
+        "$(location //aos/flatbuffers/test_dir:reflection_test_fbs_reflection_out)",
+        # Local, generated.
+        "$(location //aos/flatbuffers/test_dir/generated:reflection_test_fbs_reflection_out)",
+        # External, checked in.
+        "$(location @mock_external_fbs_repo//:reflection_test_fbs_reflection_out)",
+        # External, generated.
+        "$(location @mock_external_fbs_repo//generated:reflection_test_fbs_reflection_out)",
+    ],
+    data = [
+        "//aos/flatbuffers/test_dir:reflection_test_fbs_reflection_out",
+        "//aos/flatbuffers/test_dir/generated:reflection_test_fbs_reflection_out",
+        "@mock_external_fbs_repo//:reflection_test_fbs_reflection_out",
+        "@mock_external_fbs_repo//generated:reflection_test_fbs_reflection_out",
+    ],
+)
+
+# Materialize the upstream flatbuffers python sources into this package so the
+# resulting py_library has a stable `imports` path that resolves identically
+# under both WORKSPACE and bzlmod modes (the upstream files live under
+# external/com_github_google_flatbuffers in WORKSPACE mode and external/
+# flatbuffers+ in bzlmod mode, which is awkward to express via py_library
+# imports = ["..."] alone).
+genrule(
+    name = "flatpy_pkg",
+    srcs = ["@com_github_google_flatbuffers//:flatpy_srcs"],
+    outs = [
+        "flatpy_pkg/flatbuffers/__init__.py",
+        "flatpy_pkg/flatbuffers/_version.py",
+        "flatpy_pkg/flatbuffers/builder.py",
+        "flatpy_pkg/flatbuffers/compat.py",
+        "flatpy_pkg/flatbuffers/encode.py",
+        "flatpy_pkg/flatbuffers/flexbuffers.py",
+        "flatpy_pkg/flatbuffers/number_types.py",
+        "flatpy_pkg/flatbuffers/packer.py",
+        "flatpy_pkg/flatbuffers/table.py",
+        "flatpy_pkg/flatbuffers/util.py",
+    ],
+    cmd = "mkdir -p $(RULEDIR)/flatpy_pkg/flatbuffers && cp $(SRCS) $(RULEDIR)/flatpy_pkg/flatbuffers/",
+)
+
+py_library(
+    name = "flatpy",
+    srcs = [":flatpy_pkg"],
+    imports = ["flatpy_pkg"],
+    visibility = ["//visibility:public"],
+)
+
 py_test(
     name = "test_py",
     srcs = ["test.py"],
     main = "test.py",
     deps = [
         ":everything_fbs_py",
+        ":flatpy",
         ":generated_fbs_py",
         "@com_github_google_flatbuffers//:flatpy",
-        "@com_github_google_flatbuffers//tests:foo_fbs_py",
+        "@mock_external_fbs_repo//:baz_fbs_py",
+        "@mock_external_fbs_repo//:foo_fbs_py",
         "@pip_deps//absl_py",
     ],
 )

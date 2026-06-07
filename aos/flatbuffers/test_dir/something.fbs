@@ -1,4 +1,4 @@
-include "tests/foo.fbs";
+include "foo.fbs";
 
 namespace aos.flatbuffers.test_dir;
 

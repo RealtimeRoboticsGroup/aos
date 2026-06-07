@@ -1,5 +1,5 @@
-load("@com_github_google_flatbuffers//:flatbuffers_python.bzl", "flatbuffer_py_library")
-load("@com_github_google_flatbuffers//:typescript.bzl", "flatbuffer_ts_library")
+load("@aos//aos/flatbuffers:flatbuffers_python.bzl", "flatbuffer_py_library")
+load("@aos//aos/flatbuffers:typescript.bzl", "flatbuffer_ts_library")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")

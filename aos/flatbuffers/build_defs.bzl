@@ -1,19 +1,13 @@
 # Description:
 #   BUILD rules for generating flatbuffer files in various languages.
 
-"""
-Rules for building C++ flatbuffers with Bazel.
-
-AOS Note: These have diverged substantially from upstream; they should
-probably just be extracted from the third_party/flatbuffers folder entirely.
-"""
+"""Rules for building flatbuffers with Bazel."""
 
 load("@aos//tools/build_rules:clean_dep.bzl", "clean_dep")
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_rust//rust:defs.bzl", "rust_library")
 load("@rules_rust//rust:rust_common.bzl", "CrateInfo")
-load("//:repo_name.bzl", "repo_name")
 
 flatc_path = "@com_github_google_flatbuffers//:flatc"
 
@@ -142,7 +136,6 @@ def _flatbuffer_library_compile_impl(ctx):
             if root and root not in workspaces:
                 workspaces.append(root)
 
-    all_files = depset(ctx.attr.generated_files)
     if ctx.attr.generated_files:
         outs = ctx.outputs.generated_files
 
@@ -164,7 +157,10 @@ def _flatbuffer_library_compile_impl(ctx):
                 arguments.append("-I")
                 arguments.append(prefix + subpath + path)
         arguments.append("-I")
-        arguments.append(prefix + "%s.runfiles/%s" % (ctx.executable._flatc.path, repo_name()))
+        arguments.append(prefix + "%s.runfiles/%s" % (
+            ctx.executable._flatc.path,
+            ctx.executable._flatc.owner.repo_name or "_main",
+        ))
         arguments.extend(ctx.attr.flatc_args)
         arguments.extend(ctx.attr.language_flags)
         if prefix:
@@ -222,8 +218,7 @@ def flatbuffer_library_public(
         target_compatible_with = None,
         output_to_bindir = False,
         visibility = None):
-    """Generates code files for reading/writing the given flatbuffers in the
-    requested language using the public compiler.
+    """Generates code files for reading/writing flatbuffers in the requested language.
 
     Args:
       name: Rule name.
@@ -250,6 +245,9 @@ def flatbuffer_library_public(
     optionally a Fileset([reflection_name]) with all generated reflection
     binaries.
     """
+    if output_to_bindir:
+        fail("output_to_bindir is not supported by flatbuffer_library_public.")
+
     _flatbuffer_library_compile(
         name = name,
         srcs = srcs,
@@ -344,7 +342,7 @@ def flatbuffer_cc_library(
         includes = [d + "_srcs" for d in deps]
     reflection_name = "%s_reflection" % name if gen_reflections else ""
 
-    srcs_lib = "%s_srcs" % (name)
+    srcs_lib = srcs_filegroup_name or "%s_srcs" % (name)
     flatbuffer_library_public(
         name = srcs_lib,
         srcs = srcs,
@@ -359,7 +357,7 @@ def flatbuffer_cc_library(
         target_compatible_with = target_compatible_with,
         reflection_name = reflection_name,
         reflection_visibility = visibility,
-        visibility = visibility,
+        visibility = srcs_filegroup_visibility if srcs_filegroup_visibility != None else visibility,
     )
     cc_library(
         name = name,
@@ -408,7 +406,7 @@ def flatbuffer_go_library(
         flatc_args = flatc_args,
         compatible_with = compatible_with,
         target_compatible_with = target_compatible_with,
-        visibility = ["//visibility:private"],
+        visibility = srcs_filegroup_visibility if srcs_filegroup_visibility != None else ["//visibility:private"],
     )
     go_library(
         name = name,
@@ -487,7 +485,7 @@ def flatbuffer_rust_library(
         flatc_args = flatc_args,
         compatible_with = compatible_with,
         target_compatible_with = target_compatible_with,
-        visibility = visibility,
+        visibility = srcs_filegroup_visibility if srcs_filegroup_visibility != None else visibility,
     )
     _flatbuffer_rust_lib_gen(
         name = lib_gen,
