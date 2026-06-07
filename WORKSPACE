@@ -41,12 +41,12 @@ ci_configure(name = "ci_configure")
 load("@ci_configure//:ci.bzl", "RUNNING_IN_CI")
 load("//:repositories.bzl", "aos_repositories", "frc_repositories")
 
-# Keep WORKSPACE mode in sync with the git_override commit in MODULE.bazel.
+# Keep WORKSPACE mode in sync with the archive_override commit in MODULE.bazel.
 http_archive(
     name = "toolchains_llvm",
-    sha256 = "348918c0609370c18b2e320a2de08ad5ed8b4125c28891e47c9d22db32b404ac",
-    strip_prefix = "toolchains_llvm-37ccd1fc5d16b32fc7a10e6fa7f089b13efce99b",
-    url = "https://github.com/bazel-contrib/toolchains_llvm/archive/37ccd1fc5d16b32fc7a10e6fa7f089b13efce99b.tar.gz",
+    sha256 = "8cafb7be80e2ccf0651e80b00de8072b498c5bd096f2227787441c9599b78d66",
+    strip_prefix = "toolchains_llvm-1b9b565ac017dd69932ca5a41c6a1f5497b1eb21",
+    url = "https://github.com/bazel-contrib/toolchains_llvm/archive/1b9b565ac017dd69932ca5a41c6a1f5497b1eb21.tar.gz",
 )
 
 local_repository(
@@ -66,9 +66,9 @@ http_archive(
 # with --enable_workspace.
 http_archive(
     name = "helly25_bzl",
-    sha256 = "91857eaa56fd0013cb9d82ef5c1c8a996d23ee3d8f40fddf125bb15f5d4f3164",
-    strip_prefix = "bzl-0.4.2",
-    url = "https://github.com/helly25/bzl/releases/download/0.4.2/bzl-0.4.2.tar.gz",
+    sha256 = "8846d5363ed05dfe242af692759c9b7439c1b7ce47b9720c3338e254651cbe99",
+    strip_prefix = "bzl-0.4.3",
+    url = "https://github.com/helly25/bzl/releases/download/0.4.3/bzl-0.4.3.tar.gz",
 )
 
 load("@bazel_features//:deps.bzl", "bazel_features_deps")
@@ -185,10 +185,10 @@ setup_llvm_distributions()
 
 load("@toolchains_llvm//toolchain:rules.bzl", "llvm", "llvm_toolchain")
 
-llvm_version = "21.1.1"
+llvm_version = "21.1.8"
 
 llvm_alternative_sources = [
-    "https://realtimeroboticsgroup.org/build-dependencies/github.com/llvm/llvm-project/releases/download/llvmorg-{llvm_version}/{basename}",
+    "https://github.com/RealtimeRoboticsGroup/toolchains/releases/download/{llvm_version}/{basename}",
 ]
 
 llvm_x86_64_basename = "clang+llvm-%s-x86_64-linux-gnu-ubuntu-22.04.tar.zst" % llvm_version
@@ -196,8 +196,8 @@ llvm_x86_64_basename = "clang+llvm-%s-x86_64-linux-gnu-ubuntu-22.04.tar.zst" % l
 llvm_aarch64_basename = "clang+llvm-%s-aarch64-linux-gnu.tar.zst" % llvm_version
 
 llvm_extra_distributions = {
-    llvm_x86_64_basename: "75dde978fcfe30486680e9d2fdbad7e92d9b44b48dea8193023399bc7485f885",
-    llvm_aarch64_basename: "f9b33b7ed6cd693160922873a8ae7ec1aadf6ad1efc8e2bee13625b4dc787ce6",
+    llvm_x86_64_basename: "3e9ab559182f45143c36d761fcee6818935187a8f54354ecb043643b642769f0",
+    llvm_aarch64_basename: "68172a4b557ab3ae50fcc27d3e706d066ea5891933e50f6fb97d6ca9f7e2beb4",
 }
 
 llvm(
@@ -205,6 +205,11 @@ llvm(
     alternative_llvm_sources = llvm_alternative_sources,
     distribution = llvm_x86_64_basename,
     extra_llvm_distributions = llvm_extra_distributions,
+    # MemorySanitizer-instrumented libc++ overlay, swapped in for builds with
+    # `--features=msan` (see `build:msan` in .bazelrc). Same LLVM version as the
+    # base toolchain so it is ABI-compatible with clang 21.1.8.
+    libcxx_sha256 = "56e33981bb71aba8704026534093f81ba9783cff0bf701681f1781d2ecb50a87",
+    libcxx_url = "https://github.com/RealtimeRoboticsGroup/toolchains/releases/download/21.1.8/libcxx-msan-21.1.8-x86_64-linux-gnu-ubuntu-22.04.tar.zst",
     llvm_versions = {"": llvm_version},
 )
 
@@ -213,6 +218,11 @@ llvm(
     alternative_llvm_sources = llvm_alternative_sources,
     distribution = llvm_aarch64_basename,
     extra_llvm_distributions = llvm_extra_distributions,
+    # MemorySanitizer-instrumented libc++ overlay, swapped in for builds with
+    # `--features=msan` (see `build:msan` in .bazelrc). Same LLVM version as the
+    # base toolchain so it is ABI-compatible with clang 21.1.8.
+    libcxx_sha256 = "3bdcaf1d171ea3e15b9cef3229db0476cc8d333a32c32df9157293328f251a68",
+    libcxx_url = "https://github.com/RealtimeRoboticsGroup/toolchains/releases/download/21.1.8/libcxx-msan-21.1.8-aarch64-linux-gnu.tar.zst",
     llvm_versions = {"": llvm_version},
 )
 

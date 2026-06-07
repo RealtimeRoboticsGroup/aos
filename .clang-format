@@ -1,11 +1,10 @@
 ---
 BasedOnStyle:  Google
----
-Language:        Cpp
-# Force pointers to the type for C++.
+# Force pointers to the type for C++ and C.
 DerivePointerAlignment: false
 PointerAlignment: Right
 Standard: Cpp11
+
 IncludeCategories:
     # Force some headers to be considered third-party headers.
     - Regex:     '^<(cxx|Halide|HalidBuffer|lzma|node|v8|osqp|oscqp\+\+|snappy|snappy-sinksource).h>$'

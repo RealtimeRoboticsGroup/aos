@@ -142,6 +142,7 @@ single_version_override(
         "//third_party/abseil:0002-Suppress-the-stack-trace-on-SIGABRT.patch",
         "//third_party/abseil:0004-Remove-relocatability-test-that-is-no-longer-useful.patch",
         "//third_party/abseil:0005-Expose-google_benchmark-dependency.patch",
+        "//third_party/abseil:0006-Suppress-MemorySanitizer-on-swisstable-uninit-reads.patch",
     ],
     version = "20250512.1",
 )
@@ -439,22 +440,23 @@ register_toolchains("@cypress_toolchains//:all")
 
 # Pinned to an upstream master commit that includes the multi-arch,
 # target_toolchain_roots, dynamic libstdc++, and Yocto sysroot layout support
-# we depend on (bazel-contrib/toolchains_llvm#753). Merged upstream but not yet
-# in a tagged release.
+# (bazel-contrib/toolchains_llvm#753) plus the MemorySanitizer support and
+# feature-driven sanitizers (#765) we depend on. Merged upstream but not yet in
+# a tagged release.
 bazel_dep(name = "toolchains_llvm", version = "0.0.0", dev_dependency = True)
 archive_override(
     module_name = "toolchains_llvm",
-    integrity = "sha256-NIkYwGCTcMGLLjIKLeCK1e2LQSXCiJHkfJ0i2zK0BKw=",
-    strip_prefix = "toolchains_llvm-37ccd1fc5d16b32fc7a10e6fa7f089b13efce99b",
-    urls = ["https://github.com/bazel-contrib/toolchains_llvm/archive/37ccd1fc5d16b32fc7a10e6fa7f089b13efce99b.tar.gz"],
+    integrity = "sha256-jK+3voDizPBlHoCwDegHK0mMW9CW8iJ3h0QclZm3jWY=",
+    strip_prefix = "toolchains_llvm-1b9b565ac017dd69932ca5a41c6a1f5497b1eb21",
+    urls = ["https://github.com/bazel-contrib/toolchains_llvm/archive/1b9b565ac017dd69932ca5a41c6a1f5497b1eb21.tar.gz"],
 )
 
 llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm", dev_dependency = True)
 
-llvm_version = "21.1.1"
+llvm_version = "21.1.8"
 
 llvm_alternative_sources = [
-    "https://realtimeroboticsgroup.org/build-dependencies/github.com/llvm/llvm-project/releases/download/llvmorg-{llvm_version}/{basename}",
+    "https://github.com/RealtimeRoboticsGroup/toolchains/releases/download/{llvm_version}/{basename}",
 ]
 
 llvm_x86_64_basename = "clang+llvm-%s-x86_64-linux-gnu-ubuntu-22.04.tar.zst" % llvm_version
@@ -464,9 +466,9 @@ llvm_aarch64_basename = "clang+llvm-%s-aarch64-linux-gnu.tar.zst" % llvm_version
 llvm_darwin_aarch64_basename = "clang+llvm-%s-aarch64-apple-darwin.tar.zst" % llvm_version
 
 llvm_extra_distributions = {
-    llvm_x86_64_basename: "75dde978fcfe30486680e9d2fdbad7e92d9b44b48dea8193023399bc7485f885",
-    llvm_aarch64_basename: "f9b33b7ed6cd693160922873a8ae7ec1aadf6ad1efc8e2bee13625b4dc787ce6",
-    llvm_darwin_aarch64_basename: "61c976c4a669852c5fc0456316ee7c056ccb7193af0073432ecf279a55a1015e",
+    llvm_x86_64_basename: "3e9ab559182f45143c36d761fcee6818935187a8f54354ecb043643b642769f0",
+    llvm_aarch64_basename: "68172a4b557ab3ae50fcc27d3e706d066ea5891933e50f6fb97d6ca9f7e2beb4",
+    llvm_darwin_aarch64_basename: "b2fcfe47b336cc48077f2c9b98e5636bbdf89f17dd6596908dec5a2cb5c87de9",
 }
 
 llvm.toolchain(
@@ -474,6 +476,11 @@ llvm.toolchain(
     alternative_llvm_sources = llvm_alternative_sources,
     distribution = llvm_x86_64_basename,
     extra_llvm_distributions = llvm_extra_distributions,
+    # MemorySanitizer-instrumented libc++ overlay, swapped in for builds with
+    # `--features=msan` (see `build:msan` in .bazelrc). Same LLVM version as the
+    # base toolchain so it is ABI-compatible with clang 21.1.8.
+    libcxx_sha256 = "56e33981bb71aba8704026534093f81ba9783cff0bf701681f1781d2ecb50a87",
+    libcxx_url = "https://github.com/RealtimeRoboticsGroup/toolchains/releases/download/21.1.8/libcxx-msan-21.1.8-x86_64-linux-gnu-ubuntu-22.04.tar.zst",
     llvm_versions = {"": llvm_version},
 )
 llvm.toolchain(
@@ -481,6 +488,11 @@ llvm.toolchain(
     alternative_llvm_sources = llvm_alternative_sources,
     distribution = llvm_aarch64_basename,
     extra_llvm_distributions = llvm_extra_distributions,
+    # MemorySanitizer-instrumented libc++ overlay, swapped in for builds with
+    # `--features=msan` (see `build:msan` in .bazelrc). Same LLVM version as the
+    # base toolchain so it is ABI-compatible with clang 21.1.8.
+    libcxx_sha256 = "3bdcaf1d171ea3e15b9cef3229db0476cc8d333a32c32df9157293328f251a68",
+    libcxx_url = "https://github.com/RealtimeRoboticsGroup/toolchains/releases/download/21.1.8/libcxx-msan-21.1.8-aarch64-linux-gnu.tar.zst",
     llvm_versions = {"": llvm_version},
 )
 llvm.toolchain(
@@ -584,6 +596,15 @@ llvm.sysroot(
     name = "llvm_toolchain",
     label = "@arm64_debian_sysroot//:sysroot_files",
     targets = ["linux-aarch64"],
+)
+
+# The asan/ubsan ignorelists are passed to clang via `-fsanitize-blacklist=` as
+# a plain `--copt` (see .bazelrc), so they must be declared as compile-action
+# inputs or they are absent from the sandbox and clang fails with "no such file
+# or directory". The filegroup selects the relevant list per `--config`.
+llvm.extra_compiler_files(
+    name = "llvm_toolchain",
+    label = "//tools/cpp:flags_compiler_inputs",
 )
 use_repo(
     llvm,

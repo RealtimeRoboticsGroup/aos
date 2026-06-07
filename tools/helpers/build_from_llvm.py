@@ -124,6 +124,8 @@ def build_clang_release(
             "-DCMAKE_CXX_COMPILER={}".format(
                 shutil.which("clang++") or "clang++"),
             "-DLLVM_ENABLE_TERMINFO=OFF",
+            "-DLLVM_ENABLE_ZLIB=FORCE_ON",
+            "-DLLVM_ENABLE_ZSTD=FORCE_ON",
             "-DCMAKE_INSTALL_PREFIX={}".format(clang_dir),
             cwd=build_dir,
         )

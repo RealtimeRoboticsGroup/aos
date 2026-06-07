@@ -22,6 +22,27 @@ cc_test(
     ],
 )
 
+# Smoke tests for the toolchain sanitizers. They pass trivially in a normal
+# build; their value is exercising the instrumented libc++ under
+# `--config=msan` (and the other `--config=asan|ubsan|tsan` builds).
+cc_test(
+    name = "msan_smoke_build_test",
+    size = "small",
+    srcs = [
+        "msan_smoke.cc",
+    ],
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+cc_test(
+    name = "msan_runtime_smoke_build_test",
+    size = "small",
+    srcs = [
+        "msan_runtime_smoke.cc",
+    ],
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 cc_binary(
     name = "tcmalloc_build_test_binary",
     srcs = [
