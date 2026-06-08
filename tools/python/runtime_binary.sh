@@ -38,9 +38,13 @@ if [[ -n "${RUNFILES_DIR:-}" ]]; then
     LD_LIBRARY_PATH+=":${path}/../amd64_debian_sysroot/usr/lib/x86_64-linux-gnu/"
     LD_LIBRARY_PATH+=":${path}/../amd64_debian_sysroot/usr/lib/"
     LD_LIBRARY_PATH+=":${path}/../amd64_debian_sysroot/usr/lib/x86_64-linux-gnu/gvfs/"
-    if [[ -e "${path}/../pip_deps_nvidia_nccl_cu12" ]]; then
-      LD_LIBRARY_PATH+=":${path}/../pip_deps_nvidia_nccl_cu12/site-packages/nvidia/nccl/lib/"
-    fi
+    # Try different possible repository names due to bzlmod / workspace variations
+    for suffix in "rules_python++pip+aos_pip_deps_310_nvidia_nccl_cu12" "rules_python~~pip~aos_pip_deps_310_nvidia_nccl_cu12" "pip_deps_nvidia_nccl_cu12"; do
+      if [[ -e "${path}/../${suffix}" ]]; then
+        LD_LIBRARY_PATH+=":${path}/../${suffix}/site-packages/nvidia/nccl/lib/"
+        break
+      fi
+    done
     export LD_LIBRARY_PATH
   fi
 fi
@@ -55,9 +59,12 @@ if [[ -z "$PYTHON_BIN" ]]; then
       LD_LIBRARY_PATH+=":${path}/../amd64_debian_sysroot/usr/lib/x86_64-linux-gnu/"
       LD_LIBRARY_PATH+=":${path}/../amd64_debian_sysroot/usr/lib/"
       LD_LIBRARY_PATH+=":${path}/../amd64_debian_sysroot/usr/lib/x86_64-linux-gnu/gvfs/"
-      if [[ -e "${path}/../pip_deps_nvidia_nccl_cu12" ]]; then
-        LD_LIBRARY_PATH+=":${path}/../pip_deps_nvidia_nccl_cu12/site-packages/nvidia/nccl/lib/"
-      fi
+      for suffix in "rules_python++pip+aos_pip_deps_310_nvidia_nccl_cu12" "rules_python~~pip~aos_pip_deps_310_nvidia_nccl_cu12" "pip_deps_nvidia_nccl_cu12"; do
+        if [[ -e "${path}/../${suffix}" ]]; then
+          LD_LIBRARY_PATH+=":${path}/../${suffix}/site-packages/nvidia/nccl/lib/"
+          break
+        fi
+      done
       export LD_LIBRARY_PATH
       break
     fi
@@ -70,7 +77,65 @@ if [[ -z "$PYTHON_BIN" ]]; then
   exit 1
 fi
 
-export XLA_FLAGS=--xla_gpu_cuda_data_dir=/usr/lib/cuda
+# Locate the runfiles directory and find any bundled NVIDIA CUDA/cuDNN components.
+RUNFILES_ROOT=""
+if [[ -n "${RUNFILES_DIR:-}" && -d "${RUNFILES_DIR}" ]]; then
+  RUNFILES_ROOT="${RUNFILES_DIR}"
+elif [[ -n "${path:-}" && -d "${path}/.." ]]; then
+  RUNFILES_ROOT=$(cd "${path}/.." && pwd)
+fi
+
+CUDA_DATA_DIR=""
+if [[ -n "${RUNFILES_ROOT}" ]]; then
+  # Enable nullglob to avoid literal patterns when no files match
+  shopt -s nullglob
+  for dir in "${RUNFILES_ROOT}"/*nvidia_*; do
+    pkg_path="${dir}/site-packages/nvidia"
+    if [[ -d "${pkg_path}" ]]; then
+      for subpkg in "${pkg_path}"/*; do
+        if [[ -d "${subpkg}" ]]; then
+          if [[ -d "${subpkg}/lib" ]]; then
+            if [[ -z "${LD_LIBRARY_PATH:-}" ]]; then
+              LD_LIBRARY_PATH="${subpkg}/lib"
+            else
+              LD_LIBRARY_PATH="${subpkg}/lib:${LD_LIBRARY_PATH}"
+            fi
+          fi
+          if [[ -d "${subpkg}/bin" ]]; then
+            PATH="${subpkg}/bin:${PATH}"
+          fi
+          if [[ -d "${subpkg}/nvvm/libdevice" ]]; then
+            CUDA_DATA_DIR="${subpkg}"
+          fi
+        fi
+      done
+    fi
+  done
+  shopt -u nullglob
+
+  if [[ -n "${LD_LIBRARY_PATH:-}" ]]; then
+    export LD_LIBRARY_PATH
+  fi
+  if [[ -n "${PATH:-}" ]]; then
+    export PATH
+  fi
+fi
+
+# Configure XLA_FLAGS. Fall back to /usr/lib/cuda if no bundled libdevice is found.
+current_xla_flags="${XLA_FLAGS:-}"
+xla_data_dir="/usr/lib/cuda"
+if [[ -n "${CUDA_DATA_DIR:-}" ]]; then
+  xla_data_dir="${CUDA_DATA_DIR}"
+fi
+
+new_xla_flags=""
+for flag in ${current_xla_flags}; do
+  if [[ "$flag" != --xla_gpu_cuda_data_dir=* ]]; then
+    new_xla_flags="${new_xla_flags} ${flag}"
+  fi
+done
+
+export XLA_FLAGS="--xla_gpu_cuda_data_dir=${xla_data_dir}${new_xla_flags}"
 
 # Prevent Python from importing the host's installed packages.
 # We symlink the python binary to the current directory (which is the venv bin dir)
