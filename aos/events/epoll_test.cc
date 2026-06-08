@@ -207,4 +207,10 @@ TEST_F(EPollTest, QuitInBeforeWait) {
   epoll_.Run();
 }
 
+TEST_F(EPollTest, RemoveWithoutEvents) {
+  Pipe pipe;
+  epoll_.OnEvents(pipe.read_fd(), [](uint32_t) {});
+  epoll_.DeleteFd(pipe.read_fd());
+}
+
 }  // namespace aos::internal::testing
