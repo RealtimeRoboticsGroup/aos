@@ -121,12 +121,12 @@ class ShmEventLoop : public EventLoop {
   // this.
   absl::Span<char> GetWatcherSharedMemory(const Channel *channel);
 
-  // Setting "use writeable memory" to false (the default) means that the
+  // Setting "use writable memory" to false (the default) means that the
   // watcher will provide messages in a read-only memory region. Setting "use
-  // writeable memory" to true means that the watcher will provide messages in a
-  // writeable memory. Only use this if you absolutely know what you're doing.
+  // writable memory" to true means that the watcher will provide messages in a
+  // writable memory. Only use this if you absolutely know what you're doing.
   // You should only use this if you're interacting with something like CUDA
-  // which expects writeable memory in its API. Note that regardless of this
+  // which expects writable memory in its API. Note that regardless of this
   // setting, the API for watcher doesn't change. The messages will still be
   // `const`.
   void SetWatcherUseWritableMemory(const Channel *channel,
@@ -165,12 +165,12 @@ class ShmEventLoop : public EventLoop {
     return GetShmFetcherSharedMemory(GetRawFetcher(fetcher));
   }
 
-  // Setting "use writeable memory" to false (the default) means that the
+  // Setting "use writable memory" to false (the default) means that the
   // fetcher will provide messages in a read-only memory region. Setting "use
-  // writeable memory" to true means that the fetcher will provide messages in a
-  // writeable memory. Only use this if you absolutely know what you're doing.
+  // writable memory" to true means that the fetcher will provide messages in a
+  // writable memory. Only use this if you absolutely know what you're doing.
   // You should only use this if you're interacting with something like CUDA
-  // which expects writeable memory in its API. Note that regardless of this
+  // which expects writable memory in its API. Note that regardless of this
   // setting, the API for fetchers doesn't change. The messages will still be
   // `const`.
   template <typename T>

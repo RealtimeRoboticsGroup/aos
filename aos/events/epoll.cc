@@ -65,7 +65,7 @@ void EPoll::OnError(int fd, ::std::function<void()> function) {
   DoEpollCtl(event_data, event_data->events | kErrorEvents);
 }
 
-void EPoll::OnWriteable(int fd, ::std::function<void()> function) {
+void EPoll::OnWritable(int fd, ::std::function<void()> function) {
   EventData *event_data = GetEventData(fd);
   if (event_data == nullptr) {
     fns_.emplace_back(std::make_unique<InOutEventData>(fd));

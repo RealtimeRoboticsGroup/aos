@@ -67,7 +67,7 @@ bool PathExists(std::string_view path);
 // runs across.
 void UnlinkRecursive(std::string_view path);
 
-enum class FileOptions { kReadable, kWriteable };
+enum class FileOptions { kReadable, kWritable };
 
 enum class FileReaderErrorType { kFatal, kNonFatal };
 

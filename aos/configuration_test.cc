@@ -702,7 +702,7 @@ TEST_F(ConfigurationDeathTest, InvalidSourceNode) {
       "forwarding data to itself");
 }
 
-// Tests that our node writeable helpers work as intended.
+// Tests that our node writable helpers work as intended.
 TEST_F(ConfigurationTest, ChannelIsSendableOnNode) {
   FlatbufferDetachedBuffer<Channel> good_channel(JsonToFlatbuffer(
       R"channel({
@@ -732,7 +732,7 @@ TEST_F(ConfigurationTest, ChannelIsSendableOnNode) {
       ChannelIsSendableOnNode(&bad_channel.message(), &node.message()));
 }
 
-// Tests that our node readable and writeable helpers work as intended.
+// Tests that our node readable and writable helpers work as intended.
 TEST_F(ConfigurationTest, ChannelIsReadableOnNode) {
   FlatbufferDetachedBuffer<Channel> good_channel(JsonToFlatbuffer(
       R"channel({

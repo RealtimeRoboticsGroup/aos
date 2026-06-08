@@ -69,7 +69,7 @@ TEST(FlatbufferMMapTest, Verify) {
 }
 
 // Tests the ability to modify a flatbuffer mmaped from on disk in memory
-TEST(FlatbufferMMapTest, Writeable) {
+TEST(FlatbufferMMapTest, Writable) {
   FlatbufferDetachedBuffer<Configuration> fb =
       JsonToFlatbuffer<Configuration>("{\"foo_int\": 3}");
 
@@ -78,7 +78,7 @@ TEST(FlatbufferMMapTest, Writeable) {
 
   {
     FlatbufferMMap<Configuration> fb_mmap(fb_path,
-                                          util::FileOptions::kWriteable);
+                                          util::FileOptions::kWritable);
     fb_mmap.mutable_message()->mutate_foo_int(5);
   }
 

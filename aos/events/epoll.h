@@ -84,32 +84,39 @@ class EPoll {
   // descriptor.
   void BeforeWait(std::function<void()> function);
 
-  // Registers a function to be called if the fd becomes readable.
+  // Registers a function to be called when the fd is readable.
   // Only one function may be registered for readability on each fd.
-  // A fd may be registered exclusively with OnReadable/OnWriteable/OnError OR
+  //
+  // A fd may be registered exclusively with OnReadable/OnWritable/OnError OR
   // OnEvents.
   void OnReadable(int fd, ::std::function<void()> function);
 
-  // Registers a function to be called if the fd reports an error.
+  // Registers a function to be called when the fd has an error.
   // Only one function may be registered for errors on each fd.
-  // A fd may be registered exclusively with OnReadable/OnWriteable/OnError OR
+  //
+  // A fd may be registered exclusively with OnReadable/OnWritable/OnError OR
   // OnEvents.
   void OnError(int fd, ::std::function<void()> function);
 
-  // Registers a function to be called if the fd becomes writeable.
+  // Registers a function to be called when the fd is writable.
   // Only one function may be registered for writability on each fd.
-  // A fd may be registered exclusively with OnReadable/OnWriteable/OnError OR
+  //
+  // A fd may be registered exclusively with OnReadable/OnWritable/OnError OR
   // OnEvents.
-  void OnWriteable(int fd, ::std::function<void()> function);
+  void OnWritable(int fd, ::std::function<void()> function);
 
   // Registers a function to be called when the configured events occur on fd.
-  // Which events occur will be passed to the function.
-  // A fd may be registered exclusively with OnReadable/OnWriteable/OnError OR
+  // The function is passed an argument containing the events which occurred.
+  // Configure events to call this function for using SetEvents.
+  //
+  // A fd may be registered exclusively with OnReadable/OnWritable/OnError OR
   // OnEvents.
   void OnEvents(int fd, ::std::function<void(uint32_t)> function);
 
   // Removes fd from the event loop.
   // All Fds must be cleaned up before this class is destroyed.
+  //
+  // This applies to fds registered with any functions.
   void DeleteFd(int fd);
 
   // Removes a closed fd.  When fds are closed, they are automatically
@@ -118,16 +125,22 @@ class EPoll {
   void ForgetClosedFd(int fd);
 
   // Enables calling the existing function registered for fd when it becomes
-  // writeable.
-  void EnableWriteable(int fd) { EnableEvents(fd, kOutEvents); }
+  // writable.
+  //
+  // This is only for fds registered using OnWritable, not OnEvents.
+  void EnableWritable(int fd) { EnableEvents(fd, kOutEvents); }
 
   // Disables calling the existing function registered for fd when it becomes
-  // writeable.
-  void DisableWriteable(int fd) { DisableEvents(fd, kOutEvents); }
+  // writable.
+  //
+  // This is only for fds registered using OnWritable, not OnEvents.
+  void DisableWritable(int fd) { DisableEvents(fd, kOutEvents); }
 
   // Sets the epoll events for the given fd. Be careful using this with
-  // OnReadable/OnWriteable/OnError: enabled events which fire with no handler
+  // OnReadable/OnWritable/OnError: enabled events which fire with no handler
   // registered will result in a crash.
+  //
+  // This is only for fds registered using OnEvents.
   void SetEvents(int fd, uint32_t events);
 
   // Returns whether we're currently running. This changes to false when we

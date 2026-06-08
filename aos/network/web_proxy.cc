@@ -130,7 +130,7 @@ static int ReFdListen(int fd, int flags, fd_h *fh, void *arg) {
     global_epoll->OnReadable(fd, [fh, arg]() { (*fh)(0x1, arg); });
   }
   if (flags & 0x2) {
-    global_epoll->OnWriteable(fd, [fh, arg]() { (*fh)(0x2, arg); });
+    global_epoll->OnWritable(fd, [fh, arg]() { (*fh)(0x2, arg); });
   }
   if (flags & 0x4) {
     global_epoll->OnError(fd, [fh, arg]() { (*fh)(0x4, arg); });

@@ -96,11 +96,11 @@ TEST_F(EPollTest, BasicReadable) {
   epoll_.DeleteFd(pipe.read_fd());
 }
 
-// Test that the basics of OnWriteable work.
-TEST_F(EPollTest, BasicWriteable) {
+// Test that the basics of OnWritable work.
+TEST_F(EPollTest, BasicWritable) {
   Pipe pipe;
   int number_writes = 0;
-  epoll_.OnWriteable(pipe.write_fd(), [&]() {
+  epoll_.OnWritable(pipe.write_fd(), [&]() {
     pipe.Write(" ");
     ++number_writes;
   });
@@ -156,8 +156,8 @@ TEST(EPollDeathTest, InvalidFd) {
   epoll.OnReadable(pipe.read_fd(), []() {});
   EXPECT_DEATH(epoll.OnReadable(pipe.read_fd(), []() {}),
                "Duplicate in functions");
-  epoll.OnWriteable(pipe.read_fd(), []() {});
-  EXPECT_DEATH(epoll.OnWriteable(pipe.read_fd(), []() {}),
+  epoll.OnWritable(pipe.read_fd(), []() {});
+  EXPECT_DEATH(epoll.OnWritable(pipe.read_fd(), []() {}),
                "Duplicate out functions");
 
   epoll.DeleteFd(pipe.read_fd());
@@ -165,11 +165,11 @@ TEST(EPollDeathTest, InvalidFd) {
   EXPECT_DEATH(epoll.DeleteFd(pipe.write_fd()), "fd [0-9]+ not found");
 }
 
-// Tests that enabling/disabling a writeable FD works.
-TEST_F(EPollTest, WriteableEnableDisable) {
+// Tests that enabling/disabling a writable FD works.
+TEST_F(EPollTest, WritableEnableDisable) {
   Pipe pipe;
   int number_writes = 0;
-  epoll_.OnWriteable(pipe.write_fd(), [&]() {
+  epoll_.OnWritable(pipe.write_fd(), [&]() {
     pipe.Write(" ");
     ++number_writes;
   });
@@ -184,17 +184,17 @@ TEST_F(EPollTest, WriteableEnableDisable) {
     ASSERT_EQ(" ", pipe.Read(1));
   }
 
-  // If we disable writeable checking, then nothing should happen.
-  epoll_.DisableWriteable(pipe.write_fd());
+  // If we disable writable checking, then nothing should happen.
+  epoll_.DisableWritable(pipe.write_fd());
   number_writes = 0;
   RunFor(tick_duration());
   EXPECT_EQ(number_writes, 0);
 
   // Disabling it again should be a NOP.
-  epoll_.DisableWriteable(pipe.write_fd());
+  epoll_.DisableWritable(pipe.write_fd());
 
   // And then when we re-enable, it should fill the pipe up again.
-  epoll_.EnableWriteable(pipe.write_fd());
+  epoll_.EnableWritable(pipe.write_fd());
   number_writes = 0;
   RunFor(tick_duration());
   EXPECT_EQ(number_writes, bytes_in_pipe);
