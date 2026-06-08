@@ -10,18 +10,12 @@ bazel_dep(name = "rules_cuda", version = "0.3.0")
 # Pin to an upstream commit past v0.3.0 that includes the configurable
 # cc_host_compile_flags and multi-arch toolchain refactors we depend on,
 # plus the -std=, BAZEL_CURRENT_REPOSITORY, and host_defines fixes that
-# have since merged upstream. The two remaining local patches have not
-# landed yet.
+# have since merged upstream.
 archive_override(
     module_name = "rules_cuda",
-    integrity = "sha256-qlOGzpn6ecOELaXh3VpprsZSrf0Mx1mYRm8QIC8sNes=",
-    patch_strip = 1,
-    patches = [
-        "//third_party:rules_cuda/0001-Add-cuda_wrappers-include-feature-for-clang-CUDA-too.patch",
-        "//third_party:rules_cuda/0002-Resolve-cuda_toolkit-in-exec-config.patch",
-    ],
-    strip_prefix = "rules_cuda-249c9e897b6c5f29adba8a2195abadc21b4f771c",
-    urls = ["https://github.com/bazel-contrib/rules_cuda/archive/249c9e897b6c5f29adba8a2195abadc21b4f771c.tar.gz"],
+    integrity = "sha256-BW9EQVIw+wY6CQqdBgfUNGFn18aNa/9HCVILEyqKj+Q=",
+    strip_prefix = "rules_cuda-345dd02d2b64b8a6c138800da3180c9278417ec2",
+    urls = ["https://github.com/bazel-contrib/rules_cuda/archive/345dd02d2b64b8a6c138800da3180c9278417ec2.tar.gz"],
 )
 
 bazel_dep(name = "rules_java", version = "9.3.0")

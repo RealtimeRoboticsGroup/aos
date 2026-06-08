@@ -21,15 +21,10 @@ http_archive(
 # This matches the git_override commit and local patches used there.
 http_archive(
     name = "rules_cuda",
-    patch_args = ["-p1"],
-    patches = [
-        "@aos//third_party:rules_cuda/0001-Add-cuda_wrappers-include-feature-for-clang-CUDA-too.patch",
-        "@aos//third_party:rules_cuda/0002-Resolve-cuda_toolkit-in-exec-config.patch",
-    ],
-    sha256 = "aa5386ce99fa79c3842da5e1dd5a69aec652adfd0cc75998466f10202f2c35eb",
-    strip_prefix = "rules_cuda-249c9e897b6c5f29adba8a2195abadc21b4f771c",
+    sha256 = "056f44415230fb063a090a9d0607d4346167d7c68d6bff4709520b132a8a8fe4",
+    strip_prefix = "rules_cuda-345dd02d2b64b8a6c138800da3180c9278417ec2",
     urls = [
-        "https://github.com/bazel-contrib/rules_cuda/archive/249c9e897b6c5f29adba8a2195abadc21b4f771c.tar.gz",
+        "https://github.com/bazel-contrib/rules_cuda/archive/345dd02d2b64b8a6c138800da3180c9278417ec2.tar.gz",
     ],
 )
 
