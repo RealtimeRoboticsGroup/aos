@@ -535,8 +535,6 @@ class EventLoop:
             proxy._event_loop_proxy_target = None
         self._proxies.clear()
 
-        for timer in self._timers:
-            lib.destroy_timer_handler(timer._c_timer)
         self._timers.clear()
         for fetcher in self._fetchers:
             fetcher.release_context_buffer()

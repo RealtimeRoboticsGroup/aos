@@ -147,8 +147,6 @@ aos_exit_handle_t *aos_simulated_event_loop_factory_make_exit_handle(
 
 void aos_error_destroy(aos_error_t *self);
 int aos_error_code(aos_error_t *self);
-
-void destroy_timer_handler(aos_timer_handler_t *timer_handler);
 """)
 
 lib_path = locate("aos/aos/events/libevent_loop_c.so")
