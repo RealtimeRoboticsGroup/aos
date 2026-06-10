@@ -107,7 +107,7 @@ void ReceiverThread() {
   chrono::nanoseconds sum_latency = chrono::nanoseconds(0);
   int latency_count = 0;
 
-  internal::EPoll epoll;
+  EPoll epoll;
 
   epoll.OnReadable(signalfd_fd, [&t, &epoll, &max_wakeup_latency, &sum_latency,
                                  &latency_count, signalfd_fd]() {

@@ -45,7 +45,7 @@ LocklessQueueTest::LocklessQueueTest() {
 }
 
 void LocklessQueueTest::RunUntilWakeup(Event *ready, int priority) {
-  internal::EPoll epoll;
+  EPoll epoll;
   SignalFd signalfd({kWakeupSignal});
 
   epoll.OnReadable(signalfd.fd(), [&signalfd, &epoll]() {

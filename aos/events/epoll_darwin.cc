@@ -17,8 +17,8 @@
 #include "aos/events/epoll.h"
 #include "aos/mutex/mutex.h"
 
-namespace aos::internal {
-
+namespace aos {
+namespace internal {
 namespace {
 
 uint64_t ToMachTicks(monotonic_clock::time_point time) {
@@ -255,6 +255,8 @@ uint64_t TimerFd::Read() {
   return expirations;
 }
 
+}  // namespace internal
+
 EPoll::EPoll() : epoll_fd_(kqueue()) {
   ABSL_PCHECK(epoll_fd_ > 0);
 
@@ -435,4 +437,4 @@ void EPoll::DeleteFdFromEpoll(int fd) {
   kevent(epoll_fd_, events, n, NULL, 0, NULL);
 }
 
-}  // namespace aos::internal
+}  // namespace aos

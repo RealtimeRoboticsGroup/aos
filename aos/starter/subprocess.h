@@ -53,19 +53,19 @@ class SignalListener {
  public:
   SignalListener(aos::ShmEventLoop *loop,
                  std::function<void(signalfd_siginfo)> callback);
-  SignalListener(aos::internal::EPoll *epoll,
+  SignalListener(aos::EPoll *epoll,
                  std::function<void(signalfd_siginfo)> callback);
   SignalListener(aos::ShmEventLoop *loop,
                  std::function<void(signalfd_siginfo)> callback,
                  std::initializer_list<unsigned int> signals);
-  SignalListener(aos::internal::EPoll *epoll,
+  SignalListener(aos::EPoll *epoll,
                  std::function<void(signalfd_siginfo)> callback,
                  std::initializer_list<unsigned int> signals);
 
   ~SignalListener();
 
  private:
-  aos::internal::EPoll *epoll_;
+  aos::EPoll *epoll_;
   std::function<void(signalfd_siginfo)> callback_;
   aos::ipc_lib::SignalFd signalfd_;
 

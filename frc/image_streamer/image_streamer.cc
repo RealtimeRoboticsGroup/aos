@@ -651,7 +651,7 @@ int main(int argc, char **argv) {
     server.startListening(absl::GetFlag(FLAGS_streaming_port));
     server.setStaticPath(absl::GetFlag(FLAGS_data_dir).c_str());
 
-    aos::internal::EPoll *epoll = event_loop.epoll();
+    aos::EPoll *epoll = event_loop.epoll();
 
     epoll->OnReadable(server.fd(), [&server] {
       CHECK(::seasocks::Server::PollResult::Continue == server.poll(0));

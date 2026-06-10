@@ -225,7 +225,7 @@ class SimulatedEventLoopFactory {
   void SetRealtimeReplayRate(double replay_rate);
 
   // Access to the internal scheduler's epoll object for realtime replay.
-  internal::EPoll *scheduler_epoll() { return scheduler_scheduler_.epoll(); }
+  EPoll *scheduler_epoll() { return scheduler_scheduler_.epoll(); }
 
  private:
   friend class NodeEventLoopFactory;

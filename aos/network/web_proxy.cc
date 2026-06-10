@@ -123,7 +123,7 @@ void WebsocketHandler::onDisconnect(::seasocks::WebSocket *sock) {
 }
 
 // Global epoll pointer
-static aos::internal::EPoll *global_epoll = nullptr;
+static aos::EPoll *global_epoll = nullptr;
 
 static int ReFdListen(int fd, int flags, fd_h *fh, void *arg) {
   if (flags & 0x1) {
@@ -153,7 +153,7 @@ WebProxy::WebProxy(aos::ShmEventLoop *event_loop, StoreHistory store_history,
     : WebProxy(event_loop, event_loop->epoll(), store_history,
                per_channel_buffer_size_bytes) {}
 
-WebProxy::WebProxy(aos::EventLoop *event_loop, aos::internal::EPoll *epoll,
+WebProxy::WebProxy(aos::EventLoop *event_loop, aos::EPoll *epoll,
                    StoreHistory store_history,
                    int per_channel_buffer_size_bytes)
     : epoll_(epoll),

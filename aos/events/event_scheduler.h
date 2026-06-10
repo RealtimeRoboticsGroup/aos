@@ -332,7 +332,7 @@ class EventSchedulerScheduler {
   // (the default) to run as fast as possible. This can be changed during
   // run-time.
   void SetReplayRate(double replay_rate) { replay_rate_ = replay_rate; }
-  internal::EPoll *epoll() { return &epoll_; }
+  EPoll *epoll() { return &epoll_; }
 
   // Run until time.  fn_realtime_offset is a function that returns the
   // realtime offset.
@@ -400,7 +400,7 @@ class EventSchedulerScheduler {
       reboots_;
 
   double replay_rate_ = std::numeric_limits<double>::infinity();
-  internal::EPoll epoll_;
+  EPoll epoll_;
 
   std::function<void(
       std::tuple<distributed_clock::time_point, const EventScheduler *>)>
