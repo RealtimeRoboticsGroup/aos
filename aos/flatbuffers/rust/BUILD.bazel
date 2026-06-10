@@ -1,0 +1,23 @@
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+# Wraps the flatbuffers Rust runtime sources from the BCR-vended flatbuffers
+# module. We define the rust_library here (rather than upstream) because the
+# BCR flatbuffers module does not declare rules_rust as a dependency, so any
+# load("@rules_rust//rust:defs.bzl", ...) inside @com_github_google_flatbuffers
+# would fail to resolve.
+rust_library(
+    name = "flatbuffers",
+    srcs = ["@com_github_google_flatbuffers//rust:rust_srcs"],
+    crate_name = "flatbuffers",
+    crate_root = "@com_github_google_flatbuffers//rust:flatbuffers/src/lib.rs",
+    edition = "2018",
+    target_compatible_with = ["//tools/platforms/rust:has_support"],
+    version = "2.1.1",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crate_index//:arrayvec",
+        "@crate_index//:bitflags",
+        "@crate_index//:smallvec",
+        "@crate_index//:thiserror",
+    ],
+)

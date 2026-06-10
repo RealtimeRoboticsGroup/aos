@@ -1,4 +1,4 @@
-load("//:typescript.bzl", "flatbuffer_ts_library")
+load("@aos//aos/flatbuffers:typescript.bzl", "flatbuffer_ts_library")
 
 flatbuffer_ts_library(
     name = "reflection_ts_fbs",

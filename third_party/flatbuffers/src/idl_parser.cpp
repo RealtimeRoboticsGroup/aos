@@ -3905,6 +3905,29 @@ static bool DeserializeAttributesCommon(
   return true;
 }
 
+static std::string StripLayoutPath(const std::string &filepath) {
+  std::string path = filepath;
+  size_t bazel_out_pos = path.find("bazel-out/");
+  if (bazel_out_pos != std::string::npos) {
+    size_t bin_pos = path.find("/bin/", bazel_out_pos);
+    if (bin_pos != std::string::npos) {
+      path = path.substr(bin_pos + 5);
+    } else {
+      size_t genfiles_pos = path.find("/genfiles/", bazel_out_pos);
+      if (genfiles_pos != std::string::npos) {
+        path = path.substr(genfiles_pos + 10);
+      }
+    }
+  }
+  if (path.rfind("external/", 0) == 0) {
+    size_t next_slash = path.find('/', 9);
+    if (next_slash != std::string::npos) {
+      path = path.substr(next_slash + 1);
+    }
+  }
+  return path;
+}
+
 void Parser::Serialize() {
   builder_.Clear();
   AssignIndices(structs_.vec);
@@ -3942,7 +3965,8 @@ void Parser::Serialize() {
     std::vector<Offset<flatbuffers::String>> included_files;
     for (auto f = files_included_per_file_.begin();
          f != files_included_per_file_.end(); f++) {
-      const auto filename__ = builder_.CreateSharedString(f->first);
+      const std::string filename = (f->first == file_being_parsed_) ? StripPath(f->first) : StripLayoutPath(f->first);
+      const auto filename__ = builder_.CreateSharedString(filename);
       for (auto i = f->second.begin(); i != f->second.end(); i++) {
         // AOS Modification (hack): Strip out any bazel-out nonsense, since it
         // results in non-deterministic generation.  Use schema_name instead of

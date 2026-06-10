@@ -69,10 +69,8 @@ filegroup(
         "BUILD.bazel",
         "MODULE.bazel",
         "WORKSPACE",
-        "build_defs.bzl",
         "package.json",
         "pnpm-lock.yaml",
-        "typescript.bzl",
         "//grpc/src/compiler:distribution",
         "//include/codegen:distribution",
         "//reflection:distribution",
@@ -175,6 +173,15 @@ py_library(
     name = "flatpy",
     srcs = glob(["python/flatbuffers/*.py"]),
     imports = ["python/"],
+)
+
+# Mirrors the :flatpy_srcs filegroup added to the BCR flatbuffers module by
+# //third_party/flatbuffers_patches:21-build-bazel-aos-additions.patch, so that
+# //aos/flatbuffers:flatpy resolves identically under WORKSPACE mode.
+filegroup(
+    name = "flatpy_srcs",
+    srcs = glob(["python/flatbuffers/*.py"]),
+    visibility = ["//visibility:public"],
 )
 
 filegroup(

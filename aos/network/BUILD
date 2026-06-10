@@ -1,5 +1,5 @@
-load("@com_github_google_flatbuffers//:build_defs.bzl", "flatbuffer_cc_library")
-load("@com_github_google_flatbuffers//:typescript.bzl", "flatbuffer_ts_library")
+load("@aos//aos/flatbuffers:build_defs.bzl", "flatbuffer_cc_library")
+load("@aos//aos/flatbuffers:typescript.bzl", "flatbuffer_ts_library")
 load("@com_github_grpc_grpc//bazel:cc_grpc_library.bzl", "cc_grpc_library")
 load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
 load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")

@@ -1,4 +1,5 @@
-load("@com_github_google_flatbuffers//:flatbuffers_python.bzl", "flatbuffer_py_library")
+load("@aos//aos/flatbuffers:build_defs.bzl", "flatbuffer_cc_library")
+load("@aos//aos/flatbuffers:flatbuffers_python.bzl", "flatbuffer_py_library", "flatbuffer_py_srcs")
 load("//aos/flatbuffers:generate.bzl", "static_flatbuffer")
 
 static_flatbuffer(
@@ -46,11 +47,34 @@ sh_test(
     ],
 )
 
+flatbuffer_py_srcs(
+    name = "external_bar_fbs_py_srcs",
+    src = "@mock_external_fbs_repo//:bar.fbs",
+)
+
+flatbuffer_py_srcs(
+    name = "external_foo_fbs_py_srcs",
+    src = "@mock_external_fbs_repo//:foo.fbs",
+    deps = [
+        ":external_bar_fbs_py_srcs",
+    ],
+)
+
 flatbuffer_py_library(
     name = "something_fbs_py",
     src = "something.fbs",
     visibility = ["//visibility:public"],
     deps = [
-        "@com_github_google_flatbuffers//tests:foo_fbs_py_srcs",
+        ":external_foo_fbs_py_srcs",
     ],
+)
+
+exports_files(["reflection_test.fbs"])
+
+# Binary Identity Case 1: Local, checked-in fbs
+flatbuffer_cc_library(
+    name = "reflection_test_fbs",
+    srcs = ["reflection_test.fbs"],
+    gen_reflections = True,
+    visibility = ["//visibility:public"],
 )

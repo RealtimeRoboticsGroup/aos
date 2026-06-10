@@ -1,7 +1,7 @@
 load("@aos//aos:flatbuffers.bzl", "cc_static_flatbuffer")
+load("@aos//aos/flatbuffers:build_defs.bzl", "DEFAULT_FLATC_ARGS")
 load("@aos//aos/flatbuffers:generate.bzl", "static_flatbuffer")
 load("@aspect_bazel_lib//lib:copy_file.bzl", "copy_file")
-load("@com_github_google_flatbuffers//:build_defs.bzl", "DEFAULT_FLATC_ARGS")
 load("@rules_license//rules:license.bzl", "license")
 
 package(default_applicable_licenses = [":license"])

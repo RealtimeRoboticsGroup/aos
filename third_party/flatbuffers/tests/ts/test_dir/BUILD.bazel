@@ -1,5 +1,5 @@
 load("@aspect_rules_js//js:defs.bzl", "js_test")
-load("//:typescript.bzl", "flatbuffer_ts_library")
+load("@aos//aos/flatbuffers:typescript.bzl", "flatbuffer_ts_library")
 
 flatbuffer_ts_library(
     name = "typescript_transitive_ts_fbs",

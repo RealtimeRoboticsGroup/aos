@@ -3,6 +3,6 @@
     "integrity": "sha256-O3/7+jBCOJu1HpPqGiJake4FVm3HlthRd5FQW4vHU2s=",
     "strip_prefix": "foxglove-sdk-sdk-v0.16.2",
     "overlay": {
-        "BUILD.bazel": "sha256-T2FeeqDSiyodMloM9GFyVrCbb0iiHk9GbuERLZ+0aAY="
+        "BUILD.bazel": "sha256-ScEpOsNILclWS/HpY0wPNFGBSR1mwg7Ip8cZsdOZx8Y="
     }
 }

@@ -1,0 +1,7 @@
+namespace include.fbs;
+
+table Bar {
+  value:int (id: 0);
+}
+
+root_type Bar;

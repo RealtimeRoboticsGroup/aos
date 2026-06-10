@@ -1,5 +1,8 @@
 load("@aspect_bazel_lib//lib:copy_file.bzl", "copy_file")
+load("@aspect_rules_js//npm:defs.bzl", "npm_package")
+load("//aos/flatbuffers:build_defs.bzl", "flatbuffer_rust_library")
 load("//aos/flatbuffers:generate.bzl", "static_flatbuffer")
+load("//aos/flatbuffers:typescript.bzl", "flatbuffer_ts_library")
 
 copy_file(
     name = "reflection_fbs_copy",
@@ -14,5 +17,42 @@ copy_file(
 static_flatbuffer(
     name = "reflection_fbs",
     srcs = ["reflection.fbs"],
+    visibility = ["//visibility:public"],
+)
+
+flatbuffer_ts_library(
+    name = "reflection_ts_fbs",
+    srcs = ["reflection.fbs"],
+    include_reflection = False,
+    ts_files = ["reflection/%s" % (name,) for name in [
+        "advanced-features.ts",
+        "base-type.ts",
+        "enum.ts",
+        "enum-val.ts",
+        "field.ts",
+        "key-value.ts",
+        "object.ts",
+        "rpccall.ts",
+        "schema-file.ts",
+        "schema.ts",
+        "service.ts",
+        "type.ts",
+    ]] + ["reflection.ts"],
+    visibility = ["//visibility:public"],
+)
+
+npm_package(
+    name = "flatbuffers_reflection",
+    srcs = [":reflection_ts_fbs_ts"],
+    include_external_repositories = ["*"],
+    package = "flatbuffers_reflection",
+    visibility = ["//visibility:public"],
+)
+
+flatbuffer_rust_library(
+    name = "reflection_rust_fbs",
+    srcs = ["reflection.fbs"],
+    crate_name = "flatbuffers_reflection",
+    include_reflection = False,
     visibility = ["//visibility:public"],
 )

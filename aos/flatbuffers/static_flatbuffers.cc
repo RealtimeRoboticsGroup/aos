@@ -8,6 +8,8 @@
 #include <map>
 #include <optional>
 #include <ostream>
+#include <set>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -29,6 +31,24 @@
 
 namespace aos::fbs {
 namespace {
+// Returns the basename of a flatbuffers schema declaration_file path.
+//
+// flatc emits `reflection::Object::declaration_file()` either as a bare
+// filename (e.g. "include.fbs") or in the form `//<relative-path>` when its
+// `realpath()` resolution succeeds against the project root (e.g.
+// "//../../foo/include.fbs"). Whether realpath succeeds depends on the
+// sandbox structure of the action, so the absolute string value is not a
+// reliable identifier for the file. The basename, on the other hand, is
+// stable and is what we actually want to compare against `file_hint`
+// (which is itself just a basename).
+std::string_view StripPath(std::string_view path) {
+  size_t last_slash = path.find_last_of('/');
+  if (last_slash != std::string_view::npos) {
+    return path.substr(last_slash + 1);
+  }
+  return path;
+}
+
 // Represents a given field within a type with all of the data that we actually
 // care about.
 struct FieldData {
@@ -1057,11 +1077,14 @@ std::string MakeInclude(std::string_view path, bool system = false) {
 
 }  // namespace
 GeneratedObject GenerateCodeForObject(const reflection::Schema *schema,
-                                      int object_index) {
-  return GenerateCodeForObject(schema, GetObject(schema, object_index));
+                                      int object_index,
+                                      std::string_view file_hint) {
+  return GenerateCodeForObject(schema, GetObject(schema, object_index),
+                               file_hint);
 }
 GeneratedObject GenerateCodeForObject(const reflection::Schema *schema,
-                                      const reflection::Object *object) {
+                                      const reflection::Object *object,
+                                      std::string_view file_hint) {
   std::vector<FieldData> fields;
   for (const reflection::Field *field_fbs : *object->fields()) {
     if (field_fbs->deprecated()) {
@@ -1103,10 +1126,12 @@ GeneratedObject GenerateCodeForObject(const reflection::Schema *schema,
       MakeInclude("aos/flatbuffers/static_table.h"),
       MakeInclude("aos/flatbuffers/static_vector.h")};
   for (const reflection::SchemaFile *file : *schema->fbs_files()) {
-    includes.insert(
-        MakeInclude(IncludePathForFbs(file->filename()->string_view())));
-    includes.insert(MakeInclude(
-        IncludePathForFbs(file->filename()->string_view(), "generated")));
+    std::string_view filename = file->filename()->string_view();
+    if (!file_hint.empty() && filename == StripPath(file_hint)) {
+      filename = file_hint;
+    }
+    includes.insert(MakeInclude(IncludePathForFbs(filename)));
+    includes.insert(MakeInclude(IncludePathForFbs(filename, "generated")));
     for (const flatbuffers::String *included : *file->included_filenames()) {
       includes.insert(MakeInclude(IncludePathForFbs(included->string_view())));
     }
@@ -1351,20 +1376,42 @@ GeneratedCode GeneratedCode::MergeCode(
 
 std::string GenerateCodeForRootTableFile(const reflection::Schema *schema,
                                          std::string_view file_hint) {
+  // Sanity check to detect duplicate basenames in the imported schema graph.
+  // Since this generator matches objects from the root schema file by comparing
+  // basenames (to be robust against fluctuating relative paths across
+  // sandbox/Bzlmod environments), importing multiple schemas with colliding
+  // basenames (e.g., `foo/msg.fbs` and `bar/msg.fbs`) in the same compilation
+  // unit would cause objects from both files to incorrectly merge into the same
+  // generated C++ file.
+  std::set<std::string_view> basenames;
+  for (const reflection::SchemaFile *file : *schema->fbs_files()) {
+    const std::string_view filename = file->filename()->string_view();
+    const std::string_view basename = StripPath(filename);
+    ABSL_CHECK(basenames.insert(basename).second)
+        << ": Multiple files with the same basename (" << basename
+        << ") are being imported. This is not supported by the static "
+           "flatbuffer generator.";
+  }
+
   const reflection::Object *root_object = GetObject(schema, -1);
+  // Compare basenames rather than the raw declaration_file strings so the
+  // result is independent of whether flatc's `realpath()` succeeded against
+  // the project root (see comment on StripPath for context).
   const std::string_view root_file =
       (root_object == nullptr) ? file_hint
                                : root_object->declaration_file()->string_view();
+  const std::string_view root_file_basename = StripPath(root_file);
   std::vector<GeneratedObject> objects;
   if (root_object != nullptr) {
-    objects.push_back(GenerateCodeForObject(schema, root_object));
+    objects.push_back(GenerateCodeForObject(schema, root_object, file_hint));
   }
   for (const reflection::Object *object : *schema->objects()) {
     if (object->is_struct()) {
       continue;
     }
-    if (object->declaration_file()->string_view() == root_file) {
-      objects.push_back(GenerateCodeForObject(schema, object));
+    if (StripPath(object->declaration_file()->string_view()) ==
+        root_file_basename) {
+      objects.push_back(GenerateCodeForObject(schema, object, file_hint));
     }
   }
   return GeneratedCode::MergeCode(objects).GenerateCode();

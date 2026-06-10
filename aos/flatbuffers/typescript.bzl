@@ -1,9 +1,4 @@
-"""
-Rules for building typescript flatbuffers with Bazel.
-
-AOS Note: These have diverged substantially from upstream; they should
-probably just be extracted from the third_party/flatbuffers folder entirely.
-"""
+"""Rules for building typescript flatbuffers with Bazel."""
 
 load("@aspect_rules_js//js:defs.bzl", "js_library")
 load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
@@ -77,6 +72,9 @@ def flatbuffer_ts_library(
         target that builds the reflection library itself.
       package_name: Optional, Package name to use for the generated code.
     """
+    if package_name != None:
+        fail("package_name is not supported by flatbuffer_ts_library.")
+
     reflection_ts_files = ["reflection/%s" % (name,) for name in [
         "advanced-features.ts",
         "base-type.ts",
@@ -121,8 +119,7 @@ def flatbuffer_ts_library(
     # third_party/.
     # TODO(james): There absolutely are better ways to do this, but this was the quick and dirty
     # one....
-    outs = ["%s_generated.ts" % (s.replace(".fbs", "").split("/")[-1]) for s in srcs]
-    includes = [d + "_srcs" for d in deps] + (["@com_github_google_flatbuffers//reflection:reflection_ts_fbs_srcs"] if include_reflection else [])
+    includes = [d + "_srcs" for d in deps] + (["@aos//aos/flatbuffers/reflection:reflection_ts_fbs_srcs"] if include_reflection else [])
     flatbuffer_library_public(
         name = srcs_lib,
         srcs = srcs,
@@ -168,7 +165,7 @@ def flatbuffer_ts_library(
             # transitivie dependencies.
             "//:node_modules/@types/node",
             #] + (["@//:node_modules/flatbuffers_reflection"] if include_reflection else []),
-            #] + (["@com_github_google_flatbuffers//reflection:reflection_ts_fbs"] if include_reflection else []),
+            #] + (["@aos//aos/flatbuffers/reflection:reflection_ts_fbs"] if include_reflection else []),
         ],
     )
     js_library(

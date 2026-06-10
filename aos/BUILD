@@ -1,5 +1,5 @@
-load("@com_github_google_flatbuffers//:build_defs.bzl", "flatbuffer_cc_library")
-load("@com_github_google_flatbuffers//:typescript.bzl", "flatbuffer_ts_library")
+load("@aos//aos/flatbuffers:build_defs.bzl", "flatbuffer_cc_library")
+load("@aos//aos/flatbuffers:typescript.bzl", "flatbuffer_ts_library")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
@@ -589,7 +589,7 @@ rust_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        "@com_github_google_flatbuffers//rust",
+        "//aos/flatbuffers/rust:flatbuffers",
     ],
 )
 

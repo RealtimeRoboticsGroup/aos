@@ -1,4 +1,4 @@
-load("@com_github_google_flatbuffers//:typescript.bzl", "flatbuffer_ts_library")
+load("@aos//aos/flatbuffers:typescript.bzl", "flatbuffer_ts_library")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
@@ -481,7 +481,7 @@ ts_project(
         "//aos/network/www:aos_plotter",
         "//aos/network/www:plotter",
         "//aos/network/www:reflection_ts",
-        "@com_github_google_flatbuffers//reflection:reflection_ts_fbs",
+        "@aos//aos/flatbuffers/reflection:reflection_ts_fbs",
         "@com_github_google_flatbuffers//ts:flatbuffers_ts",
     ],
 )

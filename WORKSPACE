@@ -412,7 +412,7 @@ cypress_register_toolchains(
 # Flatbuffers
 local_repository(
     name = "com_github_google_flatbuffers",
-    path = "third_party/flatbuffers",
+    path = "third_party/flatbuffers/",
 )
 
 load("@com_github_google_flatbuffers//ts:repositories.bzl", "flatbuffers_npm")
@@ -620,3 +620,8 @@ hedron_compile_commands_setup()
 load("@com_github_storypku_bazel_iwyu//bazel:dependencies.bzl", "bazel_iwyu_dependencies")
 
 bazel_iwyu_dependencies()
+
+local_repository(
+    name = "mock_external_fbs_repo",
+    path = "aos/flatbuffers/test_dir/mock_external_fbs_repo",
+)

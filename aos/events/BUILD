@@ -1,4 +1,4 @@
-load("@com_github_google_flatbuffers//:flatbuffers_python.bzl", "flatbuffer_py_library")
+load("@aos//aos/flatbuffers:flatbuffers_python.bzl", "flatbuffer_py_library")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
@@ -190,7 +190,7 @@ py_library(
     ],
     deps = [
         ":event_loop_c_py",
-        "@com_github_google_flatbuffers//:flatpy",
+        "//aos/flatbuffers:flatpy",
     ],
 )
 
@@ -260,7 +260,7 @@ py_test(
         ":simulated_event_loop_py",
         ":test_message_fbs_py",
         ":util_py",
-        "@com_github_google_flatbuffers//:flatpy",
+        "//aos/flatbuffers:flatpy",
         "@pip_deps//absl_py",
     ],
 )
@@ -295,7 +295,7 @@ autocxx_library(
     ],
     override_cc_toolchain = "@llvm_toolchain//:cc-clang-x86_64-linux",
     rs_deps = [
-        "@com_github_google_flatbuffers//rust",
+        "//aos/flatbuffers/rust:flatbuffers",
         "@crate_index//:uuid",
         "@crate_index//:futures",
         "@crate_index//:thiserror",
@@ -599,7 +599,7 @@ autocxx_library(
     ],
     override_cc_toolchain = "@llvm_toolchain//:cc-clang-x86_64-linux",
     rs_deps = [
-        "@com_github_google_flatbuffers//rust",
+        "//aos/flatbuffers/rust:flatbuffers",
         "//aos:configuration_rust_fbs",
         "//aos:flatbuffers_rs",
         "@crate_index//:futures",
@@ -634,7 +634,7 @@ autocxx_library(
         ":shm_event_loop_for_rust",
     ],
     rs_deps = [
-        "@com_github_google_flatbuffers//rust",
+        "//aos/flatbuffers/rust:flatbuffers",
         "@crate_index//:futures",
         "//aos:configuration_rust_fbs",
         "//aos:flatbuffers_rs",

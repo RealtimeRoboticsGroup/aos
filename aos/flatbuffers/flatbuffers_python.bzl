@@ -159,8 +159,14 @@ def flatbuffer_py_library(
             ".",
         ],
         deps = [
-            "@com_github_google_flatbuffers//:flatpy",
+            # This is wrapped in `Label()` so that the string is parsed relative
+            # to this file's repo (i.e. @aos), and not relative to the repo of
+            # the caller. This lets us use the `flatbuffer_py_library` macro in
+            # external repos.
+            Label("//aos/flatbuffers:flatpy"),
         ],
         visibility = visibility,
         target_compatible_with = target_compatible_with,
     )
+
+flatbuffer_py_srcs = _flatbuffer_py_srcs

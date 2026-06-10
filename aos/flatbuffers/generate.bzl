@@ -1,5 +1,5 @@
+load("@aos//aos/flatbuffers:build_defs.bzl", "flatbuffer_cc_library")
 load("@aspect_bazel_lib//lib:run_binary.bzl", "run_binary")
-load("@com_github_google_flatbuffers//:build_defs.bzl", "flatbuffer_cc_library")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("//tools/build_rules:clean_dep.bzl", "aos_repo_name", "clean_dep")
 
@@ -30,11 +30,22 @@ def static_flatbuffer(name, visibility = None, deps = [], srcs = [], **kwargs):
         **kwargs
     )
 
+    cleaned_srcs = []
+    for file in srcs:
+        if file.startswith(":"):
+            cleaned_srcs.append(file[1:])
+        elif ":" in file or "@" in file or "//" in file:
+            fail("Invalid file (may not be in current package): %s" % file)
+        else:
+            cleaned_srcs.append(file)
+
     # Until we make this a proper rule with providers or the such, we just manage headers
     # by having a strong convention where the header will be a function of the fbs name
     # rather than a function of the rule name.
-    header_names = [file.removesuffix(".fbs") + "_static.h" for file in srcs]
+    header_names = [file.removesuffix(".fbs") + "_static.h" for file in cleaned_srcs]
     reflection_out = name + fbs_suffix + "_reflection_out"
+
+    repo_relative_srcs = [native.package_name() + "/" + file for file in cleaned_srcs]
 
     run_binary(
         name = name + "_gen",
@@ -43,7 +54,7 @@ def static_flatbuffer(name, visibility = None, deps = [], srcs = [], **kwargs):
         outs = header_names,
         env = {
             "AOS_REPO_NAME": aos_repo_name(),
-            "BASE_FILES": " ".join(srcs),
+            "BASE_FILES": " ".join(repo_relative_srcs),
             "BFBS_FILES": "$(execpaths %s)" % (reflection_out,),
             "OUT_FILES": " ".join(["$(execpath %s)" % (name,) for name in header_names]),
         },
