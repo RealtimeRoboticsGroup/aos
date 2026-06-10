@@ -1,4 +1,4 @@
-load("@@//aos/flatbuffers:build_defs.bzl", "flatbuffer_cc_library")
+load("@aos//aos/flatbuffers:build_defs.bzl", "flatbuffer_cc_library")
 
 # Binary Identity Case 4: External, generated fbs compiled directly to .bfbs with full reflection flags
 genrule(
