@@ -109,7 +109,7 @@ void EPoll::DeleteFd(int fd) {
   auto element = fns_.begin();
   while (fns_.end() != element) {
     if (element->get()->fd == fd) {
-      DeleteFdFromEpoll(fd);
+      DoEpollCtl(element->get(), 0);
       fns_.erase(element);
       return;
     }
