@@ -241,6 +241,9 @@ class Vector : public ResizeableObject {
   static constexpr size_t kInlineSize =
       sizeof(InlineType) * (kStaticLength + (kNullTerminate ? 1 : 0));
 
+  // The static_length declared in the .fbs file.
+  static constexpr size_t kDeclaredStaticLength = kStaticLength;
+
   // Padding between the inline data and any out-of-line data, to manage
   // mismatches in alignment between the two.
   //
