@@ -582,7 +582,7 @@ class Vector : public ResizeableObject {
               sizeof(InlineType));
     }
     length_ = size;
-    SetLength(length_);
+    SetLength(static_cast<LengthType>(length_));
   }
   // Resizes a vector of offsets to the requested size.
   // If the size is increased, the new elements will be initialized

@@ -705,7 +705,7 @@ class TestTableStatic : public ::aos::fbs::Table {
     SetField<::flatbuffers::uoffset_t>(
         kInlineAbsoluteOffset_vector_of_structs,
         kVtableIndex,
-        object_absolute_offset_vector_of_structs - kInlineAbsoluteOffset_vector_of_structs);
+        static_cast<::flatbuffers::uoffset_t>(object_absolute_offset_vector_of_structs - kInlineAbsoluteOffset_vector_of_structs));
     return &vector_of_structs_.value().t;
   }
 
@@ -781,7 +781,7 @@ class TestTableStatic : public ::aos::fbs::Table {
     SetField<::flatbuffers::uoffset_t>(
         kInlineAbsoluteOffset_unspecified_length_vector_of_strings,
         kVtableIndex,
-        object_absolute_offset_unspecified_length_vector_of_strings - kInlineAbsoluteOffset_unspecified_length_vector_of_strings);
+        static_cast<::flatbuffers::uoffset_t>(object_absolute_offset_unspecified_length_vector_of_strings - kInlineAbsoluteOffset_unspecified_length_vector_of_strings));
     return &unspecified_length_vector_of_strings_.value().t;
   }
 
@@ -857,7 +857,7 @@ class TestTableStatic : public ::aos::fbs::Table {
     SetField<::flatbuffers::uoffset_t>(
         kInlineAbsoluteOffset_vector_of_tables,
         kVtableIndex,
-        object_absolute_offset_vector_of_tables - kInlineAbsoluteOffset_vector_of_tables);
+        static_cast<::flatbuffers::uoffset_t>(object_absolute_offset_vector_of_tables - kInlineAbsoluteOffset_vector_of_tables));
     return &vector_of_tables_.value().t;
   }
 
@@ -933,7 +933,7 @@ class TestTableStatic : public ::aos::fbs::Table {
     SetField<::flatbuffers::uoffset_t>(
         kInlineAbsoluteOffset_vector_aligned,
         kVtableIndex,
-        object_absolute_offset_vector_aligned - kInlineAbsoluteOffset_vector_aligned);
+        static_cast<::flatbuffers::uoffset_t>(object_absolute_offset_vector_aligned - kInlineAbsoluteOffset_vector_aligned));
     return &vector_aligned_.value().t;
   }
 
@@ -1009,7 +1009,7 @@ class TestTableStatic : public ::aos::fbs::Table {
     SetField<::flatbuffers::uoffset_t>(
         kInlineAbsoluteOffset_vector_of_strings,
         kVtableIndex,
-        object_absolute_offset_vector_of_strings - kInlineAbsoluteOffset_vector_of_strings);
+        static_cast<::flatbuffers::uoffset_t>(object_absolute_offset_vector_of_strings - kInlineAbsoluteOffset_vector_of_strings));
     return &vector_of_strings_.value().t;
   }
 
@@ -1085,7 +1085,7 @@ class TestTableStatic : public ::aos::fbs::Table {
     SetField<::flatbuffers::uoffset_t>(
         kInlineAbsoluteOffset_vector_of_scalars,
         kVtableIndex,
-        object_absolute_offset_vector_of_scalars - kInlineAbsoluteOffset_vector_of_scalars);
+        static_cast<::flatbuffers::uoffset_t>(object_absolute_offset_vector_of_scalars - kInlineAbsoluteOffset_vector_of_scalars));
     return &vector_of_scalars_.value().t;
   }
 
@@ -1161,7 +1161,7 @@ class TestTableStatic : public ::aos::fbs::Table {
     SetField<::flatbuffers::uoffset_t>(
         kInlineAbsoluteOffset_unspecified_length_string,
         kVtableIndex,
-        object_absolute_offset_unspecified_length_string - kInlineAbsoluteOffset_unspecified_length_string);
+        static_cast<::flatbuffers::uoffset_t>(object_absolute_offset_unspecified_length_string - kInlineAbsoluteOffset_unspecified_length_string));
     return &unspecified_length_string_.value().t;
   }
 
@@ -1237,7 +1237,7 @@ class TestTableStatic : public ::aos::fbs::Table {
     SetField<::flatbuffers::uoffset_t>(
         kInlineAbsoluteOffset_unspecified_length_vector,
         kVtableIndex,
-        object_absolute_offset_unspecified_length_vector - kInlineAbsoluteOffset_unspecified_length_vector);
+        static_cast<::flatbuffers::uoffset_t>(object_absolute_offset_unspecified_length_vector - kInlineAbsoluteOffset_unspecified_length_vector));
     return &unspecified_length_vector_.value().t;
   }
 
@@ -1313,7 +1313,7 @@ class TestTableStatic : public ::aos::fbs::Table {
     SetField<::flatbuffers::uoffset_t>(
         kInlineAbsoluteOffset_included_table,
         kVtableIndex,
-        object_absolute_offset_included_table - kInlineAbsoluteOffset_included_table);
+        static_cast<::flatbuffers::uoffset_t>(object_absolute_offset_included_table - kInlineAbsoluteOffset_included_table));
     return &included_table_.value().t;
   }
 
@@ -1389,7 +1389,7 @@ class TestTableStatic : public ::aos::fbs::Table {
     SetField<::flatbuffers::uoffset_t>(
         kInlineAbsoluteOffset_subtable,
         kVtableIndex,
-        object_absolute_offset_subtable - kInlineAbsoluteOffset_subtable);
+        static_cast<::flatbuffers::uoffset_t>(object_absolute_offset_subtable - kInlineAbsoluteOffset_subtable));
     return &subtable_.value().t;
   }
 
@@ -1465,7 +1465,7 @@ class TestTableStatic : public ::aos::fbs::Table {
     SetField<::flatbuffers::uoffset_t>(
         kInlineAbsoluteOffset_string,
         kVtableIndex,
-        object_absolute_offset_string - kInlineAbsoluteOffset_string);
+        static_cast<::flatbuffers::uoffset_t>(object_absolute_offset_string - kInlineAbsoluteOffset_string));
     return &string_.value().t;
   }
 

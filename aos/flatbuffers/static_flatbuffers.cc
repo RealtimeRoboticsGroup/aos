@@ -674,7 +674,7 @@ std::string MakeOffsetDataAccessors(const FieldData &field) {
     SetField<::flatbuffers::uoffset_t>(
         $6,
         kVtableIndex,
-        $4 - $6);
+        static_cast<::flatbuffers::uoffset_t>($4 - $6));
     return &$5.value().t;
   }
 )code",
