@@ -1,4 +1,6 @@
 load("@bazel_skylib//lib:selects.bzl", "selects")
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+load("//tools:sanitizer_wrapper.bzl", "sanitizer_wrapper")
 load("//tools/build_rules:clean_dep.bzl", "clean_dep")
 
 package(default_visibility = ["//visibility:public"])
@@ -110,30 +112,6 @@ config_setting(
     values = {"define": "have_msan=true"},
 )
 
-config_setting(
-    name = "cpu_k8_msan",
-    constraint_values = ["@platforms//cpu:x86_64"],
-    values = {
-        "define": "have_msan=true",
-    },
-)
-
-config_setting(
-    name = "cpu_k8_no_msan",
-    constraint_values = ["@platforms//cpu:x86_64"],
-    flag_values = {
-        "@io_bazel_rules_go//go/config:msan": "false",
-    },
-)
-
-config_setting(
-    name = "cpu_arm64_no_msan",
-    constraint_values = ["@platforms//cpu:arm64"],
-    flag_values = {
-        "@io_bazel_rules_go//go/config:msan": "false",
-    },
-)
-
 selects.config_setting_group(
     name = "has_sanitizer",
     match_any = [
@@ -141,4 +119,16 @@ selects.config_setting_group(
         ":has_asan",
         ":has_ubsan",
     ],
+)
+
+cc_binary(
+    name = "unset_preload",
+    srcs = ["unset_preload.c"],
+    linkshared = True,
+)
+
+sanitizer_wrapper(
+    name = "sanitizer_wrapper",
+    tsan_options = "detect_deadlocks=1:second_deadlock_stack=1",
+    ubsan_options = "color=always:print_stacktrace=1",
 )
