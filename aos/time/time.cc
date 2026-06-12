@@ -179,10 +179,18 @@ std::ostream &operator<<(std::ostream &stream,
     return stream;
   }
 
-  using sys_ns = std::chrono::time_point<std::chrono::system_clock,
-                                         std::chrono::nanoseconds>;
-  const sys_ns system_time(now.time_since_epoch());
-  const auto days = std::chrono::floor<std::chrono::days>(system_time);
+  const int64_t total_ns = now.time_since_epoch().count();
+  // Avoid undefined behavior.
+  constexpr int64_t kNanosecondsPerDay =
+      std::chrono::days::period::num * std::chrono::nanoseconds::period::den;
+  int64_t days_count = total_ns / kNanosecondsPerDay;
+  int64_t remainder_ns = total_ns % kNanosecondsPerDay;
+  if (remainder_ns < 0) {
+    remainder_ns += kNanosecondsPerDay;
+    days_count -= 1;
+  }
+
+  const std::chrono::sys_days days{std::chrono::days{days_count}};
   const std::chrono::year_month_day ymd(days);
 
   if (!ymd.ok()) {
@@ -191,7 +199,8 @@ std::ostream &operator<<(std::ostream &stream,
     return stream;
   }
 
-  const std::chrono::hh_mm_ss<std::chrono::nanoseconds> hms(system_time - days);
+  const std::chrono::hh_mm_ss<std::chrono::nanoseconds> hms{
+      std::chrono::nanoseconds(remainder_ns)};
 
   stream << std::setfill('0') << std::setw(4) << static_cast<int>(ymd.year())
          << '-' << std::setw(2) << static_cast<unsigned>(ymd.month()) << '-'
