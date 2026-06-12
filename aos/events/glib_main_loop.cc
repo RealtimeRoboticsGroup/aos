@@ -66,7 +66,7 @@ GlibMainLoop::GlibMainLoop(ShmEventLoop *event_loop)
     : GlibMainLoop(event_loop, event_loop->epoll(),
                    [event_loop]() { event_loop->Exit(); }) {}
 
-GlibMainLoop::GlibMainLoop(EventLoop *event_loop, internal::EPoll *epoll,
+GlibMainLoop::GlibMainLoop(EventLoop *event_loop, EPoll *epoll,
                            std::function<void()> exit_handler)
     : event_loop_(event_loop),
       epoll_(epoll),

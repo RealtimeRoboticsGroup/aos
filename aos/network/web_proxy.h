@@ -78,7 +78,7 @@ class WebProxy {
            int per_channel_buffer_size_bytes);
   WebProxy(aos::ShmEventLoop *event_loop, StoreHistory store_history,
            int per_channel_buffer_size_bytes);
-  WebProxy(aos::EventLoop *event_loop, aos::internal::EPoll *epoll,
+  WebProxy(aos::EventLoop *event_loop, aos::EPoll *epoll,
            StoreHistory store_history, int per_channel_buffer_size_bytes);
   ~WebProxy();
 
@@ -88,8 +88,8 @@ class WebProxy {
   void StopRecording();
 
  private:
-  aos::internal::EPoll internal_epoll_;
-  aos::internal::EPoll *const epoll_;
+  aos::EPoll internal_epoll_;
+  aos::EPoll *const epoll_;
   ::seasocks::Server server_;
   std::shared_ptr<WebsocketHandler> websocket_handler_;
 };

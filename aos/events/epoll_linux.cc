@@ -10,7 +10,8 @@
 
 #include "aos/events/epoll.h"
 
-namespace aos::internal {
+namespace aos {
+namespace internal {
 
 TimerFd::TimerFd()
     : fd_(timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK)) {
@@ -43,6 +44,8 @@ uint64_t TimerFd::Read() {
 
   return buf;
 }
+
+}  // namespace internal
 
 EPoll::EPoll() : epoll_fd_(epoll_create1(EPOLL_CLOEXEC)) {
   ABSL_PCHECK(epoll_fd_ > 0);
@@ -141,4 +144,4 @@ void EPoll::DeleteFdFromEpoll(int fd) {
       << "Failed to delete fd " << fd;
 }
 
-}  // namespace aos::internal
+}  // namespace aos

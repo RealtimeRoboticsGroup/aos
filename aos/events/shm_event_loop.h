@@ -114,7 +114,7 @@ class ShmEventLoop : public EventLoop {
   const UUID &boot_uuid() const override { return boot_uuid_; }
 
   // Returns the epoll loop used to run the event loop.
-  internal::EPoll *epoll() { return &epoll_; }
+  EPoll *epoll() { return &epoll_; }
 
   // Returns the local mapping of the shared memory used by the watcher on the
   // specified channel. A watcher must be created on this channel before calling
@@ -258,7 +258,7 @@ class ShmEventLoop : public EventLoop {
   aos::stl_mutex *check_mutex_ = nullptr;
   std::optional<pid_t> check_tid_;
 
-  internal::EPoll epoll_;
+  EPoll epoll_;
 
   // Only set during Run().
   std::unique_ptr<ipc_lib::SignalFd> signalfd_;

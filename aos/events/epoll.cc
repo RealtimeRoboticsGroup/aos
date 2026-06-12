@@ -11,7 +11,7 @@
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 
-namespace aos::internal {
+namespace aos {
 
 void EPoll::BeforeWait(std::function<void()> function) {
   before_epoll_wait_functions_.emplace_back(std::move(function));
@@ -186,4 +186,4 @@ EPoll::EventData *EPoll::GetEventData(int fd) {
   return iterator->get();
 }
 
-}  // namespace aos::internal
+}  // namespace aos

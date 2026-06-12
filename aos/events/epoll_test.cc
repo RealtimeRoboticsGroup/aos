@@ -7,7 +7,7 @@
 #include "absl/log/log.h"
 #include "gtest/gtest.h"
 
-namespace aos::internal::testing {
+namespace aos::testing {
 
 // A simple wrapper around both ends of a pipe along with some helpers to easily
 // read/write data through it.
@@ -53,7 +53,7 @@ class Pipe {
 class EPollTest : public ::testing::Test {
  public:
   void RunFor(std::chrono::nanoseconds duration) {
-    TimerFd timerfd;
+    internal::TimerFd timerfd;
     bool did_quit = false;
     epoll_.OnReadable(timerfd.fd(), [this, &timerfd, &did_quit]() {
       CHECK(!did_quit);
@@ -213,4 +213,4 @@ TEST_F(EPollTest, RemoveWithoutEvents) {
   epoll_.DeleteFd(pipe.read_fd());
 }
 
-}  // namespace aos::internal::testing
+}  // namespace aos::testing

@@ -659,7 +659,7 @@ SignalListener::SignalListener(aos::ShmEventLoop *loop,
                                std::function<void(signalfd_siginfo)> callback)
     : SignalListener(loop->epoll(), std::move(callback)) {}
 
-SignalListener::SignalListener(aos::internal::EPoll *epoll,
+SignalListener::SignalListener(aos::EPoll *epoll,
                                std::function<void(signalfd_siginfo)> callback)
     : SignalListener(epoll, callback,
                      {SIGHUP, SIGINT, SIGQUIT, SIGABRT, SIGFPE, SIGSEGV,
@@ -670,7 +670,7 @@ SignalListener::SignalListener(aos::ShmEventLoop *loop,
                                std::initializer_list<unsigned int> signals)
     : SignalListener(loop->epoll(), std::move(callback), std::move(signals)) {}
 
-SignalListener::SignalListener(aos::internal::EPoll *epoll,
+SignalListener::SignalListener(aos::EPoll *epoll,
                                std::function<void(signalfd_siginfo)> callback,
                                std::initializer_list<unsigned int> signals)
     : epoll_(epoll), callback_(std::move(callback)), signalfd_(signals) {

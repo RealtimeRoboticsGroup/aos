@@ -19,7 +19,7 @@ ABSL_DECLARE_FLAG(bool, disable_ipv6);
 
 namespace aos::message_bridge::testing {
 
-using ::aos::internal::EPoll;
+using ::aos::EPoll;
 using ::aos::internal::TimerFd;
 using ::testing::ElementsAre;
 

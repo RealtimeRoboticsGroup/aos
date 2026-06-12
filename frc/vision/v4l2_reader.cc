@@ -428,8 +428,7 @@ V4L2Reader::V4L2Reader(aos::EventLoop *event_loop, std::string_view device_name,
   StreamOn();
 }
 
-MjpegV4L2Reader::MjpegV4L2Reader(aos::EventLoop *event_loop,
-                                 aos::internal::EPoll *epoll,
+MjpegV4L2Reader::MjpegV4L2Reader(aos::EventLoop *event_loop, aos::EPoll *epoll,
                                  std::string_view device_name,
                                  std::string_view image_channel,
                                  const CameraStreamSettings *settings)
@@ -500,7 +499,7 @@ MjpegV4L2Reader::MjpegV4L2Reader(aos::EventLoop *event_loop,
 MjpegV4L2Reader::~MjpegV4L2Reader() { epoll_->DeleteFd(fd().get()); }
 
 RockchipV4L2Reader::RockchipV4L2Reader(aos::EventLoop *event_loop,
-                                       aos::internal::EPoll *epoll,
+                                       aos::EPoll *epoll,
                                        std::string_view device_name,
                                        std::string_view image_sensor_subdev,
                                        std::string_view image_channel,

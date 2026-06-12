@@ -16,7 +16,8 @@
 
 #include "aos/time/time.h"
 
-namespace aos::internal {
+namespace aos {
+namespace internal {
 
 // Class wrapping up timerfd.
 class TimerFd {
@@ -57,6 +58,8 @@ class TimerFd {
   friend void ResetTimerFdOnFork(TimerFd *timer);
 #endif
 };
+
+}  // namespace internal
 
 // Class to wrap epoll and call a callback when an event happens.
 class EPoll {
@@ -226,6 +229,6 @@ class EPoll {
 #endif
 };
 
-}  // namespace aos::internal
+}  // namespace aos
 
 #endif  // AOS_EVENTS_EPOLL_H_
