@@ -4,6 +4,18 @@
 #include <cstdio>
 #include <cstring>
 
+#ifdef _WIN32
+
+const char *aos_strerror(int error) {
+  thread_local char buffer[128];
+  if (strerror_s(buffer, sizeof(buffer), error) != 0) {
+    snprintf(buffer, sizeof(buffer), "Unknown error %d", error);
+  }
+  return buffer;
+}
+
+#else
+
 // This code uses an overloaded function to handle the result from either
 // version of strerror_r correctly without needing a way to get the choice out
 // of the compiler/glibc/whatever explicitly.
@@ -47,3 +59,5 @@ const char *aos_strerror(int error) {
   return aos_strerror_handle_result(
       error, strerror_r(error, buffer, sizeof(buffer)), buffer);
 }
+
+#endif  // _WIN32

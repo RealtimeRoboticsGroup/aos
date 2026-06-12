@@ -147,6 +147,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//aos:macros",
+        "//aos:realtime",
         "//aos/libc:aos_strerror",
     ],
 )
@@ -724,6 +725,7 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "//aos:macros",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/strings",

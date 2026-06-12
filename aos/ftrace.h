@@ -1,12 +1,9 @@
 #ifndef AOS_FTRACE_H_
 #define AOS_FTRACE_H_
 
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-
 #include <string_view>
+
+#include "aos/macros.h"
 
 namespace aos {
 
@@ -21,8 +18,8 @@ class Ftrace {
   // Writes a message with a printf-style format.
   //
   // Silently does nothing if tracing is disabled.
-  void FormatMessage(const char *format, ...)
-      __attribute__((format(__printf__, 2, 3)));
+  AOS_PRINTF_FORMAT(2, 3)
+  void FormatMessage(const char *format, ...);
 
   // Writes a preformatted message.
   //

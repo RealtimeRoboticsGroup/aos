@@ -3,6 +3,13 @@
 #include <cstdarg>
 #include <cstdio>
 
+#ifndef _WIN32
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+#endif
+
 #include "absl/flags/flag.h"
 #include "absl/log/check.h"
 #include "absl/strings/str_cat.h"
@@ -43,12 +50,14 @@ Ftrace::Ftrace()
       on_fd_(MaybeCheckOpen("tracing_on")) {}
 
 Ftrace::~Ftrace() {
+#ifndef _WIN32
   if (message_fd_ != -1) {
     PCHECK(close(message_fd_) == 0);
   }
   if (message_fd_ != -1) {
     PCHECK(close(on_fd_) == 0);
   }
+#endif
 }
 
 void Ftrace::TurnOffOrDie() {
@@ -58,8 +67,10 @@ void Ftrace::TurnOffOrDie() {
 #else
       << ": Tracing is not supported on your OS.";
 #endif
+#ifndef _WIN32
   char zero = '0';
   CHECK_EQ(write(on_fd_, &zero, 1), 1) << ": Failed to turn tracing off";
+#endif
 }
 
 void Ftrace::FormatMessage(const char *format, ...) {
@@ -80,6 +91,7 @@ void Ftrace::WriteMessage(std::string_view content) {
   if (message_fd_ == -1) {
     return;
   }
+#ifndef _WIN32
   const int result = write(message_fd_, content.data(), content.size());
   if (result == -1 && errno == EBADF) {
     // This just means tracing is turned off. Ignore it.
@@ -88,6 +100,7 @@ void Ftrace::WriteMessage(std::string_view content) {
   PCHECK(result >= 0) << ": Failed to write ftrace message: " << content;
   CHECK_EQ(static_cast<size_t>(result), content.size())
       << ": Failed to write complete ftrace message: " << content;
+#endif
 }
 
 }  // namespace aos
