@@ -14,7 +14,8 @@
 #ifndef EMBEDDED
 
 // Free LDL Factorization structure
-void free_linsys_solver_qdldl(qdldl_solver *s) {
+void free_linsys_solver_qdldl(LinSysSolver *s_solver) {
+    qdldl_solver *s = (qdldl_solver *)s_solver;
     if (s) {
         if (s->L)           csc_spfree(s->L);
         if (s->P)           c_free(s->P);
@@ -296,7 +297,7 @@ c_int init_linsys_solver_qdldl(qdldl_solver ** sp, const csc * P, const csc * A,
 #ifdef PRINTING
         c_eprint("Error forming and permuting KKT matrix");
 #endif
-        free_linsys_solver_qdldl(s);
+        free_linsys_solver_qdldl((LinSysSolver *)s);
         *sp = OSQP_NULL;
         return OSQP_LINSYS_SOLVER_INIT_ERROR;
     }
@@ -304,7 +305,7 @@ c_int init_linsys_solver_qdldl(qdldl_solver ** sp, const csc * P, const csc * A,
     // Factorize the KKT matrix
     if (LDL_factor(KKT_temp, s, P->n) < 0) {
         csc_spfree(KKT_temp);
-        free_linsys_solver_qdldl(s);
+        free_linsys_solver_qdldl((LinSysSolver *)s);
         *sp = OSQP_NULL;
         return OSQP_NONCVX_ERROR;
     }
@@ -347,7 +348,8 @@ static void LDLSolve(c_float *x, c_float *b, const csc *L, const c_float *Dinv, 
 }
 
 
-c_int solve_linsys_qdldl(qdldl_solver * s, c_float * b) {
+c_int solve_linsys_qdldl(LinSysSolver * s_solver, c_float * b) {
+    qdldl_solver *s = (qdldl_solver *)s_solver;
     c_int j;
 
 #ifndef EMBEDDED
@@ -378,7 +380,8 @@ c_int solve_linsys_qdldl(qdldl_solver * s, c_float * b) {
 
 #if EMBEDDED != 1
 // Update private structure with new P and A
-c_int update_linsys_solver_matrices_qdldl(qdldl_solver * s, const csc *P, const csc *A) {
+c_int update_linsys_solver_matrices_qdldl(LinSysSolver * s_solver, const csc *P, const csc *A) {
+    qdldl_solver *s = (qdldl_solver *)s_solver;
 
     // Update KKT matrix with new P
     update_KKT_P(s->KKT, P, s->PtoKKT, s->sigma, s->Pdiag_idx, s->Pdiag_n);
@@ -393,7 +396,8 @@ c_int update_linsys_solver_matrices_qdldl(qdldl_solver * s, const csc *P, const 
 }
 
 
-c_int update_linsys_solver_rho_vec_qdldl(qdldl_solver * s, const c_float * rho_vec){
+c_int update_linsys_solver_rho_vec_qdldl(LinSysSolver * s_solver, const c_float * rho_vec){
+    qdldl_solver *s = (qdldl_solver *)s_solver;
     c_int i;
 
     // Update internal rho_inv_vec
