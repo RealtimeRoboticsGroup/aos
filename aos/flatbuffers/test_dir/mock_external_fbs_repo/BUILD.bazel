@@ -1,5 +1,5 @@
-load("@@//aos/flatbuffers:build_defs.bzl", "flatbuffer_cc_library")
-load("@@//aos/flatbuffers:flatbuffers_python.bzl", "flatbuffer_py_library")
+load("@aos//aos/flatbuffers:build_defs.bzl", "flatbuffer_cc_library")
+load("@aos//aos/flatbuffers:flatbuffers_python.bzl", "flatbuffer_py_library")
 
 exports_files([
     "reflection_test.fbs",

@@ -679,9 +679,10 @@ register_toolchains(
 
 # TODO(austin): Rust can't mention llvm_toolchain, otherwise wpilib needs llvm_toolchain + the sysroot.  Which is bad.
 
-bazel_dep(name = "mock_external_fbs_repo", version = "0.0.0")
-local_path_override(
-    module_name = "mock_external_fbs_repo",
-    path = "aos/flatbuffers/test_dir/mock_external_fbs_repo",
+mock_external_fbs_repo_extension = use_extension(
+    "//aos/flatbuffers/test_dir:extensions.bzl",
+    "mock_external_fbs_repo_extension",
+    dev_dependency = True,
 )
+use_repo(mock_external_fbs_repo_extension, "mock_external_fbs_repo")
 
