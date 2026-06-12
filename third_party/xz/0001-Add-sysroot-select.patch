@@ -7,13 +7,13 @@ index 2924e86..31b2d3f 100644
  )
  
 +config_setting(
-+    name = "linux_arm64_no_msan",
++    name = "linux_arm64_msan",
 +    constraint_values = [
 +        "@platforms//os:linux",
 +        "@platforms//cpu:aarch64",
 +    ],
-+    flag_values = {
-+        "@io_bazel_rules_go//go/config:msan": "false",
++    values = {
++        "define": "have_msan=true",
 +    },
 +)
 +
@@ -25,20 +25,42 @@ index 2924e86..31b2d3f 100644
  )
  
 +config_setting(
-+    name = "linux_x86_64_no_msan",
++    name = "linux_x86_64_msan",
 +    constraint_values = [
 +        "@platforms//os:linux",
 +        "@platforms//cpu:x86_64",
 +    ],
-+    flag_values = {
-+        "@io_bazel_rules_go//go/config:msan": "false",
++    values = {
++        "define": "have_msan=true",
 +    },
 +)
 +
  config_setting(
      name = "wasm32",
      constraint_values = [
-@@ -135,7 +157,7 @@ alias(
+@@ -105,6 +127,18 @@ expand_template(
+     },
+     template = "config.lzma-linux.h",
+ )
++
++expand_template(
++    name = "config_linux_x86_64_msan",
++    out = "config.lzma-linux-x86_64-msan.h",
++    substitutions = {
++        "{HAVE_IMMINTRIN_H}": "#undef HAVE_IMMINTRIN_H",
++        "{HAVE_CPUID_H}": "#undef HAVE_CPUID_H",
++        "{HAVE_USABLE_CLMUL}": "#undef HAVE_USABLE_CLMUL",
++    },
++    template = "config.lzma-linux.h",
++)
+ 
+ copy_file(
+     name = "copy_config",
+@@ -128,3 +162,4 @@ copy_file(
+         ":osx_arm64": "config.lzma-osx-arm64.h",
++        ":linux_x86_64_msan": "config.lzma-linux-x86_64-msan.h",
+         ":osx_x86_64": "config.lzma-osx-x86_64.h",
+@@ -135,7 +170,7 @@ alias(
  # Note: lzma is bundled with Apple platforms, but sadly, not considered public API because its header is not exposed. lzma is not bundled on Android.
  
  cc_library(
@@ -47,18 +69,20 @@ index 2924e86..31b2d3f 100644
      srcs = select({
          "@platforms//os:none": [],
          "//conditions:default": [
-@@ -192,6 +214,19 @@ cc_library(
+@@ -192,6 +227,21 @@ cc_library(
      ],
  )
  
 +# Platform-specific lzma library:
 +# - macOS, Android, Windows, iOS: built from source
-+# - Linux: uses Debian sysroot
++# - Linux: uses Debian sysroot (except under MSan, where we build from source)
 +alias(
 +    name = "lzma",
 +    actual = select({
-+        ":linux_arm64_no_msan": "@arm64_debian_sysroot//:liblzma",
-+        ":linux_x86_64_no_msan": "@amd64_debian_sysroot//:liblzma",
++        ":linux_arm64_msan": ":lzma_src",
++        ":linux_x86_64_msan": ":lzma_src",
++        ":linux_arm64": "@arm64_debian_sysroot//:liblzma",
++        ":linux_x86_64": "@amd64_debian_sysroot//:liblzma",
 +        "//conditions:default": ":lzma_src",
 +    }),
 +    visibility = ["//visibility:public"],
@@ -71,7 +95,7 @@ diff --git a/MODULE.bazel b/MODULE.bazel
 index 9777c92..34ba123 100644
 --- a/MODULE.bazel
 +++ b/MODULE.bazel
-@@ -7,3 +7,8 @@ module(
+@@ -7,3 +7,7 @@ module(
  bazel_dep(name = "platforms", version = "0.0.8")
  bazel_dep(name = "bazel_skylib", version = "1.5.0")
  bazel_dep(name = "rules_cc", version = "0.0.10")
@@ -79,4 +103,3 @@ index 9777c92..34ba123 100644
 +# Sysroot dependencies for Linux builds
 +bazel_dep(name = "arm64_debian_sysroot", version = "2025.10.25")
 +bazel_dep(name = "amd64_debian_sysroot", version = "2025.04.20")
-+bazel_dep(name = "rules_go", version = "0.59.0", repo_name = "io_bazel_rules_go")
