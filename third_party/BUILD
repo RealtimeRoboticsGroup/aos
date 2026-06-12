@@ -65,6 +65,10 @@ cc_library(
 
 cc_library(
     name = "opencv",
+    target_compatible_with = select({
+        "//tools:has_msan": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:public"],
     deps = select({
         "//tools:arm64_macos": [":unavailable"],
@@ -76,6 +80,10 @@ cc_library(
 
 cc_library(
     name = "gstreamer",
+    target_compatible_with = select({
+        "//tools:has_msan": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:public"],
     deps = select({
         "//tools:arm64_macos": [":unavailable"],
@@ -95,6 +103,10 @@ cc_library(
 
 cc_library(
     name = "halide",
+    target_compatible_with = select({
+        "//tools:has_msan": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:public"],
     deps = select({
         "//tools:cpu_k8": ["@halide_k8//:halide"],
@@ -104,6 +116,10 @@ cc_library(
 
 cc_library(
     name = "halide_gengen",
+    target_compatible_with = select({
+        "//tools:has_msan": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:public"],
     # It's the same file in either version, but we'll pick the native version
     # to minimize the chances of needing to download the other version unnecessarily.
@@ -115,6 +131,10 @@ cc_library(
 
 cc_library(
     name = "halide_runtime",
+    target_compatible_with = select({
+        "//tools:has_msan": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:public"],
     # It's the same file in either version, but we'll pick the native version
     # to minimize the chances of needing to download the other version unnecessarily.
@@ -128,6 +148,10 @@ cc_library(
 
 cc_library(
     name = "cudart",
+    target_compatible_with = select({
+        "//tools:has_msan": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:public"],
     deps = select({
         "//tools:arm64_macos": [":unavailable"],
@@ -139,6 +163,10 @@ cc_library(
 
 cc_library(
     name = "tensorrt",
+    target_compatible_with = select({
+        "//tools:has_msan": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:public"],
     deps = select({
         "//tools:arm64_macos": [":unavailable"],
@@ -150,6 +178,10 @@ cc_library(
 
 cc_library(
     name = "libturbojpeg",
+    target_compatible_with = select({
+        "//tools:has_msan": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:public"],
     deps = select({
         "//tools:arm64_macos": [":unavailable"],
