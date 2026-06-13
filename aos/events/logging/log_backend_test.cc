@@ -16,6 +16,7 @@
 #include "gtest/gtest.h"
 
 #include "aos/containers/resizeable_buffer.h"
+#include "aos/sanitizers.h"
 #include "aos/testing/tmpdir.h"
 #include "aos/util/file.h"
 
@@ -175,6 +176,10 @@ TEST(LogBackendTest, OutOfSpaceTest) {
 }
 
 TEST(LogBackendTest, CreateFileMassiveWrite) {
+#ifdef AOS_SANITIZE_MEMORY
+  GTEST_SKIP() << "Skipping CreateFileMassiveWrite under MSan due to high "
+                  "memory usage (>3GB + MSan overhead)";
+#endif
   const std::string logevent = TestTmpDir() + "/logevent/";
   RenamableFileBackend backend(logevent, false);
   auto file = backend.RequestFile("test.log");
