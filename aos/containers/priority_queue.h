@@ -83,6 +83,9 @@ class PriorityQueue {
 
   // Removes all the elements from the queue:
   void clear() {
+    for (auto &item : list_) {
+      item.data.reset();
+    }
     size_ = 0;
     bottom_ = buffer_size;
     top_ = buffer_size;

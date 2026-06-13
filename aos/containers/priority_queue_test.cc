@@ -174,4 +174,35 @@ TEST(PriorityQueueMoveTest, MemberAccess) {
   EXPECT_EQ(11, it->a);
 }
 
+struct DestructionTracker {
+  DestructionTracker(std::shared_ptr<int> count) : count(count) {}
+  ~DestructionTracker() {
+    if (count) {
+      (*count)++;
+    }
+  }
+  std::shared_ptr<int> count;
+  friend bool operator<(const DestructionTracker &,
+                        const DestructionTracker &) {
+    return false;
+  }
+};
+
+TEST(PriorityQueueDestructionTest, ClearDestructsElements) {
+  auto count = std::make_shared<int>(0);
+  {
+    PriorityQueue<DestructionTracker, 5, std::less<DestructionTracker>> q;
+    q.PushFromBottom(DestructionTracker{count});
+    q.PushFromBottom(DestructionTracker{count});
+    // Destructor is called for temporaries, so reset count.
+    *count = 0;
+
+    q.clear();
+    // clear() must immediately destruct the elements.
+    EXPECT_EQ(2, *count);
+  }
+  // The queue is already empty, so no further destructions.
+  EXPECT_EQ(2, *count);
+}
+
 }  // namespace aos::testing
