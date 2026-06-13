@@ -45,7 +45,7 @@ class TestLogImplementation : public LogImplementation {
     used_ = true;
   }
 
-  LogMessage message_;
+  LogMessage message_{};
 
  public:
   const LogMessage &message() { return message_; }

@@ -57,7 +57,7 @@ void PrintMessage(FILE *output, const LogMessage &message) {
 
 void HandleMessageLogImplementation::DoLog(log_level level, const char *format,
                                            va_list ap) {
-  LogMessage message;
+  LogMessage message{};
   internal::FillInMessage(level, MyName(), monotonic_now(), format, ap,
                           &message);
   HandleMessage(message);
