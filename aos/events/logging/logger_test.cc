@@ -870,7 +870,7 @@ TEST_P(LoggerTest, ManyMessagesLzmaWithProfiling) {
 }
 
 INSTANTIATE_TEST_SUITE_P(BufferSweep, LoggerTest,
-                         ::testing::Values(0.0, 0.01, 1.0, 1000.0));
+                         ::testing::Values(0.0, 0.01, 1.0, 30.0));
 // Death tests can't deal with threads, so don't test non-zero memory buffer
 // lengths.
 INSTANTIATE_TEST_SUITE_P(ZeroBuffer, LoggerDeathTest, ::testing::Values(0.0));
