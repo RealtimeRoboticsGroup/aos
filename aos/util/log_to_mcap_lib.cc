@@ -334,6 +334,17 @@ int ConvertLogToMcap(const std::vector<std::string> &log_paths,
                                       : McapLogger::Compression::kNone,
         GetChannelShouldBeDroppedTester());
 
+    // Always write the original logged configuration to the "configuration"
+    // MCAP topic, rather than the operational event_loop_->configuration().
+    // The latter may include synthetic channels injected by this tool at replay
+    // time (e.g. /clocks when --include_clocks is set). Those channels are not
+    // part of the original AOS log and should not appear in the "configuration"
+    // topic. reader.logged_configuration() returns the configuration embedded
+    // in the log files themselves, unaffected by any replay-time modifications.
+    // I.e. we need the channel indices from all the logged messages (e.g.
+    // aos.timing.Report messages) to remain valid.
+    relogger->OverrideConfiguration(reader.logged_configuration());
+
     if (fetch_mode == FetchMode::kRewrite) {
       // Override the timestamps for all latched messages so that they show up
       // near the beginning of the log. All latched messages will have the same

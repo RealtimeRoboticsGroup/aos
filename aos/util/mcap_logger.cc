@@ -344,8 +344,16 @@ void McapLogger::WriteConfigurationMessage() {
   // Avoid infinite recursion.
   wrote_configuration_ = true;
 
+  // Use configuration_override_ if it has been set via OverrideConfiguration(),
+  // otherwise fall back to event_loop_->configuration(). The former is intended
+  // for use cases like the original AOS log's channel set for log conversion.
+  // In those cases, we need the configuration without any synthetic channels
+  // added by the conversion tool.
+  const Configuration *config_to_write = (configuration_override_ != nullptr)
+                                             ? configuration_override_
+                                             : event_loop_->configuration();
   injected_configuration_->WriteMessage(
-      configuration::StripConfiguration(event_loop_->configuration()).span());
+      configuration::StripConfiguration(config_to_write).span());
 }
 
 void McapLogger::WriteLogConversionMetadataMessage() {
