@@ -70,6 +70,12 @@ class SimulatedEventLoopTestFactory : public EventLoopTestFactory {
     event_loop_factory_->set_send_delay(send_delay);
   }
 
+  // Grants access to the underlying SimulatedEventLoopFactory.
+  SimulatedEventLoopFactory *event_loop_factory() {
+    MaybeMake();
+    return event_loop_factory_.get();
+  }
+
  private:
   void MaybeMake() {
     if (!event_loop_factory_) {
@@ -588,6 +594,64 @@ TEST(SimulatedEventLoopTest, WatcherTimingReport) {
                 ->standard_deviation(),
             0.0);
 }
+
+class ReplayRateSimulatedEventLoopTest
+    : public ::testing::TestWithParam<double> {};
+
+// Validate that the simulation runs at the expected speed when using a finite
+// value for SetRealtimeReplayRate.
+TEST_P(ReplayRateSimulatedEventLoopTest, ReplayRate) {
+  SimulatedEventLoopTestFactory factory;
+  factory.event_loop_factory()->SetRealtimeReplayRate(GetParam());
+
+  std::unique_ptr<EventLoop> event_loop = factory.Make("loop");
+
+  // Create the start timer that will take the first reading.
+  monotonic_clock::time_point start_time;
+  TimerHandler *start_timer = event_loop->AddTimer(
+      [&start_time]() { start_time = monotonic_clock::now(); });
+  // Create the end timer that will take the second reading and exit.
+  monotonic_clock::time_point end_time;
+  TimerHandler *end_timer = event_loop->AddTimer([&end_time, &factory]() {
+    end_time = monotonic_clock::now();
+    factory.event_loop_factory()->Exit();
+  });
+
+  // Actually schedule the timers.
+  static constexpr monotonic_clock::duration kTestDuration =
+      std::chrono::seconds(1);
+  event_loop->OnRun([&event_loop, start_timer, end_timer] {
+    start_timer->Schedule(event_loop->monotonic_now());
+    end_timer->Schedule(event_loop->monotonic_now() + kTestDuration);
+  });
+
+  // Run the simulation until the end timer quits the event processing.
+  EXPECT_TRUE(factory.Run().has_value());
+
+  // Validate that the simulation took the expected amount of real time.
+  // We can't be too strict on the upper bound because the simulation might
+  // take longer than expected due to system load. We also can't be too strict
+  // on the lower bound because any delay in the start_timer callback will throw
+  // off this result. Give a quarter second jitter buffer for now. Might need to
+  // increase this depending on flakiness.
+  constexpr std::chrono::milliseconds kJitterBuffer(250);
+
+  // Example: If we run for 1s at 0.5x speed, it should take 2s real time.
+  const monotonic_clock::duration ideal_delta =
+      std::chrono::duration_cast<monotonic_clock::duration>(kTestDuration /
+                                                            GetParam());
+  const monotonic_clock::duration actual_delta = end_time - start_time;
+
+  EXPECT_GE(actual_delta, ideal_delta - kJitterBuffer);
+  EXPECT_LE(actual_delta, ideal_delta + kJitterBuffer);
+}
+
+INSTANTIATE_TEST_SUITE_P(ReplayRates, ReplayRateSimulatedEventLoopTest,
+                         ::testing::Values(
+                             // Test with 1x speed. Should complete in 1s.
+                             1.0,
+                             // Test with 0.5x speed. Should complete in 2s.
+                             0.5));
 
 size_t CountAll(
     const std::vector<std::unique_ptr<MessageCounter<RemoteMessage>>>
