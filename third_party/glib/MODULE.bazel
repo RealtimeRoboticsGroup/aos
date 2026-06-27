@@ -1,9 +1,0 @@
-module(
-    name = "glib",
-    version = "2.82.2.bcr.7",
-)
-
-bazel_dep(name = "platforms", version = "1.0.0")
-bazel_dep(name = "amd64_debian_sysroot", version = "2025.04.20")
-bazel_dep(name = "arm64_debian_sysroot", version = "2025.10.25")
-bazel_dep(name = "rules_cc", version = "0.2.13")
