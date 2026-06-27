@@ -424,7 +424,7 @@ local_path_override(
 
 bazel_dep(name = "foxglove_schemas", version = "0.16.2", repo_name = "com_github_foxglove_schemas")
 bazel_dep(name = "symengine", version = "0.12.0")
-bazel_dep(name = "gmp", version = "6.3.0.bcr.1")
+bazel_dep(name = "gmp", version = "6.3.0.bcr.2")
 bazel_dep(name = "aspect_rules_cypress", version = "0.7.2")
 
 cypress = use_extension("@aspect_rules_cypress//cypress:extensions.bzl", "cypress")
@@ -433,18 +433,7 @@ use_repo(cypress, "cypress_toolchains")
 
 register_toolchains("@cypress_toolchains//:all")
 
-# Pinned to an upstream master commit that includes the multi-arch,
-# target_toolchain_roots, dynamic libstdc++, and Yocto sysroot layout support
-# (bazel-contrib/toolchains_llvm#753) plus the MemorySanitizer support and
-# feature-driven sanitizers (#765) we depend on. Merged upstream but not yet in
-# a tagged release.
-bazel_dep(name = "toolchains_llvm", version = "0.0.0", dev_dependency = True)
-archive_override(
-    module_name = "toolchains_llvm",
-    integrity = "sha256-jK+3voDizPBlHoCwDegHK0mMW9CW8iJ3h0QclZm3jWY=",
-    strip_prefix = "toolchains_llvm-1b9b565ac017dd69932ca5a41c6a1f5497b1eb21",
-    urls = ["https://github.com/bazel-contrib/toolchains_llvm/archive/1b9b565ac017dd69932ca5a41c6a1f5497b1eb21.tar.gz"],
-)
+bazel_dep(name = "toolchains_llvm", version = "1.8.0", dev_dependency = True)
 
 llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm", dev_dependency = True)
 
