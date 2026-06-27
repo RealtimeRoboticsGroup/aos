@@ -18,7 +18,7 @@ steps:
 
   - label: "x86_64"
     commands:
-      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../k8_output_base test ${COMMON} --config=eigen ${TARGETS} --remote_download_outputs=minimal --noenable_bzlmod --enable_workspace -- -@ceres-solver//:polynomial_test
+      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../k8_output_base test ${COMMON} --config=eigen ${TARGETS} --remote_download_outputs=minimal --noenable_bzlmod --enable_workspace -- -@ceres-solver//:polynomial_test -@com_google_absl//absl/numeric:bits_test
     retry:
       automatic:
         - exit_status: -1  # Connection to the Agent was lost
@@ -29,7 +29,7 @@ steps:
 
   - label: "x86_64 bzlmod"
     commands:
-      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../k8_output_base test ${COMMON} --config=eigen ${TARGETS} --remote_download_outputs=minimal --enable_bzlmod --noenable_workspace --lockfile_mode=error -- -@ceres-solver//:polynomial_test
+      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../k8_output_base test ${COMMON} --config=eigen ${TARGETS} --remote_download_outputs=minimal --enable_bzlmod --noenable_workspace --lockfile_mode=error -- -@ceres-solver//:polynomial_test -@com_google_absl//absl/numeric:bits_test
     retry:
       automatic:
         - exit_status: -1  # Connection to the Agent was lost
@@ -40,7 +40,7 @@ steps:
 
   - label: "arm64"
     commands:
-      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../common_output_base build ${COMMON} --remote_download_outputs=minimal --config=arm64 ${TARGETS} --noenable_bzlmod --enable_workspace
+      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../common_output_base build ${COMMON} --remote_download_outputs=minimal --config=arm64 ${TARGETS} --noenable_bzlmod --enable_workspace -- -@com_google_absl//absl/numeric:bits_test
     retry:
       automatic:
         - exit_status: -1  # Connection to the Agent was lost
@@ -51,7 +51,7 @@ steps:
 
   - label: "arm64 bzlmod"
     commands:
-      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../common_output_base build ${COMMON} --remote_download_outputs=minimal --config=arm64 ${TARGETS} --enable_bzlmod --noenable_workspace --lockfile_mode=error
+      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../common_output_base build ${COMMON} --remote_download_outputs=minimal --config=arm64 ${TARGETS} --enable_bzlmod --noenable_workspace --lockfile_mode=error -- -@com_google_absl//absl/numeric:bits_test
     retry:
       automatic:
         - exit_status: -1  # Connection to the Agent was lost
@@ -62,7 +62,7 @@ steps:
 
   - label: "roborio bzlmod"
     commands:
-      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../common_output_base build ${COMMON} --remote_download_outputs=minimal --config=roborio ${ROBORIO_TARGETS} --enable_bzlmod --noenable_workspace
+      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../common_output_base build ${COMMON} --remote_download_outputs=minimal --config=roborio ${ROBORIO_TARGETS} --enable_bzlmod --noenable_workspace -- -@com_google_absl//absl/numeric:bits_test
     retry:
       automatic:
         - exit_status: -1  # Connection to the Agent was lost

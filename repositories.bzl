@@ -63,15 +63,14 @@ alias(
         patches = [
             "@aos//third_party/abseil:0001-Add-hooks-for-using-abseil-with-AOS.patch",
             "@aos//third_party/abseil:0002-Suppress-the-stack-trace-on-SIGABRT.patch",
-            "@aos//third_party/abseil:0004-Remove-relocatability-test-that-is-no-longer-useful.patch",
         ],
         repo_mapping = {
             "@google_benchmark": "@com_github_google_benchmark",
             "@googletest": "@com_google_googletest",
         },
-        sha256 = "9b7a064305e9fd94d124ffa6cc358592eb42b5da588fb4e07d09254aa40086db",
-        strip_prefix = "abseil-cpp-20250512.1",
-        url = "https://github.com/abseil/abseil-cpp/archive/refs/tags/20250512.1.tar.gz",
+        sha256 = "6e1aee535473414164bf83e4ebc40240dec71a4701f8a642d906e95bea1aea0c",
+        strip_prefix = "abseil-cpp-20260526.0",
+        url = "https://github.com/abseil/abseil-cpp/releases/download/20260526.0/abseil-cpp-20260526.0.tar.gz",
     )
 
     http_archive(
@@ -281,18 +280,16 @@ alias(
 
     http_archive(
         name = "com_google_googletest",
-        sha256 = "8ad598c73ad796e0d8280b082cebd82a630d73e73cd3c70057938a6501bba5d7",
-        strip_prefix = "googletest-1.14.0",
-        urls = ["https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz"],
+        integrity = "sha256-Zfq3AdmCnTjLd8FKzcQx0hCL/b+JeeQOuK5Wft8Qsnw=",
+        strip_prefix = "googletest-1.17.0",
+        urls = ["https://github.com/google/googletest/releases/download/v1.17.0/googletest-1.17.0.tar.gz"],
     )
 
     http_archive(
         name = "com_github_google_benchmark",
-        patch_args = ["-p1"],
-        patches = ["@aos//third_party/google-benchmark:benchmark.patch"],
-        sha256 = "3e7059b6b11fb1bbe28e33e02519398ca94c1818874ebed18e504dc6f709be45",
-        strip_prefix = "benchmark-1.8.4",
-        urls = ["https://github.com/google/benchmark/archive/refs/tags/v1.8.4.tar.gz"],
+        sha256 = "9631341c82bac4a288bef951f8b26b41f69021794184ece969f8473977eaa340",
+        strip_prefix = "benchmark-1.9.5",
+        urls = ["https://github.com/google/benchmark/archive/refs/tags/v1.9.5.tar.gz"],
     )
 
     http_archive(
@@ -422,9 +419,9 @@ cc_library(
         name = "com_github_grpc_grpc",
         patch_args = ["-p1"],
         patches = ["@aos//debian:grpc.patch"],
-        sha256 = "7bf97c11cf3808d650a3a025bbf9c5f922c844a590826285067765dfd055d228",
-        strip_prefix = "grpc-1.74.1",
-        url = "https://github.com/grpc/grpc/archive/refs/tags/v1.74.1.tar.gz",
+        sha256 = "41b695614b26652ff9e97ce50cfd4a6c7a3d45a9fe598d1454407746499bbf2c",
+        strip_prefix = "grpc-1.81.0",
+        url = "https://github.com/grpc/grpc/archive/refs/tags/v1.81.0.tar.gz",
     )
 
     http_archive(

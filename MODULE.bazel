@@ -84,7 +84,7 @@ pip.override(
 )
 use_repo(pip, pip_deps = "aos_pip_deps")
 
-bazel_dep(name = "grpc", version = "1.74.1", repo_name = "com_github_grpc_grpc")
+bazel_dep(name = "grpc", version = "1.81.0", repo_name = "com_github_grpc_grpc")
 bazel_dep(name = "protobuf", version = "32.1", repo_name = "com_google_protobuf")
 bazel_dep(name = "rules_proto", version = "7.1.0")
 bazel_dep(name = "aspect_rules_ts", version = "3.6.3")
@@ -127,18 +127,16 @@ go_sdk.download(
 use_repo(go_sdk, "go_sdk")
 
 bazel_dep(name = "rules_pkg", version = "1.1.0")
-bazel_dep(name = "abseil-cpp", version = "20250512.1", repo_name = "com_google_absl")
+bazel_dep(name = "abseil-cpp", version = "20260526.0", repo_name = "com_google_absl")
 single_version_override(
     module_name = "abseil-cpp",
     patch_strip = 1,
     patches = [
         "//third_party/abseil:0001-Add-hooks-for-using-abseil-with-AOS.patch",
         "//third_party/abseil:0002-Suppress-the-stack-trace-on-SIGABRT.patch",
-        "//third_party/abseil:0004-Remove-relocatability-test-that-is-no-longer-useful.patch",
-        "//third_party/abseil:0005-Expose-google_benchmark-dependency.patch",
-        "//third_party/abseil:0006-Suppress-MemorySanitizer-on-swisstable-uninit-reads.patch",
+        "//third_party/abseil:0005-Expose-google_benchmark-and-downgrade-dependencies.patch",
     ],
-    version = "20250512.1",
+    version = "20260526.0",
 )
 
 http_file = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
