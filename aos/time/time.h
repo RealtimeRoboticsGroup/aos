@@ -133,7 +133,7 @@ void sleep_until(::aos::monotonic_clock::time_point end_time);
 template <>
 inline void std::this_thread::sleep_until(
     const ::aos::monotonic_clock::time_point &end_time) {
-  ::aos::this_thread::sleep_until(std::move(end_time));
+  ::aos::this_thread::sleep_until(end_time);
 }
 
 #endif  // !AOS_OS_NONE
