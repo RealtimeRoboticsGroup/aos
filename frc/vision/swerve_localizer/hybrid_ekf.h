@@ -163,6 +163,7 @@ class HybridEkf {
   class ExpectedObservationAllocator {
    public:
     ExpectedObservationAllocator(HybridEkf *ekf) : ekf_(ekf) {}
+    ~ExpectedObservationAllocator() { ekf_->ClearObservations(); }
     void CorrectKnownH(const std::optional<Output> z, const Input *U, T H,
                        const Eigen::Matrix<Scalar, kNOutputs, kNOutputs> &R,
                        aos::monotonic_clock::time_point t) {
@@ -217,6 +218,8 @@ class HybridEkf {
       : force_dt_(force_dt) {
     InitializeMatrices();
   }
+
+  void ClearObservations() { observations_.clear(); }
 
   // Set the initial guess of the state. Can only be called once, and before
   // any measurement updates have occurred.

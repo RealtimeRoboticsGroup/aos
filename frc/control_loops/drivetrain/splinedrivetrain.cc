@@ -22,7 +22,11 @@ SplineDrivetrain::SplineDrivetrain(const DrivetrainConfig<double> &dt_config)
               dt_config_.make_hybrid_drivetrain_velocity_loop())),
       current_xva_(Eigen::Vector3d::Zero()),
       next_xva_(Eigen::Vector3d::Zero()),
-      next_U_(Eigen::Vector2d::Zero()) {}
+      next_U_(Eigen::Vector2d::Zero()),
+      uncapped_U_(Eigen::Vector2d::Zero()),
+      last_state_error_(Eigen::Matrix<double, 5, 1>::Zero()),
+      last_U_components_(Eigen::Matrix<double, 2, 5>::Zero()),
+      last_U_ff_(Eigen::Vector2d::Zero()) {}
 
 void SplineDrivetrain::ScaleCapU(Eigen::Matrix<double, 2, 1> *U) {
   output_was_capped_ =

@@ -102,6 +102,19 @@ class HybridEkfTest : public ::testing::Test {
   StateSquare AForState(const State &X, bool ignore_accel) {
     return ekf_.AForState(X, ignore_accel);
   }
+  void TearDown() override {
+    ekf_.ResetInitialState(t0_, State::Zero(), StateSquare::Identity());
+    linear_h_list_.clear();
+  }
+
+  template <typename... Args>
+  HybridEkf<>::LinearH *MakeLinearH(Args &&...args) {
+    auto h =
+        std::make_unique<HybridEkf<>::LinearH>(std::forward<Args>(args)...);
+    HybridEkf<>::LinearH *ptr = h.get();
+    linear_h_list_.push_back(std::move(h));
+    return ptr;
+  }
 
   // Returns a random value sampled from a normal distribution with a standard
   // deviation of std and a mean of zero.
@@ -114,6 +127,7 @@ class HybridEkfTest : public ::testing::Test {
 
   std::mt19937 gen_{static_cast<uint32_t>(::aos::testing::RandomSeed())};
   std::normal_distribution<> normal_;
+  std::vector<std::unique_ptr<HybridEkf<>::LinearH>> linear_h_list_;
 };
 
 // Tests that if we provide a bunch of observations of the position
@@ -209,7 +223,7 @@ TEST_F(HybridEkfTest, ZeroTimeCorrect) {
   HybridEkf<>::Output Z(0.5, 0.5, 1);
   Eigen::Matrix<double, 3, 12> H;
   H.setIdentity();
-  HybridEkf<>::LinearH h(H);
+  HybridEkf<>::LinearH *h = MakeLinearH(H);
   Eigen::Matrix<double, 3, 3> R;
   R.setIdentity();
   R *= 1e-3;
@@ -217,7 +231,7 @@ TEST_F(HybridEkfTest, ZeroTimeCorrect) {
   EXPECT_EQ(0.0, ekf_.X_hat(StateIdx::kTheta));
   const double starting_p_norm = ekf_.P().norm();
   for (int ii = 0; ii < 100; ++ii) {
-    ekf_.Correct(Z, &U, nullptr, &h, R, t0_);
+    ekf_.Correct(Z, &U, nullptr, h, R, t0_);
   }
   EXPECT_NEAR(Z(0, 0), ekf_.X_hat(StateIdx::kX), 1e-3);
   EXPECT_NEAR(Z(1, 0), ekf_.X_hat(StateIdx::kY), 1e-3);
@@ -236,7 +250,7 @@ TEST_F(HybridEkfTest, PredictionsAreSane) {
   State true_X = ekf_.X_hat();
   Eigen::Matrix<double, 3, 12> H;
   H.setZero();
-  HybridEkf<>::LinearH h(H);
+  HybridEkf<>::LinearH *h = MakeLinearH(H);
   // Provide constant input voltage.
   Input U;
   U << 12.0, 10.0, 1.0, -0.1;
@@ -247,7 +261,7 @@ TEST_F(HybridEkfTest, PredictionsAreSane) {
   EXPECT_EQ(0.0, ekf_.X_hat().norm());
   const double starting_p_norm = ekf_.P().norm();
   for (int ii = 0; ii < 100; ++ii) {
-    ekf_.Correct(Z, &U, nullptr, &h, R, t0_ + dt_config_.dt * (ii + 1));
+    ekf_.Correct(Z, &U, nullptr, h, R, t0_ + dt_config_.dt * (ii + 1));
     true_X = Update(true_X, U, false);
     EXPECT_EQ(true_X, ekf_.X_hat());
   }
@@ -286,7 +300,7 @@ TEST_P(HybridEkfOldCorrectionsTest, CreateOldCorrection) {
   Z.setZero();
   Eigen::Matrix<double, 3, 12> H;
   H.setZero();
-  HybridEkf<>::LinearH h_zero(H);
+  HybridEkf<>::LinearH *h_zero = MakeLinearH(H);
   Input U;
   U << 12.0, 12.0, 0.0, 0.0;
   Eigen::Matrix<double, 3, 3> R;
@@ -295,7 +309,7 @@ TEST_P(HybridEkfOldCorrectionsTest, CreateOldCorrection) {
   // We fill up the buffer to be as full as demanded by the user.
   const size_t n_predictions = GetParam();
   for (size_t ii = 0; ii < n_predictions; ++ii) {
-    ekf_.Correct(Z, &U, nullptr, &h_zero, R, t0_ + dt_config_.dt * (ii + 1));
+    ekf_.Correct(Z, &U, nullptr, h_zero, R, t0_ + dt_config_.dt * (ii + 1));
   }
 
   // Store state and covariance after prediction steps.
@@ -307,12 +321,12 @@ TEST_P(HybridEkfOldCorrectionsTest, CreateOldCorrection) {
   H(0, 0) = 1;
   H(1, 1) = 1;
   H(2, 2) = 1;
-  HybridEkf<>::LinearH h(H);
+  HybridEkf<>::LinearH *h = MakeLinearH(H);
   R.setZero();
   R.diagonal() << 1e-5, 1e-5, 1e-5;
   U.setZero();
   for (int ii = 0; ii < 20; ++ii) {
-    ekf_.Correct(Z, &U, nullptr, &h, R, t0_);
+    ekf_.Correct(Z, &U, nullptr, h, R, t0_);
   }
   const double corrected_p_norm = ekf_.P().norm();
   State expected_X_hat = modeled_X_hat;
@@ -339,7 +353,7 @@ TEST_F(HybridEkfTest, DiscardTooOldCorrection) {
   Z.setZero();
   Eigen::Matrix<double, 3, 12> H;
   H.setZero();
-  HybridEkf<>::LinearH h_zero(H);
+  HybridEkf<>::LinearH *h_zero = MakeLinearH(H);
   Input U;
   U << 12.0, 12.0, 0.0, 0.0;
   Eigen::Matrix<double, 3, 3> R;
@@ -347,7 +361,7 @@ TEST_F(HybridEkfTest, DiscardTooOldCorrection) {
 
   EXPECT_EQ(0.0, ekf_.X_hat().norm());
   for (int ii = 0; ii < HybridEkf<>::kSaveSamples; ++ii) {
-    ekf_.Correct(Z, &U, nullptr, &h_zero, R, t0_ + dt_config_.dt * (ii + 1));
+    ekf_.Correct(Z, &U, nullptr, h_zero, R, t0_ + dt_config_.dt * (ii + 1));
   }
   const State modeled_X_hat = ekf_.X_hat();
   const HybridEkf<>::StateSquare modeled_P = ekf_.P();
@@ -357,11 +371,11 @@ TEST_F(HybridEkfTest, DiscardTooOldCorrection) {
   H(0, 0) = 1;
   H(1, 1) = 1;
   H(2, 2) = 1;
-  HybridEkf<>::LinearH h(H);
+  HybridEkf<>::LinearH *h = MakeLinearH(H);
   R.setIdentity();
   R *= 1e-5;
   U.setZero();
-  ekf_.Correct(Z, &U, nullptr, &h, R, t0_);
+  ekf_.Correct(Z, &U, nullptr, h, R, t0_);
   EXPECT_EQ(ekf_.X_hat(), modeled_X_hat)
       << "Expected too-old correction to have no effect; X_hat: "
       << ekf_.X_hat() << " expected " << modeled_X_hat;
