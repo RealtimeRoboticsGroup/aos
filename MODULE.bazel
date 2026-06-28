@@ -37,6 +37,14 @@ single_version_override(
 )
 
 bazel_dep(name = "glib", version = "2.82.2.bcr.7", repo_name = "glib")
+single_version_override(
+    module_name = "glib",
+    patch_strip = 1,
+    patches = [
+        "third_party/glib/0001-Add-sysroot-select.patch",
+    ],
+    version = "2.82.2.bcr.7",
+)
 
 python = use_extension("@rules_python//python/extensions:python.bzl", "python")
 python.toolchain(
@@ -412,11 +420,6 @@ bazel_dep(name = "flatbuffers", version = "24.3.25", repo_name = "com_github_goo
 local_path_override(
     module_name = "flatbuffers",
     path = "third_party/flatbuffers/",
-)
-
-local_path_override(
-    module_name = "glib",
-    path = "third_party/glib",
 )
 
 bazel_dep(name = "foxglove_schemas", version = "0.16.2", repo_name = "com_github_foxglove_schemas")
