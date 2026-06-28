@@ -549,12 +549,6 @@ cxxbridge_cmd_deps()
 
 http_archive(
     name = "io_bazel_rules_go",
-    patch_args = [
-        "-p1",
-    ],
-    patches = [
-        "@aos//third_party:rules_go/0001-Disable-warnings-for-external-repositories.patch",
-    ],
     sha256 = "763f4a3f6b03469fdb00a77a333dd0b5546d3ee1fa29db373128c08fee73e0e8",
     urls = [
         "https://github.com/bazelbuild/rules_go/releases/download/v0.61.1/rules_go-v0.61.1.zip",
