@@ -14,6 +14,9 @@ def py_library(target_compatible_with = ["@aos//tools/platforms/python:has_suppo
 
 def py_test(target_compatible_with = ["@aos//tools/platforms/python:has_support"], **kwargs):
     _py_test(
-        target_compatible_with = target_compatible_with,
+        target_compatible_with = select({
+            Label("@aos//tools:has_msan"): ["@platforms//:incompatible"],
+            Label("//conditions:default"): target_compatible_with,
+        }),
         **kwargs
     )
