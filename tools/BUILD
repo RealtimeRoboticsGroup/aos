@@ -94,22 +94,22 @@ config_setting(
 
 config_setting(
     name = "has_asan",
-    values = {"define": "have_asan=true"},
+    values = {"features": "asan"},
 )
 
 config_setting(
     name = "has_tsan",
-    values = {"define": "have_tsan=true"},
+    values = {"features": "tsan"},
 )
 
 config_setting(
     name = "has_ubsan",
-    values = {"define": "have_ubsan=true"},
+    values = {"features": "ubsan"},
 )
 
 config_setting(
     name = "has_msan",
-    values = {"define": "have_msan=true"},
+    values = {"features": "msan"},
 )
 
 selects.config_setting_group(

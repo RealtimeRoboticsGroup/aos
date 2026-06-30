@@ -13,7 +13,7 @@ index 2924e86..31b2d3f 100644
 +        "@platforms//cpu:aarch64",
 +    ],
 +    values = {
-+        "define": "have_msan=true",
++        "features": "msan",
 +    },
 +)
 +
@@ -31,7 +31,7 @@ index 2924e86..31b2d3f 100644
 +        "@platforms//cpu:x86_64",
 +    ],
 +    values = {
-+        "define": "have_msan=true",
++        "features": "msan",
 +    },
 +)
 +
