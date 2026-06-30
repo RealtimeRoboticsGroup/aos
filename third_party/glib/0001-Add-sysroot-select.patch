@@ -29,7 +29,7 @@ index e5168d0..209cc89 100644
 +        "@platforms//os:linux",
 +        "@platforms//cpu:arm64",
 +    ],
-+    values = {"define": "have_msan=true"},
++    values = {"features": "msan"},
 +)
 +
 +config_setting(
@@ -38,7 +38,7 @@ index e5168d0..209cc89 100644
 +        "@platforms//os:linux",
 +        "@platforms//cpu:x86_64",
 +    ],
-+    values = {"define": "have_msan=true"},
++    values = {"features": "msan"},
 +)
 diff --git a/MODULE.bazel b/MODULE.bazel
 index f8d74a9..6f93367 100644
