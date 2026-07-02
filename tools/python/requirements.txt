@@ -46,6 +46,7 @@ tensorflow
 tensorflow_datasets
 tensorflow_probability
 tf_keras
+tensorflow-metadata>=1.15.0
 
 # Experience buffer for reinforcement learning
 flashbax>=0.1.3
