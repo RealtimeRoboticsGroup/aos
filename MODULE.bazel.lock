@@ -2257,9 +2257,10 @@
     "@@rules_rust+//crate_universe:extension.bzl%crate": {
       "general": {
         "bzlTransitiveDigest": "1XKlgSIUCUTAlB7d7zb8UOjpfqraxkA+yIfADtx1Vcw=",
-        "usagesDigest": "FmWPJnplv5OvSZ9bd46hGvjeYtPJ/pDq9rvcklDj4JM=",
+        "usagesDigest": "4/oxSQ62xdwoVo10ClIcAqnCFaYRxtITP87Zy3Fx5QU=",
         "recordedFileInputs": {
           "@@+_repo_rules2+cxxbridge-cmd//Cargo.toml": "b4e0c767c12741a6ef2e96e9c705cc5b337e895a2c5602a8bce783167911bcf2",
+          "@@//Cargo.Bazel.lock": "73ffccc577e3f28d0be3c4e43c295ebeb15f4c158368bdcf6d81b939227f8a25",
           "@@//Cargo.lock": "c25fa81c15728521c6755a91b964941027c61d13798060cb5130ee0ee8c40f93",
           "@@//Cargo.toml": "4bdb626956275bf58bc58bac4607c04135e966f882ebd5c73191b1ed46ef311c",
           "@@//third_party/autocxx/Cargo.toml": "805b60ef648c11777635f8f466ef653f6038444136c2300bbb9db62fd0074f1a",

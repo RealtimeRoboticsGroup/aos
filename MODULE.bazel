@@ -28,7 +28,6 @@ single_version_override(
     module_name = "rules_python",
     patch_strip = 1,
     patches = [
-        "//third_party:rules_python/0001-Allow-WORKSPACE-users-to-patch-wheels.patch",
         "//third_party:rules_python/0002-Allow-users-to-inject-extra-deps.patch",
         "//third_party:rules_python/0003-Add-sysroot-dep.patch",
         "//third_party:rules_python/0004-aos-ci-pip-config.patch",
@@ -341,7 +340,7 @@ crate.from_cargo(
     name = "cxxbridge_cmd_deps",
     cargo_lockfile = "//third_party/cargo:cxxbridge-cmd/Cargo.lock",
     host_tools = "@aos_rust_host_tools",
-    lockfile = "//third_party/cargo:cxxbridge-cmd/Cargo.Bazel.lock",
+    lockfile = "@@//third_party/cargo:cxxbridge-cmd/Cargo.Bazel.lock",
     manifests = ["@cxxbridge-cmd//:Cargo.toml"],
     supported_platform_triples = [
         "x86_64-unknown-linux-gnu",
@@ -357,6 +356,7 @@ crate.from_cargo(
     name = "crate_index",
     cargo_lockfile = "//:Cargo.lock",
     host_tools = "@aos_rust_host_tools",
+    lockfile = "@@//:Cargo.Bazel.lock",
     manifests = [
         "//:Cargo.toml",
         "//third_party/autocxx:Cargo.toml",
@@ -438,14 +438,7 @@ archive_override(
 )
 
 bazel_dep(name = "websocketpp", version = "0.8.2.bcr.5")
-single_version_override(
-    module_name = "websocketpp",
-    patch_strip = 1,
-    patches = ["third_party/websocketpp/websocketpp.patch"],
-)
-
 bazel_dep(name = "asio", version = "1.28.2")
-
 bazel_dep(name = "ctre_phoenix6_api_cpp_headers", version = "25.3.2", dev_dependency = True)
 bazel_dep(name = "ctre_phoenix6_tools_headers", version = "25.3.2", dev_dependency = True)
 bazel_dep(name = "ctre_phoenix6_api_cpp_athena", version = "25.3.2", dev_dependency = True)
