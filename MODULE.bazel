@@ -666,6 +666,5 @@ register_toolchains(
 mock_external_fbs_repo_extension = use_extension(
     "//aos/flatbuffers/test_dir:extensions.bzl",
     "mock_external_fbs_repo_extension",
-    dev_dependency = True,
 )
 use_repo(mock_external_fbs_repo_extension, "mock_external_fbs_repo")

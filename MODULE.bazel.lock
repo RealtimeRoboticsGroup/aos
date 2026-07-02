@@ -580,26 +580,18 @@
   "moduleExtensions": {
     "//aos/flatbuffers/test_dir:extensions.bzl%mock_external_fbs_repo_extension": {
       "general": {
-        "bzlTransitiveDigest": "3Z6ts+botTqxuFALS5xBwOGfR2YIqmA+WoEkxbwbq4A=",
+        "bzlTransitiveDigest": "m1Q9QqChdFWVq5yqDpRigK0HmhhLg+ZmF2Pd2sxg/iE=",
         "usagesDigest": "WoCxZMSMtwOEOiHSFZz5xDJs4F2LfKZLvw66CVycSV4=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
         "generatedRepoSpecs": {
           "mock_external_fbs_repo": {
-            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:local.bzl%local_repository",
-            "attributes": {
-              "path": "aos/flatbuffers/test_dir/mock_external_fbs_repo"
-            }
+            "repoRuleId": "@@//aos/flatbuffers/test_dir:extensions.bzl%mock_external_fbs_repo_rule",
+            "attributes": {}
           }
         },
-        "recordedRepoMappingEntries": [
-          [
-            "",
-            "bazel_tools",
-            "bazel_tools"
-          ]
-        ]
+        "recordedRepoMappingEntries": []
       }
     },
     "//debian:extensions.bzl%debian_deps_extension": {
