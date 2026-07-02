@@ -17,6 +17,22 @@ void *DereferenceOffset(uoffset_t *offset) {
 }
 }  // namespace
 
+ResizeableObject::ResizeableObject(std::span<uint8_t> buffer,
+                                   ResizeableObject *parent)
+    : buffer_(buffer), parent_(parent) {}
+
+ResizeableObject::ResizeableObject(std::span<uint8_t> buffer,
+                                   Allocator *allocator)
+    : buffer_(buffer), allocator_(allocator) {}
+
+ResizeableObject::ResizeableObject(std::span<uint8_t> buffer,
+                                   std::unique_ptr<Allocator> allocator)
+    : buffer_(buffer),
+      owned_allocator_(std::move(allocator)),
+      allocator_(owned_allocator_.get()) {}
+
+ResizeableObject::~ResizeableObject() = default;
+
 ResizeableObject::ResizeableObject(ResizeableObject &&other)
     : buffer_(other.buffer_),
       parent_(other.parent_),

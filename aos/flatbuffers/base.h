@@ -117,22 +117,17 @@ class ResizeableObject {
     size_t *absolute_offset;
   };
 
-  ResizeableObject(std::span<uint8_t> buffer, ResizeableObject *parent)
-      : buffer_(buffer), parent_(parent) {}
-  ResizeableObject(std::span<uint8_t> buffer, Allocator *allocator)
-      : buffer_(buffer), allocator_(allocator) {}
+  ResizeableObject(std::span<uint8_t> buffer, ResizeableObject *parent);
+  ResizeableObject(std::span<uint8_t> buffer, Allocator *allocator);
   ResizeableObject(std::span<uint8_t> buffer,
-                   std::unique_ptr<Allocator> allocator)
-      : buffer_(buffer),
-        owned_allocator_(std::move(allocator)),
-        allocator_(owned_allocator_.get()) {}
+                   std::unique_ptr<Allocator> allocator);
   ResizeableObject(const ResizeableObject &) = delete;
   ResizeableObject &operator=(const ResizeableObject &) = delete;
   // Users do not end up using the move constructor; however, it is needed to
   // handle the fact that a ResizeableObject may be a member of an std::vector
   // in the various generated types.
   ResizeableObject(ResizeableObject &&other);
-  virtual ~ResizeableObject() = default;
+  virtual ~ResizeableObject();
 
   // Required alignment of this object.
   virtual size_t Alignment() const = 0;
