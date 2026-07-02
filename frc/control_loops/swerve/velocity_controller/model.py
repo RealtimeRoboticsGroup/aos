@@ -384,7 +384,7 @@ class TrainState(flax.struct.PyTreeNode):
         alpha_opt_state = alpha_tx.init(params)
 
         mesh = Mesh(
-            devices=mesh_utils.create_device_mesh(len(jax.devices())),
+            devices=mesh_utils.create_device_mesh((len(jax.devices()),)),
             axis_names=('batch', ),
         )
         print('Devices:', jax.devices())

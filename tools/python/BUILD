@@ -39,6 +39,27 @@ pip_compile(
     ],
 )
 
+# Invoke this via "bazel run //tools/python:aos_requirements.update".
+pip_compile(
+    name = "aos_requirements.update",
+    args = [
+        "--index-strategy=unsafe-any-match",
+        "--no-strip-extras",
+        "--default-index=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
+        "--index=https://pypi.org/simple",
+    ],
+    requirements_in = "aos_requirements.txt",
+    requirements_txt = "aos_requirements.lock.txt",
+    tags = [
+        "requires-network",
+        "manual",
+    ],
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+    ],
+)
+
+
 # This binary is intended to run the `requirements.update` target in a Docker
 # container. This is primarily intended for reproducibility. See README.md.
 sh_binary(
@@ -59,6 +80,11 @@ py_runtime(
         "@python_3_10_x86_64-unknown-linux-gnu//:files",
     ],
     interpreter = "runtime_binary.sh",
+    interpreter_version_info = {
+        "major": "3",
+        "minor": "10",
+        "micro": "18",
+    },
     python_version = "PY3",
 )
 

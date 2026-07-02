@@ -5,6 +5,8 @@ def _extract_numpy_headers_impl(ctx):
     hdrs = []
     for file in files:
         _, partition, include_file = file.path.partition("/numpy/core/include/numpy/")
+        if not partition:
+            _, partition, include_file = file.path.partition("/numpy/_core/include/numpy/")
         if partition:
             hdr = ctx.actions.declare_file("%s/numpy/%s" % (prefix, include_file))
             ctx.actions.run(

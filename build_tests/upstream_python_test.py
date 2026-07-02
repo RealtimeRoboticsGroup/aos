@@ -21,7 +21,8 @@ class TestPipImports(unittest.TestCase):
         self.assertTrue(
             numpy.__file__.endswith("site-packages/numpy/__init__.py")
             and ("pip_deps_numpy" in numpy.__file__
-                 or "rules_python++pip+aos_pip_deps" in numpy.__file__),
+                 or "rules_python++pip+aos_pip_deps" in numpy.__file__
+                 or "rules_python++pip+pip_deps" in numpy.__file__),
             numpy.__file__)
 
 

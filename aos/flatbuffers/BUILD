@@ -323,6 +323,6 @@ py_test(
         "@com_github_google_flatbuffers//:flatpy",
         "@mock_external_fbs_repo//:baz_fbs_py",
         "@mock_external_fbs_repo//:foo_fbs_py",
-        "@pip_deps//absl_py",
+        "@aos_pip_deps//absl_py",
     ],
 )

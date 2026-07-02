@@ -21,6 +21,13 @@ export PYTHONDONTWRITEBYTECODE=1
 # TODO(philipp): Is there a better way to do this?
 PYTHON_BIN=""
 
+# If RUNFILES_DIR is not set, try to detect it from PWD if we are inside a runfiles directory.
+if [[ -z "${RUNFILES_DIR:-}" ]]; then
+  if [[ "$PWD" == *.runfiles/* ]]; then
+    export RUNFILES_DIR="${PWD%%.runfiles/*}.runfiles"
+  fi
+fi
+
 if [[ -n "${RUNFILES_DIR:-}" ]]; then
   path_plus="${RUNFILES_DIR}/rules_python++python+python_3_10_x86_64-unknown-linux-gnu"
   path_tilde="${RUNFILES_DIR}/rules_python~~python~python_3_10_x86_64-unknown-linux-gnu"
@@ -69,6 +76,34 @@ if [[ -z "$PYTHON_BIN" ]]; then
       break
     fi
   done
+fi
+
+if [[ -z "$PYTHON_BIN" ]]; then
+  # Fallback for bazel run where RUNFILES_DIR and PYTHONPATH might not be propagated by external wrappers.
+  workspace_dir="${BUILD_WORKSPACE_DIRECTORY:-}"
+  if [[ -z "${workspace_dir}" ]]; then
+    if [[ -f "WORKSPACE" || -f "MODULE.bazel" ]]; then
+      workspace_dir="."
+    fi
+  fi
+  if [[ -n "${workspace_dir}" ]]; then
+    for suffix in "rules_python++python+python_3_10_x86_64-unknown-linux-gnu" "rules_python~~python~python_3_10_x86_64-unknown-linux-gnu" "python_3_10_x86_64-unknown-linux-gnu"; do
+      path=$(find "${workspace_dir}/bazel-bin" -type d -name "${suffix}" -print -quit 2>/dev/null)
+      if [[ -d "${path}" ]]; then
+        PYTHON_BIN="$path"/bin/python3
+        LD_LIBRARY_PATH=":${path}/lib"
+        LD_LIBRARY_PATH+=":${path}/../amd64_debian_sysroot/lib/x86_64-linux-gnu/"
+        LD_LIBRARY_PATH+=":${path}/../amd64_debian_sysroot/usr/lib/x86_64-linux-gnu/"
+        LD_LIBRARY_PATH+=":${path}/../amd64_debian_sysroot/usr/lib/"
+        LD_LIBRARY_PATH+=":${path}/../amd64_debian_sysroot/usr/lib/x86_64-linux-gnu/gvfs/"
+        if [[ -e "${path}/../pip_deps_nvidia_nccl_cu12" ]]; then
+          LD_LIBRARY_PATH+=":${path}/../pip_deps_nvidia_nccl_cu12/site-packages/nvidia/nccl/lib/"
+        fi
+        export LD_LIBRARY_PATH
+        break
+      fi
+    done
+  fi
 fi
 
 if [[ -z "$PYTHON_BIN" ]]; then

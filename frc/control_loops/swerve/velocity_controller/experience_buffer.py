@@ -1,6 +1,6 @@
+import jax
 import flashbax
 from flashbax.buffers.trajectory_buffer import TrajectoryBufferState, Experience, TrajectoryBufferSample
-import jax
 from jax.sharding import Mesh, PartitionSpec, NamedSharding
 from jax.experimental import mesh_utils
 from flax.typing import PRNGKey
@@ -9,7 +9,7 @@ from flax.typing import PRNGKey
 def make_experience_buffer(num_agents, sample_batch_size, length):
     """Makes a random, sharded, fifo experience buffer."""
     mesh = jax.sharding.Mesh(
-        devices=mesh_utils.create_device_mesh(len(jax.devices())),
+        devices=mesh_utils.create_device_mesh((len(jax.devices()),)),
         axis_names=('batch', ),
     )
 

@@ -3,8 +3,8 @@ module(
     version = "0.0.0",
 )
 
-bazel_dep(name = "bazel_features", version = "1.38.0")
-bazel_dep(name = "rules_cc", version = "0.2.17")
+bazel_dep(name = "bazel_features", version = "1.43.0")
+bazel_dep(name = "rules_cc", version = "0.2.18")
 bazel_dep(name = "rules_cuda", version = "0.3.0")
 
 # Pin to an upstream commit past v0.3.0 that includes the configurable
@@ -48,12 +48,19 @@ single_version_override(
 
 python = use_extension("@rules_python//python/extensions:python.bzl", "python")
 python.toolchain(
+    is_default = True,
     python_version = "3.10",
+)
+python.toolchain(
+    python_version = "3.13",
 )
 use_repo(
     python,
     "python_3_10",
     "python_3_10_x86_64-unknown-linux-gnu",
+    "python_3_13",
+    "python_3_13_x86_64-unknown-linux-gnu",
+    "python_versions",
 )
 
 pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
@@ -67,18 +74,65 @@ pip.parse(
         "--extra-index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
         "--prefer-binary",
     ],
-    extra_pip_args_ci = [
-        "--timeout=1800",
-        "--index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
-        "--trusted-host=realtimeroboticsgroup.org",
-    ],
-    hub_name = "aos_pip_deps",
+    #extra_pip_args_ci = [
+        #"--timeout=1800",
+        #"--index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
+        #"--trusted-host=realtimeroboticsgroup.org",
+    #],
+    hub_name = "pip_deps",
     python_version = "3.10",
     requirements_lock = "//tools/python:requirements.lock.txt",
     whl_modifications = {
         "//third_party/python:matplotlib_annotation.json": "matplotlib",
         "//third_party/python:pygobject_annotation.json": "pygobject",
     },
+)
+pip.parse(
+    enable_implicit_namespace_pkgs = True,
+    extra_pip_args = [
+        "--timeout=1800",
+        "--index-url=https://pypi.org/simple",
+        # Use an extra index url rather than an explicit index url to allow us to
+        # use the pypi mirror for everything else.
+        "--extra-index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
+        "--prefer-binary",
+    ],
+    #extra_pip_args_ci = [
+        #"--timeout=1800",
+        #"--index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
+        #"--trusted-host=realtimeroboticsgroup.org",
+    #],
+    hub_name = "pip_deps",
+    python_version = "3.13",
+    requirements_lock = "//tools/python:requirements.lock.txt",
+    whl_modifications = {
+        "//third_party/python:matplotlib_annotation.json": "matplotlib",
+        "//third_party/python:pygobject_annotation.json": "pygobject",
+    },
+)
+pip.parse(
+    enable_implicit_namespace_pkgs = True,
+    extra_pip_args = [
+        "--timeout=1800",
+        "--index-url=https://pypi.org/simple",
+        "--extra-index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
+        "--prefer-binary",
+    ],
+    hub_name = "aos_pip_deps",
+    python_version = "3.10",
+    requirements_lock = "//tools/python:aos_requirements.lock.txt",
+)
+pip.parse(
+    enable_implicit_namespace_pkgs = True,
+    extra_pip_args = [
+        "--timeout=1800",
+        "--index-url=https://pypi.org/simple",
+        "--extra-index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
+        "--prefer-binary",
+    ],
+    hub_name = "aos_pip_deps",
+    python_version = "3.13",
+    requirements_lock = "//tools/python:aos_requirements.lock.txt",
 )
 pip.override(
     file = "matplotlib-3.9.2-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
@@ -90,13 +144,13 @@ pip.override(
     patch_strip = 2,
     patches = ["//third_party/python:pygobject/init.patch"],
 )
-use_repo(pip, pip_deps = "aos_pip_deps")
+use_repo(pip, "aos_pip_deps", pip_deps = "pip_deps")
 
 bazel_dep(name = "grpc", version = "1.81.0", repo_name = "com_github_grpc_grpc")
 bazel_dep(name = "protobuf", version = "32.1", repo_name = "com_google_protobuf")
 bazel_dep(name = "rules_proto", version = "7.1.0")
 bazel_dep(name = "aspect_rules_ts", version = "3.6.3")
-bazel_dep(name = "aspect_rules_js", version = "2.4.2")
+bazel_dep(name = "aspect_rules_js", version = "2.9.2")
 bazel_dep(name = "rules_nodejs", version = "6.3.0")
 
 node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node")
@@ -104,7 +158,7 @@ use_repo(node, "nodejs_linux_amd64")
 
 bazel_dep(name = "aspect_rules_esbuild", version = "0.22.1")
 bazel_dep(name = "aspect_rules_rollup", version = "2.0.1")
-bazel_dep(name = "aspect_rules_terser", version = "2.0.1")
+bazel_dep(name = "aspect_rules_terser", version = "2.1.2")
 bazel_dep(name = "gazelle", version = "0.51.3", repo_name = "bazel_gazelle")
 single_version_override(
     module_name = "gazelle",

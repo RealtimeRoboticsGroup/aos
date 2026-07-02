@@ -423,7 +423,10 @@ class ControlLoop(object):
         ]
         for x in range(matrix.shape[0]):
             for y in range(matrix.shape[1]):
-                write_type = repr(matrix[x, y])
+                val = matrix[x, y]
+                if hasattr(val, 'item'):
+                    val = val.item()
+                write_type = repr(val)
                 if scalar_type == 'float':
                     if '.' not in write_type and 'e' not in write_type:
                         write_type += '.0'

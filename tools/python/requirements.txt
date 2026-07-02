@@ -25,6 +25,7 @@ python-gflags
 glog
 
 bokeh
+pandas>=2.2.3
 tabulate
 
 flask
@@ -47,7 +48,7 @@ tensorflow_probability
 tf_keras
 
 # Experience buffer for reinforcement learning
-flashbax
+flashbax>=0.1.3
 
 # Experiment tracking
 aim
