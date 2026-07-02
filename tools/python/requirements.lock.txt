@@ -14,6 +14,7 @@ absl-py==2.1.0
     #   tensorboard
     #   tensorflow
     #   tensorflow-datasets
+    #   tensorflow-metadata
     #   tensorflow-probability
 aim==2.7.4
     # via -r tools/python/requirements.txt
@@ -136,8 +137,6 @@ google-auth-oauthlib==0.4.6
     # via tensorboard
 google-pasta==0.2.0
     # via tensorflow
-googleapis-common-protos==1.75.0
-    # via tensorflow-metadata
 greenlet==3.1.1
     # via sqlalchemy
 grpcio==1.66.1
@@ -347,14 +346,14 @@ plotly==5.24.1
     # via -r tools/python/requirements.txt
 promise==2.3
     # via tensorflow-datasets
-protobuf==7.35.1
+protobuf==6.32.0
     # via
     #   aim
-    #   googleapis-common-protos
     #   orbax-checkpoint
     #   tensorboard
     #   tensorflow
     #   tensorflow-datasets
+    #   tensorflow-metadata
 psutil==6.0.0
     # via
     #   aim
@@ -482,8 +481,10 @@ tensorflow==2.21.0
     #   tf-keras
 tensorflow-datasets==4.9.3
     # via -r tools/python/requirements.txt
-tensorflow-metadata==0.5.0
-    # via tensorflow-datasets
+tensorflow-metadata==1.21.0
+    # via
+    #   -r tools/python/requirements.txt
+    #   tensorflow-datasets
 tensorflow-probability==0.24.0
     # via -r tools/python/requirements.txt
 tensorstore==0.1.64
