@@ -41,8 +41,12 @@ uint64_t ToMachTicks(monotonic_clock::time_point time) {
 }  // namespace
 
 void ResetTimerFdOnFork(TimerFd *timer) { timer->ResetOnFork(); }
+
+}  // namespace internal
+
 void ResetEPollOnFork(EPoll *epoll) { epoll->ResetOnFork(); }
 
+namespace internal {
 namespace {
 
 // Checks for fork() and resets all registered TimerFd and EPoll instances in
@@ -278,11 +282,11 @@ EPoll::EPoll() : epoll_fd_(kqueue()) {
     ABSL_PCHECK(read(quit_epoll_fd_, &buf[0], 1) == 1);
   });
 
-  AtForkHandler::Instance()->RegisterEPoll(this);
+  internal::AtForkHandler::Instance()->RegisterEPoll(this);
 }
 
 EPoll::~EPoll() {
-  AtForkHandler::Instance()->UnregisterEPoll(this);
+  internal::AtForkHandler::Instance()->UnregisterEPoll(this);
   // Clean up the quit pipe and epoll fd.
   DeleteFd(quit_epoll_fd_);
   close(quit_signal_fd_);
