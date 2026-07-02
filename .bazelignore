@@ -8,3 +8,5 @@ third_party/bazel-toolchain
 third_party/allwpilib
 third_party/gmp
 registry
+
+msan_repro/

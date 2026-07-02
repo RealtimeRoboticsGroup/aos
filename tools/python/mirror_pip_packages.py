@@ -139,11 +139,11 @@ def main(argv: List[str]) -> Optional[int]:
               "older commits. Use this only if you know what you're doing."))
     args = parser.parse_args(argv[1:])
 
-    root_dir = Path(os.environ["BUILD_WORKSPACE_DIRECTORY"])
+    root_dir = Path(os.environ["BUILD_WORKSPACE_DIRECTORY"]).resolve()
     caller = os.getenv("SUDO_USER") or os.environ["USER"]
     caller_id = pwd.getpwnam(caller).pw_uid
 
-    python_dir = root_dir / "tools" / "python"
+    python_dir = (root_dir / "tools" / "python").resolve()
 
     container_tag = f"pip-compile:{caller}"
 
