@@ -613,7 +613,7 @@ http_file(
     urls = ["https://realtimeroboticsgroup.org/build-dependencies/small_sample_logfile2.fbs"],
 )
 
-frc_deps_ext = use_extension("//tools/frc:extensions.bzl", "frc_deps_extension", dev_dependency = True)
+frc_deps_ext = use_extension("//tools/frc:extensions.bzl", "frc_deps_extension")
 use_repo(
     frc_deps_ext,
     "april_tag_test_image",
@@ -666,6 +666,5 @@ register_toolchains(
 mock_external_fbs_repo_extension = use_extension(
     "//aos/flatbuffers/test_dir:extensions.bzl",
     "mock_external_fbs_repo_extension",
-    dev_dependency = True,
 )
 use_repo(mock_external_fbs_repo_extension, "mock_external_fbs_repo")
