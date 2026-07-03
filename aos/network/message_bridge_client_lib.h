@@ -7,6 +7,7 @@
 #include "aos/events/event_loop.h"
 #include "aos/events/logging/logger_generated.h"
 #include "aos/events/shm_event_loop.h"
+#include "aos/ftrace.h"
 #include "aos/network/connect_generated.h"
 #include "aos/network/message_bridge_client_generated.h"
 #include "aos/network/message_bridge_client_status.h"
@@ -139,6 +140,8 @@ class SctpClientConnection {
 
   // Any timestamps that we were unable to send back.
   aos::RingBuffer<SavedTimestamp, 1024> timestamp_buffer_;
+
+  Ftrace ftrace_;
 };
 
 // This encapsulates the state required to talk to *all* the servers from this
