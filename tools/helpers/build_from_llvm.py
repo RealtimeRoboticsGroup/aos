@@ -86,6 +86,7 @@ def build_clang_release(
     clang_topdir: Path,
     clang_dir: Path,
     clang_basename: str,
+    llvm_version: str,
     force_rebuild: bool,
 ):
     build_dir = tempdir / "clang-build"
@@ -118,13 +119,21 @@ def build_clang_release(
                 ensure_dir(directory)
 
     if not build_success_file.exists():
+        llvm_major = int(llvm_version.split(".")[0])
+        if llvm_major >= 22:
+            llvm_enable_projects = "clang;clang-tools-extra;lld;"
+            llvm_enable_runtimes = "compiler-rt;libcxx;libcxxabi;libunwind"
+        else:
+            llvm_enable_projects = "clang;clang-tools-extra;lld;compiler-rt;"
+            llvm_enable_runtimes = "libcxx;libcxxabi;libunwind"
+
         run(
             "cmake",
             "-GNinja",
             source_dir / "llvm",
             "-DCMAKE_BUILD_TYPE=Release",
-            "-DLLVM_ENABLE_PROJECTS=clang;clang-tools-extra;lld;compiler-rt;",
-            "-DLLVM_ENABLE_RUNTIMES=libcxx;libcxxabi;libunwind",
+            "-DLLVM_ENABLE_PROJECTS={}".format(llvm_enable_projects),
+            "-DLLVM_ENABLE_RUNTIMES={}".format(llvm_enable_runtimes),
             "-DCMAKE_C_COMPILER={}".format(shutil.which("clang") or "clang"),
             "-DCMAKE_CXX_COMPILER={}".format(
                 shutil.which("clang++") or "clang++"),
@@ -333,6 +342,7 @@ def main():
             clang_topdir=clang_topdir,
             clang_dir=clang_dir,
             clang_basename=clang_basename,
+            llvm_version=args.llvm_version,
             force_rebuild=args.clang_force_rebuild,
         )
 
