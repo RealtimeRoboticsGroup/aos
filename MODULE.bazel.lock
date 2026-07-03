@@ -1272,6 +1272,45 @@
         "recordedRepoMappingEntries": []
       }
     },
+    "@@bazel_iwyu+//:extensions.bzl%iwyu": {
+      "general": {
+        "bzlTransitiveDigest": "qgt6j4EZnQesv4LvV23zluGB+nrCLCU6iZaQJsjpmY8=",
+        "usagesDigest": "FNE2kWgMO1dTlIMUzB23g2WQDR9QQjWctiPK6YRagcM=",
+        "recordedFileInputs": {},
+        "recordedDirentsInputs": {},
+        "envVariables": {},
+        "generatedRepoSpecs": {
+          "iwyu_prebuilt_pkg": {
+            "repoRuleId": "@@bazel_iwyu+//bazel:prebuilt_pkg.bzl%prebuilt_pkg",
+            "attributes": {
+              "build_file": "@@bazel_iwyu+//bazel/iwyu:BUILD.prebuilt_pkg",
+              "urls": {
+                "linux-aarch64": [
+                  "https://github.com/RealtimeRoboticsGroup/bazel_iwyu/releases/download/iwyu-0.26.0/iwyu-0.26.0-aarch64-linux-gnu.tar.zst"
+                ],
+                "linux-x86_64": [
+                  "https://github.com/RealtimeRoboticsGroup/bazel_iwyu/releases/download/iwyu-0.26.0/iwyu-0.26.0-x86_64-linux-gnu.tar.zst"
+                ],
+                "macos-arm64": [
+                  "https://github.com/RealtimeRoboticsGroup/bazel_iwyu/releases/download/iwyu-0.26.0/iwyu-0.26.0-arm64-apple-darwin.tar.zst"
+                ]
+              },
+              "sha256": {
+                "linux-aarch64": "af683808b64ad75e4abb3df5f4187193f85f663fda5d6e408c0e2c9bdc32a484",
+                "linux-x86_64": "f0360da3d5f88b14d006d17ba71d1ff403aa06427187d6fc74584a7ab52aef63",
+                "macos-arm64": "111f1da7bf5da56b76aa72abee08256828aacb6d5bff899fcf1753cf56f59e73"
+              },
+              "strip_prefix": {
+                "linux-aarch64": "iwyu-0.26.0-aarch64-linux-gnu",
+                "linux-x86_64": "iwyu-0.26.0-x86_64-linux-gnu",
+                "macos-arm64": "iwyu-0.26.0-arm64-apple-darwin"
+              }
+            }
+          }
+        },
+        "recordedRepoMappingEntries": []
+      }
+    },
     "@@buildifier_prebuilt+//:defs.bzl%buildifier_prebuilt_deps_extension": {
       "general": {
         "bzlTransitiveDigest": "o1WPvgvSISMJsXVrFW1v+M17eIj9AJjkcTAucRVb3vI=",

@@ -357,15 +357,6 @@ cc_library(
     )
 
     http_archive(
-        name = "com_github_storypku_bazel_iwyu",
-        integrity = "sha256-R/rVwWn3SveoC8lAcicw6MOfdTqLLkubpaljT4qHjJg=",
-        strip_prefix = "bazel_iwyu-bb102395e553215abd66603bcdeb6e93c66ca6d7",
-        urls = [
-            "https://github.com/storypku/bazel_iwyu/archive/bb102395e553215abd66603bcdeb6e93c66ca6d7.zip",
-        ],
-    )
-
-    http_archive(
         name = "asio",
         build_file_content = """
 cc_library(
