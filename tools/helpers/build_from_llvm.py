@@ -49,6 +49,11 @@ def clone_llvm_source(source_dir: Path, llvm_version: str):
         "llvmorg-{}".format(llvm_version),
         source_dir,
     )
+    patches_dir = Path(__file__).resolve().parents[2] / "third_party/llvm"
+    if patches_dir.exists():
+        for patch in sorted(patches_dir.glob("*.patch")):
+            print("Applying patch: {}".format(patch.name), file=sys.stderr)
+            run("git", "apply", patch, cwd=source_dir)
 
 
 def download_extract_clang_distribution(clang_url: str, clang_dir: Path):

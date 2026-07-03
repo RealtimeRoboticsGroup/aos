@@ -1,0 +1,187 @@
+diff --git a/compiler-rt/lib/msan/msan_interceptors.cpp b/compiler-rt/lib/msan/msan_interceptors.cpp
+index bc28434d1..c5419d255 100644
+--- a/compiler-rt/lib/msan/msan_interceptors.cpp
++++ b/compiler-rt/lib/msan/msan_interceptors.cpp
+@@ -63,6 +63,17 @@ DECLARE_REAL(SIZE_T, strnlen, const char *s, SIZE_T maxlen)
+ DECLARE_REAL(void *, memcpy, void *dest, const void *src, SIZE_T n)
+ DECLARE_REAL(void *, memset, void *dest, int c, SIZE_T n)
+ 
++#if SANITIZER_GLIBC
++DECLARE_REAL(void *, __memcpy_chk, void *dest, const void *src, SIZE_T n,
++             SIZE_T dest_size)
++DECLARE_REAL(void *, __memmove_chk, void *dest, const void *src, SIZE_T n,
++             SIZE_T dest_size)
++DECLARE_REAL(void *, __memset_chk, void *dest, int c, SIZE_T n,
++             SIZE_T dest_size)
++DECLARE_REAL(void *, __mempcpy_chk, void *dest, const void *src, SIZE_T n,
++             SIZE_T dest_size)
++#endif
++
+ // True if this is a nested interceptor.
+ static THREADLOCAL int in_interceptor_scope;
+ 
+@@ -158,6 +169,79 @@ INTERCEPTOR(void *, bcopy, const void *src, void *dest, SIZE_T n) {
+   return __msan_memmove(dest, src, n);
+ }
+ 
++#if SANITIZER_GLIBC
++INTERCEPTOR(void *, __memcpy_chk, void *dest, const void *src, SIZE_T n,
++            SIZE_T dest_size) {
++  if (!msan_inited)
++    return internal_memcpy(dest, src, n);
++  if (msan_init_is_running || __msan::IsInSymbolizerOrUnwider())
++    return REAL(__memcpy_chk)(dest, src, n, dest_size);
++  ENSURE_MSAN_INITED();
++  GET_STORE_STACK_TRACE;
++  void *res = REAL(__memcpy_chk)(dest, src, n, dest_size);
++  CopyShadowAndOrigin(dest, src, n, &stack);
++  return res;
++}
++#define MSAN_MAYBE_INTERCEPT___MEMCPY_CHK INTERCEPT_FUNCTION(__memcpy_chk)
++#else
++#define MSAN_MAYBE_INTERCEPT___MEMCPY_CHK
++#endif
++
++#if SANITIZER_GLIBC
++INTERCEPTOR(void *, __memmove_chk, void *dest, const void *src, SIZE_T n,
++            SIZE_T dest_size) {
++  if (!msan_inited)
++    return internal_memmove(dest, src, n);
++  if (msan_init_is_running || __msan::IsInSymbolizerOrUnwider())
++    return REAL(__memmove_chk)(dest, src, n, dest_size);
++  ENSURE_MSAN_INITED();
++  GET_STORE_STACK_TRACE;
++  void *res = REAL(__memmove_chk)(dest, src, n, dest_size);
++  MoveShadowAndOrigin(dest, src, n, &stack);
++  return res;
++}
++#define MSAN_MAYBE_INTERCEPT___MEMMOVE_CHK INTERCEPT_FUNCTION(__memmove_chk)
++#else
++#define MSAN_MAYBE_INTERCEPT___MEMMOVE_CHK
++#endif
++
++#if SANITIZER_GLIBC
++INTERCEPTOR(void *, __memset_chk, void *dest, int c, SIZE_T n,
++            SIZE_T dest_size) {
++  if (!msan_inited)
++    return internal_memset(dest, c, n);
++  if (msan_init_is_running || __msan::IsInSymbolizerOrUnwider())
++    return REAL(__memset_chk)(dest, c, n, dest_size);
++  ENSURE_MSAN_INITED();
++  void *res = REAL(__memset_chk)(dest, c, n, dest_size);
++  __msan_unpoison(dest, n);
++  return res;
++}
++#define MSAN_MAYBE_INTERCEPT___MEMSET_CHK INTERCEPT_FUNCTION(__memset_chk)
++#else
++#define MSAN_MAYBE_INTERCEPT___MEMSET_CHK
++#endif
++
++#if SANITIZER_GLIBC
++INTERCEPTOR(void *, __mempcpy_chk, void *dest, const void *src, SIZE_T n,
++            SIZE_T dest_size) {
++  if (!msan_inited) {
++    internal_memcpy(dest, src, n);
++    return (char *)dest + n;
++  }
++  if (msan_init_is_running || __msan::IsInSymbolizerOrUnwider())
++    return REAL(__mempcpy_chk)(dest, src, n, dest_size);
++  ENSURE_MSAN_INITED();
++  GET_STORE_STACK_TRACE;
++  void *res = REAL(__mempcpy_chk)(dest, src, n, dest_size);
++  CopyShadowAndOrigin(dest, src, n, &stack);
++  return res;
++}
++#define MSAN_MAYBE_INTERCEPT___MEMPCPY_CHK INTERCEPT_FUNCTION(__mempcpy_chk)
++#else
++#define MSAN_MAYBE_INTERCEPT___MEMPCPY_CHK
++#endif
++
+ INTERCEPTOR(int, posix_memalign, void **memptr, SIZE_T alignment, SIZE_T size) {
+   GET_MALLOC_STACK_TRACE;
+   CHECK_NE(memptr, 0);
+@@ -1817,6 +1901,10 @@ void InitializeInterceptors() {
+   MSAN_MAYBE_INTERCEPT_FREAD_UNLOCKED;
+   INTERCEPT_FUNCTION(memccpy);
+   MSAN_MAYBE_INTERCEPT_MEMPCPY;
++  MSAN_MAYBE_INTERCEPT___MEMCPY_CHK;
++  MSAN_MAYBE_INTERCEPT___MEMMOVE_CHK;
++  MSAN_MAYBE_INTERCEPT___MEMSET_CHK;
++  MSAN_MAYBE_INTERCEPT___MEMPCPY_CHK;
+   INTERCEPT_FUNCTION(bcopy);
+   INTERCEPT_FUNCTION(wmemset);
+   INTERCEPT_FUNCTION(wmemcpy);
+diff --git a/compiler-rt/test/msan/Linux/fortify.cpp b/compiler-rt/test/msan/Linux/fortify.cpp
+new file mode 100644
+index 000000000..4568aa182
+--- /dev/null
++++ b/compiler-rt/test/msan/Linux/fortify.cpp
+@@ -0,0 +1,68 @@
++// RUN: %clangxx_msan -O0 %s -o %t && %run %t
++// RUN: %clangxx_msan -O2 %s -o %t && %run %t
++
++// REQUIRES: glibc
++
++#include <assert.h>
++#include <string.h>
++#include <sanitizer/msan_interface.h>
++
++extern "C" void *__memcpy_chk(void *dest, const void *src, size_t len, size_t destlen);
++extern "C" void *__memmove_chk(void *dest, const void *src, size_t len, size_t destlen);
++extern "C" void *__memset_chk(void *dest, int c, size_t len, size_t destlen);
++extern "C" void *__mempcpy_chk(void *dest, const void *src, size_t len, size_t destlen);
++
++int main(int argc, char *argv[]) {
++  // Test __memcpy_chk shadow propagation
++  {
++    char src[10];
++    char dest[10];
++    __msan_unpoison(dest, sizeof(dest));
++    __msan_poison(src, sizeof(src));
++    src[1] = 1;
++    src[2] = 2;
++    __memcpy_chk(dest, src, 5, sizeof(dest));
++    assert(__msan_test_shadow(dest, 5) == 0); // dest[0] is uninitialized
++    assert(__msan_test_shadow(dest + 1, 4) == 2); // dest[1], dest[2] are initialized, dest[3..4] are uninitialized
++    assert(__msan_test_shadow(dest + 5, 5) == -1); // dest[5..9] remain initialized
++  }
++
++  // Test __memmove_chk shadow propagation
++  {
++    char src[10];
++    char dest[10];
++    __msan_unpoison(dest, sizeof(dest));
++    __msan_poison(src, sizeof(src));
++    src[1] = 1;
++    src[2] = 2;
++    __memmove_chk(dest, src, 5, sizeof(dest));
++    assert(__msan_test_shadow(dest, 5) == 0);
++    assert(__msan_test_shadow(dest + 1, 4) == 2);
++    assert(__msan_test_shadow(dest + 5, 5) == -1);
++  }
++
++  // Test __memset_chk shadow propagation
++  {
++    char dest[10];
++    __msan_poison(dest, sizeof(dest));
++    __memset_chk(dest, 42, 5, sizeof(dest));
++    assert(__msan_test_shadow(dest, 10) == 5); // first 5 bytes are initialized, remaining 5 are uninitialized
++  }
++
++  // Test __mempcpy_chk shadow propagation
++  {
++    char src[10];
++    char dest[10];
++    __msan_unpoison(dest, sizeof(dest));
++    __msan_poison(src, sizeof(src));
++    src[1] = 1;
++    src[2] = 2;
++    char *res = (char *)__mempcpy_chk(dest, src, 5, sizeof(dest));
++    assert(res == dest + 5);
++    assert(__msan_test_shadow(dest, 5) == 0);
++    assert(__msan_test_shadow(dest + 1, 4) == 2);
++    assert(__msan_test_shadow(dest + 5, 5) == -1);
++  }
++
++  return 0;
++}
