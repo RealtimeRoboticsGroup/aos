@@ -287,7 +287,7 @@ crate.from_cargo(
     name = "cxxbridge_cmd_deps",
     cargo_lockfile = "//third_party/cargo:cxxbridge-cmd/Cargo.lock",
     host_tools = "@aos_rust_host_tools",
-    lockfile = "//third_party/cargo:cxxbridge-cmd/Cargo.Bazel.lock",
+    lockfile = "@@//third_party/cargo:cxxbridge-cmd/Cargo.Bazel.lock",
     manifests = ["@cxxbridge-cmd//:Cargo.toml"],
     supported_platform_triples = [
         "x86_64-unknown-linux-gnu",
@@ -303,6 +303,7 @@ crate.from_cargo(
     name = "crate_index",
     cargo_lockfile = "//:Cargo.lock",
     host_tools = "@aos_rust_host_tools",
+    lockfile = "@@//:Cargo.Bazel.lock",
     manifests = [
         "//:Cargo.toml",
         "//third_party/autocxx:Cargo.toml",
