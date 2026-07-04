@@ -228,6 +228,22 @@ build:arm64 --@rules_cuda//cuda:archs=sm_87
 # old toolchains_llvm "cuda" feature did.
 build --@rules_cuda//cuda:copts=-Wno-unknown-cuda-version
 
+# Config for running in CI (e.g., Buildkite).
+# We want developers to have liberal access to packages during local development,
+# but CI is restricted to prebuilt packages resolved exclusively from our mirror.
+#
+# These environment variables are passed to Bzlmod repository rules and read
+# by rules_python's `pip.parse` extension to configure pip's index URL and trusted hosts.
+# - AOS_RUNNING_IN_CI: Informs repository rules we are running on a CI server.
+# - AOS_PIP_INDEX_URL & AOS_PIP_EXTRA_INDEX_URL: Configures pip to resolve packages
+#   exclusively from the internal mirror instead of public PyPI.
+# - AOS_PIP_TRUSTED_HOST: Bypasses SSL cert issues on CI runner hosts by making the mirror
+#   trusted. Note: this remains unset locally to prevent bypassing SSL checks for developers.
+common:running_in_ci --repo_env=AOS_RUNNING_IN_CI=1
+common:running_in_ci --repo_env=AOS_PIP_INDEX_URL=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple
+common:running_in_ci --repo_env=AOS_PIP_EXTRA_INDEX_URL=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple
+common:running_in_ci --repo_env=AOS_PIP_TRUSTED_HOST=--trusted-host=realtimeroboticsgroup.org
+
 import %workspace%/.bazelrc_autodetection
 
 # Load a local file that users can use to customize bazel invocations.  This

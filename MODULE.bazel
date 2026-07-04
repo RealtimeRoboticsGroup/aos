@@ -30,7 +30,6 @@ single_version_override(
     patches = [
         "//third_party:rules_python/0002-Allow-users-to-inject-extra-deps.patch",
         "//third_party:rules_python/0003-Add-sysroot-dep.patch",
-        "//third_party:rules_python/0004-aos-ci-pip-config.patch",
     ],
     version = "1.5.3",
 )
@@ -62,22 +61,29 @@ use_repo(
     "python_versions",
 )
 
+_AOS_PIP_ENVSUBST = [
+    "AOS_PIP_INDEX_URL",
+    "AOS_PIP_EXTRA_INDEX_URL",
+    "AOS_PIP_TRUSTED_HOST",
+]
+
+_AOS_EXTRA_PIP_ARGS = [
+    "--timeout=1800",
+    "--index-url=${AOS_PIP_INDEX_URL:-https://pypi.org/simple}",
+    # Use an extra index url rather than an explicit index url to allow us to
+    # use the pypi mirror for everything else.
+    "--extra-index-url=${AOS_PIP_EXTRA_INDEX_URL:-https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple}",
+    "--prefer-binary",
+    # In CI we override this with --trusted-host=realtimeroboticsgroup.org to bypass SSL cert issues.
+    # Locally, we default to --timeout=1800 (harmless duplicate) to avoid passing an empty string or bypassing SSL.
+    "${AOS_PIP_TRUSTED_HOST:---timeout=1800}",
+]
+
 pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
 pip.parse(
     enable_implicit_namespace_pkgs = True,
-    extra_pip_args = [
-        "--timeout=1800",
-        "--index-url=https://pypi.org/simple",
-        # Use an extra index url rather than an explicit index url to allow us to
-        # use the pypi mirror for everything else.
-        "--extra-index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
-        "--prefer-binary",
-    ],
-    extra_pip_args_ci = [
-        "--timeout=1800",
-        "--index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
-        "--trusted-host=realtimeroboticsgroup.org",
-    ],
+    envsubst = _AOS_PIP_ENVSUBST,
+    extra_pip_args = _AOS_EXTRA_PIP_ARGS,
     hub_name = "pip_deps",
     python_version = "3.10",
     requirements_lock = "//tools/python:requirements.lock.txt",
@@ -88,19 +94,8 @@ pip.parse(
 )
 pip.parse(
     enable_implicit_namespace_pkgs = True,
-    extra_pip_args = [
-        "--timeout=1800",
-        "--index-url=https://pypi.org/simple",
-        # Use an extra index url rather than an explicit index url to allow us to
-        # use the pypi mirror for everything else.
-        "--extra-index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
-        "--prefer-binary",
-    ],
-    extra_pip_args_ci = [
-        "--timeout=1800",
-        "--index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
-        "--trusted-host=realtimeroboticsgroup.org",
-    ],
+    envsubst = _AOS_PIP_ENVSUBST,
+    extra_pip_args = _AOS_EXTRA_PIP_ARGS,
     hub_name = "pip_deps",
     python_version = "3.13",
     requirements_lock = "//tools/python:requirements.lock.txt",
@@ -111,24 +106,16 @@ pip.parse(
 )
 pip.parse(
     enable_implicit_namespace_pkgs = True,
-    extra_pip_args = [
-        "--timeout=1800",
-        "--index-url=https://pypi.org/simple",
-        "--extra-index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
-        "--prefer-binary",
-    ],
+    envsubst = _AOS_PIP_ENVSUBST,
+    extra_pip_args = _AOS_EXTRA_PIP_ARGS,
     hub_name = "aos_pip_deps",
     python_version = "3.10",
     requirements_lock = "//tools/python:aos_requirements.lock.txt",
 )
 pip.parse(
     enable_implicit_namespace_pkgs = True,
-    extra_pip_args = [
-        "--timeout=1800",
-        "--index-url=https://pypi.org/simple",
-        "--extra-index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
-        "--prefer-binary",
-    ],
+    envsubst = _AOS_PIP_ENVSUBST,
+    extra_pip_args = _AOS_EXTRA_PIP_ARGS,
     hub_name = "aos_pip_deps",
     python_version = "3.13",
     requirements_lock = "//tools/python:aos_requirements.lock.txt",
