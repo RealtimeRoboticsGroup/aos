@@ -696,22 +696,12 @@
     },
     "//tools/frc:extensions.bzl%frc_deps_extension": {
       "general": {
-        "bzlTransitiveDigest": "rhG6VmDoHd93XSyaDZBGVa0ffcBwuRWdOcbBcFOnRO0=",
+        "bzlTransitiveDigest": "lLI5KY/6SsZ6bGlqLxzbWYiZNcDlJtqKWAojIItOkEY=",
         "usagesDigest": "LNojzjbeMVSfZXgWCJWiq1Cjot/rHzz5Rzf/cq8saR4=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
         "generatedRepoSpecs": {
-          "com_github_foxglove_mcap_mcap": {
-            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_file",
-            "attributes": {
-              "executable": true,
-              "sha256": "e87895e9af36db629ad01c554258ec03d07b604bc61a0a421449c85223357c71",
-              "urls": [
-                "https://github.com/foxglove/mcap/releases/download/releases%2Fmcap-cli%2Fv0.0.51/mcap-linux-amd64"
-              ]
-            }
-          },
           "frc2026_field_map_welded": {
             "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_file",
             "attributes": {
