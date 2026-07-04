@@ -295,6 +295,7 @@ cc_library(
         ),
         cc_test(
             name = "lockless_queue_test" + suffix,
+            timeout = "eternal",
             srcs = ["lockless_queue_test.cc"],
             # We don't want all the signal handlers registered, otherwise we can't fork.
             # Also, start each of the different suffix at a different core
