@@ -1,9 +1,9 @@
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
+load("@rules_halide//:halide.bzl", "halide_library")
 load("//aos:flatbuffers.bzl", "cc_static_flatbuffer")
 load("//aos/flatbuffers:generate.bzl", "static_flatbuffer")
-load("//frc:halide.bzl", "halide_library")
 load("//tools:cuda_library.bzl", "cuda_library")
 load("//tools/build_rules:select.bzl", "cpu_select")
 

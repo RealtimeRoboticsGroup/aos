@@ -401,9 +401,15 @@ bazel_dep(name = "ctre_phoenix_api_cpp_headers", version = "5.35.0", dev_depende
 bazel_dep(name = "ctre_phoenix_api_cpp_athena", version = "5.35.0", dev_dependency = True)
 bazel_dep(name = "ctre_phoenix_cci_headers", version = "5.35.0", dev_dependency = True)
 bazel_dep(name = "ctre_phoenix_cci_athena", version = "5.35.0", dev_dependency = True)
-bazel_dep(name = "halide_k8", version = "14.0.0", dev_dependency = True)
-bazel_dep(name = "halide_arm64", version = "14.0.0", dev_dependency = True)
-bazel_dep(name = "halide_darwin_aarch64", version = "14.0.0", dev_dependency = True)
+bazel_dep(name = "rules_halide", version = "0.0.1")
+archive_override(
+    module_name = "rules_halide",
+    integrity = "sha256-GVdoOVilwyDKmA+Nfu2MdRXZDy09gGeLTgRKcclZ6pI=",
+    strip_prefix = "rules_halide-0.0.1",
+    urls = [
+        "https://github.com/RealtimeRoboticsGroup/rules_halide/releases/download/v0.0.1/rules_halide-0.0.1.tar.zst",
+    ],
+)
 bazel_dep(name = "allwpilib", version = "0.0.0", dev_dependency = True, repo_name = "com_github_wpilibsuite_allwpilib")
 local_path_override(
     module_name = "allwpilib",

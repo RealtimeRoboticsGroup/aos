@@ -1,8 +1,0 @@
-{
-    "integrity": "sha256-zdQkEby7poL3PX2wr2mDfEhX7pDxcnxv6zf8mpgTI4U=",
-    "url": "https://github.com/halide/Halide/releases/download/v14.0.0/Halide-14.0.0-arm-64-linux-6b9ed2afd1d6d0badf04986602c943e287d44e46.tar.gz",
-    "strip_prefix": "Halide-14.0.0-arm-64-linux/",
-    "overlay": {
-        "BUILD.bazel": "sha256-qzoDTDbKAOQyjTT/c3d9CyxPYWwZKj45Qv9CWhWuTz0="
-    }
-}

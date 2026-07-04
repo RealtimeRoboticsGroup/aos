@@ -17,20 +17,6 @@
 namespace frc::vision {
 namespace {
 
-// Returns a function implementating a 1-dimensional gaussian blur convolution.
-Halide::Func GenerateBlur(std::string name, Halide::Func in, int col_step,
-                          int row_step, int radius, std::vector<float> kernel,
-                          Halide::Var col, Halide::Var row) {
-  Halide::Expr expr = kernel[0] * in(col, row);
-  for (int i = 1; i <= radius; ++i) {
-    expr += kernel[0] * (in(col - i * col_step, row - i * row_step) +
-                         in(col + i * col_step, row + i * row_step));
-  }
-  Halide::Func func(name);
-  func(col, row) = expr;
-  return func;
-}
-
 template <typename T>
 void SetRowMajor(T *buffer_parameter, int cols, int rows) {
   buffer_parameter->dim(0).set_stride(1);

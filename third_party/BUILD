@@ -102,51 +102,6 @@ cc_library(
 )
 
 cc_library(
-    name = "halide",
-    target_compatible_with = select({
-        "//tools:has_msan": ["@platforms//:incompatible"],
-        "//conditions:default": [],
-    }),
-    visibility = ["//visibility:public"],
-    deps = select({
-        "//tools:cpu_k8": ["@halide_k8//:halide"],
-        "//conditions:default": [":unavailable"],
-    }),
-)
-
-cc_library(
-    name = "halide_gengen",
-    target_compatible_with = select({
-        "//tools:has_msan": ["@platforms//:incompatible"],
-        "//conditions:default": [],
-    }),
-    visibility = ["//visibility:public"],
-    # It's the same file in either version, but we'll pick the native version
-    # to minimize the chances of needing to download the other version unnecessarily.
-    deps = select({
-        "//tools:cpu_k8": ["@halide_k8//:gengen"],
-        "//conditions:default": [":unavailable"],
-    }),
-)
-
-cc_library(
-    name = "halide_runtime",
-    target_compatible_with = select({
-        "//tools:has_msan": ["@platforms//:incompatible"],
-        "//conditions:default": [],
-    }),
-    visibility = ["//visibility:public"],
-    # It's the same file in either version, but we'll pick the native version
-    # to minimize the chances of needing to download the other version unnecessarily.
-    deps = select({
-        "@platforms//os:macos": ["@halide_darwin_aarch64//:runtime"],
-        "//tools:cpu_arm64": ["@halide_arm64//:runtime"],
-        "//tools:cpu_k8": ["@halide_k8//:runtime"],
-        "//conditions:default": [":unavailable"],
-    }),
-)
-
-cc_library(
     name = "cudart",
     target_compatible_with = select({
         "//tools:has_msan": ["@platforms//:incompatible"],

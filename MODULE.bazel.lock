@@ -1870,6 +1870,45 @@
         ]
       }
     },
+    "@@rules_halide+//:extensions.bzl%halide": {
+      "general": {
+        "bzlTransitiveDigest": "GVlhpETtGvCoYJz0XcK4d7tddEiUdAS2I8Ddo2Gnihs=",
+        "usagesDigest": "rI1Ps1yxDla+QWAcZFAN0j7NLns/YjDJOTodapey1D0=",
+        "recordedFileInputs": {},
+        "recordedDirentsInputs": {},
+        "envVariables": {},
+        "generatedRepoSpecs": {
+          "halide_prebuilt_pkg": {
+            "repoRuleId": "@@rules_halide+//internal:prebuilt_pkg.bzl%prebuilt_pkg",
+            "attributes": {
+              "build_file": "@@rules_halide+//internal:BUILD.prebuilt_pkg",
+              "urls": {
+                "linux-x86_64": [
+                  "https://github.com/halide/Halide/releases/download/v18.0.0/Halide-18.0.0-x86-64-linux-8c651b459a4e3744b413c23a29b5c5d968702bb7.tar.gz"
+                ],
+                "linux-aarch64": [
+                  "https://github.com/halide/Halide/releases/download/v18.0.0/Halide-18.0.0-arm-64-linux-8c651b459a4e3744b413c23a29b5c5d968702bb7.tar.gz"
+                ],
+                "macos-arm64": [
+                  "https://github.com/halide/Halide/releases/download/v18.0.0/Halide-18.0.0-arm-64-osx-8c651b459a4e3744b413c23a29b5c5d968702bb7.tar.gz"
+                ]
+              },
+              "sha256": {
+                "linux-x86_64": "8e491e2f9ac7c138482bb344cb291c708632718dfee1dd7f9c3749b3607e41c7",
+                "linux-aarch64": "89083e890f47cd9cef983d5555111af4c9628e89b1ce24712dc090edb89c3dd8",
+                "macos-arm64": "d96831794ba91455a19d1d5832f175c6913d7238cb70dadfdc0e1475ccd9e1e6"
+              },
+              "strip_prefix": {
+                "linux-x86_64": "Halide-18.0.0-x86-64-linux",
+                "linux-aarch64": "Halide-18.0.0-arm-64-linux",
+                "macos-arm64": "Halide-18.0.0-arm-64-osx"
+              }
+            }
+          }
+        },
+        "recordedRepoMappingEntries": []
+      }
+    },
     "@@rules_kotlin+//src/main/starlark/core/repositories:bzlmod_setup.bzl%rules_kotlin_extensions": {
       "general": {
         "bzlTransitiveDigest": "rL/34P1aFDq2GqVC2zCFgQ8nTuOC6ziogocpvG50Qz8=",

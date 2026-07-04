@@ -307,6 +307,7 @@ register_toolchains(
     "//tools/cuda:x86_64_clang_toolchain",
     "//tools/cuda:aarch64_clang_toolchain",
     "//tools/cuda:no_gpu_clang_toolchain",
+    "@rules_halide//internal:halide_prebuilt_toolchain",
 )
 
 # Java11 JDK.
