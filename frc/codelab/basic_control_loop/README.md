@@ -11,7 +11,7 @@ Before starting this codelab, you should already have set up your computer with 
 
 ## Flatbuffers tutorial
 
-Our code uses flatbuffers extensively. If you're unfamiliar with them, you can take a look at these [tutorials](https://google.github.io/flatbuffers/flatbuffers_guide_tutorial.html) for how to use them.  This is optional but recommended if you are looking for more background on flatbuffers, and can be done before or after the codelab.
+Our code uses flatbuffers extensively. If you're unfamiliar with them, you can take a look at these [tutorials](https://google.github.io/flatbuffers/flatbuffers_guide_tutorial.html) for how to use them. This is optional but recommended if you are looking for more background on flatbuffers, and can be done before or after the codelab.
 
 ## Instructions
 
@@ -23,6 +23,7 @@ When this codelab is run, it performs a series of tests to check whether the cod
 ### Running the tests
 
 In order to run the tests, execute the following command in the terminal in the aos folder:
+
 ```
 bazel run //frc/codelab:basic_test -- --gtest_color=yes
 ```
@@ -45,19 +46,19 @@ It will pass in the Position message and most recent Goal message
 and provide Builders that the RunIteration method should use to
 construct and send output/status messages.
 
-The various basic_*.fbs files define the Goal, Position, Status, and Output
+The various basic\_\*.fbs files define the Goal, Position, Status, and Output
 messages. The code for the tests is in the basic_test.cc file, and the code you will edit is in the basic.cc file.
 
 In order to get the tests to pass, you'll need to fill out the RunIteration()
 implementation in basic.cc so that it uses the input goal/position to
 meaningfully populate the output/status messages. You can find descriptions
-of exactly what the fields of the messages mean by reading all the *.fbs
-files.  The tests in basic_test.cc can be reviewed to help understand exactly
+of exactly what the fields of the messages mean by reading all the \*.fbs
+files. The tests in basic_test.cc can be reviewed to help understand exactly
 what behavior is expected.
 
 ### Submitting a code review
 
 Once you can get the tests to pass, follow the directions in [this file](https://realtimeroboticsgroup.org/gerrit/plugins/gitiles/RealtimeRoboticsGroup/aos/+/refs/heads/main/documentation/tutorials/submitting-code-for-a-review.md) for creating a
-code review of the change. We will not actually *submit* the change (since
+code review of the change. We will not actually _submit_ the change (since
 that would remove the challenge for future students), but we will go through
 the code review process.

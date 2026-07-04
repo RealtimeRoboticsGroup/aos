@@ -1,11 +1,10 @@
 # Starterd
 
-Starterd is the system for launching a complete system. It defines a system of applications across a
-complex distributed system and starts those applications and relavent all tools.
+Starterd is the system for launching a complete system. It defines a system of applications across a complex distributed system and starts those applications and relavent all tools.
 
 ## Using starterd
 
-We have a python script which spins up a copy of starter with ping, pong, and the other CLI tools ready for use.  To use it, run it from Bazel:
+We have a python script which spins up a copy of starter with ping, pong, and the other CLI tools ready for use. To use it, run it from Bazel:
 
 ```
 $ bazel run -c opt //documentation/examples/starterd:starter_demo
@@ -45,7 +44,4 @@ INFO: 44 processes: 29 disk cache hit, 2 internal, 13 linux-sandbox.
 INFO: Build completed successfully, 44 total actions
 ```
 
-To run everything by hand, just run `./starterd` after extracting, and everything will start up automatically.
-To run each application manually, in there own terminal run `./ping` and `./pong`.
-Then to view the messages simply run `./aos_dump --config pingpong_config.json`
-
+To run everything by hand, just run `./starterd` after extracting, and everything will start up automatically. To run each application manually, in there own terminal run `./ping` and `./pong`. Then to view the messages simply run `./aos_dump --config pingpong_config.json`

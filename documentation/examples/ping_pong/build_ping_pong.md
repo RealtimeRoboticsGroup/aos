@@ -1,62 +1,38 @@
 # Getting Started with AOS
 
-This page will walk through how to create a simple Ping/Pong application in AOS,
-essentially from scratch.
+This page will walk through how to create a simple Ping/Pong application in AOS, essentially from scratch.
 
 ## Building the Code
 
-For purposes of this exercise, we will assume that you have cloned the
-[aos](https://github.com/RealtimeRoboticsGroup/aos) repository. If you
-have set up AOS as an external repository in
-your own [Bazel](https://bazel.build/) workspace, then the main differences
-should just be that you add Bazel dependencies with an `@aos`.
+For purposes of this exercise, we will assume that you have cloned the [aos](https://github.com/RealtimeRoboticsGroup/aos) repository. If you have set up AOS as an external repository in your own [Bazel](https://bazel.build/) workspace, then the main differences should just be that you add Bazel dependencies with an `@aos`.
 
-AOS nominally supports Debian Bookworm, although later versions of Debian and
-Ubuntu 20.04+ should work to build the code.
+AOS nominally supports Debian Bookworm, although later versions of Debian and Ubuntu 20.04+ should work to build the code.
 
-After cloning AOS and installing Bazel, then you can confirm that the core
-functionality is working by doing
+After cloning AOS and installing Bazel, then you can confirm that the core functionality is working by doing
+
 ```
 bazel test //aos/events/...
 ```
 
-Note that several tests may fail to run due to permissions issues, since they
-will attempt to exercise some of AOS code related to setting realtime schedulers
-and locking memory. You can resolve these by following the directions in
-[Realtime System Configuration](#realtime-system-configuration).
+Note that several tests may fail to run due to permissions issues, since they will attempt to exercise some of AOS code related to setting realtime schedulers and locking memory. You can resolve these by following the directions in [Realtime System Configuration](#realtime-system-configuration).
 
-At a minimum, `bazel test //aos/events:simulated_event_loop_test` should
-reliably succeed.
+At a minimum, `bazel test //aos/events:simulated_event_loop_test` should reliably succeed.
 
-Once you have the code building, you can start trying to write an application.
-Note that this example will just be walking through replicating the existing
-ping/pong processes that are defined in `//aos/events/`[^paths]. If you are unsure if
-you are doing something wrong, you can compare your code to the code already in
-the repository.
+Once you have the code building, you can start trying to write an application. Note that this example will just be walking through replicating the existing ping/pong processes that are defined in `//aos/events/`[^paths]. If you are unsure if you are doing something wrong, you can compare your code to the code already in the repository.
 
 ## Writing a Pair of Ping/Pong Applications
 
-For this example, we will create a pair of applications where the `ping`
-application will send an `aos.examples.Ping` message at a fixed period. The
-`pong` application will listen for this message, and send an `aos.examples.Pong`
-message in response. The ping application will listen for this message and print
-to stderr whenever it gets a response.
+For this example, we will create a pair of applications where the `ping` application will send an `aos.examples.Ping` message at a fixed period. The `pong` application will listen for this message, and send an `aos.examples.Pong` message in response. The ping application will listen for this message and print to stderr whenever it gets a response.
 
-We will do all our work in a new folder. Let us create a new top-level
-`foo` folder in the repository (the exact name/path is unimportant).
+We will do all our work in a new folder. Let us create a new top-level `foo` folder in the repository (the exact name/path is unimportant).
 
-To keep this example tractable, it functions in a "single-node" world. Most AOS
-users actually operate in a multi-node world. This is discussed later.
+To keep this example tractable, it functions in a "single-node" world. Most AOS users actually operate in a multi-node world. This is discussed later.
 
 <!-- TODO: link to said discussion. -->
 
 ### Defining FlatBuffer Messages
 
-The FlatBuffer messages that our processes send/receive are effectively the API
-of the processes themselves, and so we will start by defining them. FlatBuffer
-messages are defined in `.fbs` files which define the schema for the message.
-For details on how FlatBuffers themselves work, see the
-[FlatBuffers website](https://google.github.io/flatbuffers/).
+The FlatBuffer messages that our processes send/receive are effectively the API of the processes themselves, and so we will start by defining them. FlatBuffer messages are defined in `.fbs` files which define the schema for the message. For details on how FlatBuffers themselves work, see the [FlatBuffers website](https://google.github.io/flatbuffers/).
 
 For the Ping message, create a `ping.fbs` file with the following contents:
 
@@ -77,35 +53,21 @@ Stepping through what each line means:
 namespace aos.examples;
 ```
 
-This specifies that all following definitions will be in the `aos.examples`
-namespace. For C++ code, this results in the generated flatbuffer code being in
-the `aos::examples` namespace (as one would expect). Other languages translate
-namespaces in different ways.
+This specifies that all following definitions will be in the `aos.examples` namespace. For C++ code, this results in the generated flatbuffer code being in the `aos::examples` namespace (as one would expect). Other languages translate namespaces in different ways.
 
 ```
 table Ping {
 ```
 
-Defines the `Ping` table. Because this is in the `aos.examples` namespace, the
-fully-qualified name of this table will be `aos.examples.Ping`.
+Defines the `Ping` table. Because this is in the `aos.examples` namespace, the fully-qualified name of this table will be `aos.examples.Ping`.
 
 ```
   value:int (id: 0);
 ```
 
-Defines a 32-bit signed integer field named `value` in the flatbuffer.
-Since no default value is specified, the default default value
-of 0 will be used. The `(id: 0)` specifies the unique ID that the
-flatbuffer serialization will use for this field. The exact
-value is generally unimportant, except that IDs must be unique,
-IDs must start from zero and have no gaps (or else the flatbuffer compiler will
-yell at you), and because IDs are used for serialization, if you ever change the
-ID used for a field (or re-use the ID for a different field), you will break
-backwards compatibility with old data.
+Defines a 32-bit signed integer field named `value` in the flatbuffer. Since no default value is specified, the default default value of 0 will be used. The `(id: 0)` specifies the unique ID that the flatbuffer serialization will use for this field. The exact value is generally unimportant, except that IDs must be unique, IDs must start from zero and have no gaps (or else the flatbuffer compiler will yell at you), and because IDs are used for serialization, if you ever change the ID used for a field (or re-use the ID for a different field), you will break backwards compatibility with old data.
 
-Details about the scalar types available in FlatBuffers can be found
-[here](https://google.github.io/flatbuffers/flatbuffers_guide_writing_schema.html) in the Types section.
-
+Details about the scalar types available in FlatBuffers can be found [here](https://google.github.io/flatbuffers/flatbuffers_guide_writing_schema.html) in the Types section.
 
 ```
   send_time:long (id: 1);
@@ -119,14 +81,9 @@ This defines a field named `send_time` that is a signed 64-bit integer.
 root_type Pong;
 ```
 
-The `root_type` declaration doesn't change any FlatBuffer serialization on its
-own, but the root type for a schema will see some additional codegen. For AOS,
-any table that is going to serve as a message must be the `root_type` of its
-`.fbs` file (there is only one message per `.fbs` file in this example, and no
-nested tables, so the issue is irrelevant here).
+The `root_type` declaration doesn't change any FlatBuffer serialization on its own, but the root type for a schema will see some additional codegen. For AOS, any table that is going to serve as a message must be the `root_type` of its `.fbs` file (there is only one message per `.fbs` file in this example, and no nested tables, so the issue is irrelevant here).
 
-For the `aos.examples.Pong` message, we will create a `pong.fbs` that has
-essentially the same structure:
+For the `aos.examples.Pong` message, we will create a `pong.fbs` that has essentially the same structure:
 
 ```
 namespace aos.examples;
@@ -139,11 +96,7 @@ table Pong {
 root_type Pong;
 ```
 
-The final part of defining the FlatBuffer messages is defining Bazel targets to
-actually do the codegen for the schemas. Since we have not yet created a BUILD
-file for this new directory, we will create a new `BUILD` file with the
-following contents:
-
+The final part of defining the FlatBuffer messages is defining Bazel targets to actually do the codegen for the schemas. Since we have not yet created a BUILD file for this new directory, we will create a new `BUILD` file with the following contents:
 
 ```python
 load("@com_github_google_flatbuffers//:build_defs.bzl", "flatbuffer_cc_library")
@@ -174,9 +127,7 @@ flatbuffer_cc_library(
     name = "ping_fbs",
 ```
 
-Defines a target (named `ping_fbs`) that will codegen a C++ library for the
-specified `.fbs` file. This can then be depended on by C++ Bazel targets
-directly.
+Defines a target (named `ping_fbs`) that will codegen a C++ library for the specified `.fbs` file. This can then be depended on by C++ Bazel targets directly.
 
 ```python
     srcs = ["ping.fbs"],
@@ -188,17 +139,11 @@ Specifies the `.fbs` file that we are generating code for.
     gen_reflections = 1,
 ```
 
-This turns on generation of the reflection schemas for the FlatBuffer file.
-This results in a `.bfbs` file being generated that contains a FlatBuffer of
-type `reflection.Schema` (defined in [reflection.fbs][reflection_fbs]).
-This is required for FlatBuffer files that will be
-used for AOS messages so that the AOS config can include reflection information.
+This turns on generation of the reflection schemas for the FlatBuffer file. This results in a `.bfbs` file being generated that contains a FlatBuffer of type `reflection.Schema` (defined in [reflection.fbs][reflection_fbs]). This is required for FlatBuffer files that will be used for AOS messages so that the AOS config can include reflection information.
 
-For more details on the arguments available in the `flatbuffer_cc_library` rule,
-see the [upstream FlatBuffers repository][flatbuffer_cc_library].
+For more details on the arguments available in the `flatbuffer_cc_library` rule, see the [upstream FlatBuffers repository][flatbuffer_cc_library].
 
-To confirm that you have successfully set up your FlatBuffer files and BUILD
-targets, you can build the targets directly:
+To confirm that you have successfully set up your FlatBuffer files and BUILD targets, you can build the targets directly:
 
 ```bash
 bazel build //foo:ping_fbs
@@ -208,18 +153,11 @@ This should generate a C++ header at `bazel-bin/foo/ping_generated.h`.
 
 ### Writing the AOS Config
 
-Every system running AOS will need a configuration. The configuration is a
-FlatBuffer message defined in
-[configuration.fbs](https://github.com/RealtimeRoboticsGroup/aos/blob/main/aos/configuration.fbs).
-Developers typically interact with the AOS config as a JSON file, which is then
-parsed into a FlatBuffer by various pieces of tooling.
+Every system running AOS will need a configuration. The configuration is a FlatBuffer message defined in [configuration.fbs](https://github.com/RealtimeRoboticsGroup/aos/blob/main/aos/configuration.fbs). Developers typically interact with the AOS config as a JSON file, which is then parsed into a FlatBuffer by various pieces of tooling.
 
-The primary role of the config is to define all of the message channels that
-will exist. It also includes some top-level configuration information and a list
-of processes ("applications") that will be run.
+The primary role of the config is to define all of the message channels that will exist. It also includes some top-level configuration information and a list of processes ("applications") that will be run.
 
-For this system we will create a file named `pingpong.json` that has
-contents of:
+For this system we will create a file named `pingpong.json` that has contents of:
 
 ```json
 {
@@ -243,9 +181,7 @@ contents of:
       "frequency": 4500
     }
   ],
-  "imports": [
-    "../aos/events/aos.json"
-  ]
+  "imports": ["../aos/events/aos.json"]
 }
 ```
 
@@ -262,10 +198,7 @@ Going over the key lines:
   ],
 ```
 
-This defines the set of applications running in the system.
-Since we have nothing particularly complex going on, we only need to specify
-the names of the applications. If, e.g., the name of the binary
- being run does not match the name of the application, then additional parameters are needed.
+This defines the set of applications running in the system. Since we have nothing particularly complex going on, we only need to specify the names of the applications. If, e.g., the name of the binary being run does not match the name of the application, then additional parameters are needed.
 
 ```json
     {
@@ -275,16 +208,9 @@ the names of the applications. If, e.g., the name of the binary
     },
 ```
 
-This defines a channel named `/test` with a type of `aos.examples.Ping` that
-will see messages at rate of at most 4500 Hz. Note that the pair of name + type
-must be unique per channel, but it is possible to both have multiple channels
-with the same name but different types and channels with different names but the same types.
-Note that the `type` field will always use the fully-qualified type name (i.e., it includes
-the namespace). The frequency is a strict maximum---messages cannot be sent any faster.
-See [Sent Too Fast](reference.md#sent-too-fast) for details on max frequencies.
+This defines a channel named `/test` with a type of `aos.examples.Ping` that will see messages at rate of at most 4500 Hz. Note that the pair of name + type must be unique per channel, but it is possible to both have multiple channels with the same name but different types and channels with different names but the same types. Note that the `type` field will always use the fully-qualified type name (i.e., it includes the namespace). The frequency is a strict maximum---messages cannot be sent any faster. See [Sent Too Fast](reference.md#sent-too-fast) for details on max frequencies.
 
-There is also a `max_size` channel value that allows you to increase the allowable
-size (in bytes) for messages sent on the channel.
+There is also a `max_size` channel value that allows you to increase the allowable size (in bytes) for messages sent on the channel.
 
 <!-- TODO: Link to multi-node configuration. -->
 
@@ -294,17 +220,13 @@ size (in bytes) for messages sent on the channel.
   ]
 ```
 
-This imports the `aos.json` config, which defines some common channels that are
-potentially relevant for any AOS system. Note that imports are relative.
+This imports the `aos.json` config, which defines some common channels that are potentially relevant for any AOS system. Note that imports are relative.
 
-Next, we need to use the `aos_config` Bazel rule to generate the processed
-config that can actually be used on a real system. Internally, the `aos_config`
-rule is feeding the hand-written configurations through the `config_flattener`
-which does a few things:
+Next, we need to use the `aos_config` Bazel rule to generate the processed config that can actually be used on a real system. Internally, the `aos_config` rule is feeding the hand-written configurations through the `config_flattener` which does a few things:
 
-* Resolves all imports.
-* Imports the message schemas for each channel into the config.
-* Generates the resulting flattened config in multiple useful formats.
+- Resolves all imports.
+- Imports the message schemas for each channel into the config.
+- Generates the resulting flattened config in multiple useful formats.
 
 To do this, we add the following to our `BUILD` file:
 
@@ -323,10 +245,7 @@ aos_config(
 )
 ```
 
-In particular, note that the list of `flatbuffers` must include _all_ the
-FlatBuffers used by the config (so that we can get at the schemas generated by
-the `gen_reflections` argument in the previous section). We also have a `deps`
-entry for the config that we are importing.
+In particular, note that the list of `flatbuffers` must include _all_ the FlatBuffers used by the config (so that we can get at the schemas generated by the `gen_reflections` argument in the previous section). We also have a `deps` entry for the config that we are importing.
 
 If we build this config
 
@@ -344,28 +263,20 @@ bazel-bin/foo/pingpong_config.bfbs
 
 The suffixes of each file mean:
 
-* `.json`: This is the full resulting config, in human-readable JSON.
-* `.stripped.json`: This is the flattened config, but with the message schemas
-  removed. This is not used by any application code, but can be convenient for
-  debugging since it is a much smaller file than the full configs.
-* `.bfbs`: The full resulting config, but serialized as a binary FlatBuffer.
-  This contains exactly the same information as the `.json`, but is much
-  smaller and is much faster to parse.
+- `.json`: This is the full resulting config, in human-readable JSON.
+- `.stripped.json`: This is the flattened config, but with the message schemas removed. This is not used by any application code, but can be convenient for debugging since it is a much smaller file than the full configs.
+- `.bfbs`: The full resulting config, but serialized as a binary FlatBuffer. This contains exactly the same information as the `.json`, but is much smaller and is much faster to parse.
 
-Both the `.json` and `.bfbs` files can be used by applications, but most
-applications will attempt to use the `.bfbs` file if present due to the lower
-startup penalty from not having to read a massive JSON file.
+Both the `.json` and `.bfbs` files can be used by applications, but most applications will attempt to use the `.bfbs` file if present due to the lower startup penalty from not having to read a massive JSON file.
 
 ### Writing the Ping Application
 
-Now that we have the message types and channels all defined, we have the basic
-structure that we need in order to actually write our applications, starting
-with `ping`.  To do this, we will end up creating four files:
+Now that we have the message types and channels all defined, we have the basic structure that we need in order to actually write our applications, starting with `ping`. To do this, we will end up creating four files:
 
-* `ping_lib.h`: The header file for the application itself.
-* `ping_lib.cc`: The source file implementing our application.
-* `ping.cc`: The file with `main` that will start up the `ping` application.
-* `ping_lib_test.cc`: Contains the unit tests for the code in `ping_lib.*`.tests
+- `ping_lib.h`: The header file for the application itself.
+- `ping_lib.cc`: The source file implementing our application.
+- `ping.cc`: The file with `main` that will start up the `ping` application.
+- `ping_lib_test.cc`: Contains the unit tests for the code in `ping_lib.*`.tests
 
 The contents of `ping_lib.h` will be:
 
@@ -405,6 +316,7 @@ class Ping {
 ```
 
 And `ping_lib.cc` will be:
+
 ```cpp
 #include "foo/ping_lib.h"
 
@@ -471,18 +383,13 @@ In `ping_lib.h`:
   #include "foo/pong_generated.h"
 ```
 
-These are the generated headers for each of the FlatBuffer messages that we
-defined. For a `.fbs` file named `foo.fbs`, the resulting header will be named
-`foo_generated.h`.
+These are the generated headers for each of the FlatBuffer messages that we defined. For a `.fbs` file named `foo.fbs`, the resulting header will be named `foo_generated.h`.
 
 ```cpp
   Ping(EventLoop *event_loop);
 ```
 
-By convention, the top-level class for an AOS application will take, as the
-first argument to its constructor, an `aos::EventLoop*`. The
-[EventLoop](reference.md#eventloop-interface) will be
-used for all the application's interactions with the rest of the AOS system.
+By convention, the top-level class for an AOS application will take, as the first argument to its constructor, an `aos::EventLoop*`. The [EventLoop](reference.md#eventloop-interface) will be used for all the application's interactions with the rest of the AOS system.
 
 In `ping_lib.cc`:
 
@@ -490,41 +397,27 @@ In `ping_lib.cc`:
 ABSL_FLAG(int32_t, sleep_ms, 10, "Time to sleep between pings");
 ```
 
-This creates a command-line flag `--sleep_ms` which can be accessed in the code
-as `FLAGS_sleep_ms`, using the [gflags](https://gflags.github.io/gflags/)
-library. `gflags` is the default command-line flag management library used
-throughout AOS, although for testability we generally discourage using flags
-for configuration of normal application behavior.
-
+This creates a command-line flag `--sleep_ms` which can be accessed in the code as `FLAGS_sleep_ms`, using the [gflags](https://gflags.github.io/gflags/) library. `gflags` is the default command-line flag management library used throughout AOS, although for testability we generally discourage using flags for configuration of normal application behavior.
 
 ```cpp
       sender_(event_loop_->MakeSender<examples::Ping>("/test")) {
 ```
 
-Here we create a sender for the `aos.examples.Ping` message on the `/test`
-channel. Senders need to be created before the EventLoop starts running. The
-`MakeSender` call will check for whether the requested channel actually exists
-in the AOS configuration, and die if no such channel is available. There is a
-`TryMakeSender` available for those situations where it makes sense to gate
-logic on the existence of a channel.
+Here we create a sender for the `aos.examples.Ping` message on the `/test` channel. Senders need to be created before the EventLoop starts running. The `MakeSender` call will check for whether the requested channel actually exists in the AOS configuration, and die if no such channel is available. There is a `TryMakeSender` available for those situations where it makes sense to gate logic on the existence of a channel.
 
 ```cpp
   timer_handle_ = event_loop_->AddTimer([this]() { SendPing(); });
   timer_handle_->set_name("ping");
 ```
 
-This creates a timer (and gives it a name, which is optional but helpful for
-debugging). Timers in AOS call callbacks (in this case a lambda that calls
-`SendPing();`) at requested times/intervals per the `Schedule` call (which is
-done below).
+This creates a timer (and gives it a name, which is optional but helpful for debugging). Timers in AOS call callbacks (in this case a lambda that calls `SendPing();`) at requested times/intervals per the `Schedule` call (which is done below).
 
 ```cpp
   event_loop_->MakeWatcher(
       "/test", [this](const examples::Pong &pong) { HandlePong(pong); });
 ```
 
-This sets up the `HandlePong()` method to be called every time a new message is
-received on the `/test` `aos.examples.Pong` channel.
+This sets up the `HandlePong()` method to be called every time a new message is received on the `/test` `aos.examples.Pong` channel.
 
 ```cpp
   event_loop_->OnRun([this]() {
@@ -533,20 +426,9 @@ received on the `/test` `aos.examples.Pong` channel.
   });
 ```
 
-This makes it so that, once execution starts on the EventLoop, the timer (which
-calls `SendPing`) will start getting called at the current time
-(`event_loop_->monotonic_now()`) and every `FLAGS_sleep_ms` milliseconds
-thereafter.
+This makes it so that, once execution starts on the EventLoop, the timer (which calls `SendPing`) will start getting called at the current time (`event_loop_->monotonic_now()`) and every `FLAGS_sleep_ms` milliseconds thereafter.
 
-`OnRun` can be called many times to register many handlers to be called when the
-`EventLoop` starts. The `OnRun` handler allows you to delay certain actions
-until execution is "actually" happening. In many real situations, there is
-little practical difference between just doing all your setup in the constructor
-of your class vs. in the `OnRun`. However, in situations where you do
-long-running initialization work in your constructor (e.g., you need to
-pre-seed a complex solver), it can be desirable to delay certain work until the
-EventLoop actually starts running. There are also some subtle differences in
-guarantees provided by the EventLoop when it is running vs. when it is not.
+`OnRun` can be called many times to register many handlers to be called when the `EventLoop` starts. The `OnRun` handler allows you to delay certain actions until execution is "actually" happening. In many real situations, there is little practical difference between just doing all your setup in the constructor of your class vs. in the `OnRun`. However, in situations where you do long-running initialization work in your constructor (e.g., you need to pre-seed a complex solver), it can be desirable to delay certain work until the EventLoop actually starts running. There are also some subtle differences in guarantees provided by the EventLoop when it is running vs. when it is not.
 
 <!-- TODO: Link to explain those "subtle differences" -->
 
@@ -562,13 +444,9 @@ void Ping::SendPing() {
 }
 ```
 
-Here we actually send out our Ping message. We use the various `MakeBuilder`
-methods and the resulting builders to construct a `Ping` message with a count
-and current time. We then actually send it out, checking to ensure that there
-were no errors encountered while attempting to send the message.
+Here we actually send out our Ping message. We use the various `MakeBuilder` methods and the resulting builders to construct a `Ping` message with a count and current time. We then actually send it out, checking to ensure that there were no errors encountered while attempting to send the message.
 
-See [FlatBuffers](flatbuffers.md) for more details on working with FlatBuffers in
-AOS.
+See [FlatBuffers](flatbuffers.md) for more details on working with FlatBuffers in AOS.
 
 ```cpp
 void Ping::HandlePong(const examples::Pong &pong) {
@@ -587,11 +465,7 @@ void Ping::HandlePong(const examples::Pong &pong) {
 }
 ```
 
-Here we handle each incoming Pong message, calculate the round-trip time and
-print it out only if the Pong message actually corresponds to our most
-recent Ping. Note that the `LOG(INFO)` is using
-[glog](https://github.com/google/glog#user-guide), a logging library used
-extensively throughout the AOS codebase.
+Here we handle each incoming Pong message, calculate the round-trip time and print it out only if the Pong message actually corresponds to our most recent Ping. Note that the `LOG(INFO)` is using [glog](https://github.com/google/glog#user-guide), a logging library used extensively throughout the AOS codebase.
 
 Finally, in order to build this we need a `cc_library` entry in our BUILD file:
 
@@ -613,13 +487,9 @@ cc_library(
 
 ### Writing Tests for the Ping application
 
-Because we are good Software Engineers, we must now write tests for the
-application we just created. In AOS, because of how the EventLoop interface is
-designed, we can readily create a simulated environment where all events and
-clocks progress deterministically.
+Because we are good Software Engineers, we must now write tests for the application we just created. In AOS, because of how the EventLoop interface is designed, we can readily create a simulated environment where all events and clocks progress deterministically.
 
-To test the `Ping` class, we can write a `ping_lib_test.cc` using
-[gtest](http://google.github.io/googletest/) that looks like:
+To test the `Ping` class, we can write a `ping_lib_test.cc` using [gtest](http://google.github.io/googletest/) that looks like:
 
 ```cpp
 #include "foo/ping_lib.h"
@@ -694,12 +564,9 @@ TEST_F(PingPongTest, SendsPings) {
 }  // namespace aos::testing
 ```
 
-Let us know if having the comments explaining the code inline works better or
-worse than having it broken out into its own text like the previous code
-snippets.
+Let us know if having the comments explaining the code inline works better or worse than having it broken out into its own text like the previous code snippets.
 
-And then, in order to actually execute the test, we need to create a `cc_test`
-target in our BUILD file:
+And then, in order to actually execute the test, we need to create a `cc_test` target in our BUILD file:
 
 ```
 cc_test(
@@ -715,9 +582,7 @@ cc_test(
 )
 ```
 
-Note that for files that are used by the test when it is executing (namely, the
-config file), we need to add them to the `data` entry of the test rule rather
-than to the `deps` (which are the C++ dependencies needed by the compiler).
+Note that for files that are used by the test when it is executing (namely, the config file), we need to add them to the `data` entry of the test rule rather than to the `deps` (which are the C++ dependencies needed by the compiler).
 
 We can then run the test by doing
 
@@ -727,8 +592,7 @@ bazel test //foo:ping_lib_test
 
 ### Writing the Ping main()
 
-In order to create a `ping` binary that can actually be run on a real system, we
-will create a `ping.cc`:
+In order to create a `ping` binary that can actually be run on a real system, we will create a `ping.cc`:
 
 ```cpp
 #include "aos/configuration.h"
@@ -765,9 +629,7 @@ int main(int argc, char **argv) {
 }
 ```
 
-Essentially all of this code is boilerplate that you will see in most binaries.
-There are sometimes minor variations, but ideally as much code as possible is in
-the actual library code where it can be tested.
+Essentially all of this code is boilerplate that you will see in most binaries. There are sometimes minor variations, but ideally as much code as possible is in the actual library code where it can be tested.
 
 We will also need a `cc_binary` bazel target to build:
 
@@ -786,14 +648,11 @@ cc_binary(
 )
 ```
 
-Note that we add a `data` dependency on the AOS config. This makes it so that
-when we do `bazel run //foo:ping`, bazel will ensure that the AOS config is
-built and available to the `ping` binary at runtime.
+Note that we add a `data` dependency on the AOS config. This makes it so that when we do `bazel run //foo:ping`, bazel will ensure that the AOS config is built and available to the `ping` binary at runtime.
 
 ### Defining the Pong application
 
-We will not go over Pong in as much detail, and instead just provided the
-suggested contents of the `pong_lib.h`, `pong_lib.cc`, and `pong.cc`:
+We will not go over Pong in as much detail, and instead just provided the suggested contents of the `pong_lib.h`, `pong_lib.cc`, and `pong.cc`:
 
 `pong_lib.h`:
 
@@ -853,9 +712,7 @@ Pong::Pong(EventLoop *event_loop)
 
 `pong.cc`:
 
-Should be identical to `ping.cc`, except for including a using `pong_lib.h` and
-`Pong` instead of `ping_lib.h` and `Ping`. Making these changes is left as an
-exercise to the reader.
+Should be identical to `ping.cc`, except for including a using `pong_lib.h` and `Pong` instead of `ping_lib.h` and `Ping`. Making these changes is left as an exercise to the reader.
 
 And the following BUILD file entries should be created:
 
@@ -887,21 +744,14 @@ cc_binary(
 
 ### Running our applications "for real"
 
-We are now in a state where we have all the pieces we need to actually run the
-ping and pong applications. We just need to get everything coordinated to
-actually run them. Note that in a real system, you would typically have
-some build rules and scripts that manage deploying everything---here,
-we will just manually build and run things to get them working.
+We are now in a state where we have all the pieces we need to actually run the ping and pong applications. We just need to get everything coordinated to actually run them. Note that in a real system, you would typically have some build rules and scripts that manage deploying everything---here, we will just manually build and run things to get them working.
 
 Let us open three separate terminals, and in the first two run:
 
 1. `bazel run //foo:ping`
 2. `bazel run //foo:pong`
 
-We should immediately see the `ping` terminal printing to `stderr` for every
-pong message it is receiving. If we want to actually see the message flow
-itself, we can use the `aos_dump` utility to view raw messages on individual
-channels in the third terminal:
+We should immediately see the `ping` terminal printing to `stderr` for every pong message it is receiving. If we want to actually see the message flow itself, we can use the `aos_dump` utility to view raw messages on individual channels in the third terminal:
 
 ```bash
 # Ensure that aos_dump and the config are both built and in the Bazel cache.
@@ -909,26 +759,18 @@ bazel build //aos:aos_dump //foo:pingpong_config
 bazel-bin/aos/aos_dump --config=bazel-bin/foo/pingpong_config.json
 ```
 
-`aos_dump` with no extra arguments (beyond the config, which we only need
-because we are in a special case) will print a list of available channels. You
-can either manually copy the channels or just use tab completion to specify a
-channel to watch:
+`aos_dump` with no extra arguments (beyond the config, which we only need because we are in a special case) will print a list of available channels. You can either manually copy the channels or just use tab completion to specify a channel to watch:
 
 ```
 bazel-bin/aos/aos_dump --config=bazel-bin/foo/pingpong_config.json /test aos.examples.Ping
 ```
 
-And you now have a simple, running, AOS application! There are lots of things
-that this hasn't covered, but hopefully it has provided a basic overview of how
-to get things working.
+And you now have a simple, running, AOS application! There are lots of things that this hasn't covered, but hopefully it has provided a basic overview of how to get things working.
 
 ## Realtime System Configuration
 
-In order to be able to run all the AOS tests, as well as to be able to work with
-running realtime code locally (or on a test target), you should add the
-following lines to `/etc/security/limits.d/rt.conf`, replacing "USERNAME"
-with the username you're running under.  You'll probably need to do this as
-root, e.g., `sudo nano /etc/security/limits.d/rt.conf`
+In order to be able to run all the AOS tests, as well as to be able to work with running realtime code locally (or on a test target), you should add the following lines to `/etc/security/limits.d/rt.conf`, replacing "USERNAME" with the username you're running under. You'll probably need to do this as root, e.g., `sudo nano /etc/security/limits.d/rt.conf`
+
 ```
 USERNAME - nice -20
 USERNAME - rtprio 95
@@ -936,20 +778,17 @@ USERNAME - memlock unlimited
 ```
 
 If you prefer to just run a single command, then
+
 ```
 echo -e "${USER} - nice -20\n${USER} - rtprio 95\n${USER} - memlock unlimited" | sudo tee /etc/security/limits.d/rt.conf
 ```
+
 should also work.
 
-In order for these changes to take effect, you will need to reboot your machine
-(strictly speaking, you only need a new session, which can be done by, e.g.,
-logging out and logging back in, or by creating a new ssh session). Confirm that
-the limits have taken effect using `ulimit -a`.
+In order for these changes to take effect, you will need to reboot your machine (strictly speaking, you only need a new session, which can be done by, e.g., logging out and logging back in, or by creating a new ssh session). Confirm that the limits have taken effect using `ulimit -a`.
 
 [github]: https://github.com/RealtimeRoboticsGroup/aos
 [flatbuffer_cc_library]: https://github.com/google/flatbuffers/blob/eeb49c275776fe7948370a0f7a4dd644a2c5f7a8/build_defs.bzl#L141
 [reflection_fbs]: https://github.com/google/flatbuffers/blob/master/reflection/reflection.fbs
-[^paths]: Note that `//` refers to the root of the current repository in Bazel.
-          In some places, we will also use this syntax to refer to paths in the
-          repository, to be clear that we are referencing a path relative to
-          the root of the repository.
+
+[^paths]: Note that `//` refers to the root of the current repository in Bazel. In some places, we will also use this syntax to refer to paths in the repository, to be clear that we are referencing a path relative to the root of the repository.

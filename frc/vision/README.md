@@ -34,9 +34,9 @@ root[2] orin-4646-1 /home/pi
 
 ## Intrinsics Calibration
 
-Intrinsics calibration *can* be run just on the Orin. However, it tends to
+Intrinsics calibration _can_ be run just on the Orin. However, it tends to
 be significantly faster to run it first on the Orin, then scp the calibration
-images off and let the actual *solve* run on a host laptop (the
+images off and let the actual _solve_ run on a host laptop (the
 calibration consists first of collecting 50 images, then of running a solver
 against said images; the Orin CPU tends to be very slow at the solve portion).
 
@@ -48,17 +48,18 @@ $ intrinsics_calibration --base_intrinsics bin/base_intrinsics/calibration_orin1
 ```
 
 Notes to be aware of:
-* Use a base intrinsics for a camera that *matches* the resolution of your
+
+- Use a base intrinsics for a camera that _matches_ the resolution of your
   camera. Otherwise the calibration will tend to overly aggressively reject
   board detections.
-* Set the `--channel` based on what camera you are calibrating.
-* Set `--camera_id` to an ID you will use for the *physical* camera you are
+- Set the `--channel` based on what camera you are calibrating.
+- Set `--camera_id` to an ID you will use for the _physical_ camera you are
   calibrating.
-* Move around/rotate the board to persuade it to automatically capture images.
-* Once 50 images have been captured, press `q` to quit.
-* You need to turn on X11 forwarding (`-X` passed to `ssh`) to get a
+- Move around/rotate the board to persuade it to automatically capture images.
+- Once 50 images have been captured, press `q` to quit.
+- You need to turn on X11 forwarding (`-X` passed to `ssh`) to get a
   visualization.
-* The `--twenty_inch_large_board` corresponds to [this etsy
+- The `--twenty_inch_large_board` corresponds to [this etsy
   listing](https://etsy.com/listing/1820746969/charuco-calibration-target).
 
 If you wish to wait for the orin to complete calibration on its own (on the
@@ -67,6 +68,7 @@ in `frc/vision/constants/` and referenced in `frc/vision/constants.jinja2.json`.
 
 If you want to copy the images off and run intrinsics calibration on your
 machine, `scp` them back to your device and run:
+
 ```
 $ bazel run -c opt //frc/vision:intrinsics_calibration -- --base_intrinsics /home/austin/local/aos/frc/vision/constants/calibration_orin1-4646-0_cam-25-07_2025-02-18_13-23-39.json --channel=/camera0/gray --camera_id=[CAMERA ID] --grayscale --image_load_path=/tmp/[CAMERA ID]/ --twenty_inch_large_board --config=/home/austin/local/aos/bazel-bin/frc/vision/aos_config.bfbs --override_hostname=orin-4646-1
 ```
@@ -99,7 +101,7 @@ auto-exposure.
 
 The "proper" way to change and deploy changes to exposure is to modify the file
 in the code-base and then redeploy code. However, at events where there may not
-be anyone available who *can* deploy code, the following procedure may be
+be anyone available who _can_ deploy code, the following procedure may be
 followed:
 
 1. SSH onto the device: `ssh pi@10.18.68.101`.
@@ -120,7 +122,7 @@ followed:
 2. Select "Open a new connection".
 3. Use the "Foxglove WebSocket" option with a URL of `ws://10.18.68.101:8765`
    (substitution your team number as appropriate).
-4.  [Import](https://docs.foxglove.dev/docs/visualization/layouts#import-and-export) the Foxglove layout that we have at
+4. [Import](https://docs.foxglove.dev/docs/visualization/layouts#import-and-export) the Foxglove layout that we have at
    [`foxglove_camera_feeds.json`](foxglove_camera_feeds.json).
 
 You may need to close some of the camera feeds to reduce bandwidth load.
@@ -134,11 +136,13 @@ It assumes a 1600x1304 image, downsizing by a factor of 3 and cropping off the b
 The crop and resize and normalize is done in halide on the CPU to save GPU bandwidth.
 
 Export the model to onnx with:
+
 ```
 yolo export model=~/local/frc4646/yolo/runs/detect/train21/weights/best.pt format="onnx" imgsz=[416,512] data=../../coral.yaml
 ```
 
 Then convert it to the required tensorrt engine on the ORIN by runing:
+
 ```
 /usr/src/tensorrt/bin/trtexec --fp16 --onnx=best.onnx --saveEngine=best416x.engine --useSpinWait --noDataTransfer --useCudaGraph
 ```

@@ -11,13 +11,9 @@
  *  - https://github.com/angular/angular-cli/blob/14.0.5/packages/angular_devkit/build_angular/src/babel/webpack-loader.ts#L97-L114
  */
 
-import { transformFileAsync } from '@babel/core';
-import {
-  ConsoleLogger,
-  NodeJSFileSystem,
-  LogLevel,
-} from '@angular/compiler-cli';
-import { createEs2015LinkerPlugin } from '@angular/compiler-cli/linker/babel';
+import {transformFileAsync} from '@babel/core';
+import {ConsoleLogger, NodeJSFileSystem, LogLevel} from '@angular/compiler-cli';
+import {createEs2015LinkerPlugin} from '@angular/compiler-cli/linker/babel';
 
 const linkerBabelPlugin = createEs2015LinkerPlugin({
   fileSystem: new NodeJSFileSystem(),
@@ -33,7 +29,7 @@ const linkerBabelPlugin = createEs2015LinkerPlugin({
 const ngLinkerPlugin = {
   name: 'ng-linker-esbuild',
   setup(build: any) {
-    build.onLoad({ filter: /node_modules/ }, async (args: any) => {
+    build.onLoad({filter: /node_modules/}, async (args: any) => {
       const filePath = args.path;
       const transformResult = await transformFileAsync(filePath, {
         filename: filePath,
@@ -47,7 +43,7 @@ const ngLinkerPlugin = {
         throw new Error('Babel NG Linker error');
       }
 
-      return { contents: transformResult.code };
+      return {contents: transformResult.code};
     });
   },
 };

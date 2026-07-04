@@ -27,6 +27,7 @@ The labels are "normalized". That means the entries in the requirements files ma
 2. Replace all dots and dashes with underscores.
 
 For example:
+
 - `Jinja2` becomes `@pip_deps//jinja2`.
 - `absl-py` becomes `@pip_deps//absl_py`.
 - `Flask-SQLAlchemy` becomes `@pip_deps//flask_sqlalchemy`.
@@ -38,11 +39,13 @@ For example:
 2.  Run the lock file generation script for the corresponding requirement set:
 
     To update core dependencies:
+
     ```bash
     bazel run --run_under=//tools/python:update_helper //tools/python:requirements.update
     ```
 
     To update AOS dependencies:
+
     ```bash
     bazel run --run_under=//tools/python:update_helper //tools/python:aos_requirements.update
     ```

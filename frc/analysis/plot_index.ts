@@ -25,7 +25,7 @@ import {plotDemo} from '../../aos/network/www/demo_plot';
 import {Connection} from '../../aos/network/www/proxy';
 import {plotDownEstimator} from '../control_loops/drivetrain/down_estimator_plotter';
 import {plotDrivetrain} from '../control_loops/drivetrain/drivetrain_plotter';
-import {plotRobotState} from '../control_loops/drivetrain/robot_state_plotter'
+import {plotRobotState} from '../control_loops/drivetrain/robot_state_plotter';
 import {plotSpline} from '../control_loops/drivetrain/spline_plotter';
 import {plotImu} from '../wpilib/imu_plotter';
 
@@ -36,17 +36,17 @@ document.body.appendChild(rootDiv);
 const helpDiv = document.createElement('div');
 rootDiv.appendChild(helpDiv);
 helpDiv.innerHTML =
-    'Help: click + drag to pan, double click to reset, scroll to zoom, ' +
-    'right-click + drag to zoom to rectangle, Esc to cancel. ' +
-    'Hold the x/y keys to only pan/zoom along the x/y axes.';
+  'Help: click + drag to pan, double click to reset, scroll to zoom, ' +
+  'right-click + drag to zoom to rectangle, Esc to cancel. ' +
+  'Hold the x/y keys to only pan/zoom along the x/y axes.';
 
 class PlotState {
   public readonly div: HTMLElement;
   private initialized = false;
   constructor(
-      parentDiv: HTMLElement,
-      private readonly initializer:
-          (conn: Connection, element: Element) => void) {
+    parentDiv: HTMLElement,
+    private readonly initializer: (conn: Connection, element: Element) => void
+  ) {
     this.div = document.createElement('div');
     parentDiv.appendChild(this.div);
     this.hide();
@@ -58,10 +58,10 @@ class PlotState {
     }
   }
   hide(): void {
-    this.div.style.display = "none";
+    this.div.style.display = 'none';
   }
   show(): void {
-    this.div.style.display = "block";
+    this.div.style.display = 'block';
   }
 }
 
@@ -89,7 +89,7 @@ const plotIndex = new Map<string, PlotState>([
 
 const invalidSelectValue = 'null';
 function getDefaultPlot(): string {
-  const urlParams = (new URL(document.URL)).searchParams;
+  const urlParams = new URL(document.URL).searchParams;
   const urlParamKey = 'plot';
   if (!urlParams.has(urlParamKey)) {
     return invalidSelectValue;
@@ -108,7 +108,7 @@ let reloadOnChange = false;
 conn.connect();
 
 conn.addConfigHandler((config: Configuration) => {
-  plotSelect.add(new Option("Select Plot", invalidSelectValue));
+  plotSelect.add(new Option('Select Plot', invalidSelectValue));
   for (const name of plotIndex.keys()) {
     plotSelect.add(new Option(name, name));
   }
@@ -123,7 +123,10 @@ conn.addConfigHandler((config: Configuration) => {
     plotIndex.get(plotSelect.value).show();
     // Set the URL so that if you reload you get back to this plot.
     window.history.replaceState(
-        null, null, '?plot=' + encodeURIComponent(plotSelect.value));
+      null,
+      null,
+      '?plot=' + encodeURIComponent(plotSelect.value)
+    );
     if (reloadOnChange) {
       window.location.reload();
     }

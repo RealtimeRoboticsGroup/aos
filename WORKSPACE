@@ -633,12 +633,6 @@ http_archive(
 
 http_archive(
     name = "bazel_gazelle",
-    patch_args = [
-        "-p1",
-    ],
-    patches = [
-        "@aos//third_party:bazel-gazelle/0001-Fix-visibility-of-gazelle-runner.patch",
-    ],
     sha256 = "49d9eba309b0b695824ff417d734242824ad9ab5edb56063b9d3400df1a61a56",
     urls = [
         "https://mirror.bazel.build/github.com/bazel-contrib/bazel-gazelle/releases/download/v0.51.3/bazel-gazelle-v0.51.3.tar.gz",
@@ -690,4 +684,16 @@ hedron_compile_commands_setup()
 local_repository(
     name = "mock_external_fbs_repo",
     path = "aos/flatbuffers/test_dir/mock_external_fbs_repo",
+)
+
+# Stub repositories for loading Bzlmod-only dependencies in WORKSPACE mode.
+# Under Bzlmod, these are overridden by the real dependencies defined in MODULE.bazel.
+local_repository(
+    name = "rules_multirun",
+    path = "tools/workspace_stubs/rules_multirun",
+)
+
+local_repository(
+    name = "aspect_rules_lint",
+    path = "tools/workspace_stubs/aspect_rules_lint",
 )

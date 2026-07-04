@@ -118,6 +118,12 @@ build:linux --strategy=NpmLifecycleHook=remote,sandboxed,standalone
 build:macos --strategy=NpmLifecycleHook=remote,sandboxed,standalone
 build:windows --strategy=NpmLifecycleHook=remote,standalone,local
 
+# Some tests (like gazelle_test) require standalone local execution to access the
+# workspace directories, or need standalone fallback on CI environments where
+# the linux-sandbox execution strategy is not supported.
+build:linux --strategy=TestRunner=remote,sandboxed,standalone
+build:macos --strategy=TestRunner=remote,sandboxed,standalone
+
 # Honor the setting of `skipLibCheck` in the tsconfig.json file.
 # https://www.typescriptlang.org/tsconfig#skipLibCheck
 build --@aspect_rules_ts//ts:skipLibCheck=honor_tsconfig

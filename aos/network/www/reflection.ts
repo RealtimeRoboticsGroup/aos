@@ -99,7 +99,7 @@ function isInteger(baseType: reflection.BaseType): boolean {
 // special type, since the native number type is an 8-byte double, which won't
 // represent 8-byte integers to full precision).
 function isLong(baseType: reflection.BaseType): boolean {
-  return isInteger(baseType) && (typeSize(baseType) > 4);
+  return isInteger(baseType) && typeSize(baseType) > 4;
 }
 
 // Stores the data associated with a Table within a given buffer.
@@ -114,16 +114,21 @@ export class Table {
   // Schema object.
   // External users should generally not be using this constructor directly.
   constructor(
-      public readonly bb: ByteBuffer,
-      public readonly typeIndex: number, public readonly offset: number) {}
+    public readonly bb: ByteBuffer,
+    public readonly typeIndex: number,
+    public readonly offset: number
+  ) {}
   // Constructs a Table object for the root of a ByteBuffer--this assumes that
   // the type of the Table is the root table of the Parser that you are using.
   static getRootTable(bb: ByteBuffer): Table {
     return new Table(bb, -1, bb.readInt32(bb.position()) + bb.position());
   }
   static getNamedTable(
-      bb: ByteBuffer, schema: reflection.Schema, type: string,
-      offset: number): Table {
+    bb: ByteBuffer,
+    schema: reflection.Schema,
+    type: string,
+    offset: number
+  ): Table {
     for (let ii = 0; ii < schema.objectsLength(); ++ii) {
       if (schema.objects(ii).name() == type) {
         return new Table(bb, ii, offset);
@@ -160,7 +165,7 @@ export class Table {
     }
     throw new Error('Unsupported message type ' + fieldType);
   }
-};
+}
 
 // The Parser class uses a Schema to provide all the utilities required to
 // parse flatbuffers that have a type that is the same as the root_type defined
@@ -226,7 +231,8 @@ export class Parser {
         }
       } else {
         throw new Error(
-            'Unions and Arrays are not supported in field ' + field.name());
+          'Unions and Arrays are not supported in field ' + field.name()
+        );
       }
       if (fieldValue !== null) {
         result[field.name()] = fieldValue;
@@ -241,7 +247,7 @@ export class Parser {
       return this.schema.rootTable();
     }
     if (typeIndex < 0 || typeIndex > this.schema.objectsLength()) {
-      throw new Error("Type index out-of-range.");
+      throw new Error('Type index out-of-range.');
     }
     return this.schema.objects(typeIndex);
   }
@@ -259,8 +265,8 @@ export class Parser {
       }
     }
     throw new Error(
-        'Couldn\'t find field ' + fieldName + ' in object ' + schema.name() +
-        '.');
+      "Couldn't find field " + fieldName + ' in object ' + schema.name() + '.'
+    );
   }
 
   // Reads a scalar with the given field name from a Table. If readDefaults
@@ -268,18 +274,26 @@ export class Parser {
   // readDefaults is true and the field is unset, we will look-up the default
   // value for the field and return that.
   // For 64-bit fields, returns a flatbuffer Long rather than a standard number.
-  readScalar(table: Table, fieldName: string, readDefaults: boolean = false):
-      number|BigInt|null {
+  readScalar(
+    table: Table,
+    fieldName: string,
+    readDefaults: boolean = false
+  ): number | BigInt | null {
     return this.readScalarLambda(
-        table.typeIndex, fieldName, readDefaults)(table);
+      table.typeIndex,
+      fieldName,
+      readDefaults
+    )(table);
   }
   // Like readScalar(), except that this returns an accessor for the specified
   // field, rather than the value of the field itself.
   // Note that the *Lambda() methods take a typeIndex instead of a Table, which
   // can be obtained using table.typeIndex.
   readScalarLambda(
-      typeIndex: number, fieldName: string,
-      readDefaults: boolean = false): (t: Table) => number | BigInt | null {
+    typeIndex: number,
+    fieldName: string,
+    readDefaults: boolean = false
+  ): (t: Table) => number | BigInt | null {
     const field = this.getField(fieldName, typeIndex);
     const fieldType = field.type();
     const isStruct = this.getType(typeIndex).isStruct();
@@ -311,22 +325,22 @@ export class Parser {
   }
   // Reads a string with the given field name from the provided Table.
   // If the field is unset, returns null.
-  readString(table: Table, fieldName: string): string|null {
+  readString(table: Table, fieldName: string): string | null {
     return this.readStringLambda(table.typeIndex, fieldName)(table);
   }
 
-  readStringLambda(typeIndex: number, fieldName: string):
-      (t: Table) => string | null {
+  readStringLambda(
+    typeIndex: number,
+    fieldName: string
+  ): (t: Table) => string | null {
     const field = this.getField(fieldName, typeIndex);
     const fieldType = field.type();
     if (fieldType.baseType() !== reflection.BaseType.String) {
       throw new Error('Field ' + fieldName + ' is not a string.');
     }
 
-
     return (t: Table) => {
-      const offsetToOffset =
-          t.offset + t.bb.__offset(t.offset, field.offset());
+      const offsetToOffset = t.offset + t.bb.__offset(t.offset, field.offset());
       if (offsetToOffset === t.offset) {
         return null;
       }
@@ -335,10 +349,13 @@ export class Parser {
   }
   // Reads a sub-message from the given Table. The sub-message may either be
   // a struct or a Table. Returns null if the sub-message is not set.
-  readTable(table: Table, fieldName: string): Table|null {
+  readTable(table: Table, fieldName: string): Table | null {
     return this.readTableLambda(table.typeIndex, fieldName)(table);
   }
-  readTableLambda(typeIndex: number, fieldName: string): (t: Table) => Table|null {
+  readTableLambda(
+    typeIndex: number,
+    fieldName: string
+  ): (t: Table) => Table | null {
     const field = this.getField(fieldName, typeIndex);
     const fieldType = field.type();
     const parentIsStruct = this.getType(typeIndex).isStruct();
@@ -356,24 +373,30 @@ export class Parser {
 
     return (table: Table) => {
       const offsetToOffset =
-          table.offset + table.bb.__offset(table.offset, field.offset());
+        table.offset + table.bb.__offset(table.offset, field.offset());
       if (offsetToOffset === table.offset) {
         return null;
       }
 
-      const objectStart = elementIsStruct ? offsetToOffset :
-                                            table.bb.__indirect(offsetToOffset);
+      const objectStart = elementIsStruct
+        ? offsetToOffset
+        : table.bb.__indirect(offsetToOffset);
       return new Table(table.bb, fieldType.index(), objectStart);
     };
   }
   // Reads a vector of scalars (like readScalar, may return a vector of BigInt's
   // instead). Also, will return null if the vector is not set.
-  readVectorOfScalars(table: Table, fieldName: string): number[]|BigInt[]|null {
+  readVectorOfScalars(
+    table: Table,
+    fieldName: string
+  ): number[] | BigInt[] | null {
     return this.readVectorOfScalarsLambda(table.typeIndex, fieldName)(table);
   }
 
-  readVectorOfScalarsLambda(typeIndex: number, fieldName: string):
-      (t: Table) => number[] | BigInt[] | null {
+  readVectorOfScalarsLambda(
+    typeIndex: number,
+    fieldName: string
+  ): (t: Table) => number[] | BigInt[] | null {
     const field = this.getField(fieldName, typeIndex);
     const fieldType = field.type();
     if (fieldType.baseType() !== reflection.BaseType.Vector) {
@@ -385,7 +408,7 @@ export class Parser {
 
     return (table: Table) => {
       const offsetToOffset =
-          table.offset + table.bb.__offset(table.offset, field.offset());
+        table.offset + table.bb.__offset(table.offset, field.offset());
       if (offsetToOffset === table.offset) {
         return null;
       }
@@ -394,18 +417,21 @@ export class Parser {
       const baseOffset = table.bb.__vector(offsetToOffset);
       const scalarSize = typeSize(fieldType.element());
       for (let ii = 0; ii < numElements; ++ii) {
-        result.push(table.readScalar(
-            fieldType.element(), baseOffset + scalarSize * ii));
+        result.push(
+          table.readScalar(fieldType.element(), baseOffset + scalarSize * ii)
+        );
       }
       return result;
     };
   }
   // Reads a vector of tables. Returns null if vector is not set.
-  readVectorOfTables(table: Table, fieldName: string): Table[]|null {
+  readVectorOfTables(table: Table, fieldName: string): Table[] | null {
     return this.readVectorOfTablesLambda(table.typeIndex, fieldName)(table);
   }
-  readVectorOfTablesLambda(typeIndex: number, fieldName: string):
-      (t: Table) => Table[] | null {
+  readVectorOfTablesLambda(
+    typeIndex: number,
+    fieldName: string
+  ): (t: Table) => Table[] | null {
     const field = this.getField(fieldName, typeIndex);
     const fieldType = field.type();
     if (fieldType.baseType() !== reflection.BaseType.Vector) {
@@ -417,12 +443,13 @@ export class Parser {
 
     const elementSchema = this.getType(fieldType.index());
     const elementIsStruct = elementSchema.isStruct();
-    const elementSize = elementIsStruct ? elementSchema.bytesize() :
-                                          typeSize(fieldType.element());
+    const elementSize = elementIsStruct
+      ? elementSchema.bytesize()
+      : typeSize(fieldType.element());
 
     return (table: Table) => {
       const offsetToOffset =
-          table.offset + table.bb.__offset(table.offset, field.offset());
+        table.offset + table.bb.__offset(table.offset, field.offset());
       if (offsetToOffset === table.offset) {
         return null;
       }
@@ -431,20 +458,25 @@ export class Parser {
       const baseOffset = table.bb.__vector(offsetToOffset);
       for (let ii = 0; ii < numElements; ++ii) {
         const elementOffset = baseOffset + elementSize * ii;
-        result.push(new Table(
-            table.bb, fieldType.index(),
-            elementIsStruct ? elementOffset :
-                              table.bb.__indirect(elementOffset)));
+        result.push(
+          new Table(
+            table.bb,
+            fieldType.index(),
+            elementIsStruct ? elementOffset : table.bb.__indirect(elementOffset)
+          )
+        );
       }
       return result;
     };
   }
   // Reads a vector of strings. Returns null if not set.
-  readVectorOfStrings(table: Table, fieldName: string): string[]|null {
+  readVectorOfStrings(table: Table, fieldName: string): string[] | null {
     return this.readVectorOfStringsLambda(table.typeIndex, fieldName)(table);
   }
-  readVectorOfStringsLambda(typeIndex: number, fieldName: string):
-      (t: Table) => string[] | null {
+  readVectorOfStringsLambda(
+    typeIndex: number,
+    fieldName: string
+  ): (t: Table) => string[] | null {
     const field = this.getField(fieldName, typeIndex);
     const fieldType = field.type();
     if (fieldType.baseType() !== reflection.BaseType.Vector) {
@@ -456,7 +488,7 @@ export class Parser {
 
     return (table: Table) => {
       const offsetToOffset =
-          table.offset + table.bb.__offset(table.offset, field.offset());
+        table.offset + table.bb.__offset(table.offset, field.offset());
       if (offsetToOffset === table.offset) {
         return null;
       }

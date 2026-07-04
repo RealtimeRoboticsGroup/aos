@@ -1,23 +1,41 @@
 import {ByteBuffer} from 'flatbuffers';
 import {AosPlotter} from '../../../aos/network/www/aos_plotter';
-import {MessageHandler, TimestampedMessage} from '../../../aos/network/www/aos_plotter';
-import {BLUE, BROWN, CYAN, GREEN, PINK, RED, WHITE} from '../../../aos/network/www/colors';
+import {
+  MessageHandler,
+  TimestampedMessage,
+} from '../../../aos/network/www/aos_plotter';
+import {
+  BLUE,
+  BROWN,
+  CYAN,
+  GREEN,
+  PINK,
+  RED,
+  WHITE,
+} from '../../../aos/network/www/colors';
 import {Connection} from '../../../aos/network/www/proxy';
 import {Table} from '../../../aos/network/www/reflection';
 import {Schema} from '@com_github_google_flatbuffers/reflection';
-import {Visualization, TargetEstimateDebug} from './visualization_ts_fbs/frc/vision/swerve-localizer';
-
+import {
+  Visualization,
+  TargetEstimateDebug,
+} from './visualization_ts_fbs/frc/vision/swerve-localizer';
 
 const TIME = AosPlotter.TIME;
 // magenta, yellow, cyan, black
-const PI_COLORS = [[255, 0, 255], [255, 255, 0], [0, 255, 255], [0, 0, 0]];
+const PI_COLORS = [
+  [255, 0, 255],
+  [255, 255, 0],
+  [0, 255, 255],
+  [0, 0, 0],
+];
 
 class VisionMessageHandler extends MessageHandler {
   constructor(private readonly schema: Schema) {
     super(schema);
   }
 
-  private readScalar(table: Table, fieldName: string): number|BigInt|null {
+  private readScalar(table: Table, fieldName: string): number | BigInt | null {
     return this.parser.readScalar(table, fieldName);
   }
 
@@ -31,7 +49,11 @@ class VisionMessageHandler extends MessageHandler {
         continue;
       }
       const table = Table.getNamedTable(
-          target.bb, this.schema, 'frc.vision.swerve_localizer.TargetEstimateDebug', target.bb_pos);
+        target.bb,
+        this.schema,
+        'frc.vision.swerve_localizer.TargetEstimateDebug',
+        target.bb_pos
+      );
       this.messages.push(new TimestampedMessage(table, time));
     }
   }
@@ -44,15 +66,24 @@ export function plotVision(conn: Connection, element: Element): void {
   const targetLabels = [];
   for (const camera of ['camera0', 'camera1', 'camera2', 'camera3']) {
     targetLabels.push(camera);
-    targets.push(aosPlotter.addRawMessageSource(
-        '/' + camera + '/gray', 'frc.vision.swerve_localizer.Visualization',
+    targets.push(
+      aosPlotter.addRawMessageSource(
+        '/' + camera + '/gray',
+        'frc.vision.swerve_localizer.Visualization',
         new VisionMessageHandler(
-            conn.getSchema('frc.vision.swerve_localizer.Visualization'))));
+          conn.getSchema('frc.vision.swerve_localizer.Visualization')
+        )
+      )
+    );
   }
   const localizerStatus = aosPlotter.addMessageSource(
-      '/localizer', 'frc.vision.swerve_localizer.Status');
+    '/localizer',
+    'frc.vision.swerve_localizer.Status'
+  );
   const localizerOutput = aosPlotter.addMessageSource(
-      '/localizer', 'frc.controls.LocalizerOutput');
+    '/localizer',
+    'frc.controls.LocalizerOutput'
+  );
 
   const statsPlot = aosPlotter.addPlot(element);
   statsPlot.plot.getAxisLabels().setTitle('Statistics');
@@ -60,13 +91,13 @@ export function plotVision(conn: Connection, element: Element): void {
   statsPlot.plot.getAxisLabels().setYLabel('[bool, enum]');
 
   statsPlot
-      .addMessageLine(localizerStatus, ['statistics[]', 'total_accepted'])
-      .setDrawLine(false)
-      .setColor(BLUE);
+    .addMessageLine(localizerStatus, ['statistics[]', 'total_accepted'])
+    .setDrawLine(false)
+    .setColor(BLUE);
   statsPlot
-      .addMessageLine(localizerStatus, ['statistics[]', 'total_candidates'])
-      .setDrawLine(false)
-      .setColor(RED);
+    .addMessageLine(localizerStatus, ['statistics[]', 'total_candidates'])
+    .setDrawLine(false)
+    .setColor(RED);
 
   const rejectionPlot = aosPlotter.addPlot(element);
   rejectionPlot.plot.getAxisLabels().setTitle('Rejection Reasons');
@@ -74,10 +105,11 @@ export function plotVision(conn: Connection, element: Element): void {
   rejectionPlot.plot.getAxisLabels().setYLabel('[bool, enum]');
 
   for (let ii = 0; ii < targets.length; ++ii) {
-    rejectionPlot.addMessageLine(targets[ii], ['rejection_reason'])
-        .setDrawLine(false)
-        .setColor(PI_COLORS[ii])
-        .setLabel(targetLabels[ii]);
+    rejectionPlot
+      .addMessageLine(targets[ii], ['rejection_reason'])
+      .setDrawLine(false)
+      .setColor(PI_COLORS[ii])
+      .setLabel(targetLabels[ii]);
   }
 
   const xPlot = aosPlotter.addPlot(element);
@@ -86,14 +118,16 @@ export function plotVision(conn: Connection, element: Element): void {
   xPlot.plot.getAxisLabels().setYLabel('[m]');
 
   for (let ii = 0; ii < targets.length; ++ii) {
-    xPlot.addMessageLine(targets[ii], ['implied_robot_x'])
-        .setDrawLine(false)
-        .setColor(PI_COLORS[ii])
-        .setLabel(targetLabels[ii]);
-  }
-  xPlot.addMessageLine(localizerOutput, ['x'])
+    xPlot
+      .addMessageLine(targets[ii], ['implied_robot_x'])
       .setDrawLine(false)
-      .setColor(BLUE);
+      .setColor(PI_COLORS[ii])
+      .setLabel(targetLabels[ii]);
+  }
+  xPlot
+    .addMessageLine(localizerOutput, ['x'])
+    .setDrawLine(false)
+    .setColor(BLUE);
 
   const correctionXPlot = aosPlotter.addPlot(element);
   correctionXPlot.plot.getAxisLabels().setTitle('X Corrections');
@@ -101,10 +135,11 @@ export function plotVision(conn: Connection, element: Element): void {
   correctionXPlot.plot.getAxisLabels().setYLabel('[m]');
 
   for (let ii = 0; ii < targets.length; ++ii) {
-    correctionXPlot.addMessageLine(targets[ii], ['correction_x'])
-        .setDrawLine(false)
-        .setColor(PI_COLORS[ii])
-        .setLabel(targetLabels[ii]);
+    correctionXPlot
+      .addMessageLine(targets[ii], ['correction_x'])
+      .setDrawLine(false)
+      .setColor(PI_COLORS[ii])
+      .setLabel(targetLabels[ii]);
   }
 
   const yPlot = aosPlotter.addPlot(element);
@@ -113,14 +148,16 @@ export function plotVision(conn: Connection, element: Element): void {
   yPlot.plot.getAxisLabels().setYLabel('[m]');
 
   for (let ii = 0; ii < targets.length; ++ii) {
-    yPlot.addMessageLine(targets[ii], ['implied_robot_y'])
-        .setDrawLine(false)
-        .setColor(PI_COLORS[ii])
-        .setLabel(targetLabels[ii]);
-  }
-  yPlot.addMessageLine(localizerOutput, ['y'])
+    yPlot
+      .addMessageLine(targets[ii], ['implied_robot_y'])
       .setDrawLine(false)
-      .setColor(BLUE);
+      .setColor(PI_COLORS[ii])
+      .setLabel(targetLabels[ii]);
+  }
+  yPlot
+    .addMessageLine(localizerOutput, ['y'])
+    .setDrawLine(false)
+    .setColor(BLUE);
 
   const correctionYPlot = aosPlotter.addPlot(element);
   correctionYPlot.plot.getAxisLabels().setTitle('Y Corrections');
@@ -128,10 +165,11 @@ export function plotVision(conn: Connection, element: Element): void {
   correctionYPlot.plot.getAxisLabels().setYLabel('[m]');
 
   for (let ii = 0; ii < targets.length; ++ii) {
-    correctionYPlot.addMessageLine(targets[ii], ['correction_y'])
-        .setDrawLine(false)
-        .setColor(PI_COLORS[ii])
-        .setLabel(targetLabels[ii]);
+    correctionYPlot
+      .addMessageLine(targets[ii], ['correction_y'])
+      .setDrawLine(false)
+      .setColor(PI_COLORS[ii])
+      .setLabel(targetLabels[ii]);
   }
 
   const thetaPlot = aosPlotter.addPlot(element);
@@ -140,14 +178,16 @@ export function plotVision(conn: Connection, element: Element): void {
   thetaPlot.plot.getAxisLabels().setYLabel('[m]');
 
   for (let ii = 0; ii < targets.length; ++ii) {
-    thetaPlot.addMessageLine(targets[ii], ['implied_robot_theta'])
-        .setDrawLine(false)
-        .setColor(PI_COLORS[ii])
-        .setLabel(targetLabels[ii]);
-  }
-  thetaPlot.addMessageLine(localizerOutput, ['theta'])
+    thetaPlot
+      .addMessageLine(targets[ii], ['implied_robot_theta'])
       .setDrawLine(false)
-      .setColor(BLUE);
+      .setColor(PI_COLORS[ii])
+      .setLabel(targetLabels[ii]);
+  }
+  thetaPlot
+    .addMessageLine(localizerOutput, ['theta'])
+    .setDrawLine(false)
+    .setColor(BLUE);
 
   const correctionThetaPlot = aosPlotter.addPlot(element);
   correctionThetaPlot.plot.getAxisLabels().setTitle('Theta Corrections');
@@ -155,10 +195,11 @@ export function plotVision(conn: Connection, element: Element): void {
   correctionThetaPlot.plot.getAxisLabels().setYLabel('[rad]');
 
   for (let ii = 0; ii < targets.length; ++ii) {
-    correctionThetaPlot.addMessageLine(targets[ii], ['correction_theta'])
-        .setDrawLine(false)
-        .setColor(PI_COLORS[ii])
-        .setLabel(targetLabels[ii]);
+    correctionThetaPlot
+      .addMessageLine(targets[ii], ['correction_theta'])
+      .setDrawLine(false)
+      .setColor(PI_COLORS[ii])
+      .setLabel(targetLabels[ii]);
   }
 
   const aprilTagPlot = aosPlotter.addPlot(element);
@@ -167,10 +208,11 @@ export function plotVision(conn: Connection, element: Element): void {
   aprilTagPlot.plot.getAxisLabels().setYLabel('[id]');
 
   for (let ii = 0; ii < targets.length; ++ii) {
-    aprilTagPlot.addMessageLine(targets[ii], ['april_tag'])
-        .setDrawLine(false)
-        .setColor(PI_COLORS[ii])
-        .setLabel(targetLabels[ii]);
+    aprilTagPlot
+      .addMessageLine(targets[ii], ['april_tag'])
+      .setDrawLine(false)
+      .setColor(PI_COLORS[ii])
+      .setLabel(targetLabels[ii]);
   }
 
   const imageAgePlot = aosPlotter.addPlot(element);
@@ -179,9 +221,10 @@ export function plotVision(conn: Connection, element: Element): void {
   imageAgePlot.plot.getAxisLabels().setYLabel('[sec]');
 
   for (let ii = 0; ii < targets.length; ++ii) {
-    imageAgePlot.addMessageLine(targets[ii], ['image_age_sec'])
-        .setDrawLine(false)
-        .setColor(PI_COLORS[ii])
-        .setLabel(targetLabels[ii]);
+    imageAgePlot
+      .addMessageLine(targets[ii], ['image_age_sec'])
+      .setDrawLine(false)
+      .setColor(PI_COLORS[ii])
+      .setLabel(targetLabels[ii]);
   }
 }

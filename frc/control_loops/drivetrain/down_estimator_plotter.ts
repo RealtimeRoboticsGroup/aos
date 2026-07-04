@@ -2,7 +2,15 @@
 import {AosPlotter} from '../../../aos/network/www/aos_plotter';
 import {ImuMessageHandler} from '../../../frc/wpilib/imu_plot_utils';
 import * as proxy from '../../../aos/network/www/proxy';
-import {BLUE, BROWN, CYAN, GREEN, PINK, RED, WHITE} from '../../../aos/network/www/colors';
+import {
+  BLUE,
+  BROWN,
+  CYAN,
+  GREEN,
+  PINK,
+  RED,
+  WHITE,
+} from '../../../aos/network/www/colors';
 
 import Connection = proxy.Connection;
 
@@ -12,23 +20,42 @@ export function plotDownEstimator(conn: Connection, element: Element): void {
   const aosPlotter = new AosPlotter(conn);
 
   const status = aosPlotter.addMessageSource(
-      '/localizer', 'frc.controls.LocalizerStatus');
+    '/localizer',
+    'frc.controls.LocalizerStatus'
+  );
 
   const imu = aosPlotter.addRawMessageSource(
-      '/localizer', 'frc.IMUValuesBatch',
-      new ImuMessageHandler(conn.getSchema('frc.IMUValuesBatch')));
+    '/localizer',
+    'frc.IMUValuesBatch',
+    new ImuMessageHandler(conn.getSchema('frc.IMUValuesBatch'))
+  );
 
   const accelPlot = aosPlotter.addPlot(element, [width, height]);
-  accelPlot.plot.getAxisLabels().setTitle(
-      'Estimated Accelerations (x = forward, y = lateral, z = vertical)');
+  accelPlot.plot
+    .getAxisLabels()
+    .setTitle(
+      'Estimated Accelerations (x = forward, y = lateral, z = vertical)'
+    );
   accelPlot.plot.getAxisLabels().setYLabel('Acceleration (m/s/s)');
   accelPlot.plot.getAxisLabels().setXLabel('Monotonic Reading Time (sec)');
 
-  const accelX = accelPlot.addMessageLine(status, ['model_based', 'down_estimator', 'accel_x']);
+  const accelX = accelPlot.addMessageLine(status, [
+    'model_based',
+    'down_estimator',
+    'accel_x',
+  ]);
   accelX.setColor(RED);
-  const accelY = accelPlot.addMessageLine(status, ['model_based', 'down_estimator', 'accel_y']);
+  const accelY = accelPlot.addMessageLine(status, [
+    'model_based',
+    'down_estimator',
+    'accel_y',
+  ]);
   accelY.setColor(GREEN);
-  const accelZ = accelPlot.addMessageLine(status, ['model_based', 'down_estimator', 'accel_z']);
+  const accelZ = accelPlot.addMessageLine(status, [
+    'model_based',
+    'down_estimator',
+    'accel_z',
+  ]);
   accelZ.setColor(BLUE);
 
   const velPlot = aosPlotter.addPlot(element, [width, height]);
@@ -36,42 +63,66 @@ export function plotDownEstimator(conn: Connection, element: Element): void {
   velPlot.plot.getAxisLabels().setYLabel('Velocity (m/s)');
   velPlot.plot.getAxisLabels().setXLabel('Monotonic Reading Time (sec)');
 
-  const velX = velPlot.addMessageLine(status, ['model_based', 'down_estimator', 'velocity_x']);
+  const velX = velPlot.addMessageLine(status, [
+    'model_based',
+    'down_estimator',
+    'velocity_x',
+  ]);
   velX.setColor(RED);
-  const velY = velPlot.addMessageLine(status, ['model_based', 'down_estimator', 'velocity_y']);
+  const velY = velPlot.addMessageLine(status, [
+    'model_based',
+    'down_estimator',
+    'velocity_y',
+  ]);
   velY.setColor(GREEN);
-  const velZ = velPlot.addMessageLine(status, ['model_based', 'down_estimator', 'velocity_z']);
+  const velZ = velPlot.addMessageLine(status, [
+    'model_based',
+    'down_estimator',
+    'velocity_z',
+  ]);
   velZ.setColor(BLUE);
 
   const gravityPlot = aosPlotter.addPlot(element, [width, height]);
   gravityPlot.plot.getAxisLabels().setTitle('Accelerometer Magnitudes');
   gravityPlot.plot.getAxisLabels().setXLabel('Monotonic Sent Time (sec)');
   gravityPlot.plot.setDefaultYRange([0.95, 1.05]);
-  const gravityLine =
-      gravityPlot.addMessageLine(status, ['model_based', 'down_estimator', 'gravity_magnitude']);
+  const gravityLine = gravityPlot.addMessageLine(status, [
+    'model_based',
+    'down_estimator',
+    'gravity_magnitude',
+  ]);
   gravityLine.setColor(RED);
   gravityLine.setDrawLine(false);
-  const accelMagnitudeLine =
-      gravityPlot.addMessageLine(imu, ['acceleration_magnitude_filtered']);
+  const accelMagnitudeLine = gravityPlot.addMessageLine(imu, [
+    'acceleration_magnitude_filtered',
+  ]);
   accelMagnitudeLine.setColor(BLUE);
   accelMagnitudeLine.setLabel('Filtered Accel Magnitude (0.1 sec)');
   accelMagnitudeLine.setDrawLine(false);
 
-  const orientationPlot =
-      aosPlotter.addPlot(element, [width, height]);
+  const orientationPlot = aosPlotter.addPlot(element, [width, height]);
   orientationPlot.plot.getAxisLabels().setTitle('Orientation');
   orientationPlot.plot.getAxisLabels().setYLabel('Angle (rad)');
 
-  const roll = orientationPlot.addMessageLine(
-      status, ['model_based', 'down_estimator', 'lateral_pitch']);
+  const roll = orientationPlot.addMessageLine(status, [
+    'model_based',
+    'down_estimator',
+    'lateral_pitch',
+  ]);
   roll.setColor(RED);
   roll.setLabel('roll');
-  const pitch = orientationPlot.addMessageLine(
-      status, ['model_based', 'down_estimator', 'longitudinal_pitch']);
+  const pitch = orientationPlot.addMessageLine(status, [
+    'model_based',
+    'down_estimator',
+    'longitudinal_pitch',
+  ]);
   pitch.setColor(GREEN);
   pitch.setLabel('pitch');
-  const yaw = orientationPlot.addMessageLine(
-      status, ['model_based', 'down_estimator', 'yaw']);
+  const yaw = orientationPlot.addMessageLine(status, [
+    'model_based',
+    'down_estimator',
+    'yaw',
+  ]);
   yaw.setColor(BLUE);
   yaw.setLabel('yaw');
 
@@ -90,26 +141,41 @@ export function plotDownEstimator(conn: Connection, element: Element): void {
   imuAccelZ.setColor(BLUE);
   imuAccelZ.setDrawLine(false);
 
-  const imuAccelXFiltered = imuAccelPlot.addMessageLine(imu, ['accelerometer_x_filtered']);
+  const imuAccelXFiltered = imuAccelPlot.addMessageLine(imu, [
+    'accelerometer_x_filtered',
+  ]);
   imuAccelXFiltered.setColor(RED);
   imuAccelXFiltered.setPointSize(0);
-  const imuAccelYFiltered = imuAccelPlot.addMessageLine(imu, ['accelerometer_y_filtered']);
+  const imuAccelYFiltered = imuAccelPlot.addMessageLine(imu, [
+    'accelerometer_y_filtered',
+  ]);
   imuAccelYFiltered.setColor(GREEN);
   imuAccelYFiltered.setPointSize(0);
-  const imuAccelZFiltered = imuAccelPlot.addMessageLine(imu, ['accelerometer_z_filtered']);
+  const imuAccelZFiltered = imuAccelPlot.addMessageLine(imu, [
+    'accelerometer_z_filtered',
+  ]);
   imuAccelZFiltered.setColor(BLUE);
   imuAccelZFiltered.setPointSize(0);
 
-  const expectedAccelX = imuAccelPlot.addMessageLine(
-      status, ['model_based', 'down_estimator', 'expected_accel_x']);
+  const expectedAccelX = imuAccelPlot.addMessageLine(status, [
+    'model_based',
+    'down_estimator',
+    'expected_accel_x',
+  ]);
   expectedAccelX.setColor(RED);
   expectedAccelX.setPointSize(0);
-  const expectedAccelY = imuAccelPlot.addMessageLine(
-      status, ['model_based', 'down_estimator', 'expected_accel_y']);
+  const expectedAccelY = imuAccelPlot.addMessageLine(status, [
+    'model_based',
+    'down_estimator',
+    'expected_accel_y',
+  ]);
   expectedAccelY.setColor(GREEN);
   expectedAccelY.setPointSize(0);
-  const expectedAccelZ = imuAccelPlot.addMessageLine(
-      status, ['model_based', 'down_estimator', 'expected_accel_z']);
+  const expectedAccelZ = imuAccelPlot.addMessageLine(status, [
+    'model_based',
+    'down_estimator',
+    'expected_accel_z',
+  ]);
   expectedAccelZ.setColor(BLUE);
   expectedAccelZ.setPointSize(0);
 
@@ -118,18 +184,24 @@ export function plotDownEstimator(conn: Connection, element: Element): void {
   gyroPlot.plot.getAxisLabels().setYLabel('Angular Velocity (rad / sec)');
   gyroPlot.plot.getAxisLabels().setXLabel('Monotonic Reading Time (sec)');
 
-  const gyroZeroX =
-      gyroPlot.addMessageLine(status, ['zeroing', 'gyro_x_average']);
+  const gyroZeroX = gyroPlot.addMessageLine(status, [
+    'zeroing',
+    'gyro_x_average',
+  ]);
   gyroZeroX.setColor(RED);
   gyroZeroX.setPointSize(0);
   gyroZeroX.setLabel('Gyro X Zero');
-  const gyroZeroY =
-      gyroPlot.addMessageLine(status, ['zeroing', 'gyro_y_average']);
+  const gyroZeroY = gyroPlot.addMessageLine(status, [
+    'zeroing',
+    'gyro_y_average',
+  ]);
   gyroZeroY.setColor(GREEN);
   gyroZeroY.setPointSize(0);
   gyroZeroY.setLabel('Gyro Y Zero');
-  const gyroZeroZ =
-      gyroPlot.addMessageLine(status, ['zeroing', 'gyro_z_average']);
+  const gyroZeroZ = gyroPlot.addMessageLine(status, [
+    'zeroing',
+    'gyro_z_average',
+  ]);
   gyroZeroZ.setColor(BLUE);
   gyroZeroZ.setPointSize(0);
   gyroZeroZ.setLabel('Gyro Z Zero');
@@ -145,16 +217,17 @@ export function plotDownEstimator(conn: Connection, element: Element): void {
   statePlot.plot.getAxisLabels().setTitle('IMU State');
   statePlot.plot.getAxisLabels().setXLabel('Monotonic Sent Time (sec)');
 
-  const zeroedLine =
-      statePlot.addMessageLine(status, ['zeroing', 'zeroed']);
+  const zeroedLine = statePlot.addMessageLine(status, ['zeroing', 'zeroed']);
   zeroedLine.setColor(RED);
   zeroedLine.setDrawLine(false);
-  const consecutiveStill =
-      statePlot.addMessageLine(status, ['model_based', 'down_estimator', 'consecutive_still']);
+  const consecutiveStill = statePlot.addMessageLine(status, [
+    'model_based',
+    'down_estimator',
+    'consecutive_still',
+  ]);
   consecutiveStill.setColor(BLUE);
   consecutiveStill.setPointSize(0);
-  const faultedLine =
-  statePlot.addMessageLine(status, ['zeroing', 'faulted']);
+  const faultedLine = statePlot.addMessageLine(status, ['zeroing', 'faulted']);
   faultedLine.setColor(GREEN);
   faultedLine.setPointSize(0);
 }

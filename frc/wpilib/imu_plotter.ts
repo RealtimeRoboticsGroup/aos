@@ -16,11 +16,15 @@ export function plotImu(conn: Connection, element: Element): void {
   accelPlot.plot.getAxisLabels().setXLabel('Monotonic Reading Time (sec)');
 
   const drivetrainStatus = aosPlotter.addMessageSource(
-      '/drivetrain', 'frc.control_loops.drivetrain.Status');
+    '/drivetrain',
+    'frc.control_loops.drivetrain.Status'
+  );
 
   const imu = aosPlotter.addRawMessageSource(
-      '/localizer', 'frc.IMUValuesBatch',
-      new ImuMessageHandler(conn.getSchema('frc.IMUValuesBatch')));
+    '/localizer',
+    'frc.IMUValuesBatch',
+    new ImuMessageHandler(conn.getSchema('frc.IMUValuesBatch'))
+  );
 
   const accelX = accelPlot.addMessageLine(imu, ['accelerometer_x']);
   accelX.setColor([1, 0, 0]);
@@ -34,18 +38,24 @@ export function plotImu(conn: Connection, element: Element): void {
   gyroPlot.plot.getAxisLabels().setYLabel('Angular Velocity (rad / sec)');
   gyroPlot.plot.getAxisLabels().setXLabel('Monotonic Reading Time (sec)');
 
-  const gyroZeroX =
-      gyroPlot.addMessageLine(drivetrainStatus, ['zeroing', 'gyro_x_average']);
+  const gyroZeroX = gyroPlot.addMessageLine(drivetrainStatus, [
+    'zeroing',
+    'gyro_x_average',
+  ]);
   gyroZeroX.setColor([1, 0, 0]);
   gyroZeroX.setPointSize(0);
   gyroZeroX.setLabel('Gyro X Zero');
-  const gyroZeroY =
-      gyroPlot.addMessageLine(drivetrainStatus, ['zeroing', 'gyro_y_average']);
+  const gyroZeroY = gyroPlot.addMessageLine(drivetrainStatus, [
+    'zeroing',
+    'gyro_y_average',
+  ]);
   gyroZeroY.setColor([0, 1, 0]);
   gyroZeroY.setPointSize(0);
   gyroZeroY.setLabel('Gyro Y Zero');
-  const gyroZeroZ =
-      gyroPlot.addMessageLine(drivetrainStatus, ['zeroing', 'gyro_z_average']);
+  const gyroZeroZ = gyroPlot.addMessageLine(drivetrainStatus, [
+    'zeroing',
+    'gyro_z_average',
+  ]);
   gyroZeroZ.setColor([0, 0, 1]);
   gyroZeroZ.setPointSize(0);
   gyroZeroZ.setLabel('Gyro Z Zero');
@@ -69,12 +79,16 @@ export function plotImu(conn: Connection, element: Element): void {
   statePlot.plot.getAxisLabels().setXLabel('Monotonic Sent Time (sec)');
   statePlot.plot.setDefaultYRange([-0.1, 1.1]);
 
-  const zeroedLine =
-      statePlot.addMessageLine(drivetrainStatus, ['zeroing', 'zeroed']);
+  const zeroedLine = statePlot.addMessageLine(drivetrainStatus, [
+    'zeroing',
+    'zeroed',
+  ]);
   zeroedLine.setColor([1, 0, 0]);
   zeroedLine.setDrawLine(false);
-  const faultedLine =
-  statePlot.addMessageLine(drivetrainStatus, ['zeroing', 'faulted']);
+  const faultedLine = statePlot.addMessageLine(drivetrainStatus, [
+    'zeroing',
+    'faulted',
+  ]);
   faultedLine.setColor([0, 1, 0]);
   faultedLine.setPointSize(0);
 }

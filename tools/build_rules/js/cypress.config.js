@@ -15,7 +15,9 @@ export default defineConfig({
         launchOptions.args.push('--use-fake-ui-for-media-stream');
         launchOptions.args.push('--use-fake-device-for-media-stream');
         const fakeCameraVideo = `${process.env.TEST_UNDECLARED_OUTPUTS_DIR}/fake_camera.mjpeg`;
-        launchOptions.args.push(`--use-file-for-fake-video-capture=${fakeCameraVideo}`);
+        launchOptions.args.push(
+          `--use-file-for-fake-video-capture=${fakeCameraVideo}`
+        );
 
         return launchOptions;
       });

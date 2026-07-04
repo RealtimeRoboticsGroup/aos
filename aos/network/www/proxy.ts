@@ -1,18 +1,32 @@
 import {Builder, ByteBuffer, Offset} from 'flatbuffers';
-import {Channel as ChannelFb, Configuration} from '../../configuration_ts_fbs/aos';
-import {ChannelRequest as ChannelRequestFb, ChannelState, MessageHeader, Payload, SdpType, SubscriberRequest, TransferMethod, WebSocketIce, WebSocketMessage, WebSocketSdp} from '../web_proxy_ts_fbs/aos/web-proxy';
+import {
+  Channel as ChannelFb,
+  Configuration,
+} from '../../configuration_ts_fbs/aos';
+import {
+  ChannelRequest as ChannelRequestFb,
+  ChannelState,
+  MessageHeader,
+  Payload,
+  SdpType,
+  SubscriberRequest,
+  TransferMethod,
+  WebSocketIce,
+  WebSocketMessage,
+  WebSocketSdp,
+} from '../web_proxy_ts_fbs/aos/web-proxy';
 import {Schema} from '@com_github_google_flatbuffers/reflection';
 
 // There is one handler for each DataChannel, it maintains the state of
 // multi-part messages and delegates to a callback when the message is fully
 // assembled.
 export class Handler {
-  private dataBuffer: Uint8Array|null = null;
+  private dataBuffer: Uint8Array | null = null;
   private receivedMessageLength: number = 0;
   constructor(
-      private readonly handlerFunc:
-          (data: Uint8Array, sentTime: number) => void,
-      private readonly channel: RTCDataChannel) {
+    private readonly handlerFunc: (data: Uint8Array, sentTime: number) => void,
+    private readonly channel: RTCDataChannel
+  ) {
     channel.addEventListener('message', (e) => this.handleMessage(e));
   }
 
@@ -43,9 +57,7 @@ export class Handler {
     if (!messageHeader.dataLength()) {
       return;
     }
-    this.dataBuffer.set(
-        messageHeader.dataArray(),
-        this.receivedMessageLength);
+    this.dataBuffer.set(messageHeader.dataArray(), this.receivedMessageLength);
     this.receivedMessageLength += messageHeader.dataLength();
 
     if (messageHeader.packetIndex() === messageHeader.packetCount() - 1) {
@@ -57,30 +69,33 @@ export class Handler {
 class Channel {
   constructor(public readonly name: string, public readonly type: string) {}
   key(): string {
-    return this.name + "/" + this.type;
+    return this.name + '/' + this.type;
   }
 }
 
 class ChannelRequest {
   constructor(
-      public readonly channel: Channel,
-      public readonly transferMethod: TransferMethod) {}
+    public readonly channel: Channel,
+    public readonly transferMethod: TransferMethod
+  ) {}
 }
 
 // Analogous to the Connection class in //aos/network/web_proxy.h. Because most
 // of the apis are native in JS, it is much simpler.
 export class Connection {
-  private webSocketConnection: WebSocket|null = null;
-  private rtcPeerConnection: RTCPeerConnection|null = null;
-  private dataChannel: RTCDataChannel|null = null;
+  private webSocketConnection: WebSocket | null = null;
+  private rtcPeerConnection: RTCPeerConnection | null = null;
+  private dataChannel: RTCDataChannel | null = null;
   private webSocketUrl: string;
 
-  private configInternal: Configuration|null = null;
+  private configInternal: Configuration | null = null;
   // A set of functions that accept the config to handle.
   private readonly configHandlers = new Set<(config: Configuration) => void>();
 
-  private readonly handlerFuncs =
-      new Map<string, ((data: Uint8Array, sentTime: number) => void)[]>();
+  private readonly handlerFuncs = new Map<
+    string,
+    ((data: Uint8Array, sentTime: number) => void)[]
+  >();
   private readonly handlers = new Set<Handler>();
 
   private subscribedChannels: ChannelRequest[] = [];
@@ -99,24 +114,30 @@ export class Connection {
    * messages.
    */
   addReliableHandler(
-      name: string, type: string,
-      handler: (data: Uint8Array, sentTime: number) => void): void {
-    this.addHandlerImpl(
-        name, type, TransferMethod.LOSSLESS, handler);
+    name: string,
+    type: string,
+    handler: (data: Uint8Array, sentTime: number) => void
+  ): void {
+    this.addHandlerImpl(name, type, TransferMethod.LOSSLESS, handler);
   }
 
   /**
    * Add a handler for a specific message type.
    */
   addHandler(
-      name: string, type: string,
-      handler: (data: Uint8Array, sentTime: number) => void): void {
+    name: string,
+    type: string,
+    handler: (data: Uint8Array, sentTime: number) => void
+  ): void {
     this.addHandlerImpl(name, type, TransferMethod.SUBSAMPLE, handler);
   }
 
   addHandlerImpl(
-      name: string, type: string, method: TransferMethod,
-      handler: (data: Uint8Array, sentTime: number) => void): void {
+    name: string,
+    type: string,
+    method: TransferMethod,
+    handler: (data: Uint8Array, sentTime: number) => void
+  ): void {
     const channel = new Channel(name, type);
     const request = new ChannelRequest(channel, method);
     if (!this.handlerFuncs.has(channel.key())) {
@@ -124,8 +145,9 @@ export class Connection {
     } else {
       if (method == TransferMethod.LOSSLESS) {
         console.warn(
-            'Behavior of multiple reliable handlers is currently poorly ' +
-            'defined and may not actually deliver all of the messages.');
+          'Behavior of multiple reliable handlers is currently poorly ' +
+            'defined and may not actually deliver all of the messages.'
+        );
       }
     }
     this.handlerFuncs.get(channel.key()).push(handler);
@@ -150,7 +172,8 @@ export class Connection {
     this.subscribedChannels.push(channel);
     if (this.configInternal === null) {
       throw new Error(
-          'Must call subscribeToChannel after we\'ve received the config.');
+        "Must call subscribeToChannel after we've received the config."
+      );
     }
     const builder = new Builder(512);
     const channels: Offset[] = [];
@@ -167,8 +190,10 @@ export class Connection {
       channels.push(ChannelRequestFb.endChannelRequest(builder));
     }
 
-    const channelsFb =
-        SubscriberRequest.createChannelsToTransferVector(builder, channels);
+    const channelsFb = SubscriberRequest.createChannelsToTransferVector(
+      builder,
+      channels
+    );
     SubscriberRequest.startSubscriberRequest(builder);
     SubscriberRequest.addChannelsToTransfer(builder, channelsFb);
     const connect = SubscriberRequest.endSubscriberRequest(builder);
@@ -179,10 +204,12 @@ export class Connection {
   connect(): void {
     this.webSocketConnection = new WebSocket(this.webSocketUrl);
     this.webSocketConnection.binaryType = 'arraybuffer';
-    this.webSocketConnection.addEventListener(
-        'open', () => this.onWebSocketOpen());
-    this.webSocketConnection.addEventListener(
-        'message', (e) => this.onWebSocketMessage(e));
+    this.webSocketConnection.addEventListener('open', () =>
+      this.onWebSocketOpen()
+    );
+    this.webSocketConnection.addEventListener('message', (e) =>
+      this.onWebSocketMessage(e)
+    );
   }
 
   getConfig() {
@@ -218,9 +245,16 @@ export class Connection {
     const sdpMidString = builder.createString(candidate.sdpMid);
 
     const iceFb = WebSocketIce.createWebSocketIce(
-        builder, candidateString, sdpMidString, candidate.sdpMLineIndex);
+      builder,
+      candidateString,
+      sdpMidString,
+      candidate.sdpMLineIndex
+    );
     const messageFb = WebSocketMessage.createWebSocketMessage(
-        builder, Payload.WebSocketIce, iceFb);
+      builder,
+      Payload.WebSocketIce,
+      iceFb
+    );
     builder.finish(messageFb);
     const array = builder.asUint8Array();
     this.webSocketConnection.send(array.buffer.slice(array.byteOffset));
@@ -237,10 +271,15 @@ export class Connection {
     const offerString = builder.createString(description.sdp);
 
     const webSocketSdp = WebSocketSdp.createWebSocketSdp(
-        builder, SdpType.OFFER, offerString);
+      builder,
+      SdpType.OFFER,
+      offerString
+    );
     const message = WebSocketMessage.createWebSocketMessage(
-        builder, Payload.WebSocketSdp,
-        webSocketSdp);
+      builder,
+      Payload.WebSocketSdp,
+      webSocketSdp
+    );
     builder.finish(message);
     const array = builder.asUint8Array();
     this.webSocketConnection.send(array.buffer.slice(array.byteOffset));
@@ -249,26 +288,32 @@ export class Connection {
   // We now have a websocket, so start setting up the peer connection. We only
   // want a DataChannel, so create it and then create an offer to send.
   onWebSocketOpen(): void {
-    this.rtcPeerConnection = new RTCPeerConnection(
-        {'iceServers': [{'urls': ['stun:stun.l.google.com:19302']}]});
-    this.rtcPeerConnection.addEventListener(
-        'datachannel', (e) => this.onDataChannel(e));
+    this.rtcPeerConnection = new RTCPeerConnection({
+      iceServers: [{urls: ['stun:stun.l.google.com:19302']}],
+    });
+    this.rtcPeerConnection.addEventListener('datachannel', (e) =>
+      this.onDataChannel(e)
+    );
     this.dataChannel = this.rtcPeerConnection.createDataChannel('signalling');
     this.handlers.add(
-        new Handler((data) => this.onConfigMessage(data), this.dataChannel));
-    this.rtcPeerConnection.addEventListener(
-        'icecandidate', (e) => this.onIceCandidate(e));
-    this.rtcPeerConnection.addEventListener(
-        'icecandidateerror', (e) => this.onIceCandidateError(e));
-    this.rtcPeerConnection.createOffer().then(
-        (offer) => this.onOfferCreated(offer));
+      new Handler((data) => this.onConfigMessage(data), this.dataChannel)
+    );
+    this.rtcPeerConnection.addEventListener('icecandidate', (e) =>
+      this.onIceCandidate(e)
+    );
+    this.rtcPeerConnection.addEventListener('icecandidateerror', (e) =>
+      this.onIceCandidateError(e)
+    );
+    this.rtcPeerConnection
+      .createOffer()
+      .then((offer) => this.onOfferCreated(offer));
   }
 
   // When we receive a websocket message, we need to determine what type it is
   // and handle appropriately. Either by setting the remote description or
   // adding the remote ice candidate.
   onWebSocketMessage(e: MessageEvent): void {
-    const buffer = new Uint8Array(e.data)
+    const buffer = new Uint8Array(e.data);
     const fbBuffer = new ByteBuffer(buffer);
     const message = WebSocketMessage.getRootAsWebSocketMessage(fbBuffer);
     switch (message.payloadType()) {
@@ -278,8 +323,9 @@ export class Connection {
           console.log('got something other than an answer back');
           break;
         }
-        this.rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(
-            {'type': 'answer', 'sdp': sdpFb.payload()}));
+        this.rtcPeerConnection.setRemoteDescription(
+          new RTCSessionDescription({type: 'answer', sdp: sdpFb.payload()})
+        );
         break;
       case Payload.WebSocketIce:
         const iceFb = message.payload(new WebSocketIce());

@@ -25,18 +25,18 @@ export class App {
         spline_y: this.splineY,
         constraints: [
           {
-            constraint_type: "LONGITUDINAL_ACCELERATION",
-            value: this.longConstraint
+            constraint_type: 'LONGITUDINAL_ACCELERATION',
+            value: this.longConstraint,
           },
           {
-            constraint_type: "LATERAL_ACCELERATION",
-            value: this.latConstraint
+            constraint_type: 'LATERAL_ACCELERATION',
+            value: this.latConstraint,
           },
           {
-            constraint_type: "VOLTAGE",
-            value: this.voltageConstraint
-          }
-        ]
+            constraint_type: 'VOLTAGE',
+            value: this.voltageConstraint,
+          },
+        ],
       };
       const splineData = JSON.stringify(splineJson, null, 4);
       const filePath = this.getPath(this.year) + this.fileName;
@@ -47,6 +47,6 @@ export class App {
   // copied from //frc/control_loops/python/constants.py
   // returns the path to the spline jsons for the given year
   getPath(year: number): string {
-    return "/frc/control_loops/python/spline_jsons/";
+    return '/frc/control_loops/python/spline_jsons/';
   }
 }

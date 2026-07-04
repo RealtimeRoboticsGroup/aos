@@ -1,16 +1,12 @@
 # Benchmarking
 
-`ping` and `pong` serve as a good pair of latency benchmarking applications for doing initial checking of the performance of a system.
-Here we will learn how to aggragate timing info over execution and analyze the performance of our application.
+`ping` and `pong` serve as a good pair of latency benchmarking applications for doing initial checking of the performance of a system. Here we will learn how to aggragate timing info over execution and analyze the performance of our application.
 
 ## Running Timing Reports
 
 By default, they run with a RT priority of 5, and they can also be configured to forward across the network with a custom `aos_config.bfbs`.
 
-`aos_timing_report_streamer` prints out timing reports in a nice, human parsable format.
-`Control-C` stops it and prints overall aggregated statistics.
-The max wakeup (and handler) latency can be used to measure the jitter of your system.
-For example, on a `12th Gen Intel(R) Core(TM) i7-12700K`, for 1 second of execution time, I get:
+`aos_timing_report_streamer` prints out timing reports in a nice, human parsable format. `Control-C` stops it and prints overall aggregated statistics. The max wakeup (and handler) latency can be used to measure the jitter of your system. For example, on a `12th Gen Intel(R) Core(TM) i7-12700K`, for 1 second of execution time, I get:
 
 ```
 $ ./aos_timing_report_streamer --application ping
@@ -45,8 +41,6 @@ ping[3885755] () version: "ping_version" (-9223372036.854775808sec,(unrepresenta
     timing_reports |     1 |            2.5341e-05 [2.5341e-05, 2.5341e-05] std 0 |            5.515e-06 [5.515e-06, 5.515e-06] std 0
 ```
 
-Here, we can see, for the 1 `aos.timing.Report` was sent (1 second), 100 `aos.examples.Pong` messages were received, 100 `aos.examples.Ping` messages were sent, and the ping timer triggered 100 times.
-The ping timer callback took on average 26 uS between when it was scheduled, and when it actually triggered, with a max of 100 uS.
-The pong callback had a mean of 36 uS between when the `aos.examples.Pong` message was published, and when the watcher callback started, and took on average 0.7 uS to execute.
+Here, we can see, for the 1 `aos.timing.Report` was sent (1 second), 100 `aos.examples.Pong` messages were received, 100 `aos.examples.Ping` messages were sent, and the ping timer triggered 100 times. The ping timer callback took on average 26 uS between when it was scheduled, and when it actually triggered, with a max of 100 uS. The pong callback had a mean of 36 uS between when the `aos.examples.Pong` message was published, and when the watcher callback started, and took on average 0.7 uS to execute.
 
 Not bad!

@@ -1,0 +1,19 @@
+MODULE.bazel.lock -diff
+tools/python/requirements.lock.txt -diff
+
+# Exclude directories and files from rules_lint formatting
+third_party/** rules-lint-ignored=true
+aos/flatbuffers/test_dir/sample_test_static.h rules-lint-ignored=true
+motors/core/kinetis.h rules-lint-ignored=true
+motors/core/mk20dx128.c rules-lint-ignored=true
+motors/core/mk20dx128.h rules-lint-ignored=true
+motors/core/nonstd.* rules-lint-ignored=true
+motors/pistol_grip/vtable_* rules-lint-ignored=true
+motors/teensy_loader_cli/** rules-lint-ignored=true
+motors/usb/usb_* rules-lint-ignored=true
+registry/** rules-lint-ignored=true
+frc/vision/constants/** rules-lint-ignored=true
+frc/vision/test_calib_files/** rules-lint-ignored=true
+**/*.json rules-lint-ignored=true
+**/www_defaults/** rules-lint-ignored=true
+**/*.min.js rules-lint-ignored=true

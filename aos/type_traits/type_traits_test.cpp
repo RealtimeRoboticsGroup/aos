@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <string.h>
+
 #include <memory>
 
 #include "gtest/gtest.h"
@@ -74,14 +75,15 @@ class GoodPublicPrivateFunction {
   void set_a(int32_t a) { a_ = a; }
   int32_t b() { return b_; }
   void set_b(int32_t b) { b_ = b; }
+
  private:
   int32_t b_;
 };
 // Make sure that member functions still work.
 TEST(TypeTraitsTest, Function) {
   EXPECT_TRUE(shm_ok<GoodPublicPrivateFunction>::value);
-  EXPECT_EQ(static_cast<unsigned>(8), sizeof(GoodPublicPrivateFunction)) <<
-      "The compiler did something weird, but it might not be a problem.";
+  EXPECT_EQ(static_cast<unsigned>(8), sizeof(GoodPublicPrivateFunction))
+      << "The compiler did something weird, but it might not be a problem.";
   GoodPublicPrivateFunction test;
   test.a_ = 5;
   test.set_b(4646);

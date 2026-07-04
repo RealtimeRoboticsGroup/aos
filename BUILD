@@ -1,6 +1,6 @@
 load("@aspect_rules_js//npm:defs.bzl", "npm_link_package")
 load("@aspect_rules_ts//ts:defs.bzl", "ts_config")
-load("@bazel_gazelle//:def.bzl", "gazelle")
+load("@bazel_gazelle//:def.bzl", "gazelle", "gazelle_test")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("@rules_license//rules:license.bzl", "license")
 
@@ -59,4 +59,10 @@ gazelle(
     name = "gazelle",
     target_compatible_with = ["//tools/platforms/go:has_support"],
     visibility = ["//tools/lint:__subpackages__"],
+)
+
+gazelle_test(
+    name = "gazelle_test",
+    target_compatible_with = ["//tools/platforms/go:has_support"],
+    workspace = "//:BUILD",
 )

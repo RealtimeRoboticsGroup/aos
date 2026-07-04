@@ -4,6 +4,7 @@ for visualizing robot data.
 # Accessing Foxglove
 
 You have three main options for using foxglove studio:
+
 1. Go to https://studio.foxglove.dev and use the most up-to-date studio. This
    is convenient; it won't work when you do not have Internet access, and
    has some limitations when it comes to accessing unsecured websockets.
@@ -21,7 +22,8 @@ This will create an MCAP file at the specified path, which you can then open
 in any of the various foxglove options.
 
 Troubleshooting:
-* If you get the error `Check failed: output_`: Check whether `/tmp/log.mcap` already exists under another owner. If so, use a different filename, e.g. `/tmp/<your_name>_log.mcap`
+
+- If you get the error `Check failed: output_`: Check whether `/tmp/log.mcap` already exists under another owner. If so, use a different filename, e.g. `/tmp/<your_name>_log.mcap`
 
 # Live Visualization
 

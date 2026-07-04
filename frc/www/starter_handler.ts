@@ -1,22 +1,32 @@
-import {ByteBuffer} from 'flatbuffers'
-import {Connection} from '../../aos/network/www/proxy'
-import {Status, ApplicationStatus, State, LastStopReason, FileState} from '../../aos/starter/starter_ts_fbs/aos/starter'
+import {ByteBuffer} from 'flatbuffers';
+import {Connection} from '../../aos/network/www/proxy';
+import {
+  Status,
+  ApplicationStatus,
+  State,
+  LastStopReason,
+  FileState,
+} from '../../aos/starter/starter_ts_fbs/aos/starter';
 
 const NODES = ['', '/orin1', '/imu', '/roborio'];
 
 export class StarterHandler {
   private statuses = new Map<string, ApplicationStatus[]>();
 
-  private statusList: HTMLElement =
-      (document.getElementById('status_list') as HTMLElement);
+  private statusList: HTMLElement = document.getElementById(
+    'status_list'
+  ) as HTMLElement;
 
   constructor(private readonly connection: Connection) {
     for (const node in NODES) {
       this.connection.addConfigHandler(() => {
         this.connection.addHandler(
-          NODES[node] + '/aos', 'aos.starter.Status', (data) => {
+          NODES[node] + '/aos',
+          'aos.starter.Status',
+          (data) => {
             this.handleStatus(data, NODES[node]);
-          });
+          }
+        );
       });
     }
   }
@@ -73,27 +83,27 @@ export class StarterHandler {
     }
   }
 
-  private populateStatusList() : void {
+  private populateStatusList(): void {
     this.clearStatusList();
 
     const ELEMENTS: string[] = [
-        'name',
-        'node',
-        'state',
-        'last_exit_code',
-        'pid',
-        // 'id',
-        'last_start_time',
-        'last_stop_reason',
-        // 'process_info',
-        // 'has_active_timing_report',
-        'file_state'
+      'name',
+      'node',
+      'state',
+      'last_exit_code',
+      'pid',
+      // 'id',
+      'last_start_time',
+      'last_stop_reason',
+      // 'process_info',
+      // 'has_active_timing_report',
+      'file_state',
     ];
 
     // This is to add the field names as the top row
     //---------------------------------------------------
     const row = document.createElement('div');
-    row.className = "column_names";
+    row.className = 'column_names';
 
     for (const e in ELEMENTS) {
       const element = document.createElement('div');
@@ -110,7 +120,7 @@ export class StarterHandler {
       const currentStatus = this.statuses.get(NODES[node]);
 
       if (currentStatus) {
-        currentStatus.forEach(status => {
+        currentStatus.forEach((status) => {
           const row = document.createElement('div');
           row.className = status.name();
 
@@ -136,7 +146,9 @@ export class StarterHandler {
                 element.innerHTML = status.pid().toString();
                 break;
               case 'last_start_time':
-                element.innerHTML = Number(status.lastStartTime() / 1000000000n).toString() + ' sec';
+                element.innerHTML =
+                  Number(status.lastStartTime() / 1000000000n).toString() +
+                  ' sec';
                 break;
               case 'last_stop_reason':
                 element.innerHTML = LastStopReason[status.lastStopReason()];
@@ -146,25 +158,25 @@ export class StarterHandler {
                 this.setFileStateColor(element);
                 break;
               default:
-                element.innerHTML = "NA";
+                element.innerHTML = 'NA';
                 break;
             }
             row.appendChild(element);
           }
 
           this.statusList.appendChild(row);
-        })
+        });
       }
     }
   }
 
   private clearStatusList(): void {
     if (!this.statusList) {
-        return;
+      return;
     }
 
     while (this.statusList.firstChild) {
-        this.statusList.removeChild(this.statusList.firstChild);
+      this.statusList.removeChild(this.statusList.firstChild);
     }
   }
 

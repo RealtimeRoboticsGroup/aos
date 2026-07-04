@@ -2,12 +2,12 @@ import {ByteBuffer} from 'flatbuffers';
 import {Configuration} from '../../configuration_ts_fbs/aos';
 import {Connection} from './proxy';
 
-import {Parser, Table} from './reflection'
+import {Parser, Table} from './reflection';
 
 export class ConfigHandler {
   private readonly root_div = document.createElement('div');
   private readonly tree_div;
-  private config: Configuration|null = null
+  private config: Configuration | null = null;
 
   constructor(private readonly connection: Connection) {
     this.connection.addConfigHandler((config) => this.handleConfig(config));
@@ -63,14 +63,16 @@ export class ConfigHandler {
       const index = toggle.getAttribute('data-index');
       const channel = this.config.channels(Number(index));
       this.connection.addHandler(
-          channel.name(), channel.type(), (data, time) => {
-            const parser =
-                new Parser(this.connection.getSchema(channel.type()));
-            console.log(
-                parser.toObject(Table.getRootTable(new ByteBuffer(data))));
-          });
+        channel.name(),
+        channel.type(),
+        (data, time) => {
+          const parser = new Parser(this.connection.getSchema(channel.type()));
+          console.log(
+            parser.toObject(Table.getRootTable(new ByteBuffer(data)))
+          );
+        }
+      );
     }
-
   }
 
   toggleConfig() {

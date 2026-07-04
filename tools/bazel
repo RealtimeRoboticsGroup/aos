@@ -161,8 +161,12 @@ build --host_platform=//tools/platforms:darwin_arm64
 build --extra_execution_platforms=//tools/platforms:darwin_arm64
 EOF
 fi
-# Now, do the rename atomically to avoid races.
-mv "${TMP_BAZELRC_AUTODETECTION}" "${TOP_LEVEL_DIR}/.bazelrc_autodetection"
+# Now, do the rename atomically to avoid races, but only if the content changed to avoid invalidating the analysis cache.
+if [[ -f "${TOP_LEVEL_DIR}/.bazelrc_autodetection" ]] && cmp -s "${TMP_BAZELRC_AUTODETECTION}" "${TOP_LEVEL_DIR}/.bazelrc_autodetection"; then
+  rm "${TMP_BAZELRC_AUTODETECTION}"
+else
+  mv "${TMP_BAZELRC_AUTODETECTION}" "${TOP_LEVEL_DIR}/.bazelrc_autodetection"
+fi
 
 if [[ ! -z "${DISPLAY+x}" ]]; then
   ENVIRONMENT_VARIABLES+=(DISPLAY="${DISPLAY}")

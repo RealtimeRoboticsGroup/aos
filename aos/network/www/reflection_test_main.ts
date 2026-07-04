@@ -1,9 +1,17 @@
 import {Builder, ByteBuffer} from 'flatbuffers';
 import {Configuration} from '../../configuration_ts_fbs/aos';
-import {BaseType, Configuration as TestTable, FooStruct, Location, Map, VectorOfStrings, VectorOfVectorOfString} from '../../json_to_flatbuffer_fbs_ts/aos/testing'
+import {
+  BaseType,
+  Configuration as TestTable,
+  FooStruct,
+  Location,
+  Map,
+  VectorOfStrings,
+  VectorOfVectorOfString,
+} from '../../json_to_flatbuffer_fbs_ts/aos/testing';
 
 import {Connection} from './proxy';
-import {Parser, Table} from './reflection'
+import {Parser, Table} from './reflection';
 
 // This file runs a basic test to confirm that the typescript flatbuffer
 // reflection library is working correctly. It currently is not run
@@ -34,10 +42,20 @@ function DoTest(config: Configuration): void {
     const vectorFooStruct = builder.endVector();
     const nameString = builder.createString('nameString');
     const typeString = builder.createString('typeString');
-    const location0 =
-        Location.createLocation(builder, nameString, typeString, 100, 200);
-    const location1 =
-        Location.createLocation(builder, nameString, typeString, 300, 400);
+    const location0 = Location.createLocation(
+      builder,
+      nameString,
+      typeString,
+      100,
+      200
+    );
+    const location1 = Location.createLocation(
+      builder,
+      nameString,
+      typeString,
+      300,
+      400
+    );
     Map.startMap(builder);
     Map.addMatch(builder, location0);
     Map.addRename(builder, location1);
@@ -45,17 +63,24 @@ function DoTest(config: Configuration): void {
 
     const mapVector = TestTable.createMapsVector(builder, [map]);
 
-    const strVector =
-        VectorOfStrings.createStrVector(builder, [nameString, typeString]);
-    const vectorOfStrings =
-        VectorOfStrings.createVectorOfStrings(builder, strVector);
-    const vVector =
-        VectorOfVectorOfString.createVVector(builder, [vectorOfStrings]);
+    const strVector = VectorOfStrings.createStrVector(builder, [
+      nameString,
+      typeString,
+    ]);
+    const vectorOfStrings = VectorOfStrings.createVectorOfStrings(
+      builder,
+      strVector
+    );
+    const vVector = VectorOfVectorOfString.createVVector(builder, [
+      vectorOfStrings,
+    ]);
     const vectorOfVectorOfStrings =
-        VectorOfVectorOfString.createVectorOfVectorOfString(builder, vVector);
+      VectorOfVectorOfString.createVectorOfVectorOfString(builder, vVector);
 
-    const doubleVector =
-        TestTable.createVectorFooDoubleVector(builder, [9.71, 1.678, 2.056]);
+    const doubleVector = TestTable.createVectorFooDoubleVector(
+      builder,
+      [9.71, 1.678, 2.056]
+    );
 
     TestTable.startConfiguration(builder);
     TestTable.addMaps(builder, mapVector);
@@ -82,7 +107,7 @@ function DoTest(config: Configuration): void {
     }
   }
   if (testSchema === null) {
-    throw new Error('Couldn\'t find test schema in config.');
+    throw new Error("Couldn't find test schema in config.");
   }
   const testParser = new Parser(testSchema);
   const testTable = Table.getRootTable(fbBuffer);
@@ -105,30 +130,40 @@ function DoTest(config: Configuration): void {
   assertEqual(maps[0]['match']['type'], 'typeString');
   assertEqual(maps[0]['rename']['type'], 'typeString');
   assertEqual(
-      maps[0]['match']['frequency'], parsedFb.maps(0).match().frequency());
+    maps[0]['match']['frequency'],
+    parsedFb.maps(0).match().frequency()
+  );
   assertEqual(maps[0]['rename']['frequency'], 300);
   assertEqual(maps[0]['match']['max_size'], 200);
   assertEqual(maps[0]['rename']['max_size'], 400);
 
   assertEqual(
-      testObject['foo_struct']['foo_byte'], parsedFb.fooStruct().fooByte());
+    testObject['foo_struct']['foo_byte'],
+    parsedFb.fooStruct().fooByte()
+  );
   assertEqual(
-      testObject['foo_struct']['nested_struct']['foo_byte'],
-      parsedFb.fooStruct().nestedStruct().fooByte());
+    testObject['foo_struct']['nested_struct']['foo_byte'],
+    parsedFb.fooStruct().nestedStruct().fooByte()
+  );
 
   const fooStructs = testObject['vector_foo_struct'];
   assertEqual(fooStructs.length, 3);
   for (let ii = 0; ii < 3; ++ii) {
     assertEqual(
-        fooStructs[ii]['foo_byte'], parsedFb.vectorFooStruct(ii).fooByte());
+      fooStructs[ii]['foo_byte'],
+      parsedFb.vectorFooStruct(ii).fooByte()
+    );
     assertEqual(
-        fooStructs[ii]['nested_struct']['foo_byte'],
-        parsedFb.vectorFooStruct(ii).nestedStruct().fooByte());
+      fooStructs[ii]['nested_struct']['foo_byte'],
+      parsedFb.vectorFooStruct(ii).nestedStruct().fooByte()
+    );
   }
 
   for (let ii = 0; ii < 3; ++ii) {
     assertEqual(
-        testObject['vector_foo_double'][ii], parsedFb.vectorFooDouble(ii));
+      testObject['vector_foo_double'][ii],
+      parsedFb.vectorFooDouble(ii)
+    );
   }
 
   assertEqual(testObject['vov']['v'].length, 1);
@@ -146,7 +181,7 @@ conn.addConfigHandler((config: Configuration) => {
     }
   }
   if (configSchema === null) {
-    throw new Error('Couldn\'t find Configuration schema in config.');
+    throw new Error("Couldn't find Configuration schema in config.");
   }
   let configParser = new Parser(configSchema);
   const configTable = Table.getRootTable(config.bb);

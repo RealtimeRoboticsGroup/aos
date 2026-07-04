@@ -6,11 +6,7 @@ import {App} from './app';
 
 @NgModule({
   declarations: [App],
-  imports: [
-    BrowserModule,
-    BrowserAnimationsModule,
-    FormsModule,
-  ],
+  imports: [BrowserModule, BrowserAnimationsModule, FormsModule],
   exports: [App],
   bootstrap: [App],
 })

@@ -1,14 +1,22 @@
-import {ByteBuffer} from 'flatbuffers'
-import {ClientStatistics} from '../../../../aos/network/message_bridge_client_ts_fbs/aos/message-bridge'
-import {ServerStatistics, State as ConnectionState} from '../../../../aos/network/message_bridge_server_ts_fbs/aos/message-bridge'
-import {Connection} from '../../../../aos/network/www/proxy'
-import {ZeroingError} from '../../../../frc/control_loops/control_loops_ts_fbs/frc'
-import {LocalizerOutput} from '../../../control_loops/drivetrain/localization/localizer_output_ts_fbs/frc/controls'
-import {GamePieceLocations, GamePieceLocation} from '../../game_piece_locations_ts_fbs/frc/vision'
-import {TargetMap} from '../../target_map_ts_fbs/frc/vision'
-import {RejectionReason} from '../status_ts_fbs/frc/vision/swerve-localizer'
-import {TargetEstimateDebug, Visualization} from '../visualization_ts_fbs/frc/vision/swerve-localizer'
-
+import {ByteBuffer} from 'flatbuffers';
+import {ClientStatistics} from '../../../../aos/network/message_bridge_client_ts_fbs/aos/message-bridge';
+import {
+  ServerStatistics,
+  State as ConnectionState,
+} from '../../../../aos/network/message_bridge_server_ts_fbs/aos/message-bridge';
+import {Connection} from '../../../../aos/network/www/proxy';
+import {ZeroingError} from '../../../../frc/control_loops/control_loops_ts_fbs/frc';
+import {LocalizerOutput} from '../../../control_loops/drivetrain/localization/localizer_output_ts_fbs/frc/controls';
+import {
+  GamePieceLocations,
+  GamePieceLocation,
+} from '../../game_piece_locations_ts_fbs/frc/vision';
+import {TargetMap} from '../../target_map_ts_fbs/frc/vision';
+import {RejectionReason} from '../status_ts_fbs/frc/vision/swerve-localizer';
+import {
+  TargetEstimateDebug,
+  Visualization,
+} from '../visualization_ts_fbs/frc/vision/swerve-localizer';
 
 import {FIELD_LENGTH, FIELD_WIDTH, FT_TO_M, IN_TO_M} from './constants';
 
@@ -20,39 +28,47 @@ const ROBOT_WIDTH = 34 * IN_TO_M;
 const ROBOT_LENGTH = 34 * IN_TO_M;
 
 const CAMERA_COLORS = ['#ff00ff', '#ffff00', '#00ffff', '#ffa500'];
-const CAMERAS = ['/camera0/gray', '/camera1/gray', '/camera2/gray', '/camera3/gray'];
+const CAMERAS = [
+  '/camera0/gray',
+  '/camera1/gray',
+  '/camera2/gray',
+  '/camera3/gray',
+];
 
 export class FieldHandler {
   private canvas = document.createElement('canvas');
-  private localizerOutput: LocalizerOutput|null = null;
+  private localizerOutput: LocalizerOutput | null = null;
   private gamePieceLocationMatches = new Map<number, GamePieceLocations>();
 
   // Image information indexed by timestamp (seconds since the epoch), so that
   // we can stop displaying images after a certain amount of time.
   private localizerImageMatches = new Map<number, Visualization>();
-  private x: HTMLElement = (document.getElementById('x') as HTMLElement);
-  private y: HTMLElement = (document.getElementById('y') as HTMLElement);
-  private theta: HTMLElement =
-      (document.getElementById('theta') as HTMLElement);
+  private x: HTMLElement = document.getElementById('x') as HTMLElement;
+  private y: HTMLElement = document.getElementById('y') as HTMLElement;
+  private theta: HTMLElement = document.getElementById('theta') as HTMLElement;
 
-  private imagesAcceptedCounter: HTMLElement =
-      (document.getElementById('images_accepted') as HTMLElement);
-  private headingResetCounter: HTMLElement =
-      (document.getElementById('heading_resets') as HTMLElement);
+  private imagesAcceptedCounter: HTMLElement = document.getElementById(
+    'images_accepted'
+  ) as HTMLElement;
+  private headingResetCounter: HTMLElement = document.getElementById(
+    'heading_resets'
+  ) as HTMLElement;
   // HTML elements for rejection reasons for individual cameras. Indices
   // corresponding to RejectionReason enum values will be for those reasons. The
   // final row will account for images rejected by the aprilrobotics detector
   // instead of the localizer.
   private rejectionReasonCells: HTMLElement[][] = [];
-  private messageBridgeDiv: HTMLElement =
-      (document.getElementById('message_bridge_status') as HTMLElement);
+  private messageBridgeDiv: HTMLElement = document.getElementById(
+    'message_bridge_status'
+  ) as HTMLElement;
   private clientStatuses = new Map<string, HTMLElement>();
   private serverStatuses = new Map<string, HTMLElement>();
 
   private fieldImage: HTMLImageElement = new Image();
 
-  private zeroingFaults: HTMLElement =
-      (document.getElementById('zeroing_faults') as HTMLElement);
+  private zeroingFaults: HTMLElement = document.getElementById(
+    'zeroing_faults'
+  ) as HTMLElement;
 
   constructor(private readonly connection: Connection) {
     (document.getElementById('field') as HTMLElement).appendChild(this.canvas);
@@ -88,7 +104,8 @@ export class FieldHandler {
         const valueCell = document.createElement('div');
         valueCell.innerHTML = 'NA';
         this.rejectionReasonCells[this.rejectionReasonCells.length - 1].push(
-            valueCell);
+          valueCell
+        );
         row.appendChild(valueCell);
       }
       document.getElementById('vision_readouts').appendChild(row);
@@ -105,7 +122,8 @@ export class FieldHandler {
         const valueCell = document.createElement('div');
         valueCell.innerHTML = 'NA';
         this.rejectionReasonCells[this.rejectionReasonCells.length - 1].push(
-            valueCell);
+          valueCell
+        );
         row.appendChild(valueCell);
       }
       document.getElementById('vision_readouts').appendChild(row);
@@ -123,51 +141,80 @@ export class FieldHandler {
       // matches.
       for (const camera in CAMERAS) {
         this.connection.addHandler(
-            CAMERAS[camera], 'frc.vision.swerve_localizer.Visualization',
-            (data) => {
-              this.handleLocalizerDebug(Number(camera), data);
-            });
+          CAMERAS[camera],
+          'frc.vision.swerve_localizer.Visualization',
+          (data) => {
+            this.handleLocalizerDebug(Number(camera), data);
+          }
+        );
       }
       for (const camera in CAMERAS) {
         // Make unreliable to reduce network spam.
         this.connection.addHandler(
-          CAMERAS[camera], 'frc.vision.TargetMap', (data) => {
-              this.handleCameraTargetMap(camera, data);
-            });
+          CAMERAS[camera],
+          'frc.vision.TargetMap',
+          (data) => {
+            this.handleCameraTargetMap(camera, data);
+          }
+        );
       }
 
       this.connection.addHandler(
-        '/localizer', 'frc.controls.LocalizerOutput', (data) => {
+        '/localizer',
+        'frc.controls.LocalizerOutput',
+        (data) => {
           this.handleLocalizerOutput(data);
-        });
+        }
+      );
       this.connection.addHandler(
-        '/camera1/coral', 'frc.vision.GamePieceLocations', (data) => {
+        '/camera1/coral',
+        'frc.vision.GamePieceLocations',
+        (data) => {
           this.handleGamePieceLocations(data);
-        });
+        }
+      );
       this.connection.addHandler(
-        '/aos', 'aos.message_bridge.ServerStatistics',
-        (data) => {this.handleServerStatistics(data)});
+        '/aos',
+        'aos.message_bridge.ServerStatistics',
+        (data) => {
+          this.handleServerStatistics(data);
+        }
+      );
       this.connection.addHandler(
-        '/aos', 'aos.message_bridge.ClientStatistics',
-        (data) => {this.handleClientStatistics(data)});
-      });
+        '/aos',
+        'aos.message_bridge.ClientStatistics',
+        (data) => {
+          this.handleClientStatistics(data);
+        }
+      );
+    });
   }
   private handleLocalizerDebug(camera: number, data: Uint8Array): void {
     const now = Date.now() / 1000.0;
 
     const fbBuffer = new ByteBuffer(data);
     this.localizerImageMatches.set(
-        now, Visualization.getRootAsVisualization(fbBuffer));
+      now,
+      Visualization.getRootAsVisualization(fbBuffer)
+    );
 
     const debug = this.localizerImageMatches.get(now);
 
     if (debug.statistics()) {
-      if ((debug.statistics().rejectionReasonsLength() + 1) ==
-          this.rejectionReasonCells.length) {
-        for (let ii = 0; ii < debug.statistics().rejectionReasonsLength();
-             ++ii) {
-          this.rejectionReasonCells[ii][camera].innerHTML =
-              debug.statistics().rejectionReasons(ii).count().toString();
+      if (
+        debug.statistics().rejectionReasonsLength() + 1 ==
+        this.rejectionReasonCells.length
+      ) {
+        for (
+          let ii = 0;
+          ii < debug.statistics().rejectionReasonsLength();
+          ++ii
+        ) {
+          this.rejectionReasonCells[ii][camera].innerHTML = debug
+            .statistics()
+            .rejectionReasons(ii)
+            .count()
+            .toString();
         }
       } else {
         console.error('Unexpected number of rejection reasons in counter.');
@@ -178,8 +225,9 @@ export class FieldHandler {
   private handleCameraTargetMap(pi: string, data: Uint8Array): void {
     const fbBuffer = new ByteBuffer(data);
     const targetMap = TargetMap.getRootAsTargetMap(fbBuffer);
-    this.rejectionReasonCells[this.rejectionReasonCells.length - 1][pi]
-        .innerHTML = targetMap.rejections().toString();
+    this.rejectionReasonCells[this.rejectionReasonCells.length - 1][
+      pi
+    ].innerHTML = targetMap.rejections().toString();
   }
 
   private handleLocalizerOutput(data: Uint8Array): void {
@@ -192,7 +240,9 @@ export class FieldHandler {
     const now = Date.now() / 1000.0;
 
     this.gamePieceLocationMatches.set(
-        now, GamePieceLocations.getRootAsGamePieceLocations(fbBuffer));
+      now,
+      GamePieceLocations.getRootAsGamePieceLocations(fbBuffer)
+    );
   }
 
   private populateNodeConnections(nodeName: string): void {
@@ -211,8 +261,10 @@ export class FieldHandler {
     this.clientStatuses.set(nodeName, clientDiv);
   }
 
-  private setCurrentNodeState(element: HTMLElement, state: ConnectionState):
-      void {
+  private setCurrentNodeState(
+    element: HTMLElement,
+    state: ConnectionState
+  ): void {
     if (state === ConnectionState.CONNECTED) {
       element.innerHTML = ConnectionState[state];
       element.classList.remove('faulted');
@@ -227,7 +279,7 @@ export class FieldHandler {
   private handleServerStatistics(data: Uint8Array): void {
     const fbBuffer = new ByteBuffer(data);
     const serverStatistics =
-        ServerStatistics.getRootAsServerStatistics(fbBuffer);
+      ServerStatistics.getRootAsServerStatistics(fbBuffer);
 
     for (let ii = 0; ii < serverStatistics.connectionsLength(); ++ii) {
       const connection = serverStatistics.connections(ii);
@@ -236,14 +288,16 @@ export class FieldHandler {
         this.populateNodeConnections(nodeName);
       }
       this.setCurrentNodeState(
-          this.serverStatuses.get(nodeName), connection.state());
+        this.serverStatuses.get(nodeName),
+        connection.state()
+      );
     }
   }
 
   private handleClientStatistics(data: Uint8Array): void {
     const fbBuffer = new ByteBuffer(data);
     const clientStatistics =
-        ClientStatistics.getRootAsClientStatistics(fbBuffer);
+      ClientStatistics.getRootAsClientStatistics(fbBuffer);
 
     for (let ii = 0; ii < clientStatistics.connectionsLength(); ++ii) {
       const connection = clientStatistics.connections(ii);
@@ -252,7 +306,9 @@ export class FieldHandler {
         this.populateNodeConnections(nodeName);
       }
       this.setCurrentNodeState(
-          this.clientStatuses.get(nodeName), connection.state());
+        this.clientStatuses.get(nodeName),
+        connection.state()
+      );
     }
   }
 
@@ -261,13 +317,25 @@ export class FieldHandler {
     ctx.save();
     ctx.scale(1.0, -1.0);
     ctx.drawImage(
-        this.fieldImage, 0, 0, this.fieldImage.width, this.fieldImage.height,
-        -FIELD_EDGE_X, -FIELD_SIDE_Y, FIELD_LENGTH, FIELD_WIDTH);
+      this.fieldImage,
+      0,
+      0,
+      this.fieldImage.width,
+      this.fieldImage.height,
+      -FIELD_EDGE_X,
+      -FIELD_SIDE_Y,
+      FIELD_LENGTH,
+      FIELD_WIDTH
+    );
     ctx.restore();
   }
 
-  drawCamera(x: number, y: number, theta: number, color: string = 'blue'):
-  void {
+  drawCamera(
+    x: number,
+    y: number,
+    theta: number,
+    color: string = 'blue'
+  ): void {
     const ctx = this.canvas.getContext('2d');
     ctx.save();
     ctx.translate(x, y);
@@ -285,49 +353,51 @@ export class FieldHandler {
   }
 
   drawRobot(
-    x: number, y: number, theta: number, color: string = 'blue',
-    dashed: boolean = false): void {
-  const ctx = this.canvas.getContext('2d');
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(theta);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = ROBOT_WIDTH / 10.0;
-  if (dashed) {
-    ctx.setLineDash([0.05, 0.05]);
-  } else {
+    x: number,
+    y: number,
+    theta: number,
+    color: string = 'blue',
+    dashed: boolean = false
+  ): void {
+    const ctx = this.canvas.getContext('2d');
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(theta);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = ROBOT_WIDTH / 10.0;
+    if (dashed) {
+      ctx.setLineDash([0.05, 0.05]);
+    } else {
+      // Empty array = solid line.
+      ctx.setLineDash([]);
+    }
+    ctx.rect(-ROBOT_LENGTH / 2, -ROBOT_WIDTH / 2, ROBOT_LENGTH, ROBOT_WIDTH);
+    ctx.stroke();
+
+    // Draw line indicating which direction is forwards on the robot.
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(ROBOT_LENGTH / 2.0, 0);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  drawCoral(x: number, y: number, color: string = 'blue'): void {
+    const ctx = this.canvas.getContext('2d');
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = ROBOT_WIDTH / 15.0;
     // Empty array = solid line.
     ctx.setLineDash([]);
+
+    ctx.beginPath();
+    ctx.arc(0, 0, 0.15, 0, 2 * Math.PI);
+    ctx.stroke();
+
+    ctx.restore();
   }
-  ctx.rect(-ROBOT_LENGTH / 2, -ROBOT_WIDTH / 2, ROBOT_LENGTH, ROBOT_WIDTH);
-  ctx.stroke();
-
-  // Draw line indicating which direction is forwards on the robot.
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.lineTo(ROBOT_LENGTH / 2.0, 0);
-  ctx.stroke();
-
-  ctx.restore();
-}
-
-  drawCoral(
-    x: number, y: number, color: string = 'blue'): void {
-  const ctx = this.canvas.getContext('2d');
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = ROBOT_WIDTH / 15.0;
-  // Empty array = solid line.
-  ctx.setLineDash([]);
-
-  ctx.beginPath();
-  ctx.arc(0, 0, 0.15, 0, 2 * Math.PI);
-  ctx.stroke();
-
-  ctx.restore();
-}
-
 
   setZeroing(div: HTMLElement): void {
     div.innerHTML = 'zeroing';
@@ -344,7 +414,11 @@ export class FieldHandler {
   }
 
   setTargetValue(
-      div: HTMLElement, target: number, val: number, tolerance: number): void {
+    div: HTMLElement,
+    target: number,
+    val: number,
+    tolerance: number
+  ): void {
     div.innerHTML = val.toFixed(4);
     div.classList.remove('faulted');
     div.classList.remove('zeroing');
@@ -363,7 +437,7 @@ export class FieldHandler {
   }
 
   setBoolean(div: HTMLElement, triggered: boolean): void {
-    div.innerHTML = ((triggered) ? "TRUE" : "FALSE")
+    div.innerHTML = triggered ? 'TRUE' : 'FALSE';
     div.className = '';
     if (triggered) {
       div.classList.add('lightgreen');
@@ -391,13 +465,17 @@ export class FieldHandler {
       }
 
       this.drawRobot(
-          this.localizerOutput.x(), this.localizerOutput.y(),
-          this.localizerOutput.theta());
+        this.localizerOutput.x(),
+        this.localizerOutput.y(),
+        this.localizerOutput.theta()
+      );
 
-      this.imagesAcceptedCounter.innerHTML =
-          this.localizerOutput.imageAcceptedCount().toString();
-      this.headingResetCounter.innerHTML =
-          this.localizerOutput.headingResets().toString();
+      this.imagesAcceptedCounter.innerHTML = this.localizerOutput
+        .imageAcceptedCount()
+        .toString();
+      this.headingResetCounter.innerHTML = this.localizerOutput
+        .headingResets()
+        .toString();
     }
 
     for (const [time, value] of this.localizerImageMatches) {
@@ -408,7 +486,7 @@ export class FieldHandler {
         continue;
       }
       const kMaxImageAlpha = 0.5;
-      const ageAlpha = kMaxImageAlpha * (kRemovalAge - age) / kRemovalAge
+      const ageAlpha = (kMaxImageAlpha * (kRemovalAge - age)) / kRemovalAge;
       for (let i = 0; i < value.targetsLength(); i++) {
         const imageDebug = value.targets(i);
         const x = imageDebug.impliedRobotX();
@@ -419,7 +497,9 @@ export class FieldHandler {
         const cameraTheta = imageDebug.cameraTheta();
         const accepted = imageDebug.accepted();
         // Make camera readings fade over time.
-        const alpha = Math.round(255 * ageAlpha).toString(16).padStart(2, '0');
+        const alpha = Math.round(255 * ageAlpha)
+          .toString(16)
+          .padStart(2, '0');
         const dashed = false;
         const cameraRgb = CAMERA_COLORS[imageDebug.camera()];
         const cameraRgba = cameraRgb + alpha;
@@ -436,13 +516,15 @@ export class FieldHandler {
         continue;
       }
       const kMaxImageAlpha = 0.5;
-      const ageAlpha = kMaxImageAlpha * (kRemovalAge - age) / kRemovalAge
+      const ageAlpha = (kMaxImageAlpha * (kRemovalAge - age)) / kRemovalAge;
       for (let i = 0; i < value.locationsLength(); i++) {
         const loc = value.locations(i);
         const x = loc.x();
         const y = loc.y();
         // Make camera readings fade over time.
-        const alpha = Math.round(255 * ageAlpha).toString(16).padStart(2, '0');
+        const alpha = Math.round(255 * ageAlpha)
+          .toString(16)
+          .padStart(2, '0');
         const cameraRgb = '#41137d';
         const cameraRgba = cameraRgb + alpha;
         this.drawCoral(x, y, cameraRgba);

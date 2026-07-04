@@ -4,12 +4,11 @@
   font-size: 24px;
 }
 #field {
-  display: inline-block
+  display: inline-block;
 }
 
 #readouts,
-#middle_readouts
-{
+#middle_readouts {
   display: inline-block;
   vertical-align: top;
   float: right;
@@ -19,7 +18,9 @@
   display: inline-block;
 }
 
-table, th, td {
+table,
+th,
+td {
   border: 1px solid black;
   border-collapse: collapse;
   padding: 5px;
@@ -29,7 +30,8 @@ table, th, td {
   overflow: hidden;
 }
 
-th, td {
+th,
+td {
   text-align: left;
   width: 70px;
 }
@@ -42,7 +44,8 @@ td:first-child {
   width: 150px;
 }
 
-.connected, .near {
+.connected,
+.near {
   background-color: LightGreen;
   border-radius: 10px;
 }
@@ -115,12 +118,12 @@ td:first-child {
   font-size: 12;
 }
 
-.aos_legend_line>div {
+.aos_legend_line > div {
   display: inline-block;
   vertical-align: middle;
   margin-left: 5px;
 }
-.aos_legend_line>canvas {
+.aos_legend_line > canvas {
   vertical-align: middle;
   pointer-events: all;
 }
@@ -137,7 +140,7 @@ td:first-child {
   align-items: flex-start;
 }
 
-.aos_cpp_plot>div {
+.aos_cpp_plot > div {
   flex: 1;
   width: 100%;
 }
@@ -152,7 +155,6 @@ td:first-child {
   padding: 10px;
   text-align: left;
 }
-
 
 .yellow {
   background-color: yellow;

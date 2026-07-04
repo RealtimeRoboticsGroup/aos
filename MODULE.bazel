@@ -20,6 +20,8 @@ archive_override(
 
 bazel_dep(name = "rules_java", version = "9.3.0")
 bazel_dep(name = "aspect_bazel_lib", version = "2.19.3")
+bazel_dep(name = "aspect_rules_lint", version = "2.7.2")
+bazel_dep(name = "rules_multirun", version = "0.9.0")
 bazel_dep(name = "bazel_skylib", version = "1.9.0")
 bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "rules_uv", version = "0.77.0")
@@ -173,13 +175,6 @@ bazel_dep(name = "aspect_rules_esbuild", version = "0.22.1")
 bazel_dep(name = "aspect_rules_rollup", version = "2.0.1")
 bazel_dep(name = "aspect_rules_terser", version = "2.1.2")
 bazel_dep(name = "gazelle", version = "0.51.3", repo_name = "bazel_gazelle")
-single_version_override(
-    module_name = "gazelle",
-    patch_strip = 1,
-    patches = ["//third_party:bazel-gazelle/0001-Fix-visibility-of-gazelle-runner.patch"],
-    version = "0.51.3",
-)
-
 bazel_dep(name = "rules_license", version = "1.0.0")
 bazel_dep(name = "rules_go", version = "0.61.1", repo_name = "io_bazel_rules_go")
 
@@ -187,8 +182,8 @@ go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk", dev_de
 go_sdk.download(
     name = "go_sdk",
     sdks = {
-        "linux_amd64": ("go1.24.13.linux-amd64.tar.gz", "1fc94b57134d51669c72173ad5d49fd62afb0f1db9bf3f798fd98ee423f8d730"),
         "darwin_arm64": ("go1.24.13.darwin-arm64.tar.gz", "f282d882c3353485e2fc6c634606d85caf36e855167d59b996dbeae19fa7629a"),
+        "linux_amd64": ("go1.24.13.linux-amd64.tar.gz", "1fc94b57134d51669c72173ad5d49fd62afb0f1db9bf3f798fd98ee423f8d730"),
     },
     version = "1.24.13",
 )
@@ -365,7 +360,6 @@ crate.from_cargo(
     ],
 )
 use_repo(crate, "cxxbridge_cmd_deps")
-
 crate.from_cargo(
     name = "crate_index",
     cargo_lockfile = "//:Cargo.lock",
@@ -446,6 +440,7 @@ archive_override(
 )
 
 bazel_dep(name = "websocketpp", version = "0.8.2.bcr.5")
+
 # The websocketpp patch is required for the ROBORIO build (arm-frc-linux-gnueabi-gcc)
 # which fails to compile cpp/foxglove-websocket/src/server_factory.cpp because of
 # syntax errors in basic.hpp:
@@ -457,7 +452,9 @@ single_version_override(
     patch_strip = 1,
     patches = ["third_party/websocketpp/websocketpp.patch"],
 )
+
 bazel_dep(name = "asio", version = "1.28.2")
+
 bazel_dep(name = "ctre_phoenix6_api_cpp_headers", version = "25.3.2", dev_dependency = True)
 bazel_dep(name = "ctre_phoenix6_tools_headers", version = "25.3.2", dev_dependency = True)
 bazel_dep(name = "ctre_phoenix6_api_cpp_athena", version = "25.3.2", dev_dependency = True)
@@ -467,6 +464,7 @@ bazel_dep(name = "ctre_phoenix_api_cpp_headers", version = "5.35.0", dev_depende
 bazel_dep(name = "ctre_phoenix_api_cpp_athena", version = "5.35.0", dev_dependency = True)
 bazel_dep(name = "ctre_phoenix_cci_headers", version = "5.35.0", dev_dependency = True)
 bazel_dep(name = "ctre_phoenix_cci_athena", version = "5.35.0", dev_dependency = True)
+
 bazel_dep(name = "rules_halide", version = "0.0.1")
 archive_override(
     module_name = "rules_halide",
@@ -476,6 +474,7 @@ archive_override(
         "https://github.com/RealtimeRoboticsGroup/rules_halide/releases/download/v0.0.1/rules_halide-0.0.1.tar.zst",
     ],
 )
+
 bazel_dep(name = "allwpilib", version = "0.0.0", dev_dependency = True, repo_name = "com_github_wpilibsuite_allwpilib")
 local_path_override(
     module_name = "allwpilib",

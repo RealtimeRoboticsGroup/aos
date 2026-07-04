@@ -1,7 +1,7 @@
-Scouting App Frontend
-================================================================================
+# Scouting App Frontend
 
 Run using:
+
 ```console
 $ bazel build //frc/control_loops/swerve/spline_ui/www:all
 $ (cd bazel-bin/frc/control_loops/swerve/spline_ui/www/static_files/ && python3 -m http.server)

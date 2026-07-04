@@ -1,7 +1,15 @@
 // Provides a plot for debugging drivetrain-related issues.
 import {AosPlotter} from '../../../aos/network/www/aos_plotter';
 import * as proxy from '../../../aos/network/www/proxy';
-import {BLUE, BROWN, CYAN, GREEN, PINK, RED, WHITE} from '../../../aos/network/www/colors';
+import {
+  BLUE,
+  BROWN,
+  CYAN,
+  GREEN,
+  PINK,
+  RED,
+  WHITE,
+} from '../../../aos/network/www/colors';
 
 import Connection = proxy.Connection;
 
@@ -12,16 +20,26 @@ const DEFAULT_HEIGHT = AosPlotter.DEFAULT_HEIGHT;
 export function plotLocalizer(conn: Connection, element: Element): void {
   const aosPlotter = new AosPlotter(conn);
 
-  const position = aosPlotter.addMessageSource("/drivetrain",
-      "frc.control_loops.drivetrain.Position");
+  const position = aosPlotter.addMessageSource(
+    '/drivetrain',
+    'frc.control_loops.drivetrain.Position'
+  );
   const status = aosPlotter.addMessageSource(
-      '/drivetrain', 'frc.control_loops.drivetrain.Status');
+    '/drivetrain',
+    'frc.control_loops.drivetrain.Status'
+  );
   const output = aosPlotter.addMessageSource(
-      '/drivetrain', 'frc.control_loops.drivetrain.Output');
+    '/drivetrain',
+    'frc.control_loops.drivetrain.Output'
+  );
   const localizer = aosPlotter.addMessageSource(
-      '/localizer', 'frc.vision.swerve_localizer.Status');
+    '/localizer',
+    'frc.vision.swerve_localizer.Status'
+  );
   const rio_inputs = aosPlotter.addMessageSource(
-      '/drivetrain', 'frc.control_loops.drivetrain.RioLocalizerInputs');
+    '/drivetrain',
+    'frc.control_loops.drivetrain.RioLocalizerInputs'
+  );
 
   // Drivetrain Velocities
   const velocityPlot = aosPlotter.addPlot(element);
@@ -29,24 +47,30 @@ export function plotLocalizer(conn: Connection, element: Element): void {
   velocityPlot.plot.getAxisLabels().setXLabel(TIME);
   velocityPlot.plot.getAxisLabels().setYLabel('Wheel Velocity (m/s)');
 
-  const leftVelocity =
-      velocityPlot.addMessageLine(status, ['estimated_left_velocity']);
+  const leftVelocity = velocityPlot.addMessageLine(status, [
+    'estimated_left_velocity',
+  ]);
   leftVelocity.setColor(RED);
-  const rightVelocity =
-      velocityPlot.addMessageLine(status, ['estimated_right_velocity']);
+  const rightVelocity = velocityPlot.addMessageLine(status, [
+    'estimated_right_velocity',
+  ]);
   rightVelocity.setColor(GREEN);
 
-  const leftSpeed = velocityPlot.addMessageLine(position, ["left_speed"]);
+  const leftSpeed = velocityPlot.addMessageLine(position, ['left_speed']);
   leftSpeed.setColor(BLUE);
-  const rightSpeed = velocityPlot.addMessageLine(position, ["right_speed"]);
+  const rightSpeed = velocityPlot.addMessageLine(position, ['right_speed']);
   rightSpeed.setColor(BROWN);
 
-  const ekfLeftVelocity = velocityPlot.addMessageLine(
-      localizer, ['state', 'left_velocity']);
+  const ekfLeftVelocity = velocityPlot.addMessageLine(localizer, [
+    'state',
+    'left_velocity',
+  ]);
   ekfLeftVelocity.setColor(RED);
   ekfLeftVelocity.setPointSize(0.0);
-  const ekfRightVelocity = velocityPlot.addMessageLine(
-      localizer, ['state', 'right_velocity']);
+  const ekfRightVelocity = velocityPlot.addMessageLine(localizer, [
+    'state',
+    'right_velocity',
+  ]);
   ekfRightVelocity.setColor(GREEN);
   ekfRightVelocity.setPointSize(0.0);
 
@@ -56,32 +80,40 @@ export function plotLocalizer(conn: Connection, element: Element): void {
   lateralPlot.plot.getAxisLabels().setXLabel(TIME);
   lateralPlot.plot.getAxisLabels().setYLabel('Velocity (m/s)');
 
-  lateralPlot.addMessageLine(localizer, ['state', 'lateral_velocity']).setColor(CYAN);
+  lateralPlot
+    .addMessageLine(localizer, ['state', 'lateral_velocity'])
+    .setColor(CYAN);
 
   // Drivetrain Voltage
   const voltagePlot = aosPlotter.addPlot(element);
   voltagePlot.plot.getAxisLabels().setTitle('Voltage Plots');
   voltagePlot.plot.getAxisLabels().setXLabel(TIME);
-  voltagePlot.plot.getAxisLabels().setYLabel('Voltage (V)')
+  voltagePlot.plot.getAxisLabels().setYLabel('Voltage (V)');
 
-  voltagePlot.addMessageLine(localizer, ['state', 'left_voltage_error'])
-      .setColor(RED)
-      .setDrawLine(false);
-  voltagePlot.addMessageLine(localizer, ['state', 'right_voltage_error'])
-      .setColor(GREEN)
-      .setDrawLine(false);
-  voltagePlot.addMessageLine(output, ['left_voltage'])
-      .setColor(RED)
-      .setPointSize(0);
-  voltagePlot.addMessageLine(output, ['right_voltage'])
-      .setColor(GREEN)
-      .setPointSize(0);
-  voltagePlot.addMessageLine(rio_inputs, ['left_voltage'])
-      .setColor(RED)
-      .setDrawLine(false);
-  voltagePlot.addMessageLine(rio_inputs, ['right_voltage'])
-      .setColor(GREEN)
-      .setDrawLine(false);
+  voltagePlot
+    .addMessageLine(localizer, ['state', 'left_voltage_error'])
+    .setColor(RED)
+    .setDrawLine(false);
+  voltagePlot
+    .addMessageLine(localizer, ['state', 'right_voltage_error'])
+    .setColor(GREEN)
+    .setDrawLine(false);
+  voltagePlot
+    .addMessageLine(output, ['left_voltage'])
+    .setColor(RED)
+    .setPointSize(0);
+  voltagePlot
+    .addMessageLine(output, ['right_voltage'])
+    .setColor(GREEN)
+    .setPointSize(0);
+  voltagePlot
+    .addMessageLine(rio_inputs, ['left_voltage'])
+    .setColor(RED)
+    .setDrawLine(false);
+  voltagePlot
+    .addMessageLine(rio_inputs, ['right_voltage'])
+    .setColor(GREEN)
+    .setDrawLine(false);
 
   // Heading
   const yawPlot = aosPlotter.addPlot(element);
@@ -101,23 +133,28 @@ export function plotLocalizer(conn: Connection, element: Element): void {
   orientationPlot.plot.getAxisLabels().setXLabel(TIME);
   orientationPlot.plot.getAxisLabels().setYLabel('Angle (rad)');
 
-  orientationPlot.addMessageLine(localizer, ['down_estimator', 'lateral_pitch'])
-      .setColor(RED)
-      .setLabel('roll');
   orientationPlot
-      .addMessageLine(localizer, ['down_estimator', 'longitudinal_pitch'])
-      .setColor(GREEN)
-      .setLabel('pitch');
+    .addMessageLine(localizer, ['down_estimator', 'lateral_pitch'])
+    .setColor(RED)
+    .setLabel('roll');
+  orientationPlot
+    .addMessageLine(localizer, ['down_estimator', 'longitudinal_pitch'])
+    .setColor(GREEN)
+    .setLabel('pitch');
 
-  const stillPlot = aosPlotter.addPlot(element, [DEFAULT_WIDTH, DEFAULT_HEIGHT / 3]);
+  const stillPlot = aosPlotter.addPlot(element, [
+    DEFAULT_WIDTH,
+    DEFAULT_HEIGHT / 3,
+  ]);
   stillPlot.plot.getAxisLabels().setTitle('Still Plot');
   stillPlot.plot.getAxisLabels().setXLabel(TIME);
-  stillPlot.plot.getAxisLabels().setYLabel('bool, g\'s');
+  stillPlot.plot.getAxisLabels().setYLabel("bool, g's");
   stillPlot.plot.setDefaultYRange([-0.1, 1.1]);
 
-  stillPlot.addMessageLine(localizer, ['down_estimator', 'gravity_magnitude'])
-      .setColor(WHITE)
-      .setDrawLine(false);
+  stillPlot
+    .addMessageLine(localizer, ['down_estimator', 'gravity_magnitude'])
+    .setColor(WHITE)
+    .setDrawLine(false);
 
   // Absolute X Position
   const xPositionPlot = aosPlotter.addPlot(element);
@@ -126,8 +163,9 @@ export function plotLocalizer(conn: Connection, element: Element): void {
   xPositionPlot.plot.getAxisLabels().setYLabel('X Position (m)');
 
   xPositionPlot.addMessageLine(status, ['x']).setColor(RED);
-  xPositionPlot.addMessageLine(localizer, ['down_estimator', 'position_x'])
-      .setColor(BLUE);
+  xPositionPlot
+    .addMessageLine(localizer, ['down_estimator', 'position_x'])
+    .setColor(BLUE);
   xPositionPlot.addMessageLine(localizer, ['state', 'x']).setColor(CYAN);
 
   // Absolute Y Position
@@ -138,7 +176,8 @@ export function plotLocalizer(conn: Connection, element: Element): void {
 
   const localizerY = yPositionPlot.addMessageLine(status, ['y']);
   localizerY.setColor(RED);
-  yPositionPlot.addMessageLine(localizer, ['down_estimator', 'position_y'])
-      .setColor(BLUE);
+  yPositionPlot
+    .addMessageLine(localizer, ['down_estimator', 'position_y'])
+    .setColor(BLUE);
   yPositionPlot.addMessageLine(localizer, ['state', 'y']).setColor(CYAN);
 }
