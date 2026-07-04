@@ -1,10 +1,11 @@
 #include "aos/events/glib_main_loop.h"
 
+#include <glib.h>
+
 #include <thread>
 
 #include "absl/log/check.h"
 #include "absl/log/log.h"
-#include "glib-2.0/glib.h"
 #include "gtest/gtest.h"
 
 #include "aos/configuration.h"
