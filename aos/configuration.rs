@@ -13,8 +13,18 @@ autocxx::include_cpp! (
 safety!(unsafe)
 
 generate!("aos::Configuration")
+block_constructors!("aos::Configuration")
+block!("std::vector<aos::Configuration>")
+block!("std::vector<::aos::Configuration>")
 generate!("aos::Channel")
+block_constructors!("aos::Channel")
+block!("std::vector<aos::Channel>")
+block!("std::vector<::aos::Channel>")
 generate!("aos::Node")
+block_constructors!("aos::Node")
+block!("std::vector<aos::Node>")
+block!("std::vector<::aos::Node>")
+exclude_impls!()
 block!("flatbuffers::String")
 block!("flatbuffers::Verifier")
 

@@ -5,8 +5,10 @@ use cxx::UniquePtr;
 
 pub use aos_configuration::{Channel, Configuration, ConfigurationExt, Node};
 use aos_configuration_fbs::aos::Configuration as RustConfiguration;
+use aos_events_event_loop_runtime::{
+    node_has_name, EventLoopHolder, EventLoopRuntime, EventLoopRuntimeHolder,
+};
 pub use aos_events_event_loop_runtime::{CppEventLoop, CppExitHandle, ExitHandle};
-use aos_events_event_loop_runtime::{EventLoopHolder, EventLoopRuntime, EventLoopRuntimeHolder};
 use aos_flatbuffers::{transmute_table_to, Flatbuffer};
 
 autocxx::include_cpp! (
@@ -179,7 +181,7 @@ mod tests {
             let _runtime1 = {
                 let pi1_ref = &pi1;
                 event_loop_factory.make_runtime("runtime1", pi1, move |runtime1| {
-                    assert!(pi1_ref.unwrap().has_name());
+                    assert!(node_has_name(pi1_ref.unwrap()));
                     let channel = runtime1
                         .get_raw_channel("/test", "aos.examples.Ping")
                         .unwrap();
@@ -198,7 +200,7 @@ mod tests {
             let _runtime2 = {
                 let pi1_ref = &pi1;
                 event_loop_factory.make_runtime("runtime2", pi1, |runtime2| {
-                    assert!(pi1_ref.unwrap().has_name());
+                    assert!(node_has_name(pi1_ref.unwrap()));
                     let channel = runtime2
                         .get_raw_channel("/test", "aos.examples.Ping")
                         .unwrap();

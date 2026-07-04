@@ -285,12 +285,97 @@ class EventLoopRuntime {
   //
   // SAFETY:
   //   * The event loop runtime must be `!Sync` in the Rust side (default).
-  //   * We can't expose exclusive references (&mut) to either of the mutable
-  //     fields on the Rust side from a shared reference (&).
   mutable std::unique_ptr<ApplicationFuture> task_;
 
   mutable int child_count_ = 0;
 };
+
+// Helper functions to work around bindgen/autocxx limitations under Clang 22.
+inline std::unique_ptr<EventLoopRuntime> make_event_loop_runtime(
+    const EventLoop *event_loop) {
+  return std::make_unique<EventLoopRuntime>(event_loop);
+}
+
+inline EventLoop *event_loop_runtime_event_loop(
+    const EventLoopRuntime *runtime) {
+  return runtime->event_loop();
+}
+
+inline void event_loop_runtime_spawn(const EventLoopRuntime *runtime,
+                                     std::unique_ptr<ApplicationFuture> task) {
+  runtime->Spawn(std::move(task));
+}
+
+inline const Configuration *event_loop_runtime_configuration(
+    const EventLoopRuntime *runtime) {
+  return runtime->configuration();
+}
+
+inline const Node *event_loop_runtime_node(const EventLoopRuntime *runtime) {
+  return runtime->node();
+}
+
+inline bool event_loop_runtime_is_running(const EventLoopRuntime *runtime) {
+  return runtime->is_running();
+}
+
+inline int64_t event_loop_runtime_monotonic_now(
+    const EventLoopRuntime *runtime) {
+  return runtime->monotonic_now();
+}
+
+inline int64_t event_loop_runtime_realtime_now(
+    const EventLoopRuntime *runtime) {
+  return runtime->realtime_now();
+}
+
+inline const char *event_loop_runtime_name_data(
+    const EventLoopRuntime *runtime) {
+  return runtime->event_loop()->name().data();
+}
+
+inline size_t event_loop_runtime_name_size(const EventLoopRuntime *runtime) {
+  return runtime->event_loop()->name().size();
+}
+
+inline WatcherForRust event_loop_runtime_make_watcher(
+    const EventLoopRuntime *runtime, const Channel *channel) {
+  return runtime->MakeWatcher(channel);
+}
+
+inline SenderForRust event_loop_runtime_make_sender(
+    const EventLoopRuntime *runtime, const Channel *channel) {
+  return runtime->MakeSender(channel);
+}
+
+inline FetcherForRust event_loop_runtime_make_fetcher(
+    const EventLoopRuntime *runtime, const Channel *channel) {
+  return runtime->MakeFetcher(channel);
+}
+
+inline OnRunForRust event_loop_runtime_make_on_run(
+    const EventLoopRuntime *runtime) {
+  return runtime->MakeOnRun();
+}
+
+inline std::unique_ptr<TimerForRust> event_loop_runtime_add_timer(
+    const EventLoopRuntime *runtime) {
+  return runtime->AddTimer();
+}
+
+inline void event_loop_runtime_set_runtime_realtime_priority(
+    const EventLoopRuntime *runtime, int32_t priority) {
+  runtime->SetRuntimeRealtimePriority(priority);
+}
+
+inline void event_loop_runtime_set_runtime_affinity(
+    const EventLoopRuntime *runtime, const CpuSet &cpuset) {
+  runtime->SetRuntimeAffinity(cpuset);
+}
+
+inline void dummy_event_loop_use(std::unique_ptr<EventLoop>) {}
+
+inline bool node_has_name(const Node *node) { return node->has_name(); }
 
 }  // namespace aos
 

@@ -226,7 +226,7 @@ setup_llvm_distributions()
 
 load("@toolchains_llvm//toolchain:rules.bzl", "llvm", "llvm_toolchain")
 
-llvm_version = "21.1.8"
+llvm_version = "22.1.8"
 
 llvm_alternative_sources = [
     "https://github.com/RealtimeRoboticsGroup/toolchains/releases/download/{llvm_version}/{basename}",
@@ -237,8 +237,8 @@ llvm_x86_64_basename = "clang+llvm-%s-x86_64-linux-gnu-ubuntu-22.04.tar.zst" % l
 llvm_aarch64_basename = "clang+llvm-%s-aarch64-linux-gnu.tar.zst" % llvm_version
 
 llvm_extra_distributions = {
-    llvm_x86_64_basename: "3e9ab559182f45143c36d761fcee6818935187a8f54354ecb043643b642769f0",
-    llvm_aarch64_basename: "68172a4b557ab3ae50fcc27d3e706d066ea5891933e50f6fb97d6ca9f7e2beb4",
+    llvm_x86_64_basename: "82fd4fe320aae577f971b38a1371832cb8f88876c95928baf55e0fb50522cf8a",
+    llvm_aarch64_basename: "50bce7e8afe6764ed4d11042dc2bcc70e511db58d66e39ffa820bdf2325d03fa",
 }
 
 llvm(
@@ -248,9 +248,9 @@ llvm(
     extra_llvm_distributions = llvm_extra_distributions,
     # MemorySanitizer-instrumented libc++ overlay, swapped in for builds with
     # `--features=msan` (see `build:msan` in .bazelrc). Same LLVM version as the
-    # base toolchain so it is ABI-compatible with clang 21.1.8.
-    libcxx_sha256 = "56e33981bb71aba8704026534093f81ba9783cff0bf701681f1781d2ecb50a87",
-    libcxx_url = "https://github.com/RealtimeRoboticsGroup/toolchains/releases/download/21.1.8/libcxx-msan-21.1.8-x86_64-linux-gnu-ubuntu-22.04.tar.zst",
+    # base toolchain so it is ABI-compatible with clang 22.1.8.
+    libcxx_sha256 = "fd1ac49eeda4edc6deeda2037998e558718a63a5054fff4fdace7751b270217a",
+    libcxx_url = "https://github.com/RealtimeRoboticsGroup/toolchains/releases/download/22.1.8/libcxx-msan-22.1.8-x86_64-linux-gnu-ubuntu-22.04.tar.zst",
     llvm_versions = {"": llvm_version},
 )
 
@@ -261,9 +261,9 @@ llvm(
     extra_llvm_distributions = llvm_extra_distributions,
     # MemorySanitizer-instrumented libc++ overlay, swapped in for builds with
     # `--features=msan` (see `build:msan` in .bazelrc). Same LLVM version as the
-    # base toolchain so it is ABI-compatible with clang 21.1.8.
-    libcxx_sha256 = "3bdcaf1d171ea3e15b9cef3229db0476cc8d333a32c32df9157293328f251a68",
-    libcxx_url = "https://github.com/RealtimeRoboticsGroup/toolchains/releases/download/21.1.8/libcxx-msan-21.1.8-aarch64-linux-gnu.tar.zst",
+    # base toolchain so it is ABI-compatible with clang 22.1.8.
+    libcxx_sha256 = "283fc2fc17b3ed2ebf7e1281d9a6391e692da344290fc5c726037e2d1da405a1",
+    libcxx_url = "https://github.com/RealtimeRoboticsGroup/toolchains/releases/download/22.1.8/libcxx-msan-22.1.8-aarch64-linux-gnu.tar.zst",
     llvm_versions = {"": llvm_version},
 )
 
