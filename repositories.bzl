@@ -438,9 +438,9 @@ cc_library(
 
     http_archive(
         name = "aspect_rules_esbuild",
-        sha256 = "530adfeae30bbbd097e8af845a44a04b641b680c5703b3bf885cbd384ffec779",
-        strip_prefix = "rules_esbuild-0.22.1",
-        url = "https://github.com/aspect-build/rules_esbuild/releases/download/v0.22.1/rules_esbuild-v0.22.1.tar.gz",
+        sha256 = "b73d65cbed2918c382f77a548a106982b40f85200f025565d5cfa1b2e09011e7",
+        strip_prefix = "rules_esbuild-0.25.1",
+        url = "https://github.com/aspect-build/rules_esbuild/releases/download/v0.25.1/rules_esbuild-v0.25.1.tar.gz",
     )
 
     http_archive(

@@ -12,7 +12,7 @@ bazel_dep(
 )
 bazel_dep(
     name = "aspect_rules_esbuild",
-    version = "0.22.1",
+    version = "0.25.1",
 )
 bazel_dep(
     name = "aspect_rules_js",
