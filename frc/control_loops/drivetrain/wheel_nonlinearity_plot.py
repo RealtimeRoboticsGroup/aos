@@ -3,6 +3,9 @@
 # This is a quick script to show the effect of the wheel nonlinearity term on
 # turning rate
 
+import matplotlib
+
+matplotlib.use("GTK3Agg")
 from matplotlib import pylab
 import numpy
 

@@ -2,8 +2,10 @@
 
 import numpy
 import scipy
-import matplotlib.pyplot as plt
 import matplotlib
+
+matplotlib.use("GTK3Agg")
+import matplotlib.pyplot as plt
 from scipy.special import logsumexp
 
 x = numpy.linspace(-10, 10, 1000)

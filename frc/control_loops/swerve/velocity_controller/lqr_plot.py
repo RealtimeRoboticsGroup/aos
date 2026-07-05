@@ -19,15 +19,14 @@ os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = 'false'
 
 import absl
 from absl import logging
-from matplotlib.animation import FuncAnimation
 import matplotlib
+
+matplotlib.use("GTK3Agg")
+from matplotlib.animation import FuncAnimation
+from matplotlib import pylab
 import numpy
 import scipy
 import time
-
-matplotlib.use("gtk3agg")
-
-from matplotlib import pylab
 from matplotlib import pyplot
 from flax.training import checkpoints
 from frc.control_loops.python import controls

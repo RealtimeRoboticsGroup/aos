@@ -3,6 +3,9 @@
 from absl import app, flags
 import cv2 as cv
 import glog
+import matplotlib
+
+matplotlib.use("GTK3Agg")
 import matplotlib.pyplot as plt
 
 flags.DEFINE_bool("hsv", False, "Displays the image in hsv")

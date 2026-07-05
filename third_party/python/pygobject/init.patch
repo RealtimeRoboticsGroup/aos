@@ -8,7 +8,7 @@ diff --git a/site-packages/gi/__init__.py b/site-packages/gi/__init__.py
 index 3454790..a6f3246 100644
 --- a/site-packages/gi/__init__.py
 +++ b/site-packages/gi/__init__.py
-@@ -27,6 +27,53 @@ import os
+@@ -27,6 +27,88 @@
  import importlib
  import types
  
@@ -20,10 +20,22 @@ index 3454790..a6f3246 100644
 +    if not runfiles_dir:
 +        raise FileNotFoundError("Failed runfiles lookup.")
 +
-+    gtk_runtime_dir = _runfiles.Rlocation("amd64_debian_sysroot/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders")
-+    if gtk_runtime_dir:
-+        gtk_runtime_dir = gtk_runtime_dir.removesuffix("/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders")
-+    else:
++    gtk_runtime_dir = None
++    for repo_name in ["amd64_debian_sysroot", "amd64_debian_sysroot+", "amd64_debian_sysroot~"]:
++        rpath = _runfiles.Rlocation(repo_name + "/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders")
++        if rpath:
++            gtk_runtime_dir = rpath.removesuffix("/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders")
++            break
++
++    if not gtk_runtime_dir:
++        for name in os.listdir(runfiles_dir):
++            if name.startswith("amd64_debian_sysroot"):
++                candidate = os.path.join(runfiles_dir, name)
++                if os.path.isdir(candidate):
++                    gtk_runtime_dir = candidate
++                    break
++
++    if not gtk_runtime_dir:
 +        gtk_runtime_dir = os.path.join(runfiles_dir, "amd64_debian_sysroot")
 +
 +    ld_library_path = os.getenv("LD_LIBRARY_PATH") or ""
@@ -54,6 +66,29 @@ index 3454790..a6f3246 100644
 +                                                      "2.10.0", "loaders")
 +    os.environ["GDK_PIXBUF_MODULE_FILE"] = os.path.join(os.environ["GDK_PIXBUF_MODULEDIR"], "loaders.cache")
 +    os.system(os.path.join(gtk_runtime_dir, "usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders") + " --update-cache")
++
++    # Under Bzlmod, PyGObject and matplotlib are downloaded as precompiled manylinux wheels
++    # which vendorize their own copies of Cairo (e.g. libcairo-gobject-*.so.2).
++    # Meanwhile, GTK loads standard libcairo-gobject.so.2 from the sysroot.
++    # If both versions are loaded, they attempt to register duplicate Cairo GTypes
++    # (like CairoPattern) in the global GObject registry. This duplicate registration
++    # returns 0 (invalid GType), causing g_once_init_leave() to fail an assertion
++    # and corrupt the GLib once-init mutex, deadlocking the next type registration.
++    # To prevent this, we globally preload the sysroot libraries using RTLD_GLOBAL.
++    # This maps the sysroot symbols globally so that both the wheel and GTK resolve
++    # to the same Cairo GTypes, completely bypassing symbol/type duplication.
++    import ctypes
++    for lib in ["libglib-2.0.so.0", "libgobject-2.0.so.0", "libcairo.so.2", "libcairo-gobject.so.2", "libgirepository-1.0.so.1"]:
++        for path in [
++            gtk_runtime_dir + "/usr/lib/x86_64-linux-gnu/" + lib,
++            gtk_runtime_dir + "/lib/x86_64-linux-gnu/" + lib,
++            lib
++        ]:
++            try:
++                ctypes.CDLL(path, mode=ctypes.RTLD_GLOBAL)
++                break
++            except Exception:
++                pass
 +
 +
 +_hermeticity_fixup()

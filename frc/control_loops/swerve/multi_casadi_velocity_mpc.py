@@ -2,8 +2,10 @@
 from absl import app
 from frc.control_loops.swerve import dynamics
 from absl import flags
-from matplotlib import pylab
 import matplotlib
+
+matplotlib.use("GTK3Agg")
+from matplotlib import pylab
 import sys, os, pickle
 from multiprocessing.pool import ThreadPool
 import numpy
@@ -11,8 +13,6 @@ import pathlib, collections
 import subprocess
 import itertools
 import threading
-
-matplotlib.use("GTK3Agg")
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('outdir', '/tmp/swerve', "Directory to write results to.")

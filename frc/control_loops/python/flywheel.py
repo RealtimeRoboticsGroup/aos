@@ -3,6 +3,8 @@ from frc.control_loops.python import controls
 import numpy
 
 import matplotlib
+
+matplotlib.use("GTK3Agg")
 import matplotlib.pyplot as plt
 
 import glog
@@ -252,8 +254,6 @@ def PlotSpinup(params, goal, iterations=400):
 
         t.append(initial_t + i * flywheel.dt)
         u.append(U[0, 0])
-
-    matplotlib.use("GTK3Agg")
 
     plt.subplot(3, 1, 1)
     plt.plot(t, v, label='x')

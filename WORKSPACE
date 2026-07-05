@@ -140,12 +140,14 @@ install_pip_deps(
             patch: json.encode({"patch_strip": 2})
             for patch in [
                 "//third_party:python/matplotlib/init.patch",
+                "//third_party:python/matplotlib/RECORD_310.patch",
             ]
         },
         "pygobject": {
             patch: json.encode({"patch_strip": 2})
             for patch in [
                 "//third_party:python/pygobject/init.patch",
+                "//third_party:python/pygobject/RECORD_310.patch",
             ]
         },
     },
@@ -182,12 +184,14 @@ install_aos_pip_deps(
             patch: json.encode({"patch_strip": 2})
             for patch in [
                 "//third_party:python/matplotlib/init.patch",
+                "//third_party:python/matplotlib/RECORD_310.patch",
             ]
         },
         "pygobject": {
             patch: json.encode({"patch_strip": 2})
             for patch in [
                 "//third_party:python/pygobject/init.patch",
+                "//third_party:python/pygobject/RECORD_310.patch",
             ]
         },
     },
@@ -335,7 +339,6 @@ register_toolchains(
     "//tools/cpp:cc-toolchain-cortex-m4f-imu",
     # Find a good way to select between these two M4F toolchains.
     #"//tools/cpp:cc-toolchain-cortex-m4f-k22",
-    "//tools/python:python_toolchain",
     "//tools/go:noop_go_toolchain",
     "//tools/rust:rust-toolchain-x86",
     "//tools/rust:rust-toolchain-armv7",

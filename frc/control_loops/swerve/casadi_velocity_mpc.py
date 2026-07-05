@@ -3,8 +3,10 @@
 from frc.control_loops.swerve import dynamics
 from frc.control_loops.swerve.casadi_velocity_mpc_lib import MPC
 import pickle
-import matplotlib.pyplot as pyplot
 import matplotlib
+
+matplotlib.use("GTK3Agg")
+import matplotlib.pyplot as pyplot
 from matplotlib import pylab
 import numpy
 import time
@@ -137,8 +139,6 @@ class Solver(object):
 
 
 def main(argv):
-    matplotlib.use("GTK3Agg")
-
     if FLAGS.outputdir:
         os.chdir(FLAGS.outputdir)
 

@@ -128,17 +128,26 @@ pip.override(
 pip.override(
     file = "matplotlib-3.9.2-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
     patch_strip = 2,
-    patches = ["//third_party/python:matplotlib/init.patch"],
+    patches = [
+        "//third_party/python:matplotlib/init.patch",
+        "//third_party/python:matplotlib/RECORD_313.patch",
+    ],
 )
 pip.override(
     file = "pygobject-3.50.2-cp310-cp310-manylinux_2_36_x86_64.whl",
     patch_strip = 2,
-    patches = ["//third_party/python:pygobject/init.patch"],
+    patches = [
+        "//third_party/python:pygobject/init.patch",
+        "//third_party/python:pygobject/RECORD_310.patch",
+    ],
 )
 pip.override(
     file = "pygobject-3.50.2-cp313-cp313-manylinux_2_36_x86_64.whl",
     patch_strip = 2,
-    patches = ["//third_party/python:pygobject/init.patch"],
+    patches = [
+        "//third_party/python:pygobject/init.patch",
+        "//third_party/python:pygobject/RECORD_313.patch",
+    ],
 )
 use_repo(pip, "aos_pip_deps", pip_deps = "pip_deps")
 

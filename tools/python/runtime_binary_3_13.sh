@@ -73,11 +73,27 @@ if [[ -z "${BASE_PATH}" ]]; then
 fi
 
 PYTHON_BIN="${BASE_PATH}/bin/python3"
+
+# Locate the sysroot directory
+SYSROOT_DIR=""
+for path in \
+  "${BASE_PATH}/../amd64_debian_sysroot" \
+  "${BASE_PATH}/../amd64_debian_sysroot+" \
+  "${BASE_PATH}/../amd64_debian_sysroot~"; do
+  if [[ -d "${path}" ]]; then
+    SYSROOT_DIR="${path}"
+    break
+  fi
+done
+if [[ -z "${SYSROOT_DIR}" ]]; then
+  SYSROOT_DIR="${BASE_PATH}/../amd64_debian_sysroot"
+fi
+
 LD_LIBRARY_PATH=":${BASE_PATH}/lib"
-LD_LIBRARY_PATH+=":${BASE_PATH}/../amd64_debian_sysroot/lib/x86_64-linux-gnu/"
-LD_LIBRARY_PATH+=":${BASE_PATH}/../amd64_debian_sysroot/usr/lib/x86_64-linux-gnu/"
-LD_LIBRARY_PATH+=":${BASE_PATH}/../amd64_debian_sysroot/usr/lib/"
-LD_LIBRARY_PATH+=":${BASE_PATH}/../amd64_debian_sysroot/usr/lib/x86_64-linux-gnu/gvfs/"
+LD_LIBRARY_PATH+=":${SYSROOT_DIR}/lib/x86_64-linux-gnu/"
+LD_LIBRARY_PATH+=":${SYSROOT_DIR}/usr/lib/x86_64-linux-gnu/"
+LD_LIBRARY_PATH+=":${SYSROOT_DIR}/usr/lib/"
+LD_LIBRARY_PATH+=":${SYSROOT_DIR}/usr/lib/x86_64-linux-gnu/gvfs/"
 
 # Try different possible repository names due to bzlmod / workspace variations for nvidia/nccl
 for suffix in \

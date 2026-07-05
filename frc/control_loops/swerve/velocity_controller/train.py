@@ -7,6 +7,8 @@ import collections
 from absl import logging
 import flax
 import matplotlib
+
+matplotlib.use("GTK3Agg")
 from matplotlib import pyplot
 from flax import linen as nn
 from flax.training import train_state

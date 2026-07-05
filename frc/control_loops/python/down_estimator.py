@@ -7,6 +7,9 @@ import random
 import numpy
 import gflags
 import glog
+import matplotlib
+
+matplotlib.use("GTK3Agg")
 from matplotlib import pylab
 
 from frc.control_loops.python import controls

@@ -11,7 +11,7 @@ diff --git a/site-packages/matplotlib/__init__.py b/site-packages/matplotlib/__i
 index 9e9325a..ab510ab 100644
 --- a/site-packages/matplotlib/__init__.py
 +++ b/site-packages/matplotlib/__init__.py
-@@ -154,6 +154,48 @@ import tempfile
+@@ -154,6 +154,60 @@ import tempfile
  
  from packaging.version import parse as parse_version
  
@@ -35,10 +35,22 @@ index 9e9325a..ab510ab 100644
 +    # manually here to work around the bug.
 +    os.environ["MPLCONFIGDIR"] = f"/tmp/matplotlib-nobody-{os.getpid()}"
 +
-+    gtk_runtime_dir = _runfiles.Rlocation("amd64_debian_sysroot/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders")
-+    if gtk_runtime_dir:
-+        gtk_runtime_dir = gtk_runtime_dir.removesuffix("/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders")
-+    else:
++    gtk_runtime_dir = None
++    for repo_name in ["amd64_debian_sysroot", "amd64_debian_sysroot+", "amd64_debian_sysroot~"]:
++        rpath = _runfiles.Rlocation(repo_name + "/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders")
++        if rpath:
++            gtk_runtime_dir = rpath.removesuffix("/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders")
++            break
++
++    if not gtk_runtime_dir:
++        for name in os.listdir(runfiles_dir):
++            if name.startswith("amd64_debian_sysroot"):
++                candidate = os.path.join(runfiles_dir, name)
++                if os.path.isdir(candidate):
++                    gtk_runtime_dir = candidate
++                    break
++
++    if not gtk_runtime_dir:
 +        gtk_runtime_dir = os.path.join(runfiles_dir, "amd64_debian_sysroot")
 +
 +    # Tell fontconfig where to find matplotlib's sandboxed font files.
