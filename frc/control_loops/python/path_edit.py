@@ -2,23 +2,23 @@
 from __future__ import print_function
 import os
 import sys
-from color import palette
-from graph import Graph
+from frc.control_loops.python.color import palette
+from frc.control_loops.python.graph import Graph
 import gi
 import numpy as np
 
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gdk, Gtk, GLib
 import cairo
-from libspline import Spline, DistanceSpline
+from frc.control_loops.python.libspline import Spline, DistanceSpline
 import enum
 import json
 import copy
-from constants import FIELD
-from constants import get_json_folder
-from constants import ROBOT_SIDE_TO_BALL_CENTER, ROBOT_SIDE_TO_HATCH_PANEL, HATCH_PANEL_WIDTH, BALL_RADIUS
-from drawing_constants import set_color, draw_px_cross, draw_px_x, display_text, draw_control_points_cross
-from multispline import Multispline, ControlPointIndex
+from frc.control_loops.python.constants import FIELD
+from frc.control_loops.python.constants import get_json_folder
+from frc.control_loops.python.constants import ROBOT_SIDE_TO_BALL_CENTER, ROBOT_SIDE_TO_HATCH_PANEL, HATCH_PANEL_WIDTH, BALL_RADIUS
+from frc.control_loops.python.drawing_constants import set_color, draw_px_cross, draw_px_x, display_text, draw_control_points_cross
+from frc.control_loops.python.multispline import Multispline, ControlPointIndex
 import time
 from pathlib import Path
 

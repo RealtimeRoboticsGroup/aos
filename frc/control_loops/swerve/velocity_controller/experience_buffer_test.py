@@ -12,7 +12,7 @@ os.environ['XLA_FLAGS'] = ' '.join([
 os.environ['JAX_PLATFORMS'] = 'cpu'
 #os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = 'false'
 
-import experience_buffer
+from frc.control_loops.swerve.velocity_controller import experience_buffer
 import jax
 import numpy
 from jax.experimental import mesh_utils

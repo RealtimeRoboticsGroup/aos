@@ -3,15 +3,15 @@
 # matplotlib overrides fontconfig locations, so has to be imported before gtk
 import matplotlib
 import gi
-from path_edit import FieldWidget
-from path_edit import Mode  # still being tested
-from basic_window import RunApp
-from constants import FIELDS, FIELD, SCREEN_SIZE
+from frc.control_loops.python.path_edit import FieldWidget
+from frc.control_loops.python.path_edit import Mode  # still being tested
+from frc.control_loops.python.basic_window import RunApp
+from frc.control_loops.python.constants import FIELDS, FIELD, SCREEN_SIZE
 
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gdk, Gtk, GLib
 import cairo
-import basic_window
+from frc.control_loops.python import basic_window
 import os
 
 

@@ -5,7 +5,7 @@ import numpy as np
 from numpy.testing import *
 import unittest
 
-from libspline import Spline, DistanceSpline, Trajectory
+from frc.control_loops.python.libspline import Spline, DistanceSpline, Trajectory
 
 
 class TestSpline(unittest.TestCase):

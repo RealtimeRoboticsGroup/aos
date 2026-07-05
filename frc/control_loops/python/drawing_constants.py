@@ -1,5 +1,5 @@
 import cairo
-from color import Color, palette
+from frc.control_loops.python.color import Color, palette
 import numpy as np
 
 

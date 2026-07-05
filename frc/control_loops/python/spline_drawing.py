@@ -1,8 +1,8 @@
-from color import Color, palette
+from frc.control_loops.python.color import Color, palette
 import cairo
 
 import numpy as np
-from basic_window import OverrideMatrix, identity, quit_main_loop, set_color
+from frc.control_loops.python.basic_window import OverrideMatrix, identity, quit_main_loop, set_color
 
 WIDTH_OF_FIELD_IN_METERS = 8.258302
 PIXELS_ON_SCREEN = 800

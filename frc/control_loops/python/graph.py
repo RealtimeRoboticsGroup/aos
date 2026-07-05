@@ -6,8 +6,8 @@ import numpy as np
 import queue
 import threading
 import copy
-from multispline import Multispline
-from libspline import Spline, DistanceSpline, Trajectory
+from frc.control_loops.python.multispline import Multispline
+from frc.control_loops.python.libspline import Spline, DistanceSpline, Trajectory
 
 from matplotlib.backends.backend_gtk3agg import (FigureCanvasGTK3Agg as
                                                  FigureCanvas)
