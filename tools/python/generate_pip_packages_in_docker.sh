@@ -39,6 +39,16 @@ clean_up() {
 
 trap clean_up EXIT
 
+# Pip checks that the cache directory (/root/.cache/pip) is owned by the current
+# user (root). Since .pip_cache was created by the host caller, it is owned by
+# the host user inside the container, causing pip to disable the cache with a
+# warning. We change the ownership to root:root inside the container to satisfy
+# pip. The EXIT trap (clean_up) will restore ownership back to the host user
+# before exiting.
+if [ -d "${SCRIPT_DIR}/.pip_cache" ]; then
+  chown -R root:root "${SCRIPT_DIR}/.pip_cache"
+fi
+
 rm -rf \
   "${SCRIPT_DIR}"/venv \
   "${SCRIPT_DIR}"/wheelhouse_tmp \

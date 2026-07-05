@@ -17,6 +17,7 @@
 /tools/python/venv/
 /tools/python/wheelhouse/
 /tools/python/wheelhouse_tmp/
+/tools/python/.pip_cache/
 
 node_modules
 /.aspect
