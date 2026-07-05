@@ -13,7 +13,6 @@ from flax.training import train_state
 from flax.training import checkpoints
 import jax
 import inspect
-import aim
 import jax.numpy as jnp
 import ml_collections
 import numpy as np
@@ -399,26 +398,6 @@ def train(workdir: str, problem: Problem) -> train_state.TrainState:
     rng = jax.random.key(0)
     rng, r_rng = jax.random.split(rng)
 
-    run = aim.Run(repo='aim://127.0.0.1:53800')
-
-    run['hparams'] = {
-        'q_learning_rate': FLAGS.q_learning_rate,
-        'pi_learning_rate': FLAGS.pi_learning_rate,
-        'alpha_learning_rate': FLAGS.alpha_learning_rate,
-        'random_sample_steps': FLAGS.random_sample_steps,
-        'batch_size': FLAGS.batch_size,
-        'horizon': FLAGS.horizon,
-        'warmup_steps': FLAGS.warmup_steps,
-        'steps': FLAGS.steps,
-        'replay_size': FLAGS.replay_size,
-        'num_agents': FLAGS.num_agents,
-        'polyak': FLAGS.polyak,
-        'gamma': FLAGS.gamma,
-        'alpha': FLAGS.alpha,
-        'final_q_learning_rate': FLAGS.final_q_learning_rate,
-        'final_pi_learning_rate': FLAGS.final_pi_learning_rate,
-    }
-
     # Setup TrainState
     rng, init_rng = jax.random.split(rng)
     q_learning_rate = create_learning_rate_fn(
@@ -498,16 +477,6 @@ def train(workdir: str, problem: Problem) -> train_state.TrainState:
             entropy,
             step <= FLAGS.random_sample_steps,
         )
-
-        run.track(
-            {
-                'q_loss': float(q_loss),
-                'pi_loss': float(pi_loss),
-                'alpha_loss': float(alpha_loss),
-                'alpha': float(jax.numpy.exp(state.params['logalpha'])),
-                'entropy': entropy,
-            },
-            step=step)
 
         if time.time() > last_time + 3.0 and step > update_after:
             # TODO(austin): Simulate a rollout and accumulate the reward.  How good are we doing?

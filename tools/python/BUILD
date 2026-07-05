@@ -59,6 +59,11 @@ py_runtime(
         "@python_3_10_x86_64-unknown-linux-gnu//:files",
     ],
     interpreter = "runtime_binary.sh",
+    interpreter_version_info = {
+        "major": "3",
+        "micro": "18",
+        "minor": "10",
+    },
     python_version = "PY3",
 )
 

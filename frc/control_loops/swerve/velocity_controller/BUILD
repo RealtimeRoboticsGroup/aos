@@ -41,7 +41,6 @@ py_binary(
         ":physics",
         "//frc/control_loops/swerve:jax_dynamics",
         "@pip_deps//absl_py",
-        "@pip_deps//aim",
         "@pip_deps//clu",
         "@pip_deps//flashbax",
         "@pip_deps//flax",

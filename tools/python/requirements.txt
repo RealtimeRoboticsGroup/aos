@@ -49,6 +49,4 @@ tf_keras
 # Experience buffer for reinforcement learning
 flashbax
 
-# Experiment tracking
-aim
 plotly
