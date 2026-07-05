@@ -1070,9 +1070,9 @@ py_binary(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        "@pip_deps//bokeh",
-        "@pip_deps//numpy",
-        "@pip_deps//tabulate",
+        "@aos_pip_deps//bokeh",
+        "@aos_pip_deps//numpy",
+        "@aos_pip_deps//tabulate",
     ],
 )
 
@@ -1084,7 +1084,7 @@ py_test(
     visibility = ["//visibility:public"],
     deps = [
         ":plot_logger_profile",
-        "@pip_deps//numpy",
+        "@aos_pip_deps//numpy",
     ],
 )
 

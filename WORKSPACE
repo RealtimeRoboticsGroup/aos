@@ -151,6 +151,48 @@ install_pip_deps(
     },
 )
 
+pip_parse(
+    name = "aos_pip_deps",
+    timeout = 1800,
+    annotations = PYTHON_ANNOTATIONS,
+    download_only = RUNNING_IN_CI,
+    enable_implicit_namespace_pkgs = True,
+    extra_pip_args = [
+        "--timeout=1800",
+    ] + ([
+        "--index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
+        "--trusted-host=realtimeroboticsgroup.org",
+    ] if RUNNING_IN_CI else [
+        "--index-url=https://pypi.org/simple",
+        "--extra-index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
+        "--prefer-binary",
+    ]),
+    python_interpreter_target = "@python_3_10_host//:python",
+    requirements_lock = "//tools/python:aos_requirements.lock.txt",
+)
+
+load(
+    "@aos_pip_deps//:requirements.bzl",
+    install_aos_pip_deps = "install_deps",
+)
+
+install_aos_pip_deps(
+    patch_spec = {
+        "matplotlib": {
+            patch: json.encode({"patch_strip": 2})
+            for patch in [
+                "//third_party:python/matplotlib/init.patch",
+            ]
+        },
+        "pygobject": {
+            patch: json.encode({"patch_strip": 2})
+            for patch in [
+                "//third_party:python/pygobject/init.patch",
+            ]
+        },
+    },
+)
+
 # As long as we're using WORKSPACE, this will only work if uv is the only thing
 # using the multitool repo name. Otherwise, we'll have to patch it.
 multitool(

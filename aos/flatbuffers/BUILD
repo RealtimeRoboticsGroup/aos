@@ -320,9 +320,9 @@ py_test(
         ":everything_fbs_py",
         ":flatpy",
         ":generated_fbs_py",
+        "@aos_pip_deps//absl_py",
         "@com_github_google_flatbuffers//:flatpy",
         "@mock_external_fbs_repo//:baz_fbs_py",
         "@mock_external_fbs_repo//:foo_fbs_py",
-        "@pip_deps//absl_py",
     ],
 )

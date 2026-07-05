@@ -24,7 +24,7 @@ class TestExperienceBuffer(unittest.TestCase):
 
     def setUp(self):
         self.mesh = jax.sharding.Mesh(
-            devices=mesh_utils.create_device_mesh(len(jax.devices())),
+            devices=mesh_utils.create_device_mesh((len(jax.devices()), )),
             axis_names=('batch', ),
         )
 

@@ -38,6 +38,17 @@ steps:
         - signal_reason: agent_stop  # Agent was stopped by the OS (e.g. spot termination)
           limit: 2
 
+  - label: "x86_64 bzlmod Python 3.13"
+    commands:
+      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../k8_output_base test ${COMMON} --config=eigen --@rules_python//python/config_settings:python_version=3.13 ${TARGETS} --remote_download_outputs=minimal --enable_bzlmod --noenable_workspace --lockfile_mode=error -- -@ceres-solver//:polynomial_test -@com_google_absl//absl/numeric:bits_test
+    retry:
+      automatic:
+        - exit_status: -1  # Connection to the Agent was lost
+          signal_reason: none
+          limit: 2
+        - signal_reason: agent_stop  # Agent was stopped by the OS (e.g. spot termination)
+          limit: 2
+
   - label: "arm64"
     commands:
       - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../common_output_base build ${COMMON} --remote_download_outputs=minimal --config=arm64 ${TARGETS} --noenable_bzlmod --enable_workspace -- -@com_google_absl//absl/numeric:bits_test

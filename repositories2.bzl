@@ -34,6 +34,11 @@ def dependencies_phase1():
         python_version = "3.10",
     )
 
+    python_register_toolchains(
+        name = "python_3_13",
+        python_version = "3.13",
+    )
+
     m4_register_toolchains(version = "1.4.18")
     setup_legacy_bzlmodrio_ni_cpp_dependencies()
 

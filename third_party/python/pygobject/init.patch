@@ -8,7 +8,7 @@ diff --git a/site-packages/gi/__init__.py b/site-packages/gi/__init__.py
 index 3454790..a6f3246 100644
 --- a/site-packages/gi/__init__.py
 +++ b/site-packages/gi/__init__.py
-@@ -27,6 +27,49 @@ import os
+@@ -27,6 +27,53 @@ import os
  import importlib
  import types
  
@@ -20,7 +20,11 @@ index 3454790..a6f3246 100644
 +    if not runfiles_dir:
 +        raise FileNotFoundError("Failed runfiles lookup.")
 +
-+    gtk_runtime_dir = os.path.join(runfiles_dir, "amd64_debian_sysroot")
++    gtk_runtime_dir = _runfiles.Rlocation("amd64_debian_sysroot/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders")
++    if gtk_runtime_dir:
++        gtk_runtime_dir = gtk_runtime_dir.removesuffix("/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders")
++    else:
++        gtk_runtime_dir = os.path.join(runfiles_dir, "amd64_debian_sysroot")
 +
 +    ld_library_path = os.getenv("LD_LIBRARY_PATH") or ""
 +    if ld_library_path:

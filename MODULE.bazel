@@ -28,7 +28,6 @@ single_version_override(
     module_name = "rules_python",
     patch_strip = 1,
     patches = [
-        "//third_party:rules_python/0001-Allow-WORKSPACE-users-to-patch-wheels.patch",
         "//third_party:rules_python/0002-Allow-users-to-inject-extra-deps.patch",
         "//third_party:rules_python/0003-Add-sysroot-dep.patch",
         "//third_party:rules_python/0004-aos-ci-pip-config.patch",
@@ -50,10 +49,17 @@ python = use_extension("@rules_python//python/extensions:python.bzl", "python")
 python.toolchain(
     python_version = "3.10",
 )
+python.toolchain(
+    is_default = True,
+    python_version = "3.13",
+)
 use_repo(
     python,
     "python_3_10",
     "python_3_10_x86_64-unknown-linux-gnu",
+    "python_3_13",
+    "python_3_13_x86_64-unknown-linux-gnu",
+    "python_versions",
 )
 
 pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
@@ -72,7 +78,7 @@ pip.parse(
         "--index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
         "--trusted-host=realtimeroboticsgroup.org",
     ],
-    hub_name = "aos_pip_deps",
+    hub_name = "pip_deps",
     python_version = "3.10",
     requirements_lock = "//tools/python:requirements.lock.txt",
     whl_modifications = {
@@ -80,17 +86,74 @@ pip.parse(
         "//third_party/python:pygobject_annotation.json": "pygobject",
     },
 )
+pip.parse(
+    enable_implicit_namespace_pkgs = True,
+    extra_pip_args = [
+        "--timeout=1800",
+        "--index-url=https://pypi.org/simple",
+        # Use an extra index url rather than an explicit index url to allow us to
+        # use the pypi mirror for everything else.
+        "--extra-index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
+        "--prefer-binary",
+    ],
+    extra_pip_args_ci = [
+        "--timeout=1800",
+        "--index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
+        "--trusted-host=realtimeroboticsgroup.org",
+    ],
+    hub_name = "pip_deps",
+    python_version = "3.13",
+    requirements_lock = "//tools/python:requirements.lock.txt",
+    whl_modifications = {
+        "//third_party/python:matplotlib_annotation.json": "matplotlib",
+        "//third_party/python:pygobject_annotation.json": "pygobject",
+    },
+)
+pip.parse(
+    enable_implicit_namespace_pkgs = True,
+    extra_pip_args = [
+        "--timeout=1800",
+        "--index-url=https://pypi.org/simple",
+        "--extra-index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
+        "--prefer-binary",
+    ],
+    hub_name = "aos_pip_deps",
+    python_version = "3.10",
+    requirements_lock = "//tools/python:aos_requirements.lock.txt",
+)
+pip.parse(
+    enable_implicit_namespace_pkgs = True,
+    extra_pip_args = [
+        "--timeout=1800",
+        "--index-url=https://pypi.org/simple",
+        "--extra-index-url=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
+        "--prefer-binary",
+    ],
+    hub_name = "aos_pip_deps",
+    python_version = "3.13",
+    requirements_lock = "//tools/python:aos_requirements.lock.txt",
+)
 pip.override(
-    file = "matplotlib-3.9.2-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    file = "matplotlib-3.9.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
     patch_strip = 2,
     patches = ["//third_party/python:matplotlib/init.patch"],
 )
 pip.override(
-    file = "pygobject-3.42.2-cp39-cp39-manylinux_2_34_x86_64.whl",
+    file = "matplotlib-3.9.2-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    patch_strip = 2,
+    patches = ["//third_party/python:matplotlib/init.patch"],
+)
+pip.override(
+    file = "pygobject-3.50.2-cp310-cp310-manylinux_2_36_x86_64.whl",
     patch_strip = 2,
     patches = ["//third_party/python:pygobject/init.patch"],
 )
-use_repo(pip, pip_deps = "aos_pip_deps")
+pip.override(
+    file = "pygobject-3.50.2-cp313-cp313-manylinux_2_36_x86_64.whl",
+    patch_strip = 2,
+    patches = ["//third_party/python:pygobject/init.patch"],
+)
+use_repo(pip, "aos_pip_deps", pip_deps = "pip_deps")
 
 bazel_dep(name = "grpc", version = "1.81.0", repo_name = "com_github_grpc_grpc")
 bazel_dep(name = "protobuf", version = "32.1", repo_name = "com_google_protobuf")
@@ -397,7 +460,6 @@ single_version_override(
     patches = ["third_party/websocketpp/websocketpp.patch"],
 )
 bazel_dep(name = "asio", version = "1.28.2")
-
 bazel_dep(name = "ctre_phoenix6_api_cpp_headers", version = "25.3.2", dev_dependency = True)
 bazel_dep(name = "ctre_phoenix6_tools_headers", version = "25.3.2", dev_dependency = True)
 bazel_dep(name = "ctre_phoenix6_api_cpp_athena", version = "25.3.2", dev_dependency = True)

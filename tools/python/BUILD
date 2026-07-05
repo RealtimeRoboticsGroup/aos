@@ -39,6 +39,28 @@ pip_compile(
     ],
 )
 
+# Invoke this via "bazel run //tools/python:aos_requirements.update".
+pip_compile(
+    name = "aos_requirements.update",
+    args = [
+        "--index-strategy=unsafe-any-match",
+        "--no-strip-extras",
+        "--default-index=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple",
+        "--index=https://pypi.org/simple",
+        "--constraint=tools/python/requirements.lock.txt",
+    ],
+    data = ["requirements.lock.txt"],
+    requirements_in = "aos_requirements.txt",
+    requirements_txt = "aos_requirements.lock.txt",
+    tags = [
+        "manual",
+        "requires-network",
+    ],
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+    ],
+)
+
 # This binary is intended to run the `requirements.update` target in a Docker
 # container. This is primarily intended for reproducibility. See README.md.
 sh_binary(
@@ -53,12 +75,12 @@ sh_binary(
 )
 
 py_runtime(
-    name = "python3_runtime",
+    name = "python3_10_runtime",
     files = [
-        "runtime_binary.sh",
+        "runtime_binary_3_10.sh",
         "@python_3_10_x86_64-unknown-linux-gnu//:files",
     ],
-    interpreter = "runtime_binary.sh",
+    interpreter = "runtime_binary_3_10.sh",
     interpreter_version_info = {
         "major": "3",
         "micro": "18",
@@ -67,10 +89,28 @@ py_runtime(
     python_version = "PY3",
 )
 
+py_runtime(
+    name = "python3_13_runtime",
+    files = [
+        "runtime_binary_3_13.sh",
+        "@python_3_13_x86_64-unknown-linux-gnu//:files",
+    ],
+    interpreter = "runtime_binary_3_13.sh",
+    interpreter_version_info = {
+        "major": "3",
+        "micro": "0",
+        "minor": "13",
+    },
+    python_version = "PY3",
+)
+
 py_runtime_pair(
     name = "py_runtime",
     py2_runtime = None,
-    py3_runtime = ":python3_runtime",
+    py3_runtime = select({
+        "@rules_python//python/config_settings:is_python_3.13": ":python3_13_runtime",
+        "//conditions:default": ":python3_10_runtime",
+    }),
 )
 
 toolchain(

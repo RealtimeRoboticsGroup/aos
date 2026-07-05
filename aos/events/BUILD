@@ -158,7 +158,7 @@ py_library(
         ":event_loop_c",
     ],
     deps = [
-        "@pip_deps//cffi",
+        "@aos_pip_deps//cffi",
         "@rules_python//python/runfiles",
     ],
 )
@@ -216,7 +216,7 @@ py_test(
     deps = [
         ":shm_event_loop_py",
         ":util_py",
-        "@pip_deps//absl_py",
+        "@aos_pip_deps//absl_py",
     ],
 )
 
@@ -261,7 +261,7 @@ py_test(
         ":test_message_fbs_py",
         ":util_py",
         "//aos/flatbuffers:flatpy",
-        "@pip_deps//absl_py",
+        "@aos_pip_deps//absl_py",
     ],
 )
 

@@ -3,12 +3,13 @@
 
 jinja2
 matplotlib
+h5py>=3.12.1
 mkdocs
 numpy
 opencv-python
-osqp
+osqp>=1.1.0
 pkginfo
-pygobject==3.42.2
+pygobject==3.50.2
 requests
 scipy
 shapely
@@ -23,16 +24,19 @@ typing_extensions
 # TODO(phil): Migrate to absl-py. These are abandoned as far as I can tell.
 python-gflags
 glog
+grpcio>=1.67.0
+
 
 bokeh
+pandas>=2.2.3
 tabulate
 
 flask
 
-casadi>=3.6.6
+casadi>=3.7.2
 
 # ML libraries
-jax[cuda12]
+jax[cuda12]>=0.4.35
 jaxtyping
 optax
 flax
@@ -45,8 +49,9 @@ tensorflow
 tensorflow_datasets
 tensorflow_probability
 tf_keras
+tensorflow-metadata>=1.15.0
 
 # Experience buffer for reinforcement learning
-flashbax
+flashbax>=0.1.3
 
 plotly
