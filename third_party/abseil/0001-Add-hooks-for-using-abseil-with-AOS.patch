@@ -7,9 +7,9 @@ index be8ceaf..0beccdd 100644
  #endif
  
 +#ifdef _WIN32
-+extern "C" void aos_FatalUnsetRealtimePriority_default() {}
++extern "C" void aos_FatalUnsetRealtimePriority_default_check_op() {}
 +extern "C" void aos_FatalUnsetRealtimePriority();
-+#pragma comment(linker, "/alternatename:aos_FatalUnsetRealtimePriority=aos_FatalUnsetRealtimePriority_default")
++#pragma comment(linker, "/alternatename:aos_FatalUnsetRealtimePriority=aos_FatalUnsetRealtimePriority_default_check_op")
 +#else
 +extern "C" void aos_FatalUnsetRealtimePriority();
 +extern "C" __attribute__((weak)) void aos_FatalUnsetRealtimePriority() {}
@@ -39,9 +39,9 @@ index 4acd503..39b0e3e 100644
  }
  
 +#ifdef _WIN32
-+extern "C" void aos_FatalUnsetRealtimePriority_default() {}
++extern "C" void aos_FatalUnsetRealtimePriority_default_log_message() {}
 +extern "C" void aos_FatalUnsetRealtimePriority();
-+#pragma comment(linker, "/alternatename:aos_FatalUnsetRealtimePriority=aos_FatalUnsetRealtimePriority_default")
++#pragma comment(linker, "/alternatename:aos_FatalUnsetRealtimePriority=aos_FatalUnsetRealtimePriority_default_log_message")
 +#else
 +extern "C" void aos_FatalUnsetRealtimePriority();
 +extern "C" __attribute__((weak)) void aos_FatalUnsetRealtimePriority() {}
