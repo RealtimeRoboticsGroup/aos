@@ -41,28 +41,29 @@ struct LogMessage {
   char message[LOG_MESSAGE_LEN];
 };
 
-// Returns left > right. LOG_UNKNOWN is most important.
 static inline bool log_gt_important(log_level left, log_level right) {
-  if (left == ERROR) left = 3;
-  if (right == ERROR) right = 3;
-  return left > right;
+  int left_val = static_cast<int>(left);
+  int right_val = static_cast<int>(right);
+  if (left == log_level::kERROR) left_val = 3;
+  if (right == log_level::kERROR) right_val = 3;
+  return left_val > right_val;
 }
 
 // Returns a string representing level or "unknown".
 static inline const char *log_str(log_level level) {
 #define DECL_LEVEL(name, value) \
-  if (level == name) return #name;
+  if (level == log_level::name) return &(#name[1]);
   DECL_LEVELS;
 #undef DECL_LEVEL
   return "unknown";
 }
-// Returns the log level represented by str or LOG_UNKNOWN.
+// Returns the log level represented by str or kLOG_UNKNOWN.
 static inline log_level str_log(const char *str) {
 #define DECL_LEVEL(name, value) \
-  if (!strcmp(str, #name)) return name;
+  if (!strcmp(str, &(#name[1]))) return log_level::name;
   DECL_LEVELS;
 #undef DECL_LEVEL
-  return LOG_UNKNOWN;
+  return log_level::kLOG_UNKNOWN;
 }
 
 // Implements all of the DoLog* methods in terms of a (pure virtual in this

@@ -19,7 +19,7 @@ class DeathTestLogImplementation
     return context->MyName();
   }
   virtual void HandleMessage(const logging::LogMessage &message) override {
-    if (message.level == FATAL) {
+    if (message.level == log_level::kFATAL) {
       logging::internal::PrintMessage(stderr, message);
       abort();
     }

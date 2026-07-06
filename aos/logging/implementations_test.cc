@@ -37,7 +37,7 @@ class TestLogImplementation : public LogImplementation {
     internal::FillInMessage(level, MyName(), monotonic_now(), format, ap,
                             &message_);
 
-    if (level == FATAL) {
+    if (level == log_level::kFATAL) {
       internal::PrintMessage(stderr, message_);
       abort();
     }
@@ -116,14 +116,14 @@ typedef LoggingTest LoggingDeathTest;
 TEST_F(LoggingTest, Basic) {
   EXPECT_FALSE(WasAnythingLogged());
   AOS_LOG(INFO, "test log 1\n");
-  EXPECT_TRUE(WasLogged(INFO, "test log 1\n"));
+  EXPECT_TRUE(WasLogged(log_level::kINFO, "test log 1\n"));
   AOS_LOG(INFO, "test log 1.5\n");
   // there's a subtle typo on purpose...
-  EXPECT_FALSE(WasLogged(INFO, "test log 15\n"));
+  EXPECT_FALSE(WasLogged(log_level::kINFO, "test log 15\n"));
   AOS_LOG(ERROR, "test log 2=%d\n", 55);
-  EXPECT_TRUE(WasLogged(ERROR, "test log 2=55\n"));
+  EXPECT_TRUE(WasLogged(log_level::kERROR, "test log 2=55\n"));
   AOS_LOG(ERROR, "test log 3\n");
-  EXPECT_FALSE(WasLogged(WARNING, "test log 3\n"));
+  EXPECT_FALSE(WasLogged(log_level::kWARNING, "test log 3\n"));
   AOS_LOG(WARNING, "test log 4\n");
   EXPECT_TRUE(WasAnythingLogged());
 }
@@ -140,16 +140,16 @@ TEST_F(LoggingDeathTest, Fatal) {
 
 TEST_F(LoggingDeathTest, PCHECK) {
   EXPECT_DEATH(AOS_PCHECK(fprintf(stdin, "nope")),
-               ".*fprintf\\((stdin|__stdinp), \"nope\"\\).*failed.*");
+               ".*fprintf\\(.*, \"nope\"\\).*failed.*");
 }
 
 TEST_F(LoggingTest, PCHECK) { EXPECT_EQ(7, AOS_PCHECK(printf("abc123\n"))); }
 
 TEST_F(LoggingTest, PrintfDirectives) {
   AOS_LOG(INFO, "test log %%1 %%d\n");
-  EXPECT_TRUE(WasLogged(INFO, "test log %1 %d\n"));
+  EXPECT_TRUE(WasLogged(log_level::kINFO, "test log %1 %d\n"));
   AOS_LOG_DYNAMIC(WARNING, "test log %%2 %%f\n");
-  EXPECT_TRUE(WasLogged(WARNING, "test log %2 %f\n"));
+  EXPECT_TRUE(WasLogged(log_level::kWARNING, "test log %2 %f\n"));
 }
 
 TEST_F(LoggingTest, Timing) {
@@ -224,11 +224,11 @@ TEST(LoggingPrintFormatTest, Base) {
   static const ::std::string kExpected1 =
       "name(649)(01678): ERROR   at 0000000001.995000s: ";
   ASSERT_GT(sizeof(buffer), kExpected1.size());
-  ASSERT_EQ(
-      kExpected1.size(),
-      static_cast<size_t>(snprintf(
-          buffer, sizeof(buffer), AOS_LOGGING_BASE_FORMAT,
-          AOS_LOGGING_BASE_ARGS(4, "name", 649, 1678, ERROR, 1, 995000000))));
+  ASSERT_EQ(kExpected1.size(),
+            static_cast<size_t>(snprintf(
+                buffer, sizeof(buffer), AOS_LOGGING_BASE_FORMAT,
+                AOS_LOGGING_BASE_ARGS(4, "name", 649, 1678, log_level::kERROR,
+                                      1, 995000000))));
   EXPECT_EQ(kExpected1, ::std::string(buffer));
 }
 

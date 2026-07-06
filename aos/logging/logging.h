@@ -17,21 +17,35 @@
 extern "C" {
 #endif
 
-typedef uint8_t log_level;
-
 #define DECL_LEVELS                                                       \
-  DECL_LEVEL(DEBUG, 0); /* stuff that gets printed out every cycle */     \
-  DECL_LEVEL(INFO, 1);  /* things like PosEdge/NegEdge */                 \
+  DECL_LEVEL(kDEBUG, 0) /* stuff that gets printed out every cycle */     \
+  DECL_LEVEL(kINFO, 1)  /* things like PosEdge/NegEdge */                 \
   /* things that might still work if they happen occasionally */          \
-  DECL_LEVEL(WARNING, 2);                                                 \
+  DECL_LEVEL(kWARNING, 2)                                                 \
   /*-1 so that vxworks macro of same name will have same effect if used*/ \
-  DECL_LEVEL(ERROR, -1); /* errors */                                     \
+  DECL_LEVEL(kERROR, -1) /* errors */                                     \
   /* serious errors. the logging code will terminate the process/task */  \
-  DECL_LEVEL(FATAL, 4);                                                   \
-  DECL_LEVEL(LOG_UNKNOWN, 5); /* unknown logging level */
-#define DECL_LEVEL(name, value) static const log_level name = value;
-DECL_LEVELS;
+  DECL_LEVEL(kFATAL, 4)                                                   \
+  DECL_LEVEL(kLOG_UNKNOWN, 5) /* unknown logging level */
+
+#ifdef __cplusplus
+}  // extern "C"
+namespace aos {
+enum class log_level : int8_t {
+#define DECL_LEVEL(name, value) name = value,
+  DECL_LEVELS
 #undef DECL_LEVEL
+};
+}  // namespace aos
+using log_level = ::aos::log_level;
+#define AOS_LOG_LEVEL(level) AOS_LOG_LEVEL_##level
+#define AOS_LOG_LEVEL_DEBUG ::aos::log_level::kDEBUG
+#define AOS_LOG_LEVEL_INFO ::aos::log_level::kINFO
+#define AOS_LOG_LEVEL_WARNING ::aos::log_level::kWARNING
+#define AOS_LOG_LEVEL_ERROR ::aos::log_level::kERROR
+#define AOS_LOG_LEVEL_FATAL ::aos::log_level::kFATAL
+#define AOS_LOG_LEVEL_LOG_UNKNOWN ::aos::log_level::kLOG_UNKNOWN
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,17 +70,17 @@ void log_do(log_level level, const char *format, ...);
 
 #define LOG_SOURCENAME __FILE__
 
-// The basic logging call.
-#define AOS_LOG(level, format, ...)                                            \
-  do {                                                                         \
-    log_do(level, LOG_SOURCENAME ": " AOS_STRINGIFY(__LINE__) ": %s: " format, \
-           LOG_CURRENT_FUNCTION, ##__VA_ARGS__);                               \
-    /* so that GCC knows that it won't return */                               \
-    if (level == FATAL) {                                                      \
-      fprintf(stderr, "log_do(FATAL) fell through!!!!!\n");                    \
-      printf("see stderr\n");                                                  \
-      abort();                                                                 \
-    }                                                                          \
+#define AOS_LOG(level, format, ...)                                     \
+  do {                                                                  \
+    log_do(AOS_LOG_LEVEL_##level,                                       \
+           LOG_SOURCENAME ": " AOS_STRINGIFY(__LINE__) ": %s: " format, \
+           LOG_CURRENT_FUNCTION, ##__VA_ARGS__);                        \
+    /* so that GCC knows that it won't return */                        \
+    if (AOS_LOG_LEVEL_##level == AOS_LOG_LEVEL_FATAL) {                 \
+      fprintf(stderr, "log_do(FATAL) fell through!!!!!\n");             \
+      printf("see stderr\n");                                           \
+      abort();                                                          \
+    }                                                                   \
   } while (0)
 
 // Same as LOG except appends " due to %d (%s)\n" (formatted with errno and
@@ -94,10 +108,6 @@ void log_do(log_level level, const char *format, ...);
       AOS_LOG(level, "%s", log_buf);                                        \
     }                                                                       \
   } while (0)
-
-#ifdef __cplusplus
-}
-#endif
 
 #ifdef __cplusplus
 
@@ -158,7 +168,7 @@ namespace aos {
   inline void LogImpl##name(const T1 &v1, const T2 &v2,             \
                             const char *exprtext) {                 \
     if (!AOS_LIKELY(v1 op v2)) {                                    \
-      log_do(FATAL,                                                 \
+      log_do(log_level::kFATAL,                                     \
              LOG_SOURCENAME                                         \
              ": " AOS_STRINGIFY(__LINE__) ": CHECK(%s) failed\n",   \
              exprtext);                                             \

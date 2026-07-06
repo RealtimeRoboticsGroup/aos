@@ -60,7 +60,7 @@ void VLog(log_level level, const char *format, va_list ap) {
   }
   va_end(ap1);
 
-  if (level == FATAL) {
+  if (level == ::aos::log_level::kFATAL) {
     VDie(format, ap);
   }
 }

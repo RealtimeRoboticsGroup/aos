@@ -2,12 +2,12 @@ namespace aos.logging;
 
 // Log level, corresponding to levels in logging.h
 enum Level : byte {
-  ERROR = -1,
-  DEBUG = 0,
-  INFO = 1,
-  WARNING = 2,
-  FATAL = 4,
-  LOG_UNKNOWN = 5
+  kERROR = -1,
+  kDEBUG = 0,
+  kINFO = 1,
+  kWARNING = 2,
+  kFATAL = 4,
+  kLOG_UNKNOWN = 5
 }
 
 table LogMessageFbs {

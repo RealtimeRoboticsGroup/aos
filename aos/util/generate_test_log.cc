@@ -37,7 +37,7 @@ void InjectLogMessage(aos::EventLoop *event_loop) {
 
   log_message_builder.add_message(message_offset);
   log_message_builder.add_source_pid(12345);
-  log_message_builder.add_level(aos::logging::Level::INFO);
+  log_message_builder.add_level(aos::logging::Level::kINFO);
   log_message_builder.add_name(name_offset);
   log_message_builder.add_send_failures(0);
 

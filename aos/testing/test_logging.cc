@@ -75,7 +75,7 @@ class TestLogImplementation : public logging::HandleMessageLogImplementation {
  private:
   virtual void HandleMessage(const LogMessage &message) override {
     std::unique_lock<aos::stl_mutex> locker(messages_mutex_);
-    if (message.level == FATAL || print_as_messages_come_in_) {
+    if (message.level == log_level::kFATAL || print_as_messages_come_in_) {
       logging::internal::PrintMessage(output_file_, message);
     }
 
@@ -113,8 +113,9 @@ class MyTestEventListener : public ::testing::EmptyTestEventListener {
         case ::testing::TestPartResult::Type::kSkip:
           break;
       }
-      log_do(ERROR, "%s: %d: gtest %s failure\n%s\n", result.file_name(),
-             result.line_number(), failure_type, result.message());
+      log_do(log_level::kERROR, "%s: %d: gtest %s failure\n%s\n",
+             result.file_name(), result.line_number(), failure_type,
+             result.message());
     }
   }
 };

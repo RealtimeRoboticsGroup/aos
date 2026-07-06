@@ -177,12 +177,12 @@ class ControlLoop {
       ::aos::monotonic_clock::min_time;
 
   typedef ::aos::util::SimpleLogInterval SimpleLogInterval;
-  SimpleLogInterval no_sensor_state_ =
-      SimpleLogInterval(kStaleLogInterval, ERROR, "no sensor state");
-  SimpleLogInterval motors_off_log_ =
-      SimpleLogInterval(kStaleLogInterval, WARNING, "motors disabled");
+  SimpleLogInterval no_sensor_state_ = SimpleLogInterval(
+      kStaleLogInterval, log_level::kERROR, "no sensor state");
+  SimpleLogInterval motors_off_log_ = SimpleLogInterval(
+      kStaleLogInterval, log_level::kWARNING, "motors disabled");
   SimpleLogInterval no_goal_ =
-      SimpleLogInterval(kStaleLogInterval, ERROR, "no goal");
+      SimpleLogInterval(kStaleLogInterval, log_level::kERROR, "no goal");
 };
 
 template <typename T>
