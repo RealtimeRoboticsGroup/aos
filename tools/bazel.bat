@@ -21,16 +21,16 @@ if defined BAZEL_OVERRIDE (
 
 :bootstrap_git
 :: --- AUTOMATED HERMETIC GIT BOOTSTRAPPING WITH SHA256 VALIDATION ---
-set "GIT_CACHE_DIR=%BAZEL_CACHE_DIR%\mingw_git"
+set "GIT_CACHE_DIR=%BAZEL_CACHE_DIR%\portable_git"
 set "GIT_EXE_PATH=%GIT_CACHE_DIR%\cmd\git.exe"
 
 if not exist "%GIT_EXE_PATH%" (
-    echo [Wrapper] Git not detected in runtime cache. Fetching isolated MinGit... >&2
+    echo [Wrapper] Git not detected in runtime cache. Fetching isolated PortableGit... >&2
     
     set "GIT_VERSION=v2.44.0.windows.1"
-    set "GIT_ZIP_NAME=MinGit-2.44.0-64-bit.zip"
+    set "GIT_ZIP_NAME=PortableGit-2.44.0-64-bit.7z.exe"
     set "GIT_URL=https://github.com/git-for-windows/git/releases/download/!GIT_VERSION!/!GIT_ZIP_NAME!"
-    set "EXPECTED_SHA256=ed4e74e171c59c9c9d418743c7109aa595e0cc0d1c80cac574d69ed5e571ae59"
+    set "EXPECTED_SHA256=1fc64ca91b9b475ab0ada72c9f7b3addbe69a6c8f520be31425cf21841cca369"
     
     set "TEMP_DOWNLOAD_DIR=%BAZEL_CACHE_DIR%\git_tmp"
     if exist "!TEMP_DOWNLOAD_DIR!" rmdir /s /q "!TEMP_DOWNLOAD_DIR!"
@@ -42,7 +42,7 @@ if not exist "%GIT_EXE_PATH%" (
     sessionfile-check >nul 2>&1
     if %errorlevel% equ 0 set "NOISINESS="
 
-    curl -fLk !NOISINESS! --show-error --output "!TEMP_DOWNLOAD_DIR!\git.zip" "!GIT_URL!"
+    curl -fLk !NOISINESS! --show-error --output "!TEMP_DOWNLOAD_DIR!\git.7z.exe" "!GIT_URL!"
     if errorlevel 1 (
         echo Error: Failed to download hermetic Git toolchain >&2
         exit /b 1
@@ -50,7 +50,7 @@ if not exist "%GIT_EXE_PATH%" (
     
     echo [Wrapper] Validating cryptographic payload checksum... >&2
     set "COMPUTED_SHA256="
-    for /f "skip=1 delims=" %%A in ('certutil -hashfile "!TEMP_DOWNLOAD_DIR!\git.zip" SHA256 ^| findstr /v "CertUtil"') do (
+    for /f "skip=1 delims=" %%A in ('certutil -hashfile "!TEMP_DOWNLOAD_DIR!\git.7z.exe" SHA256 ^| findstr /v "CertUtil"') do (
         set "LINE=%%A"
         set "LINE=!LINE: =!"
         set "COMPUTED_SHA256=!LINE!"
@@ -70,7 +70,7 @@ if not exist "%GIT_EXE_PATH%" (
     
     echo [Wrapper] Extracting archive package... >&2
     mkdir "%GIT_CACHE_DIR%" 2>nul
-    tar -xf "!TEMP_DOWNLOAD_DIR!\git.zip" -C "%GIT_CACHE_DIR%"
+    "!TEMP_DOWNLOAD_DIR!\git.7z.exe" -y -o"%GIT_CACHE_DIR%" >nul
     
     rmdir /s /q "!TEMP_DOWNLOAD_DIR!"
     
@@ -141,8 +141,7 @@ set "USERNAME=%_SAVE_USERNAME%"
 set "USER=%_SAVE_USERNAME%"
 set "GIT_CONFIG_PARAMETERS=%_SAVE_GIT_CONFIG_PARAMETERS%"
 
-:: Rehydrate the clean sandbox PATH variable incorporating the protected Git path
-set "PATH=%_SAVE_SYSTEMROOT%\system32;%_SAVE_SYSTEMROOT%;%_SAVE_SYSTEMROOT%\System32\Wbem;%_SAVE_GIT_CACHE_DIR%\cmd;%_SAVE_PATH%"
+set "PATH=%_SAVE_SYSTEMROOT%\system32;%_SAVE_SYSTEMROOT%;%_SAVE_SYSTEMROOT%\System32\Wbem;%_SAVE_GIT_CACHE_DIR%\cmd;%_SAVE_GIT_CACHE_DIR%\bin;%_SAVE_GIT_CACHE_DIR%\usr\bin;%_SAVE_PATH%"
 
 :: CRITICAL EXPLICIT BINDING: Force Bazel's repository rules to bypass PATH lookups entirely
 set "BAZEL_GIT=%_SAVE_GIT_CACHE_DIR%\cmd\git.exe"
