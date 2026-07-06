@@ -23,6 +23,7 @@
 #include "aos/init.h"
 #include "aos/ipc_lib/lockless_queue.h"
 #include "aos/ipc_lib/memory_mapped_queue.h"
+#include "aos/macros.h"
 #include "aos/realtime.h"
 #include "aos/stl_mutex/stl_mutex.h"
 #include "aos/util/application_name.h"
@@ -895,12 +896,12 @@ void ShmEventLoop::OnRun(::std::function<void()> on_run) {
 }
 
 void ShmEventLoop::CheckCurrentThread() const {
-  if (__builtin_expect(check_mutex_ != nullptr, false)) {
+  if (AOS_UNLIKELY(check_mutex_ != nullptr)) {
     ABSL_CHECK(check_mutex_->is_locked())
         << ": The configured mutex is not locked while calling a "
            "ShmEventLoop function";
   }
-  if (__builtin_expect(!!check_tid_, false)) {
+  if (AOS_UNLIKELY(!!check_tid_)) {
     ABSL_CHECK_EQ(syscall(SYS_gettid), *check_tid_)
         << ": Being called from the wrong thread. Call from the main thread "
            "instead.";

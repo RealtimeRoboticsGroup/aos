@@ -3,6 +3,8 @@
 
 #include <type_traits>
 
+#include "aos/macros.h"
+
 namespace aos {
 namespace linux_code {
 namespace ipc_lib {
@@ -27,12 +29,12 @@ class RunShmObservers {
       : address_(static_cast<void *>(
             const_cast<typename ::std::remove_cv<T>::type *>(address))),
         write_(write) {
-    if (__builtin_expect(before_observer != nullptr, false)) {
+    if (AOS_UNLIKELY(before_observer != nullptr)) {
       before_observer(address_, write_);
     }
   }
   ~RunShmObservers() {
-    if (__builtin_expect(after_observer != nullptr, false)) {
+    if (AOS_UNLIKELY(after_observer != nullptr)) {
       after_observer(address_, write_);
     }
   }

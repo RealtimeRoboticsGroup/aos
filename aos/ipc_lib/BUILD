@@ -514,6 +514,9 @@ cc_library(
     hdrs = [
         "shm_observers.h",
     ],
+    deps = [
+        "//aos:macros",
+    ],
 )
 
 cc_library(

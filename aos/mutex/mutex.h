@@ -73,7 +73,7 @@ class Mutex {
 class MutexLocker {
  public:
   explicit MutexLocker(Mutex *mutex) : mutex_(mutex) {
-    if (__builtin_expect(mutex_->Lock(), false)) {
+    if (AOS_UNLIKELY(mutex_->Lock())) {
       LOG(FATAL) << "previous owner of mutex " << this
                  << " died but it shouldn't be able to";
     }
@@ -93,7 +93,7 @@ class IPCMutexLocker {
   explicit IPCMutexLocker(Mutex *mutex)
       : mutex_(mutex), owner_died_(mutex_->Lock()) {}
   ~IPCMutexLocker() {
-    if (__builtin_expect(!owner_died_checked_, false)) {
+    if (AOS_UNLIKELY(!owner_died_checked_)) {
       LOG(FATAL) << "nobody checked if the previous owner of mutex " << this
                  << " died";
     }
@@ -104,7 +104,7 @@ class IPCMutexLocker {
   // once, the destructor will LOG(FATAL)
   __attribute__((warn_unused_result)) bool owner_died() {
     owner_died_checked_ = true;
-    return __builtin_expect(owner_died_, false);
+    return AOS_UNLIKELY(owner_died_);
   }
 
  private:
@@ -124,7 +124,7 @@ class IPCRecursiveMutexLocker {
         locked_(!mutex_->OwnedBySelf()),
         owner_died_(locked_ ? mutex_->Lock() : false) {}
   ~IPCRecursiveMutexLocker() {
-    if (__builtin_expect(!owner_died_checked_, false)) {
+    if (AOS_UNLIKELY(!owner_died_checked_)) {
       LOG(FATAL) << "nobody checked if the previous owner of mutex " << this
                  << " died";
     }
@@ -135,7 +135,7 @@ class IPCRecursiveMutexLocker {
   // once, the destructor will LOG(FATAL)
   __attribute__((warn_unused_result)) bool owner_died() {
     owner_died_checked_ = true;
-    return __builtin_expect(owner_died_, false);
+    return AOS_UNLIKELY(owner_died_);
   }
 
  private:

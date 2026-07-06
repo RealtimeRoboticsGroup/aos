@@ -21,7 +21,7 @@ Condition::Condition(Mutex *m) : impl_(), m_(m) {}
 
 bool Condition::Wait() {
   const int ret = condition_wait(&impl_, &m_->impl_, nullptr);
-  assert(__builtin_expect(ret == 0 || ret == 1, 1));
+  assert(AOS_LIKELY(ret == 0 || ret == 1));
   return ret == 1;
 }
 
@@ -40,7 +40,7 @@ Condition::WaitResult Condition::WaitTimed(chrono::nanoseconds timeout) {
 
   const int ret =
       condition_wait(&impl_, &m_->impl_, do_timeout ? &end_time : nullptr);
-  assert(__builtin_expect(ret == 0 || ret == 1 || ret == -1, 1));
+  assert(AOS_LIKELY(ret == 0 || ret == 1 || ret == -1));
   switch (ret) {
     case 0:
       return WaitResult::kOk;
