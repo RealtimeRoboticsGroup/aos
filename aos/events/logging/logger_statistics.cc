@@ -15,7 +15,7 @@ void WriteStatistics::ResetStats() {
 }
 
 void WriteStatistics::UpdateStats(std::chrono::nanoseconds duration,
-                                  ssize_t written, int messages) {
+                                  std::ptrdiff_t written, int messages) {
   if (duration > max_write_time_) {
     max_write_time_ = duration;
     max_write_time_bytes_ = written;

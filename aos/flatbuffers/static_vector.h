@@ -576,10 +576,11 @@ class Vector : public ResizeableObject {
       return;
     }
     if (set_zero == SetZero::kYes) {
-      memset(
-          reinterpret_cast<void *>(inline_data() + std::min(size, length_)), 0,
-          std::abs(static_cast<ssize_t>(length_) - static_cast<ssize_t>(size)) *
-              sizeof(InlineType));
+      memset(reinterpret_cast<void *>(inline_data() + std::min(size, length_)),
+             0,
+             std::abs(static_cast<std::ptrdiff_t>(length_) -
+                      static_cast<std::ptrdiff_t>(size)) *
+                 sizeof(InlineType));
     }
     length_ = size;
     SetLength(static_cast<LengthType>(length_));

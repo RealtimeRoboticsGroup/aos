@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <deque>
 
@@ -656,7 +657,7 @@ class NoncausalTimestampFilter {
  private:
   std::vector<std::unique_ptr<BootFilter>> filters_;
 
-  ssize_t current_filter_ = -1;
+  std::ptrdiff_t current_filter_ = -1;
 
   // The filter to resume popping from.
   size_t pop_filter_ = 0;

@@ -525,7 +525,7 @@ TEST_P(MultinodeLoggerTest, SimpleMultiNode) {
         ++pi2_ping_count;
       });
 
-  constexpr ssize_t kQueueIndexOffset = -9;
+  constexpr std::ptrdiff_t kQueueIndexOffset = -9;
   // Confirm that the ping and pong counts both match, and the value also
   // matches.
   pi1_event_loop->MakeWatcher("/test", [&pi1_event_loop, &pi1_ping_count,

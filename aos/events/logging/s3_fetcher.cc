@@ -3,6 +3,8 @@
 #include <aws/core/Aws.h>
 #include <aws/s3/model/ListObjectsV2Request.h>
 
+#include <cstddef>
+
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
@@ -112,7 +114,7 @@ size_t S3Fetcher::Read(uint8_t *begin, uint8_t *end) {
     memcpy(begin + total_read, current_chunk_.data(), current_size);
     total_read += current_size;
     current_chunk_.erase_front(current_size);
-    if (static_cast<ssize_t>(total_read) == end - begin) {
+    if (static_cast<std::ptrdiff_t>(total_read) == end - begin) {
       VLOG(1) << "Got all " << total_read;
       // Got all of what the caller wants, done now.
       return total_read;

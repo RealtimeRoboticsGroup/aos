@@ -91,7 +91,7 @@ std::optional<std::span<uint8_t>> ResizeableObject::InsertBytes(
 
 void ResizeableObject::UpdateBuffer(std::span<uint8_t> new_buffer,
                                     void *modification_point,
-                                    ssize_t bytes_inserted) {
+                                    std::ptrdiff_t bytes_inserted) {
   buffer_ = new_buffer;
   FixObjects(modification_point, bytes_inserted);
   ObserveBufferModification();
@@ -103,7 +103,7 @@ std::span<uint8_t> ResizeableObject::BufferForObject(size_t absolute_offset,
 }
 
 void ResizeableObject::FixObjects(void *modification_point,
-                                  ssize_t bytes_inserted) {
+                                  std::ptrdiff_t bytes_inserted) {
   ABSL_CHECK_EQ(bytes_inserted % Alignment(), 0u)
       << ": We only support inserting N * Alignment() bytes at a time. This "
          "may change in the future.";
@@ -171,9 +171,9 @@ std::optional<std::span<uint8_t>> SpanAllocator::InsertBytes(
     void *insertion_point, size_t bytes, size_t /*alignment*/,
     SetZero set_zero) {
   uint8_t *insertion_point_typed = reinterpret_cast<uint8_t *>(insertion_point);
-  const ssize_t insertion_index = insertion_point_typed - buffer_.data();
+  const std::ptrdiff_t insertion_index = insertion_point_typed - buffer_.data();
   ABSL_CHECK_LE(0, insertion_index);
-  ABSL_CHECK_LE(insertion_index, static_cast<ssize_t>(buffer_.size()));
+  ABSL_CHECK_LE(insertion_index, static_cast<std::ptrdiff_t>(buffer_.size()));
   const size_t new_size = allocated_size_ + bytes;
   if (new_size > buffer_.size()) {
     ABSL_VLOG(1) << ": Insufficient space to grow by " << bytes << " bytes.";
@@ -191,10 +191,10 @@ std::optional<std::span<uint8_t>> SpanAllocator::InsertBytes(
 }
 
 std::span<uint8_t> SpanAllocator::RemoveBytes(std::span<uint8_t> remove_bytes) {
-  const ssize_t removal_index = remove_bytes.data() - buffer_.data();
+  const std::ptrdiff_t removal_index = remove_bytes.data() - buffer_.data();
   const size_t old_start_index = buffer_.size() - allocated_size_;
-  ABSL_CHECK_LE(static_cast<ssize_t>(old_start_index), removal_index);
-  ABSL_CHECK_LE(removal_index, static_cast<ssize_t>(buffer_.size()));
+  ABSL_CHECK_LE(static_cast<std::ptrdiff_t>(old_start_index), removal_index);
+  ABSL_CHECK_LE(removal_index, static_cast<std::ptrdiff_t>(buffer_.size()));
   ABSL_CHECK_LE(removal_index + remove_bytes.size(), buffer_.size());
   uint8_t *old_buffer_start = buffer_.data() + old_start_index;
   memmove(old_buffer_start + remove_bytes.size(), old_buffer_start,
@@ -281,10 +281,10 @@ std::optional<std::span<uint8_t>> AlignedVectorAllocator::InsertBytes(
 
 std::span<uint8_t> AlignedVectorAllocator::RemoveBytes(
     std::span<uint8_t> remove_bytes) {
-  const ssize_t removal_index = remove_bytes.data() - buffer_.data();
+  const std::ptrdiff_t removal_index = remove_bytes.data() - buffer_.data();
   const size_t old_start_index = buffer_.size() - allocated_size_;
-  ABSL_CHECK_LE(static_cast<ssize_t>(old_start_index), removal_index);
-  ABSL_CHECK_LE(removal_index, static_cast<ssize_t>(buffer_.size()));
+  ABSL_CHECK_LE(static_cast<std::ptrdiff_t>(old_start_index), removal_index);
+  ABSL_CHECK_LE(removal_index, static_cast<std::ptrdiff_t>(buffer_.size()));
   ABSL_CHECK_LE(removal_index + remove_bytes.size(), buffer_.size());
   uint8_t *old_buffer_start = buffer_.data() + old_start_index;
   memmove(old_buffer_start + remove_bytes.size(), old_buffer_start,

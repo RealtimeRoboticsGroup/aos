@@ -2,13 +2,8 @@
 #define AOS_FLATBUFFERS_STATIC_BASE_H_
 
 #include <stdint.h>
-#ifdef _WIN32
-#include <BaseTsd.h>
-typedef SSIZE_T ssize_t;
-#else
-#include <sys/types.h>
-#endif
 
+#include <cstddef>
 #include <cstring>
 #include <memory>
 #include <optional>
@@ -97,7 +92,7 @@ class ResizeableObject {
   // * Buffer shrinkage is not currently supported.
   // * When bytes_inserted is zero, modification_point is ignored.
   void UpdateBuffer(std::span<uint8_t> new_buffer, void *modification_point,
-                    ssize_t bytes_inserted);
+                    std::ptrdiff_t bytes_inserted);
 
  protected:
   // Data associated with a sub-object of this object.
@@ -178,7 +173,7 @@ class ResizeableObject {
   // * Removal is not entirely implemented yet, but for removal,
   //   modification_point should point to the first byte after the removed
   //   chunk.
-  void FixObjects(void *modification_point, ssize_t bytes_inserted);
+  void FixObjects(void *modification_point, std::ptrdiff_t bytes_inserted);
 
   Allocator *allocator() { return allocator_; }
 

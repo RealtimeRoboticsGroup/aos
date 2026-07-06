@@ -2,6 +2,7 @@
 #define AOS_EVENTS_LOGGING_WRITE_STATS_H_
 
 #include <chrono>
+#include <cstddef>
 
 #include "aos/events/logging/logger_statistics_static.h"
 
@@ -31,7 +32,7 @@ class WriteStatistics {
 
   void ResetStats();
 
-  void UpdateStats(std::chrono::nanoseconds duration, ssize_t written,
+  void UpdateStats(std::chrono::nanoseconds duration, std::ptrdiff_t written,
                    int messages);
 
   // Accumulates another statistics object into this object.
@@ -64,15 +65,16 @@ class LoggerStatistics {
 
   // Updates the statistics associated with what we have actually written to
   // disk.
-  void UpdateDiskStats(std::chrono::nanoseconds duration, ssize_t written) {
+  void UpdateDiskStats(std::chrono::nanoseconds duration,
+                       std::ptrdiff_t written) {
     // We don't track message counts for what we actually flush to disk.
     disk_stats_.UpdateStats(duration, written, /*messages*/ 0);
   }
 
   // Updates the statistics associated with what has been passed to the
   // FileHandler.
-  void UpdateHandlerStats(std::chrono::nanoseconds duration, ssize_t written,
-                          int messages) {
+  void UpdateHandlerStats(std::chrono::nanoseconds duration,
+                          std::ptrdiff_t written, int messages) {
     handler_stats_.UpdateStats(duration, written, messages);
   }
 

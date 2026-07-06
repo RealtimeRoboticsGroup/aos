@@ -1344,7 +1344,8 @@ NoncausalTimestampFilter::Observe() const {
     return std::nullopt;
   }
 
-  size_t current_filter = std::max(static_cast<ssize_t>(0), current_filter_);
+  size_t current_filter =
+      std::max(static_cast<std::ptrdiff_t>(0), current_filter_);
   while (true) {
     const BootFilter &filter = *filters_[current_filter];
     std::optional<
@@ -1384,7 +1385,7 @@ NoncausalTimestampFilter::Consume() {
   if (filters_.size() == 0u) {
     return std::nullopt;
   }
-  DCHECK_LT(current_filter_, static_cast<ssize_t>(filters_.size()));
+  DCHECK_LT(current_filter_, static_cast<std::ptrdiff_t>(filters_.size()));
 
   while (true) {
     std::optional<

@@ -6,6 +6,7 @@
 #include <sys/uio.h>
 
 #include <condition_variable>
+#include <cstddef>
 #include <filesystem>
 #include <memory>
 #include <mutex>
@@ -256,7 +257,7 @@ class BufferedFileHandler : public FileHandler {
 
   // Returns the total buffer space available.
   // buffer_index_mutex_ must be acquired before calling this.
-  ssize_t buffer_space_available() const {
+  size_t buffer_space_available() const {
     if (buffer_start_ == buffer_end_) {
       return buffer_empty_ ? buffer_.size() : 0;
     }

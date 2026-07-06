@@ -47,10 +47,10 @@ class Histogram {
   // data.
   void Add(double value) {
     if (value < max_value_bucket_) {
-      const ssize_t bucket = static_cast<size_t>(
+      const std::ptrdiff_t bucket = static_cast<std::ptrdiff_t>(
           std::floor(value * values_.size() / max_value_bucket_));
       CHECK_GE(bucket, 0);
-      CHECK_LT(bucket, static_cast<ssize_t>(values_.size()));
+      CHECK_LT(bucket, static_cast<std::ptrdiff_t>(values_.size()));
       values_[bucket] += value;
       if (all_counts_ == 0 || value > max_value_) {
         max_value_ = value;
@@ -162,8 +162,9 @@ class ChannelStats {
       flatbuffers::DetachedBuffer buffer =
           aos::JsonToFlatbuffer(json, flatbuffer_type_);
 
-      const ssize_t packed_size_reduction = static_cast<ssize_t>(context.size) -
-                                            static_cast<ssize_t>(buffer.size());
+      const std::ptrdiff_t packed_size_reduction =
+          static_cast<std::ptrdiff_t>(context.size) -
+          static_cast<std::ptrdiff_t>(buffer.size());
       max_packed_size_reduction_ =
           std::max(max_packed_size_reduction_, packed_size_reduction);
       total_packed_size_reduction_ += packed_size_reduction;
@@ -219,7 +220,7 @@ class ChannelStats {
   size_t max_message_size() const { return max_message_size_; }
   size_t total_num_messages() const { return total_num_messages_; }
 
-  ssize_t max_packed_size_reduction() const {
+  std::ptrdiff_t max_packed_size_reduction() const {
     return max_packed_size_reduction_;
   }
 
@@ -241,7 +242,7 @@ class ChannelStats {
     return total_message_size_ / SecondsActive();
   }
 
-  ssize_t avg_packed_size_reduction() const {
+  std::ptrdiff_t avg_packed_size_reduction() const {
     return total_packed_size_reduction_ / total_num_messages_;
   }
 
@@ -296,8 +297,8 @@ class ChannelStats {
   // The size reduction (in bytes) after a naive repacking. A negative number
   // indicates that the repacking generated a _bigger_ message than the
   // original message.
-  ssize_t max_packed_size_reduction_ = 0;
-  ssize_t total_packed_size_reduction_ = 0;
+  std::ptrdiff_t max_packed_size_reduction_ = 0;
+  std::ptrdiff_t total_packed_size_reduction_ = 0;
 
   // Count of messages which had remote timestamps
   size_t num_messages_with_remote_ = 0;
