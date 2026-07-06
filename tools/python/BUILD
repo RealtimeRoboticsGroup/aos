@@ -1,6 +1,8 @@
 load("@rules_python//python:defs.bzl", "py_runtime", "py_runtime_pair")
 load("@rules_uv//uv:pip.bzl", "pip_compile")
-load("//tools/python:defs.bzl", "py_binary")
+load("//tools/python:defs.bzl", "expand_template", "py_binary")
+
+exports_files(["runtime_binary.sh.tpl"])
 
 # Invoke this via "bazel run //tools/python:requirements.update".
 pip_compile(
@@ -74,13 +76,69 @@ sh_binary(
     ],
 )
 
+expand_template(
+    name = "gen_runtime_binary_bzlmod_3_10",
+    out = "runtime_binary_bzlmod_3_10.sh",
+    substitutions = {
+        "@NCCL_DIR_NAME@": "rules_python++pip+aos_pip_deps_310_nvidia_nccl_cu12",
+        "@PYTHON_REPO_DIR@": "rules_python++python+python_3_10_x86_64-unknown-linux-gnu",
+        "@PYTHON_VER@": "3_10",
+        "@SHORT_VER@": "310",
+        "@SYSROOT_DIR_NAME@": "amd64_debian_sysroot+",
+    },
+    template = "runtime_binary.sh.tpl",
+    visibility = ["//visibility:public"],
+)
+
+expand_template(
+    name = "gen_runtime_binary_workspace_3_10",
+    out = "runtime_binary_workspace_3_10.sh",
+    substitutions = {
+        "@NCCL_DIR_NAME@": "pip_deps_nvidia_nccl_cu12",
+        "@PYTHON_REPO_DIR@": "python_3_10_x86_64-unknown-linux-gnu",
+        "@PYTHON_VER@": "3_10",
+        "@SHORT_VER@": "310",
+        "@SYSROOT_DIR_NAME@": "amd64_debian_sysroot",
+    },
+    template = "runtime_binary.sh.tpl",
+    visibility = ["//visibility:public"],
+)
+
+expand_template(
+    name = "gen_runtime_binary_bzlmod_3_13",
+    out = "runtime_binary_bzlmod_3_13.sh",
+    substitutions = {
+        "@NCCL_DIR_NAME@": "rules_python++pip+aos_pip_deps_313_nvidia_nccl_cu12",
+        "@PYTHON_REPO_DIR@": "rules_python++python+python_3_13_x86_64-unknown-linux-gnu",
+        "@PYTHON_VER@": "3_13",
+        "@SHORT_VER@": "313",
+        "@SYSROOT_DIR_NAME@": "amd64_debian_sysroot+",
+    },
+    template = "runtime_binary.sh.tpl",
+    visibility = ["//visibility:public"],
+)
+
+expand_template(
+    name = "gen_runtime_binary_workspace_3_13",
+    out = "runtime_binary_workspace_3_13.sh",
+    substitutions = {
+        "@NCCL_DIR_NAME@": "pip_deps_nvidia_nccl_cu12",
+        "@PYTHON_REPO_DIR@": "python_3_13_x86_64-unknown-linux-gnu",
+        "@PYTHON_VER@": "3_13",
+        "@SHORT_VER@": "313",
+        "@SYSROOT_DIR_NAME@": "amd64_debian_sysroot",
+    },
+    template = "runtime_binary.sh.tpl",
+    visibility = ["//visibility:public"],
+)
+
 py_runtime(
-    name = "python3_10_runtime",
+    name = "python3_10_bzlmod_runtime",
     files = [
-        "runtime_binary_3_10.sh",
+        "runtime_binary_bzlmod_3_10.sh",
         "@python_3_10_x86_64-unknown-linux-gnu//:files",
     ],
-    interpreter = "runtime_binary_3_10.sh",
+    interpreter = "runtime_binary_bzlmod_3_10.sh",
     interpreter_version_info = {
         "major": "3",
         "micro": "18",
@@ -90,12 +148,42 @@ py_runtime(
 )
 
 py_runtime(
-    name = "python3_13_runtime",
+    name = "python3_10_workspace_runtime",
     files = [
-        "runtime_binary_3_13.sh",
+        "runtime_binary_workspace_3_10.sh",
+        "@python_3_10_x86_64-unknown-linux-gnu//:files",
+    ],
+    interpreter = "runtime_binary_workspace_3_10.sh",
+    interpreter_version_info = {
+        "major": "3",
+        "micro": "18",
+        "minor": "10",
+    },
+    python_version = "PY3",
+)
+
+py_runtime(
+    name = "python3_13_bzlmod_runtime",
+    files = [
+        "runtime_binary_bzlmod_3_13.sh",
         "@python_3_13_x86_64-unknown-linux-gnu//:files",
     ],
-    interpreter = "runtime_binary_3_13.sh",
+    interpreter = "runtime_binary_bzlmod_3_13.sh",
+    interpreter_version_info = {
+        "major": "3",
+        "micro": "0",
+        "minor": "13",
+    },
+    python_version = "PY3",
+)
+
+py_runtime(
+    name = "python3_13_workspace_runtime",
+    files = [
+        "runtime_binary_workspace_3_13.sh",
+        "@python_3_13_x86_64-unknown-linux-gnu//:files",
+    ],
+    interpreter = "runtime_binary_workspace_3_13.sh",
     interpreter_version_info = {
         "major": "3",
         "micro": "0",
@@ -105,16 +193,25 @@ py_runtime(
 )
 
 py_runtime_pair(
-    name = "py_runtime",
+    name = "py_bzlmod_runtime",
     py2_runtime = None,
     py3_runtime = select({
-        "@rules_python//python/config_settings:is_python_3.13": ":python3_13_runtime",
-        "//conditions:default": ":python3_10_runtime",
+        "@rules_python//python/config_settings:is_python_3.13": ":python3_13_bzlmod_runtime",
+        "//conditions:default": ":python3_10_bzlmod_runtime",
+    }),
+)
+
+py_runtime_pair(
+    name = "py_workspace_runtime",
+    py2_runtime = None,
+    py3_runtime = select({
+        "@rules_python//python/config_settings:is_python_3.13": ":python3_13_workspace_runtime",
+        "//conditions:default": ":python3_10_workspace_runtime",
     }),
 )
 
 toolchain(
-    name = "python_toolchain",
+    name = "python_bzlmod_toolchain",
     exec_compatible_with = [
         "@platforms//cpu:x86_64",
         "@platforms//os:linux",
@@ -123,8 +220,27 @@ toolchain(
         "@platforms//cpu:x86_64",
         "@platforms//os:linux",
     ],
-    toolchain = ":py_runtime",
+    toolchain = ":py_bzlmod_runtime",
     toolchain_type = "@rules_python//python:toolchain_type",
+)
+
+toolchain(
+    name = "python_workspace_toolchain",
+    exec_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+    toolchain = ":py_workspace_runtime",
+    toolchain_type = "@rules_python//python:toolchain_type",
+)
+
+alias(
+    name = "python_toolchain",
+    actual = ":python_bzlmod_toolchain",
 )
 
 py_binary(

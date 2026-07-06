@@ -195,6 +195,13 @@ py_test(
     srcs = [
         "upstream_python_test.py",
     ],
+    data = [
+        "//tools/python:runtime_binary.sh.tpl",
+        "//tools/python:runtime_binary_bzlmod_3_10.sh",
+        "//tools/python:runtime_binary_bzlmod_3_13.sh",
+        "//tools/python:runtime_binary_workspace_3_10.sh",
+        "//tools/python:runtime_binary_workspace_3_13.sh",
+    ],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@pip_deps//matplotlib",

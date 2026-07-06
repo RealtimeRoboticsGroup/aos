@@ -717,7 +717,7 @@ register_toolchains(
     "//tools/cpp:cc-toolchain-cortex-m4f-imu",
     # Find a good way to select between these two M4F toolchains.
     #"//tools/cpp:cc-toolchain-cortex-m4f-k22",
-    "//tools/python:python_toolchain",
+    "//tools/python:python_bzlmod_toolchain",
     "//tools/python:noop_python_toolchain",
     "//tools/go:noop_go_toolchain",
     "//tools/rust:rust-toolchain-x86",

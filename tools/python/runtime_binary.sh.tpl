@@ -6,8 +6,11 @@ set -o pipefail
 
 export PYTHONDONTWRITEBYTECODE=1
 
-readonly PYTHON_VER="3_13"
-readonly SHORT_VER="313"
+readonly PYTHON_VER="@PYTHON_VER@"
+readonly SHORT_VER="@SHORT_VER@"
+readonly PYTHON_REPO_DIR="@PYTHON_REPO_DIR@"
+readonly SYSROOT_DIR_NAME="@SYSROOT_DIR_NAME@"
+readonly NCCL_DIR_NAME="@NCCL_DIR_NAME@"
 
 # Detect RUNFILES_DIR if not set.
 if [[ -z "${RUNFILES_DIR:-}" ]]; then
@@ -20,21 +23,17 @@ fi
 find_python_interpreter() {
   # 1. Try to find in runfiles first
   if [[ -n "${RUNFILES_DIR:-}" ]]; then
-    for path in \
-      "${RUNFILES_DIR}/rules_python++python+python_${PYTHON_VER}_x86_64-unknown-linux-gnu" \
-      "${RUNFILES_DIR}/rules_python~~python~python_${PYTHON_VER}_x86_64-unknown-linux-gnu" \
-      "${RUNFILES_DIR}/python_${PYTHON_VER}_x86_64-unknown-linux-gnu"; do
-      if [[ -d "${path}" ]]; then
-        echo "${path}"
-        return 0
-      fi
-    done
+    local path="${RUNFILES_DIR}/${PYTHON_REPO_DIR}"
+    if [[ -d "${path}" ]]; then
+      echo "${path}"
+      return 0
+    fi
   fi
 
   # 2. Try to find in PYTHONPATH next
   local paths="${PYTHONPATH:-}"
   for path in ${paths//:/ }; do
-    if [[ "$path" == *.runfiles/python_${PYTHON_VER}_x86_64-unknown-linux-gnu ]]; then
+    if [[ "$path" == *.runfiles/${PYTHON_REPO_DIR} ]]; then
       if [[ -d "${path}" ]]; then
         echo "${path}"
         return 0
@@ -50,17 +49,12 @@ find_python_interpreter() {
     fi
   fi
   if [[ -n "${workspace_dir}" ]]; then
-    for suffix in \
-      "rules_python++python+python_${PYTHON_VER}_x86_64-unknown-linux-gnu" \
-      "rules_python~~python~python_${PYTHON_VER}_x86_64-unknown-linux-gnu" \
-      "python_${PYTHON_VER}_x86_64-unknown-linux-gnu"; do
-      local found_path
-      found_path=$(find "${workspace_dir}/bazel-bin" -type d -name "${suffix}" -print -quit 2>/dev/null)
-      if [[ -d "${found_path}" ]]; then
-        echo "${found_path}"
-        return 0
-      fi
-    done
+    local found_path
+    found_path=$(find "${workspace_dir}/bazel-bin" -type d -name "${PYTHON_REPO_DIR}" -print -quit 2>/dev/null)
+    if [[ -d "${found_path}" ]]; then
+      echo "${found_path}"
+      return 0
+    fi
   fi
 
   return 1
@@ -75,19 +69,7 @@ fi
 PYTHON_BIN="${BASE_PATH}/bin/python3"
 
 # Locate the sysroot directory
-SYSROOT_DIR=""
-for path in \
-  "${BASE_PATH}/../amd64_debian_sysroot" \
-  "${BASE_PATH}/../amd64_debian_sysroot+" \
-  "${BASE_PATH}/../amd64_debian_sysroot~"; do
-  if [[ -d "${path}" ]]; then
-    SYSROOT_DIR="${path}"
-    break
-  fi
-done
-if [[ -z "${SYSROOT_DIR}" ]]; then
-  SYSROOT_DIR="${BASE_PATH}/../amd64_debian_sysroot"
-fi
+SYSROOT_DIR="${BASE_PATH}/../${SYSROOT_DIR_NAME}"
 
 LD_LIBRARY_PATH=":${BASE_PATH}/lib"
 LD_LIBRARY_PATH+=":${SYSROOT_DIR}/lib/x86_64-linux-gnu/"
@@ -95,16 +77,9 @@ LD_LIBRARY_PATH+=":${SYSROOT_DIR}/usr/lib/x86_64-linux-gnu/"
 LD_LIBRARY_PATH+=":${SYSROOT_DIR}/usr/lib/"
 LD_LIBRARY_PATH+=":${SYSROOT_DIR}/usr/lib/x86_64-linux-gnu/gvfs/"
 
-# Try different possible repository names due to bzlmod / workspace variations for nvidia/nccl
-for suffix in \
-  "rules_python++pip+aos_pip_deps_${SHORT_VER}_nvidia_nccl_cu12" \
-  "rules_python~~pip~aos_pip_deps_${SHORT_VER}_nvidia_nccl_cu12" \
-  "pip_deps_nvidia_nccl_cu12"; do
-  if [[ -e "${BASE_PATH}/../${suffix}" ]]; then
-    LD_LIBRARY_PATH+=":${BASE_PATH}/../${suffix}/site-packages/nvidia/nccl/lib/"
-    break
-  fi
-done
+if [[ -e "${BASE_PATH}/../${NCCL_DIR_NAME}" ]]; then
+  LD_LIBRARY_PATH+=":${BASE_PATH}/../${NCCL_DIR_NAME}/site-packages/nvidia/nccl/lib/"
+fi
 
 # Locate the runfiles directory and find any bundled NVIDIA CUDA/cuDNN components.
 RUNFILES_ROOT=""
