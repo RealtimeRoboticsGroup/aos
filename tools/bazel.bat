@@ -1,6 +1,8 @@
 @echo off
 setlocal enabledelayedexpansion
 
+for %%I in ("%USERPROFILE%") do set "USERPROFILE=%%~sI"
+
 set "BAZEL_CACHE_DIR=%USERPROFILE%\.cache\bazel"
 
 :: 1. Feature: BAZEL_OVERRIDE Support
@@ -82,7 +84,7 @@ if not exist "%GIT_EXE_PATH%" (
 :autodetect
 :: 3. Feature: Use our bootstrapped Git to find the absolute root directory cleanly
 set "TOP_LEVEL_DIR="
-for /f "tokens=*" %%i in ('"%GIT_EXE_PATH%" rev-parse --show-toplevel 2^>nul') do set "TOP_LEVEL_DIR=%%i"
+for /f "usebackq tokens=*" %%i in (`"%GIT_EXE_PATH%" rev-parse --show-toplevel 2^>nul`) do set "TOP_LEVEL_DIR=%%i"
 
 if "%TOP_LEVEL_DIR%"=="" (
     set "TOP_LEVEL_DIR=%CD%"
@@ -91,7 +93,7 @@ if "%TOP_LEVEL_DIR%"=="" (
 :: --- URL ENCODING FOR BZLMOD REGISTRY ---
 set "URI_PATH=%TOP_LEVEL_DIR:\=/%"
 set "ENC_SPACE=%%20"
-set "URI_PATH=!URI_PATH: =%ENC_SPACE%!"
+for /f "delims=" %%A in ("!ENC_SPACE!") do set "URI_PATH=!URI_PATH: =%%A!"
 
 set "TMP_BAZELRC=%TOP_LEVEL_DIR%\.bazelrc_autodetection.tmp"
 (
@@ -100,7 +102,7 @@ set "TMP_BAZELRC=%TOP_LEVEL_DIR%\.bazelrc_autodetection.tmp"
     echo build --extra_execution_platforms=//tools/platforms:windows_x86_64
     echo.
     echo # Inject the locally encoded Bzlmod registry path safely bypassing workspace expansion spaces.
-    echo # The local registry must come before bcr (see the registry comment in .bazelrc).
+    echo # The local registry must come before bcr - see the registry comment in .bazelrc.
     echo common --registry=file:///!URI_PATH!/registry
     echo common --registry=https://bcr.bazel.build
 ) > "%TMP_BAZELRC%"
