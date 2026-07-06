@@ -2,7 +2,12 @@
 #define AOS_FLATBUFFERS_BASE_H_
 
 #include <stdint.h>
+#ifdef _WIN32
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+#else
 #include <sys/types.h>
+#endif
 
 #include <cstring>
 #include <memory>
@@ -14,7 +19,7 @@
 
 #include "absl/log/absl_check.h"
 #include "absl/types/span.h"
-#include "flatbuffers/base.h"
+#include <flatbuffers/base.h>
 
 #include "aos/containers/resizeable_buffer.h"
 #include "aos/ipc_lib/data_alignment.h"

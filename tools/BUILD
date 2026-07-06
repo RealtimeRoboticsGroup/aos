@@ -127,6 +127,14 @@ cc_binary(
     linkshared = True,
 )
 
+cc_binary(
+    name = "test_boot_uuid",
+    srcs = ["test_boot_uuid.cpp"],
+    deps = [
+        "//aos:uuid",
+    ],
+)
+
 sanitizer_wrapper(
     name = "sanitizer_wrapper",
     tsan_options = "detect_deadlocks=1:second_deadlock_stack=1",

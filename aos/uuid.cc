@@ -1,7 +1,5 @@
 #include "aos/uuid.h"
 
-#include <fcntl.h>
-#include <sys/stat.h>
 #include <sys/types.h>
 
 #include <array>
@@ -10,11 +8,25 @@
 #include <string_view>
 
 #if defined(__linux__) || defined(__APPLE__)
+#include <fcntl.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #endif
 
 #if defined(__APPLE__)
 #include <sys/sysctl.h>
+#endif
+
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+
+#include <memory>
 #endif
 
 #include "absl/flags/flag.h"
@@ -264,8 +276,114 @@ UUID UUID::BootUUID() {
   ABSL_LOG(FATAL)
       << "TODO: Support macOS sandboxed boot UUID fallback implementation.";
   return UUID::Zero();
+#elif defined(_WIN32)
+  // On Windows there is no direct boot UUID. We synthesize one by combining
+  // the machine GUID with the System process (PID 4) creation time.
+  // This is NTP-invariant, always available, and doesn't require admin rights.
+  // Cached in a static so the value is stable for the lifetime of the process
+  // (matching Linux/macOS behavior).
+  static UUID windows_boot_uuid = []() {
+    // Read the MachineGuid from the registry.
+    HKEY hKey;
+    char machine_guid[128] = {};
+    DWORD guid_size = sizeof(machine_guid);
+    const LONG open_status =
+        RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Cryptography",
+                      0, KEY_READ | KEY_WOW64_64KEY, &hKey);
+    ABSL_CHECK_EQ(open_status, ERROR_SUCCESS)
+        << "Failed to open Cryptography registry key: " << open_status;
+    const LONG query_status =
+        RegQueryValueExA(hKey, "MachineGuid", nullptr, nullptr,
+                         reinterpret_cast<LPBYTE>(machine_guid), &guid_size);
+    ABSL_CHECK_EQ(query_status, ERROR_SUCCESS)
+        << "Failed to query MachineGuid: " << query_status;
+    RegCloseKey(hKey);
+
+    // Get the creation time of the System process (PID 4) as our boot seed.
+    uint64_t stable_boot_seed = 0;
+
+    struct UNICODE_STRING_CUSTOM {
+      USHORT Length;
+      USHORT MaximumLength;
+      PWSTR Buffer;
+    };
+
+    struct SYSTEM_PROCESS_INFORMATION_CUSTOM {
+      ULONG NextEntryOffset;
+      ULONG NumberOfThreads;
+      LARGE_INTEGER WorkingSetPrivateSize;
+      ULONG HardFaultCount;
+      ULONG NumberOfThreadsHighWatermark;
+      ULONGLONG CycleTime;
+      LARGE_INTEGER CreateTime;
+      LARGE_INTEGER UserTime;
+      LARGE_INTEGER KernelTime;
+      UNICODE_STRING_CUSTOM ImageName;
+      LONG BasePriority;
+      HANDLE UniqueProcessId;
+    };
+
+    using NtQuerySystemInformationFn =
+        LONG(WINAPI *)(ULONG SystemInformationClass, PVOID SystemInformation,
+                       ULONG SystemInformationLength, PULONG ReturnLength);
+
+    HMODULE ntdll = GetModuleHandleA("ntdll.dll");
+    if (ntdll != nullptr) {
+      auto nt_query = reinterpret_cast<NtQuerySystemInformationFn>(
+          GetProcAddress(ntdll, "NtQuerySystemInformation"));
+      if (nt_query != nullptr) {
+        // Query system process information. Since the buffer size needs can be
+        // large, we allocate 1MB dynamically.
+        ULONG size = 1024 * 1024;
+        std::unique_ptr<uint8_t[]> buffer(new uint8_t[size]);
+        ULONG return_length = 0;
+        // SystemProcessInformation = 5
+        if (nt_query(5, buffer.get(), size, &return_length) == 0) {
+          uint8_t *current = buffer.get();
+          while (true) {
+            auto *proc_info =
+                reinterpret_cast<SYSTEM_PROCESS_INFORMATION_CUSTOM *>(current);
+            uint64_t pid =
+                reinterpret_cast<uint64_t>(proc_info->UniqueProcessId);
+            if (pid == 4) {
+              stable_boot_seed = proc_info->CreateTime.QuadPart;
+              break;
+            }
+            if (proc_info->NextEntryOffset == 0) {
+              break;
+            }
+            current += proc_info->NextEntryOffset;
+          }
+        }
+      }
+    }
+    ABSL_CHECK(stable_boot_seed != 0)
+        << "Failed to query System process (PID 4) creation time. Set "
+           "--boot_uuid manually.";
+
+    // Seed from MachineGuid + stable_boot_seed for a per-machine, per-boot
+    // UUID.
+    uint8_t seed_data[128 + sizeof(stable_boot_seed)];
+    ABSL_CHECK_LE(guid_size + sizeof(stable_boot_seed), sizeof(seed_data));
+    std::memcpy(seed_data, machine_guid, guid_size);
+    std::memcpy(seed_data + guid_size, &stable_boot_seed,
+                sizeof(stable_boot_seed));
+    std::seed_seq seed(seed_data,
+                       seed_data + guid_size + sizeof(stable_boot_seed));
+    std::mt19937 gen(seed);
+
+    UUID result;
+    std::uniform_int_distribution<> dis(0, 255);
+    for (size_t i = 0; i < kDataSize; ++i) {
+      result.data_[i] = static_cast<uint8_t>(dis(gen));
+    }
+    result.data_[6] = (result.data_[6] & 0x0f) | 0x40;
+    result.data_[8] = (result.data_[8] & 0x3f) | 0x80;
+    return result;
+  }();
+  return windows_boot_uuid;
 #else
-  ABSL_LOG(FATAL) << "TODO: Support windows boot UUID fallback implementation.";
+#error "Unsupported platform for BootUUID"
 #endif
 }
 

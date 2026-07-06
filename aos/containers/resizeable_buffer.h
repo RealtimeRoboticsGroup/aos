@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <memory>
+#include <new>
 
 #include "absl/log/absl_check.h"
 
@@ -104,7 +105,7 @@ class AllocatorResizeableBuffer {
   // static_cast<TheSignature>(&free). However, that sounds like a nightmare,
   // especially because it has to conditionally enable the part mentioning CUDA
   // identifiers in the preprocessor. This little function is way simpler.
-  static void DoFree(void *p) { free(p); }
+  static void DoFree(void *p) { F::Free(p); }
 
   void Allocate(size_t new_capacity) {
     void *const old = storage_.release();
@@ -124,6 +125,7 @@ class Reallocator {
   static void *Realloc(void *old, size_t /*old_size*/, size_t new_capacity) {
     return realloc(old, new_capacity);
   }
+  static void Free(void *p) { free(p); }
 };
 
 // Allocates aligned memory.
@@ -131,12 +133,18 @@ template <size_t alignment>
 class AlignedReallocator {
  public:
   static void *Realloc(void *old, size_t old_size, size_t new_capacity) {
-    void *new_memory = std::aligned_alloc(alignment, new_capacity);
+    void *new_memory =
+        ::operator new(new_capacity, std::align_val_t{alignment});
     if (old) {
       memcpy(new_memory, old, old_size);
-      free(old);
+      Free(old);
     }
     return new_memory;
+  }
+  static void Free(void *p) {
+    if (p) {
+      ::operator delete(p, std::align_val_t{alignment});
+    }
   }
 };
 

@@ -28,7 +28,7 @@ class UUID {
   // Returns a uuid with all '0's.
   static constexpr UUID Zero() {
     UUID result;
-    std::memset(result.data_.data(), 0, result.data_.size());
+    result.data_.fill(0);
     return result;
   }
 
