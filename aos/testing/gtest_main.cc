@@ -11,30 +11,42 @@ ABSL_FLAG(bool, print_logs, false,
 ABSL_FLAG(std::string, log_file, "",
           "Print all log messages to FILE instead of standard output.");
 
-namespace aos::testing {
-
 // Actually declared/defined in //aos/testing:test_logging.
 //
 // Linux is happy to pick the strong symbol over this one.  OSX doesn't like
 // undefined symbols.  So define a weak one with no body, to make both OSes
 // happy.  This lets us not add a dependency on these two libraries to every
 // test, and to only use them when linked in.
-__attribute__((weak)) void SetLogFileName(const char *) {}
-__attribute__((weak)) void ForcePrintLogsDuringTests() {}
-
-}  // namespace aos::testing
+#ifdef _WIN32
+extern "C" {
+void aos_SetLogFileName_default(const char *) {}
+void aos_ForcePrintLogsDuringTests_default() {}
+#pragma comment( \
+    linker, "/alternatename:aos_SetLogFileName=aos_SetLogFileName_default")
+#pragma comment( \
+    linker,      \
+    "/alternatename:aos_ForcePrintLogsDuringTests=aos_ForcePrintLogsDuringTests_default")
+void aos_SetLogFileName(const char *);
+void aos_ForcePrintLogsDuringTests();
+}
+#else
+extern "C" {
+__attribute__((weak)) void aos_SetLogFileName(const char *) {}
+__attribute__((weak)) void aos_ForcePrintLogsDuringTests() {}
+}
+#endif
 
 GTEST_API_ int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   aos::InitGoogle(&argc, &argv);
 
   if (absl::GetFlag(FLAGS_print_logs)) {
-    ::aos::testing::ForcePrintLogsDuringTests();
+    aos_ForcePrintLogsDuringTests();
   }
 
   if (!absl::GetFlag(FLAGS_log_file).empty()) {
-    ::aos::testing::ForcePrintLogsDuringTests();
-    ::aos::testing::SetLogFileName(absl::GetFlag(FLAGS_log_file).c_str());
+    aos_ForcePrintLogsDuringTests();
+    aos_SetLogFileName(absl::GetFlag(FLAGS_log_file).c_str());
   }
 
   // Point shared memory away from /dev/shm if we are testing.  We don't care

@@ -137,12 +137,18 @@ void EnableTestLogging() {
   absl::call_once(enable_test_logging_once, DoEnableTestLogging);
 }
 
-void SetLogFileName(const char *filename) {
+extern "C" {
+void aos_SetLogFileName(const char *filename) {
   TestLogImplementation::GetInstance()->SetOutputFile(filename);
 }
 
-void ForcePrintLogsDuringTests() {
+void aos_ForcePrintLogsDuringTests() {
   TestLogImplementation::GetInstance()->PrintMessagesAsTheyComeIn();
 }
+}  // extern "C"
+
+void SetLogFileName(const char *filename) { aos_SetLogFileName(filename); }
+
+void ForcePrintLogsDuringTests() { aos_ForcePrintLogsDuringTests(); }
 
 }  // namespace aos::testing

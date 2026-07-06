@@ -1,6 +1,11 @@
 #ifndef AOS_TESTING_TEST_LOGGING_H_
 #define AOS_TESTING_TEST_LOGGING_H_
 
+extern "C" {
+void aos_SetLogFileName(const char *filename);
+void aos_ForcePrintLogsDuringTests();
+}
+
 namespace aos::testing {
 
 // Enables the logging framework for use during a gtest test.
