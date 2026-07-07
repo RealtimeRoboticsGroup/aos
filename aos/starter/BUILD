@@ -242,6 +242,7 @@ cc_library(
     name = "irq_affinity_lib",
     srcs = ["irq_affinity_lib.cc"],
     hdrs = ["irq_affinity_lib.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos/scoped:scoped_fd",
         "@com_google_absl//absl/log",
@@ -255,6 +256,7 @@ cc_binary(
     srcs = [
         "irq_affinity.cc",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":irq_affinity_lib",
@@ -269,6 +271,7 @@ cc_binary(
 cc_test(
     name = "irq_affinity_lib_test",
     srcs = ["irq_affinity_lib_test.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":irq_affinity_lib",
         "//aos/testing:googletest",
