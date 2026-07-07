@@ -113,7 +113,12 @@ cc_library(
 
 cc_library(
     name = "log_backend",
-    srcs = ["log_backend.cc"],
+    srcs = [
+        "log_backend.cc",
+    ] + select({
+        "@platforms//os:windows": ["log_backend_windows.cc"],
+        "//conditions:default": ["log_backend_linux.cc"],
+    }),
     hdrs = ["log_backend.h"],
     visibility = ["//visibility:public"],
     deps = [
@@ -152,7 +157,7 @@ cc_library(
     srcs = ["logfile_decoder_options.cc"],
     hdrs = ["logfile_decoder_options.h"],
     copts = select({
-        "//tools:cpu_k8": ["-DENABLE_S3=1"],
+        "//tools:x86_64_linux": ["-DENABLE_S3=1"],
         "//conditions:default": ["-DENABLE_S3=0"],
     }),
     deps = [
@@ -161,7 +166,7 @@ cc_library(
         ":snappy_encoder",
         "//aos:sanitizers",
     ] + select({
-        "//tools:cpu_k8": [
+        "//tools:x86_64_linux": [
             ":s3_fetcher",
             ":s3_file_operations",
         ],
@@ -227,7 +232,10 @@ cc_library(
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/types:span",
     ] + select({
-        "//tools:cpu_k8": [
+        # s3_fetcher is x86_64-only (it depends on the AWS SDK), so gate these on
+        # x86_64_linux -- not os:linux, which would also drag them onto ARM64
+        # Linux and break that build.
+        "//tools:x86_64_linux": [
             ":s3_fetcher",
             ":s3_file_operations",
         ],
@@ -277,7 +285,10 @@ cc_library(
     name = "buffer_encoder",
     srcs = [
         "buffer_encoder.cc",
-    ],
+    ] + select({
+        "@platforms//os:windows": ["buffer_encoder_windows.cc"],
+        "//conditions:default": ["buffer_encoder_unix.cc"],
+    }),
     hdrs = [
         "buffer_encoder.h",
     ],
@@ -1105,6 +1116,7 @@ py_test(
     srcs = [
         "plot_logger_profile_test.py",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":plot_logger_profile",

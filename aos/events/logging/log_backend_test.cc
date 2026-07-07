@@ -23,6 +23,7 @@
 ABSL_DECLARE_FLAG(bool, sync);
 
 namespace aos::logger::testing {
+
 namespace {
 // Helper to write simple string to the log sink
 WriteResult Write(LogSink *log_sink, std::string_view content) {
@@ -98,8 +99,8 @@ TEST(FileHandlerTest, CloseSyncsDirectory) {
 
 TEST(LogBackendTest, CreateRenamableFile) {
   const std::string logevent = TestTmpDir() + "/logevent/";
-  RenamableFileBackend backend(logevent, false);
-  auto file = backend.RequestFile("test.log");
+  auto backend = MakeRenamableFileBackend(logevent, false);
+  auto file = backend->RequestFile("test.log");
   ASSERT_EQ(file->OpenForWrite(), WriteCode::kOk);
   auto result = Write(file.get(), "test");
   EXPECT_EQ(result.code, WriteCode::kOk);
@@ -115,8 +116,8 @@ TEST(LogBackendTest, CreateAsyncFile) {
   // in the threading code.
   for (int i = 0; i < 1000; ++i) {
     SCOPED_TRACE(i);
-    RenamableFileBackend backend(logevent, false);
-    auto file = backend.RequestFile("test.log", 1024);
+    auto backend = MakeRenamableFileBackend(logevent, false);
+    auto file = backend->RequestFile("test.log", 1024);
     ASSERT_EQ(file->OpenForWrite(), WriteCode::kOk);
     for (int i = 0; i < 1000; ++i) {
       auto result = Write(file.get(), "testing");
@@ -136,8 +137,8 @@ TEST(LogBackendTest, OutOfSpaceTest) {
   // in the threading code.
   for (int i = 0; i < 1000; ++i) {
     SCOPED_TRACE(i);
-    RenamableFileBackend backend(logevent, false);
-    auto file = backend.RequestFile("test.log", 1024);
+    auto backend = MakeRenamableFileBackend(logevent, false);
+    auto file = backend->RequestFile("test.log", 1024);
     BufferedFileHandler *file_handler =
         dynamic_cast<BufferedFileHandler *>(file.get());
     ASSERT_EQ(file->OpenForWrite(), WriteCode::kOk);
@@ -172,7 +173,93 @@ TEST(LogBackendTest, OutOfSpaceTest) {
       }
     }
     EXPECT_TRUE(got_out_of_space);
+    file.reset();
     std::filesystem::remove(logevent + "test.log");
+  }
+}
+
+// Once a handler has lost data to a full disk it stays stopped: writes report
+// kOutOfSpace from then on instead of appending to a log that already has a
+// hole in it.
+//
+// Critically, that has to hold for a handler which is also *closed*.  The
+// Windows rename path closes handlers behind the logger's back and, when the
+// flush runs out of space, leaves them closed rather than reopening a log it
+// can no longer trust.  Without the guard, the next write would go to fd -1 and
+// PLOG(FATAL) on EBADF instead of winding down gracefully.
+TEST(LogBackendTest, StopsWritingAfterOutOfSpace) {
+  // Exposes the protected hook the backends use to retire a handler.
+  class TestFileHandler : public BufferedFileHandler {
+   public:
+    using BufferedFileHandler::BufferedFileHandler;
+    using BufferedFileHandler::MarkRanOutOfSpace;
+  };
+
+  const std::string logevent = TestTmpDir() + "/logevent/";
+
+  // Both a buffered and an unbuffered handler; the writing thread only latches
+  // this for the buffered one, so the unbuffered case is the one that would
+  // otherwise reach a closed descriptor.
+  for (const size_t memory_buffer_size : {size_t{0}, size_t{1024}}) {
+    SCOPED_TRACE(memory_buffer_size);
+    std::filesystem::remove_all(logevent);
+    std::filesystem::create_directories(logevent);
+
+    TestFileHandler handler(logevent + "test.log", false, memory_buffer_size);
+    ASSERT_EQ(handler.OpenForWrite(), WriteCode::kOk);
+    ASSERT_EQ(Write(&handler, "good").code, WriteCode::kOk);
+
+    // Retire it the way the rename path does: close first (which flushes and
+    // is where the real caller sees kOutOfSpace come back), then mark it and
+    // leave it closed rather than reopening.
+    ASSERT_EQ(handler.Close(), WriteCode::kOk);
+    ASSERT_FALSE(handler.is_open());
+    handler.MarkRanOutOfSpace();
+
+    // Writing to the closed, retired handler reports out of space instead of
+    // touching the descriptor.
+    for (int i = 0; i < 3; ++i) {
+      const WriteResult result = Write(&handler, "dropped");
+      EXPECT_EQ(result.code, WriteCode::kOutOfSpace);
+      EXPECT_EQ(result.messages_written, 0);
+      EXPECT_EQ(result.bytes_written, 0);
+    }
+
+    // Only what made it to disk before we stopped is there.
+    EXPECT_EQ(std::filesystem::file_size(logevent + "test.log"), 4u);
+  }
+}
+
+// Closing has to report that the writing thread ran out of space.  That thread
+// is the only thing that knows the buffered data never reached disk, and the
+// descriptor closing cleanly says nothing about it -- so a Close() that only
+// forwards FileHandler::Close() hands back kOk after silently dropping data.
+//
+// Callers rely on this: DetachedBufferWriter latches ran_out_of_space_ from
+// Close()'s return, and the Windows rename path decides from it whether the log
+// is still worth renaming.
+TEST(LogBackendTest, CloseReportsBufferedOutOfSpace) {
+  class TestFileHandler : public BufferedFileHandler {
+   public:
+    using BufferedFileHandler::BufferedFileHandler;
+    using BufferedFileHandler::MarkRanOutOfSpace;
+  };
+
+  const std::string logevent = TestTmpDir() + "/logevent/";
+
+  for (const size_t memory_buffer_size : {size_t{0}, size_t{1024}}) {
+    SCOPED_TRACE(memory_buffer_size);
+    std::filesystem::remove_all(logevent);
+    std::filesystem::create_directories(logevent);
+
+    TestFileHandler handler(logevent + "test.log", false, memory_buffer_size);
+    ASSERT_EQ(handler.OpenForWrite(), WriteCode::kOk);
+    ASSERT_EQ(Write(&handler, "good").code, WriteCode::kOk);
+
+    // Stands in for the writing thread hitting ENOSPC mid-flush.
+    handler.MarkRanOutOfSpace();
+
+    EXPECT_EQ(handler.Close(), WriteCode::kOutOfSpace);
   }
 }
 
@@ -182,8 +269,8 @@ TEST(LogBackendTest, CreateFileMassiveWrite) {
                   "memory usage (>3GB + MSan overhead)";
 #endif
   const std::string logevent = TestTmpDir() + "/logevent/";
-  RenamableFileBackend backend(logevent, false);
-  auto file = backend.RequestFile("test.log");
+  auto backend = MakeRenamableFileBackend(logevent, false);
+  auto file = backend->RequestFile("test.log");
   ASSERT_EQ(file->OpenForWrite(), WriteCode::kOk);
   std::vector<uint8_t> buffer1(3e9, 0);
   std::vector<uint8_t> buffer2(3, 0);
@@ -198,15 +285,17 @@ TEST(LogBackendTest, CreateFileMassiveWrite) {
   EXPECT_TRUE(std::filesystem::exists(logevent + "test.log"));
   EXPECT_EQ(buffer1.size() + buffer2.size(),
             std::filesystem::file_size(logevent + "test.log"));
+#ifndef _WIN32
   ASSERT_TRUE(
       dynamic_cast<FileHandler *>(file.get())->encountered_incomplete_write());
+#endif
   std::filesystem::remove(logevent + "test.log");
 }
 
 TEST(LogBackendTest, CreateAsyncFileLargeWrites) {
   const std::string logevent = TestTmpDir() + "/logevent/";
-  RenamableFileBackend backend(logevent, false);
-  auto file = backend.RequestFile("test.log", 1024);
+  auto backend = MakeRenamableFileBackend(logevent, false);
+  auto file = backend->RequestFile("test.log", 1024);
   ASSERT_EQ(file->OpenForWrite(), WriteCode::kOk);
   std::array<char, 700> buffer;
   for (size_t i = 0; i < buffer.size(); ++i) {
@@ -233,9 +322,9 @@ TEST(LogBackendTest, CreateAsyncFileLargeWrites) {
 
 TEST(LogBackendTest, UseTempRenamableFile) {
   const std::string logevent = TestTmpDir() + "/logevent/";
-  RenamableFileBackend backend(logevent, false);
-  backend.EnableTempFiles();
-  auto file = backend.RequestFile("test.log");
+  auto backend = MakeRenamableFileBackend(logevent, false);
+  backend->EnableTempFiles();
+  auto file = backend->RequestFile("test.log");
   ASSERT_EQ(file->OpenForWrite(), WriteCode::kOk);
   auto result = Write(file.get(), "test");
   EXPECT_EQ(result.code, WriteCode::kOk);
@@ -247,10 +336,13 @@ TEST(LogBackendTest, UseTempRenamableFile) {
   EXPECT_TRUE(std::filesystem::exists(logevent + "test.log"));
 }
 
+// Active directory renaming tests are supported on Windows by temporarily
+// closing active file handlers inside RenameLogBase before renaming, and then
+// reopening them at the new path.
 TEST(LogBackendTest, RenameBaseAfterWrite) {
   const std::string logevent = TestTmpDir() + "/logevent/";
-  RenamableFileBackend backend(logevent, false);
-  auto file = backend.RequestFile("test.log");
+  auto backend = MakeRenamableFileBackend(logevent, false);
+  auto file = backend->RequestFile("test.log");
   ASSERT_EQ(file->OpenForWrite(), WriteCode::kOk);
   auto result = Write(file.get(), "test");
   EXPECT_EQ(result.code, WriteCode::kOk);
@@ -258,7 +350,7 @@ TEST(LogBackendTest, RenameBaseAfterWrite) {
   EXPECT_TRUE(std::filesystem::exists(logevent + "test.log"));
 
   std::string renamed = TestTmpDir() + "/renamed/";
-  backend.RenameLogBase(renamed);
+  backend->RenameLogBase(renamed);
 
   EXPECT_FALSE(std::filesystem::exists(logevent + "test.log"));
   EXPECT_TRUE(std::filesystem::exists(renamed + "test.log"));
@@ -266,6 +358,65 @@ TEST(LogBackendTest, RenameBaseAfterWrite) {
   EXPECT_EQ(file->Close(), WriteCode::kOk);
   // Check that file is renamed.
   EXPECT_TRUE(std::filesystem::exists(renamed + "test.log"));
+}
+
+// UpdateFilenameBase() has to rewrite the base even when the new base name is a
+// prefix of the old one.  Deciding "already updated" by testing whether the
+// filename starts with the *new* base gets this backwards: ".../run" is a
+// prefix of ".../run-old/data.bfbs", so the rewrite gets skipped and the
+// handler keeps the path it had before the rename.
+TEST(LogBackendTest, UpdateFilenameBaseToPrefixOfItself) {
+  class TestFileHandler : public FileHandler {
+   public:
+    using FileHandler::FileHandler;
+    using FileHandler::UpdateFilenameBase;
+  };
+
+  // Never opened, so this touches no filesystem.
+  TestFileHandler handler("/logs/run-old/data.bfbs", false);
+  handler.UpdateFilenameBase("/logs/run-old", "/logs/run");
+  EXPECT_EQ(handler.name(), "/logs/run/data.bfbs");
+
+  // Calling it again is a no-op rather than a second rewrite.
+  handler.UpdateFilenameBase("/logs/run-old", "/logs/run");
+  EXPECT_EQ(handler.name(), "/logs/run/data.bfbs");
+}
+
+// Renames the log base out from under a *buffered* handler and keeps writing
+// through it afterwards.
+//
+// The other rename tests all use unbuffered handlers (memory_buffer_size of 0),
+// so they never exercise the disk-writing thread.  That matters on backends
+// which have to close and reopen their files to rename the directory (Windows
+// can't rename a directory containing open files): closing stops the writing
+// thread, and if reopening doesn't restart it, writes afterwards land in a
+// buffer nothing ever drains -- the data silently never reaches the file, and
+// once the buffer fills the writer blocks forever.
+TEST(LogBackendTest, RenameBaseAfterBufferedWrite) {
+  const std::string logevent = TestTmpDir() + "/logevent/";
+  const std::string renamed = TestTmpDir() + "/renamed/";
+
+  auto backend = MakeRenamableFileBackend(logevent, false);
+  auto file = backend->RequestFile("test.log", 1024);
+  ASSERT_EQ(file->OpenForWrite(), WriteCode::kOk);
+
+  for (int i = 0; i < 100; ++i) {
+    EXPECT_EQ(Write(file.get(), "before").code, WriteCode::kOk);
+  }
+
+  EXPECT_TRUE(backend->RenameLogBase(renamed));
+
+  // Keep writing after the rename; these have to make it to disk too.
+  for (int i = 0; i < 100; ++i) {
+    EXPECT_EQ(Write(file.get(), "after").code, WriteCode::kOk);
+  }
+
+  EXPECT_EQ(file->Close(), WriteCode::kOk);
+
+  EXPECT_FALSE(std::filesystem::exists(logevent + "test.log"));
+  ASSERT_TRUE(std::filesystem::exists(renamed + "test.log"));
+  // 100 * strlen("before") + 100 * strlen("after")
+  EXPECT_EQ(std::filesystem::file_size(renamed + "test.log"), 1100u);
 }
 
 TEST(LogBackendTest, RenameBaseWithSync) {
@@ -278,8 +429,8 @@ TEST(LogBackendTest, RenameBaseWithSync) {
   const std::string logevent = TestTmpDir() + "/logevent_with_sync/";
   const std::string renamed = TestTmpDir() + "/renamed_with_sync/";
 
-  RenamableFileBackend backend(logevent, false);
-  auto file = backend.RequestFile("test.log");
+  auto backend = MakeRenamableFileBackend(logevent, false);
+  auto file = backend->RequestFile("test.log");
   ASSERT_EQ(file->OpenForWrite(), WriteCode::kOk);
   auto result = Write(file.get(), "test");
   EXPECT_EQ(result.code, WriteCode::kOk);
@@ -287,7 +438,7 @@ TEST(LogBackendTest, RenameBaseWithSync) {
   EXPECT_TRUE(std::filesystem::exists(logevent + "test.log"));
 
   // This will now sync the parent directories due to FLAGS_sync being true.
-  EXPECT_TRUE(backend.RenameLogBase(renamed));
+  EXPECT_TRUE(backend->RenameLogBase(renamed));
 
   EXPECT_FALSE(std::filesystem::exists(logevent + "test.log"));
   EXPECT_TRUE(std::filesystem::exists(renamed + "test.log"));
@@ -299,9 +450,9 @@ TEST(LogBackendTest, RenameBaseWithSync) {
 
 TEST(LogBackendTest, UseTestAndRenameBaseAfterWrite) {
   const std::string logevent = TestTmpDir() + "/logevent/";
-  RenamableFileBackend backend(logevent, false);
-  backend.EnableTempFiles();
-  auto file = backend.RequestFile("test.log");
+  auto backend = MakeRenamableFileBackend(logevent, false);
+  backend->EnableTempFiles();
+  auto file = backend->RequestFile("test.log");
   ASSERT_EQ(file->OpenForWrite(), WriteCode::kOk);
   auto result = Write(file.get(), "test");
   EXPECT_EQ(result.code, WriteCode::kOk);
@@ -309,7 +460,7 @@ TEST(LogBackendTest, UseTestAndRenameBaseAfterWrite) {
   EXPECT_TRUE(std::filesystem::exists(logevent + "test.log.tmp"));
 
   std::string renamed = TestTmpDir() + "/renamed/";
-  backend.RenameLogBase(renamed);
+  backend->RenameLogBase(renamed);
 
   EXPECT_FALSE(std::filesystem::exists(logevent + "test.log.tmp"));
   EXPECT_TRUE(std::filesystem::exists(renamed + "test.log.tmp"));
@@ -437,7 +588,10 @@ TEST(QueueAlignmentDeathTest, Cases) {
 using WriteRecipe = std::vector<std::vector<int>>;
 
 struct FileWriteTestBase : public ::testing::Test {
-  uint8_t NextRandom() { return distribution(engine); }
+  // Draw a random byte straight from the engine.  std::uniform_int_distribution
+  // isn't defined for uint8_t (MSVC rejects it), and the low bits of mt19937
+  // are uniform, so this is both portable and equivalent for random test data.
+  uint8_t NextRandom() { return static_cast<uint8_t>(engine()); }
 
   AllocatorResizeableBuffer<AlignedReallocator<aos::logger::FileHandler::kSector
 
@@ -520,7 +674,6 @@ struct FileWriteTestBase : public ::testing::Test {
 
   std::random_device random;
   std::mt19937 engine{random()};
-  std::uniform_int_distribution<uint8_t> distribution{0, 0xFF};
 };
 
 // Tests that random sets of reads and writes always result in all the data
@@ -557,6 +710,12 @@ TEST_F(FileWriteTestBase, RandomTest) {
 }
 
 // Test an aligned to unaligned transition to make sure everything works.
+//
+// Linux-only: this asserts on written_aligned(), which only the O_DIRECT
+// sector-aligned WriteV() path increments.  Windows uses plain sequential
+// writes with no alignment tracking, so the aligned/unaligned distinction this
+// exercises doesn't exist there.
+#ifndef _WIN32
 TEST_F(FileWriteTestBase, AlignedToUnaligned) {
   AllocatorResizeableBuffer<AlignedReallocator<512>> aligned_buffer;
   AllocatorResizeableBuffer<AlignedReallocator<512>> unaligned_buffer;
@@ -622,6 +781,7 @@ TEST_F(FileWriteTestBase, AlignedToUnaligned) {
     ASSERT_TRUE(false);
   }
 }
+#endif  // !_WIN32
 
 struct FileWriteTestFixture : public ::testing::WithParamInterface<WriteRecipe>,
                               public FileWriteTestBase {};

@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
   aos::ShmEventLoop event_loop(&config.message());
 
   auto log_namer = std::make_unique<aos::logger::MultiNodeFilesLogNamer>(
-      &event_loop, std::make_unique<aos::logger::RenamableFileBackend>(
+      &event_loop, aos::logger::MakeRenamableFileBackend(
                        absl::StrCat(aos::logging::GetLogName("fbs_log"), "/"),
                        absl::GetFlag(FLAGS_direct)));
 

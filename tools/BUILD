@@ -87,6 +87,14 @@ config_setting(
 )
 
 config_setting(
+    name = "x86_64_linux",
+    constraint_values = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+)
+
+config_setting(
     name = "arm64_macos",
     constraint_values = [
         "@platforms//cpu:arm64",
