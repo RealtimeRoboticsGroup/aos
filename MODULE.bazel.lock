@@ -927,7 +927,7 @@
     },
     "@@aspect_rules_esbuild+//esbuild:extensions.bzl%esbuild": {
       "general": {
-        "bzlTransitiveDigest": "oHPB3M1tjoblP2I150g+tRTHVfuAZ0Fd/iU/U/4qYI8=",
+        "bzlTransitiveDigest": "f6PSA/qUkwnMCKsY63uSCEltUGjbPqBAPWaNMG7Aufc=",
         "usagesDigest": "6We6zwGoawD9YXqMI0KPaxEKJTnamXBsuOekhFS2D40=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},

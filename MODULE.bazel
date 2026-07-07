@@ -359,7 +359,6 @@ crate.from_cargo(
     ],
 )
 use_repo(crate, "cxxbridge_cmd_deps")
-
 crate.from_cargo(
     name = "crate_index",
     cargo_lockfile = "//:Cargo.lock",
@@ -479,6 +478,12 @@ bazel_dep(name = "flatbuffers", version = "25.12.19", repo_name = "com_github_go
 single_version_override(
     module_name = "flatbuffers",
     version = "25.12.19",
+)
+
+single_version_override(
+    module_name = "aspect_rules_js",
+    patch_strip = 1,
+    patches = ["third_party/aspect_rules_js/aspect_rules_js.patch"],
 )
 
 bazel_dep(name = "foxglove_schemas", version = "0.16.2", repo_name = "com_github_foxglove_schemas")
