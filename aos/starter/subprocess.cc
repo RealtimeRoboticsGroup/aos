@@ -802,6 +802,12 @@ Application::Application(
   set_stop_grace_period(std::chrono::nanoseconds(application->stop_time()));
 }
 
+void Application::HandleEvent(Event event) {
+  // TODO: implement event-driven transition table in step 3.
+  (void)event;
+  ABSL_CHECK(false) << "HandleEvent not implemented yet";
+}
+
 void Application::DoStart() {
   if (status_ != ApplicationInternalState::kWaiting) {
     return;

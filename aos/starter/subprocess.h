@@ -344,6 +344,7 @@ class Application {
   // includes a kTerminate command used to stop the application and remove it
   // from the map once it reaches STOPPED.
   enum class ApplicationCommand {
+    kNoOp,
     kStart,
     kStop,
     kRestart,
@@ -368,6 +369,45 @@ class Application {
   // Maps the internal process state to the public flatbuffer State enum.
   static aos::starter::State PublicState(
       ApplicationInternalState internal_state);
+
+  // Events that drive the internal state machine.
+  enum class Event {
+    kStartCalled,
+    kStopCalled,
+    kRestartCalled,
+    kTerminateCalled,
+    kTimeout,
+    kChildExited,
+    kForkSuccess,
+    kForkFailed,
+  };
+
+  // Side effects performed by transitions.
+  enum class Action {
+    kNone,
+    kDoStart,
+    kHandleStarted,
+    kDoStop,
+    kDoKill,
+    kDoWait,
+  };
+
+  // A single row in the event-driven transition table.
+  struct TransitionRule {
+    ApplicationInternalState from_status;
+    Event event;
+    std::function<bool(bool autorestart,
+                       std::optional<ApplicationCommand> last_command,
+                       bool alive)>
+        guard;
+    ApplicationInternalState next_status;
+    std::optional<ApplicationCommand> next_command;
+    std::optional<Action> action;
+  };
+
+  // Dispatches an event through the transition table. Stub for now.
+  void HandleEvent(Event event);
+
   ApplicationInternalState status_ = ApplicationInternalState::kStopped;
   aos::starter::LastStopReason stop_reason_ =
       aos::starter::LastStopReason::STOP_REQUESTED;
