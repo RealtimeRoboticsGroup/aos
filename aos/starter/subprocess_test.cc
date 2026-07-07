@@ -348,6 +348,74 @@ TEST_F(SubprocessTest, ShortLivedApp) {
   event_loop_.Run();
 }
 
+// Tests that an explicit Stop() overrides autorestart=true and the application
+// stays stopped.
+TEST_F(SubprocessTest, StopOverridesAutorestart) {
+  Application sleep(
+      "sleep", "sleep", &event_loop_,
+      [this, &sleep]() {
+        if (sleep.status() == aos::starter::State::STOPPED) {
+          event_loop_.Exit();
+        }
+      },
+      nullptr);
+  sleep.set_autorestart(true);
+  sleep.set_args({"100"});
+
+  event_loop_.OnRun([this, &sleep]() {
+    exit_timer_->Disable();
+    aos::TimerHandler *check_timer = event_loop_.AddTimer([&sleep]() {
+      if (sleep.status() == aos::starter::State::RUNNING) {
+        sleep.Stop();
+      }
+    });
+    check_timer->Schedule(event_loop_.monotonic_now(),
+                          std::chrono::milliseconds(100));
+    exit_timer_->Schedule(event_loop_.monotonic_now() +
+                          std::chrono::seconds(5));
+  });
+
+  sleep.Start();
+  event_loop_.Run();
+
+  EXPECT_EQ(sleep.status(), aos::starter::State::STOPPED);
+  EXPECT_EQ(sleep.stop_reason(), aos::starter::LastStopReason::STOP_REQUESTED);
+}
+
+// Tests that Terminate() overrides autorestart=true and the application stays
+// stopped.
+TEST_F(SubprocessTest, TerminateDoesNotAutorestart) {
+  Application sleep(
+      "sleep", "sleep", &event_loop_,
+      [this, &sleep]() {
+        if (sleep.status() == aos::starter::State::STOPPED) {
+          event_loop_.Exit();
+        }
+      },
+      nullptr);
+  sleep.set_autorestart(true);
+  sleep.set_args({"100"});
+
+  event_loop_.OnRun([this, &sleep]() {
+    exit_timer_->Disable();
+    aos::TimerHandler *check_timer = event_loop_.AddTimer([&sleep]() {
+      if (sleep.status() == aos::starter::State::RUNNING) {
+        sleep.Terminate();
+      }
+    });
+    check_timer->Schedule(event_loop_.monotonic_now(),
+                          std::chrono::milliseconds(100));
+    exit_timer_->Schedule(event_loop_.monotonic_now() +
+                          std::chrono::seconds(5));
+  });
+
+  sleep.Start();
+  event_loop_.Run();
+
+  EXPECT_EQ(sleep.status(), aos::starter::State::STOPPED);
+  EXPECT_EQ(sleep.stop_reason(), aos::starter::LastStopReason::TERMINATE);
+}
+
 // Test that if the binary changes out from under us that we note it in the
 // FileState.
 TEST_F(SubprocessTest, ChangeBinaryContents) {
