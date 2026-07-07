@@ -1020,7 +1020,6 @@ void Application::DoStop(bool restart) {
       // Watchdog timer to SIGKILL application if it is still running 1 second
       // after SIGINT
       stop_timer_->Schedule(event_loop_->monotonic_now() + stop_grace_period_);
-      queue_restart_ = restart;
       OnChange();
       break;
     }
@@ -1037,9 +1036,6 @@ void Application::DoStop(bool restart) {
       break;
     }
     case aos::starter::State::STOPPING: {
-      // If the application is already stopping, then we just need to update the
-      // restart flag to the most recent status.
-      queue_restart_ = restart;
       break;
     }
     case aos::starter::State::STOPPED: {
@@ -1182,12 +1178,16 @@ Application::PopulateStatus(flatbuffers::FlatBufferBuilder *builder,
 void Application::Terminate() {
   stop_reason_ = aos::starter::LastStopReason::TERMINATE;
   DoStop(false);
-  terminating_ = true;
+  command_ = ApplicationCommand::kTerminate;
 }
 
 void Application::HandleCommand(aos::starter::Command cmd) {
+  if (command_ == ApplicationCommand::kTerminate) {
+    return;
+  }
   switch (cmd) {
     case aos::starter::Command::START: {
+      command_ = ApplicationCommand::kStart;
       switch (status_) {
         case aos::starter::State::WAITING: {
           restart_timer_->Disable();
@@ -1201,7 +1201,7 @@ void Application::HandleCommand(aos::starter::Command cmd) {
           break;
         }
         case aos::starter::State::STOPPING: {
-          queue_restart_ = true;
+          command_ = ApplicationCommand::kRestart;
           break;
         }
         case aos::starter::State::STOPPED: {
@@ -1213,11 +1213,13 @@ void Application::HandleCommand(aos::starter::Command cmd) {
       break;
     }
     case aos::starter::Command::STOP: {
+      command_ = ApplicationCommand::kStop;
       stop_reason_ = aos::starter::LastStopReason::STOP_REQUESTED;
       DoStop(false);
       break;
     }
     case aos::starter::Command::RESTART: {
+      command_ = ApplicationCommand::kRestart;
       stop_reason_ = aos::starter::LastStopReason::RESTART_REQUESTED;
       DoStop(true);
       break;
@@ -1316,12 +1318,12 @@ bool Application::MaybeHandleSignal() {
       stop_timer_->Disable();
 
       OnChange();
-      if (terminating_) {
+      if (command_ == ApplicationCommand::kTerminate) {
         return true;
       }
 
-      if (queue_restart_) {
-        queue_restart_ = false;
+      if (command_ == ApplicationCommand::kRestart) {
+        command_ = std::nullopt;
         status_ = aos::starter::State::WAITING;
         DoStart();
       }

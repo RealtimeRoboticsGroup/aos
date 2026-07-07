@@ -223,6 +223,7 @@ class Application {
 
   // Stops the command the same way as Stop() does, but updates internal state
   // to reflect that the application was terminated.
+  // Once an application is terminated, it cannot be restarted.
   void Terminate();
 
   // Adds a callback which gets notified when the application changes state.
@@ -339,8 +340,17 @@ class Application {
   uint64_t id_ = 0;
   std::optional<int> exit_code_;
   std::optional<aos::monotonic_clock::time_point> start_time_, exit_time_;
-  bool queue_restart_ = false;
-  bool terminating_ = false;
+  // Internal command vocabulary. Unlike the public Command enum, this
+  // includes a kTerminate command used to stop the application and remove it
+  // from the map once it reaches STOPPED.
+  enum class ApplicationCommand {
+    kStart,
+    kStop,
+    kRestart,
+    kTerminate,
+  };
+  std::optional<ApplicationCommand> command_;
+
   bool autostart_ = false;
   bool autorestart_ = false;
 
