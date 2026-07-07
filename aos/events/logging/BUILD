@@ -112,7 +112,12 @@ cc_library(
 
 cc_library(
     name = "log_backend",
-    srcs = ["log_backend.cc"],
+    srcs = [
+        "log_backend.cc",
+    ] + select({
+        "@platforms//os:windows": ["log_backend_windows.cc"],
+        "//conditions:default": ["log_backend_linux.cc"],
+    }),
     hdrs = ["log_backend.h"],
     visibility = ["//visibility:public"],
     deps = [
@@ -151,7 +156,7 @@ cc_library(
     srcs = ["logfile_decoder_options.cc"],
     hdrs = ["logfile_decoder_options.h"],
     copts = select({
-        "//tools:cpu_k8": ["-DENABLE_S3=1"],
+        "//tools:x86_64_linux": ["-DENABLE_S3=1"],
         "//conditions:default": ["-DENABLE_S3=0"],
     }),
     deps = [
@@ -160,7 +165,7 @@ cc_library(
         ":snappy_encoder",
         "//aos:sanitizers",
     ] + select({
-        "//tools:cpu_k8": [
+        "//tools:x86_64_linux": [
             ":s3_fetcher",
             ":s3_file_operations",
         ],
@@ -226,7 +231,7 @@ cc_library(
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/types:span",
     ] + select({
-        "//tools:cpu_k8": [
+        "@platforms//os:linux": [
             ":s3_fetcher",
             ":s3_file_operations",
         ],
@@ -1081,6 +1086,7 @@ py_test(
     srcs = [
         "plot_logger_profile_test.py",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":plot_logger_profile",

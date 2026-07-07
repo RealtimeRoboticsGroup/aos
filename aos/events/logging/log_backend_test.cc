@@ -23,6 +23,13 @@
 ABSL_DECLARE_FLAG(bool, sync);
 
 namespace aos::logger::testing {
+
+#ifdef _WIN32
+using RenamableFileBackend = ::aos::logger::WindowsRenamableFileBackend;
+#else
+using RenamableFileBackend = ::aos::logger::RenamableFileBackend;
+#endif
+
 namespace {
 // Helper to write simple string to the log sink
 WriteResult Write(LogSink *log_sink, std::string_view content) {
@@ -172,6 +179,7 @@ TEST(LogBackendTest, OutOfSpaceTest) {
       }
     }
     EXPECT_TRUE(got_out_of_space);
+    file.reset();
     std::filesystem::remove(logevent + "test.log");
   }
 }
@@ -198,8 +206,10 @@ TEST(LogBackendTest, CreateFileMassiveWrite) {
   EXPECT_TRUE(std::filesystem::exists(logevent + "test.log"));
   EXPECT_EQ(buffer1.size() + buffer2.size(),
             std::filesystem::file_size(logevent + "test.log"));
+#ifndef _WIN32
   ASSERT_TRUE(
       dynamic_cast<FileHandler *>(file.get())->encountered_incomplete_write());
+#endif
   std::filesystem::remove(logevent + "test.log");
 }
 
@@ -247,6 +257,9 @@ TEST(LogBackendTest, UseTempRenamableFile) {
   EXPECT_TRUE(std::filesystem::exists(logevent + "test.log"));
 }
 
+// Active directory renaming tests are supported on Windows by temporarily
+// closing active file handlers inside RenameLogBase before renaming, and then
+// reopening them at the new path.
 TEST(LogBackendTest, RenameBaseAfterWrite) {
   const std::string logevent = TestTmpDir() + "/logevent/";
   RenamableFileBackend backend(logevent, false);
@@ -436,6 +449,7 @@ TEST(QueueAlignmentDeathTest, Cases) {
 // int values are sizes of each message in the queue.
 using WriteRecipe = std::vector<std::vector<int>>;
 
+#ifndef _WIN32
 struct FileWriteTestBase : public ::testing::Test {
   uint8_t NextRandom() { return distribution(engine); }
 
@@ -649,5 +663,6 @@ INSTANTIATE_TEST_SUITE_P(
                                   {65536, 65536, 508, 65355},
                                   {515, 519}},
                       WriteRecipe{{0x1000b5, 0xfff4b, 0x100000}, {0x10000}}));
+#endif
 
 }  // namespace aos::logger::testing

@@ -3,15 +3,19 @@
 
 #include <fcntl.h>
 #include <sys/types.h>
+#ifndef _WIN32
 #include <sys/uio.h>
+#endif
 
 #include <condition_variable>
 #include <cstddef>
 #include <filesystem>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "absl/types/span.h"
@@ -193,13 +197,15 @@ class FileHandler : public LogSink {
   // Returns a write code and a number of bytes written.
   std::pair<WriteCode, size_t> WriteV(bool aligned);
 
+ protected:
   std::string filename_;
-
   int fd_ = -1;
 
+#ifndef _WIN32
   // List of iovecs to use with writev.  This is a member variable to avoid
   // churn.
   std::vector<struct iovec> iovec_;
+#endif
 
   QueueAligner queue_aligner_;
 
@@ -395,20 +401,19 @@ class LogFolder : public FileBackend {
 
 // Provides a file backend that supports renaming of the base log folder and
 // temporary files.
+// Provides a file backend that supports renaming of the base log folder and
+// temporary files.
 class RenamableFileBackend : public LogBackend {
  public:
   // Adds call to rename, when closed.
-  class RenamableFileHandler final : public BufferedFileHandler {
+  class RenamableFileHandler : public BufferedFileHandler {
    public:
     RenamableFileHandler(RenamableFileBackend *owner, std::string filename,
-                         bool supports_odirect, size_t memory_buffer_size)
-        : BufferedFileHandler(std::move(filename), supports_odirect,
-                              memory_buffer_size),
-          owner_(owner) {}
-    ~RenamableFileHandler() final = default;
+                         bool supports_odirect, size_t memory_buffer_size);
+    ~RenamableFileHandler() override = default;
 
     // Closes and if needed renames file.
-    WriteCode Close() final;
+    WriteCode Close() override;
 
    private:
     RenamableFileBackend *owner_;
@@ -416,14 +421,12 @@ class RenamableFileBackend : public LogBackend {
 
   explicit RenamableFileBackend(std::string_view base_name,
                                 bool supports_odirect);
-  ~RenamableFileBackend() = default;
+  ~RenamableFileBackend() override;
 
   // Request file from a file system. It is not open yet.
   std::unique_ptr<LogSink> RequestFile(
       const std::string_view id, const size_t memory_buffer_size = 0) override;
 
-  // TODO (Alexei): it is called by Logger, and left here for compatibility.
-  // Logger should not call it.
   std::string_view base_name() const { return base_name_; }
 
   // If temp files are enabled, then this will write files with the .tmp
@@ -438,15 +441,21 @@ class RenamableFileBackend : public LogBackend {
   // Moves the current log location to the new name. Returns true if a change
   // was made, false otherwise.
   // Only renaming the folder is supported, not the file base name.
-  bool RenameLogBase(std::string_view new_base_name);
+  virtual bool RenameLogBase(std::string_view new_base_name);
 
- private:
+ protected:
   // This function called after file closed, to adjust file names in case of
   // base name was changed or temp files enabled.
   WriteCode RenameFileAfterClose(std::string_view filename);
 
   // Returns true if the base directory has been renamed.
   bool was_renamed() const { return !old_base_name_.empty(); }
+
+  std::optional<std::pair<std::string, std::string>>
+  ValidateAndSplitRenamePaths(std::string_view new_base_name) const;
+
+  void SyncParentDirectories(const std::string &current_directory,
+                             const std::string &new_directory);
 
   const bool supports_odirect_;
   std::string base_name_;
@@ -457,6 +466,57 @@ class RenamableFileBackend : public LogBackend {
 
   std::string old_base_name_;
 };
+
+#ifdef _WIN32
+// Windows-specific RenamableFileBackend that tracks active file handlers to
+// work around Windows file locking, which prohibits renaming a directory
+// containing open files.
+class WindowsRenamableFileBackend final : public RenamableFileBackend {
+ public:
+  class WindowsRenamableFileHandler final : public BufferedFileHandler {
+   public:
+    WindowsRenamableFileHandler(WindowsRenamableFileBackend *owner,
+                                std::string filename, bool supports_odirect,
+                                size_t memory_buffer_size);
+    ~WindowsRenamableFileHandler() override;
+
+    WriteCode Close() override;
+
+    void ReopenAndSeek();
+
+    void UpdateFilename(const std::string_view old_base,
+                        const std::string_view new_base) {
+      UpdateFilenameBase(old_base, new_base);
+    }
+
+   private:
+    WindowsRenamableFileBackend *owner_;
+  };
+
+  WindowsRenamableFileBackend(std::string_view base_name,
+                              bool supports_odirect);
+  ~WindowsRenamableFileBackend() override;
+
+  std::unique_ptr<LogSink> RequestFile(
+      const std::string_view id, const size_t memory_buffer_size = 0) override;
+
+  bool RenameLogBase(std::string_view new_base_name) override;
+
+ private:
+  friend class WindowsRenamableFileHandler;
+
+  void RegisterHandler(WindowsRenamableFileHandler *handler);
+  void UnregisterHandler(WindowsRenamableFileHandler *handler);
+
+  std::mutex handlers_mutex_;
+  std::vector<WindowsRenamableFileHandler *> active_handlers_;
+};
+#endif
+
+// Factory function to instantiate the correct platform-specific
+// RenamableFileBackend.
+std::unique_ptr<RenamableFileBackend> MakeRenamableFileBackend(
+    std::string_view base_name, bool supports_odirect);
 
 }  // namespace aos::logger
 
