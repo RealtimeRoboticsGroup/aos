@@ -240,15 +240,6 @@ bazel_dep(name = "bazel_iwyu", version = "0.0.4")
 bazel_dep(name = "amd64_tensorrt", version = "10.9.0", dev_dependency = True)
 bazel_dep(name = "amd64_debian_sysroot", version = "2025.04.20", dev_dependency = True)
 
-# archive_override rather than git_override so the fetch goes through Bazel's
-# downloader and respects --downloader_config URL rewriting (mirrorable).
-archive_override(
-    module_name = "bazel_iwyu",
-    integrity = "sha256-23bWqjIfwRkfKz/DQ+4ndsu1beceXIemssdNbVP1i/k=",
-    strip_prefix = "bazel_iwyu-0.0.4",
-    urls = ["https://github.com/RealtimeRoboticsGroup/bazel_iwyu/releases/download/v0.0.4/bazel_iwyu-0.0.4.tar.zst"],
-)
-
 bazel_dep(name = "rules_rust", version = "0.63.0")
 
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
