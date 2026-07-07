@@ -200,7 +200,7 @@ class Application {
 
   flatbuffers::Offset<aos::starter::ApplicationStatus> PopulateStatus(
       flatbuffers::FlatBufferBuilder *builder, util::Top *top);
-  aos::starter::State status() const { return status_; };
+  aos::starter::State status() const { return PublicState(status_); };
 
   // Returns the last pid of this process. -1 if not started yet.
   pid_t get_pid() const { return pid_; }
@@ -354,7 +354,21 @@ class Application {
   bool autostart_ = false;
   bool autorestart_ = false;
 
-  aos::starter::State status_ = aos::starter::State::STOPPED;
+  // Internal process state vocabulary. Includes kForking, which is never
+  // visible externally.
+  enum class ApplicationInternalState {
+    kWaiting,
+    kForking,
+    kStarting,
+    kRunning,
+    kStopping,
+    kStopped,
+  };
+
+  // Maps the internal process state to the public flatbuffer State enum.
+  static aos::starter::State PublicState(
+      ApplicationInternalState internal_state);
+  ApplicationInternalState status_ = ApplicationInternalState::kStopped;
   aos::starter::LastStopReason stop_reason_ =
       aos::starter::LastStopReason::STOP_REQUESTED;
 

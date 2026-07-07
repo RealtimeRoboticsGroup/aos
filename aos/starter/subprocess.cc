@@ -699,7 +699,7 @@ Application::Application(
       path_(ResolvePath(executable_name)),
       event_loop_(event_loop),
       start_timer_(event_loop_->AddTimer([this] {
-        status_ = aos::starter::State::RUNNING;
+        status_ = ApplicationInternalState::kRunning;
         ABSL_LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo)
             << "Started '" << name_ << "' pid: " << pid_;
         // Check if the file on disk changed while we were starting up. We allow
@@ -753,6 +753,26 @@ Application::Application(
                                   std::chrono::seconds(1));
 }
 
+aos::starter::State Application::PublicState(
+    ApplicationInternalState internal_state) {
+  switch (internal_state) {
+    case ApplicationInternalState::kWaiting:
+      return aos::starter::State::WAITING;
+    case ApplicationInternalState::kForking:
+      return aos::starter::State::STARTING;
+    case ApplicationInternalState::kStarting:
+      return aos::starter::State::STARTING;
+    case ApplicationInternalState::kRunning:
+      return aos::starter::State::RUNNING;
+    case ApplicationInternalState::kStopping:
+      return aos::starter::State::STOPPING;
+    case ApplicationInternalState::kStopped:
+      return aos::starter::State::STOPPED;
+  }
+  ABSL_CHECK(false) << "Unexpected ApplicationInternalState";
+  return aos::starter::State::STOPPED;
+}
+
 Application::Application(
     const aos::Application *application, aos::EventLoop *event_loop,
     std::function<void()> on_change,
@@ -783,7 +803,7 @@ Application::Application(
 }
 
 void Application::DoStart() {
-  if (status_ != aos::starter::State::WAITING) {
+  if (status_ != ApplicationInternalState::kWaiting) {
     return;
   }
 
@@ -830,12 +850,12 @@ void Application::DoStart() {
                                   quiet_flag_ == QuietLogging::kNotForDebugging)
             << "Failed to fork '" << name_ << "'";
         stop_reason_ = aos::starter::LastStopReason::FORK_ERR;
-        status_ = aos::starter::State::STOPPED;
+        status_ = ApplicationInternalState::kStopped;
       } else {
         pid_ = pid;
         id_ = next_id_++;
         start_time_ = event_loop_->monotonic_now();
-        status_ = aos::starter::State::STARTING;
+        status_ = ApplicationInternalState::kStarting;
         latest_timing_report_version_.reset();
         ABSL_LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo)
             << "Starting '" << name_ << "' pid " << pid_;
@@ -1001,14 +1021,14 @@ void Application::DoStop(bool restart) {
   FetchOutputs();
 
   switch (status_) {
-    case aos::starter::State::STARTING:
-    case aos::starter::State::RUNNING: {
+    case ApplicationInternalState::kStarting:
+    case ApplicationInternalState::kRunning: {
       file_state_ = FileState::NOT_RUNNING;
       ABSL_LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo ||
                             quiet_flag_ == QuietLogging::kNotForDebugging)
           << "Stopping '" << name_ << "' pid: " << pid_ << " with signal "
           << SIGINT;
-      status_ = aos::starter::State::STOPPING;
+      status_ = ApplicationInternalState::kStopping;
 
       if (kill(pid_, SIGINT) != 0) {
         ABSL_PLOG_IF(INFO, quiet_flag_ == QuietLogging::kNo ||
@@ -1023,25 +1043,26 @@ void Application::DoStop(bool restart) {
       OnChange();
       break;
     }
-    case aos::starter::State::WAITING: {
+    case ApplicationInternalState::kWaiting: {
       // If waiting to restart, and receives restart, skip the waiting period
       // and restart immediately. If stop received, all we have to do is move
       // to the STOPPED state.
       if (restart) {
         DoStart();
       } else {
-        status_ = aos::starter::State::STOPPED;
+        status_ = ApplicationInternalState::kStopped;
         OnChange();
       }
       break;
     }
-    case aos::starter::State::STOPPING: {
+    case ApplicationInternalState::kForking:
+    case ApplicationInternalState::kStopping: {
       break;
     }
-    case aos::starter::State::STOPPED: {
+    case ApplicationInternalState::kStopped: {
       // Restart immediately if the application is already stopped
       if (restart) {
-        status_ = aos::starter::State::WAITING;
+        status_ = ApplicationInternalState::kWaiting;
         DoStart();
       }
       break;
@@ -1050,7 +1071,7 @@ void Application::DoStop(bool restart) {
 }
 
 void Application::QueueStart() {
-  status_ = aos::starter::State::WAITING;
+  status_ = ApplicationInternalState::kWaiting;
 
   ABSL_LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo)
       << "Restarting " << name_ << " in 3 seconds";
@@ -1139,14 +1160,15 @@ Application::PopulateStatus(flatbuffers::FlatBufferBuilder *builder,
   ABSL_CHECK(builder != nullptr);
   auto name_fbs = builder->CreateString(name_);
 
-  const bool valid_pid = pid_ > 0 && status_ != aos::starter::State::STOPPED;
+  const bool valid_pid =
+      pid_ > 0 && status_ != ApplicationInternalState::kStopped;
   const flatbuffers::Offset<util::ProcessInfo> process_info =
       (valid_pid && top != nullptr) ? top->InfoForProcess(builder, pid_)
                                     : flatbuffers::Offset<util::ProcessInfo>();
 
   aos::starter::ApplicationStatus::Builder status_builder(*builder);
   status_builder.add_name(name_fbs);
-  status_builder.add_state(status_);
+  status_builder.add_state(PublicState(status_));
   if (exit_code_.has_value()) {
     status_builder.add_last_exit_code(exit_code_.value());
   }
@@ -1189,23 +1211,24 @@ void Application::HandleCommand(aos::starter::Command cmd) {
     case aos::starter::Command::START: {
       command_ = ApplicationCommand::kStart;
       switch (status_) {
-        case aos::starter::State::WAITING: {
+        case ApplicationInternalState::kWaiting: {
           restart_timer_->Disable();
           DoStart();
           break;
         }
-        case aos::starter::State::STARTING: {
+        case ApplicationInternalState::kForking:
+        case ApplicationInternalState::kStarting: {
           break;
         }
-        case aos::starter::State::RUNNING: {
+        case ApplicationInternalState::kRunning: {
           break;
         }
-        case aos::starter::State::STOPPING: {
+        case ApplicationInternalState::kStopping: {
           command_ = ApplicationCommand::kRestart;
           break;
         }
-        case aos::starter::State::STOPPED: {
-          status_ = aos::starter::State::WAITING;
+        case ApplicationInternalState::kStopped: {
+          status_ = ApplicationInternalState::kWaiting;
           DoStart();
           break;
         }
@@ -1230,8 +1253,8 @@ void Application::HandleCommand(aos::starter::Command cmd) {
 bool Application::MaybeHandleSignal() {
   int status;
 
-  if (status_ == aos::starter::State::WAITING ||
-      status_ == aos::starter::State::STOPPED) {
+  if (status_ == ApplicationInternalState::kWaiting ||
+      status_ == ApplicationInternalState::kStopped) {
     // We can't possibly have received a signal meant for this process.
     return false;
   }
@@ -1260,7 +1283,7 @@ bool Application::MaybeHandleSignal() {
       absl::StrCat("starter version '",
                    event_loop_->VersionString().value_or("unknown"), "'");
   switch (status_) {
-    case aos::starter::State::STARTING: {
+    case ApplicationInternalState::kStarting: {
       if (exit_code_.value() == 0) {
         ABSL_LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo)
             << "Application '" << name_ << "' pid " << pid_
@@ -1276,12 +1299,12 @@ bool Application::MaybeHandleSignal() {
       if (autorestart()) {
         QueueStart();
       } else {
-        status_ = aos::starter::State::STOPPED;
+        status_ = ApplicationInternalState::kStopped;
         OnChange();
       }
       break;
     }
-    case aos::starter::State::RUNNING: {
+    case ApplicationInternalState::kRunning: {
       if (exit_code_.value() == 0) {
         ABSL_LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo)
             << "Application '" << name_ << "' pid " << pid_
@@ -1303,16 +1326,16 @@ bool Application::MaybeHandleSignal() {
       if (autorestart()) {
         QueueStart();
       } else {
-        status_ = aos::starter::State::STOPPED;
+        status_ = ApplicationInternalState::kStopped;
         OnChange();
       }
       break;
     }
-    case aos::starter::State::STOPPING: {
+    case ApplicationInternalState::kStopping: {
       ABSL_LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo)
           << "Successfully stopped '" << name_ << "' pid: " << pid_
           << " with status " << exit_code_.value();
-      status_ = aos::starter::State::STOPPED;
+      status_ = ApplicationInternalState::kStopped;
 
       // Disable force stop timer since the process already died
       stop_timer_->Disable();
@@ -1324,13 +1347,14 @@ bool Application::MaybeHandleSignal() {
 
       if (command_ == ApplicationCommand::kRestart) {
         command_ = std::nullopt;
-        status_ = aos::starter::State::WAITING;
+        status_ = ApplicationInternalState::kWaiting;
         DoStart();
       }
       break;
     }
-    case aos::starter::State::WAITING:
-    case aos::starter::State::STOPPED: {
+    case ApplicationInternalState::kForking:
+    case ApplicationInternalState::kWaiting:
+    case ApplicationInternalState::kStopped: {
       __builtin_unreachable();
       break;
     }
