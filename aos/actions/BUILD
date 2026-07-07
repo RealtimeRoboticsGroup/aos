@@ -20,6 +20,7 @@ cc_library(
     ],
     deps = [
         ":actions_fbs",
+        "//aos:realtime",
         "//aos/events:event_loop",
         "//aos/logging",
         "//aos/time",

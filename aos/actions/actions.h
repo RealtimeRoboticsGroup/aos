@@ -1,8 +1,6 @@
 #ifndef AOS_ACTIONS_ACTIONS_H_
 #define AOS_ACTIONS_ACTIONS_H_
 
-#include <unistd.h>
-
 #include <atomic>
 #include <cinttypes>
 #include <memory>
@@ -17,6 +15,7 @@
 #include "aos/events/event_loop.h"
 #include "aos/json_to_flatbuffer.h"
 #include "aos/logging/logging.h"
+#include "aos/realtime.h"
 
 namespace aos::common::actions {
 
@@ -122,7 +121,7 @@ class TypedAction : public Action {
         // shared across threads) and then bitwise-ORs the bottom of the PID to
         // differentiate it from other processes's values (ie a unique id).
         run_value_(run_counter_.fetch_add(1, ::std::memory_order_relaxed) |
-                   ((getpid() & 0xFFFF) << 16)),
+                   ((aos::GetProcessId() & 0xFFFF) << 16)),
         params_(params) {
     AOS_LOG(
         DEBUG, "Action %" PRIx32 " created on queue %.*s\n", run_value_,
