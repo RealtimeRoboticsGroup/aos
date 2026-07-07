@@ -3275,50 +3275,6 @@ TEST_F(SimulatedEventLoopDisconnectTest, ReliableMessageInFlightDuringReboot) {
   // TODO(austin): Verify that the dropped packet count increases.
 }
 
-namespace {
-
-// Creates a copy of a file descriptor and then closes the original.
-class BackupFD {
- public:
-  BackupFD(int fd) : original_fd_(fd), copied_fd_(dup(fd)) {
-    PCHECK(copied_fd_ != -1) << ": Failed to dup(" << fd << ")";
-    PCHECK(close(original_fd_) != -1);
-  }
-  ~BackupFD() {
-    // Close the possibly-duplicated file descriptor that someone else created.
-    // Ignore return codes here since the caller may have closed this already.
-    close(original_fd_);
-
-    // Now put the original file descriptor back to where it was.
-    PCHECK(dup2(copied_fd_, original_fd_) != -1);
-    PCHECK(close(copied_fd_) != -1);
-  }
-
- private:
-  const int original_fd_;
-  const int copied_fd_;
-};
-
-// Logs all data written to the specified file descriptor in the log file.
-class OutputCaptor {
- public:
-  OutputCaptor(int fd, std::filesystem::path output)
-      // Create a backup of the original file descriptor. This will close it.
-      : backup_fd_(fd),
-        // Create an output file for the logged data.
-        file_writer_(output.string(), std::filesystem::perms::owner_all) {
-    // Point all data written to the original file descriptor to the log file
-    // instead.
-    PCHECK(dup2(file_writer_.fd(), fd) != -1);
-  }
-
- private:
-  BackupFD backup_fd_;
-  util::FileWriter file_writer_;
-};
-
-}  // namespace
-
 // Validates that setting --use_simulated_clocks_for_logs causes LOG statements
 // to use the simulated clocks and print the node name.
 TEST(SimulatedEventLoopTest, SimulatedLogSink) {
@@ -3345,8 +3301,7 @@ TEST(SimulatedEventLoopTest, SimulatedLogSink) {
   Ping ping(pi1_event_loop.get());
   Pong pong(pi2_event_loop.get());
 
-  const auto output_path = std::filesystem::path(testing::TestTmpDir()) /
-                           "simulated_log_sink_output.txt";
+  std::string output;
   {
     absl::FlagSaver flag_saver;
     // Set the flag to enable the use of simulated clocks for LOG statements.
@@ -3355,48 +3310,49 @@ TEST(SimulatedEventLoopTest, SimulatedLogSink) {
     absl::SetFlag(&FLAGS_vmodule, "ping_lib=2,pong_lib=2");
     absl::SetFlag(&FLAGS_die_on_malloc, false);
 
-    // Save the output to a file.
-    OutputCaptor output_captor(STDERR_FILENO, output_path);
+    // Save the output to a string.
+    ::testing::internal::CaptureStderr();
 
     // Run for a short time here. We just need to validate that a few LOG
     // statements work as expected. We don't need anything huge here.
     factory.RunFor(std::chrono::milliseconds(100));
+
+    output = ::testing::internal::GetCapturedStderr();
   }
 
-  const std::string output = util::ReadFileToStringOrDie(output_path.string());
   EXPECT_THAT(output,
               ::testing::ContainsRegex(
-                  R"(I0106 00:00:00\.000000 pi1 .* ping_lib\.cc:.*] Sending ping
-I0429 04:30:00\.000200 pi2 .* pong_lib\.cc:.*] Sending pong
-I0106 00:00:00\.000400 pi1 .* ping_lib\.cc:.*] Elapsed time 400000 ns . "value": 1, "initial_send_time": 0 .
-I0106 00:00:00\.010000 pi1 .* ping_lib\.cc:.*] Sending ping
-I0429 04:30:00\.010200 pi2 .* pong_lib\.cc:.*] Sending pong
-I0106 00:00:00\.010400 pi1 .* ping_lib\.cc:.*] Elapsed time 400000 ns . "value": 2, "initial_send_time": 10000000 .
-I0106 00:00:00\.020000 pi1 .* ping_lib\.cc:.*] Sending ping
-I0429 04:30:00\.020200 pi2 .* pong_lib\.cc:.*] Sending pong
-I0106 00:00:00\.020400 pi1 .* ping_lib\.cc:.*] Elapsed time 400000 ns . "value": 3, "initial_send_time": 20000000 .
-I0106 00:00:00\.030000 pi1 .* ping_lib\.cc:.*] Sending ping
-I0429 04:30:00\.030200 pi2 .* pong_lib\.cc:.*] Sending pong
-I0106 00:00:00\.030400 pi1 .* ping_lib\.cc:.*] Elapsed time 400000 ns . "value": 4, "initial_send_time": 30000000 .
-I0106 00:00:00\.040000 pi1 .* ping_lib\.cc:.*] Sending ping
-I0429 04:30:00\.040200 pi2 .* pong_lib\.cc:.*] Sending pong
-I0106 00:00:00\.040400 pi1 .* ping_lib\.cc:.*] Elapsed time 400000 ns . "value": 5, "initial_send_time": 40000000 .
-I0106 00:00:00\.050000 pi1 .* ping_lib\.cc:.*] Sending ping
-I0429 04:30:00\.050200 pi2 .* pong_lib\.cc:.*] Sending pong
-I0106 00:00:00\.050400 pi1 .* ping_lib\.cc:.*] Elapsed time 400000 ns . "value": 6, "initial_send_time": 50000000 .
-I0106 00:00:00\.060000 pi1 .* ping_lib\.cc:.*] Sending ping
-I0429 04:30:00\.060200 pi2 .* pong_lib\.cc:.*] Sending pong
-I0106 00:00:00\.060400 pi1 .* ping_lib\.cc:.*] Elapsed time 400000 ns . "value": 7, "initial_send_time": 60000000 .
-I0106 00:00:00\.070000 pi1 .* ping_lib\.cc:.*] Sending ping
-I0429 04:30:00\.070200 pi2 .* pong_lib\.cc:.*] Sending pong
-I0106 00:00:00\.070400 pi1 .* ping_lib\.cc:.*] Elapsed time 400000 ns . "value": 8, "initial_send_time": 70000000 .
-I0106 00:00:00\.080000 pi1 .* ping_lib\.cc:.*] Sending ping
-I0429 04:30:00\.080200 pi2 .* pong_lib\.cc:.*] Sending pong
-I0106 00:00:00\.080400 pi1 .* ping_lib\.cc:.*] Elapsed time 400000 ns . "value": 9, "initial_send_time": 80000000 .
-I0106 00:00:00\.090000 pi1 .* ping_lib\.cc:.*] Sending ping
-I0429 04:30:00\.090200 pi2 .* pong_lib\.cc:.*] Sending pong
-I0106 00:00:00\.090400 pi1 .* ping_lib\.cc:.*] Elapsed time 400000 ns . "value": 10, "initial_send_time": 90000000 .
-I0106 00:00:00\.100000 pi1 .* ping_lib\.cc:.*] Sending ping
+                  R"(I0106 00:00:00\.000000 pi1 .* ping_lib\.cc:.*. Sending ping
+I0429 04:30:00\.000200 pi2 .* pong_lib\.cc:.*. Sending pong
+I0106 00:00:00\.000400 pi1 .* ping_lib\.cc:.*. Elapsed time 400000 ns . "value": 1, "initial_send_time": 0 .
+I0106 00:00:00\.010000 pi1 .* ping_lib\.cc:.*. Sending ping
+I0429 04:30:00\.010200 pi2 .* pong_lib\.cc:.*. Sending pong
+I0106 00:00:00\.010400 pi1 .* ping_lib\.cc:.*. Elapsed time 400000 ns . "value": 2, "initial_send_time": 10000000 .
+I0106 00:00:00\.020000 pi1 .* ping_lib\.cc:.*. Sending ping
+I0429 04:30:00\.020200 pi2 .* pong_lib\.cc:.*. Sending pong
+I0106 00:00:00\.020400 pi1 .* ping_lib\.cc:.*. Elapsed time 400000 ns . "value": 3, "initial_send_time": 20000000 .
+I0106 00:00:00\.030000 pi1 .* ping_lib\.cc:.*. Sending ping
+I0429 04:30:00\.030200 pi2 .* pong_lib\.cc:.*. Sending pong
+I0106 00:00:00\.030400 pi1 .* ping_lib\.cc:.*. Elapsed time 400000 ns . "value": 4, "initial_send_time": 30000000 .
+I0106 00:00:00\.040000 pi1 .* ping_lib\.cc:.*. Sending ping
+I0429 04:30:00\.040200 pi2 .* pong_lib\.cc:.*. Sending pong
+I0106 00:00:00\.040400 pi1 .* ping_lib\.cc:.*. Elapsed time 400000 ns . "value": 5, "initial_send_time": 40000000 .
+I0106 00:00:00\.050000 pi1 .* ping_lib\.cc:.*. Sending ping
+I0429 04:30:00\.050200 pi2 .* pong_lib\.cc:.*. Sending pong
+I0106 00:00:00\.050400 pi1 .* ping_lib\.cc:.*. Elapsed time 400000 ns . "value": 6, "initial_send_time": 50000000 .
+I0106 00:00:00\.060000 pi1 .* ping_lib\.cc:.*. Sending ping
+I0429 04:30:00\.060200 pi2 .* pong_lib\.cc:.*. Sending pong
+I0106 00:00:00\.060400 pi1 .* ping_lib\.cc:.*. Elapsed time 400000 ns . "value": 7, "initial_send_time": 60000000 .
+I0106 00:00:00\.070000 pi1 .* ping_lib\.cc:.*. Sending ping
+I0429 04:30:00\.070200 pi2 .* pong_lib\.cc:.*. Sending pong
+I0106 00:00:00\.070400 pi1 .* ping_lib\.cc:.*. Elapsed time 400000 ns . "value": 8, "initial_send_time": 70000000 .
+I0106 00:00:00\.080000 pi1 .* ping_lib\.cc:.*. Sending ping
+I0429 04:30:00\.080200 pi2 .* pong_lib\.cc:.*. Sending pong
+I0106 00:00:00\.080400 pi1 .* ping_lib\.cc:.*. Elapsed time 400000 ns . "value": 9, "initial_send_time": 80000000 .
+I0106 00:00:00\.090000 pi1 .* ping_lib\.cc:.*. Sending ping
+I0429 04:30:00\.090200 pi2 .* pong_lib\.cc:.*. Sending pong
+I0106 00:00:00\.090400 pi1 .* ping_lib\.cc:.*. Elapsed time 400000 ns . "value": 10, "initial_send_time": 90000000 .
+I0106 00:00:00\.100000 pi1 .* ping_lib\.cc:.*. Sending ping
 )"));
 }
 
