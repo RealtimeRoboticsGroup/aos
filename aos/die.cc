@@ -34,7 +34,13 @@ namespace {
 const std::string GetFilename() {
   intmax_t pid = static_cast<intmax_t>(aos::GetProcessId());
   char buffer[256];
+#ifdef _WIN32
+  const char *temp_dir = getenv("TEMP");
+  if (!temp_dir) temp_dir = ".";
+  snprintf(buffer, sizeof(buffer), "%s\\aos_fatal_error.%jd", temp_dir, pid);
+#else
   snprintf(buffer, sizeof(buffer), "/tmp/aos_fatal_error.%jd", pid);
+#endif
   return std::string(buffer);
 }
 
