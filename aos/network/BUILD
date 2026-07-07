@@ -223,6 +223,7 @@ cc_library(
     hdrs = [
         "sctp_error.h",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 cc_test(
@@ -230,6 +231,7 @@ cc_test(
     srcs = [
         "sctp_error_test.cc",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":sctp_error",
         "//aos/testing:googletest",
@@ -481,6 +483,7 @@ cc_library(
     hdrs = [
         "message_bridge_auth_server_lib.h",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":message_bridge_auth_proto_cc",
         ":message_bridge_auth_proto_grpc_cc",
@@ -501,6 +504,7 @@ cc_library(
     hdrs = [
         "message_bridge_auth_client_lib.h",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":message_bridge_auth_proto_grpc_cc",
         ":message_bridge_client_fbs",
@@ -524,6 +528,7 @@ cc_test(
         ":message_bridge_auth_test_config",
     ],
     tags = ["requires-network"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":message_bridge_auth_client_lib",
         ":message_bridge_auth_server_lib",
@@ -983,6 +988,7 @@ cc_binary(
     srcs = [
         "ping.cc",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":sctp_server",
         "//aos:init",
@@ -995,6 +1001,7 @@ cc_binary(
     srcs = [
         "pong.cc",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":sctp_client",
         "//aos:init",
@@ -1022,6 +1029,7 @@ cc_binary(
     srcs = [
         "sctp_perf.cc",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":sctp_client",
         ":sctp_server",
@@ -1036,6 +1044,11 @@ cc_library(
     name = "udp",
     srcs = ["udp.cc"],
     hdrs = ["udp.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "@platforms//os:osx": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         "//aos:macros",
         "//aos/scoped:scoped_fd",
@@ -1047,6 +1060,11 @@ cc_library(
 cc_test(
     name = "udp_test",
     srcs = ["udp_test.cc"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "@platforms//os:osx": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":udp",
         "//aos/testing:googletest",
