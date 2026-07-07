@@ -24,13 +24,13 @@ js_binary(
         ":foxglove_extension_wrapper_npm",
         "//:node_modules/create-foxglove-extension",
     ],
-    entry_point = "foxglove_extension_wrapper.js",
+    entry_point = "foxglove_extension_wrapper.cjs",
     visibility = ["//visibility:public"],
 )
 
 js_binary(
     name = "foxglove_extension_wrapper_npm",
-    entry_point = "foxglove_extension_wrapper_npm.js",
+    entry_point = "foxglove_extension_wrapper_npm.cjs",
 )
 
 py_binary(

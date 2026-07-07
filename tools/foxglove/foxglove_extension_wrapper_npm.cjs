@@ -4,17 +4,17 @@
 // all this script does is execute those various build stages. The stages are
 // defined in the package.json file.
 
-const fs = require('fs');
-const {execSync} = require('child_process');
-const path = require('path');
+const fs = require("fs");
+const {execSync} = require("child_process");
+const path = require("path");
 
 // Read the package.json file.
 function readPackageJson() {
   try {
-    const packageJson = fs.readFileSync('package.json', 'utf8');
+    const packageJson = fs.readFileSync("package.json", "utf8");
     return JSON.parse(packageJson);
   } catch (error) {
-    console.error('Error reading package.json:', error);
+    console.error("Error reading package.json:", error);
     process.exit(1);
   }
 }
@@ -32,23 +32,26 @@ function executeScript(scriptName) {
   // We cannot execute the `foxglove-extension` binary as-is (at least not
   // without setting up a custom PATH). So we instead point at the
   // Bazel-generated wrapper script for that binary.
-  const scriptParts = scripts[scriptName].split(' ');
+  const scriptParts = scripts[scriptName].split(" ");
   const bin = scriptParts[0];
-  if (bin !== 'foxglove-extension') {
+  if (bin !== "foxglove-extension") {
     console.error(
       `Cannot support commands other than 'foxglove-extension'. Got: ${bin}`
     );
     process.exit(1);
   }
+  const isWin = process.platform === "win32";
   scriptParts[0] = path.join(
     __dirname,
-    'foxglove_extension_/foxglove_extension'
+    isWin
+      ? "foxglove_extension_/foxglove_extension.bat"
+      : "foxglove_extension_/foxglove_extension"
   );
 
   // Execute the `foxglove-extension` command specified in the script.
   try {
     console.log(`Executing script '${scriptName}'...`);
-    execSync(scriptParts.join(' '), {stdio: 'inherit'});
+    execSync(scriptParts.join(" "), {stdio: "inherit"});
   } catch (error) {
     console.error(`Error executing script '${scriptName}':`, error);
     process.exit(1);
@@ -58,10 +61,10 @@ function executeScript(scriptName) {
 function main() {
   // Validate the input arguments.
   if (process.argv.length !== 4) {
-    console.error('Usage: node foxglove_extension_wrapper_npm.js <scriptName>');
+    console.error("Usage: node foxglove_extension_wrapper_npm.js <scriptName>");
     process.exit(1);
   }
-  if (process.argv[2] !== 'run') {
+  if (process.argv[2] !== "run") {
     console.error(
       `Cannot support commands other than 'run'. Got: ${process.argv[2]}`
     );

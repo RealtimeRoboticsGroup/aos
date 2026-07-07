@@ -1,0 +1,140 @@
+diff --git a/npm/private/npm_translate_lock_state.bzl b/npm/private/npm_translate_lock_state.bzl
+index e3270e7..cca4b19 100644
+--- a/npm/private/npm_translate_lock_state.bzl
++++ b/npm/private/npm_translate_lock_state.bzl
+@@ -50,7 +50,7 @@ WARNING: `update_pnpm_lock` attribute in `npm_translate_lock(name = "{rctx_name}
+     # parse the pnpm lock file incase since we need the importers list for additional init
+     # TODO(windows): utils.exists is not yet support on Windows
+     pnpm_lock_path = label_store.path("pnpm_lock")
+-    pnpm_lock_exists = is_windows or utils.exists(rctx, pnpm_lock_path)
++    pnpm_lock_exists = utils.exists(rctx, pnpm_lock_path)
+     if pnpm_lock_exists:
+         _load_lockfile(priv, rctx, attr, pnpm_lock_path, is_windows)
+         _init_patched_dependencies_labels(priv, rctx, attr, label_store)
+@@ -229,7 +229,7 @@ def _init_workspace(priv, rctx, attr, label_store, is_windows):
+     # Support scenario where pnpm-lock.yaml was never parsed and "lock_version" is not set.
+     if priv.get("lock_version", 0) >= 9.0 and label_store.has("pnpm_workspace"):
+         pnpm_workspace_path = label_store.path("pnpm_workspace")
+-        if is_windows or utils.exists(rctx, pnpm_workspace_path):
++        if utils.exists(rctx, pnpm_workspace_path):
+             pnpm_workspace_json, workspace_parse_err = _yaml_to_json(rctx, attr, str(pnpm_workspace_path), is_windows)
+ 
+             if workspace_parse_err == None:
+@@ -502,7 +502,7 @@ WARNING: Cannot determine home directory in order to load home `.npmrc` file in
+     home_npmrc_path = "{}/{}".format(home_directory, NPM_RC_FILENAME)
+ 
+     # TODO(windows): utils.exists is not yet support on Windows
+-    if is_windows or utils.exists(rctx, home_npmrc_path):
++    if utils.exists(rctx, home_npmrc_path):
+         _load_npmrc(priv, rctx, home_npmrc_path)
+ 
+ ################################################################################
+diff --git a/npm/private/utils.bzl b/npm/private/utils.bzl
+index 2b73f82..61f51f6 100644
+--- a/npm/private/utils.bzl
++++ b/npm/private/utils.bzl
+@@ -69,12 +69,24 @@ def _package_store_name(pnpm_name, pnpm_version):
+     else:
+         return "%s@%s" % (_escape_target_name(name), _escape_target_name(version))
+ 
+-def _make_symlink(ctx, symlink_path, target_path):
+-    symlink = ctx.actions.declare_symlink(symlink_path)
+-    ctx.actions.symlink(
+-        output = symlink,
+-        target_path = relative_file(target_path, symlink.path),
+-    )
++def _make_symlink(ctx, symlink_path, target):
++    is_windows = ctx.configuration.host_path_separator == ";"
++    if is_windows and type(target) != "string":
++        if target.is_directory:
++            symlink = ctx.actions.declare_directory(symlink_path)
++        else:
++            symlink = ctx.actions.declare_file(symlink_path)
++        ctx.actions.symlink(
++            output = symlink,
++            target_file = target,
++        )
++    else:
++        symlink = ctx.actions.declare_symlink(symlink_path)
++        target_path = target if type(target) == "string" else target.path
++        ctx.actions.symlink(
++            output = symlink,
++            target_path = relative_file(target_path, symlink.path),
++        )
+     return symlink
+ 
+ def _parse_package_name(package):
+@@ -165,28 +181,7 @@ STDERR:
+ def _exists(rctx, p):
+     if type(p) == "Label":
+         fail("ERROR: dynamic labels not accepted since they should be converted paths at the top of the repository rule implementation to avoid restarts after rctx.execute() calls")
+-    p = str(p)
+-    if repo_utils.is_windows(rctx):
+-        fail("Not yet implemented for Windows")
+-        #         rctx.file("_exists.bat", content = """IF EXIST %1 (
+-        #     EXIT /b 0
+-        # ) ELSE (
+-        #     EXIT /b 42
+-        # )""", executable = True)
+-        #         result = rctx.execute(["cmd.exe", "/C", "_exists.bat", str(p).replace("/", "\\")])
+-
+-    else:
+-        rctx.file("_exists.sh", content = """#!/usr/bin/env bash
+-set -o errexit -o nounset -o pipefail
+-if [ ! -f $1 ]; then exit 42; fi
+-""", executable = True)
+-        result = rctx.execute(["./_exists.sh", str(p)])
+-    if result.return_code == 0:  # file exists
+-        return True
+-    elif result.return_code == 42:  # file does not exist
+-        return False
+-    else:
+-        fail(INTERNAL_ERROR_MSG)
++    return rctx.path(p).exists
+ 
+ def _replace_npmrc_token_envvar(token, npmrc_path, environ):
+     # A token can be a reference to an environment variable
+diff --git a/npm/private/npm_link_package_store.bzl b/npm/private/npm_link_package_store.bzl
+index b5f73d6..a70c329 100644
+--- a/npm/private/npm_link_package_store.bzl
++++ b/npm/private/npm_link_package_store.bzl
+@@ -89,7 +89,7 @@ def _npm_link_package_store_impl(ctx):
+     # "node_modules/{package}" so it is available as a direct dependency
+     root_symlink_path = "node_modules/{}".format(package)
+ 
+-    files = [utils.make_symlink(ctx, root_symlink_path, package_store_directory.path)]
++    files = [utils.make_symlink(ctx, root_symlink_path, package_store_directory)]
+ 
+     for bin_name, bin_path in ctx.attr.bins.items():
+         bin_file = ctx.actions.declare_file("node_modules/.bin/{}".format(bin_name))
+diff --git a/npm/private/npm_package_store.bzl b/npm/private/npm_package_store.bzl
+index c5d10a2..e724b10 100644
+--- a/npm/private/npm_package_store.bzl
++++ b/npm/private/npm_package_store.bzl
+@@ -285,7 +285,7 @@ def _npm_package_store_impl(ctx):
+                 for dep_alias in dep_aliases:
+                     # "node_modules/{package_store_root}/{package_store_name}/node_modules/{package}"
+                     dep_symlink_path = "node_modules/{}/{}/node_modules/{}".format(utils.package_store_root, package_store_name, dep_alias)
+-                    files.append(utils.make_symlink(ctx, dep_symlink_path, dep_package_store_directory.path))
++                    files.append(utils.make_symlink(ctx, dep_symlink_path, dep_package_store_directory))
+             else:
+                 # this is a ref npm_link_package, a downstream terminal npm_link_package
+                 # for this npm dependency will create the dep symlinks for this dep;
+@@ -301,7 +301,7 @@ def _npm_package_store_impl(ctx):
+             if dep_package_store_directory not in linked_package_store_directories:
+                 # "node_modules/{package_store_root}/{package_store_name}/node_modules/{package}"
+                 dep_symlink_path = "node_modules/{}/{}/node_modules/{}".format(utils.package_store_root, package_store_name, dep_info.package)
+-                files.append(utils.make_symlink(ctx, dep_symlink_path, dep_package_store_directory.path))
++                files.append(utils.make_symlink(ctx, dep_symlink_path, dep_package_store_directory))
+ 
+                 # Include the store info of all linked dependencies
+                 npm_package_store_infos.append(dep_info)
+@@ -365,7 +365,7 @@ def _npm_package_store_impl(ctx):
+                     for dep_ref_dep_alias in dep_ref_dep_aliases:
+                         # "node_modules/{package_store_root}/{package_store_name}/node_modules/{package}"
+                         dep_ref_dep_symlink_path = "node_modules/{}/{}/node_modules/{}".format(utils.package_store_root, dep_package_store_name, dep_ref_dep_alias)
+-                        files.append(utils.make_symlink(ctx, dep_ref_dep_symlink_path, dep_ref_def_package_store_directory.path))
++                        files.append(utils.make_symlink(ctx, dep_ref_dep_symlink_path, dep_ref_def_package_store_directory))
+     else:
+         # We should _never_ get here
+         fail("Internal error")
