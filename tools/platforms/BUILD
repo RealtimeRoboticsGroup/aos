@@ -166,5 +166,6 @@ platform(
     flags = [
         "--cxxopt=/std:c++20",
         "--cxxopt=/Zc:preprocessor",
+        "--per_file_copt=external/.*@-wd5287,-wd4715,-wd4244",
     ],
 )
