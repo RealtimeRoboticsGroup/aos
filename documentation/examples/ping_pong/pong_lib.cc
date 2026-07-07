@@ -35,15 +35,13 @@ Pong::Pong(EventLoop *event_loop)
   }
 
   event_loop_->SetRuntimeRealtimePriority(5);
+  std::cout << "Now running pong application.\n";
 }
 
 void Pong::HandlePing(const examples::Ping &ping) {
   if (last_value_ == ping.value() && (!quiet_ || VLOG_IS_ON(1))) {
     LOG(WARNING) << "Duplicate ping value at " << last_value_
                  << " time difference " << ping.send_time() - last_send_time_;
-  }
-  if (last_send_time_ == 0) {
-    std::cout << "Now running pong application.\n";
   }
   last_value_ = ping.value();
   last_send_time_ = ping.send_time();
