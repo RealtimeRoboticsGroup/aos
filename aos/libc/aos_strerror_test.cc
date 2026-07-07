@@ -11,7 +11,11 @@ namespace aos::libc::testing {
 
 // Tries a couple of easy ones.
 TEST(StrerrorTest, Basic) {
+#ifdef _WIN32
+  EXPECT_STREQ("Arg list too long", aos_strerror(E2BIG));
+#else
   EXPECT_STREQ("Argument list too long", aos_strerror(E2BIG));
+#endif
   EXPECT_STREQ("Bad file descriptor", aos_strerror(EBADF));
 #ifdef __APPLE__
   EXPECT_STREQ("Unknown error: 4021", aos_strerror(4021));
@@ -25,7 +29,17 @@ TEST(StrerrorTest, Basic) {
 TEST(StrerrorTest, All) {
   for (int i = 0; i < 4095; ++i) {
     SCOPED_TRACE("iteration " + ::std::to_string(i));
+#ifdef _WIN32
+    std::string expected = strerror(i);
+    std::string actual = aos_strerror(i);
+    if (expected == "Unknown error") {
+      EXPECT_EQ("Unknown error " + std::to_string(i), actual);
+    } else {
+      EXPECT_EQ(expected, actual);
+    }
+#else
     EXPECT_STREQ(strerror(i), aos_strerror(i));
+#endif
   }
 }
 

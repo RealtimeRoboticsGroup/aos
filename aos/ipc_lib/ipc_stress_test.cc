@@ -1,4 +1,3 @@
-#include <libgen.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -7,10 +6,10 @@
 #include <chrono>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <string>
 
 #include "aos/libc/aos_strsignal.h"
-#include "aos/libc/dirname.h"
 #include "aos/mutex/mutex.h"
 #include "aos/testing/test_shm.h"
 #include "aos/time/time.h"
@@ -216,8 +215,10 @@ int Main(int argc, char **argv) {
   Shared *shared = static_cast<Shared *>(mem.get());
   new (shared) Shared(monotonic_clock::now() + kTestTime);
 
+  const std::string parent_dir =
+      std::filesystem::path(argv[0]).parent_path().string();
   if (asprintf(const_cast<char **>(&shared->path), "%s/../tests",
-               ::aos::libc::Dirname(argv[0]).c_str()) == -1) {
+               parent_dir.c_str()) == -1) {
     PDie("asprintf failed");
   }
 

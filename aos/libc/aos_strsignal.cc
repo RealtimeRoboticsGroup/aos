@@ -14,6 +14,27 @@
 const char *aos_strsignal(int signal) {
   thread_local char buffer[512];
 
+#ifdef _WIN32
+  switch (signal) {
+    case SIGINT:
+      return "Interrupt";
+    case SIGILL:
+      return "Illegal instruction";
+    case SIGFPE:
+      return "Floating-point exception";
+    case SIGSEGV:
+      return "Segmentation violation";
+    case SIGTERM:
+      return "Software termination signal from kill";
+    case SIGABRT:
+      return "Aborted";
+    default:
+      CHECK_GT(snprintf(buffer, sizeof(buffer), "Unknown signal %d", signal),
+               0);
+      return buffer;
+  }
+#else
+
 #if defined(SIGRTMIN) && defined(SIGRTMAX)
   if (signal >= SIGRTMIN && signal <= SIGRTMAX) {
     CHECK_GT(snprintf(buffer, sizeof(buffer), "Real-time signal %d",
@@ -43,4 +64,5 @@ const char *aos_strsignal(int signal) {
 
   CHECK_GT(snprintf(buffer, sizeof(buffer), "Unknown signal %d", signal), 0);
   return buffer;
+#endif  // _WIN32
 }

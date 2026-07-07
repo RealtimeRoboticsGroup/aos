@@ -48,7 +48,6 @@ cc_test(
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//aos/libc:aos_strsignal",
-        "//aos/libc:dirname",
         "//aos/logging",
         "//aos/mutex",
         "//aos/testing:googletest",

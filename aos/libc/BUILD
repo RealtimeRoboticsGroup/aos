@@ -25,30 +25,13 @@ cc_test(
     srcs = [
         "aos_strsignal_test.cc",
     ],
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
     deps = [
         ":aos_strsignal",
         "//aos:sanitizers",
-        "//aos/testing:googletest",
-    ],
-)
-
-cc_library(
-    name = "dirname",
-    srcs = [
-        "dirname.cc",
-    ],
-    hdrs = [
-        "dirname.h",
-    ],
-)
-
-cc_test(
-    name = "dirname_test",
-    srcs = [
-        "dirname_test.cc",
-    ],
-    deps = [
-        ":dirname",
         "//aos/testing:googletest",
     ],
 )

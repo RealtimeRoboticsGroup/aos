@@ -10,6 +10,8 @@ const char *aos_strerror(int error) {
   thread_local char buffer[128];
   if (strerror_s(buffer, sizeof(buffer), error) != 0) {
     snprintf(buffer, sizeof(buffer), "Unknown error %d", error);
+  } else if (strcmp(buffer, "Unknown error") == 0) {
+    snprintf(buffer, sizeof(buffer), "Unknown error %d", error);
   }
   return buffer;
 }
