@@ -55,19 +55,6 @@ rollup_bundle(
     ],
 )
 
-genrule(
-    name = "flatbuffers",
-    srcs = [
-        "@com_github_google_flatbuffers//:flatjs",
-    ],
-    outs = [
-        "flatbuffers.js",
-    ],
-    cmd = "cp $(location @com_github_google_flatbuffers//:flatjs) $@",
-    target_compatible_with = ["@platforms//os:linux"],
-    visibility = ["//aos:__subpackages__"],
-)
-
 ts_project(
     name = "reflection_test_main",
     srcs = [

@@ -453,15 +453,44 @@ cypress_register_toolchains(
 )
 
 # Flatbuffers
-local_repository(
+http_archive(
     name = "com_github_google_flatbuffers",
-    path = "third_party/flatbuffers/",
+    integrity = "sha256-+BwxYrEEb+i4S5oNvdOD4k/bz4hYO5y2Ao+Q0E2QaWo=",
+    patch_args = ["-p1"],
+    patches = [
+        "@aos//third_party/flatbuffers_patches:patches/01-verifier-max-tables-3m.patch",
+        "@aos//third_party/flatbuffers_patches:patches/02-cpp-has-clear-scalar-api.patch",
+        "@aos//third_party/flatbuffers_patches:patches/03-cpp-enum-ostream-and-reflection-include-remap.patch",
+        "@aos//third_party/flatbuffers_patches:patches/04-cpp-force-defaults-by-default.patch",
+        "@aos//third_party/flatbuffers_patches:patches/05-cpp-indeterminate-vector.patch",
+        "@aos//third_party/flatbuffers_patches:patches/06-cpp-default-allocator-zero-and-msan.patch",
+        "@aos//third_party/flatbuffers_patches:patches/07-cpp-numtostring-tochars.patch",
+        "@aos//third_party/flatbuffers_patches:patches/08-cpp-annotate-binary-string-and-fixes.patch",
+        "@aos//third_party/flatbuffers_patches:patches/09-flatc-python-import-prefix.patch",
+        "@aos//third_party/flatbuffers_patches:patches/10-idl-parser-deterministic-schema.patch",
+        "@aos//third_party/flatbuffers_patches:patches/11-codegen-wrap-in-namespace-object-suffix.patch",
+        "@aos//third_party/flatbuffers_patches:patches/12-rust-fully-qualified-name-and-follow-with.patch",
+        "@aos//third_party/flatbuffers_patches:patches/13-rust-runtime-allocations-and-apis.patch",
+        "@aos//third_party/flatbuffers_patches:patches/14-rust-codegen-warnings-and-bitflags.patch",
+        "@aos//third_party/flatbuffers_patches:patches/15-add-rust-build-bazel.patch",
+        "@aos//third_party/flatbuffers_patches:patches/16-build-bazel-aos-additions.patch",
+        "@aos//third_party/flatbuffers_patches:patches/17-reflection-explicit-ids-and-scoped-enums.patch",
+        "@aos//third_party/flatbuffers_patches:patches/18-ts-explicit-index-exports.patch",
+        "@aos//third_party/flatbuffers_patches:patches/19-python-fields-snake-case.patch",
+        "@aos//third_party/flatbuffers_patches:patches/20-cpp-absl-dcheck-assertions.patch",
+    ],
+    strip_prefix = "flatbuffers-25.12.19",
+    urls = [
+        "https://github.com/google/flatbuffers/archive/refs/tags/v25.12.19.tar.gz",
+    ],
 )
 
-load("@com_github_google_flatbuffers//ts:repositories.bzl", "flatbuffers_npm")
-
-flatbuffers_npm(
+npm_translate_lock(
     name = "flatbuffers_npm",
+    npmrc = "@com_github_google_flatbuffers//:.npmrc",
+    pnpm_lock = "@com_github_google_flatbuffers//ts:pnpm-lock.yaml",
+    root_package = "ts",
+    verify_node_modules_ignored = "@com_github_google_flatbuffers//:.bazelignore",
 )
 
 load("@flatbuffers_npm//:repositories.bzl", fbs_npm_repositories = "npm_repositories")

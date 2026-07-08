@@ -223,7 +223,7 @@ class BuilderInPlace(flatbuffers.Builder):
         self.Bytes = buffer
         self.head = len(self.Bytes)
 
-    def growByteBuffer(self):
+    def GrowByteBuffer(self):
         raise flatbuffers.builder.BuilderSizeError(
             "Failed to allocate for %s with max_size of %d" %
             (self._channel_wrapper.stripped_channel_to_string(), len(

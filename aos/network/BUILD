@@ -806,7 +806,6 @@ cc_binary(
     data = [
         "//aos/network/www:files",
         "//aos/network/www:main_bundle.min.js",
-        "@com_github_google_flatbuffers//:flatjs",
     ],
     deps = [
         ":web_proxy",

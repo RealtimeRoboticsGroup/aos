@@ -1,0 +1,28 @@
+{
+    "url": "https://github.com/google/flatbuffers/archive/refs/tags/v25.12.19.tar.gz",
+    "integrity": "sha256-+BwxYrEEb+i4S5oNvdOD4k/bz4hYO5y2Ao+Q0E2QaWo=",
+    "strip_prefix": "flatbuffers-25.12.19",
+    "patches": {
+        "01-verifier-max-tables-3m.patch": "sha256-IbpFSBt/nRi6WFoCuvgYvxzn+Pl8QOxXbUg9TA6ogDo=",
+        "02-cpp-has-clear-scalar-api.patch": "sha384-0E3dFNvrE09IPtJLPU41DG1EX3JSwf58pDN0czjYNdVefuIWwJchlqrm9AL9HcAi",
+        "03-cpp-enum-ostream-and-reflection-include-remap.patch": "sha256-qiL16wYwzCYIq3IG5AghTHDoPb3tX7VH63lmMXmE51I=",
+        "04-cpp-force-defaults-by-default.patch": "sha256-cfMNCyp9l4QfLehegXMCaIlpSTpmUG8IPYLYz5W68n8=",
+        "05-cpp-indeterminate-vector.patch": "sha256-edHXW+V4KFmBBS2HbyXmi3O4CEAgw5ukAFoj1UiVGx8=",
+        "06-cpp-default-allocator-zero-and-msan.patch": "sha256-81ZkMibwYyKXy4/Qi7roBgvusPm4oQmcaPDV9z7pl2c=",
+        "07-cpp-numtostring-tochars.patch": "sha256-RSs+M2As19f/AO91fE95OUQNd0zlt/5PUPpg3sQU8rs=",
+        "08-cpp-annotate-binary-string-and-fixes.patch": "sha256-pKsXx6Iw2V/pbRgH4TVlbTgKgTq5AkXp4Pmj41hT8TA=",
+        "09-flatc-python-import-prefix.patch": "sha256-cOYUnvT0okrCgh8aFJb8mgR2qDYmoO6gz015ITSta6w=",
+        "10-idl-parser-deterministic-schema.patch": "sha256-XSzGemr8O/LsIs4t9tqYKqhhEaPgdvwJG38VrZFurGo=",
+        "11-codegen-wrap-in-namespace-object-suffix.patch": "sha256-k2h8UXXc0RSKP6UUywoNKjN3Dw3JBh0SxqL4FkLOFWc=",
+        "12-rust-fully-qualified-name-and-follow-with.patch": "sha256-fnPUKtDKS70VOTCxXfF/461cAWpGVDNtvQTWvIwfUZ4=",
+        "13-rust-runtime-allocations-and-apis.patch": "sha256-IPS99RefcuGWWBIYwjT2sB6bFzvOPTf5mB3givW5rcM=",
+        "14-rust-codegen-warnings-and-bitflags.patch": "sha256-g3HfxIvbv7RFji7DqJZHxMmYARYGmD/l48pChQ+f7Mk=",
+        "15-add-rust-build-bazel.patch": "sha256-ZwAhpEU6nn26J2RtlpBLPOU6flxJmQOXYcbZpQJBkJY=",
+        "16-build-bazel-aos-additions.patch": "sha256-KU7Th1dc5y8/K8x52tVZM0OLiO4kB1OWhz2U+4COIUA=",
+        "17-reflection-explicit-ids-and-scoped-enums.patch": "sha256-0xDsKHL7ednMj73naev7FXjJxYq0OQihmytdP3TTmOo=",
+        "18-ts-explicit-index-exports.patch": "sha256-bxFOPei2Gs/mViOZNvX5OQ4ZfiNsNvEoKjVuZkIsRNY=",
+        "19-python-fields-snake-case.patch": "sha256-m2+C47Cq47ddxAUhZiHknaumyBJCjq8850mb+7iC140=",
+        "20-cpp-absl-dcheck-assertions.patch": "sha256-UgSmtEC6lFNMJbB8K3zWnOZzJJzs3QhIBBw6a87sjQE="
+    },
+    "patch_strip": 1
+}

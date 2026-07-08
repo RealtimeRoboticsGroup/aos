@@ -28,7 +28,7 @@ index 622d134..e0e8d36 100644
  
    // This gets the field offset for any of the functions below it, or 0
    // if the field was not present.
-@@ -127,6 +130,22 @@ class Table {
+@@ -127,6 +130,23 @@ class Table {
      return true;
    }
  

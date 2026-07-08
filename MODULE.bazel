@@ -396,12 +396,6 @@ crate.annotation(
 #   bazel query "filter('arrayvec', deps(//aos/testing/ping_pong:pingpong_test_rs))" --enable_bzlmod
 use_repo(crate, "crate_index")
 
-# Make flatbuffers use the same crate index as the main repo so we can link them together.
-override_repo(
-    crate,
-    flatbuffers_crate_index = "crate_index",
-)
-
 bazel_dep(name = "rules_bzlmodrio_toolchains", version = "2025-1")
 bazel_dep(name = "bzlmodrio-ni", version = "2025.2.0")
 bazel_dep(name = "range_http_server", version = "0.0.1", repo_name = "RangeHTTPServer")
@@ -471,10 +465,10 @@ local_path_override(
     path = "third_party/allwpilib",
 )
 
-bazel_dep(name = "flatbuffers", version = "24.3.25", repo_name = "com_github_google_flatbuffers")
-local_path_override(
+bazel_dep(name = "flatbuffers", version = "25.12.19", repo_name = "com_github_google_flatbuffers")
+single_version_override(
     module_name = "flatbuffers",
-    path = "third_party/flatbuffers/",
+    version = "25.12.19",
 )
 
 bazel_dep(name = "foxglove_schemas", version = "0.16.2", repo_name = "com_github_foxglove_schemas")
