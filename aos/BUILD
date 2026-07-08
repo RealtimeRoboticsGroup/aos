@@ -358,6 +358,7 @@ cc_library(
         ":flatbuffer_merge",
         ":flatbuffers",
         ":json_to_flatbuffer",
+        "//aos:macros",
         "//aos:unique_malloc_ptr",
         "//aos/ipc_lib:index",
         "//aos/network:team_number",

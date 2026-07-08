@@ -15,6 +15,7 @@ cc_library(
         "mutex.h",
     ],
     deps = [
+        "//aos:macros",
         "//aos/ipc_lib:aos_sync",
         "//aos/type_traits",
         "@com_google_absl//absl/log",

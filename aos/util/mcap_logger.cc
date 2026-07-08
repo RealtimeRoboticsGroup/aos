@@ -27,6 +27,7 @@
 #include "aos/configuration_schema.h"
 #include "aos/flatbuffer_merge.h"
 #include "aos/json_to_flatbuffer.h"
+#include "aos/macros.h"
 #include "aos/util/log_conversion_metadata_schema.h"
 #include "lz4frame.h"
 
@@ -125,6 +126,7 @@ std::string_view CompressionName(McapLogger::Compression compression) {
       return "lz4";
   }
   LOG(FATAL) << "Unreachable.";
+  AOS_UNREACHABLE();
 }
 }  // namespace
 

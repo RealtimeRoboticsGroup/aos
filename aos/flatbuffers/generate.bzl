@@ -62,7 +62,7 @@ def static_flatbuffer(name, visibility = None, deps = [], srcs = [], **kwargs):
     cc_library(
         name = name,
         hdrs = header_names,
-        deps = [clean_dep("//aos/flatbuffers:static_table"), clean_dep("//aos/flatbuffers:static_vector"), name + fbs_suffix] + deps,
+        deps = [clean_dep("//aos/flatbuffers:static_table"), clean_dep("//aos/flatbuffers:static_vector"), clean_dep("//aos:macros"), name + fbs_suffix] + deps,
         visibility = visibility,
     )
     native.alias(

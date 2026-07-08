@@ -29,6 +29,7 @@
 #include "aos/flatbuffer_merge.h"
 #include "aos/ipc_lib/index.h"
 #include "aos/json_to_flatbuffer.h"
+#include "aos/macros.h"
 #include "aos/network/team_number.h"
 #include "aos/unique_malloc_ptr.h"
 #include "aos/util/file.h"
@@ -1942,6 +1943,7 @@ int GetNodeIndex(const Configuration *config, const Node *node) {
 
   ABSL_LOG(FATAL) << "Node " << FlatbufferToJson(node)
                   << " not found in the configuration.";
+  AOS_UNREACHABLE();
 }
 
 int GetNodeIndex(const Configuration *config, std::string_view name) {
@@ -1959,6 +1961,7 @@ int GetNodeIndex(const Configuration *config, std::string_view name) {
     }
   }
   ABSL_LOG(FATAL) << "Node " << name << " not found in the configuration.";
+  AOS_UNREACHABLE();
 }
 
 size_t NodesCount(const Configuration *config) {
@@ -2117,6 +2120,7 @@ bool ChannelMessageIsLoggedOnNode(const Channel *channel,
 
   ABSL_LOG(FATAL) << "Unknown logger config "
                   << static_cast<int>(channel->logger());
+  AOS_UNREACHABLE();
 }
 
 size_t ConnectionCount(const Channel *channel) {
@@ -2179,6 +2183,7 @@ bool ConnectionDeliveryTimeIsLoggedOnNode(const Connection *connection,
 
   ABSL_LOG(FATAL) << "Unknown logger config "
                   << static_cast<int>(connection->timestamp_logger());
+  AOS_UNREACHABLE();
 }
 
 std::vector<std::string_view> SourceNodeNames(const Configuration *config,

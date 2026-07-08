@@ -714,6 +714,7 @@ cc_library(
     srcs = ["status.cc"],
     hdrs = ["status.h"],
     deps = [
+        "//aos:macros",
         "//aos/containers:inlined_vector",
         "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/strings:str_format",

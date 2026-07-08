@@ -8,6 +8,7 @@
 #include "aos/flatbuffers/test_dir/include_static.h"
 #include "aos/flatbuffers/test_generated.h"
 #include "aos/flatbuffers/test_static.h"
+#include "aos/macros.h"
 
 namespace aos::fbs::testing {
 class MinimallyAlignedTableStatic : public ::aos::fbs::Table {
@@ -218,7 +219,7 @@ class MinimallyAlignedTableStatic : public ::aos::fbs::Table {
   // special.
   size_t NumberOfSubObjects() const final { return 0; }
   using ::aos::fbs::ResizeableObject::SubObject;
-  SubObject GetSubObject(size_t) final { ABSL_LOG(FATAL) << "No subobjects."; }
+  SubObject GetSubObject(size_t) final { ABSL_LOG(FATAL) << "No subobjects."; AOS_UNREACHABLE(); }
 
  public:
   // Nominal size of this object, in bytes. The object may grow beyond this
@@ -501,7 +502,7 @@ class SubTableStatic : public ::aos::fbs::Table {
   // special.
   size_t NumberOfSubObjects() const final { return 0; }
   using ::aos::fbs::ResizeableObject::SubObject;
-  SubObject GetSubObject(size_t) final { ABSL_LOG(FATAL) << "No subobjects."; }
+  SubObject GetSubObject(size_t) final { ABSL_LOG(FATAL) << "No subobjects."; AOS_UNREACHABLE(); }
 
  public:
   // Nominal size of this object, in bytes. The object may grow beyond this

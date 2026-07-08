@@ -3,6 +3,8 @@
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 
+#include "aos/macros.h"
+
 namespace aos {
 
 // Lock and Unlock use the return values of mutex_lock/mutex_unlock
@@ -17,6 +19,7 @@ bool Mutex::Lock() {
   } else {
     LOG(FATAL) << "mutex_grab(" << &impl_ << "(=" << std::hex << impl_.futex
                << ")) failed with " << ret;
+    AOS_UNREACHABLE();
   }
 }
 
@@ -34,6 +37,7 @@ Mutex::State Mutex::TryLock() {
     default:
       LOG(FATAL) << "mutex_trylock(" << &impl_ << "(=" << std::hex
                  << impl_.futex << ")) failed with " << ret;
+      AOS_UNREACHABLE();
   }
 }
 

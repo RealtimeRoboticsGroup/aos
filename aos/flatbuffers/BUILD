@@ -19,6 +19,7 @@ cc_library(
         ":static_table",
         ":static_vector",
         "//aos:json_to_flatbuffer",
+        "//aos:macros",
         "@com_github_google_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",

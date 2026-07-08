@@ -34,6 +34,7 @@
 
 #ifdef _WIN32
 typedef int pid_t;
+#define __attribute__(x)
 #endif
 
 // Branch prediction hints. MSVC doesn't support __builtin_expect.
@@ -43,6 +44,15 @@ typedef int pid_t;
 #else
 #define AOS_LIKELY(x) (x)
 #define AOS_UNLIKELY(x) (x)
+#endif
+
+// Unreachable code path hint.
+#if defined(__GNUC__) || defined(__clang__)
+#define AOS_UNREACHABLE() __builtin_unreachable()
+#elif defined(_MSC_VER)
+#define AOS_UNREACHABLE() __assume(0)
+#else
+#define AOS_UNREACHABLE()
 #endif
 
 #endif  // _AOS_MACROS_H_

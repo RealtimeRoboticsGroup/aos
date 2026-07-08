@@ -22,6 +22,7 @@
 #include "aos/events/logging/logfile_sorting.h"
 #include "aos/events/simulated_event_loop.h"
 #include "aos/flatbuffers.h"
+#include "aos/macros.h"
 #include "aos/util/clock_publisher.h"
 #include "aos/util/clock_timepoints_schema.h"
 #include "aos/util/mcap_logger.h"
@@ -128,6 +129,7 @@ std::string AbslUnparseFlag(const FetchMode &fetch_mode) {
     }
   }
   ABSL_LOG(FATAL) << "Unhandled FetchMode: " << static_cast<int>(fetch_mode);
+  AOS_UNREACHABLE();
 }
 
 namespace {

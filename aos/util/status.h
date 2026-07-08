@@ -9,6 +9,7 @@
 #include "tl/expected.hpp"
 
 #include "aos/containers/inlined_vector.h"
+#include "aos/macros.h"
 
 namespace aos {
 // The ErrorType class provides a means by which errors can be readily returned
@@ -140,6 +141,7 @@ T CheckExpected(const Result<T> &expected) {
     }
   }
   ABSL_LOG(FATAL) << expected.error().ToString();
+  AOS_UNREACHABLE();
 }
 template <typename T>
 T CheckExpected(Result<T> &&expected) {
@@ -151,6 +153,7 @@ T CheckExpected(Result<T> &&expected) {
     }
   }
   ABSL_LOG(FATAL) << expected.error().ToString();
+  AOS_UNREACHABLE();
 }
 
 // An overload for directly checking an error. The compiler doesn't

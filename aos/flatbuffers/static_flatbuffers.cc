@@ -28,6 +28,7 @@
 #include "aos/flatbuffers/attributes.h"
 #include "aos/flatbuffers/static_base.h"
 #include "aos/json_to_flatbuffer.h"
+#include "aos/macros.h"
 
 namespace aos::fbs {
 namespace {
@@ -141,6 +142,7 @@ const std::string ScalarCppType(const reflection::BaseType type) {
                       << " not a scalar.";
   }
   ABSL_LOG(FATAL) << "Unreachable";
+  AOS_UNREACHABLE();
 }
 
 const std::string FlatbufferNameToCppName(const std::string_view input) {
@@ -1016,7 +1018,7 @@ std::string MakeSubObjectList(const std::vector<FieldData> &fields) {
   // special.
   size_t NumberOfSubObjects() const final { return 0; }
   using ::aos::fbs::ResizeableObject::SubObject;
-  SubObject GetSubObject(size_t) final { ABSL_LOG(FATAL) << "No subobjects."; }
+  SubObject GetSubObject(size_t) final { ABSL_LOG(FATAL) << "No subobjects."; AOS_UNREACHABLE(); }
 )code";
   }
   return absl::Substitute(
@@ -1123,6 +1125,7 @@ GeneratedObject GenerateCodeForObject(const reflection::Schema *schema,
   std::vector<std::string> public_constants;
   std::vector<std::string> members;
   std::set<std::string> includes = {
+      MakeInclude("aos/macros.h"),
       MakeInclude("aos/flatbuffers/static_table.h"),
       MakeInclude("aos/flatbuffers/static_vector.h")};
   for (const reflection::SchemaFile *file : *schema->fbs_files()) {
