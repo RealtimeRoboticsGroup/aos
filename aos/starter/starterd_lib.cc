@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <filesystem>
 #include <functional>
 #include <ostream>
 #include <set>
@@ -385,7 +386,8 @@ void Starter::AddChannel(const aos::Channel *channel) {
   CHECK(channel != nullptr);
   std::unique_ptr<aos::ipc_lib::MemoryMappedQueue> queue =
       std::make_unique<aos::ipc_lib::MemoryMappedQueue>(
-          shm_base_, absl::GetFlag(FLAGS_permissions),
+          shm_base_,
+          static_cast<std::filesystem::perms>(absl::GetFlag(FLAGS_permissions)),
           event_loop_.configuration(), channel);
 
   {

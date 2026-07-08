@@ -356,7 +356,8 @@ TEST_F(SubprocessTest, ChangeBinaryContents) {
       absl::StrCat(aos::testing::TestTmpDir(), "/", "sleep_binary");
   aos::util::WriteStringToFileOrDie(
       full_executable_path.native(),
-      aos::util::ReadFileToStringOrDie(ResolvePath("sleep").native()), S_IRWXU);
+      aos::util::ReadFileToStringOrDie(ResolvePath("sleep").native()),
+      std::filesystem::perms::owner_all);
 
   const std::filesystem::path executable_name =
       absl::StrCat(aos::testing::TestTmpDir(), "/", "sleep_symlink");
@@ -477,8 +478,8 @@ TEST_F(ResolvePathTest, ResolveWithUnsetPath) {
 TEST_F(ResolvePathTest, ResolveWithPath) {
   const std::filesystem::path local_folder = GetLocalPath("bin/");
   const std::filesystem::path local_folder2 = GetLocalPath("bin2/");
-  aos::util::MkdirP(local_folder.native(), S_IRWXU);
-  aos::util::MkdirP(local_folder2.native(), S_IRWXU);
+  aos::util::MkdirP(local_folder.native(), std::filesystem::perms::owner_all);
+  aos::util::MkdirP(local_folder2.native(), std::filesystem::perms::owner_all);
   SetPath({local_folder, local_folder2});
   const std::filesystem::path binary = CreateFile("bin/binary");
   const std::filesystem::path duplicate_binary = CreateFile("bin2/binary");

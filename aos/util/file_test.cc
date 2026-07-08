@@ -2,7 +2,14 @@
 
 #include <fcntl.h>
 #include <sys/stat.h>
+
+#ifdef _WIN32
+#include <io.h>
+inline int CloseFd(int fd) { return _close(fd); }
+#else
 #include <unistd.h>
+inline int CloseFd(int fd) { return ::close(fd); }
+#endif
 
 #include <cstdlib>
 #include <filesystem>
@@ -23,33 +30,34 @@ using ::testing::ElementsAre;
 
 // Basic test of reading a normal file.
 TEST(FileTest, ReadNormalFile) {
-  const std::string tmpdir(aos::testing::TestTmpDir());
-  const std::string test_file = tmpdir + "/test_file";
-  ASSERT_EQ(0, system(("echo contents > " + test_file).c_str()));
-  EXPECT_EQ("contents\n", ReadFileToStringOrDie(test_file));
+  const std::filesystem::path tmpdir(aos::testing::TestTmpDir());
+  const std::filesystem::path test_file = tmpdir / "test_file";
+  WriteStringToFileOrDie(test_file.string(), "contents\n");
+  EXPECT_EQ("contents\n", ReadFileToStringOrDie(test_file.string()));
 }
 
 // Basic test of reading a normal file.
 TEST(FileTest, ReadNormalFileToBytes) {
-  const std::string tmpdir(aos::testing::TestTmpDir());
-  const std::string test_file = tmpdir + "/test_file";
-  ASSERT_EQ(0, system(("echo contents > " + test_file).c_str()));
-  EXPECT_THAT(ReadFileToVecOrDie(test_file),
+  const std::filesystem::path tmpdir(aos::testing::TestTmpDir());
+  const std::filesystem::path test_file = tmpdir / "test_file";
+  WriteStringToFileOrDie(test_file.string(), "contents\n");
+  EXPECT_THAT(ReadFileToVecOrDie(test_file.string()),
               ElementsAre('c', 'o', 'n', 't', 'e', 'n', 't', 's', '\n'));
 }
 
+#ifndef _WIN32
 // Tests reading a file with 0 size that has content (like /proc files or
 // pipes).
 TEST(FileTest, ReadZeroSizeFileWithContent) {
-  const std::string tmpdir(aos::testing::TestTmpDir());
-  const std::string test_file = tmpdir + "/test_pipe";
+  const std::filesystem::path tmpdir(aos::testing::TestTmpDir());
+  const std::filesystem::path test_file = tmpdir / "test_pipe";
 
   // Create a named pipe.
-  ASSERT_EQ(0, mkfifo(test_file.c_str(), 0666));
+  ASSERT_EQ(0, mkfifo(test_file.string().c_str(), 0666));
 
   std::thread writer([test_file]() {
     // Open the pipe for writing.
-    int fd = open(test_file.c_str(), O_WRONLY);
+    int fd = open(test_file.string().c_str(), O_WRONLY);
     ABSL_PCHECK(fd != -1);
 
     // Write some data.
@@ -58,15 +66,16 @@ TEST(FileTest, ReadZeroSizeFileWithContent) {
     ABSL_PCHECK(result == static_cast<ssize_t>(data.size()));
 
     // Close to signal EOF.
-    close(fd);
+    CloseFd(fd);
   });
 
   // Read from the pipe.
-  std::string contents = ReadFileToStringOrDie(test_file);
+  std::string contents = ReadFileToStringOrDie(test_file.string());
   EXPECT_EQ("some data", contents);
 
   writer.join();
 }
+#endif
 
 #ifdef __linux__
 // These rely on /proc, which is a linux specific invention
@@ -92,10 +101,10 @@ TEST(FileTest, MaybeReadSpecialFile) {
 
 // Basic test of maybe reading a normal file.
 TEST(FileTest, MaybeReadNormalFile) {
-  const std::string tmpdir(aos::testing::TestTmpDir());
-  const std::string test_file = tmpdir + "/test_file";
-  ASSERT_EQ(0, system(("echo contents > " + test_file).c_str()));
-  EXPECT_EQ("contents\n", MaybeReadFileToString(test_file).value());
+  const std::filesystem::path tmpdir(aos::testing::TestTmpDir());
+  const std::filesystem::path test_file = tmpdir / "test_file";
+  WriteStringToFileOrDie(test_file.string(), "contents\n");
+  EXPECT_EQ("contents\n", MaybeReadFileToString(test_file.string()).value());
 }
 
 // Tests maybe reading a non-existent file, and not fatally erroring.
@@ -106,26 +115,26 @@ TEST(FileTest, MaybeReadNonexistentFile) {
 
 // Tests that the PathExists function works under normal conditions.
 TEST(FileTest, PathExistsTest) {
-  const std::string tmpdir(aos::testing::TestTmpDir());
-  const std::string test_file = tmpdir + "/test_file";
+  const std::filesystem::path tmpdir(aos::testing::TestTmpDir());
+  const std::filesystem::path test_file = tmpdir / "test_file";
   // Make sure the test_file doesn't exist.
-  unlink(test_file.c_str());
-  EXPECT_FALSE(PathExists(test_file));
+  std::filesystem::remove(test_file);
+  EXPECT_FALSE(PathExists(test_file.string()));
 
-  WriteStringToFileOrDie(test_file, "abc");
+  WriteStringToFileOrDie(test_file.string(), "abc");
 
-  EXPECT_TRUE(PathExists(test_file));
+  EXPECT_TRUE(PathExists(test_file.string()));
 }
 
 // Basic test of reading a normal file.
 TEST(FileTest, ReadNormalFileNoMalloc) {
-  const ::std::string tmpdir(aos::testing::TestTmpDir());
-  const ::std::string test_file = tmpdir + "/test_file";
+  const std::filesystem::path tmpdir(aos::testing::TestTmpDir());
+  const std::filesystem::path test_file = tmpdir / "test_file";
   // Make sure to include a string long enough to avoid small string
   // optimization.
-  ASSERT_EQ(0, system(("echo 123456789 > " + test_file).c_str()));
+  WriteStringToFileOrDie(test_file.string(), "123456789\n");
 
-  FileReader reader(test_file);
+  FileReader reader(test_file.string());
   EXPECT_TRUE(reader.is_open());
 
   aos::ScopedRealtime realtime;
@@ -171,10 +180,10 @@ TEST(FileDeathTest, ReadNonExistentFile) {
 
 // Tests that we can write to a file without malloc'ing.
 TEST(FileTest, WriteNormalFileNoMalloc) {
-  const ::std::string tmpdir(aos::testing::TestTmpDir());
-  const ::std::string test_file = tmpdir + "/test_file";
+  const std::filesystem::path tmpdir(aos::testing::TestTmpDir());
+  const std::filesystem::path test_file = tmpdir / "test_file";
 
-  FileWriter writer(test_file);
+  FileWriter writer(test_file.string());
 
   FileWriter::WriteResult result;
   {
@@ -183,20 +192,20 @@ TEST(FileTest, WriteNormalFileNoMalloc) {
   }
   EXPECT_EQ(9, result.bytes_written);
   EXPECT_EQ(9, result.return_code);
-  EXPECT_EQ("123456789", ReadFileToStringOrDie(test_file));
+  EXPECT_EQ("123456789", ReadFileToStringOrDie(test_file.string()));
 }
 
 // Tests that if we fail to write a file that the error code propagates
 // correctly.
 TEST(FileTest, WriteFileError) {
-  const ::std::string tmpdir(aos::testing::TestTmpDir());
-  const ::std::string test_file = tmpdir + "/test_file";
+  const std::filesystem::path tmpdir(aos::testing::TestTmpDir());
+  const std::filesystem::path test_file = tmpdir / "test_file";
 
   // Open with only read permissions; this should cause things to fail.
-  FileWriter writer(test_file, S_IRUSR);
+  FileWriter writer(test_file.string(), std::filesystem::perms::owner_read);
 
   // Mess up the file management by closing the file descriptor.
-  ABSL_PCHECK(0 == close(writer.fd()));
+  ABSL_PCHECK(0 == CloseFd(writer.fd()));
 
   FileWriter::WriteResult result;
   {
@@ -205,40 +214,43 @@ TEST(FileTest, WriteFileError) {
   }
   EXPECT_EQ(0, result.bytes_written);
   EXPECT_EQ(-1, result.return_code);
-  EXPECT_EQ("", ReadFileToStringOrDie(test_file));
+  EXPECT_EQ("", ReadFileToStringOrDie(test_file.string()));
 }
 
 // Tests that SyncDirectory opens, fsyncs, and closes a directory.
 TEST(FileTest, SyncDirectory) {
   // Create a temporary directory.
-  const ::std::string tmp_dir = aos::testing::TestTmpDir();
-  const ::std::string new_dir = tmp_dir + "/sync_dir_test/";
+  const std::filesystem::path tmp_dir = aos::testing::TestTmpDir();
+  const std::filesystem::path new_dir = tmp_dir / "sync_dir_test" / "";
 
-  ASSERT_FALSE(PathExists(new_dir));
-  MkdirP(new_dir, 0777);
-  ASSERT_TRUE(PathExists(new_dir));
+  ASSERT_FALSE(PathExists(new_dir.string()));
+  MkdirP(new_dir.string(), std::filesystem::perms::all);
+  ASSERT_TRUE(PathExists(new_dir.string()));
 
   // Call SyncDirectory and check that no errors occur.
-  EXPECT_NO_FATAL_FAILURE(SyncDirectory(std::filesystem::path(new_dir)));
+  EXPECT_NO_FATAL_FAILURE(SyncDirectory(new_dir));
 
   // Clean up the directory.
-  UnlinkRecursive(new_dir);
+  UnlinkRecursive(new_dir.string());
 }
 
 // Tests that MkdirPIfSpace creates the directory with and without syncing.
 TEST(FileTest, MkdirPIfSpace) {
-  const ::std::string tmp_dir = aos::testing::TestTmpDir();
-  const ::std::string base_dir = tmp_dir + "/mkdir_p_if_space/";
-  const ::std::string new_dir_sync = base_dir + "sync/a/b/c/";
-  const ::std::string new_dir_nosync = base_dir + "nosync/a/b/c/";
+  const std::filesystem::path tmp_dir = aos::testing::TestTmpDir();
+  const std::filesystem::path base_dir = tmp_dir / "mkdir_p_if_space" / "";
+  const std::filesystem::path new_dir_sync =
+      base_dir / "sync" / "a" / "b" / "c" / "";
+  const std::filesystem::path new_dir_nosync =
+      base_dir / "nosync" / "a" / "b" / "c" / "";
 
   // Clean-up from any previous failures.
-  UnlinkRecursive(base_dir);
+  UnlinkRecursive(base_dir.string());
 
   // Test with syncing enabled.
-  ASSERT_FALSE(PathExists(new_dir_sync));
-  ASSERT_TRUE(MkdirPIfSpace(new_dir_sync, 0777, true));
-  ASSERT_TRUE(PathExists(new_dir_sync));
+  ASSERT_FALSE(PathExists(new_dir_sync.string()));
+  ASSERT_TRUE(
+      MkdirPIfSpace(new_dir_sync.string(), std::filesystem::perms::all, true));
+  ASSERT_TRUE(PathExists(new_dir_sync.string()));
   EXPECT_TRUE(std::filesystem::is_directory(new_dir_sync));
   // When sync is true, both the created directory and its parent directory
   // should be synced.
@@ -246,87 +258,103 @@ TEST(FileTest, MkdirPIfSpace) {
   // hard.
 
   // Test without syncing.
-  ASSERT_FALSE(PathExists(new_dir_nosync));
-  ASSERT_TRUE(MkdirPIfSpace(new_dir_nosync, 0777, false));
-  ASSERT_TRUE(PathExists(new_dir_nosync));
+  ASSERT_FALSE(PathExists(new_dir_nosync.string()));
+  ASSERT_TRUE(MkdirPIfSpace(new_dir_nosync.string(),
+                            std::filesystem::perms::all, false));
+  ASSERT_TRUE(PathExists(new_dir_nosync.string()));
   EXPECT_TRUE(std::filesystem::is_directory(new_dir_nosync));
 
   // Test permissions.
-  const ::std::string new_dir_perms = base_dir + "perms/a/b/c/";
-  ASSERT_FALSE(PathExists(new_dir_perms));
-  ASSERT_TRUE(MkdirPIfSpace(new_dir_perms, 0700, false));
-  ASSERT_TRUE(PathExists(new_dir_perms));
+  const std::filesystem::path new_dir_perms =
+      base_dir / "perms" / "a" / "b" / "c" / "";
+  ASSERT_FALSE(PathExists(new_dir_perms.string()));
+  ASSERT_TRUE(MkdirPIfSpace(new_dir_perms.string(),
+                            std::filesystem::perms::owner_all, false));
+  ASSERT_TRUE(PathExists(new_dir_perms.string()));
   EXPECT_TRUE(std::filesystem::is_directory(new_dir_perms));
+#ifndef _WIN32
   EXPECT_EQ(std::filesystem::status(new_dir_perms).permissions(),
             std::filesystem::perms::owner_all);
   // Also check that parent directories have the permission applied.
-  EXPECT_EQ(std::filesystem::status(base_dir + "perms/a/b").permissions(),
+  EXPECT_EQ(
+      std::filesystem::status(base_dir / "perms" / "a" / "b").permissions(),
+      std::filesystem::perms::owner_all);
+  EXPECT_EQ(std::filesystem::status(base_dir / "perms" / "a").permissions(),
             std::filesystem::perms::owner_all);
-  EXPECT_EQ(std::filesystem::status(base_dir + "perms/a").permissions(),
-            std::filesystem::perms::owner_all);
+#endif
 
-  UnlinkRecursive(base_dir);
+  UnlinkRecursive(base_dir.string());
 }
 
 TEST(FileTest, MkdirPIfSpaceEdgeCases) {
-  const ::std::string tmp_dir = aos::testing::TestTmpDir();
-  const ::std::string base_dir = tmp_dir + "/mkdir_p_edge_cases/";
+  const std::filesystem::path tmp_dir = aos::testing::TestTmpDir();
+  const std::filesystem::path base_dir = tmp_dir / "mkdir_p_edge_cases" / "";
 
   // Clean-up from any previous failures.
-  UnlinkRecursive(base_dir);
+  UnlinkRecursive(base_dir.string());
 
   // 1. Path with no parent directory component (parent_path() is empty)
-  EXPECT_TRUE(MkdirPIfSpace("just_file_name.txt", 0777, false));
-  EXPECT_TRUE(MkdirPIfSpace("", 0777, false));
+  EXPECT_TRUE(
+      MkdirPIfSpace("just_file_name.txt", std::filesystem::perms::all, false));
+  EXPECT_TRUE(MkdirPIfSpace("", std::filesystem::perms::all, false));
 
   // 2. Folder already exists
-  const ::std::string existing_dir_file = base_dir + "existing_dir/file.txt";
-  ASSERT_TRUE(MkdirPIfSpace(existing_dir_file, 0777, false));
-  EXPECT_TRUE(PathExists(base_dir + "existing_dir"));
+  const std::filesystem::path existing_dir_file =
+      base_dir / "existing_dir" / "file.txt";
+  ASSERT_TRUE(MkdirPIfSpace(existing_dir_file.string(),
+                            std::filesystem::perms::all, false));
+  EXPECT_TRUE(PathExists((base_dir / "existing_dir").string()));
   // Calling it again on the same path where directory already exists
-  EXPECT_TRUE(MkdirPIfSpace(existing_dir_file, 0777, false));
+  EXPECT_TRUE(MkdirPIfSpace(existing_dir_file.string(),
+                            std::filesystem::perms::all, false));
 
   // 3. Trailing slashes
-  const ::std::string trailing_slash_path = base_dir + "trailing_slash/";
-  ASSERT_TRUE(MkdirPIfSpace(trailing_slash_path, 0777, false));
-  EXPECT_TRUE(PathExists(base_dir + "trailing_slash"));
+  const std::filesystem::path trailing_slash_path =
+      base_dir / "trailing_slash" / "";
+  ASSERT_TRUE(MkdirPIfSpace(trailing_slash_path.string(),
+                            std::filesystem::perms::all, false));
+  EXPECT_TRUE(PathExists((base_dir / "trailing_slash").string()));
 
-  const ::std::string multi_trailing_slashes = base_dir + "multi_trailing///";
-  ASSERT_TRUE(MkdirPIfSpace(multi_trailing_slashes, 0777, false));
-  EXPECT_TRUE(PathExists(base_dir + "multi_trailing"));
+  const std::filesystem::path multi_trailing_slashes =
+      base_dir / "multi_trailing" / "" / "" / "";
+  ASSERT_TRUE(MkdirPIfSpace(multi_trailing_slashes.string(),
+                            std::filesystem::perms::all, false));
+  EXPECT_TRUE(PathExists((base_dir / "multi_trailing").string()));
 
-  UnlinkRecursive(base_dir);
+  UnlinkRecursive(base_dir.string());
 }
 
 TEST(FileTest, MaybeWriteStringToExistingFile) {
-  const std::string tmpdir(aos::testing::TestTmpDir());
-  const std::string test_file = tmpdir + "/maybe_write_test";
-  WriteStringToFileOrDie(test_file, "original");
+  const std::filesystem::path tmpdir(aos::testing::TestTmpDir());
+  const std::filesystem::path test_file = tmpdir / "maybe_write_test";
+  WriteStringToFileOrDie(test_file.string(), "original");
 
-  EXPECT_TRUE(MaybeWriteStringToFile(test_file, "replaced"));
-  EXPECT_EQ("replaced", ReadFileToStringOrDie(test_file));
+  EXPECT_TRUE(MaybeWriteStringToFile(test_file.string(), "replaced"));
+  EXPECT_EQ("replaced", ReadFileToStringOrDie(test_file.string()));
 }
 
 TEST(FileTest, MaybeWriteStringToNonexistentFile) {
-  EXPECT_TRUE(MaybeWriteStringToFile("/tmp/dne_maybe_write_test", "data"));
+  const std::filesystem::path tmpdir(aos::testing::TestTmpDir());
+  const std::filesystem::path test_file = tmpdir / "dne_maybe_write_test";
+  EXPECT_TRUE(MaybeWriteStringToFile(test_file.string(), "data"));
 }
 
 TEST(FileTest, MaybeWriteStringTruncates) {
-  const std::string tmpdir(aos::testing::TestTmpDir());
-  const std::string test_file = tmpdir + "/maybe_write_trunc";
-  WriteStringToFileOrDie(test_file, "abcdef");
+  const std::filesystem::path tmpdir(aos::testing::TestTmpDir());
+  const std::filesystem::path test_file = tmpdir / "maybe_write_trunc";
+  WriteStringToFileOrDie(test_file.string(), "abcdef");
 
-  EXPECT_TRUE(MaybeWriteStringToFile(test_file, "xy"));
-  EXPECT_EQ("xy", ReadFileToStringOrDie(test_file));
+  EXPECT_TRUE(MaybeWriteStringToFile(test_file.string(), "xy"));
+  EXPECT_EQ("xy", ReadFileToStringOrDie(test_file.string()));
 }
 
 TEST(FileTest, MaybeWriteStringEmptyContents) {
-  const std::string tmpdir(aos::testing::TestTmpDir());
-  const std::string test_file = tmpdir + "/maybe_write_empty";
-  WriteStringToFileOrDie(test_file, "original");
+  const std::filesystem::path tmpdir(aos::testing::TestTmpDir());
+  const std::filesystem::path test_file = tmpdir / "maybe_write_empty";
+  WriteStringToFileOrDie(test_file.string(), "original");
 
-  EXPECT_TRUE(MaybeWriteStringToFile(test_file, ""));
-  EXPECT_EQ("", ReadFileToStringOrDie(test_file));
+  EXPECT_TRUE(MaybeWriteStringToFile(test_file.string(), ""));
+  EXPECT_EQ("", ReadFileToStringOrDie(test_file.string()));
 }
 
 }  // namespace aos::util::testing

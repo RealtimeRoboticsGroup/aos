@@ -1,3 +1,5 @@
+#include <filesystem>
+
 #include "absl/flags/flag.h"
 
 #include "aos/events/logging/log_reader.h"
@@ -40,8 +42,17 @@ class ImageDump {
                      sha256, "-", camera, ".jpg");
     LOG(INFO) << "Writing " << path;
 
-    CHECK(aos::util::MkdirPIfSpace(path, 0755));
-    aos::util::WriteStringToFileOrDie(path, image_data, 0644);
+    CHECK(aos::util::MkdirPIfSpace(path,
+                                   std::filesystem::perms::owner_all |
+                                       std::filesystem::perms::group_read |
+                                       std::filesystem::perms::group_exec |
+                                       std::filesystem::perms::others_read |
+                                       std::filesystem::perms::others_exec));
+    aos::util::WriteStringToFileOrDie(path, image_data,
+                                      std::filesystem::perms::owner_read |
+                                          std::filesystem::perms::owner_write |
+                                          std::filesystem::perms::group_read |
+                                          std::filesystem::perms::others_read);
   }
 
  private:

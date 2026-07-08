@@ -89,7 +89,7 @@ LocklessQueueConfiguration MakeQueueConfiguration(
 }
 
 MemoryMappedQueue::MemoryMappedQueue(std::string_view shm_base,
-                                     uint32_t permissions,
+                                     std::filesystem::perms permissions,
                                      const Configuration *config,
                                      const Channel *channel)
     : config_(MakeQueueConfiguration(config, channel)) {
@@ -104,8 +104,8 @@ MemoryMappedQueue::MemoryMappedQueue(std::string_view shm_base,
   // already exist and we need to create it.  Start by trying to create it. If
   // that fails, the file has already been created and we can open it
   // normally..  Once the file has been created it will never be deleted.
-  int fd =
-      open(path.c_str(), O_RDWR | O_CREAT | O_EXCL, O_CLOEXEC | permissions);
+  int fd = open(path.c_str(), O_RDWR | O_CREAT | O_EXCL,
+                O_CLOEXEC | static_cast<mode_t>(permissions));
   if ((fd == -1) && (errno == EEXIST)) {
     ABSL_VLOG(1) << path << " already created.";
     // File already exists.

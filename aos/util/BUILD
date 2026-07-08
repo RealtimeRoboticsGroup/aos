@@ -404,7 +404,10 @@ cc_library(
     name = "file",
     srcs = [
         "file.cc",
-    ],
+    ] + select({
+        "@platforms//os:windows": ["file_windows.cc"],
+        "//conditions:default": ["file_unix.cc"],
+    }),
     hdrs = [
         "file.h",
     ],

@@ -37,14 +37,14 @@ std::vector<uint8_t> ReadFileToVecOrDie(const std::string_view filename);
 // cannot be opened or written, or if not all the bytes are written.
 // Unlike WriteStringToFileOrDie, will not be fatal on failure — suitable for
 // best-effort cleanup paths where the target may already be gone.
-bool MaybeWriteStringToFile(std::string_view filename,
-                            std::string_view contents,
-                            mode_t permissions = S_IRWXU);
+bool MaybeWriteStringToFile(
+    std::string_view filename, std::string_view contents,
+    std::filesystem::perms permissions = std::filesystem::perms::owner_all);
 
 // Creates filename if it doesn't exist and sets the contents to contents.
-void WriteStringToFileOrDie(const std::string_view filename,
-                            const std::string_view contents,
-                            mode_t permissions = S_IRWXU);
+void WriteStringToFileOrDie(
+    const std::string_view filename, const std::string_view contents,
+    std::filesystem::perms permissions = std::filesystem::perms::owner_all);
 
 // Creates all parent directories in the given path.
 // For example, if path is "/a/b/c/file.txt", it creates directories "/a",
@@ -52,12 +52,13 @@ void WriteStringToFileOrDie(const std::string_view filename,
 // creates directories "/a", "/a/b", and "/a/b/c". When sync is true, each
 // created directory and its parent directory are synced to disk. Returns true
 // if it succeeds or false if the filesystem is full.
-bool MkdirPIfSpace(std::string_view path, mode_t mode, bool sync = false);
+bool MkdirPIfSpace(std::string_view path, std::filesystem::perms mode,
+                   bool sync = false);
 
 // Synchronizes the provided directory to disk.
 void SyncDirectory(const std::filesystem::path &path);
 
-inline void MkdirP(std::string_view path, mode_t mode) {
+inline void MkdirP(std::string_view path, std::filesystem::perms mode) {
   ABSL_CHECK(MkdirPIfSpace(path, mode));
 }
 
@@ -134,7 +135,8 @@ class FileWriter {
     int return_code;
   };
 
-  FileWriter(std::string_view filename, mode_t permissions = S_IRWXU);
+  FileWriter(std::string_view filename, std::filesystem::perms permissions =
+                                            std::filesystem::perms::owner_all);
 
   WriteResult WriteBytes(absl::Span<const uint8_t> bytes);
   WriteResult WriteBytes(std::string_view bytes);

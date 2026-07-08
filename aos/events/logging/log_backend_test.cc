@@ -76,7 +76,8 @@ TEST(FileHandlerTest, CloseSyncsDirectory) {
   const std::string filepath = logevent + filename;
 
   // Create the directory.
-  ASSERT_TRUE(aos::util::MkdirPIfSpace(logevent, 0777, true));
+  ASSERT_TRUE(
+      aos::util::MkdirPIfSpace(logevent, std::filesystem::perms::all, true));
 
   // Create a FileHandler.
   FileHandler file_handler(filepath, false);

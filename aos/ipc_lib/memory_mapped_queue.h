@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <filesystem>
 #include <string>
 #include <string_view>
 
@@ -23,7 +24,8 @@ LocklessQueueConfiguration MakeQueueConfiguration(
 
 class MemoryMappedQueue {
  public:
-  MemoryMappedQueue(std::string_view shm_base, uint32_t permissions,
+  MemoryMappedQueue(std::string_view shm_base,
+                    std::filesystem::perms permissions,
                     const Configuration *config, const Channel *channel);
   ~MemoryMappedQueue();
 

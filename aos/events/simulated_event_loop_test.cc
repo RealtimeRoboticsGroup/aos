@@ -3306,7 +3306,7 @@ class OutputCaptor {
       // Create a backup of the original file descriptor. This will close it.
       : backup_fd_(fd),
         // Create an output file for the logged data.
-        file_writer_(output.string(), S_IRWXU) {
+        file_writer_(output.string(), std::filesystem::perms::owner_all) {
     // Point all data written to the original file descriptor to the log file
     // instead.
     PCHECK(dup2(file_writer_.fd(), fd) != -1);

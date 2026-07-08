@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <filesystem>
 #include <iterator>
 #include <ranges>
 #include <stdexcept>
@@ -104,7 +105,9 @@ class SimpleShmFetcher {
   explicit SimpleShmFetcher(std::string_view shm_base, ShmEventLoop *event_loop,
                             const Channel *channel)
       : channel_(channel),
-        lockless_queue_memory_(shm_base, absl::GetFlag(FLAGS_permissions),
+        lockless_queue_memory_(shm_base,
+                               static_cast<std::filesystem::perms>(
+                                   absl::GetFlag(FLAGS_permissions)),
                                event_loop->configuration(), channel),
         reader_(lockless_queue_memory_.queue()) {
     context_.data = nullptr;
@@ -429,7 +432,9 @@ class ShmSender : public RawSender {
   explicit ShmSender(std::string_view shm_base, EventLoop *event_loop,
                      const Channel *channel)
       : RawSender(event_loop, channel),
-        lockless_queue_memory_(shm_base, absl::GetFlag(FLAGS_permissions),
+        lockless_queue_memory_(shm_base,
+                               static_cast<std::filesystem::perms>(
+                                   absl::GetFlag(FLAGS_permissions)),
                                event_loop->configuration(), channel),
         lockless_queue_sender_(
             VerifySender(ipc_lib::LocklessQueueSender::Make(

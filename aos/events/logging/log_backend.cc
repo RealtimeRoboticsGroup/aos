@@ -178,7 +178,8 @@ WriteCode BufferedFileHandler::OpenForWrite() {
 
 WriteCode FileHandler::OpenForWrite() {
   iovec_.reserve(10);
-  if (!aos::util::MkdirPIfSpace(filename_, 0777, absl::GetFlag(FLAGS_sync))) {
+  if (!aos::util::MkdirPIfSpace(filename_, std::filesystem::perms::all,
+                                absl::GetFlag(FLAGS_sync))) {
     return WriteCode::kOutOfSpace;
   } else {
     fd_ = open(filename_.c_str(), O_RDWR | O_CLOEXEC | O_CREAT | O_EXCL, 0774);

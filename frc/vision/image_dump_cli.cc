@@ -2,6 +2,8 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include <filesystem>
+
 #include "absl/flags/flag.h"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
@@ -159,7 +161,12 @@ class ImageDump {
                      sha256, "-", camera_number_, ".jpg");
     LOG(INFO) << "Writing " << path;
 
-    CHECK(aos::util::MkdirPIfSpace(path, 0755));
+    CHECK(aos::util::MkdirPIfSpace(path,
+                                   std::filesystem::perms::owner_all |
+                                       std::filesystem::perms::group_read |
+                                       std::filesystem::perms::group_exec |
+                                       std::filesystem::perms::others_read |
+                                       std::filesystem::perms::others_exec));
     aos::util::WriteStringToFileOrDie(path, image_data);
   }
 
