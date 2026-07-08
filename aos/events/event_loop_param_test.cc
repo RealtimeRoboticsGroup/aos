@@ -1313,8 +1313,8 @@ TEST_P(AbstractEventLoopDeathTest, TooManySenders) {
   }
   EXPECT_DEATH(
       { loop->MakeSender<TestMessage>("/test"); },
-      "Failed to create sender on \\{ \"name\": \"/test\", \"type\": "
-      "\"aos.TestMessage\"[^}]*\\ }, too many senders.");
+      "Failed to create sender on .*\"name\": \"/test\".*\"type\": "
+      "\"aos.TestMessage\".*too many senders.");
 }
 
 // Verify that creating too many fetchers fails.
@@ -1331,8 +1331,8 @@ TEST_P(AbstractEventLoopDeathTest, TooManyFetchers) {
   }
   EXPECT_DEATH(
       { loop->MakeFetcher<TestMessage>("/test"); },
-      "Failed to create reader on \\{ \"name\": \"/test\", \"type\": "
-      "\"aos.TestMessage\"[^}]*\\ }, too many readers.");
+      "Failed to create reader on .*\"name\": \"/test\".*\"type\": "
+      "\"aos.TestMessage\".*too many readers.");
 }
 
 // Verify that creating too many fetchers, split between two event loops, fails.
@@ -1351,8 +1351,8 @@ TEST_P(AbstractEventLoopDeathTest, TooManyFetchersTwoLoops) {
   }
   EXPECT_DEATH(
       { loop->MakeFetcher<TestMessage>("/test"); },
-      "Failed to create reader on \\{ \"name\": \"/test\", \"type\": "
-      "\"aos.TestMessage\"[^}]*\\ }, too many readers.");
+      "Failed to create reader on .*\"name\": \"/test\".*\"type\": "
+      "\"aos.TestMessage\".*too many readers.");
 }
 
 // Verify that creating too many watchers fails.
@@ -1369,8 +1369,8 @@ TEST_P(AbstractEventLoopDeathTest, TooManyWatchers) {
   }
   EXPECT_DEATH(
       { Make()->MakeWatcher("/test", [](const TestMessage &) {}); },
-      "Failed to create reader on \\{ \"name\": \"/test\", \"type\": "
-      "\"aos.TestMessage\"[^}]*\\ }, too many readers.");
+      "Failed to create reader on .*\"name\": \"/test\".*\"type\": "
+      "\"aos.TestMessage\".*too many readers.");
 }
 
 // Verify that creating too many watchers and fetchers combined fails.
@@ -1390,8 +1390,8 @@ TEST_P(AbstractEventLoopDeathTest, TooManyWatchersAndFetchers) {
   }
   EXPECT_DEATH(
       { loop->MakeFetcher<TestMessage>("/test"); },
-      "Failed to create reader on \\{ \"name\": \"/test\", \"type\": "
-      "\"aos.TestMessage\"[^}]*\\ }, too many readers.");
+      "Failed to create reader on .*\"name\": \"/test\".*\"type\": "
+      "\"aos.TestMessage\".*too many readers.");
 }
 
 // Verify that we can't exceed the configured channel maximum size on a regular
@@ -1409,9 +1409,10 @@ TEST_P(AbstractEventLoopDeathTest, SenderRespectsMaxSize) {
   builder.fbb()->CreateVector(std::vector<uint32_t>((max_size / 4) - 1));
 
   // If we try to allocate anything more, we should die.
-  EXPECT_DEATH(builder.fbb()->CreateVector(std::vector<uint32_t>()),
-               "Requested [0-9]* bytes.*max size 1000 for "
-               "channel.*/test2.*aos.TestMessage");
+  EXPECT_DEATH(
+      builder.fbb()->CreateVector(std::vector<uint32_t>()),
+      "Requested .* bytes.*max size 1000 for "
+      "channel.*\"name\": \"/test2\".*\"type\": \"aos.TestMessage\".*");
 }
 
 // Verify that we can't exceed the configured channel maximum size on a static
@@ -1443,9 +1444,10 @@ TEST_P(AbstractEventLoopTest, StaticSenderRespectsMaxSize) {
 TEST_P(AbstractEventLoopDeathTest, StaticSenderRespectsInitialMaxSize) {
   auto loop1 = MakePrimary();
   auto sender = loop1->MakeSender<TestMessageStatic>("/test/too_small");
-  EXPECT_DEATH(
-      sender.MakeStaticBuilder(),
-      R"(Failed to allocate [0-9]* bytes for \{ "name": "/test/too_small", "type": "aos.TestMessage" \} with max_size of 8)");
+  EXPECT_DEATH(sender.MakeStaticBuilder(),
+               "Failed to allocate .* bytes for .*\"name\": "
+               "\"/test/too_small\".*\"type\": \"aos.TestMessage\".* with "
+               "max_size of 8");
 }
 
 // Verify that we can't create a sender inside OnRun.
