@@ -149,4 +149,16 @@ FileWriter::WriteResult FileWriter::WriteBytes(
   return {size_written, static_cast<int>(size_written)};
 }
 
+std::optional<std::filesystem::path> GetExecutablePath() {
+#ifdef __linux__
+  char proc_self_exec_buffer[1024 + 1];
+  std::memset(proc_self_exec_buffer, 0, sizeof(proc_self_exec_buffer));
+  ssize_t s = readlink("/proc/self/exe", proc_self_exec_buffer, 1024);
+  if (s > 0) {
+    return std::filesystem::path(std::string_view(proc_self_exec_buffer, s));
+  }
+#endif
+  return std::nullopt;
+}
+
 }  // namespace aos::util

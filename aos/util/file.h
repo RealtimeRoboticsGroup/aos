@@ -148,6 +148,9 @@ class FileWriter {
   aos::ScopedFD file_;
 };
 
+// Returns the path to the currently running executable, or nullopt on failure.
+std::optional<std::filesystem::path> GetExecutablePath();
+
 }  // namespace aos::util
 
 #endif  // AOS_UTIL_FILE_H_

@@ -1,11 +1,5 @@
 #include "aos/configuration.h"
 
-#include <arpa/inet.h>
-#include <ifaddrs.h>
-#include <netinet/in.h>
-#include <sys/types.h>
-#include <unistd.h>
-
 #include <cstdlib>
 #include <cstring>
 #include <map>
@@ -992,11 +986,7 @@ std::string_view ExtractFolder(const std::string_view filename) {
 }
 
 std::string AbsolutePath(const std::string_view filename) {
-  // Uses an std::string so that we know the input will be null-terminated.
-  const std::string terminated_file(filename);
-  char buffer[PATH_MAX];
-  ABSL_PCHECK(NULL != realpath(terminated_file.c_str(), buffer));
-  return buffer;
+  return std::filesystem::weakly_canonical(filename).generic_string();
 }
 
 std::string RemoveDotDots(const std::string_view filename) {
@@ -1552,19 +1542,14 @@ std::optional<FlatbufferDetachedBuffer<Configuration>> MaybeReadConfig(
   // the config into all binaries.
   std::vector<std::string_view> extra_import_paths_with_exe =
       extra_import_paths;
-  char proc_self_exec_buffer[PATH_MAX + 1];
-  std::memset(proc_self_exec_buffer, 0, sizeof(proc_self_exec_buffer));
-  ssize_t s = readlink("/proc/self/exe", proc_self_exec_buffer, PATH_MAX);
-  if (s > 0) {
-    // If the readlink call fails, the worst thing that happens is that we don't
-    // automatically find the config next to the binary.  VLOG to make it easier
-    // to debug.
-    std::string_view proc_self_exec(proc_self_exec_buffer);
-
-    extra_import_paths_with_exe.emplace_back(
-        proc_self_exec.substr(0, proc_self_exec.rfind("/")));
+  std::string exec_dir;
+  std::optional<std::filesystem::path> exec_path =
+      aos::util::GetExecutablePath();
+  if (exec_path.has_value()) {
+    exec_dir = exec_path->parent_path().generic_string();
+    extra_import_paths_with_exe.emplace_back(exec_dir);
   } else {
-    ABSL_VLOG(1) << "Failed to read /proc/self/exe";
+    ABSL_VLOG(1) << "Failed to get executable path";
   }
 
   // We only want to read a file once.  So track the visited files in a set.

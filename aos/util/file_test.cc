@@ -357,4 +357,11 @@ TEST(FileTest, MaybeWriteStringEmptyContents) {
   EXPECT_EQ("", ReadFileToStringOrDie(test_file.string()));
 }
 
+TEST(FileTest, GetExecutablePath) {
+  std::optional<std::filesystem::path> exec_path = GetExecutablePath();
+  ASSERT_TRUE(exec_path.has_value());
+  EXPECT_TRUE(std::filesystem::exists(*exec_path));
+  EXPECT_TRUE(exec_path->is_absolute());
+}
+
 }  // namespace aos::util::testing

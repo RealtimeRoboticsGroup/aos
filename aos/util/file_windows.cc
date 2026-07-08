@@ -159,4 +159,14 @@ FileWriter::WriteResult FileWriter::WriteBytes(
   return {size_written, static_cast<int>(size_written)};
 }
 
+std::optional<std::filesystem::path> GetExecutablePath() {
+  char proc_self_exec_buffer[MAX_PATH + 1];
+  DWORD s = GetModuleFileNameA(NULL, proc_self_exec_buffer, MAX_PATH);
+  if (s > 0) {
+    return std::filesystem::path(std::string_view(proc_self_exec_buffer, s));
+  } else {
+    return std::nullopt;
+  }
+}
+
 }  // namespace aos::util

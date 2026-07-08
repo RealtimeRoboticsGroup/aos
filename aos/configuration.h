@@ -1,10 +1,6 @@
 #ifndef AOS_CONFIGURATION_H_
 #define AOS_CONFIGURATION_H_
 
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-
 #include <chrono>
 #include <cstdint>
 #include <string_view>
