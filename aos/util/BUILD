@@ -356,24 +356,6 @@ cc_test(
 )
 
 cc_library(
-    name = "options",
-    hdrs = [
-        "options.h",
-    ],
-)
-
-cc_test(
-    name = "options_test",
-    srcs = [
-        "options_test.cc",
-    ],
-    deps = [
-        ":options",
-        "//aos/testing:googletest",
-    ],
-)
-
-cc_library(
     name = "compiler_memory_barrier",
     hdrs = [
         "compiler_memory_barrier.h",
