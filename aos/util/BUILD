@@ -312,9 +312,10 @@ cc_library(
     hdrs = [
         "trapezoid_profile.h",
     ],
-    linkopts = [
-        "-lm",
-    ],
+    linkopts = select({
+        "@platforms//os:windows": [],
+        "//conditions:default": ["-lm"],
+    }),
     deps = [
         "//aos/logging",
         "//aos/time",

@@ -304,9 +304,10 @@ cc_library(
     hdrs = [
         "position_sensor_sim.h",
     ],
-    linkopts = [
-        "-lm",
-    ],
+    linkopts = select({
+        "@platforms//os:windows": [],
+        "//conditions:default": ["-lm"],
+    }),
     deps = [
         ":control_loops_fbs",
         ":gaussian_noise",
@@ -322,9 +323,10 @@ cc_library(
     hdrs = [
         "gaussian_noise.h",
     ],
-    linkopts = [
-        "-lm",
-    ],
+    linkopts = select({
+        "@platforms//os:windows": [],
+        "//conditions:default": ["-lm"],
+    }),
 )
 
 cc_library(
@@ -337,6 +339,7 @@ cc_library(
     ],
     linkopts = select({
         "@platforms//os:none": [],
+        "@platforms//os:windows": [],
         "//conditions:default": ["-lm"],
     }),
     deps = [
@@ -351,9 +354,10 @@ cc_test(
     srcs = [
         "coerce_goal_test.cc",
     ],
-    linkopts = [
-        "-lm",
-    ],
+    linkopts = select({
+        "@platforms//os:windows": [],
+        "//conditions:default": ["-lm"],
+    }),
     deps = [
         ":coerce_goal",
         "//aos/testing:googletest",
