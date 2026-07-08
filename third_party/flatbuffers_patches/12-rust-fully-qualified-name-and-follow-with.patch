@@ -1,0 +1,134 @@
+Description: Expose Rust FollowWith and FullyQualifiedName traits.
+    This supplies compile-time type identity information necessary for
+    reflection-based message dispatch and routing tables inside
+    real-time Rust environments.
+    Implemented by declaring FollowWith in
+    rust/flatbuffers/src/follow.rs and FullyQualifiedName in
+    rust/flatbuffers/src/primitives.rs, and modifying the Rust
+    generator in src/idl_gen_rust.cpp to write implementations of
+    FullyQualifiedName (returning the absolute package path, e.g.,
+    "MyGame.Monster") for generated structs and tables when the
+    --gen-name-strings flag is active, along with FollowWith trait
+    mapping.
+
+
+diff --git a/rust/flatbuffers/src/follow.rs b/rust/flatbuffers/src/follow.rs
+index 7488487..6adcd4f 100644
+--- a/rust/flatbuffers/src/follow.rs
++++ b/rust/flatbuffers/src/follow.rs
+@@ -61,3 +61,7 @@ impl<'a, T: Follow<'a>> Follow<'a> for FollowStart<T> {
+         T::follow(buf, loc)
+     }
+ }
++
++pub trait FollowWith<'a> {
++    type Inner: Follow<'a>;
++}
+diff --git a/rust/flatbuffers/src/lib.rs b/rust/flatbuffers/src/lib.rs
+index ed2bc17..d1a3bc6 100644
+--- a/rust/flatbuffers/src/lib.rs
++++ b/rust/flatbuffers/src/lib.rs
+@@ -51,7 +51,7 @@ mod vtable_writer;
+ pub use crate::array::{array_init, emplace_scalar_array, Array};
+ pub use crate::builder::{Allocator, DefaultAllocator, FlatBufferBuilder};
+ pub use crate::endian_scalar::{emplace_scalar, read_scalar, read_scalar_at, EndianScalar};
+-pub use crate::follow::{Follow, FollowStart};
++pub use crate::follow::{Follow, FollowStart, FollowWith};
+ pub use crate::primitives::*;
+ pub use crate::push::{Push, PushAlignment};
+ pub use crate::table::{buffer_has_identifier, Table};
+diff --git a/rust/flatbuffers/src/primitives.rs b/rust/flatbuffers/src/primitives.rs
+index ac35511..1005941 100644
+--- a/rust/flatbuffers/src/primitives.rs
++++ b/rust/flatbuffers/src/primitives.rs
+@@ -321,3 +321,12 @@ impl_follow_for_endian_scalar!(i32);
+ impl_follow_for_endian_scalar!(i64);
+ impl_follow_for_endian_scalar!(f32);
+ impl_follow_for_endian_scalar!(f64);
++
++pub trait FullyQualifiedName {
++    /// Returns the fully-qualified name for this table. This will include all namespaces,like
++    /// `MyGame.Monster`.
++    ///
++    /// Use `--gen-name-strings` when running the flatbuffers compile to generate implementations
++    /// of this trait for all tables.
++    fn get_fully_qualified_name() -> &'static str;
++}
+diff --git a/src/idl_gen_rust.cpp b/src/idl_gen_rust.cpp
+index 72d391e..48251b5 100644
+--- a/src/idl_gen_rust.cpp
++++ b/src/idl_gen_rust.cpp
+@@ -1616,12 +1617,16 @@ class RustGenerator : public BaseGenerator {
+ 
+   // Generates a fully-qualified name getter for use with --gen-name-strings
+   void GenFullyQualifiedNameGetter(const StructDef& struct_def,
+-                                   const std::string& name) {
++                                   const std::string& name, bool is_struct) {
+     const std::string fully_qualified_name =
+         struct_def.defined_namespace->GetFullyQualifiedName(name);
+-    code_ += "  pub const fn get_fully_qualified_name() -> &'static str {";
++    code_ += "impl flatbuffers::FullyQualifiedName for {{STRUCT_TY}}\\";
++    if (!is_struct) { code_ += "<'_>\\"; }
++    code_ += "{";
++    code_ += "  fn get_fully_qualified_name() -> &'static str {";
+     code_ += "    \"" + fully_qualified_name + "\"";
+     code_ += "  }";
++    code_ += "}";
+     code_ += "";
+   }
+ 
+@@ -1701,6 +1706,10 @@ class RustGenerator : public BaseGenerator {
+     code_ += "  }";
+     code_ += "}";
+     code_ += "";
++    code_ += "impl<'a, 'b> flatbuffers::FollowWith<'a> for {{STRUCT_TY}}<'b> {";
++    code_ += "  type Inner = {{STRUCT_TY}}<'a>;";
++    code_ += "}";
++    code_ += "";
+     code_ += "impl<'a> {{STRUCT_TY}}<'a> {";
+ 
+     // Generate field id constants.
+@@ -1712,10 +1721,6 @@ class RustGenerator : public BaseGenerator {
+     });
+     code_ += "";
+ 
+-    if (parser_.opts.generate_name_strings) {
+-      GenFullyQualifiedNameGetter(struct_def, struct_def.name);
+-    }
+-
+     code_ += "  #[inline]";
+     code_ +=
+         "  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> "
+@@ -1993,6 +1998,10 @@ class RustGenerator : public BaseGenerator {
+     code_ += "}";  // End of table impl.
+     code_ += "";
+ 
++    if (parser_.opts.generate_name_strings) {
++      GenFullyQualifiedNameGetter(struct_def, struct_def.name, false);
++    }
++
+     // Generate Verifier;
+     code_ += "impl ::flatbuffers::Verifiable for {{STRUCT_TY}}<'_> {";
+     code_ += "  #[inline]";
+@@ -2792,10 +2801,6 @@ class RustGenerator : public BaseGenerator {
+     code_ += "  }";
+     code_ += "";
+ 
+-    if (parser_.opts.generate_name_strings) {
+-      GenFullyQualifiedNameGetter(struct_def, struct_def.name);
+-    }
+-
+     // Generate accessor methods for the struct.
+     ForAllStructFields(struct_def, [&](const FieldDef& field) {
+       this->GenComment(field.doc_comment);
+@@ -2936,6 +2941,10 @@ class RustGenerator : public BaseGenerator {
+     code_ += "}";  // End impl Struct methods.
+     code_ += "";
+ 
++    if (parser_.opts.generate_name_strings) {
++      GenFullyQualifiedNameGetter(struct_def, struct_def.name, true);
++    }
++
+     // Generate Struct Object.
+     if (parser_.opts.generate_object_based_api) {
+       // Struct declaration

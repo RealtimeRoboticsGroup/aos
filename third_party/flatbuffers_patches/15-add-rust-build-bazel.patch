@@ -1,0 +1,25 @@
+Description: Add a rust/BUILD.bazel file with Bazel targets.
+    This provides standard target declarations for the flatbuffers
+    Rust library sources when vendored in Bazel environments
+    (since upstream flatbuffers releases do not include Bazel
+    targets for the Rust library).
+    Implemented by creating the new file rust/BUILD.bazel declaring
+    a public rust_srcs filegroup and exporting flatbuffers/src/lib.rs.
+
+
+diff --git a/rust/BUILD.bazel b/rust/BUILD.bazel
+new file mode 100644
+index 0000000..0000001
+--- /dev/null
++++ b/rust/BUILD.bazel
+@@ -0,0 +1,10 @@
++filegroup(
++    name = "rust_srcs",
++    srcs = glob(["flatbuffers/**/*.rs"]),
++    visibility = ["//visibility:public"],
++)
++
++exports_files(
++    ["flatbuffers/src/lib.rs"],
++    visibility = ["//visibility:public"],
++)

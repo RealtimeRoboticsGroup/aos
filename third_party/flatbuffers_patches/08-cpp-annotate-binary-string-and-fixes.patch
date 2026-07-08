@@ -1,0 +1,102 @@
+Description: Expose in-memory string generation on
+    AnnotatedBinaryTextGenerator and apply annotator stability fixes.
+    This enables dynamic inspection of annotated binary buffers without
+    forcing disk writes, avoids verification failures on schemas
+    lacking standard file identifiers, and stabilizes trailer
+    alignment parsing.
+    Implemented by adding AnnotatedBinaryTextGenerator::GenerateString()
+    to src/annotated_binary_text_gen.cpp, updating
+    BinaryAnnotator::Annotate in src/binary_annotator.cpp to verify
+    buffers using the raw Type VerifyBuffer<reflection::Schema>(nullptr)
+    API directly, and adjusting the trailing section check in
+    FixMissingSections to handle boundary offset <= binary_length_
+    comparison safely.
+
+
+diff --git a/src/annotated_binary_text_gen.cpp b/src/annotated_binary_text_gen.cpp
+index 4c7cda5..c6d2689 100644
+--- a/src/annotated_binary_text_gen.cpp
++++ b/src/annotated_binary_text_gen.cpp
+@@ -451,9 +451,7 @@ static void GenerateSection(std::ostream& os, const BinarySection& section,
+ }
+ }  // namespace
+ 
+-bool AnnotatedBinaryTextGenerator::Generate(
+-    const std::string& filename, const std::string& schema_filename,
+-    const std::string& output_filename) {
++std::string AnnotatedBinaryTextGenerator::GenerateString() {
+   OutputConfig output_config;
+   output_config.max_bytes_per_line = options_.max_bytes_per_line;
+   output_config.include_vector_contents = options_.include_vector_contents;
+@@ -486,6 +484,19 @@ bool AnnotatedBinaryTextGenerator::Generate(
+     }
+   }
+ 
++  std::stringstream os;
++
++  for (const auto& section : annotations_) {
++    GenerateSection(os, section.second, binary_, output_config);
++  }
++
++  return os.str();
++}
++
++
++bool AnnotatedBinaryTextGenerator::Generate(
++    const std::string& filename, const std::string& schema_filename,
++    const std::string& output_filename) {
+   std::string out = output_filename;
+   if (out.empty()) {
+     // Modify the output filename.
+@@ -505,10 +516,7 @@ bool AnnotatedBinaryTextGenerator::Generate(
+   }
+   ofs << "// Binary file: " << filename << std::endl;
+ 
+-  // Generate each of the binary sections
+-  for (const auto& section : annotations_) {
+-    GenerateSection(ofs, section.second, binary_, output_config);
+-  }
++  ofs << GenerateString();
+ 
+   ofs.close();
+   return true;
+diff --git a/src/annotated_binary_text_gen.h b/src/annotated_binary_text_gen.h
+index bf62fba..a0b9760 100644
+--- a/src/annotated_binary_text_gen.h
++++ b/src/annotated_binary_text_gen.h
+@@ -58,6 +58,7 @@ class AnnotatedBinaryTextGenerator {
+   // annotated binary was successfully saved.
+   bool Generate(const std::string& filename, const std::string& schema_filename,
+                 const std::string& output_filename = "");
++  std::string GenerateString();
+ 
+  private:
+   const std::map<uint64_t, BinarySection> annotations_;
+diff --git a/src/binary_annotator.cpp b/src/binary_annotator.cpp
+index 1e1668c..17f62b5 100644
+--- a/src/binary_annotator.cpp
++++ b/src/binary_annotator.cpp
+@@ -126,9 +126,12 @@ static BinarySection GenerateMissingSection(const uint64_t offset,
+ std::map<uint64_t, BinarySection> BinaryAnnotator::Annotate() {
+   if (bfbs_ != nullptr && bfbs_length_ != 0) {
+     flatbuffers::Verifier verifier(bfbs_, static_cast<size_t>(bfbs_length_));
++    // Local modification note: Directiy calling VerifySchemaBuffer requires
++    // that the serialized schema include an identifier, which sometimes does
++    // not exist (e.g., in AOS configs).
+     if ((is_size_prefixed_ &&
+-         !reflection::VerifySizePrefixedSchemaBuffer(verifier)) ||
+-        !reflection::VerifySchemaBuffer(verifier)) {
++         !verifier.VerifySizePrefixedBuffer<reflection::Schema>(nullptr)) ||
++        !verifier.VerifyBuffer<reflection::Schema>(nullptr)) {
+       return {};
+     }
+   }
+@@ -1517,7 +1520,7 @@ void BinaryAnnotator::FixMissingSections() {
+ 
+   // Handle the case where there are still bytes left in the binary that are
+   // unaccounted for.
+-  if (offset < binary_length_) {
++  if (offset <= binary_length_) {
+     const uint64_t pad_bytes = binary_length_ - offset + 1;
+     sections_to_insert.push_back(
+         GenerateMissingSection(offset - 1, pad_bytes, binary_));

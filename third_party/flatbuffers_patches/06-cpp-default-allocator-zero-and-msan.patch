@@ -1,0 +1,51 @@
+Description: Enforce zero-initialization on allocator buffers and
+    suppress false-positive MSan warnings.
+    This prevents MemorySanitizer (MSan) from flagging downstream
+    reads of padding or uninitialized slots inside compiled builders,
+    and resolves false-positive MSan warnings during sandbox directory
+    checks.
+    Implemented by modifying DefaultAllocator::allocate in
+    include/flatbuffers/default_allocator.h to zero-initialize buffers
+    via memset(), and applying a custom NO_MSAN_ATTRIBUTE
+    (__attribute__((no_sanitize("memory")))) to DirExists in
+    src/util.cpp.
+
+
+diff --git a/include/flatbuffers/default_allocator.h b/include/flatbuffers/default_allocator.h
+index d1cab08..8c7992d 100644
+--- a/include/flatbuffers/default_allocator.h
++++ b/include/flatbuffers/default_allocator.h
+@@ -26,7 +26,9 @@ namespace flatbuffers {
+ class DefaultAllocator : public Allocator {
+  public:
+   uint8_t* allocate(size_t size) FLATBUFFERS_OVERRIDE {
+-    return new uint8_t[size];
++    uint8_t* pointer = new uint8_t[size];
++    memset(pointer, 0, size);
++    return pointer;
+   }
+ 
+   void deallocate(uint8_t* p, size_t) FLATBUFFERS_OVERRIDE { delete[] p; }
+diff --git a/src/util.cpp b/src/util.cpp
+index de6b68c..6019fc3 100644
+--- a/src/util.cpp
++++ b/src/util.cpp
+@@ -224,9 +224,16 @@ bool FileExists(const char* name) {
+   return g_file_exists_function(name);
+ }
+ 
+-bool DirExists(const char* name) {
+-  // clang-format off
++#ifdef __clang__
++#define NO_MSAN_ATTRIBUTE __attribute__((no_sanitize("memory")))
++#else
++#define NO_MSAN_ATTRIBUTE
++#endif
+ 
++// For no obvious reason, clang's sanitizer thinks that the mode bits from
++// stat() are uninitialized in some circumstances.
++bool DirExists(const char* name) NO_MSAN_ATTRIBUTE {
++  // clang-format off
+   #ifdef _WIN32
+     #define flatbuffers_stat _stat
+     #define FLATBUFFERS_S_IFDIR _S_IFDIR

@@ -1,0 +1,62 @@
+Description: Support namespace-wrapping and Object suffix renaming.
+    This avoids name collisions between generated flatbuffer Object-API
+    helper types and user-defined C++ types sharing identical names
+    within the same compilation scope.
+    Implemented by extending BaseGenerator::WrapInNameSpace in
+    include/flatbuffers/code_generators.h and src/code_generators.cpp
+    to accept an optional object_suffix boolean which, when true,
+    automatically appends a "Generated" suffix to the end of the
+    qualified C++ class name.
+
+
+diff --git a/include/flatbuffers/code_generators.h b/include/flatbuffers/code_generators.h
+index d284ac5..8bf47bc 100644
+--- a/include/flatbuffers/code_generators.h
++++ b/include/flatbuffers/code_generators.h
+@@ -136,10 +136,12 @@ class BaseGenerator {
+   // its own namespace to avoid conflict between generated method
+   // names and similarly named classes or structs
+   std::string WrapInNameSpace(const Namespace* ns,
+-                              const std::string& name) const;
++                              const std::string& name,
++                              bool object_suffix = false) const;
+ 
+   std::string WrapInNameSpace(const Definition& def,
+-                              const std::string& suffix = "") const;
++                              const std::string& suffix = "",
++                              bool object_suffix = false) const;
+ 
+   std::string GetNameSpace(const Definition& def) const;
+ 
+diff --git a/src/code_generators.cpp b/src/code_generators.cpp
+index b7860e1..7cb520a 100644
+--- a/src/code_generators.cpp
++++ b/src/code_generators.cpp
+@@ -160,16 +160,23 @@ std::string BaseGenerator::LastNamespacePart(const Namespace& ns) {
+ 
+ // Ensure that a type is prefixed with its namespace.
+ std::string BaseGenerator::WrapInNameSpace(const Namespace* ns,
+-                                           const std::string& name) const {
++                                           const std::string& name,
++                                           bool object_suffix) const {
+   std::string qualified_name = qualifying_start_;
+   for (auto it = ns->components.begin(); it != ns->components.end(); ++it)
+     qualified_name += *it + qualifying_separator_;
+-  return qualified_name + name;
++  std::string object_postfix = "";
++  if (object_suffix) {
++    object_postfix = "Generated";
++  }
++  return qualified_name + name + object_postfix;
+ }
+ 
+ std::string BaseGenerator::WrapInNameSpace(const Definition& def,
+-                                           const std::string& suffix) const {
+-  return WrapInNameSpace(def.defined_namespace, def.name + suffix);
++                                           const std::string& suffix,
++                                           bool object_suffix) const {
++  return WrapInNameSpace(def.defined_namespace, def.name + suffix,
++                         object_suffix);
+ }
+ 
+ std::string BaseGenerator::GetNameSpace(const Definition& def) const {

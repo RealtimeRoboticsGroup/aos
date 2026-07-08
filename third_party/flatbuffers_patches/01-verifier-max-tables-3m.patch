@@ -1,0 +1,58 @@
+Description: Raise the maximum number of verified tables from
+    1,000,000 to 3,000,000. This prevents runtime verification
+    failures when loading exceptionally large FlatBuffer objects,
+    such as those processed in FRC log replay configurations
+    (frc/log_replay).
+    Implemented by modifying VerifierTemplate::Options::max_tables in
+    include/flatbuffers/verifier.h and standalone helper functions
+    Verify and VerifySizePrefixed in include/flatbuffers/reflection.h
+    to default to 3,000,000.
+
+
+diff --git a/include/flatbuffers/reflection.h b/include/flatbuffers/reflection.h
+index 371df72..73df679 100644
+--- a/include/flatbuffers/reflection.h
++++ b/include/flatbuffers/reflection.h
+@@ -516,12 +516,12 @@ Offset<const Table*> CopyTable(FlatBufferBuilder& fbb,
+ // length specifies the size of the flatbuffer data.
+ bool Verify(const reflection::Schema& schema, const reflection::Object& root,
+             const uint8_t* buf, size_t length, uoffset_t max_depth = 64,
+-            uoffset_t max_tables = 1000000);
++            uoffset_t max_tables = 3000000);
+ 
+ bool VerifySizePrefixed(const reflection::Schema& schema,
+                         const reflection::Object& root, const uint8_t* buf,
+                         size_t length, uoffset_t max_depth = 64,
+-                        uoffset_t max_tables = 1000000);
++                        uoffset_t max_tables = 3000000);
+ 
+ }  // namespace flatbuffers
+ 
+diff --git a/include/flatbuffers/verifier.h b/include/flatbuffers/verifier.h
+index a0b7935..989282d 100644
+--- a/include/flatbuffers/verifier.h
++++ b/include/flatbuffers/verifier.h
+@@ -26,11 +26,13 @@ namespace flatbuffers {
+ template <bool TrackVerifierBufferSize>
+ class VerifierTemplate FLATBUFFERS_FINAL_CLASS {
+  public:
++  static constexpr uoffset_t kDefaultMaxTables = 3000000;
++
+   struct Options {
+     // The maximum nesting of tables and vectors before we call it invalid.
+     uoffset_t max_depth = 64;
+     // The maximum number of tables we will verify before we call it invalid.
+-    uoffset_t max_tables = 1000000;
++    uoffset_t max_tables = kDefaultMaxTables;
+     // If true, verify all data is aligned.
+     bool check_alignment = true;
+     // If true, run verifier on nested flatbuffers
+@@ -50,7 +52,7 @@ class VerifierTemplate FLATBUFFERS_FINAL_CLASS {
+   // Deprecated API, please construct with VerifierTemplate::Options.
+   VerifierTemplate(const uint8_t* const buf, const size_t buf_len,
+                    const uoffset_t max_depth = 64,
+-                   const uoffset_t max_tables = 1000000,
++                   const uoffset_t max_tables = kDefaultMaxTables,
+                    const bool check_alignment = true)
+       : VerifierTemplate(buf, buf_len, [&] {
+           Options opts;

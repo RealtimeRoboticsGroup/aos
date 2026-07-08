@@ -1,0 +1,55 @@
+Description: C++ enum ostream overloads and reflection include remap.
+    This ensures that compiled schemas correctly consume reflection
+    definitions via flatbuffers/reflection_generated.h and allows
+    generated C++ enums to be streamed directly to logs using their
+    string names to ease debugging.
+    Implemented by modifying src/idl_gen_cpp.cpp to map dependency
+    inclusions of "reflection/reflection_generated.h" to
+    "flatbuffers/reflection_generated.h", inserting
+    "#include <ostream>" into the top of generated C++ files, and
+    emitting operator<< overloads returning EnumName{{ENUM_NAME}}(e)
+    for generated enum types.
+
+
+diff --git a/src/idl_gen_cpp.cpp b/src/idl_gen_cpp.cpp
+index 04574b1..2d02650 100644
+--- a/src/idl_gen_cpp.cpp
++++ b/src/idl_gen_cpp.cpp
+@@ -260,6 +260,7 @@ class CppGenerator : public BaseGenerator {
+   }
+ 
+   void GenIncludeDependencies() {
++    code_ += "#include <ostream>";
+     if (opts_.generate_object_based_api) {
+       for (const std::string& native_included_file :
+            parser_.native_included_files_) {
+@@ -286,8 +287,14 @@ class CppGenerator : public BaseGenerator {
+       const std::string basename =
+           opts_.keep_prefix ? name_without_ext : StripPath(name_without_ext);
+ 
+-      code_ += "#include \"" +
+-               GeneratedFileName(opts_.include_prefix, basename, opts_) + "\"";
++      std::string include_name =
++          GeneratedFileName(opts_.include_prefix, basename, opts_);
++
++      if (include_name == "reflection/reflection_generated.h") {
++        include_name = "flatbuffers/reflection_generated.h";
++      }
++
++      code_ += "#include \"" + include_name + "\"";
+     }
+ 
+     if (!parser_.native_included_files_.empty() || !included_files.empty()) {
+@@ -1647,6 +1654,12 @@ class CppGenerator : public BaseGenerator {
+       code_ += "}";
+       code_ += "";
+     }
++
++    code_ += "inline std::ostream& operator<<(std::ostream& os, const {{ENUM_NAME}} &e) {";
++    code_ += "  os << EnumName{{ENUM_NAME}}(e);";
++    code_ += "  return os;";
++    code_ += "}";
++    code_ += "";
+   }
+ 
+   void GenUnionPost(const EnumDef& enum_def) {

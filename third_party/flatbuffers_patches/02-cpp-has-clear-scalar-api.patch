@@ -1,0 +1,85 @@
+Description: Add clear_field() and has_field() APIs for scalar fields.
+    This enables developer parity with protobuf-style interfaces by
+    permitting direct checks for field presence and explicit field
+    erasure on generated C++ types.
+    Implemented by exposing GetMutableVTable() and
+    Table::ClearField(voffset_t field) in include/flatbuffers/table.h,
+    which zeroes out the corresponding vtable entry, and modifying
+    src/idl_gen_cpp.cpp to emit inline clear_{{FIELD_NAME}}() and
+    has_{{FIELD_NAME}}() helper methods in the generated code.
+
+    WARNING: ClearField() modifies the vtable in-place. Because
+    Flatbuffers deduplicates vtables within the same buffer, modifying
+    a vtable for one table instance will affect all other instances
+    sharing that same vtable. Use with extreme caution.
+
+
+diff --git a/include/flatbuffers/table.h b/include/flatbuffers/table.h
+index 622d134..e0e8d36 100644
+--- a/include/flatbuffers/table.h
++++ b/include/flatbuffers/table.h
+@@ -30,6 +30,9 @@ class Table {
+   const uint8_t* GetVTable() const {
+     return data_ - ReadScalar<soffset_t>(data_);
+   }
++  uint8_t* GetMutableVTable() {
++    return data_ - ReadScalar<soffset_t>(data_);
++  }
+ 
+   // This gets the field offset for any of the functions below it, or 0
+   // if the field was not present.
+@@ -127,6 +130,22 @@ class Table {
+     return true;
+   }
+ 
++  // TODO(RealtimeRoboticsGroup/aos#33): Fix or remove.
++  void ClearField(voffset_t field) {
++    // WARNING: This clears the field by modifying the vtable in-place.
++    // If multiple objects share a deduplicated vtable (which FlatBuffers does
++    // by default to save space), clearing the field on one instance will
++    // clear it for all instances sharing that vtable. Use with caution.
++    // The vtable offset is always at the start.
++    auto vtable = GetMutableVTable();
++    // The first element is the size of the vtable (fields + type id + itself).
++    auto vtsize = ReadScalar<voffset_t>(vtable);
++    // If the field we're accessing is outside the vtable, we're reading older
++    // data, so it's the same as if the offset was 0 (not present).
++    if (field < vtsize) {
++      WriteScalar<voffset_t>(reinterpret_cast<uint8_t*>(vtable + field), 0);
++    }
++  }
++
+   bool SetPointer(voffset_t field, const uint8_t* val) {
+     auto field_offset = GetOptionalFieldOffset(field);
+     if (!field_offset) return false;
+diff --git a/src/idl_gen_cpp.cpp b/src/idl_gen_cpp.cpp
+index f6e61ff..04574b1 100644
+--- a/src/idl_gen_cpp.cpp
++++ b/src/idl_gen_cpp.cpp
+@@ -2939,10 +2939,10 @@ class CppGenerator : public BaseGenerator {
+       return;  // changing of a union's type is forbidden
+ 
+     auto offset_str = GenFieldOffsetName(field);
++      code_.SetValue("OFFSET_NAME", offset_str);
+     if (is_scalar) {
+       const auto wire_type = GenTypeWire(type, "", false, field.offset64);
+       code_.SetValue("SET_FN", "SetField<" + wire_type + ">");
+-      code_.SetValue("OFFSET_NAME", offset_str);
+       code_.SetValue("FIELD_TYPE", GenTypeBasic(type, true));
+       code_.SetValue("FIELD_VALUE",
+                      GenUnderlyingCast(field, false, "_" + Name(field)));
+@@ -3010,6 +3010,14 @@ class CppGenerator : public BaseGenerator {
+         code_ += "  }";
+       }
+     }
++        code_ += "  void clear_{{FIELD_NAME}}() {";
++        code_ += "    ClearField({{OFFSET_NAME}});";
++        code_ += "  }";
++
++        code_ += "  bool has_{{FIELD_NAME}}() const {";
++        code_ += "    return CheckField({{OFFSET_NAME}});";
++        code_ += "  }";
++
+   }
+ 
+   std::string GetNestedFlatBufferName(const FieldDef& field) {

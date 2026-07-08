@@ -1,0 +1,114 @@
+Description: Add python-fields-snake-case compiler option to flatc.
+    This generates Python Object API field names using standard
+    snake_case naming conventions to align generated modules with
+    standard PEP8 formatting specifications.
+    Implemented by adding python_fields_snake_case to IDLOptions in
+    include/flatbuffers/idl.h, exposing the command-line argument
+    --python-fields-snake-case in src/flatc.cpp, and modifying the
+    Python generator in src/idl_gen_python.cpp to apply Case::kSnake
+    to field configuration namers when this flag is active.
+
+
+diff --git a/include/flatbuffers/idl.h b/include/flatbuffers/idl.h
+index 35e4eae..9eb452b 100644
+--- a/include/flatbuffers/idl.h
++++ b/include/flatbuffers/idl.h
+@@ -736,6 +736,9 @@ struct IDLOptions {
+   // in import statements.
+   std::string python_import_prefix;
+ 
++  // Use snake-case for field names in the Python object API.
++  bool python_fields_snake_case;
++
+   bool ts_omit_entrypoint;
+   ProtoIdGapAction proto_id_gap_action;
+ 
+@@ -863,5 +866,6 @@ struct IDLOptions {
+         python_no_type_prefix_suffix(false),
+         python_typing(false),
+         python_gen_numpy(true),
++        python_fields_snake_case(false),
+         ts_omit_entrypoint(false),
+         proto_id_gap_action(ProtoIdGapAction::WARNING),
+diff --git a/src/flatc.cpp b/src/flatc.cpp
+index f5c0cb3..541ba3a 100644
+--- a/src/flatc.cpp
++++ b/src/flatc.cpp
+@@ -261,7 +261,9 @@ const static FlatCOption flatc_options[] = {
+     {"", "python-typing", "", "Generate Python type annotations"},
+     {"", "python-version", "", "Generate code for the given Python version."},
+     {"", "python-decode-obj-api-strings", "",
+      "Decode bytes to strings for the Python Object API"},
+     {"", "python-gen-numpy", "", "Whether to generate numpy helpers."},
++    {"", "python-fields-snake-case", "",
++     "Generate Python fields using snake_case naming convention."},
+     {"", "ts-omit-entrypoint", "",
+      "Omit emission of namespace entrypoint file"},
+@@ -707,6 +709,8 @@ FlatCOptions FlatCompiler::ParseFromCommandLineArguments(int argc,
+       } else if (arg == "--no-python-gen-numpy" ||
+                  arg == "--python-gen-numpy=false") {
+         opts.python_gen_numpy = false;
++      } else if (arg == "--python-fields-snake-case") {
++        opts.python_fields_snake_case = true;
+       } else if (arg.rfind("--python-import-prefix=", 0) == 0) {
+         opts.python_import_prefix =
+             arg.substr(std::string("--python-import-prefix=").size());
+diff --git a/src/idl_gen_python.cpp b/src/idl_gen_python.cpp
+index b8e70bc..89faec9 100644
+--- a/src/idl_gen_python.cpp
++++ b/src/idl_gen_python.cpp
+@@ -46,14 +46,24 @@ typedef std::set<ImportMapEntry> ImportMap;
+ 
+ // Hardcode spaces per indentation.
+ static const CommentConfig def_comment = {nullptr, "#", nullptr};
+ static const std::string Indent = "    ";
+ 
++inline Namer::Config PythonNamerConfig(const Namer::Config& input,
++                                       const IDLOptions& opts,
++                                       const std::string& path) {
++  auto cfg = WithFlagOptions(input, opts, path);
++  if (opts.python_fields_snake_case) {
++    cfg.fields = Case::kSnake;
++  }
++  return cfg;
++}
++
+ class PythonStubGenerator {
+  public:
+   PythonStubGenerator(const Parser& parser, const std::string& path,
+                       const Version& version)
+       : parser_{parser},
+-        namer_{WithFlagOptions(kStubConfig, parser.opts, path),
++        namer_{PythonNamerConfig(kStubConfig, parser.opts, path),
+                Keywords(version)},
+         version_(version) {}
+@@ -693,9 +703,9 @@ class PythonGenerator : public BaseGenerator {
+ class PythonGenerator : public BaseGenerator {
+  public:
+   PythonGenerator(const Parser& parser, const std::string& path,
+                   const std::string& file_name, const Version& version)
+       : BaseGenerator(parser, path, file_name, "" /* not used */,
+                       "" /* not used */, "py"),
+         float_const_gen_("float('nan')", "float('inf')", "float('-inf')"),
+-        namer_(WithFlagOptions(kConfig, parser.opts, path), Keywords(version)) {
++        namer_(PythonNamerConfig(kConfig, parser.opts, path), Keywords(version)) {
+   }
+@@ -1320,6 +1330,6 @@ class PythonGenerator : public BaseGenerator {
+         } else {
+           code += IsArray(field_type) ? "    " : "";
+           code += indent + "    builder.Prepend" + GenMethod(field) + "(";
+-          code += nameprefix + namer_.Variable(field);
++          code += nameprefix + namer_.Field(field);
+           size_t array_cnt = index + (IsArray(field_type) ? 1 : 0);
+           for (size_t i = 0; in_array && i < array_cnt; i++) {
+@@ -2030,7 +2040,9 @@ class PythonGenerator : public BaseGenerator {
+     if (parser_.opts.include_dependence_headers) {
+       union_type = namer_.NamespacedType(enum_def) + "." + union_type;
+     }
++    FLATBUFFERS_ASSERT(field.sibling_union_field != nullptr);
++    const std::string type_field_name = namer_.Field(*field.sibling_union_field);
+     code += GenIndents(2) + "self." + field_field + " = " + union_type +
+-            "Creator(" + "self." + field_field + "Type, " + struct_var + "." +
++            "Creator(" + "self." + type_field_name + ", " + struct_var + "." +
+             field_method + "())";
+   }

@@ -1,0 +1,33 @@
+Description: Configure FlatBufferBuilder to serialize scalar fields
+    containing default values by default.
+    This ensures that default scalar values are explicitly serialized
+    into the buffer rather than being skipped, preserving downstream
+    structural guarantees and simplifying indexing for fields within
+    static-flatbuffer codepaths.
+    Implemented by modifying constructors in
+    include/flatbuffers/flatbuffer_builder.h to initialize
+    force_defaults_ to true instead of false.
+
+
+diff --git a/include/flatbuffers/flatbuffer_builder.h b/include/flatbuffers/flatbuffer_builder.h
+index 636d377..32f3233 100644
+--- a/include/flatbuffers/flatbuffer_builder.h
++++ b/include/flatbuffers/flatbuffer_builder.h
+@@ -106,7 +106,7 @@ class FlatBufferBuilderImpl {
+         nested(false),
+         finished(false),
+         minalign_(1),
+-        force_defaults_(false),
++        force_defaults_(true),
+         dedup_vtables_(true),
+         string_pool(nullptr) {
+     EndianCheck();
+@@ -123,7 +123,7 @@ class FlatBufferBuilderImpl {
+         nested(false),
+         finished(false),
+         minalign_(1),
+-        force_defaults_(false),
++        force_defaults_(true),
+         dedup_vtables_(true),
+         string_pool(nullptr) {
+     EndianCheck();

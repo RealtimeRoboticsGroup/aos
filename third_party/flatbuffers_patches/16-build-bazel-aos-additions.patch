@@ -1,0 +1,57 @@
+Description: Configure Bazel alignment, warnings, and file exports.
+    This supports 64-byte alignment flags necessary for memory-efficient
+    vectorized hardware allocations, and exposes Python and compiler
+    library sources to downstream integration packages.
+    Implemented by adding FLATBUFFERS_USE_STD_SPAN and
+    FLATBUFFERS_MAX_ALIGNMENT=64 to local library targets in
+    BUILD.bazel, adding -Wno-cast-align to C++ compiler options,
+    exporting a public flatpy_srcs filegroup, and making the
+    C++ compiler libraries in src/BUILD.bazel visible to the public.
+
+
+diff --git a/BUILD.bazel b/BUILD.bazel
+index 20a4fd6..39b95e1 100644
+--- a/BUILD.bazel
++++ b/BUILD.bazel
+@@ -51,6 +51,11 @@ filegroup(
+ cc_library(
+     name = "flatbuffers",
+     hdrs = ["//:public_headers"],
++    copts = ["-Wno-cast-align"],
++    defines = [
++        "FLATBUFFERS_USE_STD_SPAN",
++        "FLATBUFFERS_MAX_ALIGNMENT=64",
++    ],
+     linkstatic = 1,
+     strip_include_prefix = "/include",
+     deps = ["//src:flatbuffers"],
+@@ -125,3 +130,16 @@ cc_library(
+     linkstatic = 1,
+     strip_include_prefix = "/include",
+ )
++
++filegroup(
++    name = "flatpy_srcs",
++    srcs = glob(["python/flatbuffers/*.py"]),
++    visibility = ["//visibility:public"],
++)
++
++py_library(
++    name = "flatpy",
++    srcs = [":flatpy_srcs"],
++    imports = ["python"],
++    visibility = ["//visibility:public"],
++)
+diff --git a/src/BUILD.bazel b/src/BUILD.bazel
+index cefc0b8..0bad9ed 100644
+--- a/src/BUILD.bazel
++++ b/src/BUILD.bazel
+@@ -86,7 +86,7 @@ cc_library(
+         "//:flatc_headers",
+     ],
+     strip_include_prefix = "/include",
+-    visibility = ["//:__pkg__"],
++    visibility = ["//visibility:public"],
+     deps = [
+         ":flatbuffers",
+         "//include/codegen:namer",

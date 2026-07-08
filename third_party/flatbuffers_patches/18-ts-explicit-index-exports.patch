@@ -1,0 +1,49 @@
+Description: Generate explicit TypeScript exports and target ES2020.
+    This modernizes TypeScript targets to utilize standard ES Modules
+    (ESM) rather than old CommonJS, and exports essential generated
+    type definitions (such as IGeneratedObject, Offset, Table) for
+    consumption by frontend bundlers.
+    Implemented by rewriting generate_index.ts in ts/BUILD.bazel to
+    emit a static block exporting Builder, Table, ByteBuffer, etc.
+    explicitly from ./flatbuffers.js, and changing the compiler's
+    ts_project module output target to es2020.
+
+
+diff --git a/ts/BUILD.bazel b/ts/BUILD.bazel
+--- a/ts/BUILD.bazel
++++ b/ts/BUILD.bazel
+@@ -17,7 +17,24 @@ npm_link_all_packages(name = "node_modules")
+ genrule(
+     name = "generate_index.ts",
+     outs = ["index.ts"],
+-    cmd = """echo "export * from './flatbuffers.js'" > $(OUTS)""",
++    cmd = """cat > $(OUTS) <<'EOF'
++export {
++  Builder,
++  ByteBuffer,
++  Encoding,
++  FILE_IDENTIFIER_LENGTH,
++  SIZEOF_INT,
++  SIZEOF_SHORT,
++  SIZE_PREFIX_LENGTH,
++  float32,
++  float64,
++  int32,
++  isLittleEndian,
++} from './flatbuffers.js';
++
++export type {IGeneratedObject, IUnpackableObject, Offset, Table} from './flatbuffers.js';
++EOF
++""",
+ )
+ 
+ ts_project(
+@@ -56,7 +73,7 @@ ts_project(
+     declaration = True,
+     tsconfig = {
+         "compilerOptions": {
+-            "module": "commonjs",
++            "module": "es2020",
+             "declaration": True,
+             "moduleResolution": "node",
+             "lib": [

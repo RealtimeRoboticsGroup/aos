@@ -1,0 +1,55 @@
+Description: Route FLATBUFFERS_ASSERT checks to Abseil's ABSL_DCHECK.
+    This integrates flatbuffers internal check assertions with the
+    application's central Abseil logging and diagnostics framework,
+    ensuring failed checks output structured debug logs and details
+    rather than triggering hard aborts.
+    Implemented by rewriting FLATBUFFERS_ASSERT to expand to
+    ABSL_DCHECK in include/flatbuffers/base.h and including
+    absl/log/absl_check.h, and declaring the dependency
+    @com_google_absl//absl/log:absl_check in BUILD.bazel and
+    src/BUILD.bazel.
+
+
+diff --git a/BUILD.bazel b/BUILD.bazel
+index 39b95e1..15c2afa 100644
+--- a/BUILD.bazel
++++ b/BUILD.bazel
+@@ -129,6 +129,9 @@ cc_library(
+     hdrs = ["//:public_headers"],
+     linkstatic = 1,
+     strip_include_prefix = "/include",
++    deps = [
++        "@com_google_absl//absl/log:absl_check",
++    ],
+ )
+ 
+ filegroup(
+diff --git a/include/flatbuffers/base.h b/include/flatbuffers/base.h
+index 1d2ab58..a1bad18 100644
+--- a/include/flatbuffers/base.h
++++ b/include/flatbuffers/base.h
+@@ -17,8 +17,8 @@
+ #endif
+ 
+ #if !defined(FLATBUFFERS_ASSERT)
+-#include <assert.h>
+-#define FLATBUFFERS_ASSERT assert
++#include "absl/log/absl_check.h"
++#define FLATBUFFERS_ASSERT ABSL_DCHECK
+ #elif defined(FLATBUFFERS_ASSERT_INCLUDE)
+ // Include file with forward declaration
+ #include FLATBUFFERS_ASSERT_INCLUDE
+diff --git a/src/BUILD.bazel b/src/BUILD.bazel
+index 0bad9ed..4ee8d4b 100644
+--- a/src/BUILD.bazel
++++ b/src/BUILD.bazel
+@@ -24,6 +24,9 @@ cc_library(
+     ],
+     strip_include_prefix = "/include",
+     visibility = ["//:__subpackages__"],
++    deps = [
++        "@com_google_absl//absl/log:absl_check",
++    ],
+ )
+ 
+ cc_library(

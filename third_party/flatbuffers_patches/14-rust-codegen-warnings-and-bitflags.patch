@@ -1,0 +1,50 @@
+Description: Suppress unused Rust imports and adjust generated bitflags.
+    This ensures warning-free compilation under strict build policies
+    and preserves compatibility with the older bitflags 1.x library,
+    avoiding compile errors caused by using newer 2.x APIs.
+    Implemented by modifying src/idl_gen_rust.cpp to prepend
+    #![allow(unused_imports)] to generated Rust modules, simplifying
+    custom derives to prevent macro expansion collisions under older
+    bitflags 1.x macros, and using from_bits_unchecked in generated
+    enum translation calls.
+
+
+diff --git a/src/idl_gen_rust.cpp b/src/idl_gen_rust.cpp
+index 72d391e..48251b5 100644
+--- a/src/idl_gen_rust.cpp
++++ b/src/idl_gen_rust.cpp
+@@ -372,6 +372,7 @@ class RustGenerator : public BaseGenerator {
+       if (symbol.generated) continue;
+       code_.Clear();
+       code_ += "// " + std::string(FlatBuffersGeneratedWarning());
++      code_ += "#![allow(unused_imports)]";
+       code_ += "// @generated";
+       code_ += "extern crate alloc;";
+       if (parser_.opts.rust_serialize) {
+@@ -731,7 +732,7 @@ class RustGenerator : public BaseGenerator {
+       code_ += "mod bitflags_{{ENUM_NAMESPACE}} {";
+       code_ += "  ::flatbuffers::bitflags::bitflags! {";
+       GenComment(enum_def.doc_comment, "    ");
+-      code_ += "    #[derive(Default, Debug, Clone, Copy, PartialEq)]";
++      code_ += "    #[derive(Default)]";
+       code_ += "    {{ACCESS_TYPE}} struct {{ENUM_TY}}: {{BASE_TYPE}} {";
+       ForAllEnumValues1(enum_def, [&](const EnumVal& ev) {
+         this->GenComment(ev.doc_comment, "    ");
+@@ -871,7 +872,7 @@ class RustGenerator : public BaseGenerator {
+         "    let b = unsafe { "
+         "::flatbuffers::read_scalar_at::<{{BASE_TYPE}}>(buf, loc) };";
+     if (IsBitFlagsEnum(enum_def)) {
+-      code_ += "    Self::from_bits_retain(b)";
++      code_ += "    unsafe { Self::from_bits_unchecked(b) }";
+     } else {
+       code_ += "    Self(b)";
+     }
+@@ -899,7 +900,7 @@ class RustGenerator : public BaseGenerator {
+     code_ += "  fn from_little_endian(v: {{BASE_TYPE}}) -> Self {";
+     code_ += "    let b = {{BASE_TYPE}}::from_le(v);";
+     if (IsBitFlagsEnum(enum_def)) {
+-      code_ += "    Self::from_bits_retain(b)";
++      code_ += "    unsafe { Self::from_bits_unchecked(b) }";
+     } else {
+       code_ += "    Self(b)";
+     }

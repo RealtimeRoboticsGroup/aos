@@ -1,0 +1,114 @@
+Description: Standardize inclusion paths and type declaration files for deterministic schemas.
+    This prevents non-deterministic schema compilation and output
+    mismatches caused by absolute host paths or sandbox environment
+    variances leaking into generated binary schemas.
+    Implemented by:
+    1) Modifying Parser::DoParse in src/idl_parser.cpp to
+       track included files using virtual schema-relative inclusion
+       names (include_filename) instead of host filesystem paths, and
+       updating Parser::Serialize to populate the included_files vector
+       using schema_name to strip absolute path details.
+    2) Modifying StructDef::Serialize, ServiceDef::Serialize, and
+       EnumDef::Serialize in src/idl_parser.cpp to strip directory paths
+       from the declaration_file fields of types, so the metadata only
+       records the schema filename (basename) rather than layout-specific paths.
+    3) Defining and using StripLayoutPath to strip bazel-out and external
+       prefixes while keeping source-layout directory paths (like frc/math/).
+
+diff --git a/src/idl_parser.cpp b/src/idl_parser.cpp
+index 0aaccbb..8ee62e5 100644
+--- a/src/idl_parser.cpp
++++ b/src/idl_parser.cpp
+@@ -3749,7 +3749,9 @@ CheckedError Parser::DoParse(const char* source, const char** include_paths,
+ 
+     if (included_files_.find(source_hash) == included_files_.end()) {
+       included_files_[source_hash] = include_filename ? include_filename : "";
+-      files_included_per_file_[source_filename] = std::set<IncludedFile>();
++      files_included_per_file_[include_filename ? include_filename
++                                                : source_filename] =
++          std::set<IncludedFile>();
+     } else {
+       return NoError();
+     }
+@@ -3801,7 +3803,9 @@ CheckedError Parser::DoParse(const char* source, const char** include_paths,
+         IncludedFile included_file;
+         included_file.filename = filepath;
+         included_file.schema_name = name;
+-        files_included_per_file_[source_filename].insert(included_file);
++        files_included_per_file_[include_filename ? include_filename
++                                                  : source_filename]
++            .insert(included_file);
+       }
+ 
+       std::string contents;
+@@ -3994,6 +3994,29 @@
+   return true;
+ }
+ 
++static std::string StripLayoutPath(const std::string &filepath) {
++  std::string path = filepath;
++  size_t bazel_out_pos = path.find("bazel-out/");
++  if (bazel_out_pos != std::string::npos) {
++    size_t bin_pos = path.find("/bin/", bazel_out_pos);
++    if (bin_pos != std::string::npos) {
++      path = path.substr(bin_pos + 5);
++    } else {
++      size_t genfiles_pos = path.find("/genfiles/", bazel_out_pos);
++      if (genfiles_pos != std::string::npos) {
++        path = path.substr(genfiles_pos + 10);
++      }
++    }
++  }
++  if (path.rfind("external/", 0) == 0) {
++    size_t next_slash = path.find('/', 9);
++    if (next_slash != std::string::npos) {
++      path = path.substr(next_slash + 1);
++    }
++  }
++  return path;
++}
++
+ void Parser::Serialize() {
+   builder_.Clear();
+   AssignIndices(structs_.vec);
+@@ -4031,12 +4054,14 @@
+     std::vector<Offset<flatbuffers::String>> included_files;
+     for (auto f = files_included_per_file_.begin();
+          f != files_included_per_file_.end(); f++) {
+-      const auto filename__ = builder_.CreateSharedString(FilePath(
+-          opts.project_root, f->first, opts.binary_schema_absolute_paths));
++      const std::string filename = (f->first == file_being_parsed_) ? StripPath(f->first) : StripLayoutPath(f->first);
++      const auto filename__ = builder_.CreateSharedString(filename);
+       for (auto i = f->second.begin(); i != f->second.end(); i++) {
+-        included_files.push_back(builder_.CreateSharedString(
+-            FilePath(opts.project_root, i->filename,
+-                     opts.binary_schema_absolute_paths)));
++        // AOS Modification (hack): Strip out any bazel-out nonsense, since it
++        // results in non-deterministic generation.  Use schema_name instead of
++        // filename for that.
++        std::string filename = i->schema_name;
++        included_files.push_back(builder_.CreateSharedString(filename));
+       }
+       const auto included_files__ = builder_.CreateVector(included_files);
+       included_files.clear();
+@@ -4084,5 +4084,5 @@ Offset<reflection::Object> StructDef::Serialize(FlatBufferBuilder *builder,
+   const auto docs__ = parser.opts.binary_schema_comments && !doc_comment.empty()
+                           ? builder->CreateVectorOfStrings(doc_comment)
+                           : 0;
+-  std::string decl_file_in_project = declaration_file ? *declaration_file : "";
++  std::string decl_file_in_project = declaration_file ? StripPath(*declaration_file) : "";
+   const auto file__ = builder->CreateSharedString(decl_file_in_project);
+@@ -4226,5 +4226,5 @@ Offset<reflection::Service> ServiceDef::Serialize(FlatBufferBuilder *builder,
+   const auto docs__ = parser.opts.binary_schema_comments && !doc_comment.empty()
+                           ? builder->CreateVectorOfStrings(doc_comment)
+                           : 0;
+-  std::string decl_file_in_project = declaration_file ? *declaration_file : "";
++  std::string decl_file_in_project = declaration_file ? StripPath(*declaration_file) : "";
+   const auto file__ = builder->CreateSharedString(decl_file_in_project);
+@@ -4264,5 +4264,5 @@ Offset<reflection::Enum> EnumDef::Serialize(FlatBufferBuilder *builder,
+   const auto docs__ = parser.opts.binary_schema_comments && !doc_comment.empty()
+                           ? builder->CreateVectorOfStrings(doc_comment)
+                           : 0;
+-  std::string decl_file_in_project = declaration_file ? *declaration_file : "";
++  std::string decl_file_in_project = declaration_file ? StripPath(*declaration_file) : "";
+   const auto file__ = builder->CreateSharedString(decl_file_in_project);
