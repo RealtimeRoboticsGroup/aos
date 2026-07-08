@@ -217,15 +217,23 @@ py_test(
         ":log_to_mcap",
         "@com_github_foxglove_mcap_mcap//file",
     ],
-    target_compatible_with = ["@platforms//cpu:x86_64"],
+    target_compatible_with = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
 )
 
 cc_test(
     name = "mcap_logger_test",
     srcs = ["mcap_logger_test.cc"],
+    data = [
+        "reflection_schema.json",
+    ],
     deps = [
         ":mcap_logger",
         "//aos/testing:googletest",
+        "//aos/testing:path",
+        "//aos/util:file",
         "@com_github_nlohmann_json//:json",
     ],
 )
@@ -448,6 +456,7 @@ cc_library(
     name = "proc_stat",
     srcs = ["proc_stat.cc"],
     hdrs = ["proc_stat.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/log:absl_log",
@@ -490,6 +499,7 @@ cc_library(
     name = "scoped_pipe",
     srcs = ["scoped_pipe.cc"],
     hdrs = ["scoped_pipe.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
@@ -500,6 +510,7 @@ cc_library(
 cc_test(
     name = "scoped_pipe_test",
     srcs = ["scoped_pipe_test.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":scoped_pipe",
         "//aos/testing:googletest",
@@ -569,6 +580,10 @@ cc_library(
     name = "foxglove_websocket_lib",
     srcs = ["foxglove_websocket_lib.cc"],
     hdrs = ["foxglove_websocket_lib.h"],
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
     deps = [
         ":live_metadata_fbs",
         ":live_metadata_schema",
@@ -602,6 +617,10 @@ cc_library(
 cc_binary(
     name = "foxglove_websocket",
     srcs = ["foxglove_websocket.cc"],
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:public"],
     deps = [
         ":foxglove_websocket_lib",
