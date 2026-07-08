@@ -1,5 +1,6 @@
 #include "aos/network/multinode_timestamp_filter.h"
 
+#include <bit>
 #include <chrono>
 #include <functional>
 #include <map>
@@ -2233,14 +2234,12 @@ class BitSet64 {
   // Returns the first bit set at or after start.  Returns size() if no more
   // bits are set.
   size_t FirstBitSet(size_t start) const {
-    static_assert(sizeof(uintmax_t) == sizeof(int64_t),
-                  "ffsimax is the wrong size");
-    const int ffs = __builtin_ffsll(data_ & (~((1u << start) - 1u)));
-    if (ffs == 0) {
+    const uint64_t masked = data_ & (~((1ULL << start) - 1ULL));
+    if (masked == 0) {
       return size_;
     }
 
-    return ffs - 1;
+    return std::countr_zero(masked);
   }
 
  private:
