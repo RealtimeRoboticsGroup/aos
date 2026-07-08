@@ -1,6 +1,5 @@
 #include "aos/logging/log_namer.h"
 
-#include <dirent.h>
 #include <mntent.h>
 #include <unistd.h>
 
@@ -8,6 +7,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <ostream>
 #include <string>
 
@@ -38,33 +38,31 @@ namespace {
 void AllocateLogName(char **filename, const char *directory,
                      const char *basename) {
   int fileindex = 0;
-  DIR *const d = opendir(directory);
-  if (d == nullptr) {
-    PLOG(FATAL) << "could not open directory" << directory;
+  std::error_code ec;
+  std::filesystem::directory_iterator dir_iter(directory, ec);
+  if (ec) {
+    LOG(FATAL) << "could not open directory " << directory << ": "
+               << ec.message();
   }
   int index = 0;
-  while (true) {
-    errno = 0;
-    struct dirent *const dir = readdir(d);
-    if (dir == nullptr) {
-      if (errno == 0) {
-        break;
-      } else {
-        PLOG(FATAL) << "readdir(" << d << ") failed";
-      }
-    } else {
-      char previous_date[512];
-      // Look for previous index and date
-      const std::string format_string = std::string(basename) + "-%d_%s";
-      if (sscanf(dir->d_name, format_string.c_str(), &index, &previous_date) ==
-          2) {
-        if (index >= fileindex) {
-          fileindex = index + 1;
-        }
+  while (dir_iter != std::filesystem::directory_iterator()) {
+    const auto &entry = *dir_iter;
+    char previous_date[512];
+    // Look for previous index and date.
+    const std::string filename_str = entry.path().filename().string();
+    const std::string format_string = std::string(basename) + "-%d_%s";
+    if (sscanf(filename_str.c_str(), format_string.c_str(), &index,
+               &previous_date) == 2) {
+      if (index >= fileindex) {
+        fileindex = index + 1;
       }
     }
+    dir_iter.increment(ec);
+    if (ec) {
+      LOG(FATAL) << "failed iterating directory " << directory << ": "
+                 << ec.message();
+    }
   }
-  closedir(d);
 
   char previous[512];
   ::std::string path = ::std::string(directory) + "/" + basename + "-current";
