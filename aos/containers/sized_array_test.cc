@@ -174,7 +174,11 @@ TEST(SizedArrayTest, OverflowTest) {
   // Verify that we didn't reallocate
   EXPECT_EQ(pre_front, a.data());
 
+#ifdef _WIN32
+  EXPECT_DEATH(a.emplace_back(5), "SIGABRT received at");
+#else
   EXPECT_DEATH(a.emplace_back(5), "SIGILL received at|SIGTRAP received at");
+#endif
 }
 
 // Tests inserting at various positions in the array.
