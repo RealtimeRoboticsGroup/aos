@@ -291,10 +291,15 @@ cc_library(
     deps = [
         ":sanitizers",
         ":uuid",
-        "//aos/ipc_lib:aos_sync",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
-    ],
+    ] + select({
+        "@platforms//os:osx": ["//aos/ipc_lib:aos_sync"],
+        "@platforms//os:windows": [
+            "@microsoft_detours//:detours",
+        ],
+        "//conditions:default": [],
+    }),
 )
 
 static_flatbuffer(
@@ -531,7 +536,11 @@ cc_library(
     name = "flatbuffer_merge",
     srcs = ["flatbuffer_merge.cc"],
     hdrs = ["flatbuffer_merge.h"],
-    copts = ["-Wno-cast-align"],
+    copts = compiler_select({
+        "clang": ["-Wno-cast-align"],
+        "gcc": ["-Wno-cast-align"],
+        "msvc": [],
+    }),
     visibility = ["//visibility:public"],
     deps = [
         ":flatbuffer_utils",

@@ -306,6 +306,14 @@ http_archive(
     urls = ["https://crates.io/api/v1/crates/cxxbridge-cmd/1.0.100/download"],
 )
 
+http_archive(
+    name = "microsoft_detours",
+    build_file = "@aos//third_party:detours.BUILD",
+    integrity = "sha256-dvOWeFbHjEWMHSgvHdZjtAPDaURm0W/fWxb30iGoT0s=",
+    strip_prefix = "Detours-d644ce94e8c7f7f5a31591577c78134ea3ac1fae",
+    urls = ["https://github.com/microsoft/Detours/archive/d644ce94e8c7f7f5a31591577c78134ea3ac1fae.tar.gz"],
+)
+
 bazel_dep(name = "arm64_debian_sysroot", version = "2025.10.25", dev_dependency = True)
 
 bazel_dep(name = "buildifier_prebuilt", version = "7.3.1")

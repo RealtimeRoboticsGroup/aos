@@ -1,7 +1,5 @@
 #include "aos/realtime.h"
 
-#include <pthread.h>
-
 #include "absl/base/internal/raw_logging.h"
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
@@ -194,6 +192,7 @@ TEST(RealtimeDeathTest, NewArray) {
       "RAW: Malloced");
 }
 
+#ifndef _WIN32
 // Tests that the signal handler drops RT permission and prints out a real
 // backtrace instead of crashing on the resulting mallocs.
 TEST(RealtimeDeathTest, SignalHandler) {
@@ -205,6 +204,7 @@ TEST(RealtimeDeathTest, SignalHandler) {
       },
       "\\*\\*\\* SIGSEGV received at .*");
 }
+#endif
 
 // Tests that ABSL_RAW_LOG(FATAL) explodes properly.
 TEST(RealtimeDeathTest, RawFatal) {
@@ -216,9 +216,9 @@ TEST(RealtimeDeathTest, RawFatal) {
       "Cute message here");
 }
 
-#endif
+#endif  // !defined(AOS_SANITIZE_MEMORY) && !defined(AOS_SANITIZE_ADDRESS)
 
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(_WIN32)
 // Tests that we see which CPUs we tried to set when it fails. This can be
 // useful for debugging.
 TEST(RealtimeDeathTest, SetAffinityErrorMessage) {

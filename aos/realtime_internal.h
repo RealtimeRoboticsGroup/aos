@@ -9,6 +9,8 @@ enum class AllowSoftLimitDecrease { kYes, kNo };
 
 #ifdef __linux__
 using RlimT = rlim64_t;
+#elif defined(_WIN32)
+using RlimT = int;
 #else
 using RlimT = rlim_t;
 #endif
