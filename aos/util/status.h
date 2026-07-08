@@ -266,52 +266,19 @@ inline std::ostream &operator<<(std::ostream &stream, const Status &result) {
     }                                                                         \
   }
 
-namespace internal {
-// The below is a cutesy way to prevent
-// AOS_GET_VALUE_OR_RETURN_ERROR() from being called with an lvalue
-// expression. We do this because it may not be obvious to users whether
-// AOS_GET_VALUE_OR_RETURN_ERROR() would attempt to copy the
-// provided lvalue or move from it. The result variable is generally going
-// to own the returned value, and so must either copy or move from the input.
-// When the input expression is a temporary this is easy---we can just always
-// move, avoiding extra copies without anyone noticing. If the input is an
-// lvalue (e.g., some other variable being used to store a Result<>), then
-// choosing one or the other creates a footgun. There may be cleaner ways to
-// enforce that the input expression be a temporary, but this wrapper
-// conveniently fails to compile when passed an lvalue reference. If we did want
-// to make AOS_GET_VALUE_OR_RETURN_ERROR support moving lvalue
-// references into it then we could define a template <typename T> T
-// &ForwardExpression(T &lvalue) { return lvalue; } overload and the below macro
-// would work fine If, alternatively, we wanted to copy the input lvalue's, we
-// could define a template <typename T> T ForwardExpression(T &lvalue) { return
-// lvalue; } to achieve that result.
-template <typename T>
-T ForwardExpression(T &&rvalue) {
-  return std::move(rvalue);
-}
-}  // namespace internal
-
-// If expression (of type Result<T>) evaluates to an error state, then this
-// macro will call `return`. If the expression does not evaluate to an error
-// state, it will get the value out of the Result. Use like so:
+// Evaluates expression (of type Result<T>). If it is an error state, calls
+// `return` with the error. Otherwise, assigns the value to lhs. Use like so:
 //
-//   Result<int> result = ...
-//   int value = AOS_GET_VALUE_OR_RETURN_ERROR(result);
-//   std::cout << value << "\n";
-//
-// If `result` is an error state, then the `std::cout` will never execute
-// because the macro will return from the current function. If `result`
-// contains a value, however, it will be printed via `std::cout`.
-#define AOS_GET_VALUE_OR_RETURN_ERROR(expression)                  \
-  ({                                                               \
-    /* Ensure that we only evalute result once. */                 \
-    decltype(::aos::internal::ForwardExpression(expression)) tmp = \
-        (expression);                                              \
-    if (!tmp.has_value()) {                                        \
-      return ::aos::MakeError(tmp.error());                        \
-    }                                                              \
-    std::move(tmp.value());                                        \
-  })
+//   int value;
+//   AOS_ASSIGN_OR_RETURN_ERROR(value, MaybeGetInt());
+#define AOS_ASSIGN_OR_RETURN_ERROR(lhs, expression)              \
+  {                                                              \
+    auto &&aos_assign_or_return_tmp = (expression);              \
+    if (!aos_assign_or_return_tmp.has_value()) {                 \
+      return ::aos::MakeError(aos_assign_or_return_tmp.error()); \
+    }                                                            \
+    lhs = std::move(aos_assign_or_return_tmp.value());           \
+  }
 
 }  // namespace aos
 

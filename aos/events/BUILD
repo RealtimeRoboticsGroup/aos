@@ -563,6 +563,7 @@ cc_library(
         "//aos/network:remote_message_fbs",
         "//aos/network:timestamp_channel",
         "//aos/util:phased_loop",
+        "//aos/util:status",
         "@com_google_absl//absl/container:btree",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log:die_if_null",

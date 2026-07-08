@@ -31,19 +31,17 @@ TEST_F(ErrorTest, RealtimeError) {
   EXPECT_EQ(
       std::string("status_test.cc"),
       std::filesystem::path(error->source_location()->file_name()).filename());
-  EXPECT_EQ(
-      std::string("virtual void "
-                  "aos::testing::ErrorTest_RealtimeError_Test::TestBody()"),
-      error->source_location()->function_name());
+  EXPECT_THAT(error->source_location()->function_name(),
+              ::testing::HasSubstr("ErrorTest_RealtimeError_Test::TestBody"));
   EXPECT_EQ(line, error->source_location()->line());
   EXPECT_LT(1, error->source_location()->column());
   EXPECT_THAT(
       error->ToString(),
-      ::testing::HasSubstr(absl::StrFormat(
-          "status_test.cc:%d in virtual void "
-          "aos::testing::ErrorTest_RealtimeError_Test::TestBody(): Errored "
-          "with code of 1 and message: Hello, World!",
-          line)));
+      ::testing::AllOf(
+          ::testing::HasSubstr(absl::StrFormat("status_test.cc:%d in ", line)),
+          ::testing::HasSubstr("ErrorTest_RealtimeError_Test::TestBody"),
+          ::testing::HasSubstr(
+              "Errored with code of 1 and message: Hello, World!")));
 }
 
 // Tests that the ResultExitCode() function will correctly transform a Result<>
@@ -165,57 +163,60 @@ TEST_F(ErrorTest, ReturnResultEvaluatesOnce) {
                            "should have been evaluated exactly once.";
 }
 
-TEST_F(ErrorTest, DeclareVariableNoExtraCopies) {
+TEST_F(ErrorTest, AssignOrReturnNoExtraCopies) {
   Result<DisallowCopy> test_value = {};
   bool executed = false;
   const Result<> result = [&test_value, &executed]() -> Result<> {
-    [[maybe_unused]] DisallowCopy expected =
-        AOS_GET_VALUE_OR_RETURN_ERROR(test_value);
+    DisallowCopy expected;
+    AOS_ASSIGN_OR_RETURN_ERROR(expected, test_value);
     executed = true;
     // next, confirm that we do actually return early on an unexpected.
-    [[maybe_unused]] DisallowCopy never_reached = AOS_GET_VALUE_OR_RETURN_ERROR(
-        Result<DisallowCopy>(MakeError("Hello, World!")));
+    DisallowCopy never_reached;
+    AOS_ASSIGN_OR_RETURN_ERROR(
+        never_reached, Result<DisallowCopy>(MakeError("Hello, World!")));
     return {};
   }();
   EXPECT_FALSE(result.has_value());
   EXPECT_TRUE(executed);
 }
 
-TEST_F(ErrorTest, InitializeVariableNoExtraCopies) {
+TEST_F(ErrorTest, AssignNoExtraCopies) {
   bool executed = false;
   const Result<> result = [&executed]() -> Result<> {
-    [[maybe_unused]] DisallowCopy tmp =
-        AOS_GET_VALUE_OR_RETURN_ERROR(Result<DisallowCopy>{});
+    DisallowCopy tmp;
+    AOS_ASSIGN_OR_RETURN_ERROR(tmp, Result<DisallowCopy>{});
     executed = true;
     DisallowCopy tmp2;
     // next, confirm that we do actually return early on an unexpected.
-    AOS_GET_VALUE_OR_RETURN_ERROR(
-        Result<DisallowCopy>(MakeError("Hello, World!")));
+    AOS_ASSIGN_OR_RETURN_ERROR(
+        tmp2, Result<DisallowCopy>(MakeError("Hello, World!")));
     return {};
   }();
   EXPECT_FALSE(result.has_value());
   EXPECT_TRUE(executed);
 }
 
-// Validates that the AOS_GET_VALUE_OR_RETURN_ERROR() macro can
+// Validates that the AOS_ASSIGN_OR_RETURN_ERROR() macro can
 // handle a temporary expression. When run under sanitizers this should also
 // help to validate if the lifetime of any temporaries in
-// AOS_GET_VALUE_OR_RETURN_ERROR are handled incorrectly.
-TEST_F(ErrorTest, InitializeVariableLifetime) {
+// AOS_ASSIGN_OR_RETURN_ERROR are handled incorrectly.
+TEST_F(ErrorTest, AssignLifetime) {
   const Result<> result = []() -> Result<> {
-    [[maybe_unused]] DisallowCopy tmp = AOS_GET_VALUE_OR_RETURN_ERROR(
-        Result<DisallowCopy>(MakeError("Hello, World!")));
+    DisallowCopy tmp;
+    AOS_ASSIGN_OR_RETURN_ERROR(
+        tmp, Result<DisallowCopy>(MakeError("Hello, World!")));
     return {};
   }();
   EXPECT_FALSE(result.has_value());
 }
 
 // Validates that we evaluate the expression passed to
-// AOS_GET_VALUE_OR_RETURN_ERROR exactly once.
-TEST_F(ErrorTest, InitializeVariableEvaluatesOnce) {
+// AOS_ASSIGN_OR_RETURN_ERROR exactly once.
+TEST_F(ErrorTest, AssignEvaluatesOnce) {
   int counter = 0;
   const Result<> result = [&counter]() -> Result<> {
-    int tmp = AOS_GET_VALUE_OR_RETURN_ERROR([&counter]() -> Result<int> {
+    int tmp;
+    AOS_ASSIGN_OR_RETURN_ERROR(tmp, [&counter]() -> Result<int> {
       counter++;
       return counter;
     }());
@@ -223,8 +224,9 @@ TEST_F(ErrorTest, InitializeVariableEvaluatesOnce) {
     return {};
   }();
   EXPECT_TRUE(result.has_value());
-  EXPECT_EQ(1, counter) << "The expression passed to AOS_RETURN_IF_ERROR "
-                           "should have been evaluated exactly once.";
+  EXPECT_EQ(1, counter)
+      << "The expression passed to AOS_ASSIGN_OR_RETURN_ERROR "
+         "should have been evaluated exactly once.";
 }
 
 // Validates that the "value vs. error" functions do what we expect them to do.

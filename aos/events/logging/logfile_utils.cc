@@ -1607,8 +1607,8 @@ Result<const Message *> MessageSorter::Front() {
         break;
       }
 
-      std::shared_ptr<UnpackedMessageHeader> msg =
-          AOS_GET_VALUE_OR_RETURN_ERROR(parts_message_reader_.ReadMessage());
+      std::shared_ptr<UnpackedMessageHeader> msg;
+      AOS_ASSIGN_OR_RETURN_ERROR(msg, parts_message_reader_.ReadMessage());
       // No data left, sorted forever, work through what is left.
       if (!msg) {
         sorted_until_ = monotonic_clock::max_time;
@@ -2012,8 +2012,8 @@ Status SplitTimestampBootMerger::QueueTimestamps(
   while (true) {
     // Load all the timestamps.  If we find data, ignore it and drop it on the
     // floor.  It will be read when boot_merger_ is used.
-    const Message *msg =
-        AOS_GET_VALUE_OR_RETURN_ERROR(timestamp_boot_merger_->Front());
+    const Message *msg;
+    AOS_ASSIGN_OR_RETURN_ERROR(msg, timestamp_boot_merger_->Front());
     if (!msg) {
       queue_timestamps_ran_ = true;
       return Ok();
@@ -2248,7 +2248,9 @@ Result<TimestampedMessage *> TimestampMapper::Front() {
   }
 
   if (matched_messages_.empty()) {
-    if (!AOS_GET_VALUE_OR_RETURN_ERROR(QueueMatched())) {
+    bool queued_matched;
+    AOS_ASSIGN_OR_RETURN_ERROR(queued_matched, QueueMatched());
+    if (!queued_matched) {
       first_message_ = FirstMessage::kNullptr;
       VLOG(1) << this << " TimestampMapper::Front " << node_name()
               << " nullptr";
@@ -2286,7 +2288,8 @@ Result<TimestampMapper::MatchResult> TimestampMapper::MaybeQueueMatched() {
   if (nodes_data_.empty()) {
     // Simple path.  We are single node, so there are no timestamps to match!
     CHECK_EQ(messages_.size(), 0u);
-    const Message *msg = AOS_GET_VALUE_OR_RETURN_ERROR(boot_merger_.Front());
+    const Message *msg;
+    AOS_ASSIGN_OR_RETURN_ERROR(msg, boot_merger_.Front());
     if (!msg) {
       return MatchResult::kEndOfFile;
     }
@@ -2311,7 +2314,9 @@ Result<TimestampMapper::MatchResult> TimestampMapper::MaybeQueueMatched() {
   // messages which are delivered.  Reuse the flow below which uses messages_
   // by just adding the new message to messages_ and continuing.
   if (messages_.empty()) {
-    if (!AOS_GET_VALUE_OR_RETURN_ERROR(Queue())) {
+    bool queued;
+    AOS_ASSIGN_OR_RETURN_ERROR(queued, Queue());
+    if (!queued) {
       // Found nothing to add, we are out of data!
       return MatchResult::kEndOfFile;
     }
@@ -2338,7 +2343,8 @@ Result<TimestampMapper::MatchResult> TimestampMapper::MaybeQueueMatched() {
   } else {
     // Got a timestamp, find the matching remote data, match it, and return
     // it.
-    Message data = AOS_GET_VALUE_OR_RETURN_ERROR(MatchingMessageFor(*msg));
+    Message data;
+    AOS_ASSIGN_OR_RETURN_ERROR(data, MatchingMessageFor(*msg));
 
     // Return the data from the remote.  The local message only has timestamp
     // info which isn't relevant anymore once extracted.
@@ -2377,7 +2383,9 @@ Result<TimestampMapper::MatchResult> TimestampMapper::MaybeQueueMatched() {
 
 Result<void> TimestampMapper::QueueUntil(BootTimestamp queue_time) {
   while (last_message_time_ <= queue_time) {
-    if (!AOS_GET_VALUE_OR_RETURN_ERROR(QueueMatched())) {
+    bool queued_matched;
+    AOS_ASSIGN_OR_RETURN_ERROR(queued_matched, QueueMatched());
+    if (!queued_matched) {
       return Ok();
     }
   }
@@ -2395,7 +2403,9 @@ Result<void> TimestampMapper::QueueFor(
   // Make sure we have something queued first.  This makes the end time
   // calculation simpler, and is typically what folks want regardless.
   if (matched_messages_.empty()) {
-    if (!AOS_GET_VALUE_OR_RETURN_ERROR(QueueMatched())) {
+    bool queued_matched;
+    AOS_ASSIGN_OR_RETURN_ERROR(queued_matched, QueueMatched());
+    if (!queued_matched) {
       return Ok();
     }
   }
@@ -2410,7 +2420,9 @@ Result<void> TimestampMapper::QueueFor(
   // --time_estimation_buffer_seconds seconds queued up (but queue at least
   // until the log starts).
   while (end_queue_time >= last_message_time_.time) {
-    if (!AOS_GET_VALUE_OR_RETURN_ERROR(QueueMatched())) {
+    bool queued_matched;
+    AOS_ASSIGN_OR_RETURN_ERROR(queued_matched, QueueMatched());
+    if (!queued_matched) {
       return Ok();
     }
   }
@@ -2562,7 +2574,9 @@ Result<void> TimestampMapper::QueueUnmatchedUntil(BootTimestamp t) {
       return Ok();
     }
 
-    if (!AOS_GET_VALUE_OR_RETURN_ERROR(Queue())) {
+    bool queued;
+    AOS_ASSIGN_OR_RETURN_ERROR(queued, Queue());
+    if (!queued) {
       // Found nothing to add, we are out of data!
       queued_until_ = BootTimestamp::max_time();
       return Ok();
