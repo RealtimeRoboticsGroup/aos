@@ -1,7 +1,11 @@
 #include "aos/network/team_number.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <netinet/in.h>
 #include <unistd.h>
+#endif
 
 #include <cinttypes>
 #include <cstdlib>
@@ -110,10 +114,17 @@ uint16_t DoGetTeamNumber() {
 
 ::std::string GetHostname() {
   if (absl::GetFlag(FLAGS_override_hostname).empty()) {
+#ifdef _WIN32
+    char buf[MAX_COMPUTERNAME_LENGTH + 1];
+    DWORD size = sizeof(buf);
+    ABSL_PCHECK(GetComputerNameA(buf, &size) != 0);
+    return buf;
+#else
     char buf[256];
     buf[sizeof(buf) - 1] = '\0';
     ABSL_PCHECK(gethostname(buf, sizeof(buf) - 1) == 0);
     return buf;
+#endif
   } else {
     return absl::GetFlag(FLAGS_override_hostname);
   }
