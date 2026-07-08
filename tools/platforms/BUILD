@@ -167,6 +167,6 @@ platform(
         "--features=-default_cpp_std",
         "--cxxopt=/std:c++20",
         "--cxxopt=/Zc:preprocessor",
-        "--per_file_copt=external/.*@-wd5287,-wd4715,-wd4244",
+        "--per_file_copt=external/.*@-wd5287,-wd4715,-wd4244,-wd4624,-wd4267,-wd4047,-wd4312,-wd4805",
     ],
 )
