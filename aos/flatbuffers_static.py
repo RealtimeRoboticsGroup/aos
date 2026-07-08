@@ -66,10 +66,16 @@ def main(argv):
         for line in output_prefix:
             output.write(line)
             output.write(b'\n')
-        output.write(b'  alignas(64) static constexpr char kData[] = "')
-        for byte in bfbs:
-            output.write(b'\\x' + (b'%x' % byte).zfill(2))
-        output.write(b'";\n')
+        output.write(b'  alignas(64) static constexpr uint8_t kData[] = {\n')
+        # Add a trailing 0 to match the string literal null-termination size
+        bfbs_padded = bfbs + b'\0'
+        chunks = []
+        for i in range(0, len(bfbs_padded), 16):
+            chunk = bfbs_padded[i:i + 16]
+            chunks.append(b', '.join(b'0x' + (b'%02x' % b) for b in chunk))
+        output.write(b'    ')
+        output.write(b',\n    '.join(chunks))
+        output.write(b'\n  };\n')
         for line in output_suffix:
             output.write(line)
             output.write(b'\n')
