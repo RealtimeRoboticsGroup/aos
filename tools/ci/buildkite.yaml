@@ -18,7 +18,7 @@ steps:
 
   - label: "x86_64"
     commands:
-      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../k8_output_base test ${COMMON} --config=eigen ${TARGETS} --remote_download_outputs=minimal --noenable_bzlmod --enable_workspace -- -@ceres-solver//:polynomial_test -@com_google_absl//absl/numeric:bits_test -//aos/ipc_lib:lockless_queue_wrap_test_atomic_times -//aos/ipc_lib:lockless_queue_wrap_test_no_atomic_times
+      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../k8_output_base test ${COMMON} --config=eigen ${TARGETS} --remote_download_outputs=minimal --noenable_bzlmod --enable_workspace -- -@ceres-solver//:polynomial_test -@com_google_absl//absl/numeric:bits_test
     retry:
       automatic:
         - exit_status: -1  # Connection to the Agent was lost
@@ -40,7 +40,7 @@ steps:
 
   - label: "x86_64 bzlmod Python 3.10"
     commands:
-      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../k8_output_base test ${COMMON} --config=eigen --@rules_python//python/config_settings:python_version=3.10 ${TARGETS} --remote_download_outputs=minimal --enable_bzlmod --noenable_workspace --lockfile_mode=error -- -@ceres-solver//:polynomial_test -@com_google_absl//absl/numeric:bits_test -//aos/ipc_lib:lockless_queue_wrap_test_atomic_times -//aos/ipc_lib:lockless_queue_wrap_test_no_atomic_times
+      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../k8_output_base test ${COMMON} --config=eigen --@rules_python//python/config_settings:python_version=3.10 ${TARGETS} --remote_download_outputs=minimal --enable_bzlmod --noenable_workspace --lockfile_mode=error -- -@ceres-solver//:polynomial_test -@com_google_absl//absl/numeric:bits_test
     retry:
       automatic:
         - exit_status: -1  # Connection to the Agent was lost

@@ -333,6 +333,7 @@ cc_library(
             deps = [
                 ":lockless_queue_test_utils" + suffix,
                 ":queue_racer" + suffix,
+                "//aos/containers:resizeable_buffer",
             ],
         ),
         cc_test(

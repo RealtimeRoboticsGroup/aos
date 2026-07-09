@@ -17,6 +17,7 @@
 
 #include "aos/events/context.h"
 #include "aos/ipc_lib/event.h"
+#include "aos/ipc_lib/lockless_queue_memory.h"
 
 namespace aos::ipc_lib {
 namespace {
@@ -41,7 +42,8 @@ QueueRacer::QueueRacer(LocklessQueue queue, int num_threads,
       num_messages_(num_messages),
       channel_storage_duration_(std::chrono::nanoseconds(1)),
       expected_send_results_({LocklessQueueSender::Result::GOOD}),
-      check_writes_and_reads_(true) {
+      check_writes_and_reads_(true),
+      initial_queue_index_(0) {
   CHECK_LT(1u, std::thread::hardware_concurrency())
       << "Queue racing must be done on a multi-core executor.";
   Reset();
@@ -54,10 +56,130 @@ QueueRacer::QueueRacer(LocklessQueue queue,
       num_messages_(config.num_messages),
       channel_storage_duration_(config.channel_storage_duration),
       expected_send_results_(config.expected_send_results),
-      check_writes_and_reads_(config.check_writes_and_reads) {
+      check_writes_and_reads_(config.check_writes_and_reads),
+      initial_queue_index_(config.initial_queue_index) {
   CHECK_LT(1u, std::thread::hardware_concurrency())
       << "Queue racing must be done on a multi-core executor.";
   Reset();
+}
+
+void QueueRacer::Reset() {
+  memset(reinterpret_cast<void *>(queue_.memory()), 0,
+         LocklessQueueMemorySize(queue_.config()));
+  queue_.Initialize();
+  if (initial_queue_index_ != 0) {
+    LocklessQueueMemory *const memory = queue_.memory();
+    const uint32_t queue_size = memory->queue_size();
+    const uint32_t max_index = QueueIndex::MaxIndex(0xffffffffu, queue_size);
+    const uint64_t N = initial_queue_index_;
+    const size_t msg_data_size = memory->message_data_size();
+
+    // 1. Initialize queue slots.
+    for (uint32_t j = 0; j < queue_size; ++j) {
+      uint64_t qi;
+      uint32_t msg_idx;
+      if (N == 0 || N - 1 < j) {
+        qi = j - queue_size;
+        msg_idx = j;
+      } else {
+        uint64_t w = j + ((N - 1 - j) / queue_size) * queue_size;
+        qi = w;
+        msg_idx = (w + queue_size) % (queue_size + 1);
+      }
+      QueueIndex qi_wrapped =
+          QueueIndex::Zero(queue_size).IncrementBy(qi % max_index);
+      memory->GetQueue(j)->Store(Index(qi_wrapped, msg_idx));
+    }
+
+    // 2. Initialize sender scratch buffers.
+    const int num_senders = memory->num_senders();
+    for (int s = 0; s < num_senders; ++s) {
+      uint32_t msg_idx;
+      if (s == 0) {
+        msg_idx = (N == 0) ? queue_size : (N - 1) % (queue_size + 1);
+      } else {
+        msg_idx = s + queue_size;
+      }
+      memory->GetSender(s)->scratch_index.RelaxedStore(
+          Index(QueueIndex::Invalid(), msg_idx));
+    }
+
+    // 3. Initialize all message pool slots to exact historical state.
+    const size_t num_messages = memory->num_messages();
+    const uint32_t active_sender_scratch =
+        (N == 0) ? queue_size : (N - 1) % (queue_size + 1);
+    for (size_t m = 0; m < num_messages; ++m) {
+      Message *msg = memory->GetMessage(Index(QueueIndex::Invalid(), m));
+#ifdef AOS_IPC_LIB_LOCKLESS_QUEUE_HAS_ATOMIC_TIME_POINT
+      msg->header.monotonic_sent_time.Invalidate();
+      msg->header.realtime_sent_time.Invalidate();
+#else
+      msg->header.monotonic_sent_time = monotonic_clock::min_time;
+      msg->header.realtime_sent_time = realtime_clock::min_time;
+#endif
+      if (m == active_sender_scratch) {
+        msg->header.queue_index.Invalidate();
+        msg->header.length = 0;
+        msg->header.remote_queue_index = 0x00000000;
+        msg->header.source_boot_uuid = UUID::Zero();
+        memset(msg->data(msg_data_size), 0, msg_data_size);
+      } else if (m <= queue_size) {
+        uint64_t start = (m + 1) % (queue_size + 1);
+        if (N > 0 && N - 1 >= start) {
+          uint64_t w =
+              start + ((N - 1 - start) / (queue_size + 1)) * (queue_size + 1);
+
+          struct ThreadPlusCount {
+            uint64_t thread;
+            uint64_t count;
+          };
+          ThreadPlusCount tpc{0, w};
+
+          msg->header.length = sizeof(ThreadPlusCount);
+          msg->header.remote_queue_index = 0x00000000;
+          msg->header.source_boot_uuid = UUID::FromSpan(
+              absl::Span<const uint8_t>(reinterpret_cast<const uint8_t *>(&tpc),
+                                        sizeof(ThreadPlusCount)));
+          msg->header.queue_index.Store(
+              QueueIndex::Zero(queue_size).IncrementBy(w % max_index));
+
+#ifdef AOS_IPC_LIB_LOCKLESS_QUEUE_HAS_ATOMIC_TIME_POINT
+          msg->header.monotonic_sent_time.Store(monotonic_clock::epoch());
+          msg->header.realtime_sent_time.Store(realtime_clock::epoch());
+#else
+          msg->header.monotonic_sent_time = monotonic_clock::epoch();
+          msg->header.realtime_sent_time = realtime_clock::epoch();
+#endif
+
+          msg->header.monotonic_remote_time = monotonic_clock::min_time;
+          msg->header.monotonic_remote_transmit_time =
+              monotonic_clock::min_time;
+          msg->header.realtime_remote_time = realtime_clock::min_time;
+
+          char *const data = msg->data(msg_data_size) + msg_data_size -
+                             sizeof(ThreadPlusCount);
+          memcpy(data, &tpc, sizeof(ThreadPlusCount));
+        } else {
+          msg->header.queue_index.Invalidate();
+          msg->header.length = 0;
+          msg->header.remote_queue_index = 0x00000000;
+          msg->header.source_boot_uuid = UUID::Zero();
+          memset(msg->data(msg_data_size), 0, msg_data_size);
+        }
+      } else {
+        msg->header.queue_index.Invalidate();
+        msg->header.length = 0;
+        msg->header.remote_queue_index = 0x00000000;
+        msg->header.source_boot_uuid = UUID::Zero();
+        memset(msg->data(msg_data_size), 0, msg_data_size);
+      }
+    }
+
+    // 4. Initialize next_queue_index.
+    QueueIndex next_qi =
+        QueueIndex::Zero(queue_size).IncrementBy(N % max_index);
+    memory->next_queue_index.Store(next_qi);
+  }
 }
 
 void QueueRacer::RunIteration(bool race_reads, int write_wrap_count,
@@ -68,8 +190,8 @@ void QueueRacer::RunIteration(bool race_reads, int write_wrap_count,
 
   // Clear out shmem.
   Reset();
-  started_writes_ = 0;
-  finished_writes_ = 0;
+  started_writes_ = initial_queue_index_ * num_threads_;
+  finished_writes_ = initial_queue_index_ * num_threads_;
 
   // Event used to start all the threads processing at once.
   Event run;
@@ -84,7 +206,17 @@ void QueueRacer::RunIteration(bool race_reads, int write_wrap_count,
 
     // Track the number of times we wrap, and cache the modulo.
     uint64_t wrap_count = 0;
-    uint32_t last_queue_index = 0;
+    // The reader thread tracks the latest queue index and detects wrap-around.
+    // - If the queue starts empty (initial_queue_index_ == 0), the first read
+    //   index will be 0. We initialize last_queue_index to 0 so that reading 0
+    //   does not trigger wrap detection (since 0 < 0 is false).
+    // - If the queue starts pre-populated (initial_queue_index_ > 0), the last
+    //   message already in the queue is at initial_queue_index_ - 1. The reader
+    //   will see this value on its first read, so we initialize
+    //   last_queue_index to initial_queue_index_ - 1 to prevent that first read
+    //   from triggering wrap detection.
+    uint32_t last_queue_index =
+        initial_queue_index_ > 0 ? initial_queue_index_ - 1 : 0;
     const uint32_t max_queue_index =
         QueueIndex::MaxIndex(0xffffffffu, queue_.config().queue_size);
     while (poll_index) {
@@ -162,7 +294,7 @@ void QueueRacer::RunIteration(bool race_reads, int write_wrap_count,
     if (will_wrap) {
       t.event_count = ::std::numeric_limits<uint64_t>::max();
     } else {
-      t.event_count = 0;
+      t.event_count = initial_queue_index_;
     }
     t.thread = ::std::thread([this, &t, thread_index, &run,
                               write_wrap_count]() {
@@ -177,9 +309,10 @@ void QueueRacer::RunIteration(bool race_reads, int write_wrap_count,
       run.Wait();
 
       // Gogogo!
-      for (uint64_t i = 0;
-           i < num_messages_ * static_cast<uint64_t>(1 + write_wrap_count);
-           ++i) {
+      const uint64_t start_i = initial_queue_index_;
+      const uint64_t end_i =
+          start_i + (num_messages_ - start_i) * (1 + write_wrap_count);
+      for (uint64_t i = start_i; i < end_i; ++i) {
         char *const data = static_cast<char *>(sender.Data()) + sender.size() -
                            sizeof(ThreadPlusCount);
         const char fill = (i + 55) & 0xFF;
@@ -200,12 +333,13 @@ void QueueRacer::RunIteration(bool race_reads, int write_wrap_count,
 
         memcpy(data, &tpc, sizeof(ThreadPlusCount));
 
-        if (i % 0x800000 == 0x100000) {
-          fprintf(
-              stderr, "Sent %" PRIu64 ", %f %%\n", i,
-              static_cast<double>(i) /
-                  static_cast<double>(num_messages_ * (1 + write_wrap_count)) *
-                  100.0);
+        if ((i - start_i) % 0x800000 == 0x100000) {
+          VLOG(1) << "Sent " << (i - start_i) << ", "
+                  << (static_cast<double>(i - start_i) /
+                      static_cast<double>((num_messages_ - start_i) *
+                                          (1 + write_wrap_count)) *
+                      100.0)
+                  << " %";
         }
 
         ++started_writes_;
@@ -304,9 +438,11 @@ void QueueRacer::CheckReads(bool race_reads, int write_wrap_count,
 
   monotonic_clock::time_point last_monotonic_sent_time =
       monotonic_clock::epoch();
-  uint64_t initial_i = 0;
+  uint64_t initial_i = initial_queue_index_;
   if (will_wrap) {
-    initial_i = (1 + write_wrap_count) * num_messages_ * num_threads_ -
+    initial_i = initial_queue_index_ +
+                (1 + write_wrap_count) *
+                    (num_messages_ - initial_queue_index_) * num_threads_ -
                 LocklessQueueSize(queue_.memory());
   }
 
@@ -320,7 +456,10 @@ void QueueRacer::CheckReads(bool race_reads, int write_wrap_count,
       };
 
   for (uint64_t i = initial_i;
-       i < (1 + write_wrap_count) * num_messages_ * num_threads_; ++i) {
+       i < initial_queue_index_ + (1 + write_wrap_count) *
+                                      (num_messages_ - initial_queue_index_) *
+                                      num_threads_;
+       ++i) {
     monotonic_clock::time_point monotonic_sent_time;
     realtime_clock::time_point realtime_sent_time;
     monotonic_clock::time_point monotonic_remote_time;

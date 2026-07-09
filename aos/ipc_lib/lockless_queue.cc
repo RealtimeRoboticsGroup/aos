@@ -690,6 +690,7 @@ LocklessQueueMemory *InitializeLocklessQueueMemory(
       // because it is used for sent-too-fast checks. Nothing should ever
       // observe the uninitialized realtime send time.
       message->header.monotonic_sent_time = monotonic_clock::min_time;
+      message->header.realtime_sent_time = realtime_clock::min_time;
 #endif
       FillRedzone(memory, message->PreRedzone(memory->message_data_size()));
       FillRedzone(memory, message->PostRedzone(memory->message_data_size(),

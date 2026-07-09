@@ -32,6 +32,8 @@ struct QueueRacerConfiguration {
   // Set to true if all writes and reads are expected to be successful
   // This allows QueueRacer to be used for checking failure scenarios
   const bool check_writes_and_reads;
+  // The queue index to start sending messages from.
+  const uint32_t initial_queue_index = 0;
 };
 
 // Class to test the queue by spinning up a bunch of writing threads and racing
@@ -69,10 +71,7 @@ class QueueRacer {
 
  private:
   // Wipes the queue memory out so we get a clean start.
-  void Reset() {
-    memset(reinterpret_cast<void *>(queue_.memory()), 0,
-           LocklessQueueMemorySize(queue_.config()));
-  }
+  void Reset();
 
   // This is a separate method so that when all the ASSERT_* methods, we still
   // clean up all the threads.  Otherwise we get an assert on the way out of
@@ -88,6 +87,7 @@ class QueueRacer {
   // Allows QueueRacer to check for multiple returns from calling Send()
   const std::vector<LocklessQueueSender::Result> expected_send_results_;
   const bool check_writes_and_reads_;
+  const uint32_t initial_queue_index_;
   // The overall number of writes executed will always be between the two of
   // these.  We can't atomically count writes, so we have to bound them.
   //
