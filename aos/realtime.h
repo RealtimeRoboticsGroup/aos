@@ -3,10 +3,12 @@
 
 #ifndef _WIN32
 #include <sched.h>
+#include <sys/types.h>
 #else
 #define SCHED_OTHER 0
 #define SCHED_FIFO 1
 #define SCHED_RR 2
+using pid_t = int;
 #endif
 
 #include <cstring>
@@ -127,7 +129,7 @@ CpuSet GetCurrentThreadAffinity();
 void SetCurrentThreadAffinity(const CpuSet &cpuset);
 
 // Returns the ID of the current process.
-int32_t GetProcessId();
+pid_t GetProcessId();
 
 // Returns the name of the current process/program.
 std::string GetProgramName();

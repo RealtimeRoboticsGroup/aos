@@ -520,6 +520,6 @@ std::string GetThreadName() {
   return std::string(thread_name_array);
 }
 
-int32_t GetProcessId() { return getpid(); }
+pid_t GetProcessId() { return getpid(); }
 
 }  // namespace aos

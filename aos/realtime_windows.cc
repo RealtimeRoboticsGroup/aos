@@ -199,6 +199,6 @@ std::string GetProgramName() {
 
 std::string GetThreadName() { return ""; }
 
-int32_t GetProcessId() { return GetCurrentProcessId(); }
+pid_t GetProcessId() { return GetCurrentProcessId(); }
 
 }  // namespace aos
