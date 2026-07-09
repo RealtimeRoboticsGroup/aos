@@ -12,6 +12,7 @@
 
 #include "aos/flatbuffer_utils.h"
 #include "aos/json_tokenizer.h"
+#include "aos/macros.h"
 #include "aos/util/string_formatting.h"
 
 // TODO(austin): Can we just do an Offset<void> ?  It doesn't matter, so maybe
@@ -257,6 +258,7 @@ std::optional<Element> WriteObject(FlatbufferType type,
     return Element{buffer};
   }
   ABSL_LOG(FATAL) << "Unimplemented.";
+  AOS_UNREACHABLE();
 }
 
 // Class to parse JSON into a flatbuffer.
