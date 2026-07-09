@@ -14,7 +14,6 @@
 #include "absl/strings/escaping.h"
 #include "absl/types/span.h"
 #include "flatbuffers/flatbuffers.h"
-#include "openssl/sha.h"
 
 #include "aos/events/event_loop.h"
 #include "aos/events/logging/boot_timestamp.h"
