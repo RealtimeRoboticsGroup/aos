@@ -5,19 +5,42 @@
 
 #include "aos/ipc_lib/aos_sync.h"
 
+#ifdef _WIN32
+#include <numeric>
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <psapi.h>
+#include <windows.h>
+
+#include "absl/container/flat_hash_map.h"
+#endif
+
 #ifdef __linux__
 #include <linux/futex.h>
-#else
-#include <os/lock.h>
-#include <os/proc.h>
-#endif
 #include <pthread.h>
 #include <signal.h>
-#include <stdio.h>
 #include <sys/syscall.h>
 #include <unistd.h>
+#elif !defined(_WIN32)
+#include <os/lock.h>
+#include <os/proc.h>
+#include <pthread.h>
+#include <signal.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+#endif
+#include <stdio.h>
 
 #include <atomic>
+
+#include "aos/time/time.h"
+
+#ifdef _MSC_VER
+#include <basetsd.h>
+using ssize_t = SSIZE_T;
+#endif
+
 #include <cassert>
 #include <cerrno>
 #include <cinttypes>
@@ -158,9 +181,163 @@ extern "C" void AnnotateHappensAfter(const char *file, int line,
 #define FUTEX_WAITERS 0x80000000
 #define FUTEX_OWNER_DIED 0x40000000
 #define FUTEX_TID_MASK 0x3fffffff
+
+namespace aos {
+bool MarkRealtime(bool realtime);
+}  // namespace aos
+
+namespace {
+// Helper class to temporarily disable real-time assertions.  This is duplicated
+// here to avoid a circular depenency with aos/realtime.h
+class SyncScopedNotRealtime {
+ public:
+  SyncScopedNotRealtime() : prior_(aos::MarkRealtime(false)) {}
+  ~SyncScopedNotRealtime() { aos::MarkRealtime(prior_); }
+
+ private:
+  const bool prior_;
+};
+}  // namespace
 #endif
 
 namespace {
+
+#ifdef _WIN32
+
+// Windows WaitOnAddress and WakeByAddressSingle are scoped strictly to the
+// calling process and do not support cross-process synchronization in shared
+// memory mapping regions.  To allow cross-process mutexes and condition
+// variables on Windows without altering any public struct layouts (which must
+// remain ABI-compatible across platforms), we implement a hybrid user-space
+// futex scheme.
+//
+// Fast-path synchronization (acquiring/releasing uncontended locks) is done
+// using atomic operations directly on the shared aos_futex memory word, which
+// is fully cross-process safe since the processes map the same physical pages.
+//
+// Slow-path synchronization (when a thread needs to block or wake up waiters)
+// falls back to Win32 Named Semaphores, using the virtual address to derive
+// a unique, process-shared name (derived from the mapped file's device path
+// and the offset of the futex within the mapped region).
+//
+// Since Win32 HANDLEs are process-specific table indices that cannot be
+// shared directly in the shared memory block, each thread maintains its own
+// thread-local cache map (tl_futex_cache) mapping futex addresses to opened
+// semaphore HANDLEs.  This is analogous to the physical address-to-futex
+// hash bucket lookup performed internally within the Linux kernel.  This
+// avoids process-wide lock contention on cache lookups and ensures that
+// handles are closed automatically via RAII on thread exit.
+
+// Classify memory type and compute named semaphore details if shared.
+int ClassifyFutexAddress(void *addr, uint64_t *out_hash, uint64_t *out_offset) {
+  MEMORY_BASIC_INFORMATION mbi;
+  if (VirtualQuery(addr, &mbi, sizeof(mbi)) == 0) {
+    ABSL_LOG(FATAL) << "VirtualQuery(" << addr
+                    << ") failed: " << GetLastError();
+  }
+
+  if (mbi.Type != MEM_MAPPED) {
+    return 1;  // This is private process memory.
+  }
+
+  char filename[MAX_PATH];
+  DWORD length = GetMappedFileNameA(GetCurrentProcess(), mbi.AllocationBase,
+                                    filename, sizeof(filename));
+  if (length == 0) {
+    return 1;  // This is backed by a pagefile/swap rather than a shared file
+               // mapping.
+  }
+
+  // Compute FNV-1a 64-bit hash of the file path.
+  uint64_t hash = 14695981039346656037ULL;
+  for (DWORD i = 0; i < length; ++i) {
+    hash ^= static_cast<uint8_t>(filename[i]);
+    hash *= 1099511628211ULL;
+  }
+
+  *out_hash = hash;
+  *out_offset = reinterpret_cast<uintptr_t>(addr) -
+                reinterpret_cast<uintptr_t>(mbi.AllocationBase);
+
+  return 2;  // This is a shared memory mapping.
+}
+
+struct FutexCacheEntry {
+  // 1 = Private process memory (uses WaitOnAddress).
+  // 2 = Shared mapped memory (uses Named Semaphore).
+  int state;
+
+  // The cached semaphore handle (NULL for private memory).
+  HANDLE hSem;
+};
+
+struct ThreadLocalFutexCache {
+  absl::flat_hash_map<void *, FutexCacheEntry> cache;
+
+  ~ThreadLocalFutexCache() {
+    for (auto &pair : cache) {
+      if (pair.second.hSem != NULL) {
+        CloseHandle(pair.second.hSem);
+      }
+    }
+  }
+
+  // Returns a pointer to the FutexCacheEntry for the given address,
+  // creating it if it doesn't exist.
+  FutexCacheEntry *GetOrCreate(void *addr) {
+    auto it = cache.find(addr);
+    if (it != cache.end()) {
+      return &it->second;
+    }
+
+    uint64_t hash = 0;
+    uint64_t offset = 0;
+    int state = ClassifyFutexAddress(addr, &hash, &offset);
+
+    FutexCacheEntry entry;
+    entry.state = state;
+    entry.hSem = NULL;
+
+    if (state == 2) {
+      char name[128];
+      snprintf(name, sizeof(name), "Local\\aos_shm_%llx_%llx", hash, offset);
+      entry.hSem = CreateSemaphoreA(NULL, 0, 2147483647, name);
+      if (entry.hSem == NULL) {
+        ABSL_LOG(FATAL) << "CreateSemaphoreA(" << name
+                        << ") failed: " << GetLastError();
+      }
+    }
+
+    {
+      // This is on Windows, and we just don't care...  There is no way this
+      // will all be realtime anyways.  Take the easy road here and allocate
+      // memory for our mutex.
+      SyncScopedNotRealtime no_rt;
+      auto insert_res = cache.emplace(addr, entry);
+      return &insert_res.first->second;
+    }
+  }
+};
+
+// Thread-local instance.
+thread_local ThreadLocalFutexCache tl_futex_cache;
+
+// Convert absolute timeout timespec to relative millisecond timeout.
+DWORD GetTimeoutMs(const struct timespec *timeout) {
+  if (timeout == nullptr) {
+    return INFINITE;
+  }
+  int64_t timeout_ms =
+      static_cast<int64_t>(timeout->tv_sec) * 1000 +
+      (static_cast<int64_t>(timeout->tv_nsec) + 999999) / 1000000;
+  if (timeout_ms < 0) {
+    timeout_ms = 0;
+  } else if (timeout_ms >= static_cast<int64_t>(INFINITE)) {
+    timeout_ms = static_cast<int64_t>(INFINITE) - 1;
+  }
+  return static_cast<DWORD>(timeout_ms);
+}
+#endif
 
 const bool kRobustListDebug = false;
 const bool kLockDebug __attribute__((unused)) = false;
@@ -281,12 +458,48 @@ inline int sys_futex_wake(aos_futex *addr1, int val1) {
 // approximate "success" as 1 -- enough to let callers distinguish
 // "woke at least one" from "woke none" from "error".
 inline int sys_futex_wake(aos_futex *addr1, int val1) {
+#ifdef _WIN32
+  FutexCacheEntry *entry = tl_futex_cache.GetOrCreate(addr1);
+  if (entry->state == 1) {
+    if (val1 == 1) {
+      WakeByAddressSingle(&addr1->value);
+    } else {
+      WakeByAddressAll(&addr1->value);
+    }
+    return 1;
+  } else {
+    // Release one semaphore token per blocked waiter (at most one for a
+    // wake-one).  The waiter count lives in shared memory right next to the
+    // futex value (see aos_futex); tracking it is what keeps this counting
+    // semaphore from accumulating tokens without bound, since the semaphore
+    // itself has no way to know how many waiters exist.
+    //
+    // The fence + seq_cst load here pair with the seq_cst increment on the
+    // wait side (sys_futex_wait): if a waiter has committed to blocking (it
+    // observed the old value), its increment is guaranteed to be visible to
+    // us, so we always release a token for it and never lose a wakeup.
+    std::atomic_thread_fence(std::memory_order_seq_cst);
+    const int32_t waiters = std::atomic_ref<int32_t>(addr1->waiters)
+                                .load(std::memory_order_seq_cst);
+    if (waiters <= 0) {
+      return 0;
+    }
+    LONG to_release = waiters;
+    if (val1 == 1 && to_release > 1) {
+      to_release = 1;
+    }
+    if (ReleaseSemaphore(entry->hSem, to_release, NULL)) {
+      return 1;
+    }
+    return 0;
+  }
+#else
   int ret;
   if (val1 == 1) {
-    ret = os_sync_wake_by_address_any(addr1, sizeof(*addr1),
+    ret = os_sync_wake_by_address_any(&addr1->value, sizeof(addr1->value),
                                       OS_SYNC_WAKE_BY_ADDRESS_SHARED);
   } else {
-    ret = os_sync_wake_by_address_all(addr1, sizeof(*addr1),
+    ret = os_sync_wake_by_address_all(&addr1->value, sizeof(addr1->value),
                                       OS_SYNC_WAKE_BY_ADDRESS_SHARED);
   }
   if (ret == 0) {
@@ -297,6 +510,7 @@ inline int sys_futex_wake(aos_futex *addr1, int val1) {
     return 0;
   }
   return -errno;
+#endif
 }
 
 #endif
@@ -429,12 +643,24 @@ __attribute__((unused)) inline int sys_futex_wait_requeue_pi(
 }
 
 inline int sys_futex_unlock_pi(aos_futex *addr1) {
+#ifdef _WIN32
+  // Clear the lock value (mutex_unlock and death_notification_release rely on
+  // us to do it) and then wake a waiter.  We have to go through sys_futex_wake
+  // rather than calling WakeByAddressSingle directly: WakeByAddressSingle is
+  // scoped to the calling process, so for a futex living in shared memory it
+  // would silently fail to wake a cross-process waiter blocked on the named
+  // semaphore.  sys_futex_wake classifies the address and uses the correct
+  // wake primitive for private vs. shared memory.
+  std::atomic_ref<uint32_t>(addr1->value).store(0, std::memory_order_release);
+  sys_futex_wake(addr1, 1);
+  return 0;
+#else
   // Just wake as we are not using PI locks on macOS.
   // Also clear the lock value because mutex_unlock expects us to do it if it
   // called us.
-  std::atomic_ref<uint32_t>(*addr1).store(0, std::memory_order_release);
-  const int ret = os_sync_wake_by_address_any(addr1, sizeof(*addr1),
-                                              OS_SYNC_WAKE_BY_ADDRESS_SHARED);
+  std::atomic_ref<uint32_t>(addr1->value).store(0, std::memory_order_release);
+  const int ret = os_sync_wake_by_address_any(
+      &addr1->value, sizeof(addr1->value), OS_SYNC_WAKE_BY_ADDRESS_SHARED);
   if (ret == 0 || errno == ENOENT) {
     // Success, or there were simply no waiters to wake (which is normal when
     // the last unlock races with an interrupted waiter). Match Linux
@@ -442,6 +668,7 @@ inline int sys_futex_unlock_pi(aos_futex *addr1) {
     return 0;
   }
   return -errno;
+#endif
 }
 
 #endif
@@ -462,7 +689,7 @@ inline uint32_t compare_and_swap_val(aos_futex *f, uint32_t before,
       __tsan_memory_order_seq_cst, __tsan_memory_order_seq_cst);
   return before_value;
 #else
-  std::atomic_ref<uint32_t> ref(*f);
+  std::atomic_ref<uint32_t> ref(f->value);
   uint32_t expected = before;
   ref.compare_exchange_strong(expected, after, std::memory_order_seq_cst,
                               std::memory_order_seq_cst);
@@ -475,7 +702,7 @@ inline bool compare_and_swap(aos_futex *f, uint32_t before, uint32_t after) {
 #ifdef AOS_SANITIZER_thread
   return compare_and_swap_val(f, before, after) == before;
 #else
-  std::atomic_ref<uint32_t> ref(*f);
+  std::atomic_ref<uint32_t> ref(f->value);
   uint32_t expected = before;
   return ref.compare_exchange_strong(expected, after, std::memory_order_seq_cst,
                                      std::memory_order_seq_cst);
@@ -568,6 +795,21 @@ pid_t do_get_tid() {
   pid_t r = syscall(SYS_gettid);
   assert(r > 0);
   return r;
+#elif defined(_WIN32)
+  const DWORD tid = GetCurrentThreadId();
+  // Windows Thread IDs are always multiples of 4 (the lowest 2 bits are 0).
+  ABSL_CHECK_EQ(tid & 3u, 0u)
+      << ": thread id " << tid << " is not a multiple of 4";
+  // The futex encoding steals the top 2 bits for FUTEX_WAITERS and
+  // FUTEX_OWNER_DIED, and 0 means "unlocked".  Shift the thread ID down by 2
+  // bits to fit all 32 bits of thread ID space into the 30-bit FUTEX_TID_MASK
+  // without losing any information.
+  const DWORD shifted_tid = tid >> 2;
+  ABSL_CHECK_NE(shifted_tid, 0u);
+  ABSL_CHECK_EQ(shifted_tid & ~static_cast<DWORD>(FUTEX_TID_MASK), 0u)
+      << ": shifted thread id " << shifted_tid
+      << " does not fit in FUTEX_TID_MASK";
+  return static_cast<pid_t>(shifted_tid);
 #else
   uint64_t tid;
   pthread_threadid_np(NULL, &tid);
@@ -599,11 +841,13 @@ void atfork_child() {
   my_tid = 0;
 }
 
+#ifndef _WIN32
 void InstallAtforkHook() {
   ABSL_PCHECK(pthread_atfork(NULL, NULL, &atfork_child) == 0)
       << ": pthread_atfork(NULL, NULL, "
       << reinterpret_cast<void *>(&atfork_child) << ") failed";
 }
+#endif
 
 // This gets called to set everything up in a new thread by get_tid().
 void initialize_in_new_thread();
@@ -619,14 +863,14 @@ inline uint32_t get_tid() {
 }
 
 #ifndef __linux__
-// XNU private os_sync API provided by <os/os_sync_wait_on_address.h>
+// XNU private os_sync API / Windows WaitOnAddress
 
 inline int sys_futex_wait(int op, aos_futex *addr1, int val1,
                           const struct timespec *timeout) {
   if (op == FUTEX_TRYLOCK_PI) {
     uint32_t tid = get_tid();
     uint32_t val =
-        std::atomic_ref<uint32_t>(*addr1).load(std::memory_order_acquire);
+        std::atomic_ref<uint32_t>(addr1->value).load(std::memory_order_acquire);
     if ((val & FUTEX_TID_MASK) == 0) {
       uint32_t new_val = tid;
       if (val & FUTEX_OWNER_DIED) new_val |= FUTEX_OWNER_DIED;
@@ -638,6 +882,50 @@ inline int sys_futex_wait(int op, aos_futex *addr1, int val1,
     return -EWOULDBLOCK;
   }
 
+#ifdef _WIN32
+  FutexCacheEntry *entry = tl_futex_cache.GetOrCreate(addr1);
+  if (entry->state == 1) {
+    BOOL success;
+    uint32_t val = static_cast<uint32_t>(val1);
+    if (timeout != nullptr) {
+      const DWORD timeout_ms = GetTimeoutMs(timeout);
+      success =
+          WaitOnAddress(&addr1->value, &val, sizeof(addr1->value), timeout_ms);
+    } else {
+      success =
+          WaitOnAddress(&addr1->value, &val, sizeof(addr1->value), INFINITE);
+    }
+    if (!success) {
+      const DWORD error = GetLastError();
+      if (error == ERROR_TIMEOUT) {
+        return -ETIMEDOUT;
+      }
+      ABSL_LOG(FATAL) << "WaitOnAddress(" << addr1 << ") failed: " << error;
+    }
+    return 0;
+  } else {
+    const DWORD timeout_ms = GetTimeoutMs(timeout);
+    // Register as a waiter before re-checking the value.  The seq_cst
+    // increment doubles as a StoreLoad barrier that pairs with the fence in
+    // sys_futex_wake: a waker that changed the value is guaranteed to observe
+    // this increment, so it will release a token for us (no lost wakeups).  We
+    // deregister on the way out, regardless of why we stopped waiting.
+    std::atomic_ref<int32_t> waiters(addr1->waiters);
+    waiters.fetch_add(1, std::memory_order_seq_cst);
+    int result = 0;
+    while (std::atomic_ref<uint32_t>(addr1->value)
+               .load(std::memory_order_seq_cst) ==
+           static_cast<uint32_t>(val1)) {
+      DWORD res = WaitForSingleObject(entry->hSem, timeout_ms);
+      if (res == WAIT_TIMEOUT) {
+        result = -ETIMEDOUT;
+        break;
+      }
+    }
+    waiters.fetch_sub(1, std::memory_order_seq_cst);
+    return result;
+  }
+#else
   int ret;
   if (timeout != nullptr) {
     // Match Linux's FUTEX_WAIT semantics: the timespec is a *relative* timeout.
@@ -653,10 +941,11 @@ inline int sys_futex_wait(int op, aos_futex *addr1, int val1,
       return -ETIMEDOUT;
     }
     ret = os_sync_wait_on_address_with_timeout(
-        addr1, val1, sizeof(*addr1), OS_SYNC_WAIT_ON_ADDRESS_SHARED,
-        OS_CLOCK_MACH_ABSOLUTE_TIME, static_cast<uint64_t>(timeout_ns));
+        &addr1->value, val1, sizeof(addr1->value),
+        OS_SYNC_WAIT_ON_ADDRESS_SHARED, OS_CLOCK_MACH_ABSOLUTE_TIME,
+        static_cast<uint64_t>(timeout_ns));
   } else {
-    ret = os_sync_wait_on_address(addr1, val1, sizeof(*addr1),
+    ret = os_sync_wait_on_address(&addr1->value, val1, sizeof(addr1->value),
                                   OS_SYNC_WAIT_ON_ADDRESS_SHARED);
   }
 
@@ -672,6 +961,7 @@ inline int sys_futex_wait(int op, aos_futex *addr1, int val1,
   // wake instead of LOG(FATAL)ing.
   if (errno == EFAULT) return -EWOULDBLOCK;
   return -errno;
+#endif
 }
 #endif
 
@@ -857,6 +1147,8 @@ class Remover {
       // robust_head's psuedo-mutex doesn't have a previous pointer to update.
       next_to_mutex(next_value)->previous = previous;
     }
+    m->next = 0;
+    m->previous = nullptr;
 
     if (kRobustListDebug) {
       printf("%" PRId32 ": done removing %p\n", get_tid(), m);
@@ -893,18 +1185,90 @@ class Remover {
 // FUTEX_OWNER_DIED treatment on owner death. In practice thread death on
 // macOS almost always means process death, and this codepath is only used
 // for intra-process dev/test, so the looser guarantee is acceptable.
+// Checks if the specified address range is valid, committed, and
+// readable/writable.
+//
+// This mirrors the Linux kernel's robust list walk safety checks.  During
+// thread exit, the Linux kernel verifies that each robust list node address is
+// valid and readable/writable before dereferencing or modifying it, handling
+// any page faults gracefully instead of crashing the process.  Since we are
+// executing the robust list cleanup in userspace on Windows and macOS, we must
+// explicitly verify the memory properties in userspace to prevent page fault
+// crashes (e.g. if the shared memory backing the mutex was unmapped prior to
+// thread exit).
+#ifdef _WIN32
+bool IsValidAddress(void *addr, size_t size) {
+  MEMORY_BASIC_INFORMATION mbi;
+  if (VirtualQuery(addr, &mbi, sizeof(mbi)) == 0) {
+    return false;
+  }
+  if (mbi.State != MEM_COMMIT) {
+    return false;
+  }
+  DWORD protect = mbi.Protect & ~(PAGE_GUARD | PAGE_NOCACHE);
+  if (protect != PAGE_READWRITE && protect != PAGE_WRITECOPY &&
+      protect != PAGE_EXECUTE_READWRITE && protect != PAGE_EXECUTE_WRITECOPY) {
+    return false;
+  }
+  uintptr_t limit =
+      reinterpret_cast<uintptr_t>(mbi.BaseAddress) + mbi.RegionSize;
+  if (reinterpret_cast<uintptr_t>(addr) + size > limit) {
+    return false;
+  }
+  return true;
+}
+#elif defined(__APPLE__)
+#include <mach/mach.h>
+bool IsValidAddress(void *addr, size_t size) {
+  vm_address_t address = reinterpret_cast<vm_address_t>(addr);
+  vm_size_t region_size = 0;
+  vm_region_basic_info_data_64_t info;
+  mach_msg_type_number_t info_count = VM_REGION_BASIC_INFO_COUNT_64;
+  mach_port_t object_name;
+
+  vm_address_t target_addr = address;
+  kern_return_t kr = vm_region_64(
+      mach_task_self(), &address, &region_size, VM_REGION_BASIC_INFO_64,
+      reinterpret_cast<vm_region_info_t>(&info), &info_count, &object_name);
+
+  if (kr != KERN_SUCCESS) {
+    return false;
+  }
+
+  // The region must contain our target address range.
+  if (target_addr < address || target_addr + size > address + region_size) {
+    return false;
+  }
+
+  return (info.protection & VM_PROT_READ) && (info.protection & VM_PROT_WRITE);
+}
+#endif
+
 struct RobustListCleaner {
   ~RobustListCleaner() {
+    // On Windows, the CRT TLS callback execution model can call the destructors
+    // of thread_local variables even if they were never accessed or constructed
+    // in that thread.  If the thread never initialized its robust list,
+    // robust_head.next will be 0, and walking the list would dereference a null
+    // or invalid pointer.  Detect this case and return early.
+    if (robust_head.next == 0) {
+      return;
+    }
     while (!next_is_head(robust_head.next)) {
       aos_mutex *m = next_to_mutex(robust_head.next);
+      if (!IsValidAddress(m, sizeof(aos_mutex))) {
+        break;
+      }
       robust_head.next = m->next;
+      m->next = 0;
+      m->previous = nullptr;
 
-      uint32_t val =
-          std::atomic_ref<uint32_t>(m->futex).load(std::memory_order_relaxed);
+      uint32_t val = std::atomic_ref<uint32_t>(m->futex.value)
+                         .load(std::memory_order_relaxed);
       uint32_t new_val = FUTEX_OWNER_DIED;
       if (val & FUTEX_WAITERS) new_val |= FUTEX_WAITERS;
-      std::atomic_ref<uint32_t>(m->futex).store(new_val,
-                                                std::memory_order_seq_cst);
+      std::atomic_ref<uint32_t>(m->futex.value)
+          .store(new_val, std::memory_order_seq_cst);
       sys_futex_wake(&m->futex, 1);
     }
   }
@@ -921,7 +1285,9 @@ void initialize_in_new_thread() {
   my_tid = do_get_tid();
 
   static absl::once_flag once;
+#ifndef _WIN32
   absl::call_once(once, InstallAtforkHook);
+#endif
 
   my_robust_list::Init();
 #ifndef __linux__
@@ -933,10 +1299,10 @@ void initialize_in_new_thread() {
 // the futex and returning the correct value.
 inline int mutex_finish_lock(aos_mutex *m) {
   const uint32_t value =
-      std::atomic_ref<uint32_t>(m->futex).load(std::memory_order_acquire);
+      std::atomic_ref<uint32_t>(m->futex.value).load(std::memory_order_acquire);
   if (AOS_UNLIKELY((value & FUTEX_OWNER_DIED) != 0)) {
-    std::atomic_ref<uint32_t>(m->futex).fetch_and(~FUTEX_OWNER_DIED,
-                                                  std::memory_order_relaxed);
+    std::atomic_ref<uint32_t>(m->futex.value)
+        .fetch_and(~FUTEX_OWNER_DIED, std::memory_order_relaxed);
     force_lock_pthread_mutex(m);
     return 1;
   } else {
@@ -978,8 +1344,8 @@ inline int mutex_do_get(aos_mutex *m, bool signals_fail,
 
         errno = -ret;
         ABSL_PLOG(FATAL) << "FUTEX_LOCK_PI(" << &m->futex << "(="
-                         << std::atomic_ref<uint32_t>(m->futex).load(
-                                std::memory_order_seq_cst)
+                         << std::atomic_ref<uint32_t>(m->futex.value)
+                                .load(std::memory_order_seq_cst)
                          << "), 1, " << timeout << ") failed";
       } else {
         if (kLockDebug) {
@@ -1011,8 +1377,8 @@ inline int mutex_do_get(aos_mutex *m, bool signals_fail,
   }
 
   while (true) {
-    uint32_t v =
-        std::atomic_ref<uint32_t>(m->futex).load(std::memory_order_acquire);
+    uint32_t v = std::atomic_ref<uint32_t>(m->futex.value)
+                     .load(std::memory_order_acquire);
 
     if ((v & FUTEX_TID_MASK) == tid) {
       ABSL_LOG(FATAL) << "multiple lock of " << m << " by " << tid;
@@ -1078,8 +1444,9 @@ void condition_wake(aos_condition *c, aos_mutex *m, int number_requeue) {
   // signal():
   //   1 already sleeping will be woken but n might never actually make it to
   //     sleep in the kernel because of this.
-  uint32_t new_value =
-      std::atomic_ref<uint32_t>(*c).fetch_add(1, std::memory_order_seq_cst) + 1;
+  uint32_t new_value = std::atomic_ref<uint32_t>(c->value).fetch_add(
+                           1, std::memory_order_seq_cst) +
+                       1;
 
   while (true) {
     // This really wants to be FUTEX_REQUEUE_PI, but the kernel doesn't have
@@ -1096,7 +1463,7 @@ void condition_wake(aos_condition *c, aos_mutex *m, int number_requeue) {
         // If we're doing a signal, we have to go again to make sure that 2
         // signals wake 2 processes.
         new_value =
-            std::atomic_ref<uint32_t>(*c).load(std::memory_order_relaxed);
+            std::atomic_ref<uint32_t>(c->value).load(std::memory_order_relaxed);
         continue;
       }
       my_robust_list::robust_head.pending_next = 0;
@@ -1112,7 +1479,7 @@ void condition_wake(aos_condition *c, aos_mutex *m, int number_requeue) {
 #else
 void condition_wake(aos_condition *c, aos_mutex * /*m*/, int number_requeue) {
   RunShmObservers run_observers(c, true);
-  std::atomic_ref<uint32_t>(*c).fetch_add(1, std::memory_order_seq_cst);
+  std::atomic_ref<uint32_t>(c->value).fetch_add(1, std::memory_order_seq_cst);
   // Simple wake
   sys_futex_wake(c, number_requeue == 0 ? 1 : INT_MAX);
 }
@@ -1126,6 +1493,7 @@ int mutex_lock_timeout(aos_mutex *m, const struct timespec *timeout) {
 }
 int mutex_grab(aos_mutex *m) { return mutex_get(m, false, NULL); }
 
+#ifdef __linux__
 void mutex_unlock(aos_mutex *m) {
   RunShmObservers run_observers(m, true);
   const uint32_t tid = get_tid();
@@ -1134,7 +1502,7 @@ void mutex_unlock(aos_mutex *m) {
   }
 
   const uint32_t value =
-      std::atomic_ref<uint32_t>(m->futex).load(std::memory_order_seq_cst);
+      std::atomic_ref<uint32_t>(m->futex.value).load(std::memory_order_seq_cst);
   if (AOS_UNLIKELY((value & FUTEX_TID_MASK) != tid)) {
     my_robust_list::robust_head.pending_next = 0;
     check_cached_tid(tid);
@@ -1162,6 +1530,34 @@ void mutex_unlock(aos_mutex *m) {
     // There aren't any waiters, so no need to call into the kernel.
   }
 }
+#else
+void mutex_unlock(aos_mutex *m) {
+  RunShmObservers run_observers(m, true);
+  const uint32_t tid = get_tid();
+  if (kPrintOperations) {
+    printf("%" PRId32 ": %p unlock\n", tid, m);
+  }
+
+  const uint32_t value =
+      std::atomic_ref<uint32_t>(m->futex.value).load(std::memory_order_seq_cst);
+  if (AOS_UNLIKELY((value & FUTEX_TID_MASK) != tid)) {
+    my_robust_list::robust_head.pending_next = 0;
+    check_cached_tid(tid);
+    if ((value & FUTEX_TID_MASK) == 0) {
+      ABSL_LOG(FATAL) << "multiple unlock of aos_mutex " << m << " by " << tid;
+    } else {
+      ABSL_LOG(FATAL) << "aos_mutex " << m << " is locked by "
+                      << (value & FUTEX_TID_MASK) << ", not " << tid;
+    }
+  }
+
+  my_robust_list::Remover remover(m);
+  unlock_pthread_mutex(m);
+
+  std::atomic_ref<uint32_t>(m->futex.value).store(0, std::memory_order_release);
+  sys_futex_wake(&m->futex, 1);
+}
+#endif
 
 int mutex_trylock(aos_mutex *m) {
   RunShmObservers run_observers(m, true);
@@ -1209,35 +1605,41 @@ bool mutex_islocked(const aos_mutex *m) {
   const uint32_t tid = get_tid();
 
   const uint32_t value =
-      std::atomic_ref<uint32_t>(const_cast<uint32_t &>(m->futex))
+      std::atomic_ref<uint32_t>(const_cast<uint32_t &>(m->futex.value))
           .load(std::memory_order_relaxed);
   return (value & FUTEX_TID_MASK) == tid;
 }
 
+uint32_t mutex_owner_from_value(uint32_t value) {
+#ifdef _WIN32
+  return (value & FUTEX_TID_MASK) << 2;
+#else
+  return value & FUTEX_TID_MASK;
+#endif
+}
+
+bool mutex_owner_is_dead_from_value(uint32_t value) {
+  return (value & FUTEX_OWNER_DIED) != 0;
+}
+
 uint32_t mutex_owner(const aos_mutex *m) {
   const uint32_t value =
-      std::atomic_ref<uint32_t>(const_cast<uint32_t &>(m->futex))
+      std::atomic_ref<uint32_t>(const_cast<uint32_t &>(m->futex.value))
           .load(std::memory_order_relaxed);
-  return futex_owner(value);
+  return mutex_owner_from_value(value);
 }
 
 bool mutex_owner_is_dead(const aos_mutex *m) {
   const uint32_t value =
-      std::atomic_ref<uint32_t>(const_cast<uint32_t &>(m->futex))
+      std::atomic_ref<uint32_t>(const_cast<uint32_t &>(m->futex.value))
           .load(std::memory_order_relaxed);
-  return futex_owner_is_dead(value);
-}
-
-uint32_t futex_owner(aos_futex futex) { return futex & FUTEX_TID_MASK; }
-
-bool futex_owner_is_dead(aos_futex futex) {
-  return (futex & FUTEX_OWNER_DIED) != 0;
+  return mutex_owner_is_dead_from_value(value);
 }
 
 bool mutex_pretend_owner_died_for_testing(aos_mutex *m, uint32_t tid) {
-  std::atomic_ref<uint32_t> ref(m->futex);
+  std::atomic_ref<uint32_t> ref(m->futex.value);
   uint32_t value = ref.load(std::memory_order_relaxed);
-  if ((value & FUTEX_TID_MASK) == tid) {
+  if (mutex_owner_from_value(value) == tid) {
     uint32_t new_value = FUTEX_OWNER_DIED;
     if (value & FUTEX_WAITERS) {
       new_value |= FUTEX_WAITERS;
@@ -1271,8 +1673,8 @@ void death_notification_release(aos_mutex *m) {
     if (kPrintOperations) {
       printf("%" PRId32 ": %p death_notification release\n", tid, m);
     }
-    const uint32_t value =
-        std::atomic_ref<uint32_t>(m->futex).load(std::memory_order_seq_cst);
+    const uint32_t value = std::atomic_ref<uint32_t>(m->futex.value)
+                               .load(std::memory_order_seq_cst);
     assert((value & ~FUTEX_WAITERS) == tid);
   }
 #endif
@@ -1292,7 +1694,7 @@ int condition_wait(aos_condition *c, aos_mutex *m, struct timespec *end_time) {
   RunShmObservers run_observers(c, false);
   const uint32_t tid = get_tid();
   const uint32_t wait_start =
-      std::atomic_ref<uint32_t>(*c).load(std::memory_order_seq_cst);
+      std::atomic_ref<uint32_t>(c->value).load(std::memory_order_seq_cst);
 
   mutex_unlock(m);
 
@@ -1350,11 +1752,11 @@ int condition_wait(aos_condition *c, aos_mutex *m, struct timespec *end_time) {
 
       adder.Add();
 
-      const uint32_t value =
-          std::atomic_ref<uint32_t>(m->futex).load(std::memory_order_relaxed);
+      const uint32_t value = std::atomic_ref<uint32_t>(m->futex.value)
+                                 .load(std::memory_order_relaxed);
       if (AOS_UNLIKELY((value & FUTEX_OWNER_DIED) != 0)) {
-        std::atomic_ref<uint32_t>(m->futex).fetch_and(
-            ~FUTEX_OWNER_DIED, std::memory_order_relaxed);
+        std::atomic_ref<uint32_t>(m->futex.value)
+            .fetch_and(~FUTEX_OWNER_DIED, std::memory_order_relaxed);
         return 1;
       } else {
         return 0;
@@ -1366,24 +1768,25 @@ int condition_wait(aos_condition *c, aos_mutex *m, struct timespec *end_time) {
 int condition_wait(aos_condition *c, aos_mutex *m, struct timespec *end_time) {
   RunShmObservers run_observers(c, false);
   const uint32_t wait_start =
-      std::atomic_ref<uint32_t>(*c).load(std::memory_order_seq_cst);
+      std::atomic_ref<uint32_t>(c->value).load(std::memory_order_seq_cst);
 
   mutex_unlock(m);
 
   // Callers (e.g. Condition::WaitTimed) pass an absolute CLOCK_MONOTONIC
   // deadline, but our sys_futex_wait shim on macOS mirrors Linux FUTEX_WAIT
-  // and takes a relative timeout. Convert here.
+  // and takes a relative timeout.  Convert here.
   struct timespec relative_timeout;
   struct timespec *relative_timeout_ptr = nullptr;
   if (end_time != nullptr) {
-    struct timespec now;
-    ABSL_PCHECK(clock_gettime(CLOCK_MONOTONIC, &now) == 0);
-    int64_t ns =
-        static_cast<int64_t>(end_time->tv_sec - now.tv_sec) * 1000000000LL +
-        static_cast<int64_t>(end_time->tv_nsec - now.tv_nsec);
-    if (ns < 0) ns = 0;
-    relative_timeout.tv_sec = static_cast<time_t>(ns / 1000000000LL);
-    relative_timeout.tv_nsec = static_cast<long>(ns % 1000000000LL);
+    namespace chrono = ::std::chrono;
+    const chrono::nanoseconds end_ns = chrono::seconds(end_time->tv_sec) +
+                                       chrono::nanoseconds(end_time->tv_nsec);
+    chrono::nanoseconds relative_ns =
+        end_ns - aos::monotonic_clock::now().time_since_epoch();
+    if (relative_ns < chrono::nanoseconds::zero()) {
+      relative_ns = chrono::nanoseconds::zero();
+    }
+    relative_timeout = aos::time::to_timespec(relative_ns);
     relative_timeout_ptr = &relative_timeout;
   }
 
@@ -1437,7 +1840,7 @@ int futex_wait(aos_futex *m) { return futex_wait_timeout(m, NULL); }
 int futex_set_value(aos_futex *m, uint32_t value) {
   RunShmObservers run_observers(m, false);
   ANNOTATE_HAPPENS_BEFORE(m);
-  std::atomic_ref<uint32_t>(*m).store(value, std::memory_order_seq_cst);
+  std::atomic_ref<uint32_t>(m->value).store(value, std::memory_order_seq_cst);
   const int r = sys_futex_wake(m, INT_MAX - 4096);
   if (AOS_UNLIKELY(static_cast<unsigned int>(r) >
                    static_cast<unsigned int>(-4096))) {
@@ -1451,7 +1854,8 @@ int futex_set_value(aos_futex *m, uint32_t value) {
 int futex_set(aos_futex *m) { return futex_set_value(m, 1); }
 
 int futex_unset(aos_futex *m) {
-  return !std::atomic_ref<uint32_t>(*m).exchange(0, std::memory_order_seq_cst);
+  return !std::atomic_ref<uint32_t>(m->value).exchange(
+      0, std::memory_order_seq_cst);
 }
 
 namespace aos::linux_code::ipc_lib {

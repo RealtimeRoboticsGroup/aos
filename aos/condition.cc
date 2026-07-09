@@ -7,7 +7,9 @@
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 
+#include "aos/macros.h"
 #include "aos/mutex/mutex.h"
+#include "aos/time/time.h"
 #include "aos/type_traits/type_traits.h"
 
 namespace aos {
@@ -30,12 +32,7 @@ Condition::WaitResult Condition::WaitTimed(chrono::nanoseconds timeout) {
   const bool do_timeout = timeout != chrono::nanoseconds(0);
 
   if (do_timeout) {
-    PCHECK(clock_gettime(CLOCK_MONOTONIC, &end_time) == 0);
-    timeout += chrono::nanoseconds(end_time.tv_nsec);
-    chrono::seconds timeout_seconds =
-        chrono::duration_cast<chrono::seconds>(timeout);
-    end_time.tv_sec += timeout_seconds.count();
-    end_time.tv_nsec = (timeout - timeout_seconds).count();
+    end_time = aos::time::to_timespec(aos::monotonic_clock::now() + timeout);
   }
 
   const int ret =

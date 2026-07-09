@@ -123,7 +123,7 @@ TEST_F(RobustOwnershipTrackerTest, NoMatchingPID) {
   shared_tracker.tracker().Acquire();
   EXPECT_FALSE(shared_tracker.tracker().LoadRelaxed().OwnerIsDead());
   EXPECT_FALSE(shared_tracker.tracker().OwnerIsDefinitelyAbsolutelyDead());
-  std::atomic_ref<uint32_t>(GetMutex(shared_tracker.tracker()).futex)
+  std::atomic_ref<uint32_t>(GetMutex(shared_tracker.tracker()).futex.value)
       .store(999999, std::memory_order_relaxed);
 
   // Since we're only pretending that the owner died (by changing the TID in the

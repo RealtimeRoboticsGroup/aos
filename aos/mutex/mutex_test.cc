@@ -248,7 +248,7 @@ TEST_F(MutexLockerDeathTest, OwnerDied) {
             std::make_shared<util::DeathTestLogImplementation>());
         MutexLocker locker(mutex);
       },
-      ".*previous owner of mutex [^ ]+ died.*");
+      ".*previous owner of mutex.*died.*");
 
   mutex->~Mutex();
 }
@@ -269,7 +269,7 @@ TEST_F(IPCMutexLockerTest, Basic) {
 TEST_F(IPCMutexLockerDeathTest, NoCheckOwnerDied) {
   EXPECT_DEATH(
       { aos::IPCMutexLocker locker(&test_mutex_); },
-      "nobody checked if the previous owner of mutex [^ ]+ died.*");
+      ".*nobody checked if the previous owner of mutex.*died.*");
 }
 
 TEST_F(IPCRecursiveMutexLockerTest, Basic) {

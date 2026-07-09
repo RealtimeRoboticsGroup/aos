@@ -23,15 +23,18 @@ cc_library(
         ":aos_sync_debug": ["-DAOS_SYNC_DEBUG=1"],
         "//conditions:default": ["-DAOS_SYNC_DEBUG=0"],
     }),
-    linkopts = [
-        "-lpthread",
-    ],
+    linkopts = select({
+        "@platforms//os:windows": ["synchronization.lib"],
+        "//conditions:default": ["-lpthread"],
+    }),
     visibility = ["//visibility:public"],
     deps = [
         ":shm_observers",
         "//aos:macros",
+        "//aos/time",
         "//aos/util:compiler_memory_barrier",
         "@com_google_absl//absl/base",
+        "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
     ],
@@ -528,6 +531,7 @@ cc_test(
         "//aos/testing:googletest",
         "//aos/testing:test_logging",
         "//aos/time",
+        "//aos/util:file",
     ],
 )
 

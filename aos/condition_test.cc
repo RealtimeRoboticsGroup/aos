@@ -1,9 +1,11 @@
 #include "aos/condition.h"
 
 #include <signal.h>
+#ifndef _WIN32
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#endif
 
 #include <atomic>
 #include <chrono>
@@ -312,16 +314,31 @@ class ConditionTestProcess {
         action_(action),
         condition_(condition),
         timeout_(delay_ + timeout),
+#ifdef _WIN32
+        child_thread_(),
+#else
         child_(-1),
+#endif
         mem_(sizeof(Shared)),
         shared_(static_cast<Shared *>(mem_.get())) {
     new (shared_) Shared();
   }
-  ~ConditionTestProcess() { ABSL_CHECK_EQ(child_, -1); }
+  ~ConditionTestProcess() {
+#ifdef _WIN32
+    ABSL_CHECK(!child_thread_.joinable());
+#else
+    ABSL_CHECK_EQ(child_, -1);
+#endif
+  }
 
   void Start() {
     ASSERT_FALSE(shared_->started);
 
+#ifdef _WIN32
+    child_thread_ = std::thread([this]() { Run(); });
+    ASSERT_EQ(0, futex_wait(&shared_->ready));
+    shared_->started = true;
+#else
     child_ = fork();
     if (child_ == 0) {  // in child
       ::aos::testing::PreventExit();
@@ -334,6 +351,7 @@ class ConditionTestProcess {
 
       shared_->started = true;
     }
+#endif
   }
 
   bool IsFinished() { return shared_->finished; }
@@ -414,17 +432,31 @@ class ConditionTestProcess {
   }
 
   void Join() {
+#ifdef _WIN32
+    if (child_thread_.joinable()) {
+      child_thread_.join();
+    }
+#else
     ABSL_CHECK_NE(child_, -1);
     int status;
     do {
       ABSL_CHECK_EQ(waitpid(child_, &status, 0), child_);
     } while (!(WIFEXITED(status) || WIFSIGNALED(status)));
     child_ = -1;
+#endif
   }
   void Kill() {
+#ifdef _WIN32
+    // We cannot safely terminate a running thread on Windows.  Instead we
+    // detach it.
+    if (child_thread_.joinable()) {
+      child_thread_.detach();
+    }
+#else
     ABSL_CHECK_NE(child_, -1);
     ABSL_PCHECK(kill(child_, SIGTERM) != -1);
     Join();
+#endif
   }
 
   const chrono::milliseconds delay_;
@@ -432,7 +464,11 @@ class ConditionTestProcess {
   Condition *const condition_;
   const chrono::milliseconds timeout_;
 
+#ifdef _WIN32
+  std::thread child_thread_;
+#else
   pid_t child_;
+#endif
 
   SharedMemoryBlock mem_;
   Shared *const shared_;

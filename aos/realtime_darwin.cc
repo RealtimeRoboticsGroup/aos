@@ -167,7 +167,7 @@ void SetCurrentThreadRealtimePriority(int priority, int scheduling_policy,
   {
     static aos_mutex kInitMutex = {.next = 0,
                                    .previous = nullptr,
-                                   .futex = 0
+                                   .futex = {.value = 0}
 #ifdef AOS_SANITIZER_thread
                                    ,
                                    .pthread_mutex_init = false

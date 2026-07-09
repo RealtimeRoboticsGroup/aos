@@ -17,8 +17,8 @@ bool Mutex::Lock() {
   } else if (ret == 1) {
     return true;
   } else {
-    LOG(FATAL) << "mutex_grab(" << &impl_ << "(=" << std::hex << impl_.futex
-               << ")) failed with " << ret;
+    LOG(FATAL) << "mutex_grab(" << &impl_ << "(=" << std::hex
+               << impl_.futex.value << ")) failed with " << ret;
     AOS_UNREACHABLE();
   }
 }
@@ -36,7 +36,7 @@ Mutex::State Mutex::TryLock() {
       return State::kLockFailed;
     default:
       LOG(FATAL) << "mutex_trylock(" << &impl_ << "(=" << std::hex
-                 << impl_.futex << ")) failed with " << ret;
+                 << impl_.futex.value << ")) failed with " << ret;
       AOS_UNREACHABLE();
   }
 }

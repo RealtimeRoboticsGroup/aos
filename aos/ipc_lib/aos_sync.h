@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "aos/macros.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif  // __cplusplus
@@ -14,11 +16,44 @@ extern "C" {
 // <http://www.valgrind.org/docs/manual/drd-manual.html#drd-manual.clientreqs>
 // list the interesting ones
 
+// The futex primitive.
+//
+// On Linux, `value` is the exact 32-bit word that the kernel's futex syscalls
+// operate on, so it must be the first member and 32-bit aligned.  We wrap it
+// in a struct (rather than using a bare uint32_t) so that platforms which lack
+// a kernel futex can attach whatever extra per-futex bookkeeping they need to
+// emulate one.  Because an aos_futex only ever lives in memory shared between
+// processes running the same OS, the layout is free to differ per platform.
+//
 // Have to remember to align structs containing it (recursively) to sizeof(int).
 // Valid initial values for use with futex_ functions are 0 (unset) and 1 (set).
 // The value should not be changed after multiple processes have started
 // accessing an instance except through the functions declared in this file.
-typedef uint32_t aos_futex __attribute__((aligned(sizeof(int))));
+typedef struct aos_futex {
+  uint32_t value;
+#ifdef _WIN32
+  // Number of threads currently blocked waiting on this futex.
+  //
+  // Windows has no cross-process equivalent of WaitOnAddress, so shared-memory
+  // futexes are emulated with a named semaphore.  A counting semaphore has no
+  // way to tell how many waiters exist, so a naive wake releases too many
+  // tokens and they accumulate without bound.  We instead track the waiter
+  // count here -- right next to the value, in the same shared-memory page --
+  // and release exactly that many tokens on wake.  Only manipulated via atomic
+  // (Interlocked) operations.
+  int32_t waiters;
+#endif
+} aos_futex __attribute__((aligned(sizeof(int))));
+
+#ifndef FUTEX_TID_MASK
+#define FUTEX_TID_MASK 0x3fffffff
+#endif
+#ifndef FUTEX_WAITERS
+#define FUTEX_WAITERS 0x80000000
+#endif
+#ifndef FUTEX_OWNER_DIED
+#define FUTEX_OWNER_DIED 0x40000000
+#endif
 
 // For use with the condition_ functions.
 // No initialization is necessary.
@@ -90,11 +125,16 @@ uint32_t mutex_owner(const aos_mutex *m);
 // Returns whether the mutex's owner is dead (robust mutex feature).
 bool mutex_owner_is_dead(const aos_mutex *m);
 
-// Returns the thread ID (TID) of the owner encoded in a futex value.
-uint32_t futex_owner(aos_futex futex);
+// Returns the thread ID (TID) from a raw futex value.
+// These `_from_value` helpers allow callers to decode a single atomically
+// loaded snapshot of the futex consistently, avoiding a race condition
+// between separate atomic reads of the owner and the dead status.  They
+// also encapsulate platform-specific futex layout encoding (such as the
+// Windows 2-bit TID shift) so external code can remain platform-independent.
+uint32_t mutex_owner_from_value(uint32_t value);
 
-// Returns whether the owner encoded in a futex value is dead.
-bool futex_owner_is_dead(aos_futex futex);
+// Returns whether the owner is dead from a raw futex value.
+bool mutex_owner_is_dead_from_value(uint32_t value);
 
 // Simulates a thread crash/death by marking the mutex as owner-died.
 // Returns true if the owner matched the provided tid.
