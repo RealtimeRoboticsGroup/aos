@@ -3,6 +3,7 @@
 #include <sched.h>
 
 #include <atomic>
+#include <mutex>
 #include <ostream>
 #include <semaphore>
 #include <string>
