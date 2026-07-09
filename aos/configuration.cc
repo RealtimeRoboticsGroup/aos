@@ -276,6 +276,7 @@ void UnpackChannel(const Channel *channel, MutableChannel *result) {
   }
   if (channel->has_destination_nodes()) {
     for (const Connection *destination_node : *channel->destination_nodes()) {
+      ABSL_CHECK(destination_node->has_name());
       MutableConnection &destination =
           result->destination_nodes
               .try_emplace(destination_node->name()->string_view(),
