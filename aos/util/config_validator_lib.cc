@@ -236,6 +236,7 @@ void ConfigIsValid(const aos::Configuration *config,
     for (const LoggerNodeSetValidationStatic &logger_set :
          *validation_config->logging()->logger_sets()) {
       SCOPED_TRACE(aos::FlatbufferToJson(&logger_set.AsFlatbuffer()));
+      UnlinkRecursive(log_path);
       aos::SimulatedEventLoopFactory factory(config);
       std::vector<std::unique_ptr<LoggerState>> loggers;
       if (logger_set.has_loggers() && logger_set.loggers()->size() > 0) {
@@ -289,57 +290,64 @@ void ConfigIsValid(const aos::Configuration *config,
 
       // Confirm that we can read the log, and that if we put data in it that we
       // can find data on all the nodes that the user cares about.
-      logger::LogReader reader(logger::SortParts(logger::FindLogs(log_path)));
-      SimulatedEventLoopFactory replay_factory(reader.configuration());
-      reader.RegisterWithoutStarting(&replay_factory);
+      //
+      // This is wrapped in a scope block to force the LogReader to be destroyed
+      // and close all open file handles before we attempt to delete the log
+      // files via UnlinkRecursive. This is required on Windows, which does not
+      // allow deleting open files.
+      {
+        logger::LogReader reader(logger::SortParts(logger::FindLogs(log_path)));
+        SimulatedEventLoopFactory replay_factory(reader.configuration());
+        reader.RegisterWithoutStarting(&replay_factory);
 
-      replay_factory.Run();
+        replay_factory.Run();
 
-      // Find every channel we deliberately sent data on, and if it is for a
-      // node that we care about, confirm that we get it during replay.
-      std::vector<std::unique_ptr<EventLoop>> replay_loops;
-      for (const aos::Node *node :
-           configuration::GetNodes(replay_factory.configuration())) {
-        // If the user doesn't care about this node, don't check it.
-        if (!NodeInList(logger_set.has_replay_nodes()
-                            ? logger_set.replay_nodes()->AsFlatbufferVector()
-                            : nullptr,
-                        node)) {
-          continue;
+        // Find every channel we deliberately sent data on, and if it is for a
+        // node that we care about, confirm that we get it during replay.
+        std::vector<std::unique_ptr<EventLoop>> replay_loops;
+        for (const aos::Node *node :
+             configuration::GetNodes(replay_factory.configuration())) {
+          // If the user doesn't care about this node, don't check it.
+          if (!NodeInList(logger_set.has_replay_nodes()
+                              ? logger_set.replay_nodes()->AsFlatbufferVector()
+                              : nullptr,
+                          node)) {
+            continue;
+          }
+          replay_loops.emplace_back(replay_factory.MakeEventLoop("", node));
         }
-        replay_loops.emplace_back(replay_factory.MakeEventLoop("", node));
-      }
 
-      std::vector<std::pair<const aos::Node *, std::unique_ptr<RawFetcher>>>
-          fetchers;
-      for (const auto &node_senders : test_senders) {
-        for (const auto &sender : node_senders.second) {
-          for (auto &loop : replay_loops) {
-            if (configuration::ChannelIsReadableOnNode(sender->channel(),
-                                                       loop->node())) {
-              fetchers.push_back(std::make_pair(
-                  loop->node(),
-                  loop->MakeRawFetcher(configuration::GetChannel(
-                      replay_factory.configuration(), sender->channel(),
-                      loop->name(), loop->node()))));
+        std::vector<std::pair<const aos::Node *, std::unique_ptr<RawFetcher>>>
+            fetchers;
+        for (const auto &node_senders : test_senders) {
+          for (const auto &sender : node_senders.second) {
+            for (auto &loop : replay_loops) {
+              if (configuration::ChannelIsReadableOnNode(sender->channel(),
+                                                         loop->node())) {
+                fetchers.push_back(std::make_pair(
+                    loop->node(),
+                    loop->MakeRawFetcher(configuration::GetChannel(
+                        replay_factory.configuration(), sender->channel(),
+                        loop->name(), loop->node()))));
+              }
             }
           }
         }
-      }
 
-      for (auto &pair : fetchers) {
-        EXPECT_TRUE(pair.second->Fetch())
-            << "Failed to log or replay any data on "
-            << configuration::StrippedChannelToString(pair.second->channel())
-            << " reading from " << logger::MaybeNodeName(pair.first)
-            << " with source node "
-            << (pair.second->channel()->has_source_node()
-                    ? pair.second->channel()->source_node()->string_view()
-                    : "")
-            << ".";
-      }
+        for (auto &pair : fetchers) {
+          EXPECT_TRUE(pair.second->Fetch())
+              << "Failed to log or replay any data on "
+              << configuration::StrippedChannelToString(pair.second->channel())
+              << " reading from " << logger::MaybeNodeName(pair.first)
+              << " with source node "
+              << (pair.second->channel()->has_source_node()
+                      ? pair.second->channel()->source_node()->string_view()
+                      : "")
+              << ".";
+        }
 
-      reader.Deregister();
+        reader.Deregister();
+      }
 
       // Clean up the logs.
       UnlinkRecursive(log_path);
