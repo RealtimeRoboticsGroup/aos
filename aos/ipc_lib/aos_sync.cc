@@ -1214,6 +1214,42 @@ bool mutex_islocked(const aos_mutex *m) {
   return (value & FUTEX_TID_MASK) == tid;
 }
 
+uint32_t mutex_owner(const aos_mutex *m) {
+  const uint32_t value =
+      std::atomic_ref<uint32_t>(const_cast<uint32_t &>(m->futex))
+          .load(std::memory_order_relaxed);
+  return futex_owner(value);
+}
+
+bool mutex_owner_is_dead(const aos_mutex *m) {
+  const uint32_t value =
+      std::atomic_ref<uint32_t>(const_cast<uint32_t &>(m->futex))
+          .load(std::memory_order_relaxed);
+  return futex_owner_is_dead(value);
+}
+
+uint32_t futex_owner(aos_futex futex) { return futex & FUTEX_TID_MASK; }
+
+bool futex_owner_is_dead(aos_futex futex) {
+  return (futex & FUTEX_OWNER_DIED) != 0;
+}
+
+bool mutex_pretend_owner_died_for_testing(aos_mutex *m, uint32_t tid) {
+  // This is only used in tests, so use seq_cst rather than reasoning about
+  // what weaker orderings would be safe.
+  std::atomic_ref<uint32_t> ref(m->futex);
+  uint32_t value = ref.load(std::memory_order_seq_cst);
+  while ((value & FUTEX_TID_MASK) == tid) {
+    const uint32_t new_value = FUTEX_OWNER_DIED | (value & FUTEX_WAITERS);
+    if (ref.compare_exchange_strong(value, new_value,
+                                    std::memory_order_seq_cst)) {
+      return true;
+    }
+    // The compare failed and reloaded value, so recheck the owner.
+  }
+  return false;
+}
+
 void death_notification_init(aos_mutex *m) {
   const uint32_t tid = get_tid();
   if (kPrintOperations) {

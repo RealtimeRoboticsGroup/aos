@@ -279,10 +279,6 @@ LocklessQueueMemory *InitializeLocklessQueueMemory(
 
 const static unsigned int kWakeupSignal = SIGRTMIN + 2;
 
-// Sets FUTEX_OWNER_DIED if the owner was tid.  This fakes what the kernel does
-// with a robust mutex.
-bool PretendThatOwnerIsDeadForTesting(aos_mutex *mutex, pid_t tid);
-
 // A convenient wrapper for accessing a lockless queue.
 class LocklessQueue {
  public:

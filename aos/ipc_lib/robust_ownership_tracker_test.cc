@@ -5,11 +5,28 @@
 #include <sys/mman.h>
 #include <sys/wait.h>
 
+#include <atomic>
+#include <cstdint>
+
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 
 namespace aos::ipc_lib::testing {
+namespace {
+
+// A PID that can never belong to a live process.  The kernel caps
+// /proc/sys/kernel/pid_max at PID_MAX_LIMIT, and PID allocation wraps at
+// pid_max, so PID_MAX_LIMIT is never handed out no matter how pid_max is
+// tuned at runtime.  A smaller hardcoded value like 999999 is a perfectly
+// allocatable PID when pid_max is raised, and would spuriously match a live
+// process holding that PID.
+//
+// PID_MAX_LIMIT comes from the kernel's include/linux/threads.h, which isn't
+// exported to userspace, so we spell it out here.
+constexpr uint32_t kNonexistentPid = 1 << 22;
+
+}  // namespace
 
 // Capture RobustOwnershipTracker in shared memory so it is shared across a
 // fork.
@@ -123,11 +140,8 @@ TEST_F(RobustOwnershipTrackerTest, NoMatchingPID) {
   shared_tracker.tracker().Acquire();
   EXPECT_FALSE(shared_tracker.tracker().LoadRelaxed().OwnerIsDead());
   EXPECT_FALSE(shared_tracker.tracker().OwnerIsDefinitelyAbsolutelyDead());
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wignored-attributes"
-  GetMutex(shared_tracker.tracker()).futex =
-      std::numeric_limits<aos_futex>::max() & FUTEX_TID_MASK;
-#pragma GCC diagnostic pop
+  std::atomic_ref<uint32_t>(GetMutex(shared_tracker.tracker()).futex)
+      .store(kNonexistentPid, std::memory_order_relaxed);
 
   // Since we're only pretending that the owner died (by changing the TID in the
   // futex), we only notice that the owner is dead when spending the time

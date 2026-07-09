@@ -1,6 +1,5 @@
 #include "aos/ipc_lib/lockless_queue.h"
 
-#include <linux/futex.h>
 #include <pwd.h>
 #include <sched.h>
 #include <string.h>
@@ -437,14 +436,6 @@ QueueIndex ZeroOrValid(QueueIndex index) {
 }
 
 }  // namespace
-
-bool PretendThatOwnerIsDeadForTesting(aos_mutex *mutex, pid_t tid) {
-  if (static_cast<pid_t>(mutex->futex & FUTEX_TID_MASK) == tid) {
-    mutex->futex = FUTEX_OWNER_DIED;
-    return true;
-  }
-  return false;
-}
 
 #ifdef AOS_IPC_LIB_LOCKLESS_QUEUE_HAS_ATOMIC_TIME_POINT
 void Message::SetSendTimes(
@@ -1776,16 +1767,15 @@ namespace {
 // changed.
 ::std::string PrintMutex(const aos_mutex *mutex) {
   ::std::stringstream s;
-  s << "aos_mutex(" << ::std::hex << mutex->futex;
-
-  if (mutex->futex != 0) {
-    s << ":";
-    if (mutex->futex & FUTEX_OWNER_DIED) {
+  const uint32_t owner = mutex_owner(mutex);
+  const bool dead = mutex_owner_is_dead(mutex);
+  s << "aos_mutex(";
+  if (owner != 0 || dead) {
+    if (dead) {
       s << "FUTEX_OWNER_DIED|";
     }
-    s << "tid=" << (mutex->futex & FUTEX_TID_MASK);
+    s << "tid=" << owner;
   }
-
   s << ")";
   return s.str();
 }
