@@ -2,38 +2,59 @@
 
 #include <errno.h>
 #include <stdlib.h>
-#include <sys/mman.h>
+#ifndef _WIN32
 #include <sys/wait.h>
+#else
+#include <windows.h>
+
+#include <thread>
+#endif
 
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 
+#include "aos/testing/test_shm.h"
+
 namespace aos::ipc_lib::testing {
 
 // Capture RobustOwnershipTracker in shared memory so it is shared across a
-// fork.
+// fork (on Linux) or simply allocated/shared (on Windows).
 class SharedRobustOwnershipTracker {
  public:
-  SharedRobustOwnershipTracker() {
-    tracker_ = static_cast<RobustOwnershipTracker *>(
-        mmap(nullptr, sizeof(RobustOwnershipTracker), PROT_READ | PROT_WRITE,
-             MAP_SHARED | MAP_ANONYMOUS, -1, 0));
-    ABSL_PCHECK(MAP_FAILED != tracker_);
-  };
+  SharedRobustOwnershipTracker() : block_(sizeof(RobustOwnershipTracker)) {
+    tracker_ = new (block_.get()) RobustOwnershipTracker();
+  }
   ~SharedRobustOwnershipTracker() {
-    ABSL_PCHECK(munmap(tracker_, sizeof(RobustOwnershipTracker)) != -1);
+    if (acquired_) {
+      tracker_->Release();
+    }
   }
 
-  // Captures the tid.
   RobustOwnershipTracker &tracker() const { return *tracker_; }
 
+  void Acquire() {
+    tracker_->Acquire();
+    acquired_ = true;
+  }
+
+  void PreventRelease() { acquired_ = false; }
+
  private:
+  aos::testing::SharedMemoryBlock block_;
   RobustOwnershipTracker *tracker_;
+  bool acquired_ = false;
 };
 
 class RobustOwnershipTrackerTest : public ::testing::Test {
  public:
+#ifdef _WIN32
+  template <typename T>
+  void RunInChildAndBlockUntilComplete(T fn) {
+    std::thread thread(fn);
+    thread.join();
+  }
+#else
   // Runs a function in a child process, and then exits afterwards.  Waits for
   // the child to finish before resuming.
   template <typename T>
@@ -66,6 +87,7 @@ class RobustOwnershipTrackerTest : public ::testing::Test {
       return;
     }
   }
+#endif
 
   // Returns the robust mutex.
   aos_mutex &GetMutex(RobustOwnershipTracker &tracker) {
@@ -90,9 +112,9 @@ TEST_F(RobustOwnershipTrackerTest, AcquireWorks) {
 
   EXPECT_FALSE(shared_tracker.tracker().OwnerIsDefinitelyAbsolutelyDead());
 
-  // Run acquire in the this process, and expect it should not be dead until
+  // Run acquire in this process, and expect it should not be dead until
   // after the test finishes.
-  shared_tracker.tracker().Acquire();
+  shared_tracker.Acquire();
 
   // We have ownership. Since we are alive, the owner should not be marked as
   // dead. We can use relaxed ordering since we are the only ones touching the
@@ -120,7 +142,7 @@ TEST_F(RobustOwnershipTrackerTest, FutexRecovers) {
 TEST_F(RobustOwnershipTrackerTest, NoMatchingPID) {
   SharedRobustOwnershipTracker shared_tracker;
 
-  shared_tracker.tracker().Acquire();
+  shared_tracker.Acquire();
   EXPECT_FALSE(shared_tracker.tracker().LoadRelaxed().OwnerIsDead());
   EXPECT_FALSE(shared_tracker.tracker().OwnerIsDefinitelyAbsolutelyDead());
   std::atomic_ref<uint32_t>(GetMutex(shared_tracker.tracker()).futex.value)
@@ -131,6 +153,10 @@ TEST_F(RobustOwnershipTrackerTest, NoMatchingPID) {
   // walking through /proc.
   EXPECT_FALSE(shared_tracker.tracker().LoadRelaxed().OwnerIsDead());
   EXPECT_TRUE(shared_tracker.tracker().OwnerIsDefinitelyAbsolutelyDead());
+
+  // We have corrupted the futex. Prevent the RAII destructor from calling
+  // Release() on it, which would crash with EPERM under Linux.
+  shared_tracker.PreventRelease();
 }
 
 // Tests that a mismatched start time results in the process being marked as
@@ -138,7 +164,7 @@ TEST_F(RobustOwnershipTrackerTest, NoMatchingPID) {
 TEST_F(RobustOwnershipTrackerTest, NoMatchingStartTime) {
   SharedRobustOwnershipTracker shared_tracker;
 
-  shared_tracker.tracker().Acquire();
+  shared_tracker.Acquire();
   EXPECT_FALSE(shared_tracker.tracker().LoadRelaxed().OwnerIsDead());
   EXPECT_FALSE(shared_tracker.tracker().OwnerIsDefinitelyAbsolutelyDead());
 

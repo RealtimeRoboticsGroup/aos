@@ -301,10 +301,10 @@ cc_library(
         cc_test(
             name = "robust_ownership_tracker_test" + suffix,
             srcs = ["robust_ownership_tracker_test.cc"],
-            target_compatible_with = ["@platforms//os:linux"],
             deps = [
                 ":lockless_queue" + suffix,
                 "//aos/testing:googletest",
+                "//aos/testing:test_shm",
             ],
         ),
         cc_library(
