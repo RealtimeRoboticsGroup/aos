@@ -611,7 +611,7 @@ void initialize_in_new_thread();
 // Gets the current thread's TID and does all of the 1-time initialization the
 // first time it's called in a given thread.
 inline uint32_t get_tid() {
-  if (__builtin_expect(my_tid == 0, false)) {
+  if (AOS_UNLIKELY(my_tid == 0)) {
     initialize_in_new_thread();
   }
   static_assert(sizeof(my_tid) <= sizeof(uint32_t), "pid_t is too big");
@@ -738,7 +738,7 @@ inline uintptr_t mutex_to_next(aos_mutex *m) {
          kRobustListOr;
 }
 inline aos_mutex *next_to_mutex(uintptr_t next) {
-  if (__builtin_expect(robust_list_offset != 0, false) && next_is_head(next)) {
+  if (AOS_UNLIKELY(robust_list_offset != 0) && next_is_head(next)) {
     // We don't offset the head pointer, so be careful.
     return reinterpret_cast<aos_mutex *>(next);
   }
@@ -934,7 +934,7 @@ void initialize_in_new_thread() {
 inline int mutex_finish_lock(aos_mutex *m) {
   const uint32_t value =
       std::atomic_ref<uint32_t>(m->futex).load(std::memory_order_acquire);
-  if (__builtin_expect((value & FUTEX_OWNER_DIED) != 0, false)) {
+  if (AOS_UNLIKELY((value & FUTEX_OWNER_DIED) != 0)) {
     std::atomic_ref<uint32_t>(m->futex).fetch_and(~FUTEX_OWNER_DIED,
                                                   std::memory_order_relaxed);
     force_lock_pthread_mutex(m);
@@ -965,7 +965,7 @@ inline int mutex_do_get(aos_mutex *m, bool signals_fail,
         if (timeout != NULL && ret == -ETIMEDOUT) {
           return 3;
         }
-        if (__builtin_expect(ret == -EINTR, true)) {
+        if (AOS_LIKELY(ret == -EINTR)) {
           if (signals_fail) {
             return 2;
           } else {
@@ -1090,7 +1090,7 @@ void condition_wake(aos_condition *c, aos_mutex *m, int number_requeue) {
     if (ret < 0) {
       // If the value got changed out from under us (aka somebody else did a
       // condition_wake).
-      if (__builtin_expect(ret == -EAGAIN, true)) {
+      if (AOS_LIKELY(ret == -EAGAIN)) {
         // If we're doing a broadcast, the other guy might have done a signal
         // instead, so we have to try again.
         // If we're doing a signal, we have to go again to make sure that 2
@@ -1135,7 +1135,7 @@ void mutex_unlock(aos_mutex *m) {
 
   const uint32_t value =
       std::atomic_ref<uint32_t>(m->futex).load(std::memory_order_seq_cst);
-  if (__builtin_expect((value & FUTEX_TID_MASK) != tid, false)) {
+  if (AOS_UNLIKELY((value & FUTEX_TID_MASK) != tid)) {
     my_robust_list::robust_head.pending_next = 0;
     check_cached_tid(tid);
     if ((value & FUTEX_TID_MASK) == 0) {
@@ -1175,7 +1175,7 @@ int mutex_trylock(aos_mutex *m) {
   uint32_t c = compare_and_swap_val(&m->futex, 0, tid);
 
   if (c != 0) {
-    if (__builtin_expect((c & FUTEX_OWNER_DIED) == 0, true)) {
+    if (AOS_LIKELY((c & FUTEX_OWNER_DIED) == 0)) {
       // Somebody else had it locked; we failed.
       return 4;
     } else {
@@ -1189,7 +1189,7 @@ int mutex_trylock(aos_mutex *m) {
         return mutex_finish_lock(m);
       } else {
         // EWOULDBLOCK means that somebody else beat us to it.
-        if (__builtin_expect(ret == -EWOULDBLOCK, true)) {
+        if (AOS_LIKELY(ret == -EWOULDBLOCK)) {
           return 4;
         }
         my_robust_list::robust_head.pending_next = 0;
@@ -1271,10 +1271,10 @@ int condition_wait(aos_condition *c, aos_mutex *m, struct timespec *end_time) {
 
     if (ret != 0) {
       // Timed out waiting.  Signal that back up to the user.
-      if (__builtin_expect(ret == -ETIMEDOUT, true)) {
+      if (AOS_LIKELY(ret == -ETIMEDOUT)) {
         // We have to relock it ourself because the kernel didn't do it.
         const int r = mutex_do_get(m, false, nullptr, tid);
-        assert(__builtin_expect(r == 0 || r == 1, true));
+        assert(AOS_LIKELY(r == 0 || r == 1));
         adder.Add();
 
         // OWNER_DIED takes priority.  Pass it on if we found it.
@@ -1285,7 +1285,7 @@ int condition_wait(aos_condition *c, aos_mutex *m, struct timespec *end_time) {
 
       // If it failed because somebody else did a wake and changed the value
       // before we actually made it to sleep.
-      if (__builtin_expect(ret == -EAGAIN, true)) {
+      if (AOS_LIKELY(ret == -EAGAIN)) {
         // There's no need to unconditionally set FUTEX_WAITERS here if we're
         // using REQUEUE_PI because the kernel automatically does that in the
         // REQUEUE_PI iff it requeued anybody.
@@ -1294,12 +1294,12 @@ int condition_wait(aos_condition *c, aos_mutex *m, struct timespec *end_time) {
 
         // We have to relock it ourself because the kernel didn't do it.
         const int r = mutex_do_get(m, false, nullptr, tid);
-        assert(__builtin_expect(r == 0 || r == 1, true));
+        assert(AOS_LIKELY(r == 0 || r == 1));
         adder.Add();
         return r;
       }
       // Try again if it was because of a signal.
-      if (__builtin_expect((ret == -EINTR), true)) {
+      if (AOS_LIKELY(ret == -EINTR)) {
         continue;
       }
       my_robust_list::robust_head.pending_next = 0;
@@ -1318,7 +1318,7 @@ int condition_wait(aos_condition *c, aos_mutex *m, struct timespec *end_time) {
 
       const uint32_t value =
           std::atomic_ref<uint32_t>(m->futex).load(std::memory_order_relaxed);
-      if (__builtin_expect((value & FUTEX_OWNER_DIED) != 0, false)) {
+      if (AOS_UNLIKELY((value & FUTEX_OWNER_DIED) != 0)) {
         std::atomic_ref<uint32_t>(m->futex).fetch_and(
             ~FUTEX_OWNER_DIED, std::memory_order_relaxed);
         return 1;
@@ -1405,9 +1405,8 @@ int futex_set_value(aos_futex *m, uint32_t value) {
   ANNOTATE_HAPPENS_BEFORE(m);
   std::atomic_ref<uint32_t>(*m).store(value, std::memory_order_seq_cst);
   const int r = sys_futex_wake(m, INT_MAX - 4096);
-  if (__builtin_expect(
-          static_cast<unsigned int>(r) > static_cast<unsigned int>(-4096),
-          false)) {
+  if (AOS_UNLIKELY(static_cast<unsigned int>(r) >
+                   static_cast<unsigned int>(-4096))) {
     errno = -r;
     return -1;
   } else {
