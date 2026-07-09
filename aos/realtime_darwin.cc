@@ -521,5 +521,10 @@ std::string GetThreadName() {
 }
 
 pid_t GetProcessId() { return getpid(); }
+pid_t GetThreadId() {
+  uint64_t tid;
+  pthread_threadid_np(NULL, &tid);
+  return static_cast<pid_t>(tid);
+}
 
 }  // namespace aos

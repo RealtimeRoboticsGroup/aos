@@ -200,5 +200,6 @@ std::string GetProgramName() {
 std::string GetThreadName() { return ""; }
 
 pid_t GetProcessId() { return GetCurrentProcessId(); }
+pid_t GetThreadId() { return static_cast<pid_t>(GetCurrentThreadId()); }
 
 }  // namespace aos

@@ -1,5 +1,8 @@
+#ifndef _WIN32
 #include <sys/wait.h>
 #include <unistd.h>
+#endif
+#include <thread>
 
 #include "gtest/gtest.h"
 
@@ -14,6 +17,7 @@ class TimerFdTest : public ::testing::Test {
   void SetUp() override {}
 };
 
+#ifndef _WIN32
 TEST_F(TimerFdTest, ForkSafety) {
   // Test that TimerFd works in a forked child.
   // This mimics how ASSERT_EXIT might use it (forking and then running code).
@@ -82,6 +86,7 @@ TEST_F(TimerFdTest, EpollOutlivesFork) {
   close(pipefd[0]);
   close(pipefd[1]);
 }
+#endif
 
 TEST_F(TimerFdTest, MultipleExpirations) {
   TimerFd timer;

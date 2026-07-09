@@ -1,6 +1,5 @@
 #ifndef AOS_EVENTS_EVENT_LOOP_H_
 #define AOS_EVENTS_EVENT_LOOP_H_
-#include <sched.h>
 
 #include <atomic>
 #include <mutex>
