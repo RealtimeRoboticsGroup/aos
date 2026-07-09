@@ -2,7 +2,6 @@
 #define AOS_IPC_LIB_ROBUST_OWNERSHIP_TRACKER_H_
 
 #include <assert.h>
-#include <linux/futex.h>
 #include <stdint.h>
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -38,7 +37,7 @@ class ThreadOwnerStatusSnapshot {
 
   // Returns if the owner died as noticed by the robust futex using Acquire
   // memory ordering.
-  bool OwnerIsDead() const { return (futex_ & FUTEX_OWNER_DIED) != 0; }
+  bool OwnerIsDead() const { return futex_owner_is_dead(futex_); }
 
   // Returns true if no one has claimed ownership.
   bool IsUnclaimed() const { return futex_ == 0; }
@@ -46,7 +45,7 @@ class ThreadOwnerStatusSnapshot {
   // Returns the thread ID (a.k.a. "tid") of the owning thread. Use this when
   // trying to access the /proc entry that corresponds to the owning thread for
   // example. Do not use the futex value directly.
-  pid_t tid() const { return futex_ & FUTEX_TID_MASK; }
+  pid_t tid() const { return futex_owner(futex_); }
 
   bool operator==(const ThreadOwnerStatusSnapshot &other) const {
     return other.futex_ == futex_;
@@ -83,14 +82,16 @@ class RobustOwnershipTracker {
   // Acquire memory ordering.
   ThreadOwnerStatusSnapshot LoadAcquire() const {
     return ThreadOwnerStatusSnapshot(
-        __atomic_load_n(&(mutex_.futex), __ATOMIC_ACQUIRE));
+        std::atomic_ref<uint32_t>(const_cast<uint32_t &>(mutex_.futex))
+            .load(std::memory_order_acquire));
   }
 
   // Loads all the realtime-compatible contents of the ownership tracker with
   // Relaxed memory order.
   ThreadOwnerStatusSnapshot LoadRelaxed() const {
     return ThreadOwnerStatusSnapshot(
-        __atomic_load_n(&(mutex_.futex), __ATOMIC_RELAXED));
+        std::atomic_ref<uint32_t>(const_cast<uint32_t &>(mutex_.futex))
+            .load(std::memory_order_relaxed));
   }
 
   // Checks both the robust futex and dredges through /proc to see if the thread
@@ -128,7 +129,7 @@ class RobustOwnershipTracker {
     // about the linked list. We just want to release ownership here. We still
     // want the kernel to know about this element via the linked list the next
     // time someone takes ownership.
-    __atomic_store_n(&(mutex_.futex), 0, __ATOMIC_RELEASE);
+    std::atomic_ref<uint32_t>(mutex_.futex).store(0, std::memory_order_release);
     start_time_ticks_ = kNoStartTimeTicks;
   }
 

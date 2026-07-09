@@ -4,14 +4,17 @@ namespace aos::ipc_lib {
 
 ::std::string RobustOwnershipTracker::DebugString() const {
   ::std::stringstream s;
-  s << "{.tid=aos_mutex(" << ::std::hex << mutex_.futex;
+  const uint32_t futex =
+      std::atomic_ref<uint32_t>(const_cast<uint32_t &>(mutex_.futex))
+          .load(std::memory_order_relaxed);
+  s << "{.tid=aos_mutex(" << ::std::hex << futex;
 
-  if (mutex_.futex != 0) {
+  if (futex != 0) {
     s << ":";
-    if (mutex_.futex & FUTEX_OWNER_DIED) {
+    if (futex_owner_is_dead(futex)) {
       s << "FUTEX_OWNER_DIED|";
     }
-    s << "tid=" << (mutex_.futex & FUTEX_TID_MASK);
+    s << "tid=" << futex_owner(futex);
   }
 
   s << "),}";

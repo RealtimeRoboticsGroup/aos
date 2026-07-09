@@ -123,11 +123,8 @@ TEST_F(RobustOwnershipTrackerTest, NoMatchingPID) {
   shared_tracker.tracker().Acquire();
   EXPECT_FALSE(shared_tracker.tracker().LoadRelaxed().OwnerIsDead());
   EXPECT_FALSE(shared_tracker.tracker().OwnerIsDefinitelyAbsolutelyDead());
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wignored-attributes"
-  GetMutex(shared_tracker.tracker()).futex =
-      std::numeric_limits<aos_futex>::max() & FUTEX_TID_MASK;
-#pragma GCC diagnostic pop
+  std::atomic_ref<uint32_t>(GetMutex(shared_tracker.tracker()).futex)
+      .store(999999, std::memory_order_relaxed);
 
   // Since we're only pretending that the owner died (by changing the TID in the
   // futex), we only notice that the owner is dead when spending the time
