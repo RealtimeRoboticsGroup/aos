@@ -114,6 +114,11 @@ uint32_t mutex_owner(const aos_mutex *m);
 // Returns whether the mutex's owner is dead (robust mutex feature).
 bool mutex_owner_is_dead(const aos_mutex *m);
 
+// Atomically loads a snapshot of m's futex value, for decoding with the
+// _from_value helpers below.  Acquire ordering, so everything the owner wrote
+// before claiming the mutex is visible if the snapshot shows it as owner.
+uint32_t mutex_load_value(const struct aos_mutex *m);
+
 // Returns the thread ID (TID) from a raw futex value.
 // These `_from_value` helpers allow callers to decode a single atomically
 // loaded snapshot of the futex consistently, avoiding a race condition

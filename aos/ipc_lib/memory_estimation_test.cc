@@ -48,7 +48,7 @@ class MemoryEstimationTest : public ::testing::Test {
           "timestamp_logger_nodes": [ "node2" ]
         }
       ]
-    },
+    }
   ],
   "nodes": [
     { "name": "node1" },
@@ -72,10 +72,17 @@ TEST_F(MemoryEstimationTest, TotalMemoryUsage) {
   // sane, and they can be updated when needed.
 #ifdef _WIN32
   EXPECT_EQ(110000120720, TotalSharedMemoryUsage(config_, node1_));
+#elif defined(__APPLE__)
+  EXPECT_EQ(110000121680, TotalSharedMemoryUsage(config_, node1_));
 #else
   EXPECT_EQ(110000121200, TotalSharedMemoryUsage(config_, node1_));
 #endif
+
+#ifdef __APPLE__
+  EXPECT_EQ(65440, TotalSharedMemoryUsage(config_, node2_));
+#else
   EXPECT_EQ(65120, TotalSharedMemoryUsage(config_, node2_));
+#endif
 }
 
 // Validates that we calculate the appropriate buffer size for each individual

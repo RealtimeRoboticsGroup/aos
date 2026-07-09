@@ -309,11 +309,13 @@ bool mutex_owner_is_dead_from_value(uint32_t value) {
   return (value & FUTEX_OWNER_DIED) != 0;
 }
 
+uint32_t mutex_load_value(const aos_mutex *m) {
+  return std::atomic_ref<uint32_t>(const_cast<uint32_t &>(m->futex))
+      .load(std::memory_order_acquire);
+}
+
 uint32_t mutex_owner(const aos_mutex *m) {
-  const uint32_t value =
-      std::atomic_ref<uint32_t>(const_cast<uint32_t &>(m->futex))
-          .load(std::memory_order_relaxed);
-  return mutex_owner_from_value(value);
+  return mutex_owner_from_value(mutex_load_value(m));
 }
 
 bool mutex_owner_is_dead(const aos_mutex *m) {

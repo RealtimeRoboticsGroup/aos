@@ -947,6 +947,11 @@ LocklessQueueSender::LocklessQueueSender(
 LocklessQueueSender::~LocklessQueueSender() {
   if (sender_index_ != -1) {
     ABSL_CHECK(memory_ != nullptr);
+    // Serialize the release against Acquire()/Cleanup with the same lock that
+    // registration uses.  ownership_tracker.Release() clears the ownership
+    // metadata, which races with another thread acquiring this slot unless we
+    // hold the setup lock.
+    GrabQueueSetupLockOrDie grab_queue_setup_lock(memory_);
     memory_->GetSender(sender_index_)->ownership_tracker.Release();
   }
 }
@@ -1369,6 +1374,11 @@ LocklessQueuePinner::~LocklessQueuePinner() {
     ABSL_CHECK(memory_ != nullptr);
     memory_->GetPinner(pinner_index_)->pinned.Invalidate();
     aos_compiler_memory_barrier();
+    // Serialize the release against Acquire()/Cleanup with the same lock that
+    // registration uses; ownership_tracker.Release() clears the ownership
+    // metadata, which races with another thread acquiring this slot unless we
+    // hold the setup lock.
+    GrabQueueSetupLockOrDie grab_queue_setup_lock(memory_);
     memory_->GetPinner(pinner_index_)->ownership_tracker.Release();
   }
 }

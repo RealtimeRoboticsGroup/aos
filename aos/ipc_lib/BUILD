@@ -257,7 +257,11 @@ cc_library(
                 "lockless_queue.cc",
                 "lockless_queue_memory.h",
                 "robust_ownership_tracker.cc",
-            ],
+            ] + select({
+                "@platforms//os:linux": ["robust_ownership_tracker_linux.cc"],
+                "@platforms//os:macos": ["robust_ownership_tracker_darwin.cc"],
+                "@platforms//os:windows": ["robust_ownership_tracker_windows.cc"],
+            }),
             hdrs = [
                 "lockless_queue.h",
                 "robust_ownership_tracker.h",
@@ -356,10 +360,11 @@ cc_library(
         cc_test(
             name = "robust_ownership_tracker_test" + suffix,
             srcs = ["robust_ownership_tracker_test.cc"],
-            target_compatible_with = ["@platforms//os:linux"],
             deps = [
                 ":lockless_queue" + suffix,
                 "//aos/testing:googletest",
+                "//aos/testing:test_child",
+                "//aos/testing:test_shm",
             ],
         ),
         cc_library(

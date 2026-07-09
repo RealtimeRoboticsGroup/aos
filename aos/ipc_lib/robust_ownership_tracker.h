@@ -1,22 +1,13 @@
 #ifndef AOS_IPC_LIB_ROBUST_OWNERSHIP_TRACKER_H_
 #define AOS_IPC_LIB_ROBUST_OWNERSHIP_TRACKER_H_
 
-#include <assert.h>
 #include <stdint.h>
-#include <sys/syscall.h>
-#include <unistd.h>
 
 #include <atomic>
-#include <limits>
-#include <optional>
-#include <ostream>
 #include <string>
 
-#include "absl/log/absl_check.h"
-#include "absl/log/absl_log.h"
-
 #include "aos/ipc_lib/aos_sync.h"
-#include "aos/util/proc_stat.h"
+#include "aos/realtime.h"
 
 namespace aos::ipc_lib {
 namespace testing {
@@ -57,112 +48,47 @@ class ThreadOwnerStatusSnapshot {
   uint32_t futex_;
 };
 
-// This object reliably tracks a thread owning a resource. A single thread may
-// possess multiple resources like senders and receivers. Each resource can have
-// its own instance of this class. These instances are responsible for
-// monitoring the thread that owns them. Each resource can use its instance of
-// this class to reliably check whether the owning thread is no longer alive.
-//
-// All methods other than Load* must be accessed under a mutex.
+// This object reliably tracks a thread owning a resource.
 class RobustOwnershipTracker {
  public:
   static constexpr uint64_t kNoStartTimeTicks =
       std::numeric_limits<uint64_t>::max();
 
-  static uint64_t ReadStartTimeTicks(pid_t tid) {
-    if (tid == 0) {
-      return kNoStartTimeTicks;
-    }
-    std::optional<aos::util::ProcStat> proc_stat = util::ReadProcStat(tid);
-    if (!proc_stat.has_value()) {
-      return kNoStartTimeTicks;
-    }
-    return proc_stat->start_time_ticks;
-  }
-
   // Loads the realtime-compatible contents of the ownership tracker with
   // Acquire memory ordering.
-  ThreadOwnerStatusSnapshot LoadAcquire() const {
-    return ThreadOwnerStatusSnapshot(
-        std::atomic_ref<uint32_t>(const_cast<uint32_t &>(mutex_.futex))
-            .load(std::memory_order_acquire));
-  }
+  ThreadOwnerStatusSnapshot LoadAcquire() const;
 
   // Loads all the realtime-compatible contents of the ownership tracker with
   // Relaxed memory order.
-  ThreadOwnerStatusSnapshot LoadRelaxed() const {
-    return ThreadOwnerStatusSnapshot(
-        std::atomic_ref<uint32_t>(const_cast<uint32_t &>(mutex_.futex))
-            .load(std::memory_order_relaxed));
-  }
+  ThreadOwnerStatusSnapshot LoadRelaxed() const;
 
-  // Checks both the robust futex and dredges through /proc to see if the thread
-  // is alive. As per the class description, this must only be called under a
-  // mutex. This must not be called in a realtime context and it is slow.
-  bool OwnerIsDefinitelyAbsolutelyDead() const {
-    auto loaded = LoadAcquire();
-    if (loaded.OwnerIsDead()) {
-      return true;
-    }
-    if (loaded.IsUnclaimed()) {
-      return false;
-    }
-    const uint64_t proc_start_time_ticks = ReadStartTimeTicks(loaded.tid());
-    if (proc_start_time_ticks == kNoStartTimeTicks) {
-      ABSL_LOG(ERROR) << "Detected that PID " << loaded.tid() << " died.";
-      return true;
-    }
-
-    if (proc_start_time_ticks != start_time_ticks_) {
-      ABSL_LOG(ERROR) << "Detected that PID " << loaded.tid()
-                      << " died from a starttime missmatch.";
-      return true;
-    }
-    return false;
-  }
+  // Checks both the robust futex and process/thread start times to see if the
+  // thread is alive.
+  bool OwnerIsDefinitelyAbsolutelyDead() const;
 
   // Clears all ownership state.
   //
   // This should only really be called if you are 100% certain that the owner is
   // dead. Use `LoadAquire().OwnerIsDead()` to determine this.
-  void ForceClear() {
-    // Must be opposite order of Acquire.
-    // We only deal with the futex here because we don't want to change anything
-    // about the linked list. We just want to release ownership here. We still
-    // want the kernel to know about this element via the linked list the next
-    // time someone takes ownership.
-    std::atomic_ref<uint32_t>(mutex_.futex).store(0, std::memory_order_release);
-    start_time_ticks_ = kNoStartTimeTicks;
-  }
+  void ForceClear();
 
   // Returns true if this thread holds ownership.
-  bool IsHeldBySelf() { return death_notification_is_held(&mutex_); }
+  bool IsHeldBySelf();
 
-  // Returns true if the mutex is held by the provided tid.  This is primarily
-  // intended for testing. There should be no need to call this in production
-  // code.
-  bool IsHeldBy(pid_t tid) { return LoadRelaxed().tid() == tid; }
+  // Returns true if the mutex is held by the provided tid.
+  bool IsHeldBy(pid_t tid);
 
-  // Acquires ownership. Other threads will know that this thread holds the
-  // ownership or be notified if this thread dies.
-  void Acquire() {
-    pid_t tid = syscall(SYS_gettid);
-    assert(tid > 0);
-    const uint64_t proc_start_time_ticks = ReadStartTimeTicks(tid);
-    ABSL_CHECK_NE(proc_start_time_ticks, kNoStartTimeTicks);
-
-    start_time_ticks_ = proc_start_time_ticks;
-    death_notification_init(&mutex_);
-  }
+  // Acquires ownership.
+  //
+  // Note that if two processes concurrently attempt to call Acquire() on the
+  // same tracker, they could overwrite each other's metadata before either
+  // claims the futex, leading to state corruption.  Callers must serialize
+  // calls to Acquire() (e.g., using a higher-level lock, as is done in the
+  // lockless queue implementation via the queue setup lock).
+  void Acquire();
 
   // Releases ownership.
-  //
-  // This should only be called from the owning thread.
-  void Release() {
-    // Must be opposite order of Acquire.
-    death_notification_release(&mutex_);
-    start_time_ticks_ = kNoStartTimeTicks;
-  }
+  void Release();
 
   // Returns a string representing this object.
   std::string DebugString() const;
@@ -170,19 +96,18 @@ class RobustOwnershipTracker {
  private:
   friend class testing::RobustOwnershipTrackerTest;
 
-  // Robust futex to track ownership the normal way. The futex is inside the
-  // mutex here. We use the wrapper mutex because the death_notification_*
-  // functions operate on that instead of the futex directly.
-  //
-  // We use a futex here because:
-  // - futexes are fast.
-  // - The kernel can atomically clean up a dead thread and mark the futex
-  //   appropriately.
-  // - Owners can clean up after dead threads.
   aos_mutex mutex_;
-
-  // Thread's start time ticks.
+#ifdef __APPLE__
+  std::atomic<pid_t> owner_pid_;
+  std::atomic<uint64_t> owner_thread_id_;
+  // The owner process's p_uniqueid (PROC_PIDUNIQIDENTIFIERINFO): a 64-bit
+  // per-boot monotonic id that is never recycled.  This is the process-level
+  // fallback identity for when the thread-level probe is not permitted; see
+  // OwnerIsDefinitelyAbsolutelyDead() in robust_ownership_tracker_darwin.cc.
+  std::atomic<uint64_t> owner_unique_id_;
+#else
   std::atomic<uint64_t> start_time_ticks_;
+#endif
 };
 
 }  // namespace aos::ipc_lib
