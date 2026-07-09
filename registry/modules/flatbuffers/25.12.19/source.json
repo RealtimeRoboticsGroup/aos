@@ -22,7 +22,8 @@
         "17-reflection-explicit-ids-and-scoped-enums.patch": "sha256-0xDsKHL7ednMj73naev7FXjJxYq0OQihmytdP3TTmOo=",
         "18-ts-explicit-index-exports.patch": "sha256-bxFOPei2Gs/mViOZNvX5OQ4ZfiNsNvEoKjVuZkIsRNY=",
         "19-python-fields-snake-case.patch": "sha256-m2+C47Cq47ddxAUhZiHknaumyBJCjq8850mb+7iC140=",
-        "20-cpp-absl-dcheck-assertions.patch": "sha256-UgSmtEC6lFNMJbB8K3zWnOZzJJzs3QhIBBw6a87sjQE="
+        "20-cpp-absl-dcheck-assertions.patch": "sha256-UgSmtEC6lFNMJbB8K3zWnOZzJJzs3QhIBBw6a87sjQE=",
+        "21-python-object-api-types-other-packages.patch": "sha256-u4MuL4EcFbtbfK9Yc4wjoUCeQkFratgl7cTqKygVQLY="
     },
     "patch_strip": 1
 }

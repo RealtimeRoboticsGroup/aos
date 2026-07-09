@@ -1,0 +1,107 @@
+commit fa8bcd9e505986e78bb088ca4984fdf72c0f5773
+Author: Brian Silverman <bsilver16384@gmail.com>
+Date:   Mon Jun 1 15:11:48 2026 -0700
+
+    Fix flatbuffers Python object API with types in other packages
+
+diff --git a/src/idl_gen_python.cpp b/src/idl_gen_python.cpp
+index 72daa695c..173ec652f 100644
+--- a/src/idl_gen_python.cpp
++++ b/src/idl_gen_python.cpp
+@@ -2001,13 +2001,18 @@ class PythonGenerator : public BaseGener
+   }
+ 
+   void GenUnPackForStruct(const StructDef& struct_def, const FieldDef& field,
+-                          std::string* code_ptr) const {
++                          std::string* code_ptr, ImportMap& imports) const {
+     auto& code = *code_ptr;
+     const auto struct_var = namer_.Variable(struct_def);
+     const auto field_field = namer_.Field(field);
+     const auto field_method = namer_.Method(field);
+     auto field_type = TypeName(field);
+ 
++    const ImportMapEntry import_entry = {
++      GenPackageReference(field.value.type), namer_.ObjectType(field_type)
++    };
++    imports.insert(import_entry);
++
+     if (parser_.opts.include_dependence_headers) {
+       auto package_reference = GenPackageReference(field.value.type);
+       field_type = package_reference + "." + TypeName(field);
+@@ -2050,7 +2055,8 @@ class PythonGenerator : public BaseGener
+ 
+   void GenUnPackForStructVector(const StructDef& struct_def,
+                                 const FieldDef& field,
+-                                std::string* code_ptr) const {
++                                std::string* code_ptr,
++                                ImportMap& imports) const {
+     auto& code = *code_ptr;
+     const auto field_field = namer_.Field(field);
+     const auto field_method = namer_.Method(field);
+@@ -2078,6 +2084,11 @@ class PythonGenerator : public BaseGener
+             field_method + "(i))";
+     code +=
+         GenIndents(5) + "self." + field_field + ".append(" + one_instance + ")";
++
++    const ImportMapEntry import_entry = {
++      GenPackageReference(field.value.type), namer_.ObjectType(field_type)
++    };
++    imports.insert(import_entry);
+   }
+ 
+   void GenUnpackForTableVector(const StructDef& struct_def,
+@@ -2184,7 +2195,7 @@ class PythonGenerator : public BaseGener
+   }
+ 
+   // Generates the UnPack method for the object class.
+-  void GenUnPack(const StructDef& struct_def, std::string* code_ptr) const {
++  void GenUnPack(const StructDef& struct_def, std::string* code_ptr, ImportMap& imports) const {
+     std::string code;
+     // Items that needs to be imported. No duplicate modules will be imported.
+     std::set<std::string> import_list;
+@@ -2196,7 +2207,7 @@ class PythonGenerator : public BaseGener
+ 
+       switch (field.value.type.base_type) {
+         case BASE_TYPE_STRUCT: {
+-          GenUnPackForStruct(struct_def, field, &code);
++          GenUnPackForStruct(struct_def, field, &code, imports);
+           break;
+         }
+         case BASE_TYPE_UNION: {
+@@ -2207,7 +2218,7 @@ class PythonGenerator : public BaseGener
+         case BASE_TYPE_VECTOR: {
+           auto vectortype = field.value.type.VectorType();
+           if (vectortype.base_type == BASE_TYPE_STRUCT) {
+-            GenUnPackForStructVector(struct_def, field, &code);
++            GenUnPackForStructVector(struct_def, field, &code, imports);
+           } else {
+             GenUnPackForScalarVector(struct_def, field, &code);
+           }
+@@ -2528,7 +2539,8 @@ class PythonGenerator : public BaseGener
+   }
+ 
+   void GenStructForObjectAPI(const StructDef& struct_def,
+-                             std::string* code_ptr) const {
++                             std::string* code_ptr,
++                             ImportMap& imports) const {
+     if (struct_def.generated) return;
+ 
+     std::set<std::string> import_list;
+@@ -2549,7 +2561,7 @@ class PythonGenerator : public BaseGener
+       GenCompareOperator(struct_def, &code);
+     }
+ 
+-    GenUnPack(struct_def, &code);
++    GenUnPack(struct_def, &code, imports);
+ 
+     if (struct_def.fixed) {
+       GenPackForStruct(struct_def, &code);
+@@ -2823,7 +2835,7 @@ class PythonGenerator : public BaseGener
+       ImportMap imports;
+       GenStruct(struct_def, &declcode, imports);
+       if (parser_.opts.generate_object_based_api) {
+-        GenStructForObjectAPI(struct_def, &declcode);
++        GenStructForObjectAPI(struct_def, &declcode, imports);
+       }
+ 
+       if (parser_.opts.one_file) {

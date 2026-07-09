@@ -478,6 +478,7 @@ http_archive(
         "@aos//third_party/flatbuffers_patches:patches/18-ts-explicit-index-exports.patch",
         "@aos//third_party/flatbuffers_patches:patches/19-python-fields-snake-case.patch",
         "@aos//third_party/flatbuffers_patches:patches/20-cpp-absl-dcheck-assertions.patch",
+        "@aos//third_party/flatbuffers_patches:patches/21-python-object-api-types-other-packages.patch",
     ],
     strip_prefix = "flatbuffers-25.12.19",
     urls = [
