@@ -10,6 +10,7 @@
 #include "aos/events/logging/log_reader.h"
 #include "aos/events/logging/logger_generated.h"
 #include "aos/events/shm_event_loop.h"
+#include "aos/ftrace.h"
 #include "aos/network/connect_generated.h"
 #include "aos/network/message_bridge_client_generated.h"
 #include "aos/network/message_bridge_server_generated.h"
@@ -162,6 +163,8 @@ class ChannelState {
   aos::TimerHandler *retry_timer_;
   // Current retry period.
   std::chrono::milliseconds retry_period_;
+
+  Ftrace ftrace_;
 };
 
 // This encapsulates the state required to talk to *all* the clients from this

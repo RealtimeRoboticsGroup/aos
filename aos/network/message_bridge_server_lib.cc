@@ -192,6 +192,12 @@ bool ChannelState::TrySendData(const Context &context) {
           << "} and data " << context.data << ", size " << fbb.GetSize();
   for (Peer &peer : peers_) {
     if (PeerReadyToFetchNext(peer, context)) {
+      ftrace_.FormatMessage(
+          "Bridge skipping channel=%d peer=%d queue=%" PRIu32 " event=%" PRId64
+          " size=%u",
+          channel_index_, peer.node_index, context.queue_index,
+          context.monotonic_event_time.time_since_epoch().count(),
+          fbb.GetSize());
       VLOG(1) << "Skipping send for "
               << configuration::StrippedChannelToString(channel_) << " to "
               << FlatbufferToJson(peer.connection) << " with queue index of "
@@ -207,20 +213,31 @@ bool ChannelState::TrySendData(const Context &context) {
     const int time_to_live_ms = peer.connection->time_to_live() / 1000000;
     CHECK((time_to_live_ms == 0) == (peer.connection->time_to_live() == 0))
         << ": TTLs below 1ms are not supported, as they would get rounded "
-           "down "
-           "to zero, which is used to indicate a reliable connection.";
+           "down to zero, which is used to indicate a reliable connection.";
 
     if (peer.sac_assoc_id != 0 &&
         server_->Send(std::string_view(reinterpret_cast<const char *>(
                                            fbb.GetBufferPointer()),
                                        fbb.GetSize()),
                       peer.sac_assoc_id, peer.stream, time_to_live_ms)) {
+      ftrace_.FormatMessage(
+          "Bridge sent channel=%d peer=%d queue=%" PRIu32 " event=%" PRId64
+          " size=%u ttl_ms=%d",
+          channel_index_, peer.node_index, context.queue_index,
+          context.monotonic_event_time.time_since_epoch().count(),
+          fbb.GetSize(), time_to_live_ms);
       peer.server_status->AddSentPacket(peer.node_index, channel_);
       if (peer.logged_remotely) {
         ++sent_count;
       }
       peer.last_sent_index = context.queue_index;
     } else {
+      ftrace_.FormatMessage(
+          "Bridge disconnected channel=%d peer=%d queue=%" PRIu32
+          " event=%" PRId64 " size=%u ttl_ms=%d",
+          channel_index_, peer.node_index, context.queue_index,
+          context.monotonic_event_time.time_since_epoch().count(),
+          fbb.GetSize(), time_to_live_ms);
       if (time_to_live_ms == 0) {
         // Reliable connection that failed to send; set a retry timer.
         retry_required = true;
