@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <atomic>
 #include <chrono>
 #include <limits>
 #include <ostream>
@@ -51,8 +52,9 @@ void PageFaultDataWrite(char *data, size_t size, const long page_size) {
     //
     // This is the simplest operation I could think of which achieves that:
     // "store 0 if it's already 0".
-    __atomic_compare_exchange_n(&data[i * page_size], &zero, 0, true,
-                                __ATOMIC_RELAXED, __ATOMIC_RELAXED);
+    std::atomic_ref<char>(data[i * page_size])
+        .compare_exchange_strong(zero, 0, std::memory_order_relaxed,
+                                 std::memory_order_relaxed);
   }
 }
 
@@ -60,7 +62,8 @@ void PageFaultDataRead(const char *data, size_t size, const long page_size) {
   const size_t pages = (size + page_size - 1) / page_size;
   for (size_t i = 0; i < pages; ++i) {
     // We need to ensure there's a readable pagetable entry.
-    __atomic_load_n(&data[i * page_size], __ATOMIC_RELAXED);
+    std::atomic_ref<char>(const_cast<char &>(data[i * page_size]))
+        .load(std::memory_order_relaxed);
   }
 }
 

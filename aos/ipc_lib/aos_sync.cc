@@ -17,6 +17,7 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 
+#include <atomic>
 #include <cassert>
 #include <cerrno>
 #include <cinttypes>
@@ -431,7 +432,7 @@ inline int sys_futex_unlock_pi(aos_futex *addr1) {
   // Just wake as we are not using PI locks on macOS.
   // Also clear the lock value because mutex_unlock expects us to do it if it
   // called us.
-  __atomic_store_n(addr1, 0, __ATOMIC_RELEASE);
+  std::atomic_ref<uint32_t>(*addr1).store(0, std::memory_order_release);
   const int ret = os_sync_wake_by_address_any(addr1, sizeof(*addr1),
                                               OS_SYNC_WAKE_BY_ADDRESS_SHARED);
   if (ret == 0 || errno == ENOENT) {
@@ -461,7 +462,11 @@ inline uint32_t compare_and_swap_val(aos_futex *f, uint32_t before,
       __tsan_memory_order_seq_cst, __tsan_memory_order_seq_cst);
   return before_value;
 #else
-  return __sync_val_compare_and_swap(f, before, after);
+  std::atomic_ref<uint32_t> ref(*f);
+  uint32_t expected = before;
+  ref.compare_exchange_strong(expected, after, std::memory_order_seq_cst,
+                              std::memory_order_seq_cst);
+  return expected;
 #endif
 }
 
@@ -470,7 +475,10 @@ inline bool compare_and_swap(aos_futex *f, uint32_t before, uint32_t after) {
 #ifdef AOS_SANITIZER_thread
   return compare_and_swap_val(f, before, after) == before;
 #else
-  return __sync_bool_compare_and_swap(f, before, after);
+  std::atomic_ref<uint32_t> ref(*f);
+  uint32_t expected = before;
+  return ref.compare_exchange_strong(expected, after, std::memory_order_seq_cst,
+                                     std::memory_order_seq_cst);
 #endif
 }
 
@@ -617,7 +625,8 @@ inline int sys_futex_wait(int op, aos_futex *addr1, int val1,
                           const struct timespec *timeout) {
   if (op == FUTEX_TRYLOCK_PI) {
     uint32_t tid = get_tid();
-    uint32_t val = __atomic_load_n(addr1, __ATOMIC_ACQUIRE);
+    uint32_t val =
+        std::atomic_ref<uint32_t>(*addr1).load(std::memory_order_acquire);
     if ((val & FUTEX_TID_MASK) == 0) {
       uint32_t new_val = tid;
       if (val & FUTEX_OWNER_DIED) new_val |= FUTEX_OWNER_DIED;
@@ -890,10 +899,12 @@ struct RobustListCleaner {
       aos_mutex *m = next_to_mutex(robust_head.next);
       robust_head.next = m->next;
 
-      uint32_t val = __atomic_load_n(&m->futex, __ATOMIC_RELAXED);
+      uint32_t val =
+          std::atomic_ref<uint32_t>(m->futex).load(std::memory_order_relaxed);
       uint32_t new_val = FUTEX_OWNER_DIED;
       if (val & FUTEX_WAITERS) new_val |= FUTEX_WAITERS;
-      __atomic_store_n(&m->futex, new_val, __ATOMIC_SEQ_CST);
+      std::atomic_ref<uint32_t>(m->futex).store(new_val,
+                                                std::memory_order_seq_cst);
       sys_futex_wake(&m->futex, 1);
     }
   }
@@ -921,9 +932,11 @@ void initialize_in_new_thread() {
 // Finishes the locking of a mutex by potentially clearing FUTEX_OWNER_DIED in
 // the futex and returning the correct value.
 inline int mutex_finish_lock(aos_mutex *m) {
-  const uint32_t value = __atomic_load_n(&m->futex, __ATOMIC_ACQUIRE);
+  const uint32_t value =
+      std::atomic_ref<uint32_t>(m->futex).load(std::memory_order_acquire);
   if (__builtin_expect((value & FUTEX_OWNER_DIED) != 0, false)) {
-    __atomic_and_fetch(&m->futex, ~FUTEX_OWNER_DIED, __ATOMIC_RELAXED);
+    std::atomic_ref<uint32_t>(m->futex).fetch_and(~FUTEX_OWNER_DIED,
+                                                  std::memory_order_relaxed);
     force_lock_pthread_mutex(m);
     return 1;
   } else {
@@ -964,8 +977,9 @@ inline int mutex_do_get(aos_mutex *m, bool signals_fail,
             << ": multiple lock of " << m << " by " << tid;
 
         errno = -ret;
-        ABSL_PLOG(FATAL) << "FUTEX_LOCK_PI(" << &m->futex
-                         << "(=" << __atomic_load_n(&m->futex, __ATOMIC_SEQ_CST)
+        ABSL_PLOG(FATAL) << "FUTEX_LOCK_PI(" << &m->futex << "(="
+                         << std::atomic_ref<uint32_t>(m->futex).load(
+                                std::memory_order_seq_cst)
                          << "), 1, " << timeout << ") failed";
       } else {
         if (kLockDebug) {
@@ -997,7 +1011,8 @@ inline int mutex_do_get(aos_mutex *m, bool signals_fail,
   }
 
   while (true) {
-    uint32_t v = __atomic_load_n(&m->futex, __ATOMIC_ACQUIRE);
+    uint32_t v =
+        std::atomic_ref<uint32_t>(m->futex).load(std::memory_order_acquire);
 
     if ((v & FUTEX_TID_MASK) == tid) {
       ABSL_LOG(FATAL) << "multiple lock of " << m << " by " << tid;
@@ -1063,7 +1078,8 @@ void condition_wake(aos_condition *c, aos_mutex *m, int number_requeue) {
   // signal():
   //   1 already sleeping will be woken but n might never actually make it to
   //     sleep in the kernel because of this.
-  uint32_t new_value = __atomic_add_fetch(c, 1, __ATOMIC_SEQ_CST);
+  uint32_t new_value =
+      std::atomic_ref<uint32_t>(*c).fetch_add(1, std::memory_order_seq_cst) + 1;
 
   while (true) {
     // This really wants to be FUTEX_REQUEUE_PI, but the kernel doesn't have
@@ -1079,7 +1095,8 @@ void condition_wake(aos_condition *c, aos_mutex *m, int number_requeue) {
         // instead, so we have to try again.
         // If we're doing a signal, we have to go again to make sure that 2
         // signals wake 2 processes.
-        new_value = __atomic_load_n(c, __ATOMIC_RELAXED);
+        new_value =
+            std::atomic_ref<uint32_t>(*c).load(std::memory_order_relaxed);
         continue;
       }
       my_robust_list::robust_head.pending_next = 0;
@@ -1095,7 +1112,7 @@ void condition_wake(aos_condition *c, aos_mutex *m, int number_requeue) {
 #else
 void condition_wake(aos_condition *c, aos_mutex * /*m*/, int number_requeue) {
   RunShmObservers run_observers(c, true);
-  __atomic_add_fetch(c, 1, __ATOMIC_SEQ_CST);
+  std::atomic_ref<uint32_t>(*c).fetch_add(1, std::memory_order_seq_cst);
   // Simple wake
   sys_futex_wake(c, number_requeue == 0 ? 1 : INT_MAX);
 }
@@ -1116,7 +1133,8 @@ void mutex_unlock(aos_mutex *m) {
     printf("%" PRId32 ": %p unlock\n", tid, m);
   }
 
-  const uint32_t value = __atomic_load_n(&m->futex, __ATOMIC_SEQ_CST);
+  const uint32_t value =
+      std::atomic_ref<uint32_t>(m->futex).load(std::memory_order_seq_cst);
   if (__builtin_expect((value & FUTEX_TID_MASK) != tid, false)) {
     my_robust_list::robust_head.pending_next = 0;
     check_cached_tid(tid);
@@ -1190,7 +1208,9 @@ int mutex_trylock(aos_mutex *m) {
 bool mutex_islocked(const aos_mutex *m) {
   const uint32_t tid = get_tid();
 
-  const uint32_t value = __atomic_load_n(&m->futex, __ATOMIC_RELAXED);
+  const uint32_t value =
+      std::atomic_ref<uint32_t>(const_cast<uint32_t &>(m->futex))
+          .load(std::memory_order_relaxed);
   return (value & FUTEX_TID_MASK) == tid;
 }
 
@@ -1217,7 +1237,8 @@ void death_notification_release(aos_mutex *m) {
     if (kPrintOperations) {
       printf("%" PRId32 ": %p death_notification release\n", tid, m);
     }
-    const uint32_t value = __atomic_load_n(&m->futex, __ATOMIC_SEQ_CST);
+    const uint32_t value =
+        std::atomic_ref<uint32_t>(m->futex).load(std::memory_order_seq_cst);
     assert((value & ~FUTEX_WAITERS) == tid);
   }
 #endif
@@ -1236,7 +1257,8 @@ void death_notification_release(aos_mutex *m) {
 int condition_wait(aos_condition *c, aos_mutex *m, struct timespec *end_time) {
   RunShmObservers run_observers(c, false);
   const uint32_t tid = get_tid();
-  const uint32_t wait_start = __atomic_load_n(c, __ATOMIC_SEQ_CST);
+  const uint32_t wait_start =
+      std::atomic_ref<uint32_t>(*c).load(std::memory_order_seq_cst);
 
   mutex_unlock(m);
 
@@ -1294,9 +1316,11 @@ int condition_wait(aos_condition *c, aos_mutex *m, struct timespec *end_time) {
 
       adder.Add();
 
-      const uint32_t value = __atomic_load_n(&m->futex, __ATOMIC_RELAXED);
+      const uint32_t value =
+          std::atomic_ref<uint32_t>(m->futex).load(std::memory_order_relaxed);
       if (__builtin_expect((value & FUTEX_OWNER_DIED) != 0, false)) {
-        __atomic_and_fetch(&m->futex, ~FUTEX_OWNER_DIED, __ATOMIC_RELAXED);
+        std::atomic_ref<uint32_t>(m->futex).fetch_and(
+            ~FUTEX_OWNER_DIED, std::memory_order_relaxed);
         return 1;
       } else {
         return 0;
@@ -1307,7 +1331,8 @@ int condition_wait(aos_condition *c, aos_mutex *m, struct timespec *end_time) {
 #else
 int condition_wait(aos_condition *c, aos_mutex *m, struct timespec *end_time) {
   RunShmObservers run_observers(c, false);
-  const uint32_t wait_start = __atomic_load_n(c, __ATOMIC_SEQ_CST);
+  const uint32_t wait_start =
+      std::atomic_ref<uint32_t>(*c).load(std::memory_order_seq_cst);
 
   mutex_unlock(m);
 
@@ -1378,7 +1403,7 @@ int futex_wait(aos_futex *m) { return futex_wait_timeout(m, NULL); }
 int futex_set_value(aos_futex *m, uint32_t value) {
   RunShmObservers run_observers(m, false);
   ANNOTATE_HAPPENS_BEFORE(m);
-  __atomic_store_n(m, value, __ATOMIC_SEQ_CST);
+  std::atomic_ref<uint32_t>(*m).store(value, std::memory_order_seq_cst);
   const int r = sys_futex_wake(m, INT_MAX - 4096);
   if (__builtin_expect(
           static_cast<unsigned int>(r) > static_cast<unsigned int>(-4096),
@@ -1393,7 +1418,7 @@ int futex_set_value(aos_futex *m, uint32_t value) {
 int futex_set(aos_futex *m) { return futex_set_value(m, 1); }
 
 int futex_unset(aos_futex *m) {
-  return !__atomic_exchange_n(m, 0, __ATOMIC_SEQ_CST);
+  return !std::atomic_ref<uint32_t>(*m).exchange(0, std::memory_order_seq_cst);
 }
 
 namespace aos::linux_code::ipc_lib {

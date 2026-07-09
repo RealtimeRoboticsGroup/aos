@@ -2,6 +2,7 @@
 
 #include <time.h>
 
+#include <atomic>
 #include <chrono>
 #include <ostream>
 #include <ratio>
@@ -19,7 +20,8 @@ Event::Event() : impl_(0) {
 }
 
 void Event::Wait() {
-  while (__atomic_load_n(&impl_, __ATOMIC_SEQ_CST) == 0) {
+  while (std::atomic_ref<uint32_t>(impl_).load(std::memory_order_seq_cst) ==
+         0) {
     const int ret = futex_wait(&impl_);
     if (ret != 0) {
       CHECK_EQ(-1, ret);
@@ -37,7 +39,7 @@ bool Event::WaitTimeout(monotonic_clock::duration timeout) {
   timeout_timespec.tv_sec = sec.count();
   timeout_timespec.tv_nsec = nsec.count();
   while (true) {
-    if (__atomic_load_n(&impl_, __ATOMIC_SEQ_CST) != 0) {
+    if (std::atomic_ref<uint32_t>(impl_).load(std::memory_order_seq_cst) != 0) {
       return true;
     }
     const int ret = futex_wait_timeout(&impl_, &timeout_timespec);
