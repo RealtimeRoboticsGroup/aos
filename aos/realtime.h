@@ -178,6 +178,13 @@ void SetCurrentThreadRealtimePriority(
     int priority, int scheduling_policy = SCHED_FIFO,
     RealtimePolicy realtime_policy = RealtimePolicy::REALTIME_MODE_DENY_MALLOC);
 
+// Sets the realtime priority of the current thread directly via OS APIs,
+// bypassing the extra bookkeeping/hooks of SetCurrentThreadRealtimePriority.
+// Returns 0 on success, or -1 on error (with errno set).
+// On Windows/Darwin, this is a no-op that always returns 0.
+int SetCurrentThreadRealtimePriorityLowLevel(
+    int priority, int scheduling_policy = SCHED_FIFO);
+
 // Returns the current thread's realtime priority.
 int GetCurrentThreadRealtimePriority();
 

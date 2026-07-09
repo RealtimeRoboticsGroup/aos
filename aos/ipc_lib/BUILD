@@ -41,6 +41,33 @@ cc_library(
 )
 
 cc_library(
+    name = "shm_mapping",
+    srcs = [
+        "shm_mapping.cc",
+    ] + select({
+        "@platforms//os:windows": ["shm_mapping_windows.cc"],
+        "//conditions:default": ["shm_mapping_linux.cc"],
+    }),
+    hdrs = ["shm_mapping.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//aos/util:file",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
+    ],
+)
+
+cc_test(
+    name = "shm_mapping_test",
+    srcs = ["shm_mapping_test.cc"],
+    deps = [
+        ":shm_mapping",
+        "//aos/testing:googletest",
+        "//aos/testing:tmpdir",
+    ],
+)
+
+cc_library(
     name = "thread_signal",
     srcs = select({
         "@platforms//os:windows": ["thread_signal_windows.cc"],
@@ -212,7 +239,6 @@ cc_library(
                 "robust_ownership_tracker.h",
             ],
             defines = ["AOS_IPC_LIB_LOCKLESS_QUEUE_HAS_ATOMIC_TIME_POINT"] if suffix != "_no_atomic_times" else [],
-            target_compatible_with = ["@platforms//os:linux"],
             deps = [
                 ":aos_sync",
                 ":data_alignment",
@@ -225,13 +251,17 @@ cc_library(
                 "//aos/events:fetch_result",
                 "//aos/time",
                 "//aos/util:compiler_memory_barrier",
-                "//aos/util:proc_stat",
                 "@com_google_absl//absl/flags:flag",
                 "@com_google_absl//absl/log",
                 "@com_google_absl//absl/log:check",
                 "@com_google_absl//absl/strings",
                 "@com_google_absl//absl/types:span",
-            ],
+            ] + select({
+                "@platforms//os:windows": [],
+                "//conditions:default": [
+                    "//aos/util:proc_stat",
+                ],
+            }),
         ),
         cc_library(
             name = "multichannel_queue_racer" + suffix,
@@ -290,6 +320,7 @@ cc_library(
                 "lockless_queue_stepping.cc",
             ],
             hdrs = ["lockless_queue_stepping.h"],
+            target_compatible_with = ["@platforms//os:linux"],
             deps = [
                 ":lockless_queue" + suffix,
                 ":shm_observers",
@@ -399,6 +430,7 @@ cc_library(
     deps = [
         ":index",
         ":lockless_queue",
+        ":shm_mapping",
         "//aos:configuration",
         "//aos/util:file",
         "@com_github_google_flatbuffers//:flatbuffers",

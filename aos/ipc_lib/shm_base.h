@@ -1,6 +1,7 @@
 #ifndef AOS_IPC_LIB_SHM_BASE_H_
 #define AOS_IPC_LIB_SHM_BASE_H_
 
+#include <string>
 #include <string_view>
 
 #include "absl/flags/declare.h"

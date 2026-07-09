@@ -206,4 +206,9 @@ uid_t GetUserId() { return 0; }
 
 std::string GetUsername(uid_t /*uid*/) { return "unknown"; }
 
+int SetCurrentThreadRealtimePriorityLowLevel(int /*priority*/,
+                                             int /*scheduling_policy*/) {
+  return 0;
+}
+
 }  // namespace aos

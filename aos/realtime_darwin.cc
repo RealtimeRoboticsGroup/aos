@@ -535,4 +535,9 @@ std::string GetUsername(uid_t uid) {
   return pw != nullptr ? pw->pw_name : std::to_string(uid);
 }
 
+int SetCurrentThreadRealtimePriorityLowLevel(int /*priority*/,
+                                             int /*scheduling_policy*/) {
+  return 0;
+}
+
 }  // namespace aos
