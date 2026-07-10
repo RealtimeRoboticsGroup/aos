@@ -1,6 +1,5 @@
 #include "aos/ipc_lib/lockless_queue.h"
 
-#include <pwd.h>
 #include <sched.h>
 #include <string.h>
 #include <sys/syscall.h>
@@ -630,22 +629,7 @@ LocklessQueueMemory *InitializeLocklessQueueMemory(
   // We can't actually verify that, but we can sanity check that things are
   // valid when the queue is initialized.
 
-  uid_t uid;
-  {
-    uid_t ruid, euid, suid;
-    ABSL_PCHECK(getresuid(&ruid, &euid, &suid) == 0);
-    // If these are equal, then use them, even if that's different from the real
-    // UID. This allows processes to keep a real UID of 0 (to have permissions
-    // to perform system-level changes) while still being able to communicate
-    // with processes running unprivileged as a distinct user.
-    if (euid == suid) {
-      uid = euid;
-      ABSL_VLOG(1) << "Using euid==suid " << uid;
-    } else {
-      uid = ruid;
-      ABSL_VLOG(1) << "Using ruid " << ruid;
-    }
-  }
+  const uid_t uid = aos::GetUserId();
 
   // Grab the mutex.  We don't care if the previous reader died.  We are going
   // to check everything anyways.
@@ -718,13 +702,8 @@ LocklessQueueMemory *InitializeLocklessQueueMemory(
     memory->initialized = true;
   } else {
     if (memory->uid != uid) {
-      // Subsequent calls to getpwuid() overwrite this
-      // pointer, pull the thing we care about into a
-      // string.
-      struct passwd const *user_pw = getpwuid(uid);
-      std::string user_username = user_pw->pw_name;
-      struct passwd const *memory_pw = getpwuid(memory->uid);
-      std::string memory_username = memory_pw->pw_name;
+      const std::string user_username = aos::GetUsername(uid);
+      const std::string memory_username = aos::GetUsername(memory->uid);
       ABSL_LOG(FATAL) << "Current user " << user_username << " (uid:" << uid
                       << ") "
                       << "doesn't match shared memory user " << memory_username

@@ -13,6 +13,7 @@
 #define SCHED_FIFO 1
 #define SCHED_RR 2
 using pid_t = int;
+using uid_t = int;
 #endif
 
 #include <cstring>
@@ -141,6 +142,12 @@ inline pid_t GetThreadId() { return syscall(SYS_gettid); }
 #else
 pid_t GetThreadId();
 #endif
+
+// Returns the UID of the current user.
+uid_t GetUserId();
+
+// Returns the username associated with the given UID.
+std::string GetUsername(uid_t uid);
 
 // Returns the name of the current process/program.
 std::string GetProgramName();

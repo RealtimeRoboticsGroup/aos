@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <malloc.h>
+#include <pwd.h>
 #include <unistd.h>
 
 #if defined(AOS_SANITIZE_MEMORY)
@@ -275,5 +276,25 @@ std::string GetThreadName() {
 }
 
 pid_t GetProcessId() { return getpid(); }
+
+uid_t GetUserId() {
+  uid_t ruid, euid, suid;
+  ABSL_PCHECK(getresuid(&ruid, &euid, &suid) == 0);
+
+  // If the effective and saved user ID match, we're not running suid.
+  // Use that.
+  // If they don't, we changed our euid.  To be able to send/receive signals,
+  // we need to use our ruid instead.
+  if (euid == suid) {
+    return euid;
+  } else {
+    return ruid;
+  }
+}
+
+std::string GetUsername(uid_t uid) {
+  struct passwd const *pw = getpwuid(uid);
+  return pw != nullptr ? pw->pw_name : std::to_string(uid);
+}
 
 }  // namespace aos

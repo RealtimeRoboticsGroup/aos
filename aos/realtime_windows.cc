@@ -202,4 +202,8 @@ std::string GetThreadName() { return ""; }
 pid_t GetProcessId() { return GetCurrentProcessId(); }
 pid_t GetThreadId() { return static_cast<pid_t>(GetCurrentThreadId()); }
 
+uid_t GetUserId() { return 0; }
+
+std::string GetUsername(uid_t /*uid*/) { return "unknown"; }
+
 }  // namespace aos
