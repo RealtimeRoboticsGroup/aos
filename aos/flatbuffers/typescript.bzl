@@ -9,7 +9,7 @@ DEFAULT_FLATC_TS_ARGS = [
     "--gen-mutable",
     "--reflect-names",
     "--gen-name-strings",
-    "--ts-flat-files",
+    "--gen-all",
     "--keep-prefix",
 ]
 
