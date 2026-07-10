@@ -203,17 +203,21 @@ py_test(
     ],
 )
 
-py_binary(
+py_test(
     name = "pygobject_example",
+    size = "small",
     srcs = ["pygobject_example.py"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@pip_deps//pygobject",
     ],
 )
 
-py_binary(
+py_test(
     name = "matplotlib_example",
+    size = "small",
     srcs = ["matplotlib_example.py"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@pip_deps//matplotlib",
         "@pip_deps//pygobject",

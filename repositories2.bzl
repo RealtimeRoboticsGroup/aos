@@ -9,6 +9,7 @@ load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
 load("@rules_python//python:repositories.bzl", "py_repositories", "python_register_toolchains")
 
 def dependencies_phase1():
+    native.register_toolchains("//tools/python:python_toolchain")
     version_info = SUPPORTED_VERSIONS[DEFAULT_VERSION]
     prebuilt_pkg(
         name = "halide_prebuilt_pkg",

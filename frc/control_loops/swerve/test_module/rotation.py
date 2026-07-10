@@ -6,10 +6,12 @@ from frc.control_loops.python import angular_system_current
 from frc.control_loops.python import controls
 import numpy
 import sys
+import matplotlib
+
+matplotlib.use("GTK3Agg")
 from matplotlib import pylab
 import gflags
 import glog
-import matplotlib
 
 FLAGS = gflags.FLAGS
 

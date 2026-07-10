@@ -1,0 +1,22 @@
+diff --git a/site-packages/matplotlib-3.9.2.dist-info/RECORD b/site-packages/matplotlib-3.9.2.dist-info/RECORD
+index 0000000..0000000
+--- a/site-packages/matplotlib-3.9.2.dist-info/RECORD
++++ b/site-packages/matplotlib-3.9.2.dist-info/RECORD
+@@ -105,7 +105,7 @@
+ matplotlib/_blocking_input.py,sha256=VHNsxvX2mTx_xBknd30MSicVlRXS4dCDe9hDctbV5rk,1224
+ matplotlib/_docstring.pyi,sha256=YjWQjaiffjCBVQpNbI1lsuiUUBBD5HSSEOV2xKD1_KA,741
+ matplotlib/_pylab_helpers.pyi,sha256=7OZKr-OL3ipVt1EDZ6e-tRwHASz-ijYfcIdlPczXhvQ,1012
+-matplotlib/__init__.py,sha256=XXuQsQUhzWr2G0oF8iiQ9Cm4iArjXyjwK_FXYbq_yXw,53700
++matplotlib/__init__.py,sha256=we71D3I8sYqs13TiXgPuNqJA9qeBSCm579IMVOoIzk4,56005
+ matplotlib/textpath.pyi,sha256=rqOeTAeQYgm2b2NpetrEX0gMF8PzzW43xS5mNfUA98M,2529
+ matplotlib/layout_engine.py,sha256=NOsx76R_jx7_94n8OeSgqo58A1Kmlmpc-YH0GePcY68,11248
+ matplotlib/rcsetup.pyi,sha256=0VTIhzfKgBcKxOeOdoKq1oa7ZubalOj9Ks0efE0-cms,4337
+@@ -582,7 +582,7 @@
+ mpl_toolkits/mplot3d/tests/test_legend3d.py,sha256=A6CWWz3q5VqYu7WRhwALSWMYkPwj941sQ5GErWLdBZ8,4342
+ mpl_toolkits/mplot3d/tests/test_art3d.py,sha256=wpRhsMkGD8HdBCyIXM3SnydJWUlD6I5FRlZJM5xD_5w,1817
+ mpl_toolkits/mplot3d/tests/__init__.py,sha256=sKLxL9jEJBX7eh5OumtXSOnTriPrJUkujTHFtnJVFrM,365
+-matplotlib-3.9.2.dist-info/RECORD,,
+ matplotlib-3.9.2.dist-info/LICENSE,sha256=WhqB6jAXKMi7opM9qDLAzWIina8giToCSrPVMkRGjbw,4830
+ matplotlib-3.9.2.dist-info/WHEEL,sha256=4jJSdxi7uwJPD8E2v8tAIkL60vcN6YnLac60EMTeO-4,137
+ matplotlib-3.9.2.dist-info/METADATA,sha256=JJ7rRRw_6LFIe_SkTnbsKzVsaG5rRhB-Igpxdh_tWl8,11257
++matplotlib-3.9.2.dist-info/RECORD,,
