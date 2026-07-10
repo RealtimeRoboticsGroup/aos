@@ -21,6 +21,7 @@
 #include "aos/ipc_lib/index.h"
 #include "aos/ipc_lib/robust_ownership_tracker.h"
 #include "aos/ipc_lib/thread_signal.h"
+#include "aos/realtime.h"
 #include "aos/time/time.h"
 #include "aos/uuid.h"
 

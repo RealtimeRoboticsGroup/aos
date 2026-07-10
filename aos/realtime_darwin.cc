@@ -2,10 +2,13 @@
 #include <mach/thread_policy.h>
 #include <malloc/malloc.h>
 #include <pthread.h>
+#include <pwd.h>
 #include <stdlib.h>
 #include <unistd.h>
 
 #include <cstring>
+#include <optional>
+#include <string>
 
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
@@ -537,6 +540,17 @@ pid_t GetThreadId() {
   uint64_t tid;
   pthread_threadid_np(NULL, &tid);
   return static_cast<pid_t>(tid);
+}
+
+uid_t GetUserId() { return getuid(); }
+
+std::optional<std::string> GetUsername(uid_t uid) {
+  struct passwd const *pw = getpwuid(uid);
+  if (pw == nullptr) {
+    return std::nullopt;
+  } else {
+    return pw->pw_name;
+  }
 }
 
 }  // namespace aos

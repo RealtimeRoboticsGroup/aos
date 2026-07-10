@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <malloc.h>
+#include <pwd.h>
 #include <unistd.h>
 
 #if defined(AOS_SANITIZE_MEMORY)
@@ -9,6 +10,9 @@
 #include <sys/prctl.h>
 #include <sys/resource.h>
 #include <sys/time.h>
+
+#include <optional>
+#include <string>
 
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
@@ -275,5 +279,37 @@ std::string GetThreadName() {
 }
 
 pid_t GetProcessId() { return getpid(); }
+
+uid_t GetUserId() {
+  uid_t ruid, euid, suid;
+  ABSL_PCHECK(getresuid(&ruid, &euid, &suid) == 0);
+
+  // Pick the UID that peers can use to signal us.  A signal is deliverable
+  // when the sender's real or effective UID matches our real or *saved* UID,
+  // so whatever we return has to be one of our ruid/suid.
+  //
+  // If the effective and saved UIDs are equal, use them, even when that
+  // differs from the real UID.  This lets a process keep a real UID of 0 (to
+  // have permissions to perform system-level changes) while still being able
+  // to communicate with processes running unprivileged as a distinct user.
+  //
+  // If they differ, we've changed our euid away from the saved one, and it may
+  // be neither our ruid nor our suid.  Fall back to the ruid, which always is
+  // one of them.
+  if (euid == suid) {
+    return euid;
+  } else {
+    return ruid;
+  }
+}
+
+std::optional<std::string> GetUsername(uid_t uid) {
+  struct passwd const *pw = getpwuid(uid);
+  if (pw == nullptr) {
+    return std::nullopt;
+  } else {
+    return pw->pw_name;
+  }
+}
 
 }  // namespace aos

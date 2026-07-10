@@ -13,11 +13,14 @@
 #define SCHED_FIFO 1
 #define SCHED_RR 2
 using pid_t = int;
+using uid_t = int;
 #endif
 
 #include <cstring>
+#include <optional>
 #include <ostream>
 #include <span>
+#include <string>
 #include <string_view>
 
 #if defined(__APPLE__) || defined(_WIN32)
@@ -141,6 +144,13 @@ inline pid_t GetThreadId() { return syscall(SYS_gettid); }
 #else
 pid_t GetThreadId();
 #endif
+
+// Returns the UID of the current user.
+// On Windows, this is a NOP.
+uid_t GetUserId();
+
+// Returns the username associated with the given UID when possible.
+std::optional<std::string> GetUsername(uid_t uid);
 
 // Returns the name of the current process/program.
 std::string GetProgramName();

@@ -5,6 +5,9 @@
 #include <detours.h>
 // clang-format on
 
+#include <optional>
+#include <string>
+
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
@@ -201,5 +204,9 @@ std::string GetThreadName() { return ""; }
 
 pid_t GetProcessId() { return GetCurrentProcessId(); }
 pid_t GetThreadId() { return static_cast<pid_t>(GetCurrentThreadId()); }
+
+uid_t GetUserId() { return 0; }
+
+std::optional<std::string> GetUsername(uid_t /*uid*/) { return std::nullopt; }
 
 }  // namespace aos
