@@ -884,6 +884,8 @@ def generate_build_file(filesystem, packages_to_eval, template_filename):
             # libc6 is a bit aggressive to link against...  And breaks aos's malloc hooks.
             for d in resolved_deps
             if not d.endswith('/libc.so.6') and not d.endswith('/libm.so.6')
+            # Shared libraries should not be linked to the dynamic linker.
+            and not os.path.basename(d).startswith('ld-linux')
         ])
 
         # We want to include the canonical name for a library.  This is what

@@ -32,21 +32,21 @@ typedef struct aos_timer_handler_t aos_timer_handler_t;
 // Wrapper for aos::ExitHandle. See the aos_exit_handle_* functions for the
 // member functions.
 typedef struct aos_exit_handle_t aos_exit_handle_t;
-typedef struct aos_context_t aos_context_t;
-typedef struct aos_simulated_event_loop_factory_t
-    aos_simulated_event_loop_factory_t;
-// Wrapper for aos::ErrorType. See aos/util/status.h for detailed documentation.
-typedef struct aos_error_t aos_error_t;
 
 // Wrapper for aos::Context. Fields correspond one-to-one with the same names.
 // See aos/events/context.h for detailed documentation.
 typedef struct aos_context_t {
   int64_t monotonic_event_time;
   int64_t realtime_event_time;
+  int64_t monotonic_remote_time;
+  int64_t realtime_remote_time;
+  int64_t monotonic_remote_transmit_time;
   uint32_t queue_index;
   uint32_t remote_queue_index;
   size_t size;
   const void *data;
+  int buffer_index;
+  uint8_t source_boot_uuid[16];
 } aos_context_t;
 
 // Wrapper for aos::SimulatedEventLoopFactory. See the
@@ -84,6 +84,7 @@ typedef struct aos_node_event_loop_factory_t aos_node_event_loop_factory_t;
 // Callback types for various EventLoop APIs.
 typedef void (*aos_watcher_callback_t)(const aos_context_t *context,
                                        const void *message, void *user_data);
+typedef void (*aos_no_arg_watcher_callback_t)(void *user_data);
 typedef void (*aos_timer_callback_t)(void *user_data);
 typedef void (*aos_on_run_callback_t)(void *user_data);
 typedef void (*aos_on_startup_callback_t)(void *user_data);
@@ -123,6 +124,13 @@ void aos_event_loop_make_watcher(aos_event_loop_t *self,
                                  const char *channel_type,
                                  aos_watcher_callback_t callback,
                                  void *user_data);
+// Creates a watcher on the specified channel which doesn't get access to the
+// message. This may use less resources than aos_event_loop_make_watcher.
+void aos_event_loop_make_no_arg_watcher(aos_event_loop_t *self,
+                                        const char *channel_name,
+                                        const char *channel_type,
+                                        aos_no_arg_watcher_callback_t callback,
+                                        void *user_data);
 // Creates a timer with the provided callback, and returns a timer handler.
 // Use it to schedule the timer.
 aos_timer_handler_t *aos_event_loop_add_timer(aos_event_loop_t *self,
@@ -225,6 +233,8 @@ void aos_timer_handler_schedule(aos_timer_handler_t *self, int64_t base_ns,
                                 int64_t repeat_offset_ns);
 // Cancels the timer, if scheduled.
 void aos_timer_handler_disable(aos_timer_handler_t *self);
+// Returns true if the timer is not scheduled to go off again.
+bool aos_timer_handler_is_disabled(aos_timer_handler_t *self);
 // Copies name_size bytes from name_data (no NUL terminator required).
 void aos_timer_set_name(aos_timer_handler_t *self, const char *name_data,
                         size_t name_size);
@@ -249,6 +259,9 @@ size_t aos_configuration_buffer_get_size(
     const aos_configuration_buffer_t *self);
 aos_configuration_buffer_t *aos_configuration_buffer_read_from_file(
     const char *file_path);
+aos_configuration_buffer_t *aos_configuration_buffer_maybe_read_from_file(
+    const char *file_path, const char *const *extra_import_paths,
+    size_t extra_import_paths_count);
 void aos_configuration_buffer_destroy(aos_configuration_buffer_t *self);
 
 const aos_channel_t *aos_configuration_get_channel(
@@ -267,6 +280,13 @@ bool aos_configuration_channel_is_sendable_on_node(const aos_channel_t *channel,
                                                    const aos_node_t *node);
 bool aos_configuration_channel_is_readable_on_node(const aos_channel_t *channel,
                                                    const aos_node_t *node);
+bool aos_configuration_channel_has_type(const aos_channel_t *channel);
+const char *aos_configuration_channel_type(const aos_channel_t *channel);
+bool aos_configuration_channel_has_name(const aos_channel_t *channel);
+bool aos_configuration_node_has_name(const aos_node_t *node);
+// Returns the node's name.  Nodes always have one.
+const char *aos_configuration_node_name(const aos_node_t *node);
+const char *aos_configuration_channel_name(const aos_channel_t *channel);
 
 // All aos_simulated_event_loop_* functions may move to a different file, once
 // we decide on a path for scalable shared libraries.
@@ -275,6 +295,8 @@ aos_simulated_event_loop_factory_t *aos_simulated_event_loop_factory_create(
     const aos_configuration_t *configuration);
 void aos_simulated_event_loop_factory_destroy(
     aos_simulated_event_loop_factory_t *self);
+// "node" is the name of the node to create the event loop on, or "" for a
+// single node configuration.
 aos_event_loop_t *aos_simulated_event_loop_factory_make_event_loop(
     aos_simulated_event_loop_factory_t *self, const char *name,
     const char *node);

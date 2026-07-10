@@ -1,0 +1,50 @@
+rust_bindgen rebuilds clang's command line from the cc_toolchain, but only keeps
+flags from an allowlist, and -idirafter isn't on it.  toolchains_llvm passes
+every sysroot and builtin include directory that way (together with -nostdinc,
+so clang won't rediscover them on its own), which leaves bindgen parsing headers
+against a truncated include path.
+
+Whatever survives that filter is still a C++ compile's flags being handed to a C
+parse, so clang warns "argument unused during compilation" for each one.  Add
+-Wno-unused-command-line-argument the same way the rule already adds
+-Wno-unknown-warning-option.
+
+Finally, the generated bindings target carries CcInfo, so it belongs in the
+rust_library's link_deps rather than deps, which rules_rust now warns about.
+
+None of this is fixed upstream as of rules_rust main.  rules_rust_bindgen-0.63.0.patch
+carries the first two fixes; the link_deps one does not apply there because
+rust_library only grew that attribute after 0.63.0 (and that release does not
+warn).
+
+--- a/private/bindgen.bzl
++++ b/private/bindgen.bzl
+@@ -118,7 +118,8 @@
+     rust_library(
+         name = name,
+         srcs = [name + "__bindgen.rs"],
+-        deps = deps + [":" + name + "__bindgen"] + ([":" + name + "__bindgen_c_thunks_library"] if wrap_static_fns else []),
++        deps = deps,
++        link_deps = [":" + name + "__bindgen"] + ([":" + name + "__bindgen_c_thunks_library"] if wrap_static_fns else []),
+         tags = tags,
+         **kwargs
+     )
+@@ -287,6 +288,10 @@
+ 
+     # Ignore unknown warning options from the CC toolchain (e.g., GCC-specific flags)
+     args.add("-Wno-unknown-warning-option")
++    # The CC toolchain's flags are written for its own language mode.  bindgen
++    # parses headers as C, where flags like -nostdinc++ do nothing, so clang
++    # warns about each one and buries the real output.
++    args.add("-Wno-unused-command-line-argument")
+ 
+     resource_dir = _get_resource_dir(cc_toolchain)
+     if resource_dir:
+@@ -321,6 +326,7 @@
+     param_flags_known_to_clang = (
+         "-I",
+         "-iquote",
++        "-idirafter",
+         "-isystem",
+         "--sysroot",
+         "--gcc-toolchain",

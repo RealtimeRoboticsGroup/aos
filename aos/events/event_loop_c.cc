@@ -28,10 +28,19 @@ aos_context_t to_context_t(const aos::Context &context) {
       context.monotonic_event_time.time_since_epoch().count());
   c_context.realtime_event_time = static_cast<int64_t>(
       context.realtime_event_time.time_since_epoch().count());
+  c_context.monotonic_remote_time = static_cast<int64_t>(
+      context.monotonic_remote_time.time_since_epoch().count());
+  c_context.realtime_remote_time = static_cast<int64_t>(
+      context.realtime_remote_time.time_since_epoch().count());
+  c_context.monotonic_remote_transmit_time = static_cast<int64_t>(
+      context.monotonic_remote_transmit_time.time_since_epoch().count());
   c_context.queue_index = context.queue_index;
   c_context.remote_queue_index = context.remote_queue_index;
   c_context.size = context.size;
   c_context.data = context.data;
+  c_context.buffer_index = context.buffer_index;
+  std::memcpy(c_context.source_boot_uuid,
+              context.source_boot_uuid.span().data(), 16);
   return c_context;
 }
 
@@ -145,6 +154,12 @@ void aos_timer_handler_disable(aos_timer_handler_t *self) {
   timer_handler->Disable();
 }
 
+bool aos_timer_handler_is_disabled(aos_timer_handler_t *self) {
+  aos::TimerHandler *timer_handler =
+      reinterpret_cast<aos::TimerHandler *>(ABSL_DIE_IF_NULL(self));
+  return timer_handler->IsDisabled();
+}
+
 void aos_timer_set_name(aos_timer_handler_t *self, const char *name_data,
                         size_t name_size) {
   aos::TimerHandler *timer_handler =
@@ -246,6 +261,28 @@ void aos_event_loop_make_watcher(aos_event_loop_t *self,
         aos_context_t c_context = to_context_t(context);
         callback(&c_context, message, user_data);
       });
+}
+
+void aos_event_loop_make_no_arg_watcher(aos_event_loop_t *self,
+                                        const char *channel_name,
+                                        const char *channel_type,
+                                        aos_no_arg_watcher_callback_t callback,
+                                        void *user_data) {
+  aos::EventLoop *event_loop =
+      reinterpret_cast<aos::EventLoop *>(ABSL_DIE_IF_NULL(self));
+  const aos::Channel *channel = aos::configuration::GetChannel(
+      event_loop->configuration(), channel_name, channel_type,
+      event_loop->name(), event_loop->node(), true);
+  CHECK(channel != nullptr)
+      << ": Can't find channel " << channel_name << " " << channel_type;
+  if (!aos::configuration::ChannelIsReadableOnNode(channel,
+                                                   event_loop->node())) {
+    LOG(FATAL) << ": Channel " << channel_name << " " << channel_type
+               << " isn't readable on node " << event_loop->node();
+  }
+  event_loop->MakeRawNoArgWatcher(
+      channel,
+      [callback, user_data](const aos::Context &) { callback(user_data); });
 }
 
 aos_timer_handler_t *aos_event_loop_add_timer(aos_event_loop_t *self,
@@ -429,6 +466,24 @@ aos_configuration_buffer_t *aos_configuration_buffer_read_from_file(
   return reinterpret_cast<aos_configuration_buffer_t *>(config.release());
 }
 
+aos_configuration_buffer_t *aos_configuration_buffer_maybe_read_from_file(
+    const char *file_path, const char *const *extra_import_paths,
+    size_t extra_import_paths_count) {
+  std::vector<std::string_view> cc_extra_import_paths;
+  for (size_t i = 0; i < extra_import_paths_count; ++i) {
+    cc_extra_import_paths.push_back(extra_import_paths[i]);
+  }
+  auto cc_result = aos::configuration::MaybeReadConfig(
+      ABSL_DIE_IF_NULL(file_path), cc_extra_import_paths);
+  if (!cc_result) {
+    return nullptr;
+  }
+  auto config =
+      std::make_unique<aos::FlatbufferDetachedBuffer<aos::Configuration>>(
+          std::move(*cc_result));
+  return reinterpret_cast<aos_configuration_buffer_t *>(config.release());
+}
+
 void aos_configuration_buffer_destroy(aos_configuration_buffer_t *self) {
   aos::FlatbufferDetachedBuffer<aos::Configuration> *config =
       reinterpret_cast<aos::FlatbufferDetachedBuffer<aos::Configuration> *>(
@@ -488,6 +543,39 @@ bool aos_configuration_channel_is_readable_on_node(const aos_channel_t *channel,
       reinterpret_cast<const aos::Node *>(node));
 }
 
+bool aos_configuration_channel_has_type(const aos_channel_t *channel) {
+  return reinterpret_cast<const aos::Channel *>(ABSL_DIE_IF_NULL(channel))
+      ->has_type();
+}
+
+const char *aos_configuration_channel_type(const aos_channel_t *channel) {
+  return reinterpret_cast<const aos::Channel *>(ABSL_DIE_IF_NULL(channel))
+      ->type()
+      ->c_str();
+}
+
+bool aos_configuration_channel_has_name(const aos_channel_t *channel) {
+  return reinterpret_cast<const aos::Channel *>(ABSL_DIE_IF_NULL(channel))
+      ->has_name();
+}
+
+const char *aos_configuration_channel_name(const aos_channel_t *channel) {
+  return reinterpret_cast<const aos::Channel *>(ABSL_DIE_IF_NULL(channel))
+      ->name()
+      ->c_str();
+}
+
+bool aos_configuration_node_has_name(const aos_node_t *node) {
+  return reinterpret_cast<const aos::Node *>(ABSL_DIE_IF_NULL(node))
+      ->has_name();
+}
+
+const char *aos_configuration_node_name(const aos_node_t *node) {
+  return reinterpret_cast<const aos::Node *>(ABSL_DIE_IF_NULL(node))
+      ->name()
+      ->c_str();
+}
+
 void aos_simulated_event_loop_factory_destroy(
     aos_simulated_event_loop_factory_t *self) {
   delete reinterpret_cast<aos::SimulatedEventLoopFactory *>(self);
@@ -499,8 +587,11 @@ aos_event_loop_t *aos_simulated_event_loop_factory_make_event_loop(
   aos::SimulatedEventLoopFactory *factory =
       reinterpret_cast<aos::SimulatedEventLoopFactory *>(
           ABSL_DIE_IF_NULL(self));
+  // GetNodeEventLoopFactory takes a std::string_view, which can't be built from
+  // a nullptr.  "" is how you ask for the node of a single node configuration.
   std::unique_ptr<aos::EventLoop> event_loop =
-      factory->GetNodeEventLoopFactory(node)->MakeEventLoop(name);
+      factory->GetNodeEventLoopFactory(ABSL_DIE_IF_NULL(node))
+          ->MakeEventLoop(name);
   return reinterpret_cast<aos_event_loop_t *>(event_loop.release());
 }
 

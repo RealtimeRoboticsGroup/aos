@@ -1,47 +1,31 @@
 #ifndef AOS_INIT_FOR_RUST_H_
 #define AOS_INIT_FOR_RUST_H_
 
-#include <string>
-#include <string_view>
-#include <vector>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
-#include "aos/for_rust.h"
-#include "cxx.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-namespace aos {
+typedef struct aos_flag_info_t {
+  char *name;
+  char *type;
+  char *description;
+  char *default_value;
+  char *filename;
+} aos_flag_info_t;
 
-struct FlagInfo {
-  std::string name_;
-  std::string type_;
-  std::string description_;
-  std::string default_value_;
-  std::string filename_;
+void aos_init_from_rust();
+size_t aos_get_cpp_flags(aos_flag_info_t **flags_out);
+void aos_free_cpp_flags(aos_flag_info_t *flags, size_t size);
+bool aos_set_command_line_option(const char *name, const char *value);
+char *aos_get_command_line_option(const char *name);
+void aos_free_command_line_option(char *value);
 
-  rust::Str name() const {
-    return StringViewToRustStr(std::string_view(name_));
-  }
-  rust::Str ty() const { return StringViewToRustStr(std::string_view(type_)); }
-  rust::Str description() const {
-    return StringViewToRustStr(std::string_view(description_));
-  }
-  rust::Str default_value() const {
-    return StringViewToRustStr(std::string_view(default_value_));
-  }
-  rust::Str filename() const {
-    return StringViewToRustStr(std::string_view(filename_));
-  }
-};
-
-// A special initialization function that initializes the C++ parts in a way
-// compatible with Rust. This requires careful coordination with `:init_rs`, do
-// not use it from anywhere else.
-void InitFromRust();
-
-std::vector<FlagInfo> GetCppFlags();
-
-bool SetCommandLineOption(const char *name, const char *value);
-std::string GetCommandLineOption(const char *name);
-
-}  // namespace aos
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // AOS_INIT_FOR_RUST_H_

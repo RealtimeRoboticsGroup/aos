@@ -1,5 +1,6 @@
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
+load("@rules_rust_bindgen//:defs.bzl", "rust_bindgen_library")
 load("//tools/build_rules:clean_dep.bzl", "aos_repo_name")
 load("//tools/rust:defs.bzl", "rust_library")
 
@@ -113,11 +114,39 @@ cc_library(
     visibility = ["//visibility:public"],
 )
 
+# rust_bindgen_library does not forward testonly to the rust_bindgen target it
+# creates, so cc_lib cannot be the testonly :tmpdir.  Give bindgen the header on
+# its own; :tmpdir still provides the implementation.
+cc_library(
+    name = "tmpdir_c_hdrs",
+    hdrs = ["tmpdir_c.h"],
+    visibility = ["//visibility:public"],
+)
+
+rust_bindgen_library(
+    name = "tmpdir_c_rs",
+    bindgen_flags = [
+        "--allowlist-file=.*/tmpdir_c.h",
+        "--no-layout-tests",
+        "--merge-extern-blocks",
+    ],
+    cc_lib = ":tmpdir_c_hdrs",
+    crate_name = "aos_testing_tmpdir_c",
+    header = "tmpdir_c.h",
+    # See //aos/events:event_loop_c_rs.
+    merge_cc_lib_objects_into_rlib = False,
+    target_compatible_with = ["//tools/platforms/rust:has_support"],
+    visibility = ["//visibility:public"],
+)
+
 cc_library(
     name = "tmpdir",
     testonly = True,
     srcs = ["tmpdir.cc"],
-    hdrs = ["tmpdir.h"],
+    hdrs = [
+        "tmpdir.h",
+        "tmpdir_c.h",
+    ],
     visibility = ["//visibility:public"],
     deps = [
         "//aos:realtime",

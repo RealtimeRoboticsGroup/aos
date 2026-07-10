@@ -1260,9 +1260,8 @@ class ExitHandle {
   // processed will finish.
   virtual void Exit(Status result) = 0;
   // Overload for a successful exit---equivalent to if we specified a default
-  // parameter for Exit(), except that autocxx does not understand default
-  // arguments and so needs an explicit overload to keep rust happy
-  // (https://github.com/google/autocxx/issues/563).
+  // parameter for Exit(), except that an explicit overload is something the C
+  // API in event_loop_c.h can call directly.
   void Exit() { Exit({}); }
 };
 

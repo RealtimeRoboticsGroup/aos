@@ -16683,7 +16683,6 @@ cc_library(
     deps = [
         ":usr_lib_x86_64-linux-gnu_blas_libblas.so.3.11.0-lib",
         ":usr_lib_x86_64-linux-gnu_lapack_liblapack.so.3.11.0-lib",
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libarpack.so.2.1.0-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libstdc++.so.6.0.30-lib",
@@ -19332,7 +19331,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libLLVM-15.so.1-lib",
     srcs = ["lib/x86_64-linux-gnu/libLLVM-15.so.1"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libedit.so.2.0.70-lib",
         ":usr_lib_x86_64-linux-gnu_libffi.so.8.1.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
@@ -19357,7 +19355,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libOpenCL.so.1.0.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libOpenCL.so.1"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
     ],
 )
 
@@ -19406,7 +19403,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libQt5Core.so.5.15.8-lib",
     srcs = ["lib/x86_64-linux-gnu/libQt5Core.so.5"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libdouble-conversion.so.3.1-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libglib-2.0.so.0.7400.6-lib",
@@ -19699,7 +19695,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libabsl_base.so.20220623.0.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libabsl_base.so.20220623"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libabsl_raw_logging_internal.so.20220623.0.0-lib",
         ":usr_lib_x86_64-linux-gnu_libabsl_spinlock_wait.so.20220623.0.0-lib",
         ":usr_lib_x86_64-linux-gnu_libstdc++.so.6.0.30-lib",
@@ -19726,7 +19721,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libabsl_cord.so.20220623.0.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libabsl_cord.so.20220623"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libabsl_cord_internal.so.20220623.0.0-lib",
         ":usr_lib_x86_64-linux-gnu_libabsl_cordz_functions.so.20220623.0.0-lib",
         ":usr_lib_x86_64-linux-gnu_libabsl_cordz_info.so.20220623.0.0-lib",
@@ -19755,7 +19749,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libabsl_cordz_functions.so.20220623.0.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libabsl_cordz_functions.so.20220623"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libabsl_exponential_biased.so.20220623.0.0-lib",
     ],
 )
@@ -20101,7 +20094,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libabsl_random_internal_pool_urbg.so.20220623.0.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libabsl_random_internal_pool_urbg.so.20220623"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libabsl_base.so.20220623.0.0-lib",
         ":usr_lib_x86_64-linux-gnu_libabsl_random_internal_randen.so.20220623.0.0-lib",
         ":usr_lib_x86_64-linux-gnu_libabsl_random_internal_randen_hwaes_impl.so.20220623.0.0-lib",
@@ -20181,7 +20173,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libabsl_raw_hash_set.so.20220623.0.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libabsl_raw_hash_set.so.20220623"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
     ],
 )
 
@@ -20352,7 +20343,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libaccinj64.so.11.8.87-lib",
     srcs = ["lib/x86_64-linux-gnu/libaccinj64.so.11.8"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libcupti.so.2022.3.0-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
@@ -20541,7 +20531,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libblkid.so.1.1.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libblkid.so.1"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
     ],
 )
 
@@ -20608,7 +20597,6 @@ cc_library(
 cc_library(
     name = "usr_lib_x86_64-linux-gnu_libc.so-lib",
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libc_nonshared.a-lib",
     ],
 )
@@ -20617,7 +20605,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libc.so.6-lib",
     srcs = ["lib/x86_64-linux-gnu/libc.so.6"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
     ],
 )
 
@@ -20659,7 +20646,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libcap-ng.so.0.0.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libcap-ng.so.0"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
     ],
 )
 
@@ -20700,7 +20686,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libcheckpoint.so-lib",
     srcs = ["lib/x86_64-linux-gnu/libcheckpoint.so"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libpthread.so.0-lib",
@@ -20738,7 +20723,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libcom_err.so.2.1-lib",
     srcs = ["lib/x86_64-linux-gnu/libcom_err.so.2"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
     ],
 )
 
@@ -20773,7 +20757,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libcublas.so.11.11.3.6-lib",
     srcs = ["lib/x86_64-linux-gnu/libcublas.so.11"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libcublasLt.so.11.11.3.6-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
@@ -20786,7 +20769,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libcublasLt.so.11.11.3.6-lib",
     srcs = ["lib/x86_64-linux-gnu/libcublasLt.so.11"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libpthread.so.0-lib",
@@ -20798,7 +20780,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libcudart.so.11.8.89-lib",
     srcs = ["lib/x86_64-linux-gnu/libcudart.so.11.0"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libpthread.so.0-lib",
         ":usr_lib_x86_64-linux-gnu_librt.so.1-lib",
@@ -20809,7 +20790,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libcufft.so.10.9.0.58-lib",
     srcs = ["lib/x86_64-linux-gnu/libcufft.so.10"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libpthread.so.0-lib",
@@ -20821,7 +20801,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libcufftw.so.10.9.0.58-lib",
     srcs = ["lib/x86_64-linux-gnu/libcufftw.so.10"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libcufft.so.10.9.0.58-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
@@ -20834,7 +20813,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libcuinj64.so.11.8.87-lib",
     srcs = ["lib/x86_64-linux-gnu/libcuinj64.so.11.8"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libcupti.so.2022.3.0-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
@@ -20848,7 +20826,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libcupti.so.2022.3.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libcupti.so.11.8"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libpthread.so.0-lib",
@@ -20861,7 +20838,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libcurand.so.10.3.0.86-lib",
     srcs = ["lib/x86_64-linux-gnu/libcurand.so.10"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libpthread.so.0-lib",
@@ -20913,7 +20889,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libcusolver.so.11.4.1.48-lib",
     srcs = ["lib/x86_64-linux-gnu/libcusolver.so.11"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libcublas.so.11.11.3.6-lib",
         ":usr_lib_x86_64-linux-gnu_libcublasLt.so.11.11.3.6-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
@@ -20927,7 +20902,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libcusolverMg.so.11.4.1.48-lib",
     srcs = ["lib/x86_64-linux-gnu/libcusolverMg.so.11"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libcublas.so.11.11.3.6-lib",
         ":usr_lib_x86_64-linux-gnu_libcublasLt.so.11.11.3.6-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
@@ -20942,7 +20916,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libcusparse.so.11.7.5.86-lib",
     srcs = ["lib/x86_64-linux-gnu/libcusparse.so.11"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libpthread.so.0-lib",
@@ -21084,7 +21057,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libdw-0.188.so-lib",
     srcs = ["lib/x86_64-linux-gnu/libdw.so.1"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libbz2.so.1.0.4-lib",
         ":usr_lib_x86_64-linux-gnu_libelf-0.188.so-lib",
         ":usr_lib_x86_64-linux-gnu_liblzma.so.5.4.1-lib",
@@ -21113,7 +21085,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libelf-0.188.so-lib",
     srcs = ["lib/x86_64-linux-gnu/libelf.so.1"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libz.so.1.2.13-lib",
     ],
 )
@@ -21178,7 +21149,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libfdisk.so.1.1.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libfdisk.so.1"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libblkid.so.1.1.0-lib",
         ":usr_lib_x86_64-linux-gnu_libuuid.so.1.3.0-lib",
     ],
@@ -21195,7 +21165,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libfido2.so.1.12.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libfido2.so.1"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libcbor.so.0.8.0-lib",
         ":usr_lib_x86_64-linux-gnu_libcrypto.so.3-lib",
         ":usr_lib_x86_64-linux-gnu_libudev.so.1.7.5-lib",
@@ -21290,7 +21259,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libgav1.so.1.0.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libgav1.so.1"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libabsl_synchronization.so.20220623.0.0-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libstdc++.so.6.0.30-lib",
@@ -21346,7 +21314,6 @@ cc_library(
         ":usr_lib_libdfalt.so.0.0.0-lib",
         ":usr_lib_libmfhdfalt.so.0.0.0-lib",
         ":usr_lib_libogdi.so.4.1-lib",
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libblosc.so.1.21.3-lib",
         ":usr_lib_x86_64-linux-gnu_libcfitsio.so.10.4.2.0-lib",
         ":usr_lib_x86_64-linux-gnu_libcrypto.so.3-lib",
@@ -21536,7 +21503,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libgfortran.so.5.0.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libgfortran.so.5"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libquadmath.so.0.0.0-lib",
     ],
@@ -21626,7 +21592,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libgnutls.so.30.34.3-lib",
     srcs = ["lib/x86_64-linux-gnu/libgnutls.so.30"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgmp.so.10.4.1-lib",
         ":usr_lib_x86_64-linux-gnu_libhogweed.so.6.6-lib",
         ":usr_lib_x86_64-linux-gnu_libidn2.so.0.3.8-lib",
@@ -22490,7 +22455,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libheif.so.1.15.1-lib",
     srcs = ["lib/x86_64-linux-gnu/libheif.so.1"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libaom.so.3.6.0-lib",
         ":usr_lib_x86_64-linux-gnu_libdav1d.so.6.6.0-lib",
         ":usr_lib_x86_64-linux-gnu_libde265.so.0.1.4-lib",
@@ -22710,7 +22674,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libicuuc.so.72.1-lib",
     srcs = ["lib/x86_64-linux-gnu/libicuuc.so.72"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libicudata.so.72.1-lib",
         ":usr_lib_x86_64-linux-gnu_libstdc++.so.6.0.30-lib",
@@ -22768,7 +22731,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libjpeg.so.62.3.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libjpeg.so.62"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
     ],
 )
 
@@ -22776,7 +22738,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libjson-c.so.5.2.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libjson-c.so.5"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
     ],
 )
 
@@ -22793,7 +22754,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libjxl.so.0.7.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libjxl.so.0.7"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libbrotlidec.so.1.0.9-lib",
         ":usr_lib_x86_64-linux-gnu_libbrotlienc.so.1.0.9-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
@@ -22933,7 +22893,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_liblsan.so.0.0.0-lib",
     srcs = ["lib/x86_64-linux-gnu/liblsan.so.0"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
     ],
 )
@@ -22970,7 +22929,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libm.so.6-lib",
     srcs = ["lib/x86_64-linux-gnu/libm.so.6"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
     ],
 )
 
@@ -23165,7 +23123,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libmount.so.1.1.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libmount.so.1"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libblkid.so.1.1.0-lib",
         ":usr_lib_x86_64-linux-gnu_libselinux.so.1-lib",
     ],
@@ -23278,7 +23235,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libmvec.so.1-lib",
     srcs = ["lib/x86_64-linux-gnu/libmvec.so.1"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
     ],
 )
 
@@ -23356,7 +23312,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libnppc.so.11.8.0.86-lib",
     srcs = ["lib/x86_64-linux-gnu/libnppc.so.11"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libpthread.so.0-lib",
@@ -23368,7 +23323,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libnppial.so.11.8.0.86-lib",
     srcs = ["lib/x86_64-linux-gnu/libnppial.so.11"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libnppc.so.11.8.0.86-lib",
@@ -23381,7 +23335,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libnppicc.so.11.8.0.86-lib",
     srcs = ["lib/x86_64-linux-gnu/libnppicc.so.11"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libnppc.so.11.8.0.86-lib",
@@ -23394,7 +23347,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libnppidei.so.11.8.0.86-lib",
     srcs = ["lib/x86_64-linux-gnu/libnppidei.so.11"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libnppc.so.11.8.0.86-lib",
@@ -23407,7 +23359,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libnppif.so.11.8.0.86-lib",
     srcs = ["lib/x86_64-linux-gnu/libnppif.so.11"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libnppc.so.11.8.0.86-lib",
@@ -23420,7 +23371,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libnppig.so.11.8.0.86-lib",
     srcs = ["lib/x86_64-linux-gnu/libnppig.so.11"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libnppc.so.11.8.0.86-lib",
@@ -23433,7 +23383,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libnppim.so.11.8.0.86-lib",
     srcs = ["lib/x86_64-linux-gnu/libnppim.so.11"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libnppc.so.11.8.0.86-lib",
@@ -23446,7 +23395,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libnppist.so.11.8.0.86-lib",
     srcs = ["lib/x86_64-linux-gnu/libnppist.so.11"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libnppc.so.11.8.0.86-lib",
@@ -23459,7 +23407,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libnppisu.so.11.8.0.86-lib",
     srcs = ["lib/x86_64-linux-gnu/libnppisu.so.11"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libnppc.so.11.8.0.86-lib",
@@ -23472,7 +23419,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libnppitc.so.11.8.0.86-lib",
     srcs = ["lib/x86_64-linux-gnu/libnppitc.so.11"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libnppc.so.11.8.0.86-lib",
@@ -23485,7 +23431,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libnpps.so.11.8.0.86-lib",
     srcs = ["lib/x86_64-linux-gnu/libnpps.so.11"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libnppc.so.11.8.0.86-lib",
@@ -23498,7 +23443,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libnsl.so.2.0.1-lib",
     srcs = ["lib/x86_64-linux-gnu/libnsl.so.2"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libtirpc.so.3.0.0-lib",
     ],
 )
@@ -23555,7 +23499,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libnuma.so.1.0.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libnuma.so.1"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
     ],
 )
 
@@ -23575,7 +23518,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libnvblas.so.11.11.3.6-lib",
     srcs = ["lib/x86_64-linux-gnu/libnvblas.so.11"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libcublas.so.11.11.3.6-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
@@ -23598,7 +23540,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libnvjpeg.so.11.9.0.86-lib",
     srcs = ["lib/x86_64-linux-gnu/libnvjpeg.so.11"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libpthread.so.0-lib",
@@ -23610,7 +23551,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libnvperf_host.so-lib",
     srcs = ["lib/x86_64-linux-gnu/libnvperf_host.so"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libpthread.so.0-lib",
@@ -23623,7 +23563,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libnvperf_target.so-lib",
     srcs = ["lib/x86_64-linux-gnu/libnvperf_target.so"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libpthread.so.0-lib",
@@ -23645,7 +23584,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libnvrtc.so.11.8.89-lib",
     srcs = ["lib/x86_64-linux-gnu/libnvrtc.so.11.2"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libpthread.so.0-lib",
         ":usr_lib_x86_64-linux-gnu_librt.so.1-lib",
@@ -23656,7 +23594,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libnvvm.so.4.0.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libnvvm.so.4"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libpthread.so.0-lib",
         ":usr_lib_x86_64-linux-gnu_librt.so.1-lib",
@@ -23843,7 +23780,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libopencv_dnn.so.4.6.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libopencv_dnn.so.406"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libopencv_core.so.4.6.0-lib",
         ":usr_lib_x86_64-linux-gnu_libopencv_imgproc.so.4.6.0-lib",
@@ -24483,7 +24419,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libp11-kit.so.0.3.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libp11-kit.so.0"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libffi.so.8.1.2-lib",
     ],
 )
@@ -24587,7 +24522,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libpcsamplingutil.so-lib",
     srcs = ["lib/x86_64-linux-gnu/libpcsamplingutil.so"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libdl.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libpthread.so.0-lib",
@@ -24608,7 +24542,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libpixman-1.so.0.42.2-lib",
     srcs = ["lib/x86_64-linux-gnu/libpixman-1.so.0"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
     ],
 )
 
@@ -24647,7 +24580,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libpoppler.so.126.0.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libpoppler.so.126"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libfontconfig.so.1.12.0-lib",
         ":usr_lib_x86_64-linux-gnu_libfreetype.so.6.18.3-lib",
         ":usr_lib_x86_64-linux-gnu_libjpeg.so.62.3.0-lib",
@@ -24698,7 +24630,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libprotobuf.so.32.0.12-lib",
     srcs = ["lib/x86_64-linux-gnu/libprotobuf.so.32"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libstdc++.so.6.0.30-lib",
         ":usr_lib_x86_64-linux-gnu_libz.so.1.2.13-lib",
@@ -24765,7 +24696,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_librav1e.so.0.5.1-lib",
     srcs = ["lib/x86_64-linux-gnu/librav1e.so.0"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
     ],
 )
@@ -24781,7 +24711,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_librdmacm.so.1.3.44.0-lib",
     srcs = ["lib/x86_64-linux-gnu/librdmacm.so.1"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libibverbs.so.1.14.44.0-lib",
         ":usr_lib_x86_64-linux-gnu_libnl-3.so.200.26.0-lib",
     ],
@@ -24816,7 +24745,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_librsvg-2.so.2.48.0-lib",
     srcs = ["lib/x86_64-linux-gnu/librsvg-2.so.2"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libcairo.so.2.11600.0-lib",
         ":usr_lib_x86_64-linux-gnu_libcairo-gobject.so.2.11600.0-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
@@ -24875,7 +24803,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libselinux.so.1-lib",
     srcs = ["lib/x86_64-linux-gnu/libselinux.so.1"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libpcre2-8.so.0.11.2-lib",
     ],
 )
@@ -24945,7 +24872,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libsodium.so.23.3.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libsodium.so.23"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libpthread.so.0-lib",
     ],
 )
@@ -25031,7 +24957,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libssh-gcrypt.so.4.9.6-lib",
     srcs = ["lib/x86_64-linux-gnu/libssh-gcrypt.so.4"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcrypt.so.20.4.1-lib",
         ":usr_lib_x86_64-linux-gnu_libgpg-error.so.0.33.1-lib",
         ":usr_lib_x86_64-linux-gnu_libgssapi_krb5.so.2.2-lib",
@@ -25071,7 +24996,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libstdc++.so.6.0.30-lib",
     srcs = ["lib/x86_64-linux-gnu/libstdc++.so.6"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
     ],
 )
@@ -25105,7 +25029,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libsystemd.so.0.35.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libsystemd.so.0"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libcap.so.2.66-lib",
         ":usr_lib_x86_64-linux-gnu_libgcrypt.so.20.4.1-lib",
         ":usr_lib_x86_64-linux-gnu_liblz4.so.1.9.4-lib",
@@ -25133,7 +25056,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libtbb.so.12.8-lib",
     srcs = ["lib/x86_64-linux-gnu/libtbb.so.12"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libstdc++.so.6.0.30-lib",
     ],
@@ -25289,7 +25211,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libturbojpeg.so.0.2.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libturbojpeg.so.0"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
     ],
 )
 
@@ -25329,7 +25250,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libucs.so.0.0.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libucs.so.0"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libnuma.so.1.0.0-lib",
         ":usr_lib_x86_64-linux-gnu_libucm.so.0.0.0-lib",
     ],
@@ -25355,7 +25275,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libudev.so.1.7.5-lib",
     srcs = ["lib/x86_64-linux-gnu/libudev.so.1"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
     ],
 )
 
@@ -25392,7 +25311,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libunwind-x86_64.so.8.0.1-lib",
     srcs = ["lib/x86_64-linux-gnu/libunwind-x86_64.so.8"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_liblzma.so.5.4.1-lib",
         ":usr_lib_x86_64-linux-gnu_libunwind.so.8.0.1-lib",
     ],
@@ -25402,7 +25320,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libunwind.so.8.0.1-lib",
     srcs = ["lib/x86_64-linux-gnu/libunwind.so.8"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_liblzma.so.5.4.1-lib",
     ],
 )
@@ -25425,7 +25342,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libusb-1.0.so.0.3.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libusb-1.0.so.0"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libpthread.so.0-lib",
         ":usr_lib_x86_64-linux-gnu_libudev.so.1.7.5-lib",
     ],
@@ -25449,7 +25365,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libuuid.so.1.3.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libuuid.so.1"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
     ],
 )
 
@@ -26506,7 +26421,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libvtkIOLSDyna-9.1.so.9.1.0-lib",
     srcs = ["lib/x86_64-linux-gnu/libvtkIOLSDyna-9.1.so.1"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libstdc++.so.6.0.30-lib",
         ":usr_lib_x86_64-linux-gnu_libvtkCommonCore-9.1.so.9.1.0-lib",
@@ -27966,7 +27880,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_libz3.so.4-lib",
     srcs = ["lib/x86_64-linux-gnu/libz3.so.4"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libgcc_s.so.1-lib",
         ":usr_lib_x86_64-linux-gnu_libstdc++.so.6.0.30-lib",
     ],
@@ -28169,7 +28082,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_openmpi_lib_openmpi3_mca_btl_ofi.so-lib",
     srcs = ["usr/lib/x86_64-linux-gnu/openmpi/lib/openmpi3/mca_btl_ofi.so"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libfabric.so.1.20.0-lib",
         ":usr_lib_x86_64-linux-gnu_libmca_common_ofi.so.10.0.2-lib",
         ":usr_lib_x86_64-linux-gnu_libopen-pal.so.40.30.2-lib",
@@ -28552,7 +28464,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_openmpi_lib_openmpi3_mca_mtl_ofi.so-lib",
     srcs = ["usr/lib/x86_64-linux-gnu/openmpi/lib/openmpi3/mca_mtl_ofi.so"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libfabric.so.1.20.0-lib",
         ":usr_lib_x86_64-linux-gnu_libmca_common_ofi.so.10.0.2-lib",
         ":usr_lib_x86_64-linux-gnu_libmpi.so.40.30.4-lib",
@@ -29524,7 +29435,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_rsocket_librspreload.so-lib",
     srcs = ["usr/lib/x86_64-linux-gnu/rsocket/librspreload.so"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_librdmacm.so.1.3.44.0-lib",
     ],
 )
@@ -29719,7 +29629,6 @@ cc_library(
     name = "usr_lib_x86_64-linux-gnu_systemd_libsystemd-shared-252.so-lib",
     srcs = ["usr/lib/x86_64-linux-gnu/systemd/libsystemd-shared-252.so"],
     deps = [
-        ":usr_lib_x86_64-linux-gnu_ld-linux-x86-64.so.2-lib",
         ":usr_lib_x86_64-linux-gnu_libacl.so.1.1.2301-lib",
         ":usr_lib_x86_64-linux-gnu_libblkid.so.1.1.0-lib",
         ":usr_lib_x86_64-linux-gnu_libcap.so.2.66-lib",

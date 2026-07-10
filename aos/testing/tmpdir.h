@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include "aos/testing/tmpdir_c.h"
+
 namespace aos::testing {
 
 // Returns a usable temporary directory.

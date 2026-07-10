@@ -43,10 +43,15 @@ typedef struct aos_exit_handle_t aos_exit_handle_t;
 typedef struct aos_context_t {
   int64_t monotonic_event_time;
   int64_t realtime_event_time;
+  int64_t monotonic_remote_time;
+  int64_t realtime_remote_time;
+  int64_t monotonic_remote_transmit_time;
   uint32_t queue_index;
   uint32_t remote_queue_index;
   size_t size;
   const void *data;
+  int buffer_index;
+  uint8_t source_boot_uuid[16];
 } aos_context_t;
 
 typedef struct aos_simulated_event_loop_factory_t

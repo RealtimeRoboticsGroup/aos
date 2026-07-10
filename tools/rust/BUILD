@@ -1,6 +1,8 @@
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@rules_cc//cc:cc_import.bzl", "cc_import")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_rust//rust:toolchain.bzl", "rust_stdlib_filegroup", "rust_toolchain")
+load("@rules_rust_bindgen//:defs.bzl", "rust_bindgen_toolchain")
 load("//tools/build_rules:clean_dep.bzl", "clean_dep")
 
 # We have to declare our toolchains individually to get the corect constraints
@@ -124,4 +126,63 @@ cc_library(
     name = "forward_allocator",
     srcs = ["forward_allocator.c"],
     visibility = ["//visibility:public"],
+)
+
+# bindgen parses headers with libclang.  rules_rust_bindgen's default toolchain
+# builds clang from @llvm-project source, which is an enormous amount of work to
+# repeat for a compiler we already download, so point it at the libclang.so that
+# ships in our LLVM distribution instead.
+#
+# There is no `clang` attribute here on purpose: rust_bindgen only uses that to
+# set CLANG_PATH, and the include paths, sysroot and -resource-dir all come from
+# the cc_toolchain of whatever is being compiled.  libclang does the parsing.
+#
+# One of these per host we run bindgen on.  libclang is dlopen'd by the bindgen
+# binary itself, so it has to come from the execution platform's LLVM
+# distribution rather than the target's.
+
+cc_import(
+    name = "libclang",
+    shared_library = "@llvm_k8//:lib/libclang.so",
+    tags = ["manual"],
+)
+
+cc_import(
+    name = "libclang_darwin",
+    shared_library = "@llvm_darwin_aarch64//:lib/libclang.dylib",
+    tags = ["manual"],
+)
+
+rust_bindgen_toolchain(
+    name = "bindgen_toolchain_impl",
+    bindgen = "@rules_rust_bindgen//3rdparty:bindgen",
+    libclang = ":libclang",
+    tags = ["manual"],
+)
+
+rust_bindgen_toolchain(
+    name = "bindgen_toolchain_darwin_impl",
+    bindgen = "@rules_rust_bindgen//3rdparty:bindgen",
+    libclang = ":libclang_darwin",
+    tags = ["manual"],
+)
+
+toolchain(
+    name = "bindgen_toolchain",
+    exec_compatible_with = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+    toolchain = ":bindgen_toolchain_impl",
+    toolchain_type = "@rules_rust_bindgen//:toolchain_type",
+)
+
+toolchain(
+    name = "bindgen_toolchain_darwin",
+    exec_compatible_with = [
+        "@platforms//os:macos",
+        "@platforms//cpu:arm64",
+    ],
+    toolchain = ":bindgen_toolchain_darwin_impl",
+    toolchain_type = "@rules_rust_bindgen//:toolchain_type",
 )

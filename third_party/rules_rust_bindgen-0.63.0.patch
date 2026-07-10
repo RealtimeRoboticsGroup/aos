@@ -1,0 +1,32 @@
+Same fixes as rules_rust_bindgen-0.71.3.patch, against the version WORKSPACE
+mode is stuck on (rules_rust dropped WORKSPACE support after 0.63.0).  Keep the
+two patches in sync.
+
+rust_bindgen filters the cc_toolchain's flags down to an allowlist that omits
+-idirafter, which is how toolchains_llvm passes the sysroot and builtin include
+directories; without them bindgen parses against a truncated include path.  What
+does survive is a C++ compile's flags feeding a C parse, so silence the
+resulting "argument unused during compilation" noise.
+
+--- a/private/bindgen.bzl
++++ b/private/bindgen.bzl
+@@ -254,6 +254,11 @@
+     # Configure Clang Arguments
+     args.add("--")
+ 
++    # The CC toolchain's flags are written for its own language mode.  bindgen
++    # parses headers as C, where flags like -nostdinc++ do nothing, so clang
++    # warns about each one and buries the real output.
++    args.add("-Wno-unused-command-line-argument")
++
+     compile_variables = cc_common.create_compile_variables(
+         cc_toolchain = cc_toolchain,
+         feature_configuration = feature_configuration,
+@@ -280,6 +285,7 @@
+     param_flags_known_to_clang = (
+         "-I",
+         "-iquote",
++        "-idirafter",
+         "-isystem",
+         "--sysroot",
+         "--gcc-toolchain",

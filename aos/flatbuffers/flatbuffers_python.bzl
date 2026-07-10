@@ -55,9 +55,9 @@ def _flatbuffer_py_gen_impl(ctx):
     out_dir_name = name[:name.find("_gen")]
     out_dir = ctx.actions.declare_directory(out_dir_name)
 
-    args = [ctx.executable._flatc.path]
-    args.extend(FLATC_ARGS)
-    args.extend(["--python-import-prefix", out_dir_name])
+    flatc_args = []
+    flatc_args.extend(FLATC_ARGS)
+    flatc_args.extend(["--python-import-prefix", out_dir_name])
 
     workspaces = []
 
@@ -76,22 +76,22 @@ def _flatbuffer_py_gen_impl(ctx):
     for path in workspaces:
         # Include both the workspace and the generated path for each.
         for subpath in ["", ctx.bin_dir.path + "/"]:
-            args.append("-I")
-            args.append(subpath + path)
-    args.append("-I")
-    args.append("%s.runfiles/%s" % (
+            flatc_args.append("-I")
+            flatc_args.append(subpath + path)
+    flatc_args.append("-I")
+    flatc_args.append("%s.runfiles/%s" % (
         ctx.executable._flatc.path,
         ctx.executable._flatc.owner.repo_name or "_main",
     ))
 
-    args.extend(["-o", out_dir.path])
-    args.append(target_info.main.path)
+    flatc_args.extend(["-o", out_dir.path])
+    flatc_args.append(target_info.main.path)
 
-    ctx.actions.run_shell(
+    ctx.actions.run(
         outputs = [out_dir],
         inputs = target_info.srcs,
-        tools = [ctx.executable._flatc],
-        command = " ".join(args),
+        executable = ctx.executable._flatc,
+        arguments = flatc_args,
     )
 
     return [DefaultInfo(runfiles = ctx.runfiles(files = [out_dir]))]

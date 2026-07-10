@@ -1,51 +1,53 @@
 pub use aos_configuration::{Configuration, ConfigurationExt};
+use aos_events_event_loop_runtime::check_error;
 pub use aos_events_event_loop_runtime::{
-    make_cpp_event_loop_runtime, CppEventLoop, CppEventLoopRuntime, CppExitHandle,
-    EventLoopRuntime, ExitHandle,
+    aos_error_t, aos_event_loop_t, aos_exit_handle_t, CppEventLoop, EventLoopRuntime,
+    ExecutorState, ExitHandle,
 };
 
 use aos_configuration_fbs::aos::Configuration as RustConfiguration;
 use aos_flatbuffers::{transmute_table_to, Flatbuffer};
-use autocxx::WithinBox;
 use core::marker::PhantomData;
-use core::pin::Pin;
-use std::boxed::Box;
+use std::cell::{Cell, RefCell};
 use std::ops::{Deref, DerefMut};
+use std::rc::Rc;
 
-autocxx::include_cpp! (
-#include "aos/events/shm_event_loop.h"
-#include "aos/events/shm_event_loop_for_rust.h"
-
-safety!(unsafe)
-
-generate!("aos::ShmEventLoopForRust")
-
-extern_cpp_type!("aos::ExitHandle", crate::CppExitHandle)
-extern_cpp_type!("aos::Configuration", crate::Configuration)
-extern_cpp_type!("aos::EventLoop", crate::CppEventLoop)
-);
+use aos_events_event_loop_c::{
+    aos_event_loop_destroy, aos_shm_event_loop_create, aos_shm_event_loop_make_exit_handle,
+    aos_shm_event_loop_run,
+};
 
 /// A Rust-owned C++ `ShmEventLoop` object.
 pub struct ShmEventLoop<'config> {
-    inner: Pin<Box<ffi::aos::ShmEventLoopForRust>>,
+    event_loop: *mut aos_event_loop_t,
+    state: Option<Rc<ExecutorState>>,
     _config: PhantomData<&'config Configuration>,
+}
+
+impl Drop for ShmEventLoop<'_> {
+    fn drop(&mut self) {
+        self.state.take();
+        unsafe {
+            aos_event_loop_destroy(self.event_loop);
+        }
+    }
 }
 
 impl<'config> ShmEventLoop<'config> {
     /// Creates a Rust-owned ShmEventLoop.
     pub fn new(config: &'config impl Flatbuffer<RustConfiguration<'static>>) -> Self {
-        // SAFETY: The `_config` represents the lifetime of this pointer we're handing off to c++ to
-        // store.
-        let event_loop = unsafe {
-            ffi::aos::ShmEventLoopForRust::new(transmute_table_to::<Configuration>(
+        unsafe {
+            let event_loop = aos_shm_event_loop_create(transmute_table_to::<Configuration>(
                 &config.message()._tab,
-            ))
-        }
-        .within_box();
-
-        Self {
-            inner: event_loop,
-            _config: PhantomData,
+            ));
+            Self {
+                event_loop,
+                state: Some(Rc::new(ExecutorState {
+                    task: RefCell::new(None),
+                    is_running: Cell::new(false),
+                })),
+                _config: PhantomData,
+            }
         }
     }
 
@@ -171,9 +173,8 @@ impl<'config> ShmEventLoop<'config> {
         // SAFETY: The runtime and the event loop (i.e. self) both get destroyed at the end of this
         // scope: first the runtime followed by the event loop. The runtime gets exclusive access
         // during initialization in `fun` while the event loop remains unused.
-        let cpp_runtime =
-            unsafe { make_cpp_event_loop_runtime(self.inner.as_mut().event_loop_mut()) };
-        let runtime = unsafe { EventLoopRuntime::new(&*cpp_runtime) };
+        let runtime =
+            unsafe { EventLoopRuntime::new(self.event_loop, self.state.as_ref().unwrap()) };
         let runtime = Scoped::new(runtime);
         fun(runtime);
         self.run();
@@ -184,12 +185,17 @@ impl<'config> ShmEventLoop<'config> {
     /// Awaiting on the exit handle is the only way to actually exit the event loop
     /// task, other than panicking.
     pub fn make_exit_handle(&mut self) -> ExitHandle {
-        self.inner.as_mut().MakeExitHandle().into()
+        unsafe { ExitHandle::new(aos_shm_event_loop_make_exit_handle(self.event_loop)) }
     }
 
     /// Runs the spawned task to completion.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the application returned an error.
     fn run(&mut self) {
-        self.inner.as_mut().Run();
+        // SAFETY: `self.event_loop` is valid, and we own the error which comes back.
+        unsafe { check_error(aos_shm_event_loop_run(self.event_loop)) };
     }
 }
 

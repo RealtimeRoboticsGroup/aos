@@ -2,7 +2,7 @@
 #include "absl/log/log.h"
 #include "gtest/gtest.h"
 
-#include "aos/events/event_loop_runtime_test_lib_rs_cxxgen.h"
+#include "aos/events/event_loop_runtime_test_lib.h"
 #include "aos/events/simulated_event_loop.h"
 #include "aos/testing/path.h"
 #include "aos/testing/ping_pong/ping_generated.h"
@@ -87,7 +87,10 @@ TEST(EventLoopRustDeathTest, PanicOnRun) {
   SimulatedEventLoopFactory factory{&config.message()};
   const auto rust_event_loop = factory.MakeEventLoop("pong");
   auto application = make_panic_on_run_application(rust_event_loop.get());
-  EXPECT_DEATH(factory.Run(), "Test Rust panic.*Rust panic, aborting");
+  // The Rust callbacks C++ invokes are all extern "C", so Rust turns a panic
+  // escaping one of them into an abort for us.
+  EXPECT_DEATH(factory.Run(),
+               "Test Rust panic.*panic in a function that cannot unwind");
 }
 
 }  // namespace aos::events::testing

@@ -40,12 +40,12 @@ mod tests {
             .leak();
             let mut event_loop_factory = SimulatedEventLoopFactory::new(config);
 
-            let ping_event_loop = event_loop_factory.make_runtime("ping", None, |runtime| {
+            let ping_event_loop = event_loop_factory.make_runtime("ping", "", |runtime| {
                 let ping = PingTask::new();
                 runtime.spawn(async move { ping.tasks(runtime, 10000).await });
             });
 
-            let pong_event_loop = event_loop_factory.make_runtime("pong", None, |runtime| {
+            let pong_event_loop = event_loop_factory.make_runtime("pong", "", |runtime| {
                 runtime.spawn(async move { pong_lib::pong(runtime).await })
             });
             PingPongTest {
@@ -75,7 +75,7 @@ mod tests {
         let ping_count: &Cell<i32> = Cell::new(1).leak();
         let pong_count: &Cell<i32> = Cell::new(1).leak();
 
-        let _test_runtime = pingpong.event_loop().make_runtime("test", None, |runtime| {
+        let _test_runtime = pingpong.event_loop().make_runtime("test", "", |runtime| {
             let count_pings = async move {
                 let mut ping_watcher: Watcher<ping::Ping> = runtime.make_watcher("/test").unwrap();
                 loop {

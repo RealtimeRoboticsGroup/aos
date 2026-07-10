@@ -8,6 +8,8 @@ load(
     _rust_test = "rust_test",
 )
 
+_IS_BZLMOD = "+" in str(Label("@rules_rust//rust:defs.bzl"))
+
 def rust_doc_test(tags = [], **kwargs):
     # TODO(james): Attempting to execute this remotely results
     # in complaints about overly large files.
@@ -65,6 +67,11 @@ def rust_library(
         else:
             params[param] = value
 
+    if not _IS_BZLMOD:
+        if "link_deps" in params:
+            link_deps = params.pop("link_deps")
+            params["deps"] = params.get("deps", []) + link_deps
+
     _rust_library(
         name = name,
         target_compatible_with = select({
@@ -87,12 +94,14 @@ def rust_library(
             crate = name,
             target_compatible_with = ["@aos//tools/platforms/rust:has_support"],
             rustdoc_flags = ["--document-private-items", "-Dwarnings"],
+            testonly = params.get("testonly", False),
         )
 
     if gen_doctests:
         rust_doc_test(
             name = name + "_doctest",
             crate = name,
+            testonly = params.get("testonly", False),
             **doctest_params
         )
 

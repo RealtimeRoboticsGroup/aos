@@ -16021,7 +16021,6 @@ cc_library(
     name = "usr_lib_gstreamer-1.0_libgstcoreelements.so-lib",
     srcs = ["usr/lib/gstreamer-1.0/libgstcoreelements.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstbase-1.0.so.0.2412.0-lib",
@@ -16057,7 +16056,6 @@ cc_library(
     name = "usr_lib_libEGL.so.1.1.0-lib",
     srcs = ["lib/libEGL.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libGLdispatch.so.0.0.0-lib",
     ],
 )
@@ -16124,7 +16122,6 @@ cc_library(
     name = "usr_lib_libGLX.so.0.0.0-lib",
     srcs = ["lib/libGLX.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libGLdispatch.so.0.0.0-lib",
         ":usr_lib_libX11.so.6.4.0-lib",
     ],
@@ -16147,7 +16144,6 @@ cc_library(
     name = "usr_lib_libGLdispatch.so.0.0.0-lib",
     srcs = ["lib/libGLdispatch.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -16170,7 +16166,6 @@ cc_library(
     name = "usr_lib_libX11.so.6.4.0-lib",
     srcs = ["lib/libX11.so.6"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libpthread.so.0-lib",
         ":usr_lib_libxcb.so.1.1.0-lib",
     ],
@@ -16180,7 +16175,6 @@ cc_library(
     name = "usr_lib_libXau.so.6.0.0-lib",
     srcs = ["lib/libXau.so.6"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -16188,7 +16182,6 @@ cc_library(
     name = "usr_lib_libXcomposite.so.1.0.0-lib",
     srcs = ["lib/libXcomposite.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libX11.so.6.4.0-lib",
     ],
 )
@@ -16197,7 +16190,6 @@ cc_library(
     name = "usr_lib_libXcursor.so.1.0.2-lib",
     srcs = ["lib/libXcursor.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libX11.so.6.4.0-lib",
         ":usr_lib_libXfixes.so.3.1.0-lib",
         ":usr_lib_libXrender.so.1.3.0-lib",
@@ -16208,7 +16200,6 @@ cc_library(
     name = "usr_lib_libXdamage.so.1.1.0-lib",
     srcs = ["lib/libXdamage.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libX11.so.6.4.0-lib",
         ":usr_lib_libXfixes.so.3.1.0-lib",
     ],
@@ -16218,7 +16209,6 @@ cc_library(
     name = "usr_lib_libXdmcp.so.6.0.0-lib",
     srcs = ["lib/libXdmcp.so.6"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -16226,7 +16216,6 @@ cc_library(
     name = "usr_lib_libXext.so.6.4.0-lib",
     srcs = ["lib/libXext.so.6"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libX11.so.6.4.0-lib",
     ],
 )
@@ -16235,7 +16224,6 @@ cc_library(
     name = "usr_lib_libXfixes.so.3.1.0-lib",
     srcs = ["lib/libXfixes.so.3"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libX11.so.6.4.0-lib",
     ],
 )
@@ -16244,7 +16232,6 @@ cc_library(
     name = "usr_lib_libXft.so.2.3.8-lib",
     srcs = ["lib/libXft.so.2"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libX11.so.6.4.0-lib",
         ":usr_lib_libXrender.so.1.3.0-lib",
         ":usr_lib_libfontconfig.so.1.12.1-lib",
@@ -16256,7 +16243,6 @@ cc_library(
     name = "usr_lib_libXi.so.6.1.0-lib",
     srcs = ["lib/libXi.so.6"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libX11.so.6.4.0-lib",
         ":usr_lib_libXext.so.6.4.0-lib",
     ],
@@ -16266,7 +16252,6 @@ cc_library(
     name = "usr_lib_libXrandr.so.2.2.0-lib",
     srcs = ["lib/libXrandr.so.2"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libX11.so.6.4.0-lib",
         ":usr_lib_libXext.so.6.4.0-lib",
         ":usr_lib_libXrender.so.1.3.0-lib",
@@ -16277,7 +16262,6 @@ cc_library(
     name = "usr_lib_libXrender.so.1.3.0-lib",
     srcs = ["lib/libXrender.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libX11.so.6.4.0-lib",
     ],
 )
@@ -16286,7 +16270,6 @@ cc_library(
     name = "usr_lib_libXtst.so.6.1.0-lib",
     srcs = ["lib/libXtst.so.6"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libX11.so.6.4.0-lib",
         ":usr_lib_libXext.so.6.4.0-lib",
         ":usr_lib_libXi.so.6.1.0-lib",
@@ -16297,7 +16280,6 @@ cc_library(
     name = "usr_lib_libabsl_base.so.2501.0.0-lib",
     srcs = ["lib/libabsl_base.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_raw_logging_internal.so.2501.0.0-lib",
         ":usr_lib_libabsl_spinlock_wait.so.2501.0.0-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -16315,7 +16297,6 @@ cc_library(
     name = "usr_lib_libabsl_cord.so.2501.0.0-lib",
     srcs = ["lib/libabsl_cord.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_cord_internal.so.2501.0.0-lib",
         ":usr_lib_libabsl_cordz_functions.so.2501.0.0-lib",
         ":usr_lib_libabsl_cordz_info.so.2501.0.0-lib",
@@ -16333,7 +16314,6 @@ cc_library(
     name = "usr_lib_libabsl_cord_internal.so.2501.0.0-lib",
     srcs = ["lib/libabsl_cord_internal.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_crc_cord_state.so.2501.0.0-lib",
         ":usr_lib_libabsl_raw_logging_internal.so.2501.0.0-lib",
         ":usr_lib_libabsl_strings.so.2501.0.0-lib",
@@ -16354,7 +16334,6 @@ cc_library(
     name = "usr_lib_libabsl_cordz_handle.so.2501.0.0-lib",
     srcs = ["lib/libabsl_cordz_handle.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_synchronization.so.2501.0.0-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -16365,7 +16344,6 @@ cc_library(
     name = "usr_lib_libabsl_cordz_info.so.2501.0.0-lib",
     srcs = ["lib/libabsl_cordz_info.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_base.so.2501.0.0-lib",
         ":usr_lib_libabsl_cord_internal.so.2501.0.0-lib",
         ":usr_lib_libabsl_cordz_handle.so.2501.0.0-lib",
@@ -16382,7 +16360,6 @@ cc_library(
     name = "usr_lib_libabsl_crc32c.so.2501.0.0-lib",
     srcs = ["lib/libabsl_crc32c.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_crc_internal.so.2501.0.0-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -16393,7 +16370,6 @@ cc_library(
     name = "usr_lib_libabsl_crc_cord_state.so.2501.0.0-lib",
     srcs = ["lib/libabsl_crc_cord_state.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_crc32c.so.2501.0.0-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -16404,7 +16380,6 @@ cc_library(
     name = "usr_lib_libabsl_crc_internal.so.2501.0.0-lib",
     srcs = ["lib/libabsl_crc_internal.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_raw_logging_internal.so.2501.0.0-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -16415,7 +16390,6 @@ cc_library(
     name = "usr_lib_libabsl_debugging_internal.so.2501.0.0-lib",
     srcs = ["lib/libabsl_debugging_internal.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_raw_logging_internal.so.2501.0.0-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -16426,7 +16400,6 @@ cc_library(
     name = "usr_lib_libabsl_decode_rust_punycode.so.2501.0.0-lib",
     srcs = ["lib/libabsl_decode_rust_punycode.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_utf8_for_code_point.so.2501.0.0-lib",
     ],
 )
@@ -16435,7 +16408,6 @@ cc_library(
     name = "usr_lib_libabsl_demangle_internal.so.2501.0.0-lib",
     srcs = ["lib/libabsl_demangle_internal.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_demangle_rust.so.2501.0.0-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -16446,7 +16418,6 @@ cc_library(
     name = "usr_lib_libabsl_demangle_rust.so.2501.0.0-lib",
     srcs = ["lib/libabsl_demangle_rust.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_decode_rust_punycode.so.2501.0.0-lib",
     ],
 )
@@ -16455,7 +16426,6 @@ cc_library(
     name = "usr_lib_libabsl_die_if_null.so.2501.0.0-lib",
     srcs = ["lib/libabsl_die_if_null.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_log_internal_message.so.2501.0.0-lib",
         ":usr_lib_libabsl_strings.so.2501.0.0-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -16466,7 +16436,6 @@ cc_library(
     name = "usr_lib_libabsl_examine_stack.so.2501.0.0-lib",
     srcs = ["lib/libabsl_examine_stack.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_stacktrace.so.2501.0.0-lib",
         ":usr_lib_libabsl_symbolize.so.2501.0.0-lib",
     ],
@@ -16483,7 +16452,6 @@ cc_library(
     name = "usr_lib_libabsl_graphcycles_internal.so.2501.0.0-lib",
     srcs = ["lib/libabsl_graphcycles_internal.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_base.so.2501.0.0-lib",
         ":usr_lib_libabsl_malloc_internal.so.2501.0.0-lib",
         ":usr_lib_libabsl_raw_logging_internal.so.2501.0.0-lib",
@@ -16505,7 +16473,6 @@ cc_library(
     name = "usr_lib_libabsl_int128.so.2501.0.0-lib",
     srcs = ["lib/libabsl_int128.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
     ],
@@ -16515,7 +16482,6 @@ cc_library(
     name = "usr_lib_libabsl_kernel_timeout_internal.so.2501.0.0-lib",
     srcs = ["lib/libabsl_kernel_timeout_internal.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_raw_logging_internal.so.2501.0.0-lib",
         ":usr_lib_libabsl_time.so.2501.0.0-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -16533,7 +16499,6 @@ cc_library(
     name = "usr_lib_libabsl_log_globals.so.2501.0.0-lib",
     srcs = ["lib/libabsl_log_globals.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_hash.so.2501.0.0-lib",
         ":usr_lib_libabsl_raw_logging_internal.so.2501.0.0-lib",
         ":usr_lib_libgcc_s.so.1-lib",
@@ -16545,7 +16510,6 @@ cc_library(
     name = "usr_lib_libabsl_log_internal_check_op.so.2501.0.0-lib",
     srcs = ["lib/libabsl_log_internal_check_op.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_leak_check.so.2501.0.0-lib",
         ":usr_lib_libabsl_log_internal_nullguard.so.2501.0.0-lib",
         ":usr_lib_libabsl_strings.so.2501.0.0-lib",
@@ -16566,7 +16530,6 @@ cc_library(
     name = "usr_lib_libabsl_log_internal_format.so.2501.0.0-lib",
     srcs = ["lib/libabsl_log_internal_format.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_log_internal_globals.so.2501.0.0-lib",
         ":usr_lib_libabsl_str_format_internal.so.2501.0.0-lib",
         ":usr_lib_libabsl_strings.so.2501.0.0-lib",
@@ -16587,7 +16550,6 @@ cc_library(
     name = "usr_lib_libabsl_log_internal_log_sink_set.so.2501.0.0-lib",
     srcs = ["lib/libabsl_log_internal_log_sink_set.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_log_globals.so.2501.0.0-lib",
         ":usr_lib_libabsl_log_internal_globals.so.2501.0.0-lib",
         ":usr_lib_libabsl_log_sink.so.2501.0.0-lib",
@@ -16603,7 +16565,6 @@ cc_library(
     name = "usr_lib_libabsl_log_internal_message.so.2501.0.0-lib",
     srcs = ["lib/libabsl_log_internal_message.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_base.so.2501.0.0-lib",
         ":usr_lib_libabsl_examine_stack.so.2501.0.0-lib",
         ":usr_lib_libabsl_log_globals.so.2501.0.0-lib",
@@ -16662,7 +16623,6 @@ cc_library(
     name = "usr_lib_libabsl_malloc_internal.so.2501.0.0-lib",
     srcs = ["lib/libabsl_malloc_internal.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_base.so.2501.0.0-lib",
         ":usr_lib_libabsl_raw_logging_internal.so.2501.0.0-lib",
         ":usr_lib_libabsl_spinlock_wait.so.2501.0.0-lib",
@@ -16685,7 +16645,6 @@ cc_library(
     name = "usr_lib_libabsl_raw_logging_internal.so.2501.0.0-lib",
     srcs = ["lib/libabsl_raw_logging_internal.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -16700,7 +16659,6 @@ cc_library(
     name = "usr_lib_libabsl_stacktrace.so.2501.0.0-lib",
     srcs = ["lib/libabsl_stacktrace.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_debugging_internal.so.2501.0.0-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
     ],
@@ -16710,7 +16668,6 @@ cc_library(
     name = "usr_lib_libabsl_status.so.2501.0.0-lib",
     srcs = ["lib/libabsl_status.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_cord.so.2501.0.0-lib",
         ":usr_lib_libabsl_cordz_info.so.2501.0.0-lib",
         ":usr_lib_libabsl_leak_check.so.2501.0.0-lib",
@@ -16725,7 +16682,6 @@ cc_library(
     name = "usr_lib_libabsl_statusor.so.2501.0.0-lib",
     srcs = ["lib/libabsl_statusor.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_raw_logging_internal.so.2501.0.0-lib",
         ":usr_lib_libabsl_spinlock_wait.so.2501.0.0-lib",
         ":usr_lib_libabsl_status.so.2501.0.0-lib",
@@ -16739,7 +16695,6 @@ cc_library(
     name = "usr_lib_libabsl_str_format_internal.so.2501.0.0-lib",
     srcs = ["lib/libabsl_str_format_internal.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_int128.so.2501.0.0-lib",
         ":usr_lib_libabsl_strings.so.2501.0.0-lib",
         ":usr_lib_libgcc_s.so.1-lib",
@@ -16751,7 +16706,6 @@ cc_library(
     name = "usr_lib_libabsl_strerror.so.2501.0.0-lib",
     srcs = ["lib/libabsl_strerror.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
     ],
@@ -16761,7 +16715,6 @@ cc_library(
     name = "usr_lib_libabsl_strings.so.2501.0.0-lib",
     srcs = ["lib/libabsl_strings.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_raw_logging_internal.so.2501.0.0-lib",
         ":usr_lib_libabsl_strings_internal.so.2501.0.0-lib",
         ":usr_lib_libgcc_s.so.1-lib",
@@ -16773,7 +16726,6 @@ cc_library(
     name = "usr_lib_libabsl_strings_internal.so.2501.0.0-lib",
     srcs = ["lib/libabsl_strings_internal.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_raw_logging_internal.so.2501.0.0-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -16784,7 +16736,6 @@ cc_library(
     name = "usr_lib_libabsl_symbolize.so.2501.0.0-lib",
     srcs = ["lib/libabsl_symbolize.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_base.so.2501.0.0-lib",
         ":usr_lib_libabsl_debugging_internal.so.2501.0.0-lib",
         ":usr_lib_libabsl_demangle_internal.so.2501.0.0-lib",
@@ -16799,7 +16750,6 @@ cc_library(
     name = "usr_lib_libabsl_synchronization.so.2501.0.0-lib",
     srcs = ["lib/libabsl_synchronization.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_base.so.2501.0.0-lib",
         ":usr_lib_libabsl_graphcycles_internal.so.2501.0.0-lib",
         ":usr_lib_libabsl_kernel_timeout_internal.so.2501.0.0-lib",
@@ -16828,7 +16778,6 @@ cc_library(
     name = "usr_lib_libabsl_time.so.2501.0.0-lib",
     srcs = ["lib/libabsl_time.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_raw_logging_internal.so.2501.0.0-lib",
         ":usr_lib_libabsl_strings.so.2501.0.0-lib",
         ":usr_lib_libabsl_time_zone.so.2501.0.0-lib",
@@ -16841,7 +16790,6 @@ cc_library(
     name = "usr_lib_libabsl_time_zone.so.2501.0.0-lib",
     srcs = ["lib/libabsl_time_zone.so.2501.0.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
     ],
@@ -16872,7 +16820,6 @@ cc_library(
     name = "usr_lib_libatk-1.0.so.0.25609.1-lib",
     srcs = ["lib/libatk-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
     ],
@@ -16882,7 +16829,6 @@ cc_library(
     name = "usr_lib_libatk-bridge-2.0.so.0.0.0-lib",
     srcs = ["lib/libatk-bridge-2.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libatk-1.0.so.0.25609.1-lib",
         ":usr_lib_libatspi.so.0.0.1-lib",
         ":usr_lib_libdbus-1.so.3.38.3-lib",
@@ -16895,7 +16841,6 @@ cc_library(
     name = "usr_lib_libatspi.so.0.0.1-lib",
     srcs = ["lib/libatspi.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libX11.so.6.4.0-lib",
         ":usr_lib_libXi.so.6.1.0-lib",
         ":usr_lib_libdbus-1.so.3.38.3-lib",
@@ -16909,7 +16854,6 @@ cc_library(
     name = "usr_lib_libblkid.so.1.1.0-lib",
     srcs = ["lib/libblkid.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -16917,14 +16861,12 @@ cc_library(
     name = "usr_lib_libbz2.so.1.0.8-lib",
     srcs = ["lib/libbz2.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
 cc_library(
     name = "usr_lib_libc.so-lib",
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libc_nonshared.a-lib",
     ],
 )
@@ -16933,7 +16875,6 @@ cc_library(
     name = "usr_lib_libc.so.6-lib",
     srcs = ["lib/libc.so.6"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -16941,7 +16882,6 @@ cc_library(
     name = "usr_lib_libc_malloc_debug.so.0-lib",
     srcs = ["lib/libc_malloc_debug.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -16965,7 +16905,6 @@ cc_library(
     name = "usr_lib_libcairo.so.2.11804.4-lib",
     srcs = ["lib/libcairo.so.2"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libX11.so.6.4.0-lib",
         ":usr_lib_libXext.so.6.4.0-lib",
         ":usr_lib_libXrender.so.1.3.0-lib",
@@ -16984,7 +16923,6 @@ cc_library(
     name = "usr_lib_libcap.so.2.75-lib",
     srcs = ["lib/libcap.so.2"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -16992,7 +16930,6 @@ cc_library(
     name = "usr_lib_libcrypto.so.3-lib",
     srcs = ["lib/libcrypto.so.3"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -17000,7 +16937,6 @@ cc_library(
     name = "usr_lib_libcuda.so.1.1-lib",
     srcs = ["lib/libcuda.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libnvrm_gpu.so-lib",
         ":usr_lib_libnvrm_mem.so-lib",
@@ -17013,7 +16949,6 @@ cc_library(
     name = "usr_lib_libcudnn.so.9.3.0-lib",
     srcs = ["lib/libcudnn.so.9"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libpthread.so.0-lib",
@@ -17026,7 +16961,6 @@ cc_library(
     name = "usr_lib_libcudnn_adv.so.9.3.0-lib",
     srcs = ["lib/libcudnn_adv.so.9"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libcudnn_graph.so.9.3.0-lib",
         ":usr_lib_libcudnn_ops.so.9.3.0-lib",
         ":usr_lib_libdl.so.2-lib",
@@ -17041,7 +16975,6 @@ cc_library(
     name = "usr_lib_libcudnn_cnn.so.9.3.0-lib",
     srcs = ["lib/libcudnn_cnn.so.9"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libcudnn_graph.so.9.3.0-lib",
         ":usr_lib_libcudnn_ops.so.9.3.0-lib",
         ":usr_lib_libdl.so.2-lib",
@@ -17056,7 +16989,6 @@ cc_library(
     name = "usr_lib_libcudnn_engines_precompiled.so.9.3.0-lib",
     srcs = ["lib/libcudnn_engines_precompiled.so.9"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libcudnn_graph.so.9.3.0-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libgcc_s.so.1-lib",
@@ -17070,7 +17002,6 @@ cc_library(
     name = "usr_lib_libcudnn_engines_runtime_compiled.so.9.3.0-lib",
     srcs = ["lib/libcudnn_engines_runtime_compiled.so.9"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libcudnn_graph.so.9.3.0-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libgcc_s.so.1-lib",
@@ -17084,7 +17015,6 @@ cc_library(
     name = "usr_lib_libcudnn_graph.so.9.3.0-lib",
     srcs = ["lib/libcudnn_graph.so.9"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libpthread.so.0-lib",
@@ -17098,7 +17028,6 @@ cc_library(
     name = "usr_lib_libcudnn_heuristic.so.9.3.0-lib",
     srcs = ["lib/libcudnn_heuristic.so.9"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libcudnn_graph.so.9.3.0-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libgcc_s.so.1-lib",
@@ -17112,7 +17041,6 @@ cc_library(
     name = "usr_lib_libcudnn_ops.so.9.3.0-lib",
     srcs = ["lib/libcudnn_ops.so.9"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libcudnn_graph.so.9.3.0-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libgcc_s.so.1-lib",
@@ -17126,7 +17054,6 @@ cc_library(
     name = "usr_lib_libdbus-1.so.3.38.3-lib",
     srcs = ["lib/libdbus-1.so.3"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libsystemd.so.0.40.0-lib",
     ],
 )
@@ -17142,7 +17069,6 @@ cc_library(
     name = "usr_lib_libdrm.so.2.124.0-lib",
     srcs = ["lib/libdrm.so.2"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -17150,7 +17076,6 @@ cc_library(
     name = "usr_lib_libdrm_amdgpu.so.1.124.0-lib",
     srcs = ["lib/libdrm_amdgpu.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdrm.so.2.124.0-lib",
     ],
 )
@@ -17159,7 +17084,6 @@ cc_library(
     name = "usr_lib_libdrm_etnaviv.so.1.124.0-lib",
     srcs = ["lib/libdrm_etnaviv.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdrm.so.2.124.0-lib",
     ],
 )
@@ -17168,7 +17092,6 @@ cc_library(
     name = "usr_lib_libdrm_freedreno.so.1.124.0-lib",
     srcs = ["lib/libdrm_freedreno.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdrm.so.2.124.0-lib",
     ],
 )
@@ -17177,7 +17100,6 @@ cc_library(
     name = "usr_lib_libdrm_intel.so.1.124.0-lib",
     srcs = ["lib/libdrm_intel.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdrm.so.2.124.0-lib",
         ":usr_lib_libpciaccess.so.0.11.1-lib",
     ],
@@ -17187,7 +17109,6 @@ cc_library(
     name = "usr_lib_libdrm_nouveau.so.2.124.0-lib",
     srcs = ["lib/libdrm_nouveau.so.2"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdrm.so.2.124.0-lib",
     ],
 )
@@ -17196,7 +17117,6 @@ cc_library(
     name = "usr_lib_libdrm_omap.so.1.124.0-lib",
     srcs = ["lib/libdrm_omap.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdrm.so.2.124.0-lib",
     ],
 )
@@ -17205,7 +17125,6 @@ cc_library(
     name = "usr_lib_libdrm_radeon.so.1.124.0-lib",
     srcs = ["lib/libdrm_radeon.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdrm.so.2.124.0-lib",
     ],
 )
@@ -17214,7 +17133,6 @@ cc_library(
     name = "usr_lib_libedit.so.0.0.75-lib",
     srcs = ["lib/libedit.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libncurses.so.5.9-lib",
         ":usr_lib_libtinfo.so.5.9-lib",
     ],
@@ -17224,7 +17142,6 @@ cc_library(
     name = "usr_lib_libepoxy.so.0.0.0-lib",
     srcs = ["lib/libepoxy.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -17232,7 +17149,6 @@ cc_library(
     name = "usr_lib_libexif.so.12.3.4-lib",
     srcs = ["lib/libexif.so.12"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -17240,7 +17156,6 @@ cc_library(
     name = "usr_lib_libexpat.so.1.10.2-lib",
     srcs = ["lib/libexpat.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -17248,7 +17163,6 @@ cc_library(
     name = "usr_lib_libfdisk.so.1.1.0-lib",
     srcs = ["lib/libfdisk.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libblkid.so.1.1.0-lib",
         ":usr_lib_libpthread.so.0-lib",
         ":usr_lib_libuuid.so.1.3.0-lib",
@@ -17259,7 +17173,6 @@ cc_library(
     name = "usr_lib_libffi.so.8.1.4-lib",
     srcs = ["lib/libffi.so.8"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -17267,7 +17180,6 @@ cc_library(
     name = "usr_lib_libfontconfig.so.1.12.1-lib",
     srcs = ["lib/libfontconfig.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libexpat.so.1.10.2-lib",
         ":usr_lib_libfreetype.so.6.20.2-lib",
     ],
@@ -17277,7 +17189,6 @@ cc_library(
     name = "usr_lib_libfreetype.so.6.20.2-lib",
     srcs = ["lib/libfreetype.so.6"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libpng16.so.16.47.0-lib",
         ":usr_lib_libpthread.so.0-lib",
         ":usr_lib_libz.so.1.3.1-lib",
@@ -17288,7 +17199,6 @@ cc_library(
     name = "usr_lib_libfribidi.so.0.4.0-lib",
     srcs = ["lib/libfribidi.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -17296,7 +17206,6 @@ cc_library(
     name = "usr_lib_libgailutil-3.so.0.0.0-lib",
     srcs = ["lib/libgailutil-3.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libatk-1.0.so.0.25609.1-lib",
         ":usr_lib_libgdk-3.so.0.2411.32-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
@@ -17317,7 +17226,6 @@ cc_library(
     name = "usr_lib_libgdk-3.so.0.2411.32-lib",
     srcs = ["lib/libgdk-3.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libX11.so.6.4.0-lib",
         ":usr_lib_libXcomposite.so.1.0.0-lib",
         ":usr_lib_libXcursor.so.1.0.2-lib",
@@ -17348,7 +17256,6 @@ cc_library(
     name = "usr_lib_libgdk_pixbuf-2.0.so.0.4200.12-lib",
     srcs = ["lib/libgdk_pixbuf-2.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgio-2.0.so.0.8400.0-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgmodule-2.0.so.0.8400.0-lib",
@@ -17362,7 +17269,6 @@ cc_library(
     name = "usr_lib_libgio-2.0.so.0.8400.0-lib",
     srcs = ["lib/libgio-2.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgmodule-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
@@ -17375,7 +17281,6 @@ cc_library(
     name = "usr_lib_libgirepository-2.0.so.0.8400.0-lib",
     srcs = ["lib/libgirepository-2.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libffi.so.8.1.4-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgmodule-2.0.so.0.8400.0-lib",
@@ -17387,7 +17292,6 @@ cc_library(
     name = "usr_lib_libglib-2.0.so.0.8400.0-lib",
     srcs = ["lib/libglib-2.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libpcre2-8.so.0.14.0-lib",
     ],
 )
@@ -17396,7 +17300,6 @@ cc_library(
     name = "usr_lib_libglog.so.0.7.1-lib",
     srcs = ["lib/libglog.so.2"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
         ":usr_lib_libunwind.so.8.0.1-lib",
@@ -17407,7 +17310,6 @@ cc_library(
     name = "usr_lib_libgmodule-2.0.so.0.8400.0-lib",
     srcs = ["lib/libgmodule-2.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
     ],
 )
@@ -17416,7 +17318,6 @@ cc_library(
     name = "usr_lib_libgobject-2.0.so.0.8400.0-lib",
     srcs = ["lib/libgobject-2.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libffi.so.8.1.4-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
     ],
@@ -17426,7 +17327,6 @@ cc_library(
     name = "usr_lib_libgphoto2.so.6.3.0-lib",
     srcs = ["lib/libgphoto2.so.6"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libexif.so.12.3.4-lib",
         ":usr_lib_libgphoto2_port.so.12.2.0-lib",
         ":usr_lib_libltdl.so.7.3.3-lib",
@@ -17438,7 +17338,6 @@ cc_library(
     name = "usr_lib_libgphoto2_port.so.12.2.0-lib",
     srcs = ["lib/libgphoto2_port.so.12"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libltdl.so.7.3.3-lib",
         ":usr_lib_libpthread.so.0-lib",
     ],
@@ -17448,7 +17347,6 @@ cc_library(
     name = "usr_lib_libgstadaptivedemux-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstadaptivedemux-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstbase-1.0.so.0.2412.0-lib",
@@ -17461,7 +17359,6 @@ cc_library(
     name = "usr_lib_libgstallocators-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstallocators-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdrm.so.2.124.0-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
@@ -17473,7 +17370,6 @@ cc_library(
     name = "usr_lib_libgstanalytics-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstanalytics-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstreamer-1.0.so.0.2412.0-lib",
         ":usr_lib_libgstvideo-1.0.so.0.2412.0-lib",
@@ -17484,7 +17380,6 @@ cc_library(
     name = "usr_lib_libgstapp-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstapp-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstbase-1.0.so.0.2412.0-lib",
@@ -17496,7 +17391,6 @@ cc_library(
     name = "usr_lib_libgstaudio-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstaudio-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstbase-1.0.so.0.2412.0-lib",
@@ -17510,7 +17404,6 @@ cc_library(
     name = "usr_lib_libgstbadaudio-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstbadaudio-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstaudio-1.0.so.0.2412.0-lib",
@@ -17523,7 +17416,6 @@ cc_library(
     name = "usr_lib_libgstbase-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstbase-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstreamer-1.0.so.0.2412.0-lib",
@@ -17534,7 +17426,6 @@ cc_library(
     name = "usr_lib_libgstbasecamerabinsrc-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstbasecamerabinsrc-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstapp-1.0.so.0.2412.0-lib",
@@ -17546,7 +17437,6 @@ cc_library(
     name = "usr_lib_libgstcheck-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstcheck-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstreamer-1.0.so.0.2412.0-lib",
@@ -17557,7 +17447,6 @@ cc_library(
     name = "usr_lib_libgstcodecparsers-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstcodecparsers-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstbase-1.0.so.0.2412.0-lib",
         ":usr_lib_libgstreamer-1.0.so.0.2412.0-lib",
@@ -17568,7 +17457,6 @@ cc_library(
     name = "usr_lib_libgstcodecs-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstcodecs-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstbase-1.0.so.0.2412.0-lib",
@@ -17582,7 +17470,6 @@ cc_library(
     name = "usr_lib_libgstcontroller-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstcontroller-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstreamer-1.0.so.0.2412.0-lib",
@@ -17593,7 +17480,6 @@ cc_library(
     name = "usr_lib_libgstcuda-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstcuda-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgmodule-2.0.so.0.8400.0-lib",
@@ -17609,7 +17495,6 @@ cc_library(
     name = "usr_lib_libgstdxva-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstdxva-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstcodecs-1.0.so.0.2412.0-lib",
@@ -17623,7 +17508,6 @@ cc_library(
     name = "usr_lib_libgstfft-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstfft-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
     ],
 )
@@ -17632,7 +17516,6 @@ cc_library(
     name = "usr_lib_libgstgl-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstgl-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libEGL.so.1.1.0-lib",
         ":usr_lib_libGLX.so.0.0.0-lib",
         ":usr_lib_libX11.so.6.4.0-lib",
@@ -17665,7 +17548,6 @@ cc_library(
     name = "usr_lib_libgstisoff-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstisoff-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstbase-1.0.so.0.2412.0-lib",
         ":usr_lib_libgstreamer-1.0.so.0.2412.0-lib",
@@ -17676,7 +17558,6 @@ cc_library(
     name = "usr_lib_libgstmpegts-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstmpegts-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstreamer-1.0.so.0.2412.0-lib",
@@ -17687,7 +17568,6 @@ cc_library(
     name = "usr_lib_libgstmse-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstmse-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstapp-1.0.so.0.2412.0-lib",
@@ -17700,7 +17580,6 @@ cc_library(
     name = "usr_lib_libgstnet-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstnet-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgio-2.0.so.0.8400.0-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
@@ -17713,7 +17592,6 @@ cc_library(
     name = "usr_lib_libgstpbutils-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstpbutils-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstaudio-1.0.so.0.2412.0-lib",
@@ -17738,7 +17616,6 @@ cc_library(
     name = "usr_lib_libgstplay-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstplay-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstpbutils-1.0.so.0.2412.0-lib",
@@ -17752,7 +17629,6 @@ cc_library(
     name = "usr_lib_libgstplayer-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstplayer-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstplay-1.0.so.0.2412.0-lib",
@@ -17765,7 +17641,6 @@ cc_library(
     name = "usr_lib_libgstreamer-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstreamer-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgmodule-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
@@ -17776,7 +17651,6 @@ cc_library(
     name = "usr_lib_libgstriff-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstriff-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstaudio-1.0.so.0.2412.0-lib",
@@ -17789,7 +17663,6 @@ cc_library(
     name = "usr_lib_libgstrtp-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstrtp-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstbase-1.0.so.0.2412.0-lib",
@@ -17801,7 +17674,6 @@ cc_library(
     name = "usr_lib_libgstrtsp-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstrtsp-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgio-2.0.so.0.8400.0-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
@@ -17823,7 +17695,6 @@ cc_library(
     name = "usr_lib_libgstsdp-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstsdp-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgio-2.0.so.0.8400.0-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
@@ -17837,7 +17708,6 @@ cc_library(
     name = "usr_lib_libgsttag-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgsttag-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstbase-1.0.so.0.2412.0-lib",
@@ -17850,7 +17720,6 @@ cc_library(
     name = "usr_lib_libgsttranscoder-1.0.so.0-lib",
     srcs = ["lib/libgsttranscoder-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstpbutils-1.0.so.0.2412.0-lib",
@@ -17862,7 +17731,6 @@ cc_library(
     name = "usr_lib_libgsturidownloader-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgsturidownloader-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstbase-1.0.so.0.2412.0-lib",
@@ -17874,7 +17742,6 @@ cc_library(
     name = "usr_lib_libgstvideo-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstvideo-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstbase-1.0.so.0.2412.0-lib",
@@ -17887,7 +17754,6 @@ cc_library(
     name = "usr_lib_libgstwayland-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstwayland-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstallocators-1.0.so.0.2412.0-lib",
@@ -17901,7 +17767,6 @@ cc_library(
     name = "usr_lib_libgstwebrtc-1.0.so.0.2412.0-lib",
     srcs = ["lib/libgstwebrtc-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
         ":usr_lib_libgstreamer-1.0.so.0.2412.0-lib",
@@ -17921,7 +17786,6 @@ cc_library(
     name = "usr_lib_libgtk-3.so.0.2411.32-lib",
     srcs = ["lib/libgtk-3.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libX11.so.6.4.0-lib",
         ":usr_lib_libXfixes.so.3.1.0-lib",
         ":usr_lib_libXi.so.6.1.0-lib",
@@ -17949,7 +17813,6 @@ cc_library(
     name = "usr_lib_libharfbuzz-cairo.so.0.61040.0-lib",
     srcs = ["lib/libharfbuzz-cairo.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libcairo.so.2.11804.4-lib",
         ":usr_lib_libharfbuzz.so.0.61040.0-lib",
     ],
@@ -17969,7 +17832,6 @@ cc_library(
     name = "usr_lib_libharfbuzz.so.0.61040.0-lib",
     srcs = ["lib/libharfbuzz.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libfreetype.so.6.20.2-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
     ],
@@ -17979,7 +17841,6 @@ cc_library(
     name = "usr_lib_libhwloc.so.15.6.4-lib",
     srcs = ["lib/libhwloc.so.15"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libpciaccess.so.0.11.1-lib",
         ":usr_lib_libudev.so.1.7.10-lib",
         ":usr_lib_libxml2.so.2.13.8-lib",
@@ -17990,7 +17851,6 @@ cc_library(
     name = "usr_lib_libjpeg.so.62.4.0-lib",
     srcs = ["lib/libjpeg.so.62"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -17998,7 +17858,6 @@ cc_library(
     name = "usr_lib_liblastlog2.so.2.0.0-lib",
     srcs = ["lib/liblastlog2.so.2"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libsqlite3.so.0.8.6-lib",
     ],
 )
@@ -18007,7 +17866,6 @@ cc_library(
     name = "usr_lib_libltdl.so.7.3.3-lib",
     srcs = ["lib/libltdl.so.7"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -18015,7 +17873,6 @@ cc_library(
     name = "usr_lib_liblzma.so.5.6.4-lib",
     srcs = ["lib/liblzma.so.5"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libpthread.so.0-lib",
     ],
 )
@@ -18038,7 +17895,6 @@ cc_library(
     name = "usr_lib_libmount.so.1.1.0-lib",
     srcs = ["lib/libmount.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libblkid.so.1.1.0-lib",
     ],
 )
@@ -18054,7 +17910,6 @@ cc_library(
     name = "usr_lib_libncurses.so.5.9-lib",
     srcs = ["lib/libncurses.so.5"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libtinfo.so.5.9-lib",
     ],
 )
@@ -18106,7 +17961,6 @@ cc_library(
     name = "usr_lib_libnvcolorutil.so-lib",
     srcs = ["lib/libnvcolorutil.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libnvos.so-lib",
     ],
 )
@@ -18115,7 +17969,6 @@ cc_library(
     name = "usr_lib_libnvcucompat.so.36.4.3-lib",
     srcs = ["lib/libnvcucompat.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libnvrm_gpu.so-lib",
         ":usr_lib_libnvrm_host1x.so-lib",
@@ -18139,7 +17992,6 @@ cc_library(
     name = "usr_lib_libnvdc.so-lib",
     srcs = ["lib/libnvdc.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libnvimp.so-lib",
         ":usr_lib_libnvrm_chip.so-lib",
         ":usr_lib_libnvrm_mem.so-lib",
@@ -18152,7 +18004,6 @@ cc_library(
     name = "usr_lib_libnvddk_2d_v2.so-lib",
     srcs = ["lib/libnvddk_2d_v2.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libnvddk_vic.so-lib",
         ":usr_lib_libnvos.so-lib",
         ":usr_lib_libnvrm_host1x.so-lib",
@@ -18166,7 +18017,6 @@ cc_library(
     name = "usr_lib_libnvddk_vic.so-lib",
     srcs = ["lib/libnvddk_vic.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libnvos.so-lib",
         ":usr_lib_libnvrm_chip.so-lib",
         ":usr_lib_libnvrm_host1x.so-lib",
@@ -18180,7 +18030,6 @@ cc_library(
     name = "usr_lib_libnvdla_compiler.so-lib",
     srcs = ["lib/libnvdla_compiler.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libnvos.so-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -18191,7 +18040,6 @@ cc_library(
     name = "usr_lib_libnvdla_runtime.so-lib",
     srcs = ["lib/libnvdla_runtime.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libnvos.so-lib",
         ":usr_lib_libnvrm_host1x.so-lib",
@@ -18262,7 +18110,6 @@ cc_library(
     name = "usr_lib_libnvidia-nvvm.so.540.4.0-lib",
     srcs = ["lib/libnvidia-nvvm.so.4"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libpthread.so.0-lib",
         ":usr_lib_librt.so.1-lib",
@@ -18273,7 +18120,6 @@ cc_library(
     name = "usr_lib_libnvidia-ptxjitcompiler.so.540.4.0-lib",
     srcs = ["lib/libnvidia-ptxjitcompiler.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libpthread.so.0-lib",
     ],
@@ -18298,7 +18144,6 @@ cc_library(
     name = "usr_lib_libnvidia-rtcore.so.540.4.0-lib",
     srcs = ["lib/libnvidia-rtcore.so.540.4.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libpthread.so.0-lib",
@@ -18316,7 +18161,6 @@ cc_library(
     name = "usr_lib_libnvimp.so-lib",
     srcs = ["lib/libnvimp.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libnvrm_chip.so-lib",
     ],
 )
@@ -18325,7 +18169,6 @@ cc_library(
     name = "usr_lib_libnvinfer.so.10.3.0-lib",
     srcs = ["lib/libnvinfer.so.10"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libnvdla_compiler.so-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -18337,7 +18180,6 @@ cc_library(
     name = "usr_lib_libnvinfer_builder_resource.so.10.3.0-lib",
     srcs = ["lib/do_not_link_against_nvinfer_builder_resource"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
     ],
@@ -18347,7 +18189,6 @@ cc_library(
     name = "usr_lib_libnvinfer_dispatch.so.10.3.0-lib",
     srcs = ["lib/libnvinfer_dispatch.so.10"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libnvdla_compiler.so-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -18359,7 +18200,6 @@ cc_library(
     name = "usr_lib_libnvinfer_lean.so.10.3.0-lib",
     srcs = ["lib/libnvinfer_lean.so.10"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libnvdla_compiler.so-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -18371,7 +18211,6 @@ cc_library(
     name = "usr_lib_libnvisp_utils.so-lib",
     srcs = ["lib/libnvisp_utils.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libnvos.so-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
     ],
@@ -18381,7 +18220,6 @@ cc_library(
     name = "usr_lib_libnvos.so-lib",
     srcs = ["lib/libnvos.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -18389,7 +18227,6 @@ cc_library(
     name = "usr_lib_libnvphs.so-lib",
     srcs = ["lib/libnvphs.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libnvos.so-lib",
     ],
 )
@@ -18398,7 +18235,6 @@ cc_library(
     name = "usr_lib_libnvpva.so-lib",
     srcs = ["lib/libnvpva.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libnvos.so-lib",
         ":usr_lib_libnvrm_mem.so-lib",
         ":usr_lib_libnvrm_surface.so-lib",
@@ -18409,7 +18245,6 @@ cc_library(
     name = "usr_lib_libnvpva_algorithms.so-lib",
     srcs = ["lib/libnvpva_algorithms.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libnvos.so-lib",
         ":usr_lib_libnvpva.so-lib",
         ":usr_lib_libnvrm_mem.so-lib",
@@ -18422,7 +18257,6 @@ cc_library(
     name = "usr_lib_libnvpvaumd.so-lib",
     srcs = ["lib/libnvpvaumd.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libnvos.so-lib",
         ":usr_lib_libnvrm_mem.so-lib",
         ":usr_lib_libnvsocsys.so-lib",
@@ -18433,7 +18267,6 @@ cc_library(
     name = "usr_lib_libnvrm_chip.so-lib",
     srcs = ["lib/libnvrm_chip.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libnvos.so-lib",
     ],
 )
@@ -18442,7 +18275,6 @@ cc_library(
     name = "usr_lib_libnvrm_gpu.so-lib",
     srcs = ["lib/libnvrm_gpu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libnvos.so-lib",
         ":usr_lib_libnvrm_mem.so-lib",
         ":usr_lib_libnvrm_sync.so-lib",
@@ -18455,7 +18287,6 @@ cc_library(
     name = "usr_lib_libnvrm_host1x.so-lib",
     srcs = ["lib/libnvrm_host1x.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libnvos.so-lib",
         ":usr_lib_libnvrm_chip.so-lib",
         ":usr_lib_libnvrm_mem.so-lib",
@@ -18466,7 +18297,6 @@ cc_library(
     name = "usr_lib_libnvrm_mem.so-lib",
     srcs = ["lib/libnvrm_mem.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libnvos.so-lib",
         ":usr_lib_libnvsciipc.so-lib",
         ":usr_lib_libnvsocsys.so-lib",
@@ -18477,7 +18307,6 @@ cc_library(
     name = "usr_lib_libnvrm_stream.so-lib",
     srcs = ["lib/libnvrm_stream.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libnvos.so-lib",
         ":usr_lib_libnvrm_host1x.so-lib",
         ":usr_lib_libnvrm_mem.so-lib",
@@ -18489,7 +18318,6 @@ cc_library(
     name = "usr_lib_libnvrm_surface.so-lib",
     srcs = ["lib/libnvrm_surface.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libnvos.so-lib",
         ":usr_lib_libnvrm_chip.so-lib",
         ":usr_lib_libnvrm_mem.so-lib",
@@ -18501,7 +18329,6 @@ cc_library(
     name = "usr_lib_libnvrm_sync.so-lib",
     srcs = ["lib/libnvrm_sync.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libnvos.so-lib",
         ":usr_lib_libnvrm_chip.so-lib",
         ":usr_lib_libnvrm_host1x.so-lib",
@@ -18512,7 +18339,6 @@ cc_library(
     name = "usr_lib_libnvsciipc.so-lib",
     srcs = ["lib/libnvsciipc.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libnvos.so-lib",
     ],
 )
@@ -18521,7 +18347,6 @@ cc_library(
     name = "usr_lib_libnvsocsys.so-lib",
     srcs = ["lib/libnvsocsys.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libnvos.so-lib",
     ],
 )
@@ -18530,7 +18355,6 @@ cc_library(
     name = "usr_lib_libnvtegrahv.so-lib",
     srcs = ["lib/libnvtegrahv.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -18538,7 +18362,6 @@ cc_library(
     name = "usr_lib_libnvvic.so-lib",
     srcs = ["lib/libnvvic.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libnvcolorutil.so-lib",
         ":usr_lib_libnvos.so-lib",
         ":usr_lib_libnvrm_host1x.so-lib",
@@ -18552,7 +18375,6 @@ cc_library(
     name = "usr_lib_libopencv_alphamat.so.4.11.0-lib",
     srcs = ["lib/libopencv_alphamat.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_imgproc.so.4.11.0-lib",
@@ -18564,7 +18386,6 @@ cc_library(
     name = "usr_lib_libopencv_aruco.so.4.11.0-lib",
     srcs = ["lib/libopencv_aruco.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_calib3d.so.4.11.0-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
@@ -18577,7 +18398,6 @@ cc_library(
     name = "usr_lib_libopencv_bgsegm.so.4.11.0-lib",
     srcs = ["lib/libopencv_bgsegm.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_calib3d.so.4.11.0-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
@@ -18591,7 +18411,6 @@ cc_library(
     name = "usr_lib_libopencv_bioinspired.so.4.11.0-lib",
     srcs = ["lib/libopencv_bioinspired.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -18602,7 +18421,6 @@ cc_library(
     name = "usr_lib_libopencv_calib3d.so.4.11.0-lib",
     srcs = ["lib/libopencv_calib3d.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_features2d.so.4.11.0-lib",
@@ -18616,7 +18434,6 @@ cc_library(
     name = "usr_lib_libopencv_ccalib.so.4.11.0-lib",
     srcs = ["lib/libopencv_ccalib.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_calib3d.so.4.11.0-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
@@ -18632,7 +18449,6 @@ cc_library(
     name = "usr_lib_libopencv_core.so.4.11.0-lib",
     srcs = ["lib/libopencv_core.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
         ":usr_lib_libtbb.so.12.15-lib",
@@ -18644,7 +18460,6 @@ cc_library(
     name = "usr_lib_libopencv_cudaarithm.so.4.11.0-lib",
     srcs = ["lib/libopencv_cudaarithm.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -18663,7 +18478,6 @@ cc_library(
     name = "usr_lib_libopencv_cudabgsegm.so.4.11.0-lib",
     srcs = ["lib/libopencv_cudabgsegm.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -18674,7 +18488,6 @@ cc_library(
     name = "usr_lib_libopencv_cudacodec.so.4.11.0-lib",
     srcs = ["lib/libopencv_cudacodec.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -18685,7 +18498,6 @@ cc_library(
     name = "usr_lib_libopencv_cudafeatures2d.so.4.11.0-lib",
     srcs = ["lib/libopencv_cudafeatures2d.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_cudaarithm.so.4.11.0-lib",
@@ -18700,7 +18512,6 @@ cc_library(
     name = "usr_lib_libopencv_cudafilters.so.4.11.0-lib",
     srcs = ["lib/libopencv_cudafilters.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_cudaarithm.so.4.11.0-lib",
@@ -18716,7 +18527,6 @@ cc_library(
     name = "usr_lib_libopencv_cudaimgproc.so.4.11.0-lib",
     srcs = ["lib/libopencv_cudaimgproc.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_cudaarithm.so.4.11.0-lib",
@@ -18735,7 +18545,6 @@ cc_library(
     name = "usr_lib_libopencv_cudalegacy.so.4.11.0-lib",
     srcs = ["lib/libopencv_cudalegacy.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_calib3d.so.4.11.0-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
@@ -18752,7 +18561,6 @@ cc_library(
     name = "usr_lib_libopencv_cudaobjdetect.so.4.11.0-lib",
     srcs = ["lib/libopencv_cudaobjdetect.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_cudaarithm.so.4.11.0-lib",
@@ -18767,7 +18575,6 @@ cc_library(
     name = "usr_lib_libopencv_cudaoptflow.so.4.11.0-lib",
     srcs = ["lib/libopencv_cudaoptflow.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_cudaarithm.so.4.11.0-lib",
@@ -18782,7 +18589,6 @@ cc_library(
     name = "usr_lib_libopencv_cudastereo.so.4.11.0-lib",
     srcs = ["lib/libopencv_cudastereo.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -18793,7 +18599,6 @@ cc_library(
     name = "usr_lib_libopencv_cudawarping.so.4.11.0-lib",
     srcs = ["lib/libopencv_cudawarping.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_imgproc.so.4.11.0-lib",
@@ -18814,7 +18619,6 @@ cc_library(
     name = "usr_lib_libopencv_datasets.so.4.11.0-lib",
     srcs = ["lib/libopencv_datasets.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_imgcodecs.so.4.11.0-lib",
@@ -18826,7 +18630,6 @@ cc_library(
     name = "usr_lib_libopencv_dnn.so.4.11.0-lib",
     srcs = ["lib/libopencv_dnn.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_hash.so.2501.0.0-lib",
         ":usr_lib_libabsl_log_internal_message.so.2501.0.0-lib",
         ":usr_lib_libabsl_log_internal_nullguard.so.2501.0.0-lib",
@@ -18844,7 +18647,6 @@ cc_library(
     name = "usr_lib_libopencv_dnn_objdetect.so.4.11.0-lib",
     srcs = ["lib/libopencv_dnn_objdetect.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -18855,7 +18657,6 @@ cc_library(
     name = "usr_lib_libopencv_dnn_superres.so.4.11.0-lib",
     srcs = ["lib/libopencv_dnn_superres.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_dnn.so.4.11.0-lib",
@@ -18868,7 +18669,6 @@ cc_library(
     name = "usr_lib_libopencv_dpm.so.4.11.0-lib",
     srcs = ["lib/libopencv_dpm.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_imgproc.so.4.11.0-lib",
@@ -18880,7 +18680,6 @@ cc_library(
     name = "usr_lib_libopencv_face.so.4.11.0-lib",
     srcs = ["lib/libopencv_face.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_calib3d.so.4.11.0-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
@@ -18894,7 +18693,6 @@ cc_library(
     name = "usr_lib_libopencv_features2d.so.4.11.0-lib",
     srcs = ["lib/libopencv_features2d.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_flann.so.4.11.0-lib",
@@ -18907,7 +18705,6 @@ cc_library(
     name = "usr_lib_libopencv_flann.so.4.11.0-lib",
     srcs = ["lib/libopencv_flann.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -18918,7 +18715,6 @@ cc_library(
     name = "usr_lib_libopencv_fuzzy.so.4.11.0-lib",
     srcs = ["lib/libopencv_fuzzy.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -18929,7 +18725,6 @@ cc_library(
     name = "usr_lib_libopencv_gapi.so.4.11.0-lib",
     srcs = ["lib/libopencv_gapi.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
@@ -18950,7 +18745,6 @@ cc_library(
     name = "usr_lib_libopencv_hfs.so.4.11.0-lib",
     srcs = ["lib/libopencv_hfs.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_imgproc.so.4.11.0-lib",
@@ -18962,7 +18756,6 @@ cc_library(
     name = "usr_lib_libopencv_highgui.so.4.11.0-lib",
     srcs = ["lib/libopencv_highgui.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libcairo.so.2.11804.4-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libgdk-3.so.0.2411.32-lib",
@@ -18981,7 +18774,6 @@ cc_library(
     name = "usr_lib_libopencv_img_hash.so.4.11.0-lib",
     srcs = ["lib/libopencv_img_hash.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_imgproc.so.4.11.0-lib",
@@ -18993,7 +18785,6 @@ cc_library(
     name = "usr_lib_libopencv_imgcodecs.so.4.11.0-lib",
     srcs = ["lib/libopencv_imgcodecs.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libjpeg.so.62.4.0-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
@@ -19012,7 +18803,6 @@ cc_library(
     name = "usr_lib_libopencv_imgproc.so.4.11.0-lib",
     srcs = ["lib/libopencv_imgproc.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -19023,7 +18813,6 @@ cc_library(
     name = "usr_lib_libopencv_intensity_transform.so.4.11.0-lib",
     srcs = ["lib/libopencv_intensity_transform.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_imgproc.so.4.11.0-lib",
@@ -19035,7 +18824,6 @@ cc_library(
     name = "usr_lib_libopencv_line_descriptor.so.4.11.0-lib",
     srcs = ["lib/libopencv_line_descriptor.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_imgproc.so.4.11.0-lib",
@@ -19047,7 +18835,6 @@ cc_library(
     name = "usr_lib_libopencv_mcc.so.4.11.0-lib",
     srcs = ["lib/libopencv_mcc.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_calib3d.so.4.11.0-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
@@ -19061,7 +18848,6 @@ cc_library(
     name = "usr_lib_libopencv_ml.so.4.11.0-lib",
     srcs = ["lib/libopencv_ml.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -19072,7 +18858,6 @@ cc_library(
     name = "usr_lib_libopencv_objdetect.so.4.11.0-lib",
     srcs = ["lib/libopencv_objdetect.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_calib3d.so.4.11.0-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
@@ -19086,7 +18871,6 @@ cc_library(
     name = "usr_lib_libopencv_optflow.so.4.11.0-lib",
     srcs = ["lib/libopencv_optflow.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_calib3d.so.4.11.0-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
@@ -19103,7 +18887,6 @@ cc_library(
     name = "usr_lib_libopencv_phase_unwrapping.so.4.11.0-lib",
     srcs = ["lib/libopencv_phase_unwrapping.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -19114,7 +18897,6 @@ cc_library(
     name = "usr_lib_libopencv_photo.so.4.11.0-lib",
     srcs = ["lib/libopencv_photo.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_cudaarithm.so.4.11.0-lib",
@@ -19128,7 +18910,6 @@ cc_library(
     name = "usr_lib_libopencv_plot.so.4.11.0-lib",
     srcs = ["lib/libopencv_plot.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_imgproc.so.4.11.0-lib",
@@ -19140,7 +18921,6 @@ cc_library(
     name = "usr_lib_libopencv_quality.so.4.11.0-lib",
     srcs = ["lib/libopencv_quality.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_imgproc.so.4.11.0-lib",
@@ -19153,7 +18933,6 @@ cc_library(
     name = "usr_lib_libopencv_rapid.so.4.11.0-lib",
     srcs = ["lib/libopencv_rapid.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_calib3d.so.4.11.0-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
@@ -19166,7 +18945,6 @@ cc_library(
     name = "usr_lib_libopencv_reg.so.4.11.0-lib",
     srcs = ["lib/libopencv_reg.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_imgproc.so.4.11.0-lib",
@@ -19178,7 +18956,6 @@ cc_library(
     name = "usr_lib_libopencv_rgbd.so.4.11.0-lib",
     srcs = ["lib/libopencv_rgbd.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_calib3d.so.4.11.0-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
@@ -19192,7 +18969,6 @@ cc_library(
     name = "usr_lib_libopencv_saliency.so.4.11.0-lib",
     srcs = ["lib/libopencv_saliency.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_imgproc.so.4.11.0-lib",
@@ -19204,7 +18980,6 @@ cc_library(
     name = "usr_lib_libopencv_sfm.so.4.11.0-lib",
     srcs = ["lib/libopencv_sfm.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libglog.so.0.7.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
@@ -19216,7 +18991,6 @@ cc_library(
     name = "usr_lib_libopencv_shape.so.4.11.0-lib",
     srcs = ["lib/libopencv_shape.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_calib3d.so.4.11.0-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
@@ -19229,7 +19003,6 @@ cc_library(
     name = "usr_lib_libopencv_signal.so.4.11.0-lib",
     srcs = ["lib/libopencv_signal.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -19240,7 +19013,6 @@ cc_library(
     name = "usr_lib_libopencv_stereo.so.4.11.0-lib",
     srcs = ["lib/libopencv_stereo.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_calib3d.so.4.11.0-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
@@ -19254,7 +19026,6 @@ cc_library(
     name = "usr_lib_libopencv_stitching.so.4.11.0-lib",
     srcs = ["lib/libopencv_stitching.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_calib3d.so.4.11.0-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
@@ -19273,7 +19044,6 @@ cc_library(
     name = "usr_lib_libopencv_structured_light.so.4.11.0-lib",
     srcs = ["lib/libopencv_structured_light.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_calib3d.so.4.11.0-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
@@ -19287,7 +19057,6 @@ cc_library(
     name = "usr_lib_libopencv_superres.so.4.11.0-lib",
     srcs = ["lib/libopencv_superres.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_cudaarithm.so.4.11.0-lib",
@@ -19308,7 +19077,6 @@ cc_library(
     name = "usr_lib_libopencv_surface_matching.so.4.11.0-lib",
     srcs = ["lib/libopencv_surface_matching.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_flann.so.4.11.0-lib",
@@ -19320,7 +19088,6 @@ cc_library(
     name = "usr_lib_libopencv_tracking.so.4.11.0-lib",
     srcs = ["lib/libopencv_tracking.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_imgproc.so.4.11.0-lib",
@@ -19333,7 +19100,6 @@ cc_library(
     name = "usr_lib_libopencv_ts.so.4.11.0-lib",
     srcs = ["lib/libopencv_ts.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_highgui.so.4.11.0-lib",
@@ -19347,7 +19113,6 @@ cc_library(
     name = "usr_lib_libopencv_video.so.4.11.0-lib",
     srcs = ["lib/libopencv_video.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_calib3d.so.4.11.0-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
@@ -19361,7 +19126,6 @@ cc_library(
     name = "usr_lib_libopencv_videoio.so.4.11.0-lib",
     srcs = ["lib/libopencv_videoio.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
         ":usr_lib_libgobject-2.0.so.0.8400.0-lib",
@@ -19385,7 +19149,6 @@ cc_library(
     name = "usr_lib_libopencv_videostab.so.4.11.0-lib",
     srcs = ["lib/libopencv_videostab.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_calib3d.so.4.11.0-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
@@ -19406,7 +19169,6 @@ cc_library(
     name = "usr_lib_libopencv_wechat_qrcode.so.4.11.0-lib",
     srcs = ["lib/libopencv_wechat_qrcode.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_dnn.so.4.11.0-lib",
@@ -19419,7 +19181,6 @@ cc_library(
     name = "usr_lib_libopencv_xfeatures2d.so.4.11.0-lib",
     srcs = ["lib/libopencv_xfeatures2d.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_features2d.so.4.11.0-lib",
@@ -19432,7 +19193,6 @@ cc_library(
     name = "usr_lib_libopencv_ximgproc.so.4.11.0-lib",
     srcs = ["lib/libopencv_ximgproc.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_calib3d.so.4.11.0-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
@@ -19447,7 +19207,6 @@ cc_library(
     name = "usr_lib_libopencv_xobjdetect.so.4.11.0-lib",
     srcs = ["lib/libopencv_xobjdetect.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_imgcodecs.so.4.11.0-lib",
@@ -19461,7 +19220,6 @@ cc_library(
     name = "usr_lib_libopencv_xphoto.so.4.11.0-lib",
     srcs = ["lib/libopencv_xphoto.so.411"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_core.so.4.11.0-lib",
         ":usr_lib_libopencv_imgproc.so.4.11.0-lib",
@@ -19473,7 +19231,6 @@ cc_library(
     name = "usr_lib_liborc-0.4.so.0.41.0-lib",
     srcs = ["lib/liborc-0.4.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -19481,7 +19238,6 @@ cc_library(
     name = "usr_lib_liborc-test-0.4.so.0.41.0-lib",
     srcs = ["lib/liborc-test-0.4.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_liborc-0.4.so.0.41.0-lib",
     ],
 )
@@ -19490,7 +19246,6 @@ cc_library(
     name = "usr_lib_libpam.so.0.85.1-lib",
     srcs = ["lib/libpam.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -19498,7 +19253,6 @@ cc_library(
     name = "usr_lib_libpam_misc.so.0.82.1-lib",
     srcs = ["lib/libpam_misc.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libpam.so.0.85.1-lib",
     ],
 )
@@ -19507,7 +19261,6 @@ cc_library(
     name = "usr_lib_libpamc.so.0.82.1-lib",
     srcs = ["lib/libpamc.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -19515,7 +19268,6 @@ cc_library(
     name = "usr_lib_libpango-1.0.so.0.5600.2-lib",
     srcs = ["lib/libpango-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libfribidi.so.0.4.0-lib",
         ":usr_lib_libgio-2.0.so.0.8400.0-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
@@ -19528,7 +19280,6 @@ cc_library(
     name = "usr_lib_libpangocairo-1.0.so.0.5600.2-lib",
     srcs = ["lib/libpangocairo-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libcairo.so.2.11804.4-lib",
         ":usr_lib_libfontconfig.so.1.12.1-lib",
         ":usr_lib_libglib-2.0.so.0.8400.0-lib",
@@ -19543,7 +19294,6 @@ cc_library(
     name = "usr_lib_libpangoft2-1.0.so.0.5600.2-lib",
     srcs = ["lib/libpangoft2-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libfontconfig.so.1.12.1-lib",
         ":usr_lib_libfreetype.so.6.20.2-lib",
         ":usr_lib_libgio-2.0.so.0.8400.0-lib",
@@ -19558,7 +19308,6 @@ cc_library(
     name = "usr_lib_libpangoxft-1.0.so.0.5600.2-lib",
     srcs = ["lib/libpangoxft-1.0.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libX11.so.6.4.0-lib",
         ":usr_lib_libXft.so.2.3.8-lib",
         ":usr_lib_libXrender.so.1.3.0-lib",
@@ -19574,7 +19323,6 @@ cc_library(
     name = "usr_lib_libpciaccess.so.0.11.1-lib",
     srcs = ["lib/libpciaccess.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libz.so.1.3.1-lib",
     ],
 )
@@ -19583,7 +19331,6 @@ cc_library(
     name = "usr_lib_libpcre2-16.so.0.14.0-lib",
     srcs = ["lib/libpcre2-16.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -19591,7 +19338,6 @@ cc_library(
     name = "usr_lib_libpcre2-32.so.0.14.0-lib",
     srcs = ["lib/libpcre2-32.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -19599,7 +19345,6 @@ cc_library(
     name = "usr_lib_libpcre2-8.so.0.14.0-lib",
     srcs = ["lib/libpcre2-8.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -19607,7 +19352,6 @@ cc_library(
     name = "usr_lib_libpcre2-posix.so.3.0.6-lib",
     srcs = ["lib/libpcre2-posix.so.3"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libpcre2-8.so.0.14.0-lib",
     ],
 )
@@ -19616,7 +19360,6 @@ cc_library(
     name = "usr_lib_libpixman-1.so.0.44.2-lib",
     srcs = ["lib/libpixman-1.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -19624,7 +19367,6 @@ cc_library(
     name = "usr_lib_libpng16.so.16.47.0-lib",
     srcs = ["lib/libpng16.so.16"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libz.so.1.3.1-lib",
     ],
 )
@@ -19633,7 +19375,6 @@ cc_library(
     name = "usr_lib_libprotobuf.so.29.4.0-lib",
     srcs = ["lib/libprotobuf.so.29.4.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libabsl_cord.so.2501.0.0-lib",
         ":usr_lib_libabsl_cord_internal.so.2501.0.0-lib",
         ":usr_lib_libabsl_cordz_info.so.2501.0.0-lib",
@@ -19665,7 +19406,6 @@ cc_library(
     name = "usr_lib_libpsx.so.2.75-lib",
     srcs = ["lib/libpsx.so.2"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -19680,7 +19420,6 @@ cc_library(
     name = "usr_lib_libpython3.13.so.1.0-lib",
     srcs = ["lib/libpython3.13.so.1.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -19695,7 +19434,6 @@ cc_library(
     name = "usr_lib_librt.so.1-lib",
     srcs = ["lib/librt.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -19703,7 +19441,6 @@ cc_library(
     name = "usr_lib_libsensors.hal-client.nvs.so-lib",
     srcs = ["lib/libsensors.hal-client.nvs.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libnvos.so-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
     ],
@@ -19722,7 +19459,6 @@ cc_library(
     name = "usr_lib_libsensors_hal.nvs.so-lib",
     srcs = ["lib/libsensors_hal.nvs.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libnvos.so-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
     ],
@@ -19732,7 +19468,6 @@ cc_library(
     name = "usr_lib_libsharpyuv.so.0.1.1-lib",
     srcs = ["lib/libsharpyuv.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -19740,7 +19475,6 @@ cc_library(
     name = "usr_lib_libsmartcols.so.1.1.0-lib",
     srcs = ["lib/libsmartcols.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -19748,7 +19482,6 @@ cc_library(
     name = "usr_lib_libsqlite3.so.0.8.6-lib",
     srcs = ["lib/libsqlite3.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -19756,7 +19489,6 @@ cc_library(
     name = "usr_lib_libssl.so.3-lib",
     srcs = ["lib/libssl.so.3"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libcrypto.so.3-lib",
     ],
 )
@@ -19773,7 +19505,6 @@ cc_library(
     name = "usr_lib_libsystemd.so.0.40.0-lib",
     srcs = ["lib/libsystemd.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libcap.so.2.75-lib",
     ],
 )
@@ -19782,7 +19513,6 @@ cc_library(
     name = "usr_lib_libtbb.so.12.15-lib",
     srcs = ["lib/libtbb.so.12"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
     ],
@@ -19792,7 +19522,6 @@ cc_library(
     name = "usr_lib_libtbbbind_2_5.so.3.15-lib",
     srcs = ["lib/libtbbbind_2_5.so.3"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libhwloc.so.15.6.4-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -19803,7 +19532,6 @@ cc_library(
     name = "usr_lib_libtbbmalloc.so.2.15-lib",
     srcs = ["lib/libtbbmalloc.so.2"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -19811,7 +19539,6 @@ cc_library(
     name = "usr_lib_libtbbmalloc_proxy.so.2.15-lib",
     srcs = ["lib/libtbbmalloc_proxy.so.2"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
         ":usr_lib_libtbbmalloc.so.2.15-lib",
@@ -19829,7 +19556,6 @@ cc_library(
     name = "usr_lib_libtiff.so.6.1.0-lib",
     srcs = ["lib/libtiff.so.6"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libjpeg.so.62.4.0-lib",
         ":usr_lib_liblzma.so.5.6.4-lib",
         ":usr_lib_libz.so.1.3.1-lib",
@@ -19840,7 +19566,6 @@ cc_library(
     name = "usr_lib_libtinfo.so.5.9-lib",
     srcs = ["lib/libtinfo.so.5"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -19848,7 +19573,6 @@ cc_library(
     name = "usr_lib_libturbojpeg.so.0.3.0-lib",
     srcs = ["lib/libturbojpeg.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -19856,7 +19580,6 @@ cc_library(
     name = "usr_lib_libudev.so.1.7.10-lib",
     srcs = ["lib/libudev.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libcap.so.2.75-lib",
     ],
 )
@@ -19865,7 +19588,6 @@ cc_library(
     name = "usr_lib_libunwind-aarch64.so.8.0.1-lib",
     srcs = ["lib/libunwind-aarch64.so.8"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libunwind.so.8.0.1-lib",
     ],
@@ -19875,7 +19597,6 @@ cc_library(
     name = "usr_lib_libunwind-coredump.so.0.0.0-lib",
     srcs = ["lib/libunwind-coredump.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -19883,7 +19604,6 @@ cc_library(
     name = "usr_lib_libunwind-ptrace.so.0.0.0-lib",
     srcs = ["lib/libunwind-ptrace.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -19891,7 +19611,6 @@ cc_library(
     name = "usr_lib_libunwind-setjmp.so.0.0.0-lib",
     srcs = ["lib/libunwind-setjmp.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libunwind.so.8.0.1-lib",
         ":usr_lib_libunwind-aarch64.so.8.0.1-lib",
@@ -19902,7 +19621,6 @@ cc_library(
     name = "usr_lib_libunwind.so.8.0.1-lib",
     srcs = ["lib/libunwind.so.8"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
     ],
 )
@@ -19932,7 +19650,6 @@ cc_library(
     name = "usr_lib_libuuid.so.1.3.0-lib",
     srcs = ["lib/libuuid.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libpthread.so.0-lib",
     ],
 )
@@ -19941,7 +19658,6 @@ cc_library(
     name = "usr_lib_libwayland-client.so.0.23.1-lib",
     srcs = ["lib/libwayland-client.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libffi.so.8.1.4-lib",
     ],
 )
@@ -19950,7 +19666,6 @@ cc_library(
     name = "usr_lib_libwayland-cursor.so.0.23.1-lib",
     srcs = ["lib/libwayland-cursor.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libwayland-client.so.0.23.1-lib",
     ],
 )
@@ -19966,7 +19681,6 @@ cc_library(
     name = "usr_lib_libwayland-server.so.0.23.1-lib",
     srcs = ["lib/libwayland-server.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libffi.so.8.1.4-lib",
     ],
 )
@@ -19975,7 +19689,6 @@ cc_library(
     name = "usr_lib_libwebp.so.7.1.10-lib",
     srcs = ["lib/libwebp.so.7"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libsharpyuv.so.0.1.1-lib",
     ],
 )
@@ -19984,7 +19697,6 @@ cc_library(
     name = "usr_lib_libwebpdemux.so.2.0.16-lib",
     srcs = ["lib/libwebpdemux.so.2"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libsharpyuv.so.0.1.1-lib",
         ":usr_lib_libwebp.so.7.1.10-lib",
     ],
@@ -19994,7 +19706,6 @@ cc_library(
     name = "usr_lib_libwebpmux.so.3.1.1-lib",
     srcs = ["lib/libwebpmux.so.3"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libsharpyuv.so.0.1.1-lib",
         ":usr_lib_libwebp.so.7.1.10-lib",
     ],
@@ -20004,7 +19715,6 @@ cc_library(
     name = "usr_lib_libxcb-composite.so.0.0.0-lib",
     srcs = ["lib/libxcb-composite.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libXau.so.6.0.0-lib",
         ":usr_lib_libXdmcp.so.6.0.0-lib",
         ":usr_lib_libxcb.so.1.1.0-lib",
@@ -20015,7 +19725,6 @@ cc_library(
     name = "usr_lib_libxcb-damage.so.0.0.0-lib",
     srcs = ["lib/libxcb-damage.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libXau.so.6.0.0-lib",
         ":usr_lib_libXdmcp.so.6.0.0-lib",
         ":usr_lib_libxcb.so.1.1.0-lib",
@@ -20026,7 +19735,6 @@ cc_library(
     name = "usr_lib_libxcb-dbe.so.0.0.0-lib",
     srcs = ["lib/libxcb-dbe.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libXau.so.6.0.0-lib",
         ":usr_lib_libXdmcp.so.6.0.0-lib",
         ":usr_lib_libxcb.so.1.1.0-lib",
@@ -20037,7 +19745,6 @@ cc_library(
     name = "usr_lib_libxcb-dpms.so.0.0.0-lib",
     srcs = ["lib/libxcb-dpms.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libXau.so.6.0.0-lib",
         ":usr_lib_libXdmcp.so.6.0.0-lib",
         ":usr_lib_libxcb.so.1.1.0-lib",
@@ -20048,7 +19755,6 @@ cc_library(
     name = "usr_lib_libxcb-dri2.so.0.0.0-lib",
     srcs = ["lib/libxcb-dri2.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libXau.so.6.0.0-lib",
         ":usr_lib_libXdmcp.so.6.0.0-lib",
         ":usr_lib_libxcb.so.1.1.0-lib",
@@ -20059,7 +19765,6 @@ cc_library(
     name = "usr_lib_libxcb-dri3.so.0.1.0-lib",
     srcs = ["lib/libxcb-dri3.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libXau.so.6.0.0-lib",
         ":usr_lib_libXdmcp.so.6.0.0-lib",
         ":usr_lib_libxcb.so.1.1.0-lib",
@@ -20070,7 +19775,6 @@ cc_library(
     name = "usr_lib_libxcb-glx.so.0.0.0-lib",
     srcs = ["lib/libxcb-glx.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libXau.so.6.0.0-lib",
         ":usr_lib_libXdmcp.so.6.0.0-lib",
         ":usr_lib_libxcb.so.1.1.0-lib",
@@ -20081,7 +19785,6 @@ cc_library(
     name = "usr_lib_libxcb-present.so.0.0.0-lib",
     srcs = ["lib/libxcb-present.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libXau.so.6.0.0-lib",
         ":usr_lib_libXdmcp.so.6.0.0-lib",
         ":usr_lib_libxcb.so.1.1.0-lib",
@@ -20092,7 +19795,6 @@ cc_library(
     name = "usr_lib_libxcb-randr.so.0.1.0-lib",
     srcs = ["lib/libxcb-randr.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libXau.so.6.0.0-lib",
         ":usr_lib_libXdmcp.so.6.0.0-lib",
         ":usr_lib_libxcb.so.1.1.0-lib",
@@ -20103,7 +19805,6 @@ cc_library(
     name = "usr_lib_libxcb-record.so.0.0.0-lib",
     srcs = ["lib/libxcb-record.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libXau.so.6.0.0-lib",
         ":usr_lib_libXdmcp.so.6.0.0-lib",
         ":usr_lib_libxcb.so.1.1.0-lib",
@@ -20114,7 +19815,6 @@ cc_library(
     name = "usr_lib_libxcb-render.so.0.0.0-lib",
     srcs = ["lib/libxcb-render.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libXau.so.6.0.0-lib",
         ":usr_lib_libXdmcp.so.6.0.0-lib",
         ":usr_lib_libxcb.so.1.1.0-lib",
@@ -20125,7 +19825,6 @@ cc_library(
     name = "usr_lib_libxcb-res.so.0.0.0-lib",
     srcs = ["lib/libxcb-res.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libXau.so.6.0.0-lib",
         ":usr_lib_libXdmcp.so.6.0.0-lib",
         ":usr_lib_libxcb.so.1.1.0-lib",
@@ -20136,7 +19835,6 @@ cc_library(
     name = "usr_lib_libxcb-screensaver.so.0.0.0-lib",
     srcs = ["lib/libxcb-screensaver.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libXau.so.6.0.0-lib",
         ":usr_lib_libXdmcp.so.6.0.0-lib",
         ":usr_lib_libxcb.so.1.1.0-lib",
@@ -20147,7 +19845,6 @@ cc_library(
     name = "usr_lib_libxcb-shape.so.0.0.0-lib",
     srcs = ["lib/libxcb-shape.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libXau.so.6.0.0-lib",
         ":usr_lib_libXdmcp.so.6.0.0-lib",
         ":usr_lib_libxcb.so.1.1.0-lib",
@@ -20158,7 +19855,6 @@ cc_library(
     name = "usr_lib_libxcb-shm.so.0.0.0-lib",
     srcs = ["lib/libxcb-shm.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libXau.so.6.0.0-lib",
         ":usr_lib_libXdmcp.so.6.0.0-lib",
         ":usr_lib_libxcb.so.1.1.0-lib",
@@ -20169,7 +19865,6 @@ cc_library(
     name = "usr_lib_libxcb-sync.so.1.0.0-lib",
     srcs = ["lib/libxcb-sync.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libXau.so.6.0.0-lib",
         ":usr_lib_libXdmcp.so.6.0.0-lib",
         ":usr_lib_libxcb.so.1.1.0-lib",
@@ -20180,7 +19875,6 @@ cc_library(
     name = "usr_lib_libxcb-xf86dri.so.0.0.0-lib",
     srcs = ["lib/libxcb-xf86dri.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libXau.so.6.0.0-lib",
         ":usr_lib_libXdmcp.so.6.0.0-lib",
         ":usr_lib_libxcb.so.1.1.0-lib",
@@ -20191,7 +19885,6 @@ cc_library(
     name = "usr_lib_libxcb-xfixes.so.0.0.0-lib",
     srcs = ["lib/libxcb-xfixes.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libXau.so.6.0.0-lib",
         ":usr_lib_libXdmcp.so.6.0.0-lib",
         ":usr_lib_libxcb.so.1.1.0-lib",
@@ -20202,7 +19895,6 @@ cc_library(
     name = "usr_lib_libxcb-xinerama.so.0.0.0-lib",
     srcs = ["lib/libxcb-xinerama.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libXau.so.6.0.0-lib",
         ":usr_lib_libXdmcp.so.6.0.0-lib",
         ":usr_lib_libxcb.so.1.1.0-lib",
@@ -20213,7 +19905,6 @@ cc_library(
     name = "usr_lib_libxcb-xinput.so.0.1.0-lib",
     srcs = ["lib/libxcb-xinput.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libXau.so.6.0.0-lib",
         ":usr_lib_libXdmcp.so.6.0.0-lib",
         ":usr_lib_libxcb.so.1.1.0-lib",
@@ -20224,7 +19915,6 @@ cc_library(
     name = "usr_lib_libxcb-xkb.so.1.0.0-lib",
     srcs = ["lib/libxcb-xkb.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libXau.so.6.0.0-lib",
         ":usr_lib_libXdmcp.so.6.0.0-lib",
         ":usr_lib_libxcb.so.1.1.0-lib",
@@ -20235,7 +19925,6 @@ cc_library(
     name = "usr_lib_libxcb-xtest.so.0.0.0-lib",
     srcs = ["lib/libxcb-xtest.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libXau.so.6.0.0-lib",
         ":usr_lib_libXdmcp.so.6.0.0-lib",
         ":usr_lib_libxcb.so.1.1.0-lib",
@@ -20246,7 +19935,6 @@ cc_library(
     name = "usr_lib_libxcb-xv.so.0.0.0-lib",
     srcs = ["lib/libxcb-xv.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libXau.so.6.0.0-lib",
         ":usr_lib_libXdmcp.so.6.0.0-lib",
         ":usr_lib_libxcb.so.1.1.0-lib",
@@ -20257,7 +19945,6 @@ cc_library(
     name = "usr_lib_libxcb-xvmc.so.0.0.0-lib",
     srcs = ["lib/libxcb-xvmc.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libXau.so.6.0.0-lib",
         ":usr_lib_libXdmcp.so.6.0.0-lib",
         ":usr_lib_libxcb.so.1.1.0-lib",
@@ -20268,7 +19955,6 @@ cc_library(
     name = "usr_lib_libxcb.so.1.1.0-lib",
     srcs = ["lib/libxcb.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libXau.so.6.0.0-lib",
         ":usr_lib_libXdmcp.so.6.0.0-lib",
     ],
@@ -20278,7 +19964,6 @@ cc_library(
     name = "usr_lib_libxkbcommon.so.0.8.1-lib",
     srcs = ["lib/libxkbcommon.so.0"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20286,7 +19971,6 @@ cc_library(
     name = "usr_lib_libxml2.so.2.13.8-lib",
     srcs = ["lib/libxml2.so.2"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20294,7 +19978,6 @@ cc_library(
     name = "usr_lib_libz.so.1.3.1-lib",
     srcs = ["lib/libz.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20302,7 +19985,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__asyncio.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_asyncio.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20310,7 +19992,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__bisect.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_bisect.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20318,7 +19999,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__blake2.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_blake2.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20326,7 +20006,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__bz2.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_bz2.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libbz2.so.1.0.8-lib",
     ],
 )
@@ -20335,7 +20014,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__codecs_cn.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_codecs_cn.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20343,7 +20021,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__codecs_hk.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_codecs_hk.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20351,7 +20028,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__codecs_iso2022.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_codecs_iso2022.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20359,7 +20035,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__codecs_jp.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_codecs_jp.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20367,7 +20042,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__codecs_kr.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_codecs_kr.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20375,7 +20049,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__codecs_tw.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_codecs_tw.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20390,7 +20063,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__csv.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_csv.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20398,7 +20070,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__ctypes.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_ctypes.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libffi.so.8.1.4-lib",
     ],
 )
@@ -20407,7 +20078,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__ctypes_test.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_ctypes_test.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20415,7 +20085,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__datetime.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_datetime.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20423,7 +20092,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__decimal.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_decimal.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20431,7 +20099,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__hashlib.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_hashlib.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libcrypto.so.3-lib",
     ],
 )
@@ -20447,7 +20114,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__interpchannels.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_interpchannels.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20455,7 +20121,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__interpqueues.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_interpqueues.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20463,7 +20128,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__interpreters.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_interpreters.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20471,7 +20135,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__json.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_json.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20479,7 +20142,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__lzma.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_lzma.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_liblzma.so.5.6.4-lib",
     ],
 )
@@ -20488,7 +20150,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__md5.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_md5.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20496,7 +20157,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__multibytecodec.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_multibytecodec.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20504,7 +20164,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__multiprocessing.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_multiprocessing.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20512,7 +20171,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__opcode.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_opcode.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20520,7 +20178,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__pickle.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_pickle.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20528,7 +20185,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__posixshmem.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_posixshmem.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20536,7 +20192,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__posixsubprocess.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_posixsubprocess.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20544,7 +20199,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__queue.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_queue.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20552,7 +20206,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__random.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_random.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20560,7 +20213,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__sha1.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_sha1.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20568,7 +20220,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__sha2.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_sha2.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20576,7 +20227,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__sha3.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_sha3.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20584,7 +20234,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__socket.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_socket.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20592,7 +20241,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__ssl.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_ssl.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libcrypto.so.3-lib",
         ":usr_lib_libssl.so.3-lib",
     ],
@@ -20602,7 +20250,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__struct.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_struct.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20610,7 +20257,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__testbuffer.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_testbuffer.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20618,7 +20264,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__testcapi.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_testcapi.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20626,7 +20271,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__testclinic.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_testclinic.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20641,7 +20285,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__testexternalinspection.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_testexternalinspection.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20656,7 +20299,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__testinternalcapi.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_testinternalcapi.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20664,7 +20306,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__testlimitedcapi.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_testlimitedcapi.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20672,7 +20313,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__testmultiphase.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_testmultiphase.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20680,7 +20320,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__testsinglephase.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_testsinglephase.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20688,7 +20327,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__uuid.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_uuid.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libuuid.so.1.3.0-lib",
     ],
 )
@@ -20697,7 +20335,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload__xxtestfuzz.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/_xxtestfuzz.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20705,7 +20342,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload_array.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/array.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20713,7 +20349,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload_binascii.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/binascii.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libz.so.1.3.1-lib",
     ],
 )
@@ -20722,7 +20357,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload_cmath.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/cmath.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20730,7 +20364,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload_fcntl.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/fcntl.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20738,7 +20371,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload_grp.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/grp.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20746,7 +20378,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload_math.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/math.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20754,7 +20385,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload_mmap.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/mmap.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20762,7 +20392,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload_readline.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/readline.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libedit.so.0.0.75-lib",
     ],
 )
@@ -20771,7 +20400,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload_select.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/select.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20779,7 +20407,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload_termios.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/termios.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20787,7 +20414,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload_unicodedata.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/unicodedata.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20795,7 +20421,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload_xxlimited.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/xxlimited.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20803,7 +20428,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload_xxlimited_35.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/xxlimited_35.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20811,7 +20435,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload_xxsubtype.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/xxsubtype.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20819,7 +20442,6 @@ cc_library(
     name = "usr_lib_python3.13_lib-dynload_zlib.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/lib-dynload/zlib.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libz.so.1.3.1-lib",
     ],
 )
@@ -20828,7 +20450,6 @@ cc_library(
     name = "usr_lib_python3.13_site-packages_cv2_python-3.13_cv2.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/site-packages/cv2/python-3.13/cv2.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libopencv_alphamat.so.4.11.0-lib",
         ":usr_lib_libopencv_aruco.so.4.11.0-lib",
@@ -20895,7 +20516,6 @@ cc_library(
     name = "usr_lib_python3.13_site-packages_numpy__core__multiarray_tests.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/site-packages/numpy/_core/_multiarray_tests.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
     ],
 )
@@ -20904,7 +20524,6 @@ cc_library(
     name = "usr_lib_python3.13_site-packages_numpy__core__multiarray_umath.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/site-packages/numpy/_core/_multiarray_umath.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
     ],
 )
@@ -20920,7 +20539,6 @@ cc_library(
     name = "usr_lib_python3.13_site-packages_numpy__core__rational_tests.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/site-packages/numpy/_core/_rational_tests.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20928,7 +20546,6 @@ cc_library(
     name = "usr_lib_python3.13_site-packages_numpy__core__simd.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/site-packages/numpy/_core/_simd.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
     ],
 )
@@ -20937,7 +20554,6 @@ cc_library(
     name = "usr_lib_python3.13_site-packages_numpy__core__struct_ufunc_tests.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/site-packages/numpy/_core/_struct_ufunc_tests.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20945,7 +20561,6 @@ cc_library(
     name = "usr_lib_python3.13_site-packages_numpy__core__umath_tests.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/site-packages/numpy/_core/_umath_tests.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20953,7 +20568,6 @@ cc_library(
     name = "usr_lib_python3.13_site-packages_numpy_fft__pocketfft_umath.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/site-packages/numpy/fft/_pocketfft_umath.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
     ],
@@ -20963,7 +20577,6 @@ cc_library(
     name = "usr_lib_python3.13_site-packages_numpy_linalg__umath_linalg.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/site-packages/numpy/linalg/_umath_linalg.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
     ],
 )
@@ -20972,7 +20585,6 @@ cc_library(
     name = "usr_lib_python3.13_site-packages_numpy_linalg_lapack_lite.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/site-packages/numpy/linalg/lapack_lite.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20980,7 +20592,6 @@ cc_library(
     name = "usr_lib_python3.13_site-packages_numpy_random__bounded_integers.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/site-packages/numpy/random/_bounded_integers.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20988,7 +20599,6 @@ cc_library(
     name = "usr_lib_python3.13_site-packages_numpy_random__common.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/site-packages/numpy/random/_common.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -20996,7 +20606,6 @@ cc_library(
     name = "usr_lib_python3.13_site-packages_numpy_random__generator.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/site-packages/numpy/random/_generator.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -21004,7 +20613,6 @@ cc_library(
     name = "usr_lib_python3.13_site-packages_numpy_random__mt19937.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/site-packages/numpy/random/_mt19937.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -21012,7 +20620,6 @@ cc_library(
     name = "usr_lib_python3.13_site-packages_numpy_random__pcg64.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/site-packages/numpy/random/_pcg64.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -21020,7 +20627,6 @@ cc_library(
     name = "usr_lib_python3.13_site-packages_numpy_random__philox.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/site-packages/numpy/random/_philox.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -21028,7 +20634,6 @@ cc_library(
     name = "usr_lib_python3.13_site-packages_numpy_random__sfc64.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/site-packages/numpy/random/_sfc64.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -21036,7 +20641,6 @@ cc_library(
     name = "usr_lib_python3.13_site-packages_numpy_random_bit_generator.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/site-packages/numpy/random/bit_generator.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -21044,7 +20648,6 @@ cc_library(
     name = "usr_lib_python3.13_site-packages_numpy_random_mtrand.cpython-313-aarch64-linux-gnu.so-lib",
     srcs = ["usr/lib/python3.13/site-packages/numpy/random/mtrand.cpython-313-aarch64-linux-gnu.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
     ],
 )
 
@@ -21052,7 +20655,6 @@ cc_library(
     name = "usr_lib_security_pam_cap.so-lib",
     srcs = ["usr/lib/security/pam_cap.so"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libcap.so.2.75-lib",
         ":usr_lib_libpam.so.0.85.1-lib",
     ],
@@ -21062,7 +20664,6 @@ cc_library(
     name = "usr_local_cuda-12.6_lib_libcublas.so.12.6.1.4-lib",
     srcs = ["usr/local/cuda-12.6/lib/libcublas.so.12"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libpthread.so.0-lib",
@@ -21075,7 +20676,6 @@ cc_library(
     name = "usr_local_cuda-12.6_lib_libcublasLt.so.12.6.1.4-lib",
     srcs = ["usr/local/cuda-12.6/lib/libcublasLt.so.12"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libpthread.so.0-lib",
@@ -21087,7 +20687,6 @@ cc_library(
     name = "usr_local_cuda-12.6_lib_libcudart.so.12.6.68-lib",
     srcs = ["usr/local/cuda-12.6/lib/libcudart.so.12"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libpthread.so.0-lib",
         ":usr_lib_librt.so.1-lib",
@@ -21098,7 +20697,6 @@ cc_library(
     name = "usr_local_cuda-12.6_lib_libcudla.so.1.0.0-lib",
     srcs = ["usr/local/cuda-12.6/lib/libcudla.so.1"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libnvcudla.so-lib",
         ":usr_lib_libstdc++.so.6.0.33-lib",
@@ -21109,7 +20707,6 @@ cc_library(
     name = "usr_local_cuda-12.6_lib_libcufft.so.11.2.6.59-lib",
     srcs = ["usr/local/cuda-12.6/lib/libcufft.so.11"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libpthread.so.0-lib",
@@ -21121,7 +20718,6 @@ cc_library(
     name = "usr_local_cuda-12.6_lib_libcufftw.so.11.2.6.59-lib",
     srcs = ["usr/local/cuda-12.6/lib/libcufftw.so.11"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libpthread.so.0-lib",
@@ -21134,7 +20730,6 @@ cc_library(
     name = "usr_local_cuda-12.6_lib_libnppc.so.12.3.1.54-lib",
     srcs = ["usr/local/cuda-12.6/lib/libnppc.so.12"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libpthread.so.0-lib",
@@ -21146,7 +20741,6 @@ cc_library(
     name = "usr_local_cuda-12.6_lib_libnppial.so.12.3.1.54-lib",
     srcs = ["usr/local/cuda-12.6/lib/libnppial.so.12"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libpthread.so.0-lib",
@@ -21159,7 +20753,6 @@ cc_library(
     name = "usr_local_cuda-12.6_lib_libnppicc.so.12.3.1.54-lib",
     srcs = ["usr/local/cuda-12.6/lib/libnppicc.so.12"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libpthread.so.0-lib",
@@ -21172,7 +20765,6 @@ cc_library(
     name = "usr_local_cuda-12.6_lib_libnppidei.so.12.3.1.54-lib",
     srcs = ["usr/local/cuda-12.6/lib/libnppidei.so.12"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libpthread.so.0-lib",
@@ -21185,7 +20777,6 @@ cc_library(
     name = "usr_local_cuda-12.6_lib_libnppif.so.12.3.1.54-lib",
     srcs = ["usr/local/cuda-12.6/lib/libnppif.so.12"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libpthread.so.0-lib",
@@ -21198,7 +20789,6 @@ cc_library(
     name = "usr_local_cuda-12.6_lib_libnppig.so.12.3.1.54-lib",
     srcs = ["usr/local/cuda-12.6/lib/libnppig.so.12"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libpthread.so.0-lib",
@@ -21211,7 +20801,6 @@ cc_library(
     name = "usr_local_cuda-12.6_lib_libnppim.so.12.3.1.54-lib",
     srcs = ["usr/local/cuda-12.6/lib/libnppim.so.12"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libpthread.so.0-lib",
@@ -21224,7 +20813,6 @@ cc_library(
     name = "usr_local_cuda-12.6_lib_libnppist.so.12.3.1.54-lib",
     srcs = ["usr/local/cuda-12.6/lib/libnppist.so.12"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libpthread.so.0-lib",
@@ -21237,7 +20825,6 @@ cc_library(
     name = "usr_local_cuda-12.6_lib_libnppisu.so.12.3.1.54-lib",
     srcs = ["usr/local/cuda-12.6/lib/libnppisu.so.12"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libpthread.so.0-lib",
@@ -21250,7 +20837,6 @@ cc_library(
     name = "usr_local_cuda-12.6_lib_libnppitc.so.12.3.1.54-lib",
     srcs = ["usr/local/cuda-12.6/lib/libnppitc.so.12"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libpthread.so.0-lib",
@@ -21263,7 +20849,6 @@ cc_library(
     name = "usr_local_cuda-12.6_lib_libnpps.so.12.3.1.54-lib",
     srcs = ["usr/local/cuda-12.6/lib/libnpps.so.12"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libpthread.so.0-lib",
@@ -21276,7 +20861,6 @@ cc_library(
     name = "usr_local_cuda-12.6_lib_libnvblas.so.12.6.1.4-lib",
     srcs = ["usr/local/cuda-12.6/lib/libnvblas.so.12"],
     deps = [
-        ":usr_lib_ld-linux-aarch64.so.1-lib",
         ":usr_lib_libdl.so.2-lib",
         ":usr_lib_libgcc_s.so.1-lib",
         ":usr_lib_libpthread.so.0-lib",

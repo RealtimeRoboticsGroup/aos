@@ -30,10 +30,11 @@
 //! The design of this is tricky. This is a complicated API interface between C++ and Rust. The big
 //! considerations in arriving at this design include:
 //!   * `EventLoop` implementations alias the objects they're returning from C++, which means
-//!     creating Rust unique references to them is unsound. See
-//!     <https://github.com/google/autocxx/issues/1146> for details.
-//!   * For various reasons autocxx can't directly wrap APIs using types ergonomic for C++. This and
-//!     the previous point mean we wrap all of the C++ objects specifically for this class.
+//!     creating Rust unique references to them is unsound. Everything from C++ is held as a raw
+//!     pointer or a shared reference for that reason, never `&mut`.
+//!   * The C API in `aos/events/event_loop_c.h` only deals in pointers and plain data, so the
+//!     ergonomic C++ types don't cross the boundary at all. That and the previous point mean we
+//!     wrap all of the C++ objects specifically for this class.
 //!   * Rust's lifetimes are only flexible enough to track everything with a single big lifetime.
 //!     All the callbacks can store references to things tied to the event loop's lifetime, but no
 //!     other lifetimes.
@@ -43,100 +44,56 @@
 //!     examples for generic associated types (<https://github.com/rust-lang/rust/issues/44265>).
 
 use std::{
+    cell::{Cell, RefCell},
     fmt,
     future::Future,
     marker::PhantomData,
     ops::{Add, Deref, DerefMut},
-    panic::{catch_unwind, AssertUnwindSafe},
+    os::raw::{c_char, c_void},
     pin::Pin,
-    slice,
+    rc::Rc,
     task::Poll,
     time::Duration,
 };
 
-use autocxx::{
-    subclass::{subclass, CppSubclass},
-    WithinBox,
-};
-use cxx::UniquePtr;
-use flatbuffers::{
-    root_unchecked, Allocator, FlatBufferBuilder, Follow, FollowWith, FullyQualifiedName,
-};
+use flatbuffers::{root_unchecked, FlatBufferBuilder, Follow, FollowWith, FullyQualifiedName};
 use futures::{future::pending, future::FusedFuture, never::Never};
 use thiserror::Error;
 use uuid::Uuid;
 
 pub use aos_configuration::{Channel, Configuration, Node};
 use aos_configuration::{ChannelLookupError, ConfigurationExt};
-
 pub use aos_uuid::UUID;
-#[cxx::bridge(namespace = "aos")]
-#[allow(unused_unsafe, unsafe_op_in_unsafe_fn)]
-mod ffi_opaque {
-    unsafe extern "C++" {
-        include!("aos/events/event_loop.h");
-        include!("aos/events/event_loop_runtime.h");
-        include!("aos/realtime.h");
 
-        type EventLoop;
-        type EventLoopRuntime;
-        type CpuSet;
-
-        unsafe fn make_event_loop_runtime(
-            event_loop: *const EventLoop,
-        ) -> UniquePtr<EventLoopRuntime>;
-        #[allow(dead_code)]
-        fn dummy_event_loop_use(el: UniquePtr<EventLoop>);
-    }
-}
-
-pub use ffi::aos::ExitHandle as CppExitHandle;
-pub use ffi_opaque::{
-    CpuSet as CppCpuSet, EventLoop as CppEventLoop, EventLoopRuntime as CppEventLoopRuntime,
+use aos_events_event_loop_c::{
+    aos_configuration_channel_name, aos_configuration_channel_type,
+    aos_configuration_node_has_name, aos_const_raw_sender_error_invalid_redzone,
+    aos_const_raw_sender_error_messages_sent_too_fast, aos_const_raw_sender_error_ok,
+    aos_const_realtime_policy_no_mode, aos_const_realtime_policy_realtime_mode_deny_malloc,
+    aos_const_scheduling_policy_fifo, aos_const_scheduling_policy_other, aos_error_code,
+    aos_error_destroy, aos_event_loop_add_timer, aos_event_loop_configuration,
+    aos_event_loop_get_name, aos_event_loop_is_running, aos_event_loop_make_fetcher,
+    aos_event_loop_make_no_arg_watcher, aos_event_loop_make_sender, aos_event_loop_monotonic_now,
+    aos_event_loop_node, aos_event_loop_on_run, aos_event_loop_realtime_now,
+    aos_event_loop_set_runtime_realtime_priority, aos_exit_handle_destroy, aos_exit_handle_exit,
+    aos_fetcher_context, aos_fetcher_destroy, aos_fetcher_fetch, aos_fetcher_fetch_next,
+    aos_sender_data, aos_sender_destroy, aos_sender_send, aos_sender_size, aos_timer_get_name,
+    aos_timer_handler_disable, aos_timer_handler_is_disabled, aos_timer_handler_schedule,
+    aos_timer_set_name,
+};
+pub use aos_events_event_loop_c::{
+    aos_context_t, aos_error_t, aos_event_loop_t, aos_exit_handle_t, aos_fetcher_t, aos_sender_t,
+    aos_timer_handler_t,
 };
 
-autocxx::include_cpp! (
-#include "aos/events/event_loop_runtime.h"
+pub struct CppEventLoop {
+    _private: [u8; 0],
+}
 
-safety!(unsafe)
-
-generate_pod!("aos::Context")
-generate!("aos::WatcherForRust")
-generate!("aos::RawSender_Error")
-generate!("aos::SenderForRust")
-generate!("aos::FetcherForRust")
-generate!("aos::OnRunForRust")
-generate!("aos::ExitHandle")
-generate!("aos::TimerForRust")
-
-generate!("aos::event_loop_runtime_event_loop")
-generate!("aos::event_loop_runtime_spawn")
-generate!("aos::event_loop_runtime_configuration")
-generate!("aos::event_loop_runtime_node")
-generate!("aos::event_loop_runtime_is_running")
-generate!("aos::event_loop_runtime_monotonic_now")
-generate!("aos::event_loop_runtime_realtime_now")
-generate!("aos::event_loop_runtime_name_data")
-generate!("aos::event_loop_runtime_name_size")
-generate!("aos::event_loop_runtime_make_watcher")
-generate!("aos::event_loop_runtime_make_sender")
-generate!("aos::event_loop_runtime_make_fetcher")
-generate!("aos::event_loop_runtime_make_on_run")
-generate!("aos::event_loop_runtime_add_timer")
-generate!("aos::event_loop_runtime_set_runtime_realtime_priority")
-generate!("aos::event_loop_runtime_set_runtime_affinity")
-generate!("aos::node_has_name")
-
-subclass!("aos::ApplicationFuture", RustApplicationFuture)
-
-extern_cpp_type!("aos::Configuration", crate::Configuration)
-extern_cpp_type!("aos::Channel", crate::Channel)
-extern_cpp_type!("aos::Node", crate::Node)
-extern_cpp_type!("aos::UUID", crate::UUID)
-extern_cpp_type!("aos::EventLoop", crate::CppEventLoop)
-extern_cpp_type!("aos::EventLoopRuntime", crate::CppEventLoopRuntime)
-extern_cpp_type!("aos::CpuSet", crate::CppCpuSet)
-);
+unsafe impl cxx::ExternType for CppEventLoop {
+    type Id = cxx::type_id!("aos::EventLoop");
+    type Kind = cxx::kind::Opaque;
+}
 
 /// A marker type which is invariant with respect to the given lifetime.
 ///
@@ -145,54 +102,57 @@ extern_cpp_type!("aos::CpuSet", crate::CppCpuSet)
 /// this to tell the Rust compiler that it can't substitute a shorter _or_ longer lifetime.
 pub type InvariantLifetime<'a> = PhantomData<fn(&'a ()) -> &'a ()>;
 
+pub struct ExecutorState {
+    pub task: RefCell<Option<Pin<Box<dyn Future<Output = Never>>>>>,
+    pub is_running: Cell<bool>,
+}
+
+impl ExecutorState {
+    pub fn poll(&self) {
+        if let Some(ref mut task) = *self.task.borrow_mut() {
+            let _ = task
+                .as_mut()
+                .poll(&mut std::task::Context::from_waker(&panic_waker()));
+        }
+    }
+}
+
+/// Polls the task, aborting instead of unwinding if it panics.
+///
+/// The callbacks C++ invokes are all `extern "C"`, which already aborts on an escaping panic
+/// without any help from us. This is for the one poll which happens inline in
+/// [`EventLoopRuntime::spawn`], where there is Rust (and potentially C++) up the stack which is
+/// not prepared for an unwind.
+fn poll_and_catch_panic(state: &ExecutorState) {
+    let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        state.poll();
+    }));
+    if res.is_err() {
+        eprintln!("Rust panic, aborting");
+        std::process::abort();
+    }
+}
+
+/// Destroys `error`, panicking if it isn't null.
+///
+/// The C API's `non_fatal` entry points hand back an `aos_error_t *` rather than dying in C++, so
+/// that each language runtime gets to decide how to report the failure. Rust's answer is a panic,
+/// which we can turn into a `Result` here if somebody ever wants to handle these.
+///
 /// # Safety
 ///
-/// This should have a `'event_loop` lifetime and `future` should include that in its type, but
-/// autocxx's subclass doesn't support that. Even if it did, it wouldn't be enforced. C++ is
-/// enforcing the lifetime: it destroys this object along with the C++ `EventLoopRuntime`, which
-/// must be outlived by the EventLoop.
-#[doc(hidden)]
-#[subclass]
-pub struct RustApplicationFuture {
-    /// This logically has a `'event_loop` bound, see the class comment for details.
-    future: Pin<Box<dyn Future<Output = Never>>>,
-}
-
-impl ffi::aos::ApplicationFuture_methods for RustApplicationFuture {
-    fn Poll(&mut self) -> bool {
-        catch_unwind(AssertUnwindSafe(|| {
-            // This is always allowed because it can never create a value of type `Ready<Never>` to
-            // return, so it must always return `Pending`. That also means the value it returns doesn't
-            // mean anything, so we ignore it.
-            let _ = Pin::new(&mut self.future)
-                .poll(&mut std::task::Context::from_waker(&panic_waker()));
-        }))
-        .is_ok()
+/// `error` must be null, or a pointer to an error which nothing else will destroy.
+pub unsafe fn check_error(error: *mut aos_error_t) {
+    if error.is_null() {
+        return;
     }
-}
-
-impl RustApplicationFuture {
-    pub fn new<'event_loop>(
-        future: impl Future<Output = Never> + 'event_loop,
-    ) -> UniquePtr<ffi::aos::ApplicationFuture> {
-        /// # Safety
-        ///
-        /// This completely removes the `'event_loop` lifetime, the caller must ensure that is
-        /// sound.
-        unsafe fn remove_lifetime<'event_loop>(
-            future: Pin<Box<dyn Future<Output = Never> + 'event_loop>>,
-        ) -> Pin<Box<dyn Future<Output = Never>>> {
-            // SAFETY: Caller is responsible.
-            unsafe { std::mem::transmute(future) }
-        }
-
-        Self::as_ApplicationFuture_unique_ptr(Self::new_cpp_owned(Self {
-            // SAFETY: C++ manages observing the lifetime, see [`RustApplicationFuture`] for
-            // details.
-            future: unsafe { remove_lifetime(Box::pin(future)) },
-            cpp_peer: Default::default(),
-        }))
-    }
+    // SAFETY: We just checked it's non-null, and our caller promises we own it.
+    let code = unsafe {
+        let code = aos_error_code(error);
+        aos_error_destroy(error);
+        code
+    };
+    panic!("aos returned an error with exit code {code}");
 }
 
 /// An abstraction for objects which hold an `aos::EventLoop` from Rust code.
@@ -222,7 +182,7 @@ pub unsafe trait EventLoopHolder {
 pub struct EventLoopRuntimeHolder<T: EventLoopHolder> {
     // NOTE: `runtime` must get dropped first, so we declare it before the event_loop:
     // https://doc.rust-lang.org/reference/destructors.html
-    _runtime: UniquePtr<CppEventLoopRuntime>,
+    runtime: Option<Rc<ExecutorState>>,
     _event_loop: T,
 }
 
@@ -254,7 +214,7 @@ impl<T: EventLoopHolder> EventLoopRuntimeHolder<T> {
     /// ```
     ///
     /// But it can capture `'event_loop` references:
-    /// ```
+    /// ```no_run
     /// # use aos_events_event_loop_runtime::*;
     /// # use aos_configuration::ChannelExt;
     /// # fn good(event_loop: impl EventLoopHolder) {
@@ -272,49 +232,45 @@ impl<T: EventLoopHolder> EventLoopRuntimeHolder<T> {
     where
         F: for<'event_loop> FnOnce(EventLoopRuntime<'event_loop>),
     {
-        // SAFETY: The event loop pointer produced by as_raw must be valid and it will get dropped
-        // first (see https://doc.rust-lang.org/reference/destructors.html)
-        let runtime = unsafe { ffi_opaque::make_event_loop_runtime(event_loop.as_raw()) };
-        EventLoopRuntime::with(&*runtime, fun);
+        let event_loop_ptr = event_loop.as_raw() as *mut aos_event_loop_t;
+        let state = Rc::new(ExecutorState {
+            task: RefCell::new(None),
+            is_running: Cell::new(false),
+        });
+        // SAFETY: The event loop pointer produced by as_raw must be valid, and both it and `state`
+        // get dropped after the runtime (see
+        // https://doc.rust-lang.org/reference/destructors.html).
+        unsafe { EventLoopRuntime::with(event_loop_ptr, &state, fun) };
         Self {
-            _runtime: runtime,
+            runtime: Some(state),
             _event_loop: event_loop,
         }
     }
 }
 
-/// Construct a `CppEventLoopRuntime` pointer.
-///
-/// # Safety
-///
-/// `event_loop` must point to a valid `EventLoop`.
-pub unsafe fn make_cpp_event_loop_runtime(
-    event_loop: *const CppEventLoop,
-) -> UniquePtr<CppEventLoopRuntime> {
-    unsafe { ffi_opaque::make_event_loop_runtime(event_loop) }
-}
-
-/// Helper to check if a Node has a name.
-pub fn node_has_name(node: &Node) -> bool {
-    unsafe { ffi::aos::node_has_name(node) }
+impl<T: EventLoopHolder> Drop for EventLoopRuntimeHolder<T> {
+    fn drop(&mut self) {
+        self.runtime.take();
+    }
 }
 
 /// Manages the Rust interface to a *single* `aos::EventLoop`.
 ///
 /// This is intended to be used by a single application.
-#[derive(Copy, Clone)]
-pub struct EventLoopRuntime<'event_loop>(
-    &'event_loop CppEventLoopRuntime,
+#[derive(Clone, Copy)]
+pub struct EventLoopRuntime<'event_loop> {
+    event_loop: *mut aos_event_loop_t,
+    state: &'event_loop ExecutorState,
     // See documentation of [`new`] for details.
-    InvariantLifetime<'event_loop>,
-);
+    _lifetime: InvariantLifetime<'event_loop>,
+}
 
 impl<'event_loop> EventLoopRuntime<'event_loop> {
     /// Creates a new runtime for the underlying event loop.
     ///
     /// Consider using [`EventLoopRuntimeHolder.new`] instead, if you're working with an
-    /// `aos::EventLoop` owned (indirectly) by Rust code or using [`EventLoopRuntime::with`] as a safe
-    /// alternative.
+    /// `aos::EventLoop` owned (indirectly) by Rust code or using [`EventLoopRuntime::with`] as a
+    /// safe alternative.
     ///
     /// One common pattern is wrapping the lifetime behind a higher-rank trait bound (such as
     /// [`FnOnce`]). This would constraint the lifetime to `'static` and objects with `'event_loop`
@@ -350,7 +306,7 @@ impl<'event_loop> EventLoopRuntime<'event_loop> {
     /// * `'event_loop` references are not used once the event loop is destroyed
     ///
     /// Note that this requires this type to be invariant with respect to `'event_loop`. This can
-    /// be achieved by using [`EventLoopRuntime::with`] since `'event_loop` referenes can't leave
+    /// be achieved by using [`EventLoopRuntime::with`] since `'event_loop` references can't leave
     /// `fun` and the runtime holding `'event_loop` references will be destroyed before the event
     /// loop.
     ///
@@ -381,8 +337,15 @@ impl<'event_loop> EventLoopRuntime<'event_loop> {
     /// Following these rules is very tricky. Be very cautious calling this function. The
     /// exposed lifetime doesn't actually convey all the rules to the compiler. To the compiler,
     /// `'event_loop` ends when this object is dropped which is not the case!
-    pub unsafe fn new(event_loop: &'event_loop CppEventLoopRuntime) -> Self {
-        Self(event_loop, InvariantLifetime::default())
+    pub unsafe fn new(
+        event_loop: *mut aos_event_loop_t,
+        state: &'event_loop ExecutorState,
+    ) -> Self {
+        Self {
+            event_loop,
+            state,
+            _lifetime: InvariantLifetime::default(),
+        }
     }
 
     /// Safely builds a "constrained" EventLoopRuntime with `fun`.
@@ -390,8 +353,16 @@ impl<'event_loop> EventLoopRuntime<'event_loop> {
     /// We constrain the scope of the `[EventLoopRuntime]` by tying it to **any** `'a` lifetime. The
     /// idea is that the only things that satisfy this lifetime are either ``static` or produced by
     /// the event loop itself with a '`event_loop` runtime.
-    pub fn with<F>(event_loop: &'event_loop CppEventLoopRuntime, fun: F)
-    where
+    ///
+    /// # Safety
+    ///
+    /// `event_loop` must satisfy all the requirements of [`EventLoopRuntime::new`], and `state`
+    /// must be the executor state which the callbacks registered on `event_loop` use.
+    pub unsafe fn with<F>(
+        event_loop: *mut aos_event_loop_t,
+        state: &'event_loop ExecutorState,
+        fun: F,
+    ) where
         F: for<'a> FnOnce(EventLoopRuntime<'a>),
     {
         // SAFETY: We satisfy the event loop lifetime constraint by scoping it inside of a higher-
@@ -401,7 +372,7 @@ impl<'event_loop> EventLoopRuntime<'event_loop> {
         // to this type's invariance over its lifetime, otherwise, one could easily make a Subtype
         // that, due to its shorter lifetime, would include things from its outer scope.
         unsafe {
-            fun(Self::new(event_loop));
+            fun(Self::new(event_loop, state));
         }
     }
 
@@ -410,7 +381,7 @@ impl<'event_loop> EventLoopRuntime<'event_loop> {
     /// The returned value should only be used for destroying it (_after_ `self` is dropped) or
     /// calling other C++ APIs.
     pub fn raw_event_loop(&self) -> *mut CppEventLoop {
-        unsafe { ffi::aos::event_loop_runtime_event_loop(self.0) }
+        self.event_loop as *mut CppEventLoop
     }
 
     /// Returns a reference to the name of this EventLoop.
@@ -423,10 +394,13 @@ impl<'event_loop> EventLoopRuntime<'event_loop> {
     /// The result must not be used after C++ could change it. Unfortunately C++ can change this
     /// name from most places, so you should be really careful what you do with the result.
     pub unsafe fn raw_name(&self) -> &str {
-        let ptr = unsafe { ffi::aos::event_loop_runtime_name_data(self.0) };
-        let size = unsafe { ffi::aos::event_loop_runtime_name_size(self.0) };
-        let slice = unsafe { std::slice::from_raw_parts(ptr as *const u8, size) };
-        std::str::from_utf8(slice).unwrap()
+        unsafe {
+            let mut ptr = std::ptr::null();
+            let mut size = 0;
+            aos_event_loop_get_name(self.event_loop, &mut ptr, &mut size);
+            let slice = std::slice::from_raw_parts(ptr as *const u8, size);
+            std::str::from_utf8(slice).unwrap()
+        }
     }
 
     pub fn get_raw_channel(
@@ -466,7 +440,7 @@ impl<'event_loop> EventLoopRuntime<'event_loop> {
     /// # Examples with interesting return types
     ///
     /// These are all valid futures which never return:
-    /// ```
+    /// ```no_run
     /// # fn compile_check(mut runtime: aos_events_event_loop_runtime::EventLoopRuntime) {
     /// # use futures::{never::Never, future::pending};
     /// async fn pending_wrapper() -> Never {
@@ -503,7 +477,7 @@ impl<'event_loop> EventLoopRuntime<'event_loop> {
     ///
     /// The future can capture things. This is important to access other objects created from the
     /// runtime, either before calling this function:
-    /// ```
+    /// ```no_run
     /// # fn compile_check<'event_loop>(
     /// #     mut runtime: aos_events_event_loop_runtime::EventLoopRuntime<'event_loop>,
     /// #     channel1: &'event_loop aos_events_event_loop_runtime::Channel,
@@ -518,7 +492,7 @@ impl<'event_loop> EventLoopRuntime<'event_loop> {
     /// # }
     /// ```
     /// or after:
-    /// ```
+    /// ```no_run
     /// # fn compile_check<'event_loop>(
     /// #     mut runtime: aos_events_event_loop_runtime::EventLoopRuntime<'event_loop>,
     /// #     channel1: &'event_loop aos_events_event_loop_runtime::Channel,
@@ -541,7 +515,7 @@ impl<'event_loop> EventLoopRuntime<'event_loop> {
     /// # }
     /// ```
     /// or both:
-    /// ```
+    /// ```no_run
     /// # fn compile_check<'event_loop>(
     /// #     mut runtime: aos_events_event_loop_runtime::EventLoopRuntime<'event_loop>,
     /// #     channel1: &'event_loop aos_events_event_loop_runtime::Channel,
@@ -577,26 +551,56 @@ impl<'event_loop> EventLoopRuntime<'event_loop> {
     /// # }
     /// ```
     pub fn spawn(&self, task: impl Future<Output = Never> + 'event_loop) {
-        unsafe { ffi::aos::event_loop_runtime_spawn(self.0, RustApplicationFuture::new(task)) };
+        let pin_task: Pin<Box<dyn Future<Output = Never> + 'event_loop>> = Box::pin(task);
+        let static_task: Pin<Box<dyn Future<Output = Never> + 'static>> =
+            unsafe { std::mem::transmute(pin_task) };
+        {
+            let mut task_slot = self.state.task.borrow_mut();
+            // Overwriting would drop the first future on the floor along with
+            // everything it had registered, silently.
+            assert!(
+                task_slot.is_none(),
+                "Only one task may be spawned per EventLoopRuntime"
+            );
+            *task_slot = Some(static_task);
+        }
+        // This one poll happens with Rust (and maybe C++) up the stack, rather than directly under
+        // an `extern "C"` boundary, so it needs to abort on a panic itself.
+        poll_and_catch_panic(self.state);
+
+        unsafe extern "C" fn on_run_trigger(user_data: *mut c_void) {
+            let state = unsafe { &*(user_data as *const ExecutorState) };
+            state.is_running.set(true);
+            state.poll();
+        }
+        unsafe {
+            aos_event_loop_on_run(self.event_loop, Some(on_run_trigger), self.user_data());
+        }
+    }
+
+    /// Returns the pointer to pass to the C API as the `user_data` for our callbacks.
+    fn user_data(&self) -> *mut c_void {
+        self.state as *const ExecutorState as *mut c_void
     }
 
     pub fn configuration(&self) -> &'event_loop Configuration {
         // SAFETY: It's always a pointer valid for longer than the underlying EventLoop.
-        unsafe { &*ffi::aos::event_loop_runtime_configuration(self.0) }
+        unsafe { &*aos_event_loop_configuration(self.event_loop) }
     }
 
     pub fn node(&self) -> Option<&'event_loop Node> {
         // SAFETY: It's always a pointer valid for longer than the underlying EventLoop, or null.
-        unsafe { ffi::aos::event_loop_runtime_node(self.0).as_ref() }
+        unsafe { aos_event_loop_node(self.event_loop).as_ref() }
     }
 
     pub fn monotonic_now(&self) -> MonotonicInstant {
-        MonotonicInstant(unsafe { ffi::aos::event_loop_runtime_monotonic_now(self.0) })
+        MonotonicInstant(unsafe { aos_event_loop_monotonic_now(self.event_loop) })
     }
 
     pub fn realtime_now(&self) -> RealtimeInstant {
-        RealtimeInstant(unsafe { ffi::aos::event_loop_runtime_realtime_now(self.0) })
+        RealtimeInstant(unsafe { aos_event_loop_realtime_now(self.event_loop) })
     }
+
     /// Note that the `'event_loop` input lifetime is intentional. The C++ API requires that it is
     /// part of `self.configuration()`, which will always have this lifetime.
     ///
@@ -605,10 +609,32 @@ impl<'event_loop> EventLoopRuntime<'event_loop> {
     /// Dropping `self` before the returned object is dropped will panic.
     pub fn make_raw_watcher(&self, channel: &'event_loop Channel) -> RawWatcher {
         // SAFETY: `channel` is valid for the necessary lifetime, all other requirements fall under
-        // the usual autocxx heuristics.
-        RawWatcher(
-            unsafe { ffi::aos::event_loop_runtime_make_watcher(self.0, channel) }.within_box(),
-        )
+        // the usual C FFI safety.
+        unsafe {
+            let name_ptr = aos_configuration_channel_name(channel);
+            let type_ptr = aos_configuration_channel_type(channel);
+
+            unsafe extern "C" fn watcher_trigger(user_data: *mut c_void) {
+                let state = unsafe { &*(user_data as *const ExecutorState) };
+                state.poll();
+            }
+
+            aos_event_loop_make_no_arg_watcher(
+                self.event_loop,
+                name_ptr,
+                type_ptr,
+                Some(watcher_trigger),
+                self.user_data(),
+            );
+
+            let fetcher = aos_event_loop_make_fetcher(self.event_loop, name_ptr, type_ptr);
+            RawWatcher {
+                fetcher: RawFetcher {
+                    fetcher,
+                    last_context: aos_fetcher_context(fetcher),
+                },
+            }
+        }
     }
 
     /// Provides type-safe async blocking access to messages on a channel. `T` should be a
@@ -636,8 +662,16 @@ impl<'event_loop> EventLoopRuntime<'event_loop> {
     /// Dropping `self` before the returned object is dropped will panic.
     pub fn make_raw_sender(&self, channel: &'event_loop Channel) -> RawSender {
         // SAFETY: `channel` is valid for the necessary lifetime, all other requirements fall under
-        // the usual autocxx heuristics.
-        RawSender(unsafe { ffi::aos::event_loop_runtime_make_sender(self.0, channel) }.within_box())
+        // the usual C FFI safety.
+        unsafe {
+            let name_ptr = aos_configuration_channel_name(channel);
+            let type_ptr = aos_configuration_channel_type(channel);
+            RawSender(aos_event_loop_make_sender(
+                self.event_loop,
+                name_ptr,
+                type_ptr,
+            ))
+        }
     }
 
     /// Allows sending messages on a channel with a type-safe API.
@@ -663,10 +697,16 @@ impl<'event_loop> EventLoopRuntime<'event_loop> {
     /// Dropping `self` before the returned object is dropped will panic.
     pub fn make_raw_fetcher(&self, channel: &'event_loop Channel) -> RawFetcher {
         // SAFETY: `channel` is valid for the necessary lifetime, all other requirements fall under
-        // the usual autocxx heuristics.
-        RawFetcher(
-            unsafe { ffi::aos::event_loop_runtime_make_fetcher(self.0, channel) }.within_box(),
-        )
+        // the usual C FFI safety.
+        unsafe {
+            let name_ptr = aos_configuration_channel_name(channel);
+            let type_ptr = aos_configuration_channel_type(channel);
+            let fetcher = aos_event_loop_make_fetcher(self.event_loop, name_ptr, type_ptr);
+            RawFetcher {
+                fetcher,
+                last_context: aos_fetcher_context(fetcher),
+            }
+        }
     }
 
     /// Provides type-safe access to messages on a channel, without the ability to wait for a new
@@ -688,22 +728,41 @@ impl<'event_loop> EventLoopRuntime<'event_loop> {
 
     // TODO(Brian): Expose timers and phased loops. Should we have `sleep`-style methods for those,
     // instead of / in addition to mirroring C++ with separate setup and wait?
-
     /// Returns a Future to wait until the underlying EventLoop is running. Once this resolves, all
     /// subsequent code will have any realtime scheduling applied. This means it can rely on
     /// consistent timing, but it can no longer create any EventLoop child objects or do anything
     /// else non-realtime.
-    pub fn on_run(&self) -> OnRun {
-        OnRun(unsafe { ffi::aos::event_loop_runtime_make_on_run(self.0) }.within_box())
+    pub fn on_run(&self) -> OnRun<'event_loop> {
+        OnRun { state: self.state }
     }
 
     pub fn is_running(&self) -> bool {
-        unsafe { ffi::aos::event_loop_runtime_is_running(self.0) }
+        unsafe { aos_event_loop_is_running(self.event_loop) }
     }
 
     /// Returns an unarmed timer.
     pub fn add_timer(&self) -> Timer {
-        Timer(unsafe { ffi::aos::event_loop_runtime_add_timer(self.0) })
+        unsafe extern "C" fn timer_trigger(user_data: *mut c_void) {
+            let state = unsafe { &*(user_data as *const TimerState) };
+            state.expired.set(true);
+            let exec = unsafe { &*state.executor_state };
+            exec.poll();
+        }
+        let timer_state = Box::into_raw(Box::new(TimerState {
+            executor_state: self.state,
+            expired: Cell::new(false),
+        }));
+        unsafe {
+            let handler = aos_event_loop_add_timer(
+                self.event_loop,
+                Some(timer_trigger),
+                timer_state as *mut c_void,
+            );
+            Timer {
+                handler,
+                state: timer_state,
+            }
+        }
     }
 
     /// Returns a timer that goes off every `duration`-long ticks.
@@ -714,9 +773,42 @@ impl<'event_loop> EventLoopRuntime<'event_loop> {
     }
 
     /// Sets the scheduler priority to run the event loop at.
+    ///
+    /// A priority above zero has to come with a realtime policy: C++ CHECKs
+    /// that the two agree, so asking for priority 5 under SCHED_OTHER aborts
+    /// rather than returning an error.  Match what C++ picks by default --
+    /// SCHED_FIFO, and a realtime mode that forbids malloc -- so the two sides
+    /// behave the same way.
     pub fn set_realtime_priority(&self, priority: i32) {
-        unsafe { ffi::aos::event_loop_runtime_set_runtime_realtime_priority(self.0, priority) };
+        unsafe {
+            let (scheduling_policy, realtime_policy) = if priority > 0 {
+                (
+                    aos_const_scheduling_policy_fifo(),
+                    aos_const_realtime_policy_realtime_mode_deny_malloc(),
+                )
+            } else {
+                (
+                    aos_const_scheduling_policy_other(),
+                    aos_const_realtime_policy_no_mode(),
+                )
+            };
+            aos_event_loop_set_runtime_realtime_priority(
+                self.event_loop,
+                priority,
+                scheduling_policy,
+                realtime_policy,
+            );
+        }
     }
+}
+
+/// The state shared between a [`Timer`] and the C callback it registers.
+///
+/// This is allocated on the Rust heap and handed to C++ as the callback's `user_data`, so it can't
+/// just be a reference into the [`Timer`].
+struct TimerState {
+    executor_state: *const ExecutorState,
+    expired: Cell<bool>,
 }
 
 /// An event loop primitive that allows sleeping asynchronously.
@@ -744,7 +836,19 @@ impl<'event_loop> EventLoopRuntime<'event_loop> {
 /// };
 /// # }
 /// ```
-pub struct Timer(UniquePtr<ffi::aos::TimerForRust>);
+pub struct Timer {
+    handler: *mut aos_timer_handler_t,
+    state: *mut TimerState,
+}
+
+impl Drop for Timer {
+    fn drop(&mut self) {
+        unsafe {
+            aos_timer_handler_disable(self.handler);
+            let _ = Box::from_raw(self.state);
+        }
+    }
+}
 
 /// A "tick" for a [`Timer`].
 ///
@@ -757,38 +861,47 @@ impl Timer {
     /// The timer should sleep until `base`, `base + repeat`, `base + repeat * 2`, ...
     /// If `repeat` is `None`, then the timer only expires once at `base`.
     pub fn setup(&mut self, base: MonotonicInstant, repeat: Option<Duration>) {
-        self.0.pin_mut().Schedule(
-            base.0,
-            repeat
-                .unwrap_or(Duration::from_nanos(0))
-                .as_nanos()
-                .try_into()
-                .expect("Out of range: Internal clock uses 64 bits"),
-        );
+        unsafe {
+            aos_timer_handler_schedule(
+                self.handler,
+                base.0,
+                repeat.unwrap_or(Duration::from_nanos(0)).as_nanos() as i64,
+            );
+        }
     }
 
     /// Disarms the timer.
     ///
     /// Can be re-enabled by calling `setup` again.
     pub fn disable(&mut self) {
-        self.0.pin_mut().Disable();
+        unsafe {
+            aos_timer_handler_disable(self.handler);
+        }
     }
 
     /// Returns `true` if the timer is enabled.
     pub fn is_enabled(&self) -> bool {
-        !self.0.IsDisabled()
+        unsafe { !aos_timer_handler_is_disabled(self.handler) }
     }
 
     /// Sets the name of the timer.
     ///
     /// This can be useful to get a descriptive name in the timing reports.
     pub fn set_name(&mut self, name: &str) {
-        self.0.pin_mut().set_name(name);
+        unsafe {
+            aos_timer_set_name(self.handler, name.as_ptr() as *const c_char, name.len());
+        }
     }
 
     /// Gets the name of the timer.
     pub fn name(&self) -> &str {
-        self.0.name()
+        unsafe {
+            let mut ptr = std::ptr::null();
+            let mut size = 0;
+            aos_timer_get_name(self.handler, &mut ptr, &mut size);
+            let slice = std::slice::from_raw_parts(ptr as *const u8, size);
+            std::str::from_utf8(slice).unwrap()
+        }
     }
 
     /// Returns a tick which can be `.await`ed.
@@ -800,10 +913,14 @@ impl Timer {
 
     /// Polls the timer, returning `[Poll::Ready]` only once the timer expired.
     fn poll(&mut self) -> Poll<()> {
-        if self.0.pin_mut().Poll() {
-            Poll::Ready(())
-        } else {
-            Poll::Pending
+        unsafe {
+            let state = &*self.state;
+            if state.expired.get() {
+                state.expired.set(false);
+                Poll::Ready(())
+            } else {
+                Poll::Pending
+            }
         }
     }
 }
@@ -842,9 +959,9 @@ impl Future for TimerTick<'_> {
 /// <https://blog.rust-lang.org/2022/08/05/nll-by-default.html#looking-forward-what-can-we-expect-for-the-borrow-checker-of-the-future>
 /// We get around that one by moving the unbounded lifetime from the pointer dereference into the
 /// function with the if statement.
-// SAFETY: If this outlives the parent EventLoop, the C++ code will LOG(FATAL).
-#[repr(transparent)]
-pub struct RawWatcher(Pin<Box<ffi::aos::WatcherForRust>>);
+pub struct RawWatcher {
+    fetcher: RawFetcher,
+}
 
 impl RawWatcher {
     /// Returns a Future to await the next value. This can be canceled (ie dropped) at will,
@@ -856,14 +973,14 @@ impl RawWatcher {
     /// # Examples
     ///
     /// The common use case is immediately awaiting the next message:
-    /// ```
+    /// ```no_run
     /// # async fn await_message(mut watcher: aos_events_event_loop_runtime::RawWatcher) {
     /// println!("received: {:?}", watcher.next().await);
     /// # }
     /// ```
     ///
     /// You can also await the first message from any of a set of channels:
-    /// ```
+    /// ```no_run
     /// # async fn select(
     /// #     mut watcher1: aos_events_event_loop_runtime::RawWatcher,
     /// #     mut watcher2: aos_events_event_loop_runtime::RawWatcher,
@@ -894,7 +1011,7 @@ impl RawWatcher {
     /// # }
     /// ```
     /// but this is fine:
-    /// ```
+    /// ```no_run
     /// # async fn compile_check(mut watcher: aos_events_event_loop_runtime::RawWatcher) {
     /// let first = watcher.next().await;
     /// println!("have: {:?}", first);
@@ -916,18 +1033,11 @@ impl<'a> Future for RawWatcherNext<'a> {
             .0
             .take()
             .expect("May not call poll after it returns Ready");
-        let maybe_context = inner.0.as_mut().PollNext();
-        if maybe_context.is_null() {
-            // We're not returning a reference into it, so we can safely replace the reference to
-            // use again in the future.
+        if inner.fetcher.fetch_next() {
+            Poll::Ready(inner.fetcher.context())
+        } else {
             self.0.replace(inner);
             Poll::Pending
-        } else {
-            // SAFETY: We just checked if it's null. If not, it will be a valid pointer. It will
-            // remain a valid pointer for the borrow of the underlying `RawWatcher` (ie `'a`)
-            // because we're dropping `inner` (which is that reference), so it will need to be
-            // borrowed again which cannot happen before the end of `'a`.
-            Poll::Ready(Context(unsafe { &*maybe_context }))
         }
     }
 }
@@ -964,7 +1074,7 @@ where
     /// # Examples
     ///
     /// The common use case is immediately awaiting the next message:
-    /// ```
+    /// ```no_run
     /// # use pong_rust_fbs::aos::examples::Pong;
     /// # async fn await_message(mut watcher: aos_events_event_loop_runtime::Watcher<Pong<'static>>) {
     /// println!("received: {:?}", watcher.next().await);
@@ -972,7 +1082,7 @@ where
     /// ```
     ///
     /// You can also await the first message from any of a set of channels:
-    /// ```
+    /// ```no_run
     /// # use pong_rust_fbs::aos::examples::Pong;
     /// # async fn select(
     /// #     mut watcher1: aos_events_event_loop_runtime::Watcher<Pong<'static>>,
@@ -1006,7 +1116,7 @@ where
     /// # }
     /// ```
     /// but this is fine:
-    /// ```
+    /// ```no_run
     /// # use pong_rust_fbs::aos::examples::Pong;
     /// # async fn compile_check(mut watcher: aos_events_event_loop_runtime::Watcher<Pong<'static>>) {
     /// let first = watcher.next().await;
@@ -1031,10 +1141,9 @@ where
     type Output = TypedContext<'watcher, T>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut std::task::Context) -> Poll<Self::Output> {
-        Pin::new(&mut self.get_mut().0).poll(cx).map(|context|
-                 // SAFETY: The Watcher this was created from verified that the channel is the
-                 // right type, and the C++ guarantees that the buffer's type matches.
-                 TypedContext(context, PhantomData))
+        Pin::new(&mut self.get_mut().0)
+            .poll(cx)
+            .map(|context| TypedContext(context, PhantomData))
     }
 }
 
@@ -1048,11 +1157,7 @@ where
 }
 
 /// A wrapper around [`Context`] which exposes the flatbuffer message with the appropriate type.
-pub struct TypedContext<'a, T>(
-    // SAFETY: This must have a message, and it must be a valid `T` flatbuffer.
-    Context<'a>,
-    PhantomData<*mut T>,
-)
+pub struct TypedContext<'a, T>(Context<'a>, PhantomData<*mut T>)
 where
     T: Follow<'a> + 'a;
 
@@ -1061,11 +1166,9 @@ where
     T: Follow<'a> + 'a,
 {
     pub fn message(&self) -> Option<T::Inner> {
-        self.0.data().map(|data| {
-            // SAFETY: C++ guarantees that this is a valid flatbuffer. We guarantee it's the right
-            // type based on invariants for our type.
-            unsafe { root_unchecked::<T>(data) }
-        })
+        self.0
+            .data()
+            .map(|data| unsafe { root_unchecked::<T>(data) })
     }
 
     pub fn monotonic_event_time(&self) -> MonotonicInstant {
@@ -1121,21 +1224,48 @@ where
 ///
 /// This is the non-typed API, which is mainly useful for reflection and does not provide safe APIs
 /// for actually interpreting messages. You probably want a [`Fetcher`] instead.
-// SAFETY: If this outlives the parent EventLoop, the C++ code will LOG(FATAL).
-#[repr(transparent)]
-pub struct RawFetcher(Pin<Box<ffi::aos::FetcherForRust>>);
+pub struct RawFetcher {
+    fetcher: *mut aos_fetcher_t,
+    // Not a Cell: fetching overwrites this while context() hands out a
+    // reference to it, so the two have to be exclusive.  Interior mutability
+    // would let both happen at once behind &self and leave the returned
+    // Context pointing at a message that has since been replaced.
+    last_context: aos_context_t,
+}
+
+impl Drop for RawFetcher {
+    fn drop(&mut self) {
+        unsafe {
+            aos_fetcher_destroy(self.fetcher);
+        }
+    }
+}
 
 impl RawFetcher {
     pub fn fetch_next(&mut self) -> bool {
-        self.0.as_mut().FetchNext()
+        unsafe {
+            if aos_fetcher_fetch_next(self.fetcher) {
+                self.last_context = aos_fetcher_context(self.fetcher);
+                true
+            } else {
+                false
+            }
+        }
     }
 
     pub fn fetch(&mut self) -> bool {
-        self.0.as_mut().Fetch()
+        unsafe {
+            if aos_fetcher_fetch(self.fetcher) {
+                self.last_context = aos_fetcher_context(self.fetcher);
+                true
+            } else {
+                false
+            }
+        }
     }
 
     pub fn context(&self) -> Context {
-        Context(self.0.context())
+        Context(&self.last_context)
     }
 }
 
@@ -1143,11 +1273,7 @@ impl RawFetcher {
 /// provides APIs to get the latest message, and to follow along and retrieve each message in order.
 ///
 /// Use [`EventLoopRuntime::make_fetcher`] to create one of these.
-pub struct Fetcher<T>(
-    // SAFETY: This must produce messages of type `T`.
-    RawFetcher,
-    PhantomData<*mut T>,
-)
+pub struct Fetcher<T>(RawFetcher, PhantomData<*mut T>)
 where
     for<'a> T: FollowWith<'a>,
     for<'a> <T as FollowWith<'a>>::Inner: Follow<'a>;
@@ -1165,8 +1291,6 @@ where
     }
 
     pub fn context(&self) -> TypedContext<'_, <T as FollowWith<'_>>::Inner> {
-        // SAFETY: We verified that this is the correct type, and C++ guarantees that the buffer's
-        // type matches.
         TypedContext(self.0.context(), PhantomData)
     }
 }
@@ -1177,16 +1301,22 @@ where
 /// for actually creating messages to send. You probably want a [`Sender`] instead.
 ///
 /// Use [`EventLoopRuntime::make_raw_sender`] to create one of these.
-// SAFETY: If this outlives the parent EventLoop, the C++ code will LOG(FATAL).
-#[repr(transparent)]
-pub struct RawSender(Pin<Box<ffi::aos::SenderForRust>>);
+pub struct RawSender(*mut aos_sender_t);
+
+impl Drop for RawSender {
+    fn drop(&mut self) {
+        unsafe {
+            aos_sender_destroy(self.0);
+        }
+    }
+}
 
 impl RawSender {
     /// Returns an object which can be used to build a message.
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```no_run
     /// # use pong_rust_fbs::aos::examples::PongBuilder;
     /// # fn compile_check(mut sender: aos_events_event_loop_runtime::RawSender) {
     /// # unsafe {
@@ -1198,7 +1328,7 @@ impl RawSender {
     /// ```
     ///
     /// You can bail out of building a message and build another one:
-    /// ```
+    /// ```no_run
     /// # use pong_rust_fbs::aos::examples::PongBuilder;
     /// # fn compile_check(mut sender: aos_events_event_loop_runtime::RawSender) {
     /// # unsafe {
@@ -1224,12 +1354,11 @@ impl RawSender {
     /// # }
     /// ```
     pub fn make_builder(&mut self) -> RawBuilder {
-        // SAFETY: This is a valid slice, and `u8` doesn't have any alignment
-        // requirements. Additionally, the lifetime of the builder is tied to
-        // the lifetime of self so the buffer won't be accessible again until
-        // the builder is destroyed.
         let allocator = ChannelPreallocatedAllocator::new(unsafe {
-            slice::from_raw_parts_mut(self.0.as_mut().data(), self.0.as_mut().size())
+            std::slice::from_raw_parts_mut(
+                aos_sender_data(self.0) as *mut u8,
+                aos_sender_size(self.0),
+            )
         });
         let fbb = FlatBufferBuilder::new_in(allocator);
         RawBuilder {
@@ -1259,12 +1388,17 @@ impl<'sender> RawBuilder<'sender> {
         self.fbb.finish_minimal(root);
         let data = self.fbb.finished_data();
 
-        use ffi::aos::RawSender_Error as FfiError;
-        // SAFETY: This is a valid buffer we're passing.
-        match self.raw_sender.0.as_mut().SendBuffer(data.len()) {
-            FfiError::kOk => Ok(()),
-            FfiError::kMessagesSentTooFast => Err(SendError::MessagesSentTooFast),
-            FfiError::kInvalidRedzone => Err(SendError::InvalidRedzone),
+        unsafe {
+            let res = aos_sender_send(self.raw_sender.0, data.len());
+            if res == aos_const_raw_sender_error_ok() {
+                Ok(())
+            } else if res == aos_const_raw_sender_error_messages_sent_too_fast() {
+                Err(SendError::MessagesSentTooFast)
+            } else if res == aos_const_raw_sender_error_invalid_redzone() {
+                Err(SendError::InvalidRedzone)
+            } else {
+                panic!("Unknown sender error: {}", res);
+            }
         }
     }
 }
@@ -1272,11 +1406,7 @@ impl<'sender> RawBuilder<'sender> {
 /// Allows sending messages on a channel with a type-safe API.
 ///
 /// Use [`EventLoopRuntime::make_raw_sender`] to create one of these.
-pub struct Sender<T>(
-    // SAFETY: This must accept messages of type `T`.
-    RawSender,
-    PhantomData<*mut T>,
-)
+pub struct Sender<T>(RawSender, PhantomData<*mut T>)
 where
     for<'a> T: FollowWith<'a>,
     for<'a> <T as FollowWith<'a>>::Inner: Follow<'a>;
@@ -1290,7 +1420,7 @@ where
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```no_run
     /// # use pong_rust_fbs::aos::examples::{Pong, PongBuilder};
     /// # fn compile_check(mut sender: aos_events_event_loop_runtime::Sender<Pong<'static>>) {
     /// let mut builder = sender.make_builder();
@@ -1300,7 +1430,7 @@ where
     /// ```
     ///
     /// You can bail out of building a message and build another one:
-    /// ```
+    /// ```no_run
     /// # use pong_rust_fbs::aos::examples::{Pong, PongBuilder};
     /// # fn compile_check(mut sender: aos_events_event_loop_runtime::Sender<Pong<'static>>) {
     /// let mut builder1 = sender.make_builder();
@@ -1327,11 +1457,7 @@ where
 }
 
 /// Used for building a message. See [`Sender::make_builder`] for details.
-pub struct Builder<'sender, T>(
-    // SAFETY: This must accept messages of type `T`.
-    RawBuilder<'sender>,
-    PhantomData<*mut T>,
-)
+pub struct Builder<'sender, T>(RawBuilder<'sender>, PhantomData<*mut T>)
 where
     for<'a> T: FollowWith<'a>,
     for<'a> <T as FollowWith<'a>>::Inner: Follow<'a>;
@@ -1351,7 +1477,6 @@ where
         self,
         root: flatbuffers::WIPOffset<<T as FollowWith<'a>>::Inner>,
     ) -> Result<(), SendError> {
-        // SAFETY: We guarantee this is the right type based on invariants for our type.
         unsafe { self.0.send(root) }
     }
 }
@@ -1364,9 +1489,8 @@ pub enum SendError {
     InvalidRedzone,
 }
 
-#[repr(transparent)]
 #[derive(Clone, Copy)]
-pub struct Context<'context>(&'context ffi::aos::Context);
+pub struct Context<'context>(&'context aos_context_t);
 
 impl fmt::Debug for Context<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -1416,7 +1540,7 @@ impl<'context> Context<'context> {
             //  * `u8` has no alignment requirements
             //  * It must be a single initialized flatbuffers buffer
             //  * The borrow in `self.0` guarantees it won't be modified for `'context`
-            Some(unsafe { slice::from_raw_parts(self.0.data as *const u8, self.0.size) })
+            Some(unsafe { std::slice::from_raw_parts(self.0.data as *const u8, self.0.size) })
         }
     }
 
@@ -1425,22 +1549,21 @@ impl<'context> Context<'context> {
     }
 
     pub fn source_boot_uuid(self) -> &'context Uuid {
-        // SAFETY: `self` has a valid C++ object. C++ guarantees that the return value will be
-        // valid until something changes the context, which is `'context`.
         Uuid::from_bytes_ref(&self.0.source_boot_uuid)
     }
 }
 
 /// The type returned from [`EventLoopRuntime::on_run`], see there for details.
-// SAFETY: If this outlives the parent EventLoop, the C++ code will LOG(FATAL).
-#[repr(transparent)]
-pub struct OnRun(Pin<Box<ffi::aos::OnRunForRust>>);
+pub struct OnRun<'event_loop> {
+    state: &'event_loop ExecutorState,
+}
 
-impl Future for &'_ OnRun {
+impl Future for &'_ OnRun<'_> {
     type Output = ();
 
     fn poll(self: Pin<&mut Self>, _: &mut std::task::Context) -> Poll<()> {
-        if self.0.is_running() {
+        let state = self.state;
+        if state.is_running.get() {
             Poll::Ready(())
         } else {
             Poll::Pending
@@ -1499,6 +1622,7 @@ impl fmt::Debug for MonotonicInstant {
 pub struct RealtimeInstant(i64);
 
 impl RealtimeInstant {
+    /// `aos::monotonic_clock::min_time`, commonly used as a sentinel value.
     pub const MIN_TIME: Self = Self(i64::MIN);
 
     pub fn is_min_time(self) -> bool {
@@ -1549,21 +1673,40 @@ mod panic_waker {
     }
 
     pub fn panic_waker() -> Waker {
-        // SAFETY: The implementations of the RawWakerVTable functions do what is required of them.
         unsafe { Waker::from_raw(raw_panic_waker()) }
     }
 }
 
 use panic_waker::panic_waker;
 
-pub struct ExitHandle(UniquePtr<CppExitHandle>);
+pub struct ExitHandle(*mut aos_exit_handle_t);
+
+impl Drop for ExitHandle {
+    fn drop(&mut self) {
+        unsafe {
+            aos_exit_handle_destroy(self.0);
+        }
+    }
+}
 
 impl ExitHandle {
+    /// Takes ownership of an exit handle from the C API.
+    ///
+    /// # Safety
+    ///
+    /// `inner` must be a valid exit handle, which this takes ownership of. It gets destroyed when
+    /// the result is dropped, so nothing else may use or destroy it.
+    pub unsafe fn new(inner: *mut aos_exit_handle_t) -> Self {
+        Self(inner)
+    }
+
     /// Exits the EventLoops represented by this handle. You probably want to immediately return
     /// from the context this is called in. Awaiting [`ExitHandle::exit`] instead of using this
     /// function is an easy way to do that.
-    pub fn exit_sync(mut self) {
-        self.0.as_mut().unwrap().Exit();
+    pub fn exit_sync(self) {
+        unsafe {
+            aos_exit_handle_exit(self.0);
+        }
     }
 
     /// Exits the EventLoops represented by this handle, and never returns. Immediately awaiting
@@ -1572,12 +1715,6 @@ impl ExitHandle {
     pub async fn exit(self) -> Never {
         self.exit_sync();
         pending().await
-    }
-}
-
-impl From<UniquePtr<CppExitHandle>> for ExitHandle {
-    fn from(inner: UniquePtr<ffi::aos::ExitHandle>) -> Self {
-        Self(inner)
     }
 }
 
@@ -1595,11 +1732,9 @@ impl<'a> ChannelPreallocatedAllocator<'a> {
 #[error("Can't allocate more memory with a fixed size allocator")]
 pub struct OutOfMemory;
 
-// SAFETY: Allocator follows the required behavior.
-unsafe impl Allocator for ChannelPreallocatedAllocator<'_> {
+unsafe impl flatbuffers::Allocator for ChannelPreallocatedAllocator<'_> {
     type Error = OutOfMemory;
     fn grow_downwards(&mut self) -> Result<(), Self::Error> {
-        // Fixed size allocator can't grow.
         Err(OutOfMemory)
     }
 
@@ -1620,4 +1755,10 @@ impl DerefMut for ChannelPreallocatedAllocator<'_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.buffer
     }
+}
+
+/// Helper to check if a Node has a name.
+pub fn node_has_name(node: &Node) -> bool {
+    // SAFETY: `node` is a valid reference, and C++ doesn't hold onto it.
+    unsafe { aos_configuration_node_has_name(node) }
 }

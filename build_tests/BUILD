@@ -2,12 +2,10 @@ load("@aos//aos/flatbuffers:typescript.bzl", "flatbuffer_ts_library")
 load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
 load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
-load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//tools/build_rules:apache.bzl", "apache_wrapper")
-load("//tools/build_rules:autocxx.bzl", "autocxx_library")
 load("//tools/build_rules:js.bzl", "ts_project")
 load("//tools/python:defs.bzl", "py_binary", "py_test")
 
@@ -174,21 +172,6 @@ cc_test(
     srcs = ["rust_in_cc.cc"],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [":rust_in_cc_rs"],
-)
-
-cc_library(
-    name = "hello_autocxx_cc",
-    hdrs = [
-        "hello_autocxx.h",
-    ],
-)
-
-autocxx_library(
-    name = "hello_autocxx",
-    srcs = ["hello_autocxx.rs"],
-    libs = [":hello_autocxx_cc"],
-    override_cc_toolchain = "@llvm_toolchain//:cc-clang-x86_64-linux",
-    target_compatible_with = ["//tools/platforms/rust:has_support"],
 )
 
 py_test(

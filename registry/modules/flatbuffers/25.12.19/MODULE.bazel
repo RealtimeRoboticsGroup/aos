@@ -5,6 +5,7 @@ module(
     repo_name = "com_github_google_flatbuffers",
 )
 
+bazel_dep(name = "rules_rust", version = "0.71.3")
 bazel_dep(
     name = "abseil-cpp",
     version = "20250512.1",
@@ -90,3 +91,31 @@ rules_ts_ext.deps(
     ts_version = "5.1.6",
 )
 use_repo(rules_ts_ext, npm_typescript = "flatbuffers_npm_typescript")
+
+rust_host_tools = use_extension("@rules_rust//rust:extensions.bzl", "rust_host_tools")
+rust_host_tools.host_tools(
+    name = "flatbuffers_rust_host_tools",
+    rustfmt_version = "1.85.0",
+    version = "1.85.0",
+)
+use_repo(rust_host_tools, "flatbuffers_rust_host_tools")
+
+crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
+crate.spec(package = "arrayvec", version = "0.7.6")
+crate.spec(package = "bitflags", version = "1.3.2")
+crate.spec(package = "smallvec", version = "1.10.0")
+crate.spec(package = "thiserror", version = "1.0.40")
+crate.from_specs(
+    name = "flatbuffers_crate_index",
+    cargo_lockfile = "//rust:Cargo.lock",
+    host_tools = "@flatbuffers_rust_host_tools",
+    lockfile = "//rust:flatbuffers_crate_index.json",
+    supported_platform_triples = [
+        "x86_64-unknown-linux-gnu",
+        "arm-unknown-linux-gnueabi",
+        "armv7-unknown-linux-gnueabihf",
+        "aarch64-unknown-linux-gnu",
+        "aarch64-apple-darwin",
+    ],
+)
+use_repo(crate, "flatbuffers_crate_index")

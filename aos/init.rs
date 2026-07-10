@@ -37,31 +37,27 @@
 //!     let _ = DefaultApp::init();
 //!     // At this point AOS is initialized and you can create event loop.
 //! }
-//!```
+//! ```
 
 use std::{
     env,
-    ffi::{CString, OsStr, OsString},
-    os::unix::prelude::OsStrExt,
+    ffi::{CStr, CString, OsStr, OsString},
+    os::raw::c_char,
     sync::Once,
 };
+
+#[cfg(unix)]
+use std::os::unix::ffi::OsStrExt;
 
 use clap::{
     error::{ContextKind, ContextValue},
     Arg, ArgAction, Error, Parser,
 };
 
-autocxx::include_cpp! (
-#include "aos/init_for_rust.h"
-
-safety!(unsafe)
-
-generate!("aos::InitFromRust")
-generate!("aos::GetCppFlags")
-generate!("aos::FlagInfo")
-generate!("aos::SetCommandLineOption")
-generate!("aos::GetCommandLineOption")
-);
+use aos_init_for_rust::{
+    aos_flag_info_t, aos_free_command_line_option, aos_free_cpp_flags, aos_get_command_line_option,
+    aos_get_cpp_flags, aos_init_from_rust, aos_set_command_line_option,
+};
 
 // Intended to be used only from here and test_init. Don't use it anywhere else please.
 #[doc(hidden)]
@@ -72,8 +68,8 @@ pub mod internal {
     /// Sets up the C++ side of things. Notably, it doesn't setup the command line flags.
     pub fn init() {
         static ONCE: Once = Once::new();
-        ONCE.call_once(|| {
-            ffi::aos::InitFromRust();
+        ONCE.call_once(|| unsafe {
+            aos_init_from_rust();
         });
     }
 }
@@ -94,8 +90,7 @@ pub trait Init: Parser {
         // Rust logs to stderr by default. Make that true for C++ as that will be easier than
         // managing one or multiple files across FFI. We can pipe the stderr to a file to get
         // a log file if we want.
-        CxxFlag::set_option("logtostderr", "true".as_ref())
-            .expect("Error setting C++ flag: logtostderr");
+        CxxFlag::set_option("logtostderr", "true").expect("Error setting C++ flag: logtostderr");
         internal::init();
         // Non-test initialization below
         env_logger::init();
@@ -113,10 +108,17 @@ pub trait Init: Parser {
         I: IntoIterator<Item = T>,
         T: Into<OsString> + Clone,
     {
-        let cxxflags = ffi::aos::GetCppFlags();
+        let cxxflags = unsafe {
+            let mut flags_ptr = std::ptr::null_mut();
+            let size = aos_get_cpp_flags(&mut flags_ptr);
+            let slice = std::slice::from_raw_parts(flags_ptr, size);
+            let flags: Vec<CxxFlag> = slice.iter().map(|f| CxxFlag::from(f)).collect();
+            aos_free_cpp_flags(flags_ptr, size);
+            flags
+        };
+
         let cxxflags: Vec<CxxFlag> = cxxflags
-            .iter()
-            .map(|flag| CxxFlag::from(flag))
+            .into_iter()
             .filter(|flag| flag.name != "help" && flag.name != "version")
             .collect();
 
@@ -178,15 +180,28 @@ struct SetFlagError;
 impl CxxFlag {
     /// Sets the command gFlag to the specified value.
     fn set(&self, value: &OsStr) -> Result<(), SetFlagError> {
-        Self::set_option(&self.name, value)
+        // A Unix argv entry is bytes, not necessarily UTF-8, and the C++ side
+        // takes bytes too -- so go straight to a CString rather than panicking
+        // on a filename we could have passed through untouched.
+        #[cfg(unix)]
+        let value = CString::new(value.as_bytes()).expect("Arg may not have NUL");
+        #[cfg(not(unix))]
+        let value = CString::new(value.to_str().expect("Arg must be valid UTF-8"))
+            .expect("Arg may not have NUL");
+        Self::set_c_option(&self.name, &value)
     }
 
     /// Sets the command gFlag to the specified value.
-    fn set_option(name: &str, value: &OsStr) -> Result<(), SetFlagError> {
+    fn set_option(name: &str, value: &str) -> Result<(), SetFlagError> {
+        let value = CString::new(value).expect("Arg may not have NUL");
+        Self::set_c_option(name, &value)
+    }
+
+    /// Sets the command gFlag to an already-converted value.
+    fn set_c_option(name: &str, value: &CStr) -> Result<(), SetFlagError> {
         unsafe {
             let name = CString::new(name).expect("Flag name may not have NUL");
-            let value = CString::new(value.as_bytes()).expect("Arg may not have NUL");
-            if ffi::aos::SetCommandLineOption(name.as_ptr(), value.as_ptr()) {
+            if aos_set_command_line_option(name.as_ptr(), value.as_ptr()) {
                 Ok(())
             } else {
                 Err(SetFlagError)
@@ -198,19 +213,30 @@ impl CxxFlag {
     fn get_option(name: &str) -> String {
         unsafe {
             let name = CString::new(name).expect("Flag may not have NUL");
-            ffi::aos::GetCommandLineOption(name.as_ptr()).to_string()
+            let ptr = aos_get_command_line_option(name.as_ptr());
+            if ptr.is_null() {
+                String::new()
+            } else {
+                let res = std::ffi::CStr::from_ptr(ptr).to_string_lossy().into_owned();
+                aos_free_command_line_option(ptr);
+                res
+            }
         }
     }
 }
 
-impl From<&ffi::aos::FlagInfo> for CxxFlag {
-    fn from(value: &ffi::aos::FlagInfo) -> Self {
-        Self {
-            name: value.name().to_string(),
-            ty: value.ty().to_string(),
-            description: value.description().to_string(),
-            default_value: value.default_value().to_string(),
-            filename: value.filename().to_string(),
+impl From<&aos_flag_info_t> for CxxFlag {
+    fn from(value: &aos_flag_info_t) -> Self {
+        unsafe {
+            let to_string =
+                |ptr: *mut c_char| std::ffi::CStr::from_ptr(ptr).to_string_lossy().into_owned();
+            Self {
+                name: to_string(value.name),
+                ty: to_string(value.type_),
+                description: to_string(value.description),
+                default_value: to_string(value.default_value),
+                filename: to_string(value.filename),
+            }
         }
     }
 }

@@ -491,7 +491,11 @@ http_archive(
         "@aos//third_party/flatbuffers_patches:patches/19-python-fields-snake-case.patch",
         "@aos//third_party/flatbuffers_patches:patches/20-cpp-absl-dcheck-assertions.patch",
         "@aos//third_party/flatbuffers_patches:patches/21-python-object-api-types-other-packages.patch",
+        "@aos//third_party/flatbuffers_patches:patches/22-add-rust-lockfile.patch",
     ],
+    repo_mapping = {
+        "@flatbuffers_crate_index": "@crate_index",
+    },
     strip_prefix = "flatbuffers-25.12.19",
     urls = [
         "https://github.com/google/flatbuffers/archive/refs/tags/v25.12.19.tar.gz",
@@ -518,7 +522,7 @@ http_archive(
 
 load("@rules_rust//rust:repositories.bzl", "rust_analyzer_toolchain_repository", "rust_repository_set")
 
-RUST_VERSION = "1.81.0"
+RUST_VERSION = "1.85.0"
 
 rust_repository_set(
     name = "rust",
@@ -572,12 +576,6 @@ crates_repository(
     lockfile = "//:Cargo.Bazel.Workspace.lock",
     manifests = [
         "//:Cargo.toml",
-        "//third_party/autocxx:Cargo.toml",
-        "//third_party/autocxx:engine/Cargo.toml",
-        "//third_party/autocxx:parser/Cargo.toml",
-        "//third_party/autocxx:gen/cmd/Cargo.toml",
-        "//third_party/autocxx:macro/Cargo.toml",
-        "//third_party/autocxx:integration-tests/Cargo.toml",
     ],
     rust_toolchain_cargo_template = "@rust__{triple}__{channel}_tools//:bin/{tool}",
     rust_toolchain_rustc_template = "@rust__{triple}__{channel}_tools//:bin/{tool}",
@@ -619,7 +617,7 @@ crates_repository(
     manifests = ["@cxxbridge-cmd//:Cargo.toml"],
     rust_toolchain_cargo_template = "@rust__{triple}__{channel}_tools//:bin/{tool}",
     rust_toolchain_rustc_template = "@rust__{triple}__{channel}_tools//:bin/{tool}",
-    rust_version = "1.81.0",
+    rust_version = "1.85.0",
     supported_platform_triples = [
         "x86_64-unknown-linux-gnu",
         "arm-unknown-linux-gnueabi",
@@ -631,6 +629,29 @@ crates_repository(
 load("@cxxbridge_cmd_deps//:defs.bzl", cxxbridge_cmd_deps = "crate_repositories")
 
 cxxbridge_cmd_deps()
+
+# Generates the Rust declarations for our C FFI headers.  bzlmod uses
+# rules_rust_bindgen 0.71.3 to match its rules_rust; rules_rust dropped
+# WORKSPACE support after 0.63.0, so this side is pinned to the matching
+# 0.63.0 release.  It lives inside the rules_rust archive we already
+# download, so bindgen itself is the only extra fetch.
+http_archive(
+    name = "rules_rust_bindgen",
+    integrity = "sha256-w4tiLybzXDRzgQDibReT/yUolzgVRkZ7IticnU2L/VA=",
+    patch_args = ["-p1"],
+    patches = ["@aos//third_party:rules_rust_bindgen-0.63.0.patch"],
+    strip_prefix = "extensions/bindgen",
+    urls = ["https://github.com/bazelbuild/rules_rust/releases/download/0.63.0/rules_rust-0.63.0.tar.gz"],
+)
+
+load("@rules_rust_bindgen//:repositories.bzl", "rust_bindgen_dependencies")
+
+# is_bzlmod skips the @llvm-project/zlib/zstd repositories that only exist to
+# build rules_rust_bindgen's default toolchain from clang source.  We register
+# //tools/rust:bindgen_toolchain instead, which uses the clang we already have.
+rust_bindgen_dependencies(is_bzlmod = True)
+
+register_toolchains("//tools/rust:bindgen_toolchain")
 
 http_archive(
     name = "io_bazel_rules_go",
