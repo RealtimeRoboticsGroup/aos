@@ -37,6 +37,31 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "thread_signal",
+    srcs = select({
+        "@platforms//os:windows": ["thread_signal_windows.cc"],
+        "//conditions:default": ["thread_signal_linux.cc"],
+    }),
+    hdrs = ["thread_signal.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//aos:realtime",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "thread_signal_test",
+    srcs = ["thread_signal_test.cc"],
+    deps = [
+        ":thread_signal",
+        "//aos/testing:googletest",
+        "@com_google_absl//absl/log:absl_check",
+    ],
+)
+
 cc_test(
     name = "ipc_stress_test",
     srcs = [
@@ -189,6 +214,7 @@ cc_library(
                 ":aos_sync",
                 ":data_alignment",
                 ":index",
+                ":thread_signal",
                 "//aos:realtime",
                 "//aos:uuid",
                 "//aos/containers:ring_buffer",
