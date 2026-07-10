@@ -240,7 +240,7 @@ bazel_dep(name = "bazel_iwyu", version = "0.0.4")
 bazel_dep(name = "amd64_tensorrt", version = "10.9.0", dev_dependency = True)
 bazel_dep(name = "amd64_debian_sysroot", version = "2025.04.20", dev_dependency = True)
 
-bazel_dep(name = "rules_rust", version = "0.63.0")
+bazel_dep(name = "rules_rust", version = "0.71.3")
 
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
 rust.toolchain(
@@ -250,8 +250,8 @@ rust.toolchain(
         "armv7-unknown-linux-gnueabihf",
         "aarch64-unknown-linux-gnu",
     ],
-    rustfmt_version = "1.81.0",
-    versions = ["1.81.0"],
+    rustfmt_version = "1.85.0",
+    versions = ["1.85.0"],
 )
 use_repo(rust, "rust_toolchains")
 
@@ -260,8 +260,8 @@ register_toolchains("@rust_toolchains//:all")
 rust_host_tools = use_extension("@rules_rust//rust:extensions.bzl", "rust_host_tools")
 rust_host_tools.host_tools(
     name = "aos_rust_host_tools",
-    rustfmt_version = "1.81.0",
-    version = "1.81.0",
+    rustfmt_version = "1.85.0",
+    version = "1.85.0",
 )
 use_repo(rust_host_tools, "aos_rust_host_tools")
 
@@ -366,12 +366,6 @@ crate.from_cargo(
     lockfile = "@@//:Cargo.Bazel.lock",
     manifests = [
         "//:Cargo.toml",
-        "//third_party/autocxx:Cargo.toml",
-        "//third_party/autocxx:engine/Cargo.toml",
-        "//third_party/autocxx:parser/Cargo.toml",
-        "//third_party/autocxx:gen/cmd/Cargo.toml",
-        "//third_party/autocxx:macro/Cargo.toml",
-        "//third_party/autocxx:integration-tests/Cargo.toml",
         "@com_github_google_flatbuffers//rust:flatbuffers/Cargo.toml",
         "@com_github_google_flatbuffers//rust:flexbuffers/Cargo.toml",
         "@com_github_google_flatbuffers//rust:reflection/Cargo.toml",

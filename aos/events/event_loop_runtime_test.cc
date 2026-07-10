@@ -2,7 +2,7 @@
 #include "absl/log/log.h"
 #include "gtest/gtest.h"
 
-#include "aos/events/event_loop_runtime_test_lib_rs_cxxgen.h"
+#include "aos/events/event_loop_runtime_test_lib.h"
 #include "aos/events/simulated_event_loop.h"
 #include "aos/testing/path.h"
 #include "aos/testing/ping_pong/ping_generated.h"

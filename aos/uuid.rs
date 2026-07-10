@@ -1,13 +1,8 @@
-autocxx::include_cpp! (
-#include "aos/uuid.h"
-#include "aos/uuid_for_rust.h"
-
-safety!(unsafe)
-
-generate_pod!("aos::UUID")
-);
-
-pub use ffi::aos::UUID;
+#[repr(transparent)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub struct UUID {
+    pub data: [u8; 16],
+}
 
 impl From<UUID> for uuid::Uuid {
     fn from(uuid: UUID) -> uuid::Uuid {

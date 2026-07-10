@@ -482,7 +482,11 @@ http_archive(
         "@aos//third_party/flatbuffers_patches:patches/19-python-fields-snake-case.patch",
         "@aos//third_party/flatbuffers_patches:patches/20-cpp-absl-dcheck-assertions.patch",
         "@aos//third_party/flatbuffers_patches:patches/21-python-object-api-types-other-packages.patch",
+        "@aos//third_party/flatbuffers_patches:patches/21-add-rust-lockfile.patch",
     ],
+    repo_mapping = {
+        "@flatbuffers_crate_index": "@crate_index",
+    },
     strip_prefix = "flatbuffers-25.12.19",
     urls = [
         "https://github.com/google/flatbuffers/archive/refs/tags/v25.12.19.tar.gz",
@@ -563,12 +567,6 @@ crates_repository(
     lockfile = "//:Cargo.Bazel.Workspace.lock",
     manifests = [
         "//:Cargo.toml",
-        "//third_party/autocxx:Cargo.toml",
-        "//third_party/autocxx:engine/Cargo.toml",
-        "//third_party/autocxx:parser/Cargo.toml",
-        "//third_party/autocxx:gen/cmd/Cargo.toml",
-        "//third_party/autocxx:macro/Cargo.toml",
-        "//third_party/autocxx:integration-tests/Cargo.toml",
     ],
     rust_toolchain_cargo_template = "@rust__{triple}__{channel}_tools//:bin/{tool}",
     rust_toolchain_rustc_template = "@rust__{triple}__{channel}_tools//:bin/{tool}",

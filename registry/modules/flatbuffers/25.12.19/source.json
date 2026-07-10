@@ -17,13 +17,14 @@
         "12-rust-fully-qualified-name-and-follow-with.patch": "sha256-fnPUKtDKS70VOTCxXfF/461cAWpGVDNtvQTWvIwfUZ4=",
         "13-rust-runtime-allocations-and-apis.patch": "sha256-IPS99RefcuGWWBIYwjT2sB6bFzvOPTf5mB3givW5rcM=",
         "14-rust-codegen-warnings-and-bitflags.patch": "sha256-g3HfxIvbv7RFji7DqJZHxMmYARYGmD/l48pChQ+f7Mk=",
-        "15-add-rust-build-bazel.patch": "sha256-ZwAhpEU6nn26J2RtlpBLPOU6flxJmQOXYcbZpQJBkJY=",
+        "15-add-rust-build-bazel.patch": "sha256-itNniLwSenvk1LLwTsogbaalXeOIG1BjsQIwalTw/v0=",
         "16-build-bazel-aos-additions.patch": "sha256-KU7Th1dc5y8/K8x52tVZM0OLiO4kB1OWhz2U+4COIUA=",
         "17-reflection-explicit-ids-and-scoped-enums.patch": "sha256-0xDsKHL7ednMj73naev7FXjJxYq0OQihmytdP3TTmOo=",
         "18-ts-explicit-index-exports.patch": "sha256-bxFOPei2Gs/mViOZNvX5OQ4ZfiNsNvEoKjVuZkIsRNY=",
         "19-python-fields-snake-case.patch": "sha256-m2+C47Cq47ddxAUhZiHknaumyBJCjq8850mb+7iC140=",
         "20-cpp-absl-dcheck-assertions.patch": "sha256-UgSmtEC6lFNMJbB8K3zWnOZzJJzs3QhIBBw6a87sjQE=",
-        "21-python-object-api-types-other-packages.patch": "sha256-u4MuL4EcFbtbfK9Yc4wjoUCeQkFratgl7cTqKygVQLY="
+        "21-python-object-api-types-other-packages.patch": "sha256-u4MuL4EcFbtbfK9Yc4wjoUCeQkFratgl7cTqKygVQLY=",
+        "21-add-rust-lockfile.patch": "sha256-9PPow41h18hKIm0LnezS0sL8iNIHvqbFzpbMffbUUJc="
     },
     "patch_strip": 1
 }

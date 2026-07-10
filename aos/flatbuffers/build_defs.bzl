@@ -519,7 +519,7 @@ def flatbuffer_rust_library(
         srcs = [srcs_lib, lib_gen],
         crate_root = lib_gen,
         crate_name = crate_name,
-        deps = ["//aos/flatbuffers/rust:flatbuffers"] + deps,
+        deps = ["@com_github_google_flatbuffers//rust:flatbuffers"] + deps,
         edition = "2018",
         visibility = visibility,
         compatible_with = compatible_with,

@@ -1,52 +1,69 @@
-use std::{path::Path, ptr};
+use std::{
+    ffi::CString,
+    os::raw::{c_char, c_void},
+    path::Path,
+    ptr,
+};
 
 use thiserror::Error;
 
 use aos_configuration_fbs::aos::{Channel as RustChannel, Configuration as RustConfiguration};
 use aos_flatbuffers::{transmute_table_to, NonSizePrefixedFlatbuffer};
 
-autocxx::include_cpp! (
-#include "aos/configuration.h"
-#include "aos/configuration_for_rust.h"
-#include "aos/configuration_generated.h"
-
-safety!(unsafe)
-
-generate!("aos::Configuration")
-block_constructors!("aos::Configuration")
-block!("std::vector<aos::Configuration>")
-block!("std::vector<::aos::Configuration>")
-generate!("aos::Channel")
-block_constructors!("aos::Channel")
-block!("std::vector<aos::Channel>")
-block!("std::vector<::aos::Channel>")
-generate!("aos::Node")
-block_constructors!("aos::Node")
-block!("std::vector<aos::Node>")
-block!("std::vector<::aos::Node>")
-exclude_impls!()
-block!("flatbuffers::String")
-block!("flatbuffers::Verifier")
-
-generate!("aos::configuration::GetChannelForRust")
-generate!("aos::configuration::GetNodeForRust")
-
-generate!("aos::configuration::HasChannelTypeForRust")
-generate!("aos::configuration::GetChannelTypeForRust")
-generate!("aos::configuration::HasChannelNameForRust")
-generate!("aos::configuration::GetChannelNameForRust")
-);
-
-#[cxx::bridge]
-mod ffi2 {
-    #[namespace = "aos::configuration"]
-    unsafe extern "C++" {
-        include!("aos/configuration_for_rust.h");
-        fn MaybeReadConfigForRust(path: &str, extra_import_paths: &[&str]) -> Vec<u8>;
-    }
+#[repr(C)]
+pub struct Configuration {
+    _unused: [u8; 0],
 }
 
-pub use ffi::aos::{Channel, Configuration, Node};
+#[repr(C)]
+pub struct Channel {
+    _unused: [u8; 0],
+}
+
+#[repr(C)]
+pub struct Node {
+    _unused: [u8; 0],
+}
+
+#[repr(C)]
+struct aos_configuration_buffer_t {
+    _unused: [u8; 0],
+}
+
+extern "C" {
+    fn aos_configuration_get_channel(
+        config: *const Configuration,
+        name_data: *const c_char,
+        name_size: usize,
+        type_data: *const c_char,
+        type_size: usize,
+        application_name_data: *const c_char,
+        application_name_size: usize,
+        node: *const Node,
+    ) -> *const Channel;
+
+    fn aos_configuration_get_node(
+        config: *const Configuration,
+        name_data: *const c_char,
+        name_size: usize,
+    ) -> *const Node;
+
+    fn aos_configuration_channel_has_type(channel: *const Channel) -> bool;
+    fn aos_configuration_channel_type(channel: *const Channel) -> *const c_char;
+    fn aos_configuration_channel_has_name(channel: *const Channel) -> bool;
+    fn aos_configuration_channel_name(channel: *const Channel) -> *const c_char;
+
+    fn aos_configuration_buffer_get_data(
+        buffer: *const aos_configuration_buffer_t,
+    ) -> *const c_void;
+    fn aos_configuration_buffer_get_size(buffer: *const aos_configuration_buffer_t) -> usize;
+    fn aos_configuration_buffer_maybe_read_from_file(
+        file_path: *const c_char,
+        extra_import_paths: *const *const c_char,
+        extra_import_paths_count: usize,
+    ) -> *mut aos_configuration_buffer_t;
+    fn aos_configuration_buffer_destroy(buffer: *mut aos_configuration_buffer_t);
+}
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug, Error)]
 pub enum ChannelLookupError {
@@ -86,11 +103,14 @@ pub trait ConfigurationExt<'a>: Into<&'a Configuration> {
         // SAFETY: All the input references are valid pointers, and we're not doing anything with
         // the result yet. It doesn't store any of the input references.
         let channel = unsafe {
-            ffi::aos::configuration::GetChannelForRust(
+            aos_configuration_get_channel(
                 self.into(),
-                name,
-                typename,
-                application_name,
+                name.as_ptr() as *const c_char,
+                name.len(),
+                typename.as_ptr() as *const c_char,
+                typename.len(),
+                application_name.as_ptr() as *const c_char,
+                application_name.len(),
                 node.map_or(ptr::null(), |p| p),
             )
         };
@@ -106,7 +126,9 @@ pub trait ConfigurationExt<'a>: Into<&'a Configuration> {
     fn get_node(self, name: &str) -> Result<&'a Node, NodeLookupError> {
         // SAFETY: All the input references are valid pointers, and we're not doing anything with
         // the result yet. It doesn't store any of the input references.
-        let node = unsafe { ffi::aos::configuration::GetNodeForRust(self.into(), name) };
+        let node = unsafe {
+            aos_configuration_get_node(self.into(), name.as_ptr() as *const c_char, name.len())
+        };
         if node.is_null() {
             Err(NodeLookupError::NotFound)
         } else {
@@ -128,14 +150,28 @@ impl<'a> Into<&'a Channel> for RustChannel<'a> {
 pub trait ChannelExt<'a>: Into<&'a Channel> {
     fn type_(self) -> Option<&'a str> {
         let c = self.into();
-        ffi::aos::configuration::HasChannelTypeForRust(c)
-            .then(move || ffi::aos::configuration::GetChannelTypeForRust(c))
+        unsafe {
+            if aos_configuration_channel_has_type(c) {
+                let ptr = aos_configuration_channel_type(c);
+                let c_str = std::ffi::CStr::from_ptr(ptr);
+                Some(c_str.to_str().expect("Channel type is invalid UTF-8"))
+            } else {
+                None
+            }
+        }
     }
 
     fn name(self) -> Option<&'a str> {
         let c = self.into();
-        ffi::aos::configuration::HasChannelNameForRust(c)
-            .then(move || ffi::aos::configuration::GetChannelNameForRust(c))
+        unsafe {
+            if aos_configuration_channel_has_name(c) {
+                let ptr = aos_configuration_channel_name(c);
+                let c_str = std::ffi::CStr::from_ptr(ptr);
+                Some(c_str.to_str().expect("Channel name is invalid UTF-8"))
+            } else {
+                None
+            }
+        }
     }
 }
 
@@ -157,20 +193,32 @@ pub fn read_config_from_import_paths(
     path: &Path,
     extra_import_paths: &[&Path],
 ) -> Result<NonSizePrefixedFlatbuffer<RustConfiguration<'static>, Vec<u8>>, ReadConfigError> {
-    let extra_import_paths: Vec<_> = extra_import_paths
+    let path_str = CString::new(path.to_str().expect("Paths must be UTF-8")).unwrap();
+    let extra_import_paths_c: Vec<CString> = extra_import_paths
         .iter()
-        .map(|p| p.to_str().expect("Paths must be UTF-8"))
+        .map(|p| CString::new(p.to_str().expect("Paths must be UTF-8")).unwrap())
         .collect();
-    let buffer = ffi2::MaybeReadConfigForRust(
-        path.to_str().expect("Paths must be UTF-8"),
-        &extra_import_paths,
-    );
-    if buffer.is_empty() {
-        return Err(ReadConfigError::ReadFailed);
+    let extra_import_paths_ptrs: Vec<*const c_char> =
+        extra_import_paths_c.iter().map(|c| c.as_ptr()).collect();
+
+    unsafe {
+        let buffer = aos_configuration_buffer_maybe_read_from_file(
+            path_str.as_ptr(),
+            extra_import_paths_ptrs.as_ptr(),
+            extra_import_paths_ptrs.len(),
+        );
+        if buffer.is_null() {
+            return Err(ReadConfigError::ReadFailed);
+        }
+        let data_ptr = aos_configuration_buffer_get_data(buffer);
+        let size = aos_configuration_buffer_get_size(buffer);
+        let slice = std::slice::from_raw_parts(data_ptr as *const u8, size);
+        let buffer_vec = slice.to_vec();
+        aos_configuration_buffer_destroy(buffer);
+        // SAFETY: The C++ code returns a valid flatbuffer (unless it returned an error, which we
+        // checked above).
+        Ok(NonSizePrefixedFlatbuffer::new_unchecked(buffer_vec))
     }
-    // SAFETY: The C++ code returns a valid flatbuffer (unless it returned an error, which we
-    // checked above).
-    return Ok(unsafe { NonSizePrefixedFlatbuffer::new_unchecked(buffer) });
 }
 
 #[cfg(test)]

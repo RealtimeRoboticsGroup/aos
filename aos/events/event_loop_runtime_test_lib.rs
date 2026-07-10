@@ -34,7 +34,7 @@ mod tests {
 
     thread_local!(static GLOBAL_STATE: RefCell<GlobalState> = Default::default());
 
-    fn completed_test_count() -> u32 {
+    fn completed_test_count_internal() -> u32 {
         GLOBAL_STATE.with(|g| {
             let g = &mut *g.borrow_mut();
             let count = g.creation_count;
@@ -47,7 +47,7 @@ mod tests {
         })
     }
 
-    fn started_test_count() -> u32 {
+    fn started_test_count_internal() -> u32 {
         GLOBAL_STATE.with(|g| g.borrow().on_run_count)
     }
 
@@ -166,14 +166,6 @@ mod tests {
         }
     }
 
-    unsafe fn make_test_application(event_loop: *mut EventLoop) -> Box<TestApplication> {
-        GLOBAL_STATE.with(|g| {
-            let g = &mut *g.borrow_mut();
-            g.creation_count += 1;
-        });
-        Box::new(TestApplication::new(CppEventLoopHolder(event_loop)))
-    }
-
     pub struct TypedTestApplication {
         _runtime: EventLoopRuntimeHolder<CppEventLoopHolder>,
         ping_fetcher: Fetcher<Ping<'static>>,
@@ -277,15 +269,7 @@ mod tests {
         }
     }
 
-    unsafe fn make_typed_test_application(event_loop: *mut EventLoop) -> Box<TypedTestApplication> {
-        GLOBAL_STATE.with(|g| {
-            let g = &mut *g.borrow_mut();
-            g.creation_count += 1;
-        });
-        Box::new(TypedTestApplication::new(CppEventLoopHolder(event_loop)))
-    }
-
-    struct PanicApplication {
+    pub struct PanicApplication {
         _runtime: EventLoopRuntimeHolder<CppEventLoopHolder>,
     }
 
@@ -301,11 +285,7 @@ mod tests {
         }
     }
 
-    unsafe fn make_panic_application(event_loop: *mut EventLoop) -> Box<PanicApplication> {
-        Box::new(PanicApplication::new(CppEventLoopHolder(event_loop)))
-    }
-
-    struct PanicOnRunApplication {
+    pub struct PanicOnRunApplication {
         _runtime: EventLoopRuntimeHolder<CppEventLoopHolder>,
     }
 
@@ -323,57 +303,95 @@ mod tests {
         }
     }
 
-    unsafe fn make_panic_on_run_application(
+    #[no_mangle]
+    pub unsafe extern "C" fn make_test_application_raw(
         event_loop: *mut EventLoop,
-    ) -> Box<PanicOnRunApplication> {
-        Box::new(PanicOnRunApplication::new(CppEventLoopHolder(event_loop)))
+    ) -> *mut TestApplication {
+        GLOBAL_STATE.with(|g| {
+            g.borrow_mut().creation_count += 1;
+        });
+        Box::into_raw(Box::new(TestApplication::new(CppEventLoopHolder(
+            event_loop,
+        ))))
     }
 
-    #[cxx::bridge(namespace = "aos::events::testing")]
-    mod ffi_bridge {
-        extern "Rust" {
-            unsafe fn make_test_application(event_loop: *mut EventLoop) -> Box<TestApplication>;
+    #[no_mangle]
+    pub unsafe extern "C" fn test_application_before_sending(app: *mut TestApplication) {
+        (*app).before_sending();
+    }
 
-            unsafe fn make_typed_test_application(
-                event_loop: *mut EventLoop,
-            ) -> Box<TypedTestApplication>;
+    #[no_mangle]
+    pub unsafe extern "C" fn test_application_after_sending(app: *mut TestApplication) {
+        (*app).after_sending();
+    }
 
-            unsafe fn make_panic_application(event_loop: *mut EventLoop) -> Box<PanicApplication>;
+    #[no_mangle]
+    pub unsafe extern "C" fn test_application_destroy(app: *mut TestApplication) {
+        let _ = Box::from_raw(app);
+    }
 
-            unsafe fn make_panic_on_run_application(
-                event_loop: *mut EventLoop,
-            ) -> Box<PanicOnRunApplication>;
+    #[no_mangle]
+    pub unsafe extern "C" fn make_typed_test_application_raw(
+        event_loop: *mut EventLoop,
+    ) -> *mut TypedTestApplication {
+        GLOBAL_STATE.with(|g| {
+            g.borrow_mut().creation_count += 1;
+        });
+        Box::into_raw(Box::new(TypedTestApplication::new(CppEventLoopHolder(
+            event_loop,
+        ))))
+    }
 
-            fn completed_test_count() -> u32;
-            fn started_test_count() -> u32;
-        }
+    #[no_mangle]
+    pub unsafe extern "C" fn typed_test_application_before_sending(app: *mut TypedTestApplication) {
+        (*app).before_sending();
+    }
 
-        extern "Rust" {
-            type TestApplication;
+    #[no_mangle]
+    pub unsafe extern "C" fn typed_test_application_after_sending(app: *mut TypedTestApplication) {
+        (*app).after_sending();
+    }
 
-            fn before_sending(&mut self);
-            fn after_sending(&mut self);
-        }
+    #[no_mangle]
+    pub unsafe extern "C" fn typed_test_application_destroy(app: *mut TypedTestApplication) {
+        let _ = Box::from_raw(app);
+    }
 
-        extern "Rust" {
-            type TypedTestApplication;
+    #[no_mangle]
+    pub unsafe extern "C" fn make_panic_application_raw(
+        event_loop: *mut EventLoop,
+    ) -> *mut PanicApplication {
+        Box::into_raw(Box::new(PanicApplication::new(CppEventLoopHolder(
+            event_loop,
+        ))))
+    }
 
-            fn before_sending(&mut self);
-            fn after_sending(&mut self);
-        }
+    #[no_mangle]
+    pub unsafe extern "C" fn panic_application_destroy(app: *mut PanicApplication) {
+        let _ = Box::from_raw(app);
+    }
 
-        extern "Rust" {
-            type PanicApplication;
-        }
+    #[no_mangle]
+    pub unsafe extern "C" fn make_panic_on_run_application_raw(
+        event_loop: *mut EventLoop,
+    ) -> *mut PanicOnRunApplication {
+        Box::into_raw(Box::new(PanicOnRunApplication::new(CppEventLoopHolder(
+            event_loop,
+        ))))
+    }
 
-        extern "Rust" {
-            type PanicOnRunApplication;
-        }
+    #[no_mangle]
+    pub unsafe extern "C" fn panic_on_run_application_destroy(app: *mut PanicOnRunApplication) {
+        let _ = Box::from_raw(app);
+    }
 
-        unsafe extern "C++" {
-            include!("aos/events/event_loop.h");
-            #[namespace = "aos"]
-            type EventLoop = crate::EventLoop;
-        }
+    #[no_mangle]
+    pub extern "C" fn completed_test_count() -> u32 {
+        completed_test_count_internal()
+    }
+
+    #[no_mangle]
+    pub extern "C" fn started_test_count() -> u32 {
+        started_test_count_internal()
     }
 }

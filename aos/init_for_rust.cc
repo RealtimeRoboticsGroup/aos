@@ -1,5 +1,9 @@
 #include "aos/init_for_rust.h"
 
+#include <string.h>
+
+#include <vector>
+
 #include "absl/flags/flag.h"
 #include "absl/flags/reflection.h"
 #include "absl/log/absl_check.h"
@@ -8,87 +12,95 @@
 
 #include "aos/init.h"
 
-namespace aos {
+extern "C" {
 
-void InitFromRust() {
+void aos_init_from_rust() {
   ABSL_CHECK(!aos::IsInitialized()) << "Only initialize once.";
-
   absl::InitializeLog();
-
-  // TODO(Brian): Where should Rust binaries be configured to write coredumps?
-
-  // TODO(Brian): Figure out what to do with allocator hooks for C++ and Rust.
-
-  MarkInitialized();
+  aos::MarkInitialized();
 }
 
-std::vector<FlagInfo> GetCppFlags() {
-  absl::flat_hash_map<absl::string_view, absl::CommandLineFlag *> info =
-      absl::GetAllFlags();
-  std::vector<FlagInfo> out;
+size_t aos_get_cpp_flags(aos_flag_info_t **flags_out) {
+  auto info = absl::GetAllFlags();
+  std::vector<aos_flag_info_t> out;
   for (const auto &flag : info) {
-    std::string type;
-    if (flag.second->IsOfType<float>()) {
+    const char *type = "unknown";
+    if (flag.second->IsOfType<float>())
       type = "float";
-    } else if (flag.second->IsOfType<double>()) {
+    else if (flag.second->IsOfType<double>())
       type = "double";
-    } else if (flag.second->IsOfType<bool>()) {
+    else if (flag.second->IsOfType<bool>())
       type = "bool";
-    } else if (flag.second->IsOfType<uint8_t>()) {
+    else if (flag.second->IsOfType<uint8_t>())
       type = "uint8_t";
-    } else if (flag.second->IsOfType<int8_t>()) {
+    else if (flag.second->IsOfType<int8_t>())
       type = "int8_t";
-    } else if (flag.second->IsOfType<uint16_t>()) {
+    else if (flag.second->IsOfType<uint16_t>())
       type = "uint16_t";
-    } else if (flag.second->IsOfType<int16_t>()) {
+    else if (flag.second->IsOfType<int16_t>())
       type = "int16_t";
-    } else if (flag.second->IsOfType<uint32_t>()) {
+    else if (flag.second->IsOfType<uint32_t>())
       type = "uint32_t";
-    } else if (flag.second->IsOfType<int32_t>()) {
+    else if (flag.second->IsOfType<int32_t>())
       type = "int32_t";
-    } else if (flag.second->IsOfType<uint64_t>()) {
+    else if (flag.second->IsOfType<uint64_t>())
       type = "uint64_t";
-    } else if (flag.second->IsOfType<int64_t>()) {
+    else if (flag.second->IsOfType<int64_t>())
       type = "int64_t";
-    } else if (flag.second->IsOfType<std::string>()) {
+    else if (flag.second->IsOfType<std::string>())
       type = "string";
-    } else if (flag.second->IsOfType<std::vector<std::string>>()) {
+    else if (flag.second->IsOfType<std::vector<std::string>>())
       type = "vector<string>";
-    } else {
-      ABSL_LOG(FATAL) << "Unknown type for flag " << flag.second->Name()
-                      << " in file " << flag.second->Filename();
-    }
 
-    ABSL_LOG(INFO) << "Reporting flag " << flag.second->Name() << " " << type
-                   << " " << flag.second->DefaultValue();
-    FlagInfo out_flag = {
-        .name_ = std::string(flag.second->Name()),
-        .type_ = type,
-        .description_ = flag.second->Help(),
-        .default_value_ = flag.second->DefaultValue(),
-        .filename_ = flag.second->Filename(),
+    auto copy_string_view = [](absl::string_view sv) -> char * {
+      char *res = (char *)malloc(sv.size() + 1);
+      memcpy(res, sv.data(), sv.size());
+      res[sv.size()] = '\0';
+      return res;
     };
+
+    aos_flag_info_t out_flag;
+    out_flag.name = copy_string_view(flag.second->Name());
+    out_flag.type = copy_string_view(type);
+    out_flag.description = copy_string_view(flag.second->Help());
+    out_flag.default_value = copy_string_view(flag.second->DefaultValue());
+    out_flag.filename = copy_string_view(flag.second->Filename());
     out.push_back(out_flag);
   }
-  return out;
+
+  size_t size = out.size();
+  *flags_out = (aos_flag_info_t *)malloc(sizeof(aos_flag_info_t) * size);
+  memcpy(*flags_out, out.data(), sizeof(aos_flag_info_t) * size);
+  return size;
 }
 
-bool SetCommandLineOption(const char *name, const char *value) {
+void aos_free_cpp_flags(aos_flag_info_t *flags, size_t size) {
+  for (size_t i = 0; i < size; ++i) {
+    free(flags[i].name);
+    free(flags[i].type);
+    free(flags[i].description);
+    free(flags[i].default_value);
+    free(flags[i].filename);
+  }
+  free(flags);
+}
+
+bool aos_set_command_line_option(const char *name, const char *value) {
   absl::CommandLineFlag *flag = absl::FindCommandLineFlag(name);
   if (flag == nullptr) {
     return false;
   }
-
   std::string error;
-  bool result = flag->ParseFrom(value, &error);
-  return result;
+  return flag->ParseFrom(value, &error);
 }
 
-std::string GetCommandLineOption(const char *name) {
+char *aos_get_command_line_option(const char *name) {
   absl::CommandLineFlag *flag = absl::FindCommandLineFlag(name);
-  ABSL_CHECK(flag != nullptr) << "Unknown flag " << name;
-
-  return flag->CurrentValue();
+  if (flag == nullptr) {
+    return nullptr;
+  }
+  return strdup(flag->CurrentValue().c_str());
 }
 
-}  // namespace aos
+void aos_free_command_line_option(char *value) { free(value); }
+}

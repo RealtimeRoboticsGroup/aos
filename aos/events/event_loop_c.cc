@@ -26,10 +26,19 @@ aos_context_t to_context_t(const aos::Context &context) {
       context.monotonic_event_time.time_since_epoch().count());
   c_context.realtime_event_time = static_cast<int64_t>(
       context.realtime_event_time.time_since_epoch().count());
+  c_context.monotonic_remote_time = static_cast<int64_t>(
+      context.monotonic_remote_time.time_since_epoch().count());
+  c_context.realtime_remote_time = static_cast<int64_t>(
+      context.realtime_remote_time.time_since_epoch().count());
+  c_context.monotonic_remote_transmit_time = static_cast<int64_t>(
+      context.monotonic_remote_transmit_time.time_since_epoch().count());
   c_context.queue_index = context.queue_index;
   c_context.remote_queue_index = context.remote_queue_index;
   c_context.size = context.size;
   c_context.data = context.data;
+  c_context.buffer_index = context.buffer_index;
+  std::memcpy(c_context.source_boot_uuid,
+              context.source_boot_uuid.span().data(), 16);
   return c_context;
 }
 
@@ -415,6 +424,24 @@ aos_configuration_buffer_t *aos_configuration_buffer_read_from_file(
   return reinterpret_cast<aos_configuration_buffer_t *>(config.release());
 }
 
+aos_configuration_buffer_t *aos_configuration_buffer_maybe_read_from_file(
+    const char *file_path, const char **extra_import_paths,
+    size_t extra_import_paths_count) {
+  std::vector<std::string_view> cc_extra_import_paths;
+  for (size_t i = 0; i < extra_import_paths_count; ++i) {
+    cc_extra_import_paths.push_back(extra_import_paths[i]);
+  }
+  auto cc_result = aos::configuration::MaybeReadConfig(
+      ABSL_DIE_IF_NULL(file_path), cc_extra_import_paths);
+  if (!cc_result) {
+    return nullptr;
+  }
+  auto config =
+      std::make_unique<aos::FlatbufferDetachedBuffer<aos::Configuration>>(
+          std::move(*cc_result));
+  return reinterpret_cast<aos_configuration_buffer_t *>(config.release());
+}
+
 void aos_configuration_buffer_destroy(aos_configuration_buffer_t *self) {
   aos::FlatbufferDetachedBuffer<aos::Configuration> *config =
       reinterpret_cast<aos::FlatbufferDetachedBuffer<aos::Configuration> *>(
@@ -474,6 +501,28 @@ bool aos_configuration_channel_is_readable_on_node(const aos_channel_t *channel,
       reinterpret_cast<const aos::Node *>(node));
 }
 
+bool aos_configuration_channel_has_type(const aos_channel_t *channel) {
+  return reinterpret_cast<const aos::Channel *>(ABSL_DIE_IF_NULL(channel))
+      ->has_type();
+}
+
+const char *aos_configuration_channel_type(const aos_channel_t *channel) {
+  return reinterpret_cast<const aos::Channel *>(ABSL_DIE_IF_NULL(channel))
+      ->type()
+      ->c_str();
+}
+
+bool aos_configuration_channel_has_name(const aos_channel_t *channel) {
+  return reinterpret_cast<const aos::Channel *>(ABSL_DIE_IF_NULL(channel))
+      ->has_name();
+}
+
+const char *aos_configuration_channel_name(const aos_channel_t *channel) {
+  return reinterpret_cast<const aos::Channel *>(ABSL_DIE_IF_NULL(channel))
+      ->name()
+      ->c_str();
+}
+
 void aos_simulated_event_loop_factory_destroy(
     aos_simulated_event_loop_factory_t *self) {
   delete reinterpret_cast<aos::SimulatedEventLoopFactory *>(self);
@@ -485,9 +534,24 @@ aos_event_loop_t *aos_simulated_event_loop_factory_make_event_loop(
   aos::SimulatedEventLoopFactory *factory =
       reinterpret_cast<aos::SimulatedEventLoopFactory *>(
           ABSL_DIE_IF_NULL(self));
+  aos::NodeEventLoopFactory *node_factory = nullptr;
+  if (node != nullptr) {
+    node_factory = factory->GetNodeEventLoopFactory(node);
+  } else {
+    node_factory = factory->GetNodeEventLoopFactory(
+        static_cast<const aos::Node *>(nullptr));
+  }
   std::unique_ptr<aos::EventLoop> event_loop =
-      factory->GetNodeEventLoopFactory(node)->MakeEventLoop(name);
+      node_factory->MakeEventLoop(name);
   return reinterpret_cast<aos_event_loop_t *>(event_loop.release());
+}
+
+void aos_simulated_event_loop_factory_run(
+    aos_simulated_event_loop_factory_t *self) {
+  aos::SimulatedEventLoopFactory *factory =
+      reinterpret_cast<aos::SimulatedEventLoopFactory *>(
+          ABSL_DIE_IF_NULL(self));
+  factory->Run();
 }
 
 void aos_simulated_event_loop_factory_run_for(

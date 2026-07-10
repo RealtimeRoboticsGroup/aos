@@ -26,3 +26,7 @@ void SetTestShmBase() {
 }
 
 }  // namespace aos::testing
+
+extern "C" void aos_testing_set_test_shm_base() {
+  aos::testing::SetTestShmBase();
+}

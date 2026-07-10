@@ -1,51 +1,59 @@
 pub use aos_configuration::{Configuration, ConfigurationExt};
 pub use aos_events_event_loop_runtime::{
-    make_cpp_event_loop_runtime, CppEventLoop, CppEventLoopRuntime, CppExitHandle,
-    EventLoopRuntime, ExitHandle,
+    aos_event_loop_t, aos_exit_handle_t, CppEventLoop, EventLoopRuntime, ExecutorState, ExitHandle,
 };
 
 use aos_configuration_fbs::aos::Configuration as RustConfiguration;
 use aos_flatbuffers::{transmute_table_to, Flatbuffer};
-use autocxx::WithinBox;
 use core::marker::PhantomData;
-use core::pin::Pin;
-use std::boxed::Box;
+use std::cell::{Cell, RefCell};
 use std::ops::{Deref, DerefMut};
+use std::rc::Rc;
 
-autocxx::include_cpp! (
-#include "aos/events/shm_event_loop.h"
-#include "aos/events/shm_event_loop_for_rust.h"
+#[repr(C)]
+struct aos_error_t {
+    _unused: [u8; 0],
+}
 
-safety!(unsafe)
-
-generate!("aos::ShmEventLoopForRust")
-
-extern_cpp_type!("aos::ExitHandle", crate::CppExitHandle)
-extern_cpp_type!("aos::Configuration", crate::Configuration)
-extern_cpp_type!("aos::EventLoop", crate::CppEventLoop)
-);
+extern "C" {
+    fn aos_shm_event_loop_create(config: *const Configuration) -> *mut aos_event_loop_t;
+    fn aos_shm_event_loop_run(self_: *mut aos_event_loop_t) -> *mut aos_error_t;
+    fn aos_shm_event_loop_make_exit_handle(self_: *mut aos_event_loop_t) -> *mut aos_exit_handle_t;
+    fn aos_event_loop_destroy(self_: *mut aos_event_loop_t);
+    fn aos_error_destroy(self_: *mut aos_error_t);
+}
 
 /// A Rust-owned C++ `ShmEventLoop` object.
 pub struct ShmEventLoop<'config> {
-    inner: Pin<Box<ffi::aos::ShmEventLoopForRust>>,
+    event_loop: *mut aos_event_loop_t,
+    state: Option<Rc<ExecutorState>>,
     _config: PhantomData<&'config Configuration>,
+}
+
+impl Drop for ShmEventLoop<'_> {
+    fn drop(&mut self) {
+        self.state.take();
+        unsafe {
+            aos_event_loop_destroy(self.event_loop);
+        }
+    }
 }
 
 impl<'config> ShmEventLoop<'config> {
     /// Creates a Rust-owned ShmEventLoop.
     pub fn new(config: &'config impl Flatbuffer<RustConfiguration<'static>>) -> Self {
-        // SAFETY: The `_config` represents the lifetime of this pointer we're handing off to c++ to
-        // store.
-        let event_loop = unsafe {
-            ffi::aos::ShmEventLoopForRust::new(transmute_table_to::<Configuration>(
+        unsafe {
+            let event_loop = aos_shm_event_loop_create(transmute_table_to::<Configuration>(
                 &config.message()._tab,
-            ))
-        }
-        .within_box();
-
-        Self {
-            inner: event_loop,
-            _config: PhantomData,
+            ));
+            Self {
+                event_loop,
+                state: Some(Rc::new(ExecutorState {
+                    task: RefCell::new(None),
+                    is_running: Cell::new(false),
+                })),
+                _config: PhantomData,
+            }
         }
     }
 
@@ -171,35 +179,31 @@ impl<'config> ShmEventLoop<'config> {
         // SAFETY: The runtime and the event loop (i.e. self) both get destroyed at the end of this
         // scope: first the runtime followed by the event loop. The runtime gets exclusive access
         // during initialization in `fun` while the event loop remains unused.
-        let cpp_runtime =
-            unsafe { make_cpp_event_loop_runtime(self.inner.as_mut().event_loop_mut()) };
-        let runtime = unsafe { EventLoopRuntime::new(&*cpp_runtime) };
+        let runtime = unsafe {
+            EventLoopRuntime::new(self.event_loop, Rc::as_ptr(self.state.as_ref().unwrap()))
+        };
         let runtime = Scoped::new(runtime);
         fun(runtime);
         self.run();
     }
 
     /// Makes an exit handle.
-    ///
-    /// Awaiting on the exit handle is the only way to actually exit the event loop
-    /// task, other than panicking.
     pub fn make_exit_handle(&mut self) -> ExitHandle {
-        self.inner.as_mut().MakeExitHandle().into()
+        unsafe { aos_shm_event_loop_make_exit_handle(self.event_loop).into() }
     }
 
     /// Runs the spawned task to completion.
     fn run(&mut self) {
-        self.inner.as_mut().Run();
+        unsafe {
+            let err = aos_shm_event_loop_run(self.event_loop);
+            if !err.is_null() {
+                aos_error_destroy(err);
+            }
+        }
     }
 }
 
 /// A wrapper over some data that lives for the duration of a scope.
-///
-/// This struct ensures the existence of some `'env` which outlives `'scope`. In
-/// the presence of higher-ranked trait bounds which require types that work for
-/// any `'scope`, this allows the compiler to propagate lifetime bounds which
-/// outlive any of the possible `'scope`. This is the simplest way to express
-/// this concept to the compiler right now.
 #[derive(Clone, Copy)]
 pub struct Scoped<'scope, 'env: 'scope, T: 'scope> {
     data: T,

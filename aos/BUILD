@@ -6,7 +6,6 @@ load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
 load("//aos:flatbuffers.bzl", "cc_static_flatbuffer")
 load("//aos/flatbuffers:generate.bzl", "static_flatbuffer")
-load("//tools/build_rules:autocxx.bzl", "autocxx_library")
 load("//tools/build_rules:select.bzl", "compiler_select")
 load("//tools/python:defs.bzl", "py_binary", "py_library")
 load("//tools/rust:defs.bzl", "flatbuffer_rust_library", "rust_library")
@@ -214,23 +213,20 @@ cc_library(
         "init_for_rust.h",
     ],
     deps = [
-        ":for_rust",
         ":init",
         "//aos/logging",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log:flags",
-        "@crate_index//:cxx_cc",
     ],
 )
 
-autocxx_library(
+rust_library(
     name = "init_rs",
     srcs = ["init.rs"],
     crate_name = "aos_init",
-    libs = [
+    link_deps = [
         ":init_for_rust",
     ],
-    override_cc_toolchain = "@llvm_toolchain//:cc-clang-x86_64-linux",
     visibility = ["//visibility:public"],
     deps = [
         "@crate_index//:clap",
@@ -238,16 +234,14 @@ autocxx_library(
     ],
 )
 
-autocxx_library(
+rust_library(
     name = "test_init_rs",
     testonly = True,
     srcs = ["test_init.rs"],
     crate_name = "aos_test_init",
-    gen_docs = False,
-    libs = [
+    link_deps = [
         "//aos/testing:tmpdir",
     ],
-    override_cc_toolchain = "@llvm_toolchain//:cc-clang-x86_64-linux",
     visibility = ["//visibility:public"],
     deps = [
         ":init_rs",
@@ -399,16 +393,13 @@ cc_library(
     ],
 )
 
-autocxx_library(
+rust_library(
     name = "configuration_rs",
     srcs = ["configuration.rs"],
     crate_name = "aos_configuration",
-    libs = [
-        ":configuration",
-        ":configuration_for_rust",
-        ":configuration_fbs",
+    link_deps = [
+        "//aos/events:event_loop_c_lib",
     ],
-    override_cc_toolchain = "@llvm_toolchain//:cc-clang-x86_64-linux",
     test_data = [
         "//aos/testdata:test_configs",
     ],
@@ -611,7 +602,7 @@ rust_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        "//aos/flatbuffers/rust:flatbuffers",
+        "@com_github_google_flatbuffers//rust:flatbuffers",
     ],
 )
 
@@ -852,19 +843,14 @@ cc_library(
     ],
 )
 
-autocxx_library(
+rust_library(
     name = "uuid_rs",
     srcs = ["uuid.rs"],
     crate_name = "aos_uuid",
-    libs = [
-        ":uuid",
-        ":uuid_for_rust",
-    ],
-    override_cc_toolchain = "@llvm_toolchain//:cc-clang-x86_64-linux",
-    rs_deps = [
+    visibility = ["//visibility:public"],
+    deps = [
         "@crate_index//:uuid",
     ],
-    visibility = ["//visibility:public"],
 )
 
 cc_binary(

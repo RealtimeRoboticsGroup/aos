@@ -12,6 +12,14 @@ std::string TestTmpDir();
 // otherwise.
 void SetTestShmBase();
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+void aos_testing_set_test_shm_base();
+#ifdef __cplusplus
+}
+#endif
+
 }  // namespace aos::testing
 
 #endif  // AOS_TESTING_TMPDIR_H_

@@ -12,7 +12,9 @@ new file mode 100644
 index 0000000..0000001
 --- /dev/null
 +++ b/rust/BUILD.bazel
-@@ -0,0 +1,10 @@
+@@ -0,0 +1,28 @@
++load("@rules_rust//rust:defs.bzl", "rust_library")
++
 +filegroup(
 +    name = "rust_srcs",
 +    srcs = glob(["flatbuffers/**/*.rs"]),
@@ -22,4 +24,20 @@ index 0000000..0000001
 +exports_files(
 +    ["flatbuffers/src/lib.rs"],
 +    visibility = ["//visibility:public"],
++)
++
++rust_library(
++    name = "flatbuffers",
++    srcs = [":rust_srcs"],
++    crate_name = "flatbuffers",
++    crate_root = "flatbuffers/src/lib.rs",
++    edition = "2018",
++    version = "2.1.1",
++    visibility = ["//visibility:public"],
++    deps = [
++        "@flatbuffers_crate_index//:arrayvec",
++        "@flatbuffers_crate_index//:bitflags",
++        "@flatbuffers_crate_index//:smallvec",
++        "@flatbuffers_crate_index//:thiserror",
++    ],
 +)

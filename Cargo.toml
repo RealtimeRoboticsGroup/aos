@@ -7,13 +7,18 @@ version = "0.0.0"
 path = "fake_lib.rs"
 
 [workspace]
-members = [
-	"third_party/autocxx",
-	"third_party/autocxx/engine",
-	"third_party/autocxx/parser",
-	"third_party/autocxx/gen/cmd",
-	"third_party/autocxx/macro",
-	"third_party/autocxx/integration-tests",
+members = []
+exclude = [
+    "third_party/cargo",
+    "third_party/flatbuffers",
+    "third_party/flatbuffers/rust/flatbuffers",
+    "third_party/flatbuffers/rust/flexbuffers",
+    "third_party/flatbuffers/rust/reflection",
+    "third_party/flatbuffers/tests/rust_no_std_compilation_test",
+    "third_party/flatbuffers/tests/rust_reflection_test",
+    "third_party/flatbuffers/tests/rust_serialize_test",
+    "third_party/flatbuffers/tests/rust_usage_test",
+    "third_party/flatbuffers/tests/rust_usage_test/outdir",
 ]
 
 [dependencies]
@@ -28,6 +33,8 @@ once_cell = "1.13"
 thiserror = "1.0"
 bitflags = "1.3"
 smallvec = "1.9"
+log = "0.4"
+env_logger = "0.8"
 
 # For bindgen.
 bindgen = "0.58.1"

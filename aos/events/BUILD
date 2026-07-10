@@ -5,8 +5,8 @@ load("@rules_cc//cc:cc_test.bzl", "cc_test")
 load("//aos:config.bzl", "aos_config")
 load("//aos:flatbuffers.bzl", "cc_static_flatbuffer")
 load("//aos/flatbuffers:generate.bzl", "static_flatbuffer")
-load("//tools/build_rules:autocxx.bzl", "autocxx_library")
 load("//tools/python:defs.bzl", "py_library", "py_test")
+load("//tools/rust:defs.bzl", "rust_library")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -127,13 +127,15 @@ cc_library(
     ],
 )
 
-cc_binary(
-    name = "event_loop_c",
+cc_library(
+    name = "event_loop_c_lib",
     srcs = [
         "event_loop_c.cc",
+    ],
+    hdrs = [
         "event_loop_c.h",
     ],
-    linkshared = True,
+    visibility = ["//visibility:public"],
     deps = [
         ":context",
         ":event_loop",
@@ -146,6 +148,14 @@ cc_binary(
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/log:die_if_null",
+    ],
+    alwayslink = True,
+)
+
+cc_shared_library(
+    name = "event_loop_c",
+    deps = [
+        ":event_loop_c_lib",
     ],
 )
 
@@ -302,40 +312,42 @@ cc_library(
     ],
 )
 
-autocxx_library(
+rust_library(
     name = "event_loop_runtime",
     srcs = ["event_loop_runtime.rs"],
     crate_name = "aos_events_event_loop_runtime",
     doctest_deps = [
         "//aos/testing/ping_pong:pong_rust_fbs",
     ],
+    gen_doctests = False,
     gen_tests = False,
-    libs = [
-        ":event_loop_runtime_cc",
-    ],
-    override_cc_toolchain = "@llvm_toolchain//:cc-clang-x86_64-linux",
-    rs_deps = [
-        "//aos/flatbuffers/rust:flatbuffers",
-        "@crate_index//:uuid",
-        "@crate_index//:futures",
-        "@crate_index//:thiserror",
+    link_deps = [
+        ":event_loop_c_lib",
     ],
     visibility = ["//visibility:public"],
     deps = [
         "//aos:configuration_rs",
+        "//aos:configuration_rust_fbs",
         "//aos:uuid_rs",
+        "@com_github_google_flatbuffers//rust:flatbuffers",
+        "@crate_index//:cxx",
+        "@crate_index//:futures",
+        "@crate_index//:thiserror",
+        "@crate_index//:uuid",
     ],
 )
 
-autocxx_library(
+rust_library(
     name = "event_loop_runtime_test_lib_rs",
     testonly = True,
     srcs = ["event_loop_runtime_test_lib.rs"],
+    crate_name = "aos_events_event_loop_runtime_test_lib",
     gen_docs = False,
-    libs = [
+    link_deps = [
         ":event_loop",
     ],
-    rs_deps = [
+    visibility = ["//visibility:public"],
+    deps = [
         ":event_loop_runtime",
         "//aos/testing/ping_pong:ping_rust_fbs",
         "//aos/testing/ping_pong:pong_rust_fbs",
@@ -344,7 +356,10 @@ autocxx_library(
 
 cc_test(
     name = "event_loop_runtime_test",
-    srcs = ["event_loop_runtime_test.cc"],
+    srcs = [
+        "event_loop_runtime_test.cc",
+        "event_loop_runtime_test_lib.h",
+    ],
     data = ["//aos/testing/ping_pong:pingpong_config"],
     deps = [
         ":event_loop_runtime_test_lib_rs",
@@ -610,20 +625,13 @@ cc_library(
     ],
 )
 
-autocxx_library(
+rust_library(
     name = "simulated_event_loop_rs",
     srcs = ["simulated_event_loop.rs"],
     crate_name = "aos_events_simulated_event_loop",
-    libs = [
-        ":simulated_event_loop",
-        ":simulated_event_loop_for_rust",
-    ],
-    override_cc_toolchain = "@llvm_toolchain//:cc-clang-x86_64-linux",
-    rs_deps = [
-        "//aos/flatbuffers/rust:flatbuffers",
-        "//aos:configuration_rust_fbs",
-        "//aos:flatbuffers_rs",
-        "@crate_index//:futures",
+    gen_doctests = False,
+    link_deps = [
+        ":event_loop_c_lib",
     ],
     test_data = [
         "//aos/testing/ping_pong:multinode_pingpong_test_combined_config",
@@ -638,11 +646,15 @@ autocxx_library(
     deps = [
         ":event_loop_runtime",
         "//aos:configuration_rs",
+        "//aos:configuration_rust_fbs",
+        "//aos:flatbuffers_rs",
         "//aos:uuid_rs",
+        "@com_github_google_flatbuffers//rust:flatbuffers",
+        "@crate_index//:futures",
     ],
 )
 
-autocxx_library(
+rust_library(
     name = "shm_event_loop_rs",
     srcs = ["shm_event_loop.rs"],
     crate_name = "aos_events_shm_event_loop",
@@ -650,15 +662,9 @@ autocxx_library(
         "//aos/testing/ping_pong:ping_rust_fbs",
         "//aos/testing/ping_pong:pong_rust_fbs",
     ],
-    libs = [
-        ":shm_event_loop",
-        ":shm_event_loop_for_rust",
-    ],
-    rs_deps = [
-        "//aos/flatbuffers/rust:flatbuffers",
-        "@crate_index//:futures",
-        "//aos:configuration_rust_fbs",
-        "//aos:flatbuffers_rs",
+    gen_doctests = False,
+    link_deps = [
+        ":event_loop_c_lib",
     ],
     test_data = ["//aos/testing/ping_pong:pingpong_config"],
     test_deps = [
@@ -671,6 +677,10 @@ autocxx_library(
     deps = [
         ":event_loop_runtime",
         "//aos:configuration_rs",
+        "//aos:configuration_rust_fbs",
+        "//aos:flatbuffers_rs",
+        "@com_github_google_flatbuffers//rust:flatbuffers",
+        "@crate_index//:futures",
     ],
 )
 

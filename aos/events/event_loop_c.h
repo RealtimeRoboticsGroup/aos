@@ -43,10 +43,15 @@ typedef struct aos_error_t aos_error_t;
 typedef struct aos_context_t {
   int64_t monotonic_event_time;
   int64_t realtime_event_time;
+  int64_t monotonic_remote_time;
+  int64_t realtime_remote_time;
+  int64_t monotonic_remote_transmit_time;
   uint32_t queue_index;
   uint32_t remote_queue_index;
   size_t size;
   const void *data;
+  int buffer_index;
+  uint8_t source_boot_uuid[16];
 } aos_context_t;
 
 // Wrapper for aos::SimulatedEventLoopFactory. See the
@@ -234,6 +239,9 @@ size_t aos_configuration_buffer_get_size(
     const aos_configuration_buffer_t *self);
 aos_configuration_buffer_t *aos_configuration_buffer_read_from_file(
     const char *file_path);
+aos_configuration_buffer_t *aos_configuration_buffer_maybe_read_from_file(
+    const char *file_path, const char **extra_import_paths,
+    size_t extra_import_paths_count);
 void aos_configuration_buffer_destroy(aos_configuration_buffer_t *self);
 
 const aos_channel_t *aos_configuration_get_channel(
@@ -252,6 +260,10 @@ bool aos_configuration_channel_is_sendable_on_node(const aos_channel_t *channel,
                                                    const aos_node_t *node);
 bool aos_configuration_channel_is_readable_on_node(const aos_channel_t *channel,
                                                    const aos_node_t *node);
+bool aos_configuration_channel_has_type(const aos_channel_t *channel);
+const char *aos_configuration_channel_type(const aos_channel_t *channel);
+bool aos_configuration_channel_has_name(const aos_channel_t *channel);
+const char *aos_configuration_channel_name(const aos_channel_t *channel);
 
 // All aos_simulated_event_loop_* functions may move to a different file, once
 // we decide on a path for scalable shared libraries.
@@ -263,6 +275,8 @@ void aos_simulated_event_loop_factory_destroy(
 aos_event_loop_t *aos_simulated_event_loop_factory_make_event_loop(
     aos_simulated_event_loop_factory_t *self, const char *name,
     const char *node);
+void aos_simulated_event_loop_factory_run(
+    aos_simulated_event_loop_factory_t *self);
 void aos_simulated_event_loop_factory_run_for(
     aos_simulated_event_loop_factory_t *self, const int64_t duration_ns);
 aos_error_t *aos_simulated_event_loop_factory_non_fatal_run_for(

@@ -1,29 +1,51 @@
-use std::{marker::PhantomData, pin::Pin, ptr, time::Duration};
+use std::{ffi::CString, marker::PhantomData, ptr, time::Duration};
 
-use autocxx::WithinBox;
-use cxx::UniquePtr;
-
-pub use aos_configuration::{Channel, Configuration, ConfigurationExt, Node};
+pub use aos_configuration::{Channel, ChannelExt, Configuration, ConfigurationExt, Node};
 use aos_configuration_fbs::aos::Configuration as RustConfiguration;
+pub use aos_events_event_loop_runtime::{
+    aos_event_loop_t, aos_exit_handle_t, CppEventLoop, ExitHandle,
+};
 use aos_events_event_loop_runtime::{
     node_has_name, EventLoopHolder, EventLoopRuntime, EventLoopRuntimeHolder,
 };
-pub use aos_events_event_loop_runtime::{CppEventLoop, CppExitHandle, ExitHandle};
 use aos_flatbuffers::{transmute_table_to, Flatbuffer};
 
-autocxx::include_cpp! (
-#include "aos/events/simulated_event_loop.h"
-#include "aos/events/simulated_event_loop_for_rust.h"
+#[allow(non_camel_case_types)]
+mod libc {
+    pub type c_char = std::os::raw::c_char;
+}
 
-safety!(unsafe)
+#[repr(C)]
+pub struct aos_simulated_event_loop_factory_t {
+    _unused: [u8; 0],
+}
 
-generate!("aos::SimulatedEventLoopFactoryForRust")
+extern "C" {
+    fn aos_simulated_event_loop_factory_create(
+        config: *const Configuration,
+    ) -> *mut aos_simulated_event_loop_factory_t;
 
-extern_cpp_type!("aos::ExitHandle", crate::CppExitHandle)
-extern_cpp_type!("aos::Configuration", crate::Configuration)
-extern_cpp_type!("aos::Node", crate::Node)
-extern_cpp_type!("aos::EventLoop", crate::CppEventLoop)
-);
+    fn aos_simulated_event_loop_factory_destroy(self_: *mut aos_simulated_event_loop_factory_t);
+
+    fn aos_simulated_event_loop_factory_make_event_loop(
+        self_: *mut aos_simulated_event_loop_factory_t,
+        name: *const libc::c_char,
+        node: *const libc::c_char,
+    ) -> *mut aos_event_loop_t;
+
+    fn aos_simulated_event_loop_factory_run(self_: *mut aos_simulated_event_loop_factory_t);
+
+    fn aos_simulated_event_loop_factory_run_for(
+        self_: *mut aos_simulated_event_loop_factory_t,
+        duration_ns: i64,
+    );
+
+    fn aos_simulated_event_loop_factory_make_exit_handle(
+        self_: *mut aos_simulated_event_loop_factory_t,
+    ) -> *mut aos_exit_handle_t;
+
+    fn aos_event_loop_destroy(self_: *mut aos_event_loop_t);
+}
 
 /// A Rust-owned C++ `SimulatedEventLoopFactory` object.
 ///
@@ -33,30 +55,30 @@ extern_cpp_type!("aos::EventLoop", crate::CppEventLoop)
 /// We don't want to own the `SimulatedEventLoopFactory` directly because C++ maintains multiple
 /// pointers to it, so we can't create Rust mutable references to it.
 pub struct SimulatedEventLoopFactory<'config> {
-    // SAFETY: This stores a pointer to the configuration, whose lifetime is `'config`.
-    event_loop_factory: Pin<Box<ffi::aos::SimulatedEventLoopFactoryForRust>>,
-    // This represents the config pointer C++ is storing.
+    factory: *mut aos_simulated_event_loop_factory_t,
     _marker: PhantomData<&'config Configuration>,
+}
+
+impl Drop for SimulatedEventLoopFactory<'_> {
+    fn drop(&mut self) {
+        unsafe {
+            aos_simulated_event_loop_factory_destroy(self.factory);
+        }
+    }
 }
 
 impl<'config> SimulatedEventLoopFactory<'config> {
     pub fn new(config: &'config impl Flatbuffer<RustConfiguration<'static>>) -> Self {
-        // SAFETY: `_marker` represents the lifetime of this pointer we're handing off to C++ to
-        // store.
-        let event_loop_factory = unsafe {
-            ffi::aos::SimulatedEventLoopFactoryForRust::new(transmute_table_to::<Configuration>(
-                &config.message()._tab,
-            ))
+        unsafe {
+            let factory =
+                aos_simulated_event_loop_factory_create(transmute_table_to::<Configuration>(
+                    &config.message()._tab,
+                ));
+            Self {
+                factory,
+                _marker: PhantomData,
+            }
         }
-        .within_box();
-        Self {
-            event_loop_factory,
-            _marker: PhantomData,
-        }
-    }
-
-    fn as_mut(&mut self) -> Pin<&mut ffi::aos::SimulatedEventLoopFactoryForRust> {
-        self.event_loop_factory.as_mut()
     }
 
     /// Creates a Rust-owned EventLoop.
@@ -64,18 +86,26 @@ impl<'config> SimulatedEventLoopFactory<'config> {
     /// You probably don't want to call this directly if you're creating a Rust application. This
     /// is intended for creating C++ applications. Use [`Self::make_runtime`] instead when creating Rust
     /// applications.
-    pub fn make_event_loop(&mut self, name: &str, node: Option<&Node>) -> UniquePtr<CppEventLoop> {
-        // SAFETY:
-        // * `self` has a valid C++ object.
-        // * C++ doesn't need the lifetimes of `name` or `node` to last any longer than this method
-        //   call.
-        // * The return value manages its lifetime via `unique_ptr`.
-        //
-        // Note that dropping `self` before the return value will abort from C++, but this is still
-        // sound.
+    pub fn make_event_loop(&mut self, name: &str, node: Option<&Node>) -> *mut aos_event_loop_t {
+        let name_c = CString::new(name).unwrap();
+        let node_name = node.and_then(|n| {
+            let ptr = n as *const Node as *const u8;
+            let offset = 1 << 20;
+            let base_ptr = unsafe { ptr.offset(-(offset as isize)) };
+            let buf = unsafe { std::slice::from_raw_parts(base_ptr, offset + (1 << 20)) };
+            let rust_node = unsafe {
+                let table = flatbuffers::Table::new(buf, offset);
+                aos_configuration_fbs::aos::Node::init_from_table(table)
+            };
+            rust_node.name()
+        });
+        let node_c = node_name.map(|name| CString::new(name).unwrap());
         unsafe {
-            self.as_mut()
-                .MakeEventLoop(name, node.map_or(ptr::null(), |p| p))
+            aos_simulated_event_loop_factory_make_event_loop(
+                self.factory,
+                name_c.as_ptr(),
+                node_c.as_ref().map_or(ptr::null(), |c| c.as_ptr()),
+            )
         }
     }
 
@@ -96,50 +126,48 @@ impl<'config> SimulatedEventLoopFactory<'config> {
         F: for<'event_loop> FnOnce(EventLoopRuntime<'event_loop>),
     {
         let event_loop = self.make_event_loop(name, node);
-        // SAFETY: We just created this EventLoop, so we are the exclusive owner of it.
         let holder = unsafe { SimulatedEventLoopHolder::new(event_loop) };
         EventLoopRuntimeHolder::new(holder, fun)
     }
 
     pub fn make_exit_handle(&mut self) -> ExitHandle {
-        self.as_mut().MakeExitHandle().into()
+        unsafe { aos_simulated_event_loop_factory_make_exit_handle(self.factory).into() }
     }
 
     pub fn run(&mut self) {
-        self.as_mut().Run();
+        unsafe {
+            aos_simulated_event_loop_factory_run(self.factory);
+        }
     }
 
     pub fn run_for(&mut self, duration: Duration) {
-        self.as_mut().RunFor(
-            duration
-                .as_nanos()
-                .try_into()
-                .expect("Out of range: Internal clock uses 64 bits"),
-        );
+        unsafe {
+            aos_simulated_event_loop_factory_run_for(self.factory, duration.as_nanos() as i64);
+        }
     }
-
-    // TODO(Brian): Expose OnStartup. Just take a callback for creating things, and rely on
-    // dropping the created objects instead of OnShutdown.
-    // pub fn spawn_on_startup(&mut self, spawner: impl FnMut());
 }
 
-pub struct SimulatedEventLoopHolder(UniquePtr<CppEventLoop>);
+pub struct SimulatedEventLoopHolder(*mut aos_event_loop_t);
+
+impl Drop for SimulatedEventLoopHolder {
+    fn drop(&mut self) {
+        unsafe {
+            aos_event_loop_destroy(self.0);
+        }
+    }
+}
 
 impl SimulatedEventLoopHolder {
     /// SAFETY: `event_loop` must be the exclusive owner of the underlying EventLoop.
-    pub unsafe fn new(event_loop: UniquePtr<CppEventLoop>) -> Self {
+    pub unsafe fn new(event_loop: *mut aos_event_loop_t) -> Self {
         Self(event_loop)
     }
 }
 
-// SAFETY: The UniquePtr functions we're using here mirror most of the EventLoopHolder requirements
-// exactly. Safety requirements on [`SimulatedEventLoopHolder.new`] take care of the rest.
+// SAFETY: The simulated event loop is kept alive.
 unsafe impl EventLoopHolder for SimulatedEventLoopHolder {
     fn as_raw(&self) -> *const CppEventLoop {
-        self.0
-            .as_ref()
-            .map(|event_loop| event_loop as *const CppEventLoop)
-            .unwrap_or(core::ptr::null())
+        self.0 as *const CppEventLoop
     }
 }
 
@@ -223,9 +251,6 @@ mod tests {
             GLOBAL_STATE.with(|g| {
                 let g = g.borrow();
                 assert_eq!(0, g.watcher_count);
-                // TODO(Brian): Use an OnRun wrapper to defer setting this until it actually starts,
-                // then check it.
-                //assert_eq!(0, g.startup_count);
             });
             event_loop_factory.run();
             GLOBAL_STATE.with(|g| {

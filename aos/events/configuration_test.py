@@ -16,6 +16,7 @@ class ConfigurationTest(absltest.TestCase):
     def test_basics(self):
         configuration_t = self.config.root_fbs_t()
         assert len(configuration_t.nodes) == 2
+        assert configuration_t.channels[0].schema is not None
 
         assert configuration.multi_node(self.config)
         for (node_fbs, node_t,
