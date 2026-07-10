@@ -23,6 +23,7 @@
 #include "absl/strings/escaping.h"
 
 #include "aos/ipc_lib/lockless_queue_memory.h"
+#include "aos/ipc_lib/thread_signal.h"
 #include "aos/util/compiler_memory_barrier.h"
 
 ABSL_FLAG(bool, dump_lockless_queue_data, false,
@@ -419,13 +420,6 @@ void Cleanup(LocklessQueueMemory *memory, const GrabQueueSetupLockOrDie &lock) {
   // created while we're in here holding the lock.
   while (!DoCleanup(memory, lock)) {
   }
-}
-
-// Exposes rt_tgsigqueueinfo so we can send the signal *just* to the target
-// thread.
-// TODO(Brian): Do directly in assembly for armhf at least for efficiency.
-int rt_tgsigqueueinfo(pid_t tgid, pid_t tid, int sig, siginfo_t *si) {
-  return syscall(SYS_rt_tgsigqueueinfo, tgid, tid, sig, si);
 }
 
 QueueIndex ZeroOrValid(QueueIndex index) {
@@ -838,7 +832,7 @@ LocklessQueueWatcher::LocklessQueueWatcher(LocklessQueueMemory *memory,
 }
 
 LocklessQueueWakeUpper::LocklessQueueWakeUpper(LocklessQueue queue)
-    : memory_(queue.const_memory()), pid_(getpid()), uid_(getuid()) {
+    : memory_(queue.const_memory()) {
   queue.Initialize();
   watcher_copy_.resize(memory_->num_watchers());
 }
@@ -907,26 +901,13 @@ int LocklessQueueWakeUpper::Wakeup(const int current_priority) {
       }
     }
 
-    // Build up the siginfo to send.
-    siginfo_t uinfo;
-    memset(&uinfo, 0, sizeof(uinfo));
-
-    uinfo.si_code = SI_QUEUE;
-    uinfo.si_pid = pid_;
-    uinfo.si_uid = uid_;
-    uinfo.si_value.sival_int = 0;
-
     for (const WatcherCopy &watcher_copy : watcher_copy_) {
       // The first -1 priority means we are at the end of the valid list.
       if (watcher_copy.priority == -1) {
         break;
       }
 
-      // Send the signal.  Target just the thread that sent it so that we can
-      // support multiple watchers in a process (when someone creates multiple
-      // event loops in different threads).
-      rt_tgsigqueueinfo(watcher_copy.pid, watcher_copy.ownership_snapshot.tid(),
-                        kWakeupSignal, &uinfo);
+      signal_.Signal(watcher_copy.pid, watcher_copy.ownership_snapshot.tid());
 
       ++count;
     }

@@ -20,6 +20,7 @@
 #include "aos/ipc_lib/data_alignment.h"
 #include "aos/ipc_lib/index.h"
 #include "aos/ipc_lib/robust_ownership_tracker.h"
+#include "aos/ipc_lib/thread_signal.h"
 #include "aos/time/time.h"
 #include "aos/uuid.h"
 
@@ -277,8 +278,6 @@ size_t LocklessQueueMemorySize(LocklessQueueConfiguration config);
 LocklessQueueMemory *InitializeLocklessQueueMemory(
     LocklessQueueMemory *memory, LocklessQueueConfiguration config);
 
-const static unsigned int kWakeupSignal = SIGRTMIN + 2;
-
 // A convenient wrapper for accessing a lockless queue.
 class LocklessQueue {
  public:
@@ -304,12 +303,15 @@ class LocklessQueueWatcher {
   LocklessQueueWatcher(const LocklessQueueWatcher &) = delete;
   LocklessQueueWatcher &operator=(const LocklessQueueWatcher &) = delete;
   LocklessQueueWatcher(LocklessQueueWatcher &&other)
-      : memory_(other.memory_), watcher_index_(other.watcher_index_) {
+      : memory_(other.memory_),
+        watcher_index_(other.watcher_index_),
+        signal_(std::move(other.signal_)) {
     other.watcher_index_ = -1;
   }
   LocklessQueueWatcher &operator=(LocklessQueueWatcher &&other) {
     std::swap(memory_, other.memory_);
     std::swap(watcher_index_, other.watcher_index_);
+    std::swap(signal_, other.signal_);
     return *this;
   }
 
@@ -330,6 +332,8 @@ class LocklessQueueWatcher {
   // Index in the watcher list that our entry is, or -1 if no watcher is
   // registered.
   int watcher_index_ = -1;
+
+  ThreadSignal signal_;
 };
 
 class LocklessQueueWakeUpper {
@@ -353,10 +357,9 @@ class LocklessQueueWakeUpper {
   };
 
   const LocklessQueueMemory *const memory_;
-  const int pid_;
-  const uid_t uid_;
 
   ::std::vector<WatcherCopy> watcher_copy_;
+  ThreadSignal signal_;
 };
 
 // Sender for blocks of data.  The resources associated with a sender are
