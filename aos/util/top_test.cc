@@ -37,12 +37,30 @@ void SetThreadName(const std::string &name) {
   pthread_setname_np(pthread_self(), name.c_str());
 }
 
+void WaitForCpuConsumption(pid_t pid) {
+  std::optional<ProcStat> start_stat = ReadProcStat(pid);
+  CHECK(start_stat.has_value());
+  uint64_t start_ticks =
+      start_stat->user_mode_ticks + start_stat->kernel_mode_ticks;
+  while (true) {
+    std::optional<ProcStat> cur_stat = ReadProcStat(pid);
+    CHECK(cur_stat.has_value());
+    uint64_t cur_ticks =
+        cur_stat->user_mode_ticks + cur_stat->kernel_mode_ticks;
+    if (cur_ticks > start_ticks + 10) {
+      break;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+}
+
 constexpr std::string_view kTestCPUConsumer = "TestCPUConsumer";
 
 class TopTest : public ::testing::Test {
  protected:
   TopTest()
       : shm_dir_(aos::testing::TestTmpDir()),
+        stop_flag_(false),
         cpu_consumer_([this]() {
           SetThreadName(std::string(kTestCPUConsumer));
           while (!stop_flag_.load()) {
@@ -63,11 +81,29 @@ class TopTest : public ::testing::Test {
     cpu_consumer_.join();
   }
 
+  void ExitAfterReadings(Top *top, int target_readings = 2) {
+    reading_count_ = 0;
+    // Exit early once we have collected at least target_readings readings,
+    // which ensures we have enough samples to calculate CPU usage. This avoids
+    // test flakes on slow startups (where a hardcoded 2s exit timer might fire
+    // before the 2nd sample).
+    top->set_on_reading_update([this, target_readings]() {
+      reading_count_++;
+      if (reading_count_ >= target_readings) {
+        event_loop_.Exit();
+      }
+    });
+    // Fallback safety timeout in case the sample timer never fires.
+    event_loop_.AddTimer([this]() { event_loop_.Exit(); })
+        ->Schedule(event_loop_.monotonic_now() + std::chrono::seconds(10));
+  }
+
+  int reading_count_ = 0;
   absl::FlagSaver flag_saver_;
   std::string shm_dir_;
 
-  std::thread cpu_consumer_;
   std::atomic<bool> stop_flag_{false};
+  std::thread cpu_consumer_;
   const std::string config_file_;
   const aos::FlatbufferDetachedBuffer<aos::Configuration> config_;
   aos::ShmEventLoop event_loop_;
@@ -85,11 +121,11 @@ TEST_F(TopTest, TestSelfStat) {
 
 TEST_F(TopTest, QuerySingleProcess) {
   const pid_t pid = getpid();
+  WaitForCpuConsumption(pid);
   Top top(&event_loop_, Top::TrackThreadsMode::kDisabled,
           Top::TrackPerThreadInfoMode::kDisabled);
   top.set_track_pids({pid});
-  event_loop_.AddTimer([this]() { event_loop_.Exit(); })
-      ->Schedule(event_loop_.monotonic_now() + std::chrono::seconds(2));
+  ExitAfterReadings(&top);
   event_loop_.Run();
   flatbuffers::FlatBufferBuilder fbb;
   fbb.ForceDefaults(true);
@@ -113,11 +149,11 @@ TEST_F(TopTest, QuerySingleProcess) {
 
 TEST_F(TopTest, QuerySingleProcessWithThreads) {
   const pid_t pid = getpid();
+  WaitForCpuConsumption(pid);
   Top top(&event_loop_, Top::TrackThreadsMode::kDisabled,
           Top::TrackPerThreadInfoMode::kEnabled);
   top.set_track_pids({pid});
-  event_loop_.AddTimer([this]() { event_loop_.Exit(); })
-      ->Schedule(event_loop_.monotonic_now() + std::chrono::seconds(2));
+  ExitAfterReadings(&top);
   event_loop_.Run();
   flatbuffers::FlatBufferBuilder fbb;
   fbb.ForceDefaults(true);
@@ -177,11 +213,14 @@ TEST_F(TopTest, TopProcesses) {
     }
   }
 
+  for (const pid_t child : children) {
+    WaitForCpuConsumption(child);
+  }
+
   Top top(&event_loop_, Top::TrackThreadsMode::kDisabled,
           Top::TrackPerThreadInfoMode::kDisabled);
   top.set_track_top_processes(true);
-  event_loop_.AddTimer([this]() { event_loop_.Exit(); })
-      ->Schedule(event_loop_.monotonic_now() + std::chrono::seconds(2));
+  ExitAfterReadings(&top);
   event_loop_.SkipTimingReport();
   event_loop_.SkipAosLog();
   event_loop_.Run();
@@ -221,12 +260,12 @@ TEST_F(TopTest, TopProcesses) {
 // many processes as actually exist and that nothing breaks.
 TEST_F(TopTest, AllTopProcesses) {
   constexpr int kNProcesses = 1000000;
+  WaitForCpuConsumption(getpid());
 
   Top top(&event_loop_, Top::TrackThreadsMode::kDisabled,
           Top::TrackPerThreadInfoMode::kDisabled);
   top.set_track_top_processes(true);
-  event_loop_.AddTimer([this]() { event_loop_.Exit(); })
-      ->Schedule(event_loop_.monotonic_now() + std::chrono::seconds(2));
+  ExitAfterReadings(&top);
   event_loop_.Run();
   flatbuffers::FlatBufferBuilder fbb;
   fbb.ForceDefaults(true);
