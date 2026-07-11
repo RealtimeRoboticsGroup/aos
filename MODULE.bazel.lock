@@ -1128,8 +1128,8 @@
     },
     "@@aspect_rules_js+//npm:extensions.bzl%pnpm": {
       "general": {
-        "bzlTransitiveDigest": "umJWNo7FJdJfxE7aILlEnzx7b5sJjDMVZxj84LZju4I=",
-        "usagesDigest": "NJcs6Xw9o4o7+eD49mg+pixudLk5exJSg52azzrikyE=",
+        "bzlTransitiveDigest": "rxDcNGhJ9uk8EQIu6HNJUKnCMavJYdonnnNKX9GSqCw=",
+        "usagesDigest": "UCPGCdTkoflpzf0ShZ9hsk2zN6bbQlRvpRRZJnniDDc=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -1138,11 +1138,11 @@
             "repoRuleId": "@@aspect_rules_js+//npm/private:npm_import.bzl%npm_import_rule",
             "attributes": {
               "package": "pnpm",
-              "version": "8.6.7",
+              "version": "8.15.9",
               "root_package": "",
               "link_workspace": "",
               "link_packages": {},
-              "integrity": "sha512-vRIWpD/L4phf9Bk2o/O2TDR8fFoJnpYrp2TKqTIZF/qZ2/rgL3qKXzHofHgbXsinwMoSEigz28sqk3pQ+yMEQQ==",
+              "integrity": "sha512-SZQ0ydj90aJ5Tr9FUrOyXApjOrzuW7Fee13pDzL0e1E6ypjNXP0AHDHw20VLw4BO3M1XhQHkyik6aBYWa72fgQ==",
               "url": "",
               "commit": "",
               "patch_args": [
@@ -1158,15 +1158,14 @@
               "extra_build_content": "load(\"@aspect_rules_js//js:defs.bzl\", \"js_binary\")\njs_binary(name = \"pnpm\", data = glob([\"package/**\"]), entry_point = \"package/dist/pnpm.cjs\", visibility = [\"//visibility:public\"])",
               "generate_bzl_library_targets": false,
               "extract_full_archive": true,
-              "exclude_package_contents": [],
-              "system_tar": "auto"
+              "exclude_package_contents": []
             }
           },
           "pnpm__links": {
             "repoRuleId": "@@aspect_rules_js+//npm/private:npm_import.bzl%npm_import_links",
             "attributes": {
               "package": "pnpm",
-              "version": "8.6.7",
+              "version": "8.15.9",
               "dev": false,
               "root_package": "",
               "link_packages": {},
@@ -1188,6 +1187,11 @@
           }
         },
         "recordedRepoMappingEntries": [
+          [
+            "aspect_bazel_lib+",
+            "bazel_lib",
+            "bazel_lib+"
+          ],
           [
             "aspect_bazel_lib+",
             "bazel_skylib",
@@ -1225,6 +1229,11 @@
           ],
           [
             "aspect_rules_js+",
+            "bazel_lib",
+            "bazel_lib+"
+          ],
+          [
+            "aspect_rules_js+",
             "bazel_skylib",
             "bazel_skylib+"
           ],
@@ -1242,6 +1251,16 @@
             "bazel_features+",
             "bazel_features_version",
             "bazel_features++version_extension+bazel_features_version"
+          ],
+          [
+            "bazel_lib+",
+            "bazel_skylib",
+            "bazel_skylib+"
+          ],
+          [
+            "bazel_lib+",
+            "bazel_tools",
+            "bazel_tools"
           ],
           [
             "tar.bzl+",
@@ -1266,7 +1285,7 @@
         "bzlTransitiveDigest": "l0y/rFY9e6PRJzN9/6ytBRu/W8B64s5Nr/+xMuE47Qo=",
         "usagesDigest": "v3px49Jj5u8VBWsUkIYNcNNt9mmNv4tIEt7olrjV4DE=",
         "recordedFileInputs": {
-          "@@//package.json": "22ea6786b1941d1ae192ff21d147a21e149c8e95bf67351c7278b789ebf431e6"
+          "@@//package.json": "452df920c716b1d16502ba9a5c790672a0c555cf67a7a1744d0cdf8580de9f88"
         },
         "recordedDirentsInputs": {},
         "envVariables": {},
