@@ -257,9 +257,9 @@ flatbuffer_py_library(
 
 # Verifies that the compiled reflection outputs of all 4 flavors of the same fbs
 # schema are binary identical.
-sh_test(
+py_test(
     name = "compare_binary_reflection_outs",
-    srcs = ["compare_binary_reflection_outs.sh"],
+    srcs = ["compare_binary_reflection_outs.py"],
     args = [
         # Local, checked in.
         "$(location //aos/flatbuffers/test_dir:reflection_test_fbs_reflection_out)",
