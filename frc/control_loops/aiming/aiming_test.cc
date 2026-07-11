@@ -1,9 +1,13 @@
 #include "frc/control_loops/aiming/aiming.h"
 
+#include <numbers>
+
 #include "gtest/gtest.h"
 
 #include "frc/constants.h"
 #include "frc/control_loops/pose.h"
+
+namespace numbers = std::numbers;
 
 namespace frc::control_loops::aiming::testing {
 
@@ -16,14 +20,14 @@ TEST(AimerTest, StandingStill) {
   TurretGoal goal = AimerGoal(
       ShotConfig{target, ShotMode::kShootOnTheFly, range, kBallSpeed, 0.0, 0.0},
       RobotState{robot_pose, {0.0, 0.0}, 0.0, 0.0});
-  EXPECT_FLOAT_EQ(M_PI, goal.position);
+  EXPECT_FLOAT_EQ(numbers::pi, goal.position);
   EXPECT_FLOAT_EQ(0.0, goal.velocity);
   EXPECT_FLOAT_EQ(1.0, goal.virtual_shot_distance);
   EXPECT_FLOAT_EQ(1.0, goal.target_distance);
 
   // If there is a turret offset, it should get compensated out.
   goal = AimerGoal(ShotConfig{target, ShotMode::kShootOnTheFly, range,
-                              kBallSpeed, 0.0, M_PI},
+                              kBallSpeed, 0.0, numbers::pi},
                    RobotState{robot_pose, {0.0, 0.0}, 0.0, 0.0});
   EXPECT_FLOAT_EQ(0.0, goal.position);
 
@@ -94,7 +98,7 @@ TEST(AimerTest, DrivingLateralToTarget) {
   TurretGoal goal = AimerGoal(
       ShotConfig{target, ShotMode::kStatic, range, kBallSpeed, 0.0, 0.0},
       RobotState{robot_pose, {1.0, 0.0}, 0.0, 0.0});
-  EXPECT_FLOAT_EQ(M_PI_2, goal.position);
+  EXPECT_FLOAT_EQ(numbers::pi / 2.0, goal.position);
   EXPECT_FLOAT_EQ(1.0, goal.velocity);
   EXPECT_FLOAT_EQ(1.0, goal.virtual_shot_distance);
   EXPECT_FLOAT_EQ(1.0, goal.target_distance);
@@ -105,8 +109,8 @@ TEST(AimerTest, DrivingLateralToTarget) {
       RobotState{robot_pose, {1.0, 0.0}, 0.0, 0.0});
   // Confirm that the turret heading goal is a bit more than pi / 2, but not by
   // too much.
-  EXPECT_LT(M_PI_2 + 0.01, goal.position);
-  EXPECT_GT(M_PI_2 + 0.5, goal.position);
+  EXPECT_LT(numbers::pi / 2.0 + 0.01, goal.position);
+  EXPECT_GT(numbers::pi / 2.0 + 0.5, goal.position);
   // Similarly, the turret velocity goal should be a bit less than 1.0,
   // since the turret is no longer at exactly a right angle.
   EXPECT_LT(0.9, goal.velocity);

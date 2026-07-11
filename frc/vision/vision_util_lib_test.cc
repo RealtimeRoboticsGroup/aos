@@ -1,9 +1,13 @@
 #include "frc/vision/vision_util_lib.h"
 
+#include <numbers>
+
 #include "absl/strings/str_format.h"
 #include "gtest/gtest.h"
 
 #include "aos/util/math.h"
+
+namespace numbers = std::numbers;
 
 namespace frc::vision {
 // For now, just testing extracting camera number from channel name
@@ -31,8 +35,9 @@ constexpr double kOrientationEqTolerance = 1e-10;
     double delta = std::abs(aos::math::DiffAngle(theta1, theta2));         \
     /* Have to check delta - 2pi for the case that one angle is very */    \
     /* close to -pi, and the other is very close to +pi */                 \
-    EXPECT_TRUE(delta < tolerance || std::abs(aos::math::DiffAngle(        \
-                                         delta, 2.0 * M_PI)) < tolerance); \
+    EXPECT_TRUE(delta < tolerance ||                                       \
+                std::abs(aos::math::DiffAngle(delta, 2.0 * numbers::pi)) < \
+                    tolerance);                                            \
   }
 
 #define EXPECT_POSE_NEAR(pose1, pose2)                                     \
@@ -93,26 +98,31 @@ TEST(PoseUtilsTest, EulerAnglesAndQuaternionConversions) {
   // Make sure that the conversions are consistent back and forth.
   // These angles shouldn't get changed to a different, equivalent roll pitch
   // yaw.
-  EXPECT_EULER_ANGLES_QUATERNION_BACK_AND_FORTH_EQ(0.0, 0.0, M_PI);
-  EXPECT_EULER_ANGLES_QUATERNION_BACK_AND_FORTH_EQ(0.0, 0.0, -M_PI);
-  EXPECT_EULER_ANGLES_QUATERNION_BACK_AND_FORTH_EQ(0.0, 0.0, M_PI_2);
-  EXPECT_EULER_ANGLES_QUATERNION_BACK_AND_FORTH_EQ(0.0, 0.0, -M_PI_2);
+  EXPECT_EULER_ANGLES_QUATERNION_BACK_AND_FORTH_EQ(0.0, 0.0, numbers::pi);
+  EXPECT_EULER_ANGLES_QUATERNION_BACK_AND_FORTH_EQ(0.0, 0.0, -numbers::pi);
+  EXPECT_EULER_ANGLES_QUATERNION_BACK_AND_FORTH_EQ(0.0, 0.0, numbers::pi / 2.0);
+  EXPECT_EULER_ANGLES_QUATERNION_BACK_AND_FORTH_EQ(0.0, 0.0,
+                                                   -numbers::pi / 2.0);
   EXPECT_EULER_ANGLES_QUATERNION_BACK_AND_FORTH_EQ(0.0, 0.0, 0.0);
-  EXPECT_EULER_ANGLES_QUATERNION_BACK_AND_FORTH_EQ(0.0, M_PI_4, 0.0);
-  EXPECT_EULER_ANGLES_QUATERNION_BACK_AND_FORTH_EQ(0.0, -M_PI_4, 0.0);
-  EXPECT_EULER_ANGLES_QUATERNION_BACK_AND_FORTH_EQ(0.0, -M_PI_4, M_PI_4);
-  EXPECT_EULER_ANGLES_QUATERNION_BACK_AND_FORTH_EQ(M_PI_4, -M_PI_4, M_PI_4);
-  EXPECT_EULER_ANGLES_QUATERNION_BACK_AND_FORTH_EQ(-M_PI_2, -M_PI_4, M_PI_4);
+  EXPECT_EULER_ANGLES_QUATERNION_BACK_AND_FORTH_EQ(0.0, numbers::pi / 4.0, 0.0);
+  EXPECT_EULER_ANGLES_QUATERNION_BACK_AND_FORTH_EQ(0.0, -numbers::pi / 4.0,
+                                                   0.0);
+  EXPECT_EULER_ANGLES_QUATERNION_BACK_AND_FORTH_EQ(0.0, -numbers::pi / 4.0,
+                                                   numbers::pi / 4.0);
+  EXPECT_EULER_ANGLES_QUATERNION_BACK_AND_FORTH_EQ(
+      numbers::pi / 4.0, -numbers::pi / 4.0, numbers::pi / 4.0);
+  EXPECT_EULER_ANGLES_QUATERNION_BACK_AND_FORTH_EQ(
+      -numbers::pi / 2.0, -numbers::pi / 4.0, numbers::pi / 4.0);
 
   // Now, do a sweep of roll, pitch, and yaws in the normalized
   // range.
   // - roll: (-pi/2, pi/2)
   // - pitch: (-pi/2, pi/2)
   // - yaw: [-pi, pi)
-  constexpr double kThetaMaxRoll = M_PI_2 - kToleranceRadians;
-  constexpr double kThetaMaxPitch = M_PI_2 - kToleranceRadians;
-  constexpr double kThetaMaxYaw = M_PI;
-  constexpr double kDeltaTheta = M_PI / 16;
+  constexpr double kThetaMaxRoll = numbers::pi / 2.0 - kToleranceRadians;
+  constexpr double kThetaMaxPitch = numbers::pi / 2.0 - kToleranceRadians;
+  constexpr double kThetaMaxYaw = numbers::pi;
+  constexpr double kDeltaTheta = numbers::pi / 16;
 
   for (double roll = -kThetaMaxRoll; roll < kThetaMaxRoll;
        roll += kDeltaTheta) {

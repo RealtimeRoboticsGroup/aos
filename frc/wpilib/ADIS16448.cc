@@ -6,10 +6,13 @@
 #include <chrono>
 #include <cinttypes>
 #include <cmath>
+#include <numbers>
 
 #include "aos/init.h"
 #include "aos/time/time.h"
 #include "frc/wpilib/imu_generated.h"
+
+namespace numbers = std::numbers;
 
 namespace frc::wpilib {
 
@@ -239,12 +242,12 @@ void ADIS16448::DoRun() {
     imu_builder.add_monotonic_timestamp_ns(
         time_converter_.FpgaToMonotonic(fpga_time).time_since_epoch().count());
 
-    float gyro_x =
-        ConvertValue(&to_receive[4], kGyroLsbDegreeSecond * M_PI / 180.0);
-    float gyro_y =
-        ConvertValue(&to_receive[6], kGyroLsbDegreeSecond * M_PI / 180.0);
-    float gyro_z =
-        ConvertValue(&to_receive[8], kGyroLsbDegreeSecond * M_PI / 180.0);
+    float gyro_x = ConvertValue(&to_receive[4],
+                                kGyroLsbDegreeSecond * numbers::pi / 180.0);
+    float gyro_y = ConvertValue(&to_receive[6],
+                                kGyroLsbDegreeSecond * numbers::pi / 180.0);
+    float gyro_z = ConvertValue(&to_receive[8],
+                                kGyroLsbDegreeSecond * numbers::pi / 180.0);
 
     imu_builder.add_gyro_x(gyro_x);
     imu_builder.add_gyro_y(gyro_y);

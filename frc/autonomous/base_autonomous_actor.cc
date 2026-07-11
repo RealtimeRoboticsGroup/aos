@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cinttypes>
 #include <cmath>
+#include <numbers>
 
 #include "aos/logging/logging.h"
 #include "aos/util/math.h"
@@ -11,6 +12,8 @@
 #include "frc/control_loops/drivetrain/drivetrain_goal_generated.h"
 #include "frc/control_loops/drivetrain/drivetrain_status_generated.h"
 #include "frc/control_loops/drivetrain/spline.h"
+
+namespace numbers = std::numbers;
 
 using ::aos::monotonic_clock;
 namespace chrono = ::std::chrono;
@@ -235,7 +238,7 @@ bool BaseAutonomousActor::WaitForMaxBy(double angle) {
   ::aos::time::PhasedLoop phased_loop(frc::controls::kLoopFrequency,
                                       event_loop()->monotonic_now(),
                                       aos::common::actions::kLoopOffset);
-  double max_angle = -M_PI;
+  double max_angle = -numbers::pi;
   while (true) {
     if (ShouldCancel()) {
       return false;
@@ -563,7 +566,7 @@ BaseAutonomousActor::SplineHandle BaseAutonomousActor::PlanSpline(
     frc::control_loops::drivetrain::Spline spline_object(control_points);
     start(2) = spline_object.Theta(0);
     if (direction == SplineDirection::kBackward) {
-      start(2) = aos::math::NormalizeAngle(start(2) + M_PI);
+      start(2) = aos::math::NormalizeAngle(start(2) + numbers::pi);
     }
   }
 

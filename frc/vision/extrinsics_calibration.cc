@@ -1,5 +1,7 @@
 #include "frc/vision/extrinsics_calibration.h"
 
+#include <numbers>
+
 #include "ceres/ceres.h"
 #include "opencv2/core.hpp"
 #include "opencv2/core/eigen.hpp"
@@ -13,6 +15,8 @@
 #include "frc/vision/calibration_accumulator.h"
 #include "frc/vision/charuco_lib.h"
 #include "frc/vision/visualize_robot.h"
+
+namespace numbers = std::numbers;
 
 namespace frc::vision {
 
@@ -470,7 +474,7 @@ class PoseFilter : public CeresPoseFilter<double> {
     // Set virtual viewing point 10 meters above the origin, rotated so the
     // camera faces straight down
     Eigen::Translation3d camera_trans(0, 0, 10.0);
-    Eigen::AngleAxisd camera_rot(M_PI, Eigen::Vector3d::UnitX());
+    Eigen::AngleAxisd camera_rot(numbers::pi, Eigen::Vector3d::UnitX());
     Eigen::Affine3d camera_viewpoint = camera_trans * camera_rot;
     vis_robot.SetViewpoint(camera_viewpoint);
 

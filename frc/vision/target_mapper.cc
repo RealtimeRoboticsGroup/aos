@@ -1,5 +1,7 @@
 #include "frc/vision/target_mapper.h"
 
+#include <numbers>
+
 #include "absl/flags/flag.h"
 #include "absl/strings/str_format.h"
 
@@ -7,6 +9,8 @@
 #include "frc/vision/ceres/pose_graph_3d_error_term.h"
 #include "frc/vision/geometry.h"
 #include "frc/vision/vision_util_lib.h"
+
+namespace numbers = std::numbers;
 
 ABSL_FLAG(uint64_t, max_num_iterations, 100,
           "Maximum number of iterations for the ceres solver");
@@ -782,7 +786,7 @@ void TargetMapper::PrintDiffs() const {
     Eigen::Affine3d H_ideal_solved = H_world_ideal.inverse() * H_world_solved;
     Eigen::Vector3d rpy = PoseUtils::RotationMatrixToEulerAngles(
                               H_ideal_solved.rotation().matrix()) *
-                          180.0 / M_PI;
+                          180.0 / numbers::pi;
     Eigen::Vector3d trans = H_ideal_solved.translation();
 
     LOG(INFO) << "\nOffset from ideal to solved for target " << id

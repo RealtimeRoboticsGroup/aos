@@ -1,3 +1,4 @@
+#include <numbers>
 #include <numeric>
 #include <random>
 #include <string>
@@ -24,6 +25,8 @@
 #include "frc/orin/apriltag.h"
 #include "frc/vision/vision_generated.h"
 #include "tools/cpp/runfiles/runfiles.h"
+
+namespace numbers = std::numbers;
 
 ABSL_FLAG(int32_t, pixel_border, 10,
           "Size of image border within which to reject detected corners");
@@ -1106,7 +1109,8 @@ class CudaAprilTagDetector {
           for (size_t j = 0; j < points.size(); ++j) {
             IndexPoint pt(i, points[j].point_bits());
             float theta =
-                (atan2f(pt.y() - extents.cy(), pt.x() - extents.cx()) + M_PI) *
+                (atan2f(pt.y() - extents.cy(), pt.x() - extents.cx()) +
+                 numbers::pi) *
                 8e6;
             long long int theta_int = llrintf(theta);
 

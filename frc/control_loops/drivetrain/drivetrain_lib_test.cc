@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <memory>
+#include <numbers>
 
 #include "absl/flags/flag.h"
 #include "gmock/gmock.h"
@@ -24,6 +25,8 @@
 #include "frc/control_loops/drivetrain/trajectory_generator.h"
 #include "frc/control_loops/polytope.h"
 #include "frc/queues/gyro_generated.h"
+
+namespace numbers = std::numbers;
 
 ABSL_FLAG(std::string, output_file, "",
           "If set, logs all channels to the provided logfile.");
@@ -826,7 +829,7 @@ TEST_P(DrivetrainBackwardsParamTest, SplineOffset) {
   SetEnabled(true);
   if (GetParam()) {
     // Turn the robot around if we are backwards.
-    (*drivetrain_plant_.mutable_state())(2) += M_PI;
+    (*drivetrain_plant_.mutable_state())(2) += numbers::pi;
 
     auto builder = localizer_control_sender_.MakeBuilder();
     LocalizerControl::Builder localizer_control_builder =
@@ -1522,7 +1525,7 @@ TEST_F(DrivetrainTest, FillSplineBuffer) {
 TEST_F(DrivetrainTest, BasicLineFollow) {
   SetEnabled(true);
   localizer_.target_selector()->set_has_target(true);
-  localizer_.target_selector()->set_pose({{1.0, 1.0, 0.0}, M_PI_4});
+  localizer_.target_selector()->set_pose({{1.0, 1.0, 0.0}, numbers::pi / 4.0});
   {
     auto builder = drivetrain_goal_sender_.MakeBuilder();
     Goal::Builder goal_builder = builder.MakeBuilder<Goal>();
@@ -1539,7 +1542,7 @@ TEST_F(DrivetrainTest, BasicLineFollow) {
   EXPECT_TRUE(drivetrain_status_fetcher_->line_follow_logging()->have_target());
   EXPECT_EQ(1.0, drivetrain_status_fetcher_->line_follow_logging()->x());
   EXPECT_EQ(1.0, drivetrain_status_fetcher_->line_follow_logging()->y());
-  EXPECT_FLOAT_EQ(M_PI_4,
+  EXPECT_FLOAT_EQ(numbers::pi / 4.0,
                   drivetrain_status_fetcher_->line_follow_logging()->theta());
 
   // Should have run off the end of the target, running along the y=x line.
@@ -1553,7 +1556,7 @@ TEST_F(DrivetrainTest, BasicLineFollow) {
 TEST_F(DrivetrainTest, LineFollowDefersToOpenLoop) {
   SetEnabled(true);
   localizer_.target_selector()->set_has_target(false);
-  localizer_.target_selector()->set_pose({{1.0, 1.0, 0.0}, M_PI_4});
+  localizer_.target_selector()->set_pose({{1.0, 1.0, 0.0}, numbers::pi / 4.0});
   {
     auto builder = drivetrain_goal_sender_.MakeBuilder();
     Goal::Builder goal_builder = builder.MakeBuilder<Goal>();

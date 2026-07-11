@@ -26,7 +26,11 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 // clang-format on
+#include <numbers>
+
 #include "frc/constants/constants_sender_lib.h"
+
+namespace numbers = std::numbers;
 
 ABSL_FLAG(bool, alt_view, false,
           "If true, show visualization from field level, rather than above");
@@ -148,14 +152,16 @@ void RemoveOutliers(std::vector<TimestampedCameraDetection> &pose_list,
             << " outlier constraints out of " << original_size
             << " total\nStd Dev's are: "
             << translation_variance.array().sqrt().transpose() << "m and "
-            << rotation_variance.array().sqrt().transpose() * 180.0 / M_PI
+            << rotation_variance.array().sqrt().transpose() * 180.0 /
+                   numbers::pi
             << "deg";
     if (original_size - pose_list.size() == 0) {
       VLOG(1) << "At step " << i
               << ", ending outlier rejection early due to convergence at "
               << pose_list.size() << " elements.\nStd Dev's are: "
               << translation_variance.array().sqrt().transpose() << "m and "
-              << rotation_variance.array().sqrt().transpose() * 180.0 / M_PI
+              << rotation_variance.array().sqrt().transpose() * 180.0 /
+                     numbers::pi
               << "deg";
       break;
     }
@@ -211,8 +217,9 @@ void HandlePoses(
   // This (H_world_board) is used to transform points for visualization
   // Assumes targets are aligned with x->right, y->up, z->out of board
   Eigen::Affine3d H_world_board;
-  H_world_board = Eigen::Translation3d::Identity() *
-                  Eigen::AngleAxisd(M_PI / 2.0, Eigen::Vector3d::UnitX());
+  H_world_board =
+      Eigen::Translation3d::Identity() *
+      Eigen::AngleAxisd(numbers::pi / 2.0, Eigen::Vector3d::UnitX());
   if (absl::GetFlag(FLAGS_alt_view)) {
     // Don't rotate -- this is like viewing from the side
     H_world_board = Eigen::Translation3d(0.0, 0.0, 3.0);
@@ -675,7 +682,7 @@ void ExtrinsicsMain(const NodeList &node_list,
             << PoseUtils::RotationMatrixToEulerAngles(
                    H_boardA_boardB_avg.rotation().matrix())
                        .transpose() *
-                   180.0 / M_PI
+                   180.0 / numbers::pi
             << " (deg)";
 
   // Do quick check to see what averaged two-board pose for
@@ -717,13 +724,14 @@ void ExtrinsicsMain(const NodeList &node_list,
               << " with rotational standard deviation of: "
               << rotation_std_dev.transpose() << " (radians)";
     double rot_stdev_norm = rotation_std_dev.norm();
-    double rot_threshold = 3 * M_PI / 180.0;  // Warn if more than 3 degrees
+    double rot_threshold =
+        3 * numbers::pi / 180.0;  // Warn if more than 3 degrees
     if (rot_stdev_norm > rot_threshold) {
       LOG(INFO) << "WARNING: ROTATIONAL STD DEV is "
-                << rot_stdev_norm * 180.0 / M_PI << " > "
-                << rot_threshold * 180.0 / M_PI
+                << rot_stdev_norm * 180.0 / numbers::pi << " > "
+                << rot_threshold * 180.0 / numbers::pi
                 << " degrees!!!!\nStd dev vector (in deg) is "
-                << (rotation_std_dev * 180.0 / M_PI).transpose();
+                << (rotation_std_dev * 180.0 / numbers::pi).transpose();
     }
     // Check if a particular camera deviates significantly from the overall
     // average Any of these factors could indicate a problem with that camera
@@ -735,7 +743,7 @@ void ExtrinsicsMain(const NodeList &node_list,
               << "m  and |dR| = "
               << (PoseUtils::RotationMatrixToEulerAngles(
                       delta_from_overall.rotation().matrix()) *
-                  180.0 / M_PI)
+                  180.0 / numbers::pi)
                      .norm()
               << " deg";
   }
@@ -799,8 +807,9 @@ void ExtrinsicsMain(const NodeList &node_list,
                 << H_camera1_camera2.matrix();
 
         Eigen::Affine3d H_world_board;
-        H_world_board = Eigen::Translation3d::Identity() *
-                        Eigen::AngleAxisd(M_PI / 2.0, Eigen::Vector3d::UnitX());
+        H_world_board =
+            Eigen::Translation3d::Identity() *
+            Eigen::AngleAxisd(numbers::pi / 2.0, Eigen::Vector3d::UnitX());
         if (absl::GetFlag(FLAGS_alt_view)) {
           H_world_board = Eigen::Translation3d(0.0, 0.0, 3.0);
         }
@@ -850,7 +859,7 @@ void ExtrinsicsMain(const NodeList &node_list,
               << Eigen::AngleAxisd(H_camera1_camera2_diff.rotation()).angle()
               << " radians ("
               << Eigen::AngleAxisd(H_camera1_camera2_diff.rotation()).angle() *
-                     180.0 / M_PI
+                     180.0 / numbers::pi
               << " degrees)";
     averaged_H_camera1_camera2_list.emplace_back(H_camera1_camera2_avg);
   }

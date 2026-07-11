@@ -1,12 +1,15 @@
 #include "frc/control_loops/drivetrain/line_follow_drivetrain.h"
 
 #include <chrono>
+#include <numbers>
 
 #include "aos/commonmath.h"
 #include "aos/time/time.h"
 #include "aos/util/math.h"
 #include "frc/control_loops/c2d.h"
 #include "frc/control_loops/dlqr.h"
+
+namespace numbers = std::numbers;
 
 namespace frc::control_loops::drivetrain {
 namespace {
@@ -197,9 +200,10 @@ double LineFollowDrivetrain::GoalTheta(
   // take (relative to the plane of the target).
   const double alpha = ::std::acos(piece_rad / dist_to_corner);
   const double heading_to_robot = edge_sign * square_robot.heading();
-  double theta = -edge_sign * (M_PI - alpha - (heading_to_robot - M_PI_2));
+  double theta = -edge_sign *
+                 (numbers::pi - alpha - (heading_to_robot - numbers::pi / 2.0));
   if (velocity_sign < 0) {
-    theta = ::aos::math::NormalizeAngle(theta + M_PI);
+    theta = ::aos::math::NormalizeAngle(theta + numbers::pi);
   }
   return theta;
 }

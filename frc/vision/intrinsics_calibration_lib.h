@@ -2,6 +2,7 @@
 #define FRC_VISION_CALIBRATION_LIB_H_
 #include <cmath>
 #include <filesystem>
+#include <numbers>
 #include <regex>
 
 #include "Eigen/Dense"
@@ -85,10 +86,10 @@ class IntrinsicsCalibration {
   double GetReprojectionError() { return reprojection_error_; };
 
  private:
-  static constexpr double kDeltaRThreshold = M_PI / 6.0;
+  static constexpr double kDeltaRThreshold = std::numbers::pi / 6.0;
   static constexpr double kDeltaTThreshold = 0.3;
 
-  static constexpr double kFrameDeltaRLimit = M_PI / 60;
+  static constexpr double kFrameDeltaRLimit = std::numbers::pi / 60;
   static constexpr double kFrameDeltaTLimit = 0.01;
 
   std::string hostname_;

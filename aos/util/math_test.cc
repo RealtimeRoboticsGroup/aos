@@ -1,17 +1,20 @@
 #include "aos/util/math.h"
 
 #include <memory>
+#include <numbers>
 
 #include "gtest/gtest.h"
+
+namespace numbers = std::numbers;
 
 namespace aos::math::testing {
 
 bool AngleEqual(double a1, double a2) {
   double diff = a1 - a2;
-  return ::std::fmod(diff, 2 * M_PI) == 0.0;
+  return ::std::fmod(diff, 2 * numbers::pi) == 0.0;
 }
 
-bool AngleInBounds(double a) { return a <= M_PI && a > -M_PI; }
+bool AngleInBounds(double a) { return a <= numbers::pi && a > -numbers::pi; }
 
 // Check that something
 void ExpectNormalizesCorrectly(double a) {
@@ -33,9 +36,9 @@ TEST(MathTest, NormalizeAngleTest) {
   ExpectNormalizesCorrectly(0.0);
   ExpectNormalizesCorrectly(1.0);
   ExpectNormalizesCorrectly(-1.0);
-  ExpectNormalizesCorrectly(M_PI);
-  ExpectNormalizesCorrectly(2.0 * M_PI);
-  ExpectNormalizesCorrectly(-2.0 * M_PI);
+  ExpectNormalizesCorrectly(numbers::pi);
+  ExpectNormalizesCorrectly(2.0 * numbers::pi);
+  ExpectNormalizesCorrectly(-2.0 * numbers::pi);
   ExpectNormalizesCorrectly(100.0);
   ExpectNormalizesCorrectly(-100.0);
 }
@@ -49,7 +52,7 @@ TEST(MathTest, DiffAngleTest) {
   ExpectDiffsCorrectly(-1.0, 1.0);
   ExpectDiffsCorrectly(100.0, 1.0);
   ExpectDiffsCorrectly(-100.0, 1.0);
-  ExpectDiffsCorrectly(M_PI, M_PI);
+  ExpectDiffsCorrectly(numbers::pi, numbers::pi);
 }
 
 // Check that points that are really counter-clockwise show up as

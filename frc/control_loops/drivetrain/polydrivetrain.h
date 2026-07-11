@@ -20,6 +20,8 @@
 #include "frc/control_loops/drivetrain/drivetrain_position_float_generated.h"
 #include "frc/control_loops/drivetrain/drivetrain_status_float_generated.h"
 #endif  // !AOS_OS_NONE
+#include <numbers>
+
 #include "frc/control_loops/drivetrain/drivetrain_config.h"
 #include "frc/control_loops/drivetrain/drivetrain_states.h"
 #include "frc/control_loops/state_feedback_loop.h"
@@ -208,8 +210,8 @@ void PolyDrivetrain<Scalar>::SetGoal(const Scalar wheel, const Scalar throttle,
                                      const bool quickturn,
                                      const bool highgear) {
   // Apply a sin function that's scaled to make it feel better.
-  const Scalar angular_range =
-      static_cast<Scalar>(M_PI_2) * dt_config_.wheel_non_linearity;
+  const Scalar angular_range = static_cast<Scalar>(std::numbers::pi / 2.0) *
+                               dt_config_.wheel_non_linearity;
 
   wheel_ = sin(angular_range * wheel) / sin(angular_range);
   wheel_ = sin(angular_range * wheel_) / sin(angular_range);

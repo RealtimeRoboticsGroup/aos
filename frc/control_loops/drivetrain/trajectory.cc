@@ -1,6 +1,7 @@
 #include "frc/control_loops/drivetrain/trajectory.h"
 
 #include <chrono>
+#include <numbers>
 
 #include "Eigen/Dense"
 
@@ -11,6 +12,8 @@
 #include "frc/control_loops/drivetrain/drivetrain_config.h"
 #include "frc/control_loops/hybrid_state_feedback_loop.h"
 #include "frc/control_loops/state_feedback_loop.h"
+
+namespace numbers = std::numbers;
 
 namespace frc::control_loops::drivetrain {
 
@@ -736,8 +739,8 @@ Eigen::Matrix<double, 5, 1> FinishedTrajectory::StateToPathRelativeState(
   Eigen::Matrix<double, 5, 1> path_state;
   path_state(0) = distance + xy_err.x() * ctheta + xy_err.y() * stheta;
   path_state(1) = -xy_err.x() * stheta + xy_err.y() * ctheta;
-  path_state(2) = aos::math::NormalizeAngle(state(2) - nominal_theta +
-                                            (drive_backwards ? M_PI : 0.0));
+  path_state(2) = aos::math::NormalizeAngle(
+      state(2) - nominal_theta + (drive_backwards ? numbers::pi : 0.0));
   path_state(2) = aos::math::NormalizeAngle(state(2) - nominal_theta);
   path_state(3) = state(3);
   path_state(4) = state(4);
