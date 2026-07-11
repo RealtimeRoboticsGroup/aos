@@ -101,7 +101,10 @@ cc_library(
     hdrs = ["tmpdir.h"],
     visibility = ["//visibility:public"],
     deps = [
+        "//aos:realtime",
         "//aos/ipc_lib:shm_base",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/log:check",
     ],
 )
 

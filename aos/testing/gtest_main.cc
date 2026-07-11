@@ -49,6 +49,13 @@ GTEST_API_ int main(int argc, char **argv) {
     aos_SetLogFileName(absl::GetFlag(FLAGS_log_file).c_str());
   }
 
+#ifdef _WIN32
+  // Start from an empty temporary directory.  Doing it here runs it exactly
+  // once, before any test, rather than making TestTmpDir() work out whether
+  // each of its callers is the first one.
+  aos::testing::internal::ClearTestTmpDirWindows();
+#endif
+
   // Point shared memory away from /dev/shm if we are testing.  We don't care
   // about RT in this case, so if it is backed by disk, we are fine.
   aos::testing::SetTestShmBase();
