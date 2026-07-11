@@ -35,10 +35,14 @@ void LocalFileOperations::FindLogs(std::vector<File> *files) {
         VLOG(1) << file << " is not file.";
         continue;
       }
-      MaybeAddFile(file.path().string(), file.file_size());
+      // generic_string() so the reported names use '/' whichever separator the
+      // caller's path and the iterator happened to use.  Callers match these
+      // against their own base names, so the two have to agree.
+      MaybeAddFile(file.path().generic_string(), file.file_size());
     }
   } else {
-    MaybeAddFile(filename_, std::filesystem::file_size(filename_));
+    MaybeAddFile(filename_.generic_string(),
+                 std::filesystem::file_size(filename_));
   }
 }
 

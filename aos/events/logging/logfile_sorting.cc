@@ -1,7 +1,5 @@
 #include "aos/events/logging/logfile_sorting.h"
 
-#include <dirent.h>
-
 #include <algorithm>
 #include <map>
 #include <string>

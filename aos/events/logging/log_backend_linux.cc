@@ -370,7 +370,7 @@ bool RenamableFileBackend::RenameLogBase(std::string_view new_base_name) {
   }
   old_base_name_ = base_name_;
   base_name_ = std::string(new_base_name);
-  separator_ = base_name_.back() == '/' ? "" : "_";
+  separator_ = BaseNameSeparator(base_name_);
 
   return true;
 }

@@ -1,10 +1,8 @@
 #include "aos/events/logging/log_reader.h"
 
-#include <dirent.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/uio.h>
 
 #include <climits>
 #include <utility>

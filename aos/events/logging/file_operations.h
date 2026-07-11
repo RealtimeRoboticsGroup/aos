@@ -28,19 +28,24 @@ class FileOperations {
   virtual void FindLogs(std::vector<File> *files) = 0;
 };
 
-// Implements FileOperations with standard POSIX filesystem APIs. These work on
-// files local to the machine they're running on.
+// Implements FileOperations with standard filesystem APIs. These work on files
+// local to the machine they're running on.
+//
+// Takes a std::filesystem::path rather than a string: unlike the FileOperations
+// interface, which also covers S3 (where "s3://bucket/key" is a URL and not a
+// path at all), everything this one does is a path operation, and holding the
+// parsed form keeps callers from round-tripping through a string.
 class LocalFileOperations final : public FileOperations {
  public:
-  explicit LocalFileOperations(std::string_view filename)
-      : filename_(filename) {}
+  explicit LocalFileOperations(std::filesystem::path filename)
+      : filename_(std::move(filename)) {}
 
   bool Exists() override { return std::filesystem::exists(filename_); }
 
   void FindLogs(std::vector<File> *files) override;
 
  private:
-  std::string filename_;
+  std::filesystem::path filename_;
 };
 
 }  // namespace aos::logger::internal

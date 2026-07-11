@@ -7,6 +7,7 @@
 #include <sys/uio.h>
 #endif
 
+#include <climits>
 #include <condition_variable>
 #include <cstddef>
 #include <filesystem>
@@ -26,6 +27,14 @@
 #include "aos/time/time.h"
 
 namespace aos::logger {
+
+// Windows has no writev()/IOV_MAX, so cap batched writes at a reasonable
+// constant there instead.
+#ifdef _WIN32
+inline constexpr int kIovMax = 1024;
+#else
+inline constexpr int kIovMax = IOV_MAX;
+#endif
 
 // Currently, all write operations only cares about out-of-space error. This is
 // a simple representation of write result.
@@ -376,6 +385,18 @@ class LogBackend {
       const std::string_view id, const size_t memory_buffer_size = 0) = 0;
 };
 
+// Returns what goes between a base name and a file id.  A base name naming a
+// directory ("logs/") needs nothing; one that is a filename stem
+// ("logs/prefix") needs an underscore, so files come out as "logs/prefix_id".
+//
+// Asks std::filesystem::path instead of testing for a trailing '/' so a native
+// Windows base name ("C:\logs\") is recognized as a directory too.  On POSIX
+// '\' is an ordinary filename character, and this agrees with the trailing-'/'
+// test for every base name there.
+inline std::string_view BaseNameSeparator(std::string_view base_name) {
+  return std::filesystem::path(base_name).has_filename() ? "_" : "";
+}
+
 // Implements requests log files from file system.
 class FileBackend : public LogBackend, public LogSource {
  public:
@@ -410,14 +431,12 @@ class LogFolder : public FileBackend {
       : FileBackend(MakeBaseName(log_directory_path), supports_direct) {}
 
  private:
-  // Ensures that the last character of the path is '/' to set the correct value
-  // of separator in FileBackend.
+  // Ensures the base name names a directory, so BaseNameSeparator() picks the
+  // empty separator for it.  Appending through std::filesystem::path uses the
+  // platform's separator, rather than tacking a '/' onto a native Windows path
+  // and leaving "C:\logs/".
   static std::string MakeBaseName(const std::filesystem::path &path) {
-    if (path.string().back() == '/') {
-      return path.string();
-    } else {
-      return path.string() + '/';
-    }
+    return path.has_filename() ? (path / "").string() : path.string();
   }
 };
 

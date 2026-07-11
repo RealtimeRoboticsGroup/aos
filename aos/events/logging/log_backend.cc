@@ -378,7 +378,7 @@ WriteCode BufferedFileHandler::Close() {
 FileBackend::FileBackend(std::string_view base_name, bool supports_odirect)
     : supports_odirect_(supports_odirect),
       base_name_(base_name),
-      separator_(base_name_.back() == '/' ? "" : "_") {}
+      separator_(BaseNameSeparator(base_name_)) {}
 
 std::unique_ptr<LogSink> FileBackend::RequestFile(
     const std::string_view id, const size_t memory_buffer_size) {
@@ -393,12 +393,20 @@ std::vector<FileBackend::File> FileBackend::ListFiles() const {
   if (!is_directory(directory)) {
     directory = directory.parent_path();
   }
-  internal::LocalFileOperations operations(directory.string());
+  internal::LocalFileOperations operations(directory);
   std::vector<internal::FileOperations::File> files;
   operations.FindLogs(&files);
 
   std::vector<File> names;
-  const std::string prefix = absl::StrCat(base_name_, separator_);
+  // FindLogs() reports paths in generic (forward slash) form, so compare
+  // against the generic form of the base name -- on Windows it may well be a
+  // native path full of backslashes, and matching the two directly would fail
+  // the CHECK below for every file.
+  //
+  // Both sides go through generic_string(), so they stay consistent even where
+  // it rewrites more than the separators (it collapses "a//b" to "a/b").
+  const std::string prefix = absl::StrCat(
+      std::filesystem::path(base_name_).generic_string(), separator_);
   for (const auto &file : files) {
     CHECK(absl::StartsWith(file.name, prefix))
         << ": File " << file.name << ", prefix " << prefix;
@@ -428,7 +436,7 @@ RenamableFileBackend::RenamableFileBackend(std::string_view base_name,
                                            bool supports_odirect)
     : supports_odirect_(supports_odirect),
       base_name_(base_name),
-      separator_(base_name_.back() == '/' ? "" : "_") {}
+      separator_(BaseNameSeparator(base_name_)) {}
 
 RenamableFileBackend::~RenamableFileBackend() = default;
 

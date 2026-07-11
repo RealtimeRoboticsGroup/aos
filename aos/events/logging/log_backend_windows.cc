@@ -346,7 +346,7 @@ bool WindowsRenamableFileBackend::RenameLogBase(
   // fresh at the new path on their next OpenForWrite().
   old_base_name_ = base_name_;
   base_name_.replace(0, current_directory.length(), new_directory);
-  separator_ = base_name_.back() == '/' ? "" : "_";
+  separator_ = BaseNameSeparator(base_name_);
   for (auto *handler : active_handlers_) {
     handler->UpdateFilename(current_directory, new_directory);
   }

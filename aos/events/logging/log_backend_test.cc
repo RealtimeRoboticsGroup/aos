@@ -68,6 +68,35 @@ TEST(LogBackendTest, CreateSimpleFile) {
   EXPECT_EQ(view, "test");
 }
 
+// ListFiles() matches the paths FileOperations reports against the backend's
+// own base name.  The two are produced differently -- FindLogs() reports
+// generic_string()s, while the base name is whatever the caller handed us -- so
+// any disagreement in how the same directory is spelled trips the CHECK in
+// ListFiles() for every file found.
+//
+// Redundant separators are a disagreement we can construct on Linux:
+// generic_string() collapses "logevent//" to "logevent/", the raw base name
+// keeps both slashes, and matching one against the other fails.  On Windows the
+// same mismatch shows up for the far more common reason that the base name is a
+// native path spelled with backslashes.
+TEST(LogBackendTest, ListFilesWithRedundantSeparators) {
+  const std::string logevent = TestTmpDir() + "/logevent//";
+  const std::string filename = "test.bfbs";
+  std::filesystem::remove_all(logevent);
+
+  LogFolder backend(logevent, false);
+  auto file = backend.RequestFile(filename);
+  ASSERT_EQ(file->OpenForWrite(), WriteCode::kOk);
+  ASSERT_EQ(Write(file.get(), "test").code, WriteCode::kOk);
+  ASSERT_EQ(file->Close(), WriteCode::kOk);
+
+  EXPECT_THAT(backend.ListFiles(),
+              ::testing::ElementsAre(FileEq(LogSource::File{
+                  .name = filename,
+                  .size = 4,
+              })));
+}
+
 TEST(FileHandlerTest, CloseSyncsDirectory) {
   absl::FlagSaver flag_saver;
   absl::SetFlag(&FLAGS_sync, true);

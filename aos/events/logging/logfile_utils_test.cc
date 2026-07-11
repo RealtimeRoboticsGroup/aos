@@ -36,9 +36,11 @@ class TestDetachedBufferWriter : public LogFolder, public DetachedBufferWriter {
   // Pick a max size that is rather conservative.
   static constexpr size_t kMaxMessageSize = 128 * 1024;
   TestDetachedBufferWriter(std::string_view filename)
-      : LogFolder("/", false),
-        DetachedBufferWriter(FileBackend::RequestFile(filename),
-                             std::make_unique<DummyEncoder>(kMaxMessageSize)) {}
+      : LogFolder(std::filesystem::path(filename).parent_path(), false),
+        DetachedBufferWriter(
+            FileBackend::RequestFile(
+                std::filesystem::path(filename).filename().string()),
+            std::make_unique<DummyEncoder>(kMaxMessageSize)) {}
   void WriteSizedFlatbuffer(flatbuffers::DetachedBuffer &&buffer) {
     QueueSpan(absl::Span<const uint8_t>(buffer.data(), buffer.size()));
   }
@@ -3197,17 +3199,13 @@ class InlinePackMessage : public ::testing::Test {
 
   aos::SizePrefixedFlatbufferDetachedBuffer<message_bridge::RemoteMessage>
   RandomRemoteMessage() {
-    std::uniform_int_distribution<uint8_t> uint8_distribution(
-        std::numeric_limits<uint8_t>::min(),
-        std::numeric_limits<uint8_t>::max());
-
     std::uniform_int_distribution<int64_t> time_distribution(
         std::numeric_limits<int64_t>::min(),
         std::numeric_limits<int64_t>::max());
 
     flatbuffers::FlatBufferBuilder fbb;
     message_bridge::RemoteMessage::Builder builder(fbb);
-    builder.add_queue_index(uint8_distribution(random_number_generator_));
+    builder.add_queue_index(static_cast<uint8_t>(random_number_generator_()));
 
     builder.add_monotonic_sent_time(
         time_distribution(random_number_generator_));
@@ -3218,7 +3216,7 @@ class InlinePackMessage : public ::testing::Test {
         time_distribution(random_number_generator_));
 
     builder.add_remote_queue_index(
-        uint8_distribution(random_number_generator_));
+        static_cast<uint8_t>(random_number_generator_()));
 
     builder.add_monotonic_remote_transmit_time(
         time_distribution(random_number_generator_));
@@ -3230,15 +3228,12 @@ class InlinePackMessage : public ::testing::Test {
   std::vector<uint8_t> RandomData() {
     std::vector<uint8_t> result;
     std::uniform_int_distribution<int> length_distribution(1, 32);
-    std::uniform_int_distribution<uint8_t> data_distribution(
-        std::numeric_limits<uint8_t>::min(),
-        std::numeric_limits<uint8_t>::max());
 
     const size_t length = length_distribution(random_number_generator_);
 
     result.reserve(length);
     for (size_t i = 0; i < length; ++i) {
-      result.emplace_back(data_distribution(random_number_generator_));
+      result.emplace_back(static_cast<uint8_t>(random_number_generator_()));
     }
     return result;
   }
@@ -3466,13 +3461,12 @@ TEST_F(InlinePackMessage, RemoteEquivilent) {
   aos::FlatbufferVector<reflection::Schema> schema =
       FileToFlatbuffer<reflection::Schema>(
           ArtifactPath("aos/events/logging/logger.bfbs"));
-  std::uniform_int_distribution<uint8_t> uint8_distribution(
-      std::numeric_limits<uint8_t>::min(), std::numeric_limits<uint8_t>::max());
 
   for (int i = 0; i < 100; ++i) {
     aos::SizePrefixedFlatbufferDetachedBuffer<RemoteMessage> random_msg =
         RandomRemoteMessage();
-    const size_t channel_index = uint8_distribution(random_number_generator_);
+    const size_t channel_index =
+        static_cast<uint8_t>(random_number_generator_());
     const monotonic_clock::time_point monotonic_timestamp_time =
         RandomMonotonic();
 

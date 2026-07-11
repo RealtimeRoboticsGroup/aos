@@ -79,7 +79,7 @@ void LoggerState::StartLogger(std::string logfile_base) {
 void LoggerState::AppendAllFilenames(std::vector<std::string> *filenames) {
   for (const std::string &file : log_namer->all_filenames()) {
     const std::string_view separator =
-        log_namer->base_name().back() == '/' ? "" : "_";
+        BaseNameSeparator(log_namer->base_name());
     filenames->emplace_back(
         absl::StrCat(log_namer->base_name(), separator, file));
   }
