@@ -500,6 +500,14 @@ use_repo(cypress, "cypress_toolchains")
 register_toolchains("@cypress_toolchains//:all")
 
 bazel_dep(name = "toolchains_llvm", version = "1.8.0", dev_dependency = True)
+single_version_override(
+    module_name = "toolchains_llvm",
+    patch_strip = 1,
+    patches = [
+        "//third_party:toolchains_llvm.patch",
+    ],
+    version = "1.8.0",
+)
 
 llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm", dev_dependency = True)
 
@@ -746,3 +754,15 @@ mock_external_fbs_repo_extension = use_extension(
     "mock_external_fbs_repo_extension",
 )
 use_repo(mock_external_fbs_repo_extension, "mock_external_fbs_repo")
+
+single_version_override(
+    module_name = "amd64_debian_sysroot",
+    patch_cmds = [
+        # OSX is case insensitive filenames.  Fix up the couple of them which are case sensitive.
+        "rm -f usr/lib/x86_64-linux-gnu/libCharLS.so.2",
+        "ln -s libcharls.so.2.4.1 usr/lib/x86_64-linux-gnu/libCharLS.so.2",
+        "rm -f usr/share/man/man2/_Exit.2.gz usr/share/man/man2/exit.2.gz usr/share/man/man7/pam.7.gz",
+        "rm -f usr/share/terminfo/N/NCR260VT300WPP",
+    ],
+    version = "2025.04.20",
+)
