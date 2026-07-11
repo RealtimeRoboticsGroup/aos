@@ -301,7 +301,7 @@ void SctpClientConnection::HandleData(const Message *message) {
           chrono::nanoseconds(remote_data->monotonic_sent_time())) ==
           channel_state->last_timestamp) {
     VLOG(1) << "Duplicate message from " << message->PeerAddress();
-    ftrace_.FormatMessage("Bridge duplicate message size=%zu", message->size);
+    ftrace_.FormatEvent("Bridge duplicate message size=%zu", message->size);
     connection_->mutate_duplicate_packets(connection_->duplicate_packets() + 1);
     // Duplicate message, ignore.
   } else {
@@ -316,12 +316,12 @@ void SctpClientConnection::HandleData(const Message *message) {
     // Publish the message.
     UUID remote_boot_uuid = UUID::FromVector(remote_data->boot_uuid());
     RawSender *sender = channel_state->sender.get();
-    ftrace_.FormatMessage("Bridge message size=%zu remote=%" PRId64
-                          " transmit=%" PRId64 " remote_queue=%" PRIu32
-                          " channel=%d",
-                          message->size, remote_data->monotonic_sent_time(),
-                          remote_data->monotonic_remote_transmit_time(),
-                          remote_data->queue_index(), stream);
+    ftrace_.FormatEvent("Bridge message size=%zu remote=%" PRId64
+                        " transmit=%" PRId64 " remote_queue=%" PRIu32
+                        " channel=%d",
+                        message->size, remote_data->monotonic_sent_time(),
+                        remote_data->monotonic_remote_transmit_time(),
+                        remote_data->queue_index(), stream);
     RawSender::Error result = sender->Send(
         remote_data->data()->data(), remote_data->data()->size(),
         monotonic_clock::time_point(

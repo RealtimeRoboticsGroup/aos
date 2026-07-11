@@ -247,7 +247,7 @@ void Starter::OnSignal(signalfd_siginfo info) {
     // SIGCHLD messages can be collapsed if multiple are received, so all
     // applications must check their status.
     if (absl::GetFlag(FLAGS_enable_ftrace)) {
-      ftrace_.FormatMessage("SIGCHLD");
+      ftrace_.FormatEvent("SIGCHLD");
       ftrace_.TurnOffOrDie();
     }
 

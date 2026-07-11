@@ -192,7 +192,7 @@ bool ChannelState::TrySendData(const Context &context) {
           << "} and data " << context.data << ", size " << fbb.GetSize();
   for (Peer &peer : peers_) {
     if (PeerReadyToFetchNext(peer, context)) {
-      ftrace_.FormatMessage(
+      ftrace_.FormatEvent(
           "Bridge skipping channel=%d peer=%d queue=%" PRIu32 " event=%" PRId64
           " size=%u",
           channel_index_, peer.node_index, context.queue_index,
@@ -220,7 +220,7 @@ bool ChannelState::TrySendData(const Context &context) {
                                            fbb.GetBufferPointer()),
                                        fbb.GetSize()),
                       peer.sac_assoc_id, peer.stream, time_to_live_ms)) {
-      ftrace_.FormatMessage(
+      ftrace_.FormatEvent(
           "Bridge sent channel=%d peer=%d queue=%" PRIu32 " event=%" PRId64
           " size=%u ttl_ms=%d",
           channel_index_, peer.node_index, context.queue_index,
@@ -232,7 +232,7 @@ bool ChannelState::TrySendData(const Context &context) {
       }
       peer.last_sent_index = context.queue_index;
     } else {
-      ftrace_.FormatMessage(
+      ftrace_.FormatEvent(
           "Bridge disconnected channel=%d peer=%d queue=%" PRIu32
           " event=%" PRId64 " size=%u ttl_ms=%d",
           channel_index_, peer.node_index, context.queue_index,

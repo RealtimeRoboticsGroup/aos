@@ -73,7 +73,7 @@ void Ftrace::TurnOffOrDie() {
 #endif
 }
 
-void Ftrace::FormatMessage(const char *format, ...) {
+void Ftrace::FormatEvent(const char *format, ...) {
   if (message_fd_ == -1) {
     return;
   }
@@ -84,10 +84,10 @@ void Ftrace::FormatMessage(const char *format, ...) {
   va_end(ap);
   CHECK_LE(static_cast<size_t>(result), sizeof(buffer))
       << ": Format string ended up too long: " << format;
-  WriteMessage(std::string_view(buffer, result));
+  WriteEvent(std::string_view(buffer, result));
 }
 
-void Ftrace::WriteMessage(std::string_view content) {
+void Ftrace::WriteEvent(std::string_view content) {
   if (message_fd_ == -1) {
     return;
   }
@@ -97,9 +97,9 @@ void Ftrace::WriteMessage(std::string_view content) {
     // This just means tracing is turned off. Ignore it.
     return;
   }
-  PCHECK(result >= 0) << ": Failed to write ftrace message: " << content;
+  PCHECK(result >= 0) << ": Failed to write ftrace event: " << content;
   CHECK_EQ(static_cast<size_t>(result), content.size())
-      << ": Failed to write complete ftrace message: " << content;
+      << ": Failed to write complete ftrace event: " << content;
 #endif
 }
 
