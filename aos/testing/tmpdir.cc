@@ -1,7 +1,11 @@
 #include "aos/testing/tmpdir.h"
 
 #include <cstdlib>
+#include <filesystem>
 #include <string>
+#ifdef _WIN32
+#include <process.h>
+#endif
 
 #include "absl/flags/flag.h"
 
@@ -19,7 +23,26 @@ std::string TestTmpDirOr(std::string fallback) {
 }
 }  // namespace
 
-std::string TestTmpDir() { return TestTmpDirOr("/tmp"); }
+std::string TestTmpDir() {
+#ifdef _WIN32
+  // On Windows, Bazel does not provide the same mount/namespace isolation for
+  // temporary directories as Linux does. As a result, parallel test shards or
+  // concurrent test processes might share the same temp directory.
+  //
+  // Furthermore, Windows enforces strict file locking (sharing violations)
+  // which prevents deleting or overwriting files that are currently open.
+  // During Google Test death tests, the test binary is re-executed in a
+  // subprocess. If both parent and child processes write to the same temporary
+  // directory, they will collide and fail due to file locks. Appending the PID
+  // ensures each process (and child subprocess) gets a unique, isolated temp
+  // folder.
+  std::string path = TestTmpDirOr("/tmp") + "/" + std::to_string(_getpid());
+  std::filesystem::create_directories(path);
+  return path;
+#else
+  return TestTmpDirOr("/tmp");
+#endif
+}
 
 void SetTestShmBase() {
   SetShmBase(TestTmpDirOr(absl::GetFlag(FLAGS_shm_base)));
