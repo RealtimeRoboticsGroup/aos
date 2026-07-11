@@ -94,6 +94,7 @@ class RobustOwnershipTrackerTest : public ::testing::Test {
     return tracker.mutex_;
   }
 
+#ifndef __APPLE__
   // Returns the current start time in ticks.
   uint64_t GetStartTimeTicks(RobustOwnershipTracker &tracker) {
     return tracker.start_time_ticks_.load();
@@ -103,6 +104,7 @@ class RobustOwnershipTrackerTest : public ::testing::Test {
   void SetStartTimeTicks(RobustOwnershipTracker &tracker, uint64_t start_time) {
     tracker.start_time_ticks_ = start_time;
   }
+#endif
 };
 
 // Tests that acquiring the futex doesn't erroneously report the owner (i.e.
@@ -159,6 +161,7 @@ TEST_F(RobustOwnershipTrackerTest, NoMatchingPID) {
   shared_tracker.PreventRelease();
 }
 
+#ifndef __APPLE__
 // Tests that a mismatched start time results in the process being marked as
 // dead.
 TEST_F(RobustOwnershipTrackerTest, NoMatchingStartTime) {
@@ -179,5 +182,6 @@ TEST_F(RobustOwnershipTrackerTest, NoMatchingStartTime) {
   EXPECT_FALSE(shared_tracker.tracker().LoadRelaxed().OwnerIsDead());
   EXPECT_TRUE(shared_tracker.tracker().OwnerIsDefinitelyAbsolutelyDead());
 }
+#endif
 
 }  // namespace aos::ipc_lib::testing

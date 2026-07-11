@@ -234,7 +234,11 @@ cc_library(
                 "lockless_queue.cc",
                 "lockless_queue_memory.h",
                 "robust_ownership_tracker.cc",
-            ],
+            ] + select({
+                "@platforms//os:linux": ["robust_ownership_tracker_linux.cc"],
+                "@platforms//os:macos": ["robust_ownership_tracker_darwin.cc"],
+                "@platforms//os:windows": ["robust_ownership_tracker_windows.cc"],
+            }),
             hdrs = [
                 "lockless_queue.h",
                 "robust_ownership_tracker.h",

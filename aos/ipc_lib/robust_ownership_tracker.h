@@ -54,8 +54,6 @@ class RobustOwnershipTracker {
   static constexpr uint64_t kNoStartTimeTicks =
       std::numeric_limits<uint64_t>::max();
 
-  static uint64_t ReadStartTimeTicks(pid_t tid);
-
   // Loads the realtime-compatible contents of the ownership tracker with
   // Acquire memory ordering.
   ThreadOwnerStatusSnapshot LoadAcquire() const;
@@ -81,6 +79,19 @@ class RobustOwnershipTracker {
   bool IsHeldBy(pid_t tid);
 
   // Acquires ownership.
+  //
+  // There is a subtle ordering of operations here: the metadata
+  // (start_time_ticks_, owner_pid_, owner_thread_id_) must be fully written
+  // and visible BEFORE the futex is claimed by death_notification_init.
+  // Otherwise, another process inspecting the tracker concurrently could see
+  // that the futex is claimed but find the metadata is still unset (or
+  // contains stale values), incorrectly concluding that the owner is dead.
+  //
+  // Note that if two processes concurrently attempt to call Acquire() on the
+  // same tracker, they could overwrite each other's metadata before either
+  // claims the futex, leading to state corruption.  Callers must serialize
+  // calls to Acquire() (e.g., using a higher-level lock, as is done in the
+  // lockless queue implementation via the queue setup lock).
   void Acquire();
 
   // Releases ownership.
@@ -93,7 +104,12 @@ class RobustOwnershipTracker {
   friend class testing::RobustOwnershipTrackerTest;
 
   aos_mutex mutex_;
+#ifdef __APPLE__
+  std::atomic<pid_t> owner_pid_;
+  std::atomic<uint64_t> owner_thread_id_;
+#else
   std::atomic<uint64_t> start_time_ticks_;
+#endif
 };
 
 }  // namespace aos::ipc_lib
