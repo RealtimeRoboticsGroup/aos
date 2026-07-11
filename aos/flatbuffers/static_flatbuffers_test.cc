@@ -43,8 +43,6 @@
 #include "aos/testing/path.h"
 #include "aos/testing/tmpdir.h"
 #include "aos/util/file.h"
-#include "src/annotated_binary_text_gen.h"
-#include "src/binary_annotator.h"
 
 namespace aos::fbs::testing {
 
