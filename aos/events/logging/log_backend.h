@@ -27,6 +27,13 @@
 
 namespace aos::logger {
 
+#ifdef _WIN32
+inline constexpr int kIovMax = 1024;
+#else
+#include <climits>
+inline constexpr int kIovMax = IOV_MAX;
+#endif
+
 // Currently, all write operations only cares about out-of-space error. This is
 // a simple representation of write result.
 enum class WriteCode { kOk, kOutOfSpace };

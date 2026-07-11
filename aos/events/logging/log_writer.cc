@@ -1,7 +1,5 @@
 #include "aos/events/logging/log_writer.h"
 
-#include <dirent.h>
-
 #include <functional>
 #include <map>
 #include <vector>

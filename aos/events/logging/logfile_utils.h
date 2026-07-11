@@ -1,8 +1,6 @@
 #ifndef AOS_EVENTS_LOGGING_LOGFILE_UTILS_H_
 #define AOS_EVENTS_LOGGING_LOGFILE_UTILS_H_
 
-#include <sys/uio.h>
-
 #include <chrono>
 #include <deque>
 #include <limits>

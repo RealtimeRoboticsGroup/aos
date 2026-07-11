@@ -99,9 +99,7 @@ class BufferEncoderBaseTest : public ::testing::Test {
     const flatbuffers::Offset<flatbuffers::Vector<uint8_t>> data_offset =
         fbb.CreateUninitializedVector(length, &data);
     {
-      std::independent_bits_engine<std::mt19937, CHAR_BIT, uint8_t> engine(
-          std::ref(random_number_generator_));
-      const uint8_t byte = engine();
+      const uint8_t byte = static_cast<uint8_t>(random_number_generator_());
       std::fill(data, data + length, byte);
     }
 

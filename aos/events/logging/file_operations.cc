@@ -27,18 +27,20 @@ void LocalFileOperations::FindLogs(std::vector<File> *files) {
       });
     }
   };
-  if (std::filesystem::is_directory(filename_)) {
-    VLOG(1) << "Searching in " << filename_;
+  std::filesystem::path base_path(filename_);
+  if (std::filesystem::is_directory(base_path)) {
+    VLOG(1) << "Searching in " << base_path;
     for (const auto &file :
-         std::filesystem::recursive_directory_iterator(filename_)) {
+         std::filesystem::recursive_directory_iterator(base_path)) {
       if (!file.is_regular_file()) {
         VLOG(1) << file << " is not file.";
         continue;
       }
-      MaybeAddFile(file.path().string(), file.file_size());
+      MaybeAddFile(file.path().generic_string(), file.file_size());
     }
   } else {
-    MaybeAddFile(filename_, std::filesystem::file_size(filename_));
+    MaybeAddFile(base_path.generic_string(),
+                 std::filesystem::file_size(base_path));
   }
 }
 

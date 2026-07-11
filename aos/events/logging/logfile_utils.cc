@@ -3,7 +3,6 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/uio.h>
 
 #include <algorithm>
 #include <climits>
@@ -239,7 +238,7 @@ void DetachedBufferWriter::FlushAtThreshold(
   while (encoder_->space() == 0 ||
          encoder_->queued_bytes() >
              static_cast<size_t>(absl::GetFlag(FLAGS_flush_size)) ||
-         encoder_->queue_size() >= IOV_MAX ||
+         encoder_->queue_size() >= kIovMax ||
          (now > last_flush_time_ + chrono::duration_cast<chrono::nanoseconds>(
                                        chrono::duration<double>(absl::GetFlag(
                                            FLAGS_flush_period))) &&

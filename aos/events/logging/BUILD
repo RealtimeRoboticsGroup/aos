@@ -281,7 +281,10 @@ cc_library(
     name = "buffer_encoder",
     srcs = [
         "buffer_encoder.cc",
-    ],
+    ] + select({
+        "@platforms//os:windows": ["buffer_encoder_windows.cc"],
+        "//conditions:default": ["buffer_encoder_unix.cc"],
+    }),
     hdrs = [
         "buffer_encoder.h",
     ],
