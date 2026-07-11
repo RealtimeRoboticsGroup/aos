@@ -158,7 +158,7 @@ void CameraImageCallback::HandleImage(const CameraImage &image) {
       std::chrono::duration_cast<std::chrono::duration<double>>(age).count();
   if (age > max_age_) {
     if (absl::GetFlag(FLAGS_enable_ftrace)) {
-      ftrace_.FormatMessage("Too late receiving image, age: %f\n", age_double);
+      ftrace_.FormatEvent("Too late receiving image, age: %f\n", age_double);
       if (absl::GetFlag(FLAGS_disable_delay) > 0) {
         if (!disabling_) {
           timer_fn_->Schedule(
@@ -174,7 +174,7 @@ void CameraImageCallback::HandleImage(const CameraImage &image) {
     return;
   }
 
-  ftrace_.FormatMessage("Starting conversion\n");
+  ftrace_.FormatEvent("Starting conversion\n");
   handle_image_(image, eof);
 }
 

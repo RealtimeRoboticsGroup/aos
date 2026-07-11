@@ -58,7 +58,7 @@ class State {
                            std::chrono::duration<double>(
                                absl::GetFlag(FLAGS_max_jitter)))) {
         if (absl::GetFlag(FLAGS_enable_ftrace)) {
-          ftrace_->FormatMessage(
+          ftrace_->FormatEvent(
               "Got high latency event on %s -> %.9f between messages",
               channel_name_.c_str(),
               std::chrono::duration<double>(context.monotonic_event_time -

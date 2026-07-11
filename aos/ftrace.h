@@ -15,16 +15,16 @@ class Ftrace {
   Ftrace();
   ~Ftrace();
 
-  // Writes a message with a printf-style format.
+  // Writes an event with a printf-style format.
   //
   // Silently does nothing if tracing is disabled.
   AOS_PRINTF_FORMAT(2, 3)
-  void FormatMessage(const char *format, ...);
+  void FormatEvent(const char *format, ...);
 
-  // Writes a preformatted message.
+  // Writes a preformatted event.
   //
   // Silently does nothing if tracing is disabled.
-  void WriteMessage(std::string_view content);
+  void WriteEvent(std::string_view content);
 
   // Turns tracing off, or CHECK-fails if tracing is inaccessible. Does nothing
   // if tracing is currently available but off.

@@ -86,7 +86,7 @@ inline bool RawFetcher::FetchNext() {
       timing_.fetcher->mutate_count(timing_.fetcher->count() + 1);
     }
     const monotonic_clock::time_point monotonic_time = result.second;
-    ftrace_.FormatMessage(
+    ftrace_.FormatEvent(
         "%.*s: fetch next: now=%" PRId64 " event=%" PRId64 " queue=%" PRIu32,
         static_cast<int>(ftrace_prefix_.size()), ftrace_prefix_.data(),
         static_cast<int64_t>(monotonic_time.time_since_epoch().count()),
@@ -100,7 +100,7 @@ inline bool RawFetcher::FetchNext() {
     timing_.latency.Add(latency);
     return true;
   }
-  ftrace_.FormatMessage(
+  ftrace_.FormatEvent(
       "%.*s: fetch next: still event=%" PRId64 " queue=%" PRIu32,
       static_cast<int>(ftrace_prefix_.size()), ftrace_prefix_.data(),
       static_cast<int64_t>(
@@ -140,7 +140,7 @@ inline RawFetcher::Result RawFetcher::FetchNextIfWithStatus(
       timing_.fetcher->mutate_count(timing_.fetcher->count() + 1);
     }
     const monotonic_clock::time_point monotonic_time = result.second;
-    ftrace_.FormatMessage(
+    ftrace_.FormatEvent(
         "%.*s: fetch next if: now=%" PRId64 " event=%" PRId64 " queue=%" PRIu32,
         static_cast<int>(ftrace_prefix_.size()), ftrace_prefix_.data(),
         static_cast<int64_t>(monotonic_time.time_since_epoch().count()),
@@ -154,7 +154,7 @@ inline RawFetcher::Result RawFetcher::FetchNextIfWithStatus(
     timing_.latency.Add(latency);
     return result.first;
   }
-  ftrace_.FormatMessage(
+  ftrace_.FormatEvent(
       "%.*s: fetch next: still event=%" PRId64 " queue=%" PRIu32,
       static_cast<int>(ftrace_prefix_.size()), ftrace_prefix_.data(),
       static_cast<int64_t>(
@@ -170,7 +170,7 @@ inline bool RawFetcher::Fetch() {
       timing_.fetcher->mutate_count(timing_.fetcher->count() + 1);
     }
     const monotonic_clock::time_point monotonic_time = result.second;
-    ftrace_.FormatMessage(
+    ftrace_.FormatEvent(
         "%.*s: fetch latest: now=%" PRId64 " event=%" PRId64 " queue=%" PRIu32,
         static_cast<int>(ftrace_prefix_.size()), ftrace_prefix_.data(),
         static_cast<int64_t>(monotonic_time.time_since_epoch().count()),
@@ -184,7 +184,7 @@ inline bool RawFetcher::Fetch() {
     timing_.latency.Add(latency);
     return true;
   }
-  ftrace_.FormatMessage(
+  ftrace_.FormatEvent(
       "%.*s: fetch latest: still event=%" PRId64 " queue=%" PRIu32,
       static_cast<int>(ftrace_prefix_.size()), ftrace_prefix_.data(),
       static_cast<int64_t>(
@@ -202,7 +202,7 @@ inline bool RawFetcher::FetchIf(std::function<bool(const Context &)> fn) {
       timing_.fetcher->mutate_count(timing_.fetcher->count() + 1);
     }
     const monotonic_clock::time_point monotonic_time = result.second;
-    ftrace_.FormatMessage(
+    ftrace_.FormatEvent(
         "%.*s: fetch latest: now=%" PRId64 " event=%" PRId64 " queue=%" PRIu32,
         static_cast<int>(ftrace_prefix_.size()), ftrace_prefix_.data(),
         static_cast<int64_t>(monotonic_time.time_since_epoch().count()),
@@ -216,7 +216,7 @@ inline bool RawFetcher::FetchIf(std::function<bool(const Context &)> fn) {
     timing_.latency.Add(latency);
     return true;
   }
-  ftrace_.FormatMessage(
+  ftrace_.FormatEvent(
       "%.*s: fetch latest: still event=%" PRId64 " queue=%" PRIu32,
       static_cast<int>(ftrace_prefix_.size()), ftrace_prefix_.data(),
       static_cast<int64_t>(
@@ -240,7 +240,7 @@ inline RawSender::Error RawSender::Send(
              monotonic_remote_transmit_time, remote_queue_index, uuid);
   RecordSendResult(err, size);
   if (err == Error::kOk) {
-    ftrace_.FormatMessage(
+    ftrace_.FormatEvent(
         "%.*s: sent internal: event=%" PRId64 " queue=%" PRIu32,
         static_cast<int>(ftrace_prefix_.size()), ftrace_prefix_.data(),
         static_cast<int64_t>(monotonic_sent_time().time_since_epoch().count()),
@@ -265,7 +265,7 @@ inline RawSender::Error RawSender::Send(
              monotonic_remote_transmit_time, remote_queue_index, uuid);
   RecordSendResult(err, size);
   if (err == RawSender::Error::kOk) {
-    ftrace_.FormatMessage(
+    ftrace_.FormatEvent(
         "%.*s: sent external: event=%" PRId64 " queue=%" PRIu32,
         static_cast<int>(ftrace_prefix_.size()), ftrace_prefix_.data(),
         static_cast<int64_t>(monotonic_sent_time().time_since_epoch().count()),
@@ -292,7 +292,7 @@ inline RawSender::Error RawSender::Send(
              monotonic_remote_transmit_time, remote_queue_index, uuid);
   RecordSendResult(err, size);
   if (err == Error::kOk) {
-    ftrace_.FormatMessage(
+    ftrace_.FormatEvent(
         "%.*s: sent shared: event=%" PRId64 " queue=%" PRIu32,
         static_cast<int>(ftrace_prefix_.size()), ftrace_prefix_.data(),
         static_cast<int64_t>(monotonic_sent_time().time_since_epoch().count()),
@@ -308,7 +308,7 @@ inline monotonic_clock::time_point TimerHandler::Call(
 
   event_loop_->SetTimerContext(event_time);
 
-  ftrace_.FormatMessage(
+  ftrace_.FormatEvent(
       "timer: %.*s: start now=%" PRId64 " event=%" PRId64,
       static_cast<int>(name_.size()), name_.data(),
       static_cast<int64_t>(monotonic_start_time.time_since_epoch().count()),
@@ -324,7 +324,7 @@ inline monotonic_clock::time_point TimerHandler::Call(
   fn_();
 
   const monotonic_clock::time_point monotonic_end_time = get_time();
-  ftrace_.FormatMessage(
+  ftrace_.FormatEvent(
       "timer: %.*s: end now=%" PRId64, static_cast<int>(name_.size()),
       name_.data(),
       static_cast<int64_t>(monotonic_end_time.time_since_epoch().count()));
@@ -348,7 +348,7 @@ inline void PhasedLoopHandler::Call(
   // Compute how many cycles elapsed
   cycles_elapsed_ += phased_loop_.Iterate(monotonic_start_time);
 
-  ftrace_.FormatMessage(
+  ftrace_.FormatEvent(
       "phased: %.*s: start now=%" PRId64 " event=%" PRId64 " cycles=%d",
       static_cast<int>(name_.size()), name_.data(),
       static_cast<int64_t>(monotonic_start_time.time_since_epoch().count()),
@@ -372,7 +372,7 @@ inline void PhasedLoopHandler::Call(
   Schedule(phased_loop_.sleep_time());
 
   const monotonic_clock::time_point monotonic_end_time = get_time();
-  ftrace_.FormatMessage(
+  ftrace_.FormatEvent(
       "phased: %.*s: end now=%" PRId64, static_cast<int>(name_.size()),
       name_.data(),
       static_cast<int64_t>(monotonic_end_time.time_since_epoch().count()));
@@ -410,7 +410,7 @@ class WatcherState {
       CheckChannelDataAlignment(context.data, context.size);
     }
     const monotonic_clock::time_point monotonic_start_time = get_time();
-    ftrace_.FormatMessage(
+    ftrace_.FormatEvent(
         "%.*s: watcher start: now=%" PRId64 " event=%" PRId64 " queue=%" PRIu32,
         static_cast<int>(ftrace_prefix_.size()), ftrace_prefix_.data(),
         static_cast<int64_t>(monotonic_start_time.time_since_epoch().count()),
@@ -428,7 +428,7 @@ class WatcherState {
     fn_(context, context.data);
 
     const monotonic_clock::time_point monotonic_end_time = get_time();
-    ftrace_.FormatMessage(
+    ftrace_.FormatEvent(
         "%.*s: watcher end: now=%" PRId64,
         static_cast<int>(ftrace_prefix_.size()), ftrace_prefix_.data(),
         static_cast<int64_t>(monotonic_end_time.time_since_epoch().count()));
