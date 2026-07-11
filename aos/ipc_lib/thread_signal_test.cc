@@ -1,5 +1,9 @@
 #include "aos/ipc_lib/thread_signal.h"
 
+#ifdef __APPLE__
+#define FUTEX_TID_MASK 0x3fffffff
+#endif
+
 #include <chrono>
 #include <thread>
 
@@ -46,7 +50,13 @@ TEST(ThreadSignalTest, BasicSignalWakeup) {
   ThreadSignal signal;
 
   const pid_t pid = getpid();
+#ifdef __APPLE__
+  uint64_t mac_tid;
+  pthread_threadid_np(NULL, &mac_tid);
+  const pid_t tid = static_cast<pid_t>(mac_tid) & FUTEX_TID_MASK;
+#else
   const pid_t tid = syscall(SYS_gettid);
+#endif
 
   std::thread signaler([pid, tid]() {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));

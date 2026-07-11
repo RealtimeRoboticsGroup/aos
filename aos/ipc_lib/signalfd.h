@@ -9,6 +9,10 @@
 
 #include "aos/ipc_lib/thread_signal.h"
 #else
+#include <signal.h>
+
+#include <vector>
+
 #include "aos/ipc_lib/thread_signal.h"
 #endif
 
@@ -17,19 +21,28 @@
 namespace aos::ipc_lib {
 
 // Class to manage a signalfd.
+//
+// On macOS/Darwin, this class is emulated using kqueue EVFILT_SIGNAL via the
+// event loop, and its fd() method always returns -1. Because macOS only
+// supports process-directed signals across processes, any thread wakeups via
+// ThreadSignal can trigger spurious wakeups on other threads waiting in the
+// same process.
 class SignalFd {
  public:
   // Constructs a SignalFd for the provided list of signals.
   // Blocks the signals at the same time in this thread.
+  // On macOS, ignores the signals process-wide instead of blocking them.
   SignalFd(::std::initializer_list<unsigned int> signal_list);
 
   SignalFd(const SignalFd &) = delete;
   SignalFd &operator=(const SignalFd &) = delete;
   ~SignalFd();
 
+#if defined(__linux__)
   // Reads a signalfd_siginfo.  If there was an error, the resulting ssi_signo
   // will be 0.
   signalfd_siginfo Read();
+#endif
 
   // Ensures the destructor will leave the specific signal blocked. This can be
   // helpful if the signal is sent asynchronously, such that it may arrive after
@@ -44,7 +57,7 @@ class SignalFd {
   HANDLE fd() const { return signal_.event_handle(); }
 #else
   // Fallback for non-Linux, non-Windows systems (e.g. Darwin stub)
-  int fd() const { return signal_number_; }
+  int fd() const { return -1; }
 #endif
 
  private:
@@ -57,6 +70,12 @@ class SignalFd {
   ThreadSignal signal_;
 #else
   ThreadSignal signal_;
+  struct SignalState {
+    unsigned int signal;
+    struct sigaction old_sa;
+    bool restore = true;
+  };
+  std::vector<SignalState> signals_;
 #endif
 };
 

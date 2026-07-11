@@ -1,10 +1,12 @@
 #include "aos/ipc_lib/signalfd.h"
 
+#if !defined(__linux__) && !defined(__APPLE__)
 namespace aos::ipc_lib {
 
-#ifndef __linux__
 SignalFd::SignalFd(::std::initializer_list<unsigned int> /*signal_list*/) {}
 SignalFd::~SignalFd() {}
-#endif
+
+void SignalFd::LeaveSignalBlocked(unsigned int /*signal*/) {}
 
 }  // namespace aos::ipc_lib
+#endif

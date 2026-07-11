@@ -13,6 +13,8 @@ namespace aos::ipc_lib {
 
 #ifdef _WIN32
 const static unsigned int kWakeupSignal = 0;
+#elif defined(__APPLE__)
+const static unsigned int kWakeupSignal = SIGUSR1;
 #else
 const static unsigned int kWakeupSignal = SIGRTMIN + 2;
 #endif
@@ -30,6 +32,9 @@ class ThreadSignal {
   // Wakes up the target thread.
   // On Linux, this uses rt_tgsigqueueinfo.
   // On Windows, this opens and signals the thread's named event.
+  // On macOS, since cross-process thread-directed signals are not supported,
+  // this sends a process-directed signal (kill) using kWakeupSignal, which
+  // may trigger spurious wakeups on other threads waiting in the same process.
   void Signal(pid_t pid, pid_t tid);
 
 #ifdef _WIN32

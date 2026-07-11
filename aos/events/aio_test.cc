@@ -21,6 +21,7 @@
 #include "gtest/gtest.h"
 
 #include "aos/events/pipe.h"
+#include "aos/ipc_lib/event.h"
 #include "aos/ipc_lib/signalfd.h"
 #include "aos/ipc_lib/thread_signal.h"
 #include "aos/realtime.h"
@@ -218,6 +219,97 @@ TEST_P(AioTest, MultiThreadSignalTest) {
 
   signaler.join();
   aio.UnregisterSignalFd(&sfd);
+}
+
+// Tests that signaling targets the correct thread for wakeups using Aio.
+// On macOS, process-wide signals trigger the kqueue of any thread, which is
+// acceptable as spurious wakeups are tolerated by the event loop.
+TEST_P(AioTest, TargetedThreadWakeup) {
+  std::atomic<pid_t> tid_a{0};
+  std::atomic<pid_t> tid_b{0};
+  aos::Event done_a;
+  aos::Event done_b;
+  aos::Event waiting_a;
+  aos::Event waiting_b;
+  std::atomic<bool> quit_b{false};
+
+  std::thread thread_a([&]() {
+    tid_a = aos::GetThreadId();
+    Aio aio;
+    aos::ipc_lib::SignalFd sfd({aos::ipc_lib::kWakeupSignal});
+    bool done = false;
+    aio.RegisterSignalFd(&sfd, [&]() {
+      done = true;
+      done_a.Set();
+    });
+
+    waiting_a.Set();
+    while (!done && aio.Poll(true)) {
+    }
+    sfd.LeaveSignalBlocked(aos::ipc_lib::kWakeupSignal);
+    aio.UnregisterSignalFd(&sfd);
+  });
+
+  std::thread thread_b([&]() {
+    tid_b = aos::GetThreadId();
+    Aio aio;
+    aos::ipc_lib::SignalFd sfd({aos::ipc_lib::kWakeupSignal});
+    bool done = false;
+    aio.RegisterSignalFd(&sfd, [&]() {
+      done_b.Set();
+      if (quit_b) {
+        done = true;
+      }
+    });
+
+    waiting_b.Set();
+    while (!done && aio.Poll(true)) {
+    }
+    sfd.LeaveSignalBlocked(aos::ipc_lib::kWakeupSignal);
+    aio.UnregisterSignalFd(&sfd);
+  });
+
+  // Wait until both threads have started, constructed their SignalFds,
+  // and entered their wait loops.
+  waiting_a.Wait();
+  waiting_b.Wait();
+
+  const pid_t pid = aos::GetProcessId();
+
+  // Signal Thread A exactly once.
+  aos::ipc_lib::ThreadSignal signaler;
+  signaler.Signal(pid, tid_a);
+
+  // The signal must successfully wake up Thread A.
+  EXPECT_TRUE(done_a.WaitTimeout(std::chrono::seconds(2)));
+
+  // Join Thread A to verify it finished and exited while Thread B remains
+  // active.
+  thread_a.join();
+
+#if !defined(__APPLE__)
+  // On platforms with targeted thread wakeups (Linux/Windows), Thread B must
+  // remain blocked because we only signaled Thread A.
+  EXPECT_FALSE(done_b.WaitTimeout(std::chrono::milliseconds(50)));
+
+  // Now ensure Thread B is signaled for the first time.
+  signaler.Signal(pid, tid_b);
+#endif
+
+  // Thread B must successfully wake up from its first signal.
+  EXPECT_TRUE(done_b.WaitTimeout(std::chrono::seconds(2)));
+
+  // Clear the done_b event and tell Thread B it should quit on the next signal.
+  done_b.Clear();
+  quit_b = true;
+
+  // Signal Thread B a second time.
+  signaler.Signal(pid, tid_b);
+
+  // Thread B must successfully wake up from its second signal and exit.
+  EXPECT_TRUE(done_b.WaitTimeout(std::chrono::seconds(2)));
+
+  thread_b.join();
 }
 
 // Tests that we can cancel a timer immediately after scheduling it.

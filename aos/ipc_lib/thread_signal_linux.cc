@@ -16,6 +16,10 @@ ThreadSignal::ThreadSignal(ThreadSignal && /*other*/)
 ThreadSignal &ThreadSignal::operator=(ThreadSignal &&) { return *this; }
 
 void ThreadSignal::Signal(pid_t pid, pid_t tid) {
+#ifdef __APPLE__
+  (void)tid;
+  kill(pid, kWakeupSignal);
+#else
   siginfo_t uinfo;
   memset(&uinfo, 0, sizeof(uinfo));
   uinfo.si_code = SI_QUEUE;
@@ -23,6 +27,7 @@ void ThreadSignal::Signal(pid_t pid, pid_t tid) {
   uinfo.si_uid = uid_;
   uinfo.si_value.sival_int = 0;
   syscall(SYS_rt_tgsigqueueinfo, pid, tid, kWakeupSignal, &uinfo);
+#endif
 }
 
 }  // namespace aos::ipc_lib

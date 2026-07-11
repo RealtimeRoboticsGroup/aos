@@ -73,6 +73,7 @@ cc_test(
         ":aio",
         ":pipe",
         "//aos:realtime",
+        "//aos/ipc_lib:event",
         "//aos/ipc_lib:signalfd",
         "//aos/ipc_lib:thread_signal",
         "//aos/testing:googletest",

@@ -132,6 +132,7 @@ cc_library(
     name = "signalfd",
     srcs = select({
         "@platforms//os:linux": ["signalfd.cc"],
+        "@platforms//os:macos": ["signalfd_darwin.cc"],
         "//conditions:default": ["signalfd_stub.cc"],
     }),
     hdrs = [
