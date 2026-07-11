@@ -1,12 +1,15 @@
 #include "frc/vision/geometry.h"
 
 #include <cmath>
+#include <numbers>
 
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "gtest/gtest.h"
 
 #include "aos/util/math.h"
+
+namespace numbers = std::numbers;
 
 namespace frc::vision::testing {
 
@@ -76,14 +79,14 @@ TEST(GeometryTest, Circle) {
     // Coordinate systems flipped because of image
     const cv::Point2d kPoint = {c->center.x - c->radius * std::sqrt(3.0) / 2.0,
                                 c->center.y - c->radius / 2.0};
-    EXPECT_NEAR(c->AngleOf(kPoint), 5.0 * M_PI / 6.0, 1e-5);
-    EXPECT_TRUE(c->InAngleRange(kPoint, 4.0 * M_PI / 6.0, M_PI));
-    EXPECT_FALSE(c->InAngleRange(kPoint, 0, 2.0 * M_PI / 6.0));
+    EXPECT_NEAR(c->AngleOf(kPoint), 5.0 * numbers::pi / 6.0, 1e-5);
+    EXPECT_TRUE(c->InAngleRange(kPoint, 4.0 * numbers::pi / 6.0, numbers::pi));
+    EXPECT_FALSE(c->InAngleRange(kPoint, 0, 2.0 * numbers::pi / 6.0));
     EXPECT_EQ(c->DistanceTo(kPoint), 0.0);
 
     const cv::Point2d kZeroPoint = {c->center.x + c->radius, c->center.y};
     EXPECT_NEAR(c->AngleOf(kZeroPoint), 0.0, 1e-5);
-    EXPECT_TRUE(c->InAngleRange(kZeroPoint, (2.0 * M_PI) - 0.1, 0.1));
+    EXPECT_TRUE(c->InAngleRange(kZeroPoint, (2.0 * numbers::pi) - 0.1, 0.1));
     EXPECT_EQ(c->DistanceTo(kZeroPoint), 0.0);
 
     // Test the distance to another point
@@ -103,10 +106,10 @@ TEST(GeometryTest, Circle) {
   // Test if angles are in ranges
   {
     EXPECT_TRUE(Circle::AngleInRange(0.5, 0.4, 0.6));
-    EXPECT_TRUE(Circle::AngleInRange(0, (2.0 * M_PI) - 0.2, 0.2));
-    EXPECT_FALSE(
-        Circle::AngleInRange(0, (2.0 * M_PI) - 0.2, (2.0 * M_PI) - 0.1));
-    EXPECT_TRUE(Circle::AngleInRange(0.5, (2.0 * M_PI) - 0.1, 0.6));
+    EXPECT_TRUE(Circle::AngleInRange(0, (2.0 * numbers::pi) - 0.2, 0.2));
+    EXPECT_FALSE(Circle::AngleInRange(0, (2.0 * numbers::pi) - 0.2,
+                                      (2.0 * numbers::pi) - 0.1));
+    EXPECT_TRUE(Circle::AngleInRange(0.5, (2.0 * numbers::pi) - 0.1, 0.6));
   }
 }
 

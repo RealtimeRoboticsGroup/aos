@@ -1,5 +1,7 @@
 #include "frc/vision/visualize_robot.h"
 
+#include <numbers>
+
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "opencv2/calib3d.hpp"
@@ -7,12 +9,14 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 
+namespace numbers = std::numbers;
+
 namespace frc::vision {
 
 void VisualizeRobot::SetDefaultViewpoint(int image_width, double focal_length) {
   // 10 meters above the origin, rotated so the camera faces straight down
   Eigen::Translation3d camera_trans(0, 0, 3.0);
-  Eigen::AngleAxisd camera_rot(M_PI, Eigen::Vector3d::UnitX());
+  Eigen::AngleAxisd camera_rot(numbers::pi, Eigen::Vector3d::UnitX());
   Eigen::Affine3d camera_viewpoint = camera_trans * camera_rot;
   SetViewpoint(camera_viewpoint);
 

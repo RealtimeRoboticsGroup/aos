@@ -1,5 +1,6 @@
 #include "frc/control_loops/quaternion_utils.h"
 
+#include <numbers>
 #include <random>
 
 #include "Eigen/Dense"
@@ -10,6 +11,8 @@
 #include "aos/testing/random_seed.h"
 #include "frc/control_loops/jacobian.h"
 #include "frc/control_loops/runge_kutta.h"
+
+namespace numbers = std::numbers;
 
 namespace frc::controls::testing {
 
@@ -63,10 +66,11 @@ TEST(DownEstimatorTest, ToRotationVectorFromQuaternionAtZero) {
 TEST(DownEstimatorTest, ToRotationVectorFromQuaternion) {
   Eigen::Matrix<double, 3, 1> vector = ToRotationVectorFromQuaternion(
       Eigen::Quaternion<double>(
-          Eigen::AngleAxis<double>(M_PI * 0.5, Eigen::Vector3d::UnitX()))
+          Eigen::AngleAxis<double>(numbers::pi * 0.5, Eigen::Vector3d::UnitX()))
           .coeffs());
 
-  EXPECT_NEAR(0.0, (vector - Eigen::Vector3d::UnitX() * M_PI * 0.5).norm(),
+  EXPECT_NEAR(0.0,
+              (vector - Eigen::Vector3d::UnitX() * numbers::pi * 0.5).norm(),
               1e-4);
 }
 
@@ -76,11 +80,13 @@ TEST(DownEstimatorTest, ToRotationVectorFromQuaternionNegative) {
   Eigen::Matrix<double, 3, 1> vector = ToRotationVectorFromQuaternion(
       Eigen::Quaternion<double>(
           -Eigen::Quaternion<double>(
-               Eigen::AngleAxis<double>(M_PI * 0.5, Eigen::Vector3d::UnitX()))
+               Eigen::AngleAxis<double>(numbers::pi * 0.5,
+                                        Eigen::Vector3d::UnitX()))
                .coeffs())
           .coeffs());
 
-  EXPECT_NEAR(0.0, (vector - Eigen::Vector3d::UnitX() * M_PI * 0.5).norm(),
+  EXPECT_NEAR(0.0,
+              (vector - Eigen::Vector3d::UnitX() * numbers::pi * 0.5).norm(),
               1e-4);
 }
 
@@ -100,17 +106,18 @@ TEST(DownEstimatorTest, ToQuaternionFromRotationVectorAtZero) {
 
 // Tests that ToQuaternionFromRotationVector works for a real rotation.
 TEST(DownEstimatorTest, ToQuaternionFromRotationVector) {
-  Eigen::Matrix<double, 4, 1> quaternion =
-      ToQuaternionFromRotationVector(Eigen::Vector3d::UnitX() * M_PI * 0.5);
+  Eigen::Matrix<double, 4, 1> quaternion = ToQuaternionFromRotationVector(
+      Eigen::Vector3d::UnitX() * numbers::pi * 0.5);
 
-  EXPECT_NEAR(0.0,
-              (quaternion - Eigen::Quaternion<double>(
-                                Eigen::AngleAxis<double>(
-                                    M_PI * 0.5, Eigen::Vector3d::UnitX()))
-                                .coeffs())
+  EXPECT_NEAR(
+      0.0,
+      (quaternion - Eigen::Quaternion<double>(
+                        Eigen::AngleAxis<double>(numbers::pi * 0.5,
+                                                 Eigen::Vector3d::UnitX()))
+                        .coeffs())
 
-                  .norm(),
-              1e-4);
+          .norm(),
+      1e-4);
 }
 
 // Tests that ToQuaternionFromRotationVector correctly clips a rotation vector
@@ -139,7 +146,7 @@ TEST(DownEstimatorTest, RandomQuaternions) {
     EXPECT_GE(axis.norm(), 1e-6);
     axis.normalize();
 
-    const double angle = random_scalar(generator) * M_PI;
+    const double angle = random_scalar(generator) * numbers::pi;
 
     Eigen::Matrix<double, 4, 1> quaternion =
         ToQuaternionFromRotationVector(axis * angle);
@@ -168,7 +175,7 @@ TEST(DownEstimatorTest, QuaternionIntegral) {
   Eigen::Vector3d uz = Eigen::Vector3d::UnitZ();
 
   Eigen::Quaternion<double> q(
-      Eigen::AngleAxis<double>(0.5 * M_PI, Eigen::Vector3d::UnitY()));
+      Eigen::AngleAxis<double>(0.5 * numbers::pi, Eigen::Vector3d::UnitY()));
 
   Eigen::Quaternion<double> q0(
       Eigen::AngleAxis<double>(0, Eigen::Vector3d::UnitY()));
@@ -182,21 +189,21 @@ TEST(DownEstimatorTest, QuaternionIntegral) {
   // Start by rotating around the X body vector for pi/2
   Eigen::Quaternion<double> integral1(control_loops::RungeKutta(
       std::bind(&QuaternionDerivative, ux, std::placeholders::_1), q0.coeffs(),
-      0.5 * M_PI));
+      0.5 * numbers::pi));
 
   VLOG(1) << "integral1 * uz => " << integral1 * uz;
 
   // Then rotate around the Y body vector for pi/2
   Eigen::Quaternion<double> integral2(control_loops::RungeKutta(
       std::bind(&QuaternionDerivative, uy, std::placeholders::_1),
-      integral1.normalized().coeffs(), 0.5 * M_PI));
+      integral1.normalized().coeffs(), 0.5 * numbers::pi));
 
   VLOG(1) << "integral2 * uz => " << integral2 * uz;
 
   // Then rotate around the X body vector for -pi/2
   Eigen::Quaternion<double> integral3(control_loops::RungeKutta(
       std::bind(&QuaternionDerivative, -ux, std::placeholders::_1),
-      integral2.normalized().coeffs(), 0.5 * M_PI));
+      integral2.normalized().coeffs(), 0.5 * numbers::pi));
 
   integral1.normalize();
   integral2.normalize();

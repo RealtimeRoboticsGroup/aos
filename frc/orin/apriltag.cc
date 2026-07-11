@@ -12,6 +12,7 @@
 #include <cub/device/device_select.cuh>
 #include <cub/iterator/discard_output_iterator.cuh>
 #include <cub/iterator/transform_input_iterator.cuh>
+#include <numbers>
 #include <vector>
 
 #include "absl/flags/flag.h"
@@ -23,6 +24,8 @@
 #include "frc/orin/labeling_allegretti_2019_BKE.h"
 #include "frc/orin/threshold.h"
 #include "frc/orin/transform_output_iterator.h"
+
+namespace numbers = std::numbers;
 
 ABSL_FLAG(bool, use_neon, false, "Use NEON optimized threshold");
 
@@ -397,7 +400,8 @@ class AddThetaToIndexPoint {
   __host__ __device__ __forceinline__ IndexPoint operator()(IndexPoint a) {
     MinMaxExtents extents = blob_finder_.Get(a.blob_index());
     float theta =
-        (atan2f(a.y() - extents.cy(), a.x() - extents.cx()) + M_PI) * 8e6;
+        (atan2f(a.y() - extents.cy(), a.x() - extents.cx()) + numbers::pi) *
+        8e6;
     long long int theta_int = llrintf(theta);
 
     a.set_theta(std::max<long long int>(0, theta_int));

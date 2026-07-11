@@ -1,5 +1,7 @@
 #include "frc/vision/swerve_localizer/localizer.h"
 
+#include <numbers>
+
 #include "absl/flags/flag.h"
 
 #include "aos/containers/sized_array.h"
@@ -7,6 +9,8 @@
 #include "frc/control_loops/pose.h"
 #include "frc/math/flatbuffers_matrix.h"
 #include "frc/vision/target_map_utils.h"
+
+namespace numbers = std::numbers;
 
 ABSL_FLAG(double, max_pose_error, 1e-5,
           "Throw out target poses with a higher pose error than this");
@@ -242,7 +246,7 @@ void Localizer::HandleChassisSpeeds(
           << roborio_pose_fetcher_->theta() << " -> "
           << absolute_velocity.transpose();
 
-  // Now, angle is +- M_PI
+  // Now, angle is +- numbers::pi
   const double theta_error = aos::math::NormalizeAngle(
       ekf_.X_hat(StateIdx::kTheta) - roborio_pose_fetcher_->theta());
 
@@ -487,7 +491,7 @@ void Localizer::HandleTarget(
   const double camera_yaw_error = aos::math::NormalizeAngle(
       corrector.expected_rio_heading_camera().abs_theta() -
       corrector.observed_camera_pose().abs_theta());
-  constexpr double kDegToRad = M_PI / 180.0;
+  constexpr double kDegToRad = numbers::pi / 180.0;
   const double yaw_threshold =
       (utils_.MaybeInAutonomous()
            ? absl::GetFlag(FLAGS_max_implied_yaw_error)

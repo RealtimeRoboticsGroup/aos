@@ -1,5 +1,7 @@
 #ifndef FRC_CONTROL_LOOPS_SWERVE_SIMPLIFIED_DYNAMICS_H_
 #define FRC_CONTROL_LOOPS_SWERVE_SIMPLIFIED_DYNAMICS_H_
+#include <numbers>
+
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 
@@ -352,14 +354,15 @@ class SimplifiedDynamics {
       const LocalScalar slip_force =
           module_params().slip_angle_coefficient * slip_angle;
       const LocalScalar slip_force_direction =
-          theta + theta_steer + static_cast<Scalar>(M_PI_2);
+          theta + theta_steer + static_cast<Scalar>(std::numbers::pi / 2.0);
       const Eigen::Matrix<LocalScalar, 3, 1> slip_force_vec =
           slip_force * UnitYawVector<LocalScalar>(slip_force_direction);
       const LocalScalar slip_torque =
           module_position
               .cross(slip_force *
-                     UnitYawVector<LocalScalar>(theta_steer +
-                                                static_cast<Scalar>(M_PI_2)))
+                     UnitYawVector<LocalScalar>(
+                         theta_steer +
+                         static_cast<Scalar>(std::numbers::pi / 2.0)))
               .z();
 
       // drive torque calculations

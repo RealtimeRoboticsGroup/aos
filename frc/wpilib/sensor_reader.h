@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <numbers>
 
 #include "aos/events/event_loop.h"
 #include "aos/events/shm_event_loop.h"
@@ -99,7 +100,7 @@ class SensorReader {
     position->set_absolute_encoder((reverse
                                         ? (1.0 - encoder.ReadAbsoluteEncoder())
                                         : encoder.ReadAbsoluteEncoder()) *
-                                   encoder_ratio * (2.0 * M_PI));
+                                   encoder_ratio * (2.0 * std::numbers::pi));
   }
 
   void CopyPosition(
@@ -120,7 +121,7 @@ class SensorReader {
     position->set_absolute_encoder((reverse
                                         ? (1.0 - encoder.ReadAbsoluteEncoder())
                                         : encoder.ReadAbsoluteEncoder()) *
-                                   encoder_ratio * (2.0 * M_PI));
+                                   encoder_ratio * (2.0 * std::numbers::pi));
   }
 
   // Copies an AbsoluteEncoderAndPotentiometer to an AbsoluteAndAbsolutePosition
@@ -138,12 +139,12 @@ class SensorReader {
     position->set_absolute_encoder((reverse
                                         ? (1.0 - encoder.ReadAbsoluteEncoder())
                                         : encoder.ReadAbsoluteEncoder()) *
-                                   encoder_ratio * (2.0 * M_PI));
+                                   encoder_ratio * (2.0 * std::numbers::pi));
 
     position->set_single_turn_absolute_encoder(
         (reverse ? (1.0 - encoder.ReadSingleTurnAbsoluteEncoder())
                  : encoder.ReadSingleTurnAbsoluteEncoder()) *
-        single_turn_encoder_ratio * (2.0 * M_PI));
+        single_turn_encoder_ratio * (2.0 * std::numbers::pi));
   }
 
   // Copies a DMAEdgeCounter to a HallEffectAndPosition with the correct unit
@@ -185,7 +186,7 @@ class SensorReader {
     position->set_absolute_encoder((reverse
                                         ? (1.0 - encoder.ReadAbsoluteEncoder())
                                         : encoder.ReadAbsoluteEncoder()) *
-                                   encoder_ratio * (2.0 * M_PI));
+                                   encoder_ratio * (2.0 * std::numbers::pi));
   }
 
   void CopyPosition(const ::frc::wpilib::DMAEncoderAndPotentiometer &encoder,
@@ -233,7 +234,7 @@ class SensorReader {
   double encoder_translate(int32_t value, double counts_per_revolution,
                            double ratio) {
     return static_cast<double>(value) / counts_per_revolution * ratio *
-           (2.0 * M_PI);
+           (2.0 * std::numbers::pi);
   }
 
   void SendDrivetrainPosition(

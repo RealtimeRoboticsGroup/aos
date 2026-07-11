@@ -1,6 +1,10 @@
 #include "frc/control_loops/pose.h"
 
+#include <numbers>
+
 #include "gtest/gtest.h"
+
+namespace numbers = std::numbers;
 
 namespace frc::control_loops::testing {
 
@@ -12,7 +16,7 @@ TEST(PoseTest, BasicPoseTest) {
   // sqrt(2) rather than sqrt(1^2 + 1^2 + 0.5^2).
   EXPECT_DOUBLE_EQ(::std::sqrt(2.0), pose.xy_norm());
   // Similarly, heading should just be atan2(y, x).
-  EXPECT_DOUBLE_EQ(M_PI / 4.0, pose.heading());
+  EXPECT_DOUBLE_EQ(numbers::pi / 4.0, pose.heading());
   // Global and relative poses should be the same since we did not construct
   // this off of a separate Pose.
   EXPECT_EQ(1.0, pose.rel_pos().x());
@@ -50,14 +54,14 @@ TEST(PoseTest, BaseTest) {
   // base2: (-1, 1)
   // rel1: (0, 2)
   // Where rel1 is expressed as compared to base1, noting that because base1
-  // has a yaw of M_PI, the position of rel1 compared to base1 is (1, -1)
+  // has a yaw of numbers::pi, the position of rel1 compared to base1 is (1, -1)
   // rather than (-1, 1).
-  Pose base1({1, 1, 0}, M_PI);
-  Pose base2({-1, 1, 0}, -M_PI / 2.0);
+  Pose base1({1, 1, 0}, numbers::pi);
+  Pose base2({-1, 1, 0}, -numbers::pi / 2.0);
   Pose rel1(&base1, {1, -1, 0}, 0.0);
   EXPECT_NEAR(0.0, rel1.abs_pos().x(), kEps);
   EXPECT_NEAR(2.0, rel1.abs_pos().y(), kEps);
-  EXPECT_NEAR(M_PI, rel1.abs_theta(), kEps);
+  EXPECT_NEAR(numbers::pi, rel1.abs_theta(), kEps);
   // Check that, when rebasing to base2, the absolute position does not change
   // and the relative POse changes to be relative to base2.
   Pose rel2 = rel1.Rebase(&base2);
@@ -67,7 +71,7 @@ TEST(PoseTest, BaseTest) {
   EXPECT_NEAR(rel1.abs_theta(), rel2.abs_theta(), kEps);
   EXPECT_NEAR(-1.0, rel2.rel_pos().x(), kEps);
   EXPECT_NEAR(1.0, rel2.rel_pos().y(), kEps);
-  EXPECT_NEAR(-M_PI / 2.0, rel2.rel_theta(), kEps);
+  EXPECT_NEAR(-numbers::pi / 2.0, rel2.rel_theta(), kEps);
   // Check that rebasing onto nullptr results in a Pose based in the global
   // frame.
   Pose abs = rel1.Rebase(nullptr);
@@ -92,7 +96,7 @@ TEST(PoseTest, TransformationMatrixTest) {
   ASSERT_EQ(reproduced_pose.rel_theta(), pose.rel_theta());
   // Check a basic case of rotation + translation.
   *pose.mutable_pos() << 1, 2, 3;
-  pose.set_theta(M_PI_2);
+  pose.set_theta(numbers::pi / 2.0);
   TransformationMatrix expected;
   expected << 0, -1, 0, 1, 1, 0, 0, 2, 0, 0, 1, 3, 0, 0, 0, 1;
   TransformationMatrix pose_transformation = pose.AsTransformationMatrix();

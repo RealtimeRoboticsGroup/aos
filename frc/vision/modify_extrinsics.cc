@@ -1,5 +1,6 @@
 #include <cmath>
 #include <filesystem>
+#include <numbers>
 #include <regex>
 
 #include "Eigen/Dense"
@@ -18,6 +19,8 @@
 #include "aos/util/file.h"
 #include "frc/vision/calibration_generated.h"
 #include "frc/vision/vision_util_lib.h"
+
+namespace numbers = std::numbers;
 
 // This is a helper program to build and rename calibration files
 // You can:
@@ -91,12 +94,12 @@ aos::FlatbufferDetachedBuffer<calibration::CameraCalibration> BuildCalibration(
 
     // convert to radians
     double angle_scale =
-        (absl::GetFlag(FLAGS_use_degrees) ? M_PI / 180.0 : 1.0);
+        (absl::GetFlag(FLAGS_use_degrees) ? numbers::pi / 180.0 : 1.0);
     // The rotation that takes robot coordinates (x forward, z up) to camera
     // coordiantes (z forward, x right)
     Eigen::Quaterniond R_robo_cam =
-        Eigen::AngleAxisd(-M_PI / 2.0, Eigen::Vector3d::UnitZ()) *
-        Eigen::AngleAxisd(-M_PI / 2.0, Eigen::Vector3d::UnitX());
+        Eigen::AngleAxisd(-numbers::pi / 2.0, Eigen::Vector3d::UnitZ()) *
+        Eigen::AngleAxisd(-numbers::pi / 2.0, Eigen::Vector3d::UnitX());
     Eigen::AngleAxisd pitchAngle(
         absl::GetFlag(FLAGS_camera_pitch) * angle_scale,
         Eigen::Vector3d::UnitY());

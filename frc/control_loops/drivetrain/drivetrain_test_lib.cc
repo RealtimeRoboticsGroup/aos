@@ -12,11 +12,15 @@
 #if defined(SUPPORT_PLOT)
 #include "third_party/matplotlib-cpp/matplotlibcpp.h"
 #endif
+#include <numbers>
+
 #include "frc/control_loops/drivetrain/test_robot/drivetrain_dog_motor_plant.h"
 #include "frc/control_loops/drivetrain/test_robot/hybrid_velocity_drivetrain.h"
 #include "frc/control_loops/drivetrain/test_robot/kalman_drivetrain_motor_plant.h"
 #include "frc/control_loops/drivetrain/test_robot/polydrivetrain_dog_motor_plant.h"
 #include "frc/wpilib/imu_batch_generated.h"
+
+namespace numbers = std::numbers;
 
 ABSL_FLAG(bool, plot, false, "If true, plot");
 
@@ -357,7 +361,7 @@ void DrivetrainSimulation::Simulate() {
   // situations where the IMU is not perfectly flat in the CG of the robot.
   last_acceleration_ << (Xdot(3, 0) + Xdot(4, 0)) / 2.0, centripetal_accel, 0.0;
   double accel_disturbance =
-      std::sin(10.0 * 2 * M_PI *
+      std::sin(10.0 * 2 * numbers::pi *
                aos::time::DurationInSeconds(
                    event_loop_->monotonic_now().time_since_epoch())) *
       accel_sin_wave_magnitude_;

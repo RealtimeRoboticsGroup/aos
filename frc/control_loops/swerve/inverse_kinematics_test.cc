@@ -1,6 +1,10 @@
 #include "frc/control_loops/swerve/inverse_kinematics.h"
 
+#include <numbers>
+
 #include "gtest/gtest.h"
+
+namespace numbers = std::numbers;
 
 namespace frc::control_loops::swerve::testing {
 class InverseKinematicsTest : public ::testing::Test {
@@ -91,18 +95,26 @@ TEST_F(InverseKinematicsTest, StraightDrivingNoYaw) {
              {0.0, 0.0, 0.0, 0.0}, Eigen::Vector4d::Zero());
 
   CheckState({.vx = 0.0, .vy = 1.0, .omega = 0.0, .theta = 0.0},
-             {M_PI_2, M_PI_2, M_PI_2, M_PI_2}, Eigen::Vector4d::Zero());
+             {numbers::pi / 2.0, numbers::pi / 2.0, numbers::pi / 2.0,
+              numbers::pi / 2.0},
+             Eigen::Vector4d::Zero());
   // For module hysteresis, this is a corner case where we are exactly 90 deg
   // from the current value; the exact result is unimportant.
   CheckState({.vx = 0.0, .vy = -1.0, .omega = 0.0, .theta = 0.0},
-             {-M_PI_2, -M_PI_2, -M_PI_2, -M_PI_2}, Eigen::Vector4d::Zero());
+             {-numbers::pi / 2.0, -numbers::pi / 2.0, -numbers::pi / 2.0,
+              -numbers::pi / 2.0},
+             Eigen::Vector4d::Zero());
 
   CheckState({.vx = 1.0, .vy = 1.0, .omega = 0.0, .theta = 0.0},
-             {M_PI_4, M_PI_4, M_PI_4, M_PI_4}, Eigen::Vector4d::Zero());
+             {numbers::pi / 4.0, numbers::pi / 4.0, numbers::pi / 4.0,
+              numbers::pi / 4.0},
+             Eigen::Vector4d::Zero());
   // Reverse should prefer to bias the modules towards [-pi/2, pi/2] due to
   // hysteresis from starting the modules at thetas of 0.
   CheckState({.vx = -1.0, .vy = -1.0, .omega = 0.0, .theta = 0.0},
-             {M_PI_4, M_PI_4, M_PI_4, M_PI_4}, Eigen::Vector4d::Zero());
+             {numbers::pi / 4.0, numbers::pi / 4.0, numbers::pi / 4.0,
+              numbers::pi / 4.0},
+             Eigen::Vector4d::Zero());
 }
 
 // Tests that if we are driving straight with non-zero yaw that we get sane
@@ -111,26 +123,32 @@ TEST_F(InverseKinematicsTest, StraightDrivingYawed) {
   CheckState({.vx = 1.0, .vy = 0.0, .omega = 0.0, .theta = 0.1},
              {-0.1, -0.1, -0.1, -0.1}, Eigen::Vector4d::Zero());
 
-  CheckState({.vx = 1.0, .vy = 0.0, .omega = 0.0, .theta = M_PI_2},
-             {-M_PI_2, -M_PI_2, -M_PI_2, -M_PI_2}, Eigen::Vector4d::Zero());
-  CheckState({.vx = 1.0, .vy = 0.0, .omega = 0.0, .theta = M_PI},
+  CheckState({.vx = 1.0, .vy = 0.0, .omega = 0.0, .theta = numbers::pi / 2.0},
+             {-numbers::pi / 2.0, -numbers::pi / 2.0, -numbers::pi / 2.0,
+              -numbers::pi / 2.0},
+             Eigen::Vector4d::Zero());
+  CheckState({.vx = 1.0, .vy = 0.0, .omega = 0.0, .theta = numbers::pi},
              {0.0, 0.0, 0.0, 0.0}, Eigen::Vector4d::Zero());
 
-  CheckState({.vx = 0.0, .vy = 1.0, .omega = 0.0, .theta = M_PI_2},
+  CheckState({.vx = 0.0, .vy = 1.0, .omega = 0.0, .theta = numbers::pi / 2.0},
              {0.0, 0.0, 0.0, 0.0}, Eigen::Vector4d::Zero());
   // Reverse should prefer to bias the modules towards [-pi/2, pi/2] due to
   // hysteresis from starting the modules at thetas of 0.
-  CheckState({.vx = 0.0, .vy = -1.0, .omega = 0.0, .theta = M_PI_2},
+  CheckState({.vx = 0.0, .vy = -1.0, .omega = 0.0, .theta = numbers::pi / 2.0},
              {0.0, 0.0, 0.0, 0.0}, Eigen::Vector4d::Zero());
 }
 
 // Tests that we can spin in place.
 TEST_F(InverseKinematicsTest, SpinInPlace) {
   CheckState({.vx = 0.0, .vy = 0.0, .omega = 1.0, .theta = 0.0},
-             {-M_PI_4, M_PI_4, -M_PI_4, M_PI_4}, Eigen::Vector4d::Zero());
+             {-numbers::pi / 4.0, numbers::pi / 4.0, -numbers::pi / 4.0,
+              numbers::pi / 4.0},
+             Eigen::Vector4d::Zero());
   // And changing the current theta should not matter.
   CheckState({.vx = 0.0, .vy = 0.0, .omega = 1.0, .theta = 1.0},
-             {-M_PI_4, M_PI_4, -M_PI_4, M_PI_4}, Eigen::Vector4d::Zero());
+             {-numbers::pi / 4.0, numbers::pi / 4.0, -numbers::pi / 4.0,
+              numbers::pi / 4.0},
+             Eigen::Vector4d::Zero());
 }
 
 // Tests that if we are spinning while moving that we correctly calculate module
@@ -146,6 +164,7 @@ TEST_F(InverseKinematicsTest, SpinWhileMoving) {
               .vy = 0.0,
               .omega = 1.0,
               .theta = 0.0},
-             {3 * M_PI_4 / 2, -3 * M_PI_4 / 2, -M_PI_4 / 2, M_PI_4 / 2});
+             {3 * numbers::pi / 4.0 / 2, -3 * numbers::pi / 4.0 / 2,
+              -numbers::pi / 4.0 / 2, numbers::pi / 4.0 / 2});
 }
 }  // namespace frc::control_loops::swerve::testing

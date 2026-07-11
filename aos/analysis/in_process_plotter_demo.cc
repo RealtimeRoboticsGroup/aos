@@ -1,9 +1,12 @@
 #include <algorithm>
 #include <cmath>
+#include <numbers>
 #include <vector>
 
 #include "aos/analysis/in_process_plotter.h"
 #include "aos/init.h"
+
+namespace numbers = std::numbers;
 
 // To run this example, do:
 // bazel run -c opt //frc/analysis:in_process_plotter_demo
@@ -33,7 +36,7 @@ int main(int argc, char *argv[]) {
   std::vector<double> cosx;
   constexpr int kNumPoints = 100000;
   for (int ii = 0; ii < kNumPoints; ++ii) {
-    x.push_back(ii * 2 * M_PI / kNumPoints);
+    x.push_back(ii * 2 * numbers::pi / kNumPoints);
     sinx.push_back(std::sin(x.back()));
     cosx.push_back(std::cos(x.back()));
   }

@@ -3,6 +3,9 @@
 #include <array>
 #include <initializer_list>
 #include <memory>
+#include <numbers>
+
+namespace numbers = std::numbers;
 
 namespace frc::control_loops::arm {
 
@@ -11,8 +14,8 @@ namespace frc::control_loops::arm {
   ::std::vector<::std::array<double, 6>> result;
   result.reserve(list.size());
   for (::std::array<double, 6> point : list) {
-    point[0] = M_PI_2 - point[0];
-    point[1] = M_PI_2 - point[1];
+    point[0] = numbers::pi / 2.0 - point[0];
+    point[1] = numbers::pi / 2.0 - point[1];
     point[2] = -point[2];
     point[3] = -point[3];
     point[4] = -point[4];

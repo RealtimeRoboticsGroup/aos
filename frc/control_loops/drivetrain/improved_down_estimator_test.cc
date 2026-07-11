@@ -1,5 +1,6 @@
 #include "frc/control_loops/drivetrain/improved_down_estimator.h"
 
+#include <numbers>
 #include <random>
 
 #include "absl/log/check.h"
@@ -11,6 +12,8 @@
 #include "frc/control_loops/drivetrain/drivetrain_test_lib.h"
 #include "frc/control_loops/quaternion_utils.h"
 #include "frc/control_loops/runge_kutta.h"
+
+namespace numbers = std::numbers;
 
 namespace frc::control_loops::testing {
 
@@ -37,9 +40,11 @@ TEST(DownEstimatorTest, UkfConstantRotation) {
   Eigen::Matrix<double, 3, 1> measurement;
   measurement.setZero();
   for (int ii = 0; ii < 200; ++ii) {
-    dtukf.Predict(ux * M_PI_2, measurement, frc::controls::kLoopFrequency);
+    dtukf.Predict(ux * numbers::pi / 2.0, measurement,
+                  frc::controls::kLoopFrequency);
   }
-  const Eigen::Quaterniond expected(Eigen::AngleAxis<double>(M_PI_2, ux));
+  const Eigen::Quaterniond expected(
+      Eigen::AngleAxis<double>(numbers::pi / 2.0, ux));
   EXPECT_TRUE(QuaternionEqual(expected, dtukf.X_hat(), 0.01))
       << "Expected: " << expected.coeffs()
       << " Got: " << dtukf.X_hat().coeffs();
@@ -122,7 +127,8 @@ TEST(DownEstimatorTest, UkfAccelCorrectsBias) {
   for (int ii = 0; ii < 2000; ++ii) {
     dtukf.Predict({0.0, 0.0, 0.0}, measurement, frc::controls::kLoopFrequency);
   }
-  const Eigen::Quaterniond expected(Eigen::AngleAxis<double>(M_PI_2, ux));
+  const Eigen::Quaterniond expected(
+      Eigen::AngleAxis<double>(numbers::pi / 2.0, ux));
   EXPECT_TRUE(QuaternionEqual(expected, dtukf.X_hat(), 0.01))
       << "Expected: " << expected.coeffs()
       << " Got: " << dtukf.X_hat().coeffs();
@@ -141,10 +147,11 @@ TEST(DownEstimatorTest, UkfIgnoreBadAccel) {
   // are only rotating about the Y (pitch) axis.
   measurement << 0.3, 1.0, 0.0;
   for (int ii = 0; ii < 200; ++ii) {
-    dtukf.Predict({0.0, M_PI_2, 0.0}, measurement,
+    dtukf.Predict({0.0, numbers::pi / 2.0, 0.0}, measurement,
                   frc::controls::kLoopFrequency);
   }
-  const Eigen::Quaterniond expected(Eigen::AngleAxis<double>(M_PI_2, uy));
+  const Eigen::Quaterniond expected(
+      Eigen::AngleAxis<double>(numbers::pi / 2.0, uy));
   EXPECT_TRUE(QuaternionEqual(expected, dtukf.X_hat(), 1e-1))
       << "Expected: " << expected.coeffs()
       << " Got: " << dtukf.X_hat().coeffs();
@@ -160,7 +167,7 @@ TEST(DownEstimatorTest, UkfIgnoreBadAccel) {
 // returns the original answer.
 TEST(DownEstimatorTest, SigmaPoints) {
   const Eigen::Quaternion<double> mean(
-      Eigen::AngleAxis<double>(M_PI / 2.0, Eigen::Vector3d::UnitX()));
+      Eigen::AngleAxis<double>(numbers::pi / 2.0, Eigen::Vector3d::UnitX()));
 
   Eigen::Matrix<double, 3, 3> covariance;
   covariance << 0.4, -0.1, 0.2, -0.1, 0.6, 0.0, 0.2, 0.0, 0.5;
@@ -191,7 +198,7 @@ TEST(DownEstimatorTest, SigmaPoints) {
 // wrap, that we do clip the perturbations.
 TEST(DownEstimatorTest, ClippedSigmaPoints) {
   const Eigen::Quaternion<double> mean(
-      Eigen::AngleAxis<double>(M_PI / 2.0, Eigen::Vector3d::UnitX()));
+      Eigen::AngleAxis<double>(numbers::pi / 2.0, Eigen::Vector3d::UnitX()));
 
   Eigen::Matrix<double, 3, 3> covariance;
   covariance << 0.4, -0.1, 0.2, -0.1, 0.6, 0.0, 0.2, 0.0, 0.5;

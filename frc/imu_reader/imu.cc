@@ -2,17 +2,21 @@
 
 #include <fcntl.h>
 
+#include <numbers>
+
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 
 #include "aos/util/crc32.h"
+
+namespace numbers = std::numbers;
 
 namespace frc::imu {
 
 namespace {
 
 constexpr size_t kReadSize = 50;
-constexpr double kGyroScale = 1 / 655360.0 / 360.0 * (2 * M_PI);
+constexpr double kGyroScale = 1 / 655360.0 / 360.0 * (2 * numbers::pi);
 constexpr double kAccelScale = 1 / 26756268.0 / 9.80665;
 constexpr double kTempScale = 0.1;
 

@@ -1,8 +1,12 @@
+#include <numbers>
+
 #include "Eigen/Core"
 #include "Eigen/Geometry"
 #include "absl/log/log.h"
 
 #include "aos/init.h"
+
+namespace numbers = std::numbers;
 
 // A tool to convert camera mounting locations in CAD to transformation
 // matricies.
@@ -29,8 +33,9 @@ int Main() {
   const double angledown0 = 15.0;
   const Eigen::Affine3d orientation0 =
       Eigen::Translation3d(-0.120, 0.133, 0.710) *
-      Eigen::AngleAxisd(angle0 * M_PI / 180, Eigen::Vector3d::UnitZ()) *
-      Eigen::AngleAxisd(angledown0 * M_PI / 180, Eigen::Vector3d::UnitY()) *
+      Eigen::AngleAxisd(angle0 * numbers::pi / 180, Eigen::Vector3d::UnitZ()) *
+      Eigen::AngleAxisd(angledown0 * numbers::pi / 180,
+                        Eigen::Vector3d::UnitY()) *
       camera_to_robot;
 
   LOG(INFO) << "Orientation0 (cam to robot): \n"
@@ -53,8 +58,9 @@ int Main() {
   const double angledown1 = 0.0;
   const Eigen::Affine3d orientation1 =
       Eigen::Translation3d(0.177, -0.210, 0.959) *
-      Eigen::AngleAxisd(angle1 * M_PI / 180, Eigen::Vector3d::UnitZ()) *
-      Eigen::AngleAxisd(angledown1 * M_PI / 180, Eigen::Vector3d::UnitY()) *
+      Eigen::AngleAxisd(angle1 * numbers::pi / 180, Eigen::Vector3d::UnitZ()) *
+      Eigen::AngleAxisd(angledown1 * numbers::pi / 180,
+                        Eigen::Vector3d::UnitY()) *
       camera_to_robot;
 
   LOG(INFO) << "Orientation1: \n" << orientation1.matrix().format(json_format);
@@ -66,8 +72,9 @@ int Main() {
   const double angledown2 = 0.0;
   const Eigen::Affine3d orientation2 =
       Eigen::Translation3d(-0.177, -0.317, 0.959) *
-      Eigen::AngleAxisd(angle2 * M_PI / 180, Eigen::Vector3d::UnitZ()) *
-      Eigen::AngleAxisd(angledown2 * M_PI / 180, Eigen::Vector3d::UnitY()) *
+      Eigen::AngleAxisd(angle2 * numbers::pi / 180, Eigen::Vector3d::UnitZ()) *
+      Eigen::AngleAxisd(angledown2 * numbers::pi / 180,
+                        Eigen::Vector3d::UnitY()) *
       camera_to_robot;
 
   LOG(INFO) << "Orientation2: \n" << orientation2.matrix().format(json_format);
@@ -79,8 +86,9 @@ int Main() {
   const double angledown3 = -28.0;
   const Eigen::Affine3d orientation3 =
       Eigen::Translation3d(0.120, -0.264, 1.031) *
-      Eigen::AngleAxisd(angle3 * M_PI / 180, Eigen::Vector3d::UnitZ()) *
-      Eigen::AngleAxisd(angledown3 * M_PI / 180, Eigen::Vector3d::UnitY()) *
+      Eigen::AngleAxisd(angle3 * numbers::pi / 180, Eigen::Vector3d::UnitZ()) *
+      Eigen::AngleAxisd(angledown3 * numbers::pi / 180,
+                        Eigen::Vector3d::UnitY()) *
       camera_to_robot;
 
   LOG(INFO) << "Orientation3: \n" << orientation3.matrix().format(json_format);

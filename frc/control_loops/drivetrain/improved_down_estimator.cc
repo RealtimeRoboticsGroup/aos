@@ -1,10 +1,14 @@
 #include "frc/control_loops/drivetrain/improved_down_estimator.h"
 
+#include <numbers>
+
 #include "Eigen/Dense"
 #include "Eigen/Geometry"
 
 #include "aos/util/math.h"
 #include "frc/control_loops/quaternion_utils.h"
+
+namespace numbers = std::numbers;
 
 namespace frc::control_loops::drivetrain {
 
@@ -241,7 +245,8 @@ Eigen::Matrix<double, 4, 3 * 2 + 1> GenerateSigmaPoints(
   Eigen::Matrix<double, 4, 3 * 2 + 1> X;
   for (int i = 0; i < 3; ++i) {
     Eigen::Quaternion<double> perturbation(
-        frc::controls::ToQuaternionFromRotationVector(S.col(i), M_PI_2));
+        frc::controls::ToQuaternionFromRotationVector(S.col(i),
+                                                      numbers::pi / 2.0));
 
     X.col(i * 2) = (mean * perturbation).coeffs();
     X.col(i * 2 + 1) = (mean * perturbation.conjugate()).coeffs();

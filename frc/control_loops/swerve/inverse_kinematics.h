@@ -1,7 +1,10 @@
 #ifndef FRC_CONTROL_LOOPS_SWERVE_INVERSE_KINEMATICS_H_
 #define FRC_CONTROL_LOOPS_SWERVE_INVERSE_KINEMATICS_H_
+#include <numbers>
+
 #include "aos/util/math.h"
 #include "frc/control_loops/swerve/simplified_dynamics.h"
+
 namespace frc::control_loops::swerve {
 // Class to do straightforwards inverse kinematics of a swerve drivebase. This
 // is meant largely as a sanity-check/initializer for more sophisticated
@@ -60,8 +63,9 @@ class InverseKinematics {
     // If the current module theta is more than 90 deg from the desired theta,
     // flip the desired theta by 180 deg.
     if (std::abs(aos::math::DiffAngle(nominal_module_theta, *module_theta)) >
-        M_PI_2) {
-      *module_theta = aos::math::NormalizeAngle(nominal_module_theta + M_PI);
+        std::numbers::pi / 2.0) {
+      *module_theta =
+          aos::math::NormalizeAngle(nominal_module_theta + std::numbers::pi);
     } else {
       *module_theta = nominal_module_theta;
     }
