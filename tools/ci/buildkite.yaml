@@ -1,6 +1,7 @@
 env:
   STARTUP: --max_idle_secs=0
-  COMMON: -c opt --stamp=no --curses=yes --symlink_prefix=/ --config=running_in_ci --repository_cache=~/.cache/bazel_repository --experimental_repository_cache_hardlinks=true --google_default_credentials --remote_cache=https://storage.googleapis.com/austin-vpn-bazel-cache --nobuild_runfile_links
+  COMMON_BASE: -c opt --stamp=no --curses=yes --config=running_in_ci --repository_cache=~/.cache/bazel_repository --experimental_repository_cache_hardlinks=true --google_default_credentials --remote_cache=https://storage.googleapis.com/austin-vpn-bazel-cache --nobuild_runfile_links
+  COMMON: ${COMMON_BASE} --symlink_prefix=/
   TARGETS: //... @com_google_absl//... @ceres-solver//... @rawrtc//... @com_google_googletest//... @symengine//... @gmp//...
   ROBORIO_TARGETS: ${TARGETS}
 
@@ -8,6 +9,17 @@ steps:
   - label: "lint"
     commands:
       - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../k8_output_base run ${COMMON} --remote_download_outputs=toplevel //tools/lint:run-ci --enable_bzlmod --noenable_workspace
+    retry:
+      automatic:
+        - exit_status: -1  # Connection to the Agent was lost
+          signal_reason: none
+          limit: 2
+        - signal_reason: agent_stop  # Agent was stopped by the OS (e.g. spot termination)
+          limit: 2
+
+  - label: "mod graph"  # Ensure all of our bzlmod dependencies are loadable.
+    commands:
+      - tools/bazel shutdown; tools/bazel ${STARTUP} --output_base=../k8_output_base mod graph ${COMMON_BASE} --enable_bzlmod --noenable_workspace --lockfile_mode=error > /dev/null
     retry:
       automatic:
         - exit_status: -1  # Connection to the Agent was lost

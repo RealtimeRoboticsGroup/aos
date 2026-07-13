@@ -18,8 +18,10 @@ archive_override(
     urls = ["https://github.com/bazel-contrib/rules_cuda/archive/345dd02d2b64b8a6c138800da3180c9278417ec2.tar.gz"],
 )
 
+# avoid 0.0.0-20251216-6ef568c, it's broken
+bazel_dep(name = "envoy_api", version = "0.0.0-20260130-84e8436")
 bazel_dep(name = "rules_java", version = "9.3.0")
-bazel_dep(name = "aspect_bazel_lib", version = "2.22.0")
+bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
 bazel_dep(name = "aspect_rules_lint", version = "2.7.2")
 bazel_dep(name = "rules_multirun", version = "0.9.0")
 bazel_dep(name = "bazel_skylib", version = "1.9.0")
