@@ -2,8 +2,11 @@
 #include <fcntl.h>
 #include <liburing.h>
 #include <poll.h>
+#include <stdio.h>
+#include <sys/epoll.h>
 #include <sys/eventfd.h>
 #include <sys/socket.h>
+#include <sys/timerfd.h>
 #include <unistd.h>
 
 #include "aos/events/aio.h"
@@ -23,6 +26,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstring>
+#include <memory>
 #include <unordered_map>
 #include <vector>
 
@@ -36,6 +40,12 @@
 
 ABSL_FLAG(uint32_t, aio_queue_depth, 1024,
           "Depth of the io_uring submission and completion queues.");
+
+ABSL_FLAG(bool, use_io_uring, true,
+          "Whether to use the io_uring backend or fallback to epoll.");
+
+ABSL_FLAG(size_t, aio_epoll_pool_size, 16,
+          "Initial size of the pre-allocated epoll FdRegistration pool.");
 
 namespace aos {
 namespace {
@@ -59,34 +69,14 @@ class EventFD {
   EventFD(const EventFD &) = delete;
   EventFD &operator=(const EventFD &) = delete;
 
-  EventFD(EventFD &&other) noexcept
-      : eventfd_buf(other.eventfd_buf),
-        wakeup_req(std::move(other.wakeup_req)),
-        fd_(other.fd_) {
-    other.fd_ = -1;
-  }
-
-  EventFD &operator=(EventFD &&other) noexcept {
-    if (this != &other) {
-      if (fd_ >= 0) {
-        close(fd_);
-      }
-      fd_ = other.fd_;
-      eventfd_buf = other.eventfd_buf;
-      wakeup_req = std::move(other.wakeup_req);
-      other.fd_ = -1;
-    }
-    return *this;
-  }
-
   int fd() const { return fd_; }
 
-  // Writes to the eventfd to wake it up.
   void Write() {
     uint64_t val = 1;
-    ssize_t res = write(fd_, &val, sizeof(val));
-    ABSL_CHECK_EQ(res, static_cast<ssize_t>(sizeof(val)))
-        << "Failed to write to eventfd: " << aos_strerror(errno);
+    ssize_t ret = write(fd_, &val, sizeof(val));
+    if (ret < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+      ABSL_LOG(FATAL) << "Failed to write to eventfd: " << aos_strerror(errno);
+    }
   }
 
   uint64_t eventfd_buf = 0;
@@ -95,6 +85,59 @@ class EventFD {
  private:
   int fd_ = -1;
 };
+
+// RAII wrapper around timerfd file descriptors.
+class TimerFD {
+ public:
+  TimerFD() {
+    fd_ = timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK);
+    ABSL_PCHECK(fd_ >= 0) << "Failed to create timerfd";
+  }
+
+  ~TimerFD() {
+    if (fd_ >= 0) {
+      close(fd_);
+    }
+  }
+
+  // Disable copy construction and assignment to prevent duplicate ownership of
+  // the descriptor.
+  TimerFD(const TimerFD &) = delete;
+  TimerFD &operator=(const TimerFD &) = delete;
+
+  int fd() const { return fd_; }
+
+ private:
+  int fd_ = -1;
+};
+
+// Internal helper union to access AsyncRequest's opaque state buffer.  This
+// avoids type-punning issues and pointer-to-pointer casting.
+union AioState {
+  struct {
+    int64_t tv_sec;
+    int64_t tv_nsec;
+  } timespec;
+  struct {
+    void *ptr;
+    size_t size;
+  } buffer;
+  struct {
+    AsyncRequest *next;
+    int64_t result;
+  } link;
+};
+
+inline AioState &State(AsyncRequest *req) {
+  static_assert(sizeof(AioState) <= sizeof(req->internal_state),
+                "AioState too large");
+  static_assert(alignof(AioState) <= 8, "AioState alignment mismatch");
+  return *reinterpret_cast<AioState *>(req->internal_state);
+}
+
+[[maybe_unused]] inline const AioState &State(const AsyncRequest *req) {
+  return *reinterpret_cast<const AioState *>(req->internal_state);
+}
 
 }  // namespace
 
@@ -105,72 +148,123 @@ struct Aio::TimerState {
   aos::monotonic_clock::time_point deadline = aos::monotonic_clock::epoch();
   CompletionCallback user_callback = nullptr;
   void *user_context = nullptr;
+
+  // Epoll-backend specific timerfd state
+  std::unique_ptr<TimerFD> timer_fd;
 };
 
 struct Aio::Impl {
-  // Processes completed CQEs (Completion Queue Events) in the io_uring ring.
-  // It iterates through the completion queue, marks each matching AsyncRequest
-  // as done, constructs a Completion status, and invokes the associated
-  // callback. Returns true if at least one completion event was processed.
-  bool ReapCompletions();
+  virtual ~Impl() = default;
 
-  // Scans the completion queue ring for a specific request.  If found,
-  // processes it, marks it done, and clears its user data so the normal poll
-  // loop ignores it.
-  bool ReapSpecificRequest(AsyncRequest *target_req, bool execute_callback);
+  virtual void Run() = 0;
+
+  // Polls the event loop for completed events.  If block is true, it waits
+  // for at least one event to complete.  Otherwise, it returns immediately.
+  // Returns true if at least one event completed.
+  virtual bool Poll(bool block) = 0;
+
+  // Requests the event loop to stop running.
+  virtual void Quit() = 0;
+
+  // Wakes up a blocking event loop.
+  virtual void Wakeup() = 0;
+
+  // The following methods submit asynchronous I/O requests.  The callback is
+  // executed when the operation completes.
+  virtual void AsyncRead(int fd, std::span<char> buffer,
+                         AsyncRequest *request) = 0;
+  virtual void AsyncWrite(int fd, std::span<const char> buffer,
+                          AsyncRequest *request) = 0;
+
+  // Cancels a pending asynchronous request.  The callback will be executed
+  // with a Canceled status.
+  virtual void Cancel(AsyncRequest *request) = 0;
+
+  // Registers a callback to be executed before waiting for events.
+  virtual void BeforeWait(std::function<void()> function) = 0;
+
+  // Legacy Readiness Hooks.
+  virtual void OnReadable(int fd, std::function<void()> callback) = 0;
+  virtual void OnError(int fd, std::function<void()> callback) = 0;
+  virtual void OnWritable(int fd, std::function<void()> callback) = 0;
+  virtual void OnEvents(int fd, std::function<void(uint32_t)> callback) = 0;
+  virtual void DeleteFd(int fd) = 0;
+  virtual void ForgetClosedFd(int fd) = 0;
+  virtual void EnableWritable(int fd) = 0;
+  virtual void DisableWritable(int fd) = 0;
+  virtual void SetEvents(int fd, uint32_t events) = 0;
+
+  // Registers a SignalFd for wakeups.
+  virtual void RegisterSignalFd(ipc_lib::SignalFd *sfd,
+                                std::function<void()> callback) = 0;
+  virtual void UnregisterSignalFd(ipc_lib::SignalFd *sfd) = 0;
 
   // The following methods implement the timer backend and match the behavior of
   // the corresponding Aio::Timer methods documented in aio.h.
-  void InitializeTimer(TimerState *state);
-  void DestroyTimer(std::unique_ptr<TimerState> state);
-  void ScheduleTimer(TimerState *state,
+  virtual void InitializeTimer(Aio::TimerState *state) = 0;
+  virtual void DestroyTimer(std::unique_ptr<Aio::TimerState> state) = 0;
+  virtual void ScheduleTimer(Aio::TimerState *state,
+                             aos::monotonic_clock::time_point deadline,
+                             aos::monotonic_clock::duration interval,
+                             CompletionCallback callback, void *context) = 0;
+  virtual void CancelTimer(Aio::TimerState *state, bool reap) = 0;
+};
+
+class IoUringImpl : public Aio::Impl {
+ public:
+  IoUringImpl();
+  ~IoUringImpl() override;
+
+  void Run() override;
+  bool Poll(bool block) override;
+  void Quit() override;
+  void Wakeup() override;
+
+  void AsyncRead(int fd, std::span<char> buffer,
+                 AsyncRequest *request) override;
+  void AsyncWrite(int fd, std::span<const char> buffer,
+                  AsyncRequest *request) override;
+  void Cancel(AsyncRequest *request) override;
+  void BeforeWait(std::function<void()> function) override;
+
+  void OnReadable(int fd, std::function<void()> callback) override;
+  void OnError(int fd, std::function<void()> callback) override;
+  void OnWritable(int fd, std::function<void()> callback) override;
+  void OnEvents(int fd, std::function<void(uint32_t)> callback) override;
+  void DeleteFd(int fd) override;
+  void ForgetClosedFd(int fd) override;
+  void EnableWritable(int fd) override;
+  void DisableWritable(int fd) override;
+  void SetEvents(int fd, uint32_t events) override;
+
+  void RegisterSignalFd(ipc_lib::SignalFd *sfd,
+                        std::function<void()> callback) override;
+  void UnregisterSignalFd(ipc_lib::SignalFd *sfd) override;
+
+  void InitializeTimer(Aio::TimerState *state) override;
+  void DestroyTimer(std::unique_ptr<Aio::TimerState> state) override;
+  void ScheduleTimer(Aio::TimerState *state,
                      aos::monotonic_clock::time_point deadline,
                      aos::monotonic_clock::duration interval,
-                     CompletionCallback callback, void *context);
-  void CancelTimer(TimerState *state, bool reap);
-  bool TimerIsPending(const TimerState *state) const;
+                     CompletionCallback callback, void *context) override;
+  void CancelTimer(Aio::TimerState *state, bool reap) override;
 
-  // Synchronously cancels and reaps the target request if reap is true.
-  // Otherwise, cancels the request asynchronously.
-  void CancelRequest(AsyncRequest *request, bool reap, bool execute_callback);
-
-  // The following methods correspond directly to the public delegate methods
-  // documented in Aio in aio.h.
-  void AsyncRead(int fd, std::span<char> buffer, AsyncRequest *request);
-  void AsyncWrite(int fd, std::span<const char> buffer, AsyncRequest *request);
-  void Cancel(AsyncRequest *request);
-  void BeforeWait(std::function<void()> function);
-  void OnReadable(int fd, std::function<void()> callback);
-  void OnError(int fd, std::function<void()> callback);
-  void OnWritable(int fd, std::function<void()> callback);
-  void OnEvents(int fd, std::function<void(uint32_t)> callback);
-  void DeleteFd(int fd);
-  void ForgetClosedFd(int fd);
-  void EnableWritable(int fd);
-  void DisableWritable(int fd);
-  void SetEvents(int fd, uint32_t events);
-  void RegisterSignalFd(ipc_lib::SignalFd *sfd, std::function<void()> callback);
-  void UnregisterSignalFd(ipc_lib::SignalFd *sfd);
-
-  // Schedules a read request on the eventfd descriptor.
+ private:
+  bool ReapCompletions();
+  bool ReapSpecificRequest(AsyncRequest *target_req);
+  void CancelRequest(AsyncRequest *request, bool reap);
   void SubmitWakeupRead();
 
-  // Standard liburing ring structure.
   struct io_uring ring;
-
-  // RAII wrapper around the eventfd descriptor.
   EventFD event_fd;
 
-  // Loop control flags.
   std::atomic<bool> run{true};
   std::atomic<bool> quit_requested{false};
 
-  // Pre-wait callback functions.
   std::vector<std::function<void()>> before_wait_functions;
 
-  // Tracks active legacy readiness poll requests.
   struct LegacyState {
-    Aio::Impl *impl = nullptr;
+    IoUringImpl *impl = nullptr;
     int fd = -1;
     uint32_t events = 0;
     std::function<void()> in_fn = nullptr;
@@ -179,31 +273,22 @@ struct Aio::Impl {
     std::function<void(uint32_t)> events_fn = nullptr;
     AsyncRequest request;
 
-    // Submits a one-shot poll request to the io_uring ring.
     void Submit();
   };
   std::unordered_map<int, std::unique_ptr<LegacyState>> legacy_states;
 
-  // Manages the state for a signal file descriptor registered in Aio.
-  // It schedules a persistent multishot poll request (using io_uring's
-  // multishot poll support) to monitor the descriptor for incoming signals.
-  // When a signal is triggered, the event loop processes the completion event,
-  // reads and consumes the signal data from the file descriptor, and executes
-  // the registered user callback.
   struct SignalFdState {
     FileDescriptor fd = -1;
     std::function<void()> callback;
     AsyncRequest request;
 
-    // Prepares and submits a persistent poll request to monitor incoming
-    // signals.
-    void Submit(Aio::Impl *impl);
+    void Submit(IoUringImpl *impl);
   };
   std::unordered_map<ipc_lib::SignalFd *, std::unique_ptr<SignalFdState>>
       signalfd_states;
 };
 
-void Aio::Impl::LegacyState::Submit() {
+void IoUringImpl::LegacyState::Submit() {
   if (!request.done) return;
 
   uint32_t poll_mask = 0;
@@ -222,6 +307,7 @@ void Aio::Impl::LegacyState::Submit() {
 
   io_uring_prep_poll_add(sqe, fd, poll_mask);
   io_uring_sqe_set_data(sqe, &request);
+  request.done = false;
 
   request.callback = [](Completion completion, void *context) {
     auto state = static_cast<LegacyState *>(context);
@@ -241,6 +327,7 @@ void Aio::Impl::LegacyState::Submit() {
 
       // Re-submit the poll request first so it's active.
       state->Submit();
+
       if (events_fn) {
         events_fn(ready_epoll);
       } else {
@@ -261,7 +348,7 @@ void Aio::Impl::LegacyState::Submit() {
   request.done = false;
 }
 
-void Aio::Impl::SignalFdState::Submit(Aio::Impl *impl) {
+void IoUringImpl::SignalFdState::Submit(IoUringImpl *impl) {
   struct io_uring_sqe *sqe = io_uring_get_sqe(&impl->ring);
   ABSL_CHECK(sqe != nullptr) << "Out of SQEs";
 
@@ -272,11 +359,18 @@ void Aio::Impl::SignalFdState::Submit(Aio::Impl *impl) {
     auto state = static_cast<SignalFdState *>(context);
     if (aos::IsOk(completion.status)) {
       struct signalfd_siginfo siginfo;
-      ssize_t res = read(state->fd, &siginfo, sizeof(siginfo));
-      ABSL_CHECK_EQ(res, static_cast<ssize_t>(sizeof(siginfo)))
-          << "Failed to read from signalfd: " << aos_strerror(errno);
-      if (state->callback) {
-        state->callback();
+      while (true) {
+        ssize_t res = read(state->fd, &siginfo, sizeof(siginfo));
+        if (res == sizeof(siginfo)) {
+          if (state->callback) {
+            state->callback();
+          }
+        } else if (res < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+          break;
+        } else {
+          ABSL_LOG(FATAL) << "Failed to read from signalfd: "
+                          << aos_strerror(errno);
+        }
       }
     }
   };
@@ -285,98 +379,306 @@ void Aio::Impl::SignalFdState::Submit(Aio::Impl *impl) {
   request.done = false;
 }
 
-bool Aio::Impl::ReapCompletions() {
-  struct io_uring_cqe *cqe = nullptr;
-  unsigned head;
-  unsigned count = 0;
-  bool processed = false;
+IoUringImpl::IoUringImpl() {
+  uint32_t depth = ::absl::GetFlag(FLAGS_aio_queue_depth);
 
-  io_uring_for_each_cqe(&ring, head, cqe) {
-    processed = true;
-    count++;
-    AsyncRequest *req = (AsyncRequest *)io_uring_cqe_get_data(cqe);
-    int32_t res = cqe->res;
+  struct io_uring_params params;
+  std::memset(&params, 0, sizeof(params));
 
-    if (req) {
-      if (!(cqe->flags & IORING_CQE_F_MORE)) {
-        req->done = true;
-      }
-      Completion completion;
-      completion.user_data = req->user_data;
+  params.flags |= IORING_SETUP_SINGLE_ISSUER;
+  params.flags |= IORING_SETUP_COOP_TASKRUN;
+  params.flags |= IORING_SETUP_TASKRUN_FLAG;
 
-      if (res == -ECANCELED) {
-        completion.status = aos::MakeError("Canceled");
-        completion.result = 0;
-      } else if (res == -ETIME) {
-        completion.status = aos::Ok();
-        completion.result = 0;
-      } else if (res < 0) {
-        completion.status = aos::MakeError("io_uring error");
-        completion.result = -res;
-      } else {
-        completion.status = aos::Ok();
-        completion.result = res;
-      }
+  int ret = io_uring_queue_init_params(depth, &ring, &params);
+  if (ret < 0) {
+    std::memset(&params, 0, sizeof(params));
+    ret = io_uring_queue_init_params(depth, &ring, &params);
+    ABSL_PCHECK(ret == 0) << "io_uring_queue_init failed: "
+                          << aos_strerror(-ret);
+  }
 
-      if (req->callback) {
-        req->callback(completion, req->context);
-      }
+  // When wakeup event fd read completes, re-schedule it.
+  event_fd.wakeup_req.callback = [](Completion completion, void *context) {
+    auto *impl = static_cast<IoUringImpl *>(context);
+    if (aos::IsOk(completion.status)) {
+      impl->SubmitWakeupRead();
     }
-  }
+  };
+  event_fd.wakeup_req.context = this;
 
-  if (count > 0) {
-    io_uring_cq_advance(&ring, count);
-  }
-  return processed;
+  SubmitWakeupRead();
 }
 
-bool Aio::Impl::ReapSpecificRequest(AsyncRequest *target_req,
-                                    bool execute_callback) {
-  unsigned head;
-  struct io_uring_cqe *cqe = nullptr;
-  io_uring_for_each_cqe(&ring, head, cqe) {
-    if (io_uring_cqe_get_data(cqe) == target_req) {
-      int32_t res = cqe->res;
-      target_req->done = true;
-      cqe->user_data = 0;
-
-      if (execute_callback && target_req->callback) {
-        Completion completion;
-        completion.user_data = target_req->user_data;
-        if (res == -ECANCELED) {
-          completion.status = aos::MakeError("Canceled");
-          completion.result = 0;
-        } else if (res == -ETIME) {
-          completion.status = aos::Ok();
-          completion.result = 0;
-        } else if (res < 0) {
-          completion.status = aos::MakeError("io_uring error");
-          completion.result = -res;
-        } else {
-          completion.status = aos::Ok();
-          completion.result = res;
-        }
-        target_req->callback(completion, target_req->context);
-      }
-      return true;
+IoUringImpl::~IoUringImpl() {
+  run = false;
+  std::vector<AsyncRequest *> active_reqs;
+  for (auto &pair : legacy_states) {
+    if (!pair.second->request.done) {
+      active_reqs.push_back(&pair.second->request);
     }
   }
-  return false;
+  for (auto &pair : signalfd_states) {
+    if (!pair.second->request.done) {
+      active_reqs.push_back(&pair.second->request);
+    }
+  }
+  for (auto *req : active_reqs) {
+    Cancel(req);
+  }
+  if (!event_fd.wakeup_req.done) {
+    Cancel(&event_fd.wakeup_req);
+  }
+  io_uring_queue_exit(&ring);
 }
 
-void Aio::Impl::InitializeTimer(TimerState *state) {
+void IoUringImpl::Run() {
+  if (quit_requested) {
+    quit_requested = false;
+    return;
+  }
+  run = true;
+  while (run) {
+    Poll(true);
+  }
+  quit_requested = false;
+}
+
+bool IoUringImpl::Poll(bool block) {
+  for (const auto &fn : before_wait_functions) {
+    fn();
+  }
+
+  int ret;
+  if (block) {
+    ret = io_uring_submit_and_wait(&ring, 1);
+  } else {
+    ret = io_uring_submit(&ring);
+  }
+
+  if (ret < 0 && ret != -EINTR && ret != -EAGAIN) {
+    ABSL_LOG(ERROR) << "io_uring submit failed: " << aos_strerror(-ret);
+  }
+
+  return ReapCompletions();
+}
+
+void IoUringImpl::Quit() {
+  quit_requested = true;
+  run = false;
+  Wakeup();
+}
+
+void IoUringImpl::Wakeup() { event_fd.Write(); }
+
+void IoUringImpl::AsyncRead(int fd, std::span<char> buffer,
+                            AsyncRequest *request) {
+  struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
+  ABSL_CHECK(sqe != nullptr) << "Out of SQEs";
+
+  io_uring_prep_read(sqe, fd, buffer.data(), buffer.size(), -1);
+  io_uring_sqe_set_data(sqe, request);
+  request->done = false;
+}
+
+void IoUringImpl::AsyncWrite(int fd, std::span<const char> buffer,
+                             AsyncRequest *request) {
+  struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
+  ABSL_CHECK(sqe != nullptr) << "Out of SQEs";
+
+  io_uring_prep_write(sqe, fd, buffer.data(), buffer.size(), -1);
+  io_uring_sqe_set_data(sqe, request);
+  request->done = false;
+}
+
+void IoUringImpl::Cancel(AsyncRequest *request) {
+  if (request->done) return;
+
+  struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
+  ABSL_CHECK(sqe != nullptr) << "Out of SQEs";
+  io_uring_prep_cancel(sqe, request, 0);
+  io_uring_sqe_set_data(sqe, nullptr);
+  io_uring_submit(&ring);
+}
+
+void IoUringImpl::BeforeWait(std::function<void()> function) {
+  before_wait_functions.push_back(std::move(function));
+}
+
+void IoUringImpl::OnReadable(int fd, std::function<void()> callback) {
+  auto [it, inserted] = legacy_states.try_emplace(fd);
+  if (inserted) {
+    it->second = std::make_unique<IoUringImpl::LegacyState>();
+    it->second->impl = this;
+    it->second->fd = fd;
+  } else {
+    ABSL_CHECK(!it->second->in_fn) << "Duplicate in functions for " << fd;
+  }
+  auto &state = *it->second;
+  ABSL_CHECK(!state.events_fn)
+      << "Cannot mix OnEvents and OnReadable for fd " << fd;
+  state.in_fn = std::move(callback);
+  uint32_t new_events = state.events | 0x01 | 0x02 | 0x08;
+  if (state.events != new_events) {
+    CancelRequest(&state.request, true);
+    state.events = new_events;
+    state.Submit();
+  }
+}
+
+void IoUringImpl::OnError(int fd, std::function<void()> callback) {
+  auto [it, inserted] = legacy_states.try_emplace(fd);
+  if (inserted) {
+    it->second = std::make_unique<IoUringImpl::LegacyState>();
+    it->second->impl = this;
+    it->second->fd = fd;
+  } else {
+    ABSL_CHECK(!it->second->err_fn) << "Duplicate error functions for " << fd;
+  }
+  auto &state = *it->second;
+  ABSL_CHECK(!state.events_fn)
+      << "Cannot mix OnEvents and OnError for fd " << fd;
+  state.err_fn = std::move(callback);
+  uint32_t new_events = state.events | 0x08;
+  if (state.events != new_events) {
+    CancelRequest(&state.request, true);
+    state.events = new_events;
+    state.Submit();
+  }
+}
+
+void IoUringImpl::OnWritable(int fd, std::function<void()> callback) {
+  auto [it, inserted] = legacy_states.try_emplace(fd);
+  if (inserted) {
+    it->second = std::make_unique<IoUringImpl::LegacyState>();
+    it->second->impl = this;
+    it->second->fd = fd;
+  } else {
+    ABSL_CHECK(!it->second->out_fn) << "Duplicate out functions for " << fd;
+  }
+  auto &state = *it->second;
+  ABSL_CHECK(!state.events_fn)
+      << "Cannot mix OnEvents and OnWritable for fd " << fd;
+  state.out_fn = std::move(callback);
+  uint32_t new_events = state.events | 0x04;
+  if (state.events != new_events) {
+    CancelRequest(&state.request, true);
+    state.events = new_events;
+    state.Submit();
+  }
+}
+
+void IoUringImpl::OnEvents(int fd, std::function<void(uint32_t)> callback) {
+  auto [it, inserted] = legacy_states.try_emplace(fd);
+  ABSL_CHECK(inserted) << "May not replace OnEvents handlers for fd " << fd;
+
+  it->second = std::make_unique<IoUringImpl::LegacyState>();
+  it->second->impl = this;
+  it->second->fd = fd;
+  auto &state = *it->second;
+  state.events_fn = std::move(callback);
+}
+
+void IoUringImpl::DeleteFd(int fd) {
+  auto it = legacy_states.find(fd);
+  ABSL_CHECK(it != legacy_states.end()) << "fd " << fd << " not found";
+
+  auto state = std::move(it->second);
+  legacy_states.erase(it);
+
+  CancelRequest(&state->request, true);
+}
+
+void IoUringImpl::ForgetClosedFd(int fd) {
+  auto it = legacy_states.find(fd);
+  ABSL_CHECK(it != legacy_states.end()) << "fd " << fd << " not found";
+
+  auto state = std::move(it->second);
+  legacy_states.erase(it);
+
   state->request.done = true;
 }
 
-void Aio::Impl::DestroyTimer(std::unique_ptr<TimerState> state) {
-  state->request.callback = nullptr;
+void IoUringImpl::EnableWritable(int fd) {
+  auto it = legacy_states.find(fd);
+  ABSL_CHECK(it != legacy_states.end()) << "fd " << fd << " not found";
+
+  auto &state = *it->second;
+  ABSL_CHECK(!state.events_fn)
+      << "EnableWritable is only for fds registered using OnWritable, not "
+         "OnEvents";
+  uint32_t new_events = state.events | 0x04;
+  if (state.events != new_events) {
+    CancelRequest(&state.request, true);
+    state.events = new_events;
+    state.Submit();
+  }
+}
+
+void IoUringImpl::DisableWritable(int fd) {
+  auto it = legacy_states.find(fd);
+  ABSL_CHECK(it != legacy_states.end()) << "fd " << fd << " not found";
+
+  auto &state = *it->second;
+  ABSL_CHECK(!state.events_fn)
+      << "DisableWritable is only for fds registered using OnWritable, not "
+         "OnEvents";
+  uint32_t new_events = state.events & ~0x04;
+  if (state.events != new_events) {
+    CancelRequest(&state.request, true);
+    state.events = new_events;
+    state.Submit();
+  }
+}
+
+void IoUringImpl::SetEvents(int fd, uint32_t events) {
+  auto it = legacy_states.find(fd);
+  ABSL_CHECK(it != legacy_states.end()) << "fd " << fd << " not found";
+
+  auto &state = *it->second;
+  ABSL_CHECK(state.events_fn)
+      << "SetEvents is only for fds registered using OnEvents";
+  if (state.events != events) {
+    CancelRequest(&state.request, true);
+    state.events = events;
+    state.Submit();
+  }
+}
+
+void IoUringImpl::RegisterSignalFd(ipc_lib::SignalFd *sfd,
+                                   std::function<void()> callback) {
+  auto [it, inserted] = signalfd_states.try_emplace(sfd);
+  ABSL_CHECK(inserted) << "Duplicate signalfd registration";
+
+  it->second = std::make_unique<IoUringImpl::SignalFdState>();
+  it->second->fd = sfd->fd();
+  auto &state = *it->second;
+  state.callback = std::move(callback);
+  state.Submit(this);
+}
+
+void IoUringImpl::UnregisterSignalFd(ipc_lib::SignalFd *sfd) {
+  auto it = signalfd_states.find(sfd);
+  ABSL_CHECK(it != signalfd_states.end()) << "SignalFd not found";
+
+  auto state = std::move(it->second);
+  signalfd_states.erase(it);
+
+  state->callback = nullptr;
+  CancelRequest(&state->request, true);
+}
+
+void IoUringImpl::InitializeTimer(Aio::TimerState *state) {
+  state->request.done = true;
+}
+
+void IoUringImpl::DestroyTimer(std::unique_ptr<Aio::TimerState> state) {
   CancelTimer(state.get(), true);
 }
 
-void Aio::Impl::ScheduleTimer(TimerState *state,
-                              aos::monotonic_clock::time_point deadline,
-                              aos::monotonic_clock::duration interval,
-                              CompletionCallback callback, void *context) {
+void IoUringImpl::ScheduleTimer(Aio::TimerState *state,
+                                aos::monotonic_clock::time_point deadline,
+                                aos::monotonic_clock::duration interval,
+                                CompletionCallback callback, void *context) {
   CancelTimer(state, true);
 
   state->interval = interval;
@@ -384,9 +686,10 @@ void Aio::Impl::ScheduleTimer(TimerState *state,
   state->user_callback = callback;
   state->user_context = context;
   state->request.user_data = state;
+  state->request.done = false;
 
   state->request.callback = [](Completion completion, void *ctx) {
-    auto *tstate = static_cast<TimerState *>(ctx);
+    auto *tstate = static_cast<Aio::TimerState *>(ctx);
     auto user_cb = tstate->user_callback;
     auto user_ctx = tstate->user_context;
 
@@ -397,7 +700,8 @@ void Aio::Impl::ScheduleTimer(TimerState *state,
       tstate->request.done = false;
 
       struct __kernel_timespec *ts =
-          reinterpret_cast<struct __kernel_timespec *>(&tstate->request.tv_sec);
+          reinterpret_cast<struct __kernel_timespec *>(
+              &State(&tstate->request).timespec);
       auto duration = tstate->deadline.time_since_epoch();
       auto secs = std::chrono::duration_cast<std::chrono::seconds>(duration);
       auto nsecs =
@@ -405,11 +709,12 @@ void Aio::Impl::ScheduleTimer(TimerState *state,
       ts->tv_sec = secs.count();
       ts->tv_nsec = nsecs.count();
 
-      struct io_uring_sqe *sqe = io_uring_get_sqe(&impl->ring);
+      auto *ring_impl = static_cast<IoUringImpl *>(impl);
+      struct io_uring_sqe *sqe = io_uring_get_sqe(&ring_impl->ring);
       ABSL_CHECK(sqe != nullptr) << "Out of SQEs";
       io_uring_prep_timeout(sqe, ts, 0, IORING_TIMEOUT_ABS);
       io_uring_sqe_set_data(sqe, &tstate->request);
-      io_uring_submit(&impl->ring);
+      io_uring_submit(&ring_impl->ring);
     }
 
     if (user_cb) {
@@ -425,8 +730,8 @@ void Aio::Impl::ScheduleTimer(TimerState *state,
   auto nsecs =
       std::chrono::duration_cast<std::chrono::nanoseconds>(duration - secs);
 
-  struct __kernel_timespec *ts =
-      reinterpret_cast<struct __kernel_timespec *>(&state->request.tv_sec);
+  struct __kernel_timespec *ts = reinterpret_cast<struct __kernel_timespec *>(
+      &State(&state->request).timespec);
   ts->tv_sec = secs.count();
   ts->tv_nsec = nsecs.count();
 
@@ -437,375 +742,845 @@ void Aio::Impl::ScheduleTimer(TimerState *state,
   io_uring_sqe_set_data(sqe, &state->request);
 }
 
-void Aio::Impl::CancelRequest(AsyncRequest *request, bool reap,
-                              bool execute_callback) {
+void IoUringImpl::CancelTimer(Aio::TimerState *state, bool reap) {
+  state->request.callback = nullptr;
+  CancelRequest(&state->request, reap);
+}
+
+bool IoUringImpl::ReapCompletions() {
+  bool processed = false;
+  struct io_uring_cqe *cqe = nullptr;
+  unsigned head;
+  int count = 0;
+
+  io_uring_for_each_cqe(&ring, head, cqe) {
+    processed = true;
+    ++count;
+    auto *req = static_cast<AsyncRequest *>(io_uring_cqe_get_data(cqe));
+
+    if (req != nullptr) {
+      int32_t res = cqe->res;
+      if (!(cqe->flags & IORING_CQE_F_MORE)) {
+        req->done = true;
+      }
+      cqe->user_data = 0;
+
+      if (req->callback) {
+        Completion completion;
+        completion.user_data = req->user_data;
+
+        if (res == -ECANCELED) {
+          completion.status = aos::MakeError("Canceled");
+          completion.result = 0;
+        } else if (res == -ETIME) {
+          completion.status = aos::Ok();
+          completion.result = 0;
+        } else if (res < 0) {
+          completion.status = aos::MakeError("io_uring error");
+          completion.result = -res;
+        } else {
+          completion.status = aos::Ok();
+          completion.result = res;
+        }
+
+        req->callback(completion, req->context);
+      }
+    }
+  }
+
+  if (count > 0) {
+    io_uring_cq_advance(&ring, count);
+  }
+
+  return processed;
+}
+
+bool IoUringImpl::ReapSpecificRequest(AsyncRequest *target_req) {
+  unsigned head;
+  struct io_uring_cqe *cqe = nullptr;
+  io_uring_for_each_cqe(&ring, head, cqe) {
+    if (io_uring_cqe_get_data(cqe) == target_req) {
+      target_req->done = true;
+      cqe->user_data = 0;
+      return true;
+    }
+  }
+  return false;
+}
+
+void IoUringImpl::CancelRequest(AsyncRequest *request, bool reap) {
   if (!request->done) {
+    Cancel(request);
     if (reap) {
-      // First, submit any pending SQEs to ensure the request is in the kernel.
-      io_uring_submit(&ring);
-
-      struct io_uring_sync_cancel_reg reg;
-      std::memset(&reg, 0, sizeof(reg));
-      reg.addr = reinterpret_cast<uint64_t>(request);
-      reg.flags = 0;
-
-      int ret = io_uring_register_sync_cancel(&ring, &reg);
-      if (ret == 0) {
-        ABSL_CHECK(ReapSpecificRequest(request, execute_callback));
-      } else {
-        // If the cancel failed or was already in flight, wait for the kernel to
-        // generate a completion event for this request.
-        while (!ReapSpecificRequest(request, execute_callback)) {
-          struct io_uring_cqe *cqe = nullptr;
-          int wait_ret = io_uring_wait_cqe(&ring, &cqe);
+      while (!request->done) {
+        if (!ReapSpecificRequest(request)) {
+          struct io_uring_cqe *cfe = nullptr;
+          int wait_ret = io_uring_wait_cqe(&ring, &cfe);
           ABSL_CHECK_EQ(wait_ret, 0)
               << "io_uring_wait_cqe failed: " << aos_strerror(-wait_ret);
         }
       }
-    } else {
-      Cancel(request);
     }
   }
 }
 
-void Aio::Impl::CancelTimer(TimerState *state, bool reap) {
-  CancelRequest(&state->request, reap, true);
-}
-
-bool Aio::Impl::TimerIsPending(const TimerState *state) const {
-  return !state->request.done;
-}
-
-void Aio::Impl::AsyncRead(int fd, std::span<char> buffer,
-                          AsyncRequest *request) {
-  struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
-  ABSL_CHECK(sqe != nullptr) << "Out of SQEs";
-
-  io_uring_prep_read(sqe, fd, buffer.data(), buffer.size(), -1);
-  io_uring_sqe_set_data(sqe, request);
-  request->done = false;
-}
-
-void Aio::Impl::AsyncWrite(int fd, std::span<const char> buffer,
-                           AsyncRequest *request) {
-  struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
-  ABSL_CHECK(sqe != nullptr) << "Out of SQEs";
-
-  io_uring_prep_write(sqe, fd, buffer.data(), buffer.size(), -1);
-  io_uring_sqe_set_data(sqe, request);
-  request->done = false;
-}
-
-void Aio::Impl::Cancel(AsyncRequest *request) {
-  if (request->done) return;
-
-  struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
-  ABSL_CHECK(sqe != nullptr) << "Out of SQEs";
-  io_uring_prep_cancel(sqe, request, 0);
-  io_uring_sqe_set_data(sqe, nullptr);
-  io_uring_submit(&ring);
-}
-
-void Aio::Impl::BeforeWait(std::function<void()> function) {
-  before_wait_functions.push_back(std::move(function));
-}
-
-void Aio::Impl::OnReadable(int fd, std::function<void()> callback) {
-  auto [it, inserted] = legacy_states.try_emplace(fd);
-  if (inserted) {
-    it->second = std::make_unique<Impl::LegacyState>();
-    it->second->impl = this;
-    it->second->fd = fd;
-  } else {
-    ABSL_CHECK(!it->second->in_fn) << "Duplicate in functions for " << fd;
-  }
-  auto &state = *it->second;
-  ABSL_CHECK(!state.events_fn)
-      << "Cannot mix OnEvents and OnReadable for fd " << fd;
-  state.in_fn = std::move(callback);
-  uint32_t new_events = state.events | 0x01 | 0x02 | 0x08;
-  if (state.events != new_events) {
-    CancelRequest(&state.request, true, false);
-    state.events = new_events;
-    state.Submit();
-  }
-}
-
-void Aio::Impl::OnError(int fd, std::function<void()> callback) {
-  auto [it, inserted] = legacy_states.try_emplace(fd);
-  if (inserted) {
-    it->second = std::make_unique<Impl::LegacyState>();
-    it->second->impl = this;
-    it->second->fd = fd;
-  } else {
-    ABSL_CHECK(!it->second->err_fn) << "Duplicate error functions for " << fd;
-  }
-  auto &state = *it->second;
-  ABSL_CHECK(!state.events_fn)
-      << "Cannot mix OnEvents and OnError for fd " << fd;
-  state.err_fn = std::move(callback);
-  uint32_t new_events = state.events | 0x08;
-  if (state.events != new_events) {
-    CancelRequest(&state.request, true, false);
-    state.events = new_events;
-    state.Submit();
-  }
-}
-
-void Aio::Impl::OnWritable(int fd, std::function<void()> callback) {
-  auto [it, inserted] = legacy_states.try_emplace(fd);
-  if (inserted) {
-    it->second = std::make_unique<Impl::LegacyState>();
-    it->second->impl = this;
-    it->second->fd = fd;
-  } else {
-    ABSL_CHECK(!it->second->out_fn) << "Duplicate out functions for " << fd;
-  }
-  auto &state = *it->second;
-  ABSL_CHECK(!state.events_fn)
-      << "Cannot mix OnEvents and OnWritable for fd " << fd;
-  state.out_fn = std::move(callback);
-  uint32_t new_events = state.events | 0x04;
-  if (state.events != new_events) {
-    CancelRequest(&state.request, true, false);
-    state.events = new_events;
-    state.Submit();
-  }
-}
-
-void Aio::Impl::OnEvents(int fd, std::function<void(uint32_t)> callback) {
-  auto [it, inserted] = legacy_states.try_emplace(fd);
-  ABSL_CHECK(inserted) << "May not replace OnEvents handlers for fd " << fd;
-
-  it->second = std::make_unique<Impl::LegacyState>();
-  it->second->impl = this;
-  it->second->fd = fd;
-  auto &state = *it->second;
-  state.events_fn = std::move(callback);
-}
-
-void Aio::Impl::DeleteFd(int fd) {
-  auto it = legacy_states.find(fd);
-  ABSL_CHECK(it != legacy_states.end()) << "fd " << fd << " not found";
-
-  auto state = std::move(it->second);
-  legacy_states.erase(it);
-
-  CancelRequest(&state->request, true, false);
-}
-
-void Aio::Impl::ForgetClosedFd(int fd) {
-  auto it = legacy_states.find(fd);
-  ABSL_CHECK(it != legacy_states.end()) << "fd " << fd << " not found";
-
-  auto state = std::move(it->second);
-  legacy_states.erase(it);
-
-  state->request.done = true;
-}
-
-void Aio::Impl::EnableWritable(int fd) {
-  auto it = legacy_states.find(fd);
-  ABSL_CHECK(it != legacy_states.end()) << "fd " << fd << " not found";
-
-  auto &state = *it->second;
-  ABSL_CHECK(!state.events_fn) << "EnableWritable is only for fds registered "
-                                  "using OnWritable, not OnEvents";
-  uint32_t new_events = state.events | 0x04;
-  if (state.events != new_events) {
-    CancelRequest(&state.request, true, false);
-    state.events = new_events;
-    state.Submit();
-  }
-}
-
-void Aio::Impl::DisableWritable(int fd) {
-  auto it = legacy_states.find(fd);
-  ABSL_CHECK(it != legacy_states.end()) << "fd " << fd << " not found";
-
-  auto &state = *it->second;
-  ABSL_CHECK(!state.events_fn) << "DisableWritable is only for fds registered "
-                                  "using OnWritable, not OnEvents";
-  uint32_t new_events = state.events & ~0x04;
-  if (state.events != new_events) {
-    CancelRequest(&state.request, true, false);
-    state.events = new_events;
-    state.Submit();
-  }
-}
-
-void Aio::Impl::SetEvents(int fd, uint32_t events) {
-  auto it = legacy_states.find(fd);
-  ABSL_CHECK(it != legacy_states.end()) << "fd " << fd << " not found";
-
-  auto &state = *it->second;
-  ABSL_CHECK(state.events_fn)
-      << "SetEvents is only for fds registered using OnEvents";
-  if (state.events != events) {
-    CancelRequest(&state.request, true, false);
-    state.events = events;
-    state.Submit();
-  }
-}
-
-void Aio::Impl::SubmitWakeupRead() {
+void IoUringImpl::SubmitWakeupRead() {
   AsyncRead(event_fd.fd(),
             std::span<char>(reinterpret_cast<char *>(&event_fd.eventfd_buf),
                             sizeof(event_fd.eventfd_buf)),
             &event_fd.wakeup_req);
 }
 
-void Aio::Impl::RegisterSignalFd(ipc_lib::SignalFd *sfd,
-                                 std::function<void()> callback) {
-  auto [it, inserted] = signalfd_states.try_emplace(sfd);
-  ABSL_CHECK(inserted) << "Duplicate signalfd registration";
+class EpollImpl : public Aio::Impl {
+ public:
+  EpollImpl();
+  ~EpollImpl() override;
 
-  it->second = std::make_unique<Impl::SignalFdState>();
-  it->second->fd = sfd->fd();
-  auto &state = *it->second;
-  state.callback = std::move(callback);
-  state.Submit(this);
-}
+  void Run() override;
+  bool Poll(bool block) override;
+  void Quit() override;
+  void Wakeup() override;
 
-void Aio::Impl::UnregisterSignalFd(ipc_lib::SignalFd *sfd) {
-  auto it = signalfd_states.find(sfd);
-  ABSL_CHECK(it != signalfd_states.end()) << "SignalFd not found";
+  void AsyncRead(int fd, std::span<char> buffer,
+                 AsyncRequest *request) override;
+  void AsyncWrite(int fd, std::span<const char> buffer,
+                  AsyncRequest *request) override;
+  void Cancel(AsyncRequest *request) override;
+  void BeforeWait(std::function<void()> function) override;
 
-  auto state = std::move(it->second);
-  signalfd_states.erase(it);
+  void OnReadable(int fd, std::function<void()> callback) override;
+  void OnError(int fd, std::function<void()> callback) override;
+  void OnWritable(int fd, std::function<void()> callback) override;
+  void OnEvents(int fd, std::function<void(uint32_t)> callback) override;
+  void DeleteFd(int fd) override;
+  void ForgetClosedFd(int fd) override;
+  void EnableWritable(int fd) override;
+  void DisableWritable(int fd) override;
+  void SetEvents(int fd, uint32_t events) override;
 
-  state->callback = nullptr;
-  CancelRequest(&state->request, true, false);
-}
+  void RegisterSignalFd(ipc_lib::SignalFd *sfd,
+                        std::function<void()> callback) override;
+  void UnregisterSignalFd(ipc_lib::SignalFd *sfd) override;
 
-Aio::Aio() : impl_(std::make_unique<Impl>()) {
-  // Initialize the io_uring ring with the configured queue depth.
-  //
-  // We attempt to set the following real-time optimization flags:
-  // 1. IORING_SETUP_SINGLE_ISSUER: Informs the kernel that only a single thread
-  //    (the event loop thread) will submit and reap requests on this ring. This
-  //    allows the kernel to bypass internal mutexes and locks, making the
-  //    entire operation path lock-free.
-  // 2. IORING_SETUP_COOP_TASKRUN: Prevents the kernel from raising asynchronous
-  //    interrupts (like signals or TIF_NOTIFY_SIGNAL) to wake up the thread and
-  //    process completion task work while it is busy executing user-space code.
-  //    Instead, completion work is deferred to run cooperatively when the
-  //    thread naturally enters the kernel (e.g., inside Aio::Poll or
-  //    io_uring_enter). This completely eliminates scheduling jitter in the
-  //    user-space RT loop.
-  // 3. IORING_SETUP_TASKRUN_FLAG: Used with IORING_SETUP_COOP_TASKRUN to expose
-  //    a flag indicating when task work is pending, allowing checking for work
-  //    efficiently.
-  //
-  // Note on wakeups: If the loop is asleep waiting for the next event inside
-  // io_uring_enter, the timer or signal expiry wakes the thread up immediately
-  // and executes the task work as part of the wakeup transition, ensuring zero
-  // wakeup latency.
-  //
-  // If the running kernel does not support these optimizations (returning
-  // -EINVAL), we fall back to a standard queue initialization (0 flags).
-  const uint32_t queue_depth = ::absl::GetFlag(FLAGS_aio_queue_depth);
-  uint32_t flags = IORING_SETUP_SINGLE_ISSUER | IORING_SETUP_COOP_TASKRUN |
-                   IORING_SETUP_TASKRUN_FLAG;
-  int ret = io_uring_queue_init(queue_depth, &(impl_->ring), flags);
-  if (ret == -EINVAL) {
-    // Try without IORING_SETUP_SINGLE_ISSUER (requires Linux 6.0+).
-    flags = IORING_SETUP_COOP_TASKRUN | IORING_SETUP_TASKRUN_FLAG;
-    ret = io_uring_queue_init(queue_depth, &(impl_->ring), flags);
-    if (ret == 0) {
-      ABSL_LOG(WARNING)
-          << "Kernel does not support IORING_SETUP_SINGLE_ISSUER (requires "
-             "Linux 6.0+).  Continuing with cooperative taskrun optimizations "
-             "only.  Consider using EPoll instead for RT performance.";
-    } else if (ret == -EINVAL) {
-      // Try standard initialization (cooperative taskrun requires Linux 5.19+).
-      ret = io_uring_queue_init(queue_depth, &(impl_->ring), 0);
-      if (ret == 0) {
-        ABSL_LOG(WARNING)
-            << "Kernel does not support IORING_SETUP_COOP_TASKRUN or "
-               "IORING_SETUP_TASKRUN_FLAG (require Linux 5.19+).  Continuing "
-               "with standard initialization.  Consider using EPoll instead "
-               "for RT performance.";
+  void InitializeTimer(Aio::TimerState *state) override;
+  void DestroyTimer(std::unique_ptr<Aio::TimerState> state) override;
+  void ScheduleTimer(Aio::TimerState *state,
+                     aos::monotonic_clock::time_point deadline,
+                     aos::monotonic_clock::duration interval,
+                     CompletionCallback callback, void *context) override;
+  void CancelTimer(Aio::TimerState *state, bool reap) override;
+
+ private:
+  struct FdRegistration {
+    int fd = -1;
+    AsyncRequest *read_req = nullptr;
+    AsyncRequest *write_req = nullptr;
+    std::function<void()> in_fn = nullptr;
+    std::function<void()> out_fn = nullptr;
+    std::function<void()> err_fn = nullptr;
+    std::function<void(uint32_t)> events_fn = nullptr;
+    uint32_t events = 0;
+
+    bool registered = false;
+    uint32_t epoll_events = 0;
+  };
+
+  static constexpr uint32_t kIn = 0x01;
+  static constexpr uint32_t kPri = 0x02;
+  static constexpr uint32_t kOut = 0x04;
+  static constexpr uint32_t kErr = 0x08;
+
+  static constexpr uint32_t kInEvents = kIn | kPri;
+  static constexpr uint32_t kOutEvents = kOut;
+  static constexpr uint32_t kErrorEvents = kErr;
+
+  FdRegistration *GetActiveRegistration(int fd) const;
+  FdRegistration &GetOrCreateLegacyRegistration(int fd);
+  FdRegistration &GetOrCreateAsyncRegistration(int fd);
+  void ReleaseRegistration(FdRegistration *reg);
+  void UpdateEpoll(int fd);
+  void SubmitWakeupRead();
+  void CancelRequest(AsyncRequest *request);
+
+  bool remove_from_cancels(AsyncRequest *r) {
+    AsyncRequest **curr = &pending_cancels_head;
+    while (*curr != nullptr) {
+      if (*curr == r) {
+        *curr = State(*curr).link.next;
+        return true;
       }
+      curr = &State(*curr).link.next;
     }
+    return false;
   }
-  ABSL_PCHECK(ret == 0) << "io_uring_queue_init failed: " << ret;
+
+  bool remove_from_sync(AsyncRequest *r) {
+    AsyncRequest **curr = &pending_sync_completions_head;
+    while (*curr != nullptr) {
+      if (*curr == r) {
+        *curr = State(*curr).link.next;
+        return true;
+      }
+      curr = &State(*curr).link.next;
+    }
+    return false;
+  }
+
+  int epoll_fd_ = -1;
+  EventFD event_fd_;
+  std::vector<std::unique_ptr<FdRegistration>> registrations_;
+  // If people really want to do heavy async IO, they should migrate to
+  // io_uring.
+  std::vector<std::unique_ptr<FdRegistration>> free_list_;
+  size_t initial_pool_size_ = 16;
+  std::vector<std::function<void()>> before_wait_functions_;
+
+  bool run_ = false;
+  bool quit_requested_ = false;
+
+  AsyncRequest *pending_cancels_head = nullptr;
+  AsyncRequest *pending_sync_completions_head = nullptr;
+};
+
+EpollImpl::EpollImpl() {
+  epoll_fd_ = epoll_create1(EPOLL_CLOEXEC);
+  ABSL_PCHECK(epoll_fd_ >= 0) << "Failed to create epoll instance";
+
+  initial_pool_size_ = absl::GetFlag(FLAGS_aio_epoll_pool_size);
+  free_list_.reserve(initial_pool_size_ * 2);
+  for (size_t i = 0; i < initial_pool_size_; ++i) {
+    free_list_.push_back(std::make_unique<FdRegistration>());
+  }
+  registrations_.reserve(initial_pool_size_ * 2);
 
   // When wakeup event fd read completes, re-schedule it.
-  impl_->event_fd.wakeup_req.callback = [](Completion completion,
-                                           void *context) {
-    Aio::Impl *impl = (Aio::Impl *)context;
+  event_fd_.wakeup_req.callback = [](Completion completion, void *context) {
+    auto *impl = static_cast<EpollImpl *>(context);
     if (aos::IsOk(completion.status)) {
       impl->SubmitWakeupRead();
     }
   };
-  impl_->event_fd.wakeup_req.context = impl_.get();
-  impl_->SubmitWakeupRead();
+  event_fd_.wakeup_req.context = this;
+
+  SubmitWakeupRead();
 }
 
-Aio::~Aio() {
-  std::vector<AsyncRequest *> active_reqs;
-  for (auto &pair : impl_->legacy_states) {
-    if (!pair.second->request.done) {
-      active_reqs.push_back(&pair.second->request);
-    }
+EpollImpl::~EpollImpl() {
+  run_ = false;
+  if (epoll_fd_ >= 0) {
+    close(epoll_fd_);
   }
-  for (auto &pair : impl_->signalfd_states) {
-    if (!pair.second->request.done) {
-      active_reqs.push_back(&pair.second->request);
-    }
-  }
-  for (auto *req : active_reqs) {
-    Cancel(req);
-  }
-  if (!impl_->event_fd.wakeup_req.done) {
-    Cancel(&impl_->event_fd.wakeup_req);
-  }
-  io_uring_queue_exit(&impl_->ring);
 }
 
-void Aio::Run() {
-  if (impl_->quit_requested) {
-    impl_->quit_requested = false;
+EpollImpl::FdRegistration *EpollImpl::GetActiveRegistration(int fd) const {
+  auto it = std::lower_bound(registrations_.begin(), registrations_.end(), fd,
+                             [](const std::unique_ptr<FdRegistration> &reg,
+                                int value) { return reg->fd < value; });
+  if (it != registrations_.end() && (*it)->fd == fd) {
+    return it->get();
+  }
+  return nullptr;
+}
+
+EpollImpl::FdRegistration &EpollImpl::GetOrCreateLegacyRegistration(int fd) {
+  if (auto *reg = GetActiveRegistration(fd)) {
+    return *reg;
+  }
+  auto new_reg = std::make_unique<FdRegistration>();
+  auto *ptr = new_reg.get();
+  ptr->fd = fd;
+  auto it = std::lower_bound(registrations_.begin(), registrations_.end(), fd,
+                             [](const std::unique_ptr<FdRegistration> &reg,
+                                int value) { return reg->fd < value; });
+  registrations_.insert(it, std::move(new_reg));
+  return *ptr;
+}
+
+EpollImpl::FdRegistration &EpollImpl::GetOrCreateAsyncRegistration(int fd) {
+  if (auto *reg = GetActiveRegistration(fd)) {
+    return *reg;
+  }
+  ABSL_CHECK(!free_list_.empty()) << "Async registration pool exhausted";
+  auto owned_reg = std::move(free_list_.back());
+  free_list_.pop_back();
+  auto *ptr = owned_reg.get();
+  ptr->fd = fd;
+  auto it = std::lower_bound(registrations_.begin(), registrations_.end(), fd,
+                             [](const std::unique_ptr<FdRegistration> &reg,
+                                int value) { return reg->fd < value; });
+  registrations_.insert(it, std::move(owned_reg));
+  return *ptr;
+}
+
+void EpollImpl::ReleaseRegistration(FdRegistration *reg) {
+  auto it =
+      std::lower_bound(registrations_.begin(), registrations_.end(), reg->fd,
+                       [](const std::unique_ptr<FdRegistration> &r, int value) {
+                         return r->fd < value;
+                       });
+  ABSL_CHECK(it != registrations_.end() && it->get() == reg);
+
+  std::unique_ptr<FdRegistration> owned_reg = std::move(*it);
+  registrations_.erase(it);
+
+  owned_reg->fd = -1;
+  owned_reg->read_req = nullptr;
+  owned_reg->write_req = nullptr;
+  owned_reg->in_fn = nullptr;
+  owned_reg->out_fn = nullptr;
+  owned_reg->err_fn = nullptr;
+  owned_reg->events_fn = nullptr;
+  owned_reg->events = 0;
+  owned_reg->registered = false;
+  owned_reg->epoll_events = 0;
+
+  if (free_list_.size() < 2 * initial_pool_size_) {
+    free_list_.push_back(std::move(owned_reg));
+  }
+}
+
+void EpollImpl::Run() {
+  if (quit_requested_) {
+    quit_requested_ = false;
     return;
   }
-  impl_->run = true;
-  while (impl_->run) {
+  run_ = true;
+  while (run_) {
     Poll(true);
   }
-  impl_->quit_requested = false;
+  quit_requested_ = false;
 }
 
-bool Aio::Poll(bool block) {
-  // Execute pre-wait callbacks.
-  for (const auto &fn : impl_->before_wait_functions) {
+bool EpollImpl::Poll(bool block) {
+  for (const auto &fn : before_wait_functions_) {
     fn();
   }
 
-  int ret;
-  if (block) {
-    // Submit any pending submissions and block until at least 1 completion is
-    // available.
-    ret = io_uring_submit_and_wait(&impl_->ring, 1);
-  } else {
-    // Just submit any pending submissions without blocking.
-    ret = io_uring_submit(&impl_->ring);
+  bool processed = false;
+
+  // Handle any pending cancels first to complete them.
+  while (pending_cancels_head != nullptr) {
+    auto *req = pending_cancels_head;
+    pending_cancels_head = State(req).link.next;
+
+    if (!req->done) {
+      req->done = true;
+      if (req->callback) {
+        req->callback(Completion{aos::MakeError("Canceled"), 0, req->user_data},
+                      req->context);
+      }
+      processed = true;
+    }
   }
 
-  if (ret < 0 && ret != -EINTR && ret != -EAGAIN) {
-    ABSL_LOG(ERROR) << "io_uring submit failed: " << aos_strerror(-ret);
+  // Process synchronous completions (e.g. invalid FDs).
+  while (pending_sync_completions_head != nullptr) {
+    auto *req = pending_sync_completions_head;
+    pending_sync_completions_head = State(req).link.next;
+
+    if (!req->done) {
+      req->done = true;
+      if (req->callback) {
+        int64_t res = State(req).link.result;
+        Completion completion;
+        completion.user_data = req->user_data;
+        if (res >= 0) {
+          completion.status = aos::Ok();
+          completion.result = static_cast<int32_t>(res);
+        } else {
+          completion.status = aos::MakeError("io_uring error");
+          completion.result = static_cast<int32_t>(-res);
+        }
+        req->callback(completion, req->context);
+      }
+      processed = true;
+    }
   }
 
-  return impl_->ReapCompletions();
+  int timeout = (block && !processed) ? -1 : 0;
+
+  struct epoll_event event;
+  int num_events;
+  do {
+    num_events = epoll_wait(epoll_fd_, &event, 1, timeout);
+  } while (num_events == -1 && errno == EINTR && block && !processed);
+
+  if (num_events == -1) {
+    if (errno == EINTR) {
+      return processed;
+    }
+    ABSL_PCHECK(num_events != -1);
+  }
+
+  if (num_events > 0) {
+    processed = true;
+    auto *reg = static_cast<FdRegistration *>(event.data.ptr);
+    uint32_t got_events = event.events;
+    uint32_t events = 0;
+    if (got_events & EPOLLIN) events |= kIn;
+    if (got_events & EPOLLPRI) events |= kPri;
+    if (got_events & EPOLLOUT) events |= kOut;
+    if (got_events & EPOLLERR) events |= kErr;
+    if (got_events & EPOLLHUP) events |= kErr;
+
+    if (events & kInEvents) {
+      if (reg->in_fn) {
+        reg->in_fn();
+      }
+    }
+
+    if (reg->fd != -1 && (events & kOutEvents)) {
+      if (reg->out_fn) {
+        reg->out_fn();
+      }
+    }
+
+    if (reg->fd != -1 && (events & kErrorEvents)) {
+      if (reg->err_fn) {
+        reg->err_fn();
+      }
+    }
+
+    if (reg->fd != -1 && reg->events_fn) {
+      reg->events_fn(events);
+    }
+  }
+
+  return processed;
 }
 
-void Aio::Quit() {
-  impl_->quit_requested = true;
-  impl_->run = false;
+void EpollImpl::Quit() {
+  quit_requested_ = true;
+  run_ = false;
   Wakeup();
 }
 
-void Aio::Wakeup() { impl_->event_fd.Write(); }
+void EpollImpl::Wakeup() { event_fd_.Write(); }
+
+void EpollImpl::AsyncRead(int fd, std::span<char> buffer,
+                          AsyncRequest *request) {
+  request->done = false;
+  if (fd < 0) {
+    State(request).link.next = pending_sync_completions_head;
+    State(request).link.result = -EBADF;
+    pending_sync_completions_head = request;
+    return;
+  }
+  auto &reg = GetOrCreateAsyncRegistration(fd);
+
+  ABSL_CHECK(reg.events_fn == nullptr)
+      << "Cannot mix OnEvents and AsyncRead/AsyncWrite on fd " << fd;
+  ABSL_CHECK(reg.in_fn == nullptr)
+      << "Cannot mix OnReadable and AsyncRead on fd " << fd;
+  ABSL_CHECK(reg.read_req == nullptr) << "Duplicate AsyncRead on fd " << fd;
+  reg.read_req = request;
+
+  State(request).buffer.ptr = buffer.data();
+  State(request).buffer.size = buffer.size();
+
+  reg.in_fn = [this, fd]() {
+    auto &r = GetOrCreateAsyncRegistration(fd);
+    auto *req = r.read_req;
+    if (!req) return;
+    char *data = static_cast<char *>(State(req).buffer.ptr);
+    size_t size = State(req).buffer.size;
+    ssize_t res = read(fd, data, size);
+    if (res >= 0 || (errno != EAGAIN && errno != EWOULDBLOCK)) {
+      r.read_req = nullptr;
+      r.in_fn = nullptr;
+      req->done = true;
+      UpdateEpoll(fd);
+      if (req->callback) {
+        Completion completion;
+        completion.user_data = req->user_data;
+        if (res >= 0) {
+          completion.status = aos::Ok();
+          completion.result = static_cast<int32_t>(res);
+        } else {
+          completion.status = aos::MakeError("io_uring error");
+          completion.result = static_cast<int32_t>(errno);
+        }
+        req->callback(completion, req->context);
+      }
+    }
+  };
+
+  UpdateEpoll(fd);
+}
+
+void EpollImpl::AsyncWrite(int fd, std::span<const char> buffer,
+                           AsyncRequest *request) {
+  request->done = false;
+  if (fd < 0) {
+    State(request).link.next = pending_sync_completions_head;
+    State(request).link.result = -EBADF;
+    pending_sync_completions_head = request;
+    return;
+  }
+  auto &reg = GetOrCreateAsyncRegistration(fd);
+
+  ABSL_CHECK(reg.events_fn == nullptr)
+      << "Cannot mix OnEvents and AsyncRead/AsyncWrite on fd " << fd;
+  ABSL_CHECK(reg.out_fn == nullptr)
+      << "Cannot mix OnWritable and AsyncWrite on fd " << fd;
+  ABSL_CHECK(reg.write_req == nullptr) << "Duplicate AsyncWrite on fd " << fd;
+  reg.write_req = request;
+
+  State(request).buffer.ptr = const_cast<char *>(buffer.data());
+  State(request).buffer.size = buffer.size();
+
+  reg.out_fn = [this, fd]() {
+    auto &r = GetOrCreateAsyncRegistration(fd);
+    auto *req = r.write_req;
+    if (!req) return;
+    const char *data = static_cast<const char *>(State(req).buffer.ptr);
+    size_t size = State(req).buffer.size;
+    ssize_t res = write(fd, data, size);
+    if (res >= 0 || (errno != EAGAIN && errno != EWOULDBLOCK)) {
+      r.write_req = nullptr;
+      r.out_fn = nullptr;
+      req->done = true;
+      UpdateEpoll(fd);
+      if (req->callback) {
+        Completion completion;
+        completion.user_data = req->user_data;
+        if (res >= 0) {
+          completion.status = aos::Ok();
+          completion.result = static_cast<int32_t>(res);
+        } else {
+          completion.status = aos::MakeError("io_uring error");
+          completion.result = static_cast<int32_t>(errno);
+        }
+        req->callback(completion, req->context);
+      }
+    }
+  };
+
+  UpdateEpoll(fd);
+}
+
+void EpollImpl::Cancel(AsyncRequest *request) { CancelRequest(request); }
+
+void EpollImpl::BeforeWait(std::function<void()> function) {
+  before_wait_functions_.push_back(std::move(function));
+}
+
+void EpollImpl::OnReadable(int fd, std::function<void()> callback) {
+  auto &reg = GetOrCreateLegacyRegistration(fd);
+  ABSL_CHECK(!reg.events_fn)
+      << "Cannot mix OnEvents and OnReadable for fd " << fd;
+  ABSL_CHECK(reg.read_req == nullptr)
+      << "Cannot mix OnReadable and AsyncRead on fd " << fd;
+  if (reg.in_fn) {
+    ABSL_CHECK(!callback) << "Duplicate in functions for " << fd;
+  }
+  reg.in_fn = std::move(callback);
+
+  reg.events |= kInEvents;
+  UpdateEpoll(fd);
+}
+
+void EpollImpl::OnError(int fd, std::function<void()> callback) {
+  auto &reg = GetOrCreateLegacyRegistration(fd);
+  ABSL_CHECK(!reg.events_fn) << "Cannot mix OnEvents and OnError for fd " << fd;
+  if (reg.err_fn) {
+    ABSL_CHECK(!callback) << "Duplicate error functions for " << fd;
+  }
+  reg.err_fn = std::move(callback);
+
+  reg.events |= kErrorEvents;
+  UpdateEpoll(fd);
+}
+
+void EpollImpl::OnWritable(int fd, std::function<void()> callback) {
+  auto &reg = GetOrCreateLegacyRegistration(fd);
+  ABSL_CHECK(!reg.events_fn)
+      << "Cannot mix OnEvents and OnWritable for fd " << fd;
+  ABSL_CHECK(reg.write_req == nullptr)
+      << "Cannot mix OnWritable and AsyncWrite on fd " << fd;
+  if (reg.out_fn) {
+    ABSL_CHECK(!callback) << "Duplicate out functions for " << fd;
+  }
+  reg.out_fn = std::move(callback);
+
+  reg.events |= kOutEvents;
+  UpdateEpoll(fd);
+}
+
+void EpollImpl::OnEvents(int fd, std::function<void(uint32_t)> callback) {
+  auto &reg = GetOrCreateLegacyRegistration(fd);
+  ABSL_CHECK(reg.read_req == nullptr && reg.write_req == nullptr)
+      << "Cannot mix OnEvents and AsyncRead/AsyncWrite on fd " << fd;
+  ABSL_CHECK(!reg.in_fn && !reg.out_fn && !reg.err_fn)
+      << "May not replace OnEvents handlers for fd " << fd;
+  ABSL_CHECK(!reg.events_fn)
+      << "May not replace OnEvents handlers for fd " << fd;
+  reg.events_fn = std::move(callback);
+}
+
+void EpollImpl::DeleteFd(int fd) {
+  auto *reg = GetActiveRegistration(fd);
+  ABSL_CHECK(reg != nullptr) << "fd " << fd << " not found";
+
+  if (reg->registered) {
+    int ret = epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, nullptr);
+    ABSL_PCHECK(ret == 0 || errno == ENOENT)
+        << "epoll_ctl DEL failed for fd " << fd;
+  }
+
+  ReleaseRegistration(reg);
+}
+
+void EpollImpl::ForgetClosedFd(int fd) {
+  auto *reg = GetActiveRegistration(fd);
+  ABSL_CHECK(reg != nullptr) << "fd " << fd << " not found";
+
+  ReleaseRegistration(reg);
+}
+
+void EpollImpl::EnableWritable(int fd) {
+  auto *reg = GetActiveRegistration(fd);
+  ABSL_CHECK(reg != nullptr) << "fd " << fd << " not found";
+  ABSL_CHECK(!reg->events_fn)
+      << "EnableWritable is only for fds registered using OnWritable, not "
+         "OnEvents";
+
+  uint32_t new_events = reg->events | kOutEvents;
+  if (reg->events != new_events) {
+    reg->events = new_events;
+    UpdateEpoll(fd);
+  }
+}
+
+void EpollImpl::DisableWritable(int fd) {
+  auto *reg = GetActiveRegistration(fd);
+  ABSL_CHECK(reg != nullptr) << "fd " << fd << " not found";
+  ABSL_CHECK(!reg->events_fn)
+      << "DisableWritable is only for fds registered using OnWritable, not "
+         "OnEvents";
+
+  uint32_t new_events = reg->events & ~kOutEvents;
+  if (reg->events != new_events) {
+    reg->events = new_events;
+    UpdateEpoll(fd);
+  }
+}
+
+void EpollImpl::SetEvents(int fd, uint32_t events) {
+  auto *reg = GetActiveRegistration(fd);
+  ABSL_CHECK(reg != nullptr) << "fd " << fd << " not found";
+  ABSL_CHECK(reg->events_fn)
+      << "SetEvents is only for fds registered using OnEvents";
+
+  if (reg->events != events) {
+    reg->events = events;
+    UpdateEpoll(fd);
+  }
+}
+
+void EpollImpl::RegisterSignalFd(ipc_lib::SignalFd *sfd,
+                                 std::function<void()> callback) {
+  int fd = sfd->fd();
+  OnReadable(fd, [fd, callback = std::move(callback)]() {
+    struct signalfd_siginfo siginfo;
+    while (true) {
+      ssize_t res = read(fd, &siginfo, sizeof(siginfo));
+      if (res == sizeof(siginfo)) {
+        if (callback) callback();
+      } else if (res < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+        break;
+      } else {
+        ABSL_LOG(FATAL) << "Failed to read from signalfd: "
+                        << aos_strerror(errno);
+      }
+    }
+  });
+}
+
+void EpollImpl::UnregisterSignalFd(ipc_lib::SignalFd *sfd) {
+  DeleteFd(sfd->fd());
+}
+
+void EpollImpl::InitializeTimer(Aio::TimerState *state) {
+  state->timer_fd = std::make_unique<TimerFD>();
+  state->request.done = true;
+
+  OnReadable(state->timer_fd->fd(), [state]() {
+    uint64_t buf;
+    ssize_t result = read(state->timer_fd->fd(), &buf, sizeof(buf));
+    if (result == -1 && errno == EAGAIN) {
+      return;
+    }
+    ABSL_PCHECK(result == sizeof(buf));
+
+    if (state->interval == aos::monotonic_clock::zero()) {
+      state->request.done = true;
+    }
+
+    if (state->user_callback) {
+      Completion completion;
+      completion.user_data = state->request.user_data;
+      completion.status = aos::Ok();
+      completion.result = 0;
+      state->user_callback(completion, state->user_context);
+    }
+  });
+}
+
+void EpollImpl::DestroyTimer(std::unique_ptr<Aio::TimerState> state) {
+  CancelTimer(state.get(), true);
+  DeleteFd(state->timer_fd->fd());
+}
+
+void EpollImpl::ScheduleTimer(Aio::TimerState *state,
+                              aos::monotonic_clock::time_point deadline,
+                              aos::monotonic_clock::duration interval,
+                              CompletionCallback callback, void *context) {
+  CancelTimer(state, true);
+
+  state->interval = interval;
+  state->deadline = deadline;
+  state->user_callback = callback;
+  state->user_context = context;
+  state->request.user_data = state;
+  state->request.done = false;
+
+  struct itimerspec its;
+  its.it_interval = ::aos::time::to_timespec(interval);
+  its.it_value = ::aos::time::to_timespec(deadline);
+
+  int ret =
+      timerfd_settime(state->timer_fd->fd(), TFD_TIMER_ABSTIME, &its, nullptr);
+  ABSL_PCHECK(ret == 0) << "timerfd_settime failed: " << aos_strerror(errno);
+}
+
+void EpollImpl::CancelTimer(Aio::TimerState *state, bool /*reap*/) {
+  if (state->timer_fd) {
+    struct itimerspec its;
+    std::memset(&its, 0, sizeof(its));
+    timerfd_settime(state->timer_fd->fd(), 0, &its, nullptr);
+  }
+  state->request.done = true;
+  state->user_callback = nullptr;
+}
+
+void EpollImpl::UpdateEpoll(int fd) {
+  auto *reg = GetActiveRegistration(fd);
+  if (!reg) return;
+
+  uint32_t desired_events = 0;
+  if (reg->read_req) desired_events |= EPOLLIN;
+  if (reg->write_req) desired_events |= EPOLLOUT;
+
+  if (reg->events & kIn) desired_events |= EPOLLIN;
+  if (reg->events & kPri) desired_events |= EPOLLPRI;
+  if (reg->events & kOut) desired_events |= EPOLLOUT;
+  if (reg->events & kErr) desired_events |= EPOLLERR;
+
+  if (desired_events == 0) {
+    if (reg->registered) {
+      int ret = epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, nullptr);
+      ABSL_PCHECK(ret == 0 || errno == ENOENT)
+          << "epoll_ctl DEL failed for fd " << fd;
+      reg->registered = false;
+      reg->epoll_events = 0;
+    }
+  } else {
+    struct epoll_event ev;
+    std::memset(&ev, 0, sizeof(ev));
+    ev.events = desired_events;
+    ev.data.ptr = reg;
+    if (reg->registered) {
+      if (reg->epoll_events != desired_events) {
+        int ret = epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, fd, &ev);
+        ABSL_PCHECK(ret == 0) << "epoll_ctl MOD failed for fd " << fd;
+        reg->epoll_events = desired_events;
+      }
+    } else {
+      int ret = epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &ev);
+      ABSL_PCHECK(ret == 0) << "epoll_ctl ADD failed for fd " << fd;
+      reg->registered = true;
+      reg->epoll_events = desired_events;
+    }
+  }
+}
+
+void EpollImpl::SubmitWakeupRead() {
+  AsyncRead(event_fd_.fd(),
+            std::span<char>(reinterpret_cast<char *>(&event_fd_.eventfd_buf),
+                            sizeof(event_fd_.eventfd_buf)),
+            &event_fd_.wakeup_req);
+}
+
+void EpollImpl::CancelRequest(AsyncRequest *request) {
+  if (request->done) return;
+
+  // Remove from pending lists if already there.
+  remove_from_cancels(request);
+  remove_from_sync(request);
+
+  bool is_read = false;
+  bool is_write = false;
+  int found_fd = -1;
+  for (const auto &reg : registrations_) {
+    if (reg->read_req == request) {
+      is_read = true;
+      found_fd = reg->fd;
+      break;
+    }
+    if (reg->write_req == request) {
+      is_write = true;
+      found_fd = reg->fd;
+      break;
+    }
+  }
+
+  if (is_read) {
+    auto *reg = GetActiveRegistration(found_fd);
+    if (reg) {
+      reg->read_req = nullptr;
+      reg->in_fn = nullptr;
+      UpdateEpoll(found_fd);
+    }
+  } else if (is_write) {
+    auto *reg = GetActiveRegistration(found_fd);
+    if (reg) {
+      reg->write_req = nullptr;
+      reg->out_fn = nullptr;
+      UpdateEpoll(found_fd);
+    }
+  }
+
+  State(request).link.next = pending_cancels_head;
+  pending_cancels_head = request;
+}
+
+Aio::Aio() {
+  bool try_io_uring = ::absl::GetFlag(FLAGS_use_io_uring);
+  if (try_io_uring) {
+    struct io_uring r;
+    int ret = io_uring_queue_init(8, &r, 0);
+    if (ret == 0) {
+      io_uring_queue_exit(&r);
+      impl_ = std::make_unique<IoUringImpl>();
+      return;
+    } else {
+      ABSL_LOG(WARNING) << "io_uring not supported by kernel (error " << ret
+                        << ").  Falling back to epoll backend.";
+    }
+  }
+  impl_ = std::make_unique<EpollImpl>();
+}
+
+Aio::~Aio() = default;
+
+void Aio::Run() { impl_->Run(); }
+
+bool Aio::Poll(bool block) { return impl_->Poll(block); }
+
+void Aio::Quit() { impl_->Quit(); }
+
+void Aio::Wakeup() { impl_->Wakeup(); }
 
 void Aio::AsyncRead(int fd, std::span<char> buffer, AsyncRequest *request) {
   impl_->AsyncRead(fd, buffer, request);
@@ -857,7 +1632,7 @@ void Aio::UnregisterSignalFd(ipc_lib::SignalFd *sfd) {
   impl_->UnregisterSignalFd(sfd);
 }
 
-Aio::Timer::Timer(Aio *aio) : state_(std::make_unique<TimerState>()) {
+Aio::Timer::Timer(Aio *aio) : state_(std::make_unique<Aio::TimerState>()) {
   state_->aio = aio;
   state_->aio->impl_->InitializeTimer(state_.get());
 }
@@ -877,10 +1652,6 @@ void Aio::Timer::Schedule(aos::monotonic_clock::time_point deadline,
 
 void Aio::Timer::Cancel() {
   state_->aio->impl_->CancelTimer(state_.get(), false);
-}
-
-bool Aio::Timer::IsPending() const {
-  return state_ && state_->aio->impl_->TimerIsPending(state_.get());
 }
 
 }  // namespace aos

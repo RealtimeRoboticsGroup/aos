@@ -63,11 +63,9 @@ struct AsyncRequest {
   // Tracks if request has completed or is not currently pending.
   bool done = true;
 
-  // The following fields are internal state managed entirely by the Aio
-  // implementation to track absolute timeout deadlines for OS-level timers.
-  // Callers must not read or modify these fields.
-  int64_t tv_sec = 0;
-  int64_t tv_nsec = 0;
+  // Internal state managed entirely by the Aio implementation.  Callers must
+  // not read or modify this field.
+  alignas(8) uint8_t internal_state[16] = {0};
 };
 
 // Aio is a cross-platform asynchronous I/O multiplexer and event loop engine.
@@ -159,9 +157,6 @@ class Aio {
     // status of Canceled.
     void Cancel();
 
-    // Returns true if the timer has a pending scheduling request.
-    bool IsPending() const;
-
    private:
     std::unique_ptr<TimerState> state_;
   };
@@ -240,6 +235,9 @@ class Aio {
 
  private:
   struct Impl;
+  friend class IoUringImpl;
+  friend class EpollImpl;
+
   std::unique_ptr<Impl> impl_;
 };
 

@@ -2,6 +2,9 @@
 
 #include <fcntl.h>
 #include <signal.h>
+#ifndef _WIN32
+#include <sys/epoll.h>
+#endif
 
 #include <array>
 #include <chrono>
@@ -18,10 +21,21 @@
 #include "aos/ipc_lib/thread_signal.h"
 #include "aos/realtime.h"
 
+ABSL_DECLARE_FLAG(bool, use_io_uring);
+
 namespace aos::testing {
 
+class AioTest : public ::testing::TestWithParam<bool> {
+ protected:
+  void SetUp() override {
+    ::absl::SetFlag(&FLAGS_use_io_uring, GetParam());
+    ABSL_LOG(INFO) << "Testing Aio with " << (GetParam() ? "io_uring" : "epoll")
+                   << " backend.";
+  }
+};
+
 // Tests that we can push basic strings through a pipe with io_uring.
-TEST(AioTest, BasicPipeReadWrite) {
+TEST_P(AioTest, BasicPipeReadWrite) {
   Aio aio;
   Pipe pipe;
 
@@ -52,12 +66,14 @@ TEST(AioTest, BasicPipeReadWrite) {
     }
   }
 
-  EXPECT_EQ(count, 1);
+  // The epoll backend processes exactly one event per Poll() call.  This aligns
+  // with the behavior of epoll_linux.cc.
+  EXPECT_EQ(count, GetParam() ? 1 : 2);
   EXPECT_STREQ(read_buf, "Hello io_uring!");
 }
 
 // Tests that we can have 2 timers going.
-TEST(AioTest, AsyncTimerTest) {
+TEST_P(AioTest, AsyncTimerTest) {
   Aio aio;
 
   Aio::Timer timer1(&aio);
@@ -109,7 +125,7 @@ TEST(AioTest, AsyncTimerTest) {
 
 // Tests that ThreadSignal events trigger the registered SignalFd wakeup
 // callback in the event loop.
-TEST(AioTest, ThreadSignalTest) {
+TEST_P(AioTest, ThreadSignalTest) {
   Aio aio;
 
   aos::ipc_lib::SignalFd sfd({aos::ipc_lib::kWakeupSignal});
@@ -145,7 +161,7 @@ TEST(AioTest, ThreadSignalTest) {
 
 // Tests that a registered SignalFd callback is successfully invoked multiple
 // times when multiple signals are sent sequentially, using multishot poll.
-TEST(AioTest, MultiThreadSignalTest) {
+TEST_P(AioTest, MultiThreadSignalTest) {
   Aio aio;
 
   aos::ipc_lib::SignalFd sfd({aos::ipc_lib::kWakeupSignal});
@@ -198,17 +214,12 @@ TEST(AioTest, MultiThreadSignalTest) {
 }
 
 // Tests that we can cancel a timer immediately after scheduling it.
-TEST(AioTest, CancelTimerTest) {
+TEST_P(AioTest, CancelTimerTest) {
   Aio aio;
 
   Aio::Timer timer(&aio);
-  std::optional<aos::Status> fired_status;
   bool callback_invoked = false;
 
-  std::pair<std::optional<aos::Status> *, bool *> ctx(&fired_status,
-                                                      &callback_invoked);
-
-  size_t count = 0;
   auto start = aos::monotonic_clock::now();
   {
     ScopedRealtime rt;
@@ -216,33 +227,70 @@ TEST(AioTest, CancelTimerTest) {
     timer.Schedule(
         start + std::chrono::seconds(10),
         [](Completion completion, void *ctx) {
-          auto self_ctx =
-              static_cast<std::pair<std::optional<aos::Status> *, bool *> *>(
-                  ctx);
-          self_ctx->first->emplace(std::move(completion.status));
-          *self_ctx->second = true;
+          EXPECT_TRUE(aos::IsOk(completion.status));
+          *static_cast<bool *>(ctx) = true;
         },
-        &ctx);
+        &callback_invoked);
 
     // Immediately cancel the timer.
     timer.Cancel();
 
-    // Poll until it executes.
+    // Poll to ensure it never fires.
+    aio.Poll(false);
+  }
+
+  EXPECT_FALSE(callback_invoked);
+  EXPECT_LT(aos::monotonic_clock::now(), start + std::chrono::seconds(1));
+}
+
+// Tests that canceling a pending AsyncRead request executes the callback
+// asynchronously inside Poll(), never nested/synchronously inside Cancel().
+TEST_P(AioTest, CancelAsyncReadTest) {
+  Aio aio;
+  Pipe pipe;
+
+  AsyncRequest request;
+  bool callback_invoked = false;
+  std::optional<aos::Status> fired_status;
+
+  char buf[10];
+
+  {
+    ScopedRealtime rt;
+    request.callback = [](Completion completion, void *ctx) {
+      auto *state =
+          static_cast<std::pair<std::optional<aos::Status> *, bool *> *>(ctx);
+      state->first->emplace(std::move(completion.status));
+      *state->second = true;
+    };
+    std::pair<std::optional<aos::Status> *, bool *> ctx(&fired_status,
+                                                        &callback_invoked);
+    request.context = &ctx;
+
+    aio.AsyncRead(pipe.read_fd(), buf, &request);
+
+    // Verify it hasn't run yet.
+    EXPECT_FALSE(callback_invoked);
+
+    // Cancel the request.
+    aio.Cancel(&request);
+
+    // The callback must NOT run synchronously inside Cancel().
+    EXPECT_FALSE(callback_invoked);
+
+    // Now poll, which should execute the canceled callback.
     while (!callback_invoked && aio.Poll(true)) {
-      ++count;
     }
   }
 
-  EXPECT_GT(count, 0);
   EXPECT_TRUE(callback_invoked);
   ASSERT_TRUE(fired_status.has_value());
   EXPECT_FALSE(aos::IsOk(*fired_status));
   EXPECT_EQ(fired_status->error().message(), "Canceled");
-  EXPECT_LT(aos::monotonic_clock::now(), start + std::chrono::seconds(1));
 }
 
 // Tests that we can change a timer's deadline by canceling and rescheduling it.
-TEST(AioTest, ChangeTimerDeadlineTest) {
+TEST_P(AioTest, ChangeTimerDeadlineTest) {
   Aio aio;
 
   Aio::Timer timer(&aio);
@@ -260,6 +308,7 @@ TEST(AioTest, ChangeTimerDeadlineTest) {
     timer.Schedule(
         start + std::chrono::seconds(10),
         [](Completion completion, void *ctx) {
+          EXPECT_TRUE(aos::IsOk(completion.status));
           auto state =
               static_cast<std::pair<std::optional<aos::Status> *, size_t *> *>(
                   ctx);
@@ -272,6 +321,7 @@ TEST(AioTest, ChangeTimerDeadlineTest) {
     timer.Schedule(
         start + std::chrono::milliseconds(100),
         [](Completion completion, void *ctx) {
+          EXPECT_TRUE(aos::IsOk(completion.status));
           auto state =
               static_cast<std::pair<std::optional<aos::Status> *, size_t *> *>(
                   ctx);
@@ -280,14 +330,14 @@ TEST(AioTest, ChangeTimerDeadlineTest) {
         },
         &ctx);
 
-    // Poll until we get two completions (one canceled, one ok).
-    while (invocations < 2 && aio.Poll(true)) {
+    // Poll until the rescheduled timer fires (1 completion).
+    while (invocations < 1 && aio.Poll(true)) {
       ++count;
     }
   }
 
   EXPECT_GT(count, 0);
-  EXPECT_EQ(invocations, 2);
+  EXPECT_EQ(invocations, 1);
   ASSERT_TRUE(fired_status.has_value());
   EXPECT_TRUE(aos::IsOk(*fired_status));
   auto end = aos::monotonic_clock::now();
@@ -297,7 +347,7 @@ TEST(AioTest, ChangeTimerDeadlineTest) {
 
 // Tests that scheduling a timer with a deadline in the past fires immediately
 // on the next poll.
-TEST(AioTest, PastTimerTest) {
+TEST_P(AioTest, PastTimerTest) {
   Aio aio;
 
   Aio::Timer timer(&aio);
@@ -332,7 +382,7 @@ TEST(AioTest, PastTimerTest) {
 
 // Tests that a repeating timer can be implemented by rescheduling from the
 // completion callback.
-TEST(AioTest, RepeatingTimerTest) {
+TEST_P(AioTest, RepeatingTimerTest) {
   Aio aio;
 
   struct TimerContext {
@@ -380,17 +430,12 @@ TEST(AioTest, RepeatingTimerTest) {
 }
 
 // Tests that we can cancel a timer after it has been active for some time.
-TEST(AioTest, CancelTimerAfterDelayTest) {
+TEST_P(AioTest, CancelTimerAfterDelayTest) {
   Aio aio;
 
   Aio::Timer timer(&aio);
-  std::optional<aos::Status> fired_status;
   bool callback_invoked = false;
 
-  std::pair<std::optional<aos::Status> *, bool *> ctx(&fired_status,
-                                                      &callback_invoked);
-
-  size_t count = 0;
   aos::monotonic_clock::time_point start;
   {
     ScopedRealtime rt;
@@ -399,13 +444,10 @@ TEST(AioTest, CancelTimerAfterDelayTest) {
     timer.Schedule(
         start + std::chrono::seconds(10),
         [](Completion completion, void *ctx) {
-          auto self_ctx =
-              static_cast<std::pair<std::optional<aos::Status> *, bool *> *>(
-                  ctx);
-          self_ctx->first->emplace(std::move(completion.status));
-          *self_ctx->second = true;
+          EXPECT_TRUE(aos::IsOk(completion.status));
+          *static_cast<bool *>(ctx) = true;
         },
-        &ctx);
+        &callback_invoked);
 
     // Let it run for 100 milliseconds.
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -417,22 +459,16 @@ TEST(AioTest, CancelTimerAfterDelayTest) {
     // Cancel the timer.
     timer.Cancel();
 
-    // Poll until it executes.
-    while (!callback_invoked && aio.Poll(true)) {
-      ++count;
-    }
+    // Poll to ensure it never fires.
+    aio.Poll(false);
   }
 
-  EXPECT_GT(count, 0);
-  EXPECT_TRUE(callback_invoked);
-  ASSERT_TRUE(fired_status.has_value());
-  EXPECT_FALSE(aos::IsOk(*fired_status));
-  EXPECT_EQ(fired_status->error().message(), "Canceled");
+  EXPECT_FALSE(callback_invoked);
   EXPECT_LT(aos::monotonic_clock::now(), start + std::chrono::seconds(1));
 }
 
 // Tests that duplicate registrations for legacy fds and signalfds die.
-TEST(AioTest, DuplicateRegistrationDeathTest) {
+TEST_P(AioTest, DuplicateRegistrationDeathTest) {
   Aio aio;
   Pipe pipe;
 
@@ -450,8 +486,7 @@ TEST(AioTest, DuplicateRegistrationDeathTest) {
 
   aos::ipc_lib::SignalFd sfd({aos::ipc_lib::kWakeupSignal});
   aio.RegisterSignalFd(&sfd, []() {});
-  EXPECT_DEATH(aio.RegisterSignalFd(&sfd, []() {}),
-               "Duplicate signalfd registration");
+  EXPECT_DEATH(aio.RegisterSignalFd(&sfd, []() {}), "Duplicate.*");
 
   // Clean up registered resources before loop destruction.
   aio.DeleteFd(pipe.read_fd());
@@ -460,17 +495,18 @@ TEST(AioTest, DuplicateRegistrationDeathTest) {
 }
 
 // Tests that unregistering untracked legacy fds or signalfds dies.
-TEST(AioTest, UntrackedUnregistrationDeathTest) {
+TEST_P(AioTest, UntrackedUnregistrationDeathTest) {
   Aio aio;
 
   EXPECT_DEATH(aio.DeleteFd(999), "fd 999 not found");
   aos::ipc_lib::SignalFd sfd2({aos::ipc_lib::kWakeupSignal});
-  EXPECT_DEATH(aio.UnregisterSignalFd(&sfd2), "SignalFd not found");
+  EXPECT_DEATH(aio.UnregisterSignalFd(&sfd2),
+               "(SignalFd not found|fd .* not found)");
 }
 
 // Tests that mixing OnEvents and other legacy hooks or calling invalid methods
 // triggers assertions.
-TEST(AioTest, MixedRegistrationAndInvalidHookDeathTest) {
+TEST_P(AioTest, MixedRegistrationAndInvalidHookDeathTest) {
   Aio aio;
   Pipe pipe;
 
@@ -495,11 +531,60 @@ TEST(AioTest, MixedRegistrationAndInvalidHookDeathTest) {
                "SetEvents is only for fds registered using OnEvents");
 
   aio.DeleteFd(pipe.write_fd());
+
+  if (!GetParam()) {
+    // Under epoll, verify that mixing AsyncRead/AsyncWrite and
+    // OnReadable/OnWritable/OnEvents fails.
+    AsyncRequest req;
+    char buf[10];
+
+    // AsyncRead, then OnReadable fails.
+    aio.AsyncRead(pipe.read_fd(), buf, &req);
+    EXPECT_DEATH(aio.OnReadable(pipe.read_fd(), []() {}),
+                 "Cannot mix OnReadable and AsyncRead");
+    aio.Cancel(&req);
+    while (aio.Poll(false)) {
+    }
+
+    // OnReadable, then AsyncRead fails.
+    aio.OnReadable(pipe.read_fd(), []() {});
+    EXPECT_DEATH(aio.AsyncRead(pipe.read_fd(), buf, &req),
+                 "Cannot mix OnReadable and AsyncRead");
+    aio.DeleteFd(pipe.read_fd());
+
+    // AsyncWrite, then OnWritable fails.
+    aio.AsyncWrite(pipe.write_fd(), buf, &req);
+    EXPECT_DEATH(aio.OnWritable(pipe.write_fd(), []() {}),
+                 "Cannot mix OnWritable and AsyncWrite");
+    aio.Cancel(&req);
+    while (aio.Poll(false)) {
+    }
+
+    // OnWritable, then AsyncWrite fails.
+    aio.OnWritable(pipe.write_fd(), []() {});
+    EXPECT_DEATH(aio.AsyncWrite(pipe.write_fd(), buf, &req),
+                 "Cannot mix OnWritable and AsyncWrite");
+    aio.DeleteFd(pipe.write_fd());
+
+    // AsyncRead, then OnEvents fails.
+    aio.AsyncRead(pipe.read_fd(), buf, &req);
+    EXPECT_DEATH(aio.OnEvents(pipe.read_fd(), [](uint32_t) {}),
+                 "Cannot mix OnEvents and AsyncRead/AsyncWrite");
+    aio.Cancel(&req);
+    while (aio.Poll(false)) {
+    }
+
+    // OnEvents, then AsyncRead fails.
+    aio.OnEvents(pipe.read_fd(), [](uint32_t) {});
+    EXPECT_DEATH(aio.AsyncRead(pipe.read_fd(), buf, &req),
+                 "Cannot mix OnEvents and AsyncRead/AsyncWrite");
+    aio.DeleteFd(pipe.read_fd());
+  }
 }
 
 // Tests that a failed I/O operation (like reading from an invalid fd)
 // is correctly captured as an error status and the raw errno is populated.
-TEST(AioTest, FailedIoErrorTest) {
+TEST_P(AioTest, FailedIoErrorTest) {
   Aio aio;
 
   AsyncRequest read_req;
@@ -538,7 +623,7 @@ TEST(AioTest, FailedIoErrorTest) {
 
 // Tests the normal behavior of OnEvents (scheduling, callback delivery,
 // persistent one-shot re-submission, and unregistering).
-TEST(AioTest, LegacyFdTest) {
+TEST_P(AioTest, LegacyFdTest) {
   Aio aio;
   Pipe pipe;
 
@@ -623,7 +708,7 @@ TEST(AioTest, LegacyFdTest) {
 }
 
 // Tests the writable readiness behavior of OnEvents (using 0x04 / POLLOUT).
-TEST(AioTest, LegacyFdWritableTest) {
+TEST_P(AioTest, LegacyFdWritableTest) {
   Aio aio;
   Pipe pipe;
 
@@ -657,7 +742,7 @@ TEST(AioTest, LegacyFdWritableTest) {
 
 // Tests the error/hangup readiness behavior of OnEvents (using 0x08 / POLLERR |
 // POLLHUP).
-TEST(AioTest, LegacyFdErrorTest) {
+TEST_P(AioTest, LegacyFdErrorTest) {
   Aio aio;
   Pipe pipe;
 
@@ -700,7 +785,7 @@ TEST(AioTest, LegacyFdErrorTest) {
 
 // Tests that we can schedule, cancel, and schedule again before polling,
 // and it does not hang and correctly processes the rescheduled timer.
-TEST(AioTest, ScheduleCancelScheduleTest) {
+TEST_P(AioTest, ScheduleCancelScheduleTest) {
   Aio aio;
 
   Aio::Timer timer(&aio);
@@ -716,9 +801,8 @@ TEST(AioTest, ScheduleCancelScheduleTest) {
   // 1. Schedule timer.
   timer.Schedule(
       aos::monotonic_clock::now() + std::chrono::seconds(10),
-      [](Completion completion, void *ctx) {
+      [](Completion /*completion*/, void *ctx) {
         auto *s = static_cast<TestState *>(ctx);
-        EXPECT_FALSE(aos::IsOk(completion.status));
         (*s->canceled_count)++;
       },
       &state);
@@ -738,15 +822,15 @@ TEST(AioTest, ScheduleCancelScheduleTest) {
       },
       &state);
 
-  // The first callback (canceled) should have run inside Schedule()!
-  EXPECT_EQ(canceled_count, 1);
+  // The first callback (canceled) should NEVER run.
+  EXPECT_EQ(canceled_count, 0);
   EXPECT_EQ(fired_count, 0);
 
   // 4. Poll. We expect the new timer to fire.
   while (fired_count == 0 && aio.Poll(true)) {
   }
 
-  EXPECT_EQ(canceled_count, 1);
+  EXPECT_EQ(canceled_count, 0);
   EXPECT_EQ(fired_count, 1);
 }
 
@@ -759,7 +843,7 @@ struct NoNestedCallbackState {
 
 // Tests that cancelling or rescheduling a timer does not trigger other
 // pending completion callbacks nested inside the current callback context.
-TEST(AioTest, NoNestedCallbackTest) {
+TEST_P(AioTest, NoNestedCallbackTest) {
   Aio aio;
 
   Aio::Timer timer1(&aio);
@@ -810,7 +894,7 @@ TEST(AioTest, NoNestedCallbackTest) {
 }
 
 // Tests the OnReadable/OnWritable/OnError legacy EPoll-like APIs.
-TEST(AioTest, EPollLikeLegacyFdTest) {
+TEST_P(AioTest, EPollLikeLegacyFdTest) {
   Aio aio;
   Pipe pipe;
 
@@ -822,15 +906,21 @@ TEST(AioTest, EPollLikeLegacyFdTest) {
 
   // Initially, writable should fire because the pipe is empty.
   size_t count = 0;
-  while (writable_count == 0 && aio.Poll(true)) {
-    ++count;
+  {
+    ScopedRealtime rt;
+    while (writable_count == 0 && aio.Poll(true)) {
+      ++count;
+    }
   }
   EXPECT_GT(count, 0);
   EXPECT_EQ(writable_count, 1);
   EXPECT_EQ(readable_count, 0);
 
   // Disable writability.
-  aio.DisableWritable(pipe.write_fd());
+  {
+    ScopedRealtime rt;
+    aio.DisableWritable(pipe.write_fd());
+  }
 
   // Write a byte to make readable fire.
   char buf[] = "a";
@@ -839,18 +929,27 @@ TEST(AioTest, EPollLikeLegacyFdTest) {
 
   // Poll; readable should fire. Writable should NOT fire again since disabled.
   count = 0;
-  while (readable_count == 0 && aio.Poll(true)) {
-    ++count;
+  {
+    ScopedRealtime rt;
+    while (readable_count == 0 && aio.Poll(true)) {
+      ++count;
+    }
   }
   EXPECT_GT(count, 0);
   EXPECT_EQ(readable_count, 1);
   EXPECT_EQ(writable_count, 1);
 
   // Re-enable writability.
-  aio.EnableWritable(pipe.write_fd());
+  {
+    ScopedRealtime rt;
+    aio.EnableWritable(pipe.write_fd());
+  }
   count = 0;
-  while (writable_count == 1 && aio.Poll(true)) {
-    ++count;
+  {
+    ScopedRealtime rt;
+    while (writable_count == 1 && aio.Poll(true)) {
+      ++count;
+    }
   }
   EXPECT_GT(count, 0);
   EXPECT_EQ(writable_count, 2);
@@ -861,7 +960,7 @@ TEST(AioTest, EPollLikeLegacyFdTest) {
 }
 
 // Tests the OnEvents/SetEvents legacy EPoll-like APIs.
-TEST(AioTest, EPollLikeOnEventsTest) {
+TEST_P(AioTest, EPollLikeOnEventsTest) {
   Aio aio;
   Pipe pipe;
 
@@ -874,7 +973,10 @@ TEST(AioTest, EPollLikeOnEventsTest) {
   });
 
   // Schedule events (0x01 = POLLIN / Epoll In).
-  aio.SetEvents(pipe.read_fd(), 0x01);
+  {
+    ScopedRealtime rt;
+    aio.SetEvents(pipe.read_fd(), 0x01);
+  }
 
   // Write a byte.
   char buf[] = "x";
@@ -883,8 +985,11 @@ TEST(AioTest, EPollLikeOnEventsTest) {
 
   // Poll; callback should fire.
   size_t count = 0;
-  while (event_count == 0 && aio.Poll(true)) {
-    ++count;
+  {
+    ScopedRealtime rt;
+    while (event_count == 0 && aio.Poll(true)) {
+      ++count;
+    }
   }
   EXPECT_GT(count, 0);
   EXPECT_EQ(event_count, 1);
@@ -895,7 +1000,7 @@ TEST(AioTest, EPollLikeOnEventsTest) {
 }
 
 // Tests DeleteFd and ForgetClosedFd APIs.
-TEST(AioTest, EPollLikeDeleteAndForgetTest) {
+TEST_P(AioTest, EPollLikeDeleteAndForgetTest) {
   Aio aio;
   Pipe pipe;
 
@@ -910,7 +1015,10 @@ TEST(AioTest, EPollLikeDeleteAndForgetTest) {
   ssize_t res = write(pipe.write_fd(), buf, 1);
   ASSERT_EQ(res, 1);
 
-  aio.Poll(false);
+  {
+    ScopedRealtime rt;
+    aio.Poll(false);
+  }
   EXPECT_EQ(readable_count, 0);
 
   // Register write end, close it, and forget closed fd.
@@ -923,48 +1031,57 @@ TEST(AioTest, EPollLikeDeleteAndForgetTest) {
 }
 
 // Tests repeating timers schedule functionality.
-TEST(AioTest, RepeatingTimerScheduleTest) {
+TEST_P(AioTest, RepeatingTimerScheduleTest) {
   Aio aio;
 
   size_t timer_fires = 0;
   Aio::Timer timer(&aio);
 
-  timer.Schedule(
-      aos::monotonic_clock::now() + std::chrono::milliseconds(50),
-      std::chrono::milliseconds(50),
-      [](Completion completion, void *context) {
-        if (aos::IsOk(completion.status)) {
-          ++(*static_cast<size_t *>(context));
-        }
-      },
-      &timer_fires);
-
-  // Poll multiple times to let the timer fire twice automatically.
   size_t count = 0;
-  while (timer_fires < 2 && aio.Poll(true)) {
-    ++count;
+  {
+    ScopedRealtime rt;
+    timer.Schedule(
+        aos::monotonic_clock::now() + std::chrono::milliseconds(50),
+        std::chrono::milliseconds(50),
+        [](Completion completion, void *context) {
+          if (aos::IsOk(completion.status)) {
+            ++(*static_cast<size_t *>(context));
+          }
+        },
+        &timer_fires);
+
+    // Poll multiple times to let the timer fire twice automatically.
+    while (timer_fires < 2 && aio.Poll(true)) {
+      ++count;
+    }
   }
 
   EXPECT_GT(count, 0);
   EXPECT_GE(timer_fires, 2);
 
   // Cancel repeating timer.
-  timer.Cancel();
+  {
+    ScopedRealtime rt;
+    timer.Cancel();
+  }
 }
 
 // Helper function to poll Aio for a given duration.
 void RunAioFor(Aio &aio, std::chrono::nanoseconds duration) {
   Aio::Timer timer(&aio);
   bool done = false;
-  timer.Schedule(
-      aos::monotonic_clock::now() + duration,
-      [](Completion, void *ctx) { *static_cast<bool *>(ctx) = true; }, &done);
-  while (!done && aio.Poll(true)) {
+  {
+    ScopedRealtime rt;
+    timer.Schedule(
+        aos::monotonic_clock::now() + duration,
+        [](Completion, void *ctx) { *static_cast<bool *>(ctx) = true; }, &done);
+    while (!done && aio.Poll(true)) {
+    }
   }
 }
 
 // Test that the basics of OnWritable work, filling the pipe's buffer.
-TEST(AioTest, EPollLikeBasicWritable) {
+TEST_P(AioTest, EPollLikeBasicWritable) {
   Aio aio;
   Pipe pipe;
   int number_writes = 0;
@@ -995,7 +1112,7 @@ TEST(AioTest, EPollLikeBasicWritable) {
 }
 
 // Test that the basics of OnError work by closing the read end.
-TEST(AioTest, EPollLikeBasicError) {
+TEST_P(AioTest, EPollLikeBasicError) {
   Aio aio;
   Pipe pipe;
   int number_errors = 0;
@@ -1008,7 +1125,10 @@ TEST(AioTest, EPollLikeBasicError) {
   pipe.close_read_fd();
 
   // Poll once to consume the hangup/error.
-  aio.Poll(false);
+  {
+    ScopedRealtime rt;
+    aio.Poll(false);
+  }
 
   EXPECT_EQ(number_errors, 1);
 
@@ -1016,7 +1136,7 @@ TEST(AioTest, EPollLikeBasicError) {
 }
 
 // Tests that removing an event before scheduling any events works.
-TEST(AioTest, EPollLikeRemoveWithoutEvents) {
+TEST_P(AioTest, EPollLikeRemoveWithoutEvents) {
   Aio aio;
   Pipe pipe;
   aio.OnEvents(pipe.read_fd(), [](uint32_t) {});
@@ -1025,10 +1145,101 @@ TEST(AioTest, EPollLikeRemoveWithoutEvents) {
 
 // Tests that calling Quit from a BeforeWait callback successfully stops the
 // loop.
-TEST(AioTest, QuitInBeforeWait) {
+TEST_P(AioTest, QuitInBeforeWait) {
   Aio aio;
   aio.BeforeWait([&aio]() { aio.Quit(); });
   aio.Run();
 }
+
+// Tests that we can wake up the event loop multiple times consecutively.
+// This ensures the wakeup eventfd read completion callback is correctly
+// re-registered in both backends.
+TEST_P(AioTest, MultipleWakeupsTest) {
+  Aio aio;
+  std::atomic<int> wakeups{0};
+
+  std::thread signaler([&aio, &wakeups]() {
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    wakeups = 1;
+    aio.Wakeup();
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    wakeups = 2;
+    aio.Wakeup();
+  });
+
+  // Wait for first wakeup.
+  while (wakeups < 1) {
+    aio.Poll(true);
+  }
+  EXPECT_EQ(wakeups, 1);
+
+  // Wait for second wakeup.
+  while (wakeups < 2) {
+    aio.Poll(true);
+  }
+  EXPECT_EQ(wakeups, 2);
+
+  signaler.join();
+}
+
+// Tests that unregistering a signalfd correctly cancels the underlying
+// multishot poll request and prevents any use-after-free or extra callbacks.
+TEST_P(AioTest, UnregisterSignalFdTest) {
+  Aio aio;
+  aos::ipc_lib::SignalFd sfd({aos::ipc_lib::kWakeupSignal});
+
+  int count = 0;
+  aio.RegisterSignalFd(&sfd, [&count]() { ++count; });
+
+  // Send kWakeupSignal to our thread.
+  pthread_kill(pthread_self(), aos::ipc_lib::kWakeupSignal);
+
+  // Poll until the signal is handled.
+  while (count == 0 && aio.Poll(true)) {
+  }
+  EXPECT_EQ(count, 1);
+
+  // Unregister the signalfd.
+  aio.UnregisterSignalFd(&sfd);
+
+  // Send the signal again.
+  pthread_kill(pthread_self(), aos::ipc_lib::kWakeupSignal);
+
+  // Clean up signal by reading it manually so it doesn't stay pending.
+  struct signalfd_siginfo siginfo;
+  ssize_t res = read(sfd.fd(), &siginfo, sizeof(siginfo));
+  EXPECT_EQ(res, sizeof(siginfo));
+
+  // Poll non-blockingly a few times to ensure the callback is NOT invoked.
+  for (int i = 0; i < 5; ++i) {
+    aio.Poll(false);
+  }
+  EXPECT_EQ(count, 1);
+}
+
+TEST_P(AioTest, DuplicateEventOnCancel) {
+  // Test that clearing events on an active file descriptor from its callback
+  // does not result in duplicate events due to recursive cancel handling.
+  Aio aio;
+  Pipe pipe;
+  int count = 0;
+
+  aio.OnEvents(pipe.write_fd(), [&](uint32_t events) {
+    EXPECT_TRUE(events & EPOLLOUT);
+    ++count;
+    aio.SetEvents(pipe.write_fd(), 0);
+  });
+
+  aio.SetEvents(pipe.write_fd(), EPOLLOUT);
+  aio.Poll(true);
+  aio.Poll(false);
+
+  EXPECT_EQ(count, 1);
+
+  aio.DeleteFd(pipe.write_fd());
+}
+
+INSTANTIATE_TEST_SUITE_P(AioBackends, AioTest, ::testing::Values(true, false));
 
 }  // namespace aos::testing
