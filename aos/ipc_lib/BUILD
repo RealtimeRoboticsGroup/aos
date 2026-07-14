@@ -130,15 +130,16 @@ cc_binary(
 
 cc_library(
     name = "signalfd",
-    srcs = [
-        "signalfd.cc",
-    ],
+    srcs = select({
+        "@platforms//os:linux": ["signalfd.cc"],
+        "//conditions:default": ["signalfd_stub.cc"],
+    }),
     hdrs = [
         "signalfd.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
+        ":thread_signal",
         "//aos:sanitizers",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
