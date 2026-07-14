@@ -1,0 +1,12 @@
+{
+    "url": "https://github.com/axboe/liburing/archive/refs/tags/liburing-2.14.tar.gz",
+    "integrity": "sha256-X4CWQQiYHGrZecc18LSHfV9JkUwqBi+OiCgvJr9h3gw=",
+    "strip_prefix": "liburing-liburing-2.14",
+    "patch_strip": 1,
+    "patches": {
+        "01-add-bazel-build-support.patch": "sha256-wcESkoBoVO3eyYYfcyjJI16WCx4B8ilXiYWssKA1IJc="
+    },
+    "overlay": {
+        "MODULE.bazel": "sha256-bf6db5qgdCG13fl0O2C8EoMoVxE7eg6sLYm9CSz8VUQ="
+    }
+}

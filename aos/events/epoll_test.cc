@@ -7,48 +7,9 @@
 #include "absl/log/log.h"
 #include "gtest/gtest.h"
 
+#include "aos/events/pipe.h"
+
 namespace aos::testing {
-
-// A simple wrapper around both ends of a pipe along with some helpers to easily
-// read/write data through it.
-class Pipe {
- public:
-  Pipe() {
-    PCHECK(pipe(fds_) == 0);
-    PCHECK(fcntl(fds_[0], F_SETFL, O_NONBLOCK) == 0);
-    PCHECK(fcntl(fds_[1], F_SETFL, O_NONBLOCK) == 0);
-  }
-  ~Pipe() {
-    if (fds_[0] >= 0) {
-      PCHECK(close(fds_[0]) == 0);
-    }
-    if (fds_[1] >= 0) {
-      PCHECK(close(fds_[1]) == 0);
-    }
-  }
-
-  int read_fd() { return fds_[0]; }
-  int write_fd() { return fds_[1]; }
-  void close_read_fd() {
-    PCHECK(close(fds_[0]) == 0);
-    fds_[0] = -1;
-  }
-
-  void Write(const std::string &data) {
-    CHECK_EQ(write(write_fd(), data.data(), data.size()),
-             static_cast<ssize_t>(data.size()));
-  }
-
-  std::string Read(size_t size) {
-    std::string result;
-    result.resize(size);
-    CHECK_EQ(read(read_fd(), result.data(), size), static_cast<ssize_t>(size));
-    return result;
-  }
-
- private:
-  int fds_[2];
-};
 
 class EPollTest : public ::testing::Test {
  public:

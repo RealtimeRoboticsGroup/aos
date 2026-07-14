@@ -43,6 +43,47 @@ cc_static_flatbuffer(
 )
 
 cc_library(
+    name = "aio",
+    srcs = [
+        "aio.cc",
+        "aio_internal.h",
+        "aio_linux.cc",
+    ],
+    hdrs = ["aio.h"],
+    target_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//aos:realtime",
+        "//aos/ipc_lib:thread_signal",
+        "//aos/libc:aos_strerror",
+        "//aos/time",
+        "//aos/util:status",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
+        "@liburing",
+    ],
+)
+
+cc_test(
+    name = "aio_test",
+    srcs = ["aio_test.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        ":aio",
+        ":pipe",
+        "//aos:realtime",
+        "//aos/ipc_lib:thread_signal",
+        "//aos/testing:googletest",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:reflection",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
+    ],
+)
+
+cc_library(
     name = "epoll",
     srcs = [
         "epoll.cc",
@@ -61,11 +102,23 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "pipe",
+    testonly = True,
+    hdrs = [
+        "pipe.h",
+    ],
+    deps = [
+        "@com_google_absl//absl/log:absl_check",
+    ],
+)
+
 cc_test(
     name = "epoll_test",
     srcs = ["epoll_test.cc"],
     deps = [
         ":epoll",
+        ":pipe",
         "//aos/testing:googletest",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",

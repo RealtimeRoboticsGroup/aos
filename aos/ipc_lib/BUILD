@@ -265,10 +265,10 @@ cc_library(
                 "@com_google_absl//absl/strings",
                 "@com_google_absl//absl/types:span",
             ] + select({
-                "@platforms//os:windows": [],
-                "//conditions:default": [
+                "@platforms//os:linux": [
                     "//aos/util:proc_stat",
                 ],
+                "//conditions:default": [],
             }),
         ),
         cc_library(

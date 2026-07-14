@@ -2,7 +2,7 @@ package(default_visibility = ["//visibility:public"])
 
 _DEFAULT_WARNING_FLAGS = [
     "--per_file_copt=-third_party/.*,-external/.*@-Werror,-Wextra,-Wpointer-arith,-Wstrict-aliasing,-Wwrite-strings,-Wtype-limits,-Wsign-compare,-Wformat=2",
-    "--per_file_copt=third_party/.*,external/.*@-Wno-sign-compare,-Wno-cast-align,-Wno-error,-Wno-unused-parameter,-Wno-cast-qual,-Wno-format-nonliteral,-Wno-tautological-type-limit-compare,-Wno-missing-field-initializers,-Wno-unused-function,-Wno-cast-function-type,-Wno-comment,-Wno-typedef-redefinition,-Wno-tautological-unsigned-enum-zero-compare,-Wno-extra,-Wno-type-limits,-Wno-attributes,-Wno-deprecated,-Wno-deprecated-declarations,-Wno-missing-template-arg-list-after-template-kw",
+    "--per_file_copt=third_party/.*,external/.*@-Wno-sign-compare,-Wno-cast-align,-Wno-error,-Wno-unused-parameter,-Wno-cast-qual,-Wno-format-nonliteral,-Wno-tautological-type-limit-compare,-Wno-missing-field-initializers,-Wno-unused-function,-Wno-cast-function-type,-Wno-comment,-Wno-typedef-redefinition,-Wno-tautological-unsigned-enum-zero-compare,-Wno-extra,-Wno-type-limits,-Wno-attributes,-Wno-deprecated,-Wno-deprecated-declarations,-Wno-missing-template-arg-list-after-template-kw,-Wno-gnu-pointer-arith",
 ]
 
 platform(
