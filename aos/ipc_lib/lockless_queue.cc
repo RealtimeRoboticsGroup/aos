@@ -686,9 +686,8 @@ LocklessQueueMemory *InitializeLocklessQueueMemory(
       message->header.realtime_sent_time.Invalidate();
       message->header.monotonic_sent_time.Invalidate();
 #else
-      // We only need to clear the monotonic send time during initialization
-      // because it is used for sent-too-fast checks. Nothing should ever
-      // observe the uninitialized realtime send time.
+      // We clear both times to ensure everything is initialized for
+      // lockless_queue_wrap_test. The realtime one is not read anywhere else.
       message->header.monotonic_sent_time = monotonic_clock::min_time;
       message->header.realtime_sent_time = realtime_clock::min_time;
 #endif
