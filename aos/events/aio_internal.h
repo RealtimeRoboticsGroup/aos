@@ -41,6 +41,14 @@ class IntrusiveStack {
     head_ = node;
   }
 
+  // Visits every node.  Does not tolerate the callback unlinking a node.
+  template <typename Fn>
+  void ForEach(Fn fn) const {
+    for (Node *node = head_; node != nullptr; node = Traits::next(node)) {
+      fn(node);
+    }
+  }
+
   // Pops and returns the most recently pushed node, or nullptr when empty.
   Node *Pop() {
     Node *node = head_;
@@ -224,6 +232,34 @@ struct Aio::Impl {
   Impl(const Impl &) = delete;
   Impl &operator=(const Impl &) = delete;
   virtual ~Impl() = default;
+
+  // --- fork() contract -------------------------------------------------
+  //
+  // Every backend has to rebuild its kernel-side state in a forked child:
+  // an io_uring ring, an epoll instance, and a kqueue are all invalid
+  // there.  The mechanism is per-backend; what lives here is the part they
+  // must not get subtly different from each other.
+
+  // Whether a caller-submitted AsyncRead/AsyncWrite is in flight, which
+  // lasts until its callback has run: resolved but not yet delivered counts.
+  // A backend's own internal reads don't count -- the wakeup eventfd read
+  // goes through the public AsyncRead() on three of the four backends and
+  // is reconstructed rather than lost, so counting it would refuse every
+  // fork.
+  virtual bool HasRawRequestsInFlight() const = 0;
+
+  // Dies if this loop has raw I/O in flight.  Called by each backend at the
+  // top of its reconstruction, before it has torn anything down.
+  //
+  // Every answer here is a bug, which is why this refuses to pick one:
+  // io_uring's child cannot complete the request (it was submitted to the
+  // inherited ring, and there is no registry to re-arm raw requests from),
+  // while epoll's and kqueue's registrations survive the fork, so
+  // reconstruction would re-arm them and repeat a read or write the parent
+  // is also still doing.  Shared rather than copied per backend so the rule
+  // and the message it dies with cannot drift apart, and so a new backend
+  // inherits both by implementing one predicate.
+  void CheckNoRawRequestsInFlightOnFork() const;
 
   virtual std::unique_ptr<Aio::TimerState> MakeTimerState() = 0;
 
