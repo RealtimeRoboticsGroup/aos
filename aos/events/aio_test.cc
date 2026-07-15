@@ -4541,6 +4541,112 @@ TEST_P(AioTest, QuitInBeforeWait) {
   aio.Run();
 }
 
+// Tests that Run() flushes what is already queued before returning from a
+// Quit().
+//
+// EPoll::Run() polled with a zero timeout once Quit() landed, so events already
+// sitting in the queue still ran before Run() returned ("This lets us flush the
+// event queue before quitting", 6b6dfa5a9).  Nothing had ever pinned that at
+// this level -- so pin it.
+//
+// The ordering here is deliberate: only `trigger` is readable when Run()
+// starts, so its callback is guaranteed to run first, and it is that callback
+// which both makes `target` readable and asks to quit.  A non-draining Run()
+// leaves target_count at 0.
+TEST_P(AioTest, RunDrainsQueuedEventsAfterQuit) {
+  Aio aio;
+  Pipe trigger;
+  Pipe target;
+
+  int target_count = 0;
+  aio.OnReadable(trigger.read_fd(), [&aio, &trigger, &target]() {
+    EXPECT_EQ(trigger.Read(1), "x");
+    // Queue up work and ask to stop in the same breath.
+    target.Write("x");
+    aio.Quit();
+  });
+  aio.OnReadable(target.read_fd(), [&target, &target_count]() {
+    EXPECT_EQ(target.Read(1), "x");
+    ++target_count;
+  });
+
+  trigger.Write("x");
+  aio.Run();
+
+  EXPECT_EQ(target_count, 1)
+      << "Run() returned without draining the event queue; work that was "
+         "already pending when Quit() was called got dropped.";
+
+  aio.DeleteFd(trigger.read_fd());
+  aio.DeleteFd(target.read_fd());
+}
+
+// The other half of the drain contract: it ends when a Poll() finds nothing,
+// so readiness no callback consumed is redelivered on every pass.  A callback
+// that calls Quit() without consuming its own readiness keeps Run() going --
+// EPoll::Run() has always behaved this way, so it is preserved rather than
+// fixed, and pinned here rather than left to be rediscovered.
+//
+// The callback consumes the byte on its second invocation, so a regression
+// that stops redelivering fails the EXPECT instead of the test hanging; the
+// watchdog covers the opposite regression, where nothing ever ends the drain.
+TEST_P(AioTest, RunDrainRedeliversUnconsumedReadiness) {
+  ScopedDeathTestWatchdog watchdog;
+
+  Aio aio;
+  Pipe pipe;
+
+  int calls = 0;
+  aio.OnReadable(pipe.read_fd(), [&aio, &pipe, &calls]() {
+    ++calls;
+    if (calls == 1) {
+      // Ask to stop without reading, leaving the fd level-ready.
+      aio.Quit();
+      return;
+    }
+    // Consuming it is what lets the drain find nothing and finish.
+    EXPECT_EQ(pipe.Read(1), "x");
+  });
+
+  pipe.Write("x");
+  aio.Run();
+
+  EXPECT_EQ(calls, 2)
+      << "The drain did not redeliver readiness that the Quit()ing callback "
+         "left unconsumed.";
+
+  aio.DeleteFd(pipe.read_fd());
+}
+
+// The same contract for writability, which is the shape most likely to trip
+// someone: an idle fd is always writable, so unlike a pipe's byte there is
+// nothing to read to make it stop.  DisableWritable() is what retires it.
+TEST_P(AioTest, RunDrainRedeliversWritability) {
+  ScopedDeathTestWatchdog watchdog;
+
+  Aio aio;
+  Pipe pipe;
+
+  int calls = 0;
+  aio.OnWritable(pipe.write_fd(), [&aio, &pipe, &calls]() {
+    ++calls;
+    if (calls == 1) {
+      // Quit without retiring the writability.
+      aio.Quit();
+      return;
+    }
+    aio.DisableWritable(pipe.write_fd());
+  });
+
+  aio.Run();
+
+  EXPECT_EQ(calls, 2)
+      << "The drain did not redeliver writability that the Quit()ing callback "
+         "left enabled.";
+
+  aio.DeleteFd(pipe.write_fd());
+}
+
 // Tests that a Quit() concurrent with Run() startup always stops the loop, and
 // that the loop is left stopped afterwards.
 //
@@ -4552,8 +4658,8 @@ TEST_P(AioTest, QuitInBeforeWait) {
 // It does NOT reliably reach the narrowest interleaving, where Quit() lands
 // between Run() reading quit_requested_ and Run() storing to run_ -- that
 // window is a couple of instructions wide and did not reproduce here even with
-// a barrier and 2000 attempts.  Run()'s loop consults quit_requested_ as well
-// as run_ precisely so that interleaving stays harmless: the store would
+// a barrier and 2000 attempts.  Run()'s loop consults should_run() rather than
+// run_ alone precisely so that interleaving stays harmless: the store would
 // clobber Quit()'s `run_ = false`, leaving quit_requested_ as the only record
 // that a shutdown was asked for.  A regression there would hang rather than
 // fail an assertion.
@@ -4585,6 +4691,7 @@ TEST_P(AioTest, QuitRacingWithRunStartup) {
     go.store(true, std::memory_order_release);
     aio.Run();
     quitter.join();
+    EXPECT_FALSE(aio.should_run());
   }
 }
 
@@ -4721,6 +4828,101 @@ TEST_P(AioTest, ForkOperationBeforePollDeathTest) {
       ::testing::ExitedWithCode(42), "");
 }
 #endif  // !_WIN32
+
+TEST_P(AioTest, ShouldRunTest) {
+  Aio aio;
+  // True before any Run() or Quit(), as EPoll's run_{true} was.
+  EXPECT_TRUE(aio.should_run());
+
+  // Set a timer to check should_run() while running and then quit.
+  Aio::Timer timer(&aio);
+  struct Context {
+    Aio *aio;
+    bool checked_running;
+  };
+  Context context{&aio, false};
+
+  timer.Schedule(
+      aos::monotonic_clock::now(),
+      [](Completion, void *ctx) {
+        auto *c = static_cast<Context *>(ctx);
+        EXPECT_TRUE(c->aio->should_run());
+        c->checked_running = true;
+        c->aio->Quit();
+        EXPECT_FALSE(c->aio->should_run());
+      },
+      &context);
+
+  aio.Run();
+  EXPECT_FALSE(aio.should_run());
+  EXPECT_TRUE(context.checked_running);
+}
+
+// Quit() before Run() is remembered: Run() goes straight to the drain and
+// returns rather than blocking forever, and consumes the request instead of
+// stranding the *next* Run().
+//
+// This is what broke EPoll when it was converted to wrap Aio: it kept its own
+// run_ flag, set it in Run() and never cleared it on exit, so the impl's early
+// return swallowed the quit and should_run() answered true forever after.
+TEST_P(AioTest, QuitBeforeRunTest) {
+  Aio aio;
+  EXPECT_TRUE(aio.should_run());
+
+  aio.Quit();
+  EXPECT_FALSE(aio.should_run());
+
+  // Returns rather than blocking: there is nothing queued to drain.
+  aio.Run();
+  EXPECT_FALSE(aio.should_run());
+
+  // ...and the request was consumed: a stranded quit shows up as a second
+  // Run() returning immediately without servicing anything.
+  Aio::Timer timer(&aio);
+  bool fired = false;
+  struct Context {
+    Aio *aio;
+    bool *fired;
+  } context{&aio, &fired};
+  timer.Schedule(
+      aos::monotonic_clock::now(),
+      [](Completion, void *ctx) {
+        auto *c = static_cast<Context *>(ctx);
+        *c->fired = true;
+        c->aio->Quit();
+      },
+      &context);
+
+  aio.Run();
+  EXPECT_TRUE(fired)
+      << "The second Run() returned without servicing the loop; the earlier "
+         "Quit() was never consumed.";
+  EXPECT_FALSE(aio.should_run());
+}
+
+// A Quit() before Run() still drains, as a Quit() during Run() does: work
+// already queued when it landed runs before Run() returns (see Aio::Run()).
+// Run() used to return at once in this case, so a readable fd's handler never
+// ran, and EPoll's callers, who get this Run() once EPoll sits on Aio, expect
+// it to.
+TEST_P(AioTest, QuitBeforeRunStillDrainsTest) {
+  Aio aio;
+  Pipe pipe;
+  int handled = 0;
+  aio.OnReadable(pipe.read_fd(), [&pipe, &handled]() {
+    // Reads the byte, so the readiness is retired and the drain ends.
+    pipe.Read(1);
+    ++handled;
+  });
+  pipe.Write("x");
+
+  aio.Quit();
+  aio.Run();
+  EXPECT_EQ(handled, 1) << "Run() returned without draining queued work";
+  EXPECT_FALSE(aio.should_run());
+
+  aio.DeleteFd(pipe.read_fd());
+}
 
 // Bare fork() with waitpid(), so Windows is excluded the way the other
 // bare-fork tests in this file are (see ForkOperationBeforePollDeathTest).

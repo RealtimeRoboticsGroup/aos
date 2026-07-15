@@ -738,6 +738,7 @@ class IoUringImpl : public Aio::Impl {
   void DestroyTimerState(std::unique_ptr<Aio::TimerState> state) override;
 
   void Run() override;
+  bool should_run() const override;
 
   bool Poll(bool block) override;
   void Quit() override;
@@ -1021,7 +1022,9 @@ class IoUringImpl : public Aio::Impl {
   // them silently.
   int raw_requests_in_flight_ = 0;
 
-  std::atomic<bool> run{false};
+  // Starts true, so should_run() is true before the first Run().  Run()
+  // clears it on exit, Quit() on shutdown.
+  std::atomic<bool> run{true};
   std::atomic<bool> quit_requested{false};
 
   std::vector<std::function<void()>> before_wait_functions;
@@ -1659,24 +1662,39 @@ IoUringImpl::~IoUringImpl() {
 
 void IoUringImpl::Run() {
   run = true;
-  // The loop consults quit_requested as well as run: a Quit() racing this
-  // startup can have its `run = false` store clobbered by the store above,
-  // leaving quit_requested as the only record that a shutdown was asked for
-  // (see AioTest.QuitRacingWithRunStartup).  This also covers a Quit() that
-  // landed entirely before Run(): the loop body never executes.
-  while (run && !quit_requested) {
-    Poll(true);
+  // Blocking polls while running, non-blocking once Quit() lands, so queued
+  // work is flushed before returning.  A Quit() before Run() is the same
+  // case: quit_requested is already set, so should_run() is false from the
+  // start and Run() goes straight to the drain.  Aio::Run() documents that
+  // contract and what it requires of callbacks.
+  //
+  // should_run() rather than run alone is what makes a concurrent Quit() safe.
+  // Quit() is async-safe, so it can run in its entirety just before the
+  // `run = true` store, which then overwrites Quit()'s `run = false`.
+  // quit_requested is the only surviving record of the request, and the
+  // wakeup Quit() sent is already spent, so reading run alone would block
+  // here forever.  Quit() sets both flags before Wakeup(), so a Poll() woken
+  // by it sees them.
+  while (true) {
+    if (!Poll(should_run())) {
+      // Nothing was processed.  Once a shutdown has been requested, that means
+      // the queue is drained and we are done.  While still running, it was a
+      // blocking Poll() that only did internal work, such as the wakeup read,
+      // so we go back to waiting.  (EINTR is absorbed inside Poll().)
+      if (!should_run()) {
+        break;
+      }
+    }
   }
-  // Post-Quit() drain, keeping EPoll::Run()'s contract: whatever is
-  // already resolved -- queued-but-undispatched completions on
-  // pending_dispatch_, ready CQEs -- is delivered before returning rather
-  // than dropped.  ReapCompletions() depends on this when it reports
-  // progress for completions drained by an earlier Poll().
-  while (Poll(false)) {
-  }
+  // run first: should_run() must not still report "running" once Run() has
+  // returned.  A Quit() landing between these two stores is cleared along with
+  // them, which cannot hang anything -- the loop has already stopped -- it only
+  // means the next Run() won't start out draining.
   run = false;
   quit_requested = false;
 }
+
+bool IoUringImpl::should_run() const { return run && !quit_requested; }
 
 struct io_uring_sqe *IoUringImpl::GetSqeForRingReconstruction() {
   struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
@@ -3283,6 +3301,7 @@ class EpollImpl : public Aio::Impl {
   std::unique_ptr<Aio::TimerState> MakeTimerState() override;
 
   void Run() override;
+  bool should_run() const override;
 
   bool Poll(bool block) override;
   void Quit() override;
@@ -3636,14 +3655,16 @@ class EpollImpl : public Aio::Impl {
   bool in_before_wait_ = false;
 
   // Quit() writes these from other threads and from a signal handler
-  // (ShmEventLoop's SIGINT/SIGHUP/SIGTERM handler); plain bools would be a
-  // data race that can miss the shutdown outright.  A handler may only
-  // touch lock-free atomics, so assert that; a non-lock-free atomic could
-  // deadlock against the interrupted thread.
+  // (ShmEventLoop's SIGINT/SIGHUP/SIGTERM handler), and should_run() reads
+  // them; plain bools would be a data race that can miss the shutdown
+  // outright.  A handler may only touch lock-free atomics, so assert that;
+  // a non-lock-free atomic could deadlock against the interrupted thread.
   static_assert(std::atomic<bool>::is_always_lock_free,
                 "Quit() runs in a signal handler, so these have to be usable "
                 "from one");
-  std::atomic<bool> run_ = false;
+  // Starts true, so should_run() is true before the first Run().  Run()
+  // clears it on exit, Quit() on shutdown.
+  std::atomic<bool> run_ = true;
   std::atomic<bool> quit_requested_ = false;
 
   size_t last_fork_count_ = 0;
@@ -3837,17 +3858,28 @@ void EpollImpl::ScrubRetiredRegistrations() {
 
 void EpollImpl::Run() {
   run_ = true;
-  // quit_requested_ as well as run_, same as IoUringImpl::Run(): a Quit()
-  // racing this startup can have its run_ store clobbered by the store
-  // above, and its wakeup is already spent (see
-  // AioTest.QuitRacingWithRunStartup).  Also covers a Quit() that landed
-  // entirely before Run().
-  while (run_ && !quit_requested_) {
-    Poll(true);
+  // Blocking polls while running, non-blocking once Quit() lands -- see
+  // IoUringImpl::Run(), which this mirrors, and Aio::Run() for the contract.
+  while (true) {
+    if (!Poll(should_run())) {
+      // Nothing was processed.  Once a shutdown has been requested, that means
+      // the queue is drained and we are done.  While still running, it was a
+      // blocking Poll() that only did internal work, such as the wakeup read,
+      // so we go back to waiting.  (EINTR is absorbed inside Poll().)
+      if (!should_run()) {
+        break;
+      }
+    }
   }
+  // run_ first: should_run() must not still report "running" once Run() has
+  // returned.  A Quit() landing between these two stores is cleared along with
+  // them, which cannot hang anything -- the loop has already stopped -- it only
+  // means the next Run() won't start out draining.
   run_ = false;
   quit_requested_ = false;
 }
+
+bool EpollImpl::should_run() const { return run_ && !quit_requested_; }
 
 void EpollImpl::HandleFork() {
   // Shared rule; see Aio::Impl::CheckNoRawRequestsInFlightOnFork().  Here
@@ -4215,6 +4247,20 @@ void EpollImpl::RunLegacyHandlers(FdRegistration *reg, uint32_t got_events) {
 }
 
 void EpollImpl::Quit() {
+  // Already asked to stop.  Bail out rather than re-arming the wakeup: once
+  // Run() is draining it polls with a zero timeout, so a Quit() called from a
+  // BeforeWait callback (or any other per-Poll path) would refill the queue
+  // every time around and the drain would never finish.  This is the 2021
+  // EPoll::Quit() guard -- f74daa655, "Make EPoll actually return from Run even
+  // if you call Quit repeatedly" -- which the drain has always needed.
+  //
+  // Suppressing the wakeup is safe: quit_requested_ is only cleared by Run() on
+  // its way out, so while it is set the loop has either already been woken or
+  // is in the non-blocking drain and cannot block again.
+  if (quit_requested_) {
+    return;
+  }
+
   quit_requested_ = true;
   run_ = false;
   Wakeup();

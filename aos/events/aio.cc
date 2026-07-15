@@ -31,6 +31,8 @@ bool Aio::Poll(bool block) { return impl_->Poll(block); }
 
 void Aio::Quit() { impl_->Quit(); }
 
+bool Aio::should_run() const { return impl_->should_run(); }
+
 void Aio::AsyncRead(FileDescriptor fd, std::span<char> buffer,
                     AsyncRequest *request) {
   impl_->AsyncRead(fd, buffer, request);
