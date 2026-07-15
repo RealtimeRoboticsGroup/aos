@@ -96,7 +96,7 @@ class ImageDump {
         camera_number_(CameraNumber(absl::GetFlag(FLAGS_channel)).value()),
         raw_(STDIN_FILENO),
         nonblocking_(STDIN_FILENO) {
-    event_loop_->epoll()->OnReadable(STDIN_FILENO, [this]() {
+    event_loop_->aio()->OnReadable(STDIN_FILENO, [this]() {
       ssize_t bytes_read;
       char read_buffer[1];
       while (true) {
@@ -138,7 +138,7 @@ class ImageDump {
     });
   }
 
-  ~ImageDump() { event_loop_->epoll()->DeleteFd(STDIN_FILENO); }
+  ~ImageDump() { event_loop_->aio()->DeleteFd(STDIN_FILENO); }
 
   void MaybeLogLastImage() {
     if (!image_fetcher_.Fetch()) {

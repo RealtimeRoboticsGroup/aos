@@ -122,52 +122,52 @@ void WebsocketHandler::onDisconnect(::seasocks::WebSocket *sock) {
   connections_.erase(sock);
 }
 
-// Global epoll pointer
-static aos::EPoll *global_epoll = nullptr;
+// Global Aio pointer
+static aos::Aio *global_aio = nullptr;
 
 static int ReFdListen(int fd, int flags, fd_h *fh, void *arg) {
   if (flags & 0x1) {
-    global_epoll->OnReadable(fd, [fh, arg]() { (*fh)(0x1, arg); });
+    global_aio->OnReadable(fd, [fh, arg]() { (*fh)(0x1, arg); });
   }
   if (flags & 0x2) {
-    global_epoll->OnWritable(fd, [fh, arg]() { (*fh)(0x2, arg); });
+    global_aio->OnWritable(fd, [fh, arg]() { (*fh)(0x2, arg); });
   }
   if (flags & 0x4) {
-    global_epoll->OnError(fd, [fh, arg]() { (*fh)(0x4, arg); });
+    global_aio->OnError(fd, [fh, arg]() { (*fh)(0x4, arg); });
   }
   return 0;
 }
 
 static void ReFdClose(int fd) {
-  CHECK(global_epoll != nullptr);
-  global_epoll->DeleteFd(fd);
+  CHECK(global_aio != nullptr);
+  global_aio->DeleteFd(fd);
 }
 
 WebProxy::WebProxy(aos::EventLoop *event_loop, StoreHistory store_history,
                    int per_channel_buffer_size_bytes)
-    : WebProxy(event_loop, &internal_epoll_, store_history,
+    : WebProxy(event_loop, &internal_aio_, store_history,
                per_channel_buffer_size_bytes) {}
 
 WebProxy::WebProxy(aos::ShmEventLoop *event_loop, StoreHistory store_history,
                    int per_channel_buffer_size_bytes)
-    : WebProxy(event_loop, event_loop->epoll(), store_history,
+    : WebProxy(event_loop, event_loop->aio(), store_history,
                per_channel_buffer_size_bytes) {}
 
-WebProxy::WebProxy(aos::EventLoop *event_loop, aos::EPoll *epoll,
+WebProxy::WebProxy(aos::EventLoop *event_loop, aos::Aio *aio,
                    StoreHistory store_history,
                    int per_channel_buffer_size_bytes)
-    : epoll_(epoll),
+    : aio_(aio),
       server_(std::make_shared<aos::seasocks::SeasocksLogger>(
           ::seasocks::Logger::Level::Info)),
       websocket_handler_(new WebsocketHandler(
           &server_, event_loop, store_history, per_channel_buffer_size_bytes)) {
-  CHECK(!global_epoll);
-  global_epoll = epoll;
+  CHECK(!global_aio);
+  global_aio = aio;
 
   re_fd_set_listen_callback(&ReFdListen);
   re_fd_set_close_callback(&ReFdClose);
 
-  epoll->BeforeWait([]() {
+  aio->BeforeWait([]() {
     const uint64_t to = tmr_next_timeout(tmrl_get());
     if (to != 0) {
       VLOG(3) << "Next timeout " << to;
@@ -181,20 +181,20 @@ WebProxy::WebProxy(aos::EventLoop *event_loop, aos::EPoll *epoll,
   server_.addWebSocketHandler("/ws", websocket_handler_);
   CHECK(server_.startListening(absl::GetFlag(FLAGS_proxy_port)));
 
-  epoll->OnReadable(server_.fd(), [this]() {
+  aio->OnReadable(server_.fd(), [this]() {
     CHECK(::seasocks::Server::PollResult::Continue == server_.poll(0));
   });
 
-  if (&internal_epoll_ == epoll) {
+  if (&internal_aio_ == aio) {
     TimerHandler *const timer = event_loop->AddTimer([this]() {
-      // Run the epoll poller until there are no more events (if we are being
+      // Run the Aio poller until there are no more events (if we are being
       // backed by a shm event loop, there won't be anything registered to
-      // internal_epoll_ and this will just return false).
-      // We just deal with clearing all the epoll events using a simulated
+      // internal_aio_ and this will just return false).
+      // We just deal with clearing all the Aio events using a simulated
       // timer. This does mean that we will spin rather than actually sleeping
       // in any coherent manner, which will be particularly noticeable when past
       // the end of processing other events.
-      while (internal_epoll_.Poll(false)) {
+      while (internal_aio_.Poll(false)) {
         continue;
       }
     });
@@ -207,11 +207,11 @@ WebProxy::WebProxy(aos::EventLoop *event_loop, aos::EPoll *epoll,
 }
 
 WebProxy::~WebProxy() {
-  epoll_->DeleteFd(server_.fd());
+  aio_->DeleteFd(server_.fd());
   server_.terminate();
   CHECK(::seasocks::Server::PollResult::Terminated == server_.poll(0));
-  CHECK(global_epoll == epoll_);
-  global_epoll = nullptr;
+  CHECK(global_aio == aio_);
+  global_aio = nullptr;
 }
 
 void WebProxy::StopRecording() { websocket_handler_->StopRecording(); }

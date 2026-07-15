@@ -372,7 +372,7 @@ int Main() {
 
   CoralForwarder coral_forwarder(&event_loop, &instance, &target_map_fetcher);
 
-  event_loop.epoll()->OnReadable(drive_state_socket.fd(), [&]() {
+  event_loop.aio()->OnReadable(drive_state_socket.fd(), [&]() {
     std::array<uint8_t, 256> buffer;
 
     const int received_length =
@@ -518,7 +518,7 @@ int Main() {
   };
   // /AdvantageKit/SystemStats/BatteryVoltage
 
-  event_loop.epoll()->OnReadable(enabled_eventfd.fd(), [&]() {
+  event_loop.aio()->OnReadable(enabled_eventfd.fd(), [&]() {
     uint64_t events = enabled_eventfd.Read();
     publish_robot_state();
     VLOG(1) << "Got " << events << " wakeups.";
@@ -619,8 +619,8 @@ int Main() {
 
   event_loop.Run();
 
-  event_loop.epoll()->DeleteFd(enabled_eventfd.fd());
-  event_loop.epoll()->DeleteFd(drive_state_socket.fd());
+  event_loop.aio()->DeleteFd(enabled_eventfd.fd());
+  event_loop.aio()->DeleteFd(drive_state_socket.fd());
 
   instance.StopClient();
   {

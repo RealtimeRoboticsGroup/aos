@@ -428,12 +428,12 @@ V4L2Reader::V4L2Reader(aos::EventLoop *event_loop, std::string_view device_name,
   StreamOn();
 }
 
-MjpegV4L2Reader::MjpegV4L2Reader(aos::EventLoop *event_loop, aos::EPoll *epoll,
+MjpegV4L2Reader::MjpegV4L2Reader(aos::EventLoop *event_loop, aos::Aio *aio,
                                  std::string_view device_name,
                                  std::string_view image_channel,
                                  const CameraStreamSettings *settings)
     : V4L2ReaderBase(event_loop, device_name, image_channel, settings),
-      epoll_(epoll) {
+      aio_(aio) {
   // Don't know why this magic call to SetExposure is required (before the
   // camera settings are configured) to make things work on boot of the pi, but
   // it seems to be-- without it, the image exposure is wrong (too dark). Note--
@@ -487,7 +487,7 @@ MjpegV4L2Reader::MjpegV4L2Reader(aos::EventLoop *event_loop, aos::EPoll *epoll,
   ConfigureCameraFromConfig();
 
   StreamOn();
-  epoll_->OnReadable(fd().get(), [this]() {
+  aio_->OnReadable(fd().get(), [this]() {
     if (!ReadLatestImage()) {
       return;
     }
@@ -496,16 +496,16 @@ MjpegV4L2Reader::MjpegV4L2Reader(aos::EventLoop *event_loop, aos::EPoll *epoll,
   });
 }
 
-MjpegV4L2Reader::~MjpegV4L2Reader() { epoll_->DeleteFd(fd().get()); }
+MjpegV4L2Reader::~MjpegV4L2Reader() { aio_->DeleteFd(fd().get()); }
 
 RockchipV4L2Reader::RockchipV4L2Reader(aos::EventLoop *event_loop,
-                                       aos::EPoll *epoll,
+                                       aos::Aio *aio,
                                        std::string_view device_name,
                                        std::string_view image_sensor_subdev,
                                        std::string_view image_channel,
                                        const CameraStreamSettings *settings)
     : V4L2ReaderBase(event_loop, device_name, image_channel, settings),
-      epoll_(epoll),
+      aio_(aio),
       image_sensor_fd_(open(image_sensor_subdev.data(), O_RDWR | O_NONBLOCK)),
       buffer_requeuer_([this](int buffer) { EnqueueBuffer(buffer); },
                        kEnqueueFifoPriority) {
@@ -513,10 +513,10 @@ RockchipV4L2Reader::RockchipV4L2Reader(aos::EventLoop *event_loop,
   PCHECK(image_sensor_fd_.get() != -1)
       << " Failed to open device " << device_name;
   StreamOn();
-  epoll_->OnReadable(fd().get(), [this]() { OnImageReady(); });
+  aio_->OnReadable(fd().get(), [this]() { OnImageReady(); });
 }
 
-RockchipV4L2Reader::~RockchipV4L2Reader() { epoll_->DeleteFd(fd().get()); }
+RockchipV4L2Reader::~RockchipV4L2Reader() { aio_->DeleteFd(fd().get()); }
 
 void RockchipV4L2Reader::MarkBufferToBeEnqueued(int buffer) {
   ReinitializeBuffer(buffer);

@@ -28,8 +28,8 @@ Imu::Imu(aos::ShmEventLoop *event_loop, double encoder_scalar)
       encoder_scalar_(encoder_scalar) {
   imu_fd_ = open("/dev/adis16505", O_RDONLY | O_NONBLOCK);
   PCHECK(imu_fd_ != -1) << ": Failed to open SPI device for IMU.";
-  aos::EPoll *epoll = event_loop_->epoll();
-  epoll->OnReadable(imu_fd_, [this]() {
+  aos::Aio *aio = event_loop_->aio();
+  aio->OnReadable(imu_fd_, [this]() {
     uint8_t buf[kReadSize];
     ssize_t read_len = read(imu_fd_, buf, kReadSize);
     // TODO: Do we care about gracefully handling EAGAIN or anything else?

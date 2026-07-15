@@ -166,8 +166,7 @@ SctpClientConnection::SctpClientConnection(
   // messages in flight.
   client_.SetPoolSize(2u);
 
-  event_loop_->epoll()->OnReadable(client_.fd(),
-                                   [this]() { MessageReceived(); });
+  event_loop_->aio()->OnReadable(client_.fd(), [this]() { MessageReceived(); });
 }
 
 void SctpClientConnection::MessageReceived() {

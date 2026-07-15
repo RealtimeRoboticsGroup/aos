@@ -11,7 +11,7 @@
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 
-#include "aos/events/epoll.h"
+#include "aos/events/aio.h"
 #include "aos/events/event_loop.h"
 #include "aos/events/logging/boot_timestamp.h"
 #include "aos/logging/implementations.h"
@@ -332,7 +332,7 @@ class EventSchedulerScheduler {
   // (the default) to run as fast as possible. This can be changed during
   // run-time.
   void SetReplayRate(double replay_rate) { replay_rate_ = replay_rate; }
-  EPoll *epoll() { return &epoll_; }
+  Aio *aio() { return &aio_; }
 
   // Run until time.  fn_realtime_offset is a function that returns the
   // realtime offset.
@@ -400,7 +400,7 @@ class EventSchedulerScheduler {
       reboots_;
 
   double replay_rate_ = std::numeric_limits<double>::infinity();
-  EPoll epoll_;
+  Aio aio_;
 
   std::function<void(
       std::tuple<distributed_clock::time_point, const EventScheduler *>)>

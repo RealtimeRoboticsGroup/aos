@@ -5,7 +5,7 @@
 
 #include "absl/types/span.h"
 
-#include "aos/events/epoll.h"
+#include "aos/events/aio.h"
 #include "aos/events/event_loop.h"
 #include "aos/events/event_loop_generated.h"
 #include "aos/ipc_lib/shm_base.h"
@@ -113,8 +113,8 @@ class ShmEventLoop : public EventLoop {
 
   const UUID &boot_uuid() const override { return boot_uuid_; }
 
-  // Returns the epoll loop used to run the event loop.
-  EPoll *epoll() { return &epoll_; }
+  // Returns the Aio loop used to run the event loop.
+  Aio *aio() { return &aio_; }
 
   // Returns the local mapping of the shared memory used by the watcher on the
   // specified channel. A watcher must be created on this channel before calling
@@ -258,7 +258,7 @@ class ShmEventLoop : public EventLoop {
   aos::stl_mutex *check_mutex_ = nullptr;
   std::optional<pid_t> check_tid_;
 
-  EPoll epoll_;
+  Aio aio_;
 
   // Only set during Run().
   std::unique_ptr<ipc_lib::SignalFd> signalfd_;

@@ -407,54 +407,70 @@ Status EventSchedulerScheduler::Run() {
 
 template <typename F>
 Result<void> EventSchedulerScheduler::RunMaybeRealtimeLoop(F loop_body) {
-  internal::TimerFd timerfd;
+  Aio::Timer timer(&aio_);
   CHECK_LT(0.0, replay_rate_) << "Replay rate must be positive.";
   std::tuple<distributed_clock::time_point, EventScheduler *> oldest_event;
   AOS_ASSIGN_OR_RETURN_ERROR(oldest_event, OldestEvent());
   distributed_clock::time_point last_distributed_clock =
       std::get<0>(oldest_event);
   monotonic_clock::time_point last_monotonic_clock = monotonic_clock::now();
-  timerfd.SetTime(last_monotonic_clock, std::chrono::seconds(0));
-  Result<void> result{};
-  epoll_.OnReadable(
-      timerfd.fd(), [this, &last_distributed_clock, &last_monotonic_clock,
-                     &timerfd, &result, loop_body]() {
-        const uint64_t read_result = timerfd.Read();
-        if (!is_running_) {
-          epoll_.Quit();
-          return;
-        }
-        CHECK_EQ(read_result, 1u);
-        // Call loop_body() at least once; if we are in infinite-speed replay,
-        // we don't actually want/need the context switches from the epoll
-        // setup, so just loop.
-        // Note: The performance impacts of this code have not been carefully
-        // inspected (e.g., how much does avoiding the context-switch help; does
-        // the timerfd_settime call matter).
-        // This is deliberately written to support the user changing replay
-        // rates dynamically.
-        do {
-          result = loop_body();
-          if (!result.has_value()) {
-            is_running_ = false;
-          }
-          if (is_running_) {
-            const monotonic_clock::time_point next_trigger =
-                last_monotonic_clock +
-                std::chrono::duration_cast<std::chrono::nanoseconds>(
-                    (now_ - last_distributed_clock) / replay_rate_);
-            timerfd.SetTime(next_trigger, std::chrono::seconds(0));
-            last_monotonic_clock = next_trigger;
-            last_distributed_clock = now_;
-          } else {
-            epoll_.Quit();
-          }
-        } while (replay_rate_ == std::numeric_limits<double>::infinity() &&
-                 is_running_);
-      });
 
-  epoll_.Run();
-  epoll_.DeleteFd(timerfd.fd());
+  Result<void> result{};
+
+  struct Context {
+    EventSchedulerScheduler *self;
+    Aio::Timer *timer;
+    distributed_clock::time_point *last_distributed_clock;
+    monotonic_clock::time_point *last_monotonic_clock;
+    Result<void> *result;
+    std::function<Result<void>()> loop_body;
+
+    static void OnTimer(Completion completion, void *ctx) {
+      auto c = static_cast<Context *>(ctx);
+      if (!completion.status.has_value()) {
+        return;
+      }
+      if (!c->self->is_running_) {
+        c->self->aio_.Quit();
+        return;
+      }
+      do {
+        *c->result = c->loop_body();
+        if (!c->result->has_value()) {
+          c->self->is_running_ = false;
+        }
+        if (c->self->is_running_) {
+          if (c->self->replay_rate_ !=
+              std::numeric_limits<double>::infinity()) {
+            const monotonic_clock::time_point next_trigger =
+                *c->last_monotonic_clock +
+                std::chrono::duration_cast<std::chrono::nanoseconds>(
+                    (c->self->now_ - *c->last_distributed_clock) /
+                    c->self->replay_rate_);
+            c->timer->Schedule(next_trigger, &Context::OnTimer, c);
+            *c->last_monotonic_clock = next_trigger;
+            *c->last_distributed_clock = c->self->now_;
+          } else {
+            *c->last_distributed_clock = c->self->now_;
+          }
+        } else {
+          c->self->aio_.Quit();
+        }
+      } while (c->self->replay_rate_ ==
+                   std::numeric_limits<double>::infinity() &&
+               c->self->is_running_);
+    }
+  };
+
+  Context ctx{this,
+              &timer,
+              &last_distributed_clock,
+              &last_monotonic_clock,
+              &result,
+              std::move(loop_body)};
+  timer.Schedule(last_monotonic_clock, &Context::OnTimer, &ctx);
+
+  aio_.Run();
   return result;
 }
 

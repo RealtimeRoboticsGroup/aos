@@ -36,7 +36,7 @@ void CameraReaderMain() {
   uint32_t last_exposure = stream_settings->exposure_100us();
   uint32_t last_gain = stream_settings->gain();
 
-  MjpegV4L2Reader v4l2_reader(&event_loop, event_loop.epoll(),
+  MjpegV4L2Reader v4l2_reader(&event_loop, event_loop.aio(),
                               absl::GetFlag(FLAGS_viddevice),
                               absl::GetFlag(FLAGS_channel), stream_settings);
   // If the exposure flag is set to override the constants, use it.

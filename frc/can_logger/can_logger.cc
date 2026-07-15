@@ -59,7 +59,7 @@ CanLogger::CanLogger(aos::ShmEventLoop *event_loop,
     timer_handler->set_name("CAN logging Loop");
     timer_handler->Schedule(event_loop->monotonic_now(), kPollPeriod);
   } else {
-    shm_event_loop_->epoll()->OnReadable(fd_.get(), [this]() { Poll(); });
+    shm_event_loop_->aio()->OnReadable(fd_.get(), [this]() { Poll(); });
   }
 }
 

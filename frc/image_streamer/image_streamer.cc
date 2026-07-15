@@ -651,15 +651,15 @@ int main(int argc, char **argv) {
     server.startListening(absl::GetFlag(FLAGS_streaming_port));
     server.setStaticPath(absl::GetFlag(FLAGS_data_dir).c_str());
 
-    aos::EPoll *epoll = event_loop.epoll();
+    aos::Aio *aio = event_loop.aio();
 
-    epoll->OnReadable(server.fd(), [&server] {
+    aio->OnReadable(server.fd(), [&server] {
       CHECK(::seasocks::Server::PollResult::Continue == server.poll(0));
     });
 
     event_loop.Run();
 
-    epoll->DeleteFd(server.fd());
+    aio->DeleteFd(server.fd());
     server.terminate();
   }
 

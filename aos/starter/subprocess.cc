@@ -657,24 +657,24 @@ void RemoveCGroupWithRetry(const std::filesystem::path &cgroup_path) {
 
 SignalListener::SignalListener(aos::ShmEventLoop *loop,
                                std::function<void(signalfd_siginfo)> callback)
-    : SignalListener(loop->epoll(), std::move(callback)) {}
+    : SignalListener(loop->aio(), std::move(callback)) {}
 
-SignalListener::SignalListener(aos::EPoll *epoll,
+SignalListener::SignalListener(aos::Aio *aio,
                                std::function<void(signalfd_siginfo)> callback)
-    : SignalListener(epoll, callback,
+    : SignalListener(aio, callback,
                      {SIGHUP, SIGINT, SIGQUIT, SIGABRT, SIGFPE, SIGSEGV,
                       SIGPIPE, SIGTERM, SIGBUS, SIGXCPU, SIGCHLD}) {}
 
 SignalListener::SignalListener(aos::ShmEventLoop *loop,
                                std::function<void(signalfd_siginfo)> callback,
                                std::initializer_list<unsigned int> signals)
-    : SignalListener(loop->epoll(), std::move(callback), std::move(signals)) {}
+    : SignalListener(loop->aio(), std::move(callback), std::move(signals)) {}
 
-SignalListener::SignalListener(aos::EPoll *epoll,
+SignalListener::SignalListener(aos::Aio *aio,
                                std::function<void(signalfd_siginfo)> callback,
                                std::initializer_list<unsigned int> signals)
-    : epoll_(epoll), callback_(std::move(callback)), signalfd_(signals) {
-  epoll_->OnReadable(signalfd_.fd(), [this] {
+    : aio_(aio), callback_(std::move(callback)), signalfd_(signals) {
+  aio_->OnReadable(signalfd_.fd(), [this] {
     signalfd_siginfo info = signalfd_.Read();
 
     if (info.ssi_signo == 0) {
@@ -687,7 +687,7 @@ SignalListener::SignalListener(aos::EPoll *epoll,
   });
 }
 
-SignalListener::~SignalListener() { epoll_->DeleteFd(signalfd_.fd()); }
+SignalListener::~SignalListener() { aio_->DeleteFd(signalfd_.fd()); }
 
 Application::Application(
     std::string_view name, std::string_view executable_name,

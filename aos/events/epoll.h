@@ -54,6 +54,7 @@ class TimerFd {
 class EPoll {
  public:
   EPoll();
+  explicit EPoll(Aio *aio);
   ~EPoll();
   EPoll(const EPoll &) = delete;
   EPoll &operator=(const EPoll &) = delete;
@@ -118,8 +119,11 @@ class EPoll {
   // start draining events to finish.
   bool should_run() const { return run_; }
 
+  Aio *aio() { return aio_; }
+
  private:
-  std::unique_ptr<Aio> aio_;
+  std::unique_ptr<Aio> owned_aio_;
+  Aio *aio_ = nullptr;
   ::std::atomic<bool> run_{true};
 };
 

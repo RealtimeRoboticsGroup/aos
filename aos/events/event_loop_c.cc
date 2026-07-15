@@ -370,7 +370,7 @@ void aos_shm_event_loop_on_fd_events(aos_event_loop_t *self, int fd,
                                      void *user_data) {
   aos::ShmEventLoop *event_loop = static_cast<aos::ShmEventLoop *>(
       reinterpret_cast<aos::EventLoop *>(ABSL_DIE_IF_NULL(self)));
-  event_loop->epoll()->OnEvents(fd, [callback, user_data](uint32_t events) {
+  event_loop->aio()->OnEvents(fd, [callback, user_data](uint32_t events) {
     callback(user_data, events);
   });
 }
@@ -378,14 +378,14 @@ void aos_shm_event_loop_on_fd_events(aos_event_loop_t *self, int fd,
 void aos_shm_event_loop_delete_fd(aos_event_loop_t *self, int fd) {
   aos::ShmEventLoop *event_loop = static_cast<aos::ShmEventLoop *>(
       reinterpret_cast<aos::EventLoop *>(ABSL_DIE_IF_NULL(self)));
-  event_loop->epoll()->DeleteFd(fd);
+  event_loop->aio()->DeleteFd(fd);
 }
 
 void aos_shm_event_loop_set_fd_events(aos_event_loop_t *self, int fd,
                                       uint32_t events) {
   aos::ShmEventLoop *event_loop = static_cast<aos::ShmEventLoop *>(
       reinterpret_cast<aos::EventLoop *>(ABSL_DIE_IF_NULL(self)));
-  event_loop->epoll()->SetEvents(fd, events);
+  event_loop->aio()->SetEvents(fd, events);
 }
 
 aos_event_loop_t *aos_shm_event_loop_create(

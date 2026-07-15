@@ -24,7 +24,7 @@
 #include "flatbuffers/vector.h"
 
 #include "aos/configuration_generated.h"
-#include "aos/events/epoll.h"
+#include "aos/events/aio.h"
 #include "aos/events/event_loop.h"
 #include "aos/events/event_loop_generated.h"
 #include "aos/events/shm_event_loop.h"
@@ -53,19 +53,17 @@ class SignalListener {
  public:
   SignalListener(aos::ShmEventLoop *loop,
                  std::function<void(signalfd_siginfo)> callback);
-  SignalListener(aos::EPoll *epoll,
-                 std::function<void(signalfd_siginfo)> callback);
+  SignalListener(aos::Aio *aio, std::function<void(signalfd_siginfo)> callback);
   SignalListener(aos::ShmEventLoop *loop,
                  std::function<void(signalfd_siginfo)> callback,
                  std::initializer_list<unsigned int> signals);
-  SignalListener(aos::EPoll *epoll,
-                 std::function<void(signalfd_siginfo)> callback,
+  SignalListener(aos::Aio *aio, std::function<void(signalfd_siginfo)> callback,
                  std::initializer_list<unsigned int> signals);
 
   ~SignalListener();
 
  private:
-  aos::EPoll *epoll_;
+  aos::Aio *aio_;
   std::function<void(signalfd_siginfo)> callback_;
   aos::ipc_lib::SignalFd signalfd_;
 

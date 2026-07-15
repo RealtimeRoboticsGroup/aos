@@ -8,7 +8,7 @@
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 
-#include "aos/events/epoll.h"
+#include "aos/events/aio.h"
 #include "aos/network/sctp_client.h"
 #include "aos/network/sctp_lib.h"
 #include "aos/network/sctp_server.h"
@@ -19,8 +19,7 @@ ABSL_DECLARE_FLAG(bool, disable_ipv6);
 
 namespace aos::message_bridge::testing {
 
-using ::aos::EPoll;
-using ::aos::internal::TimerFd;
+using ::aos::Aio;
 using ::testing::ElementsAre;
 
 using namespace ::std::chrono_literals;
@@ -53,17 +52,17 @@ template <typename T>
 class SctpReceiver {
  public:
   SctpReceiver(
-      EPoll &epoll, T &receiver,
+      Aio &aio, T &receiver,
       std::function<void(T &, const union sctp_notification *)> on_notify,
       std::function<void(T &, std::vector<uint8_t>)> on_message)
-      : epoll_(epoll),
+      : aio_(aio),
         receiver_(receiver),
         on_notify_(std::move(on_notify)),
         on_message_(std::move(on_message)) {
-    epoll_.OnReadable(receiver_.fd(), [this]() { Read(); });
+    aio_.OnReadable(receiver_.fd(), [this]() { Read(); });
   }
 
-  ~SctpReceiver() { epoll_.DeleteFd(receiver_.fd()); }
+  ~SctpReceiver() { aio_.DeleteFd(receiver_.fd()); }
 
  private:
   // Handles an incoming message by routing it to the apropriate handler.
@@ -90,7 +89,7 @@ class SctpReceiver {
     receiver_.FreeMessage(std::move(message));
   }
 
-  EPoll &epoll_;
+  Aio &aio_;
   T &receiver_;
   std::function<void(T &, const union sctp_notification *)> on_notify_;
   std::function<void(T &, std::vector<uint8_t>)> on_message_;
@@ -108,8 +107,9 @@ class SctpTest : public ::testing::Test {
            std::chrono::milliseconds timeout = 1000ms)
       : server_(kStreams, "", kPort, requested_authentication),
         client_("localhost", kPort, kStreams, "", 0, requested_authentication),
+        timeout_(&aio_),
         client_receiver_(
-            epoll_, client_,
+            aio_, client_,
             [this](SctpClient &client,
                    const union sctp_notification *notification) {
               HandleNotification(client, notification);
@@ -118,7 +118,7 @@ class SctpTest : public ::testing::Test {
               HandleMessage(client, std::move(message));
             }),
         server_receiver_(
-            epoll_, server_,
+            aio_, server_,
             [this](SctpServer &server,
                    const union sctp_notification *notification) {
               HandleNotification(server, notification);
@@ -128,9 +128,15 @@ class SctpTest : public ::testing::Test {
             }) {
     server_.SetAuthKey(server_key);
     client_.SetAuthKey(client_key);
-    timeout_.SetTime(aos::monotonic_clock::now() + timeout,
-                     std::chrono::milliseconds::zero());
-    epoll_.OnReadable(timeout_.fd(), [this]() { TimeOut(); });
+    timeout_.Schedule(
+        aos::monotonic_clock::now() + timeout,
+        [](Completion completion, void *context) {
+          auto self = static_cast<SctpTest *>(context);
+          if (completion.status.has_value()) {
+            self->TimeOut();
+          }
+        },
+        this);
   }
 
   static void SetUpTestSuite() {
@@ -171,18 +177,18 @@ class SctpTest : public ::testing::Test {
 
   // Quit the test.
   void Quit() {
-    epoll_.DeleteFd(timeout_.fd());
-    epoll_.Quit();
+    timeout_.Cancel();
+    aio_.Quit();
   }
-  void Run() { epoll_.Run(); }
+  void Run() { aio_.Run(); }
 
   SctpServer server_;
   SctpClient client_;
   sctp_assoc_t assoc_ = 0;
 
  private:
-  TimerFd timeout_;
-  EPoll epoll_;
+  Aio aio_;
+  Aio::Timer timeout_;
   SctpReceiver<SctpClient> client_receiver_;
   SctpReceiver<SctpServer> server_receiver_;
 };

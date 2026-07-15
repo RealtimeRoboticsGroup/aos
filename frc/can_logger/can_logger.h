@@ -33,7 +33,7 @@ class CanLogger {
   CanLogger(const CanLogger &) = delete;
   CanLogger &operator=(const CanLogger &) = delete;
 
-  ~CanLogger() { shm_event_loop_->epoll()->DeleteFd(fd_.get()); }
+  ~CanLogger() { shm_event_loop_->aio()->DeleteFd(fd_.get()); }
 
  private:
   void Poll();

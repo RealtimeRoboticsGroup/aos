@@ -1415,7 +1415,7 @@ TEST_P(MessageBridgeParameterizedTest, TooBigConnect) {
 
     const std::string big_data(kBigMessageSize, 'a');
 
-    pi2_.client_event_loop_->epoll()->OnReadable(client.fd(), [&]() {
+    pi2_.client_event_loop_->aio()->OnReadable(client.fd(), [&]() {
       aos::unique_c_ptr<Message> message = client.Read();
       client.FreeMessage(std::move(message));
     });
@@ -1464,7 +1464,7 @@ TEST_P(MessageBridgeParameterizedTest, TooBigConnect) {
     VLOG(1) << aos::FlatbufferToJson(pi1_server_statistics_fetcher.get());
     VLOG(1) << aos::FlatbufferToJson(pi1_client_statistics_fetcher.get());
 
-    pi2_.client_event_loop_->epoll()->DeleteFd(client.fd());
+    pi2_.client_event_loop_->aio()->DeleteFd(client.fd());
 
     pi2_.StopClient();
   }

@@ -181,7 +181,7 @@ class MessageBridgeServer {
   MessageBridgeServer &operator=(MessageBridgeServer &&) = delete;
   MessageBridgeServer &operator=(const MessageBridgeServer &) = delete;
 
-  ~MessageBridgeServer() { event_loop_->epoll()->DeleteFd(server_.fd()); }
+  ~MessageBridgeServer() { event_loop_->aio()->DeleteFd(server_.fd()); }
 
  private:
   // Reads a message from the socket.  Could be a notification.

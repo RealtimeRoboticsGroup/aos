@@ -1,5 +1,7 @@
 #include "aos/events/glib_main_loop.h"
 
+#include <sys/epoll.h>
+
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 
@@ -63,13 +65,13 @@ uint32_t GioToEpoll(gint gio) {
 }  // namespace
 
 GlibMainLoop::GlibMainLoop(ShmEventLoop *event_loop)
-    : GlibMainLoop(event_loop, event_loop->epoll(),
+    : GlibMainLoop(event_loop, event_loop->aio(),
                    [event_loop]() { event_loop->Exit(); }) {}
 
-GlibMainLoop::GlibMainLoop(EventLoop *event_loop, EPoll *epoll,
+GlibMainLoop::GlibMainLoop(EventLoop *event_loop, Aio *aio,
                            std::function<void()> exit_handler)
     : event_loop_(event_loop),
-      epoll_(epoll),
+      aio_(aio),
       exit_handler_(std::move(exit_handler)),
       timeout_timer_(event_loop->AddTimer([]() {
         // Don't need to do anything, just need to get the event loop to break
@@ -83,7 +85,7 @@ GlibMainLoop::GlibMainLoop(EventLoop *event_loop, EPoll *epoll,
         << ": The EventLoop thread must own the context";
     acquired_context_ = true;
   });
-  epoll_->BeforeWait([this]() { BeforeWait(); });
+  aio_->BeforeWait([this]() { BeforeWait(); });
 }
 
 GlibMainLoop::~GlibMainLoop() {
@@ -102,7 +104,7 @@ void GlibMainLoop::RemoveAllFds() {
     if (to_remove == added_fds_.end()) {
       break;
     }
-    epoll_->DeleteFd(*to_remove);
+    aio_->DeleteFd(*to_remove);
     added_fds_.erase(to_remove);
   }
 }
@@ -117,9 +119,9 @@ void GlibMainLoop::BeforeWait() {
     exit_handler_();
     return;
   }
-  if (!epoll_->should_run()) {
+  if (!aio_->should_run()) {
     // Give glib one more round of dispatching.
-    VLOG(1) << "EPoll::should_run = false";
+    VLOG(1) << "Aio::should_run = false";
     g_main_loop_quit(g_main_loop_);
   }
 
@@ -159,7 +161,7 @@ void GlibMainLoop::BeforeWait() {
 
     if (added_fds_.count(gpoll_fd.fd) == 0) {
       VLOG(1) << "Add to ShmEventLoop: " << gpoll_fd.fd;
-      epoll_->OnEvents(gpoll_fd.fd, [this, fd = gpoll_fd.fd](uint32_t events) {
+      aio_->OnEvents(gpoll_fd.fd, [this, fd = gpoll_fd.fd](uint32_t events) {
         VLOG(1) << "glib " << fd << " triggered: " << std::hex << events;
         const auto iterator = std::find_if(
             gpoll_fds_.begin(), gpoll_fds_.end(),
@@ -171,7 +173,7 @@ void GlibMainLoop::BeforeWait() {
       });
       added_fds_.insert(gpoll_fd.fd);
     }
-    epoll_->SetEvents(gpoll_fd.fd, GioToEpoll(gpoll_fd.events));
+    aio_->SetEvents(gpoll_fd.fd, GioToEpoll(gpoll_fd.events));
   }
   for (int fd : added_fds_) {
     const auto iterator = std::find_if(

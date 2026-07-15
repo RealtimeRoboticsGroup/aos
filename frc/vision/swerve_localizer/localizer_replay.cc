@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
 
     web_proxy_event_loop = factory->MakeEventLoop("localizer", node);
     web_proxy = std::make_unique<aos::web_proxy::WebProxy>(
-        web_proxy_event_loop.get(), factory->scheduler_epoll(),
+        web_proxy_event_loop.get(), factory->scheduler_aio(),
         aos::web_proxy::StoreHistory::kYes, absl::GetFlag(FLAGS_buffer_size));
     reader.SetRealtimeReplayRate(0.005);
     LOG(INFO) << "Going slow to wait for the user to connect.";

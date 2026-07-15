@@ -12,7 +12,7 @@
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 
-#include "aos/events/epoll.h"
+#include "aos/events/aio.h"
 #include "aos/events/event_loop.h"
 #include "aos/stl_mutex/stl_mutex.h"
 
@@ -130,7 +130,7 @@ class GlibMainLoop {
  public:
   // Binds to an event loop and an EPoll object. This could be from an
   // ShmEventLoop or from a SimulatedEventLoop.
-  GlibMainLoop(EventLoop *event_loop, EPoll *epoll,
+  GlibMainLoop(EventLoop *event_loop, Aio *aio,
                std::function<void()> exit_handler);
   // Binds to an ShmEventLoop directly.
   GlibMainLoop(ShmEventLoop *event_loop);
@@ -191,7 +191,7 @@ class GlibMainLoop {
   std::unordered_set<int> added_fds_;
 
   EventLoop *const event_loop_;
-  EPoll *const epoll_;
+  Aio *const aio_;
   std::function<void()> exit_handler_;
   TimerHandler *const timeout_timer_;
   GMainContext *const g_main_context_;

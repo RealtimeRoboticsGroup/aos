@@ -8,7 +8,7 @@
 #include "absl/types/span.h"
 
 #include "aos/containers/ring_buffer.h"
-#include "aos/events/epoll.h"
+#include "aos/events/aio.h"
 #include "aos/events/event_loop.h"
 #include "aos/ftrace.h"
 #include "aos/realtime.h"
@@ -188,21 +188,21 @@ class V4L2Reader : public V4L2ReaderBase {
 // V4L2 Reader with MJPEG support.
 class MjpegV4L2Reader : public V4L2ReaderBase {
  public:
-  MjpegV4L2Reader(aos::EventLoop *event_loop, aos::EPoll *epoll,
+  MjpegV4L2Reader(aos::EventLoop *event_loop, aos::Aio *aio,
                   std::string_view device_name, std::string_view image_channel,
                   const CameraStreamSettings *settings);
 
   ~MjpegV4L2Reader() override;
 
  private:
-  aos::EPoll *epoll_;
+  aos::Aio *aio_;
 };
 
 // Rockpi specific v4l2 reader.  This assumes that the media device has been
 // properly configured before this class is constructed.
 class RockchipV4L2Reader : public V4L2ReaderBase {
  public:
-  RockchipV4L2Reader(aos::EventLoop *event_loop, aos::EPoll *epoll,
+  RockchipV4L2Reader(aos::EventLoop *event_loop, aos::Aio *aio,
                      std::string_view device_name,
                      std::string_view image_sensor_subdev,
                      std::string_view image_channel,
@@ -224,7 +224,7 @@ class RockchipV4L2Reader : public V4L2ReaderBase {
 
   int ImageSensorIoctl(unsigned long number, void *arg);
 
-  aos::EPoll *epoll_;
+  aos::Aio *aio_;
 
   aos::ScopedFD image_sensor_fd_;
 
