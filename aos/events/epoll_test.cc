@@ -3,30 +3,39 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include "absl/flags/declare.h"
+#include "absl/flags/flag.h"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "gtest/gtest.h"
 
 #include "aos/events/pipe.h"
 
+ABSL_DECLARE_FLAG(bool, use_io_uring);
+
 namespace aos::testing {
 
-class EPollTest : public ::testing::Test {
+class EPollTest : public ::testing::TestWithParam<bool> {
  public:
+  void SetUp() override {
+    absl::SetFlag(&FLAGS_use_io_uring, GetParam());
+    epoll_ptr_ = std::make_unique<EPoll>();
+  }
+
   void RunFor(std::chrono::nanoseconds duration) {
     internal::TimerFd timerfd;
     bool did_quit = false;
-    epoll_.OnReadable(timerfd.fd(), [this, &timerfd, &did_quit]() {
+    epoll_ptr_->OnReadable(timerfd.fd(), [this, &timerfd, &did_quit]() {
       CHECK(!did_quit);
-      epoll_.Quit();
+      epoll_ptr_->Quit();
       did_quit = true;
       timerfd.Read();
     });
     timerfd.SetTime(monotonic_clock::now() + duration,
                     monotonic_clock::duration::zero());
-    epoll_.Run();
+    epoll_ptr_->Run();
     CHECK(did_quit);
-    epoll_.DeleteFd(timerfd.fd());
+    epoll_ptr_->DeleteFd(timerfd.fd());
   }
 
   // Tests should avoid relying on ordering for events closer in time than this,
@@ -35,11 +44,13 @@ class EPollTest : public ::testing::Test {
     return std::chrono::milliseconds(50);
   }
 
-  EPoll epoll_;
+  std::unique_ptr<EPoll> epoll_ptr_;
 };
 
+#define epoll_ (*epoll_ptr_)
+
 // Test that the basics of OnReadable work.
-TEST_F(EPollTest, BasicReadable) {
+TEST_P(EPollTest, BasicReadable) {
   Pipe pipe;
   bool got_data = false;
   epoll_.OnReadable(pipe.read_fd(), [&]() {
@@ -58,7 +69,7 @@ TEST_F(EPollTest, BasicReadable) {
 }
 
 // Test that the basics of OnWritable work.
-TEST_F(EPollTest, BasicWritable) {
+TEST_P(EPollTest, BasicWritable) {
   Pipe pipe;
   int number_writes = 0;
   epoll_.OnWritable(pipe.write_fd(), [&]() {
@@ -88,7 +99,7 @@ TEST_F(EPollTest, BasicWritable) {
 }
 
 // Test that the basics of OnError work.
-TEST_F(EPollTest, BasicError) {
+TEST_P(EPollTest, BasicError) {
   // In order to trigger an error, close the read file descriptor (per the
   // epoll_ctl manpage, this should trigger an error).
   Pipe pipe;
@@ -104,14 +115,16 @@ TEST_F(EPollTest, BasicError) {
 
   // For some reason, OnError doesn't seem to play nice with the timer setup we
   // have in this test, so just poll for a single event.
-  epoll_.Poll(false);
+  while (number_errors == 0) {
+    epoll_.Poll(true);
+  }
 
   EXPECT_EQ(number_errors, 1);
 
   epoll_.DeleteFd(pipe.write_fd());
 }
 
-TEST(EPollDeathTest, InvalidFd) {
+TEST_P(EPollTest, InvalidFd) {
   EPoll epoll;
   Pipe pipe;
   epoll.OnReadable(pipe.read_fd(), []() {});
@@ -127,7 +140,7 @@ TEST(EPollDeathTest, InvalidFd) {
 }
 
 // Tests that enabling/disabling a writable FD works.
-TEST_F(EPollTest, WritableEnableDisable) {
+TEST_P(EPollTest, WritableEnableDisable) {
   Pipe pipe;
   int number_writes = 0;
   epoll_.OnWritable(pipe.write_fd(), [&]() {
@@ -163,15 +176,18 @@ TEST_F(EPollTest, WritableEnableDisable) {
   epoll_.DeleteFd(pipe.write_fd());
 }
 
-TEST_F(EPollTest, QuitInBeforeWait) {
+TEST_P(EPollTest, QuitInBeforeWait) {
   epoll_.BeforeWait([this]() { epoll_.Quit(); });
   epoll_.Run();
 }
 
-TEST_F(EPollTest, RemoveWithoutEvents) {
+TEST_P(EPollTest, RemoveWithoutEvents) {
   Pipe pipe;
   epoll_.OnEvents(pipe.read_fd(), [](uint32_t) {});
   epoll_.DeleteFd(pipe.read_fd());
 }
+
+INSTANTIATE_TEST_SUITE_P(EPollTestBackends, EPollTest,
+                         ::testing::Values(true, false));
 
 }  // namespace aos::testing

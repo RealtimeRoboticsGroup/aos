@@ -1,13 +1,10 @@
 #ifndef AOS_EVENTS_EPOLL_H_
 #define AOS_EVENTS_EPOLL_H_
 
-#include <stdint.h>
-#if defined(__linux__)
+#ifndef _WIN32
 #include <sys/epoll.h>
-#elif defined(__APPLE__)
-#include <sys/event.h>
-#include <sys/time.h>
 #endif
+#include <stdint.h>
 
 #include <atomic>
 #include <functional>
@@ -17,6 +14,9 @@
 #include "aos/time/time.h"
 
 namespace aos {
+
+class Aio;
+
 namespace internal {
 
 // Class wrapping up timerfd.
@@ -36,10 +36,7 @@ class TimerFd {
                monotonic_clock::duration interval);
 
   // Disarms the timer.
-  void Disable() {
-    // Disarm the timer by feeding zero values
-    SetTime(monotonic_clock::epoch(), monotonic_clock::zero());
-  }
+  void Disable() { SetTime(monotonic_clock::epoch(), monotonic_clock::zero()); }
 
   // Reads the event.  Returns the number of elapsed cycles.
   uint64_t Read();
@@ -48,15 +45,7 @@ class TimerFd {
   int fd() { return fd_; }
 
  private:
-  friend class EPoll;
   int fd_ = -1;
-#if defined(__APPLE__)
-  ::aos::monotonic_clock::duration interval_ = ::aos::monotonic_clock::zero();
-  ::aos::monotonic_clock::time_point next_expiration_ =
-      ::aos::monotonic_clock::min_time;
-  void ResetOnFork();
-  friend void ResetTimerFdOnFork(TimerFd *timer);
-#endif
 };
 
 }  // namespace internal
@@ -74,7 +63,7 @@ class EPoll {
   // Runs until Quit() is called.
   void Run();
 
-  // Consumes a single epoll event. Blocks indefinitely if block is true, or
+  // Consumes a single event. Blocks indefinitely if block is true, or
   // does not block at all. Returns true if an event was consumed, and false on
   // any retryable error or if no events are available. Dies fatally on
   // non-retryable errors.
@@ -83,43 +72,28 @@ class EPoll {
   // Quits.  Async safe.
   void Quit();
 
-  // Adds a function which will be called before waiting on the epoll file
-  // descriptor.
+  // Adds a function which will be called before waiting.
   void BeforeWait(std::function<void()> function);
 
   // Registers a function to be called when the fd is readable.
   // Only one function may be registered for readability on each fd.
-  //
-  // A fd may be registered exclusively with OnReadable/OnWritable/OnError OR
-  // OnEvents.
   void OnReadable(int fd, ::std::function<void()> function);
 
   // Registers a function to be called when the fd has an error.
   // Only one function may be registered for errors on each fd.
-  //
-  // A fd may be registered exclusively with OnReadable/OnWritable/OnError OR
-  // OnEvents.
   void OnError(int fd, ::std::function<void()> function);
 
   // Registers a function to be called when the fd is writable.
   // Only one function may be registered for writability on each fd.
-  //
-  // A fd may be registered exclusively with OnReadable/OnWritable/OnError OR
-  // OnEvents.
   void OnWritable(int fd, ::std::function<void()> function);
 
   // Registers a function to be called when the configured events occur on fd.
   // The function is passed an argument containing the events which occurred.
   // Configure events to call this function for using SetEvents.
-  //
-  // A fd may be registered exclusively with OnReadable/OnWritable/OnError OR
-  // OnEvents.
   void OnEvents(int fd, ::std::function<void(uint32_t)> function);
 
   // Removes fd from the event loop.
   // All Fds must be cleaned up before this class is destroyed.
-  //
-  // This applies to fds registered with any functions.
   void DeleteFd(int fd);
 
   // Removes a closed fd.  When fds are closed, they are automatically
@@ -129,21 +103,15 @@ class EPoll {
 
   // Enables calling the existing function registered for fd when it becomes
   // writable.
-  //
-  // This is only for fds registered using OnWritable, not OnEvents.
-  void EnableWritable(int fd) { EnableEvents(fd, kOutEvents); }
+  void EnableWritable(int fd);
 
   // Disables calling the existing function registered for fd when it becomes
   // writable.
-  //
-  // This is only for fds registered using OnWritable, not OnEvents.
-  void DisableWritable(int fd) { DisableEvents(fd, kOutEvents); }
+  void DisableWritable(int fd);
 
   // Sets the epoll events for the given fd. Be careful using this with
   // OnReadable/OnWritable/OnError: enabled events which fire with no handler
   // registered will result in a crash.
-  //
-  // This is only for fds registered using OnEvents.
   void SetEvents(int fd, uint32_t events);
 
   // Returns whether we're currently running. This changes to false when we
@@ -151,82 +119,8 @@ class EPoll {
   bool should_run() const { return run_; }
 
  private:
-  // Structure whose pointer should be returned by epoll.  Makes looking up the
-  // function fast and easy.
-  struct EventData {
-    EventData(int fd_in) : fd(fd_in) {}
-    virtual ~EventData() = default;
-
-    // We use pointers to these objects as persistent identifiers, so they can't
-    // be moved.
-    EventData(const EventData &) = delete;
-    EventData &operator=(const EventData &) = delete;
-
-    // Calls the appropriate callbacks when events are returned from the kernel.
-    virtual void DoCallbacks(uint32_t events) = 0;
-
-    const int fd;
-    uint32_t events = 0;
-  };
-
-  struct InOutEventData : public EventData {
-    InOutEventData(int fd) : EventData(fd) {}
-    ~InOutEventData() override = default;
-
-    std::function<void()> in_fn, out_fn, err_fn;
-
-    void DoCallbacks(uint32_t events) override;
-  };
-
-  struct SingleEventData : public EventData {
-    SingleEventData(int fd) : EventData(fd) {}
-    ~SingleEventData() override = default;
-
-    std::function<void(uint32_t)> fn;
-
-    void DoCallbacks(uint32_t events) override { fn(events); }
-  };
-
-  void EnableEvents(int fd, uint32_t events);
-  void DisableEvents(int fd, uint32_t events);
-
-  EventData *GetEventData(int fd);
-
-  void DoEpollCtl(EventData *event_data, uint32_t new_events);
-
-  void DeleteFdFromEpoll(int fd);
-
-  // Provide an abstraction which is pretty close to the Linux abstraction.
-  // The underlying datastructures want to track this as a bitmask to track if
-  // multiple things are set, so lean in to that abstraction.
-  static constexpr uint32_t kIn = 0x01;
-  static constexpr uint32_t kPri = 0x02;
-  static constexpr uint32_t kOut = 0x04;
-  static constexpr uint32_t kErr = 0x08;
-
-  // TODO(Brian): Figure out a nicer way to handle EPOLLPRI than lumping it in
-  // with input.
-  static constexpr uint32_t kInEvents = kIn | kPri;
-  static constexpr uint32_t kOutEvents = kOut;
-  static constexpr uint32_t kErrorEvents = kErr;
-
+  std::unique_ptr<Aio> aio_;
   ::std::atomic<bool> run_{true};
-
-  // Main epoll fd.
-  int epoll_fd_;
-
-  ::std::vector<::std::unique_ptr<EventData>> fns_;
-
-  // Pipe pair for handling quit.
-  int quit_signal_fd_;
-  int quit_epoll_fd_;
-
-  std::vector<std::function<void()>> before_epoll_wait_functions_;
-
-#if defined(__APPLE__)
-  void ResetOnFork();
-  friend void ResetEPollOnFork(EPoll *epoll);
-#endif
 };
 
 }  // namespace aos

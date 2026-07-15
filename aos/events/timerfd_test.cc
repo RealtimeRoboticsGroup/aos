@@ -4,21 +4,25 @@
 #endif
 #include <thread>
 
+#include "absl/flags/declare.h"
+#include "absl/flags/flag.h"
 #include "gtest/gtest.h"
 
 #include "aos/events/epoll.h"
+
+ABSL_DECLARE_FLAG(bool, use_io_uring);
 
 namespace aos {
 namespace internal {
 namespace testing {
 
-class TimerFdTest : public ::testing::Test {
+class TimerFdTest : public ::testing::TestWithParam<bool> {
  protected:
-  void SetUp() override {}
+  void SetUp() override { absl::SetFlag(&FLAGS_use_io_uring, GetParam()); }
 };
 
 #ifndef _WIN32
-TEST_F(TimerFdTest, ForkSafety) {
+TEST_P(TimerFdTest, ForkSafety) {
   // Test that TimerFd works in a forked child.
   // This mimics how ASSERT_EXIT might use it (forking and then running code).
   // On macOS, kqueue/kevent handles are not inherited across fork, so any
@@ -49,7 +53,7 @@ TEST_F(TimerFdTest, ForkSafety) {
       ::testing::ExitedWithCode(0), "");
 }
 
-TEST_F(TimerFdTest, EpollOutlivesFork) {
+TEST_P(TimerFdTest, EpollOutlivesFork) {
   // Test that EPoll works in a forked child even if created in parent.
   // This verifies that kqueue is correctly re-created after fork.
 
@@ -88,7 +92,7 @@ TEST_F(TimerFdTest, EpollOutlivesFork) {
 }
 #endif
 
-TEST_F(TimerFdTest, MultipleExpirations) {
+TEST_P(TimerFdTest, MultipleExpirations) {
   TimerFd timer;
   timer.SetTime(monotonic_clock::now() + std::chrono::milliseconds(100),
                 std::chrono::milliseconds(100));
@@ -101,7 +105,7 @@ TEST_F(TimerFdTest, MultipleExpirations) {
   EXPECT_GE(expirations, 3);
 }
 
-TEST_F(TimerFdTest, EarlyWakeup) {
+TEST_P(TimerFdTest, EarlyWakeup) {
   // Set the timer in the past so expiration is immediate and deterministic.
   // We use EPoll to wait for readiness and then verify Read() reports >= 1.
   EPoll loop;
@@ -118,6 +122,9 @@ TEST_F(TimerFdTest, EarlyWakeup) {
   EXPECT_GE(count, 1);
   loop.DeleteFd(timer.fd());
 }
+
+INSTANTIATE_TEST_SUITE_P(TimerFdTestBackends, TimerFdTest,
+                         ::testing::Values(true, false));
 
 }  // namespace testing
 }  // namespace internal

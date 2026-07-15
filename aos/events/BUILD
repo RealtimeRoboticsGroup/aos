@@ -76,14 +76,13 @@ cc_library(
     name = "epoll",
     srcs = [
         "epoll.cc",
-    ] + select({
-        "@platforms//os:linux": ["epoll_linux.cc"],
-        "@platforms//os:macos": ["epoll_darwin.cc"],
-        "@platforms//os:windows": ["epoll_windows.cc"],
-    }),
+        "epoll_linux.cc",
+    ],
     hdrs = ["epoll.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
+        ":aio",
         "//aos/mutex",
         "//aos/time",
         "@com_google_absl//absl/log:absl_check",
