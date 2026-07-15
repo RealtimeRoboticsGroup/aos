@@ -22,11 +22,14 @@
 #define IORING_SETUP_SINGLE_ISSUER (1U << 12)
 #endif
 
+#include <pthread.h>
+
 #include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstring>
 #include <memory>
+#include <mutex>
 #include <unordered_map>
 #include <vector>
 
@@ -49,6 +52,24 @@ ABSL_FLAG(size_t, aio_epoll_pool_size, 16,
 
 namespace aos {
 namespace {
+
+// Incremented by the pthread_atfork child handler.
+//
+// We check this counter inside Poll() to detect forks instead of calling
+// getpid().  While getpid() is a vdso call on many modern Linux setups, it is
+// still a system call on others.  Reading a relaxed atomic integer is a
+// pure user-space operation on all platforms and has zero syscall overhead,
+// making it extremely fast for high-frequency event loops.
+std::atomic<uint64_t> global_fork_count{0};
+std::once_flag atfork_once;
+
+void RegisterAtFork() {
+  std::call_once(atfork_once, []() {
+    pthread_atfork(nullptr, nullptr, []() {
+      global_fork_count.fetch_add(1, std::memory_order_relaxed);
+    });
+  });
+}
 
 // RAII wrapper around eventfd file descriptors.
 class EventFD {
@@ -254,6 +275,9 @@ class IoUringImpl : public Aio::Impl {
   bool ReapSpecificRequest(AsyncRequest *target_req);
   void CancelRequest(AsyncRequest *request, bool reap);
   void SubmitWakeupRead();
+  void HandleFork();
+
+  uint64_t last_fork_count_ = 0;
 
   struct io_uring ring;
   EventFD event_fd;
@@ -380,12 +404,13 @@ void IoUringImpl::SignalFdState::Submit(IoUringImpl *impl) {
 }
 
 IoUringImpl::IoUringImpl() {
+  RegisterAtFork();
+  last_fork_count_ = global_fork_count.load(std::memory_order_relaxed);
   uint32_t depth = ::absl::GetFlag(FLAGS_aio_queue_depth);
 
   struct io_uring_params params;
   std::memset(&params, 0, sizeof(params));
 
-  params.flags |= IORING_SETUP_SINGLE_ISSUER;
   params.flags |= IORING_SETUP_COOP_TASKRUN;
   params.flags |= IORING_SETUP_TASKRUN_FLAG;
 
@@ -443,7 +468,56 @@ void IoUringImpl::Run() {
   quit_requested = false;
 }
 
+// Detects when the process has forked and recreates the io_uring ring.
+//
+// File descriptors created by io_uring_queue_init are inherited across fork,
+// but the kernel-shared ring buffers are mapped to the parent's memory
+// space.  Any attempt to read/write/submit requests on the inherited ring
+// inside the child process will block indefinitely or fail.  We must close
+// the parent's ring fd, initialize a new ring in the child, and re-submit
+// all active registrations to the new ring.
+void IoUringImpl::HandleFork() {
+  if (ring.ring_fd >= 0) {
+    close(ring.ring_fd);
+    ring.ring_fd = -1;
+  }
+
+  uint32_t depth = ::absl::GetFlag(FLAGS_aio_queue_depth);
+  struct io_uring_params params;
+  std::memset(&params, 0, sizeof(params));
+  params.flags |= IORING_SETUP_COOP_TASKRUN;
+  params.flags |= IORING_SETUP_TASKRUN_FLAG;
+
+  int ret = io_uring_queue_init_params(depth, &ring, &params);
+  if (ret < 0) {
+    std::memset(&params, 0, sizeof(params));
+    ret = io_uring_queue_init_params(depth, &ring, &params);
+    ABSL_PCHECK(ret == 0) << "io_uring_queue_init failed: "
+                          << aos_strerror(-ret);
+  }
+
+  event_fd.wakeup_req.done = true;
+  SubmitWakeupRead();
+
+  for (auto &pair : legacy_states) {
+    pair.second->request.done = true;
+    pair.second->Submit();
+  }
+
+  for (auto &pair : signalfd_states) {
+    pair.second->request.done = true;
+    pair.second->Submit(this);
+  }
+}
+
 bool IoUringImpl::Poll(bool block) {
+  uint64_t current_fork_count =
+      global_fork_count.load(std::memory_order_relaxed);
+  if (last_fork_count_ != current_fork_count) {
+    HandleFork();
+    last_fork_count_ = current_fork_count;
+  }
+
   for (const auto &fn : before_wait_functions) {
     fn();
   }
@@ -938,11 +1012,15 @@ class EpollImpl : public Aio::Impl {
   bool run_ = false;
   bool quit_requested_ = false;
 
+  uint64_t last_fork_count_ = 0;
+  void HandleFork();
+
   AsyncRequest *pending_cancels_head = nullptr;
   AsyncRequest *pending_sync_completions_head = nullptr;
 };
 
 EpollImpl::EpollImpl() {
+  last_fork_count_ = global_fork_count.load(std::memory_order_relaxed);
   epoll_fd_ = epoll_create1(EPOLL_CLOEXEC);
   ABSL_PCHECK(epoll_fd_ >= 0) << "Failed to create epoll instance";
 
@@ -1051,7 +1129,29 @@ void EpollImpl::Run() {
   quit_requested_ = false;
 }
 
+void EpollImpl::HandleFork() {
+  if (epoll_fd_ >= 0) {
+    close(epoll_fd_);
+  }
+  epoll_fd_ = epoll_create1(EPOLL_CLOEXEC);
+  ABSL_PCHECK(epoll_fd_ >= 0) << "Failed to recreate epoll instance after fork";
+
+  for (auto &reg : registrations_) {
+    if (reg->registered) {
+      reg->registered = false;
+      UpdateEpoll(reg->fd);
+    }
+  }
+}
+
 bool EpollImpl::Poll(bool block) {
+  uint64_t current_fork_count =
+      global_fork_count.load(std::memory_order_relaxed);
+  if (last_fork_count_ != current_fork_count) {
+    HandleFork();
+    last_fork_count_ = current_fork_count;
+  }
+
   for (const auto &fn : before_wait_functions_) {
     fn();
   }

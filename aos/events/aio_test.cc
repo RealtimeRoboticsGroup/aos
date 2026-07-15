@@ -1240,6 +1240,43 @@ TEST_P(AioTest, DuplicateEventOnCancel) {
   aio.DeleteFd(pipe.write_fd());
 }
 
+TEST_P(AioTest, ForkDeathTest) {
+  // Test that an Aio instance constructed in the parent process remains
+  // fully functional inside a forked child process by successfully detecting
+  // the fork and recreating the io_uring ring.  We register both a standard
+  // file descriptor event and a SignalFd to exercise all re-registration loops
+  // in HandleFork.
+  Aio aio;
+  Pipe pipe;
+  aos::ipc_lib::SignalFd sfd({aos::ipc_lib::kWakeupSignal});
+
+  int signal_count = 0;
+  int fd_count = 0;
+
+  aio.RegisterSignalFd(&sfd, [&]() { ++signal_count; });
+
+  aio.OnEvents(pipe.write_fd(), [&](uint32_t events) {
+    EXPECT_TRUE(events & EPOLLOUT);
+    ++fd_count;
+  });
+
+  aio.SetEvents(pipe.write_fd(), EPOLLOUT);
+
+  EXPECT_EXIT(
+      {
+        pthread_kill(pthread_self(), aos::ipc_lib::kWakeupSignal);
+        while ((signal_count == 0 || fd_count == 0) && aio.Poll(true)) {
+        }
+        if (signal_count == 1 && fd_count == 1) {
+          exit(42);
+        }
+        exit(1);
+      },
+      ::testing::ExitedWithCode(42), "");
+
+  aio.UnregisterSignalFd(&sfd);
+  aio.DeleteFd(pipe.write_fd());
+}
 INSTANTIATE_TEST_SUITE_P(AioBackends, AioTest, ::testing::Values(true, false));
 
 }  // namespace aos::testing
