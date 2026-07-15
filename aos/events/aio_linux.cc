@@ -183,6 +183,7 @@ struct Aio::Impl {
   virtual ~Impl() = default;
 
   virtual void Run() = 0;
+  virtual bool should_run() const = 0;
 
   // Polls the event loop for completed events.  If block is true, it waits
   // for at least one event to complete.  Otherwise, it returns immediately.
@@ -242,6 +243,7 @@ class IoUringImpl : public Aio::Impl {
   ~IoUringImpl() override;
 
   void Run() override;
+  bool should_run() const override;
 
   bool Poll(bool block) override;
   void Quit() override;
@@ -288,7 +290,7 @@ class IoUringImpl : public Aio::Impl {
   struct io_uring ring;
   EventFD event_fd;
 
-  std::atomic<bool> run{true};
+  std::atomic<bool> run{false};
   std::atomic<bool> quit_requested{false};
 
   std::vector<std::function<void()>> before_wait_functions;
@@ -498,6 +500,8 @@ void IoUringImpl::Run() {
   }
   quit_requested = false;
 }
+
+bool IoUringImpl::should_run() const { return run && !quit_requested; }
 
 // Detects when the process has forked and recreates the io_uring ring.
 //
@@ -968,6 +972,7 @@ class EpollImpl : public Aio::Impl {
   ~EpollImpl() override;
 
   void Run() override;
+  bool should_run() const override;
 
   bool Poll(bool block) override;
   void Quit() override;
@@ -1186,6 +1191,8 @@ void EpollImpl::Run() {
   }
   quit_requested_ = false;
 }
+
+bool EpollImpl::should_run() const { return run_ && !quit_requested_; }
 
 void EpollImpl::HandleFork() {
   if (epoll_fd_ >= 0) {
@@ -1738,6 +1745,8 @@ void Aio::Run() { impl_->Run(); }
 bool Aio::Poll(bool block) { return impl_->Poll(block); }
 
 void Aio::Quit() { impl_->Quit(); }
+
+bool Aio::should_run() const { return impl_->should_run(); }
 
 void Aio::Wakeup() { impl_->Wakeup(); }
 

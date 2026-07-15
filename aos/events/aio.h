@@ -124,6 +124,9 @@ class Aio {
   // Signals the loop to terminate execution. Async-safe.
   void Quit();
 
+  // Returns whether the loop is currently running and should continue running.
+  bool should_run() const;
+
   // Interrupts a blocking Poll() call, forcing it to wake up immediately.
   void Wakeup();
 

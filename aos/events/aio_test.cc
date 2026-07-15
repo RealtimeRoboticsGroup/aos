@@ -1304,6 +1304,33 @@ TEST_P(AioTest, TimerForkTest) {
       },
       ::testing::ExitedWithCode(42), "");
 }
+TEST_P(AioTest, ShouldRunTest) {
+  Aio aio;
+  EXPECT_FALSE(aio.should_run());
+
+  // Set a timer to check should_run() while running and then quit.
+  Aio::Timer timer(&aio);
+  struct Context {
+    Aio *aio;
+    bool checked_running;
+  };
+  Context context{&aio, false};
+
+  timer.Schedule(
+      aos::monotonic_clock::now(),
+      [](Completion, void *ctx) {
+        auto *c = static_cast<Context *>(ctx);
+        EXPECT_TRUE(c->aio->should_run());
+        c->checked_running = true;
+        c->aio->Quit();
+        EXPECT_FALSE(c->aio->should_run());
+      },
+      &context);
+
+  aio.Run();
+  EXPECT_FALSE(aio.should_run());
+  EXPECT_TRUE(context.checked_running);
+}
 INSTANTIATE_TEST_SUITE_P(AioBackends, AioTest, ::testing::Values(true, false));
 
 }  // namespace aos::testing
