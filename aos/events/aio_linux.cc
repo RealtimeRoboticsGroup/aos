@@ -172,6 +172,11 @@ struct Aio::TimerState {
 
   // Epoll-backend specific timerfd state
   std::unique_ptr<TimerFD> timer_fd;
+
+  // Intrusive doubly-linked list pointers for IoUringImpl active timers
+  Aio::TimerState *prev_active = nullptr;
+  Aio::TimerState *next_active = nullptr;
+  bool is_active = false;
 };
 
 struct Aio::Impl {
@@ -237,6 +242,7 @@ class IoUringImpl : public Aio::Impl {
   ~IoUringImpl() override;
 
   void Run() override;
+
   bool Poll(bool block) override;
   void Quit() override;
   void Wakeup() override;
@@ -310,6 +316,31 @@ class IoUringImpl : public Aio::Impl {
   };
   std::unordered_map<ipc_lib::SignalFd *, std::unique_ptr<SignalFdState>>
       signalfd_states;
+  Aio::TimerState *active_timers_head_ = nullptr;
+  void LinkTimer(Aio::TimerState *state) {
+    if (state->is_active) return;
+    state->next_active = active_timers_head_;
+    state->prev_active = nullptr;
+    if (active_timers_head_) {
+      active_timers_head_->prev_active = state;
+    }
+    active_timers_head_ = state;
+    state->is_active = true;
+  }
+  void UnlinkTimer(Aio::TimerState *state) {
+    if (!state->is_active) return;
+    if (state->prev_active) {
+      state->prev_active->next_active = state->next_active;
+    } else {
+      active_timers_head_ = state->next_active;
+    }
+    if (state->next_active) {
+      state->next_active->prev_active = state->prev_active;
+    }
+    state->prev_active = nullptr;
+    state->next_active = nullptr;
+    state->is_active = false;
+  }
 };
 
 void IoUringImpl::LegacyState::Submit() {
@@ -507,6 +538,26 @@ void IoUringImpl::HandleFork() {
   for (auto &pair : signalfd_states) {
     pair.second->request.done = true;
     pair.second->Submit(this);
+  }
+
+  Aio::TimerState *curr = active_timers_head_;
+  while (curr != nullptr) {
+    curr->request.done = true;
+    struct __kernel_timespec *ts = reinterpret_cast<struct __kernel_timespec *>(
+        &State(&curr->request).timespec);
+    auto duration = curr->deadline.time_since_epoch();
+    auto secs = std::chrono::duration_cast<std::chrono::seconds>(duration);
+    auto nsecs =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(duration - secs);
+    ts->tv_sec = secs.count();
+    ts->tv_nsec = nsecs.count();
+
+    struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
+    ABSL_CHECK(sqe != nullptr) << "Out of SQEs";
+    io_uring_prep_timeout(sqe, ts, 0, IORING_TIMEOUT_ABS);
+    io_uring_sqe_set_data(sqe, &curr->request);
+    curr->request.done = false;
+    curr = curr->next_active;
   }
 }
 
@@ -753,7 +804,9 @@ void IoUringImpl::ScheduleTimer(Aio::TimerState *state,
                                 aos::monotonic_clock::time_point deadline,
                                 aos::monotonic_clock::duration interval,
                                 CompletionCallback callback, void *context) {
+  ABSL_CHECK_GE(deadline, aos::monotonic_clock::epoch());
   CancelTimer(state, true);
+  LinkTimer(state);
 
   state->interval = interval;
   state->deadline = deadline;
@@ -767,10 +820,12 @@ void IoUringImpl::ScheduleTimer(Aio::TimerState *state,
     auto user_cb = tstate->user_callback;
     auto user_ctx = tstate->user_context;
 
+    auto *impl = tstate->aio->impl_.get();
+    auto *ring_impl = static_cast<IoUringImpl *>(impl);
+
     if (aos::IsOk(completion.status) &&
         tstate->interval > aos::monotonic_clock::zero()) {
       tstate->deadline += tstate->interval;
-      auto *impl = tstate->aio->impl_.get();
       tstate->request.done = false;
 
       struct __kernel_timespec *ts =
@@ -783,12 +838,13 @@ void IoUringImpl::ScheduleTimer(Aio::TimerState *state,
       ts->tv_sec = secs.count();
       ts->tv_nsec = nsecs.count();
 
-      auto *ring_impl = static_cast<IoUringImpl *>(impl);
       struct io_uring_sqe *sqe = io_uring_get_sqe(&ring_impl->ring);
       ABSL_CHECK(sqe != nullptr) << "Out of SQEs";
       io_uring_prep_timeout(sqe, ts, 0, IORING_TIMEOUT_ABS);
       io_uring_sqe_set_data(sqe, &tstate->request);
       io_uring_submit(&ring_impl->ring);
+    } else {
+      ring_impl->UnlinkTimer(tstate);
     }
 
     if (user_cb) {
@@ -819,6 +875,7 @@ void IoUringImpl::ScheduleTimer(Aio::TimerState *state,
 void IoUringImpl::CancelTimer(Aio::TimerState *state, bool reap) {
   state->request.callback = nullptr;
   CancelRequest(&state->request, reap);
+  UnlinkTimer(state);
 }
 
 bool IoUringImpl::ReapCompletions() {
@@ -911,6 +968,7 @@ class EpollImpl : public Aio::Impl {
   ~EpollImpl() override;
 
   void Run() override;
+
   bool Poll(bool block) override;
   void Quit() override;
   void Wakeup() override;
@@ -1134,9 +1192,9 @@ void EpollImpl::HandleFork() {
     close(epoll_fd_);
   }
   epoll_fd_ = epoll_create1(EPOLL_CLOEXEC);
-  ABSL_PCHECK(epoll_fd_ >= 0) << "Failed to recreate epoll instance after fork";
+  ABSL_PCHECK(epoll_fd_ >= 0) << "Failed to recreate epoll instance";
 
-  for (auto &reg : registrations_) {
+  for (const auto &reg : registrations_) {
     if (reg->registered) {
       reg->registered = false;
       UpdateEpoll(reg->fd);
@@ -1536,6 +1594,7 @@ void EpollImpl::ScheduleTimer(Aio::TimerState *state,
                               aos::monotonic_clock::time_point deadline,
                               aos::monotonic_clock::duration interval,
                               CompletionCallback callback, void *context) {
+  ABSL_CHECK_GE(deadline, aos::monotonic_clock::epoch());
   CancelTimer(state, true);
 
   state->interval = interval;

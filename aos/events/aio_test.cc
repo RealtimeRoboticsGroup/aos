@@ -1277,6 +1277,33 @@ TEST_P(AioTest, ForkDeathTest) {
   aio.UnregisterSignalFd(&sfd);
   aio.DeleteFd(pipe.write_fd());
 }
+TEST_P(AioTest, TimerForkTest) {
+  // Test that an active timer scheduled in the parent process remains fully
+  // functional and fires inside a forked child process.  This verifies that the
+  // backend correctly re-registers pending timeouts when recreating the loop.
+  Aio aio;
+  Aio::Timer timer(&aio);
+
+  int timer_count = 0;
+  timer.Schedule(
+      aos::monotonic_clock::now(),
+      [](Completion, void *context) {
+        auto *counter = static_cast<int *>(context);
+        ++(*counter);
+      },
+      &timer_count);
+
+  EXPECT_EXIT(
+      {
+        while (timer_count == 0 && aio.Poll(true)) {
+        }
+        if (timer_count == 1) {
+          exit(42);
+        }
+        exit(1);
+      },
+      ::testing::ExitedWithCode(42), "");
+}
 INSTANTIATE_TEST_SUITE_P(AioBackends, AioTest, ::testing::Values(true, false));
 
 }  // namespace aos::testing
