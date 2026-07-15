@@ -13,7 +13,7 @@ namespace aos::internal {
 
 // Pieces every POSIX Aio backend needs, kept in one place so they cannot
 // drift apart between aio_linux.cc and aio_darwin.cc.  IsSocket() and
-// GetSocketErrorStr() come from socket_error.h, which EPoll shares.
+// GetSocketErrorStr() come from socket_error.h.
 
 // Puts fd in non-blocking mode if it is not already.  The readiness backends
 // run a raw request's read(2)/write(2) inside Poll() once the fd reports

@@ -181,8 +181,8 @@ cc_test(
     ],
 )
 
-# The socket diagnostic EPoll appends to an unhandled error event, shared by
-# EPoll and the Aio backends so the message cannot drift between them.
+# The socket diagnostic EPoll has always appended to an unhandled error
+# event, shared by every Aio backend so the message cannot drift between them.
 cc_library(
     name = "socket_error",
     hdrs = ["socket_error.h"],
@@ -254,7 +254,6 @@ cc_library(
     ] + select({
         "@platforms//os:linux": ["epoll_linux.cc"],
         "@platforms//os:macos": ["epoll_darwin.cc"],
-        "@platforms//os:windows": ["epoll_windows.cc"],
     }),
     hdrs = ["epoll.h"],
     # EPoll's API is in terms of integer file descriptors, which don't map onto
@@ -267,7 +266,7 @@ cc_library(
     }),
     visibility = ["//visibility:public"],
     deps = [
-        ":socket_error",
+        ":aio",
         "//aos/mutex",
         "//aos/time",
         "@com_google_absl//absl/log:absl_check",

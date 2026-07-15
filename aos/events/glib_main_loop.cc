@@ -1,5 +1,7 @@
 #include "aos/events/glib_main_loop.h"
 
+#include <sys/epoll.h>
+
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 

@@ -13,13 +13,18 @@
 #include "aos/network/team_number.h"
 #include "aos/realtime.h"
 
+ABSL_DECLARE_FLAG(std::string, aio_backend);
+
 namespace aos::testing {
 namespace {
 namespace chrono = ::std::chrono;
 
 class ShmEventLoopTestFactory : public EventLoopTestFactory {
  public:
-  ShmEventLoopTestFactory() {
+  // The backend name --aio_backend takes, rather than a bool, so adding a
+  // backend does not mean re-teaching this a new flag shape.
+  explicit ShmEventLoopTestFactory(std::string backend = "io_uring")
+      : backend_(std::move(backend)) {
     // Clean up anything left there before.
     unlink(
         (absl::GetFlag(FLAGS_shm_base) + "/test/aos.TestMessage.v8").c_str());
@@ -41,6 +46,7 @@ class ShmEventLoopTestFactory : public EventLoopTestFactory {
   ~ShmEventLoopTestFactory() { absl::SetFlag(&FLAGS_override_hostname, ""); }
 
   ::std::unique_ptr<EventLoop> Make(std::string_view name) override {
+    absl::SetFlag(&FLAGS_aio_backend, backend_);
     if (configuration()->has_nodes()) {
       absl::SetFlag(&FLAGS_override_hostname,
                     std::string(my_node()->hostname()->string_view()));
@@ -51,6 +57,7 @@ class ShmEventLoopTestFactory : public EventLoopTestFactory {
   }
 
   ::std::unique_ptr<EventLoop> MakePrimary(std::string_view name) override {
+    absl::SetFlag(&FLAGS_aio_backend, backend_);
     if (configuration()->has_nodes()) {
       absl::SetFlag(&FLAGS_override_hostname,
                     std::string(my_node()->hostname()->string_view()));
@@ -83,20 +90,28 @@ class ShmEventLoopTestFactory : public EventLoopTestFactory {
 
  private:
   ::aos::ShmEventLoop *primary_event_loop_ = nullptr;
+  const std::string backend_;
 };
 
-auto CommonParameters() {
+auto CommonParameters(std::string backend) {
   return ::testing::Combine(
-      ::testing::Values([]() { return new ShmEventLoopTestFactory(); }),
+      ::testing::Values([backend = std::move(backend)]() {
+        return new ShmEventLoopTestFactory(backend);
+      }),
       ::testing::Values(ReadMethod::COPY, ReadMethod::PIN),
       ::testing::Values(DoTimingReports::kYes, DoTimingReports::kNo));
 }
 
-INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonTest, AbstractEventLoopTest,
-                         CommonParameters());
+INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonTestIoUring, AbstractEventLoopTest,
+                         CommonParameters("io_uring"));
+INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonTestEpoll, AbstractEventLoopTest,
+                         CommonParameters("epoll"));
 
-INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonDeathTest,
-                         AbstractEventLoopDeathTest, CommonParameters());
+INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonDeathTestIoUring,
+                         AbstractEventLoopDeathTest,
+                         CommonParameters("io_uring"));
+INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonDeathTestEpoll,
+                         AbstractEventLoopDeathTest, CommonParameters("epoll"));
 
 }  // namespace
 
@@ -122,10 +137,11 @@ bool IsRealtime() {
   return result;
 }
 
-class ShmEventLoopTest : public ::testing::TestWithParam<ReadMethod> {
+class ShmEventLoopTest
+    : public ::testing::TestWithParam<std::tuple<ReadMethod, std::string>> {
  public:
-  ShmEventLoopTest() {
-    if (GetParam() == ReadMethod::PIN) {
+  ShmEventLoopTest() : factory_(std::get<1>(GetParam())) {
+    if (std::get<0>(GetParam()) == ReadMethod::PIN) {
       factory_.PinReads();
     }
   }
@@ -366,7 +382,7 @@ TEST_P(ShmEventLoopDeathTest, GetWatcherSharedMemory) {
     ran = true;
     // If we're using pinning, then we can verify that the message is actually
     // in the specified region.
-    if (GetParam() == ReadMethod::PIN) {
+    if (std::get<0>(GetParam()) == ReadMethod::PIN) {
       EXPECT_GE(reinterpret_cast<const char *>(&message),
                 shared_memory.begin());
       EXPECT_LT(reinterpret_cast<const char *>(&message), shared_memory.end());
@@ -433,7 +449,7 @@ TEST_P(ShmEventLoopTest, GetFetcherPrivateMemory) {
   EXPECT_GE(fetcher.context().data, private_memory.begin());
   EXPECT_LT(fetcher.context().data, private_memory.end());
 
-  if (GetParam() == ReadMethod::PIN) {
+  if (std::get<0>(GetParam()) == ReadMethod::PIN) {
     // For pinned messages only, we can get access to the full underlying
     // memory. For copied messages, we only get a sub-portion of the memory so
     // this test won't work. Validate that we can also access the underlying
@@ -487,7 +503,7 @@ TEST_P(ShmEventLoopTest, SetFetcherUseWritableMemory) {
 
   ASSERT_TRUE(fetcher.Fetch());
 
-  if (GetParam() == ReadMethod::PIN) {
+  if (std::get<0>(GetParam()) == ReadMethod::PIN) {
     // For pinned messages only, we can get access to the full underlying
     // memory. For copied messages, we only get a sub-portion of the memory so
     // this test won't work. Validate that we can also access the underlying
@@ -568,13 +584,33 @@ TEST_P(ShmEventLoopDeathTest, ExitHandleOutlivesEventLoop) {
 
 // TODO(austin): Test that missing a deadline with a timer recovers as expected.
 
+// The ReadMethod half is already in each suite's name, so naming these by
+// backend alone is unambiguous -- and beats the tuple index gtest would
+// otherwise print.
+auto BackendName(
+    const ::testing::TestParamInfo<std::tuple<ReadMethod, std::string>> &info) {
+  return std::get<1>(info.param);
+}
+
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCopyTest, ShmEventLoopTest,
-                         ::testing::Values(ReadMethod::COPY));
+                         ::testing::Combine(::testing::Values(ReadMethod::COPY),
+                                            ::testing::Values("io_uring",
+                                                              "epoll")),
+                         BackendName);
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopPinTest, ShmEventLoopTest,
-                         ::testing::Values(ReadMethod::PIN));
+                         ::testing::Combine(::testing::Values(ReadMethod::PIN),
+                                            ::testing::Values("io_uring",
+                                                              "epoll")),
+                         BackendName);
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCopyDeathTest, ShmEventLoopDeathTest,
-                         ::testing::Values(ReadMethod::COPY));
+                         ::testing::Combine(::testing::Values(ReadMethod::COPY),
+                                            ::testing::Values("io_uring",
+                                                              "epoll")),
+                         BackendName);
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopPinDeathTest, ShmEventLoopDeathTest,
-                         ::testing::Values(ReadMethod::PIN));
+                         ::testing::Combine(::testing::Values(ReadMethod::PIN),
+                                            ::testing::Values("io_uring",
+                                                              "epoll")),
+                         BackendName);
 
 }  // namespace aos::testing

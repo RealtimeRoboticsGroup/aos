@@ -2,14 +2,7 @@
 #define AOS_EVENTS_EPOLL_H_
 
 #include <stdint.h>
-#if defined(__linux__)
-#include <sys/epoll.h>
-#elif defined(__APPLE__)
-#include <sys/event.h>
-#include <sys/time.h>
-#endif
 
-#include <atomic>
 #include <functional>
 #include <memory>
 #include <vector>
@@ -17,6 +10,9 @@
 #include "aos/time/time.h"
 
 namespace aos {
+
+class Aio;
+
 namespace internal {
 
 // Class wrapping up timerfd.
@@ -47,15 +43,17 @@ class TimerFd {
   // Returns the file descriptor associated with the timerfd.
   int fd() { return fd_; }
 
- private:
-  friend class EPoll;
-  int fd_ = -1;
-#if defined(__APPLE__)
-  ::aos::monotonic_clock::duration interval_ = ::aos::monotonic_clock::zero();
-  ::aos::monotonic_clock::time_point next_expiration_ =
-      ::aos::monotonic_clock::min_time;
+#ifdef __APPLE__
   void ResetOnFork();
-  friend void ResetTimerFdOnFork(TimerFd *timer);
+#endif
+
+ private:
+  int fd_ = -1;
+
+#ifdef __APPLE__
+  aos::monotonic_clock::time_point next_expiration_ =
+      aos::monotonic_clock::min_time;
+  aos::monotonic_clock::duration interval_ = aos::monotonic_clock::zero();
 #endif
 };
 
@@ -74,7 +72,7 @@ class EPoll {
   // Runs until Quit() is called.
   void Run();
 
-  // Consumes a single epoll event. Blocks indefinitely if block is true, or
+  // Consumes a single event. Blocks indefinitely if block is true, or
   // does not block at all. Returns true if an event was consumed, and false on
   // any retryable error or if no events are available. Dies fatally on
   // non-retryable errors.
@@ -83,8 +81,7 @@ class EPoll {
   // Quits.  Async safe.
   void Quit();
 
-  // Adds a function which will be called before waiting on the epoll file
-  // descriptor.
+  // Adds a function which will be called before waiting.
   void BeforeWait(std::function<void()> function);
 
   // Registers a function to be called when the fd is readable.
@@ -112,6 +109,10 @@ class EPoll {
   // The function is passed an argument containing the events which occurred.
   // Configure events to call this function for using SetEvents.
   //
+  // The event encoding is documented on Aio::OnEvents().  One delta from
+  // the pre-Aio EPoll: a hangup (EPOLLHUP) is delivered as the error bit
+  // (0x08), where it used to be dropped and the callback invoked with 0.
+  //
   // A fd may be registered exclusively with OnReadable/OnWritable/OnError OR
   // OnEvents.
   void OnEvents(int fd, ::std::function<void(uint32_t)> function);
@@ -131,102 +132,28 @@ class EPoll {
   // writable.
   //
   // This is only for fds registered using OnWritable, not OnEvents.
-  void EnableWritable(int fd) { EnableEvents(fd, kOutEvents); }
+  void EnableWritable(int fd);
 
   // Disables calling the existing function registered for fd when it becomes
   // writable.
   //
   // This is only for fds registered using OnWritable, not OnEvents.
-  void DisableWritable(int fd) { DisableEvents(fd, kOutEvents); }
+  void DisableWritable(int fd);
 
-  // Sets the epoll events for the given fd. Be careful using this with
-  // OnReadable/OnWritable/OnError: enabled events which fire with no handler
-  // registered will result in a crash.
+  // Sets the events to deliver to fd's OnEvents function -- see
+  // Aio::SetEvents().
   //
-  // This is only for fds registered using OnEvents.
+  // This is only for fds registered using OnEvents (enforced with a
+  // CHECK, where the pre-Aio EPoll accepted it on any fd and crashed at
+  // dispatch instead).
   void SetEvents(int fd, uint32_t events);
 
   // Returns whether we're currently running. This changes to false when we
   // start draining events to finish.
-  bool should_run() const { return run_; }
+  bool should_run() const;
 
  private:
-  // Structure whose pointer should be returned by epoll.  Makes looking up the
-  // function fast and easy.
-  struct EventData {
-    EventData(int fd_in) : fd(fd_in) {}
-    virtual ~EventData() = default;
-
-    // We use pointers to these objects as persistent identifiers, so they can't
-    // be moved.
-    EventData(const EventData &) = delete;
-    EventData &operator=(const EventData &) = delete;
-
-    // Calls the appropriate callbacks when events are returned from the kernel.
-    virtual void DoCallbacks(uint32_t events) = 0;
-
-    const int fd;
-    uint32_t events = 0;
-  };
-
-  struct InOutEventData : public EventData {
-    InOutEventData(int fd) : EventData(fd) {}
-    ~InOutEventData() override = default;
-
-    std::function<void()> in_fn, out_fn, err_fn;
-
-    void DoCallbacks(uint32_t events) override;
-  };
-
-  struct SingleEventData : public EventData {
-    SingleEventData(int fd) : EventData(fd) {}
-    ~SingleEventData() override = default;
-
-    std::function<void(uint32_t)> fn;
-
-    void DoCallbacks(uint32_t events) override { fn(events); }
-  };
-
-  void EnableEvents(int fd, uint32_t events);
-  void DisableEvents(int fd, uint32_t events);
-
-  EventData *GetEventData(int fd);
-
-  void DoEpollCtl(EventData *event_data, uint32_t new_events);
-
-  void DeleteFdFromEpoll(int fd);
-
-  // Provide an abstraction which is pretty close to the Linux abstraction.
-  // The underlying datastructures want to track this as a bitmask to track if
-  // multiple things are set, so lean in to that abstraction.
-  static constexpr uint32_t kIn = 0x01;
-  static constexpr uint32_t kPri = 0x02;
-  static constexpr uint32_t kOut = 0x04;
-  static constexpr uint32_t kErr = 0x08;
-
-  // TODO(Brian): Figure out a nicer way to handle EPOLLPRI than lumping it in
-  // with input.
-  static constexpr uint32_t kInEvents = kIn | kPri;
-  static constexpr uint32_t kOutEvents = kOut;
-  static constexpr uint32_t kErrorEvents = kErr;
-
-  ::std::atomic<bool> run_{true};
-
-  // Main epoll fd.
-  int epoll_fd_;
-
-  ::std::vector<::std::unique_ptr<EventData>> fns_;
-
-  // Pipe pair for handling quit.
-  int quit_signal_fd_;
-  int quit_epoll_fd_;
-
-  std::vector<std::function<void()>> before_epoll_wait_functions_;
-
-#if defined(__APPLE__)
-  void ResetOnFork();
-  friend void ResetEPollOnFork(EPoll *epoll);
-#endif
+  std::unique_ptr<Aio> aio_;
 };
 
 }  // namespace aos
