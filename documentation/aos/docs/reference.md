@@ -926,20 +926,20 @@ The `ShmEventLoop` does a few key things beyond just implementing what is requir
 - Has `Run()` and `Exit()` calls to directly start/stop execution of the event loop.
 - Does signal handling to capture `SIGINT` and automatically exit.
 - Allows controlling the scheduling of the process (realtime priority, CPU affinity)---technically these are actually part of the `EventLoop` API, but are meaningless for any other `EventLoop` implementations.
-- Exposes the `EPoll` implementation used to back the `EventLoop` (this becomes useful when wanting to interact with sockets, files, and sometimes even other event loops/schedulers).
+- Exposes the `Aio` implementation used to back the `EventLoop` (this becomes useful when wanting to interact with sockets, files, and sometimes even other event loops/schedulers).
 
 ### Design of the `ShmEventLoop`
 
 The goal of the `ShmEventLoop` is to provide an `EventLoop` implementation that can run on most Linux systems, and which has good enough performance to support soft/firm real-time system where large amounts of data (e.g., raw images) may need to be moved over the pub-sub channels. In order to implement the core `EventLoop` API, we use two things:
 
 1. An IPC (InterProcess Communication) library using a lockless shared-memory queue for managing the pub-sub channels.
-2. `epoll` for managing event scheduling.
+2. An asynchronous I/O loop (`Aio`) for managing event scheduling.
 
 For each `EventLoop` feature, this means:
 
-- `Watcher`s are implemented by having the sending event loop general signals, where each `Watcher` then has an associated `signalfd` that we use `epoll` to watch and wakeup on when the new messages arrived.
-- `Timer`s and `PhasedLoop`s are implemented using `timerfd` and `epoll` to wakeup when the timers expire.
-- `Sender`s and `Fetcher`s do not have to directly interact with the event scheduling (beyond generating signals on sends, in the case of `Sender`s), but do use the IPC library.
+- `Watcher`s are implemented by having the sending event loop wake every event loop watching the channel, whose `Aio` loop then runs the `Watcher`s for the new messages.
+- `Timer`s and `PhasedLoop`s are implemented using `Aio` timers to wake up when the timers expire.
+- `Sender`s and `Fetcher`s do not have to directly interact with the event scheduling (beyond waking `Watcher`s on sends, in the case of `Sender`s), but do use the IPC library.
 
 Outside of the "core" `EventLoop` API, the `ShmEventLoop` is also responsible for setting the current process priority, pinning it to the requested CPU core(s), and doing things like preventing calls to `malloc` while the `ShmEventLoop` is [Running](#running).
 
@@ -1002,9 +1002,9 @@ A few things to be aware of:
 - When the `ShmEventLoop` is [Running](#running), the process priority will be elevated and if the priority is real-time it will die on attempted `malloc`s. I.e., "Running" == Real-time.
 - If you wish to programmatically exit your process (e.g., it is a one-shot process that just does some work and exits), use the `ExitHandle` API. This way you can use `ShmEventLoop::MakeExitHandle` to provide your application with a way to exit the process at runtime, and then use a different `ExitHandle` implementation for testing.
 
-### `EPoll` interface
+### `Aio` interface
 
-As previously mentioned, the `ShmEventLoop` uses `epoll` under the hood to trigger wakeups on new events. Typically, you do not need to care about this; however, the `EPoll` class is exposed from the `ShmEventLoop` in order to enable you to interact with the system outside of the standard `EventLoop` API while still having your callbacks and events occur within the main thread of the `EventLoop`. In order to enable testing & simulation, most applications that do this will take an abstract `EventLoop*` and an `EPoll*` in their constructor; however, for cases where the application truly only makes sense to run against a `ShmEventLoop`, it may take a `ShmEventLoop` directly. By breaking out of the normal `EventLoop` API your application will become harder to simulate, replay, etc. However, this is useful in some situations, e.g.:
+As previously mentioned, the `ShmEventLoop` uses an asynchronous I/O loop under the hood to trigger wakeups on new events. Typically, you do not need to care about this; however, the `Aio` class is exposed from the `ShmEventLoop` (via `ShmEventLoop::aio()`) in order to enable you to interact with the system outside of the standard `EventLoop` API while still having your callbacks and events occur within the main thread of the `EventLoop`. In order to enable testing & simulation, most applications that do this will take an abstract `EventLoop*` and an `Aio*` in their constructor; however, for cases where the application truly only makes sense to run against a `ShmEventLoop`, it may take a `ShmEventLoop` directly. By breaking out of the normal `EventLoop` API your application will become harder to simulate, replay, etc. However, this is useful in some situations, e.g.:
 
 - An application that must provide a web server of some sort to external applications, such as for a live debugging webpage.
 - Interacting with a CAN bus, UDP/TCP socket, etc. in order to interface with and control some external system.

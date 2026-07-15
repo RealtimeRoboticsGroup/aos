@@ -1,11 +1,12 @@
 #ifndef AOS_EVENTS_SHM_EVENT_LOOP_H_
 #define AOS_EVENTS_SHM_EVENT_LOOP_H_
 
+#include <thread>
 #include <vector>
 
 #include "absl/types/span.h"
 
-#include "aos/events/epoll.h"
+#include "aos/events/aio.h"
 #include "aos/events/event_loop.h"
 #include "aos/events/event_loop_generated.h"
 #include "aos/ipc_lib/shm_base.h"
@@ -113,8 +114,8 @@ class ShmEventLoop : public EventLoop {
 
   const UUID &boot_uuid() const override { return boot_uuid_; }
 
-  // Returns the epoll loop used to run the event loop.
-  EPoll *epoll() { return &epoll_; }
+  // Returns the Aio loop used to run the event loop.
+  Aio *aio() { return &aio_; }
 
   // Returns the local mapping of the shared memory used by the watcher on the
   // specified channel. A watcher must be created on this channel before calling
@@ -189,6 +190,10 @@ class ShmEventLoop : public EventLoop {
   // synchronization across multiple threads. It will NOT reliably catch race
   // conditions, but if you have a race condition triggered repeatedly it'll
   // probably catch it eventually.
+  //
+  // Holding the mutex does not make timers and phased loops usable from other
+  // threads.  While the event loop runs, only the thread running it may
+  // schedule or disable them; see CheckLoopThread().
   void CheckForMutex(aos::stl_mutex *check_mutex) {
     check_mutex_ = check_mutex;
   }
@@ -220,6 +225,13 @@ class ShmEventLoop : public EventLoop {
   void IgnoreThreadImpl() override;
 
   void CheckCurrentThread() const;
+
+  // CheckCurrentThread(), and while Run() is running, also checks that this is
+  // the thread running it.  Timers and phased loops arm Aio timers, which
+  // only the thread driving the Aio may do, so they check this.  Before
+  // Run() and after it returns, any thread may set them up or tear them down,
+  // as far as the Aio allows.
+  void CheckLoopThread() const;
 
   // Validates that the current thread is not the main thread.
   // Requires that the user has called LockToThread() before.
@@ -257,8 +269,12 @@ class ShmEventLoop : public EventLoop {
 
   aos::stl_mutex *check_mutex_ = nullptr;
   std::optional<pid_t> check_tid_;
+  // The thread inside Run(), and so driving the Aio.  A std::thread::id
+  // because reading it is free, where gettid() is a syscall on every timer
+  // Schedule().
+  std::optional<std::thread::id> loop_thread_;
 
-  EPoll epoll_;
+  Aio aio_;
 
   // Only set during Run().
   std::unique_ptr<ipc_lib::SignalFd> signalfd_;

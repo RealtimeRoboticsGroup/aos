@@ -62,7 +62,16 @@ class TimerFd {
 // Class to wrap epoll and call a callback when an event happens.
 class EPoll {
  public:
+  // Owns its Aio.
   EPoll();
+  // Borrows aio, which must outlive this EPoll.  Every call forwards to it:
+  // the On*() handlers are registered on aio itself, and Run(), Poll(),
+  // Quit() and should_run() drive and report on the whole shared loop, not
+  // just this EPoll's registrations.  Destroying this EPoll neither quits aio
+  // nor removes what was registered through it; DeleteFd() those first.  A
+  // BeforeWait() hook cannot be removed, so one registered through a borrowed
+  // EPoll lives as long as aio does.
+  explicit EPoll(Aio *aio);
   ~EPoll();
   EPoll(const EPoll &) = delete;
   EPoll &operator=(const EPoll &) = delete;
@@ -152,8 +161,12 @@ class EPoll {
   // start draining events to finish.
   bool should_run() const;
 
+  // The Aio every call forwards to: this EPoll's own, or the one it borrows.
+  Aio *aio() { return aio_; }
+
  private:
-  std::unique_ptr<Aio> aio_;
+  std::unique_ptr<Aio> owned_aio_;
+  Aio *aio_ = nullptr;
 };
 
 }  // namespace aos

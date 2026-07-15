@@ -17,8 +17,8 @@
 #include "absl/log/absl_log.h"
 #include "absl/log/die_if_null.h"
 
+#include "aos/events/aio.h"
 #include "aos/events/aos_logging.h"
-#include "aos/events/epoll.h"
 #include "aos/events/event_loop_generated.h"
 #include "aos/events/timing_statistics.h"
 #include "aos/init.h"
@@ -629,27 +629,19 @@ class ShmWatcherState : public WatcherState {
   SimpleShmFetcher simple_shm_fetcher_;
 };
 
-// Adapter class to adapt a timerfd to a TimerHandler.
+// Adapts an Aio::Timer to a TimerHandler.  An Aio::Timer fires once per
+// Schedule(), so HandleEvent() re-arms it for a repeating timer.
 class ShmTimerHandler final : public TimerHandler {
  public:
   ShmTimerHandler(ShmEventLoop *shm_event_loop, ::std::function<void()> fn)
       : TimerHandler(shm_event_loop, std::move(fn)),
         shm_event_loop_(shm_event_loop),
-        event_(this) {
-    shm_event_loop_->epoll_.OnReadable(timerfd_.fd(), [this]() {
-      // The timer may fire spuriously.  HandleEvent on the event loop will
-      // call the callback if it is needed.  It may also have called it when
-      // processing some other event, and the kernel decided to deliver this
-      // wakeup anyways.
-      timerfd_.Read();
-      shm_event_loop_->HandleEvent();
-    });
-  }
+        event_(this),
+        timer_(&shm_event_loop_->aio_) {}
 
   ~ShmTimerHandler() {
     shm_event_loop_->CheckCurrentThread();
-    Disable();
-    shm_event_loop_->epoll_.DeleteFd(timerfd_.fd());
+    DisableTimer();
   }
 
   void HandleEvent() {
@@ -668,7 +660,7 @@ class ShmTimerHandler final : public TimerHandler {
     }
 
     if (repeat_offset_ == std::chrono::seconds(0)) {
-      timerfd_.Disable();
+      timer_.Cancel();
       disabled_ = true;
     } else {
       // Compute how many cycles have elapsed and schedule the next iteration
@@ -679,23 +671,28 @@ class ShmTimerHandler final : public TimerHandler {
                                repeat_offset_);
       base_ += repeat_offset_ * elapsed_cycles;
 
-      // Update the heap and schedule the timerfd wakeup.
+      // Update the heap and schedule the timer wakeup.
       event_.set_event_time(base_);
       shm_event_loop_->AddEvent(&event_);
-      timerfd_.SetTime(base_, std::chrono::seconds(0));
+      timer_.Schedule(base_, &OnTimerComplete, this);
       disabled_ = false;
     }
   }
 
   void Schedule(monotonic_clock::time_point base,
                 monotonic_clock::duration repeat_offset) override {
-    shm_event_loop_->CheckCurrentThread();
+    shm_event_loop_->CheckLoopThread();
     ABSL_CHECK_GE(repeat_offset, monotonic_clock::zero());
     if (event_.valid()) {
       shm_event_loop_->RemoveEvent(&event_);
     }
 
-    timerfd_.SetTime(base, repeat_offset);
+    // Aio timers are one-shot, so a repeating timer reschedules itself:
+    // HandleEvent() advances base_ to the next period after now and arms the
+    // timer for it.  base_ is the event time for both the event heap and the
+    // timing report, so it comes from the clock, not from how many
+    // expirations the kernel counted.
+    timer_.Schedule(base, &OnTimerComplete, this);
     base_ = base;
     repeat_offset_ = repeat_offset;
     event_.set_event_time(base_);
@@ -704,19 +701,30 @@ class ShmTimerHandler final : public TimerHandler {
   }
 
   void Disable() override {
-    shm_event_loop_->CheckCurrentThread();
-    shm_event_loop_->RemoveEvent(&event_);
-    timerfd_.Disable();
-    disabled_ = true;
+    shm_event_loop_->CheckLoopThread();
+    DisableTimer();
   }
 
   bool IsDisabled() override { return disabled_; }
 
  private:
+  void DisableTimer() {
+    shm_event_loop_->RemoveEvent(&event_);
+    timer_.Cancel();
+    disabled_ = true;
+  }
+
+  // Timer completions are Ok() by contract (see Aio::Timer::Schedule());
+  // CHECK rather than handle.
+  static void OnTimerComplete(Completion completion, void *context) {
+    ABSL_CHECK(completion.status.has_value());
+    static_cast<ShmTimerHandler *>(context)->shm_event_loop_->HandleEvent();
+  }
+
   ShmEventLoop *shm_event_loop_;
   EventHandler<ShmTimerHandler> event_;
 
-  internal::TimerFd timerfd_;
+  Aio::Timer timer_;
 
   monotonic_clock::time_point base_;
   monotonic_clock::duration repeat_offset_;
@@ -726,7 +734,7 @@ class ShmTimerHandler final : public TimerHandler {
   bool disabled_ = true;
 };
 
-// Adapter class to the timerfd and PhasedLoop.
+// Adapts an Aio::Timer and a PhasedLoop to a PhasedLoopHandler.
 class ShmPhasedLoopHandler final : public PhasedLoopHandler {
  public:
   ShmPhasedLoopHandler(ShmEventLoop *shm_event_loop,
@@ -735,47 +743,42 @@ class ShmPhasedLoopHandler final : public PhasedLoopHandler {
                        const monotonic_clock::duration offset)
       : PhasedLoopHandler(shm_event_loop, std::move(fn), interval, offset),
         shm_event_loop_(shm_event_loop),
-        event_(this) {
-    shm_event_loop_->epoll_.OnReadable(
-        timerfd_.fd(), [this]() { shm_event_loop_->HandleEvent(); });
-  }
+        event_(this),
+        timer_(&shm_event_loop_->aio_) {}
 
   void HandleEvent() {
-    // The return value for read is the number of cycles that have elapsed.
-    // Because we check to see when this event *should* have happened, there are
-    // cases where Read() will return 0, when 1 cycle has actually happened.
-    // This occurs when the timer interrupt hasn't triggered yet.  Therefore,
-    // ignore it.  Call handles rescheduling and calculating elapsed cycles
-    // without any extra help.
-    timerfd_.Read();
     event_.Invalidate();
-
     Call(monotonic_clock::now);
   }
 
   ~ShmPhasedLoopHandler() override {
     shm_event_loop_->CheckCurrentThread();
-    shm_event_loop_->epoll_.DeleteFd(timerfd_.fd());
     shm_event_loop_->RemoveEvent(&event_);
   }
 
  private:
   // Reschedules the timer.
   void Schedule(monotonic_clock::time_point sleep_time) override {
-    shm_event_loop_->CheckCurrentThread();
+    shm_event_loop_->CheckLoopThread();
     if (event_.valid()) {
       shm_event_loop_->RemoveEvent(&event_);
     }
 
-    timerfd_.SetTime(sleep_time, ::aos::monotonic_clock::zero());
+    timer_.Schedule(sleep_time, &OnTimerComplete, this);
     event_.set_event_time(sleep_time);
     shm_event_loop_->AddEvent(&event_);
   }
 
+  // Same contract CHECK as ShmTimerHandler::OnTimerComplete().
+  static void OnTimerComplete(Completion completion, void *context) {
+    ABSL_CHECK(completion.status.has_value());
+    static_cast<ShmPhasedLoopHandler *>(context)
+        ->shm_event_loop_->HandleEvent();
+  }
+
   ShmEventLoop *shm_event_loop_;
   EventHandler<ShmPhasedLoopHandler> event_;
-
-  internal::TimerFd timerfd_;
+  Aio::Timer timer_;
 };
 
 class ShmThreadHandle : public ThreadHandle {
@@ -911,6 +914,15 @@ void ShmEventLoop::CheckCurrentThread() const {
     ABSL_CHECK_EQ(syscall(SYS_gettid), *check_tid_)
         << ": Being called from the wrong thread. Call from the main thread "
            "instead.";
+  }
+}
+
+void ShmEventLoop::CheckLoopThread() const {
+  CheckCurrentThread();
+  if (loop_thread_) {
+    ABSL_CHECK(std::this_thread::get_id() == *loop_thread_)
+        << ": Timers and phased loops can only be scheduled or disabled from "
+           "the thread that runs the event loop.";
   }
 }
 
@@ -1118,13 +1130,14 @@ class SignalHandler {
 
 Status ShmEventLoop::Run() {
   CheckCurrentThread();
+  loop_thread_ = std::this_thread::get_id();
   SignalHandler::global()->Register(this);
 
   if (watchers_.size() > 0) {
     signalfd_.reset(new ipc_lib::SignalFd({ipc_lib::kWakeupSignal}));
     signalfd_->LeaveSignalBlocked(ipc_lib::kWakeupSignal);
 
-    epoll_.OnReadable(signalfd_->fd(), [this]() { HandleEvent(); });
+    aio_.OnReadable(signalfd_->fd(), [this]() { HandleEvent(); });
   }
 
   MaybeScheduleTimingReports();
@@ -1200,9 +1213,9 @@ Status ShmEventLoop::Run() {
     }
 
     // And start our main event loop which runs all the timers and handles Quit.
-    epoll_.Run();
+    aio_.Run();
 
-    // Once epoll exits, there is no useful nonrt work left to do.
+    // Once the Aio loop exits, there is no useful nonrt work left to do.
     set_is_running(false);
 
     // Nothing time or synchronization critical needs to happen after this
@@ -1217,11 +1230,12 @@ Status ShmEventLoop::Run() {
   }
 
   if (watchers_.size() > 0) {
-    epoll_.DeleteFd(signalfd_->fd());
+    aio_.DeleteFd(signalfd_->fd());
     signalfd_.reset();
   }
 
   SignalHandler::global()->Unregister(this);
+  loop_thread_.reset();
 
   // Trigger any remaining senders or fetchers to be cleared before destroying
   // the event loop so the book keeping matches.  Do this in the thread that
@@ -1239,7 +1253,7 @@ void ShmEventLoop::Exit() {
   observed_exit_.test_and_set();
   // Implicitly defaults exit_status_ to success by not setting it.
 
-  epoll_.Quit();
+  aio_.Quit();
 }
 
 void ShmEventLoop::ExitWithStatus(Status status) {
@@ -1259,7 +1273,8 @@ std::unique_ptr<ExitHandle> ShmEventLoop::MakeExitHandle() {
 
 ShmEventLoop::~ShmEventLoop() {
   CheckCurrentThread();
-  // Force everything with a registered fd with epoll to be destroyed now.
+  // Destroy the timers, phased loops and watchers now, while the Aio they are
+  // registered with still exists.
   timers_.clear();
   phased_loops_.clear();
   watchers_.clear();

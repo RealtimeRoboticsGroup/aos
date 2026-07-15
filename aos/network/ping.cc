@@ -23,8 +23,8 @@ class PingServer {
  public:
   PingServer(aos::ShmEventLoop *event_loop)
       : event_loop_(event_loop), server_(2, "::", absl::GetFlag(FLAGS_port)) {
-    event_loop_->epoll()->OnReadable(server_.fd(),
-                                     [this]() { MessageReceived(); });
+    event_loop_->aio()->OnReadable(server_.fd(),
+                                   [this]() { MessageReceived(); });
     server_.SetMaxReadSize(absl::GetFlag(FLAGS_size) + 100);
     server_.SetMaxWriteSize(absl::GetFlag(FLAGS_size) + 100);
 
@@ -38,7 +38,7 @@ class PingServer {
     event_loop_->SetRuntimeRealtimePriority(5);
   }
 
-  ~PingServer() { event_loop_->epoll()->DeleteFd(server_.fd()); }
+  ~PingServer() { event_loop_->aio()->DeleteFd(server_.fd()); }
 
   aos::TimerHandler *timer_;
   sctp_assoc_t sac_assoc_id_ = 0;

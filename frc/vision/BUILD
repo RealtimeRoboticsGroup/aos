@@ -141,7 +141,7 @@ cc_library(
     deps = [
         ":camera_constants_fbs",
         ":vision_fbs",
-        "//aos/events:epoll",
+        "//aos/events:aio",
         "//aos/events:event_loop",
         "//aos/scoped:scoped_fd",
         "//aos/util:threaded_consumer",

@@ -15,6 +15,7 @@
 #include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 
+#include "aos/events/aio.h"
 #include "aos/events/pipe.h"
 
 ABSL_DECLARE_FLAG(std::string, aio_backend);
@@ -202,6 +203,43 @@ TEST_P(EPollTest, WritableEnableDisable) {
 TEST_P(EPollTest, QuitInBeforeWait) {
   epoll_->BeforeWait([this]() { epoll_->Quit(); });
   epoll_->Run();
+}
+
+// Two EPolls borrowing one Aio are one loop.  What either registers lands on
+// the Aio, driving the Aio delivers both, and a Quit() through one EPoll quits
+// the whole loop, after which Run() still drains what is ready.  Only `first`
+// quits, so if that Quit() did nothing, Run() would never return.
+TEST_P(EPollTest, EPollsSharingAnAio) {
+  Aio aio;
+  EPoll first(&aio);
+  EPoll second(&aio);
+  EXPECT_EQ(first.aio(), &aio);
+  EXPECT_EQ(second.aio(), &aio);
+
+  Pipe a;
+  Pipe b;
+  bool first_ran = false;
+  bool second_ran = false;
+  first.OnReadable(a.read_fd(), [&]() {
+    ASSERT_EQ("x", a.Read(1));
+    first_ran = true;
+    first.Quit();
+  });
+  second.OnReadable(b.read_fd(), [&]() {
+    ASSERT_EQ("y", b.Read(1));
+    second_ran = true;
+  });
+  a.Write("x");
+  b.Write("y");
+
+  aio.Run();
+  EXPECT_TRUE(first_ran);
+  EXPECT_TRUE(second_ran);
+  EXPECT_FALSE(first.should_run());
+  EXPECT_FALSE(second.should_run());
+
+  first.DeleteFd(a.read_fd());
+  second.DeleteFd(b.read_fd());
 }
 
 TEST_P(EPollTest, RemoveWithoutEvents) {

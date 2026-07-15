@@ -1,6 +1,7 @@
 #include "aos/events/shm_event_loop.h"
 
 #include <string_view>
+#include <thread>
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
@@ -596,6 +597,68 @@ TEST_P(ShmEventLoopDeathTest, ExitHandleOutlivesEventLoop) {
   auto exit_handle = static_cast<ShmEventLoop *>(loop1.get())->MakeExitHandle();
   EXPECT_DEATH(loop1.reset(),
                "All ExitHandles must be destroyed before the ShmEventLoop");
+}
+
+// Once the loop runs, timers and phased loops belong to its thread, on every
+// backend.
+TEST_P(ShmEventLoopDeathTest, TimerFromAnotherThread) {
+  auto loop = factory()->MakePrimary("primary");
+  TimerHandler *timer = loop->AddTimer([]() {});
+  loop->OnRun([&]() {
+    std::thread([&]() { timer->Schedule(loop->monotonic_now()); }).join();
+  });
+  EXPECT_DEATH(factory()->Run(), "thread that runs the event loop");
+}
+
+TEST_P(ShmEventLoopDeathTest, DisableTimerFromAnotherThread) {
+  auto loop = factory()->MakePrimary("primary");
+  TimerHandler *timer = loop->AddTimer([]() {});
+  loop->OnRun([&]() { std::thread([&]() { timer->Disable(); }).join(); });
+  EXPECT_DEATH(factory()->Run(), "thread that runs the event loop");
+}
+
+TEST_P(ShmEventLoopDeathTest, PhasedLoopFromAnotherThread) {
+  auto loop = factory()->MakePrimary("primary");
+  PhasedLoopHandler *phased_loop =
+      loop->AddPhasedLoop([](int) {}, std::chrono::seconds(1));
+  loop->OnRun([&]() {
+    std::thread([&]() {
+      phased_loop->Reschedule(loop->monotonic_now());
+    }).join();
+  });
+  EXPECT_DEATH(factory()->Run(), "thread that runs the event loop");
+}
+
+// Before the loop runs, any thread may set its timers up.
+TEST_P(ShmEventLoopTest, TimerFromAnotherThreadBeforeRun) {
+  auto loop = factory()->MakePrimary("primary");
+  int fires = 0;
+  TimerHandler *timer = loop->AddTimer([&]() {
+    ++fires;
+    factory()->Exit();
+  });
+  std::thread([&]() { timer->Schedule(loop->monotonic_now()); }).join();
+  factory()->Run();
+  EXPECT_EQ(fires, 1);
+}
+
+// After Run() returns, any thread may use the timers again, so a loop built
+// on one thread and run on another can be torn down where it was built.
+TEST_P(ShmEventLoopTest, TimerFromAnotherThreadAfterRun) {
+  auto loop = factory()->MakePrimary("primary");
+  TimerHandler *exit_timer = loop->AddTimer([&]() { factory()->Exit(); });
+  TimerHandler *timer = loop->AddTimer([]() {});
+  PhasedLoopHandler *phased_loop =
+      loop->AddPhasedLoop([](int) {}, std::chrono::seconds(1));
+  loop->OnRun([&]() {
+    exit_timer->Schedule(loop->monotonic_now());
+    timer->Schedule(loop->monotonic_now() + std::chrono::seconds(10));
+  });
+  std::thread([&]() { factory()->Run(); }).join();
+  timer->Disable();
+  timer->Schedule(loop->monotonic_now() + std::chrono::seconds(10));
+  phased_loop->Reschedule(loop->monotonic_now());
+  timer->Disable();
 }
 
 // TODO(austin): Test that missing a deadline with a timer recovers as expected.

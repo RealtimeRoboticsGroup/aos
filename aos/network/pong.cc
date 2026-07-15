@@ -41,12 +41,12 @@ class PingClient {
                        chrono::milliseconds(1000));
     });
 
-    event_loop_->epoll()->OnReadable(client_.fd(),
-                                     [this]() { MessageReceived(); });
+    event_loop_->aio()->OnReadable(client_.fd(),
+                                   [this]() { MessageReceived(); });
     event_loop_->SetRuntimeRealtimePriority(5);
   }
 
-  ~PingClient() { event_loop_->epoll()->DeleteFd(client_.fd()); }
+  ~PingClient() { event_loop_->aio()->DeleteFd(client_.fd()); }
 
   aos::TimerHandler *timer_;
   sctp_assoc_t sac_assoc_id_ = 0;

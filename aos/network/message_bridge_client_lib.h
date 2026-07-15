@@ -53,7 +53,7 @@ class SctpClientConnection {
                        std::string_view config_sha256,
                        SctpAuthMethod requested_authentication);
 
-  ~SctpClientConnection() { event_loop_->epoll()->DeleteFd(client_.fd()); }
+  ~SctpClientConnection() { event_loop_->aio()->DeleteFd(client_.fd()); }
 
   void SetAuthKey(absl::Span<const uint8_t> auth_key) {
     client_.SetAuthKey(auth_key);

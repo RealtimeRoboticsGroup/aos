@@ -42,6 +42,7 @@ cc_library(
     deps = [
         ":starter_fbs",
         ":starter_rpc_fbs",
+        "//aos/events:aio",
         "//aos/events:event_loop",
         "//aos/events:shm_event_loop",
         "//aos/ipc_lib:signalfd",

@@ -65,15 +65,15 @@ class Server {
       : event_loop_(event_loop),
         server_(2, "0.0.0.0", absl::GetFlag(FLAGS_port), SctpAuthMethod()) {
     server_.SetAuthKey(GetSctpAuthKey());
-    event_loop_->epoll()->OnReadable(server_.fd(),
-                                     [this]() { MessageReceived(); });
+    event_loop_->aio()->OnReadable(server_.fd(),
+                                   [this]() { MessageReceived(); });
     server_.SetMaxReadSize(absl::GetFlag(FLAGS_rx_size) + 100);
     server_.SetMaxWriteSize(absl::GetFlag(FLAGS_rx_size) + 100);
 
     event_loop_->SetRuntimeRealtimePriority(5);
   }
 
-  ~Server() { event_loop_->epoll()->DeleteFd(server_.fd()); }
+  ~Server() { event_loop_->aio()->DeleteFd(server_.fd()); }
 
   void SendMessage(std::string_view message) {
     if (sac_assoc_id_ == 0) {
@@ -157,12 +157,12 @@ class Client {
                        chrono::milliseconds(1000));
     });
 
-    event_loop_->epoll()->OnReadable(client_.fd(),
-                                     [this]() { MessageReceived(); });
+    event_loop_->aio()->OnReadable(client_.fd(),
+                                   [this]() { MessageReceived(); });
     event_loop_->SetRuntimeRealtimePriority(5);
   }
 
-  ~Client() { event_loop_->epoll()->DeleteFd(client_.fd()); }
+  ~Client() { event_loop_->aio()->DeleteFd(client_.fd()); }
 
   void Ping() {
     std::string payload(absl::GetFlag(FLAGS_payload_size), 'a');

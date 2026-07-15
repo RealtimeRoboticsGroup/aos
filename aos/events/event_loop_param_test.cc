@@ -804,6 +804,35 @@ TEST_P(AbstractEventLoopTest, CheckTimerRunInPastDisabled) {
   EXPECT_TRUE(timer2->IsDisabled());
 }
 
+// Scheduling at exactly monotonic_clock::epoch() is legal -- NegativeTimeTimer
+// pins the epoch as the first valid deadline -- and means "fire as soon as the
+// loop runs", like any other deadline in the past.
+//
+// The two event loops reach it differently.  In simulation the epoch is where
+// the timeline starts, so it is simply "now".  On a ShmEventLoop it is decades
+// in the past, a deadline that has already passed rather than an empty one.
+// This test holds both loops to firing it, and to firing it promptly: a timer
+// that never armed would still run late, whenever something else woke the
+// loop, so a second timer ends the test 100ms in.
+TEST_P(AbstractEventLoopTest, TimerAtEpochFires) {
+  auto loop = MakePrimary("primary");
+
+  int fires = 0;
+  auto timer = loop->AddTimer([this, &fires]() {
+    ++fires;
+    Exit();
+  });
+  auto deadline = loop->AddTimer([this]() { Exit(); });
+
+  loop->OnRun([&loop, timer, deadline]() {
+    timer->Schedule(monotonic_clock::epoch());
+    deadline->Schedule(loop->monotonic_now() + chrono::milliseconds(100));
+  });
+
+  Run();
+  EXPECT_EQ(fires, 1);
+}
+
 // Tests that timer handler is not disabled even after calling Exit on the event
 // loop within the timer
 TEST_P(AbstractEventLoopTest, CheckTimerRepeatOnCountDisabled) {

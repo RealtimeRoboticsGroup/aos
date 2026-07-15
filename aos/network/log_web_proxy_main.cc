@@ -35,7 +35,8 @@ int main(int argc, char **argv) {
   reader.Register();
 
   // If going for "as fast as possible" don't actually use infinity, because we
-  // don't want the log reading blocking our use of the epoll handlers.
+  // don't want the log reading starving the web proxy's handlers on the
+  // event loop.
   reader.SetRealtimeReplayRate(absl::GetFlag(FLAGS_replay_rate) == -1.0
                                    ? std::numeric_limits<double>::max()
                                    : absl::GetFlag(FLAGS_replay_rate));
@@ -65,7 +66,7 @@ int main(int argc, char **argv) {
   }
 
   aos::web_proxy::WebProxy web_proxy(
-      event_loop.get(), reader.event_loop_factory()->scheduler_epoll(),
+      event_loop.get(), reader.event_loop_factory()->scheduler_aio(),
       aos::web_proxy::StoreHistory::kYes, absl::GetFlag(FLAGS_buffer_size));
 
   web_proxy.SetDataPath(absl::GetFlag(FLAGS_data_dir).c_str());

@@ -517,8 +517,7 @@ MessageBridgeServer::MessageBridgeServer(
   }
 
   // TODO(austin): Logging synchronization.
-  event_loop_->epoll()->OnReadable(server_.fd(),
-                                   [this]() { MessageReceived(); });
+  event_loop_->aio()->OnReadable(server_.fd(), [this]() { MessageReceived(); });
 
   ABSL_LOG(INFO) << "Hostname: "
                  << event_loop_->node()->hostname()->string_view();

@@ -40,14 +40,14 @@ class GlibMainLoopTest : public ::testing::TestWithParam<EventLoopType> {
       event_loop_ = simulated_event_loop_factory_->MakeEventLoop("test");
       event_loop_->SkipTimingReport();
       glib_main_loop_ = std::make_unique<GlibMainLoop>(
-          event_loop_.get(), simulated_event_loop_factory_->scheduler_epoll(),
+          event_loop_.get(), simulated_event_loop_factory_->scheduler_aio(),
           [this]() { simulated_event_loop_factory_->Exit(); });
 
       // Schedule a periodic event so that we actually start "realtime playback"
       // at time zero. Otherwise, playback immediately skips to the first event
       // which may be an arbitrary amount of time after time zero. We also want
       // to specify a periodic event so that there are always events being
-      // waited on. Otherwise, the event loop will quit before the epoll events
+      // waited on. Otherwise, the event loop will quit before the fd events
       // have had a chance to execute.
       event_loop_->AddTimer([]() { ABSL_VLOG(1) << "null event"; })
           ->Schedule(event_loop_->monotonic_now(), std::chrono::seconds(1));

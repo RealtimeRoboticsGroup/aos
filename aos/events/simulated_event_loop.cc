@@ -699,7 +699,8 @@ class SimulatedEventLoop : public EventLoop {
     // the event loop so the book keeping matches.
     timing_report_sender_.reset();
 
-    // Force everything with a registered fd with epoll to be destroyed now.
+    // Destroy the timers, phased loops and watchers now, while the scheduler
+    // they are registered with still exists.
     timers_.clear();
     phased_loops_.clear();
     watchers_.clear();

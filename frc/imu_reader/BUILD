@@ -13,7 +13,7 @@ cc_library(
     target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
-        "//aos/events:epoll",
+        "//aos/events:aio",
         "//aos/events:shm_event_loop",
         "//aos/util:crc32",
         "//frc/wpilib:imu_batch_fbs",

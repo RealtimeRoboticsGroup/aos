@@ -297,6 +297,7 @@ cc_test(
     name = "epoll_test",
     srcs = ["epoll_test.cc"],
     deps = [
+        ":aio",
         ":epoll",
         ":pipe",
         "//aos/testing:googletest",
@@ -692,8 +693,8 @@ cc_library(
     hdrs = ["shm_event_loop.h"],
     visibility = ["//visibility:public"],
     deps = [
+        ":aio",
         ":aos_logging",
-        ":epoll",
         ":event_loop",
         ":event_loop_fbs",
         ":test_message_fbs",
@@ -875,8 +876,8 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        ":aio",
         ":aos_logging",
-        ":epoll",
         ":event_loop",
         ":simple_channel",
         "//aos:init",
@@ -1002,7 +1003,7 @@ cc_library(
     target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
-        ":epoll",
+        ":aio",
         ":event_loop",
         "//aos/stl_mutex",
         "@com_google_absl//absl/log:absl_check",

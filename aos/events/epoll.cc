@@ -4,7 +4,9 @@
 
 namespace aos {
 
-EPoll::EPoll() : aio_(std::make_unique<Aio>()) {}
+EPoll::EPoll() : owned_aio_(std::make_unique<Aio>()), aio_(owned_aio_.get()) {}
+
+EPoll::EPoll(Aio *aio) : aio_(aio) {}
 
 EPoll::~EPoll() = default;
 
