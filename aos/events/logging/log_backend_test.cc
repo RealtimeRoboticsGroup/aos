@@ -206,7 +206,7 @@ TEST(LogBackendTest, CreateFileMassiveWrite) {
   EXPECT_TRUE(std::filesystem::exists(logevent + "test.log"));
   EXPECT_EQ(buffer1.size() + buffer2.size(),
             std::filesystem::file_size(logevent + "test.log"));
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__APPLE__)
   ASSERT_TRUE(
       dynamic_cast<FileHandler *>(file.get())->encountered_incomplete_write());
 #endif
@@ -606,8 +606,10 @@ TEST_F(FileWriteTestBase, AlignedToUnaligned) {
   auto result = handler->Write(queue);
   EXPECT_EQ(result.code, WriteCode::kOk);
   EXPECT_EQ(result.messages_written, queue.size());
+#if !defined(__APPLE__) && !defined(_WIN32)
   FileHandler *file_handler = reinterpret_cast<FileHandler *>(handler.get());
   EXPECT_GT(file_handler->written_aligned(), 0);
+#endif
 
   ASSERT_EQ(handler->Close(), WriteCode::kOk);
   EXPECT_TRUE(std::filesystem::exists(file));

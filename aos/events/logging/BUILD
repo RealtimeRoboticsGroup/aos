@@ -115,8 +115,15 @@ cc_library(
     srcs = [
         "log_backend.cc",
     ] + select({
+        "@platforms//os:osx": [
+            "log_backend_darwin.cc",
+            "log_backend_unix.cc",
+        ],
         "@platforms//os:windows": ["log_backend_windows.cc"],
-        "//conditions:default": ["log_backend_linux.cc"],
+        "//conditions:default": [
+            "log_backend_linux.cc",
+            "log_backend_unix.cc",
+        ],
     }),
     hdrs = ["log_backend.h"],
     visibility = ["//visibility:public"],

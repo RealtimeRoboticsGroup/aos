@@ -298,6 +298,8 @@ WriteCode FileHandler::Close() {
 void FileHandler::EnableDirect() {}
 void FileHandler::DisableDirect() {}
 
+void FileHandler::PlatformSync() { _commit(fd_); }
+
 std::pair<WriteCode, size_t> FileHandler::WriteV(bool) {
   LOG(FATAL) << "WriteV not implemented on Windows";
   return {WriteCode::kOk, 0};

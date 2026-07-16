@@ -198,6 +198,9 @@ class FileHandler : public LogSink {
 
   bool ODirectEnabled() const;
 
+  // Flushes the file descriptor to disk in a platform-specific way.
+  void PlatformSync();
+
   // Writes a chunk of iovecs from iovec_. aligned is true if all the data is
   // kSector byte aligned and multiples of it in length.
   // May modify iovec_.
