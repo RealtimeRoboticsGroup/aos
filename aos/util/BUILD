@@ -21,7 +21,6 @@ cc_library(
     name = "application_name",
     srcs = ["application_name.cc"],
     hdrs = ["application_name.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/flags:flag",

@@ -6,6 +6,10 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#ifdef __APPLE__
+#include <limits.h>
+#include <mach-o/dyld.h>
+#endif
 
 #include <algorithm>
 #include <iterator>
@@ -156,6 +160,12 @@ std::optional<std::filesystem::path> GetExecutablePath() {
   ssize_t s = readlink("/proc/self/exe", proc_self_exec_buffer, 1024);
   if (s > 0) {
     return std::filesystem::path(std::string_view(proc_self_exec_buffer, s));
+  }
+#elif defined(__APPLE__)
+  char buf[PATH_MAX + 1];
+  uint32_t size = sizeof(buf);
+  if (_NSGetExecutablePath(buf, &size) == 0) {
+    return std::filesystem::canonical(buf);
   }
 #endif
   return std::nullopt;

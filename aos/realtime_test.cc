@@ -91,6 +91,12 @@ TEST(RealtimeTest, GetSetRealtimePriority) {
   UnsetCurrentThreadRealtimePriority();
 }
 
+TEST(RealtimeTest, GetProgramName) {
+  std::string prog_name = GetProgramName();
+  EXPECT_FALSE(prog_name.empty());
+  EXPECT_NE(prog_name.find("realtime_test"), std::string::npos);
+}
+
 // Tests that getters and setters properly interact with thread scheduling
 // policy.
 TEST(RealtimeTest, GetSetSchedulingPolicy) {
