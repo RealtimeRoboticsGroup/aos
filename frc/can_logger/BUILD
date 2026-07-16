@@ -7,6 +7,7 @@ cc_binary(
     srcs = [
         "can_logger_main.cc",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":can_logger_lib",
@@ -25,6 +26,7 @@ cc_library(
         "can_logger.cc",
         "can_logger.h",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":can_logging_fbs",
