@@ -2,9 +2,7 @@ external
 node_modules
 frc/control_loops/swerve/spline_ui/www/node_modules
 aos/analysis/foxglove_extension/node_modules
-third_party/flatbuffers
 third_party/xz
-third_party/bazel-toolchain
 third_party/allwpilib
 third_party/gmp
 registry
