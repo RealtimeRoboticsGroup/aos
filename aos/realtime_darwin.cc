@@ -524,8 +524,6 @@ void RegisterMallocHook() {
   }
 }
 
-std::string GetProgramName() { return getprogname(); }
-
 std::string GetThreadName() {
   char thread_name_array[65];
   if (pthread_getname_np(pthread_self(), thread_name_array,

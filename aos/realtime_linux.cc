@@ -262,8 +262,6 @@ void RegisterMallocHook() {
   }
 }
 
-std::string GetProgramName() { return ::program_invocation_short_name; }
-
 std::string GetThreadName() {
   char thread_name_array[17];
   if (prctl(PR_GET_NAME, thread_name_array) != 0) {

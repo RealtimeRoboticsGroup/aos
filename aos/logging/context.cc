@@ -19,6 +19,7 @@
 
 #include "aos/macros.h"
 #include "aos/sanitizers.h"
+#include "aos/util/application_name.h"
 
 #if defined(AOS_SANITIZE_MEMORY)
 #include <sanitizer/msan_interface.h>

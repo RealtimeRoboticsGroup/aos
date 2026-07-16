@@ -194,13 +194,6 @@ void RegisterMallocHook() {
       << ": DetourTransactionCommit failed: " << commit_err;
 }
 
-std::string GetProgramName() {
-  char exe_path[MAX_PATH];
-  GetModuleFileNameA(nullptr, exe_path, MAX_PATH);
-  const char *last_slash = strrchr(exe_path, '\\');
-  return std::string(last_slash ? (last_slash + 1) : exe_path);
-}
-
 std::string GetThreadName() { return ""; }
 
 pid_t GetProcessId() { return GetCurrentProcessId(); }

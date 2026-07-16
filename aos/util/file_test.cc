@@ -362,6 +362,8 @@ TEST(FileTest, GetExecutablePath) {
   ASSERT_TRUE(exec_path.has_value());
   EXPECT_TRUE(std::filesystem::exists(*exec_path));
   EXPECT_TRUE(exec_path->is_absolute());
+  const std::string filename = exec_path->filename().string();
+  EXPECT_TRUE(filename == "file_test" || filename == "file_test.exe");
 }
 
 }  // namespace aos::util::testing

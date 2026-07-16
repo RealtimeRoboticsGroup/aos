@@ -19,12 +19,29 @@ config_validator_test(
 
 cc_library(
     name = "application_name",
-    srcs = ["application_name.cc"],
+    srcs = ["application_name.cc"] + select(
+        {
+            "@platforms//os:linux": ["application_name_linux.cc"],
+            "@platforms//os:osx": ["application_name_darwin.cc"],
+            "@platforms//os:windows": ["application_name_windows.cc"],
+        },
+        no_match_error = "aos/util:application_name has no GetProgramName() " +
+                         "implementation for this platform.  Add one as " +
+                         "application_name_<os>.cc.",
+    ),
     hdrs = ["application_name.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/flags:flag",
+    ],
+)
+
+cc_test(
+    name = "application_name_test",
+    srcs = ["application_name_test.cc"],
+    deps = [
+        ":application_name",
+        "//aos/testing:googletest",
     ],
 )
 

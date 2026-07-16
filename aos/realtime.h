@@ -152,9 +152,6 @@ uid_t GetUserId();
 // Returns the username associated with the given UID when possible.
 std::optional<std::string> GetUsername(uid_t uid);
 
-// Returns the name of the current process/program.
-std::string GetProgramName();
-
 // Returns the name of the current thread. If the OS does not support
 // thread names (e.g., Windows by default), returns an empty string.
 std::string GetThreadName();

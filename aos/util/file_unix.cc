@@ -8,6 +8,10 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#ifdef __APPLE__
+#include <limits.h>
+#include <mach-o/dyld.h>
+#endif
 
 #include <algorithm>
 #include <iterator>
@@ -157,6 +161,39 @@ std::optional<std::filesystem::path> GetExecutablePath() {
   if (s > 0) {
     return std::filesystem::path(std::string_view(proc_self_exec_buffer, s));
   }
+#elif defined(__APPLE__)
+  // A path too long for the buffer isn't a failure to report:
+  // _NSGetExecutablePath writes the size it needs into `size` and expects to be
+  // called again with that.  PATH_MAX is not an upper bound here -- a deep
+  // enough directory tree needs more than that.
+  std::vector<char> buf(PATH_MAX + 1);
+  uint32_t size = static_cast<uint32_t>(buf.size());
+  if (_NSGetExecutablePath(buf.data(), &size) != 0) {
+    buf.resize(size);
+    // It just told us how much room it wants, so giving it exactly that has to
+    // work.  Anything else means our understanding of the API is wrong, which
+    // isn't something to paper over by reporting "no executable path".
+    ABSL_CHECK_EQ(_NSGetExecutablePath(buf.data(), &size), 0)
+        << ": _NSGetExecutablePath rejected the " << size
+        << " byte buffer it asked for";
+  }
+
+  // _NSGetExecutablePath returns the path the process was launched with, not a
+  // resolved one: it can be relative to the working directory and can run
+  // through symlinks.  Callers want the real location -- and the Linux branch
+  // above returns exactly that, since /proc/self/exe is already resolved -- so
+  // canonicalize to make the two platforms agree.
+  //
+  // The throwing overload would break the nullopt-on-failure contract, and it
+  // does throw in practice: renaming the executable out from under a running
+  // process is enough to get there.
+  std::error_code error_code;
+  std::filesystem::path path =
+      std::filesystem::canonical(buf.data(), error_code);
+  if (error_code) {
+    return std::nullopt;
+  }
+  return path;
 #endif
   return std::nullopt;
 }
