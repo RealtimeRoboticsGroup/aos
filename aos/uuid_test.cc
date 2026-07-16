@@ -24,6 +24,12 @@ TEST(UUIDTest, GetOne) {
   EXPECT_EQ(UUID::Zero(), UUID::Zero());
 }
 
+TEST(UUIDTest, BootUUID) {
+  UUID boot_uuid = UUID::BootUUID();
+  EXPECT_NE(boot_uuid, UUID::Zero());
+  EXPECT_EQ(boot_uuid, UUID::BootUUID());
+}
+
 // Tests that converting to and from various formats produces the same UUID.
 TEST(UUIDTest, FromStringOrSpan) {
   std::string_view str = "4b88ab00-556a-455b-a395-17d1a0c6f906";

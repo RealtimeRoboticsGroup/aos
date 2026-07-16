@@ -100,6 +100,10 @@ bool TryReadDarwinBootUUID(UUID *uuid) {
     return false;
   }
 
+  for (size_t i = 0; i < UUID::kStringSize; ++i) {
+    buffer[i] = std::tolower(static_cast<unsigned char>(buffer[i]));
+  }
+
   *uuid = UUID::FromString(std::string_view(buffer.data(), UUID::kStringSize));
   return true;
 }
