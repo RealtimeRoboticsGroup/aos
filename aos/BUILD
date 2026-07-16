@@ -366,6 +366,7 @@ cc_library(
         ":flatbuffer_merge",
         ":flatbuffers",
         ":json_to_flatbuffer",
+        ":uuid",
         "//aos:macros",
         "//aos:unique_malloc_ptr",
         "//aos/ipc_lib:index",
@@ -619,11 +620,47 @@ cc_test(
     ],
     deps = [
         ":configuration",
+        ":realtime",
         "//aos/testing:flatbuffer_eq",
         "//aos/testing:googletest",
         "//aos/testing:path",
         "//aos/testing:test_logging",
         "//aos/testing/ping_pong:ping_fbs",
+    ],
+)
+
+cc_test(
+    name = "configuration_collision_test",
+    srcs = [
+        "configuration.cc",
+        "configuration.h",
+        "configuration_collision_test.cc",
+    ],
+    copts = compiler_select({
+        "clang": [],
+        "gcc": ["-Wno-missing-field-initializers"],
+        "msvc": [],
+    }) + ["-DAOS_CONFIGURATION_TEST_COLLISION"],
+    data = [
+        "//aos/testdata:test_configs",
+    ],
+    deps = [
+        ":configuration_fbs",
+        ":flatbuffer_merge",
+        ":flatbuffers",
+        ":json_to_flatbuffer",
+        ":uuid",
+        "//aos:macros",
+        "//aos:unique_malloc_ptr",
+        "//aos/ipc_lib:index",
+        "//aos/network:team_number",
+        "//aos/testing:googletest",
+        "//aos/testing:path",
+        "//aos/util:file",
+        "@com_google_absl//absl/container:btree",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
+        "@com_google_absl//absl/strings",
     ],
 )
 
