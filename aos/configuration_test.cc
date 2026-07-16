@@ -1,5 +1,7 @@
 #include "aos/configuration.h"
 
+#include <set>
+
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/strings/strip.h"
@@ -9,6 +11,7 @@
 
 #include "aos/configuration_static.h"
 #include "aos/json_to_flatbuffer.h"
+#include "aos/realtime.h"
 #include "aos/testing/flatbuffer_eq.h"
 #include "aos/testing/path.h"
 #include "aos/testing/ping_pong/ping_generated.h"
@@ -2117,5 +2120,67 @@ TEST_F(ConfigurationDeathTest, GetApplicationUnsortedApplications) {
       "config->applications\\(\\) is not sorted by name");
 }
 #endif
+
+// Tests that ChannelHash produces stable, unique, non-zero hashes.
+TEST_F(ConfigurationTest, ChannelHash) {
+#if !defined(AOS_SANITIZE_MEMORY) && !defined(AOS_SANITIZE_ADDRESS)
+  aos::ScopedRealtime realtime;
+#endif
+  UUID hash1 = ChannelHash("/foo", ".aos.bar");
+  UUID hash2 = ChannelHash("/foo", ".aos.bar");
+  EXPECT_EQ(hash1, hash2);
+
+  // Different name should produce a different hash.
+  UUID hash3 = ChannelHash("/bar", ".aos.bar");
+  EXPECT_NE(hash1, hash3);
+
+  // Different type should produce a different hash.
+  UUID hash4 = ChannelHash("/foo", ".aos.baz");
+  EXPECT_NE(hash1, hash4);
+
+  // The backend shouldn't just concatenate them.
+  UUID hash5 = ChannelHash("/foo.aos.baz", "");
+  EXPECT_NE(hash4, hash5);
+
+  // The UUID should not be zero.
+  EXPECT_NE(hash1, UUID::Zero());
+  EXPECT_NE(hash2, UUID::Zero());
+  EXPECT_NE(hash3, UUID::Zero());
+  EXPECT_NE(hash4, UUID::Zero());
+  EXPECT_NE(hash5, UUID::Zero());
+}
+
+// Tests that ChannelHash produces unique hashes for all channels in a real
+// configuration.
+TEST_F(ConfigurationTest, ChannelHashesAreUnique) {
+  FlatbufferDetachedBuffer<Configuration> config =
+      ReadConfig(ArtifactPath("aos/testdata/config1.json"));
+  std::set<UUID> hashes;
+  for (const Channel *c : *config.message().channels()) {
+    UUID hash = ChannelHash(c);
+    EXPECT_TRUE(hashes.insert(hash).second);
+  }
+}
+
+// Tests that ChannelHash matches precalculated golden numbers.  This ensures
+// that the hashing algorithm remains constant across upgrades.
+TEST_F(ConfigurationTest, ChannelHashGoldenValues) {
+#if !defined(AOS_SANITIZE_MEMORY) && !defined(AOS_SANITIZE_ADDRESS)
+  aos::ScopedRealtime realtime;
+#endif
+  char buf[UUID::kStringSize + 1];
+
+  ChannelHash("/foo", ".aos.bar").CopyTo(buf);
+  buf[UUID::kStringSize] = '\0';
+  EXPECT_STREQ(buf, "fadf6e00-edd3-d48b-bb67-2beb6efadb1a");
+
+  ChannelHash("/batman", ".aos.baz").CopyTo(buf);
+  buf[UUID::kStringSize] = '\0';
+  EXPECT_STREQ(buf, "ed2086a9-077b-a29f-f279-8748eb377156");
+
+  ChannelHash("/aos/report", ".aos.timing.Report").CopyTo(buf);
+  buf[UUID::kStringSize] = '\0';
+  EXPECT_STREQ(buf, "8c8e6dd9-1b5d-d4cc-989b-677d48fc5726");
+}
 
 }  // namespace aos::configuration::testing

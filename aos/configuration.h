@@ -7,6 +7,7 @@
 
 #include "aos/configuration_generated.h"  // IWYU pragma: export
 #include "aos/flatbuffers.h"
+#include "aos/uuid.h"
 
 namespace aos {
 
@@ -294,6 +295,14 @@ aos::FlatbufferDetachedBuffer<Configuration> AddChannelToConfiguration(
 FlatbufferDetachedBuffer<Configuration> GetPartialConfiguration(
     const Configuration &configuration,
     std::function<bool(const Channel &)> should_include_channel);
+
+// Returns a stable 128-bit hash of the channel name and type.  The hash is
+// returned as an aos::UUID.
+UUID ChannelHash(const Channel *channel);
+
+// Helper to compute a 128-bit channel hash from name and type.  The hash is
+// returned as an aos::UUID.
+UUID ChannelHash(std::string_view name, std::string_view type);
 }  // namespace configuration
 
 // Compare and equality operators for Channel.  Note: these only check the name

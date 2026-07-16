@@ -15,6 +15,7 @@
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/log/absl_vlog_is_on.h"
+#include "absl/numeric/int128.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_split.h"
@@ -1270,6 +1271,7 @@ void ValidateConfiguration(const Flatbuffer<Configuration> &config,
   // A final config is also sorted.  Lookups in the config assume it is sorted.
   if (config.message().has_channels()) {
     const Channel *last_channel = nullptr;
+    absl::btree_set<UUID> hashes;
     for (const Channel *c : *config.message().channels()) {
       if (last_channel != nullptr) {
         ABSL_CHECK(CompareChannels(
@@ -1283,6 +1285,12 @@ void ValidateConfiguration(const Flatbuffer<Configuration> &config,
         ABSL_CHECK(c->has_schema())
             << ": Failed to find schema for " << StrippedChannelToString(c);
       }
+
+      UUID hash = ChannelHash(c);
+      auto [it, inserted] = hashes.insert(hash);
+      ABSL_CHECK(inserted) << ": Duplicate channel hash " << hash
+                           << " detected for channel "
+                           << StrippedChannelToString(c);
     }
   }
 
@@ -2490,6 +2498,51 @@ FlatbufferDetachedBuffer<Configuration> GetPartialConfiguration(
 
   // Use MergeConfiguration to clean up redundant schemas.
   return configuration::MergeConfiguration(raw_subset_configuration);
+}
+
+UUID ChannelHash(std::string_view name, std::string_view type) {
+#ifdef AOS_CONFIGURATION_TEST_COLLISION
+  return UUID::Zero();
+#endif
+
+  // 128-bit FNV-1a constants.
+  absl::uint128 fnv_hash =
+      absl::MakeUint128(0x6c62272e07bb0142ULL, 0x62b821756295c58dULL);
+
+  auto hash_byte = [&fnv_hash](uint8_t byte) {
+    const absl::uint128 fnv_prime = absl::MakeUint128(0x1000000ULL, 0x13bULL);
+    fnv_hash ^= byte;
+    fnv_hash *= fnv_prime;
+  };
+
+  // Hash a string by hashing the length, and then hashing the contents.  This
+  // makes it so ("foo", ".msg") and ("foo.msg", "") don't collide.
+  auto hash_bytes = [hash_byte](const uint8_t *data, size_t size) {
+    uint32_t len = size;
+    hash_byte(len & 0xFF);
+    hash_byte((len >> 8) & 0xFF);
+    hash_byte((len >> 16) & 0xFF);
+    hash_byte((len >> 24) & 0xFF);
+    for (size_t i = 0; i < size; ++i) {
+      hash_byte(data[i]);
+    }
+  };
+
+  hash_bytes(reinterpret_cast<const uint8_t *>(name.data()), name.size());
+  hash_bytes(reinterpret_cast<const uint8_t *>(type.data()), type.size());
+
+  // Convert the 128-bit hash to a big-endian 16-byte array for UUID.
+  uint8_t bytes[16];
+  for (int i = 0; i < 16; ++i) {
+    bytes[i] = absl::Uint128Low64(fnv_hash >> ((15 - i) * 8)) & 0xFF;
+  }
+
+  return UUID::FromSpan(absl::Span<const uint8_t>(bytes, 16));
+}
+
+UUID ChannelHash(const Channel *channel) {
+  return ChannelHash(channel->name()->string_view(),
+                     channel->type()->string_view());
 }
 }  // namespace configuration
 }  // namespace aos
