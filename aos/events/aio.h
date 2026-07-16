@@ -93,8 +93,8 @@ struct AsyncRequest {
 // 1. Thread Safety: Aio is designed to be driven by a single-threaded event
 //    loop.  All scheduling (e.g., AsyncRead, AsyncWrite, AsyncTimer) and
 //    cancellation (Cancel) operations must be invoked from the thread that
-//    drives the loop via Poll() or Run().  The only exceptions are Wakeup()
-//    and Quit(), which are thread-safe and may be called from any thread.
+//    drives the loop via Poll() or Run().  The only exception is Quit(),
+//    which is thread-safe and may be called from any thread.
 // 2. Request Lifetime: The caller-supplied AsyncRequest object must remain
 //    valid and allocated in memory from the time it is submitted until its
 //    corresponding CompletionCallback is executed.  Destroying the Aio
@@ -126,9 +126,6 @@ class Aio {
 
   // Returns whether the loop is currently running and should continue running.
   bool should_run() const;
-
-  // Interrupts a blocking Poll() call, forcing it to wake up immediately.
-  void Wakeup();
 
   // Schedules an asynchronous read on a file descriptor.
   void AsyncRead(int fd, std::span<char> buffer, AsyncRequest *request);
@@ -243,6 +240,7 @@ class Aio {
   struct Impl;
   friend class IoUringImpl;
   friend class EpollImpl;
+  friend class KqueueImpl;
 
   std::unique_ptr<Impl> impl_;
 };

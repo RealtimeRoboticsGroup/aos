@@ -1,8 +1,12 @@
 #ifndef AOS_EVENTS_EPOLL_H_
 #define AOS_EVENTS_EPOLL_H_
 
-#ifndef _WIN32
+#if defined(__linux__)
 #include <sys/epoll.h>
+#else
+#define EPOLLIN 0x01
+#define EPOLLOUT 0x04
+#define EPOLLERR 0x08
 #endif
 #include <stdint.h>
 
@@ -44,8 +48,18 @@ class TimerFd {
   // Returns the file descriptor associated with the timerfd.
   int fd() { return fd_; }
 
+#ifdef __APPLE__
+  void ResetOnFork();
+#endif
+
  private:
   int fd_ = -1;
+
+#ifdef __APPLE__
+  aos::monotonic_clock::time_point next_expiration_ =
+      aos::monotonic_clock::min_time;
+  aos::monotonic_clock::duration interval_ = aos::monotonic_clock::zero();
+#endif
 };
 
 }  // namespace internal

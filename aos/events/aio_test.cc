@@ -2,8 +2,12 @@
 
 #include <fcntl.h>
 #include <signal.h>
-#ifndef _WIN32
+#if defined(__linux__)
 #include <sys/epoll.h>
+#else
+#define EPOLLIN 0x01
+#define EPOLLOUT 0x04
+#define EPOLLERR 0x08
 #endif
 
 #include <array>
@@ -66,9 +70,12 @@ TEST_P(AioTest, BasicPipeReadWrite) {
     }
   }
 
-  // The epoll backend processes exactly one event per Poll() call.  This aligns
-  // with the behavior of epoll_linux.cc.
+  // The epoll/kqueue backend processes exactly one event per Poll() call.
+#if defined(__linux__)
   EXPECT_EQ(count, GetParam() ? 1 : 2);
+#else
+  EXPECT_EQ(count, 2);
+#endif
   EXPECT_STREQ(read_buf, "Hello io_uring!");
 }
 
@@ -1151,38 +1158,6 @@ TEST_P(AioTest, QuitInBeforeWait) {
   aio.Run();
 }
 
-// Tests that we can wake up the event loop multiple times consecutively.
-// This ensures the wakeup eventfd read completion callback is correctly
-// re-registered in both backends.
-TEST_P(AioTest, MultipleWakeupsTest) {
-  Aio aio;
-  std::atomic<int> wakeups{0};
-
-  std::thread signaler([&aio, &wakeups]() {
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
-    wakeups = 1;
-    aio.Wakeup();
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
-    wakeups = 2;
-    aio.Wakeup();
-  });
-
-  // Wait for first wakeup.
-  while (wakeups < 1) {
-    aio.Poll(true);
-  }
-  EXPECT_EQ(wakeups, 1);
-
-  // Wait for second wakeup.
-  while (wakeups < 2) {
-    aio.Poll(true);
-  }
-  EXPECT_EQ(wakeups, 2);
-
-  signaler.join();
-}
-
 // Tests that unregistering a signalfd correctly cancels the underlying
 // multishot poll request and prevents any use-after-free or extra callbacks.
 TEST_P(AioTest, UnregisterSignalFdTest) {
@@ -1192,8 +1167,12 @@ TEST_P(AioTest, UnregisterSignalFdTest) {
   int count = 0;
   aio.RegisterSignalFd(&sfd, [&count]() { ++count; });
 
-  // Send kWakeupSignal to our thread.
-  pthread_kill(pthread_self(), aos::ipc_lib::kWakeupSignal);
+  const auto pid = aos::GetProcessId();
+  const auto tid = aos::GetThreadId();
+  aos::ipc_lib::ThreadSignal signaler_signal;
+
+  // Send kWakeupSignal.
+  signaler_signal.Signal(pid, tid);
 
   // Poll until the signal is handled.
   while (count == 0 && aio.Poll(true)) {
@@ -1204,12 +1183,14 @@ TEST_P(AioTest, UnregisterSignalFdTest) {
   aio.UnregisterSignalFd(&sfd);
 
   // Send the signal again.
-  pthread_kill(pthread_self(), aos::ipc_lib::kWakeupSignal);
+  signaler_signal.Signal(pid, tid);
 
-  // Clean up signal by reading it manually so it doesn't stay pending.
+  // Clean up signal so it doesn't stay pending.
+#if defined(__linux__)
   struct signalfd_siginfo siginfo;
   ssize_t res = read(sfd.fd(), &siginfo, sizeof(siginfo));
   EXPECT_EQ(res, sizeof(siginfo));
+#endif
 
   // Poll non-blockingly a few times to ensure the callback is NOT invoked.
   for (int i = 0; i < 5; ++i) {
@@ -1258,13 +1239,17 @@ TEST_P(AioTest, ForkDeathTest) {
   aio.OnEvents(pipe.write_fd(), [&](uint32_t events) {
     EXPECT_TRUE(events & EPOLLOUT);
     ++fd_count;
+    aio.SetEvents(pipe.write_fd(), 0);
   });
 
   aio.SetEvents(pipe.write_fd(), EPOLLOUT);
 
   EXPECT_EXIT(
       {
-        pthread_kill(pthread_self(), aos::ipc_lib::kWakeupSignal);
+        const auto pid = aos::GetProcessId();
+        const auto tid = aos::GetThreadId();
+        aos::ipc_lib::ThreadSignal signaler_signal;
+        signaler_signal.Signal(pid, tid);
         while ((signal_count == 0 || fd_count == 0) && aio.Poll(true)) {
         }
         if (signal_count == 1 && fd_count == 1) {

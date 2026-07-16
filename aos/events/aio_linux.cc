@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include "aos/events/aio.h"
+#include "aos/events/aio_internal.h"
 
 // Fallback definitions for older liburing / kernel headers.
 #ifndef IORING_SETUP_COOP_TASKRUN
@@ -162,94 +163,37 @@ inline AioState &State(AsyncRequest *req) {
 
 }  // namespace
 
-struct Aio::TimerState {
-  Aio *aio = nullptr;
-  AsyncRequest request;
-  aos::monotonic_clock::duration interval = aos::monotonic_clock::zero();
-  aos::monotonic_clock::time_point deadline = aos::monotonic_clock::epoch();
-  CompletionCallback user_callback = nullptr;
-  void *user_context = nullptr;
+class IoUringImpl;
 
-  // Epoll-backend specific timerfd state
-  std::unique_ptr<TimerFD> timer_fd;
+struct IoUringTimerState : public Aio::TimerState {
+  explicit IoUringTimerState(IoUringImpl *impl) : impl_(impl) {}
+  ~IoUringTimerState() override;
 
-  // Intrusive doubly-linked list pointers for IoUringImpl active timers
-  Aio::TimerState *prev_active = nullptr;
-  Aio::TimerState *next_active = nullptr;
-  bool is_active = false;
-};
+  void Initialize() override;
+  void Schedule(aos::monotonic_clock::time_point deadline,
+                aos::monotonic_clock::duration interval,
+                CompletionCallback callback, void *context) override;
+  void Cancel(bool reap) override;
 
-struct Aio::Impl {
-  virtual ~Impl() = default;
-
-  virtual void Run() = 0;
-  virtual bool should_run() const = 0;
-
-  // Polls the event loop for completed events.  If block is true, it waits
-  // for at least one event to complete.  Otherwise, it returns immediately.
-  // Returns true if at least one event completed.
-  virtual bool Poll(bool block) = 0;
-
-  // Requests the event loop to stop running.
-  virtual void Quit() = 0;
-
-  // Wakes up a blocking event loop.
-  virtual void Wakeup() = 0;
-
-  // The following methods submit asynchronous I/O requests.  The callback is
-  // executed when the operation completes.
-  virtual void AsyncRead(int fd, std::span<char> buffer,
-                         AsyncRequest *request) = 0;
-  virtual void AsyncWrite(int fd, std::span<const char> buffer,
-                          AsyncRequest *request) = 0;
-
-  // Cancels a pending asynchronous request.  The callback will be executed
-  // with a Canceled status.
-  virtual void Cancel(AsyncRequest *request) = 0;
-
-  // Registers a callback to be executed before waiting for events.
-  virtual void BeforeWait(std::function<void()> function) = 0;
-
-  // Legacy Readiness Hooks.
-  virtual void OnReadable(int fd, std::function<void()> callback) = 0;
-  virtual void OnError(int fd, std::function<void()> callback) = 0;
-  virtual void OnWritable(int fd, std::function<void()> callback) = 0;
-  virtual void OnEvents(int fd, std::function<void(uint32_t)> callback) = 0;
-  virtual void DeleteFd(int fd) = 0;
-  virtual void ForgetClosedFd(int fd) = 0;
-  virtual void EnableWritable(int fd) = 0;
-  virtual void DisableWritable(int fd) = 0;
-  virtual void SetEvents(int fd, uint32_t events) = 0;
-
-  // Registers a SignalFd for wakeups.
-  virtual void RegisterSignalFd(ipc_lib::SignalFd *sfd,
-                                std::function<void()> callback) = 0;
-  virtual void UnregisterSignalFd(ipc_lib::SignalFd *sfd) = 0;
-
-  virtual void ConsumeSignalFd(ipc_lib::SignalFd *sfd) = 0;
-
-  // The following methods implement the timer backend and match the behavior of
-  // the corresponding Aio::Timer methods documented in aio.h.
-  virtual void InitializeTimer(Aio::TimerState *state) = 0;
-  virtual void DestroyTimer(std::unique_ptr<Aio::TimerState> state) = 0;
-  virtual void ScheduleTimer(Aio::TimerState *state,
-                             aos::monotonic_clock::time_point deadline,
-                             aos::monotonic_clock::duration interval,
-                             CompletionCallback callback, void *context) = 0;
-  virtual void CancelTimer(Aio::TimerState *state, bool reap) = 0;
+ private:
+  IoUringImpl *impl_;
 };
 
 class IoUringImpl : public Aio::Impl {
+  friend struct IoUringTimerState;
+
  public:
   IoUringImpl();
   ~IoUringImpl() override;
+
+  std::unique_ptr<Aio::TimerState> MakeTimerState() override;
 
   void Run() override;
   bool should_run() const override;
 
   bool Poll(bool block) override;
   void Quit() override;
-  void Wakeup() override;
+  void Wakeup();
 
   void AsyncRead(int fd, std::span<char> buffer,
                  AsyncRequest *request) override;
@@ -272,14 +216,6 @@ class IoUringImpl : public Aio::Impl {
                         std::function<void()> callback) override;
   void UnregisterSignalFd(ipc_lib::SignalFd *sfd) override;
   void ConsumeSignalFd(ipc_lib::SignalFd *sfd) override;
-
-  void InitializeTimer(Aio::TimerState *state) override;
-  void DestroyTimer(std::unique_ptr<Aio::TimerState> state) override;
-  void ScheduleTimer(Aio::TimerState *state,
-                     aos::monotonic_clock::time_point deadline,
-                     aos::monotonic_clock::duration interval,
-                     CompletionCallback callback, void *context) override;
-  void CancelTimer(Aio::TimerState *state, bool reap) override;
 
  private:
   bool ReapCompletions();
@@ -437,6 +373,10 @@ void IoUringImpl::SignalFdState::Submit(IoUringImpl *impl) {
   request.context = this;
   request.user_data = &request;
   request.done = false;
+}
+
+std::unique_ptr<Aio::TimerState> IoUringImpl::MakeTimerState() {
+  return std::make_unique<IoUringTimerState>(this);
 }
 
 IoUringImpl::IoUringImpl() {
@@ -813,36 +753,30 @@ void IoUringImpl::ConsumeSignalFd(ipc_lib::SignalFd *sfd) {
   }
 }
 
-void IoUringImpl::InitializeTimer(Aio::TimerState *state) {
-  state->request.done = true;
-}
+IoUringTimerState::~IoUringTimerState() { Cancel(true); }
 
-void IoUringImpl::DestroyTimer(std::unique_ptr<Aio::TimerState> state) {
-  CancelTimer(state.get(), true);
-}
+void IoUringTimerState::Initialize() { request.done = true; }
 
-void IoUringImpl::ScheduleTimer(Aio::TimerState *state,
-                                aos::monotonic_clock::time_point deadline,
-                                aos::monotonic_clock::duration interval,
-                                CompletionCallback callback, void *context) {
+void IoUringTimerState::Schedule(aos::monotonic_clock::time_point deadline,
+                                 aos::monotonic_clock::duration interval,
+                                 CompletionCallback callback, void *context) {
   ABSL_CHECK_GE(deadline, aos::monotonic_clock::epoch());
-  CancelTimer(state, true);
-  LinkTimer(state);
+  Cancel(true);
+  impl_->LinkTimer(this);
 
-  state->interval = interval;
-  state->deadline = deadline;
-  state->user_callback = callback;
-  state->user_context = context;
-  state->request.user_data = state;
-  state->request.done = false;
+  this->interval = interval;
+  this->deadline = deadline;
+  this->user_callback = callback;
+  this->user_context = context;
+  this->request.user_data = this;
+  this->request.done = false;
 
-  state->request.callback = [](Completion completion, void *ctx) {
-    auto *tstate = static_cast<Aio::TimerState *>(ctx);
+  this->request.callback = [](Completion completion, void *ctx) {
+    auto *tstate = static_cast<IoUringTimerState *>(ctx);
     auto user_cb = tstate->user_callback;
     auto user_ctx = tstate->user_context;
 
-    auto *impl = tstate->aio->impl_.get();
-    auto *ring_impl = static_cast<IoUringImpl *>(impl);
+    auto *ring_impl = tstate->impl_;
 
     if (aos::IsOk(completion.status) &&
         tstate->interval > aos::monotonic_clock::zero()) {
@@ -872,8 +806,8 @@ void IoUringImpl::ScheduleTimer(Aio::TimerState *state,
       user_cb(completion, user_ctx);
     }
   };
-  state->request.context = state;
-  state->request.done = false;
+  this->request.context = this;
+  this->request.done = false;
 
   ABSL_CHECK_GE(deadline, aos::monotonic_clock::epoch());
   auto duration = deadline.time_since_epoch();
@@ -882,21 +816,21 @@ void IoUringImpl::ScheduleTimer(Aio::TimerState *state,
       std::chrono::duration_cast<std::chrono::nanoseconds>(duration - secs);
 
   struct __kernel_timespec *ts = reinterpret_cast<struct __kernel_timespec *>(
-      &State(&state->request).timespec);
+      &State(&this->request).timespec);
   ts->tv_sec = secs.count();
   ts->tv_nsec = nsecs.count();
 
-  struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
+  struct io_uring_sqe *sqe = io_uring_get_sqe(&impl_->ring);
   ABSL_CHECK(sqe != nullptr) << "Out of SQEs";
 
   io_uring_prep_timeout(sqe, ts, 0, IORING_TIMEOUT_ABS);
-  io_uring_sqe_set_data(sqe, &state->request);
+  io_uring_sqe_set_data(sqe, &this->request);
 }
 
-void IoUringImpl::CancelTimer(Aio::TimerState *state, bool reap) {
-  state->request.callback = nullptr;
-  CancelRequest(&state->request, reap);
-  UnlinkTimer(state);
+void IoUringTimerState::Cancel(bool reap) {
+  this->request.callback = nullptr;
+  impl_->CancelRequest(&this->request, reap);
+  impl_->UnlinkTimer(this);
 }
 
 bool IoUringImpl::ReapCompletions() {
@@ -983,17 +917,39 @@ void IoUringImpl::SubmitWakeupRead() {
             &event_fd.wakeup_req);
 }
 
+class EpollImpl;
+
+struct EpollTimerState : public Aio::TimerState {
+  explicit EpollTimerState(EpollImpl *impl) : impl_(impl) {}
+  ~EpollTimerState() override;
+
+  void Initialize() override;
+  void Schedule(aos::monotonic_clock::time_point deadline,
+                aos::monotonic_clock::duration interval,
+                CompletionCallback callback, void *context) override;
+  void Cancel(bool reap) override;
+
+  std::unique_ptr<TimerFD> timer_fd;
+
+ private:
+  EpollImpl *impl_;
+};
+
 class EpollImpl : public Aio::Impl {
+  friend struct EpollTimerState;
+
  public:
   EpollImpl();
   ~EpollImpl() override;
+
+  std::unique_ptr<Aio::TimerState> MakeTimerState() override;
 
   void Run() override;
   bool should_run() const override;
 
   bool Poll(bool block) override;
   void Quit() override;
-  void Wakeup() override;
+  void Wakeup();
 
   void AsyncRead(int fd, std::span<char> buffer,
                  AsyncRequest *request) override;
@@ -1016,14 +972,6 @@ class EpollImpl : public Aio::Impl {
                         std::function<void()> callback) override;
   void UnregisterSignalFd(ipc_lib::SignalFd *sfd) override;
   void ConsumeSignalFd(ipc_lib::SignalFd *sfd) override;
-
-  void InitializeTimer(Aio::TimerState *state) override;
-  void DestroyTimer(std::unique_ptr<Aio::TimerState> state) override;
-  void ScheduleTimer(Aio::TimerState *state,
-                     aos::monotonic_clock::time_point deadline,
-                     aos::monotonic_clock::duration interval,
-                     CompletionCallback callback, void *context) override;
-  void CancelTimer(Aio::TimerState *state, bool reap) override;
 
  private:
   struct FdRegistration {
@@ -1099,6 +1047,10 @@ class EpollImpl : public Aio::Impl {
   AsyncRequest *pending_cancels_head = nullptr;
   AsyncRequest *pending_sync_completions_head = nullptr;
 };
+
+std::unique_ptr<Aio::TimerState> EpollImpl::MakeTimerState() {
+  return std::make_unique<EpollTimerState>(this);
+}
 
 EpollImpl::EpollImpl() {
   last_fork_count_ = global_fork_count.load(std::memory_order_relaxed);
@@ -1598,68 +1550,68 @@ void EpollImpl::ConsumeSignalFd(ipc_lib::SignalFd *sfd) {
   }
 }
 
-void EpollImpl::InitializeTimer(Aio::TimerState *state) {
-  state->timer_fd = std::make_unique<TimerFD>();
-  state->request.done = true;
+EpollTimerState::~EpollTimerState() {
+  Cancel(true);
+  if (timer_fd) {
+    impl_->DeleteFd(timer_fd->fd());
+  }
+}
 
-  OnReadable(state->timer_fd->fd(), [state]() {
+void EpollTimerState::Initialize() {
+  timer_fd = std::make_unique<TimerFD>();
+  request.done = true;
+
+  impl_->OnReadable(timer_fd->fd(), [this]() {
     uint64_t buf;
-    ssize_t result = read(state->timer_fd->fd(), &buf, sizeof(buf));
+    ssize_t result = read(timer_fd->fd(), &buf, sizeof(buf));
     if (result == -1 && errno == EAGAIN) {
       return;
     }
     ABSL_PCHECK(result == sizeof(buf));
 
-    if (state->interval == aos::monotonic_clock::zero()) {
-      state->request.done = true;
+    if (interval == aos::monotonic_clock::zero()) {
+      request.done = true;
     }
 
-    if (state->user_callback) {
+    if (user_callback) {
       Completion completion;
-      completion.user_data = state->request.user_data;
+      completion.user_data = request.user_data;
       completion.status = aos::Ok();
       completion.result = 0;
-      state->user_callback(completion, state->user_context);
+      user_callback(completion, user_context);
     }
   });
 }
 
-void EpollImpl::DestroyTimer(std::unique_ptr<Aio::TimerState> state) {
-  CancelTimer(state.get(), true);
-  DeleteFd(state->timer_fd->fd());
-}
-
-void EpollImpl::ScheduleTimer(Aio::TimerState *state,
-                              aos::monotonic_clock::time_point deadline,
-                              aos::monotonic_clock::duration interval,
-                              CompletionCallback callback, void *context) {
+void EpollTimerState::Schedule(aos::monotonic_clock::time_point deadline,
+                               aos::monotonic_clock::duration interval,
+                               CompletionCallback callback, void *context) {
   ABSL_CHECK_GE(deadline, aos::monotonic_clock::epoch());
-  CancelTimer(state, true);
+  Cancel(true);
 
-  state->interval = interval;
-  state->deadline = deadline;
-  state->user_callback = callback;
-  state->user_context = context;
-  state->request.user_data = state;
-  state->request.done = false;
+  this->interval = interval;
+  this->deadline = deadline;
+  this->user_callback = callback;
+  this->user_context = context;
+  this->request.user_data = this;
+  this->request.done = false;
 
   struct itimerspec its;
   its.it_interval = ::aos::time::to_timespec(interval);
   its.it_value = ::aos::time::to_timespec(deadline);
 
-  int ret =
-      timerfd_settime(state->timer_fd->fd(), TFD_TIMER_ABSTIME, &its, nullptr);
+  int ret = timerfd_settime(timer_fd->fd(), TFD_TIMER_ABSTIME, &its, nullptr);
   ABSL_PCHECK(ret == 0) << "timerfd_settime failed: " << aos_strerror(errno);
 }
 
-void EpollImpl::CancelTimer(Aio::TimerState *state, bool /*reap*/) {
-  if (state->timer_fd) {
+void EpollTimerState::Cancel(bool /*reap*/) {
+  if (timer_fd) {
     struct itimerspec its;
     std::memset(&its, 0, sizeof(its));
-    timerfd_settime(state->timer_fd->fd(), 0, &its, nullptr);
+    timerfd_settime(timer_fd->fd(), 0, &its, nullptr);
   }
-  state->request.done = true;
-  state->user_callback = nullptr;
+  request.done = true;
+  user_callback = nullptr;
 }
 
 void EpollImpl::UpdateEpoll(int fd) {
@@ -1769,93 +1721,4 @@ Aio::Aio() {
   }
   impl_ = std::make_unique<EpollImpl>();
 }
-
-Aio::~Aio() = default;
-
-void Aio::Run() { impl_->Run(); }
-
-bool Aio::Poll(bool block) { return impl_->Poll(block); }
-
-void Aio::Quit() { impl_->Quit(); }
-
-bool Aio::should_run() const { return impl_->should_run(); }
-
-void Aio::Wakeup() { impl_->Wakeup(); }
-
-void Aio::AsyncRead(int fd, std::span<char> buffer, AsyncRequest *request) {
-  impl_->AsyncRead(fd, buffer, request);
-}
-
-void Aio::AsyncWrite(int fd, std::span<const char> buffer,
-                     AsyncRequest *request) {
-  impl_->AsyncWrite(fd, buffer, request);
-}
-
-void Aio::Cancel(AsyncRequest *request) { impl_->Cancel(request); }
-
-void Aio::BeforeWait(std::function<void()> function) {
-  impl_->BeforeWait(std::move(function));
-}
-
-void Aio::OnReadable(int fd, std::function<void()> callback) {
-  impl_->OnReadable(fd, std::move(callback));
-}
-
-void Aio::OnError(int fd, std::function<void()> callback) {
-  impl_->OnError(fd, std::move(callback));
-}
-
-void Aio::OnWritable(int fd, std::function<void()> callback) {
-  impl_->OnWritable(fd, std::move(callback));
-}
-
-void Aio::OnEvents(int fd, std::function<void(uint32_t)> callback) {
-  impl_->OnEvents(fd, std::move(callback));
-}
-
-void Aio::DeleteFd(int fd) { impl_->DeleteFd(fd); }
-
-void Aio::ForgetClosedFd(int fd) { impl_->ForgetClosedFd(fd); }
-
-void Aio::EnableWritable(int fd) { impl_->EnableWritable(fd); }
-
-void Aio::DisableWritable(int fd) { impl_->DisableWritable(fd); }
-
-void Aio::SetEvents(int fd, uint32_t events) { impl_->SetEvents(fd, events); }
-
-void Aio::RegisterSignalFd(ipc_lib::SignalFd *sfd,
-                           std::function<void()> callback) {
-  impl_->RegisterSignalFd(sfd, std::move(callback));
-}
-
-void Aio::UnregisterSignalFd(ipc_lib::SignalFd *sfd) {
-  impl_->UnregisterSignalFd(sfd);
-}
-
-void Aio::ConsumeSignalFd(ipc_lib::SignalFd *sfd) {
-  impl_->ConsumeSignalFd(sfd);
-}
-
-Aio::Timer::Timer(Aio *aio) : state_(std::make_unique<Aio::TimerState>()) {
-  state_->aio = aio;
-  state_->aio->impl_->InitializeTimer(state_.get());
-}
-
-Aio::Timer::~Timer() {
-  if (state_) {
-    state_->aio->impl_->DestroyTimer(std::move(state_));
-  }
-}
-
-void Aio::Timer::Schedule(aos::monotonic_clock::time_point deadline,
-                          aos::monotonic_clock::duration interval,
-                          CompletionCallback callback, void *context) {
-  state_->aio->impl_->ScheduleTimer(state_.get(), deadline, interval, callback,
-                                    context);
-}
-
-void Aio::Timer::Cancel() {
-  state_->aio->impl_->CancelTimer(state_.get(), false);
-}
-
 }  // namespace aos

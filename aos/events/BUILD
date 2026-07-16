@@ -40,27 +40,35 @@ cc_library(
     name = "aio",
     srcs = [
         "aio.cc",
-        "aio_linux.cc",
-    ],
+        "aio_internal.h",
+    ] + select({
+        "@platforms//os:linux": ["aio_linux.cc"],
+        "@platforms//os:macos": ["aio_darwin.cc"],
+    }),
     hdrs = ["aio.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
-        "//aos/ipc_lib:signalfd",
         "//aos/libc:aos_strerror",
         "//aos/time",
         "//aos/util:status",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
-        "@liburing",
-    ],
+    ] + select({
+        "@platforms//os:linux": [
+            "//aos/ipc_lib:signalfd",
+            "@liburing",
+        ],
+        "@platforms//os:macos": [
+            "//aos/ipc_lib:signalfd",
+            "//aos/mutex",
+        ],
+    }),
 )
 
 cc_test(
     name = "aio_test",
     srcs = ["aio_test.cc"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":aio",
         ":pipe",
@@ -76,10 +84,12 @@ cc_library(
     name = "epoll",
     srcs = [
         "epoll.cc",
-        "epoll_linux.cc",
-    ],
+    ] + select({
+        "@platforms//os:linux": ["epoll_linux.cc"],
+        "@platforms//os:macos": ["epoll_darwin.cc"],
+        "@platforms//os:windows": ["epoll_windows.cc"],
+    }),
     hdrs = ["epoll.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":aio",
@@ -459,7 +469,6 @@ cc_library(
     name = "shm_event_loop",
     srcs = ["shm_event_loop.cc"],
     hdrs = ["shm_event_loop.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":aos_logging",
@@ -489,7 +498,6 @@ cc_test(
     srcs = ["shm_event_loop_test.cc"],
     flaky = True,
     shard_count = 50,
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":event_loop_param_test",
         ":shm_event_loop",
@@ -515,6 +523,7 @@ cc_library(
         "//aos/network:timestamp_schema",
         "//aos/testing:googletest",
     ],
+    alwayslink = True,
 )
 
 cc_test(
