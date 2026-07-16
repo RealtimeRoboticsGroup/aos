@@ -255,7 +255,10 @@ cc_binary(
     srcs = [
         "argus_camera.cc",
     ],
-    target_compatible_with = ["@platforms//cpu:arm64"],
+    target_compatible_with = [
+        "@platforms//cpu:arm64",
+        "@platforms//os:linux",
+    ],
     visibility = ["//visibility:public"],
     deps = [
         "//aos:init",
