@@ -65,7 +65,7 @@ ABSL_FLAG(aos::util::FetchMode, fetch, aos::util::FetchMode::kRewrite,
           "additional behavior described in "
           "--rewrite_timestamp_delta_seconds.");
 ABSL_FLAG(int, rewrite_timestamp_delta_seconds, 10,
-          "When --fetch_and_rewrite_timestamps is used, this determines the "
+          "When --fetch=rewrite is used, this determines the "
           "number of seconds by which the latched messages are shifted. The "
           "final timestamp of latched messages will be the log's start time "
           "rounded down to the nearest second and moved back this many "
