@@ -103,11 +103,17 @@ void SetCurrentThreadAffinity(const CpuSet &cpuset) {
   if (cpuset.Empty() || cpuset == DefaultAffinity()) {
     // Clear the affinity policy.
     thread_affinity_policy_data_t policy = {THREAD_AFFINITY_TAG_NULL};
-    ABSL_CHECK_EQ(
-        thread_policy_set(pthread_mach_thread_np(pthread_self()),
-                          THREAD_AFFINITY_POLICY, (thread_policy_t)&policy,
-                          THREAD_AFFINITY_POLICY_COUNT),
-        KERN_SUCCESS);
+    const kern_return_t result = thread_policy_set(
+        pthread_mach_thread_np(pthread_self()), THREAD_AFFINITY_POLICY,
+        (thread_policy_t)&policy, THREAD_AFFINITY_POLICY_COUNT);
+    if (result == KERN_NOT_SUPPORTED) {
+      if (ABSL_VLOG_IS_ON(1)) {
+        ABSL_LOG(WARNING) << "Thread affinity is not supported on this Darwin "
+                             "system, ignoring";
+      }
+    } else {
+      ABSL_CHECK_EQ(result, KERN_SUCCESS);
+    }
   } else {
     integer_t tag = 0;
     // We want to map the cpuset to an affinity tag.  The kernel doesn't give us
@@ -123,11 +129,17 @@ void SetCurrentThreadAffinity(const CpuSet &cpuset) {
     // the same CpuSet together.
     thread_affinity_policy_data_t policy = {tag};
 
-    ABSL_CHECK_EQ(
-        thread_policy_set(pthread_mach_thread_np(pthread_self()),
-                          THREAD_AFFINITY_POLICY, (thread_policy_t)&policy,
-                          THREAD_AFFINITY_POLICY_COUNT),
-        KERN_SUCCESS);
+    const kern_return_t result = thread_policy_set(
+        pthread_mach_thread_np(pthread_self()), THREAD_AFFINITY_POLICY,
+        (thread_policy_t)&policy, THREAD_AFFINITY_POLICY_COUNT);
+    if (result == KERN_NOT_SUPPORTED) {
+      if (ABSL_VLOG_IS_ON(1)) {
+        ABSL_LOG(WARNING) << "Thread affinity is not supported on this Darwin "
+                             "system, ignoring";
+      }
+    } else {
+      ABSL_CHECK_EQ(result, KERN_SUCCESS);
+    }
   }
 }
 
