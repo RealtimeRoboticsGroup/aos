@@ -2,6 +2,9 @@
 
 #include <fcntl.h>
 #include <unistd.h>
+#ifndef _WIN32
+#include <sys/select.h>
+#endif
 
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
@@ -49,6 +52,23 @@ class EPollTest : public ::testing::TestWithParam<bool> {
 
 #define epoll_ (*epoll_ptr_)
 
+// Helper function to fill up a pipe using OnWritable callbacks.
+// It uses select() to query writability and runs the event loop until
+// the pipe buffer is full and select() returns 0.
+void FillPipe(EPoll &epoll, int fd) {
+  while (true) {
+    fd_set write_fds;
+    FD_ZERO(&write_fds);
+    FD_SET(fd, &write_fds);
+    struct timeval timeout = {0, 0};
+    int ret = select(fd + 1, nullptr, &write_fds, nullptr, &timeout);
+    if (ret <= 0) {
+      break;
+    }
+    epoll.Poll(true);
+  }
+}
+
 // Test that the basics of OnReadable work.
 TEST_P(EPollTest, BasicReadable) {
   Pipe pipe;
@@ -78,13 +98,13 @@ TEST_P(EPollTest, BasicWritable) {
   });
 
   // First, fill up the pipe's write buffer.
-  RunFor(tick_duration());
+  FillPipe(epoll_, pipe.write_fd());
   EXPECT_GT(number_writes, 0);
 
   // Now, if we try again, we shouldn't do anything.
   const int bytes_in_pipe = number_writes;
   number_writes = 0;
-  RunFor(tick_duration());
+  FillPipe(epoll_, pipe.write_fd());
   EXPECT_EQ(number_writes, 0);
 
   // Empty the pipe, then fill it up again.
@@ -92,7 +112,7 @@ TEST_P(EPollTest, BasicWritable) {
     ASSERT_EQ(" ", pipe.Read(1));
   }
   number_writes = 0;
-  RunFor(tick_duration());
+  FillPipe(epoll_, pipe.write_fd());
   EXPECT_EQ(number_writes, bytes_in_pipe);
 
   epoll_.DeleteFd(pipe.write_fd());
@@ -149,7 +169,7 @@ TEST_P(EPollTest, WritableEnableDisable) {
   });
 
   // First, fill up the pipe's write buffer.
-  RunFor(tick_duration());
+  FillPipe(epoll_, pipe.write_fd());
   EXPECT_GT(number_writes, 0);
 
   // Empty the pipe.
@@ -170,7 +190,7 @@ TEST_P(EPollTest, WritableEnableDisable) {
   // And then when we re-enable, it should fill the pipe up again.
   epoll_.EnableWritable(pipe.write_fd());
   number_writes = 0;
-  RunFor(tick_duration());
+  FillPipe(epoll_, pipe.write_fd());
   EXPECT_EQ(number_writes, bytes_in_pipe);
 
   epoll_.DeleteFd(pipe.write_fd());

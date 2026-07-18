@@ -2,6 +2,8 @@
 
 #include <fcntl.h>
 #include <signal.h>
+
+#include <cerrno>
 #if defined(__linux__)
 #include <sys/epoll.h>
 #else
@@ -25,6 +27,9 @@
 #include "aos/ipc_lib/signalfd.h"
 #include "aos/ipc_lib/thread_signal.h"
 #include "aos/realtime.h"
+#ifndef _WIN32
+#include <sys/select.h>
+#endif
 
 ABSL_DECLARE_FLAG(bool, use_io_uring);
 
@@ -1179,6 +1184,26 @@ void RunAioFor(Aio &aio, std::chrono::nanoseconds duration) {
   }
 }
 
+// Helper function to fill up a pipe using OnWritable callbacks.
+// It uses select() to query writability and runs the event loop until
+// the pipe buffer is full and select() returns 0.
+void FillPipe(Aio &aio, int fd) {
+  while (true) {
+    fd_set write_fds;
+    FD_ZERO(&write_fds);
+    FD_SET(fd, &write_fds);
+    struct timeval timeout = {0, 0};
+    int ret = select(fd + 1, nullptr, &write_fds, nullptr, &timeout);
+    if (ret <= 0) {
+      break;
+    }
+    {
+      ScopedRealtime rt;
+      aio.Poll(true);
+    }
+  }
+}
+
 // Test that the basics of OnWritable work, filling the pipe's buffer.
 TEST_P(AioTest, EPollLikeBasicWritable) {
   Aio aio;
@@ -1190,13 +1215,13 @@ TEST_P(AioTest, EPollLikeBasicWritable) {
   });
 
   // First, fill up the pipe's write buffer.
-  RunAioFor(aio, std::chrono::milliseconds(50));
+  FillPipe(aio, pipe.write_fd());
   EXPECT_GT(number_writes, 0);
 
   // Now, if we try again, we shouldn't do anything because buffer is full.
   const int bytes_in_pipe = number_writes;
   number_writes = 0;
-  RunAioFor(aio, std::chrono::milliseconds(50));
+  FillPipe(aio, pipe.write_fd());
   EXPECT_EQ(number_writes, 0);
 
   // Empty the pipe, then fill it up again.
@@ -1204,7 +1229,7 @@ TEST_P(AioTest, EPollLikeBasicWritable) {
     ASSERT_EQ(" ", pipe.Read(1));
   }
   number_writes = 0;
-  RunAioFor(aio, std::chrono::milliseconds(50));
+  FillPipe(aio, pipe.write_fd());
   EXPECT_EQ(number_writes, bytes_in_pipe);
 
   aio.DeleteFd(pipe.write_fd());
