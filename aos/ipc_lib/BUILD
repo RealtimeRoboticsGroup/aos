@@ -66,6 +66,7 @@ cc_library(
     srcs = [
         "shm_mapping.cc",
     ] + select({
+        "@platforms//os:macos": ["shm_mapping_darwin.cc"],
         "@platforms//os:windows": ["shm_mapping_windows.cc"],
         "//conditions:default": ["shm_mapping_linux.cc"],
     }),
@@ -334,7 +335,6 @@ cc_library(
             hdrs = [
                 "queue_racer.h",
             ],
-            target_compatible_with = ["@platforms//os:linux"],
             deps = [
                 ":event",
                 ":lockless_queue" + suffix,
@@ -348,7 +348,6 @@ cc_library(
                 "lockless_queue_stepping.cc",
             ],
             hdrs = ["lockless_queue_stepping.h"],
-            target_compatible_with = ["@platforms//os:linux"],
             deps = [
                 ":lockless_queue" + suffix,
                 ":shm_observers",
@@ -397,7 +396,6 @@ cc_library(
                 "//conditions:default": [],
             }),
             shard_count = 10,
-            target_compatible_with = ["@platforms//os:linux"],
             deps = [
                 ":event",
                 ":lockless_queue" + suffix,
@@ -429,7 +427,6 @@ cc_library(
             srcs = ["lockless_queue_death_test.cc"],
             # We don't want all the signal handlers registered, otherwise we can't fork.
             args = ["--nobacktrace"],
-            target_compatible_with = ["@platforms//os:linux"],
             deps = [
                 ":event",
                 ":lockless_queue" + suffix,

@@ -1,5 +1,7 @@
 #include "aos/ipc_lib/lockless_queue_stepping.h"
 
+#ifdef SUPPORTS_SHM_ROBUSTNESS_TEST
+
 #include <assert.h>
 #include <elf.h>
 #include <errno.h>
@@ -29,8 +31,6 @@
 #include "aos/ipc_lib/shm_observers.h"
 #include "aos/libc/aos_strsignal.h"
 #include "aos/testing/prevent_exit.h"
-
-#ifdef SUPPORTS_SHM_ROBUSTNESS_TEST
 
 namespace aos::ipc_lib::testing {
 

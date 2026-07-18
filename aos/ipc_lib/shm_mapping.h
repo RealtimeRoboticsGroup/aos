@@ -55,10 +55,11 @@ class WritableShmMapping {
   void *data_ = nullptr;
 };
 
-// ReadOnlyShmMapping maps an existing (already-sized) file read-only, waiting
-// if necessary for the creating process to finish sizing it.  Pre-faults
-// every page so realtime code can touch the memory without faulting, and unmap
-// on destruction.
+// ReadOnlyShmMapping maps a file read-only.  It does not create one: some
+// writer must have already, or this dies -- construct the WritableShmMapping
+// first.  It does wait for a creator that has made the file but not yet sized
+// it.  Pre-faults every page so realtime code can touch the memory without
+// faulting, and unmap on destruction.
 class ReadOnlyShmMapping {
  public:
   ReadOnlyShmMapping(std::string_view path, size_t size,
