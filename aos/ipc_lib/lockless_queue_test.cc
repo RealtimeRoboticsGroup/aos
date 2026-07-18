@@ -3,7 +3,6 @@
 #include <sched.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/signalfd.h>
 
 #include <algorithm>
 #include <chrono>
@@ -22,7 +21,6 @@
 #include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 
-#include "aos/events/epoll.h"
 #include "aos/ipc_lib/event.h"
 #include "aos/ipc_lib/lockless_queue_memory.h"
 #include "aos/ipc_lib/lockless_queue_stepping.h"
@@ -152,8 +150,10 @@ TEST_F(LocklessQueueTest, TooManySenders) {
 // Now, start 2 threads and have them receive the signals.
 TEST_F(LocklessQueueTest, WakeUpThreads) {
   // Confirm that the wakeup signal is in range.
+#ifdef __linux__
   EXPECT_LE(kWakeupSignal, SIGRTMAX);
   EXPECT_GE(kWakeupSignal, SIGRTMIN);
+#endif
 
   LocklessQueueWakeUpper wake_upper(queue());
 

@@ -2,6 +2,7 @@
 
 #include "absl/flags/flag.h"
 
+#include "aos/events/aio.h"
 #include "aos/ipc_lib/signalfd.h"
 
 ABSL_FLAG(uint32_t, start_core_index, 0, "The core to start pinning on");
@@ -45,14 +46,12 @@ LocklessQueueTest::LocklessQueueTest() {
 }
 
 void LocklessQueueTest::RunUntilWakeup(Event *ready, int priority) {
-  EPoll epoll;
+  Aio aio;
   SignalFd signalfd({kWakeupSignal});
 
-  epoll.OnReadable(signalfd.fd(), [&signalfd, &epoll]() {
-    signalfd_siginfo result = signalfd.Read();
-
-    fprintf(stderr, "Got signal: %d\n", result.ssi_signo);
-    epoll.Quit();
+  aio.RegisterSignalFd(&signalfd, [&aio]() {
+    fprintf(stderr, "Got signal\n");
+    aio.Quit();
   });
 
   {
@@ -63,10 +62,10 @@ void LocklessQueueTest::RunUntilWakeup(Event *ready, int priority) {
     // And signal we are now ready.
     ready->Set();
 
-    epoll.Run();
+    aio.Run();
 
     // Cleanup, ensuring the watcher is destroyed before the signalfd.
   }
-  epoll.DeleteFd(signalfd.fd());
+  aio.UnregisterSignalFd(&signalfd);
 }
 }  // namespace aos::ipc_lib::testing

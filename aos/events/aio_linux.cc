@@ -226,6 +226,8 @@ struct Aio::Impl {
                                 std::function<void()> callback) = 0;
   virtual void UnregisterSignalFd(ipc_lib::SignalFd *sfd) = 0;
 
+  virtual void ConsumeSignalFd(ipc_lib::SignalFd *sfd) = 0;
+
   // The following methods implement the timer backend and match the behavior of
   // the corresponding Aio::Timer methods documented in aio.h.
   virtual void InitializeTimer(Aio::TimerState *state) = 0;
@@ -269,6 +271,7 @@ class IoUringImpl : public Aio::Impl {
   void RegisterSignalFd(ipc_lib::SignalFd *sfd,
                         std::function<void()> callback) override;
   void UnregisterSignalFd(ipc_lib::SignalFd *sfd) override;
+  void ConsumeSignalFd(ipc_lib::SignalFd *sfd) override;
 
   void InitializeTimer(Aio::TimerState *state) override;
   void DestroyTimer(std::unique_ptr<Aio::TimerState> state) override;
@@ -796,6 +799,20 @@ void IoUringImpl::UnregisterSignalFd(ipc_lib::SignalFd *sfd) {
   CancelRequest(&state->request, true);
 }
 
+void IoUringImpl::ConsumeSignalFd(ipc_lib::SignalFd *sfd) {
+  int fd = sfd->fd();
+  struct signalfd_siginfo siginfo;
+  while (true) {
+    ssize_t res = read(fd, &siginfo, sizeof(siginfo));
+    if (res < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+      break;
+    } else if (res < 0) {
+      ABSL_LOG(FATAL) << "Failed to read from signalfd: "
+                      << aos_strerror(errno);
+    }
+  }
+}
+
 void IoUringImpl::InitializeTimer(Aio::TimerState *state) {
   state->request.done = true;
 }
@@ -998,6 +1015,7 @@ class EpollImpl : public Aio::Impl {
   void RegisterSignalFd(ipc_lib::SignalFd *sfd,
                         std::function<void()> callback) override;
   void UnregisterSignalFd(ipc_lib::SignalFd *sfd) override;
+  void ConsumeSignalFd(ipc_lib::SignalFd *sfd) override;
 
   void InitializeTimer(Aio::TimerState *state) override;
   void DestroyTimer(std::unique_ptr<Aio::TimerState> state) override;
@@ -1566,6 +1584,20 @@ void EpollImpl::UnregisterSignalFd(ipc_lib::SignalFd *sfd) {
   DeleteFd(sfd->fd());
 }
 
+void EpollImpl::ConsumeSignalFd(ipc_lib::SignalFd *sfd) {
+  int fd = sfd->fd();
+  struct signalfd_siginfo siginfo;
+  while (true) {
+    ssize_t res = read(fd, &siginfo, sizeof(siginfo));
+    if (res < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+      break;
+    } else if (res < 0) {
+      ABSL_LOG(FATAL) << "Failed to read from signalfd: "
+                      << aos_strerror(errno);
+    }
+  }
+}
+
 void EpollImpl::InitializeTimer(Aio::TimerState *state) {
   state->timer_fd = std::make_unique<TimerFD>();
   state->request.done = true;
@@ -1798,6 +1830,10 @@ void Aio::RegisterSignalFd(ipc_lib::SignalFd *sfd,
 
 void Aio::UnregisterSignalFd(ipc_lib::SignalFd *sfd) {
   impl_->UnregisterSignalFd(sfd);
+}
+
+void Aio::ConsumeSignalFd(ipc_lib::SignalFd *sfd) {
+  impl_->ConsumeSignalFd(sfd);
 }
 
 Aio::Timer::Timer(Aio *aio) : state_(std::make_unique<Aio::TimerState>()) {

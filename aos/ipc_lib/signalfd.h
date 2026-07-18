@@ -27,10 +27,6 @@ class SignalFd {
   SignalFd &operator=(const SignalFd &) = delete;
   ~SignalFd();
 
-#if defined(__linux__)
-  // Returns the file descriptor for the signalfd.
-  int fd() { return fd_; }
-
   // Reads a signalfd_siginfo.  If there was an error, the resulting ssi_signo
   // will be 0.
   signalfd_siginfo Read();
@@ -39,12 +35,16 @@ class SignalFd {
   // helpful if the signal is sent asynchronously, such that it may arrive after
   // this object is destroyed, to ensure that doesn't kill the process.
   void LeaveSignalBlocked(unsigned int signal);
+
+#if defined(__linux__)
+  // Returns the file descriptor for the signalfd.
+  int fd() { return fd_; }
 #elif defined(_WIN32)
   HANDLE event_handle() const { return signal_.event_handle(); }
   HANDLE fd() const { return signal_.event_handle(); }
 #else
   // Fallback for non-Linux, non-Windows systems (e.g. Darwin stub)
-  int fd() const { return -1; }
+  int fd() const { return signal_number_; }
 #endif
 
  private:

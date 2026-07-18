@@ -236,6 +236,9 @@ class Aio {
   void RegisterSignalFd(ipc_lib::SignalFd *sfd, std::function<void()> callback);
   void UnregisterSignalFd(ipc_lib::SignalFd *sfd);
 
+  // Consumes/drains all pending signals for the registered SignalFd.
+  void ConsumeSignalFd(ipc_lib::SignalFd *sfd);
+
  private:
   struct Impl;
   friend class IoUringImpl;
