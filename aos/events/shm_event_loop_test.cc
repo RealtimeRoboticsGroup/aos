@@ -98,15 +98,19 @@ auto CommonParameters(bool use_io_uring) {
 }
 
 #ifdef __linux__
+#ifndef AOS_EPOLL_ONLY
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonTestIoUring, AbstractEventLoopTest,
                          CommonParameters(true));
-INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonTestEpoll, AbstractEventLoopTest,
-                         CommonParameters(false));
-
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonDeathTestIoUring,
                          AbstractEventLoopDeathTest, CommonParameters(true));
+#endif  // AOS_EPOLL_ONLY
+
+#ifndef AOS_IO_URING_ONLY
+INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonTestEpoll, AbstractEventLoopTest,
+                         CommonParameters(false));
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonDeathTestEpoll,
                          AbstractEventLoopDeathTest, CommonParameters(false));
+#endif  // AOS_IO_URING_ONLY
 #else
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonTestKQueue, AbstractEventLoopTest,
                          CommonParameters(false));
@@ -571,17 +575,25 @@ TEST_P(ShmEventLoopDeathTest, ExitHandleOutlivesEventLoop) {
 
 // TODO(austin): Test that missing a deadline with a timer recovers as expected.
 
+#if defined(AOS_EPOLL_ONLY)
+#define SHM_EVENT_LOOP_URING_VALUES ::testing::Values(false)
+#elif defined(AOS_IO_URING_ONLY)
+#define SHM_EVENT_LOOP_URING_VALUES ::testing::Values(true)
+#else
+#define SHM_EVENT_LOOP_URING_VALUES ::testing::Values(true, false)
+#endif
+
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCopyTest, ShmEventLoopTest,
                          ::testing::Combine(::testing::Values(ReadMethod::COPY),
-                                            ::testing::Values(true, false)));
+                                            SHM_EVENT_LOOP_URING_VALUES));
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopPinTest, ShmEventLoopTest,
                          ::testing::Combine(::testing::Values(ReadMethod::PIN),
-                                            ::testing::Values(true, false)));
+                                            SHM_EVENT_LOOP_URING_VALUES));
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCopyDeathTest, ShmEventLoopDeathTest,
                          ::testing::Combine(::testing::Values(ReadMethod::COPY),
-                                            ::testing::Values(true, false)));
+                                            SHM_EVENT_LOOP_URING_VALUES));
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopPinDeathTest, ShmEventLoopDeathTest,
                          ::testing::Combine(::testing::Values(ReadMethod::PIN),
-                                            ::testing::Values(true, false)));
+                                            SHM_EVENT_LOOP_URING_VALUES));
 
 }  // namespace aos::testing

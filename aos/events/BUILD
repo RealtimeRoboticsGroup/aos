@@ -495,10 +495,25 @@ cc_library(
 )
 
 cc_test(
-    name = "shm_event_loop_test",
+    name = "shm_event_loop_test_epoll",
     srcs = ["shm_event_loop_test.cc"],
     flaky = True,
+    local_defines = ["AOS_EPOLL_ONLY"],
     shard_count = 50,
+    deps = [
+        ":event_loop_param_test",
+        ":shm_event_loop",
+        ":test_message_fbs",
+    ],
+)
+
+cc_test(
+    name = "shm_event_loop_test_io_uring",
+    srcs = ["shm_event_loop_test.cc"],
+    flaky = True,
+    local_defines = ["AOS_IO_URING_ONLY"],
+    shard_count = 50,
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":event_loop_param_test",
         ":shm_event_loop",
