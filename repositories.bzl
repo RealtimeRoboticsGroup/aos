@@ -65,7 +65,6 @@ alias(
             "@aos//third_party/abseil:0002-Suppress-the-stack-trace-on-SIGABRT.patch",
         ],
         repo_mapping = {
-            "@google_benchmark": "@com_github_google_benchmark",
             "@googletest": "@com_google_googletest",
         },
         sha256 = "6e1aee535473414164bf83e4ebc40240dec71a4701f8a642d906e95bea1aea0c",
@@ -285,8 +284,10 @@ alias(
         urls = ["https://github.com/google/googletest/releases/download/v1.17.0/googletest-1.17.0.tar.gz"],
     )
 
+    # Named to match the bzlmod bazel_dep so //aos/time:time_test can reference
+    # @google_benchmark in both modes.
     http_archive(
-        name = "com_github_google_benchmark",
+        name = "google_benchmark",
         sha256 = "9631341c82bac4a288bef951f8b26b41f69021794184ece969f8473977eaa340",
         strip_prefix = "benchmark-1.9.5",
         urls = ["https://github.com/google/benchmark/archive/refs/tags/v1.9.5.tar.gz"],

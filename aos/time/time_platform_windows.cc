@@ -37,23 +37,46 @@ static uint64_t FileTimeToUnixNanos(const FILETIME &file_time) {
 static int64_t WindowsPerformanceFrequency() {
   static const int64_t frequency = [] {
     LARGE_INTEGER freq;
-    ABSL_PCHECK(QueryPerformanceFrequency(&freq) != 0);
-    ABSL_PCHECK(freq.QuadPart != 0);
+    // QueryPerformance{Counter,Frequency} report failures via their return
+    // value, not errno, so ABSL_CHECK (rather than ABSL_PCHECK) is
+    // appropriate here.
+    ABSL_CHECK(QueryPerformanceFrequency(&freq) != 0);
+    ABSL_CHECK(freq.QuadPart != 0);
     return freq.QuadPart;
   }();
   return frequency;
 }
 
+// Number of nanoseconds in a second, pulled out to a constant so the 2
+// QueryPerformanceCounter->nanoseconds conversions below are easy to compare
+// and keep in sync.
+constexpr int64_t kNanosPerSecond = 1000000000;
+
+uint64_t QueryPerformanceCounterNanos(int64_t frequency) {
+  LARGE_INTEGER counter;
+  ABSL_CHECK(QueryPerformanceCounter(&counter) != 0);
+  const absl::int128 nanos =
+      (absl::int128(counter.QuadPart) * kNanosPerSecond) / frequency;
+  return static_cast<uint64_t>(nanos);
+}
+
 }  // namespace
 
 monotonic_clock::time_point monotonic_clock::now() noexcept {
-  LARGE_INTEGER counter;
-  ABSL_PCHECK(QueryPerformanceCounter(&counter) != 0);
-
   const int64_t frequency = WindowsPerformanceFrequency();
-  absl::int128 nanos = absl::int128(counter.QuadPart) * 1000000000;
-  nanos /= frequency;
-  return time_point(std::chrono::nanoseconds(static_cast<int64_t>(nanos)));
+  uint64_t current_nanos = QueryPerformanceCounterNanos(frequency);
+
+  // The lockless queue, among other things, wants to see time go forwards each
+  // time we read it.  On Windows, the QueryPerformanceCounter resolution is
+  // typically low enough (often 100 ns) that duplicate values are common under
+  // rapid polling.  Spin until it changes to make this true.
+  static thread_local uint64_t last_nanos = 0;
+  while (current_nanos <= last_nanos) {
+    current_nanos = QueryPerformanceCounterNanos(frequency);
+  }
+  last_nanos = current_nanos;
+
+  return time_point(std::chrono::nanoseconds(current_nanos));
 }
 
 realtime_clock::time_point realtime_clock::now() noexcept {
