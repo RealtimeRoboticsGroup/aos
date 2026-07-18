@@ -53,7 +53,24 @@ monotonic_clock::time_point monotonic_clock::now() noexcept {
   const int64_t frequency = WindowsPerformanceFrequency();
   absl::int128 nanos = absl::int128(counter.QuadPart) * 1000000000;
   nanos /= frequency;
-  return time_point(std::chrono::nanoseconds(static_cast<int64_t>(nanos)));
+  uint64_t current_nanos = static_cast<uint64_t>(nanos);
+
+  // The lockless queue, among other things, wants to see time go forwards each
+  // time we read it.  On Windows, the QueryPerformanceCounter resolution is
+  // typically low enough (often 100 ns) that duplicate values are common under
+  // rapid polling.  Spin until it changes to make this true.
+  static thread_local uint64_t last_nanos = 0;
+  if (current_nanos <= last_nanos) {
+    do {
+      ABSL_PCHECK(QueryPerformanceCounter(&counter) != 0);
+      nanos = absl::int128(counter.QuadPart) * 1000000000;
+      nanos /= frequency;
+      current_nanos = static_cast<uint64_t>(nanos);
+    } while (current_nanos <= last_nanos);
+  }
+  last_nanos = current_nanos;
+
+  return time_point(std::chrono::nanoseconds(current_nanos));
 }
 
 realtime_clock::time_point realtime_clock::now() noexcept {

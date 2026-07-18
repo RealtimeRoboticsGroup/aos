@@ -4,8 +4,12 @@
 #include <sys/time.h>
 #endif
 
+#include <atomic>
 #include <memory>
+#include <thread>
+#include <vector>
 
+#include "absl/log/log.h"
 #include "gtest/gtest.h"
 
 namespace aos::time::testing {
@@ -288,3 +292,178 @@ TEST(TimeTest, ToStringTimePoints) {
 }
 
 }  // namespace aos::time::testing
+
+#ifdef __APPLE__
+#include <mach/mach_time.h>
+#endif
+#include <benchmark/benchmark.h>
+
+static void BM_MonotonicClockNow(benchmark::State &state) {
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(aos::monotonic_clock::now());
+  }
+}
+BENCHMARK(BM_MonotonicClockNow);
+
+static void BM_RealtimeClockNow(benchmark::State &state) {
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(aos::realtime_clock::now());
+  }
+}
+BENCHMARK(BM_RealtimeClockNow);
+
+#ifdef __APPLE__
+static void BM_MachAbsoluteTime(benchmark::State &state) {
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(mach_absolute_time());
+  }
+}
+BENCHMARK(BM_MachAbsoluteTime);
+
+static void BM_ClockGetTimeNsecNpMonotonicRaw(benchmark::State &state) {
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW));
+  }
+}
+BENCHMARK(BM_ClockGetTimeNsecNpMonotonicRaw);
+#endif
+
+#if !defined(_WIN32)
+static void BM_ClockGetTimeMonotonic(benchmark::State &state) {
+  for (auto _ : state) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    benchmark::DoNotOptimize(ts);
+  }
+}
+BENCHMARK(BM_ClockGetTimeMonotonic);
+#endif
+
+// Benchmark of various clock APIs using the Google Benchmark library.
+TEST(TimeTest, ClockBenchmark) {
+  int argc = 1;
+  char *argv[] = {(char *)"time_test"};
+  benchmark::Initialize(&argc, argv);
+  benchmark::RunSpecifiedBenchmarks();
+}
+
+// Concurrency test for monotonic_clock::now()
+TEST(TimeTest, MonotonicClockConcurrency) {
+  const int kNumThreads = 8;
+  const int kIterations = 100000;
+  std::atomic<uint64_t> max_time{0};
+  std::atomic<bool> error{false};
+
+  std::vector<std::thread> threads;
+  for (int i = 0; i < kNumThreads; ++i) {
+    threads.emplace_back([&]() {
+      uint64_t local_last = 0;
+      for (int j = 0; j < kIterations; ++j) {
+        uint64_t now = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                           aos::monotonic_clock::now().time_since_epoch())
+                           .count();
+        if (now <= local_last) {
+          error.store(true);
+        }
+        local_last = now;
+
+        uint64_t current_max = max_time.load(std::memory_order_relaxed);
+        while (now > current_max) {
+          if (max_time.compare_exchange_weak(current_max, now,
+                                             std::memory_order_relaxed,
+                                             std::memory_order_relaxed)) {
+            break;
+          }
+        }
+      }
+    });
+  }
+  for (auto &t : threads) {
+    t.join();
+  }
+
+  EXPECT_FALSE(error.load())
+      << "Time was observed going backward or remaining equal in a thread!";
+}
+
+// Measure and print the effective granularity (min non-zero delta) of raw and
+// adjusted clocks.
+TEST(TimeTest, MonotonicClockGranularity) {
+#ifdef __APPLE__
+  mach_timebase_info_data_t info;
+  mach_timebase_info(&info);
+  LOG(INFO) << "Mach Timebase Numerator:   " << info.numer;
+  LOG(INFO) << "Mach Timebase Denominator: " << info.denom;
+  LOG(INFO) << "Tick duration (numer/denom): "
+            << (double)info.numer / info.denom << " ns";
+#endif
+
+  const int kIterations = 1000000;
+
+  // Measure granularity of the atomic-adjusted clock.
+  {
+    uint64_t min_non_zero_diff = -1ULL;
+    uint64_t last = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                        aos::monotonic_clock::now().time_since_epoch())
+                        .count();
+    for (int i = 0; i < kIterations; ++i) {
+      uint64_t current = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                             aos::monotonic_clock::now().time_since_epoch())
+                             .count();
+      if (current > last) {
+        uint64_t diff = current - last;
+        if (diff < min_non_zero_diff) {
+          min_non_zero_diff = diff;
+        }
+      }
+      last = current;
+    }
+    LOG(INFO) << "Monotonic Clock Effective Granularity (adjusted): "
+              << min_non_zero_diff << " ns";
+    EXPECT_GT(min_non_zero_diff, 0U);
+  }
+
+#ifdef __APPLE__
+  // Measure granularity of the raw CLOCK_UPTIME_RAW clock.
+  {
+    uint64_t min_non_zero_diff = -1ULL;
+    uint64_t last = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
+    for (int i = 0; i < kIterations; ++i) {
+      uint64_t current = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
+      if (current > last) {
+        uint64_t diff = current - last;
+        if (diff < min_non_zero_diff) {
+          min_non_zero_diff = diff;
+        }
+      }
+      last = current;
+    }
+    LOG(INFO) << "Raw CLOCK_UPTIME_RAW Granularity:                 "
+              << min_non_zero_diff << " ns";
+    EXPECT_GT(min_non_zero_diff, 0U);
+  }
+#endif
+
+  // Measure granularity of the realtime clock.
+  {
+    uint64_t min_non_zero_diff = -1ULL;
+    uint64_t last = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                        aos::realtime_clock::now().time_since_epoch())
+                        .count();
+    for (int i = 0; i < kIterations; ++i) {
+      uint64_t current = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                             aos::realtime_clock::now().time_since_epoch())
+                             .count();
+      if (current > last) {
+        uint64_t diff = current - last;
+        if (diff < min_non_zero_diff) {
+          min_non_zero_diff = diff;
+        }
+      }
+      last = current;
+    }
+    LOG(INFO) << "Realtime Clock Granularity:                       "
+              << min_non_zero_diff << " ns";
+    EXPECT_GT(min_non_zero_diff, 0U);
+  }
+}

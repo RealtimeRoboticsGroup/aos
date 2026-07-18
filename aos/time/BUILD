@@ -42,5 +42,7 @@ cc_test(
         "//aos/logging",
         "//aos/testing:googletest",
         "//aos/util:death_test_log_implementation",
+        "@com_google_absl//absl/log",
+        "@google_benchmark//:benchmark",
     ],
 )

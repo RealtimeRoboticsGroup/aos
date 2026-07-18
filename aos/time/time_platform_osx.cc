@@ -1,6 +1,7 @@
 #include <mach/mach.h>
 #include <mach/mach_time.h>
 
+#include <atomic>
 #include <chrono>
 #include <cstdint>
 
@@ -26,17 +27,26 @@ const mach_timebase_info_data_t &MachTimebaseInfo() {
 }  // namespace
 
 monotonic_clock::time_point monotonic_clock::now() noexcept {
-  const mach_timebase_info_data_t &timebase_info = MachTimebaseInfo();
-  uint64_t current_nanos = static_cast<uint64_t>(
-      (absl::uint128(mach_absolute_time()) * timebase_info.numer) /
-      timebase_info.denom);
+  uint64_t current_nanos = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
+
+  // The lockless queue, among other things, wants to see time go forwards each
+  // time we read it. That isn't a crazy request.  On OSX, the timer resolution
+  // is 41.66ns (24 mhz), and it takes about 10 ns to read the clock.  Spin
+  // until it changes to make this true.
+  static thread_local uint64_t last_nanos = 0;
+  if (current_nanos <= last_nanos) {
+    do {
+      current_nanos = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
+    } while (current_nanos <= last_nanos);
+  }
+  last_nanos = current_nanos;
+
   return time_point(std::chrono::nanoseconds(current_nanos));
 }
 
 realtime_clock::time_point realtime_clock::now() noexcept {
-  auto now = std::chrono::system_clock::now().time_since_epoch();
   return realtime_clock::time_point(
-      std::chrono::duration_cast<std::chrono::nanoseconds>(now));
+      std::chrono::nanoseconds(clock_gettime_nsec_np(CLOCK_REALTIME)));
 }
 
 namespace this_thread {
