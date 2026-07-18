@@ -12,7 +12,7 @@
 
 namespace aos::ipc_lib::testing {
 
-#if defined(__ARM_EABI__)
+#if !defined(__linux__) || !defined(__x86_64__)
 // There are various reasons why we might not actually be able to do this
 // testing, but we still want to run the functions to test anything they test
 // other than shm robustness.
