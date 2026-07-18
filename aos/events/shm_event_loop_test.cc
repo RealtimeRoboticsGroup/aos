@@ -97,6 +97,7 @@ auto CommonParameters(bool use_io_uring) {
       ::testing::Values(DoTimingReports::kYes, DoTimingReports::kNo));
 }
 
+#ifdef __linux__
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonTestIoUring, AbstractEventLoopTest,
                          CommonParameters(true));
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonTestEpoll, AbstractEventLoopTest,
@@ -106,12 +107,22 @@ INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonDeathTestIoUring,
                          AbstractEventLoopDeathTest, CommonParameters(true));
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonDeathTestEpoll,
                          AbstractEventLoopDeathTest, CommonParameters(false));
+#else
+INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonTestKQueue, AbstractEventLoopTest,
+                         CommonParameters(false));
+INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonDeathTestKQueue,
+                         AbstractEventLoopDeathTest, CommonParameters(false));
+#endif
 
 }  // namespace
 
 bool IsRealtime() {
+#if defined(__linux__)
   int scheduler;
   PCHECK((scheduler = sched_getscheduler(0)) != -1);
+#else
+  int scheduler = aos::GetCurrentThreadSchedulingPolicy();
+#endif
 
   {
     // If we are RT, logging the scheduler will crash us.  Mark that we just

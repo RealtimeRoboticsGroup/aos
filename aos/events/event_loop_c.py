@@ -195,5 +195,9 @@ void aos_error_destroy(aos_error_t *self);
 int aos_error_code(aos_error_t *self);
 """)
 
-lib_path = locate("aos/aos/events/libevent_loop_c.so")
+import platform
+if platform.system() == "Darwin":
+    lib_path = locate("aos/aos/events/libevent_loop_c.dylib")
+else:
+    lib_path = locate("aos/aos/events/libevent_loop_c.so")
 lib = ffi.dlopen(str(lib_path))
