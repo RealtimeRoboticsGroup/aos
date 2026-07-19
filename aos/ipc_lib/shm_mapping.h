@@ -21,6 +21,12 @@ long SystemPageSize();
 void PageFaultDataWrite(char *data, size_t size, const long page_size);
 void PageFaultDataRead(const char *data, size_t size, const long page_size);
 
+// Removes the shared memory a mapping of `path` would use, so the next
+// WritableShmMapping of it starts from a new, zeroed one.  Mappings already
+// made keep the old memory.  Returns false if there was nothing to remove or
+// it could not be removed.
+bool UnlinkShm(std::string_view path);
+
 // RAII wrappers around a shared-memory-backed file mapped into this process.
 //
 // Lifetime is part of the contract, not an implementation detail: the contents

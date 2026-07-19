@@ -1,5 +1,11 @@
 #include "aos/events/shm_event_loop.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+#include <atomic>
+#include <chrono>
 #include <string_view>
 #include <thread>
 
@@ -11,6 +17,8 @@
 
 #include "aos/events/event_loop_param_test.h"
 #include "aos/events/test_message_generated.h"
+#include "aos/ipc_lib/memory_mapped_queue.h"
+#include "aos/ipc_lib/shm_mapping.h"
 #include "aos/network/team_number.h"
 #include "aos/realtime.h"
 
@@ -20,6 +28,15 @@ namespace aos::testing {
 namespace {
 namespace chrono = ::std::chrono;
 
+// Unlinks the test's queues under --shm_base.  Only this test's own channels,
+// since run outside bazel the shm base is the live system's.
+void EmptyQueues(const Configuration *configuration) {
+  const std::string shm_base = absl::GetFlag(FLAGS_shm_base);
+  for (const Channel *channel : *configuration->channels()) {
+    ipc_lib::UnlinkShm(ipc_lib::ShmPath(shm_base, channel));
+  }
+}
+
 class ShmEventLoopTestFactory : public EventLoopTestFactory {
  public:
   // The backend name --aio_backend takes, rather than a bool, so adding a
@@ -27,24 +44,13 @@ class ShmEventLoopTestFactory : public EventLoopTestFactory {
   explicit ShmEventLoopTestFactory(std::string backend = "io_uring")
       : backend_(std::move(backend)) {
     // Clean up anything left there before.
-    unlink(
-        (absl::GetFlag(FLAGS_shm_base) + "/test/aos.TestMessage.v8").c_str());
-    unlink(
-        (absl::GetFlag(FLAGS_shm_base) + "/test1/aos.TestMessage.v8").c_str());
-    unlink(
-        (absl::GetFlag(FLAGS_shm_base) + "/test2/aos.TestMessage.v8").c_str());
-    unlink(
-        (absl::GetFlag(FLAGS_shm_base) + "/test3/aos.TestMessage.v8").c_str());
-    unlink(
-        (absl::GetFlag(FLAGS_shm_base) + "/test/too_small/aos.TestMessage.v8")
-            .c_str());
-    unlink(
-        (absl::GetFlag(FLAGS_shm_base) + "/aos/aos.timing.Report.v8").c_str());
-    unlink((absl::GetFlag(FLAGS_shm_base) + "/aos/aos.logging.LogMessageFbs.v8")
-               .c_str());
+    EmptyQueues(configuration());
   }
 
-  ~ShmEventLoopTestFactory() { absl::SetFlag(&FLAGS_override_hostname, ""); }
+  ~ShmEventLoopTestFactory() {
+    absl::SetFlag(&FLAGS_override_hostname, "");
+    EmptyQueues(configuration());
+  }
 
   ::std::unique_ptr<EventLoop> Make(std::string_view name) override {
     absl::SetFlag(&FLAGS_aio_backend, backend_);
@@ -118,6 +124,11 @@ INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonTestEpoll, AbstractEventLoopTest,
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonDeathTestEpoll,
                          AbstractEventLoopDeathTest, CommonParameters("epoll"));
 #endif  // AOS_IO_URING_ONLY
+#elif defined(_WIN32)
+INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonTestIocp, AbstractEventLoopTest,
+                         CommonParameters("iocp"));
+INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonDeathTestIocp,
+                         AbstractEventLoopDeathTest, CommonParameters("iocp"));
 #else
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonTestKQueue, AbstractEventLoopTest,
                          CommonParameters("kqueue"));
@@ -129,11 +140,11 @@ INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonDeathTestKQueue,
 }  // namespace
 
 bool IsRealtime() {
-#if defined(__linux__)
   int scheduler;
+#if defined(__linux__)
   ABSL_PCHECK((scheduler = sched_getscheduler(0)) != -1);
 #else
-  int scheduler = aos::GetCurrentThreadSchedulingPolicy();
+  scheduler = aos::GetCurrentThreadSchedulingPolicy();
 #endif
 
   {
@@ -176,6 +187,12 @@ class ShmEventLoopTest
     auto loop2 = factory()->Make("loop2");
     auto sender = loop2->MakeSender<TestMessage>("/test");
     bool ran = false;
+    // Set just before the death test.  Where gtest cannot fork (Windows) the
+    // death test runs this whole test again in a child process, so the
+    // statement takes as long as the test has so far, and the phased loop
+    // would make up all of those periods in one burst after it, faster than
+    // the channel allows.
+    bool stop_sending = false;
     // AddPhasedLoop()'s callback takes the number of cycles elapsed since
     // the last call: normally 1, but more if a scheduling delay made this
     // invocation late enough to skip one or more periods.  Sending that
@@ -186,7 +203,10 @@ class ShmEventLoopTest
     // the deadline assumes a specific number of messages have been sent by
     // then.
     loop1->AddPhasedLoop(
-        [&sender](int cycles) {
+        [&sender, &stop_sending](int cycles) {
+          if (stop_sending) {
+            return;
+          }
           for (int i = 0; i < cycles; ++i) {
             auto builder = sender.MakeBuilder();
             TestMessage::Builder test_builder(*builder.fbb());
@@ -203,7 +223,8 @@ class ShmEventLoopTest
     // this deadline only needs a small margin over the 3.2s minimum, not a
     // large one hedging against lost messages.
     loop1
-        ->AddTimer([this, &fetcher, &ran]() {
+        ->AddTimer([this, &fetcher, &ran, &stop_sending]() {
+          stop_sending = true;
           EXPECT_DEATH(fetcher.FetchNext(),
                        "The next message is no longer "
                        "available.*\"/test\".*\"aos\\.TestMessage\"");
@@ -271,6 +292,79 @@ TEST_P(ShmEventLoopTest, SendBeforeRun) {
   static_cast<ShmEventLoop *>(loop2.get())->Exit();
   loop2_thread.join();
 }
+
+#if defined(_WIN32)
+namespace {
+
+// The event loop HoldCtrlC() stops.
+std::atomic<ShmEventLoop *> ctrl_c_loop{nullptr};
+
+// A console control handler that stops ctrl_c_loop, then holds the dispatch
+// long enough for Run() to return and the event loop to unregister while it
+// is still in progress, before passing the event on.
+BOOL WINAPI HoldCtrlC(DWORD) {
+  ctrl_c_loop.load()->Exit();
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+  return FALSE;
+}
+
+}  // namespace
+
+// A real console Ctrl-C stops a running event loop, even one with nothing due
+// to wake it.  Under Python the CRT's handler only sets a flag, so this is
+// also what lets Ctrl-C stop a Python ShmEventLoop that is watching quiet
+// channels.
+//
+// With hold, the last event loop unregisters while a dispatch is still in
+// progress, which deadlocked when that removed the handler: Windows holds its
+// handler-list lock for the whole dispatch.
+TEST_P(ShmEventLoopTest, ConsoleCtrlCExitsRun) {
+  // In a death-test child, which on Windows is a fresh process running only
+  // this test: a console of its own, so the event reaches it and nothing
+  // else, and no event loop registered before the console changed, which
+  // would have lost the handler with the old console.
+  const auto child = [this](bool hold) {
+    FreeConsole();
+    ABSL_CHECK(AllocConsole()) << GetLastError();
+    ABSL_CHECK(SetConsoleCtrlHandler(nullptr, FALSE)) << GetLastError();
+
+    std::unique_ptr<EventLoop> loop = factory()->MakePrimary("primary");
+    loop->MakeWatcher("/test", [](const TestMessage &) {});
+    std::atomic<bool> gave_up{false};
+    TimerHandler *const give_up = loop->AddTimer([&]() {
+      gave_up = true;
+      factory()->Exit();
+    });
+    loop->OnRun([&]() {
+      give_up->Schedule(loop->monotonic_now() + std::chrono::seconds(10));
+      if (hold) {
+        // Added after the event loop's own handler, so it runs first.
+        ctrl_c_loop = static_cast<ShmEventLoop *>(loop.get());
+        ABSL_CHECK(SetConsoleCtrlHandler(&HoldCtrlC, TRUE)) << GetLastError();
+      }
+      ABSL_CHECK(GenerateConsoleCtrlEvent(CTRL_C_EVENT, 0)) << GetLastError();
+    });
+    (void)factory()->Run();
+    std::exit(gave_up ? 1 : 0);
+  };
+  EXPECT_EXIT(child(false), ::testing::ExitedWithCode(0), "")
+      << "Ctrl-C did not stop the event loop";
+  EXPECT_EXIT(child(true), ::testing::ExitedWithCode(0), "")
+      << "Ctrl-C deadlocked against the event loop unregistering";
+}
+
+// Only an absolute --shm_base means one directory to every process.
+TEST_P(ShmEventLoopDeathTest, ShmBaseThatIsNotAbsoluteDies) {
+  for (const char *shm_base : {"/dev/shm/aos", "D:aos"}) {
+    EXPECT_DEATH(
+        {
+          absl::SetFlag(&FLAGS_shm_base, shm_base);
+          ShmEventLoop loop(factory()->configuration());
+        },
+        "is not absolute on Windows");
+  }
+}
+#endif  // _WIN32
 
 // Tests that every handler type is realtime and runs.  There are threads
 // involved and it's easy to miss one.
@@ -663,14 +757,21 @@ TEST_P(ShmEventLoopTest, TimerFromAnotherThreadAfterRun) {
 
 // TODO(austin): Test that missing a deadline with a timer recovers as expected.
 
-// The AOS_*_ONLY splits only mean something on Linux; elsewhere the epoll
-// target runs the platform's own backend, as CommonParameters() above does.
+// The trailing parameter is the name of the backend to run.  On Linux,
+// AOS_EPOLL_ONLY / AOS_IO_URING_ONLY split io_uring and epoll into separate
+// test targets that run in parallel; the plain Linux build runs both.  Every
+// other platform has a single backend, so it instantiates just that one.  The
+// AOS_*_ONLY splits only mean something on Linux; elsewhere the epoll target
+// runs the platform's own backend, as CommonParameters() above does.
 #if defined(__linux__) && defined(AOS_EPOLL_ONLY)
 #define SHM_EVENT_LOOP_BACKENDS ::testing::Values("epoll")
 #elif defined(__linux__) && defined(AOS_IO_URING_ONLY)
 #define SHM_EVENT_LOOP_BACKENDS ::testing::Values("io_uring")
 #elif defined(__linux__)
 #define SHM_EVENT_LOOP_BACKENDS ::testing::Values("io_uring", "epoll")
+#elif defined(_WIN32)
+// Windows has only iocp, and --aio_backend is fatal on any other name.
+#define SHM_EVENT_LOOP_BACKENDS ::testing::Values("iocp")
 #else
 // macOS has only kqueue, and --aio_backend is fatal on any other name.
 #define SHM_EVENT_LOOP_BACKENDS ::testing::Values("kqueue")

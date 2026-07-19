@@ -17,8 +17,9 @@ def locate(relative_path):
         raise ValueError(
             f"Expected relative path that starts with a repository, got absolute path: {relative_path}"
         )
-    absolute_path = _RUNFILES.Rlocation(str(relative_path))
-    if absolute_path is None or not absolute_path.startswith("/"):
+    # Rlocation() takes forward slashes on every platform.
+    absolute_path = _RUNFILES.Rlocation(relative_path.as_posix())
+    if absolute_path is None or not os.path.isabs(absolute_path):
         raise FileNotFoundError(
             f"Failed to locate {relative_path}, got {absolute_path}")
     if not os.path.exists(absolute_path):
@@ -126,11 +127,11 @@ aos_exit_handle_t *aos_shm_event_loop_make_exit_handle(aos_event_loop_t *self);
 void aos_shm_event_loop_set_name(aos_event_loop_t *self, const char *name_data,
                                  size_t name_size);
 void aos_shm_event_loop_lock_to_thread(aos_event_loop_t *self);
-void aos_shm_event_loop_on_fd_events(aos_event_loop_t *self, int fd,
+void aos_shm_event_loop_on_fd_events(aos_event_loop_t *self, intptr_t fd,
                                      aos_shm_event_loop_fd_callback_t callback,
                                      void *user_data);
-void aos_shm_event_loop_delete_fd(aos_event_loop_t *self, int fd);
-void aos_shm_event_loop_set_fd_events(aos_event_loop_t *self, int fd,
+void aos_shm_event_loop_delete_fd(aos_event_loop_t *self, intptr_t fd);
+void aos_shm_event_loop_set_fd_events(aos_event_loop_t *self, intptr_t fd,
                                       uint32_t events);
 aos_event_loop_t *aos_shm_event_loop_create(
     const aos_configuration_t *configuration);
@@ -223,6 +224,9 @@ int aos_error_code(aos_error_t *self);
 import platform
 if platform.system() == "Darwin":
     lib_path = locate("aos/aos/events/libevent_loop_c.dylib")
+elif platform.system() == "Windows":
+    # MSVC names a linkshared cc_binary <name>.dll, with no lib prefix.
+    lib_path = locate("aos/aos/events/event_loop_c.dll")
 else:
     lib_path = locate("aos/aos/events/libevent_loop_c.so")
 lib = ffi.dlopen(str(lib_path))

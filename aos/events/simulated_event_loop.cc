@@ -19,6 +19,7 @@
 #include "aos/events/simulated_network_bridge.h"
 #include "aos/init.h"
 #include "aos/json_to_flatbuffer.h"
+#include "aos/macros.h"
 #include "aos/realtime.h"
 #include "aos/sanitizers.h"
 #include "aos/util/phased_loop.h"
@@ -179,7 +180,8 @@ int GetRuntimeRealtimePriority(SchedulingPolicy policy, int priority) {
     case SchedulingPolicy::SCHEDULER_OTHER:
       return 0;
   }
-  ABSL_LOG(FATAL) << "Unreachable.";
+  ABSL_LOG(FATAL) << "Unknown scheduling policy " << static_cast<int>(policy);
+  AOS_UNREACHABLE();
 }
 
 // Container for both a message, and the context for it for simulation.  This

@@ -407,27 +407,43 @@ void aos_shm_event_loop_lock_to_thread(aos_event_loop_t *self) {
   event_loop->LockToThread();
 }
 
-void aos_shm_event_loop_on_fd_events(aos_event_loop_t *self, int fd,
+namespace {
+
+// The C API's widened descriptor, back to what Aio takes on this platform.
+aos::FileDescriptor ToFileDescriptor(intptr_t fd) {
+#if defined(_WIN32)
+  return reinterpret_cast<aos::FileDescriptor>(fd);
+#else
+  // An int was the old signature, where cffi refused anything out of range.
+  ABSL_CHECK_EQ(static_cast<intptr_t>(static_cast<int>(fd)), fd)
+      << ": not a file descriptor";
+  return static_cast<aos::FileDescriptor>(fd);
+#endif
+}
+
+}  // namespace
+
+void aos_shm_event_loop_on_fd_events(aos_event_loop_t *self, intptr_t fd,
                                      aos_shm_event_loop_fd_callback_t callback,
                                      void *user_data) {
   aos::ShmEventLoop *event_loop = static_cast<aos::ShmEventLoop *>(
       reinterpret_cast<aos::EventLoop *>(ABSL_DIE_IF_NULL(self)));
-  event_loop->aio()->OnEvents(fd, [callback, user_data](uint32_t events) {
-    callback(user_data, events);
-  });
+  event_loop->aio()->OnEvents(
+      ToFileDescriptor(fd),
+      [callback, user_data](uint32_t events) { callback(user_data, events); });
 }
 
-void aos_shm_event_loop_delete_fd(aos_event_loop_t *self, int fd) {
+void aos_shm_event_loop_delete_fd(aos_event_loop_t *self, intptr_t fd) {
   aos::ShmEventLoop *event_loop = static_cast<aos::ShmEventLoop *>(
       reinterpret_cast<aos::EventLoop *>(ABSL_DIE_IF_NULL(self)));
-  event_loop->aio()->DeleteFd(fd);
+  event_loop->aio()->DeleteFd(ToFileDescriptor(fd));
 }
 
-void aos_shm_event_loop_set_fd_events(aos_event_loop_t *self, int fd,
+void aos_shm_event_loop_set_fd_events(aos_event_loop_t *self, intptr_t fd,
                                       uint32_t events) {
   aos::ShmEventLoop *event_loop = static_cast<aos::ShmEventLoop *>(
       reinterpret_cast<aos::EventLoop *>(ABSL_DIE_IF_NULL(self)));
-  event_loop->aio()->SetEvents(fd, events);
+  event_loop->aio()->SetEvents(ToFileDescriptor(fd), events);
 }
 
 aos_event_loop_t *aos_shm_event_loop_create(

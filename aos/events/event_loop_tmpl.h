@@ -8,6 +8,7 @@
 #include "absl/log/absl_check.h"
 
 #include "aos/events/event_loop.h"
+#include "aos/macros.h"
 
 namespace aos {
 namespace event_loop_internal {
@@ -125,6 +126,7 @@ inline bool RawFetcher::ConvertReaderResultToBoolOrDie(Result result) {
                       << (result == Result::TOO_OLD ? "TOO_OLD" : "OVERWROTE");
   }
   ABSL_LOG(FATAL) << "Unreachable.";
+  AOS_UNREACHABLE();
 }
 
 inline bool RawFetcher::FetchNextIf(std::function<bool(const Context &)> fn) {

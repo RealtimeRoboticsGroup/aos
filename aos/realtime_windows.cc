@@ -43,6 +43,12 @@ thread_local CpuSet thread_affinity = DefaultAffinity();
 
 bool GetIsRealtime() { return is_realtime; }
 
+// AOS locks no memory here, and the priorities this platform can offer are
+// handed out by SetCurrentThreadRealtimePriority() without any process-wide
+// limits to raise first.  That leaves only the misuse check InitRT() makes
+// everywhere else.
+void InitRT() { CheckNotRealtime(); }
+
 void SetIsRealtime(bool realtime) { is_realtime = realtime; }
 
 void UnsetCurrentThreadRealtimePriority() {

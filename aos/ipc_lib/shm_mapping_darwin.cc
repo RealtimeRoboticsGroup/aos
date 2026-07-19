@@ -23,21 +23,32 @@ long SystemPageSize() { return sysconf(_SC_PAGESIZE); }
 
 namespace {
 
+// macOS has no /dev/shm, so a path under it names a POSIX shared memory
+// object instead of a file.
+bool UsesPosixShm(std::string_view path) {
+  return path.starts_with("/dev/shm/");
+}
+
+// The POSIX shared memory object for a path under /dev/shm: "/aos_<hash>",
+// because those names are short and flat.
+std::string PosixShmName(std::string_view path) {
+  const uint64_t hash_val = std::hash<std::string_view>{}(path);
+  char name_buf[32];
+  std::snprintf(name_buf, sizeof(name_buf), "/aos_%016llx",
+                static_cast<unsigned long long>(hash_val));
+  return name_buf;
+}
+
 void *MapShm(std::string_view path, size_t size,
              std::filesystem::perms permissions, bool writable) {
-  bool use_posix_shm = path.starts_with("/dev/shm/");
+  bool use_posix_shm = UsesPosixShm(path);
 
   int fd = -1;
   bool created = false;
   std::string path_str(path);
 
   if (use_posix_shm) {
-    // Format a unique name: "/aos_<hash>"
-    uint64_t hash_val = std::hash<std::string_view>{}(path);
-    char name_buf[32];
-    std::snprintf(name_buf, sizeof(name_buf), "/aos_%016llx",
-                  static_cast<unsigned long long>(hash_val));
-    std::string posix_shm_name(name_buf);
+    const std::string posix_shm_name = PosixShmName(path);
 
     if (writable) {
       // The same protocol as shm_mapping_linux.cc: create it exclusively, and
@@ -140,6 +151,13 @@ ReadOnlyShmMapping::ReadOnlyShmMapping(std::string_view path, size_t size,
 
 ReadOnlyShmMapping::~ReadOnlyShmMapping() {
   ABSL_PCHECK(munmap(const_cast<void *>(data_), size_) == 0);
+}
+
+bool UnlinkShm(std::string_view path) {
+  if (UsesPosixShm(path)) {
+    return shm_unlink(PosixShmName(path).c_str()) == 0;
+  }
+  return unlink(std::string(path).c_str()) == 0;
 }
 
 }  // namespace aos::ipc_lib

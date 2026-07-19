@@ -57,14 +57,6 @@ const Node *MaybeMyNode(const Configuration *configuration) {
   return configuration::GetMyNode(configuration);
 }
 
-void IgnoreWakeupSignal() {
-  struct sigaction action;
-  action.sa_handler = SIG_IGN;
-  ABSL_PCHECK(sigemptyset(&action.sa_mask) == 0);
-  action.sa_flags = 0;
-  ABSL_PCHECK(sigaction(ipc_lib::kWakeupSignal, &action, nullptr) == 0);
-}
-
 // Returns true if the given scheduling policy is realtime.
 bool SchedulingPolicyIsRealtime(SchedulingPolicy policy) {
   return policy == SchedulingPolicy::SCHEDULER_FIFO ||
@@ -84,7 +76,7 @@ ShmEventLoop::ShmEventLoop(const Configuration *configuration)
     : EventLoop(configuration, absl::GetFlag(FLAGS_application_name),
                 MaybeMyNode(configuration)),
       boot_uuid_(UUID::BootUUID()),
-      shm_base_(absl::GetFlag(FLAGS_shm_base)) {
+      shm_base_(ShmBase()) {
   // Ignore the wakeup signal by default. Otherwise, we have race conditions on
   // shutdown where a wakeup signal will uncleanly terminate the process.
   // See LocklessQueueWakeUpper::Wakeup() for some more information.
@@ -454,6 +446,7 @@ class ShmSender : public RawSender {
     ABSL_LOG(FATAL) << "Failed to create sender on "
                     << configuration::CleanedChannelToString(channel)
                     << ", too many senders.";
+    AOS_UNREACHABLE();
   }
 
   void *data() override {
@@ -542,6 +535,7 @@ class ShmSender : public RawSender {
     }
     ABSL_LOG(FATAL) << "Unknown lockless queue sender result"
                     << static_cast<int>(result);
+    AOS_UNREACHABLE();
   }
 
   ipc_lib::MemoryMappedQueue lockless_queue_memory_;
@@ -1021,108 +1015,10 @@ void ShmEventLoop::HandleEvent() {
   }
 }
 
-// RAII class to mask signals.
-class ScopedSignalMask {
- public:
-  ScopedSignalMask(std::initializer_list<int> signals) {
-    sigset_t sigset;
-    ABSL_PCHECK(sigemptyset(&sigset) == 0);
-    for (int signal : signals) {
-      ABSL_PCHECK(sigaddset(&sigset, signal) == 0);
-    }
-
-    ABSL_PCHECK(sigprocmask(SIG_BLOCK, &sigset, &old_) == 0);
-  }
-
-  ~ScopedSignalMask() {
-    ABSL_PCHECK(sigprocmask(SIG_SETMASK, &old_, nullptr) == 0);
-  }
-
- private:
-  sigset_t old_;
-};
-
-// Class to manage the static state associated with killing multiple event
-// loops.
-class SignalHandler {
- public:
-  // Gets the singleton.  It is never destroyed, because an event loop on
-  // another thread can still be registered, or a signal can still arrive, while
-  // the process exits.
-  static SignalHandler *global() {
-    static SignalHandler *const loop = new SignalHandler();
-    return loop;
-  }
-
-  // Handles the signal with the singleton.
-  static void HandleSignal(int) { global()->DoHandleSignal(); }
-
-  // Registers an event loop to receive Exit() calls.
-  void Register(ShmEventLoop *event_loop) {
-    // Block signals while we have the mutex so we never race with the signal
-    // handler.
-    ScopedSignalMask mask({SIGINT, SIGHUP, SIGTERM});
-    std::unique_lock<stl_mutex> locker(mutex_);
-    if (event_loops_.size() == 0) {
-      // The first caller registers the signal handler.
-      struct sigaction new_action;
-      sigemptyset(&new_action.sa_mask);
-      // This makes it so that 2 control c's to a stuck process will kill it by
-      // restoring the original signal handler.
-      new_action.sa_flags = SA_RESETHAND;
-      new_action.sa_handler = &HandleSignal;
-
-      ABSL_PCHECK(sigaction(SIGINT, &new_action, &old_action_int_) == 0);
-      ABSL_PCHECK(sigaction(SIGHUP, &new_action, &old_action_hup_) == 0);
-      ABSL_PCHECK(sigaction(SIGTERM, &new_action, &old_action_term_) == 0);
-    }
-
-    event_loops_.push_back(event_loop);
-  }
-
-  // Unregisters an event loop to receive Exit() calls.
-  void Unregister(ShmEventLoop *event_loop) {
-    // Block signals while we have the mutex so we never race with the signal
-    // handler.
-    ScopedSignalMask mask({SIGINT, SIGHUP, SIGTERM});
-    std::unique_lock<stl_mutex> locker(mutex_);
-
-    event_loops_.erase(
-        std::find(event_loops_.begin(), event_loops_.end(), event_loop));
-
-    if (event_loops_.size() == 0u) {
-      // The last caller restores the original signal handlers.
-      ABSL_PCHECK(sigaction(SIGINT, &old_action_int_, nullptr) == 0);
-      ABSL_PCHECK(sigaction(SIGHUP, &old_action_hup_, nullptr) == 0);
-      ABSL_PCHECK(sigaction(SIGTERM, &old_action_term_, nullptr) == 0);
-    }
-  }
-
- private:
-  void DoHandleSignal() {
-    // We block signals while grabbing the lock, so there should never be a
-    // race.  Confirm that this is true using trylock.
-    ABSL_CHECK(mutex_.try_lock())
-        << ": sigprocmask failed to block signals while "
-           "modifing the event loop list.";
-    for (ShmEventLoop *event_loop : event_loops_) {
-      event_loop->Exit();
-    }
-    mutex_.unlock();
-  }
-
-  // Mutex to protect all state.
-  stl_mutex mutex_;
-  std::vector<ShmEventLoop *> event_loops_;
-  struct sigaction old_action_int_;
-  struct sigaction old_action_hup_;
-  struct sigaction old_action_term_;
-};
-
 Status ShmEventLoop::Run() {
   CheckCurrentThread();
   loop_thread_ = std::this_thread::get_id();
-  SignalHandler::global()->Register(this);
+  RegisterSignalHandler();
 
   if (watchers_.size() > 0) {
     signal_receiver_.reset(new ipc_lib::ThreadSignalReceiver());
@@ -1226,7 +1122,7 @@ Status ShmEventLoop::Run() {
     signal_receiver_.reset();
   }
 
-  SignalHandler::global()->Unregister(this);
+  UnregisterSignalHandler();
   loop_thread_.reset();
 
   // Trigger any remaining senders or fetchers to be cleared before destroying

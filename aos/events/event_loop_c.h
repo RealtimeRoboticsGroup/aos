@@ -187,15 +187,27 @@ void aos_shm_event_loop_set_name(aos_event_loop_t *self, const char *name_data,
                                  size_t name_size);
 // All public-facing APIs will verify they are called in this thread.
 void aos_shm_event_loop_lock_to_thread(aos_event_loop_t *self);
+// fd is the platform's descriptor, widened to intptr_t: a POSIX file
+// descriptor, or a Windows SOCKET or HANDLE (Python's socket.fileno() on
+// Windows).  Those are pointer-sized types, even though Windows keeps the
+// values to 32 significant bits so that they can cross between 32- and 64-bit
+// processes.
+//
+// On Windows that means a SOCKET or a HANDLE, never a CRT fd: one from
+// os.pipe() or os.open() is taken as a HANDLE value and names some unrelated
+// kernel object.  A socket joins the event loop's completion port for good, so
+// it can only ever be on one event loop.  Any other HANDLE is watched as a
+// waitable object, and reports every subscribed event when it is signalled.
+//
 // Registers a function to be called when the configured events occur on fd.
-void aos_shm_event_loop_on_fd_events(aos_event_loop_t *self, int fd,
+void aos_shm_event_loop_on_fd_events(aos_event_loop_t *self, intptr_t fd,
                                      aos_shm_event_loop_fd_callback_t callback,
                                      void *user_data);
 // Removes fd from the event loop.
-void aos_shm_event_loop_delete_fd(aos_event_loop_t *self, int fd);
+void aos_shm_event_loop_delete_fd(aos_event_loop_t *self, intptr_t fd);
 // Sets the events for the given fd, in the encoding Aio::OnEvents()
 // documents: readable 0x01, priority 0x02, writable 0x04 and error 0x08.
-void aos_shm_event_loop_set_fd_events(aos_event_loop_t *self, int fd,
+void aos_shm_event_loop_set_fd_events(aos_event_loop_t *self, intptr_t fd,
                                       uint32_t events);
 aos_event_loop_t *aos_shm_event_loop_create(
     const aos_configuration_t *configuration);

@@ -493,6 +493,9 @@ cc_binary(
         "event_loop_c.cc",
         "event_loop_c.h",
     ],
+    # A DLL exports nothing unless told to, and cffi looks the C entry points
+    # up by name.  A no-op off Windows, where everything is visible already.
+    features = ["windows_export_all_symbols"],
     linkshared = True,
     deps = [
         ":context",
@@ -755,7 +758,10 @@ cc_test(
 
 cc_library(
     name = "shm_event_loop",
-    srcs = ["shm_event_loop.cc"],
+    srcs = ["shm_event_loop.cc"] + select({
+        "@platforms//os:windows": ["shm_event_loop_windows.cc"],
+        "//conditions:default": ["shm_event_loop_posix.cc"],
+    }),
     hdrs = ["shm_event_loop.h"],
     visibility = ["//visibility:public"],
     deps = [
@@ -791,6 +797,8 @@ cc_test(
         ":event_loop_param_test",
         ":shm_event_loop",
         ":test_message_fbs",
+        "//aos/ipc_lib:memory_mapped_queue",
+        "//aos/ipc_lib:shm_mapping",
     ],
 )
 
@@ -805,6 +813,8 @@ cc_test(
         ":event_loop_param_test",
         ":shm_event_loop",
         ":test_message_fbs",
+        "//aos/ipc_lib:memory_mapped_queue",
+        "//aos/ipc_lib:shm_mapping",
     ],
 )
 

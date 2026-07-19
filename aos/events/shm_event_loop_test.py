@@ -1,10 +1,6 @@
 import sys
 import os
 import contextlib
-import select
-
-EPOLLIN = getattr(select, 'EPOLLIN', 1)
-EPOLLOUT = getattr(select, 'EPOLLOUT', 4)
 
 from absl.testing import absltest
 from absl import flags
@@ -12,7 +8,7 @@ from absl import flags
 flags.DEFINE_string("shm_base", None, "Shared memory base directory")
 
 from aos.events import util
-from aos.events.shm_event_loop import ShmEventLoop
+from aos.events.shm_event_loop import ShmEventLoop, READABLE_EVENT, WRITABLE_EVENT
 from aos.events.event_loop_fbs_py.aos.timing.Report import ReportT
 
 
@@ -23,22 +19,38 @@ class ShmEventLoopTest(absltest.TestCase):
                 util.ConfigurationBuffer(
                     util.locate("aos/aos/events/event_loop_py_config.bfbs"))
         ) as event_loop:
-            self.assertEqual(event_loop.name(), "python3")
+            # The default name is the program's: python.exe on Windows.
+            self.assertEqual(
+                event_loop.name(),
+                "python" if sys.platform == "win32" else "python3")
             event_loop.set_name("new_name")
             self.assertEqual(event_loop.name(), "new_name")
 
     def test_on_fd_events(self):
-        if hasattr(os, 'pipe2'):
-            read_fd, write_fd = os.pipe2(os.O_NONBLOCK)
-        else:
-            import fcntl
-            read_fd, write_fd = os.pipe()
-            for fd in (read_fd, write_fd):
-                flags = fcntl.fcntl(fd, fcntl.F_GETFL)
-                fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
         with contextlib.ExitStack() as exit_stack:
-            exit_stack.callback(os.close, read_fd)
-            exit_stack.callback(os.close, write_fd)
+            if sys.platform == "win32":
+                # Aio watches sockets on Windows, not the C runtime's file
+                # descriptors, so a socket pair stands in for the pipe.  Its
+                # fileno() is the SOCKET the event loop takes.
+                import socket
+                read_sock, write_sock = socket.socketpair()
+                for sock in (read_sock, write_sock):
+                    sock.setblocking(False)
+                    exit_stack.callback(sock.close)
+                read_fd, write_fd = read_sock.fileno(), write_sock.fileno()
+                write = write_sock.send
+            else:
+                if hasattr(os, 'pipe2'):
+                    read_fd, write_fd = os.pipe2(os.O_NONBLOCK)
+                else:
+                    import fcntl
+                    read_fd, write_fd = os.pipe()
+                    for fd in (read_fd, write_fd):
+                        flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+                        fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+                exit_stack.callback(os.close, read_fd)
+                exit_stack.callback(os.close, write_fd)
+                write = lambda data: os.write(write_fd, data)
 
             event_loop = exit_stack.enter_context(
                 ShmEventLoop(
@@ -51,25 +63,25 @@ class ShmEventLoopTest(absltest.TestCase):
             def write_callback(events):
                 nonlocal write_call_count, read_call_count, event_loop
                 event_loop.set_fd_events(write_fd, 0)
-                assert events & EPOLLOUT
+                assert events & WRITABLE_EVENT
                 write_call_count += 1
                 assert read_call_count == 0
-                os.write(write_fd, b'\0' * 100)
+                write(b'\0' * 100)
 
             def read_callback(events):
                 nonlocal write_call_count, read_call_count, event_loop
                 event_loop.set_fd_events(read_fd, 0)
-                assert events & EPOLLIN
+                assert events & READABLE_EVENT
                 read_call_count += 1
                 assert write_call_count == 1
                 event_loop.make_exit_handle().exit()
 
             event_loop.on_fd_events(write_fd, write_callback)
             exit_stack.callback(event_loop.delete_fd, write_fd)
-            event_loop.set_fd_events(write_fd, EPOLLOUT)
+            event_loop.set_fd_events(write_fd, WRITABLE_EVENT)
             event_loop.on_fd_events(read_fd, read_callback)
             exit_stack.callback(event_loop.delete_fd, read_fd)
-            event_loop.set_fd_events(read_fd, EPOLLIN)
+            event_loop.set_fd_events(read_fd, READABLE_EVENT)
 
             event_loop.run()
             self.assertEqual(write_call_count, 1)

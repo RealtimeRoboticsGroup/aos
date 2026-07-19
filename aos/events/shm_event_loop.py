@@ -1,11 +1,17 @@
 from collections.abc import Callable
 from typing import Any, Optional, Type, List
-import select
 
 from aos.events.event_loop_c import ffi, lib
 from aos.events.event_loop import EventLoop, ExceptionPassthroughReceiver, ExitHandle, Error, InternalProxy, _intercept_exception, ExceptionPassthroughInterceptor
 from aos.events.event_loop_runtime import EventLoopRuntime
 from aos.events.util import ConfigurationBuffer
+
+# The event bits set_fd_events() takes and fd callbacks receive, as
+# aos/events/file_descriptor.h defines them on every platform.
+READABLE_EVENT = 0x01
+PRIORITY_EVENT = 0x02
+WRITABLE_EVENT = 0x04
+ERROR_EVENT = 0x08
 
 
 class _ShmEventLoop(EventLoop):
@@ -67,12 +73,12 @@ class _ShmEventLoop(EventLoop):
         register multiple types."""
 
         def wrapped_callback(events, callback=callback):
-            assert events & (select.EPOLLIN | select.EPOLLPRI)
+            assert events & (READABLE_EVENT | PRIORITY_EVENT)
             callback()
 
         self.on_fd_events(fd, wrapped_callback)
         try:
-            self.set_fd_events(fd, select.EPOLLIN | select.EPOLLPRI)
+            self.set_fd_events(fd, READABLE_EVENT | PRIORITY_EVENT)
         except:
             self.delete_fd(fd)
             raise
@@ -84,12 +90,12 @@ class _ShmEventLoop(EventLoop):
         register multiple types."""
 
         def wrapped_callback(events, callback=callback):
-            assert events & select.EPOLLERR
+            assert events & ERROR_EVENT
             callback()
 
         self.on_fd_events(fd, wrapped_callback)
         try:
-            self.set_fd_events(fd, select.EPOLLERR)
+            self.set_fd_events(fd, ERROR_EVENT)
         except:
             self.delete_fd(fd)
             raise
@@ -101,12 +107,12 @@ class _ShmEventLoop(EventLoop):
         register multiple types."""
 
         def wrapped_callback(events, callback=callback):
-            assert events & select.EPOLLOUT
+            assert events & WRITABLE_EVENT
             callback()
 
         self.on_fd_events(fd, wrapped_callback)
         try:
-            self.set_fd_events(fd, select.EPOLLOUT)
+            self.set_fd_events(fd, WRITABLE_EVENT)
         except:
             self.delete_fd(fd)
             raise

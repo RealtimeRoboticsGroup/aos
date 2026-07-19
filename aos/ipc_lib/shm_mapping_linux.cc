@@ -115,4 +115,8 @@ ReadOnlyShmMapping::~ReadOnlyShmMapping() {
   ABSL_PCHECK(munmap(const_cast<void *>(data_), size_) == 0);
 }
 
+bool UnlinkShm(std::string_view path) {
+  return unlink(std::string(path).c_str()) == 0;
+}
+
 }  // namespace aos::ipc_lib

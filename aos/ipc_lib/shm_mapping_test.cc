@@ -130,6 +130,40 @@ TEST_F(ShmMappingTest, BasicReadWrite) {
   EXPECT_EQ(read_ptr[4], 'o');
 }
 
+namespace {
+
+// UnlinkShm() of path leaves the next mapping a new, zeroed one, and a second
+// UnlinkShm() finds nothing.
+void ExpectUnlinkStartsOver(const std::string &path) {
+  // A whole page, which is how macOS sizes a POSIX shared memory object.
+  const size_t kSize = SystemPageSize();
+  {
+    WritableShmMapping mapping(path, kSize, std::filesystem::perms::owner_all);
+    static_cast<char *>(mapping.data())[0] = 1;
+  }
+  EXPECT_TRUE(UnlinkShm(path));
+  EXPECT_FALSE(UnlinkShm(path));
+  {
+    WritableShmMapping mapping(path, kSize, std::filesystem::perms::owner_all);
+    EXPECT_EQ(static_cast<char *>(mapping.data())[0], 0);
+  }
+  EXPECT_TRUE(UnlinkShm(path));
+}
+
+}  // namespace
+
+TEST_F(ShmMappingTest, UnlinkStartsOver) {
+  ExpectUnlinkStartsOver(test_dir_ + "/queue");
+}
+
+#ifdef __APPLE__
+// A path under /dev/shm is a POSIX shared memory object on macOS, not a file.
+TEST_F(ShmMappingTest, UnlinkStartsOverInPosixShm) {
+  ExpectUnlinkStartsOver("/dev/shm/aos_shm_mapping_test_" +
+                         std::to_string(getpid()) + "/queue");
+}
+#endif
+
 TEST_F(ShmMappingDeathTest, ReadOnlyIsActuallyReadOnly) {
   const std::string shm_path = test_dir_ + "/test_queue_ro";
   const size_t size = 4096;
