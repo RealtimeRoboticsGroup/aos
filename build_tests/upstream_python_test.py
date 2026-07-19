@@ -39,7 +39,7 @@ class TestPipImports(unittest.TestCase):
         self.assertTrue(runfiles_dir, "RUNFILES_DIR is not set")
 
         base_path = None
-        for ws in ["_main", "aos"]:
+        for ws in ["_main", "aos", "aos+"]:
             p = os.path.join(runfiles_dir, ws, "tools/python")
             if os.path.isdir(p):
                 base_path = p
@@ -139,7 +139,7 @@ class TestPipImports(unittest.TestCase):
         self.assertTrue(runfiles_dir, "RUNFILES_DIR is not set")
 
         base_path = None
-        for ws in ["_main", "aos"]:
+        for ws in ["_main", "aos", "aos+"]:
             p = os.path.join(runfiles_dir, ws, "tools/python")
             if os.path.isdir(p):
                 base_path = p
