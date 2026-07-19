@@ -11,6 +11,7 @@
 #include "aos/configuration.h"
 #include "aos/configuration_generated.h"
 #include "aos/logging/implementations.h"
+#include "aos/macros.h"
 #include "aos/realtime.h"
 
 ABSL_FLAG(bool, timing_reports, true, "Publish timing reports.");
@@ -42,6 +43,7 @@ std::string_view ErrorToString(const RawSender::Error err) {
       return "RawSender::Error::kInvalidRedzone";
   }
   ABSL_LOG(FATAL) << "Unknown error given with code " << static_cast<int>(err);
+  AOS_UNREACHABLE();
 }
 }  // namespace
 
@@ -225,6 +227,7 @@ WatcherState *EventLoop::GetWatcherState(const Channel *channel) {
     }
   }
   ABSL_LOG(FATAL) << "No watcher found for channel";
+  AOS_UNREACHABLE();
 }
 
 void EventLoop::ParseSchedulingSettings() {

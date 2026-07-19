@@ -5,6 +5,8 @@
 #include "flatbuffers/minireflect.h"
 #include "flatbuffers/reflection_generated.h"
 
+#include "aos/macros.h"
+
 namespace aos {
 
 FlatbufferType::FlatbufferType(const flatbuffers::TypeTable *type_table) {
@@ -45,6 +47,7 @@ bool FlatbufferType::IsSequence() const {
     return enum_->is_union();
   }
   ABSL_LOG(FATAL) << "Unimplemented";
+  AOS_UNREACHABLE();
 }
 
 bool FlatbufferType::IsTable() const {
@@ -55,6 +58,7 @@ bool FlatbufferType::IsTable() const {
     return !object_->is_struct();
   }
   ABSL_LOG(FATAL) << "Unimplemented";
+  AOS_UNREACHABLE();
 }
 
 bool FlatbufferType::IsStruct() const {
@@ -65,6 +69,7 @@ bool FlatbufferType::IsStruct() const {
     return object_->is_struct();
   }
   ABSL_LOG(FATAL) << "Unimplemented";
+  AOS_UNREACHABLE();
 }
 
 bool FlatbufferType::IsEnum() const {
@@ -78,6 +83,7 @@ bool FlatbufferType::IsEnum() const {
     return !enum_->is_union();
   }
   ABSL_LOG(FATAL) << "Unimplemented";
+  AOS_UNREACHABLE();
 }
 
 bool FlatbufferType::FieldIsSequence(int index) const {
@@ -97,6 +103,7 @@ bool FlatbufferType::FieldIsSequence(int index) const {
            base_type == reflection::BaseType::Union;
   }
   ABSL_LOG(FATAL) << "Unimplemented";
+  AOS_UNREACHABLE();
 }
 
 bool FlatbufferType::FieldIsEnum(int index) const {
@@ -123,6 +130,7 @@ bool FlatbufferType::FieldIsEnum(int index) const {
     return ReflectionType(index)->index() >= 0;
   }
   ABSL_LOG(FATAL) << "Unimplemented";
+  AOS_UNREACHABLE();
 }
 
 std::optional<int64_t> FlatbufferType::EnumValue(std::string_view name) const {
@@ -150,6 +158,7 @@ std::optional<int64_t> FlatbufferType::EnumValue(std::string_view name) const {
     return std::nullopt;
   }
   ABSL_LOG(FATAL) << "Unimplemented";
+  AOS_UNREACHABLE();
 }
 
 bool FlatbufferType::FieldIsRepeating(int index) const {
@@ -166,6 +175,7 @@ bool FlatbufferType::FieldIsRepeating(int index) const {
            type == reflection::BaseType::Array;
   }
   ABSL_LOG(FATAL) << "Unimplemented";
+  AOS_UNREACHABLE();
 }
 
 int FlatbufferType::FieldIndex(std::string_view field_name) const {
@@ -197,6 +207,7 @@ int FlatbufferType::FieldIndex(std::string_view field_name) const {
     return -1;
   }
   ABSL_LOG(FATAL) << "Unimplemented";
+  AOS_UNREACHABLE();
 }
 
 std::string_view FlatbufferType::FieldName(int index) const {
@@ -212,6 +223,7 @@ std::string_view FlatbufferType::FieldName(int index) const {
     return ReflectionEnumValue(index)->name()->string_view();
   }
   ABSL_LOG(FATAL) << "Unimplemented";
+  AOS_UNREACHABLE();
 }
 
 namespace {
@@ -253,6 +265,7 @@ flatbuffers::ElementaryType ElementaryTypeFromBaseType(
       return flatbuffers::ElementaryType::ET_SEQUENCE;
     default:
       ABSL_LOG(FATAL) << "Unknown BaseType";
+      AOS_UNREACHABLE();
   }
 }
 
@@ -270,6 +283,7 @@ flatbuffers::ElementaryType FlatbufferType::FieldElementaryType(
     return ElementaryTypeFromBaseType(ReflectionElementBaseType(index));
   }
   ABSL_LOG(FATAL) << "Unimplemented";
+  AOS_UNREACHABLE();
 }
 
 namespace {
@@ -299,6 +313,7 @@ size_t BaseTypeInlineSize(reflection::BaseType base_type) {
       return 4;
     default:
       ABSL_LOG(FATAL) << "Unknown BaseType";
+      AOS_UNREACHABLE();
   }
 }
 
@@ -317,6 +332,7 @@ size_t FlatbufferType::InlineSize() const {
     return BaseTypeInlineSize(enum_->underlying_type()->base_type());
   }
   ABSL_LOG(FATAL) << "Unimplemented";
+  AOS_UNREACHABLE();
 }
 
 // Returns the required alignment for this type.
@@ -336,6 +352,7 @@ size_t FlatbufferType::Alignment() const {
   // We don't do a great job of supporting unions in general, and as of this
   // writing did not try to look up what the alignment rules for unions were.
   ABSL_LOG(FATAL) << "Unimplemented";
+  AOS_UNREACHABLE();
 }
 
 size_t FlatbufferType::FieldInlineAlignment(size_t field_index) const {
@@ -354,6 +371,7 @@ size_t FlatbufferType::StructFieldOffset(int index) const {
     return ReflectionObjectField(index)->offset();
   }
   ABSL_LOG(FATAL) << "Unimplemented";
+  AOS_UNREACHABLE();
 }
 
 size_t FlatbufferType::FieldInlineSize(int index) const {
@@ -384,6 +402,7 @@ size_t FlatbufferType::FieldInlineSize(int index) const {
     return element_size;
   }
   ABSL_LOG(FATAL) << "Unimplemented";
+  AOS_UNREACHABLE();
 }
 
 int FlatbufferType::NumberFields() const {
@@ -398,6 +417,7 @@ int FlatbufferType::NumberFields() const {
     return enum_->values()->size();
   }
   ABSL_LOG(FATAL) << "Unimplemented";
+  AOS_UNREACHABLE();
 }
 
 FlatbufferType FlatbufferType::FieldType(int index) const {
@@ -430,6 +450,7 @@ FlatbufferType FlatbufferType::FieldType(int index) const {
     }
   }
   ABSL_LOG(FATAL) << "Unimplemented";
+  AOS_UNREACHABLE();
 }
 
 const reflection::Type *FlatbufferType::ReflectionType(int index) const {

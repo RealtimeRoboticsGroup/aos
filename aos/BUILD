@@ -455,6 +455,7 @@ cc_library(
     hdrs = ["flatbuffer_utils.h"],
     visibility = ["//visibility:public"],
     deps = [
+        "//aos:macros",
         "@com_github_google_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
@@ -486,6 +487,7 @@ cc_library(
         ":flatbuffer_utils",
         ":flatbuffers",
         ":json_tokenizer",
+        "//aos:macros",
         "//aos/flatbuffers:builder",
         "//aos/util:file",
         "//aos/util:string_formatting",
