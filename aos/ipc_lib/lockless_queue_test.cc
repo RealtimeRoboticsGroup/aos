@@ -1,6 +1,5 @@
 #include "aos/ipc_lib/lockless_queue.h"
 
-#include <sched.h>
 #include <stdio.h>
 #include <string.h>
 
