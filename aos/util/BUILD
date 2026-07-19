@@ -704,6 +704,7 @@ cc_static_flatbuffer(
 cc_binary(
     name = "filesystem_monitor",
     srcs = ["filesystem_monitor.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":filesystem_fbs",
         "//aos:init",
