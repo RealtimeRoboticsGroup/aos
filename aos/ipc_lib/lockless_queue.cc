@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <compare>
 #include <iomanip>
@@ -1365,6 +1366,17 @@ LocklessQueueSender::Result LocklessQueueSender::Send(
   // If anybody is looking at this message (they shouldn't be), then try telling
   // them about it (best-effort).
   memory_->GetMessage(new_scratch)->header.queue_index.RelaxedInvalidate();
+
+  // This must be ordered before the body of this message gets overwritten by a
+  // subsequent Send() that reuses this scratch buffer.  On weakly ordered
+  // architectures (e.g. ARM) the relaxed invalidate above could otherwise
+  // become visible *after* those later (non-atomic) body writes, letting an
+  // in-flight reader observe the stale-but-still-valid queue_index together
+  // with freshly overwritten data and wrongly accept it.  This release fence
+  // pairs with the reader's acquire fence in Read() to guarantee that any
+  // reader which sees modified data also sees the invalidated queue_index.
+  std::atomic_thread_fence(std::memory_order_release);
+
   return Result::GOOD;
 }
 
@@ -1623,7 +1635,16 @@ LocklessQueueReader::Result LocklessQueueReader::Read(
     // we want.  This means it didn't change out from under us. If something
     // changed out from under us, we were reading it much too late in its
     // lifetime.
-    aos_compiler_memory_barrier();
+    //
+    // This must be an acquire fence, not merely a compiler barrier.  On weakly
+    // ordered architectures (e.g. ARM) the plain, non-atomic reads of the
+    // message body above (send times, remote times, etc.) may otherwise be
+    // reordered by the hardware to complete *after* the acquire load of
+    // queue_index below.  The acquire load only prevents later accesses from
+    // being hoisted above it; it does not keep the earlier body reads from
+    // sinking below it.  Without a real LoadLoad barrier the seqlock re-check
+    // can pass while the body was actually read from a recycled message.
+    std::atomic_thread_fence(std::memory_order_acquire);
     const QueueIndex final_queue_index = m->header.queue_index.Load(queue_size);
     if (final_queue_index != queue_index) {
       ABSL_VLOG(3) << "Changed out from under us.  Reading " << std::hex
@@ -1651,7 +1672,11 @@ LocklessQueueReader::Result LocklessQueueReader::Read(
   // if we have read anything new after the previous check up above, which
   // happens if we read the data, or if we didn't check for the filtered case.
   if (data || !should_read_callback) {
-    aos_compiler_memory_barrier();
+    // See the note on the acquire fence above: on weakly ordered architectures
+    // this must be a real LoadLoad barrier so that the (non-atomic) memcpy
+    // of the data above cannot be reordered past the acquire load of
+    // queue_index below.
+    std::atomic_thread_fence(std::memory_order_acquire);
     const QueueIndex final_queue_index = m->header.queue_index.Load(queue_size);
     if (final_queue_index != queue_index) {
       ABSL_VLOG(3) << "Changed out from under us.  Reading " << std::hex
