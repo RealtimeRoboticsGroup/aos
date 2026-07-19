@@ -8,7 +8,7 @@ diff --git a/site-packages/gi/__init__.py b/site-packages/gi/__init__.py
 index 3454790..a6f3246 100644
 --- a/site-packages/gi/__init__.py
 +++ b/site-packages/gi/__init__.py
-@@ -27,6 +27,88 @@
+@@ -27,6 +27,105 @@
  import importlib
  import types
  
@@ -34,6 +34,23 @@ index 3454790..a6f3246 100644
 +                if os.path.isdir(candidate):
 +                    gtk_runtime_dir = candidate
 +                    break
++
++    # Under remote execution the runfiles tree is manifest-based rather than a
++    # physical directory, so the Rlocation/listdir lookups above fail (the pip
++    # wheel repo has no apparent-name mapping for the sysroot). Fall back to
++    # reading the runfiles manifest directly for the absolute sysroot path.
++    if not gtk_runtime_dir:
++        _suffix = "/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders"
++        _manifest = os.environ.get("RUNFILES_MANIFEST_FILE")
++        if _manifest and os.path.isfile(_manifest):
++            with open(_manifest) as _mf:
++                for _line in _mf:
++                    _parts = _line.rstrip("\n").split(" ", 1)
++                    if (len(_parts) == 2 and
++                            _parts[0].startswith("amd64_debian_sysroot") and
++                            _parts[0].endswith(_suffix)):
++                        gtk_runtime_dir = _parts[1].removesuffix(_suffix)
++                        break
 +
 +    if not gtk_runtime_dir:
 +        gtk_runtime_dir = os.path.join(runfiles_dir, "amd64_debian_sysroot")
