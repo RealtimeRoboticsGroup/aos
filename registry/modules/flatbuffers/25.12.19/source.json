@@ -9,7 +9,7 @@
         "04-cpp-force-defaults-by-default.patch": "sha256-cfMNCyp9l4QfLehegXMCaIlpSTpmUG8IPYLYz5W68n8=",
         "05-cpp-indeterminate-vector.patch": "sha256-edHXW+V4KFmBBS2HbyXmi3O4CEAgw5ukAFoj1UiVGx8=",
         "06-cpp-default-allocator-zero-and-msan.patch": "sha256-81ZkMibwYyKXy4/Qi7roBgvusPm4oQmcaPDV9z7pl2c=",
-        "07-cpp-numtostring-tochars.patch": "sha256-RSs+M2As19f/AO91fE95OUQNd0zlt/5PUPpg3sQU8rs=",
+        "07-cpp-numtostring-tochars.patch": "sha256-2zYSWiT3CxPqKH2+8jEH6MK72ZQlfkUAy+NPUvbwhYs=",
         "08-cpp-annotate-binary-string-and-fixes.patch": "sha256-pKsXx6Iw2V/pbRgH4TVlbTgKgTq5AkXp4Pmj41hT8TA=",
         "09-flatc-python-import-prefix.patch": "sha256-cOYUnvT0okrCgh8aFJb8mgR2qDYmoO6gz015ITSta6w=",
         "10-idl-parser-deterministic-schema.patch": "sha256-XSzGemr8O/LsIs4t9tqYKqhhEaPgdvwJG38VrZFurGo=",
