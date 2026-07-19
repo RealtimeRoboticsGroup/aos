@@ -5,7 +5,7 @@ load("@aspect_bazel_lib//lib:run_binary.bzl", "run_binary")
 def camera_constants_json(name, src, out):
     run_binary(
         name = name,
-        tool = "//frc/vision:camera_constants_formatter",
+        tool = Label("//frc/vision:camera_constants_formatter"),
         srcs = [src],
         outs = [out],
         args = ["$(location %s)" % (src)] + ["$(location %s)" % (out)],
