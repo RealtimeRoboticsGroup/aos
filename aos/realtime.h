@@ -4,6 +4,10 @@
 #ifndef _WIN32
 #include <sched.h>
 #include <sys/types.h>
+#ifdef __linux__
+#include <sys/syscall.h>
+#endif
+#include <unistd.h>
 #else
 #define SCHED_OTHER 0
 #define SCHED_FIFO 1
@@ -130,6 +134,13 @@ void SetCurrentThreadAffinity(const CpuSet &cpuset);
 
 // Returns the ID of the current process.
 pid_t GetProcessId();
+
+// Returns the ID of the current thread.
+#ifdef __linux__
+inline pid_t GetThreadId() { return syscall(SYS_gettid); }
+#else
+pid_t GetThreadId();
+#endif
 
 // Returns the name of the current process/program.
 std::string GetProgramName();

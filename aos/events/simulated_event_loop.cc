@@ -1,8 +1,5 @@
 #include "aos/events/simulated_event_loop.h"
 
-// For gettid().
-#include <sys/syscall.h>
-
 #include <algorithm>
 #include <deque>
 #include <optional>
@@ -671,7 +668,7 @@ class SimulatedEventLoop : public EventLoop {
         channels_(channels),
         event_loops_(event_loops_),
         tid_(tid),
-        real_tid_(syscall(SYS_gettid)),
+        real_tid_(aos::GetThreadId()),
         startup_tracker_(std::make_shared<StartupTracker>()),
         options_(options) {
     ClearContext();
@@ -865,7 +862,7 @@ class SimulatedEventLoop : public EventLoop {
   }
 
   void IgnoreThreadImpl() override {
-    ABSL_CHECK_EQ(real_tid_, syscall(SYS_gettid))
+    ABSL_CHECK_EQ(real_tid_, aos::GetThreadId())
         << ": Being called from the wrong thread. Call from the main thread "
            "instead.";
   }
@@ -1041,7 +1038,7 @@ int SimulatedEventLoop::NumberBuffers(const Channel *channel) {
 SimulatedThreadHandle::SimulatedThreadHandle(
     SimulatedEventLoop *simulated_event_loop,
     const ThreadConfiguration &thread_configuration) {
-  ABSL_CHECK_NE(simulated_event_loop->real_tid_, syscall(SYS_gettid))
+  ABSL_CHECK_NE(simulated_event_loop->real_tid_, aos::GetThreadId())
       << ": Do not call this function from the main thread.";
   ABSL_CHECK(thread_configuration.has_name());
 
