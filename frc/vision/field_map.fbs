@@ -35,6 +35,9 @@ table FieldMap {
 
   // Type of the field. "frc" for frc.
   type:string (id: 3);
+
+  // Png preview of the field, in base 64 encoding.
+  pngBase64:string (id: 4);
 }
 
 root_type FieldMap;
