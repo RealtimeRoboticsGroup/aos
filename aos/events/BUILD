@@ -30,6 +30,12 @@ static_flatbuffer(
     deps = ["//aos:configuration_fbs"],
 )
 
+flatbuffer_py_library(
+    name = "event_loop_fbs_py",
+    src = "event_loop.fbs",
+    deps = ["//aos:configuration_fbs_py_srcs"],
+)
+
 cc_static_flatbuffer(
     name = "timing_report_schema",
     function = "aos::timing::ReportSchema",
