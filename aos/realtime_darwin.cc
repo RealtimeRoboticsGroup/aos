@@ -552,4 +552,9 @@ std::optional<std::string> GetUsername(uid_t uid) {
   }
 }
 
+int SetCurrentThreadRealtimePriorityLowLevel(int /*priority*/,
+                                             int /*scheduling_policy*/) {
+  return 0;
+}
+
 }  // namespace aos

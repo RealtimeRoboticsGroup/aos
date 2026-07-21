@@ -211,7 +211,6 @@ cc_library(
                 "robust_ownership_tracker.h",
             ],
             defines = ["AOS_IPC_LIB_LOCKLESS_QUEUE_HAS_ATOMIC_TIME_POINT"] if suffix != "_no_atomic_times" else [],
-            target_compatible_with = ["@platforms//os:linux"],
             deps = [
                 ":aos_sync",
                 ":data_alignment",
@@ -224,13 +223,17 @@ cc_library(
                 "//aos/events:fetch_result",
                 "//aos/time",
                 "//aos/util:compiler_memory_barrier",
-                "//aos/util:proc_stat",
                 "@com_google_absl//absl/flags:flag",
                 "@com_google_absl//absl/log",
                 "@com_google_absl//absl/log:check",
                 "@com_google_absl//absl/strings",
                 "@com_google_absl//absl/types:span",
-            ],
+            ] + select({
+                "@platforms//os:windows": [],
+                "//conditions:default": [
+                    "//aos/util:proc_stat",
+                ],
+            }),
         ),
         cc_library(
             name = "multichannel_queue_racer" + suffix,
@@ -289,6 +292,7 @@ cc_library(
                 "lockless_queue_stepping.cc",
             ],
             hdrs = ["lockless_queue_stepping.h"],
+            target_compatible_with = ["@platforms//os:linux"],
             deps = [
                 ":lockless_queue" + suffix,
                 ":shm_observers",

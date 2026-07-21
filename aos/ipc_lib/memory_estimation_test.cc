@@ -70,7 +70,11 @@ class MemoryEstimationTest : public ::testing::Test {
 TEST_F(MemoryEstimationTest, TotalMemoryUsage) {
   // Just hard-code these; we want to be able to visually check that they look
   // sane, and they can be updated when needed.
+#ifdef _WIN32
+  EXPECT_EQ(110000120720, TotalSharedMemoryUsage(config_, node1_));
+#else
   EXPECT_EQ(110000121200, TotalSharedMemoryUsage(config_, node1_));
+#endif
   EXPECT_EQ(65120, TotalSharedMemoryUsage(config_, node2_));
 }
 

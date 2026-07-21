@@ -203,4 +203,9 @@ uid_t GetUserId() { return 0; }
 
 std::optional<std::string> GetUsername(uid_t /*uid*/) { return std::nullopt; }
 
+int SetCurrentThreadRealtimePriorityLowLevel(int /*priority*/,
+                                             int /*scheduling_policy*/) {
+  return 0;
+}
+
 }  // namespace aos
