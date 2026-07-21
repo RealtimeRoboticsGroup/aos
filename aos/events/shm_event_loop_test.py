@@ -7,6 +7,7 @@ from absl.testing import absltest
 
 from aos.events import util
 from aos.events.shm_event_loop import ShmEventLoop
+from aos.events.event_loop_fbs_py.aos.timing.Report import ReportT
 
 
 class ShmEventLoopTest(absltest.TestCase):
@@ -68,6 +69,18 @@ class ShmEventLoopTest(absltest.TestCase):
                     util.locate("aos/aos/events/event_loop_py_config.bfbs"))
         ) as event_loop:
             event_loop.lock_to_thread()
+
+    def test_skip_timing_report(self):
+        with ShmEventLoop(
+                util.ConfigurationBuffer(
+                    util.locate("aos/aos/events/event_loop_py_config.bfbs"))
+        ) as event_loop:
+            event_loop.skip_timing_report()
+            event_loop.skip_aos_log()
+            event_loop.make_watcher(ReportT, "/aos", lambda m: None)
+            exit_handle = event_loop.make_exit_handle()
+            event_loop.on_run(lambda: exit_handle.exit())
+            event_loop.run()
 
 
 if __name__ == "__main__":

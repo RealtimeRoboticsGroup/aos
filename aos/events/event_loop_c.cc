@@ -14,6 +14,8 @@
 #include "aos/configuration_generated.h"
 #include "aos/events/context.h"
 #include "aos/events/event_loop.h"
+#include "aos/events/logging/log_reader.h"
+#include "aos/events/logging/logfile_utils.h"
 #include "aos/events/shm_event_loop.h"
 #include "aos/events/simulated_event_loop.h"
 #include "aos/init.h"
@@ -330,6 +332,18 @@ const aos_configuration_t *aos_event_loop_configuration(
       event_loop->configuration());
 }
 
+void aos_event_loop_skip_timing_report(aos_event_loop_t *self) {
+  aos::EventLoop *event_loop =
+      reinterpret_cast<aos::EventLoop *>(ABSL_DIE_IF_NULL(self));
+  event_loop->SkipTimingReport();
+}
+
+void aos_event_loop_skip_aos_log(aos_event_loop_t *self) {
+  aos::EventLoop *event_loop =
+      reinterpret_cast<aos::EventLoop *>(ABSL_DIE_IF_NULL(self));
+  event_loop->SkipAosLog();
+}
+
 aos_error_t *aos_shm_event_loop_run(aos_event_loop_t *self) {
   aos::ShmEventLoop *event_loop = static_cast<aos::ShmEventLoop *>(
       reinterpret_cast<aos::EventLoop *>(ABSL_DIE_IF_NULL(self)));
@@ -490,14 +504,6 @@ aos_event_loop_t *aos_simulated_event_loop_factory_make_event_loop(
   return reinterpret_cast<aos_event_loop_t *>(event_loop.release());
 }
 
-void aos_simulated_event_loop_factory_run_for(
-    aos_simulated_event_loop_factory_t *self, const int64_t duration_ns) {
-  aos::SimulatedEventLoopFactory *factory =
-      reinterpret_cast<aos::SimulatedEventLoopFactory *>(
-          ABSL_DIE_IF_NULL(self));
-  factory->RunFor(std::chrono::nanoseconds(duration_ns));
-}
-
 aos_error_t *aos_simulated_event_loop_factory_non_fatal_run_for(
     aos_simulated_event_loop_factory_t *self, const int64_t duration_ns) {
   aos::SimulatedEventLoopFactory *factory =
@@ -505,6 +511,14 @@ aos_error_t *aos_simulated_event_loop_factory_non_fatal_run_for(
           ABSL_DIE_IF_NULL(self));
   return to_error_t(
       factory->NonFatalRunFor(std::chrono::nanoseconds(duration_ns)));
+}
+
+aos_error_t *aos_simulated_event_loop_factory_non_fatal_run(
+    aos_simulated_event_loop_factory_t *self) {
+  aos::SimulatedEventLoopFactory *factory =
+      reinterpret_cast<aos::SimulatedEventLoopFactory *>(
+          ABSL_DIE_IF_NULL(self));
+  return to_error_t(factory->NonFatalRun());
 }
 
 aos_exit_handle_t *aos_simulated_event_loop_factory_make_exit_handle(
@@ -522,6 +536,74 @@ aos_simulated_event_loop_factory_t *aos_simulated_event_loop_factory_create(
       reinterpret_cast<const aos::Configuration *>(configuration));
   return reinterpret_cast<aos_simulated_event_loop_factory_t *>(
       factory.release());
+}
+
+aos_node_event_loop_factory_t *
+aos_simulated_event_loop_factory_get_node_event_loop_factory(
+    aos_simulated_event_loop_factory_t *self, const aos_node_t *node) {
+  return reinterpret_cast<aos_node_event_loop_factory_t *>(
+      reinterpret_cast<aos::SimulatedEventLoopFactory *>(ABSL_DIE_IF_NULL(self))
+          ->GetNodeEventLoopFactory(reinterpret_cast<const aos::Node *>(node)));
+}
+
+void aos_node_event_loop_factory_on_startup(aos_node_event_loop_factory_t *self,
+                                            void (*callback)(void *),
+                                            void *user_data) {
+  reinterpret_cast<aos::NodeEventLoopFactory *>(ABSL_DIE_IF_NULL(self))
+      ->OnStartup([callback, user_data]() { callback(user_data); });
+}
+
+aos_event_loop_t *aos_node_event_loop_factory_make_event_loop(
+    aos_node_event_loop_factory_t *self, const char *name) {
+  return reinterpret_cast<aos_event_loop_t *>(
+      reinterpret_cast<aos::NodeEventLoopFactory *>(ABSL_DIE_IF_NULL(self))
+          ->MakeEventLoop(name)
+          .release());
+}
+
+aos_log_reader_t *aos_log_reader_create_from_argv(int argc, char *argv[]) {
+  if (argc < 2) {
+    LOG(ERROR)
+        << "aos_log_reader_create_from_argv requires at least a log path";
+    return nullptr;
+  }
+  const std::string log_path = argv[1];
+  try {
+    std::vector<aos::logger::LogFile> log_files =
+        aos::logger::SortParts(aos::logger::FindLogs(log_path));
+    auto log_reader = std::make_unique<aos::logger::LogReader>(log_files);
+    return reinterpret_cast<aos_log_reader_t *>(log_reader.release());
+  } catch (const std::exception &e) {
+    LOG(ERROR) << "Failed to create LogReader: " << e.what();
+    return nullptr;
+  }
+}
+
+void aos_log_reader_register(aos_log_reader_t *self,
+                             aos_simulated_event_loop_factory_t *factory) {
+  auto log_reader =
+      reinterpret_cast<aos::logger::LogReader *>(ABSL_DIE_IF_NULL(self));
+  auto event_loop_factory = reinterpret_cast<aos::SimulatedEventLoopFactory *>(
+      ABSL_DIE_IF_NULL(factory));
+  log_reader->RegisterWithoutStarting(event_loop_factory);
+}
+
+aos_configuration_buffer_t *aos_log_reader_configuration_buffer(
+    const aos_log_reader_t *self) {
+  return reinterpret_cast<aos_configuration_buffer_t *>(
+      new aos::FlatbufferDetachedBuffer<aos::Configuration>(
+          aos::CopyFlatBuffer(reinterpret_cast<const aos::logger::LogReader *>(
+                                  ABSL_DIE_IF_NULL(self))
+                                  ->configuration())));
+}
+
+void aos_log_reader_deregister(aos_log_reader_t *self) {
+  reinterpret_cast<aos::logger::LogReader *>(ABSL_DIE_IF_NULL(self))
+      ->Deregister();
+}
+
+void aos_log_reader_destroy(aos_log_reader_t *self) {
+  delete reinterpret_cast<aos::logger::LogReader *>(self);
 }
 
 void aos_error_destroy(aos_error_t *self) {
