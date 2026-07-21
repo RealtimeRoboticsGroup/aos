@@ -77,6 +77,11 @@ def _flatbuffer_py_gen_impl(ctx):
         for subpath in ["", ctx.bin_dir.path + "/"]:
             args.append("-I")
             args.append(subpath + path)
+    args.append("-I")
+    args.append("%s.runfiles/%s" % (
+        ctx.executable._flatc.path,
+        ctx.executable._flatc.owner.repo_name or "_main",
+    ))
 
     args.extend(["-o", out_dir.path])
     args.append(target_info.main.path)

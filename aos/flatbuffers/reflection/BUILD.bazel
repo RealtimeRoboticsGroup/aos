@@ -1,3 +1,4 @@
+load("@aos//aos/flatbuffers:flatbuffers_python.bzl", "flatbuffer_py_library")
 load("@aspect_bazel_lib//lib:copy_file.bzl", "copy_file")
 load("@aspect_rules_js//npm:defs.bzl", "npm_package")
 load("//aos/flatbuffers:build_defs.bzl", "flatbuffer_rust_library")
@@ -54,5 +55,11 @@ flatbuffer_rust_library(
     srcs = ["reflection.fbs"],
     crate_name = "flatbuffers_reflection",
     include_reflection = False,
+    visibility = ["//visibility:public"],
+)
+
+flatbuffer_py_library(
+    name = "reflection_fbs_py",
+    src = "reflection.fbs",
     visibility = ["//visibility:public"],
 )

@@ -17,7 +17,7 @@ VECTOR_VALUE = [1, 8, 6, 8]
 class EventLoopTest(absltest.TestCase):
 
     def setUp(self):
-        self._config = util.Configuration(
+        self._config = util.ConfigurationBuffer(
             util.locate("aos/aos/events/event_loop_py_config.bfbs"))
         with contextlib.ExitStack() as stack:
             self._factory = stack.enter_context(
@@ -36,13 +36,15 @@ class EventLoopTest(absltest.TestCase):
         timer_count = 0
 
         def handle_test_message(message):
-            nonlocal watcher_count, fetcher
+            nonlocal watcher_count, fetcher, send_loop
             assert message.vector == VECTOR_VALUE
             watcher_count += 1
 
             fetched = fetcher.fetch()
             assert fetched is not None
             assert fetched.vector == VECTOR_VALUE
+
+            assert send_loop.realtime_now_ns() > 0
 
         def handle_timer():
             nonlocal timer_count
@@ -51,6 +53,7 @@ class EventLoopTest(absltest.TestCase):
         sender = send_loop.make_sender(TestMessageT, "/test")
         receive_loop1.make_watcher(TestMessageT, "/test", handle_test_message)
         timer = send_loop.add_timer(handle_timer)
+        receive_loop1.set_runtime_affinity([1])
 
         def on_run():
             nonlocal send_loop

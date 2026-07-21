@@ -170,6 +170,23 @@ py_library(
     ],
     deps = [
         ":event_loop_c_py",
+        "//aos:configuration_fbs_py",
+        "//aos:flatbuffers_py",
+        "//aos/flatbuffers:flatpy",
+    ],
+)
+
+py_test(
+    name = "util_test_py",
+    srcs = ["util_test.py"],
+    data = [
+        ":event_loop_py_config",
+    ],
+    main = "util_test.py",
+    deps = [
+        ":util_py",
+        "//aos:configuration_fbs_py",
+        "@pip_deps//absl_py",
     ],
 )
 
@@ -190,7 +207,10 @@ py_library(
     ],
     deps = [
         ":event_loop_c_py",
+        ":util_py",
+        "//aos:configuration_fbs_py",
         "//aos/flatbuffers:flatpy",
+        "@pip_deps//absl_py",
     ],
 )
 
@@ -777,4 +797,30 @@ cc_binary(
 cc_library(
     name = "fetch_result",
     hdrs = ["fetch_result.h"],
+)
+
+py_library(
+    name = "configuration_py",
+    srcs = ["configuration.py"],
+    deps = [
+        ":event_loop_c_py",
+        ":util_py",
+        "//aos:configuration_fbs_py",
+    ],
+)
+
+py_test(
+    name = "configuration_test_py",
+    srcs = ["configuration_test.py"],
+    data = [
+        ":event_loop_py_config",
+        "//aos/testing/ping_pong:multinode_pingpong_config",
+    ],
+    main = "configuration_test.py",
+    deps = [
+        ":configuration_py",
+        ":util_py",
+        "//aos:configuration_fbs_py",
+        "@pip_deps//absl_py",
+    ],
 )

@@ -42,7 +42,7 @@ class Pong:
 
 def main(argv):
     util.init(argv)
-    config = util.Configuration(
+    config = util.ConfigurationBuffer(
         "aos/documentation/examples/ping_pong/pingpong_config.bfbs")
     with ShmEventLoop(config) as shm_event_loop:
         pong = Pong(shm_event_loop)

@@ -263,6 +263,13 @@ int64_t aos_event_loop_monotonic_now(aos_event_loop_t *self) {
       event_loop->monotonic_now().time_since_epoch().count());
 }
 
+int64_t aos_event_loop_realtime_now(aos_event_loop_t *self) {
+  aos::EventLoop *event_loop =
+      reinterpret_cast<aos::EventLoop *>(ABSL_DIE_IF_NULL(self));
+  return static_cast<int64_t>(
+      ABSL_DIE_IF_NULL(event_loop)->realtime_now().time_since_epoch().count());
+}
+
 void aos_event_loop_on_run(aos_event_loop_t *self,
                            aos_on_run_callback_t callback, void *user_data) {
   aos::EventLoop *event_loop =
@@ -287,6 +294,19 @@ void aos_event_loop_set_runtime_realtime_priority(aos_event_loop_t *self,
       static_cast<aos::RealtimePolicy>(realtime_policy));
 }
 
+void aos_event_loop_set_runtime_affinity(aos_event_loop_t *self,
+                                         const int32_t *affinity_list,
+                                         size_t affinity_list_size) {
+  aos::EventLoop *event_loop =
+      reinterpret_cast<aos::EventLoop *>(ABSL_DIE_IF_NULL(self));
+  aos::CpuSet affinity;
+  for (size_t i = 0; i < affinity_list_size; ++i) {
+    CHECK_LT(static_cast<size_t>(affinity_list[i]), aos::CpuSet::kSize);
+    affinity.Set(affinity_list[i]);
+  }
+  event_loop->SetRuntimeAffinity(affinity);
+}
+
 void aos_event_loop_get_name(aos_event_loop_t *self, const char **name_data,
                              size_t *name_size) {
   aos::EventLoop *event_loop =
@@ -294,6 +314,20 @@ void aos_event_loop_get_name(aos_event_loop_t *self, const char **name_data,
   const std::string_view name = event_loop->name();
   *name_data = name.data();
   *name_size = name.size();
+}
+
+const aos_node_t *aos_event_loop_node(aos_event_loop_t *self) {
+  aos::EventLoop *event_loop =
+      reinterpret_cast<aos::EventLoop *>(ABSL_DIE_IF_NULL(self));
+  return reinterpret_cast<const aos_node_t *>(event_loop->node());
+}
+
+const aos_configuration_t *aos_event_loop_configuration(
+    aos_event_loop_t *self) {
+  aos::EventLoop *event_loop =
+      reinterpret_cast<aos::EventLoop *>(ABSL_DIE_IF_NULL(self));
+  return reinterpret_cast<const aos_configuration_t *>(
+      event_loop->configuration());
 }
 
 aos_error_t *aos_shm_event_loop_run(aos_event_loop_t *self) {
@@ -316,26 +350,128 @@ void aos_shm_event_loop_set_name(aos_event_loop_t *self, const char *name_data,
   event_loop->set_name(std::string_view(name_data, name_size));
 }
 
-void aos_init(int *argc, char ***argv) { aos::InitGoogle(argc, argv); }
-
-uint8_t *aos_configuration_read_from_file(const char *file_path) {
-  aos::FlatbufferDetachedBuffer<aos::Configuration> config =
-      aos::configuration::ReadConfig(file_path);
-  uint8_t *dst = (uint8_t *)malloc(config.span().size() * sizeof(uint8_t));
-  CHECK(dst != nullptr);
-  memcpy(dst, config.span().data(), config.span().size());
-  return dst;
+void aos_shm_event_loop_lock_to_thread(aos_event_loop_t *self) {
+  aos::ShmEventLoop *event_loop = static_cast<aos::ShmEventLoop *>(
+      reinterpret_cast<aos::EventLoop *>(ABSL_DIE_IF_NULL(self)));
+  event_loop->LockToThread();
 }
 
-void aos_configuration_destroy(uint8_t *self) { free((void *)self); }
+void aos_shm_event_loop_on_fd_events(aos_event_loop_t *self, int fd,
+                                     aos_shm_event_loop_fd_callback_t callback,
+                                     void *user_data) {
+  aos::ShmEventLoop *event_loop = static_cast<aos::ShmEventLoop *>(
+      reinterpret_cast<aos::EventLoop *>(ABSL_DIE_IF_NULL(self)));
+  event_loop->epoll()->OnEvents(fd, [callback, user_data](uint32_t events) {
+    callback(user_data, events);
+  });
+}
+
+void aos_shm_event_loop_delete_fd(aos_event_loop_t *self, int fd) {
+  aos::ShmEventLoop *event_loop = static_cast<aos::ShmEventLoop *>(
+      reinterpret_cast<aos::EventLoop *>(ABSL_DIE_IF_NULL(self)));
+  event_loop->epoll()->DeleteFd(fd);
+}
+
+void aos_shm_event_loop_set_fd_events(aos_event_loop_t *self, int fd,
+                                      uint32_t events) {
+  aos::ShmEventLoop *event_loop = static_cast<aos::ShmEventLoop *>(
+      reinterpret_cast<aos::EventLoop *>(ABSL_DIE_IF_NULL(self)));
+  event_loop->epoll()->SetEvents(fd, events);
+}
 
 aos_event_loop_t *aos_shm_event_loop_create(
-    const uint8_t *configuration_buffer) {
+    const aos_configuration_t *configuration) {
   auto event_loop = std::make_unique<aos::ShmEventLoop>(
-      flatbuffers::GetRoot<aos::Configuration>(
-          ABSL_DIE_IF_NULL(configuration_buffer)));
+      reinterpret_cast<const aos::Configuration *>(configuration));
   return reinterpret_cast<aos_event_loop_t *>(
       static_cast<aos::EventLoop *>(event_loop.release()));
+}
+
+void aos_init(int *argc, char ***argv) { aos::InitGoogle(argc, argv); }
+
+const void *aos_configuration_buffer_get_data(
+    const aos_configuration_buffer_t *self) {
+  const aos::FlatbufferDetachedBuffer<aos::Configuration> *config =
+      reinterpret_cast<
+          const aos::FlatbufferDetachedBuffer<aos::Configuration> *>(
+          ABSL_DIE_IF_NULL(self));
+  return config->span().data();
+}
+
+size_t aos_configuration_buffer_get_size(
+    const aos_configuration_buffer_t *self) {
+  const aos::FlatbufferDetachedBuffer<aos::Configuration> *config =
+      reinterpret_cast<
+          const aos::FlatbufferDetachedBuffer<aos::Configuration> *>(
+          ABSL_DIE_IF_NULL(self));
+  return config->span().size();
+}
+
+aos_configuration_buffer_t *aos_configuration_buffer_read_from_file(
+    const char *file_path) {
+  auto config =
+      std::make_unique<aos::FlatbufferDetachedBuffer<aos::Configuration>>(
+          aos::configuration::ReadConfig(ABSL_DIE_IF_NULL(file_path)));
+  return reinterpret_cast<aos_configuration_buffer_t *>(config.release());
+}
+
+void aos_configuration_buffer_destroy(aos_configuration_buffer_t *self) {
+  aos::FlatbufferDetachedBuffer<aos::Configuration> *config =
+      reinterpret_cast<aos::FlatbufferDetachedBuffer<aos::Configuration> *>(
+          ABSL_DIE_IF_NULL(self));
+  delete config;
+}
+
+const aos_channel_t *aos_configuration_get_channel(
+    const aos_configuration_t *config, const char *name_data, size_t name_size,
+    const char *type_data, size_t type_size, const char *application_name_data,
+    size_t application_name_size, const aos_node_t *node) {
+  return reinterpret_cast<const aos_channel_t *>(aos::configuration::GetChannel(
+      reinterpret_cast<const aos::Configuration *>(ABSL_DIE_IF_NULL(config)),
+      std::string_view(ABSL_DIE_IF_NULL(name_data), name_size),
+      std::string_view(ABSL_DIE_IF_NULL(type_data), type_size),
+      std::string_view(ABSL_DIE_IF_NULL(application_name_data),
+                       application_name_size),
+      reinterpret_cast<const aos::Node *>(node)));
+}
+
+const aos_node_t *aos_configuration_get_node(const aos_configuration_t *config,
+                                             const char *name_data,
+                                             size_t name_size) {
+  return reinterpret_cast<const aos_node_t *>(aos::configuration::GetNode(
+      reinterpret_cast<const aos::Configuration *>(ABSL_DIE_IF_NULL(config)),
+      std::string_view(ABSL_DIE_IF_NULL(name_data), name_size)));
+}
+
+size_t aos_configuration_get_nodes(const aos_configuration_t *config,
+                                   const aos_node_t **result,
+                                   size_t result_size) {
+  const std::vector<const aos::Node *> result_vector =
+      aos::configuration::GetNodes(reinterpret_cast<const aos::Configuration *>(
+          ABSL_DIE_IF_NULL(config)));
+  for (size_t i = 0; i < std::min(result_vector.size(), result_size); ++i) {
+    result[i] = reinterpret_cast<const aos_node_t *>(result_vector[i]);
+  }
+  return result_vector.size();
+}
+
+bool aos_configuration_multi_node(const aos_configuration_t *config) {
+  return aos::configuration::MultiNode(
+      reinterpret_cast<const aos::Configuration *>(ABSL_DIE_IF_NULL(config)));
+}
+
+bool aos_configuration_channel_is_sendable_on_node(const aos_channel_t *channel,
+                                                   const aos_node_t *node) {
+  return aos::configuration::ChannelIsSendableOnNode(
+      reinterpret_cast<const aos::Channel *>(ABSL_DIE_IF_NULL(channel)),
+      reinterpret_cast<const aos::Node *>(node));
+}
+
+bool aos_configuration_channel_is_readable_on_node(const aos_channel_t *channel,
+                                                   const aos_node_t *node) {
+  return aos::configuration::ChannelIsReadableOnNode(
+      reinterpret_cast<const aos::Channel *>(ABSL_DIE_IF_NULL(channel)),
+      reinterpret_cast<const aos::Node *>(node));
 }
 
 void aos_simulated_event_loop_factory_destroy(
@@ -381,10 +517,9 @@ aos_exit_handle_t *aos_simulated_event_loop_factory_make_exit_handle(
 }
 
 aos_simulated_event_loop_factory_t *aos_simulated_event_loop_factory_create(
-    const uint8_t *configuration_buffer) {
+    const aos_configuration_t *configuration) {
   auto factory = std::make_unique<aos::SimulatedEventLoopFactory>(
-      flatbuffers::GetRoot<aos::Configuration>(
-          ABSL_DIE_IF_NULL(configuration_buffer)));
+      reinterpret_cast<const aos::Configuration *>(configuration));
   return reinterpret_cast<aos_simulated_event_loop_factory_t *>(
       factory.release());
 }

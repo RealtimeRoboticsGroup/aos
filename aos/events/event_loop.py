@@ -1,11 +1,14 @@
 from typing import Any, List, Type, Callable, Optional
 import traceback
 import sys
+import enum
 
 import flatbuffers
 from absl import logging
 
 from aos.events.event_loop_c import ffi, lib
+from aos.configuration_fbs_py.aos.Configuration import Configuration, Node
+from aos.events.util import ConfigurationBuffer
 '''
 A friendly, callback-based Python interface to EventLoop.
 
@@ -64,7 +67,31 @@ We expose the underlying C++ memory directly. This is needed for performant
 access to large messages, but it is difficult to use correctly from Python. We
 wrap all of this access in further context managers which verify a lack of
 Python references at `__exit__` time.
+
+## Flatbuffers
+
+The Python flatbuffers API (the non-object based one) solves this problem by
+storing a Python-owned buffer in all of the Python objects. This makes these
+objects simpler than the design for `EventLoop`'s child objects, and makes more
+sense here.
+
+Given a known Python-owned buffer, it is simple to convert between the offsets
+tracked in Python and a pointer passed through C++ code. The Python
+`FlatbufferDetachedBuffer` implements these conversions, which we use there.
+This means we can freely expose these objects to Python callers and rely on
+Python refcounting to manage the lifetime of the backing buffer.
+
+However, this means the Python buffer must be known, which is not easy to pass
+through a C++ API in a robust way. We require a Python buffer at `EventLoop`
+construction time, and any caller with a C++-owned (or generically-owned)
+buffer must copy it.
 '''
+
+
+class SchedulingPolicy(enum.Enum):
+    OTHER = lib.aos_const_scheduling_policy_other()
+    FIFO = lib.aos_const_scheduling_policy_fifo()
+    RR = lib.aos_const_scheduling_policy_rr()
 
 
 class InternalProxy:
@@ -99,10 +126,17 @@ class PythonChannel:
     def c_name(self):
         return ffi.new("char[]", self._channel_name.encode('utf-8'))
 
+    @property
+    def channel_name(self):
+        return self._channel_name
+
     def c_type(self):
+        return ffi.new("char[]", self.fbs_module().encode('utf-8'))
+
+    def fbs_module(self):
+        """Returns the fbs module name. This is how the C API identifies this type."""
         module = self._channel_type.__module__
-        fbs_module = module.split('_fbs_py.', 1)[1]
-        return ffi.new("char[]", fbs_module.encode('utf-8'))
+        return module.split('_fbs_py.', 1)[1]
 
     def object_from_buffer(self, buffer):
         return self._channel_type.InitFromPackedBuf(buffer, 0)
@@ -520,15 +554,25 @@ class Error:
 class EventLoop:
     """Wraps an `aos::EventLoop`."""
 
-    def __init__(self, c_event_loop) -> None:
-        """`close()` must be called on the result before `c_event_loop` is destroyed."""
+    def __init__(self, c_event_loop: ffi.CData,
+                 config_buffer: ConfigurationBuffer) -> None:
+        """`close()` must be called on the result before `c_event_loop` is destroyed.
+
+        `c_event_loop`'s configuration must lie within `config_buffer`. If you
+        need to create an instance with a C++-owned `aos::Configuration`,
+        create a copy into a Python-owned `ConfigurationBuffer` before calling
+        this constructor."""
         self._c_event_loop = c_event_loop
+        self._config_buffer = config_buffer
         self._proxies: List[InternalProxy] = list()
         self._timers: List[Timer] = list()
         self._fetchers: List[Fetcher] = list()
         self._senders: List[Sender] = list()
         self._callback_handles: List[ffi.Handle] = list()
         self._handle = ffi.new_handle(self)
+
+        # Call this now to confirm our caller passed the correct `ConfigurationBuffer`.
+        self.configuration()
 
     def close(self):
         for proxy in self._proxies:
@@ -560,6 +604,14 @@ class EventLoop:
             int: Nanoseconds since epoch on the monotonic clock.
         """
         return lib.aos_event_loop_monotonic_now(self._c_event_loop)
+
+    def realtime_now_ns(self) -> int:
+        """Read the current time on the realtime clock.
+
+        Returns:
+            int: Nanoseconds since epoch on the realtime clock.
+        """
+        return lib.aos_event_loop_realtime_now(self._c_event_loop)
 
     def name(self) -> str:
         name_data = ffi.new('const char **')
@@ -662,8 +714,29 @@ class EventLoop:
             callback = ffi.from_handle(callback_handle)
             callback()
 
-    def set_runtime_realtime_priority(self, priority: int) -> None:
+    def set_runtime_realtime_priority(
+            self,
+            priority: int,
+            scheduling_policy: SchedulingPolicy = SchedulingPolicy.FIFO
+    ) -> None:
         lib.aos_event_loop_set_runtime_realtime_priority(
-            self._c_event_loop, priority,
-            lib.aos_const_scheduling_policy_fifo(),
+            self._c_event_loop, priority, scheduling_policy.value,
             lib.aos_const_realtime_policy_no_mode())
+
+    def set_runtime_affinity(self, affinity: [int]) -> None:
+        affinity_c = ffi.new('int32_t[]', affinity)
+        lib.aos_event_loop_set_runtime_affinity(self._c_event_loop, affinity_c,
+                                                len(affinity))
+
+    def node(self) -> Node:
+        return self._config_buffer.c_to_fbs(
+            Node, lib.aos_event_loop_node(self._c_event_loop))
+
+    def configuration(self) -> Configuration:
+        return self._config_buffer.c_to_fbs(
+            Configuration,
+            lib.aos_event_loop_configuration(self._c_event_loop))
+
+    @property
+    def config_buffer(self) -> ConfigurationBuffer:
+        return self._config_buffer

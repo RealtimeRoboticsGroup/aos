@@ -57,11 +57,29 @@ typedef struct aos_simulated_event_loop_factory_t
 // Wrapper for aos::ErrorType. See aos/util/status.h for detailed documentation.
 typedef struct aos_error_t aos_error_t;
 
+// Wrapper for aos::Configuration (a pointer to a flatbuffers table). See
+// aos/configuration.fbs for detailed documentation.
+typedef struct aos_configuration_t aos_configuration_t;
+
+// Wrapper for aos::Channel (a pointer to a flatbuffers table). See
+// aos/configuration.fbs for detailed documentation.
+typedef struct aos_channel_t aos_channel_t;
+
+// Wrapper for aos::Node (a pointer to a flatbuffers table). See
+// aos/configuration.fbs for detailed documentation.
+typedef struct aos_node_t aos_node_t;
+
+// Wrapper for aos::FlatbufferDetachedBuffer<aos::Configuration>. See
+// aos/flatbuffers.h for detailed documentation.
+typedef struct aos_configuration_buffer_t aos_configuration_buffer_t;
+
 // Callback types for various EventLoop APIs.
 typedef void (*aos_watcher_callback_t)(const aos_context_t *context,
                                        const void *message, void *user_data);
 typedef void (*aos_timer_callback_t)(void *user_data);
 typedef void (*aos_on_run_callback_t)(void *user_data);
+typedef void (*aos_shm_event_loop_fd_callback_t)(void *user_data,
+                                                 uint32_t events);
 
 // These functions will always return the same value each time they are
 // executed, although this return value may change in future versions.
@@ -104,6 +122,9 @@ aos_timer_handler_t *aos_event_loop_add_timer(aos_event_loop_t *self,
 // Returns the current time on the monotonic clock, as nanoseconds since
 // epoch.
 int64_t aos_event_loop_monotonic_now(aos_event_loop_t *self);
+// Returns the current time on the realtime clock, as nanoseconds since
+// epoch.
+int64_t aos_event_loop_realtime_now(aos_event_loop_t *self);
 // Registers the provided callback to be invoked when the event loop is first
 // run.
 void aos_event_loop_on_run(aos_event_loop_t *self,
@@ -117,10 +138,24 @@ void aos_event_loop_set_runtime_realtime_priority(aos_event_loop_t *self,
                                                   int priority,
                                                   int scheduling_policy,
                                                   int realtime_policy);
+// Sets the cpu affinity to run the event loop with.
+// affinity_list is a pointer to an array of affinity_list_size cpu numbers to
+// include in the affinity mask.
+//
+// This will die if any entry in the list is larger than a platform-specific
+// limit.
+void aos_event_loop_set_runtime_affinity(aos_event_loop_t *self,
+                                         const int32_t *affinity_list,
+                                         size_t affinity_list_size);
 // "*name_data" is invalidated when the next "aos_event_loop_*" function is
 // called on "self".
 void aos_event_loop_get_name(aos_event_loop_t *self, const char **name_data,
                              size_t *name_size);
+const aos_node_t *aos_event_loop_node(aos_event_loop_t *self);
+const aos_configuration_t *aos_event_loop_configuration(aos_event_loop_t *self);
+
+// All aos_shm_event_loop_* functions may move to a different file, once we
+// decide on a path for scalable shared libraries.
 
 // Runs the event loop. This blocks until interrupted by a signal or ^C. This
 // is only available on some kinds of event loops.
@@ -131,6 +166,19 @@ aos_exit_handle_t *aos_shm_event_loop_make_exit_handle(aos_event_loop_t *self);
 // Copies name_size bytes from name_data (no NUL terminator required).
 void aos_shm_event_loop_set_name(aos_event_loop_t *self, const char *name_data,
                                  size_t name_size);
+// All public-facing APIs will verify they are called in this thread.
+void aos_shm_event_loop_lock_to_thread(aos_event_loop_t *self);
+// Registers a function to be called when the configured events occur on fd.
+void aos_shm_event_loop_on_fd_events(aos_event_loop_t *self, int fd,
+                                     aos_shm_event_loop_fd_callback_t callback,
+                                     void *user_data);
+// Removes fd from the event loop.
+void aos_shm_event_loop_delete_fd(aos_event_loop_t *self, int fd);
+// Sets the epoll events for the given fd.
+void aos_shm_event_loop_set_fd_events(aos_event_loop_t *self, int fd,
+                                      uint32_t events);
+aos_event_loop_t *aos_shm_event_loop_create(
+    const aos_configuration_t *configuration);
 
 void aos_fetcher_destroy(aos_fetcher_t *self);
 // Fetches the latest message on the channel. Returns true if a new message
@@ -178,16 +226,42 @@ void aos_exit_handle_destroy(aos_exit_handle_t *self);
 void aos_exit_handle_exit(aos_exit_handle_t *self);
 void aos_exit_handle_exit_with_python_exception(aos_exit_handle_t *self);
 
+// All aos_configuration_* functions may move to a different file, once we
+// decide on a path for scalable shared libraries.
+
 // TODO(Sanjay): How does this interact with absl-py?
 void aos_init(int *argc, char ***argv);
-uint8_t *aos_configuration_read_from_file(const char *file_path);
-void aos_configuration_destroy(uint8_t *self);
 
-aos_event_loop_t *aos_shm_event_loop_create(
-    const uint8_t *configuration_buffer);
+const void *aos_configuration_buffer_get_data(
+    const aos_configuration_buffer_t *self);
+size_t aos_configuration_buffer_get_size(
+    const aos_configuration_buffer_t *self);
+aos_configuration_buffer_t *aos_configuration_buffer_read_from_file(
+    const char *file_path);
+void aos_configuration_buffer_destroy(aos_configuration_buffer_t *self);
+
+const aos_channel_t *aos_configuration_get_channel(
+    const aos_configuration_t *config, const char *name_data, size_t name_size,
+    const char *type_data, size_t type_size, const char *application_name_data,
+    size_t application_name_size, const aos_node_t *node);
+const aos_node_t *aos_configuration_get_node(const aos_configuration_t *config,
+                                             const char *name_data,
+                                             size_t name_size);
+// Returns the full result size. Writes at most result_size results.
+size_t aos_configuration_get_nodes(const aos_configuration_t *config,
+                                   const aos_node_t **result,
+                                   size_t result_size);
+bool aos_configuration_multi_node(const aos_configuration_t *config);
+bool aos_configuration_channel_is_sendable_on_node(const aos_channel_t *channel,
+                                                   const aos_node_t *node);
+bool aos_configuration_channel_is_readable_on_node(const aos_channel_t *channel,
+                                                   const aos_node_t *node);
+
+// All aos_simulated_event_loop_* functions may move to a different file, once
+// we decide on a path for scalable shared libraries.
 
 aos_simulated_event_loop_factory_t *aos_simulated_event_loop_factory_create(
-    const uint8_t *configuration_buffer);
+    const aos_configuration_t *configuration);
 void aos_simulated_event_loop_factory_destroy(
     aos_simulated_event_loop_factory_t *self);
 aos_event_loop_t *aos_simulated_event_loop_factory_make_event_loop(
