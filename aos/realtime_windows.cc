@@ -102,6 +102,7 @@ static void *(__cdecl *original_malloc)(size_t) = nullptr;
 static void(__cdecl *original_free)(void *) = nullptr;
 static void *(__cdecl *original_realloc)(void *, size_t) = nullptr;
 static void *(__cdecl *original_calloc)(size_t, size_t) = nullptr;
+bool malloc_hook_registered = false;
 
 void *AosMalloc(size_t size) {
   if (aos::GetIsRealtime() && absl::GetFlag(FLAGS_die_on_malloc)) {
@@ -132,9 +133,8 @@ void *AosCalloc(size_t num, size_t size) {
 }  // namespace
 
 void RegisterMallocHook() {
-  static bool registered = false;
-  if (registered) return;
-  registered = true;
+  if (malloc_hook_registered) return;
+  malloc_hook_registered = true;
 
   HMODULE h_ucrt = GetModuleHandleA("ucrtbase.dll");
   if (!h_ucrt) {
@@ -194,6 +194,29 @@ void RegisterMallocHook() {
       << ": DetourTransactionCommit failed: " << commit_err;
 }
 
+// Removes the malloc detours installed by RegisterMallocHook().  This must run
+// before the module that owns AosMalloc/AosFree/... is unloaded (e.g. when
+// Python/cffi FreeLibrary's the event-loop DLL): otherwise the detours keep
+// redirecting malloc/free into unmapped code and the next allocation crashes.
+// Best-effort only -- it runs from DLL detach, where logging and allocation are
+// unsafe, so it avoids ABSL_CHECK and just reverses the DetourAttach calls.
+void UnregisterMallocHook() {
+  if (!malloc_hook_registered) return;
+  malloc_hook_registered = false;
+
+  DetourTransactionBegin();
+  DetourUpdateThread(GetCurrentThread());
+  DetourDetach(reinterpret_cast<void **>(&original_malloc),
+               reinterpret_cast<void *>(AosMalloc));
+  DetourDetach(reinterpret_cast<void **>(&original_free),
+               reinterpret_cast<void *>(AosFree));
+  DetourDetach(reinterpret_cast<void **>(&original_realloc),
+               reinterpret_cast<void *>(AosRealloc));
+  DetourDetach(reinterpret_cast<void **>(&original_calloc),
+               reinterpret_cast<void *>(AosCalloc));
+  DetourTransactionCommit();
+}
+
 std::string GetThreadName() { return ""; }
 
 pid_t GetProcessId() { return GetCurrentProcessId(); }
@@ -209,3 +232,17 @@ int SetCurrentThreadRealtimePriorityLowLevel(int /*priority*/,
 }
 
 }  // namespace aos
+
+// Remove the malloc detours when this module is unloaded via FreeLibrary
+// (reserved == nullptr) -- e.g. when Python/cffi releases the event-loop DLL at
+// interpreter shutdown.  Without this, the detours outlive the code they point
+// at and the next malloc/free faults.  On full process termination
+// (reserved != nullptr) the loader is already tearing everything down, so we
+// leave the detours in place rather than risk touching a Detours transaction
+// during shutdown.
+BOOL WINAPI DllMain(HINSTANCE /*instance*/, DWORD reason, LPVOID reserved) {
+  if (reason == DLL_PROCESS_DETACH && reserved == nullptr) {
+    aos::UnregisterMallocHook();
+  }
+  return TRUE;
+}
