@@ -242,10 +242,21 @@ void Starter::Cleanup() {
   for (auto &application : applications_) {
     application.second.Terminate();
   }
-  cleanup_timer_->Schedule(
-      event_loop_.monotonic_now() +
-      std::chrono::milliseconds(static_cast<int>(
-          absl::GetFlag(FLAGS_starterd_shutdown_timeout) * 1000)));
+  for (auto iter = applications_.begin(); iter != applications_.end();) {
+    if (iter->second.Terminated()) {
+      iter = applications_.erase(iter);
+    } else {
+      ++iter;
+    }
+  }
+  if (applications_.empty()) {
+    event_loop_.Exit();
+  } else {
+    cleanup_timer_->Schedule(
+        event_loop_.monotonic_now() +
+        std::chrono::milliseconds(static_cast<int>(
+            absl::GetFlag(FLAGS_starterd_shutdown_timeout) * 1000)));
+  }
 }
 
 void Starter::OnSignal(signalfd_siginfo info) {

@@ -226,6 +226,12 @@ class Application {
   // Once an application is terminated, it cannot be restarted.
   void Terminate();
 
+  // Return true if application terminated.
+  bool Terminated() {
+    return status_ == ApplicationInternalState::kStopped && command_ &&
+           command_.value() == ApplicationCommand::kTerminate;
+  }
+
   // Adds a callback which gets notified when the application changes state.
   // This is in addition to any existing callbacks and doesn't replace any of
   // them.

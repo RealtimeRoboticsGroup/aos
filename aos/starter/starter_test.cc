@@ -557,30 +557,17 @@ TEST_F(StarterdTest, StarterChainTest) {
     client_loop.Exit();
     LOG(INFO) << "End stage3.";
   };
-  auto stage2 = [this, &starter, &client, &client_node, &stage3] {
+  auto stage2 = [&client, &client_node, &stage3] {
     LOG(INFO) << "Begin stage2";
-    test_done_ = true;  // trigger `starter` to exit.
-
-    // wait for the starter event loop to close, so we can
-    // intentionally trigger a timeout.
-    int attempts = 0;
-    while (starter.event_loop()->is_running()) {
-      ++attempts;
-      if (attempts > 5) {
-        LOG(INFO) << "Timeout while waiting for starter to exit";
-        return;
-      }
-      LOG(INFO) << "Waiting for starter to close.";
-      std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
     client.SetTimeoutHandler(std::ref(stage3));
     client.SetSuccessHandler([]() {
       LOG(INFO) << "stage3 success handler called.";
       FAIL() << ": Command should not have succeeded here.";
     });
     // we want this command to timeout
+    // Don't wait as long as the start timer (1 second)
     client.SendCommands({{Command::START, "ping", {client_node}}},
-                        std::chrono::seconds(5));
+                        std::chrono::milliseconds(500));
     LOG(INFO) << "End stage2";
   };
   auto stage1 = [&client, &client_node, &stage2] {
@@ -606,7 +593,105 @@ TEST_F(StarterdTest, StarterChainTest) {
 
   client_loop.Run();
   EXPECT_TRUE(success);
-  ASSERT_FALSE(starter.event_loop()->is_running());
+  test_done_ = true;  // trigger `starter` to exit.
+}
+
+TEST_F(StarterdTest, ImmediateExitWithOnlyStopped) {
+  // Test that with an application never started and with
+  // an application already stopped, starterd exits "immediately"
+  // when asked to terminate.
+  const std::string config_file =
+      ArtifactPath("documentation/examples/ping_pong/pingpong_config.json");
+  aos::FlatbufferDetachedBuffer<aos::Configuration> config =
+      aos::configuration::ReadConfig(config_file);
+
+  // Autostart pong but not ping.
+  auto new_config = aos::configuration::MergeWithConfig(
+      &config.message(),
+      absl::StrFormat(
+          R"({"applications": [
+                                {
+                                  "name": "ping",
+                                  "executable_name": "%s",
+                                  "args": ["--shm_base", "%s"],
+                                  "autorestart": false
+                                },
+                                {
+                                  "name": "pong",
+                                  "executable_name": "%s",
+                                  "args": ["--shm_base", "%s"]
+                                }
+                              ]})",
+          ArtifactPath("documentation/examples/ping_pong/ping"),
+          absl::GetFlag(FLAGS_shm_base),
+          ArtifactPath("documentation/examples/ping_pong/pong"),
+          absl::GetFlag(FLAGS_shm_base)));
+
+  const aos::Configuration *config_msg = &new_config.message();
+  // Set up starter with config file
+  aos::starter::Starter starter(config_msg,
+                                std::make_unique<DummyCGroupManager>());
+  aos::ShmEventLoop client_loop(config_msg);
+  client_loop.SkipAosLog();
+  StarterClient client(&client_loop);
+  bool success = false;
+  auto client_node = client_loop.node();
+
+  // limit the amount of time we will wait for the test to finish.
+  client_loop
+      .AddTimer([&client_loop] {
+        client_loop.Exit();
+        FAIL() << "ERROR: The test has failed, the watcher has timed out. "
+                  "The chain of stages defined below did not complete "
+                  "within the time limit.";
+      })
+      ->Schedule(client_loop.monotonic_now() + std::chrono::seconds(20));
+
+  auto stage2 = [this, &starter, &success, &client_loop] {
+    LOG(INFO) << "Begin stage2";
+    test_done_ = true;  // trigger `starter` to exit.
+    auto start_time = starter.event_loop()->monotonic_now();
+    auto tick_period = std::chrono::milliseconds(100);
+    auto shutdown_time_max = std::chrono::seconds(1);
+    while (starter.event_loop()->is_running()) {
+      if (starter.event_loop()->monotonic_now() - start_time >
+          shutdown_time_max) {
+        LOG(INFO) << "Timeout while waiting for starter to exit";
+        return;
+      }
+      LOG(INFO) << "Waiting for starter to close.";
+      std::this_thread::sleep_for(tick_period);
+    }
+    auto ticks_to_shut_down =
+        (starter.event_loop()->monotonic_now() - start_time) / tick_period;
+    LOG(INFO) << "Starter took " << ticks_to_shut_down
+              << " ticks to shut down.";
+    success = true;
+    client_loop.Exit();
+  };
+  auto stage1 = [&client, &client_node, &stage2] {
+    LOG(INFO) << "Begin stage1";
+    client.SetTimeoutHandler(
+        []() { FAIL() << ": Command should not have timed out."; });
+    client.SetSuccessHandler(std::ref(stage2));
+    client.SendCommands({{Command::STOP, "pong", {client_node}}},
+                        std::chrono::seconds(5));
+    LOG(INFO) << "End stage1";
+  };
+  // start the test body
+  client_loop.AddTimer(stage1)->Schedule(client_loop.monotonic_now() +
+                                         std::chrono::milliseconds(1));
+
+  // prepare the cleanup for starter. This will finish when we call
+  // `test_done_ = true;`.
+  SetupStarterCleanup(&starter);
+
+  // run `starter.Run()` in a thread to simulate it running on
+  // another process.
+  ThreadedStarterRunner starterd_thread(&starter);
+
+  client_loop.Run();
+  ASSERT_TRUE(success);
 }
 
 }  // namespace aos::starter

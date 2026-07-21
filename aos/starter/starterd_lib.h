@@ -3,6 +3,7 @@
 
 #include <sys/signalfd.h>
 
+#include <chrono>
 #include <csignal>
 #include <memory>
 #include <mutex>
