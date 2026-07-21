@@ -38,6 +38,33 @@ cc_library(
 )
 
 cc_library(
+    name = "shm_mapping",
+    srcs = [
+        "shm_mapping.cc",
+    ] + select({
+        "@platforms//os:windows": ["shm_mapping_windows.cc"],
+        "//conditions:default": ["shm_mapping_linux.cc"],
+    }),
+    hdrs = ["shm_mapping.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//aos/util:file",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
+    ],
+)
+
+cc_test(
+    name = "shm_mapping_test",
+    srcs = ["shm_mapping_test.cc"],
+    deps = [
+        ":shm_mapping",
+        "//aos/testing:googletest",
+        "//aos/testing:tmpdir",
+    ],
+)
+
+cc_library(
     name = "thread_signal",
     srcs = select({
         "@platforms//os:linux": ["thread_signal_linux.cc"],
@@ -402,6 +429,7 @@ cc_library(
     deps = [
         ":index",
         ":lockless_queue",
+        ":shm_mapping",
         "//aos:configuration",
         "//aos/util:file",
         "@com_github_google_flatbuffers//:flatbuffers",

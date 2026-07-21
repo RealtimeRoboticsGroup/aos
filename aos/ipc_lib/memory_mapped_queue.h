@@ -12,6 +12,7 @@
 
 #include "aos/configuration.h"
 #include "aos/ipc_lib/lockless_queue.h"
+#include "aos/ipc_lib/shm_mapping.h"
 
 namespace aos::ipc_lib {
 
@@ -35,11 +36,13 @@ class MemoryMappedQueue {
   MemoryMappedQueue &operator=(const MemoryMappedQueue &rhs) = delete;
 
   LocklessQueueMemory *memory() const {
-    return reinterpret_cast<ipc_lib::LocklessQueueMemory *>(data_);
+    return reinterpret_cast<ipc_lib::LocklessQueueMemory *>(
+        writable_mapping_.data());
   }
 
   const LocklessQueueMemory *const_memory() const {
-    return reinterpret_cast<const LocklessQueueMemory *>(const_data_);
+    return reinterpret_cast<const LocklessQueueMemory *>(
+        readonly_mapping_.data());
   }
 
   const LocklessQueueConfiguration &config() const { return config_; }
@@ -49,20 +52,20 @@ class MemoryMappedQueue {
   }
 
   absl::Span<char> GetMutableSharedMemory() const {
-    return absl::Span<char>(static_cast<char *>(data_), size_);
+    return absl::Span<char>(static_cast<char *>(writable_mapping_.data()),
+                            writable_mapping_.size());
   }
 
   absl::Span<const char> GetConstSharedMemory() const {
-    return absl::Span<const char>(static_cast<const char *>(const_data_),
-                                  size_);
+    return absl::Span<const char>(
+        static_cast<const char *>(readonly_mapping_.data()),
+        readonly_mapping_.size());
   }
 
  private:
   const LocklessQueueConfiguration config_;
-
-  size_t size_;
-  void *data_;
-  const void *const_data_;
+  WritableShmMapping writable_mapping_;
+  ReadOnlyShmMapping readonly_mapping_;
 };
 
 }  // namespace aos::ipc_lib
