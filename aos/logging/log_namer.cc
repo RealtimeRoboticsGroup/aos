@@ -32,6 +32,8 @@
 ABSL_FLAG(std::string, logging_folder, LOGGING_FOLDER_DEFAULT,
           "The folder to log to.  If empty, search for the /media/sd*1/ "
           "folder and place logs there.");
+ABSL_FLAG(bool, enable_current_symlink, true,
+          "Whether to write aos_log-current symlinks.");
 
 namespace aos::logging {
 namespace {
@@ -161,7 +163,9 @@ std::optional<std::string> MaybeGetLogName(const char *basename) {
   std::string log_roborio_name = std::string(tmp) + "/";
   free(tmp);
 
-  UpdateCurrentSymlink(folder, basename, log_roborio_name);
+  if (absl::GetFlag(FLAGS_enable_current_symlink)) {
+    UpdateCurrentSymlink(folder, basename, log_roborio_name);
+  }
   return log_base_name;
 }
 
