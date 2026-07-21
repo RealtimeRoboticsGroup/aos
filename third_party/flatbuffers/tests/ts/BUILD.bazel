@@ -1,2 +1,0 @@
-# Stubbed out. See //third_party/flatbuffers/tests/BUILD.bazel for context.
-package(default_visibility = ["//visibility:private"])

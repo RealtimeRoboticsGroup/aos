@@ -23,13 +23,16 @@ def main(argv):
     repos = tools.go.mirror_lib.parse_go_repositories(args.go_deps_bzl)
 
     with open(args.go_deps_bzl, "w") as file:
-        file.write(
-            textwrap.dedent("""\
-            # This file is auto-generated. Do not edit.
-            load("//tools/go:mirrored_go_deps.bzl", "maybe_override_go_dep")
-
-            def go_dependencies():
-            """))
+        file.write("# This file is auto-generated. Do not edit.\n")
+        if repos:
+            file.write(
+                'load("//tools/go:mirrored_go_deps.bzl", "maybe_override_go_dep")\n'
+            )
+        file.write("\ndef go_dependencies():\n")
+        if not repos:
+            # When the repo has no Go code at all, we still need a body to make
+            # this valid Starlark, and buildifier rejects the unused load above.
+            file.write("    pass\n")
         for repo in repos:
             file.write(
                 textwrap.indent(

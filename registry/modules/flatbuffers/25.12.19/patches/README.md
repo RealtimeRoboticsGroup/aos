@@ -4,8 +4,7 @@ These patches are applied via `single_version_override` in the root
 `MODULE.bazel` to the [BCR-distributed flatbuffers module](https://registry.bazel.build/modules/flatbuffers).
 
 The intent is that the AOS-specific divergence from upstream flatbuffers lives
-here as a curated list of small logical patches, rather than as a fork of the
-entire source tree under `third_party/flatbuffers/`.
+here as a curated list of small logical patches.
 
 ## Sequencing
 
