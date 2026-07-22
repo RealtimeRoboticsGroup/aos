@@ -2,13 +2,12 @@
 
 #include <chrono>
 #include <cinttypes>
+#include <numbers>
 
 #include "aos/logging/logging.h"
 #include "aos/time/time.h"
 
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
+namespace numbers = std::numbers;
 
 namespace frc::wpilib {
 
@@ -130,7 +129,7 @@ uint16_t GyroInterface::DoRead(uint8_t address) {
 
 double GyroInterface::ExtractAngle(uint32_t value) {
   const int16_t reading = -static_cast<int16_t>(value >> 10 & 0xFFFF);
-  return static_cast<double>(reading) * 2.0 * M_PI / 360.0 / 80.0;
+  return static_cast<double>(reading) * 2.0 * numbers::pi / 360.0 / 80.0;
 }
 
 uint32_t GyroInterface::ReadPartID() {

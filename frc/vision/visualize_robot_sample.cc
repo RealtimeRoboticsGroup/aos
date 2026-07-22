@@ -1,5 +1,7 @@
 #include <math.h>
 
+#include <numbers>
+
 #include "Eigen/Dense"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
@@ -14,6 +16,8 @@
 #include "aos/logging/logging.h"
 #include "aos/time/time.h"
 #include "frc/vision/visualize_robot.h"
+
+namespace numbers = std::numbers;
 
 namespace frc::vision {
 
@@ -30,7 +34,7 @@ void Main(int /*argc*/, char ** /* argv */) {
 
   // Go around the clock and plot the coordinate frame at different rotations
   for (int i = 0; i < 12; i++) {
-    double angle = M_PI * double(i) / 6.0;
+    double angle = numbers::pi * double(i) / 6.0;
     Eigen::Vector3d trans;
     trans << 1.0 * cos(angle), 1.0 * sin(angle), 0.0;
 

@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <numbers>
 #include <random>
 
 #include "Eigen/Dense"
@@ -18,6 +19,8 @@
 #include "aos/util/math.h"
 #include "frc/vision/intrinsics_calibration_lib.h"
 #include "tools/cpp/runfiles/runfiles.h"
+
+namespace numbers = std::numbers;
 
 namespace frc::vision {
 aos::distributed_clock::time_point TimeInMs(size_t ms) {
@@ -116,10 +119,10 @@ void RunIntrinsicFromPoints(std::string calib_filename,
   bool should_break = false;
   // Iterate through a bunch of poses so that we present the board at enough
   // views to cover the image plane with corner points
-  for (float theta_x = 0.0; theta_x <= M_PI / 6 && !should_break;
-       theta_x += M_PI / 8) {
-    for (float theta_y = 0.0; theta_y <= M_PI / 6 && !should_break;
-         theta_y += M_PI / 8) {
+  for (float theta_x = 0.0; theta_x <= numbers::pi / 6 && !should_break;
+       theta_x += numbers::pi / 8) {
+    for (float theta_y = 0.0; theta_y <= numbers::pi / 6 && !should_break;
+         theta_y += numbers::pi / 8) {
       for (float depth = 0.6; depth >= 0.0 && !should_break; depth -= 0.2) {
         for (float x = -0.5; x <= 0.5 && !should_break; x += 0.5) {
           for (float y = -1.0; y <= 0.0 && !should_break; y += 0.5) {

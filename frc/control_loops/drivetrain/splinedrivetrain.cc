@@ -1,5 +1,7 @@
 #include "frc/control_loops/drivetrain/splinedrivetrain.h"
 
+#include <numbers>
+
 #include "Eigen/Dense"
 
 #include "aos/json_to_flatbuffer.h"
@@ -10,6 +12,8 @@
 #include "frc/control_loops/drivetrain/drivetrain_goal_generated.h"
 #include "frc/control_loops/drivetrain/drivetrain_output_generated.h"
 #include "frc/control_loops/drivetrain/drivetrain_status_generated.h"
+
+namespace numbers = std::numbers;
 
 namespace frc::control_loops::drivetrain {
 
@@ -169,7 +173,7 @@ void SplineDrivetrain::Update(
     if (backwards) {
       ::Eigen::Matrix<double, 2, 1> swapU(U_ff(1, 0), U_ff(0, 0));
       U_ff = -swapU;
-      goal_state(2, 0) += M_PI;
+      goal_state(2, 0) += numbers::pi;
       double left_goal = goal_state(3, 0);
       double right_goal = goal_state(4, 0);
       goal_state(3, 0) = -right_goal;
@@ -273,7 +277,7 @@ flatbuffers::Offset<TrajectoryLogging> SplineDrivetrain::MakeTrajectoryLogging(
       trajectory_logging_builder.add_left_velocity(-goal_state(4));
       trajectory_logging_builder.add_right_velocity(-goal_state(3));
       trajectory_logging_builder.add_theta(
-          ::aos::math::NormalizeAngle(goal_state(2) + M_PI));
+          ::aos::math::NormalizeAngle(goal_state(2) + numbers::pi));
     } else {
       trajectory_logging_builder.add_theta(
           ::aos::math::NormalizeAngle(goal_state(2)));

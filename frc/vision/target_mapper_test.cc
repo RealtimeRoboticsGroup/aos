@@ -1,5 +1,6 @@
 #include "frc/vision/target_mapper.h"
 
+#include <numbers>
 #include <random>
 
 #include "absl/flags/declare.h"
@@ -13,6 +14,8 @@
 #include "aos/testing/random_seed.h"
 #include "aos/util/math.h"
 #include "vision_util_lib.h"
+
+namespace numbers = std::numbers;
 
 ABSL_DECLARE_FLAG(int32_t, min_target_id);
 ABSL_DECLARE_FLAG(int32_t, max_target_id);
@@ -36,8 +39,9 @@ constexpr std::string_view kFieldName = "test";
     double delta = std::abs(aos::math::DiffAngle(theta1, theta2));         \
     /* Have to check delta - 2pi for the case that one angle is very */    \
     /* close to -pi, and the other is very close to +pi */                 \
-    EXPECT_TRUE(delta < tolerance || std::abs(aos::math::DiffAngle(        \
-                                         delta, 2.0 * M_PI)) < tolerance); \
+    EXPECT_TRUE(delta < tolerance ||                                       \
+                std::abs(aos::math::DiffAngle(delta, 2.0 * numbers::pi)) < \
+                    tolerance);                                            \
   }
 
 #define EXPECT_POSE_NEAR(pose1, pose2)                                     \
@@ -136,7 +140,7 @@ bool TargetIsInView(TargetMapper::TargetPose target_detection) {
       atan2(target_detection.pose.p(1), target_detection.pose.p(0));
 
   // Simulated camera field of view, in radians
-  constexpr double kCameraFov = M_PI_2;
+  constexpr double kCameraFov = numbers::pi / 2.0;
   if (std::abs(angle_to_target) <= kCameraFov / 2.0) {
     VLOG(2) << "Found target in view, based on T = "
             << target_detection.pose.p(0) << ", " << target_detection.pose.p(1)
@@ -268,16 +272,18 @@ TEST(DataAdapterTest, MatchTargetDetections) {
            2),
        MakeTimestampedDetection(
            TimeInMs(6),
-           PoseUtils::Pose3dToAffine3d(Make2dPose(5.0, -4.0, M_PI)), 0),
+           PoseUtils::Pose3dToAffine3d(Make2dPose(5.0, -4.0, numbers::pi)), 0),
        MakeTimestampedDetection(
            TimeInMs(10),
-           PoseUtils::Pose3dToAffine3d(Make2dPose(3.0, -3.0, M_PI)), 1),
-       MakeTimestampedDetection(
-           TimeInMs(13),
-           PoseUtils::Pose3dToAffine3d(Make2dPose(4.0, -7.0, M_PI_2)), 2),
-       MakeTimestampedDetection(
-           TimeInMs(14),
-           PoseUtils::Pose3dToAffine3d(Make2dPose(4.0, -4.0, M_PI_2)), 2)};
+           PoseUtils::Pose3dToAffine3d(Make2dPose(3.0, -3.0, numbers::pi)), 1),
+       MakeTimestampedDetection(TimeInMs(13),
+                                PoseUtils::Pose3dToAffine3d(
+                                    Make2dPose(4.0, -7.0, numbers::pi / 2.0)),
+                                2),
+       MakeTimestampedDetection(TimeInMs(14),
+                                PoseUtils::Pose3dToAffine3d(
+                                    Make2dPose(4.0, -4.0, numbers::pi / 2.0)),
+                                2)};
 
   auto target_constraints =
       DataAdapter::MatchTargetDetections(timestamped_target_detections, kMaxDt);
@@ -292,18 +298,18 @@ TEST(DataAdapterTest, MatchTargetDetections) {
   // Between 5ms and 6ms detections
   EXPECT_DOUBLE_EQ(target_constraints[0].t_be.p(0), 0.0);
   EXPECT_DOUBLE_EQ(target_constraints[0].t_be.p(1), 1.0);
-  EXPECT_QUATERNION_NEAR(
-      target_constraints[0].t_be.q,
-      PoseUtils::EulerAnglesToQuaternion(Eigen::Vector3d(0.0, 0.0, M_PI)));
+  EXPECT_QUATERNION_NEAR(target_constraints[0].t_be.q,
+                         PoseUtils::EulerAnglesToQuaternion(
+                             Eigen::Vector3d(0.0, 0.0, numbers::pi)));
   EXPECT_EQ(target_constraints[0].id_begin, 2);
   EXPECT_EQ(target_constraints[0].id_end, 0);
 
   // Between 10ms and 13ms detections
   EXPECT_DOUBLE_EQ(target_constraints[1].t_be.p(0), -1.0);
   EXPECT_DOUBLE_EQ(target_constraints[1].t_be.p(1), 4.0);
-  EXPECT_QUATERNION_NEAR(
-      target_constraints[1].t_be.q,
-      PoseUtils::EulerAnglesToQuaternion(Eigen::Vector3d(0.0, 0.0, -M_PI_2)));
+  EXPECT_QUATERNION_NEAR(target_constraints[1].t_be.q,
+                         PoseUtils::EulerAnglesToQuaternion(
+                             Eigen::Vector3d(0.0, 0.0, -numbers::pi / 2.0)));
   EXPECT_EQ(target_constraints[1].id_begin, 1);
   EXPECT_EQ(target_constraints[1].id_end, 2);
 }
@@ -313,13 +319,13 @@ TEST(TargetMapperTest, TwoTargetsOneConstraint) {
   absl::SetFlag(&FLAGS_max_target_id, 1);
 
   ceres::examples::MapOfPoses target_poses;
-  target_poses[0] = Make2dPose(5.0, 0.0, M_PI);
+  target_poses[0] = Make2dPose(5.0, 0.0, numbers::pi);
   target_poses[1] = Make2dPose(-5.0, 0.0, 0.0);
 
   std::vector<DataAdapter::TimestampedDetection> timestamped_target_detections =
       {MakeTimestampedDetection(
-           TimeInMs(5), PoseUtils::Pose3dToAffine3d(Make2dPose(3.0, 0.0, M_PI)),
-           0),
+           TimeInMs(5),
+           PoseUtils::Pose3dToAffine3d(Make2dPose(3.0, 0.0, numbers::pi)), 0),
        MakeTimestampedDetection(
            TimeInMs(6), PoseUtils::Pose3dToAffine3d(Make2dPose(-7.0, 0.0, 0.0)),
            1)};
@@ -330,7 +336,7 @@ TEST(TargetMapperTest, TwoTargetsOneConstraint) {
   mapper.Solve(kFieldName);
 
   ASSERT_EQ(mapper.target_poses().size(), 2);
-  EXPECT_POSE_NEAR(mapper.target_poses()[0], Make2dPose(5.0, 0.0, M_PI));
+  EXPECT_POSE_NEAR(mapper.target_poses()[0], Make2dPose(5.0, 0.0, numbers::pi));
   EXPECT_POSE_NEAR(mapper.target_poses()[1], Make2dPose(-5.0, 0.0, 0.0));
 }
 
@@ -339,22 +345,24 @@ TEST(TargetMapperTest, TwoTargetsTwoConstraints) {
   absl::SetFlag(&FLAGS_max_target_id, 1);
 
   ceres::examples::MapOfPoses target_poses;
-  target_poses[0] = Make2dPose(5.0, 0.0, M_PI);
-  target_poses[1] = Make2dPose(-5.0, 0.0, -M_PI_2);
+  target_poses[0] = Make2dPose(5.0, 0.0, numbers::pi);
+  target_poses[1] = Make2dPose(-5.0, 0.0, -numbers::pi / 2.0);
 
   std::vector<DataAdapter::TimestampedDetection> timestamped_target_detections =
       {MakeTimestampedDetection(
            TimeInMs(5),
-           PoseUtils::Pose3dToAffine3d(Make2dPose(6.0, 0.0, M_PI_2)), 0),
+           PoseUtils::Pose3dToAffine3d(Make2dPose(6.0, 0.0, numbers::pi / 2.0)),
+           0),
        MakeTimestampedDetection(
            TimeInMs(7),
-           PoseUtils::Pose3dToAffine3d(Make2dPose(6.0, 10.0, -M_PI)), 1),
+           PoseUtils::Pose3dToAffine3d(Make2dPose(6.0, 10.0, -numbers::pi)), 1),
        MakeTimestampedDetection(
            TimeInMs(12),
-           PoseUtils::Pose3dToAffine3d(Make2dPose(1.0, 0.0, M_PI)), 0),
-       MakeTimestampedDetection(
-           TimeInMs(13),
-           PoseUtils::Pose3dToAffine3d(Make2dPose(-9.0, 0.0, -M_PI_2)), 1)};
+           PoseUtils::Pose3dToAffine3d(Make2dPose(1.0, 0.0, numbers::pi)), 0),
+       MakeTimestampedDetection(TimeInMs(13),
+                                PoseUtils::Pose3dToAffine3d(
+                                    Make2dPose(-9.0, 0.0, -numbers::pi / 2.0)),
+                                1)};
   auto target_constraints =
       DataAdapter::MatchTargetDetections(timestamped_target_detections, kMaxDt);
 
@@ -362,8 +370,9 @@ TEST(TargetMapperTest, TwoTargetsTwoConstraints) {
   mapper.Solve(kFieldName);
 
   ASSERT_EQ(mapper.target_poses().size(), 2);
-  EXPECT_POSE_NEAR(mapper.target_poses()[0], Make2dPose(5.0, 0.0, M_PI));
-  EXPECT_POSE_NEAR(mapper.target_poses()[1], Make2dPose(-5.0, 0.0, -M_PI_2));
+  EXPECT_POSE_NEAR(mapper.target_poses()[0], Make2dPose(5.0, 0.0, numbers::pi));
+  EXPECT_POSE_NEAR(mapper.target_poses()[1],
+                   Make2dPose(-5.0, 0.0, -numbers::pi / 2.0));
 }
 
 TEST(TargetMapperTest, TwoTargetsOneNoisyConstraint) {
@@ -371,14 +380,14 @@ TEST(TargetMapperTest, TwoTargetsOneNoisyConstraint) {
   absl::SetFlag(&FLAGS_max_target_id, 1);
 
   ceres::examples::MapOfPoses target_poses;
-  target_poses[0] = Make2dPose(5.0, 0.0, M_PI);
+  target_poses[0] = Make2dPose(5.0, 0.0, numbers::pi);
   target_poses[1] = Make2dPose(-5.0, 0.0, 0.0);
 
   std::vector<DataAdapter::TimestampedDetection> timestamped_target_detections =
-      {MakeTimestampedDetection(
-           TimeInMs(5),
-           PoseUtils::Pose3dToAffine3d(Make2dPose(3.01, 0.001, M_PI - 0.001)),
-           0),
+      {MakeTimestampedDetection(TimeInMs(5),
+                                PoseUtils::Pose3dToAffine3d(Make2dPose(
+                                    3.01, 0.001, numbers::pi - 0.001)),
+                                0),
        MakeTimestampedDetection(
            TimeInMs(7),
            PoseUtils::Pose3dToAffine3d(Make2dPose(-7.01, 0.0, 0.0)), 1)};
@@ -390,7 +399,7 @@ TEST(TargetMapperTest, TwoTargetsOneNoisyConstraint) {
   mapper.Solve(kFieldName);
 
   ASSERT_EQ(mapper.target_poses().size(), 2);
-  EXPECT_POSE_NEAR(mapper.target_poses()[0], Make2dPose(5.0, 0.0, M_PI));
+  EXPECT_POSE_NEAR(mapper.target_poses()[0], Make2dPose(5.0, 0.0, numbers::pi));
   EXPECT_POSE_NEAR(mapper.target_poses()[1], Make2dPose(-5.0, 0.0, 0.0));
 }
 
@@ -511,7 +520,7 @@ TEST_F(ChargedUpTargetMapperTest, DISABLED_FieldCircleMotion) {
     auto last_robot_pose =
         ceres::examples::Pose3d{.p = Eigen::Vector3d(0.0, 0.0, kRobotZ),
                                 .q = PoseUtils::EulerAnglesToQuaternion(
-                                    Eigen::Vector3d(0.0, 0.0, M_PI))};
+                                    Eigen::Vector3d(0.0, 0.0, numbers::pi))};
     for (size_t id = 4; id <= 8; id++) {
       auto target_pose =
           TargetMapper::GetTargetPoseById(actual_target_poses, id).value();

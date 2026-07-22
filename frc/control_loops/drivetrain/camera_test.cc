@@ -1,18 +1,22 @@
 #include "frc/control_loops/drivetrain/camera.h"
 
+#include <numbers>
+
 #include "gtest/gtest.h"
+
+namespace numbers = std::numbers;
 
 namespace frc::control_loops::testing {
 
 // Check that a Target's basic operations work.
 TEST(TargetTest, BasicTargetTest) {
-  Target target({{1, 2, 3}, M_PI / 2.0}, 1.234,
+  Target target({{1, 2, 3}, numbers::pi / 2.0}, 1.234,
                 Target::TargetType::kFaceCargoBay, Target::GoalType::kHatches);
 
   EXPECT_EQ(1.0, target.pose().abs_pos().x());
   EXPECT_EQ(2.0, target.pose().abs_pos().y());
   EXPECT_EQ(3.0, target.pose().abs_pos().z());
-  EXPECT_EQ(M_PI / 2.0, target.pose().abs_theta());
+  EXPECT_EQ(numbers::pi / 2.0, target.pose().abs_theta());
   EXPECT_EQ(1.234, target.radius());
   EXPECT_EQ(Target::GoalType::kHatches, target.goal_type());
   EXPECT_EQ(Target::TargetType::kFaceCargoBay, target.target_type());
@@ -25,7 +29,7 @@ TEST(TargetTest, BasicTargetTest) {
   ASSERT_EQ(4, plot_pts.size());
   for (const Target::Pose &pt : plot_pts) {
     EXPECT_EQ(3.0, pt.abs_pos().z());
-    EXPECT_EQ(M_PI / 2.0, pt.abs_theta());
+    EXPECT_EQ(numbers::pi / 2.0, pt.abs_theta());
     // We don't particularly care about the plot point details, just check that
     // they are all roughly in the right vicinity:
     EXPECT_LT((pt.abs_pos() - target.pose().abs_pos()).norm(), 0.25);
@@ -43,15 +47,15 @@ class CameraTest : public ::testing::Test {
   // Place the camera at (0, -5) so the targets are a few meters away.
   // Place one obstacle in a place where it blocks the left-most target (-1, 0).
   CameraTest()
-      : targets_{{Target(Target::Pose({-1.0, 0.0, 0.0}, M_PI_2)),
+      : targets_{{Target(Target::Pose({-1.0, 0.0, 0.0}, numbers::pi / 2.0)),
                   Target(Target::Pose({0.0, 0.0, kMiddleHeight},
-                                      M_PI_2 + kMiddleSkew)),
-                  Target(Target::Pose({1.0, 0.0, 0.0}, -M_PI_2))}},
+                                      numbers::pi / 2.0 + kMiddleSkew)),
+                  Target(Target::Pose({1.0, 0.0, 0.0}, -numbers::pi / 2.0))}},
         obstacles_{{TestCamera::LineSegment({{-2.0, -0.5, 0.0}, 0.0},
                                             {{-0.5, -0.5, 0.0}, 0.0})}},
-        base_pose_({0.0, -5.0, 0.0}, M_PI_2),
-        camera_({&base_pose_, {0.0, 0.0, 0.0}, 0.0}, M_PI_2, noise_parameters_,
-                targets_, obstacles_) {}
+        base_pose_({0.0, -5.0, 0.0}, numbers::pi / 2.0),
+        camera_({&base_pose_, {0.0, 0.0, 0.0}, 0.0}, numbers::pi / 2.0,
+                noise_parameters_, targets_, obstacles_) {}
 
  protected:
   static constexpr double kMiddleSkew = 0.1;
@@ -123,15 +127,15 @@ TEST_F(CameraTest, FovTest) {
   // Initially, we should still see just the middle target.
   EXPECT_EQ(1u, camera_.target_views().size());
   // Point camera so that the middle target is just barely in its field of view.
-  base_pose_.set_theta(3.0 * M_PI / 4.0 - 0.01);
+  base_pose_.set_theta(3.0 * numbers::pi / 4.0 - 0.01);
   EXPECT_EQ(1u, camera_.target_views().size());
   // Point camera so that the middle target is just outside of its FoV.
-  base_pose_.set_theta(3.0 * M_PI / 4.0 + 0.01);
+  base_pose_.set_theta(3.0 * numbers::pi / 4.0 + 0.01);
   EXPECT_EQ(0u, camera_.target_views().size());
   // Check the same things, but on the other edge of the FoV:
-  base_pose_.set_theta(M_PI / 4.0 + 0.01);
+  base_pose_.set_theta(numbers::pi / 4.0 + 0.01);
   EXPECT_EQ(1u, camera_.target_views().size());
-  base_pose_.set_theta(M_PI / 4.0 - 0.01);
+  base_pose_.set_theta(numbers::pi / 4.0 - 0.01);
   EXPECT_EQ(0u, camera_.target_views().size());
 }
 

@@ -1,8 +1,12 @@
 #include "frc/control_loops/double_jointed_arm/dynamics.h"
 
+#include <numbers>
+
 #include "gtest/gtest.h"
 
 #include "frc/control_loops/double_jointed_arm/test_constants.h"
+
+namespace numbers = std::numbers;
 
 namespace frc::control_loops::arm::testing {
 
@@ -23,7 +27,8 @@ TEST(DynamicsTest, Acceleration) {
           .isApprox(::Eigen::Matrix<double, 4, 1>::Zero()));
 
   const ::Eigen::Matrix<double, 4, 1> X =
-      (::Eigen::Matrix<double, 4, 1>() << M_PI / 2.0, 0.0, 0.0, 0.0).finished();
+      (::Eigen::Matrix<double, 4, 1>() << numbers::pi / 2.0, 0.0, 0.0, 0.0)
+          .finished();
 
   ::std::cout << dynamics.FF_U(X, ::Eigen::Matrix<double, 2, 1>::Zero(),
                                ::Eigen::Matrix<double, 2, 1>::Zero())

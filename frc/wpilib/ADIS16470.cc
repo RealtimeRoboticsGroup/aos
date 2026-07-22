@@ -1,6 +1,7 @@
 #include "frc/wpilib/ADIS16470.h"
 
 #include <cinttypes>
+#include <numbers>
 
 #include "absl/log/check.h"
 #include "absl/log/log.h"
@@ -8,6 +9,8 @@
 #include "aos/containers/sized_array.h"
 #include "aos/time/time.h"
 #include "hal/HAL.h"
+
+namespace numbers = std::numbers;
 
 namespace frc::wpilib {
 namespace {
@@ -175,7 +178,7 @@ static constexpr size_t kAutospiDataSize =
 
 // radian/second/LSB for the gyros (for just the 16-bit value).
 constexpr double kGyroLsbRadianSecond =
-    1.0 / 10.0 * (2.0 * M_PI / 360.0) /* degrees -> radians */;
+    1.0 / 10.0 * (2.0 * numbers::pi / 360.0) /* degrees -> radians */;
 // G/LSB for the accelerometers (for the full 32-bit value).
 constexpr double kAccelerometerLsbG = 1.0 / 52'428'800.0;
 // C/LSB for the temperature.

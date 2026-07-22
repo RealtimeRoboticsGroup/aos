@@ -1,5 +1,6 @@
 #include "frc/control_loops/drivetrain/hybrid_ekf.h"
 
+#include <numbers>
 #include <random>
 
 #include "gtest/gtest.h"
@@ -7,6 +8,8 @@
 #include "aos/testing/random_seed.h"
 #include "frc/control_loops/drivetrain/drivetrain_test_lib.h"
 #include "frc/control_loops/drivetrain/trajectory.h"
+
+namespace numbers = std::numbers;
 
 namespace frc::control_loops::drivetrain::testing {
 
@@ -171,53 +174,54 @@ TEST_P(HybridEkfDiffEqTest, CheckDynamics) {
 
 INSTANTIATE_TEST_SUITE_P(
     CheckMathTest, HybridEkfDiffEqTest,
-    ::testing::Values(DiffEqInputs{State::Zero(), Input::Zero(), false},
-                      DiffEqInputs{State::Zero(), Input::Zero(), true},
-                      DiffEqInputs{State::Zero(), {-5.0, 5.0, 0.0, 0.0}, false},
-                      DiffEqInputs{State::Zero(), {-5.0, 5.0, 0.0, 0.0}, true},
-                      DiffEqInputs{State::Zero(), {12.0, 3.0, 0.0, 0.0}, false},
-                      DiffEqInputs{State::Zero(), {12.0, 3.0, 0.0, 0.0}, true},
-                      DiffEqInputs{(State() << 100.0, 200.0, M_PI, 1.234, 0.5,
-                                    1.2, 0.6, 3.0, -4.0, 0.3, 0.0, 0.0)
-                                       .finished(),
-                                   {3.0, 4.0, 5.0, 6.0},
-                                   false},
-                      DiffEqInputs{(State() << 100.0, 200.0, M_PI, 1.234, 0.5,
-                                    1.2, 0.6, 3.0, -4.0, 0.3, 0.0, 0.0)
-                                       .finished(),
-                                   {3.0, 4.0, 5.0, 6.0},
-                                   true},
-                      DiffEqInputs{(State() << 100.0, 200.0, 2.0, 1.234, 0.5,
-                                    1.2, 0.6, 3.0, -4.0, 0.3, 0.0, 0.0)
-                                       .finished(),
-                                   {3.0, 4.0, 5.0, 6.0},
-                                   false},
-                      DiffEqInputs{(State() << 100.0, 200.0, 2.0, 1.234, 0.5,
-                                    1.2, 0.6, 3.0, -4.0, 0.3, 0.0, 0.0)
-                                       .finished(),
-                                   {3.0, 4.0, 5.0, 6.0},
-                                   true},
-                      DiffEqInputs{(State() << 100.0, 200.0, 2.0, 1.234, 0.5,
-                                    1.2, 0.6, 3.0, -4.0, 0.3, 0.1, 0.2)
-                                       .finished(),
-                                   {3.0, 4.0, 5.0, 6.0},
-                                   false},
-                      DiffEqInputs{(State() << 100.0, 200.0, -2.0, 1.234, 0.5,
-                                    1.2, 0.6, 3.0, -4.0, 0.3, 0.0, 0.0)
-                                       .finished(),
-                                   {-3.0, -4.0, -5.0, -6.0},
-                                   false},
-                      DiffEqInputs{(State() << 100.0, 200.0, -2.0, 1.234, 0.5,
-                                    1.2, 0.6, 3.0, -4.0, 0.3, 0.0, 0.0)
-                                       .finished(),
-                                   {-3.0, -4.0, -5.0, -6.0},
-                                   true},
-                      // And check that a theta outside of [-M_PI, M_PI] works.
-                      DiffEqInputs{(State() << 100.0, 200.0, 200.0, 1.234, 0.5,
-                                    1.2, 0.6, 3.0, -4.0, 0.3, 0.0, 0.0)
-                                       .finished(),
-                                   {3.0, 4.0, 5.0, 6.0},
-                                   false}));
+    ::testing::Values(
+        DiffEqInputs{State::Zero(), Input::Zero(), false},
+        DiffEqInputs{State::Zero(), Input::Zero(), true},
+        DiffEqInputs{State::Zero(), {-5.0, 5.0, 0.0, 0.0}, false},
+        DiffEqInputs{State::Zero(), {-5.0, 5.0, 0.0, 0.0}, true},
+        DiffEqInputs{State::Zero(), {12.0, 3.0, 0.0, 0.0}, false},
+        DiffEqInputs{State::Zero(), {12.0, 3.0, 0.0, 0.0}, true},
+        DiffEqInputs{(State() << 100.0, 200.0, numbers::pi, 1.234, 0.5, 1.2,
+                      0.6, 3.0, -4.0, 0.3, 0.0, 0.0)
+                         .finished(),
+                     {3.0, 4.0, 5.0, 6.0},
+                     false},
+        DiffEqInputs{(State() << 100.0, 200.0, numbers::pi, 1.234, 0.5, 1.2,
+                      0.6, 3.0, -4.0, 0.3, 0.0, 0.0)
+                         .finished(),
+                     {3.0, 4.0, 5.0, 6.0},
+                     true},
+        DiffEqInputs{(State() << 100.0, 200.0, 2.0, 1.234, 0.5, 1.2, 0.6, 3.0,
+                      -4.0, 0.3, 0.0, 0.0)
+                         .finished(),
+                     {3.0, 4.0, 5.0, 6.0},
+                     false},
+        DiffEqInputs{(State() << 100.0, 200.0, 2.0, 1.234, 0.5, 1.2, 0.6, 3.0,
+                      -4.0, 0.3, 0.0, 0.0)
+                         .finished(),
+                     {3.0, 4.0, 5.0, 6.0},
+                     true},
+        DiffEqInputs{(State() << 100.0, 200.0, 2.0, 1.234, 0.5, 1.2, 0.6, 3.0,
+                      -4.0, 0.3, 0.1, 0.2)
+                         .finished(),
+                     {3.0, 4.0, 5.0, 6.0},
+                     false},
+        DiffEqInputs{(State() << 100.0, 200.0, -2.0, 1.234, 0.5, 1.2, 0.6, 3.0,
+                      -4.0, 0.3, 0.0, 0.0)
+                         .finished(),
+                     {-3.0, -4.0, -5.0, -6.0},
+                     false},
+        DiffEqInputs{(State() << 100.0, 200.0, -2.0, 1.234, 0.5, 1.2, 0.6, 3.0,
+                      -4.0, 0.3, 0.0, 0.0)
+                         .finished(),
+                     {-3.0, -4.0, -5.0, -6.0},
+                     true},
+        // And check that a theta outside of [-numbers::pi, numbers::pi] works.
+        DiffEqInputs{(State() << 100.0, 200.0, 200.0, 1.234, 0.5, 1.2, 0.6, 3.0,
+                      -4.0, 0.3, 0.0, 0.0)
+                         .finished(),
+                     {3.0, 4.0, 5.0, 6.0},
+                     false}));
 
 TEST_F(HybridEkfTest, ZeroTimeCorrect) {
   HybridEkf<>::Output Z(0.5, 0.5, 1);
@@ -316,7 +320,7 @@ TEST_P(HybridEkfOldCorrectionsTest, CreateOldCorrection) {
   const State modeled_X_hat = ekf_.X_hat();
   const double modeled_p_norm = ekf_.P().norm();
 
-  Z << 1, 1, M_PI / 2.0;
+  Z << 1, 1, numbers::pi / 2.0;
   H.setZero();
   H(0, 0) = 1;
   H(1, 1) = 1;
@@ -366,7 +370,7 @@ TEST_F(HybridEkfTest, DiscardTooOldCorrection) {
   const State modeled_X_hat = ekf_.X_hat();
   const HybridEkf<>::StateSquare modeled_P = ekf_.P();
 
-  Z << 1, 1, M_PI / 2.0;
+  Z << 1, 1, numbers::pi / 2.0;
   H.setZero();
   H(0, 0) = 1;
   H(1, 1) = 1;

@@ -1,13 +1,15 @@
 #ifndef FRC_CONTROL_LOOPS_DOUBLE_JOINTED_ARM_TEST_CONSTANTS_H_
 #define FRC_CONTROL_LOOPS_DOUBLE_JOINTED_ARM_TEST_CONSTANTS_H_
 
+#include <numbers>
+
 #include "frc/control_loops/double_jointed_arm/dynamics.h"
 
 namespace frc::control_loops::arm::testing {
 
 constexpr double kEfficiencyTweak = 0.95;
 constexpr double kStallTorque = 1.41 * kEfficiencyTweak;
-constexpr double kFreeSpeed = (5840.0 / 60.0) * 2.0 * M_PI;
+constexpr double kFreeSpeed = (5840.0 / 60.0) * 2.0 * std::numbers::pi;
 constexpr double kStallCurrent = 89.0;
 
 constexpr ArmConstants kArmConstants = {

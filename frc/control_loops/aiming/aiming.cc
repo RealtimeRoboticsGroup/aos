@@ -1,9 +1,13 @@
 #include "frc/control_loops/aiming/aiming.h"
 
+#include <numbers>
+
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 
 #include "frc/zeroing/wrap.h"
+
+namespace numbers = std::numbers;
 
 namespace frc::control_loops::aiming {
 
@@ -128,7 +132,7 @@ TurretGoal AimerGoal(const ShotConfig &config, const RobotState &state) {
   if (turret_heading > config.turret_range.upper - config.anti_wrap_buffer ||
       turret_heading < config.turret_range.lower + config.anti_wrap_buffer) {
     turret_heading = frc::zeroing::Wrap(config.turret_range.middle_soft(),
-                                        turret_heading, 2.0 * M_PI);
+                                        turret_heading, 2.0 * numbers::pi);
   }
   result.position = turret_heading;
   result.velocity = dheading_dt;

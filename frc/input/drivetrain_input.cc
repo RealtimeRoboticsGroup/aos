@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <numbers>
 
 #include "aos/commonmath.h"
 #include "aos/logging/logging.h"
@@ -11,6 +12,8 @@
 #include "frc/control_loops/drivetrain/drivetrain_goal_generated.h"
 #include "frc/control_loops/drivetrain/drivetrain_status_generated.h"
 #include "frc/input/driver_station_data.h"
+
+namespace numbers = std::numbers;
 
 using ::frc::input::driver_station::ButtonLocation;
 using ::frc::input::driver_station::ControlBit;
@@ -283,7 +286,7 @@ XboxDrivetrainInputReader::GetWheelAndThrottle(
       aos::Deadband(-data.GetAxis(throttle_), kThrottleDeadband, 1.0);
 
   // Apply a sin function that's scaled to make it feel better.
-  constexpr double throttle_range = M_PI_2 * 0.9;
+  constexpr double throttle_range = numbers::pi / 2.0 * 0.9;
 
   double throttle = ::std::sin(throttle_range * unmodified_throttle) /
                     ::std::sin(throttle_range);

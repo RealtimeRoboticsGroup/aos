@@ -1,6 +1,7 @@
 #include "frc/control_loops/drivetrain/line_follow_drivetrain.h"
 
 #include <chrono>
+#include <numbers>
 
 #include "absl/flags/flag.h"
 #include "gtest/gtest.h"
@@ -8,6 +9,8 @@
 
 #include "frc/control_loops/drivetrain/drivetrain_test_lib.h"
 #include "frc/control_loops/drivetrain/trajectory.h"
+
+namespace numbers = std::numbers;
 
 ABSL_DECLARE_FLAG(bool, plot);
 
@@ -189,7 +192,7 @@ TEST_F(LineFollowDrivetrainTest, BasicGoalThetaCheck) {
           const double zero_rad_theta = GoalTheta(x, y, v, throttle);
           EXPECT_NEAR(
               0.0,
-              ::aos::math::DiffAngle((throttle > 0.0 ? M_PI : 0.0) +
+              ::aos::math::DiffAngle((throttle > 0.0 ? numbers::pi : 0.0) +
                                          ::std::atan2(y, ::std::min(-0.01, x)),
                                      zero_rad_theta),
               1e-14);
@@ -250,7 +253,7 @@ TEST_F(LineFollowDrivetrainTest, FreezeOnControllerType) {
   freeze_target_ = true;
 
   // Set a goal pose that we should not go to.
-  set_goal_pose({{1.0, 1.0, 0.0}, M_PI_2});
+  set_goal_pose({{1.0, 1.0, 0.0}, numbers::pi / 2.0});
 
   RunForTime(::std::chrono::seconds(5));
   EXPECT_NEAR(0.0, state_.squaredNorm(), 1e-25)
@@ -293,7 +296,7 @@ TEST_F(LineFollowDrivetrainTest, FreezeWithoutAcquiringTarget) {
 
   // Now, provide a target:
   target_selector_.set_has_target(true);
-  set_goal_pose({{1.0, 2.0, 0.0}, M_PI_2});
+  set_goal_pose({{1.0, 2.0, 0.0}, numbers::pi / 2.0});
   driver_model_ = [this](const ::Eigen::Matrix<double, 5, 1> &state) {
     return -(state.y() - goal_pose().abs_pos().y());
   };

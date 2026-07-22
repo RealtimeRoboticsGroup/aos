@@ -2,26 +2,29 @@
 #define AOS_UTIL_MATH_H_
 
 #include <cmath>
+#include <numbers>
 
 #include "Eigen/Core"
 
 namespace aos::math {
 
-// Normalizes an angle to be in (-M_PI, M_PI]
+// Normalizes an angle to be in (-pi, pi]
 template <typename Scalar>
 constexpr Scalar NormalizeAngle(Scalar theta) {
   // First clause takes care of getting theta into
-  // (-3 * M_PI, M_PI)
-  const int n_pi_pos = (theta + M_PI) / 2.0 / M_PI;
-  theta -= n_pi_pos * 2.0 * M_PI;
+  // (-3 * pi, pi)
+  const int n_pi_pos =
+      (theta + std::numbers::pi_v<Scalar>) / 2.0 / std::numbers::pi_v<Scalar>;
+  theta -= n_pi_pos * 2.0 * std::numbers::pi_v<Scalar>;
   // Next we fix it to cut off the bottom half of the above
-  // range and bring us into (-M_PI, M_PI]
-  const int n_pi_neg = (theta - M_PI) / 2.0 / M_PI;
-  theta -= n_pi_neg * 2.0 * M_PI;
+  // range and bring us into (-pi, pi]
+  const int n_pi_neg =
+      (theta - std::numbers::pi_v<Scalar>) / 2.0 / std::numbers::pi_v<Scalar>;
+  theta -= n_pi_neg * 2.0 * std::numbers::pi_v<Scalar>;
   return theta;
 }
 
-// Calculate a - b and return the result in (-M_PI, M_PI]
+// Calculate a - b and return the result in (-pi, pi]
 template <typename Scalar>
 constexpr Scalar DiffAngle(Scalar a, Scalar b) {
   return NormalizeAngle(a - b);

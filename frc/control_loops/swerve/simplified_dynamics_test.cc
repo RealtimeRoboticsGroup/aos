@@ -1,12 +1,15 @@
 #include "frc/control_loops/swerve/simplified_dynamics.h"
 
 #include <functional>
+#include <numbers>
 
 #include "absl/log/log.h"
 #include "gtest/gtest.h"
 
 #include "aos/time/time.h"
 #include "frc/control_loops/jacobian.h"
+
+namespace numbers = std::numbers;
 
 namespace frc::control_loops::swerve::testing {
 class SimplifiedDynamicsTest : public ::testing::Test {
@@ -129,10 +132,10 @@ TEST_F(SimplifiedDynamicsTest, ForceWheelsSideways) {
 // Tests that we can make the robot spin in place by orienting all the wheels
 TEST_F(SimplifiedDynamicsTest, SpinInPlaceNoSlip) {
   PositionState state = PositionState::Zero();
-  state(States::kThetas0) = 3.0 * M_PI / 4.0;
-  state(States::kThetas1) = 5.0 * M_PI / 4.0;
-  state(States::kThetas2) = 7.0 * M_PI / 4.0;
-  state(States::kThetas3) = 1.0 * M_PI / 4.0;
+  state(States::kThetas0) = 3.0 * numbers::pi / 4.0;
+  state(States::kThetas1) = 5.0 * numbers::pi / 4.0;
+  state(States::kThetas2) = 7.0 * numbers::pi / 4.0;
+  state(States::kThetas3) = 1.0 * numbers::pi / 4.0;
   state(States::kOmega) = 1.0;
   PositionState result = ValidateDynamics(state, Input::Zero());
   EXPECT_NEAR(result.norm(), 1.0, 1e-10)
@@ -155,8 +158,8 @@ TEST_F(SimplifiedDynamicsTest, SpinInPlaceNoSlip) {
 // pointed straight, but we still attempt to spint he robot).
 TEST_F(SimplifiedDynamicsTest, SpinInPlaceSkidSteer) {
   PositionState state = PositionState::Zero();
-  state(States::kThetas0) = -M_PI;
-  state(States::kThetas1) = -M_PI;
+  state(States::kThetas0) = -numbers::pi;
+  state(States::kThetas1) = -numbers::pi;
   state(States::kThetas2) = 0.0;
   state(States::kThetas3) = 0.0;
   state(States::kOmega) = 1.0;
@@ -187,8 +190,8 @@ TEST_F(SimplifiedDynamicsTest, SpinInPlaceSkidSteerBackwards) {
   PositionState state = PositionState::Zero();
   state(States::kThetas0) = 0.0;
   state(States::kThetas1) = 0.0;
-  state(States::kThetas2) = M_PI;
-  state(States::kThetas3) = M_PI;
+  state(States::kThetas2) = numbers::pi;
+  state(States::kThetas3) = numbers::pi;
   state(States::kOmega) = 1.0;
   PositionState result = ValidateDynamics(state, Input::Zero());
   EXPECT_EQ(result(States::kTheta), 1.0);

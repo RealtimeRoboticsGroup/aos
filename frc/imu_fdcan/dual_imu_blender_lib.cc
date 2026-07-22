@@ -1,12 +1,16 @@
 #include "frc/imu_fdcan/dual_imu_blender_lib.h"
 
+#include <numbers>
+
 #include "absl/flags/flag.h"
+
+namespace numbers = std::numbers;
 
 ABSL_FLAG(bool, murata_only, false,
           "If true then only use the murata value and ignore the tdk.");
 
 // Saturation for the gyro is measured in +- radians/s
-static constexpr double kMurataGyroSaturation = (300.0 * M_PI) / 180;
+static constexpr double kMurataGyroSaturation = (300.0 * numbers::pi) / 180;
 
 // Measured in gs
 static constexpr double kMurataAccelSaturation = 6.0;
