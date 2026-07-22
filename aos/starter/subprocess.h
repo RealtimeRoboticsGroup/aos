@@ -244,6 +244,12 @@ class Application {
   void set_capture_stderr(bool capture);
   void set_run_as_sudo(bool value) { run_as_sudo_ = value; }
 
+  // When true, places the child in its own process group (PGID == child PID)
+  // so that DoStop signals all descendants. Should only be set for
+  // applications spawned directly by starterd, not for Application instances
+  // created within child processes.
+  void set_isolate_process_group(bool value) { isolate_process_group_ = value; }
+
   // Sets the time for a process to stop gracefully. If an application is asked
   // to stop, but doesn't stop within the specified time limit, then it is
   // forcefully killed. Defaults to 1 second unless overridden by the
@@ -326,6 +332,7 @@ class Application {
   std::optional<uid_t> user_;
   std::optional<gid_t> group_;
   bool run_as_sudo_ = false;
+  bool isolate_process_group_ = false;
   std::chrono::nanoseconds stop_grace_period_ = std::chrono::seconds(1);
 
   bool capture_stdout_ = false;
