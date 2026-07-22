@@ -163,6 +163,9 @@ TEST(SubprocessTest, ChildExitsDuringStartingAutorestart) {
     }
   });
 
+  // Safety net: bail out after 15 seconds.
+  event_loop.AddTimer([&]() { event_loop.Exit(); })
+      ->Schedule(event_loop.monotonic_now() + std::chrono::seconds(15));
   application->Start();
   event_loop.Run();
 
