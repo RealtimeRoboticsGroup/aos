@@ -296,12 +296,6 @@ class Application {
       const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>
           &args);
 
-  void DoStart();
-
-  void DoStop(bool restart);
-
-  void QueueStart();
-
   void OnChange();
 
   // Copy flatbuffer vector of strings to vector of std::string.
@@ -364,12 +358,12 @@ class Application {
   // Internal process state vocabulary. Includes kForking, which is never
   // visible externally.
   enum class ApplicationInternalState {
-    kWaiting,
-    kForking,
-    kStarting,
-    kRunning,
-    kStopping,
-    kStopped,
+    kWaiting,   // Waiting to start the process
+    kForking,   // Forking the process
+    kStarting,  // Waiting for the process to start
+    kRunning,   // Process is running
+    kStopping,  // Waiting for the process to stop
+    kStopped,   // Process is stopped
   };
 
   // Maps the internal process state to the public flatbuffer State enum.
@@ -396,31 +390,44 @@ class Application {
     kDoStop,
     kDoKill,
     kDoWait,
+    kCancelTimer,
   };
+
+  // The below internal actions return an optional event in case a state
+  // transition is immediately needed.
+  std::optional<Event> DoStart();
+  std::optional<Event> HandleStarted();
+  std::optional<Event> DoStop();
+  std::optional<Event> DoKill();
+  std::optional<Event> DoWait();
+  std::optional<Event> DoCancelTimer();
 
   // A single row in the event-driven transition table.
   struct TransitionRule {
     ApplicationInternalState from_status;
     Event event;
+    // This function must return true for the rule to match.
     std::function<bool(bool autorestart,
                        std::optional<ApplicationCommand> last_command,
                        bool alive)>
         guard;
     ApplicationInternalState next_status;
-    std::optional<ApplicationCommand> next_command;
-    std::optional<Action> action;
+    ApplicationCommand next_command = ApplicationCommand::kNoOp;
+    Action action = Action::kNone;
   };
 
-  // Dispatches an event through the transition table. Stub for now.
+  // Dispatches an event through the transition table.
   void HandleEvent(Event event);
+
+  // The explicit event-driven transition table.
+  static const TransitionRule kTransitionTable[];
 
   ApplicationInternalState status_ = ApplicationInternalState::kStopped;
   aos::starter::LastStopReason stop_reason_ =
       aos::starter::LastStopReason::STOP_REQUESTED;
 
   aos::EventLoop *event_loop_;
-  aos::TimerHandler *start_timer_, *restart_timer_, *stop_timer_, *pipe_timer_,
-      *child_status_handler_;
+  aos::TimerHandler *state_timer_, *pipe_timer_, *child_status_handler_;
 
   // Version string from the most recent valid timing report for this
   // application. Cleared when the application restarts.

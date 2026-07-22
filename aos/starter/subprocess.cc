@@ -698,40 +698,8 @@ Application::Application(
     : name_(name),
       path_(ResolvePath(executable_name)),
       event_loop_(event_loop),
-      start_timer_(event_loop_->AddTimer([this] {
-        status_ = ApplicationInternalState::kRunning;
-        ABSL_LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo)
-            << "Started '" << name_ << "' pid: " << pid_;
-        // Check if the file on disk changed while we were starting up. We allow
-        // this state for the same reason that we don't just use /proc/$pid/exe
-        // to determine if the file is deleted--we may be running a script or
-        // sudo or the such and determining the state of the file that we
-        // actually care about sounds like more work than we want to deal with.
-        if (InodeChanged(path_, pre_fork_inode_)) {
-          file_state_ = FileState::CHANGED_DURING_STARTUP;
-        } else {
-          file_state_ = FileState::NO_CHANGE;
-        }
-
-        OnChange();
-      })),
-      restart_timer_(event_loop_->AddTimer([this] { DoStart(); })),
-      stop_timer_(event_loop_->AddTimer([this] {
-        if (kill(pid_, SIGKILL) == 0) {
-          ABSL_LOG_IF(WARNING,
-                      quiet_flag_ == QuietLogging::kNo ||
-                          quiet_flag_ == QuietLogging::kNotForDebugging)
-              << "Failed to stop, sending SIGKILL to '" << name_
-              << "' pid: " << pid_;
-        } else {
-          ABSL_PLOG_IF(WARNING,
-                       quiet_flag_ == QuietLogging::kNo ||
-                           quiet_flag_ == QuietLogging::kNotForDebugging)
-              << "Failed to send SIGKILL to '" << name_ << "' pid: " << pid_;
-          stop_timer_->Schedule(event_loop_->monotonic_now() +
-                                std::chrono::seconds(1));
-        }
-      })),
+      state_timer_(
+          event_loop_->AddTimer([this] { HandleEvent(Event::kTimeout); })),
       pipe_timer_(event_loop_->AddTimer([this]() { FetchOutputs(); })),
       child_status_handler_(
           event_loop_->AddTimer([this]() { MaybeHandleSignal(); })),
@@ -740,9 +708,7 @@ Application::Application(
       extra_cgroups_(std::move(extra_cgroups)),
       quiet_flag_(quiet_flag) {
   // Keep the length of the timer name bounded to some reasonable length.
-  start_timer_->set_name(absl::StrCat("app_start_", name.substr(0, 10)));
-  restart_timer_->set_name(absl::StrCat("app_restart_", name.substr(0, 10)));
-  stop_timer_->set_name(absl::StrCat("app_stop_", name.substr(0, 10)));
+  state_timer_->set_name(absl::StrCat("app_state_", name.substr(0, 10)));
   pipe_timer_->set_name(absl::StrCat("app_pipe_", name.substr(0, 10)));
   child_status_handler_->set_name(
       absl::StrCat("app_status_handler_", name.substr(0, 10)));
@@ -802,19 +768,182 @@ Application::Application(
   set_stop_grace_period(std::chrono::nanoseconds(application->stop_time()));
 }
 
-void Application::HandleEvent(Event event) {
-  // TODO: implement event-driven transition table in step 3.
-  (void)event;
-  ABSL_CHECK(false) << "HandleEvent not implemented yet";
-}
+#define RULE(from, ev, guard, next, cmd, act) \
+  {ApplicationInternalState::from,            \
+   Event::ev,                                 \
+   guard,                                     \
+   ApplicationInternalState::next,            \
+   ApplicationCommand::cmd,                   \
+   Action::act}
 
-void Application::DoStart() {
-  if (status_ != ApplicationInternalState::kWaiting) {
-    return;
+#define NoGuard nullptr
+#define Autorestart                                               \
+  [](bool autorestart, std::optional<ApplicationCommand>, bool) { \
+    return autorestart;                                           \
+  }
+#define NotAutorestart                                            \
+  [](bool autorestart, std::optional<ApplicationCommand>, bool) { \
+    return !autorestart;                                          \
+  }
+#define Alive \
+  [](bool, std::optional<ApplicationCommand>, bool alive) { return alive; }
+#define StopOrTerminate                                       \
+  [](bool, std::optional<ApplicationCommand> command, bool) { \
+    return command == ApplicationCommand::kStop ||            \
+           command == ApplicationCommand::kTerminate;         \
+  }
+#define StartOrRestart                                        \
+  [](bool, std::optional<ApplicationCommand> command, bool) { \
+    return command == ApplicationCommand::kStart ||           \
+           command == ApplicationCommand::kRestart;           \
   }
 
-  start_timer_->Disable();
-  restart_timer_->Disable();
+// clang-format off
+const Application::TransitionRule Application::kTransitionTable[] = {
+    // state        event            guard            next_state   command    action
+    RULE(kWaiting,  kStartCalled,    NoGuard,         kForking,    kStart,    kDoStart),
+    RULE(kWaiting,  kRestartCalled,  NoGuard,         kForking,    kRestart,  kDoStart),
+    RULE(kWaiting,  kStopCalled,     NoGuard,         kStopped,    kStop,     kCancelTimer),
+    RULE(kWaiting,  kTerminateCalled,NoGuard,         kStopped,    kTerminate,kCancelTimer),
+    RULE(kWaiting,  kTimeout,        NoGuard,         kForking,    kNoOp,     kDoStart),
+    //   kWaiting,  kChildExited not possible
+
+    RULE(kForking,  kForkSuccess,    NoGuard,         kStarting,   kNoOp,     kNone),
+    RULE(kForking,  kForkFailed,     NoGuard,         kStopped,    kStop,     kNone),
+    //   kForking,  no other events possible
+
+    RULE(kStarting, kStartCalled,    NoGuard,         kStarting,   kStart,    kNone),
+    RULE(kStarting, kRestartCalled,  NoGuard,         kStopping,   kRestart,  kDoStop),
+    RULE(kStarting, kStopCalled,     NoGuard,         kStopping,   kStop,     kDoStop),
+    RULE(kStarting, kTerminateCalled,NoGuard,         kStopping,   kTerminate,kDoStop),
+    RULE(kStarting, kTimeout,        NoGuard,         kRunning,    kNoOp,     kHandleStarted),
+    RULE(kStarting, kChildExited,    Autorestart,     kWaiting,    kRestart,  kDoWait),
+    RULE(kStarting, kChildExited,    NotAutorestart,  kStopped,    kStop,     kCancelTimer),
+
+    RULE(kRunning,  kStartCalled,    NoGuard,         kRunning,    kStart,    kNone),
+    RULE(kRunning,  kRestartCalled,  NoGuard,         kStopping,   kRestart,  kDoStop),
+    RULE(kRunning,  kStopCalled,     NoGuard,         kStopping,   kStop,     kDoStop),
+    RULE(kRunning,  kTerminateCalled,NoGuard,         kStopping,   kTerminate,kDoStop),
+    //   kRunning,  kTimeout not possible
+    RULE(kRunning,  kChildExited,    Autorestart,     kWaiting,    kRestart,  kDoWait),
+    RULE(kRunning,  kChildExited,    NotAutorestart,  kStopped,    kStop,     kNone),
+
+    RULE(kStopping, kStartCalled,    NoGuard,         kStopping,   kStart,    kNone),
+    RULE(kStopping, kRestartCalled,  NoGuard,         kStopping,   kRestart,  kNone),
+    RULE(kStopping, kStopCalled,     NoGuard,         kStopping,   kStop,     kNone),
+    RULE(kStopping, kTerminateCalled,NoGuard,         kStopping,   kTerminate,kNone),
+    RULE(kStopping, kTimeout,        Alive,           kStopping,   kNoOp,     kDoKill),
+    RULE(kStopping, kTimeout,        StopOrTerminate, kStopped,    kNoOp,     kNone),
+    RULE(kStopping, kTimeout,        StartOrRestart,  kWaiting,    kNoOp,     kDoWait),
+    RULE(kStopping, kChildExited,    StopOrTerminate, kStopped,    kNoOp,     kCancelTimer),
+    RULE(kStopping, kChildExited,    StartOrRestart,  kWaiting,    kNoOp,     kDoWait),
+
+    RULE(kStopped,  kStartCalled,    NoGuard,         kForking,    kStart,    kDoStart),
+    RULE(kStopped,  kRestartCalled,  NoGuard,         kForking,    kRestart,  kDoStart),
+    RULE(kStopped,  kStopCalled,     NoGuard,         kStopped,    kStop,     kNone),
+    RULE(kStopped,  kTerminateCalled,NoGuard,         kStopped,    kTerminate,kNone),
+    //   kStopped,  kTimeout not possible
+    //   kStopped,  kChildExited not possible
+};
+// clang-format on
+
+#undef RULE
+#undef NoGuard
+#undef Autorestart
+#undef NotAutorestart
+#undef Alive
+#undef StopOrTerminate
+#undef StartOrRestart
+
+// GCC 12 (the roborio toolchain) can't tell that an engaged std::optional has
+// an initialized payload, so the loop-carried next_event below trips
+// -Wmaybe-uninitialized inside <optional>.  Clang doesn't have that warning at
+// all, so it has to be guarded.  Scoped to the old GCC so it goes away on its
+// own; delete it once the roborio toolchain is gone.
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ < 13
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+void Application::HandleEvent(Event event) {
+  const ApplicationInternalState original_status = status_;
+
+  // A real PID must be positive. The kill 2 man page states:
+  // If sig is 0, then no signal is sent, but existence and permission
+  // checks are still performed; this can be used to check for the
+  // existence of a process ID or process group ID that the caller is
+  // permitted to signal.
+  const bool alive = pid_ > 0 && kill(pid_, 0) == 0;
+  std::optional<Event> next_event = event;
+
+  while (next_event) {
+    const TransitionRule *matched_rule = nullptr;
+    for (const auto &rule : kTransitionTable) {
+      if (rule.from_status != status_) {
+        continue;
+      }
+      if (rule.event != next_event) {
+        continue;
+      }
+      if (rule.guard && !rule.guard(autorestart_, command_, alive)) {
+        continue;
+      }
+      matched_rule = &rule;
+      break;
+    }
+
+    ABSL_CHECK(matched_rule != nullptr)
+        << "Unhandled event " << static_cast<int>(event) << " in state "
+        << static_cast<int>(status_) << " autorestart_=" << autorestart_
+        << " command_="
+        << static_cast<int>(command_.value_or(ApplicationCommand::kNoOp))
+        << " alive=" << alive;
+
+    if (matched_rule->next_command != ApplicationCommand::kNoOp) {
+      command_ = matched_rule->next_command;
+    }
+
+    status_ = matched_rule->next_status;
+
+    switch (matched_rule->action) {
+      case Action::kNone:
+        next_event = std::nullopt;
+        break;
+      case Action::kDoStart:
+        next_event = DoStart();
+        break;
+      case Action::kHandleStarted:
+        next_event = HandleStarted();
+        break;
+      case Action::kDoStop:
+        next_event = DoStop();
+        break;
+      case Action::kDoKill:
+        next_event = DoKill();
+        break;
+      case Action::kDoWait:
+        next_event = DoWait();
+        break;
+      case Action::kCancelTimer:
+        next_event = DoCancelTimer();
+        break;
+    }
+  }
+
+  if (status_ != original_status) {
+    OnChange();
+  }
+}
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ < 13
+#pragma GCC diagnostic pop
+#endif
+
+std::optional<Application::Event> Application::DoStart() {
+  // The state machine guarantees this is only called from kForking.
+  ABSL_CHECK(status_ == ApplicationInternalState::kForking)
+      << "DoStart called from unexpected state " << static_cast<int>(status_);
+
+  // Will be re-enabled later if needed.
+  state_timer_->Disable();
 
   status_pipes_ = util::ScopedPipe::MakePipe();
 
@@ -856,28 +985,27 @@ void Application::DoStart() {
                                   quiet_flag_ == QuietLogging::kNotForDebugging)
             << "Failed to fork '" << name_ << "'";
         stop_reason_ = aos::starter::LastStopReason::FORK_ERR;
-        status_ = ApplicationInternalState::kStopped;
+        return Event::kForkFailed;
       } else {
         pid_ = pid;
         id_ = next_id_++;
         start_time_ = event_loop_->monotonic_now();
-        status_ = ApplicationInternalState::kStarting;
         latest_timing_report_version_.reset();
         ABSL_LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo)
             << "Starting '" << name_ << "' pid " << pid_;
 
         // Set up timer which moves application to RUNNING state if it is still
         // alive in 1 second.
-        start_timer_->Schedule(event_loop_->monotonic_now() +
+        state_timer_->Schedule(event_loop_->monotonic_now() +
                                std::chrono::seconds(1));
         // Since we are the parent process, clear our write-side of all the
         // pipes.
         status_pipes_.write.reset();
         stdout_pipes_.write.reset();
         stderr_pipes_.write.reset();
+
+        return Event::kForkSuccess;
       }
-      OnChange();
-      return;
     }
 
     // Clear any signal handlers so that they don't accidentally interfere with
@@ -1018,74 +1146,71 @@ const std::string &Application::GetStderr() {
   return stderr_;
 }
 
-void Application::DoStop(bool restart) {
-  // If stop or restart received, the old state of these is no longer applicable
-  // so cancel both.
-  restart_timer_->Disable();
-  start_timer_->Disable();
-
+std::optional<Application::Event> Application::DoStop() {
   FetchOutputs();
 
-  switch (status_) {
-    case ApplicationInternalState::kStarting:
-    case ApplicationInternalState::kRunning: {
-      file_state_ = FileState::NOT_RUNNING;
-      ABSL_LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo ||
-                            quiet_flag_ == QuietLogging::kNotForDebugging)
-          << "Stopping '" << name_ << "' pid: " << pid_ << " with signal "
-          << SIGINT;
-      status_ = ApplicationInternalState::kStopping;
+  file_state_ = FileState::NOT_RUNNING;
+  ABSL_LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo ||
+                        quiet_flag_ == QuietLogging::kNotForDebugging)
+      << "Stopping '" << name_ << "' pid: " << pid_ << " with signal "
+      << SIGINT;
 
-      if (kill(pid_, SIGINT) != 0) {
-        ABSL_PLOG_IF(INFO, quiet_flag_ == QuietLogging::kNo ||
-                               quiet_flag_ == QuietLogging::kNotForDebugging)
-            << "Failed to send signal " << SIGINT << " to '" << name_
-            << "' pid: " << pid_;
-      }
-
-      // Watchdog timer to SIGKILL application if it is still running 1 second
-      // after SIGINT
-      stop_timer_->Schedule(event_loop_->monotonic_now() + stop_grace_period_);
-      OnChange();
-      break;
-    }
-    case ApplicationInternalState::kWaiting: {
-      // If waiting to restart, and receives restart, skip the waiting period
-      // and restart immediately. If stop received, all we have to do is move
-      // to the STOPPED state.
-      if (restart) {
-        DoStart();
-      } else {
-        status_ = ApplicationInternalState::kStopped;
-        OnChange();
-      }
-      break;
-    }
-    case ApplicationInternalState::kForking:
-    case ApplicationInternalState::kStopping: {
-      break;
-    }
-    case ApplicationInternalState::kStopped: {
-      // Restart immediately if the application is already stopped
-      if (restart) {
-        status_ = ApplicationInternalState::kWaiting;
-        DoStart();
-      }
-      break;
-    }
+  if (kill(pid_, SIGINT) != 0) {
+    ABSL_PLOG_IF(INFO, quiet_flag_ == QuietLogging::kNo ||
+                           quiet_flag_ == QuietLogging::kNotForDebugging)
+        << "Failed to send signal " << SIGINT << " to '" << name_
+        << "' pid: " << pid_;
   }
+
+  // Watchdog timer to SIGKILL application if it is still running after the
+  // grace period.
+  state_timer_->Schedule(event_loop_->monotonic_now() + stop_grace_period_);
+  return std::nullopt;
 }
 
-void Application::QueueStart() {
-  status_ = ApplicationInternalState::kWaiting;
+std::optional<Application::Event> Application::DoKill() {
+  if (kill(pid_, SIGKILL) == 0) {
+    ABSL_LOG_IF(WARNING, quiet_flag_ == QuietLogging::kNo ||
+                             quiet_flag_ == QuietLogging::kNotForDebugging)
+        << "Failed to stop, sending SIGKILL to '" << name_ << "' pid: " << pid_;
+  } else {
+    ABSL_PLOG_IF(WARNING, quiet_flag_ == QuietLogging::kNo ||
+                              quiet_flag_ == QuietLogging::kNotForDebugging)
+        << "Failed to send SIGKILL to '" << name_ << "' pid: " << pid_;
+    // Retry sending SIGKILL in 1 second.
+    state_timer_->Schedule(event_loop_->monotonic_now() +
+                           std::chrono::seconds(1));
+  }
+  return std::nullopt;
+}
 
+std::optional<Application::Event> Application::DoWait() {
   ABSL_LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo)
       << "Restarting " << name_ << " in 3 seconds";
-  restart_timer_->Schedule(event_loop_->monotonic_now() +
-                           std::chrono::seconds(3));
-  start_timer_->Disable();
-  stop_timer_->Disable();
-  OnChange();
+  state_timer_->Schedule(event_loop_->monotonic_now() +
+                         std::chrono::seconds(3));
+  return std::nullopt;
+}
+
+std::optional<Application::Event> Application::DoCancelTimer() {
+  state_timer_->Disable();
+  return std::nullopt;
+}
+
+std::optional<Application::Event> Application::HandleStarted() {
+  ABSL_LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo)
+      << "Started '" << name_ << "' pid: " << pid_;
+  // Check if the file on disk changed while we were starting up. We allow
+  // this state for the same reason that we don't just use /proc/$pid/exe
+  // to determine if the file is deleted--we may be running a script or
+  // sudo or the such and determining the state of the file that we
+  // actually care about sounds like more work than we want to deal with.
+  if (InodeChanged(path_, pre_fork_inode_)) {
+    file_state_ = FileState::CHANGED_DURING_STARTUP;
+  } else {
+    file_state_ = FileState::NO_CHANGE;
+  }
+  return std::nullopt;
 }
 
 std::vector<char *> Application::CArgs() {
@@ -1205,8 +1330,7 @@ Application::PopulateStatus(flatbuffers::FlatBufferBuilder *builder,
 
 void Application::Terminate() {
   stop_reason_ = aos::starter::LastStopReason::TERMINATE;
-  DoStop(false);
-  command_ = ApplicationCommand::kTerminate;
+  HandleEvent(Event::kTerminateCalled);
 }
 
 void Application::HandleCommand(aos::starter::Command cmd) {
@@ -1215,42 +1339,17 @@ void Application::HandleCommand(aos::starter::Command cmd) {
   }
   switch (cmd) {
     case aos::starter::Command::START: {
-      command_ = ApplicationCommand::kStart;
-      switch (status_) {
-        case ApplicationInternalState::kWaiting: {
-          restart_timer_->Disable();
-          DoStart();
-          break;
-        }
-        case ApplicationInternalState::kForking:
-        case ApplicationInternalState::kStarting: {
-          break;
-        }
-        case ApplicationInternalState::kRunning: {
-          break;
-        }
-        case ApplicationInternalState::kStopping: {
-          command_ = ApplicationCommand::kRestart;
-          break;
-        }
-        case ApplicationInternalState::kStopped: {
-          status_ = ApplicationInternalState::kWaiting;
-          DoStart();
-          break;
-        }
-      }
+      HandleEvent(Event::kStartCalled);
       break;
     }
     case aos::starter::Command::STOP: {
-      command_ = ApplicationCommand::kStop;
       stop_reason_ = aos::starter::LastStopReason::STOP_REQUESTED;
-      DoStop(false);
+      HandleEvent(Event::kStopCalled);
       break;
     }
     case aos::starter::Command::RESTART: {
-      command_ = ApplicationCommand::kRestart;
       stop_reason_ = aos::starter::LastStopReason::RESTART_REQUESTED;
-      DoStop(true);
+      HandleEvent(Event::kRestartCalled);
       break;
     }
   }
@@ -1276,7 +1375,6 @@ bool Application::MaybeHandleSignal() {
     return false;
   }
 
-  start_timer_->Disable();
   exit_time_ = event_loop_->monotonic_now();
   exit_code_ = WIFEXITED(status) ? WEXITSTATUS(status) : WTERMSIG(status);
   file_state_ = FileState::NOT_RUNNING;
@@ -1288,6 +1386,8 @@ bool Application::MaybeHandleSignal() {
   const std::string starter_version_string =
       absl::StrCat("starter version '",
                    event_loop_->VersionString().value_or("unknown"), "'");
+
+  // Log status.
   switch (status_) {
     case ApplicationInternalState::kStarting: {
       if (exit_code_.value() == 0) {
@@ -1301,12 +1401,6 @@ bool Application::MaybeHandleSignal() {
             << "Failed to start '" << name_ << "' on pid " << pid_
             << " : Exited with status " << exit_code_.value() << " and "
             << starter_version_string;
-      }
-      if (autorestart()) {
-        QueueStart();
-      } else {
-        status_ = ApplicationInternalState::kStopped;
-        OnChange();
       }
       break;
     }
@@ -1329,33 +1423,12 @@ bool Application::MaybeHandleSignal() {
               << exit_code_.value();
         }
       }
-      if (autorestart()) {
-        QueueStart();
-      } else {
-        status_ = ApplicationInternalState::kStopped;
-        OnChange();
-      }
       break;
     }
     case ApplicationInternalState::kStopping: {
       ABSL_LOG_IF(INFO, quiet_flag_ == QuietLogging::kNo)
           << "Successfully stopped '" << name_ << "' pid: " << pid_
           << " with status " << exit_code_.value();
-      status_ = ApplicationInternalState::kStopped;
-
-      // Disable force stop timer since the process already died
-      stop_timer_->Disable();
-
-      OnChange();
-      if (command_ == ApplicationCommand::kTerminate) {
-        return true;
-      }
-
-      if (command_ == ApplicationCommand::kRestart) {
-        command_ = std::nullopt;
-        status_ = ApplicationInternalState::kWaiting;
-        DoStart();
-      }
       break;
     }
     case ApplicationInternalState::kForking:
@@ -1366,7 +1439,10 @@ bool Application::MaybeHandleSignal() {
     }
   }
 
-  return false;
+  HandleEvent(Event::kChildExited);
+
+  return status_ == ApplicationInternalState::kStopped &&
+         command_ == ApplicationCommand::kTerminate;
 }
 
 void Application::OnChange() {
@@ -1376,9 +1452,7 @@ void Application::OnChange() {
 }
 
 Application::~Application() {
-  start_timer_->Disable();
-  restart_timer_->Disable();
-  stop_timer_->Disable();
+  state_timer_->Disable();
   pipe_timer_->Disable();
   child_status_handler_->Disable();
 }
