@@ -40,17 +40,11 @@ cc_library(
 cc_library(
     name = "thread_signal",
     srcs = select({
+        "@platforms//os:linux": ["thread_signal_linux.cc"],
+        "@platforms//os:macos": ["thread_signal_darwin.cc"],
         "@platforms//os:windows": ["thread_signal_windows.cc"],
-        "//conditions:default": ["thread_signal_linux.cc"],
     }),
     hdrs = ["thread_signal.h"],
-    # thread_signal_linux.cc's default (non-Windows) branch uses SIGRTMIN,
-    # which doesn't exist on macOS.  macOS support lands in a later commit;
-    # until then, don't try to build this there.
-    target_compatible_with = select({
-        "@platforms//os:macos": ["@platforms//:incompatible"],
-        "//conditions:default": [],
-    }),
     visibility = ["//visibility:public"],
     deps = [
         "//aos:realtime",

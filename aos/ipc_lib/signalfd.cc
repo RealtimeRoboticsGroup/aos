@@ -69,7 +69,7 @@ SignalFd::SignalFd(::std::initializer_list<unsigned int> signal_list) {
   for (int signal : signal_list) {
     ABSL_CHECK_EQ(0, sigaddset(&blocked_mask_, signal));
   }
-  // Then build a signalfd.  Make it nonblocking so it works well with an epoll
+  // Then build a signalfd.  Make it nonblocking so it works well with an event
   // loop, and have it close on exec.
   ABSL_PCHECK(
       (fd_ = signalfd(-1, &blocked_mask_, SFD_NONBLOCK | SFD_CLOEXEC)) != 0);

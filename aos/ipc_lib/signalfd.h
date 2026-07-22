@@ -9,27 +9,31 @@
 namespace aos::ipc_lib {
 
 // Class to manage a signalfd.
+//
+// This is the general "turn a set of signals into a readable fd" primitive
+// (used e.g. by starter to watch child-process signals).  It is Linux-only.
+// For the thread-wakeup mechanism, use ThreadSignalReceiver instead.
 class SignalFd {
  public:
-  // Constructs a SignalFd for the provided list of signals.
-  // Blocks the signals at the same time in this thread.
+  // Constructs a SignalFd for the provided list of signals.  Blocks the signals
+  // at the same time in this thread.
   SignalFd(::std::initializer_list<unsigned int> signal_list);
 
   SignalFd(const SignalFd &) = delete;
   SignalFd &operator=(const SignalFd &) = delete;
   ~SignalFd();
 
-  // Returns the file descriptor for the signalfd.
-  int fd() { return fd_; }
-
   // Reads a signalfd_siginfo.  If there was an error, the resulting ssi_signo
   // will be 0.
   signalfd_siginfo Read();
 
-  // Ensures the destructor will leave the specific signal blocked. This can be
+  // Ensures the destructor will leave the specific signal blocked.  This can be
   // helpful if the signal is sent asynchronously, such that it may arrive after
   // this object is destroyed, to ensure that doesn't kill the process.
   void LeaveSignalBlocked(unsigned int signal);
+
+  // Returns the file descriptor for the signalfd.
+  int fd() { return fd_; }
 
  private:
   int fd_ = -1;

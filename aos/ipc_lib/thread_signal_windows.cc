@@ -1,39 +1,49 @@
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 
+#include <cstdio>
+
 #include "absl/log/absl_check.h"
-#include "absl/strings/str_cat.h"
 
 #include "aos/ipc_lib/thread_signal.h"
 
 namespace aos::ipc_lib {
 
-ThreadSignal::ThreadSignal() {
+ThreadSignalSender::ThreadSignalSender() {
   const pid_t pid = GetCurrentProcessId();
   const pid_t tid = GetCurrentThreadId();
-  std::string name = absl::StrCat("Local\\aos-wakeup-", pid, "-", tid);
-  event_handle_ = CreateEventA(NULL, FALSE, FALSE, name.c_str());
+  char name[64];
+  int len = snprintf(name, sizeof(name), "Local\\aos-wakeup-%d-%d",
+                     static_cast<int>(pid), static_cast<int>(tid));
+  ABSL_CHECK(len > 0 && len < static_cast<int>(sizeof(name)));
+  event_handle_ = CreateEventA(NULL, FALSE, FALSE, name);
   ABSL_PCHECK(event_handle_ != NULL) << "CreateEventA failed";
 }
 
-ThreadSignal::~ThreadSignal() {
+ThreadSignalSender::~ThreadSignalSender() {
   if (event_handle_ != NULL) {
     CloseHandle(event_handle_);
   }
 }
 
-ThreadSignal::ThreadSignal(ThreadSignal &&other) {
+ThreadSignalSender::ThreadSignalSender(ThreadSignalSender &&other) {
   event_handle_ = other.event_handle_;
   other.event_handle_ = NULL;
 }
 
-ThreadSignal &ThreadSignal::operator=(ThreadSignal &&other) {
+ThreadSignalSender &ThreadSignalSender::operator=(ThreadSignalSender &&other) {
   std::swap(event_handle_, other.event_handle_);
   return *this;
 }
 
-void ThreadSignal::Signal(pid_t pid, pid_t tid) {
-  std::string name = absl::StrCat("Local\\aos-wakeup-", pid, "-", tid);
-  HANDLE hEvent = OpenEventA(EVENT_MODIFY_STATE, FALSE, name.c_str());
+void ThreadSignalSender::Signal(pid_t pid, pid_t tid) {
+  char name[64];
+  int len = snprintf(name, sizeof(name), "Local\\aos-wakeup-%d-%d",
+                     static_cast<int>(pid), static_cast<int>(tid));
+  ABSL_CHECK(len > 0 && len < static_cast<int>(sizeof(name)));
+  HANDLE hEvent = OpenEventA(EVENT_MODIFY_STATE, FALSE, name);
   if (hEvent == NULL) {
     const DWORD error = GetLastError();
     // The target thread may have already exited and closed its event before we
@@ -48,5 +58,8 @@ void ThreadSignal::Signal(pid_t pid, pid_t tid) {
   ABSL_PCHECK(SetEvent(hEvent)) << "SetEvent(" << name << ") failed";
   ABSL_PCHECK(CloseHandle(hEvent)) << "CloseHandle failed";
 }
+
+// ThreadSignalReceiver on Windows is added later, alongside the Aio (IOCP) loop
+// it registers its Event with.
 
 }  // namespace aos::ipc_lib

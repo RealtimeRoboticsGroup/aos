@@ -334,7 +334,7 @@ class LocklessQueueWatcher {
   // registered.
   int watcher_index_ = -1;
 
-  ThreadSignal signal_;
+  ThreadSignalSender signal_;
 };
 
 class LocklessQueueWakeUpper {
@@ -360,7 +360,7 @@ class LocklessQueueWakeUpper {
   const LocklessQueueMemory *const memory_;
 
   ::std::vector<WatcherCopy> watcher_copy_;
-  ThreadSignal signal_;
+  ThreadSignalSender signal_;
 };
 
 // Sender for blocks of data.  The resources associated with a sender are
