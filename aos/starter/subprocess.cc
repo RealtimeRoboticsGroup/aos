@@ -835,6 +835,12 @@ const Application::TransitionRule Application::kTransitionTable[] = {
     RULE(kStopping, kTimeout,        Alive,           kStopping,   kNoOp,     kDoKill),
     RULE(kStopping, kTimeout,        StopOrTerminate, kStopped,    kNoOp,     kNone),
     RULE(kStopping, kTimeout,        StartOrRestart,  kWaiting,    kNoOp,     kDoWait),
+    // If there are children in the process group when the main PID exits, we could
+    // wait for them (as done below) or we could kill them immediately.
+    // Without PR_SET_CHILD_SUBREAPER we're waiting for the full stop_grace_period_ + 1s.
+    // Setting PR_SET_CHILD_SUBREAPER for starterd could reduce that, but it's not
+    // clear that won't cause other problems.
+    RULE(kStopping, kChildExited,    Alive,           kStopping,   kNoOp,     kNone),
     RULE(kStopping, kChildExited,    StopOrTerminate, kStopped,    kNoOp,     kCancelTimer),
     RULE(kStopping, kChildExited,    StartOrRestart,  kWaiting,    kNoOp,     kDoWait),
 
@@ -872,7 +878,9 @@ void Application::HandleEvent(Event event) {
   // checks are still performed; this can be used to check for the
   // existence of a process ID or process group ID that the caller is
   // permitted to signal.
-  const bool alive = pid_ > 0 && kill(pid_, 0) == 0;
+  const bool alive =
+      pid_ > 0 &&
+      (kill(pid_, 0) == 0 || (isolate_process_group_ && killpg(pid_, 0) == 0));
   std::optional<Event> next_event = event;
 
   while (next_event) {
@@ -1020,6 +1028,13 @@ std::optional<Application::Event> Application::DoStart() {
     }
   }
 
+  // Place the child in its own process group (PGID == child PID) so that
+  // killpg(pid_, sig) in DoStop reaches all descendants
+  if (isolate_process_group_) {
+    ABSL_PCHECK(setpgid(0, 0) == 0)
+        << "Could not set process group for " << name_;
+  }
+
   if (main_cgroup_) {
     main_cgroup_->AddTid();
   }
@@ -1154,12 +1169,14 @@ std::optional<Application::Event> Application::DoStop() {
                         quiet_flag_ == QuietLogging::kNotForDebugging)
       << "Stopping '" << name_ << "' pid: " << pid_ << " with signal "
       << SIGINT;
-
-  if (kill(pid_, SIGINT) != 0) {
+  const int sigint_result =
+      isolate_process_group_ ? killpg(pid_, SIGINT) : kill(pid_, SIGINT);
+  if (sigint_result != 0) {
     ABSL_PLOG_IF(INFO, quiet_flag_ == QuietLogging::kNo ||
                            quiet_flag_ == QuietLogging::kNotForDebugging)
-        << "Failed to send signal " << SIGINT << " to '" << name_
-        << "' pid: " << pid_;
+        << "Failed to send signal " << SIGINT
+        << (isolate_process_group_ ? " to process group of '" : " to '")
+        << name_ << "' pid: " << pid_;
   }
 
   // Watchdog timer to SIGKILL application if it is still running after the
@@ -1169,7 +1186,9 @@ std::optional<Application::Event> Application::DoStop() {
 }
 
 std::optional<Application::Event> Application::DoKill() {
-  if (kill(pid_, SIGKILL) == 0) {
+  const int kill_result =
+      isolate_process_group_ ? killpg(pid_, SIGKILL) : kill(pid_, SIGKILL);
+  if (kill_result == 0) {
     ABSL_LOG_IF(WARNING, quiet_flag_ == QuietLogging::kNo ||
                              quiet_flag_ == QuietLogging::kNotForDebugging)
         << "Failed to stop, sending SIGKILL to '" << name_ << "' pid: " << pid_;
@@ -1177,10 +1196,10 @@ std::optional<Application::Event> Application::DoKill() {
     ABSL_PLOG_IF(WARNING, quiet_flag_ == QuietLogging::kNo ||
                               quiet_flag_ == QuietLogging::kNotForDebugging)
         << "Failed to send SIGKILL to '" << name_ << "' pid: " << pid_;
-    // Retry sending SIGKILL in 1 second.
-    state_timer_->Schedule(event_loop_->monotonic_now() +
-                           std::chrono::seconds(1));
   }
+  // Recheck state in one second.
+  state_timer_->Schedule(event_loop_->monotonic_now() +
+                         std::chrono::seconds(1));
   return std::nullopt;
 }
 

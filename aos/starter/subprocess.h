@@ -248,7 +248,14 @@ class Application {
   // so that DoStop signals all descendants. Should only be set for
   // applications spawned directly by starterd, not for Application instances
   // created within child processes.
-  void set_isolate_process_group(bool value) { isolate_process_group_ = value; }
+  // Do not set the value if the application has ever run, because calling
+  // killpg on a process without a custom process group set would kill starterd
+  // and all the applications that don't have isolate_process_group_ set.
+  void set_isolate_process_group(bool value) {
+    if (pid_ == -1) {
+      isolate_process_group_ = value;
+    }
+  }
 
   // Sets the time for a process to stop gracefully. If an application is asked
   // to stop, but doesn't stop within the specified time limit, then it is

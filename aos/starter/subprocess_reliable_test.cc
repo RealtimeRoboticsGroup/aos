@@ -380,11 +380,8 @@ TEST(SubprocessTest, GrandchildKilledOnStop) {
   // kill(pid, 0) returns 0 if process exists, -1 with ESRCH if not
   int result = kill(grandchild_pid, 0);
 
-  // Temporarily invert what is expected.
-  // TODO: Revert this when the test is fixed.
-  EXPECT_EQ(result, 0);
-  // EXPECT_EQ(result, -1);
-  // EXPECT_EQ(errno, ESRCH) << "Grandchild process still running after Stop()";
+  EXPECT_EQ(result, -1);
+  EXPECT_EQ(errno, ESRCH) << "Grandchild process still running after Stop()";
 }
 
 }  // namespace aos::starter::testing
