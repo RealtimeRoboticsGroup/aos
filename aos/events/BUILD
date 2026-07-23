@@ -288,6 +288,7 @@ py_test(
         ":util_py",
         "//aos/flatbuffers:flatpy",
         "@aos_pip_deps//absl_py",
+        "@pip_deps//numpy",
     ],
 )
 

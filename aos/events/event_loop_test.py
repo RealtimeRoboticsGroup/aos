@@ -4,6 +4,7 @@ import contextlib
 
 from absl.testing import absltest
 import flatbuffers
+import numpy
 
 from aos.events import util
 from aos.events.simulated_event_loop import SimulatedEventLoopFactory
@@ -11,7 +12,7 @@ from aos.events.simulated_event_loop import ffi
 from aos.events.event_loop import MessagesSentTooFastError
 from test_message_fbs_py.aos.TestMessage import TestMessageT
 
-VECTOR_VALUE = [1, 8, 6, 8]
+VECTOR_VALUE = numpy.array([1, 8, 6, 8], dtype='int32')
 
 
 class EventLoopTest(absltest.TestCase):
@@ -37,12 +38,12 @@ class EventLoopTest(absltest.TestCase):
 
         def handle_test_message(message):
             nonlocal watcher_count, fetcher, send_loop
-            assert message.vector == VECTOR_VALUE
+            assert numpy.array_equal(message.vector, VECTOR_VALUE)
             watcher_count += 1
 
             fetched = fetcher.fetch()
             assert fetched is not None
-            assert fetched.vector == VECTOR_VALUE
+            assert numpy.array_equal(fetched.vector, VECTOR_VALUE)
 
             assert send_loop.realtime_now_ns() > 0
 
@@ -190,6 +191,31 @@ class EventLoopTest(absltest.TestCase):
 
         with self.assertRaises(BufferError):
             self._factory.run_for_ns(500_000)
+
+    def test_strings_arrays(self):
+        """Tests messages with strings and array. When numpy is importable,
+        the FlatBuffers Python object based API retains references to the buffer
+        by default."""
+        send_loop = self._factory.make_event_loop("primary", "")
+        sender = send_loop.make_sender(TestMessageT, "/test")
+
+        retained_message = None
+
+        def handle_test_message(message):
+            nonlocal retained_message
+            retained_message = message
+
+        receive_loop1 = self._factory.make_event_loop("loop1", "")
+        receive_loop1.make_watcher(TestMessageT, "/test", handle_test_message)
+        receive_loop2 = self._factory.make_event_loop("loop2", "")
+        fetcher = receive_loop2.make_fetcher(TestMessageT, "/test")
+
+        send_loop.on_run(
+            lambda: sender.send(TestMessageT(vector=[1, 2, 3], string='abc')))
+
+        self._factory.run_for_ns(500_000)
+        assert fetcher.fetch() is not None
+        assert isinstance(retained_message.vector, numpy.ndarray)
 
 
 if __name__ == "__main__":

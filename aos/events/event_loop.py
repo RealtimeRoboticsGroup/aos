@@ -2,6 +2,7 @@ from typing import Any, List, Type, Callable, Optional
 import traceback
 import sys
 import enum
+from copy import deepcopy
 
 import flatbuffers
 from absl import logging
@@ -209,7 +210,17 @@ class ContextView:
 
         Returns None if there is no message in the context."""
         if self.buffer:
-            return self.channel_wrapper.object_from_buffer(self.buffer)
+            # deepcopy is important here to avoid retaining buffer references
+            # via strings and numpy arrays. If this becomes a performance
+            # problem, consider other approaches such as:
+            #   * Iterate like deepcopy's implementation, but only copy the
+            #     relevant object types and swap the object fields.
+            #   * Use the FlatBuffers reflection API to find the relevant fields.
+            #   * Generate functions to only copy the relevant fields.
+            #   * Disable the FlatBuffers numpy support.
+            #   * Copy the entire backing buffer if it's small (before parsing).
+            return deepcopy(
+                self.channel_wrapper.object_from_buffer(self.buffer))
 
     def release_buffer(self):
         """Releases the buffer, and raises BufferError if any references have been retained.
