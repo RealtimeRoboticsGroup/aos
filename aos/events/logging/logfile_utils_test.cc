@@ -11,6 +11,7 @@
 #include "flatbuffers/reflection_generated.h"
 #include "gtest/gtest.h"
 
+#include "aos/events/logging/binary_annotator_wrapper.h"
 #include "aos/events/logging/logfile_sorting.h"
 #include "aos/events/logging/test_message_generated.h"
 #include "aos/flatbuffer_merge.h"
@@ -20,8 +21,6 @@
 #include "aos/testing/random_seed.h"
 #include "aos/testing/tmpdir.h"
 #include "aos/util/file.h"
-#include "src/annotated_binary_text_gen.h"
-#include "src/binary_annotator.h"
 
 ABSL_DECLARE_FLAG(double, max_network_delay);
 
@@ -3273,29 +3272,6 @@ class InlinePackMessage : public ::testing::Test {
 }
 )")};
 };
-
-// Uses the binary schema to annotate a provided flatbuffer.  Returns the
-// annotated flatbuffer.
-std::string AnnotateBinaries(
-    const aos::NonSizePrefixedFlatbuffer<reflection::Schema> &schema,
-    const std::string &schema_filename,
-    flatbuffers::span<uint8_t> binary_data) {
-  flatbuffers::BinaryAnnotator binary_annotator(
-      schema.span().data(), schema.span().size(), binary_data.data(),
-      binary_data.size(), /*is_size_prefixed=*/false);
-
-  auto annotations = binary_annotator.Annotate();
-
-  flatbuffers::AnnotatedBinaryTextGenerator text_generator(
-      flatbuffers::AnnotatedBinaryTextGenerator::Options{}, annotations,
-      binary_data.data(), binary_data.size());
-
-  text_generator.Generate(aos::testing::TestTmpDir() + "/foo.bfbs",
-                          schema_filename);
-
-  return aos::util::ReadFileToStringOrDie(aos::testing::TestTmpDir() +
-                                          "/foo.afb");
-}
 
 // Event loop which just has working time functions for the Copier classes
 // tested below.

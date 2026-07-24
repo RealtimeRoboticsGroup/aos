@@ -998,6 +998,7 @@ cc_test(
         "//aos/network:remote_message_fbs_reflection_out",
     ],
     deps = [
+        ":binary_annotator_wrapper",
         ":logfile_utils",
         ":logger_fbs",
         ":test_message_fbs",
@@ -1005,6 +1006,18 @@ cc_test(
         "//aos/testing:path",
         "//aos/testing:random_seed",
         "//aos/testing:tmpdir",
+    ],
+)
+
+cc_library(
+    name = "binary_annotator_wrapper",
+    testonly = True,
+    srcs = ["binary_annotator_wrapper.cc"],
+    hdrs = ["binary_annotator_wrapper.h"],
+    deps = [
+        "//aos:flatbuffers",
+        "//aos/testing:tmpdir",
+        "//aos/util:file",
         "@com_github_google_flatbuffers//src:flatc_library",
     ],
 )
