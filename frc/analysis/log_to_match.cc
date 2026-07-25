@@ -10,17 +10,17 @@ int main(int argc, char **argv) {
   aos::logger::LogReader reader(
       aos::logger::SortParts(aos::logger::FindLogs(argc, argv)));
   reader.Register();
-  const aos::Node *roborio =
-      aos::configuration::GetNode(reader.configuration(), "roborio");
+  const aos::Node *node =
+      aos::configuration::GetNode(reader.configuration(), "orin");
 
   std::unique_ptr<aos::EventLoop> event_loop =
-      reader.event_loop_factory()->MakeEventLoop("roborio", roborio);
+      reader.event_loop_factory()->MakeEventLoop("log_to_match", node);
 
   frc::MatchType match_type = frc::MatchType::kNone;
   int match_number = 0;
 
   auto joystick_state_fetcher =
-      event_loop->MakeFetcher<frc::JoystickState>("/roborio/frc");
+      event_loop->MakeFetcher<frc::JoystickState>("/frc");
 
   event_loop->AddPhasedLoop(
       [&](int) {
