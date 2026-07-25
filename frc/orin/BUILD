@@ -296,7 +296,6 @@ cuda_library(
 static_flatbuffer(
     name = "hardware_stats_fbs",
     srcs = ["hardware_stats.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 

@@ -463,7 +463,6 @@ cc_binary(
         "intrinsics_calibration.cc",
     ],
     data = [":aos_config"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":intrinsics_calibration_lib",
@@ -498,7 +497,6 @@ aos_config(
         "//aos/util:filesystem_fbs",
         "@com_github_foxglove_schemas//:schemas",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//aos/events:aos_config",
@@ -519,7 +517,6 @@ cc_test(
         "@intrinsic_calibration_test_images",
     ],
     shard_count = 4,
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":intrinsics_calibration",
         ":intrinsics_calibration_lib",
@@ -655,7 +652,6 @@ robot_downloader(
 static_flatbuffer(
     name = "turbojpeg_decoder_status_fbs",
     srcs = ["turbojpeg_decoder_status.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
@@ -873,7 +869,6 @@ camera_constants_json(
 static_flatbuffer(
     name = "field_map_fbs",
     srcs = ["field_map.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
@@ -1009,7 +1004,6 @@ cc_binary(
 static_flatbuffer(
     name = "coral_detection_fbs",
     srcs = ["coral_detection.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
@@ -1028,7 +1022,6 @@ flatbuffer_ts_library(
 static_flatbuffer(
     name = "game_piece_locations_fbs",
     srcs = ["game_piece_locations.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 

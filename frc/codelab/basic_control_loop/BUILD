@@ -44,7 +44,6 @@ static_flatbuffer(
     srcs = [
         "basic_goal.fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 static_flatbuffer(
@@ -52,7 +51,6 @@ static_flatbuffer(
     srcs = [
         "basic_output.fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 static_flatbuffer(
@@ -60,7 +58,6 @@ static_flatbuffer(
     srcs = [
         "basic_status.fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 static_flatbuffer(
@@ -68,7 +65,6 @@ static_flatbuffer(
     srcs = [
         "basic_position.fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 aos_config(

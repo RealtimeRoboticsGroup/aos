@@ -22,7 +22,6 @@ static_flatbuffer(
     srcs = [
         "udp_status.fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
@@ -31,7 +30,6 @@ static_flatbuffer(
     srcs = [
         "status.fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//frc/math:matrix_fbs",
@@ -233,7 +231,6 @@ static_flatbuffer(
     srcs = [
         "chassis_speeds.fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
@@ -242,7 +239,6 @@ static_flatbuffer(
     srcs = [
         "pose2d.fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 

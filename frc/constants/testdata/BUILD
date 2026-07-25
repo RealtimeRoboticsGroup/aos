@@ -9,7 +9,6 @@ exports_files([
 static_flatbuffer(
     name = "constants_list_fbs",
     srcs = ["constants_list.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":constants_data_fbs",
@@ -19,7 +18,6 @@ static_flatbuffer(
 static_flatbuffer(
     name = "constants_data_fbs",
     srcs = ["constants_data.fbs"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
 )
 
