@@ -350,7 +350,7 @@ int Main() {
           return;
         }
 
-        std::array<double, 4> pose_data;
+        std::array<double, 5> pose_data;
 
         pose_data[0] = localizer_output.x() +
                        target_map_fetcher.constants().fieldlength() / 2.0;
@@ -362,6 +362,8 @@ int Main() {
                 event_loop.context().realtime_event_time.time_since_epoch())
                 .count() +
             offset.value();
+
+        pose_data[4] = localizer_output.image_accepted_count();
 
         if (pose_socket.Send(reinterpret_cast<char *>(pose_data.data()),
                              pose_data.size() * sizeof(double)) !=
