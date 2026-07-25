@@ -274,8 +274,34 @@ void Localizer::HandleChassisSpeeds(
   t_ = sample_time_orin;
   // We don't actually use the down estimator currently, but it's really
   // convenient for debugging.
+
+  /* Angular velocity was not trustworthy, causing heading resets because of
+  differences between angular velocity via roborio and estimated image pose. To
+  solve, we used heading directly between timestamps. */
+
+  ekf_.UpdateSpeeds(
+      prev_absolute_velocity_x_, prev_absolute_velocity_y_,
+      prev_absolute_velocity_omega_,
+      t_);  // Speeds are applied from last update up until now. Integrate robot
+            // state from previous state up until now based on prior speeds
+
+  const double roborio_pose_delta = aos::math::NormalizeAngle(
+      roborio_pose_fetcher_->theta() - roborio_pose_last_theta_);
+  ekf_.mutable_X_hat(StateIdx::kTheta) +=
+      (roborio_pose_delta -
+       std::chrono::duration<double>(t_ - prev_timestamp_s_).count() *
+           (prev_absolute_velocity_omega_));
+
+  prev_absolute_velocity_x_ = absolute_velocity.x();
+  prev_absolute_velocity_y_ = absolute_velocity.y();
+  prev_absolute_velocity_omega_ = speeds.omega();
+  prev_timestamp_s_ = t_;
+  roborio_pose_last_theta_ = roborio_pose_fetcher_->theta();
+
   ekf_.UpdateSpeeds(absolute_velocity.x(), absolute_velocity.y(),
-                    speeds.omega(), t_);
+                    speeds.omega(),
+                    t_);  // Step change; stop using old speeds for integration
+                          // now that we have new speeds
   SendStatus();
 }
 
