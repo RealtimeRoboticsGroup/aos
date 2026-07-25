@@ -215,6 +215,7 @@ Localizer::Localizer(aos::EventLoop *event_loop)
 
 void Localizer::HandleControl(
     const frc::control_loops::drivetrain::LocalizerControl &control) {
+  t_ = event_loop_->context().monotonic_event_time;
   // This is triggered whenever we need to force the X/Y/(maybe theta)
   // position of the robot to a particular point---e.g., during pre-match
   // setup, or when commanded by a button on the driverstation.
