@@ -130,6 +130,28 @@ class Ekf {
             .correct_update = update};
   }
 
+  void CorrectNoUpdates(const aos::monotonic_clock::time_point now,
+                        const Input &U) {
+    CHECK(last_update_.has_value())
+        << ": Must call Initialize() before doing EKF Corrections.";
+    CHECK_LE(last_update_.value(), now);
+    const aos::monotonic_clock::duration dt = now - last_update_.value();
+    StateSquare Q_discrete, A_discrete;
+    // Note: We don't actually use the linearized B matrix, but the cost of
+    // calculating said matrix is reasonably low in most practical scenarios.
+    const typename Dynamics::LinearDynamics linearized_dynamics =
+        dynamics_->LinearizeDynamics(X_hat_, U);
+    controls::DiscretizeQAFast(Q_continuous_, linearized_dynamics.A, dt,
+                               &Q_discrete, &A_discrete);
+    VLOG(3) << "Discretized Q\n" << Q_discrete;
+    // Only do a predict step if time actually passed; this optimizes things in
+    // the scenario where we do multiple correction steps at once.
+    if (dt.count() != 0) {
+      Predict(dt, U, A_discrete, Q_discrete);
+      last_update_ = now;
+    }
+  }
+
   // Uses Ceres to calculate the Jacobian of expected_measurement and calls
   // Correct().
   template <int kNumMeasurements, typename ExpectedMeasurementFunction,

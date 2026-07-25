@@ -23,9 +23,10 @@ class EkfTest : public ::testing::Test {
   using State = PositionVelocityDynamics::State;
   using Input = PositionVelocityDynamics::Input;
   using StateSquare = PositionVelocityDynamics::StateSquare;
+
+  static const StateSquare Q_continuous;
   EkfTest()
-      : ekf_({Eigen::Matrix2d{{1.0, 0.0}, {0.0, 1.0}},
-              std::make_unique<PositionVelocityDynamics>()}) {}
+      : ekf_({Q_continuous, std::make_unique<PositionVelocityDynamics>()}) {}
 
   void DoMeaninglessMeasurementCorrection(aos::monotonic_clock::time_point now,
                                           const Input &input) {
@@ -53,6 +54,9 @@ class EkfTest : public ::testing::Test {
 
   Ekf<double, 2, 1> ekf_;
 };
+
+const PositionVelocityDynamics::StateSquare EkfTest::Q_continuous{
+    Eigen::Matrix2d::Identity()};
 
 // Test that when we provide basic inputs the EKF exactly tracks the provided
 // model.
@@ -153,4 +157,31 @@ TEST_F(EkfTest, PositionCorrectionsInEquilibrium) {
   EXPECT_NEAR(1.0, ekf_.X_hat()(0), 1e-10);
   EXPECT_NEAR(0.0, ekf_.X_hat()(1), 1e-10);
 }
+
+// Test that we do dead reckoning when we run CorrectNoUpdates, which allows us
+// to advance time with no observations.
+TEST_F(EkfTest, CorrectNoUpdates) {
+  // SETUP
+  aos::monotonic_clock::time_point now = aos::monotonic_clock::epoch();
+  Eigen::Vector2d true_state{{1.0, 0.0}};
+  Eigen::Matrix2d covariance{Eigen::Matrix2d::Identity()};
+
+  Eigen::Matrix<double, 1, 1> input{{1.0}};
+  ekf_.Initialize(now, true_state, covariance);
+
+  // Check that we don't have any modifcations at the current time.
+  ekf_.CorrectNoUpdates(now, input);
+  EXPECT_TRUE(true_state.isApprox(ekf_.X_hat()));
+  EXPECT_TRUE(ekf_.P().isApprox(covariance));
+
+  // Do our dead reckoning
+  now += std::chrono::seconds(1);
+  ekf_.CorrectNoUpdates(now, Eigen::Matrix<double, 1, 1>{input});
+
+  // Closed form solution:
+  // x_0 = [1 + 0.5 t^2]
+  // x_1 =  [t]
+  EXPECT_TRUE(ekf_.X_hat().isApprox(true_state + Eigen::Vector2d{0.5, 1}));
+}
+
 }  // namespace frc::control_loops::testing
