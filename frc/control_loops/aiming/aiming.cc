@@ -96,14 +96,11 @@ TurretGoal AimerGoal(const ShotConfig &config, const RobotState &state) {
   const double rel_y = virtual_goal.rel_pos().y();
   const double squared_norm = rel_x * rel_x + rel_y * rel_y;
   // rel_xdot and rel_ydot are the derivatives (with respect to time) of rel_x
-  // and rel_y. Since these are in the robot's coordinate frame, and since we
-  // are ignoring lateral velocity for this exercise, rel_ydot is zero, and
-  // rel_xdot is just the inverse of the robot's velocity.
-  // Note that rel_x and rel_y are in the robot frame.
-  const double rel_xdot = -Eigen::Vector2d(std::cos(state.pose.rel_theta()),
-                                           std::sin(state.pose.rel_theta()))
-                               .dot(state.velocity);
-  const double rel_ydot = 0.0;
+  // and rel_y.
+  const Eigen::Vector2d rel_vel =
+      Eigen::Rotation2D<double>(state.pose.rel_theta()) * -state.velocity;
+  const double rel_xdot = rel_vel.x();
+  const double rel_ydot = rel_vel.y();
 
   // If squared_norm gets to be too close to zero, just zero out the relevant
   // term to prevent NaNs. Note that this doesn't address the chattering that
@@ -115,6 +112,9 @@ TurretGoal AimerGoal(const ShotConfig &config, const RobotState &state) {
       (squared_norm < 1e-3)
           ? 0.0
           : (rel_x * rel_ydot - rel_y * rel_xdot) / squared_norm;
+  VLOG(1) << "atan diff " << atan_diff << " relx, rely " << rel_x << ", "
+          << rel_y << " relx/ydot " << rel_xdot << ", " << rel_ydot << " norm "
+          << squared_norm;
   // heading = atan2(relative_y, relative_x) - robot_theta
   // dheading / dt =
   //     (rel_x * rel_y' - rel_y * rel_x') / (rel_x^2 + rel_y^2) - dtheta / dt
