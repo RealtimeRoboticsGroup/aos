@@ -612,9 +612,14 @@ void ExtrinsicsMain(const NodeList &node_list,
     calibration_list.push_back(calibration);
 
     // Extract the extrinsics from the calibration, and save as "defaults"
-    cv::Mat extrinsics_cv = frc::vision::CameraExtrinsics(calibration).value();
+    std::optional<cv::Mat> extrinsics_cv_opt =
+        frc::vision::CameraExtrinsics(calibration);
+    CHECK(extrinsics_cv_opt.has_value())
+        << "Must provide initial extrinsics for each camera; missing for "
+        << camera_node.node_name << " camera " << camera_node.camera_number
+        << ".";
     Eigen::Matrix4d extrinsics_matrix;
-    cv::cv2eigen(extrinsics_cv, extrinsics_matrix);
+    cv::cv2eigen(extrinsics_cv_opt.value(), extrinsics_matrix);
     const auto ext_H_robot_camera = Eigen::Affine3d(extrinsics_matrix);
     default_extrinsics.emplace_back(ext_H_robot_camera);
 
