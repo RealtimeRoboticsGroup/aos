@@ -56,7 +56,8 @@ Notes to be aware of:
 - Set `--camera_id` to an ID you will use for the _physical_ camera you are
   calibrating.
 - Move around/rotate the board to persuade it to automatically capture images.
-- Once 50 images have been captured, press `q` to quit.
+- Once 50 images have been captured (see `--min_images_to_calibrate`), it will
+  automatically quit and start the intrinsics calibration.
 - You need to turn on X11 forwarding (`-X` passed to `ssh`) to get a
   visualization.
 - The `--twenty_inch_large_board` corresponds to [this etsy

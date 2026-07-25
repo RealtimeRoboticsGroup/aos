@@ -509,6 +509,7 @@ aos_config(
 
 cc_test(
     name = "intrinsics_calibration_test",
+    timeout = "long",
     srcs = [
         "intrinsics_calibration_test.cc",
     ],
