@@ -173,6 +173,8 @@ cc_binary(
         "//aos/events/logging:log_reader",
         "//aos/events/logging:log_writer",
         "//aos/network:web_proxy",
+        "//aos/util:file",
+        "//aos/util:mcap_logger",
         "//aos/util:simulation_logger",
         "//frc/constants:constants_sender_lib",
         "//frc/imu_fdcan:dual_imu_blender_lib",
