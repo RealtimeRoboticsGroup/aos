@@ -253,18 +253,22 @@ void Localizer::HandleChassisSpeeds(
   const double theta_error = aos::math::NormalizeAngle(
       ekf_.X_hat(StateIdx::kTheta) - roborio_pose_fetcher_->theta());
 
-  if (std::abs(theta_error) > 0.4) {
+  if (std::abs(theta_error) > (utils_.MaybeInAutonomous() ? 1.5 : 0.4)) {
     ++heading_resets_;
     // TODO(austin): Count this and display it.
     VLOG(1) << "Resetting, theta too far off, was "
             << ekf_.X_hat(StateIdx::kTheta) << " expected "
             << roborio_pose_fetcher_->theta() << " for an error of "
             << theta_error;
-    ekf_.ResetInitialState(t_,
-                           (HybridEkf::State() << average_pose_.x(),
-                            average_pose_.y(), roborio_pose_fetcher_->theta())
-                               .finished(),
-                           NominalCovariance());
+    double new_x = utils_.MaybeInAutonomous() ? ekf_.X_hat(StateIdx::kX)
+                                              : average_pose_.x();
+    double new_y = utils_.MaybeInAutonomous() ? ekf_.X_hat(StateIdx::kY)
+                                              : average_pose_.y();
+    ekf_.ResetInitialState(
+        t_,
+        (HybridEkf::State() << new_x, new_y, roborio_pose_fetcher_->theta())
+            .finished(),
+        NominalCovariance());
   }
 
   t_ = sample_time_orin;
