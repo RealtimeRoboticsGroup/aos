@@ -29,7 +29,6 @@ cc_library(
     hdrs = [
         "flywheel_test_plant.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":flywheel_controller",
@@ -44,7 +43,6 @@ cc_library(
     hdrs = [
         "flywheel_controller.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":flywheel_controller_status_fbs",
@@ -60,7 +58,6 @@ cc_test(
     data = [
         ":flywheel_controller_test_config",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":flywheel_controller",
         ":flywheel_controller_test_plants",
@@ -81,7 +78,6 @@ aos_config(
         "//aos/events:event_loop_fbs",
         ":flywheel_controller_status_fbs",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 genrule(
@@ -93,7 +89,6 @@ genrule(
         "integral_flywheel_controller_test_plant.cc",
     ],
     cmd = "$(location //frc/control_loops/python:flywheel_controller_test) $(OUTS)",
-    target_compatible_with = ["@platforms//os:linux"],
     tools = [
         "//frc/control_loops/python:flywheel_controller_test",
     ],
@@ -109,7 +104,6 @@ cc_library(
         "flywheel_controller_test_plant.h",
         "integral_flywheel_controller_test_plant.h",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//frc/control_loops:hybrid_state_feedback_loop",
