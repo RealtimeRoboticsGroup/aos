@@ -352,6 +352,7 @@ void Localizer::HandleTarget(
     int camera_index, const aos::monotonic_clock::time_point capture_time,
     const frc::vision::TargetPoseFbs &target,
     TargetEstimateDebugStatic *debug_builder) {
+  t_ = event_loop_->context().monotonic_event_time;
   ++total_candidate_targets_;
   ++cameras_.at(camera_index).total_candidate_targets;
   const uint64_t target_id = target.id();
