@@ -186,6 +186,7 @@ class Localizer {
   size_t total_candidate_targets_ = 0;
   size_t total_accepted_targets_ = 0;
   size_t heading_resets_ = 0;
+  size_t total_chassis_speeds_ = 0;
 
   // For the status message.
   std::optional<Eigen::Vector2d> last_encoder_readings_;

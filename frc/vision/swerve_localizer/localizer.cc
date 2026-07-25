@@ -234,6 +234,8 @@ void Localizer::HandleControl(
 void Localizer::HandleChassisSpeeds(
     const aos::monotonic_clock::time_point sample_time_orin,
     const ChassisSpeeds &speeds) {
+  ++total_chassis_speeds_;
+
   roborio_pose_fetcher_.Fetch();
   if (roborio_pose_fetcher_.get() == nullptr) {
     return;
@@ -579,6 +581,7 @@ void Localizer::SendOutput() {
   output_builder.add_zeroed(true);
   output_builder.add_image_accepted_count(total_accepted_targets_);
   output_builder.add_heading_resets(heading_resets_);
+  output_builder.add_chassis_speeds_count(total_chassis_speeds_);
 
   // The output message is year-agnostic, and retains "pi" naming for histrocial
   // reasons.
