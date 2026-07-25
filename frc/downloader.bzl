@@ -6,7 +6,7 @@ def robot_downloader(
         binaries = [],
         data = [],
         dirs = None,
-        target_compatible_with = ["@//tools/platforms/hardware:roborio"],
+        target_compatible_with = [Label("//tools/platforms/hardware:roborio")],
         target_type = "roborio"):
     """Sets up the standard robot download targets.
 
@@ -18,10 +18,10 @@ def robot_downloader(
     aos_downloader(
         name = name,
         srcs = ([
-            "//aos:prime_start_binaries",
+            Label("//aos:prime_start_binaries"),
         ] if target_type == "roborio" else []) + [
-            "//aos:prime_binaries",
-        ] + binaries + data + ["//frc/raspi/rootfs:chrt.sh"],
+            Label("//aos:prime_binaries"),
+        ] + binaries + data + [Label("//frc/raspi/rootfs:chrt.sh")],
         dirs = dirs,
         target_type = target_type,
         target_compatible_with = target_compatible_with,
@@ -30,10 +30,10 @@ def robot_downloader(
     aos_downloader(
         name = name + "_stripped",
         srcs = ([
-            "//aos:prime_start_binaries_stripped",
+            Label("//aos:prime_start_binaries_stripped"),
         ] if target_type == "roborio" else []) + [
-            "//aos:prime_binaries_stripped",
-        ] + [expand_label(binary) + ".stripped" for binary in binaries] + data + ["//frc/raspi/rootfs:chrt.sh"],
+            Label("//aos:prime_binaries_stripped"),
+        ] + [expand_label(binary) + ".stripped" for binary in binaries] + data + [Label("//frc/raspi/rootfs:chrt.sh")],
         dirs = dirs,
         target_type = target_type,
         target_compatible_with = target_compatible_with,
