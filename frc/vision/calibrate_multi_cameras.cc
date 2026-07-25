@@ -18,6 +18,8 @@ ABSL_FLAG(std::string, constants_path, "frc/vision/constants.json",
 ABSL_FLAG(double, max_pose_error_ratio, 0.4,
           "Throw out target poses with a higher pose error ratio than this");
 
+ABSL_FLAG(std::string, fake_robot_name, "bot1", "Robot name");
+
 ABSL_DECLARE_FLAG(int32_t, min_target_id);
 ABSL_DECLARE_FLAG(int32_t, max_target_id);
 ABSL_DECLARE_FLAG(double, outlier_std_devs);
@@ -45,7 +47,8 @@ int main(int argc, char **argv) {
 
   frc::vision::swerve_localizer::SimulatedConstantsSender(
       reader.event_loop_factory(), absl::GetFlag(FLAGS_team_number),
-      absl::GetFlag(FLAGS_constants_path));
+      absl::GetFlag(FLAGS_constants_path),
+      absl::GetFlag(FLAGS_fake_robot_name));
 
   auto find_calibration = [](aos::EventLoop *const event_loop,
                              std::string node_name, int camera_number)
