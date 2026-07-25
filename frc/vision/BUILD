@@ -736,9 +736,14 @@ cc_binary(
     deps = [
         ":camera_constants_fbs",
         ":camera_constants_list_fbs",
+        "//aos:configuration",
         "//aos:init",
         "//aos/events:shm_event_loop",
+        "//aos/util:file",
         "//frc/constants:constants_sender_lib",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/strings",
     ],
 )
 
