@@ -36,6 +36,12 @@ ABSL_FLAG(bool, alt_view, false,
           "If true, show visualization from field level, rather than above");
 ABSL_FLAG(float, max_pose_error, 5e-5,
           "Throw out target poses with a higher pose error than this");
+ABSL_FLAG(bool, check_camera_board_solve_consistency, true,
+          "Check the estimated poses between boards for each camera set for "
+          "consistency.");
+ABSL_FLAG(
+    bool, check_camera_board_solve_consistency_remove_outliers, false,
+    "Remove outliers when performing --check_camera_board_solve_consistency.");
 ABSL_FLAG(std::string, output_folder,
           (std::getenv("TEST_TMPDIR") != nullptr ? std::getenv("TEST_TMPDIR")
                                                  : "/tmp/"),
@@ -57,8 +63,10 @@ using frc::vision::VisualizeRobot;
 NodeList CreateNodeList() {
   NodeList result;
 
-  result.cameras.push_back({.node_name = "orin", .camera_number = 3});
+  // Note: This list must match the order of cameras on the robot, such that
+  // adjacent cameras in this list are adjacent to one another on the robot.
   result.cameras.push_back({.node_name = "orin", .camera_number = 0});
+  result.cameras.push_back({.node_name = "orin", .camera_number = 3});
   result.cameras.push_back({.node_name = "orin", .camera_number = 2});
   result.cameras.push_back({.node_name = "orin", .camera_number = 1});
 
@@ -692,65 +700,72 @@ void ExtrinsicsMain(const NodeList &node_list,
 
   // Do quick check to see what averaged two-board pose for
   // each camera is individually, and compare with overall average
-  for (auto camera_node : node_list.cameras) {
-    std::vector<TimestampedCameraDetection> pose_list;
-    for (auto ext : two_board_extrinsics_list_with_outliers) {
-      CHECK_EQ(base_target_id, ext.board_id)
-          << " All boards should have same reference id";
-      if (ext.camera_name == camera_node.camera_name()) {
-        pose_list.push_back(ext);
+  if (absl::GetFlag(FLAGS_check_camera_board_solve_consistency)) {
+    for (auto camera_node : node_list.cameras) {
+      std::vector<TimestampedCameraDetection> pose_list;
+      for (auto ext : two_board_extrinsics_list_with_outliers) {
+        CHECK_EQ(base_target_id, ext.board_id)
+            << " All boards should have same reference id";
+        if (ext.camera_name == camera_node.camera_name()) {
+          pose_list.push_back(ext);
+        }
       }
-    }
-    RemoveOutliers(pose_list, remove_outliers_iterations);
+      // Note: Sometimes when a given camera has relatively few or noisy solves
+      // we end up removing every outlier.
+      if (absl::GetFlag(
+              FLAGS_check_camera_board_solve_consistency_remove_outliers)) {
+        RemoveOutliers(pose_list, remove_outliers_iterations);
+      }
 
-    CHECK(pose_list.size() > 0)
-        << "Didn't get any two_board extrinsics for camera "
-        << camera_node.camera_name();
-    Eigen::Vector3d translation_variance, rotation_variance;
-    Eigen::Affine3d avg_pose_from_camera = ComputeAveragePose(
-        pose_list, &translation_variance, &rotation_variance);
+      CHECK(pose_list.size() > 0)
+          << "Didn't get any two_board extrinsics for camera "
+          << camera_node.camera_name();
+      Eigen::Vector3d translation_variance, rotation_variance;
+      Eigen::Affine3d avg_pose_from_camera = ComputeAveragePose(
+          pose_list, &translation_variance, &rotation_variance);
 
-    Eigen::Vector3d translation_std_dev = translation_variance.array().sqrt();
-    LOG(INFO) << camera_node.camera_name() << " has average pose from "
-              << pose_list.size() << " views of two targets of \n"
-              << avg_pose_from_camera.matrix()
-              << "\nTranslation standard deviation is "
-              << translation_std_dev.transpose();
-    double stdev_norm = translation_std_dev.norm();
-    double threshold = 0.03;  // 3 cm threshold on translation variation
-    if (stdev_norm > threshold) {
-      LOG(INFO) << "WARNING: |STD_DEV| is " << stdev_norm * 100 << " > "
-                << threshold * 100 << " cm!!!!\nStd dev vector (in m) is "
+      Eigen::Vector3d translation_std_dev = translation_variance.array().sqrt();
+      LOG(INFO) << camera_node.camera_name() << " has average pose from "
+                << pose_list.size() << " views of two targets of \n"
+                << avg_pose_from_camera.matrix()
+                << "\nTranslation standard deviation is "
                 << translation_std_dev.transpose();
-    }
+      double stdev_norm = translation_std_dev.norm();
+      double threshold = 0.03;  // 3 cm threshold on translation variation
+      if (stdev_norm > threshold) {
+        LOG(INFO) << "WARNING: |STD_DEV| is " << stdev_norm * 100 << " > "
+                  << threshold * 100 << " cm!!!!\nStd dev vector (in m) is "
+                  << translation_std_dev.transpose();
+      }
 
-    Eigen::Vector3d rotation_std_dev = rotation_variance.array().sqrt();
-    LOG(INFO) << camera_node.camera_name()
-              << " with rotational standard deviation of: "
-              << rotation_std_dev.transpose() << " (radians)";
-    double rot_stdev_norm = rotation_std_dev.norm();
-    double rot_threshold =
-        3 * numbers::pi / 180.0;  // Warn if more than 3 degrees
-    if (rot_stdev_norm > rot_threshold) {
-      LOG(INFO) << "WARNING: ROTATIONAL STD DEV is "
-                << rot_stdev_norm * 180.0 / numbers::pi << " > "
-                << rot_threshold * 180.0 / numbers::pi
-                << " degrees!!!!\nStd dev vector (in deg) is "
-                << (rotation_std_dev * 180.0 / numbers::pi).transpose();
+      Eigen::Vector3d rotation_std_dev = rotation_variance.array().sqrt();
+      LOG(INFO) << camera_node.camera_name()
+                << " with rotational standard deviation of: "
+                << rotation_std_dev.transpose() << " (radians)";
+      double rot_stdev_norm = rotation_std_dev.norm();
+      double rot_threshold =
+          3 * numbers::pi / 180.0;  // Warn if more than 3 degrees
+      if (rot_stdev_norm > rot_threshold) {
+        LOG(INFO) << "WARNING: ROTATIONAL STD DEV is "
+                  << rot_stdev_norm * 180.0 / numbers::pi << " > "
+                  << rot_threshold * 180.0 / numbers::pi
+                  << " degrees!!!!\nStd dev vector (in deg) is "
+                  << (rotation_std_dev * 180.0 / numbers::pi).transpose();
+      }
+      // Check if a particular camera deviates significantly from the overall
+      // average Any of these factors could indicate a problem with that camera
+      Eigen::Affine3d delta_from_overall =
+          H_boardA_boardB_avg * avg_pose_from_camera.inverse();
+      LOG(INFO) << camera_node.camera_name()
+                << " had estimate different from pooled average of\n"
+                << "|dT| = " << delta_from_overall.translation().norm()
+                << "m  and |dR| = "
+                << (PoseUtils::RotationMatrixToEulerAngles(
+                        delta_from_overall.rotation().matrix()) *
+                    180.0 / numbers::pi)
+                       .norm()
+                << " deg";
     }
-    // Check if a particular camera deviates significantly from the overall
-    // average Any of these factors could indicate a problem with that camera
-    Eigen::Affine3d delta_from_overall =
-        H_boardA_boardB_avg * avg_pose_from_camera.inverse();
-    LOG(INFO) << camera_node.camera_name()
-              << " had estimate different from pooled average of\n"
-              << "|dT| = " << delta_from_overall.translation().norm()
-              << "m  and |dR| = "
-              << (PoseUtils::RotationMatrixToEulerAngles(
-                      delta_from_overall.rotation().matrix()) *
-                  180.0 / numbers::pi)
-                     .norm()
-              << " deg";
   }
 
   // Next, compute the relative camera poses
