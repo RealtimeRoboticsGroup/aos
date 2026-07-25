@@ -394,7 +394,7 @@ aos_config(
         "//frc/input:robot_state_fbs",
         "@com_github_foxglove_schemas//:schemas",
     ],
-    visibility = ["//frc/vision:__subpackages__"],
+    visibility = ["//visibility:public"],
 )
 
 aos_config(
@@ -604,6 +604,7 @@ aos_downloader_dir(
     name = "base_intrinsics_files",
     srcs = glob(["constants/calibration*.json"]),
     dir = "base_intrinsics",
+    visibility = ["//visibility:public"],
 )
 
 robot_downloader(
@@ -661,6 +662,7 @@ static_flatbuffer(
 cc_binary(
     name = "turbojpeg_decoder",
     srcs = ["turbojpeg_decoder.cc"],
+    visibility = ["//visibility:public"],
     deps = [
         ":turbojpeg_decoder_status_fbs",
         ":vision_fbs",
@@ -733,6 +735,7 @@ cc_binary(
     srcs = [
         "vision_constants_sender.cc",
     ],
+    visibility = ["//visibility:public"],
     deps = [
         ":camera_constants_fbs",
         ":camera_constants_list_fbs",
@@ -799,6 +802,7 @@ static_flatbuffer(
 cc_binary(
     name = "network_tables_publisher",
     srcs = ["network_tables_publisher.cc"],
+    visibility = ["//visibility:public"],
     deps = [
         ":camera_constants_fbs",
         ":field_map_fbs",
@@ -831,6 +835,7 @@ cc_binary(
 cc_binary(
     name = "network_tables_server",
     srcs = ["network_tables_server.cc"],
+    visibility = ["//visibility:public"],
     deps = [
         "//aos:init",
         "@com_github_wpilibsuite_allwpilib//ntcore:ntcore.static",
@@ -841,6 +846,7 @@ cc_binary(
 cc_binary(
     name = "field_side_exposure_adjuster",
     srcs = ["field_side_exposure_adjuster.cc"],
+    visibility = ["//visibility:public"],
     deps = [
         ":camera_settings_fbs",
         "//aos:configuration",
@@ -853,6 +859,7 @@ cc_binary(
 cc_binary(
     name = "network_tables_client",
     srcs = ["network_tables_client.cc"],
+    visibility = ["//visibility:public"],
     deps = [
         "//aos:init",
         "@com_github_wpilibsuite_allwpilib//ntcore:ntcore.static",

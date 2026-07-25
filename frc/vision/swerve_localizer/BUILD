@@ -163,6 +163,7 @@ cc_binary(
         "//frc/vision/swerve_localizer/www:www_directory",
     ],
     target_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:public"],
     deps = [
         ":localizer",
         ":simulated_constants_sender_lib",
@@ -201,6 +202,7 @@ cc_library(
     data = [
         "@frc2026_field_map_welded//file:frc2026.fmap",
     ],
+    visibility = ["//visibility:public"],
     deps = [
         "//aos:json_to_flatbuffer",
         "//aos/events:event_loop",
