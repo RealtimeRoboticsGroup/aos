@@ -475,6 +475,11 @@ int Main() {
       auto location = alliance_station_subscriber.GetAtomic();
       if (location.time != 0) {
         builder->set_location(location.value);
+        if (location.value >= 4) {
+          builder->set_alliance(frc::Alliance::kBlue);
+        } else {
+          builder->set_alliance(frc::Alliance::kRed);
+        }
       }
       builder->set_ds_attached(ds_attached_subscriber.Get());
       builder->set_emergency_stop(emergency_stop_subscriber.Get());
