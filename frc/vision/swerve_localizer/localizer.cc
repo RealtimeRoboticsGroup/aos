@@ -21,7 +21,7 @@ ABSL_FLAG(double, distortion_noise_scalar, 4.0,
           "Scale the target pose distortion factor by this when computing "
           "the noise.");
 ABSL_FLAG(
-    double, max_implied_yaw_error, 5.0,
+    double, max_implied_yaw_error, 10.0,
     "Reject target poses that imply a robot yaw of more than this many degrees "
     "off from our estimate.");
 ABSL_FLAG(
