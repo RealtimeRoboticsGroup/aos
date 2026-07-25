@@ -33,6 +33,12 @@ class ConfigurationBuffer(FlatbufferDetachedBuffer):
         finally:
             lib.aos_configuration_buffer_destroy(c_config_buffer)
 
+    @classmethod
+    def from_bytes(cls, data: bytes) -> 'ConfigurationBuffer':
+        obj = object.__new__(cls)
+        FlatbufferDetachedBuffer.__init__(obj, data)
+        return obj
+
     def root_fbs(self) -> Configuration:
         return self.c_to_fbs(Configuration, self.c_root())
 

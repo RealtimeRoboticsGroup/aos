@@ -751,3 +751,9 @@ class EventLoop:
     @property
     def config_buffer(self) -> ConfigurationBuffer:
         return self._config_buffer
+
+    def skip_timing_report(self) -> None:
+        lib.aos_event_loop_skip_timing_report(self._c_event_loop)
+
+    def skip_aos_log(self) -> None:
+        lib.aos_event_loop_skip_aos_log(self._c_event_loop)

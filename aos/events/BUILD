@@ -148,6 +148,8 @@ cc_binary(
         "//aos:configuration",
         "//aos:configuration_fbs",
         "//aos:init",
+        "//aos/events/logging:log_reader",
+        "//aos/events/logging:logfile_utils",
         "@com_github_google_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
@@ -240,6 +242,7 @@ py_test(
     ],
     main = "shm_event_loop_test.py",
     deps = [
+        ":event_loop_fbs_py",
         ":shm_event_loop_py",
         ":util_py",
         "@aos_pip_deps//absl_py",
@@ -255,6 +258,8 @@ py_library(
         ":event_loop_c_py",
         ":event_loop_py",
         ":event_loop_runtime_py",
+        ":util_py",
+        "//aos:configuration_fbs_py",
     ],
 )
 

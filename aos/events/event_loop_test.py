@@ -217,6 +217,11 @@ class EventLoopTest(absltest.TestCase):
         assert fetcher.fetch() is not None
         assert isinstance(retained_message.vector, numpy.ndarray)
 
+    def test_plain_run(self):
+        send_loop = self._factory.make_event_loop("primary", "")
+        send_loop.on_run(lambda: self._factory.make_exit_handle().exit())
+        self._factory.run()
+
 
 if __name__ == "__main__":
     util.init(sys.argv)

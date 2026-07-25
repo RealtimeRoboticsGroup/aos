@@ -52,6 +52,8 @@ typedef struct aos_context_t {
 typedef struct aos_simulated_event_loop_factory_t
     aos_simulated_event_loop_factory_t;
 
+typedef struct aos_log_reader_t aos_log_reader_t;
+
 typedef struct aos_error_t aos_error_t;
 typedef struct aos_channel_t aos_channel_t;
 typedef struct aos_node_t aos_node_t;
@@ -59,10 +61,13 @@ typedef struct aos_configuration_buffer_t aos_configuration_buffer_t;
 
 typedef struct aos_configuration_t aos_configuration_t;
 
+typedef struct aos_node_event_loop_factory_t aos_node_event_loop_factory_t;
+
 typedef void (*aos_watcher_callback_t)(const aos_context_t *context,
                                        const void *message, void *user_data);
 typedef void (*aos_timer_callback_t)(void *user_data);
 typedef void (*aos_on_run_callback_t)(void *user_data);
+typedef void (*aos_on_startup_callback_t)(void *user_data);
 typedef void (*aos_shm_event_loop_fd_callback_t)(void *user_data,
                                                  uint32_t events);
 
@@ -108,6 +113,8 @@ void aos_event_loop_get_name(aos_event_loop_t *self, const char **name_data,
                              size_t *name_size);
 const aos_node_t *aos_event_loop_node(aos_event_loop_t *self);
 const aos_configuration_t *aos_event_loop_configuration(aos_event_loop_t *self);
+void aos_event_loop_skip_timing_report(aos_event_loop_t *self);
+void aos_event_loop_skip_aos_log(aos_event_loop_t * self);
 
 aos_error_t *aos_shm_event_loop_run(aos_event_loop_t *self);
 aos_exit_handle_t *aos_shm_event_loop_make_exit_handle(aos_event_loop_t *self);
@@ -179,12 +186,30 @@ void aos_simulated_event_loop_factory_destroy(
 aos_event_loop_t *aos_simulated_event_loop_factory_make_event_loop(
     aos_simulated_event_loop_factory_t *self, const char *name,
     const char *node);
-void aos_simulated_event_loop_factory_run_for(
-    aos_simulated_event_loop_factory_t *self, const int64_t duration_ns);
 aos_error_t *aos_simulated_event_loop_factory_non_fatal_run_for(
     aos_simulated_event_loop_factory_t *self, const int64_t duration_ns);
+aos_error_t *aos_simulated_event_loop_factory_non_fatal_run(
+    aos_simulated_event_loop_factory_t *self);
 aos_exit_handle_t *aos_simulated_event_loop_factory_make_exit_handle(
     aos_simulated_event_loop_factory_t *self);
+
+aos_node_event_loop_factory_t *
+aos_simulated_event_loop_factory_get_node_event_loop_factory(
+    aos_simulated_event_loop_factory_t *self, const aos_node_t *node);
+void aos_node_event_loop_factory_on_startup(
+    aos_node_event_loop_factory_t *self,
+    aos_on_startup_callback_t callback,
+    void *user_data);
+aos_event_loop_t *aos_node_event_loop_factory_make_event_loop(
+    aos_node_event_loop_factory_t *self, const char *name);
+
+aos_log_reader_t *aos_log_reader_create_from_argv(int argc, char *argv[]);
+void aos_log_reader_register(aos_log_reader_t *self,
+                             aos_simulated_event_loop_factory_t *factory);
+void aos_log_reader_deregister(aos_log_reader_t *self);
+aos_configuration_buffer_t *aos_log_reader_configuration_buffer(
+    const aos_log_reader_t *self);
+void aos_log_reader_destroy(aos_log_reader_t *self);
 
 void aos_error_destroy(aos_error_t *self);
 int aos_error_code(aos_error_t *self);

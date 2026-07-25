@@ -1,6 +1,7 @@
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
+load("@rules_python//python:defs.bzl", "py_library")
 load("//aos:config.bzl", "aos_config")
 load("//aos:flatbuffers.bzl", "cc_static_flatbuffer")
 load("//aos/flatbuffers:generate.bzl", "static_flatbuffer")
@@ -506,6 +507,16 @@ cc_library(
         "//aos/util:threaded_queue",
         "@com_github_google_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/strings",
+    ],
+)
+
+py_library(
+    name = "log_reader_py",
+    srcs = ["log_reader.py"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//aos/events:event_loop_c_py",
+        "//aos/events:util_py",
     ],
 )
 
