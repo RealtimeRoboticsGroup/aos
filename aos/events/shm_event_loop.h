@@ -10,7 +10,7 @@
 #include "aos/events/event_loop.h"
 #include "aos/events/event_loop_generated.h"
 #include "aos/ipc_lib/shm_base.h"
-#include "aos/ipc_lib/signalfd.h"
+#include "aos/ipc_lib/thread_signal.h"
 #include "aos/stl_mutex/stl_mutex.h"
 
 namespace aos {
@@ -277,7 +277,7 @@ class ShmEventLoop : public EventLoop {
   Aio aio_;
 
   // Only set during Run().
-  std::unique_ptr<ipc_lib::SignalFd> signalfd_;
+  std::unique_ptr<ipc_lib::ThreadSignalReceiver> signal_receiver_;
 
   // Calls to Exit() are guaranteed to be thread-safe, so the exit_status_mutex_
   // guards access to the exit_status_.

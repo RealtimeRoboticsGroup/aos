@@ -1,7 +1,6 @@
 #include "aos/events/shm_event_loop.h"
 
 #include <sys/stat.h>
-#include <sys/syscall.h>
 #include <sys/types.h>
 
 #include <algorithm>
@@ -911,7 +910,7 @@ void ShmEventLoop::CheckCurrentThread() const {
            "ShmEventLoop function";
   }
   if (AOS_UNLIKELY(!!check_tid_)) {
-    ABSL_CHECK_EQ(syscall(SYS_gettid), *check_tid_)
+    ABSL_CHECK_EQ(aos::GetThreadId(), *check_tid_)
         << ": Being called from the wrong thread. Call from the main thread "
            "instead.";
   }
@@ -931,7 +930,7 @@ void ShmEventLoop::CheckNotMainThread() const {
 
   ABSL_CHECK(main_tid.has_value())
       << ": Call LockToThread() before constructing any threads.";
-  ABSL_CHECK_NE(syscall(SYS_gettid), *main_tid)
+  ABSL_CHECK_NE(aos::GetThreadId(), *main_tid)
       << ": Do not call this function from the main thread.";
 }
 
@@ -943,7 +942,7 @@ void ShmEventLoop::CheckNotMainThread() const {
 void ShmEventLoop::HandleEvent() {
   // Time through which we've checked for new events in watchers.
   monotonic_clock::time_point checked_until = monotonic_clock::min_time;
-  if (!signalfd_) {
+  if (!signal_receiver_) {
     // Nothing to check, so we can bail out immediately once we're out of
     // events.
     ABSL_CHECK(watchers_.empty());
@@ -963,8 +962,8 @@ void ShmEventLoop::HandleEvent() {
         // we're all done.
         //
         // There's a small chance that a watcher has gotten another event in
-        // between checked_until and now. If so, then the signalfd will be
-        // triggered now and we'll re-enter HandleEvent immediately. This is
+        // between checked_until and now. If so, then the signal receiver will
+        // be triggered now and we'll re-enter HandleEvent immediately. This is
         // unlikely though, so we don't want to spend time checking all the
         // watchers unnecessarily.
         break;
@@ -976,19 +975,9 @@ void ShmEventLoop::HandleEvent() {
     bool new_data = false;
 
     if (next_time > checked_until) {
-      // Read all of the signals, because there's no point in waking up again
-      // immediately to handle each one if we've fallen behind.
-      //
-      // This is safe before checking for new data on the watchers. If a signal
-      // is cleared here, the corresponding CheckForNewData() call below will
-      // pick it up.
-      while (true) {
-        const signalfd_siginfo result = signalfd_->Read();
-        if (result.ssi_signo == 0) {
-          break;
-        }
-        ABSL_CHECK_EQ(result.ssi_signo, ipc_lib::kWakeupSignal);
-      }
+      // Consume all pending wakeup signals, so we don't wake up again
+      // immediately to handle them.
+      aio_.ConsumeThreadSignalReceiver(signal_receiver_.get());
       // This is the last time we can guarantee that if a message is published
       // before, we will notice it.
       now = monotonic_clock::now();
@@ -1134,10 +1123,11 @@ Status ShmEventLoop::Run() {
   SignalHandler::global()->Register(this);
 
   if (watchers_.size() > 0) {
-    signalfd_.reset(new ipc_lib::SignalFd({ipc_lib::kWakeupSignal}));
-    signalfd_->LeaveSignalBlocked(ipc_lib::kWakeupSignal);
+    signal_receiver_.reset(new ipc_lib::ThreadSignalReceiver());
+    signal_receiver_->LeaveSignalBlocked();
 
-    aio_.OnReadable(signalfd_->fd(), [this]() { HandleEvent(); });
+    aio_.RegisterThreadSignalReceiver(signal_receiver_.get(),
+                                      [this]() { HandleEvent(); });
   }
 
   MaybeScheduleTimingReports();
@@ -1230,8 +1220,8 @@ Status ShmEventLoop::Run() {
   }
 
   if (watchers_.size() > 0) {
-    aio_.DeleteFd(signalfd_->fd());
-    signalfd_.reset();
+    aio_.UnregisterThreadSignalReceiver(signal_receiver_.get());
+    signal_receiver_.reset();
   }
 
   SignalHandler::global()->Unregister(this);
@@ -1377,7 +1367,7 @@ void ShmEventLoop::SetShmFetcherUseWritableMemory(
 
 pid_t ShmEventLoop::GetTid() const {
   CheckCurrentThread();
-  return syscall(SYS_gettid);
+  return aos::GetThreadId();
 }
 
 }  // namespace aos

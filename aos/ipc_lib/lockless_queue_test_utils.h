@@ -3,7 +3,6 @@
 
 #include "gtest/gtest.h"
 
-#include "aos/events/epoll.h"
 #include "aos/ipc_lib/event.h"
 #include "aos/ipc_lib/lockless_queue.h"
 #include "aos/realtime.h"

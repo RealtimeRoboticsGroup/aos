@@ -704,7 +704,7 @@ cc_library(
         "//aos/ipc_lib:lockless_queue",
         "//aos/ipc_lib:memory_mapped_queue",
         "//aos/ipc_lib:shm_base",
-        "//aos/ipc_lib:signalfd",
+        "//aos/ipc_lib:thread_signal",
         "//aos/stl_mutex",
         "//aos/util:application_name",
         "//aos/util:phased_loop",
