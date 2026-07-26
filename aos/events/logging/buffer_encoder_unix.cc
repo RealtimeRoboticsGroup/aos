@@ -1,3 +1,5 @@
+#include "aos/events/logging/buffer_encoder.h"
+
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -5,8 +7,6 @@
 
 #include "absl/log/check.h"
 #include "absl/log/log.h"
-
-#include "aos/events/logging/buffer_encoder.h"
 
 namespace aos::logger {
 

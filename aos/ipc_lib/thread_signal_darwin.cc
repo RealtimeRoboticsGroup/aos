@@ -1,3 +1,5 @@
+#include "aos/ipc_lib/thread_signal.h"
+
 #include <errno.h>
 #include <signal.h>
 #include <sys/types.h>
@@ -9,8 +11,6 @@
 
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
-
-#include "aos/ipc_lib/thread_signal.h"
 
 namespace aos::ipc_lib {
 

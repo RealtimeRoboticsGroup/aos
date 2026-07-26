@@ -1,3 +1,5 @@
+#include "aos/events/epoll.h"
+
 #include <fcntl.h>
 #include <sys/epoll.h>
 #include <sys/timerfd.h>
@@ -7,8 +9,6 @@
 
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
-
-#include "aos/events/epoll.h"
 
 namespace aos {
 namespace internal {

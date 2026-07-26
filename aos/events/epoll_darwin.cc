@@ -1,3 +1,5 @@
+#include "aos/events/epoll.h"
+
 #include <dispatch/dispatch.h>
 #include <fcntl.h>
 #include <mach/mach_time.h>
@@ -14,7 +16,6 @@
 #include "absl/log/absl_log.h"
 #include "absl/numeric/int128.h"
 
-#include "aos/events/epoll.h"
 #include "aos/mutex/mutex.h"
 
 namespace aos {

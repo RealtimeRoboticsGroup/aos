@@ -1,3 +1,5 @@
+#include "aos/util/file.h"
+
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -16,8 +18,6 @@
 
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
-
-#include "aos/util/file.h"
 
 namespace aos::util {
 

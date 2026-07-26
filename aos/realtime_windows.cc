@@ -5,6 +5,8 @@
 #include <detours.h>
 // clang-format on
 
+#include "aos/realtime.h"
+
 #include <optional>
 #include <string>
 
@@ -13,7 +15,6 @@
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 
-#include "aos/realtime.h"
 #include "aos/realtime_internal.h"
 #include "aos/uuid.h"
 

@@ -1,3 +1,5 @@
+#include "aos/realtime.h"
+
 #include <mach/mach.h>
 #include <mach/thread_policy.h>
 #include <malloc/malloc.h>
@@ -16,7 +18,6 @@
 #include "absl/log/absl_log.h"
 
 #include "aos/ipc_lib/aos_sync.h"
-#include "aos/realtime.h"
 #include "aos/realtime_internal.h"
 #include "aos/uuid.h"
 

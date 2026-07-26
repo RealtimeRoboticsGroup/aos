@@ -4,6 +4,11 @@ BasedOnStyle:  Google
 DerivePointerAlignment: false
 PointerAlignment: Right
 Standard: Cpp11
+# Treat aos/util/foo.h as the main header of aos/util/foo_linux.cc and friends,
+# the same way it already is for a plain aos/util/foo.cc.  Without this,
+# clang-format sorts a platform backend's own header in with everything else
+# instead of putting it first.
+IncludeIsMainRegex: '(_(darwin|linux|unix|windows))?([-_](test|unittest))?$'
 
 IncludeCategories:
     # Force some headers to be considered third-party headers.

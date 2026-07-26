@@ -1,13 +1,13 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
+#include "aos/ipc_lib/thread_signal.h"
+
 #include <windows.h>
 
 #include <cstdio>
 
 #include "absl/log/absl_check.h"
-
-#include "aos/ipc_lib/thread_signal.h"
 
 namespace aos::ipc_lib {
 

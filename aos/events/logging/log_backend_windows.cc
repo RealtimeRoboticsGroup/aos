@@ -1,3 +1,5 @@
+#include "aos/events/logging/log_backend.h"
+
 #include <fcntl.h>
 #include <io.h>
 #include <sys/stat.h>
@@ -13,7 +15,6 @@
 #include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
 
-#include "aos/events/logging/log_backend.h"
 #include "aos/util/file.h"
 
 ABSL_DECLARE_FLAG(bool, sync);
