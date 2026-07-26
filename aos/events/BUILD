@@ -93,6 +93,14 @@ cc_library(
         "@platforms//os:windows": ["epoll_windows.cc"],
     }),
     hdrs = ["epoll.h"],
+    # EPoll's API is in terms of integer file descriptors, which don't map onto
+    # Windows sockets -- Aio's FileDescriptor is an opaque handle there.  Nothing
+    # on Windows needs it: event loops there go through Aio directly, and the
+    # remaining users are all Linux-only binaries.
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:public"],
     deps = [
         "//aos/mutex",
