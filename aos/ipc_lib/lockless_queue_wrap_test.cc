@@ -72,15 +72,24 @@ TEST_F(LocklessQueueTest, InitializeVerification) {
       racer.RunIteration(false, 0, false, true);
     }
 
-    // Validate that all sent timestamps are valid and recently written (within
-    // a strict 10-second window of the test start time) rather than stale or
-    // uninitialized. Since the two queue runs occur at slightly different
-    // times, their timestamps differ. After validating their correctness, we
-    // overwrite them to a constant value to allow a byte-for-byte memory
-    // comparison.
-    constexpr auto kWindow = std::chrono::seconds(10);
-    auto is_near_start = [kWindow](auto time, auto start) {
-      return time >= start - kWindow && time <= start + kWindow;
+    // Validate that all sent timestamps are valid and were written by the run
+    // above, rather than being stale or uninitialized.  Since the two queue
+    // runs occur at slightly different times, their timestamps differ.  After
+    // validating their correctness, we overwrite them to a constant value to
+    // allow a byte-for-byte memory comparison.
+    //
+    // Bound this by when the sending actually finished rather than by a fixed
+    // slop around the start.  The two runs above push tens of millions of
+    // messages through, and how long that takes is a property of the machine --
+    // notably of how expensive a clock read is, since every send takes two.  A
+    // fixed window is simultaneously too loose to be a real check on a fast
+    // machine and wrong on a slow one.
+    const monotonic_clock::time_point test_end_monotonic =
+        monotonic_clock::now();
+    const realtime_clock::time_point test_end_realtime = realtime_clock::now();
+    constexpr auto kSlop = std::chrono::seconds(1);
+    auto written_by_this_run = [kSlop](auto time, auto start, auto end) {
+      return time >= start - kSlop && time <= end + kSlop;
     };
 
     for (size_t i = 0; i < q1.memory()->num_messages(); ++i) {
@@ -109,8 +118,8 @@ TEST_F(LocklessQueueTest, InitializeVerification) {
       //     when atomic time points are enabled.
       //
       // The individual validity checks below (mono_is_sentinel ||
-      // is_near_start) are not redundant with the XOR matching logic; they
-      // verify that the values are actually valid sentinels or sent times,
+      // written_by_this_run) are not redundant with the XOR matching logic;
+      // they verify that the values are actually valid sentinels or sent times,
       // preventing cases where both evaluate to a matching arbitrary/garbage
       // value (which would otherwise pass the XOR check).
       //
@@ -124,13 +133,14 @@ TEST_F(LocklessQueueTest, InitializeVerification) {
           (mono2 == monotonic_clock::min_time ||
            mono2 == monotonic_clock::time_point::max());
 
-      EXPECT_TRUE(mono_is_sentinel1 ||
-                  is_near_start(mono1, test_start_monotonic));
-      EXPECT_TRUE(mono_is_sentinel2 ||
-                  is_near_start(mono2, test_start_monotonic));
-      EXPECT_TRUE((mono1 == mono2) !=
-                  (is_near_start(mono1, test_start_monotonic) &&
-                   is_near_start(mono2, test_start_monotonic)));
+      const bool mono1_written =
+          written_by_this_run(mono1, test_start_monotonic, test_end_monotonic);
+      const bool mono2_written =
+          written_by_this_run(mono2, test_start_monotonic, test_end_monotonic);
+
+      EXPECT_TRUE(mono_is_sentinel1 || mono1_written);
+      EXPECT_TRUE(mono_is_sentinel2 || mono2_written);
+      EXPECT_TRUE((mono1 == mono2) != (mono1_written && mono2_written));
 
       const bool real_is_sentinel1 =
           (real1 == realtime_clock::min_time ||
@@ -139,13 +149,14 @@ TEST_F(LocklessQueueTest, InitializeVerification) {
           (real2 == realtime_clock::min_time ||
            real2 == realtime_clock::time_point::max());
 
-      EXPECT_TRUE(real_is_sentinel1 ||
-                  is_near_start(real1, test_start_realtime));
-      EXPECT_TRUE(real_is_sentinel2 ||
-                  is_near_start(real2, test_start_realtime));
-      EXPECT_TRUE((real1 == real2) !=
-                  (is_near_start(real1, test_start_realtime) &&
-                   is_near_start(real2, test_start_realtime)));
+      const bool real1_written =
+          written_by_this_run(real1, test_start_realtime, test_end_realtime);
+      const bool real2_written =
+          written_by_this_run(real2, test_start_realtime, test_end_realtime);
+
+      EXPECT_TRUE(real_is_sentinel1 || real1_written);
+      EXPECT_TRUE(real_is_sentinel2 || real2_written);
+      EXPECT_TRUE((real1 == real2) != (real1_written && real2_written));
 
 #ifdef AOS_IPC_LIB_LOCKLESS_QUEUE_HAS_ATOMIC_TIME_POINT
       msg2->header.monotonic_sent_time.Store(msg1->monotonic_sent_time());
