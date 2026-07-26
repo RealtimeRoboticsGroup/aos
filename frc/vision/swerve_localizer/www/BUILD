@@ -16,7 +16,7 @@ genrule(
     name = "2026_field_png",
     srcs = ["//third_party/y2026/field:pictures"],
     outs = ["2026.png"],
-    cmd = "cp third_party/y2026/field/2026.png $@",
+    cmd = "cp $(location //third_party/y2026/field:pictures) $@",
 )
 
 ts_project(

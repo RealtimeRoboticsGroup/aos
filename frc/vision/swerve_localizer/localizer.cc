@@ -21,7 +21,7 @@ ABSL_FLAG(double, distortion_noise_scalar, 4.0,
           "Scale the target pose distortion factor by this when computing "
           "the noise.");
 ABSL_FLAG(
-    double, max_implied_yaw_error, 5.0,
+    double, max_implied_yaw_error, 10.0,
     "Reject target poses that imply a robot yaw of more than this many degrees "
     "off from our estimate.");
 ABSL_FLAG(
@@ -215,6 +215,7 @@ Localizer::Localizer(aos::EventLoop *event_loop)
 
 void Localizer::HandleControl(
     const frc::control_loops::drivetrain::LocalizerControl &control) {
+  t_ = event_loop_->context().monotonic_event_time;
   // This is triggered whenever we need to force the X/Y/(maybe theta)
   // position of the robot to a particular point---e.g., during pre-match
   // setup, or when commanded by a button on the driverstation.
@@ -233,6 +234,8 @@ void Localizer::HandleControl(
 void Localizer::HandleChassisSpeeds(
     const aos::monotonic_clock::time_point sample_time_orin,
     const ChassisSpeeds &speeds) {
+  ++total_chassis_speeds_;
+
   roborio_pose_fetcher_.Fetch();
   if (roborio_pose_fetcher_.get() == nullptr) {
     return;
@@ -250,25 +253,55 @@ void Localizer::HandleChassisSpeeds(
   const double theta_error = aos::math::NormalizeAngle(
       ekf_.X_hat(StateIdx::kTheta) - roborio_pose_fetcher_->theta());
 
-  if (std::abs(theta_error) > 0.4) {
+  if (std::abs(theta_error) > (utils_.MaybeInAutonomous() ? 1.5 : 0.4)) {
     ++heading_resets_;
     // TODO(austin): Count this and display it.
     VLOG(1) << "Resetting, theta too far off, was "
             << ekf_.X_hat(StateIdx::kTheta) << " expected "
             << roborio_pose_fetcher_->theta() << " for an error of "
             << theta_error;
-    ekf_.ResetInitialState(t_,
-                           (HybridEkf::State() << average_pose_.x(),
-                            average_pose_.y(), roborio_pose_fetcher_->theta())
-                               .finished(),
-                           NominalCovariance());
+    double new_x = utils_.MaybeInAutonomous() ? ekf_.X_hat(StateIdx::kX)
+                                              : average_pose_.x();
+    double new_y = utils_.MaybeInAutonomous() ? ekf_.X_hat(StateIdx::kY)
+                                              : average_pose_.y();
+    ekf_.ResetInitialState(
+        t_,
+        (HybridEkf::State() << new_x, new_y, roborio_pose_fetcher_->theta())
+            .finished(),
+        NominalCovariance());
   }
 
   t_ = sample_time_orin;
   // We don't actually use the down estimator currently, but it's really
   // convenient for debugging.
+
+  /* Angular velocity was not trustworthy, causing heading resets because of
+  differences between angular velocity via roborio and estimated image pose. To
+  solve, we used heading directly between timestamps. */
+
+  ekf_.UpdateSpeeds(
+      prev_absolute_velocity_x_, prev_absolute_velocity_y_,
+      prev_absolute_velocity_omega_,
+      t_);  // Speeds are applied from last update up until now. Integrate robot
+            // state from previous state up until now based on prior speeds
+
+  const double roborio_pose_delta = aos::math::NormalizeAngle(
+      roborio_pose_fetcher_->theta() - roborio_pose_last_theta_);
+  ekf_.mutable_X_hat(StateIdx::kTheta) +=
+      (roborio_pose_delta -
+       std::chrono::duration<double>(t_ - prev_timestamp_s_).count() *
+           (prev_absolute_velocity_omega_));
+
+  prev_absolute_velocity_x_ = absolute_velocity.x();
+  prev_absolute_velocity_y_ = absolute_velocity.y();
+  prev_absolute_velocity_omega_ = speeds.omega();
+  prev_timestamp_s_ = t_;
+  roborio_pose_last_theta_ = roborio_pose_fetcher_->theta();
+
   ekf_.UpdateSpeeds(absolute_velocity.x(), absolute_velocity.y(),
-                    speeds.omega(), t_);
+                    speeds.omega(),
+                    t_);  // Step change; stop using old speeds for integration
+                          // now that we have new speeds
   SendStatus();
 }
 
@@ -352,6 +385,7 @@ void Localizer::HandleTarget(
     int camera_index, const aos::monotonic_clock::time_point capture_time,
     const frc::vision::TargetPoseFbs &target,
     TargetEstimateDebugStatic *debug_builder) {
+  t_ = event_loop_->context().monotonic_event_time;
   ++total_candidate_targets_;
   ++cameras_.at(camera_index).total_candidate_targets;
   const uint64_t target_id = target.id();
@@ -577,6 +611,7 @@ void Localizer::SendOutput() {
   output_builder.add_zeroed(true);
   output_builder.add_image_accepted_count(total_accepted_targets_);
   output_builder.add_heading_resets(heading_resets_);
+  output_builder.add_chassis_speeds_count(total_chassis_speeds_);
 
   // The output message is year-agnostic, and retains "pi" naming for histrocial
   // reasons.

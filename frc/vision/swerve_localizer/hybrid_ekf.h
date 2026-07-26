@@ -276,6 +276,8 @@ class HybridEkf {
   // Sundry accessor:
   State X_hat() const { return X_hat_; }
   Scalar X_hat(long i) const { return X_hat_(i); }
+  State &mutable_X_hat() { return X_hat_; }
+  Scalar &mutable_X_hat(long i) { return X_hat_(i); }
   StateSquare P() const { return P_; }
   aos::monotonic_clock::time_point latest_t() const {
     return observations_.top().t;

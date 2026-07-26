@@ -53,6 +53,9 @@ export class FieldHandler {
   private headingResetCounter: HTMLElement = document.getElementById(
     'heading_resets'
   ) as HTMLElement;
+  private chassisSpeedsCounter: HTMLElement = document.getElementById(
+    'chassis_speeds_count'
+  ) as HTMLElement;
   // HTML elements for rejection reasons for individual cameras. Indices
   // corresponding to RejectionReason enum values will be for those reasons. The
   // final row will account for images rejected by the aprilrobotics detector
@@ -475,6 +478,9 @@ export class FieldHandler {
         .toString();
       this.headingResetCounter.innerHTML = this.localizerOutput
         .headingResets()
+        .toString();
+      this.chassisSpeedsCounter.innerHTML = this.localizerOutput
+        .chassisSpeedsCount()
         .toString();
     }
 

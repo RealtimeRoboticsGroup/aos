@@ -121,6 +121,22 @@ TEST(AimerTest, DrivingLateralToTarget) {
   EXPECT_FLOAT_EQ(1.0, goal.target_distance);
 }
 
+// Check that driving laterally to the goal but from a different angle relative
+// to the goal also results in a correct velocity calculation.
+TEST(AimerTest, DrivingLateralToTargetRightAngle) {
+  const Pose target({0.0, 0.0, 0.0}, 0.0);
+  Pose robot_pose({-1.0, 0.0, 0.0}, 0.0);
+  const constants::Range range{-4.5, 4.5, -4.0, 4.0};
+  const double kBallSpeed = 10.0;
+  TurretGoal goal = AimerGoal(
+      ShotConfig{target, ShotMode::kStatic, range, kBallSpeed, 0.0, 0.0},
+      RobotState{robot_pose, {0.0, 1.0}, 0.0, 0.0});
+  EXPECT_FLOAT_EQ(0.0, goal.position);
+  EXPECT_FLOAT_EQ(-1.0, goal.velocity);
+  EXPECT_FLOAT_EQ(1.0, goal.virtual_shot_distance);
+  EXPECT_FLOAT_EQ(1.0, goal.target_distance);
+}
+
 // Confirms that when we move the turret heading so that it would be entirely
 // out of the normal range of motion that we send a valid (in-range) goal.
 // I.e., test that we have some hysteresis, but that it doesn't take us

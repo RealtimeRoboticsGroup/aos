@@ -20,6 +20,10 @@
 #include "frc/vision/intrinsics_calibration_lib.h"
 #include "tools/cpp/runfiles/runfiles.h"
 
+ABSL_DECLARE_FLAG(bool, large_board);
+ABSL_DECLARE_FLAG(bool, coarse_pattern);
+ABSL_DECLARE_FLAG(bool, dict5x5_9x14_board);
+
 namespace numbers = std::numbers;
 
 namespace frc::vision {
@@ -280,6 +284,9 @@ TEST(IntrinsicCalculationTest, SamplingProjectedPoints) {
 
 // Test intrinsic calibration when loading from a series of images from disk
 TEST(IntrinsicCalculationTest, ImagePlayback) {
+  absl::SetFlag(&FLAGS_coarse_pattern, true);
+  absl::SetFlag(&FLAGS_large_board, true);
+  absl::SetFlag(&FLAGS_dict5x5_9x14_board, false);
   absl::SetFlag(&FLAGS_override_hostname, "orin-971-1");
   aos::FlatbufferDetachedBuffer<aos::Configuration> config =
       aos::configuration::ReadConfig(

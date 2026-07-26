@@ -163,6 +163,7 @@ cc_binary(
         "//frc/vision/swerve_localizer/www:www_directory",
     ],
     target_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:public"],
     deps = [
         ":localizer",
         ":simulated_constants_sender_lib",
@@ -173,6 +174,8 @@ cc_binary(
         "//aos/events/logging:log_reader",
         "//aos/events/logging:log_writer",
         "//aos/network:web_proxy",
+        "//aos/util:file",
+        "//aos/util:mcap_logger",
         "//aos/util:simulation_logger",
         "//frc/constants:constants_sender_lib",
         "//frc/imu_fdcan:dual_imu_blender_lib",
@@ -199,6 +202,7 @@ cc_library(
     data = [
         "@frc2026_field_map_welded//file:frc2026.fmap",
     ],
+    visibility = ["//visibility:public"],
     deps = [
         "//aos:json_to_flatbuffer",
         "//aos/events:event_loop",

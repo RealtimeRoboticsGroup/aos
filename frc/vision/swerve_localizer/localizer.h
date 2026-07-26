@@ -186,6 +186,13 @@ class Localizer {
   size_t total_candidate_targets_ = 0;
   size_t total_accepted_targets_ = 0;
   size_t heading_resets_ = 0;
+  size_t total_chassis_speeds_ = 0;
+
+  double prev_absolute_velocity_x_ = 0;
+  double prev_absolute_velocity_y_ = 0;
+  double prev_absolute_velocity_omega_ = 0;
+  aos::monotonic_clock::time_point prev_timestamp_s_ =
+      aos::monotonic_clock::min_time;
 
   // For the status message.
   std::optional<Eigen::Vector2d> last_encoder_readings_;
@@ -193,6 +200,8 @@ class Localizer {
   aos::Fetcher<frc::control_loops::drivetrain::LocalizerControl>
       control_fetcher_;
   aos::Fetcher<frc::vision::swerve_localizer::Pose2d> roborio_pose_fetcher_;
+
+  double roborio_pose_last_theta_ = 0;
 
   Eigen::Vector3d average_pose_ = Eigen::Vector3d::Zero();
 };

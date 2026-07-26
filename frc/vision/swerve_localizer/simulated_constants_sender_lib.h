@@ -13,12 +13,13 @@ namespace frc::vision::swerve_localizer {
 class SimulatedConstantsSender {
  public:
   SimulatedConstantsSender(aos::SimulatedEventLoopFactory *factory, int team,
-                           const std::string_view constants_path) {
+                           const std::string_view constants_path,
+                           std::string_view robot_name = "blackbeard") {
     for (const aos::Node *node : factory->nodes()) {
       std::unique_ptr<aos::EventLoop> event_loop =
           factory->MakeEventLoop("constants_sender", node);
       frc::constants::NameConstantSender<CameraConstants, CameraConstantsList>
-          sender(event_loop.get(), constants_path, team, "blackbeard",
+          sender(event_loop.get(), constants_path, team, robot_name,
                  "/constants");
     }
   }

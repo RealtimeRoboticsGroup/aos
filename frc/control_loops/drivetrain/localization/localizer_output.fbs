@@ -43,6 +43,9 @@ table LocalizerOutput {
 
   // Number of heading resets
   heading_resets:uint (id: 9);
+
+  // Number of times we received a ChassisSpeeds message.
+  chassis_speeds_count:uint (id: 10);
 }
 
 root_type LocalizerOutput;

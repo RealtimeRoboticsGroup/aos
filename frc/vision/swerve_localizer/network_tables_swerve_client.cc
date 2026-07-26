@@ -9,6 +9,7 @@
 #include <condition_variable>
 #include <iostream>
 #include <mutex>
+#include <optional>
 #include <thread>
 
 #include "Eigen/Dense"
@@ -50,8 +51,8 @@ ABSL_FLAG(uint16_t, drive_state_port, 4647,
           "Port to listen for drivestate UDP messages on.");
 ABSL_FLAG(uint16_t, pose_port, 4648, "Port to publish poses to");
 ABSL_FLAG(uint16_t, game_piece_port, 4649, "Port to publish game pieces to");
-ABSL_FLAG(std::string, chassis_speed_topic, "/DriveState/Speeds", "");
-ABSL_FLAG(std::string, pose_topic, "/DriveState/Pose", "");
+ABSL_FLAG(bool, do_object_detection, false,
+          "Whether to run object detection code.");
 ABSL_FLAG(std::string, autonomous_topic,
           "/AdvantageKit/DriverStation/Autonomous", "");
 ABSL_FLAG(std::string, alliance_station_topic,
@@ -349,7 +350,7 @@ int Main() {
           return;
         }
 
-        std::array<double, 4> pose_data;
+        std::array<double, 5> pose_data;
 
         pose_data[0] = localizer_output.x() +
                        target_map_fetcher.constants().fieldlength() / 2.0;
@@ -362,6 +363,8 @@ int Main() {
                 .count() +
             offset.value();
 
+        pose_data[4] = localizer_output.image_accepted_count();
+
         if (pose_socket.Send(reinterpret_cast<char *>(pose_data.data()),
                              pose_data.size() * sizeof(double)) !=
             pose_data.size() * sizeof(double)) {
@@ -370,7 +373,10 @@ int Main() {
         }
       });
 
-  CoralForwarder coral_forwarder(&event_loop, &instance, &target_map_fetcher);
+  std::optional<CoralForwarder> coral_forwarder;
+  if (absl::GetFlag(FLAGS_do_object_detection)) {
+    coral_forwarder.emplace(&event_loop, &instance, &target_map_fetcher);
+  }
 
   event_loop.epoll()->OnReadable(drive_state_socket.fd(), [&]() {
     std::array<uint8_t, 256> buffer;
@@ -471,6 +477,11 @@ int Main() {
       auto location = alliance_station_subscriber.GetAtomic();
       if (location.time != 0) {
         builder->set_location(location.value);
+        if (location.value >= 4) {
+          builder->set_alliance(frc::Alliance::kBlue);
+        } else {
+          builder->set_alliance(frc::Alliance::kRed);
+        }
       }
       builder->set_ds_attached(ds_attached_subscriber.Get());
       builder->set_emergency_stop(emergency_stop_subscriber.Get());
@@ -599,13 +610,18 @@ int Main() {
     aos::Sender<UdpStatusStatic>::StaticBuilder builder =
         udp_status_sender.MakeStaticBuilder();
     auto faults = builder->add_faults();
-    const size_t overall_send_failure_count =
-        send_failure_count + coral_forwarder.send_failure_count();
+    size_t overall_send_failure_count = send_failure_count;
+    if (coral_forwarder.has_value()) {
+      overall_send_failure_count +=
+          coral_forwarder.value().send_failure_count();
+    }
     if (overall_send_failure_count > 0) {
       CHECK(faults->reserve(1));
       CHECK(faults->emplace_back(NetworkHealth::SEND_FAILURE));
       send_failure_count = 0;
-      coral_forwarder.reset_send_failure_count();
+      if (coral_forwarder.has_value()) {
+        coral_forwarder.value().reset_send_failure_count();
+      }
     }
     builder.CheckOk(builder.Send());
   });
