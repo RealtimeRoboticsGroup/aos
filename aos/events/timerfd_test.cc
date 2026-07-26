@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 
 #include "aos/events/epoll.h"
+#include "aos/events/timerfd.h"
 
 ABSL_DECLARE_FLAG(std::string, aio_backend);
 

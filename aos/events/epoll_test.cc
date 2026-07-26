@@ -32,19 +32,28 @@ class EPollTest : public ::testing::TestWithParam<std::string> {
   }
 
   void RunFor(std::chrono::nanoseconds duration) {
-    internal::TimerFd timerfd;
-    bool did_quit = false;
-    epoll_->OnReadable(timerfd.fd(), [this, &timerfd, &did_quit]() {
-      ABSL_CHECK(!did_quit);
-      epoll_->Quit();
-      did_quit = true;
-      timerfd.Read();
-    });
-    timerfd.SetTime(monotonic_clock::now() + duration,
-                    monotonic_clock::duration::zero());
+    struct QuitState {
+      EPoll *epoll;
+      bool did_quit;
+    } state{epoll_.get(), false};
+
+    // Use an Aio timer rather than a TimerFd: EPoll is a thin wrapper around
+    // Aio now, so this needs no fd of its own, and it keeps TimerFd (which is
+    // Linux-only) out of these tests.  TimerFd has its own coverage in
+    // timerfd_test.
+    Aio::Timer timer(epoll_->aio());
+    timer.Schedule(
+        monotonic_clock::now() + duration,
+        [](Completion completion, void *context) {
+          ABSL_CHECK(completion.status.has_value());
+          QuitState *state = static_cast<QuitState *>(context);
+          ABSL_CHECK(!state->did_quit);
+          state->epoll->Quit();
+          state->did_quit = true;
+        },
+        &state);
     epoll_->Run();
-    ABSL_CHECK(did_quit);
-    epoll_->DeleteFd(timerfd.fd());
+    ABSL_CHECK(state.did_quit);
   }
 
   // Tests should avoid relying on ordering for events closer in time than this,

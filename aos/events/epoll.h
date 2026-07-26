@@ -13,52 +13,6 @@ namespace aos {
 
 class Aio;
 
-namespace internal {
-
-// Class wrapping up timerfd.
-class TimerFd {
- public:
-  TimerFd();
-  ~TimerFd();
-
-  TimerFd(const TimerFd &) = delete;
-  TimerFd &operator=(const TimerFd &) = delete;
-  TimerFd(TimerFd &&) = delete;
-  TimerFd &operator=(TimerFd &&) = delete;
-
-  // Sets the trigger time and repeat for the timerfd.
-  // An interval of 0 results in a single expiration.
-  void SetTime(monotonic_clock::time_point start,
-               monotonic_clock::duration interval);
-
-  // Disarms the timer.
-  void Disable() {
-    // Disarm the timer by feeding zero values
-    SetTime(monotonic_clock::epoch(), monotonic_clock::zero());
-  }
-
-  // Reads the event.  Returns the number of elapsed cycles.
-  uint64_t Read();
-
-  // Returns the file descriptor associated with the timerfd.
-  int fd() { return fd_; }
-
-#ifdef __APPLE__
-  void ResetOnFork();
-#endif
-
- private:
-  int fd_ = -1;
-
-#ifdef __APPLE__
-  aos::monotonic_clock::time_point next_expiration_ =
-      aos::monotonic_clock::min_time;
-  aos::monotonic_clock::duration interval_ = aos::monotonic_clock::zero();
-#endif
-};
-
-}  // namespace internal
-
 // Class to wrap epoll and call a callback when an event happens.
 class EPoll {
  public:

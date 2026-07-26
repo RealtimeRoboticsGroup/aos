@@ -34,9 +34,8 @@ const mach_timebase_info_data_t &MachTimebaseInfo() {
 // 1) Timebase.  Everything on Darwin that we hand an *absolute* deadline to
 //    consumes Mach absolute ticks, not POSIX clock nanoseconds:
 //      - sleep_until() below, via mach_wait_until().
-//      - The kqueue timers in //aos/events:aio_darwin and
-//        //aos/events:epoll_darwin, which arm EVFILT_TIMER with
-//        NOTE_MACHTIME | NOTE_ABSOLUTE.
+//      - The kqueue timers in //aos/events:aio_darwin, which arm EVFILT_TIMER
+//        with NOTE_MACHTIME | NOTE_ABSOLUTE.
 //    All of those take a monotonic_clock::time_point and convert it with
 //    nothing but the mach_timebase_info ratio (see ToMachTicks() in
 //    aio_darwin.cc).  That conversion is only correct if now() is *already*

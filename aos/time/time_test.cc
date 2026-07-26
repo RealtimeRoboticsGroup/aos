@@ -527,10 +527,10 @@ TEST(TimeTest, MonotonicClockGranularity) {
 
 #ifdef __APPLE__
 // aos::monotonic_clock::now() has to stay in the Mach absolute timebase.  The
-// Darwin timer paths (ToMachTicks() in //aos/events:aio_darwin and
-// //aos/events:epoll_darwin) convert our time_points into Mach ticks using
-// nothing but the mach_timebase_info ratio and hand them to EVFILT_TIMER with
-// NOTE_MACHTIME | NOTE_ABSOLUTE, and sleep_until() does the same for
+// Darwin timer path (ToMachTicks() in //aos/events:aio_darwin) converts our
+// time_points into Mach ticks using nothing but the mach_timebase_info ratio
+// and hands them to EVFILT_TIMER with NOTE_MACHTIME | NOTE_ABSOLUTE, and
+// sleep_until() does the same for
 // mach_wait_until().  If now() ever moves to a clock on a different epoch,
 // every one of those deadlines silently skews.
 //
@@ -565,7 +565,7 @@ TEST(TimeTest, MonotonicClockUsesMachTimebase) {
       << "aos::monotonic_clock::now() is not in the Mach absolute timebase "
          "(off by at least "
       << worst_skew_ns
-      << " ns).  ToMachTicks() in aio_darwin.cc/epoll_darwin.cc and "
+      << " ns).  ToMachTicks() in aio_darwin.cc and "
          "sleep_until()'s mach_wait_until() all assume it is.";
 
   // And show what going to CLOCK_MONOTONIC would have cost: it keeps counting
