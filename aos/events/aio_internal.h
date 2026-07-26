@@ -181,6 +181,15 @@ class IntrusiveDoublyLinkedList {
     Traits::next(node) = nullptr;
   }
 
+  // Visits every node, front to back.  Does not tolerate the callback
+  // unlinking a node.
+  template <typename Fn>
+  void ForEach(Fn fn) const {
+    for (Node *node = head_; node != nullptr; node = Traits::next(node)) {
+      fn(node);
+    }
+  }
+
   // Pops and returns the front node, or nullptr when empty.
   Node *PopFront() {
     Node *node = head_;

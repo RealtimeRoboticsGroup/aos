@@ -480,6 +480,7 @@ class Aio {
  private:
   friend class IoUringImpl;
   friend class EpollImpl;
+  friend class KqueueImpl;
 
   std::unique_ptr<Impl> impl_;
 };

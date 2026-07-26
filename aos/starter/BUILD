@@ -32,6 +32,12 @@ cc_library(
     name = "subprocess",
     srcs = ["subprocess.cc"],
     hdrs = ["subprocess.h"],
+    # SignalFd (and <sys/signalfd.h>, included by subprocess.h) is Linux-only.
+    # //aos/ipc_lib:signalfd already carries this constraint, so this target was
+    # effectively Linux-only already; stating it here makes the failure a clear
+    # constraint on subprocess instead of an incompatibility surfacing from a
+    # transitive dep.
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":starter_fbs",

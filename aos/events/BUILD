@@ -61,6 +61,36 @@ cc_library(
     deps = ["@com_google_absl//absl/log:absl_check"],
 )
 
+# Shared by the POSIX Aio backends (epoll, kqueue).  Windows has neither
+# pthread_atfork nor the socket-error shape, so it does not take this.
+cc_library(
+    name = "aio_unix",
+    srcs = ["aio_unix.cc"],
+    hdrs = ["aio_unix.h"],
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+    deps = [
+        ":socket_error",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
+    ],
+)
+
+# The fd registration table every readiness-driven backend keeps (epoll,
+# kqueue, IOCP).  Header-only; the syscalls that arm and disarm the kernel
+# stay in each backend.
+cc_library(
+    name = "aio_registrations",
+    hdrs = ["aio_registrations.h"],
+    deps = [
+        ":file_descriptor",
+        ":intrusive_rb_tree",
+        "@com_google_absl//absl/log:absl_check",
+    ],
+)
+
 cc_library(
     name = "file_descriptor",
     hdrs = ["file_descriptor.h"],
@@ -72,9 +102,26 @@ cc_library(
     srcs = [
         "aio.cc",
         "aio_internal.h",
-        "aio_linux.cc",
+    ] + select({
+        # internal::ReadinessBackend is the shared half of the readiness
+        # backends, and it reaches aio_unix.h -> sys/socket.h.  A
+        # completion-based backend does not derive from it and cannot compile
+        # it, so it goes per-platform rather than in the unconditional srcs.
+        "@platforms//os:linux": [
+            "aio_linux.cc",
+            "aio_readiness_backend.cc",
+            "aio_readiness_backend.h",
+        ],
+        "@platforms//os:macos": [
+            "aio_darwin.cc",
+            "aio_readiness_backend.cc",
+            "aio_readiness_backend.h",
+        ],
+    }),
+    hdrs = [
+        "aio.h",
+        "aio_state.h",
     ],
-    hdrs = ["aio.h"],
     # The --aio_backend default is a property of the target platform (there
     # is no runtime fallback), so it is compiled in rather than probed.  See
     # //tools/platforms/io_uring.
@@ -86,13 +133,13 @@ cc_library(
             "AOS_AIO_DEFAULT_BACKEND=\\\"epoll\\\"",
         ],
     }),
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
+        ":aio_registrations",
         ":file_descriptor",
-        ":intrusive_rb_tree",
         ":kernel_release",
         ":socket_error",
+        ":timer_queue",
         "//aos:realtime",
         "//aos/ipc_lib:thread_signal",
         "//aos/libc:aos_strerror",
@@ -102,7 +149,35 @@ cc_library(
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
-        "@liburing",
+    ] + select({
+        "@platforms//os:linux": [
+            ":aio_unix",
+            "@liburing",
+        ],
+        "@platforms//os:macos": [
+            ":aio_unix",
+            ":pipe",
+            "//aos/mutex",
+        ],
+    }),
+)
+
+cc_library(
+    name = "timer_queue",
+    hdrs = ["timer_queue.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":intrusive_rb_tree",
+        "//aos/time",
+    ],
+)
+
+cc_test(
+    name = "timer_queue_test",
+    srcs = ["timer_queue_test.cc"],
+    deps = [
+        ":timer_queue",
+        "//aos/testing:googletest",
     ],
 )
 
@@ -157,7 +232,6 @@ cc_test(
 cc_test(
     name = "aio_test",
     srcs = ["aio_test.cc"],
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":aio",
         ":pipe",
@@ -203,7 +277,6 @@ cc_library(
 
 cc_library(
     name = "pipe",
-    testonly = True,
     srcs = select({
         "@platforms//os:windows": ["pipe_windows.cc"],
         "//conditions:default": ["pipe_unix.cc"],
@@ -618,7 +691,6 @@ cc_library(
     name = "shm_event_loop",
     srcs = ["shm_event_loop.cc"],
     hdrs = ["shm_event_loop.h"],
-    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":aos_logging",
@@ -648,7 +720,6 @@ cc_test(
     srcs = ["shm_event_loop_test.cc"],
     flaky = True,
     shard_count = 50,
-    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":event_loop_param_test",
         ":shm_event_loop",
@@ -674,6 +745,7 @@ cc_library(
         "//aos/network:timestamp_schema",
         "//aos/testing:googletest",
     ],
+    alwayslink = True,
 )
 
 cc_test(

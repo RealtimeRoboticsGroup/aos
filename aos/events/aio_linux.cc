@@ -34,7 +34,10 @@
 
 #include "aos/events/aio.h"
 #include "aos/events/aio_internal.h"
-#include "aos/events/intrusive_rb_tree.h"
+#include "aos/events/aio_readiness_backend.h"
+#include "aos/events/aio_registrations.h"
+#include "aos/events/aio_state.h"
+#include "aos/events/aio_unix.h"
 #include "aos/events/kernel_release.h"
 #include "aos/events/socket_error.h"
 #include "aos/ipc_lib/thread_signal.h"
@@ -72,22 +75,7 @@ ABSL_FLAG(size_t, aio_pool_size, 16,
 namespace aos {
 namespace {
 
-// Incremented by the pthread_atfork child handler.  Checked instead of
-// getpid(): a relaxed atomic load never syscalls.
-//
-// size_t because this only detects "did a fork happen since I last
-// checked," so any width works, and size_t stays single-instruction
-// lock-free everywhere (a fixed 64-bit type would drag 32-bit ARM through
-// libatomic locks; unsigned int wouldn't grow on 64-bit targets).
-std::atomic<size_t> global_fork_count{0};
-
-// Incremented by the pthread_atfork parent handler (the forking process,
-// not the child -- compare global_fork_count).  Kernel quirk: on
-// DEFER_TASKRUN rings a multishot op outstanding in the parent becomes
-// uncancelable after any fork() until a resync -- see CheckForParentFork()
-// and the ADR.  size_t as above.
-std::atomic<size_t> global_parent_fork_count{0};
-std::once_flag atfork_once;
+std::once_flag tid_atfork_once;
 
 // The calling thread's id, cached: aos::GetThreadId() is an uncached
 // syscall(SYS_gettid), and the submitter-thread check runs on every entry
@@ -108,21 +96,13 @@ pid_t CachedThreadId() {
 void ResetCachedThreadId() { cached_tid = 0; }
 
 void RegisterAtFork() {
-  std::call_once(atfork_once, []() {
-    pthread_atfork(
-        // No prepare handler: nothing here needs to be quiesced before the
-        // fork, only fixed up after it.
-        nullptr,
-        // Parent handler: runs in the forking process, once fork() returns.
-        []() {
-          global_parent_fork_count.fetch_add(1, std::memory_order_relaxed);
-        },
-        // Child handler: runs in the new process, once fork() returns.
-        []() {
-          // Every cached copy is the parent's tid.
-          ResetCachedThreadId();
-          global_fork_count.fetch_add(1, std::memory_order_relaxed);
-        });
+  // Both counters, shared with every other POSIX backend.
+  internal::RegisterForkCounters();
+  // Plus the one thing only this file needs.  pthread_atfork stacks
+  // handlers, so registering a second time is fine.
+  std::call_once(tid_atfork_once, []() {
+    // Child handler only: every cached tid is the parent's.
+    pthread_atfork(nullptr, nullptr, []() { ResetCachedThreadId(); });
   });
 }
 
@@ -313,85 +293,6 @@ class TimerFD {
   int fd_ = -1;
 };
 
-// Which caller-submitted raw op a request has in flight.
-enum class RawIo : uint8_t {
-  kNone = 0,
-  kRead,
-  kWrite,
-};
-
-// Internal helper to access AsyncRequest's opaque state buffer.
-//
-// The members are separate structs, not a union.  A request can reach
-// AsyncRead() or AsyncWrite() still carrying `link` state from an Aio that
-// was destroyed while the request was queued, which aio.h's constraint 2
-// permits.  The submit path reads that state to tell that it is stale (see
-// IoUringImpl::ClearStaleQueuedFlag()), so scratch space that shared memory
-// with `link` would already have overwritten it.  Re-arming a request that
-// is still queued on this loop is fatal; see AsyncRequest::done.
-struct AioState {
-  // List node, used by both backends: IoUringImpl::pending_dispatch_ and
-  // EpollImpl's pending_/ready_ all use all four fields.
-  struct {
-    AsyncRequest *next;
-    // Doubly linked so IoUringImpl::UnlinkPendingDispatch() can splice a
-    // request out of pending_dispatch_ in O(1).
-    AsyncRequest *prev;
-    int32_t result;
-    // Which pending list this request is linked on, or 0 for none.
-    // IoUringImpl uses it for pending_dispatch_ (see QueuePendingDispatch());
-    // EpollImpl uses it for pending_/ready_, and to say why a request is
-    // there -- see EpollImpl::QueueKind.
-    int32_t queued;
-  } link;
-  // EpollImpl only: read/write staging for AsyncRead/AsyncWrite (io_uring
-  // hands its span straight to the SQE), and the registration a Cancel()ed
-  // request holds its claim on.  Separate from `link` -- see the struct
-  // comment.
-  struct {
-    void *ptr;
-    size_t size;
-  } epoll;
-  // IoUringImpl only.
-  struct {
-    // List node and fd for raw_in_flight_, valid while raw_io is set --
-    // this is what lets legacy registration CHECK the no-mixing contract
-    // (see ClaimRawFd()).  Separate from `link` -- see the struct comment.
-    AsyncRequest *raw_prev;
-    AsyncRequest *raw_next;
-    int32_t raw_fd;
-    // Incarnation counter: incremented per fresh kernel op submitted under
-    // this request's identity and encoded into that op's user_data.  See
-    // EncodeUserData() for why 16 bits cannot wrap into ambiguity.
-    uint16_t generation;
-    // Set while a caller-submitted AsyncRead/AsyncWrite is in flight (the
-    // internal wakeup read is excluded).  Backs raw_requests_in_flight_
-    // (see DowngradeFromSingleIssuer()) and tells the terminal completion
-    // which per-fd no-mixing claim to release.
-    RawIo raw_io;
-    // Set at queue time when this request's callback is the caller's own
-    // rather than one of this file's trampolines, so ReapCompletions() can
-    // tell whether dispatching it spends the one-user-completion-per-Poll()
-    // budget.  The trampolines report for themselves.
-    //
-    // Note that this is a boolean flag, but uses uint8_t to ensure
-    // struct alignment/packing without complications around the "bool"
-    // type.
-    uint8_t user_visible;
-  } uring;
-};
-
-inline AioState &State(AsyncRequest *req) {
-  static_assert(sizeof(AioState) <= sizeof(req->internal_state),
-                "AioState too large");
-  static_assert(alignof(AioState) <= 8, "AioState alignment mismatch");
-  return *reinterpret_cast<AioState *>(req->internal_state);
-}
-
-[[maybe_unused]] inline const AioState &State(const AsyncRequest *req) {
-  return *reinterpret_cast<const AioState *>(req->internal_state);
-}
-
 // The user_data encoding from the IoUringImpl design comment.  Kernel side:
 // IORING_OP_ASYNC_CANCEL matches its target by exact user_data compare
 // (io_cancel_req_match()), which is what makes incarnation targeting exact.
@@ -470,52 +371,13 @@ inline Completion CompletionFromResult(AsyncRequest *req, int32_t res) {
   return completion;
 }
 
-// AOS's fd-readiness event encoding, shared by both backends and by the
-// public SetEvents()/OnEvents() contract.  Numerically identical to the
-// low 4 bits of the real epoll event flags (the encoding documented on
-// Aio::OnEvents()).
-constexpr uint32_t kIn = 0x01;   // EPOLLIN
-constexpr uint32_t kPri = 0x02;  // EPOLLPRI
-constexpr uint32_t kOut = 0x04;  // EPOLLOUT
-constexpr uint32_t kErr = 0x08;  // EPOLLERR
-
-constexpr uint32_t kInEvents = kIn | kPri;
-constexpr uint32_t kOutEvents = kOut;
-constexpr uint32_t kErrorEvents = kErr;
-
-// Where a legacy registration's hangup or error goes when no handler asked
-// for it: a hangup with no readable, writable or error bit to carry it, or an
-// error on an fd with no error handler.  Both go to the handler that can act
-// on them, the way libuv (and so UvAio) routes them: the error handler if
-// there is one, otherwise whichever of readable/writable the fd subscribed
-// to, where the read sees EOF or the error, and the write sees EPIPE or the
-// error.
-//
-// The kernel keeps reporting either condition for as long as the fd is
-// registered.  EPoll dropped a bare hangup, which left an OnReadable() pipe
-// whose writer went away spinning Poll() forever with nothing ever told.  An
-// error with no error handler was fatal, which killed an OnWritable() pipe
-// whose reader went away: the kernel reports that as EPOLLERR alone, and the
-// write that would have seen EPIPE never ran.
-//
-// A hangup that arrives alongside another bit is left alone; that bit's
-// handler already runs.  An fd subscribed to neither direction keeps its
-// error bit, and the error-handler CHECK still fires for it.
-uint32_t RouteHangupOrError(uint32_t events, bool hangup, uint32_t subscribed,
-                            bool has_err_fn) {
-  constexpr uint32_t kData = kInEvents | kOutEvents;
-  const bool bare_hangup = hangup && (events & (kData | kErrorEvents)) == 0;
-  if (has_err_fn) {
-    return bare_hangup ? (events | kErr) : events;
-  }
-  if (!bare_hangup && (events & kErrorEvents) == 0) {
-    return events;
-  }
-  if ((subscribed & kData) == 0) {
-    return events;
-  }
-  return (events & ~kErrorEvents) | (subscribed & kData);
-}
+using internal::kErr;
+using internal::kErrorEvents;
+using internal::kIn;
+using internal::kInEvents;
+using internal::kOut;
+using internal::kOutEvents;
+using internal::kPri;
 
 // One read or write at the fd's current position that returns EAGAIN rather
 // than sleeping, whatever the fd's flags: preadv2()/pwritev2() with
@@ -721,7 +583,7 @@ struct IoUringTimerState : public Aio::TimerState {
 // test process.  But io_urings don't survive one: the SQ/CQ mmaps are
 // shared with the parent rather than copied, so a child using the
 // inherited ring races the parent for the same queues -- and the parent
-// needs a resync of its own after any fork (see global_parent_fork_count).
+// needs a resync of its own after any fork (see internal::ParentForkCount()).
 // Global atfork counters trigger a rebuild and re-arm at the next entry
 // point (HandleFork(), CheckForParentFork()).
 //
@@ -911,7 +773,7 @@ class IoUringImpl : public Aio::Impl {
   void CheckSubmitterThread() const;
   // Resyncs with the kernel once after this process forked a child -- the
   // mirror of CheckForFork(), which handles being the child.  Why:
-  // global_parent_fork_count's comment.  A no-op except for the first call
+  // internal::ParentForkCount()'s comment.  A no-op except for the first call
   // after each such fork().
   void CheckForParentFork();
   bool HasRawRequestsInFlight() const override;
@@ -1372,9 +1234,9 @@ bool IoUringImpl::DrainLegacyEpoll() {
     state->events_fn(terminal ? (ready_epoll | kErr) : ready_epoll);
     return true;
   }
-  ready_epoll =
-      RouteHangupOrError(ready_epoll, (event.events & EPOLLHUP) != 0,
-                         state->events, static_cast<bool>(state->err_fn));
+  ready_epoll = internal::RouteHangupOrError(
+      ready_epoll, (event.events & EPOLLHUP) != 0, state->events,
+      static_cast<bool>(state->err_fn));
   // EPoll::InOutEventData::DoCallbacks()'s rules, message text included --
   // callers depend on those semantics, so the bits the kernel reported are
   // dispatched, as RouteHangupOrError() routed them.  An error that reaches
@@ -1571,9 +1433,8 @@ std::unique_ptr<Aio::TimerState> IoUringImpl::MakeTimerState() {
 IoUringImpl::IoUringImpl() {
   RequireMinimumKernelVersion();
   RegisterAtFork();
-  last_fork_count_ = global_fork_count.load(std::memory_order_relaxed);
-  last_parent_fork_count_ =
-      global_parent_fork_count.load(std::memory_order_relaxed);
+  last_fork_count_ = internal::ForkCount();
+  last_parent_fork_count_ = internal::ParentForkCount();
   construction_tid_ = CachedThreadId();
   uint32_t depth = ::absl::GetFlag(FLAGS_aio_queue_depth);
   InitSingleIssuerRing(&ring, depth);
@@ -1825,7 +1686,7 @@ void IoUringImpl::CheckSubmitterThread() const {
   // Deliberately not a CheckForFork() here: rebuilding a whole ring purely to
   // tear it down is what this avoids.  That is why destroying an inherited
   // Aio used to work only when a timer or fd happened to be destroyed first.
-  if (last_fork_count_ != global_fork_count.load(std::memory_order_relaxed)) {
+  if (last_fork_count_ != internal::ForkCount()) {
     return;
   }
   if (single_issuer_ && submitter_tid_) {
@@ -1859,59 +1720,6 @@ bool IoUringImpl::HasRawRequestsInFlight() const {
   return false;
 }
 
-namespace {
-
-// The other half of a forked child's contract: every fd it closes that is still
-// registered must be ForgetClosedFd()'d before its next use of the loop.  A
-// backend's rebuild calls this for each fd it is about to re-register, before
-// creating any descriptor of its own.  After that, the lowest free number is
-// the one the child just closed, and the re-register could succeed on the
-// backend's own new fd instead of failing.  Shared so the rule and its message
-// cannot drift between backends.
-void CheckRegisteredFdOpenAfterFork(int fd) {
-  const int flags = fcntl(fd, F_GETFD);
-  ABSL_PCHECK(flags != -1 || errno != EBADF)
-      << ": a forked child closed fd " << fd
-      << " while it was still registered with this Aio.  Call "
-         "ForgetClosedFd() for every registered fd the child closes, before "
-         "its next use of the loop.";
-}
-
-// The same check for a descriptor the loop made for itself: a timer's timerfd,
-// a registered thread-signal receiver's fd, or the wakeup.  The caller never
-// registered it, so ForgetClosedFd() is no way out; the child has to leave it
-// open.
-void CheckOwnFdOpenAfterFork(int fd, const char *owner) {
-  const int flags = fcntl(fd, F_GETFD);
-  ABSL_PCHECK(flags != -1 || errno != EBADF)
-      << ": a forked child closed fd " << fd
-      << ", which belongs to this Aio's own " << owner
-      << ".  The loop cannot run without it, so the child must leave it open.";
-}
-
-// A descriptor the loop just took for its own use (a timer's new timerfd, a
-// thread-signal receiver's fd) has the number of one the caller still has
-// registered.  The caller closed that fd without ForgetClosedFd(), and the
-// kernel handed its number out again.  Caught here, where the reuse happens,
-// rather than as a confusing collision later.
-void DieOwnFdStillRegistered(int fd, const char *owner) {
-  ABSL_LOG(FATAL) << "fd " << fd << ", now this Aio's own " << owner
-                  << ", is still registered by the caller: it was closed "
-                     "without ForgetClosedFd(), and the kernel reused its "
-                     "number.  Call ForgetClosedFd() right after close().";
-}
-
-// ForgetClosedFd() is for fds the caller registered.  One the loop made for
-// itself was never the caller's to forget.
-void DieForgettingOwnFd(int fd, const char *owner) {
-  ABSL_LOG(FATAL) << "ForgetClosedFd(" << fd << "): fd " << fd
-                  << " belongs to this Aio's own " << owner
-                  << ", not to a registration made with On*() or "
-                     "AsyncRead()/AsyncWrite().";
-}
-
-}  // namespace
-
 void IoUringImpl::HandleFork() {
   // Shared rule, shared message; see
   // Aio::Impl::CheckNoRawRequestsInFlightOnFork().  Only reached when a
@@ -1921,20 +1729,21 @@ void IoUringImpl::HandleFork() {
   // Before anything below frees or creates a descriptor; see
   // CheckRegisteredFdOpenAfterFork().  The loop's own descriptors first, so a
   // child that closed everything is told about the ones it cannot forget.
-  CheckOwnFdOpenAfterFork(event_fd.fd(), "wakeup");
+  internal::CheckOwnFdOpenAfterFork(event_fd.fd(), "wakeup");
   // A futex-kind receiver has no descriptor (fd -1).
   if (receiver_state_ != nullptr && receiver_state_->fd >= 0) {
-    CheckOwnFdOpenAfterFork(receiver_state_->fd, "thread-signal receiver");
+    internal::CheckOwnFdOpenAfterFork(receiver_state_->fd,
+                                      "thread-signal receiver");
   }
   for (Aio::TimerState *state = active_timers_.front(); state != nullptr;
        state = decltype(active_timers_)::Next(state)) {
     auto *timer = static_cast<IoUringTimerState *>(state);
     if (timer->timer_fd != nullptr) {
-      CheckOwnFdOpenAfterFork(timer->timer_fd->fd(), "timer");
+      internal::CheckOwnFdOpenAfterFork(timer->timer_fd->fd(), "timer");
     }
   }
   for (const auto &pair : legacy_states_) {
-    CheckRegisteredFdOpenAfterFork(pair.first);
+    internal::CheckRegisteredFdOpenAfterFork(pair.first);
   }
 
   // io_uring_queue_exit() rather than close(ring.ring_fd): the reinit below
@@ -2131,7 +1940,7 @@ void IoUringImpl::ReArmPersistentRegistrations() {
 }
 
 void IoUringImpl::CheckForFork() {
-  size_t current_fork_count = global_fork_count.load(std::memory_order_relaxed);
+  size_t current_fork_count = internal::ForkCount();
   if (last_fork_count_ != current_fork_count) {
     // Record the new count *before* HandleFork(): it re-submits work
     // through these same entry points (e.g. the wakeup read via
@@ -2147,13 +1956,13 @@ void IoUringImpl::CheckForFork() {
 }
 
 void IoUringImpl::CheckForParentFork() {
-  size_t current = global_parent_fork_count.load(std::memory_order_relaxed);
+  size_t current = internal::ParentForkCount();
   if (last_parent_fork_count_ != current) {
     last_parent_fork_count_ = current;
     if (ring_enabled_) {
       // Resyncs the kernel's cancel/remove lookup for any op that was
       // already outstanding when a child forked off of this process -- see
-      // global_parent_fork_count's comment.
+      // internal::ParentForkCount()'s comment.
       //
       // submit_and_get_events() rather than a bare get_events(), matching a
       // normal Poll(false): the resync only reliably takes effect with a
@@ -2617,7 +2426,7 @@ void IoUringImpl::ForgetClosedFd(FileDescriptor fd) {
   auto it = legacy_states_.find(fd);
   if (it == legacy_states_.end()) {
     if (const char *owner = OwnFdName(fd)) {
-      DieForgettingOwnFd(fd, owner);
+      internal::DieForgettingOwnFd(fd, owner);
     }
     ABSL_LOG(FATAL) << "fd " << fd << " not found";
   }
@@ -2693,7 +2502,7 @@ void IoUringImpl::RegisterThreadSignalReceiver(
       << "Duplicate ThreadSignalReceiver registration: only one receiver "
          "may be active at a time (see receiver_state_)";
   if (receiver->fd() >= 0 && legacy_states_.contains(receiver->fd())) {
-    DieOwnFdStillRegistered(receiver->fd(), "thread-signal receiver");
+    internal::DieOwnFdStillRegistered(receiver->fd(), "thread-signal receiver");
   }
 
   if (ThreadSignalReceiverState *state = free_receivers_.Pop();
@@ -2802,7 +2611,7 @@ void IoUringTimerState::Initialize() {
   if (timer_fd == nullptr) {
     timer_fd = std::make_unique<TimerFD>();
     if (impl_->legacy_states_.contains(timer_fd->fd())) {
-      DieOwnFdStillRegistered(timer_fd->fd(), "timer");
+      internal::DieOwnFdStillRegistered(timer_fd->fd(), "timer");
     }
   }
   // The poll is armed here, once, and stays armed for this state's whole
@@ -3254,7 +3063,7 @@ struct EpollTimerState : public Aio::TimerState {
   // post-fork replacement, which needs the identical handler on a new fd.
   void RegisterFd();
   // Swaps in a timerfd belonging to this process and re-arms it from
-  // `deadline` if this timer was armed.  See EpollImpl::HandleFork().
+  // `deadline` if this timer was armed.  See EpollImpl::RecreateKernelState().
   void ReplaceFdAfterFork();
 
   std::unique_ptr<TimerFD> timer_fd;
@@ -3263,35 +3072,7 @@ struct EpollTimerState : public Aio::TimerState {
   EpollImpl *impl_;
 };
 
-// Completion delivery mirrors IoUringImpl's, so the two backends resolve and
-// deliver requests at the same points:
-//
-//   * Submit does no I/O.  AsyncRead()/AsyncWrite() queue the request, and
-//     the harvest makes its first attempt in submission order -- what
-//     io_uring's kernel does with its SQ: try inline, poll-arm on EAGAIN.
-//     Only a request that got EAGAIN is registered with epoll.
-//   * Resolving is eager.  One Poll() harvests everything that is ready --
-//     every raw AsyncRead/AsyncWrite whose fd epoll reports (the I/O itself
-//     runs right there), every submit-time result, every Cancel() -- sets
-//     `done`, and queues the completion on ready_.  That is io_uring's CQ
-//     drain.  It reads epoll one event at a time and acts on each before
-//     reading the next, so no dequeued event can go stale.  A raw I/O can
-//     make another raw request ready (a pipe's write filling its read end),
-//     so the harvest keeps asking, non-blocking, until nothing more is ready
-//     -- io_uring runs both in the same submit.
-//   * Delivery is rationed: one user callback per Poll(), in FIFO order, off
-//     ready_ -- io_uring's pending_dispatch_.  The next harvest only happens
-//     once ready_ is empty, which is also what keeps this fair: a callback
-//     that re-arms itself on a request that resolves at once (a regular
-//     file) lands behind everything the previous harvest found, timers and
-//     legacy fds included, instead of in front of them.
-//
-// Legacy handlers are the one thing the harvest cannot resolve early, since
-// dispatching them *is* running user code.  The harvest stops at the first
-// one and queues a marker in ready_ in its place; delivering the marker
-// dispatches one legacy event -- io_uring's legacy-epoll poll CQE and
-// DrainLegacyEpoll(), the same shape.
-class EpollImpl : public Aio::Impl {
+class EpollImpl : public internal::ReadinessBackend {
   friend struct EpollTimerState;
 
  public:
@@ -3300,31 +3081,6 @@ class EpollImpl : public Aio::Impl {
 
   std::unique_ptr<Aio::TimerState> MakeTimerState() override;
 
-  void Run() override;
-  bool should_run() const override;
-
-  bool Poll(bool block) override;
-  void Quit() override;
-  void Wakeup();
-
-  void AsyncRead(FileDescriptor fd, std::span<char> buffer,
-                 AsyncRequest *request) override;
-  void AsyncWrite(FileDescriptor fd, std::span<const char> buffer,
-                  AsyncRequest *request) override;
-  void Cancel(AsyncRequest *request) override;
-  void BeforeWait(std::function<void()> function) override;
-
-  void OnReadable(FileDescriptor fd, std::function<void()> callback) override;
-  void OnError(FileDescriptor fd, std::function<void()> callback) override;
-  void OnWritable(FileDescriptor fd, std::function<void()> callback) override;
-  void OnEvents(FileDescriptor fd,
-                std::function<void(uint32_t)> callback) override;
-  void DeleteFd(FileDescriptor fd) override;
-  void ForgetClosedFd(FileDescriptor fd) override;
-  void EnableWritable(FileDescriptor fd) override;
-  void DisableWritable(FileDescriptor fd) override;
-  void SetEvents(FileDescriptor fd, uint32_t events) override;
-
   void RegisterThreadSignalReceiver(ipc_lib::ThreadSignalReceiver *receiver,
                                     std::function<void()> callback) override;
   void UnregisterThreadSignalReceiver(
@@ -3332,382 +3088,33 @@ class EpollImpl : public Aio::Impl {
   void ConsumeThreadSignalReceiver(
       ipc_lib::ThreadSignalReceiver *receiver) override;
 
+ protected:
+  // --- internal::ReadinessBackend's seam, in terms of epoll_ctl(). ---
+  bool UpdateRegistration(internal::FdRegistration *reg) override;
+  void RemoveRegistration(internal::FdRegistration *reg) override;
+  WaitResult WaitForOne(bool block, FdReady *out) override;
+  void RecreateKernelState() override;
+  void AfterForkReArm() override;
+
+  // Every live timer, so a fork can replace their timerfds.  io_uring keeps
+  // the same list for the same reason; this side only had a count.
+  IntrusiveDoublyLinkedList<Aio::TimerState, ActiveTimerTraits> active_timers_;
+  void WakeLoop() override;
+  FileDescriptor wakeup_fd() const override { return event_fd_.fd(); }
+  const char *OwnFdName(FileDescriptor fd) override;
+  void CheckOwnFdsOpenAfterFork() override;
+  ssize_t DoRawIo(internal::FdRegistration *reg, Direction direction,
+                  void *data, size_t size) override;
+
  private:
-  enum class Direction { kRead, kWrite };
-
-  // Which of the two request lists a request is on, and why.  Kept in
-  // AioState::link.queued, a raw int32_t because io_uring shares the field;
-  // Kind()/SetKind() are the only places that convert.
-  enum class QueueKind : int32_t {
-    kNone = 0,
-    // On pending_: submitted, I/O not attempted yet (done still false).  The
-    // request already holds its registration's slot; link.result holds the
-    // fd until the attempt replaces it with the outcome.  See SubmitRaw().
-    kPendingSubmitRead,
-    kPendingSubmitWrite,
-    // On pending_: outcome known, not resolved yet (done still false).
-    // link.result holds the result or -errno.
-    kPendingResult,
-    // On pending_: Cancel()ed.  AioState::epoll.ptr holds the FdRegistration
-    // whose claim this holds (nullptr if it was not armed here), since the
-    // buffer is no longer needed.
-    kPendingCancelRead,
-    kPendingCancelWrite,
-    // On ready_: resolved (done set), callback not run yet.
-    kReadyResult,
-    kReadyCanceled,
-    // On ready_: legacy_marker_, standing in for one legacy event.
-    kReadyLegacy,
-  };
-  static QueueKind Kind(const AsyncRequest *request) {
-    return static_cast<QueueKind>(State(request).link.queued);
-  }
-  static void SetKind(AsyncRequest *request, QueueKind kind) {
-    State(request).link.queued = static_cast<int32_t>(kind);
-  }
-  static bool IsPendingSubmit(QueueKind kind) {
-    return kind == QueueKind::kPendingSubmitRead ||
-           kind == QueueKind::kPendingSubmitWrite;
-  }
-  static bool IsPendingCancel(QueueKind kind) {
-    return kind == QueueKind::kPendingCancelRead ||
-           kind == QueueKind::kPendingCancelWrite;
-  }
-  static bool IsPending(QueueKind kind) {
-    return IsPendingSubmit(kind) || kind == QueueKind::kPendingResult ||
-           IsPendingCancel(kind);
-  }
-  static bool IsReady(QueueKind kind) {
-    return kind == QueueKind::kReadyResult || kind == QueueKind::kReadyCanceled;
-  }
-
-  struct FdRegistration {
-    int fd = -1;
-    // Raw requests in flight, from submit until they resolve -- including
-    // while still on pending_ waiting for their first attempt, so the
-    // per-fd CHECKs see them.  Only an *armed* one (see Armed()) is waiting
-    // on epoll.  The harvest does their I/O directly; nothing is parked in
-    // in_fn/out_fn for them, so those are only ever the caller's legacy
-    // handlers.
-    AsyncRequest *read_req = nullptr;
-    AsyncRequest *write_req = nullptr;
-    std::function<void()> in_fn = nullptr;
-    std::function<void()> out_fn = nullptr;
-    std::function<void()> err_fn = nullptr;
-    std::function<void(uint32_t)> events_fn = nullptr;
-    uint32_t events = 0;
-
-    bool registered = false;
-    uint32_t epoll_events = 0;
-    // True while this registration exists only to carry AsyncRead/AsyncWrite
-    // requests; retired back to the pool once the last one is resolved (see
-    // SettleRawRegistration()).  Legacy registrations live until
-    // DeleteFd()/ForgetClosedFd().  An fd is one or the other, never both.
-    bool async_only = false;
-    // Which free list this registration goes back to.  Raw registrations
-    // come from the --aio_pool_size pool, which is what keeps arming a
-    // request allocation-free.  Legacy ones -- every On*() fd, every timer,
-    // the thread-signal receiver -- come from their own list, so they cannot
-    // use up the slots the realtime submit path relies on.
-    bool pooled = false;
-    // Set by UpdateEpoll() when epoll_ctl(ADD) returned EPERM: a regular
-    // file, always ready.  Its I/O is then done at once, blocking, instead
-    // of waiting for an event that can never arrive -- see DoRawIo().
-    bool unpollable = false;
-    // Set by DoRawIo() when the fd refused RWF_NOWAIT -- see there.
-    bool nowait_unsupported = false;
-    // Canceled requests whose Canceled completion has not been resolved yet.
-    // aio.h documents Cancel() as asynchronous, so the fd stays claimed
-    // until then, which is the point io_uring releases its claim too (its
-    // terminal CQE is drained by the next Poll(), and so is this).  Counts,
-    // not flags: two requests can be canceled on one fd before either
-    // resolves, and resolving the first must not free the fd for the second.
-    int cancel_claims_read = 0;
-    int cancel_claims_write = 0;
-    // Positive errno from an epoll_ctl(ADD) the kernel refused.
-    // UpdateEpoll() returns false and leaves it here; StartRaw() turns it
-    // into an error completion rather than taking the process down.
-    int registration_errno = 0;
-    // Link for the free lists and retired_.  One link covers them all
-    // because a registration is only ever on one: it moves free list ->
-    // live_ -> retired_ -> free list.
-    FdRegistration *next_free = nullptr;
-    // Link for all_, which owns every registration for this impl's lifetime
-    // so the tree and the free/retired stacks can all be non-owning.
-    FdRegistration *next_all = nullptr;
-    // Links for live_.  Owned by the tree; nothing else may touch them
-    // while this registration is in it.
-    FdRegistration *tree_left = nullptr;
-    FdRegistration *tree_right = nullptr;
-    FdRegistration *tree_parent = nullptr;
-    bool tree_red = false;
-
-    AsyncRequest *&slot(Direction direction) {
-      return direction == Direction::kRead ? read_req : write_req;
-    }
-    int &cancel_claims(Direction direction) {
-      return direction == Direction::kRead ? cancel_claims_read
-                                           : cancel_claims_write;
-    }
-    bool idle() const {
-      return read_req == nullptr && write_req == nullptr &&
-             cancel_claims_read == 0 && cancel_claims_write == 0;
-    }
-
-    // Drops everything tying this registration to an fd -- but deliberately
-    // not the callbacks.  ReleaseRegistration() can run underneath one of
-    // them (a callback which DeleteFd()s its own fd), and destroying a
-    // std::function there would free the frame that is executing.  Reset()
-    // does that half, once it is safe.
-    void Detach() {
-      fd = -1;
-      read_req = nullptr;
-      write_req = nullptr;
-      cancel_claims_read = 0;
-      cancel_claims_write = 0;
-      events = 0;
-      registered = false;
-      epoll_events = 0;
-    }
-
-    // Drops what Detach() left behind, returning this to pool state.  Only
-    // safe with no dispatch in flight; see ScrubRetiredRegistrations().
-    void Reset() {
-      in_fn = nullptr;
-      out_fn = nullptr;
-      err_fn = nullptr;
-      events_fn = nullptr;
-      async_only = false;
-      unpollable = false;
-      nowait_unsupported = false;
-    }
-  };
-  struct FreeLinkTraits {
-    static FdRegistration *&next(FdRegistration *reg) { return reg->next_free; }
-  };
-  struct AllLinkTraits {
-    static FdRegistration *&next(FdRegistration *reg) { return reg->next_all; }
-  };
-  // Orders the live registrations by fd.  Compare() lets
-  // GetActiveRegistration() look one up from a bare fd without building a
-  // registration to compare against.
-  struct LiveTreeTraits {
-    static FdRegistration *&left(FdRegistration *reg) { return reg->tree_left; }
-    static FdRegistration *&right(FdRegistration *reg) {
-      return reg->tree_right;
-    }
-    static FdRegistration *&parent(FdRegistration *reg) {
-      return reg->tree_parent;
-    }
-    static bool &red(FdRegistration *reg) { return reg->tree_red; }
-    static bool Less(FdRegistration *a, FdRegistration *b) {
-      return a->fd < b->fd;
-    }
-    static int Compare(const FdRegistration *reg, int fd) {
-      if (reg->fd < fd) return -1;
-      if (fd < reg->fd) return 1;
-      return 0;
-    }
-  };
-
-  // A legacy event the harvest saw, handed straight to the marker's
-  // dispatch when nothing ran in between -- see DispatchLegacyEvent().
-  struct HarvestedLegacyEvent {
-    FdRegistration *reg = nullptr;
-    uint32_t events = 0;
-  };
-
-  FdRegistration *GetActiveRegistration(FileDescriptor fd) const;
-  FdRegistration *GetOrCreateLegacyRegistration(FileDescriptor fd);
-  void ReleaseRegistration(FdRegistration *reg);
-  // Moves retired_ back to the free lists, destroying the parked callbacks.
-  // Must only run with no dispatch in flight: a parked callback can be the
-  // very function that triggered the release.
-  void ScrubRetiredRegistrations();
-  // Reconciles reg's epoll registration with what it is now interested in.
-  // Takes the registration rather than an fd, as EPoll::DoEpollCtl() does:
-  // every caller has just looked it up.
-  //
-  // Returns false when the kernel refused to add a raw registration and
-  // left the errno in reg->registration_errno for the caller to deliver.
-  // Legacy registrations die instead, as EPoll always did: there is no
-  // request to carry the error.  Every other epoll_ctl() failure dies: an fd
-  // the caller closed with a request armed on it is a contract violation
-  // (see Aio::AsyncRead()), and this is where epoll can see one.
-  bool UpdateEpoll(FdRegistration *reg);
-
-  // The raw request path.  AsyncRead() and AsyncWrite() differ only in
-  // direction.
-  void SubmitRaw(FileDescriptor fd, void *data, size_t size,
-                 AsyncRequest *request, Direction direction);
-  // reg's request in `direction` if it is armed -- waiting on epoll -- and
-  // nullptr if there is none or it has not had its first attempt yet.
-  static AsyncRequest *Armed(FdRegistration *reg, Direction direction) {
-    AsyncRequest *req = reg->slot(direction);
-    return req != nullptr && Kind(req) == QueueKind::kNone ? req : nullptr;
-  }
-  // One non-blocking read or write for reg's request in `direction`.  See
-  // the definition for how an fd that cannot do that is handled.
-  ssize_t DoRawIo(FdRegistration *reg, Direction direction, void *data,
-                  size_t size);
-  // Performs reg's pending I/O in one direction.  Returns whether the
-  // request resolved (false: EAGAIN, still waiting).
-  bool TryRawIo(FdRegistration *reg, Direction direction);
-  // A submitted request's first attempt, taken off pending_ in submission
-  // order: the I/O now if it can complete, else armed on epoll -- io_uring's
-  // own order (try inline, poll-arm on EAGAIN).  Returns whether it resolved;
-  // arming is not processing anything.
-  bool StartRaw(AsyncRequest *request, Direction direction);
-  // Services a harvested epoll event on a raw registration.  Returns whether
-  // any request resolved.
-  bool ServiceRaw(FdRegistration *reg, uint32_t got_events);
-  // After a raw registration's requests or claims change: retires it if
-  // nothing is left, otherwise updates epoll to match what is.
-  void SettleRawRegistration(FdRegistration *reg);
-  // Dies if request is already armed, or armed and not yet delivered, on
-  // this loop.  See the definition.
-  void CheckNotAlreadyInFlight(AsyncRequest *request) const;
-  // Dies if epoll reported an event for a registration that is no longer
-  // live.  DeleteFd() and a raw registration's retirement DEL strictly
-  // first, so neither leaves an entry behind.  ForgetClosedFd() cannot DEL:
-  // its fd is already closed, and closing only removes the kernel's entry
-  // when it was the last reference to the file.  One still open through a
-  // dup() or a fork() keeps the entry, and its next event lands here.
-  static void CheckLive(const FdRegistration *reg) {
-    ABSL_CHECK(reg->registered)
-        << ": epoll reported an event for a released registration.  Its fd "
-           "was ForgetClosedFd()'d while its file was still open elsewhere (a "
-           "dup() or a fork()), which leaves the kernel watching it; for a "
-           "shared file, DeleteFd() before closing instead";
-  }
-
-  // Queues a submitted request, or one whose outcome is already known -- a
-  // submit-time error, a Cancel() -- for the next harvest, which takes them
-  // in this order.  `kind` is one of the QueueKind::kPending* values.
-  void QueuePending(AsyncRequest *request, QueueKind kind);
-  // Sets done and, if it has a callback to deliver, moves request onto
-  // ready_.  `kind` is kReadyResult or kReadyCanceled.
-  void QueueReady(AsyncRequest *request, QueueKind kind);
-  // Resolves pending_, then waits (or doesn't) for epoll and resolves what it
-  // reports.  Returns whether it found anything at all.
-  bool Harvest(bool block, HarvestedLegacyEvent *harvested);
-  // Everything Poll() does inside its dispatch-depth scope.
-  bool PollOnce(bool block);
-  // Delivers the legacy marker: one legacy fd's event, per
-  // EPoll::DoCallbacks().  Returns false if none is ready any more.
-  bool DispatchLegacyEvent(HarvestedLegacyEvent *harvested);
-  // Runs the handlers for one legacy event.
-  void RunLegacyHandlers(FdRegistration *reg, uint32_t got_events);
-  // Marks reg as having no per-call way to avoid sleeping and makes its fd
-  // O_NONBLOCK -- see DoRawIo().
-  static void FallBackToNonBlocking(FdRegistration *reg);
-
   int epoll_fd_ = -1;
   // Whether this kernel's RWF_NOWAIT reads can return a spurious 0 (Linux 5.9
   // and 5.10; see KernelHasSpuriousNowaitZero()).  Read once at construction,
   // so the raw I/O path neither calls uname() nor allocates.
   bool nowait_unreliable_ = false;
-  // Quit()/Wakeup() write this eventfd to knock Poll() out of epoll_wait().
-  // Registered through wakeup_reg_ rather than as a legacy handler: draining
-  // it is internal work, which must neither use up a pool slot nor spend
-  // Poll()'s one-callback budget (see Aio::Poll()).
+  // Quit()/Wakeup() write this eventfd to knock Poll() out of epoll_wait();
+  // an internal registration drains the writes (see OnInternalReadable()).
   EventFD event_fd_;
-  // Identifies the wakeup eventfd in epoll events.  Never in live_ and never
-  // on a free list; only its address matters.
-  FdRegistration wakeup_reg_;
-  // Adds event_fd_ to epoll_fd_ as wakeup_reg_.  The constructor and
-  // HandleFork() both need it.
-  void RegisterWakeup();
-  // Owns every registration for this impl's lifetime, so the containers
-  // below are all non-owning and moving a registration between them is
-  // pointer assignment -- which is what makes ReleaseRegistration() safe on
-  // the dispatch path, where it runs under RT.
-  OwningIntrusiveStack<FdRegistration, AllLinkTraits> all_;
-  // Every live registration, keyed on fd.  A tree rather than a sorted
-  // vector because SubmitRaw() inserts on the submit path, which aio.h
-  // requires to be allocation-free: the links live on the registration, so
-  // inserting one allocates nothing at all.
-  IntrusiveRbTree<FdRegistration, LiveTreeTraits> live_;
-  // Pre-allocated pool (--aio_pool_size) for raw registrations only.
-  // Intrusive, like the io_uring backend's free_timers_/free_receivers_:
-  // parking and unparking are then pointer assignment.
-  IntrusiveStack<FdRegistration, FreeLinkTraits> raw_free_list_;
-  // Recycled legacy registrations.  Grown on demand: On*() is
-  // CheckNotRealtime(), so allocating there is fine.
-  IntrusiveStack<FdRegistration, FreeLinkTraits> legacy_free_list_;
-  // Legacy registrations released mid-dispatch, still holding
-  // std::functions -- one of which can be the currently-executing callback --
-  // so they are destroyed at the end of the Poll(), by
-  // ScrubRetiredRegistrations().  Raw registrations never park here; see
-  // ReleaseRegistration().
-  IntrusiveStack<FdRegistration, FreeLinkTraits> retired_;
-  // Non-zero while Poll() is dispatching.  Tells ReleaseRegistration()
-  // whether a callback frame may be live.
-  int dispatch_depth_ = 0;
-  // True for all of Poll(), including the scrub of retired registrations
-  // that runs after dispatch_depth_ drops: that scrub destroys
-  // std::functions, and their captures' destructors are user code too.
-  // Backs Poll()'s reentrancy CHECK, like IoUringImpl's in_poll_.
-  bool in_poll_ = false;
-  std::vector<std::function<void()>> before_wait_functions_;
-  // True while Poll() is running the before-wait functions; BeforeWait()
-  // CHECKs it, matching IoUringImpl.
-  bool in_before_wait_ = false;
-
-  // Quit() writes these from other threads and from a signal handler
-  // (ShmEventLoop's SIGINT/SIGHUP/SIGTERM handler), and should_run() reads
-  // them; plain bools would be a data race that can miss the shutdown
-  // outright.  A handler may only touch lock-free atomics, so assert that;
-  // a non-lock-free atomic could deadlock against the interrupted thread.
-  static_assert(std::atomic<bool>::is_always_lock_free,
-                "Quit() runs in a signal handler, so these have to be usable "
-                "from one");
-  // Starts true, so should_run() is true before the first Run().  Run()
-  // clears it on exit, Quit() on shutdown.
-  std::atomic<bool> run_ = true;
-  std::atomic<bool> quit_requested_ = false;
-
-  size_t last_fork_count_ = 0;
-  void HandleFork();
-  // See IoUringImpl::OwnFdName().
-  const char *OwnFdName(FileDescriptor fd);
-  bool HasRawRequestsInFlight() const override;
-  // See IoUringImpl::CheckForFork -- same eager fork handling for the epoll
-  // backend (rebuilds epoll_fd_ before touching it outside of Poll()).
-  void CheckForFork();
-
-  // Both request lists are doubly linked through AioState::link.  A request
-  // is on at most one, and link.queued says which and why, so membership is
-  // O(1) to test without reordering anything.
-  struct PendingLinkTraits {
-    static AsyncRequest *&next(AsyncRequest *request) {
-      return State(request).link.next;
-    }
-    static AsyncRequest *&prev(AsyncRequest *request) {
-      return State(request).link.prev;
-    }
-  };
-  // Whether request is linked on list.  O(n); only reached on paths that
-  // are already errors or rare.
-  static bool ListContains(
-      const IntrusiveDoublyLinkedList<AsyncRequest, PendingLinkTraits> &list,
-      const AsyncRequest *request) {
-    for (AsyncRequest *req = list.front(); req != nullptr;
-         req = list.Next(req)) {
-      if (req == request) return true;
-    }
-    return false;
-  }
-  // What submit and Cancel() queued since the last Poll(), in that order.
-  // Harvest() resolves first attempts and submit-time failures first, in
-  // order, then the cancels in theirs, as io_uring posts one submitted
-  // batch's CQEs.
-  IntrusiveDoublyLinkedList<AsyncRequest, PendingLinkTraits> pending_;
-  // FIFO of resolved requests awaiting their callback -- io_uring's
-  // pending_dispatch_.
-  IntrusiveDoublyLinkedList<AsyncRequest, PendingLinkTraits> ready_;
-  // See QueueKind::kReadyLegacy.  Never armed; only its link is used.
-  AsyncRequest legacy_marker_;
 
   // The active ThreadSignalReceiver, if any -- at most one may be
   // registered at a time (see Aio::RegisterThreadSignalReceiver).
@@ -3716,9 +3123,6 @@ class EpollImpl : public Aio::Impl {
   // Live EpollTimerStates, counted so ~EpollImpl() can CHECK none outlive
   // it -- ~EpollTimerState dereferences this impl.
   int active_timer_count_ = 0;
-  // Every live timer, so a fork can replace their timerfds.  io_uring keeps
-  // the same list for the same reason; this side only had a count.
-  IntrusiveDoublyLinkedList<Aio::TimerState, ActiveTimerTraits> active_timers_;
 };
 
 std::unique_ptr<Aio::TimerState> EpollImpl::MakeTimerState() {
@@ -3726,14 +3130,16 @@ std::unique_ptr<Aio::TimerState> EpollImpl::MakeTimerState() {
   return std::make_unique<EpollTimerState>(this);
 }
 
-EpollImpl::EpollImpl() {
+EpollImpl::EpollImpl()
+    : internal::ReadinessBackend(absl::GetFlag(FLAGS_aio_pool_size), "epoll") {
   // Here too, not just in IoUringImpl: an epoll-only build (io_uring
   // unavailable or disabled) would otherwise never increment
-  // global_fork_count, so no fork is ever detected and the child hangs.
+  // internal::fork_count, so no fork is ever detected and the child hangs.
   // The io_uring tests hide this, since they run first and register the
   // handler process-wide.
   RegisterAtFork();
-  last_fork_count_ = global_fork_count.load(std::memory_order_relaxed);
+  last_fork_count_ = internal::ForkCount();
+
   struct utsname un;
   nowait_unreliable_ =
       uname(&un) == 0 && internal::KernelHasSpuriousNowaitZero(un.release);
@@ -3741,25 +3147,15 @@ EpollImpl::EpollImpl() {
   epoll_fd_ = epoll_create1(EPOLL_CLOEXEC);
   ABSL_PCHECK(epoll_fd_ >= 0) << "Failed to create epoll instance";
 
-  const size_t pool_size = absl::GetFlag(FLAGS_aio_pool_size);
-  for (size_t i = 0; i < pool_size; ++i) {
-    auto *reg = new FdRegistration();
-    reg->pooled = true;
-    all_.Push(reg);
-    raw_free_list_.Push(reg);
-  }
-
-  RegisterWakeup();
-}
-
-void EpollImpl::RegisterWakeup() {
-  wakeup_reg_.fd = event_fd_.fd();
-  struct epoll_event ev;
-  std::memset(&ev, 0, sizeof(ev));
-  ev.events = EPOLLIN;
-  ev.data.ptr = &wakeup_reg_;
-  ABSL_PCHECK(epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, event_fd_.fd(), &ev) == 0)
-      << "Failed to register the wakeup eventfd";
+  // Not a persistent AsyncRead: that version re-armed from its own
+  // completion, inside dispatch, where the slot it just retired cannot be
+  // scrubbed yet -- so each wakeup took a fresh one, and the sixteenth
+  // concurrent fd turned Quit() into "Async registration pool exhausted".
+  // Level-triggered needs no re-arm, it comes from the legacy list rather
+  // than the pool, and draining it is internal work that does not spend a
+  // Poll().  HandleForkInternal()'s ReArmAllRegistrations() covers it across
+  // a fork like any other.
+  OnInternalReadable(event_fd_.fd(), [this]() { event_fd_.Drain(); });
 }
 
 EpollImpl::~EpollImpl() {
@@ -3768,7 +3164,7 @@ EpollImpl::~EpollImpl() {
   // registration's captures (a handler which deleted its own fd and owned a
   // Timer, say) must be destroyed before the CHECKs below count what is
   // still alive.
-  ScrubRetiredRegistrations();
+  registrations_.ScrubRetired();
   // Owner-facing state must be gone first, as EPoll::~EPoll() CHECKed and
   // aio.h documents.  A live Aio::Timer's destructor dereferences this
   // impl, so one outliving its Aio is a use-after-free.
@@ -3777,160 +3173,64 @@ EpollImpl::~EpollImpl() {
   ABSL_CHECK(receiver_ == nullptr)
       << ": The ThreadSignalReceiver must be unregistered before destroying "
          "the Aio";
-  // Only async-only registrations may remain: aio.h's constraint 2 permits
-  // destroying the Aio with raw requests still pending.  Caller fd
-  // registrations must be gone, as EPoll always CHECKed.
-  for (FdRegistration *reg : live_) {
-    ABSL_CHECK(reg->async_only)
+  // Only the internal wakeup read and async-only registrations may remain:
+  // aio.h's constraint 2 permits destroying the Aio with raw requests still
+  // pending.  Caller fd registrations must be gone, as EPoll always
+  // CHECKed.
+  for (const auto &reg : registrations_) {
+    ABSL_CHECK(reg->internal || reg->async_only)
         << ": fd " << reg->fd
         << " must be removed (DeleteFd()/ForgetClosedFd()) before destroying "
            "the Aio";
   }
-  // all_ owns every registration, live and parked alike.  Cleared here
-  // rather than left to its destructor so that the std::functions a
-  // registration still holds are destroyed while this impl is intact -- a
-  // capture's destructor can reenter it.
-  all_.Clear();
+  // registrations_ frees its own entries; the parked ones belong to the
+  // stacks.  Cleared here rather than left to their destructors so that the
+  // std::functions a parked registration still holds are destroyed while this
+  // impl is intact -- a capture's destructor can reenter it.
   run_ = false;
   if (epoll_fd_ >= 0) {
     close(epoll_fd_);
   }
 }
 
-EpollImpl::FdRegistration *EpollImpl::GetActiveRegistration(
-    FileDescriptor fd) const {
-  return live_.Find(fd);
-}
-
-EpollImpl::FdRegistration *EpollImpl::GetOrCreateLegacyRegistration(
-    FileDescriptor fd) {
-  if (auto *reg = GetActiveRegistration(fd)) {
-    // Possibly a raw registration; each On*() names the collision it hits.
-    return reg;
-  }
-  FdRegistration *reg = legacy_free_list_.Pop();
-  if (reg == nullptr) {
-    reg = new FdRegistration();
-    all_.Push(reg);
-  }
-  reg->fd = fd;
-  live_.Insert(reg);
-  return reg;
-}
-
-void EpollImpl::ReleaseRegistration(FdRegistration *reg) {
-  ABSL_CHECK(live_.Find(reg->fd) == reg);
-  live_.Remove(reg);
-
-  reg->Detach();
-
-  // A raw registration holds no std::function, so nothing can be executing
-  // out of it, and it goes straight back to the pool: a completion callback
-  // that re-arms its own fd then reuses the slot the completion just gave
-  // up, instead of needing a second one until the Poll() ends.  Detach()
-  // already tombstoned fd, which is all ServiceRaw() re-reads, and nothing
-  // can take the slot back out before then -- only a callback arms.
-  if (dispatch_depth_ > 0 && !reg->async_only) {
-    // A callback may be running out of reg -- one that DeleteFd()s its own
-    // fd -- and Poll()'s dispatch may still re-read reg->fd to notice the
-    // deletion.  Park it; ScrubRetiredRegistrations() destroys it once the
-    // Poll() ends.
-    retired_.Push(reg);
+void EpollImpl::RemoveRegistration(internal::FdRegistration *reg) {
+  if (!reg->registered) {
     return;
   }
-  // Nothing can be executing out of it: destroy now, so a legacy
-  // registration's captures die at DeleteFd() as EPoll's always did.
-  reg->Reset();
-  (reg->pooled ? raw_free_list_ : legacy_free_list_).Push(reg);
+  // Strict, like EPoll::DoEpollCtl() and IoUringImpl::DeleteFd(); see
+  // ReadinessBackend::RemoveRegistration().  EBADF, ENOENT or EPERM here
+  // means the fd was closed while registered: the kernel entry can outlive
+  // the close (a dup() or fork() keeps the file open) and would name this
+  // registration after it went back to the pool.
+  ABSL_PCHECK(epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, reg->fd, nullptr) == 0)
+      << "epoll_ctl DEL failed for fd " << reg->fd
+      << "; was it closed while registered?";
+  reg->registered = false;
+  reg->epoll_events = 0;
 }
 
-void EpollImpl::ScrubRetiredRegistrations() {
-  ABSL_CHECK_EQ(dispatch_depth_, 0);
-  while (FdRegistration *reg = retired_.Pop()) {
-    reg->Reset();
-    (reg->pooled ? raw_free_list_ : legacy_free_list_).Push(reg);
-  }
-  // No trimming and no free(): all_ owns every registration for this impl's
-  // lifetime, so each free list only ever grows to its peak concurrent fd
-  // count and hands the same objects back out.  Giving surplus back with
-  // delete would put a free() inside the caller's realtime section.
-}
-
-void EpollImpl::Run() {
-  run_ = true;
-  // Blocking polls while running, non-blocking once Quit() lands -- see
-  // IoUringImpl::Run(), which this mirrors, and Aio::Run() for the contract.
-  while (true) {
-    if (!Poll(should_run())) {
-      // Nothing was processed.  Once a shutdown has been requested, that means
-      // the queue is drained and we are done.  While still running, it was a
-      // blocking Poll() that only did internal work, such as the wakeup read,
-      // so we go back to waiting.  (EINTR is absorbed inside Poll().)
-      if (!should_run()) {
-        break;
-      }
-    }
-  }
-  // run_ first: should_run() must not still report "running" once Run() has
-  // returned.  A Quit() landing between these two stores is cleared along with
-  // them, which cannot hang anything -- the loop has already stopped -- it only
-  // means the next Run() won't start out draining.
-  run_ = false;
-  quit_requested_ = false;
-}
-
-bool EpollImpl::should_run() const { return run_ && !quit_requested_; }
-
-void EpollImpl::HandleFork() {
-  // Shared rule; see Aio::Impl::CheckNoRawRequestsInFlightOnFork().  Here
-  // the failure it prevents is a duplicated write: this backend's
-  // registrations survive a fork, so the re-arm below would hand the child
-  // work the parent is still doing.
-  CheckNoRawRequestsInFlightOnFork();
-  // Before the close() and epoll_create1() below; see
-  // CheckRegisteredFdOpenAfterFork().  The loop's own descriptors first, as in
-  // IoUringImpl::HandleFork(), so a child that closed everything is told about
-  // the ones it cannot forget.  live_ holds the timers' and the receiver's as
-  // ordinary registrations.  Checked directly, one pass each: once the loop's
-  // own are known open, the pass over live_ finds them open too and only the
-  // caller's can fail it.
-  CheckOwnFdOpenAfterFork(event_fd_.fd(), "wakeup");
-  if (receiver_ != nullptr && receiver_->fd() >= 0) {
-    CheckOwnFdOpenAfterFork(receiver_->fd(), "thread-signal receiver");
-  }
-  for (Aio::TimerState *state = active_timers_.front(); state != nullptr;
-       state = decltype(active_timers_)::Next(state)) {
-    CheckOwnFdOpenAfterFork(
-        static_cast<EpollTimerState *>(state)->timer_fd->fd(), "timer");
-  }
-  for (FdRegistration *reg : live_) {
-    CheckRegisteredFdOpenAfterFork(reg->fd);
-  }
-
+void EpollImpl::RecreateKernelState() {
+  // The inherited epoll instance is shared with the parent rather than
+  // copied, so both processes polling it would steal each other's events.
   if (epoll_fd_ >= 0) {
     close(epoll_fd_);
   }
   epoll_fd_ = epoll_create1(EPOLL_CLOEXEC);
   ABSL_PCHECK(epoll_fd_ >= 0) << "Failed to recreate epoll instance";
+}
 
-  for (FdRegistration *reg : live_) {
-    if (reg->registered) {
-      reg->registered = false;
-      UpdateEpoll(reg);
-    }
-  }
-
-  // Timerfds are inherited too, and a timerfd is an ordinary descriptor -- so
-  // without this the child's read() on firing eats the parent's expiration,
-  // and its Schedule()/Cancel()/~Timer re-arms or disarms the parent's timer.
-  // Same defect and the same fix as IoUringImpl::HandleFork(); see
-  // TimerSurvivesAChildConsumingItTest.
+void EpollImpl::AfterForkReArm() {
+  // Timerfds are inherited too, and a timerfd is an ordinary descriptor --
+  // so without this the child's read() on firing eats the parent's
+  // expiration, and its Schedule()/Cancel()/~Timer re-arms or disarms the
+  // parent's timer.  Same defect and the same fix as IoUringImpl::HandleFork();
+  // see TimerSurvivesAChildConsumingItTest.
   //
-  // After the re-arm loop, not before: registering the replacement fd arms it
-  // on the new epoll instance immediately, and the blanket re-arm would then
-  // try to add it a second time ("epoll_ctl ADD failed: File exists").
-  // Everything else in the table is stale from the old instance and genuinely
-  // does need that re-add.
+  // After ReArmAllRegistrations(), not before: registering the replacement
+  // fd arms it on the new epoll instance immediately, and the blanket re-arm
+  // would then try to add it a second time ("epoll_ctl ADD failed: File
+  // exists").  Everything else in the table is stale from the old instance
+  // and genuinely does need that re-add.
   for (Aio::TimerState *state = active_timers_.front(); state != nullptr;
        state = decltype(active_timers_)::Next(state)) {
     static_cast<EpollTimerState *>(state)->ReplaceFdAfterFork();
@@ -3940,408 +3240,56 @@ void EpollImpl::HandleFork() {
   // the timerfds above have: either process's read consumes writes meant for
   // the other, so a Quit() can leave the other side blocked in Poll().
   //
-  // Nothing to remove first, unlike the timerfds: wakeup_reg_ is not in
-  // live_, so the re-arm loop above never added the old fd to the new epoll
-  // instance, and the old instance is already closed.
+  // DeleteFd() before replacing it, for the reason spelled out in
+  // EpollTimerState::ReplaceFdAfterFork(): ReArmAllRegistrations() has just
+  // re-added this fd to the new epoll instance, and closing it would not
+  // detach it -- the parent still holds a descriptor for the same open file
+  // description, so the registration would linger pointing at a released
+  // FdRegistration.
+  DeleteFd(event_fd_.fd());
   event_fd_.Recreate();
-  RegisterWakeup();
+  OnInternalReadable(event_fd_.fd(), [this]() { event_fd_.Drain(); });
 }
 
-void EpollImpl::CheckForFork() {
-  size_t current_fork_count = global_fork_count.load(std::memory_order_relaxed);
-  if (last_fork_count_ != current_fork_count) {
-    // Record the new count *before* HandleFork(): it re-submits work
-    // through these same entry points (e.g. the wakeup read via
-    // AsyncRead()), so a count left stale would recurse forever.
-    last_fork_count_ = current_fork_count;
-    HandleFork();
-  }
-}
+internal::ReadinessBackend::WaitResult EpollImpl::WaitForOne(bool block,
+                                                             FdReady *out) {
+  const int timeout = block ? -1 : 0;
 
-bool EpollImpl::Poll(bool block) {
-  // Not reentrant, matching IoUringImpl::Poll().  in_poll_ covers the whole
-  // body below, the before-wait functions and the scrub included.
-  ABSL_CHECK(!in_poll_)
-      << "Aio::Poll() reentered from inside a completion callback, a "
-         "before-wait function, or a destructor the loop ran; wait by "
-         "returning to the event loop instead";
-  struct InPoll {
-    bool *in_poll;
-    explicit InPoll(bool *p) : in_poll(p) { *in_poll = true; }
-    ~InPoll() { *in_poll = false; }
-  } in_poll_guard(&in_poll_);
+  struct epoll_event event;
+  int num_events;
+  // EINTR while blocking is absorbed, per the contract on Aio::Poll();
+  // Quit()'s wakeup write ends the wait instead.
+  do {
+    num_events = epoll_wait(epoll_fd_, &event, 1, timeout);
+  } while (num_events == -1 && errno == EINTR && block);
 
-  CheckForFork();
-
-  bool processed;
-  {
-    struct DispatchDepth {
-      int *depth;
-      explicit DispatchDepth(int *d) : depth(d) { ++*depth; }
-      ~DispatchDepth() { --*depth; }
-    } dispatch_depth_guard(&dispatch_depth_);
-    processed = PollOnce(block);
-  }
-
-  // Reclaim what this Poll()'s callback retired (a callback that deleted its
-  // own fd), now that its frame has unwound -- at the end of the same
-  // dispatch, as IoUringImpl frees its parked legacy state.  Leaving it for
-  // the top of the next Poll() moved the free into whatever context that one
-  // ran in, which could be ScopedRealtime and trip the RT free check; here it
-  // stays with the dispatch whose callback passed Aio::DeleteFd()'s
-  // CheckNotRealtime().
-  ScrubRetiredRegistrations();
-  return processed;
-}
-
-bool EpollImpl::PollOnce(bool block) {
-  // Registering a before-wait function from inside one is disallowed --
-  // see IoUringImpl::BeforeWait().
-  in_before_wait_ = true;
-  for (const auto &fn : before_wait_functions_) {
-    fn();
-  }
-  in_before_wait_ = false;
-
-  bool processed = false;
-  HarvestedLegacyEvent harvested;
-  // Only go back to the kernel once everything already resolved has been
-  // delivered -- see the class comment.
-  if (ready_.empty()) {
-    processed = Harvest(block, &harvested);
-  }
-
-  // At most one callback per Poll() -- see Aio::Poll().  Only the legacy
-  // marker can pop without spending it (its fd may have gone quiet).
-  while (AsyncRequest *req = ready_.PopFront()) {
-    const QueueKind kind = Kind(req);
-    SetKind(req, QueueKind::kNone);
-    processed = true;
-    if (kind == QueueKind::kReadyLegacy) {
-      if (DispatchLegacyEvent(&harvested)) {
-        return true;
-      }
-      continue;
+  if (num_events == -1) {
+    if (errno == EINTR) {
+      return WaitResult::kNothing;
     }
-    // Only ever handed over once: the next legacy dispatch must ask epoll
-    // again, since this callback may delete or replace that fd.
-    harvested.reg = nullptr;
-    Completion completion;
-    completion.user_data = req->user_data;
-    if (kind == QueueKind::kReadyCanceled) {
-      completion.status = aos::MakeError("Canceled");
-      completion.result = 0;
-    } else if (State(req).link.result >= 0) {
-      completion.status = aos::Ok();
-      completion.result = State(req).link.result;
-    } else {
-      completion.status = aos::MakeError("epoll error");
-      completion.result = -State(req).link.result;
-    }
-    req->callback(completion, req->context);
-    return true;
-  }
-  return processed;
-}
-
-bool EpollImpl::Harvest(bool block, HarvestedLegacyEvent *harvested) {
-  bool processed = false;
-
-  // What submit and Cancel() queued since the last Poll(), resolved here
-  // rather than when queued, so `done` flips inside Poll() on every backend.
-  // The order is io_uring's for one submitted batch: first attempts and
-  // submit-time errors in submission order, then the cancels in theirs.
-  // io_uring completes the former inline while it submits the batch, and
-  // posts a canceled request's completion once the submit is done, so a
-  // cancel resolves after the batch's immediate completions, even ones
-  // submitted after it.
-  for (AsyncRequest *req = pending_.front(); req != nullptr;) {
-    AsyncRequest *const next = pending_.Next(req);
-    const QueueKind kind = Kind(req);
-    if (!IsPendingCancel(kind)) {
-      pending_.Remove(req);
-      SetKind(req, QueueKind::kNone);
-      if (IsPendingSubmit(kind)) {
-        // A first attempt that only armed epoll resolved nothing, so it does
-        // not count: Poll(false) right after an AsyncRead() on an empty pipe
-        // returns false, as io_uring's does, and Poll(true) goes on to wait.
-        processed |= StartRaw(req, kind == QueueKind::kPendingSubmitRead
-                                       ? Direction::kRead
-                                       : Direction::kWrite);
-      } else {
-        processed = true;
-        QueueReady(req, QueueKind::kReadyResult);
-      }
-    }
-    req = next;
-  }
-  while (AsyncRequest *req = pending_.PopFront()) {
-    const QueueKind kind = Kind(req);
-    SetKind(req, QueueKind::kNone);
-    processed = true;
-    // The claim Cancel() took is released now, when the request resolves.
-    // io_uring releases its at the terminal CQE, which the next Poll()
-    // drains -- the same moment.
-    if (auto *reg = static_cast<FdRegistration *>(State(req).epoll.ptr)) {
-      --reg->cancel_claims(kind == QueueKind::kPendingCancelRead
-                               ? Direction::kRead
-                               : Direction::kWrite);
-      SettleRawRegistration(reg);
-    }
-    QueueReady(req, QueueKind::kReadyCanceled);
-  }
-
-  // Anything already resolved has to be delivered without waiting on the
-  // kernel for more -- and a callbackless request resolved above counts,
-  // though it never reaches ready_: resolving it was the work.  After the
-  // first event, never wait: everything below is collecting what is already
-  // there.
-  //
-  // One event per epoll_wait(), as EPoll always read them, never a batch: a
-  // dequeued event is acted on before the next is read, so none can go stale
-  // behind a callback that closed or replaced its fd.  Level-triggered epoll
-  // rotates a reported fd to the back of its ready list, so asking again
-  // walks every ready fd fairly.
-  int timeout = (block && !processed) ? -1 : 0;
-  while (true) {
-    struct epoll_event event;
-    int num_events;
-    // EINTR while blocking is absorbed, per the contract on Aio::Poll();
-    // Quit()'s wakeup write ends the wait instead.
-    do {
-      num_events = epoll_wait(epoll_fd_, &event, 1, timeout);
-    } while (num_events == -1 && errno == EINTR && timeout != 0);
-    timeout = 0;
-    if (num_events == -1) {
-      if (errno == EINTR) {
-        return processed;
-      }
-      ABSL_PCHECK(num_events != -1);
-    }
-    if (num_events == 0) {
-      break;
-    }
-    processed = true;
-
-    auto *reg = static_cast<FdRegistration *>(event.data.ptr);
-    if (reg == &wakeup_reg_) {
-      // Internal work: neither delivered nor rationed.
-      event_fd_.Drain();
-      continue;
-    }
-    CheckLive(reg);
-    if (reg->async_only) {
-      // Do the I/O and keep collecting: that I/O can itself have readied
-      // another raw request (writing a pipe makes its read end readable),
-      // and io_uring completes both inside one submit.  No user code runs
-      // here, so nothing can close an fd underneath the next event.
-      if (!ServiceRaw(reg, event.events)) {
-        // Reported but not actually ready.  Stop rather than spin on it.
-        break;
-      }
-      continue;
-    }
-    // A legacy fd.  Running its handlers is the delivery itself, so it cannot
-    // be resolved early; a marker takes its place in line, and this event is
-    // handed to it directly if nothing runs in between.
-    SetKind(&legacy_marker_, QueueKind::kReadyLegacy);
-    ready_.PushBack(&legacy_marker_);
-    harvested->reg = reg;
-    harvested->events = event.events;
-    break;
-  }
-  return processed;
-}
-
-bool EpollImpl::DispatchLegacyEvent(HarvestedLegacyEvent *harvested) {
-  // The harvest's own event, when nothing has run since it was read: no
-  // callback can have deleted or replaced the fd, so asking again would only
-  // cost a syscall.
-  if (harvested->reg != nullptr) {
-    FdRegistration *reg = harvested->reg;
-    harvested->reg = nullptr;
-    RunLegacyHandlers(reg, harvested->events);
-    return true;
-  }
-  // Otherwise ask epoll which legacy fd is ready now.  One event at a time:
-  // level-triggered epoll rotates a reported fd to the back of its ready
-  // list, which is what keeps legacy fds fair against each other (the same
-  // argument as DrainLegacyEpoll()).  Raw and wakeup events met on the way
-  // are resolved as internal work, so this ends once nothing but legacy
-  // events can be left -- at most one pass per raw request, plus the wakeup.
-  while (true) {
-    struct epoll_event event;
-    int num_events;
-    do {
-      num_events = epoll_wait(epoll_fd_, &event, 1, 0);
-    } while (num_events == -1 && errno == EINTR);
     ABSL_PCHECK(num_events != -1);
-    if (num_events == 0) {
-      return false;
-    }
-    auto *reg = static_cast<FdRegistration *>(event.data.ptr);
-    if (reg == &wakeup_reg_) {
-      event_fd_.Drain();
-      continue;
-    }
-    CheckLive(reg);
-    if (reg->async_only) {
-      if (!ServiceRaw(reg, event.events)) {
-        // Reported but not actually ready.  Stop rather than spin on it;
-        // the legacy event, if any, is found next time.
-        return false;
-      }
-      continue;
-    }
-    RunLegacyHandlers(reg, event.events);
-    return true;
   }
-}
-
-void EpollImpl::RunLegacyHandlers(FdRegistration *reg, uint32_t got_events) {
-  uint32_t events = 0;
-  if (got_events & EPOLLIN) events |= kIn;
-  if (got_events & EPOLLPRI) events |= kPri;
-  if (got_events & EPOLLOUT) events |= kOut;
-  if (got_events & EPOLLERR) events |= kErr;
-
-  if (reg->events_fn) {
-    // OnEvents delivers everything, hangups included -- see the OnEvents()
-    // contract in aio.h.  SetEvents(fd, EPOLLHUP) is a supported way to
-    // watch for one (SetEventsUntranslatedMaskKeepsRegistration), which is
-    // why this does not follow EPoll here.
-    const bool terminal = (got_events & (EPOLLERR | EPOLLHUP)) != 0;
-    reg->events_fn(terminal ? (events | kErr) : events);
-    return;
+  if (num_events == 0) {
+    return WaitResult::kNothing;
   }
 
+  const uint32_t got_events = event.events;
+  out->reg = static_cast<internal::FdRegistration *>(event.data.ptr);
+  out->events = 0;
+  if (got_events & EPOLLIN) out->events |= kIn;
+  if (got_events & EPOLLPRI) out->events |= kPri;
+  if (got_events & EPOLLOUT) out->events |= kOut;
+  if (got_events & EPOLLERR) out->events |= kErr;
   // EPOLLHUP is absent from the translation above, as it was in EPoll: a
-  // hangup is not an error event.  One that nothing else carries is routed
-  // to a handler rather than dropped, and so is an error with no err_fn.
-  // See RouteHangupOrError().  The CHECKs
-  // below are EPoll::InOutEventData::DoCallbacks() verbatim, message text
-  // included -- callers depend on those semantics.  A callback that deletes
-  // its own fd tombstones reg->fd to -1 (Detach()), which ends the remaining
-  // handlers.
-  events = RouteHangupOrError(events, (got_events & EPOLLHUP) != 0, reg->events,
-                              static_cast<bool>(reg->err_fn));
-  if (events & kInEvents) {
-    ABSL_CHECK(reg->in_fn)
-        << ": No handler registered for input events on descriptor " << reg->fd
-        << ". Received events = 0x" << std::hex << events << std::dec;
-    reg->in_fn();
-  }
-  if (reg->fd != -1 && (events & kOutEvents)) {
-    ABSL_CHECK(reg->out_fn)
-        << ": No handler registered for output events on descriptor " << reg->fd
-        << ". Received events = 0x" << std::hex << events << std::dec;
-    reg->out_fn();
-  }
-  if (reg->fd != -1 && (events & kErrorEvents)) {
-    ABSL_CHECK(reg->err_fn)
-        << ": No handler registered for error events on descriptor " << reg->fd
-        << ". Received events = 0x" << std::hex << events << std::dec << ". "
-        << internal::GetSocketErrorStr(reg->fd);
-    reg->err_fn();
-  }
+  // hangup is not an error event.  It still reaches OnEvents, a raw
+  // AsyncRead/AsyncWrite, and a legacy handler when nothing else carries it,
+  // all through `terminal`.  An error with no err_fn goes to the subscribed
+  // handler too.  See RouteHangupOrError().
+  out->terminal = (got_events & (EPOLLERR | EPOLLHUP)) != 0;
+  return WaitResult::kFdReady;
 }
 
-void EpollImpl::Quit() {
-  // Already asked to stop.  Bail out rather than re-arming the wakeup: once
-  // Run() is draining it polls with a zero timeout, so a Quit() called from a
-  // BeforeWait callback (or any other per-Poll path) would refill the queue
-  // every time around and the drain would never finish.  This is the 2021
-  // EPoll::Quit() guard -- f74daa655, "Make EPoll actually return from Run even
-  // if you call Quit repeatedly" -- which the drain has always needed.
-  //
-  // Suppressing the wakeup is safe: quit_requested_ is only cleared by Run() on
-  // its way out, so while it is set the loop has either already been woken or
-  // is in the non-blocking drain and cannot block again.
-  if (quit_requested_) {
-    return;
-  }
-
-  quit_requested_ = true;
-  run_ = false;
-  Wakeup();
-}
-
-void EpollImpl::Wakeup() { event_fd_.Write(); }
-
-void EpollImpl::QueuePending(AsyncRequest *request, QueueKind kind) {
-  SetKind(request, kind);
-  pending_.PushBack(request);
-}
-
-void EpollImpl::QueueReady(AsyncRequest *request, QueueKind kind) {
-  request->done = true;
-  // Nothing to deliver, so resolving it is the end of it, as io_uring never
-  // queues a callbackless CQE for dispatch.  Once `done` is set the caller
-  // may free it, so it must not be left on ready_ for a later Poll() to pop.
-  if (!request->callback) {
-    return;
-  }
-  SetKind(request, kind);
-  ready_.PushBack(request);
-}
-
-// A request may only be armed once at a time, and "armed" lasts until its
-// callback has run: resolved-but-undelivered still counts, since the
-// callback is on its way.  aio.h's constraint 2 lets a request outlive the
-// Aio it was armed on, so the request's own state cannot answer this -- a
-// request left behind by a destroyed Aio can carry any `done` and any
-// link.queued.  Ask this loop instead, the same way
-// IoUringImpl::ClearStaleRawState() asks raw_in_flight_.
-//
-// The per-fd "Duplicate AsyncRead on fd" check catches re-arming on the *same*
-// fd.  This is the cross-fd case, and the queued cases: a request Cancel()ed
-// or failed at submit whose completion has not been delivered.  Re-arming
-// one of those used to deliver two callbacks for one request -- Canceled,
-// then the new result -- and if the caller freed the request in the first,
-// as it may, the second read freed memory.
-//
-// Walks only when the request's own state says it might be ours, so a fresh
-// or delivered request never walks anything.
-void EpollImpl::CheckNotAlreadyInFlight(AsyncRequest *request) const {
-  constexpr const char *kMessage = internal::kRequestStillInFlight;
-  const QueueKind kind = Kind(request);
-  if (IsPending(kind)) {
-    ABSL_CHECK(!ListContains(pending_, request)) << kMessage;
-  } else if (IsReady(kind)) {
-    ABSL_CHECK(!ListContains(ready_, request)) << kMessage;
-  }
-  if (!request->done) {
-    for (FdRegistration *reg : live_) {
-      ABSL_CHECK(reg->read_req != request && reg->write_req != request)
-          << kMessage;
-    }
-  }
-}
-
-bool EpollImpl::HasRawRequestsInFlight() const {
-  for (FdRegistration *reg : live_) {
-    // No carve-out for the loop's own wakeup: it is not in live_ at all.
-    if (reg->read_req != nullptr) {
-      return true;
-    }
-    if (reg->write_req != nullptr) {
-      return true;
-    }
-  }
-  // A raw request stays in flight until its callback has run, so one that
-  // has resolved but is still queued counts too: a submit-time result or a
-  // cancel on pending_, or a result on ready_.  The legacy marker is not a
-  // request.  Only reached on the fork path.
-  for (const auto *queue : {&pending_, &ready_}) {
-    for (AsyncRequest *req = queue->front(); req != nullptr;
-         req = std::remove_pointer_t<decltype(queue)>::Next(req)) {
-      if (Kind(req) != QueueKind::kReadyLegacy) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
+void EpollImpl::WakeLoop() { event_fd_.Write(); }
 
 // Non-blocking per call, without touching the fd's flags: RWF_NOWAIT makes
 // this one read or write return EAGAIN instead of sleeping, and the file
@@ -4366,8 +3314,8 @@ bool EpollImpl::HasRawRequestsInFlight() const {
 // 0 reads as end of file.  Every fd there is treated like one that refused
 // it: a regular file or block device is unpollable, anything else is made
 // O_NONBLOCK.
-ssize_t EpollImpl::DoRawIo(FdRegistration *reg, Direction direction, void *data,
-                           size_t size) {
+ssize_t EpollImpl::DoRawIo(internal::FdRegistration *reg, Direction direction,
+                           void *data, size_t size) {
   const int fd = reg->fd;
   if (size == 0) {
     // An empty request goes where io_uring's does, as far as userspace can
@@ -4403,7 +3351,8 @@ ssize_t EpollImpl::DoRawIo(FdRegistration *reg, Direction direction, void *data,
     if (fstat(fd, &st) == 0 && (S_ISREG(st.st_mode) || S_ISBLK(st.st_mode))) {
       reg->unpollable = true;
     } else {
-      FallBackToNonBlocking(reg);
+      reg->nowait_unsupported = true;
+      internal::SetNonBlocking(fd);
     }
   }
   if (!reg->unpollable && !reg->nowait_unsupported) {
@@ -4421,422 +3370,12 @@ ssize_t EpollImpl::DoRawIo(FdRegistration *reg, Direction direction, void *data,
       }
       reg->unpollable = true;
     } else {
-      FallBackToNonBlocking(reg);
+      reg->nowait_unsupported = true;
+      internal::SetNonBlocking(fd);
     }
   }
   return direction == Direction::kRead ? readv(fd, &iov, 1)
                                        : writev(fd, &iov, 1);
-}
-
-void EpollImpl::FallBackToNonBlocking(FdRegistration *reg) {
-  const int fd = reg->fd;
-  reg->nowait_unsupported = true;
-  const int flags = fcntl(fd, F_GETFL);
-  ABSL_PCHECK(flags != -1) << "fcntl(F_GETFL) failed for fd " << fd;
-  if ((flags & O_NONBLOCK) == 0) {
-    ABSL_PCHECK(fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0)
-        << "fcntl(F_SETFL, O_NONBLOCK) failed for fd " << fd;
-  }
-}
-
-void EpollImpl::AsyncRead(FileDescriptor fd, std::span<char> buffer,
-                          AsyncRequest *request) {
-  CheckForFork();
-  SubmitRaw(fd, buffer.data(), buffer.size(), request, Direction::kRead);
-}
-
-void EpollImpl::AsyncWrite(FileDescriptor fd, std::span<const char> buffer,
-                           AsyncRequest *request) {
-  CheckForFork();
-  SubmitRaw(fd, const_cast<char *>(buffer.data()), buffer.size(), request,
-            Direction::kWrite);
-}
-
-void EpollImpl::SubmitRaw(FileDescriptor fd, void *data, size_t size,
-                          AsyncRequest *request, Direction direction) {
-  const bool is_read = direction == Direction::kRead;
-  CheckNotAlreadyInFlight(request);
-  // Cleared here rather than trusted: aio.h's constraint 2 lets a request
-  // outlive the Aio it was armed on, so it can arrive still marked as queued
-  // on a list belonging to an instance that is gone.  Same staleness, and the
-  // same resolve-at-next-arm answer, as ClearStaleRawState().
-  SetKind(request, QueueKind::kNone);
-  request->done = false;
-  if (fd < 0) {
-    State(request).link.result = -EBADF;
-    QueuePending(request, QueueKind::kPendingResult);
-    return;
-  }
-
-  FdRegistration *reg = GetActiveRegistration(fd);
-  if (reg != nullptr) {
-    ABSL_CHECK(reg->events_fn == nullptr)
-        << "Cannot mix OnEvents and AsyncRead/AsyncWrite on fd " << fd;
-    if (is_read) {
-      ABSL_CHECK(reg->read_req == nullptr)
-          << "Duplicate AsyncRead on fd " << fd;
-      ABSL_CHECK(reg->in_fn == nullptr)
-          << "Cannot mix OnReadable and AsyncRead on fd " << fd;
-    } else {
-      ABSL_CHECK(reg->write_req == nullptr)
-          << "Duplicate AsyncWrite on fd " << fd;
-      ABSL_CHECK(reg->out_fn == nullptr)
-          << "Cannot mix OnWritable and AsyncWrite on fd " << fd;
-    }
-    // Legacy handlers and raw requests are exclusive on an fd, in both
-    // directions.  The specific checks above name the direction that
-    // collides; this catches the cross-direction pairing.
-    ABSL_CHECK(reg->async_only)
-        << "Cannot mix legacy handlers and AsyncRead/AsyncWrite on fd " << fd;
-  } else {
-    // From the pool, or the heap if it has run dry.  The fallback keeps an
-    // unusually large fd count working rather than turning it into a CHECK;
-    // on a realtime thread the malloc hook is what objects, which is the
-    // right place for that to surface.
-    reg = raw_free_list_.Pop();
-    if (reg == nullptr) {
-      reg = new FdRegistration();
-      reg->pooled = true;
-      all_.Push(reg);
-    }
-    reg->fd = fd;
-    reg->async_only = true;
-    live_.Insert(reg);
-  }
-  reg->slot(direction) = request;
-  State(request).epoll.ptr = data;
-  State(request).epoll.size = size;
-  // No I/O and no epoll_ctl() here: the first attempt is the harvest's, in
-  // submission order with every other queued outcome -- see StartRaw().
-  State(request).link.result = fd;
-  QueuePending(request, is_read ? QueueKind::kPendingSubmitRead
-                                : QueueKind::kPendingSubmitWrite);
-}
-
-bool EpollImpl::StartRaw(AsyncRequest *request, Direction direction) {
-  FdRegistration *reg = GetActiveRegistration(State(request).link.result);
-  ABSL_CHECK(reg != nullptr && reg->slot(direction) == request);
-  if (TryRawIo(reg, direction)) {
-    return true;
-  }
-  // EAGAIN: wait for readiness.
-  if (!UpdateEpoll(reg)) {
-    // The kernel refused to watch it.  Deliver the errno as the error
-    // completion aio.h promises instead of aborting.
-    reg->slot(direction) = nullptr;
-    State(request).link.result = -reg->registration_errno;
-    reg->registration_errno = 0;
-    QueueReady(request, QueueKind::kReadyResult);
-    SettleRawRegistration(reg);
-    return true;
-  }
-  if (reg->unpollable) {
-    // A regular file, found by the ADD above: nothing to wait for, so the
-    // I/O runs now, blocking -- see DoRawIo().
-    ABSL_CHECK(TryRawIo(reg, direction));
-    return true;
-  }
-  return false;
-}
-
-bool EpollImpl::TryRawIo(FdRegistration *reg, Direction direction) {
-  AsyncRequest *req = reg->slot(direction);
-  const ssize_t res =
-      DoRawIo(reg, direction, State(req).epoll.ptr, State(req).epoll.size);
-  if (res < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-    return false;
-  }
-  // Before any epoll_ctl below can clobber it.
-  const int io_errno = errno;
-  reg->slot(direction) = nullptr;
-  State(req).link.result = res >= 0 ? static_cast<int32_t>(res) : -io_errno;
-  QueueReady(req, QueueKind::kReadyResult);
-  SettleRawRegistration(reg);
-  return true;
-}
-
-bool EpollImpl::ServiceRaw(FdRegistration *reg, uint32_t got_events) {
-  // A raw request observes a terminal condition by running: a pending read
-  // only sees EOF from its own read(), and closing an empty pipe's write end
-  // raises EPOLLHUP with no EPOLLIN.  So a hangup or error is readiness for
-  // whichever requests are waiting.
-  //
-  // That assumes the fd's socket error queue is not in use.  An unread
-  // IP_RECVERR or SO_TIMESTAMPING entry keeps EPOLLERR set while read()
-  // still returns EAGAIN, so every Poll() would wake for it and resolve
-  // nothing.  Only recvmsg(MSG_ERRQUEUE) clears it, which no raw request
-  // issues.
-  const bool terminal = (got_events & (EPOLLERR | EPOLLHUP)) != 0;
-  bool resolved = false;
-  if (Armed(reg, Direction::kRead) != nullptr &&
-      (terminal || (got_events & (EPOLLIN | EPOLLPRI)) != 0)) {
-    resolved |= TryRawIo(reg, Direction::kRead);
-  }
-  // The read may have retired the registration (Detach() tombstones fd).
-  if (reg->fd != -1 && Armed(reg, Direction::kWrite) != nullptr &&
-      (terminal || (got_events & EPOLLOUT) != 0)) {
-    resolved |= TryRawIo(reg, Direction::kWrite);
-  }
-  return resolved;
-}
-
-void EpollImpl::SettleRawRegistration(FdRegistration *reg) {
-  if (reg->idle()) {
-    if (reg->registered) {
-      // Strict, as DeleteFd() is.  EBADF, ENOENT or EPERM here means the
-      // caller closed the fd with a request armed on it, which the contract
-      // forbids: the kernel entry can outlive the close (a dup() or fork()
-      // keeps the file open) and would name this registration after it went
-      // back to the pool.
-      ABSL_PCHECK(epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, reg->fd, nullptr) == 0)
-          << "epoll_ctl DEL failed for fd " << reg->fd
-          << "; was it closed with a request armed on it?";
-    }
-    ReleaseRegistration(reg);
-    return;
-  }
-  // Only ever narrows or MODs what is already registered -- a request is
-  // added to epoll by StartRaw() alone -- so the refusal UpdateEpoll()
-  // reports cannot happen here.
-  ABSL_CHECK(UpdateEpoll(reg));
-}
-
-void EpollImpl::Cancel(AsyncRequest *request) {
-  CheckForFork();
-  // Resolved already -- done, or its outcome decided and waiting on pending_.
-  // The completion stands, like io_uring's cancel against an
-  // already-posted CQE.  Tested rather than removed and re-queued, which
-  // would reorder completions a caller can observe.
-  if (request->done) {
-    return;
-  }
-  // Armed on this loop means holding a registration's slot, from submit
-  // until it resolves.  The loop is asked rather than the request's own
-  // link.queued: a request left over from an Aio destroyed underneath it
-  // (aio.h's constraint 2) can carry any value there, naming a list that is
-  // gone.  Not found is not in flight here -- never armed, left over, or
-  // already resolved with its outcome on pending_ -- and, as io_uring's
-  // cancel of a user_data its ring does not hold, a no-op.
-  FdRegistration *found = nullptr;
-  Direction direction = Direction::kRead;
-  for (FdRegistration *reg : live_) {
-    if (reg->read_req == request) {
-      found = reg;
-      direction = Direction::kRead;
-      break;
-    }
-    if (reg->write_req == request) {
-      found = reg;
-      direction = Direction::kWrite;
-      break;
-    }
-  }
-  if (found == nullptr) {
-    return;
-  }
-  // Not attempted yet: it leaves pending_ and is canceled, as an io_uring
-  // cancel that reaches an SQE before it runs.
-  if (IsPendingSubmit(Kind(request))) {
-    pending_.Remove(request);
-    SetKind(request, QueueKind::kNone);
-  }
-
-  // The request must not also complete normally, so it leaves its slot now.
-  // The fd stays claimed until the Canceled completion resolves, and the
-  // registration stays alive to hold that claim -- see
-  // FdRegistration::cancel_claims_read.  The registration itself is what the
-  // resolve step releases, not the fd number, which may belong to someone
-  // else by then.
-  found->slot(direction) = nullptr;
-  ++found->cancel_claims(direction);
-  SettleRawRegistration(found);
-  State(request).epoll.ptr = found;
-  QueuePending(request, direction == Direction::kRead
-                            ? QueueKind::kPendingCancelRead
-                            : QueueKind::kPendingCancelWrite);
-}
-
-void EpollImpl::BeforeWait(std::function<void()> function) {
-  ABSL_CHECK(!in_before_wait_)
-      << ": BeforeWait() may not be called from a before-wait function";
-  before_wait_functions_.push_back(std::move(function));
-}
-
-void EpollImpl::OnReadable(FileDescriptor fd, std::function<void()> callback) {
-  CheckForFork();
-  FdRegistration *reg = GetOrCreateLegacyRegistration(fd);
-  ABSL_CHECK(!reg->events_fn)
-      << "Cannot mix OnEvents and OnReadable for fd " << fd;
-  ABSL_CHECK(reg->read_req == nullptr && reg->cancel_claims_read == 0)
-      << "Cannot mix OnReadable and AsyncRead on fd " << fd;
-  ABSL_CHECK(reg->write_req == nullptr && reg->cancel_claims_write == 0)
-      << "Cannot mix AsyncWrite and OnReadable on fd " << fd;
-  // Unconditional, as EPoll and IoUringImpl have it: a null `callback` is
-  // no exception, since it would silently clear the handler while leaving
-  // the events subscribed -- which Poll()'s dispatch then dies on.
-  ABSL_CHECK(!reg->in_fn) << "Duplicate in functions for " << fd;
-  reg->in_fn = std::move(callback);
-
-  reg->events |= kInEvents;
-  UpdateEpoll(reg);
-}
-
-void EpollImpl::OnError(FileDescriptor fd, std::function<void()> callback) {
-  CheckForFork();
-  FdRegistration *reg = GetOrCreateLegacyRegistration(fd);
-  ABSL_CHECK(!reg->events_fn)
-      << "Cannot mix OnEvents and OnError for fd " << fd;
-  ABSL_CHECK(reg->idle())
-      << "Cannot mix AsyncRead/AsyncWrite and OnError on fd " << fd;
-  // Unconditional -- see OnReadable().
-  ABSL_CHECK(!reg->err_fn) << "Duplicate error functions for " << fd;
-  reg->err_fn = std::move(callback);
-
-  reg->events |= kErrorEvents;
-  UpdateEpoll(reg);
-}
-
-void EpollImpl::OnWritable(FileDescriptor fd, std::function<void()> callback) {
-  CheckForFork();
-  FdRegistration *reg = GetOrCreateLegacyRegistration(fd);
-  ABSL_CHECK(!reg->events_fn)
-      << "Cannot mix OnEvents and OnWritable for fd " << fd;
-  ABSL_CHECK(reg->write_req == nullptr && reg->cancel_claims_write == 0)
-      << "Cannot mix OnWritable and AsyncWrite on fd " << fd;
-  ABSL_CHECK(reg->read_req == nullptr && reg->cancel_claims_read == 0)
-      << "Cannot mix AsyncRead and OnWritable on fd " << fd;
-  // Unconditional -- see OnReadable().
-  ABSL_CHECK(!reg->out_fn) << "Duplicate out functions for " << fd;
-  reg->out_fn = std::move(callback);
-
-  reg->events |= kOutEvents;
-  UpdateEpoll(reg);
-}
-
-void EpollImpl::OnEvents(FileDescriptor fd,
-                         std::function<void(uint32_t)> callback) {
-  CheckForFork();
-  FdRegistration *reg = GetOrCreateLegacyRegistration(fd);
-  ABSL_CHECK(reg->idle())
-      << "Cannot mix OnEvents and AsyncRead/AsyncWrite on fd " << fd;
-  ABSL_CHECK(!reg->in_fn && !reg->out_fn && !reg->err_fn)
-      << "May not replace OnEvents handlers for fd " << fd;
-  ABSL_CHECK(!reg->events_fn)
-      << "May not replace OnEvents handlers for fd " << fd;
-  reg->events_fn = std::move(callback);
-}
-
-void EpollImpl::DeleteFd(FileDescriptor fd) {
-  CheckForFork();
-  auto *reg = GetActiveRegistration(fd);
-  ABSL_CHECK(reg != nullptr) << "fd " << fd << " not found";
-  // Async-only registrations are not the caller's to delete.  DeleteFd()
-  // undoes an On*() registration; an fd carrying only AsyncRead/AsyncWrite
-  // has none, and releasing it here would drop the requests without ever
-  // completing them -- leaving req.done false forever, which aio.h's
-  // constraint 2 says the caller may then never free or reuse.  A silent
-  // hang, where io_uring gives a loud "fd not found" for the same sequence
-  // because its legacy state lives in a separate table.
-  //
-  // Raw requests are retired by completing or Cancel()ing them, which is
-  // what a caller wanting this fd gone should do.
-  ABSL_CHECK(!reg->async_only) << "fd " << fd << " not found";
-
-  if (reg->registered) {
-    // Strict, like EPoll::DoEpollCtl() and IoUringImpl::DeleteFd().  ENOENT
-    // means the fd isn't ours any more: it was closed, which silently took
-    // it out of the interest list, and the number may already belong to
-    // someone else.  Carrying on would hand this registration back to the
-    // pool while an epoll entry for a dup'd descriptor could still point at
-    // it.  ForgetClosedFd() is the API for an fd that is already closed.
-    ABSL_PCHECK(epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, nullptr) == 0)
-        << "epoll_ctl DEL failed for fd " << fd;
-  }
-
-  ReleaseRegistration(reg);
-}
-
-const char *EpollImpl::OwnFdName(FileDescriptor fd) {
-  if (fd == event_fd_.fd()) {
-    return "wakeup";
-  }
-  if (receiver_ != nullptr && fd == receiver_->fd()) {
-    return "thread-signal receiver";
-  }
-  for (Aio::TimerState *state = active_timers_.front(); state != nullptr;
-       state = decltype(active_timers_)::Next(state)) {
-    if (fd == static_cast<EpollTimerState *>(state)->timer_fd->fd()) {
-      return "timer";
-    }
-  }
-  return nullptr;
-}
-
-void EpollImpl::ForgetClosedFd(FileDescriptor fd) {
-  // live_ also holds the timers' and the receiver's own registrations, so
-  // finding fd there does not make it the caller's.  A number cannot be both:
-  // taking one the caller still has registered for an own descriptor dies at
-  // once (DieOwnFdStillRegistered()), so asking which it is settles it.
-  if (const char *owner = OwnFdName(fd)) {
-    DieForgettingOwnFd(fd, owner);
-  }
-  auto *reg = GetActiveRegistration(fd);
-  ABSL_CHECK(reg != nullptr) << "fd " << fd << " not found";
-  // Not the caller's to forget -- see DeleteFd().
-  ABSL_CHECK(!reg->async_only) << "fd " << fd << " not found";
-
-  ReleaseRegistration(reg);
-}
-
-void EpollImpl::EnableWritable(FileDescriptor fd) {
-  CheckForFork();
-  auto *reg = GetActiveRegistration(fd);
-  ABSL_CHECK(reg != nullptr) << "fd " << fd << " not found";
-  // A raw-only registration is not an fd the caller registered a handler on,
-  // so this is the same misuse io_uring reports as "fd not found" -- it looks
-  // in a table that only holds legacy state, while this one holds both.  Left
-  // through, it subscribes to EPOLLOUT with no out_fn to dispatch and crashes
-  // somewhere else, or evaporates when the async registration auto-retires.
-  ABSL_CHECK(!reg->async_only) << "fd " << fd << " not found";
-  ABSL_CHECK(!reg->events_fn)
-      << "EnableWritable is only for fds registered using OnWritable, not "
-         "OnEvents";
-
-  uint32_t new_events = reg->events | kOutEvents;
-  if (reg->events != new_events) {
-    reg->events = new_events;
-    UpdateEpoll(reg);
-  }
-}
-
-void EpollImpl::DisableWritable(FileDescriptor fd) {
-  CheckForFork();
-  auto *reg = GetActiveRegistration(fd);
-  ABSL_CHECK(reg != nullptr) << "fd " << fd << " not found";
-  // Same as EnableWritable() -- see there.
-  ABSL_CHECK(!reg->async_only) << "fd " << fd << " not found";
-  ABSL_CHECK(!reg->events_fn)
-      << "DisableWritable is only for fds registered using OnWritable, not "
-         "OnEvents";
-
-  uint32_t new_events = reg->events & ~kOutEvents;
-  if (reg->events != new_events) {
-    reg->events = new_events;
-    UpdateEpoll(reg);
-  }
-}
-
-void EpollImpl::SetEvents(FileDescriptor fd, uint32_t events) {
-  CheckForFork();
-  auto *reg = GetActiveRegistration(fd);
-  ABSL_CHECK(reg != nullptr) << "fd " << fd << " not found";
-  ABSL_CHECK(reg->events_fn)
-      << "SetEvents is only for fds registered using OnEvents";
-
-  if (reg->events != events) {
-    reg->events = events;
-    UpdateEpoll(reg);
-  }
 }
 
 void EpollImpl::RegisterThreadSignalReceiver(
@@ -4845,8 +3384,8 @@ void EpollImpl::RegisterThreadSignalReceiver(
   ABSL_CHECK(receiver_ == nullptr)
       << "Duplicate ThreadSignalReceiver registration: only one receiver "
          "may be active at a time (see Aio::RegisterThreadSignalReceiver)";
-  if (GetActiveRegistration(receiver->fd()) != nullptr) {
-    DieOwnFdStillRegistered(receiver->fd(), "thread-signal receiver");
+  if (registrations_.GetActive(receiver->fd()) != nullptr) {
+    internal::DieOwnFdStillRegistered(receiver->fd(), "thread-signal receiver");
   }
   receiver_ = receiver;
   OnReadable(receiver->fd(), [receiver, callback = std::move(callback)]() {
@@ -4879,6 +3418,32 @@ EpollTimerState::~EpollTimerState() {
   --impl_->active_timer_count_;
 }
 
+const char *EpollImpl::OwnFdName(FileDescriptor fd) {
+  if (receiver_ != nullptr && fd == receiver_->fd()) {
+    return "thread-signal receiver";
+  }
+  for (Aio::TimerState *state = active_timers_.front(); state != nullptr;
+       state = decltype(active_timers_)::Next(state)) {
+    if (fd == static_cast<EpollTimerState *>(state)->timer_fd->fd()) {
+      return "timer";
+    }
+  }
+  return internal::ReadinessBackend::OwnFdName(fd);
+}
+
+void EpollImpl::CheckOwnFdsOpenAfterFork() {
+  internal::ReadinessBackend::CheckOwnFdsOpenAfterFork();
+  if (receiver_ != nullptr && receiver_->fd() >= 0) {
+    internal::CheckOwnFdOpenAfterFork(receiver_->fd(),
+                                      "thread-signal receiver");
+  }
+  for (Aio::TimerState *state = active_timers_.front(); state != nullptr;
+       state = decltype(active_timers_)::Next(state)) {
+    internal::CheckOwnFdOpenAfterFork(
+        static_cast<EpollTimerState *>(state)->timer_fd->fd(), "timer");
+  }
+}
+
 void EpollTimerState::Initialize() {
   // The fork check before the timerfd exists, as IoUringTimerState does.  In a
   // child that closed a registered fd without forgetting it, the new timerfd
@@ -4886,12 +3451,12 @@ void EpollTimerState::Initialize() {
   // re-register the stale handler on the timer's fd.
   impl_->CheckForFork();
   timer_fd = std::make_unique<TimerFD>();
-  if (impl_->GetActiveRegistration(timer_fd->fd()) != nullptr) {
-    DieOwnFdStillRegistered(timer_fd->fd(), "timer");
+  if (impl_->registrations_.GetActive(timer_fd->fd()) != nullptr) {
+    internal::DieOwnFdStillRegistered(timer_fd->fd(), "timer");
   }
   request.done = true;
   // Listed only once it is fully built.  The fork check has already run, so
-  // HandleFork() never sees a timer whose fd is not registered yet.
+  // AfterForkReArm() never sees a timer whose fd is not registered yet.
   RegisterFd();
   impl_->active_timers_.PushBack(this);
 }
@@ -4929,9 +3494,9 @@ void EpollTimerState::RegisterFd() {
 
 void EpollTimerState::ReplaceFdAfterFork() {
   // DeleteFd(), not ForgetClosedFd(): this fd really is registered on the new
-  // epoll instance right now, because the re-arm loop in HandleFork() ran just
-  // before us and re-added the whole table, and it is still open until the
-  // TimerFD below replaces it.
+  // epoll instance right now, because ReArmAllRegistrations() ran just before
+  // us and re-added the whole table, and it is still open until the TimerFD
+  // below replaces it.
   //
   // Closing it would not clean the epoll set either.  A descriptor leaves an
   // epoll set once every descriptor naming the same open file description is
@@ -4992,7 +3557,7 @@ void EpollTimerState::Cancel(bool /*reap*/) {
   user_callback = nullptr;
 }
 
-bool EpollImpl::UpdateEpoll(FdRegistration *reg) {
+bool EpollImpl::UpdateRegistration(internal::FdRegistration *reg) {
   const FileDescriptor fd = reg->fd;
 
   const bool read_armed = Armed(reg, Direction::kRead) != nullptr;
@@ -5011,54 +3576,52 @@ bool EpollImpl::UpdateEpoll(FdRegistration *reg) {
   // only untranslated bits (e.g. a bare EPOLLHUP) keeps the fd registered
   // with an empty event set, which still delivers EPOLLERR/EPOLLHUP.
   if (!read_armed && !write_armed && reg->events == 0) {
+    // Same strictness as RemoveRegistration(), which this is.  A raw
+    // registration only gets here while a cancel claim or an unattempted
+    // request keeps it alive.
+    RemoveRegistration(reg);
+  } else {
+    struct epoll_event ev;
+    std::memset(&ev, 0, sizeof(ev));
+    ev.events = desired_events;
+    ev.data.ptr = reg;
     if (reg->registered) {
-      // Strict, like EPoll::DoEpollCtl(); see DeleteFd() and
-      // SettleRawRegistration().
-      ABSL_PCHECK(epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, nullptr) == 0)
-          << "epoll_ctl DEL failed for fd " << fd;
-      reg->registered = false;
-      reg->epoll_events = 0;
+      if (reg->epoll_events != desired_events) {
+        // Strict, as RemoveRegistration() is: failing means the fd was
+        // closed while registered.
+        ABSL_PCHECK(epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, fd, &ev) == 0)
+            << "epoll_ctl MOD failed for fd " << fd
+            << "; was it closed while registered?";
+        reg->epoll_events = desired_events;
+      }
+    } else {
+      int ret = epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &ev);
+      if (ret != 0 && errno == EPERM && reg->async_only) {
+        // EPERM means no wait queue -- a regular file, always ready.  Only
+        // tolerated for pure AsyncRead/AsyncWrite registrations, whose I/O
+        // ReadinessBackend::StartRaw() then does at once; a legacy
+        // registration would silently never fire, so that still dies on the
+        // PCHECK below.
+        reg->unpollable = true;
+        return true;
+      }
+      if (ret != 0 && reg->async_only) {
+        // The kernel refused to poll the fd.  aio.h documents an
+        // operational failure as an error completion carrying the errno, so
+        // a purely async registration's request gets one rather than the
+        // process dying.  (A closed fd never gets this far: its first
+        // attempt already answered EBADF.)
+        //
+        // A legacy registration has no request to complete, so it still
+        // dies below -- which is what EPoll has always done.
+        reg->registration_errno = errno;
+        return false;
+      }
+      ABSL_PCHECK(ret == 0) << "epoll_ctl ADD failed for fd " << fd;
+      reg->registered = true;
+      reg->epoll_events = desired_events;
     }
-    return true;
   }
-
-  struct epoll_event ev;
-  std::memset(&ev, 0, sizeof(ev));
-  ev.events = desired_events;
-  ev.data.ptr = reg;
-  if (reg->registered) {
-    if (reg->epoll_events == desired_events) {
-      return true;
-    }
-    ABSL_PCHECK(epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, fd, &ev) == 0)
-        << "epoll_ctl MOD failed for fd " << fd;
-    reg->epoll_events = desired_events;
-    return true;
-  }
-
-  const int ret = epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &ev);
-  if (ret != 0 && reg->async_only) {
-    if (errno == EPERM) {
-      // EPERM means no wait queue -- a regular file, always ready.  Only
-      // tolerated for raw registrations, whose I/O StartRaw() then does at
-      // once; a legacy registration would silently never fire, so that
-      // still dies below.
-      reg->unpollable = true;
-      return true;
-    }
-    // The kernel refused to poll the fd.  aio.h documents an operational
-    // failure as an error completion carrying the errno, so the request gets
-    // one rather than the process dying.  (A closed fd never gets this far:
-    // its first attempt already answered EBADF.)
-    //
-    // A legacy registration has no request to complete, so it still dies
-    // below -- which is what EPoll has always done.
-    reg->registration_errno = errno;
-    return false;
-  }
-  ABSL_PCHECK(ret == 0) << "epoll_ctl ADD failed for fd " << fd;
-  reg->registered = true;
-  reg->epoll_events = desired_events;
   return true;
 }
 
