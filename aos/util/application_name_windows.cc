@@ -2,7 +2,10 @@
 
 #include <windows.h>
 
+#include <algorithm>
+#include <cctype>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace aos {
@@ -29,7 +32,23 @@ std::string GetProgramName() {
 
   const std::string path(exe_path.begin(), exe_path.end());
   const size_t last_slash = path.find_last_of('\\');
-  return last_slash == std::string::npos ? path : path.substr(last_slash + 1);
+  std::string name =
+      last_slash == std::string::npos ? path : path.substr(last_slash + 1);
+
+  // Drop the ".exe", so an application is named the same thing here as it is
+  // everywhere else.  Configurations name applications without it, and the
+  // program name is what an event loop looks itself up by, so leaving it on
+  // means a binary can't find its own entry in the config.
+  constexpr std::string_view kExeSuffix = ".exe";
+  if (name.size() > kExeSuffix.size() &&
+      std::equal(kExeSuffix.rbegin(), kExeSuffix.rend(), name.rbegin(),
+                 [](char a, char b) {
+                   return std::tolower(static_cast<unsigned char>(a)) ==
+                          std::tolower(static_cast<unsigned char>(b));
+                 })) {
+    name.resize(name.size() - kExeSuffix.size());
+  }
+  return name;
 }
 
 }  // namespace aos
