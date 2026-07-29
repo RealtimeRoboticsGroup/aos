@@ -99,7 +99,8 @@ TEST(LocklessQueueTest, Death) {
         // not crash with them.  We know what the futexes are, and what the tid
         // of the corresponding holder is.  So go pretend to be the kernel and
         // fix the futex.
-        PretendThatOwnerIsDeadForTesting(&memory->queue_setup_lock, tid.Get());
+        mutex_pretend_owner_died_for_testing(&memory->queue_setup_lock,
+                                             tid.Get());
 
         for (size_t i = 0; i < config.num_senders; ++i) {
           if (memory->GetSender(i)->ownership_tracker.IsHeldBy(tid.Get())) {

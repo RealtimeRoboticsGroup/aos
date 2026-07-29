@@ -81,11 +81,29 @@ void mutex_unlock(struct aos_mutex *m);
 // Does not block waiting for the mutex.
 int mutex_trylock(struct aos_mutex *m) __attribute__((warn_unused_result));
 #ifdef __cplusplus
-// Returns whether or not the mutex is locked by this thread.
-// There aren't very many valid uses for this function; the main ones are
-// checking mutexes as they are destroyed to catch problems with that early and
-// stack-based recursive mutex locking.
 bool mutex_islocked(const aos_mutex *m);
+
+// Returns the thread ID (TID) of the current owner, or 0 if unclaimed.
+// Under Windows, this returns the Windows Thread ID.
+uint32_t mutex_owner(const aos_mutex *m);
+
+// Returns whether the mutex's owner is dead (robust mutex feature).
+bool mutex_owner_is_dead(const aos_mutex *m);
+
+// Returns the thread ID (TID) of the owner encoded in a futex value.
+//
+// This only decodes the provided value; it does not read shared memory. The
+// value must have been read from the futex with an atomic load — do not pass
+// m->futex directly.
+uint32_t futex_owner(aos_futex futex);
+
+// Returns whether the owner encoded in a futex value is dead. The same atomic
+// load requirement as futex_owner applies to the provided value.
+bool futex_owner_is_dead(aos_futex futex);
+
+// Simulates a thread crash/death by marking the mutex as owner-died.
+// Returns true if the owner matched the provided tid.
+bool mutex_pretend_owner_died_for_testing(aos_mutex *m, uint32_t tid);
 
 // The death_notification_ functions are designed for one thread to wait for
 // another thread (possibly in a different process) to end. This can mean
