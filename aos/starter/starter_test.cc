@@ -208,6 +208,15 @@ TEST_P(StarterdConfigParamTest, MultiNodeStartStopTest) {
 
   watcher_loop.Run();
   test_done_ = true;
+  // The success handler is the only path that exits client_loop from inside
+  // it.  On the failure paths (a command timing out under load, or
+  // watcher_loop's failsafe timer expiring) nothing else stops it, and the
+  // join below blocks forever -- caught live by the hang watchdog on a
+  // loaded CI machine, presenting as one thread parked in
+  // ShmEventLoop::Run() and main parked in join.  Exit() is safe to call
+  // from this thread (it is atomics plus Aio::Quit(), which is documented
+  // thread-safe), and is a no-op if the success handler already exited.
+  client_loop.Exit();
   client_thread.join();
   ASSERT_TRUE(success);
 }
