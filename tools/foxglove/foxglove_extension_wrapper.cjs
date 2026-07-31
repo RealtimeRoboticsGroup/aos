@@ -22,17 +22,17 @@ const fakeNpm = path.join(
   __dirname,
   isWin
     ? "foxglove_extension_wrapper_npm_/foxglove_extension_wrapper_npm.bat"
-    : "foxglove_extension_wrapper_npm_/foxglove_extension_wrapper_npm"
+    : "foxglove_extension_wrapper_npm_/foxglove_extension_wrapper_npm",
 );
 
 const tempBinDir = fs.mkdtempSync(
-  path.join(tmpdir(), "foxglove_extension_wrapper-tmp-")
+  path.join(tmpdir(), "foxglove_extension_wrapper-tmp-"),
 );
 
 if (isWin) {
   fs.writeFileSync(
     path.join(tempBinDir, "npm.bat"),
-    `@echo off\r\ncall "${fakeNpm}" %*\r\n`
+    `@echo off\r\ncall "${fakeNpm}" %*\r\n`,
   );
 } else {
   fs.symlinkSync(fakeNpm, path.join(tempBinDir, "npm"));
@@ -55,7 +55,7 @@ const relativePath = getRelativePath(bazel_package);
 let foxgloveExtensionPath = path.join(
   relativePath,
   process.env.BAZEL_REPOSITORY +
-    `tools/foxglove/foxglove_extension_/foxglove_extension`
+    `tools/foxglove/foxglove_extension_/foxglove_extension`,
 );
 if (isWin) {
   foxgloveExtensionPath += ".bat";

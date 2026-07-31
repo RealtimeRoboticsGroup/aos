@@ -17,13 +17,13 @@ export function plotImu(conn: Connection, element: Element): void {
 
   const drivetrainStatus = aosPlotter.addMessageSource(
     '/drivetrain',
-    'frc.control_loops.drivetrain.Status'
+    'frc.control_loops.drivetrain.Status',
   );
 
   const imu = aosPlotter.addRawMessageSource(
     '/localizer',
     'frc.IMUValuesBatch',
-    new ImuMessageHandler(conn.getSchema('frc.IMUValuesBatch'))
+    new ImuMessageHandler(conn.getSchema('frc.IMUValuesBatch')),
   );
 
   const accelX = accelPlot.addMessageLine(imu, ['accelerometer_x']);

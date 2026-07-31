@@ -113,6 +113,6 @@ export function plotData(conn: Connection, parentDiv: Element) {
         plotSelect.value = name;
         plotSelect.dispatchEvent(new Event('input'));
       }
-    }
+    },
   );
 }

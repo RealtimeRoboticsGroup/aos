@@ -22,19 +22,19 @@ export function plotSpline(conn: Connection, element: Element): void {
 
   const goal = aosPlotter.addMessageSource(
     '/drivetrain',
-    'frc.control_loops.drivetrain.Goal'
+    'frc.control_loops.drivetrain.Goal',
   );
   const position = aosPlotter.addMessageSource(
     '/drivetrain',
-    'frc.control_loops.drivetrain.Position'
+    'frc.control_loops.drivetrain.Position',
   );
   const status = aosPlotter.addMessageSource(
     '/drivetrain',
-    'frc.control_loops.drivetrain.Status'
+    'frc.control_loops.drivetrain.Status',
   );
   const output = aosPlotter.addMessageSource(
     '/drivetrain',
-    'frc.control_loops.drivetrain.Output'
+    'frc.control_loops.drivetrain.Output',
   );
 
   let currentTop = 0;

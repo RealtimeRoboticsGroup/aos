@@ -334,6 +334,7 @@ npm.npm_translate_lock(
     npmrc = "//:.npmrc",
     pnpm_lock = "//:pnpm-lock.yaml",
     quiet = False,
+    # Flip this flag when adding/upgrading a package in the package.json
     update_pnpm_lock = False,
     verify_node_modules_ignored = "//:.bazelignore",
 )

@@ -45,7 +45,7 @@ class PlotState {
   private initialized = false;
   constructor(
     parentDiv: HTMLElement,
-    private readonly initializer: (conn: Connection, element: Element) => void
+    private readonly initializer: (conn: Connection, element: Element) => void,
   ) {
     this.div = document.createElement('div');
     parentDiv.appendChild(this.div);
@@ -125,7 +125,7 @@ conn.addConfigHandler((config: Configuration) => {
     window.history.replaceState(
       null,
       null,
-      '?plot=' + encodeURIComponent(plotSelect.value)
+      '?plot=' + encodeURIComponent(plotSelect.value),
     );
     if (reloadOnChange) {
       window.location.reload();

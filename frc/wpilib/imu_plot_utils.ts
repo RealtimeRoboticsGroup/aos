@@ -29,7 +29,7 @@ export class ImuMessageHandler extends MessageHandler {
         message.bb,
         this.schema,
         'frc.IMUValues',
-        message.bb_pos
+        message.bb_pos,
       );
       if (this.parser.readScalar(table, 'monotonic_timestamp_ns') == null) {
         console.log('Ignoring unpopulated IMU values: ');
@@ -44,9 +44,9 @@ export class ImuMessageHandler extends MessageHandler {
           Math.hypot(
             message.accelerometerX(),
             message.accelerometerY(),
-            message.accelerometerZ()
-          )
-        )
+            message.accelerometerZ(),
+          ),
+        ),
       );
     }
   }
@@ -82,7 +82,7 @@ export class ImuMessageHandler extends MessageHandler {
       return this.movingAverageCentered(
         this.getField([
           field[0].slice(0, field[0].length - filtered_suffix.length),
-        ])
+        ]),
       );
     } else {
       return super.getField(field);

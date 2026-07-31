@@ -23,32 +23,32 @@ export function plotDrivetrain(conn: Connection, element: Element): void {
 
   const goal = aosPlotter.addMessageSource(
     '/drivetrain',
-    'frc.control_loops.drivetrain.Goal'
+    'frc.control_loops.drivetrain.Goal',
   );
   const position = aosPlotter.addMessageSource(
     '/drivetrain',
-    'frc.control_loops.drivetrain.Position'
+    'frc.control_loops.drivetrain.Position',
   );
   const status = aosPlotter.addMessageSource(
     '/drivetrain',
-    'frc.control_loops.drivetrain.Status'
+    'frc.control_loops.drivetrain.Status',
   );
   const localizerOuput = aosPlotter.addMessageSource(
     '/localizer',
-    'frc.controls.LocalizerOutput'
+    'frc.controls.LocalizerOutput',
   );
   const output = aosPlotter.addMessageSource(
     '/drivetrain',
-    'frc.control_loops.drivetrain.Output'
+    'frc.control_loops.drivetrain.Output',
   );
   const gyroReading = aosPlotter.addMessageSource(
     '/drivetrain',
-    'frc.sensors.GyroReading'
+    'frc.sensors.GyroReading',
   );
   const imu = aosPlotter.addRawMessageSource(
     '/drivetrain',
     'frc.IMUValuesBatch',
-    new ImuMessageHandler(conn.getSchema('frc.IMUValuesBatch'))
+    new ImuMessageHandler(conn.getSchema('frc.IMUValuesBatch')),
   );
 
   // Polydrivetrain (teleop control) plots
@@ -78,7 +78,7 @@ export function plotDrivetrain(conn: Connection, element: Element): void {
     .getAxisLabels()
     .setTitle(
       'Drivetrain Mode [POLYDRIVE, MOTION_PROFILE, ' +
-        'SPLINE_FOLLOWER, LINE_FOLLOWER]'
+        'SPLINE_FOLLOWER, LINE_FOLLOWER]',
     );
   modePlot.plot.getAxisLabels().setXLabel(TIME);
   modePlot.plot.getAxisLabels().setYLabel('ControllerType');

@@ -56,7 +56,7 @@ export function plotDemo(conn: Connection, parentDiv: Element): void {
   {
     const timingReport = aosPlotter.addMessageSource(
       '/aos',
-      'aos.timing.Report'
+      'aos.timing.Report',
     );
     // Set up a plot that just shows some arbitrary timing data.
     const timingPlot = aosPlotter.addPlot(parentDiv);

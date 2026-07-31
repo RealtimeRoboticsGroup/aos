@@ -48,13 +48,13 @@ export class FieldHandler {
   private theta: HTMLElement = document.getElementById('theta') as HTMLElement;
 
   private imagesAcceptedCounter: HTMLElement = document.getElementById(
-    'images_accepted'
+    'images_accepted',
   ) as HTMLElement;
   private headingResetCounter: HTMLElement = document.getElementById(
-    'heading_resets'
+    'heading_resets',
   ) as HTMLElement;
   private chassisSpeedsCounter: HTMLElement = document.getElementById(
-    'chassis_speeds_count'
+    'chassis_speeds_count',
   ) as HTMLElement;
   // HTML elements for rejection reasons for individual cameras. Indices
   // corresponding to RejectionReason enum values will be for those reasons. The
@@ -62,7 +62,7 @@ export class FieldHandler {
   // instead of the localizer.
   private rejectionReasonCells: HTMLElement[][] = [];
   private messageBridgeDiv: HTMLElement = document.getElementById(
-    'message_bridge_status'
+    'message_bridge_status',
   ) as HTMLElement;
   private clientStatuses = new Map<string, HTMLElement>();
   private serverStatuses = new Map<string, HTMLElement>();
@@ -70,7 +70,7 @@ export class FieldHandler {
   private fieldImage: HTMLImageElement = new Image();
 
   private zeroingFaults: HTMLElement = document.getElementById(
-    'zeroing_faults'
+    'zeroing_faults',
   ) as HTMLElement;
 
   constructor(private readonly connection: Connection) {
@@ -107,7 +107,7 @@ export class FieldHandler {
         const valueCell = document.createElement('div');
         valueCell.innerHTML = 'NA';
         this.rejectionReasonCells[this.rejectionReasonCells.length - 1].push(
-          valueCell
+          valueCell,
         );
         row.appendChild(valueCell);
       }
@@ -125,7 +125,7 @@ export class FieldHandler {
         const valueCell = document.createElement('div');
         valueCell.innerHTML = 'NA';
         this.rejectionReasonCells[this.rejectionReasonCells.length - 1].push(
-          valueCell
+          valueCell,
         );
         row.appendChild(valueCell);
       }
@@ -148,7 +148,7 @@ export class FieldHandler {
           'frc.vision.swerve_localizer.Visualization',
           (data) => {
             this.handleLocalizerDebug(Number(camera), data);
-          }
+          },
         );
       }
       for (const camera in CAMERAS) {
@@ -158,7 +158,7 @@ export class FieldHandler {
           'frc.vision.TargetMap',
           (data) => {
             this.handleCameraTargetMap(camera, data);
-          }
+          },
         );
       }
 
@@ -167,28 +167,28 @@ export class FieldHandler {
         'frc.controls.LocalizerOutput',
         (data) => {
           this.handleLocalizerOutput(data);
-        }
+        },
       );
       this.connection.addHandler(
         '/camera1/coral',
         'frc.vision.GamePieceLocations',
         (data) => {
           this.handleGamePieceLocations(data);
-        }
+        },
       );
       this.connection.addHandler(
         '/aos',
         'aos.message_bridge.ServerStatistics',
         (data) => {
           this.handleServerStatistics(data);
-        }
+        },
       );
       this.connection.addHandler(
         '/aos',
         'aos.message_bridge.ClientStatistics',
         (data) => {
           this.handleClientStatistics(data);
-        }
+        },
       );
     });
   }
@@ -198,7 +198,7 @@ export class FieldHandler {
     const fbBuffer = new ByteBuffer(data);
     this.localizerImageMatches.set(
       now,
-      Visualization.getRootAsVisualization(fbBuffer)
+      Visualization.getRootAsVisualization(fbBuffer),
     );
 
     const debug = this.localizerImageMatches.get(now);
@@ -244,7 +244,7 @@ export class FieldHandler {
 
     this.gamePieceLocationMatches.set(
       now,
-      GamePieceLocations.getRootAsGamePieceLocations(fbBuffer)
+      GamePieceLocations.getRootAsGamePieceLocations(fbBuffer),
     );
   }
 
@@ -266,7 +266,7 @@ export class FieldHandler {
 
   private setCurrentNodeState(
     element: HTMLElement,
-    state: ConnectionState
+    state: ConnectionState,
   ): void {
     if (state === ConnectionState.CONNECTED) {
       element.innerHTML = ConnectionState[state];
@@ -292,7 +292,7 @@ export class FieldHandler {
       }
       this.setCurrentNodeState(
         this.serverStatuses.get(nodeName),
-        connection.state()
+        connection.state(),
       );
     }
   }
@@ -310,7 +310,7 @@ export class FieldHandler {
       }
       this.setCurrentNodeState(
         this.clientStatuses.get(nodeName),
-        connection.state()
+        connection.state(),
       );
     }
   }
@@ -328,7 +328,7 @@ export class FieldHandler {
       -FIELD_EDGE_X,
       -FIELD_SIDE_Y,
       FIELD_LENGTH,
-      FIELD_WIDTH
+      FIELD_WIDTH,
     );
     ctx.restore();
   }
@@ -337,7 +337,7 @@ export class FieldHandler {
     x: number,
     y: number,
     theta: number,
-    color: string = 'blue'
+    color: string = 'blue',
   ): void {
     const ctx = this.canvas.getContext('2d');
     ctx.save();
@@ -360,7 +360,7 @@ export class FieldHandler {
     y: number,
     theta: number,
     color: string = 'blue',
-    dashed: boolean = false
+    dashed: boolean = false,
   ): void {
     const ctx = this.canvas.getContext('2d');
     ctx.save();
@@ -420,7 +420,7 @@ export class FieldHandler {
     div: HTMLElement,
     target: number,
     val: number,
-    tolerance: number
+    tolerance: number,
   ): void {
     div.innerHTML = val.toFixed(4);
     div.classList.remove('faulted');
@@ -470,7 +470,7 @@ export class FieldHandler {
       this.drawRobot(
         this.localizerOutput.x(),
         this.localizerOutput.y(),
-        this.localizerOutput.theta()
+        this.localizerOutput.theta(),
       );
 
       this.imagesAcceptedCounter.innerHTML = this.localizerOutput
