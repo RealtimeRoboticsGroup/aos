@@ -175,6 +175,15 @@ class FileHandler : public LogSink {
     return encountered_incomplete_write_;
   }
 
+  // For testing; counts how many times we have pushed file *data* towards the
+  // disk, by any platform-specific mechanism.  --sync promises to "sync the
+  // file after each written block", so with it set this has to become non-zero
+  // during Write(), not only at Close().  Each backend syncs differently
+  // (sync_file_range() on Linux, F_FULLFSYNC on Darwin, _commit() on Windows),
+  // so counting the operations is the one durability check that is meaningful
+  // on all of them.  Does not count directory syncs.
+  size_t data_sync_count() const { return data_sync_count_; }
+
  protected:
   // This is used by subclasses who need to access filename.
   std::string_view filename() const { return filename_; }
@@ -199,6 +208,30 @@ class FileHandler : public LogSink {
   void DisableDirect();
 
   bool ODirectEnabled() const;
+
+  // Flushes the file descriptor to disk, recording that we did so.  Callers
+  // should use this rather than PlatformSyncImpl() so that every data sync is
+  // counted in one place.
+  //
+  // Returns kOutOfSpace when the flush failed because the disk filled up.
+  // Callers have to report that the same way they report a failing write: a
+  // failed sync means the data isn't durable, and answering kOk would tell the
+  // logger the batch is safely on disk when it isn't.  DetachedBufferWriter::
+  // Flush() would then Clear() it out of the encoder as durably written and
+  // keep logging, instead of winding down through kOutOfSpace.
+  [[nodiscard]] WriteCode PlatformSync() {
+    ++data_sync_count_;
+    return PlatformSyncImpl();
+  }
+
+  // Flushes the file descriptor to disk in a platform-specific way.  Returns
+  // kOutOfSpace on ENOSPC; any other failure is logged and reported as kOk,
+  // since running out of space is the only one the logger can wind down for.
+  //
+  // Virtual only so tests can force the out-of-space case: a real ENOSPC from
+  // fdatasync()/F_FULLFSYNC/_commit() needs a genuinely full filesystem, and
+  // the propagation this feeds is exactly what has regressed here before.
+  [[nodiscard]] virtual WriteCode PlatformSyncImpl();
 
   // Writes a chunk of iovecs from iovec_. aligned is true if all the data is
   // kSector byte aligned and multiples of it in length.
@@ -230,6 +263,9 @@ class FileHandler : public LogSink {
   // Used for unit tests to ensure that we have coverage of handling certain
   // corner-cases.
   bool encountered_incomplete_write_ = false;
+
+  // See data_sync_count().
+  size_t data_sync_count_ = 0;
 };
 
 namespace testing {

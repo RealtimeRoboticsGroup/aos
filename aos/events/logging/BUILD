@@ -116,8 +116,15 @@ cc_library(
     srcs = [
         "log_backend.cc",
     ] + select({
+        "@platforms//os:osx": [
+            "log_backend_darwin.cc",
+            "log_backend_unix.cc",
+        ],
         "@platforms//os:windows": ["log_backend_windows.cc"],
-        "//conditions:default": ["log_backend_linux.cc"],
+        "//conditions:default": [
+            "log_backend_linux.cc",
+            "log_backend_unix.cc",
+        ],
     }),
     hdrs = ["log_backend.h"],
     visibility = ["//visibility:public"],
@@ -141,7 +148,7 @@ cc_test(
     name = "log_backend_test",
     srcs = ["log_backend_test.cc"],
     # One shard per test in log_backend_test.cc
-    shard_count = 22,
+    shard_count = 24,
     deps = [
         ":log_backend",
         "//aos/containers:resizeable_buffer",

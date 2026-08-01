@@ -100,43 +100,38 @@ WriteResult FileHandler::DoWrite(
       data_ptr += written;
     }
   }
-  // Stop the clock before flushing, like the Unix backend does, so the disk
-  // stats keep measuring the writes themselves rather than the sync behind
-  // them.
   const auto end = aos::monotonic_clock::now();
 
-  if (absl::GetFlag(FLAGS_sync) && total_bytes_written > 0) {
-    // Without this, --sync only reaches the disk in Close(), so a crash loses
-    // everything written since the last close rather than the bounded amount
-    // the Unix backend loses.
+  if (absl::GetFlag(FLAGS_sync)) {
+    // Same contract as the other backends: --sync means "sync the file after
+    // each written block", so the data has to be pushed out here and not only
+    // by the _commit() in Close().  Deliberately after `end` is sampled, so the
+    // disk stats keep measuring the write itself.
     //
-    // Windows has no ranged writeback primitive -- no sync_file_range -- so the
-    // Linux pipeline (queue writeback for this chunk, block on the previous
-    // one, then drop its pages) has nothing to build on.  _commit() is
+    // Windows has no ranged writeback primitive -- no sync_file_range -- so
+    // there's no equivalent of the Linux pipeline (queue writeback for this
+    // chunk, block on the previous one, then drop its pages).  _commit() is
     // FlushFileBuffers(): the whole file, synchronously.  That makes this the
-    // macOS F_FULLFSYNC path rather than the Linux one -- a blocking full flush
-    // per write -- which costs throughput, but --sync is the flag that asks for
-    // durability over throughput.
-    if (_commit(fd_) == -1) {
-      if (errno == ENOSPC) {
-        // The data isn't durable, so report it the way a failed write is
-        // reported.  Coming back kOk here would tell the logger this batch is
-        // safely on disk when it isn't.
-        WriteStatistics()->UpdateDiskStats(end - start, total_bytes_written);
-        return {
-            .code = WriteCode::kOutOfSpace,
-            .messages_written = queue.size(),
-            .bytes_written = total_bytes_written,
-        };
-      }
-      PLOG(ERROR) << "Failed to _commit " << filename_;
+    // Darwin F_FULLFSYNC path rather than the Linux one, which costs
+    // throughput -- but --sync is the flag that asks for durability over
+    // throughput.
+    if (PlatformSync() == WriteCode::kOutOfSpace) {
+      // The data isn't durable, so report it the way a failed write is
+      // reported.  Coming back kOk here would tell the logger this batch is
+      // safely on disk when it isn't.
+      WriteStatistics()->UpdateDiskStats(end - start, total_bytes_written);
+      return {
+          .code = WriteCode::kOutOfSpace,
+          .messages_written = queue.size(),
+          .bytes_written = total_bytes_written,
+      };
     }
   }
 
   // written_aligned_ stays at zero: it counts bytes written through the
   // O_DIRECT aligned path, which this backend doesn't have.  last_synced_bytes_
-  // likewise: it tracks how far the ranged writeback above got, and _commit()
-  // has no range to track.
+  // likewise: it tracks how far Linux's ranged writeback got, and _commit() has
+  // no range to track.
   WriteStatistics()->UpdateDiskStats(end - start, total_bytes_written);
   return {
       .code = WriteCode::kOk,
@@ -420,12 +415,8 @@ WriteCode FileHandler::Close() {
     // data isn't durable, so it has to be reported the same way a failing
     // _close() is -- otherwise running out of space while flushing would look
     // like a clean close.
-    if (_commit(fd_) == -1) {
-      if (errno == ENOSPC) {
-        ran_out_of_space = true;
-      } else {
-        PLOG(ERROR) << "Failed to _commit " << filename_;
-      }
+    if (PlatformSync() == WriteCode::kOutOfSpace) {
+      ran_out_of_space = true;
     }
   }
 
@@ -446,6 +437,16 @@ WriteCode FileHandler::Close() {
 
 void FileHandler::EnableDirect() {}
 void FileHandler::DisableDirect() {}
+
+WriteCode FileHandler::PlatformSyncImpl() {
+  if (_commit(fd_) == -1) {
+    if (errno == ENOSPC) {
+      return WriteCode::kOutOfSpace;
+    }
+    PLOG(ERROR) << "Failed to _commit " << filename_;
+  }
+  return WriteCode::kOk;
+}
 
 std::pair<WriteCode, size_t> FileHandler::WriteV(bool) {
   LOG(FATAL) << "WriteV not implemented on Windows";
