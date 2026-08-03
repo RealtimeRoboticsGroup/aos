@@ -11,6 +11,7 @@ FLATC_ARGS = [
     "--python-typing",
     "--gen-object-api",
     "--python-fields-snake-case",
+    "--gen-compare",
 ]
 
 """Contains information about a flatbuffers schema and its dependencies.
