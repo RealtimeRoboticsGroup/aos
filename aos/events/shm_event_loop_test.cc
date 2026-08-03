@@ -102,22 +102,38 @@ auto CommonParameters(std::string backend) {
       ::testing::Values(DoTimingReports::kYes, DoTimingReports::kNo));
 }
 
+#ifdef __linux__
+#ifndef AOS_EPOLL_ONLY
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonTestIoUring, AbstractEventLoopTest,
                          CommonParameters("io_uring"));
-INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonTestEpoll, AbstractEventLoopTest,
-                         CommonParameters("epoll"));
-
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonDeathTestIoUring,
                          AbstractEventLoopDeathTest,
                          CommonParameters("io_uring"));
+#endif  // AOS_EPOLL_ONLY
+
+#ifndef AOS_IO_URING_ONLY
+INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonTestEpoll, AbstractEventLoopTest,
+                         CommonParameters("epoll"));
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonDeathTestEpoll,
                          AbstractEventLoopDeathTest, CommonParameters("epoll"));
+#endif  // AOS_IO_URING_ONLY
+#else
+INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonTestKQueue, AbstractEventLoopTest,
+                         CommonParameters("kqueue"));
+INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonDeathTestKQueue,
+                         AbstractEventLoopDeathTest,
+                         CommonParameters("kqueue"));
+#endif
 
 }  // namespace
 
 bool IsRealtime() {
+#if defined(__linux__)
   int scheduler;
   ABSL_PCHECK((scheduler = sched_getscheduler(0)) != -1);
+#else
+  int scheduler = aos::GetCurrentThreadSchedulingPolicy();
+#endif
 
   {
     // If we are RT, logging the scheduler will crash us.  Mark that we just
@@ -584,6 +600,19 @@ TEST_P(ShmEventLoopDeathTest, ExitHandleOutlivesEventLoop) {
 
 // TODO(austin): Test that missing a deadline with a timer recovers as expected.
 
+// The AOS_*_ONLY splits only mean something on Linux; elsewhere the epoll
+// target runs the platform's own backend, as CommonParameters() above does.
+#if defined(__linux__) && defined(AOS_EPOLL_ONLY)
+#define SHM_EVENT_LOOP_BACKENDS ::testing::Values("epoll")
+#elif defined(__linux__) && defined(AOS_IO_URING_ONLY)
+#define SHM_EVENT_LOOP_BACKENDS ::testing::Values("io_uring")
+#elif defined(__linux__)
+#define SHM_EVENT_LOOP_BACKENDS ::testing::Values("io_uring", "epoll")
+#else
+// macOS has only kqueue, and --aio_backend is fatal on any other name.
+#define SHM_EVENT_LOOP_BACKENDS ::testing::Values("kqueue")
+#endif
+
 // The ReadMethod half is already in each suite's name, so naming these by
 // backend alone is unambiguous -- and beats the tuple index gtest would
 // otherwise print.
@@ -594,23 +623,19 @@ auto BackendName(
 
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCopyTest, ShmEventLoopTest,
                          ::testing::Combine(::testing::Values(ReadMethod::COPY),
-                                            ::testing::Values("io_uring",
-                                                              "epoll")),
+                                            SHM_EVENT_LOOP_BACKENDS),
                          BackendName);
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopPinTest, ShmEventLoopTest,
                          ::testing::Combine(::testing::Values(ReadMethod::PIN),
-                                            ::testing::Values("io_uring",
-                                                              "epoll")),
+                                            SHM_EVENT_LOOP_BACKENDS),
                          BackendName);
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCopyDeathTest, ShmEventLoopDeathTest,
                          ::testing::Combine(::testing::Values(ReadMethod::COPY),
-                                            ::testing::Values("io_uring",
-                                                              "epoll")),
+                                            SHM_EVENT_LOOP_BACKENDS),
                          BackendName);
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopPinDeathTest, ShmEventLoopDeathTest,
                          ::testing::Combine(::testing::Values(ReadMethod::PIN),
-                                            ::testing::Values("io_uring",
-                                                              "epoll")),
+                                            SHM_EVENT_LOOP_BACKENDS),
                          BackendName);
 
 }  // namespace aos::testing
