@@ -109,6 +109,9 @@ class ErrorList {
     }
   }
 
+  // Removes all errors from the list. Invalidates all iterators.
+  void ClearAll() { array_.clear(); }
+
   void Set(const T t) {
     iterator position = std::lower_bound(array_.begin(), array_.end(), t);
 
@@ -121,7 +124,7 @@ class ErrorList {
     array_.insert(position, t);
   }
 
-  bool Has(const T t) {
+  bool Has(const T t) const {
     return std::binary_search(array_.begin(), array_.end(), t);
   }
 

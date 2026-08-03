@@ -63,6 +63,42 @@ TEST(ErrorListTest, Clearing) {
   EXPECT_EQ(a.size(), 2);
 }
 
+// Tests that clearing all errors works.
+TEST(ErrorListTest, ClearAll) {
+  // Set up a list to test with.
+  ErrorList<TestEnum> a;
+  a.Set(TestEnum::FOO);
+  a.Set(TestEnum::BAZ);
+  a.Set(TestEnum::VWEEP);
+  EXPECT_EQ(a.size(), 3);
+  EXPECT_FALSE(a.empty());
+  EXPECT_TRUE(a.Has(TestEnum::FOO));
+  EXPECT_TRUE(a.Has(TestEnum::BAZ));
+  EXPECT_TRUE(a.Has(TestEnum::VWEEP));
+
+  // Validate that clearing everything does indeed leave the list empty.
+  a.ClearAll();
+  EXPECT_EQ(a.size(), 0);
+  EXPECT_TRUE(a.empty());
+  EXPECT_FALSE(a.Has(TestEnum::FOO));
+  EXPECT_FALSE(a.Has(TestEnum::BAZ));
+  EXPECT_FALSE(a.Has(TestEnum::VWEEP));
+
+  // Clearing an empty list should be idempotent.
+  a.ClearAll();
+  EXPECT_EQ(a.size(), 0);
+  EXPECT_TRUE(a.empty());
+
+  // A cleared list should still be usable.
+  a.Set(TestEnum::BAR);
+  a.Set(TestEnum::FOO);
+  EXPECT_EQ(a.size(), 2);
+  EXPECT_EQ(a.at(0), TestEnum::FOO);
+  EXPECT_EQ(a.at(1), TestEnum::BAR);
+  EXPECT_TRUE(a.Has(TestEnum::BAR));
+  EXPECT_TRUE(a.Has(TestEnum::FOO));
+}
+
 // Tests that checking for a value works
 TEST(ErrorListTest, Has) {
   ErrorList<TestEnum> a;
