@@ -17,6 +17,7 @@
 #include "aos/flatbuffer_merge.h"
 #include "aos/flatbuffers.h"
 #include "aos/json_to_flatbuffer.h"
+#include "aos/macros.h"
 #include "aos/testing/path.h"
 #include "aos/testing/random_seed.h"
 #include "aos/testing/tmpdir.h"
@@ -3344,6 +3345,7 @@ class TimeEventLoop : public EventLoop {
   std::unique_ptr<ThreadHandle> ConfigureThreadImpl(
       const ThreadConfiguration & /*thread_configuration*/) final {
     LOG(FATAL);
+    AOS_UNREACHABLE();
   }
 
   void IgnoreThreadImpl() final { LOG(FATAL); }
