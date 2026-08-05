@@ -21,6 +21,10 @@ cc_library(
             "aos_sync_darwin.cc",
             "aos_sync_portable.cc",
         ],
+        "@platforms//os:windows": [
+            "aos_sync_portable.cc",
+            "aos_sync_windows.cc",
+        ],
         "//conditions:default": [
             "aos_sync_linux.cc",
         ],
@@ -32,18 +36,29 @@ cc_library(
         ":aos_sync_debug": ["-DAOS_SYNC_DEBUG=1"],
         "//conditions:default": ["-DAOS_SYNC_DEBUG=0"],
     }),
-    linkopts = [
-        "-lpthread",
-    ],
+    linkopts = select({
+        "@platforms//os:windows": ["synchronization.lib"],
+        "//conditions:default": ["-lpthread"],
+    }),
     visibility = ["//visibility:public"],
     deps = [
         ":shm_observers",
         "//aos:macros",
+        "//aos/time",
         "//aos/util:compiler_memory_barrier",
         "@com_google_absl//absl/base",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
-    ],
+    ] + select({
+        # aos_sync_windows.cc uses aos::ScopedNotRealtime to bypass malloc checks in a couple of
+        # spots.  Given that Windows will never be realtime, we just don't care enough to do
+        # something else.  Make it conditional then.
+        "@platforms//os:windows": [
+            "//aos:realtime",
+            "@com_google_absl//absl/container:flat_hash_map",
+        ],
+        "//conditions:default": [],
+    }),
 )
 
 cc_library(
@@ -562,12 +577,31 @@ cc_library(
 )
 
 cc_test(
+    name = "aos_sync_test",
+    srcs = [
+        "aos_sync_test.cc",
+    ] + select({
+        # The Windows-specific behavior (kernel-mutex-backed shared-memory
+        # mutexes, the process-local futex/condition FATALs) only exists
+        # there.
+        "@platforms//os:windows": ["aos_sync_windows_test.cc"],
+        "//conditions:default": [],
+    }),
+    deps = [
+        ":aos_sync",
+        "//aos/testing:googletest",
+        "//aos/testing:tmpdir",
+    ],
+)
+
+cc_test(
     name = "event_test",
     srcs = [
         "event_test.cc",
     ],
     deps = [
         ":event",
+        "//aos:realtime",
         "//aos/testing:googletest",
         "//aos/testing:test_logging",
         "//aos/time",

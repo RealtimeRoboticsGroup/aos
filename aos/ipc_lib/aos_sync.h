@@ -4,6 +4,15 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifdef AOS_SANITIZER_thread
+// aos_mutex carries a pthread_mutex_t under tsan.  It has to come from here
+// rather than from whoever includes us; there is no ordering of includes which
+// makes that work for every caller.
+#include <pthread.h>
+#endif
+
+#include "aos/macros.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif  // __cplusplus
@@ -18,7 +27,20 @@ extern "C" {
 // Valid initial values for use with futex_ functions are 0 (unset) and 1 (set).
 // The value should not be changed after multiple processes have started
 // accessing an instance except through the functions declared in this file.
+//
+// Notably, Windows support for shared memory events and condition variables is
+// currently lacking.  That can change if there is a pressing need.
 typedef uint32_t aos_futex __attribute__((aligned(sizeof(int))));
+
+#ifndef FUTEX_TID_MASK
+#define FUTEX_TID_MASK 0x3fffffff
+#endif
+#ifndef FUTEX_WAITERS
+#define FUTEX_WAITERS 0x80000000
+#endif
+#ifndef FUTEX_OWNER_DIED
+#define FUTEX_OWNER_DIED 0x40000000
+#endif
 
 // For use with the condition_ functions.
 // No initialization is necessary.
@@ -62,6 +84,11 @@ struct aos_mutex {
 // fork(2), any mutexes held will be held ONLY in the parent process. Attempting
 // to unlock them from the child will give errors.
 // Priority inheritance (aka priority inversion protection) is enabled.
+//
+// The owner-death notification above ("if a task dies while holding a mutex,
+// the next person who locks it will be notified") is best-effort: how much of
+// it survives an abrupt death (a forced kill that runs no cleanup) varies by
+// backend.  No OS is 100% reliable.
 
 // All of these return 1 if the previous owner died with it held, 2 if
 // interrupted by a signal, or 4 if an optional lock fails. Some of them
@@ -80,23 +107,23 @@ int mutex_trylock(struct aos_mutex *m) __attribute__((warn_unused_result));
 #ifdef __cplusplus
 bool mutex_islocked(const aos_mutex *m);
 
-// Returns the thread ID (TID) of the current owner, or 0 if unclaimed.
-// Under Windows, this returns the Windows Thread ID.
+// Returns the thread ID (TID) of the current owner, or 0 if unclaimed.  The
+// TID is in whatever form the OS names threads.
 uint32_t mutex_owner(const aos_mutex *m);
 
 // Returns whether the mutex's owner is dead (robust mutex feature).
 bool mutex_owner_is_dead(const aos_mutex *m);
 
-// Returns the thread ID (TID) of the owner encoded in a futex value.
-//
-// This only decodes the provided value; it does not read shared memory. The
-// value must have been read from the futex with an atomic load — do not pass
-// m->futex directly.
-uint32_t futex_owner(aos_futex futex);
+// Returns the thread ID (TID) from a raw futex value.
+// These `_from_value` helpers allow callers to decode a single atomically
+// loaded snapshot of the futex consistently, avoiding a race condition
+// between separate atomic reads of the owner and the dead status.  They
+// also encapsulate any backend-specific encoding of the TID in the futex
+// word, so external code can remain platform-independent.
+uint32_t mutex_owner_from_value(uint32_t value);
 
-// Returns whether the owner encoded in a futex value is dead. The same atomic
-// load requirement as futex_owner applies to the provided value.
-bool futex_owner_is_dead(aos_futex futex);
+// Returns whether the owner is dead from a raw futex value.
+bool mutex_owner_is_dead_from_value(uint32_t value);
 
 // Simulates a thread crash/death by marking the mutex as owner-died.
 // Returns true if the owner matched the provided tid.
@@ -158,8 +185,6 @@ int futex_wait_timeout(aos_futex *m, const struct timespec *timeout)
 //
 // This will always wake up all waiters at the same time and set the value to 1.
 int futex_set(aos_futex *m);
-// Same as above except lets something other than 1 be used as the final value.
-int futex_set_value(aos_futex *m, aos_futex value);
 // Unsets the futex (sets the value to 0).
 // Returns 0 if it was set before and 1 if it wasn't.
 // Can not fail.

@@ -34,7 +34,12 @@
 
 #ifdef _WIN32
 typedef int pid_t;
+// Only neuter __attribute__ on compilers that don't actually support it.
+// clang-cl does, and stripping attributes there would silently change the
+// meaning of any header included after this one.
+#if !defined(__GNUC__) && !defined(__clang__)
 #define __attribute__(x)
+#endif
 #endif
 
 // Branch prediction hints. MSVC doesn't support __builtin_expect.

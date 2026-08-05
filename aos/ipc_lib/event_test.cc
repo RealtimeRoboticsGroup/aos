@@ -6,6 +6,7 @@
 
 #include "gtest/gtest.h"
 
+#include "aos/realtime.h"
 #include "aos/testing/test_logging.h"
 #include "aos/time/time.h"
 
@@ -87,6 +88,25 @@ TEST_F(EventTest, WaitTimeout) {
   test_event_.Set();
   thread.join();
   EXPECT_GE(finish_time - start_time, kWaitTime);
+}
+
+// Verifies that Event::Wait actually blocks in the kernel and does not
+// busy-poll.
+TEST_F(EventTest, WaitBlocksNoBusyPoll) {
+  const chrono::nanoseconds start_cpu = aos::GetCurrentThreadCpuTime();
+
+  ::std::thread thread([this]() {
+    ::std::this_thread::sleep_for(chrono::milliseconds(50));
+    test_event_.Set();
+  });
+
+  test_event_.Wait();
+  thread.join();
+
+  const chrono::nanoseconds end_cpu = aos::GetCurrentThreadCpuTime();
+  // It should block in the kernel.  If it busy-polls, it would consume nearly
+  // 50ms of CPU time.  Make sure it used less than 10ms.
+  EXPECT_LT(end_cpu - start_cpu, chrono::milliseconds(10));
 }
 
 }  // namespace aos::testing

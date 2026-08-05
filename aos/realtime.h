@@ -16,6 +16,7 @@ using pid_t = int;
 using uid_t = int;
 #endif
 
+#include <chrono>
 #include <cstring>
 #include <optional>
 #include <ostream>
@@ -144,6 +145,11 @@ inline pid_t GetThreadId() { return syscall(SYS_gettid); }
 #else
 pid_t GetThreadId();
 #endif
+
+// Returns how much CPU time the current thread has consumed since it started.
+// Useful for telling a thread which is blocked apart from one which is
+// spinning.
+std::chrono::nanoseconds GetCurrentThreadCpuTime();
 
 // Returns the UID of the current user.
 // On Windows, this is a NOP.

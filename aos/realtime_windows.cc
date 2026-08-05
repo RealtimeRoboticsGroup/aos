@@ -224,6 +224,19 @@ std::string GetThreadName() { return ""; }
 pid_t GetProcessId() { return GetCurrentProcessId(); }
 pid_t GetThreadId() { return static_cast<pid_t>(GetCurrentThreadId()); }
 
+std::chrono::nanoseconds GetCurrentThreadCpuTime() {
+  FILETIME creation_time, exit_time, kernel_time, user_time;
+  ABSL_PCHECK(GetThreadTimes(GetCurrentThread(), &creation_time, &exit_time,
+                             &kernel_time, &user_time) != 0);
+  ULARGE_INTEGER kernel, user;
+  kernel.LowPart = kernel_time.dwLowDateTime;
+  kernel.HighPart = kernel_time.dwHighDateTime;
+  user.LowPart = user_time.dwLowDateTime;
+  user.HighPart = user_time.dwHighDateTime;
+  // FILETIME counts 100-nanosecond intervals.
+  return std::chrono::nanoseconds((kernel.QuadPart + user.QuadPart) * 100);
+}
+
 uid_t GetUserId() { return 0; }
 
 std::optional<std::string> GetUsername(uid_t /*uid*/) { return std::nullopt; }

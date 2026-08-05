@@ -11,10 +11,10 @@ namespace aos::ipc_lib {
 
   if (futex != 0) {
     s << ":";
-    if (futex_owner_is_dead(futex)) {
+    if (mutex_owner_is_dead_from_value(futex)) {
       s << "FUTEX_OWNER_DIED|";
     }
-    s << "tid=" << futex_owner(futex);
+    s << "tid=" << mutex_owner_from_value(futex);
   }
 
   s << "),}";
