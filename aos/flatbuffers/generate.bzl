@@ -105,7 +105,16 @@ _static_flatbuffer_gen = rule(
     },
 )
 
-def static_flatbuffer(name, visibility = None, deps = [], srcs = [], **kwargs):
+def static_flatbuffer(
+        name,
+        visibility = None,
+        deps = [],
+        srcs = [],
+        target_compatible_with = None,
+        compatible_with = None,
+        restricted_to = None,
+        testonly = None,
+        **kwargs):
     """Generates the code for the static C++ flatbuffer API for the specified fbs file.
 
     Generates a target of name `name` that can be depended on by C++ code (it
@@ -131,6 +140,13 @@ def static_flatbuffer(name, visibility = None, deps = [], srcs = [], **kwargs):
       deps: List of flatbuffer dependencies of this rule. Each entry must have
         a sibling `<dep>_fbs` `flatbuffer_cc_library` (which `static_flatbuffer`
         generates automatically).
+      target_compatible_with: Optional, the list of constraints the target
+        platform must satisfy for this target to be considered compatible.
+      compatible_with: Optional, the list of environments this rule can be built
+        for, in addition to default-supported environments.
+      restricted_to: Optional, the list of environments this rule can be built
+        for, instead of default-supported environments.
+      testonly: Optional, whether the generated targets are test-only.
     """
     fbs_suffix = "_fbs"
 
@@ -140,6 +156,9 @@ def static_flatbuffer(name, visibility = None, deps = [], srcs = [], **kwargs):
         deps = [dep + fbs_suffix for dep in deps],
         gen_reflections = True,
         visibility = visibility,
+        target_compatible_with = target_compatible_with,
+        compatible_with = compatible_with,
+        restricted_to = restricted_to,
         **kwargs
     )
 
@@ -163,6 +182,10 @@ def static_flatbuffer(name, visibility = None, deps = [], srcs = [], **kwargs):
         bfbs_files = reflection_out,
         outs = header_names,
         base_files = [native.package_name() + "/" + file for file in cleaned_srcs],
+        target_compatible_with = target_compatible_with,
+        compatible_with = compatible_with,
+        restricted_to = restricted_to,
+        testonly = testonly,
     )
 
     # `:name` is a custom rule that advertises CcInfo (re-exported from the
@@ -185,10 +208,17 @@ def static_flatbuffer(name, visibility = None, deps = [], srcs = [], **kwargs):
         fbs_names = [src.removeprefix(":") for src in srcs],
         static_flatbuffer_deps = deps,
         visibility = visibility,
+        target_compatible_with = target_compatible_with,
+        compatible_with = compatible_with,
+        restricted_to = restricted_to,
+        testonly = testonly,
     )
 
     native.alias(
         name = name + "_reflection_out",
         actual = name + fbs_suffix + "_reflection_out",
         visibility = visibility,
+        compatible_with = compatible_with,
+        restricted_to = restricted_to,
+        testonly = testonly,
     )

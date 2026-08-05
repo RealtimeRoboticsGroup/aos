@@ -350,7 +350,7 @@ crate.from_cargo(
     name = "cxxbridge_cmd_deps",
     cargo_lockfile = "//third_party/cargo:cxxbridge-cmd/Cargo.lock",
     host_tools = "@aos_rust_host_tools",
-    lockfile = "@@//third_party/cargo:cxxbridge-cmd/Cargo.Bazel.lock",
+    lockfile = "//third_party/cargo:cxxbridge-cmd/Cargo.Bazel.lock",
     manifests = ["@cxxbridge-cmd//:Cargo.toml"],
     supported_platform_triples = [
         "x86_64-unknown-linux-gnu",
@@ -365,7 +365,7 @@ crate.from_cargo(
     name = "crate_index",
     cargo_lockfile = "//:Cargo.lock",
     host_tools = "@aos_rust_host_tools",
-    lockfile = "@@//:Cargo.Bazel.lock",
+    lockfile = "//:Cargo.Bazel.lock",
     manifests = [
         "//:Cargo.toml",
         "//third_party/autocxx:Cargo.toml",
@@ -741,7 +741,6 @@ register_toolchains(
     "//tools/cpp:cc-toolchain-cortex-m4f-imu",
     # Find a good way to select between these two M4F toolchains.
     #"//tools/cpp:cc-toolchain-cortex-m4f-k22",
-    "//tools/python:python_bzlmod_toolchain",
     "//tools/python:noop_python_toolchain",
     "//tools/go:noop_go_toolchain",
     "//tools/rust:rust-toolchain-x86",
@@ -751,6 +750,18 @@ register_toolchains(
     # //tools/platforms:linux_roborio for details.
     #"//tools/rust:rust-toolchain-roborio",
     "//tools/rust:noop_rust_toolchain",
+)
+
+# AOS's hermetic python runtime is built on the amd64_debian_sysroot, which is a
+# dev_dependency and therefore does not exist for modules that depend on AOS.
+# The toolchain is otherwise an exact match for a typical consumer host
+# (linux + x86_64, canonical @rules_python//python:toolchain_type), so exporting
+# it would hijack a consumer's python toolchain and point it at a repository
+# that isn't there.  dev_dependency registrations still apply when AOS is the
+# root module, so AOS's own builds are unchanged.
+register_toolchains(
+    "//tools/python:python_bzlmod_toolchain",
+    dev_dependency = True,
 )
 
 # TODO(austin): Rust can't mention llvm_toolchain, otherwise wpilib needs llvm_toolchain + the sysroot.  Which is bad.

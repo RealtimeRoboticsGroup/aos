@@ -7,6 +7,11 @@ AosConfigInfo = provider(fields = [
 ])
 
 def aos_config(name, src, flatbuffers = [], deps = [], visibility = None, testonly = False, target_compatible_with = None):
+    if src.split(":")[-1].split("/")[-1] == name + ".json":
+        fail(("aos_config(name = %r): the target name must differ from the src " +
+              "basename, because the flattened config is written to %r. " +
+              "Rename the target (e.g. name = %r).") % (name, name + ".json", name + "_config"))
+
     _aos_config(
         name = name,
         src = src,

@@ -1,10 +1,11 @@
-load("@aos//aos/flatbuffers:flatbuffers_python.bzl", "flatbuffer_py_library")
 load("@aos//aos/flatbuffers:typescript.bzl", "flatbuffer_ts_library")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
-load("//aos:config.bzl", "aos_config")
-load("//aos/flatbuffers:generate.bzl", "static_flatbuffer")
+
+# Load AOS's build macros from the public seam, as an external consumer would:
+# load("@aos//aos:defs.bzl", ...).
+load("//aos:defs.bzl", "aos_config", "flatbuffer_py_library", "static_flatbuffer")
 load("//tools/python:defs.bzl", "py_binary", "py_test")
 load("//tools/rust:defs.bzl", "flatbuffer_rust_library", "rust_binary", "rust_library", "rust_test")
 

@@ -100,6 +100,14 @@ eval "$(ssh-agent -s)"
 ssh-add ~/.ssh/id_ed25519<_if not default>
 ```
 
+```
+cat ~/.ssh/id_ed25519<_if not default>.pub
+```
+
+Copy the full output (starts with ssh-ed25519 or ssh-rsa).
+
+Add it to GitHub Go to GitHub → click your profile photo → Settings In the sidebar, click SSH and GPG keys Click New SSH key Give it a title (e.g. the name of the machine it's from) Click Add SSH key
+
 [Add key] (link to directions) to github. In `~/.ssh/config` tell git to use this key
 
 ```
@@ -128,7 +136,7 @@ Host gerrit
 
 ```
 
-Reach out or file a ticket to get yourself added to the Verified Users group so you can trigger CI and push to `unreviewed/${username}` branches. Add the gerrit romte ssh to git `git remote add gerrit "ssh://<gerrit user>@realtimeroboticsgroup.org:29418/RealtimeRoboticsGroup/aos"` Then add some nice hooks to automatically add Change-Id to each commit:
+Reach out or file a ticket to get yourself added to the Verified Users group so you can trigger CI and push to `unreviewed/${username}` branches. Add the gerrit remote ssh to git `git remote add gerrit "ssh://<gerrit user>@realtimeroboticsgroup.org:29418/RealtimeRoboticsGroup/aos"` Then add some nice hooks to automatically add Change-Id to each commit:
 
 ```
 mkdir -p `git rev-parse --git-dir`/hooks/ && curl -Lo `git rev-parse --git-dir`/hooks/commit-msg https://realtimeroboticsgroup.org/gerrit/tools/hooks/commit-msg && chmod +x `git rev-parse --git-dir`/hooks/commit-msg
@@ -136,4 +144,4 @@ mkdir -p `git rev-parse --git-dir`/hooks/ && curl -Lo `git rev-parse --git-dir`/
 
 and finally configure git to push to getrrit: `git remote set-url gerrit ssh://gerrit/RealtimeRoboticsGroup/aos` Test this with `ssh -p 29418 gerrit`
 
-Finally you should be able to push a branch to unrviewed to test that you can: Create a new branch with some trivial change named `unreviewed/<gerrit user>/<branch name>` Make sure this change is signed off by using the git `-s` option during commit or running `git commit --amend -s`, more info can found [here.](https://github.com/RealtimeRoboticsGroup/aos?tab=readme-ov-file#contributing) Now lets push our change to gerrit, but not make a PR to review. `git push gerrit HEAD:refs/heads/unreviewed/<gerrit user>/<branch name>` There is possibilty this will fail, but everything will be working. You might just lack create premissions. If you want to make a real PR try `git push gerrit HEAD:refs/for/main`
+Finally you should be able to push a branch to unrviewed to test that you can: Create a new branch with some trivial change named `unreviewed/<gerrit user>/<branch name>` Make sure this change is signed off by using the git `-s` option during commit or running `git commit --amend -s` More info can found [here.](https://github.com/RealtimeRoboticsGroup/aos?tab=readme-ov-file#contributing) Now lets push our change to gerrit, but not make a PR to review. `git push gerrit HEAD:refs/heads/unreviewed/<gerrit user>/<branch name>` There is possibilty this will fail, but everything will be working. You might just lack create premissions. If you want to make a real PR try `git push gerrit HEAD:refs/for/main`

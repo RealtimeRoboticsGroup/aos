@@ -389,8 +389,8 @@ def flatbuffer_cc_library(
             "-parse_headers",
         ],
         deps = [
-            "@com_github_google_flatbuffers//:runtime_cc",
-            "@com_github_google_flatbuffers//:flatbuffers",
+            clean_dep("@com_github_google_flatbuffers//:runtime_cc"),
+            clean_dep("@com_github_google_flatbuffers//:flatbuffers"),
         ] + deps,
         includes = cc_include_paths,
         compatible_with = compatible_with,
@@ -429,7 +429,7 @@ def flatbuffer_go_library(
     go_library(
         name = name,
         srcs = [srcs_lib],
-        deps = ["@com_github_google_flatbuffers//go"],
+        deps = [clean_dep("@com_github_google_flatbuffers//go")],
         importpath = importpath,
         visibility = visibility,
         compatible_with = compatible_with,

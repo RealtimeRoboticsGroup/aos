@@ -1,6 +1,9 @@
 package(default_visibility = ["//visibility:public"])
 
-constraint_setting(name = "python_support")
+constraint_setting(
+    name = "python_support",
+    default_constraint_value = ":has_support",
+)
 
 constraint_value(
     name = "has_support",
