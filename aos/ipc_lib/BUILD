@@ -15,7 +15,16 @@ cc_library(
     name = "aos_sync",
     srcs = [
         "aos_sync.cc",
-    ],
+        "aos_sync_internal.h",
+    ] + select({
+        "@platforms//os:macos": [
+            "aos_sync_darwin.cc",
+            "aos_sync_portable.cc",
+        ],
+        "//conditions:default": [
+            "aos_sync_linux.cc",
+        ],
+    }),
     hdrs = [
         "aos_sync.h",
     ],
