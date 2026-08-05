@@ -1,5 +1,13 @@
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 
+AosDownloaderDirInfo = provider(
+    doc = "Files and destination directory for an aos_downloader_dir.",
+    fields = {
+        "downloader_dir": "Destination directory (relative to the download root).",
+        "downloader_srcs": "Files to download into downloader_dir.",
+    },
+)
+
 def _aos_downloader_impl(ctx):
     all_files = ctx.files.srcs
     target_files = []
@@ -7,7 +15,8 @@ def _aos_downloader_impl(ctx):
     # downloader looks for : in the inputs and uses the part after the : as
     # the directory to copy to.
     for d in ctx.attr.dirs:
-        target_files += [src.short_path + ":" + d.downloader_dir for src in d.downloader_srcs]
+        dir_info = d[AosDownloaderDirInfo]
+        target_files += [src.short_path + ":" + dir_info.downloader_dir for src in dir_info.downloader_srcs]
 
     ctx.actions.write(
         output = ctx.outputs.executable,
@@ -32,9 +41,9 @@ def _aos_downloader_impl(ctx):
     to_download = []
     to_download += all_files
     for d in ctx.attr.dirs:
-        to_download += d.downloader_srcs
+        to_download += d[AosDownloaderDirInfo].downloader_srcs
 
-    return struct(
+    return [DefaultInfo(
         runfiles = ctx.runfiles(
             files = to_download + ctx.files._downloader,
             transitive_files = ctx.attr._downloader.default_runfiles.files,
@@ -42,13 +51,13 @@ def _aos_downloader_impl(ctx):
             collect_default = True,
         ),
         files = depset([ctx.outputs.executable]),
-    )
+    )]
 
 def _aos_downloader_dir_impl(ctx):
-    return struct(
+    return [AosDownloaderDirInfo(
         downloader_dir = ctx.attr.dir,
         downloader_srcs = ctx.files.srcs,
-    )
+    )]
 
 """Creates a binary which downloads code to a robot.
 
@@ -63,10 +72,7 @@ aos_downloader = rule(
     attrs = {
         "dirs": attr.label_list(
             mandatory = False,
-            providers = [
-                "downloader_dir",
-                "downloader_srcs",
-            ],
+            providers = [AosDownloaderDirInfo],
         ),
         "srcs": attr.label_list(
             mandatory = True,
