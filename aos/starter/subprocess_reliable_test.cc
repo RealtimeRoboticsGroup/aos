@@ -8,6 +8,7 @@
 #include <ostream>
 #include <string>
 #include <thread>
+#include <unordered_set>
 
 #include "absl/log/check.h"
 #include "absl/log/log.h"
@@ -135,6 +136,139 @@ TEST(SubprocessTest, CanKillAfterStartup) {
   PCHECK(kill(application->get_pid(), SIGTERM) == 0);
   Wait(application->get_pid());
   ASSERT_TRUE(std::filesystem::exists(shutdown_signal_file));
+}
+
+// Tests that a process which exits during STARTING is restarted when
+// autorestart is enabled.
+TEST(SubprocessTest, ChildExitsDuringStartingAutorestart) {
+  const std::string config_file = ::aos::testing::ArtifactPath(
+      "aos/testing/ping_pong/pingpong_config.json");
+  aos::FlatbufferDetachedBuffer<aos::Configuration> config =
+      aos::configuration::ReadConfig(config_file);
+  aos::ShmEventLoop event_loop(&config.message());
+
+  auto application = std::make_unique<Application>(
+      "exit", "sh", &event_loop, []() {}, nullptr);
+  application->set_autorestart(true);
+  application->set_args({"-c", "exit 0"});
+
+  std::unordered_set<pid_t> started_pids;
+  application->AddOnChange([&] {
+    if (application->get_pid() != -1) {
+      started_pids.insert(application->get_pid());
+      if (started_pids.size() >= 3) {
+        event_loop.Exit();
+      }
+    }
+  });
+
+  application->Start();
+  event_loop.Run();
+
+  EXPECT_GE(started_pids.size(), 3u);
+}
+
+// Tests that the autorestart delay is at least 3 seconds and not excessively
+// long.
+TEST(SubprocessTest, RestartDelay) {
+  const std::string config_file = ::aos::testing::ArtifactPath(
+      "aos/testing/ping_pong/pingpong_config.json");
+  aos::FlatbufferDetachedBuffer<aos::Configuration> config =
+      aos::configuration::ReadConfig(config_file);
+  aos::ShmEventLoop event_loop(&config.message());
+
+  auto application = std::make_unique<Application>(
+      "sleep", "sleep", &event_loop, []() {}, nullptr);
+  application->set_autorestart(true);
+  application->set_args({"100"});
+
+  pid_t original_pid = -1;
+  std::optional<aos::monotonic_clock::time_point> waiting_time;
+  std::optional<aos::monotonic_clock::time_point> starting_time;
+
+  aos::TimerHandler *shutdown_timer =
+      event_loop.AddTimer([&]() { event_loop.Exit(); });
+  application->AddOnChange([&] {
+    if (application->status() == aos::starter::State::WAITING &&
+        !waiting_time.has_value()) {
+      waiting_time = event_loop.monotonic_now();
+    }
+    if (application->status() == aos::starter::State::STARTING &&
+        waiting_time.has_value() && !starting_time.has_value()) {
+      starting_time = event_loop.monotonic_now();
+      shutdown_timer->Schedule(event_loop.monotonic_now() +
+                               std::chrono::milliseconds(500));
+    }
+  });
+
+  aos::TimerHandler *check_timer = event_loop.AddTimer([&]() {
+    if (application->status() == aos::starter::State::RUNNING &&
+        original_pid == -1) {
+      original_pid = application->get_pid();
+      kill(original_pid, SIGTERM);
+    }
+  });
+
+  application->Start();
+  check_timer->Schedule(event_loop.monotonic_now(),
+                        std::chrono::milliseconds(100));
+  // Safety net: bail out after 15 seconds.
+  shutdown_timer->Schedule(event_loop.monotonic_now() +
+                           std::chrono::seconds(15));
+  event_loop.Run();
+
+  EXPECT_NE(original_pid, -1);
+  ASSERT_TRUE(waiting_time.has_value());
+  ASSERT_TRUE(starting_time.has_value());
+  const std::chrono::duration<double> delay = *starting_time - *waiting_time;
+  EXPECT_GE(delay, std::chrono::seconds(3))
+      << "Restart delay was only " << delay.count() << " seconds";
+  EXPECT_LE(delay, std::chrono::seconds(20))
+      << "Restart delay was " << delay.count() << " seconds";
+}
+
+// Validates that a process which ignores SIGINT is force-killed by SIGKILL
+// after the stop grace period.
+TEST(SubprocessTest, ForceKillIgnoresSigint) {
+  const std::string config_file = ::aos::testing::ArtifactPath(
+      "aos/testing/ping_pong/pingpong_config.json");
+  aos::FlatbufferDetachedBuffer<aos::Configuration> config =
+      aos::configuration::ReadConfig(config_file);
+  aos::ShmEventLoop event_loop(&config.message());
+
+  auto signal_dir = std::filesystem::path(aos::testing::TestTmpDir()) /
+                    "force_kill_sigint_signals";
+  ASSERT_TRUE(std::filesystem::create_directory(signal_dir));
+  auto startup_signal_file = signal_dir / "startup";
+
+  auto application = std::make_unique<Application>(
+      "/bin/bash", "/bin/bash", &event_loop, []() {}, nullptr);
+  application->set_args(
+      {"-c",
+       absl::StrCat("trap '' SIGINT; touch ", startup_signal_file.string(),
+                    "; while true; do sleep 0.1; done;")});
+  application->set_stop_grace_period(std::chrono::seconds(1));
+  application->AddOnChange([&] {
+    if (application->status() == aos::starter::State::STOPPED) {
+      event_loop.Exit();
+    }
+  });
+
+  application->Start();
+  event_loop
+      .AddTimer([&] {
+        if (std::filesystem::exists(startup_signal_file)) {
+          application->Stop();
+        }
+      })
+      ->Schedule(event_loop.monotonic_now(), std::chrono::milliseconds(100));
+  // Safety net: bail out after 10 seconds.
+  event_loop.AddTimer([&]() { event_loop.Exit(); })
+      ->Schedule(event_loop.monotonic_now() + std::chrono::seconds(10));
+  event_loop.Run();
+
+  EXPECT_EQ(application->status(), aos::starter::State::STOPPED);
+  EXPECT_EQ(application->exit_code(), SIGKILL);
 }
 
 // Validates that a process that is known to take a while to stop can shut down

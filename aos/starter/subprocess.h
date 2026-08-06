@@ -200,7 +200,7 @@ class Application {
 
   flatbuffers::Offset<aos::starter::ApplicationStatus> PopulateStatus(
       flatbuffers::FlatBufferBuilder *builder, util::Top *top);
-  aos::starter::State status() const { return status_; };
+  aos::starter::State status() const { return PublicState(status_); };
 
   // Returns the last pid of this process. -1 if not started yet.
   pid_t get_pid() const { return pid_; }
@@ -223,6 +223,7 @@ class Application {
 
   // Stops the command the same way as Stop() does, but updates internal state
   // to reflect that the application was terminated.
+  // Once an application is terminated, it cannot be restarted.
   void Terminate();
 
   // Adds a callback which gets notified when the application changes state.
@@ -339,12 +340,75 @@ class Application {
   uint64_t id_ = 0;
   std::optional<int> exit_code_;
   std::optional<aos::monotonic_clock::time_point> start_time_, exit_time_;
-  bool queue_restart_ = false;
-  bool terminating_ = false;
+  // Internal command vocabulary. Unlike the public Command enum, this
+  // includes a kTerminate command used to stop the application and remove it
+  // from the map once it reaches STOPPED.
+  enum class ApplicationCommand {
+    kNoOp,
+    kStart,
+    kStop,
+    kRestart,
+    kTerminate,
+  };
+  std::optional<ApplicationCommand> command_;
+
   bool autostart_ = false;
   bool autorestart_ = false;
 
-  aos::starter::State status_ = aos::starter::State::STOPPED;
+  // Internal process state vocabulary. Includes kForking, which is never
+  // visible externally.
+  enum class ApplicationInternalState {
+    kWaiting,
+    kForking,
+    kStarting,
+    kRunning,
+    kStopping,
+    kStopped,
+  };
+
+  // Maps the internal process state to the public flatbuffer State enum.
+  static aos::starter::State PublicState(
+      ApplicationInternalState internal_state);
+
+  // Events that drive the internal state machine.
+  enum class Event {
+    kStartCalled,
+    kStopCalled,
+    kRestartCalled,
+    kTerminateCalled,
+    kTimeout,
+    kChildExited,
+    kForkSuccess,
+    kForkFailed,
+  };
+
+  // Side effects performed by transitions.
+  enum class Action {
+    kNone,
+    kDoStart,
+    kHandleStarted,
+    kDoStop,
+    kDoKill,
+    kDoWait,
+  };
+
+  // A single row in the event-driven transition table.
+  struct TransitionRule {
+    ApplicationInternalState from_status;
+    Event event;
+    std::function<bool(bool autorestart,
+                       std::optional<ApplicationCommand> last_command,
+                       bool alive)>
+        guard;
+    ApplicationInternalState next_status;
+    std::optional<ApplicationCommand> next_command;
+    std::optional<Action> action;
+  };
+
+  // Dispatches an event through the transition table. Stub for now.
+  void HandleEvent(Event event);
+
+  ApplicationInternalState status_ = ApplicationInternalState::kStopped;
   aos::starter::LastStopReason stop_reason_ =
       aos::starter::LastStopReason::STOP_REQUESTED;
 

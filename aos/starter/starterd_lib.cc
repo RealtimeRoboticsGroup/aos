@@ -44,6 +44,10 @@ ABSL_FLAG(uint32_t, queue_initialization_threads, 0,
           "Number of threads to spin up to initialize the queue.  0 means "
           "use the main thread.");
 ABSL_DECLARE_FLAG(bool, enable_ftrace);
+ABSL_FLAG(double, starterd_shutdown_timeout, 1.5,
+          "Time, in seconds, to wait for everything to shut down when starterd "
+          "is cleaning up. When running with large numbers of processes, you "
+          "may need a longer timeout than the default.");
 
 namespace aos::starter {
 
@@ -238,8 +242,10 @@ void Starter::Cleanup() {
   for (auto &application : applications_) {
     application.second.Terminate();
   }
-  cleanup_timer_->Schedule(event_loop_.monotonic_now() +
-                           std::chrono::milliseconds(1500));
+  cleanup_timer_->Schedule(
+      event_loop_.monotonic_now() +
+      std::chrono::milliseconds(static_cast<int>(
+          absl::GetFlag(FLAGS_starterd_shutdown_timeout) * 1000)));
 }
 
 void Starter::OnSignal(signalfd_siginfo info) {
