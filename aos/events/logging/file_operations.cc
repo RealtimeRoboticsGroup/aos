@@ -3,9 +3,14 @@
 #include <algorithm>
 #include <ostream>
 
+#include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/strings/match.h"
+
+ABSL_FLAG(bool, log_reader_follow_symlinks, true,
+          "If set, the log reader will follow symlinks when recursing through "
+          "a log directory.");
 
 namespace aos::logger::internal {
 
@@ -29,8 +34,11 @@ void LocalFileOperations::FindLogs(std::vector<File> *files) {
   };
   if (std::filesystem::is_directory(filename_)) {
     ABSL_VLOG(1) << "Searching in " << filename_;
-    for (const auto &file :
-         std::filesystem::recursive_directory_iterator(filename_)) {
+    for (const auto &file : std::filesystem::recursive_directory_iterator(
+             filename_,
+             absl::GetFlag(FLAGS_log_reader_follow_symlinks)
+                 ? std::filesystem::directory_options::follow_directory_symlink
+                 : std::filesystem::directory_options::none)) {
       if (!file.is_regular_file()) {
         ABSL_VLOG(1) << file << " is not file.";
         continue;

@@ -96,6 +96,7 @@ cc_library(
     srcs = ["file_operations.cc"],
     hdrs = ["file_operations.h"],
     deps = [
+        "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/strings",
