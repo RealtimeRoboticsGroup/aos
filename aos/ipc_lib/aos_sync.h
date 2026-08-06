@@ -64,15 +64,12 @@ struct aos_mutex {
 // Priority inheritance (aka priority inversion protection) is enabled.
 
 // All of these return 1 if the previous owner died with it held, 2 if
-// interrupted by a signal, 3 if timed out, or 4 if an optional lock fails. Some
-// of them (obviously) can never return some of those values.
+// interrupted by a signal, or 4 if an optional lock fails. Some of them
+// (obviously) can never return some of those values.
 //
 // One of the highest priority processes blocked on a given mutex will be the
 // one to lock it when it is unlocked.
 int mutex_lock(struct aos_mutex *m) __attribute__((warn_unused_result));
-// Returns 2 if it timed out or 1 if interrupted by a signal.
-int mutex_lock_timeout(struct aos_mutex *m, const struct timespec *timeout)
-    __attribute__((warn_unused_result));
 // Ignores signals (retries until something other than getting a signal
 // happens).
 int mutex_grab(struct aos_mutex *m) __attribute__((warn_unused_result));

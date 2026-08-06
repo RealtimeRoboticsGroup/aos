@@ -113,12 +113,10 @@ void check_cached_tid(pid_t tid) {
 // The common implementation for everything that wants to lock a mutex.
 // If signals_fail is false, the function will try again if the wait syscall is
 // interrupted by a signal.
-// timeout can be NULL for no timeout.
-inline int mutex_get(aos_mutex *m, bool signals_fail,
-                     const struct timespec *timeout) {
+inline int mutex_get(aos_mutex *m, bool signals_fail) {
   const uint32_t tid = get_tid();
   my_robust_list::Adder adder(m);
-  const int r = mutex_do_get(m, signals_fail, timeout, tid);
+  const int r = mutex_do_get(m, signals_fail, tid);
   if (r == 0 || r == 1) adder.Add();
   return r;
 }
@@ -187,11 +185,8 @@ void initialize_in_new_thread() {
 // single use of it.
 using namespace aos::ipc_lib::sync;  // NOLINT(build/namespaces)
 
-int mutex_lock(aos_mutex *m) { return mutex_get(m, true, NULL); }
-int mutex_lock_timeout(aos_mutex *m, const struct timespec *timeout) {
-  return mutex_get(m, true, timeout);
-}
-int mutex_grab(aos_mutex *m) { return mutex_get(m, false, NULL); }
+int mutex_lock(aos_mutex *m) { return mutex_get(m, true); }
+int mutex_grab(aos_mutex *m) { return mutex_get(m, false); }
 
 void mutex_unlock(aos_mutex *m) {
   RunShmObservers run_observers(m, true);

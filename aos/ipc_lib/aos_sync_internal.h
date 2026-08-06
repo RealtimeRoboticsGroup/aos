@@ -462,8 +462,7 @@ inline int mutex_finish_lock(aos_mutex *m) {
 
 // Split out separately from mutex_get so condition_wait can call it and use its
 // own my_robust_list::Adder.
-int mutex_do_get(aos_mutex *m, bool signals_fail,
-                 const struct timespec *timeout, uint32_t tid);
+int mutex_do_get(aos_mutex *m, bool signals_fail, uint32_t tid);
 
 // Releases *m, which the caller has already checked is locked by tid and taken
 // off the robust list.

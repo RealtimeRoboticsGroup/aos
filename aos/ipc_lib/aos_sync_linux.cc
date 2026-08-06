@@ -254,8 +254,7 @@ int sys_futex_unlock_pi(aos_futex *addr1) {
 #endif
 }
 
-int mutex_do_get(aos_mutex *m, bool signals_fail,
-                 const struct timespec *timeout, uint32_t tid) {
+int mutex_do_get(aos_mutex *m, bool signals_fail, uint32_t tid) {
   RunShmObservers run_observers(m, true);
   if (kPrintOperations) {
     printf("%" PRId32 ": %p do_get\n", tid, m);
@@ -266,11 +265,8 @@ int mutex_do_get(aos_mutex *m, bool signals_fail,
     if (!compare_and_swap(&m->futex, 0, tid)) {
       // Wait in the kernel, which handles atomically ORing in FUTEX_WAITERS
       // before actually sleeping.
-      const int ret = sys_futex_wait(FUTEX_LOCK_PI, &m->futex, 1, timeout);
+      const int ret = sys_futex_wait(FUTEX_LOCK_PI, &m->futex, 1, nullptr);
       if (ret != 0) {
-        if (timeout != NULL && ret == -ETIMEDOUT) {
-          return 3;
-        }
         if (AOS_LIKELY(ret == -EINTR)) {
           if (signals_fail) {
             return 2;
@@ -286,7 +282,7 @@ int mutex_do_get(aos_mutex *m, bool signals_fail,
         ABSL_PLOG(FATAL) << "FUTEX_LOCK_PI(" << &m->futex << "(="
                          << std::atomic_ref<uint32_t>(m->futex).load(
                                 std::memory_order_seq_cst)
-                         << "), 1, " << timeout << ") failed";
+                         << "), 1, nullptr) failed";
       } else {
         if (kLockDebug) {
           printf("%" PRId32 ": %p kernel lock done\n", tid, m);
@@ -388,7 +384,7 @@ int condition_wait(aos_condition *c, aos_mutex *m, struct timespec *end_time) {
       // Timed out waiting.  Signal that back up to the user.
       if (AOS_LIKELY(ret == -ETIMEDOUT)) {
         // We have to relock it ourself because the kernel didn't do it.
-        const int r = mutex_do_get(m, false, nullptr, tid);
+        const int r = mutex_do_get(m, false, tid);
         assert(AOS_LIKELY(r == 0 || r == 1));
         adder.Add();
 
@@ -408,7 +404,7 @@ int condition_wait(aos_condition *c, aos_mutex *m, struct timespec *end_time) {
         // etc, so there's no need to do anything special there either.
 
         // We have to relock it ourself because the kernel didn't do it.
-        const int r = mutex_do_get(m, false, nullptr, tid);
+        const int r = mutex_do_get(m, false, tid);
         assert(AOS_LIKELY(r == 0 || r == 1));
         adder.Add();
         return r;

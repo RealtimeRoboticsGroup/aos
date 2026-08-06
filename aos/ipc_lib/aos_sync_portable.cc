@@ -102,8 +102,7 @@ thread_local RobustListCleaner robust_list_cleaner;
 
 void TouchRobustListCleaner() { my_robust_list::robust_list_cleaner.Touch(); }
 
-int mutex_do_get(aos_mutex *m, bool signals_fail,
-                 const struct timespec *timeout, uint32_t tid) {
+int mutex_do_get(aos_mutex *m, bool signals_fail, uint32_t tid) {
   RunShmObservers run_observers(m, true);
   if (kPrintOperations) {
     printf("%" PRId32 ": %p do_get\n", tid, m);
@@ -136,9 +135,8 @@ int mutex_do_get(aos_mutex *m, bool signals_fail,
       v |= FUTEX_WAITERS;
     }
 
-    const int ret = sys_futex_wait(FUTEX_WAIT, &m->futex, v, timeout);
+    const int ret = sys_futex_wait(FUTEX_WAIT, &m->futex, v, nullptr);
     if (ret != 0) {
-      if (ret == -ETIMEDOUT) return 3;
       if (ret == -EINTR) {
         if (signals_fail) return 2;
         continue;
