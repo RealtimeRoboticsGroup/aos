@@ -1,0 +1,12 @@
+include "ros2_header.fbs";
+
+namespace aos.ros2_emulation;
+
+// Our version of ROS2's "sensor_msgs/Joy".
+table Ros2Joy {
+  header:Ros2Header (id: 0);
+  axes:[float32] (id: 1);
+  buttons:[int32] (id: 2);
+}
+
+root_type Ros2Joy;

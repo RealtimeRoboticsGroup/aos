@@ -1,0 +1,14 @@
+namespace aos.ros2_emulation;
+
+// Our version of ROS2's "geometry_msgs/Quaternion".
+//
+// This would be more natural in flatbuffers as [float64:4], but that requires
+// updating all references.
+table Ros2Quaternion {
+  x:float64 (id: 0);
+  y:float64 (id: 1);
+  z:float64 (id: 2);
+  w:float64 (id: 3);
+}
+
+root_type Ros2Quaternion;

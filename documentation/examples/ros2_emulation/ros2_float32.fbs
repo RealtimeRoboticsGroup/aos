@@ -1,0 +1,8 @@
+namespace aos.ros2_emulation;
+
+// Our version of ROS2's "std_msgs/Float32".
+table Ros2Float32 {
+  data:float32 (id: 0);
+}
+
+root_type Ros2Float32;

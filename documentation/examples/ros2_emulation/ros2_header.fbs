@@ -1,0 +1,16 @@
+namespace aos.ros2_emulation;
+
+// Our version of ROS2's "time". This uses different datatypes to represent
+// nanoseconds since the epoch than the rest of AOS, to match ROS2.
+table Ros2Time {
+  sec:int32 (id: 0);
+  nanosec:uint32 (id: 1);
+}
+
+// Our version of a subset of ROS2's "std_msgs/Header".
+table Ros2Header {
+  stamp:Ros2Time (id: 0);
+  frame_id:string (id: 1);
+}
+
+root_type Ros2Header;

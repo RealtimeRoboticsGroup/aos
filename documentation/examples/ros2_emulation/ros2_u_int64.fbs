@@ -1,0 +1,8 @@
+namespace aos.ros2_emulation;
+
+// Our version of ROS2's "std_msgs/UInt64".
+table Ros2UInt64 {
+  data:uint64 (id: 0);
+}
+
+root_type Ros2UInt64;

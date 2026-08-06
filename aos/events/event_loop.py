@@ -238,8 +238,8 @@ class ContextView:
         assert refcount >= 2, "Should always have refs from member variable and temporary"
         if refcount > 2:
             raise BufferError(
-                "Excess references to an AOS context buffer have been retained"
-            )
+                "Excess references to an AOS context buffer have been retained for %s"
+                % self.channel_wrapper.stripped_channel_to_string())
         self._buffer = None
 
     def __enter__(self):

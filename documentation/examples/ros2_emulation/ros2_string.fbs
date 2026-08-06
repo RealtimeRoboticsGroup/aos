@@ -1,0 +1,8 @@
+namespace aos.ros2_emulation;
+
+// Our version of ROS2's "std_msgs/String".
+table Ros2String {
+  data:string (id: 0);
+}
+
+root_type Ros2String;
