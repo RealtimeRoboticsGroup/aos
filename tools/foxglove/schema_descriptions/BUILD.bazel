@@ -1,0 +1,85 @@
+load("@aspect_rules_js//js:defs.bzl", "js_binary")
+load("//tools/build_rules/js:ts.bzl", "ts_project")
+load(":foxglove_schema.bzl", "foxglove_schema_descriptions")
+
+# Compile the TypeScript source for the codegen tool. The emitted `.js` file is consumed by the
+# `js_binary` below as its entry point.
+#
+# The tsconfig is inlined and emits CommonJS so the produced `.js` runs under `js_binary`'s Node
+# runtime regardless of any `"type": "module"` package.json that does (or does not) end up in
+# the runfiles tree. This is a self-contained tool, so it doesn't benefit from sharing the
+# repo's main tsconfig.
+ts_project(
+    name = "generate_foxglove_schema_description_lib",
+    srcs = ["generate_foxglove_schema_description.ts"],
+    declaration = False,
+    declaration_map = False,
+    source_map = False,
+    tsconfig = {
+        "compilerOptions": {
+            "target": "ES2021",
+            "module": "CommonJS",
+            "moduleResolution": "node",
+            "lib": ["ES2021"],
+            "esModuleInterop": True,
+            "skipLibCheck": True,
+            "strict": True,
+            "types": ["node"],
+        },
+    },
+    deps = [
+        "//:node_modules/@types/node",
+        "//:node_modules/typescript",
+    ],
+)
+
+# Node.js binary that generates a Foxglove `MessageSchemaDescription` literal from a TypeScript
+# type alias. Invoked via the `foxglove_schema_descriptions` macro in `foxglove_schema.bzl`.
+js_binary(
+    name = "generate_foxglove_schema_description",
+    data = [
+        ":generate_foxglove_schema_description_lib",
+        "//:node_modules/typescript",
+    ],
+    entry_point = "generate_foxglove_schema_description.js",
+    visibility = ["//visibility:public"],
+)
+
+exports_files(
+    ["foxglove_schema.bzl"],
+    visibility = ["//visibility:public"],
+)
+
+# Runs the codegen against a checked-in set of test types that exercises every TS construct the
+# generator supports. The output is compared against the checked-in golden file by the
+# `compare_generated_file` test below so changes to the generator's output are visible in review.
+foxglove_schema_descriptions(
+    name = "test_types_schema_codegen",
+    src = "test_types.ts",
+    out = "test_types.generated.ts",
+    type_names = [
+        "SimplePrimitives",
+        "ArraysAndOptional",
+        "Nested",
+    ],
+)
+
+sh_test(
+    name = "compare_generated_file",
+    srcs = ["compare_generated_file.sh"],
+    args = [
+        "$(location test_types.expected.generated.ts)",
+        "$(location :test_types.generated.ts)",
+    ],
+    data = [
+        "test_types.expected.generated.ts",
+        ":test_types.generated.ts",
+    ],
+)
+
+sh_binary(
+    name = "copy_generated_file",
+    srcs = ["copy_generated_file.sh"],
+    args = ["$(location :test_types.generated.ts)"],
+    data = [":test_types.generated.ts"],
+)

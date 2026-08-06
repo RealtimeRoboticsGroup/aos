@@ -95,6 +95,27 @@ class McapLogger {
     realtime_time_override_ = realtime_time;
   }
 
+  // Overrides the configuration written to the "configuration" MCAP topic.
+  //
+  // By default, WriteConfigurationMessage() uses event_loop_->configuration(),
+  // which is the full operational configuration used during MCAP creation. For
+  // log conversion tasks, however, this may differ from what was actually
+  // logged — for example, log_to_mcap injects a synthetic /clocks channel into
+  // the operational config when --include_clocks is set. That channel is not
+  // part of the original AOS log and should not appear in the "configuration"
+  // topic, which is intended to be an accurate snapshot of the original log's
+  // channel set. The channel indices from a log file's messages (e.g.
+  // `aos.timing.Report` messages) must match the correct channels in the MCAP
+  // file.
+  //
+  // In those cases, pass the original logged configuration here (before any
+  // replay-time modifications) so that the "configuration" topic faithfully
+  // reflects the original log. A good way to do this is with
+  // `LogReader::logged_configuration()`.
+  void OverrideConfiguration(const Configuration *configuration_override) {
+    configuration_override_ = configuration_override;
+  }
+
  private:
   enum class OpCode {
     kHeader = 0x01,
@@ -262,6 +283,11 @@ class McapLogger {
   // A test function that dictate which channels to drop from the MCAP. This is
   // passed into the constructor.
   std::function<bool(const Channel *)> channel_should_be_dropped_;
+
+  // When non-null, this configuration is written to the "configuration" MCAP
+  // topic instead of event_loop_->configuration(). See OverrideConfiguration()
+  // for details.
+  const Configuration *configuration_override_ = nullptr;
 
   // Memory buffer to use for compressing data.
   std::vector<uint8_t> compression_buffer_;

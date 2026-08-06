@@ -416,42 +416,61 @@ Result<void> EventSchedulerScheduler::RunMaybeRealtimeLoop(F loop_body) {
   monotonic_clock::time_point last_monotonic_clock = monotonic_clock::now();
   timerfd.SetTime(last_monotonic_clock, std::chrono::seconds(0));
   Result<void> result{};
-  epoll_.OnReadable(
-      timerfd.fd(), [this, &last_distributed_clock, &last_monotonic_clock,
-                     &timerfd, &result, loop_body]() {
-        const uint64_t read_result = timerfd.Read();
-        if (!is_running_) {
-          epoll_.Quit();
-          return;
+  epoll_.OnReadable(timerfd.fd(), [this, &last_distributed_clock,
+                                   &last_monotonic_clock, &timerfd, &result,
+                                   loop_body]() {
+    const uint64_t read_result = timerfd.Read();
+    if (!is_running_) {
+      epoll_.Quit();
+      return;
+    }
+    CHECK_EQ(read_result, 1u);
+    // Call loop_body() at least once; if we are in infinite-speed replay,
+    // we don't actually want/need the context switches from the epoll
+    // setup, so just loop.
+    // Note: The performance impacts of this code have not been carefully
+    // inspected (e.g., how much does avoiding the context-switch help; does
+    // the timerfd_settime call matter).
+    // This is deliberately written to support the user changing replay
+    // rates dynamically.
+    do {
+      result = loop_body();
+      if (!result.has_value()) {
+        is_running_ = false;
+      }
+      if (is_running_) {
+        const Result<
+            std::tuple<distributed_clock::time_point, EventScheduler *>>
+            next_oldest_event = OldestEvent();
+        if (!next_oldest_event.has_value()) {
+          // Propagate the error.
+          result = MakeError(next_oldest_event.error());
+          is_running_ = false;
+        } else if (distributed_clock::time_point next_event_time =
+                       std::get<0>(next_oldest_event.value());
+                   next_event_time != distributed_clock::max_time) {
+          // Schedule the next event.
+          const monotonic_clock::time_point next_trigger =
+              last_monotonic_clock +
+              std::chrono::duration_cast<std::chrono::nanoseconds>(
+                  (next_event_time - last_distributed_clock) / replay_rate_);
+          timerfd.SetTime(next_trigger, std::chrono::seconds(0));
+          last_monotonic_clock = next_trigger;
+          last_distributed_clock = next_event_time;
+        } else {
+          // We're out of events. Let loop_body deal with that above. It will
+          // set is_running_ to false and do any additional bookkeeping that it
+          // needs to do.
+          continue;
         }
-        CHECK_EQ(read_result, 1u);
-        // Call loop_body() at least once; if we are in infinite-speed replay,
-        // we don't actually want/need the context switches from the epoll
-        // setup, so just loop.
-        // Note: The performance impacts of this code have not been carefully
-        // inspected (e.g., how much does avoiding the context-switch help; does
-        // the timerfd_settime call matter).
-        // This is deliberately written to support the user changing replay
-        // rates dynamically.
-        do {
-          result = loop_body();
-          if (!result.has_value()) {
-            is_running_ = false;
-          }
-          if (is_running_) {
-            const monotonic_clock::time_point next_trigger =
-                last_monotonic_clock +
-                std::chrono::duration_cast<std::chrono::nanoseconds>(
-                    (now_ - last_distributed_clock) / replay_rate_);
-            timerfd.SetTime(next_trigger, std::chrono::seconds(0));
-            last_monotonic_clock = next_trigger;
-            last_distributed_clock = now_;
-          } else {
-            epoll_.Quit();
-          }
-        } while (replay_rate_ == std::numeric_limits<double>::infinity() &&
-                 is_running_);
-      });
+      }
+    } while (replay_rate_ == std::numeric_limits<double>::infinity() &&
+             is_running_);
+
+    if (!is_running_) {
+      epoll_.Quit();
+    }
+  });
 
   epoll_.Run();
   epoll_.DeleteFd(timerfd.fd());

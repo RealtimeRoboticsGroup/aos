@@ -1,6 +1,71 @@
 load("@aos//aos/flatbuffers:build_defs.bzl", "flatbuffer_cc_library")
+load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("//tools/build_rules:clean_dep.bzl", "clean_dep")
+
+StaticFlatbufferReflectionInfo = provider(
+    doc = "Reflection metadata for a static_flatbuffer target. Exposes one " +
+          "(.fbs, .bfbs) pair per source so downstream codegen tools can walk " +
+          "the static_flatbuffer dependency graph via an aspect (propagated " +
+          "over the rule's `static_flatbuffer_deps` attribute) and access " +
+          "each schema's reflection info.",
+    fields = {
+        "schemas": "list[struct(bfbs: File, fbs_name: string)]: one entry per " +
+                   ".fbs/.bfbs pair owned by this target.",
+    },
+)
+
+def _static_flatbuffer_impl(ctx):
+    # Pair each declared .fbs source with its sibling .bfbs by basename stem
+    # (the underlying flatbuffer_cc_library emits `<stem>.bfbs` per `<stem>.fbs`).
+    bfbs_by_stem = {
+        paths.replace_extension(bfbs.basename, ""): bfbs
+        for bfbs in ctx.files.bfbs
+    }
+    schemas = []
+    for fbs_name in ctx.attr.fbs_names:
+        stem = paths.replace_extension(paths.basename(fbs_name), "")
+        if stem not in bfbs_by_stem:
+            fail("No .bfbs file found for '%s' in %s; have %s" %
+                 (fbs_name, ctx.attr.bfbs.label, sorted(bfbs_by_stem.keys())))
+        schemas.append(struct(bfbs = bfbs_by_stem[stem], fbs_name = fbs_name))
+
+    # Re-export the wrapped cc_library so this target is usable wherever a
+    # cc_library is expected (downstream cc_library deps, cc_binary, etc.).
+    return [
+        ctx.attr.cc_lib[CcInfo],
+        ctx.attr.cc_lib[DefaultInfo],
+        StaticFlatbufferReflectionInfo(schemas = schemas),
+    ]
+
+_static_flatbuffer = rule(
+    implementation = _static_flatbuffer_impl,
+    attrs = {
+        "cc_lib": attr.label(
+            mandatory = True,
+            providers = [CcInfo],
+            doc = "The underlying cc_library whose CcInfo is re-exported.",
+        ),
+        "bfbs": attr.label(
+            mandatory = True,
+            allow_files = [".bfbs"],
+            doc = "Target producing the .bfbs reflection files (one per source).",
+        ),
+        "fbs_names": attr.string_list(
+            mandatory = True,
+            doc = "Source .fbs filenames (parallel to the .bfbs files exposed " +
+                  "by `bfbs`, matched by basename stem).",
+        ),
+        "static_flatbuffer_deps": attr.label_list(
+            default = [],
+            doc = "Direct user-declared deps, mirrored here for aspect " +
+                  "propagation. Kept separate from the wrapped cc_library's " +
+                  "`deps` so aspects only traverse the static_flatbuffer dep " +
+                  "graph and don't leak into unrelated cc_library transitives.",
+        ),
+    },
+    provides = [CcInfo, StaticFlatbufferReflectionInfo],
+)
 
 def _static_flatbuffer_gen_impl(ctx):
     """Implementation for generating static flatbuffer headers."""
@@ -43,18 +108,29 @@ _static_flatbuffer_gen = rule(
 def static_flatbuffer(name, visibility = None, deps = [], srcs = [], **kwargs):
     """Generates the code for the static C++ flatbuffer API for the specified fbs file.
 
-    Generates a cc_library of name name that can be depended on by C++ code and other
-    static_flatbuffer rules.
+    Generates a target of name `name` that can be depended on by C++ code (it
+    advertises `CcInfo`) and by other static_flatbuffer rules.
 
-    The cc_library will consist of a single file suffixed with _static.h and prefixed
-    with the name of the flatbuffer file itself (i.e., if you have a src of foo.fbs, then
-    the resulting header will be foo_static.h).
+    The generated library consists of one header per source, suffixed with
+    `_static.h` and prefixed with the name of the flatbuffer file itself
+    (i.e., if you have a src of `foo.fbs`, then the resulting header will be
+    `foo_static.h`).
+
+    `:name` advertises both `CcInfo` (re-exported from the underlying
+    cc_library) and `StaticFlatbufferReflectionInfo` so codegen aspects
+    (e.g. `foxglove_ts_library`) can walk the dep graph. The metadata provider
+    exposes one `(bfbs, fbs_name)` entry per source. `deps` may freely mix
+    `static_flatbuffer` targets and raw `flatbuffer_cc_library` targets that
+    lack the provider; aspects with `required_providers =
+    [StaticFlatbufferReflectionInfo]` skip the latter.
 
     Args:
       name: Target name.
       srcs: List of fbs files to codegen.
       visibility: Desired rule visibility.
-      deps: List of static_flatbuffer dependencies of this rule.
+      deps: List of flatbuffer dependencies of this rule. Each entry must have
+        a sibling `<dep>_fbs` `flatbuffer_cc_library` (which `static_flatbuffer`
+        generates automatically).
     """
     fbs_suffix = "_fbs"
 
@@ -88,12 +164,29 @@ def static_flatbuffer(name, visibility = None, deps = [], srcs = [], **kwargs):
         outs = header_names,
         base_files = [native.package_name() + "/" + file for file in cleaned_srcs],
     )
+
+    # `:name` is a custom rule that advertises CcInfo (re-exported from the
+    # underlying `:name_cc` cc_library) and StaticFlatbufferReflectionInfo.
+    # Codegen aspects walk the dep graph via the rule's
+    # `static_flatbuffer_deps` attribute, which only references user-declared
+    # deps; this scopes propagation to the static_flatbuffer subgraph and
+    # naturally stops at raw `flatbuffer_cc_library` boundaries (which are
+    # plain cc_library and don't have that attribute).
     cc_library(
-        name = name,
+        name = name + "_cc",
         hdrs = header_names,
         deps = [clean_dep("//aos/flatbuffers:static_table"), clean_dep("//aos/flatbuffers:static_vector"), clean_dep("//aos:macros"), name + fbs_suffix] + deps,
+        visibility = ["//visibility:private"],
+    )
+    _static_flatbuffer(
+        name = name,
+        cc_lib = ":" + name + "_cc",
+        bfbs = ":" + reflection_out,
+        fbs_names = [src.removeprefix(":") for src in srcs],
+        static_flatbuffer_deps = deps,
         visibility = visibility,
     )
+
     native.alias(
         name = name + "_reflection_out",
         actual = name + fbs_suffix + "_reflection_out",
