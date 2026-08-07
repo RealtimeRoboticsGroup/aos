@@ -32,7 +32,9 @@ namespace {
 // Windows doesn't really have any of this.  Scheduler + priority + affinity is
 // per-thread, so be per-thread on each of these.
 thread_local int fake_rt_priority = 0;
-thread_local int fake_rt_policy = SCHED_FIFO;
+// Threads start out non-realtime, the same as they do on Linux, and the same as
+// UnsetCurrentThreadRealtimePriority() puts them back to.
+thread_local int fake_rt_policy = SCHED_OTHER;
 thread_local bool is_realtime = false;
 thread_local CpuSet thread_affinity = DefaultAffinity();
 }  // namespace
