@@ -51,6 +51,25 @@ cc_test(
 )
 
 cc_library(
+    name = "test_child",
+    testonly = True,
+    srcs = [
+        "test_child.cc",
+    ],
+    hdrs = [
+        "test_child.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
+    ] + select({
+        "@platforms//os:windows": [],
+        "//conditions:default": [":prevent_exit"],
+    }),
+)
+
+cc_library(
     name = "prevent_exit",
     testonly = True,
     srcs = [

@@ -131,7 +131,7 @@ cc_test(
         "//aos/logging",
         "//aos/mutex",
         "//aos/testing:googletest",
-        "//aos/testing:prevent_exit",
+        "//aos/testing:test_child",
         "//aos/testing:test_shm",
         "//aos/time",
     ],
