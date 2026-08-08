@@ -48,6 +48,21 @@ cc_library(
     visibility = ["//visibility:public"],
 )
 
+# NVIDIA's TEGRA_ACCELERATE build of libjpeg-8b, which drives the NVJPG
+# engine.  Consumers must compile with -DTEGRA_ACCELERATE to get the
+# matching struct layout.
+cc_library(
+    name = "nvjpeg",
+    srcs = [
+        "usr/lib/libnvjpeg.so",
+    ],
+    hdrs = glob(
+        include = ["usr/include/libjpeg-8b/*.h"],
+    ),
+    includes = ["usr/include/libjpeg-8b/"],
+    visibility = ["//visibility:public"],
+)
+
 cc_library(
     name = "cudart",
     srcs = [

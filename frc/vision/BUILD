@@ -674,6 +674,84 @@ cc_binary(
     ],
 )
 
+# Thin wrapper around the Jetson NVJPG hardware JPEG decoder; see
+# nvjpeg_decoder_lib.h.
+cc_library(
+    name = "nvjpeg_decoder_lib",
+    srcs = ["nvjpeg_decoder_lib.cc"],
+    hdrs = ["nvjpeg_decoder_lib.h"],
+    # Selects the hardware-extended jpeglib struct layout matching
+    # libnvjpeg.so's ABI; must only be set for TUs including the sysroot's
+    # libjpeg-8b headers.
+    local_defines = ["TEGRA_ACCELERATE"],
+    target_compatible_with = [
+        "@platforms//cpu:arm64",
+        "@platforms//os:linux",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@arm64_debian_sysroot//:nvjpeg",
+        "@com_google_absl//absl/log",
+    ],
+)
+
+# Hardware (NVJPG engine) counterpart to turbojpeg_decoder with the identical
+# channel/flag/status interface -- swap decoders by changing executable_name
+# in the config.  arm64-only; x86 simulation keeps using turbojpeg_decoder.
+cc_binary(
+    name = "nvjpeg_decoder",
+    srcs = ["nvjpeg_decoder.cc"],
+    target_compatible_with = [
+        "@platforms//cpu:arm64",
+        "@platforms//os:linux",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":nvjpeg_decoder_lib",
+        ":turbojpeg_decoder_status_fbs",
+        ":vision_fbs",
+        "//aos:configuration",
+        "//aos:init",
+        "//aos/containers:inlined_vector",
+        "//aos/events:shm_event_loop",
+    ],
+)
+
+# Probe/benchmark for libnvjpeg on the Orin: reports whether the NVJPG
+# engine is engaged and the per-frame decode time.  scp to the target and
+# run by hand; independent of nvjpeg_decoder_lib's fail-loud policy.
+cc_binary(
+    name = "nvjpeg_bench",
+    srcs = ["nvjpeg_bench.cc"],
+    local_defines = ["TEGRA_ACCELERATE"],
+    target_compatible_with = [
+        "@platforms//cpu:arm64",
+        "@platforms//os:linux",
+    ],
+    deps = [
+        "@arm64_debian_sysroot//:nvjpeg",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:globals",
+        "@com_google_absl//absl/log:initialize",
+        "@com_google_absl//absl/strings:str_format",
+    ],
+)
+
+# Standalone benchmark for the turbojpeg CPU decode path, mirroring
+# turbojpeg_decoder's per-frame calls.  scp to a target and run by hand on a
+# .jpg to compare decoder latencies (counterpart to :nvjpeg_bench).
+cc_binary(
+    name = "turbojpeg_bench",
+    srcs = ["turbojpeg_bench.cc"],
+    deps = [
+        "//third_party:libturbojpeg",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:globals",
+        "@com_google_absl//absl/log:initialize",
+        "@com_google_absl//absl/strings:str_format",
+    ],
+)
+
 static_flatbuffer(
     name = "camera_settings_fbs",
     srcs = ["camera_settings.fbs"],
