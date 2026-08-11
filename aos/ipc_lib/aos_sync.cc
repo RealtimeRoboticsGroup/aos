@@ -125,51 +125,74 @@ inline int mutex_get(aos_mutex *m, bool signals_fail) {
 
 void atfork_child() {
   // The next time get_tid() is called, it will set everything up again.
-  my_tid = 0;
+  thread_state()->tid = 0;
 }
 
-thread_local pid_t my_tid = 0;
+namespace {
+// TU-local so ELF can use a cheap TLS model; see the ThreadState comment in
+// aos_sync_internal.h.  Zero-initialized, which is the state every consumer
+// other than RobustListCleaner treats as "initialize me first".
+thread_local ThreadState g_thread_state;
+}  // namespace
+
+ThreadState *thread_state() { return &g_thread_state; }
 
 namespace my_robust_list {
-
-thread_local aos_robust_list_head robust_head;
 
 uintptr_t robust_list_offset = 0;
 
 void Init() {
+  aos_robust_list_head *const head = &thread_state()->robust_head;
   // It starts out just pointing back to itself.
-  robust_head.next = robust_head_next_value();
-  robust_head.futex_offset = static_cast<ssize_t>(offsetof(aos_mutex, futex)) -
-                             static_cast<ssize_t>(offsetof(aos_mutex, next));
-  robust_head.pending_next = 0;
-  RegisterRobustList(reinterpret_cast<void *>(robust_head_next_value()),
-                     sizeof(robust_head));
+  head->next = robust_head_next_value(head);
+  head->futex_offset = static_cast<ssize_t>(offsetof(aos_mutex, futex)) -
+                       static_cast<ssize_t>(offsetof(aos_mutex, next));
+  head->pending_next = 0;
+  RegisterRobustList(reinterpret_cast<void *>(robust_head_next_value(head)),
+                     sizeof(*head));
   if (kRobustListDebug) {
     printf("%" PRId32 ": init done\n", get_tid());
   }
 }
 
 void SetRobustListOffset(uintptr_t offset) {
+  aos_robust_list_head *const head = &thread_state()->robust_head;
   const uintptr_t offset_change = offset - robust_list_offset;
   robust_list_offset = offset;
-  aos_mutex *m = robust_head_mutex();
+  aos_mutex *m = robust_head_mutex(head);
   // Update the offset contained in each of the mutexes which is already locked.
-  while (!next_is_head(m->next)) {
+  while (!next_is_head(head, m->next)) {
     m->next += offset_change;
-    m = next_to_mutex(m->next);
+    m = next_to_mutex(head, m->next);
   }
 }
 
 bool HaveLockedMutexes() {
-  return robust_head.next != robust_head_next_value();
+  aos_robust_list_head *const head = &thread_state()->robust_head;
+  return head->next != robust_head_next_value(head);
 }
 
 }  // namespace my_robust_list
 
+void futex_mutex_do_unlock(aos_mutex *m, uint32_t tid) {
+  // If the atomic TID->0 transition fails (ie FUTEX_WAITERS is set),
+  if (!compare_and_swap(&m->futex, tid, 0)) {
+    // sys_futex_unlock_pi wakes a waiter for us.
+    const int ret = sys_futex_unlock_pi(&m->futex);
+    if (ret != 0) {
+      thread_state()->robust_head.pending_next = 0;
+      errno = -ret;
+      ABSL_PLOG(FATAL) << "FUTEX_UNLOCK_PI(" << (&m->futex) << ") failed";
+    }
+  } else {
+    // There aren't any waiters, so no need to wake anybody.
+  }
+}
+
 void initialize_in_new_thread() {
   // No synchronization necessary in most of this because it's all thread-local!
 
-  my_tid = do_get_tid();
+  thread_state()->tid = do_get_tid();
 
   static absl::once_flag once;
   absl::call_once(once, InstallAtforkHook);
@@ -198,7 +221,7 @@ void mutex_unlock(aos_mutex *m) {
   const uint32_t value =
       std::atomic_ref<uint32_t>(m->futex).load(std::memory_order_seq_cst);
   if (AOS_UNLIKELY((value & FUTEX_TID_MASK) != tid)) {
-    my_robust_list::robust_head.pending_next = 0;
+    thread_state()->robust_head.pending_next = 0;
     check_cached_tid(tid);
     if ((value & FUTEX_TID_MASK) == 0) {
       ABSL_LOG(FATAL) << "multiple unlock of aos_mutex " << m << " by " << tid;
@@ -243,7 +266,7 @@ int mutex_trylock(aos_mutex *m) {
         if (AOS_LIKELY(ret == -EWOULDBLOCK)) {
           return 4;
         }
-        my_robust_list::robust_head.pending_next = 0;
+        thread_state()->robust_head.pending_next = 0;
         errno = -ret;
         ABSL_PLOG(FATAL) << "FUTEX_TRYLOCK_PI(" << (&m->futex)
                          << ", 0, NULL) failed";
@@ -334,7 +357,7 @@ void death_notification_release(aos_mutex *m) {
   ANNOTATE_HAPPENS_BEFORE(m);
   const int ret = sys_futex_unlock_pi(&m->futex);
   if (ret != 0) {
-    my_robust_list::robust_head.pending_next = 0;
+    thread_state()->robust_head.pending_next = 0;
     errno = -ret;
     ABSL_PLOG(FATAL) << "FUTEX_UNLOCK_PI(" << &m->futex << ") failed";
   }
