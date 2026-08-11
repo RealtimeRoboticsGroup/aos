@@ -1,9 +1,17 @@
 // Standalone probe/benchmark for libnvjpeg (NVIDIA's TEGRA_ACCELERATE
-// libjpeg-8b) on the Orin.  Decodes a JPEG file N times through the same
-// raw-data-out call sequence NvJpegDecoderLib uses, reports whether the
-// library engaged the NVJPG engine (cinfo.tegra_acceleration) and the
-// per-frame decode time, and optionally writes the grayscale result as a
-// PGM for pixel-level verification.
+// libjpeg-8b) on the Orin.  Decodes a JPEG file N times through the plain
+// raw-data-out call sequence, reports whether the library engaged the NVJPG
+// engine (cinfo.tegra_acceleration) and the per-frame decode time, and
+// optionally writes the grayscale result as a PGM for pixel-level
+// verification.
+//
+// NOTE: this raw-data-out sequence only produces pixels on the FIRST decode
+// of a decompress object's lifetime -- later iterations silently write
+// nothing (the library bug that NvJpegDecoderLib works around with MJPEG
+// stream mode + hardware-surface readback; see nvjpeg_decoder_lib.cc and
+// nvjpeg_seq_test.cc).  The output buffer is therefore re-poisoned before
+// every iteration and per-iteration written-pixel counts are printed, so a
+// written-nothing iteration is visible instead of masked by stale pixels.
 //
 // Deliberately independent of NvJpegDecoderLib so it runs (and reports)
 // even on systems where the engine is unavailable -- this is the tool to
@@ -69,6 +77,11 @@ int main(int argc, char **argv) {
   fseek(f, 0, SEEK_END);
   const long file_size = ftell(f);
   fseek(f, 0, SEEK_SET);
+  if (file_size <= 0 || file_size > 100 * 1024 * 1024) {
+    LOG(ERROR) << argv[1] << ": implausible size " << file_size
+               << " (directory or unseekable file?)";
+    return 1;
+  }
   std::vector<unsigned char> jpeg(file_size);
   if (fread(jpeg.data(), 1, file_size, f) != static_cast<size_t>(file_size)) {
     LOG(ERROR) << "short read of " << argv[1];
@@ -92,11 +105,21 @@ int main(int argc, char **argv) {
   std::vector<unsigned char> gray;
   std::vector<unsigned char> discard_row;
   std::vector<unsigned char> bounce_rows;
+  // Snapshot of iteration 0's output for the optional PGM: later iterations
+  // re-poison gray, and the raw-data path writes nothing after the first
+  // decode (see NOTE above), so gray itself ends the loop full of poison.
+  std::vector<unsigned char> first_gray;
   double total_us = 0;
   double min_us = 1e12;
   uint32_t width = 0, height = 0;
 
   for (int iter = 0; iter < iterations; ++iter) {
+    // Poison before the timed region so an iteration that writes nothing is
+    // detectable without skewing the reported decode time (first iteration:
+    // the buffer does not exist yet; it is poisoned right after the resize).
+    if (!gray.empty()) {
+      memset(gray.data(), 0xAA, gray.size());
+    }
     if (setjmp(jerr.setjmp_buffer)) {
       LOG(ERROR) << "decode failed on iteration " << iter << ": "
                  << jerr.message;
@@ -147,11 +170,17 @@ int main(int argc, char **argv) {
       if (w > scratch) scratch = w;
     }
     discard_row.resize(scratch);
-    gray.resize(static_cast<size_t>(width) * height);
+    if (gray.empty()) {
+      gray.resize(static_cast<size_t>(width) * height);
+      memset(gray.data(), 0xAA, gray.size());
+    }
     const bool bounce = (y_padded_width != width);
     if (bounce) {
       bounce_rows.resize(static_cast<size_t>(y_padded_width) *
                          y_rows_per_group);
+      // Poisoned like gray: on a written-nothing iteration the bounce copy
+      // must transport poison, not the previous iteration's rows.
+      memset(bounce_rows.data(), 0xAA, bounce_rows.size());
     }
 
     JSAMPROW y_rows[4 * DCTSIZE];
@@ -200,9 +229,15 @@ int main(int argc, char **argv) {
     total_us += us;
     if (us < min_us) min_us = us;
     if (iter == 0) {
-      LOG(INFO) << absl::StrFormat("first decode: %.1f us, hardware=%s", us,
-                                   hw ? "YES" : "no");
+      first_gray = gray;
     }
+    size_t poison = 0;
+    for (const unsigned char v : gray) {
+      if (v == 0xAA) ++poison;
+    }
+    LOG(INFO) << absl::StrFormat(
+        "iter %d: %.1f us, hardware=%s, untouched_pixels=%zu/%zu", iter, us,
+        hw ? "YES" : "no", poison, gray.size());
   }
 
   LOG(INFO) << absl::StrFormat("%d iterations: mean %.1f us, min %.1f us",
@@ -215,7 +250,7 @@ int main(int argc, char **argv) {
       return 1;
     }
     fprintf(out, "P5\n%u %u\n255\n", width, height);
-    fwrite(gray.data(), 1, gray.size(), out);
+    fwrite(first_gray.data(), 1, first_gray.size(), out);
     fclose(out);
     LOG(INFO) << "wrote " << argv[3];
   }

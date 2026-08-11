@@ -11,6 +11,25 @@ table TurboJpegDecoderStatus {
   // the last status message, will not be populated.
   // May be truncated.
   last_error_message:string (id: 2, static_length: 128);
+  // The number of all-zero decoded frames skipped instead of published since
+  // the last status message -- the hardware pipeline's warmup frame, or a
+  // genuinely black image (nvjpeg_decoder only; turbojpeg_decoder does not
+  // set it).
+  skipped_zero_frames:uint (id: 3);
+  // Number of already-stale input frames skipped without decoding -- mostly
+  // the backlog a watcher drains when the decoder (re)starts against a live
+  // camera (nvjpeg_decoder only).
+  skipped_stale_frames:uint (id: 4);
+  // Number of successfully decoded frames dropped instead of published to
+  // stay under the output channel's configured frequency, including sends
+  // AOS rejected as too fast (nvjpeg_decoder only).
+  dropped_sends:uint (id: 5);
+  // Worst-case age of a published image at publish time (now minus the
+  // image's capture timestamp) in this status window, in milliseconds.
+  // Includes the hardware pipeline's one-frame delay; if this approaches
+  // the detector's --max_image_age_ms, detections are about to go dark
+  // (nvjpeg_decoder only).
+  max_publish_age_ms:uint (id: 6);
 }
 
 root_type TurboJpegDecoderStatus;
