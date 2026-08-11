@@ -1,10 +1,5 @@
 #include "aos/condition.h"
 
-#include <signal.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
-
 #include <atomic>
 #include <chrono>
 #include <thread>
@@ -16,7 +11,7 @@
 #include "aos/ipc_lib/aos_sync.h"
 #include "aos/macros.h"
 #include "aos/mutex/mutex.h"
-#include "aos/testing/prevent_exit.h"
+#include "aos/testing/test_child.h"
 #include "aos/testing/test_shm.h"
 #include "aos/time/time.h"
 #include "aos/type_traits/type_traits.h"
@@ -312,28 +307,16 @@ class ConditionTestProcess {
         action_(action),
         condition_(condition),
         timeout_(delay_ + timeout),
-        child_(-1),
         mem_(sizeof(Shared)),
         shared_(static_cast<Shared *>(mem_.get())) {
     new (shared_) Shared();
   }
-  ~ConditionTestProcess() { ABSL_CHECK_EQ(child_, -1); }
-
   void Start() {
     ASSERT_FALSE(shared_->started);
 
-    child_ = fork();
-    if (child_ == 0) {  // in child
-      ::aos::testing::PreventExit();
-      Run();
-      exit(EXIT_SUCCESS);
-    } else {  // in parent
-      ABSL_CHECK_NE(child_, -1);
-
-      ASSERT_EQ(0, futex_wait(&shared_->ready));
-
-      shared_->started = true;
-    }
+    child_.Start([this]() { Run(); });
+    ASSERT_EQ(0, futex_wait(&shared_->ready));
+    shared_->started = true;
   }
 
   bool IsFinished() { return shared_->finished; }
@@ -413,26 +396,15 @@ class ConditionTestProcess {
     }
   }
 
-  void Join() {
-    ABSL_CHECK_NE(child_, -1);
-    int status;
-    do {
-      ABSL_CHECK_EQ(waitpid(child_, &status, 0), child_);
-    } while (!(WIFEXITED(status) || WIFSIGNALED(status)));
-    child_ = -1;
-  }
-  void Kill() {
-    ABSL_CHECK_NE(child_, -1);
-    ABSL_PCHECK(kill(child_, SIGTERM) != -1);
-    Join();
-  }
+  void Join() { child_.Join(); }
+  void Kill() { child_.Terminate(); }
 
   const chrono::milliseconds delay_;
   const Action action_;
   Condition *const condition_;
   const chrono::milliseconds timeout_;
 
-  pid_t child_;
+  TestChild child_;
 
   SharedMemoryBlock mem_;
   Shared *const shared_;
