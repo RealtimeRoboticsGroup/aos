@@ -91,6 +91,11 @@ const bool kPrintOperations = false;
 
 #ifdef AOS_SANITIZER_thread
 
+// NOTE: this tsan integration is only tested on Linux, which is the only
+// place we run tsan today, but nothing in it is Linux-specific: it is
+// deliberately not guarded linux-only, and porting tsan to macOS should
+// take little more than making the build enable it.
+
 // Simple macro for checking something which should always be true.
 // Using the standard CHECK macro isn't safe because failures often result in
 // reentering the mutex locking code, which doesn't work.
@@ -212,7 +217,35 @@ pid_t do_get_tid();
 
 // Starts off at 0 in each new thread (because that's what it gets initialized
 // to in most of them or it gets to reset to 0 after a fork by atfork_child()).
-extern thread_local pid_t my_tid;
+// Our version of robust_list_head.
+// This is copied from the kernel header because that's a pretty stable ABI (and
+// any changes will be backwards compatible anyways) and we want ours to have
+// different types.
+// The uintptr_ts are &next of the elements in the list (with stuff |ed in).
+struct aos_robust_list_head {
+  uintptr_t next;
+  long futex_offset;
+  uintptr_t pending_next;
+};
+
+// All of this thread's aos_sync state, together so retrieving it is a
+// single TLS lookup.  An extern thread_local would force the
+// general-dynamic TLS model on ELF (accesses through __tls_get_addr; see
+// https://www.uclibc.org/docs/tls.pdf), so instead the variable is
+// TU-local behind thread_state() in aos_sync.cc, and callers make one
+// call and cache the reference.
+struct ThreadState {
+  // This thread's tid, from do_get_tid().  0 until
+  // initialize_in_new_thread() runs (and reset to 0 in the child of a
+  // fork by atfork_child()).
+  pid_t tid;
+
+  aos_robust_list_head robust_head;
+};
+
+// Returns this thread's state (zero-initialized until
+// initialize_in_new_thread()).
+ThreadState *thread_state();
 
 // This gets called to set everything up in a new thread by get_tid().
 void initialize_in_new_thread();
@@ -227,11 +260,12 @@ void InstallAtforkHook();
 // Gets the current thread's TID and does all of the 1-time initialization the
 // first time it's called in a given thread.
 inline uint32_t get_tid() {
-  if (AOS_UNLIKELY(my_tid == 0)) {
+  ThreadState *state = thread_state();
+  if (AOS_UNLIKELY(state->tid == 0)) {
     initialize_in_new_thread();
   }
-  static_assert(sizeof(my_tid) <= sizeof(uint32_t), "pid_t is too big");
-  return static_cast<uint32_t>(my_tid);
+  static_assert(sizeof(state->tid) <= sizeof(uint32_t), "pid_t is too big");
+  return static_cast<uint32_t>(state->tid);
 }
 
 // Contains all of the stuff for dealing with the robust list. Nothing outside
@@ -242,17 +276,6 @@ namespace my_robust_list {
 static_assert(offsetof(aos_mutex, next) == 0,
               "Our math all assumes that the beginning of a mutex and its next "
               "pointer are at the same place in memory.");
-
-// Our version of robust_list_head.
-// This is copied from the kernel header because that's a pretty stable ABI (and
-// any changes will be backwards compatible anyways) and we want ours to have
-// different types.
-// The uintptr_ts are &next of the elements in the list (with stuff |ed in).
-struct aos_robust_list_head {
-  uintptr_t next;
-  long futex_offset;
-  uintptr_t pending_next;
-};
 
 #ifdef __linux__
 static_assert(offsetof(aos_robust_list_head, next) ==
@@ -268,8 +291,6 @@ static_assert(sizeof(aos_robust_list_head) == sizeof(robust_list_head),
               "Our aos_robust_list_head doesn't match the kernel's");
 #endif
 
-extern thread_local aos_robust_list_head robust_head;
-
 // Extra offset between mutex values and where we point to for their robust list
 // entries (from SetRobustListOffset).
 extern uintptr_t robust_list_offset;
@@ -279,25 +300,25 @@ extern uintptr_t robust_list_offset;
 static const uintptr_t kRobustListOr = 1;
 
 // Returns the value which goes into a next variable to represent the head.
-inline uintptr_t robust_head_next_value() {
-  return reinterpret_cast<uintptr_t>(&robust_head.next);
+inline uintptr_t robust_head_next_value(aos_robust_list_head *head) {
+  return reinterpret_cast<uintptr_t>(&head->next);
 }
 // Returns true iff next represents the head.
-inline bool next_is_head(uintptr_t next) {
-  return next == robust_head_next_value();
+inline bool next_is_head(aos_robust_list_head *head, uintptr_t next) {
+  return next == robust_head_next_value(head);
 }
 // Returns the (psuedo-)mutex corresponding to the head.
 // This does NOT have a previous pointer, so be careful with the return value.
-inline aos_mutex *robust_head_mutex() {
-  return reinterpret_cast<aos_mutex *>(robust_head_next_value());
+inline aos_mutex *robust_head_mutex(aos_robust_list_head *head) {
+  return reinterpret_cast<aos_mutex *>(robust_head_next_value(head));
 }
 
 inline uintptr_t mutex_to_next(aos_mutex *m) {
   return (reinterpret_cast<uintptr_t>(&m->next) + robust_list_offset) |
          kRobustListOr;
 }
-inline aos_mutex *next_to_mutex(uintptr_t next) {
-  if (AOS_UNLIKELY(robust_list_offset != 0) && next_is_head(next)) {
+inline aos_mutex *next_to_mutex(aos_robust_list_head *head, uintptr_t next) {
+  if (AOS_UNLIKELY(robust_list_offset != 0) && next_is_head(head, next)) {
     // We don't offset the head pointer, so be careful.
     return reinterpret_cast<aos_mutex *>(next);
   }
@@ -322,39 +343,39 @@ bool HaveLockedMutexes();
 // to do this and then call Add() iff it should actually be added.
 class Adder {
  public:
-  Adder(aos_mutex *m) : m_(m) {
-    assert(robust_head.pending_next == 0);
+  Adder(aos_mutex *m) : head_(&thread_state()->robust_head), m_(m) {
+    assert(head_->pending_next == 0);
     if (kRobustListDebug) {
       printf("%" PRId32 ": maybe add %p\n", get_tid(), m_);
     }
-    robust_head.pending_next = mutex_to_next(m);
+    head_->pending_next = mutex_to_next(m);
     aos_compiler_memory_barrier();
   }
   ~Adder() {
-    assert(robust_head.pending_next == mutex_to_next(m_));
+    assert(head_->pending_next == mutex_to_next(m_));
     if (kRobustListDebug) {
       printf("%" PRId32 ": done maybe add %p, n=%p p=%p\n", get_tid(), m_,
-             next_to_mutex(m_->next), m_->previous);
+             next_to_mutex(head_, m_->next), m_->previous);
     }
     aos_compiler_memory_barrier();
-    robust_head.pending_next = 0;
+    head_->pending_next = 0;
   }
 
   void Add() {
-    assert(robust_head.pending_next == mutex_to_next(m_));
+    assert(head_->pending_next == mutex_to_next(m_));
     if (kRobustListDebug) {
       printf("%" PRId32 ": adding %p\n", get_tid(), m_);
     }
-    const uintptr_t old_head_next_value = robust_head.next;
+    const uintptr_t old_head_next_value = head_->next;
 
     m_->next = old_head_next_value;
     aos_compiler_memory_barrier();
-    robust_head.next = mutex_to_next(m_);
+    head_->next = mutex_to_next(m_);
 
-    m_->previous = robust_head_mutex();
-    if (!next_is_head(old_head_next_value)) {
+    m_->previous = robust_head_mutex(head_);
+    if (!next_is_head(head_, old_head_next_value)) {
       // robust_head's psuedo-mutex doesn't have a previous pointer to update.
-      next_to_mutex(old_head_next_value)->previous = m_;
+      next_to_mutex(head_, old_head_next_value)->previous = m_;
     }
     aos_compiler_memory_barrier();
     if (kRobustListDebug) {
@@ -363,6 +384,7 @@ class Adder {
   }
 
  private:
+  aos_robust_list_head *const head_;
   aos_mutex *const m_;
 
   DISALLOW_COPY_AND_ASSIGN(Adder);
@@ -373,22 +395,22 @@ class Adder {
 // to do this.
 class Remover {
  public:
-  Remover(aos_mutex *m) {
-    assert(robust_head.pending_next == 0);
+  Remover(aos_mutex *m) : head_(&thread_state()->robust_head) {
+    assert(head_->pending_next == 0);
     if (kRobustListDebug) {
       printf("%" PRId32 ": beginning to remove %p, n=%p p=%p\n", get_tid(), m,
-             next_to_mutex(m->next), m->previous);
+             next_to_mutex(head_, m->next), m->previous);
     }
-    robust_head.pending_next = mutex_to_next(m);
+    head_->pending_next = mutex_to_next(m);
     aos_compiler_memory_barrier();
 
     aos_mutex *const previous = m->previous;
     const uintptr_t next_value = m->next;
 
     previous->next = m->next;
-    if (!next_is_head(next_value)) {
+    if (!next_is_head(head_, next_value)) {
       // robust_head's psuedo-mutex doesn't have a previous pointer to update.
-      next_to_mutex(next_value)->previous = previous;
+      next_to_mutex(head_, next_value)->previous = previous;
     }
 
     if (kRobustListDebug) {
@@ -396,15 +418,17 @@ class Remover {
     }
   }
   ~Remover() {
-    assert(robust_head.pending_next != 0);
+    assert(head_->pending_next != 0);
     aos_compiler_memory_barrier();
-    robust_head.pending_next = 0;
+    head_->pending_next = 0;
     if (kRobustListDebug) {
       printf("%" PRId32 ": done with removal\n", get_tid());
     }
   }
 
  private:
+  aos_robust_list_head *const head_;
+
   DISALLOW_COPY_AND_ASSIGN(Remover);
 };
 
@@ -467,6 +491,12 @@ int mutex_do_get(aos_mutex *m, bool signals_fail, uint32_t tid);
 // Releases *m, which the caller has already checked is locked by tid and taken
 // off the robust list.
 void mutex_do_unlock(aos_mutex *m, uint32_t tid);
+
+// The futex-word implementation of mutex_do_unlock, defined in aos_sync.cc and
+// shared by every backend whose unlock is the word CAS plus sys_futex_unlock_pi
+// -- the real kernel operation on Linux, and the emulation of it everywhere
+// else.
+void futex_mutex_do_unlock(aos_mutex *m, uint32_t tid);
 
 // The common implementation for broadcast and signal.
 // number_requeue is the number of waiters to requeue (probably INT_MAX or 0). 1

@@ -80,9 +80,11 @@ namespace {
 // for intra-process dev/test, so the looser guarantee is acceptable.
 struct RobustListCleaner {
   ~RobustListCleaner() {
-    while (!next_is_head(robust_head.next)) {
-      aos_mutex *m = next_to_mutex(robust_head.next);
-      robust_head.next = m->next;
+    ThreadState *state = thread_state();
+    while (!next_is_head(&state->robust_head, state->robust_head.next)) {
+      aos_mutex *m =
+          next_to_mutex(&state->robust_head, state->robust_head.next);
+      state->robust_head.next = m->next;
 
       uint32_t val =
           std::atomic_ref<uint32_t>(m->futex).load(std::memory_order_relaxed);
@@ -151,18 +153,7 @@ int mutex_do_get(aos_mutex *m, bool signals_fail, uint32_t tid) {
 }
 
 void mutex_do_unlock(aos_mutex *m, uint32_t tid) {
-  // If the atomic TID->0 transition fails (ie FUTEX_WAITERS is set),
-  if (!compare_and_swap(&m->futex, tid, 0)) {
-    // sys_futex_unlock_pi handles waking any waiters.
-    const int ret = sys_futex_unlock_pi(&m->futex);
-    if (ret != 0) {
-      my_robust_list::robust_head.pending_next = 0;
-      errno = -ret;
-      ABSL_PLOG(FATAL) << "FUTEX_UNLOCK_PI(" << (&m->futex) << ") failed";
-    }
-  } else {
-    // There aren't any waiters, so no need to wake anybody.
-  }
+  futex_mutex_do_unlock(m, tid);
 }
 
 void condition_wake(aos_condition *c, aos_mutex * /*m*/, int number_requeue) {
