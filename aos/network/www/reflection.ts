@@ -116,7 +116,7 @@ export class Table {
   constructor(
     public readonly bb: ByteBuffer,
     public readonly typeIndex: number,
-    public readonly offset: number
+    public readonly offset: number,
   ) {}
   // Constructs a Table object for the root of a ByteBuffer--this assumes that
   // the type of the Table is the root table of the Parser that you are using.
@@ -127,7 +127,7 @@ export class Table {
     bb: ByteBuffer,
     schema: reflection.Schema,
     type: string,
-    offset: number
+    offset: number,
   ): Table {
     for (let ii = 0; ii < schema.objectsLength(); ++ii) {
       if (schema.objects(ii).name() == type) {
@@ -231,7 +231,7 @@ export class Parser {
         }
       } else {
         throw new Error(
-          'Unions and Arrays are not supported in field ' + field.name()
+          'Unions and Arrays are not supported in field ' + field.name(),
         );
       }
       if (fieldValue !== null) {
@@ -265,7 +265,7 @@ export class Parser {
       }
     }
     throw new Error(
-      "Couldn't find field " + fieldName + ' in object ' + schema.name() + '.'
+      "Couldn't find field " + fieldName + ' in object ' + schema.name() + '.',
     );
   }
 
@@ -277,12 +277,12 @@ export class Parser {
   readScalar(
     table: Table,
     fieldName: string,
-    readDefaults: boolean = false
+    readDefaults: boolean = false,
   ): number | BigInt | null {
     return this.readScalarLambda(
       table.typeIndex,
       fieldName,
-      readDefaults
+      readDefaults,
     )(table);
   }
   // Like readScalar(), except that this returns an accessor for the specified
@@ -292,7 +292,7 @@ export class Parser {
   readScalarLambda(
     typeIndex: number,
     fieldName: string,
-    readDefaults: boolean = false
+    readDefaults: boolean = false,
   ): (t: Table) => number | BigInt | null {
     const field = this.getField(fieldName, typeIndex);
     const fieldType = field.type();
@@ -331,7 +331,7 @@ export class Parser {
 
   readStringLambda(
     typeIndex: number,
-    fieldName: string
+    fieldName: string,
   ): (t: Table) => string | null {
     const field = this.getField(fieldName, typeIndex);
     const fieldType = field.type();
@@ -354,7 +354,7 @@ export class Parser {
   }
   readTableLambda(
     typeIndex: number,
-    fieldName: string
+    fieldName: string,
   ): (t: Table) => Table | null {
     const field = this.getField(fieldName, typeIndex);
     const fieldType = field.type();
@@ -388,14 +388,14 @@ export class Parser {
   // instead). Also, will return null if the vector is not set.
   readVectorOfScalars(
     table: Table,
-    fieldName: string
+    fieldName: string,
   ): number[] | BigInt[] | null {
     return this.readVectorOfScalarsLambda(table.typeIndex, fieldName)(table);
   }
 
   readVectorOfScalarsLambda(
     typeIndex: number,
-    fieldName: string
+    fieldName: string,
   ): (t: Table) => number[] | BigInt[] | null {
     const field = this.getField(fieldName, typeIndex);
     const fieldType = field.type();
@@ -418,7 +418,7 @@ export class Parser {
       const scalarSize = typeSize(fieldType.element());
       for (let ii = 0; ii < numElements; ++ii) {
         result.push(
-          table.readScalar(fieldType.element(), baseOffset + scalarSize * ii)
+          table.readScalar(fieldType.element(), baseOffset + scalarSize * ii),
         );
       }
       return result;
@@ -430,7 +430,7 @@ export class Parser {
   }
   readVectorOfTablesLambda(
     typeIndex: number,
-    fieldName: string
+    fieldName: string,
   ): (t: Table) => Table[] | null {
     const field = this.getField(fieldName, typeIndex);
     const fieldType = field.type();
@@ -462,8 +462,10 @@ export class Parser {
           new Table(
             table.bb,
             fieldType.index(),
-            elementIsStruct ? elementOffset : table.bb.__indirect(elementOffset)
-          )
+            elementIsStruct
+              ? elementOffset
+              : table.bb.__indirect(elementOffset),
+          ),
         );
       }
       return result;
@@ -475,7 +477,7 @@ export class Parser {
   }
   readVectorOfStringsLambda(
     typeIndex: number,
-    fieldName: string
+    fieldName: string,
   ): (t: Table) => string[] | null {
     const field = this.getField(fieldName, typeIndex);
     const fieldType = field.type();

@@ -52,7 +52,7 @@ class VisionMessageHandler extends MessageHandler {
         target.bb,
         this.schema,
         'frc.vision.swerve_localizer.TargetEstimateDebug',
-        target.bb_pos
+        target.bb_pos,
       );
       this.messages.push(new TimestampedMessage(table, time));
     }
@@ -71,18 +71,18 @@ export function plotVision(conn: Connection, element: Element): void {
         '/' + camera + '/gray',
         'frc.vision.swerve_localizer.Visualization',
         new VisionMessageHandler(
-          conn.getSchema('frc.vision.swerve_localizer.Visualization')
-        )
-      )
+          conn.getSchema('frc.vision.swerve_localizer.Visualization'),
+        ),
+      ),
     );
   }
   const localizerStatus = aosPlotter.addMessageSource(
     '/localizer',
-    'frc.vision.swerve_localizer.Status'
+    'frc.vision.swerve_localizer.Status',
   );
   const localizerOutput = aosPlotter.addMessageSource(
     '/localizer',
-    'frc.controls.LocalizerOutput'
+    'frc.controls.LocalizerOutput',
   );
 
   const statsPlot = aosPlotter.addPlot(element);

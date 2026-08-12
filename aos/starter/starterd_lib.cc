@@ -330,6 +330,9 @@ Application *Starter::AddApplication(const aos::Application *application) {
     // is less about efficiency, and more about making sure bit rot doesn't
     // result in the signal handling breaking).
     iter->second.DisableChildDeathPolling();
+    // Isolate each application in its own process group so that
+    // DoStop signals reach all descendants, including grandchildren.
+    iter->second.set_isolate_process_group(true);
     return &(iter->second);
   }
   return nullptr;

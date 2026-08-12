@@ -68,9 +68,9 @@ export class ConfigHandler {
         (data, time) => {
           const parser = new Parser(this.connection.getSchema(channel.type()));
           console.log(
-            parser.toObject(Table.getRootTable(new ByteBuffer(data)))
+            parser.toObject(Table.getRootTable(new ByteBuffer(data))),
           );
-        }
+        },
       );
     }
   }

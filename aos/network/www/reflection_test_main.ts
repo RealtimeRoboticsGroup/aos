@@ -47,14 +47,14 @@ function DoTest(config: Configuration): void {
       nameString,
       typeString,
       100,
-      200
+      200,
     );
     const location1 = Location.createLocation(
       builder,
       nameString,
       typeString,
       300,
-      400
+      400,
     );
     Map.startMap(builder);
     Map.addMatch(builder, location0);
@@ -69,7 +69,7 @@ function DoTest(config: Configuration): void {
     ]);
     const vectorOfStrings = VectorOfStrings.createVectorOfStrings(
       builder,
-      strVector
+      strVector,
     );
     const vVector = VectorOfVectorOfString.createVVector(builder, [
       vectorOfStrings,
@@ -79,7 +79,7 @@ function DoTest(config: Configuration): void {
 
     const doubleVector = TestTable.createVectorFooDoubleVector(
       builder,
-      [9.71, 1.678, 2.056]
+      [9.71, 1.678, 2.056],
     );
 
     TestTable.startConfiguration(builder);
@@ -131,7 +131,7 @@ function DoTest(config: Configuration): void {
   assertEqual(maps[0]['rename']['type'], 'typeString');
   assertEqual(
     maps[0]['match']['frequency'],
-    parsedFb.maps(0).match().frequency()
+    parsedFb.maps(0).match().frequency(),
   );
   assertEqual(maps[0]['rename']['frequency'], 300);
   assertEqual(maps[0]['match']['max_size'], 200);
@@ -139,11 +139,11 @@ function DoTest(config: Configuration): void {
 
   assertEqual(
     testObject['foo_struct']['foo_byte'],
-    parsedFb.fooStruct().fooByte()
+    parsedFb.fooStruct().fooByte(),
   );
   assertEqual(
     testObject['foo_struct']['nested_struct']['foo_byte'],
-    parsedFb.fooStruct().nestedStruct().fooByte()
+    parsedFb.fooStruct().nestedStruct().fooByte(),
   );
 
   const fooStructs = testObject['vector_foo_struct'];
@@ -151,18 +151,18 @@ function DoTest(config: Configuration): void {
   for (let ii = 0; ii < 3; ++ii) {
     assertEqual(
       fooStructs[ii]['foo_byte'],
-      parsedFb.vectorFooStruct(ii).fooByte()
+      parsedFb.vectorFooStruct(ii).fooByte(),
     );
     assertEqual(
       fooStructs[ii]['nested_struct']['foo_byte'],
-      parsedFb.vectorFooStruct(ii).nestedStruct().fooByte()
+      parsedFb.vectorFooStruct(ii).nestedStruct().fooByte(),
     );
   }
 
   for (let ii = 0; ii < 3; ++ii) {
     assertEqual(
       testObject['vector_foo_double'][ii],
-      parsedFb.vectorFooDouble(ii)
+      parsedFb.vectorFooDouble(ii),
     );
   }
 

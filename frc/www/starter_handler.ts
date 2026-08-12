@@ -14,7 +14,7 @@ export class StarterHandler {
   private statuses = new Map<string, ApplicationStatus[]>();
 
   private statusList: HTMLElement = document.getElementById(
-    'status_list'
+    'status_list',
   ) as HTMLElement;
 
   constructor(private readonly connection: Connection) {
@@ -25,7 +25,7 @@ export class StarterHandler {
           'aos.starter.Status',
           (data) => {
             this.handleStatus(data, NODES[node]);
-          }
+          },
         );
       });
     }

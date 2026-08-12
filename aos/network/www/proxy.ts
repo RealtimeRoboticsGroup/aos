@@ -25,7 +25,7 @@ export class Handler {
   private receivedMessageLength: number = 0;
   constructor(
     private readonly handlerFunc: (data: Uint8Array, sentTime: number) => void,
-    private readonly channel: RTCDataChannel
+    private readonly channel: RTCDataChannel,
   ) {
     channel.addEventListener('message', (e) => this.handleMessage(e));
   }
@@ -67,7 +67,10 @@ export class Handler {
 }
 
 class Channel {
-  constructor(public readonly name: string, public readonly type: string) {}
+  constructor(
+    public readonly name: string,
+    public readonly type: string,
+  ) {}
   key(): string {
     return this.name + '/' + this.type;
   }
@@ -76,7 +79,7 @@ class Channel {
 class ChannelRequest {
   constructor(
     public readonly channel: Channel,
-    public readonly transferMethod: TransferMethod
+    public readonly transferMethod: TransferMethod,
   ) {}
 }
 
@@ -116,7 +119,7 @@ export class Connection {
   addReliableHandler(
     name: string,
     type: string,
-    handler: (data: Uint8Array, sentTime: number) => void
+    handler: (data: Uint8Array, sentTime: number) => void,
   ): void {
     this.addHandlerImpl(name, type, TransferMethod.LOSSLESS, handler);
   }
@@ -127,7 +130,7 @@ export class Connection {
   addHandler(
     name: string,
     type: string,
-    handler: (data: Uint8Array, sentTime: number) => void
+    handler: (data: Uint8Array, sentTime: number) => void,
   ): void {
     this.addHandlerImpl(name, type, TransferMethod.SUBSAMPLE, handler);
   }
@@ -136,7 +139,7 @@ export class Connection {
     name: string,
     type: string,
     method: TransferMethod,
-    handler: (data: Uint8Array, sentTime: number) => void
+    handler: (data: Uint8Array, sentTime: number) => void,
   ): void {
     const channel = new Channel(name, type);
     const request = new ChannelRequest(channel, method);
@@ -146,7 +149,7 @@ export class Connection {
       if (method == TransferMethod.LOSSLESS) {
         console.warn(
           'Behavior of multiple reliable handlers is currently poorly ' +
-            'defined and may not actually deliver all of the messages.'
+            'defined and may not actually deliver all of the messages.',
         );
       }
     }
@@ -172,7 +175,7 @@ export class Connection {
     this.subscribedChannels.push(channel);
     if (this.configInternal === null) {
       throw new Error(
-        "Must call subscribeToChannel after we've received the config."
+        "Must call subscribeToChannel after we've received the config.",
       );
     }
     const builder = new Builder(512);
@@ -192,7 +195,7 @@ export class Connection {
 
     const channelsFb = SubscriberRequest.createChannelsToTransferVector(
       builder,
-      channels
+      channels,
     );
     SubscriberRequest.startSubscriberRequest(builder);
     SubscriberRequest.addChannelsToTransfer(builder, channelsFb);
@@ -205,10 +208,10 @@ export class Connection {
     this.webSocketConnection = new WebSocket(this.webSocketUrl);
     this.webSocketConnection.binaryType = 'arraybuffer';
     this.webSocketConnection.addEventListener('open', () =>
-      this.onWebSocketOpen()
+      this.onWebSocketOpen(),
     );
     this.webSocketConnection.addEventListener('message', (e) =>
-      this.onWebSocketMessage(e)
+      this.onWebSocketMessage(e),
     );
   }
 
@@ -248,12 +251,12 @@ export class Connection {
       builder,
       candidateString,
       sdpMidString,
-      candidate.sdpMLineIndex
+      candidate.sdpMLineIndex,
     );
     const messageFb = WebSocketMessage.createWebSocketMessage(
       builder,
       Payload.WebSocketIce,
-      iceFb
+      iceFb,
     );
     builder.finish(messageFb);
     const array = builder.asUint8Array();
@@ -273,12 +276,12 @@ export class Connection {
     const webSocketSdp = WebSocketSdp.createWebSocketSdp(
       builder,
       SdpType.OFFER,
-      offerString
+      offerString,
     );
     const message = WebSocketMessage.createWebSocketMessage(
       builder,
       Payload.WebSocketSdp,
-      webSocketSdp
+      webSocketSdp,
     );
     builder.finish(message);
     const array = builder.asUint8Array();
@@ -292,17 +295,17 @@ export class Connection {
       iceServers: [{urls: ['stun:stun.l.google.com:19302']}],
     });
     this.rtcPeerConnection.addEventListener('datachannel', (e) =>
-      this.onDataChannel(e)
+      this.onDataChannel(e),
     );
     this.dataChannel = this.rtcPeerConnection.createDataChannel('signalling');
     this.handlers.add(
-      new Handler((data) => this.onConfigMessage(data), this.dataChannel)
+      new Handler((data) => this.onConfigMessage(data), this.dataChannel),
     );
     this.rtcPeerConnection.addEventListener('icecandidate', (e) =>
-      this.onIceCandidate(e)
+      this.onIceCandidate(e),
     );
     this.rtcPeerConnection.addEventListener('icecandidateerror', (e) =>
-      this.onIceCandidateError(e)
+      this.onIceCandidateError(e),
     );
     this.rtcPeerConnection
       .createOffer()
@@ -324,7 +327,7 @@ export class Connection {
           break;
         }
         this.rtcPeerConnection.setRemoteDescription(
-          new RTCSessionDescription({type: 'answer', sdp: sdpFb.payload()})
+          new RTCSessionDescription({type: 'answer', sdp: sdpFb.payload()}),
         );
         break;
       case Payload.WebSocketIce:

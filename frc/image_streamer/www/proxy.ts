@@ -65,13 +65,13 @@ export class Connection {
 
   connect(): void {
     this.html5VideoElement = document.getElementById(
-      'stream'
+      'stream',
     ) as HTMLMediaElement;
 
     this.webSocketConnection = new WebSocket(this.webSocketUrl);
     this.webSocketConnection.binaryType = 'arraybuffer';
     this.webSocketConnection.addEventListener('message', (e) =>
-      this.onWebSocketMessage(e)
+      this.onWebSocketMessage(e),
     );
   }
 
@@ -114,12 +114,12 @@ export class Connection {
       const sdpFb = WebSocketSdp.createWebSocketSdp(
         builder,
         SdpType.ANSWER,
-        builder.createString(desc.sdp)
+        builder.createString(desc.sdp),
       );
       const message = WebSocketMessage.createWebSocketMessage(
         builder,
         Payload.WebSocketSdp,
-        sdpFb
+        sdpFb,
       );
       builder.finish(message);
       const array = builder.asUint8Array();
@@ -177,7 +177,7 @@ export class Connection {
             (((bytes_now - this.lastBytesReceived) * 8) /* bits */ /
               1024 /* kbits */ /
               (timestamp - this.lastRtpTimestamp)) *
-              1000 /* ms */
+              1000 /* ms */,
           ).toString();
 
           document.getElementById('stats_fps').innerText = (
@@ -185,7 +185,7 @@ export class Connection {
               ((frames_decoded - this.lastFramesDecoded) /
                 (timestamp - this.lastRtpTimestamp)) *
                 1000 /* ms */ *
-                10
+                10,
             ) / 10
           ).toString();
 
@@ -204,7 +204,7 @@ export class Connection {
     const track = stream.getTracks()[0];
     this.statsInterval = window.setInterval(
       () => this.onRequestStats(track),
-      1000
+      1000,
     );
   }
 
@@ -214,7 +214,7 @@ export class Connection {
     }
 
     console.log(
-      'Sending ICE candidate out: ' + JSON.stringify(event.candidate)
+      'Sending ICE candidate out: ' + JSON.stringify(event.candidate),
     );
 
     const builder = new Builder(512);
@@ -222,12 +222,12 @@ export class Connection {
       builder,
       builder.createString(event.candidate.candidate),
       null,
-      event.candidate.sdpMLineIndex
+      event.candidate.sdpMLineIndex,
     );
     const message = WebSocketMessage.createWebSocketMessage(
       builder,
       Payload.WebSocketIce,
-      iceFb
+      iceFb,
     );
     builder.finish(message);
     const array = builder.asUint8Array();

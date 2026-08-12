@@ -22,7 +22,7 @@ export function plotRobotState(conn: Connection, element: Element): void {
   const robotState = aosPlotter.addMessageSource('/frc', 'frc.RobotState');
   const joystickState = aosPlotter.addMessageSource(
     '/frc',
-    'frc.JoystickState'
+    'frc.JoystickState',
   );
 
   var currentTop = 0;

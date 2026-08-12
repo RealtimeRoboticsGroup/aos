@@ -14,7 +14,7 @@ function scaleVec(vec: number[], scale: number): number[] {
 function cwiseOp(
   a: number[],
   b: number[],
-  op: (a: number, b: number) => number
+  op: (a: number, b: number) => number,
 ): number[] {
   if (a.length !== b.length) {
     throw new Error('a and b must be of equal length.');
@@ -66,7 +66,10 @@ class ZoomParameters {
 }
 
 export class Point {
-  constructor(public x: number = 0.0, public y: number = 0.0) {}
+  constructor(
+    public x: number = 0.0,
+    public y: number = 0.0,
+  ) {}
 }
 
 // Represents a single line within a plot. Handles rendering the line with
@@ -112,13 +115,13 @@ export class Line {
     private readonly ctx: WebGLRenderingContext,
     private readonly program: WebGLProgram,
     private readonly buffer: WebGLBuffer,
-    private baseZoom: ZoomParameters
+    private baseZoom: ZoomParameters,
   ) {
     this.pointAttribLocation = this.ctx.getAttribLocation(this.program, 'apos');
     this.colorLocation = this.ctx.getUniformLocation(this.program, 'color');
     this.pointSizeLocation = this.ctx.getUniformLocation(
       this.program,
-      'point_size'
+      'point_size',
     );
   }
 
@@ -247,7 +250,7 @@ export class Line {
     this.ctx.bufferData(
       this.ctx.ARRAY_BUFFER,
       this.adjustedPoints,
-      this.ctx.STATIC_DRAW
+      this.ctx.STATIC_DRAW,
     );
     {
       const numComponents = 2; // pull out 2 values per iteration
@@ -262,7 +265,7 @@ export class Line {
         numType,
         normalize,
         stride,
-        offset
+        offset,
       );
       this.ctx.enableVertexAttribArray(this.pointAttribLocation);
     }
@@ -273,7 +276,7 @@ export class Line {
       this._color[0],
       this._color[1],
       this._color[2],
-      1.0
+      1.0,
     );
 
     if (this._drawLine) {
@@ -331,7 +334,7 @@ export class Legend {
   constructor(
     private plot: Plot,
     private lines: Line[],
-    private legend: HTMLDivElement
+    private legend: HTMLDivElement,
   ) {
     this.setPosition([80, 30]);
   }
@@ -436,7 +439,7 @@ export class Legend {
           c.height - 1 - pointSize,
           c.width - 1 - pointSize,
           pointSize,
-          pointSize
+          pointSize,
         );
       }
 
@@ -498,10 +501,10 @@ export class LineDrawer {
 
     for (let ii = 0; ii < this.MAX_GRID_LINES; ++ii) {
       this.xGridLines.push(
-        new Line(this.ctx, this.program, this.vertexBuffer, this.baseZoom)
+        new Line(this.ctx, this.program, this.vertexBuffer, this.baseZoom),
       );
       this.yGridLines.push(
-        new Line(this.ctx, this.program, this.vertexBuffer, this.baseZoom)
+        new Line(this.ctx, this.program, this.vertexBuffer, this.baseZoom),
       );
     }
   }
@@ -617,7 +620,7 @@ export class LineDrawer {
     this.ctx.compileShader(shader);
     if (!this.ctx.getShaderParameter(shader, this.ctx.COMPILE_STATUS)) {
       alert(
-        'Got an error compiling a shader: ' + this.ctx.getShaderInfoLog(shader)
+        'Got an error compiling a shader: ' + this.ctx.getShaderInfoLog(shader),
       );
       this.ctx.deleteShader(shader);
       return null;
@@ -648,11 +651,11 @@ export class LineDrawer {
 
     const compiledVertex = this.loadShader(
       this.ctx.VERTEX_SHADER,
-      vertexShader
+      vertexShader,
     );
     const compiledFragment = this.loadShader(
       this.ctx.FRAGMENT_SHADER,
-      fragmentShader
+      fragmentShader,
     );
     const program = this.ctx.createProgram();
     this.ctx.attachShader(program, compiledVertex);
@@ -660,7 +663,7 @@ export class LineDrawer {
     this.ctx.linkProgram(program);
     if (!this.ctx.getProgramParameter(program, this.ctx.LINK_STATUS)) {
       alert(
-        'Unable to link the shaders: ' + this.ctx.getProgramInfoLog(program)
+        'Unable to link the shaders: ' + this.ctx.getProgramInfoLog(program),
       );
       return null;
     }
@@ -669,7 +672,7 @@ export class LineDrawer {
 
   addLine(useColorCycle: boolean = true): Line {
     this.lines.push(
-      new Line(this.ctx, this.program, this.vertexBuffer, this.baseZoom)
+      new Line(this.ctx, this.program, this.vertexBuffer, this.baseZoom),
     );
     const line = this.lines[this.lines.length - 1];
     if (useColorCycle) {
@@ -741,7 +744,7 @@ export class LineDrawer {
     const scale = divideVec(this.zoom.scale, this.baseZoom.scale);
     const offset = subtractVec(
       this.zoom.offset,
-      multVec(scale, this.baseZoom.offset)
+      multVec(scale, this.baseZoom.offset),
     );
     this.ctx.uniform2f(this.scaleLocation, scale[0], scale[1]);
     this.ctx.uniform2f(this.offsetLocation, offset[0], offset[1]);
@@ -756,7 +759,7 @@ class WhitespaceBuffers {
     public left: number,
     public right: number,
     public top: number,
-    public bottom: number
+    public bottom: number,
   ) {}
 }
 
@@ -772,7 +775,7 @@ class AxisLabels {
   constructor(
     private ctx: CanvasRenderingContext2D,
     private drawer: LineDrawer,
-    private graphBuffers: WhitespaceBuffers
+    private graphBuffers: WhitespaceBuffers,
   ) {}
 
   numberToLabel(num: number): string {
@@ -809,7 +812,7 @@ class AxisLabels {
     const incrementsRatio = this.INCREMENTS[this.INCREMENTS.length - 1];
     const order = Math.pow(
       incrementsRatio,
-      Math.floor(Math.log(minDiff) / Math.log(incrementsRatio))
+      Math.floor(Math.log(minDiff) / Math.log(incrementsRatio)),
     );
     const normalizedDiff = minDiff / order;
     for (let increment of this.INCREMENTS) {
@@ -853,7 +856,7 @@ class AxisLabels {
       this.ctx.canvas.height -
         this.graphBuffers.bottom +
         height +
-        this.TEXT_BUFFER
+        this.TEXT_BUFFER,
     );
   }
 
@@ -865,7 +868,7 @@ class AxisLabels {
     this.ctx.fillText(
       text,
       this.graphBuffers.left - this.TEXT_BUFFER,
-      ypos + height / 2.0
+      ypos + height / 2.0,
     );
   }
 
@@ -875,7 +878,7 @@ class AxisLabels {
       this.ctx.fillText(
         this.title,
         this.ctx.canvas.width / 2.0,
-        this.graphBuffers.top - this.TEXT_BUFFER
+        this.graphBuffers.top - this.TEXT_BUFFER,
       );
     }
   }
@@ -886,7 +889,7 @@ class AxisLabels {
       this.ctx.fillText(
         this.xlabel,
         this.ctx.canvas.width / 2.0,
-        this.ctx.canvas.height - this.TEXT_BUFFER
+        this.ctx.canvas.height - this.TEXT_BUFFER,
       );
     }
   }
@@ -898,7 +901,7 @@ class AxisLabels {
       const height = this.textHeight(this.ylabel);
       this.ctx.translate(
         height + this.TEXT_BUFFER,
-        this.ctx.canvas.height / 2.0
+        this.ctx.canvas.height / 2.0,
       );
       this.ctx.rotate(-Math.PI / 2.0);
       this.ctx.fillText(this.ylabel, 0, 0);
@@ -920,7 +923,7 @@ class AxisLabels {
       this.graphBuffers.left,
       this.graphBuffers.top,
       this.drawer.ctx.canvas.width,
-      this.drawer.ctx.canvas.height
+      this.drawer.ctx.canvas.height,
     );
     this.ctx.strokeRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
     const xTicks = this.getTicks([minValues[0], maxValues[0]]);
@@ -946,14 +949,14 @@ class AxisLabels {
     const plotPos = this.drawer.canvasToPlotCoordinates(mousePos);
 
     const text = `(${plotPos[0].toPrecision(10)}, ${plotPos[1].toPrecision(
-      10
+      10,
     )})`;
     const textDepth = this.textDepth(text);
     this.ctx.textAlign = 'right';
     this.ctx.fillText(
       text,
       this.ctx.canvas.width - this.graphBuffers.right,
-      this.ctx.canvas.height - this.graphBuffers.bottom - textDepth
+      this.ctx.canvas.height - this.graphBuffers.bottom - textDepth,
     );
   }
 }
@@ -977,7 +980,7 @@ export class Plot {
     50,
     20,
     20,
-    30
+    30,
   );
   private axisLabels: AxisLabels;
   private legend: Legend;
@@ -1025,7 +1028,7 @@ export class Plot {
       this.handleMouseMove(e);
     };
     this.canvas.addEventListener('contextmenu', (event) =>
-      event.preventDefault()
+      event.preventDefault(),
     );
     // Note: To handle the fact that only one keypress handle can be registered
     // per browser tab, we share key-press handlers across all plot instances.
@@ -1041,7 +1044,7 @@ export class Plot {
     this.axisLabels = new AxisLabels(
       textCtx,
       this.drawer,
-      this.axisLabelBuffer
+      this.axisLabelBuffer,
     );
     this.legend = new Legend(this, this.drawer.getLines(), this.legendDiv);
 
@@ -1094,7 +1097,7 @@ export class Plot {
     const scale = scaleVec(this.drawer.getZoom().scale, zoomScalar);
     const offset = addVec(
       scaleVec(mousePosition, 1.0 - zoomScalar),
-      scaleVec(this.drawer.getZoom().offset, zoomScalar)
+      scaleVec(this.drawer.getZoom().offset, zoomScalar),
     );
     this.setZoom(scale, offset);
   }
@@ -1152,11 +1155,11 @@ export class Plot {
     ) {
       const mouseDiff = addVec(
         mouseLocation,
-        scaleVec(this.lastMousePanPosition, -1)
+        scaleVec(this.lastMousePanPosition, -1),
       );
       this.setZoom(
         this.drawer.getZoom().scale,
-        addVec(this.drawer.getZoom().offset, mouseDiff)
+        addVec(this.drawer.getZoom().offset, mouseDiff),
       );
       this.lastMousePanPosition = mouseLocation;
     }
@@ -1197,7 +1200,7 @@ export class Plot {
   setZoom(scale: number[], offset: number[]) {
     if (!isFinite(scale[0]) || !isFinite(scale[1])) {
       throw new Error(
-        "Doesn't support non-finite scales due to singularities."
+        "Doesn't support non-finite scales due to singularities.",
       );
     }
     const x_pressed = Plot.keysPressed['x'];
@@ -1325,7 +1328,7 @@ export class Plot {
       0,
       0,
       this.lineDrawerContext.drawingBufferWidth,
-      this.lineDrawerContext.drawingBufferHeight
+      this.lineDrawerContext.drawingBufferHeight,
     );
 
     // Clear the overlay.

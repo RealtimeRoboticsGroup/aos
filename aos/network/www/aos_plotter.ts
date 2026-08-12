@@ -36,7 +36,10 @@ import {Schema} from '@com_github_google_flatbuffers/reflection';
 import {ByteBuffer} from 'flatbuffers';
 
 export class TimestampedMessage {
-  constructor(public readonly message: Table, public readonly time: number) {}
+  constructor(
+    public readonly message: Table,
+    public readonly time: number,
+  ) {}
 }
 
 // The MessageHandler stores an array of every single message on a given channel
@@ -51,7 +54,7 @@ export class MessageHandler {
   }
   addMessage(data: Uint8Array, time: number): void {
     this.messages.push(
-      new TimestampedMessage(Table.getRootTable(new ByteBuffer(data)), time)
+      new TimestampedMessage(Table.getRootTable(new ByteBuffer(data)), time),
     );
   }
   private parseFieldName(rawName: string): [string, boolean, number | null] {
@@ -74,7 +77,7 @@ export class MessageHandler {
     typeIndex: number,
     fieldName: string,
     normalReader: (typeIndex: number, name: string) => (t: Table) => T | null,
-    vectorReader: (typeIndex: number, name: string) => (t: Table) => T[] | null
+    vectorReader: (typeIndex: number, name: string) => (t: Table) => T[] | null,
   ): (t: Table) => T[] | null {
     const [name, isVector, vectorIndex] = this.parseFieldName(fieldName);
     if (isVector) {
@@ -125,8 +128,8 @@ export class MessageHandler {
           (typeIndex: number, name: string) =>
             this.parser.readTableLambda(typeIndex, name),
           (typeIndex: number, name: string) =>
-            this.parser.readVectorOfTablesLambda(typeIndex, name)
-        )
+            this.parser.readVectorOfTablesLambda(typeIndex, name),
+        ),
       );
       const [name, isVector, vectorIndex] = this.parseFieldName(subMessageName);
       currentType = this.parser.getField(name, currentType).type().index();
@@ -137,7 +140,7 @@ export class MessageHandler {
       (typeIndex: number, name: string) =>
         this.parser.readScalarLambda(typeIndex, name),
       (typeIndex: number, name: string) =>
-        this.parser.readVectorOfScalarsLambda(typeIndex, name)
+        this.parser.readVectorOfScalarsLambda(typeIndex, name),
     );
 
     const results = [];
@@ -185,7 +188,7 @@ class MessageLine {
   constructor(
     public readonly messages: MessageHandler,
     public readonly line: Line,
-    public readonly field: string[]
+    public readonly field: string[],
   ) {}
   hasUpdate(): boolean {
     const updated = this._lastNumMessages != this.messages.numMessages();
@@ -198,7 +201,7 @@ class AosPlot {
   private lines: MessageLine[] = [];
   constructor(
     private readonly plotter: AosPlotter,
-    public readonly plot: Plot
+    public readonly plot: Plot,
   ) {}
 
   // Adds a line to the figure.
@@ -218,7 +221,7 @@ class AosPlot {
       console.warn(
         'Not plotting field ' +
           field.join('.') +
-          ' because of an invalid MessageHandler.'
+          ' because of an invalid MessageHandler.',
       );
       return line;
     }
@@ -273,7 +276,7 @@ export class AosPlotter {
   addRawMessageSource(
     name: string,
     type: string,
-    messageHandler: MessageHandler | null
+    messageHandler: MessageHandler | null,
   ): MessageHandler {
     if (messageHandler === null) {
       return null;
@@ -286,7 +289,7 @@ export class AosPlotter {
       type,
       (data: Uint8Array, time: number) => {
         messageHandler.addMessage(data, time);
-      }
+      },
     );
     return messageHandler;
   }
@@ -294,7 +297,7 @@ export class AosPlotter {
   // parentElement.
   addPlot(
     parentElement: Element,
-    size: number[] = [AosPlotter.DEFAULT_WIDTH, AosPlotter.DEFAULT_HEIGHT]
+    size: number[] = [AosPlotter.DEFAULT_WIDTH, AosPlotter.DEFAULT_HEIGHT],
   ): AosPlot {
     const div = document.createElement('div');
     div.style.position = 'relative';

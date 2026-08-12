@@ -61,7 +61,7 @@ function fail(message: string): never {
 // callers are expected to use unique type names.
 function findTypeAlias(
   sourceFile: ts.SourceFile,
-  typeName: string
+  typeName: string,
 ): ts.TypeAliasDeclaration | undefined {
   let found: ts.TypeAliasDeclaration | undefined;
 
@@ -86,7 +86,7 @@ function findTypeAlias(
 function stripUndefined(typeNode: ts.TypeNode): ts.TypeNode {
   if (!ts.isUnionTypeNode(typeNode)) return typeNode;
   const remaining = typeNode.types.filter(
-    (t) => t.kind !== ts.SyntaxKind.UndefinedKeyword
+    (t) => t.kind !== ts.SyntaxKind.UndefinedKeyword,
   );
   if (remaining.length === 1) return remaining[0];
   throw new Error(`Unsupported union type: ${typeNode.getText()}`);
@@ -131,12 +131,12 @@ function typeNodeToSchema(typeNode: ts.TypeNode): Schema {
     if (referenceName === 'Uint8Array') return ['byte'];
     throw new Error(
       `Unsupported type reference '${referenceName}'. Only inline type literals are supported in ` +
-        `this prototype.`
+        `this prototype.`,
     );
   }
 
   throw new Error(
-    `Unsupported type node: ${ts.SyntaxKind[node.kind]} (${node.getText()})`
+    `Unsupported type node: ${ts.SyntaxKind[node.kind]} (${node.getText()})`,
   );
 }
 
@@ -158,7 +158,7 @@ function renderSchema(schema: Schema, indent: number): string {
   const entries = Object.entries(schema);
   if (entries.length === 0) return '{}';
   const lines = entries.map(
-    ([key, value]) => `${inner}${key}: ${renderSchema(value, indent + 1)},`
+    ([key, value]) => `${inner}${key}: ${renderSchema(value, indent + 1)},`,
   );
   return `{\n${lines.join('\n')}\n${pad}}`;
 }
@@ -178,7 +178,7 @@ function main(): void {
     path.basename(inputPath),
     sourceText,
     ts.ScriptTarget.Latest,
-    /*setParentNodes=*/ true
+    /*setParentNodes=*/ true,
   );
 
   const exports: string[] = [];
@@ -192,21 +192,21 @@ function main(): void {
       schema = typeNodeToSchema(typeAlias.type);
     } catch (error) {
       fail(
-        `while generating schema for '${typeName}': ${(error as Error).message}`
+        `while generating schema for '${typeName}': ${(error as Error).message}`,
       );
     }
     exports.push(
       `export const ${typeName}SchemaDescription: MessageSchemaDescription = ${renderSchema(
         schema,
-        0
-      )};`
+        0,
+      )};`,
     );
   }
 
   const output =
     `// AUTO-GENERATED FILE — do not edit by hand.\n` +
     `// Generated from ${path.basename(
-      inputPath
+      inputPath,
     )} by tools/foxglove/schema_descriptions.\n` +
     `// Regenerate by rebuilding the surrounding Bazel target.\n` +
     `\n` +

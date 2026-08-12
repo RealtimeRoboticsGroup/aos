@@ -21,20 +21,20 @@ export function plotDownEstimator(conn: Connection, element: Element): void {
 
   const status = aosPlotter.addMessageSource(
     '/localizer',
-    'frc.controls.LocalizerStatus'
+    'frc.controls.LocalizerStatus',
   );
 
   const imu = aosPlotter.addRawMessageSource(
     '/localizer',
     'frc.IMUValuesBatch',
-    new ImuMessageHandler(conn.getSchema('frc.IMUValuesBatch'))
+    new ImuMessageHandler(conn.getSchema('frc.IMUValuesBatch')),
   );
 
   const accelPlot = aosPlotter.addPlot(element, [width, height]);
   accelPlot.plot
     .getAxisLabels()
     .setTitle(
-      'Estimated Accelerations (x = forward, y = lateral, z = vertical)'
+      'Estimated Accelerations (x = forward, y = lateral, z = vertical)',
     );
   accelPlot.plot.getAxisLabels().setYLabel('Acceleration (m/s/s)');
   accelPlot.plot.getAxisLabels().setXLabel('Monotonic Reading Time (sec)');

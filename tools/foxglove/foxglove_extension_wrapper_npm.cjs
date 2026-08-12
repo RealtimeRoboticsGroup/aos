@@ -36,7 +36,7 @@ function executeScript(scriptName) {
   const bin = scriptParts[0];
   if (bin !== "foxglove-extension") {
     console.error(
-      `Cannot support commands other than 'foxglove-extension'. Got: ${bin}`
+      `Cannot support commands other than 'foxglove-extension'. Got: ${bin}`,
     );
     process.exit(1);
   }
@@ -45,7 +45,7 @@ function executeScript(scriptName) {
     __dirname,
     isWin
       ? "foxglove_extension_/foxglove_extension.bat"
-      : "foxglove_extension_/foxglove_extension"
+      : "foxglove_extension_/foxglove_extension",
   );
 
   // Execute the `foxglove-extension` command specified in the script.
@@ -66,7 +66,7 @@ function main() {
   }
   if (process.argv[2] !== "run") {
     console.error(
-      `Cannot support commands other than 'run'. Got: ${process.argv[2]}`
+      `Cannot support commands other than 'run'. Got: ${process.argv[2]}`,
     );
     process.exit(1);
   }
