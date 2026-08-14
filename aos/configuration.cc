@@ -1,5 +1,6 @@
 #include "aos/configuration.h"
 
+#include <array>
 #include <cstdlib>
 #include <cstring>
 #include <map>
@@ -2509,15 +2510,16 @@ UUID ChannelHash(std::string_view name, std::string_view type) {
   absl::uint128 fnv_hash =
       absl::MakeUint128(0x6c62272e07bb0142ULL, 0x62b821756295c58dULL);
 
-  auto hash_byte = [&fnv_hash](uint8_t byte) {
-    const absl::uint128 fnv_prime = absl::MakeUint128(0x1000000ULL, 0x13bULL);
+  const auto hash_byte = [&fnv_hash](uint8_t byte) {
+    constexpr absl::uint128 fnv_prime =
+        absl::MakeUint128(0x1000000ULL, 0x13bULL);
     fnv_hash ^= byte;
     fnv_hash *= fnv_prime;
   };
 
   // Hash a string by hashing the length, and then hashing the contents.  This
   // makes it so ("foo", ".msg") and ("foo.msg", "") don't collide.
-  auto hash_bytes = [hash_byte](const uint8_t *data, size_t size) {
+  const auto hash_bytes = [hash_byte](const uint8_t *data, size_t size) {
     uint32_t len = size;
     hash_byte(len & 0xFF);
     hash_byte((len >> 8) & 0xFF);
@@ -2532,12 +2534,13 @@ UUID ChannelHash(std::string_view name, std::string_view type) {
   hash_bytes(reinterpret_cast<const uint8_t *>(type.data()), type.size());
 
   // Convert the 128-bit hash to a big-endian 16-byte array for UUID.
-  uint8_t bytes[16];
-  for (int i = 0; i < 16; ++i) {
-    bytes[i] = absl::Uint128Low64(fnv_hash >> ((15 - i) * 8)) & 0xFF;
+  std::array<uint8_t, 16> bytes;
+  for (size_t i = 0; i < bytes.size(); ++i) {
+    bytes[i] =
+        absl::Uint128Low64(fnv_hash >> ((bytes.size() - 1 - i) * 8)) & 0xFF;
   }
 
-  return UUID::FromSpan(absl::Span<const uint8_t>(bytes, 16));
+  return UUID::FromSpan(bytes);
 }
 
 UUID ChannelHash(const Channel *channel) {
