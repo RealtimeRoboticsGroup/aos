@@ -15,7 +15,7 @@
 
 ABSL_FLAG(int32_t, priority, -1, "If set, the RT priority to run at.");
 ABSL_FLAG(double, max_jitter, 0.01,
-          "The max time in milliseconds between messages before marking it "
+          "The max time in seconds between messages before marking it "
           "as too late.");
 ABSL_FLAG(bool, print_jitter, true,
           "If true, print jitter events.  These will impact RT performance.");
