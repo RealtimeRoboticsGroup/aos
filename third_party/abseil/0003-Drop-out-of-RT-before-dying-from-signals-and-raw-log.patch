@@ -1,0 +1,110 @@
+diff --git a/absl/base/internal/raw_logging.cc b/absl/base/internal/raw_logging.cc
+--- a/absl/base/internal/raw_logging.cc
++++ b/absl/base/internal/raw_logging.cc
+@@ -31,6 +31,37 @@
+ #include "absl/base/internal/errno_saver.h"
+ #include "absl/base/log_severity.h"
+ 
++#if defined(_WIN32)
++extern "C" void aos_FatalUnsetRealtimePriority_default_raw_logging() {}
++extern "C" void aos_FatalUnsetRealtimePriority();
++#pragma comment(linker, "/alternatename:aos_FatalUnsetRealtimePriority=aos_FatalUnsetRealtimePriority_default_raw_logging")
++
++static void MaybeUnsetRealtime() { aos_FatalUnsetRealtimePriority(); }
++#elif defined(__APPLE__)
++// Mach-O has no undefined-weak-resolves-to-null, so the ELF form below fails to
++// link when AOS isn't present.  Fall back to a weak definition, which Mach-O
++// does support.  That reintroduces the shadowing hazard the ELF comment
++// describes, which is acceptable here only because macOS is not a realtime
++// target -- realtime_darwin.cc is stubs.
++extern "C" void aos_FatalUnsetRealtimePriority();
++extern "C" __attribute__((weak)) void aos_FatalUnsetRealtimePriority() {}
++
++static void MaybeUnsetRealtime() { aos_FatalUnsetRealtimePriority(); }
++#else
++// Declared weak, and deliberately NOT defined.  A weak *definition* here would
++// be picked over AOS's real one whenever this object comes first in the link or
++// dynamic search order, silently turning the drop back into a no-op.  An
++// undefined weak reference is instead null when AOS is not linked in at all,
++// which is the fallback we actually want.
++extern "C" __attribute__((weak)) void aos_FatalUnsetRealtimePriority();
++
++static void MaybeUnsetRealtime() {
++  if (aos_FatalUnsetRealtimePriority != nullptr) {
++    aos_FatalUnsetRealtimePriority();
++  }
++}
++#endif
++
+ // We know how to perform low-level writes to stderr in POSIX and Windows.  For
+ // these platforms, we define the token ABSL_LOW_LEVEL_WRITE_SUPPORTED.
+ // Much of raw_logging.cc becomes a no-op when we can't output messages,
+@@ -147,6 +178,13 @@
+               const char* format, va_list ap) ABSL_PRINTF_ATTRIBUTE(4, 0);
+ void RawLogVA(absl::LogSeverity severity, const char* file, int line,
+               const char* format, va_list ap) {
++  // Get off the realtime scheduler before formatting and writing the message,
++  // so a dying process does not do that work at a priority which preempts
++  // healthy realtime applications.  This path aborts without going through
++  // LogMessage, so it needs its own hook.
++  if (severity == absl::LogSeverity::kFatal) {
++    MaybeUnsetRealtime();
++  }
+   char buffer[kLogBufSize];
+   char* buf = buffer;
+   int size = sizeof(buffer);
+diff --git a/absl/debugging/failure_signal_handler.cc b/absl/debugging/failure_signal_handler.cc
+--- a/absl/debugging/failure_signal_handler.cc
++++ b/absl/debugging/failure_signal_handler.cc
+@@ -56,6 +56,37 @@
+ #include "absl/debugging/stacktrace.h"
+ #include "absl/log/internal/globals.h"
+ 
++#if defined(_WIN32)
++extern "C" void aos_FatalUnsetRealtimePriority_default_failure_signal_handler() {}
++extern "C" void aos_FatalUnsetRealtimePriority();
++#pragma comment(linker, "/alternatename:aos_FatalUnsetRealtimePriority=aos_FatalUnsetRealtimePriority_default_failure_signal_handler")
++
++static void MaybeUnsetRealtime() { aos_FatalUnsetRealtimePriority(); }
++#elif defined(__APPLE__)
++// Mach-O has no undefined-weak-resolves-to-null, so the ELF form below fails to
++// link when AOS isn't present.  Fall back to a weak definition, which Mach-O
++// does support.  That reintroduces the shadowing hazard the ELF comment
++// describes, which is acceptable here only because macOS is not a realtime
++// target -- realtime_darwin.cc is stubs.
++extern "C" void aos_FatalUnsetRealtimePriority();
++extern "C" __attribute__((weak)) void aos_FatalUnsetRealtimePriority() {}
++
++static void MaybeUnsetRealtime() { aos_FatalUnsetRealtimePriority(); }
++#else
++// Declared weak, and deliberately NOT defined.  A weak *definition* here would
++// be picked over AOS's real one whenever this object comes first in the link or
++// dynamic search order, silently turning the drop back into a no-op.  An
++// undefined weak reference is instead null when AOS is not linked in at all,
++// which is the fallback we actually want.
++extern "C" __attribute__((weak)) void aos_FatalUnsetRealtimePriority();
++
++static void MaybeUnsetRealtime() {
++  if (aos_FatalUnsetRealtimePriority != nullptr) {
++    aos_FatalUnsetRealtimePriority();
++  }
++}
++#endif
++
+ #if !defined(_WIN32) && !defined(__wasi__)
+ #define ABSL_HAVE_SIGACTION
+ // Apple WatchOS and TVOS don't allow sigaltstack
+@@ -372,6 +403,13 @@
+ static void AbslFailureSignalHandler(int signo, siginfo_t*, void* ucontext) {
+ #endif
+ 
++  // Drop the whole process off the realtime scheduler before doing any of the
++  // symbolization and writing below.  That work is unbounded, and doing it at
++  // realtime priority lets a process which is already dying starve healthy
++  // realtime applications sharing the CPU.  Done first, and unconditionally,
++  // so it also covers the recursive-invocation path below.
++  MaybeUnsetRealtime();
++
+   const GetTidType this_tid = absl::base_internal::GetTID();
+   GetTidType previous_failed_tid = 0;
+   if (!failed_tid.compare_exchange_strong(previous_failed_tid, this_tid,

@@ -1,23 +1,29 @@
 #include "aos/realtime.h"
 
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 #ifdef __linux__
 #include <sys/resource.h>
-#include <unistd.h>
 #endif
 
 #include <algorithm>
 #include <atomic>
 #include <cerrno>
 #include <chrono>
+#include <csignal>
+#include <cstdio>
 #include <cstring>
 #include <semaphore>
 #include <thread>
 
 #include "absl/base/internal/raw_logging.h"
+#include "absl/debugging/failure_signal_handler.h"
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "absl/strings/str_cat.h"
 #include "absl/synchronization/mutex.h"
 #include "gtest/gtest.h"
 
@@ -359,6 +365,84 @@ TEST(RealtimeDeathTest, RawFatal) {
       },
       "Cute message here");
 }
+
+#ifndef _WIN32
+
+namespace {
+
+// Async-signal-safe report of the current scheduling policy, so the death
+// tests below can observe it from contexts where the process is already dying
+// and nothing which allocates is safe to call.
+void ReportSchedulingPolicy() {
+  char buffer[64];
+  const int size =
+      snprintf(buffer, sizeof(buffer), "\npolicy while dying: %d\n",
+               sched_getscheduler(0));
+  if (size > 0) {
+    // Nothing useful to do if this fails; we are on our way out.
+    [[maybe_unused]] const ssize_t written =
+        write(STDERR_FILENO, buffer, static_cast<size_t>(size));
+  }
+}
+
+void SchedulingPolicyAbortHook(const char * /*file*/, int /*line*/,
+                               const char * /*buf_start*/,
+                               const char * /*prefix_end*/,
+                               const char * /*buf_end*/) {
+  ReportSchedulingPolicy();
+}
+
+void SchedulingPolicySignalHandler(int /*signo*/) {
+  ReportSchedulingPolicy();
+  _exit(1);
+}
+
+}  // namespace
+
+// Tests that ABSL_RAW_LOG(FATAL) leaves the realtime scheduler before it
+// formats and writes anything.  It aborts without going through LogMessage, so
+// it needs its own hook to do this.
+TEST(RealtimeDeathTest, RawFatalDropsRealtimePriority) {
+  EXPECT_DEATH(
+      {
+        // The abort hook runs after the message is written, which is after the
+        // drop we are checking for.
+        absl::raw_log_internal::RegisterAbortHook(SchedulingPolicyAbortHook);
+
+        SetCurrentThreadRealtimePriority(1, SCHED_FIFO,
+                                         RealtimePolicy::NO_MODE);
+        ABSL_RAW_LOG(FATAL, "Dying now\n");
+      },
+      absl::StrCat("policy while dying: ", SCHED_OTHER));
+}
+
+// Tests that a fatal signal drops us off the realtime scheduler before abseil
+// symbolizes the backtrace.  That work is unbounded, and doing it at realtime
+// priority lets a dying process starve healthy realtime work elsewhere.
+TEST(RealtimeDeathTest, SignalHandlerDropsRealtimePriority) {
+  EXPECT_DEATH(
+      {
+        // Install our handler first, then re-install abseil's asking it to
+        // chain.  Abseil's handler then runs first (dropping us off RT) and
+        // ours observes the result.
+        struct sigaction action;
+        memset(&action, 0, sizeof(action));
+        action.sa_handler = SchedulingPolicySignalHandler;
+        ABSL_PCHECK(sigaction(SIGSEGV, &action, nullptr) == 0);
+
+        absl::FailureSignalHandlerOptions options;
+        options.call_previous_handler = true;
+        absl::InstallFailureSignalHandler(options);
+
+        SetCurrentThreadRealtimePriority(1, SCHED_FIFO,
+                                         RealtimePolicy::NO_MODE);
+        int x = reinterpret_cast<const volatile int *>(0)[0];
+        ABSL_LOG(INFO) << x;
+      },
+      absl::StrCat("policy while dying: ", SCHED_OTHER));
+}
+
+#endif  // !_WIN32
 
 #endif  // !defined(AOS_SANITIZE_MEMORY) && !defined(AOS_SANITIZE_ADDRESS) &&
         // !defined(AOS_SANITIZE_THREAD)

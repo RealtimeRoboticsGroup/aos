@@ -70,6 +70,7 @@ alias(
         patches = [
             "@aos//third_party/abseil:0001-Add-hooks-for-using-abseil-with-AOS.patch",
             "@aos//third_party/abseil:0002-Suppress-the-stack-trace-on-SIGABRT.patch",
+            "@aos//third_party/abseil:0003-Drop-out-of-RT-before-dying-from-signals-and-raw-log.patch",
         ],
         repo_mapping = {
             "@googletest": "@com_google_googletest",
