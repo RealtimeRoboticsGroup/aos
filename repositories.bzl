@@ -175,9 +175,18 @@ alias(
         url = "https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi.tar.xz",
     )
 
-    native.local_repository(
+    # Same version bzlmod resolves from the BCR, so both paths get one Eigen.
+    http_archive(
         name = "eigen",
-        path = prefix + "third_party/eigen",
+        build_file = "@aos//third_party:eigen.BUILD",
+        sha256 = "e9c326dc8c05cd1e044c71f30f1b2e34a6161a3b6ecf445d56b53ff1669e3dec",
+        strip_prefix = "eigen-5.0.1",
+        urls = [
+            # The BCR's primary URL for this archive is on gitlab.com, which
+            # tools/dependency_rewrite blocks.  This is the github mirror the
+            # BCR lists alongside it, byte-identical to the gitlab one.
+            "https://github.com/eigen-mirror/eigen/archive/refs/tags/5.0.1.tar.gz",
+        ],
     )
 
     native.local_repository(
