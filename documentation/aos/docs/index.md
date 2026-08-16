@@ -28,6 +28,12 @@ If you want to start by running something locally, try [running ping/pong](run_p
 
 If curious how this example was built, see [building ping/pong](build_ping_pong.md).
 
+## Real-Time
+
+[How AOS is Real-Time](realtime.md) explains the mechanisms AOS uses to hold to a deadline — the lockless IPC primitive, the priority-inversion handling in the wakeup path, and where the non-real-time startup work is pushed to.
+
+[Measuring Real-Time Performance](measuring_realtime.md) covers how to verify and debug all of that on hardware: timing reports, `aos_jitter`, and stopping an ftrace capture at the instant of a timing violation.
+
 # Design of AOS
 
 ## Overview

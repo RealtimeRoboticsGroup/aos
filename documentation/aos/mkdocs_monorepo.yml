@@ -5,6 +5,9 @@ nav:
   - "AOS Reference Docs":
     - "Flatbuffers": "flatbuffers.md"
     - "Reference": "reference.md"
+    - "How AOS is Real-Time": "realtime.md"
+    - "Measuring Real-Time Performance": "measuring_realtime.md"
   - "Examples":
     - "Building Ping/Pong ": "build_ping_pong.md"
     - "Running Ping/Pong ": "run_ping_pong.md"
+    - "Benchmarking": "benchmarking.md"

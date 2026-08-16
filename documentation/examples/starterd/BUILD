@@ -1,6 +1,11 @@
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
 load("//tools/python:defs.bzl", "py_binary")
 
+exports_files(
+    ["benchmarking.md"],
+    visibility = ["//documentation/aos:__pkg__"],
+)
+
 pkg_tar(
     name = "ping_pong_demo",
     srcs = [
