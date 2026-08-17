@@ -67,7 +67,24 @@ std::string TestTmpDir() {
   std::filesystem::create_directories(path, ec);
   ABSL_CHECK(!ec) << "Failed to create " << path.string() << ": "
                   << ec.message();
-  return path.string();
+
+  // Hand back one separator, not two.  TEST_TMPDIR arrives forward-slashed
+  // (Bazel writes it that way) while operator/ appends a native backslash,
+  // so string() returns a mixed "C:/bazel/root\aos_testing_tmpdir_123".
+  // Both open fine, but callers that build a path by concatenation and then
+  // compare it against one that went through std::filesystem -- as
+  // log_reader_utils_test does against LocalFileOperations::FindLogs() --
+  // compare unequal.  generic_string() is uniformly forward-slashed, which
+  // every Windows API accepts.
+  //
+  // Except under the \\?\ prefix, where Win32 skips its usual
+  // forward-to-backslash normalization and only backslashes work; that form
+  // is passed through untouched.
+  const std::string native = path.string();
+  if (native.starts_with("\\\\?\\") || native.starts_with("\\\\.\\")) {
+    return native;
+  }
+  return path.generic_string();
 #else
   return TestTmpDirOr("/tmp");
 #endif
