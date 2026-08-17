@@ -106,10 +106,15 @@ static void *(__cdecl *original_realloc)(void *, size_t) = nullptr;
 static void *(__cdecl *original_calloc)(size_t, size_t) = nullptr;
 bool malloc_hook_registered = false;
 
+// The messages below match aos/realtime_linux.cc's wording exactly, size
+// included.  ABSL_RAW_LOG prepends its own "RAW: ", so spelling it in the
+// format string too produced "RAW: RAW: Malloced" -- and dropping the size
+// left nothing after "Malloced", which is what event_loop_thread_tester
+// looks for.
 void *AosMalloc(size_t size) {
   if (aos::GetIsRealtime() && absl::GetFlag(FLAGS_die_on_malloc)) {
     aos::SetIsRealtime(false);
-    ABSL_RAW_LOG(FATAL, "RAW: Malloced");
+    ABSL_RAW_LOG(FATAL, "Malloced %zu bytes", size);
   }
   return original_malloc(size);
 }
@@ -119,7 +124,7 @@ void AosFree(void *ptr) { original_free(ptr); }
 void *AosRealloc(void *ptr, size_t size) {
   if (aos::GetIsRealtime() && absl::GetFlag(FLAGS_die_on_malloc)) {
     aos::SetIsRealtime(false);
-    ABSL_RAW_LOG(FATAL, "RAW: Malloced");
+    ABSL_RAW_LOG(FATAL, "Malloced %p -> %zu bytes", ptr, size);
   }
   return original_realloc(ptr, size);
 }
@@ -127,7 +132,7 @@ void *AosRealloc(void *ptr, size_t size) {
 void *AosCalloc(size_t num, size_t size) {
   if (aos::GetIsRealtime() && absl::GetFlag(FLAGS_die_on_malloc)) {
     aos::SetIsRealtime(false);
-    ABSL_RAW_LOG(FATAL, "RAW: Malloced");
+    ABSL_RAW_LOG(FATAL, "Malloced %zu * %zu bytes", num, size);
   }
   return original_calloc(num, size);
 }
