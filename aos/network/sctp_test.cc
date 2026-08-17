@@ -32,17 +32,21 @@ constexpr int kStreams = 1;
 namespace {
 void EnableSctpAuthIfAvailable() {
 #if HAS_SCTP_AUTH
+  const std::string auth_enable_file = "/proc/sys/net/sctp/auth_enable";
   // Check if it is already enabled.
-  if (aos::util::ReadFileToStringOrDie("/proc/sys/net/sctp/auth_enable") ==
-      "1\n") {
+  auto enabled = aos::util::MaybeReadFileToString(auth_enable_file);
+
+  if (!enabled.has_value()) {
+    // Open an SCTP socket to bring the kernel SCTP module
+    SctpServer server(1, "localhost");
+    enabled = aos::util::MaybeReadFileToString(auth_enable_file);
+  }
+  ABSL_CHECK(enabled.has_value()) << "Unable to load sctp auth module";
+
+  if (enabled.value() == "1\n") {
     return;
   }
-
-  // Open an SCTP socket to bring the kernel SCTP module
-  SctpServer server(1, "localhost");
-  ABSL_CHECK(system("/usr/sbin/sysctl net.sctp.auth_enable=1 || /sbin/sysctl "
-                    "net.sctp.auth_enable=1") == 0)
-      << "Couldn't enable sctp authentication.";
+  aos::util::WriteStringToFileOrDie(auth_enable_file, "1");
 #endif
 }
 }  // namespace
