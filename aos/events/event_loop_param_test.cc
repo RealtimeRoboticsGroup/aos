@@ -3911,9 +3911,15 @@ TEST_P(AbstractEventLoopTest, SendingMessagesTooFast) {
     // reproducible.
     for (int i = 0; i < messages_per_ms * kRepeatOffset.count(); ++i) {
       const bool done = (msgs_sent == queue_size + 1);
-      ASSERT_EQ(SendTestMessage(sender),
-                done ? RawSender::Error::kMessagesSentTooFast
-                     : RawSender::Error::kOk);
+      const RawSender::Error result = SendTestMessage(sender);
+      const RawSender::Error expected =
+          done ? RawSender::Error::kMessagesSentTooFast : RawSender::Error::kOk;
+      if (result != expected) {
+        // Report from outside realtime.  The test will still fail, but with a
+        // better error.
+        ScopedNotRealtime nrt;
+        ASSERT_EQ(result, expected);
+      }
       msgs_sent++;
       if (done) {
         Exit();
