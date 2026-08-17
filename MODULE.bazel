@@ -38,7 +38,7 @@ single_version_override(
     version = "1.5.3",
 )
 
-bazel_dep(name = "glib", version = "2.82.2.bcr.7", repo_name = "glib")
+bazel_dep(name = "glib", version = "2.82.2.bcr.10", repo_name = "glib")
 bazel_dep(name = "liburing", version = "2.14.bcr.1")
 
 single_version_override(
@@ -47,7 +47,7 @@ single_version_override(
     patches = [
         "third_party/glib/0001-Add-sysroot-select.patch",
     ],
-    version = "2.82.2.bcr.7",
+    version = "2.82.2.bcr.10",
 )
 
 python = use_extension("@rules_python//python/extensions:python.bzl", "python")
