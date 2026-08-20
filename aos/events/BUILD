@@ -902,7 +902,10 @@ cc_library(
     name = "timing_report_dump_lib",
     srcs = ["timing_report_dump_lib.cc"],
     hdrs = ["timing_report_dump_lib.h"],
-    deps = ["//aos/events:event_loop"],
+    deps = [
+        "//aos/events:event_loop",
+        "//aos/util:print_table",
+    ],
 )
 
 cc_binary(

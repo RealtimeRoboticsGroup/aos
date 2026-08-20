@@ -5,6 +5,8 @@
 
 #include "absl/log/absl_check.h"
 
+#include "aos/util/print_table.h"
+
 namespace aos {
 TimingReportDump::TimingReportDump(aos::EventLoop *event_loop,
                                    AccumulateStatistics accumulate,
@@ -26,32 +28,6 @@ std::ostream &operator<<(std::ostream &os, const timing::Statistic &stats) {
      << stats.min() << ", " << num_width << stats.max() << "] std " << num_width
      << stats.standard_deviation();
   return os;
-}
-
-// Generates a table of the specified strings, such that the columns are all
-// spaced equally.
-// Will use prefix for indentation.
-template <size_t kColumns>
-void PrintTable(std::ostream *os, std::string_view prefix,
-                const std::vector<std::array<std::string, kColumns>> &table) {
-  std::array<size_t, kColumns> widths;
-  widths.fill(0);
-  for (const auto &row : table) {
-    for (size_t ii = 0; ii < kColumns; ++ii) {
-      widths.at(ii) = std::max(widths.at(ii), row.at(ii).size());
-    }
-  }
-  const std::string kSep = " | ";
-  for (const auto &row : table) {
-    *os << prefix << std::setfill(' ');
-    for (size_t ii = 0; ii < widths.size(); ++ii) {
-      *os << std::setw(widths.at(ii)) << row.at(ii);
-      if (ii + 1 != widths.size()) {
-        *os << " | ";
-      }
-    }
-    *os << std::endl;
-  }
 }
 
 // Spacing to use for indentation.
@@ -83,7 +59,7 @@ void TimingReportDump::PrintTimers(
                     std::to_string(timer->count()), wakeup_latency_stats.str(),
                     handler_time_stats.str()});
   }
-  PrintTable(os, kIndent + kIndent, rows);
+  util::PrintTable(os, kIndent + kIndent, rows);
 }
 
 void TimingReportDump::PrintWatchers(
@@ -105,7 +81,7 @@ void TimingReportDump::PrintWatchers(
                     std::to_string(watcher->count()), latency_stats.str(),
                     handler_stats.str()});
   }
-  PrintTable(os, kIndent + kIndent, rows);
+  util::PrintTable(os, kIndent + kIndent, rows);
 }
 
 void TimingReportDump::PrintSenders(
@@ -143,7 +119,7 @@ void TimingReportDump::PrintSenders(
                     std::to_string(sender->count()), size_stats.str(),
                     errors.str()});
   }
-  PrintTable(os, kIndent + kIndent, rows);
+  util::PrintTable(os, kIndent + kIndent, rows);
 }
 
 void TimingReportDump::PrintFetchers(
@@ -160,7 +136,7 @@ void TimingReportDump::PrintFetchers(
     rows.push_back({channel->name()->str(), channel->type()->str(),
                     std::to_string(fetcher->count()), latency_stats.str()});
   }
-  PrintTable(os, kIndent + kIndent, rows);
+  util::PrintTable(os, kIndent + kIndent, rows);
 }
 
 void TimingReportDump::HandleTimingReport(const timing::Report &report) {

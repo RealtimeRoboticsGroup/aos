@@ -56,6 +56,14 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "print_table",
+    hdrs = [
+        "print_table.h",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 cc_test(
     name = "bitpacking_test",
     srcs = [
