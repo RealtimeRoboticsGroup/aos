@@ -39,7 +39,19 @@ ErrorType::ErrorType(ErrorType &&other)
   other.message_ = {};
 }
 ErrorType &ErrorType::operator=(ErrorType &&other) {
-  std::swap(*this, other);
+  if (this == &other) {
+    return *this;
+  }
+  // Mirrors the move constructor rather than deferring to std::swap: std::swap
+  // is itself implemented in terms of move assignment, so calling it here
+  // recurses infinitely.
+  code_ = other.code_;
+  owned_message_ = std::move(other.owned_message_);
+  // message_ may point into owned_message_, so rebuild it against our own
+  // buffer instead of copying other's view.
+  message_ = MakeStringViewFromBufferOrView(owned_message_, other.message_);
+  source_location_ = std::move(other.source_location_);
+  other.message_ = {};
   return *this;
 }
 ErrorType::ErrorType(const ErrorType &other)

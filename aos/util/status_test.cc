@@ -92,6 +92,35 @@ TEST_F(ErrorTest, StringLiteralError) {
       std::filesystem::path(error->source_location()->file_name()).filename());
 }
 
+// Tests that move assignment works. ErrorType::operator=(ErrorType&&) used to
+// delegate to std::swap(), which is implemented in terms of move assignment and
+// so recursed until the stack overflowed.
+TEST_F(ErrorTest, MoveAssign) {
+  // A message short enough to live in owned_message_, so message_ points into
+  // this object's own buffer.
+  ErrorType owned("Hello, World!");
+  ErrorType destination("Goodbye!");
+  destination = std::move(owned);
+  EXPECT_EQ(std::string("Hello, World!"), destination.message());
+
+  // A message too long to be owned, where message_ instead points at the
+  // caller's string literal.
+  const char *literal =
+      "Hellllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll"
+      "llllllllllllllloooooooooooooooooooooooooooooooooooooooooooo, "
+      "World!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+      "!!!!!!!!!!!!!!";
+  ASSERT_LT(ErrorType::kStaticMessageLength, strlen(literal));
+  ErrorType unowned = MakeStringLiteralError(literal).value();
+  destination = std::move(unowned);
+  EXPECT_EQ(literal, destination.message());
+
+  // Self-assignment must not clobber the message.
+  ErrorType &alias = destination;
+  destination = std::move(alias);
+  EXPECT_EQ(literal, destination.message());
+}
+
 // Tests that the CheckExpected() call works as intended.
 TEST(ErrorDeathTest, CheckExpected) {
   tl::expected<int, ErrorType> expected;
