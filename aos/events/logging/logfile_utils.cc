@@ -20,6 +20,7 @@
 #include "aos/events/logging/logfile_decoder_options.h"
 #include "aos/events/logging/snappy_encoder.h"
 #include "aos/flatbuffer_merge.h"
+#include "aos/macros.h"
 #include "aos/util/file.h"
 
 ABSL_FLAG(int32_t, flush_size, 128 * 1024,
@@ -573,6 +574,7 @@ flatbuffers::uoffset_t PackMessageHeaderSize(LogType log_type) {
           sizeof(uint32_t) * 2;
   }
   LOG(FATAL);
+  AOS_UNREACHABLE();
 }
 
 flatbuffers::uoffset_t PackMessageSize(LogType log_type, size_t data_size) {
@@ -591,6 +593,7 @@ flatbuffers::uoffset_t PackMessageSize(LogType log_type, size_t data_size) {
              sizeof(flatbuffers::uoffset_t) + aligned_data_length;
   }
   LOG(FATAL);
+  AOS_UNREACHABLE();
 }
 
 size_t PackMessageInline(uint8_t *buffer, const Context &context,

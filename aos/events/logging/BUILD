@@ -226,6 +226,7 @@ cc_library(
         "//aos:configuration",
         "//aos:flatbuffer_merge",
         "//aos:flatbuffers",
+        "//aos:macros",
         "//aos:sha256",
         "//aos:uuid",
         "//aos/containers:error_list",

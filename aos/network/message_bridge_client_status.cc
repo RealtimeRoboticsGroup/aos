@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "aos/events/event_loop.h"
+#include "aos/macros.h"
 #include "aos/network/message_bridge_client_generated.h"
 
 namespace aos::message_bridge {
@@ -189,6 +190,7 @@ int MessageBridgeClientStatus::FindClientIndex(std::string_view node_name) {
   }
 
   LOG(FATAL) << "Unknown client " << node_name;
+  AOS_UNREACHABLE();
 }
 
 ClientConnection *MessageBridgeClientStatus::GetClientConnection(

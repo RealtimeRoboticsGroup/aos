@@ -15,6 +15,8 @@
 #include "absl/log/absl_log.h"
 #include "absl/strings/numbers.h"
 
+#include "aos/macros.h"
+
 ABSL_FLAG(std::string, override_hostname, "",
           "If set, this forces the hostname of this node to be the provided "
           "hostname.");
@@ -108,6 +110,7 @@ uint16_t DoGetTeamNumber() {
   }
   ABSL_LOG(FATAL) << "Failed to parse a team number from hostname: "
                   << hostname;
+  AOS_UNREACHABLE();
 }
 
 }  // namespace

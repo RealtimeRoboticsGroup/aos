@@ -196,6 +196,7 @@ cc_library(
         "team_number.h",
     ],
     deps = [
+        "//aos:macros",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
@@ -423,6 +424,7 @@ cc_library(
         ":message_bridge_server_fbs",
         ":timestamp_filter",
         "//aos:flatbuffers",
+        "//aos:macros",
         "//aos/events:event_loop",
         "//aos/time",
     ],
