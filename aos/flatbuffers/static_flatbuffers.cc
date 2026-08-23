@@ -1375,10 +1375,30 @@ GeneratedCode GeneratedCode::MergeCode(
   }
   return result;
 }
+
+// Returns the file in which object was declared.  Its only caller,
+// GenerateCodeForRootTableFile(), has already checked that flatc recorded it.
+std::string_view DeclarationFile(const reflection::Object *object) {
+  ABSL_CHECK(object->declaration_file() != nullptr)
+      << ": " << object->name()->string_view()
+      << " records no declaration file even though the schema lists its source "
+         "files. Was this .bfbs produced by something other than flatc?";
+  return object->declaration_file()->string_view();
+}
 }  // namespace
 
 std::string GenerateCodeForRootTableFile(const reflection::Schema *schema,
                                          std::string_view file_hint) {
+  // flatc only records where each object was declared when it is given
+  // --bfbs-filenames; without it fbs_files() is absent entirely and every
+  // declaration_file is empty, leaving this generator no way to tell which
+  // objects belong to the root schema.
+  ABSL_CHECK(schema->fbs_files() != nullptr)
+      << ": Schema for " << file_hint
+      << " records no source files, so the objects belonging to it cannot be "
+         "identified. Pass --bfbs-filenames <root> to flatc when building the "
+         ".bfbs.";
+
   // Sanity check to detect duplicate basenames in the imported schema graph.
   // Since this generator matches objects from the root schema file by comparing
   // basenames (to be robust against fluctuating relative paths across
@@ -1401,8 +1421,7 @@ std::string GenerateCodeForRootTableFile(const reflection::Schema *schema,
   // result is independent of whether flatc's `realpath()` succeeded against
   // the project root (see comment on StripPath for context).
   const std::string_view root_file =
-      (root_object == nullptr) ? file_hint
-                               : root_object->declaration_file()->string_view();
+      (root_object == nullptr) ? file_hint : DeclarationFile(root_object);
   const std::string_view root_file_basename = StripPath(root_file);
   std::vector<GeneratedObject> objects;
   if (root_object != nullptr) {
@@ -1412,8 +1431,7 @@ std::string GenerateCodeForRootTableFile(const reflection::Schema *schema,
     if (object->is_struct()) {
       continue;
     }
-    if (StripPath(object->declaration_file()->string_view()) ==
-        root_file_basename) {
+    if (StripPath(DeclarationFile(object)) == root_file_basename) {
       objects.push_back(GenerateCodeForObject(schema, object, file_hint));
     }
   }
