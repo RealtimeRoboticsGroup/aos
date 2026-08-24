@@ -250,6 +250,10 @@ common:running_in_ci --repo_env=AOS_RUNNING_IN_CI=1
 common:running_in_ci --repo_env=AOS_PIP_INDEX_URL=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple
 common:running_in_ci --repo_env=AOS_PIP_EXTRA_INDEX_URL=https://realtimeroboticsgroup.org/build-dependencies/wheelhouse/simple
 common:running_in_ci --repo_env=AOS_PIP_TRUSTED_HOST=--trusted-host=realtimeroboticsgroup.org
+# CI caches evict (disk cache pruning on workers, GCS lifecycle): retry the
+# build when a blob referenced under --remote_download_outputs=minimal has
+# vanished.  Matches the bazel 8.5 default; pinned so it stays that way.
+common:running_in_ci --experimental_remote_cache_eviction_retries=5
 
 import %workspace%/.bazelrc_autodetection
 
