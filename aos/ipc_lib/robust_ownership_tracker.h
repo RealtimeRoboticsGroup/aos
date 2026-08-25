@@ -28,7 +28,7 @@ class RobustOwnershipTrackerTest;
 class ThreadOwnerStatusSnapshot {
  public:
   ThreadOwnerStatusSnapshot() : futex_(0) {}
-  ThreadOwnerStatusSnapshot(aos_futex futex) : futex_(futex) {}
+  ThreadOwnerStatusSnapshot(uint32_t futex) : futex_(futex) {}
   ThreadOwnerStatusSnapshot(const ThreadOwnerStatusSnapshot &) = default;
   ThreadOwnerStatusSnapshot &operator=(const ThreadOwnerStatusSnapshot &) =
       default;
@@ -37,22 +37,24 @@ class ThreadOwnerStatusSnapshot {
 
   // Returns if the owner died as noticed by the robust futex using Acquire
   // memory ordering.
-  bool OwnerIsDead() const { return futex_owner_is_dead(futex_); }
+  bool OwnerIsDead() const { return mutex_owner_is_dead_from_value(futex_); }
 
   // Returns true if no one has claimed ownership.
-  bool IsUnclaimed() const { return futex_ == 0; }
+  bool IsUnclaimed() const {
+    return mutex_owner_from_value(futex_) == 0 && !OwnerIsDead();
+  }
 
   // Returns the thread ID (a.k.a. "tid") of the owning thread. Use this when
   // trying to access the /proc entry that corresponds to the owning thread for
   // example. Do not use the futex value directly.
-  pid_t tid() const { return futex_owner(futex_); }
+  pid_t tid() const { return mutex_owner_from_value(futex_); }
 
   bool operator==(const ThreadOwnerStatusSnapshot &other) const {
     return other.futex_ == futex_;
   }
 
  private:
-  aos_futex futex_;
+  uint32_t futex_;
 };
 
 // This object reliably tracks a thread owning a resource. A single thread may

@@ -541,6 +541,12 @@ pid_t GetThreadId() {
   return static_cast<pid_t>(tid);
 }
 
+std::chrono::nanoseconds GetCurrentThreadCpuTime() {
+  struct timespec ts;
+  ABSL_PCHECK(clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts) == 0);
+  return std::chrono::seconds(ts.tv_sec) + std::chrono::nanoseconds(ts.tv_nsec);
+}
+
 uid_t GetUserId() { return getuid(); }
 
 std::optional<std::string> GetUsername(uid_t uid) {

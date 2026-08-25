@@ -9,6 +9,7 @@
 
 #include "aos/ipc_lib/aos_sync.h"
 
+#include <mach/mach.h>
 #include <os/clock.h>
 #include <os/lock.h>
 #include <os/os_sync_wait_on_address.h>
@@ -18,6 +19,8 @@
 #include <atomic>
 #include <cerrno>
 #include <cstdint>
+
+#include "absl/log/absl_check.h"
 
 #include "aos/ipc_lib/aos_sync_internal.h"
 
@@ -42,6 +45,46 @@ void InstallAtforkHook() {
   ABSL_PCHECK(pthread_atfork(NULL, NULL, &atfork_child) == 0)
       << ": pthread_atfork(NULL, NULL, "
       << reinterpret_cast<void *>(&atfork_child) << ") failed";
+}
+
+bool IsValidAddress(void *addr, size_t size) {
+  vm_address_t address = reinterpret_cast<vm_address_t>(addr);
+  vm_size_t region_size = 0;
+  vm_region_basic_info_data_64_t info;
+  mach_msg_type_number_t info_count = VM_REGION_BASIC_INFO_COUNT_64;
+  mach_port_t object_name;
+
+  vm_address_t target_addr = address;
+  kern_return_t kr = vm_region_64(
+      mach_task_self(), &address, &region_size, VM_REGION_BASIC_INFO_64,
+      reinterpret_cast<vm_region_info_t>(&info), &info_count, &object_name);
+
+  if (kr != KERN_SUCCESS) {
+    return false;
+  }
+
+  // The region must contain our target address range.
+  if (target_addr < address || target_addr + size > address + region_size) {
+    return false;
+  }
+
+  return (info.protection & VM_PROT_READ) && (info.protection & VM_PROT_WRITE);
+}
+
+void RobustListCleanerWake(aos_futex *futex) { sys_futex_wake(futex, 1); }
+
+// macOS mutexes are always the futex word, so its backend is exactly the
+// portable one.
+int mutex_do_get(aos_mutex *m, bool signals_fail, uint32_t tid) {
+  return portable_mutex_do_get(m, signals_fail, tid);
+}
+
+int mutex_do_trylock(aos_mutex *m, uint32_t tid, my_robust_list::Adder *adder) {
+  return portable_mutex_do_trylock(m, tid, adder);
+}
+
+void mutex_do_unlock(aos_mutex *m, uint32_t tid) {
+  return portable_mutex_do_unlock(m, tid);
 }
 
 int wait_on_address(aos_futex *addr1, int val1,
@@ -134,3 +177,9 @@ int sys_futex_unlock_pi(aos_futex *addr1) {
 }
 
 }  // namespace aos::ipc_lib::sync
+
+// The rest of this is part of the public interface, which lives at the global
+// scope.
+uint32_t mutex_owner_from_value(uint32_t value) {
+  return value & FUTEX_TID_MASK;
+}

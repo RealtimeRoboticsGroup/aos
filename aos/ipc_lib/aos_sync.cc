@@ -7,6 +7,11 @@
 
 #include <stdio.h>
 
+#ifdef _MSC_VER
+#include <basetsd.h>
+using ssize_t = SSIZE_T;
+#endif
+
 #include <atomic>
 #include <cassert>
 #include <cerrno>
@@ -156,7 +161,13 @@ void Init() {
 }
 
 void SetRobustListOffset(uintptr_t offset) {
+  // Calling this from a thread which has never used aos_sync would walk a
+  // zero-initialized robust_head off into garbage.  Only the destructor in
+  // aos_sync_portable.cc is written to tolerate the uninitialized state (it
+  // has to be; see the contract there); everything else must come through
+  // get_tid()'s lazy initialization first.
   aos_robust_list_head *const head = &thread_state()->robust_head;
+  ABSL_CHECK(head->next != 0);
   const uintptr_t offset_change = offset - robust_list_offset;
   robust_list_offset = offset;
   aos_mutex *m = robust_head_mutex(head);
@@ -168,11 +179,48 @@ void SetRobustListOffset(uintptr_t offset) {
 }
 
 bool HaveLockedMutexes() {
+  // A zero-initialized (never-used-aos_sync) thread's robust_head would
+  // compare as "locked mutexes exist", which is the wrong answer.
   aos_robust_list_head *const head = &thread_state()->robust_head;
+  ABSL_CHECK(head->next != 0);
   return head->next != robust_head_next_value(head);
 }
 
 }  // namespace my_robust_list
+
+int futex_mutex_do_trylock(aos_mutex *m, uint32_t tid,
+                           my_robust_list::Adder *adder) {
+  // Try an atomic 0->TID transition.
+  uint32_t c = compare_and_swap_val(&m->futex, 0, tid);
+
+  if (c != 0) {
+    if (AOS_LIKELY((c & FUTEX_OWNER_DIED) == 0)) {
+      // Somebody else had it locked; we failed.
+      return 4;
+    }
+    // FUTEX_OWNER_DIED was set, so we have to call into the kernel (or its
+    // userspace emulation) to deal with resetting it.
+    const int ret = sys_futex_wait(FUTEX_TRYLOCK_PI, &m->futex, 0, NULL);
+    if (ret == 0) {
+      adder->Add();
+      // Only clear the owner died if somebody else didn't do the recovery
+      // and then unlock before our TRYLOCK happened.
+      return mutex_finish_lock(m);
+    }
+    // EWOULDBLOCK means that somebody else beat us to it.
+    if (AOS_LIKELY(ret == -EWOULDBLOCK)) {
+      return 4;
+    }
+    thread_state()->robust_head.pending_next = 0;
+    errno = -ret;
+    ABSL_PLOG(FATAL) << "FUTEX_TRYLOCK_PI(" << (&m->futex)
+                     << ", 0, NULL) failed";
+  }
+
+  lock_pthread_mutex(m);
+  adder->Add();
+  return 0;
+}
 
 void futex_mutex_do_unlock(aos_mutex *m, uint32_t tid) {
   // If the atomic TID->0 transition fails (ie FUTEX_WAITERS is set),
@@ -245,38 +293,7 @@ int mutex_trylock(aos_mutex *m) {
   }
   my_robust_list::Adder adder(m);
 
-  // Try an atomic 0->TID transition.
-  uint32_t c = compare_and_swap_val(&m->futex, 0, tid);
-
-  if (c != 0) {
-    if (AOS_LIKELY((c & FUTEX_OWNER_DIED) == 0)) {
-      // Somebody else had it locked; we failed.
-      return 4;
-    } else {
-      // FUTEX_OWNER_DIED was set, so we have to call into the kernel to deal
-      // with resetting it.
-      const int ret = sys_futex_wait(FUTEX_TRYLOCK_PI, &m->futex, 0, NULL);
-      if (ret == 0) {
-        adder.Add();
-        // Only clear the owner died if somebody else didn't do the recovery
-        // and then unlock before our TRYLOCK happened.
-        return mutex_finish_lock(m);
-      } else {
-        // EWOULDBLOCK means that somebody else beat us to it.
-        if (AOS_LIKELY(ret == -EWOULDBLOCK)) {
-          return 4;
-        }
-        thread_state()->robust_head.pending_next = 0;
-        errno = -ret;
-        ABSL_PLOG(FATAL) << "FUTEX_TRYLOCK_PI(" << (&m->futex)
-                         << ", 0, NULL) failed";
-      }
-    }
-  }
-
-  lock_pthread_mutex(m);
-  adder.Add();
-  return 0;
+  return mutex_do_trylock(m, tid, &adder);
 }
 
 bool mutex_islocked(const aos_mutex *m) {
@@ -288,24 +305,22 @@ bool mutex_islocked(const aos_mutex *m) {
   return (value & FUTEX_TID_MASK) == tid;
 }
 
+bool mutex_owner_is_dead_from_value(uint32_t value) {
+  return (value & FUTEX_OWNER_DIED) != 0;
+}
+
 uint32_t mutex_owner(const aos_mutex *m) {
   const uint32_t value =
       std::atomic_ref<uint32_t>(const_cast<uint32_t &>(m->futex))
           .load(std::memory_order_relaxed);
-  return futex_owner(value);
+  return mutex_owner_from_value(value);
 }
 
 bool mutex_owner_is_dead(const aos_mutex *m) {
   const uint32_t value =
       std::atomic_ref<uint32_t>(const_cast<uint32_t &>(m->futex))
           .load(std::memory_order_relaxed);
-  return futex_owner_is_dead(value);
-}
-
-uint32_t futex_owner(aos_futex futex) { return futex & FUTEX_TID_MASK; }
-
-bool futex_owner_is_dead(aos_futex futex) {
-  return (futex & FUTEX_OWNER_DIED) != 0;
+  return mutex_owner_is_dead_from_value(value);
 }
 
 bool mutex_pretend_owner_died_for_testing(aos_mutex *m, uint32_t tid) {
@@ -313,7 +328,7 @@ bool mutex_pretend_owner_died_for_testing(aos_mutex *m, uint32_t tid) {
   // what weaker orderings would be safe.
   std::atomic_ref<uint32_t> ref(m->futex);
   uint32_t value = ref.load(std::memory_order_seq_cst);
-  while ((value & FUTEX_TID_MASK) == tid) {
+  while (mutex_owner_from_value(value) == tid) {
     const uint32_t new_value = FUTEX_OWNER_DIED | (value & FUTEX_WAITERS);
     if (ref.compare_exchange_strong(value, new_value,
                                     std::memory_order_seq_cst)) {

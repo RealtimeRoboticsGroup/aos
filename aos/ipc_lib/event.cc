@@ -14,7 +14,7 @@
 
 namespace aos {
 
-Event::Event() : impl_(0) {
+Event::Event() : impl_{} {
   static_assert(shm_ok<Event>::value,
                 "Event is not safe for use in shared memory.");
 }

@@ -278,6 +278,12 @@ std::string GetThreadName() {
 
 pid_t GetProcessId() { return getpid(); }
 
+std::chrono::nanoseconds GetCurrentThreadCpuTime() {
+  struct timespec ts;
+  ABSL_PCHECK(clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts) == 0);
+  return std::chrono::seconds(ts.tv_sec) + std::chrono::nanoseconds(ts.tv_nsec);
+}
+
 uid_t GetUserId() {
   uid_t ruid, euid, suid;
   ABSL_PCHECK(getresuid(&ruid, &euid, &suid) == 0);

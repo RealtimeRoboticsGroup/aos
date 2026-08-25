@@ -1,6 +1,8 @@
 #include "aos/testing/prevent_exit.h"
 
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 
 #include <cstdlib>
 

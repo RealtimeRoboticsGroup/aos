@@ -305,6 +305,10 @@ int mutex_do_get(aos_mutex *m, bool signals_fail, uint32_t tid) {
   return mutex_finish_lock(m);
 }
 
+int mutex_do_trylock(aos_mutex *m, uint32_t tid, my_robust_list::Adder *adder) {
+  return futex_mutex_do_trylock(m, tid, adder);
+}
+
 void mutex_do_unlock(aos_mutex *m, uint32_t tid) {
   futex_mutex_do_unlock(m, tid);
 }
@@ -350,9 +354,13 @@ void condition_wake(aos_condition *c, aos_mutex *m, int number_requeue) {
 
 }  // namespace aos::ipc_lib::sync
 
-// condition_wait is part of the public interface, which lives at the global
+// The rest of this is part of the public interface, which lives at the global
 // scope.
 using namespace aos::ipc_lib::sync;  // NOLINT(build/namespaces)
+
+uint32_t mutex_owner_from_value(uint32_t value) {
+  return value & FUTEX_TID_MASK;
+}
 
 int condition_wait(aos_condition *c, aos_mutex *m, struct timespec *end_time) {
   RunShmObservers run_observers(c, false);

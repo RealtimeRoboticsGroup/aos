@@ -78,9 +78,11 @@
   (FUTEX_WAIT_REQUEUE_PI | FUTEX_PRIVATE_FLAG)
 #define FUTEX_CMP_REQUEUE_PI_PRIVATE (FUTEX_CMP_REQUEUE_PI | FUTEX_PRIVATE_FLAG)
 
-#define FUTEX_WAITERS 0x80000000
-#define FUTEX_OWNER_DIED 0x40000000
-#define FUTEX_TID_MASK 0x3fffffff
+// FUTEX_WAITERS, FUTEX_OWNER_DIED, and FUTEX_TID_MASK come from aos_sync.h,
+// which defines them (guarded by #ifndef, with the same values the kernel
+// uses) for every platform without <linux/futex.h>.  They're part of the futex
+// value's layout, which callers outside aos_sync need to decode, so the header
+// is the one place they're defined.
 #endif  // !__linux__
 
 namespace aos::ipc_lib::sync {
@@ -412,6 +414,14 @@ class Remover {
       // robust_head's psuedo-mutex doesn't have a previous pointer to update.
       next_to_mutex(head_, next_value)->previous = previous;
     }
+    // m is unlinked now.  Don't let the compiler sink the unlinking stores
+    // past the clearing below: anything walking this list concurrently (the
+    // kernel's robust list handling on Linux, RobustListCleaner elsewhere) has
+    // to see either m still linked in with valid pointers, or m gone -- never
+    // m still reachable from the list with its own pointers already zeroed.
+    aos_compiler_memory_barrier();
+    m->next = 0;
+    m->previous = nullptr;
 
     if (kRobustListDebug) {
       printf("%" PRId32 ": done removing %p\n", get_tid(), m);
@@ -463,9 +473,30 @@ int sys_futex_unlock_pi(aos_futex *addr1);
 // timeout isn't nullptr) the relative timeout expires.  Returns 0 or a negated
 // errno, just like FUTEX_WAIT does.
 //
-// This is the one piece of aos_sync_portable.cc's emulation which every OS has
-// to provide for itself; everything else it needs is above.
+// This is the piece of aos_sync_portable.cc's emulation which every OS has to
+// provide for itself; everything else it needs is above.
 int wait_on_address(aos_futex *addr1, int val1, const struct timespec *timeout);
+
+// Returns true if [addr, addr + size) is currently mapped and writable.  Used
+// by the userspace robust list walk to avoid faulting on a mutex whose shared
+// memory has already been unmapped, which is what the kernel does for us on
+// Linux.
+bool IsValidAddress(void *addr, size_t size);
+
+// Wakes any waiters on a mutex the userspace robust list walk has just marked
+// as owner-died.  Split out from sys_futex_wake because that one is not
+// necessarily callable from inside thread_local destruction.
+void RobustListCleanerWake(aos_futex *futex);
+
+// The futex-word emulation of the mutex operations, shared by the OSes
+// without kernel futexes (aos_sync_portable.cc).  macOS's mutex_do_* are
+// exactly these; Windows backs shared-memory mutexes with a real kernel
+// object instead and only falls back to these for process-private ones (see
+// aos_sync_windows.cc for why).
+int portable_mutex_do_get(aos_mutex *m, bool signals_fail, uint32_t tid);
+int portable_mutex_do_trylock(aos_mutex *m, uint32_t tid,
+                              my_robust_list::Adder *adder);
+void portable_mutex_do_unlock(aos_mutex *m, uint32_t tid);
 #endif
 
 // Finishes the locking of a mutex by potentially clearing FUTEX_OWNER_DIED in
@@ -487,6 +518,19 @@ inline int mutex_finish_lock(aos_mutex *m) {
 // Split out separately from mutex_get so condition_wait can call it and use its
 // own my_robust_list::Adder.
 int mutex_do_get(aos_mutex *m, bool signals_fail, uint32_t tid);
+
+// The backend half of mutex_trylock: returns 0 or 1 with *m locked (and the
+// pthread mutex handled), or 4 if somebody else has it.  Calls adder->Add()
+// once the lock is held, at the point in the acquisition each backend needs.
+int mutex_do_trylock(aos_mutex *m, uint32_t tid, my_robust_list::Adder *adder);
+
+// The futex-word implementation of mutex_do_trylock, defined in aos_sync.cc
+// and shared by every backend whose trylock is the word CAS: Linux directly,
+// and the portable emulation (whose sys_futex_wait provides the
+// FUTEX_TRYLOCK_PI half).  Windows reaches it only for process-private
+// mutexes, through the portable backend.
+int futex_mutex_do_trylock(aos_mutex *m, uint32_t tid,
+                           my_robust_list::Adder *adder);
 
 // Releases *m, which the caller has already checked is locked by tid and taken
 // off the robust list.

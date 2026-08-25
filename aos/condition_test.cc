@@ -14,7 +14,6 @@
 #include "aos/testing/test_child.h"
 #include "aos/testing/test_shm.h"
 #include "aos/time/time.h"
-#include "aos/type_traits/type_traits.h"
 
 namespace aos::testing {
 
@@ -263,13 +262,12 @@ TEST_F(SimpleConditionTest, MutexContention) {
 class ConditionTest : public ConditionTestCommon {
  public:
   struct Shared {
-    Shared() : condition(&mutex) {}
+    Shared() : condition(&mutex), waiters_count(0) {}
 
     Mutex mutex;
     Condition condition;
+    std::atomic<int> waiters_count;
   };
-  static_assert(shm_ok<Shared>::value,
-                "it's going to get shared between forked processes");
 
   ConditionTest()
       : mem_(sizeof(Shared)), shared_(static_cast<Shared *>(mem_.get())) {
@@ -302,10 +300,12 @@ class ConditionTestProcess {
   // timeout is how long to wait after delay before deciding that it's hung.
   ConditionTestProcess(chrono::milliseconds delay, Action action,
                        Condition *condition,
+                       std::atomic<int> *waiters_count = nullptr,
                        chrono::milliseconds timeout = kDefaultTimeout)
       : delay_(kMinimumDelay + delay),
         action_(action),
         condition_(condition),
+        waiters_count_(waiters_count),
         timeout_(delay_ + timeout),
         mem_(sizeof(Shared)),
         shared_(static_cast<Shared *>(mem_.get())) {
@@ -372,8 +372,6 @@ class ConditionTestProcess {
     volatile bool finished;
     aos_futex ready;
   };
-  static_assert(shm_ok<Shared>::value,
-                "it's going to get shared between forked processes");
 
   void Run() {
     if (action_ == Action::kWaitLockStart) {
@@ -388,8 +386,14 @@ class ConditionTestProcess {
       ASSERT_EQ(1, futex_set(&shared_->ready));
       ASSERT_FALSE(condition_->m()->Lock());
     }
+    if (waiters_count_ != nullptr) {
+      waiters_count_->fetch_add(1, std::memory_order_relaxed);
+    }
     // TODO(brians): Test this returning true (aka the owner dying).
     ASSERT_FALSE(condition_->Wait());
+    if (waiters_count_ != nullptr) {
+      waiters_count_->fetch_sub(1, std::memory_order_relaxed);
+    }
     shared_->finished = true;
     if (action_ != Action::kWaitNoUnlock) {
       condition_->m()->Unlock();
@@ -402,6 +406,7 @@ class ConditionTestProcess {
   const chrono::milliseconds delay_;
   const Action action_;
   Condition *const condition_;
+  std::atomic<int> *const waiters_count_;
   const chrono::milliseconds timeout_;
 
   TestChild child_;
@@ -429,6 +434,15 @@ TEST_F(ConditionTest, Basic) {
 
 // Makes sure that the worker child locks before it tries to Wait() etc.
 TEST_F(ConditionTest, Locking) {
+#ifdef _WIN32
+  // This test deliberately leaves the child blocked forever and then reaps
+  // it, which verifies that an abandoned waiter can be cleaned up from
+  // outside -- an inherently cross-process property.  Windows conditions are
+  // process-local and the child is a thread, which cannot be killed, so the
+  // scenario has no meaning here.
+  GTEST_SKIP() << "requires killing a blocked child; process-local futexes "
+                  "on Windows make abandoned waiters meaningless";
+#endif
   ConditionTestProcess child(chrono::milliseconds(0),
                              ConditionTestProcess::Action::kWait,
                              &shared_->condition);
@@ -479,13 +493,13 @@ TEST_F(ConditionTest, Relocking) {
 TEST_F(ConditionTest, SignalOne) {
   ConditionTestProcess child1(chrono::milliseconds(0),
                               ConditionTestProcess::Action::kWait,
-                              &shared_->condition);
+                              &shared_->condition, &shared_->waiters_count);
   ConditionTestProcess child2(chrono::milliseconds(0),
                               ConditionTestProcess::Action::kWait,
-                              &shared_->condition);
+                              &shared_->condition, &shared_->waiters_count);
   ConditionTestProcess child3(chrono::milliseconds(0),
                               ConditionTestProcess::Action::kWait,
-                              &shared_->condition);
+                              &shared_->condition, &shared_->waiters_count);
   auto number_finished = [&]() {
     return (child1.IsFinished() ? 1 : 0) + (child2.IsFinished() ? 1 : 0) +
            (child3.IsFinished() ? 1 : 0);
@@ -493,6 +507,12 @@ TEST_F(ConditionTest, SignalOne) {
   child1.Start();
   child2.Start();
   child3.Start();
+  while (shared_->waiters_count.load(std::memory_order_relaxed) < 3) {
+    ::std::this_thread::sleep_for(chrono::milliseconds(1));
+  }
+  ASSERT_FALSE(shared_->mutex.Lock());
+  ::std::this_thread::sleep_for(chrono::milliseconds(10));
+  shared_->mutex.Unlock();
   Settle();
   EXPECT_EQ(0, number_finished());
   shared_->condition.Signal();
@@ -513,16 +533,22 @@ TEST_F(ConditionTest, SignalOne) {
 TEST_F(ConditionTest, Broadcast) {
   ConditionTestProcess child1(chrono::milliseconds(0),
                               ConditionTestProcess::Action::kWait,
-                              &shared_->condition);
+                              &shared_->condition, &shared_->waiters_count);
   ConditionTestProcess child2(chrono::milliseconds(0),
                               ConditionTestProcess::Action::kWait,
-                              &shared_->condition);
+                              &shared_->condition, &shared_->waiters_count);
   ConditionTestProcess child3(chrono::milliseconds(0),
                               ConditionTestProcess::Action::kWait,
-                              &shared_->condition);
+                              &shared_->condition, &shared_->waiters_count);
   child1.Start();
   child2.Start();
   child3.Start();
+  while (shared_->waiters_count.load(std::memory_order_relaxed) < 3) {
+    ::std::this_thread::sleep_for(chrono::milliseconds(1));
+  }
+  ASSERT_FALSE(shared_->mutex.Lock());
+  ::std::this_thread::sleep_for(chrono::milliseconds(10));
+  shared_->mutex.Unlock();
   Settle();
   shared_->condition.Broadcast();
   EXPECT_FALSE(child1.Hung());

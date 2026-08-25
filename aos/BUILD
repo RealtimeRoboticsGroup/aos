@@ -114,6 +114,7 @@ cc_library(
     deps = [
         "//aos/ipc_lib:aos_sync",
         "//aos/mutex",
+        "//aos/time",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
     ],
