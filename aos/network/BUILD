@@ -161,6 +161,56 @@ cc_static_flatbuffer(
     visibility = ["//visibility:public"],
 )
 
+cc_library(
+    name = "message_bridge_statistics_dump_lib",
+    srcs = ["message_bridge_statistics_dump_lib.cc"],
+    hdrs = ["message_bridge_statistics_dump_lib.h"],
+    deps = [
+        ":message_bridge_server_fbs",
+        "//aos:flatbuffer_merge",
+        "//aos/events:event_loop",
+        "//aos/util:print_table",
+        "@com_google_absl//absl/log:absl_check",
+    ],
+)
+
+cc_binary(
+    name = "message_bridge_statistics_dump",
+    srcs = ["message_bridge_statistics_dump.cc"],
+    deps = [
+        ":message_bridge_statistics_dump_lib",
+        "//aos:init",
+        "//aos/events/logging:log_reader",
+    ],
+)
+
+cc_binary(
+    name = "message_bridge_latency_dump",
+    srcs = ["message_bridge_latency_dump.cc"],
+    deps = [
+        "//aos:configuration",
+        "//aos:init",
+        "//aos/events:simulated_event_loop",
+        "//aos/events/logging:log_reader",
+        "//aos/time",
+        "//aos/util:print_table",
+        "//aos/util:status",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
+    ],
+)
+
+cc_binary(
+    name = "aos_message_bridge_statistics_streamer",
+    srcs = ["aos_message_bridge_statistics_streamer.cc"],
+    deps = [
+        ":message_bridge_statistics_dump_lib",
+        "//aos:init",
+        "//aos/events:shm_event_loop",
+    ],
+)
+
 proto_library(
     name = "message_bridge_auth_proto",
     srcs = [
