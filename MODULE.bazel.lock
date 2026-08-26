@@ -487,6 +487,8 @@
     "https://bcr.bazel.build/modules/rules_go/0.59.0/MODULE.bazel": "b7e43e7414a3139a7547d1b4909b29085fbe5182b6c58cbe1ed4c6272815aeae",
     "https://bcr.bazel.build/modules/rules_go/0.61.1/MODULE.bazel": "b599cc67f98e8dbe040631129fbd23f190a557f7be506d4781619d0fd4dbbbec",
     "https://bcr.bazel.build/modules/rules_go/0.61.1/source.json": "ff52d46fca8e2ac87c610c11f05c3a9f0fa08dc4294664c6a31449092409c5aa",
+    "https://bcr.bazel.build/modules/rules_halide/0.0.1/MODULE.bazel": "3404cda9201d3ff217af1e6ebb255bb34b5bb213ecb5b2bd754f21b54c14859c",
+    "https://bcr.bazel.build/modules/rules_halide/0.0.1/source.json": "088647e9369f4203e481b67df929a66685a4b7807163f84314bc8f4a95387b83",
     "https://bcr.bazel.build/modules/rules_java/4.0.0/MODULE.bazel": "5a78a7ae82cd1a33cef56dc578c7d2a46ed0dca12643ee45edbb8417899e6f74",
     "https://bcr.bazel.build/modules/rules_java/5.1.0/MODULE.bazel": "324b6478b0343a3ce7a9add8586ad75d24076d6d43d2f622990b9c1cfd8a1b15",
     "https://bcr.bazel.build/modules/rules_java/5.3.5/MODULE.bazel": "a4ec4f2db570171e3e5eb753276ee4b389bae16b96207e9d3230895c99644b86",
@@ -1859,7 +1861,7 @@
     "@@rules_halide+//:extensions.bzl%halide": {
       "general": {
         "bzlTransitiveDigest": "GVlhpETtGvCoYJz0XcK4d7tddEiUdAS2I8Ddo2Gnihs=",
-        "usagesDigest": "rI1Ps1yxDla+QWAcZFAN0j7NLns/YjDJOTodapey1D0=",
+        "usagesDigest": "KROYEHQzg4kQR/g8Ae788XCg+JMxc3AqC2IQttG+MgI=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
