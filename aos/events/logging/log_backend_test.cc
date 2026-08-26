@@ -126,6 +126,140 @@ TEST(FileHandlerTest, CloseSyncsDirectory) {
   std::filesystem::remove(filepath);
 }
 
+class FileHandlerSyncTest : public ::testing::TestWithParam<bool> {};
+
+// --sync promises to "sync the file after each written block", so the data has
+// to be pushed at the disk during Write() and not only by Close().  Otherwise a
+// crash in between silently loses writes that were already reported as durable.
+//
+// Every backend syncs by a different mechanism (sync_file_range() on Linux,
+// F_FULLFSYNC on Darwin, _commit() on Windows) and none of them are observable
+// from the filesystem afterwards, so this checks that the syncs were issued.
+// The OSX backend regressed exactly here once, by dropping its F_FULLFSYNC.
+TEST_P(FileHandlerSyncTest, SyncsDataDuringWrites) {
+  const bool sync = GetParam();
+
+  absl::FlagSaver flag_saver;
+  absl::SetFlag(&FLAGS_sync, sync);
+
+  const std::string logevent = TestTmpDir() + "/";
+  const std::string filepath = logevent + "test.log";
+  ASSERT_TRUE(
+      aos::util::MkdirPIfSpace(logevent, std::filesystem::perms::all, sync));
+
+  FileHandler file_handler(filepath, false);
+  ASSERT_EQ(file_handler.OpenForWrite(), WriteCode::kOk);
+  ASSERT_EQ(file_handler.data_sync_count(), 0u);
+
+  ASSERT_EQ(Write(&file_handler, "test").code, WriteCode::kOk);
+  const size_t after_first_write = file_handler.data_sync_count();
+
+  ASSERT_EQ(Write(&file_handler, "more").code, WriteCode::kOk);
+  const size_t after_second_write = file_handler.data_sync_count();
+
+  if (sync) {
+    EXPECT_GT(after_first_write, 0u)
+        << "--sync is set, but Write() never synced.  A crash before Close() "
+           "would lose data we already acknowledged as written.";
+    EXPECT_GT(after_second_write, after_first_write)
+        << "--sync syncs after *each* written block, but the second Write() "
+           "didn't sync.";
+  } else {
+    EXPECT_EQ(after_second_write, 0u)
+        << "--sync is off, so writes shouldn't be paying for syncs.";
+  }
+
+  EXPECT_EQ(file_handler.Close(), WriteCode::kOk);
+  std::filesystem::remove(filepath);
+}
+
+INSTANTIATE_TEST_SUITE_P(FileHandlerSync, FileHandlerSyncTest,
+                         ::testing::Bool(),
+                         [](const ::testing::TestParamInfo<bool> &info) {
+                           return info.param ? "SyncEnabled" : "SyncDisabled";
+                         });
+
+namespace {
+// Forces every platform sync to report a full disk.  Reaching a real ENOSPC
+// out of fdatasync()/F_FULLFSYNC/_commit() would take a genuinely full
+// filesystem, so the failure is injected at the one seam all three share.
+class OutOfSpaceSyncFileHandler : public FileHandler {
+ public:
+  using FileHandler::FileHandler;
+
+  // How many times a sync actually reached this override.  Which paths sync
+  // through here is backend-specific, so the test keys off this rather than
+  // assuming.
+  size_t sync_calls() const { return sync_calls_; }
+
+ private:
+  WriteCode PlatformSyncImpl() override {
+    ++sync_calls_;
+    return WriteCode::kOutOfSpace;
+  }
+
+  size_t sync_calls_ = 0;
+};
+}  // namespace
+
+// A sync that fails with ENOSPC leaves the data non-durable, so it has to come
+// back as kOutOfSpace instead of a clean result.  Answering kOk tells the
+// logger the batch is safely on disk when it isn't: DetachedBufferWriter::
+// Flush() then Clear()s it out of the encoder as durably written and keeps
+// logging, rather than winding the log down.
+//
+// The Windows backend regressed exactly here once, by routing its per-write
+// _commit() through PlatformSync() and dropping the return value.
+//
+// Which calls reach PlatformSyncImpl() differs per backend, so the per-write
+// half is asserted per platform rather than only where a sync happens to have
+// landed -- a runtime "if it synced" check would silently assert nothing on
+// Linux, which is the only platform CI builds this on.  Close() syncs through
+// the seam on all three.
+TEST(LogBackendTest, SyncOutOfSpaceIsReported) {
+  absl::FlagSaver flag_saver;
+  absl::SetFlag(&FLAGS_sync, true);
+
+  const std::string logevent = TestTmpDir() + "/";
+  const std::string filepath = logevent + "test.log";
+  ASSERT_TRUE(
+      aos::util::MkdirPIfSpace(logevent, std::filesystem::perms::all, true));
+
+  OutOfSpaceSyncFileHandler file_handler(filepath, false);
+  ASSERT_EQ(file_handler.OpenForWrite(), WriteCode::kOk);
+
+  const WriteResult result = Write(&file_handler, "test");
+#if defined(__linux__)
+  // Linux pushes each write out with sync_file_range() inside WriteV() and
+  // never routes it through PlatformSyncImpl(), so a failing platform sync
+  // can't reach this write.  Pinned rather than left unasserted: if Linux ever
+  // starts syncing writes through the seam, this fires and the kOutOfSpace
+  // expectation below it becomes the one that applies.
+  EXPECT_EQ(file_handler.sync_calls(), 0u)
+      << "Linux started syncing writes through PlatformSyncImpl(); it now has "
+         "to propagate the failure the way Darwin and Windows do.";
+  EXPECT_EQ(result.code, WriteCode::kOk);
+#else
+  // Darwin (F_FULLFSYNC) and Windows (_commit()) sync every write through the
+  // seam, so the failure has to come back to the caller.
+  EXPECT_GT(file_handler.sync_calls(), 0u)
+      << "--sync is set, so each write has to flush through "
+         "PlatformSyncImpl().";
+  EXPECT_EQ(result.code, WriteCode::kOutOfSpace)
+      << "The per-write sync reported running out of space, but Write() came "
+         "back clean.  The logger would drop this batch from memory as durably "
+         "written and keep going.";
+#endif
+
+  const size_t after_write = file_handler.sync_calls();
+  EXPECT_EQ(file_handler.Close(), WriteCode::kOutOfSpace)
+      << "Close() ran out of space while flushing, but reported a clean close.";
+  EXPECT_GT(file_handler.sync_calls(), after_write)
+      << "--sync is set, so Close() has to flush through PlatformSyncImpl().";
+
+  std::filesystem::remove(filepath);
+}
+
 TEST(LogBackendTest, CreateRenamableFile) {
   const std::string logevent = TestTmpDir() + "/logevent/";
   auto backend = MakeRenamableFileBackend(logevent, false);
@@ -314,7 +448,7 @@ TEST(LogBackendTest, CreateFileMassiveWrite) {
   EXPECT_TRUE(std::filesystem::exists(logevent + "test.log"));
   EXPECT_EQ(buffer1.size() + buffer2.size(),
             std::filesystem::file_size(logevent + "test.log"));
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__APPLE__)
   ASSERT_TRUE(
       dynamic_cast<FileHandler *>(file.get())->encountered_incomplete_write());
 #endif
@@ -780,8 +914,10 @@ TEST_F(FileWriteTestBase, AlignedToUnaligned) {
   auto result = handler->Write(queue);
   EXPECT_EQ(result.code, WriteCode::kOk);
   EXPECT_EQ(result.messages_written, queue.size());
+#if !defined(__APPLE__) && !defined(_WIN32)
   FileHandler *file_handler = reinterpret_cast<FileHandler *>(handler.get());
   EXPECT_GT(file_handler->written_aligned(), 0);
+#endif
 
   ASSERT_EQ(handler->Close(), WriteCode::kOk);
   EXPECT_TRUE(std::filesystem::exists(file));

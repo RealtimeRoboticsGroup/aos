@@ -37,7 +37,6 @@ inline bool IsAlignedLength(const absl::Span<const uint8_t> span) {
 
 void FileHandler::EnableDirect() {
   if (supports_odirect_ && !ODirectEnabled()) {
-#ifdef O_DIRECT
     const int new_flags = flags_ | O_DIRECT;
     // Track if we failed to set O_DIRECT.  Note: Austin hasn't seen this call
     // fail.  The write call tends to fail instead.
@@ -49,31 +48,13 @@ void FileHandler::EnableDirect() {
       odirect_enabled_ = true;
       VLOG(1) << "Enabled O_DIRECT on " << filename_;
     }
-#elif defined(__APPLE__)
-    if (fcntl(fd_, F_NOCACHE, 1) == -1) {
-      PLOG(WARNING) << "Failed to set F_NOCACHE on " << filename_;
-      supports_odirect_ = false;
-    } else {
-      odirect_enabled_ = true;
-      VLOG(1) << "Enabled F_NOCACHE on " << filename_;
-    }
-#else
-    // OSX likes aligned blocks to write efficiently, but does it implicitly
-    // rather than explicitly.
-    odirect_enabled_ = true;
-    VLOG(1) << "Enabled O_DIRECT on " << filename_;
-#endif
   }
 }
 
 void FileHandler::DisableDirect() {
   if (supports_odirect_ && ODirectEnabled()) {
-#ifdef O_DIRECT
     flags_ = flags_ & (~O_DIRECT);
     PCHECK(fcntl(fd_, F_SETFL, flags_) != -1) << ": Failed to disable O_DIRECT";
-#elif defined(__APPLE__)
-    PCHECK(fcntl(fd_, F_NOCACHE, 0) != -1) << ": Failed to disable F_NOCACHE";
-#endif
     odirect_enabled_ = false;
     VLOG(1) << "Disabled O_DIRECT on " << filename_;
   }
@@ -176,7 +157,11 @@ std::pair<WriteCode, size_t> FileHandler::WriteV(bool aligned) {
   const auto end = aos::monotonic_clock::now();
 
   if (absl::GetFlag(FLAGS_sync)) {
-#ifdef __linux__
+    // Counted by hand rather than through PlatformSync(): this path pushes the
+    // data out with sync_file_range() instead of a whole-file sync, but it is
+    // still a data sync as far as --sync's promise (and data_sync_count()) is
+    // concerned.
+    ++data_sync_count_;
     // Flush asynchronously and force the data out of the cache.
     sync_file_range(fd_, total_write_bytes_, total_written,
                     SYNC_FILE_RANGE_WRITE);
@@ -193,11 +178,6 @@ std::pair<WriteCode, size_t> FileHandler::WriteV(bool aligned) {
                     total_write_bytes_ - last_synced_bytes_,
                     POSIX_FADV_DONTNEED);
     }
-#elif defined(__APPLE__)
-    if (fcntl(fd_, F_FULLFSYNC) == -1) {
-      PLOG(WARNING) << "Failed to F_FULLFSYNC " << filename_;
-    }
-#endif
     last_synced_bytes_ = total_write_bytes_;
   }
 
@@ -209,63 +189,14 @@ std::pair<WriteCode, size_t> FileHandler::WriteV(bool aligned) {
   return std::make_pair(WriteCode::kOk, total_written);
 }
 
-WriteCode FileHandler::OpenForWrite() {
-  iovec_.reserve(10);
-  if (!aos::util::MkdirPIfSpace(filename_, std::filesystem::perms::all,
-                                absl::GetFlag(FLAGS_sync))) {
-    return WriteCode::kOutOfSpace;
-  } else {
-    fd_ = open(filename_.c_str(), O_RDWR | O_CLOEXEC | O_CREAT | O_EXCL, 0774);
-    if (fd_ == -1 && errno == ENOSPC) {
-      return WriteCode::kOutOfSpace;
-    } else {
-      PCHECK(fd_ != -1) << ": Failed to open " << filename_ << " for writing";
-      VLOG(1) << "Opened " << filename_ << " for writing";
-    }
-
-    flags_ = fcntl(fd_, F_GETFL, 0);
-    PCHECK(flags_ >= 0) << ": Failed to get flags for " << filename_;
-
-    EnableDirect();
-
-    CHECK(std::filesystem::exists(filename_));
-
-    return WriteCode::kOk;
-  }
-}
-
-WriteCode FileHandler::Close() {
-  if (!is_open()) {
-    return WriteCode::kOk;
-  }
-  bool ran_out_of_space = false;
-
-  if (absl::GetFlag(FLAGS_sync)) {
-    // Force everythig out at the end so we know that it hits disk.
-#ifdef __linux__
-    fdatasync(fd_);
-#elif defined(__APPLE__)
-    if (fcntl(fd_, F_FULLFSYNC) == -1) {
-      PLOG(WARNING) << "Failed to F_FULLFSYNC " << filename_;
-    }
-#else
-    fsync(fd_);
-#endif
-  }
-
-  if (close(fd_) == -1) {
+WriteCode FileHandler::PlatformSyncImpl() {
+  if (fdatasync(fd_) == -1) {
     if (errno == ENOSPC) {
-      ran_out_of_space = true;
-    } else {
-      PLOG(ERROR) << "Closing log file failed";
+      return WriteCode::kOutOfSpace;
     }
+    PLOG(ERROR) << "Failed to fdatasync " << filename_;
   }
-  if (absl::GetFlag(FLAGS_sync)) {
-    aos::util::SyncDirectory(std::filesystem::path(filename_).parent_path());
-  }
-  fd_ = -1;
-  VLOG(1) << "Closed " << filename_;
-  return ran_out_of_space ? WriteCode::kOutOfSpace : WriteCode::kOk;
+  return WriteCode::kOk;
 }
 
 WriteResult FileHandler::DoWrite(
@@ -327,58 +258,6 @@ WriteResult FileHandler::DoWrite(
       .messages_written = queue.size(),
       .bytes_written = total_bytes_written,
   };
-}
-
-bool RenamableFileBackend::RenameLogBase(std::string_view new_base_name) {
-  auto paths = ValidateAndSplitRenamePaths(new_base_name);
-  if (!paths) {
-    return true;
-  }
-  const auto &[current_directory, new_directory] = *paths;
-
-  const bool dir_exists = DirectoryExists(current_directory);
-
-  if (dir_exists) {
-    const int result = rename(current_directory.c_str(), new_directory.c_str());
-    if (result != 0) {
-      // Out of space is the one condition the logger is built to ride out, so
-      // it stays a reported failure: the base name is left alone and logging
-      // carries on in the old directory until the writes themselves start
-      // coming back kOutOfSpace and wind it down.
-      //
-      // Nothing else rename(2) can fail with here fixes itself.  They all say
-      // this deployment is wrong rather than unlucky -- EXDEV for a new base
-      // name on a different mount, EACCES or EROFS for a parent we can't write,
-      // EEXIST or ENOTEMPTY for a target already sitting there -- and the
-      // caller has no way to act on any of them (set_base_name() drops this
-      // return value on the floor).
-      PCHECK(errno == ENOSPC) << ": Unable to rename " << current_directory
-                              << " to " << new_directory;
-      PLOG(ERROR) << "Ran out of space renaming " << current_directory << " to "
-                  << new_directory << "; logging continues at the old path";
-      return false;
-    }
-
-    SyncParentDirectories(current_directory, new_directory);
-  } else {
-    // Neither name is on disk, so the directory being logged into has gone out
-    // from under us -- this is not the "somebody already renamed it" case,
-    // which is new_directory being present.  There is nothing left to rename
-    // and nothing to keep logging into.
-    CHECK(DirectoryExists(new_directory))
-        << ": Old directory " << current_directory
-        << " missing and new directory " << new_directory << " not present.";
-  }
-  old_base_name_ = base_name_;
-  base_name_ = std::string(new_base_name);
-  separator_ = BaseNameSeparator(base_name_);
-
-  return true;
-}
-
-std::unique_ptr<RenamableFileBackend> MakeRenamableFileBackend(
-    std::string_view base_name, bool supports_odirect) {
-  return std::make_unique<RenamableFileBackend>(base_name, supports_odirect);
 }
 
 }  // namespace aos::logger
