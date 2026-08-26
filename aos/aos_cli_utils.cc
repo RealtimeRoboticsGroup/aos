@@ -1,9 +1,5 @@
 #include "aos/aos_cli_utils.h"
 
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-
 #include <chrono>
 #include <iomanip>
 #include <iostream>

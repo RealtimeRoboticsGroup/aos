@@ -1,7 +1,6 @@
-#include <unistd.h>
-
 #include <iomanip>
 #include <iostream>  // IWYU pragma: keep
+#include <numeric>
 
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
