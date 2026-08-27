@@ -325,6 +325,77 @@ TEST_F(ConfigurationTest, MergeConfigurationKeepsNewestPriorities) {
       FlatbufferToJson(updated_config, {.multi_line = true}));
 }
 
+// Tests that a channel's tags merge as a sorted, deduplicated union.
+TEST_F(ConfigurationTest, MergeConfigurationSortsChannelTags) {
+  FlatbufferDetachedBuffer<Configuration> updated_config =
+      MergeConfiguration(aos::FlatbufferDetachedBuffer<Configuration>(
+          aos::JsonToFlatbuffer<Configuration>(R"json({
+  "channels": [
+    {
+      "name": "/foo",
+      "type": "aos.bar",
+      "tags": ["zebra", "apple"]
+    },
+    {
+      "name": "/foo",
+      "type": "aos.bar",
+      "tags": ["mango", "apple"]
+    }
+  ]
+})json")));
+
+  // Union of both, sorted, with the duplicate "apple" appearing once -- so the
+  // result does not depend on which config declared what, or in what order.
+  EXPECT_EQ(
+      R"json({
+ "channels": [
+  {
+   "name": "/foo",
+   "type": "aos.bar",
+   "tags": [
+    "apple",
+    "mango",
+    "zebra"
+   ]
+  }
+ ]
+})json",
+      FlatbufferToJson(updated_config, {.multi_line = true}));
+}
+
+// Tests that ChannelHasTag finds tags, and is unbothered by channels and tags
+// that are not there.
+TEST_F(ConfigurationTest, ChannelHasTag) {
+  FlatbufferDetachedBuffer<Configuration> config =
+      MergeConfiguration(aos::FlatbufferDetachedBuffer<Configuration>(
+          aos::JsonToFlatbuffer<Configuration>(R"json({
+  "channels": [
+    {
+      "name": "/tagged",
+      "type": "aos.bar",
+      "tags": ["nt:publish"]
+    },
+    {
+      "name": "/untagged",
+      "type": "aos.bar"
+    }
+  ]
+})json")));
+
+  const Channel *const tagged = config.message().channels()->Get(0);
+  const Channel *const untagged = config.message().channels()->Get(1);
+  ASSERT_EQ(tagged->name()->string_view(), "/tagged");
+  ASSERT_EQ(untagged->name()->string_view(), "/untagged");
+
+  EXPECT_TRUE(ChannelHasTag(tagged, "nt:publish"));
+  EXPECT_FALSE(ChannelHasTag(tagged, "nt:subscribe"));
+  // A prefix of a real tag is not a match.
+  EXPECT_FALSE(ChannelHasTag(tagged, "nt:"));
+  EXPECT_FALSE(ChannelHasTag(untagged, "nt:publish"));
+  // Unlike NodeHasTag(), a missing channel has no tags rather than all of them.
+  EXPECT_FALSE(ChannelHasTag(nullptr, "nt:publish"));
+}
+
 // Tests that MergeConfiguration overwrites the list of threads.
 TEST_F(ConfigurationTest, MergeConfigurationOverwritesThreads) {
   FlatbufferDetachedBuffer<Configuration> updated_config =

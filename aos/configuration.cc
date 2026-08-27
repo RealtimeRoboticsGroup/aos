@@ -127,6 +127,8 @@ struct MutableChannel {
   std::optional<int32_t> num_readers;
 
   std::optional<int64_t> channel_storage_duration;
+  // Sorted and deduplicated, like every other string set here.
+  absl::btree_set<std::string_view> tags;
 };
 
 // Struct representing a Node in a way that is easy to work with.
@@ -246,7 +248,7 @@ void UnpackConnection(const Connection *destination_node,
 }
 
 void UnpackChannel(const Channel *channel, MutableChannel *result) {
-  ABSL_CHECK_EQ(Channel::MiniReflectTypeTable()->num_elems, 14u)
+  ABSL_CHECK_EQ(Channel::MiniReflectTypeTable()->num_elems, 15u)
       << ": Merging logic needs to be updated when the number of channel "
          "fields changes.";
 
@@ -290,6 +292,9 @@ void UnpackChannel(const Channel *channel, MutableChannel *result) {
   }
   if (channel->has_logger()) {
     result->logger = channel->logger();
+  }
+  if (channel->has_tags()) {
+    UnpackStringSet(channel->tags(), &(result->tags));
   }
   if (channel->has_logger_nodes()) {
     UnpackStringSet(channel->logger_nodes(), &(result->logger_nodes));
@@ -476,6 +481,7 @@ void UnpackConfiguration(const Configuration *configuration,
                       .read_method = std::nullopt,
                       .num_readers = std::nullopt,
                       .channel_storage_duration = std::nullopt,
+                      .tags = {},
                   })
               .first->second;
 
@@ -640,6 +646,10 @@ flatbuffers::Offset<Channel> PackChannel(
       flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>>
       logger_nodes_offset = PackStringSet(channel.logger_nodes, fbb);
 
+  flatbuffers::Offset<
+      flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>>
+      tags_offset = PackStringSet(channel.tags, fbb);
+
   Channel::Builder channel_builder(*fbb);
 
   if (!name_offset.IsNull()) {
@@ -687,6 +697,9 @@ flatbuffers::Offset<Channel> PackChannel(
   if (channel.channel_storage_duration.has_value()) {
     channel_builder.add_channel_storage_duration(
         channel.channel_storage_duration.value());
+  }
+  if (!tags_offset.IsNull()) {
+    channel_builder.add_tags(tags_offset);
   }
 
   return channel_builder.Finish();
@@ -2001,6 +2014,18 @@ std::vector<const Node *> GetNodesWithTag(const Configuration *config,
     }
   }
   return nodes;
+}
+
+bool ChannelHasTag(const Channel *channel, std::string_view tag) {
+  if (channel == nullptr || !channel->has_tags()) {
+    return false;
+  }
+
+  const auto *const tags = channel->tags();
+  return std::find_if(tags->begin(), tags->end(),
+                      [tag](const flatbuffers::String *candidate) {
+                        return candidate->string_view() == tag;
+                      }) != tags->end();
 }
 
 bool NodeHasTag(const Node *node, std::string_view tag) {

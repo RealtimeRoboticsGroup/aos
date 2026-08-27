@@ -79,7 +79,7 @@ flatbuffers::Offset<Channel> CopyChannel(const Channel *c,
                                          std::string_view new_name,
                                          std::string_view new_type,
                                          flatbuffers::FlatBufferBuilder *fbb) {
-  CHECK_EQ(Channel::MiniReflectTypeTable()->num_elems, 14u)
+  CHECK_EQ(Channel::MiniReflectTypeTable()->num_elems, 15u)
       << ": Merging logic needs to be updated when the number of channel "
          "fields changes.";
 
@@ -99,6 +99,10 @@ flatbuffers::Offset<Channel> CopyChannel(const Channel *c,
   flatbuffers::Offset<
       flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>>
       logger_nodes_offset = CopyVectorSharedString(c->logger_nodes(), fbb);
+
+  flatbuffers::Offset<
+      flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>>
+      tags_offset = CopyVectorSharedString(c->tags(), fbb);
 
   Channel::Builder channel_builder(*fbb);
   channel_builder.add_name(name_offset);
@@ -135,6 +139,9 @@ flatbuffers::Offset<Channel> CopyChannel(const Channel *c,
   }
   if (c->has_channel_storage_duration()) {
     channel_builder.add_channel_storage_duration(c->channel_storage_duration());
+  }
+  if (!tags_offset.IsNull()) {
+    channel_builder.add_tags(tags_offset);
   }
   return channel_builder.Finish();
 }
@@ -458,7 +465,7 @@ void ConfigRemapper::MakeRemappedConfig() {
   fbb.ForceDefaults(true);
   std::vector<flatbuffers::Offset<Channel>> channel_offsets;
 
-  CHECK_EQ(Channel::MiniReflectTypeTable()->num_elems, 14u)
+  CHECK_EQ(Channel::MiniReflectTypeTable()->num_elems, 15u)
       << ": Merging logic needs to be updated when the number of channel "
          "fields changes.";
 
