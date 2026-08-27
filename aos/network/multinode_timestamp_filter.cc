@@ -1282,13 +1282,14 @@ NewtonSolver::SolveConstrainedNewton(
       } else {
         SOLVE_VLOG(my_solve_number_, 1)
             << "  r_dual(" << iteration << ") -> "
-            << std::sqrt(r_dual_squared_norm) << " < " << kEpsilonF
-            << ", not done yet";
+            << std::sqrt(r_dual_squared_norm) << " < "
+            << (kEpsilonF * kEpsilonF) << ", not done yet";
       }
     } else {
-      SOLVE_VLOG(my_solve_number_, 1) << "  r_primal(" << iteration << ") -> "
-                                      << std::sqrt(r_primal_squared_norm)
-                                      << " < " << kEpsilonF << ", not done yet";
+      SOLVE_VLOG(my_solve_number_, 1)
+          << "  r_primal(" << iteration << ") -> "
+          << std::sqrt(r_primal_squared_norm) << " < "
+          << (kEpsilonF * kEpsilonF) << ", not done yet";
     }
     SOLVE_VLOG(my_solve_number_, 1)
         << "  step(" << iteration << ") "
