@@ -440,6 +440,12 @@ class PartsMessageReader {
 };
 
 // Stores MessageHeader as a flat header and inline, aligned block of data.
+//
+// Storing instances of this class is responsible for a significant amount of
+// memory usage when reading a log. This means we optimize the implementation of
+// this class for size instead of readability, which shows up in awkward field
+// ordering and not using std::optional. Please pay attention to any impact to
+// this size during any future modifications.
 class UnpackedMessageHeader {
  private:
   // A helper class so we can control construction of instances, but still use
@@ -460,49 +466,89 @@ class UnpackedMessageHeader {
       std::optional<uint32_t> remote_queue_index,
       monotonic_clock::time_point monotonic_timestamp_time,
       bool has_monotonic_timestamp_time, absl::Span<const uint8_t> span)
-      : channel_index(channel_index),
+      : span(span),
         monotonic_sent_time(monotonic_sent_time),
         realtime_sent_time(realtime_sent_time),
+        channel_index(channel_index),
         queue_index(queue_index),
-        monotonic_remote_time(monotonic_remote_time),
-        realtime_remote_time(realtime_remote_time),
+        maybe_monotonic_remote_time(
+            monotonic_remote_time.value_or(monotonic_clock::epoch())),
+        maybe_realtime_remote_time(
+            realtime_remote_time.value_or(realtime_clock::epoch())),
         monotonic_remote_transmit_time(monotonic_remote_transmit_time),
-        remote_queue_index(remote_queue_index),
         monotonic_timestamp_time(monotonic_timestamp_time),
         has_monotonic_timestamp_time(has_monotonic_timestamp_time),
-        span(span) {}
+        has_monotonic_remote_time(monotonic_remote_time.has_value()),
+        has_realtime_remote_time(realtime_remote_time.has_value()),
+        has_remote_queue_index(remote_queue_index.has_value()),
+        maybe_remote_queue_index(remote_queue_index.value_or(0)) {}
   ~UnpackedMessageHeader() = default;
   UnpackedMessageHeader(const UnpackedMessageHeader &) = delete;
   UnpackedMessageHeader &operator=(const UnpackedMessageHeader &) = delete;
 
-  // The channel.
-  uint32_t channel_index = 0xffffffff;
-
-  monotonic_clock::time_point monotonic_sent_time;
-  realtime_clock::time_point realtime_sent_time;
-
-  // The local queue index.
-  uint32_t queue_index = 0xffffffff;
-
-  std::optional<aos::monotonic_clock::time_point> monotonic_remote_time;
-
-  std::optional<realtime_clock::time_point> realtime_remote_time;
-  aos::monotonic_clock::time_point monotonic_remote_transmit_time;
-  std::optional<uint32_t> remote_queue_index;
-
-  // This field is defaulted in the flatbuffer, so we need to store both the
-  // possibly defaulted value and whether it is defaulted.
-  monotonic_clock::time_point monotonic_timestamp_time;
-  bool has_monotonic_timestamp_time;
-
-  static std::shared_ptr<UnpackedMessageHeader> MakeMessage(
-      const MessageHeader &message);
+  std::optional<aos::monotonic_clock::time_point> monotonic_remote_time()
+      const {
+    if (has_monotonic_remote_time) {
+      return maybe_monotonic_remote_time;
+    } else {
+      return std::nullopt;
+    }
+  }
+  std::optional<realtime_clock::time_point> realtime_remote_time() const {
+    if (has_realtime_remote_time) {
+      return maybe_realtime_remote_time;
+    } else {
+      return std::nullopt;
+    }
+  }
+  std::optional<uint32_t> remote_queue_index() const {
+    if (has_remote_queue_index) {
+      return maybe_remote_queue_index;
+    } else {
+      return std::nullopt;
+    }
+  }
 
   // Note: we are storing a span here because we need something to put in the
   // SharedSpan pointer that RawSender takes.  We are using the aliasing
   // constructor of shared_ptr to avoid the allocation, and it needs a nice
   // pointer to track.
   absl::Span<const uint8_t> span;
+
+  monotonic_clock::time_point monotonic_sent_time;
+  realtime_clock::time_point realtime_sent_time;
+
+  // The channel.
+  uint32_t channel_index = 0xffffffff;
+
+  // The local queue index.
+  uint32_t queue_index = 0xffffffff;
+
+  // Only valid if has_monotonic_remote_time is true.
+  // Accessing via monotonic_remote_time() is recommended.
+  aos::monotonic_clock::time_point maybe_monotonic_remote_time;
+
+  // Only valid if has_realtime_remote_time is true.
+  // Accessing via realtime_remote_time() is recommended.
+  realtime_clock::time_point maybe_realtime_remote_time;
+
+  aos::monotonic_clock::time_point monotonic_remote_transmit_time;
+
+  // This field is defaulted in the flatbuffer, so we need to store both the
+  // possibly defaulted value and whether it is defaulted.
+  monotonic_clock::time_point monotonic_timestamp_time;
+  bool has_monotonic_timestamp_time;
+
+  bool has_monotonic_remote_time;
+  bool has_realtime_remote_time;
+  bool has_remote_queue_index;
+
+  // Only valid if has_remote_queue_index is true.
+  // Accessing via remote_queue_index() is recommended.
+  uint32_t maybe_remote_queue_index;
+
+  static std::shared_ptr<UnpackedMessageHeader> MakeMessage(
+      const MessageHeader &message);
 
   char actual_data[];
 

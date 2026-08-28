@@ -1540,13 +1540,13 @@ std::ostream &operator<<(std::ostream &os, const UnpackedMessageHeader &msg) {
      << ", .monotonic_sent_time=" << msg.monotonic_sent_time
      << ", .realtime_sent_time=" << msg.realtime_sent_time
      << ", .queue_index=" << msg.queue_index;
-  if (msg.monotonic_remote_time) {
-    os << ", .monotonic_remote_time=" << *msg.monotonic_remote_time;
+  if (msg.has_monotonic_remote_time) {
+    os << ", .monotonic_remote_time=" << msg.maybe_monotonic_remote_time;
   }
   os << ", .realtime_remote_time=";
-  PrintOptionalOrNull(&os, msg.realtime_remote_time);
+  PrintOptionalOrNull(&os, msg.realtime_remote_time());
   os << ", .remote_queue_index=";
-  PrintOptionalOrNull(&os, msg.remote_queue_index);
+  PrintOptionalOrNull(&os, msg.remote_queue_index());
   if (msg.has_monotonic_timestamp_time) {
     os << ", .monotonic_timestamp_time=" << msg.monotonic_timestamp_time;
   }
@@ -1559,11 +1559,12 @@ std::ostream &operator<<(std::ostream &os, const Message &msg) {
      << ", .queue_index=" << msg.queue_index
      << ", .timestamp=" << msg.timestamp;
   if (msg.header != nullptr) {
-    if (msg.header->remote_queue_index.has_value()) {
-      os << ", .remote_queue_index=" << *msg.header->remote_queue_index;
+    if (msg.header->has_remote_queue_index) {
+      os << ", .remote_queue_index=" << msg.header->maybe_remote_queue_index;
     }
-    if (msg.header->monotonic_remote_time.has_value()) {
-      os << ", .monotonic_remote_time=" << *msg.header->monotonic_remote_time;
+    if (msg.header->has_monotonic_remote_time) {
+      os << ", .monotonic_remote_time="
+         << msg.header->maybe_monotonic_remote_time;
     }
     os << ", .header=" << msg.header;
   }
@@ -1632,7 +1633,7 @@ Result<const Message *> MessageSorter::Front() {
       }
       size_t monotonic_remote_boot = 0xffffff;
 
-      if (msg->monotonic_remote_time.has_value()) {
+      if (msg->has_monotonic_remote_time) {
         CHECK_LT(msg->channel_index, source_node_index_.size());
         const Node *node = parts().config->nodes()->Get(
             source_node_index_[msg->channel_index]);
@@ -2038,10 +2039,10 @@ Status SplitTimestampBootMerger::QueueTimestamps(
           .realtime_event_time = msg->header->realtime_sent_time,
           .remote_queue_index =
               BootQueueIndex{.boot = msg->monotonic_remote_boot,
-                             .index = msg->header->remote_queue_index.value()},
+                             .index = msg->header->maybe_remote_queue_index},
           .monotonic_remote_time = {msg->monotonic_remote_boot,
-                                    msg->header->monotonic_remote_time.value()},
-          .realtime_remote_time = msg->header->realtime_remote_time.value(),
+                                    msg->header->maybe_monotonic_remote_time},
+          .realtime_remote_time = msg->header->maybe_realtime_remote_time,
           .monotonic_remote_transmit_time =
               {msg->monotonic_remote_boot,
                msg->header->monotonic_remote_transmit_time},
@@ -2366,10 +2367,10 @@ Result<TimestampMapper::MatchResult> TimestampMapper::MaybeQueueMatched() {
         .realtime_event_time = msg->header->realtime_sent_time,
         .remote_queue_index =
             BootQueueIndex{.boot = msg->monotonic_remote_boot,
-                           .index = msg->header->remote_queue_index.value()},
+                           .index = msg->header->maybe_remote_queue_index},
         .monotonic_remote_time = {msg->monotonic_remote_boot,
-                                  msg->header->monotonic_remote_time.value()},
-        .realtime_remote_time = msg->header->realtime_remote_time.value(),
+                                  msg->header->maybe_monotonic_remote_time},
+        .realtime_remote_time = msg->header->maybe_realtime_remote_time,
         .monotonic_remote_transmit_time =
             {msg->monotonic_remote_boot,
              msg->header->monotonic_remote_transmit_time},
@@ -2454,19 +2455,19 @@ Result<void> TimestampMapper::PopFront() {
 Result<Message> TimestampMapper::MatchingMessageFor(const Message &message) {
   // Figure out what queue index we are looking for.
   CHECK(message.header != nullptr);
-  CHECK(message.header->remote_queue_index.has_value());
+  CHECK(message.header->has_remote_queue_index);
   const BootQueueIndex remote_queue_index =
       BootQueueIndex{.boot = message.monotonic_remote_boot,
-                     .index = *message.header->remote_queue_index};
+                     .index = message.header->maybe_remote_queue_index};
 
-  CHECK(message.header->monotonic_remote_time.has_value());
-  CHECK(message.header->realtime_remote_time.has_value());
+  CHECK(message.header->has_monotonic_remote_time);
+  CHECK(message.header->has_realtime_remote_time);
 
   const BootTimestamp monotonic_remote_time{
       .boot = message.monotonic_remote_boot,
-      .time = message.header->monotonic_remote_time.value()};
+      .time = message.header->maybe_monotonic_remote_time};
   const realtime_clock::time_point realtime_remote_time =
-      *message.header->realtime_remote_time;
+      message.header->maybe_realtime_remote_time;
 
   TimestampMapper *peer =
       nodes_data_[source_node_[message.header->channel_index]].peer;

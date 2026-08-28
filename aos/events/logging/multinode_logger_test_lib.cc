@@ -578,32 +578,32 @@ std::vector<std::tuple<std::string, std::string, int>> CountChannelsMatching(
 std::vector<std::tuple<std::string, std::string, int>> CountChannelsData(
     std::shared_ptr<const aos::Configuration> config,
     std::string_view filename) {
-  return CountChannelsMatching(
-      config, filename, [](const UnpackedMessageHeader *msg) {
-        if (msg->span.data() != nullptr) {
-          CHECK(!msg->monotonic_remote_time.has_value());
-          CHECK(!msg->realtime_remote_time.has_value());
-          CHECK(!msg->remote_queue_index.has_value());
-          return true;
-        }
-        return false;
-      });
+  return CountChannelsMatching(config, filename,
+                               [](const UnpackedMessageHeader *msg) {
+                                 if (msg->span.data() != nullptr) {
+                                   CHECK(!msg->has_monotonic_remote_time);
+                                   CHECK(!msg->has_realtime_remote_time);
+                                   CHECK(!msg->has_remote_queue_index);
+                                   return true;
+                                 }
+                                 return false;
+                               });
 }
 
 // Counts the number of messages (channel, count) for all timestamp messages.
 std::vector<std::tuple<std::string, std::string, int>> CountChannelsTimestamp(
     std::shared_ptr<const aos::Configuration> config,
     std::string_view filename) {
-  return CountChannelsMatching(
-      config, filename, [](const UnpackedMessageHeader *msg) {
-        if (msg->span.data() == nullptr) {
-          CHECK(msg->monotonic_remote_time.has_value());
-          CHECK(msg->realtime_remote_time.has_value());
-          CHECK(msg->remote_queue_index.has_value());
-          return true;
-        }
-        return false;
-      });
+  return CountChannelsMatching(config, filename,
+                               [](const UnpackedMessageHeader *msg) {
+                                 if (msg->span.data() == nullptr) {
+                                   CHECK(msg->has_monotonic_remote_time);
+                                   CHECK(msg->has_realtime_remote_time);
+                                   CHECK(msg->has_remote_queue_index);
+                                   return true;
+                                 }
+                                 return false;
+                               });
 }
 
 bool AllPartsMatchOutOfOrderDuration(
