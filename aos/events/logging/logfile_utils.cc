@@ -1510,9 +1510,9 @@ void PartsMessageReader::NextLog() {
 }
 
 bool Message::operator<(const Message &m2) const {
-  if (this->timestamp < m2.timestamp) {
+  if (this->timestamp() < m2.timestamp()) {
     return true;
-  } else if (this->timestamp > m2.timestamp) {
+  } else if (this->timestamp() > m2.timestamp()) {
     return false;
   }
 
@@ -1522,13 +1522,13 @@ bool Message::operator<(const Message &m2) const {
     return false;
   }
 
-  return this->queue_index < m2.queue_index;
+  return this->queue_index() < m2.queue_index();
 }
 
 bool Message::operator>=(const Message &m2) const { return !(*this < m2); }
 bool Message::operator==(const Message &m2) const {
-  return timestamp == m2.timestamp && channel_index == m2.channel_index &&
-         queue_index == m2.queue_index;
+  return timestamp() == m2.timestamp() && channel_index == m2.channel_index &&
+         queue_index() == m2.queue_index();
 }
 
 bool Message::operator<=(const Message &m2) const {
@@ -1556,8 +1556,8 @@ std::ostream &operator<<(std::ostream &os, const UnpackedMessageHeader &msg) {
 
 std::ostream &operator<<(std::ostream &os, const Message &msg) {
   os << "{.channel_index=" << msg.channel_index
-     << ", .queue_index=" << msg.queue_index
-     << ", .timestamp=" << msg.timestamp;
+     << ", .queue_index=" << msg.queue_index()
+     << ", .timestamp=" << msg.timestamp();
   if (msg.header != nullptr) {
     if (msg.header->has_remote_queue_index) {
       os << ", .remote_queue_index=" << msg.header->maybe_remote_queue_index;
@@ -1614,7 +1614,7 @@ Result<const Message *> MessageSorter::Front() {
   if (sorted_until() != monotonic_clock::max_time) {
     while (true) {
       if (!messages_.empty() &&
-          messages_.begin()->timestamp.time < sorted_until() &&
+          messages_.begin()->raw_timestamp < sorted_until() &&
           sorted_until() >= monotonic_start_time()) {
         break;
       }
@@ -1649,17 +1649,21 @@ Result<const Message *> MessageSorter::Front() {
       std::shared_ptr<SharedSpan> data =
           std::make_shared<SharedSpan>(msg, &msg->span);
 
-      messages_.insert(Message{
-          .channel_index = msg->channel_index,
-          .queue_index = BootQueueIndex{.boot = parts().boot_count,
-                                        .index = msg->queue_index},
-          .timestamp = BootTimestamp{.boot = parts().boot_count,
-                                     .time = msg->monotonic_sent_time},
-          .monotonic_remote_boot = monotonic_remote_boot,
-          .monotonic_timestamp_boot = monotonic_timestamp_boot,
-          .header = std::move(msg),
-          .data = std::move(data),
-      });
+      {
+        const auto raw_timestamp = msg->monotonic_sent_time;
+        const auto channel_index = msg->channel_index;
+        const auto raw_queue_index = msg->queue_index;
+        messages_.insert(Message{
+            .header = std::move(msg),
+            .data = std::move(data),
+            .raw_timestamp = raw_timestamp,
+            .boot = parts().boot_count,
+            .monotonic_remote_boot = monotonic_remote_boot,
+            .monotonic_timestamp_boot = monotonic_timestamp_boot,
+            .channel_index = channel_index,
+            .raw_queue_index = raw_queue_index,
+        });
+      }
 
       // Now, update sorted_until_ to match the new message.
       if (parts_message_reader_.newest_timestamp() >
@@ -1680,9 +1684,9 @@ Result<const Message *> MessageSorter::Front() {
     return nullptr;
   }
 
-  CHECK_GE(messages_.begin()->timestamp.time, last_message_time_)
+  CHECK_GE(messages_.begin()->raw_timestamp, last_message_time_)
       << DebugString() << " reading " << parts_message_reader_.filename();
-  last_message_time_ = messages_.begin()->timestamp.time;
+  last_message_time_ = messages_.begin()->raw_timestamp;
   VLOG(1) << this << " Front, sorted until " << sorted_until_ << " for "
           << (*messages_.begin()) << " on " << parts_message_reader_.filename();
   return &(*messages_.begin());
@@ -1790,7 +1794,7 @@ Result<const Message *> PartsMerger::Front() {
   // Return the current Front if we have one, otherwise go compute one.
   if (current_ != nullptr) {
     return current_->Front().transform([this](const Message *result) {
-      CHECK_GE(result->timestamp.time, last_message_time_);
+      CHECK_GE(result->raw_timestamp, last_message_time_);
       VLOG(1) << this << " PartsMerger::Front for node " << node_name() << " "
               << *result;
       return result;
@@ -1835,15 +1839,15 @@ Result<const Message *> PartsMerger::Front() {
   }
 
   if (oldest) {
-    CHECK_GE(oldest->timestamp.time, last_message_time_);
-    last_message_time_ = oldest->timestamp.time;
-    if (monotonic_oldest_time_ > oldest->timestamp.time) {
-      VLOG(1) << this << " Updating oldest to " << oldest->timestamp.time
+    CHECK_GE(oldest->raw_timestamp, last_message_time_);
+    last_message_time_ = oldest->raw_timestamp;
+    if (monotonic_oldest_time_ > oldest->raw_timestamp) {
+      VLOG(1) << this << " Updating oldest to " << oldest->raw_timestamp
               << " for node " << node_name() << " with a start time of "
               << monotonic_start_time_ << " " << *oldest;
     }
     monotonic_oldest_time_ =
-        std::min(monotonic_oldest_time_, oldest->timestamp.time);
+        std::min(monotonic_oldest_time_, oldest->raw_timestamp);
   } else {
     last_message_time_ = monotonic_clock::max_time;
   }
@@ -2034,8 +2038,8 @@ Status SplitTimestampBootMerger::QueueTimestamps(
     if (source_node[msg->channel_index] != static_cast<size_t>(node())) {
       TimestampedMessage timestamped_message{
           .channel_index = msg->channel_index,
-          .queue_index = msg->queue_index,
-          .monotonic_event_time = msg->timestamp,
+          .queue_index = msg->queue_index(),
+          .monotonic_event_time = msg->timestamp(),
           .realtime_event_time = msg->header->realtime_sent_time,
           .remote_queue_index =
               BootQueueIndex{.boot = msg->monotonic_remote_boot,
@@ -2231,8 +2235,8 @@ void TimestampMapper::AddPeer(TimestampMapper *timestamp_mapper) {
 void TimestampMapper::QueueMessage(const Message *msg) {
   matched_messages_.emplace_back(TimestampedMessage{
       .channel_index = msg->channel_index,
-      .queue_index = msg->queue_index,
-      .monotonic_event_time = msg->timestamp,
+      .queue_index = msg->queue_index(),
+      .monotonic_event_time = msg->timestamp(),
       .realtime_event_time = msg->header->realtime_sent_time,
       .remote_queue_index = BootQueueIndex::Invalid(),
       .monotonic_remote_time = BootTimestamp::min_time(),
@@ -2362,8 +2366,8 @@ Result<TimestampMapper::MatchResult> TimestampMapper::MaybeQueueMatched() {
     // info which isn't relevant anymore once extracted.
     matched_messages_.emplace_back(TimestampedMessage{
         .channel_index = msg->channel_index,
-        .queue_index = msg->queue_index,
-        .monotonic_event_time = msg->timestamp,
+        .queue_index = msg->queue_index(),
+        .monotonic_event_time = msg->timestamp(),
         .realtime_event_time = msg->header->realtime_sent_time,
         .remote_queue_index =
             BootQueueIndex{.boot = msg->monotonic_remote_boot,
@@ -2478,13 +2482,14 @@ Result<Message> TimestampMapper::MatchingMessageFor(const Message &message) {
   if (peer == nullptr) {
     // TODO(austin): Make sure the tests hit all these paths with a boot count
     // of 1...
-    return Message{.channel_index = message.channel_index,
-                   .queue_index = remote_queue_index,
-                   .timestamp = monotonic_remote_time,
+    return Message{.header = nullptr,
+                   .data = nullptr,
+                   .raw_timestamp = message.header->maybe_monotonic_remote_time,
+                   .boot = message.monotonic_remote_boot,
                    .monotonic_remote_boot = 0xffffff,
                    .monotonic_timestamp_boot = 0xffffff,
-                   .header = nullptr,
-                   .data = nullptr};
+                   .channel_index = message.channel_index,
+                   .raw_queue_index = message.header->maybe_remote_queue_index};
   }
 
   // The queue which will have the matching data, if available.
@@ -2494,42 +2499,43 @@ Result<Message> TimestampMapper::MatchingMessageFor(const Message &message) {
   AOS_RETURN_IF_ERROR(peer->QueueUnmatchedUntil(monotonic_remote_time));
 
   if (data_queue->empty()) {
-    return Message{.channel_index = message.channel_index,
-                   .queue_index = remote_queue_index,
-                   .timestamp = monotonic_remote_time,
+    return Message{.header = nullptr,
+                   .data = nullptr,
+                   .raw_timestamp = message.header->maybe_monotonic_remote_time,
+                   .boot = message.monotonic_remote_boot,
                    .monotonic_remote_boot = 0xffffff,
                    .monotonic_timestamp_boot = 0xffffff,
-                   .header = nullptr,
-                   .data = nullptr};
+                   .channel_index = message.channel_index,
+                   .raw_queue_index = message.header->maybe_remote_queue_index};
   }
 
-  if (remote_queue_index < data_queue->front().queue_index ||
-      remote_queue_index > data_queue->back().queue_index) {
-    return Message{.channel_index = message.channel_index,
-                   .queue_index = remote_queue_index,
-                   .timestamp = monotonic_remote_time,
+  if (remote_queue_index < data_queue->front().queue_index() ||
+      remote_queue_index > data_queue->back().queue_index()) {
+    return Message{.header = nullptr,
+                   .data = nullptr,
+                   .raw_timestamp = message.header->maybe_monotonic_remote_time,
+                   .boot = message.monotonic_remote_boot,
                    .monotonic_remote_boot = 0xffffff,
                    .monotonic_timestamp_boot = 0xffffff,
-                   .header = nullptr,
-                   .data = nullptr};
+                   .channel_index = message.channel_index,
+                   .raw_queue_index = message.header->maybe_remote_queue_index};
   }
 
   // The algorithm below is constant time with some assumptions.  We need there
   // to be no missing messages in the data stream.  This also assumes a queue
   // hasn't wrapped.  That is conservative, but should let us get started.
-  if (data_queue->back().queue_index.boot ==
-          data_queue->front().queue_index.boot &&
-      (data_queue->back().queue_index.index -
-           data_queue->front().queue_index.index + 1u ==
+  if (data_queue->back().boot == data_queue->front().boot &&
+      (data_queue->back().raw_queue_index -
+           data_queue->front().raw_queue_index + 1u ==
        data_queue->size())) {
-    CHECK_EQ(remote_queue_index.boot, data_queue->front().queue_index.boot);
+    CHECK_EQ(remote_queue_index.boot, data_queue->front().boot);
     // Pull the data out and confirm that the timestamps match as expected.
     //
     // TODO(austin): Move if not reliable.
     Message result = (*data_queue)[remote_queue_index.index -
-                                   data_queue->front().queue_index.index];
+                                   data_queue->front().raw_queue_index];
 
-    CHECK_EQ(result.timestamp, monotonic_remote_time)
+    CHECK_EQ(result.timestamp(), monotonic_remote_time)
         << ": Queue index matches, but timestamp doesn't.  Please investigate!";
     CHECK_EQ(result.header->realtime_sent_time, realtime_remote_time)
         << ": Queue index matches, but timestamp doesn't.  Please investigate!";
@@ -2538,7 +2544,7 @@ Result<Message> TimestampMapper::MatchingMessageFor(const Message &message) {
     data_queue->erase(
         data_queue->begin(),
         data_queue->begin() +
-            (remote_queue_index.index - data_queue->front().queue_index.index));
+            (remote_queue_index.index - data_queue->front().raw_queue_index));
     return result;
   } else {
     // TODO(austin): Binary search.
@@ -2546,22 +2552,24 @@ Result<Message> TimestampMapper::MatchingMessageFor(const Message &message) {
         data_queue->begin(), data_queue->end(),
         [remote_queue_index,
          remote_boot = monotonic_remote_time.boot](const Message &msg) {
-          return msg.queue_index == remote_queue_index &&
-                 msg.timestamp.boot == remote_boot;
+          return msg.queue_index() == remote_queue_index &&
+                 msg.boot == remote_boot;
         });
     if (it == data_queue->end()) {
-      return Message{.channel_index = message.channel_index,
-                     .queue_index = remote_queue_index,
-                     .timestamp = monotonic_remote_time,
-                     .monotonic_remote_boot = 0xffffff,
-                     .monotonic_timestamp_boot = 0xffffff,
-                     .header = nullptr,
-                     .data = nullptr};
+      return Message{
+          .header = nullptr,
+          .data = nullptr,
+          .raw_timestamp = message.header->maybe_monotonic_remote_time,
+          .boot = message.monotonic_remote_boot,
+          .monotonic_remote_boot = 0xffffff,
+          .monotonic_timestamp_boot = 0xffffff,
+          .channel_index = message.channel_index,
+          .raw_queue_index = message.header->maybe_remote_queue_index};
     }
 
     Message result = std::move(*it);
 
-    CHECK_EQ(result.timestamp, monotonic_remote_time)
+    CHECK_EQ(result.timestamp(), monotonic_remote_time)
         << ": Queue index matches, but timestamp doesn't.  Please "
            "investigate!";
     CHECK_EQ(result.header->realtime_sent_time, realtime_remote_time)
@@ -2581,8 +2589,8 @@ Result<void> TimestampMapper::QueueUnmatchedUntil(BootTimestamp t) {
     return Ok();
   }
   while (true) {
-    if (!messages_.empty() && messages_.back().timestamp > t) {
-      queued_until_ = std::max(queued_until_, messages_.back().timestamp);
+    if (!messages_.empty() && messages_.back().timestamp() > t) {
+      queued_until_ = std::max(queued_until_, messages_.back().timestamp());
       return Ok();
     }
 
@@ -2641,9 +2649,9 @@ Result<bool> TimestampMapper::Queue() {
               break;
             }
             Message &message = *messages.begin();
-            if (message.timestamp.boot == last_popped_message_time_.boot) {
+            if (message.boot == last_popped_message_time_.boot) {
               const aos::monotonic_clock::time_point message_expiry_time =
-                  message.timestamp.time +
+                  message.raw_timestamp +
                   node_data.channels[msg->channel_index].time_to_live +
                   chrono::duration_cast<chrono::nanoseconds>(
                       chrono::duration<double>(
@@ -2663,7 +2671,7 @@ Result<bool> TimestampMapper::Queue() {
               // We should never have a message that is newer than the last
               // message we popped, because these messages should have been
               // sorted earlier.
-              CHECK_LT(message.timestamp.boot, last_popped_message_time_.boot);
+              CHECK_LT(message.boot, last_popped_message_time_.boot);
             }
 
             messages.pop_front();
@@ -2680,7 +2688,7 @@ Result<bool> TimestampMapper::Queue() {
 
 void TimestampMapper::CheckAndHandleMessageExpiration(Message *message,
                                                       bool message_expired) {
-  const int boot_index = message->timestamp.boot;
+  const int boot_index = message->boot;
   const int channel_index = message->channel_index;
 
   if (!message_expired) {

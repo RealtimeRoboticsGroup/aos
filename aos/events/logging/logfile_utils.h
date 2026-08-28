@@ -563,21 +563,19 @@ std::ostream &operator<<(std::ostream &os,
                          const UnpackedMessageHeader &message);
 
 // Struct to hold a message as it gets sorted on a single node.
+//
+// Storing instances of this class is responsible for a significant amount of
+// memory usage when reading a log. This means we optimize the implementation of
+// this class for size instead of readability, which shows up in awkward field
+// ordering and not using BootQueueIndex/BootTimestamp directly. Please pay
+// attention to any impact to this size during any future modifications.
 struct Message {
-  // The channel.
-  uint32_t channel_index = 0xffffffff;
   // The local queue index.
-  // TODO(austin): Technically the boot inside queue_index is redundant with
-  // timestamp.  In practice, it is less error-prone to duplicate it.  Maybe a
-  // function to return the combined struct?
-  BootQueueIndex queue_index;
+  BootQueueIndex queue_index() const {
+    return BootQueueIndex{boot, raw_queue_index};
+  }
   // The local timestamp.
-  BootTimestamp timestamp;
-
-  // Remote boot when this is a timestamp.
-  size_t monotonic_remote_boot = 0xffffff;
-
-  size_t monotonic_timestamp_boot = 0xffffff;
+  BootTimestamp timestamp() const { return BootTimestamp{boot, raw_timestamp}; }
 
   // Pointer to the unpacked header.
   std::shared_ptr<UnpackedMessageHeader> header;
@@ -586,6 +584,27 @@ struct Message {
   // second layer of indirection lets us modify all copies of a message when
   // sending inside the log reader.
   std::shared_ptr<SharedSpan> data;
+
+  // The local timestamp.
+  // Logically paired with boot, consider accessing them together via
+  // timestamp().
+  monotonic_clock::time_point raw_timestamp = monotonic_clock::min_time;
+
+  // The local boot number. Consider accessing via queue_index() and
+  // timestamp().
+  size_t boot = std::numeric_limits<size_t>::max();
+
+  // Remote boot when this is a timestamp.
+  size_t monotonic_remote_boot = 0xffffff;
+
+  size_t monotonic_timestamp_boot = 0xffffff;
+
+  // The channel.
+  uint32_t channel_index = 0xffffffff;
+  // The local queue index.
+  // Logically paired with boot, consider accessing them together via
+  // queue_index().
+  uint32_t raw_queue_index = std::numeric_limits<uint32_t>::max();
 
   // Set to true if this message comes after an expired message (on the same
   // channel/boot). Used by LogReader to provide more helpful error messages

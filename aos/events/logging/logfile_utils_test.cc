@@ -274,28 +274,32 @@ TEST(PartsMessageReaderTest, ReadWrite) {
 TEST(MessageTest, Sorting) {
   const aos::monotonic_clock::time_point e = monotonic_clock::epoch();
 
-  Message m1{.channel_index = 0,
-             .queue_index = BootQueueIndex{.boot = 0, .index = 0u},
-             .timestamp =
-                 BootTimestamp{.boot = 0, .time = e + chrono::milliseconds(1)},
-             .monotonic_remote_boot = 0xffffff,
-             .monotonic_timestamp_boot = 0xffffff,
-             .header = nullptr,
-             .data = nullptr};
-  Message m2{.channel_index = 0,
-             .queue_index = BootQueueIndex{.boot = 0, .index = 0u},
-             .timestamp =
-                 BootTimestamp{.boot = 0, .time = e + chrono::milliseconds(2)},
-             .monotonic_remote_boot = 0xffffff,
-             .monotonic_timestamp_boot = 0xffffff,
-             .header = nullptr,
-             .data = nullptr};
+  Message m1{
+      .header = nullptr,
+      .data = nullptr,
+      .raw_timestamp = e + chrono::milliseconds(1),
+      .boot = 0,
+      .monotonic_remote_boot = 0xffffff,
+      .monotonic_timestamp_boot = 0xffffff,
+      .channel_index = 0,
+      .raw_queue_index = 0,
+  };
+  Message m2{
+      .header = nullptr,
+      .data = nullptr,
+      .raw_timestamp = e + chrono::milliseconds(2),
+      .boot = 0,
+      .monotonic_remote_boot = 0xffffff,
+      .monotonic_timestamp_boot = 0xffffff,
+      .channel_index = 0,
+      .raw_queue_index = 0,
+  };
 
   EXPECT_LT(m1, m2);
   EXPECT_GE(m2, m1);
 
-  m1.timestamp.time = e;
-  m2.timestamp.time = e;
+  m1.raw_timestamp = e;
+  m2.raw_timestamp = e;
 
   m1.channel_index = 1;
   m2.channel_index = 2;
@@ -305,8 +309,8 @@ TEST(MessageTest, Sorting) {
 
   m1.channel_index = 0;
   m2.channel_index = 0;
-  m1.queue_index.index = 0u;
-  m2.queue_index.index = 1u;
+  m1.raw_queue_index = 0u;
+  m2.raw_queue_index = 1u;
 
   EXPECT_LT(m1, m2);
   EXPECT_GE(m2, m1);
@@ -718,14 +722,14 @@ TEST_F(MessageSorterTest, Pull) {
 
   ASSERT_TRUE(CheckExpected(message_sorter.Front()) == nullptr);
 
-  EXPECT_EQ(output[0].timestamp.boot, 0);
-  EXPECT_EQ(output[0].timestamp.time, e + chrono::milliseconds(1000));
-  EXPECT_EQ(output[1].timestamp.boot, 0);
-  EXPECT_EQ(output[1].timestamp.time, e + chrono::milliseconds(1000));
-  EXPECT_EQ(output[2].timestamp.boot, 0);
-  EXPECT_EQ(output[2].timestamp.time, e + chrono::milliseconds(1901));
-  EXPECT_EQ(output[3].timestamp.boot, 0);
-  EXPECT_EQ(output[3].timestamp.time, e + chrono::milliseconds(2000));
+  EXPECT_EQ(output[0].boot, 0);
+  EXPECT_EQ(output[0].raw_timestamp, e + chrono::milliseconds(1000));
+  EXPECT_EQ(output[1].boot, 0);
+  EXPECT_EQ(output[1].raw_timestamp, e + chrono::milliseconds(1000));
+  EXPECT_EQ(output[2].boot, 0);
+  EXPECT_EQ(output[2].raw_timestamp, e + chrono::milliseconds(1901));
+  EXPECT_EQ(output[3].boot, 0);
+  EXPECT_EQ(output[3].raw_timestamp, e + chrono::milliseconds(2000));
 }
 
 // Tests that we can pull messages out of a log sorted in order.
@@ -768,16 +772,16 @@ TEST_F(MessageSorterTest, WayBeforeStart) {
 
   ASSERT_TRUE(CheckExpected(message_sorter.Front()) == nullptr);
 
-  EXPECT_EQ(output[0].timestamp.boot, 0u);
-  EXPECT_EQ(output[0].timestamp.time, e - chrono::milliseconds(1000));
-  EXPECT_EQ(output[1].timestamp.boot, 0u);
-  EXPECT_EQ(output[1].timestamp.time, e - chrono::milliseconds(500));
-  EXPECT_EQ(output[2].timestamp.boot, 0u);
-  EXPECT_EQ(output[2].timestamp.time, e - chrono::milliseconds(10));
-  EXPECT_EQ(output[3].timestamp.boot, 0u);
-  EXPECT_EQ(output[3].timestamp.time, e + chrono::milliseconds(1901));
-  EXPECT_EQ(output[4].timestamp.boot, 0u);
-  EXPECT_EQ(output[4].timestamp.time, e + chrono::milliseconds(2000));
+  EXPECT_EQ(output[0].boot, 0u);
+  EXPECT_EQ(output[0].raw_timestamp, e - chrono::milliseconds(1000));
+  EXPECT_EQ(output[1].boot, 0u);
+  EXPECT_EQ(output[1].raw_timestamp, e - chrono::milliseconds(500));
+  EXPECT_EQ(output[2].boot, 0u);
+  EXPECT_EQ(output[2].raw_timestamp, e - chrono::milliseconds(10));
+  EXPECT_EQ(output[3].boot, 0u);
+  EXPECT_EQ(output[3].raw_timestamp, e + chrono::milliseconds(1901));
+  EXPECT_EQ(output[4].boot, 0u);
+  EXPECT_EQ(output[4].raw_timestamp, e + chrono::milliseconds(2000));
 }
 
 // Tests that messages too far out of order trigger death.
@@ -894,18 +898,18 @@ TEST_F(PartsMergerTest, TwoFileMerger) {
 
   ASSERT_TRUE(CheckExpected(merger.Front()) == nullptr);
 
-  EXPECT_EQ(output[0].timestamp.boot, 0u);
-  EXPECT_EQ(output[0].timestamp.time, e + chrono::milliseconds(1000));
-  EXPECT_EQ(output[1].timestamp.boot, 0u);
-  EXPECT_EQ(output[1].timestamp.time, e + chrono::milliseconds(1001));
-  EXPECT_EQ(output[2].timestamp.boot, 0u);
-  EXPECT_EQ(output[2].timestamp.time, e + chrono::milliseconds(1002));
-  EXPECT_EQ(output[3].timestamp.boot, 0u);
-  EXPECT_EQ(output[3].timestamp.time, e + chrono::milliseconds(2000));
-  EXPECT_EQ(output[4].timestamp.boot, 0u);
-  EXPECT_EQ(output[4].timestamp.time, e + chrono::milliseconds(3000));
-  EXPECT_EQ(output[5].timestamp.boot, 0u);
-  EXPECT_EQ(output[5].timestamp.time, e + chrono::milliseconds(3002));
+  EXPECT_EQ(output[0].boot, 0u);
+  EXPECT_EQ(output[0].raw_timestamp, e + chrono::milliseconds(1000));
+  EXPECT_EQ(output[1].boot, 0u);
+  EXPECT_EQ(output[1].raw_timestamp, e + chrono::milliseconds(1001));
+  EXPECT_EQ(output[2].boot, 0u);
+  EXPECT_EQ(output[2].raw_timestamp, e + chrono::milliseconds(1002));
+  EXPECT_EQ(output[3].boot, 0u);
+  EXPECT_EQ(output[3].raw_timestamp, e + chrono::milliseconds(2000));
+  EXPECT_EQ(output[4].boot, 0u);
+  EXPECT_EQ(output[4].raw_timestamp, e + chrono::milliseconds(3000));
+  EXPECT_EQ(output[5].boot, 0u);
+  EXPECT_EQ(output[5].raw_timestamp, e + chrono::milliseconds(3002));
 }
 
 // Tests that we can merge timestamps with various combinations of
@@ -971,24 +975,24 @@ TEST_F(PartsMergerTest, TwoFileTimestampMerger) {
   }
   ASSERT_TRUE(CheckExpected(merger.Front()) == nullptr);
 
-  EXPECT_EQ(output[0].timestamp.boot, 0u);
-  EXPECT_EQ(output[0].timestamp.time, e + chrono::milliseconds(101000));
+  EXPECT_EQ(output[0].boot, 0u);
+  EXPECT_EQ(output[0].raw_timestamp, e + chrono::milliseconds(101000));
   EXPECT_FALSE(output[0].header->has_monotonic_timestamp_time);
 
-  EXPECT_EQ(output[1].timestamp.boot, 0u);
-  EXPECT_EQ(output[1].timestamp.time, e + chrono::milliseconds(101001));
+  EXPECT_EQ(output[1].boot, 0u);
+  EXPECT_EQ(output[1].raw_timestamp, e + chrono::milliseconds(101001));
   EXPECT_TRUE(output[1].header->has_monotonic_timestamp_time);
   EXPECT_EQ(output[1].header->monotonic_timestamp_time,
             monotonic_clock::time_point(std::chrono::nanoseconds(649)));
 
-  EXPECT_EQ(output[2].timestamp.boot, 0u);
-  EXPECT_EQ(output[2].timestamp.time, e + chrono::milliseconds(101002));
+  EXPECT_EQ(output[2].boot, 0u);
+  EXPECT_EQ(output[2].raw_timestamp, e + chrono::milliseconds(101002));
   EXPECT_TRUE(output[2].header->has_monotonic_timestamp_time);
   EXPECT_EQ(output[2].header->monotonic_timestamp_time,
             monotonic_clock::time_point(std::chrono::nanoseconds(972)));
 
-  EXPECT_EQ(output[3].timestamp.boot, 0u);
-  EXPECT_EQ(output[3].timestamp.time, e + chrono::milliseconds(101003));
+  EXPECT_EQ(output[3].boot, 0u);
+  EXPECT_EQ(output[3].raw_timestamp, e + chrono::milliseconds(101003));
   EXPECT_TRUE(output[3].header->has_monotonic_timestamp_time);
   EXPECT_EQ(output[3].header->monotonic_timestamp_time,
             monotonic_clock::time_point(std::chrono::nanoseconds(973)));
@@ -2303,15 +2307,15 @@ TEST_F(BootMergerTest, SortAcrossReboot) {
 
   ASSERT_TRUE(CheckExpected(merger.Front()) == nullptr);
 
-  EXPECT_EQ(output[0].timestamp.boot, 0u);
-  EXPECT_EQ(output[0].timestamp.time, e + chrono::milliseconds(1000));
-  EXPECT_EQ(output[1].timestamp.boot, 0u);
-  EXPECT_EQ(output[1].timestamp.time, e + chrono::milliseconds(2000));
+  EXPECT_EQ(output[0].boot, 0u);
+  EXPECT_EQ(output[0].raw_timestamp, e + chrono::milliseconds(1000));
+  EXPECT_EQ(output[1].boot, 0u);
+  EXPECT_EQ(output[1].raw_timestamp, e + chrono::milliseconds(2000));
 
-  EXPECT_EQ(output[2].timestamp.boot, 1u);
-  EXPECT_EQ(output[2].timestamp.time, e + chrono::milliseconds(100));
-  EXPECT_EQ(output[3].timestamp.boot, 1u);
-  EXPECT_EQ(output[3].timestamp.time, e + chrono::milliseconds(200));
+  EXPECT_EQ(output[2].boot, 1u);
+  EXPECT_EQ(output[2].raw_timestamp, e + chrono::milliseconds(100));
+  EXPECT_EQ(output[3].boot, 1u);
+  EXPECT_EQ(output[3].raw_timestamp, e + chrono::milliseconds(200));
 }
 
 class RebootTimestampMapperTest : public SortingElementTest<> {
