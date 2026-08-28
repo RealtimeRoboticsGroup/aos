@@ -765,6 +765,62 @@ class BootMerger {
   int node_;
 };
 
+// A deque optimized for storing a large number of relatively small elements
+// which are only added and removed from the ends.
+//
+// This is a similar API to a (small) subset of std::deque, but implemented
+// differently (and consistently across STLs).
+//
+// Currently, this retains some default-constructed T instances after popping to
+// make the implementation simpler.
+template <typename T>
+class LargeDeque {
+ public:
+  // Maximum number of T instances in a chunk.
+  static constexpr size_t kMaxChunkCount = 16384;
+
+  bool empty() const { return chunks_.empty(); }
+
+  size_t size() const {
+    size_t result = 0;
+    for (const auto &chunk : chunks_) {
+      result += chunk.size();
+    }
+    return result - free_front_;
+  }
+
+  template <typename... Args>
+  void emplace_back(Args &&...args) {
+    if (chunks_.empty()) {
+      chunks_.emplace_back();
+      // We don't call reserve on the vector here to reduce memory usage for
+      // instances which stay small.
+    } else if (chunks_.back().size() >= kMaxChunkCount) {
+      chunks_.emplace_back();
+      // Assume this one is going to get big and reserve each vector from here
+      // on.
+      chunks_.back().reserve(kMaxChunkCount);
+    }
+    chunks_.back().emplace_back(std::forward<Args>(args)...);
+  }
+
+  T &front() { return chunks_.front()[free_front_]; }
+
+  void pop_front() {
+    ++free_front_;
+    if (free_front_ >= chunks_.front().size()) {
+      chunks_.pop_front();
+      free_front_ = 0;
+    } else {
+      chunks_.front()[free_front_ - 1] = T();
+    }
+  }
+
+ private:
+  std::deque<std::vector<T>> chunks_;
+  size_t free_front_ = 0;
+};
+
 enum class TimestampQueueStrategy {
   // Read the timestamps at the same time as all the other data.
   kQueueTogether,
@@ -843,7 +899,7 @@ class SplitTimestampBootMerger {
   std::unique_ptr<BootMerger> timestamp_boot_merger_;
 
   // Deque of all the timestamp messages.
-  std::deque<Message> timestamp_messages_;
+  LargeDeque<Message> timestamp_messages_;
 
   // Start times for each boot.
   std::vector<monotonic_clock::time_point> monotonic_start_time_;

@@ -3898,4 +3898,62 @@ INSTANTIATE_TEST_SUITE_P(ExpirationScenarios, TimestampMapperExpirationTest,
                                              : "WithinThreshold";
                          });
 
+TEST(LargeDequeTest, Basic) {
+  LargeDeque<int> d;
+  EXPECT_TRUE(d.empty());
+  EXPECT_EQ(0u, d.size());
+
+  d.emplace_back(1);
+  EXPECT_FALSE(d.empty());
+  EXPECT_EQ(1u, d.size());
+
+  d.emplace_back(2);
+  EXPECT_FALSE(d.empty());
+  EXPECT_EQ(2u, d.size());
+
+  d.emplace_back(3);
+  EXPECT_FALSE(d.empty());
+  EXPECT_EQ(3u, d.size());
+
+  EXPECT_EQ(1, d.front());
+  d.pop_front();
+  EXPECT_FALSE(d.empty());
+  EXPECT_EQ(2u, d.size());
+
+  d.emplace_back(4);
+  EXPECT_FALSE(d.empty());
+  EXPECT_EQ(3u, d.size());
+
+  EXPECT_EQ(2, d.front());
+  d.pop_front();
+  EXPECT_FALSE(d.empty());
+  EXPECT_EQ(2u, d.size());
+
+  EXPECT_EQ(3, d.front());
+  d.pop_front();
+  EXPECT_FALSE(d.empty());
+  EXPECT_EQ(1u, d.size());
+
+  EXPECT_EQ(4, d.front());
+  d.pop_front();
+  EXPECT_TRUE(d.empty());
+  EXPECT_EQ(0u, d.size());
+}
+
+TEST(LargeDequeTest, MultipleBlocks) {
+  LargeDeque<int> d;
+  constexpr size_t kTestCount = LargeDeque<int>::kMaxChunkCount * 2 + 1;
+  for (size_t i = 0; i < kTestCount; ++i) {
+    d.emplace_back(i);
+  }
+  EXPECT_FALSE(d.empty());
+  EXPECT_EQ(kTestCount, d.size());
+
+  for (size_t i = 0; i < kTestCount; ++i) {
+    EXPECT_EQ(i, d.front());
+    d.pop_front();
+  }
+  EXPECT_TRUE(d.empty());
+}
+
 }  // namespace aos::logger::testing
