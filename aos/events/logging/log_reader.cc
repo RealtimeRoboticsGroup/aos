@@ -1592,6 +1592,10 @@ bool LogReader::State::Send(TimestampedMessage &&timestamped_message) {
       // data is not mutated after Send is called.
       to_send = before_send_callbacks_[timestamped_message.channel_index](
           timestamped_message);
+      if (!timestamped_message.data) {
+        CHECK(!to_send) << ": Callbacks may not turn a timestamp message into "
+                           "a non-timestamp message";
+      }
       *timestamped_message.data.get() = to_send;
     } else {
       to_send = *timestamped_message.data;

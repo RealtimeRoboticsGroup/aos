@@ -583,6 +583,9 @@ struct Message {
   // Pointer to a pointer to the span with the flatbuffer to publish in it.  The
   // second layer of indirection lets us modify all copies of a message when
   // sending inside the log reader.
+  //
+  // Set to nullptr if this is a timestamp-only message. The log reader may not
+  // "materialize" data for a timestamp-only message.
   std::shared_ptr<SharedSpan> data;
 
   // The local timestamp.

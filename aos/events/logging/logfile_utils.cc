@@ -1646,8 +1646,10 @@ Result<const Message *> MessageSorter::Front() {
         monotonic_remote_boot = *boot;
       }
 
-      std::shared_ptr<SharedSpan> data =
-          std::make_shared<SharedSpan>(msg, &msg->span);
+      std::shared_ptr<SharedSpan> data;
+      if (!msg->span.empty()) {
+        data = std::make_shared<SharedSpan>(msg, &msg->span);
+      }
 
       {
         const auto raw_timestamp = msg->monotonic_sent_time;
@@ -2029,6 +2031,8 @@ Status SplitTimestampBootMerger::QueueTimestamps(
     // Load all the timestamps.  If we find data, ignore it and drop it on the
     // floor.  It will be read when boot_merger_ is used.
     const Message *msg;
+    // TODO(Brian): Reduce shared_ptr refcount shuffling by changing this to a
+    // combined fetch-and-pop. That should speed this up noticeably.
     AOS_ASSIGN_OR_RETURN_ERROR(msg, timestamp_boot_merger_->Front());
     if (!msg) {
       queue_timestamps_ran_ = true;
