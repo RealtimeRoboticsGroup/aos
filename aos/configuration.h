@@ -164,6 +164,12 @@ std::vector<const Node *> GetNodesWithTag(const Configuration *config,
 // world, we assume that all tags match.
 bool NodeHasTag(const Node *node, std::string_view tag);
 
+// Returns whether the given channel has the provided tag.
+//
+// Unlike NodeHasTag(), a null channel has no tags rather than all of them:
+// there is no "single-channel world" for the absence to stand in for.
+bool ChannelHasTag(const Channel *channel, std::string_view tag);
+
 // Returns the node index for a node.  Note: will be faster if node is a pointer
 // to a node in config, but is not required.
 int GetNodeIndex(const Configuration *config, const Node *node);

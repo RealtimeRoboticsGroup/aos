@@ -109,6 +109,16 @@ table Channel {
   // Length of this channel in nanoseconds.  This overrides
   // channel_storage_duration below in Configuration for just this channel.
   channel_storage_duration:long = 2000000000 (id: 13);
+
+  // An arbitrary list of strings representing properties of this channel.
+  // These can be used to store information about roles, in the same spirit as
+  // Node's tags -- what an application should do with a channel, rather than
+  // anything AOS itself interprets.
+  //
+  // Merging is a union, and the result is sorted and deduplicated, so a
+  // channel's tags do not depend on which config declared them or in what
+  // order.  Use ChannelHasTag() to test for one.
+  tags:[string] (id: 14);
 }
 
 // Table to support renaming channel names.
