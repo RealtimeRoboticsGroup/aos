@@ -1316,23 +1316,8 @@ std::shared_ptr<UnpackedMessageHeader> MessageReader::ReadMessage() {
 
 std::shared_ptr<UnpackedMessageHeader> UnpackedMessageHeader::MakeMessage(
     const MessageHeader &message) {
-  const size_t data_size = message.has_data() ? message.data()->size() : 0;
-
-  UnpackedMessageHeader *const unpacked_message =
-      reinterpret_cast<UnpackedMessageHeader *>(
-          malloc(sizeof(UnpackedMessageHeader) + data_size +
-                 kChannelDataAlignment - 1));
-
   CHECK(message.has_channel_index());
   CHECK(message.has_monotonic_sent_time());
-
-  absl::Span<uint8_t> span;
-  if (data_size > 0) {
-    span =
-        absl::Span<uint8_t>(reinterpret_cast<uint8_t *>(RoundChannelData(
-                                &unpacked_message->actual_data[0], data_size)),
-                            data_size);
-  }
 
   std::optional<aos::monotonic_clock::time_point> monotonic_remote_time;
   if (message.has_monotonic_remote_time()) {
@@ -1353,24 +1338,48 @@ std::shared_ptr<UnpackedMessageHeader> UnpackedMessageHeader::MakeMessage(
     remote_queue_index = message.remote_queue_index();
   }
 
-  new (unpacked_message) UnpackedMessageHeader(
-      message.channel_index(),
-      monotonic_clock::time_point(
-          chrono::nanoseconds(message.monotonic_sent_time())),
-      realtime_clock::time_point(
-          chrono::nanoseconds(message.realtime_sent_time())),
-      message.queue_index(), monotonic_remote_time, realtime_remote_time,
-      monotonic_remote_transmit_time, remote_queue_index,
-      monotonic_clock::time_point(
-          std::chrono::nanoseconds(message.monotonic_timestamp_time())),
-      message.has_monotonic_timestamp_time(), span);
-
+  const size_t data_size = message.has_data() ? message.data()->size() : 0;
   if (data_size > 0) {
-    memcpy(span.data(), message.data()->data(), data_size);
-  }
+    UnpackedMessageHeader *const unpacked_message =
+        reinterpret_cast<UnpackedMessageHeader *>(
+            malloc(sizeof(UnpackedMessageHeader) + data_size +
+                   kChannelDataAlignment - 1));
+    const absl::Span<uint8_t> span =
+        absl::Span<uint8_t>(reinterpret_cast<uint8_t *>(RoundChannelData(
+                                &unpacked_message->actual_data[0], data_size)),
+                            data_size);
+    new (unpacked_message) UnpackedMessageHeader(
+        private_constructor(), message.channel_index(),
+        monotonic_clock::time_point(
+            chrono::nanoseconds(message.monotonic_sent_time())),
+        realtime_clock::time_point(
+            chrono::nanoseconds(message.realtime_sent_time())),
+        message.queue_index(), monotonic_remote_time, realtime_remote_time,
+        monotonic_remote_transmit_time, remote_queue_index,
+        monotonic_clock::time_point(
+            std::chrono::nanoseconds(message.monotonic_timestamp_time())),
+        message.has_monotonic_timestamp_time(), span);
 
-  return std::shared_ptr<UnpackedMessageHeader>(unpacked_message,
-                                                &DestroyAndFree);
+    memcpy(span.data(), message.data()->data(), data_size);
+
+    return std::shared_ptr<UnpackedMessageHeader>(unpacked_message,
+                                                  &DestroyAndFree);
+  } else {
+    // We see a lot of messages with no data (timestamps), so using
+    // std::make_shared to allocate the shared_ptr control block together with
+    // the header saves a lot of allocations and consequently a lot of memory.
+    return std::make_shared<UnpackedMessageHeader>(
+        private_constructor(), message.channel_index(),
+        monotonic_clock::time_point(
+            chrono::nanoseconds(message.monotonic_sent_time())),
+        realtime_clock::time_point(
+            chrono::nanoseconds(message.realtime_sent_time())),
+        message.queue_index(), monotonic_remote_time, realtime_remote_time,
+        monotonic_remote_transmit_time, remote_queue_index,
+        monotonic_clock::time_point(
+            std::chrono::nanoseconds(message.monotonic_timestamp_time())),
+        message.has_monotonic_timestamp_time(), absl::Span<uint8_t>());
+  }
 }
 
 SpanReader PartsMessageReader::MakeSpanReader(

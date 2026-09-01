@@ -441,9 +441,18 @@ class PartsMessageReader {
 
 // Stores MessageHeader as a flat header and inline, aligned block of data.
 class UnpackedMessageHeader {
+ private:
+  // A helper class so we can control construction of instances, but still use
+  // std::make_shared.
+  struct private_constructor {
+    explicit private_constructor() = default;
+  };
+
  public:
+  // Use MakeMessage to create an instance.
   UnpackedMessageHeader(
-      uint32_t channel_index, monotonic_clock::time_point monotonic_sent_time,
+      private_constructor, uint32_t channel_index,
+      monotonic_clock::time_point monotonic_sent_time,
       realtime_clock::time_point realtime_sent_time, uint32_t queue_index,
       std::optional<monotonic_clock::time_point> monotonic_remote_time,
       std::optional<realtime_clock::time_point> realtime_remote_time,
@@ -462,6 +471,7 @@ class UnpackedMessageHeader {
         monotonic_timestamp_time(monotonic_timestamp_time),
         has_monotonic_timestamp_time(has_monotonic_timestamp_time),
         span(span) {}
+  ~UnpackedMessageHeader() = default;
   UnpackedMessageHeader(const UnpackedMessageHeader &) = delete;
   UnpackedMessageHeader &operator=(const UnpackedMessageHeader &) = delete;
 
@@ -497,8 +507,6 @@ class UnpackedMessageHeader {
   char actual_data[];
 
  private:
-  ~UnpackedMessageHeader() {}
-
   static void DestroyAndFree(UnpackedMessageHeader *p) {
     p->~UnpackedMessageHeader();
     free(p);
