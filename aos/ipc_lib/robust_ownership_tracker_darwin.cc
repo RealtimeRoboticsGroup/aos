@@ -147,12 +147,12 @@ bool RobustOwnershipTracker::OwnerIsDefinitelyAbsolutelyDead() const {
 }
 
 void RobustOwnershipTracker::Acquire() {
-  // There is a subtle ordering of operations here: the metadata
-  // (start_time_ticks_) must be fully written and visible BEFORE the futex is
-  // claimed by death_notification_init. Otherwise, another process inspecting
-  // the tracker concurrently could see that the futex is claimed but find the
-  // metadata is still unset (or contains stale values), incorrectly concluding
-  // that the owner is dead.
+  // There is a subtle ordering of operations here: the metadata (owner_*) must
+  // be fully written and visible BEFORE the futex is claimed by
+  // death_notification_init. Otherwise, another process inspecting the tracker
+  // concurrently could see that the futex is claimed but find the metadata is
+  // still unset (or contains stale values), incorrectly concluding that the
+  // owner is dead.
   //
   // Note that if two processes concurrently attempt to call Acquire() on the
   // same tracker, they could overwrite each other's metadata before either
