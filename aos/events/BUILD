@@ -67,6 +67,24 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "intrusive_rb_tree",
+    hdrs = ["intrusive_rb_tree.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_google_absl//absl/log:absl_check",
+    ],
+)
+
+cc_test(
+    name = "intrusive_rb_tree_test",
+    srcs = ["intrusive_rb_tree_test.cc"],
+    deps = [
+        ":intrusive_rb_tree",
+        "//aos/testing:googletest",
+    ],
+)
+
 cc_test(
     name = "aio_test",
     srcs = ["aio_test.cc"],
