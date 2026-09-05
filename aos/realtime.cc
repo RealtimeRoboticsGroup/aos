@@ -18,6 +18,7 @@
 #include <cstring>
 
 #include "absl/base/internal/raw_logging.h"
+#include "absl/base/internal/sysinfo.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
@@ -188,6 +189,20 @@ bool MarkRealtime(bool realtime) {
         << ": Failed to register required malloc hooks before going realtime.  "
            "Disable --die_on_malloc to continue.";
 #endif
+    // absl::Mutex's contended path lazily computes the spin count from
+    // NumCPUs() the first time any lock in the process is contended, and on
+    // Windows NumCPUs() mallocs (GetLogicalProcessorInformation into a heap
+    // buffer).  If the first contended lock in the process happens to land
+    // on a realtime thread, the malloc hook makes it fatal -- which is how
+    // two threads reading the same absl::Flag the instant they were released
+    // killed event_loop_thread_tester about one run in forty under load.
+    //
+    // NumCPUs() is call-once, so forcing it here, on this thread while it is
+    // still non-realtime, is an atomic load on every call after the first.
+    // Done on every platform rather than just Windows: a one-time
+    // initialization that belongs before the realtime section belongs there
+    // everywhere, even where today's implementation happens not to allocate.
+    absl::base_internal::NumCPUs();
   }
   const bool prior = GetIsRealtime();
   SetIsRealtime(realtime);
