@@ -21,13 +21,19 @@ struct ApplicationRegistrar {
 
 }  // namespace aos::internal
 
-// Usage: AOS_REGISTER_APPLICATION(MyClass)
-// Registers ClassName with ApplicationRegistry at static initialization time.
+#define AOS_REGISTER_APPLICATION_INTERNAL(line, key, ClassName)           \
+  namespace {                                                             \
+  ::aos::internal::ApplicationRegistrar<ClassName> registrar_##line{key}; \
+  }
+#define AOS_REGISTER_APPLICATION_EXPAND(line, key, ClassName) \
+  AOS_REGISTER_APPLICATION_INTERNAL(line, key, ClassName)
+
+// Usage: AOS_REGISTER_APPLICATION("my_app", MyClass)
+// Registers ClassName with ApplicationRegistry at static initialization time
+// under the specified key.
 // Note: ClassName must inherit from aos::AosApplication and have a static
 // factory function Create() as described in application.h.
-#define AOS_REGISTER_APPLICATION(ClassName)                               \
-  namespace {                                                             \
-  ::aos::internal::ApplicationRegistrar<ClassName> registrar{#ClassName}; \
-  }
+#define AOS_REGISTER_APPLICATION(key, ClassName) \
+  AOS_REGISTER_APPLICATION_EXPAND(__LINE__, key, ClassName)
 
 #endif  // AOS_APPLICATION_INTERFACE_APPLICATION_MACRO_H_

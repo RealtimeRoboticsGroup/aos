@@ -1,0 +1,20 @@
+{
+  "channels": [
+    {
+      "name": "/aos",
+      "type": "aos.timing.Report"
+    },
+    {
+      "name": "/aos",
+      "type": "aos.logging.DynamicLogCommand"
+    },
+    {
+      "name": "/aos",
+      "type": "aos.logging.LogMessageFbs"
+    },
+    {
+      "name": "/test",
+	"type": "aos.application_interface.testdata.Message"
+    }
+  ]
+}

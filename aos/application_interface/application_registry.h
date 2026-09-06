@@ -28,13 +28,12 @@ class ApplicationRegistry {
   // Gets the instance of this singleton object.
   static ApplicationRegistry &GetInstance();
 
-  // Registers a factory function for a given application implementation name.
-  void Register(std::string_view implementation_name, FactoryFunc factory);
+  // Registers a factory function for a given application key.
+  void Register(std::string_view key, FactoryFunc factory);
 
-  // Retrieves the factory function registered under `implementation_name` by
-  // pointer, or a bad status if this key is not registered.
-  Result<const FactoryFunc *> GetFactory(
-      std::string_view implementation_name) const;
+  // Retrieves the factory function registered under `key` by pointer, or a
+  // bad status if this key is not registered.
+  Result<const FactoryFunc *> GetFactory(std::string_view key) const;
 
  private:
   ApplicationRegistry() = default;

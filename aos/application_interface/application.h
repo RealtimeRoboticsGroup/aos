@@ -43,7 +43,8 @@ namespace aos {
 // }  // namespace foo::bar
 //
 // // At global namespace:
-// AOS_REGISTER_APPLICATION(foo::bar::MyAosRobotApplication);
+// AOS_REGISTER_APPLICATION("my_aos_robot_application",
+// foo::bar::MyAosRobotApplication);
 //
 ////////////////////////////////////////////////////////////////////////////////
 class AosApplication {

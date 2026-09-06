@@ -7,6 +7,7 @@
 
 #include "aos/configuration_generated.h"  // IWYU pragma: export
 #include "aos/flatbuffers.h"
+#include "aos/util/status.h"
 #include "aos/uuid.h"
 
 namespace aos {
@@ -258,6 +259,15 @@ std::vector<const Application *> GetApplicationsContainingSubstring(
 bool ApplicationShouldStart(const Configuration *config, const Node *my_node,
                             const Application *application,
                             Autostart autostart_filter);
+
+// Returns the list of nodes on which the given application should run.
+// In single-node configurations, returns a vector containing a single nullptr.
+// In multi-node configurations, resolves each node name in application->nodes()
+// to its corresponding const Node pointer from the configuration. Returns an
+// error if application->nodes() is missing or empty, or if any specified node
+// name is not present in the configuration.
+Result<std::vector<const Node *>> GetNodesForApplication(
+    const Configuration *config, const Application *application);
 
 // Returns the number of messages in the queue.
 size_t QueueSize(const Configuration *config, const Channel *channel);

@@ -2342,6 +2342,33 @@ bool ApplicationShouldStart(const Configuration *config, const Node *my_node,
   }
 }
 
+Result<std::vector<const Node *>> GetNodesForApplication(
+    const Configuration *config, const Application *application) {
+  std::vector<const Node *> nodes;
+  if (MultiNode(config)) {
+    if (!application->has_nodes() || application->nodes()->size() == 0) {
+      return MakeError(absl::StrCat(
+          "Application '",
+          application->has_name() ? application->name()->string_view() : "",
+          "' must specify 'nodes' in a multi-node configuration"));
+    }
+    nodes.reserve(application->nodes()->size());
+    for (const flatbuffers::String *node_str : *application->nodes()) {
+      const Node *node = GetNode(config, node_str->string_view());
+      if (node == nullptr) {
+        return MakeError(absl::StrCat(
+            "Application '",
+            application->has_name() ? application->name()->string_view() : "",
+            "' references unknown node '", node_str->string_view(), "'"));
+      }
+      nodes.push_back(node);
+    }
+  } else {
+    nodes.push_back(nullptr);
+  }
+  return nodes;
+}
+
 const Application *GetApplication(const Configuration *config,
                                   const Node *my_node,
                                   std::string_view application_name) {

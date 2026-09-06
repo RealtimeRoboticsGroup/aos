@@ -1,0 +1,102 @@
+{
+  "channels": [
+    {
+      "name": "/a/aos",
+	"type": "aos.timing.Report",
+      "source_node": "a"
+    },
+    {
+      "name": "/b/aos",
+      "type": "aos.timing.Report",
+      "source_node": "b"
+    },
+    {
+      "name": "/a/aos",
+      "type": "aos.logging.DynamicLogCommand",
+      "source_node": "a"
+    },
+    {
+      "name": "/b/aos",
+      "type": "aos.logging.DynamicLogCommand",
+      "source_node": "b"
+    },
+    {
+      "name": "/a/aos",
+      "type": "aos.logging.LogMessageFbs",
+      "source_node": "a"
+    },
+    {
+      "name": "/b/aos",
+      "type": "aos.logging.LogMessageFbs",
+      "source_node": "b"
+    },
+    {
+      "name": "/a/test",
+      "type": "aos.application_interface.testdata.Message",
+      "source_node": "a"
+    },
+    {
+      "name": "/b/test",
+      "type": "aos.application_interface.testdata.Message",
+      "source_node": "b"
+    },
+    {
+      "name": "/a/aos",
+      "type": "aos.message_bridge.ServerStatistics",
+      "source_node": "a"
+    },
+    {
+      "name": "/b/aos",
+      "type": "aos.message_bridge.ServerStatistics",
+      "source_node": "b"
+    },
+    {
+      "name": "/a/aos",
+      "type": "aos.message_bridge.ClientStatistics",
+      "source_node": "a"
+    },
+    {
+      "name": "/b/aos",
+      "type": "aos.message_bridge.ClientStatistics",
+      "source_node": "b"
+    },
+    {
+      "name": "/a/aos",
+      "type": "aos.message_bridge.Timestamp",
+      "source_node": "a"
+    },
+    {
+      "name": "/b/aos",
+      "type": "aos.message_bridge.Timestamp",
+      "source_node": "b"
+    },
+  ],
+  "maps": [
+    {
+      "match": {
+        "name": "/aos*",
+        "source_node": "a"
+      },
+      "rename": {
+        "name": "/a/aos"
+      }
+    },
+    {
+      "match": {
+        "name": "/aos*",
+        "source_node": "b"
+      },
+      "rename": {
+        "name": "/b/aos"
+      }
+    }
+  ],
+  "nodes": [
+    {
+      "name": "a"
+    },
+    {
+      "name": "b"
+    }
+  ]
+}

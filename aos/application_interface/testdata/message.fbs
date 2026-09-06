@@ -1,0 +1,7 @@
+namespace aos.application_interface.testdata;
+
+table Message {
+  value:int (id: 0);
+}
+
+root_type Message;

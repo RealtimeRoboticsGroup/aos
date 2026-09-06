@@ -2185,6 +2185,80 @@ TEST_F(ConfigurationTest, ApplicationShouldStartAutostartFilter) {
                                      Autostart::kYes));  // default is true
 }
 
+// Tests GetNodesForApplication in single-node and multi-node configurations,
+// including error handling for missing, empty, or unknown nodes.
+TEST_F(ConfigurationTest, GetNodesForApplication) {
+  // Single-node configuration returns a single nullptr.
+  {
+    const FlatbufferDetachedBuffer<Configuration> config =
+        JsonToFlatbuffer<Configuration>(R"config({
+          "applications": [
+            {
+              "name": "single_node_app"
+            }
+          ]
+        })config");
+    const Application *const app = config.message().applications()->Get(0);
+    const Result<std::vector<const Node *>> nodes =
+        GetNodesForApplication(&config.message(), app);
+    ASSERT_TRUE(nodes.has_value());
+    EXPECT_THAT(*nodes, ::testing::ElementsAre(nullptr));
+  }
+
+  // Multi-node configuration resolves configured nodes and errors on invalid
+  // node specifications.
+  {
+    const FlatbufferDetachedBuffer<Configuration> config =
+        JsonToFlatbuffer<Configuration>(R"config({
+          "applications": [
+            {
+              "name": "multi_node_app",
+              "nodes": ["node1", "node2"]
+            },
+            {
+              "name": "missing_nodes_app"
+            },
+            {
+              "name": "empty_nodes_app",
+              "nodes": []
+            },
+            {
+              "name": "unknown_node_app",
+              "nodes": ["node1", "nonexistent"]
+            }
+          ],
+          "nodes": [
+            {
+              "name": "node1"
+            },
+            {
+              "name": "node2"
+            }
+          ]
+        })config");
+    const Node *const node1 = GetNode(&config.message(), "node1");
+    const Node *const node2 = GetNode(&config.message(), "node2");
+    ASSERT_NE(node1, nullptr);
+    ASSERT_NE(node2, nullptr);
+
+    const Result<std::vector<const Node *>> valid_nodes =
+        GetNodesForApplication(&config.message(),
+                               config.message().applications()->Get(0));
+    ASSERT_TRUE(valid_nodes.has_value());
+    EXPECT_THAT(*valid_nodes, ::testing::ElementsAre(node1, node2));
+
+    EXPECT_FALSE(GetNodesForApplication(&config.message(),
+                                        config.message().applications()->Get(1))
+                     .has_value());
+    EXPECT_FALSE(GetNodesForApplication(&config.message(),
+                                        config.message().applications()->Get(2))
+                     .has_value());
+    EXPECT_FALSE(GetNodesForApplication(&config.message(),
+                                        config.message().applications()->Get(3))
+                     .has_value());
+  }
+}
+
 // Test that our ABSL_DCHECK will reject an unsorted applications list when
 // running in debug mode.
 #ifndef NDEBUG

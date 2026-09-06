@@ -45,3 +45,36 @@ cc_test(
         "@com_google_absl//absl/memory",
     ],
 )
+
+cc_library(
+    name = "simulated_event_loop_wrapper",
+    srcs = ["simulated_event_loop_wrapper.cc"],
+    hdrs = ["simulated_event_loop_wrapper.h"],
+    deps = [
+        ":application",
+        ":application_registry",
+        "//aos:configuration",
+        "//aos/events:simulated_event_loop",
+        "//aos/util:status",
+    ],
+)
+
+cc_test(
+    name = "simulated_event_loop_wrapper_test",
+    srcs = ["simulated_event_loop_wrapper_test.cc"],
+    data = [
+        "//aos/application_interface/testdata:aos_config",
+        "//aos/application_interface/testdata:aos_multinode_config",
+    ],
+    deps = [
+        ":application_macro",
+        ":application_registry",
+        ":simulated_event_loop_wrapper",
+        "//aos:json_to_flatbuffer",
+        "//aos/application_interface/testdata:message_fbs",
+        "//aos/events:simulated_event_loop",
+        "//aos/testing:googletest",
+        "//aos/testing:path",
+        "@com_google_absl//absl/memory",
+    ],
+)

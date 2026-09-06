@@ -77,7 +77,7 @@ TEST(ApplicationRegistryTest, RegistersAndRetrievesFactory) {
   // VERIFICATION
   ASSERT_HAS_VALUE_AND_ASSIGN(
       const ApplicationRegistry::FactoryFunc *const registered_factory,
-      registry.GetFactory("aos::testing::TestApp"));
+      registry.GetFactory("test_app"));
   ASSERT_NE(registered_factory, nullptr);
   // Check that the function isn't null.
   ASSERT_NE(*registered_factory, nullptr);
@@ -97,4 +97,4 @@ TEST(ApplicationRegistryTest, RegistersAndRetrievesFactory) {
 }  // namespace
 }  // namespace aos::testing
 
-AOS_REGISTER_APPLICATION(aos::testing::TestApp)
+AOS_REGISTER_APPLICATION("test_app", aos::testing::TestApp)

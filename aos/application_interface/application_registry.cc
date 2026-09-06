@@ -16,23 +16,21 @@ ApplicationRegistry &ApplicationRegistry::GetInstance() {
   return instance;
 }
 
-void ApplicationRegistry::Register(std::string_view implementation_name,
-                                   FactoryFunc factory) {
-  CHECK(!implementation_name.empty());
+void ApplicationRegistry::Register(std::string_view key, FactoryFunc factory) {
+  CHECK(!key.empty());
   CHECK(factory != nullptr);
-  CHECK(factories_.emplace(implementation_name, std::move(factory)).second)
-      << "Duplicate application registered!";
+  CHECK(factories_.emplace(key, std::move(factory)).second)
+      << "Duplicate application registered for key: " << key;
 }
 
 Result<const ApplicationRegistry::FactoryFunc *>
-ApplicationRegistry::GetFactory(std::string_view implementation_name) const {
-  auto it = factories_.find(implementation_name);
+ApplicationRegistry::GetFactory(std::string_view key) const {
+  auto it = factories_.find(key);
   if (it != factories_.cend()) {
     return &it->second;
   }
   return MakeError(
-      absl::StrCat("ApplicationRegistry queried for non-existent key: ",
-                   implementation_name));
+      absl::StrCat("ApplicationRegistry queried for non-existent key: ", key));
 }
 
 }  // namespace aos
