@@ -32,7 +32,7 @@ import {
   TransferMethod,
 } from '../web_proxy_ts_fbs/aos/web-proxy';
 import {Parser, Table} from './reflection';
-import {Schema} from '@com_github_google_flatbuffers/reflection';
+import {Schema} from '@aos_flatbuffers/reflection';
 import {ByteBuffer} from 'flatbuffers';
 
 export class TimestampedMessage {

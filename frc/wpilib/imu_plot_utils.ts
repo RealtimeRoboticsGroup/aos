@@ -8,7 +8,7 @@ import {
 import {Point} from '../../aos/network/www/plotter';
 import {Table} from '../../aos/network/www/reflection';
 import {ByteBuffer} from 'flatbuffers';
-import {Schema} from '@com_github_google_flatbuffers/reflection';
+import {Schema} from '@aos_flatbuffers/reflection';
 
 const FILTER_WINDOW_SIZE = 100;
 

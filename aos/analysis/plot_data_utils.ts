@@ -8,7 +8,7 @@ import {
 import {ByteBuffer} from 'flatbuffers';
 import {Plot, Point} from '../../aos/network/www/plotter';
 import {Connection} from '../../aos/network/www/proxy';
-import {Schema} from '@com_github_google_flatbuffers/reflection';
+import {Schema} from '@aos_flatbuffers/reflection';
 
 export function plotData(conn: Connection, parentDiv: Element) {
   // Set up a selection box to allow the user to choose between plots to show.

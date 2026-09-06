@@ -1,4 +1,4 @@
-load("@aos//aos/flatbuffers:build_defs.bzl", _flatbuffer_rust_library = "flatbuffer_rust_library")
+load("@aos//aos/flatbuffers:rust.bzl", _flatbuffer_rust_library = "flatbuffer_rust_library")
 load(
     "@rules_rust//rust:defs.bzl",
     _rust_binary = "rust_binary",

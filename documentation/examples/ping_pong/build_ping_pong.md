@@ -99,7 +99,7 @@ root_type Pong;
 The final part of defining the FlatBuffer messages is defining Bazel targets to actually do the codegen for the schemas. Since we have not yet created a BUILD file for this new directory, we will create a new `BUILD` file with the following contents:
 
 ```python
-load("@com_github_google_flatbuffers//:build_defs.bzl", "flatbuffer_cc_library")
+load("@aos_flatbuffers//:build_defs.bzl", "flatbuffer_cc_library")
 
 flatbuffer_cc_library(
     name = "ping_fbs",
@@ -117,7 +117,7 @@ flatbuffer_cc_library(
 If we step through the interesting lines in the `BUILD` file:
 
 ```python
-load("@com_github_google_flatbuffers//:build_defs.bzl", "flatbuffer_cc_library")
+load("@aos_flatbuffers//:build_defs.bzl", "flatbuffer_cc_library")
 ```
 
 Imports the `flatbuffer_cc_library` build rule so that we have it available.

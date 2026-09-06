@@ -1,6 +1,6 @@
-load("@aos//aos/flatbuffers:build_defs.bzl", "flatbuffer_cc_library")
-load("@aos//aos/flatbuffers:flatbuffers_python.bzl", "flatbuffer_py_library")
-load("@aos//aos/flatbuffers:typescript.bzl", "flatbuffer_ts_library")
+load("@aos//aos/flatbuffers:cc.bzl", "flatbuffer_cc_library")
+load("@aos//aos/flatbuffers:python.bzl", "flatbuffer_py_library")
+load("@aos//aos/flatbuffers:ts.bzl", "flatbuffer_ts_library")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
@@ -465,7 +465,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//aos:macros",
-        "@com_github_google_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
     ],
@@ -476,7 +476,7 @@ cc_library(
     srcs = ["json_tokenizer.cc"],
     hdrs = ["json_tokenizer.h"],
     deps = [
-        "@com_github_google_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/strings",
@@ -500,7 +500,7 @@ cc_library(
         "//aos/flatbuffers:builder",
         "//aos/util:file",
         "//aos/util:string_formatting",
-        "@com_github_google_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/strings",
@@ -539,7 +539,7 @@ cc_test(
         "//aos/testing:googletest",
         "//aos/testing:path",
         "//aos/util:file",
-        "@com_github_google_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//:flatbuffers",
     ],
 )
 
@@ -556,7 +556,7 @@ cc_library(
     deps = [
         ":flatbuffer_utils",
         ":flatbuffers",
-        "@com_github_google_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
     ],
@@ -591,7 +591,7 @@ cc_library(
         "//aos/containers:resizeable_buffer",
         "//aos/ipc_lib:data_alignment",
         "//aos/util:file",
-        "@com_github_google_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/strings",
@@ -611,7 +611,7 @@ rust_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        "@com_github_google_flatbuffers//rust:flatbuffers",
+        "@aos_flatbuffers//rust:flatbuffers",
     ],
 )
 
@@ -851,7 +851,7 @@ cc_library(
     hdrs = ["uuid.h"],
     visibility = ["//visibility:public"],
     deps = [
-        "@com_github_google_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",

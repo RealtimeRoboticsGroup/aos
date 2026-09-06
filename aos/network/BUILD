@@ -1,5 +1,5 @@
-load("@aos//aos/flatbuffers:build_defs.bzl", "flatbuffer_cc_library")
-load("@aos//aos/flatbuffers:typescript.bzl", "flatbuffer_ts_library")
+load("@aos//aos/flatbuffers:cc.bzl", "flatbuffer_cc_library")
+load("@aos//aos/flatbuffers:ts.bzl", "flatbuffer_ts_library")
 load("@com_github_grpc_grpc//bazel:cc_grpc_library.bzl", "cc_grpc_library")
 load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
 load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
@@ -311,7 +311,7 @@ cc_library(
         "//aos:flatbuffer_merge",
         "//aos:flatbuffers",
         "//aos:uuid",
-        "@com_github_google_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//:flatbuffers",
     ],
 )
 
@@ -772,7 +772,7 @@ cc_library(
         ":web_proxy_fbs",
         "//aos:configuration_fbs",
         "//aos/events:event_loop",
-        "@com_github_google_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//:flatbuffers",
     ],
 )
 
@@ -821,7 +821,7 @@ cc_binary(
         ":web_proxy",
         "//aos:init",
         "//aos/events:shm_event_loop",
-        "@com_github_google_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//:flatbuffers",
     ],
 )
 
@@ -836,7 +836,7 @@ cc_binary(
         "//aos:init",
         "//aos/events:simulated_event_loop",
         "//aos/events/logging:log_reader",
-        "@com_github_google_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//:flatbuffers",
     ],
 )
 

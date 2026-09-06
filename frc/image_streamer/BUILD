@@ -42,7 +42,7 @@ cc_binary(
         "//frc/vision:vision_fbs",
         "//third_party:gstreamer",
         "//third_party/seasocks",
-        "@com_github_google_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/strings:str_format",

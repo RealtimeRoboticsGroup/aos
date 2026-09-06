@@ -35,9 +35,9 @@ index 0000000..0000001
 +    version = "2.1.1",
 +    visibility = ["//visibility:public"],
 +    deps = [
-+        "@flatbuffers_crate_index//:arrayvec",
-+        "@flatbuffers_crate_index//:bitflags",
-+        "@flatbuffers_crate_index//:smallvec",
-+        "@flatbuffers_crate_index//:thiserror",
++        "@crate_index//:arrayvec",
++        "@crate_index//:bitflags",
++        "@crate_index//:smallvec",
++        "@crate_index//:thiserror",
 +    ],
 +)

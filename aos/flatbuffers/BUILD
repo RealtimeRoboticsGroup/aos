@@ -1,5 +1,5 @@
-load("@aos//aos/flatbuffers:build_defs.bzl", "flatbuffer_cc_library")
-load("@aos//aos/flatbuffers:flatbuffers_python.bzl", "flatbuffer_py_library")
+load("@aos//aos/flatbuffers:cc.bzl", "flatbuffer_cc_library")
+load("@aos//aos/flatbuffers:python.bzl", "flatbuffer_py_library")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
@@ -21,7 +21,7 @@ cc_library(
         ":static_vector",
         "//aos:json_to_flatbuffer",
         "//aos:macros",
-        "@com_github_google_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/strings",
@@ -43,7 +43,7 @@ cc_library(
         "//aos/containers:resizeable_buffer",
         "//aos/ipc_lib:data_alignment",
         "@aos//aos:realtime",
-        "@com_github_google_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/base",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
@@ -70,7 +70,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":static_base",
-        "@com_github_google_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/log:absl_check",
     ],
 )
@@ -82,7 +82,7 @@ cc_library(
     deps = [
         "//aos/containers:inlined_vector",
         "//aos/containers:sized_array",
-        "@com_github_google_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/log:die_if_null",
@@ -171,7 +171,7 @@ cc_binary(
         "//aos:init",
         "//aos:json_to_flatbuffer",
         "//aos/util:file",
-        "@com_github_google_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//:flatbuffers",
     ],
 )
 
@@ -192,7 +192,7 @@ cc_library(
     hdrs = ["attributes.h"],
     visibility = ["//visibility:public"],
     deps = [
-        "@com_github_google_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//:flatbuffers",
     ],
 )
 
@@ -204,8 +204,8 @@ cc_library(
     deps = [
         "//aos:flatbuffers",
         "//aos:json_to_flatbuffer",
-        "@com_github_google_flatbuffers//:flatbuffers",
-        "@com_github_google_flatbuffers//src:flatc_library",
+        "@aos_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//src:flatc_library",
     ],
 )
 
@@ -281,12 +281,12 @@ py_test(
 # Materialize the upstream flatbuffers python sources into this package so the
 # resulting py_library has a stable `imports` path that resolves identically
 # under both WORKSPACE and bzlmod modes (the upstream files live under
-# external/com_github_google_flatbuffers in WORKSPACE mode and external/
+# external/aos_flatbuffers in WORKSPACE mode and external/
 # flatbuffers+ in bzlmod mode, which is awkward to express via py_library
 # imports = ["..."] alone).
 genrule(
     name = "flatpy_pkg",
-    srcs = ["@com_github_google_flatbuffers//:flatpy_srcs"],
+    srcs = ["@aos_flatbuffers//:flatpy_srcs"],
     outs = [
         "flatpy_pkg/flatbuffers/__init__.py",
         "flatpy_pkg/flatbuffers/_version.py",
@@ -317,8 +317,8 @@ py_test(
         ":everything_fbs_py",
         ":flatpy",
         ":generated_fbs_py",
+        "@aos_flatbuffers//:flatpy",
         "@aos_pip_deps//absl_py",
-        "@com_github_google_flatbuffers//:flatpy",
         "@mock_external_fbs_repo//:baz_fbs_py",
         "@mock_external_fbs_repo//:foo_fbs_py",
     ],
