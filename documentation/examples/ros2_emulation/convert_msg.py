@@ -166,7 +166,7 @@ class MsgBuild:
 
         with open(os.path.join(self.msg_folder, 'BUILD'), 'w') as build:
             build.write(
-                'load("@aos//aos/flatbuffers:flatbuffers_python.bzl", "flatbuffer_py_library")\n'
+                'load("@aos//aos/flatbuffers:python.bzl", "flatbuffer_py_library")\n'
             )
             build.write(
                 'load("@aos//aos/flatbuffers:generate.bzl", "static_flatbuffer")\n'

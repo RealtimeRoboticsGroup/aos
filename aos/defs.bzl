@@ -8,9 +8,9 @@ breaking consumers. This also helps define a prefered API for users.
 
 load("//aos:config.bzl", _aos_config = "aos_config")
 load("//aos:flatbuffers.bzl", _cc_static_flatbuffer = "cc_static_flatbuffer")
-load("//aos/flatbuffers:build_defs.bzl", _flatbuffer_cc_library = "flatbuffer_cc_library")
-load("//aos/flatbuffers:flatbuffers_python.bzl", _flatbuffer_py_library = "flatbuffer_py_library")
+load("//aos/flatbuffers:cc.bzl", _flatbuffer_cc_library = "flatbuffer_cc_library")
 load("//aos/flatbuffers:generate.bzl", _static_flatbuffer = "static_flatbuffer")
+load("//aos/flatbuffers:python.bzl", _flatbuffer_py_library = "flatbuffer_py_library")
 
 # Flattens a .json AOS config (channels, applications, imports) into the
 # .stripped.json/.bfbs pair that aos::configuration::ReadConfig() consumes.

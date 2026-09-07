@@ -10,9 +10,9 @@ source "${RUNFILES_DIR:-/dev/null}/$f" 2>/dev/null || \
   { echo>&2 "ERROR: cannot find $f"; exit 1; }; f=; set -e
 # --- end runfiles.bash initialization v2 ---
 
-GAZELLE_BIN="$(rlocation aos/gazelle)"
+GAZELLE_BIN="$(rlocation aos/tools/gazelle/gazelle)"
 if [[ -z "${GAZELLE_BIN}" ]]; then
-  GAZELLE_BIN="$(rlocation _main/gazelle)"
+  GAZELLE_BIN="$(rlocation _main/tools/gazelle/gazelle)"
 fi
 
 cd "${BUILD_WORKSPACE_DIRECTORY}"

@@ -40,7 +40,7 @@ ts_project(
         "//frc/vision:target_map_ts_fbs",
         "//frc/vision/swerve_localizer:status_ts_fbs",
         "//frc/vision/swerve_localizer:visualization_ts_fbs",
-        "@com_github_google_flatbuffers//ts:flatbuffers_ts",
+        "@aos_flatbuffers//ts:flatbuffers_ts",
     ],
 )
 

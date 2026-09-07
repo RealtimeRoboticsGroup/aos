@@ -28,7 +28,7 @@ ts_project(
         "//aos/network:connect_ts_fbs",
         "//aos/network:web_proxy_ts_fbs",
         "@aos//aos/flatbuffers/reflection:reflection_ts_fbs",
-        "@com_github_google_flatbuffers//ts:flatbuffers_ts",
+        "@aos_flatbuffers//ts:flatbuffers_ts",
     ],
 )
 
@@ -42,7 +42,7 @@ ts_project(
     deps = [
         ":proxy",
         "//aos/testing/ping_pong:ping_ts_fbs",
-        "@com_github_google_flatbuffers//ts:flatbuffers_ts",
+        "@aos_flatbuffers//ts:flatbuffers_ts",
     ],
 )
 
@@ -68,7 +68,7 @@ ts_project(
         "//aos:configuration_ts_fbs",
         "//aos:json_to_flatbuffer_fbs_ts",
         "//aos/network/www:proxy",
-        "@com_github_google_flatbuffers//ts:flatbuffers_ts",
+        "@aos_flatbuffers//ts:flatbuffers_ts",
     ],
 )
 
@@ -81,7 +81,7 @@ ts_project(
         "//:node_modules/flatbuffers_reflection",
         "//aos:configuration_ts_fbs",
         "@aos//aos/flatbuffers/reflection:reflection_ts_fbs",
-        "@com_github_google_flatbuffers//ts:flatbuffers_ts",
+        "@aos_flatbuffers//ts:flatbuffers_ts",
     ],
 )
 
@@ -119,7 +119,7 @@ ts_project(
         "//aos/network:connect_ts_fbs",
         "//aos/network:web_proxy_ts_fbs",
         "@aos//aos/flatbuffers/reflection:reflection_ts_fbs",
-        "@com_github_google_flatbuffers//ts:flatbuffers_ts",
+        "@aos_flatbuffers//ts:flatbuffers_ts",
     ],
 )
 
@@ -139,7 +139,7 @@ ts_project(
         "//aos:configuration_ts_fbs",
         "//aos/network:connect_ts_fbs",
         "//aos/network:web_proxy_ts_fbs",
-        "@com_github_google_flatbuffers//ts:flatbuffers_ts",
+        "@aos_flatbuffers//ts:flatbuffers_ts",
     ],
 )
 

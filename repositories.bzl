@@ -405,7 +405,7 @@ cc_library(
 
     http_archive(
         name = "com_github_foxglove_schemas",
-        build_file = "@aos//:registry/modules/foxglove_schemas/0.16.2/overlay/BUILD.bazel",
+        build_file = "@aos//third_party/foxglove_schemas:foxglove_schemas.BUILD",
         integrity = "sha256-O3/7+jBCOJu1HpPqGiJake4FVm3HlthRd5FQW4vHU2s=",
         strip_prefix = "foxglove-sdk-sdk-v0.16.2",
         url = "https://github.com/foxglove/foxglove-sdk/archive/refs/tags/sdk/v0.16.2.tar.gz",

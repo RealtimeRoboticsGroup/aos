@@ -14,15 +14,15 @@
     "moduleResolution": "node",
     "paths": {
       "@aos/*": ["./*", "external/aos/*"],
-      "@com_github_google_flatbuffers/*": [
+      "@aos_flatbuffers/*": [
         "aos/flatbuffers/reflection/reflection_ts_fbs/*",
         "../../aos/flatbuffers/reflection/reflection_ts_fbs/*",
         "external/aos/aos/flatbuffers/reflection/reflection_ts_fbs/*",
         "../../external/aos/aos/flatbuffers/reflection/reflection_ts_fbs/*",
-        "external/com_github_google_flatbuffers/reflection/reflection_ts_fbs/*",
-        "../../external/com_github_google_flatbuffers/reflection/reflection_ts_fbs/*",
-        "external/flatbuffers+/reflection/reflection_ts_fbs/*",
-        "../../external/flatbuffers+/reflection/reflection_ts_fbs/*"
+        "external/aos_flatbuffers/reflection/reflection_ts_fbs/*",
+        "../../external/aos_flatbuffers/reflection/reflection_ts_fbs/*",
+        "external/+dependencies+aos_flatbuffers/reflection/reflection_ts_fbs/*",
+        "../../external/+dependencies+aos_flatbuffers/reflection/reflection_ts_fbs/*"
       ]
     }
   },

@@ -23,7 +23,7 @@ ts_project(
         "//aos/network:message_bridge_client_ts_fbs",
         "//aos/network/www:proxy",
         "//aos/starter:starter_ts_fbs",
-        "@com_github_google_flatbuffers//ts:flatbuffers_ts",
+        "@aos_flatbuffers//ts:flatbuffers_ts",
     ],
 )
 

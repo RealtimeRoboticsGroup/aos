@@ -15,7 +15,7 @@ import {
   WebSocketMessage,
   WebSocketSdp,
 } from '../web_proxy_ts_fbs/aos/web-proxy';
-import {Schema} from '@com_github_google_flatbuffers/reflection';
+import {Schema} from '@aos_flatbuffers/reflection';
 
 // There is one handler for each DataChannel, it maintains the state of
 // multi-part messages and delegates to a callback when the message is fully

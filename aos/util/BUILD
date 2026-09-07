@@ -1,4 +1,4 @@
-load("@aos//aos/flatbuffers:typescript.bzl", "flatbuffer_ts_library")
+load("@aos//aos/flatbuffers:ts.bzl", "flatbuffer_ts_library")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
@@ -124,7 +124,7 @@ cc_library(
     name = "error_counter",
     hdrs = ["error_counter.h"],
     deps = [
-        "@com_github_google_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/log:absl_check",
     ],
 )
@@ -316,7 +316,7 @@ cc_library(
         "string_formatting.h",
     ],
     deps = [
-        "@com_github_google_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//:flatbuffers",
     ],
 )
 
@@ -431,7 +431,7 @@ cc_library(
     deps = [
         "//aos:sanitizers",
         "//aos/scoped:scoped_fd",
-        "@com_github_google_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/strings",

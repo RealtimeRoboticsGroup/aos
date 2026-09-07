@@ -18,7 +18,7 @@ ts_project(
     ],
     deps = [
         "//aos/network:web_proxy_ts_fbs",
-        "@com_github_google_flatbuffers//ts:flatbuffers_ts",
+        "@aos_flatbuffers//ts:flatbuffers_ts",
     ],
 )
 

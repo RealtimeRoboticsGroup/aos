@@ -1,4 +1,4 @@
-load("@aos//aos/flatbuffers:flatbuffers_python.bzl", "flatbuffer_py_library")
+load("@aos//aos/flatbuffers:python.bzl", "flatbuffer_py_library")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
@@ -205,7 +205,7 @@ cc_library(
         "//aos/time",
         "//aos/util:phased_loop",
         "//aos/util:status",
-        "@com_github_google_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/container:btree",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
@@ -255,7 +255,7 @@ cc_library(
         "//aos:init",
         "//aos/events/logging:log_reader",
         "//aos/events/logging:logfile_utils",
-        "@com_github_google_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/log:die_if_null",
@@ -284,7 +284,7 @@ cc_binary(
         "//aos:init",
         "//aos/events/logging:log_reader",
         "//aos/events/logging:logfile_utils",
-        "@com_github_google_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/log:die_if_null",
@@ -444,7 +444,7 @@ rust_library(
         ":event_loop_c_rs",
         "//aos:configuration_rs",
         "//aos:uuid_rs",
-        "@com_github_google_flatbuffers//rust:flatbuffers",
+        "@aos_flatbuffers//rust:flatbuffers",
         "@crate_index//:cxx",
         "@crate_index//:futures",
         "@crate_index//:thiserror",
@@ -677,7 +677,7 @@ cc_library(
     hdrs = ["simple_channel.h"],
     deps = [
         "//aos:configuration_fbs",
-        "@com_github_google_flatbuffers//:flatbuffers",
+        "@aos_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/strings",
@@ -742,7 +742,7 @@ rust_library(
         "//aos:configuration_rust_fbs",
         "//aos:flatbuffers_rs",
         "//aos:uuid_rs",
-        "@com_github_google_flatbuffers//rust:flatbuffers",
+        "@aos_flatbuffers//rust:flatbuffers",
         "@crate_index//:futures",
     ],
 )
@@ -769,7 +769,7 @@ rust_library(
         "//aos:configuration_rs",
         "//aos:configuration_rust_fbs",
         "//aos:flatbuffers_rs",
-        "@com_github_google_flatbuffers//rust:flatbuffers",
+        "@aos_flatbuffers//rust:flatbuffers",
         "@crate_index//:futures",
     ],
 )

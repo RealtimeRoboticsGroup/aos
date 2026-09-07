@@ -1,4 +1,4 @@
-load("@aos//aos/flatbuffers:flatbuffers_python.bzl", "flatbuffer_py_library")
+load("@aos//aos/flatbuffers:python.bzl", "flatbuffer_py_library")
 
 flatbuffer_py_library(
     name = "bar_fbs_py",

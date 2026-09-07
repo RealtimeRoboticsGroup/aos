@@ -15,7 +15,7 @@ import {
 } from '../../../aos/network/www/colors';
 import {Connection} from '../../../aos/network/www/proxy';
 import {Table} from '../../../aos/network/www/reflection';
-import {Schema} from '@com_github_google_flatbuffers/reflection';
+import {Schema} from '@aos_flatbuffers/reflection';
 import {
   Visualization,
   TargetEstimateDebug,

@@ -1,5 +1,5 @@
-load("@aos//aos/flatbuffers:flatbuffers_python.bzl", "flatbuffer_py_library")
 load("@aos//aos/flatbuffers:generate.bzl", "static_flatbuffer")
+load("@aos//aos/flatbuffers:python.bzl", "flatbuffer_py_library")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_python//python:defs.bzl", "py_library")
 

@@ -111,7 +111,7 @@ sh_binary(
 sh_binary(
     name = "update_go_repos",
     srcs = ["update_go_repos.sh"],
-    data = ["//:gazelle"],
+    data = ["//tools/gazelle"],
     deps = [
         "@bazel_tools//tools/bash/runfiles",
     ],
