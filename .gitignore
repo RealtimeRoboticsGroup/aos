@@ -23,3 +23,8 @@ node_modules
 /.aspect
 
 /rust-project.json
+
+# Emacs temporary/backup/lock files
+*~
+\#*\#
+.\#*
