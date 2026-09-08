@@ -46,6 +46,9 @@ std::string AbslUnparseFlag(const FetchMode &fetch_mode);
 ABSL_FLAG(std::string, node, "", "Node to replay from the perspective of.");
 ABSL_FLAG(std::string, mode, "flatbuffer", "json or flatbuffer serialization.");
 ABSL_FLAG(
+    std::string, timestamp_mode, "monotonic",
+    "Clock used for MCAP logTime and publishTime: monotonic or realtime.");
+ABSL_FLAG(
     bool, canonical_channel_names, false,
     "If set, use full channel names; by default, will shorten names to be the "
     "shortest possible version of the name (e.g., /aos instead of /pi/aos).");
@@ -323,6 +326,9 @@ int ConvertLogToMcap(const std::vector<std::string> &log_paths,
         << ": log_to_mcap does not support generating MCAP "
            "files from multi-boot logs.";
     mcap_event_loop = reader.event_loop_factory()->MakeEventLoop("mcap", node);
+    const std::string timestamp_mode = absl::GetFlag(FLAGS_timestamp_mode);
+    ABSL_CHECK(timestamp_mode == "monotonic" || timestamp_mode == "realtime")
+        << ": --timestamp_mode must be monotonic or realtime.";
     relogger = std::make_unique<McapLogger>(
         mcap_event_loop.get(), output_path,
         absl::GetFlag(FLAGS_mode) == "flatbuffer"
@@ -333,7 +339,9 @@ int ConvertLogToMcap(const std::vector<std::string> &log_paths,
             : McapLogger::CanonicalChannelNames::kShortened,
         absl::GetFlag(FLAGS_compress) ? McapLogger::Compression::kLz4
                                       : McapLogger::Compression::kNone,
-        GetChannelShouldBeDroppedTester());
+        GetChannelShouldBeDroppedTester(),
+        timestamp_mode == "realtime" ? McapLogger::TimestampMode::kRealtime
+                                     : McapLogger::TimestampMode::kMonotonic);
 
     // Always write the original logged configuration to the "configuration"
     // MCAP topic, rather than the operational event_loop_->configuration().
@@ -410,6 +418,18 @@ int ConvertLogToMcap(const std::vector<std::string> &log_paths,
       progress_update_printer = std::make_unique<ProgressUpdatePrinter>(
           progress_update_printer_event_loop.get());
     });
+  }
+
+  // Set the realtime clock offset before running so that generated messages
+  // (e.g., ClockTimepoints, configuration) have correct realtime timestamps
+  // when replaying from before the log start time.
+  if (reader.realtime_start_time(node) != aos::realtime_clock::min_time &&
+      reader.monotonic_start_time(node) != aos::monotonic_clock::min_time) {
+    factory.GetNodeEventLoopFactory(node)->SetRealtimeOffset(
+        aos::monotonic_clock::epoch(),
+        aos::realtime_clock::epoch() +
+            (reader.realtime_start_time(node).time_since_epoch() -
+             reader.monotonic_start_time(node).time_since_epoch()));
   }
 
   reader.event_loop_factory()->Run();

@@ -76,13 +76,20 @@ class McapLogger {
     kNone,
     kLz4,
   };
+
+  // Selects which AOS clock provides the timestamps written to the MCAP file.
+  enum class TimestampMode {
+    kMonotonic,
+    kRealtime,
+  };
   // Channels which trigger `channel_should_be_dropped` to return true will not
   // be added to the MCAP.
   McapLogger(
       EventLoop *event_loop, const std::string &output_path,
       Serialization serialization, CanonicalChannelNames canonical_channels,
       Compression compression,
-      std::function<bool(const Channel *)> channel_should_be_dropped = {});
+      std::function<bool(const Channel *)> channel_should_be_dropped = {},
+      TimestampMode timestamp_mode = TimestampMode::kMonotonic);
   ~McapLogger();
 
   // Forces all messages being saved to the MCAP file to have the specified
@@ -291,6 +298,9 @@ class McapLogger {
 
   // Memory buffer to use for compressing data.
   std::vector<uint8_t> compression_buffer_;
+
+  // Which AOS clock provides the timestamps written to the MCAP file.
+  const TimestampMode timestamp_mode_;
 
   template <typename T>
   friend class InjectedChannel;

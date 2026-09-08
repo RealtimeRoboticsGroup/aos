@@ -54,6 +54,9 @@ int main(int argc, char **argv) {
           "aos/testing/ping_pong/pingpong_config.json"));
 
   aos::SimulatedEventLoopFactory event_loop_factory(&config.message());
+  event_loop_factory.GetNodeEventLoopFactory(nullptr)->SetRealtimeOffset(
+      aos::monotonic_clock::epoch(),
+      aos::realtime_clock::epoch() + std::chrono::seconds(1000));
 
   // Inject a message before startup. The times here are somewhat arbitrary. We
   // want to simulate a message very early after boot. Then the log starts at 10

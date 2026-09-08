@@ -171,6 +171,7 @@ class McapLogger::InjectedChannel {
   void WriteMessage(absl::Span<const uint8_t> data) {
     Context context;
     context.monotonic_event_time = mcap_logger_->event_loop_->monotonic_now();
+    context.realtime_event_time = mcap_logger_->event_loop_->realtime_now();
     context.queue_index = queue_index_++;
     context.size = data.size();
     context.data = data.data();
@@ -195,7 +196,8 @@ McapLogger::McapLogger(
     EventLoop *event_loop, const std::string &output_path,
     Serialization serialization, CanonicalChannelNames canonical_channels,
     Compression compression,
-    std::function<bool(const Channel *)> channel_should_be_dropped)
+    std::function<bool(const Channel *)> channel_should_be_dropped,
+    TimestampMode timestamp_mode)
     : event_loop_(event_loop),
       output_(),
       serialization_(serialization),
@@ -206,7 +208,8 @@ McapLogger::McapLogger(
       injected_conversion_metadata_(
           std::make_unique<InjectedChannel<LogConversionMetadata>>(
               this, "log_conversion_metadata", LogConversionMetadataSchema)),
-      channel_should_be_dropped_(std::move(channel_should_be_dropped)) {
+      channel_should_be_dropped_(std::move(channel_should_be_dropped)),
+      timestamp_mode_(timestamp_mode) {
   // Open the stream and check immediately while errno is still valid.
   output_.open(output_path, std::ios::out | std::ios::binary);
   ABSL_PCHECK(output_.good())
@@ -493,8 +496,19 @@ void McapLogger::WriteMessage(uint16_t channel_id, const Channel *channel,
 
   message_counts_[channel_id]++;
 
+  // Choose the clock source. Both MCAP timestamps are written from the same
+  // source so they stay identical and the file remains self-consistent.
+  const std::chrono::nanoseconds event_time_since_epoch =
+      timestamp_mode_ == TimestampMode::kRealtime
+          ? realtime_time_override_.value_or(context.realtime_event_time)
+                .time_since_epoch()
+          : monotonic_time_override_.value_or(context.monotonic_event_time)
+                .time_since_epoch();
+
+  // Reconstruct a time_point so existing chunk/index code (which expects
+  // monotonic_clock) can use the chosen nanosecond value verbatim.
   const monotonic_clock::time_point event_time =
-      monotonic_time_override_.value_or(context.monotonic_event_time);
+      monotonic_clock::epoch() + event_time_since_epoch;
 
   if (!earliest_message_.has_value()) {
     earliest_message_ = event_time;

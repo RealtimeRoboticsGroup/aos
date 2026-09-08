@@ -42,6 +42,7 @@ def generate_argument_permutations():
                 ["--canonical_channel_names", "--nocanonical_channel_names"],
                 ["--mcap_chunk_size=1000", "--mcap_chunk_size=10000000"],
                 ["--fetch=none", "--fetch=all", "--fetch=rewrite"],
+                ["--timestamp_mode=monotonic", "--timestamp_mode=realtime"],
                 ["--include_channels=", "--include_channels=.*"],
                 ["--drop_channels=", "--drop_channels=.*aos.examples.Pong"]]
     permutations = make_permutations(arg_sets)
@@ -125,6 +126,8 @@ def main(argv: Sequence[Text]):
 
             # Validate that log_to_mcap can fetch messages appropriately. This is only possible when
             # we're not dropping all messages.
+            # The generated test log has a 1000s offset between monotonic and realtime time.
+            expected_time_offset = 1000 if "--timestamp_mode=realtime" in log_to_mcap_args else 0
             if "--include_channels=" not in log_to_mcap_args:
                 if "--fetch=all" in log_to_mcap_args:
                     # We expect this message to be in the log.
@@ -135,7 +138,7 @@ def main(argv: Sequence[Text]):
                         expected_duration = "19.99005s"
                     else:
                         expected_duration = "19.99s"
-                    expected_start_time = "0.000000000"
+                    expected_start_time = f"{expected_time_offset:.9f}"
                     expected_num_clock_timepoints = 20
 
                 elif "--fetch=rewrite" in log_to_mcap_args:
@@ -147,7 +150,7 @@ def main(argv: Sequence[Text]):
                         expected_duration = "10.99005s"
                     else:
                         expected_duration = "10.99s"
-                    expected_start_time = "9.000000000"
+                    expected_start_time = f"{expected_time_offset + 9:.9f}"
                     # We only get ClockTimepoints for the duration of the log.
                     expected_num_clock_timepoints = 10
 
@@ -158,7 +161,7 @@ def main(argv: Sequence[Text]):
                         expected_duration = "9.99005s"
                     else:
                         expected_duration = "9.99s"
-                    expected_start_time = "10.000000000"
+                    expected_start_time = f"{expected_time_offset + 10:.9f}"
                     expected_num_clock_timepoints = 10
 
                 log_message_fbs = LOG_MESSAGE_FBS_RE.findall(info)
