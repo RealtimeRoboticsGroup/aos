@@ -2508,6 +2508,9 @@ void IoUringImpl::RegisterThreadSignalReceiver(
   if (receiver->fd() >= 0 && legacy_states_.contains(receiver->fd())) {
     internal::DieOwnFdStillRegistered(receiver->fd(), "thread-signal receiver");
   }
+  // Registration runs on the polling thread, which is the thread whose
+  // wakeups this receiver serves.  Construction may not have.
+  receiver->BindToCurrentThread();
 
   if (ThreadSignalReceiverState *state = free_receivers_.Pop();
       state != nullptr) {
@@ -3391,6 +3394,9 @@ void EpollImpl::RegisterThreadSignalReceiver(
   if (registrations_.GetActive(receiver->fd()) != nullptr) {
     internal::DieOwnFdStillRegistered(receiver->fd(), "thread-signal receiver");
   }
+  // Registration runs on the polling thread, which is the thread whose
+  // wakeups this receiver serves.  Construction may not have.
+  receiver->BindToCurrentThread();
   receiver_ = receiver;
   OnReadable(receiver->fd(), [receiver, callback = std::move(callback)]() {
     receiver->ConsumeWakeup();

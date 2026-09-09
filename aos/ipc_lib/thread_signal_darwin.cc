@@ -108,6 +108,14 @@ ThreadSignalReceiver::~ThreadSignalReceiver() {
   WakeupSignalDisposition::Get().Unregister();
 }
 
+void ThreadSignalReceiver::BindToCurrentThread() {
+  // Nothing to point: the signal is sent to the thread itself.
+}
+
+void ThreadSignalReceiver::ReleaseThread() {
+  // Nothing was bound.
+}
+
 bool ThreadSignalReceiver::ConsumeWakeup() {
   // kqueue automatically consumes the signal event when returning it, so
   // there is nothing here to tell.

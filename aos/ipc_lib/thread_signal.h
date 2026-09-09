@@ -68,6 +68,26 @@ class ThreadSignalReceiver {
   // kInvalidFd on macOS, where kqueue watches the signal itself.
   FileDescriptor fd() const { return fd_; }
 
+  // Points this receiver at the calling thread, the thread whose wakeups it
+  // delivers.  Aio::RegisterThreadSignalReceiver() calls this, because
+  // registration is the first moment the receiver learns which thread it
+  // serves: it runs on the polling thread, while construction may not.
+  //
+  // Only Windows has anything to do.  A sender finds the receiver's Event by
+  // a name built from the thread's id, so the Event has to carry the polling
+  // thread's name, and a second receiver on that thread would share it.  That
+  // CHECKs.  On Linux and macOS the signal is sent to the thread itself, so
+  // there is nothing to point.
+  void BindToCurrentThread();
+
+  // Gives up the thread BindToCurrentThread() bound this receiver to, so
+  // another can be bound there, whether or not this one is destroyed.
+  // Aio::UnregisterThreadSignalReceiver() calls this.  What this receiver
+  // waits on stays, so a wakeup sent before it is registered again is still
+  // delivered.  Only Windows has anything to do, for the same reason as
+  // BindToCurrentThread().  May be called from any thread.
+  void ReleaseThread();
+
   // Drains any pending wakeups so we don't immediately wake again.  Returns
   // whether it consumed anything; a platform that cannot tell returns true.
   bool ConsumeWakeup();
@@ -87,7 +107,17 @@ class ThreadSignalReceiver {
   // it.
   FileDescriptor fd_ = kInvalidFd;
 
-#if !defined(_WIN32) && !defined(__APPLE__)
+#if defined(_WIN32)
+  // The thread fd_ is named for, so BindToCurrentThread() can tell a real
+  // thread change from a re-registration on the same thread.
+  pid_t bound_tid_ = 0;
+  // A HANDLE (kept as void * so this header needs no windows.h): the named
+  // object that says this receiver is bound_tid_'s one receiver, held from
+  // BindToCurrentThread() until ReleaseThread().  Only receivers ever create
+  // it, so its existing means another receiver holds the thread.  fd_ cannot
+  // say that, because a sender opens it by name while it signals.
+  void *owner_ = nullptr;
+#elif !defined(__APPLE__)
   // Whether the destructor unblocks kWakeupSignal.  False if it was already
   // blocked before we got here, or if LeaveSignalBlocked() was called.
   bool should_unblock_ = true;

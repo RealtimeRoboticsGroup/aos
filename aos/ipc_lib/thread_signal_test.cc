@@ -8,6 +8,7 @@
 #define FUTEX_TID_MASK 0x3fffffff
 #endif
 
+#include <atomic>
 #include <future>
 #include <thread>
 
@@ -151,6 +152,33 @@ TEST(ThreadSignalReceiverTest, SignalFromAnotherThread) {
   signaled.set_value();
   receiver_thread.join();
   EXPECT_EQ(wait_result, WAIT_OBJECT_0);
+}
+
+// A receiver built on a thread whose last receiver has just gone, while a
+// sender is signalling that thread, is the thread's one receiver.  Signal()
+// opens the thread's Event by name for the moment it takes to set it, so a
+// sender can still be holding the old Event when the next receiver asks for
+// it.  The Event still existing does not mean another receiver has the
+// thread.
+TEST(ThreadSignalReceiverTest, NewReceiverWhileASenderHoldsTheOldEvent) {
+  std::atomic<pid_t> tid{0};
+  std::atomic<bool> done{false};
+  std::thread worker([&]() {
+    tid = static_cast<pid_t>(GetCurrentThreadId());
+    for (int i = 0; i < 20000; ++i) {
+      ThreadSignalReceiver receiver;
+      receiver.BindToCurrentThread();
+    }
+    done = true;
+  });
+  while (tid.load() == 0) {
+  }
+  ThreadSignalSender sender;
+  const pid_t pid = static_cast<pid_t>(GetCurrentProcessId());
+  while (!done.load()) {
+    sender.Signal(pid, tid.load());
+  }
+  worker.join();
 }
 #endif  // _WIN32
 

@@ -105,6 +105,14 @@ ThreadSignalReceiver::~ThreadSignalReceiver() {
   ABSL_PCHECK(close(fd_) == 0);
 }
 
+void ThreadSignalReceiver::BindToCurrentThread() {
+  // Nothing to point: the signal is sent to the thread itself.
+}
+
+void ThreadSignalReceiver::ReleaseThread() {
+  // Nothing was bound.
+}
+
 bool ThreadSignalReceiver::ConsumeWakeup() {
   // Batched: signalfd dequeues as many pending siginfos as fit the buffer,
   // and a short count means the queue was empty at that moment -- so the

@@ -69,8 +69,8 @@ struct AsyncRequest {
   // backend.
   bool done = true;
 
-  // Internal state managed entirely by the Aio implementation.  Callers must
-  // not read or modify this field.
+  // Opaque to callers.  Each backend keeps its per-request record here and
+  // static_asserts that it fits, so this struct has one layout everywhere.
   alignas(8) uint8_t internal_state[64] = {0};
 };
 
@@ -97,7 +97,7 @@ struct AsyncRequest {
 //
 // Constraints:
 // 1. Thread Safety: Aio is designed to be driven by a single-threaded event
-//    loop.  All scheduling (e.g., AsyncRead, AsyncWrite, AsyncTimer) and
+//    loop.  All scheduling (e.g., AsyncRead, AsyncWrite, Timer::Schedule) and
 //    cancellation (Cancel) operations -- including destroying the Aio
 //    instance itself -- should be invoked from the thread that drives the
 //    loop via Poll() or Run().  Two exceptions:
@@ -109,7 +109,12 @@ struct AsyncRequest {
 //        -- nothing here is synchronized).  This is what makes pre-Run()
 //        setup work: constructing and configuring an Aio (arming timers,
 //        registering fds) on one thread, then handing it to the thread
-//        that will drive it.
+//        that will drive it.  A ThreadSignalReceiver registered before the
+//        hand-off serves the thread that drives the loop, but on Windows
+//        that thread can be signalled only from its first Poll()/Run().
+//        Don't give senders its id before then.  Nor, on Windows, register
+//        receivers for two Aios on one thread before handing them off: the
+//        registering thread holds the receiver until that first Poll()/Run().
 //
 //    The io_uring backend enforces this: IORING_SETUP_SINGLE_ISSUER binds
 //    the ring to whichever thread first calls Run()/Poll() and ABSL_CHECKs
@@ -241,6 +246,9 @@ class Aio {
   // one slot each way -- and CHECK a second with "Duplicate AsyncRead on
   // fd".  Restricting io_uring to match would give up something it is good
   // at, so portable callers keep to one read and one write per fd at a time.
+  // A cancelled request keeps its slot until its Canceled callback has run on
+  // the IOCP backend, so a portable caller lets that callback run before it
+  // submits another request on the same fd and direction.
   //
   // The fd may be blocking or non-blocking, and of any kind, regular files
   // and devices included.  The ideal, which io_uring meets: the thread
@@ -388,6 +396,10 @@ class Aio {
   // sees EOF or the error, and whose write(2) sees EPIPE or the error.  The
   // handler has to retire it (DeleteFd(), usually) or it is reported again,
   // like any other level-triggered condition.
+  //
+  // A socket that is to listen() must be listening before it is registered.
+  // The IOCP backend tells a listening socket apart once, at registration,
+  // and one registered before listen() never reports a connection.
   void OnReadable(FileDescriptor fd, std::function<void()> callback);
 
   // Registers a function to be called when the fd has an error.
@@ -487,6 +499,7 @@ class Aio {
   friend class IoUringImpl;
   friend class EpollImpl;
   friend class KqueueImpl;
+  friend class IocpImpl;
 
   std::unique_ptr<Impl> impl_;
 };

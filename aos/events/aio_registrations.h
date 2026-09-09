@@ -52,8 +52,8 @@ inline uint32_t RouteHangupOrError(uint32_t events, bool hangup,
 
 // What one fd is registered for, and the table that owns them.
 //
-// Every readiness-driven backend -- epoll, kqueue, IOCP -- keeps exactly
-// this state and recycles it exactly this way.  Only the syscall that arms
+// Both readiness-driven backends, epoll and kqueue, keep exactly this state
+// and recycle it exactly this way.  Only the syscall that arms
 // and disarms the kernel differs, and that stays in the backend.  Sharing
 // the bookkeeping is mostly about the parts that are subtle rather than the
 // parts that are long: the deferred teardown below took an ASAN run to find

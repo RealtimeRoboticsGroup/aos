@@ -6,6 +6,7 @@
 // incompatible winsock 1 declarations.
 // clang-format off
 #include <winsock2.h>
+#include <ws2tcpip.h>
 #include <windows.h>
 // clang-format on
 
@@ -99,6 +100,145 @@ void TcpPair::ResetClient() {
   client_ = kInvalidFd;
 }
 
+void TcpPair::ShutdownClient() {
+  ABSL_CHECK_EQ(shutdown(ToSocket(client_), SD_SEND), 0)
+      << ": shutdown(SD_SEND) failed: " << WSAGetLastError();
+}
+
+void TcpPair::CloseServer() {
+  ABSL_CHECK_EQ(closesocket(ToSocket(server_)), 0);
+  server_ = kInvalidFd;
+}
+
+TcpListener::TcpListener() {
+  EnsureWinsockInitialized();
+  const SOCKET listener = MakeSocket(SOCK_STREAM, IPPROTO_TCP);
+  BindLoopback(listener);
+  ABSL_CHECK_EQ(listen(listener, 4), 0)
+      << ": listen failed: " << WSAGetLastError();
+  SetUp(listener);
+  listener_ = ToFd(listener);
+}
+
+TcpListener::~TcpListener() {
+  for (int i = 0; i < other_count_; ++i) {
+    ABSL_CHECK_EQ(closesocket(ToSocket(others_[i])), 0);
+  }
+  ABSL_CHECK_EQ(closesocket(ToSocket(listener_)), 0);
+}
+
+FileDescriptor TcpListener::Connect() {
+  ABSL_CHECK_LT(other_count_, 8);
+  sockaddr_in address = {};
+  int length = sizeof(address);
+  ABSL_CHECK_EQ(getsockname(ToSocket(listener_),
+                            reinterpret_cast<sockaddr *>(&address), &length),
+                0)
+      << ": getsockname failed: " << WSAGetLastError();
+  // Blocking for the connect, which a loopback listener with room in its
+  // backlog completes before accept().
+  const SOCKET client = MakeSocket(SOCK_STREAM, IPPROTO_TCP);
+  ABSL_CHECK_EQ(
+      connect(client, reinterpret_cast<sockaddr *>(&address), sizeof(address)),
+      0)
+      << ": connect failed: " << WSAGetLastError();
+  SetUp(client);
+  others_[other_count_++] = ToFd(client);
+  return ToFd(client);
+}
+
+FileDescriptor TcpListener::Accept() {
+  const SOCKET accepted = accept(ToSocket(listener_), nullptr, nullptr);
+  if (accepted == INVALID_SOCKET) {
+    ABSL_CHECK_EQ(WSAGetLastError(), WSAEWOULDBLOCK)
+        << ": accept failed: " << WSAGetLastError();
+    return kInvalidFd;
+  }
+  ABSL_CHECK_LT(other_count_, 8);
+  SetUp(accepted);
+  others_[other_count_++] = ToFd(accepted);
+  return ToFd(accepted);
+}
+
+void TcpListener::Reset(FileDescriptor fd) {
+  int i = 0;
+  while (i < other_count_ && others_[i] != fd) ++i;
+  ABSL_CHECK_LT(i, other_count_)
+      << ": fd " << fd << " is not one of this listener's";
+  const struct linger abortive = {1, 0};
+  ABSL_CHECK_EQ(
+      setsockopt(ToSocket(fd), SOL_SOCKET, SO_LINGER,
+                 reinterpret_cast<const char *>(&abortive), sizeof(abortive)),
+      0)
+      << ": setsockopt(SO_LINGER) failed: " << WSAGetLastError();
+  ABSL_CHECK_EQ(closesocket(ToSocket(fd)), 0);
+  others_[i] = others_[--other_count_];
+}
+
+int TcpListener::port() const {
+  sockaddr_in address = {};
+  int length = sizeof(address);
+  ABSL_CHECK_EQ(getsockname(ToSocket(listener_),
+                            reinterpret_cast<sockaddr *>(&address), &length),
+                0)
+      << ": getsockname failed: " << WSAGetLastError();
+  return ntohs(address.sin_port);
+}
+
+int UnusedLoopbackPort() {
+  EnsureWinsockInitialized();
+  const SOCKET s = MakeSocket(SOCK_STREAM, IPPROTO_TCP);
+  const sockaddr_in address = BindLoopback(s);
+  ABSL_CHECK_EQ(closesocket(s), 0);
+  return ntohs(address.sin_port);
+}
+
+ConnectingSocket::ConnectingSocket() {
+  EnsureWinsockInitialized();
+  sockaddr_in address = {};
+  address.sin_family = AF_INET;
+  address.sin_port = htons(9);
+  ABSL_CHECK_EQ(inet_pton(AF_INET, "192.0.2.1", &address.sin_addr), 1);
+  Start(address);
+}
+
+ConnectingSocket::ConnectingSocket(int loopback_port) {
+  EnsureWinsockInitialized();
+  sockaddr_in address = {};
+  address.sin_family = AF_INET;
+  address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  address.sin_port = htons(static_cast<u_short>(loopback_port));
+  Start(address);
+}
+
+void ConnectingSocket::Start(const sockaddr_in &address) {
+  const SOCKET s = MakeSocket(SOCK_STREAM, IPPROTO_TCP);
+  SetUp(s);
+  const int res =
+      connect(s, reinterpret_cast<const sockaddr *>(&address), sizeof(address));
+  in_progress_ = res != 0 && WSAGetLastError() == WSAEWOULDBLOCK;
+  fd_ = ToFd(s);
+}
+
+ConnectingSocket::~ConnectingSocket() {
+  ABSL_CHECK_EQ(closesocket(ToSocket(fd_)), 0);
+}
+
+bool ConnectingSocket::StillConnecting() const {
+  // A connect that succeeds makes the socket writable, and one that fails
+  // puts it in the exception set.
+  fd_set writable;
+  fd_set failed;
+  FD_ZERO(&writable);
+  FD_ZERO(&failed);
+  FD_SET(ToSocket(fd_), &writable);
+  FD_SET(ToSocket(fd_), &failed);
+  TIMEVAL immediately = {0, 0};
+  const int res = select(0, nullptr, &writable, &failed, &immediately);
+  ABSL_CHECK_GE(res, 0) << ": select failed: " << WSAGetLastError();
+  return res == 0;
+}
+
 void SendOutOfBand(FileDescriptor fd, char byte) {
   ABSL_CHECK_EQ(send(ToSocket(fd), &byte, 1, MSG_OOB), 1)
       << ": send(MSG_OOB) failed: " << WSAGetLastError();
@@ -117,6 +257,17 @@ bool ReceiveOutOfBand(FileDescriptor fd, char *byte) {
       << ": recv(MSG_OOB) failed: " << error;
   return false;
 }
+
+bool OutOfBandPending(FileDescriptor fd) {
+  // A connected socket in select()'s exception set has unread out-of-band
+  // data; nothing else puts it there.
+  fd_set exceptional;
+  FD_ZERO(&exceptional);
+  FD_SET(ToSocket(fd), &exceptional);
+  TIMEVAL immediately = {0, 0};
+  return select(0, nullptr, nullptr, &exceptional, &immediately) == 1;
+}
+
 bool LastReadWasReset() { return WSAGetLastError() == WSAECONNRESET; }
 
 DatagramPair::DatagramPair() {

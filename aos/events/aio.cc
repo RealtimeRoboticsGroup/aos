@@ -3,6 +3,7 @@
 #include "absl/log/absl_check.h"
 
 #include "aos/events/aio_internal.h"
+#include "aos/ipc_lib/thread_signal.h"
 #include "aos/realtime.h"
 
 namespace aos {
@@ -98,6 +99,9 @@ void Aio::UnregisterThreadSignalReceiver(
     ipc_lib::ThreadSignalReceiver *receiver) {
   aos::CheckNotRealtime();
   impl_->UnregisterThreadSignalReceiver(receiver);
+  // The receiver's hold on its thread ends with its registration, not with
+  // the receiver (UnregisteredReceiverFreesItsThreadWhileAlive).
+  receiver->ReleaseThread();
 }
 
 void Aio::ConsumeThreadSignalReceiver(ipc_lib::ThreadSignalReceiver *receiver) {

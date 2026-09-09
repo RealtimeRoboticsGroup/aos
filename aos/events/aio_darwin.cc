@@ -762,6 +762,10 @@ void KqueueImpl::RegisterThreadSignalReceiver(
       << "Duplicate ThreadSignalReceiver registration: only one receiver "
          "may be active at a time (see Aio::RegisterThreadSignalReceiver)";
 
+  // Registration runs on the polling thread, which is the thread whose
+  // wakeups this receiver serves.  Construction may not have.
+  receiver->BindToCurrentThread();
+
   signal_receiver_ = receiver;
   signal_callback_ = std::move(callback);
 

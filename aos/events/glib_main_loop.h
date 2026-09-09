@@ -187,8 +187,8 @@ class GlibMainLoop {
   void RemoveAllFds();
   void BeforeWait();
 
-  // fds which we have added to the Aio object.
-  std::unordered_set<int> added_fds_;
+  // fds which we have added to the Aio object, keyed the way Aio spells them.
+  std::unordered_set<FileDescriptor> added_fds_;
 
   EventLoop *const event_loop_;
   Aio *const aio_;

@@ -78,9 +78,9 @@ cc_library(
     ],
 )
 
-# The fd registration table every readiness-driven backend keeps (epoll,
-# kqueue, IOCP).  Header-only; the syscalls that arm and disarm the kernel
-# stay in each backend.
+# The fd registration table every readiness-driven backend keeps (epoll and
+# kqueue).  Header-only; the syscalls that arm and disarm the kernel stay in
+# each backend.
 cc_library(
     name = "aio_registrations",
     hdrs = ["aio_registrations.h"],
@@ -104,9 +104,8 @@ cc_library(
         "aio_internal.h",
     ] + select({
         # internal::ReadinessBackend is the shared half of the readiness
-        # backends, and it reaches aio_unix.h -> sys/socket.h.  A
-        # completion-based backend does not derive from it and cannot compile
-        # it, so it goes per-platform rather than in the unconditional srcs.
+        # backends, and it reaches aio_unix.h -> sys/socket.h.  IOCP is
+        # completion-based, does not derive from it, and cannot compile it.
         "@platforms//os:linux": [
             "aio_linux.cc",
             "aio_readiness_backend.cc",
@@ -117,11 +116,24 @@ cc_library(
             "aio_readiness_backend.cc",
             "aio_readiness_backend.h",
         ],
+        "@platforms//os:windows": [
+            "aio_windows.cc",
+            "aio_windows_internal.h",
+        ],
     }),
     hdrs = [
         "aio.h",
         "aio_state.h",
     ],
+    linkopts = select({
+        # WSAStartup/WSAPoll/overlapped socket I/O live in ws2_32;
+        # timeBeginPeriod lives in winmm.
+        "@platforms//os:windows": [
+            "-DEFAULTLIB:ws2_32.lib",
+            "-DEFAULTLIB:winmm.lib",
+        ],
+        "//conditions:default": [],
+    }),
     # The --aio_backend default is a property of the target platform (there
     # is no runtime fallback), so it is compiled in rather than probed.  See
     # //tools/platforms/io_uring.
@@ -138,7 +150,6 @@ cc_library(
         ":aio_registrations",
         ":file_descriptor",
         ":kernel_release",
-        ":socket_error",
         ":timer_queue",
         "//aos:realtime",
         "//aos/ipc_lib:thread_signal",
@@ -152,13 +163,20 @@ cc_library(
     ] + select({
         "@platforms//os:linux": [
             ":aio_unix",
+            # socket_error.h is POSIX (sys/socket.h, fstat) and only the
+            # readiness backends report through it.  Windows is marked
+            # incompatible with it, so an unconditional dep made all of aio
+            # incompatible there.
+            ":socket_error",
             "@liburing",
         ],
         "@platforms//os:macos": [
             ":aio_unix",
             ":pipe",
+            ":socket_error",
             "//aos/mutex",
         ],
+        "@platforms//os:windows": [":winsock_init"],
     }),
 )
 

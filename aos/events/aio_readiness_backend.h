@@ -17,8 +17,8 @@ namespace aos::internal {
 
 // Everything a readiness-driven Aio backend does that is not a syscall.
 //
-// epoll, kqueue and IOCP all work the same way: keep a table of what each fd
-// is registered for, ask the kernel which one is ready, and dispatch.  They
+// epoll and kqueue work the same way: keep a table of what each fd is
+// registered for, ask the kernel which one is ready, and dispatch.  They
 // differ only in how interest is expressed to the kernel and how the kernel
 // answers.  That difference is the five virtuals below; everything else --
 // the public entry points, the raw request machinery, the drain loop, the
@@ -87,7 +87,7 @@ class ReadinessBackend : public Aio::Impl {
 
  protected:
   // backend_name is what this backend calls itself in operational-failure
-  // messages ("epoll", "kqueue", "iocp"); aio_test asserts on it.
+  // messages ("epoll", "kqueue"); aio_test asserts on it.
   ReadinessBackend(size_t pool_size, std::string backend_name);
 
   // --- The seam.  Everything below is a syscall or close to one. ---
