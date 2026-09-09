@@ -201,11 +201,9 @@ go_sdk.download(
     version = "1.24.13",
 )
 
-# use_repo on a non-dev proxy so @go_sdk resolves both when AOS is the root module
-# (the dev-only download above provides it) and when AOS is consumed as a
-# dependency (the root module's own go_sdk.download provides it, and the dev
-# download here is dropped).
-go_sdk_deps = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
+# A second dev-only handle on the same extension, for use_repo. Like the
+# download above, dependents never see it.
+go_sdk_deps = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk", dev_dependency = True)
 use_repo(go_sdk_deps, "go_sdk")
 
 bazel_dep(name = "rules_pkg", version = "1.1.0")
@@ -471,9 +469,10 @@ crate.annotation(
 #   bazel query "filter('arrayvec', deps(//aos/testing/ping_pong:pingpong_test_rs))" --enable_bzlmod
 use_repo(crate, "crate_index")
 
-bazel_dep(name = "rules_bzlmodrio_toolchains", version = "2025-1")
-bazel_dep(name = "bzlmodrio-ni", version = "2025.2.0")
-bazel_dep(name = "range_http_server", version = "0.0.1", repo_name = "RangeHTTPServer")
+bazel_dep(name = "rules_bzlmodrio_toolchains", version = "2025-1", dev_dependency = True)
+bazel_dep(name = "bzlmodrio-ni", version = "2025.2.0", dev_dependency = True)
+bazel_dep(name = "range_http_server", version = "0.0.1", dev_dependency = True, repo_name = "RangeHTTPServer")
+
 bazel_dep(name = "ceres-solver", version = "2.2.0")
 
 # TODO(austin): Need to apply patch file so the tests pass.
