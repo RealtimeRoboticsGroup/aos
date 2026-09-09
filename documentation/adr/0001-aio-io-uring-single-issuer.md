@@ -27,7 +27,7 @@ This ADR documents the design that gets `SINGLE_ISSUER`'s determinism by default
 This document compares the design against four different baselines, and it matters which one a given sentence means:
 
 - **`EPoll` (`aos/events/epoll.h`)** — the readiness-based loop AOS ran on before `Aio` existed, with `timerfd`-backed `TimerFd` timers, and what `ShmEventLoop` still runs on as of the change introducing this document. The "legacy fd" API (`OnReadable`/`OnWritable`/…) is its API. When a sentence says something "has always" been the case, it is `EPoll`'s behavior it means.
-- **`EpollImpl`** — the epoll _backend of `Aio`_. "Both backends", "the other backend", and "the same observable behavior on every backend" refer to this, and `aio_test.cc` is parameterized over both so those statements are tested rather than asserted.
+- **`EpollImpl`** — the epoll _backend of `Aio`_. "Both backends", "the other backend", and "the same observable behavior on every backend" refer to this, and `aio_test_lib.cc` is parameterized over both so those statements are tested rather than asserted.
 - **The unconstrained ring configuration**, `IORING_SETUP_COOP_TASKRUN | IORING_SETUP_TASKRUN_FLAG` — the configuration the automatic per-instance downgrade falls back to. "More deterministic", "less predictable", and "loses `SINGLE_ISSUER`'s benefit" compare `SINGLE_ISSUER | DEFER_TASKRUN` against this.
 - **Earlier, unmerged iterations of this same io_uring backend** — the design went through several shapes during development (timers on `IORING_OP_TIMEOUT`, an availability-probe ring per construction, cancel-and-resubmit for legacy-fd mask changes, a draining `ReapCompletions()`) that never reached `main`. "The earlier design", "the old …", "the … this replaces", "pre-change", and the whole of "Lessons learned" refer to these. Nothing in the repository corresponds to them; they are recorded here so the reasons they were abandoned survive.
 
@@ -247,7 +247,7 @@ Trade-offs:
 - The kernel floor (6.12) is hard, with no fallback. An older kernel fails loudly at startup rather than degrading.
 - Ring teardown is throughput-capped and RCU-gated regardless of configuration, and `DEFER_TASKRUN` roughly doubles the cost. Irrelevant for long-lived production processes; a real hazard for anything that churns rings at scale.
 - Each timer costs a file descriptor and one `read(2)` per firing. It does _not_ cost a submission per period. Constructing a timer touches the ring, so `--aio_queue_depth` must be at least the concurrent timer count.
-- `Aio::Timer::Schedule()` has no repeating form. A caller that wants a period writes the three-line re-arm itself (see `RepeatingTimer` in `aio_test.cc`, or `ShmTimerHandler`). `TimerHandler::Schedule(base, repeat_offset)` — the API robot code actually uses — is unchanged.
+- `Aio::Timer::Schedule()` has no repeating form. A caller that wants a period writes the three-line re-arm itself (see `RepeatingTimer` in `aio_test_lib.cc`, or `ShmTimerHandler`). `TimerHandler::Schedule(base, repeat_offset)` — the API robot code actually uses — is unchanged.
 - `WPILibRobotBase::AddLoop()` is a breaking API change: it takes a factory instead of an already-built `ShmEventLoop*`. There are zero in-tree callers of the current (pre-factory) signature; out-of-tree robot code gets a compile error pointing at the new contract rather than a silent downgrade.
 
 ## Alternatives considered
@@ -283,7 +283,7 @@ The per-timer cost this would remove — one fd, one `read(2)` per firing — is
 
 The figures quoted in "Lessons" below (10,000-run gates, 25,020 remote runs) predate the timer redesign. That change has been re-verified against the full `//aos/...` suite and high `--runs_per_test` counts, not another 10,000-run gate.
 
-See `aos/events/aio_test.cc` and `aos/events/shm_event_loop_test.cc` for the regression tests covering each mechanism.
+See `aos/events/aio_test_lib.cc` and `aos/events/shm_event_loop_test.cc` for the regression tests covering each mechanism.
 
 ## Lessons learned
 

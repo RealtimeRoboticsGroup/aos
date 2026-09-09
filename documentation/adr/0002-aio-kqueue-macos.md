@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed. Implemented in `aos/events/aio_darwin.cc`, `aos/events/timer_queue.h`, `aos/events/aio_uv.cc` and `aos/events/glib_main_loop.cc`. The kqueue backend, the libuv backend on macOS, and `GlibMainLoop` on macOS are all in tree and tested: `//aos/...` runs 135 test targets green on `darwin_arm64`, and `//...` 212. Twenty targets remain Linux-only for reasons unrelated to `Aio` (SCTP, `signalfd`, `timerfd`, `starter`/subprocess, stacktraces), and ten cases inside `aio_test` skip themselves as io_uring-specific.
+Proposed. Implemented in `aos/events/aio_darwin.cc`, `aos/events/timer_queue.h`, `aos/events/aio_uv.cc` and `aos/events/glib_main_loop.cc`. The kqueue backend, the libuv backend on macOS, and `GlibMainLoop` on macOS are all in tree and tested: `//aos/...` runs 135 test targets green on `darwin_arm64`, and `//...` 212. Twenty targets remain Linux-only for reasons unrelated to `Aio` (SCTP, `signalfd`, `timerfd`, `starter`/subprocess, stacktraces), and the io_uring-specific `aio_test` cases are not instantiated there.
 
 ## Context
 

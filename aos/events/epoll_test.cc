@@ -257,7 +257,7 @@ TEST_P(EPollTest, RemoveWithoutEvents) {
   epoll_->DeleteFd(pipe.read_fd());
 }
 
-// The backends this platform has, the same way aio_test.cc picks them.
+// The backends this platform has, the same way aio_test_native.cc picks them.
 // --aio_backend is fatal on any name the platform has no backend for.
 //
 // Built as a function rather than inline in the macro call below: a
