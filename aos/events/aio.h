@@ -139,9 +139,11 @@ struct AsyncRequest {
 //    until its callback runs, before destroying the Aio.
 // 3. Callback Reentrancy: Completion callbacks run synchronously inside
 //    Poll() and should not block the event loop thread.  Poll() is not
-//    reentrant: calling it from a completion callback or before-wait
-//    function is a fatal error.  To wait for another completion, return
-//    and let the event loop deliver it.
+//    reentrant: calling it from anywhere inside a Poll() is a fatal
+//    error, whether that is a completion callback, a before-wait
+//    function, or a destructor the loop runs on its way out of a
+//    dispatch.  To wait for another completion, return and let the event
+//    loop deliver it.
 class Aio {
  public:
   struct TimerState;

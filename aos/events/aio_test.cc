@@ -759,6 +759,47 @@ TEST_P(AioTest, NestedPollDeathTest) {
       "reentered");
 }
 
+// The other way into a nested Poll(), and equally fatal: not a callback, but
+// a destructor the loop runs on its way out of one.  A callback that deletes
+// its own fd parks the registration rather than freeing it mid-dispatch, and
+// the parked state is freed at the end of that same Poll() -- which destroys
+// the callback, which destroys its captures.
+TEST_P(AioTest, NestedPollFromCaptureDestructorDeathTest) {
+  ScopedDeathTestWatchdog watchdog;
+  Aio aio;
+  Pipe pipe;
+
+  // Armed only once the callback has run, so the copies std::function makes
+  // while the registration is being built don't poll on their way out.
+  struct PollOnDestruction {
+    ~PollOnDestruction() {
+      if (*armed) {
+        aio->Poll(false);
+      }
+    }
+    Aio *aio;
+    bool *armed;
+  };
+
+  // All of it inside the child.  The fork shares this process's epoll
+  // instance, so a registration made out here and deleted in there leaves
+  // nothing behind for the cleanup to remove.
+  EXPECT_DEATH(
+      {
+        bool armed = false;
+        aio.OnReadable(
+            pipe.read_fd(),
+            [&aio, &pipe, &armed, guard = PollOnDestruction{&aio, &armed}]() {
+              armed = true;
+              aio.DeleteFd(pipe.read_fd());
+            });
+        pipe.Write("a");
+        while (aio.Poll(true)) {
+        }
+      },
+      "reentered");
+}
+
 // Tests that mixing OnEvents and other legacy hooks or calling invalid methods
 // triggers assertions.
 TEST_P(AioTest, MixedRegistrationAndInvalidHookDeathTest) {
@@ -1058,6 +1099,96 @@ TEST_P(AioTest, LegacyFdTest) {
 
   // Clean up.
   EXPECT_EQ(pipe.Read(1), "a");
+}
+
+// One poll backs every legacy fd, armed on the epoll instance rather than on
+// the fd that fired, and re-armed before the drain dispatches.  So the
+// readiness that re-arm sees belongs to no particular registration:
+//
+// 1. A and B are both registered readable.
+// 2. A becomes readable, and the loop reports A.
+// 3. B becomes readable from inside A's callback, after the re-arm was
+//    queued.
+// 4. A's callback fully drains A.
+// 5. The instance was readable the whole way through, but by the end it is
+//    readable for B rather than for the fd that was just drained.
+//
+// B has to be delivered exactly once.  The second half of the test takes
+// away B, so the surviving readiness is one the callback itself consumed:
+// that has to cost a bounded number of polls rather than spin.
+TEST_P(AioTest, EpollReadinessSpansRegistrations) {
+  Aio aio;
+  Pipe a;
+  Pipe b;
+
+  size_t a_count = 0;
+  size_t b_count = 0;
+
+  bool arm_b = true;
+  aio.OnReadable(a.read_fd(), [&]() {
+    ++a_count;
+    // Step 3: B goes ready while A's event is mid-dispatch.
+    if (arm_b) {
+      b.Write("b");
+    }
+    // Step 4: and A is fully drained, so nothing about A is still ready.
+    EXPECT_EQ(a.Read(1), "a");
+  });
+  aio.OnReadable(b.read_fd(), [&]() {
+    ++b_count;
+    EXPECT_EQ(b.Read(1), "b");
+  });
+
+  a.Write("a");
+
+  size_t polls = 0;
+  while (b_count == 0 && polls < 100) {
+    aio.Poll(true);
+    ++polls;
+  }
+  ABSL_LOG(INFO) << "Polls to deliver A and then B: " << polls;
+  EXPECT_EQ(a_count, 1);
+  EXPECT_EQ(b_count, 1);
+
+  // Both drained.  A bounded number of non-blocking polls has to run out:
+  // an unbounded one is the busy loop an unconsumable level-triggered
+  // readiness would produce.
+  size_t spins = 0;
+  while (spins < 50 && aio.Poll(false)) {
+    ++spins;
+  }
+  ABSL_LOG(INFO) << "Non-blocking polls before the loop went quiet: " << spins;
+  EXPECT_LT(spins, 50);
+  EXPECT_EQ(a_count, 1);
+  EXPECT_EQ(b_count, 1);
+
+  // The same thing with nothing behind it: A goes ready alone and its
+  // callback drains it, so the only readiness the re-arm was queued against
+  // is one that callback has since consumed.  Bounded polls again, not an
+  // endless supply of them.
+  arm_b = false;
+  a.Write("a");
+
+  polls = 0;
+  while (a_count == 1 && polls < 100) {
+    aio.Poll(true);
+    ++polls;
+  }
+  ABSL_LOG(INFO) << "Polls to deliver A alone: " << polls;
+  EXPECT_EQ(a_count, 2);
+  EXPECT_EQ(b_count, 1);
+
+  spins = 0;
+  while (spins < 50 && aio.Poll(false)) {
+    ++spins;
+  }
+  ABSL_LOG(INFO) << "Non-blocking polls after draining A alone: " << spins;
+  EXPECT_LT(spins, 50);
+  EXPECT_EQ(a_count, 2);
+  EXPECT_EQ(b_count, 1);
+
+  aio.DeleteFd(a.read_fd());
+  aio.DeleteFd(b.read_fd());
 }
 
 // Tests the writable readiness behavior of OnEvents (using 0x04 / POLLOUT).

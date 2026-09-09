@@ -310,6 +310,21 @@ inline uint64_t NewIncarnationUserData(AsyncRequest *req) {
   return EncodeUserData(req, 0);
 }
 
+// Arms `req` on `sqe` as a fresh incarnation, setting the four fields that
+// have to move together.
+//
+// For this file's own registrations only.  A caller's AsyncRead()/AsyncWrite()
+// request carries its own callback, context and user_data, and a cancel names
+// the existing incarnation rather than starting one.
+inline void ArmRequest(struct io_uring_sqe *sqe, AsyncRequest *req,
+                       CompletionCallback callback, void *context) {
+  io_uring_sqe_set_data64(sqe, NewIncarnationUserData(req));
+  req->callback = callback;
+  req->context = context;
+  req->user_data = req;
+  req->done = false;
+}
+
 // Translates a raw io_uring CQE result code into the public Completion
 // status/result pair.  Only one caller today (ReapCompletions()), but kept
 // separate since the translation logic is a distinct concern from iterating
@@ -500,7 +515,7 @@ struct IoUringTimerState : public Aio::TimerState {
 // completion handling is two-phase: DrainCompletions() extracts CQEs and
 // queues callbacks on pending_dispatch_ without running any user code,
 // then ReapCompletions() dispatches.  Poll() itself is not reentrant --
-// a callback calling Poll() dies on a CHECK (see there).
+// reentering it from anywhere inside it dies on a CHECK (see there).
 //
 // Legacy fds.  OnReadable()/OnWritable()/OnEvents() fds live on one
 // embedded epoll instance, watched by a single-shot POLL_ADD that is
@@ -756,10 +771,15 @@ class IoUringImpl : public Aio::Impl {
   // DrainCompletions(), drained only by ReapCompletions() -- see both for why
   // extraction and dispatch are deliberately two separate steps.
   IntrusiveDoublyLinkedList<AsyncRequest, DispatchLinkTraits> pending_dispatch_;
-  // True while ReapCompletions() is dispatching.  Backs Poll()'s
-  // reentrancy CHECK, and tells teardown paths that a callback frame may
-  // be live so they park state instead of freeing it.
+  // True while ReapCompletions() is dispatching.  Tells teardown paths
+  // that a callback frame may be live, so they park state instead of
+  // freeing it.
   bool dispatching_ = false;
+  // True for the whole of ReapCompletions(): the dispatch loop and the
+  // bookkeeping after it.  Backs Poll()'s reentrancy CHECK.  Deliberately
+  // wider than dispatching_, which has to go false before that bookkeeping
+  // so a DeleteFd() from one of the destructors it runs frees inline.
+  bool in_poll_ = false;
   // Set by ReapCompletions()'s dispatch loop once it has delivered a
   // user-visible completion, which is what ends that Poll()'s dispatch.
   // Internal plumbing -- the wakeup read, the legacy-epoll poll re-arm, a
@@ -820,8 +840,9 @@ class IoUringImpl : public Aio::Impl {
   // dispatch that parked them (ReapCompletions()) -- a context that is
   // deterministically non-RT, because DeleteFd()/ForgetClosedFd() are
   // CheckNotRealtime().  There is deliberately no RT conditional anywhere
-  // in this lifecycle.  Owned raw pointers (released from their
-  // unique_ptrs at retirement).
+  // in this lifecycle.  Retiring release()es the state out of
+  // legacy_states' unique_ptr and parks it here; ReapCompletions()' sweep
+  // deletes it.
   IntrusiveStack<LegacyState, RetiredLegacyTraits> retired_legacy_states_;
 
   // One shared epoll instance backing every OnReadable/OnWritable/OnError/
@@ -981,8 +1002,12 @@ void IoUringImpl::UpdateLegacyEpoll(LegacyState *state) {
   if (state->events == 0) {
     if (state->epoll_registered) {
       int ret = epoll_ctl(legacy_epoll_fd_, EPOLL_CTL_DEL, state->fd, nullptr);
-      ABSL_PCHECK(ret == 0 || errno == ENOENT)
-          << "epoll_ctl DEL failed for fd " << state->fd;
+      // Strict, like EPoll::DoEpollCtl().  ENOENT means the fd isn't ours
+      // any more, and the number could have been reused by now.  Abort to draw
+      // attention to the use-after-free instead of allowing the process to
+      // continue with file descriptors incorrectly closed. ForgetClosedFd() is
+      // the API for an fd that is already closed.
+      ABSL_PCHECK(ret == 0) << "epoll_ctl DEL failed for fd " << state->fd;
       state->epoll_registered = false;
     }
     return;
@@ -1014,48 +1039,59 @@ void IoUringImpl::SubmitLegacyEpollPoll() {
   // EPollLikeBasicWritable live).  A fresh single-shot arm re-checks
   // current readiness at arm time, so it fires immediately if the
   // condition never went away.
+  //
+  // That readiness is the whole epoll instance's, not one fd's, so a
+  // callback which fully drains its own fd can still re-fire immediately
+  // for a different one.  The SQE is only queued here; the next Poll()
+  // submits it, so the kernel checks readiness after this firing's
+  // callbacks ran and one they consumed produces nothing.
+  // EpollReadinessSpansRegistrations covers both.
   struct io_uring_sqe *sqe = ArmSqe();
 
   io_uring_prep_poll_add(sqe, legacy_epoll_fd_, POLLIN);
-  io_uring_sqe_set_data64(sqe, NewIncarnationUserData(&legacy_epoll_request_));
 
-  legacy_epoll_request_.callback = [](Completion completion, void *context) {
-    auto *impl = static_cast<IoUringImpl *>(context);
-    // Nothing ever cancels this poll, so any failure is unexpected -- and
-    // absorbing it would silently stop every OnReadable/OnWritable/
-    // OnError/OnEvents callback on this loop (this poll is the only thing
-    // that ever fires them).
-    ABSL_CHECK(aos::IsOk(completion.status))
-        << "Poll on the embedded legacy-fd epoll instance failed: "
-        << aos_strerror(completion.result);
-    // Re-arm before dispatching: a single-shot poll is consumed by this
-    // firing, so the next check needs to be queued now, regardless of
-    // what a callback below ends up doing (including deleting fds this
-    // very drain pass would otherwise still be about to look at).
-    impl->SubmitLegacyEpollPoll();
-    if (impl->DrainLegacyEpoll()) {
-      impl->user_dispatch_ = true;
-    }
-  };
-  legacy_epoll_request_.context = this;
-  legacy_epoll_request_.user_data = &legacy_epoll_request_;
-  legacy_epoll_request_.done = false;
+  ArmRequest(
+      sqe, &legacy_epoll_request_,
+      [](Completion completion, void *context) {
+        auto *impl = static_cast<IoUringImpl *>(context);
+        // Nothing ever cancels this poll, so any failure is unexpected --
+        // and absorbing it would silently stop every OnReadable/
+        // OnWritable/OnError/OnEvents callback on this loop (this poll is
+        // the only thing that ever fires them).
+        ABSL_CHECK(aos::IsOk(completion.status))
+            << "Poll on the embedded legacy-fd epoll instance failed: "
+            << aos_strerror(completion.result);
+        // Re-arm before dispatching: a single-shot poll is consumed by
+        // this firing, so the next check needs to be queued now,
+        // regardless of what a callback below ends up doing (including
+        // deleting fds this very drain pass would otherwise still be
+        // about to look at).
+        impl->SubmitLegacyEpollPoll();
+        if (impl->DrainLegacyEpoll()) {
+          impl->user_dispatch_ = true;
+        }
+      },
+      this);
 }
 
 bool IoUringImpl::DrainLegacyEpoll() {
-  // One event per firing.  Fairness comes from level-triggered epoll
-  // itself: a still-ready fd goes back on the ready list's tail, so
-  // successive firings rotate through every ready fd.  The re-armed
-  // POLL_ADD (queued before this by the caller) checks readiness at arm
-  // time, so any remaining events fire it again on the next Poll().  This
-  // is also what keeps legacy fds fair against the ring's native work: a
-  // Poll() dispatches at most one legacy event alongside that cycle's
-  // native completions, instead of a whole batch crowding them out.  Not
-  // a drain-to-empty loop: that busy-spins forever on any fd whose
-  // callback doesn't consume its own readiness (e.g. LegacyFdTest's
-  // OnEvents callback, which just counts -- confirmed live).  One event
-  // also means no stale-batch hazard: nothing runs between epoll_wait()
-  // and dispatch, so the by-fd lookup below cannot race a deletion.
+  // One event per firing.  An event is not a callback: its mask can carry
+  // readable, writable and error, which go to three separate handlers
+  // below.  That is the bounded exception Aio::Poll() documents.
+  //
+  // Fairness comes from level-triggered epoll itself: a still-ready fd goes
+  // back on the ready list's tail, so successive firings rotate through
+  // every ready fd.  The re-armed POLL_ADD (queued before this by the
+  // caller) checks readiness at arm time, so any remaining events fire it
+  // again on the next Poll().  This is also what keeps legacy fds fair
+  // against the ring's native work: a Poll() dispatches at most one legacy
+  // event alongside that cycle's native completions, instead of a whole
+  // batch crowding them out.  Not a drain-to-empty loop: that busy-spins
+  // forever on any fd whose callback doesn't consume its own readiness
+  // (e.g. LegacyFdTest's OnEvents callback, which just counts -- confirmed
+  // live).  One event also means no stale-batch hazard: nothing runs
+  // between epoll_wait() and dispatch, so the by-fd lookup below cannot
+  // race a deletion.
   struct epoll_event event;
   int n = epoll_wait(legacy_epoll_fd_, &event, 1, 0);
   if (n < 0) {
@@ -1162,9 +1198,8 @@ void IoUringImpl::ThreadSignalReceiverState::Submit(IoUringImpl *impl) {
   struct io_uring_sqe *sqe = impl->ArmSqe();
 
   io_uring_prep_poll_multishot(sqe, fd, POLLIN);
-  io_uring_sqe_set_data64(sqe, NewIncarnationUserData(&request));
 
-  request.callback = [](Completion completion, void *context) {
+  const CompletionCallback callback = [](Completion completion, void *context) {
     auto state = static_cast<ThreadSignalReceiverState *>(context);
     if (state->unregistered) {
       // A CQE that was already kernel-side (or queued) when the receiver
@@ -1247,9 +1282,7 @@ void IoUringImpl::ThreadSignalReceiverState::Submit(IoUringImpl *impl) {
       state->impl->MaybeSubmit();
     }
   };
-  request.context = this;
-  request.user_data = &request;
-  request.done = false;
+  ArmRequest(sqe, &request, callback, this);
 }
 
 // Timer destruction, without blocking: disarm the timerfd, then either free
@@ -1654,7 +1687,11 @@ void IoUringImpl::ReArmPersistentRegistrations() {
   while (curr != nullptr) {
     Aio::TimerState *next = decltype(active_timers_)::Next(curr);
     curr->request.done = true;
-    curr->canceling = false;
+    // Only DestroyTimerState() sets `canceling`, and it unlinks the timer
+    // at the same time, so nothing reachable from here has it set.  Check
+    // rather than clear: clearing would resurrect the poll on a timer its
+    // owner has already destroyed.
+    ABSL_CHECK(!curr->canceling);
     static_cast<IoUringTimerState *>(curr)->SubmitPoll(/*draining_ok=*/true);
     curr = next;
   }
@@ -1664,9 +1701,10 @@ bool IoUringImpl::Poll(bool block) {
   // Not reentrant: a nested Poll() can never dispatch (the outer loop owns
   // delivery), so reentry could only silently starve its caller.  Die at
   // the call site instead; fatal is RT-clean.
-  ABSL_CHECK(!dispatching_ && !in_before_wait_)
-      << "Aio::Poll() reentered from inside a completion callback or "
-         "before-wait function; wait by returning to the event loop instead";
+  ABSL_CHECK(!in_poll_ && !in_before_wait_)
+      << "Aio::Poll() reentered from inside a completion callback, a "
+         "before-wait function, or a destructor the loop ran; wait by "
+         "returning to the event loop instead";
 
   CheckSubmitterThread();
   EnsureBound();
@@ -1784,9 +1822,13 @@ void IoUringImpl::AsyncRead(FileDescriptor fd, std::span<char> buffer,
   // re-arm path; everything else is a raw request a ring rebuild could not
   // reconstruct -- count it (see DowngradeFromSingleIssuer()).
   //
-  // Each loop constructs its own event_fd which means event_fd.wakeup_req
-  // cannot be reused from a dead loop.
-  if (request != &event_fd.wakeup_req && !State(request).raw_io) {
+  // Unconditional, like the queued flag above: a request reused from a dead
+  // loop can arrive with raw_io still set, and skipping the increment would
+  // undercount.  On this loop it is always clear by now, since
+  // DrainCompletions() clears it on the terminal completion.  Each loop
+  // constructs its own event_fd, so event_fd.wakeup_req cannot be reused from
+  // a dead loop.
+  if (request != &event_fd.wakeup_req) {
     State(request).raw_io = 1;
     ++raw_requests_in_flight_;
   }
@@ -1802,11 +1844,9 @@ void IoUringImpl::AsyncWrite(FileDescriptor fd, std::span<const char> buffer,
   // See AsyncRead() for the stale-queued-flag clear.
   State(request).link.queued = 0;
   request->done = false;
-  // See AsyncRead().
-  if (!State(request).raw_io) {
-    State(request).raw_io = 1;
-    ++raw_requests_in_flight_;
-  }
+  // See AsyncRead().  No wakeup_req exception here; the wakeup is a read.
+  State(request).raw_io = 1;
+  ++raw_requests_in_flight_;
 }
 
 void IoUringImpl::Cancel(AsyncRequest *request) {
@@ -1937,8 +1977,8 @@ void IoUringImpl::DeleteFd(FileDescriptor fd) {
 
   if (it->second->epoll_registered) {
     int ret = epoll_ctl(legacy_epoll_fd_, EPOLL_CTL_DEL, fd, nullptr);
-    ABSL_PCHECK(ret == 0 || errno == ENOENT)
-        << "epoll_ctl DEL failed for fd " << fd;
+    // Strict; see UpdateLegacyEpoll().
+    ABSL_PCHECK(ret == 0) << "epoll_ctl DEL failed for fd " << fd;
   }
   // Mid-dispatch the state is parked, not destroyed: a callback may
   // DeleteFd() its own fd, in which case one of this state's
@@ -2119,13 +2159,20 @@ void IoUringImpl::ConsumeThreadSignalReceiver(
   // multishot poll delivers through, and a cross-thread drain would race
   // the loop thread's own dispatch of it.
   CheckSubmitterThread();
-  int fd = receiver->fd();
-  struct signalfd_siginfo siginfo;
+  const int fd = receiver->fd();
+  // Batched like the trampoline's drain in
+  // ThreadSignalReceiverState::Submit(); see there for why a short read
+  // ends the loop.
+  struct signalfd_siginfo siginfos[16];
   while (true) {
-    ssize_t res = read(fd, &siginfo, sizeof(siginfo));
-    if (res < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+    const ssize_t res = read(fd, siginfos, sizeof(siginfos));
+    if (res > 0) {
+      if (static_cast<size_t>(res) < sizeof(siginfos)) {
+        break;  // Short read: nothing was left pending.
+      }
+    } else if (res < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
       break;
-    } else if (res < 0) {
+    } else {
       ABSL_LOG(FATAL) << "Failed to read from signalfd: "
                       << aos_strerror(errno);
     }
@@ -2201,11 +2248,7 @@ void IoUringTimerState::SubmitPoll(bool draining_ok) {
   // a real edge, which is the only thing IORING_OP_POLL_ADD ever completes
   // on.  So the steady state costs zero SQEs per firing.
   io_uring_prep_poll_multishot(sqe, timer_fd->fd(), POLLIN);
-  io_uring_sqe_set_data64(sqe, NewIncarnationUserData(&request));
-
-  request.callback = &IoUringTimerState::OnTimerFdReadable;
-  request.context = this;
-  request.done = false;
+  ArmRequest(sqe, &request, &IoUringTimerState::OnTimerFdReadable, this);
 }
 
 void IoUringTimerState::OnTimerFdReadable(Completion completion, void *ctx) {
@@ -2255,10 +2298,17 @@ void IoUringTimerState::OnTimerFdReadable(Completion completion, void *ctx) {
     tstate->impl_->MaybeSubmit();
   }
 
-  if (!expired || tstate->user_callback == nullptr) {
+  // Last use of tstate.  A callback may destroy its own timer, and
+  // DestroyTimerState() frees the state outright when the poll has already
+  // resolved, so dispatch off copies rather than depending on the re-arm
+  // above having cleared `done`.
+  const CompletionCallback user_callback = tstate->user_callback;
+  void *const user_context = tstate->user_context;
+  IoUringImpl *const impl = tstate->impl_;
+
+  if (!expired || user_callback == nullptr) {
     return;
   }
-  // Last use of tstate -- see above.
   Completion timer_completion;
   // nullptr, exactly as documented: Completion::user_data is "the opaque
   // pointer supplied by the caller", and Timer::Schedule() takes no
@@ -2267,8 +2317,8 @@ void IoUringTimerState::OnTimerFdReadable(Completion completion, void *ctx) {
   timer_completion.user_data = nullptr;
   timer_completion.status = aos::Ok();
   timer_completion.result = 0;
-  tstate->impl_->user_dispatch_ = true;
-  tstate->user_callback(timer_completion, tstate->user_context);
+  impl->user_dispatch_ = true;
+  user_callback(timer_completion, user_context);
 }
 
 void IoUringTimerState::Schedule(aos::monotonic_clock::time_point deadline,
@@ -2422,6 +2472,9 @@ bool IoUringImpl::DrainCompletions() {
 }
 
 bool IoUringImpl::ReapCompletions() {
+  // Backs Poll()'s reentrancy CHECK for everything below, callbacks and
+  // the teardown bookkeeping alike.
+  in_poll_ = true;
   // Drain the ring first: every currently-available entry is resolved
   // (done set) and, if it has a callback, queued -- see DrainCompletions()
   // for why this part is unconditionally safe regardless of nesting.
@@ -2467,10 +2520,15 @@ bool IoUringImpl::ReapCompletions() {
   // the retired-legacy sweep below: the deferral only happens inside
   // UnregisterThreadSignalReceiver(), which is CheckNotRealtime() and ran
   // on this thread inside this very dispatch.
-  if (deferred_receiver_callback_clear_ != nullptr) {
+  //
+  // Cleared before the destructor runs rather than after, matching the
+  // sweep below popping before it deletes: destroying the std::function
+  // runs its captures' destructors, which are user code, and this pointer
+  // must never name a function that is already being destroyed.
+  if (ThreadSignalReceiverState *state = deferred_receiver_callback_clear_) {
     aos::CheckNotRealtime();
-    deferred_receiver_callback_clear_->callback = nullptr;
     deferred_receiver_callback_clear_ = nullptr;
+    state->callback = nullptr;
   }
 
   // Free legacy registrations retired mid-dispatch (see DeleteFd()).  Why
@@ -2487,8 +2545,12 @@ bool IoUringImpl::ReapCompletions() {
   //     these don't).
   //   * ~LegacyState runs capture destructors, which may reenter the Aio;
   //     dispatching_ is already false and the node is popped before the
-  //     delete, so a reentrant DeleteFd() frees inline and a reentrant
-  //     Poll() is just a fresh dispatch.
+  //     delete, so a reentrant DeleteFd() frees inline.  A reentrant
+  //     Poll() dies here like anywhere else inside Poll(), which is what
+  //     in_poll_ is for: this and the receiver-callback clear above are
+  //     the only points where user code runs with the dispatch loop
+  //     already marked done, and a Poll() from one would otherwise
+  //     dispatch without its caller knowing.
   //   * Non-RT is *checked*, not assumed: parking requires passing
   //     DeleteFd()/ForgetClosedFd()'s CheckNotRealtime() inside this very
   //     dispatch, and the check below catches the one path that could
@@ -2503,11 +2565,12 @@ bool IoUringImpl::ReapCompletions() {
     } while ((state = retired_legacy_states_.Pop()) != nullptr);
   }
 
-  // Safe point to recycle drained orphans: no CQ scan is live and nothing
-  // is mid-dispatch.  Recycling never allocates or frees, so this is fine
-  // on an RT thread too.
+  // Safe point to recycle drained orphans: no CQ scan is live and every
+  // dispatch frame has unwound.  Recycling never allocates or frees, so
+  // this is fine on an RT thread too.
   RecycleDrainedOrphans();
 
+  in_poll_ = false;
   return processed;
 }
 
