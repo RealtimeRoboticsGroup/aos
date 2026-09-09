@@ -1,9 +1,9 @@
 diff --git a/BUILD.bazel b/BUILD.bazel
 new file mode 100644
-index 0000000..ae859f5
+index 0000000000000000000000000000000000000000..c44f63b07504e6f4bc29c2fb09f3da8fc730a8e7
 --- /dev/null
 +++ b/BUILD.bazel
-@@ -0,0 +1,67 @@
+@@ -0,0 +1,69 @@
 +# SPDX-License-Identifier: Apache-2.0
 +
 +load("@rules_cc//cc:defs.bzl", "cc_library")
@@ -15,21 +15,23 @@ index 0000000..ae859f5
 +# can only reach $(CC_FLAGS), which omits the target triple and makes every
 +# probe fail when cross compiling.
 +#
-+# The kernel headers still come from the host, which is as hermetic as this can
-+# get -- they describe the kernel we'd run against, not the one we build on.
-+# The compatibility layer keeps the result portable.
++# Because the probes get the real command line, the headers they read -- libc
++# and the kernel uapi ones describing io_uring itself -- come from the
++# toolchain's sysroot, the same place the library's own compiles get them.  The
++# generated shims therefore describe the target, not the machine running the
++# build.
 +liburing_configure(
 +    name = "generate_headers",
++    srcs = [
++        "Makefile.common",
++        "liburing.spec",
++    ],
 +    outs = [
 +        "config-host.h",
 +        "src/include/liburing/compat.h",
 +        "src/include/liburing/io_uring_version.h",
 +    ],
 +    configure = "configure",
-+    srcs = [
-+        "Makefile.common",
-+        "liburing.spec",
-+    ],
 +)
 +
 +cc_library(
@@ -73,7 +75,7 @@ index 0000000..ae859f5
 +)
 diff --git a/liburing_configure.bzl b/liburing_configure.bzl
 new file mode 100644
-index 0000000..164bcd5
+index 0000000000000000000000000000000000000000..cc763a8589db074f25d36c6f4a399cd02d8f771d
 --- /dev/null
 +++ b/liburing_configure.bzl
 @@ -0,0 +1,167 @@
@@ -88,14 +90,18 @@ index 0000000..164bcd5
 +real one and the library stops compiling.
 +
 +A genrule can't avoid this: it can only reach $(CC) and $(CC_FLAGS), and
-+$(CC_FLAGS) is just the sysroot.  Cross compiling, the target triple is missing,
-+so every probe that includes a libc header fails against a sysroot for the wrong
-+architecture.  Reaching the full command line means asking the toolchain for it
-+through cc_common, which needs a rule.
++$(CC_FLAGS) is missing the target architecture triple.  It does carry the
++sysroot, so cross compiling the probes get a compiler defaulting to the host
++architecture pointed at a sysroot for the target one, and every probe that
++includes a libc header fails on the mismatch.  Reaching the full command line
++means asking the toolchain for it through cc_common, which needs a rule.
 +"""
 +
-+load("@bazel_tools//tools/build_defs/cc:action_names.bzl", "C_COMPILE_ACTION_NAME")
-+load("@bazel_tools//tools/cpp:toolchain_utils.bzl", "find_cpp_toolchain", "use_cpp_toolchain")
++load("@rules_cc//cc:action_names.bzl", "ACTION_NAMES")
++load("@rules_cc//cc:find_cc_toolchain.bzl", "find_cc_toolchain", "use_cc_toolchain")
++load("@rules_cc//cc/common:cc_common.bzl", "cc_common")
++
++visibility("private")
 +
 +# Flags which make sense when compiling a translation unit but not when running
 +# a configure probe.  Dependency-file flags name an output configure has no
@@ -139,7 +145,7 @@ index 0000000..164bcd5
 +    return output.path[len(prefix):]
 +
 +def _liburing_configure_impl(ctx):
-+    cc_toolchain = find_cpp_toolchain(ctx)
++    cc_toolchain = find_cc_toolchain(ctx)
 +    feature_configuration = cc_common.configure_features(
 +        ctx = ctx,
 +        cc_toolchain = cc_toolchain,
@@ -149,7 +155,7 @@ index 0000000..164bcd5
 +
 +    compiler = cc_common.get_tool_for_action(
 +        feature_configuration = feature_configuration,
-+        action_name = C_COMPILE_ACTION_NAME,
++        action_name = ACTION_NAMES.c_compile,
 +    )
 +    compile_variables = cc_common.create_compile_variables(
 +        feature_configuration = feature_configuration,
@@ -159,7 +165,7 @@ index 0000000..164bcd5
 +        flag
 +        for flag in cc_common.get_memory_inefficient_command_line(
 +            feature_configuration = feature_configuration,
-+            action_name = C_COMPILE_ACTION_NAME,
++            action_name = ACTION_NAMES.c_compile,
 +            variables = compile_variables,
 +        )
 +        if _keep_flag(flag)
@@ -206,15 +212,11 @@ index 0000000..164bcd5
 +            "{}={}".format(_output_relative_path(ctx, output), output.path)
 +            for output in outputs
 +        ],
-+        # configure shells out to make, awk, sed and friends, so it needs a
-+        # PATH to find them (actions get a scrubbed environment by default,
-+        # which leaves make reporting "awk: No such file or directory").  A
-+        # pinned PATH rather than use_default_shell_env: the latter hands the
-+        # action whatever environment the invoking client happens to have,
-+        # without making it part of the action key -- so two machines with
-+        # different environments produce "identical" cache entries and
-+        # whichever populates the remote cache first wins for everyone.
-+        env = {"PATH": "/usr/bin:/bin"},
++        # configure shells out to make, awk, sed and friends, so it needs a PATH
++        # to find them.  Actions get a scrubbed environment by default, which
++        # leaves make reporting "awk: No such file or directory"; the genrule
++        # this replaced got the default environment implicitly.
++        use_default_shell_env = True,
 +        mnemonic = "LiburingConfigure",
 +        progress_message = "Configuring liburing for %{label}",
 +    )
@@ -241,6 +243,6 @@ index 0000000..164bcd5
 +        ),
 +    },
 +    fragments = ["cpp"],
-+    toolchains = use_cpp_toolchain(),
++    toolchains = use_cc_toolchain(),
 +    doc = "Generates liburing's configure-time headers for the target platform.",
 +)

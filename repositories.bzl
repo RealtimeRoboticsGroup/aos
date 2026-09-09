@@ -145,14 +145,16 @@ alias(
         url = "https://realtimeroboticsgroup.org/build-dependencies/2025-10-25-walnascar-arm64-nvidia-rootfs.tar.zst",
     )
 
-    # Kept in sync with the liburing bazel_dep in MODULE.bazel.  The patch is
-    # the same one the registry module applies, and it is what supplies
-    # BUILD.bazel, so there is no build_file here.
+    # Kept in sync with the liburing bazel_dep in MODULE.bazel.  bzlmod gets
+    # BUILD.bazel and liburing_configure.bzl from the registry's overlay;
+    # WORKSPACE mode cannot apply an overlay, so it patches the same content
+    # in.  That is also what supplies BUILD.bazel, so there is no build_file
+    # here.
     http_archive(
         name = "liburing",
         integrity = "sha256-X4CWQQiYHGrZecc18LSHfV9JkUwqBi+OiCgvJr9h3gw=",
         patch_args = ["-p1"],
-        patches = ["//:registry/modules/liburing/2.14.bcr.1/patches/01-add-bazel-build-support.patch"],
+        patches = ["//:third_party/liburing/add-bazel-build-support.patch"],
         strip_prefix = "liburing-liburing-2.14",
         url = "https://github.com/axboe/liburing/archive/refs/tags/liburing-2.14.tar.gz",
     )
