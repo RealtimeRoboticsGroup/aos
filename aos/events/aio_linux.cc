@@ -240,6 +240,9 @@ struct AioState {
   // IoUringImpl::raw_requests_in_flight_, which is what lets a ring
   // rebuild refuse loudly instead of silently dropping raw requests it has
   // no registry to re-arm -- see DowngradeFromSingleIssuer().
+  //
+  // Note that this is a boolean flag, but uses uint8_t to ensure struct
+  // alignment/packing without complications around the "bool" type.
   uint8_t raw_io;
   // Set at queue time when this request's callback is the caller's own
   // completion callback rather than one of this file's trampolines, so
@@ -249,6 +252,9 @@ struct AioState {
   // trampolines (timers, thread-signal receivers, the legacy-epoll poll)
   // report for themselves instead -- they routinely dispatch without
   // delivering anything to the user.
+  //
+  // Note that this is a boolean flag, but uses uint8_t to ensure struct
+  // alignment/packing without complications around the "bool" type.
   uint8_t user_visible;
 };
 
@@ -292,7 +298,8 @@ static_assert(alignof(AsyncRequest) >= 4,
 inline uint64_t EncodeUserData(AsyncRequest *req, uint64_t tag) {
   const uint64_t ptr = reinterpret_cast<uint64_t>(req);
   ABSL_CHECK_EQ(ptr >> kGenerationShift, uint64_t{0})
-      << "AsyncRequest pointer does not fit the user_data encoding";
+      << "AsyncRequest pointer " << req
+      << " does not fit the user_data encoding";
   return (uint64_t{State(req).generation} << kGenerationShift) | ptr | tag;
 }
 
@@ -354,9 +361,9 @@ constexpr uint32_t kErrorEvents = kErr;
 // time of 0, IOCP an absolute deadline of 0; both are simply in the past),
 // so this is the only place the divergence could come from.
 //
-// One nanosecond past the epoch is decades in the past on any running
-// system, so it expires immediately -- the requested behavior -- while being
-// non-zero, so the kernel arms rather than disarms.
+// One nanosecond past the epoch is long in the past (just after boot) on any
+// running system, so it expires immediately -- the requested behavior -- while
+// being non-zero, so the kernel arms rather than disarms.
 inline struct timespec AbsoluteTimerfdValue(
     aos::monotonic_clock::time_point deadline) {
   struct timespec ts = ::aos::time::to_timespec(deadline);
@@ -746,9 +753,8 @@ class IoUringImpl : public Aio::Impl {
   };
   // FIFO of resolved requests waiting for their callback to run -- see
   // AioState::link for why the links live there.  Populated only by
-  // DrainCompletions(),
-  // drained only by ReapCompletions() -- see both for why extraction and
-  // dispatch are deliberately two separate steps.
+  // DrainCompletions(), drained only by ReapCompletions() -- see both for why
+  // extraction and dispatch are deliberately two separate steps.
   IntrusiveDoublyLinkedList<AsyncRequest, DispatchLinkTraits> pending_dispatch_;
   // True while ReapCompletions() is dispatching.  Backs Poll()'s
   // reentrancy CHECK, and tells teardown paths that a callback frame may
@@ -1368,6 +1374,10 @@ IoUringImpl::~IoUringImpl() {
   // kernel -EEXIST rather than this clear message.  No-op if Run()/Poll() was
   // never called (submitter_tid_ unset): nothing bound yet to violate.
   CheckSubmitterThread();
+  // Deterministically illegal under RT: this destructor might not free any
+  // memory if there's nothing left, and we want to avoid non-deterministic
+  // violations of RT rules.
+  aos::CheckNotRealtime();
 
   // Owner-facing state must be gone first, exactly as EPoll::~EPoll() has
   // always CHECKed, and as aio.h documents ("All Fds must be cleaned up
@@ -1773,6 +1783,9 @@ void IoUringImpl::AsyncRead(FileDescriptor fd, std::span<char> buffer,
   // The internal wakeup read is a persistent registration with its own
   // re-arm path; everything else is a raw request a ring rebuild could not
   // reconstruct -- count it (see DowngradeFromSingleIssuer()).
+  //
+  // Each loop constructs its own event_fd which means event_fd.wakeup_req
+  // cannot be reused from a dead loop.
   if (request != &event_fd.wakeup_req && !State(request).raw_io) {
     State(request).raw_io = 1;
     ++raw_requests_in_flight_;
@@ -1832,7 +1845,7 @@ void IoUringImpl::BeforeWait(std::function<void()> function) {
   // storage.  Deterministically illegal rather than sometimes-corrupting.
   ABSL_CHECK(!in_before_wait_)
       << ": BeforeWait() may not be called from a before-wait function";
-  before_wait_functions.push_back(std::move(function));
+  before_wait_functions.emplace_back(std::move(function));
 }
 
 void IoUringImpl::OnReadable(FileDescriptor fd,

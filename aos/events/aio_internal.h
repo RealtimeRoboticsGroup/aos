@@ -153,6 +153,9 @@ class IntrusiveDoublyLinkedList {
 };
 
 struct Aio::TimerState {
+  TimerState() = default;
+  TimerState(const TimerState &) = delete;
+  TimerState &operator=(const TimerState &) = delete;
   virtual ~TimerState() = default;
 
   virtual void Initialize() = 0;
@@ -182,6 +185,9 @@ struct Aio::TimerState {
 };
 
 struct Aio::Impl {
+  Impl() = default;
+  Impl(const Impl &) = delete;
+  Impl &operator=(const Impl &) = delete;
   virtual ~Impl() = default;
 
   virtual std::unique_ptr<Aio::TimerState> MakeTimerState() = 0;

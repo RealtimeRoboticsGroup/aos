@@ -119,9 +119,9 @@ struct AsyncRequest {
 //    lockless_queue.cc's RobustOwnershipTracker) -- which SINGLE_ISSUER's
 //    binding would forbid. See
 //    documentation/adr/0001-aio-io-uring-single-issuer.md.
-// 2. Request Lifetime: The caller-supplied AsyncRequest object must remain
-//    valid and allocated in memory from the time it is submitted until its
-//    corresponding CompletionCallback is executed -- including for
+// 2. Request Lifetime: The caller-supplied AsyncRequest object and any buffers
+//    must remain valid and allocated in memory from the time it is submitted
+//    until its corresponding CompletionCallback is executed -- including for
 //    canceled requests, whose Canceled completion arrives through Poll()
 //    like any other.  Once the callback has run, the request may be freed
 //    or reused; nothing in the loop or the kernel names it afterward.
@@ -191,7 +191,8 @@ class Aio {
   // queued, so it is never lost to that race.
   bool Poll(bool block);
 
-  // Signals the loop to terminate execution.  Async-safe.
+  // Signals the loop to terminate execution.  Async-signal-safe (see
+  // signal-safety(7) for details of what this means).
   //
   // The request is sticky and consumed only by Run(): the first Quit()
   // wakes a blocked Poll()/Run() and latches the request; every further
@@ -256,6 +257,9 @@ class Aio {
     // the next future deadline, versus PhasedLoop, which counts them).
     // Pushing the repeat down here would mean owning that policy for
     // everyone and getting it wrong for someone.
+    //
+    // Destroying the Timer object is allowed from within a callback it is
+    // calling.
     void Schedule(aos::monotonic_clock::time_point deadline,
                   CompletionCallback callback, void *context = nullptr);
 
@@ -263,6 +267,10 @@ class Aio {
     // callback is dropped and will not be invoked, not even with a Canceled
     // status.  (Unlike Aio::Cancel() on a raw request, which delivers a
     // Canceled completion through Poll().)
+    //
+    // Calling Aio::Cancel is not necessary or allowed at any point, this Timer
+    // object handles synchronization during destruction at any point other than
+    // inside its own callback.
     void Cancel();
 
    private:
