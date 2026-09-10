@@ -154,13 +154,13 @@ void SensorReader::Loop() {
 
   if (pwm_trigger_) {
     // TODO(austin): Put this in a status message.
-    VLOG(1) << "PWM wakeup delta: "
-            << (monotonic_now - last_monotonic_now_).count();
+    ABSL_VLOG(1) << "PWM wakeup delta: "
+                 << (monotonic_now - last_monotonic_now_).count();
     last_monotonic_now_ = monotonic_now;
 
     monotonic_clock::time_point last_tick_timepoint = GetPWMStartTime();
-    VLOG(1) << "Start time " << last_tick_timepoint << " period "
-            << period_.count();
+    ABSL_VLOG(1) << "Start time " << last_tick_timepoint << " period "
+                 << period_.count();
     if (last_tick_timepoint == monotonic_clock::min_time) {
       return;
     }
@@ -172,7 +172,7 @@ void SensorReader::Loop() {
          period_) *
             period_ +
         chrono::microseconds(absl::GetFlag(FLAGS_pwm_offset));
-    VLOG(1) << "Now " << monotonic_now << " tick " << last_tick_timepoint;
+    ABSL_VLOG(1) << "Now " << monotonic_now << " tick " << last_tick_timepoint;
     // If it's over 1/2 of a period back in time, that's wrong.  Move it
     // forwards to now.
     if (last_tick_timepoint - monotonic_now < -period_ / 2) {

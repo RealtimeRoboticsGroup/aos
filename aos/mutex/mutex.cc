@@ -1,7 +1,7 @@
 #include "aos/mutex/mutex.h"
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/macros.h"
 
@@ -17,8 +17,8 @@ bool Mutex::Lock() {
   } else if (ret == 1) {
     return true;
   } else {
-    LOG(FATAL) << "mutex_grab(" << &impl_ << "(=" << std::hex << impl_.futex
-               << ")) failed with " << ret;
+    ABSL_LOG(FATAL) << "mutex_grab(" << &impl_ << "(=" << std::hex
+                    << impl_.futex << ")) failed with " << ret;
     AOS_UNREACHABLE();
   }
 }
@@ -35,8 +35,8 @@ Mutex::State Mutex::TryLock() {
     case 4:
       return State::kLockFailed;
     default:
-      LOG(FATAL) << "mutex_trylock(" << &impl_ << "(=" << std::hex
-                 << impl_.futex << ")) failed with " << ret;
+      ABSL_LOG(FATAL) << "mutex_trylock(" << &impl_ << "(=" << std::hex
+                      << impl_.futex << ")) failed with " << ret;
       AOS_UNREACHABLE();
   }
 }

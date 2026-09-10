@@ -78,7 +78,8 @@ void SplineDrivetrain::DeleteTrajectory(const fb::Trajectory *trajectory) {
     }
   }
 
-  LOG(FATAL) << "Trying to remove unknown trajectory " << trajectory->handle();
+  ABSL_LOG(FATAL) << "Trying to remove unknown trajectory "
+                  << trajectory->handle();
 }
 
 void SplineDrivetrain::AddTrajectory(const fb::Trajectory *trajectory) {

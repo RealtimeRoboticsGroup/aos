@@ -8,7 +8,7 @@
 #include <deque>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/numeric/int128.h"
 
 #include "aos/configuration.h"
@@ -48,7 +48,7 @@ class TimestampFilter {
   void set_base_offset(std::chrono::nanoseconds base_offset);
 
   double offset() const {
-    VLOG(2) << " " << this << " offset " << offset_;
+    ABSL_VLOG(2) << " " << this << " offset " << offset_;
     return offset_;
   }
 

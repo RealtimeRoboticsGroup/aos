@@ -1,7 +1,7 @@
 #include "frc/control_loops/drivetrain/distance_spline.h"
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/logging/logging.h"
 #include "frc/control_loops/drivetrain/spline.h"

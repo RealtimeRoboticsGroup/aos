@@ -1,8 +1,8 @@
 #include "aos/testing/ping_pong/pong_lib.h"
 
 #include "absl/flags/flag.h"
-#include "absl/log/log.h"
-#include "absl/log/vlog_is_on.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 
 #include "aos/events/event_loop.h"
 #include "aos/logging/logging.h"
@@ -38,9 +38,10 @@ Pong::Pong(EventLoop *event_loop)
 }
 
 void Pong::HandlePing(const examples::Ping &ping) {
-  if (last_value_ == ping.value() && (!quiet_ || VLOG_IS_ON(1))) {
-    LOG(WARNING) << "Duplicate ping value at " << last_value_
-                 << " time difference " << ping.send_time() - last_send_time_;
+  if (last_value_ == ping.value() && (!quiet_ || ABSL_VLOG_IS_ON(1))) {
+    ABSL_LOG(WARNING) << "Duplicate ping value at " << last_value_
+                      << " time difference "
+                      << ping.send_time() - last_send_time_;
   }
   last_value_ = ping.value();
   last_send_time_ = ping.send_time();
@@ -49,7 +50,7 @@ void Pong::HandlePing(const examples::Ping &ping) {
   builder->set_value(ping.value());
   builder->set_initial_send_time(ping.send_time());
   builder.CheckOk(builder.Send());
-  VLOG(2) << "Sending pong";
+  ABSL_VLOG(2) << "Sending pong";
 }
 
 }  // namespace aos

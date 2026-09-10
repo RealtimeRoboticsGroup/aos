@@ -7,7 +7,7 @@
 #include <iomanip>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include <Eigen/Sparse>
 
 namespace frc::solvers {
@@ -112,7 +112,7 @@ class SparseSolver {
   Eigen::VectorXd Rt(const Derivatives &derivatives, Eigen::VectorXd y,
                      double t_inverse);
 
-  // Prints out all the derivatives with VLOG at the provided verbosity.
+  // Prints out all the derivatives with ABSL_VLOG at the provided verbosity.
   void PrintDerivatives(const Derivatives &derivatives,
                         const Eigen::Ref<const Eigen::VectorXd> y,
                         std::string_view prefix, int verbosity);

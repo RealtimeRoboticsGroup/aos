@@ -7,7 +7,7 @@
 #include "absl/flags/flag.h"
 #include "absl/flags/usage.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/configuration.h"
 #include "aos/events/logging/log_writer.h"
@@ -154,8 +154,9 @@ int main(int argc, char *argv[]) {
     });
   }
 
-  LOG(INFO) << "Starting image_logger; will wait on joystick enabled to start "
-               "logging";
+  ABSL_LOG(INFO)
+      << "Starting image_logger; will wait on joystick enabled to start "
+         "logging";
   event_loop.OnRun([]() {
     errno = 0;
     setpriority(PRIO_PROCESS, 0, -20);
@@ -210,7 +211,7 @@ int main(int argc, char *argv[]) {
       current_log_namer = log_namer.get();
 
       // Start logging if we just got enabled
-      LOG(INFO) << "Starting logging to " << log_namer->base_name();
+      ABSL_LOG(INFO) << "Starting logging to " << log_namer->base_name();
       logger.StartLogging(std::move(log_namer));
       logging = true;
       last_rotation_time = event_loop.monotonic_now();
@@ -218,7 +219,7 @@ int main(int argc, char *argv[]) {
     } else if (logging && !should_be_logging) {
       // Stop logging if we've been disabled for a non-negligible amount of
       // time
-      LOG(INFO) << "Stopping logging";
+      ABSL_LOG(INFO) << "Stopping logging";
       aos::CheckExpected(logger.StopLogging(event_loop.monotonic_now()));
       logging = false;
       current_log_namer = nullptr;
@@ -248,7 +249,7 @@ int main(int argc, char *argv[]) {
 
   event_loop.Run();
 
-  LOG(INFO) << "Shutting down";
+  ABSL_LOG(INFO) << "Shutting down";
 
   return 0;
 }

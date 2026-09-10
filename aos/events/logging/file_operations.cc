@@ -4,7 +4,7 @@
 #include <ostream>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/match.h"
 
 namespace aos::logger::internal {
@@ -18,9 +18,9 @@ bool IsValidFilename(std::string_view filename) {
 void LocalFileOperations::FindLogs(std::vector<File> *files) {
   auto MaybeAddFile = [&files](std::string_view filename, size_t size) {
     if (!IsValidFilename(filename)) {
-      VLOG(1) << "Ignoring " << filename << " with invalid extension.";
+      ABSL_VLOG(1) << "Ignoring " << filename << " with invalid extension.";
     } else {
-      VLOG(1) << "Found log " << filename;
+      ABSL_VLOG(1) << "Found log " << filename;
       files->emplace_back(File{
           .name = std::string(filename),
           .size = size,
@@ -28,11 +28,11 @@ void LocalFileOperations::FindLogs(std::vector<File> *files) {
     }
   };
   if (std::filesystem::is_directory(filename_)) {
-    VLOG(1) << "Searching in " << filename_;
+    ABSL_VLOG(1) << "Searching in " << filename_;
     for (const auto &file :
          std::filesystem::recursive_directory_iterator(filename_)) {
       if (!file.is_regular_file()) {
-        VLOG(1) << file << " is not file.";
+        ABSL_VLOG(1) << file << " is not file.";
         continue;
       }
       // generic_string() so the reported names use '/' whichever separator the

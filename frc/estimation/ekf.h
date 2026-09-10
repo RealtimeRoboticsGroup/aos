@@ -107,7 +107,7 @@ class Ekf {
         dynamics_->LinearizeDynamics(X_hat_, U);
     controls::DiscretizeQAFast(Q_continuous_, linearized_dynamics.A, dt,
                                &Q_discrete, &A_discrete);
-    VLOG(3) << "Discretized Q\n" << Q_discrete;
+    ABSL_VLOG(3) << "Discretized Q\n" << Q_discrete;
     const State prior_state = X_hat_;
     // Only do a predict step if time actually passed; this optimizes things in
     // the scenario where we do multiple correction steps at once.
@@ -122,9 +122,9 @@ class Ekf {
     const Eigen::Matrix<Scalar, kNumStates, kNumMeasurements> K =
         P_ * H.transpose() * (H * P_ * H.transpose() + R).inverse();
     P_ = (StateSquare::Identity() - K * H) * P_;
-    VLOG(3) << "K\n" << K;
+    ABSL_VLOG(3) << "K\n" << K;
     const State update = K * (measurement - expected);
-    VLOG(3) << "correction update\n" << update;
+    ABSL_VLOG(3) << "correction update\n" << update;
     X_hat_ += update;
     return {.measurement = measurement,
             .expected = expected,
@@ -145,7 +145,7 @@ class Ekf {
         dynamics_->LinearizeDynamics(X_hat_, U);
     controls::DiscretizeQAFast(Q_continuous_, linearized_dynamics.A, dt,
                                &Q_discrete, &A_discrete);
-    VLOG(3) << "Discretized Q\n" << Q_discrete;
+    ABSL_VLOG(3) << "Discretized Q\n" << Q_discrete;
     // Only do a predict step if time actually passed; this optimizes things in
     // the scenario where we do multiple correction steps at once.
     if (dt.count() != 0) {
@@ -180,7 +180,7 @@ class Ekf {
     const State updated_state = control_loops::RungeKuttaU(
         [this](const State &X, const Input &U) { return (*dynamics_)(X, U); },
         X_hat_, U, aos::time::DurationInSeconds(dt));
-    VLOG(3) << "predict update\n" << updated_state - X_hat_;
+    ABSL_VLOG(3) << "predict update\n" << updated_state - X_hat_;
     X_hat_ = updated_state;
     P_ = A_discrete * P_ * A_discrete.transpose() + Q_discrete;
   }

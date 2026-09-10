@@ -11,7 +11,7 @@
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/util/file.h"
 
@@ -22,11 +22,11 @@ namespace aos::logger {
 void FileHandler::EnableDirect() {
   if (supports_odirect_ && !ODirectEnabled()) {
     if (fcntl(fd_, F_NOCACHE, 1) == -1) {
-      PLOG(WARNING) << "Failed to set F_NOCACHE on " << filename_;
+      ABSL_PLOG(WARNING) << "Failed to set F_NOCACHE on " << filename_;
       supports_odirect_ = false;
     } else {
       odirect_enabled_ = true;
-      VLOG(1) << "Enabled F_NOCACHE on " << filename_;
+      ABSL_VLOG(1) << "Enabled F_NOCACHE on " << filename_;
     }
   }
 }
@@ -36,7 +36,7 @@ void FileHandler::DisableDirect() {
     ABSL_PCHECK(fcntl(fd_, F_NOCACHE, 0) != -1)
         << ": Failed to disable F_NOCACHE";
     odirect_enabled_ = false;
-    VLOG(1) << "Disabled F_NOCACHE on " << filename_;
+    ABSL_VLOG(1) << "Disabled F_NOCACHE on " << filename_;
   }
 }
 
@@ -47,7 +47,7 @@ WriteCode FileHandler::PlatformSyncImpl() {
     }
     // Not every filesystem implements F_FULLFSYNC, so anything else stays the
     // warning this backend has logged since before it was split out.
-    PLOG(WARNING) << "Failed to F_FULLFSYNC " << filename_;
+    ABSL_PLOG(WARNING) << "Failed to F_FULLFSYNC " << filename_;
   }
   return WriteCode::kOk;
 }
@@ -61,7 +61,7 @@ std::pair<WriteCode, size_t> FileHandler::WriteV(bool) {
     if (errno == ENOSPC) {
       return std::make_pair(WriteCode::kOutOfSpace, 0);
     }
-    PLOG(FATAL) << "writev failed for " << filename_;
+    ABSL_PLOG(FATAL) << "writev failed for " << filename_;
   }
 
   if (absl::GetFlag(FLAGS_sync)) {

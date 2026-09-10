@@ -10,7 +10,7 @@
 #include <sstream>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "frc/wpilib/ahal/PWM.h"
 #include "frc/wpilib/ahal/WPIErrors.h"
@@ -274,7 +274,7 @@ void PWM::SetPeriodMultiplier(PeriodMultiplier mult) {
       HAL_SetPWMPeriodScale(m_handle, 0, &status);  // Don't squelch any outputs
       break;
     default:
-      LOG(FATAL) << "Invalid multiplier " << mult;
+      ABSL_LOG(FATAL) << "Invalid multiplier " << mult;
   }
 
   HAL_CHECK_STATUS(status);

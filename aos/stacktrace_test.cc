@@ -1,7 +1,7 @@
 #include <signal.h>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 
 #include "aos/realtime.h"
@@ -47,10 +47,10 @@ NOOPT void function2() { function1(); }
 NOOPT void function3() { function2(); }
 NOOPT void function4() { function3(); }
 
-// Tests that we get a useful stacktrace on a `LOG(FATAL)`. Also makes sure that
-// we don't get a duplicate stack trace in the SIGABRT handler.
+// Tests that we get a useful stacktrace on a `ABSL_LOG(FATAL)`. Also makes sure
+// that we don't get a duplicate stack trace in the SIGABRT handler.
 TEST(StacktraceDeathTest, StackTraceOnCrash) {
-  g_function = [] { LOG(FATAL) << "Triggering death!"; };
+  g_function = [] { ABSL_LOG(FATAL) << "Triggering death!"; };
 
   // NOTE(james): Depending on the platform this runs on, we sometimes get
   // libunwind warnings in a line here. We may consider suppressing that in the

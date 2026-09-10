@@ -12,7 +12,7 @@
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_cat.h"
 
 #include "aos/util/file.h"
@@ -52,7 +52,7 @@ WriteCode FileHandler::OpenForWrite() {
     } else {
       ABSL_PCHECK(fd_ != -1)
           << ": Failed to open " << filename_ << " for writing";
-      VLOG(1) << "Opened " << filename_ << " for writing";
+      ABSL_VLOG(1) << "Opened " << filename_ << " for writing";
     }
 
     flags_ = 0;
@@ -93,7 +93,7 @@ WriteResult FileHandler::DoWrite(
               .bytes_written = total_bytes_written,
           };
         }
-        PLOG(FATAL) << "Write failed for " << filename_;
+        ABSL_PLOG(FATAL) << "Write failed for " << filename_;
       }
       total_bytes_written += written;
       total_write_bytes_ += written;
@@ -279,9 +279,10 @@ bool WindowsRenamableFileBackend::RenameLogBase(
   // empty), so spending it here would turn a later, legitimate rename into a
   // crash.  Nothing moved, so report exactly that.
   if (flush_ran_out_of_space) {
-    LOG(ERROR) << "Ran out of space flushing buffered log data; not renaming "
-               << current_directory << " to " << new_directory
-               << ".  Logging to it stops here.";
+    ABSL_LOG(ERROR)
+        << "Ran out of space flushing buffered log data; not renaming "
+        << current_directory << " to " << new_directory
+        << ".  Logging to it stops here.";
     for (auto *handler : reopen_handlers) {
       handler->StopForOutOfSpace();
     }
@@ -325,8 +326,9 @@ bool WindowsRenamableFileBackend::RenameLogBase(
                   rename_errno == ENOSPC)
           << ": Unable to rename " << current_directory << " to "
           << new_directory;
-      PLOG(ERROR) << "Unable to rename " << current_directory << " to "
-                  << new_directory << "; logging continues at the old path";
+      ABSL_PLOG(ERROR) << "Unable to rename " << current_directory << " to "
+                       << new_directory
+                       << "; logging continues at the old path";
       // Reopen the files we closed at the original path if the rename failed.
       for (auto *handler : reopen_handlers) {
         handler->ReopenAndSeek();
@@ -355,8 +357,9 @@ bool WindowsRenamableFileBackend::RenameLogBase(
 }
 
 bool RenamableFileBackend::RenameLogBase(std::string_view /*new_base_name*/) {
-  LOG(FATAL) << "RenameLogBase should be called on WindowsRenamableFileBackend "
-                "on Windows";
+  ABSL_LOG(FATAL)
+      << "RenameLogBase should be called on WindowsRenamableFileBackend "
+         "on Windows";
   return false;
 }
 
@@ -426,14 +429,14 @@ WriteCode FileHandler::Close() {
     if (errno == ENOSPC) {
       ran_out_of_space = true;
     } else {
-      PLOG(ERROR) << "Closing log file failed";
+      ABSL_PLOG(ERROR) << "Closing log file failed";
     }
   }
   if (absl::GetFlag(FLAGS_sync)) {
     aos::util::SyncDirectory(std::filesystem::path(filename_).parent_path());
   }
   fd_ = -1;
-  VLOG(1) << "Closed " << filename_;
+  ABSL_VLOG(1) << "Closed " << filename_;
   return ran_out_of_space ? WriteCode::kOutOfSpace : WriteCode::kOk;
 }
 
@@ -445,13 +448,13 @@ WriteCode FileHandler::PlatformSyncImpl() {
     if (errno == ENOSPC) {
       return WriteCode::kOutOfSpace;
     }
-    PLOG(ERROR) << "Failed to _commit " << filename_;
+    ABSL_PLOG(ERROR) << "Failed to _commit " << filename_;
   }
   return WriteCode::kOk;
 }
 
 std::pair<WriteCode, size_t> FileHandler::WriteV(bool) {
-  LOG(FATAL) << "WriteV not implemented on Windows";
+  ABSL_LOG(FATAL) << "WriteV not implemented on Windows";
   return {WriteCode::kOk, 0};
 }
 

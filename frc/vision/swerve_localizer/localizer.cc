@@ -57,7 +57,7 @@ size_t CameraIndexForName(std::string_view name) {
       return index;
     }
   }
-  LOG(FATAL) << "No camera channel named " << name;
+  ABSL_LOG(FATAL) << "No camera channel named " << name;
 }
 
 std::map<uint64_t, Localizer::Transform> GetTargetLocations(
@@ -160,10 +160,11 @@ Localizer::Localizer(aos::EventLoop *event_loop)
           const aos::monotonic_clock::time_point orin_capture_time(
               std::chrono::nanoseconds(targets.monotonic_timestamp_ns()));
           if (orin_capture_time > event_loop_->context().monotonic_event_time) {
-            VLOG(1) << "Rejecting image due to being from future at "
-                    << event_loop_->monotonic_now() << " with timestamp of "
-                    << orin_capture_time << " and event time pf "
-                    << event_loop_->context().monotonic_event_time;
+            ABSL_VLOG(1) << "Rejecting image due to being from future at "
+                         << event_loop_->monotonic_now()
+                         << " with timestamp of " << orin_capture_time
+                         << " and event time pf "
+                         << event_loop_->context().monotonic_event_time;
             cameras_.at(camera_index)
                 .rejection_counter.IncrementError(
                     RejectionReason::IMAGE_FROM_FUTURE);
@@ -176,7 +177,7 @@ Localizer::Localizer(aos::EventLoop *event_loop)
           ABSL_CHECK(target_debug_list->reserve(20));
           for (const frc::vision::TargetPoseFbs *target :
                *targets.target_poses()) {
-            VLOG(1) << "Handling target from " << camera_index;
+            ABSL_VLOG(1) << "Handling target from " << camera_index;
             HandleTarget(camera_index, orin_capture_time, *target,
                          target_debug_list->emplace_back());
           }
@@ -230,7 +231,7 @@ void Localizer::HandleControl(
   ekf_.ResetInitialState(
       t_, (HybridEkf::State() << control.x(), control.y(), theta).finished(),
       NominalCovariance());
-  VLOG(1) << "Reset state";
+  ABSL_VLOG(1) << "Reset state";
 }
 
 void Localizer::HandleChassisSpeeds(
@@ -247,9 +248,9 @@ void Localizer::HandleChassisSpeeds(
   const Eigen::Vector2d velocity(speeds.vx(), speeds.vy());
 
   const Eigen::Vector2d absolute_velocity = rotation * velocity;
-  VLOG(1) << speeds.vx() << ", " << speeds.vy() << ", theta "
-          << roborio_pose_fetcher_->theta() << " -> "
-          << absolute_velocity.transpose();
+  ABSL_VLOG(1) << speeds.vx() << ", " << speeds.vy() << ", theta "
+               << roborio_pose_fetcher_->theta() << " -> "
+               << absolute_velocity.transpose();
 
   // Now, angle is +- numbers::pi
   const double theta_error = aos::math::NormalizeAngle(
@@ -258,10 +259,10 @@ void Localizer::HandleChassisSpeeds(
   if (std::abs(theta_error) > (utils_.MaybeInAutonomous() ? 1.5 : 0.4)) {
     ++heading_resets_;
     // TODO(austin): Count this and display it.
-    VLOG(1) << "Resetting, theta too far off, was "
-            << ekf_.X_hat(StateIdx::kTheta) << " expected "
-            << roborio_pose_fetcher_->theta() << " for an error of "
-            << theta_error;
+    ABSL_VLOG(1) << "Resetting, theta too far off, was "
+                 << ekf_.X_hat(StateIdx::kTheta) << " expected "
+                 << roborio_pose_fetcher_->theta() << " for an error of "
+                 << theta_error;
     double new_x = utils_.MaybeInAutonomous() ? ekf_.X_hat(StateIdx::kX)
                                               : average_pose_.x();
     double new_y = utils_.MaybeInAutonomous() ? ekf_.X_hat(StateIdx::kY)
@@ -404,9 +405,9 @@ void Localizer::HandleTarget(
             .count());
     debug_builder->set_april_tag(target_id);
   }
-  VLOG(2) << aos::FlatbufferToJson(&target);
+  ABSL_VLOG(2) << aos::FlatbufferToJson(&target);
   if (!UseAprilTag(target_id)) {
-    VLOG(1) << "Rejecting target due to invalid ID " << target_id;
+    ABSL_VLOG(1) << "Rejecting target due to invalid ID " << target_id;
     RejectImage(camera_index, RejectionReason::NO_SUCH_TARGET, debug_builder);
     return;
   }
@@ -414,7 +415,7 @@ void Localizer::HandleTarget(
   if (DeweightAprilTag(target_id)) {
     if (!absl::GetFlag(FLAGS_always_use_extra_tags) &&
         utils_.MaybeInAutonomous()) {
-      VLOG(1) << "Rejecting target due to auto invalid ID " << target_id;
+      ABSL_VLOG(1) << "Rejecting target due to auto invalid ID " << target_id;
       RejectImage(camera_index, RejectionReason::NO_SUCH_TARGET, debug_builder);
       return;
     } else {
@@ -443,18 +444,18 @@ void Localizer::HandleTarget(
       ekf_.LastInputBeforeTime(capture_time);
 
   if (!state_at_capture.has_value()) {
-    VLOG(1) << "Rejecting image due to being too old.";
+    ABSL_VLOG(1) << "Rejecting image due to being too old.";
     return RejectImage(camera_index, RejectionReason::IMAGE_TOO_OLD,
                        debug_builder);
   } else if (target.pose_error() > absl::GetFlag(FLAGS_max_pose_error)) {
-    VLOG(1) << "Rejecting target due to high pose error "
-            << target.pose_error();
+    ABSL_VLOG(1) << "Rejecting target due to high pose error "
+                 << target.pose_error();
     return RejectImage(camera_index, RejectionReason::HIGH_POSE_ERROR,
                        debug_builder);
   } else if (target.pose_error_ratio() >
              absl::GetFlag(FLAGS_max_pose_error_ratio)) {
-    VLOG(1) << "Rejecting target due to high pose error ratio "
-            << target.pose_error_ratio();
+    ABSL_VLOG(1) << "Rejecting target due to high pose error ratio "
+                 << target.pose_error_ratio();
     return RejectImage(camera_index, RejectionReason::HIGH_POSE_ERROR_RATIO,
                        debug_builder);
   }
@@ -518,11 +519,11 @@ void Localizer::HandleTarget(
     Corrector::PopulateMeasurement(noises, debug_builder->add_modeled_noise());
   }
 
-  VLOG(1) << "Got " << corrector.observed_camera_pose().abs_theta()
-          << " expected " << corrector.expected_camera_pose().abs_theta()
-          << " rio " << corrector.expected_rio_heading_camera().abs_theta()
-          << " absolute rio " << rio_theta << " heading "
-          << state_at_capture.value()(StateIdx::kTheta);
+  ABSL_VLOG(1) << "Got " << corrector.observed_camera_pose().abs_theta()
+               << " expected " << corrector.expected_camera_pose().abs_theta()
+               << " rio " << corrector.expected_rio_heading_camera().abs_theta()
+               << " absolute rio " << rio_theta << " heading "
+               << state_at_capture.value()(StateIdx::kTheta);
 
   const double camera_yaw_error = aos::math::NormalizeAngle(
       corrector.expected_rio_heading_camera().abs_theta() -
@@ -535,7 +536,7 @@ void Localizer::HandleTarget(
       kDegToRad;
 
   if (target.distortion_factor() > absl::GetFlag(FLAGS_max_distortion)) {
-    VLOG(1) << "Rejecting target due to high distortion.";
+    ABSL_VLOG(1) << "Rejecting target due to high distortion.";
     return RejectImage(camera_index, RejectionReason::HIGH_DISTORTION,
                        debug_builder);
   } else if (utils_.MaybeInAutonomous() &&
@@ -555,7 +556,7 @@ void Localizer::HandleTarget(
   average_pose_ = average_pose_ * 0.9 + 0.1 * measured_pose.rel_pos();
 
   const Input U = ekf_.MostRecentInput();
-  VLOG(1) << "previous state " << ekf_.X_hat().transpose();
+  ABSL_VLOG(1) << "previous state " << ekf_.X_hat().transpose();
   const State prior_state = ekf_.X_hat();
   // For the correction step, instead of passing in the measurement directly,
   // we pass in (0, 0, 0) as the measurement and then for the expected
@@ -583,7 +584,7 @@ void Localizer::HandleTarget(
   }
   ++total_accepted_targets_;
   ++cameras_.at(camera_index).total_accepted_targets;
-  VLOG(1) << "new state " << ekf_.X_hat().transpose();
+  ABSL_VLOG(1) << "new state " << ekf_.X_hat().transpose();
   if (debug_builder != nullptr) {
     debug_builder->set_correction_x(ekf_.X_hat()(StateIdx::kX) -
                                     prior_state(StateIdx::kX));
@@ -786,8 +787,8 @@ Localizer::Output Localizer::XyzCorrector::H(const State &, const Input &) {
   Eigen::Vector3d Zhat = H_ * state_at_capture_ - Z_;
   // Rewrap angle difference to put it back in range.
   Zhat(2) = aos::math::NormalizeAngle(Zhat(2));
-  VLOG(1) << "Zhat " << Zhat.transpose() << " Z_ " << Z_.transpose()
-          << " state " << (H_ * state_at_capture_).transpose();
+  ABSL_VLOG(1) << "Zhat " << Zhat.transpose() << " Z_ " << Z_.transpose()
+               << " state " << (H_ * state_at_capture_).transpose();
   return Zhat;
 }
 

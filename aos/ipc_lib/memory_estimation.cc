@@ -45,8 +45,8 @@ size_t LogMemoryBufferSizeForChannel(const aos::Channel *channel,
   const size_t buffer_size =
       channel->max_size() *
       (channel->frequency() * aos::time::DurationInSeconds(buffer_duration));
-  VLOG(2) << "Allocating " << buffer_size << " bytes for "
-          << configuration::CleanedChannelToString(channel);
+  ABSL_VLOG(2) << "Allocating " << buffer_size << " bytes for "
+               << configuration::CleanedChannelToString(channel);
   return buffer_size;
 }
 
@@ -55,8 +55,8 @@ size_t LogMemoryBufferSizeForChannelTimestamps(
   const size_t buffer_size = logger::PackRemoteMessageSize() *
                              channel->frequency() *
                              aos::time::DurationInSeconds(buffer_duration);
-  VLOG(2) << "Allocating " << buffer_size << " bytes for "
-          << configuration::CleanedChannelToString(channel);
+  ABSL_VLOG(2) << "Allocating " << buffer_size << " bytes for "
+               << configuration::CleanedChannelToString(channel);
   return buffer_size;
 }
 

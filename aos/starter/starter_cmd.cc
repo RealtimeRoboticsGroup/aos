@@ -18,7 +18,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
 #include "flatbuffers/string.h"
@@ -259,10 +259,10 @@ void GetAllStarterStatus(const aos::Configuration *config) {
   }
   for (const aos::Node *node : missing_nodes) {
     if (node == nullptr) {
-      LOG(WARNING) << "No status found.";
+      ABSL_LOG(WARNING) << "No status found.";
     } else {
-      LOG(WARNING) << "No status found for node "
-                   << node->name()->string_view();
+      ABSL_LOG(WARNING) << "No status found for node "
+                        << node->name()->string_view();
     }
   }
 }
@@ -295,16 +295,17 @@ bool GetStarterStatus(int argc, char **argv, const aos::Configuration *config) {
                                optional_status.value().first, node);
       } else {
         if (node != nullptr) {
-          LOG(ERROR) << "No status available yet for \"" << application_name
-                     << "\" on node \"" << node->name()->string_view() << "\".";
+          ABSL_LOG(ERROR) << "No status available yet for \""
+                          << application_name << "\" on node \""
+                          << node->name()->string_view() << "\".";
         } else {
-          LOG(ERROR) << "No status available yet for \"" << application_name
-                     << "\".";
+          ABSL_LOG(ERROR) << "No status available yet for \""
+                          << application_name << "\".";
         }
       }
     }
   } else {
-    LOG(ERROR) << "The \"status\" command requires zero or one arguments.";
+    ABSL_LOG(ERROR) << "The \"status\" command requires zero or one arguments.";
     return true;
   }
   return false;
@@ -330,10 +331,10 @@ void InteractWithAll(const aos::Configuration *config,
               optional_status.value().second);
     } else {
       if (node == nullptr) {
-        LOG(WARNING) << "Starter not running";
+        ABSL_LOG(WARNING) << "Starter not running";
       } else {
-        LOG(WARNING) << "Starter not running on node "
-                     << node->name()->string_view();
+        ABSL_LOG(WARNING) << "Starter not running on node "
+                          << node->name()->string_view();
       }
     }
   }
@@ -389,7 +390,7 @@ void InteractWithAll(const aos::Configuration *config,
       std::cout << failure_text << "all \n";
     }
   } else {
-    LOG(WARNING) << "None of the starters we care about are running.";
+    ABSL_LOG(WARNING) << "None of the starters we care about are running.";
   }
 }
 
@@ -399,7 +400,7 @@ bool InteractWithProgram(int argc, char **argv,
                          const aos::Configuration *config) {
   const char *command_string = argv[0];
   if (argc != 2) {
-    LOG(ERROR)
+    ABSL_LOG(ERROR)
         << "The \"" << command_string
         << "\" command requires an application name or 'all' as an argument.";
     return true;

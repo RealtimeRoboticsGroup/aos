@@ -33,8 +33,8 @@ const calibration::CameraCalibration *FindCameraCalibration(
     }
     return candidate;
   }
-  LOG(FATAL) << ": Failed to find camera calibration for " << node_name
-             << " and camera number " << camera_number;
+  ABSL_LOG(FATAL) << ": Failed to find camera calibration for " << node_name
+                  << " and camera number " << camera_number;
 }
 
 void GpuApriltagDetector() {
@@ -74,12 +74,12 @@ void GpuApriltagDetector() {
   // TODO(austin): Figure out our core pinning strategy.
   // event_loop.SetRuntimeAffinity(aos::MakeCpusetFromCpus({5}));
 
-  LOG(INFO) << "Setting scheduler priority";
+  ABSL_LOG(INFO) << "Setting scheduler priority";
   struct sched_param param;
   param.sched_priority = 21;
   ABSL_PCHECK(sched_setscheduler(0, SCHED_FIFO, &param) == 0);
 
-  LOG(INFO) << "Running event loop";
+  ABSL_LOG(INFO) << "Running event loop";
   // TODO(austin): Pre-warm it...
   event_loop.Run();
 }

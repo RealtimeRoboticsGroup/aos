@@ -30,13 +30,15 @@ void HandleChannelsInApplications(
   if (results->observed_applications[nodes_index].count(name) > 0) {
     if (!results->remaining_applications[nodes_index].empty()) {
       if (options.fatal_application_not_found) {
-        LOG(FATAL) << "Didn't see timing reports for every application! "
-                   << absl::StrJoin(
-                          results->remaining_applications[nodes_index], ", ");
+        ABSL_LOG(FATAL) << "Didn't see timing reports for every application! "
+                        << absl::StrJoin(
+                               results->remaining_applications[nodes_index],
+                               ", ");
       } else {
-        LOG(WARNING) << "Didn't see timing reports for every application! "
-                     << absl::StrJoin(
-                            results->remaining_applications[nodes_index], ", ");
+        ABSL_LOG(WARNING) << "Didn't see timing reports for every application! "
+                          << absl::StrJoin(
+                                 results->remaining_applications[nodes_index],
+                                 ", ");
       }
     } else {
       factory->Exit();
@@ -147,10 +149,10 @@ ChannelsInLogResult ChannelsInLog(
 
   for (size_t ii = 0; ii < nodes.size(); ++ii) {
     if (!results.remaining_applications[ii].empty()) {
-      LOG(INFO) << "Didn't find all applications requested on "
-                << nodes[ii]->name()->string_view()
-                << ": remaining applications: "
-                << absl::StrJoin(results.remaining_applications[ii], ", ");
+      ABSL_LOG(INFO) << "Didn't find all applications requested on "
+                     << nodes[ii]->name()->string_view()
+                     << ": remaining applications: "
+                     << absl::StrJoin(results.remaining_applications[ii], ", ");
     }
   }
 

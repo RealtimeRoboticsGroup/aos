@@ -1,7 +1,7 @@
 #include "frc/control_loops/static_zeroing_single_dof_profiled_subsystem.h"
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "flatbuffers/flatbuffers.h"
 #include "gtest/gtest.h"
 

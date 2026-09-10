@@ -641,7 +641,7 @@ class SortingElementTest : public ::testing::Test {
     }
 
     fbb.FinishSizePrefixed(message_header_builder.Finish());
-    LOG(INFO) << aos::FlatbufferToJson(
+    ABSL_LOG(INFO) << aos::FlatbufferToJson(
         aos::SizePrefixedFlatbufferSpan<MessageHeader>(
             absl::Span<uint8_t>(fbb.GetBufferPointer(), fbb.GetSize())));
 
@@ -2474,7 +2474,7 @@ TEST_F(RebootTimestampMapperTest, ReadNode0First) {
   LogFilesContainer log_files(parts);
 
   for (const auto &x : parts) {
-    LOG(INFO) << x;
+    ABSL_LOG(INFO) << x;
   }
   ASSERT_EQ(parts.size(), 1u);
   ASSERT_EQ(parts[0].logger_node, "pi1");
@@ -2524,9 +2524,9 @@ TEST_F(RebootTimestampMapperTest, ReadNode0First) {
 
     ASSERT_TRUE(CheckExpected(mapper0.Front()) == nullptr);
 
-    LOG(INFO) << output0[0];
-    LOG(INFO) << output0[1];
-    LOG(INFO) << output0[2];
+    ABSL_LOG(INFO) << output0[0];
+    ABSL_LOG(INFO) << output0[1];
+    ABSL_LOG(INFO) << output0[2];
 
     EXPECT_EQ(output0[0].monotonic_event_time.boot, 0u);
     EXPECT_EQ(output0[0].monotonic_event_time.time,
@@ -2649,10 +2649,10 @@ TEST_F(RebootTimestampMapperTest, ReadNode0First) {
               e + chrono::milliseconds(3001));
     EXPECT_TRUE(output1[3].data != nullptr);
 
-    LOG(INFO) << output1[0];
-    LOG(INFO) << output1[1];
-    LOG(INFO) << output1[2];
-    LOG(INFO) << output1[3];
+    ABSL_LOG(INFO) << output1[0];
+    ABSL_LOG(INFO) << output1[1];
+    ABSL_LOG(INFO) << output1[2];
+    ABSL_LOG(INFO) << output1[3];
   }
 }
 
@@ -2695,7 +2695,7 @@ TEST_F(RebootTimestampMapperTest, Node2Reboot) {
   LogFilesContainer log_files(parts);
 
   for (const auto &x : parts) {
-    LOG(INFO) << x;
+    ABSL_LOG(INFO) << x;
   }
   ASSERT_EQ(parts.size(), 1u);
   ASSERT_EQ(parts[0].logger_node, "pi1");
@@ -2745,9 +2745,9 @@ TEST_F(RebootTimestampMapperTest, Node2Reboot) {
 
     ASSERT_TRUE(CheckExpected(mapper0.Front()) == nullptr);
 
-    LOG(INFO) << output0[0];
-    LOG(INFO) << output0[1];
-    LOG(INFO) << output0[2];
+    ABSL_LOG(INFO) << output0[0];
+    ABSL_LOG(INFO) << output0[1];
+    ABSL_LOG(INFO) << output0[2];
 
     EXPECT_EQ(output0[0].monotonic_event_time.boot, 0u);
     EXPECT_EQ(output0[0].monotonic_event_time.time,
@@ -2840,9 +2840,9 @@ TEST_F(RebootTimestampMapperTest, Node2Reboot) {
     EXPECT_EQ(output1[2].monotonic_timestamp_time, BootTimestamp::min_time());
     EXPECT_TRUE(output1[2].data != nullptr);
 
-    LOG(INFO) << output1[0];
-    LOG(INFO) << output1[1];
-    LOG(INFO) << output1[2];
+    ABSL_LOG(INFO) << output1[0];
+    ABSL_LOG(INFO) << output1[1];
+    ABSL_LOG(INFO) << output1[2];
   }
 }
 
@@ -3289,76 +3289,76 @@ class TimeEventLoop : public EventLoop {
     return aos::realtime_clock::min_time;
   }
 
-  void OnRun(::std::function<void()> /*on_run*/) final { LOG(FATAL); }
+  void OnRun(::std::function<void()> /*on_run*/) final { ABSL_LOG(FATAL); }
 
   const std::string_view name() const final { return name_; }
   const Node *node() const final { return node_; }
 
-  void SetRuntimeAffinity(const CpuSet & /*cpuset*/) final { LOG(FATAL); }
+  void SetRuntimeAffinity(const CpuSet & /*cpuset*/) final { ABSL_LOG(FATAL); }
   void SetRuntimeRealtimePriority(int /*priority*/,
                                   SchedulingPolicy /*scheduling_policy*/,
                                   RealtimePolicy /*realtime_policy*/) final {
-    LOG(FATAL);
+    ABSL_LOG(FATAL);
   }
 
   const CpuSet &runtime_affinity() const final {
-    LOG(FATAL);
+    ABSL_LOG(FATAL);
     return runtime_affinity_;
   }
 
   TimerHandler *AddTimer(::std::function<void()> /*callback*/) final {
-    LOG(FATAL);
+    ABSL_LOG(FATAL);
     return nullptr;
   }
 
   std::unique_ptr<RawSender> MakeRawSender(const Channel * /*channel*/) final {
-    LOG(FATAL);
+    ABSL_LOG(FATAL);
     return std::unique_ptr<RawSender>();
   }
 
   const UUID &boot_uuid() const final {
-    LOG(FATAL);
+    ABSL_LOG(FATAL);
     return boot_uuid_;
   }
 
-  void set_name(const std::string_view name) final { LOG(FATAL) << name; }
+  void set_name(const std::string_view name) final { ABSL_LOG(FATAL) << name; }
 
   pid_t GetTid() const final {
-    LOG(FATAL);
+    ABSL_LOG(FATAL);
     return 0;
   }
 
   int NumberBuffers(const Channel * /*channel*/) final {
-    LOG(FATAL);
+    ABSL_LOG(FATAL);
     return 0;
   }
 
   int runtime_realtime_priority() const final {
-    LOG(FATAL);
+    ABSL_LOG(FATAL);
     return runtime_priority_;
   }
 
   SchedulingPolicy runtime_scheduling_policy() const final {
-    LOG(FATAL);
+    ABSL_LOG(FATAL);
     return runtime_scheduling_policy_;
   }
 
   RealtimePolicy runtime_realtime_policy() const final {
-    LOG(FATAL);
+    ABSL_LOG(FATAL);
     return runtime_realtime_policy_;
   }
 
   std::unique_ptr<ThreadHandle> ConfigureThreadImpl(
       const ThreadConfiguration & /*thread_configuration*/) final {
-    LOG(FATAL);
+    ABSL_LOG(FATAL);
     AOS_UNREACHABLE();
   }
 
-  void IgnoreThreadImpl() final { LOG(FATAL); }
+  void IgnoreThreadImpl() final { ABSL_LOG(FATAL); }
 
   std::unique_ptr<RawFetcher> MakeRawFetcher(
       const Channel * /*channel*/) final {
-    LOG(FATAL);
+    ABSL_LOG(FATAL);
     return std::unique_ptr<RawFetcher>();
   }
 
@@ -3366,7 +3366,7 @@ class TimeEventLoop : public EventLoop {
       ::std::function<void(int)> /*callback*/,
       const monotonic_clock::duration /*interval*/,
       const monotonic_clock::duration /*offset*/) final {
-    LOG(FATAL);
+    ABSL_LOG(FATAL);
     return nullptr;
   }
 
@@ -3374,7 +3374,7 @@ class TimeEventLoop : public EventLoop {
       const Channel * /*channel*/,
       std::function<void(const Context &context, const void *message)>
       /*watcher*/) final {
-    LOG(FATAL);
+    ABSL_LOG(FATAL);
   }
 
  private:
@@ -3403,7 +3403,7 @@ TEST_F(InlinePackMessage, Equivilent) {
       fbb.ForceDefaults(true);
       fbb.FinishSizePrefixed(PackMessage(&fbb, context, channel_index, type));
 
-      VLOG(1) << absl::BytesToHexString(std::string_view(
+      ABSL_VLOG(1) << absl::BytesToHexString(std::string_view(
           reinterpret_cast<const char *>(fbb.GetBufferSpan().data()),
           fbb.GetBufferSpan().size()));
 
@@ -3483,7 +3483,7 @@ TEST_F(InlinePackMessage, RemoteEquivilent) {
     fbb.FinishSizePrefixed(PackRemoteMessage(
         &fbb, &random_msg.message(), channel_index, monotonic_timestamp_time));
 
-    VLOG(1) << absl::BytesToHexString(std::string_view(
+    ABSL_VLOG(1) << absl::BytesToHexString(std::string_view(
         reinterpret_cast<const char *>(fbb.GetBufferSpan().data()),
         fbb.GetBufferSpan().size()));
 
@@ -3720,10 +3720,10 @@ TEST_P(TimestampMapperExpirationTest, PrecededByExpiredMessageWithTTL) {
     // popped from the queue. Later, when Ch1[1]'s timestamp arrives (160ms), it
     // tries to match but finds queue_index=1 is out of range (queue now has
     // front=2), so it returns .data = nullptr.
-    LOG(INFO) << "=== Sending " << kMessageCount
-              << " messages: ch0=" << kCh0Delay.count()
-              << "ms (constant), ch1=" << kCh1StartDelay.count() << "→"
-              << kCh1EndDelay.count() << "ms (ramping) ===";
+    ABSL_LOG(INFO) << "=== Sending " << kMessageCount
+                   << " messages: ch0=" << kCh0Delay.count()
+                   << "ms (constant), ch1=" << kCh1StartDelay.count() << "→"
+                   << kCh1EndDelay.count() << "ms (ramping) ===";
 
     int ch0_queue_idx = 0;
     int ch1_queue_idx = 0;
@@ -3799,7 +3799,7 @@ TEST_P(TimestampMapperExpirationTest, PrecededByExpiredMessageWithTTL) {
   // when we call Front(). Process messages in chronological order like
   // LogReader does: compare oldest message from each mapper and pop whichever
   // is earlier.
-  LOG(INFO)
+  ABSL_LOG(INFO)
       << "=== Processing messages with kQueueTogether (chronological order)";
 
   while (true) {
@@ -3822,7 +3822,7 @@ TEST_P(TimestampMapperExpirationTest, PrecededByExpiredMessageWithTTL) {
   }
 
   // Verify the test ran and produced output.
-  LOG(INFO) << "Received " << output0.size() << " messages";
+  ABSL_LOG(INFO) << "Received " << output0.size() << " messages";
   EXPECT_GT(output0.size(), 0u) << "Should have received some messages.";
 
   // Verify messages and check expiration flags.
@@ -3844,12 +3844,12 @@ TEST_P(TimestampMapperExpirationTest, PrecededByExpiredMessageWithTTL) {
       }
       const auto delay = (msg.monotonic_event_time.time - clock_offset) -
                          (msg.monotonic_remote_time.time);
-      LOG(INFO) << "Channel 1: sent=" << msg.monotonic_remote_time
-                << " arrived=" << msg.monotonic_event_time << " delay="
-                << chrono::duration_cast<chrono::milliseconds>(delay).count()
-                << "ms"
-                << " has_data=" << (msg.data ? "true" : "false")
-                << " preceded_by_expired=" << msg.preceded_by_expired_message;
+      ABSL_LOG(INFO)
+          << "Channel 1: sent=" << msg.monotonic_remote_time
+          << " arrived=" << msg.monotonic_event_time << " delay="
+          << chrono::duration_cast<chrono::milliseconds>(delay).count() << "ms"
+          << " has_data=" << (msg.data ? "true" : "false")
+          << " preceded_by_expired=" << msg.preceded_by_expired_message;
       if (msg.preceded_by_expired_message) {
         found_preceded_by_expired = true;
       }
@@ -3857,8 +3857,8 @@ TEST_P(TimestampMapperExpirationTest, PrecededByExpiredMessageWithTTL) {
   }
 
   // Verify channel 0 received all messages with data (no expiration).
-  LOG(INFO) << "Received " << channel_0_count << " channel 0 messages ("
-            << channel_0_with_data << " with data)";
+  ABSL_LOG(INFO) << "Received " << channel_0_count << " channel 0 messages ("
+                 << channel_0_with_data << " with data)";
   EXPECT_EQ(channel_0_count, kMessageCount)
       << "Should receive all " << kMessageCount << " channel 0 messages.";
   EXPECT_EQ(channel_0_with_data, kMessageCount)
@@ -3867,8 +3867,8 @@ TEST_P(TimestampMapperExpirationTest, PrecededByExpiredMessageWithTTL) {
   // Verify channel 1 received all timestamp messages.
   // ExceedsThreshold: Multiple messages expire, fewer have data.
   // WithinThreshold: All messages have data, no expiration.
-  LOG(INFO) << "Received " << channel_1_count << " channel 1 messages ("
-            << channel_1_with_data << " with data)";
+  ABSL_LOG(INFO) << "Received " << channel_1_count << " channel 1 messages ("
+                 << channel_1_with_data << " with data)";
   EXPECT_EQ(channel_1_count, kMessageCount)
       << "Should receive all " << kMessageCount
       << " channel 1 timestamp messages.";

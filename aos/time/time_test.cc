@@ -12,7 +12,7 @@
 #include <thread>
 #include <vector>
 
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/numeric/int128.h"
 #include "absl/strings/str_format.h"
 #include "gtest/gtest.h"
@@ -448,7 +448,7 @@ GranularityResult MeasureGranularity(Fn &&read_nanos, int iterations) {
 }
 
 void LogGranularity(std::string_view name, const GranularityResult &result) {
-  LOG(INFO) << absl::StrFormat(
+  ABSL_LOG(INFO) << absl::StrFormat(
       "%-24s granularity = %6d ns   duplicates = %5.1f%%", name,
       result.min_non_zero_diff_ns, 100.0 * result.duplicate_fraction());
 }
@@ -479,10 +479,10 @@ TEST(TimeTest, MonotonicClockGranularity) {
 #ifdef __APPLE__
   mach_timebase_info_data_t info;
   ASSERT_EQ(mach_timebase_info(&info), KERN_SUCCESS);
-  LOG(INFO) << "Mach Timebase Numerator:   " << info.numer;
-  LOG(INFO) << "Mach Timebase Denominator: " << info.denom;
-  LOG(INFO) << "Tick duration (numer/denom): "
-            << static_cast<double>(info.numer) / info.denom << " ns";
+  ABSL_LOG(INFO) << "Mach Timebase Numerator:   " << info.numer;
+  ABSL_LOG(INFO) << "Mach Timebase Denominator: " << info.denom;
+  ABSL_LOG(INFO) << "Tick duration (numer/denom): "
+                 << static_cast<double>(info.numer) / info.denom << " ns";
 #endif
 
   const int kIterations = 1000000;
@@ -574,10 +574,11 @@ TEST(TimeTest, MonotonicClockUsesMachTimebase) {
   // slept the gap is legitimately ~0.
   const uint64_t mach_ns = to_nanos(mach_absolute_time());
   const uint64_t posix_monotonic_ns = clock_gettime_nsec_np(CLOCK_MONOTONIC);
-  LOG(INFO) << "CLOCK_MONOTONIC runs ahead of Mach absolute time by "
-            << (posix_monotonic_ns > mach_ns ? posix_monotonic_ns - mach_ns : 0)
-            << " ns (the machine's accumulated sleep time).  That is the error "
-               "we would inject into every kqueue timer deadline by switching "
-               "now() to it.";
+  ABSL_LOG(INFO)
+      << "CLOCK_MONOTONIC runs ahead of Mach absolute time by "
+      << (posix_monotonic_ns > mach_ns ? posix_monotonic_ns - mach_ns : 0)
+      << " ns (the machine's accumulated sleep time).  That is the error "
+         "we would inject into every kqueue timer deadline by switching "
+         "now() to it.";
 }
 #endif

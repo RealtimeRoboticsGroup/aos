@@ -11,7 +11,7 @@ extern "C" {
 }
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "flatbuffers/flatbuffers.h"
 
 namespace aos::web_proxy {

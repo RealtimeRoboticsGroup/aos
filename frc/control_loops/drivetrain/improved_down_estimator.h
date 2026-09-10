@@ -4,7 +4,7 @@
 #include "Eigen/Dense"
 #include "Eigen/Geometry"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/events/event_loop.h"
 #include "aos/time/time.h"

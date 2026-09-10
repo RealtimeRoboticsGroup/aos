@@ -145,8 +145,8 @@ cc_binary(
         ":motors",
         "//aos:init",
         "//aos/util:file",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
         "@symengine",
@@ -427,8 +427,8 @@ cc_binary(
     deps = [
         ":eigen_dynamics",
         "//third_party/python",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -449,8 +449,8 @@ cc_library(
         "//frc/control_loops:dlqr",
         "//frc/control_loops:jacobian",
         "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -489,8 +489,8 @@ cc_library(
         ":linearization_utils",
         ":motors",
         "//aos/util:math",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -502,7 +502,7 @@ cc_test(
         "//aos/testing:googletest",
         "//aos/time",
         "//frc/control_loops:jacobian",
-        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 

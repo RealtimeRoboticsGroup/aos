@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "ctre/phoenix6/TalonFX.hpp"
 
 #include "aos/commonmath.h"

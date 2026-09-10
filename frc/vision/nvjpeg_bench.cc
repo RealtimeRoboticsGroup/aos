@@ -29,9 +29,9 @@
 #include <cstring>
 #include <vector>
 
+#include "absl/log/absl_log.h"
 #include "absl/log/globals.h"
 #include "absl/log/initialize.h"
-#include "absl/log/log.h"
 #include "absl/strings/str_format.h"
 
 extern "C" {
@@ -55,7 +55,7 @@ void ErrorExit(j_common_ptr cinfo) {
 void OutputMessage(j_common_ptr cinfo) {
   char message[JMSG_LENGTH_MAX];
   (*cinfo->err->format_message)(cinfo, message);
-  LOG(WARNING) << "libnvjpeg: " << message;
+  ABSL_LOG(WARNING) << "libnvjpeg: " << message;
 }
 
 }  // namespace
@@ -64,27 +64,28 @@ int main(int argc, char **argv) {
   absl::InitializeLog();
   absl::SetStderrThreshold(absl::LogSeverityAtLeast::kInfo);
   if (argc < 2) {
-    LOG(ERROR) << "usage: " << argv[0] << " <file.jpg> [iterations] [out.pgm]";
+    ABSL_LOG(ERROR) << "usage: " << argv[0]
+                    << " <file.jpg> [iterations] [out.pgm]";
     return 1;
   }
   const int iterations = argc > 2 ? atoi(argv[2]) : 20;
 
   FILE *f = fopen(argv[1], "rb");
   if (f == nullptr) {
-    LOG(ERROR) << "open " << argv[1] << ": " << strerror(errno);
+    ABSL_LOG(ERROR) << "open " << argv[1] << ": " << strerror(errno);
     return 1;
   }
   fseek(f, 0, SEEK_END);
   const long file_size = ftell(f);
   fseek(f, 0, SEEK_SET);
   if (file_size <= 0 || file_size > 100 * 1024 * 1024) {
-    LOG(ERROR) << argv[1] << ": implausible size " << file_size
-               << " (directory or unseekable file?)";
+    ABSL_LOG(ERROR) << argv[1] << ": implausible size " << file_size
+                    << " (directory or unseekable file?)";
     return 1;
   }
   std::vector<unsigned char> jpeg(file_size);
   if (fread(jpeg.data(), 1, file_size, f) != static_cast<size_t>(file_size)) {
-    LOG(ERROR) << "short read of " << argv[1];
+    ABSL_LOG(ERROR) << "short read of " << argv[1];
     return 1;
   }
   fclose(f);
@@ -97,7 +98,7 @@ int main(int argc, char **argv) {
   jerr.pub.error_exit = ErrorExit;
   jerr.pub.output_message = OutputMessage;
   if (setjmp(jerr.setjmp_buffer)) {
-    LOG(ERROR) << "libnvjpeg failed to initialize: " << jerr.message;
+    ABSL_LOG(ERROR) << "libnvjpeg failed to initialize: " << jerr.message;
     return 1;
   }
   jpeg_create_decompress(&cinfo);
@@ -121,8 +122,8 @@ int main(int argc, char **argv) {
       memset(gray.data(), 0xAA, gray.size());
     }
     if (setjmp(jerr.setjmp_buffer)) {
-      LOG(ERROR) << "decode failed on iteration " << iter << ": "
-                 << jerr.message;
+      ABSL_LOG(ERROR) << "decode failed on iteration " << iter << ": "
+                      << jerr.message;
       return 1;
     }
     const auto start = std::chrono::steady_clock::now();
@@ -137,21 +138,22 @@ int main(int argc, char **argv) {
     jpeg_start_decompress(&cinfo);
 
     if (iter == 0) {
-      LOG(INFO) << absl::StrFormat(
+      ABSL_LOG(INFO) << absl::StrFormat(
           "image: %ux%u, components=%d, Y samp=%dx%d, jpeg_color_space=%d",
           width, height, cinfo.num_components, cinfo.comp_info[0].h_samp_factor,
           cinfo.comp_info[0].v_samp_factor,
           static_cast<int>(cinfo.jpeg_color_space));
-      LOG(INFO) << absl::StrFormat("tegra_acceleration=%d mjpeg_decode=%d",
-                                   static_cast<int>(cinfo.tegra_acceleration),
-                                   static_cast<int>(cinfo.mjpeg_decode));
+      ABSL_LOG(INFO) << absl::StrFormat(
+          "tegra_acceleration=%d mjpeg_decode=%d",
+          static_cast<int>(cinfo.tegra_acceleration),
+          static_cast<int>(cinfo.mjpeg_decode));
       if (cinfo.jpegTegraMgr != nullptr) {
-        LOG(INFO) << "jpegTegraMgr: buff[0]="
-                  << static_cast<void *>(cinfo.jpegTegraMgr->buff[0])
-                  << " pitch[0]=" << cinfo.jpegTegraMgr->pitch[0]
-                  << " mcu_type=" << cinfo.jpegTegraMgr->mcu_type;
+        ABSL_LOG(INFO) << "jpegTegraMgr: buff[0]="
+                       << static_cast<void *>(cinfo.jpegTegraMgr->buff[0])
+                       << " pitch[0]=" << cinfo.jpegTegraMgr->pitch[0]
+                       << " mcu_type=" << cinfo.jpegTegraMgr->mcu_type;
       } else {
-        LOG(INFO) << "jpegTegraMgr: null";
+        ABSL_LOG(INFO) << "jpegTegraMgr: null";
       }
     }
 
@@ -160,7 +162,7 @@ int main(int argc, char **argv) {
     const uint32_t y_padded_width =
         cinfo.comp_info[0].width_in_blocks * DCTSIZE;
     if (y_rows_per_group != lines_per_group || y_rows_per_group > 4 * DCTSIZE) {
-      LOG(ERROR) << "unsupported subsampling";
+      ABSL_LOG(ERROR) << "unsupported subsampling";
       return 1;
     }
     size_t scratch = y_padded_width;
@@ -206,7 +208,8 @@ int main(int argc, char **argv) {
         }
       }
       if (jpeg_read_raw_data(&cinfo, planes, lines_per_group) == 0) {
-        LOG(ERROR) << "jpeg_read_raw_data made no progress at row " << base;
+        ABSL_LOG(ERROR) << "jpeg_read_raw_data made no progress at row "
+                        << base;
         return 1;
       }
       if (bounce) {
@@ -235,24 +238,24 @@ int main(int argc, char **argv) {
     for (const unsigned char v : gray) {
       if (v == 0xAA) ++poison;
     }
-    LOG(INFO) << absl::StrFormat(
+    ABSL_LOG(INFO) << absl::StrFormat(
         "iter %d: %.1f us, hardware=%s, untouched_pixels=%zu/%zu", iter, us,
         hw ? "YES" : "no", poison, gray.size());
   }
 
-  LOG(INFO) << absl::StrFormat("%d iterations: mean %.1f us, min %.1f us",
-                               iterations, total_us / iterations, min_us);
+  ABSL_LOG(INFO) << absl::StrFormat("%d iterations: mean %.1f us, min %.1f us",
+                                    iterations, total_us / iterations, min_us);
 
   if (argc > 3) {
     FILE *out = fopen(argv[3], "wb");
     if (out == nullptr) {
-      LOG(ERROR) << "open " << argv[3] << ": " << strerror(errno);
+      ABSL_LOG(ERROR) << "open " << argv[3] << ": " << strerror(errno);
       return 1;
     }
     fprintf(out, "P5\n%u %u\n255\n", width, height);
     fwrite(first_gray.data(), 1, first_gray.size(), out);
     fclose(out);
-    LOG(INFO) << "wrote " << argv[3];
+    ABSL_LOG(INFO) << "wrote " << argv[3];
   }
 
   jpeg_destroy_decompress(&cinfo);

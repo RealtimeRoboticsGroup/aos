@@ -1,7 +1,7 @@
 #include "aos/events/glib_main_loop.h"
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/events/shm_event_loop.h"
 
@@ -112,14 +112,14 @@ void GlibMainLoop::BeforeWait() {
     // glib will never quiesce its FDs, so the best we can do is just skip it
     // once it's done and shut down our event loop. We have to remove all of its
     // FDs first so other event sources can quiesce.
-    VLOG(1) << "g_main_loop_is_running = false";
+    ABSL_VLOG(1) << "g_main_loop_is_running = false";
     RemoveAllFds();
     exit_handler_();
     return;
   }
   if (!epoll_->should_run()) {
     // Give glib one more round of dispatching.
-    VLOG(1) << "EPoll::should_run = false";
+    ABSL_VLOG(1) << "EPoll::should_run = false";
     g_main_loop_quit(g_main_loop_);
   }
 
@@ -127,7 +127,7 @@ void GlibMainLoop::BeforeWait() {
     // Tell glib about any events we received on the FDs it asked about.
     if (g_main_context_check(g_main_context_, last_query_max_priority_,
                              gpoll_fds_.data(), gpoll_fds_.size())) {
-      VLOG(1) << "g_main_context_dispatch";
+      ABSL_VLOG(1) << "g_main_context_dispatch";
       // We have some glib events now, dispatch them now.
       g_main_context_dispatch(g_main_context_);
     }
@@ -146,7 +146,7 @@ void GlibMainLoop::BeforeWait() {
     if (static_cast<size_t>(number_new_fds) <= gpoll_fds_.size()) {
       // They all fit, resize to drop any stale entries and then we're done.
       gpoll_fds_.resize(number_new_fds);
-      VLOG(1) << "glib gave " << number_new_fds;
+      ABSL_VLOG(1) << "glib gave " << number_new_fds;
       break;
     }
     // Need more space, we know how much so try again.
@@ -158,9 +158,9 @@ void GlibMainLoop::BeforeWait() {
     ABSL_CHECK_EQ(gpoll_fd.revents, 0) << ": what does this mean?";
 
     if (added_fds_.count(gpoll_fd.fd) == 0) {
-      VLOG(1) << "Add to ShmEventLoop: " << gpoll_fd.fd;
+      ABSL_VLOG(1) << "Add to ShmEventLoop: " << gpoll_fd.fd;
       epoll_->OnEvents(gpoll_fd.fd, [this, fd = gpoll_fd.fd](uint32_t events) {
-        VLOG(1) << "glib " << fd << " triggered: " << std::hex << events;
+        ABSL_VLOG(1) << "glib " << fd << " triggered: " << std::hex << events;
         const auto iterator = std::find_if(
             gpoll_fds_.begin(), gpoll_fds_.end(),
             [fd](const GPollFD &candidate) { return candidate.fd == fd; });
@@ -178,12 +178,12 @@ void GlibMainLoop::BeforeWait() {
         gpoll_fds_.begin(), gpoll_fds_.end(),
         [fd](const GPollFD &candidate) { return candidate.fd == fd; });
     if (iterator == gpoll_fds_.end()) {
-      VLOG(1) << "Remove from ShmEventLoop: " << fd;
+      ABSL_VLOG(1) << "Remove from ShmEventLoop: " << fd;
       added_fds_.erase(fd);
     }
   }
   ABSL_CHECK_EQ(added_fds_.size(), gpoll_fds_.size());
-  VLOG(1) << "Timeout: " << timeout_ms;
+  ABSL_VLOG(1) << "Timeout: " << timeout_ms;
   if (timeout_ms == -1) {
     timeout_timer_->Disable();
   } else {

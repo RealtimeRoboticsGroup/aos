@@ -10,7 +10,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
 #include "gmock/gmock.h"
@@ -510,7 +510,7 @@ class ResolvePathTest : public ::testing::Test {
 
   std::filesystem::path CreateFile(const std::string filename) {
     const std::filesystem::path file = GetLocalPath(filename);
-    VLOG(2) << "Creating file at " << file;
+    ABSL_VLOG(2) << "Creating file at " << file;
     util::WriteStringToFileOrDie(file.native(), "contents");
     return file;
   }
@@ -615,8 +615,8 @@ TEST_F(RemoveCGroupTest, RemoveNonExistentDirectoryWarning) {
   EXPECT_FALSE(std::filesystem::exists(test_path));
 }
 
-// Tests that RemoveCGroupWithRetry crashes with LOG(FATAL) when attempting to
-// remove a non-empty directory after exhausting all retries.
+// Tests that RemoveCGroupWithRetry crashes with ABSL_LOG(FATAL) when attempting
+// to remove a non-empty directory after exhausting all retries.
 TEST_F(RemoveCGroupTest, RemoveDirectoryWithFileFatal) {
   std::filesystem::path test_path = test_dir_ / "dir_with_file";
   std::filesystem::create_directory(test_path);

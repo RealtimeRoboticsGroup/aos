@@ -7,7 +7,7 @@
 #include "Eigen/Geometry"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_format.h"
 
 #include "aos/configuration.h"
@@ -141,7 +141,7 @@ aos::FlatbufferDetachedBuffer<calibration::CameraCalibration> BuildCalibration(
 }
 
 void Main(std::string orig_calib_filename) {
-  LOG(INFO) << "Reading from file: " << orig_calib_filename;
+  ABSL_LOG(INFO) << "Reading from file: " << orig_calib_filename;
   aos::FlatbufferDetachedBuffer<calibration::CameraCalibration>
       base_calibration =
           aos::JsonFileToFlatbuffer<calibration::CameraCalibration>(
@@ -177,13 +177,13 @@ void Main(std::string orig_calib_filename) {
       dirname, node_name.c_str(), team_number, camera_number, camera_id.c_str(),
       time_ss.str());
 
-  VLOG(1) << "From: " << orig_calib_filename << " -> "
-          << aos::FlatbufferToJson(base_calibration, {.multi_line = true});
+  ABSL_VLOG(1) << "From: " << orig_calib_filename << " -> "
+               << aos::FlatbufferToJson(base_calibration, {.multi_line = true});
 
-  VLOG(1) << "Writing: " << new_calib_filename << " -> "
-          << aos::FlatbufferToJson(new_calibration, {.multi_line = true});
+  ABSL_VLOG(1) << "Writing: " << new_calib_filename << " -> "
+               << aos::FlatbufferToJson(new_calibration, {.multi_line = true});
 
-  LOG(INFO) << "Writing to file: " << new_calib_filename;
+  ABSL_LOG(INFO) << "Writing to file: " << new_calib_filename;
   aos::util::WriteStringToFileOrDie(
       new_calib_filename,
       aos::FlatbufferToJson(new_calibration, {.multi_line = true}));

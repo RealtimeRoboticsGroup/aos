@@ -6,7 +6,7 @@
 #include <cstddef>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_cat.h"
 
 // When we first start reading a log folder, we end up reading the first part of
@@ -79,7 +79,7 @@ ParsedRange ParseRange(std::string_view string) {
 ObjectName ParseUrl(std::string_view url) {
   static constexpr std::string_view kS3 = "s3://";
   if (url.substr(0, kS3.size()) != kS3) {
-    LOG(FATAL) << "Not an S3 URL: " << url;
+    ABSL_LOG(FATAL) << "Not an S3 URL: " << url;
   }
   url = url.substr(kS3.size());
   const size_t slash = url.find('/');
@@ -98,13 +98,13 @@ Aws::S3::S3Client &GetS3Client() {
 }
 
 S3Fetcher::S3Fetcher(std::string_view url) : url_(url) {
-  VLOG(1) << "opening " << url;
+  ABSL_VLOG(1) << "opening " << url;
   // Start the initial request now.
   StartRequest();
 }
 
 size_t S3Fetcher::Read(uint8_t *begin, uint8_t *end) {
-  VLOG(1) << "looking to read " << (end - begin);
+  ABSL_VLOG(1) << "looking to read " << (end - begin);
   size_t total_read = 0;
 
   while (true) {
@@ -115,14 +115,14 @@ size_t S3Fetcher::Read(uint8_t *begin, uint8_t *end) {
     total_read += current_size;
     current_chunk_.erase_front(current_size);
     if (static_cast<std::ptrdiff_t>(total_read) == end - begin) {
-      VLOG(1) << "Got all " << total_read;
+      ABSL_VLOG(1) << "Got all " << total_read;
       // Got all of what the caller wants, done now.
       return total_read;
     }
     ABSL_CHECK_EQ(current_chunk_.size(), 0u)
         << ": Should have already copied this data out";
     if (end_of_object_) {
-      VLOG(1) << "At end after " << total_read;
+      ABSL_VLOG(1) << "At end after " << total_read;
       // Nothing more to read.
       return total_read;
     }
@@ -135,15 +135,15 @@ size_t S3Fetcher::Read(uint8_t *begin, uint8_t *end) {
       if (next_byte_to_request_ == 0 &&
           get_outcome.GetError().GetResponseCode() ==
               Aws::Http::HttpResponseCode::REQUESTED_RANGE_NOT_SATISFIABLE) {
-        VLOG(1) << "At beginning of empty file";
+        ABSL_VLOG(1) << "At beginning of empty file";
         // This is what happens with an empty file.
         // TODO(Brian): Do a List operation to verify it's actually empty?
         ABSL_CHECK_EQ(0u, total_read);
         end_of_object_ = true;
         return 0;
       }
-      LOG(FATAL) << ": GET for " << url_
-                 << " failed: " << get_outcome.GetError();
+      ABSL_LOG(FATAL) << ": GET for " << url_
+                      << " failed: " << get_outcome.GetError();
     }
     const ParsedRange content_range =
         ParseRange(get_outcome.GetResult().GetContentRange());
@@ -155,8 +155,8 @@ size_t S3Fetcher::Read(uint8_t *begin, uint8_t *end) {
     current_chunk_.resize(content_bytes);
     stream.read(reinterpret_cast<char *>(current_chunk_.data()), content_bytes);
     const size_t stream_read = stream.gcount();
-    VLOG(1) << "got " << stream_read << " from "
-            << get_outcome.GetResult().GetContentRange();
+    ABSL_VLOG(1) << "got " << stream_read << " from "
+                 << get_outcome.GetResult().GetContentRange();
     ABSL_CHECK_EQ(stream_read, content_bytes);
     if (content_range.end + 1 == content_range.total_size) {
       end_of_object_ = true;
@@ -178,8 +178,8 @@ void S3Fetcher::StartRequest() {
   const uint64_t last_byte_to_request = next_byte_to_request_ + kChunkSize;
   get_request.SetRange(absl::StrCat("bytes=", next_byte_to_request_, "-",
                                     last_byte_to_request - 1));
-  VLOG(1) << "request for " << next_byte_to_request_ << "-"
-          << last_byte_to_request << ": " << get_request.GetRange();
+  ABSL_VLOG(1) << "request for " << next_byte_to_request_ << "-"
+               << last_byte_to_request << ": " << get_request.GetRange();
   get_next_chunk_ = GetS3Client().GetObjectCallable(get_request);
 }
 
@@ -202,7 +202,7 @@ std::vector<std::pair<std::string, size_t>> ListS3Objects(
           absl::StrCat("s3://", list_outcome.GetResult().GetName(), "/",
                        object.GetKey()),
           object.GetSize());
-      VLOG(2) << "got " << result.back().first;
+      ABSL_VLOG(2) << "got " << result.back().first;
     }
     if (!list_result.GetIsTruncated()) {
       break;

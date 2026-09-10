@@ -2,7 +2,7 @@
 
 #include "Eigen/Core"
 #include "Eigen/Geometry"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/init.h"
 
@@ -16,14 +16,14 @@ int Main() {
   camera_to_robot_matrix << 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0;
 
   Eigen::Quaterniond camera_to_robot(camera_to_robot_matrix);
-  LOG(INFO) << "Camera to robot: \n" << camera_to_robot_matrix;
-  LOG(INFO) << "Camera to robot: \n" << camera_to_robot.matrix();
-  LOG(INFO) << "X: "
-            << (camera_to_robot * Eigen::Vector3d::UnitX()).transpose();
-  LOG(INFO) << "Y: "
-            << (camera_to_robot * Eigen::Vector3d::UnitY()).transpose();
-  LOG(INFO) << "Z: "
-            << (camera_to_robot * Eigen::Vector3d::UnitZ()).transpose();
+  ABSL_LOG(INFO) << "Camera to robot: \n" << camera_to_robot_matrix;
+  ABSL_LOG(INFO) << "Camera to robot: \n" << camera_to_robot.matrix();
+  ABSL_LOG(INFO) << "X: "
+                 << (camera_to_robot * Eigen::Vector3d::UnitX()).transpose();
+  ABSL_LOG(INFO) << "Y: "
+                 << (camera_to_robot * Eigen::Vector3d::UnitY()).transpose();
+  ABSL_LOG(INFO) << "Z: "
+                 << (camera_to_robot * Eigen::Vector3d::UnitZ()).transpose();
 
   Eigen::IOFormat json_format(Eigen::FullPrecision, 0, ", ", "\n", "      ",
                               ",");
@@ -38,21 +38,21 @@ int Main() {
                         Eigen::Vector3d::UnitY()) *
       camera_to_robot;
 
-  LOG(INFO) << "Orientation0 (cam to robot): \n"
-            << orientation0.matrix().format(json_format);
-  LOG(INFO) << "T: "
-            << (orientation0 * Eigen::Vector3d(0.0, 0.0, 0.0)).transpose()
-            << " angle " << angle0 << " or " << angle0 + 360.;
+  ABSL_LOG(INFO) << "Orientation0 (cam to robot): \n"
+                 << orientation0.matrix().format(json_format);
+  ABSL_LOG(INFO) << "T: "
+                 << (orientation0 * Eigen::Vector3d(0.0, 0.0, 0.0)).transpose()
+                 << " angle " << angle0 << " or " << angle0 + 360.;
 
-  LOG(INFO) << "Camera0 to robot: \n" << orientation0.matrix();
+  ABSL_LOG(INFO) << "Camera0 to robot: \n" << orientation0.matrix();
   const Eigen::Vector3d z = orientation0 * Eigen::Vector3d::Zero();
-  LOG(INFO) << "0: " << (z).transpose();
-  LOG(INFO) << "X: "
-            << (orientation0 * Eigen::Vector3d::UnitX() - z).transpose();
-  LOG(INFO) << "Y: "
-            << (orientation0 * Eigen::Vector3d::UnitY() - z).transpose();
-  LOG(INFO) << "Z: "
-            << (orientation0 * Eigen::Vector3d::UnitZ() - z).transpose();
+  ABSL_LOG(INFO) << "0: " << (z).transpose();
+  ABSL_LOG(INFO) << "X: "
+                 << (orientation0 * Eigen::Vector3d::UnitX() - z).transpose();
+  ABSL_LOG(INFO) << "Y: "
+                 << (orientation0 * Eigen::Vector3d::UnitY() - z).transpose();
+  ABSL_LOG(INFO) << "Z: "
+                 << (orientation0 * Eigen::Vector3d::UnitZ() - z).transpose();
 
   const double angle1 = 36.0;
   const double angledown1 = 0.0;
@@ -63,10 +63,11 @@ int Main() {
                         Eigen::Vector3d::UnitY()) *
       camera_to_robot;
 
-  LOG(INFO) << "Orientation1: \n" << orientation1.matrix().format(json_format);
-  LOG(INFO) << "T: "
-            << (orientation1 * Eigen::Vector3d(0.0, 0.0, 0.0)).transpose()
-            << " angle " << angle1 << " or " << angle1 + 360.;
+  ABSL_LOG(INFO) << "Orientation1: \n"
+                 << orientation1.matrix().format(json_format);
+  ABSL_LOG(INFO) << "T: "
+                 << (orientation1 * Eigen::Vector3d(0.0, 0.0, 0.0)).transpose()
+                 << " angle " << angle1 << " or " << angle1 + 360.;
 
   const double angle2 = -36.0;
   const double angledown2 = 0.0;
@@ -77,10 +78,11 @@ int Main() {
                         Eigen::Vector3d::UnitY()) *
       camera_to_robot;
 
-  LOG(INFO) << "Orientation2: \n" << orientation2.matrix().format(json_format);
-  LOG(INFO) << "T: "
-            << (orientation2 * Eigen::Vector3d(0.0, 0.0, 0.0)).transpose()
-            << " angle " << angle2 << " or " << angle2 + 360.;
+  ABSL_LOG(INFO) << "Orientation2: \n"
+                 << orientation2.matrix().format(json_format);
+  ABSL_LOG(INFO) << "T: "
+                 << (orientation2 * Eigen::Vector3d(0.0, 0.0, 0.0)).transpose()
+                 << " angle " << angle2 << " or " << angle2 + 360.;
 
   const double angle3 = 180.;
   const double angledown3 = -28.0;
@@ -91,10 +93,11 @@ int Main() {
                         Eigen::Vector3d::UnitY()) *
       camera_to_robot;
 
-  LOG(INFO) << "Orientation3: \n" << orientation3.matrix().format(json_format);
-  LOG(INFO) << "T: "
-            << (orientation3 * Eigen::Vector3d(0.0, 0.0, 0.0)).transpose()
-            << " angle " << angle3 << " or " << angle3 + 360.;
+  ABSL_LOG(INFO) << "Orientation3: \n"
+                 << orientation3.matrix().format(json_format);
+  ABSL_LOG(INFO) << "T: "
+                 << (orientation3 * Eigen::Vector3d(0.0, 0.0, 0.0)).transpose()
+                 << " angle " << angle3 << " or " << angle3 + 360.;
   return 0;
 }
 

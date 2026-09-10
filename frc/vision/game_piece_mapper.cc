@@ -2,7 +2,7 @@
 #include "Eigen/Geometry"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/configuration.h"
 #include "aos/events/shm_event_loop.h"
@@ -30,8 +30,8 @@ const calibration::CameraCalibration *FindCameraCalibration(
     }
     return candidate;
   }
-  LOG(FATAL) << ": Failed to find camera calibration for " << node_name
-             << " and camera number " << camera_number;
+  ABSL_LOG(FATAL) << ": Failed to find camera calibration for " << node_name
+                  << " and camera number " << camera_number;
 }
 
 class GamePieceMapper {
@@ -96,7 +96,7 @@ class GamePieceMapper {
     const Eigen::Affine3d camera_to_field = robot_to_field * camera_to_robot;
     const Eigen::Affine3d field_to_camera = camera_to_field.inverse();
 
-    VLOG(1) << bounding_boxes.has_boxes();
+    ABSL_VLOG(1) << bounding_boxes.has_boxes();
 
     Eigen::Matrix<double, 3, 4> field_to_pixel =
         intrinsics * camera_projective_transform *
@@ -129,10 +129,11 @@ class GamePieceMapper {
         Eigen::Matrix<double, 3, 1> xys1 =
             field_to_pixel_xys.inverse() * Eigen::Vector3d(u1, v1, 1.0);
 
-        VLOG(1) << "xys0: " << xys0.transpose() << " xysc: " << xysc.transpose()
-                << " xys1: " << xys1.transpose();
+        ABSL_VLOG(1) << "xys0: " << xys0.transpose()
+                     << " xysc: " << xysc.transpose()
+                     << " xys1: " << xys1.transpose();
 
-        VLOG(1) << "Center: " << uc << ", " << vc;
+        ABSL_VLOG(1) << "Center: " << uc << ", " << vc;
 
         Eigen::Vector3d xy0 = xys0 / xys0.z();
         Eigen::Vector3d xyc = xysc / xysc.z();
@@ -140,8 +141,9 @@ class GamePieceMapper {
 
         // TODO(austin): Do the behind us calc...
 
-        VLOG(1) << "xy0: " << xy0.transpose() << " xyc: " << xyc.transpose()
-                << " xy1: " << xy1.transpose();
+        ABSL_VLOG(1) << "xy0: " << xy0.transpose()
+                     << " xyc: " << xyc.transpose()
+                     << " xy1: " << xy1.transpose();
         frc::vision::GamePieceLocationStatic *location_static =
             locations->emplace_back();
         location_static->set_class_id(box->class_id());

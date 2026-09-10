@@ -10,7 +10,7 @@ namespace aos::events {
 
 // Simple wrapper around a transmitting UDP socket.
 //
-// LOG(FATAL)s for all errors, including from Send.
+// ABSL_LOG(FATAL)s for all errors, including from Send.
 class TXUdpSocket {
  public:
   TXUdpSocket(const std::string &ip_addr, int port);
@@ -44,7 +44,7 @@ class ProtoTXUdpSocket {
 
 // Simple wrapper around a receiving UDP socket.
 //
-// LOG(FATAL)s for all errors, including from Recv.
+// ABSL_LOG(FATAL)s for all errors, including from Recv.
 class RXUdpSocket {
  public:
   RXUdpSocket(int port);

@@ -5,8 +5,8 @@
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/log/die_if_null.h"
-#include "absl/log/log.h"
 #include "opencv2/core/eigen.hpp"
 
 // NOTE: This will flip any annotations / text that has already been drawn on
@@ -94,8 +94,9 @@ IntrinsicsCalibration::IntrinsicsCalibration(
         << absl::GetFlag(FLAGS_image_save_path) << " is not a directory";
   }
 
-  LOG(INFO) << "Hostname is: " << hostname_ << " and camera channel is "
-            << camera_channel_ << " make sure you are using the right channel.";
+  ABSL_LOG(INFO) << "Hostname is: " << hostname_ << " and camera channel is "
+                 << camera_channel_
+                 << " make sure you are using the right channel.";
 
   std::regex re{"^[0-9][0-9]-[0-9][0-9]"};
   ABSL_CHECK(std::regex_match(camera_id_, re))
@@ -148,7 +149,7 @@ void IntrinsicsCalibration::HandleCharuco(
   int keystroke = cv::waitKey(1);
   if ((keystroke & 0xFF) == static_cast<int>('q') ||
       all_charuco_ids_.size() >= absl::GetFlag(FLAGS_min_images_to_calibrate)) {
-    LOG(INFO) << "Going to exit";
+    ABSL_LOG(INFO) << "Going to exit";
     exit_collection_ = true;
     exit_handle_->Exit();
   }
@@ -157,9 +158,9 @@ void IntrinsicsCalibration::HandleCharuco(
     // Require valid poses on loading from disk, so we can visually
     // review once done
     if (!absl::GetFlag(FLAGS_image_load_path).empty()) {
-      LOG(ERROR) << "Shouldn't have invalid images in loading from logs";
+      ABSL_LOG(ERROR) << "Shouldn't have invalid images in loading from logs";
     }
-    VLOG(1) << "Skip because pose is not valid";
+    ABSL_VLOG(1) << "Skip because pose is not valid";
     return;
   }
 
@@ -187,8 +188,10 @@ void IntrinsicsCalibration::HandleCharuco(
   bool store_image = false;
   double percent_motion =
       std::max<double>(r_norm / kDeltaRThreshold, t_norm / kDeltaTThreshold);
-  LOG(INFO) << "Captured: " << all_charuco_ids_.size() << " samples; \nMoved "
-            << static_cast<int>(percent_motion * 100) << "% of what's needed";
+  ABSL_LOG(INFO) << "Captured: " << all_charuco_ids_.size()
+                 << " samples; \nMoved "
+                 << static_cast<int>(percent_motion * 100)
+                 << "% of what's needed";
 
   // Verify that camera has moved enough from last stored image
   if (r_norm > kDeltaRThreshold || t_norm > kDeltaTThreshold) {
@@ -208,39 +211,39 @@ void IntrinsicsCalibration::HandleCharuco(
         frame_r_norm < kFrameDeltaRLimit && frame_t_norm < kFrameDeltaTLimit;
     double percent_stop = std::max<double>(frame_r_norm / kFrameDeltaRLimit,
                                            frame_t_norm / kFrameDeltaTLimit);
-    LOG(INFO) << "\nCaptured: " << all_charuco_ids_.size()
-              << " samples; \nMoved enough ("
-              << static_cast<int>(percent_motion * 100)
-              << "%); Last motion was " << static_cast<int>(percent_stop * 100)
-              << "% of limit. "
-              << (store_image ? "Capturing image" : "Still need to stop");
+    ABSL_LOG(INFO) << "\nCaptured: " << all_charuco_ids_.size()
+                   << " samples; \nMoved enough ("
+                   << static_cast<int>(percent_motion * 100)
+                   << "%); Last motion was "
+                   << static_cast<int>(percent_stop * 100) << "% of limit. "
+                   << (store_image ? "Capturing image" : "Still need to stop");
   }
   last_frame_H_board_camera_ = H_camera_board.inverse();
 
   if (all_charuco_ids_.empty() && valid) {
     // If we haven't captured yet, and it's a valid pose, go ahead and store
     // it, since we don't have a previous pose to reference
-    LOG(INFO) << "Capturing first valid pose estimate";
+    ABSL_LOG(INFO) << "Capturing first valid pose estimate";
     store_image = true;
   }
 
   if (absl::GetFlag(FLAGS_image_load_path) != "") {
-    LOG(INFO) << "Loading from disk, so capturing all images";
+    ABSL_LOG(INFO) << "Loading from disk, so capturing all images";
     store_image = true;
   }
 
   if ((keystroke & 0xFF) == static_cast<int>('c')) {
     // Protect from hitting capture key but then the image captured is bad
     if (charuco_ids.size() > 15) {
-      LOG(INFO) << "Manual capture triggered";
+      ABSL_LOG(INFO) << "Manual capture triggered";
       H_camera_board = prev_H_board_camera_;
       if (!valid) {
         invalid_images_saved_++;
       }
       store_image = true;
     } else {
-      LOG(INFO) << "Manual attempt rejected due to too few features "
-                << charuco_ids.size();
+      ABSL_LOG(INFO) << "Manual attempt rejected due to too few features "
+                     << charuco_ids.size();
     }
   }
 
@@ -257,12 +260,12 @@ void IntrinsicsCalibration::HandleCharuco(
       all_charuco_corners_.emplace_back(std::move(charuco_corners[0]));
 
       if (r_norm > kDeltaRThreshold) {
-        LOG(INFO) << "Triggered by rotation delta = " << r_norm << " > "
-                  << kDeltaRThreshold;
+        ABSL_LOG(INFO) << "Triggered by rotation delta = " << r_norm << " > "
+                       << kDeltaRThreshold;
       }
       if (t_norm > kDeltaTThreshold) {
-        LOG(INFO) << "Triggered by translation delta = " << t_norm << " > "
-                  << kDeltaTThreshold;
+        ABSL_LOG(INFO) << "Triggered by translation delta = " << t_norm << " > "
+                       << kDeltaTThreshold;
       }
       if (absl::GetFlag(FLAGS_visualize)) {
         if (point_viz_image_.empty()) {
@@ -284,13 +287,13 @@ void IntrinsicsCalibration::HandleCharuco(
         cv::imshow("Captured Point Visualization", display_image);
         cv::waitKey(1);
       }
-      LOG(INFO) << "Storing image #" << all_charuco_corners_.size();
+      ABSL_LOG(INFO) << "Storing image #" << all_charuco_corners_.size();
 
       if (absl::GetFlag(FLAGS_image_save_path) != "") {
         std::string image_name =
             absl::StrFormat("/img_%06d.png", image_save_count_++);
         std::string path = absl::GetFlag(FLAGS_image_save_path) + image_name;
-        VLOG(2) << "Saving intrinsic calibration image to " << path;
+        ABSL_VLOG(2) << "Saving intrinsic calibration image to " << path;
         cv::imwrite(path, rgb_image);
       }
     }
@@ -298,15 +301,15 @@ void IntrinsicsCalibration::HandleCharuco(
 
   // TODO<Jim>: Do we really need this?
   if (invalid_images_saved_ > 0) {
-    LOG(INFO) << "Captured " << invalid_images_saved_
-              << " invalid images out of " << all_charuco_corners_.size();
+    ABSL_LOG(INFO) << "Captured " << invalid_images_saved_
+                   << " invalid images out of " << all_charuco_corners_.size();
   }
 }
 
 void IntrinsicsCalibration::LoadImages(std::vector<std::string> file_list) {
   file_list_ = file_list;
   for (std::string filename : file_list_) {
-    LOG(INFO) << "Loading image " << filename;
+    ABSL_LOG(INFO) << "Loading image " << filename;
     cv::Mat image = cv::imread(filename);
     charuco_extractor_.HandleImage(image, aos::monotonic_clock::now());
   }
@@ -326,8 +329,8 @@ void IntrinsicsCalibration::LoadImagesFromPath(
   }
 
   std::sort(file_list.begin(), file_list.end());
-  LOG(INFO) << "Loading " << file_list.size() << " images from "
-            << path.string();
+  ABSL_LOG(INFO) << "Loading " << file_list.size() << " images from "
+                 << path.string();
   LoadImages(file_list);
 }
 
@@ -472,8 +475,8 @@ void IntrinsicsCalibration::MaybeCalibrate() {
     for (auto charuco_ids : all_charuco_ids_) {
       total_num_ids += charuco_ids.size();
     }
-    LOG(INFO) << "Beginning calibration on " << all_charuco_ids_.size()
-              << " images, with " << total_num_ids << " ids total";
+    ABSL_LOG(INFO) << "Beginning calibration on " << all_charuco_ids_.size()
+                   << " images, with " << total_num_ids << " ids total";
 
     if (camera_mat_.empty()) {
       camera_mat_ = charuco_extractor_.camera_matrix();
@@ -487,7 +490,7 @@ void IntrinsicsCalibration::MaybeCalibrate() {
     // just approximate or from an old camera
     int calibration_flags = cv::CALIB_USE_INTRINSIC_GUESS;
     if (absl::GetFlag(FLAGS_use_rational_model)) {
-      LOG(INFO) << "Using rational (8-parameter) model";
+      ABSL_LOG(INFO) << "Using rational (8-parameter) model";
       calibration_flags |= cv::CALIB_RATIONAL_MODEL;
     }
     // Found that using at least 100 iterations helped get convergence to
@@ -503,10 +506,10 @@ void IntrinsicsCalibration::MaybeCalibrate() {
     ABSL_CHECK_LE(reprojection_error_, 5.0)
         << ": Reproduction error is bad-- greater than 5 pixels.";
     if (reprojection_error_ < 1.0) {
-      LOG(INFO) << "Reprojection Error is " << reprojection_error_;
+      ABSL_LOG(INFO) << "Reprojection Error is " << reprojection_error_;
     } else {
-      LOG(WARNING) << "NOTE: Reprojection Error is > 1.0, at "
-                   << reprojection_error_;
+      ABSL_LOG(WARNING) << "NOTE: Reprojection Error is > 1.0, at "
+                        << reprojection_error_;
     }
 
     const aos::realtime_clock::time_point realtime_now =
@@ -530,9 +533,9 @@ void IntrinsicsCalibration::MaybeCalibrate() {
         calibration_folder_, node_name_, team_number.value(),
         camera_number.value(), camera_id_, time_ss.str());
 
-    LOG(INFO) << calibration_filename << " -> "
-              << aos::FlatbufferToJson(camera_calibration,
-                                       {.multi_line = true});
+    ABSL_LOG(INFO) << calibration_filename << " -> "
+                   << aos::FlatbufferToJson(camera_calibration,
+                                            {.multi_line = true});
     aos::util::WriteStringToFileOrDie(
         calibration_filename,
         aos::FlatbufferToJson(camera_calibration, {.multi_line = true}));
@@ -542,7 +545,7 @@ void IntrinsicsCalibration::MaybeCalibrate() {
         !absl::GetFlag(FLAGS_image_load_path).empty()) {
       uint index = 0;
       for (std::string filename : file_list_) {
-        LOG(INFO) << "Loading file " << filename;
+        ABSL_LOG(INFO) << "Loading file " << filename;
         cv::Mat image = cv::imread(filename);
         DrawCornersOnImage(image, index, tvecs_, rvecs_, camera_mat_,
                            dist_coeffs_);
@@ -552,7 +555,7 @@ void IntrinsicsCalibration::MaybeCalibrate() {
       }
     }
   } else {
-    LOG(INFO) << "Skipping calibration due to not enough images.";
+    ABSL_LOG(INFO) << "Skipping calibration due to not enough images.";
   }
 }
 }  // namespace frc::vision

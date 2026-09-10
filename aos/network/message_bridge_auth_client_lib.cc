@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/events/event_loop.h"
 #include "aos/network/message_bridge_auth.grpc.pb.h"
@@ -35,7 +35,7 @@ MessageBridgeAuthClient::MessageBridgeAuthClient(
         // get another request in the future anyway.
         if (config_request_fetcher_.Fetch()) {
           if (config_request_fetcher_->request_key()) {
-            VLOG(1) << "Got SCTP authentication request from /aos";
+            ABSL_VLOG(1) << "Got SCTP authentication request from /aos";
             SendKey();
           }
         }
@@ -70,7 +70,7 @@ std::vector<uint8_t> MessageBridgeAuthClient::GetSctpKey() {
   SctpKeyResponse response;
   Status status = client_->GetActiveKey(&context, request, &response);
   if (!status.ok()) {
-    LOG_EVERY_N(ERROR, 50)
+    ABSL_LOG_EVERY_N(ERROR, 50)
         << "Unable to retrieve active SCTP authentication key from server";
     return {};
   }

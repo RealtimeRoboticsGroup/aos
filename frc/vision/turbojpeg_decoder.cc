@@ -4,7 +4,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_cat.h"
 
 #include "aos/configuration.h"
@@ -76,7 +76,7 @@ class TurboJpegDecoder {
             strnlen(error, last_error_message_.capacity());
         last_error_message_.resize(truncated_len);
         memcpy(last_error_message_.data(), error, truncated_len);
-        VLOG(1) << "Error decompressing image: " << error;
+        ABSL_VLOG(1) << "Error decompressing image: " << error;
         return;
       }
     }
@@ -100,7 +100,7 @@ class TurboJpegDecoder {
             strnlen(error, last_error_message_.capacity());
         last_error_message_.resize(truncated_len);
         memcpy(last_error_message_.data(), error, truncated_len);
-        VLOG(1) << "Error decompressing image: " << error;
+        ABSL_VLOG(1) << "Error decompressing image: " << error;
         return;
       }
     }
@@ -117,13 +117,13 @@ class TurboJpegDecoder {
 
     builder.CheckOk(builder.Send(camera_image_builder.Finish()));
 
-    VLOG(1) << "Decompressed " << image.data()->size() << " bytes to " << width
-            << "x" << height << " in "
-            << std::chrono::duration<double>(
-                   event_loop_->monotonic_now() -
-                   event_loop_->context().monotonic_event_time)
-                   .count()
-            << "sec";
+    ABSL_VLOG(1) << "Decompressed " << image.data()->size() << " bytes to "
+                 << width << "x" << height << " in "
+                 << std::chrono::duration<double>(
+                        event_loop_->monotonic_now() -
+                        event_loop_->context().monotonic_event_time)
+                        .count()
+                 << "sec";
   }
 
   void SendStatus() {

@@ -47,8 +47,8 @@ cc_library(
         "//third_party:cudart",
         "@com_github_nvidia_cccl//:cccl",
         "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -92,7 +92,7 @@ cc_test(
         "//aos/testing:path",
         "//frc/vision:vision_fbs",
         "@bazel_tools//tools/cpp/runfiles",
-        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -158,8 +158,8 @@ cuda_library(
         "//third_party/apriltag",
         "@com_github_nvidia_cccl//:cccl",
         "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -314,7 +314,7 @@ cc_binary(
         ":hardware_stats_fbs",
         "//aos:init",
         "//aos/events:shm_event_loop",
-        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/strings",
     ],
 )
@@ -348,8 +348,8 @@ cc_binary(
         "//aos/events/logging:snappy_encoder",
         "//aos/logging:log_namer",
         "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 

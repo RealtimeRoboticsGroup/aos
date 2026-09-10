@@ -2,6 +2,7 @@
 #define FRC_WPILIB_NEWROBOTBASE_H_
 
 #include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/events/shm_event_loop.h"
 #include "aos/init.h"
@@ -22,13 +23,13 @@ class WPILibRobotBase {
     ::std::vector<::std::thread> threads;
     for (size_t i = 1; i < loops_.size(); ++i) {
       threads.emplace_back([this, i]() {
-        LOG(INFO) << "Starting " << loops_[i]->name() << " with priority "
-                  << loops_[i]->runtime_realtime_priority();
+        ABSL_LOG(INFO) << "Starting " << loops_[i]->name() << " with priority "
+                       << loops_[i]->runtime_realtime_priority();
         loops_[i]->Run();
       });
     }
-    LOG(INFO) << "Starting " << loops_[0]->name() << " with priority "
-              << loops_[0]->runtime_realtime_priority();
+    ABSL_LOG(INFO) << "Starting " << loops_[0]->name() << " with priority "
+                   << loops_[0]->runtime_realtime_priority();
     // Save some memory and run the last one in the main thread.
     loops_[0]->Run();
 
@@ -36,7 +37,7 @@ class WPILibRobotBase {
       thread.join();
     }
 
-    LOG(ERROR) << "Exiting WPILibRobot";
+    ABSL_LOG(ERROR) << "Exiting WPILibRobot";
   }
 
  protected:

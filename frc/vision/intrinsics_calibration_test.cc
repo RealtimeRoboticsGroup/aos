@@ -52,8 +52,8 @@ void CheckAgainstKnownCalibration(IntrinsicsCalibration &calibrator) {
   cv::add(dist_coeffs, -calculated_dist_coeffs, diff_dist_coeffs, cv::noArray(),
           CV_32F);
 
-  VLOG(1) << "Norm of diffs is " << cv::norm(diff_camera_mat) << " and "
-          << cv::norm(diff_dist_coeffs);
+  ABSL_VLOG(1) << "Norm of diffs is " << cv::norm(diff_camera_mat) << " and "
+               << cv::norm(diff_dist_coeffs);
 
   const double kDiffThreshold = 1e-3;
   EXPECT_NEAR(cv::norm(diff_camera_mat), 0.0, kDiffThreshold);
@@ -104,10 +104,10 @@ void RunIntrinsicFromPoints(std::string calib_filename,
   calibrator.SetDistortionCoefficients(dist_coeffs_init);
 
   if (dist_coeffs.size().height == 5) {
-    LOG(INFO) << "Using 5 parameter traditional model";
+    ABSL_LOG(INFO) << "Using 5 parameter traditional model";
     absl::SetFlag(&FLAGS_use_rational_model, false);
   } else {
-    LOG(INFO) << "Using 8 parameter rational model";
+    ABSL_LOG(INFO) << "Using 8 parameter rational model";
     absl::SetFlag(&FLAGS_use_rational_model, true);
   }
 
@@ -137,9 +137,9 @@ void RunIntrinsicFromPoints(std::string calib_filename,
               for (auto corner_ids : all_corner_ids) {
                 total_num_ids += corner_ids.size();
               }
-              LOG(INFO) << "Got enough board captures: "
-                        << all_corner_ids.size() << " with " << total_num_ids
-                        << " corners";
+              ABSL_LOG(INFO)
+                  << "Got enough board captures: " << all_corner_ids.size()
+                  << " with " << total_num_ids << " corners";
               should_break = true;
               break;
             }
@@ -316,8 +316,8 @@ TEST(IntrinsicCalculationTest, ImagePlayback) {
   std::filesystem::path test_images_path(
       runfiles->Rlocation("intrinsic_calibration_test_images/img_000001.png"));
   test_images_path = test_images_path.parent_path();
-  LOG(INFO) << "Running intrinsics from disk from path: "
-            << test_images_path.string();
+  ABSL_LOG(INFO) << "Running intrinsics from disk from path: "
+                 << test_images_path.string();
   absl::SetFlag(&FLAGS_image_load_path, test_images_path.string());
   calibrator.LoadImagesFromPath(test_images_path);
   calibrator.MaybeCalibrate();

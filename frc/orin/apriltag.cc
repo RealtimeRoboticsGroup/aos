@@ -17,7 +17,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "third_party/apriltag/common/g2d.h"
 
 #include "aos/time/time.h"
@@ -1099,12 +1099,14 @@ void GpuDetector::Detect(const uint8_t *image, const uint8_t *image_device) {
 
   // Report out how long things took.
 
-  VLOG(1) << "Found " << *num_compressed_union_marker_pair_host_.get()
-          << " items";
-  VLOG(1) << "Selected " << num_selected_blobs_host << " right side out points";
-  VLOG(1) << "Found compressed runs: " << *num_quads_host_.get();
-  VLOG(1) << "Peaks " << num_compressed_peaks_host << " peaks";
-  VLOG(1) << "Peak Selected blobs " << num_quad_peaked_quads_host << " quads";
+  ABSL_VLOG(1) << "Found " << *num_compressed_union_marker_pair_host_.get()
+               << " items";
+  ABSL_VLOG(1) << "Selected " << num_selected_blobs_host
+               << " right side out points";
+  ABSL_VLOG(1) << "Found compressed runs: " << *num_quads_host_.get();
+  ABSL_VLOG(1) << "Peaks " << num_compressed_peaks_host << " peaks";
+  ABSL_VLOG(1) << "Peak Selected blobs " << num_quad_peaked_quads_host
+               << " quads";
   CudaEvent *previous_event = &start_;
   for (auto name_event : std::vector<std::tuple<std::string_view, CudaEvent &>>{
            {"Memcpy", after_image_memcpy_to_device_},
@@ -1131,30 +1133,34 @@ void GpuDetector::Detect(const uint8_t *image, const uint8_t *image_device) {
            {"FitQuads", after_quad_fit_},
        }) {
     std::get<1>(name_event).Synchronize();
-    VLOG(1) << "    " << std::get<0>(name_event) << " "
-            << float_milli(std::get<1>(name_event).ElapsedTime(*previous_event))
-                   .count()
-            << "ms";
+    ABSL_VLOG(1) << "    " << std::get<0>(name_event) << " "
+                 << float_milli(
+                        std::get<1>(name_event).ElapsedTime(*previous_event))
+                        .count()
+                 << "ms";
     previous_event = &std::get<1>(name_event);
   }
-  VLOG(1) << "  FitQuads " << float_milli(end_time - before_fit_quads).count()
-          << "ms on host";
+  ABSL_VLOG(1) << "  FitQuads "
+               << float_milli(end_time - before_fit_quads).count()
+               << "ms on host";
 
-  VLOG(1) << "Overall "
-          << float_milli(previous_event->ElapsedTime(start_)).count() << "ms, "
-          << float_milli(end_time - start_time).count() << "ms on host, "
-          << (1000.0 / float_milli(previous_event->ElapsedTime(start_)).count())
-          << "hz";
+  ABSL_VLOG(1) << "Overall "
+               << float_milli(previous_event->ElapsedTime(start_)).count()
+               << "ms, " << float_milli(end_time - start_time).count()
+               << "ms on host, "
+               << (1000.0 /
+                   float_milli(previous_event->ElapsedTime(start_)).count())
+               << "hz";
   // Average.  Skip the first one as the kernel is warming up and is slower.
   if (!first_) {
     ++execution_count_;
     execution_duration_ += previous_event->ElapsedTime(start_);
-    VLOG(1) << "Average overall "
-            << float_milli(execution_duration_ / execution_count_).count()
-            << "ms, "
-            << (1000.0 /
-                float_milli(execution_duration_ / execution_count_).count())
-            << "hz";
+    ABSL_VLOG(1)
+        << "Average overall "
+        << float_milli(execution_duration_ / execution_count_).count() << "ms, "
+        << (1000.0 /
+            float_milli(execution_duration_ / execution_count_).count())
+        << "hz";
   }
 
   first_ = false;

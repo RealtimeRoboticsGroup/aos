@@ -6,7 +6,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/events/event_loop.h"
 #include "frc/can_logger/can_logging_generated.h"

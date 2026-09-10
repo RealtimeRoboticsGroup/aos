@@ -8,7 +8,7 @@
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/synchronization/mutex.h"
 #include "gtest/gtest.h"
 
@@ -134,7 +134,7 @@ TEST(RealtimeDeathTest, Fatal) {
   EXPECT_DEATH(
       {
         ScopedRealtime rt;
-        LOG(FATAL) << "Cute message here";
+        ABSL_LOG(FATAL) << "Cute message here";
       },
       "Cute message here");
 }
@@ -248,7 +248,7 @@ TEST(RealtimeDeathTest, SignalHandler) {
       {
         ScopedRealtime rt;
         int x = reinterpret_cast<const volatile int *>(0)[0];
-        LOG(INFO) << x;
+        ABSL_LOG(INFO) << x;
       },
       "\\*\\*\\* SIGSEGV received at .*");
 }

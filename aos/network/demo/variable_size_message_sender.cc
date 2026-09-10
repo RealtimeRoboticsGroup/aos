@@ -2,8 +2,8 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/log/die_if_null.h"
-#include "absl/log/log.h"
 
 #include "aos/configuration.h"
 #include "aos/events/shm_event_loop.h"
@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
 
           ++value;
         }
-        VLOG(1) << "Sent " << num_messages_per_sleep << " messages.";
+        ABSL_VLOG(1) << "Sent " << num_messages_per_sleep << " messages.";
       });
   timer_handle->set_name("sender");
 

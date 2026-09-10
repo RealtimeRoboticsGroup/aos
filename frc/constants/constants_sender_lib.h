@@ -3,7 +3,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/events/event_loop.h"
 #include "aos/events/shm_event_loop.h"
@@ -54,9 +54,10 @@ class ConstantSender {
         return flatbuffer_constants;
       }
     }
-    LOG(FATAL) << "There was no match for " << team_number_
-               << ". Check the constants.json file for the team number that is "
-                  "missing.";
+    ABSL_LOG(FATAL)
+        << "There was no match for " << team_number_
+        << ". Check the constants.json file for the team number that is "
+           "missing.";
   }
 
   std::string constants_path_;
@@ -114,9 +115,10 @@ class NameConstantSender {
         return flatbuffer_constants;
       }
     }
-    LOG(FATAL) << "There was no match for " << team_number_
-               << ". Check the constants.json file for the team number that is "
-                  "missing.";
+    ABSL_LOG(FATAL)
+        << "There was no match for " << team_number_
+        << ". Check the constants.json file for the team number that is "
+           "missing.";
   }
 
   std::string constants_path_;
@@ -138,7 +140,7 @@ class ConstantsFetcher {
     ABSL_CHECK(fetcher_.Fetch())
         << "Constants information must be available at startup.";
     event_loop->MakeNoArgWatcher<ConstantsData>(channel, []() {
-      LOG(FATAL)
+      ABSL_LOG(FATAL)
           << "Don't know how to handle changes to constants information.";
     });
   }
@@ -169,10 +171,10 @@ void WaitForConstants(const aos::Configuration *config,
       event_loop.Exit();
     }
   });
-  LOG(INFO) << "Waiting for constants data on " << channel << " "
-            << ConstantsData::GetFullyQualifiedName();
+  ABSL_LOG(INFO) << "Waiting for constants data on " << channel << " "
+                 << ConstantsData::GetFullyQualifiedName();
   event_loop.Run();
-  LOG(INFO) << "Got constants data.";
+  ABSL_LOG(INFO) << "Got constants data.";
 }
 
 }  // namespace frc::constants

@@ -40,18 +40,18 @@ void TestCalibrationFile(std::filesystem::path base_intrinsics_file) {
 // and undistort routines
 TEST(UndistortTest, DistortUndistort) {
   // Test against default zero distortion 5 parameter model
-  LOG(INFO) << "Test against default zero distortion 5 parameter model";
+  ABSL_LOG(INFO) << "Test against default zero distortion 5 parameter model";
   TestCalibrationFile(ArtifactPath(
       "frc/vision/test_calib_files/calibration_orin-971-1_cam-24-00.json"));
 
   // Test against regular camera distortion 5 parameter model
-  LOG(INFO) << "Test against regular distortion 5 parameter model";
+  ABSL_LOG(INFO) << "Test against regular distortion 5 parameter model";
   TestCalibrationFile(ArtifactPath(
       "frc/vision/test_calib_files/"
       "calibration_orin1-971-0_cam-24-06_2024-03-24_14-54-27.json"));
 
   // Test against regular camera distortion 5 parameter model
-  LOG(INFO) << "Test against 8 parameter model";
+  ABSL_LOG(INFO) << "Test against 8 parameter model";
   TestCalibrationFile(
       ArtifactPath("frc/vision/test_calib_files/"
                    "calibration_orin-971-1_cam-24-00_8parameter.json"));

@@ -1,8 +1,8 @@
 #include <chrono>
 
 #include "absl/flags/flag.h"
-#include "absl/log/log.h"
-#include "absl/log/vlog_is_on.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 
 #include "aos/events/shm_event_loop.h"
 #include "aos/init.h"
@@ -45,16 +45,16 @@ class PingServer {
 
   void Timer() {
     if (sac_assoc_id_ == 0) {
-      LOG(INFO) << "No client, not sending";
+      ABSL_LOG(INFO) << "No client, not sending";
       return;
     }
 
     std::string data(absl::GetFlag(FLAGS_size), 'a');
 
     if (server_.Send(data, sac_assoc_id_, 0, absl::GetFlag(FLAGS_ttl))) {
-      LOG(INFO) << "Sent " << data.size();
+      ABSL_LOG(INFO) << "Sent " << data.size();
     } else {
-      PLOG(ERROR) << "Failed to send";
+      ABSL_PLOG(ERROR) << "Failed to send";
     }
   }
 
@@ -68,7 +68,7 @@ class PingServer {
       const union sctp_notification *snp =
           (const union sctp_notification *)message->data();
 
-      if (VLOG_IS_ON(2)) {
+      if (ABSL_VLOG_IS_ON(2)) {
         PrintNotification(message.get());
       }
 
@@ -78,16 +78,16 @@ class PingServer {
           switch (sac->sac_state) {
             case SCTP_COMM_UP:
               NodeConnected(sac->sac_assoc_id);
-              VLOG(1) << "Peer connected";
+              ABSL_VLOG(1) << "Peer connected";
               break;
             case SCTP_COMM_LOST:
             case SCTP_SHUTDOWN_COMP:
             case SCTP_CANT_STR_ASSOC:
               NodeDisconnected(sac->sac_assoc_id);
-              VLOG(1) << "Disconnect";
+              ABSL_VLOG(1) << "Disconnect";
               break;
             case SCTP_RESTART:
-              LOG(FATAL) << "Never seen this before.";
+              ABSL_LOG(FATAL) << "Never seen this before.";
               break;
           }
         } break;
@@ -104,9 +104,9 @@ class PingServer {
   void NodeDisconnected(sctp_assoc_t /*assoc_id*/) { sac_assoc_id_ = 0; }
 
   void HandleData(const Message *message) {
-    VLOG(1) << "Received data of length " << message->size;
+    ABSL_VLOG(1) << "Received data of length " << message->size;
 
-    if (VLOG_IS_ON(1)) {
+    if (ABSL_VLOG_IS_ON(1)) {
       message->LogRcvInfo();
     }
   }

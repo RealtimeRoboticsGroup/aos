@@ -6,7 +6,7 @@
 #include <tuple>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/vlog_is_on.h"
+#include "absl/log/absl_vlog_is_on.h"
 #include "absl/numeric/int128.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
@@ -136,9 +136,9 @@ NoncausalTimestampFilter::InterpolateWithOtherFilter(
     return std::make_pair(pointer, std::make_pair(t0, t1));
   }
 
-  VLOG(1) << "Other points are: " << pointer.other_points_.size();
+  ABSL_VLOG(1) << "Other points are: " << pointer.other_points_.size();
   for (const auto &x : pointer.other_points_) {
-    VLOG(1) << "  " << TimeString(x.second);
+    ABSL_VLOG(1) << "  " << TimeString(x.second);
   }
 
   // The invariant of pointer is that other_points is bounded by t0, t1. Confirm
@@ -790,9 +790,10 @@ bool NoncausalTimestampFilter::SingleFilter::ValidateSolution(
   NormalizeTimestamps(&tb_base, &tb);
   ABSL_CHECK_GT(timestamps_size(), 0u);
   if (ta_base < std::get<0>(timestamp(0)) && has_popped_ && validate_popped) {
-    if (!quiet || VLOG_IS_ON(1)) {
-      LOG(ERROR) << node_names_ << " O(" << ta_base << ", " << ta
-                 << ") is before the start and we have forgotten the answer.";
+    if (!quiet || ABSL_VLOG_IS_ON(1)) {
+      ABSL_LOG(ERROR)
+          << node_names_ << " O(" << ta_base << ", " << ta
+          << ") is before the start and we have forgotten the answer.";
     }
     return false;
   }
@@ -812,15 +813,15 @@ bool NoncausalTimestampFilter::SingleFilter::ValidateSolution(
     if (static_cast<double>(
             (std::get<0>(offset) + ta_base - tb_base).count()) >=
         tb - ta - std::get<1>(offset)) {
-      if (!quiet || VLOG_IS_ON(1)) {
-        LOG(ERROR) << node_names_ << " "
-                   << TimeString(ta_base, ta, std::get<0>(offset),
-                                 std::get<1>(offset))
-                   << " > solution time "
-                   << tb_base + chrono::nanoseconds(
-                                    static_cast<int64_t>(std::round(tb)))
-                   << ", " << tb - std::round(tb) << " foo";
-        LOG(INFO) << "Remainder " << std::get<1>(offset);
+      if (!quiet || ABSL_VLOG_IS_ON(1)) {
+        ABSL_LOG(ERROR) << node_names_ << " "
+                        << TimeString(ta_base, ta, std::get<0>(offset),
+                                      std::get<1>(offset))
+                        << " > solution time "
+                        << tb_base + chrono::nanoseconds(
+                                         static_cast<int64_t>(std::round(tb)))
+                        << ", " << tb - std::round(tb) << " foo";
+        ABSL_LOG(INFO) << "Remainder " << std::get<1>(offset);
       }
       return false;
     }
@@ -843,13 +844,14 @@ bool NoncausalTimestampFilter::SingleFilter::ValidateSolution(
   // See below for why this is a >=
   if (static_cast<double>((std::get<0>(offset) + ta_base - tb_base).count()) >=
       tb - std::get<1>(offset) - ta) {
-    if (!quiet || VLOG_IS_ON(1)) {
-      LOG(ERROR) << node_names_ << " "
-                 << TimeString(ta_base, ta, std::get<0>(offset),
-                               std::get<1>(offset))
-                 << " > solution time " << tb_base << ", " << tb;
-      LOG(ERROR) << "Bracketing times are " << TimeString(points.second.first)
-                 << " and " << TimeString(points.second.second);
+    if (!quiet || ABSL_VLOG_IS_ON(1)) {
+      ABSL_LOG(ERROR) << node_names_ << " "
+                      << TimeString(ta_base, ta, std::get<0>(offset),
+                                    std::get<1>(offset))
+                      << " > solution time " << tb_base << ", " << tb;
+      ABSL_LOG(ERROR) << "Bracketing times are "
+                      << TimeString(points.second.first) << " and "
+                      << TimeString(points.second.second);
     }
     return false;
   }
@@ -862,9 +864,10 @@ bool NoncausalTimestampFilter::SingleFilter::ValidateSolution(
     bool validate_popped, bool quiet) const {
   ABSL_CHECK_GT(timestamps_size(), 0u);
   if (ta < std::get<0>(timestamp(0)) && has_popped_ && validate_popped) {
-    if (!quiet || VLOG_IS_ON(1)) {
-      LOG(ERROR) << node_names_ << " O(" << ta
-                 << ") is before the start and we have forgotten the answer.";
+    if (!quiet || ABSL_VLOG_IS_ON(1)) {
+      ABSL_LOG(ERROR)
+          << node_names_ << " O(" << ta
+          << ") is before the start and we have forgotten the answer.";
     }
     return false;
   }
@@ -882,9 +885,9 @@ bool NoncausalTimestampFilter::SingleFilter::ValidateSolution(
     // way to preserve order well enough to have causality preserved when things
     // happen at the same point in time.
     if (offset + ta >= tb) {
-      if (!quiet || VLOG_IS_ON(1)) {
-        LOG(ERROR) << node_names_ << " " << TimeString(ta, offset)
-                   << " > solution time " << tb;
+      if (!quiet || ABSL_VLOG_IS_ON(1)) {
+        ABSL_LOG(ERROR) << node_names_ << " " << TimeString(ta, offset)
+                        << " > solution time " << tb;
       }
       return false;
     }
@@ -903,11 +906,12 @@ bool NoncausalTimestampFilter::SingleFilter::ValidateSolution(
   // way to preserve order well enough to have causality preserved when things
   // happen at the same point in time.
   if (offset + ta >= tb) {
-    if (!quiet || VLOG_IS_ON(1)) {
-      LOG(ERROR) << node_names_ << " " << TimeString(ta, offset)
-                 << " > solution time " << tb;
-      LOG(ERROR) << "Bracketing times are " << TimeString(points.second.first)
-                 << " and " << TimeString(points.second.second);
+    if (!quiet || ABSL_VLOG_IS_ON(1)) {
+      ABSL_LOG(ERROR) << node_names_ << " " << TimeString(ta, offset)
+                      << " > solution time " << tb;
+      ABSL_LOG(ERROR) << "Bracketing times are "
+                      << TimeString(points.second.first) << " and "
+                      << TimeString(points.second.second);
     }
     return false;
   }
@@ -924,8 +928,8 @@ void NoncausalTimestampFilter::SingleFilter::Sample(
     logger::BootTimestamp monotonic_now, logger::BootDuration sample_ns) {
   // The first sample is easy.  Just do it!
   if (timestamps_.size() == 0) {
-    VLOG(1) << node_names_ << " Initial sample of "
-            << TimeString(monotonic_now, sample_ns);
+    ABSL_VLOG(1) << node_names_ << " Initial sample of "
+                 << TimeString(monotonic_now, sample_ns);
     timestamps_.emplace_back(
         std::make_tuple(monotonic_now.time, sample_ns.duration));
     ABSL_CHECK(!fully_frozen_)
@@ -962,9 +966,9 @@ void NoncausalTimestampFilter::SingleFilter::Sample(
       sample_ns.duration - std::get<1>(back);
 
   if (dt == chrono::nanoseconds(0) && doffset == chrono::nanoseconds(0)) {
-    VLOG(1) << node_names_ << " Duplicate sample of O(" << monotonic_now
-            << ") = " << sample_ns << ", remote time "
-            << monotonic_now + sample_ns;
+    ABSL_VLOG(1) << node_names_ << " Duplicate sample of O(" << monotonic_now
+                 << ") = " << sample_ns << ", remote time "
+                 << monotonic_now + sample_ns;
 
     return;
   }
@@ -977,11 +981,11 @@ void NoncausalTimestampFilter::SingleFilter::Sample(
     // considering.  Ignore it.
     if (absl::int128(doffset.count()) * absl::int128(MaxVelocityRatio::den) <
         -absl::int128(dt.count()) * absl::int128(MaxVelocityRatio::num)) {
-      VLOG(1) << std::setprecision(1) << std::fixed << node_names_
-              << " Rejected sample of " << TimeString(monotonic_now, sample_ns)
-              << " because " << doffset.count() << " < "
-              << (-dt * kMaxVelocity()).count() << " len "
-              << timestamps_.size();
+      ABSL_VLOG(1) << std::setprecision(1) << std::fixed << node_names_
+                   << " Rejected sample of "
+                   << TimeString(monotonic_now, sample_ns) << " because "
+                   << doffset.count() << " < " << (-dt * kMaxVelocity()).count()
+                   << " len " << timestamps_.size();
       return;
     }
 
@@ -1028,9 +1032,9 @@ void NoncausalTimestampFilter::SingleFilter::Sample(
           << chrono::duration<double>(monotonic_now.time - std::get<0>(back))
                  .count()
           << ", or set --force_timestamp_loading";
-      VLOG(1) << node_names_
-              << " Removing now invalid sample during back propegation of "
-              << TimeString(back);
+      ABSL_VLOG(1) << node_names_
+                   << " Removing now invalid sample during back propegation of "
+                   << TimeString(back);
       timestamps_.pop_back();
 
       back = timestamps_.back();
@@ -1038,8 +1042,8 @@ void NoncausalTimestampFilter::SingleFilter::Sample(
       doffset = sample_ns.duration - std::get<1>(back);
     }
 
-    VLOG(1) << node_names_ << " Added sample of "
-            << TimeString(monotonic_now, sample_ns);
+    ABSL_VLOG(1) << node_names_ << " Added sample of "
+                 << TimeString(monotonic_now, sample_ns);
     timestamps_.emplace_back(
         std::make_tuple(monotonic_now.time, sample_ns.duration));
     return;
@@ -1068,16 +1072,16 @@ void NoncausalTimestampFilter::SingleFilter::Sample(
       const chrono::nanoseconds doffset = original_offset - sample_ns.duration;
 
       if (dt == chrono::nanoseconds(0) && doffset >= chrono::nanoseconds(0)) {
-        VLOG(1) << node_names_ << " Redundant timestamp "
-                << TimeString(monotonic_now, sample_ns) << " because "
-                << TimeString(timestamps_.front())
-                << " is at the same time and a better solution.";
+        ABSL_VLOG(1) << node_names_ << " Redundant timestamp "
+                     << TimeString(monotonic_now, sample_ns) << " because "
+                     << TimeString(timestamps_.front())
+                     << " is at the same time and a better solution.";
         return;
       }
     }
 
-    VLOG(1) << node_names_ << " Added sample at beginning "
-            << TimeString(monotonic_now, sample_ns);
+    ABSL_VLOG(1) << node_names_ << " Added sample at beginning "
+                 << TimeString(monotonic_now, sample_ns);
     timestamps_.insert(it,
                        std::make_tuple(monotonic_now.time, sample_ns.duration));
 
@@ -1094,10 +1098,10 @@ void NoncausalTimestampFilter::SingleFilter::Sample(
         if (absl::int128(doffset.count()) *
                 absl::int128(MaxVelocityRatio::den) <
             -absl::int128(dt.count()) * absl::int128(MaxVelocityRatio::num)) {
-          VLOG(1) << node_names_ << " Removing redundant sample of "
-                  << TimeString(*second) << " because "
-                  << TimeString(timestamps_.front())
-                  << " would make the slope too negative.";
+          ABSL_VLOG(1) << node_names_ << " Removing redundant sample of "
+                       << TimeString(*second) << " because "
+                       << TimeString(timestamps_.front())
+                       << " would make the slope too negative.";
           timestamps_.erase(second);
           continue;
         }
@@ -1123,9 +1127,10 @@ void NoncausalTimestampFilter::SingleFilter::Sample(
           if (absl::int128(doffset.count()) *
                   absl::int128(MaxVelocityRatio::den) >
               absl::int128(dt.count()) * absl::int128(MaxVelocityRatio::num)) {
-            VLOG(1) << node_names_ << " Removing invalid sample of "
-                    << TimeString(*second) << " because " << TimeString(*third)
-                    << " would make the slope too positive.";
+            ABSL_VLOG(1) << node_names_ << " Removing invalid sample of "
+                         << TimeString(*second) << " because "
+                         << TimeString(*third)
+                         << " would make the slope too positive.";
             timestamps_.erase(second);
             continue;
           }
@@ -1136,8 +1141,9 @@ void NoncausalTimestampFilter::SingleFilter::Sample(
     }
     return;
   } else {
-    VLOG(1) << node_names_ << " Found the next time " << std::get<0>(*(it - 1))
-            << " < " << monotonic_now << " < " << std::get<0>(*it);
+    ABSL_VLOG(1) << node_names_ << " Found the next time "
+                 << std::get<0>(*(it - 1)) << " < " << monotonic_now << " < "
+                 << std::get<0>(*it);
 
     {
       chrono::nanoseconds prior_dt =
@@ -1152,19 +1158,19 @@ void NoncausalTimestampFilter::SingleFilter::Sample(
               absl::int128(MaxVelocityRatio::den) <
           absl::int128(-prior_dt.count()) *
               absl::int128(MaxVelocityRatio::num)) {
-        VLOG(1) << node_names_ << " Ignoring timestamp "
-                << TimeString(monotonic_now, sample_ns) << " because "
-                << TimeString(*(it - 1))
-                << " is before and the slope would be too negative.";
+        ABSL_VLOG(1) << node_names_ << " Ignoring timestamp "
+                     << TimeString(monotonic_now, sample_ns) << " because "
+                     << TimeString(*(it - 1))
+                     << " is before and the slope would be too negative.";
         return;
       }
       if (absl::int128(next_doffset.count()) *
               absl::int128(MaxVelocityRatio::den) >
           absl::int128(next_dt.count()) * absl::int128(MaxVelocityRatio::num)) {
-        VLOG(1) << node_names_ << " Ignoring timestamp "
-                << TimeString(monotonic_now, sample_ns) << " because "
-                << TimeString(*it)
-                << " is following and the slope would be too positive.";
+        ABSL_VLOG(1) << node_names_ << " Ignoring timestamp "
+                     << TimeString(monotonic_now, sample_ns) << " because "
+                     << TimeString(*it)
+                     << " is following and the slope would be too positive.";
         return;
       }
 
@@ -1172,9 +1178,9 @@ void NoncausalTimestampFilter::SingleFilter::Sample(
            prior_doffset == chrono::nanoseconds(0)) ||
           (next_dt == chrono::nanoseconds(0) &&
            next_doffset == chrono::nanoseconds(0))) {
-        VLOG(1) << node_names_ << " Ignoring timestamp "
-                << TimeString(monotonic_now, sample_ns) << " because "
-                << TimeString(*it) << " matches one of the points.";
+        ABSL_VLOG(1) << node_names_ << " Ignoring timestamp "
+                     << TimeString(monotonic_now, sample_ns) << " because "
+                     << TimeString(*it) << " matches one of the points.";
         return;
       }
     }
@@ -1184,7 +1190,7 @@ void NoncausalTimestampFilter::SingleFilter::Sample(
     // new.
     auto middle_it = timestamps_.insert(
         it, std::make_tuple(monotonic_now.time, sample_ns.duration));
-    VLOG(1) << node_names_ << " Inserted " << TimeString(*middle_it);
+    ABSL_VLOG(1) << node_names_ << " Inserted " << TimeString(*middle_it);
 
     while (middle_it != timestamps_.end() && middle_it != timestamps_.begin()) {
       auto next_it =
@@ -1203,9 +1209,9 @@ void NoncausalTimestampFilter::SingleFilter::Sample(
                 absl::int128(MaxVelocityRatio::den) <
             absl::int128(-next_dt.count()) *
                 absl::int128(MaxVelocityRatio::num)) {
-          VLOG(1) << node_names_
-                  << " Next slope is too negative, removing next point "
-                  << TimeString(*next_it);
+          ABSL_VLOG(1) << node_names_
+                       << " Next slope is too negative, removing next point "
+                       << TimeString(*next_it);
           next_it = timestamps_.erase(next_it);
           // erase invalidates all iterators, and this code uses middle as the
           // state.  Update middle.
@@ -1232,8 +1238,8 @@ void NoncausalTimestampFilter::SingleFilter::Sample(
               << chrono::duration<double>(prior_dt).count()
               << ", or set --force_timestamp_loading";
 
-          VLOG(1) << "Prior slope is too positive, removing prior point "
-                  << TimeString(*prior_it);
+          ABSL_VLOG(1) << "Prior slope is too positive, removing prior point "
+                       << TimeString(*prior_it);
           prior_it = timestamps_.erase(prior_it);
           middle_it = prior_it;
           continue;
@@ -1248,7 +1254,7 @@ void NoncausalTimestampFilter::SingleFilter::Sample(
 bool NoncausalTimestampFilter::Pop(BootTimestamp time) {
   ABSL_CHECK_GE(filters_.size(), 1u);
 
-  VLOG(1) << NodeNames() << " Pop(" << time << ")";
+  ABSL_VLOG(1) << NodeNames() << " Pop(" << time << ")";
   bool removed = false;
 
   // Declare a variable to store the index of latest filter we should modify.
@@ -1312,10 +1318,10 @@ void NoncausalTimestampFilter::SingleFilter::Debug() const {
   size_t count = 0;
   for (std::tuple<aos::monotonic_clock::time_point, std::chrono::nanoseconds>
            timestamp : timestamps_) {
-    LOG(INFO) << node_names_ << " "
-              << TimeString(std::get<0>(timestamp), std::get<1>(timestamp))
-              << " frozen? " << frozen(std::get<0>(timestamp)) << " consumed? "
-              << (count < next_to_consume_);
+    ABSL_LOG(INFO) << node_names_ << " "
+                   << TimeString(std::get<0>(timestamp), std::get<1>(timestamp))
+                   << " frozen? " << frozen(std::get<0>(timestamp))
+                   << " consumed? " << (count < next_to_consume_);
     ++count;
   }
 }
@@ -1368,8 +1374,8 @@ NoncausalTimestampFilter::Observe() const {
                               std::get<0>(*result)},
         logger::BootDuration{static_cast<size_t>(filter.boot.second),
                              std::get<1>(*result)});
-    VLOG(1) << NodeNames() << " Observed sample of "
-            << TimeString(final_result);
+    ABSL_VLOG(1) << NodeNames() << " Observed sample of "
+                 << TimeString(final_result);
     return final_result;
   }
 }
@@ -1379,8 +1385,8 @@ NoncausalTimestampFilter::SingleFilter::Observe() const {
   if (timestamps_.empty() || next_to_consume_ >= timestamps_.size()) {
     return std::nullopt;
   }
-  VLOG(2) << node_names_ << " Observed sample of "
-          << TimeString(timestamp(next_to_consume_));
+  ABSL_VLOG(2) << node_names_ << " Observed sample of "
+               << TimeString(timestamp(next_to_consume_));
   return timestamp(next_to_consume_);
 }
 
@@ -1411,8 +1417,8 @@ NoncausalTimestampFilter::Consume() {
                               std::get<0>(*result)},
         logger::BootDuration{static_cast<size_t>(filter.boot.second),
                              std::get<1>(*result)});
-    VLOG(1) << NodeNames() << " Consumed sample of "
-            << TimeString(final_result);
+    ABSL_VLOG(1) << NodeNames() << " Consumed sample of "
+                 << TimeString(final_result);
     return final_result;
   }
 }
@@ -1424,7 +1430,7 @@ NoncausalTimestampFilter::SingleFilter::Consume() {
   }
 
   auto result = timestamp(next_to_consume_);
-  VLOG(2) << node_names_ << " Consumed sample of " << TimeString(result);
+  ABSL_VLOG(2) << node_names_ << " Consumed sample of " << TimeString(result);
   ++next_to_consume_;
   return result;
 }
@@ -1443,15 +1449,15 @@ void NoncausalTimestampFilter::SingleFilter::FreezeUntil(
   }
 
   if (timestamps_.empty()) {
-    VLOG(1) << node_names_ << " fully_frozen_, no timestamps.";
+    ABSL_VLOG(1) << node_names_ << " fully_frozen_, no timestamps.";
     fully_frozen_ = true;
   } else if (node_monotonic_now > std::get<0>(timestamps_.back())) {
     // We've been asked to freeze past the last point.  It isn't safe to add any
     // more points or we will change this region.
-    VLOG(1) << node_names_ << " fully_frozen_, after the end.";
+    ABSL_VLOG(1) << node_names_ << " fully_frozen_, after the end.";
     fully_frozen_ = true;
   } else {
-    LOG(FATAL) << "How did we get here?";
+    ABSL_LOG(FATAL) << "How did we get here?";
   }
 }
 
@@ -1467,23 +1473,23 @@ void NoncausalTimestampFilter::SingleFilter::FreezeUntilRemote(
   }
 
   if (timestamps_.empty()) {
-    VLOG(1) << node_names_ << " fully_frozen_, no timestamps.";
+    ABSL_VLOG(1) << node_names_ << " fully_frozen_, no timestamps.";
     fully_frozen_ = true;
   } else if (remote_monotonic_now > std::get<0>(timestamps_.back()) +
                                         std::get<1>(timestamps_.back())) {
     // We've been asked to freeze past the last point.  It isn't safe to add any
     // more points or we will change this region.
-    VLOG(1) << node_names_ << " fully_frozen_, after the end.";
+    ABSL_VLOG(1) << node_names_ << " fully_frozen_, after the end.";
     fully_frozen_ = true;
   } else {
-    LOG(FATAL) << "How did we get here?";
+    ABSL_LOG(FATAL) << "How did we get here?";
   }
 }
 
 void NoncausalTimestampFilter::SingleFilter::PopFront() {
   // If we drop data, we shouldn't add anything before that point.
   frozen_time_ = std::max(frozen_time_, std::get<0>(timestamp(0)));
-  VLOG(1) << "Popped " << std::get<0>(timestamps_[0]);
+  ABSL_VLOG(1) << "Popped " << std::get<0>(timestamps_[0]);
   timestamps_.pop_front();
   has_popped_ = true;
   if (next_to_consume_ > 0u) {
@@ -1494,10 +1500,10 @@ void NoncausalTimestampFilter::SingleFilter::PopFront() {
 void NoncausalOffsetEstimator::Sample(const Node *node,
                                       BootTimestamp node_delivered_time,
                                       BootTimestamp other_node_sent_time) {
-  VLOG(1) << "Sample delivered         " << node_delivered_time << " sent "
-          << other_node_sent_time << " " << node->name()->string_view()
-          << " -> "
-          << ((node == node_a_) ? node_b_ : node_a_)->name()->string_view();
+  ABSL_VLOG(1)
+      << "Sample delivered         " << node_delivered_time << " sent "
+      << other_node_sent_time << " " << node->name()->string_view() << " -> "
+      << ((node == node_a_) ? node_b_ : node_a_)->name()->string_view();
   if (node == node_a_) {
     a_.Sample(node_delivered_time,
               {other_node_sent_time.boot,
@@ -1507,17 +1513,17 @@ void NoncausalOffsetEstimator::Sample(const Node *node,
               {other_node_sent_time.boot,
                other_node_sent_time.time - node_delivered_time.time});
   } else {
-    LOG(FATAL) << "Unknown node " << node->name()->string_view();
+    ABSL_LOG(FATAL) << "Unknown node " << node->name()->string_view();
   }
 }
 
 void NoncausalOffsetEstimator::ReverseSample(
     const Node *node, BootTimestamp node_sent_time,
     BootTimestamp other_node_delivered_time) {
-  VLOG(1) << "Reverse sample delivered " << other_node_delivered_time
-          << " sent " << node_sent_time << " "
-          << ((node == node_a_) ? node_b_ : node_a_)->name()->string_view()
-          << " -> " << node->name()->string_view();
+  ABSL_VLOG(1) << "Reverse sample delivered " << other_node_delivered_time
+               << " sent " << node_sent_time << " "
+               << ((node == node_a_) ? node_b_ : node_a_)->name()->string_view()
+               << " -> " << node->name()->string_view();
   if (node == node_a_) {
     b_.Sample(other_node_delivered_time,
               {node_sent_time.boot,
@@ -1527,7 +1533,7 @@ void NoncausalOffsetEstimator::ReverseSample(
               {node_sent_time.boot,
                node_sent_time.time - other_node_delivered_time.time});
   } else {
-    LOG(FATAL) << "Unknown node " << node->name()->string_view();
+    ABSL_LOG(FATAL) << "Unknown node " << node->name()->string_view();
   }
 }
 

@@ -16,8 +16,8 @@
 #include "Eigen/Geometry"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/log/die_if_null.h"
-#include "absl/log/log.h"
 #include "absl/strings/str_join.h"
 
 #include "aos/configuration.h"
@@ -104,10 +104,10 @@ std::string ResolveHostname(std::string_view host, int port) {
   int ret = getaddrinfo(host.empty() ? nullptr : std::string(host).c_str(),
                         std::to_string(port).c_str(), &hints, &addrinfo_result);
   if (ret == EAI_SYSTEM) {
-    PLOG(FATAL) << "getaddrinfo failed to look up '" << host << "'";
+    ABSL_PLOG(FATAL) << "getaddrinfo failed to look up '" << host << "'";
   } else if (ret != 0) {
-    LOG(FATAL) << "getaddrinfo failed to look up '" << host
-               << "': " << gai_strerror(ret);
+    ABSL_LOG(FATAL) << "getaddrinfo failed to look up '" << host
+                    << "': " << gai_strerror(ret);
   }
   switch (addrinfo_result->ai_family) {
     case AF_INET:
@@ -117,7 +117,7 @@ std::string ResolveHostname(std::string_view host, int port) {
 
       break;
     default:
-      LOG(FATAL) << "Unsupported family";
+      ABSL_LOG(FATAL) << "Unsupported family";
   }
 
   // Now print it back out nicely.
@@ -129,11 +129,11 @@ std::string ResolveHostname(std::string_view host, int port) {
                           service_string, NI_MAXSERV, NI_NUMERICHOST);
 
   if (error) {
-    LOG(ERROR) << "Reverse lookup failed ... " << gai_strerror(error);
+    ABSL_LOG(ERROR) << "Reverse lookup failed ... " << gai_strerror(error);
   }
 
-  LOG(INFO) << "remote:addr=" << host_string << ", port=" << service_string
-            << ", family=" << addrinfo_result->ai_family;
+  ABSL_LOG(INFO) << "remote:addr=" << host_string << ", port=" << service_string
+                 << ", family=" << addrinfo_result->ai_family;
 
   freeaddrinfo(addrinfo_result);
 
@@ -194,7 +194,7 @@ class CoralForwarder {
       const frc::vision::GamePieceLocations &locations) {
     auto offset = instance_->GetServerTimeOffset();
     if (!offset.has_value()) {
-      VLOG(1) << "Not connected, ignoring";
+      ABSL_VLOG(1) << "Not connected, ignoring";
       return;
     }
 
@@ -264,7 +264,7 @@ class CoralForwarder {
             game_piece_data.size() * sizeof(double)) !=
         game_piece_data.size() * sizeof(double)) {
       ++send_failure_count_;
-      VLOG(1) << "Send failure";
+      ABSL_VLOG(1) << "Send failure";
     }
   }
 
@@ -328,10 +328,10 @@ int Main() {
       [&connection_mutex, &connection_notify](const nt::Event &event) {
         std::unique_lock<std::mutex> lock(connection_mutex);
         if (event.Is(nt::EventFlags::kConnected)) {
-          VLOG(1) << "Connected!";
+          ABSL_VLOG(1) << "Connected!";
           connection_notify.notify_one();
         } else if (event.Is(nt::EventFlags::kDisconnected)) {
-          VLOG(1) << "Disconnected!";
+          ABSL_VLOG(1) << "Disconnected!";
           connection_notify.notify_one();
         }
       });
@@ -348,7 +348,7 @@ int Main() {
       [&](const frc::controls::LocalizerOutput &localizer_output) {
         auto offset = instance.GetServerTimeOffset();
         if (!offset.has_value()) {
-          VLOG(1) << "Not connected, ignoring";
+          ABSL_VLOG(1) << "Not connected, ignoring";
           return;
         }
 
@@ -371,7 +371,7 @@ int Main() {
                              pose_data.size() * sizeof(double)) !=
             pose_data.size() * sizeof(double)) {
           ++send_failure_count;
-          VLOG(1) << "Send failure";
+          ABSL_VLOG(1) << "Send failure";
         }
       });
 
@@ -394,7 +394,7 @@ int Main() {
 
     auto offset = instance.GetServerTimeOffset();
     if (!offset.has_value()) {
-      VLOG(1) << "Not connected";
+      ABSL_VLOG(1) << "Not connected";
       return;
     }
 
@@ -402,12 +402,12 @@ int Main() {
         std::chrono::duration_cast<std::chrono::nanoseconds>(
             std::chrono::duration<double>(data[6])) -
         std::chrono::microseconds(offset.value()));
-    VLOG(1) << "Published at " << publish_time << " now "
-            << aos::realtime_clock::now() << " offset "
-            << std::chrono::duration<double, std::milli>(
-                   publish_time - aos::realtime_clock::now())
-                   .count()
-            << " ms";
+    ABSL_VLOG(1) << "Published at " << publish_time << " now "
+                 << aos::realtime_clock::now() << " offset "
+                 << std::chrono::duration<double, std::milli>(
+                        publish_time - aos::realtime_clock::now())
+                        .count()
+                 << " ms";
     {
       aos::Sender<Pose2dStatic>::StaticBuilder builder =
           pose_sender.MakeStaticBuilder();
@@ -534,14 +534,15 @@ int Main() {
   event_loop.epoll()->OnReadable(enabled_eventfd.fd(), [&]() {
     uint64_t events = enabled_eventfd.Read();
     publish_robot_state();
-    VLOG(1) << "Got " << events << " wakeups.";
+    ABSL_VLOG(1) << "Got " << events << " wakeups.";
   });
 
   {
     std::unique_lock<std::mutex> lock(connection_mutex);
     if (std::cv_status::timeout ==
         connection_notify.wait_for(lock, std::chrono::seconds(1))) {
-      LOG(ERROR) << "Timed out connecting to " << absl::GetFlag(FLAGS_server);
+      ABSL_LOG(ERROR) << "Timed out connecting to "
+                      << absl::GetFlag(FLAGS_server);
       return 1;
     }
 
@@ -645,8 +646,8 @@ int Main() {
     std::unique_lock<std::mutex> lock(connection_mutex);
     if (std::cv_status::timeout ==
         connection_notify.wait_for(lock, std::chrono::seconds(1))) {
-      LOG(ERROR) << "Timed out disconnecting from "
-                 << absl::GetFlag(FLAGS_server);
+      ABSL_LOG(ERROR) << "Timed out disconnecting from "
+                      << absl::GetFlag(FLAGS_server);
       return 1;
     }
     ABSL_CHECK(!instance.IsConnected());

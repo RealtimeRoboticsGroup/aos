@@ -3,7 +3,7 @@
 #include <numeric>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_format.h"
 
 #include "aos/util/math.h"

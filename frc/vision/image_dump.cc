@@ -41,7 +41,7 @@ class ImageDump {
     std::string path =
         absl::StrCat(absl::GetFlag(FLAGS_path), "/", sha256.substr(0, 2), "/",
                      sha256, "-", camera, ".jpg");
-    LOG(INFO) << "Writing " << path;
+    ABSL_LOG(INFO) << "Writing " << path;
 
     ABSL_CHECK(aos::util::MkdirPIfSpace(
         path, std::filesystem::perms::owner_all |

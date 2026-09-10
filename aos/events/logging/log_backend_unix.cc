@@ -9,7 +9,7 @@
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/util/file.h"
 
@@ -29,7 +29,7 @@ WriteCode FileHandler::OpenForWrite() {
     } else {
       ABSL_PCHECK(fd_ != -1)
           << ": Failed to open " << filename_ << " for writing";
-      VLOG(1) << "Opened " << filename_ << " for writing";
+      ABSL_VLOG(1) << "Opened " << filename_ << " for writing";
     }
 
     flags_ = fcntl(fd_, F_GETFL, 0);
@@ -62,14 +62,14 @@ WriteCode FileHandler::Close() {
     if (errno == ENOSPC) {
       ran_out_of_space = true;
     } else {
-      PLOG(ERROR) << "Closing log file failed";
+      ABSL_PLOG(ERROR) << "Closing log file failed";
     }
   }
   if (absl::GetFlag(FLAGS_sync)) {
     aos::util::SyncDirectory(std::filesystem::path(filename_).parent_path());
   }
   fd_ = -1;
-  VLOG(1) << "Closed " << filename_;
+  ABSL_VLOG(1) << "Closed " << filename_;
   return ran_out_of_space ? WriteCode::kOutOfSpace : WriteCode::kOk;
 }
 
@@ -98,8 +98,9 @@ bool RenamableFileBackend::RenameLogBase(std::string_view new_base_name) {
       // return value on the floor).
       ABSL_PCHECK(errno == ENOSPC) << ": Unable to rename " << current_directory
                                    << " to " << new_directory;
-      PLOG(ERROR) << "Ran out of space renaming " << current_directory << " to "
-                  << new_directory << "; logging continues at the old path";
+      ABSL_PLOG(ERROR) << "Ran out of space renaming " << current_directory
+                       << " to " << new_directory
+                       << "; logging continues at the old path";
       return false;
     }
 

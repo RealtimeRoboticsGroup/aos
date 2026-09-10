@@ -13,7 +13,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/configuration.h"
 #include "aos/time/time.h"
@@ -43,8 +43,8 @@ void AllocateLogName(char **filename, const char *directory,
   std::error_code ec;
   std::filesystem::directory_iterator dir_iter(directory, ec);
   if (ec) {
-    LOG(FATAL) << "could not open directory " << directory << ": "
-               << ec.message();
+    ABSL_LOG(FATAL) << "could not open directory " << directory << ": "
+                    << ec.message();
   }
   int index = 0;
   while (dir_iter != std::filesystem::directory_iterator()) {
@@ -61,8 +61,8 @@ void AllocateLogName(char **filename, const char *directory,
     }
     dir_iter.increment(ec);
     if (ec) {
-      LOG(FATAL) << "failed iterating directory " << directory << ": "
-                 << ec.message();
+      ABSL_LOG(FATAL) << "failed iterating directory " << directory << ": "
+                      << ec.message();
     }
   }
 
@@ -73,7 +73,7 @@ void AllocateLogName(char **filename, const char *directory,
     previous[len] = '\0';
   } else {
     previous[0] = '\0';
-    LOG(INFO) << "Could not find " << path;
+    ABSL_LOG(INFO) << "Could not find " << path;
   }
   // Remove subsecond accuracy (after the ".").  We don't need it, and it makes
   // the string very long
@@ -82,17 +82,18 @@ void AllocateLogName(char **filename, const char *directory,
 
   if (asprintf(filename, "%s-%03d_%s", basename, fileindex,
                time_short.c_str()) == -1) {
-    PLOG(FATAL) << "couldn't create final name";
+    ABSL_PLOG(FATAL) << "couldn't create final name";
   }
   // Fix basename formatting.
-  LOG(INFO) << "Created log file (" << directory << "/" << *filename
-            << "). Previous file was (" << directory << "/" << previous << ").";
+  ABSL_LOG(INFO) << "Created log file (" << directory << "/" << *filename
+                 << "). Previous file was (" << directory << "/" << previous
+                 << ").";
 }
 
 bool FoundThumbDrive(const char *path) {
   FILE *mnt_fp = setmntent("/etc/mtab", "r");
   if (mnt_fp == nullptr) {
-    LOG(FATAL) << "Could not open /etc/mtab";
+    ABSL_LOG(FATAL) << "Could not open /etc/mtab";
   }
 
   bool found = false;
@@ -115,7 +116,7 @@ bool FindDevice(char *device, size_t device_size) {
   char test_device[10];
   for (char i = 'a'; i < 'z'; ++i) {
     snprintf(test_device, sizeof(test_device), "/dev/sd%c", i);
-    VLOG(1) << "Trying to access" << test_device;
+    ABSL_VLOG(1) << "Trying to access" << test_device;
     if (access(test_device, F_OK) != -1) {
       snprintf(device, device_size, "sd%c", i);
       return true;
@@ -132,29 +133,30 @@ std::optional<std::string> MaybeGetLogName(const char *basename) {
     {
       char dev_name[8];
       if (!FindDevice(dev_name, sizeof(dev_name))) {
-        LOG(INFO) << "Waiting for a device";
+        ABSL_LOG(INFO) << "Waiting for a device";
         return std::nullopt;
       }
       snprintf(folder, sizeof(folder), "/media/%s1", dev_name);
       if (!FoundThumbDrive(folder)) {
-        LOG(INFO) << "Waiting for" << folder;
+        ABSL_LOG(INFO) << "Waiting for" << folder;
         return std::nullopt;
       }
       snprintf(folder, sizeof(folder), "/media/%s1/", dev_name);
     }
 
     if (access(folder, F_OK) == -1) {
-      LOG(FATAL) << "folder '" << folder
-                 << "' does not exist. please create it.";
+      ABSL_LOG(FATAL) << "folder '" << folder
+                      << "' does not exist. please create it.";
     }
 
     absl::SetFlag(&FLAGS_logging_folder, folder);
   }
   const std::string folder = absl::GetFlag(FLAGS_logging_folder);
   if (access(folder.c_str(), R_OK | W_OK) == -1) {
-    LOG(FATAL) << "folder '" << folder << "' does not exist. please create it.";
+    ABSL_LOG(FATAL) << "folder '" << folder
+                    << "' does not exist. please create it.";
   }
-  LOG(INFO) << "logging to folder '" << folder << "'";
+  ABSL_LOG(INFO) << "logging to folder '" << folder << "'";
 
   char *tmp;
   AllocateLogName(&tmp, folder.c_str(), basename);
@@ -195,18 +197,19 @@ void UpdateCurrentSymlink(std::string_view folder, std::string_view basename,
   char *tmp2;
   if (asprintf(&tmp2, "%s/%s-current", folder_str.c_str(),
                basename_str.c_str()) == -1) {
-    PLOG(WARNING) << "couldn't create current symlink name";
+    ABSL_PLOG(WARNING) << "couldn't create current symlink name";
     return;
   }
 
   if (unlink(tmp2) == -1 && (errno != EROFS && errno != ENOENT)) {
-    LOG(WARNING) << "unlink('" << tmp2 << "') failed";
+    ABSL_LOG(WARNING) << "unlink('" << tmp2 << "') failed";
   }
 
   if (symlink(target_str.c_str(), tmp2) == -1) {
-    PLOG(WARNING) << "symlink('" << target_str << "', '" << tmp2 << "') failed";
+    ABSL_PLOG(WARNING) << "symlink('" << target_str << "', '" << tmp2
+                       << "') failed";
   } else {
-    VLOG(1) << "Updated symlink " << tmp2 << " -> " << target_str;
+    ABSL_VLOG(1) << "Updated symlink " << tmp2 << " -> " << target_str;
   }
 
   free(tmp2);

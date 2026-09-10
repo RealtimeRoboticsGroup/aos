@@ -4,7 +4,7 @@
 // flatbuffer type and an Eigen::Matrix.
 // The interesting methods are ToEigen(), ToEigenOrDie(), and FromEigen().
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "tl/expected.hpp"
 #include <Eigen/Core>
 
@@ -87,8 +87,8 @@ typename EigenMatrix<Rows, Cols, StorageOrder>::type ToEigenOrDie(
     const fbs::Matrix &matrix) {
   auto result = ToEigen<Rows, Cols, StorageOrder>(matrix);
   if (!result.has_value()) {
-    LOG(FATAL) << "Failed to convert to matrix with error " << result.error()
-               << ".";
+    ABSL_LOG(FATAL) << "Failed to convert to matrix with error "
+                    << result.error() << ".";
   }
   return result.value();
 }

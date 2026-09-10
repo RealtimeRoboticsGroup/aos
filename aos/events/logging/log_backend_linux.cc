@@ -10,8 +10,8 @@
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
-#include "absl/log/vlog_is_on.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 
 #include "aos/util/file.h"
 
@@ -41,12 +41,12 @@ void FileHandler::EnableDirect() {
     // Track if we failed to set O_DIRECT.  Note: Austin hasn't seen this call
     // fail.  The write call tends to fail instead.
     if (fcntl(fd_, F_SETFL, new_flags) == -1) {
-      PLOG(WARNING) << "Failed to set O_DIRECT on " << filename_;
+      ABSL_PLOG(WARNING) << "Failed to set O_DIRECT on " << filename_;
       supports_odirect_ = false;
     } else {
       flags_ = new_flags;
       odirect_enabled_ = true;
-      VLOG(1) << "Enabled O_DIRECT on " << filename_;
+      ABSL_VLOG(1) << "Enabled O_DIRECT on " << filename_;
     }
   }
 }
@@ -57,7 +57,7 @@ void FileHandler::DisableDirect() {
     ABSL_PCHECK(fcntl(fd_, F_SETFL, flags_) != -1)
         << ": Failed to disable O_DIRECT";
     odirect_enabled_ = false;
-    VLOG(1) << "Disabled O_DIRECT on " << filename_;
+    ABSL_VLOG(1) << "Disabled O_DIRECT on " << filename_;
   }
 }
 
@@ -70,8 +70,8 @@ std::pair<WriteCode, size_t> FileHandler::WriteV(bool aligned) {
     DisableDirect();
   }
 
-  VLOG(2) << "Flushing queue of " << iovec_.size() << " elements, "
-          << (aligned ? "aligned" : "unaligned");
+  ABSL_VLOG(2) << "Flushing queue of " << iovec_.size() << " elements, "
+               << (aligned ? "aligned" : "unaligned");
 
   ABSL_CHECK_GT(iovec_.size(), 0u);
   const auto start = aos::monotonic_clock::now();
@@ -86,8 +86,8 @@ std::pair<WriteCode, size_t> FileHandler::WriteV(bool aligned) {
       absl::Span<const uint8_t> data(
           reinterpret_cast<const uint8_t *>(iovec_item.iov_base),
           iovec_item.iov_len);
-      VLOG(2) << "  iov_base " << static_cast<void *>(iovec_item.iov_base)
-              << ", iov_len " << iovec_item.iov_len;
+      ABSL_VLOG(2) << "  iov_base " << static_cast<void *>(iovec_item.iov_base)
+                   << ", iov_len " << iovec_item.iov_len;
       ABSL_CHECK(IsAlignedStart(data) && IsAlignedLength(data));
     }
   }
@@ -103,15 +103,15 @@ std::pair<WriteCode, size_t> FileHandler::WriteV(bool aligned) {
                           return count + next_iovec.iov_len;
                         });
 
-    VLOG(2) << "Going to write " << counted_size;
+    ABSL_VLOG(2) << "Going to write " << counted_size;
     ABSL_CHECK_GT(counted_size, 0u);
 
     const ssize_t written =
         writev(fd_, iovec_.data() + iovecs_index, iovec_.size() - iovecs_index);
-    VLOG(2) << "Wrote " << written << ", for iovec size " << iovec_.size();
+    ABSL_VLOG(2) << "Wrote " << written << ", for iovec size " << iovec_.size();
 
     if (written == -1 && errno == ENOSPC) {
-      PLOG(ERROR) << "Wrote " << written << " bytes of " << counted_size;
+      ABSL_PLOG(ERROR) << "Wrote " << written << " bytes of " << counted_size;
       return std::make_pair(WriteCode::kOutOfSpace, 0);
     }
     ABSL_PCHECK(written >= 0)
@@ -129,8 +129,9 @@ std::pair<WriteCode, size_t> FileHandler::WriteV(bool aligned) {
       //
       // Future work may also create situations where we e.g. attempt to write
       // to sockets where we may more frequently encounter incomplete writes.
-      if (VLOG_IS_ON(1)) {
-        PLOG(WARNING) << "Wrote " << written << " bytes of " << counted_size;
+      if (ABSL_VLOG_IS_ON(1)) {
+        ABSL_PLOG(WARNING) << "Wrote " << written << " bytes of "
+                           << counted_size;
       }
       encountered_incomplete_write_ = true;
       ssize_t bytes_to_evict = written;
@@ -195,7 +196,7 @@ WriteCode FileHandler::PlatformSyncImpl() {
     if (errno == ENOSPC) {
       return WriteCode::kOutOfSpace;
     }
-    PLOG(ERROR) << "Failed to fdatasync " << filename_;
+    ABSL_PLOG(ERROR) << "Failed to fdatasync " << filename_;
   }
   return WriteCode::kOk;
 }
@@ -218,8 +219,8 @@ WriteResult FileHandler::DoWrite(
   // Some of the callers use an aligned ResizeableBuffer to generate 512 byte
   // aligned buffers for this code to find and use.
   bool was_aligned = IsAligned(total_write_bytes_);
-  VLOG(1) << "Started " << (was_aligned ? "aligned" : "unaligned")
-          << " at offset " << total_write_bytes_ << " on " << filename();
+  ABSL_VLOG(1) << "Started " << (was_aligned ? "aligned" : "unaligned")
+               << " at offset " << total_write_bytes_ << " on " << filename();
   size_t total_bytes_written = 0;
 
   // Walk through aligned queue and batch writes based on aligned flag

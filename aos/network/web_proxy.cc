@@ -2,8 +2,8 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
-#include "absl/log/vlog_is_on.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 
 #include "aos/flatbuffer_merge.h"
 #include "aos/network/connect_generated.h"
@@ -45,7 +45,7 @@ WebsocketHandler::WebsocketHandler(::seasocks::Server *server,
     : server_(server),
       config_(aos::CopyFlatBuffer(event_loop->configuration())),
       event_loop_(event_loop) {
-  if (VLOG_IS_ON(2)) {
+  if (ABSL_VLOG_IS_ON(2)) {
     dbg_init(DBG_DEBUG, DBG_ALL);
   }
   CHECK_RAWRTC(rawrtc_init(true));
@@ -92,15 +92,15 @@ void WebsocketHandler::onData(::seasocks::WebSocket *sock, const uint8_t *data,
                               size_t size) {
   const FlatbufferSpan<WebSocketMessage> message({data, size});
   if (!message.Verify()) {
-    LOG(ERROR) << "Invalid WebsocketMessage received from browser.";
+    ABSL_LOG(ERROR) << "Invalid WebsocketMessage received from browser.";
     return;
   }
-  VLOG(1) << "Got msg " << aos::FlatbufferToJson(message);
+  ABSL_VLOG(1) << "Got msg " << aos::FlatbufferToJson(message);
   switch (message.message().payload_type()) {
     case Payload::WebSocketSdp: {
       const WebSocketSdp *offer = message.message().payload_as_WebSocketSdp();
       if (offer->type() != SdpType::OFFER) {
-        LOG(WARNING) << "Got the wrong sdp type from client";
+        ABSL_LOG(WARNING) << "Got the wrong sdp type from client";
         break;
       }
       const flatbuffers::String *sdp = offer->payload();
@@ -170,7 +170,7 @@ WebProxy::WebProxy(aos::EventLoop *event_loop, aos::EPoll *epoll,
   epoll->BeforeWait([]() {
     const uint64_t to = tmr_next_timeout(tmrl_get());
     if (to != 0) {
-      VLOG(3) << "Next timeout " << to;
+      ABSL_VLOG(3) << "Next timeout " << to;
     }
     // Note: this only works because we are spinning on it...
     // TODO(austin): If we choose to actually sleep, use a timerfd reserved just
@@ -231,8 +231,8 @@ void Subscriber::RunIteration(bool fetch_new) {
       }
       Message message;
       message.index = fetcher_->context().queue_index;
-      VLOG(2) << "Packing a message with "
-              << GetPacketCount(fetcher_->context()) << "packets";
+      ABSL_VLOG(2) << "Packing a message with "
+                   << GetPacketCount(fetcher_->context()) << "packets";
       for (int packet_index = 0;
            packet_index < GetPacketCount(fetcher_->context()); ++packet_index) {
         // Pack directly into the mbuffer.  This is admittedly a bit painful.
@@ -280,7 +280,7 @@ void Subscriber::RunIteration(bool fetch_new) {
       // TODO(austin): This is a nop so we just buffer forever.  Fix this when
       // we care.
       if (rtc_channel->buffered_amount() > 14000000) {
-        VLOG(1) << "skipping a send because buffered amount is too high";
+        ABSL_VLOG(1) << "skipping a send because buffered amount is too high";
         break;
       }
 
@@ -309,7 +309,7 @@ void Subscriber::AddListener(std::shared_ptr<ScopedDataChannel> data_channel,
         FlatbufferSpan<ChannelState> message(
             {mbuf_buf(buffer), mbuf_get_left(buffer)});
         if (!message.Verify()) {
-          LOG(ERROR) << "Invalid flatbuffer received from browser client.";
+          ABSL_LOG(ERROR) << "Invalid flatbuffer received from browser client.";
           return;
         }
 
@@ -427,7 +427,7 @@ ApplicationConnection::ApplicationConnection(
       config_headers_(PackBuffer(config.span())),
       event_loop_(event_loop) {
   connection_.set_on_negotiation_needed([]() {
-    VLOG(1) << "Negotiation needed, not offering so not creating offer.";
+    ABSL_VLOG(1) << "Negotiation needed, not offering so not creating offer.";
   });
 
   connection_.set_on_local_candidate(
@@ -462,8 +462,8 @@ void ApplicationConnection::OnSdp(const char *sdp) {
   auto error = rawrtc_peer_connection_description_create(
       &remote_description, RAWRTC_SDP_TYPE_OFFER, sdp);
   if (error) {
-    LOG(WARNING) << "Cannot parse remote description: "
-                 << rawrtc_code_to_str(error);
+    ABSL_LOG(WARNING) << "Cannot parse remote description: "
+                      << rawrtc_code_to_str(error);
     return;
   }
 
@@ -490,7 +490,7 @@ void ApplicationConnection::OnSdp(const char *sdp) {
   flatbuffers::Offset<WebSocketMessage> answer_message =
       CreateWebSocketMessage(fbb, Payload::WebSocketSdp, sdp_fb.Union());
 
-  VLOG(1) << aos::FlatbufferToJson(
+  ABSL_VLOG(1) << aos::FlatbufferToJson(
       flatbuffers::GetTemporaryPointer(fbb, answer_message));
   fbb.Finish(answer_message);
 
@@ -554,9 +554,9 @@ void ApplicationConnection::LocalCandidate(
 
     flatbuffers::Offset<WebSocketMessage> ice_message =
         CreateWebSocketMessage(fbb, Payload::WebSocketIce, ice_offset.Union());
-    VLOG(1) << url << ": "
-            << aos::FlatbufferToJson(
-                   flatbuffers::GetTemporaryPointer(fbb, ice_message));
+    ABSL_VLOG(1) << url << ": "
+                 << aos::FlatbufferToJson(
+                        flatbuffers::GetTemporaryPointer(fbb, ice_message));
     fbb.Finish(ice_message);
 
     server_->execute(std::make_shared<UpdateData>(sock_, fbb.Release()));
@@ -584,7 +584,8 @@ void ApplicationConnection::OnDataChannel(
       }
     });
 
-    channel_->set_on_error([this]() { LOG(ERROR) << "Error on " << this; });
+    channel_->set_on_error(
+        [this]() { ABSL_LOG(ERROR) << "Error on " << this; });
 
     // Register an on_close callback which does nothing but keeps channel alive
     // until it is done.  This keeps the memory around until rawrtc can finish
@@ -603,13 +604,13 @@ void ApplicationConnection::HandleSignallingData(
   FlatbufferSpan<SubscriberRequest> message(
       {mbuf_buf(buffer), mbuf_get_left(buffer)});
   if (!message.Verify()) {
-    LOG(ERROR) << "Invalid flatbuffer received from browser client.";
+    ABSL_LOG(ERROR) << "Invalid flatbuffer received from browser client.";
     return;
   }
-  VLOG(1) << "Got a subscription message "
-          << aos::FlatbufferToJson(&message.message());
+  ABSL_VLOG(1) << "Got a subscription message "
+               << aos::FlatbufferToJson(&message.message());
   if (!message.message().has_channels_to_transfer()) {
-    LOG(ERROR) << "No channels requested for transfer.";
+    ABSL_LOG(ERROR) << "No channels requested for transfer.";
     return;
   }
 
@@ -631,7 +632,7 @@ void ApplicationConnection::HandleSignallingData(
   for (auto channel_request : *message.message().channels_to_transfer()) {
     const Channel *channel = channel_request->channel();
     if (channel == nullptr) {
-      LOG(ERROR) << "Got unpopulated channel.";
+      ABSL_LOG(ERROR) << "Got unpopulated channel.";
       continue;
     }
     const TransferMethod transfer_method = channel_request->method();
@@ -642,15 +643,15 @@ void ApplicationConnection::HandleSignallingData(
         configuration::GetChannel(event_loop_->configuration(), channel,
                                   event_loop_->name(), event_loop_->node());
     if (comparison_channel == nullptr) {
-      LOG(ERROR) << "Channel does not exist: "
-                 << configuration::StrippedChannelToString(channel);
+      ABSL_LOG(ERROR) << "Channel does not exist: "
+                      << configuration::StrippedChannelToString(channel);
       continue;
     }
     if (!configuration::ChannelIsReadableOnNode(comparison_channel,
                                                 event_loop_->node())) {
-      LOG(ERROR) << "Channel not available on node "
-                 << event_loop_->node()->name()->string_view() << ": "
-                 << configuration::StrippedChannelToString(channel);
+      ABSL_LOG(ERROR) << "Channel not available on node "
+                      << event_loop_->node()->name()->string_view() << ": "
+                      << configuration::StrippedChannelToString(channel);
       continue;
     }
 
@@ -694,7 +695,7 @@ void ApplicationConnection::HandleSignallingData(
 
     it->second.requested = true;
 
-    VLOG(1) << "Subscribe to: " << channel->type()->str();
+    ABSL_VLOG(1) << "Subscribe to: " << channel->type()->str();
   }
 
   for (auto &it : channels_) {

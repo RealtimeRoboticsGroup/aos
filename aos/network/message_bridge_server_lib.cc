@@ -2,8 +2,8 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
-#include "absl/log/vlog_is_on.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 #include "absl/strings/str_cat.h"
 #include "absl/types/span.h"
 
@@ -75,9 +75,9 @@ flatbuffers::FlatBufferBuilder ChannelState::PackContext(
   flatbuffers::FlatBufferBuilder fbb(
       channel_->max_size() + kHeaderSizeOverhead(), allocator_);
   fbb.ForceDefaults(true);
-  VLOG(2) << "Found " << peers_.size() << " peers on channel "
-          << channel_->name()->string_view() << " "
-          << channel_->type()->string_view() << " size " << context.size;
+  ABSL_VLOG(2) << "Found " << peers_.size() << " peers on channel "
+               << channel_->name()->string_view() << " "
+               << channel_->type()->string_view() << " size " << context.size;
 
   flatbuffers::Offset<flatbuffers::Vector<uint8_t>> data_offset =
       fbb.CreateVector(static_cast<const uint8_t *>(context.data),
@@ -184,12 +184,13 @@ bool ChannelState::TrySendData(const Context &context) {
   size_t sent_count = 0;
   bool logged_remotely = false;
   bool retry_required = false;
-  VLOG(1) << "Send for " << configuration::StrippedChannelToString(channel_)
-          << " with {\"channel_index\": " << channel_index_
-          << ", \"queue_index\": " << context.queue_index
-          << ", \"monotonic_sent_time\": " << context.monotonic_event_time
-          << ", \"realtime_sent_time\": " << context.realtime_event_time
-          << "} and data " << context.data << ", size " << fbb.GetSize();
+  ABSL_VLOG(1) << "Send for "
+               << configuration::StrippedChannelToString(channel_)
+               << " with {\"channel_index\": " << channel_index_
+               << ", \"queue_index\": " << context.queue_index
+               << ", \"monotonic_sent_time\": " << context.monotonic_event_time
+               << ", \"realtime_sent_time\": " << context.realtime_event_time
+               << "} and data " << context.data << ", size " << fbb.GetSize();
   for (Peer &peer : peers_) {
     if (PeerReadyToFetchNext(peer, context)) {
       ftrace_.FormatEvent(
@@ -198,10 +199,10 @@ bool ChannelState::TrySendData(const Context &context) {
           channel_index_, peer.node_index, context.queue_index,
           context.monotonic_event_time.time_since_epoch().count(),
           fbb.GetSize());
-      VLOG(1) << "Skipping send for "
-              << configuration::StrippedChannelToString(channel_) << " to "
-              << FlatbufferToJson(peer.connection) << " with queue index of "
-              << context.queue_index;
+      ABSL_VLOG(1) << "Skipping send for "
+                   << configuration::StrippedChannelToString(channel_) << " to "
+                   << FlatbufferToJson(peer.connection)
+                   << " with queue index of " << context.queue_index;
       // Either:
       // * We already sent on this connection; we do not need to do anything
       //   further.
@@ -261,14 +262,15 @@ bool ChannelState::TrySendData(const Context &context) {
 
   if (logged_remotely) {
     if (sent_count == 0) {
-      VLOG(1)
+      ABSL_VLOG(1)
           << "No clients, rejecting. TODO(austin): do backup logging to disk";
     } else {
-      VLOG(2) << "TODO(austin): backup log to disk if this fails eventually";
+      ABSL_VLOG(2)
+          << "TODO(austin): backup log to disk if this fails eventually";
     }
   } else {
-    VLOG(2) << "Not bothering to track this message since it isn't logged "
-               "remotely.";
+    ABSL_VLOG(2) << "Not bothering to track this message since it isn't logged "
+                    "remotely.";
   }
 
   // TODO(austin): Limit the size of this queue.  Flush messages to disk
@@ -356,8 +358,8 @@ void ChannelState::AddPeer(const Connection *connection, int node_index,
 }
 
 int ChannelState::NodeDisconnected(sctp_assoc_t assoc_id) {
-  VLOG(1) << "Disconnected " << assoc_id << " for "
-          << configuration::StrippedChannelToString(channel_);
+  ABSL_VLOG(1) << "Disconnected " << assoc_id << " for "
+               << configuration::StrippedChannelToString(channel_);
   for (ChannelState::Peer &peer : peers_) {
     if (peer.sac_assoc_id == assoc_id) {
       // TODO(austin): This will not handle multiple clients from
@@ -377,10 +379,10 @@ int ChannelState::NodeConnected(const Node *node, sctp_assoc_t assoc_id,
                                 int stream,
                                 aos::monotonic_clock::time_point monotonic_now,
                                 std::vector<sctp_assoc_t> *reconnected) {
-  VLOG(1) << "Channel " << channel_->name()->string_view() << " "
-          << channel_->type()->string_view() << " mapped to stream " << stream
-          << " for node " << node->name()->string_view() << " assoc_id "
-          << assoc_id;
+  ABSL_VLOG(1) << "Channel " << channel_->name()->string_view() << " "
+               << channel_->type()->string_view() << " mapped to stream "
+               << stream << " for node " << node->name()->string_view()
+               << " assoc_id " << assoc_id;
   for (ChannelState::Peer &peer : peers_) {
     // The node name is the most reliable method of detecting the same peer
     // because in a multihomed system, the same IP address may not always be
@@ -392,14 +394,14 @@ int ChannelState::NodeConnected(const Node *node, sctp_assoc_t assoc_id,
                      peer.sac_assoc_id) == reconnected->end())) {
         reconnected->push_back(peer.sac_assoc_id);
         if (peer.sac_assoc_id == assoc_id) {
-          if (VLOG_IS_ON(1)) {
-            LOG_EVERY_N_SEC(WARNING, 0.025)
+          if (ABSL_VLOG_IS_ON(1)) {
+            ABSL_LOG_EVERY_N_SEC(WARNING, 0.025)
                 << "Node " << node->name()->string_view() << " reconnecting on "
                 << assoc_id << " with the same ID, something got lost";
           }
         } else {
-          if (VLOG_IS_ON(1)) {
-            LOG_EVERY_N_SEC(WARNING, 0.025)
+          if (ABSL_VLOG_IS_ON(1)) {
+            ABSL_LOG_EVERY_N_SEC(WARNING, 0.025)
                 << "Node " << node->name()->string_view() << " "
                 << " already connected on " << peer.sac_assoc_id
                 << " aborting old connection and switching to " << assoc_id;
@@ -434,7 +436,7 @@ int ChannelState::NodeConnected(const Node *node, sctp_assoc_t assoc_id,
 
       if (!server_->SetStreamPriority(assoc_id, stream,
                                       peer.connection->priority())) {
-        PLOG_IF(WARNING, VLOG_IS_ON(1))
+        ABSL_PLOG_IF(WARNING, ABSL_VLOG_IS_ON(1))
             << "Failed to set stream priority for "
             << peer.connection->name()->string_view() << " assoc_id "
             << assoc_id << " stream " << stream
@@ -509,8 +511,8 @@ MessageBridgeServer::MessageBridgeServer(
                            UUID::Zero(), config_sha256_)
             .span()
             .size();
-    VLOG(1) << "Connection to " << destination_node_name << " has size "
-            << connect_size;
+    ABSL_VLOG(1) << "Connection to " << destination_node_name << " has size "
+                 << connect_size;
     max_size = std::max(max_size, connect_size);
   }
 
@@ -518,7 +520,8 @@ MessageBridgeServer::MessageBridgeServer(
   event_loop_->epoll()->OnReadable(server_.fd(),
                                    [this]() { MessageReceived(); });
 
-  LOG(INFO) << "Hostname: " << event_loop_->node()->hostname()->string_view();
+  ABSL_LOG(INFO) << "Hostname: "
+                 << event_loop_->node()->hostname()->string_view();
 
   int channel_index = 0;
   size_t max_channel_buffer_size = 0u;
@@ -609,11 +612,11 @@ MessageBridgeServer::MessageBridgeServer(
   ABSL_CHECK(timestamp_state_ != nullptr);
 
   // Buffer up the max size a bit so everything fits nicely.
-  LOG(INFO) << "Max message read size for all clients is " << max_size;
-  LOG(INFO) << "Max message write size for all clients is "
-            << max_channel_buffer_size;
-  LOG(INFO) << "Reliable buffer size for all clients is "
-            << reliable_buffer_size;
+  ABSL_LOG(INFO) << "Max message read size for all clients is " << max_size;
+  ABSL_LOG(INFO) << "Max message write size for all clients is "
+                 << max_channel_buffer_size;
+  ABSL_LOG(INFO) << "Reliable buffer size for all clients is "
+                 << reliable_buffer_size;
   server_.SetMaxReadSize(max_size);
   server_.SetMaxWriteSize(
       std::max(max_channel_buffer_size, reliable_buffer_size));
@@ -631,7 +634,7 @@ MessageBridgeServer::MessageBridgeServer(
 
   reconnected_.reserve(max_channels());
 
-  LOG_IF(WARNING, event_loop_->runtime_realtime_priority() <= 0)
+  ABSL_LOG_IF(WARNING, event_loop_->runtime_realtime_priority() <= 0)
       << ": Suggested to use a realtime priority >0.";
 }
 
@@ -654,12 +657,12 @@ void MessageBridgeServer::NodeDisconnected(sctp_assoc_t assoc_id) {
   }
 
   if (node_index != -1) {
-    VLOG(1) << "Resetting filters for " << node_index << " "
-            << event_loop_->configuration()
-                   ->nodes()
-                   ->Get(node_index)
-                   ->name()
-                   ->string_view();
+    ABSL_VLOG(1) << "Resetting filters for " << node_index << " "
+                 << event_loop_->configuration()
+                        ->nodes()
+                        ->Get(node_index)
+                        ->name()
+                        ->string_view();
     server_status_.Disconnect(node_index);
     server_status_.ResetFilter(node_index);
     server_status_.ClearBootUUID(node_index);
@@ -678,7 +681,7 @@ void MessageBridgeServer::MessageReceived() {
       const union sctp_notification *snp =
           (const union sctp_notification *)message->data();
 
-      if (VLOG_IS_ON(2)) {
+      if (ABSL_VLOG_IS_ON(2)) {
         PrintNotification(message.get());
       }
 
@@ -691,18 +694,21 @@ void MessageBridgeServer::MessageReceived() {
               [[fallthrough]];
             case SCTP_COMM_UP:
               NodeConnected(sac->sac_assoc_id);
-              VLOG(1) << "Received up from " << message->PeerAddress() << " on "
-                      << sac->sac_assoc_id << " state " << sac->sac_state;
+              ABSL_VLOG(1) << "Received up from " << message->PeerAddress()
+                           << " on " << sac->sac_assoc_id << " state "
+                           << sac->sac_state;
               break;
             case SCTP_COMM_LOST:
             case SCTP_SHUTDOWN_COMP:
             case SCTP_CANT_STR_ASSOC:
               NodeDisconnected(sac->sac_assoc_id);
-              VLOG(1) << "Disconnect from " << message->PeerAddress() << " on "
-                      << sac->sac_assoc_id << " state " << sac->sac_state;
+              ABSL_VLOG(1) << "Disconnect from " << message->PeerAddress()
+                           << " on " << sac->sac_assoc_id << " state "
+                           << sac->sac_state;
               break;
             default:
-              LOG(FATAL) << "Never seen state " << sac->sac_state << " before.";
+              ABSL_LOG(FATAL)
+                  << "Never seen state " << sac->sac_state << " before.";
               break;
           }
         } break;
@@ -720,7 +726,7 @@ void MessageBridgeServer::MessageReceived() {
 }
 
 void MessageBridgeServer::HandleData(const Message *message) {
-  VLOG(2) << "Received data of length " << message->size;
+  ABSL_VLOG(2) << "Received data of length " << message->size;
 
   if (message->header.rcvinfo.rcv_sid == kConnectStream()) {
     // Control channel!
@@ -728,8 +734,8 @@ void MessageBridgeServer::HandleData(const Message *message) {
     {
       flatbuffers::Verifier verifier(message->data(), message->size);
       if (!connect->Verify(verifier)) {
-        if (VLOG_IS_ON(1)) {
-          LOG_EVERY_N_SEC(WARNING, 1.0)
+        if (ABSL_VLOG_IS_ON(1)) {
+          ABSL_LOG_EVERY_N_SEC(WARNING, 1.0)
               << "Failed to verify message, disconnecting client";
         }
         server_.Abort(message->header.rcvinfo.rcv_assoc_id);
@@ -738,11 +744,12 @@ void MessageBridgeServer::HandleData(const Message *message) {
         return;
       }
     }
-    VLOG(1) << "Connect msg: " << FlatbufferToJson(connect);
+    ABSL_VLOG(1) << "Connect msg: " << FlatbufferToJson(connect);
 
     if (!connect->has_config_sha256()) {
-      if (VLOG_IS_ON(1)) {
-        LOG(WARNING) << "Client missing config_sha256, disconnecting client";
+      if (ABSL_VLOG_IS_ON(1)) {
+        ABSL_LOG(WARNING)
+            << "Client missing config_sha256, disconnecting client";
       }
       server_.Abort(message->header.rcvinfo.rcv_assoc_id);
 
@@ -751,11 +758,11 @@ void MessageBridgeServer::HandleData(const Message *message) {
     }
 
     if (connect->config_sha256()->string_view() != config_sha256_) {
-      if (VLOG_IS_ON(1)) {
-        LOG(WARNING) << "Client config sha256 of "
-                     << connect->config_sha256()->string_view()
-                     << " doesn't match our config sha256 of " << config_sha256_
-                     << ", disconnecting client";
+      if (ABSL_VLOG_IS_ON(1)) {
+        ABSL_LOG(WARNING) << "Client config sha256 of "
+                          << connect->config_sha256()->string_view()
+                          << " doesn't match our config sha256 of "
+                          << config_sha256_ << ", disconnecting client";
       }
       server_.Abort(message->header.rcvinfo.rcv_assoc_id);
 
@@ -765,8 +772,8 @@ void MessageBridgeServer::HandleData(const Message *message) {
 
     if (connect->channels_to_transfer()->size() >
         static_cast<size_t>(max_channels())) {
-      if (VLOG_IS_ON(1)) {
-        LOG(WARNING)
+      if (ABSL_VLOG_IS_ON(1)) {
+        ABSL_LOG(WARNING)
             << "Client has more channels than we do, disconnecting client";
       }
       server_.Abort(message->header.rcvinfo.rcv_assoc_id);
@@ -806,9 +813,9 @@ void MessageBridgeServer::HandleData(const Message *message) {
         }
       }
       if (!matched) {
-        if (VLOG_IS_ON(1)) {
-          LOG(ERROR) << "Remote tried registering for unknown channel "
-                     << FlatbufferToJson(channel);
+        if (ABSL_VLOG_IS_ON(1)) {
+          ABSL_LOG(ERROR) << "Remote tried registering for unknown channel "
+                          << FlatbufferToJson(channel);
         }
         server_.Abort(message->header.rcvinfo.rcv_assoc_id);
 
@@ -823,13 +830,13 @@ void MessageBridgeServer::HandleData(const Message *message) {
                                         message->partial_deliveries);
     server_status_.SetBootUUID(
         node_index, UUID::FromString(connect->boot_uuid()->string_view()));
-    VLOG(1) << "Resetting filters for " << node_index << " "
-            << event_loop_->configuration()
-                   ->nodes()
-                   ->Get(node_index)
-                   ->name()
-                   ->string_view();
-    if (VLOG_IS_ON(1)) {
+    ABSL_VLOG(1) << "Resetting filters for " << node_index << " "
+                 << event_loop_->configuration()
+                        ->nodes()
+                        ->Get(node_index)
+                        ->name()
+                        ->string_view();
+    if (ABSL_VLOG_IS_ON(1)) {
       message->LogRcvInfo();
     }
   } else if (message->header.rcvinfo.rcv_sid == kTimestampStream()) {
@@ -841,7 +848,8 @@ void MessageBridgeServer::HandleData(const Message *message) {
       ABSL_CHECK(message_header->Verify(verifier));
     }
 
-    VLOG(1) << "Received Timestamp msg: " << FlatbufferToJson(message_header);
+    ABSL_VLOG(1) << "Received Timestamp msg: "
+                 << FlatbufferToJson(message_header);
 
     ABSL_CHECK_LT(message_header->channel_index(), channels_.size());
     ChannelState *channel = channels_[message_header->channel_index()].get();
@@ -850,17 +858,18 @@ void MessageBridgeServer::HandleData(const Message *message) {
         message->header.rcvinfo.rcv_assoc_id, message->header.rcvinfo.rcv_ssn,
         absl::Span<const uint8_t>(message->data(), message->size),
         message->partial_deliveries, &server_status_);
-    if (VLOG_IS_ON(2)) {
+    if (ABSL_VLOG_IS_ON(2)) {
       message->LogRcvInfo();
     }
   } else {
     // We should never see the client sending us something on the wrong stream.
     // Just explode...  In theory, this could let a client DOS us, but we trust
     // the client.
-    if (VLOG_IS_ON(2)) {
+    if (ABSL_VLOG_IS_ON(2)) {
       message->LogRcvInfo();
     }
-    LOG(FATAL) << "Unexpected stream id " << message->header.rcvinfo.rcv_sid;
+    ABSL_LOG(FATAL) << "Unexpected stream id "
+                    << message->header.rcvinfo.rcv_sid;
   }
 }
 

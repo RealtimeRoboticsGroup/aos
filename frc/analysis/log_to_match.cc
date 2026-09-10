@@ -41,6 +41,6 @@ int main(int argc, char **argv) {
 
   reader.event_loop_factory()->Run();
 
-  LOG(INFO) << "Match Type: " << frc::EnumNameMatchType(match_type);
-  LOG(INFO) << "Match #: " << match_number;
+  ABSL_LOG(INFO) << "Match Type: " << frc::EnumNameMatchType(match_type);
+  ABSL_LOG(INFO) << "Match #: " << match_number;
 }

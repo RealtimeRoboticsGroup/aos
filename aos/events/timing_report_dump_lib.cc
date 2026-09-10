@@ -129,11 +129,11 @@ void TimingReportDump::PrintSenders(
       if (error_count > 0) {
         // Put send errors onto stderr so that people just interested in
         // outright errors can find them more readily.
-        LOG(INFO) << configuration::StrippedChannelToString(channel) << ": "
-                  << error_count << " "
-                  << timing::EnumNamesSendError()[static_cast<uint8_t>(
-                         sender->error_counts()->Get(ii)->error())]
-                  << " errors.";
+        ABSL_LOG(INFO) << configuration::StrippedChannelToString(channel)
+                       << ": " << error_count << " "
+                       << timing::EnumNamesSendError()[static_cast<uint8_t>(
+                              sender->error_counts()->Get(ii)->error())]
+                       << " errors.";
       }
       if (ii + 1 != sender->error_counts()->size()) {
         errors << ", ";
@@ -179,10 +179,10 @@ void TimingReportDump::HandleTimingReport(const timing::Report &report) {
 }
 
 void TimingReportDump::PrintReport(const timing::Report &report) {
-  VLOG(1) << FlatbufferToJson(&report);
+  ABSL_VLOG(1) << FlatbufferToJson(&report);
   if (report.send_failures() != 0) {
-    LOG(INFO) << "Failed to send " << report.send_failures()
-              << " timing report(s) in " << report.name()->string_view();
+    ABSL_LOG(INFO) << "Failed to send " << report.send_failures()
+                   << " timing report(s) in " << report.name()->string_view();
   }
   std::string version_string;
   if (report.has_version()) {

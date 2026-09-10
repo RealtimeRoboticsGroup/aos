@@ -220,8 +220,8 @@ void DrivetrainFilters::Correct(aos::monotonic_clock::time_point monotonic_now,
         if (yaw_gyro_zeroer_.full() &&
             yaw_gyro_zeroer_.GetRange() < kMaxYawGyroZeroingRange) {
           yaw_gyro_zero_ = yaw_gyro_zeroer_.GetAverage()(0);
-          VLOG(1) << "Zeroed to " << *yaw_gyro_zero_ << " Range "
-                  << yaw_gyro_zeroer_.GetRange();
+          ABSL_VLOG(1) << "Zeroed to " << *yaw_gyro_zero_ << " Range "
+                       << yaw_gyro_zeroer_.GetRange();
         }
       }
       ready_ = yaw_gyro_zero_.has_value();
@@ -260,8 +260,8 @@ void DrivetrainFilters::Correct(aos::monotonic_clock::time_point monotonic_now,
   // If we get a new message setting the absolute position, then reset the
   // localizer.
   if (localizer_control_fetcher_.Fetch()) {
-    VLOG(1) << "localizer_control "
-            << aos::FlatbufferToJson(localizer_control_fetcher_.get());
+    ABSL_VLOG(1) << "localizer_control "
+                 << aos::FlatbufferToJson(localizer_control_fetcher_.get());
     localizer_->ResetPosition(
         monotonic_now, localizer_control_fetcher_->x(),
         localizer_control_fetcher_->y(), localizer_control_fetcher_->theta(),

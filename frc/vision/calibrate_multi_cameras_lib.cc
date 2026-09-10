@@ -145,10 +145,10 @@ void RemoveOutliers(std::vector<TimestampedCameraDetection> &pose_list,
       double z_score = std::max(max_translation_z_score, max_rotation_z_score);
       // Remove observations that vary significantly from the mean
       if (z_score > absl::GetFlag(FLAGS_outlier_std_devs)) {
-        VLOG(1) << "Removing outlier with z_score " << z_score
-                << " relative to std dev = "
-                << absl::GetFlag(FLAGS_outlier_std_devs) << " for camera "
-                << pose.camera_name;
+        ABSL_VLOG(1) << "Removing outlier with z_score " << z_score
+                     << " relative to std dev = "
+                     << absl::GetFlag(FLAGS_outlier_std_devs) << " for camera "
+                     << pose.camera_name;
         return true;
       }
       return false;
@@ -157,22 +157,23 @@ void RemoveOutliers(std::vector<TimestampedCameraDetection> &pose_list,
         std::remove_if(pose_list.begin(), pose_list.end(), IsPoseOutlier),
         pose_list.end());
 
-    VLOG(1) << "Iteration #" << i << ": removed "
-            << (original_size - pose_list.size())
-            << " outlier constraints out of " << original_size
-            << " total\nStd Dev's are: "
-            << translation_variance.array().sqrt().transpose() << "m and "
-            << rotation_variance.array().sqrt().transpose() * 180.0 /
-                   numbers::pi
-            << "deg";
+    ABSL_VLOG(1) << "Iteration #" << i << ": removed "
+                 << (original_size - pose_list.size())
+                 << " outlier constraints out of " << original_size
+                 << " total\nStd Dev's are: "
+                 << translation_variance.array().sqrt().transpose() << "m and "
+                 << rotation_variance.array().sqrt().transpose() * 180.0 /
+                        numbers::pi
+                 << "deg";
     if (original_size - pose_list.size() == 0) {
-      VLOG(1) << "At step " << i
-              << ", ending outlier rejection early due to convergence at "
-              << pose_list.size() << " elements.\nStd Dev's are: "
-              << translation_variance.array().sqrt().transpose() << "m and "
-              << rotation_variance.array().sqrt().transpose() * 180.0 /
-                     numbers::pi
-              << "deg";
+      ABSL_VLOG(1) << "At step " << i
+                   << ", ending outlier rejection early due to convergence at "
+                   << pose_list.size() << " elements.\nStd Dev's are: "
+                   << translation_variance.array().sqrt().transpose()
+                   << "m and "
+                   << rotation_variance.array().sqrt().transpose() * 180.0 /
+                          numbers::pi
+                   << "deg";
       break;
     }
   }
@@ -185,22 +186,22 @@ bool PoseIsValid(const TargetMapper::TargetPose &target_pose, double pose_error,
           absl::GetFlag(FLAGS_min_target_id) ||
       static_cast<TargetMapper::TargetId>(target_pose.id) >
           absl::GetFlag(FLAGS_max_target_id)) {
-    LOG(WARNING) << "Skipping tag from " << camera_name
-                 << " with invalid id of " << target_pose.id;
+    ABSL_LOG(WARNING) << "Skipping tag from " << camera_name
+                      << " with invalid id of " << target_pose.id;
     return false;
   }
 
   // Skip detections with high pose errors
   if (pose_error > absl::GetFlag(FLAGS_max_pose_error)) {
-    LOG(INFO) << "Skipping tag from " << camera_name << " with id "
-              << target_pose.id << " due to pose error of " << pose_error;
+    ABSL_LOG(INFO) << "Skipping tag from " << camera_name << " with id "
+                   << target_pose.id << " due to pose error of " << pose_error;
     return false;
   }
   // Skip detections with high pose error ratios
   if (pose_error_ratio > absl::GetFlag(FLAGS_max_pose_error_ratio)) {
-    LOG(INFO) << "Skipping tag from " << camera_name << " with id "
-              << target_pose.id << " due to pose error ratio of "
-              << pose_error_ratio;
+    ABSL_LOG(INFO) << "Skipping tag from " << camera_name << " with id "
+                   << target_pose.id << " due to pose error ratio of "
+                   << pose_error_ratio;
     return false;
   }
 
@@ -240,7 +241,7 @@ void HandlePoses(
       << "Can't handle more than two tags in field of view";
   if (target_poses.size() == 2) {
     draw_vis = true;
-    VLOG(1) << "Saw two boards in same view from " << camera_name;
+    ABSL_VLOG(1) << "Saw two boards in same view from " << camera_name;
     int from_index = 0;
     int to_index = 1;
     // Handle when we see two boards at once
@@ -264,10 +265,10 @@ void HandlePoses(
         .camera_name = camera_name,
         .board_id = target_poses[from_index].id};
 
-    LOG(INFO) << "Two boards seen by " << camera_name << ".  Map from board "
-              << target_poses[from_index].id << " to "
-              << target_poses[to_index].id << " is\n"
-              << H_boardA_boardB.matrix();
+    ABSL_LOG(INFO) << "Two boards seen by " << camera_name
+                   << ".  Map from board " << target_poses[from_index].id
+                   << " to " << target_poses[to_index].id << " is\n"
+                   << H_boardA_boardB.matrix();
     // Store this observation of the transform between two boards
     two_board_extrinsics_list.push_back(boardA_boardB);
 
@@ -293,7 +294,7 @@ void HandlePoses(
                                   camera_name, camera_colors.at(camera_name));
     }
   } else if (target_poses.size() == 1) {
-    VLOG(1) << camera_name << " saw single board " << target_poses[0].id;
+    ABSL_VLOG(1) << camera_name << " saw single board " << target_poses[0].id;
     Eigen::Affine3d H_camera2_board2 =
         PoseUtils::Pose3dToAffine3d(target_poses[0].pose);
     TimestampedCameraDetection new_observation{
@@ -346,10 +347,10 @@ void HandlePoses(
         if (camera2_boardA.board_id != boardA_id) {
           H_camera2_boardA = H_camera2_boardA * H_boardA_boardB.inverse();
         }
-        VLOG(1) << "Camera " << camera1_boardA.camera_name << " seeing board "
-                << camera1_boardA.board_id << " and camera "
-                << camera2_boardA.camera_name << " seeing board "
-                << camera2_boardA.board_id;
+        ABSL_VLOG(1) << "Camera " << camera1_boardA.camera_name
+                     << " seeing board " << camera1_boardA.board_id
+                     << " and camera " << camera2_boardA.camera_name
+                     << " seeing board " << camera2_boardA.board_id;
 
         // Draw the two poses of the cameras, and the locations of the
         // boards We use "Board A" as the origin (with everything relative
@@ -370,23 +371,26 @@ void HandlePoses(
         vis_robot_.DrawFrameAxes(H_world_board * H_boardA_boardB, "Board B",
                                  cv::Scalar(255, 0, 0));
 
-        VLOG(1) << "Storing observation between " << new_pair.first.camera_name
-                << ", target " << new_pair.first.board_id << " and "
-                << new_pair.second.camera_name << ", target "
-                << new_pair.second.board_id;
+        ABSL_VLOG(1) << "Storing observation between "
+                     << new_pair.first.camera_name << ", target "
+                     << new_pair.first.board_id << " and "
+                     << new_pair.second.camera_name << ", target "
+                     << new_pair.second.board_id;
       } else if (two_board_extrinsics_list.size() == 0) {
-        VLOG(1) << "Not drawing observation yet, since we don't have a two "
-                   "board estimate";
+        ABSL_VLOG(1)
+            << "Not drawing observation yet, since we don't have a two "
+               "board estimate";
       }
     } else {
       if (new_observation.camera_name == last_observation.camera_name) {
-        VLOG(2) << "Updating repeated observation for " << camera_name;
+        ABSL_VLOG(2) << "Updating repeated observation for " << camera_name;
       } else {
-        VLOG(1) << "Storing observation for " << camera_name << " at time "
-                << distributed_eof << " since last observation was "
-                << std::abs((distributed_eof - last_observation.time).count()) /
-                       1000000.0
-                << "ms ago";
+        ABSL_VLOG(1) << "Storing observation for " << camera_name << " at time "
+                     << distributed_eof << " since last observation was "
+                     << std::abs(
+                            (distributed_eof - last_observation.time).count()) /
+                            1000000.0
+                     << "ms ago";
       }
       last_observation = new_observation;
     }
@@ -425,14 +429,14 @@ void HandleTargetMap(
     std::map<std::string, cv::Scalar> const &camera_colors,
     std::map<std::string, int> &ordering_map, double image_period_ms,
     int display_count) {
-  VLOG(1) << "Got april tag map call from camera " << camera_name;
+  ABSL_VLOG(1) << "Got april tag map call from camera " << camera_name;
   // Create empty RGB image in this case
   cv::Mat rgb_image;
   std::vector<TargetMapper::TargetPose> target_poses;
-  VLOG(1) << ": Diff since last image from " << camera_name << " is "
-          << (distributed_eof - last_eofs_debug.at(camera_name)).count() /
-                 1000000.0
-          << "ms";
+  ABSL_VLOG(1) << ": Diff since last image from " << camera_name << " is "
+               << (distributed_eof - last_eofs_debug.at(camera_name)).count() /
+                      1000000.0
+               << "ms";
 
   if (last_eofs_debug.find(camera_name) == last_eofs_debug.end()) {
     last_eofs_debug[camera_name] = distributed_eof;
@@ -451,14 +455,15 @@ void HandleTargetMap(
 
     Eigen::Affine3d H_camera_target =
         PoseUtils::Pose3dToAffine3d(target_pose.pose);
-    VLOG(1) << camera_name << " saw target " << target_pose.id
-            << " from TargetMap at timestamp " << distributed_eof
-            << " with pose = " << H_camera_target.matrix();
-    LOG(INFO) << "pose info for target " << target_pose_fbs->id()
-              << ": \nconfidence: " << target_pose_fbs->confidence()
-              << ", pose_error: " << target_pose_fbs->pose_error()
-              << ", pose_error_ratio: " << target_pose_fbs->pose_error_ratio()
-              << ", dist_factor: " << target_pose_fbs->distortion_factor();
+    ABSL_VLOG(1) << camera_name << " saw target " << target_pose.id
+                 << " from TargetMap at timestamp " << distributed_eof
+                 << " with pose = " << H_camera_target.matrix();
+    ABSL_LOG(INFO) << "pose info for target " << target_pose_fbs->id()
+                   << ": \nconfidence: " << target_pose_fbs->confidence()
+                   << ", pose_error: " << target_pose_fbs->pose_error()
+                   << ", pose_error_ratio: "
+                   << target_pose_fbs->pose_error_ratio()
+                   << ", dist_factor: " << target_pose_fbs->distortion_factor();
   }
 
   last_eofs_debug[camera_name] = distributed_eof;
@@ -495,7 +500,7 @@ void HandleImage(
                                  charuco_ids, charuco_corners, valid,
                                  rvecs_eigen, tvecs_eigen);
   if (rvecs_eigen.size() > 0 && !valid) {
-    LOG(WARNING) << "Charuco extractor returned not valid";
+    ABSL_LOG(WARNING) << "Charuco extractor returned not valid";
     return;
   }
 
@@ -515,9 +520,9 @@ void HandleImage(
     target_poses.emplace_back(target_pose);
 
     Eigen::Affine3d H_camera_target = PoseUtils::Pose3dToAffine3d(pose);
-    VLOG(2) << camera_name << " saw target " << target_pose.id
-            << " from image at timestamp " << distributed_eof
-            << " with pose = " << H_camera_target.matrix();
+    ABSL_VLOG(2) << camera_name << " saw target " << target_pose.id
+                 << " from image at timestamp " << distributed_eof
+                 << " with pose = " << H_camera_target.matrix();
   }
   HandlePoses(rgb_image, target_poses, distributed_eof, camera_name,
               last_observation, detection_list, two_board_extrinsics_list,
@@ -561,8 +566,9 @@ void WriteExtrinsicFile(Eigen::Affine3d extrinsic, CameraNode camera_node,
       absl::GetFlag(FLAGS_output_folder), camera_node.node_name,
       absl::GetFlag(FLAGS_team_number), camera_node.camera_number,
       cal_copy.message().camera_id()->data(), time_ss.str());
-  LOG(INFO) << calibration_filename << " -> "
-            << aos::FlatbufferToJson(merged_calibration, {.multi_line = true});
+  ABSL_LOG(INFO) << calibration_filename << " -> "
+                 << aos::FlatbufferToJson(merged_calibration,
+                                          {.multi_line = true});
 
   aos::util::WriteStringToFileOrDie(
       calibration_filename,
@@ -594,11 +600,12 @@ void ExtrinsicsMain(const NodeList &node_list,
   const double kFocalLength = 1000.0;
   const int kImageWidth = 1000;
   vis_robot.SetDefaultViewpoint(kImageWidth, kFocalLength);
-  LOG(INFO) << "COPYTHIS, count, camera_name, target_id, timestamp, mag_T, "
-               "mag_R_deg, "
-               "confidence, pose_error, pose_error_ratio, distortion_factor";
+  ABSL_LOG(INFO)
+      << "COPYTHIS, count, camera_name, target_id, timestamp, mag_T, "
+         "mag_R_deg, "
+         "confidence, pose_error, pose_error_ratio, distortion_factor";
 
-  VLOG(1) << "Using target type " << absl::GetFlag(FLAGS_target_type);
+  ABSL_VLOG(1) << "Using target type " << absl::GetFlag(FLAGS_target_type);
 
   std::vector<const calibration::CameraCalibration *> calibration_list;
 
@@ -633,8 +640,9 @@ void ExtrinsicsMain(const NodeList &node_list,
     const auto ext_H_robot_camera = Eigen::Affine3d(extrinsics_matrix);
     default_extrinsics.emplace_back(ext_H_robot_camera);
 
-    VLOG(1) << "Got extrinsics for " << camera_node.camera_name() << " as\n"
-            << default_extrinsics.back().matrix();
+    ABSL_VLOG(1) << "Got extrinsics for " << camera_node.camera_name()
+                 << " as\n"
+                 << default_extrinsics.back().matrix();
 
     event_loop->MakeWatcher(
         camera_node.camera_name(),
@@ -655,8 +663,8 @@ void ExtrinsicsMain(const NodeList &node_list,
               two_board_extrinsics_list_with_outliers, vis_robot, camera_colors,
               ordering_map, image_period_ms, display_count);
         });
-    VLOG(1) << "Created watcher for using the detection event loop for "
-            << camera_node.camera_name();
+    ABSL_VLOG(1) << "Created watcher for using the detection event loop for "
+                 << camera_node.camera_name();
 
     // Display images, if they exist
     std::string camera_name = camera_node.camera_name();
@@ -678,27 +686,29 @@ void ExtrinsicsMain(const NodeList &node_list,
   ABSL_CHECK_GT(two_board_extrinsics_list_with_outliers.size(), 0u)
       << "Must have at least one view of both boards";
   int base_target_id = two_board_extrinsics_list_with_outliers[0].board_id;
-  VLOG(1) << "Base id for two_board_extrinsics_list_with_outliers is "
-          << base_target_id;
+  ABSL_VLOG(1) << "Base id for two_board_extrinsics_list_with_outliers is "
+               << base_target_id;
 
   two_board_extrinsics_list = two_board_extrinsics_list_with_outliers;
   RemoveOutliers(two_board_extrinsics_list, remove_outliers_iterations);
 
-  LOG(INFO) << "Started with " << two_board_extrinsics_list_with_outliers.size()
-            << " observations.  After OUTLIER rejection, "
-            << two_board_extrinsics_list.size() << " observations remaining";
+  ABSL_LOG(INFO) << "Started with "
+                 << two_board_extrinsics_list_with_outliers.size()
+                 << " observations.  After OUTLIER rejection, "
+                 << two_board_extrinsics_list.size()
+                 << " observations remaining";
   Eigen::Affine3d H_boardA_boardB_avg =
       ComputeAveragePose(two_board_extrinsics_list);
-  LOG(INFO) << "Estimate of two board pose using all nodes with "
-            << two_board_extrinsics_list.size() << " observations is:\n"
-            << H_boardA_boardB_avg.matrix() << "\nOr translation of "
-            << H_boardA_boardB_avg.translation().transpose()
-            << " (m) and rotation (r,p,y) of "
-            << PoseUtils::RotationMatrixToEulerAngles(
-                   H_boardA_boardB_avg.rotation().matrix())
-                       .transpose() *
-                   180.0 / numbers::pi
-            << " (deg)";
+  ABSL_LOG(INFO) << "Estimate of two board pose using all nodes with "
+                 << two_board_extrinsics_list.size() << " observations is:\n"
+                 << H_boardA_boardB_avg.matrix() << "\nOr translation of "
+                 << H_boardA_boardB_avg.translation().transpose()
+                 << " (m) and rotation (r,p,y) of "
+                 << PoseUtils::RotationMatrixToEulerAngles(
+                        H_boardA_boardB_avg.rotation().matrix())
+                            .transpose() *
+                        180.0 / numbers::pi
+                 << " (deg)";
 
   // Do quick check to see what averaged two-board pose for
   // each camera is individually, and compare with overall average
@@ -727,51 +737,53 @@ void ExtrinsicsMain(const NodeList &node_list,
           pose_list, &translation_variance, &rotation_variance);
 
       Eigen::Vector3d translation_std_dev = translation_variance.array().sqrt();
-      LOG(INFO) << camera_node.camera_name() << " has average pose from "
-                << pose_list.size() << " views of two targets of \n"
-                << avg_pose_from_camera.matrix()
-                << "\nTranslation standard deviation is "
-                << translation_std_dev.transpose();
+      ABSL_LOG(INFO) << camera_node.camera_name() << " has average pose from "
+                     << pose_list.size() << " views of two targets of \n"
+                     << avg_pose_from_camera.matrix()
+                     << "\nTranslation standard deviation is "
+                     << translation_std_dev.transpose();
       double stdev_norm = translation_std_dev.norm();
       double threshold = 0.03;  // 3 cm threshold on translation variation
       if (stdev_norm > threshold) {
-        LOG(INFO) << "WARNING: |STD_DEV| is " << stdev_norm * 100 << " > "
-                  << threshold * 100 << " cm!!!!\nStd dev vector (in m) is "
-                  << translation_std_dev.transpose();
+        ABSL_LOG(INFO) << "WARNING: |STD_DEV| is " << stdev_norm * 100 << " > "
+                       << threshold * 100
+                       << " cm!!!!\nStd dev vector (in m) is "
+                       << translation_std_dev.transpose();
       }
 
       Eigen::Vector3d rotation_std_dev = rotation_variance.array().sqrt();
-      LOG(INFO) << camera_node.camera_name()
-                << " with rotational standard deviation of: "
-                << rotation_std_dev.transpose() << " (radians)";
+      ABSL_LOG(INFO) << camera_node.camera_name()
+                     << " with rotational standard deviation of: "
+                     << rotation_std_dev.transpose() << " (radians)";
       double rot_stdev_norm = rotation_std_dev.norm();
       double rot_threshold =
           3 * numbers::pi / 180.0;  // Warn if more than 3 degrees
       if (rot_stdev_norm > rot_threshold) {
-        LOG(INFO) << "WARNING: ROTATIONAL STD DEV is "
-                  << rot_stdev_norm * 180.0 / numbers::pi << " > "
-                  << rot_threshold * 180.0 / numbers::pi
-                  << " degrees!!!!\nStd dev vector (in deg) is "
-                  << (rotation_std_dev * 180.0 / numbers::pi).transpose();
+        ABSL_LOG(INFO) << "WARNING: ROTATIONAL STD DEV is "
+                       << rot_stdev_norm * 180.0 / numbers::pi << " > "
+                       << rot_threshold * 180.0 / numbers::pi
+                       << " degrees!!!!\nStd dev vector (in deg) is "
+                       << (rotation_std_dev * 180.0 / numbers::pi).transpose();
       }
       // Check if a particular camera deviates significantly from the overall
       // average Any of these factors could indicate a problem with that camera
       Eigen::Affine3d delta_from_overall =
           H_boardA_boardB_avg * avg_pose_from_camera.inverse();
-      LOG(INFO) << camera_node.camera_name()
-                << " had estimate different from pooled average of\n"
-                << "|dT| = " << delta_from_overall.translation().norm()
-                << "m  and |dR| = "
-                << (PoseUtils::RotationMatrixToEulerAngles(
-                        delta_from_overall.rotation().matrix()) *
-                    180.0 / numbers::pi)
-                       .norm()
-                << " deg";
+      ABSL_LOG(INFO) << camera_node.camera_name()
+                     << " had estimate different from pooled average of\n"
+                     << "|dT| = " << delta_from_overall.translation().norm()
+                     << "m  and |dR| = "
+                     << (PoseUtils::RotationMatrixToEulerAngles(
+                             delta_from_overall.rotation().matrix()) *
+                         180.0 / numbers::pi)
+                            .norm()
+                     << " deg";
     }
   }
 
   // Next, compute the relative camera poses
-  LOG(INFO) << "Got " << detection_list.size() << " extrinsic observations";
+  ABSL_LOG(INFO) << "Got " << detection_list.size()
+                 << " extrinsic observations";
   std::vector<TimestampedCameraDetection> H_camera1_camera2_list;
 
   // Compute the pairwise transforms first.
@@ -820,13 +832,13 @@ void ExtrinsicsMain(const NodeList &node_list,
             .board_id = 0,
         };
         H_camera1_camera2_list.push_back(camera1_camera2);
-        VLOG(1) << "Map from camera " << pose1.camera_name << " and tag "
-                << pose1.board_id << " with observation: \n"
-                << pose1.H_camera_target.matrix() << "\n to camera "
-                << pose2.camera_name << " and tag " << pose2.board_id
-                << " with observation: \n"
-                << pose2.H_camera_target.matrix() << "\ngot map as\n"
-                << H_camera1_camera2.matrix();
+        ABSL_VLOG(1) << "Map from camera " << pose1.camera_name << " and tag "
+                     << pose1.board_id << " with observation: \n"
+                     << pose1.H_camera_target.matrix() << "\n to camera "
+                     << pose2.camera_name << " and tag " << pose2.board_id
+                     << " with observation: \n"
+                     << pose2.H_camera_target.matrix() << "\ngot map as\n"
+                     << H_camera1_camera2.matrix();
 
         Eigen::Affine3d H_world_board;
         H_world_board =
@@ -836,61 +848,64 @@ void ExtrinsicsMain(const NodeList &node_list,
           H_world_board = Eigen::Translation3d(0.0, 0.0, 3.0);
         }
 
-        VLOG(2) << "Camera1 " << pose1.camera_name << " in world frame is \n"
-                << (H_world_board * H_camera1_boardA.inverse()).matrix();
-        VLOG(2) << "Camera2 " << pose2.camera_name << " in world frame is \n"
-                << (H_world_board * H_camera2_boardA.inverse()).matrix();
+        ABSL_VLOG(2) << "Camera1 " << pose1.camera_name
+                     << " in world frame is \n"
+                     << (H_world_board * H_camera1_boardA.inverse()).matrix();
+        ABSL_VLOG(2) << "Camera2 " << pose2.camera_name
+                     << " in world frame is \n"
+                     << (H_world_board * H_camera2_boardA.inverse()).matrix();
       }
     }
     // TODO<Jim>: If we don't get any matches, we could just use default
     // extrinsics
     if (H_camera1_camera2_list.empty()) {
-      LOG(WARNING) << "Failed with zero poses for node "
-                   << node_list.cameras.at(i).camera_name() << " and "
-                   << node_list.cameras.at(i + 1).camera_name();
+      ABSL_LOG(WARNING) << "Failed with zero poses for node "
+                        << node_list.cameras.at(i).camera_name() << " and "
+                        << node_list.cameras.at(i + 1).camera_name();
       continue;
     }
 
     Eigen::Affine3d H_camera1_camera2_avg =
         ComputeAveragePose(H_camera1_camera2_list);
-    LOG(INFO) << "From " << node_list.cameras.at(i).camera_name() << " to "
-              << node_list.cameras.at(i + 1).camera_name() << " found "
-              << H_camera1_camera2_list.size()
-              << " observations, and the average pose is:\n"
-              << H_camera1_camera2_avg.matrix();
+    ABSL_LOG(INFO) << "From " << node_list.cameras.at(i).camera_name() << " to "
+                   << node_list.cameras.at(i + 1).camera_name() << " found "
+                   << H_camera1_camera2_list.size()
+                   << " observations, and the average pose is:\n"
+                   << H_camera1_camera2_avg.matrix();
 
     RemoveOutliers(H_camera1_camera2_list, remove_outliers_iterations);
 
     H_camera1_camera2_avg = ComputeAveragePose(H_camera1_camera2_list);
-    LOG(INFO) << "After outlier rejection, from "
-              << node_list.cameras.at(i).camera_name() << " to "
-              << node_list.cameras.at(i + 1).camera_name() << " found "
-              << H_camera1_camera2_list.size()
-              << " observations, and the average pose is:\n"
-              << H_camera1_camera2_avg.matrix();
+    ABSL_LOG(INFO) << "After outlier rejection, from "
+                   << node_list.cameras.at(i).camera_name() << " to "
+                   << node_list.cameras.at(i + 1).camera_name() << " found "
+                   << H_camera1_camera2_list.size()
+                   << " observations, and the average pose is:\n"
+                   << H_camera1_camera2_avg.matrix();
 
     Eigen::Affine3d H_camera1_camera2_default =
         default_extrinsics[i].inverse() * default_extrinsics[i + 1];
-    LOG(INFO) << "Compare this to that from default values:\n"
-              << H_camera1_camera2_default.matrix();
+    ABSL_LOG(INFO) << "Compare this to that from default values:\n"
+                   << H_camera1_camera2_default.matrix();
     Eigen::Affine3d H_camera1_camera2_diff =
         H_camera1_camera2_avg * H_camera1_camera2_default.inverse();
-    LOG(INFO) << "Difference between averaged and default delta poses "
-                 "has |T| = "
-              << H_camera1_camera2_diff.translation().norm() << "m and |R| = "
-              << Eigen::AngleAxisd(H_camera1_camera2_diff.rotation()).angle()
-              << " radians ("
-              << Eigen::AngleAxisd(H_camera1_camera2_diff.rotation()).angle() *
-                     180.0 / numbers::pi
-              << " degrees)";
+    ABSL_LOG(INFO)
+        << "Difference between averaged and default delta poses "
+           "has |T| = "
+        << H_camera1_camera2_diff.translation().norm() << "m and |R| = "
+        << Eigen::AngleAxisd(H_camera1_camera2_diff.rotation()).angle()
+        << " radians ("
+        << Eigen::AngleAxisd(H_camera1_camera2_diff.rotation()).angle() *
+               180.0 / numbers::pi
+        << " degrees)";
     averaged_H_camera1_camera2_list.emplace_back(H_camera1_camera2_avg);
   }
 
   std::vector<Eigen::Affine3d> updated_extrinsics = default_extrinsics;
-  LOG(INFO) << "Default extrinsic for camera "
-            << node_list.cameras.at(node_list.fixed_camera).camera_name()
-            << " is\n"
-            << default_extrinsics[node_list.fixed_camera].matrix();
+  ABSL_LOG(INFO) << "Default extrinsic for camera "
+                 << node_list.cameras.at(node_list.fixed_camera).camera_name()
+                 << " is\n"
+                 << default_extrinsics[node_list.fixed_camera].matrix();
 
   // We've now got all the pairwise transforms.  Start with the one we want to
   // report out as, and work our way forwards/backwards through the pairs.
@@ -901,12 +916,12 @@ void ExtrinsicsMain(const NodeList &node_list,
         updated_extrinsics[i] * averaged_H_camera1_camera2_list[i];
 
     updated_extrinsics[i + 1] = next_extrinsic;
-    LOG(INFO) << "Default Extrinsic for "
-              << node_list.cameras.at(i + 1).camera_name() << " is \n"
-              << default_extrinsics[i + 1].matrix();
-    LOG(INFO) << "--> Updated Extrinsic for "
-              << node_list.cameras.at(i + 1).camera_name() << " is \n"
-              << next_extrinsic.matrix();
+    ABSL_LOG(INFO) << "Default Extrinsic for "
+                   << node_list.cameras.at(i + 1).camera_name() << " is \n"
+                   << default_extrinsics[i + 1].matrix();
+    ABSL_LOG(INFO) << "--> Updated Extrinsic for "
+                   << node_list.cameras.at(i + 1).camera_name() << " is \n"
+                   << next_extrinsic.matrix();
 
     WriteExtrinsicFile(next_extrinsic, node_list.cameras[i + 1],
                        calibration_list[i + 1]);
@@ -920,12 +935,12 @@ void ExtrinsicsMain(const NodeList &node_list,
         averaged_H_camera1_camera2_list[i - 1].inverse();
 
     updated_extrinsics[i - 1] = next_extrinsic;
-    LOG(INFO) << "Default Extrinsic for "
-              << node_list.cameras.at(i - 1).camera_name() << " is \n"
-              << default_extrinsics[i - 1].matrix();
-    LOG(INFO) << "--> Updated Extrinsic for "
-              << node_list.cameras.at(i - 1).camera_name() << " is \n"
-              << next_extrinsic.matrix();
+    ABSL_LOG(INFO) << "Default Extrinsic for "
+                   << node_list.cameras.at(i - 1).camera_name() << " is \n"
+                   << default_extrinsics[i - 1].matrix();
+    ABSL_LOG(INFO) << "--> Updated Extrinsic for "
+                   << node_list.cameras.at(i - 1).camera_name() << " is \n"
+                   << next_extrinsic.matrix();
 
     WriteExtrinsicFile(next_extrinsic, node_list.cameras[i - 1],
                        calibration_list[i - 1]);

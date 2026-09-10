@@ -2,7 +2,7 @@
 #include <sys/statvfs.h>
 
 #include "absl/flags/flag.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_format.h"
 
@@ -19,7 +19,7 @@ namespace {
 std::optional<std::string> ReadFileFirstLine(std::string_view file_name) {
   std::ifstream file(std::string(file_name), std::ios_base::in);
   if (!file.good()) {
-    VLOG(1) << "Can't read " << file_name;
+    ABSL_VLOG(1) << "Can't read " << file_name;
     return std::nullopt;
   }
   std::string line;
@@ -30,7 +30,7 @@ std::optional<std::string> ReadFileFirstLine(std::string_view file_name) {
 std::string GetHwmonNumber(const char *dir_name) {
   DIR *dirp = opendir(dir_name);
   if (!dirp) {
-    VLOG(1) << "Can't open " << dir_name;
+    ABSL_VLOG(1) << "Can't open " << dir_name;
     return "";
   }
   struct dirent *directory_entry;

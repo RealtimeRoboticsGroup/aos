@@ -1,6 +1,6 @@
 #include "aos/flatbuffers.h"
 
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_cat.h"
 #include "gtest/gtest.h"
 

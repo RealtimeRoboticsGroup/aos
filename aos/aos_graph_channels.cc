@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
   aos::InitGoogle(&argc, &argv);
 
   if (argc < 2) {
-    LOG(FATAL) << "Expected at least 1 logfile as an argument.";
+    ABSL_LOG(FATAL) << "Expected at least 1 logfile as an argument.";
   }
 
   const std::vector<std::string> skip_list =

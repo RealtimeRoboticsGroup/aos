@@ -67,8 +67,8 @@ TEST(SolverTest, SimpleQP) {
   SimpleQP qp(Q, p, 6, -1, 6, -1);
   Solver<2, 4, 1> s;
   Eigen::Vector2d result = s.Solve(qp, Eigen::Matrix<double, 2, 1>(0, 0));
-  LOG(INFO) << "Result is " << std::setprecision(12)
-            << result.transpose().format(kHeavyFormat);
+  ABSL_LOG(INFO) << "Result is " << std::setprecision(12)
+                 << result.transpose().format(kHeavyFormat);
   EXPECT_NEAR((result - Eigen::Vector2d(5.0, 5.0)).norm(), 0.0, 1e-6);
 }
 
@@ -80,8 +80,8 @@ TEST(SolverTest, Constrained) {
   SimpleQP qp(Q, p, 4, -1, 5, -1);
   Solver<2, 4, 1> s;
   Eigen::Vector2d result = s.Solve(qp, Eigen::Matrix<double, 2, 1>(3, 4));
-  LOG(INFO) << "Result is " << std::setprecision(12)
-            << result.transpose().format(kHeavyFormat);
+  ABSL_LOG(INFO) << "Result is " << std::setprecision(12)
+                 << result.transpose().format(kHeavyFormat);
   EXPECT_NEAR((result - Eigen::Vector2d(4.0, 4.0)).norm(), 0.0, 1e-6);
 }
 
@@ -94,8 +94,8 @@ TEST(SolverTest, ConstrainedFromSolution) {
   SimpleQP qp(Q, p, 4, -1, 5, -1);
   Solver<2, 4, 1> s;
   Eigen::Vector2d result = s.Solve(qp, Eigen::Matrix<double, 2, 1>(4, 4));
-  LOG(INFO) << "Result is " << std::setprecision(12)
-            << result.transpose().format(kHeavyFormat);
+  ABSL_LOG(INFO) << "Result is " << std::setprecision(12)
+                 << result.transpose().format(kHeavyFormat);
   EXPECT_NEAR((result - Eigen::Vector2d(4.0, 4.0)).norm(), 0.0, 1e-6);
 }
 

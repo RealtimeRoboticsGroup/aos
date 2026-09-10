@@ -85,12 +85,12 @@ void log_do(log_level level, const char *format, ...);
     }                                                                   \
   } while (0)
 
-// Same as LOG except appends " due to %d (%s)\n" (formatted with errno and
+// Same as AOS_LOG except appends " due to %d (%s)\n" (formatted with errno and
 // aos_strerror(errno)) to the message.
 #define AOS_PLOG(level, format, ...) \
   AOS_PELOG(level, errno, format __VA_OPT__(, ) __VA_ARGS__)
 
-// Like PLOG except allows specifying an error other than errno.
+// Like AOS_PLOG except allows specifying an error other than errno.
 #define AOS_PELOG(level, error_in, format, ...)                           \
   do {                                                                    \
     const int error = error_in;                                           \
@@ -120,7 +120,7 @@ namespace aos {
 // (<http://google-glog.googlecode.com/svn/trunk/doc/glog.html>)'s, except they
 // don't support streaming in extra text. Some of the implementation is borrowed
 // from there too.
-// They all LOG(FATAL) with a helpful message when the check fails.
+// They all AOS_LOG(FATAL) with a helpful message when the check fails.
 // Portions copyright (c) 1999, Google Inc.
 // All rights reserved.
 //
@@ -233,14 +233,15 @@ inline void CheckSyscallReturn(const char *syscall_string, int value) {
   }
 }
 
-// Check that syscall does not return -1. If it does, PLOG(FATAL)s. This is
+// Check that syscall does not return -1. If it does, AOS_PLOG(FATAL)s. This is
 // useful for quickly checking syscalls where it's not very useful to print out
 // the values of any of the arguments. Returns the result otherwise.
 //
 // Example: const int fd = AOS_PCHECK(open("/tmp/whatever", O_WRONLY))
 #define AOS_PCHECK(syscall) ::aos::CheckSyscall(AOS_STRINGIFY(syscall), syscall)
 
-// PELOG(FATAL)s with the result of syscall if it returns anything other than 0.
+// AOS_PELOG(FATAL)s with the result of syscall if it returns anything other
+// than 0.
 // This is useful for quickly checking things like many of the pthreads
 // functions where it's not very useful to print out the values of any of the
 // arguments.

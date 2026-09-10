@@ -100,7 +100,7 @@ TEST_F(SimpleConditionTest, WaitTimedBoundedByTimeout) {
 // Regression test for a bug in the macOS aos_sync shim where
 // os_sync_wait_on_address's success return value (the number of waiters still
 // blocked on the address after this thread was woken) was reinterpreted as a
-// negative errno, causing mutex_do_get to LOG(FATAL) whenever the kernel
+// negative errno, causing mutex_do_get to ABSL_LOG(FATAL) whenever the kernel
 // reported >= 2 waiters still parked on the mutex's futex.
 TEST_F(SimpleConditionTest, ManyMutexWaiters) {
   constexpr int kNumWaiters = 16;
@@ -129,7 +129,7 @@ TEST_F(SimpleConditionTest, ManyMutexWaiters) {
   ::std::this_thread::sleep_for(chrono::milliseconds(100));
 
   // Release. As each waiter wakes, kNumWaiters-1 others are still parked on
-  // the mutex futex -- that's the path that used to LOG(FATAL) for all but
+  // the mutex futex -- that's the path that used to ABSL_LOG(FATAL) for all but
   // the last waiter.
   mutex_.Unlock();
 
@@ -142,8 +142,8 @@ TEST_F(SimpleConditionTest, ManyMutexWaiters) {
 // Wakes several in-process waiters with Broadcast(). Regression test for a bug
 // in the macOS aos_sync shim where os_sync_wait_on_address's success return
 // value (the number of waiters still blocked) was being reinterpreted as a
-// negative errno, causing broadcast wakes of multiple waiters to LOG(FATAL) in
-// mutex_do_get on the subsequent mutex relock.
+// negative errno, causing broadcast wakes of multiple waiters to
+// ABSL_LOG(FATAL) in mutex_do_get on the subsequent mutex relock.
 TEST_F(SimpleConditionTest, BroadcastWakesMultipleWaiters) {
   constexpr int kNumWaiters = 4;
   int waiters_running = 0;  // protected by mutex_

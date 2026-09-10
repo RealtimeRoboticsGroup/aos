@@ -70,8 +70,8 @@ bool MPCProblem::Solve() {
       aos::monotonic_clock::now();
   osqp::OsqpExitCode exit_code = solver_.Solve();
   const aos::monotonic_clock::time_point end_time = aos::monotonic_clock::now();
-  VLOG(1) << "OSQP solved in "
-          << std::chrono::duration<double>(end_time - start_time).count();
+  ABSL_VLOG(1) << "OSQP solved in "
+               << std::chrono::duration<double>(end_time - start_time).count();
   solve_time_ = std::chrono::duration<double>(end_time - start_time).count();
   // TODO(austin): Dump the exit codes out as an enum for logging.
   //

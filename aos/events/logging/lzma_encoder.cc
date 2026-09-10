@@ -2,8 +2,8 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
-#include "absl/log/vlog_is_on.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 
 ABSL_FLAG(int32_t, lzma_threads, 1, "Number of threads to use for encoding");
 
@@ -18,36 +18,39 @@ bool LzmaCodeIsOk(lzma_ret status, std::string_view filename = "") {
     case LZMA_STREAM_END:
       return true;
     case LZMA_MEM_ERROR:
-      LOG(FATAL) << "Memory allocation failed:" << status;
+      ABSL_LOG(FATAL) << "Memory allocation failed:" << status;
     case LZMA_OPTIONS_ERROR:
-      LOG(FATAL) << "The given compression preset or decompression options are "
-                    "not supported: "
-                 << status;
+      ABSL_LOG(FATAL)
+          << "The given compression preset or decompression options are "
+             "not supported: "
+          << status;
     case LZMA_UNSUPPORTED_CHECK:
-      LOG(FATAL) << "The given check type is not supported: " << status;
+      ABSL_LOG(FATAL) << "The given check type is not supported: " << status;
     case LZMA_PROG_ERROR:
-      LOG(FATAL) << "One or more of the parameters have values that will never "
-                    "be valid: "
-                 << status;
+      ABSL_LOG(FATAL)
+          << "One or more of the parameters have values that will never "
+             "be valid: "
+          << status;
     case LZMA_MEMLIMIT_ERROR:
-      LOG(FATAL) << "Decoder needs more memory than allowed by the specified "
-                    "memory usage limit: "
-                 << status;
+      ABSL_LOG(FATAL)
+          << "Decoder needs more memory than allowed by the specified "
+             "memory usage limit: "
+          << status;
     case LZMA_FORMAT_ERROR:
       if (filename.empty()) {
-        LOG(FATAL) << "File format not recognized: " << status;
+        ABSL_LOG(FATAL) << "File format not recognized: " << status;
       } else {
-        LOG(FATAL) << "File format of " << filename
-                   << " not recognized: " << status;
+        ABSL_LOG(FATAL) << "File format of " << filename
+                        << " not recognized: " << status;
       }
     case LZMA_DATA_ERROR:
-      VLOG(1) << "Compressed file is corrupt: " << status;
+      ABSL_VLOG(1) << "Compressed file is corrupt: " << status;
       return false;
     case LZMA_BUF_ERROR:
-      VLOG(1) << "Compressed file is truncated or corrupt: " << status;
+      ABSL_VLOG(1) << "Compressed file is truncated or corrupt: " << status;
       return false;
     default:
-      LOG(FATAL) << "Unexpected return value: " << status;
+      ABSL_LOG(FATAL) << "Unexpected return value: " << status;
   }
 }
 
@@ -81,7 +84,7 @@ LzmaEncoder::LzmaEncoder(size_t max_message_size,
   }
 
   stream_.avail_out = 0;
-  VLOG(2) << "LzmaEncoder: Initialization succeeded.";
+  ABSL_VLOG(2) << "LzmaEncoder: Initialization succeeded.";
 
   // TODO(austin): We don't write the biggest messages very often.  Is it more
   // efficient to allocate if we go over a threshold to keep the static memory
@@ -218,7 +221,7 @@ void LzmaEncoder::RunLzmaCode(lzma_action action,
     } else {
       ABSL_CHECK(status != LZMA_STREAM_END);
     }
-    VLOG(2) << "LzmaEncoder: Encoded chunk.";
+    ABSL_VLOG(2) << "LzmaEncoder: Encoded chunk.";
   }
 
   // Update the number of resulting encoded bytes.
@@ -237,7 +240,7 @@ LzmaDecoder::LzmaDecoder(std::unique_ptr<DataDecoder> underlying_decoder,
   ABSL_CHECK(LzmaCodeIsOk(status))
       << "Failed initializing LZMA stream decoder.";
   stream_.avail_out = 0;
-  VLOG(2) << "LzmaDecoder: Initialization succeeded.";
+  ABSL_VLOG(2) << "LzmaDecoder: Initialization succeeded.";
 }
 
 LzmaDecoder::~LzmaDecoder() { lzma_end(&stream_); }
@@ -279,16 +282,16 @@ size_t LzmaDecoder::Read(uint8_t *begin, uint8_t *end) {
     if (!LzmaCodeIsOk(status, filename())) {
       finished_ = true;
       if (status == LZMA_DATA_ERROR) {
-        if (!quiet_ || VLOG_IS_ON(1)) {
-          LOG(WARNING) << filename() << " is corrupted.";
+        if (!quiet_ || ABSL_VLOG_IS_ON(1)) {
+          ABSL_LOG(WARNING) << filename() << " is corrupted.";
         }
       } else if (status == LZMA_BUF_ERROR) {
-        if (!quiet_ || VLOG_IS_ON(1)) {
-          LOG(WARNING) << filename() << " is truncated or corrupted.";
+        if (!quiet_ || ABSL_VLOG_IS_ON(1)) {
+          ABSL_LOG(WARNING) << filename() << " is truncated or corrupted.";
         }
       } else {
-        LOG(FATAL) << "Unknown error " << status << " when reading "
-                   << filename();
+        ABSL_LOG(FATAL) << "Unknown error " << status << " when reading "
+                        << filename();
       }
       return (end - begin) - stream_.avail_out;
     }

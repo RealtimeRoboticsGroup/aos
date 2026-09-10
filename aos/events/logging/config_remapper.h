@@ -48,7 +48,7 @@ class ConfigRemapper {
   // already a channel with the remapped name (e.g., as may happen when
   // replaying a logfile that was itself generated from replay).
   enum class RemapConflict {
-    // LOG(FATAL) on conflicts in remappings.
+    // ABSL_LOG(FATAL) on conflicts in remappings.
     kDisallow,
     // If we run into a conflict, attempt to remap the channel we would be
     // overriding (and continue to do so if remapping *that* channel also

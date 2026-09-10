@@ -5,8 +5,8 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
-#include "absl/log/vlog_is_on.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 
 #include "aos/events/logging/log_reader.h"
 #include "aos/events/shm_event_loop.h"
@@ -54,9 +54,9 @@ std::vector<StreamData> MakeStreamData(const Configuration *config,
       const Connection *connection =
           configuration::ConnectionToNode(channel, my_node);
       if (connection != nullptr) {
-        VLOG(1) << "Channel " << channel->name()->string_view() << " "
-                << channel->type()->string_view() << " mapped to stream "
-                << stream_data.size() + kControlStreams();
+        ABSL_VLOG(1) << "Channel " << channel->name()->string_view() << " "
+                     << channel->type()->string_view() << " mapped to stream "
+                     << stream_data.size() + kControlStreams();
         stream_data.push_back(StreamData{
             .channel = channel_index,
             // We want to reply with a timestamp if the other node is logging
@@ -123,8 +123,8 @@ SctpClientConnection::SctpClientConnection(
       client_status_(client_status),
       client_index_(client_index),
       connection_(client_status_->GetClientConnection(client_index_)) {
-  VLOG(1) << "Connect request for " << remote_node_->name()->string_view()
-          << ": " << FlatbufferToJson(connect_message_);
+  ABSL_VLOG(1) << "Connect request for " << remote_node_->name()->string_view()
+               << ": " << FlatbufferToJson(connect_message_);
 
   connect_timer_ = event_loop_->AddTimer([this]() { SendConnect(); });
   connect_timer_->set_name(std::string("connect_") +
@@ -145,8 +145,8 @@ SctpClientConnection::SctpClientConnection(
 
     if (configuration::ChannelIsSendableOnNode(channel, remote_node_) &&
         configuration::ChannelIsReadableOnNode(channel, event_loop_->node())) {
-      VLOG(1) << "Receiving channel "
-              << configuration::CleanedChannelToString(channel);
+      ABSL_VLOG(1) << "Receiving channel "
+                   << configuration::CleanedChannelToString(channel);
       max_read_size = std::max(
           static_cast<size_t>(channel->max_size() + kHeaderSizeOverhead()),
           max_read_size);
@@ -154,8 +154,10 @@ SctpClientConnection::SctpClientConnection(
   }
 
   // Buffer up the max size a bit so everything fits nicely.
-  LOG(INFO) << "Max read message size for all servers is " << max_read_size;
-  LOG(INFO) << "Max write message size for all servers is " << max_write_size;
+  ABSL_LOG(INFO) << "Max read message size for all servers is "
+                 << max_read_size;
+  ABSL_LOG(INFO) << "Max write message size for all servers is "
+                 << max_write_size;
   // RemoteMessage header appears to be between 100 and 204 bytes of overhead
   // from the vector of data.  No need to get super tight to that bound.
   client_.SetMaxReadSize(max_read_size);
@@ -192,28 +194,30 @@ void SctpClientConnection::MessageReceived() {
             case SCTP_COMM_UP:
               NodeConnected(sac->sac_assoc_id);
 
-              VLOG(1) << "Received up from " << message->PeerAddress()
-                      << " on assoc " << sac->sac_assoc_id << " state "
-                      << sac->sac_state;
+              ABSL_VLOG(1) << "Received up from " << message->PeerAddress()
+                           << " on assoc " << sac->sac_assoc_id << " state "
+                           << sac->sac_state;
               break;
             case SCTP_COMM_LOST:
             case SCTP_SHUTDOWN_COMP:
             case SCTP_CANT_STR_ASSOC: {
               NodeDisconnected();
-              VLOG(1) << "Disconnect from " << message->PeerAddress() << " on "
-                      << sac->sac_assoc_id << " state " << sac->sac_state
-                      << " error " << sac->sac_error << ": "
-                      << sctp::GetErrorString(
-                             sctp::ToSctpError(sac->sac_error));
+              ABSL_VLOG(1) << "Disconnect from " << message->PeerAddress()
+                           << " on " << sac->sac_assoc_id << " state "
+                           << sac->sac_state << " error " << sac->sac_error
+                           << ": "
+                           << sctp::GetErrorString(
+                                  sctp::ToSctpError(sac->sac_error));
             } break;
             default:
-              LOG(FATAL) << "Never seen state " << sac->sac_state << " before.";
+              ABSL_LOG(FATAL)
+                  << "Never seen state " << sac->sac_state << " before.";
               break;
           }
         } break;
       }
 
-      if (VLOG_IS_ON(1)) {
+      if (ABSL_VLOG_IS_ON(1)) {
         PrintNotification(message.get());
       }
     } break;
@@ -234,7 +238,7 @@ void SctpClientConnection::SendConnect() {
   // the connection.
   if (client_status_->GetClientConnection(client_index_)->state() ==
       aos::message_bridge::State::CONNECTED) {
-    VLOG(1) << "Aborting to reconnect.";
+    ABSL_VLOG(1) << "Aborting to reconnect.";
     client_.Abort();
     return;
   }
@@ -244,11 +248,12 @@ void SctpClientConnection::SendConnect() {
                                         connect_message_.span().data()),
                                     connect_message_.span().size()),
                    0)) {
-    VLOG(1) << "Sending connect to " << remote_node_->hostname()->string_view()
-            << " port " << remote_node_->port() << " succeeded.";
+    ABSL_VLOG(1) << "Sending connect to "
+                 << remote_node_->hostname()->string_view() << " port "
+                 << remote_node_->port() << " succeeded.";
   } else {
-    VLOG(1) << "Connect to " << remote_node_->hostname()->string_view()
-            << " port " << remote_node_->port() << " failed.";
+    ABSL_VLOG(1) << "Connect to " << remote_node_->hostname()->string_view()
+                 << " port " << remote_node_->port() << " failed.";
   }
 }
 
@@ -284,7 +289,7 @@ void SctpClientConnection::HandleData(const Message *message) {
   const RemoteData *remote_data =
       flatbuffers::GetSizePrefixedRoot<RemoteData>(message->data());
 
-  VLOG(2) << "Got a message of size " << message->size;
+  ABSL_VLOG(2) << "Got a message of size " << message->size;
   ABSL_CHECK_EQ(message->size, flatbuffers::GetPrefixedSize(message->data()) +
                                    sizeof(flatbuffers::uoffset_t));
   {
@@ -300,7 +305,7 @@ void SctpClientConnection::HandleData(const Message *message) {
       monotonic_clock::time_point(
           chrono::nanoseconds(remote_data->monotonic_sent_time())) ==
           channel_state->last_timestamp) {
-    VLOG(1) << "Duplicate message from " << message->PeerAddress();
+    ABSL_VLOG(1) << "Duplicate message from " << message->PeerAddress();
     ftrace_.FormatEvent("Bridge duplicate message size=%zu", message->size);
     connection_->mutate_duplicate_packets(connection_->duplicate_packets() + 1);
     // Duplicate message, ignore.
@@ -345,20 +350,19 @@ void SctpClientConnection::HandleData(const Message *message) {
       sender->CheckOk(result);
     }
 
-    VLOG(2) << (send_was_successful ? "Sent " : "Failed to send ")
-            << configuration::StrippedChannelToString(
-                   channel_state->sender->channel())
-            << " -> {\"channel_index\": " << remote_data->channel_index()
-            << ", \"monotonic_sent_time\": "
-            << remote_data->monotonic_sent_time()
-            << ", \"monotonic_remote_transmit_time\": "
-            << remote_data->monotonic_remote_transmit_time()
-            << ", \"realtime_sent_time\": " << remote_data->realtime_sent_time()
-            << ", \"queue_index\": " << remote_data->queue_index()
-            << ", \"monotonic_remote_time\": " << sender->monotonic_sent_time()
-            << ", \"realtime_remote_time\": " << sender->realtime_sent_time()
-            << ", \"remote_queue_index\": " << sender->sent_queue_index()
-            << "}";
+    ABSL_VLOG(2)
+        << (send_was_successful ? "Sent " : "Failed to send ")
+        << configuration::StrippedChannelToString(
+               channel_state->sender->channel())
+        << " -> {\"channel_index\": " << remote_data->channel_index()
+        << ", \"monotonic_sent_time\": " << remote_data->monotonic_sent_time()
+        << ", \"monotonic_remote_transmit_time\": "
+        << remote_data->monotonic_remote_transmit_time()
+        << ", \"realtime_sent_time\": " << remote_data->realtime_sent_time()
+        << ", \"queue_index\": " << remote_data->queue_index()
+        << ", \"monotonic_remote_time\": " << sender->monotonic_sent_time()
+        << ", \"realtime_remote_time\": " << sender->realtime_sent_time()
+        << ", \"remote_queue_index\": " << sender->sent_queue_index() << "}";
 
     // Only perform filtering and forwarding on the timestamps if the send was
     // successful. We don't have meaningful data otherwise.
@@ -413,8 +417,9 @@ void SctpClientConnection::HandleData(const Message *message) {
             timestamp_retry_buffer_->Schedule(event_loop_->monotonic_now() +
                                               chrono::milliseconds(100));
           }
-          VLOG(1) << this << " Queued timestamp " << timestamp.channel_index
-                  << " " << timestamp.queue_index;
+          ABSL_VLOG(1) << this << " Queued timestamp "
+                       << timestamp.channel_index << " "
+                       << timestamp.queue_index;
           // TODO: Track timestamps that get overwritten in the
           // statistics message we send out.
           timestamp_buffer_.Push(timestamp);
@@ -423,19 +428,19 @@ void SctpClientConnection::HandleData(const Message *message) {
     }
   }
 
-  VLOG(2) << "Received data of length " << message->size << " from "
-          << message->PeerAddress();
+  ABSL_VLOG(2) << "Received data of length " << message->size << " from "
+               << message->PeerAddress();
 
-  if (VLOG_IS_ON(2)) {
+  if (ABSL_VLOG_IS_ON(2)) {
     client_.LogSctpStatus(message->header.rcvinfo.rcv_assoc_id);
   }
 
-  VLOG(3) << "\tSNDRCV (stream=" << message->header.rcvinfo.rcv_sid
-          << " ssn=" << message->header.rcvinfo.rcv_ssn
-          << " tsn=" << message->header.rcvinfo.rcv_tsn << " flags=0x"
-          << std::hex << message->header.rcvinfo.rcv_flags << std::dec
-          << " ppid=" << message->header.rcvinfo.rcv_ppid
-          << " cumtsn=" << message->header.rcvinfo.rcv_cumtsn << ")";
+  ABSL_VLOG(3) << "\tSNDRCV (stream=" << message->header.rcvinfo.rcv_sid
+               << " ssn=" << message->header.rcvinfo.rcv_ssn
+               << " tsn=" << message->header.rcvinfo.rcv_tsn << " flags=0x"
+               << std::hex << message->header.rcvinfo.rcv_flags << std::dec
+               << " ppid=" << message->header.rcvinfo.rcv_ppid
+               << " cumtsn=" << message->header.rcvinfo.rcv_cumtsn << ")";
 }
 
 bool SctpClientConnection::SendTimestamp(SavedTimestamp timestamp) {
@@ -463,8 +468,9 @@ bool SctpClientConnection::SendTimestamp(SavedTimestamp timestamp) {
       timestamp.remote_queue_index);
 
   // Unique ID is channel_index and monotonic clock.
-  VLOG(1) << this << " Sent timestamp for channel " << timestamp.channel_index
-          << ", queue index " << timestamp.queue_index;
+  ABSL_VLOG(1) << this << " Sent timestamp for channel "
+               << timestamp.channel_index << ", queue index "
+               << timestamp.queue_index;
   if (!client_.Send(
           kTimestampStream(),
           std::string_view(reinterpret_cast<const char *>(
@@ -489,9 +495,9 @@ void SctpClientConnection::SendTimestamps() {
                                         chrono::milliseconds(100));
       return;
     } else {
-      VLOG(1) << this << " Resent timestamp "
-              << timestamp_buffer_[0].channel_index << " "
-              << timestamp_buffer_[0].queue_index;
+      ABSL_VLOG(1) << this << " Resent timestamp "
+                   << timestamp_buffer_[0].channel_index << " "
+                   << timestamp_buffer_[0].queue_index;
       timestamp_buffer_.Shift();
     }
   } while (!timestamp_buffer_.empty());
@@ -551,9 +557,9 @@ MessageBridgeClient::MessageBridgeClient(
           raw_fetcher->Fetch();
 
           if (raw_fetcher->context().data != nullptr) {
-            VLOG(1) << "Found data on "
-                    << configuration::CleanedChannelToString(channel)
-                    << ", won't resend it.";
+            ABSL_VLOG(1) << "Found data on "
+                         << configuration::CleanedChannelToString(channel)
+                         << ", won't resend it.";
             channels_[channel_index].last_queue_index =
                 raw_fetcher->context().remote_queue_index;
             channels_[channel_index].last_timestamp =
@@ -577,7 +583,7 @@ MessageBridgeClient::MessageBridgeClient(
         config_sha256_, requested_authentication));
   }
 
-  LOG_IF(WARNING, event_loop_->runtime_realtime_priority() <= 0)
+  ABSL_LOG_IF(WARNING, event_loop_->runtime_realtime_priority() <= 0)
       << ": Suggested to use a realtime priority >0.";
 }
 

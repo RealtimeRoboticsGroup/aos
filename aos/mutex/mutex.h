@@ -4,7 +4,7 @@
 #include <ostream>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/ipc_lib/aos_sync.h"
 #include "aos/macros.h"
@@ -19,7 +19,7 @@ namespace aos {
 // To deal with priority inversion, the linux implementation does priority
 // inheritance.
 // Before destroying a mutex, it is important to make sure it isn't locked.
-// Otherwise, the destructor will LOG(FATAL).
+// Otherwise, the destructor will ABSL_LOG(FATAL).
 class Mutex {
  public:
   // States that signify the result of TryLock.
@@ -43,7 +43,7 @@ class Mutex {
   // memory in the middle of the robust list, which breaks things horribly.
   ~Mutex() = default;
 
-  // Locks the mutex. If it fails, it calls LOG(FATAL).
+  // Locks the mutex. If it fails, it calls ABSL_LOG(FATAL).
   // Returns true if the previous owner died instead of unlocking nicely.
   bool Lock() __attribute__((warn_unused_result));
   // Unlocks the mutex. Fails like Lock.
@@ -74,8 +74,8 @@ class MutexLocker {
  public:
   explicit MutexLocker(Mutex *mutex) : mutex_(mutex) {
     if (AOS_UNLIKELY(mutex_->Lock())) {
-      LOG(FATAL) << "previous owner of mutex " << this
-                 << " died but it shouldn't be able to";
+      ABSL_LOG(FATAL) << "previous owner of mutex " << this
+                      << " died but it shouldn't be able to";
     }
   }
   ~MutexLocker() { mutex_->Unlock(); }
@@ -87,21 +87,21 @@ class MutexLocker {
 };
 
 // A version of MutexLocker which reports the previous owner dying instead of
-// immediately LOG(FATAL)ing.
+// immediately ABSL_LOG(FATAL)ing.
 class IPCMutexLocker {
  public:
   explicit IPCMutexLocker(Mutex *mutex)
       : mutex_(mutex), owner_died_(mutex_->Lock()) {}
   ~IPCMutexLocker() {
     if (AOS_UNLIKELY(!owner_died_checked_)) {
-      LOG(FATAL) << "nobody checked if the previous owner of mutex " << this
-                 << " died";
+      ABSL_LOG(FATAL) << "nobody checked if the previous owner of mutex "
+                      << this << " died";
     }
     mutex_->Unlock();
   }
 
   // Whether or not the previous owner died. If this is not called at least
-  // once, the destructor will LOG(FATAL)
+  // once, the destructor will ABSL_LOG(FATAL)
   __attribute__((warn_unused_result)) bool owner_died() {
     owner_died_checked_ = true;
     return AOS_UNLIKELY(owner_died_);
@@ -125,14 +125,14 @@ class IPCRecursiveMutexLocker {
         owner_died_(locked_ ? mutex_->Lock() : false) {}
   ~IPCRecursiveMutexLocker() {
     if (AOS_UNLIKELY(!owner_died_checked_)) {
-      LOG(FATAL) << "nobody checked if the previous owner of mutex " << this
-                 << " died";
+      ABSL_LOG(FATAL) << "nobody checked if the previous owner of mutex "
+                      << this << " died";
     }
     if (locked_) mutex_->Unlock();
   }
 
   // Whether or not the previous owner died. If this is not called at least
-  // once, the destructor will LOG(FATAL)
+  // once, the destructor will ABSL_LOG(FATAL)
   __attribute__((warn_unused_result)) bool owner_died() {
     owner_died_checked_ = true;
     return AOS_UNLIKELY(owner_died_);

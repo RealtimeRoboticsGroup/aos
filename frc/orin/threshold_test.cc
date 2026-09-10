@@ -74,8 +74,8 @@ TEST_F(ThresholdTest, NeonThreshold) {
   auto image =
       ReadImage("orin_capture_24_04_side/file/orin_capture_24_04_side.bfbs");
 
-  LOG(INFO) << "Image is: " << image.message().cols() << " x "
-            << image.message().rows();
+  ABSL_LOG(INFO) << "Image is: " << image.message().cols() << " x "
+                 << image.message().rows();
 
   const size_t width = image.message().cols();
   const size_t height = image.message().rows();
@@ -145,12 +145,12 @@ TEST_F(ThresholdTest, NeonThreshold) {
       aos::monotonic_clock::now();
   image_u8_t *thresholded_im = threshold(tag_detector_, quad_im);
   const aos::monotonic_clock::time_point end_time = aos::monotonic_clock::now();
-  LOG(INFO) << "April robotics after, decimated took "
-            << double_milli(decimated_time - start_time).count()
-            << "ms, threshold took "
-            << double_milli(end_time - decimated_time).count()
-            << "ms overall took " << double_milli(end_time - start_time).count()
-            << "ms";
+  ABSL_LOG(INFO) << "April robotics after, decimated took "
+                 << double_milli(decimated_time - start_time).count()
+                 << "ms, threshold took "
+                 << double_milli(end_time - decimated_time).count()
+                 << "ms overall took "
+                 << double_milli(end_time - start_time).count() << "ms";
 
   image_u8_t decimated_im = {
       .width = static_cast<int32_t>(width / 2),

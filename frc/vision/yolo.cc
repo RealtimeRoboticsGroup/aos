@@ -4,7 +4,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "opencv2/core.hpp"
 #include "opencv2/dnn/dnn.hpp"
 
@@ -49,19 +49,19 @@ class Logger : public nvinfer1::ILogger {
   void log(Severity severity, const char *msg) noexcept override {
     switch (severity) {
       case Severity::kINTERNAL_ERROR:
-        LOG(FATAL) << msg;
+        ABSL_LOG(FATAL) << msg;
         break;
       case Severity::kERROR:
-        LOG(ERROR) << msg;
+        ABSL_LOG(ERROR) << msg;
         break;
       case Severity::kWARNING:
-        LOG(WARNING) << msg;
+        ABSL_LOG(WARNING) << msg;
         break;
       case Severity::kINFO:
-        LOG(INFO) << msg;
+        ABSL_LOG(INFO) << msg;
         break;
       case Severity::kVERBOSE:
-        VLOG(1) << msg;
+        ABSL_VLOG(1) << msg;
         break;
     }
   }
@@ -98,7 +98,8 @@ class ModelInference {
     }
 
     if (!context_->enqueueV3(stream_)) {
-      LOG(FATAL) << "Error running inference: enqueueV3 failed!" << std::endl;
+      ABSL_LOG(FATAL) << "Error running inference: enqueueV3 failed!"
+                      << std::endl;
     }
 
     // Synchronize stream
@@ -119,7 +120,7 @@ class ModelInference {
     runtime_ = std::unique_ptr<nvinfer1::IRuntime>(
         nvinfer1::createInferRuntime(logger_));
     if (!runtime_) {
-      LOG(FATAL) << "Error creating TensorRT runtime" << std::endl;
+      ABSL_LOG(FATAL) << "Error creating TensorRT runtime" << std::endl;
       return false;
     }
 
@@ -127,14 +128,14 @@ class ModelInference {
         std::unique_ptr<nvinfer1::ICudaEngine>(runtime_->deserializeCudaEngine(
             engine_data.data(), engine_data.size()));
     if (!engine_) {
-      LOG(FATAL) << "Error deserializing CUDA engine" << std::endl;
+      ABSL_LOG(FATAL) << "Error deserializing CUDA engine" << std::endl;
       return false;
     }
 
     context_ = std::unique_ptr<nvinfer1::IExecutionContext>(
         engine_->createExecutionContext());
     if (!context_) {
-      LOG(FATAL) << "Error creating execution context" << std::endl;
+      ABSL_LOG(FATAL) << "Error creating execution context" << std::endl;
       return false;
     }
 
@@ -142,7 +143,7 @@ class ModelInference {
     CHECK_CUDA(cudaStreamCreate(&stream_));
 
     // Allocate device buffers
-    LOG(INFO) << "Has " << engine_->getNbIOTensors() << " tensors";
+    ABSL_LOG(INFO) << "Has " << engine_->getNbIOTensors() << " tensors";
     for (int i = 0; i < engine_->getNbIOTensors(); i++) {
       const char *tensor_name = engine_->getIOTensorName(i);
       nvinfer1::Dims dims = engine_->getTensorShape(tensor_name);
@@ -215,12 +216,12 @@ class YoloApplication {
 
     {
       nvinfer1::Dims d = inference_.input_dims();
-      LOG(INFO) << "Input: " << d.nbDims << " [" << d.d[0] << " " << d.d[1]
-                << " " << d.d[2] << " " << d.d[3] << "]";
+      ABSL_LOG(INFO) << "Input: " << d.nbDims << " [" << d.d[0] << " " << d.d[1]
+                     << " " << d.d[2] << " " << d.d[3] << "]";
 
       d = inference_.output_dims();
-      LOG(INFO) << "Output: " << d.nbDims << " [" << d.d[0] << " " << d.d[1]
-                << " " << d.d[2] << "]";
+      ABSL_LOG(INFO) << "Output: " << d.nbDims << " [" << d.d[0] << " "
+                     << d.d[1] << " " << d.d[2] << "]";
     }
   }
 
@@ -285,11 +286,11 @@ class YoloApplication {
 
     aos::monotonic_clock::time_point start = aos::monotonic_clock::now();
     resize_normalize(image, normalized);
-    VLOG(1) << "Took: "
-            << std::chrono::duration<double, std::milli>(
-                   aos::monotonic_clock::now() - start)
-                   .count()
-            << "ms";
+    ABSL_VLOG(1) << "Took: "
+                 << std::chrono::duration<double, std::milli>(
+                        aos::monotonic_clock::now() - start)
+                        .count()
+                 << "ms";
   }
 
   struct Detection {
@@ -335,14 +336,14 @@ class YoloApplication {
         continue;
       }
 
-      VLOG(1) << j << " -> [" << xc << ", " << yc << ", " << w << ", " << h
-              << ", " << confidence << "]";
+      ABSL_VLOG(1) << j << " -> [" << xc << ", " << yc << ", " << w << ", " << h
+                   << ", " << confidence << "]";
 
       detections.emplace_back(detection);
     }
 
     std::vector<Detection> nms = NMSBoxes(detections);
-    VLOG(1) << "Found " << nms.size() << " detections";
+    ABSL_VLOG(1) << "Found " << nms.size() << " detections";
 
     {
       aos::Sender<frc::vision::BoundingBoxesStatic>::StaticBuilder builder =
@@ -406,7 +407,7 @@ class YoloApplication {
     foxglove::ImageAnnotations::Builder annotation_builder(*builder.fbb());
     annotation_builder.add_points(corners_offset);
     builder.CheckOk(builder.Send(annotation_builder.Finish()));
-    VLOG(1) << "Max confidence: " << c;
+    ABSL_VLOG(1) << "Max confidence: " << c;
   }
 
   std::vector<Detection> NMSBoxes(const std::vector<Detection> &detections) {

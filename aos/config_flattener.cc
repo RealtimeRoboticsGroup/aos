@@ -3,7 +3,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/configuration.h"
 #include "aos/init.h"
@@ -29,16 +29,17 @@ int Main(int argc, char **argv) {
   // files), we need to tell ReadConfig where the generated files directory is.
   const char *bazel_outs_directory = argv[2];
 
-  VLOG(1) << "Reading " << config_path;
+  ABSL_VLOG(1) << "Reading " << config_path;
   FlatbufferDetachedBuffer<Configuration> config =
       configuration::ReadConfig(config_path, {bazel_outs_directory});
 
   for (const Channel *channel : *config.message().channels()) {
     if (channel->max_size() % alignof(flatbuffers::largest_scalar_t) != 0) {
-      LOG(FATAL) << "max_size() (" << channel->max_size()
-                 << ") is not a multiple of alignment ("
-                 << alignof(flatbuffers::largest_scalar_t) << ") for channel "
-                 << configuration::CleanedChannelToString(channel) << ".";
+      ABSL_LOG(FATAL) << "max_size() (" << channel->max_size()
+                      << ") is not a multiple of alignment ("
+                      << alignof(flatbuffers::largest_scalar_t)
+                      << ") for channel "
+                      << configuration::CleanedChannelToString(channel) << ".";
     }
   }
 
@@ -47,8 +48,8 @@ int Main(int argc, char **argv) {
   for (int i = 3; i < argc; ++i) {
     auto schema = FileToFlatbuffer<reflection::Schema>(argv[i]);
     if (!schema.message().has_root_table()) {
-      LOG(ERROR) << "Schema in " << argv[i]
-                 << " does not have a root table, aborting";
+      ABSL_LOG(ERROR) << "Schema in " << argv[i]
+                      << " does not have a root table, aborting";
       return 1;
     }
     schemas.emplace_back(std::move(schema));
@@ -71,7 +72,7 @@ int Main(int argc, char **argv) {
 
   // TODO(austin): Figure out how to squash the schemas onto 1 line so it is
   // easier to read?
-  VLOG(1) << "Flattened config is " << merged_config_json;
+  ABSL_VLOG(1) << "Flattened config is " << merged_config_json;
   if (!absl::GetFlag(FLAGS_full_output).empty()) {
     util::WriteStringToFileOrDie(absl::GetFlag(FLAGS_full_output),
                                  merged_config_json);

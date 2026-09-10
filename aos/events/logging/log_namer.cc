@@ -8,7 +8,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_cat.h"
 #include "flatbuffers/flatbuffers.h"
 
@@ -58,7 +58,7 @@ DataWriter::~DataWriter() {
 void DataWriter::Rotate() {
   // No need to rotate if nothing has been written.
   if (header_written_) {
-    VLOG(1) << "Rotated " << name();
+    ABSL_VLOG(1) << "Rotated " << name();
     ++parts_index_;
 
     aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader> header =
@@ -102,7 +102,7 @@ void DataWriter::Reboot(const UUID &source_node_boot_uuid) {
 
   state_[node_index_].boot_uuid = source_node_boot_uuid;
 
-  VLOG(1) << "Rebooted " << name();
+  ABSL_VLOG(1) << "Rebooted " << name();
   newest_message_time_ = monotonic_clock::min_time;
   // When a node reboots, parts_uuid changes but the same writer continues to
   // write the data, so we can reset the max out of order duration. If we don't
@@ -132,8 +132,8 @@ void DataWriter::UpdateRemote(
 
   // Did the remote boot UUID change?
   if (state.boot_uuid != remote_node_boot_uuid) {
-    VLOG(1) << name() << " Remote " << remote_node_index << " updated to "
-            << remote_node_boot_uuid << " from " << state.boot_uuid;
+    ABSL_VLOG(1) << name() << " Remote " << remote_node_index << " updated to "
+                 << remote_node_boot_uuid << " from " << state.boot_uuid;
     state.boot_uuid = remote_node_boot_uuid;
     state.oldest_remote_monotonic_timestamp = monotonic_clock::max_time;
     state.oldest_local_monotonic_timestamp = monotonic_clock::max_time;
@@ -158,11 +158,12 @@ void DataWriter::UpdateRemote(
   if (monotonic_remote_transmit_time != monotonic_clock::min_time) {
     if (state.oldest_remote_reliable_monotonic_transmit_timestamp >
         monotonic_remote_transmit_time) {
-      VLOG(1) << name() << " Remote " << remote_node_index
-              << " oldest_remote_reliable_monotonic_transmit_timestamp updated "
-                 "from "
-              << state.oldest_remote_reliable_monotonic_transmit_timestamp
-              << " to " << monotonic_remote_transmit_time;
+      ABSL_VLOG(1)
+          << name() << " Remote " << remote_node_index
+          << " oldest_remote_reliable_monotonic_transmit_timestamp updated "
+             "from "
+          << state.oldest_remote_reliable_monotonic_transmit_timestamp << " to "
+          << monotonic_remote_transmit_time;
       state.oldest_remote_reliable_monotonic_transmit_timestamp =
           monotonic_remote_transmit_time;
       state.oldest_local_reliable_monotonic_transmit_timestamp =
@@ -175,10 +176,11 @@ void DataWriter::UpdateRemote(
   if (!reliable) {
     if (state.oldest_remote_unreliable_monotonic_timestamp >
         monotonic_remote_time) {
-      VLOG(1) << name() << " Remote " << remote_node_index
-              << " oldest_remote_unreliable_monotonic_timestamp updated from "
-              << state.oldest_remote_unreliable_monotonic_timestamp << " to "
-              << monotonic_remote_time;
+      ABSL_VLOG(1)
+          << name() << " Remote " << remote_node_index
+          << " oldest_remote_unreliable_monotonic_timestamp updated from "
+          << state.oldest_remote_unreliable_monotonic_timestamp << " to "
+          << monotonic_remote_time;
       state.oldest_remote_unreliable_monotonic_timestamp =
           monotonic_remote_time;
       state.oldest_local_unreliable_monotonic_timestamp = monotonic_event_time;
@@ -187,10 +189,11 @@ void DataWriter::UpdateRemote(
   } else {
     if (state.oldest_remote_reliable_monotonic_timestamp >
         monotonic_remote_time) {
-      VLOG(1) << name() << " Remote " << remote_node_index
-              << " oldest_remote_reliable_monotonic_timestamp updated from "
-              << state.oldest_remote_reliable_monotonic_timestamp << " to "
-              << monotonic_remote_time;
+      ABSL_VLOG(1)
+          << name() << " Remote " << remote_node_index
+          << " oldest_remote_reliable_monotonic_timestamp updated from "
+          << state.oldest_remote_reliable_monotonic_timestamp << " to "
+          << monotonic_remote_time;
       state.oldest_remote_reliable_monotonic_timestamp = monotonic_remote_time;
       state.oldest_local_reliable_monotonic_timestamp = monotonic_event_time;
       rotate = true;
@@ -203,7 +206,7 @@ void DataWriter::UpdateRemote(
     ABSL_CHECK_EQ(remote_node_index, logger_node_index_);
     if (monotonic_event_time <
         logger_state.oldest_logger_remote_unreliable_monotonic_timestamp) {
-      VLOG(1)
+      ABSL_VLOG(1)
           << name() << " Remote " << node_index_
           << " oldest_logger_remote_unreliable_monotonic_timestamp updated "
              "from "
@@ -220,10 +223,10 @@ void DataWriter::UpdateRemote(
 
   // Did any of the timestamps change?
   if (state.oldest_remote_monotonic_timestamp > monotonic_remote_time) {
-    VLOG(1) << name() << " Remote " << remote_node_index
-            << " oldest_remote_monotonic_timestamp updated from "
-            << state.oldest_remote_monotonic_timestamp << " to "
-            << monotonic_remote_time;
+    ABSL_VLOG(1) << name() << " Remote " << remote_node_index
+                 << " oldest_remote_monotonic_timestamp updated from "
+                 << state.oldest_remote_monotonic_timestamp << " to "
+                 << monotonic_remote_time;
     state.oldest_remote_monotonic_timestamp = monotonic_remote_time;
     state.oldest_local_monotonic_timestamp = monotonic_event_time;
     rotate = true;
@@ -354,8 +357,8 @@ DataWriter::MakeHeader() {
   const size_t logger_node_index = log_namer_->logger_node_index();
   const UUID &logger_node_boot_uuid = log_namer_->logger_node_boot_uuid();
   if (state_[logger_node_index].boot_uuid == UUID::Zero()) {
-    VLOG(1) << name() << " Logger node is " << logger_node_index
-            << " and uuid is " << logger_node_boot_uuid;
+    ABSL_VLOG(1) << name() << " Logger node is " << logger_node_index
+                 << " and uuid is " << logger_node_boot_uuid;
     state_[logger_node_index].boot_uuid = logger_node_boot_uuid;
   } else {
     ABSL_CHECK_EQ(state_[logger_node_index].boot_uuid, logger_node_boot_uuid);
@@ -386,9 +389,9 @@ void DataWriter::QueueHeader(
     reopen_(this);
   }
 
-  VLOG(1) << "Writing to " << name() << " "
-          << aos::FlatbufferToJson(
-                 header, {.multi_line = false, .max_vector_size = 100});
+  ABSL_VLOG(1) << "Writing to " << name() << " "
+               << aos::FlatbufferToJson(
+                      header, {.multi_line = false, .max_vector_size = 100});
 
   ABSL_CHECK(writer_);
   DataEncoder::SpanCopier coppier(header.span());
@@ -1253,7 +1256,7 @@ void MinimalFileMultiNodeLogNamer::OpenNodeWriter(const Node *source_node,
 
   absl::StrAppend(&filename, "all.part", data_writer->parts_index(), ".bfbs",
                   extension_);
-  VLOG(1) << "Going to open " << filename;
+  ABSL_VLOG(1) << "Going to open " << filename;
   CreateBufferWriter(filename, data_writer->max_message_size(), data_writer);
 }
 

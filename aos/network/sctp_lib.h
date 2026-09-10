@@ -12,7 +12,7 @@
 #include <vector>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/types/span.h"
 
 #include "aos/unique_malloc_ptr.h"
@@ -131,8 +131,8 @@ class SctpReadWrite {
       : sctp_authentication_(HasSctpAuth() ? requested_authentication ==
                                                  SctpAuthMethod::kAuth
                                            : false) {
-    LOG_IF(WARNING,
-           requested_authentication == SctpAuthMethod::kAuth && !HasSctpAuth())
+    ABSL_LOG_IF(WARNING, requested_authentication == SctpAuthMethod::kAuth &&
+                             !HasSctpAuth())
         << "SCTP authentication requested but not provided by the kernel... "
            "You may need a newer kernel";
   }

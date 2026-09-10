@@ -9,7 +9,7 @@
 #include "absl/flags/flag.h"
 #include "absl/flags/usage.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/events/logging/snappy_encoder.h"
 #include "aos/events/shm_event_loop.h"
@@ -95,8 +95,8 @@ int main(int argc, char *argv[]) {
 
   event_loop.OnRun([&log_namer, &logger]() {
     if (absl::GetFlag(FLAGS_skip_renicing)) {
-      LOG(WARNING) << "Ignoring request to renice to -20 due to "
-                      "--skip_renicing.";
+      ABSL_LOG(WARNING) << "Ignoring request to renice to -20 due to "
+                           "--skip_renicing.";
     } else {
       errno = 0;
       setpriority(PRIO_PROCESS, 0, -20);
@@ -108,7 +108,7 @@ int main(int argc, char *argv[]) {
 
   event_loop.Run();
 
-  LOG(INFO) << "Shutting down";
+  ABSL_LOG(INFO) << "Shutting down";
 
   return 0;
 }

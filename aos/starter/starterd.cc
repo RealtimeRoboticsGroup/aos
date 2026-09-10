@@ -7,7 +7,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/configuration.h"
 #include "aos/events/event_loop.h"
@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
     {
       struct passwd *user_data = getpwnam(absl::GetFlag(FLAGS_user).c_str());
       if (user_data != nullptr) {
-        LOG(INFO) << "Switching to user " << user_data->pw_name;
+        ABSL_LOG(INFO) << "Switching to user " << user_data->pw_name;
         uid = user_data->pw_uid;
         gid = user_data->pw_gid;
 
@@ -58,10 +58,10 @@ int main(int argc, char **argv) {
           struct group *gr = getgrgid(groups[i]);
           ABSL_PCHECK(gr != nullptr);
 
-          LOG(INFO) << "  Adding supplemental group of " << gr->gr_name;
+          ABSL_LOG(INFO) << "  Adding supplemental group of " << gr->gr_name;
         }
       } else {
-        LOG(FATAL) << "Could not find user " << absl::GetFlag(FLAGS_user);
+        ABSL_LOG(FATAL) << "Could not find user " << absl::GetFlag(FLAGS_user);
         return 1;
       }
     }
@@ -76,13 +76,14 @@ int main(int argc, char **argv) {
     constexpr int kUnchanged = -1;
     if (setresgid(/* ruid */ gid, /* euid */ gid,
                   /* suid */ kUnchanged) != 0) {
-      PLOG(FATAL) << "Failed to change GID to " << absl::GetFlag(FLAGS_user)
-                  << ", group " << gid;
+      ABSL_PLOG(FATAL) << "Failed to change GID to "
+                       << absl::GetFlag(FLAGS_user) << ", group " << gid;
     }
 
     if (setresuid(/* ruid */ uid, /* euid */ uid,
                   /* suid */ kUnchanged) != 0) {
-      PLOG(FATAL) << "Failed to change UID to " << absl::GetFlag(FLAGS_user);
+      ABSL_PLOG(FATAL) << "Failed to change UID to "
+                       << absl::GetFlag(FLAGS_user);
     }
   }
 

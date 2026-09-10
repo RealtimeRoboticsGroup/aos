@@ -3,7 +3,7 @@
 #include "absl/flags/flag.h"
 #include "absl/flags/usage.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/events/logging/log_reader.h"
 #include "aos/init.h"
@@ -52,8 +52,9 @@ int main(int argc, char *argv[]) {
                                      &event_loop](
                                         const frc::JoystickState &msg) {
       if (!printed_match && msg.match_type() != frc::MatchType::kNone) {
-        LOG(INFO) << "Match Type: " << frc::EnumNameMatchType(msg.match_type());
-        LOG(INFO) << "Match #: " << msg.match_number();
+        ABSL_LOG(INFO) << "Match Type: "
+                       << frc::EnumNameMatchType(msg.match_type());
+        ABSL_LOG(INFO) << "Match #: " << msg.match_number();
         printed_match = true;
       }
 
@@ -70,14 +71,14 @@ int main(int argc, char *argv[]) {
     reader.event_loop_factory()->Run();
 
     if (!printed_match) {
-      LOG(INFO) << "No match info.";
+      ABSL_LOG(INFO) << "No match info.";
     }
     if (!start_time.has_value()) {
-      LOG(WARNING) << "Log does not ontain any JoystickState messages.";
+      ABSL_LOG(WARNING) << "Log does not ontain any JoystickState messages.";
       return 1;
     }
-    LOG(INFO) << "First enable at " << start_time.value();
-    LOG(INFO) << "Final enable at " << end_time.value();
+    ABSL_LOG(INFO) << "First enable at " << start_time.value();
+    ABSL_LOG(INFO) << "Final enable at " << end_time.value();
     start_time.value() -= std::chrono::duration_cast<std::chrono::nanoseconds>(
         std::chrono::duration<double>(
             absl::GetFlag(FLAGS_pre_enable_time_sec)));
@@ -122,7 +123,8 @@ int main(int argc, char *argv[]) {
     reader.event_loop_factory()->Run();
   }
 
-  LOG(INFO) << "Trimmed logs written to " << absl::GetFlag(FLAGS_output_folder);
+  ABSL_LOG(INFO) << "Trimmed logs written to "
+                 << absl::GetFlag(FLAGS_output_folder);
 
   return EXIT_SUCCESS;
 }

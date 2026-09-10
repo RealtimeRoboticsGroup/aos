@@ -5,7 +5,7 @@
 #include <thread>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 
 #include "aos/configuration.h"
@@ -49,7 +49,7 @@ class GlibMainLoopTest : public ::testing::TestWithParam<EventLoopType> {
       // to specify a periodic event so that there are always events being
       // waited on. Otherwise, the event loop will quit before the epoll events
       // have had a chance to execute.
-      event_loop_->AddTimer([]() { VLOG(1) << "null event"; })
+      event_loop_->AddTimer([]() { ABSL_VLOG(1) << "null event"; })
           ->Schedule(event_loop_->monotonic_now(), std::chrono::seconds(1));
     }
   }

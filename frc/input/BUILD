@@ -53,8 +53,8 @@ cc_library(
     ],
     deps = [
         ":joystick_state_fbs",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 

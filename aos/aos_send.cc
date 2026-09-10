@@ -2,7 +2,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/usage.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/aos_cli_utils.h"
 #include "aos/configuration.h"
@@ -36,11 +36,11 @@ int main(int argc, char **argv) {
     return 0;
   }
   if (cli_info.found_channels.size() > 1) {
-    LOG(FATAL) << "Matched multiple channels, but may only send on 1";
+    ABSL_LOG(FATAL) << "Matched multiple channels, but may only send on 1";
   }
 
   if (argc == 1) {
-    LOG(FATAL) << "Must specify a message to send";
+    ABSL_LOG(FATAL) << "Must specify a message to send";
   }
 
   // Check if the user wants to use stdin (denoted by '-') or the argument

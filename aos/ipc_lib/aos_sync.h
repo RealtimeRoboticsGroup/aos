@@ -100,7 +100,7 @@ int mutex_lock(struct aos_mutex *m) __attribute__((warn_unused_result));
 // Ignores signals (retries until something other than getting a signal
 // happens).
 int mutex_grab(struct aos_mutex *m) __attribute__((warn_unused_result));
-// LOG(FATAL)s for multiple unlocking.
+// ABSL_LOG(FATAL)s for multiple unlocking.
 void mutex_unlock(struct aos_mutex *m);
 // Does not block waiting for the mutex.
 int mutex_trylock(struct aos_mutex *m) __attribute__((warn_unused_result));

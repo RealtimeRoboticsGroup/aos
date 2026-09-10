@@ -373,7 +373,7 @@ class LogStatsApplication {
       found_channel = true;
     }
     if (!found_channel) {
-      LOG(FATAL) << "Could not find any channels.";
+      ABSL_LOG(FATAL) << "Could not find any channels.";
     }
   }
 
@@ -464,7 +464,7 @@ int main(int argc, char **argv) {
   aos::InitGoogle(&argc, &argv);
 
   if (argc < 2) {
-    LOG(FATAL) << "Expected at least 1 logfile as an argument.";
+    ABSL_LOG(FATAL) << "Expected at least 1 logfile as an argument.";
   }
 
   aos::logger::LogReader reader(
@@ -477,9 +477,9 @@ int main(int argc, char **argv) {
 
   if (aos::configuration::MultiNode(reader.configuration())) {
     if (absl::GetFlag(FLAGS_node).empty()) {
-      LOG(INFO) << "Need a --node specified.  The log file has:";
+      ABSL_LOG(INFO) << "Need a --node specified.  The log file has:";
       for (const aos::Node *node : reader.LoggedNodes()) {
-        LOG(INFO) << "  " << node->name()->string_view();
+        ABSL_LOG(INFO) << "  " << node->name()->string_view();
       }
       reader.Deregister();
       return 1;

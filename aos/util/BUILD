@@ -106,7 +106,7 @@ cc_test(
         "//aos/testing:googletest",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:reflection",
-        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -521,8 +521,8 @@ cc_library(
     hdrs = ["scoped_pipe.h"],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/types:span",
     ],
 )
@@ -611,7 +611,7 @@ cc_library(
         "//aos:configuration_fbs",
         "//aos:configuration_schema",
         "//aos/events:event_loop",
-        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/log:die_if_null",
         "@com_google_absl//absl/strings",
         "@foxglove_ws_protocol",
@@ -627,8 +627,8 @@ cc_library(
         "//aos:json_to_flatbuffer",
         "//aos/testing:googletest",
         "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_googletest//:gtest",
     ],
     alwayslink = True,
@@ -680,8 +680,8 @@ cc_library(
         "//aos/events/logging:log_writer",
         "//aos/network:timestamp_channel",
         "//aos/testing:tmpdir",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_googletest//:gtest",
     ],
 )

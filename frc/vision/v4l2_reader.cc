@@ -43,12 +43,12 @@ V4L2ReaderBase::V4L2ReaderBase(aos::EventLoop *event_loop,
     memset(&capability, 0, sizeof(capability));
     ABSL_PCHECK(Ioctl(VIDIOC_QUERYCAP, &capability) == 0);
 
-    LOG(INFO) << "Opening " << device_name;
-    LOG(INFO) << "  driver " << capability.driver;
-    LOG(INFO) << "  card " << capability.card;
-    LOG(INFO) << "  bus_info " << capability.bus_info;
+    ABSL_LOG(INFO) << "Opening " << device_name;
+    ABSL_LOG(INFO) << "  driver " << capability.driver;
+    ABSL_LOG(INFO) << "  card " << capability.card;
+    ABSL_LOG(INFO) << "  bus_info " << capability.bus_info;
     if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE) {
-      LOG(INFO) << "  Multi-planar";
+      ABSL_LOG(INFO) << "  Multi-planar";
       multiplanar_ = true;
     }
   }
@@ -103,7 +103,7 @@ void V4L2ReaderBase::StreamOn() {
       cols_ = format.fmt.pix_mp.width;
       rows_ = format.fmt.pix_mp.height;
       image_size_ = AlignImageSize(format.fmt.pix_mp.plane_fmt[0].sizeimage);
-      LOG(INFO) << "Format is " << cols_ << ", " << rows_;
+      ABSL_LOG(INFO) << "Format is " << cols_ << ", " << rows_;
       if (format.fmt.pix_mp.pixelformat == V4L2_PIX_FMT_MJPEG) {
         ABSL_CHECK_EQ(
             static_cast<int>(format.fmt.pix_mp.plane_fmt[0].bytesperline), 0);
@@ -114,7 +114,7 @@ void V4L2ReaderBase::StreamOn() {
             cols_ * 2 /* bytes per pixel */);
         format_ = ImageFormat::YUYV422;
       } else {
-        LOG(FATAL) << ": Invalid pixel format";
+        ABSL_LOG(FATAL) << ": Invalid pixel format";
       }
 
       ABSL_CHECK_EQ(format.fmt.pix_mp.num_planes, 1u);
@@ -122,7 +122,7 @@ void V4L2ReaderBase::StreamOn() {
       cols_ = format.fmt.pix.width;
       rows_ = format.fmt.pix.height;
       image_size_ = AlignImageSize(format.fmt.pix.sizeimage);
-      LOG(INFO) << "Format is " << cols_ << ", " << rows_;
+      ABSL_LOG(INFO) << "Format is " << cols_ << ", " << rows_;
       if (format.fmt.pix.pixelformat == V4L2_PIX_FMT_MJPEG) {
         ABSL_CHECK_EQ(static_cast<int>(format.fmt.pix.bytesperline), 0);
         format_ = ImageFormat::MJPEG;
@@ -131,7 +131,7 @@ void V4L2ReaderBase::StreamOn() {
                       cols_ * 2 /* bytes per pixel */);
         format_ = ImageFormat::YUYV422;
       } else {
-        LOG(FATAL) << ": Invalid pixel format";
+        ABSL_LOG(FATAL) << ": Invalid pixel format";
       }
     }
   }
@@ -222,7 +222,7 @@ void V4L2ReaderBase::UseAutoExposure() {
       ABSL_PCHECK(Ioctl(VIDIOC_S_CTRL, &control) == 0)
           << ": Failed to set auto-exposure.";
     } else {
-      PLOG(FATAL) << ": Failed to set auto-exposure.";
+      ABSL_PLOG(FATAL) << ": Failed to set auto-exposure.";
     }
   }
 }
@@ -390,7 +390,7 @@ void V4L2ReaderBase::StreamOff() {
   if (errno == EBUSY) {
     return;
   }
-  PLOG(FATAL) << "VIDIOC_STREAMOFF failed";
+  ABSL_PLOG(FATAL) << "VIDIOC_STREAMOFF failed";
 }
 
 V4L2Reader::V4L2Reader(aos::EventLoop *event_loop, std::string_view device_name,
@@ -483,9 +483,9 @@ MjpegV4L2Reader::MjpegV4L2Reader(aos::EventLoop *event_loop, aos::EPoll *epoll,
           absl::GetFlag(FLAGS_imagefps);
     }
     ABSL_PCHECK(Ioctl(VIDIOC_S_PARM, &setfps) == 0);
-    LOG(INFO) << "framerate ended up at "
-              << setfps.parm.capture.timeperframe.numerator << "/"
-              << setfps.parm.capture.timeperframe.denominator;
+    ABSL_LOG(INFO) << "framerate ended up at "
+                   << setfps.parm.capture.timeperframe.numerator << "/"
+                   << setfps.parm.capture.timeperframe.denominator;
   }
 
   ConfigureCameraFromConfig();

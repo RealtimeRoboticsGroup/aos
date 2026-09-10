@@ -31,8 +31,8 @@ cc_library(
     deps = [
         ":matrix_fbs",
         "//aos:json_to_flatbuffer",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@eigen",
         "@tl-expected//:tl-expected",
     ],

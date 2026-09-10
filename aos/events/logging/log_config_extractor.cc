@@ -5,7 +5,7 @@
 #include "absl/flags/flag.h"
 #include "absl/flags/usage.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "flatbuffers/flatbuffers.h"
 
 #include "aos/configuration_generated.h"
@@ -48,12 +48,12 @@ void WriteConfig(const aos::Configuration *config, std::string output_path) {
 
   if (absl::GetFlag(FLAGS_bfbs)) {
     WriteFlatbufferToFile(output_path + ".bfbs", config_flatbuffer);
-    LOG(INFO) << "Done writing bfbs to " << output_path << ".bfbs";
+    ABSL_LOG(INFO) << "Done writing bfbs to " << output_path << ".bfbs";
   }
 
   if (absl::GetFlag(FLAGS_json)) {
     WriteFlatbufferToJson(output_path + ".json", config_flatbuffer);
-    LOG(INFO) << "Done writing json to " << output_path << ".json";
+    ABSL_LOG(INFO) << "Done writing json to " << output_path << ".json";
   }
 
   if (absl::GetFlag(FLAGS_stripped) || !absl::GetFlag(FLAGS_quiet)) {
@@ -63,8 +63,8 @@ void WriteConfig(const aos::Configuration *config, std::string output_path) {
     }
     if (absl::GetFlag(FLAGS_stripped)) {
       WriteFlatbufferToJson(output_path + ".stripped.json", config_flatbuffer);
-      LOG(INFO) << "Done writing stripped json to " << output_path
-                << ".stripped.json";
+      ABSL_LOG(INFO) << "Done writing stripped json to " << output_path
+                     << ".stripped.json";
     }
     if (!absl::GetFlag(FLAGS_quiet)) {
       std::cout << FlatbufferToJson(config_flatbuffer) << std::endl;
@@ -80,7 +80,7 @@ int Main(int argc, char *argv[]) {
     output_path += "/";
   }
   if (!std::filesystem::exists(output_path)) {
-    LOG(ERROR)
+    ABSL_LOG(ERROR)
         << "Output path is invalid. Make sure the path exists before running.";
     return EXIT_FAILURE;
   }
@@ -99,7 +99,7 @@ int Main(int argc, char *argv[]) {
   } else if (absl::GetFlag(FLAGS_convert_to_json)) {
     aos::FlatbufferDetachedBuffer config = aos::configuration::ReadConfig(arg);
     WriteFlatbufferToJson(output_path + ".json", config);
-    LOG(INFO) << "Done writing json to " << output_path << ".json";
+    ABSL_LOG(INFO) << "Done writing json to " << output_path << ".json";
   } else {
     const std::vector<aos::logger::LogFile> logfiles =
         aos::logger::SortParts(aos::logger::FindLogs(argc, argv));

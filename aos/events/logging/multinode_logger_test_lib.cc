@@ -3,7 +3,7 @@
 #include "absl/flags/flag.h"
 #include "absl/flags/reflection.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/events/event_loop.h"
 #include "aos/events/logging/log_reader.h"
@@ -91,10 +91,10 @@ LoggerState::~LoggerState() {
     AppendAllFilenames(&filenames);
     std::sort(filenames.begin(), filenames.end());
     for (const std::string &file : filenames) {
-      LOG(INFO) << "Wrote to " << file;
+      ABSL_LOG(INFO) << "Wrote to " << file;
       auto x = ReadHeader(file);
       if (x) {
-        VLOG(1) << aos::FlatbufferToJson(x.value());
+        ABSL_VLOG(1) << aos::FlatbufferToJson(x.value());
       }
     }
   }
@@ -124,12 +124,12 @@ MultinodeLoggerTest::MultinodeLoggerTest()
   util::UnlinkRecursive(tmp_dir_ + "/logs");
   std::filesystem::create_directory(tmp_dir_ + "/logs");
 
-  LOG(INFO) << "Config " << std::get<0>(GetParam()).config;
+  ABSL_LOG(INFO) << "Config " << std::get<0>(GetParam()).config;
   event_loop_factory_.SetTimeConverter(&time_converter_);
 
-  LOG(INFO) << "Logging data to " << logfiles_[0] << ", " << logfiles_[1]
-            << " and " << logfiles_[2] << " shared? " << shared()
-            << " combine? " << (file_strategy() == FileStrategy::kCombine);
+  ABSL_LOG(INFO) << "Logging data to " << logfiles_[0] << ", " << logfiles_[1]
+                 << " and " << logfiles_[2] << " shared? " << shared()
+                 << " combine? " << (file_strategy() == FileStrategy::kCombine);
 
   pi1_->OnStartup([this]() {
     pi1_->AlwaysStart<Ping>("ping");
@@ -475,16 +475,16 @@ ConfirmReadable(const std::vector<std::string> &files,
       size_t i = 0;
       for (const aos::Node *node :
            *log_reader_factory.configuration()->nodes()) {
-        LOG(INFO) << "Registering start";
+        ABSL_LOG(INFO) << "Registering start";
         reader.OnStart(node, [node, &log_reader_factory, &result,
                               node_index = i]() {
-          LOG(INFO) << "Starting " << node->name()->string_view();
+          ABSL_LOG(INFO) << "Starting " << node->name()->string_view();
           result[node_index].first.push_back(
               log_reader_factory.GetNodeEventLoopFactory(node)->realtime_now());
         });
         reader.OnEnd(node, [node, &log_reader_factory, &result,
                             node_index = i]() {
-          LOG(INFO) << "Ending " << node->name()->string_view();
+          ABSL_LOG(INFO) << "Ending " << node->name()->string_view();
           result[node_index].second.push_back(
               log_reader_factory.GetNodeEventLoopFactory(node)->realtime_now());
         });
@@ -492,13 +492,13 @@ ConfirmReadable(const std::vector<std::string> &files,
       }
     } else {
       reader.OnStart([&log_reader_factory, &result]() {
-        LOG(INFO) << "Starting";
+        ABSL_LOG(INFO) << "Starting";
         result[0].first.push_back(
             log_reader_factory.GetNodeEventLoopFactory(nullptr)
                 ->realtime_now());
       });
       reader.OnEnd([&log_reader_factory, &result]() {
-        LOG(INFO) << "Ending";
+        ABSL_LOG(INFO) << "Ending";
         result[0].second.push_back(
             log_reader_factory.GetNodeEventLoopFactory(nullptr)
                 ->realtime_now());
@@ -514,10 +514,10 @@ ConfirmReadable(const std::vector<std::string> &files,
           << ": Got a different number of start and end times, that is very "
              "bad.";
       for (auto y : x.first) {
-        VLOG(1) << "Start " << y;
+        ABSL_VLOG(1) << "Start " << y;
       }
       for (auto y : x.second) {
-        VLOG(1) << "End " << y;
+        ABSL_VLOG(1) << "End " << y;
       }
     }
     return result;
@@ -613,10 +613,10 @@ bool AllPartsMatchOutOfOrderDuration(
   for (const LogFile &file : files) {
     for (const LogParts &parts : file.parts) {
       if (parts.max_out_of_order_duration != max_out_of_order_duration) {
-        LOG(ERROR) << "Found an out of order duration of "
-                   << parts.max_out_of_order_duration.count()
-                   << "ns instead of " << max_out_of_order_duration.count()
-                   << "ns for " << parts;
+        ABSL_LOG(ERROR) << "Found an out of order duration of "
+                        << parts.max_out_of_order_duration.count()
+                        << "ns instead of " << max_out_of_order_duration.count()
+                        << "ns for " << parts;
         result = false;
       }
     }
@@ -634,10 +634,10 @@ bool AllRebootPartsMatchOutOfOrderDuration(
         continue;
       }
       if (parts.max_out_of_order_duration != max_out_of_order_duration) {
-        LOG(ERROR) << "Found an out of order duration of "
-                   << parts.max_out_of_order_duration.count()
-                   << "ns instead of " << max_out_of_order_duration.count()
-                   << "ns for " << parts;
+        ABSL_LOG(ERROR) << "Found an out of order duration of "
+                        << parts.max_out_of_order_duration.count()
+                        << "ns instead of " << max_out_of_order_duration.count()
+                        << "ns for " << parts;
         result = false;
       }
     }

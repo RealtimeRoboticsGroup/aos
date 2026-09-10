@@ -52,8 +52,8 @@ void CalibrationData::AddImu(distributed_clock::time_point distributed_now,
   // this here just in case there are other ways this could happen
   if ((fabs(accel(0)) < zero_threshold) && (fabs(accel(1)) < zero_threshold) &&
       (fabs(accel(2)) < zero_threshold)) {
-    LOG(FATAL) << "Ignoring zero value from IMU accelerometer: " << accel
-               << " (gyro is " << gyro << ")";
+    ABSL_LOG(FATAL) << "Ignoring zero value from IMU accelerometer: " << accel
+                    << " (gyro is " << gyro << ")";
   } else {
     imu_points_.emplace_back(distributed_now, std::make_pair(gyro, accel));
   }
@@ -69,7 +69,7 @@ void CalibrationData::AddTurret(
   if (turret_points_.empty()) {
     while (!rot_trans_points_.empty() &&
            rot_trans_points_[0].first < distributed_now) {
-      LOG(INFO) << "Erasing, distributed " << distributed_now;
+      ABSL_LOG(INFO) << "Erasing, distributed " << distributed_now;
       rot_trans_points_.erase(rot_trans_points_.begin());
     }
   }
@@ -190,12 +190,14 @@ Calibration::Calibration(
   } else if (imu_event_loop->HasChannel<frc::IMUValuesBatch>("/drivetrain")) {
     imu_channel = "/drivetrain";
   } else {
-    LOG(FATAL) << "Couldn't find channel with IMU data for either localizer or "
-                  "drivtrain";
+    ABSL_LOG(FATAL)
+        << "Couldn't find channel with IMU data for either localizer or "
+           "drivtrain";
   }
 
-  VLOG(2) << "Listening for " << frc::IMUValuesBatch::GetFullyQualifiedName()
-          << " on channel: " << imu_channel;
+  ABSL_VLOG(2) << "Listening for "
+               << frc::IMUValuesBatch::GetFullyQualifiedName()
+               << " on channel: " << imu_channel;
 
   imu_event_loop_->MakeWatcher(
       imu_channel, [this](const frc::IMUValuesBatch &imu) {
@@ -230,9 +232,10 @@ void Calibration::HandleCharuco(
         std::chrono::duration_cast<std::chrono::duration<double>>(
             image_event_loop_->monotonic_now() - eof)
             .count();
-    VLOG(1) << std::fixed << std::setprecision(6) << "Age: " << age_double
-            << ", Pose is R:" << rvecs_eigen[0].transpose().format(HeavyFmt)
-            << "\nT:" << tvecs_eigen[0].transpose().format(HeavyFmt);
+    ABSL_VLOG(1) << std::fixed << std::setprecision(6) << "Age: " << age_double
+                 << ", Pose is R:"
+                 << rvecs_eigen[0].transpose().format(HeavyFmt)
+                 << "\nT:" << tvecs_eigen[0].transpose().format(HeavyFmt);
   }
 
   if (absl::GetFlag(FLAGS_visualize)) {
@@ -255,7 +258,7 @@ void Calibration::HandleCharuco(
       static int img_count = 0;
       std::string image_name = absl::StrFormat("/img_%06d.png", img_count);
       std::string path = absl::GetFlag(FLAGS_save_path) + image_name;
-      VLOG(2) << "Saving image to " << path;
+      ABSL_VLOG(2) << "Saving image to " << path;
       cv::imwrite(path, rgb_image);
       img_count++;
     }
@@ -270,7 +273,7 @@ void Calibration::HandleIMU(const frc::IMUValues *imu) {
     return;
   }
 
-  VLOG(2) << "IMU " << imu;
+  ABSL_VLOG(2) << "IMU " << imu;
   imu->UnPackTo(&last_value_);
   Eigen::Vector3d gyro(last_value_.gyro_x, last_value_.gyro_y,
                        last_value_.gyro_z);

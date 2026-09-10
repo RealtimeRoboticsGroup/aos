@@ -20,7 +20,7 @@
 
 namespace aos::util {
 
-// Returns the complete contents of filename. LOG(FATAL)s if any errors are
+// Returns the complete contents of filename. ABSL_LOG(FATAL)s if any errors are
 // encountered.
 std::string ReadFileToStringOrDie(const std::string_view filename);
 
@@ -29,8 +29,8 @@ std::string ReadFileToStringOrDie(const std::string_view filename);
 std::optional<std::string> MaybeReadFileToString(
     const std::string_view filename);
 
-// Returns the complete contents of filename as a byte vector. LOG(FATAL)s if
-// any errors are encountered.
+// Returns the complete contents of filename as a byte vector. ABSL_LOG(FATAL)s
+// if any errors are encountered.
 std::vector<uint8_t> ReadFileToVecOrDie(const std::string_view filename);
 
 // Writes contents to an existing file. Returns false (never dies) if the file

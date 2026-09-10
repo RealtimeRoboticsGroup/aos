@@ -86,7 +86,7 @@ class SctpReceiver {
                                            message->data() + message->size));
         break;
       case Message::kOverflow:
-        LOG(FATAL) << "Overflow";
+        ABSL_LOG(FATAL) << "Overflow";
     }
     receiver_.FreeMessage(std::move(message));
   }
@@ -386,7 +386,7 @@ class SctpInvalidAssociationTest : public SctpTest {
   }
   void HandleMessage(SctpServer &server,
                      std::vector<uint8_t> /*message*/) override {
-    VLOG(1) << "Server received message";
+    ABSL_VLOG(1) << "Server received message";
     // Test that SetStreamPriority returns false for an invalid association ID.
     const sctp_assoc_t invalid_assoc_id = -1;
     bool result = server.SetStreamPriority(invalid_assoc_id, 0, 1);
@@ -402,7 +402,7 @@ class SctpInvalidAssociationTest : public SctpTest {
     server.Send("pong", assoc_, 0, 0);
   }
   void HandleMessage(SctpClient &, std::vector<uint8_t>) override {
-    VLOG(1) << "Client received response";
+    ABSL_VLOG(1) << "Client received response";
     Quit();
   }
 };

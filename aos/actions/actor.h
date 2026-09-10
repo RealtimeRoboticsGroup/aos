@@ -10,7 +10,7 @@
 #include <type_traits>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "flatbuffers/string.h"
 
 #include "aos/actions/actions_generated.h"
@@ -126,7 +126,7 @@ class ActorBase {
 
 template <class T>
 void ActorBase<T>::HandleGoal(const GoalType &goal) {
-  VLOG(1) << "action goal " << FlatbufferToJson(&goal);
+  ABSL_VLOG(1) << "action goal " << FlatbufferToJson(&goal);
   switch (state_) {
     case State::WAITING_FOR_ACTION:
       if (goal.run()) {
@@ -161,7 +161,7 @@ void ActorBase<T>::HandleGoal(const GoalType &goal) {
         }
       }
 
-      VLOG(1) << "goal " << FlatbufferToJson(&goal);
+      ABSL_VLOG(1) << "goal " << FlatbufferToJson(&goal);
       abort_ = !RunAction(goal.params());
       AOS_LOG(INFO, "Done with action %" PRIx32 "\n", running_id);
       current_id_ = 0u;
@@ -225,7 +225,7 @@ bool ActorBase<T>::WaitUntil(::std::function<bool(void)> done_condition,
 template <class T>
 bool ActorBase<T>::ShouldCancel() {
   if (goal_fetcher_.Fetch()) {
-    VLOG(1) << "goal queue " << FlatbufferToJson(goal_fetcher_.get());
+    ABSL_VLOG(1) << "goal queue " << FlatbufferToJson(goal_fetcher_.get());
   }
   bool ans = !goal_fetcher_->run() || goal_fetcher_->run() != current_id_;
   if (ans) {

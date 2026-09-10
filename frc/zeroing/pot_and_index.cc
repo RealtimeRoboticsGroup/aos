@@ -3,7 +3,7 @@
 #include <cmath>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 namespace frc::zeroing {
 
@@ -26,7 +26,7 @@ void PotAndIndexPulseZeroingEstimator::Reset() {
 
 void PotAndIndexPulseZeroingEstimator::TriggerError() {
   if (!error_) {
-    VLOG(1) << "Manually triggered zeroing error.";
+    ABSL_VLOG(1) << "Manually triggered zeroing error.";
     error_ = true;
   }
 }
@@ -94,7 +94,7 @@ void PotAndIndexPulseZeroingEstimator::UpdateEstimate(
     // Save the first starting position.
     if (!zeroed_) {
       first_start_pos_ = offset_;
-      VLOG(2) << "latching start position" << first_start_pos_;
+      ABSL_VLOG(2) << "latching start position" << first_start_pos_;
     }
 
     // Now that we have an accurate starting position we can consider ourselves
@@ -105,7 +105,7 @@ void PotAndIndexPulseZeroingEstimator::UpdateEstimate(
     if (::std::abs(first_start_pos_ - offset_) >
         constants_.allowable_encoder_error * constants_.index_difference) {
       if (!error_) {
-        VLOG(1)
+        ABSL_VLOG(1)
             << "Encoder ticks out of range since last index pulse. first start "
                "position: "
             << first_start_pos_ << " recent starting position: " << offset_

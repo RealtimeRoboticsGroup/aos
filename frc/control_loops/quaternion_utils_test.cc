@@ -5,7 +5,7 @@
 
 #include "Eigen/Dense"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 
 #include "aos/testing/random_seed.h"
@@ -182,23 +182,23 @@ TEST(DownEstimatorTest, QuaternionIntegral) {
 
   auto qux = q * ux;
 
-  VLOG(1) << "Q is w: " << q.w() << " vec: " << q.vec();
-  VLOG(1) << "ux is " << ux;
-  VLOG(1) << "qux is " << qux;
+  ABSL_VLOG(1) << "Q is w: " << q.w() << " vec: " << q.vec();
+  ABSL_VLOG(1) << "ux is " << ux;
+  ABSL_VLOG(1) << "qux is " << qux;
 
   // Start by rotating around the X body vector for pi/2
   Eigen::Quaternion<double> integral1(control_loops::RungeKutta(
       std::bind(&QuaternionDerivative, ux, std::placeholders::_1), q0.coeffs(),
       0.5 * numbers::pi));
 
-  VLOG(1) << "integral1 * uz => " << integral1 * uz;
+  ABSL_VLOG(1) << "integral1 * uz => " << integral1 * uz;
 
   // Then rotate around the Y body vector for pi/2
   Eigen::Quaternion<double> integral2(control_loops::RungeKutta(
       std::bind(&QuaternionDerivative, uy, std::placeholders::_1),
       integral1.normalized().coeffs(), 0.5 * numbers::pi));
 
-  VLOG(1) << "integral2 * uz => " << integral2 * uz;
+  ABSL_VLOG(1) << "integral2 * uz => " << integral2 * uz;
 
   // Then rotate around the X body vector for -pi/2
   Eigen::Quaternion<double> integral3(control_loops::RungeKutta(
@@ -209,13 +209,13 @@ TEST(DownEstimatorTest, QuaternionIntegral) {
   integral2.normalize();
   integral3.normalize();
 
-  VLOG(1) << "Integral is w: " << integral1.w() << " vec: " << integral1.vec()
-          << " norm " << integral1.norm();
+  ABSL_VLOG(1) << "Integral is w: " << integral1.w()
+               << " vec: " << integral1.vec() << " norm " << integral1.norm();
 
-  VLOG(1) << "Integral is w: " << integral3.w() << " vec: " << integral3.vec()
-          << " norm " << integral3.norm();
+  ABSL_VLOG(1) << "Integral is w: " << integral3.w()
+               << " vec: " << integral3.vec() << " norm " << integral3.norm();
 
-  VLOG(1) << "ux => " << integral3 * ux;
+  ABSL_VLOG(1) << "ux => " << integral3 * ux;
   EXPECT_NEAR(0.0, (ux - integral1 * ux).norm(), 5e-2);
   EXPECT_NEAR(0.0, (uz - integral1 * uy).norm(), 5e-2);
   EXPECT_NEAR(0.0, (-uy - integral1 * uz).norm(), 5e-2);

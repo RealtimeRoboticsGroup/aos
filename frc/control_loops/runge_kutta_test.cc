@@ -110,8 +110,8 @@ TEST(RungeKuttaTest, RungeKuttaTimeVaryingAdaptive) {
   // times.
   EXPECT_EQ(count, 38);
 
-  LOG(INFO) << "Got " << y1(0, 0) << " vs expected "
-            << RungeKuttaTimeVaryingSolution(6.0)(0, 0);
+  ABSL_LOG(INFO) << "Got " << y1(0, 0) << " vs expected "
+                 << RungeKuttaTimeVaryingSolution(6.0)(0, 0);
 }
 
 }  // namespace frc::control_loops::testing

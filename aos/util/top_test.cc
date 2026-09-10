@@ -16,7 +16,7 @@
 #include "absl/flags/flag.h"
 #include "absl/flags/reflection.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "flatbuffers/string.h"
 #include "flatbuffers/vector.h"
 #include "gtest/gtest.h"
@@ -199,14 +199,14 @@ TEST_F(TopTest, TopProcesses) {
     const pid_t pid = fork();
     ABSL_PCHECK(pid >= 0);
     if (pid == 0) {
-      LOG(INFO) << "In child process.";
+      ABSL_LOG(INFO) << "In child process.";
       while (true) {
         // This is a "please don't optimize me out" thing for the compiler.
         // Otherwise, the entire if (pid == 0) block can get optimized away...
         asm("");
         continue;
       }
-      LOG(FATAL) << "This should be unreachable.";
+      ABSL_LOG(FATAL) << "This should be unreachable.";
     } else {
       ABSL_CHECK_NE(0, pid) << "The compiler is messing with you.";
       children.push_back(pid);
@@ -278,7 +278,7 @@ TEST_F(TopTest, AllTopProcesses) {
   std::set<pid_t> observed_pids;
   for (const ProcessInfo *info : *info.message().processes()) {
     SCOPED_TRACE(aos::FlatbufferToJson(info));
-    LOG(INFO) << aos::FlatbufferToJson(info);
+    ABSL_LOG(INFO) << aos::FlatbufferToJson(info);
     ASSERT_EQ(0, observed_pids.count(info->pid()));
     observed_pids.insert(info->pid());
     ASSERT_TRUE(info->has_name());

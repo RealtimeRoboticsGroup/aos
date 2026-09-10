@@ -83,18 +83,18 @@ void ZeroedStateFeedbackLoop<kNumZeroSensors>::CapU() {
   if (X_hat(2, 0) > last_voltage_ + 2.0) {
     // X_hat(2, 0) = last_voltage_ + 2.0;
     voltage_ -= X_hat(2, 0) - (last_voltage_ + 2.0);
-    LOG(DEBUG, "X_hat(2, 0) = %f\n", X_hat(2, 0));
+    ABSL_LOG(DEBUG, "X_hat(2, 0) = %f\n", X_hat(2, 0));
   } else if (X_hat(2, 0) < last_voltage_ - 2.0) {
     // X_hat(2, 0) = last_voltage_ - 2.0;
     voltage_ += X_hat(2, 0) - (last_voltage_ - 2.0);
-    LOG(DEBUG, "X_hat(2, 0) = %f\n", X_hat(2, 0));
+    ABSL_LOG(DEBUG, "X_hat(2, 0) = %f\n", X_hat(2, 0));
   }
 
   voltage_ = std::min(limit, voltage_);
   voltage_ = std::max(-limit, voltage_);
   U(0, 0) = voltage_ - old_voltage;
-  LOG(DEBUG, "abc %f\n", X_hat(2, 0) - voltage_);
-  LOG(DEBUG, "error %f\n", X_hat(0, 0) - R(0, 0));
+  ABSL_LOG(DEBUG, "abc %f\n", X_hat(2, 0) - voltage_);
+  ABSL_LOG(DEBUG, "error %f\n", X_hat(0, 0) - R(0, 0));
 
   last_voltage_ = voltage_;
 }
@@ -208,7 +208,7 @@ class ZeroedJoint {
     for (int i = 0; i < kNumZeroSensors; ++i) {
       if (position->hall_effects[i]) {
         if (active_index != -1) {
-          LOG(ERROR, "More than one hall effect sensor is active\n");
+          ABSL_LOG(ERROR, "More than one hall effect sensor is active\n");
         } else {
           active_index = i;
         }
@@ -274,16 +274,16 @@ double ZeroedJoint<kNumZeroSensors>::Update(
     bool output_enabled, double goal_angle, double goal_velocity) {
   // Uninitialize the bot if too many cycles pass without an encoder.
   if (position == NULL) {
-    LOG(WARNING, "no new pos given\n");
+    ABSL_LOG(WARNING, "no new pos given\n");
     error_count_++;
   }
   if (error_count_ >= 4) {
     output_enabled = false;
-    LOG(WARNING, "err_count is %d so disabling\n", error_count_);
+    ABSL_LOG(WARNING, "err_count is %d so disabling\n", error_count_);
 
     if (monotonic_now > kRezeroTime + last_good_time_) {
-      LOG(WARNING, "err_count is %d (or 1st time) so forcing a re-zero\n",
-          error_count_);
+      ABSL_LOG(WARNING, "err_count is %d (or 1st time) so forcing a re-zero\n",
+               error_count_);
       state_ = UNINITIALIZED;
       loop_->Reset();
     }
@@ -311,7 +311,7 @@ double ZeroedJoint<kNumZeroSensors>::Update(
 
   switch (state_) {
     case UNINITIALIZED:
-      LOG(DEBUG, "UNINITIALIZED\n");
+      ABSL_LOG(DEBUG, "UNINITIALIZED\n");
       if (position) {
         // Reset the zeroing goal.
         zeroing_position_ = absolute_position;
@@ -331,7 +331,7 @@ double ZeroedJoint<kNumZeroSensors>::Update(
       }
       break;
     case MOVING_OFF:
-      LOG(DEBUG, "MOVING_OFF\n");
+      ABSL_LOG(DEBUG, "MOVING_OFF\n");
       {
         // Move off the hall effect sensor.
         if (!::aos::joystick_state->enabled) {
@@ -348,7 +348,7 @@ double ZeroedJoint<kNumZeroSensors>::Update(
         }
       }
     case ZEROING:
-      LOG(DEBUG, "ZEROING\n");
+      ABSL_LOG(DEBUG, "ZEROING\n");
       {
         int active_sensor_index = ActiveSensorIndex(position);
         if (!::aos::joystick_state->enabled) {
@@ -363,8 +363,9 @@ double ZeroedJoint<kNumZeroSensors>::Update(
               position->hall_effect_positions[active_sensor_index];
           if (!is_between(last_off_position_, position->position,
                           calibration)) {
-            LOG(ERROR, "Got a bogus calibration number.  Trying again.\n");
-            LOG(ERROR,
+            ABSL_LOG(ERROR, "Got a bogus calibration number.  Trying again.\n");
+            ABSL_LOG(
+                ERROR,
                 "Last off position was %f, current is %f, calibration is %f\n",
                 last_off_position_, position->position,
                 position->hall_effect_positions[active_sensor_index]);
@@ -388,7 +389,7 @@ double ZeroedJoint<kNumZeroSensors>::Update(
       }
 
     case READY:
-      LOG(DEBUG, "READY\n");
+      ABSL_LOG(DEBUG, "READY\n");
       {
         const double limited_goal = ClipGoal(goal_angle);
         loop_->R << limited_goal, goal_velocity, 0.0;
@@ -396,16 +397,16 @@ double ZeroedJoint<kNumZeroSensors>::Update(
       }
 
     case ESTOP:
-      LOG(DEBUG, "ESTOP\n");
-      LOG(WARNING, "have already given up\n");
+      ABSL_LOG(DEBUG, "ESTOP\n");
+      ABSL_LOG(WARNING, "have already given up\n");
       return 0.0;
   }
 
   // Update the observer.
   loop_->Update(position != NULL, !output_enabled);
 
-  LOG(DEBUG, "X_hat={%f, %f, %f}\n", loop_->X_hat(0, 0), loop_->X_hat(1, 0),
-      loop_->X_hat(2, 0));
+  ABSL_LOG(DEBUG, "X_hat={%f, %f, %f}\n", loop_->X_hat(0, 0),
+           loop_->X_hat(1, 0), loop_->X_hat(2, 0));
 
   capped_goal_ = false;
   // Verify that the zeroing goal hasn't run away.

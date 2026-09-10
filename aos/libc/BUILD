@@ -15,8 +15,8 @@ cc_library(
         "aos_strsignal.h",
     ],
     deps = [
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 

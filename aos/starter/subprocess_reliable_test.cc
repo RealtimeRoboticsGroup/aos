@@ -12,7 +12,7 @@
 #include <unordered_set>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_cat.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -33,11 +33,11 @@ void Wait(pid_t pid) {
   int status;
   if (waitpid(pid, &status, 0) != pid) {
     if (errno != ECHILD) {
-      PLOG(ERROR) << "Failed to wait for PID " << pid << ": " << status;
+      ABSL_PLOG(ERROR) << "Failed to wait for PID " << pid << ": " << status;
       FAIL();
     }
   }
-  LOG(INFO) << "Succesfully waited for PID " << pid;
+  ABSL_LOG(INFO) << "Succesfully waited for PID " << pid;
 }
 
 }  // namespace

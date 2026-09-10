@@ -64,11 +64,11 @@ void Ping::InterestingFunction() {
       event_loop_->monotonic_now();
   const aos::monotonic_clock::time_point system_end =
       aos::monotonic_clock::now();
-  LOG(INFO) << "EventLoop elapsed (will be zero in simulation): "
-            << aos::time::DurationInSeconds(event_loop_end -
+  ABSL_LOG(INFO) << "EventLoop elapsed (will be zero in simulation): "
+                 << aos::time::DurationInSeconds(event_loop_end -
                                             event_loop_start);
-  LOG(INFO) << "System elapsed: "
-            << aos::time::DurationInSeconds(system_end - system_start);
+  ABSL_LOG(INFO) << "System elapsed: "
+                 << aos::time::DurationInSeconds(system_end - system_start);
 }
 ```
 
@@ -145,7 +145,7 @@ Using the context `monotonic_event_time` to schedule a timer at a set amount of 
 
 ```cpp
 aos::TimerHandler *delay_timer = event_loop_->AddTimer([]() {
-  LOG(INFO) << "It's been 1 second since the last Pong message was sent!";
+  ABSL_LOG(INFO) << "It's been 1 second since the last Pong message was sent!";
 });
 
 event_loop_->MakeWatcher(
@@ -235,7 +235,7 @@ Note that setting a 1 Hz repeated timer is _not_ equivalent to always rescheduli
 ...
 
 void Ping::SendPing() {
-  LOG(INFO) << "Ping!";
+  ABSL_LOG(INFO) << "Ping!";
   // This is (typically) bad!
   timer_handle_->Schedule(event_loop_->context().monotonic_event_time + std::chrono::seconds(1));
 }
@@ -271,8 +271,8 @@ Scheduling a PhasedLoop to occur at 1 Hz (where you either don't care about the 
 ```cpp
   event_loop_->AddPhasedLoop(
       [](int missed_cycles) {
-        LOG(INFO) << "It has been " << missed_cycles
-                  << " period(s) since the last callback.";
+        ABSL_LOG(INFO) << "It has been " << missed_cycles
+                       << " period(s) since the last callback.";
       },
       std::chrono::seconds(1));
 ```
@@ -287,9 +287,9 @@ Scheduling a PhasedLoop at 0.1 Hz that gets scheduled with an offset of 2 sec (a
                 event_loop_->context().monotonic_event_time.time_since_epoch()).count();
         int periods = scheduled_seconds / 10;
         ABSL_CHECK_EQ(2, scheduled_seconds - periods * 10);
-        LOG(INFO) << "Scheduled time: "
-                  << event_loop_->context().monotonic_event_time
-                  << " Current time: " << event_loop_->monotonic_now();
+        ABSL_LOG(INFO) << "Scheduled time: "
+                       << event_loop_->context().monotonic_event_time
+                       << " Current time: " << event_loop_->monotonic_now();
       },
       std::chrono::seconds(10), std::chrono::seconds(2));
 ```
@@ -487,7 +487,7 @@ class Ping {
       // completed the table, so long as we have an offset and the
       // FlatBufferBuilder used to create it.
       // This won't work after calling Send() or Detach() on the Builder.
-      LOG(INFO) << aos::FlatbufferToJson(
+      ABSL_LOG(INFO) << aos::FlatbufferToJson(
           flatbuffers::GetTemporaryPointer(*builder_.fbb(), ping_offset_));
       sender_.CheckOk(builder_.Send(ping_offset_));
       builder_ = sender_.MakeBuilder();
@@ -538,7 +538,7 @@ Registering a simple watcher to print message contents every time a message is r
 
 ```cpp
 event_loop_->MakeWatcher("/test", [](const aos::examples::Ping &msg) {
-  LOG(INFO) << aos::FlatbufferToJson(&msg);
+  ABSL_LOG(INFO) << aos::FlatbufferToJson(&msg);
 });
 ```
 
@@ -560,7 +560,7 @@ class Pong {
         // should be guaranteed to have received a new message,
         // so Fetch() should always return true.
         ABSL_CHECK(fetcher_.Fetch());
-        LOG(INFO) << aos::FlatbufferToJson(fetcher_.get());
+        ABSL_LOG(INFO) << aos::FlatbufferToJson(fetcher_.get());
       }
     });
 
@@ -568,7 +568,7 @@ class Pong {
     // startup, check for any pre-existing message and print it out if present.
     event_loop->OnRun([this]() {
       if (fetcher_.Fetch()) {
-        LOG(INFO) << aos::FlatbufferToJson(fetcher_.get());
+        ABSL_LOG(INFO) << aos::FlatbufferToJson(fetcher_.get());
       }
     });
   }
@@ -617,7 +617,7 @@ Make a Fetcher and use it to retrieve and print out the most recent message:
 aos::Fetcher<aos::examples::Ping> fetcher =
     event_loop_->MakeFetcher<aos::examples::Ping>("/test");
 if (fetcher.Fetch()) {
-  LOG(INFO) << aos::FlatbufferToJson(fetcher.get());
+  ABSL_LOG(INFO) << aos::FlatbufferToJson(fetcher.get());
 }
 ```
 
@@ -634,9 +634,9 @@ class Pong {
       // regardless.
       fetcher_.Fetch();
       if (fetcher_.get() != nullptr) {
-        LOG(INFO) << "The Ping value is " << fetcher_.get()->value();
+        ABSL_LOG(INFO) << "The Ping value is " << fetcher_.get()->value();
       } else {
-        LOG(WARNING) << "No messages received yet :(";
+        ABSL_LOG(WARNING) << "No messages received yet :(";
       }
     }, std::chrono::seconds(1));
   }
@@ -657,7 +657,7 @@ class Pong {
         [this](int) {
           // Call FetchNext() until we stop getting new messages.
           while (fetcher_.FetchNext()) {
-            LOG(INFO) << "The Ping value is " << fetcher_.get()->value();
+            ABSL_LOG(INFO) << "The Ping value is " << fetcher_.get()->value();
           }
         },
         std::chrono::seconds(1));
@@ -726,7 +726,7 @@ void RegisterRawWatcher(aos::EventLoop *event_loop,
                                 event_loop->name(), event_loop->node(), true));
   event_loop->MakeRawWatcher(
       channel, [channel](const aos::Context &context, const void *) {
-        LOG(INFO) << aos::FlatbufferToJson(
+        ABSL_LOG(INFO) << aos::FlatbufferToJson(
             channel->schema(), static_cast<const uint8_t *>(context.data));
       });
 }
@@ -752,11 +752,11 @@ void FetchLatestMessage(aos::EventLoop *event_loop,
   std::unique_ptr<aos::RawFetcher> fetcher =
       event_loop->MakeRawFetcher(channel);
   if (fetcher->Fetch()) {
-    LOG(INFO) << aos::FlatbufferToJson(
+    ABSL_LOG(INFO) << aos::FlatbufferToJson(
         channel->schema(),
         static_cast<const uint8_t *>(fetcher->context().data));
   } else {
-    LOG(ERROR) << "No message available.";
+    ABSL_LOG(ERROR) << "No message available.";
   }
 }
 
@@ -853,7 +853,7 @@ class Pong {
     event_loop_->OnRun([this]() {
       aos::monotonic_clock::time_point start_time =
           event_loop_->context().monotonic_event_time;
-      LOG(INFO) << "Start time " << start_time;
+      ABSL_LOG(INFO) << "Start time " << start_time;
       std::this_thread::sleep_for(std::chrono::seconds(10));
       // Schedule delayed_timer_ for start + 5 seconds, which is currently ~5
       // seconds in the past.
@@ -866,9 +866,9 @@ class Pong {
 
  private:
   void EarlyTimerCallback() {
-    LOG(INFO) << "Early Timer. Scheduled time of "
-              << event_loop_->context().monotonic_event_time << " current time "
-              << event_loop_->monotonic_now();
+    ABSL_LOG(INFO) << "Early Timer. Scheduled time of "
+                   << event_loop_->context().monotonic_event_time << " current time "
+                   << event_loop_->monotonic_now();
     // Schedule our next callback for 1 second after our schedule callback time.
     // Note that when we are running behind schedule, this time may be in the
     // past.
@@ -876,9 +876,9 @@ class Pong {
                            std::chrono::seconds(1));
   }
   void DelayedTimerCallback() {
-    LOG(INFO) << "Delayed Timer. Scheduled time of "
-              << event_loop_->context().monotonic_event_time << " current time "
-              << event_loop_->monotonic_now();
+    ABSL_LOG(INFO) << "Delayed Timer. Scheduled time of "
+                   << event_loop_->context().monotonic_event_time << " current time "
+                   << event_loop_->monotonic_now();
   }
   EventLoop *event_loop_;
   aos::TimerHandler *delayed_timer_;
@@ -1139,14 +1139,14 @@ class SensorAgeReader {
             // node (although it can be good practice to check that the node you
             // are looking for actually exists, to protect against programming
             // errors).
-            LOG(WARNING) << "Message bridge disconnected.";
+            ABSL_LOG(WARNING) << "Message bridge disconnected.";
             return;
           }
           break;
         }
       }
     } else {
-      LOG(WARNING) << "No message bridge status available.";
+      ABSL_LOG(WARNING) << "No message bridge status available.";
       return;
     }
     const aos::monotonic_clock::time_point now = event_loop_->monotonic_now();
@@ -1164,12 +1164,12 @@ class SensorAgeReader {
     const aos::monotonic_clock::time_point capture_time(
         std::chrono::nanoseconds(msg.hardware_capture_time_ns()) -
         monotonic_offset);
-    LOG(INFO) << "The sensor data was sent "
-              << aos::time::DurationInSeconds(now - send_time)
-              << " seconds ago.";
-    LOG(INFO) << "The sensor data was read off of the hardware "
-              << aos::time::DurationInSeconds(now - capture_time)
-              << " seconds ago.";
+    ABSL_LOG(INFO) << "The sensor data was sent "
+                   << aos::time::DurationInSeconds(now - send_time)
+                   << " seconds ago.";
+    ABSL_LOG(INFO) << "The sensor data was read off of the hardware "
+                   << aos::time::DurationInSeconds(now - capture_time)
+                   << " seconds ago.";
   }
 
   aos::EventLoop *event_loop_;

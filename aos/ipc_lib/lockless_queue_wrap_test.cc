@@ -1,6 +1,6 @@
 #include <cinttypes>
 
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/containers/resizeable_buffer.h"
 #include "aos/ipc_lib/lockless_queue_memory.h"
@@ -22,7 +22,7 @@ TEST_F(LocklessQueueTest, InitializeVerification) {
                                                  15000, 20000, 27531};
 
   for (const uint32_t N : offsets_to_test) {
-    LOG(INFO) << "Testing starting offset N = " << N;
+    ABSL_LOG(INFO) << "Testing starting offset N = " << N;
     const monotonic_clock::time_point test_start_monotonic =
         monotonic_clock::now();
     const realtime_clock::time_point test_start_realtime =
@@ -175,12 +175,13 @@ TEST_F(LocklessQueueTest, InitializeVerification) {
       int diff_count = 0;
       for (size_t i = 0; i < memory_size; ++i) {
         if (b1[i] != b2[i]) {
-          LOG(ERROR) << "N = " << N << " DIFF: offset " << i << ": mem1 = 0x"
-                     << std::hex << static_cast<int>(b1[i]) << ", mem2 = 0x"
-                     << static_cast<int>(b2[i]);
+          ABSL_LOG(ERROR) << "N = " << N << " DIFF: offset " << i
+                          << ": mem1 = 0x" << std::hex
+                          << static_cast<int>(b1[i]) << ", mem2 = 0x"
+                          << static_cast<int>(b2[i]);
           if (++diff_count >= 100) {
-            LOG(ERROR) << "N = " << N
-                       << " DIFF: truncated after 100 differences";
+            ABSL_LOG(ERROR)
+                << "N = " << N << " DIFF: truncated after 100 differences";
             break;
           }
         }
@@ -236,10 +237,10 @@ TEST_F(LocklessQueueTest, WrappedSend) {
   double elapsed_seconds = chrono::duration_cast<chrono::duration<double>>(
                                monotonic_now - start_time)
                                .count();
-  LOG(INFO) << "Took " << elapsed_seconds << " seconds to write "
-            << kNumMessages << " messages, "
-            << (static_cast<double>(kNumMessages) / elapsed_seconds)
-            << " messages/s";
+  ABSL_LOG(INFO) << "Took " << elapsed_seconds << " seconds to write "
+                 << kNumMessages << " messages, "
+                 << (static_cast<double>(kNumMessages) / elapsed_seconds)
+                 << " messages/s";
 }
 
 }  // namespace aos::ipc_lib::testing

@@ -310,7 +310,7 @@ inline int shared_mutex_lock(FutexCacheEntry *entry, aos_mutex *m, uint32_t tid,
   // The word only mirrors ownership state which the kernel mutex actually
   // enforces, for the benefit of observers reading shared memory.  We hold
   // the kernel mutex, so nothing may legitimately write the word between
-  // this load and the stamp; use a compare-and-swap and LOG(FATAL) on a
+  // this load and the stamp; use a compare-and-swap and ABSL_LOG(FATAL) on a
   // mismatch rather than retrying, because a mismatch means somebody wrote
   // the mirror outside the locking protocol and fixing it up would hide the
   // corruption.

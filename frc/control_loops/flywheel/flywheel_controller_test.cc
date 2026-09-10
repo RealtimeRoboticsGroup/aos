@@ -1,7 +1,7 @@
 #include "frc/control_loops/flywheel/flywheel_controller.h"
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 
 #include "aos/configuration.h"

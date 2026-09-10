@@ -3,7 +3,7 @@
 #include <ostream>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 
 namespace aos::ipc_lib::testing {
@@ -11,8 +11,8 @@ namespace aos::ipc_lib::testing {
 class QueueIndexTest : public ::testing::Test {
  protected:
   uint32_t GetIndex(const QueueIndex &index) {
-    LOG(INFO) << "Index, count: " << std::hex << index.index_ << ", "
-              << index.count_;
+    ABSL_LOG(INFO) << "Index, count: " << std::hex << index.index_ << ", "
+                   << index.count_;
     return index.index();
   }
 

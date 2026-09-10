@@ -58,12 +58,12 @@ const Channel *ChannelTimestampFinder::ForChannel(
   }
 
   if (!absl::GetFlag(FLAGS_combined_timestamp_channel_fallback)) {
-    LOG(FATAL) << "Failed to find new timestamp channel {\"name\": \""
-               << split_timestamp_channel_name << "\", \"type\": \""
-               << RemoteMessage::GetFullyQualifiedName() << "\"} for "
-               << configuration::CleanedChannelToString(channel)
-               << " connection " << aos::FlatbufferToJson(connection)
-               << " and --nocombined_timestamp_channel_fallback is set";
+    ABSL_LOG(FATAL) << "Failed to find new timestamp channel {\"name\": \""
+                    << split_timestamp_channel_name << "\", \"type\": \""
+                    << RemoteMessage::GetFullyQualifiedName() << "\"} for "
+                    << configuration::CleanedChannelToString(channel)
+                    << " connection " << aos::FlatbufferToJson(connection)
+                    << " and --nocombined_timestamp_channel_fallback is set";
   }
 
   const std::string shared_timestamp_channel_name =
@@ -72,10 +72,10 @@ const Channel *ChannelTimestampFinder::ForChannel(
       configuration_, shared_timestamp_channel_name,
       RemoteMessage::GetFullyQualifiedName(), name_, node_, true);
   if (shared_timestamp_channel != nullptr) {
-    LOG(WARNING) << "Failed to find timestamp channel {\"name\": \""
-                 << split_timestamp_channel_name << "\", \"type\": \""
-                 << RemoteMessage::GetFullyQualifiedName()
-                 << "\"}, falling back to old version.";
+    ABSL_LOG(WARNING) << "Failed to find timestamp channel {\"name\": \""
+                      << split_timestamp_channel_name << "\", \"type\": \""
+                      << RemoteMessage::GetFullyQualifiedName()
+                      << "\"}, falling back to old version.";
     return shared_timestamp_channel;
   }
 

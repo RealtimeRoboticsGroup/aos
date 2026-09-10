@@ -322,7 +322,7 @@ And `ping_lib.cc` will be:
 
 #include "aos/json_to_flatbuffer.h"
 #include "absl/flags/flag.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/log/absl_check.h"
 
 ABSL_FLAG(int32_t, sleep_ms, 10, "Time to sleep between pings");
@@ -366,8 +366,8 @@ void Ping::HandlePong(const examples::Pong &pong) {
       monotonic_now - monotonic_send_time;
 
   if (pong.value() == count_) {
-    LOG(INFO) << "Elapsed time " << round_trip_time.count() << " ns "
-              << FlatbufferToJson(&pong);
+    ABSL_LOG(INFO) << "Elapsed time " << round_trip_time.count() << " ns "
+                   << FlatbufferToJson(&pong);
   }
 }
 
@@ -459,13 +459,13 @@ void Ping::HandlePong(const examples::Pong &pong) {
       monotonic_now - monotonic_send_time;
 
   if (pong.value() == count_) {
-    LOG(INFO) << "Elapsed time " << round_trip_time.count() << " ns "
-              << FlatbufferToJson(&pong);
+    ABSL_LOG(INFO) << "Elapsed time " << round_trip_time.count() << " ns "
+                   << FlatbufferToJson(&pong);
   }
 }
 ```
 
-Here we handle each incoming Pong message, calculate the round-trip time and print it out only if the Pong message actually corresponds to our most recent Ping. Note that the `LOG(INFO)` is using [glog](https://github.com/google/glog#user-guide), a logging library used extensively throughout the AOS codebase.
+Here we handle each incoming Pong message, calculate the round-trip time and print it out only if the Pong message actually corresponds to our most recent Ping. Note that `ABSL_LOG(INFO)` is [Abseil logging](https://abseil.io/docs/cpp/guides/logging), which AOS uses throughout.
 
 Finally, in order to build this we need a `cc_library` entry in our BUILD file:
 
@@ -480,7 +480,7 @@ cc_library(
         "//aos:json_to_flatbuffer",
         "//aos/events:event_loop",
         "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log","@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log","@com_google_absl//absl/log:absl_check",
     ],
 )
 ```

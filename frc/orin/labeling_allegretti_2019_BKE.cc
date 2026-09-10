@@ -20,7 +20,7 @@
 #include "frc/orin/labeling_allegretti_2019_BKE.h"
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"

@@ -50,7 +50,8 @@ int main(int argc, char **argv) {
 
   if (absl::GetFlag(FLAGS_override_constants) &&
       !absl::GetFlag(FLAGS_robot_name).has_value()) {
-    LOG(ERROR) << "Must supply a --robot_name if using --override_constants.";
+    ABSL_LOG(ERROR)
+        << "Must supply a --robot_name if using --override_constants.";
     return 1;
   }
 
@@ -135,13 +136,13 @@ int main(int argc, char **argv) {
         aos::web_proxy::StoreHistory::kYes, absl::GetFlag(FLAGS_buffer_size));
     if (absl::GetFlag(FLAGS_rerun_realtime)) {
       reader.SetRealtimeReplayRate(0.005);
-      LOG(INFO) << "Going slow to wait for the user to connect.";
+      ABSL_LOG(INFO) << "Going slow to wait for the user to connect.";
     }
 
     web_proxy->SetDataPath(absl::GetFlag(FLAGS_data_dir).c_str());
     if (absl::GetFlag(FLAGS_rerun_realtime)) {
       aos::TimerHandler *timer = web_proxy_event_loop->AddTimer([&reader]() {
-        LOG(INFO) << "Replaying";
+        ABSL_LOG(INFO) << "Replaying";
         reader.SetRealtimeReplayRate(1.0);
       });
       web_proxy_event_loop->OnRun([timer, &web_proxy_event_loop]() {

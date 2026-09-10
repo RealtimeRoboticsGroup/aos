@@ -12,7 +12,7 @@
 
 #include "absl/container/btree_map.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/configuration.h"
 #include "aos/events/event_loop.h"
@@ -475,12 +475,12 @@ class NodeEventLoopFactory {
                      Args &&...args)
         : Application(node_factory, name),
           main(event_loop.get(), std::forward<Args>(args)...) {
-      VLOG(1) << node_factory->scheduler_.distributed_now() << " "
-              << (node_factory->node() == nullptr
-                      ? ""
-                      : node_factory->node()->name()->str() + " ")
-              << node_factory->monotonic_now() << " Starting Application \""
-              << name << "\"";
+      ABSL_VLOG(1) << node_factory->scheduler_.distributed_now() << " "
+                   << (node_factory->node() == nullptr
+                           ? ""
+                           : node_factory->node()->name()->str() + " ")
+                   << node_factory->monotonic_now()
+                   << " Starting Application \"" << name << "\"";
     }
     ~TypedApplication() override {}
 

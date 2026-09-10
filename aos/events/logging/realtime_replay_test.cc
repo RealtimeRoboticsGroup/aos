@@ -96,7 +96,7 @@ TEST_F(RealtimeLoggerTest, RealtimeReplay) {
   Fetcher<examples::Ping> ping_fetcher =
       shm_event_loop.MakeFetcher<examples::Ping>("/test");
 
-  shm_event_loop.AddTimer([]() { LOG(INFO) << "Hello, World!"; })
+  shm_event_loop.AddTimer([]() { ABSL_LOG(INFO) << "Hello, World!"; })
       ->Schedule(shm_event_loop.monotonic_now(), std::chrono::seconds(1));
 
   shm_event_loop.Run();
@@ -134,7 +134,7 @@ TEST_F(RealtimeLoggerTest, SingleNodeReplayChannels) {
   Fetcher<examples::Pong> pong_fetcher =
       shm_event_loop.MakeFetcher<examples::Pong>("/test");
 
-  shm_event_loop.AddTimer([]() { LOG(INFO) << "Hello, World!"; })
+  shm_event_loop.AddTimer([]() { ABSL_LOG(INFO) << "Hello, World!"; })
       ->Schedule(shm_event_loop.monotonic_now(), std::chrono::seconds(1));
 
   // End timer should not be called in this case, it should automatically quit
@@ -150,7 +150,7 @@ TEST_F(RealtimeLoggerTest, SingleNodeReplayChannels) {
                << run_seconds << " seconds.";
       });
   shm_event_loop.OnRun([&shm_event_loop, end_timer, run_seconds]() {
-    LOG(INFO) << "Quitting in: " << run_seconds;
+    ABSL_LOG(INFO) << "Quitting in: " << run_seconds;
     end_timer->Schedule(shm_event_loop.monotonic_now() +
                         std::chrono::seconds(run_seconds));
   });
@@ -198,7 +198,7 @@ TEST_F(RealtimeMultiNodeLoggerTest, ReplayChannelsPingTest) {
   Fetcher<examples::Ping> ping_fetcher =
       shm_event_loop.MakeFetcher<examples::Ping>("/test");
 
-  shm_event_loop.AddTimer([]() { LOG(INFO) << "Hello, World!"; })
+  shm_event_loop.AddTimer([]() { ABSL_LOG(INFO) << "Hello, World!"; })
       ->Schedule(shm_event_loop.monotonic_now(), std::chrono::seconds(1));
 
   shm_event_loop.Run();
@@ -247,7 +247,7 @@ TEST_F(RealtimeMultiNodeLoggerTest, RemappedReplayChannelsTest) {
   Fetcher<examples::Ping> ping_fetcher =
       shm_event_loop.MakeFetcher<examples::Ping>("/test");
 
-  shm_event_loop.AddTimer([]() { LOG(INFO) << "Hello, World!"; })
+  shm_event_loop.AddTimer([]() { ABSL_LOG(INFO) << "Hello, World!"; })
       ->Schedule(shm_event_loop.monotonic_now(), std::chrono::seconds(1));
 
   shm_event_loop.Run();
@@ -297,7 +297,7 @@ TEST_F(RealtimeMultiNodeLoggerTest, DoesNotExistInReplayChannelsTest) {
       shm_event_loop.MakeFetcher<examples::Ping>("/test");
 
   auto *const end_timer = shm_event_loop.AddTimer([&shm_event_loop]() {
-    LOG(INFO) << "All done, quitting now";
+    ABSL_LOG(INFO) << "All done, quitting now";
     shm_event_loop.Exit();
   });
 
@@ -306,7 +306,7 @@ TEST_F(RealtimeMultiNodeLoggerTest, DoesNotExistInReplayChannelsTest) {
   // keep looking for 3 seconds if some message comes, just in case
   size_t run_seconds = 3;
   shm_event_loop.OnRun([&shm_event_loop, end_timer, run_seconds]() {
-    LOG(INFO) << "Quitting in: " << run_seconds;
+    ABSL_LOG(INFO) << "Quitting in: " << run_seconds;
     end_timer->Schedule(shm_event_loop.monotonic_now() +
                         std::chrono::seconds(run_seconds));
   });

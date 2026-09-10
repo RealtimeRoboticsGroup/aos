@@ -97,8 +97,8 @@ cc_test(
         "//aos/testing:googletest",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:reflection",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -147,8 +147,6 @@ cc_test(
         ":epoll",
         ":pipe",
         "//aos/testing:googletest",
-        "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -158,8 +156,8 @@ cc_test(
     deps = [
         ":epoll",
         "//aos/testing:googletest",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -256,8 +254,8 @@ cc_library(
         "//aos/events/logging:log_reader",
         "//aos/events/logging:logfile_utils",
         "@aos_flatbuffers//:flatbuffers",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/log:die_if_null",
     ],
 )
@@ -285,8 +283,8 @@ cc_binary(
         "//aos/events/logging:log_reader",
         "//aos/events/logging:logfile_utils",
         "@aos_flatbuffers//:flatbuffers",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/log:die_if_null",
     ],
 )
@@ -517,8 +515,8 @@ cc_library(
         ":event_loop_fbs",
         "//aos:configuration",
         "//aos/util:error_counter",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -641,8 +639,8 @@ cc_binary(
         "//aos:sanitizers",
         "//aos/testing:path",
         "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -687,8 +685,8 @@ cc_library(
     deps = [
         "//aos:configuration_fbs",
         "@aos_flatbuffers//:flatbuffers",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/strings",
     ],
 )
@@ -790,8 +788,8 @@ cc_test(
         ":simulated_event_loop",
         "//aos/network:testing_time_converter",
         "//aos/testing:googletest",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -837,8 +835,8 @@ cc_library(
         ":epoll",
         ":event_loop",
         "//aos/stl_mutex",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@glib//glib",
         "@glib//gobject",
     ],
@@ -859,8 +857,8 @@ cc_test(
         "//aos/events:shm_event_loop",
         "//aos/testing:googletest",
         "//aos/testing:path",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@glib//glib",
         "@glib//gobject",
     ],

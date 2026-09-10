@@ -6,7 +6,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/escaping.h"
 
 #include "aos/configuration.h"
@@ -130,8 +130,8 @@ class ImageDump {
             MaybeLogLastImage();
             break;
           default:
-            LOG(INFO) << "Unhandled character '"
-                      << absl::CEscape(terminated_buffer) << "'";
+            ABSL_LOG(INFO) << "Unhandled character '"
+                           << absl::CEscape(terminated_buffer) << "'";
             break;
         }
       }
@@ -142,7 +142,7 @@ class ImageDump {
 
   void MaybeLogLastImage() {
     if (!image_fetcher_.Fetch()) {
-      LOG(ERROR) << "No new images";
+      ABSL_LOG(ERROR) << "No new images";
       return;
     }
     LogImage(*image_fetcher_);
@@ -159,7 +159,7 @@ class ImageDump {
     std::string path =
         absl::StrCat(absl::GetFlag(FLAGS_path), "/", sha256.substr(0, 2), "/",
                      sha256, "-", camera_number_, ".jpg");
-    LOG(INFO) << "Writing " << path;
+    ABSL_LOG(INFO) << "Writing " << path;
 
     ABSL_CHECK(aos::util::MkdirPIfSpace(
         path, std::filesystem::perms::owner_all |
@@ -189,10 +189,10 @@ int main(int argc, char **argv) {
 
   ImageDump image_dump(&event_loop);
 
-  LOG(INFO) << "Logging images from " << absl::GetFlag(FLAGS_channel);
-  LOG(INFO) << "Press 's' to save an image";
+  ABSL_LOG(INFO) << "Logging images from " << absl::GetFlag(FLAGS_channel);
+  ABSL_LOG(INFO) << "Press 's' to save an image";
 
   event_loop.Run();
 
-  LOG(INFO) << "Exiting";
+  ABSL_LOG(INFO) << "Exiting";
 }

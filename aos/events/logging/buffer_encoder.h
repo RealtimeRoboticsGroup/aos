@@ -2,7 +2,7 @@
 #define AOS_EVENTS_LOGGING_BUFFER_ENCODER_H_
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/types/span.h"
 #include "flatbuffers/flatbuffers.h"
 

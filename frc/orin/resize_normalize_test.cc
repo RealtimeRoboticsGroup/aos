@@ -1,6 +1,6 @@
 #include "frc/orin/resize_normalize.h"
 
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 
 #include "HalideBuffer.h"
@@ -36,8 +36,8 @@ class NormalizeResizeTest : public ::testing::Test {
 TEST_F(NormalizeResizeTest, HalideNoramlize) {
   auto image_fbs = ReadImage("coral_image_thriftycam_2025/file/image.bfbs");
 
-  LOG(INFO) << "Image is: " << image_fbs.message().cols() << " x "
-            << image_fbs.message().rows();
+  ABSL_LOG(INFO) << "Image is: " << image_fbs.message().cols() << " x "
+                 << image_fbs.message().rows();
 
   const size_t width = image_fbs.message().cols();
   const size_t height = image_fbs.message().rows();
@@ -103,11 +103,11 @@ TEST_F(NormalizeResizeTest, HalideNoramlize) {
 
     resize_normalize(image, normalized);
 
-    LOG(INFO) << "Took: "
-              << std::chrono::duration<double, std::milli>(
-                     aos::monotonic_clock::now() - start)
-                     .count()
-              << "ms";
+    ABSL_LOG(INFO) << "Took: "
+                   << std::chrono::duration<double, std::milli>(
+                          aos::monotonic_clock::now() - start)
+                          .count()
+                   << "ms";
   }
 
   // args = "input_rows=1304 input_cols=1600 output_rows=416 output_cols=512

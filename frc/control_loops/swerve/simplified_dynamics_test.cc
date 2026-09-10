@@ -3,7 +3,7 @@
 #include <functional>
 #include <numbers>
 
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 
 #include "aos/time/time.h"
@@ -71,8 +71,8 @@ class SimplifiedDynamicsTest : public ::testing::Test {
         state, input);
     const aos::monotonic_clock::duration numerical_time =
         aos::monotonic_clock::now() - start_time;
-    VLOG(1) << "Autodifferentiation took " << auto_diff_time
-            << " while numerical differentiation took " << numerical_time;
+    ABSL_VLOG(1) << "Autodifferentiation took " << auto_diff_time
+                 << " while numerical differentiation took " << numerical_time;
     EXPECT_LT((numerical_A - linearized_dynamics.first).norm(), 1e-6)
         << "Numerical result:\n"
         << numerical_A << "\nAuto-diff result:\n"

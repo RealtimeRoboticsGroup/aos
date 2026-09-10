@@ -14,8 +14,8 @@
 #include <thread>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
-#include "absl/log/vlog_is_on.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 
 #include "aos/network/sctp_lib.h"
 #include "aos/unique_malloc_ptr.h"
@@ -48,8 +48,8 @@ SctpServer::SctpServer(int streams, std::string_view local_host, int local_port,
 
     {
       int on = 1;
-      LOG(INFO) << "setsockopt(" << fd()
-                << ", SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)";
+      ABSL_LOG(INFO) << "setsockopt(" << fd()
+                     << ", SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)";
       ABSL_PCHECK(
           setsockopt(fd(), SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)) == 0);
     }
@@ -59,12 +59,13 @@ SctpServer::SctpServer(int streams, std::string_view local_host, int local_port,
              sockaddr_local_.ss_family == AF_INET6
                  ? sizeof(struct sockaddr_in6)
                  : sizeof(struct sockaddr_in)) != 0) {
-      PLOG(ERROR) << "Failed to bind, retrying";
+      ABSL_PLOG(ERROR) << "Failed to bind, retrying";
       close(fd());
       std::this_thread::sleep_for(std::chrono::seconds(5));
       continue;
     }
-    LOG(INFO) << "bind(" << fd() << ", " << Address(sockaddr_local_) << ")";
+    ABSL_LOG(INFO) << "bind(" << fd() << ", " << Address(sockaddr_local_)
+                   << ")";
 
     ABSL_PCHECK(listen(fd(), 100) == 0);
 
@@ -83,7 +84,7 @@ void SctpServer::SetPriorityScheduler([[maybe_unused]] sctp_assoc_t assoc_id) {
   scheduler.assoc_value = SCTP_SS_PRIO;
   if (setsockopt(fd(), IPPROTO_SCTP, SCTP_STREAM_SCHEDULER, &scheduler,
                  sizeof(scheduler)) != 0) {
-    PLOG(FATAL) << "Failed to set scheduler.";
+    ABSL_PLOG(FATAL) << "Failed to set scheduler.";
   }
 #endif
 }
@@ -103,7 +104,7 @@ bool SctpServer::SetStreamPriority([[maybe_unused]] sctp_assoc_t assoc_id,
     // Treat "Protocol not available" as equivalent to the
     // SCTP_STREAM_SCHEDULER_VALUE not being defined--silently ignore it.
     if (errno == ENOPROTOOPT) {
-      VLOG(1) << "Stream scheduler not supported on this kernel.";
+      ABSL_VLOG(1) << "Stream scheduler not supported on this kernel.";
       return true;
     }
     // Handle the case where the association is no longer valid (connection
@@ -119,13 +120,13 @@ bool SctpServer::SetStreamPriority([[maybe_unused]] sctp_assoc_t assoc_id,
           0) {
         // Note: If the getsockopt fails, it will have overridden the errno from
         // the setsockopt call.
-        PLOG_IF(WARNING, VLOG_IS_ON(1))
+        ABSL_PLOG_IF(WARNING, ABSL_VLOG_IS_ON(1))
             << "Failed to locate association id " << assoc_id
             << " in SetStreamPriority, connection likely closed.";
         return false;
       }
       // If we can get the status, log the details but still return false.
-      PLOG_IF(WARNING, VLOG_IS_ON(1))
+      ABSL_PLOG_IF(WARNING, ABSL_VLOG_IS_ON(1))
           << "Failed to set scheduler for assoc id " << assoc_id
           << " and stream id " << stream_id << ". The current assoc id is "
           << status.sstat_assoc_id << " with " << status.sstat_outstrms
@@ -133,9 +134,9 @@ bool SctpServer::SetStreamPriority([[maybe_unused]] sctp_assoc_t assoc_id,
       return false;
     }
     // For other errors, still log fatally as these are unexpected.
-    PLOG(FATAL) << "Unexpected error setting stream priority for assoc id "
-                << assoc_id << " and stream id " << stream_id << ": "
-                << strerror(errno);
+    ABSL_PLOG(FATAL) << "Unexpected error setting stream priority for assoc id "
+                     << assoc_id << " and stream id " << stream_id << ": "
+                     << strerror(errno);
   }
   return true;
 #else

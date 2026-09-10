@@ -9,7 +9,7 @@
 #include "absl/flags/flag.h"
 #include "absl/flags/reflection.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
 #include "gmock/gmock.h"
@@ -349,7 +349,7 @@ TEST(LogBackendTest, OutOfSpaceTest) {
 // Windows rename path closes handlers behind the logger's back and, when the
 // flush runs out of space, leaves them closed rather than reopening a log it
 // can no longer trust.  Without the guard, the next write would go to fd -1 and
-// PLOG(FATAL) on EBADF instead of winding down gracefully.
+// ABSL_PLOG(FATAL) on EBADF instead of winding down gracefully.
 TEST(LogBackendTest, StopsWritingAfterOutOfSpace) {
   // Exposes the protected hook the backends use to retire a handler.
   class TestFileHandler : public BufferedFileHandler {
@@ -762,9 +762,9 @@ struct FileWriteTestBase : public ::testing::Test {
       buffer;
 
   void TestRecipe(const WriteRecipe &recipe) {
-    VLOG(1) << "Starting";
+    ABSL_VLOG(1) << "Starting";
     for (const std::vector<int> &r : recipe) {
-      VLOG(1) << "  chunk " << absl::StrJoin(r, ", ");
+      ABSL_VLOG(1) << "  chunk " << absl::StrJoin(r, ", ");
     }
     size_t requested_size = 0;
     for (const auto &call : recipe) {
@@ -794,7 +794,7 @@ struct FileWriteTestBase : public ::testing::Test {
     const std::string logevent = TestTmpDir();
     const auto file = std::filesystem::path(logevent) / "test.log";
     std::filesystem::remove_all(file);
-    VLOG(1) << "Writing to " << file.c_str();
+    ABSL_VLOG(1) << "Writing to " << file.c_str();
 
     LogFolder backend(logevent, false);
     auto handler = backend.RequestFile("test.log");
@@ -899,13 +899,13 @@ TEST_F(FileWriteTestBase, AlignedToUnaligned) {
 
   queue.emplace_back(aligned_buffer.data(), aligned_buffer.size());
   queue.emplace_back(unaligned_span);
-  LOG(INFO) << "Queue 0 " << queue[0].size();
-  LOG(INFO) << "Queue 1 " << queue[1].size();
+  ABSL_LOG(INFO) << "Queue 0 " << queue[0].size();
+  ABSL_LOG(INFO) << "Queue 1 " << queue[1].size();
 
   const std::string logevent = TestTmpDir();
   const auto file = std::filesystem::path(logevent) / "test.log";
   std::filesystem::remove_all(file);
-  VLOG(1) << "Writing to " << file.c_str();
+  ABSL_VLOG(1) << "Writing to " << file.c_str();
 
   LogFolder backend(logevent, false);
   auto handler = backend.RequestFile("test.log");

@@ -9,7 +9,7 @@
 #include <csignal>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 const char *aos_strsignal(int signal) {
   thread_local char buffer[512];

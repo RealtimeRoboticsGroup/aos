@@ -14,7 +14,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/time/time.h"
 #include "frc/orin/apriltag.h"
@@ -101,7 +101,7 @@ const std::vector<QuadCorners> &GpuDetector::FitQuads() const {
 
 void GpuDetector::UpdateFitQuads() {
   quad_corners_host_.resize(0);
-  VLOG(1) << "Considering " << fit_quads_host_.size();
+  ABSL_VLOG(1) << "Considering " << fit_quads_host_.size();
   for (const FitQuad &quad : fit_quads_host_) {
     bool print = quad.blob_index == absl::GetFlag(FLAGS_debug_blob_index);
     if (!quad.valid) {
@@ -118,10 +118,10 @@ void GpuDetector::UpdateFitQuads() {
       double mse;
       HostFitLine(quad.moments[i], lines[i], lines[i] + 2, &err, &mse);
       if (print) {
-        LOG(INFO) << "Blob " << corners.blob_index << " mse -> " << mse
-                  << " err " << err << " index " << quad.indices[i] << ", "
-                  << quad.indices[(i + 1) % 4];
-        LOG(INFO) << "   " << quad.moments[i];
+        ABSL_LOG(INFO) << "Blob " << corners.blob_index << " mse -> " << mse
+                       << " err " << err << " index " << quad.indices[i] << ", "
+                       << quad.indices[(i + 1) % 4];
+        ABSL_LOG(INFO) << "   " << quad.moments[i];
       }
     }
 
@@ -163,9 +163,9 @@ void GpuDetector::UpdateFitQuads() {
       corners.corners[i][0] = lines[i][0] + L0 * A00;
       corners.corners[i][1] = lines[i][1] + L0 * A10;
       if (print) {
-        LOG(INFO) << "Calculated corner[" << i << "] -> ("
-                  << std::setprecision(20) << corners.corners[i][0] << ", "
-                  << std::setprecision(20) << corners.corners[i][1] << ")";
+        ABSL_LOG(INFO) << "Calculated corner[" << i << "] -> ("
+                       << std::setprecision(20) << corners.corners[i][0] << ", "
+                       << std::setprecision(20) << corners.corners[i][1] << ")";
       }
     }
     if (bad_determinant) {
@@ -203,8 +203,8 @@ void GpuDetector::UpdateFitQuads() {
 
       if (area < 0.95 * min_tag_width_ * min_tag_width_) {
         if (print) {
-          LOG(INFO) << "Area of " << area << " smaller than "
-                    << 0.95 * min_tag_width_ * min_tag_width_;
+          ABSL_LOG(INFO) << "Area of " << area << " smaller than "
+                         << 0.95 * min_tag_width_ * min_tag_width_;
         }
         continue;
       }
@@ -225,9 +225,9 @@ void GpuDetector::UpdateFitQuads() {
             sqrtf((dx1 * dx1 + dy1 * dy1) * (dx2 * dx2 + dy2 * dy2));
 
         if (print) {
-          LOG(INFO) << "Cosdtheta -> for " << i0 << " " << i1 << " " << i2
-                    << " -> " << cos_dtheta << " threshold "
-                    << tag_detector_->qtp.cos_critical_rad;
+          ABSL_LOG(INFO) << "Cosdtheta -> for " << i0 << " " << i1 << " " << i2
+                         << " -> " << cos_dtheta << " threshold "
+                         << tag_detector_->qtp.cos_critical_rad;
         }
 
         if (std::abs(cos_dtheta) > tag_detector_->qtp.cos_critical_rad ||
@@ -400,14 +400,15 @@ bool GpuDetector::UnDistort(double *u, double *v,
            std::abs(yP - prev_y) > kUndistortConvergenceEpsilon);
 
   if (iterations < kUndistortIterationThreshold) {
-    VLOG(1) << "Took " << iterations << " iterations to reach convergence.";
+    ABSL_VLOG(1) << "Took " << iterations
+                 << " iterations to reach convergence.";
   } else {
-    VLOG(1) << "Took " << iterations
-            << " iterations and didn't reach convergence with "
-            << " (xP, yP): "
-            << " (" << xP << ", " << yP << ")"
-            << " vs. (prev_x, prev_y): "
-            << " (" << prev_x << ", " << prev_y << ")";
+    ABSL_VLOG(1) << "Took " << iterations
+                 << " iterations and didn't reach convergence with "
+                 << " (xP, yP): "
+                 << " (" << xP << ", " << yP << ")"
+                 << " vs. (prev_x, prev_y): "
+                 << " (" << prev_x << ", " << prev_y << ")";
   }
 
   *u = xP * fx + cx;

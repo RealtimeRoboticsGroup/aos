@@ -41,8 +41,8 @@ cc_library(
     deps = [
         "//aos:configuration",
         "//aos/time",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -54,8 +54,8 @@ cc_test(
     deps = [
         ":logging",
         "//aos/testing:googletest",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -88,8 +88,8 @@ cc_library(
     deps = [
         ":dynamic_log_command_fbs",
         "//aos/events:event_loop",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 

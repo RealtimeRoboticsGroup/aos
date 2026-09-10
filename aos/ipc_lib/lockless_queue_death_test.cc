@@ -9,7 +9,7 @@
 #include <ostream>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 
 #include "aos/events/context.h"
@@ -111,7 +111,7 @@ TEST(LocklessQueueTest, Death) {
         }
 
         if (print) {
-          LOG(INFO) << "Bad version:";
+          ABSL_LOG(INFO) << "Bad version:";
           PrintLocklessQueueMemory(memory);
         }
 
@@ -119,7 +119,7 @@ TEST(LocklessQueueTest, Death) {
         LocklessQueueSender::Make(queue, kChannelStorageDuration).value();
 
         if (print) {
-          LOG(INFO) << "Cleaned up version:";
+          ABSL_LOG(INFO) << "Cleaned up version:";
           PrintLocklessQueueMemory(memory);
         }
 

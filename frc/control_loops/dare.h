@@ -6,7 +6,7 @@
 #include "Eigen/Eigenvalues"
 #include "Eigen/LU"
 #include "Eigen/QR"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "tl/expected.hpp"
 
 namespace frc::controls {
@@ -137,7 +137,7 @@ enum class DareError {
 };
 
 /**
- * Allows DareError to be used with LOG(INFO) and absl
+ * Allows DareError to be used with ABSL_LOG(INFO) and absl
  */
 template <typename Sink>
 void AbslStringify(Sink &sink, DareError e) {
@@ -286,7 +286,7 @@ tl::expected<Eigen::Matrix<double, num_states, num_states>, DareError> dare(
     // while |Hₖ₊₁ − Hₖ| > ε |Hₖ₊₁|
   } while ((H_k1 - H_k).norm() > 1e-10 * H_k1.norm() &&
            ++loop_count < max_iters);
-  VLOG(3) << "loop_count: " << loop_count;
+  ABSL_VLOG(3) << "loop_count: " << loop_count;
   return H_k1;
 }
 

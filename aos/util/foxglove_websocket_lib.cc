@@ -12,9 +12,9 @@
 #include "absl/container/btree_set.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 #include "absl/log/die_if_null.h"
-#include "absl/log/log.h"
-#include "absl/log/vlog_is_on.h"
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_split.h"
 #include "absl/types/span.h"
@@ -52,19 +52,19 @@ void PrintFoxgloveMessage(foxglove::WebSocketLogLevel log_level,
                           char const *message) {
   switch (log_level) {
     case foxglove::WebSocketLogLevel::Debug:
-      VLOG(1) << message;
+      ABSL_VLOG(1) << message;
       break;
     case foxglove::WebSocketLogLevel::Info:
-      LOG(INFO) << message;
+      ABSL_LOG(INFO) << message;
       break;
     case foxglove::WebSocketLogLevel::Warn:
-      LOG(WARNING) << message;
+      ABSL_LOG(WARNING) << message;
       break;
     case foxglove::WebSocketLogLevel::Error:
-      LOG(ERROR) << message;
+      ABSL_LOG(ERROR) << message;
       break;
     case foxglove::WebSocketLogLevel::Critical:
-      LOG(FATAL) << message;
+      ABSL_LOG(FATAL) << message;
       break;
   }
 }
@@ -120,7 +120,7 @@ FoxgloveWebsocketServer::FoxgloveWebsocketServer(
         return ShortenedChannelName(event_loop_->configuration(), channel,
                                     event_loop_->name(), event_loop_->node());
     }
-    LOG(FATAL) << "Unreachable";
+    ABSL_LOG(FATAL) << "Unreachable";
   };
 
   // Add some special channels that are not real channels on the system.
@@ -286,17 +286,18 @@ FoxgloveWebsocketServer::FoxgloveWebsocketServer(
       [this](foxglove::ClientAdvertisement client_advertisement,
              foxglove::ConnHandle /*conn_handle*/) {
         const std::string &topic = client_advertisement.topic;
-        LOG(INFO) << "Client wants to publish to topic " << topic
-                  << " with channelId " << client_advertisement.channelId;
+        ABSL_LOG(INFO) << "Client wants to publish to topic " << topic
+                       << " with channelId " << client_advertisement.channelId;
         if (!senders_.contains(topic)) {
-          LOG(ERROR) << "Topic " << topic << " has no senders pre-configured.";
+          ABSL_LOG(ERROR) << "Topic " << topic
+                          << " has no senders pre-configured.";
         }
       };
   handlers.clientUnadvertiseHandler =
       [](foxglove::ClientChannelId client_channel_id,
          foxglove::ConnHandle /*conn_handle*/) {
-        LOG(INFO) << "Client stopped publishing to channel with channelId "
-                  << client_channel_id;
+        ABSL_LOG(INFO) << "Client stopped publishing to channel with channelId "
+                       << client_channel_id;
       };
   handlers.clientMessageHandler =
       [this](const foxglove::ClientMessage &client_message,
@@ -304,12 +305,12 @@ FoxgloveWebsocketServer::FoxgloveWebsocketServer(
         const std::string &topic = client_message.advertisement.topic;
         auto it = senders_.find(topic);
         if (it == senders_.end()) {
-          LOG(ERROR) << "Lacking sender for topic " << topic;
+          ABSL_LOG(ERROR) << "Lacking sender for topic " << topic;
           return;
         }
-        if (VLOG_IS_ON(1)) {
-          LOG(INFO) << "Got " << client_message.data.size()
-                    << " bytes from client: ";
+        if (ABSL_VLOG_IS_ON(1)) {
+          ABSL_LOG(INFO) << "Got " << client_message.data.size()
+                         << " bytes from client: ";
           for (uint8_t byte : client_message.data) {
             std::cerr << std::hex << std::setw(2) << static_cast<int>(byte);
           }
@@ -322,7 +323,7 @@ FoxgloveWebsocketServer::FoxgloveWebsocketServer(
             }
           }
           std::cerr << "\n";
-          LOG(INFO) << "Trying to parse it as a flatbuffer.";
+          ABSL_LOG(INFO) << "Trying to parse it as a flatbuffer.";
         }
 
         // Validate the header as per:
@@ -330,12 +331,13 @@ FoxgloveWebsocketServer::FoxgloveWebsocketServer(
         constexpr int kNumHeaderBytes = 5;
 
         if (client_message.data.size() < kNumHeaderBytes) {
-          LOG(ERROR) << "Expected at least 5 bytes from the client. Got only "
-                     << client_message.data.size() << " bytes.";
+          ABSL_LOG(ERROR)
+              << "Expected at least 5 bytes from the client. Got only "
+              << client_message.data.size() << " bytes.";
           return;
         } else if (client_message.data[0] != foxglove::OpCode::TEXT) {
-          LOG(ERROR) << "Got unexpected opcode from client: "
-                     << static_cast<int>(client_message.data[0]);
+          ABSL_LOG(ERROR) << "Got unexpected opcode from client: "
+                          << static_cast<int>(client_message.data[0]);
           return;
         }
 
@@ -353,15 +355,15 @@ FoxgloveWebsocketServer::FoxgloveWebsocketServer(
         flatbuffers::Offset<flatbuffers::Table> msg_offset =
             aos::JsonToFlatbuffer(data, channel->schema(), &fbb);
         if (msg_offset.IsNull()) {
-          LOG(ERROR) << "Failed to parse client message as a flatbuffer.";
+          ABSL_LOG(ERROR) << "Failed to parse client message as a flatbuffer.";
           return;
         }
         fbb.Finish(msg_offset);
 
         RawSender::Error error = sender->Send(fbb.GetSize());
         if (error != RawSender::Error::kOk) {
-          LOG(ERROR) << "Failed to send message on " << topic << ": "
-                     << static_cast<int>(error);
+          ABSL_LOG(ERROR) << "Failed to send message on " << topic << ": "
+                          << static_cast<int>(error);
           return;
         }
       };

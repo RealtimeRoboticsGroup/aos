@@ -5,7 +5,7 @@
 #include <string>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 

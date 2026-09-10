@@ -191,7 +191,7 @@ int MessageBridgeClientStatus::FindClientIndex(std::string_view node_name) {
     }
   }
 
-  LOG(FATAL) << "Unknown client " << node_name;
+  ABSL_LOG(FATAL) << "Unknown client " << node_name;
   AOS_UNREACHABLE();
 }
 
