@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_join.h"
 #include "flatbuffers/reflection_generated.h"
@@ -236,9 +236,9 @@ int ConvertLogToMcap(const std::vector<std::string> &log_paths,
                      std::function<void(logger::LogReader &)> setup_callback) {
   const std::vector<logger::LogFile> logfiles =
       logger::SortParts(logger::FindLogs(log_paths));
-  CHECK(!logfiles.empty());
+  ABSL_CHECK(!logfiles.empty());
   const std::set<std::string> logger_nodes = logger::LoggerNodes(logfiles);
-  CHECK_LT(0u, logger_nodes.size());
+  ABSL_CHECK_LT(0u, logger_nodes.size());
   const std::string logger_node = *logger_nodes.begin();
   std::string replay_node = absl::GetFlag(FLAGS_node);
   if (replay_node.empty()) {
@@ -258,7 +258,7 @@ int ConvertLogToMcap(const std::vector<std::string> &log_paths,
     logger::LogReader config_reader(logfiles);
 
     if (configuration::MultiNode(config_reader.configuration())) {
-      CHECK(!replay_node.empty()) << ": Must supply a --node.";
+      ABSL_CHECK(!replay_node.empty()) << ": Must supply a --node.";
     }
 
     const Configuration *raw_config = config_reader.logged_configuration();
@@ -284,7 +284,7 @@ int ConvertLogToMcap(const std::vector<std::string> &log_paths,
   reader.RegisterWithoutStarting(&factory);
 
   if (configuration::MultiNode(reader.configuration())) {
-    CHECK(!replay_node.empty()) << ": Must supply a --node.";
+    ABSL_CHECK(!replay_node.empty()) << ": Must supply a --node.";
   }
 
   const Node *node =
@@ -319,8 +319,9 @@ int ConvertLogToMcap(const std::vector<std::string> &log_paths,
   // happens depends on the fetch-related command line flags.
   auto startup_handler = [&relogger, &mcap_event_loop, &reader, node,
                           fetch_mode, output_path]() {
-    CHECK(!mcap_event_loop) << ": log_to_mcap does not support generating MCAP "
-                               "files from multi-boot logs.";
+    ABSL_CHECK(!mcap_event_loop)
+        << ": log_to_mcap does not support generating MCAP "
+           "files from multi-boot logs.";
     mcap_event_loop = reader.event_loop_factory()->MakeEventLoop("mcap", node);
     relogger = std::make_unique<McapLogger>(
         mcap_event_loop.get(), output_path,

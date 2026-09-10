@@ -255,7 +255,7 @@ cc_library(
         "//aos/util:file",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/types:span",
     ],
 )
@@ -345,7 +345,7 @@ cc_library(
         "//aos/events:event_loop",
         "@com_google_absl//absl/container:btree",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/strings",
     ],
 )
@@ -796,7 +796,7 @@ cc_library(
         "//aos/seasocks:seasocks_logger",
         "//third_party/seasocks",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@rawrtc",
     ],
 )
@@ -1056,7 +1056,7 @@ cc_library(
         "//aos:macros",
         "//aos/scoped:scoped_fd",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 

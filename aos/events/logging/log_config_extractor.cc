@@ -4,7 +4,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/usage.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "flatbuffers/flatbuffers.h"
 
@@ -73,7 +73,7 @@ void WriteConfig(const aos::Configuration *config, std::string output_path) {
 }
 
 int Main(int argc, char *argv[]) {
-  CHECK(argc > 1) << "Must provide an argument";
+  ABSL_CHECK(argc > 1) << "Must provide an argument";
 
   std::string output_path = absl::GetFlag(FLAGS_output_path);
   if (output_path.back() != '/') {

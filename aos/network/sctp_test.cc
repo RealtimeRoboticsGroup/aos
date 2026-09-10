@@ -5,6 +5,7 @@
 
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 
@@ -39,8 +40,8 @@ void EnableSctpAuthIfAvailable() {
 
   // Open an SCTP socket to bring the kernel SCTP module
   SctpServer server(1, "localhost");
-  CHECK(system("/usr/sbin/sysctl net.sctp.auth_enable=1 || /sbin/sysctl "
-               "net.sctp.auth_enable=1") == 0)
+  ABSL_CHECK(system("/usr/sbin/sysctl net.sctp.auth_enable=1 || /sbin/sysctl "
+                    "net.sctp.auth_enable=1") == 0)
       << "Couldn't enable sctp authentication.";
 #endif
 }

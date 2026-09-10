@@ -3,6 +3,7 @@
 #include <chrono>
 
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
 
@@ -35,7 +36,7 @@ class TurboJpegDecoder {
             absl::StrCat(absl::GetFlag(FLAGS_channel), "/gray"))),
         status_sender_(event_loop_->MakeSender<TurboJpegDecoderStatusStatic>(
             absl::StrCat(absl::GetFlag(FLAGS_channel), "/gray"))) {
-    CHECK(handle_) << "Error initializing turbojpeg decompressor.";
+    ABSL_CHECK(handle_) << "Error initializing turbojpeg decompressor.";
     aos::TimerHandler *status_timer =
         event_loop_->AddTimer([this]() { SendStatus(); });
     event_loop_->OnRun([this, status_timer]() {
@@ -51,7 +52,7 @@ class TurboJpegDecoder {
 
  private:
   void ProcessImage(const CameraImage &image) {
-    CHECK(image.format() == ImageFormat::MJPEG)
+    ABSL_CHECK(image.format() == ImageFormat::MJPEG)
         << ": Expected MJPEG format but got: "
         << EnumNameImageFormat(image.format());
 
@@ -131,7 +132,7 @@ class TurboJpegDecoder {
     builder->set_failed_decodes(failed_decodes_);
     if (failed_decodes_ > 0) {
       auto error_fbs = builder->add_last_error_message();
-      CHECK(error_fbs->reserve(last_error_message_.size()));
+      ABSL_CHECK(error_fbs->reserve(last_error_message_.size()));
       error_fbs->SetString(std::string_view(last_error_message_.data(),
                                             last_error_message_.size()));
     }

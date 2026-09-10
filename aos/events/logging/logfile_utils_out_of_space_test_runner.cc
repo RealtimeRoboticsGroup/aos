@@ -3,7 +3,7 @@
 #include <array>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/events/logging/logfile_utils.h"
@@ -15,7 +15,7 @@ ABSL_FLAG(std::string, tmpfs, "", "tmpfs with the desired size");
 int main(int argc, char **argv) {
   aos::InitGoogle(&argc, &argv);
   absl::SetFlag(&FLAGS_flush_size, 1);
-  CHECK(!absl::GetFlag(FLAGS_tmpfs).empty())
+  ABSL_CHECK(!absl::GetFlag(FLAGS_tmpfs).empty())
       << ": Must specify a tmpfs location";
 
   std::array<uint8_t, 10240> data;
@@ -29,12 +29,12 @@ int main(int argc, char **argv) {
   for (int i = 0; i < 8; ++i) {
     aos::logger::DataEncoder::SpanCopier coppier(data);
     writer.CopyMessage(&coppier, aos::monotonic_clock::now());
-    CHECK(!writer.ran_out_of_space()) << ": " << i;
+    ABSL_CHECK(!writer.ran_out_of_space()) << ": " << i;
   }
   {
     aos::logger::DataEncoder::SpanCopier coppier(data);
     writer.CopyMessage(&coppier, aos::monotonic_clock::now());
   }
-  CHECK(writer.ran_out_of_space());
+  ABSL_CHECK(writer.ran_out_of_space());
   writer.acknowledge_out_of_space();
 }

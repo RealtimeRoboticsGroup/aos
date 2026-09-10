@@ -2,6 +2,7 @@
 
 #include <chrono>
 
+#include "absl/log/absl_check.h"
 #include "gtest/gtest.h"
 
 #include "aos/network/testing_time_converter.h"
@@ -35,7 +36,7 @@ class SlopeOffsetTimeConverter final : public TimeConverter {
 
   Result<distributed_clock::time_point> ToDistributedClock(
       size_t node_index, BootTimestamp time) override {
-    CHECK_EQ(time.boot, 0u);
+    ABSL_CHECK_EQ(time.boot, 0u);
     return distributed_clock::epoch() +
            std::chrono::duration_cast<std::chrono::nanoseconds>(
                (time.time_since_epoch() - distributed_offset_[node_index]) /
@@ -45,7 +46,7 @@ class SlopeOffsetTimeConverter final : public TimeConverter {
   Result<BootTimestamp> FromDistributedClock(size_t node_index,
                                              distributed_clock::time_point time,
                                              size_t boot_index) override {
-    CHECK_EQ(boot_index, 0u);
+    ABSL_CHECK_EQ(boot_index, 0u);
     return BootTimestamp{
         .boot = 0u,
         .time = monotonic_clock::epoch() +
@@ -55,7 +56,7 @@ class SlopeOffsetTimeConverter final : public TimeConverter {
   }
 
   UUID boot_uuid(size_t node_index, size_t boot_count) override {
-    CHECK_EQ(boot_count, 0u);
+    ABSL_CHECK_EQ(boot_count, 0u);
     return uuids_[node_index];
   }
 

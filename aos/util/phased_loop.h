@@ -4,6 +4,8 @@
 #include <chrono>
 #include <optional>
 
+#include "absl/log/absl_check.h"
+
 #include "aos/time/time.h"
 
 namespace aos::time {
@@ -28,8 +30,8 @@ class PhasedLoop {
   // following will hold, for any allowed values of interval and offset:
   // auto original_time = loop.sleep_time();
   // loop.set_interval_and_offset(interval, offset);
-  // CHECK_LE(loop.sleep_time(), original_time);
-  // CHECK_EQ(0, loop.Iterate(original_time));
+  // ABSL_CHECK_LE(loop.sleep_time(), original_time);
+  // ABSL_CHECK_EQ(0, loop.Iterate(original_time));
   //
   // Note that this will not be the behavior that all (or even necessarily most)
   // users want, since it doesn't necessarily preserve a "keep the iteration
@@ -41,8 +43,8 @@ class PhasedLoop {
   // If monotonic_now is set, then the following will hold:
   // auto original_time = loop.sleep_time();
   // loop.set_interval_and_offset(interval, offset, monotonic_now);
-  // CHECK_LE(loop.sleep_time(), monotonic_now);
-  // CHECK_EQ(0, loop.Iterate(monotonic_now));
+  // ABSL_CHECK_LE(loop.sleep_time(), monotonic_now);
+  // ABSL_CHECK_EQ(0, loop.Iterate(monotonic_now));
   void set_interval_and_offset(
       const monotonic_clock::duration interval,
       const monotonic_clock::duration offset,

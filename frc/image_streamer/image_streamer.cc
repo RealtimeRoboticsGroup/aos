@@ -15,7 +15,7 @@
 #include <thread>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
 #include "flatbuffers/flatbuffers.h"
@@ -171,8 +171,8 @@ class ChannelSource : public GstSampleSource {
       VLOG(2) << "Skipping CameraImage with no data";
       return;
     }
-    CHECK_EQ(image.rows(), absl::GetFlag(FLAGS_height));
-    CHECK_EQ(image.cols(), absl::GetFlag(FLAGS_width));
+    ABSL_CHECK_EQ(image.rows(), absl::GetFlag(FLAGS_height));
+    ABSL_CHECK_EQ(image.cols(), absl::GetFlag(FLAGS_width));
 
     GBytes *bytes = g_bytes_new(image.data()->data(), image.data()->size());
     GstBuffer *buffer = gst_buffer_new_wrapped_bytes(bytes);
@@ -182,7 +182,7 @@ class ChannelSource : public GstSampleSource {
     GstCaps *caps = gst_caps_new_simple(
         "video/x-raw", "width", G_TYPE_INT, image.cols(), "height", G_TYPE_INT,
         image.rows(), "format", G_TYPE_STRING, "YUY2", nullptr);
-    CHECK(caps != nullptr);
+    ABSL_CHECK(caps != nullptr);
 
     GstSample *sample = gst_sample_new(buffer, caps, nullptr, nullptr);
 
@@ -320,18 +320,18 @@ void WebsocketHandler::OnSample(GstSample *sample) {
 
   if (sender_.valid()) {
     const GstCaps *caps = gst_sample_get_caps(sample);
-    CHECK(caps != nullptr);
-    CHECK_GT(gst_caps_get_size(caps), 0U);
+    ABSL_CHECK(caps != nullptr);
+    ABSL_CHECK_GT(gst_caps_get_size(caps), 0U);
     const GstStructure *str = gst_caps_get_structure(caps, 0);
 
     gint width;
     gint height;
 
-    CHECK(gst_structure_get_int(str, "width", &width));
-    CHECK(gst_structure_get_int(str, "height", &height));
+    ABSL_CHECK(gst_structure_get_int(str, "width", &width));
+    ABSL_CHECK(gst_structure_get_int(str, "height", &height));
 
     GstBuffer *buffer = gst_sample_get_buffer(sample);
-    CHECK(buffer != nullptr);
+    ABSL_CHECK(buffer != nullptr);
 
     const gsize size = gst_buffer_get_size(buffer);
 
@@ -418,7 +418,7 @@ Connection::Connection(::seasocks::WebSocket *sock, ::seasocks::Server *server)
   {
     GstObject *ice = nullptr;
     g_object_get(G_OBJECT(webrtcbin_), "ice-agent", &ice, nullptr);
-    CHECK(ice != nullptr);
+    ABSL_CHECK(ice != nullptr);
 
     g_object_set(ice, "min-rtp-port", absl::GetFlag(FLAGS_min_port),
                  "max-rtp-port", absl::GetFlag(FLAGS_max_port), nullptr);
@@ -427,7 +427,7 @@ Connection::Connection(::seasocks::WebSocket *sock, ::seasocks::Server *server)
     {
       GstObject *nice = nullptr;
       g_object_get(ice, "agent", &nice, nullptr);
-      CHECK(nice != nullptr);
+      ABSL_CHECK(nice != nullptr);
 
       g_object_set(nice, "upnp", false, nullptr);
       g_object_unref(nice);
@@ -654,7 +654,7 @@ int main(int argc, char **argv) {
     aos::EPoll *epoll = event_loop.epoll();
 
     epoll->OnReadable(server.fd(), [&server] {
-      CHECK(::seasocks::Server::PollResult::Continue == server.poll(0));
+      ABSL_CHECK(::seasocks::Server::PollResult::Continue == server.poll(0));
     });
 
     event_loop.Run();

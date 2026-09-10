@@ -5,7 +5,7 @@
 // http://localhost:8080/graph.html
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 
 #include "aos/configuration.h"
 #include "aos/events/logging/log_reader.h"
@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
   std::unique_ptr<aos::EventLoop> event_loop;
 
   if (absl::GetFlag(FLAGS_node).empty()) {
-    CHECK(!aos::configuration::MultiNode(reader.configuration()))
+    ABSL_CHECK(!aos::configuration::MultiNode(reader.configuration()))
         << "If using a multi-node logfile, please specify --node.";
     event_loop = reader.event_loop_factory()->MakeEventLoop("web_proxy");
   } else {

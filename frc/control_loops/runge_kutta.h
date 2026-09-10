@@ -1,7 +1,7 @@
 #ifndef FRC_CONTROL_LOOPS_RUNGE_KUTTA_H_
 #define FRC_CONTROL_LOOPS_RUNGE_KUTTA_H_
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include <Eigen/Dense>
 
@@ -155,7 +155,7 @@ T AdaptiveRungeKutta(const F &fn, T y0, double t0, double dt,
     Eigen::Matrix<double, states, 1> f_new;
     while (!step_accepted) {
       // TODO(austin): Tell the user rather than just explode?
-      CHECK_GE(h_abs, min_step);
+      ABSL_CHECK_GE(h_abs, min_step);
 
       double h = h_abs;
       t_new = t + h;

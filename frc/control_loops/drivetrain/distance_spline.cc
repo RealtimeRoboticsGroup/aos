@@ -1,6 +1,6 @@
 #include "frc/control_loops/drivetrain/distance_spline.h"
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/logging/logging.h"
@@ -78,10 +78,12 @@ namespace frc::control_loops::drivetrain {
 }
 
 std::vector<Spline> FlatbufferToSplines(const MultiSpline *fb) {
-  CHECK(fb != nullptr);
+  ABSL_CHECK(fb != nullptr);
   const size_t spline_count = fb->spline_count();
-  CHECK_EQ(fb->spline_x()->size(), static_cast<size_t>(spline_count * 5 + 1));
-  CHECK_EQ(fb->spline_y()->size(), static_cast<size_t>(spline_count * 5 + 1));
+  ABSL_CHECK_EQ(fb->spline_x()->size(),
+                static_cast<size_t>(spline_count * 5 + 1));
+  ABSL_CHECK_EQ(fb->spline_y()->size(),
+                static_cast<size_t>(spline_count * 5 + 1));
   std::vector<Spline> splines;
   for (size_t ii = 0; ii < spline_count; ++ii) {
     Eigen::Matrix<double, 2, 6> points;
@@ -96,10 +98,12 @@ std::vector<Spline> FlatbufferToSplines(const MultiSpline *fb) {
 
 aos::SizedArray<Spline, FinishedDistanceSpline::kMaxSplines>
 SizedFlatbufferToSplines(const MultiSpline *fb) {
-  CHECK(fb != nullptr);
+  ABSL_CHECK(fb != nullptr);
   const size_t spline_count = fb->spline_count();
-  CHECK_EQ(fb->spline_x()->size(), static_cast<size_t>(spline_count * 5 + 1));
-  CHECK_EQ(fb->spline_y()->size(), static_cast<size_t>(spline_count * 5 + 1));
+  ABSL_CHECK_EQ(fb->spline_x()->size(),
+                static_cast<size_t>(spline_count * 5 + 1));
+  ABSL_CHECK_EQ(fb->spline_y()->size(),
+                static_cast<size_t>(spline_count * 5 + 1));
   aos::SizedArray<Spline, FinishedDistanceSpline::kMaxSplines> splines;
   for (size_t ii = 0; ii < spline_count; ++ii) {
     Eigen::Matrix<double, 2, 6> points;
@@ -142,8 +146,8 @@ flatbuffers::Offset<fb::DistanceSpline> DistanceSplineBase::Serialize(
       fbb->CreateUninitializedVector(num_points, &spline_x_vector);
   const flatbuffers::Offset<flatbuffers::Vector<float>> spline_y_offset =
       fbb->CreateUninitializedVector(num_points, &spline_y_vector);
-  CHECK(spline_x_vector != nullptr);
-  CHECK(spline_y_vector != nullptr);
+  ABSL_CHECK(spline_x_vector != nullptr);
+  ABSL_CHECK(spline_y_vector != nullptr);
   spline_x_vector[0] = splines()[0].control_points()(0, 0);
   spline_y_vector[0] = splines()[0].control_points()(1, 0);
   for (size_t spline_index = 0; spline_index < splines().size();

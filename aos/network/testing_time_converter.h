@@ -5,6 +5,8 @@
 #include <optional>
 #include <tuple>
 
+#include "absl/log/absl_check.h"
+
 #include "aos/events/event_scheduler.h"
 #include "aos/events/logging/boot_timestamp.h"
 #include "aos/network/multinode_timestamp_filter.h"
@@ -45,9 +47,10 @@ class TestingTimeConverter final : public InterpolatedTimeConverter {
   NextTimestamp() override;
 
   void set_boot_uuid(size_t node_index, size_t boot_count, UUID uuid) {
-    CHECK(boot_uuids_
-              .emplace(std::make_pair(node_index, boot_count), std ::move(uuid))
-              .second)
+    ABSL_CHECK(
+        boot_uuids_
+            .emplace(std::make_pair(node_index, boot_count), std ::move(uuid))
+            .second)
         << ": Duplicate boot";
   }
 
@@ -57,7 +60,7 @@ class TestingTimeConverter final : public InterpolatedTimeConverter {
 
     auto new_it = boot_uuids_.emplace(std::make_pair(node_index, boot_count),
                                       UUID::Random());
-    CHECK(new_it.second);
+    ABSL_CHECK(new_it.second);
     return new_it.first->second;
   }
 

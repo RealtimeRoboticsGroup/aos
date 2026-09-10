@@ -1,6 +1,8 @@
 #ifndef FRC_ESTIMATION_EKF_H_
 #define FRC_ESTIMATION_EKF_H_
 
+#include "absl/log/absl_check.h"
+
 #include "frc/control_loops/c2d.h"
 #include "frc/control_loops/runge_kutta.h"
 #include "frc/control_loops/swerve/auto_diff_jacobian.h"
@@ -94,9 +96,9 @@ class Ekf {
       const Measurement &measurement, const MeasurementSquare &R,
       const Input &U, const ExpectedMeasurementFunction &expected_measurement,
       const Eigen::Matrix<Scalar, kNumMeasurements, kNumStates> &H) {
-    CHECK(last_update_.has_value())
+    ABSL_CHECK(last_update_.has_value())
         << ": Must call Initialize() before doing EKF Corrections.";
-    CHECK_LE(last_update_.value(), now);
+    ABSL_CHECK_LE(last_update_.value(), now);
     const aos::monotonic_clock::duration dt = now - last_update_.value();
     StateSquare Q_discrete, A_discrete;
     // Note: We don't actually use the linearized B matrix, but the cost of
@@ -132,9 +134,9 @@ class Ekf {
 
   void CorrectNoUpdates(const aos::monotonic_clock::time_point now,
                         const Input &U) {
-    CHECK(last_update_.has_value())
+    ABSL_CHECK(last_update_.has_value())
         << ": Must call Initialize() before doing EKF Corrections.";
-    CHECK_LE(last_update_.value(), now);
+    ABSL_CHECK_LE(last_update_.value(), now);
     const aos::monotonic_clock::duration dt = now - last_update_.value();
     StateSquare Q_discrete, A_discrete;
     // Note: We don't actually use the linearized B matrix, but the cost of

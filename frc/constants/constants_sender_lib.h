@@ -2,7 +2,7 @@
 #define FRC_CONSTANTS_CONSTANTS_SENDER_H_
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/events/event_loop.h"
@@ -104,7 +104,7 @@ class NameConstantSender {
     const auto *constants = message.constants();
     // Search through the constants for the one matching our team number.
     for (const auto &constant_data : *constants) {
-      CHECK(constant_data->has_robot_name());
+      ABSL_CHECK(constant_data->has_robot_name());
       if (team_number_ == constant_data->team() &&
           robot_name_ == constant_data->robot_name()->string_view()) {
         // Values is equal to the constants meant for the specific robot.
@@ -135,7 +135,7 @@ class ConstantsFetcher {
   ConstantsFetcher(aos::EventLoop *event_loop,
                    std::string_view channel = "/constants")
       : fetcher_(event_loop->MakeFetcher<ConstantsData>(channel)) {
-    CHECK(fetcher_.Fetch())
+    ABSL_CHECK(fetcher_.Fetch())
         << "Constants information must be available at startup.";
     event_loop->MakeNoArgWatcher<ConstantsData>(channel, []() {
       LOG(FATAL)
@@ -144,7 +144,7 @@ class ConstantsFetcher {
   }
 
   const ConstantsData &constants() const {
-    CHECK(fetcher_.get() != nullptr);
+    ABSL_CHECK(fetcher_.get() != nullptr);
     return *fetcher_.get();
   }
 

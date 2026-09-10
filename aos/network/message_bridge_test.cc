@@ -2,7 +2,7 @@
 #include <thread>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
 #include "gtest/gtest.h"
@@ -866,7 +866,7 @@ TEST_P(MessageBridgeParameterizedTest, ReliableSentBeforeClientStartup) {
         if (shared() && header.channel_index() != ping_channel_index) {
           return;
         }
-        CHECK_EQ(header.channel_index(), ping_channel_index);
+        ABSL_CHECK_EQ(header.channel_index(), ping_channel_index);
         ++ping_timestamp_count;
       });
 
@@ -1003,7 +1003,7 @@ TEST_P(MessageBridgeParameterizedTest, ReliableSentBeforeServerStartup) {
         if (shared() && header.channel_index() != ping_channel_index) {
           return;
         }
-        CHECK_EQ(header.channel_index(), ping_channel_index);
+        ABSL_CHECK_EQ(header.channel_index(), ping_channel_index);
         ++ping_timestamp_count;
       });
 
@@ -1134,7 +1134,7 @@ TEST_P(MessageBridgeParameterizedTest, ReliableSentDuringClientReboot) {
         if (shared() && header.channel_index() != ping_channel_index) {
           return;
         }
-        CHECK_EQ(header.channel_index(), ping_channel_index);
+        ABSL_CHECK_EQ(header.channel_index(), ping_channel_index);
         ++ping_timestamp_count;
       });
 
@@ -1385,7 +1385,7 @@ TEST_P(MessageBridgeParameterizedTest, TooBigConnect) {
 
     const aos::Node *const remote_node =
         configuration::GetNode(pi2_.client_event_loop_->configuration(), "pi1");
-    CHECK(remote_node != nullptr);
+    ABSL_CHECK(remote_node != nullptr);
 
     const aos::FlatbufferDetachedBuffer<aos::message_bridge::Connect>
         connect_message(MakeConnectMessage(
@@ -1422,7 +1422,7 @@ TEST_P(MessageBridgeParameterizedTest, TooBigConnect) {
 
     aos::TimerHandler *const send_big_message =
         pi2_.client_event_loop_->AddTimer(
-            [&]() { CHECK(client.Send(kConnectStream(), big_data, 0)); });
+            [&]() { ABSL_CHECK(client.Send(kConnectStream(), big_data, 0)); });
 
     pi2_.client_event_loop_->OnRun([this, send_big_message]() {
       send_big_message->Schedule(pi2_.client_event_loop_->monotonic_now() +

@@ -11,7 +11,7 @@
 #endif
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
 
 ABSL_FLAG(bool, enable_ftrace, false,
@@ -33,8 +33,8 @@ int MaybeCheckOpen(const char *file) {
   // New kernels prefer /sys/kernel/tracing, and old kernels prefer
   // /sys/kernel/debug/tracing...  When Ubuntu 18.04 and the 4.9 kernel
   // disappear finally, we can switch fully to /sys/kernel/tracing.
-  PCHECK(result >= 0) << ": Failed to open /sys/kernel/tracing/" << file
-                      << " or legacy /sys/kernel/debug/tracing/" << file;
+  ABSL_PCHECK(result >= 0) << ": Failed to open /sys/kernel/tracing/" << file
+                           << " or legacy /sys/kernel/debug/tracing/" << file;
   return result;
 #else
   // Don't worry about tracing on other OSes yet.  Don't open the file and
@@ -52,16 +52,16 @@ Ftrace::Ftrace()
 Ftrace::~Ftrace() {
 #ifndef _WIN32
   if (message_fd_ != -1) {
-    PCHECK(close(message_fd_) == 0);
+    ABSL_PCHECK(close(message_fd_) == 0);
   }
   if (message_fd_ != -1) {
-    PCHECK(close(on_fd_) == 0);
+    ABSL_PCHECK(close(on_fd_) == 0);
   }
 #endif
 }
 
 void Ftrace::TurnOffOrDie() {
-  CHECK(on_fd_ != -1)
+  ABSL_CHECK(on_fd_ != -1)
 #ifdef __linux__
       << ": Failed to open tracing_on earlier, cannot turn off tracing";
 #else
@@ -69,7 +69,7 @@ void Ftrace::TurnOffOrDie() {
 #endif
 #ifndef _WIN32
   char zero = '0';
-  CHECK_EQ(write(on_fd_, &zero, 1), 1) << ": Failed to turn tracing off";
+  ABSL_CHECK_EQ(write(on_fd_, &zero, 1), 1) << ": Failed to turn tracing off";
 #endif
 }
 
@@ -82,7 +82,7 @@ void Ftrace::FormatEvent(const char *format, ...) {
   va_start(ap, format);
   const int result = vsnprintf(buffer, sizeof(buffer), format, ap);
   va_end(ap);
-  CHECK_LE(static_cast<size_t>(result), sizeof(buffer))
+  ABSL_CHECK_LE(static_cast<size_t>(result), sizeof(buffer))
       << ": Format string ended up too long: " << format;
   WriteEvent(std::string_view(buffer, result));
 }
@@ -97,8 +97,8 @@ void Ftrace::WriteEvent(std::string_view content) {
     // This just means tracing is turned off. Ignore it.
     return;
   }
-  PCHECK(result >= 0) << ": Failed to write ftrace event: " << content;
-  CHECK_EQ(static_cast<size_t>(result), content.size())
+  ABSL_PCHECK(result >= 0) << ": Failed to write ftrace event: " << content;
+  ABSL_CHECK_EQ(static_cast<size_t>(result), content.size())
       << ": Failed to write complete ftrace event: " << content;
 #endif
 }

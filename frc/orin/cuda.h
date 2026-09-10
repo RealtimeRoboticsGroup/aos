@@ -4,7 +4,7 @@
 #include <chrono>
 #include <span>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "cuda_runtime.h"
@@ -155,7 +155,7 @@ class GpuMemory {
   }
   void MemcpyAsyncFrom(const T *host_memory, const size_t size,
                        CudaStream *stream) {
-    CHECK_LE(size, size_);
+    ABSL_CHECK_LE(size, size_);
     CHECK_CUDA(cudaMemcpyAsync(memory_, host_memory, sizeof(T) * size,
                                cudaMemcpyHostToDevice, stream->get()));
   }
@@ -166,7 +166,7 @@ class GpuMemory {
   }
   void MemcpyAsyncFrom(const HostMemory<T> *host_memory, const size_t size,
                        CudaStream *stream) {
-    CHECK_LE(size, size_);
+    ABSL_CHECK_LE(size, size_);
     CHECK_CUDA(cudaMemcpyAsync(memory_, host_memory, sizeof(T) * size,
                                cudaMemcpyHostToDevice, stream->get()));
   }
@@ -216,7 +216,7 @@ class GpuMemory {
   // Allocates a vector on the host, copies size objects into it, and returns
   // it.
   std::vector<T> Copy(size_t s) const {
-    CHECK_LE(s, size_);
+    ABSL_CHECK_LE(s, size_);
     std::vector<T> result(s);
     MemcpyTo(result.data(), s);
     return result;

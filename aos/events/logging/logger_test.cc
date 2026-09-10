@@ -3,7 +3,7 @@
 #include <filesystem>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
 #include "gmock/gmock.h"
@@ -626,7 +626,8 @@ TEST_P(LoggerTest, ManyMessages) {
               ping_sender.MakeBuilder();
           examples::Ping::Builder ping_builder =
               builder.MakeBuilder<examples::Ping>();
-          CHECK_EQ(builder.Send(ping_builder.Finish()), RawSender::Error::kOk);
+          ABSL_CHECK_EQ(builder.Send(ping_builder.Finish()),
+                        RawSender::Error::kOk);
         });
 
     // 100 ms / 0.05 ms -> 2000 messages.  Should be enough to crash it.
@@ -681,7 +682,8 @@ TEST(SingleNodeLoggerNoFixtureTest, ReadTooFast) {
               ping_sender.MakeBuilder();
           examples::Ping::Builder ping_builder =
               builder.MakeBuilder<examples::Ping>();
-          CHECK_EQ(builder.Send(ping_builder.Finish()), RawSender::Error::kOk);
+          ABSL_CHECK_EQ(builder.Send(ping_builder.Finish()),
+                        RawSender::Error::kOk);
           ++sent_messages;
         });
 
@@ -831,8 +833,8 @@ TEST_P(LoggerTest, ManyMessagesLzmaWithProfiling) {
               ping_sender.MakeBuilder();
           examples::Ping::Builder ping_builder =
               builder.MakeBuilder<examples::Ping>();
-          CHECK_EQ(builder.Send(ping_builder.Finish()),
-                   aos::RawSender::Error::kOk);
+          ABSL_CHECK_EQ(builder.Send(ping_builder.Finish()),
+                        aos::RawSender::Error::kOk);
         });
 
     // Send a message every 50 microseconds to simulate high throughput.

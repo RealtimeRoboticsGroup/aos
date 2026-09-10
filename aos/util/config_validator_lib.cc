@@ -14,7 +14,7 @@
 #include <vector>
 
 #include "absl/flags/declare.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "flatbuffers/buffer.h"
 #include "flatbuffers/detached_buffer.h"
@@ -75,7 +75,7 @@ void ConfigIsValid(const aos::Configuration *config,
          "channels with no channels, please write a design proposal.";
 
   aos::fbs::Builder<ConfigValidatorConfigStatic> validation_config;
-  CHECK(validation_config->FromFlatbuffer(validation_config_raw));
+  ABSL_CHECK(validation_config->FromFlatbuffer(validation_config_raw));
 
   if (validation_config_raw->has_logging() &&
       validation_config_raw->logging()->validate_individual_node_loggers() &&
@@ -86,10 +86,11 @@ void ConfigIsValid(const aos::Configuration *config,
     auto logger_sets =
         validation_config->mutable_logging()->mutable_logger_sets();
     for (const aos::Node *node : configuration::GetNodes(config)) {
-      CHECK(logger_sets->reserve(logger_sets->size() + 1));
+      ABSL_CHECK(logger_sets->reserve(logger_sets->size() + 1));
       auto logger_set = logger_sets->emplace_back();
-      CHECK(logger_set->add_loggers()->FromFlatbuffer({node->name()->str()}));
-      CHECK(logger_set->add_replay_nodes()->FromFlatbuffer(
+      ABSL_CHECK(
+          logger_set->add_loggers()->FromFlatbuffer({node->name()->str()}));
+      ABSL_CHECK(logger_set->add_replay_nodes()->FromFlatbuffer(
           {node->name()->str()}));
     }
   }
@@ -177,10 +178,10 @@ void ConfigIsValid(const aos::Configuration *config,
                 validation_failed = true;
               }
               // TODO(james): This will be overly noisy, as it ends up
-              // CHECK-failing.
+              // ABSL_CHECK-failing.
               const Channel *found_channel =
                   timestamp_finder.ForChannel(channel, connection);
-              CHECK(found_channel != nullptr);
+              ABSL_CHECK(found_channel != nullptr);
               required_timestamp_channels.insert(found_channel);
               break;
           }

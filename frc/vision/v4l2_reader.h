@@ -4,7 +4,7 @@
 #include <array>
 #include <string>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 
 #include "aos/containers/ring_buffer.h"
@@ -78,8 +78,8 @@ class V4L2ReaderBase {
   // Implementations of MarkBufferToBeEnqueued should call this before calling
   // EnqueueBuffer.
   void ReinitializeBuffer(int buffer_index) {
-    CHECK_GE(buffer_index, 0);
-    CHECK_LT(buffer_index, static_cast<int>(buffers_.size()));
+    ABSL_CHECK_GE(buffer_index, 0);
+    ABSL_CHECK_LT(buffer_index, static_cast<int>(buffers_.size()));
     buffers_[buffer_index].InitializeMessage(ImageSize());
   }
 
@@ -117,7 +117,7 @@ class V4L2ReaderBase {
     }
 
     absl::Span<const char> DataSpan(size_t image_size) {
-      CHECK(data_pointer != nullptr);
+      ABSL_CHECK(data_pointer != nullptr);
       return absl::Span<const char>(reinterpret_cast<char *>(data_pointer),
                                     image_size);
     }

@@ -11,7 +11,7 @@
 #include <thread>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/events/epoll.h"
@@ -59,8 +59,8 @@ void SenderThread(int fd) {
     const monotonic_clock::time_point monotonic_now = monotonic_clock::now();
     char sent_time_buffer[8];
     memcpy(sent_time_buffer, &monotonic_now, sizeof(sent_time_buffer));
-    PCHECK(write(fd, sent_time_buffer, sizeof(sent_time_buffer)) ==
-           sizeof(sent_time_buffer));
+    ABSL_PCHECK(write(fd, sent_time_buffer, sizeof(sent_time_buffer)) ==
+                sizeof(sent_time_buffer));
 
     if (monotonic_now > end_time) {
       break;
@@ -72,8 +72,8 @@ void SenderThread(int fd) {
     const monotonic_clock::time_point stop_time(chrono::nanoseconds(1));
     char sent_time_buffer[8];
     memcpy(sent_time_buffer, &stop_time, sizeof(sent_time_buffer));
-    PCHECK(write(fd, sent_time_buffer, sizeof(sent_time_buffer)) ==
-           sizeof(sent_time_buffer));
+    ABSL_PCHECK(write(fd, sent_time_buffer, sizeof(sent_time_buffer)) ==
+                sizeof(sent_time_buffer));
   }
   UnsetCurrentThreadRealtimePriority();
 }
@@ -95,7 +95,7 @@ void ReceiverThread(int fd) {
     const int ret = read(fd, static_cast<void *>(sent_time_buffer),
                          sizeof(sent_time_buffer));
     const monotonic_clock::time_point monotonic_now = monotonic_clock::now();
-    CHECK_EQ(ret, 8);
+    ABSL_CHECK_EQ(ret, 8);
 
     monotonic_clock::time_point sent_time;
     memcpy(&sent_time, sent_time_buffer, sizeof(sent_time_buffer));
@@ -153,14 +153,14 @@ int Main(int /*argc*/, char ** /*argv*/) {
   });
 
   int fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
-  PCHECK(fd >= 0);
+  ABSL_PCHECK(fd >= 0);
 
   ::std::thread st([&fd]() { SenderThread(fd); });
 
   ReceiverThread(fd);
   st.join();
 
-  PCHECK(close(fd) == 0);
+  ABSL_PCHECK(close(fd) == 0);
 
   t.join();
   return 0;

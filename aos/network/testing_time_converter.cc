@@ -5,6 +5,8 @@
 #include <optional>
 #include <tuple>
 
+#include "absl/log/absl_check.h"
+
 #include "aos/events/event_scheduler.h"
 #include "aos/network/multinode_timestamp_filter.h"
 #include "aos/time/time.h"
@@ -16,29 +18,29 @@ namespace chrono = std::chrono;
 TestingTimeConverter ::TestingTimeConverter(size_t node_count)
     : InterpolatedTimeConverter(node_count),
       last_monotonic_(node_count, logger::BootTimestamp::epoch()) {
-  CHECK_GE(node_count, 1u);
+  ABSL_CHECK_GE(node_count, 1u);
 }
 
 TestingTimeConverter::~TestingTimeConverter() {
   if (at_end_) {
     auto next_timestamp = NextTimestamp();
-    CHECK(next_timestamp.has_value()) << ": Unexpected error";
-    CHECK(!next_timestamp.value().has_value())
+    ABSL_CHECK(next_timestamp.has_value()) << ": Unexpected error";
+    ABSL_CHECK(!next_timestamp.value().has_value())
         << ": At the end but there is more data.";
   }
 }
 
 void TestingTimeConverter::StartEqual() {
-  CHECK(first_);
+  ABSL_CHECK(first_);
   first_ = false;
   ts_.emplace_back(std::make_tuple(last_distributed_, last_monotonic_));
 }
 
 chrono::nanoseconds TestingTimeConverter::AddMonotonic(
     std::vector<monotonic_clock::duration> times) {
-  CHECK_EQ(times.size(), last_monotonic_.size());
+  ABSL_CHECK_EQ(times.size(), last_monotonic_.size());
   for (size_t i = 0; i < times.size(); ++i) {
-    CHECK_GT(times[i].count(), 0);
+    ABSL_CHECK_GT(times[i].count(), 0);
     last_monotonic_[i].time += times[i];
   }
   chrono::nanoseconds dt(0);
@@ -54,13 +56,13 @@ chrono::nanoseconds TestingTimeConverter::AddMonotonic(
 
 chrono::nanoseconds TestingTimeConverter::AddMonotonic(
     std::vector<logger::BootTimestamp> times) {
-  CHECK_EQ(times.size(), last_monotonic_.size());
+  ABSL_CHECK_EQ(times.size(), last_monotonic_.size());
   chrono::nanoseconds dt(0);
   if (!first_) {
-    CHECK_EQ(times[0].boot, last_monotonic_[0].boot);
+    ABSL_CHECK_EQ(times[0].boot, last_monotonic_[0].boot);
     dt = times[0].time - last_monotonic_[0].time;
     for (size_t i = 0; i < times.size(); ++i) {
-      CHECK_GT(times[i], last_monotonic_[i]);
+      ABSL_CHECK_GT(times[i], last_monotonic_[i]);
       dt = std::max(dt, times[i].time - times[0].time);
     }
     last_distributed_ += dt;
@@ -75,7 +77,7 @@ chrono::nanoseconds TestingTimeConverter::AddMonotonic(
 
 void TestingTimeConverter::RebootAt(size_t node_index,
                                     distributed_clock::time_point t) {
-  CHECK(!first_);
+  ABSL_CHECK(!first_);
   const chrono::nanoseconds dt = t - last_distributed_;
 
   for (size_t i = 0; i < last_monotonic_.size(); ++i) {
@@ -92,11 +94,11 @@ void TestingTimeConverter::RebootAt(size_t node_index,
 void TestingTimeConverter::AddNextTimestamp(
     distributed_clock::time_point time,
     std::vector<logger::BootTimestamp> times) {
-  CHECK_EQ(times.size(), last_monotonic_.size());
+  ABSL_CHECK_EQ(times.size(), last_monotonic_.size());
   if (!first_) {
-    CHECK_GT(time, last_distributed_);
+    ABSL_CHECK_GT(time, last_distributed_);
     for (size_t i = 0; i < times.size(); ++i) {
-      CHECK_GT(times[i], last_monotonic_[i]);
+      ABSL_CHECK_GT(times[i], last_monotonic_[i]);
     }
   } else {
     first_ = false;
@@ -110,8 +112,9 @@ void TestingTimeConverter::AddNextTimestamp(
 Result<std::optional<std::tuple<distributed_clock::time_point,
                                 std::vector<logger::BootTimestamp>>>>
 TestingTimeConverter::NextTimestamp() {
-  CHECK(!first_) << ": Tried to pull a timestamp before one was added.  This "
-                    "is unlikely to be what you want.";
+  ABSL_CHECK(!first_)
+      << ": Tried to pull a timestamp before one was added.  This "
+         "is unlikely to be what you want.";
   if (ts_.empty()) {
     Result<std::optional<std::tuple<distributed_clock::time_point,
                                     std::vector<logger::BootTimestamp>>>>

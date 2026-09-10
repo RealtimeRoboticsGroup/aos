@@ -20,7 +20,7 @@
 #include <string>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/events/shm_event_loop.h"
@@ -64,7 +64,7 @@ const char *policy_string(uint32_t policy) {
 
 aos::CpuSet FindAllCpus() {
   long nproc = sysconf(_SC_NPROCESSORS_CONF);
-  PCHECK(nproc != -1);
+  ABSL_PCHECK(nproc != -1);
   aos::CpuSet r;
   r.Clear();
   for (long i = 0; i < nproc; ++i) {
@@ -81,7 +81,7 @@ aos::CpuSet find_cpu_mask(int process, bool *not_there) {
     *not_there = true;
     return aos::CpuSet();
   }
-  PCHECK(result == 0) << ": sched_getaffinity of " << process;
+  ABSL_PCHECK(result == 0) << ": sched_getaffinity of " << process;
   return r;
 }
 
@@ -92,7 +92,7 @@ sched_param find_sched_param(int process, bool *not_there) {
     *not_there = true;
     return sched_param();
   }
-  PCHECK(result == 0) << ": sched_getparam of " << process;
+  ABSL_PCHECK(result == 0) << ": sched_getparam of " << process;
   return r;
 }
 
@@ -102,7 +102,7 @@ int find_scheduler(int process, bool *not_there) {
     *not_there = true;
     return 0;
   }
-  PCHECK(scheduler != -1) << ": sched_getscheduler of " << process;
+  ABSL_PCHECK(scheduler != -1) << ": sched_getscheduler of " << process;
   return scheduler;
 }
 
@@ -118,8 +118,9 @@ int find_scheduler(int process, bool *not_there) {
       *not_there = true;
       return "";
     }
-    PCHECK(exe_size != -1) << ": readlink " << exe_filename
-                           << " into buffer of size " << sizeof(exe_buffer);
+    ABSL_PCHECK(exe_size != -1)
+        << ": readlink " << exe_filename << " into buffer of size "
+        << sizeof(exe_buffer);
     return ::std::string(exe_buffer, exe_size);
   }
 }
@@ -131,7 +132,7 @@ int find_nice_value(int process, bool *not_there) {
     *not_there = true;
     return 0;
   }
-  PCHECK(errno == 0) << "getpriority of " << process;
+  ABSL_PCHECK(errno == 0) << "getpriority of " << process;
   return nice_value;
 }
 
@@ -142,7 +143,7 @@ void read_stat(int process, int *ppid, int *sid, bool *not_there) {
     *not_there = true;
     return;
   }
-  PCHECK(stat != nullptr) << ": Failed to open " << stat_filename;
+  ABSL_PCHECK(stat != nullptr) << ": Failed to open " << stat_filename;
 
   char buffer[2048];
   if (fgets(buffer, sizeof(buffer), stat) == nullptr) {
@@ -185,12 +186,12 @@ void read_stat(int process, int *ppid, int *sid, bool *not_there) {
       field_start = i + 1;
     }
   }
-  PCHECK(fclose(stat) == 0);
+  ABSL_PCHECK(fclose(stat) == 0);
 
   if (field < 4) {
     LOG(FATAL) << "couldn't get fields from /proc/" << process << "/stat";
   }
-  CHECK_EQ(pid, process);
+  ABSL_CHECK_EQ(pid, process);
 }
 
 void read_status(int process, int ppid, int *pgrp, ::std::string *name,
@@ -202,7 +203,7 @@ void read_status(int process, int ppid, int *pgrp, ::std::string *name,
     *not_there = true;
     return;
   }
-  PCHECK(status != nullptr) << ": Failed to open " << status_filename;
+  ABSL_PCHECK(status != nullptr) << ": Failed to open " << status_filename;
 
   int pid = 0, status_ppid = 0;
   while (true) {
@@ -226,9 +227,9 @@ void read_status(int process, int ppid, int *pgrp, ::std::string *name,
       *pgrp = ::std::stoi(strip_string_prefix(5, line));
     }
   }
-  PCHECK(fclose(status) == 0);
-  CHECK_EQ(pid, process);
-  CHECK_EQ(status_ppid, ppid);
+  ABSL_PCHECK(fclose(status) == 0);
+  ABSL_CHECK_EQ(pid, process);
+  ABSL_CHECK_EQ(status_ppid, ppid);
 }
 
 struct Thread {

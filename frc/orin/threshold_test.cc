@@ -1,5 +1,6 @@
 #include "frc/orin/threshold.h"
 
+#include "absl/log/absl_check.h"
 #include "gtest/gtest.h"
 #include "third_party/apriltag/apriltag.h"
 #include "third_party/apriltag/common/unionfind.h"
@@ -52,12 +53,12 @@ class ThresholdTest : public ::testing::Test {
 // Checks that 2 images match.
 void CheckImage(image_u8_t compare_im_one, image_u8_t compare_im_two,
                 std::string_view label) {
-  CHECK_EQ(compare_im_one.width, compare_im_two.width);
-  CHECK_EQ(compare_im_one.height, compare_im_two.height);
+  ABSL_CHECK_EQ(compare_im_one.width, compare_im_two.width);
+  ABSL_CHECK_EQ(compare_im_one.height, compare_im_two.height);
   for (int j = 0; j < compare_im_one.height; ++j) {
     for (int i = 0; i < compare_im_one.width; ++i) {
-      CHECK_EQ(compare_im_one.buf[j * compare_im_one.stride + i],
-               compare_im_two.buf[j * compare_im_two.stride + i])
+      ABSL_CHECK_EQ(compare_im_one.buf[j * compare_im_one.stride + i],
+                    compare_im_two.buf[j * compare_im_two.stride + i])
           << "First Image Value "
           << (int)compare_im_one.buf[j * compare_im_one.stride + i] << " "
           << "Second Image Value "

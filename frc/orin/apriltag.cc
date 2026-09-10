@@ -16,7 +16,7 @@
 #include <vector>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "third_party/apriltag/common/g2d.h"
 
@@ -180,8 +180,8 @@ GpuDetector::GpuDetector(size_t width, size_t height,
   fit_quads_host_.reserve(kMaxBlobs);
   quad_corners_host_.reserve(kMaxBlobs);
 
-  CHECK_EQ(tag_detector_->quad_decimate, 2);
-  CHECK(!tag_detector_->qtp.deglitch);
+  ABSL_CHECK_EQ(tag_detector_->quad_decimate, 2);
+  ABSL_CHECK(!tag_detector_->qtp.deglitch);
 
   for (int i = 0; i < zarray_size(tag_detector_->tag_families); i++) {
     apriltag_family_t *family;
@@ -731,8 +731,8 @@ void GpuDetector::Detect(const uint8_t *image, const uint8_t *image_device) {
 
   after_unionfinding_.Record(&stream_);
 
-  CHECK((width_ % 8) == 0);
-  CHECK((height_ % 8) == 0);
+  ABSL_CHECK((width_ % 8) == 0);
+  ABSL_CHECK((height_ % 8) == 0);
 
   size_t decimated_width = width_ / 2;
   size_t decimated_height = height_ / 2;
@@ -751,7 +751,7 @@ void GpuDetector::Detect(const uint8_t *image, const uint8_t *image_device) {
                 (decimated_height + threads.y - 2) / (threads.y - 1), 1);
 
     //  Make sure we fit in our mask.
-    CHECK_LT(width_ * height_, static_cast<size_t>(1 << 22));
+    ABSL_CHECK_LT(width_ * height_, static_cast<size_t>(1 << 22));
 
     BlobDiff<kBlockWidth, kBlockHeight><<<blocks, threads, 0, stream_.get()>>>(
         thresholded_image_device_.get(), union_markers_device_.get(),
@@ -786,8 +786,9 @@ void GpuDetector::Detect(const uint8_t *image, const uint8_t *image_device) {
   {
     num_compressed_union_marker_pair_device_.MemcpyAsyncTo(
         &num_compressed_union_marker_pair_host_, &stream_);
-    CHECK_LT(static_cast<size_t>(*num_compressed_union_marker_pair_host_.get()),
-             union_marker_pair_device_.size());
+    ABSL_CHECK_LT(
+        static_cast<size_t>(*num_compressed_union_marker_pair_host_.get()),
+        union_marker_pair_device_.size());
   }
 
   after_num_compact_memcpy_.Record(&stream_);

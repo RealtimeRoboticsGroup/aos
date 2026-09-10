@@ -5,6 +5,7 @@
 #include <optional>
 
 #include "Eigen/Dense"
+#include "absl/log/absl_check.h"
 
 #include "aos/commonmath.h"
 #include "aos/containers/priority_queue.h"
@@ -201,7 +202,7 @@ class HybridEkf {
     virtual Eigen::Matrix<Scalar, kNOutputs, kNStates> DHDX(
         const State &state) = 0;
     virtual void ObserveDeletion() {
-      CHECK(!deleted_);
+      ABSL_CHECK(!deleted_);
       deleted_ = true;
     }
     bool deleted() const { return deleted_; }
@@ -223,7 +224,7 @@ class HybridEkf {
     virtual ExpectedObservationFunctor *MakeExpectedObservations(
         const State &state, const StateSquare &P) = 0;
     void ObserveDeletion() {
-      CHECK(!deleted_);
+      ABSL_CHECK(!deleted_);
       deleted_ = true;
     }
     bool deleted() const { return deleted_; }
@@ -252,7 +253,7 @@ class HybridEkf {
                        const Eigen::Matrix<Scalar, kNOutputs, kNOutputs> &R,
                        aos::monotonic_clock::time_point t) {
       if (functors_.full()) {
-        CHECK(functors_.begin()->functor->deleted());
+        ABSL_CHECK(functors_.begin()->functor->deleted());
       }
       auto pushed = functors_.PushFromBottom(Pair{t, std::move(H)});
       if (pushed == functors_.end()) {
@@ -266,7 +267,7 @@ class HybridEkf {
         const Eigen::Matrix<Scalar, kNOutputs, kNOutputs> &R,
         aos::monotonic_clock::time_point t) {
       if (functors_.full()) {
-        CHECK(functors_.begin()->functor->deleted());
+        ABSL_CHECK(functors_.begin()->functor->deleted());
       }
       auto pushed = functors_.PushFromBottom(Pair{t, std::move(builder)});
       if (pushed == functors_.end()) {
@@ -388,7 +389,7 @@ class HybridEkf {
     // Because the check below for have_zeroed_encoders_ will add an
     // Observation, do a check here to ensure that initialization has been
     // performed and so there is at least one observation.
-    CHECK(!observations_.empty());
+    ABSL_CHECK(!observations_.empty());
     if (!have_zeroed_encoders_) {
       // This logic handles ensuring that on the first encoder reading, we
       // update the internal state for the encoders to match the reading.
@@ -421,8 +422,8 @@ class HybridEkf {
     Eigen::Matrix<Scalar, kNOutputs, kNOutputs> R;
     R.setZero();
     R.diagonal() << encoder_noise_, encoder_noise_, gyro_noise_;
-    CHECK(H_encoders_and_gyro_.has_value());
-    CHECK(H_gyro_only_.has_value());
+    ABSL_CHECK(H_encoders_and_gyro_.has_value());
+    ABSL_CHECK(H_gyro_only_.has_value());
     LinearH *H = &H_encoders_and_gyro_.value();
     if (!left_encoder.has_value() || !right_encoder.has_value()) {
       H = &H_gyro_only_.value();
@@ -471,7 +472,7 @@ class HybridEkf {
 
   // Returns the most recent input vector.
   Input MostRecentInput() {
-    CHECK(!observations_.empty());
+    ABSL_CHECK(!observations_.empty());
     Input U = observations_.top().U;
     return U;
   }
@@ -743,9 +744,9 @@ class HybridEkf {
       PredictImpl(obs, dt, state, P);
     }
     if (obs->h == nullptr) {
-      CHECK(obs->make_h != nullptr);
+      ABSL_CHECK(obs->make_h != nullptr);
       obs->h = obs->make_h->MakeExpectedObservations(*state, *P);
-      CHECK(obs->h != nullptr);
+      ABSL_CHECK(obs->h != nullptr);
     }
     CorrectImpl(obs, state, P);
   }
@@ -782,7 +783,7 @@ void HybridEkf<Scalar>::Correct(
     ExpectedObservationFunctor *expected_observations,
     const Eigen::Matrix<Scalar, kNOutputs, kNOutputs> &R,
     aos::monotonic_clock::time_point t) {
-  CHECK(!observations_.empty());
+  ABSL_CHECK(!observations_.empty());
   if (!observations_.full() && t < observations_.begin()->t) {
     AOS_LOG(ERROR,
             "Dropped an observation that was received before we "
@@ -827,7 +828,7 @@ void HybridEkf<Scalar>::Correct(
     --prev_it;
     cur_it->prev_t = prev_it->t;
     // TODO(james): Figure out a saner way of handling this.
-    CHECK(U != nullptr);
+    ABSL_CHECK(U != nullptr);
     cur_it->U = *U;
   } else {
     cur_it->X_hat = next_it->X_hat;
@@ -853,7 +854,7 @@ void HybridEkf<Scalar>::Correct(
     // small values in P_. This is particularly likely if Scalar is just float
     // and we are performing zero-time updates where the predict step never
     // runs.
-    CHECK(X_hat_.allFinite());
+    ABSL_CHECK(X_hat_.allFinite());
     if (next_it != observations_.end()) {
       next_it->X_hat = X_hat_;
       next_it->P = P_;

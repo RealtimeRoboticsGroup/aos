@@ -6,7 +6,7 @@
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
 #include "absl/flags/usage.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/configuration.h"
@@ -159,7 +159,7 @@ int main(int argc, char *argv[]) {
   event_loop.OnRun([]() {
     errno = 0;
     setpriority(PRIO_PROCESS, 0, -20);
-    PCHECK(errno == 0) << ": Renicing to -20 failed.";
+    ABSL_PCHECK(errno == 0) << ": Renicing to -20 failed.";
   });
 
   LogName log_name_accumulator;
@@ -185,7 +185,7 @@ int main(int argc, char *argv[]) {
       enough_space = false;
       for (const aos::util::Filesystem *fs :
            *filesystem_status->filesystems()) {
-        CHECK(fs->has_path());
+        ABSL_CHECK(fs->has_path());
         if (fs->path()->string_view() == "/") {
           if (fs->free_space() > 50ull * 1024ull * 1024ull * 1024ull) {
             enough_space = true;

@@ -11,7 +11,7 @@
 #include <thread>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/events/epoll.h"
@@ -76,7 +76,7 @@ void SenderThread() {
         static_cast<uint64_t>(monotonic_now.time_since_epoch().count()) &
         0xfffffffful);
 
-    PCHECK(sigqueue(pid, kSignalNumber, s) == 0);
+    ABSL_PCHECK(sigqueue(pid, kSignalNumber, s) == 0);
 
     if (monotonic_now > end_time) {
       break;
@@ -86,7 +86,7 @@ void SenderThread() {
   {
     sigval s;
     s.sival_int = 0;
-    PCHECK(sigqueue(pid, kQuitSignalNumber, s) == 0);
+    ABSL_PCHECK(sigqueue(pid, kQuitSignalNumber, s) == 0);
   }
   UnsetCurrentThreadRealtimePriority();
 }
@@ -101,7 +101,8 @@ void ReceiverThread() {
   sigaddset(&x, kSignalNumber);
   sigaddset(&x, kQuitSignalNumber);
 
-  PCHECK((signalfd_fd = signalfd(-1, &x, SFD_NONBLOCK | SFD_CLOEXEC)) >= 0);
+  ABSL_PCHECK((signalfd_fd = signalfd(-1, &x, SFD_NONBLOCK | SFD_CLOEXEC)) >=
+              0);
   chrono::nanoseconds max_wakeup_latency = chrono::nanoseconds(0);
 
   chrono::nanoseconds sum_latency = chrono::nanoseconds(0);
@@ -115,7 +116,7 @@ void ReceiverThread() {
     signalfd_siginfo si;
     const int ret =
         read(signalfd_fd, static_cast<void *>(&si), sizeof(signalfd_siginfo));
-    CHECK_EQ(ret, static_cast<int>(sizeof(signalfd_siginfo)));
+    ABSL_CHECK_EQ(ret, static_cast<int>(sizeof(signalfd_siginfo)));
 
     if (si.ssi_signo == kQuitSignalNumber) {
       epoll.Quit();
@@ -169,7 +170,7 @@ void ReceiverThread() {
           static_cast<int>(average_latency.count() / 1000),
           static_cast<int>(average_latency.count() % 1000));
 
-  PCHECK(close(signalfd_fd) == 0);
+  ABSL_PCHECK(close(signalfd_fd) == 0);
 }
 
 int Main(int /*argc*/, char ** /*argv*/) {

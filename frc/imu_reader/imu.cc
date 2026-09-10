@@ -4,7 +4,7 @@
 
 #include <numbers>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/util/crc32.h"
@@ -27,15 +27,15 @@ Imu::Imu(aos::ShmEventLoop *event_loop, double encoder_scalar)
       imu_sender_(event_loop_->MakeSender<frc::IMUValuesBatch>("/localizer")),
       encoder_scalar_(encoder_scalar) {
   imu_fd_ = open("/dev/adis16505", O_RDONLY | O_NONBLOCK);
-  PCHECK(imu_fd_ != -1) << ": Failed to open SPI device for IMU.";
+  ABSL_PCHECK(imu_fd_ != -1) << ": Failed to open SPI device for IMU.";
   aos::EPoll *epoll = event_loop_->epoll();
   epoll->OnReadable(imu_fd_, [this]() {
     uint8_t buf[kReadSize];
     ssize_t read_len = read(imu_fd_, buf, kReadSize);
     // TODO: Do we care about gracefully handling EAGAIN or anything else?
     // This should only get called when there is data.
-    PCHECK(read_len != -1);
-    CHECK_EQ(read_len, static_cast<ssize_t>(kReadSize))
+    ABSL_PCHECK(read_len != -1);
+    ABSL_CHECK_EQ(read_len, static_cast<ssize_t>(kReadSize))
         << ": Read incorrect number of bytes.";
 
     auto sender = imu_sender_.MakeBuilder();
@@ -94,7 +94,7 @@ flatbuffers::Offset<frc::IMUValues> Imu::ProcessReading(
   memcpy(&checksum, buf.data(), sizeof(checksum));
   buf = buf.subspan(4);
 
-  CHECK(buf.empty()) << "Have leftover bytes: " << buf.size();
+  ABSL_CHECK(buf.empty()) << "Have leftover bytes: " << buf.size();
 
   u_int32_t calculated_checksum = aos::ComputeCrc32(message.subspan(8, 38));
 
@@ -168,6 +168,6 @@ double Imu::ConvertValue16(absl::Span<const uint8_t> data,
   return static_cast<double>(value) * lsb_per_output;
 }
 
-Imu::~Imu() { PCHECK(0 == close(imu_fd_)); }
+Imu::~Imu() { ABSL_PCHECK(0 == close(imu_fd_)); }
 
 }  // namespace frc::imu

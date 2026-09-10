@@ -1,6 +1,8 @@
 #ifndef FRC_CONTROL_LOOPS_HYBRID_STATE_FEEDBACK_LOOP_CONVERTERS_H_
 #define FRC_CONTROL_LOOPS_HYBRID_STATE_FEEDBACK_LOOP_CONVERTERS_H_
 
+#include "absl/log/absl_check.h"
+
 #include "frc/control_loops/hybrid_state_feedback_loop.h"
 #include "frc/control_loops/state_feedback_loop_converters.h"
 #include "frc/control_loops/state_feedback_loop_static.h"
@@ -15,14 +17,14 @@ std::unique_ptr<StateFeedbackHybridPlantCoefficients<
     number_of_states, number_of_inputs, number_of_outputs>>
 MakeStateFeedbackHybridPlantCoefficients(
     const fbs::StateFeedbackHybridPlantCoefficients &coefficients) {
-  CHECK(coefficients.a_continuous() != nullptr);
-  CHECK(coefficients.b_continuous() != nullptr);
-  CHECK(coefficients.c() != nullptr);
-  CHECK(coefficients.d() != nullptr);
-  CHECK(coefficients.u_max() != nullptr);
-  CHECK(coefficients.u_min() != nullptr);
-  CHECK(coefficients.u_limit_coefficient() != nullptr);
-  CHECK(coefficients.u_limit_constant() != nullptr);
+  ABSL_CHECK(coefficients.a_continuous() != nullptr);
+  ABSL_CHECK(coefficients.b_continuous() != nullptr);
+  ABSL_CHECK(coefficients.c() != nullptr);
+  ABSL_CHECK(coefficients.d() != nullptr);
+  ABSL_CHECK(coefficients.u_max() != nullptr);
+  ABSL_CHECK(coefficients.u_min() != nullptr);
+  ABSL_CHECK(coefficients.u_limit_coefficient() != nullptr);
+  ABSL_CHECK(coefficients.u_limit_constant() != nullptr);
 
   return std::make_unique<StateFeedbackHybridPlantCoefficients<
       number_of_states, number_of_inputs, number_of_outputs>>(
@@ -45,9 +47,9 @@ std::unique_ptr<HybridKalmanCoefficients<number_of_states, number_of_inputs,
                                          number_of_outputs>>
 MakeHybridKalmanCoefficients(
     const fbs::HybridKalmanCoefficients &coefficients) {
-  CHECK(coefficients.q_continuous() != nullptr);
-  CHECK(coefficients.r_continuous() != nullptr);
-  CHECK(coefficients.p_steady_state() != nullptr);
+  ABSL_CHECK(coefficients.q_continuous() != nullptr);
+  ABSL_CHECK(coefficients.r_continuous() != nullptr);
+  ABSL_CHECK(coefficients.p_steady_state() != nullptr);
   return std::make_unique<HybridKalmanCoefficients<
       number_of_states, number_of_inputs, number_of_outputs>>(
       ToEigenOrDie<number_of_states, number_of_states>(
@@ -68,7 +70,7 @@ MakeHybridStateFeedbackLoop(
     const flatbuffers::Vector<
         flatbuffers::Offset<fbs::StateFeedbackHybridLoopCoefficients>>
         &coefficients) {
-  CHECK_LE(1u, coefficients.size());
+  ABSL_CHECK_LE(1u, coefficients.size());
   std::vector<std::unique_ptr<StateFeedbackHybridPlantCoefficients<
       number_of_states, number_of_inputs, number_of_outputs>>>
       plant_coefficients;
@@ -79,9 +81,9 @@ MakeHybridStateFeedbackLoop(
       number_of_states, number_of_inputs, number_of_outputs>>>
       observer_coefficients;
   for (const fbs::StateFeedbackHybridLoopCoefficients *loop : coefficients) {
-    CHECK(loop->has_plant());
-    CHECK(loop->has_controller());
-    CHECK(loop->has_observer());
+    ABSL_CHECK(loop->has_plant());
+    ABSL_CHECK(loop->has_controller());
+    ABSL_CHECK(loop->has_observer());
     plant_coefficients.emplace_back(
         MakeStateFeedbackHybridPlantCoefficients<
             number_of_states, number_of_inputs, number_of_outputs>(

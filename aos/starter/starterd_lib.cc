@@ -14,7 +14,7 @@
 
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "flatbuffers/buffer.h"
 #include "flatbuffers/flatbuffer_builder.h"
@@ -98,9 +98,9 @@ Starter::Starter(const aos::Configuration *event_loop_config,
   } else {
     for (const aos::Node *node : aos::configuration::GetNodes(config_msg_)) {
       const Channel *channel = StarterRpcChannelForNode(config_msg_, node);
-      CHECK(channel != nullptr) << ": Failed to find channel /aos for "
-                                << StarterRpc::GetFullyQualifiedName() << " on "
-                                << node->name()->string_view();
+      ABSL_CHECK(channel != nullptr) << ": Failed to find channel /aos for "
+                                     << StarterRpc::GetFullyQualifiedName()
+                                     << " on " << node->name()->string_view();
       if (!aos::configuration::ChannelIsReadableOnNode(channel,
                                                        event_loop_.node())) {
         LOG(INFO) << "StarterRpc channel "
@@ -125,7 +125,7 @@ Starter::Starter(const aos::Configuration *event_loop_config,
     if (aos::configuration::MultiNode(config_msg_)) {
       std::string_view current_node = event_loop_.node()->name()->string_view();
       for (const aos::Application *application : *applications) {
-        CHECK(application->has_nodes())
+        ABSL_CHECK(application->has_nodes())
             << ": Missing nodes on " << aos::FlatbufferToJson(application);
         for (const flatbuffers::String *node : *application->nodes()) {
           if (node->string_view() == current_node) {
@@ -196,7 +196,7 @@ void Starter::HandleStarterRpc(const StarterRpc &command) {
   LOG(INFO) << "Received " << aos::FlatbufferToJson(&command);
 
   if (command.has_nodes()) {
-    CHECK(aos::configuration::MultiNode(config_msg_));
+    ABSL_CHECK(aos::configuration::MultiNode(config_msg_));
     bool relevant_to_this_node = false;
     for (const flatbuffers::String *node : *command.nodes()) {
       if (node->string_view() == event_loop_.node()->name()->string_view()) {
@@ -340,7 +340,7 @@ Application *Starter::AddApplication(const aos::Application *application) {
 
 void Starter::Run() {
 #ifdef AOS_ARCHITECTURE_arm_frc
-  PCHECK(setuid(0) == 0) << "Failed to change user to root";
+  ABSL_PCHECK(setuid(0) == 0) << "Failed to change user to root";
 #endif
 
   for (auto &application : applications_) {
@@ -403,7 +403,7 @@ void Starter::SendStatus() {
 }
 
 void Starter::AddChannel(const aos::Channel *channel) {
-  CHECK(channel != nullptr);
+  ABSL_CHECK(channel != nullptr);
   std::unique_ptr<aos::ipc_lib::MemoryMappedQueue> queue =
       std::make_unique<aos::ipc_lib::MemoryMappedQueue>(
           shm_base_,

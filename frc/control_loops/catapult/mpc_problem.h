@@ -1,6 +1,6 @@
 #include "Eigen/Dense"
 #include "Eigen/Sparse"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/realtime.h"

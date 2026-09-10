@@ -1,3 +1,5 @@
+#include "absl/log/absl_check.h"
+
 #include "aos/configuration.h"
 #include "aos/events/event_loop_generated.h"
 #include "aos/events/logging/log_reader.h"
@@ -13,7 +15,7 @@ int main(int argc, char *argv[]) {
 
   const std::vector<aos::logger::LogFile> logfiles =
       aos::logger::SortParts(aos::logger::FindLogs(argc, argv));
-  CHECK(!logfiles.empty());
+  ABSL_CHECK(!logfiles.empty());
   const std::string logger_node = logfiles.at(0).logger_node;
   bool all_logs_from_same_node = true;
   for (const aos::logger::LogFile &log : logfiles) {
@@ -43,7 +45,7 @@ int main(int argc, char *argv[]) {
           : aos::configuration::GetNode(reader.configuration(), replay_node);
 
   std::unique_ptr<aos::EventLoop> can_event_loop;
-  CHECK(!absl::GetFlag(FLAGS_output_path).empty());
+  ABSL_CHECK(!absl::GetFlag(FLAGS_output_path).empty());
   std::unique_ptr<frc::can_logger::AscLogger> relogger;
 
   factory.GetNodeEventLoopFactory(node)->OnStartup([&relogger, &can_event_loop,

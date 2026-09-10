@@ -3,6 +3,7 @@
 #include <chrono>
 
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "opencv2/highgui.hpp"
 #include "third_party/apriltag/apriltag.h"
 #include "third_party/apriltag/apriltag_pose.h"
@@ -159,8 +160,8 @@ bool ApriltagDetector::UndistortDetection(apriltag_detection_t *det) const {
 double ApriltagDetector::ComputeDistortionFactor(
     const std::vector<cv::Point2f> &orig_corners,
     const std::vector<cv::Point2f> &corners) {
-  CHECK_EQ(orig_corners.size(), 4ul);
-  CHECK_EQ(corners.size(), 4ul);
+  ABSL_CHECK_EQ(orig_corners.size(), 4ul);
+  ABSL_CHECK_EQ(corners.size(), 4ul);
 
   double avg_distance = 0.0;
   for (size_t i = 0; i < corners.size(); i++) {
@@ -198,17 +199,17 @@ void ApriltagDetector::HandleImage(const vision::CameraImage &image,
   const aos::monotonic_clock::time_point start_time =
       aos::monotonic_clock::now();
 
-  CHECK(image.format() == image_format_)
+  ABSL_CHECK(image.format() == image_format_)
       << ": Image format doesn't match --image_format="
       << absl::GetFlag(FLAGS_image_format);
-  CHECK(image.has_data());
-  CHECK_EQ(gpu_detector_.width(), static_cast<size_t>(image.cols()));
-  CHECK_EQ(gpu_detector_.height(), static_cast<size_t>(image.rows()));
+  ABSL_CHECK(image.has_data());
+  ABSL_CHECK_EQ(gpu_detector_.width(), static_cast<size_t>(image.cols()));
+  ABSL_CHECK_EQ(gpu_detector_.height(), static_cast<size_t>(image.rows()));
   uint8_t *image_device = nullptr;
   CHECK_CUDA(cudaHostGetDevicePointer(
       &image_device,
       static_cast<void *>(const_cast<uint8_t *>(image.data()->data())), 0));
-  CHECK_NE(image_device, nullptr);
+  ABSL_CHECK_NE(image_device, nullptr);
 
   gpu_detector_.Detect(image.data()->data(), image_device);
   image_size_ = cv::Size(image.cols(), image.rows());
@@ -350,7 +351,7 @@ void ApriltagDetector::HandleImage(const vision::CameraImage &image,
       double best_pose_error = (use_pose_1 ? pose_error_1 : pose_error_2);
       double secondary_pose_error = (use_pose_1 ? pose_error_2 : pose_error_1);
 
-      CHECK_NE(best_pose_error, std::numeric_limits<double>::infinity())
+      ABSL_CHECK_NE(best_pose_error, std::numeric_limits<double>::infinity())
           << "Got no valid pose estimations, this should not be possible.";
       double pose_error_ratio = best_pose_error / secondary_pose_error;
 

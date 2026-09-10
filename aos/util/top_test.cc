@@ -15,7 +15,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/reflection.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "flatbuffers/string.h"
 #include "flatbuffers/vector.h"
@@ -39,12 +39,12 @@ void SetThreadName(const std::string &name) {
 
 void WaitForCpuConsumption(pid_t pid) {
   std::optional<ProcStat> start_stat = ReadProcStat(pid);
-  CHECK(start_stat.has_value());
+  ABSL_CHECK(start_stat.has_value());
   uint64_t start_ticks =
       start_stat->user_mode_ticks + start_stat->kernel_mode_ticks;
   while (true) {
     std::optional<ProcStat> cur_stat = ReadProcStat(pid);
-    CHECK(cur_stat.has_value());
+    ABSL_CHECK(cur_stat.has_value());
     uint64_t cur_ticks =
         cur_stat->user_mode_ticks + cur_stat->kernel_mode_ticks;
     if (cur_ticks > start_ticks + 10) {
@@ -197,7 +197,7 @@ TEST_F(TopTest, TopProcesses) {
   // processes than exist.
   for (int ii = 0; ii < kNProcesses; ++ii) {
     const pid_t pid = fork();
-    PCHECK(pid >= 0);
+    ABSL_PCHECK(pid >= 0);
     if (pid == 0) {
       LOG(INFO) << "In child process.";
       while (true) {
@@ -208,7 +208,7 @@ TEST_F(TopTest, TopProcesses) {
       }
       LOG(FATAL) << "This should be unreachable.";
     } else {
-      CHECK_NE(0, pid) << "The compiler is messing with you.";
+      ABSL_CHECK_NE(0, pid) << "The compiler is messing with you.";
       children.push_back(pid);
     }
   }

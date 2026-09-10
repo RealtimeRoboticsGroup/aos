@@ -10,7 +10,7 @@
 #include <ostream>
 #include <thread>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/types/span.h"
 #include "gtest/gtest.h"
@@ -44,7 +44,7 @@ QueueRacer::QueueRacer(LocklessQueue queue, int num_threads,
       expected_send_results_({LocklessQueueSender::Result::GOOD}),
       check_writes_and_reads_(true),
       initial_queue_index_(0) {
-  CHECK_LT(1u, std::thread::hardware_concurrency())
+  ABSL_CHECK_LT(1u, std::thread::hardware_concurrency())
       << "Queue racing must be done on a multi-core executor.";
   Reset();
 }
@@ -58,7 +58,7 @@ QueueRacer::QueueRacer(LocklessQueue queue,
       expected_send_results_(config.expected_send_results),
       check_writes_and_reads_(config.check_writes_and_reads),
       initial_queue_index_(config.initial_queue_index) {
-  CHECK_LT(1u, std::thread::hardware_concurrency())
+  ABSL_CHECK_LT(1u, std::thread::hardware_concurrency())
       << "Queue racing must be done on a multi-core executor.";
   Reset();
 }
@@ -300,7 +300,7 @@ void QueueRacer::RunIteration(bool race_reads, int write_wrap_count,
                               write_wrap_count]() {
       LocklessQueueSender sender =
           LocklessQueueSender::Make(queue_, channel_storage_duration_).value();
-      CHECK_GE(sender.size(), sizeof(ThreadPlusCount));
+      ABSL_CHECK_GE(sender.size(), sizeof(ThreadPlusCount));
 
       // Signal that we are ready to start sending.
       t.ready.Set();
@@ -324,7 +324,8 @@ void QueueRacer::RunIteration(bool race_reads, int write_wrap_count,
               found_nonzero = true;
             }
           }
-          CHECK(!found_nonzero) << ": Somebody else is writing to our buffer";
+          ABSL_CHECK(!found_nonzero)
+              << ": Somebody else is writing to our buffer";
         }
 
         ThreadPlusCount tpc;
@@ -352,9 +353,9 @@ void QueueRacer::RunIteration(bool race_reads, int write_wrap_count,
                             sizeof(ThreadPlusCount))),
                         nullptr, nullptr, nullptr);
 
-        CHECK(std::find(expected_send_results_.begin(),
-                        expected_send_results_.end(),
-                        result) != expected_send_results_.end())
+        ABSL_CHECK(std::find(expected_send_results_.begin(),
+                             expected_send_results_.end(),
+                             result) != expected_send_results_.end())
             << "Unexpected send result: " << result;
 
         // Blank out the new scratch buffer, to catch other people using it.

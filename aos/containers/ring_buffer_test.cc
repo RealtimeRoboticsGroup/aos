@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "gtest/gtest.h"
 
 namespace aos::testing {
@@ -22,20 +22,20 @@ struct TrackedInt {
 
   TrackedInt(const TrackedInt &other) = delete;
   TrackedInt(TrackedInt &&other) : value(other.value), state(other.state) {
-    CHECK(other.state != State::kDestroyed);
+    ABSL_CHECK(other.state != State::kDestroyed);
     other.state = State::kNoValue;
     ++instance_count;
   }
   ~TrackedInt() {
-    CHECK(state != State::kDestroyed);
+    ABSL_CHECK(state != State::kDestroyed);
     state = State::kDestroyed;
     --instance_count;
-    CHECK_GE(instance_count, 0);
+    ABSL_CHECK_GE(instance_count, 0);
   }
   TrackedInt &operator=(const TrackedInt &other) = delete;
   TrackedInt &operator=(TrackedInt &&other) {
-    CHECK(state != State::kDestroyed);
-    CHECK(other.state != State::kDestroyed);
+    ABSL_CHECK(state != State::kDestroyed);
+    ABSL_CHECK(other.state != State::kDestroyed);
     state = other.state;
     other.state = State::kNoValue;
     value = other.value;
@@ -43,7 +43,7 @@ struct TrackedInt {
   }
 
   operator int() const {
-    CHECK(state == State::kAlive);
+    ABSL_CHECK(state == State::kAlive);
     return value;
   }
 };
@@ -52,10 +52,12 @@ int TrackedInt::instance_count;
 
 struct TrackedIntTracker {
   TrackedIntTracker() {
-    CHECK_EQ(0, TrackedInt::instance_count) << ": Instances alive before test";
+    ABSL_CHECK_EQ(0, TrackedInt::instance_count)
+        << ": Instances alive before test";
   }
   ~TrackedIntTracker() {
-    CHECK_EQ(0, TrackedInt::instance_count) << ": Instances alive after test";
+    ABSL_CHECK_EQ(0, TrackedInt::instance_count)
+        << ": Instances alive after test";
   }
 };
 

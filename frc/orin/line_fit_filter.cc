@@ -4,6 +4,8 @@
 #include <cub/warp/warp_merge_sort.cuh>
 #include <iomanip>
 
+#include "absl/log/absl_check.h"
+
 #include "frc/orin/cuda.h"
 
 // #define DEBUG_BLOB_NUMBER 401
@@ -1208,7 +1210,7 @@ void FitQuads(
   const size_t kBlocks = num_extents;
   VLOG(1) << "Spawning with " << kThreads << " threads, and " << kBlocks
           << " blocks for " << num_extents << " blob_ids";
-  CHECK_EQ(nmaxima, kNMaxima)
+  ABSL_CHECK_EQ(nmaxima, kNMaxima)
       << ": Kernel is compiled and optimized for a fixed nmaxima, please "
          "recompile if you want to change it.";
   DoFitQuads<<<kBlocks, kThreads, 0, stream->get()>>>(

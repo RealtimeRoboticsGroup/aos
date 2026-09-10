@@ -36,7 +36,7 @@
 #include <fstream>
 #include <string>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 namespace ceres::examples {
@@ -103,8 +103,8 @@ template <typename Pose, typename Constraint, typename MapAllocator,
 bool ReadG2oFile(const std::string &filename,
                  std::map<int, Pose, std::less<int>, MapAllocator> *poses,
                  std::vector<Constraint, VectorAllocator> *constraints) {
-  CHECK(poses != NULL);
-  CHECK(constraints != NULL);
+  ABSL_CHECK(poses != NULL);
+  ABSL_CHECK(constraints != NULL);
 
   poses->clear();
   constraints->clear();

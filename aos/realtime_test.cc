@@ -7,7 +7,7 @@
 #include "absl/base/internal/raw_logging.h"
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/synchronization/mutex.h"
 #include "gtest/gtest.h"
@@ -111,24 +111,24 @@ TEST(RealtimeTest, GetSetSchedulingPolicy) {
 // Malloc hooks don't work with asan/msan.
 #if !defined(AOS_SANITIZE_MEMORY) && !defined(AOS_SANITIZE_ADDRESS)
 
-// Tests that CHECK statements give real error messages rather than die on
+// Tests that ABSL_CHECK statements give real error messages rather than die on
 // malloc.
 TEST(RealtimeDeathTest, Check) {
   EXPECT_DEATH(
       {
         ScopedRealtime rt;
-        CHECK_EQ(1, 2) << ": Numbers aren't equal.";
+        ABSL_CHECK_EQ(1, 2) << ": Numbers aren't equal.";
       },
       "Numbers aren't equal");
   EXPECT_DEATH(
       {
         ScopedRealtime rt;
-        CHECK_GT(1, 2) << ": Cute error message";
+        ABSL_CHECK_GT(1, 2) << ": Cute error message";
       },
       "Cute error message");
 }
 
-// Tests that CHECK statements give real error messages rather than die on
+// Tests that ABSL_CHECK statements give real error messages rather than die on
 // malloc.
 TEST(RealtimeDeathTest, Fatal) {
   EXPECT_DEATH(
@@ -348,7 +348,7 @@ TEST(CpuSetTest, MakeCpusetFromCpus) {
 }  // namespace aos::testing
 
 // We need a special gtest main to force die_on_malloc support on.  Otherwise
-// we can't test CHECK statements before turning die_on_malloc on globally.
+// we can't test ABSL_CHECK statements before turning die_on_malloc on globally.
 GTEST_API_ int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
 

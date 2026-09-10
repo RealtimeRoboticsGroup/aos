@@ -9,7 +9,7 @@
 #include <thread>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/condition.h"
@@ -102,7 +102,7 @@ void ReceiverThread(WakeupData *data) {
     {
       MutexLocker locker(&data->mutex);
       while (data->wakeup_time == monotonic_clock::epoch() && !data->done) {
-        CHECK(!data->condition.Wait());
+        ABSL_CHECK(!data->condition.Wait());
       }
 
       const monotonic_clock::time_point monotonic_now = monotonic_clock::now();

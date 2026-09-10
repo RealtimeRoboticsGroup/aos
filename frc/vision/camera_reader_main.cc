@@ -1,4 +1,5 @@
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 
 #include "aos/events/shm_event_loop.h"
 #include "aos/init.h"
@@ -27,7 +28,7 @@ void CameraReaderMain() {
   const frc::constants::ConstantsFetcher<CameraConstants> calibration_data(
       &event_loop);
 
-  CHECK(calibration_data.constants().has_default_camera_stream_settings())
+  ABSL_CHECK(calibration_data.constants().has_default_camera_stream_settings())
       << ": Must provide camera stream settings for camera initialization.";
 
   const CameraStreamSettings *const stream_settings =

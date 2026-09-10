@@ -4,7 +4,7 @@
 #include <shared_mutex>
 #include <thread>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/containers/ring_buffer.h"
@@ -21,7 +21,7 @@ MultiChannelQueueRacer::MultiChannelQueueRacer(int num_threads,
               .num_pinners = 10,
               .queue_size = 10000,
               .message_data_size = 128} {
-  CHECK_LT(1u, std::thread::hardware_concurrency())
+  ABSL_CHECK_LT(1u, std::thread::hardware_concurrency())
       << "Queue racing must be done on a multi-core executor.";
   for (size_t index = 0; index < num_threads_; ++index) {
     queues_.emplace_back(config_);
@@ -50,11 +50,11 @@ void MultiChannelQueueRacer::Run() {
         if (message_index % 100 == 0) {
           VLOG(2) << "Sending " << message_index << " on " << thread_index;
         }
-        CHECK(LocklessQueueSender::Result::GOOD ==
-              sender.Send(0, aos::monotonic_clock::min_time,
-                          aos::realtime_clock::min_time,
-                          aos::monotonic_clock::min_time, 0xffffffff, boot_uuid,
-                          nullptr, nullptr, nullptr));
+        ABSL_CHECK(LocklessQueueSender::Result::GOOD ==
+                   sender.Send(0, aos::monotonic_clock::min_time,
+                               aos::realtime_clock::min_time,
+                               aos::monotonic_clock::min_time, 0xffffffff,
+                               boot_uuid, nullptr, nullptr, nullptr));
       }
     });
     thread_start_event.Wait();
@@ -141,7 +141,7 @@ void MultiChannelQueueRacer::Run() {
             // be minimal performance penalty to checking against ourselves as
             // well.
             for (const auto &other : readers) {
-              CHECK_LT(other.recent_send_times[0], receive_time)
+              ABSL_CHECK_LT(other.recent_send_times[0], receive_time)
                   << "thread " << thread_index << " queue "
                   << reader.last_queue_index.index();
             }
@@ -160,7 +160,7 @@ void MultiChannelQueueRacer::Run() {
   queue_readers.join();
 #if defined(AOS_IPC_LIB_TEST_CAN_RELIABLY_TRIGGER_RACES)
   // Check that we actually received a non-trivial number of messages.
-  CHECK_LT(num_messages_ / 100 + 1, good_reads);
+  ABSL_CHECK_LT(num_messages_ / 100 + 1, good_reads);
 #endif
 }
 }  // namespace aos::ipc_lib

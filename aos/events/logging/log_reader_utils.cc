@@ -1,5 +1,6 @@
 #include "aos/events/logging/log_reader_utils.h"
 
+#include "absl/log/absl_check.h"
 #include "absl/strings/str_join.h"
 
 namespace {
@@ -50,9 +51,9 @@ void HandleChannelsInApplications(
   if (options.get_senders) {
     if (report.has_senders()) {
       for (const aos::timing::Sender *sender : *report.senders()) {
-        CHECK_LT(0, sender->channel_index());
-        CHECK_LT(static_cast<size_t>(sender->channel_index()),
-                 logged_configuration->channels()->size());
+        ABSL_CHECK_LT(0, sender->channel_index());
+        ABSL_CHECK_LT(static_cast<size_t>(sender->channel_index()),
+                      logged_configuration->channels()->size());
         results->senders.insert(sender->channel_index());
       }
     }
@@ -61,9 +62,9 @@ void HandleChannelsInApplications(
   if (options.get_watchers) {
     if (report.has_watchers()) {
       for (const aos::timing::Watcher *watcher : *report.watchers()) {
-        CHECK_LT(0, watcher->channel_index());
-        CHECK_LT(static_cast<size_t>(watcher->channel_index()),
-                 factory->configuration()->channels()->size());
+        ABSL_CHECK_LT(0, watcher->channel_index());
+        ABSL_CHECK_LT(static_cast<size_t>(watcher->channel_index()),
+                      factory->configuration()->channels()->size());
         results->watchers.insert(watcher->channel_index());
       }
     }
@@ -72,9 +73,9 @@ void HandleChannelsInApplications(
   if (options.get_fetchers) {
     if (report.has_fetchers()) {
       for (const aos::timing::Fetcher *fetcher : *report.fetchers()) {
-        CHECK_LT(0, fetcher->channel_index());
-        CHECK_LT(static_cast<size_t>(fetcher->channel_index()),
-                 factory->configuration()->channels()->size());
+        ABSL_CHECK_LT(0, fetcher->channel_index());
+        ABSL_CHECK_LT(static_cast<size_t>(fetcher->channel_index()),
+                      factory->configuration()->channels()->size());
         results->fetchers.insert(fetcher->channel_index());
       }
     }

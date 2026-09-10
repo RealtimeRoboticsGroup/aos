@@ -5,7 +5,7 @@
 
 #include <cstddef>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
 
@@ -52,24 +52,24 @@ struct ParsedRange {
 
 ParsedRange ParseRange(std::string_view string) {
   static constexpr std::string_view kBytes = "bytes ";
-  CHECK(string.substr(0, kBytes.size()) == kBytes)
+  ABSL_CHECK(string.substr(0, kBytes.size()) == kBytes)
       << ": Invalid range: " << string;
   string = string.substr(kBytes.size());
 
   const size_t dash = string.find('-');
-  CHECK(dash != string.npos) << ": Invalid range: " << string;
+  ABSL_CHECK(dash != string.npos) << ": Invalid range: " << string;
   const size_t slash = string.find('/');
-  CHECK(slash != string.npos) << ": Invalid range: " << string;
+  ABSL_CHECK(slash != string.npos) << ": Invalid range: " << string;
 
   ParsedRange result;
   const std::string_view start_string = string.substr(0, dash);
-  CHECK(absl::SimpleAtoi(start_string, &result.start))
+  ABSL_CHECK(absl::SimpleAtoi(start_string, &result.start))
       << ": failed to parse " << start_string << " from " << string;
   const std::string_view end_string = string.substr(dash + 1, slash - dash - 1);
-  CHECK(absl::SimpleAtoi(end_string, &result.end))
+  ABSL_CHECK(absl::SimpleAtoi(end_string, &result.end))
       << ": failed to parse " << end_string << " from " << string;
   const std::string_view total_string = string.substr(slash + 1);
-  CHECK(absl::SimpleAtoi(total_string, &result.total_size))
+  ABSL_CHECK(absl::SimpleAtoi(total_string, &result.total_size))
       << ": failed to parse " << total_string << " from " << string;
   return result;
 }
@@ -83,7 +83,7 @@ ObjectName ParseUrl(std::string_view url) {
   }
   url = url.substr(kS3.size());
   const size_t slash = url.find('/');
-  CHECK(slash != url.npos) << ": Invalid S3 URL: " << url;
+  ABSL_CHECK(slash != url.npos) << ": Invalid S3 URL: " << url;
   ObjectName result;
   result.bucket = url.substr(0, slash);
   result.key = url.substr(slash + 1);
@@ -119,7 +119,7 @@ size_t S3Fetcher::Read(uint8_t *begin, uint8_t *end) {
       // Got all of what the caller wants, done now.
       return total_read;
     }
-    CHECK_EQ(current_chunk_.size(), 0u)
+    ABSL_CHECK_EQ(current_chunk_.size(), 0u)
         << ": Should have already copied this data out";
     if (end_of_object_) {
       VLOG(1) << "At end after " << total_read;
@@ -128,7 +128,8 @@ size_t S3Fetcher::Read(uint8_t *begin, uint8_t *end) {
     }
 
     // Read data from the last request.
-    CHECK(get_next_chunk_.valid()) << ": Should have a request started already";
+    ABSL_CHECK(get_next_chunk_.valid())
+        << ": Should have a request started already";
     Aws::S3::Model::GetObjectOutcome get_outcome = get_next_chunk_.get();
     if (!get_outcome.IsSuccess()) {
       if (next_byte_to_request_ == 0 &&
@@ -137,7 +138,7 @@ size_t S3Fetcher::Read(uint8_t *begin, uint8_t *end) {
         VLOG(1) << "At beginning of empty file";
         // This is what happens with an empty file.
         // TODO(Brian): Do a List operation to verify it's actually empty?
-        CHECK_EQ(0u, total_read);
+        ABSL_CHECK_EQ(0u, total_read);
         end_of_object_ = true;
         return 0;
       }
@@ -147,7 +148,7 @@ size_t S3Fetcher::Read(uint8_t *begin, uint8_t *end) {
     const ParsedRange content_range =
         ParseRange(get_outcome.GetResult().GetContentRange());
     const uint64_t content_bytes = content_range.end - content_range.start + 1;
-    CHECK_EQ(content_range.start, next_byte_to_request_);
+    ABSL_CHECK_EQ(content_range.start, next_byte_to_request_);
     next_byte_to_request_ += kChunkSize;
 
     auto &stream = get_outcome.GetResult().GetBody();
@@ -156,7 +157,7 @@ size_t S3Fetcher::Read(uint8_t *begin, uint8_t *end) {
     const size_t stream_read = stream.gcount();
     VLOG(1) << "got " << stream_read << " from "
             << get_outcome.GetResult().GetContentRange();
-    CHECK_EQ(stream_read, content_bytes);
+    ABSL_CHECK_EQ(stream_read, content_bytes);
     if (content_range.end + 1 == content_range.total_size) {
       end_of_object_ = true;
       continue;
@@ -192,8 +193,9 @@ std::vector<std::pair<std::string, size_t>> ListS3Objects(
       GetS3Client().ListObjectsV2(list_request);
   std::vector<std::pair<std::string, size_t>> result;
   while (true) {
-    CHECK(list_outcome.IsSuccess()) << ": Listing objects for " << url
-                                    << " failed: " << list_outcome.GetError();
+    ABSL_CHECK(list_outcome.IsSuccess())
+        << ": Listing objects for " << url
+        << " failed: " << list_outcome.GetError();
     auto &list_result = list_outcome.GetResult();
     for (const Aws::S3::Model::Object &object : list_result.GetContents()) {
       result.emplace_back(

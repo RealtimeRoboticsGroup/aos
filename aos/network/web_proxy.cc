@@ -1,7 +1,7 @@
 #include "aos/network/web_proxy.h"
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/log/vlog_is_on.h"
 
@@ -139,7 +139,7 @@ static int ReFdListen(int fd, int flags, fd_h *fh, void *arg) {
 }
 
 static void ReFdClose(int fd) {
-  CHECK(global_epoll != nullptr);
+  ABSL_CHECK(global_epoll != nullptr);
   global_epoll->DeleteFd(fd);
 }
 
@@ -161,7 +161,7 @@ WebProxy::WebProxy(aos::EventLoop *event_loop, aos::EPoll *epoll,
           ::seasocks::Logger::Level::Info)),
       websocket_handler_(new WebsocketHandler(
           &server_, event_loop, store_history, per_channel_buffer_size_bytes)) {
-  CHECK(!global_epoll);
+  ABSL_CHECK(!global_epoll);
   global_epoll = epoll;
 
   re_fd_set_listen_callback(&ReFdListen);
@@ -179,10 +179,10 @@ WebProxy::WebProxy(aos::EventLoop *event_loop, aos::EPoll *epoll,
   });
 
   server_.addWebSocketHandler("/ws", websocket_handler_);
-  CHECK(server_.startListening(absl::GetFlag(FLAGS_proxy_port)));
+  ABSL_CHECK(server_.startListening(absl::GetFlag(FLAGS_proxy_port)));
 
   epoll->OnReadable(server_.fd(), [this]() {
-    CHECK(::seasocks::Server::PollResult::Continue == server_.poll(0));
+    ABSL_CHECK(::seasocks::Server::PollResult::Continue == server_.poll(0));
   });
 
   if (&internal_epoll_ == epoll) {
@@ -209,8 +209,8 @@ WebProxy::WebProxy(aos::EventLoop *event_loop, aos::EPoll *epoll,
 WebProxy::~WebProxy() {
   epoll_->DeleteFd(server_.fd());
   server_.terminate();
-  CHECK(::seasocks::Server::PollResult::Terminated == server_.poll(0));
-  CHECK(global_epoll == epoll_);
+  ABSL_CHECK(::seasocks::Server::PollResult::Terminated == server_.poll(0));
+  ABSL_CHECK(global_epoll == epoll_);
   global_epoll = nullptr;
 }
 
@@ -270,7 +270,7 @@ void Subscriber::RunIteration(bool fetch_new) {
   }
   for (auto &conn : channels_) {
     std::shared_ptr<ScopedDataChannel> rtc_channel = conn.first.lock();
-    CHECK(rtc_channel) << "data_channel was destroyed too early.";
+    ABSL_CHECK(rtc_channel) << "data_channel was destroyed too early.";
     ChannelInformation *channel_data = &conn.second;
     if (channel_data->transfer_method == TransferMethod::SUBSAMPLE) {
       SkipToLastMessage(channel_data);
@@ -336,7 +336,7 @@ void Subscriber::RemoveListener(
 
 std::shared_ptr<struct mbuf> Subscriber::NextBuffer(
     ChannelInformation *channel) {
-  CHECK(channel != nullptr);
+  ABSL_CHECK(channel != nullptr);
   if (message_buffer_.empty()) {
     return nullptr;
   }
@@ -381,13 +381,13 @@ std::shared_ptr<struct mbuf> Subscriber::NextBuffer(
       return nullptr;
     }
   }
-  CHECK_EQ(latest_index - earliest_index + 1, message_buffer_.size())
+  ABSL_CHECK_EQ(latest_index - earliest_index + 1, message_buffer_.size())
       << "Inconsistent queue indices.";
   const size_t packets_in_message =
       message_buffer_[channel->current_queue_index - earliest_index]
           .data.size();
-  CHECK_LT(0u, packets_in_message);
-  CHECK_LT(channel->next_packet_number, packets_in_message);
+  ABSL_CHECK_LT(0u, packets_in_message);
+  ABSL_CHECK_LT(channel->next_packet_number, packets_in_message);
 
   std::shared_ptr<struct mbuf> original_data =
       message_buffer_[channel->current_queue_index - earliest_index].data.at(
@@ -405,7 +405,7 @@ std::shared_ptr<struct mbuf> Subscriber::NextBuffer(
 }
 
 void Subscriber::SkipToLastMessage(ChannelInformation *channel) {
-  CHECK(channel != nullptr);
+  ABSL_CHECK(channel != nullptr);
   if (message_buffer_.empty() ||
       channel->current_queue_index == message_buffer_.back().index) {
     return;
@@ -569,7 +569,7 @@ void ApplicationConnection::LocalCandidate(
 void ApplicationConnection::OnDataChannel(
     std::shared_ptr<ScopedDataChannel> channel) {
   if (channel->label() == std::string_view("signalling")) {
-    CHECK(!channel_);
+    ABSL_CHECK(!channel_);
     channel_ = channel;
 
     channel_->set_on_message(
@@ -668,7 +668,8 @@ void ApplicationConnection::HandleSignallingData(
                                  channel_index]() {
         std::shared_ptr<ScopedDataChannel> data_channel =
             data_channel_weak_ptr.lock();
-        CHECK(data_channel) << ": Subscriber got destroyed before we started.";
+        ABSL_CHECK(data_channel)
+            << ": Subscriber got destroyed before we started.";
         // Raw pointer inside the subscriber so we don't have a circular
         // reference.  AddListener will close it.
         subscribers_[channel_index]->AddListener(data_channel, transfer_method);
@@ -678,7 +679,8 @@ void ApplicationConnection::HandleSignallingData(
       data_channel->set_on_close([subscriber, data_channel_weak_ptr]() {
         std::shared_ptr<ScopedDataChannel> data_channel =
             data_channel_weak_ptr.lock();
-        CHECK(data_channel) << ": Subscriber got destroyed before we finished.";
+        ABSL_CHECK(data_channel)
+            << ": Subscriber got destroyed before we finished.";
         subscriber->RemoveListener(data_channel);
       });
 

@@ -13,7 +13,7 @@
 #include <string_view>
 #include <vector>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
@@ -70,11 +70,11 @@ std::optional<MediaDevice> MediaDevice::Initialize(int index) {
 }
 
 void MediaDevice::Update() {
-  PCHECK(ioctl(fd_.get(), MEDIA_IOC_DEVICE_INFO, &device_info_) == 0);
+  ABSL_PCHECK(ioctl(fd_.get(), MEDIA_IOC_DEVICE_INFO, &device_info_) == 0);
 
   struct media_v2_topology topology;
   std::memset(&topology, 0, sizeof(topology));
-  PCHECK(ioctl(fd_.get(), MEDIA_IOC_G_TOPOLOGY, &topology) == 0);
+  ABSL_PCHECK(ioctl(fd_.get(), MEDIA_IOC_G_TOPOLOGY, &topology) == 0);
   VLOG(1) << "Got " << topology.num_entities << " entries";
   VLOG(1) << "Got " << topology.num_interfaces << " interfaces";
   VLOG(1) << "Got " << topology.num_pads << " pads";
@@ -93,7 +93,7 @@ void MediaDevice::Update() {
   std::vector<struct media_v2_link> links;
   links.resize(topology.num_links);
   topology.ptr_links = reinterpret_cast<uint64_t>(links.data());
-  PCHECK(ioctl(fd_.get(), MEDIA_IOC_G_TOPOLOGY, &topology) == 0);
+  ABSL_PCHECK(ioctl(fd_.get(), MEDIA_IOC_G_TOPOLOGY, &topology) == 0);
 
   entities_.reserve(entities.size());
   for (const struct media_v2_entity &entity : entities) {
@@ -110,7 +110,7 @@ void MediaDevice::Update() {
         break;
       }
     }
-    CHECK(found_entity != nullptr);
+    ABSL_CHECK(found_entity != nullptr);
     pads_.emplace_back();
     pads_.back().id_ = pad.id;
     pads_.back().flags_ = pad.flags;
@@ -133,7 +133,7 @@ void MediaDevice::Update() {
           break;
         }
       }
-      CHECK(found_interface != nullptr) << ": Failed to find interface";
+      ABSL_CHECK(found_interface != nullptr) << ": Failed to find interface";
       bool found = false;
       for (Entity &entity : entities_) {
         if (entity.id() == link.sink_id) {
@@ -145,7 +145,7 @@ void MediaDevice::Update() {
           break;
         }
       }
-      CHECK(found);
+      ABSL_CHECK(found);
 
     } else if ((link.flags & MEDIA_LNK_FL_LINK_TYPE) ==
                MEDIA_LNK_FL_DATA_LINK) {
@@ -162,8 +162,8 @@ void MediaDevice::Update() {
           found_sink_pad = &pad;
         }
       }
-      CHECK(found_source_pad != nullptr);
-      CHECK(found_sink_pad != nullptr);
+      ABSL_CHECK(found_source_pad != nullptr);
+      ABSL_CHECK(found_sink_pad != nullptr);
 
       links_.back().source_ = found_source_pad;
       links_.back().sink_ = found_sink_pad;
@@ -216,14 +216,14 @@ void Pad::Log() const {
 
 void Pad::SetSubdevCrop(uint32_t width, uint32_t height) {
   int fd = open(entity()->device().c_str(), O_RDWR);
-  PCHECK(fd >= 0);
+  ABSL_PCHECK(fd >= 0);
 
   struct v4l2_subdev_selection selection;
   std::memset(&selection, 0, sizeof(selection));
   selection.which = V4L2_SUBDEV_FORMAT_ACTIVE;
   selection.pad = index();
 
-  PCHECK(ioctl(fd, VIDIOC_SUBDEV_G_SELECTION, &selection) == 0)
+  ABSL_PCHECK(ioctl(fd, VIDIOC_SUBDEV_G_SELECTION, &selection) == 0)
       << ": Failed to set " << entity()->device();
 
   selection.target = V4L2_SEL_TGT_CROP;
@@ -232,21 +232,21 @@ void Pad::SetSubdevCrop(uint32_t width, uint32_t height) {
   selection.r.width = width;
   selection.r.height = height;
 
-  PCHECK(ioctl(fd, VIDIOC_SUBDEV_S_SELECTION, &selection) == 0);
+  ABSL_PCHECK(ioctl(fd, VIDIOC_SUBDEV_S_SELECTION, &selection) == 0);
   LOG(INFO) << "Setting " << entity()->name() << " pad " << index()
             << " crop to (0, 0) " << width << "x" << height;
 }
 void Pad::SetSubdevFormat(uint32_t width, uint32_t height, uint32_t code) {
   VLOG(1) << "Opening " << entity()->device();
   int fd = open(entity()->device().c_str(), O_RDWR);
-  PCHECK(fd >= 0);
+  ABSL_PCHECK(fd >= 0);
 
   struct v4l2_subdev_format format;
   std::memset(&format, 0, sizeof(format));
   format.pad = index();
   format.which = V4L2_SUBDEV_FORMAT_ACTIVE;
 
-  PCHECK(ioctl(fd, VIDIOC_SUBDEV_G_FMT, &format) == 0);
+  ABSL_PCHECK(ioctl(fd, VIDIOC_SUBDEV_G_FMT, &format) == 0);
 
   VLOG(1) << format.format.width << ", " << format.format.height << ", "
           << format.format.code << " field " << format.format.field
@@ -268,21 +268,21 @@ void Pad::SetSubdevFormat(uint32_t width, uint32_t height, uint32_t code) {
             << " format to " << width << "x" << height << " code 0x" << std::hex
             << code;
 
-  PCHECK(ioctl(fd, VIDIOC_SUBDEV_S_FMT, &format) == 0);
+  ABSL_PCHECK(ioctl(fd, VIDIOC_SUBDEV_S_FMT, &format) == 0);
 
-  PCHECK(close(fd) == 0);
+  ABSL_PCHECK(close(fd) == 0);
 }
 
 void Entity::SetFormat(uint32_t width, uint32_t height, uint32_t code) {
   VLOG(1) << "Opening " << device();
   int fd = open(device().c_str(), O_RDWR);
-  PCHECK(fd >= 0);
+  ABSL_PCHECK(fd >= 0);
 
   struct v4l2_format format;
   std::memset(&format, 0, sizeof(format));
   format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
 
-  PCHECK(ioctl(fd, VIDIOC_G_FMT, &format) == 0);
+  ABSL_PCHECK(ioctl(fd, VIDIOC_G_FMT, &format) == 0);
 
   VLOG(1) << "width " << format.fmt.pix_mp.width;
   VLOG(1) << "height " << format.fmt.pix_mp.height;
@@ -308,7 +308,7 @@ void Entity::SetFormat(uint32_t width, uint32_t height, uint32_t code) {
 
   // TODO(austin): This is probably V4L2_PIX_FMT_YUV422P specific...  We really
   // want to extract bytes/pixel.
-  CHECK((code == V4L2_PIX_FMT_YUV422P) || (code == V4L2_PIX_FMT_YUYV));
+  ABSL_CHECK((code == V4L2_PIX_FMT_YUV422P) || (code == V4L2_PIX_FMT_YUYV));
   format.fmt.pix_mp.plane_fmt[0].sizeimage = width * height * 2;
   format.fmt.pix_mp.plane_fmt[0].bytesperline = width;
 
@@ -319,9 +319,9 @@ void Entity::SetFormat(uint32_t width, uint32_t height, uint32_t code) {
 
   LOG(INFO) << "Setting " << name() << " to " << width << "x" << height
             << " code 0x" << std::hex << code;
-  PCHECK(ioctl(fd, VIDIOC_S_FMT, &format) == 0);
+  ABSL_PCHECK(ioctl(fd, VIDIOC_S_FMT, &format) == 0);
 
-  PCHECK(close(fd) == 0);
+  ABSL_PCHECK(close(fd) == 0);
 }
 
 void MediaDevice::Reset(Link *link) {
@@ -335,7 +335,7 @@ void MediaDevice::Reset(Link *link) {
   link_desc.sink.index = link->sink()->index();
   link_desc.sink.flags = 0;
   link_desc.flags = link->flags() & (~MEDIA_LNK_FL_ENABLED);
-  PCHECK(ioctl(fd_.get(), MEDIA_IOC_SETUP_LINK, &link_desc) == 0);
+  ABSL_PCHECK(ioctl(fd_.get(), MEDIA_IOC_SETUP_LINK, &link_desc) == 0);
 
   link->flags_ = link_desc.flags;
 }
@@ -351,7 +351,7 @@ void MediaDevice::Enable(Link *link) {
   link_desc.sink.index = link->sink()->index();
   link_desc.sink.flags = 0;
   link_desc.flags = link->flags() | MEDIA_LNK_FL_ENABLED;
-  PCHECK(ioctl(fd_.get(), MEDIA_IOC_SETUP_LINK, &link_desc) == 0);
+  ABSL_PCHECK(ioctl(fd_.get(), MEDIA_IOC_SETUP_LINK, &link_desc) == 0);
 
   link->flags_ = link_desc.flags;
 }
@@ -370,8 +370,8 @@ Link *MediaDevice::FindLink(std::string_view source, int source_pad_index,
   Entity *source_entity = FindEntity(source);
   Entity *sink_entity = FindEntity(sink);
 
-  CHECK(source_entity != nullptr) << ": Failed to find source " << source;
-  CHECK(sink_entity != nullptr) << ": Failed to find sink " << sink;
+  ABSL_CHECK(source_entity != nullptr) << ": Failed to find source " << source;
+  ABSL_CHECK(sink_entity != nullptr) << ": Failed to find sink " << sink;
 
   Pad *source_pad = source_entity->pads()[source_pad_index];
   Pad *sink_pad = sink_entity->pads()[sink_pad_index];

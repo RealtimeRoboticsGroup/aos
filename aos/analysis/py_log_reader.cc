@@ -26,7 +26,7 @@
 #include <string>
 #include <vector>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/types/span.h"
 
@@ -113,7 +113,7 @@ int LogReader_init(LogReaderType *self, PyObject *args, PyObject *kwds) {
   }
 
   LogReaderTools *tools = self->tools;
-  CHECK(tools != nullptr);
+  ABSL_CHECK(tools != nullptr);
   tools->reader = std::make_unique<aos::logger::LogReader>(log_file_name);
   tools->reader->Register();
 
@@ -143,7 +143,7 @@ PyObject *LogReader_get_data_for_channel(LogReaderType *self, PyObject *args,
   }
 
   LogReaderTools *tools = self->tools;
-  CHECK(tools != nullptr);
+  ABSL_CHECK(tools != nullptr);
 
   if (!tools->processed) {
     PyErr_SetString(PyExc_RuntimeError,
@@ -192,7 +192,7 @@ PyObject *LogReader_subscribe(LogReaderType *self, PyObject *args,
   }
 
   LogReaderTools *tools = self->tools;
-  CHECK(tools != nullptr);
+  ABSL_CHECK(tools != nullptr);
 
   if (tools->processed) {
     PyErr_SetString(PyExc_RuntimeError,
@@ -222,7 +222,7 @@ PyObject *LogReader_subscribe(LogReaderType *self, PyObject *args,
 static PyObject *LogReader_process(LogReaderType *self,
                                    PyObject *Py_UNUSED(ignored)) {
   LogReaderTools *tools = self->tools;
-  CHECK(tools != nullptr);
+  ABSL_CHECK(tools != nullptr);
 
   if (tools->processed) {
     PyErr_SetString(PyExc_RuntimeError, "process() may only be called once.");
@@ -239,7 +239,7 @@ static PyObject *LogReader_process(LogReaderType *self,
 static PyObject *LogReader_configuration(LogReaderType *self,
                                          PyObject *Py_UNUSED(ignored)) {
   LogReaderTools *tools = self->tools;
-  CHECK(tools != nullptr);
+  ABSL_CHECK(tools != nullptr);
 
   // I have no clue if the Configuration that we get from the log reader is in a
   // contiguous chunk of memory, and I'm too lazy to either figure it out or

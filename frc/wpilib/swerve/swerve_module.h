@@ -1,6 +1,8 @@
 #ifndef FRC_WPILIB_SWERVE_SWERVE_MODULE_H_
 #define FRC_WPILIB_SWERVE_SWERVE_MODULE_H_
 
+#include "absl/log/absl_check.h"
+
 #include "frc/control_loops/swerve/swerve_drivetrain_can_position_static.h"
 #include "frc/control_loops/swerve/swerve_drivetrain_output_generated.h"
 #include "frc/control_loops/swerve/swerve_drivetrain_position_static.h"
@@ -85,7 +87,7 @@ struct SwerveModule {
 // Represents all the modules in a swerve drivetrain.
 struct SwerveModules {
   void PopulateFalconsVector(std::vector<std::shared_ptr<TalonFX>> *falcons) {
-    CHECK(falcons != nullptr);
+    ABSL_CHECK(falcons != nullptr);
     falcons->push_back(front_left->rotation);
     falcons->push_back(front_left->translation);
 

@@ -1,6 +1,7 @@
 #include <algorithm>
 
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -103,7 +104,8 @@ class PongSender {
           aos::Sender<examples::Pong>::Builder builder = sender_.MakeBuilder();
           examples::Pong::Builder pong_builder =
               builder.MakeBuilder<examples::Pong>();
-          CHECK_EQ(builder.Send(pong_builder.Finish()), RawSender::Error::kOk);
+          ABSL_CHECK_EQ(builder.Send(pong_builder.Finish()),
+                        RawSender::Error::kOk);
         },
         chrono::milliseconds(10));
   }
@@ -122,7 +124,8 @@ class PingSender {
           aos::Sender<examples::Ping>::Builder builder = sender_.MakeBuilder();
           examples::Ping::Builder ping_builder =
               builder.MakeBuilder<examples::Ping>();
-          CHECK_EQ(builder.Send(ping_builder.Finish()), RawSender::Error::kOk);
+          ABSL_CHECK_EQ(builder.Send(ping_builder.Finish()),
+                        RawSender::Error::kOk);
         },
         chrono::milliseconds(10));
   }
@@ -883,7 +886,7 @@ TEST_P(MultinodeLoggerTest, MultiNodeMutateCallbackReplacement) {
                                const TimestampedMessage &) -> SharedSpan {
         aos::fbs::AlignedVectorAllocator allocator;
         aos::fbs::Builder<aos::examples::PongStatic> pong_static(&allocator);
-        CHECK(pong_static->FromFlatbuffer(*pong));
+        ABSL_CHECK(pong_static->FromFlatbuffer(*pong));
 
         pong_static->set_value(pong_count + 101);
         ++pong_count;
@@ -978,7 +981,7 @@ TEST_P(MultinodeLoggerTest, MultiNodeMutateCallbackDelete) {
                                const TimestampedMessage &) -> SharedSpan {
         aos::fbs::AlignedVectorAllocator allocator;
         aos::fbs::Builder<aos::examples::PongStatic> pong_static(&allocator);
-        CHECK(pong_static->FromFlatbuffer(*pong));
+        ABSL_CHECK(pong_static->FromFlatbuffer(*pong));
 
         pong_static->set_value(pong_count + 101);
         ++pong_count;
@@ -1081,7 +1084,7 @@ TEST_P(MultinodeLoggerTest, MultiNodeMutateCallbackNotForwarded) {
                                const TimestampedMessage &) -> SharedSpan {
         aos::fbs::AlignedVectorAllocator allocator;
         aos::fbs::Builder<aos::examples::PingStatic> ping_static(&allocator);
-        CHECK(ping_static->FromFlatbuffer(*ping));
+        ABSL_CHECK(ping_static->FromFlatbuffer(*ping));
 
         ping_static->set_value(ping_count + 101);
         ++ping_count;
@@ -2562,8 +2565,8 @@ TEST_P(MultinodeLoggerTest, RemoteReboot) {
   const UUID pi2_boot0 = UUID::Random();
   const UUID pi2_boot1 = UUID::Random();
   {
-    CHECK_EQ(pi1_index_, 0u);
-    CHECK_EQ(pi2_index_, 1u);
+    ABSL_CHECK_EQ(pi1_index_, 0u);
+    ABSL_CHECK_EQ(pi2_index_, 1u);
 
     time_converter_.set_boot_uuid(pi1_index_, 0, pi1_boot0);
     time_converter_.set_boot_uuid(pi2_index_, 0, pi2_boot0);
@@ -2615,7 +2618,7 @@ TEST_P(MultinodeLoggerTest, RemoteReboot) {
   for (const std::string &file : pi1_reboot_logfiles_) {
     std::optional<SizePrefixedFlatbufferVector<LogFileHeader>> log_header =
         ReadHeader(file);
-    CHECK(log_header);
+    ABSL_CHECK(log_header);
     if (log_header->message().has_configuration()) {
       continue;
     }
@@ -2943,8 +2946,8 @@ TEST_P(MultinodeLoggerTest, RemoteRebootOnlyTimestamps) {
   const UUID pi2_boot0 = UUID::Random();
   const UUID pi2_boot1 = UUID::Random();
   {
-    CHECK_EQ(pi1_index_, 0u);
-    CHECK_EQ(pi2_index_, 1u);
+    ABSL_CHECK_EQ(pi1_index_, 0u);
+    ABSL_CHECK_EQ(pi2_index_, 1u);
 
     time_converter_.set_boot_uuid(pi1_index_, 0, pi1_boot0);
     time_converter_.set_boot_uuid(pi2_index_, 0, pi2_boot0);
@@ -2995,7 +2998,7 @@ TEST_P(MultinodeLoggerTest, RemoteRebootOnlyTimestamps) {
   for (const std::string &file : filenames) {
     std::optional<SizePrefixedFlatbufferVector<LogFileHeader>> log_header =
         ReadHeader(file);
-    CHECK(log_header);
+    ABSL_CHECK(log_header);
 
     if (log_header->message().has_configuration()) {
       continue;
@@ -3057,7 +3060,7 @@ TEST_P(MultinodeLoggerTest, RemoteRebootOnlyTimestamps) {
 
       const std::optional<SizePrefixedFlatbufferVector<MessageHeader>> msg =
           ReadNthMessage(file, 0);
-      CHECK(msg);
+      ABSL_CHECK(msg);
 
       EXPECT_TRUE(msg->message().has_monotonic_sent_time());
       EXPECT_TRUE(msg->message().has_monotonic_remote_time());
@@ -3729,9 +3732,9 @@ TEST(MultinodeRebootLoggerTest, StartTimeBeforeData) {
   const UUID pi2_boot1 = UUID::Random();
   const UUID pi3_boot0 = UUID::Random();
   {
-    CHECK_EQ(pi1_index, 0u);
-    CHECK_EQ(pi2_index, 1u);
-    CHECK_EQ(pi3_index, 2u);
+    ABSL_CHECK_EQ(pi1_index, 0u);
+    ABSL_CHECK_EQ(pi2_index, 1u);
+    ABSL_CHECK_EQ(pi3_index, 2u);
 
     time_converter.set_boot_uuid(pi1_index, 0, pi1_boot0);
     time_converter.set_boot_uuid(pi2_index, 0, pi2_boot0);
@@ -3902,9 +3905,9 @@ TEST(MultinodeRebootLoggerTest,
   const UUID pi2_boot1 = UUID::Random();
   const UUID pi3_boot0 = UUID::Random();
   {
-    CHECK_EQ(pi1_index, 0u);
-    CHECK_EQ(pi2_index, 1u);
-    CHECK_EQ(pi3_index, 2u);
+    ABSL_CHECK_EQ(pi1_index, 0u);
+    ABSL_CHECK_EQ(pi2_index, 1u);
+    ABSL_CHECK_EQ(pi3_index, 2u);
 
     time_converter.set_boot_uuid(pi1_index, 0, pi1_boot0);
     time_converter.set_boot_uuid(pi2_index, 0, pi2_boot0);
@@ -4078,9 +4081,9 @@ TEST(MultinodeRebootLoggerTest, RebootStartStopTimes) {
   const std::string kLogfile3_1 =
       aos::testing::TestTmpDir() + "/logs/multi_logfile3/";
   {
-    CHECK_EQ(pi1_index, 0u);
-    CHECK_EQ(pi2_index, 1u);
-    CHECK_EQ(pi3_index, 2u);
+    ABSL_CHECK_EQ(pi1_index, 0u);
+    ABSL_CHECK_EQ(pi2_index, 1u);
+    ABSL_CHECK_EQ(pi3_index, 2u);
 
     time_converter.AddNextTimestamp(
         distributed_clock::epoch(),
@@ -4229,8 +4232,8 @@ TEST(MissingDirectionTest, OneDirection) {
   std::vector<std::string> filenames;
 
   {
-    CHECK_EQ(pi1_index, 0u);
-    CHECK_EQ(pi2_index, 1u);
+    ABSL_CHECK_EQ(pi1_index, 0u);
+    ABSL_CHECK_EQ(pi2_index, 1u);
 
     time_converter.AddNextTimestamp(
         distributed_clock::epoch(),
@@ -4306,8 +4309,8 @@ TEST(MissingDirectionTest, OneDirectionAfterReboot) {
   std::vector<std::string> filenames;
 
   {
-    CHECK_EQ(pi1_index, 0u);
-    CHECK_EQ(pi2_index, 1u);
+    ABSL_CHECK_EQ(pi1_index, 0u);
+    ABSL_CHECK_EQ(pi2_index, 1u);
 
     time_converter.AddNextTimestamp(
         distributed_clock::epoch(),
@@ -4379,8 +4382,8 @@ TEST(MissingDirectionTest, OneDirectionAfterRebootReliable) {
   std::vector<std::string> filenames;
 
   {
-    CHECK_EQ(pi1_index, 0u);
-    CHECK_EQ(pi2_index, 1u);
+    ABSL_CHECK_EQ(pi1_index, 0u);
+    ABSL_CHECK_EQ(pi2_index, 1u);
 
     time_converter.AddNextTimestamp(
         distributed_clock::epoch(),
@@ -4452,8 +4455,8 @@ TEST(MissingDirectionTest, OneDirectionAfterRebootMixedCase1) {
   std::vector<std::string> filenames;
 
   {
-    CHECK_EQ(pi1_index, 0u);
-    CHECK_EQ(pi2_index, 1u);
+    ABSL_CHECK_EQ(pi1_index, 0u);
+    ABSL_CHECK_EQ(pi2_index, 1u);
 
     time_converter.AddNextTimestamp(
         distributed_clock::epoch(),
@@ -4526,8 +4529,8 @@ TEST(MissingDirectionTest, OneDirectionAfterRebootMixedCase2) {
   std::vector<std::string> filenames;
 
   {
-    CHECK_EQ(pi1_index, 0u);
-    CHECK_EQ(pi2_index, 1u);
+    ABSL_CHECK_EQ(pi1_index, 0u);
+    ABSL_CHECK_EQ(pi2_index, 1u);
 
     time_converter.AddNextTimestamp(
         distributed_clock::epoch(),
@@ -4584,8 +4587,8 @@ TEST(MissingDirectionTest, OneDirectionAfterRebootMixedCase2) {
 TEST_P(MultinodeLoggerTest, OneDirectionTimeDrift) {
   std::vector<std::string> filenames;
 
-  CHECK_EQ(pi1_index_, 0u);
-  CHECK_EQ(pi2_index_, 1u);
+  ABSL_CHECK_EQ(pi1_index_, 0u);
+  ABSL_CHECK_EQ(pi2_index_, 1u);
 
   time_converter_.AddNextTimestamp(
       distributed_clock::epoch(),
@@ -4702,10 +4705,12 @@ TEST(MultinodeLoggerLoopTest, PopWithEmptyFilter) {
     NodeEventLoopFactory *const pi2 =
         event_loop_factory.GetNodeEventLoopFactory("pi2");
 
-    CHECK_EQ(kPi1Index, configuration::GetNodeIndex(
-                            event_loop_factory.configuration(), pi1->node()));
-    CHECK_EQ(kPi2Index, configuration::GetNodeIndex(
-                            event_loop_factory.configuration(), pi2->node()));
+    ABSL_CHECK_EQ(kPi1Index,
+                  configuration::GetNodeIndex(
+                      event_loop_factory.configuration(), pi1->node()));
+    ABSL_CHECK_EQ(kPi2Index,
+                  configuration::GetNodeIndex(
+                      event_loop_factory.configuration(), pi2->node()));
 
     // Verify the pi2 node has rebooted.
     EXPECT_EQ(event_loop_factory.GetNodeEventLoopFactory("pi1")->boot_uuid(),
@@ -4722,7 +4727,7 @@ TEST(MultinodeLoggerLoopTest, PopWithEmptyFilter) {
       aos::Sender<examples::Pong>::Builder builder = pong_sender.MakeBuilder();
       examples::Pong::Builder pong_builder =
           builder.MakeBuilder<examples::Pong>();
-      CHECK_EQ(builder.Send(pong_builder.Finish()), RawSender::Error::kOk);
+      ABSL_CHECK_EQ(builder.Send(pong_builder.Finish()), RawSender::Error::kOk);
     }
 
     // Run the event loop long enough to get entirely through the remote's 1st
@@ -4748,7 +4753,7 @@ TEST(MultinodeLoggerLoopTest, PopWithEmptyFilter) {
       aos::Sender<examples::Pong>::Builder builder = pong_sender.MakeBuilder();
       examples::Pong::Builder pong_builder =
           builder.MakeBuilder<examples::Pong>();
-      CHECK_EQ(builder.Send(pong_builder.Finish()), RawSender::Error::kOk);
+      ABSL_CHECK_EQ(builder.Send(pong_builder.Finish()), RawSender::Error::kOk);
     }
 
     // Run the event loop long enough to get entirely through the remote's 2st
@@ -4790,8 +4795,8 @@ TEST(MultinodeLoggerLoopTest, PopWithEmptyFilter) {
 TEST_P(MultinodeLoggerTest, StartOneNodeBeforeOther) {
   std::vector<std::string> filenames;
 
-  CHECK_EQ(pi1_index_, 0u);
-  CHECK_EQ(pi2_index_, 1u);
+  ABSL_CHECK_EQ(pi1_index_, 0u);
+  ABSL_CHECK_EQ(pi2_index_, 1u);
 
   time_converter_.AddNextTimestamp(
       distributed_clock::epoch(),
@@ -4839,7 +4844,7 @@ TEST_P(MultinodeLoggerTest, StartOneNodeBeforeOther) {
       test_event_loop = replay_node->MakeEventLoop("test_reader");
 
       // Check that we didn't boot until at least t=0.
-      CHECK_LE(monotonic_clock::epoch(), replay_node->monotonic_now());
+      ABSL_CHECK_LE(monotonic_clock::epoch(), replay_node->monotonic_now());
 
       test_event_loop->OnRun([&test_event_loop]() {
         // Check that we didn't boot until at least t=0.
@@ -4907,7 +4912,7 @@ TEST(MultinodeLoggerLoopTest, Loop) {
       aos::Sender<examples::Ping>::Builder builder = ping_sender.MakeBuilder();
       examples::Ping::Builder ping_builder =
           builder.MakeBuilder<examples::Ping>();
-      CHECK_EQ(builder.Send(ping_builder.Finish()), RawSender::Error::kOk);
+      ABSL_CHECK_EQ(builder.Send(ping_builder.Finish()), RawSender::Error::kOk);
     }
 
     // Wait a while so there's enough data to let the worst case be rather
@@ -5155,7 +5160,8 @@ TEST(MultinodeLoggerLoopTest, PreviousBootData) {
               pong_sender.MakeBuilder();
           examples::Pong::Builder pong_builder =
               builder.MakeBuilder<examples::Pong>();
-          CHECK_EQ(builder.Send(pong_builder.Finish()), RawSender::Error::kOk);
+          ABSL_CHECK_EQ(builder.Send(pong_builder.Finish()),
+                        RawSender::Error::kOk);
         });
       });
 
@@ -5170,7 +5176,7 @@ TEST(MultinodeLoggerLoopTest, PreviousBootData) {
       aos::Sender<examples::Pong>::Builder builder = pong_sender.MakeBuilder();
       examples::Pong::Builder pong_builder =
           builder.MakeBuilder<examples::Pong>();
-      CHECK_EQ(builder.Send(pong_builder.Finish()), RawSender::Error::kOk);
+      ABSL_CHECK_EQ(builder.Send(pong_builder.Finish()), RawSender::Error::kOk);
     }
 
     event_loop_factory.RunFor(chrono::seconds(10));
@@ -5193,8 +5199,8 @@ TEST(MultinodeLoggerLoopTest, PreviousBootData) {
                 pong_sender.MakeBuilder();
             examples::Pong::Builder pong_builder =
                 builder.MakeBuilder<examples::Pong>();
-            CHECK_EQ(builder.Send(pong_builder.Finish()),
-                     RawSender::Error::kOk);
+            ABSL_CHECK_EQ(builder.Send(pong_builder.Finish()),
+                          RawSender::Error::kOk);
           },
           chrono::milliseconds(10));
 
@@ -5255,7 +5261,8 @@ TEST(MultinodeLoggerLoopTest, StartDisconnected) {
             pong_sender.MakeBuilder();
         examples::Pong::Builder pong_builder =
             builder.MakeBuilder<examples::Pong>();
-        CHECK_EQ(builder.Send(pong_builder.Finish()), RawSender::Error::kOk);
+        ABSL_CHECK_EQ(builder.Send(pong_builder.Finish()),
+                      RawSender::Error::kOk);
       });
 
       event_loop_factory.RunFor(chrono::seconds(1000));
@@ -5269,7 +5276,7 @@ TEST(MultinodeLoggerLoopTest, StartDisconnected) {
       aos::Sender<examples::Pong>::Builder builder = pong_sender.MakeBuilder();
       examples::Pong::Builder pong_builder =
           builder.MakeBuilder<examples::Pong>();
-      CHECK_EQ(builder.Send(pong_builder.Finish()), RawSender::Error::kOk);
+      ABSL_CHECK_EQ(builder.Send(pong_builder.Finish()), RawSender::Error::kOk);
     }
 
     event_loop_factory.RunFor(chrono::seconds(10));
@@ -5288,7 +5295,8 @@ TEST(MultinodeLoggerLoopTest, StartDisconnected) {
               pong_sender.MakeBuilder();
           examples::Pong::Builder pong_builder =
               builder.MakeBuilder<examples::Pong>();
-          CHECK_EQ(builder.Send(pong_builder.Finish()), RawSender::Error::kOk);
+          ABSL_CHECK_EQ(builder.Send(pong_builder.Finish()),
+                        RawSender::Error::kOk);
         },
         chrono::milliseconds(10));
 
@@ -5531,14 +5539,14 @@ TEST(MultinodeLoggerLoopTest, ChannelNetworkDelayEffects) {
       aos::Sender<examples::Pong>::Builder builder = pong_sender1.MakeBuilder();
       examples::Pong::Builder pong_builder =
           builder.MakeBuilder<examples::Pong>();
-      CHECK_EQ(builder.Send(pong_builder.Finish()), RawSender::Error::kOk);
+      ABSL_CHECK_EQ(builder.Send(pong_builder.Finish()), RawSender::Error::kOk);
     }
 
     {
       aos::Sender<examples::Pong>::Builder builder = pong_sender2.MakeBuilder();
       examples::Pong::Builder pong_builder =
           builder.MakeBuilder<examples::Pong>();
-      CHECK_EQ(builder.Send(pong_builder.Finish()), RawSender::Error::kOk);
+      ABSL_CHECK_EQ(builder.Send(pong_builder.Finish()), RawSender::Error::kOk);
     }
   });
 
@@ -5727,7 +5735,7 @@ TEST_P(MultinodeLoggerLoopMaxNetworkDelayTest, MaxNetworkDelay) {
       aos::Sender<examples::Pong>::Builder builder = pong_sender1.MakeBuilder();
       examples::Pong::Builder pong_builder =
           builder.MakeBuilder<examples::Pong>();
-      CHECK_EQ(builder.Send(pong_builder.Finish()), RawSender::Error::kOk);
+      ABSL_CHECK_EQ(builder.Send(pong_builder.Finish()), RawSender::Error::kOk);
     };
 
     // Get the /atest1 channel for per-channel network delay configuration.

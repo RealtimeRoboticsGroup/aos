@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 
 #include "aos/events/logging/logfile_sorting.h"
 #include "aos/events/logging/logfile_utils.h"
@@ -25,7 +26,7 @@ int Main(int argc, char **argv) {
 
   // Haven't tested this on a single node log, and don't really see a need to
   // right now.  The higher layers just work.
-  CHECK(configuration::MultiNode(config));
+  ABSL_CHECK(configuration::MultiNode(config));
 
   // Now, build up all the TimestampMapper classes to read and sort the data.
   std::vector<std::unique_ptr<TimestampMapper>> mappers;
@@ -47,7 +48,7 @@ int Main(int argc, char **argv) {
     }
   }
 
-  CHECK(node_mapper != nullptr)
+  ABSL_CHECK(node_mapper != nullptr)
       << ": Failed to find node " << absl::GetFlag(FLAGS_node);
 
   // Hook the peers up so data gets matched.
@@ -67,8 +68,8 @@ int Main(int argc, char **argv) {
   LOG(INFO) << "Reading all data for " << node->name()->string_view();
   const size_t node_index = configuration::GetNodeIndex(config, node);
   TimestampMapper *timestamp_mapper = mappers[node_index].get();
-  CHECK(timestamp_mapper != nullptr);
-  CHECK_EQ(timestamp_mapper, node_mapper);
+  ABSL_CHECK(timestamp_mapper != nullptr);
+  ABSL_CHECK_EQ(timestamp_mapper, node_mapper);
 
   while (true) {
     TimestampedMessage *m = CheckExpected(timestamp_mapper->Front());

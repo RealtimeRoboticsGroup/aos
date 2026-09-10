@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "gtest/gtest.h"
 
 #include "aos/analysis/in_process_plotter.h"
@@ -40,7 +41,7 @@ class SplineTest : public ::testing::Test {
         spline4_(control_points_),
         spline6_(Spline4To6(control_points_)) {
     if (absl::GetFlag(FLAGS_plot)) {
-      CHECK(plotter_);
+      ABSL_CHECK(plotter_);
       plotter_->Title(TestName());
     }
   }

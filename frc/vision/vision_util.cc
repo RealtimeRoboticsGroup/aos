@@ -1,6 +1,6 @@
 #include "frc/vision/vision_util.h"
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 namespace frc::vision {
@@ -8,7 +8,7 @@ namespace frc::vision {
 const frc::vision::calibration::CameraCalibration *FindCameraCalibration(
     const frc::vision::CameraConstants &calibration_data,
     std::string_view node_name, int camera_number) {
-  CHECK(calibration_data.has_calibration());
+  ABSL_CHECK(calibration_data.has_calibration());
   for (const frc::vision::calibration::CameraCalibration *candidate :
        *calibration_data.calibration()) {
     if (candidate->node_name()->string_view() != node_name ||

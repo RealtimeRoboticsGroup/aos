@@ -3,7 +3,7 @@
 #include <numbers>
 
 #include "Eigen/Dense"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "opencv2/aruco.hpp"
 #include "opencv2/aruco/charuco.hpp"

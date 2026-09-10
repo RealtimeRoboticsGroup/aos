@@ -9,6 +9,8 @@
 #include <filesystem>
 #include <string>
 
+#include "absl/log/absl_check.h"
+
 #include "aos/libc/aos_strsignal.h"
 #include "aos/mutex/mutex.h"
 #include "aos/testing/test_shm.h"
@@ -180,7 +182,7 @@ void DoRun(Shared *shared) {
               WTERMSIG(status), aos_strsignal(WTERMSIG(status)));
       fputs(output.c_str(), stderr);
     } else {
-      CHECK(WIFSTOPPED(status));
+      ABSL_CHECK(WIFSTOPPED(status));
       Die("Test %s was stopped.\n", (*test)[0]);
     }
 

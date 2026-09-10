@@ -1,5 +1,6 @@
 #include "aos/events/logging/buffer_encoder_param_test.h"
 
+#include "absl/log/absl_check.h"
 #include "gmock/gmock.h"
 
 #include "aos/testing/tmpdir.h"
@@ -79,7 +80,7 @@ TEST_P(BufferEncoderTest, RoundTrip) {
       // Eventually we'll get here, once the decoder is really sure it's done.
       if (read_result == 0) {
         // Sanity check the math in the test code.
-        CHECK_EQ(total_decoded_size, TotalSize(decoded_buffers));
+        ABSL_CHECK_EQ(total_decoded_size, TotalSize(decoded_buffers));
         // Bail out because we're done.
         break;
       }

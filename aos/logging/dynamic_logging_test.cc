@@ -4,7 +4,7 @@
 #include <memory>
 #include <ostream>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "flatbuffers/buffer.h"
 #include "flatbuffers/flatbuffer_builder.h"
@@ -54,7 +54,7 @@ TEST_F(DynamicLoggingTest, TestVLog) {
             message.MakeBuilder<DynamicLogCommand>();
         builder.add_name(name_str);
         builder.add_vlog_level(log_level);
-        CHECK_EQ(message.Send(builder.Finish()), RawSender::Error::kOk);
+        ABSL_CHECK_EQ(message.Send(builder.Finish()), RawSender::Error::kOk);
         --log_level;
         if (log_level >= 0) {
           timer_handler->Schedule(event_loop_send_->monotonic_now() +

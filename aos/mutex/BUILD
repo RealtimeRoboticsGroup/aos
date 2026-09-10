@@ -19,7 +19,7 @@ cc_library(
         "//aos/ipc_lib:aos_sync",
         "//aos/type_traits",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -36,6 +36,6 @@ cc_test(
         "//aos/time",
         "//aos/util:death_test_log_implementation",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )

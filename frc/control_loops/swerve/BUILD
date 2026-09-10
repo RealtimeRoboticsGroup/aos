@@ -146,7 +146,7 @@ cc_binary(
         "//aos:init",
         "//aos/util:file",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
         "@symengine",
@@ -428,7 +428,7 @@ cc_binary(
         ":eigen_dynamics",
         "//third_party/python",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -450,7 +450,7 @@ cc_library(
         "//frc/control_loops:jacobian",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -490,7 +490,7 @@ cc_library(
         ":motors",
         "//aos/util:math",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 

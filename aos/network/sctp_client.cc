@@ -10,7 +10,7 @@
 #include <string_view>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/network/sctp_lib.h"
@@ -38,15 +38,16 @@ SctpClient::SctpClient(std::string_view remote_host, int remote_port,
     initmsg.sinit_max_instreams = streams;
     // Max timeout in milliseconds for the INIT packet.
     initmsg.sinit_max_init_timeo = absl::GetFlag(FLAGS_sinit_max_init_timeout);
-    PCHECK(setsockopt(fd(), IPPROTO_SCTP, SCTP_INITMSG, &initmsg,
-                      sizeof(struct sctp_initmsg)) == 0);
+    ABSL_PCHECK(setsockopt(fd(), IPPROTO_SCTP, SCTP_INITMSG, &initmsg,
+                           sizeof(struct sctp_initmsg)) == 0);
   }
 
   {
     // Turn off the NAGLE algorithm so the timestamps heading back across the
     // network arrive promptly.
     int on = 1;
-    PCHECK(setsockopt(fd(), IPPROTO_SCTP, SCTP_NODELAY, &on, sizeof(int)) == 0);
+    ABSL_PCHECK(
+        setsockopt(fd(), IPPROTO_SCTP, SCTP_NODELAY, &on, sizeof(int)) == 0);
   }
 }
 

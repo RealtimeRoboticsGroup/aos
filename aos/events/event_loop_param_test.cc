@@ -7,7 +7,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/reflection.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -47,9 +47,9 @@ void AbstractEventLoopTest::VerifyBuffers(
   std::unordered_set<int> in_sender;
   for (const Sender<TestMessage> &sender : senders) {
     const int this_buffer = sender.buffer_index();
-    CHECK_GE(this_buffer, 0);
-    CHECK_LT(this_buffer, number_buffers);
-    CHECK(in_sender.insert(this_buffer).second) << ": " << this_buffer;
+    ABSL_CHECK_GE(this_buffer, 0);
+    ABSL_CHECK_LT(this_buffer, number_buffers);
+    ABSL_CHECK(in_sender.insert(this_buffer).second) << ": " << this_buffer;
   }
 
   if (read_method() != ReadMethod::PIN) {
@@ -65,13 +65,13 @@ void AbstractEventLoopTest::VerifyBuffers(
       continue;
     }
     const int this_buffer = fetcher.context().buffer_index;
-    CHECK_GE(this_buffer, 0);
-    CHECK_LT(this_buffer, number_buffers);
-    CHECK(in_sender.count(this_buffer) == 0) << ": " << this_buffer;
+    ABSL_CHECK_GE(this_buffer, 0);
+    ABSL_CHECK_LT(this_buffer, number_buffers);
+    ABSL_CHECK(in_sender.count(this_buffer) == 0) << ": " << this_buffer;
     const auto insert_result = fetcher_values.insert(
         std::make_pair(fetcher.get()->value(), this_buffer));
     if (!insert_result.second) {
-      CHECK_EQ(this_buffer, insert_result.first->second);
+      ABSL_CHECK_EQ(this_buffer, insert_result.first->second);
     }
   }
 }
@@ -123,7 +123,7 @@ TEST_P(AbstractEventLoopTest, BasicStatic) {
     aos::Sender<TestMessageStatic>::StaticBuilder msg =
         sender.MakeStaticBuilder();
     msg->set_value(200);
-    CHECK(msg.builder()->Verify());
+    ABSL_CHECK(msg.builder()->Verify());
     msg.CheckOk(msg.Send());
   });
 
@@ -153,7 +153,7 @@ TEST_P(AbstractEventLoopTest, StaticBuilderMoveConstructor) {
 
   loop1->OnRun([this, &moved_to_builder]() {
     moved_to_builder.value()->set_value(200);
-    CHECK(moved_to_builder.value().builder()->Verify());
+    ABSL_CHECK(moved_to_builder.value().builder()->Verify());
     moved_to_builder.value().CheckOk(moved_to_builder.value().Send());
     this->Exit();
   });
@@ -1281,7 +1281,7 @@ TEST_P(AbstractEventLoopDeathTest, SetRuntimeAffinity) {
       continue;
     }
   }
-  CHECK_NE(first_cpu, -1) << ": Default affinity has no CPUs?";
+  ABSL_CHECK_NE(first_cpu, -1) << ": Default affinity has no CPUs?";
 
   auto loop = MakePrimary();
   EXPECT_EQ(EventLoop::DefaultAffinity(), loop->runtime_affinity());

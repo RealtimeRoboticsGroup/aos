@@ -10,7 +10,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/reflection.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
 #include "flatbuffers/string.h"

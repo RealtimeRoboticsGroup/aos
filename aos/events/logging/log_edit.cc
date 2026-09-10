@@ -2,6 +2,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/usage.h"
+#include "absl/log/absl_check.h"
 
 #include "aos/configuration.h"
 #include "aos/events/logging/log_reader.h"
@@ -48,11 +49,12 @@ int main(int argc, char **argv) {
         header(fbb.Release());
 
     const std::string orig_path = absl::GetFlag(FLAGS_logfile) + ".orig";
-    PCHECK(rename(absl::GetFlag(FLAGS_logfile).c_str(), orig_path.c_str()) ==
-           0);
+    ABSL_PCHECK(
+        rename(absl::GetFlag(FLAGS_logfile).c_str(), orig_path.c_str()) == 0);
 
     aos::logger::SpanReader span_reader(orig_path);
-    CHECK(!span_reader.ReadMessage().empty()) << ": Empty header, aborting";
+    ABSL_CHECK(!span_reader.ReadMessage().empty())
+        << ": Empty header, aborting";
 
     aos::logger::LogFolder file_backend("/", absl::GetFlag(FLAGS_direct));
     aos::logger::DetachedBufferWriter buffer_writer(

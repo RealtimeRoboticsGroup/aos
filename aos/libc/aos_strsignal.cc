@@ -8,7 +8,7 @@
 
 #include <csignal>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 const char *aos_strsignal(int signal) {
@@ -29,17 +29,17 @@ const char *aos_strsignal(int signal) {
     case SIGABRT:
       return "Aborted";
     default:
-      CHECK_GT(snprintf(buffer, sizeof(buffer), "Unknown signal %d", signal),
-               0);
+      ABSL_CHECK_GT(
+          snprintf(buffer, sizeof(buffer), "Unknown signal %d", signal), 0);
       return buffer;
   }
 #else
 
 #if defined(SIGRTMIN) && defined(SIGRTMAX)
   if (signal >= SIGRTMIN && signal <= SIGRTMAX) {
-    CHECK_GT(snprintf(buffer, sizeof(buffer), "Real-time signal %d",
-                      signal - SIGRTMIN),
-             0);
+    ABSL_CHECK_GT(snprintf(buffer, sizeof(buffer), "Real-time signal %d",
+                           signal - SIGRTMIN),
+                  0);
     return buffer;
   }
 #endif
@@ -62,7 +62,8 @@ const char *aos_strsignal(int signal) {
   }
 #endif
 
-  CHECK_GT(snprintf(buffer, sizeof(buffer), "Unknown signal %d", signal), 0);
+  ABSL_CHECK_GT(snprintf(buffer, sizeof(buffer), "Unknown signal %d", signal),
+                0);
   return buffer;
 #endif  // _WIN32
 }

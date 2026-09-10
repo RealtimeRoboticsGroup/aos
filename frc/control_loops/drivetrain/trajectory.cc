@@ -4,6 +4,7 @@
 #include <numbers>
 
 #include "Eigen/Dense"
+#include "absl/log/absl_check.h"
 
 #include "aos/util/math.h"
 #include "frc/control_loops/c2d.h"
@@ -43,8 +44,8 @@ FinishedTrajectory::FinishedTrajectory(
         velocity_drivetrain)
     : BaseTrajectory(
           [&]() {
-            CHECK(buffer->spline() != nullptr);
-            CHECK(buffer->spline()->spline() != nullptr);
+            ABSL_CHECK(buffer->spline() != nullptr);
+            ABSL_CHECK(buffer->spline()->spline() != nullptr);
             return buffer->spline()->spline()->constraints();
           }(),
           config, std::move(velocity_drivetrain)),
@@ -556,12 +557,12 @@ size_t FinishedTrajectory::distance_plan_size() const {
 }
 
 fb::SegmentConstraint FinishedTrajectory::plan_constraint(size_t index) const {
-  CHECK_LT(index, distance_plan_size());
+  ABSL_CHECK_LT(index, distance_plan_size());
   return trajectory().distance_based_plan()->Get(index)->segment_constraint();
 }
 
 float FinishedTrajectory::plan_velocity(size_t index) const {
-  CHECK_LT(index, distance_plan_size());
+  ABSL_CHECK_LT(index, distance_plan_size());
   return trajectory().distance_based_plan()->Get(index)->velocity();
 }
 
@@ -782,7 +783,7 @@ void Trajectory::CalculatePathGains() {
 
   Eigen::Matrix<double, 5, 5> P = Q;
 
-  CHECK_LT(0u, xva_plan.size());
+  ABSL_CHECK_LT(0u, xva_plan.size());
   const int max_index = static_cast<int>(xva_plan.size()) - 1;
   for (int i = max_index; i >= 0; --i) {
     const double distance = xva_plan[i](0);
@@ -820,16 +821,16 @@ void Trajectory::CalculatePathGains() {
     const Eigen::Matrix<double, 2, 5> K = RBPBinv * APB.transpose();
     plan_gains_[i].second = K.cast<float>();
     P = AP * A_discrete - APB * K + Q;
-    CHECK_LT(P.norm(), 1e30) << "LQR calculations became unstable.";
+    ABSL_CHECK_LT(P.norm(), 1e30) << "LQR calculations became unstable.";
   }
 }
 
 Eigen::Matrix<double, 2, 5> FinishedTrajectory::GainForDistance(
     double distance) const {
-  CHECK(trajectory().gains() != nullptr);
+  ABSL_CHECK(trajectory().gains() != nullptr);
   const flatbuffers::Vector<flatbuffers::Offset<fb::GainPoint>> &gains =
       *trajectory().gains();
-  CHECK_LT(0u, gains.size());
+  ABSL_CHECK_LT(0u, gains.size());
   size_t index = 0;
   for (index = 0; index < gains.size() - 1; ++index) {
     if (gains[index + 1]->distance() > distance) {
@@ -873,8 +874,8 @@ flatbuffers::Offset<fb::Trajectory> Trajectory::Serialize(
   }
 
   // TODO(james): What is an appropriate cap?
-  CHECK_LT(plan_gains_.size(), 5000u);
-  CHECK_LT(0u, plan_gains_.size());
+  ABSL_CHECK_LT(plan_gains_.size(), 5000u);
+  ABSL_CHECK_LT(0u, plan_gains_.size());
   std::vector<flatbuffers::Offset<fb::GainPoint>> gain_points;
   const size_t matrix_size = plan_gains_[0].second.size();
   for (size_t ii = 0; ii < plan_gains_.size(); ++ii) {

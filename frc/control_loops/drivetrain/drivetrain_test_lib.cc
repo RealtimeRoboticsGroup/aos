@@ -3,7 +3,7 @@
 #include <chrono>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "gtest/gtest.h"
 
@@ -126,13 +126,13 @@ DrivetrainSimulation::DrivetrainSimulation(
                                     HybridKalman<2, 2, 2>>(
                   dt_config_.make_hybrid_drivetrain_velocity_loop()))) {
   if (imu_event_loop_ != nullptr) {
-    CHECK(!imu_sender_);
+    ABSL_CHECK(!imu_sender_);
     imu_sender_ =
         imu_event_loop_->MakeSender<::frc::IMUValuesBatch>("/localizer");
     gyro_sender_ =
         event_loop_->MakeSender<::frc::sensors::GyroReading>("/drivetrain");
   }
-  CHECK(imu_sender_);
+  ABSL_CHECK(imu_sender_);
   Reinitialize();
   last_U_.setZero();
   event_loop_->AddPhasedLoop(
@@ -182,7 +182,8 @@ void DrivetrainSimulation::SendTruthMessage() {
   status_builder.add_x(state_.x());
   status_builder.add_y(state_.y());
   status_builder.add_theta(state_(2));
-  CHECK_EQ(builder.Send(status_builder.Finish()), aos::RawSender::Error::kOk);
+  ABSL_CHECK_EQ(builder.Send(status_builder.Finish()),
+                aos::RawSender::Error::kOk);
 }
 
 void DrivetrainSimulation::SendPositionMessage() {
@@ -199,8 +200,8 @@ void DrivetrainSimulation::SendPositionMessage() {
     fbb.Finish(position_builder.Finish());
     aos::FlatbufferDetachedBuffer<frc::control_loops::drivetrain::Position>
         position(fbb.Release());
-    CHECK_EQ(drivetrain_position_sender_.Send(position),
-             aos::RawSender::Error::kOk);
+    ABSL_CHECK_EQ(drivetrain_position_sender_.Send(position),
+                  aos::RawSender::Error::kOk);
   }
 }
 
@@ -287,15 +288,15 @@ void DrivetrainSimulation::SendImuMessage() {
   imu_values_batch_builder.add_readings(imu_values_offset);
   fbb.Finish(imu_values_batch_builder.Finish());
   aos::FlatbufferDetachedBuffer<frc::IMUValuesBatch> message = fbb.Release();
-  CHECK_EQ(imu_sender_.Send(message), aos::RawSender::Error::kOk);
+  ABSL_CHECK_EQ(imu_sender_.Send(message), aos::RawSender::Error::kOk);
   if (gyro_sender_) {
     auto builder = gyro_sender_.MakeBuilder();
     sensors::GyroReading::Builder reading_builder =
         builder.MakeBuilder<sensors::GyroReading>();
     reading_builder.add_angle(state_(2));
     reading_builder.add_velocity(last_yaw_rate_);
-    CHECK_EQ(builder.Send(reading_builder.Finish()),
-             aos::RawSender::Error::kOk);
+    ABSL_CHECK_EQ(builder.Send(reading_builder.Finish()),
+                  aos::RawSender::Error::kOk);
   }
 }
 

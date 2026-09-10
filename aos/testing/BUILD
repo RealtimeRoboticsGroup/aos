@@ -16,7 +16,7 @@ cc_library(
         "//aos/testing:tmpdir",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_googletest//:gtest",
     ],
 )
@@ -82,7 +82,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -152,7 +152,7 @@ cc_library(
         "//aos:realtime",
         "//aos/ipc_lib:shm_base",
         "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 

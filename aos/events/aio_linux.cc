@@ -1637,7 +1637,7 @@ void IoUringImpl::ReArmPersistentRegistrations() {
   //     reach the freelist, and MakeTimerState()'s Reset() zeroes the
   //     request -- including the intrusive links -- while it is still in
   //     this list, truncating it or tripping its own "removing a node that
-  //     is not on this list" CHECK.  Its new owner could then be handed a
+  //     is not on this list" ABSL_CHECK.  Its new owner could then be handed a
   //     spurious firing belonging to the previous one.
   //   * Every request re-armed below (the wakeup read, the legacy-fd poll,
   //     receivers, every timer's poll) may be queued too.  Dispatching a

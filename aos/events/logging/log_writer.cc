@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 
+#include "absl/log/absl_check.h"
 #include "absl/strings/ascii.h"  // for AsciiStrToLower
 #include "absl/strings/str_cat.h"
 
@@ -100,8 +101,8 @@ Logger::Logger(EventLoop *event_loop, const Configuration *configuration,
 
         auto it = timestamp_logger_channels.find(timestamp_logger_channel);
         if (it != timestamp_logger_channels.end()) {
-          CHECK(!is_split);
-          CHECK_LT(channel_index, std::get<2>(it->second).size());
+          ABSL_CHECK(!is_split);
+          ABSL_CHECK_LT(channel_index, std::get<2>(it->second).size());
           std::get<2>(it->second)[channel_index] =
               (connection->time_to_live() == 0);
         } else {
@@ -178,9 +179,9 @@ Logger::Logger(EventLoop *event_loop, const Configuration *configuration,
       log_delivery_times = configuration::ConnectionDeliveryTimeIsLoggedOnNode(
           connection, event_loop_->node());
 
-      CHECK_EQ(log_delivery_times,
-               configuration::ConnectionDeliveryTimeIsLoggedOnNode(
-                   logged_channel, node_, node_));
+      ABSL_CHECK_EQ(log_delivery_times,
+                    configuration::ConnectionDeliveryTimeIsLoggedOnNode(
+                        logged_channel, node_, node_));
 
       if (connection) {
         fs.reliable_forwarding = (connection->time_to_live() == 0);
@@ -227,7 +228,8 @@ Logger::Logger(EventLoop *event_loop, const Configuration *configuration,
                 << configuration::CleanedChannelToString(event_loop_channel);
         auto timestamp_logger_channel_info =
             timestamp_logger_channels.find(event_loop_channel);
-        CHECK(timestamp_logger_channel_info != timestamp_logger_channels.end());
+        ABSL_CHECK(timestamp_logger_channel_info !=
+                   timestamp_logger_channels.end());
         fs.timestamp_node = std::get<0>(timestamp_logger_channel_info->second);
         fs.reliable_contents =
             std::get<1>(timestamp_logger_channel_info->second);
@@ -279,7 +281,7 @@ std::string Logger::WriteConfiguration(LogNamer *log_namer) {
 
 void Logger::StartLogging(std::unique_ptr<LogNamer> log_namer,
                           std::optional<UUID> log_start_uuid) {
-  CHECK(!log_namer_) << ": Already logging";
+  ABSL_CHECK(!log_namer_) << ": Already logging";
 
   VLOG(1) << "Starting logger for " << FlatbufferToJson(node_);
 
@@ -304,7 +306,7 @@ void Logger::StartLogging(std::unique_ptr<LogNamer> log_namer,
           log_namer_->MakeTimestampWriter(f.event_loop_channel);
     }
     if (f.wants_contents_writer) {
-      CHECK(f.timestamp_node != nullptr);
+      ABSL_CHECK(f.timestamp_node != nullptr);
       f.contents_writer = log_namer_->MakeForwardedTimestampWriter(
           f.event_loop_channel, f.timestamp_node);
     }
@@ -364,7 +366,7 @@ void Logger::StartLogging(std::unique_ptr<LogNamer> log_namer,
 std::unique_ptr<LogNamer> Logger::RestartLogging(
     std::unique_ptr<LogNamer> log_namer, std::optional<UUID> log_start_uuid,
     std::optional<monotonic_clock::time_point> end_time) {
-  CHECK(log_namer_) << ": Unexpected restart while not logging";
+  ABSL_CHECK(log_namer_) << ": Unexpected restart while not logging";
 
   VLOG(1) << "Restarting logger for " << FlatbufferToJson(node_);
 
@@ -379,7 +381,7 @@ std::unique_ptr<LogNamer> Logger::RestartLogging(
 
   // Log until the provided end time.
   if (end_time) {
-    CHECK_LE(*end_time, monotonic_now1) << ": Can't log into the future.";
+    ABSL_CHECK_LE(*end_time, monotonic_now1) << ": Can't log into the future.";
     // DoLogData is a bit fragile.
     if (*end_time > last_synchronized_time_) {
       CheckExpected(DoLogData(*end_time, false));
@@ -434,7 +436,7 @@ std::unique_ptr<LogNamer> Logger::RestartLogging(
           log_namer_->MakeTimestampWriter(f.event_loop_channel);
     }
     if (f.wants_contents_writer) {
-      CHECK(f.timestamp_node != nullptr);
+      ABSL_CHECK(f.timestamp_node != nullptr);
       f.contents_writer = log_namer_->MakeForwardedTimestampWriter(
           f.event_loop_channel, f.timestamp_node);
     }
@@ -464,7 +466,7 @@ std::unique_ptr<LogNamer> Logger::RestartLogging(
 
 Result<std::unique_ptr<LogNamer>> Logger::StopLogging(
     aos::monotonic_clock::time_point end_time) {
-  CHECK(log_namer_) << ": Not logging right now";
+  ABSL_CHECK(log_namer_) << ": Not logging right now";
 
   // If the DoLogData() fails, we still want to close out the internal state of
   // the logger, so defer propagating the error until the end of the function.
@@ -513,7 +515,7 @@ void Logger::WriteHeader(aos::monotonic_clock::time_point monotonic_start_time,
 
   for (const Node *node : log_namer_->nodes()) {
     // Verify the log_namer is using the nodes from configuration_.
-    CHECK(configuration::IsNodeFromConfiguration(configuration_, node));
+    ABSL_CHECK(configuration::IsNodeFromConfiguration(configuration_, node));
 
     const int node_index = configuration::GetNodeIndex(configuration_, node);
     MaybeUpdateTimestamp(node, node_index, monotonic_start_time,
@@ -563,7 +565,7 @@ bool Logger::MaybeUpdateTimestamp(
   } else if (server_statistics_fetcher_.get() != nullptr) {
     // We must be a remote node now.  Look for the connection and see if it is
     // connected.
-    CHECK(server_statistics_fetcher_->has_connections());
+    ABSL_CHECK(server_statistics_fetcher_->has_connections());
 
     for (const message_bridge::ServerConnection *connection :
          *server_statistics_fetcher_->connections()) {
@@ -584,7 +586,7 @@ bool Logger::MaybeUpdateTimestamp(
         break;
       }
 
-      CHECK(connection->has_boot_uuid());
+      ABSL_CHECK(connection->has_boot_uuid());
       const UUID boot_uuid =
           UUID::FromString(connection->boot_uuid()->string_view());
 
@@ -617,7 +619,7 @@ aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader> Logger::MakeHeader(
   if (!separate_config_) {
     configuration_offset = CopyFlatBuffer(configuration_, &fbb);
   } else {
-    CHECK(!config_sha256.empty());
+    ABSL_CHECK(!config_sha256.empty());
   }
 
   const flatbuffers::Offset<flatbuffers::String> name_offset =
@@ -628,7 +630,7 @@ aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader> Logger::MakeHeader(
   const flatbuffers::Offset<flatbuffers::String> logger_version_offset =
       logger_version_.empty() ? 0 : fbb.CreateString(logger_version_);
 
-  CHECK(log_event_uuid_ != UUID::Zero());
+  ABSL_CHECK(log_event_uuid_ != UUID::Zero());
   const flatbuffers::Offset<flatbuffers::String> log_event_uuid_offset =
       log_event_uuid_.PackString(&fbb);
 
@@ -696,7 +698,7 @@ aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader> Logger::MakeHeader(
   aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader> result(
       fbb.Release());
 
-  CHECK(result.Verify()) << ": Built a corrupted header.";
+  ABSL_CHECK(result.Verify()) << ": Built a corrupted header.";
 
   return result;
 }
@@ -795,13 +797,13 @@ void Logger::WriteContent(DataWriter *contents_writer, const FetcherStruct &f) {
     const RemoteMessage *msg =
         flatbuffers::GetRoot<RemoteMessage>(f.fetcher->context().data);
 
-    CHECK(msg->has_boot_uuid()) << ": " << aos::FlatbufferToJson(msg);
+    ABSL_CHECK(msg->has_boot_uuid()) << ": " << aos::FlatbufferToJson(msg);
     // Translate from the channel index that the event loop uses to the
     // channel index in the log file.
     const std::optional<uint32_t> channel_index =
         event_loop_to_logged_channel_index_[msg->channel_index()];
 
-    CHECK(channel_index.has_value());
+    ABSL_CHECK(channel_index.has_value());
 
     const aos::monotonic_clock::time_point monotonic_timestamp_time =
         f.fetcher->context().monotonic_event_time;
@@ -886,7 +888,7 @@ Status Logger::LogUntil(monotonic_clock::time_point t) {
       }
 
       // TODO(james): Write tests to exercise this logic.
-      CHECK_LE(f.fetcher->context().monotonic_event_time, t);
+      ABSL_CHECK_LE(f.fetcher->context().monotonic_event_time, t);
 
       // At startup, we can end up grabbing a message at the current time.
       // Ignore it.
@@ -908,7 +910,7 @@ Status Logger::DoLogData(const monotonic_clock::time_point end_time,
                          bool run_on_logged) {
   if (end_time < last_synchronized_time_) return aos::Ok();
 
-  DCHECK(is_started());
+  ABSL_DCHECK(is_started());
   // We want to guarantee that messages aren't out of order by more than
   // max_out_of_order_duration.  To do this, we need sync points.  Every write
   // cycle should be a sync point.
@@ -1002,7 +1004,7 @@ void ProfileDataWriter::WriteProfileData(
 }
 
 ProfileDataWriter::ProfileDataWriter(const std::filesystem::path &path) {
-  CHECK(!path.empty());
+  ABSL_CHECK(!path.empty());
 
   const std::string extension = path.extension().string();
   const std::string lower_case_extension = absl::AsciiStrToLower(extension);
@@ -1019,7 +1021,7 @@ ProfileDataWriter::ProfileDataWriter(const std::filesystem::path &path) {
   }
 
   stream_.open(path, std::ios::out);
-  CHECK(stream_.is_open()) << ": Failed to open " << path;
+  ABSL_CHECK(stream_.is_open()) << ": Failed to open " << path;
 
   // Write the header that describes the file content and the column names.
   stream_

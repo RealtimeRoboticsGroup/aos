@@ -4,6 +4,8 @@
 #include <string_view>
 #include <vector>
 
+#include "absl/log/absl_check.h"
+
 #include "aos/events/event_loop.h"
 #include "aos/macros.h"
 #include "aos/network/message_bridge_client_generated.h"
@@ -180,7 +182,7 @@ void MessageBridgeClientStatus::SendStatistics() {
 }
 
 int MessageBridgeClientStatus::FindClientIndex(std::string_view node_name) {
-  CHECK(statistics_.message().has_connections());
+  ABSL_CHECK(statistics_.message().has_connections());
   for (size_t i = 0; i < statistics_.message().connections()->size(); ++i) {
     const ClientConnection *client_connection =
         statistics_.message().connections()->Get(i);
@@ -235,7 +237,7 @@ void MessageBridgeClientStatus::DisableStatistics(bool destroy_sender) {
 }
 
 void MessageBridgeClientStatus::EnableStatistics() {
-  CHECK(sender_.valid());
+  ABSL_CHECK(sender_.valid());
   send_ = true;
   statistics_timer_->Schedule(event_loop_->monotonic_now() + kStatisticsPeriod,
                               kStatisticsPeriod);

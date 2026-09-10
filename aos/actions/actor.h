@@ -9,7 +9,7 @@
 #include <string>
 #include <type_traits>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "flatbuffers/string.h"
 
@@ -51,8 +51,8 @@ class ActorBase {
       status_builder.add_running(0);
       status_builder.add_last_running(0);
       status_builder.add_success(!abort_);
-      CHECK_EQ(builder.Send(status_builder.Finish()),
-               aos::RawSender::Error::kOk)
+      ABSL_CHECK_EQ(builder.Send(status_builder.Finish()),
+                    aos::RawSender::Error::kOk)
           << "Failed to send initial status";
     });
   }

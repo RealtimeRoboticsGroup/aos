@@ -3,6 +3,8 @@
 #include <chrono>
 #include <functional>
 
+#include "absl/log/absl_check.h"
+
 #include "aos/configuration.h"
 #include "aos/events/event_loop.h"
 #include "aos/flatbuffer_merge.h"
@@ -82,7 +84,7 @@ ServerConnection *FindServerConnection(ServerStatistics *statistics,
     }
   }
 
-  CHECK(matching_server_connection != nullptr) << ": Unknown client";
+  ABSL_CHECK(matching_server_connection != nullptr) << ": Unknown client";
 
   return matching_server_connection;
 }
@@ -126,7 +128,7 @@ MessageBridgeServerStatus::MessageBridgeServerStatus(
         configuration::GetChannel(event_loop_->configuration(), "/aos",
                                   Timestamp::GetFullyQualifiedName(),
                                   event_loop_->name(), destination_node);
-    CHECK(other_timestamp_channel)
+    ABSL_CHECK(other_timestamp_channel)
         << "Failed to find other timestamp channel \"/aos\" type "
         << Timestamp::GetFullyQualifiedName() << " for destination node "
         << destination_node->name()->string_view() << " from node "
@@ -183,7 +185,7 @@ ServerConnection *MessageBridgeServerStatus::FindServerConnection(
 
 void MessageBridgeServerStatus::AddSentPacket(int node_index,
                                               const aos::Channel *channel) {
-  CHECK(nodes_[node_index].has_value());
+  ABSL_CHECK(nodes_[node_index].has_value());
   NodeState &node = nodes_[node_index].value();
   ServerConnection *connection = node.server_connection;
   connection->mutate_sent_packets(connection->sent_packets() + 1);
@@ -192,7 +194,7 @@ void MessageBridgeServerStatus::AddSentPacket(int node_index,
 
 void MessageBridgeServerStatus::AddDroppedPacket(int node_index,
                                                  const aos::Channel *channel) {
-  CHECK(nodes_[node_index].has_value());
+  ABSL_CHECK(nodes_[node_index].has_value());
   NodeState &node = nodes_[node_index].value();
   ServerConnection *connection = node.server_connection;
   connection->mutate_dropped_packets(connection->dropped_packets() + 1);
@@ -258,7 +260,7 @@ void MessageBridgeServerStatus::SendStatistics() {
     const int node_index =
         configuration::GetNodeIndex(event_loop_->configuration(),
                                     connection->node()->name()->string_view());
-    CHECK(nodes_[node_index].has_value());
+    ABSL_CHECK(nodes_[node_index].has_value());
 
     flatbuffers::Offset<flatbuffers::String> node_name_offset =
         builder.fbb()->CreateString(connection->node()->name()->string_view());
@@ -276,8 +278,8 @@ void MessageBridgeServerStatus::SendStatistics() {
 
     {
       size_t index = 0;
-      CHECK_EQ(nodes_[node_index].value().channel_offsets_buffer.size(),
-               nodes_[node_index].value().channel_statistics.size());
+      ABSL_CHECK_EQ(nodes_[node_index].value().channel_offsets_buffer.size(),
+                    nodes_[node_index].value().channel_statistics.size());
       for (const auto &channel :
            nodes_[node_index].value().channel_statistics) {
         nodes_[node_index].value().channel_offsets_buffer.at(index) =
@@ -502,8 +504,8 @@ void MessageBridgeServerStatus::DisableStatistics(bool destroy_senders) {
 
 void MessageBridgeServerStatus::EnableStatistics() {
   send_ = true;
-  CHECK(sender_.valid());
-  CHECK(timestamp_sender_.valid());
+  ABSL_CHECK(sender_.valid());
+  ABSL_CHECK(timestamp_sender_.valid());
   statistics_timer_->Schedule(event_loop_->monotonic_now() + kPingPeriod,
                               kPingPeriod);
 }

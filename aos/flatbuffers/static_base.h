@@ -112,7 +112,7 @@ class ResizeableObject {
     // zero.
     // I.e., the following holds when object is not nullptr:
     // SubObject object = parent.GetSubObject(index);
-    // CHECK_EQ(parent.buffer()->data() + *object.absolute_offset,
+    // ABSL_CHECK_EQ(parent.buffer()->data() + *object.absolute_offset,
     // object.object->buffer().data());
     size_t *absolute_offset;
   };

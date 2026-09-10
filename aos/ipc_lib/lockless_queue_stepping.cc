@@ -23,7 +23,7 @@
 #include <thread>
 #include <utility>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "gtest/gtest.h"
 
@@ -122,11 +122,11 @@ void InstallHandler(int signal, void (*handler)(int, siginfo_t *, void *),
     if (sigaction == real_sigaction) {
       LOG(WARNING) << "failed to work around tsan signal handling weirdness";
     }
-    PCHECK(real_sigaction(signal, &action, old_action) == 0);
+    ABSL_PCHECK(real_sigaction(signal, &action, old_action) == 0);
     return;
   }
 #endif
-  PCHECK(sigaction(signal, &action, old_action) == 0);
+  ABSL_PCHECK(sigaction(signal, &action, old_action) == 0);
 }
 
 // A mutex lock is about to happen.  Mark the memory rw, and check to see if we
@@ -183,7 +183,7 @@ std::tuple<GlobalState *, WritesArray *> GlobalState::MakeGlobalState() {
   void *shared_allocations = static_cast<GlobalState *>(
       mmap(nullptr, sizeof(GlobalState) + sizeof(WritesArray),
            PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0));
-  CHECK_NE(MAP_FAILED, shared_allocations);
+  ABSL_CHECK_NE(MAP_FAILED, shared_allocations);
 
   global_state.store(static_cast<GlobalState *>(shared_allocations));
   void *expected_writes_shared_allocations = static_cast<void *>(
@@ -208,8 +208,8 @@ bool GlobalState::IsInLocklessQueueMemory(void *address) {
 }
 
 void GlobalState::ShmProtectOrDie(int prot) {
-  PCHECK(mprotect(lockless_queue_memory, lockless_queue_memory_size, prot) !=
-         -1)
+  ABSL_PCHECK(
+      mprotect(lockless_queue_memory, lockless_queue_memory_size, prot) != -1)
       << ": mprotect(" << lockless_queue_memory << ", "
       << lockless_queue_memory_size << ", 0x" << std::hex << prot << ") failed";
 }
@@ -217,7 +217,7 @@ void GlobalState::ShmProtectOrDie(int prot) {
 void GlobalState::RegisterSegvAndTrapHandlers() {
   InstallHandler(SIGSEGV, segv_handler, &old_segv_handler);
   InstallHandler(SIGTRAP, trap_handler, &old_trap_handler);
-  CHECK_EQ(old_trap_handler.sa_handler, SIG_DFL);
+  ABSL_CHECK_EQ(old_trap_handler.sa_handler, SIG_DFL);
   linux_code::ipc_lib::SetShmAccessorObservers(futex_before, futex_after);
 }
 
@@ -249,7 +249,7 @@ bool RunFunctionDieAt(::std::function<void(void *)> prepare,
   my_global_state->state = DieAtState::kDisabled;
 
   const pid_t pid = fork();
-  PCHECK(pid != -1) << ": fork() failed";
+  ABSL_PCHECK(pid != -1) << ": fork() failed";
   if (pid == 0) {
     // Run the test.
     ::aos::testing::PreventExit();
@@ -262,7 +262,7 @@ bool RunFunctionDieAt(::std::function<void(void *)> prepare,
     // handler so we can single step.
     my_global_state->RegisterSegvAndTrapHandlers();
 
-    PCHECK(ptrace(PTRACE_TRACEME, 0, 0, 0) == 0);
+    ABSL_PCHECK(ptrace(PTRACE_TRACEME, 0, 0, 0) == 0);
     my_global_state->ShmProtectOrDie(PROT_READ);
     my_global_state->state = DieAtState::kRunning;
 
@@ -287,10 +287,10 @@ bool RunFunctionDieAt(::std::function<void(void *)> prepare,
       pid_t waited_on = waitpid(pid, &status, 0);
       if (waited_on == -1) {
         if (errno == EINTR) continue;
-        PCHECK(false) << ": waitpid(" << pid << ", " << &status
-                      << ", 0) failed";
+        ABSL_PCHECK(false) << ": waitpid(" << pid << ", " << &status
+                           << ", 0) failed";
       }
-      CHECK_EQ(waited_on, pid)
+      ABSL_CHECK_EQ(waited_on, pid)
           << ": waitpid got child " << waited_on << " instead of " << pid;
       if (WIFSTOPPED(status)) {
         // The child was stopped via ptrace.
@@ -300,8 +300,8 @@ bool RunFunctionDieAt(::std::function<void(void *)> prepare,
           struct iovec iov;
           iov.iov_base = &regs;
           iov.iov_len = sizeof(regs);
-          PCHECK(ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov) == 0);
-          CHECK_EQ(iov.iov_len, sizeof(regs))
+          ABSL_PCHECK(ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov) == 0);
+          ABSL_CHECK_EQ(iov.iov_len, sizeof(regs))
               << ": ptrace regset is the wrong size";
         }
         if (stop_signal == SIGSEGV) {
@@ -311,12 +311,12 @@ bool RunFunctionDieAt(::std::function<void(void *)> prepare,
           // child can mark it read-write and then poke us to single-step that
           // instruction.
 
-          CHECK(!restore_regs)
+          ABSL_CHECK(!restore_regs)
               << ": Traced child got a SEGV while single-stepping";
           // Save all the registers to resume execution at the current location
           // in the child.
           restore_regs = RestoreState(regs);
-          PCHECK(ptrace(PTRACE_CONT, pid, nullptr, SIGSEGV) == 0);
+          ABSL_PCHECK(ptrace(PTRACE_CONT, pid, nullptr, SIGSEGV) == 0);
           continue;
         }
         if (stop_signal == SIGTRAP) {
@@ -324,7 +324,7 @@ bool RunFunctionDieAt(::std::function<void(void *)> prepare,
             // This is the new SIGTRAP we generated, which we just want to pass
             // through so the child's signal handler can restore the memory to
             // read-only
-            PCHECK(ptrace(PTRACE_CONT, pid, nullptr, SIGTRAP) == 0);
+            ABSL_PCHECK(ptrace(PTRACE_CONT, pid, nullptr, SIGTRAP) == 0);
             pass_trap = false;
             continue;
           }
@@ -334,17 +334,17 @@ bool RunFunctionDieAt(::std::function<void(void *)> prepare,
             struct iovec iov;
             iov.iov_base = &restore_regs->regs;
             iov.iov_len = sizeof(restore_regs->regs);
-            PCHECK(ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov) == 0);
+            ABSL_PCHECK(ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov) == 0);
             restore_regs = std::nullopt;
-            PCHECK(ptrace(PTRACE_SINGLESTEP, pid, nullptr, nullptr) == 0);
+            ABSL_PCHECK(ptrace(PTRACE_SINGLESTEP, pid, nullptr, nullptr) == 0);
             continue;
           }
           // We executed the single instruction that originally faulted, so
           // now deliver a SIGTRAP to the child so it can mark the memory
           // read-only again.
           pass_trap = true;
-          PCHECK(kill(pid, SIGTRAP) == 0);
-          PCHECK(ptrace(PTRACE_CONT, pid, nullptr, nullptr) == 0);
+          ABSL_PCHECK(kill(pid, SIGTRAP) == 0);
+          ABSL_PCHECK(ptrace(PTRACE_CONT, pid, nullptr, nullptr) == 0);
           continue;
         }
         LOG(FATAL) << "Traced child was stopped with unexpected signal: "
@@ -374,13 +374,13 @@ bool RunFunctionDieAtAndCheck(const LocklessQueueConfiguration &config,
   my_global_state->lockless_queue_memory = static_cast<void *>(
       mmap(nullptr, my_global_state->lockless_queue_memory_size,
            PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0));
-  CHECK_NE(MAP_FAILED, my_global_state->lockless_queue_memory);
+  ABSL_CHECK_NE(MAP_FAILED, my_global_state->lockless_queue_memory);
 
   // And the backup used to point the robust list at.
   my_global_state->lockless_queue_memory_lock_backup = static_cast<void *>(
       mmap(nullptr, my_global_state->lockless_queue_memory_size,
            PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0));
-  CHECK_NE(MAP_FAILED, my_global_state->lockless_queue_memory_lock_backup);
+  ABSL_CHECK_NE(MAP_FAILED, my_global_state->lockless_queue_memory_lock_backup);
 
   // The writable offset tells us how to convert from a pointer in the queue to
   // a pointer that is safe to write.  This is so robust futexes don't spin the
@@ -453,10 +453,10 @@ SharedTid::SharedTid() {
   tid_ =
       static_cast<pid_t *>(mmap(nullptr, sizeof(pid_t), PROT_READ | PROT_WRITE,
                                 MAP_SHARED | MAP_ANONYMOUS, -1, 0));
-  CHECK_NE(MAP_FAILED, tid_);
+  ABSL_CHECK_NE(MAP_FAILED, tid_);
 }
 
-SharedTid::~SharedTid() { CHECK_EQ(munmap(tid_, sizeof(pid_t)), 0); }
+SharedTid::~SharedTid() { ABSL_CHECK_EQ(munmap(tid_, sizeof(pid_t)), 0); }
 
 void SharedTid::Set() { *tid_ = gettid(); }
 

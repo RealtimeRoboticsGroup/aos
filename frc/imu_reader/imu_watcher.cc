@@ -1,5 +1,7 @@
 #include "frc/imu_reader/imu_watcher.h"
 
+#include "absl/log/absl_check.h"
+
 #include "frc/wpilib/imu_batch_generated.h"
 
 namespace frc::controls {
@@ -31,7 +33,7 @@ ImuWatcher::ImuWatcher(
           EncoderWrapDistance(drivetrain_distance_per_encoder_tick)) {
   event_loop->MakeWatcher("/localizer", [this, timestamp_source, event_loop](
                                             const IMUValuesBatch &values) {
-    CHECK(values.has_readings());
+    ABSL_CHECK(values.has_readings());
     for (const IMUValues *value : *values.readings()) {
       zeroer_.InsertAndProcessMeasurement(*value);
       if (zeroer_.Faulted()) {

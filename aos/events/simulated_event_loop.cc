@@ -9,6 +9,7 @@
 
 #include "absl/container/btree_map.h"
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/die_if_null.h"
 #include "absl/log/globals.h"
 #include "absl/log/log_sink.h"
@@ -63,7 +64,7 @@ class SimulatedEventLoopLogSink : public absl::LogSink {
     } else if (!configuration::MultiNode(configuration)) {
       // Since we just have a single node, we don't need a callback to tell us
       // about the current node. Everything will happen on the same node.
-      CHECK_EQ(node_factories_.size(), 1u);
+      ABSL_CHECK_EQ(node_factories_.size(), 1u);
       current_event_loop_factory_ = node_factories_[0].get();
     } else {
       // We're on a multi-node system so we need to be notified when we execute
@@ -74,7 +75,8 @@ class SimulatedEventLoopLogSink : public absl::LogSink {
                      event) {
             const EventScheduler *event_scheduler =
                 ABSL_DIE_IF_NULL(std::get<1>(event));
-            DCHECK_LT(event_scheduler->node_index(), node_factories_.size());
+            ABSL_DCHECK_LT(event_scheduler->node_index(),
+                           node_factories_.size());
             current_event_loop_factory_ =
                 node_factories_[event_scheduler->node_index()].get();
           });
@@ -162,7 +164,7 @@ std::string NodeName(const Node *node) {
 class ScopedMarkRealtimeRestorer {
  public:
   ScopedMarkRealtimeRestorer(bool rt) : rt_(rt), prior_(MarkRealtime(rt)) {}
-  ~ScopedMarkRealtimeRestorer() { CHECK_EQ(rt_, MarkRealtime(prior_)); }
+  ~ScopedMarkRealtimeRestorer() { ABSL_CHECK_EQ(rt_, MarkRealtime(prior_)); }
 
  private:
   const bool rt_;
@@ -271,7 +273,7 @@ class SimulatedFactoryExitHandle : public ExitHandle {
     ++factory_->exit_handle_count_;
   }
   ~SimulatedFactoryExitHandle() override {
-    CHECK_GT(factory_->exit_handle_count_, 0);
+    ABSL_CHECK_GT(factory_->exit_handle_count_, 0);
     --factory_->exit_handle_count_;
   }
 
@@ -292,9 +294,9 @@ class SimulatedChannel {
         scheduler_(scheduler) {
     // Gut check that things fit.  Configuration validation should have caught
     // this before we get here.
-    CHECK_LT(static_cast<size_t>(number_buffers()),
-             std::numeric_limits<
-                 decltype(available_buffer_indices_)::value_type>::max())
+    ABSL_CHECK_LT(static_cast<size_t>(number_buffers()),
+                  std::numeric_limits<
+                      decltype(available_buffer_indices_)::value_type>::max())
         << configuration::CleanedChannelToString(channel);
     available_buffer_indices_.resize(number_buffers());
     for (int i = 0; i < number_buffers(); ++i) {
@@ -304,14 +306,14 @@ class SimulatedChannel {
 
   ~SimulatedChannel() {
     latest_message_.reset();
-    CHECK_EQ(0u, fetchers_.size())
+    ABSL_CHECK_EQ(0u, fetchers_.size())
         << configuration::StrippedChannelToString(channel());
-    CHECK_EQ(0u, watchers_.size())
+    ABSL_CHECK_EQ(0u, watchers_.size())
         << configuration::StrippedChannelToString(channel());
-    CHECK_EQ(0, sender_count_)
+    ABSL_CHECK_EQ(0, sender_count_)
         << configuration::StrippedChannelToString(channel());
-    CHECK_EQ(static_cast<size_t>(number_buffers()),
-             available_buffer_indices_.size());
+    ABSL_CHECK_EQ(static_cast<size_t>(number_buffers()),
+                  available_buffer_indices_.size());
   }
 
   // The number of messages we pretend to have in the queue.
@@ -332,7 +334,8 @@ class SimulatedChannel {
   int number_buffers() const { return queue_size() + number_scratch_buffers(); }
 
   int GetBufferIndex() {
-    CHECK(!available_buffer_indices_.empty()) << ": This should be impossible";
+    ABSL_CHECK(!available_buffer_indices_.empty())
+        << ": This should be impossible";
     const int result = available_buffer_indices_.back();
     available_buffer_indices_.pop_back();
     return result;
@@ -342,9 +345,9 @@ class SimulatedChannel {
     // This extra checking has a large performance hit with sanitizers that
     // track memory accesses, so just skip it.
 #if !defined(AOS_SANITIZE_MEMORY) && !defined(AOS_SANITIZE_ADDRESS)
-    DCHECK(std::find(available_buffer_indices_.begin(),
-                     available_buffer_indices_.end(),
-                     i) == available_buffer_indices_.end())
+    ABSL_DCHECK(std::find(available_buffer_indices_.begin(),
+                          available_buffer_indices_.end(),
+                          i) == available_buffer_indices_.end())
         << ": Buffer is not in use: " << i;
 #endif
     available_buffer_indices_.push_back(i);
@@ -393,7 +396,7 @@ class SimulatedChannel {
 
   void CountSenderDestroyed() {
     --sender_count_;
-    CHECK_GE(sender_count_, 0);
+    ABSL_CHECK_GE(sender_count_, 0);
     if (sender_count_ == 0) {
       allow_new_senders_ = true;
     }
@@ -405,7 +408,7 @@ class SimulatedChannel {
     if (channel()->read_method() == ReadMethod::PIN) {
       reader_count = watchers_.size() + fetchers_.size();
     }
-    CHECK_LT(reader_count + sender_count_, number_scratch_buffers());
+    ABSL_CHECK_LT(reader_count + sender_count_, number_scratch_buffers());
   }
 
   void CheckReaderCount() {
@@ -488,7 +491,7 @@ class SimulatedSender : public RawSender {
       message_ = SimulatedMessage::Make(simulated_channel_, span);
       message_->mutable_data = mutable_span;
     }
-    CHECK(message_->is_mutable());
+    ABSL_CHECK(message_->is_mutable());
     return message_->mutable_data.data();
   }
 
@@ -533,7 +536,7 @@ class SimulatedFetcher : public RawFetcher {
   explicit SimulatedFetcher(SimulatedEventLoop *event_loop,
                             SimulatedChannel *simulated_channel);
   ~SimulatedFetcher() {
-    CHECK(!event_loop()->is_running())
+    ABSL_CHECK(!event_loop()->is_running())
         << ": Can't destroy Fetcher while running";
     simulated_channel_->UnregisterFetcher(this);
   }
@@ -716,7 +719,7 @@ class SimulatedEventLoop : public EventLoop {
     VLOG(1) << scheduler_->distributed_now() << " " << NodeName(node())
             << monotonic_now() << " " << name_ << " set_is_running(" << running
             << ")";
-    CHECK(startup_tracker_->has_setup);
+    ABSL_CHECK(startup_tracker_->has_setup);
 
     set_is_running(running);
     if (running) {
@@ -753,7 +756,7 @@ class SimulatedEventLoop : public EventLoop {
           watcher) override;
 
   TimerHandler *AddTimer(::std::function<void()> callback) override {
-    CHECK(!is_running());
+    ABSL_CHECK(!is_running());
     return NewTimer(::std::unique_ptr<TimerHandler>(
         new SimulatedTimerHandler(scheduler_, this, callback)));
   }
@@ -778,8 +781,9 @@ class SimulatedEventLoop : public EventLoop {
   };
 
   void OnRun(::std::function<void()> on_run) override {
-    CHECK(!is_running()) << ": Cannot register OnRun callback while running.";
-    CHECK(on_run_scheduled_)
+    ABSL_CHECK(!is_running())
+        << ": Cannot register OnRun callback while running.";
+    ABSL_CHECK(on_run_scheduled_)
         << "Registering OnRun callback after running on " << name();
     on_run_.emplace_back(std::move(on_run));
   }
@@ -821,21 +825,22 @@ class SimulatedEventLoop : public EventLoop {
   SimulatedChannel *GetSimulatedChannel(const Channel *channel);
 
   void SetRuntimeAffinity(const CpuSet &affinity) override {
-    CHECK(!is_running()) << ": Cannot set affinity while running.";
+    ABSL_CHECK(!is_running()) << ": Cannot set affinity while running.";
     runtime_affinity_ = affinity;
   }
 
   void SetRuntimeRealtimePriority(int priority,
                                   SchedulingPolicy scheduling_policy,
                                   RealtimePolicy realtime_policy) override {
-    CHECK(!is_running()) << ": Cannot set realtime priority while running.";
+    ABSL_CHECK(!is_running())
+        << ": Cannot set realtime priority while running.";
 
     if (priority == 0) {
       runtime_priority_ = 0;
       runtime_scheduling_policy_ = SchedulingPolicy::SCHEDULER_OTHER;
     } else {
-      CHECK(scheduling_policy == SchedulingPolicy::SCHEDULER_FIFO ||
-            scheduling_policy == SchedulingPolicy::SCHEDULER_RR)
+      ABSL_CHECK(scheduling_policy == SchedulingPolicy::SCHEDULER_FIFO ||
+                 scheduling_policy == SchedulingPolicy::SCHEDULER_RR)
           << ": Attempted to set realtime priority without a realtime "
              "scheduling policy";
       runtime_priority_ = priority;
@@ -979,7 +984,7 @@ void SimulatedEventLoop::MakeRawWatcher(
 
   // Order of operations gets kinda wonky if we let people make watchers after
   // running once.  If someone has a valid use case, we can reconsider.
-  CHECK(!has_run()) << ": Can't add a watcher after running.";
+  ABSL_CHECK(!has_run()) << ": Can't add a watcher after running.";
 }
 
 std::unique_ptr<RawSender> SimulatedEventLoop::MakeRawSender(
@@ -994,7 +999,7 @@ std::unique_ptr<RawSender> SimulatedEventLoop::MakeRawSender(
 
 std::unique_ptr<RawFetcher> SimulatedEventLoop::MakeRawFetcher(
     const Channel *channel) {
-  CHECK(!is_running()) << ": Can't make Fetcher while running";
+  ABSL_CHECK(!is_running()) << ": Can't make Fetcher while running";
   ChannelIndex(channel);
 
   if (!configuration::ChannelIsReadableOnNode(channel, node())) {
@@ -1084,7 +1089,7 @@ SimulatedWatcher::~SimulatedWatcher() {
   if (token_ != scheduler_->InvalidToken()) {
     scheduler_->Deschedule(token_);
   }
-  CHECK(simulated_channel_ != nullptr);
+  ABSL_CHECK(simulated_channel_ != nullptr);
   simulated_channel_->RemoveWatcher(this);
 }
 
@@ -1116,7 +1121,7 @@ void SimulatedWatcher::HandleEvent() noexcept {
           << simulated_event_loop_->monotonic_now() << " "
           << simulated_event_loop_->name() << " Watcher "
           << configuration::StrippedChannelToString(channel_);
-  CHECK_NE(msgs_.size(), 0u) << ": No events to handle.";
+  ABSL_CHECK_NE(msgs_.size(), 0u) << ": No events to handle.";
 
   logging::ScopedLogRestorer prev_logger;
   if (simulated_event_loop_->log_impl_) {
@@ -1159,13 +1164,13 @@ void SimulatedWatcher::HandleEvent() noexcept {
 }
 
 void SimulatedWatcher::Handle() noexcept {
-  DCHECK(token_ != scheduler_->InvalidToken());
+  ABSL_DCHECK(token_ != scheduler_->InvalidToken());
   token_ = scheduler_->InvalidToken();
   simulated_event_loop_->HandleEvent();
 }
 
 void SimulatedWatcher::DoSchedule(monotonic_clock::time_point event_time) {
-  CHECK(token_ == scheduler_->InvalidToken())
+  ABSL_CHECK(token_ == scheduler_->InvalidToken())
       << ": May not schedule multiple times";
   token_ = scheduler_->Schedule(
       event_time + simulated_event_loop_->send_delay(), this);
@@ -1179,7 +1184,7 @@ void SimulatedChannel::MakeRawWatcher(SimulatedWatcher *watcher) {
 
 ::std::unique_ptr<RawSender> SimulatedChannel::MakeRawSender(
     SimulatedEventLoop *event_loop) {
-  CHECK(allow_new_senders_)
+  ABSL_CHECK(allow_new_senders_)
       << ": Attempted to create a new sender on exclusive channel "
       << configuration::StrippedChannelToString(channel_);
   std::optional<ExclusiveSenders> per_channel_option;
@@ -1189,7 +1194,7 @@ void SimulatedChannel::MakeRawWatcher(SimulatedWatcher *watcher) {
             channel_->name()->string_view() &&
         per_channel.first->type()->string_view() ==
             channel_->type()->string_view()) {
-      CHECK(!per_channel_option.has_value())
+      ABSL_CHECK(!per_channel_option.has_value())
           << ": Channel " << configuration::StrippedChannelToString(channel_)
           << " listed twice in per-channel list.";
       per_channel_option = per_channel.second;
@@ -1203,7 +1208,7 @@ void SimulatedChannel::MakeRawWatcher(SimulatedWatcher *watcher) {
     per_channel_option = event_loop->options().exclusive_senders;
   }
   if (per_channel_option.value() == ExclusiveSenders::kYes) {
-    CHECK_EQ(0, sender_count_)
+    ABSL_CHECK_EQ(0, sender_count_)
         << ": Attempted to add an exclusive sender on a channel with existing "
            "senders: "
         << configuration::StrippedChannelToString(channel_);
@@ -1248,10 +1253,10 @@ std::optional<uint32_t> SimulatedChannel::Send(
   message->context.data =
       message->data->data() + message->data->size() - message->context.size;
 
-  DCHECK(channel()->has_schema())
+  ABSL_DCHECK(channel()->has_schema())
       << ": Missing schema for channel "
       << configuration::StrippedChannelToString(channel());
-  DCHECK(flatbuffers::Verify(
+  ABSL_DCHECK(flatbuffers::Verify(
       *channel()->schema(), *channel()->schema()->root_table(),
       static_cast<const uint8_t *>(message->context.data),
       message->context.size))
@@ -1293,8 +1298,8 @@ RawSender::Error SimulatedSender::DoSend(
     realtime_clock::time_point realtime_remote_time,
     monotonic_clock::time_point monotonic_remote_transmit_time,
     uint32_t remote_queue_index, const UUID &source_boot_uuid) {
-  CHECK_GE(simulated_event_loop_->monotonic_now(),
-           aos::monotonic_clock::epoch())
+  ABSL_CHECK_GE(simulated_event_loop_->monotonic_now(),
+                aos::monotonic_clock::epoch())
       << ": Can only send messages after time starts.";
   // The allocations in here are due to infrastructure and don't count in the
   // no mallocs in RT code.
@@ -1306,7 +1311,7 @@ RawSender::Error SimulatedSender::DoSend(
           << simulated_event_loop_->name() << " Send "
           << configuration::StrippedChannelToString(channel());
 
-  CHECK_LE(length, size()) << ": Attempting to send too big a message.";
+  ABSL_CHECK_LE(length, size()) << ": Attempting to send too big a message.";
   message_->context.monotonic_event_time =
       simulated_event_loop_->monotonic_now();
   message_->context.monotonic_remote_time = monotonic_remote_time;
@@ -1316,7 +1321,7 @@ RawSender::Error SimulatedSender::DoSend(
   message_->context.source_boot_uuid = source_boot_uuid;
   message_->context.monotonic_remote_transmit_time =
       monotonic_remote_transmit_time;
-  CHECK_LE(length, message_->context.size);
+  ABSL_CHECK_LE(length, message_->context.size);
   message_->context.size = length;
 
   const std::optional<uint32_t> optional_queue_index = simulated_channel_->Send(
@@ -1355,7 +1360,7 @@ RawSender::Error SimulatedSender::DoSend(
     realtime_clock::time_point realtime_remote_time,
     monotonic_clock::time_point monotonic_remote_transmit_time,
     uint32_t remote_queue_index, const UUID &source_boot_uuid) {
-  CHECK_LE(size, this->size())
+  ABSL_CHECK_LE(size, this->size())
       << ": Attempting to send too big a message on "
       << configuration::CleanedChannelToString(simulated_channel_->channel());
 
@@ -1382,7 +1387,7 @@ RawSender::Error SimulatedSender::DoSend(
     realtime_clock::time_point realtime_remote_time,
     monotonic_clock::time_point monotonic_remote_transmit_time,
     uint32_t remote_queue_index, const UUID &source_boot_uuid) {
-  CHECK_LE(data->size(), this->size())
+  ABSL_CHECK_LE(data->size(), this->size())
       << ": Attempting to send too big a message on "
       << configuration::CleanedChannelToString(simulated_channel_->channel());
 
@@ -1511,7 +1516,7 @@ SimulatedTimerHandler::SimulatedTimerHandler(
 
 void SimulatedTimerHandler::Schedule(monotonic_clock::time_point base,
                                      monotonic_clock::duration repeat_offset) {
-  CHECK_GE(base, monotonic_clock::epoch());
+  ABSL_CHECK_GE(base, monotonic_clock::epoch());
   // The allocations in here are due to infrastructure and don't count in the no
   // mallocs in RT code.
   ScopedNotRealtime nrt;
@@ -1527,7 +1532,7 @@ void SimulatedTimerHandler::Schedule(monotonic_clock::time_point base,
 }
 
 void SimulatedTimerHandler::Handle() noexcept {
-  DCHECK(token_ != scheduler_->InvalidToken());
+  ABSL_DCHECK(token_ != scheduler_->InvalidToken());
   token_ = scheduler_->InvalidToken();
   simulated_event_loop_->HandleEvent();
 }
@@ -1621,7 +1626,7 @@ void SimulatedPhasedLoopHandler::HandleEvent() noexcept {
 }
 
 void SimulatedPhasedLoopHandler::Handle() noexcept {
-  DCHECK(token_ != scheduler_->InvalidToken());
+  ABSL_DCHECK(token_ != scheduler_->InvalidToken());
   token_ = scheduler_->InvalidToken();
   simulated_event_loop_->HandleEvent();
 }
@@ -1649,8 +1654,8 @@ SimulatedEventLoopFactory::SimulatedEventLoopFactory(
           // before doing anything.
           configuration == nullptr ? std::vector<const Node *>{}
                                    : configuration::GetNodes(configuration_)) {
-  CHECK(configuration_ != nullptr);
-  CHECK(IsInitialized()) << ": Need to initialize AOS first.";
+  ABSL_CHECK(configuration_ != nullptr);
+  ABSL_CHECK(IsInitialized()) << ": Need to initialize AOS first.";
   for (const Node *node : nodes_) {
     node_factories_.emplace_back(
         new NodeEventLoopFactory(&scheduler_scheduler_, this, node));
@@ -1662,7 +1667,7 @@ SimulatedEventLoopFactory::SimulatedEventLoopFactory(
 }
 
 SimulatedEventLoopFactory::~SimulatedEventLoopFactory() {
-  CHECK_EQ(0, exit_handle_count_)
+  ABSL_CHECK_EQ(0, exit_handle_count_)
       << ": All ExitHandles must be destroyed before the factory";
 }
 
@@ -1679,7 +1684,7 @@ NodeEventLoopFactory *SimulatedEventLoopFactory::GetNodeEventLoopFactory(
         return node_factory->node() == node;
       });
 
-  CHECK(result != node_factories_.end())
+  ABSL_CHECK(result != node_factories_.end())
       << ": Failed to find node " << FlatbufferToJson(node);
 
   return result->get();
@@ -1696,10 +1701,10 @@ void SimulatedEventLoopFactory::SetTimeConverter(
 ::std::unique_ptr<EventLoop> SimulatedEventLoopFactory::MakeEventLoop(
     std::string_view name, const Node *node) {
   if (node == nullptr) {
-    CHECK(!configuration::MultiNode(configuration()))
+    ABSL_CHECK(!configuration::MultiNode(configuration()))
         << ": Can't make a single node event loop in a multi-node world.";
   } else {
-    CHECK(configuration::MultiNode(configuration()))
+    ABSL_CHECK(configuration::MultiNode(configuration()))
         << ": Can't make a multi-node event loop in a single-node world.";
   }
   return GetNodeEventLoopFactory(node)->MakeEventLoop(name);
@@ -1713,10 +1718,10 @@ void SimulatedEventLoopFactory::OnStartup(
 void SimulatedEventLoopFactory::OnStartup(
     const Node *node, std::function<void(NodeEventLoopFactory *)> &&fn) {
   if (node == nullptr) {
-    CHECK(!configuration::MultiNode(configuration()))
+    ABSL_CHECK(!configuration::MultiNode(configuration()))
         << ": Can't make a single node event loop in a multi-node world.";
   } else {
-    CHECK(configuration::MultiNode(configuration()))
+    ABSL_CHECK(configuration::MultiNode(configuration()))
         << ": Can't make a multi-node event loop in a single-node world.";
   }
   NodeEventLoopFactory *node_factory = GetNodeEventLoopFactory(node);
@@ -1786,11 +1791,11 @@ NodeEventLoopFactory::~NodeEventLoopFactory() {
                  << "' failed to shut down";
     }
   }
-  CHECK_EQ(event_loops_.size(), 0u) << "Event loop didn't exit";
+  ABSL_CHECK_EQ(event_loops_.size(), 0u) << "Event loop didn't exit";
 }
 
 void NodeEventLoopFactory::OnStartup(std::function<void()> &&fn) {
-  CHECK(!scheduler_.is_running())
+  ABSL_CHECK(!scheduler_.is_running())
       << ": Can only register OnStartup handlers when not running.";
   on_startup_.emplace_back(std::move(fn));
   if (started_) {
@@ -1808,7 +1813,7 @@ void NodeEventLoopFactory::ScheduleStartup() {
   scheduler_.ScheduleOnStartup([this]() {
     UUID next_uuid = scheduler_.boot_uuid();
     if (boot_uuid_ != next_uuid) {
-      CHECK_EQ(boot_uuid_, UUID::Zero())
+      ABSL_CHECK_EQ(boot_uuid_, UUID::Zero())
           << ": Boot UUID changed without restarting.  Did TimeConverter "
              "change the boot UUID without signaling a restart, or did you "
              "change TimeConverter?";
@@ -1821,7 +1826,7 @@ void NodeEventLoopFactory::ScheduleStartup() {
 }
 
 void NodeEventLoopFactory::Startup() {
-  CHECK(!started_);
+  ABSL_CHECK(!started_);
   for (size_t i = 0; i < on_startup_.size(); ++i) {
     on_startup_[i]();
   }
@@ -1829,10 +1834,10 @@ void NodeEventLoopFactory::Startup() {
 
 void NodeEventLoopFactory::Shutdown() {
   for (SimulatedEventLoop *event_loop : event_loops_) {
-    CHECK(!event_loop->is_running());
+    ABSL_CHECK(!event_loop->is_running());
   }
 
-  CHECK(started_);
+  ABSL_CHECK(started_);
   started_ = false;
   for (std::function<void()> &fn : on_shutdown_) {
     fn();
@@ -1849,7 +1854,7 @@ void NodeEventLoopFactory::Shutdown() {
                  << "' failed to shut down";
     }
   }
-  CHECK_EQ(event_loops_.size(), 0u) << "Not all event loops shut down";
+  ABSL_CHECK_EQ(event_loops_.size(), 0u) << "Not all event loops shut down";
   boot_uuid_ = UUID::Zero();
 
   channels_.clear();
@@ -1886,7 +1891,7 @@ Status SimulatedEventLoopFactory::NonFatalRunFor(
   for (std::unique_ptr<NodeEventLoopFactory> &node : node_factories_) {
     if (node) {
       for (SimulatedEventLoop *loop : node->event_loops_) {
-        CHECK(!loop->is_running());
+        ABSL_CHECK(!loop->is_running());
       }
     }
   }
@@ -1917,7 +1922,7 @@ SimulatedEventLoopFactory::NonFatalRunUntil(realtime_clock::time_point now,
   for (std::unique_ptr<NodeEventLoopFactory> &node : node_factories_) {
     if (node) {
       for (SimulatedEventLoop *loop : node->event_loops_) {
-        CHECK(!loop->is_running());
+        ABSL_CHECK(!loop->is_running());
       }
     }
   }
@@ -1937,9 +1942,9 @@ Result<void> SimulatedEventLoopFactory::NonFatalRun() {
   const Result<void> result = scheduler_scheduler_.Run();
   for (std::unique_ptr<NodeEventLoopFactory> &node : node_factories_) {
     if (node) {
-      CHECK(!node->is_running());
+      ABSL_CHECK(!node->is_running());
       for (SimulatedEventLoop *loop : node->event_loops_) {
-        CHECK(!loop->is_running());
+        ABSL_CHECK(!loop->is_running());
       }
     }
   }
@@ -1960,29 +1965,30 @@ std::unique_ptr<ExitHandle> SimulatedEventLoopFactory::MakeExitHandle() {
 }
 
 void SimulatedEventLoopFactory::DisableForwarding(const Channel *channel) {
-  CHECK(bridge_) << ": Can't disable forwarding without a message bridge.";
+  ABSL_CHECK(bridge_) << ": Can't disable forwarding without a message bridge.";
   bridge_->DisableForwarding(channel);
 }
 
 void SimulatedEventLoopFactory::DisableStatistics() {
-  CHECK(bridge_) << ": Can't disable statistics without a message bridge.";
+  ABSL_CHECK(bridge_) << ": Can't disable statistics without a message bridge.";
   bridge_->DisableStatistics(
       message_bridge::SimulatedMessageBridge::DestroySenders::kNo);
 }
 
 void SimulatedEventLoopFactory::PermanentlyDisableStatistics() {
-  CHECK(bridge_) << ": Can't disable statistics without a message bridge.";
+  ABSL_CHECK(bridge_) << ": Can't disable statistics without a message bridge.";
   bridge_->DisableStatistics(
       message_bridge::SimulatedMessageBridge::DestroySenders::kYes);
 }
 
 void SimulatedEventLoopFactory::EnableStatistics() {
-  CHECK(bridge_) << ": Can't enable statistics without a message bridge.";
+  ABSL_CHECK(bridge_) << ": Can't enable statistics without a message bridge.";
   bridge_->EnableStatistics();
 }
 
 void SimulatedEventLoopFactory::SkipTimingReport() {
-  CHECK(bridge_) << ": Can't skip timing reports without a message bridge.";
+  ABSL_CHECK(bridge_)
+      << ": Can't skip timing reports without a message bridge.";
 
   for (std::unique_ptr<NodeEventLoopFactory> &node : node_factories_) {
     if (node) {
@@ -1999,20 +2005,20 @@ void NodeEventLoopFactory::SkipTimingReport() {
 }
 
 void NodeEventLoopFactory::EnableStatistics() {
-  CHECK(factory_->bridge_)
+  ABSL_CHECK(factory_->bridge_)
       << ": Can't enable statistics without a message bridge.";
   factory_->bridge_->EnableStatistics(node_);
 }
 
 void NodeEventLoopFactory::DisableStatistics() {
-  CHECK(factory_->bridge_)
+  ABSL_CHECK(factory_->bridge_)
       << ": Can't disable statistics without a message bridge.";
   factory_->bridge_->DisableStatistics(node_);
 }
 
 ::std::unique_ptr<EventLoop> NodeEventLoopFactory::MakeEventLoop(
     std::string_view name, EventLoopOptions options) {
-  CHECK(!scheduler_.is_running() || !started_)
+  ABSL_CHECK(!scheduler_.is_running() || !started_)
       << ": Can't create an event loop while running";
 
   pid_t tid = tid_;

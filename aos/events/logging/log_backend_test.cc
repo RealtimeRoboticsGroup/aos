@@ -8,7 +8,7 @@
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
 #include "absl/flags/reflection.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
@@ -71,7 +71,7 @@ TEST(LogBackendTest, CreateSimpleFile) {
 // ListFiles() matches the paths FileOperations reports against the backend's
 // own base name.  The two are produced differently -- FindLogs() reports
 // generic_string()s, while the base name is whatever the caller handed us -- so
-// any disagreement in how the same directory is spelled trips the CHECK in
+// any disagreement in how the same directory is spelled trips the ABSL_CHECK in
 // ListFiles() for every file found.
 //
 // Redundant separators are a disagreement we can construct on Linux:

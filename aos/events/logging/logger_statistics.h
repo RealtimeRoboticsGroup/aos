@@ -4,6 +4,8 @@
 #include <chrono>
 #include <cstddef>
 
+#include "absl/log/absl_check.h"
+
 #include "aos/events/logging/logger_statistics_static.h"
 
 namespace aos::logger {
@@ -86,7 +88,7 @@ class LoggerStatistics {
 
   void UpdateMemoryBufferBytesAvailable(size_t memory_buffer_bytes_available) {
     memory_buffer_bytes_available_ = memory_buffer_bytes_available;
-    CHECK_LE(0u, memory_buffer_bytes_available);
+    ABSL_CHECK_LE(0u, memory_buffer_bytes_available);
   }
 
   // Accumulates another statistics object into this object.

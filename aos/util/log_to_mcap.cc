@@ -1,7 +1,7 @@
 #include <string>
 #include <vector>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 
 #include "aos/init.h"
 #include "aos/util/log_to_mcap_lib.h"
@@ -15,7 +15,8 @@
 // foxglove's servers or anything).
 int main(int argc, char *argv[]) {
   aos::InitGoogle(&argc, &argv);
-  CHECK_GE(argc, 2) << ": Usage: " << argv[0] << " path/to/log [output.mcap]";
+  ABSL_CHECK_GE(argc, 2) << ": Usage: " << argv[0]
+                         << " path/to/log [output.mcap]";
 
   std::string output_path = "/tmp/log.mcap";
   if (argc >= 3) {

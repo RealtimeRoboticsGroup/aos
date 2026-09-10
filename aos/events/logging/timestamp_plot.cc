@@ -1,4 +1,5 @@
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 
@@ -34,7 +35,7 @@ std::vector<std::string> Nodes() {
     }
 
     std::vector<std::string_view> l = absl::StrSplit(n, ", ");
-    CHECK_EQ(l.size(), 2u) << "'" << n << "'";
+    ABSL_CHECK_EQ(l.size(), 2u) << "'" << n << "'";
     formatted_nodes.emplace_back(l[0]);
   }
 
@@ -75,8 +76,8 @@ std::pair<std::vector<double>, std::vector<double>> ReadSamples(
     }
     double t;
     double o;
-    CHECK(absl::SimpleAtod(l[0], &t));
-    CHECK(absl::SimpleAtod(l[1], &o));
+    ABSL_CHECK(absl::SimpleAtod(l[0], &t));
+    ABSL_CHECK(absl::SimpleAtod(l[1], &o));
     samplefile12_t.emplace_back(t);
     samplefile12_o.emplace_back(flip ? -o : o);
   }
@@ -118,9 +119,9 @@ class NodePlotter {
            absl::StrSplit(absl::GetFlag(FLAGS_offsets), ',')) {
         std::vector<std::string_view> node_offset =
             absl::StrSplit(nodeoffset, '=');
-        CHECK_EQ(node_offset.size(), 2u);
+        ABSL_CHECK_EQ(node_offset.size(), 2u);
         double o;
-        CHECK(absl::SimpleAtod(node_offset[1], &o));
+        ABSL_CHECK(absl::SimpleAtod(node_offset[1], &o));
         offset_.emplace(std::string(node_offset[0]), o);
       }
     }
@@ -186,8 +187,8 @@ std::pair<std::vector<double>, std::vector<double>> NodePlotter::ReadLines(
     }
     double t;
     double o;
-    CHECK(absl::SimpleAtod(l[0], &t));
-    CHECK(absl::SimpleAtod(l[2], &o));
+    ABSL_CHECK(absl::SimpleAtod(l[0], &t));
+    ABSL_CHECK(absl::SimpleAtod(l[2], &o));
     samplefile12_t.emplace_back(t);
     samplefile12_o.emplace_back(flip ? -o : o);
   }
@@ -211,8 +212,8 @@ std::pair<std::vector<double>, std::vector<double>> NodePlotter::ReadOffset(
       ++index;
     }
   }
-  CHECK_NE(node1_index, -1) << ": Unknown node " << node1;
-  CHECK_NE(node2_index, -1) << ": Unknown node " << node2;
+  ABSL_CHECK_NE(node1_index, -1) << ": Unknown node " << node1;
+  ABSL_CHECK_NE(node2_index, -1) << ": Unknown node " << node2;
   std::vector<double> offsetfile_t;
   std::vector<double> offsetfile_o;
 
@@ -231,14 +232,14 @@ std::pair<std::vector<double>, std::vector<double>> NodePlotter::ReadOffset(
     }
 
     std::vector<std::string_view> l = absl::StrSplit(n, ", ");
-    CHECK_LT(static_cast<size_t>(node1_index + 1), l.size());
-    CHECK_LT(static_cast<size_t>(node2_index + 1), l.size());
+    ABSL_CHECK_LT(static_cast<size_t>(node1_index + 1), l.size());
+    ABSL_CHECK_LT(static_cast<size_t>(node2_index + 1), l.size());
     double t;
     double o1;
     double o2;
-    CHECK(absl::SimpleAtod(l[0], &t));
-    CHECK(absl::SimpleAtod(l[1 + node1_index], &o1));
-    CHECK(absl::SimpleAtod(l[1 + node2_index], &o2));
+    ABSL_CHECK(absl::SimpleAtod(l[0], &t));
+    ABSL_CHECK(absl::SimpleAtod(l[1 + node1_index], &o1));
+    ABSL_CHECK(absl::SimpleAtod(l[1 + node2_index], &o2));
     offsetfile_t.emplace_back(t);
     offsetfile_o.emplace_back(o2 - o1);
   }
@@ -268,10 +269,10 @@ void NodePlotter::AddNodes(std::string_view node1, std::string_view node2) {
   Offset(&noncausalfile21.second, offset2 - offset1);
   Offset(&offsetfile.second, offset2 - offset1);
 
-  CHECK_EQ(samplefile12.first.size(), samplefile12.second.size());
-  CHECK_EQ(samplefile21.first.size(), samplefile21.second.size());
-  CHECK_EQ(noncausalfile12.first.size(), noncausalfile12.second.size());
-  CHECK_EQ(noncausalfile21.first.size(), noncausalfile21.second.size());
+  ABSL_CHECK_EQ(samplefile12.first.size(), samplefile12.second.size());
+  ABSL_CHECK_EQ(samplefile21.first.size(), samplefile21.second.size());
+  ABSL_CHECK_EQ(noncausalfile12.first.size(), noncausalfile12.second.size());
+  ABSL_CHECK_EQ(noncausalfile21.first.size(), noncausalfile21.second.size());
 
   LOG(INFO) << samplefile12.first.size() + samplefile21.first.size() +
                    noncausalfile12.first.size() + noncausalfile21.first.size()
@@ -328,7 +329,7 @@ int Main(int argc, const char *const *argv) {
       LOG(WARNING) << "No connections found, is something wrong?";
     }
   } else {
-    CHECK_EQ(argc, 3);
+    ABSL_CHECK_EQ(argc, 3);
 
     LOG(INFO) << argv[1];
     LOG(INFO) << argv[2];

@@ -5,7 +5,7 @@
 #include <string_view>
 #include <utility>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "flatbuffers/buffer.h"
 #include "flatbuffers/flatbuffer_builder.h"
@@ -24,7 +24,7 @@ MockStarter::MockStarter(aos::EventLoop *event_loop)
   aos::TimerHandler *send_timer =
       event_loop_->AddTimer([this]() { SendStatus(); });
 
-  CHECK(aos::configuration::MultiNode(event_loop_->configuration()));
+  ABSL_CHECK(aos::configuration::MultiNode(event_loop_->configuration()));
 
   for (const aos::Node *node :
        aos::configuration::GetNodes(event_loop_->configuration())) {
@@ -38,7 +38,7 @@ MockStarter::MockStarter(aos::EventLoop *event_loop)
             for (const flatbuffers::String *node : *command.nodes()) {
               if (node->string_view() ==
                   event_loop_->node()->name()->string_view()) {
-                CHECK(statuses_.count(command.name()->str()) > 0)
+                ABSL_CHECK(statuses_.count(command.name()->str()) > 0)
                     << "Unable to find " << command.name()->string_view()
                     << " in our list of applications.";
                 ApplicationStatus &status = statuses_[command.name()->str()];
@@ -124,7 +124,8 @@ void MockStarter::SendStatus() {
 }
 
 MockStarters::MockStarters(aos::SimulatedEventLoopFactory *event_loop_factory) {
-  CHECK(aos::configuration::MultiNode(event_loop_factory->configuration()));
+  ABSL_CHECK(
+      aos::configuration::MultiNode(event_loop_factory->configuration()));
   for (const aos::Node *node :
        aos::configuration::GetNodes(event_loop_factory->configuration())) {
     event_loops_.emplace_back(

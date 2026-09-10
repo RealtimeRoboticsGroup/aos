@@ -3,6 +3,7 @@
 #include <numbers>
 
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 
 #include "aos/containers/sized_array.h"
 #include "frc/control_loops/drivetrain/localizer_generated.h"
@@ -61,13 +62,13 @@ size_t CameraIndexForName(std::string_view name) {
 
 std::map<uint64_t, Localizer::Transform> GetTargetLocations(
     const TargetMap &constants) {
-  CHECK(constants.has_target_poses());
+  ABSL_CHECK(constants.has_target_poses());
   std::map<uint64_t, Localizer::Transform> transforms;
   for (const frc::vision::TargetPoseFbs *target : *constants.target_poses()) {
-    CHECK(target->has_id());
-    CHECK(target->has_position());
-    CHECK(target->has_orientation());
-    CHECK_EQ(0u, transforms.count(target->id()));
+    ABSL_CHECK(target->has_id());
+    ABSL_CHECK(target->has_position());
+    ABSL_CHECK(target->has_orientation());
+    ABSL_CHECK_EQ(0u, transforms.count(target->id()));
     transforms[target->id()] = PoseToTransform(target);
   }
   return transforms;
@@ -92,22 +93,22 @@ NominalCovariance() {
 std::array<Localizer::CameraState, Localizer::kNumCameras>
 Localizer::MakeCameras(const CameraConstants &constants,
                        aos::EventLoop *event_loop) {
-  CHECK(constants.has_calibration());
+  ABSL_CHECK(constants.has_calibration());
   std::array<Localizer::CameraState, Localizer::kNumCameras> cameras;
   for (const calibration::CameraCalibration *calibration :
        *constants.calibration()) {
-    CHECK(!calibration->has_turret_extrinsics())
+    ABSL_CHECK(!calibration->has_turret_extrinsics())
         << "The 2024 robot does not have cameras on a turret.";
-    CHECK(calibration->has_node_name());
+    ABSL_CHECK(calibration->has_node_name());
     const std::string channel_name =
         absl::StrFormat("/camera%d/gray", calibration->camera_number());
     const size_t index = CameraIndexForName(channel_name);
     // We default-construct the extrinsics matrix to all-zeros; use that to
     // sanity-check whether we have populated the matrix yet or not.
-    CHECK(cameras.at(index).extrinsics.norm() == 0)
+    ABSL_CHECK(cameras.at(index).extrinsics.norm() == 0)
         << "Got multiple calibrations for "
         << calibration->node_name()->string_view();
-    CHECK(calibration->has_fixed_extrinsics());
+    ABSL_CHECK(calibration->has_fixed_extrinsics());
     cameras.at(index).extrinsics =
         frc::control_loops::drivetrain::FlatbufferToTransformationMatrix(
             *calibration->fixed_extrinsics());
@@ -115,7 +116,8 @@ Localizer::MakeCameras(const CameraConstants &constants,
         event_loop->MakeSender<VisualizationStatic>(channel_name);
   }
   for (const CameraState &camera : cameras) {
-    CHECK(camera.extrinsics.norm() != 0) << "Missing a camera calibration.";
+    ABSL_CHECK(camera.extrinsics.norm() != 0)
+        << "Missing a camera calibration.";
   }
   return cameras;
 }
@@ -149,12 +151,12 @@ Localizer::Localizer(aos::EventLoop *event_loop)
     const std::string_view channel_name = kDetectionChannels.at(camera_index);
     const aos::Channel *const channel =
         event_loop->GetChannel<frc::vision::TargetMap>(channel_name);
-    CHECK(channel != nullptr);
+    ABSL_CHECK(channel != nullptr);
     event_loop->MakeWatcher(
         channel_name,
         [this, camera_index](const frc::vision::TargetMap &targets) {
-          CHECK(targets.has_target_poses());
-          CHECK(targets.has_monotonic_timestamp_ns());
+          ABSL_CHECK(targets.has_target_poses());
+          ABSL_CHECK(targets.has_monotonic_timestamp_ns());
           const aos::monotonic_clock::time_point orin_capture_time(
               std::chrono::nanoseconds(targets.monotonic_timestamp_ns()));
           if (orin_capture_time > event_loop_->context().monotonic_event_time) {
@@ -171,7 +173,7 @@ Localizer::Localizer(aos::EventLoop *event_loop)
               cameras_.at(camera_index).debug_sender.MakeStaticBuilder();
           auto target_debug_list = debug_builder->add_targets();
           // The static_length should already be 20.
-          CHECK(target_debug_list->reserve(20));
+          ABSL_CHECK(target_debug_list->reserve(20));
           for (const frc::vision::TargetPoseFbs *target :
                *targets.target_poses()) {
             VLOG(1) << "Handling target from " << camera_index;
@@ -354,12 +356,12 @@ bool Localizer::DeweightAprilTag(uint64_t target_id) {
     case aos::Alliance::kRed:
       ignore_tags =
           constants_fetcher_.constants().common()->ignore_targets()->red();
-      CHECK(ignore_tags != nullptr);
+      ABSL_CHECK(ignore_tags != nullptr);
       break;
     case aos::Alliance::kBlue:
       ignore_tags =
           constants_fetcher_.constants().common()->ignore_targets()->blue();
-      CHECK(ignore_tags != nullptr);
+      ABSL_CHECK(ignore_tags != nullptr);
       break;
     case aos::Alliance::kInvalid:
       return false;
@@ -780,7 +782,7 @@ Localizer::Output Localizer::Corrector::H(const State &, const Input &) {
 }
 
 Localizer::Output Localizer::XyzCorrector::H(const State &, const Input &) {
-  CHECK(Z_.allFinite());
+  ABSL_CHECK(Z_.allFinite());
   Eigen::Vector3d Zhat = H_ * state_at_capture_ - Z_;
   // Rewrap angle difference to put it back in range.
   Zhat(2) = aos::math::NormalizeAngle(Zhat(2));

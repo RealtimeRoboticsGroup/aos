@@ -1,5 +1,7 @@
 #include "frc/control_loops/catapult/mpc_problem.h"
 
+#include "absl/log/absl_check.h"
+
 namespace frc::control_loops::catapult {
 namespace chrono = std::chrono;
 
@@ -48,7 +50,7 @@ MPCProblem::MPCProblem(size_t horizon,
   // internally.
   settings_.scaling = 0;
   auto status = solver_.Init(instance_, settings_);
-  CHECK(status.ok()) << status;
+  ABSL_CHECK(status.ok()) << status;
 }
 
 void MPCProblem::SetState(Eigen::Matrix<double, 2, 1> X_initial,
@@ -60,7 +62,7 @@ void MPCProblem::SetState(Eigen::Matrix<double, 2, 1> X_initial,
       X_initial(1, 0) * accel_q_ + final_q_ * (Af_ * X_initial - X_final);
 
   auto status = solver_.SetObjectiveVector(objective_vector_);
-  CHECK(status.ok()) << status;
+  ABSL_CHECK(status.ok()) << status;
 }
 
 bool MPCProblem::Solve() {
@@ -82,14 +84,14 @@ bool MPCProblem::Solve() {
 }
 
 void MPCProblem::WarmStart(const MPCProblem &p) {
-  CHECK_GE(p.horizon(), horizon())
+  ABSL_CHECK_GE(p.horizon(), horizon())
       << ": Can only copy a bigger problem's solution into a smaller problem.";
   auto status = solver_.SetPrimalWarmStart(p.solver_.primal_solution().block(
       p.horizon() - horizon(), 0, horizon(), 1));
-  CHECK(status.ok()) << status;
+  ABSL_CHECK(status.ok()) << status;
   status = solver_.SetDualWarmStart(p.solver_.dual_solution().block(
       p.horizon() - horizon(), 0, horizon(), 1));
-  CHECK(status.ok()) << status;
+  ABSL_CHECK(status.ok()) << status;
 }
 
 }  // namespace frc::control_loops::catapult

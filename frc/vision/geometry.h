@@ -3,7 +3,7 @@
 
 #include <optional>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "opencv2/core/types.hpp"
 
@@ -17,7 +17,7 @@ struct SlopeInterceptLine {
 
   inline SlopeInterceptLine(cv::Point2d p, cv::Point2d q) {
     if (p.x == q.x) {
-      CHECK_EQ(p.y, q.y) << "Can't fit line to infinite slope";
+      ABSL_CHECK_EQ(p.y, q.y) << "Can't fit line to infinite slope";
 
       // If two identical points were passed in, give the slope 0,
       // with it passing the point.
@@ -65,7 +65,7 @@ struct Circle {
   double radius;
 
   static inline std::optional<Circle> Fit(std::vector<cv::Point2d> points) {
-    CHECK_EQ(points.size(), 3ul);
+    ABSL_CHECK_EQ(points.size(), 3ul);
     // For the 3 points, we have 3 equations in the form
     // (x - h)^2 + (y - k)^2 = r^2
     // Manipulate them to solve for the center and radius

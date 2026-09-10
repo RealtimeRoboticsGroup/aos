@@ -11,7 +11,7 @@
 
 #include "absl/container/btree_set.h"
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/die_if_null.h"
 #include "absl/log/log.h"
 #include "absl/log/vlog_is_on.h"
@@ -85,7 +85,7 @@ FoxgloveWebsocketServer::FoxgloveWebsocketServer(
         fbs::String<0> *foo = ABSL_DIE_IF_NULL(builder->add_node());
         const std::string_view node_name =
             event_loop_->node()->name()->string_view();
-        CHECK(foo->reserve(node_name.size()));
+        ABSL_CHECK(foo->reserve(node_name.size()));
         foo->SetString(node_name);
         return builder;
       }()),
@@ -140,7 +140,7 @@ FoxgloveWebsocketServer::FoxgloveWebsocketServer(
                   {reinterpret_cast<const char *>(configuration_schema.data()),
                    configuration_schema.size()}),
               .schemaEncoding = std::nullopt}});
-      CHECK_EQ(ids.size(), 1u);
+      ABSL_CHECK_EQ(ids.size(), 1u);
       special_channels_.emplace(ids[0],
                                 SpecialChannelState{
                                     .message = stripped_configuration_.span(),
@@ -159,7 +159,7 @@ FoxgloveWebsocketServer::FoxgloveWebsocketServer(
                   {reinterpret_cast<const char *>(live_metadata_schema.data()),
                    live_metadata_schema.size()}),
               .schemaEncoding = std::nullopt}});
-      CHECK_EQ(ids.size(), 1u);
+      ABSL_CHECK_EQ(ids.size(), 1u);
       special_channels_.emplace(
           ids[0],
           SpecialChannelState{
@@ -203,9 +203,9 @@ FoxgloveWebsocketServer::FoxgloveWebsocketServer(
                          schema.span().size()}),
                     .schemaEncoding = std::nullopt,
                 }});
-      CHECK_EQ(ids.size(), 1u);
+      ABSL_CHECK_EQ(ids.size(), 1u);
       const ChannelId id = ids[0];
-      CHECK(fetchers_.count(id) == 0);
+      ABSL_CHECK(fetchers_.count(id) == 0);
       fetchers_[id] = FetcherState{
           .fetcher = event_loop_->MakeRawFetcher(channel),
           .fetch_next = channel->max_size() <=
@@ -223,8 +223,8 @@ FoxgloveWebsocketServer::FoxgloveWebsocketServer(
         // runtime.
         const auto [it, success] =
             senders_.emplace(topic, event_loop_->MakeRawSender(channel));
-        CHECK(success) << "Internal assumption was broken.";
-        CHECK(it->second.get() != nullptr)
+        ABSL_CHECK(success) << "Internal assumption was broken.";
+        ABSL_CHECK(it->second.get() != nullptr)
             << "MakeRawSender failed for some reason on channel {"
             << aos::FlatbufferToJson(channel) << "}";
       }
@@ -263,7 +263,7 @@ FoxgloveWebsocketServer::FoxgloveWebsocketServer(
     }
 
     if (special_channel_it != special_channels_.end()) {
-      CHECK(it == active_channels_.end())
+      ABSL_CHECK(it == active_channels_.end())
           << ": Somehow allowed a channel to be both a real channel and a "
              "special channel.";
 

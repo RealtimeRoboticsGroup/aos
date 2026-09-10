@@ -2,6 +2,7 @@
 #include <memory>
 #include <thread>
 
+#include "absl/log/absl_check.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 
@@ -45,7 +46,7 @@ std::shared_ptr<Channel> MakeAuthClientChannel() {
   std::shared_ptr<Channel> channel(
       grpc::CreateChannel(server_address, grpc::InsecureChannelCredentials()));
   // Give 10s deadline to connect to server or bail.
-  CHECK(channel->WaitForConnected(std::chrono::system_clock::now() + 10s))
+  ABSL_CHECK(channel->WaitForConnected(std::chrono::system_clock::now() + 10s))
       << "Couldn't connect to auth server.";
   return channel;
 }

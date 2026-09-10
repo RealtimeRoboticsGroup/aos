@@ -4,6 +4,8 @@
 #include <regex>
 #include <string_view>
 
+#include "absl/log/absl_check.h"
+
 ABSL_FLAG(
     std::string, name, "",
     "Name to match for printing out channels. Empty means no name filter.");
@@ -131,7 +133,7 @@ NodePrinter::NodePrinter(aos::EventLoop *event_loop,
       const flatbuffers::string_view type = channel->type()->string_view();
       VLOG(1) << "Listening on " << name << " " << type;
 
-      CHECK(channel->schema() != nullptr);
+      ABSL_CHECK(channel->schema() != nullptr);
       event_loop_->MakeRawWatcher(
           channel, [this, channel, start_time, end_time](
                        const aos::Context &context, const void * /*message*/) {

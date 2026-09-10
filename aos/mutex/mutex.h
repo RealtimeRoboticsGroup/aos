@@ -3,7 +3,7 @@
 
 #include <ostream>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/ipc_lib/aos_sync.h"

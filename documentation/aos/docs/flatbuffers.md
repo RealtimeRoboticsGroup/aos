@@ -117,8 +117,8 @@ TestTableStatic *object = builder.get();
 object->set_scalar(123);
 {
   auto vector = object->add_vector_of_scalars();
-  CHECK(vector->emplace_back(4));
-  CHECK(vector->emplace_back(5));
+  ABSL_CHECK(vector->emplace_back(4));
+  ABSL_CHECK(vector->emplace_back(5));
 }
 {
   auto string = object->add_string();
@@ -126,8 +126,8 @@ object->set_scalar(123);
 }
 {
   auto vector_of_strings = object->add_vector_of_strings();
-  auto sub_string = CHECK_NOTNULL(vector_of_strings->emplace_back());
-  CHECK(sub_string->emplace_back('D'));
+  auto sub_string = ABSL_DIE_IF_NULL(vector_of_strings->emplace_back());
+  ABSL_CHECK(sub_string->emplace_back('D'));
 }
 {
   object->set_substruct({1678, 254});
@@ -138,11 +138,11 @@ object->set_scalar(123);
 }
 {
   auto vector = object->add_vector_of_structs();
-  CHECK(vector->emplace_back({48, 67}));
-  CHECK(vector->emplace_back({118, 148}));
-  CHECK(vector->emplace_back({1678, 973}));
+  ABSL_CHECK(vector->emplace_back({48, 67}));
+  ABSL_CHECK(vector->emplace_back({118, 148}));
+  ABSL_CHECK(vector->emplace_back({1678, 973}));
   // Max vector size is three; this should fail.
-  CHECK(!vector->emplace_back({1114, 2056}));
+  ABSL_CHECK(!vector->emplace_back({1114, 2056}));
 }
 {
   auto vector = object->add_vector_of_tables();
@@ -224,7 +224,7 @@ TEST_F(StaticFlatbuffersTest, PopulateMethodConversionExample) {
   // Using the static flatbuffer API.
   aos::fbs::AlignedVectorAllocator allocator;
   Builder<TestTableStatic> static_builder(&allocator);
-  PopulateStatic(CHECK_NOTNULL(static_builder.get()->add_subtable()));
+  PopulateStatic(ABSL_DIE_IF_NULL(static_builder.get()->add_subtable()));
 
   // And confirm that they both contain the expected flatbuffer:
   const std::string expected = R"json({ "subtable": { "foo": 1234 }})json";

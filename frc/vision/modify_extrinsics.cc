@@ -6,7 +6,7 @@
 #include "Eigen/Dense"
 #include "Eigen/Geometry"
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
 
@@ -194,7 +194,7 @@ void Main(std::string orig_calib_filename) {
 
 int main(int argc, char **argv) {
   aos::InitGoogle(&argc, &argv);
-  CHECK(argc == 2) << "Must supply a starting calibration filename";
+  ABSL_CHECK(argc == 2) << "Must supply a starting calibration filename";
   std::string filename = argv[1];
   frc::vision::Main(filename);
 }

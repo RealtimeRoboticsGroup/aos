@@ -2,6 +2,7 @@
 
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -103,7 +104,7 @@ TEST_F(BufferEncoderBaseTest, CorruptedBuffer) {
         // Sanity check the math in the test code.
         LOG(INFO) << "Decoded " << total_decoded_size << " encoded "
                   << total_encoded_size;
-        CHECK_EQ(total_decoded_size, TotalSize(decoded_buffers));
+        ABSL_CHECK_EQ(total_decoded_size, TotalSize(decoded_buffers));
         break;
       }
       // If we're at the end, trim off the 0s so our comparison later works out.

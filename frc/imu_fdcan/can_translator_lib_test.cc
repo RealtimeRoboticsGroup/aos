@@ -1,6 +1,6 @@
 #include "frc/imu_fdcan/can_translator_lib.h"
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "gtest/gtest.h"
 
@@ -65,7 +65,7 @@ TEST_F(CANTranslatorTest, CheckValidFrame) {
       can_frame_builder->set_can_id(i + 1);
       can_frame_builder->set_realtime_timestamp_ns(100e9 + 649);
       auto can_data = can_frame_builder->add_data();
-      CHECK(can_data->FromData(full_frame.data() + i * 8, 8));
+      ABSL_CHECK(can_data->FromData(full_frame.data() + i * 8, 8));
 
       can_frame_builder.CheckOk(can_frame_builder.Send());
     }
@@ -126,7 +126,7 @@ TEST_F(CANTranslatorTest, CheckInvalidFrame) {
     can_frame_builder->set_can_id(10);
     can_frame_builder->set_realtime_timestamp_ns(100);
     auto can_data = can_frame_builder->add_data();
-    CHECK(can_data->reserve(sizeof(uint8_t) * 8));
+    ABSL_CHECK(can_data->reserve(sizeof(uint8_t) * 8));
     can_data->resize(8);
 
     can_frame_builder.CheckOk(can_frame_builder.Send());

@@ -1,5 +1,7 @@
 #include "frc/control_loops/swerve/naive_estimator.h"
 
+#include "absl/log/absl_check.h"
+
 #include "aos/flatbuffers.h"
 #include "frc/math/flatbuffers_matrix.h"
 
@@ -105,9 +107,9 @@ NaiveEstimator::State NaiveEstimator::Update(
 }
 
 void NaiveEstimator::PopulateStatus(NaiveEstimatorStatusStatic *fbs) const {
-  CHECK(FromEigen(state_.cast<double>(), fbs->add_velocity_state()));
+  ABSL_CHECK(FromEigen(state_.cast<double>(), fbs->add_velocity_state()));
   auto estimator_states = fbs->add_estimator_states();
-  CHECK(estimator_states->reserve(4));
+  ABSL_CHECK(estimator_states->reserve(4));
   for (size_t module = 0; module < 4; ++module) {
     zeroing_[module].GetEstimatorState(estimator_states->emplace_back());
   }
@@ -115,7 +117,7 @@ void NaiveEstimator::PopulateStatus(NaiveEstimatorStatusStatic *fbs) const {
   fbs->set_yaw(state_(States::kTheta));
   fbs->set_vx(state_(States::kVx));
   fbs->set_vy(state_(States::kVy));
-  CHECK(fbs->add_module_drive_velocities()->FromIterator(velocities_.begin(),
-                                                         velocities_.end()));
+  ABSL_CHECK(fbs->add_module_drive_velocities()->FromIterator(
+      velocities_.begin(), velocities_.end()));
 }
 }  // namespace frc::control_loops::swerve

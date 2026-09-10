@@ -1,6 +1,6 @@
 #include "frc/control_loops/static_zeroing_single_dof_profiled_subsystem.h"
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "flatbuffers/flatbuffers.h"
 #include "gtest/gtest.h"
@@ -217,8 +217,8 @@ class TestIntakeSystemSimulation {
                 &real_position_builder);
     auto position_builder = position.template MakeBuilder<PositionType>();
     position_builder.add_position(position_offset);
-    CHECK_EQ(position.Send(position_builder.Finish()),
-             aos::RawSender::Error::kOk);
+    ABSL_CHECK_EQ(position.Send(position_builder.Finish()),
+                  aos::RawSender::Error::kOk);
   }
 
   void set_peak_subsystem_acceleration(double value) {
@@ -390,14 +390,14 @@ class Subsystem
         status->template MakeBuilder<StatusType>();
 
     subsystem_status_builder.add_status(status_offset);
-    CHECK_EQ(status->Send(subsystem_status_builder.Finish()),
-             aos::RawSender::Error::kOk);
+    ABSL_CHECK_EQ(status->Send(subsystem_status_builder.Finish()),
+                  aos::RawSender::Error::kOk);
     if (output != nullptr) {
       typename OutputType::Builder output_builder =
           output->template MakeBuilder<OutputType>();
       output_builder.add_output(output_voltage);
-      CHECK_EQ(output->Send(output_builder.Finish()),
-               aos::RawSender::Error::kOk);
+      ABSL_CHECK_EQ(output->Send(output_builder.Finish()),
+                    aos::RawSender::Error::kOk);
     }
   }
 

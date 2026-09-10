@@ -19,7 +19,7 @@
 
 #include "frc/orin/labeling_allegretti_2019_BKE.h"
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "cuda_runtime.h"
@@ -473,13 +473,13 @@ __global__ void FinalLabeling(GpuImage<uint32_t> labels,
 void LabelImage(const GpuImage<uint8_t> input, GpuImage<uint32_t> output,
                 GpuImage<uint32_t> union_markers_size_device,
                 cudaStream_t stream) {
-  CHECK_NE(input.rows, 1u);
-  CHECK_NE(input.cols, 1u);
+  ABSL_CHECK_NE(input.rows, 1u);
+  ABSL_CHECK_NE(input.cols, 1u);
 
   // Need an even number of rows and colums, we don't need to solve the actual
   // hard problems...
-  CHECK_EQ(input.rows % 2, 0u);
-  CHECK_EQ(input.cols % 2, 0u);
+  ABSL_CHECK_EQ(input.rows % 2, 0u);
+  ABSL_CHECK_EQ(input.cols % 2, 0u);
 
   dim3 grid_size =
       dim3((((input.cols + 1) / 2) + BLOCK_COLS - 1) / BLOCK_COLS,

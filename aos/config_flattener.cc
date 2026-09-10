@@ -2,7 +2,7 @@
 #include <vector>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/configuration.h"
@@ -21,7 +21,7 @@ ABSL_FLAG(
 namespace aos {
 
 int Main(int argc, char **argv) {
-  CHECK_GE(argc, 3) << ": Too few arguments";
+  ABSL_CHECK_GE(argc, 3) << ": Too few arguments";
 
   const char *config_path = argv[1];
   // In order to support not only importing things by absolute path, but also
@@ -57,13 +57,13 @@ int Main(int argc, char **argv) {
   aos::FlatbufferDetachedBuffer<Configuration> merged_config =
       configuration::MergeConfiguration(config, schemas);
   // In case we've done something overly weird to the flatbuffer...
-  CHECK(merged_config.Verify())
+  ABSL_CHECK(merged_config.Verify())
       << ": Failed to verify flatbuffer. NOTE: Very large flatbuffers could be "
          "exceeding max_tables in flatbuffers::Verifier.";
 
   for (const Channel *c : *merged_config.message().channels()) {
-    CHECK(c->has_schema()) << ": Channel doesn't have a schema "
-                           << FlatbufferToJson(c);
+    ABSL_CHECK(c->has_schema())
+        << ": Channel doesn't have a schema " << FlatbufferToJson(c);
   }
 
   const std::string merged_config_json =

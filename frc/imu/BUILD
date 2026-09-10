@@ -78,7 +78,7 @@ cc_library(
         "@ceres-solver//:ceres",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/strings:str_format",
         "@eigen",
     ],
@@ -97,7 +97,7 @@ cc_library(
         "@ceres-solver//:ceres",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@eigen",
     ],
 )

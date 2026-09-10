@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/events/epoll.h"
@@ -103,7 +103,7 @@ class EventScheduler {
   // Sets the time converter in use for this scheduler (and the corresponding
   // node index)
   void SetTimeConverter(size_t node_index, TimeConverter *converter) {
-    CHECK_EQ(node_index_, node_index);
+    ABSL_CHECK_EQ(node_index_, node_index);
     converter_ = converter;
   }
 
@@ -124,7 +124,7 @@ class EventScheduler {
   // Removes an event from the OnRun list without running it.
   void DeleteOnRun(Event *callback) {
     auto it = std::find(on_run_.begin(), on_run_.end(), callback);
-    CHECK(it != on_run_.end());
+    ABSL_CHECK(it != on_run_.end());
     on_run_.erase(it);
   }
 
@@ -264,14 +264,14 @@ class EventScheduler {
    public:
     Result<distributed_clock::time_point> ToDistributedClock(
         size_t /*node_index*/, logger::BootTimestamp time) override {
-      CHECK_EQ(time.boot, 0u) << ": Reboots unsupported by default.";
+      ABSL_CHECK_EQ(time.boot, 0u) << ": Reboots unsupported by default.";
       return distributed_clock::epoch() + time.time.time_since_epoch();
     }
 
     Result<logger::BootTimestamp> FromDistributedClock(
         size_t /*node_index*/, distributed_clock::time_point time,
         size_t boot_count) override {
-      CHECK_EQ(boot_count, 0u);
+      ABSL_CHECK_EQ(boot_count, 0u);
       return logger::BootTimestamp{
           .boot = boot_count,
           .time = monotonic_clock::epoch() + time.time_since_epoch()};
@@ -280,7 +280,7 @@ class EventScheduler {
     void ObserveTimePassed(distributed_clock::time_point /*time*/) override {}
 
     UUID boot_uuid(size_t /*node_index*/, size_t boot_count) override {
-      CHECK_EQ(boot_count, 0u);
+      ABSL_CHECK_EQ(boot_count, 0u);
       return uuid_;
     }
 
@@ -350,7 +350,7 @@ class EventSchedulerScheduler {
         [this](distributed_clock::time_point reboot_time,
                const std::vector<logger::BootTimestamp> &node_times) {
           if (!reboots_.empty()) {
-            CHECK_GT(reboot_time, std::get<0>(reboots_.back()));
+            ABSL_CHECK_GT(reboot_time, std::get<0>(reboots_.back()));
           }
           reboots_.emplace_back(reboot_time, node_times);
         });
@@ -417,7 +417,7 @@ inline monotonic_clock::time_point EventScheduler::monotonic_now() const {
   // to be miserable, so we should probably aim to *make* it true.
   const logger::BootTimestamp t = CheckExpected(
       FromDistributedClock(scheduler_scheduler_->distributed_now()));
-  CHECK_EQ(t.boot, boot_count_)
+  ABSL_CHECK_EQ(t.boot, boot_count_)
       << ": "
       << " " << t << " d " << scheduler_scheduler_->distributed_now();
   return t.time;

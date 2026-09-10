@@ -9,7 +9,7 @@
 #include <filesystem>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/containers/resizeable_buffer.h"
@@ -58,7 +58,7 @@ void Cleanup() {
             << "MB";
 
   // Delete FLAGS_file at shutdown
-  PCHECK(std::filesystem::remove(absl::GetFlag(FLAGS_file)) != 0)
+  ABSL_PCHECK(std::filesystem::remove(absl::GetFlag(FLAGS_file)) != 0)
       << "Failed to cleanup file";
 }
 
@@ -81,17 +81,17 @@ int main(int argc, char **argv) {
     // We want uncompressible data.  The easiest way to do this is to grab a
     // good sized block from /dev/random, and then reuse it.
     int random_fd = open("/dev/random", O_RDONLY | O_CLOEXEC);
-    PCHECK(random_fd != -1) << ": Failed to open /dev/random";
+    ABSL_PCHECK(random_fd != -1) << ": Failed to open /dev/random";
     data.resize(absl::GetFlag(FLAGS_write_size));
     size_t written = 0;
     while (written < data.size()) {
       const size_t result =
           read(random_fd, data.data() + written, data.size() - written);
-      PCHECK(result > 0);
+      ABSL_PCHECK(result > 0);
       written += result;
     }
 
-    PCHECK(close(random_fd) == 0);
+    ABSL_PCHECK(close(random_fd) == 0);
   }
 
   std::vector<struct iovec> iovec;
@@ -99,7 +99,7 @@ int main(int argc, char **argv) {
     const size_t chunks = absl::GetFlag(FLAGS_chunks);
     const size_t chunk_size = absl::GetFlag(FLAGS_chunk_size);
     iovec.resize(chunks);
-    CHECK_LE(chunks * chunk_size, absl::GetFlag(FLAGS_write_size));
+    ABSL_CHECK_LE(chunks * chunk_size, absl::GetFlag(FLAGS_write_size));
 
     for (size_t i = 0; i < chunks; ++i) {
       iovec[i].iov_base = &data.at(i * chunk_size);
@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
                 O_RDWR | O_CLOEXEC | O_CREAT |
                     (absl::GetFlag(FLAGS_direct) ? O_DIRECT : 0),
                 0774);
-  PCHECK(fd != -1);
+  ABSL_PCHECK(fd != -1);
 
   start_time = aos::monotonic_clock::now();
   aos::monotonic_clock::time_point last_print_time = start_time;
@@ -131,7 +131,7 @@ int main(int argc, char **argv) {
   }
 
   if (absl::GetFlag(FLAGS_nice) != 0) {
-    PCHECK(-1 != setpriority(PRIO_PROCESS, 0, absl::GetFlag(FLAGS_nice)))
+    ABSL_PCHECK(-1 != setpriority(PRIO_PROCESS, 0, absl::GetFlag(FLAGS_nice)))
         << ": Renicing to " << absl::GetFlag(FLAGS_nice) << " failed";
   }
 
@@ -143,14 +143,14 @@ int main(int argc, char **argv) {
     }
 
     if (absl::GetFlag(FLAGS_writev)) {
-      PCHECK(writev(fd, iovec.data(), iovec.size()) ==
-             static_cast<ssize_t>(data.size()))
+      ABSL_PCHECK(writev(fd, iovec.data(), iovec.size()) ==
+                  static_cast<ssize_t>(data.size()))
           << ": Failed after "
           << chrono::duration<double>(aos::monotonic_clock::now() - start_time)
                  .count();
     } else {
-      PCHECK(write(fd, data.data(), data.size()) ==
-             static_cast<ssize_t>(data.size()))
+      ABSL_PCHECK(write(fd, data.data(), data.size()) ==
+                  static_cast<ssize_t>(data.size()))
           << ": Failed after "
           << chrono::duration<double>(aos::monotonic_clock::now() - start_time)
                  .count();

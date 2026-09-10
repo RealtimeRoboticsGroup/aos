@@ -5,7 +5,7 @@
 #include <thread>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/log/vlog_is_on.h"
 #include "absl/strings/match.h"
@@ -61,7 +61,7 @@ void QueueAligner::FillAlignedQueue(
     VLOG(2) << "Consider span starting at " << std::hex << start
             << " with size " << size;
 
-    CHECK_GT(size, 0u)
+    ABSL_CHECK_GT(size, 0u)
         << ": Nobody should be sending empty messages.  Queue index "
         << (queue_index - 1) << " out of " << queue.size();
 
@@ -74,11 +74,11 @@ void QueueAligner::FillAlignedQueue(
       // size of prefix >= size of span - alignment is not possible, accept the
       // whole span
       VLOG(2) << "Only prefix found";
-      CHECK_GT(size, 0u);
+      ABSL_CHECK_GT(size, 0u);
       aligned_queue_.emplace_back(data, size, false);
       continue;
     }
-    CHECK_LT(prefix_size, FileHandler::kSector)
+    ABSL_CHECK_LT(prefix_size, FileHandler::kSector)
         << ": Wrong calculation of 'next' aligned position";
     if (prefix_size > 0) {
       // Cut the prefix and move to the main part.
@@ -87,19 +87,20 @@ void QueueAligner::FillAlignedQueue(
       aligned_queue_.emplace_back(data, prefix_size, false);
       data += prefix_size;
       size -= prefix_size;
-      CHECK(data <= span.data() + span.size()) << " :Boundaries after prefix";
+      ABSL_CHECK(data <= span.data() + span.size())
+          << " :Boundaries after prefix";
     }
 
     if (IsAligned(size)) {
       // the rest is aligned.
       VLOG(2) << "Returning aligned main part";
-      CHECK_GT(size, 0u);
+      ABSL_CHECK_GT(size, 0u);
       aligned_queue_.emplace_back(data, size, true);
       continue;
     }
 
     const auto aligned_size = AlignToLeft(size);
-    CHECK(aligned_size < size) << ": Wrong calculation of 'main' size";
+    ABSL_CHECK(aligned_size < size) << ": Wrong calculation of 'main' size";
     if (aligned_size > 0) {
       VLOG(2) << "Cutting main part starting " << std::hex
               << reinterpret_cast<size_t>(data) << " of size " << aligned_size;
@@ -107,12 +108,13 @@ void QueueAligner::FillAlignedQueue(
 
       data += aligned_size;
       size -= aligned_size;
-      CHECK(data <= span.data() + span.size()) << " :Boundaries after main";
+      ABSL_CHECK(data <= span.data() + span.size())
+          << " :Boundaries after main";
     }
 
     VLOG(2) << "Cutting suffix part starting " << std::hex
             << reinterpret_cast<size_t>(data) << " of size " << size;
-    CHECK_GT(size, 0u);
+    ABSL_CHECK_GT(size, 0u);
     aligned_queue_.emplace_back(data, size, false);
   }
 }
@@ -147,7 +149,7 @@ void FileHandler::UpdateFilenameBase(const std::string_view old_base_name,
     return;
   }
 
-  CHECK(filename_.starts_with(new_base_name))
+  ABSL_CHECK(filename_.starts_with(new_base_name))
       << "Expected '" << filename_ << "' to start with either old_base_name '"
       << old_base_name << "' or new_base_name '" << new_base_name << "'";
 }
@@ -157,7 +159,7 @@ void BufferedFileHandler::StartWriterThread() {
     return;
   }
   closing_ = false;
-  CHECK(!file_writer_.has_value());
+  ABSL_CHECK(!file_writer_.has_value());
   file_writer_.emplace([this]() {
     SetCurrentThreadName(
         ("writer_" + std::filesystem::path(filename()).filename().string())
@@ -180,7 +182,7 @@ WriteCode BufferedFileHandler::OpenForWrite() {
 
 void BufferedFileHandler::WriteCurrentBufferContents(
     std::unique_lock<std::mutex> &buffer_index_lock) {
-  CHECK(buffer_index_lock.owns_lock());
+  ABSL_CHECK(buffer_index_lock.owns_lock());
   if (buffer_empty_ || ran_out_of_space_in_thread_) {
     return;
   }
@@ -216,7 +218,7 @@ void BufferedFileHandler::WriteCurrentBufferContents(
   buffer_index_lock.lock();
   switch (result.code) {
     case WriteCode::kOk:
-      CHECK_EQ(result.messages_written, queue.size())
+      ABSL_CHECK_EQ(result.messages_written, queue.size())
           << ": Expected to write all of the data if there was space on disk.";
       break;
     case WriteCode::kOutOfSpace:
@@ -289,7 +291,7 @@ WriteResult BufferedFileHandler::DoWriteAsync(
       lock.lock();
       message_bytes_written += target_buffer.size();
       bytes_written += target_buffer.size();
-      DCHECK_NE(0u, message_bytes_written)
+      ABSL_DCHECK_NE(0u, message_bytes_written)
           << "buffer_end: " << buffer_end_ << " buffer size " << buffer_.size()
           << " buffer start " << buffer_start_ << " empty " << buffer_empty_
           << " buffer space " << buffer_space;
@@ -382,7 +384,7 @@ FileBackend::FileBackend(std::string_view base_name, bool supports_odirect)
 
 std::unique_ptr<LogSink> FileBackend::RequestFile(
     const std::string_view id, const size_t memory_buffer_size) {
-  CHECK_EQ(memory_buffer_size, 0u)
+  ABSL_CHECK_EQ(memory_buffer_size, 0u)
       << ": Memory buffer unsupported on regular FileBackend.";
   const std::string filename = absl::StrCat(base_name_, separator_, id);
   return std::make_unique<FileHandler>(filename, supports_odirect_);
@@ -401,14 +403,14 @@ std::vector<FileBackend::File> FileBackend::ListFiles() const {
   // FindLogs() reports paths in generic (forward slash) form, so compare
   // against the generic form of the base name -- on Windows it may well be a
   // native path full of backslashes, and matching the two directly would fail
-  // the CHECK below for every file.
+  // the ABSL_CHECK below for every file.
   //
   // Both sides go through generic_string(), so they stay consistent even where
   // it rewrites more than the separators (it collapses "a//b" to "a/b").
   const std::string prefix = absl::StrCat(
       std::filesystem::path(base_name_).generic_string(), separator_);
   for (const auto &file : files) {
-    CHECK(absl::StartsWith(file.name, prefix))
+    ABSL_CHECK(absl::StartsWith(file.name, prefix))
         << ": File " << file.name << ", prefix " << prefix;
     names.emplace_back(File{
         .name = file.name.substr(prefix.size()),
@@ -421,7 +423,7 @@ std::vector<FileBackend::File> FileBackend::ListFiles() const {
 std::unique_ptr<DataDecoder> FileBackend::GetDecoder(
     const std::string_view id) const {
   const std::string filename = absl::StrCat(base_name_, separator_, id);
-  CHECK(std::filesystem::exists(filename));
+  ABSL_CHECK(std::filesystem::exists(filename));
   return internal::ResolveDecoder(filename, /*quiet=*/true);
 }
 
@@ -459,21 +461,21 @@ RenamableFileBackend::ValidateAndSplitRenamePaths(
   if (new_base_name == base_name_) {
     return std::nullopt;
   }
-  CHECK(old_base_name_.empty())
+  ABSL_CHECK(old_base_name_.empty())
       << "Only one change of base_name is supported. Was: " << old_base_name_;
 
   std::string current_directory = base_name_;
   std::string new_directory(new_base_name);
 
   auto current_path_split = current_directory.rfind("/");
-  CHECK(current_path_split != std::string::npos)
+  ABSL_CHECK(current_path_split != std::string::npos)
       << "Could not find / in the current directory path";
   auto new_path_split = new_directory.rfind("/");
-  CHECK(new_path_split != std::string::npos)
+  ABSL_CHECK(new_path_split != std::string::npos)
       << "Could not find / in the new directory path";
 
-  CHECK(new_base_name.substr(new_path_split) ==
-        current_directory.substr(current_path_split))
+  ABSL_CHECK(new_base_name.substr(new_path_split) ==
+             current_directory.substr(current_path_split))
       << "Rename of file base from " << current_directory << " to "
       << new_directory << " is not supported.";
 
@@ -527,8 +529,8 @@ bool RenamableFileBackend::DirectoryExists(const std::string &directory) {
   // ENAMETOOLONG), failing (EIO), or a network mount that went away (ESTALE)
   // -- and answering false would report "already renamed, nothing to do" for a
   // directory that may well be sitting right there.
-  CHECK(!error) << ": Failed to check whether " << directory
-                << " exists: " << error.message();
+  ABSL_CHECK(!error) << ": Failed to check whether " << directory
+                     << " exists: " << error.message();
   return exists;
 }
 
@@ -560,7 +562,7 @@ WriteCode RenamableFileBackend::RenameFileAfterClose(
 
   std::string final_filename = current_filename;
   if (use_temp_files_) {
-    CHECK(current_filename.size() > temp_suffix_.size());
+    ABSL_CHECK(current_filename.size() > temp_suffix_.size());
     final_filename = current_filename.substr(
         0, current_filename.size() - temp_suffix_.size());
   }

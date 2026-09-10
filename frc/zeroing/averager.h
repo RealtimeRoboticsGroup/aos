@@ -6,7 +6,7 @@
 #include <cstdint>
 
 #include "Eigen/Dense"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 namespace frc::zeroing {
@@ -28,7 +28,7 @@ class Averager {
   // If more than "num_samples" samples are added, they will start overwriting
   // the oldest ones.
   void AddData(Scalar data) {
-    CHECK_EQ(1, rows_per_sample);
+    ABSL_CHECK_EQ(1, rows_per_sample);
     AddData(Vector(data));
   }
   void AddData(const Vector &data) {

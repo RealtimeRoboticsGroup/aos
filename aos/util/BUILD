@@ -116,7 +116,7 @@ cc_binary(
     deps = [
         ":log_to_mcap_lib",
         "//aos:init",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -522,7 +522,7 @@ cc_library(
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/types:span",
     ],
 )
@@ -628,7 +628,7 @@ cc_library(
         "//aos/testing:googletest",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_googletest//:gtest",
     ],
     alwayslink = True,
@@ -681,7 +681,7 @@ cc_library(
         "//aos/network:timestamp_channel",
         "//aos/testing:tmpdir",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_googletest//:gtest",
     ],
 )

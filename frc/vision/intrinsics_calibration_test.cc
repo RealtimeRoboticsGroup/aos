@@ -5,6 +5,7 @@
 #include "Eigen/Dense"
 #include "Eigen/Geometry"
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "gtest/gtest.h"
 #include "opencv2/calib3d.hpp"
 #include "opencv2/core/eigen.hpp"
@@ -311,7 +312,7 @@ TEST(IntrinsicCalculationTest, ImagePlayback) {
   std::string error;
   std::unique_ptr<Runfiles> runfiles(
       Runfiles::CreateForTest(BAZEL_CURRENT_REPOSITORY, &error));
-  CHECK(runfiles != nullptr) << error;
+  ABSL_CHECK(runfiles != nullptr) << error;
   std::filesystem::path test_images_path(
       runfiles->Rlocation("intrinsic_calibration_test_images/img_000001.png"));
   test_images_path = test_images_path.parent_path();

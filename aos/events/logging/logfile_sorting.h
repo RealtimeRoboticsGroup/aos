@@ -9,6 +9,8 @@
 #include <utility>
 #include <vector>
 
+#include "absl/log/absl_check.h"
+
 #include "aos/configuration.h"
 #include "aos/events/logging/file_operations.h"
 #include "aos/events/logging/log_backend.h"
@@ -177,7 +179,7 @@ class LogPartsAccess {
   LogPartsAccess(std::optional<const LogSource *> log_source,
                  LogParts log_parts)
       : log_source_(std::move(log_source)), log_parts_(std::move(log_parts)) {
-    CHECK(!log_parts_.parts.empty());
+    ABSL_CHECK(!log_parts_.parts.empty());
   }
 
   std::string_view node_name() const { return log_parts_.node; }
@@ -199,7 +201,7 @@ class LogPartsAccess {
   }
 
   std::string GetPartAt(size_t index) const {
-    CHECK_LT(index, log_parts_.parts.size());
+    ABSL_CHECK_LT(index, log_parts_.parts.size());
     return log_parts_.parts[index];
   }
 

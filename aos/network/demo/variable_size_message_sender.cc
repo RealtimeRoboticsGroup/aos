@@ -1,6 +1,7 @@
 #include <ranges>
 
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/die_if_null.h"
 #include "absl/log/log.h"
 
@@ -41,7 +42,7 @@ int main(int argc, char **argv) {
               builder = sender.MakeStaticBuilder();
           builder->set_value(value);
           auto data = ABSL_DIE_IF_NULL(builder->add_data());
-          CHECK(data->reserve(message_size));
+          ABSL_CHECK(data->reserve(message_size));
           data->resize(message_size);
           builder.CheckOk(builder.Send());
 

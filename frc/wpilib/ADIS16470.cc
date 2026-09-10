@@ -3,7 +3,7 @@
 #include <cinttypes>
 #include <numbers>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/containers/sized_array.h"
@@ -203,7 +203,7 @@ ADIS16470::ADIS16470(aos::EventLoop *event_loop, frc::SPI *spi,
       reset_(reset) {
   // Rather than put the entire data packet into the header, just put a size
   // there and verify it matches here.
-  CHECK_EQ(kAutospiDataSize, read_data_.size());
+  ABSL_CHECK_EQ(kAutospiDataSize, read_data_.size());
 
   // We're not doing burst mode, so this is the IMU's rated speed.
   spi_->SetClockRate(2'000'000);
@@ -212,12 +212,14 @@ ADIS16470::ADIS16470(aos::EventLoop *event_loop, frc::SPI *spi,
 
   // NI's SPI driver defaults to SCHED_OTHER.  Find it's PID with ps, and change
   // it to a RT priority of 33.
-  PCHECK(system("busybox ps -ef | grep '\\[spi0\\]' | awk '{print $1}' | xargs "
-                "chrt -f -p "
-                "33") == 0);
-  PCHECK(system("busybox ps -ef | grep '\\[spi1\\]' | awk '{print $1}' | xargs "
-                "chrt -f -p "
-                "33") == 0);
+  ABSL_PCHECK(
+      system("busybox ps -ef | grep '\\[spi0\\]' | awk '{print $1}' | xargs "
+             "chrt -f -p "
+             "33") == 0);
+  ABSL_PCHECK(
+      system("busybox ps -ef | grep '\\[spi1\\]' | awk '{print $1}' | xargs "
+             "chrt -f -p "
+             "33") == 0);
 
   event_loop_->OnRun([this]() { BeginInitialization(); });
 }
@@ -236,10 +238,11 @@ void ADIS16470::DoReads() {
   aos::SizedArray<flatbuffers::Offset<IMUValues>, 50> readings_offsets;
   while (true) {
     if (amount_to_read == 0) break;
-    CHECK(!to_read_.empty());
+    ABSL_CHECK(!to_read_.empty());
     const int amount_read_now = std::min<int>(amount_to_read, to_read_.size());
-    CHECK_GT(amount_read_now, 0) << "amount_to_read: " << amount_to_read
-                                 << ", to_read_.size(): " << to_read_.size();
+    ABSL_CHECK_GT(amount_read_now, 0)
+        << "amount_to_read: " << amount_to_read
+        << ", to_read_.size(): " << to_read_.size();
     spi_->ReadAutoReceivedData(to_read_.data(), amount_read_now,
                                0 /* don't block */);
     to_read_ = to_read_.subspan(amount_read_now);
@@ -253,7 +256,7 @@ void ADIS16470::DoReads() {
       // Reset for the next reading.
       to_read_ = absl::MakeSpan(read_data_);
     } else {
-      CHECK_EQ(amount_to_read, 0);
+      ABSL_CHECK_EQ(amount_to_read, 0);
       break;
     }
   }
@@ -362,10 +365,10 @@ void ADIS16470::DoInitializeStep() {
             // how we start up, and it isn't worth tracking for downstream users
             // to look at.
             to_read_ = absl::MakeSpan(read_data_);
-            CHECK_EQ(spi_->ReadAutoReceivedData(
-                         to_read_.data(), to_read_.size(),
-                         1000.0 /* block for up to 1 second */),
-                     static_cast<int>(to_read_.size()))
+            ABSL_CHECK_EQ(spi_->ReadAutoReceivedData(
+                              to_read_.data(), to_read_.size(),
+                              1000.0 /* block for up to 1 second */),
+                          static_cast<int>(to_read_.size()))
                 << ": Failed to read first sample.";
             success = true;
           }
@@ -407,14 +410,14 @@ flatbuffers::Offset<IMUValues> ADIS16470::ProcessReading(
     flatbuffers::FlatBufferBuilder *fbb) {
   // If we ever see this, we'll need to decide how to handle it. Probably reset
   // everything and try again.
-  CHECK_EQ(0, spi_->GetAutoDroppedCount());
+  ABSL_CHECK_EQ(0, spi_->GetAutoDroppedCount());
 
   absl::Span<const uint32_t> to_process = read_data_;
   hal::fpga_clock::time_point fpga_time;
   {
     int32_t status = 0;
     const uint64_t fpga_expanded = HAL_ExpandFPGATime(to_process[0], &status);
-    CHECK_EQ(0, status);
+    ABSL_CHECK_EQ(0, status);
     fpga_time =
         hal::fpga_clock::time_point(hal::fpga_clock::duration(fpga_expanded));
   }
@@ -452,7 +455,8 @@ flatbuffers::Offset<IMUValues> ADIS16470::ProcessReading(
       ConvertValue16(to_process, kTemperatureLsbDegree));
   to_process = to_process.subspan(2);
 
-  CHECK(to_process.empty()) << "Have leftover bytes: " << to_process.size();
+  ABSL_CHECK(to_process.empty())
+      << "Have leftover bytes: " << to_process.size();
 
   return imu_builder.Finish();
 }

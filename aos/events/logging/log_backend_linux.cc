@@ -9,7 +9,7 @@
 
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/log/vlog_is_on.h"
 
@@ -54,7 +54,8 @@ void FileHandler::EnableDirect() {
 void FileHandler::DisableDirect() {
   if (supports_odirect_ && ODirectEnabled()) {
     flags_ = flags_ & (~O_DIRECT);
-    PCHECK(fcntl(fd_, F_SETFL, flags_) != -1) << ": Failed to disable O_DIRECT";
+    ABSL_PCHECK(fcntl(fd_, F_SETFL, flags_) != -1)
+        << ": Failed to disable O_DIRECT";
     odirect_enabled_ = false;
     VLOG(1) << "Disabled O_DIRECT on " << filename_;
   }
@@ -72,12 +73,12 @@ std::pair<WriteCode, size_t> FileHandler::WriteV(bool aligned) {
   VLOG(2) << "Flushing queue of " << iovec_.size() << " elements, "
           << (aligned ? "aligned" : "unaligned");
 
-  CHECK_GT(iovec_.size(), 0u);
+  ABSL_CHECK_GT(iovec_.size(), 0u);
   const auto start = aos::monotonic_clock::now();
 
   // Validation of alignment assumptions.
   if (aligned) {
-    CHECK(IsAligned(total_write_bytes_))
+    ABSL_CHECK(IsAligned(total_write_bytes_))
         << ": Failed after writing " << total_write_bytes_
         << " to the file, attempting aligned write with unaligned start.";
 
@@ -87,7 +88,7 @@ std::pair<WriteCode, size_t> FileHandler::WriteV(bool aligned) {
           iovec_item.iov_len);
       VLOG(2) << "  iov_base " << static_cast<void *>(iovec_item.iov_base)
               << ", iov_len " << iovec_item.iov_len;
-      CHECK(IsAlignedStart(data) && IsAlignedLength(data));
+      ABSL_CHECK(IsAlignedStart(data) && IsAlignedLength(data));
     }
   }
 
@@ -103,7 +104,7 @@ std::pair<WriteCode, size_t> FileHandler::WriteV(bool aligned) {
                         });
 
     VLOG(2) << "Going to write " << counted_size;
-    CHECK_GT(counted_size, 0u);
+    ABSL_CHECK_GT(counted_size, 0u);
 
     const ssize_t written =
         writev(fd_, iovec_.data() + iovecs_index, iovec_.size() - iovecs_index);
@@ -113,8 +114,8 @@ std::pair<WriteCode, size_t> FileHandler::WriteV(bool aligned) {
       PLOG(ERROR) << "Wrote " << written << " bytes of " << counted_size;
       return std::make_pair(WriteCode::kOutOfSpace, 0);
     }
-    PCHECK(written >= 0) << ": write failed, got " << written << " for "
-                         << filename_;
+    ABSL_PCHECK(written >= 0)
+        << ": write failed, got " << written << " for " << filename_;
     total_written += written;
     if (written < static_cast<ssize_t>(counted_size)) {
       // Note that we have observed this condition (less data being written than
@@ -142,7 +143,7 @@ std::pair<WriteCode, size_t> FileHandler::WriteV(bool aligned) {
         // had in iovec_. If iovecs_index == iovec_.size() then written
         // should strictly equal counted_size and we should not have ended up
         // here.
-        CHECK(iovecs_index < iovec_.size());
+        ABSL_CHECK(iovecs_index < iovec_.size());
       }
       iovec_.at(iovecs_index).iov_base =
           reinterpret_cast<uint8_t *>(iovec_.at(iovecs_index).iov_base) +
@@ -202,10 +203,11 @@ WriteCode FileHandler::PlatformSyncImpl() {
 WriteResult FileHandler::DoWrite(
     const absl::Span<const absl::Span<const uint8_t>> &queue) {
   iovec_.clear();
-  CHECK_LE(queue.size(), static_cast<size_t>(IOV_MAX));
+  ABSL_CHECK_LE(queue.size(), static_cast<size_t>(IOV_MAX));
 
   queue_aligner_.FillAlignedQueue(queue);
-  CHECK_LE(queue_aligner_.aligned_queue().size(), static_cast<size_t>(IOV_MAX));
+  ABSL_CHECK_LE(queue_aligner_.aligned_queue().size(),
+                static_cast<size_t>(IOV_MAX));
 
   // Ok, we now need to figure out if we were aligned, and if we were, how much
   // of the data we are being asked to write is aligned.

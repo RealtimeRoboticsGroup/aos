@@ -13,7 +13,7 @@
 #include "third_party/cddlib/lib-src/cdd.h"
 // clang-format on
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #endif  // !AOS_OS_NONE
 
@@ -218,7 +218,7 @@ HPolytope<number_of_dimensions>::CalculateVertices(
   }
 
   // Rays are unsupported right now.  This may change in the future.
-  CHECK_EQ(0, num_rays);
+  ABSL_CHECK_EQ(0, num_rays);
 
   Eigen::Matrix<double, number_of_dimensions, Eigen::Dynamic> vertices(
       number_of_dimensions, num_vertices);

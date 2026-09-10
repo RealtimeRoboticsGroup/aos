@@ -3,6 +3,7 @@
 #include <numbers>
 
 #include "Eigen/Dense"
+#include "absl/log/absl_check.h"
 
 #include "aos/json_to_flatbuffer.h"
 #include "aos/realtime.h"
@@ -68,7 +69,7 @@ bool SplineDrivetrain::HasTrajectory(const fb::Trajectory *trajectory) const {
 }
 
 void SplineDrivetrain::DeleteTrajectory(const fb::Trajectory *trajectory) {
-  CHECK(trajectory != nullptr);
+  ABSL_CHECK(trajectory != nullptr);
 
   for (size_t ii = 0; ii < trajectories_.size(); ++ii) {
     if (trajectories_[ii].spline_handle() == trajectory->handle()) {
@@ -81,14 +82,14 @@ void SplineDrivetrain::DeleteTrajectory(const fb::Trajectory *trajectory) {
 }
 
 void SplineDrivetrain::AddTrajectory(const fb::Trajectory *trajectory) {
-  CHECK_LT(trajectories_.size(), trajectories_.capacity());
+  ABSL_CHECK_LT(trajectories_.size(), trajectories_.capacity());
   trajectories_.emplace_back(&dt_config_, trajectory, velocity_drivetrain_);
   UpdateSplineHandles(commanded_spline_);
 }
 
 void SplineDrivetrain::DeleteCurrentSpline() {
   const FinishedTrajectory *const trajectory = current_trajectory();
-  CHECK(trajectory != nullptr);
+  ABSL_CHECK(trajectory != nullptr);
   DeleteTrajectory(&trajectory->trajectory());
   executing_spline_ = false;
   commanded_spline_.reset();
@@ -107,7 +108,7 @@ void SplineDrivetrain::UpdateSplineHandles(
     } else {
       if (executing_spline_) {
         const FinishedTrajectory *const trajectory = current_trajectory();
-        CHECK(trajectory != nullptr);
+        ABSL_CHECK(trajectory != nullptr);
 
         if (trajectory->spline_handle() != *commanded_spline) {
           // If we are executing a spline, and the handle has changed, garbage
@@ -158,7 +159,7 @@ void SplineDrivetrain::Update(
   if (enable && executing_spline_) {
     ::Eigen::Matrix<double, 2, 1> U_ff = ::Eigen::Matrix<double, 2, 1>::Zero();
     const FinishedTrajectory *const trajectory = current_trajectory();
-    CHECK(trajectory != nullptr);
+    ABSL_CHECK(trajectory != nullptr);
     if (!IsAtEnd() && executing_spline_) {
       // TODO(alex): It takes about a cycle for the outputs to propagate to the
       // motors. Consider delaying the output by a cycle.
@@ -272,7 +273,7 @@ flatbuffers::Offset<TrajectoryLogging> SplineDrivetrain::MakeTrajectoryLogging(
     trajectory_logging_builder.add_x(goal_state(0));
     trajectory_logging_builder.add_y(goal_state(1));
     const FinishedTrajectory *const trajectory = current_trajectory();
-    CHECK(trajectory != nullptr);
+    ABSL_CHECK(trajectory != nullptr);
     if (trajectory->drive_spline_backwards()) {
       trajectory_logging_builder.add_left_velocity(-goal_state(4));
       trajectory_logging_builder.add_right_velocity(-goal_state(3));
@@ -302,7 +303,7 @@ flatbuffers::Offset<TrajectoryLogging> SplineDrivetrain::MakeTrajectoryLogging(
   }
   if (executing_spline_) {
     const FinishedTrajectory *const trajectory = current_trajectory();
-    CHECK(trajectory != nullptr);
+    ABSL_CHECK(trajectory != nullptr);
     trajectory_logging_builder.add_distance_remaining(trajectory->length() -
                                                       current_xva_.x());
   } else {

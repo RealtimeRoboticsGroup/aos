@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "absl/container/btree_set.h"
+#include "absl/log/absl_check.h"
 #include "absl/types/span.h"
 #include "flatbuffers/flatbuffers.h"
 
@@ -85,7 +86,7 @@ class DetachedBufferWriter {
   // destruction if ran_out_of_space() is true and the situation has been
   // handled.
   void acknowledge_out_of_space() {
-    CHECK(ran_out_of_space_);
+    ABSL_CHECK(ran_out_of_space_);
     acknowledge_ran_out_of_space_ = true;
   }
 
@@ -395,8 +396,8 @@ class PartsMessageReader {
   // Returns the boot count for the requested node, or std::nullopt if we don't
   // know.
   std::optional<size_t> boot_count(size_t node_index) const {
-    CHECK_GE(node_index, 0u);
-    CHECK_LT(node_index, boot_counts_.size());
+    ABSL_CHECK_GE(node_index, 0u);
+    ABSL_CHECK_LT(node_index, boot_counts_.size());
     return boot_counts_[node_index];
   }
 

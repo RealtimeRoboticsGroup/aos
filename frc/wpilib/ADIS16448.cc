@@ -1,5 +1,7 @@
 #include "frc/wpilib/ADIS16448.h"
 
+#include "absl/log/absl_check.h"
+
 #include "frc/wpilib/ahal/InterruptableSensorBase.h"
 #undef ERROR
 
@@ -137,9 +139,9 @@ ADIS16448::ADIS16448(::aos::ShmEventLoop *event_loop, frc::SPI::Port port,
 
   // NI's SPI driver defaults to SCHED_OTHER.  Find it's PID with ps, and change
   // it to a RT priority of 33.
-  PCHECK(system("busybox ps -ef | grep '\\[spi0\\]' | awk '{print $1}' | "
-                "xargs chrt -f -p "
-                "33") == 0);
+  ABSL_PCHECK(system("busybox ps -ef | grep '\\[spi0\\]' | awk '{print $1}' | "
+                     "xargs chrt -f -p "
+                     "33") == 0);
 
   event_loop->set_name("IMU");
   event_loop_->SetRuntimeRealtimePriority(33);

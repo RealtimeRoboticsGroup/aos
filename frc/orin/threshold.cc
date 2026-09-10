@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#include "absl/log/absl_check.h"
+
 #include "frc/orin/cuda.h"
 
 namespace frc::apriltag {
@@ -253,8 +255,8 @@ void TypedThreshold<IMAGE_FORMAT>::ThresholdAndDecimate(
   uint8_t *unfiltered_minmax_image = unfiltered_minmax_image_device_.get();
   uint8_t *minmax_image = minmax_image_device_.get();
 
-  CHECK((width_ % 8) == 0);
-  CHECK((height_ % 8) == 0);
+  ABSL_CHECK((width_ % 8) == 0);
+  ABSL_CHECK((height_ % 8) == 0);
   constexpr size_t kThreads = 256;
   const apriltag_size_t decimated_width = width_ / 2;
   const apriltag_size_t decimated_height = height_ / 2;

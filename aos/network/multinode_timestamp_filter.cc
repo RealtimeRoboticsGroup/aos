@@ -6,7 +6,7 @@
 #include <map>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/log/vlog_is_on.h"
 #include "absl/strings/str_join.h"
@@ -92,7 +92,7 @@ std::atomic<size_t> NewtonSolver::solve_number_ = 0u;
 NewtonSolver::NewtonSolver() : my_solve_number_(solve_number_++) {}
 
 TimestampProblem::TimestampProblem(size_t count) {
-  CHECK_GT(count, 1u);
+  ABSL_CHECK_GT(count, 1u);
   clock_offset_filter_for_node_.resize(count);
   base_clock_.resize(count);
   live_.resize(count, true);
@@ -268,7 +268,7 @@ Problem::Derivatives TimestampProblem::ComputeDerivatives(
   // makes the derivative just be the distance to the line, which is a
   // continuous function.  Newtons method then converges really really easily
   // every time.
-  CHECK_GT(states(), 0u) << ": No live nodes to solve for.";
+  ABSL_CHECK_GT(states(), 0u) << ": No live nodes to solve for.";
   Problem::Derivatives result;
 
   // We get back both interger and double remainders for the gradient.  We then
@@ -441,7 +441,7 @@ Problem::Derivatives TimestampProblem::ComputeDerivatives(
       continue;
     }
 
-    CHECK_EQ(points_[i].boot, base_clock(i).boot);
+    ABSL_CHECK_EQ(points_[i].boot, base_clock(i).boot);
     const double candidate_b = chrono::duration<double, std::nano>(
                                    points_[i].time - base_clock(i).time)
                                    .count() -
@@ -461,7 +461,7 @@ Problem::Derivatives TimestampProblem::ComputeDerivatives(
     }
   }
 
-  CHECK_NE(result.solution_node, std::numeric_limits<size_t>::max())
+  ABSL_CHECK_NE(result.solution_node, std::numeric_limits<size_t>::max())
       << ": No solution nodes, please investigate";
 
   return result;
@@ -626,7 +626,7 @@ std::tuple<Eigen::VectorXd, size_t, size_t> NewtonSolver::SolveNewton(
             << "  Line search terminated with a step of " << t;
         break;
       } else {
-        CHECK_NE(t, 0.0) << ": Failed on solve " << my_solve_number_;
+        ABSL_CHECK_NE(t, 0.0) << ": Failed on solve " << my_solve_number_;
       }
       t *= kBeta;
     }
@@ -782,7 +782,7 @@ NewtonSolver::ConstrainedNewton(const Eigen::Ref<const Eigen::VectorXd> y,
   const Eigen::Ref<const Eigen::VectorXd> lambda =
       y.block(x.rows(), 0, derivatives.f.rows(), 1);
 
-  CHECK_LT(0, lambda.rows())
+  ABSL_CHECK_LT(0, lambda.rows())
       << ": You are calling the unconstrained Newton solver without inequality "
          "constraints. This is not supported.";
 
@@ -953,9 +953,10 @@ bool TimestampProblem::AddConstraints(
         if (!iteration) {
           // Ok, we found a violated constraint.  Add it to the list.
           updated = true;
-          CHECK(std::find(new_active_constraints->begin(),
-                          new_active_constraints->end(),
-                          constraint_index) == new_active_constraints->end())
+          ABSL_CHECK(std::find(new_active_constraints->begin(),
+                               new_active_constraints->end(),
+                               constraint_index) ==
+                     new_active_constraints->end())
               << " while solving " << solve_number << " constraint index "
               << constraint_index;
 
@@ -972,7 +973,7 @@ bool TimestampProblem::AddConstraints(
       }
     }
 
-    CHECK_EQ(constraint_index, inequality_constraints_);
+    ABSL_CHECK_EQ(constraint_index, inequality_constraints_);
   }
   return updated;
 }
@@ -1012,7 +1013,7 @@ SolveConstrainedNewton(NewtonSolver *solver, TimestampProblem *problem,
       return std::make_tuple(std::move(result), std::move(y), solution_node,
                              iteration);
     } else {
-      CHECK(new_active_constraints != active_constraints);
+      ABSL_CHECK(new_active_constraints != active_constraints);
       active_constraints = std::move(new_active_constraints);
       SOLVE_VLOG(solver->my_solve_number(), 1)
           << "Constraint indices changed, solving again with more constraints.";
@@ -1351,7 +1352,7 @@ void TimestampProblem::MaybeUpdateNodeMapping() {
 void TimestampProblem::Prepare(size_t solve_number) {
   MaybeUpdateNodeMapping();
 
-  CHECK_GT(states(), 0u) << ": No live nodes to solve for.";
+  ABSL_CHECK_GT(states(), 0u) << ": No live nodes to solve for.";
 
   for (size_t i = 0; i < points_.size(); ++i) {
     if (points_[i] != logger::BootTimestamp::max_time()) {
@@ -1481,7 +1482,7 @@ InterpolatedTimeConverter::QueueNextTimestamp() {
         result;
     result.emplace(std::nullopt);
     // Check that C++ actually works how we think it does...
-    CHECK(result.has_value());
+    ABSL_CHECK(result.has_value());
     at_end_ = true;
     return result;
   }
@@ -1492,11 +1493,11 @@ InterpolatedTimeConverter::QueueNextTimestamp() {
     VLOG(1) << "  " << t;
   }
 
-  CHECK_EQ(node_count_, std::get<1>(**next_time).size());
+  ABSL_CHECK_EQ(node_count_, std::get<1>(**next_time).size());
 
   if (times_.empty()) {
     for (BootTimestamp t : std::get<1>(**next_time)) {
-      CHECK_EQ(t.boot, 0u);
+      ABSL_CHECK_EQ(t.boot, 0u);
     }
   } else {
     bool rebooted = false;
@@ -1508,7 +1509,7 @@ InterpolatedTimeConverter::QueueNextTimestamp() {
       }
     }
     if (rebooted) {
-      CHECK(reboot_found_);
+      ABSL_CHECK(reboot_found_);
       if (VLOG_IS_ON(2)) {
         VLOG(2) << "Notified reboot of";
         size_t node_index = 0;
@@ -1553,8 +1554,9 @@ distributed_clock::time_point ToDistributedClock(
     monotonic_clock::time_point time) {
   const chrono::nanoseconds dt = (t1 - t0);
 
-  CHECK_NE(dt.count(), 0u) << " t0 " << t0 << " t1 " << t1 << " d0 " << d0
-                           << " d1 " << d1 << " looking up monotonic " << time;
+  ABSL_CHECK_NE(dt.count(), 0u)
+      << " t0 " << t0 << " t1 " << t1 << " d0 " << d0 << " d1 " << d1
+      << " looking up monotonic " << time;
   // Basic interpolation between 2 points look like
   //  p0.d + (t - p0.t) * (p1.d - p0.d) / (p1.t - p0.t)
   // This can be multiplied out with integer arithmetic to get exact results.
@@ -1574,7 +1576,7 @@ distributed_clock::time_point ToDistributedClock(
 Result<distributed_clock::time_point>
 InterpolatedTimeConverter::ToDistributedClock(size_t node_index,
                                               BootTimestamp time) {
-  CHECK_LT(node_index, node_count_);
+  ABSL_CHECK_LT(node_index, node_count_);
   // If there is only one node, time estimation makes no sense.  Just return
   // unity time.
   if (node_count_ == 1u) {
@@ -1592,11 +1594,11 @@ InterpolatedTimeConverter::ToDistributedClock(size_t node_index,
   // timestamp 2 happens.
   if (times_.size() == 1u || time < std::get<1>(times_[0])[node_index]) {
     if (time < std::get<1>(times_[0])[node_index]) {
-      CHECK(!have_popped_)
+      ABSL_CHECK(!have_popped_)
           << ": Trying to interpolate time " << time
           << " but we have forgotten the relevant points already.";
     }
-    CHECK_EQ(time.boot, std::get<1>(times_[0])[node_index].boot);
+    ABSL_CHECK_EQ(time.boot, std::get<1>(times_[0])[node_index].boot);
     const distributed_clock::time_point result =
         time.time - std::get<1>(times_[0])[node_index].time +
         std::get<0>(times_[0]);
@@ -1660,7 +1662,7 @@ InterpolatedTimeConverter::ToDistributedClock(size_t node_index,
 
 Result<BootTimestamp> InterpolatedTimeConverter::FromDistributedClock(
     size_t node_index, distributed_clock::time_point time, size_t boot_count) {
-  CHECK_LT(node_index, node_count_);
+  ABSL_CHECK_LT(node_index, node_count_);
   // If there is only one node, time estimation makes no sense.  Just return
   // unity time.
   if (node_count_ == 1u) {
@@ -1676,7 +1678,7 @@ Result<BootTimestamp> InterpolatedTimeConverter::FromDistributedClock(
 
   if (times_.size() == 1u || time < std::get<0>(times_[0])) {
     if (time < std::get<0>(times_[0])) {
-      CHECK(!have_popped_)
+      ABSL_CHECK(!have_popped_)
           << ": Trying to interpolate time " << time
           << " but we have forgotten the relevant points already.";
     }
@@ -1721,7 +1723,7 @@ Result<BootTimestamp> InterpolatedTimeConverter::FromDistributedClock(
               << boot_count << ") -> " << result;
       return result;
     } else {
-      CHECK_EQ(boot_count, t0.boot);
+      ABSL_CHECK_EQ(boot_count, t0.boot);
       const BootTimestamp result = t0 + (time - d0);
       VLOG(3) << "FromDistributedClock(" << node_index << ", " << time << ", "
               << boot_count << ") -> " << result;
@@ -1745,9 +1747,9 @@ Result<BootTimestamp> InterpolatedTimeConverter::FromDistributedClock(
 
   const chrono::nanoseconds dd = d1 - d0;
 
-  CHECK_NE(dd.count(), 0u) << " t0 " << t0 << " t1 " << t1 << "d0 " << d0
-                           << " d1 " << d1 << " looking up distributed "
-                           << time;
+  ABSL_CHECK_NE(dd.count(), 0u)
+      << " t0 " << t0 << " t1 " << t1 << "d0 " << d0 << " d1 " << d1
+      << " looking up distributed " << time;
 
   // Basic interpolation between 2 points look like
   //  p0.t + (t - p0.d) * (p1.t - p0.t) / (p1.d - p0.d)
@@ -1796,8 +1798,8 @@ MultiNodeNoncausalOffsetEstimator::MultiNodeNoncausalOffsetEstimator(
     boots_ = boots;
   }
 
-  CHECK(boots_) << ": Missing boots for " << NodesCount();
-  CHECK_EQ(boots_->boots.size(), NodesCount());
+  ABSL_CHECK(boots_) << ": Missing boots for " << NodesCount();
+  ABSL_CHECK_EQ(boots_->boots.size(), NodesCount());
   filters_per_node_.resize(NodesCount());
   last_monotonics_.resize(NodesCount(), BootTimestamp::epoch());
   if (absl::GetFlag(FLAGS_timestamps_to_csv) && multi_node) {
@@ -1907,14 +1909,14 @@ bool MultiNodeNoncausalOffsetEstimator::FlushAndClose(bool destructor) {
 MultiNodeNoncausalOffsetEstimator::~MultiNodeNoncausalOffsetEstimator() {
   const bool success = FlushAndClose(true);
   if (!non_fatal_destructor_checks_) {
-    CHECK(success);
+    ABSL_CHECK(success);
   }
 }
 
 UUID MultiNodeNoncausalOffsetEstimator::boot_uuid(size_t node_index,
                                                   size_t boot_count) {
-  CHECK(boots_);
-  CHECK_LT(node_index, boots_->boots.size());
+  ABSL_CHECK(boots_);
+  ABSL_CHECK_LT(node_index, boots_->boots.size());
   if (boot_count < boots_->boots[node_index].size()) {
     return UUID::FromString(boots_->boots[node_index][boot_count]);
   } else {
@@ -1939,7 +1941,7 @@ void MultiNodeNoncausalOffsetEstimator::Start(
   if (absl::GetFlag(FLAGS_timestamps_to_csv)) {
     std::fstream s(CsvPath("timestamp_noncausal_starttime.csv").c_str(),
                    s.trunc | s.out);
-    CHECK(s.is_open());
+    ABSL_CHECK(s.is_open());
     for (const Node *node : configuration::GetNodes(configuration())) {
       const size_t node_index =
           configuration::GetNodeIndex(configuration(), node);
@@ -1955,9 +1957,9 @@ void MultiNodeNoncausalOffsetEstimator::Start(
 message_bridge::NoncausalOffsetEstimator *
 MultiNodeNoncausalOffsetEstimator::GetFilter(const Node *node_a,
                                              const Node *node_b) {
-  CHECK_NE(node_a, node_b);
-  CHECK_EQ(configuration::GetNode(configuration(), node_a), node_a);
-  CHECK_EQ(configuration::GetNode(configuration(), node_b), node_b);
+  ABSL_CHECK_NE(node_a, node_b);
+  ABSL_CHECK_EQ(configuration::GetNode(configuration(), node_a), node_a);
+  ABSL_CHECK_EQ(configuration::GetNode(configuration(), node_b), node_b);
 
   if (node_a > node_b) {
     return GetFilter(node_b, node_a);
@@ -1991,7 +1993,7 @@ MultiNodeNoncausalOffsetEstimator::GetFilter(const Node *node_a,
 
 void MultiNodeNoncausalOffsetEstimator::SetTimestampMappers(
     std::vector<logger::TimestampMapper *> timestamp_mappers) {
-  CHECK_EQ(timestamp_mappers.size(), NodesCount());
+  ABSL_CHECK_EQ(timestamp_mappers.size(), NodesCount());
   filters_per_channel_.resize(timestamp_mappers.size());
 
   // Pre-build all the filters.  Why not?
@@ -2020,7 +2022,7 @@ void MultiNodeNoncausalOffsetEstimator::SetTimestampMappers(
   size_t node_index = 0;
   for (logger::TimestampMapper *timestamp_mapper : timestamp_mappers) {
     if (timestamp_mapper != nullptr) {
-      CHECK(!timestamp_mapper->started())
+      ABSL_CHECK(!timestamp_mapper->started())
           << ": Timestamps queued before we registered the timestamp hooks.";
       timestamp_mapper->set_timestamp_callback(
           [this, node_index](logger::TimestampedMessage *msg) {
@@ -2028,7 +2030,7 @@ void MultiNodeNoncausalOffsetEstimator::SetTimestampMappers(
               // Got a forwarding timestamp!
               NoncausalOffsetEstimator *filter =
                   filters_per_channel_[node_index][msg->channel_index];
-              CHECK(filter != nullptr);
+              ABSL_CHECK(filter != nullptr);
               const Node *node = configuration()->nodes()->Get(node_index);
 
               // The remote time could be from a reliable message long ago,
@@ -2141,8 +2143,8 @@ TimeComparison CompareTimes(const std::vector<BootTimestamp> &ta,
 
 chrono::nanoseconds MaxElapsedTime(const std::vector<BootTimestamp> &ta,
                                    const std::vector<BootTimestamp> &tb) {
-  CHECK_EQ(ta.size(), tb.size());
-  CHECK(!ta.empty());
+  ABSL_CHECK_EQ(ta.size(), tb.size());
+  ABSL_CHECK(!ta.empty());
   bool first = true;
   chrono::nanoseconds dt;
   for (size_t i = 0; i < ta.size(); ++i) {
@@ -2160,7 +2162,7 @@ chrono::nanoseconds MaxElapsedTime(const std::vector<BootTimestamp> &ta,
       first = false;
     }
   }
-  CHECK(!first);
+  ABSL_CHECK(!first);
   return dt;
 }
 
@@ -2194,7 +2196,7 @@ class BitSet64 {
   BitSet64(size_t size) : size_(size) {
     // Cheat a bit...  Some of the math below assumes that 1 << size fits in a
     // 64 bit number, and it isn't worth fixing this assumption.
-    CHECK_LE(size, (sizeof(uint64_t) * 8) - 1);
+    ABSL_CHECK_LE(size, (sizeof(uint64_t) * 8) - 1);
   }
 
   size_t size() const { return size_; }
@@ -2269,8 +2271,8 @@ void MultiNodeNoncausalOffsetEstimator::CheckGraph() {
     ++node_a_index;
   }
 
-  CHECK(found_start) << ": Failed to find any connected nodes in a graph of "
-                     << NodesCount();
+  ABSL_CHECK(found_start)
+      << ": Failed to find any connected nodes in a graph of " << NodesCount();
 
   // The set of nodes we have visited.
   BitSet64 visited_set(all_nodes.size());
@@ -2447,7 +2449,7 @@ Result<TimestampProblem> MultiNodeNoncausalOffsetEstimator::MakeProblem() {
     }
   }
 
-  CHECK(traversed_nodes == all_live_nodes)
+  ABSL_CHECK(traversed_nodes == all_live_nodes)
       << ": Found a subset of the graph which is disconnected.  This isn't "
          "solvable today, but could be with valid use case.";
 
@@ -2575,7 +2577,7 @@ MultiNodeNoncausalOffsetEstimator::MakeCandidateTimes() const {
       continue;
     }
 
-    DCHECK_LT(candidate.b_index, candidate_times.size());
+    ABSL_DCHECK_LT(candidate.b_index, candidate_times.size());
     if (candidate_times[candidate.b_index].next_node_time.boot !=
         candidate.next_node_duration.boot) {
       boots_all_match = false;
@@ -2620,7 +2622,7 @@ MultiNodeNoncausalOffsetEstimator::SimultaneousSolution(
     if (next_node_time == BootTimestamp::max_time()) {
       continue;
     }
-    CHECK_EQ(next_node_time.boot, base_times[node_a_index].boot);
+    ABSL_CHECK_EQ(next_node_time.boot, base_times[node_a_index].boot);
 
     const chrono::nanoseconds this_dt =
         next_node_time.time - base_times[node_a_index].time;
@@ -2761,7 +2763,7 @@ bool MultiNodeNoncausalOffsetEstimator::CheckInvalidDistance(
   // Somehow the new solution is better *and* worse than the old
   // solution...  This is an internal failure because that means time
   // goes backwards on a node.
-  CHECK_EQ(result_times.size(), solution.size());
+  ABSL_CHECK_EQ(result_times.size(), solution.size());
   LOG(INFO) << "Times can't be compared by " << invalid_distance.count()
             << "ns";
   for (size_t i = 0; i < result_times.size(); ++i) {
@@ -2861,7 +2863,7 @@ MultiNodeNoncausalOffsetEstimator::SequentialSolution(
 
     if (!problem->HasObservations(node_a_index)) {
       VLOG(1) << "No observations, checking if there's a filter";
-      CHECK(next_node_filter == nullptr)
+      ABSL_CHECK(next_node_filter == nullptr)
           << ": No observations, but this isn't a start time.";
       continue;
     }
@@ -3003,7 +3005,7 @@ MultiNodeNoncausalOffsetEstimator::SequentialSolution(
         if (next_node_filter) {
           std::optional<std::tuple<logger::BootTimestamp, logger::BootDuration>>
               result = next_node_filter->Consume();
-          CHECK(result);
+          ABSL_CHECK(result);
           WriteFilter(next_node_filter, *result);
 
           // We shouldn't pop since we don't know if this is the oldest one or
@@ -3146,7 +3148,7 @@ MultiNodeNoncausalOffsetEstimator::NextTimestamp() {
     std::tie(next_filter, std::ignore, solution_node_index) =
         next_solution.value();
 
-    CHECK(!all_done_);
+    ABSL_CHECK(!all_done_);
 
     // All done.
     if (result_times.empty()) {
@@ -3188,8 +3190,8 @@ MultiNodeNoncausalOffsetEstimator::NextTimestamp() {
                                       std::vector<BootTimestamp>>>>
           result;
       result.emplace(std::nullopt);
-      CHECK(result.has_value());
-      CHECK(!result.value().has_value());
+      ABSL_CHECK(result.has_value());
+      ABSL_CHECK(!result.value().has_value());
       return result;
     }
 
@@ -3270,7 +3272,7 @@ MultiNodeNoncausalOffsetEstimator::NextTimestamp() {
           }
           LOG(INFO) << "Times can't be compared by " << invalid_distance.count()
                     << "ns";
-          CHECK_EQ(last_monotonics_.size(), result_times.size());
+          ABSL_CHECK_EQ(last_monotonics_.size(), result_times.size());
           for (size_t i = 0; i < result_times.size(); ++i) {
             LOG(INFO)
                 << "  " << last_monotonics_[i] << " vs " << result_times[i]
@@ -3364,7 +3366,7 @@ void MultiNodeNoncausalOffsetEstimator::FlushAllSamples(bool finish) {
           if (!finish) {
             break;
           }
-          CHECK_EQ(t0.boot, message.first.boot);
+          ABSL_CHECK_EQ(t0.boot, message.first.boot);
           distributed = message.first.time - t0.time + d0;
         } else {
           const distributed_clock::time_point d1 = std::get<0>(*next);

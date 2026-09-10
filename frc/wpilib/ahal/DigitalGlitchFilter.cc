@@ -10,7 +10,7 @@
 #include <algorithm>
 #include <array>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "frc/wpilib/ahal/Counter.h"
@@ -28,7 +28,7 @@ std::array<bool, 3> DigitalGlitchFilter::m_filterAllocated = {
 DigitalGlitchFilter::DigitalGlitchFilter() {
   auto index =
       std::find(m_filterAllocated.begin(), m_filterAllocated.end(), false);
-  CHECK_NE(index, m_filterAllocated.end());
+  ABSL_CHECK_NE(index, m_filterAllocated.end());
 
   m_channelIndex = std::distance(m_filterAllocated.begin(), index);
   *index = true;
@@ -70,7 +70,7 @@ void DigitalGlitchFilter::DoAdd(DigitalSource *input, int requested_index) {
     // Validate that we set it correctly.
     int actual_index =
         HAL_GetFilterSelect(input->GetPortHandleForRouting(), &status);
-    CHECK_EQ(actual_index, requested_index);
+    ABSL_CHECK_EQ(actual_index, requested_index);
 
     HAL_Report(HALUsageReporting::kResourceType_DigitalInput,
                input->GetChannel());

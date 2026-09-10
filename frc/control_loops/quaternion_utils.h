@@ -3,7 +3,7 @@
 
 #include "Eigen/Dense"
 #include "Eigen/Geometry"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 namespace frc::controls {
@@ -48,7 +48,7 @@ inline Eigen::Matrix<double, 4, 1> ExtractQuaternionMean(
   // I can't prove this is true, but everyone else seems to assume it...
   // TODO(james): Handle this more rigorously.
   for (int i = 0; i < 4; ++i) {
-    CHECK_LT(eigenvectors(i, max_index).imag(), 1e-4)
+    ABSL_CHECK_LT(eigenvectors(i, max_index).imag(), 1e-4)
         << eigenvectors(i, max_index);
   }
   return MaybeFlipX(eigenvectors.col(max_index).real().normalized());
@@ -74,7 +74,7 @@ inline Eigen::Matrix<double, 4, 1> QuaternionMean(
 // initializes with scalars as Eigen::Quaternion{w, x, y, z}
 inline Eigen::Vector4d QuaternionMean(
     std::vector<Eigen::Vector4d> quaternion_list) {
-  CHECK(quaternion_list.size() != 0)
+  ABSL_CHECK(quaternion_list.size() != 0)
       << "Must have at least one quaternion to compute an average!";
 
   Eigen::Matrix<double, 4, 4> m = Eigen::Matrix4d::Zero();

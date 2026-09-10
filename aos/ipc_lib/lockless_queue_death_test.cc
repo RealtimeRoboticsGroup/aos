@@ -8,7 +8,7 @@
 #include <optional>
 #include <ostream>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "gtest/gtest.h"
 
@@ -82,7 +82,7 @@ TEST(LocklessQueueTest, Death) {
           // Pin a message, so when we keep writing we will exercise the pinning
           // logic.
           if (i == 1) {
-            CHECK_EQ(pinner.PinIndex(1), kPinnedMessageIndex);
+            ABSL_CHECK_EQ(pinner.PinIndex(1), kPinnedMessageIndex);
           }
         }
       },
@@ -191,7 +191,7 @@ TEST(LocklessQueueTest, Death) {
               ++i;
               continue;
             }
-            CHECK(read_result == LocklessQueueReader::Result::NOTHING_NEW)
+            ABSL_CHECK(read_result == LocklessQueueReader::Result::NOTHING_NEW)
                 << ": " << static_cast<int>(read_result);
             break;
           }

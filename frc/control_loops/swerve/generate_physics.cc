@@ -13,7 +13,7 @@
 #include <utility>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
@@ -272,8 +272,8 @@ class SwerveSimulation {
     std::vector<std::string> result_h;
 
     std::string_view include_guard_stripped = h_path;
-    CHECK(absl::ConsumePrefix(&include_guard_stripped,
-                              absl::GetFlag(FLAGS_output_base)));
+    ABSL_CHECK(absl::ConsumePrefix(&include_guard_stripped,
+                                   absl::GetFlag(FLAGS_output_base)));
     std::string include_guard =
         absl::StrReplaceAll(absl::AsciiStrToUpper(include_guard_stripped),
                             {{"/", "_"}, {".", "_"}});

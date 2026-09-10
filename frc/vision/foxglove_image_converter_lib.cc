@@ -1,7 +1,7 @@
 #include "frc/vision/foxglove_image_converter_lib.h"
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/imgproc.hpp"
@@ -29,7 +29,7 @@ flatbuffers::Offset<foxglove::CompressedImage> CompressImage(
   // imencode doesn't let us pass in anything other than an std::vector, and
   // performance isn't yet a big enough issue to try to avoid the copy.
   std::vector<uint8_t> buffer;
-  CHECK(cv::imencode(
+  ABSL_CHECK(cv::imencode(
       absl::StrCat(".", format), image, buffer,
       {cv::IMWRITE_JPEG_QUALITY, absl::GetFlag(FLAGS_jpeg_quality)}));
   const flatbuffers::Offset<flatbuffers::Vector<uint8_t>> data_offset =

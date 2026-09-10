@@ -9,6 +9,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/usage.h"
+#include "absl/log/absl_check.h"
 #include "absl/strings/escaping.h"
 
 #include "aos/aos_cli_utils.h"
@@ -38,7 +39,7 @@ namespace chrono = std::chrono;
 // Prints out raw log parts to stdout.
 int PrintRaw(int argc, char **argv) {
   if (argc == 1) {
-    CHECK(!absl::GetFlag(FLAGS_raw_header).empty());
+    ABSL_CHECK(!absl::GetFlag(FLAGS_raw_header).empty());
     aos::logger::MessageReader raw_header_reader(
         absl::GetFlag(FLAGS_raw_header));
     std::cout << aos::FlatbufferToJson(
@@ -104,8 +105,8 @@ int PrintRaw(int argc, char **argv) {
                                    .max_vector_size = static_cast<size_t>(
                                        absl::GetFlag(FLAGS_max_vector_size))})
               << std::endl;
-    CHECK_EQ(full_header->configuration_sha256()->string_view(),
-             aos::Sha256(raw_header_reader->raw_log_file_header().span()));
+    ABSL_CHECK_EQ(full_header->configuration_sha256()->string_view(),
+                  aos::Sha256(raw_header_reader->raw_log_file_header().span()));
     full_header = raw_header_reader->log_file_header();
   }
 
@@ -118,7 +119,7 @@ int PrintRaw(int argc, char **argv) {
                                  .max_vector_size = static_cast<size_t>(
                                      absl::GetFlag(FLAGS_max_vector_size))})
             << std::endl;
-  CHECK(full_header->has_configuration())
+  ABSL_CHECK(full_header->has_configuration())
       << ": Missing configuration! You may want to provide the path to the "
          "logged configuration file using the --raw_header flag.";
 
@@ -128,21 +129,21 @@ int PrintRaw(int argc, char **argv) {
     if (message.span().empty()) {
       break;
     }
-    CHECK(message.Verify());
+    ABSL_CHECK(message.Verify());
 
     const auto *const channels = full_header->configuration()->channels();
     const size_t channel_index = message.message().channel_index();
-    CHECK_LT(channel_index, channels->size());
+    ABSL_CHECK_LT(channel_index, channels->size());
     const aos::Channel *const channel = channels->Get(channel_index);
 
-    CHECK(message.Verify()) << absl::BytesToHexString(
+    ABSL_CHECK(message.Verify()) << absl::BytesToHexString(
         std::string_view(reinterpret_cast<const char *>(message.span().data()),
                          message.span().size()));
 
     if (message.message().data() != nullptr) {
-      CHECK(channel->has_schema());
+      ABSL_CHECK(channel->has_schema());
 
-      CHECK(flatbuffers::Verify(
+      ABSL_CHECK(flatbuffers::Verify(
           *channel->schema(), *channel->schema()->root_table(),
           message.message().data()->data(), message.message().data()->size()))
           << ": Corrupted flatbuffer on " << channel->name()->c_str() << " "
@@ -224,8 +225,8 @@ int main(int argc, char **argv) {
   {
     std::function<bool(const aos::Channel *)> channel_should_be_printed =
         aos::logging::GetChannelShouldBePrintedTester();
-    CHECK(std::ranges::any_of(*reader.configuration()->channels(),
-                              channel_should_be_printed))
+    ABSL_CHECK(std::ranges::any_of(*reader.configuration()->channels(),
+                                   channel_should_be_printed))
         << ": Could not find any channels";
   }
 
@@ -257,12 +258,12 @@ int main(int argc, char **argv) {
         [&printers, node_index]() { printers[node_index] = nullptr; });
 
     reader.OnStart(node, [&printers, node_index, node_factory]() {
-      CHECK(printers[node_index]);
+      ABSL_CHECK(printers[node_index]);
       printers[node_index]->SetStarted(true, node_factory->monotonic_now(),
                                        node_factory->realtime_now());
     });
     reader.OnEnd(node, [&printers, node_index, node_factory]() {
-      CHECK(printers[node_index]);
+      ABSL_CHECK(printers[node_index]);
       printers[node_index]->SetStarted(false, node_factory->monotonic_now(),
                                        node_factory->realtime_now());
     });

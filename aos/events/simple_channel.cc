@@ -1,17 +1,17 @@
 #include "aos/events/simple_channel.h"
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
 
 namespace aos {
 
 SimpleChannel::SimpleChannel(const Channel *channel) {
-  CHECK(channel != nullptr);
+  ABSL_CHECK(channel != nullptr);
   const flatbuffers::String *channel_name = channel->name();
-  CHECK(channel_name != nullptr);
+  ABSL_CHECK(channel_name != nullptr);
   name = channel_name->str();
   const flatbuffers::String *channel_type = channel->type();
-  CHECK(channel_type != nullptr);
+  ABSL_CHECK(channel_type != nullptr);
   type = channel_type->str();
 }
 

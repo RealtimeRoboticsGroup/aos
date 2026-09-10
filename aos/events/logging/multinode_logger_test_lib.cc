@@ -2,7 +2,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/reflection.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/events/event_loop.h"
@@ -53,7 +53,7 @@ std::unique_ptr<MultiNodeFilesLogNamer> LoggerState::MakeLogNamer(
 }
 
 void LoggerState::StartLogger(std::string logfile_base) {
-  CHECK(!logfile_base.empty());
+  ABSL_CHECK(!logfile_base.empty());
 
   logger = std::make_unique<Logger>(event_loop.get(), configuration);
   logger->set_polling_period(std::chrono::milliseconds(100));
@@ -63,7 +63,7 @@ void LoggerState::StartLogger(std::string logfile_base) {
       absl::StrCat("logger_sha1_", event_loop->node()->name()->str()));
   logger->set_logger_version(
       absl::StrCat("logger_version_", event_loop->node()->name()->str()));
-  CHECK(start_timer == nullptr)
+  ABSL_CHECK(start_timer == nullptr)
       << ": Test fixture doesn't yet supporting starting a logger twice.";
 
   // Use a timer for starting since OnRun can only happen at the actual startup.
@@ -457,7 +457,7 @@ ConfirmReadable(const std::vector<std::string> &files,
 
     reader.Deregister();
   }
-  CHECK(LogIsReadableIfMultiNode(LogFilesContainer{SortParts(files)}));
+  ABSL_CHECK(LogIsReadableIfMultiNode(LogFilesContainer{SortParts(files)}));
   {
     std::vector<std::pair<std::vector<realtime_clock::time_point>,
                           std::vector<realtime_clock::time_point>>>
@@ -581,9 +581,9 @@ std::vector<std::tuple<std::string, std::string, int>> CountChannelsData(
   return CountChannelsMatching(config, filename,
                                [](const UnpackedMessageHeader *msg) {
                                  if (msg->span.data() != nullptr) {
-                                   CHECK(!msg->has_monotonic_remote_time);
-                                   CHECK(!msg->has_realtime_remote_time);
-                                   CHECK(!msg->has_remote_queue_index);
+                                   ABSL_CHECK(!msg->has_monotonic_remote_time);
+                                   ABSL_CHECK(!msg->has_realtime_remote_time);
+                                   ABSL_CHECK(!msg->has_remote_queue_index);
                                    return true;
                                  }
                                  return false;
@@ -597,9 +597,9 @@ std::vector<std::tuple<std::string, std::string, int>> CountChannelsTimestamp(
   return CountChannelsMatching(config, filename,
                                [](const UnpackedMessageHeader *msg) {
                                  if (msg->span.data() == nullptr) {
-                                   CHECK(msg->has_monotonic_remote_time);
-                                   CHECK(msg->has_realtime_remote_time);
-                                   CHECK(msg->has_remote_queue_index);
+                                   ABSL_CHECK(msg->has_monotonic_remote_time);
+                                   ABSL_CHECK(msg->has_realtime_remote_time);
+                                   ABSL_CHECK(msg->has_remote_queue_index);
                                    return true;
                                  }
                                  return false;

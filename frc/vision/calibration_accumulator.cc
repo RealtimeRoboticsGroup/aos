@@ -6,6 +6,7 @@
 
 #include "Eigen/Dense"
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "opencv2/highgui/highgui.hpp"
 
 #include "CompressedImage_schema.h"
@@ -215,7 +216,8 @@ void Calibration::HandleCharuco(
     std::vector<Eigen::Vector3d> tvecs_eigen) {
   visualizer_.HandleCharuco(eof, charuco_corners);
   if (valid) {
-    CHECK(rvecs_eigen.size() > 0) << "Require at least one target detected";
+    ABSL_CHECK(rvecs_eigen.size() > 0)
+        << "Require at least one target detected";
     // We only use one (the first) target detected for calibration
     data_->AddCameraPose(
         aos::CheckExpected(image_factory_->ToDistributedClock(eof)),

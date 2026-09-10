@@ -712,7 +712,7 @@ cc_library(
         "//frc/control_loops:control_loops_fbs",
         "//frc/control_loops:fixed_quadrature",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/types:span",
         "@eigen",
     ],
@@ -837,7 +837,7 @@ cc_library(
         "//frc/control_loops:quaternion_utils",
         "//frc/control_loops:runge_kutta",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@eigen",
     ],
 )

@@ -9,7 +9,7 @@
 
 #include <cstdint>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #ifdef WPI_ERRORS_DEFINE_STRINGS
@@ -23,7 +23,7 @@
 #endif
 
 #define HAL_CHECK_STATUS(status) \
-  CHECK(status == 0) << HAL_GetLastError(&(status))
+  ABSL_CHECK(status == 0) << HAL_GetLastError(&(status))
 
 /*
  * Fatal errors

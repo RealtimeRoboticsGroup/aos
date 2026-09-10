@@ -8,7 +8,7 @@
 #endif
 #include "absl/flags/flag.h"
 #include "absl/flags/usage.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/events/logging/snappy_encoder.h"
@@ -100,7 +100,7 @@ int main(int argc, char *argv[]) {
     } else {
       errno = 0;
       setpriority(PRIO_PROCESS, 0, -20);
-      PCHECK(errno == 0)
+      ABSL_PCHECK(errno == 0)
           << ": Renicing to -20 failed, use --skip_renicing to skip renicing.";
     }
     logger.StartLogging(std::move(log_namer));

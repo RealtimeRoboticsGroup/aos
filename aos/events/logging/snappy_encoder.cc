@@ -1,5 +1,7 @@
 #include "aos/events/logging/snappy_encoder.h"
 
+#include "absl/log/absl_check.h"
+
 #include "aos/util/crc32.h"
 #include "snappy.h"
 
@@ -51,7 +53,7 @@ size_t SnappyEncoder::Encode(Copier *copy, size_t start_byte,
                              std::chrono::nanoseconds * /*encode_duration*/) {
   // TODO (Maxwell Gumley): find a way to measure encode duration for a single
   // message.
-  CHECK_EQ(start_byte, 0u);
+  ABSL_CHECK_EQ(start_byte, 0u);
   buffer_source_.Append(copy);
 
   if (buffer_source_.Available() >= chunk_size_) {
@@ -77,10 +79,10 @@ void SnappyEncoder::EncodeCurrentBuffer() {
   snappy::UncheckedByteArraySink snappy_sink(compressed_start);
   const size_t compressed_size =
       snappy::Compress(&buffer_source_, &snappy_sink);
-  CHECK_LT(compressed_size + kPrefixSize, queue_.back().size());
+  ABSL_CHECK_LT(compressed_size + kPrefixSize, queue_.back().size());
   queue_.back().resize(compressed_size + kPrefixSize);
   const size_t chunk_size = compressed_size + 4;
-  CHECK_LT(chunk_size, 1U << 24);
+  ABSL_CHECK_LT(chunk_size, 1U << 24);
   queue_.back().data()[1] = chunk_size & 0xFF;
   queue_.back().data()[2] = (chunk_size >> 8) & 0xFF;
   queue_.back().data()[3] = (chunk_size >> 16) & 0xFF;
@@ -92,12 +94,12 @@ void SnappyEncoder::EncodeCurrentBuffer() {
   total_bytes_ += queue_.back().size();
 
   buffer_source_.ResetAccumulatedChecksum();
-  CHECK_EQ(0u, buffer_source_.Available());
+  ABSL_CHECK_EQ(0u, buffer_source_.Available());
 }
 
 void SnappyEncoder::Clear(int n) {
-  CHECK_GE(n, 0);
-  CHECK_LE(static_cast<size_t>(n), queue_size());
+  ABSL_CHECK_GE(n, 0);
+  ABSL_CHECK_LE(static_cast<size_t>(n), queue_size());
   queue_.erase(queue_.begin(), queue_.begin() + n);
 }
 
@@ -127,7 +129,7 @@ size_t SnappyEncoder::DetachedBufferSource::Available() const {
 }
 
 const char *SnappyEncoder::DetachedBufferSource::Peek(size_t *length) {
-  CHECK(length != nullptr);
+  ABSL_CHECK(length != nullptr);
   *length = data_.size() - index_into_first_buffer_;
   return reinterpret_cast<char *>(data_.data()) + index_into_first_buffer_;
 }
@@ -137,10 +139,10 @@ void SnappyEncoder::DetachedBufferSource::Skip(size_t n) {
     return;
   }
 
-  CHECK_NE(data_.size(), 0u);
+  ABSL_CHECK_NE(data_.size(), 0u);
 
   index_into_first_buffer_ += n;
-  CHECK_LE(index_into_first_buffer_, data_.size())
+  ABSL_CHECK_LE(index_into_first_buffer_, data_.size())
       << ": " << n << " is too large a skip.";
   if (index_into_first_buffer_ == data_.size()) {
     data_.resize(0u);
@@ -150,10 +152,11 @@ void SnappyEncoder::DetachedBufferSource::Skip(size_t n) {
 
 void SnappyEncoder::DetachedBufferSource::Append(Copier *copy) {
   const size_t copy_size = copy->size();
-  CHECK_LE(copy_size + data_.size(), data_.capacity());
+  ABSL_CHECK_LE(copy_size + data_.size(), data_.capacity());
   size_t starting_size = data_.size();
   data_.resize(starting_size + copy_size);
-  CHECK_EQ(copy->Copy(data_.data() + starting_size, 0, copy_size), copy_size);
+  ABSL_CHECK_EQ(copy->Copy(data_.data() + starting_size, 0, copy_size),
+                copy_size);
   accumulated_checksum_ = AccumulateCrc32(
       {data_.data() + starting_size, copy_size}, accumulated_checksum_);
 }
@@ -220,8 +223,8 @@ size_t SnappyDecoder::Read(uint8_t *begin, uint8_t *end) {
       const size_t input_size = compressed_buffer_.size() - 4;
 
       size_t uncompressed_length;
-      CHECK(snappy::GetUncompressedLength(input_data, input_size,
-                                          &uncompressed_length));
+      ABSL_CHECK(snappy::GetUncompressedLength(input_data, input_size,
+                                               &uncompressed_length));
 
       // If the user's buffer can fit the entire uncompressed data, we
       // will uncompress directly into their buffer. Otherwise, we uncompress
@@ -231,21 +234,22 @@ size_t SnappyDecoder::Read(uint8_t *begin, uint8_t *end) {
       // unnecessary copies by extracting the initial N bytes directly into
       // the user's buffer.
       if (end > (uncompressed_length + current_output)) {
-        CHECK(snappy::RawUncompress(input_data, input_size,
-                                    reinterpret_cast<char *>(current_output)))
+        ABSL_CHECK(snappy::RawUncompress(
+            input_data, input_size, reinterpret_cast<char *>(current_output)))
             << ": Corrupted snappy chunk.";
-        CHECK_EQ(checksum, SnappyChecksum(current_output, uncompressed_length))
+        ABSL_CHECK_EQ(checksum,
+                      SnappyChecksum(current_output, uncompressed_length))
             << ": Checksum mismatch.";
 
         current_output += uncompressed_length;
       } else {
         uncompressed_buffer_.resize(uncompressed_length);
-        CHECK(snappy::RawUncompress(
+        ABSL_CHECK(snappy::RawUncompress(
             input_data, input_size,
             reinterpret_cast<char *>(uncompressed_buffer_.data())))
             << ": Corrupted snappy chunk.";
-        CHECK_EQ(checksum, SnappyChecksum(uncompressed_buffer_.data(),
-                                          uncompressed_buffer_.size()))
+        ABSL_CHECK_EQ(checksum, SnappyChecksum(uncompressed_buffer_.data(),
+                                               uncompressed_buffer_.size()))
             << ": Checksum mismatch.";
         std::memcpy(current_output, uncompressed_buffer_.data(),
                     end - current_output);

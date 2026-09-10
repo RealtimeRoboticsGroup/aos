@@ -10,26 +10,27 @@ extern "C" {
 #include "rawrtcc/utils.h"
 }
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "flatbuffers/flatbuffers.h"
 
 namespace aos::web_proxy {
 
 // TODO(austin): This doesn't allow streaming data in.
-#define CHECK_RAWRTC(x)                                                     \
-  [&]() {                                                                   \
-    enum rawrtc_code r = x;                                                 \
-    CHECK(r == RAWRTC_CODE_SUCCESS) << " actual " << rawrtc_code_to_str(r); \
+#define CHECK_RAWRTC(x)                         \
+  [&]() {                                       \
+    enum rawrtc_code r = x;                     \
+    ABSL_CHECK(r == RAWRTC_CODE_SUCCESS)        \
+        << " actual " << rawrtc_code_to_str(r); \
   }()
 
-#define CHECK_RAWRTC_IGNORE(x, i)    \
-  [&]() {                            \
-    enum rawrtc_code r = x;          \
-    for (auto w : i) {               \
-      if (w == r) return;            \
-    }                                \
-    CHECK(r == RAWRTC_CODE_SUCCESS); \
+#define CHECK_RAWRTC_IGNORE(x, i)         \
+  [&]() {                                 \
+    enum rawrtc_code r = x;               \
+    for (auto w : i) {                    \
+      if (w == r) return;                 \
+    }                                     \
+    ABSL_CHECK(r == RAWRTC_CODE_SUCCESS); \
   }()
 
 // Wrapper around a RawRTC data channel to manage it's lifetime and provide C++

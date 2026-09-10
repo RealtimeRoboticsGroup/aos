@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
 #include "flatbuffers/flatbuffers.h"
@@ -42,9 +42,9 @@ DataWriter::DataWriter(LogNamer *log_namer, const Node *node,
   allowed_data_types_.fill(false);
 
   state_.resize(configuration::NodesCount(log_namer->configuration_));
-  CHECK_LT(node_index_, state_.size());
+  ABSL_CHECK_LT(node_index_, state_.size());
   for (StoredDataType type : types) {
-    CHECK_LT(static_cast<size_t>(type), allowed_data_types_.size());
+    ABSL_CHECK_LT(static_cast<size_t>(type), allowed_data_types_.size());
     allowed_data_types_[static_cast<size_t>(type)] = true;
   }
 }
@@ -127,7 +127,7 @@ void DataWriter::UpdateRemote(
     monotonic_clock::time_point monotonic_timestamp_time) {
   // Trigger rotation if anything in the header changes.
   bool rotate = false;
-  CHECK_LT(remote_node_index, state_.size());
+  ABSL_CHECK_LT(remote_node_index, state_.size());
   State &state = state_[remote_node_index];
 
   // Did the remote boot UUID change?
@@ -200,7 +200,7 @@ void DataWriter::UpdateRemote(
   // Track the logger timestamps too.
   if (monotonic_timestamp_time != monotonic_clock::min_time) {
     State &logger_state = state_[node_index_];
-    CHECK_EQ(remote_node_index, logger_node_index_);
+    ABSL_CHECK_EQ(remote_node_index, logger_node_index_);
     if (monotonic_event_time <
         logger_state.oldest_logger_remote_unreliable_monotonic_timestamp) {
       VLOG(1)
@@ -238,7 +238,7 @@ std::chrono::nanoseconds DataWriter::CopyDataMessage(
     DataEncoder::Copier *coppier, const UUID &source_node_boot_uuid,
     aos::monotonic_clock::time_point now,
     aos::monotonic_clock::time_point message_time) {
-  CHECK(allowed_data_types_[static_cast<size_t>(StoredDataType::DATA)])
+  ABSL_CHECK(allowed_data_types_[static_cast<size_t>(StoredDataType::DATA)])
       << ": Tried to write data on non-data writer.";
   return CopyMessage(coppier, source_node_boot_uuid, now, message_time);
 }
@@ -247,7 +247,8 @@ void DataWriter::CopyTimestampMessage(
     DataEncoder::Copier *coppier, const UUID &source_node_boot_uuid,
     aos::monotonic_clock::time_point now,
     aos::monotonic_clock::time_point message_time) {
-  CHECK(allowed_data_types_[static_cast<size_t>(StoredDataType::TIMESTAMPS)])
+  ABSL_CHECK(
+      allowed_data_types_[static_cast<size_t>(StoredDataType::TIMESTAMPS)])
       << ": Tried to write timestamps on non-timestamp writer.";
   CopyMessage(coppier, source_node_boot_uuid, now, message_time);
 }
@@ -256,7 +257,7 @@ void DataWriter::CopyRemoteTimestampMessage(
     DataEncoder::Copier *coppier, const UUID &source_node_boot_uuid,
     aos::monotonic_clock::time_point now,
     aos::monotonic_clock::time_point message_time) {
-  CHECK(allowed_data_types_[static_cast<size_t>(
+  ABSL_CHECK(allowed_data_types_[static_cast<size_t>(
       StoredDataType::REMOTE_TIMESTAMPS)])
       << ": Tried to write remote timestamps on non-remote timestamp writer.";
   CopyMessage(coppier, source_node_boot_uuid, now, message_time);
@@ -332,17 +333,18 @@ std::chrono::nanoseconds DataWriter::CopyMessage(
                             std::chrono::nanoseconds(newest_message_time_ -
                                                      monotonic_start_time)));
     }
-    CHECK(header_written_);
+    ABSL_CHECK(header_written_);
     Rotate();
   }
 
-  CHECK_EQ(log_namer_->monotonic_start_time(node_index_, source_node_boot_uuid),
-           monotonic_start_time_);
-  CHECK_EQ(state_[node_index_].boot_uuid, source_node_boot_uuid);
-  CHECK(writer_);
-  CHECK(header_written_) << ": Attempting to write message before header to "
-                         << writer_->name();
-  CHECK_LE(coppier->size(), max_message_size_);
+  ABSL_CHECK_EQ(
+      log_namer_->monotonic_start_time(node_index_, source_node_boot_uuid),
+      monotonic_start_time_);
+  ABSL_CHECK_EQ(state_[node_index_].boot_uuid, source_node_boot_uuid);
+  ABSL_CHECK(writer_);
+  ABSL_CHECK(header_written_)
+      << ": Attempting to write message before header to " << writer_->name();
+  ABSL_CHECK_LE(coppier->size(), max_message_size_);
   std::chrono::nanoseconds encode_duration = writer_->CopyMessage(coppier, now);
   return encode_duration;
 }
@@ -356,7 +358,7 @@ DataWriter::MakeHeader() {
             << " and uuid is " << logger_node_boot_uuid;
     state_[logger_node_index].boot_uuid = logger_node_boot_uuid;
   } else {
-    CHECK_EQ(state_[logger_node_index].boot_uuid, logger_node_boot_uuid);
+    ABSL_CHECK_EQ(state_[logger_node_index].boot_uuid, logger_node_boot_uuid);
   }
   return log_namer_->MakeHeader(node_index_, state_, parts_uuid(), parts_index_,
                                 max_out_of_order_duration_,
@@ -365,11 +367,11 @@ DataWriter::MakeHeader() {
 
 void DataWriter::QueueHeader(
     aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader> &&header) {
-  CHECK(!header_written_) << ": Attempting to write duplicate header to "
-                          << writer_->name();
-  CHECK(header.message().has_source_node_boot_uuid());
-  CHECK_EQ(state_[node_index_].boot_uuid,
-           UUID::FromString(header.message().source_node_boot_uuid()));
+  ABSL_CHECK(!header_written_)
+      << ": Attempting to write duplicate header to " << writer_->name();
+  ABSL_CHECK(header.message().has_source_node_boot_uuid());
+  ABSL_CHECK_EQ(state_[node_index_].boot_uuid,
+                UUID::FromString(header.message().source_node_boot_uuid()));
   if (!writer_) {
     // Since we haven't opened the first time, it's still not too late to update
     // the max message size.  Make sure the header fits.
@@ -388,9 +390,9 @@ void DataWriter::QueueHeader(
           << aos::FlatbufferToJson(
                  header, {.multi_line = false, .max_vector_size = 100});
 
-  CHECK(writer_);
+  ABSL_CHECK(writer_);
   DataEncoder::SpanCopier coppier(header.span());
-  CHECK_LE(coppier.size(), max_message_size_);
+  ABSL_CHECK_LE(coppier.size(), max_message_size_);
   writer_->CopyMessage(&coppier, aos::monotonic_clock::now());
   header_written_ = true;
   monotonic_start_time_ = log_namer_->monotonic_start_time(
@@ -398,7 +400,7 @@ void DataWriter::QueueHeader(
 }
 
 void DataWriter::Close() {
-  CHECK(writer_);
+  ABSL_CHECK(writer_);
   close_(this);
   writer_.reset();
   header_written_ = false;
@@ -424,7 +426,7 @@ aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader> LogNamer::MakeHeader(
   const UUID &source_node_boot_uuid = state[node_index].boot_uuid;
   const Node *const source_node =
       configuration::GetNode(configuration_, node_index);
-  CHECK_EQ(LogFileHeader::MiniReflectTypeTable()->num_elems, 37u)
+  ABSL_CHECK_EQ(LogFileHeader::MiniReflectTypeTable()->num_elems, 37u)
       << ": If you added new fields to the LogFileHeader table, don't forget "
          "to add it below!";
   ;
@@ -434,17 +436,17 @@ aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader> LogNamer::MakeHeader(
   flatbuffers::Offset<flatbuffers::String> config_sha256_offset;
   flatbuffers::Offset<aos::Configuration> configuration_offset;
   if (header_.message().has_configuration()) {
-    CHECK(!header_.message().has_configuration_sha256());
+    ABSL_CHECK(!header_.message().has_configuration_sha256());
     configuration_offset =
         CopyFlatBuffer(header_.message().configuration(), &fbb);
   } else {
-    CHECK(!header_.message().has_configuration());
-    CHECK(header_.message().has_configuration_sha256());
+    ABSL_CHECK(!header_.message().has_configuration());
+    ABSL_CHECK(header_.message().has_configuration_sha256());
     config_sha256_offset = fbb.CreateString(
         header_.message().configuration_sha256()->string_view());
   }
 
-  CHECK(header_.message().has_name());
+  ABSL_CHECK(header_.message().has_name());
   const flatbuffers::Offset<flatbuffers::String> name_offset =
       fbb.CreateString(header_.message().name()->string_view());
   const flatbuffers::Offset<flatbuffers::String> logger_sha1_offset =
@@ -456,11 +458,11 @@ aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader> LogNamer::MakeHeader(
           ? fbb.CreateString(header_.message().logger_version()->string_view())
           : 0;
 
-  CHECK(header_.message().has_log_event_uuid());
+  ABSL_CHECK(header_.message().has_log_event_uuid());
   const flatbuffers::Offset<flatbuffers::String> log_event_uuid_offset =
       fbb.CreateString(header_.message().log_event_uuid()->string_view());
 
-  CHECK(header_.message().has_logger_instance_uuid());
+  ABSL_CHECK(header_.message().has_logger_instance_uuid());
   const flatbuffers::Offset<flatbuffers::String> logger_instance_uuid_offset =
       fbb.CreateString(header_.message().logger_instance_uuid()->string_view());
 
@@ -470,12 +472,12 @@ aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader> LogNamer::MakeHeader(
         fbb.CreateString(header_.message().log_start_uuid()->string_view());
   }
 
-  CHECK(header_.message().has_logger_node_boot_uuid());
+  ABSL_CHECK(header_.message().has_logger_node_boot_uuid());
   const flatbuffers::Offset<flatbuffers::String> logger_node_boot_uuid_offset =
       fbb.CreateString(
           header_.message().logger_node_boot_uuid()->string_view());
 
-  CHECK_NE(source_node_boot_uuid, UUID::Zero());
+  ABSL_CHECK_NE(source_node_boot_uuid, UUID::Zero());
   const flatbuffers::Offset<flatbuffers::String> source_node_boot_uuid_offset =
       source_node_boot_uuid.PackString(&fbb);
 
@@ -541,26 +543,28 @@ aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader> LogNamer::MakeHeader(
       boot_uuid_offsets.emplace_back(fbb.CreateString(""));
     }
     if (state[i].boot_uuid == UUID::Zero()) {
-      CHECK_EQ(state[i].oldest_remote_monotonic_timestamp,
-               monotonic_clock::max_time);
-      CHECK_EQ(state[i].oldest_local_monotonic_timestamp,
-               monotonic_clock::max_time);
-      CHECK_EQ(state[i].oldest_remote_unreliable_monotonic_timestamp,
-               monotonic_clock::max_time);
-      CHECK_EQ(state[i].oldest_local_unreliable_monotonic_timestamp,
-               monotonic_clock::max_time);
-      CHECK_EQ(state[i].oldest_remote_reliable_monotonic_timestamp,
-               monotonic_clock::max_time);
-      CHECK_EQ(state[i].oldest_local_reliable_monotonic_timestamp,
-               monotonic_clock::max_time);
-      CHECK_EQ(state[i].oldest_logger_remote_unreliable_monotonic_timestamp,
-               monotonic_clock::max_time);
-      CHECK_EQ(state[i].oldest_logger_local_unreliable_monotonic_timestamp,
-               monotonic_clock::max_time);
-      CHECK_EQ(state[i].oldest_remote_reliable_monotonic_transmit_timestamp,
-               monotonic_clock::max_time);
-      CHECK_EQ(state[i].oldest_local_reliable_monotonic_transmit_timestamp,
-               monotonic_clock::max_time);
+      ABSL_CHECK_EQ(state[i].oldest_remote_monotonic_timestamp,
+                    monotonic_clock::max_time);
+      ABSL_CHECK_EQ(state[i].oldest_local_monotonic_timestamp,
+                    monotonic_clock::max_time);
+      ABSL_CHECK_EQ(state[i].oldest_remote_unreliable_monotonic_timestamp,
+                    monotonic_clock::max_time);
+      ABSL_CHECK_EQ(state[i].oldest_local_unreliable_monotonic_timestamp,
+                    monotonic_clock::max_time);
+      ABSL_CHECK_EQ(state[i].oldest_remote_reliable_monotonic_timestamp,
+                    monotonic_clock::max_time);
+      ABSL_CHECK_EQ(state[i].oldest_local_reliable_monotonic_timestamp,
+                    monotonic_clock::max_time);
+      ABSL_CHECK_EQ(
+          state[i].oldest_logger_remote_unreliable_monotonic_timestamp,
+          monotonic_clock::max_time);
+      ABSL_CHECK_EQ(state[i].oldest_logger_local_unreliable_monotonic_timestamp,
+                    monotonic_clock::max_time);
+      ABSL_CHECK_EQ(
+          state[i].oldest_remote_reliable_monotonic_transmit_timestamp,
+          monotonic_clock::max_time);
+      ABSL_CHECK_EQ(state[i].oldest_local_reliable_monotonic_transmit_timestamp,
+                    monotonic_clock::max_time);
     }
 
     flatbuffers::GetMutableTemporaryPointer(
@@ -747,7 +751,7 @@ aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader> LogNamer::MakeHeader(
   aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader> result(
       fbb.Release());
 
-  CHECK(result.Verify()) << ": Built a corrupted header.";
+  ABSL_CHECK(result.Verify()) << ": Built a corrupted header.";
 
   return result;
 }
@@ -845,14 +849,14 @@ DataWriter *MultiNodeLogNamer::FindNodeTimestampWriterAndAddChannel(
 DataWriter *MultiNodeLogNamer::AddNodeDataWriter(const Node *source_node,
                                                  DataWriter &&writer) {
   auto result = node_data_writers_.emplace(source_node, std::move(writer));
-  CHECK(result.second);
+  ABSL_CHECK(result.second);
   return &(result.first->second);
 }
 
 DataWriter *MultiNodeLogNamer::AddNodeTimestampWriter(const Node *source_node,
                                                       DataWriter &&writer) {
   auto result = node_timestamp_writers_.emplace(source_node, std::move(writer));
-  CHECK(result.second);
+  ABSL_CHECK(result.second);
   return &(result.first->second);
 }
 
@@ -916,9 +920,10 @@ DataWriter *MultiNodeLogNamer::MakeForwardedTimestampWriter(
   // See if we can read the data on this node at all.
   const bool is_readable =
       configuration::ChannelIsReadableOnNode(channel, this->node());
-  CHECK(is_readable) << ": " << configuration::CleanedChannelToString(channel);
+  ABSL_CHECK(is_readable) << ": "
+                          << configuration::CleanedChannelToString(channel);
 
-  CHECK_NE(node, this->node());
+  ABSL_CHECK_NE(node, this->node());
 
   // If we have a remote timestamp writer for a particular node, use the same
   // writer for all remote timestamp channels of that node.
@@ -1203,9 +1208,10 @@ DataWriter *MinimalFileMultiNodeLogNamer::MakeForwardedTimestampWriter(
   // See if we can read the data on this node at all.
   const bool is_readable =
       configuration::ChannelIsReadableOnNode(channel, this->node());
-  CHECK(is_readable) << ": " << configuration::CleanedChannelToString(channel);
+  ABSL_CHECK(is_readable) << ": "
+                          << configuration::CleanedChannelToString(channel);
 
-  CHECK_NE(node, this->node());
+  ABSL_CHECK_NE(node, this->node());
 
   // If we have a remote timestamp writer for a particular node, use the same
   // writer for all remote timestamp channels of that node.

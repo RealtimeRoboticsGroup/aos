@@ -1,5 +1,7 @@
 #include "frc/control_loops/catapult/mpc_problem_generator.h"
 
+#include "absl/log/absl_check.h"
+
 namespace frc::control_loops::catapult {
 namespace chrono = std::chrono;
 
@@ -29,8 +31,8 @@ std::unique_ptr<MPCProblem> CatapultProblemGenerator::MakeProblem(
 
 const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>
 CatapultProblemGenerator::P(size_t horizon) {
-  CHECK_GT(horizon, 0u);
-  CHECK_LE(horizon, horizon_);
+  ABSL_CHECK_GT(horizon, 0u);
+  ABSL_CHECK_LE(horizon, horizon_);
   return 2.0 * (WM_.block(0, 0, horizon, horizon).transpose() * Pi(horizon) *
                     WM_.block(0, 0, horizon, horizon) +
                 Bf(horizon).transpose() * Q_final_ * Bf(horizon));
@@ -39,8 +41,8 @@ CatapultProblemGenerator::P(size_t horizon) {
 const Eigen::Matrix<double, Eigen::Dynamic, 1> CatapultProblemGenerator::q(
     size_t horizon, Eigen::Matrix<double, 2, 1> X_initial,
     Eigen::Matrix<double, 2, 1> X_final) {
-  CHECK_GT(horizon, 0u);
-  CHECK_LE(horizon, horizon_);
+  ABSL_CHECK_GT(horizon, 0u);
+  ABSL_CHECK_LE(horizon, horizon_);
   return 2.0 * X_initial(1, 0) * accel_q(horizon) +
          2.0 * ((Af(horizon) * X_initial - X_final).transpose() * Q_final_ *
                 Bf(horizon))
@@ -55,22 +57,22 @@ CatapultProblemGenerator::accel_q(size_t horizon) {
 }
 
 const Eigen::Matrix<double, 2, 2> CatapultProblemGenerator::Af(size_t horizon) {
-  CHECK_GT(horizon, 0u);
-  CHECK_LE(horizon, horizon_);
+  ABSL_CHECK_GT(horizon, 0u);
+  ABSL_CHECK_LE(horizon, horizon_);
   return As_.block<2, 2>(2 * (horizon - 1), 0);
 }
 
 const Eigen::Matrix<double, 2, Eigen::Dynamic> CatapultProblemGenerator::Bf(
     size_t horizon) {
-  CHECK_GT(horizon, 0u);
-  CHECK_LE(horizon, horizon_);
+  ABSL_CHECK_GT(horizon, 0u);
+  ABSL_CHECK_LE(horizon, horizon_);
   return Bs_.block(2 * (horizon - 1), 0, 2, horizon);
 }
 
 const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>
 CatapultProblemGenerator::Pi(size_t horizon) {
-  CHECK_GT(horizon, 0u);
-  CHECK_LE(horizon, horizon_);
+  ABSL_CHECK_GT(horizon, 0u);
+  ABSL_CHECK_LE(horizon, horizon_);
   return Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>(Pi_).block(
       horizon_ - horizon, horizon_ - horizon, horizon, horizon);
 }

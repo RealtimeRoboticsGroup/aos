@@ -7,7 +7,7 @@
 #include <ostream>
 #include <ratio>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/type_traits/type_traits.h"
@@ -24,7 +24,7 @@ void Event::Wait() {
          0) {
     const int ret = futex_wait(&impl_);
     if (ret != 0) {
-      CHECK_EQ(-1, ret);
+      ABSL_CHECK_EQ(-1, ret);
       PLOG(FATAL) << "futex_wait(" << &impl_ << ") failed";
     }
   }
@@ -45,7 +45,7 @@ bool Event::WaitTimeout(monotonic_clock::duration timeout) {
     const int ret = futex_wait_timeout(&impl_, &timeout_timespec);
     if (ret != 0) {
       if (ret == 2) return false;
-      CHECK_EQ(-1, ret);
+      ABSL_CHECK_EQ(-1, ret);
       PLOG(FATAL) << "futex_wait(" << &impl_ << ") failed";
     }
   }

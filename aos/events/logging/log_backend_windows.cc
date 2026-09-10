@@ -11,7 +11,7 @@
 
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
 
@@ -27,12 +27,12 @@ WriteCode FileHandler::OpenForWrite() {
     return WriteCode::kOutOfSpace;
   } else {
     // Match the Linux backend: use O_EXCL so OpenForWrite() always starts a
-    // fresh file and fails loudly (via the PCHECK below) rather than silently
-    // overwriting or appending to an existing one.  In normal operation log
-    // names are unique, so an EEXIST here means a name collision or a bug, and
-    // we'd rather crash than clobber a log.  (Appending to an existing file
-    // after a directory rename is ReopenAndSeek(), which opens its own
-    // descriptor below.)
+    // fresh file and fails loudly (via the ABSL_PCHECK below) rather than
+    // silently overwriting or appending to an existing one.  In normal
+    // operation log names are unique, so an EEXIST here means a name collision
+    // or a bug, and we'd rather crash than clobber a log.  (Appending to an
+    // existing file after a directory rename is ReopenAndSeek(), which opens
+    // its own descriptor below.)
     //
     // Note: if a Google Test death test ever needs to reopen a log the parent
     // still holds open (the child re-spawns the binary on Windows), it will
@@ -50,7 +50,8 @@ WriteCode FileHandler::OpenForWrite() {
     if (fd_ == -1 && errno == ENOSPC) {
       return WriteCode::kOutOfSpace;
     } else {
-      PCHECK(fd_ != -1) << ": Failed to open " << filename_ << " for writing";
+      ABSL_PCHECK(fd_ != -1)
+          << ": Failed to open " << filename_ << " for writing";
       VLOG(1) << "Opened " << filename_ << " for writing";
     }
 
@@ -58,7 +59,7 @@ WriteCode FileHandler::OpenForWrite() {
 
     EnableDirect();
 
-    CHECK(std::filesystem::exists(filename_));
+    ABSL_CHECK(std::filesystem::exists(filename_));
 
     return WriteCode::kOk;
   }
@@ -156,7 +157,7 @@ WindowsRenamableFileBackend::~WindowsRenamableFileBackend() {
   // handlers_mutex_ afterwards.  A handler leaves active_handlers_ when it is
   // destroyed, so anything still in here has outlived us.
   std::unique_lock lock(handlers_mutex_);
-  CHECK(active_handlers_.empty())
+  ABSL_CHECK(active_handlers_.empty())
       << ": " << active_handlers_.size()
       << " log sink(s) outlived the backend that created them";
 }
@@ -239,7 +240,7 @@ bool WindowsRenamableFileBackend::RenameLogBase(
   // would additionally leave every handler shut with no file to reopen against
   // (see ReopenAndSeek) and nothing draining its buffer.
   const bool dir_exists = DirectoryExists(current_directory);
-  CHECK(dir_exists || DirectoryExists(new_directory))
+  ABSL_CHECK(dir_exists || DirectoryExists(new_directory))
       << ": Old directory " << current_directory
       << " missing and new directory " << new_directory << " not present.";
 
@@ -320,8 +321,8 @@ bool WindowsRenamableFileBackend::RenameLogBase(
       // is wrong rather than unlucky -- a new base name on another volume, an
       // unwritable parent -- with no caller able to act on it either, since
       // set_base_name() drops this return value on the floor.
-      PCHECK(rename_errno == EACCES || rename_errno == EEXIST ||
-             rename_errno == ENOSPC)
+      ABSL_PCHECK(rename_errno == EACCES || rename_errno == EEXIST ||
+                  rename_errno == ENOSPC)
           << ": Unable to rename " << current_directory << " to "
           << new_directory;
       PLOG(ERROR) << "Unable to rename " << current_directory << " to "
@@ -393,7 +394,8 @@ void WindowsRenamableFileBackend::WindowsRenamableFileHandler::ReopenAndSeek() {
   // O_NOINHERIT for the same reason as OpenForWrite(): an inherited descriptor
   // outlives our close and blocks the next directory rename.
   fd_ = open(filename_.c_str(), O_RDWR | O_BINARY | O_NOINHERIT);
-  PCHECK(fd_ != -1) << ": Failed to reopen " << filename_ << " after rename";
+  ABSL_PCHECK(fd_ != -1) << ": Failed to reopen " << filename_
+                         << " after rename";
   flags_ = 0;
   _lseeki64(fd_, 0, SEEK_END);
 

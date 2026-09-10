@@ -1,6 +1,8 @@
 #ifndef FRC_WPILIB_NEWROBOTBASE_H_
 #define FRC_WPILIB_NEWROBOTBASE_H_
 
+#include "absl/log/absl_check.h"
+
 #include "aos/events/shm_event_loop.h"
 #include "aos/init.h"
 #include "aos/logging/logging.h"
@@ -53,25 +55,30 @@ template <typename T>
 class WPILibAdapterRobot : public frc::RobotBase {
  public:
   void StartCompetition() override {
-    PCHECK(setuid(0) == 0) << ": Failed to change user to root";
+    ABSL_PCHECK(setuid(0) == 0) << ": Failed to change user to root";
     // Just allow overcommit memory like usual. Various processes map memory
     // they will never use, and the roboRIO doesn't have enough RAM to handle
     // it. This is in here instead of starter.sh because starter.sh doesn't run
     // with permissions on a roboRIO.
-    PCHECK(system("echo 0 > /proc/sys/vm/overcommit_memory") == 0);
-    PCHECK(system("busybox ps -ef | grep '\\[ktimersoftd/0\\]' | awk '{print "
-                  "$1}' | xargs chrt -f -p 70") == 0);
-    PCHECK(system("busybox ps -ef | grep '\\[ktimersoftd/1\\]' | awk '{print "
-                  "$1}' | xargs chrt -f -p 70") == 0);
-    PCHECK(system("busybox ps -ef | grep '\\[irq/54-eth0\\]' | awk '{print "
-                  "$1}' | xargs chrt -f -p 17") == 0);
+    ABSL_PCHECK(system("echo 0 > /proc/sys/vm/overcommit_memory") == 0);
+    ABSL_PCHECK(
+        system("busybox ps -ef | grep '\\[ktimersoftd/0\\]' | awk '{print "
+               "$1}' | xargs chrt -f -p 70") == 0);
+    ABSL_PCHECK(
+        system("busybox ps -ef | grep '\\[ktimersoftd/1\\]' | awk '{print "
+               "$1}' | xargs chrt -f -p 70") == 0);
+    ABSL_PCHECK(
+        system("busybox ps -ef | grep '\\[irq/54-eth0\\]' | awk '{print "
+               "$1}' | xargs chrt -f -p 17") == 0);
 
     // Configure throttling so we reserve 5% of the CPU for non-rt work.
     // This makes things significantly more stable when work explodes.
     // This is in here instead of starter.sh for the same reasons, starter is
     // suid and runs as admin, so this actually works.
-    PCHECK(system("/sbin/sysctl -w kernel.sched_rt_period_us=1000000") == 0);
-    PCHECK(system("/sbin/sysctl -w kernel.sched_rt_runtime_us=950000") == 0);
+    ABSL_PCHECK(system("/sbin/sysctl -w kernel.sched_rt_period_us=1000000") ==
+                0);
+    ABSL_PCHECK(system("/sbin/sysctl -w kernel.sched_rt_runtime_us=950000") ==
+                0);
 
     robot_.Run();
   }

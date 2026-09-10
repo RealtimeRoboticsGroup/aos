@@ -3,6 +3,7 @@
 #include <numbers>
 
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "absl/strings/str_format.h"
 
 #include "frc/control_loops/control_loop.h"
@@ -38,7 +39,7 @@ ceres::examples::VectorOfConstraints DataAdapter::MatchTargetDetections(
     const std::vector<DataAdapter::TimestampedDetection>
         &timestamped_target_detections,
     aos::distributed_clock::duration max_dt) {
-  CHECK_GE(timestamped_target_detections.size(), 2ul)
+  ABSL_CHECK_GE(timestamped_target_detections.size(), 2ul)
       << "Must have at least 2 detections";
 
   // Match consecutive detections
@@ -258,8 +259,8 @@ std::optional<TargetMapper::TargetPose> TargetMapper::GetTargetPoseById(
 void TargetMapper::BuildTargetPoseOptimizationProblem(
     const ceres::examples::VectorOfConstraints &constraints,
     ceres::examples::MapOfPoses *poses, ceres::Problem *problem) {
-  CHECK(poses != nullptr);
-  CHECK(problem != nullptr);
+  ABSL_CHECK(poses != nullptr);
+  ABSL_CHECK(problem != nullptr);
   if (constraints.empty()) {
     LOG(INFO) << "No constraints, no problem to optimize.";
     return;
@@ -279,18 +280,18 @@ void TargetMapper::BuildTargetPoseOptimizationProblem(
 
     ceres::examples::MapOfPoses::iterator pose_begin_iter =
         poses->find(constraint.id_begin);
-    CHECK(pose_begin_iter != poses->end())
+    ABSL_CHECK(pose_begin_iter != poses->end())
         << "Pose with ID: " << constraint.id_begin << " not found.";
     ceres::examples::MapOfPoses::iterator pose_end_iter =
         poses->find(constraint.id_end);
-    CHECK(pose_end_iter != poses->end())
+    ABSL_CHECK(pose_end_iter != poses->end())
         << "Pose with ID: " << constraint.id_end << " not found.";
 
     const Eigen::Matrix<double, 6, 6> sqrt_information =
         constraint.information.llt().matrixL();
 
     auto id_pair = MakeIdPair(constraint);
-    CHECK_GT(constraint_counts_.count(id_pair), 0ul)
+    ABSL_CHECK_GT(constraint_counts_.count(id_pair), 0ul)
         << "Should have counted constraints for " << id_pair.first << "->"
         << id_pair.second;
 
@@ -334,18 +335,18 @@ void TargetMapper::BuildTargetPoseOptimizationProblem(
   // algorithm has internal damping which mitigates this issue, but it is
   // better to properly constrain the gauge freedom. This can be done by
   // setting one of the poses as constant so the optimizer cannot change it.
-  CHECK_NE(poses->count(absl::GetFlag(FLAGS_frozen_target_id)), 0ul)
+  ABSL_CHECK_NE(poses->count(absl::GetFlag(FLAGS_frozen_target_id)), 0ul)
       << "Got no poses for frozen target id "
       << absl::GetFlag(FLAGS_frozen_target_id);
-  CHECK_GE(absl::GetFlag(FLAGS_frozen_target_id), min_constraint_id)
+  ABSL_CHECK_GE(absl::GetFlag(FLAGS_frozen_target_id), min_constraint_id)
       << "target to freeze index " << absl::GetFlag(FLAGS_frozen_target_id)
       << " must be in range of constraints, > " << min_constraint_id;
-  CHECK_LE(absl::GetFlag(FLAGS_frozen_target_id), max_constraint_id)
+  ABSL_CHECK_LE(absl::GetFlag(FLAGS_frozen_target_id), max_constraint_id)
       << "target to freeze index " << absl::GetFlag(FLAGS_frozen_target_id)
       << " must be in range of constraints, < " << max_constraint_id;
   ceres::examples::MapOfPoses::iterator pose_start_iter =
       poses->find(absl::GetFlag(FLAGS_frozen_target_id));
-  CHECK(pose_start_iter != poses->end()) << "There are no poses.";
+  ABSL_CHECK(pose_start_iter != poses->end()) << "There are no poses.";
   problem->SetParameterBlockConstant(pose_start_iter->second.p.data());
   problem->SetParameterBlockConstant(pose_start_iter->second.q.coeffs().data());
 }
@@ -422,7 +423,7 @@ void TargetMapper::DisplaySolvedVsInitial() {
 
 // Taken from ceres/examples/slam/pose_graph_3d/pose_graph_3d.cc
 bool TargetMapper::SolveOptimizationProblem(ceres::Problem *problem) {
-  CHECK(problem != nullptr);
+  ABSL_CHECK(problem != nullptr);
 
   ceres::Solver::Options options;
   options.max_num_iterations = absl::GetFlag(FLAGS_max_num_iterations);
@@ -442,7 +443,7 @@ void TargetMapper::Solve(std::string_view field_name,
   ceres::Problem target_pose_problem_1;
   BuildTargetPoseOptimizationProblem(target_constraints_, &target_poses_,
                                      &target_pose_problem_1);
-  CHECK(SolveOptimizationProblem(&target_pose_problem_1))
+  ABSL_CHECK(SolveOptimizationProblem(&target_pose_problem_1))
       << "The target pose solve 1 was not successful, exiting.";
   if (absl::GetFlag(FLAGS_visualize_solver)) {
     LOG(INFO) << "Displaying constraint graph before removing outliers";
@@ -456,7 +457,7 @@ void TargetMapper::Solve(std::string_view field_name,
   ceres::Problem target_pose_problem_2;
   BuildTargetPoseOptimizationProblem(target_constraints_, &target_poses_,
                                      &target_pose_problem_2);
-  CHECK(SolveOptimizationProblem(&target_pose_problem_2))
+  ABSL_CHECK(SolveOptimizationProblem(&target_pose_problem_2))
       << "The target pose solve 2 was not successful, exiting.";
   if (absl::GetFlag(FLAGS_visualize_solver)) {
     LOG(INFO) << "Displaying constraint graph before removing outliers";
@@ -470,7 +471,7 @@ void TargetMapper::Solve(std::string_view field_name,
         {.loss_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP});
     std::unique_ptr<ceres::CostFunction> map_fitting_cost_function =
         BuildMapFittingOptimizationProblem(&map_fitting_problem);
-    CHECK(SolveOptimizationProblem(&map_fitting_problem))
+    ABSL_CHECK(SolveOptimizationProblem(&map_fitting_problem))
         << "The map fitting solve was not successful, exiting.";
     map_fitting_cost_function.release();
 

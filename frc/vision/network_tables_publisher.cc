@@ -8,6 +8,7 @@
 #include "Eigen/Core"
 #include "Eigen/Geometry"
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 
 #include "aos/configuration.h"
 #include "aos/events/shm_event_loop.h"
@@ -35,7 +36,7 @@ namespace frc::vision {
 const calibration::CameraCalibration *FindCameraCalibration(
     const CameraConstants &calibration_data, std::string_view node_name,
     int camera_number) {
-  CHECK(calibration_data.has_calibration());
+  ABSL_CHECK(calibration_data.has_calibration());
   for (const calibration::CameraCalibration *candidate :
        *calibration_data.calibration()) {
     if (candidate->node_name()->string_view() != node_name ||
@@ -71,9 +72,9 @@ class NetworkTablesPublisher {
       const calibration::CameraCalibration *calibration =
           FindCameraCalibration(calibration_data_.constants(),
                                 event_loop->node()->name()->string_view(), i);
-      CHECK(calibration->has_fixed_extrinsics());
-      CHECK(calibration->fixed_extrinsics()->has_data());
-      CHECK_EQ(calibration->fixed_extrinsics()->data()->size(), 16u);
+      ABSL_CHECK(calibration->has_fixed_extrinsics());
+      ABSL_CHECK(calibration->fixed_extrinsics()->has_data());
+      ABSL_CHECK_EQ(calibration->fixed_extrinsics()->data()->size(), 16u);
       event_loop_->MakeWatcher(
           absl::StrCat("/camera", i, "/gray"),
           [this, calibration, i](const TargetMap &target_map) {
@@ -96,13 +97,13 @@ class NetworkTablesPublisher {
     }
 
     // Make sure there aren't any holes in the ids
-    CHECK_EQ(max_id, field_map->fiducials()->size());
+    ABSL_CHECK_EQ(max_id, field_map->fiducials()->size());
 
     // Now, fill in the tag transformations table.
     tag_transformations_.resize(max_id + 1);
     for (const Fiducial *fiducial : *field_map->fiducials()) {
-      CHECK(fiducial->has_transform());
-      CHECK_EQ(fiducial->transform()->size(), 16u);
+      ABSL_CHECK(fiducial->has_transform());
+      ABSL_CHECK_EQ(fiducial->transform()->size(), 16u);
 
       VLOG(1) << "Fiducial: " << fiducial->id();
       Eigen::Affine3d transformation;

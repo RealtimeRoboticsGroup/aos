@@ -2,6 +2,7 @@
 
 #include <chrono>
 
+#include "absl/log/absl_check.h"
 #include "absl/log/vlog_is_on.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -99,8 +100,8 @@ void NormalizeTimestamps(monotonic_clock::time_point *ta_base, double *ta) {
     *ta_base += chrono::nanoseconds(1);
   }
 
-  CHECK_GE(*ta, 0.0) << ta_digits.count() << "ns " << ta_orig;
-  CHECK_LT(*ta, 1.0);
+  ABSL_CHECK_GE(*ta, 0.0) << ta_digits.count() << "ns " << ta_orig;
+  ABSL_CHECK_LT(*ta, 1.0);
 }
 
 class FilterTest : public ::testing::Test {
@@ -911,8 +912,8 @@ TEST_F(NoncausalTimestampFilterTest, InterpolateOffset) {
     double ta = ta_orig;
 
     NormalizeTimestamps(&ta_base, &ta);
-    CHECK_GE(ta, 0.0);
-    CHECK_LT(ta, 1.0);
+    ABSL_CHECK_GE(ta, 0.0);
+    ABSL_CHECK_LT(ta, 1.0);
 
     const chrono::nanoseconds expected_offset =
         NoncausalTimestampFilter::InterpolateOffset(
@@ -1014,8 +1015,8 @@ TEST_F(NoncausalTimestampFilterTest, ExtrapolateOffset) {
     double ta = ta_orig;
 
     NormalizeTimestamps(&ta_base, &ta);
-    CHECK_GE(ta, 0.0);
-    CHECK_LT(ta, 1.0);
+    ABSL_CHECK_GE(ta, 0.0);
+    ABSL_CHECK_LT(ta, 1.0);
 
     const chrono::nanoseconds expected_offset =
         NoncausalTimestampFilter::ExtrapolateOffset(std::make_tuple(t1, o1),
@@ -1074,8 +1075,8 @@ TEST_F(NoncausalTimestampFilterTest, BoundOffset) {
     double ta = ta_orig;
 
     NormalizeTimestamps(&ta_base, &ta);
-    CHECK_GE(ta, 0.0);
-    CHECK_LT(ta, 1.0);
+    ABSL_CHECK_GE(ta, 0.0);
+    ABSL_CHECK_LT(ta, 1.0);
 
     const chrono::nanoseconds expected_offset_1 =
         NoncausalTimestampFilter::ExtrapolateOffset(std::make_tuple(t1, o1),

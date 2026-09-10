@@ -4,7 +4,7 @@
 #include <chrono>
 #include <string_view>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "gtest/gtest.h"
 
@@ -149,7 +149,8 @@ class ControlLoopTestTemplated : public TestBaseClass {
       builder.add_team_id(team_id_);
       builder.add_alliance(alliance_);
 
-      CHECK_EQ(new_state.Send(builder.Finish()), aos::RawSender::Error::kOk);
+      ABSL_CHECK_EQ(new_state.Send(builder.Finish()),
+                    aos::RawSender::Error::kOk);
 
       last_ds_time_ = monotonic_now();
       last_enabled_ = enabled_;

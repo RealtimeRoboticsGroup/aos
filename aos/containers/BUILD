@@ -22,7 +22,7 @@ cc_test(
         ":ring_buffer",
         "//aos/testing:googletest",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 

@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/escaping.h"
 #include "flatbuffers/flatbuffers.h"
@@ -79,7 +79,7 @@ flatbuffers::Offset<Channel> CopyChannel(const Channel *c,
                                          std::string_view new_name,
                                          std::string_view new_type,
                                          flatbuffers::FlatBufferBuilder *fbb) {
-  CHECK_EQ(Channel::MiniReflectTypeTable()->num_elems, 15u)
+  ABSL_CHECK_EQ(Channel::MiniReflectTypeTable()->num_elems, 15u)
       << ": Merging logic needs to be updated when the number of channel "
          "fields changes.";
 
@@ -214,7 +214,7 @@ ConfigRemapper::ConfigRemapper(const Configuration *config,
       // in it, or a newer log with RemoteMessage.  If we find an older log,
       // rename the type too along with the name.
       if (HasChannel<logger::MessageHeader>(channel, node)) {
-        CHECK(!HasChannel<RemoteMessage>(channel, node))
+        ABSL_CHECK(!HasChannel<RemoteMessage>(channel, node))
             << ": Can't have both a logger::MessageHeader and RemoteMessage "
                "remote "
                "timestamp channel.";
@@ -225,7 +225,7 @@ ConfigRemapper::ConfigRemapper(const Configuration *config,
         RemapOriginalChannel<logger::MessageHeader>(
             channel, node, "/original", "aos.message_bridge.RemoteMessage");
       } else {
-        CHECK(HasChannel<RemoteMessage>(channel, node))
+        ABSL_CHECK(HasChannel<RemoteMessage>(channel, node))
             << ": Failed to find {\"name\": \"" << channel << "\", \"type\": \""
             << RemoteMessage::GetFullyQualifiedName() << "\"} for node "
             << node->name()->string_view();
@@ -240,8 +240,8 @@ ConfigRemapper::ConfigRemapper(const Configuration *config,
     }
   }
   if (replay_configuration_) {
-    CHECK_EQ(configuration::MultiNode(remapped_configuration()),
-             configuration::MultiNode(replay_configuration_))
+    ABSL_CHECK_EQ(configuration::MultiNode(remapped_configuration()),
+                  configuration::MultiNode(replay_configuration_))
         << ": Log file and replay config need to both be multi or single "
            "node.";
   }
@@ -273,7 +273,7 @@ std::vector<const Channel *> ConfigRemapper::RemappedChannels() const {
   for (auto &pair : remapped_channels_) {
     const Channel *const original_channel =
         original_configuration()->channels()->Get(pair.first);
-    CHECK(original_channel != nullptr);
+    ABSL_CHECK(original_channel != nullptr);
 
     auto channel_iterator = std::lower_bound(
         remapped_configuration_->channels()->cbegin(),
@@ -282,8 +282,8 @@ std::vector<const Channel *> ConfigRemapper::RemappedChannels() const {
                        original_channel->type()->string_view()),
         CompareChannels);
 
-    CHECK(channel_iterator != remapped_configuration_->channels()->cend());
-    CHECK(EqualsChannels(
+    ABSL_CHECK(channel_iterator != remapped_configuration_->channels()->cend());
+    ABSL_CHECK(EqualsChannels(
         *channel_iterator,
         std::make_pair(std::string_view(pair.second.remapped_name),
                        original_channel->type()->string_view())));
@@ -308,7 +308,7 @@ const Channel *ConfigRemapper::RemapChannel(const Channel *channel) {
   const Channel *remapped_channel = configuration::GetFullySpecifiedChannel(
       remapped_configuration(), channel_name, channel_type);
 
-  CHECK(remapped_channel != nullptr)
+  ABSL_CHECK(remapped_channel != nullptr)
       << ": Unable to send {\"name\": \"" << channel_name << "\", \"type\": \""
       << channel_type << "\"} because it is not in the provided configuration.";
 
@@ -334,17 +334,19 @@ void ConfigRemapper::RemapOriginalChannel(std::string_view name,
     VLOG(1) << "Node is " << FlatbufferToJson(node);
   }
   if (replay_channels_ != nullptr) {
-    CHECK(std::find(replay_channels_->begin(), replay_channels_->end(),
-                    std::make_pair(std::string{name}, std::string{type})) !=
-          replay_channels_->end())
+    ABSL_CHECK(
+        std::find(replay_channels_->begin(), replay_channels_->end(),
+                  std::make_pair(std::string{name}, std::string{type})) !=
+        replay_channels_->end())
         << "Attempted to remap channel " << name << " " << type
         << " which is not included in the replay channels passed to "
            "ConfigRemapper.";
   }
   const Channel *remapped_channel =
       configuration::GetChannel(original_configuration(), name, type, "", node);
-  CHECK(remapped_channel != nullptr) << ": Failed to find {\"name\": \"" << name
-                                     << "\", \"type\": \"" << type << "\"}";
+  ABSL_CHECK(remapped_channel != nullptr)
+      << ": Failed to find {\"name\": \"" << name << "\", \"type\": \"" << type
+      << "\"}";
   VLOG(1) << "Original {\"name\": \"" << name << "\", \"type\": \"" << type
           << "\"}";
   VLOG(1) << "Remapped "
@@ -374,7 +376,7 @@ void ConfigRemapper::RemapOriginalChannel(std::string_view name,
   // Then remap the original channel to the prefixed channel.
   const size_t channel_index =
       configuration::ChannelIndex(original_configuration(), remapped_channel);
-  CHECK_EQ(0u, remapped_channels_.count(channel_index))
+  ABSL_CHECK_EQ(0u, remapped_channels_.count(channel_index))
       << "Already remapped channel "
       << configuration::CleanedChannelToString(remapped_channel);
 
@@ -415,8 +417,9 @@ void ConfigRemapper::RenameOriginalChannel(const std::string_view name,
   // First find the channel and rename it.
   const Channel *remapped_channel =
       configuration::GetChannel(original_configuration(), name, type, "", node);
-  CHECK(remapped_channel != nullptr) << ": Failed to find {\"name\": \"" << name
-                                     << "\", \"type\": \"" << type << "\"}";
+  ABSL_CHECK(remapped_channel != nullptr)
+      << ": Failed to find {\"name\": \"" << name << "\", \"type\": \"" << type
+      << "\"}";
   VLOG(1) << "Original {\"name\": \"" << name << "\", \"type\": \"" << type
           << "\"}";
   VLOG(1) << "Remapped "
@@ -424,7 +427,7 @@ void ConfigRemapper::RenameOriginalChannel(const std::string_view name,
 
   const size_t channel_index =
       configuration::ChannelIndex(original_configuration(), remapped_channel);
-  CHECK_EQ(0u, remapped_channels_.count(channel_index))
+  ABSL_CHECK_EQ(0u, remapped_channels_.count(channel_index))
       << "Already remapped channel "
       << configuration::CleanedChannelToString(remapped_channel);
 
@@ -465,7 +468,7 @@ void ConfigRemapper::MakeRemappedConfig() {
   fbb.ForceDefaults(true);
   std::vector<flatbuffers::Offset<Channel>> channel_offsets;
 
-  CHECK_EQ(Channel::MiniReflectTypeTable()->num_elems, 15u)
+  ABSL_CHECK_EQ(Channel::MiniReflectTypeTable()->num_elems, 15u)
       << ": Merging logic needs to be updated when the number of channel "
          "fields changes.";
 
@@ -484,7 +487,7 @@ void ConfigRemapper::MakeRemappedConfig() {
     const Channel *const c = configuration::GetFullySpecifiedChannel(
         base_config, original_channel->name()->string_view(),
         original_channel->type()->string_view());
-    CHECK(c != nullptr);
+    ABSL_CHECK(c != nullptr);
     channel_offsets.emplace_back(
         CopyChannel(c, pair.second.remapped_name, "", &fbb));
 
@@ -502,7 +505,7 @@ void ConfigRemapper::MakeRemappedConfig() {
             // of log this used to be.  No sense propagating the single
             // timestamp channel.
 
-            CHECK(connection->has_timestamp_logger_nodes());
+            ABSL_CHECK(connection->has_timestamp_logger_nodes());
             for (const flatbuffers::String *timestamp_logger_node :
                  *connection->timestamp_logger_nodes()) {
               const Node *node =
@@ -520,7 +523,7 @@ void ConfigRemapper::MakeRemappedConfig() {
               configuration::HandleMaps(original_configuration()->maps(), &name,
                                         "aos.message_bridge.RemoteMessage",
                                         node);
-              CHECK_NE(name, unmapped_name)
+              ABSL_CHECK_NE(name, unmapped_name)
                   << ": Remote timestamp channel was not remapped, this is "
                      "very fishy";
               flatbuffers::Offset<flatbuffers::String> channel_name_offset =
@@ -602,7 +605,7 @@ void ConfigRemapper::MakeRemappedConfig() {
 
   // Now create the new maps.  These are second so they take effect first.
   for (const MapT &map : maps_) {
-    CHECK(!map.match->name.empty());
+    ABSL_CHECK(!map.match->name.empty());
     const flatbuffers::Offset<flatbuffers::String> match_name_offset =
         fbb.CreateString(map.match->name);
     flatbuffers::Offset<flatbuffers::String> match_type_offset;
@@ -613,7 +616,7 @@ void ConfigRemapper::MakeRemappedConfig() {
     if (!map.match->source_node.empty()) {
       match_source_node_offset = fbb.CreateString(map.match->source_node);
     }
-    CHECK(!map.rename->name.empty());
+    ABSL_CHECK(!map.rename->name.empty());
     const flatbuffers::Offset<flatbuffers::String> rename_name_offset =
         fbb.CreateString(map.rename->name);
     Channel::Builder match_builder(fbb);
@@ -667,7 +670,7 @@ void ConfigRemapper::MakeRemappedConfig() {
         base_config->channel_storage_duration());
   }
 
-  CHECK_EQ(Configuration::MiniReflectTypeTable()->num_elems, 6u)
+  ABSL_CHECK_EQ(Configuration::MiniReflectTypeTable()->num_elems, 6u)
       << ": Merging logic needs to be updated when the number of configuration "
          "fields changes.";
 

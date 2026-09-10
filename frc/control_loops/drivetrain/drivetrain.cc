@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "Eigen/Dense"
+#include "absl/log/absl_check.h"
 
 #include "aos/logging/logging.h"
 #include "frc/control_loops/drivetrain/drivetrain_config.h"
@@ -122,7 +123,7 @@ void DrivetrainFilters::Correct(aos::monotonic_clock::time_point monotonic_now,
   }
 
   while (imu_values_fetcher_.valid() && imu_values_fetcher_.FetchNext()) {
-    CHECK(imu_values_fetcher_->has_readings());
+    ABSL_CHECK(imu_values_fetcher_->has_readings());
     last_gyro_time_ = monotonic_now;
     for (const IMUValues *value : *imu_values_fetcher_->readings()) {
       imu_zeroer_.InsertMeasurement(*value);
@@ -145,7 +146,7 @@ void DrivetrainFilters::Correct(aos::monotonic_clock::time_point monotonic_now,
   if (imu_values_fetcher_.valid() && imu_values_fetcher_.get() != nullptr) {
     imu_zeroer_.ProcessMeasurements();
     got_imu_reading = true;
-    CHECK(imu_values_fetcher_->has_readings());
+    ABSL_CHECK(imu_values_fetcher_->has_readings());
     if (imu_values_fetcher_->readings()->size() > 0) {
       const IMUValues *value = imu_values_fetcher_->readings()->Get(
           imu_values_fetcher_->readings()->size() - 1);
@@ -368,8 +369,8 @@ void DrivetrainLoop::UpdateTrajectoryFetchers() {
     size_t fetcher_index = 0;
     // Find the oldest spline to forget.
     for (auto &fetcher : trajectory_fetchers_) {
-      CHECK_NE(fetcher.fetcher.context().monotonic_event_time,
-               monotonic_clock::min_time);
+      ABSL_CHECK_NE(fetcher.fetcher.context().monotonic_event_time,
+                    monotonic_clock::min_time);
       if (fetcher.fetcher.context().monotonic_event_time < min_time &&
           !dt_spline_.IsCurrentTrajectory(fetcher.fetcher.get())) {
         min_time = fetcher.fetcher.context().monotonic_event_time;
@@ -433,7 +434,7 @@ void DrivetrainLoop::RunIteration(
   filters_.Correct(monotonic_now, position);
 
   // Set the gear-logging parts of the status
-  CHECK(status);
+  ABSL_CHECK(status);
   flatbuffers::Offset<GearLogging> gear_logging_offset =
       filters_.CreateGearLogging(status->fbb());
 

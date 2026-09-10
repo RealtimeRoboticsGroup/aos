@@ -1,7 +1,7 @@
 #include "aos/events/logging/lzma_encoder.h"
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/log/vlog_is_on.h"
 
@@ -56,15 +56,15 @@ bool LzmaCodeIsOk(lzma_ret status, std::string_view filename = "") {
 LzmaEncoder::LzmaEncoder(size_t max_message_size,
                          const uint32_t compression_preset, size_t block_size)
     : stream_(LZMA_STREAM_INIT), compression_preset_(compression_preset) {
-  CHECK_GE(compression_preset_, 0u)
+  ABSL_CHECK_GE(compression_preset_, 0u)
       << ": Compression preset must be in the range [0, 9].";
-  CHECK_LE(compression_preset_, 9u)
+  ABSL_CHECK_LE(compression_preset_, 9u)
       << ": Compression preset must be in the range [0, 9].";
 
   if (absl::GetFlag(FLAGS_lzma_threads) <= 1) {
     lzma_ret status =
         lzma_easy_encoder(&stream_, compression_preset_, LZMA_CHECK_CRC64);
-    CHECK(LzmaCodeIsOk(status));
+    ABSL_CHECK(LzmaCodeIsOk(status));
   } else {
     lzma_mt mt_options;
     memset(&mt_options, 0, sizeof(mt_options));
@@ -77,7 +77,7 @@ LzmaEncoder::LzmaEncoder(size_t max_message_size,
     mt_options.filters = nullptr;
     mt_options.check = LZMA_CHECK_CRC64;
     lzma_ret status = lzma_stream_encoder_mt(&stream_, &mt_options);
-    CHECK(LzmaCodeIsOk(status));
+    ABSL_CHECK(LzmaCodeIsOk(status));
   }
 
   stream_.avail_out = 0;
@@ -104,10 +104,11 @@ size_t LzmaEncoder::Encode(Copier *copy, size_t start_byte,
   // LZMA compresses the data as it goes along, copying the compressed results
   // into another buffer.  So, there's no need to store more than one message
   // since lzma is going to take it from here.
-  CHECK_LE(copy_size, input_buffer_.size());
+  ABSL_CHECK_LE(copy_size, input_buffer_.size());
 
-  CHECK_EQ(copy->Copy(input_buffer_.data(), start_byte, copy_size - start_byte),
-           copy_size - start_byte);
+  ABSL_CHECK_EQ(
+      copy->Copy(input_buffer_.data(), start_byte, copy_size - start_byte),
+      copy_size - start_byte);
 
   stream_.next_in = input_buffer_.data();
   stream_.avail_in = copy_size;
@@ -121,8 +122,8 @@ void LzmaEncoder::Finish(std::chrono::nanoseconds *encode_duration) {
 }
 
 void LzmaEncoder::Clear(const int n) {
-  CHECK_GE(n, 0);
-  CHECK_LE(static_cast<size_t>(n), queue_size());
+  ABSL_CHECK_GE(n, 0);
+  ABSL_CHECK_LE(static_cast<size_t>(n), queue_size());
   for (int i = 0; i < n; ++i) {
     free_queue_.emplace_back(std::move(queue_[i]));
   }
@@ -161,7 +162,7 @@ size_t LzmaEncoder::queued_bytes() const {
 
 void LzmaEncoder::RunLzmaCode(lzma_action action,
                               std::chrono::nanoseconds *encode_duration) {
-  CHECK(!finished_);
+  ABSL_CHECK(!finished_);
 
   // This is to keep track of how many bytes resulted from encoding this input
   // buffer.
@@ -199,7 +200,7 @@ void LzmaEncoder::RunLzmaCode(lzma_action action,
           aos::monotonic_clock::now();
       status = lzma_code(&stream_, action);
       const monotonic_clock::time_point end_time = aos::monotonic_clock::now();
-      DCHECK_NE(start_time, end_time)
+      ABSL_DCHECK_NE(start_time, end_time)
           << "Timestamp equality check failed, indicating insufficient clock "
              "resolution. This was observed while measuring the execution "
              "duration of 'lzma_code'. If using Xen as the OS clock source, "
@@ -207,7 +208,7 @@ void LzmaEncoder::RunLzmaCode(lzma_action action,
       *encode_duration = end_time - start_time;
     }
 
-    CHECK(LzmaCodeIsOk(status));
+    ABSL_CHECK(LzmaCodeIsOk(status));
     if (action == LZMA_FINISH) {
       if (status == LZMA_STREAM_END) {
         // This is returned when lzma_code is all done.
@@ -215,7 +216,7 @@ void LzmaEncoder::RunLzmaCode(lzma_action action,
         break;
       }
     } else {
-      CHECK(status != LZMA_STREAM_END);
+      ABSL_CHECK(status != LZMA_STREAM_END);
     }
     VLOG(2) << "LzmaEncoder: Encoded chunk.";
   }
@@ -233,7 +234,8 @@ LzmaDecoder::LzmaDecoder(std::unique_ptr<DataDecoder> underlying_decoder,
 
   lzma_ret status =
       lzma_stream_decoder(&stream_, UINT64_MAX, LZMA_CONCATENATED);
-  CHECK(LzmaCodeIsOk(status)) << "Failed initializing LZMA stream decoder.";
+  ABSL_CHECK(LzmaCodeIsOk(status))
+      << "Failed initializing LZMA stream decoder.";
   stream_.avail_out = 0;
   VLOG(2) << "LzmaDecoder: Initialization succeeded.";
 }
@@ -266,7 +268,7 @@ size_t LzmaDecoder::Read(uint8_t *begin, uint8_t *end) {
     const lzma_ret status = lzma_code(&stream_, action_);
     // Return if we're done.
     if (status == LZMA_STREAM_END) {
-      CHECK_EQ(action_, LZMA_FINISH)
+      ABSL_CHECK_EQ(action_, LZMA_FINISH)
           << ": Got LZMA_STREAM_END when action wasn't LZMA_FINISH";
       finished_ = true;
       return (end - begin) - stream_.avail_out;
@@ -309,7 +311,7 @@ ThreadedLzmaDecoder::ThreadedLzmaDecoder(
           }
 
           while (true) {
-            CHECK(!finished_);
+            ABSL_CHECK(!finished_);
             // Release our lock on the queue before doing decompression work.
             lock.unlock();
 
@@ -374,7 +376,7 @@ size_t ThreadedLzmaDecoder::Read(uint8_t *begin, uint8_t *end) {
     }
   }
   // Sanity check if the queue is empty and we're not finished.
-  CHECK(!decoded_queue_.empty()) << "Decoded queue unexpectedly empty";
+  ABSL_CHECK(!decoded_queue_.empty()) << "Decoded queue unexpectedly empty";
 
   ResizeableBuffer &front_buffer = decoded_queue_.front();
 

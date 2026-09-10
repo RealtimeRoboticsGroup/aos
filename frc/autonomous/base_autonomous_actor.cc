@@ -5,6 +5,8 @@
 #include <cmath>
 #include <numbers>
 
+#include "absl/log/absl_check.h"
+
 #include "aos/logging/logging.h"
 #include "aos/util/math.h"
 #include "aos/util/phased_loop.h"
@@ -176,19 +178,19 @@ bool BaseAutonomousActor::IsDriveDone() {
 
 double BaseAutonomousActor::X() {
   drivetrain_status_fetcher_.Fetch();
-  CHECK(drivetrain_status_fetcher_.get());
+  ABSL_CHECK(drivetrain_status_fetcher_.get());
   return drivetrain_status_fetcher_->x();
 }
 
 double BaseAutonomousActor::Y() {
   drivetrain_status_fetcher_.Fetch();
-  CHECK(drivetrain_status_fetcher_.get());
+  ABSL_CHECK(drivetrain_status_fetcher_.get());
   return drivetrain_status_fetcher_->y();
 }
 
 double BaseAutonomousActor::Theta() {
   drivetrain_status_fetcher_.Fetch();
-  CHECK(drivetrain_status_fetcher_.get());
+  ABSL_CHECK(drivetrain_status_fetcher_.get());
   return drivetrain_status_fetcher_->theta();
 }
 

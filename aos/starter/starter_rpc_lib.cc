@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <ostream>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "flatbuffers/buffer.h"
 #include "flatbuffers/flatbuffer_builder.h"
@@ -78,9 +78,9 @@ StarterClient::StarterClient(EventLoop *event_loop)
          configuration::GetNodes(event_loop_->configuration())) {
       const Channel *channel =
           StatusChannelForNode(event_loop_->configuration(), node);
-      CHECK(channel != nullptr) << ": Failed to find channel /aos for "
-                                << Status::GetFullyQualifiedName() << " on "
-                                << node->name()->string_view();
+      ABSL_CHECK(channel != nullptr) << ": Failed to find channel /aos for "
+                                     << Status::GetFullyQualifiedName()
+                                     << " on " << node->name()->string_view();
       if (!configuration::ChannelIsReadableOnNode(channel,
                                                   event_loop_->node())) {
         VLOG(1) << "Status channel "
@@ -120,7 +120,7 @@ StarterClient::StarterClient(EventLoop *event_loop)
 void StarterClient::SendCommands(
     const std::vector<ApplicationCommand> &commands,
     monotonic_clock::duration timeout) {
-  CHECK(current_commands_.empty());
+  ABSL_CHECK(current_commands_.empty());
   for (auto &pair : status_fetchers_) {
     pair.second.Fetch();
   }
@@ -131,7 +131,7 @@ void StarterClient::SendCommands(
     const auto application_offset =
         builder.fbb()->CreateString(command.application);
     std::vector<flatbuffers::Offset<flatbuffers::String>> node_offsets;
-    CHECK(!command.nodes.empty())
+    ABSL_CHECK(!command.nodes.empty())
         << "At least one node must be specified for application "
         << command.application;
     for (const aos::Node *node : command.nodes) {
@@ -158,7 +158,7 @@ void StarterClient::SendCommands(
       }
       const ApplicationStatus *last_status = FindApplicationStatus(
           *status_fetchers_[node_name], command.application);
-      CHECK(last_status != nullptr);
+      ABSL_CHECK(last_status != nullptr);
       current_commands_[node_name].push_back(CommandStatus{
           .expected_state = ExpectedStateForCommand(command.command),
           .application = std::string(command.application),
@@ -203,13 +203,13 @@ bool StarterClient::CheckCommandsSucceeded() {
     if (pair.second.empty()) {
       continue;
     }
-    CHECK(status_fetchers_[pair.first].get() != nullptr)
+    ABSL_CHECK(status_fetchers_[pair.first].get() != nullptr)
         << ": No status available for node " << pair.first;
     const Status &status = *status_fetchers_[pair.first];
     for (const auto &command : pair.second) {
       const ApplicationStatus *application_status =
           FindApplicationStatus(status, command.application);
-      CHECK(application_status != nullptr);
+      ABSL_CHECK(application_status != nullptr);
       if (application_status->state() == command.expected_state) {
         if (command.expected_state == State::RUNNING &&
             application_status->id() == command.old_id) {

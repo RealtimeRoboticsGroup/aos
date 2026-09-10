@@ -4,7 +4,7 @@
 
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include <Eigen/Dense>
 
@@ -94,7 +94,7 @@ class LinearizedController {
       auto K_expected =
           frc::controls::dlqr(discrete_dynamics.A, discrete_dynamics.B,
                               params_.Q, params_.R, false);
-      CHECK(K_expected);
+      ABSL_CHECK(K_expected);
       K = K_expected.value();
     } else {
       K.setZero();
@@ -154,14 +154,14 @@ class LinearizedController {
       InputSquare RBPBinv;
       for (int ii = 0; ii < kDareIters; ++ii) {
         const StateSquare AP = A.transpose() * P;
-        CHECK(AP.allFinite());
+        ABSL_CHECK(AP.allFinite());
         APB = AP * B;
-        CHECK(APB.allFinite());
+        ABSL_CHECK(APB.allFinite());
         RBPBinv = (R + B.transpose() * P * B).inverse();
         P = AP * A - APB * RBPBinv * APB.transpose() + Q;
       }
-      CHECK(P.allFinite());
-      CHECK_LT(P.norm(), 1e30) << "LQR calculations became unstable.";
+      ABSL_CHECK(P.allFinite());
+      ABSL_CHECK_LT(P.norm(), 1e30) << "LQR calculations became unstable.";
       return (R + B.transpose() * P * B).inverse() *
              (A.transpose() * P * B).transpose();
     }

@@ -1,5 +1,6 @@
 #include "frc/control_loops/drivetrain/drivetrain_encoder_fault_detector.h"
 
+#include "absl/log/absl_check.h"
 #include "gtest/gtest.h"
 
 #include "aos/events/simulated_event_loop.h"
@@ -106,7 +107,7 @@ TEST_F(EncoderFaultDetectorTest, Idle) {
                      std::chrono::milliseconds(5)));
   event_loop_factory_.RunFor(std::chrono::seconds(1));
 
-  CHECK(drivetrain_status_fetcher_.Fetch());
+  ABSL_CHECK(drivetrain_status_fetcher_.Fetch());
 
   EXPECT_EQ(
       false,
@@ -137,7 +138,7 @@ TEST_F(EncoderFaultDetectorTest, Increasing) {
                      std::chrono::milliseconds(5)));
   event_loop_factory_.RunFor(std::chrono::seconds(5));
 
-  CHECK(drivetrain_status_fetcher_.Fetch());
+  ABSL_CHECK(drivetrain_status_fetcher_.Fetch());
 
   EXPECT_EQ(
       false,
@@ -168,7 +169,7 @@ TEST_F(EncoderFaultDetectorTest, Decreasing) {
                      std::chrono::milliseconds(5)));
   event_loop_factory_.RunFor(std::chrono::seconds(5));
 
-  CHECK(drivetrain_status_fetcher_.Fetch());
+  ABSL_CHECK(drivetrain_status_fetcher_.Fetch());
 
   EXPECT_EQ(
       false,
@@ -195,7 +196,7 @@ TEST_F(EncoderFaultDetectorTest, OnlyIncreaseRightSide) {
                      std::chrono::milliseconds(5)));
   event_loop_factory_.RunFor(std::chrono::seconds(5));
 
-  CHECK(drivetrain_status_fetcher_.Fetch());
+  ABSL_CHECK(drivetrain_status_fetcher_.Fetch());
 
   EXPECT_EQ(
       false,
@@ -222,7 +223,7 @@ TEST_F(EncoderFaultDetectorTest, OnlyIncreaseLeftSide) {
                      std::chrono::milliseconds(5)));
   event_loop_factory_.RunFor(std::chrono::seconds(5));
 
-  CHECK(drivetrain_status_fetcher_.Fetch());
+  ABSL_CHECK(drivetrain_status_fetcher_.Fetch());
 
   EXPECT_EQ(
       false,
@@ -249,7 +250,7 @@ TEST_F(EncoderFaultDetectorTest, OnlyDecreaseRightSide) {
                      std::chrono::milliseconds(5)));
   event_loop_factory_.RunFor(std::chrono::seconds(5));
 
-  CHECK(drivetrain_status_fetcher_.Fetch());
+  ABSL_CHECK(drivetrain_status_fetcher_.Fetch());
 
   EXPECT_EQ(
       false,
@@ -275,7 +276,7 @@ TEST_F(EncoderFaultDetectorTest, OnlyDecreaseLeftSide) {
                      std::chrono::milliseconds(5)));
   event_loop_factory_.RunFor(std::chrono::seconds(5));
 
-  CHECK(drivetrain_status_fetcher_.Fetch());
+  ABSL_CHECK(drivetrain_status_fetcher_.Fetch());
 
   EXPECT_EQ(
       false,
@@ -307,7 +308,7 @@ TEST_F(EncoderFaultDetectorTest, NoDataForOneSecond) {
 
   event_loop_factory_.RunFor(std::chrono::seconds(1));
 
-  CHECK(drivetrain_status_fetcher_.Fetch());
+  ABSL_CHECK(drivetrain_status_fetcher_.Fetch());
 
   EXPECT_EQ(
       false,
@@ -331,7 +332,7 @@ TEST_F(EncoderFaultDetectorTest, LeftEncoderFaulted) {
                      std::chrono::milliseconds(5)));
   event_loop_factory_.RunFor(std::chrono::seconds(5));
 
-  CHECK(drivetrain_status_fetcher_.Fetch());
+  ABSL_CHECK(drivetrain_status_fetcher_.Fetch());
 
   EXPECT_EQ(
       false,
@@ -354,7 +355,7 @@ TEST_F(EncoderFaultDetectorTest, RightEncoderFaulted) {
                      std::chrono::milliseconds(5)));
   event_loop_factory_.RunFor(std::chrono::seconds(5));
 
-  CHECK(drivetrain_status_fetcher_.Fetch());
+  ABSL_CHECK(drivetrain_status_fetcher_.Fetch());
 
   EXPECT_EQ(
       true,
@@ -380,7 +381,7 @@ TEST_F(EncoderFaultDetectorTest, LeftFalconsFaulted) {
                      std::chrono::milliseconds(5)));
   event_loop_factory_.RunFor(std::chrono::seconds(5));
 
-  CHECK(drivetrain_status_fetcher_.Fetch());
+  ABSL_CHECK(drivetrain_status_fetcher_.Fetch());
 
   EXPECT_EQ(
       false,
@@ -406,7 +407,7 @@ TEST_F(EncoderFaultDetectorTest, RightFalconsFaulted) {
                      std::chrono::milliseconds(5)));
   event_loop_factory_.RunFor(std::chrono::seconds(5));
 
-  CHECK(drivetrain_status_fetcher_.Fetch());
+  ABSL_CHECK(drivetrain_status_fetcher_.Fetch());
 
   EXPECT_EQ(
       true,
