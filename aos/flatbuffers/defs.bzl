@@ -139,6 +139,10 @@ def _flatbuffer_library_compile_impl(ctx):
 
     has_root_folder = False
 
+    # The directory holding reflection/, which is the root of the upstream
+    # flatbuffers tree -- <repo>/reflection/reflection.fbs, so up two.
+    flatbuffers_include_root = ctx.file._reflection_fbs.dirname.rsplit("/", 1)[0]
+
     for src in ctx.files.srcs:
         if ctx.attr.generated_files:
             root_folder = None
@@ -169,10 +173,7 @@ def _flatbuffer_library_compile_impl(ctx):
                 arguments.append("-I")
                 arguments.append(execroot_prefix + subpath + path)
         arguments.append("-I")
-        arguments.append(execroot_prefix + "%s.runfiles/%s" % (
-            ctx.executable._flatc.path,
-            ctx.executable._flatc.owner.repo_name or "_main",
-        ))
+        arguments.append(execroot_prefix + flatbuffers_include_root)
         arguments.extend(ctx.attr.flatc_args)
         arguments.extend(ctx.attr.language_flags)
         if prefix:
@@ -194,7 +195,7 @@ def _flatbuffer_library_compile_impl(ctx):
 
     ctx.actions.run_shell(
         outputs = outs,
-        inputs = all_srcs,
+        inputs = depset([ctx.file._reflection_fbs], transitive = [all_srcs]),
         tools = [ctx.executable._flatc],
         command = command_str,
         mnemonic = "Flatc",
@@ -214,6 +215,10 @@ _flatbuffer_library_compile = rule(
         "output_suffix": attr.string(default = ""),
         "srcs": attr.label_list(mandatory = True, allow_files = True),
         "_flatc": attr.label(executable = True, cfg = "exec", default = Label(flatc_path)),
+        "_reflection_fbs": attr.label(
+            allow_single_file = True,
+            default = Label("@aos_flatbuffers//reflection:reflection_fbs_schema"),
+        ),
     },
 )
 
