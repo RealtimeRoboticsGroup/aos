@@ -439,6 +439,15 @@ rust_library(
         "//aos/testing/ping_pong:pong_rust_fbs",
     ],
     gen_tests = False,
+    # The cxx crate is only half Rust: its Result, CxxString and UniquePtr
+    # shims are cxxbridge1$* symbols defined in the crate's own src/cxx.cc.
+    # gen_build_script is off for cxx (see MODULE.bazel), so the build script
+    # that would otherwise compile that file and emit the link directive never
+    # runs, and cxx_cc -- the additive cc_library that compiles it, from
+    # third_party/cargo/cxx/include.BUILD.bazel -- is what supplies it
+    # instead.  Nothing linked it in, so every binary reaching this crate came
+    # up undefined at link time.
+    link_deps = ["@crate_index//:cxx_cc"],
     visibility = ["//visibility:public"],
     deps = [
         ":event_loop_c_rs",
