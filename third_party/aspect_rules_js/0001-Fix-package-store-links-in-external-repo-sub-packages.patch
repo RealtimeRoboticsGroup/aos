@@ -1,0 +1,110 @@
+From 048c545230815b7b1f127f2880ec11f1e0878dc1 Mon Sep 17 00:00:00 2001
+From: Oscar Falk <oscar@meroton.com>
+Subject: [PATCH] fix(npm): correct package_store_prefix_len for links in
+ external-repo sub-packages (#2864)
+
+When calculating the package store prefix truncation with external
+modules (i.e. a repo name is included in the path), an extra slash after
+the repo name was unaccounted for, resulting in incorrect symlinks (and
+subsequently `ERR_MODULE_NOT_FOUND` error during builds).
+
+Below is an example of the logic used to calculate the truncation
+length:
+
+```python
+# ../[com_github_example_repo+]/[example_package]/[node_modules/.aspect_rules_js/]foo@1.2.3/node_modules/bar
+#    |        repo name       | |  package name | |         store prefix         |
+
+path = "../com_github_example_repo+/example_package/node_modules/.aspect_rules_js/foo@1.2.3/node_modules/bar"
+truncate_length = len(repo_name) + len(package_name) + len(store_prefix) + 3 # = 72
+truncated_path = path[truncate_length:] # = "s/foo@1.2.3/node_modules/bar"
+```
+
+The extra `s` in the beginning of `truncated_path` should not be there
+and is solved by changing the `+ 3` to a `+ 4`.
+
+---------
+
+Co-authored-by: Fredrik Medley <fredrik@meroton.com>
+Co-authored-by: Jason Bedard <jason+github@jbedard.ca>
+Backport of https://github.com/aspect-build/rules_js/pull/2864 (048c545230) to 3.4.1,
+without its e2e and unit tests. Drop it once a release includes the fix.
+---
+diff --git a/npm/private/npm_package_store.bzl b/npm/private/npm_package_store.bzl
+index c33ac08..dab5c13 100644
+--- a/npm/private/npm_package_store.bzl
++++ b/npm/private/npm_package_store.bzl
+@@ -12,8 +12,6 @@ load(":utils.bzl", "utils")
+ 
+ _SUPPORTS_SYMLINK_TARGET_TYPE = bazel_features.rules.symlink_action_has_target_type
+ 
+-_PACKAGE_STORE_PREFIX_LEN = len("node_modules/{}/".format(utils.package_store_root))
+-
+ _EXTRACT_EXECUTION_REQUIREMENTS = {
+     "supports-path-mapping": "1",
+ }
+@@ -191,11 +189,8 @@ def _npm_package_store_impl(ctx):
+     if not version:
+         fail("No package version specified to link to. Package version must either be specified explicitly via 'version' attribute or come from the 'src' 'JsInfo|NpmPackageInfo', typically a 'js_library|npm_package' target")
+ 
+-    package_store_prefix_len = _PACKAGE_STORE_PREFIX_LEN
+-    if ctx.label.package:
+-        package_store_prefix_len += len(ctx.label.package)
+-    if ctx.label.repo_name:
+-        package_store_prefix_len += len(ctx.label.repo_name) + 3  # +3 for ../
++    package_store_prefix = utils.package_store_prefix(ctx.label.repo_name, ctx.label.package)
++    package_store_prefix_len = len(package_store_prefix)
+ 
+     package_key = "{}@{}".format(package, version)
+     package_store_name = utils.package_store_name(package_key)
+@@ -225,14 +220,7 @@ def _npm_package_store_impl(ctx):
+         npm_pkg_info = ctx.attr.src[NpmPackageInfo]
+ 
+         # output the package as a TreeArtifact to its package store location
+-        if ctx.label.repo_name and ctx.label.package:
+-            expected_short_path = "../{}/{}/{}".format(ctx.label.repo_name, ctx.label.package, package_store_directory_path)
+-        elif ctx.label.repo_name:
+-            expected_short_path = "../{}/{}".format(ctx.label.repo_name, package_store_directory_path)
+-        elif ctx.label.package:
+-            expected_short_path = "{}/{}".format(ctx.label.package, package_store_directory_path)
+-        else:
+-            expected_short_path = package_store_directory_path
++        expected_short_path = "{}{}/node_modules/{}".format(package_store_prefix, package_store_name, package)
+ 
+         src = npm_pkg_info.src
+         if src.short_path == expected_short_path:
+diff --git a/npm/private/utils.bzl b/npm/private/utils.bzl
+index 461712c..0f0c4ba 100644
+--- a/npm/private/utils.bzl
++++ b/npm/private/utils.bzl
+@@ -382,6 +382,18 @@ def _hex_to_base64(hex_string):
+ 
+     return "".join(output)
+ 
++_PACKAGE_STORE_ROOT = ".aspect_rules_js"
++_PACKAGE_STORE_PREFIX = "node_modules/{}/".format(_PACKAGE_STORE_ROOT)
++
++def _package_store_prefix(repo_name, package):
++    """Path of the package store of a repository package, relative to the main repository."""
++    prefix = _PACKAGE_STORE_PREFIX
++    if package:
++        prefix = "{}/{}".format(package, prefix)
++    if repo_name:
++        prefix = "../{}/{}".format(repo_name, prefix)
++    return prefix
++
+ utils = struct(
+     sorted_map = _sorted_map,
+     friendly_name = _friendly_name,
+@@ -389,9 +401,10 @@ utils = struct(
+     importer_to_link = _importer_to_link,
+     package_repo_name = _package_repo_name,
+     package_store_name = _package_store_name,
++    package_store_prefix = _package_store_prefix,
+     make_directory_symlink = _make_directory_symlink,
+     # Symlinked node_modules structure package store path under node_modules
+-    package_store_root = ".aspect_rules_js",
++    package_store_root = _PACKAGE_STORE_ROOT,
+     # Suffix for npm_import links repository
+     links_repo_suffix = "__links",
+     # Output group name for the package directory of a linked npm package

@@ -31,3 +31,17 @@ toolchain(
     toolchain = ":noop_node_toolchain_impl",
     toolchain_type = "@rules_nodejs//nodejs:toolchain_type",
 )
+
+# js_binary resolves the runtime toolchain type against the target platform, so
+# platforms without NodeJs need a match for it too.
+toolchain(
+    name = "noop_node_runtime_toolchain",
+    exec_compatible_with = [
+        "@platforms//os:linux",
+    ],
+    target_compatible_with = [
+        "//tools/platforms/nodejs:lacks_support",
+    ],
+    toolchain = ":noop_node_toolchain_impl",
+    toolchain_type = "@rules_nodejs//nodejs:runtime_toolchain_type",
+)

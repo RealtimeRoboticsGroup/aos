@@ -40,6 +40,10 @@ if (isWin) {
 
 addToPath(tempBinDir);
 
+// The js_binary launchers below run from outside a runfiles tree, so they find
+// this wrapper's runfiles through RUNFILES. rules_js 3.x no longer exports it.
+process.env.RUNFILES = process.env.JS_BINARY__RUNFILES;
+
 // Create a relative path for a specific root-relative directory.
 function getRelativePath(filePath) {
   // Count the number of directories and construct the relative path.

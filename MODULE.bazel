@@ -168,8 +168,17 @@ use_repo(pip, "aos_pip_deps", pip_deps = "pip_deps")
 bazel_dep(name = "grpc", version = "1.81.0", repo_name = "com_github_grpc_grpc")
 bazel_dep(name = "protobuf", version = "33.5", repo_name = "com_google_protobuf")
 bazel_dep(name = "rules_proto", version = "7.1.0")
-bazel_dep(name = "aspect_rules_ts", version = "3.6.3")
-bazel_dep(name = "aspect_rules_js", version = "2.9.2")
+bazel_dep(name = "aspect_rules_ts", version = "3.10.1")
+bazel_dep(name = "aspect_rules_js", version = "3.4.1")
+
+# Fixes npm package store links in external repo sub-packages, such as
+# @aos_flatbuffers//ts. Upstream #2864, not yet in a release.
+single_version_override(
+    module_name = "aspect_rules_js",
+    patch_strip = 1,
+    patches = ["third_party/aspect_rules_js/0001-Fix-package-store-links-in-external-repo-sub-packages.patch"],
+)
+
 bazel_dep(name = "rules_nodejs", version = "6.7.3")
 
 node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node")
@@ -389,7 +398,6 @@ npm.npm_translate_lock(
     name = "aos_flatbuffers_npm",
     npmrc = "@aos_flatbuffers//:.npmrc",
     pnpm_lock = "@aos_flatbuffers//ts:pnpm-lock.yaml",
-    root_package = "ts",
     verify_node_modules_ignored = "@aos_flatbuffers//:.bazelignore",
 )
 use_repo(npm, flatbuffers_npm = "aos_flatbuffers_npm")
@@ -533,12 +541,6 @@ local_path_override(
 # aos/extension.bzl.
 dependencies = use_extension("//aos:extension.bzl", "dependencies")
 use_repo(dependencies, "aos_flatbuffers", "com_github_foxglove_schemas")
-
-single_version_override(
-    module_name = "aspect_rules_js",
-    patch_strip = 1,
-    patches = ["third_party/aspect_rules_js/aspect_rules_js.patch"],
-)
 
 bazel_dep(name = "symengine", version = "0.12.0")
 bazel_dep(name = "gmp", version = "6.3.0.bcr.2")
@@ -780,6 +782,7 @@ register_toolchains(
     #"//tools/cpp:cc-toolchain-cortex-m4f-k22",
     "//tools/python:noop_python_toolchain",
     "//tools/go:noop_go_toolchain",
+    "//tools/ts:noop_node_runtime_toolchain",
     "//tools/rust:rust-toolchain-x86",
     "//tools/rust:rust-toolchain-armv7",
     "//tools/rust:rust-toolchain-arm64",
