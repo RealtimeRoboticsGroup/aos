@@ -1084,6 +1084,12 @@ void ShmEventLoop::HandleEvent() {
   }
 }
 
+void ShmEventLoop::set_handle_signals(bool handle_signals) {
+  CheckCurrentThread();
+  ABSL_CHECK(!started_) << ": Must be called before Startup().";
+  handle_signals_ = handle_signals;
+}
+
 void ShmEventLoop::Startup() {
   ABSL_CHECK(!started_) << ": Startup() has already run.";
   ABSL_CHECK(started_on_this_thread == nullptr)
@@ -1095,7 +1101,10 @@ void ShmEventLoop::Startup() {
   started_ = true;
   CheckCurrentThread();
   loop_thread_ = std::this_thread::get_id();
-  RegisterSignalHandler();
+  if (handle_signals_) {
+    RegisterSignalHandler();
+    registered_signal_handler_ = true;
+  }
 
   if (watchers_.size() > 0) {
     signal_receiver_.reset(new ipc_lib::ThreadSignalReceiver());
@@ -1214,7 +1223,10 @@ Status ShmEventLoop::Shutdown() {
     signal_receiver_.reset();
   }
 
-  UnregisterSignalHandler();
+  if (registered_signal_handler_) {
+    UnregisterSignalHandler();
+    registered_signal_handler_ = false;
+  }
   loop_thread_.reset();
   started_on_this_thread = nullptr;
 

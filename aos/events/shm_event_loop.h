@@ -90,6 +90,13 @@ class ShmEventLoop : public EventLoop {
   // from one, a glib callback under GlibMainLoop included, dies.
   void Startup();
   Status Shutdown();
+
+  // Sets whether Startup() installs handlers that exit this event loop on
+  // SIGINT, SIGHUP and SIGTERM, or on Ctrl-C, Ctrl-Break and console close on
+  // Windows.  Defaults to true.  Must be called before Startup().
+  void set_handle_signals(bool handle_signals);
+  bool handle_signals() const { return handle_signals_; }
+
   // Exits the event loop.  async-signal-safe (see
   // https://man7.org/linux/man-pages/man7/signal-safety.7.html).
   // Run() then returns a successful result.  On a borrowed Aio this stops the
@@ -331,6 +338,9 @@ class ShmEventLoop : public EventLoop {
   // Whether one of this event loop's callbacks is running, which Shutdown()
   // may not be called from.
   bool in_callback_ = false;
+  // Whether Startup() installs signal handlers, and whether it did.
+  bool handle_signals_ = true;
+  bool registered_signal_handler_ = false;
 
   // Live from Startup() to Shutdown(), which is why they are not locals.
   // Held by pointer so this header does not have to define them.

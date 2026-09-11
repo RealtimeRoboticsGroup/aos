@@ -924,7 +924,7 @@ Additionally, there are a set of common utilities & applications that go with th
 The `ShmEventLoop` does a few key things beyond just implementing what is required by the `EventLoop` API:
 
 - Has `Run()` and `Exit()` calls to directly start/stop execution of the event loop.
-- Does signal handling to capture `SIGINT` and automatically exit.
+- Does signal handling to capture `SIGINT`, `SIGHUP` and `SIGTERM` (Ctrl-C, Ctrl-Break and console close on Windows) and automatically exit, unless `set_handle_signals(false)` says the program handles its own.
 - Allows controlling the scheduling of the process (realtime priority, CPU affinity)---technically these are actually part of the `EventLoop` API, but are meaningless for any other `EventLoop` implementations.
 - Exposes the `Aio` implementation used to back the `EventLoop` (this becomes useful when wanting to interact with sockets, files, and sometimes even other event loops/schedulers).
 
