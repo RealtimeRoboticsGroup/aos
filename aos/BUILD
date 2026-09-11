@@ -205,6 +205,50 @@ cc_library(
     ],
 )
 
+# Has its own main(), because gtest's calls InitGoogle.
+cc_test(
+    name = "init_embedded_test",
+    srcs = ["init_embedded_test.cc"],
+    deps = [
+        ":init",
+        "@com_google_absl//absl/log:absl_check",
+    ],
+)
+
+# Its own main() too, so that a library thread can race main()'s InitGoogle().
+cc_test(
+    name = "init_embedded_during_init_google_test",
+    srcs = ["init_embedded_during_init_google_test.cc"],
+    deps = [
+        ":init",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:globals",
+    ],
+)
+
+# Its own main() too, since the hook is decided once per process.
+cc_test(
+    name = "init_embedded_no_malloc_hook_test",
+    srcs = ["init_embedded_no_malloc_hook_test.cc"],
+    deps = [
+        ":init",
+        ":realtime",
+        ":sanitizers",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+# Its own main() too, so that the host can initialize logging first.
+cc_test(
+    name = "init_embedded_host_log_test",
+    srcs = ["init_embedded_host_log_test.cc"],
+    deps = [
+        ":init",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:initialize",
+    ],
+)
+
 rust_bindgen_library(
     name = "init_for_rust_rs",
     bindgen_flags = [

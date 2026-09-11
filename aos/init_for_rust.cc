@@ -2,6 +2,7 @@
 
 #include <string.h>
 
+#include <mutex>
 #include <vector>
 
 #include "absl/flags/flag.h"
@@ -12,10 +13,20 @@
 
 #include "aos/init.h"
 
+namespace aos {
+
+// Defined in init.cc.  Declared here rather than in init.h since nothing else
+// should take it.
+std::mutex &InitMutex();
+
+}  // namespace aos
+
 extern "C" {
 
 void aos_init_from_rust() {
-  ABSL_CHECK(!aos::IsInitialized()) << "Only initialize once.";
+  std::lock_guard<std::mutex> lock(aos::InitMutex());
+  ABSL_CHECK(!aos::IsInitialized())
+      << "Only initialize once.  InitEmbedded() may have got here first.";
   absl::InitializeLog();
   aos::MarkInitialized();
 }

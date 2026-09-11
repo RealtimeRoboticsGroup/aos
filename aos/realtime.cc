@@ -217,6 +217,12 @@ bool MarkRealtime(bool realtime) {
   return prior;
 }
 
+void SkipMallocHook() {
+  if (absl::GetFlag(FLAGS_die_on_malloc)) {
+    has_malloc_hook = false;
+  }
+}
+
 bool IsDieOnMallocEnabled() {
   return absl::GetFlag(FLAGS_die_on_malloc) && GetIsRealtime() &&
          has_malloc_hook;

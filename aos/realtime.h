@@ -211,6 +211,12 @@ void UnsetCurrentThreadRealtimePriority();
 // Registers our hooks which crash on RT malloc.
 void RegisterMallocHook();
 
+// Records that RegisterMallocHook() will not run, so that nothing catches a
+// malloc on a realtime thread.  Under --die_on_malloc, going realtime then
+// dies, as it does when registering the hooks fails, rather than
+// IsDieOnMallocEnabled() promising a check nothing makes.
+void SkipMallocHook();
+
 // CHECKs that we are (or are not) running on the RT scheduler.  Useful for
 // enforcing that operations which are or are not bounded shouldn't be run. This
 // works both in simulation and when running against the real target.

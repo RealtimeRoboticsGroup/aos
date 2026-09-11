@@ -15,6 +15,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <mutex>
+#include <vector>
 
 #include "absl/debugging/failure_signal_handler.h"
 #include "absl/debugging/symbolize.h"
@@ -57,6 +59,23 @@ void InvalidParameterHandler(const wchar_t * /*expression*/,
 #endif
 
 void InitGoogle(int *argc, char ***argv) {
+  InitGoogle(argc, argv, InitOptions{});
+}
+
+// Held for the whole of an initialization, so that a library thread's
+// InitEmbedded() during main()'s InitGoogle() or aos_init_from_rust() waits for
+// it and then finds AOS initialized, rather than initializing it a second time.
+std::mutex &InitMutex() {
+  static std::mutex *const mutex = new std::mutex();
+  return *mutex;
+}
+
+namespace {
+
+void InitGoogleLocked(int *argc, char ***argv, const InitOptions &options) {
+  // First, so a second initialization changes nothing before it dies.
+  ABSL_CHECK(!IsInitialized())
+      << "Only initialize once.  InitEmbedded() may have got here first.";
 #ifdef _WIN32
   // Configure Windows CRT parameter validation and assert behavior:
   // 1. Force invalid CRT parameters to fail gracefully and set errno instead of
@@ -66,23 +85,28 @@ void InitGoogle(int *argc, char ***argv) {
   // headless testing.
   _CrtSetReportMode(_CRT_ASSERT, 0);
 #endif
-  ABSL_CHECK(!IsInitialized()) << "Only initialize once.";
   absl::SetStderrThreshold(absl::LogSeverityAtLeast::kInfo);
-  std::vector<char *> positional_arguments =
-      absl::ParseCommandLine(*argc, *argv);
+  if (options.parse_command_line) {
+    std::vector<char *> positional_arguments =
+        absl::ParseCommandLine(*argc, *argv);
 
-  ABSL_CHECK_LE(positional_arguments.size(), static_cast<size_t>(*argc));
-  for (size_t i = 0; i < positional_arguments.size(); ++i) {
-    (*argv)[i] = positional_arguments[i];
+    ABSL_CHECK_LE(positional_arguments.size(), static_cast<size_t>(*argc));
+    for (size_t i = 0; i < positional_arguments.size(); ++i) {
+      (*argv)[i] = positional_arguments[i];
+    }
+    *argc = positional_arguments.size();
   }
-  *argc = positional_arguments.size();
 
-  absl::InitializeLog();
+  if (options.initialize_log) {
+    absl::InitializeLog();
+  }
 
-  if (absl::GetFlag(FLAGS_backtrace)) {
-    absl::InitializeSymbolizer((*argv)[0]);
-    absl::FailureSignalHandlerOptions options;
-    absl::InstallFailureSignalHandler(options);
+  if (options.install_failure_signal_handler &&
+      absl::GetFlag(FLAGS_backtrace)) {
+    absl::InitializeSymbolizer(
+        (argv != nullptr && *argv != nullptr) ? (*argv)[0] : "");
+    absl::FailureSignalHandlerOptions handler_options;
+    absl::InstallFailureSignalHandler(handler_options);
   }
 
 #ifndef _WIN32
@@ -91,12 +115,33 @@ void InitGoogle(int *argc, char ***argv) {
   }
 #endif
 
-  RegisterMallocHook();
+  if (options.register_malloc_hook) {
+    RegisterMallocHook();
+  } else {
+    SkipMallocHook();
+  }
   // Ensure that the random number generator for the UUID code is initialized
   // (it does some potentially expensive random number generation).
   UUID::Random();
 
   initialized = true;
+}
+
+}  // namespace
+
+void InitGoogle(int *argc, char ***argv, const InitOptions &options) {
+  std::lock_guard<std::mutex> lock(InitMutex());
+  InitGoogleLocked(argc, argv, options);
+}
+
+void InitEmbedded(const InitOptions &options) {
+  ABSL_CHECK(!options.parse_command_line)
+      << ": InitEmbedded() has no command line to parse.";
+  std::lock_guard<std::mutex> lock(InitMutex());
+  if (IsInitialized()) {
+    return;
+  }
+  InitGoogleLocked(nullptr, nullptr, options);
 }
 
 void MarkInitialized() { initialized = true; }
