@@ -1,3 +1,21 @@
+# The Windows SDK headers and detours.h both pick an architecture from the
+# _AMD64_ / _ARM64_ defines below.
+config_setting(
+    name = "windows_arm64",
+    constraint_values = [
+        "@platforms//cpu:arm64",
+        "@platforms//os:windows",
+    ],
+)
+
+config_setting(
+    name = "windows_x86_64",
+    constraint_values = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:windows",
+    ],
+)
+
 cc_library(
     name = "detours",
     srcs = [
@@ -13,7 +31,8 @@ cc_library(
     includes = ["src"],
     visibility = ["//visibility:public"],
     defines = select({
-        "@platforms//os:windows": ["_AMD64_"],
+        ":windows_arm64": ["_ARM64_"],
+        ":windows_x86_64": ["_AMD64_"],
         "//conditions:default": [],
     }),
     linkopts = select({
