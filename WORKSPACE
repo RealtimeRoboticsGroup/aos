@@ -45,12 +45,12 @@ ci_configure(name = "ci_configure")
 load("@ci_configure//:ci.bzl", "RUNNING_IN_CI")
 load("//:repositories.bzl", "aos_repositories", "frc_repositories")
 
-# Keep WORKSPACE mode in sync with the archive_override commit in MODULE.bazel.
+# Keep WORKSPACE mode in sync with the toolchains_llvm version in MODULE.bazel.
 http_archive(
     name = "toolchains_llvm",
-    sha256 = "8cafb7be80e2ccf0651e80b00de8072b498c5bd096f2227787441c9599b78d66",
-    strip_prefix = "toolchains_llvm-1b9b565ac017dd69932ca5a41c6a1f5497b1eb21",
-    url = "https://github.com/bazel-contrib/toolchains_llvm/archive/1b9b565ac017dd69932ca5a41c6a1f5497b1eb21.tar.gz",
+    sha256 = "779b3280571647034931c7f9ce8ef3836bfc55d00d23e7dad5370151e1f7149e",
+    strip_prefix = "toolchains_llvm-v1.9.0",
+    url = "https://github.com/bazel-contrib/toolchains_llvm/releases/download/v1.9.0/toolchains_llvm-v1.9.0.tar.gz",
 )
 
 local_repository(
@@ -65,14 +65,14 @@ http_archive(
     url = "https://github.com/bazel-contrib/bazel_features/releases/download/v1.38.0/bazel_features-v1.38.0.tar.gz",
 )
 
-# toolchains_llvm now loads version helpers from @helly25_bzl in WORKSPACE
-# mode. Declare it here so loading @toolchains_llvm//toolchain:rules.bzl works
-# with --enable_workspace.
+# toolchains_llvm loads path and version helpers from @mboworks_bzl (renamed
+# from @helly25_bzl in 1.9.0) in WORKSPACE mode. Declare it here so loading
+# @toolchains_llvm//toolchain:rules.bzl works with --enable_workspace.
 http_archive(
-    name = "helly25_bzl",
-    sha256 = "8846d5363ed05dfe242af692759c9b7439c1b7ce47b9720c3338e254651cbe99",
-    strip_prefix = "bzl-0.4.3",
-    url = "https://github.com/helly25/bzl/releases/download/0.4.3/bzl-0.4.3.tar.gz",
+    name = "mboworks_bzl",
+    sha256 = "0c51edbd3a3b69ebff59b5ffec411a3ab8cb137a845b9bba9803738cd7bd5c28",
+    strip_prefix = "bzl-0.5.1",
+    url = "https://github.com/mboworks/bzl/releases/download/0.5.1/bzl-0.5.1.tar.gz",
 )
 
 load("@bazel_features//:deps.bzl", "bazel_features_deps")
