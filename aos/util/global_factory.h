@@ -24,7 +24,7 @@
 // Put this in the header file alongside the base class.
 #define SETUP_FACTORY(BaseClass, ...) \
   using BaseClass##GlobalFactory =    \
-      ::aos::GlobalFactory<BaseClass, ##__VA_ARGS__>
+      ::aos::GlobalFactory<BaseClass __VA_OPT__(, ) __VA_ARGS__>
 
 // Helper macro to set up a Factory for a subtype. For BaseClass
 // This should happen in a .cc file not a header file to avoid multiple

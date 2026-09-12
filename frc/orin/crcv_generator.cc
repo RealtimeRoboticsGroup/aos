@@ -2,13 +2,15 @@
 
 #include "Halide.h"
 
-#define CHECK(x, message, ...)                                              \
-  do {                                                                      \
-    if (!(x)) {                                                             \
-      fprintf(stderr, "assertion failed: " message ": %s\n", ##__VA_ARGS__, \
-              #x);                                                          \
-      abort();                                                              \
-    }                                                                       \
+#define CHECK(x, message, ...)                                     \
+  do {                                                             \
+    if (!(x)) {                                                    \
+      fprintf(stderr,                                              \
+              "assertion failed: " message ": %s\n" __VA_OPT__(, ) \
+                  __VA_ARGS__,                                     \
+              #x);                                                 \
+      abort();                                                     \
+    }                                                              \
   } while (0)
 
 // This is a Halide "generator". This means it is a binary which generates

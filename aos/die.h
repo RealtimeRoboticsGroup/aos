@@ -17,11 +17,11 @@ namespace aos {
 
 // The same as Die except appends " because of %d (%s)" (formatted with errno
 // and aos_strerror(errno)) to the message.
-#define PDie(format, ...)                                          \
-  do {                                                             \
-    const int error = errno;                                       \
-    ::aos::Die(format " because of %d (%s)", ##__VA_ARGS__, error, \
-               aos_strerror(error));                               \
+#define PDie(format, ...)                                                      \
+  do {                                                                         \
+    const int error = errno;                                                   \
+    ::aos::Die(format " because of %d (%s)" __VA_OPT__(, ) __VA_ARGS__, error, \
+               aos_strerror(error));                                           \
   } while (false)
 
 // The same as Die except appends " because of %d (%s)" (formatted with error
@@ -31,10 +31,10 @@ namespace aos {
 // Example:
 // const int ret = pthread_mutex_lock(whatever);
 // if (ret != 0) PRDie(ret, "pthread_mutex_lock(%p) failed", whatever);
-#define PRDie(error, format, ...)                                  \
-  do {                                                             \
-    ::aos::Die(format " because of %d (%s)", ##__VA_ARGS__, error, \
-               aos_strerror(error));                               \
+#define PRDie(error, format, ...)                                              \
+  do {                                                                         \
+    ::aos::Die(format " because of %d (%s)" __VA_OPT__(, ) __VA_ARGS__, error, \
+               aos_strerror(error));                                           \
   } while (false)
 
 // Turns on (or off) "test mode", where (V)Die doesn't write out files and

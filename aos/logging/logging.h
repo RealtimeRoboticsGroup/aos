@@ -74,7 +74,7 @@ void log_do(log_level level, const char *format, ...);
   do {                                                                  \
     log_do(AOS_LOG_LEVEL_##level,                                       \
            LOG_SOURCENAME ": " AOS_STRINGIFY(__LINE__) ": %s: " format, \
-           LOG_CURRENT_FUNCTION, ##__VA_ARGS__);                        \
+           LOG_CURRENT_FUNCTION __VA_OPT__(, ) __VA_ARGS__);            \
     /* so that GCC knows that it won't return */                        \
     if (AOS_LOG_LEVEL_##level == AOS_LOG_LEVEL_FATAL) {                 \
       fprintf(stderr, "log_do(FATAL) fell through!!!!!\n");             \
@@ -86,27 +86,28 @@ void log_do(log_level level, const char *format, ...);
 // Same as LOG except appends " due to %d (%s)\n" (formatted with errno and
 // aos_strerror(errno)) to the message.
 #define AOS_PLOG(level, format, ...) \
-  AOS_PELOG(level, errno, format, ##__VA_ARGS__)
+  AOS_PELOG(level, errno, format __VA_OPT__(, ) __VA_ARGS__)
 
 // Like PLOG except allows specifying an error other than errno.
-#define AOS_PELOG(level, error_in, format, ...)                      \
-  do {                                                               \
-    const int error = error_in;                                      \
-    AOS_LOG(level, format " due to %d (%s)\n", ##__VA_ARGS__, error, \
-            aos_strerror(error));                                    \
+#define AOS_PELOG(level, error_in, format, ...)                           \
+  do {                                                                    \
+    const int error = error_in;                                           \
+    AOS_LOG(level, format " due to %d (%s)\n" __VA_OPT__(, ) __VA_ARGS__, \
+            error, aos_strerror(error));                                  \
   } while (0);
 
 // Allows format to not be a string constant.
-#define AOS_LOG_DYNAMIC(level, format, ...)                                 \
-  do {                                                                      \
-    static char log_buf[LOG_MESSAGE_LEN];                                   \
-    int ret = snprintf(log_buf, sizeof(log_buf), format, ##__VA_ARGS__);    \
-    if (ret < 0 || (uintmax_t)ret >= LOG_MESSAGE_LEN) {                     \
-      AOS_LOG(ERROR, "next message was too long so not subbing in args\n"); \
-      AOS_LOG(level, "%s", format);                                         \
-    } else {                                                                \
-      AOS_LOG(level, "%s", log_buf);                                        \
-    }                                                                       \
+#define AOS_LOG_DYNAMIC(level, format, ...)                                    \
+  do {                                                                         \
+    static char log_buf[LOG_MESSAGE_LEN];                                      \
+    int ret =                                                                  \
+        snprintf(log_buf, sizeof(log_buf), format __VA_OPT__(, ) __VA_ARGS__); \
+    if (ret < 0 || (uintmax_t)ret >= LOG_MESSAGE_LEN) {                        \
+      AOS_LOG(ERROR, "next message was too long so not subbing in args\n");    \
+      AOS_LOG(level, "%s", format);                                            \
+    } else {                                                                   \
+      AOS_LOG(level, "%s", log_buf);                                           \
+    }                                                                          \
   } while (0)
 
 #ifdef __cplusplus
