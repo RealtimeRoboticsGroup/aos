@@ -24,15 +24,6 @@
 
 #include "aos/ipc_lib/aos_sync_internal.h"
 
-// OS_CLOCK_MACH_ABSOLUTE_TIME is only measured in nanoseconds on Apple Silicon;
-// on Intel Macs it uses host-specific mach tick units that require conversion
-// via mach_timebase_info(). We don't bother supporting Intel here.
-#if !defined(__aarch64__) && !defined(__arm64__)
-#error \
-    "aos_sync OSX support requires Apple Silicon (arm64); " \
-    "OS_CLOCK_MACH_ABSOLUTE_TIME is not nanoseconds on Intel Macs."
-#endif
-
 namespace aos::ipc_lib::sync {
 
 pid_t do_get_tid() {
@@ -95,9 +86,12 @@ int wait_on_address(aos_futex *addr1, int val1,
     // Callers that want an absolute deadline (e.g. the OSX condition_wait
     // path) must convert to a relative duration before calling.
     //
-    // os_sync_wait_on_address_with_timeout takes its timeout in
-    // OS_CLOCK_MACH_ABSOLUTE_TIME units; on Apple Silicon those are
-    // nanoseconds (enforced by the arm64 #error check at the top of the file).
+    // OS_CLOCK_MACH_ABSOLUTE_TIME is nanoseconds, not the mach_absolute_time()
+    // ticks the name suggests, so the timeout goes through unconverted.
+    // mach_wait_until() and EVFILT_TIMER with NOTE_MACHTIME do take ticks, and
+    // ToMachTicks() converts for them.  Measured on an M4 (timebase 125/3):
+    // 50ms wants 50000000, and the 1200000 ticks it works out to returns after
+    // 1.5ms.  x86_64 has a 1:1 timebase, so the units coincide there.
     int64_t timeout_ns = static_cast<int64_t>(timeout->tv_sec) * 1000000000LL +
                          static_cast<int64_t>(timeout->tv_nsec);
     if (timeout_ns <= 0) {

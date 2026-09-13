@@ -592,6 +592,8 @@ cc_test(
         # mutexes, the process-local futex/condition FATALs) only exists
         # there.
         "@platforms//os:windows": ["aos_sync_windows_test.cc"],
+        # The OS_CLOCK_MACH_ABSOLUTE_TIME timeout units only exist here.
+        "@platforms//os:osx": ["aos_sync_darwin_test.cc"],
         "//conditions:default": [],
     }),
     deps = [
