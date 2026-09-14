@@ -21,7 +21,7 @@ def cc_static_flatbuffer(name, target, function, bfbs_name = None, visibility = 
         name = name,
         hdrs = [name + ".h"],
         deps = [
-            "@com_google_absl//absl/types:span",
+            clean_dep("@com_google_absl//absl/types:span"),
         ],
         visibility = visibility,
     )
