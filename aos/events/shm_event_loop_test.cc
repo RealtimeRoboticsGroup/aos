@@ -28,7 +28,10 @@ class ShmEventLoopTestFactory : public EventLoopTestFactory {
     unlink(
         (absl::GetFlag(FLAGS_shm_base) + "/test2/aos.TestMessage.v8").c_str());
     unlink(
-        (absl::GetFlag(FLAGS_shm_base) + "/test2/aos.TestMessage.v8").c_str());
+        (absl::GetFlag(FLAGS_shm_base) + "/test3/aos.TestMessage.v8").c_str());
+    unlink(
+        (absl::GetFlag(FLAGS_shm_base) + "/test/too_small/aos.TestMessage.v8")
+            .c_str());
     unlink(
         (absl::GetFlag(FLAGS_shm_base) + "/aos/aos.timing.Report.v8").c_str());
     unlink((absl::GetFlag(FLAGS_shm_base) + "/aos/aos.logging.LogMessageFbs.v8")
