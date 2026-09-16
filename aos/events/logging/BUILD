@@ -150,7 +150,7 @@ cc_test(
     name = "log_backend_test",
     srcs = ["log_backend_test.cc"],
     # One shard per test in log_backend_test.cc
-    shard_count = 24,
+    shard_count = 27,
     deps = [
         ":log_backend",
         "//aos/containers:resizeable_buffer",

@@ -110,7 +110,7 @@ std::pair<WriteCode, size_t> FileHandler::WriteV(bool aligned) {
         writev(fd_, iovec_.data() + iovecs_index, iovec_.size() - iovecs_index);
     ABSL_VLOG(2) << "Wrote " << written << ", for iovec size " << iovec_.size();
 
-    if (written == -1 && errno == ENOSPC) {
+    if (written == -1 && (errno == ENOSPC || errno == EDQUOT)) {
       ABSL_PLOG(ERROR) << "Wrote " << written << " bytes of " << counted_size;
       return std::make_pair(WriteCode::kOutOfSpace, 0);
     }
@@ -193,7 +193,7 @@ std::pair<WriteCode, size_t> FileHandler::WriteV(bool aligned) {
 
 WriteCode FileHandler::PlatformSyncImpl() {
   if (fdatasync(fd_) == -1) {
-    if (errno == ENOSPC) {
+    if (errno == ENOSPC || errno == EDQUOT) {
       return WriteCode::kOutOfSpace;
     }
     ABSL_PLOG(ERROR) << "Failed to fdatasync " << filename_;

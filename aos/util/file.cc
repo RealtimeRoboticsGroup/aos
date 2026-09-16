@@ -65,6 +65,7 @@ bool MkdirPIfSpace(std::string_view path, std::filesystem::perms mode,
     }
   } else {
     if (ec) {
+      // Note: This handles both ENOSPC and EDQUOT.
       if (ec == std::errc::no_space_on_device) {
         ABSL_VLOG(2) << "Out of space";
         return false;
