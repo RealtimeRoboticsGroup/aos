@@ -450,6 +450,54 @@ cc_library(
 ]
 
 cc_library(
+    name = "queue_memory",
+    hdrs = ["queue_memory.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":lockless_queue",
+        "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_library(
+    name = "process_local_queue",
+    srcs = ["process_local_queue.cc"] + select({
+        "@platforms//os:macos": ["process_local_queue_darwin.cc"],
+        "@platforms//os:windows": ["process_local_queue_windows.cc"],
+        "//conditions:default": ["process_local_queue_linux.cc"],
+    }),
+    hdrs = [
+        "process_local_queue.h",
+        "process_local_queue_internal.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":lockless_queue",
+        ":memory_mapped_queue",
+        ":queue_memory",
+        ":shm_mapping",
+        "//aos:configuration",
+        "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/base:no_destructor",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
+    ],
+)
+
+cc_test(
+    name = "process_local_queue_test",
+    srcs = ["process_local_queue_test.cc"],
+    deps = [
+        ":lockless_queue",
+        ":process_local_queue",
+        "//aos:configuration",
+        "//aos:json_to_flatbuffer",
+        "//aos/testing:googletest",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+cc_library(
     name = "memory_mapped_queue",
     srcs = ["memory_mapped_queue.cc"],
     hdrs = ["memory_mapped_queue.h"],
@@ -457,6 +505,7 @@ cc_library(
     deps = [
         ":index",
         ":lockless_queue",
+        ":queue_memory",
         ":shm_mapping",
         "//aos:configuration",
         "//aos/util:file",

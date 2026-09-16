@@ -7,7 +7,7 @@
 
 #include "absl/log/absl_check.h"
 
-#include "aos/events/shm_event_loop.h"
+#include "aos/events/queue_event_loop.h"
 #include "aos/ipc_lib/thread_signal.h"
 
 namespace aos {
@@ -50,7 +50,7 @@ class SignalHandler {
   static void HandleSignal(int) { global()->DoHandleSignal(); }
 
   // Registers an event loop to receive Exit() calls.
-  void Register(ShmEventLoop *event_loop) {
+  void Register(QueueEventLoop *event_loop) {
     // Block signals while we have the mutex so we never race with the signal
     // handler.
     ScopedSignalMask mask({SIGINT, SIGHUP, SIGTERM});
@@ -73,7 +73,7 @@ class SignalHandler {
   }
 
   // Unregisters an event loop to receive Exit() calls.
-  void Unregister(ShmEventLoop *event_loop) {
+  void Unregister(QueueEventLoop *event_loop) {
     // Block signals while we have the mutex so we never race with the signal
     // handler.
     ScopedSignalMask mask({SIGINT, SIGHUP, SIGTERM});
@@ -97,7 +97,7 @@ class SignalHandler {
     ABSL_CHECK(mutex_.try_lock())
         << ": sigprocmask failed to block signals while "
            "modifing the event loop list.";
-    for (ShmEventLoop *event_loop : event_loops_) {
+    for (QueueEventLoop *event_loop : event_loops_) {
       event_loop->Exit();
     }
     mutex_.unlock();
@@ -105,7 +105,7 @@ class SignalHandler {
 
   // Mutex to protect all state.
   stl_mutex mutex_;
-  std::vector<ShmEventLoop *> event_loops_;
+  std::vector<QueueEventLoop *> event_loops_;
   struct sigaction old_action_int_;
   struct sigaction old_action_hup_;
   struct sigaction old_action_term_;
@@ -113,7 +113,7 @@ class SignalHandler {
 
 }  // namespace
 
-void ShmEventLoop::IgnoreWakeupSignal() {
+void QueueEventLoop::IgnoreWakeupSignal() {
   struct sigaction action;
   action.sa_handler = SIG_IGN;
   ABSL_PCHECK(sigemptyset(&action.sa_mask) == 0);
@@ -121,11 +121,11 @@ void ShmEventLoop::IgnoreWakeupSignal() {
   ABSL_PCHECK(sigaction(ipc_lib::kWakeupSignal, &action, nullptr) == 0);
 }
 
-void ShmEventLoop::RegisterSignalHandler() {
+void QueueEventLoop::RegisterSignalHandler() {
   SignalHandler::global()->Register(this);
 }
 
-void ShmEventLoop::UnregisterSignalHandler() {
+void QueueEventLoop::UnregisterSignalHandler() {
   SignalHandler::global()->Unregister(this);
 }
 

@@ -261,6 +261,8 @@ struct LocklessQueueConfiguration {
   size_t message_size() const;
 
   size_t num_messages() const { return num_senders + num_pinners + queue_size; }
+
+  bool operator==(const LocklessQueueConfiguration &) const = default;
 };
 
 // Structure to hold the state of the queue.

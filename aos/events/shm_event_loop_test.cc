@@ -8,6 +8,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <string_view>
@@ -23,7 +24,9 @@
 #include "aos/events/aio.h"
 #include "aos/events/event_loop_param_test.h"
 #include "aos/events/test_message_generated.h"
+#include "aos/events/thread_event_loop.h"
 #include "aos/ipc_lib/memory_mapped_queue.h"
+#include "aos/ipc_lib/process_local_queue.h"
 #include "aos/ipc_lib/shm_mapping.h"
 #include "aos/network/team_number.h"
 #include "aos/realtime.h"
@@ -34,13 +37,70 @@ namespace aos::testing {
 namespace {
 namespace chrono = ::std::chrono;
 
-// Unlinks the test's queues under --shm_base.  Only this test's own channels,
-// since run outside bazel the shm base is the live system's.
-void EmptyQueues(const Configuration *configuration) {
-  const std::string shm_base = absl::GetFlag(FLAGS_shm_base);
-  for (const Channel *channel : *configuration->channels()) {
-    ipc_lib::UnlinkShm(ipc_lib::ShmPath(shm_base, channel));
+// Which QueueEventLoop a factory builds.  Everything in this file runs against
+// both: they share an implementation, and what differs -- where the queues
+// live and how long -- is exactly what these tests should not be able to
+// tell apart, except where a test asks about it by name.
+//
+// One binary runs one kind.  These suites are expensive enough that doubling
+// a binary would double its wall time, so AOS_THREAD_EVENT_LOOP selects the
+// kind and the BUILD file makes a test target per kind and backend.
+enum class LoopKind { kShm, kThread };
+
+#if defined(AOS_THREAD_EVENT_LOOP)
+constexpr LoopKind kLoopKind = LoopKind::kThread;
+#else
+constexpr LoopKind kLoopKind = LoopKind::kShm;
+#endif
+
+std::string LoopKindName(LoopKind kind) {
+  switch (kind) {
+    case LoopKind::kShm:
+      return "shm";
+    case LoopKind::kThread:
+      return "thread";
   }
+  return "unknown";
+}
+
+// Empties the test's queues.  Shared memory is wiped by unlinking the test's
+// queues under --shm_base; process-local queues have nothing to unlink and are
+// reset in place.  Those are reset for either kind, since a few tests build a
+// ThreadEventLoop next to a ShmEventLoop, and a queue one leaves behind would
+// meet the next test's configuration of the channel in the same process.
+void EmptyQueues(LoopKind kind, const Configuration *configuration) {
+  if (kind == LoopKind::kShm) {
+    // Only this test's own channels, since run outside bazel the shm base is
+    // the live system's.
+    const std::string shm_base = absl::GetFlag(FLAGS_shm_base);
+    for (const Channel *channel : *configuration->channels()) {
+      ipc_lib::UnlinkShm(ipc_lib::ShmPath(shm_base, channel));
+    }
+  }
+  ipc_lib::ProcessLocalQueue::ResetAll();
+}
+
+std::unique_ptr<QueueEventLoop> MakeLoop(LoopKind kind,
+                                         const Configuration *configuration) {
+  switch (kind) {
+    case LoopKind::kShm:
+      return std::make_unique<ShmEventLoop>(configuration);
+    case LoopKind::kThread:
+      return std::make_unique<ThreadEventLoop>(configuration);
+  }
+  return nullptr;
+}
+
+std::unique_ptr<QueueEventLoop> MakeLoop(LoopKind kind,
+                                         const Configuration *configuration,
+                                         Aio *aio) {
+  switch (kind) {
+    case LoopKind::kShm:
+      return std::make_unique<ShmEventLoop>(configuration, aio);
+    case LoopKind::kThread:
+      return std::make_unique<ThreadEventLoop>(configuration, aio);
+  }
+  return nullptr;
 }
 
 class ShmEventLoopTestFactory : public EventLoopTestFactory {
@@ -50,26 +110,27 @@ class ShmEventLoopTestFactory : public EventLoopTestFactory {
   //
   // With borrow_aio, every event loop is built on an Aio this owns, and Run()
   // drives the primary's Aio around Startup() and Shutdown() instead of
-  // calling ShmEventLoop::Run().  Anything Run() does that those two miss
+  // calling Run() on the event loop.  Anything Run() does that those two miss
   // then fails the suite.
   explicit ShmEventLoopTestFactory(std::string backend = "io_uring",
+                                   LoopKind kind = LoopKind::kShm,
                                    bool borrow_aio = false)
-      : backend_(std::move(backend)), borrow_aio_(borrow_aio) {
+      : backend_(std::move(backend)), kind_(kind), borrow_aio_(borrow_aio) {
     // Clean up anything left there before.
-    EmptyQueues(configuration());
+    EmptyQueues(kind_, configuration());
   }
 
   ~ShmEventLoopTestFactory() {
     absl::SetFlag(&FLAGS_override_hostname, "");
-    EmptyQueues(configuration());
+    EmptyQueues(kind_, configuration());
   }
 
   ::std::unique_ptr<EventLoop> Make(std::string_view name) override {
-    return MakeShmEventLoop(name);
+    return MakeQueueEventLoop(name);
   }
 
   ::std::unique_ptr<EventLoop> MakePrimary(std::string_view name) override {
-    ::std::unique_ptr<ShmEventLoop> loop = MakeShmEventLoop(name);
+    ::std::unique_ptr<QueueEventLoop> loop = MakeQueueEventLoop(name);
     primary_event_loop_ = loop.get();
     primary_aio_ = borrow_aio_ ? aios_.back().get() : nullptr;
     return loop;
@@ -102,27 +163,28 @@ class ShmEventLoopTestFactory : public EventLoopTestFactory {
   }
 
  private:
-  ::std::unique_ptr<ShmEventLoop> MakeShmEventLoop(std::string_view name) {
+  ::std::unique_ptr<QueueEventLoop> MakeQueueEventLoop(std::string_view name) {
     absl::SetFlag(&FLAGS_aio_backend, backend_);
     if (configuration()->has_nodes()) {
       absl::SetFlag(&FLAGS_override_hostname,
                     std::string(my_node()->hostname()->string_view()));
     }
-    ::std::unique_ptr<ShmEventLoop> loop;
+    ::std::unique_ptr<QueueEventLoop> loop;
     if (borrow_aio_) {
       aios_.push_back(std::make_unique<Aio>());
-      loop.reset(new ShmEventLoop(configuration(), aios_.back().get()));
+      loop = MakeLoop(kind_, configuration(), aios_.back().get());
     } else {
-      loop.reset(new ShmEventLoop(configuration()));
+      loop = MakeLoop(kind_, configuration());
     }
     loop->set_name(name);
     return loop;
   }
 
-  ::aos::ShmEventLoop *primary_event_loop_ = nullptr;
+  ::aos::QueueEventLoop *primary_event_loop_ = nullptr;
   // The primary's Aio when borrow_aio_, which Run() drives.
   Aio *primary_aio_ = nullptr;
   const std::string backend_;
+  const LoopKind kind_;
   const bool borrow_aio_;
   // One per event loop when borrow_aio_.  The tests destroy their event loops
   // before this factory, so these outlive every loop built on them.
@@ -132,7 +194,7 @@ class ShmEventLoopTestFactory : public EventLoopTestFactory {
 auto CommonParameters(std::string backend) {
   return ::testing::Combine(
       ::testing::Values([backend = std::move(backend)]() {
-        return new ShmEventLoopTestFactory(backend);
+        return new ShmEventLoopTestFactory(backend, kLoopKind);
       }),
       ::testing::Values(ReadMethod::COPY, ReadMethod::PIN),
       ::testing::Values(DoTimingReports::kYes, DoTimingReports::kNo));
@@ -145,12 +207,14 @@ auto CommonParameters(std::string backend) {
 auto BorrowedParameters(std::string backend) {
   return ::testing::Combine(::testing::Values([backend = std::move(backend)]() {
                               return new ShmEventLoopTestFactory(
-                                  backend, /*borrow_aio=*/true);
+                                  backend, kLoopKind, /*borrow_aio=*/true);
                             }),
                             ::testing::Values(ReadMethod::COPY),
                             ::testing::Values(DoTimingReports::kNo));
 }
 
+// The suite names say Shm whichever kind this binary was built for; the
+// target name is what says which.
 #ifdef __linux__
 #ifndef AOS_EPOLL_ONLY
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonTestIoUring, AbstractEventLoopTest,
@@ -227,10 +291,11 @@ bool IsRealtime() {
   return result;
 }
 
-class ShmEventLoopTest
-    : public ::testing::TestWithParam<std::tuple<ReadMethod, std::string>> {
+class ShmEventLoopTest : public ::testing::TestWithParam<
+                             std::tuple<ReadMethod, std::string, LoopKind>> {
  public:
-  ShmEventLoopTest() : factory_(std::get<1>(GetParam())) {
+  ShmEventLoopTest()
+      : factory_(std::get<1>(GetParam()), std::get<2>(GetParam())) {
     if (std::get<0>(GetParam()) == ReadMethod::PIN) {
       factory_.PinReads();
     }
@@ -338,7 +403,7 @@ TEST_P(ShmEventLoopTest, SendBeforeRun) {
   // wakers to boost their priority, so leave it running in a thread for this
   // test.
   std::thread loop2_thread(
-      [&loop2]() { static_cast<ShmEventLoop *>(loop2.get())->Run(); });
+      [&loop2]() { static_cast<QueueEventLoop *>(loop2.get())->Run(); });
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
   auto sender = loop->MakeSender<TestMessage>("/test");
@@ -351,7 +416,7 @@ TEST_P(ShmEventLoopTest, SendBeforeRun) {
   }
   EXPECT_FALSE(IsRealtime());
 
-  static_cast<ShmEventLoop *>(loop2.get())->Exit();
+  static_cast<QueueEventLoop *>(loop2.get())->Exit();
   loop2_thread.join();
 }
 
@@ -377,7 +442,8 @@ TEST_P(ShmEventLoopTest, HandleSignals) {
 
   for (const bool handle_signals : {true, false}) {
     auto loop = factory()->MakePrimary("primary");
-    static_cast<ShmEventLoop *>(loop.get())->set_handle_signals(handle_signals);
+    static_cast<QueueEventLoop *>(loop.get())
+        ->set_handle_signals(handle_signals);
     void (*while_running)(int) = nullptr;
     loop->OnRun([&]() {
       while_running = SigtermHandler();
@@ -575,7 +641,8 @@ TEST_P(ShmEventLoopTest, SuccessfulExitTest) {
 // Test GetWatcherSharedMemory in a few basic scenarios.
 TEST_P(ShmEventLoopDeathTest, GetWatcherSharedMemory) {
   auto generic_loop1 = factory()->MakePrimary("primary");
-  ShmEventLoop *const loop1 = static_cast<ShmEventLoop *>(generic_loop1.get());
+  QueueEventLoop *const loop1 =
+      static_cast<QueueEventLoop *>(generic_loop1.get());
   const auto channel = configuration::GetChannel(
       loop1->configuration(), "/test", TestMessage::GetFullyQualifiedName(),
       loop1->name(), loop1->node());
@@ -618,7 +685,8 @@ TEST_P(ShmEventLoopDeathTest, GetWatcherSharedMemory) {
 
 TEST_P(ShmEventLoopTest, GetSenderSharedMemory) {
   auto generic_loop1 = factory()->MakePrimary("primary");
-  ShmEventLoop *const loop1 = static_cast<ShmEventLoop *>(generic_loop1.get());
+  QueueEventLoop *const loop1 =
+      static_cast<QueueEventLoop *>(generic_loop1.get());
 
   // Check that GetSenderSharedMemory returns non-null/non-empty memory span.
   auto sender = loop1->MakeSender<TestMessage>("/test");
@@ -634,7 +702,8 @@ TEST_P(ShmEventLoopTest, GetSenderSharedMemory) {
 
 TEST_P(ShmEventLoopTest, GetFetcherPrivateMemory) {
   auto generic_loop1 = factory()->MakePrimary("primary");
-  ShmEventLoop *const loop1 = static_cast<ShmEventLoop *>(generic_loop1.get());
+  QueueEventLoop *const loop1 =
+      static_cast<QueueEventLoop *>(generic_loop1.get());
 
   // Check that GetFetcherPrivateMemory returns non-null/non-empty memory span.
   auto fetcher = loop1->MakeFetcher<TestMessage>("/test");
@@ -690,7 +759,8 @@ TEST_P(ShmEventLoopTest, GetFetcherPrivateMemory) {
 // Validates that we can make fetchers point at writable memory.
 TEST_P(ShmEventLoopTest, SetFetcherUseWritableMemory) {
   auto generic_loop1 = factory()->MakePrimary("primary");
-  ShmEventLoop *const loop1 = static_cast<ShmEventLoop *>(generic_loop1.get());
+  QueueEventLoop *const loop1 =
+      static_cast<QueueEventLoop *>(generic_loop1.get());
 
   // Check that GetFetcherSharedMemory returns non-null/non-empty memory span.
   auto fetcher = loop1->MakeFetcher<TestMessage>("/test");
@@ -788,9 +858,10 @@ TEST_P(ShmEventLoopDeathTest, NextMessageNotAvailableNoRunNoTimingReports) {
 // Test that an ExitHandle outliving its EventLoop is caught.
 TEST_P(ShmEventLoopDeathTest, ExitHandleOutlivesEventLoop) {
   auto loop1 = factory()->MakePrimary("loop1");
-  auto exit_handle = static_cast<ShmEventLoop *>(loop1.get())->MakeExitHandle();
+  auto exit_handle =
+      static_cast<QueueEventLoop *>(loop1.get())->MakeExitHandle();
   EXPECT_DEATH(loop1.reset(),
-               "All ExitHandles must be destroyed before the ShmEventLoop");
+               "All ExitHandles must be destroyed before the event loop");
 }
 
 // Once the loop runs, timers and phased loops belong to its thread, on every
@@ -862,8 +933,8 @@ TEST_P(ShmEventLoopDeathTest, DestroyingAStartedLoopOnABorrowedAioDies) {
   EXPECT_DEATH(
       {
         Aio aio;
-        auto event_loop =
-            std::make_unique<ShmEventLoop>(factory()->configuration(), &aio);
+        std::unique_ptr<QueueEventLoop> event_loop =
+            MakeLoop(std::get<2>(GetParam()), factory()->configuration(), &aio);
         event_loop->SkipTimingReport();
         event_loop->SkipAosLog();
         event_loop->Startup();
@@ -876,8 +947,9 @@ TEST_P(ShmEventLoopDeathTest, DestroyingAStartedLoopOnABorrowedAioDies) {
 TEST_P(ShmEventLoopDeathTest, RunIsRefusedOnABorrowedAio) {
   absl::SetFlag(&FLAGS_aio_backend, std::get<1>(GetParam()));
   Aio aio;
-  ShmEventLoop event_loop(factory()->configuration(), &aio);
-  EXPECT_DEATH((void)event_loop.Run(), "borrowed Aio");
+  std::unique_ptr<QueueEventLoop> event_loop =
+      MakeLoop(std::get<2>(GetParam()), factory()->configuration(), &aio);
+  EXPECT_DEATH((void)event_loop->Run(), "borrowed Aio");
 }
 
 // Polls a borrowed Aio, without blocking, until duration has passed.
@@ -897,7 +969,9 @@ TEST_P(ShmEventLoopTest, BorrowedAioOutlivesItsEventLoop) {
   for (int i = 0; i < 2; ++i) {
     int ticks = 0;
     {
-      ShmEventLoop event_loop(factory()->configuration(), &aio);
+      std::unique_ptr<QueueEventLoop> event_loop_ptr =
+          MakeLoop(std::get<2>(GetParam()), factory()->configuration(), &aio);
+      QueueEventLoop &event_loop = *event_loop_ptr;
       event_loop.SkipTimingReport();
       event_loop.SkipAosLog();
       std::optional<aos::Sender<TestMessage>> sender =
@@ -922,7 +996,9 @@ TEST_P(ShmEventLoopTest, BorrowedAioOutlivesItsEventLoop) {
 TEST_P(ShmEventLoopTest, ShutDownEventLoopKeepsItsScheduleForTheNextStartup) {
   absl::SetFlag(&FLAGS_aio_backend, std::get<1>(GetParam()));
   Aio aio;
-  ShmEventLoop event_loop(factory()->configuration(), &aio);
+  std::unique_ptr<QueueEventLoop> event_loop_ptr =
+      MakeLoop(std::get<2>(GetParam()), factory()->configuration(), &aio);
+  QueueEventLoop &event_loop = *event_loop_ptr;
   event_loop.SkipAosLog();
   event_loop.MakeWatcher("/test", [](const TestMessage &) {});
   int ticks = 0;
@@ -953,6 +1029,50 @@ TEST_P(ShmEventLoopTest, ShutDownEventLoopKeepsItsScheduleForTheNextStartup) {
   EXPECT_TRUE(IsOk(event_loop.Shutdown()));
 }
 
+// A ShmEventLoop and a ThreadEventLoop on the same channel, in one process,
+// do not exchange messages.
+TEST_P(ShmEventLoopTest, ThreadAndShmEventLoopsDoNotShareQueues) {
+  absl::SetFlag(&FLAGS_aio_backend, std::get<1>(GetParam()));
+  ShmEventLoop shm_loop(factory()->configuration());
+  ThreadEventLoop thread_loop(factory()->configuration());
+  for (const bool from_shm : {true, false}) {
+    QueueEventLoop &sending =
+        from_shm ? static_cast<QueueEventLoop &>(shm_loop) : thread_loop;
+    QueueEventLoop &fetching =
+        from_shm ? static_cast<QueueEventLoop &>(thread_loop) : shm_loop;
+    const int value = from_shm ? 971 : 972;
+    aos::Sender<TestMessage> sender = sending.MakeSender<TestMessage>("/test");
+    aos::Fetcher<TestMessage> fetcher =
+        fetching.MakeFetcher<TestMessage>("/test");
+    auto builder = sender.MakeBuilder();
+    TestMessage::Builder test_builder(*builder.fbb());
+    test_builder.add_value(value);
+    builder.CheckOk(builder.Send(test_builder.Finish()));
+    EXPECT_FALSE(fetcher.Fetch() && fetcher->value() == value);
+  }
+}
+
+// A ThreadEventLoop leaves nothing under --shm_base.
+TEST_P(ShmEventLoopTest, ThreadEventLoopLeavesNoFiles) {
+  absl::SetFlag(&FLAGS_aio_backend, std::get<1>(GetParam()));
+  const std::string queue_file = ipc_lib::ShmPath(
+      absl::GetFlag(FLAGS_shm_base),
+      configuration::GetChannel(factory()->configuration(), "/test",
+                                "aos.TestMessage", "", nullptr));
+  std::error_code ec;
+  std::filesystem::remove(queue_file, ec);
+  {
+    ThreadEventLoop thread_loop(factory()->configuration());
+    aos::Sender<TestMessage> sender =
+        thread_loop.MakeSender<TestMessage>("/test");
+    auto builder = sender.MakeBuilder();
+    TestMessage::Builder test_builder(*builder.fbb());
+    test_builder.add_value(1);
+    builder.CheckOk(builder.Send(test_builder.Finish()));
+  }
+  EXPECT_FALSE(std::filesystem::exists(queue_file));
+}
+
 // Run() shuts an owned event loop down before it returns, so destroying one
 // from its own callback is a misuse.
 TEST_P(ShmEventLoopDeathTest, DestroyingAnOwnedEventLoopFromItsCallbackDies) {
@@ -977,7 +1097,9 @@ TEST_P(ShmEventLoopDeathTest, ShutdownFromACallbackDies) {
   EXPECT_DEATH(
       {
         Aio aio;
-        ShmEventLoop event_loop(factory()->configuration(), &aio);
+        std::unique_ptr<QueueEventLoop> event_loop_ptr =
+            MakeLoop(std::get<2>(GetParam()), factory()->configuration(), &aio);
+        QueueEventLoop &event_loop = *event_loop_ptr;
         event_loop.SkipTimingReport();
         event_loop.SkipAosLog();
         TimerHandler *const timer =
@@ -996,7 +1118,9 @@ TEST_P(ShmEventLoopDeathTest, ShutdownOffTheLoopThreadDies) {
   EXPECT_DEATH(
       {
         Aio aio;
-        ShmEventLoop event_loop(factory()->configuration(), &aio);
+        std::unique_ptr<QueueEventLoop> event_loop_ptr =
+            MakeLoop(std::get<2>(GetParam()), factory()->configuration(), &aio);
+        QueueEventLoop &event_loop = *event_loop_ptr;
         event_loop.SkipTimingReport();
         event_loop.SkipAosLog();
         event_loop.MakeWatcher("/test", [](const TestMessage &) {});
@@ -1018,7 +1142,9 @@ TEST_P(ShmEventLoopDeathTest, PollingTheAioWhileNotStartedDies) {
     EXPECT_DEATH(
         {
           Aio aio;
-          ShmEventLoop event_loop(factory()->configuration(), &aio);
+          std::unique_ptr<QueueEventLoop> event_loop_ptr = MakeLoop(
+              std::get<2>(GetParam()), factory()->configuration(), &aio);
+          QueueEventLoop &event_loop = *event_loop_ptr;
           event_loop.SkipTimingReport();
           event_loop.SkipAosLog();
           if (started_once) {
@@ -1075,8 +1201,10 @@ TEST_P(ShmEventLoopDeathTest, TwoEventLoopsOnOneAioDie) {
   EXPECT_DEATH(
       {
         Aio aio;
-        ShmEventLoop a(factory()->configuration(), &aio);
-        ShmEventLoop b(factory()->configuration(), &aio);
+        std::unique_ptr<QueueEventLoop> a =
+            MakeLoop(std::get<2>(GetParam()), factory()->configuration(), &aio);
+        std::unique_ptr<QueueEventLoop> b =
+            MakeLoop(std::get<2>(GetParam()), factory()->configuration(), &aio);
       },
       "Only one event loop may be on an Aio");
 }
@@ -1103,29 +1231,35 @@ TEST_P(ShmEventLoopDeathTest, TwoEventLoopsOnOneAioDie) {
 #define SHM_EVENT_LOOP_BACKENDS ::testing::Values("kqueue")
 #endif
 
+#define SHM_EVENT_LOOP_KINDS ::testing::Values(kLoopKind)
+
 // The ReadMethod half is already in each suite's name, so naming these by
-// backend alone is unambiguous -- and beats the tuple index gtest would
-// otherwise print.
-auto BackendName(
-    const ::testing::TestParamInfo<std::tuple<ReadMethod, std::string>> &info) {
-  return std::get<1>(info.param);
+// backend and loop kind is unambiguous -- and beats the tuple index gtest
+// would otherwise print.
+auto BackendName(const ::testing::TestParamInfo<
+                 std::tuple<ReadMethod, std::string, LoopKind>> &info) {
+  return std::get<1>(info.param) + "_" + LoopKindName(std::get<2>(info.param));
 }
 
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCopyTest, ShmEventLoopTest,
                          ::testing::Combine(::testing::Values(ReadMethod::COPY),
-                                            SHM_EVENT_LOOP_BACKENDS),
+                                            SHM_EVENT_LOOP_BACKENDS,
+                                            SHM_EVENT_LOOP_KINDS),
                          BackendName);
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopPinTest, ShmEventLoopTest,
                          ::testing::Combine(::testing::Values(ReadMethod::PIN),
-                                            SHM_EVENT_LOOP_BACKENDS),
+                                            SHM_EVENT_LOOP_BACKENDS,
+                                            SHM_EVENT_LOOP_KINDS),
                          BackendName);
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCopyDeathTest, ShmEventLoopDeathTest,
                          ::testing::Combine(::testing::Values(ReadMethod::COPY),
-                                            SHM_EVENT_LOOP_BACKENDS),
+                                            SHM_EVENT_LOOP_BACKENDS,
+                                            SHM_EVENT_LOOP_KINDS),
                          BackendName);
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopPinDeathTest, ShmEventLoopDeathTest,
                          ::testing::Combine(::testing::Values(ReadMethod::PIN),
-                                            SHM_EVENT_LOOP_BACKENDS),
+                                            SHM_EVENT_LOOP_BACKENDS,
+                                            SHM_EVENT_LOOP_KINDS),
                          BackendName);
 
 }  // namespace aos::testing

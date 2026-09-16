@@ -1,7 +1,7 @@
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
-#include "aos/events/shm_event_loop.h"
+#include "aos/events/queue_event_loop.h"
 
 #include <windows.h>
 
@@ -42,7 +42,7 @@ class ConsoleCtrlHandler {
   }
 
   // Registers an event loop to receive Exit() calls.
-  void Register(ShmEventLoop *event_loop) {
+  void Register(QueueEventLoop *event_loop) {
     // Outside mutex_, for the reason above.  A handler added later runs
     // before the ones already there, so this preempts the CRT's (and so
     // Python's) SIGINT emulation the way sigaction() replaces a handler on
@@ -67,7 +67,7 @@ class ConsoleCtrlHandler {
   }
 
   // Unregisters an event loop to receive Exit() calls.
-  void Unregister(ShmEventLoop *event_loop) {
+  void Unregister(QueueEventLoop *event_loop) {
     std::unique_lock<std::mutex> locker(mutex_);
     event_loops_.erase(
         std::find(event_loops_.begin(), event_loops_.end(), event_loop));
@@ -103,7 +103,7 @@ class ConsoleCtrlHandler {
       TerminateProcess(GetCurrentProcess(), STATUS_CONTROL_C_EXIT);
     }
     handled_ = true;
-    for (ShmEventLoop *event_loop : event_loops_) {
+    for (QueueEventLoop *event_loop : event_loops_) {
       event_loop->Exit();
     }
     if (ctrl_type == CTRL_CLOSE_EVENT) {
@@ -122,7 +122,7 @@ class ConsoleCtrlHandler {
   std::mutex mutex_;
   // Notified when the last event loop unregisters.
   std::condition_variable all_unregistered_;
-  std::vector<ShmEventLoop *> event_loops_;
+  std::vector<QueueEventLoop *> event_loops_;
   // Whether an event has asked the registered loops to exit.
   bool handled_ = false;
 };
@@ -132,13 +132,13 @@ class ConsoleCtrlHandler {
 // Wakeups arrive as a named Event on Windows rather than as a signal (see
 // ThreadSignalSender/ThreadSignalReceiver), so there is no signal disposition
 // to suppress here.
-void ShmEventLoop::IgnoreWakeupSignal() {}
+void QueueEventLoop::IgnoreWakeupSignal() {}
 
-void ShmEventLoop::RegisterSignalHandler() {
+void QueueEventLoop::RegisterSignalHandler() {
   ConsoleCtrlHandler::global()->Register(this);
 }
 
-void ShmEventLoop::UnregisterSignalHandler() {
+void QueueEventLoop::UnregisterSignalHandler() {
   ConsoleCtrlHandler::global()->Unregister(this);
 }
 
