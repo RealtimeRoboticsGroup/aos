@@ -24,6 +24,8 @@
 #include "aos/testing/tmpdir.h"
 #include "aos/util/file.h"
 
+ABSL_DECLARE_FLAG(int32_t, cgroup_remove_max_retries);
+
 namespace aos::starter::testing {
 
 class SubprocessTest : public ::testing::Test {
@@ -624,8 +626,10 @@ TEST_F(RemoveCGroupTest, RemoveDirectoryWithFileFatal) {
   std::ofstream(file_path) << "test content";
   ASSERT_TRUE(std::filesystem::exists(file_path));
 
+  const int max_retries = absl::GetFlag(FLAGS_cgroup_remove_max_retries);
   EXPECT_DEATH(RemoveCGroupWithRetry(test_path),
-               "Failed to remove cgroup .* after 5 attempts");
+               "Failed to remove cgroup .* after " +
+                   std::to_string(max_retries) + " attempts");
 }
 
 // Tests that RemoveCGroupWithRetry successfully removes a directory after

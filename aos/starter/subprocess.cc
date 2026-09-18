@@ -30,6 +30,10 @@
 
 ABSL_FLAG(bool, require_path_resolution, true,
           "If set, names passed to Subprocess must correspond to a real file.");
+ABSL_FLAG(int32_t, cgroup_remove_max_retries, 5,
+          "Maximum number of retries when removing a cgroup directory.");
+ABSL_FLAG(int32_t, cgroup_remove_retry_delay_secs, 1,
+          "Delay in seconds between retries when removing a cgroup directory.");
 
 namespace aos::starter {
 
@@ -615,11 +619,12 @@ void RemoveCGroupWithRetry(const std::filesystem::path &cgroup_path) {
     return;
   }
 
-  constexpr int kMaxRetries = 5;
-  constexpr std::chrono::seconds kRetryDelay{1};
+  const int max_retries = absl::GetFlag(FLAGS_cgroup_remove_max_retries);
+  const std::chrono::seconds retry_delay{
+      absl::GetFlag(FLAGS_cgroup_remove_retry_delay_secs)};
 
   std::error_code last_error;
-  for (int attempt = 0; attempt < kMaxRetries; ++attempt) {
+  for (int attempt = 0; attempt < max_retries; ++attempt) {
     std::error_code ec;
     if (std::filesystem::remove(cgroup_path, ec)) {
       if (attempt > 0) {
@@ -632,21 +637,21 @@ void RemoveCGroupWithRetry(const std::filesystem::path &cgroup_path) {
     last_error = ec;
 
     // Cgroup is busy or not empty, wait and retry.
-    if (attempt < kMaxRetries - 1) {
+    if (attempt < max_retries - 1) {
       const std::string process_info = GetCGroupProcessesInfo(cgroup_path);
       ABSL_LOG(WARNING) << "Failed to remove cgroup " << cgroup_path
-                        << " (attempt " << (attempt + 1) << "/" << kMaxRetries
+                        << " (attempt " << (attempt + 1) << "/" << max_retries
                         << "): " << ec.message() << ". Retrying in 1 second... "
                         << (process_info.empty() ? "" : process_info);
 
-      std::this_thread::sleep_for(kRetryDelay);
+      std::this_thread::sleep_for(retry_delay);
     }
   }
 
   // All attempts failed, log final state.
   const std::string final_process_info = GetCGroupProcessesInfo(cgroup_path);
   ABSL_LOG(ERROR) << "Failed to remove cgroup " << cgroup_path << " after "
-                  << kMaxRetries
+                  << max_retries
                   << " attempts. Last error: " << last_error.message() << " ("
                   << last_error.value() << "). Final cgroup state: "
                   << (final_process_info.empty() ? "(no processes found)"
