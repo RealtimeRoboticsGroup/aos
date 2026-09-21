@@ -97,8 +97,11 @@ END""" % (force_includes, force_excludes, excludes_list, package_list, release),
         target_compatible_with = target_compatible_with,
     )
 
-def _convert_deb_to_target(deb):
-    """Converts a debian package filename to a valid bazel target name."""
+def convert_deb_to_target(deb):
+    """Converts a debian package filename to a valid bazel target name.
+
+    Returns:
+      Valid bazel target name for the provided deb."""
     target = deb
     target = target.replace("-", "_")
     target = target.replace(".", "_")
@@ -114,7 +117,7 @@ def generate_repositories_for_debs(files, base_url = "https://realtimeroboticsgr
     helper above.
     """
     for f in files.keys():
-        name = _convert_deb_to_target(f)
+        name = convert_deb_to_target(f)
         if name not in native.existing_rules():
             http_file(
                 name = name,
@@ -135,7 +138,7 @@ def generate_deb_tarball(name, files, target_compatible_with = None):
         ])
     deps = []
     for f in files.keys():
-        dep = _convert_deb_to_target(f)
+        dep = convert_deb_to_target(f)
         deps.append(dep)
         if ("generate_%s_tarball" % dep) not in native.existing_rules():
             native.genrule(
