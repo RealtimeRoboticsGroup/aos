@@ -1,10 +1,15 @@
 #include "aos/realtime.h"
 
+#include <chrono>
+#include <semaphore>
+#include <thread>
+
 #include "absl/base/internal/raw_logging.h"
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
+#include "absl/synchronization/mutex.h"
 #include "gtest/gtest.h"
 
 #include "aos/init.h"
@@ -143,6 +148,49 @@ TEST(RealtimeDeathTest, Malloc) {
         EXPECT_EQ(*a, 5);
       },
       "RAW: Malloced");
+}
+
+// The first *contended* absl::Mutex lock in a process runs a one-time
+// initialization (absl::base_internal::NumCPUs(), to size the spin loop) that
+// mallocs on Windows.  If that first contention lands on a realtime thread,
+// the malloc hook kills the process.  MarkRealtime() forces the
+// initialization before the thread goes realtime; this pins that.
+//
+// A death test because the property is per-process: the child is a fresh
+// process, so the lock below really is its first contended one.  Everything
+// before the realtime section is std:: rather than absl:: on purpose -- an
+// absl::Notification would take an absl::Mutex of its own and could warm
+// the initialization early, and the test would prove nothing.
+TEST(RealtimeDeathTest, FirstContendedMutexLockDoesNotMalloc) {
+  EXPECT_EXIT(
+      {
+        absl::Mutex mu;
+        std::binary_semaphore holder_has_lock(0);
+        std::binary_semaphore main_is_locking(0);
+        std::thread holder([&]() {
+          mu.lock();
+          holder_has_lock.release();
+          main_is_locking.acquire();
+          // Keep the lock long enough for the main thread to get from its
+          // release() into lock() and fail the fast path.  Microseconds
+          // against 50ms; and too short would only make this test vacuous,
+          // never wrong.  The holder cannot wait for the main thread instead,
+          // because the main thread is about to block on it.
+          std::this_thread::sleep_for(std::chrono::milliseconds(50));
+          mu.unlock();
+        });
+        holder_has_lock.acquire();
+        {
+          ScopedRealtime rt;
+          main_is_locking.release();
+          // Held by the other thread, so this is the contended slow path.
+          mu.lock();
+          mu.unlock();
+        }
+        holder.join();
+        exit(0);
+      },
+      ::testing::ExitedWithCode(0), "");
 }
 
 TEST(RealtimeDeathTest, Realloc) {
