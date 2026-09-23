@@ -2310,20 +2310,19 @@ class TestTableStatic : public ::aos::fbs::Table {
         &object_absolute_offset_subtable,
         &object_absolute_offset_string,
     };
-    // Actual subobjects; note that the pointers will be invalid when the
-    // field is not populated.
+    // Actual subobjects; null when the field is not populated.
     const std::array<::aos::fbs::ResizeableObject *, 11> subobject_objects{
-        &vector_of_structs_->t,
-        &unspecified_length_vector_of_strings_->t,
-        &vector_of_tables_->t,
-        &vector_aligned_->t,
-        &vector_of_strings_->t,
-        &vector_of_scalars_->t,
-        &unspecified_length_string_->t,
-        &unspecified_length_vector_->t,
-        &included_table_->t,
-        &subtable_->t,
-        &string_->t,
+        vector_of_structs_.has_value() ? &vector_of_structs_->t : nullptr,
+        unspecified_length_vector_of_strings_.has_value() ? &unspecified_length_vector_of_strings_->t : nullptr,
+        vector_of_tables_.has_value() ? &vector_of_tables_->t : nullptr,
+        vector_aligned_.has_value() ? &vector_aligned_->t : nullptr,
+        vector_of_strings_.has_value() ? &vector_of_strings_->t : nullptr,
+        vector_of_scalars_.has_value() ? &vector_of_scalars_->t : nullptr,
+        unspecified_length_string_.has_value() ? &unspecified_length_string_->t : nullptr,
+        unspecified_length_vector_.has_value() ? &unspecified_length_vector_->t : nullptr,
+        included_table_.has_value() ? &included_table_->t : nullptr,
+        subtable_.has_value() ? &subtable_->t : nullptr,
+        string_.has_value() ? &string_->t : nullptr,
     };
     // Absolute offsets from the start of the buffer to where the inline
     // entry is for each table. These offsets do not need to change at

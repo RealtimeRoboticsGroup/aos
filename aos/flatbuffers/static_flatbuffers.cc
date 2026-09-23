@@ -1009,7 +1009,11 @@ std::string MakeSubObjectList(const std::vector<FieldData> &fields) {
       ++num_object_fields;
       object_offsets.push_back(
           absl::StrFormat("&%s", ObjectAbsoluteOffsetName(field)));
-      objects.push_back(absl::StrFormat("&%s->t", MemberName(field)));
+      // Only take the address of populated fields: calling operator-> on an
+      // empty std::optional is undefined behavior, and MSVC debug builds
+      // fail fast on it.
+      objects.push_back(absl::StrFormat("%s.has_value() ? &%s->t : nullptr",
+                                        MemberName(field), MemberName(field)));
       inline_offsets.push_back(InlineAbsoluteOffsetName(field));
     }
   }
@@ -1036,8 +1040,7 @@ std::string MakeSubObjectList(const std::vector<FieldData> &fields) {
     const std::array<size_t *, $0> subobject_object_offsets{
         $1,
     };
-    // Actual subobjects; note that the pointers will be invalid when the
-    // field is not populated.
+    // Actual subobjects; null when the field is not populated.
     const std::array<::aos::fbs::ResizeableObject *, $0> subobject_objects{
         $2,
     };
