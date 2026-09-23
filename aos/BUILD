@@ -882,6 +882,60 @@ cc_test(
     ],
 )
 
+# Runs once per seed: UUID::Random() reads the seed the first time it is
+# called, so a process only ever exercises one of them.  The two ways of asking
+# for a seed, the flag and ${TEST_RANDOM_SEED}, are each covered once.
+#
+# Each binary runs a single test. The sequence test checks the first UUIDs a process
+# generates, so it cannot share a binary with a test that generates its own.
+SEQUENCE_ARG = "--gtest_filter=*MatchesCheckedInSequence*"
+
+UNIQUENESS_ARG = "--gtest_filter=*StillUniqueAcrossThreads*"
+
+[cc_test(
+    name = "uuid_deterministic_test_%s" % name,
+    srcs = ["uuid_deterministic_test.cc"],
+    args = args,
+    env = env,
+    deps = [
+        ":uuid",
+        "//aos/testing:googletest",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
+    ],
+) for name, args, env in [
+    (
+        "seed_0",
+        [
+            "--deterministic_uuid_seed=0",
+            SEQUENCE_ARG,
+        ],
+        {},
+    ),
+    (
+        "seed_1",
+        [
+            "--deterministic_uuid_seed=1",
+            SEQUENCE_ARG,
+        ],
+        {},
+    ),
+    (
+        "seed_42_from_environment",
+        [SEQUENCE_ARG],
+        {"TEST_RANDOM_SEED": "42"},
+    ),
+    (
+        "uniqueness",
+        [
+            "--deterministic_uuid_seed=0",
+            UNIQUENESS_ARG,
+        ],
+        {},
+    ),
+]]
+
 rust_library(
     name = "uuid_rs",
     srcs = ["uuid.rs"],

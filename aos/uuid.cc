@@ -3,7 +3,11 @@
 #include <sys/types.h>
 
 #include <array>
+#include <atomic>
+#include <cstdint>
+#include <cstdlib>
 #include <cstring>
+#include <optional>
 #include <random>
 #include <string_view>
 
@@ -35,6 +39,21 @@
 
 ABSL_FLAG(std::string, boot_uuid, "",
           "If set, override the boot UUID to have this value instead.");
+
+ABSL_FLAG(int64_t, deterministic_uuid_seed, -1,
+          "If >= 0, seed the random UUID generator with this value instead "
+          "of with entropy from the OS, so UUID::Random() returns the same "
+          "sequence on every run.  This is for tools that have to produce "
+          "byte-for-byte reproducible output, such as one that replays a log "
+          "and writes a new one: the UUIDs it generates are written into the "
+          "new log's headers, so without a fixed seed no two runs of it "
+          "agree.  The UUIDs a run hands out are still all different from one "
+          "another, but they are no longer unique against any other run, so "
+          "do not set this in production.  Set it before the first UUID is "
+          "generated, as that is when it is read.  The generator is cached "
+          "per thread; each thread seeds with the requested seed and a "
+          "per-thread counter, so a run repeats per thread without "
+          "contention.");
 
 namespace aos {
 namespace {
@@ -167,12 +186,70 @@ std::mt19937 FullySeededRandomGenerator() {
 }
 }  // namespace internal
 
+namespace {
+// Returns the seed to use, or nullopt to draw entropy from the OS.
+//
+// --deterministic_uuid_seed wins if it was set.  Otherwise ${TEST_RANDOM_SEED}
+// is used when the environment provides it, which lets a test ask for
+// repeatable UUIDs the same way it asks the rest of aos for a repeatable seed.
+// That variable is read directly rather than through aos/testing/random_seed.h,
+// which is testonly and so cannot be depended on from here.
+std::optional<std::mt19937::result_type> RequestedSeed() {
+  const int64_t flag_seed = absl::GetFlag(FLAGS_deterministic_uuid_seed);
+  if (flag_seed >= 0) {
+    return static_cast<std::mt19937::result_type>(flag_seed);
+  }
+  const char *const test_seed = getenv("TEST_RANDOM_SEED");
+  if (test_seed != nullptr) {
+    return static_cast<std::mt19937::result_type>(atoi(test_seed));
+  }
+  return std::nullopt;
+}
+
+// Returns a generator seeded with the requested seed and a per-thread counter.
+//
+// The first thread (number 0) is seeded with just the requested seed so
+// single-threaded deterministic runs repeat the same sequence as before.
+// Additional threads mix the thread number into the seed, giving each thread
+// its own deterministic sequence without contending with other threads.
+std::mt19937 SeededGeneratorForThread(std::mt19937::result_type seed) {
+  static std::atomic<uint64_t> next_thread_number{0};
+  const uint64_t thread_number =
+      next_thread_number.fetch_add(1, std::memory_order_relaxed);
+
+  if (thread_number == 0) {
+    return std::mt19937(seed);
+  }
+
+  const std::seed_seq::result_type thread_low =
+      static_cast<std::seed_seq::result_type>(thread_number);
+  const std::seed_seq::result_type thread_high =
+      static_cast<std::seed_seq::result_type>(thread_number >> 32);
+  const std::array<std::seed_seq::result_type, 3> seed_values{
+      static_cast<unsigned int>(seed), thread_low, thread_high};
+  std::seed_seq seeds(seed_values.begin(), seed_values.end());
+  return std::mt19937(seeds);
+}
+
+// Returns a fully seeded mt19937 for this thread, using the requested seed if
+// any, otherwise OS entropy.
+std::mt19937 MakeThreadLocalGenerator() {
+  static const std::optional<std::mt19937::result_type> requested_seed =
+      RequestedSeed();
+  if (!requested_seed.has_value()) {
+    return internal::FullySeededRandomGenerator();
+  }
+  return SeededGeneratorForThread(*requested_seed);
+}
+}  // namespace
+
 UUID UUID::Random() {
+  UUID result;
+
   // thread_local to guarantee safe use of the generator itself.
-  thread_local std::mt19937 gen(internal::FullySeededRandomGenerator());
+  thread_local std::mt19937 gen = MakeThreadLocalGenerator();
 
   std::uniform_int_distribution<> dis(0, 255);
-  UUID result;
   for (size_t i = 0; i < kDataSize; ++i) {
     result.data_[i] = dis(gen);
   }
