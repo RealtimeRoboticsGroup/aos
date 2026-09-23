@@ -140,14 +140,32 @@ class ShmEventLoopTest : public ::testing::TestWithParam<ReadMethod> {
     auto loop2 = factory()->Make("loop2");
     auto sender = loop2->MakeSender<TestMessage>("/test");
     bool ran = false;
+    // AddPhasedLoop()'s callback takes the number of cycles elapsed since
+    // the last call: normally 1, but more if a scheduling delay made this
+    // invocation late enough to skip one or more periods.  Sending that
+    // many messages, instead of always just 1, guarantees the total sent
+    // by a given wall-clock time tracks elapsed_time / period: any period
+    // skipped in real time is made up in a burst next time this runs, so
+    // no messages are lost to scheduling delay.  That matters below, where
+    // the deadline assumes a specific number of messages have been sent by
+    // then.
     loop1->AddPhasedLoop(
-        [&sender](int) {
-          auto builder = sender.MakeBuilder();
-          TestMessage::Builder test_builder(*builder.fbb());
-          test_builder.add_value(0);
-          builder.CheckOk(builder.Send(test_builder.Finish()));
+        [&sender](int cycles) {
+          for (int i = 0; i < cycles; ++i) {
+            auto builder = sender.MakeBuilder();
+            TestMessage::Builder test_builder(*builder.fbb());
+            test_builder.add_value(0);
+            builder.CheckOk(builder.Send(test_builder.Finish()));
+          }
         },
         std::chrono::milliseconds(2));
+    // "/test"'s queue depth is frequency(800) * channel_storage_duration
+    // (2s default, EventLoopTestFactory doesn't override it for "/test") =
+    // 1600 slots.  At the 2ms send period above (500/s), the queue is
+    // guaranteed to have wrapped past after 1600/500 = 3.2s -- with the
+    // catch-up sending above, that holds regardless of scheduling delay, so
+    // this deadline only needs a small margin over the 3.2s minimum, not a
+    // large one hedging against lost messages.
     loop1
         ->AddTimer([this, &fetcher, &ran]() {
           EXPECT_DEATH(fetcher.FetchNext(),
@@ -156,7 +174,7 @@ class ShmEventLoopTest : public ::testing::TestWithParam<ReadMethod> {
           factory()->Exit();
           ran = true;
         })
-        ->Schedule(loop1->monotonic_now() + std::chrono::seconds(4));
+        ->Schedule(loop1->monotonic_now() + std::chrono::seconds(5));
     factory()->Run();
     EXPECT_TRUE(ran);
   }
