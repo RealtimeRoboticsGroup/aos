@@ -66,6 +66,11 @@ build:ubsan --features=ubsan
 build:ubsan --copt -fno-sanitize=alignment
 build:ubsan --platform_suffix=-ubsan
 build:ubsan --copt -fsanitize-blacklist=tools/cpp/ubsan-blacklist
+# Standard library precondition violations, like operator-> on an empty
+# std::optional, are undefined behavior that never touches bad memory, so
+# ubsan cannot see them.  libstdc++'s assertions check them without changing
+# the ABI, which keeps this safe to link against prebuilt C++ like OpenCV.
+build:ubsan --copt -D_GLIBCXX_ASSERTIONS
 
 # MemorySanitizer is enabled through the toolchain's `msan` feature rather than
 # raw --copt/--linkopt flags. The feature swaps in the instrumented libc++ that
