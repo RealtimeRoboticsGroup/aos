@@ -3,6 +3,6 @@
     "integrity": "sha256-W1uCi+clB30Toj0palrlbOQveFrYJY3HnTTzJrNMx4M=",
     "strip_prefix": "TensorRT-10.9.0.34",
     "overlay": {
-        "BUILD.bazel": "sha256-Tj3bp1cfDvf1mOJJp7LHlaQ5kfEYw23GSJEN9muXvcw="
+        "BUILD.bazel": "sha256-PO9WfttDMF1RzgCz7ooFFADhjPsQLQHbOYg3OYa8Hy8="
     }
 }

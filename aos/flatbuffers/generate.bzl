@@ -1,6 +1,7 @@
 load("@aos//aos/flatbuffers:cc.bzl", "flatbuffer_cc_library")
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 load("//tools/build_rules:clean_dep.bzl", "clean_dep")
 
 StaticFlatbufferReflectionInfo = provider(

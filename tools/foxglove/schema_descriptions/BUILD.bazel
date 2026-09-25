@@ -1,4 +1,6 @@
 load("@aspect_rules_js//js:defs.bzl", "js_binary")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//tools/build_rules/js:ts.bzl", "ts_project")
 load(":foxglove_schema.bzl", "foxglove_schema_descriptions")
 

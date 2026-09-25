@@ -1,3 +1,5 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
 # 3 Clause BSD
 licenses(["notice"])
 

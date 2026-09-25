@@ -1,6 +1,6 @@
 """Third-party repos that must be private to AOS, fetched by one extension.
 
-The 22 patches here change flatbuffers' behaviour rather than just its build:
+The 23 patches here change flatbuffers' behaviour rather than just its build:
 force_defaults defaults to true (which changes the bytes the serializer
 emits), FLATBUFFERS_ASSERT becomes ABSL_DCHECK, the verifier's max_tables
 triples.  That must never resolve as anyone's `flatbuffers` module, and it
@@ -50,6 +50,7 @@ FLATBUFFERS_PATCHES = [
     "20-cpp-absl-dcheck-assertions.patch",
     "21-python-object-api-types-other-packages.patch",
     "22-add-rust-lockfile.patch",
+    "23-load-py_library-from-rules_python.patch",
 ]
 
 def _flatbuffers_impl(module_ctx):

@@ -1,5 +1,6 @@
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
 # Pieces of the CUDA 11.8 toolkit shipped inside the Debian sysroot. Exposed
 # so //tools/cuda can wire them into a rules_cuda toolchain.

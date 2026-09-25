@@ -1,3 +1,6 @@
+load("@rules_cc//cc/common:cc_common.bzl", "cc_common")
+load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
+
 def _collect_nodejs_headers_impl(ctx):
     """Collect all the headers for compiling a native node module.
 

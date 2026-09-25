@@ -1,5 +1,7 @@
 # This file is included in the BUILD for the cxx crate, to export its header
 # file for C++ code to depend on.
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
 cc_library(
     name = "cxx_cc",
     visibility = ["//visibility:public"],

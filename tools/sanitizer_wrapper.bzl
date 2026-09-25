@@ -1,3 +1,5 @@
+load("@rules_cc//cc/common:cc_common.bzl", "cc_common")
+
 def _runfile_path(ctx, file):
     path = file.short_path
     if path.startswith("../"):

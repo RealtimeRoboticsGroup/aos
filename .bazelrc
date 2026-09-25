@@ -158,8 +158,16 @@ build --sandbox_tmpfs_path=/tmp
 # Prevent cypress from using its own binary. We want to use the hermetic one.
 build --action_env=CYPRESS_INSTALL_BINARY=0
 
-# Allow spaces in runfiles filenames.
-build --experimental_inprocess_symlink_creation
+# Stops aspect_tools_telemetry's notice.  Telemetry stays on.
+common --repo_env=ASPECT_TOOLS_TELEMETRY=all
+
+# Bazel 9 dropped the native rules.  Autoload them for external repos that still
+# use them.  This is Bazel 8's default list plus @rules_cc.
+common --incompatible_autoload_externally=+@rules_python,+java_common,+JavaInfo,+JavaPluginInfo,ProguardSpecProvider,java_binary,java_import,java_library,java_plugin,java_test,java_runtime,java_toolchain,java_package_configuration,@com_google_protobuf,@rules_shell,+@rules_android,+@rules_cc
+
+# Keep passing includes as -isystem on Bazel 9, like Bazel 8.
+build --features=system_include_paths
+build --host_features=system_include_paths
 
 common --enable_bzlmod=true
 # Consult our local registry before bcr. Every module under registry/ is

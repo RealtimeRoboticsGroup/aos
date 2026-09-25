@@ -1,3 +1,5 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
 # The Windows SDK headers and detours.h both pick an architecture from the
 # _AMD64_ / _ARM64_ defines below.
 config_setting(
@@ -28,6 +30,8 @@ cc_library(
     hdrs = [
         "src/detours.h",
     ],
+    # creatwth.cpp #includes this file directly.
+    textual_hdrs = ["src/uimports.cpp"],
     includes = ["src"],
     visibility = ["//visibility:public"],
     defines = select({

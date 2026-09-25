@@ -550,7 +550,7 @@ use_repo(dependencies, "aos_flatbuffers", "com_github_foxglove_schemas")
 
 bazel_dep(name = "symengine", version = "0.12.0")
 bazel_dep(name = "gmp", version = "6.3.0.bcr.2")
-bazel_dep(name = "aspect_rules_cypress", version = "0.7.2")
+bazel_dep(name = "aspect_rules_cypress", version = "0.8.0")
 
 cypress = use_extension("@aspect_rules_cypress//cypress:extensions.bzl", "cypress")
 cypress.toolchain(cypress_version = "13.6.6")

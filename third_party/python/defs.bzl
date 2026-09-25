@@ -1,3 +1,5 @@
+load("@rules_python//python:py_info.bzl", "PyInfo")
+
 def _extract_numpy_headers_impl(ctx):
     files = ctx.attr.numpy[DefaultInfo].default_runfiles.files.to_list()
     prefix = ctx.attr.header_prefix

@@ -1,0 +1,13 @@
+Load py_library from rules_python
+
+Bazel 9 no longer defines py_library natively.
+
+diff --git a/BUILD.bazel b/BUILD.bazel
+--- a/BUILD.bazel
++++ b/BUILD.bazel
+@@ -1,4 +1,5 @@
+ load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
++load("@rules_python//python:py_library.bzl", "py_library")
+ 
+ licenses(["notice"])
+ 

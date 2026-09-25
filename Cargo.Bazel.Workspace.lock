@@ -1,5 +1,5 @@
 {
-  "checksum": "033182580dd262528c0f70193e13b5074e6e25a4c944a93dda5394597f5c19ce",
+  "checksum": "386785396697df0ebdb577a72b5d9962c279236ad7be59cc598c31967987b76e",
   "crates": {
     "aho-corasick 1.0.2": {
       "name": "aho-corasick",
@@ -1620,7 +1620,7 @@
         "MIT"
       ],
       "license_file": "LICENSE-APACHE",
-      "additive_build_file_content": "# This file is included in the BUILD for the cxx crate, to export its header\n# file for C++ code to depend on.\ncc_library(\n    name = \"cxx_cc\",\n    visibility = [\"//visibility:public\"],\n    hdrs = [\"include/cxx.h\"],\n    srcs = [\"src/cxx.cc\"],\n    includes = [\"include\"],\n)\n",
+      "additive_build_file_content": "# This file is included in the BUILD for the cxx crate, to export its header\n# file for C++ code to depend on.\nload(\"@rules_cc//cc:cc_library.bzl\", \"cc_library\")\n\ncc_library(\n    name = \"cxx_cc\",\n    visibility = [\"//visibility:public\"],\n    hdrs = [\"include/cxx.h\"],\n    srcs = [\"src/cxx.cc\"],\n    includes = [\"include\"],\n)\n",
       "extra_aliased_targets": {
         "cxx_cc": "cxx_cc"
       }

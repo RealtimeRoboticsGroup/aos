@@ -23,7 +23,7 @@ index 3454790..a6f3246 100644
 +    gtk_runtime_dir = None
 +    for repo_name in ["amd64_debian_sysroot", "amd64_debian_sysroot+", "amd64_debian_sysroot~"]:
 +        rpath = _runfiles.Rlocation(repo_name + "/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders")
-+        if rpath:
++        if rpath and os.path.exists(rpath):
 +            gtk_runtime_dir = rpath.removesuffix("/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders")
 +            break
 +
