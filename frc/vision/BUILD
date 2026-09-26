@@ -688,6 +688,7 @@ cc_library(
     deps = [
         "@arm64_debian_sysroot//:nvjpeg",
         "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
     ],
 )
 
@@ -730,6 +731,33 @@ cc_binary(
         "@com_google_absl//absl/log:globals",
         "@com_google_absl//absl/log:initialize",
         "@com_google_absl//absl/strings:str_format",
+    ],
+)
+
+# Hardware test: decodes DIFFERENT JPEGs through one NvJpegDecoderLib
+# instance and asserts the pipelining contract, to expose persistent-state
+# bugs; see nvjpeg_seq_test.cc.  Needs the NVJPG engine, so CI (x86) skips
+# it -- build with --config=arm64 and run it on an Orin.
+cc_test(
+    name = "nvjpeg_seq_test",
+    srcs = ["nvjpeg_seq_test.cc"],
+    data = [
+        "testdata/seq_040.jpg",
+        "testdata/seq_080.jpg",
+        "testdata/seq_120.jpg",
+        "testdata/seq_200.jpg",
+        "testdata/seq_other_size.jpg",
+    ],
+    target_compatible_with = [
+        "@platforms//cpu:arm64",
+        "@platforms//os:linux",
+    ],
+    deps = [
+        ":nvjpeg_decoder_lib",
+        "//aos/testing:googletest",
+        "//aos/testing:path",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
     ],
 )
 
