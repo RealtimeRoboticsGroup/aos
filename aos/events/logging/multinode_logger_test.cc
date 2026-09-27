@@ -4770,6 +4770,67 @@ TEST_P(MultinodeLoggerTest, OneDirectionDriftWithDelayJump) {
   ConfirmReadable(filenames);
 }
 
+// Tests that we can solve when the network delay from pi1 to pi2 jumps up at
+// the bottom of a clock drift while pi2 to pi1 is disconnected.  The samples
+// from pi1 to pi2 bend the line through the samples from pi2 to pi1 right up
+// until the jump.  The solution for a pi2 to pi1 sample then lands 1ns past
+// where it bends pi1 to pi2's line, and the slope changes by about 1000ppm
+// there.  See SolveNewtonNextToBentCorner in multinode_timestamp_filter_test.cc
+// for a smaller version.
+TEST_P(MultinodeLoggerTest, OneDirectionDriftWithSuddenDelayJump) {
+  std::vector<std::string> filenames;
+
+  time_converter_.AddNextTimestamp(
+      distributed_clock::epoch(),
+      {BootTimestamp::epoch(), BootTimestamp::epoch()});
+
+  const chrono::nanoseconds before_disconnect_duration =
+      time_converter_.AddMonotonic(
+          {chrono::milliseconds(1000), chrono::milliseconds(1000)});
+
+  const chrono::nanoseconds drift_duration =
+      time_converter_.AddMonotonic(
+          {chrono::milliseconds(10000),
+           chrono::milliseconds(10000) - chrono::milliseconds(5)}) +
+      time_converter_.AddMonotonic(
+          {chrono::milliseconds(10000),
+           chrono::milliseconds(10000) + chrono::milliseconds(5)});
+
+  const chrono::nanoseconds after_reconnect_duration =
+      time_converter_.AddMonotonic(
+          {chrono::milliseconds(5000), chrono::milliseconds(5000)});
+
+  const chrono::nanoseconds before_delay_jump_duration =
+      chrono::milliseconds(10000);
+
+  const std::string kLogfile =
+      aos::testing::TestTmpDir() + "/logs/multi_logfile2.1/";
+
+  {
+    LoggerState pi2_logger = MakeLogger(pi2_);
+    pi2_logger.StartLogger(kLogfile);
+    event_loop_factory_.RunFor(before_disconnect_duration);
+
+    pi2_->Disconnect(pi1_->node());
+
+    event_loop_factory_.RunFor(before_delay_jump_duration);
+    const chrono::nanoseconds network_delay =
+        event_loop_factory_.network_delay();
+    event_loop_factory_.set_network_delay(chrono::milliseconds(6));
+    event_loop_factory_.RunFor(drift_duration - before_delay_jump_duration);
+
+    event_loop_factory_.set_network_delay(network_delay);
+    pi2_->Connect(pi1_->node());
+
+    event_loop_factory_.RunFor(after_reconnect_duration);
+    pi2_logger.AppendAllFilenames(&filenames);
+  }
+
+  const std::vector<LogFile> sorted_parts = SortParts(filenames);
+  EXPECT_TRUE(AllPartsMatchOutOfOrderDuration(sorted_parts));
+  ConfirmReadable(filenames);
+}
+
 // Test the that we can handle a log which has an asymetric record (between
 // VPUs) of a particular boot combination. The only trace of boot index 1 on the
 // remote node is a message that exists in the fetcher queue. This can occur

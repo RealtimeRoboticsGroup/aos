@@ -153,7 +153,14 @@ NoncausalTimestampFilter::InterpolateWithOtherFilter(
   //
   // There are really 3 cases. The time is before the hunk in the middle, after
   // the hunk in the middle, or in the hunk in the middle.
-  if (ta <= std::get<0>(pointer.other_points_[0].second)) {
+  //
+  // ta is only the integer part of the time.  The caller evaluates the line we
+  // return anywhere in [ta, ta + 1ns), so a segment needs to cover [p0, p1).
+  // Otherwise, at ta == p1, we would extrapolate the segment ending at p1 up to
+  // 1ns past it, and switch to the next segment at p1 + 1ns.  The line would
+  // jump there by the change in slope times 1ns.  The solver needs the line to
+  // be continuous to converge.
+  if (ta < std::get<0>(pointer.other_points_[0].second)) {
     // We are before the hunk!  Use the start point, and the beginning of the
     // hunk.
     t1 = pointer.other_points_[0].second;
@@ -163,7 +170,7 @@ NoncausalTimestampFilter::InterpolateWithOtherFilter(
         absl::int128((std::get<0>(t1) - std::get<0>(t0)).count()) *
             absl::int128(MaxVelocityRatio::num))
         << ": t0 " << TimeString(t0) << ", t1 " << TimeString(t1);
-  } else if (ta >
+  } else if (ta >=
              std::get<0>(pointer.other_points_[pointer.other_points_.size() - 1]
                              .second)) {
     // We are after the hunk!  Use the end point, and the end of the

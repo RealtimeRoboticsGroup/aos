@@ -1754,6 +1754,89 @@ TEST_F(NoncausalTimestampFilterTest, DebugOffsetErrorPointsUsesOther) {
       ::testing::HasSubstr(kBentPoint));
 }
 
+// Tests that a line bent through points from the opposite filter is continuous
+// at those points.  The solver evaluates the line at an integer time plus a
+// fraction of a ns, so the time from p to p + 1ns needs to use the segment
+// starting at p.  If it used the segment ending at p instead, the line would
+// jump by the change in slope times 1ns at p + 1ns.
+//
+// a's offset, in a's time, with 3 of b's samples flipped into it:
+//
+//  -1.0ms  A0 - - - - - - - - - - - - - - - - - - - - - - - A20
+//             `--.__                                __.--'
+//                   `--.__  -500ppm      +500ppm __.--'
+//  -5.0ms                 `B8 --.__     __.-- B12'
+//                               -250 B10 +250
+//  -5.5ms
+//
+//          0s            8s        10s        12s          20s
+//
+// This checks 1, 2 and 3 points from b, which exercises every branch of the
+// lookup, with the slope changing by 250 to 1000ppm at each point.
+TEST_F(NoncausalTimestampFilterTest, OffsetContinuousAtOtherPoints) {
+  const BootTimestamp e{0, monotonic_clock::epoch()};
+
+  const std::vector<std::vector<std::pair<chrono::nanoseconds, BootDuration>>>
+      b_samples_list = {
+          {{chrono::seconds(10), {0, chrono::microseconds(6000)}}},
+          {{chrono::seconds(8), {0, chrono::microseconds(5000)}},
+           {chrono::seconds(12), {0, chrono::microseconds(5000)}}},
+          {{chrono::seconds(8), {0, chrono::microseconds(5000)}},
+           {chrono::seconds(10), {0, chrono::microseconds(5500)}},
+           {chrono::seconds(12), {0, chrono::microseconds(5000)}}},
+      };
+
+  for (const std::vector<std::pair<chrono::nanoseconds, BootDuration>>
+           &b_samples : b_samples_list) {
+    TestingNoncausalTimestampFilter filter_a(node_a, node_b);
+    filter_a.Sample(e, {0, -chrono::microseconds(1000)});
+    filter_a.Sample(e + chrono::seconds(20), {0, -chrono::microseconds(1000)});
+
+    TestingNoncausalTimestampFilter filter_b(node_b, node_a);
+    for (const std::pair<chrono::nanoseconds, BootDuration> &sample :
+         b_samples) {
+      filter_b.Sample(e + sample.first, sample.second);
+    }
+    ASSERT_EQ(filter_b.timestamps_size(), b_samples.size());
+
+    // Returns a's offset at ta_base + ta, relative to -1ms to keep the
+    // precision.
+    auto offset = [&](BootTimestamp ta_base, double ta) {
+      const std::tuple<BootDuration, double, double> result =
+          filter_a.Offset(&filter_b, Pointer(), ta_base, ta, 0);
+      return static_cast<double>(
+                 (std::get<0>(result).duration + chrono::microseconds(1000))
+                     .count()) +
+             std::get<1>(result);
+    };
+
+    for (const std::pair<chrono::nanoseconds, BootDuration> &sample :
+         b_samples) {
+      // b's sample, flipped into a.
+      const BootTimestamp p = e + sample.first + sample.second.duration;
+      const double p_offset =
+          static_cast<double>((-sample.second.duration - kMinNetworkDelay() +
+                               chrono::microseconds(1000))
+                                  .count());
+
+      // The line goes through the point.
+      EXPECT_NEAR(offset(p, 0.0), p_offset, 1e-9)
+          << ": " << b_samples.size() << " points, at " << p;
+
+      // And it is continuous across each ns boundary around the point.  The
+      // slope is under 1000ppm, so the line moves less than 1e-9ns from just
+      // before a boundary to on it.
+      for (BootTimestamp t = p - chrono::nanoseconds(2);
+           t <= p + chrono::nanoseconds(2); t += chrono::nanoseconds(1)) {
+        EXPECT_NEAR(offset(t, 0.999999),
+                    offset(t + chrono::nanoseconds(1), 0.0), 1e-8)
+            << ": " << b_samples.size() << " points, at " << t << " next to "
+            << p;
+      }
+    }
+  }
+}
+
 // Run a couple of points through the estimator and confirm it works.
 TEST(NoncausalOffsetEstimatorTest, FullEstimator) {
   const aos::FlatbufferDetachedBuffer<Node> node_a_buffer =

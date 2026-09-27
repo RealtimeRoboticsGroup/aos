@@ -559,4 +559,76 @@ TEST(TimestampProblemTest, SolveNewton) {
       << derivatives.df_slope_limited;
 }
 
+// Tests that the solver converges when the solution is right next to a point
+// from the opposite filter which bends the line.
+//
+// a's offset, in a's time:
+//
+//  -1ms  A0 - - - - - - - - - - - - - - - - - - - - - - - - A20
+//           `--.__                                   __.--'
+//                 `--.__  -500ppm     +500ppm  __.--'
+//                       `--.__           __.--'
+//  -6ms                       `---B10---'
+//
+//        0s                       10s                       20s
+//
+// B10 is b's sample at 10s, flipped into a at 10.006s.  The slope of a's line
+// changes by 1000ppm there.  Solving for b at 10s puts a 1ns past B10, since
+// kMinNetworkDelay is split between the two directions.  If the line jumps
+// anywhere within that 1ns, the gradient changes sign across the jump without
+// ever reaching 0, and Newton's method bounces across it forever.
+TEST(TimestampProblemTest, SolveNewtonNextToBentCorner) {
+  FlatbufferDetachedBuffer<Node> node_a_buffer =
+      JsonToFlatbuffer<Node>("{\"name\": \"test_a\"}");
+  const Node *const node_a = &node_a_buffer.message();
+
+  FlatbufferDetachedBuffer<Node> node_b_buffer =
+      JsonToFlatbuffer<Node>("{\"name\": \"test_b\"}");
+  const Node *const node_b = &node_b_buffer.message();
+
+  const BootTimestamp e{0, monotonic_clock::epoch()};
+
+  NoncausalTimestampFilter a(node_a, node_b);
+  a.Sample(e, {0, -chrono::milliseconds(1)});
+  a.Sample(e + chrono::seconds(20), {0, -chrono::milliseconds(1)});
+
+  // Only the sample at 10s, flipped, is below a's line.
+  NoncausalTimestampFilter b(node_b, node_a);
+  b.Sample(e + chrono::seconds(4), {0, chrono::microseconds(500)});
+  b.Sample(e + chrono::seconds(10), {0, chrono::milliseconds(6)});
+  b.Sample(e + chrono::seconds(16), {0, chrono::microseconds(500)});
+  ASSERT_EQ(b.timestamps_size(), 3u);
+
+  TimestampProblem problem(2);
+  problem.set_base_clock(0, e + chrono::seconds(10));
+  problem.set_base_clock(1, e + chrono::seconds(10));
+  problem.add_clock_offset_filter(0, &a, 1, &b);
+  problem.add_clock_offset_filter(1, &b, 0, &a);
+
+  std::vector<BootTimestamp> points(problem.size(), BootTimestamp::max_time());
+  points[1] = e + chrono::seconds(10);
+  problem.set_points(points);
+
+  // Normal solves take 10 iterations or fewer.  Anything which doesn't
+  // converge bounces until it hits the limit.
+  constexpr size_t kMaxIterations = 400u;
+  NewtonSolver solver;
+  const std::tuple<Eigen::VectorXd, size_t, size_t> result =
+      solver.SolveNewton(&problem, kMaxIterations);
+  EXPECT_LE(std::get<2>(result), 10u);
+  EXPECT_EQ(std::get<1>(result), 1u);
+
+  const std::vector<BootTimestamp> times =
+      problem.PackResults(false, std::get<0>(result));
+  EXPECT_EQ(times[1], e + chrono::seconds(10));
+  EXPECT_EQ(times[0], e + chrono::seconds(10) + chrono::milliseconds(6) +
+                          chrono::nanoseconds(1));
+  EXPECT_TRUE(problem.ValidateSolution(times, false));
+
+  // And we are at the minimum, not bouncing around it.
+  const Problem::Derivatives derivatives = problem.ComputeDerivatives(
+      0, std::get<0>(result), true, false, absl::Span<const size_t>());
+  EXPECT_NEAR(derivatives.gradient.norm(), 0.0, 1e-3) << derivatives.gradient;
+}
+
 }  // namespace aos::message_bridge::testing
