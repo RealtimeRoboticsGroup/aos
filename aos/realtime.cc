@@ -22,6 +22,7 @@
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "absl/synchronization/internal/create_thread_identity.h"
 
 #include "aos/sanitizers.h"
 
@@ -203,6 +204,13 @@ bool MarkRealtime(bool realtime) {
     // initialization that belongs before the realtime section belongs there
     // everywhere, even where today's implementation happens not to allocate.
     absl::base_internal::NumCPUs();
+    // The contended path also creates the calling thread's absl identity the
+    // first time this thread takes it, and on macOS that mallocs.  The
+    // identity lives in a thread_local with a destructor, and dyld registers
+    // that destructor (ThreadLocalVariables::addTermFunc) into a heap-allocated
+    // list on the thread's first touch.  This is per-thread, not call-once, so
+    // it has to happen here on the thread that is going realtime.
+    absl::synchronization_internal::GetOrCreateCurrentThreadIdentity();
   }
   const bool prior = GetIsRealtime();
   SetIsRealtime(realtime);
