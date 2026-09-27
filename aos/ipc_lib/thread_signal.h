@@ -87,8 +87,9 @@ class ThreadSignalReceiver {
   int fd() const { return fd_; }
 #endif
 
-  // Drains any pending wakeups so we don't immediately wake again.
-  void ConsumeWakeup();
+  // Drains any pending wakeups so we don't immediately wake again.  Returns
+  // whether it consumed anything; a platform that cannot tell returns true.
+  bool ConsumeWakeup();
 
   // Leaves kWakeupSignal blocked (Linux) / ignored (macOS) when this receiver
   // is destroyed, rather than restoring the previous disposition.  This closes
@@ -100,9 +101,6 @@ class ThreadSignalReceiver {
  private:
   // Nothing backs the receiver on macOS, so it has no state at all.
 #if !defined(__APPLE__)
-  // Reads a single signalfd_siginfo.  On error/EAGAIN the resulting ssi_signo
-  // is 0.
-  signalfd_siginfo Read();
 
   int fd_ = -1;
   // Whether the destructor unblocks kWakeupSignal.  False if it was already

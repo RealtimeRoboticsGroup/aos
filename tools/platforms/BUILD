@@ -15,6 +15,7 @@ platform(
         "//tools/platforms/nodejs:has_support",
         "//tools/platforms/python:has_support",
         "//tools/platforms/gpu:nvidia",
+        "//tools/platforms/io_uring:has_support",
     ],
     exec_properties = {
         "OSFamily": "Linux",
@@ -40,6 +41,7 @@ platform(
         "//tools/platforms/nodejs:has_support",
         "//tools/platforms/python:has_support",
         "//tools/platforms/gpu:none",
+        "//tools/platforms/io_uring:has_support",
     ],
     exec_properties = {
         "OSFamily": "Linux",
@@ -66,6 +68,9 @@ platform(
         "//tools/platforms/nodejs:lacks_support",
         "//tools/platforms/python:has_support",
         "//tools/platforms/gpu:nvidia",
+        # Not yet -- the aarch64 boards have not been moved to a kernel new
+        # enough for io_uring.  Flip this to has_support once they are.
+        "//tools/platforms/io_uring:lacks_support",
     ],
     flags = _DEFAULT_WARNING_FLAGS,
 )
@@ -87,6 +92,8 @@ platform(
         "//tools/platforms/python:lacks_support",
         "//tools/platforms/gpu:none",
         "@rules_bzlmodrio_toolchains//constraints/is_roborio:true",
+        # The roborio image's kernel predates io_uring entirely.
+        "//tools/platforms/io_uring:lacks_support",
     ],
     flags = _DEFAULT_WARNING_FLAGS,
 )
@@ -101,6 +108,7 @@ platform(
         "//tools/platforms/nodejs:lacks_support",
         "//tools/platforms/python:lacks_support",
         "//tools/platforms/gpu:none",
+        "//tools/platforms/io_uring:lacks_support",
     ],
     flags = _DEFAULT_WARNING_FLAGS,
 )
@@ -115,6 +123,7 @@ platform(
         "//tools/platforms/nodejs:lacks_support",
         "//tools/platforms/python:lacks_support",
         "//tools/platforms/gpu:none",
+        "//tools/platforms/io_uring:lacks_support",
     ],
     flags = _DEFAULT_WARNING_FLAGS,
 )
@@ -129,6 +138,7 @@ platform(
         "//tools/platforms/nodejs:lacks_support",
         "//tools/platforms/python:lacks_support",
         "//tools/platforms/gpu:none",
+        "//tools/platforms/io_uring:lacks_support",
     ],
     flags = _DEFAULT_WARNING_FLAGS,
 )
@@ -145,6 +155,7 @@ platform(
         "//tools/platforms/nodejs:has_support",
         "//tools/platforms/python:has_support",
         "//tools/platforms/gpu:none",
+        "//tools/platforms/io_uring:lacks_support",
     ],
     flags = _DEFAULT_WARNING_FLAGS + [
         # We need at least 14.4 for os_sync_wait_on_address (used by aos_sync.cc).
@@ -162,6 +173,7 @@ platform(
         "//tools/platforms/nodejs:has_support",
         "//tools/platforms/python:has_support",
         "//tools/platforms/gpu:none",
+        "//tools/platforms/io_uring:lacks_support",
     ],
     flags = [
         "--features=-default_cpp_std",

@@ -1,8 +1,5 @@
 #include "aos/events/epoll.h"
 
-#include <sys/socket.h>
-#include <sys/stat.h>
-
 #include <algorithm>
 #include <cstring>
 #include <iostream>
@@ -10,6 +7,8 @@
 
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+
+#include "aos/events/socket_error.h"
 
 namespace aos {
 
@@ -118,30 +117,6 @@ void EPoll::DeleteFd(int fd) {
   ABSL_LOG(FATAL) << "fd " << fd << " not found";
 }
 
-namespace {
-bool IsSocket(int fd) {
-  struct stat st;
-  if (fstat(fd, &st) == -1) {
-    return false;
-  }
-  return static_cast<bool>(S_ISSOCK(st.st_mode));
-}
-
-::std::string GetSocketErrorStr(int fd) {
-  ::std::string error_str;
-  if (IsSocket(fd)) {
-    int error = 0;
-    socklen_t errlen = sizeof(error);
-    if (getsockopt(fd, SOL_SOCKET, SO_ERROR, (void *)&error, &errlen) == 0) {
-      if (error) {
-        error_str = "Socket error: " + ::std::string(strerror(error));
-      }
-    }
-  }
-  return error_str;
-}
-}  // namespace
-
 void EPoll::InOutEventData::DoCallbacks(uint32_t events) {
   if (events & kInEvents) {
     ABSL_CHECK(in_fn)
@@ -159,7 +134,7 @@ void EPoll::InOutEventData::DoCallbacks(uint32_t events) {
     ABSL_CHECK(err_fn)
         << ": No handler registered for error events on descriptor " << fd
         << ". Received events = 0x" << std::hex << events << std::dec << ". "
-        << GetSocketErrorStr(fd);
+        << internal::GetSocketErrorStr(fd);
     err_fn();
   }
 }

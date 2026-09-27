@@ -75,10 +75,24 @@ cc_library(
         "aio_linux.cc",
     ],
     hdrs = ["aio.h"],
+    # The --aio_backend default is a property of the target platform (there
+    # is no runtime fallback), so it is compiled in rather than probed.  See
+    # //tools/platforms/io_uring.
+    local_defines = select({
+        "//tools/platforms/io_uring:has_support": [
+            "AOS_AIO_DEFAULT_BACKEND=\\\"io_uring\\\"",
+        ],
+        "//tools/platforms/io_uring:lacks_support": [
+            "AOS_AIO_DEFAULT_BACKEND=\\\"epoll\\\"",
+        ],
+    }),
     target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         ":file_descriptor",
+        ":intrusive_rb_tree",
+        ":kernel_release",
+        ":socket_error",
         "//aos:realtime",
         "//aos/ipc_lib:thread_signal",
         "//aos/libc:aos_strerror",
@@ -89,6 +103,36 @@ cc_library(
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
         "@liburing",
+    ],
+)
+
+# The socket diagnostic EPoll appends to an unhandled error event, shared by
+# EPoll and the Aio backends so the message cannot drift between them.
+cc_library(
+    name = "socket_error",
+    hdrs = ["socket_error.h"],
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:private"],
+    deps = ["//aos/libc:aos_strerror"],
+)
+
+# Which kernels have the RWF_NOWAIT bug readv(2) documents.  Header-only and
+# portable, so the version parsing has a test of its own.
+cc_library(
+    name = "kernel_release",
+    hdrs = ["kernel_release.h"],
+    visibility = ["//visibility:private"],
+)
+
+cc_test(
+    name = "kernel_release_test",
+    srcs = ["kernel_release_test.cc"],
+    deps = [
+        ":kernel_release",
+        "//aos/testing:googletest",
     ],
 )
 
@@ -120,6 +164,8 @@ cc_test(
         "//aos:realtime",
         "//aos/ipc_lib:thread_signal",
         "//aos/testing:googletest",
+        "//aos/testing:tmpdir",
+        "@com_google_absl//absl/flags:commandlineflag",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:reflection",
         "@com_google_absl//absl/log:absl_check",
@@ -147,6 +193,7 @@ cc_library(
     }),
     visibility = ["//visibility:public"],
     deps = [
+        ":socket_error",
         "//aos/mutex",
         "//aos/time",
         "@com_google_absl//absl/log:absl_check",
@@ -181,6 +228,8 @@ cc_test(
         ":epoll",
         ":pipe",
         "//aos/testing:googletest",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 

@@ -8,8 +8,18 @@
 #include "absl/log/absl_check.h"
 
 #include "aos/events/aio.h"
+#include "aos/realtime.h"
 
 namespace aos {
+
+namespace internal {
+// What every backend says when a request is armed again before its callback
+// has run -- see AsyncRequest::done.  One string, so a death test matches it
+// on all of them.
+inline constexpr char kRequestStillInFlight[] =
+    ": AsyncRead()/AsyncWrite() on a request that is still in flight; wait "
+    "for its callback (a Cancel()ed request's too) before re-arming it";
+}  // namespace internal
 
 // Intrusive singly-linked LIFO stack.  The link lives inside the node;
 // Traits names it:
@@ -71,6 +81,31 @@ class IntrusiveStack {
 
  private:
   Node *head_ = nullptr;
+};
+
+// An IntrusiveStack which owns what is on it, deleting whatever is left when
+// it goes away.  Use it where the stack is the owner -- a free pool, a list of
+// orphaned states -- and plain IntrusiveStack where the nodes belong to
+// someone else, so the type says which it is.
+//
+// Where teardown order matters, keep calling Clear() explicitly at the point
+// it has to happen; the destructor is then a backstop rather than the plan.
+// That is the whole point: forgetting to drain one stops being a leak.
+template <typename Node, typename Traits>
+class OwningIntrusiveStack : public IntrusiveStack<Node, Traits> {
+ public:
+  OwningIntrusiveStack() = default;
+  // Copying one would double-free; nothing needs to move one yet.
+  OwningIntrusiveStack(const OwningIntrusiveStack &) = delete;
+  OwningIntrusiveStack &operator=(const OwningIntrusiveStack &) = delete;
+  ~OwningIntrusiveStack() { Clear(); }
+
+  // Deletes everything on the stack.  Allocator work, so not for RT threads.
+  void Clear() {
+    while (Node *node = this->Pop()) {
+      delete node;
+    }
+  }
 };
 
 // Intrusive doubly-linked FIFO with O(1) removal from anywhere in the list.
@@ -198,6 +233,9 @@ struct Aio::Impl {
   // overrides this to *orphan* the state instead: destruction submits an async
   // cancel and returns immediately, and the state is recycled once its last
   // kernel completion has drained.
+  //
+  // Illegal under RT on every backend, since this can free;
+  // Aio::Timer::~Timer() checks that before calling this.
   virtual void DestroyTimerState(std::unique_ptr<Aio::TimerState> state) {
     state.reset();
   }

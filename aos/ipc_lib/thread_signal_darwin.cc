@@ -108,8 +108,10 @@ ThreadSignalReceiver::~ThreadSignalReceiver() {
   WakeupSignalDisposition::Get().Unregister();
 }
 
-void ThreadSignalReceiver::ConsumeWakeup() {
-  // kqueue automatically consumes the signal event when returning it.
+bool ThreadSignalReceiver::ConsumeWakeup() {
+  // kqueue automatically consumes the signal event when returning it, so
+  // there is nothing here to tell.
+  return true;
 }
 
 void ThreadSignalReceiver::LeaveSignalBlocked() {

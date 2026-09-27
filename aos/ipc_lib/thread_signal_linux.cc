@@ -7,6 +7,8 @@
 #include <unistd.h>
 
 #include <csignal>
+#include <cstddef>
+#include <iterator>
 #include <ostream>
 
 #include "absl/log/absl_check.h"
@@ -102,28 +104,31 @@ ThreadSignalReceiver::~ThreadSignalReceiver() {
   ABSL_PCHECK(close(fd_) == 0);
 }
 
-signalfd_siginfo ThreadSignalReceiver::Read() {
-  signalfd_siginfo result;
-  const int ret =
-      read(fd_, static_cast<void *>(&result), sizeof(signalfd_siginfo));
-  // If we didn't get the right amount of data, signal that there was a problem
-  // by setting the signal number to 0.
-  if (ret != static_cast<int>(sizeof(signalfd_siginfo))) {
-    result.ssi_signo = 0;
-  } else {
-    ABSL_CHECK_NE(0u, result.ssi_signo);
-  }
-  return result;
-}
-
-void ThreadSignalReceiver::ConsumeWakeup() {
+bool ThreadSignalReceiver::ConsumeWakeup() {
+  // Batched: signalfd dequeues as many pending siginfos as fit the buffer,
+  // and a short count means the queue was empty at that moment -- so the
+  // common one-signal wakeup costs exactly one read(2), with no EAGAIN bounce
+  // to end the loop.
+  signalfd_siginfo siginfos[16];
+  bool consumed = false;
   while (true) {
-    signalfd_siginfo result = Read();
-    if (result.ssi_signo == 0) {
+    const ssize_t res = read(fd_, siginfos, sizeof(siginfos));
+    if (res < 0) {
+      ABSL_PCHECK(errno == EAGAIN || errno == EWOULDBLOCK)
+          << "Failed to read from signalfd";
       break;
     }
-    ABSL_CHECK_EQ(result.ssi_signo, kWakeupSignal);
+    ABSL_CHECK_EQ(res % sizeof(signalfd_siginfo), 0u);
+    const size_t count = res / sizeof(signalfd_siginfo);
+    for (size_t i = 0; i < count; ++i) {
+      ABSL_CHECK_EQ(siginfos[i].ssi_signo, kWakeupSignal);
+    }
+    consumed |= count > 0;
+    if (count < std::size(siginfos)) {
+      break;
+    }
   }
+  return consumed;
 }
 
 void ThreadSignalReceiver::LeaveSignalBlocked() {

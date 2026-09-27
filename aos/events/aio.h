@@ -59,11 +59,19 @@ struct AsyncRequest {
   void *user_data = nullptr;
 
   // Tracks if request has completed or is not currently pending.
+  //
+  // Set when the request resolves, which can be before its callback runs:
+  // one Poll() resolves everything that is ready but delivers one callback
+  // (see Aio::Poll()), so the rest are delivered by the next Poll()s.  A
+  // `while (!req.done && aio.Poll(true))` loop can therefore exit with the
+  // callback still queued.  The request is not free to re-arm or destroy
+  // until its callback has run; re-arming it before then is fatal on every
+  // backend.
   bool done = true;
 
   // Internal state managed entirely by the Aio implementation.  Callers must
   // not read or modify this field.
-  alignas(8) uint8_t internal_state[32] = {0};
+  alignas(8) uint8_t internal_state[64] = {0};
 };
 
 // Aio is a cross-platform asynchronous I/O multiplexer and event loop engine.
@@ -114,6 +122,9 @@ struct AsyncRequest {
 //    lockless_queue.cc's RobustOwnershipTracker) -- which SINGLE_ISSUER's
 //    binding would forbid. See
 //    documentation/adr/0001-aio-io-uring-single-issuer.md.
+//
+//    The epoll backend deliberately enforces none of this, so
+//    --aio_backend=epoll remains an unconstrained fallback.
 // 2. Request Lifetime: The caller-supplied AsyncRequest object and any buffers
 //    must remain valid and allocated in memory from the time it is submitted
 //    until its corresponding CompletionCallback is executed -- including for
@@ -139,6 +150,12 @@ struct AsyncRequest {
 //    function, or a destructor the loop runs on its way out of a
 //    dispatch.  To wait for another completion, return and let the event
 //    loop deliver it.
+// 4. Handler/Request Exclusivity: legacy readiness handlers
+//    (OnReadable/OnWritable/OnError/OnEvents) and raw requests
+//    (AsyncRead/AsyncWrite) are mutually exclusive on a descriptor, in both
+//    directions: an fd is either driven by handlers or by requests, never a
+//    mix.  Registering either kind on an fd already carrying the other is
+//    fatal.
 class Aio {
  public:
   struct TimerState;
@@ -154,38 +171,31 @@ class Aio {
   // Drives the loop continuously until Quit() is called.
   void Run();
 
-  // Polls for and processes active completions.
-  // Returns true if any event (including timers or wakeup signals) was
+  // Polls for and processes active completions.  Returns true if anything was
   // processed.
   //
-  // Dispatches at most ONE user-visible completion per call, on every
-  // backend: one raw AsyncRead/AsyncWrite completion, one timer firing, or
-  // one legacy fd's readiness events.  Internal completions (the wakeup
-  // read, poll re-arms, a legacy firing with nothing left to report) are
-  // not rationed: a single Poll() dispatches as many of those as it takes
-  // to reach the first user-visible one (or empty its queue).  One bounded
-  // exception to "one": a legacy fd can deliver readable, writable, and
-  // error together in one Poll(), as EPoll always has.  (A thread-signal
-  // receiver is NOT an exception: pending wakeups coalesce into a single
-  // callback invocation -- see RegisterThreadSignalReceiver().)
-  // A backend that learns about several ready user-visible completions at
-  // once (io_uring drains the whole completion queue; IOCP can have a
-  // queue of synchronous failures) delivers one and leaves the rest queued
-  // for the next call, so draining N ready completions takes N calls.
-  // That costs a loop iteration each -- not a syscall each -- and Run() is
-  // an unconditional drain loop, so it is not observable as latency.
+  // At most ONE user-visible completion per call, on every backend: one raw
+  // AsyncRead/AsyncWrite, one timer firing, or one fd's readiness.  Internal
+  // work (the wakeup read, poll re-arms, a legacy firing with nothing left to
+  // report) is not rationed -- Poll() runs as much of it as it takes to reach
+  // the first user-visible completion.  A backend that learns of several at
+  // once queues the rest, so draining N takes N calls: a loop iteration each,
+  // not a syscall each, and Run() drains unconditionally.
   //
-  // This is a contract, not an implementation accident: the alternative is
-  // that "how many callbacks does one Poll() run" depends on which backend
-  // you built against, which makes the backends distinguishable to any
-  // consumer that polls by hand.
+  // The rationing is a contract, not an accident -- without it, how many
+  // callbacks one Poll() runs would depend on which backend you built
+  // against.  One exception, inherited from EPoll::DoCallbacks() because
+  // callers rely on it: a legacy fd's readable, writable and error handlers
+  // run together.  Raw requests get no such carve-out -- an AsyncRead and an
+  // AsyncWrite on one fd take two Poll()s.  Thread-signal wakeups are not an
+  // exception either; they coalesce into one callback, see
+  // RegisterThreadSignalReceiver().
   //
-  // A blocking Poll() is not interrupted by signals: every backend
-  // absorbs EINTR and resumes waiting.  EPoll::Poll() returned false
-  // instead, but the `while (!signal_flag && Poll(true))` idiom that
-  // enabled was racy anyway (the pselect(2) race).  Shut down from a
-  // signal handler with Quit(): async-signal-safe, and its wakeup is
-  // queued, so it is never lost to that race.
+  // A blocking Poll() is not interrupted by signals: every backend absorbs
+  // EINTR and resumes.  EPoll::Poll() returned false instead, but the
+  // `while (!signal_flag && Poll(true))` idiom that enabled was racy anyway
+  // (the pselect(2) race).  Shut down from a signal handler with Quit():
+  // async-signal-safe, and its wakeup is queued, so it is never lost.
   bool Poll(bool block);
 
   // Signals the loop to terminate execution.  Async-signal-safe (see
@@ -203,10 +213,62 @@ class Aio {
   void Quit();
 
   // Schedules an asynchronous read on a file descriptor.
+  //
+  // How many raw requests may be in flight on one fd at once is
+  // backend-dependent, deliberately.  io_uring can have any number.  The
+  // readiness backends hold one per direction per fd -- a registration has
+  // one slot each way -- and CHECK a second with "Duplicate AsyncRead on
+  // fd".  Restricting io_uring to match would give up something it is good
+  // at, so portable callers keep to one read and one write per fd at a time.
+  //
+  // The fd may be blocking or non-blocking, and of any kind, regular files
+  // and devices included.  The ideal, which io_uring meets: the thread
+  // driving the loop never sleeps waiting for the fd to have data or room,
+  // the fd's flags are left as they were, and a regular-file read is not cut
+  // short by what happens to be cached.
+  //
+  // The readiness backends have gaps:
+  //   - An fd with no per-call way to avoid sleeping (on Linux, any fd that
+  //     refuses RWF_NOWAIT: a tty, say, or a pipe or socket on an older
+  //     kernel; and every fd on Linux 5.9 and 5.10, whose RWF_NOWAIT reads
+  //     can return a spurious 0) may be made O_NONBLOCK and left that way.
+  //   - Nothing can wait for a regular file or block device to be ready, so
+  //     their I/O runs synchronously inside Poll(), and the loop thread
+  //     sleeps on the disk.
+  //   - A regular-file read may return only the bytes already cached, fewer
+  //     than asked, as read(2) allows.  It returns 0 only at end of file.
+  //   - A device they cannot poll is not supported.
+  //   - A zero-length request never reaches a non-socket file: it completes
+  //     with 0 (or EBADF).  io_uring hands it to files whose kernel read or
+  //     write path takes it, and those apply their own rules: an eventfd
+  //     refuses io_uring's empty read with EINVAL.
+  // Use io_uring where any of these matter.  None of them is fundamental:
+  // if a real requirement runs into one, the backend can do better, and
+  // contributions are welcome.
+  //
+  // Each request is attempted in submission order, as the kernel runs an
+  // io_uring submission queue.  Requests that complete without waiting
+  // (ready data, room to write, a zero-length buffer, an error) resolve in
+  // submission order.  A Cancel() resolves after all of those submitted
+  // before the same Poll(), including ones submitted after the Cancel():
+  // io_uring completes them while it submits the batch, and the canceled
+  // request once the submit is done.  Cancels resolve in the order they were
+  // made.  A request that has to wait for readiness resolves whenever its fd
+  // is ready, and nothing orders it against other fds.  On io_uring, a batch
+  // that fills the submission queue is submitted in parts, and this ordering
+  // holds within each part.
+  //
+  // The fd must stay open until the request's callback has run.  Closing it
+  // with a request armed -- Cancel() it and wait for the callback first -- is
+  // a contract violation: io_uring still completes the I/O against the file
+  // it holds, while a readiness backend dies where it can tell, and
+  // otherwise may leave the request pending forever or do its I/O on
+  // whatever file reuses the number.
   void AsyncRead(FileDescriptor fd, std::span<char> buffer,
                  AsyncRequest *request);
 
-  // Schedules an asynchronous write to a file descriptor.
+  // Schedules an asynchronous write to a file descriptor.  The fd rules are
+  // AsyncRead()'s.
   void AsyncWrite(FileDescriptor fd, std::span<const char> buffer,
                   AsyncRequest *request);
 
@@ -297,6 +359,14 @@ class Aio {
   //
   // A fd may be registered exclusively with OnReadable/OnWritable/OnError OR
   // OnEvents.
+  //
+  // A hangup that arrives with nothing else to report (an empty pipe whose
+  // writer closed), and an error on an fd with no OnError() function (a full
+  // pipe whose reader closed), go to the OnError() function if there is one,
+  // and otherwise to the OnReadable()/OnWritable() one, whose read(2) then
+  // sees EOF or the error, and whose write(2) sees EPIPE or the error.  The
+  // handler has to retire it (DeleteFd(), usually) or it is reported again,
+  // like any other level-triggered condition.
   void OnReadable(FileDescriptor fd, std::function<void()> callback);
 
   // Registers a function to be called when the fd has an error.
@@ -317,6 +387,11 @@ class Aio {
   // The function is passed an argument containing the events which occurred.
   // Configure events to call this function for using SetEvents.
   //
+  // The event encoding, in the argument and in SetEvents()'s mask, is the
+  // low four epoll bits on every platform: readable 0x01, priority data
+  // 0x02, writable 0x04, error 0x08.  Error conditions are always
+  // reported, and a hangup is delivered as the error bit.
+  //
   // A fd may be registered exclusively with OnReadable/OnWritable/OnError OR
   // OnEvents.
   void OnEvents(FileDescriptor fd, std::function<void(uint32_t)> callback);
@@ -335,7 +410,8 @@ class Aio {
   // Enables calling the existing function registered for fd when it becomes
   // writable.
   //
-  // This is only for fds registered using OnWritable, not OnEvents.
+  // This is only for fds registered using OnWritable, not OnEvents.  A
+  // writable event on an fd with no OnWritable function is a crash.
   void EnableWritable(FileDescriptor fd);
 
   // Disables calling the existing function registered for fd when it becomes
@@ -344,9 +420,11 @@ class Aio {
   // This is only for fds registered using OnWritable, not OnEvents.
   void DisableWritable(FileDescriptor fd);
 
-  // Sets the epoll events for the given fd.  Be careful using this with
-  // OnReadable/OnWritable/OnError: enabled events which fire with no handler
-  // registered will result in a crash.
+  // Sets the events to deliver to fd's OnEvents function, in the encoding
+  // documented there.  Error events are delivered regardless of the mask,
+  // but only while the fd is registered: a mask of 0 removes the fd from the
+  // underlying poller entirely, so nothing at all is delivered until a later
+  // SetEvents() subscribes it again.
   //
   // This is only for fds registered using OnEvents.
   void SetEvents(FileDescriptor fd, uint32_t events);
@@ -381,6 +459,7 @@ class Aio {
  private:
   struct Impl;
   friend class IoUringImpl;
+  friend class EpollImpl;
 
   std::unique_ptr<Impl> impl_;
 };
