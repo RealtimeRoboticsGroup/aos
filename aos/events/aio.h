@@ -7,6 +7,7 @@
 #include <span>
 #include <vector>
 
+#include "aos/events/file_descriptor.h"
 #include "aos/time/time.h"
 #include "aos/util/status.h"
 
@@ -15,12 +16,6 @@ namespace aos {
 namespace ipc_lib {
 class ThreadSignalReceiver;
 }  // namespace ipc_lib
-
-#if defined(_WIN32)
-using FileDescriptor = void *;
-#else
-using FileDescriptor = int;
-#endif
 
 // Represents the payload returned upon completion of an async operation.
 //
