@@ -1,59 +1,45 @@
 #ifndef AOS_EVENTS_PIPE_H_
 #define AOS_EVENTS_PIPE_H_
 
-#include <fcntl.h>
-#include <unistd.h>
-
+#include <cstddef>
 #include <string>
+#include <string_view>
 
-#include "absl/log/absl_check.h"
+#include "aos/events/file_descriptor.h"
 
 namespace aos {
 
 // A simple wrapper around both ends of a pipe along with some helpers to easily
 // read/write data through it.
+//
+// Both ends are non-blocking.  On Windows, where there is no pollable pipe, the
+// two ends are a connected loopback socket pair with pipe-sized buffers; see
+// pipe_windows.cc.
 class Pipe {
  public:
-  Pipe() {
-    ABSL_PCHECK(pipe(fds_) == 0);
-    ABSL_PCHECK(fcntl(fds_[0], F_SETFL, O_NONBLOCK) == 0);
-    ABSL_PCHECK(fcntl(fds_[1], F_SETFL, O_NONBLOCK) == 0);
-  }
-  ~Pipe() {
-    if (fds_[0] >= 0) {
-      ABSL_PCHECK(close(fds_[0]) == 0);
-    }
-    if (fds_[1] >= 0) {
-      ABSL_PCHECK(close(fds_[1]) == 0);
-    }
-  }
+  Pipe();
+  ~Pipe();
 
-  int read_fd() { return fds_[0]; }
-  int write_fd() { return fds_[1]; }
-  void close_read_fd() {
-    ABSL_PCHECK(close(fds_[0]) == 0);
-    fds_[0] = -1;
-  }
-  void close_write_fd() {
-    ABSL_PCHECK(close(fds_[1]) == 0);
-    fds_[1] = -1;
-  }
+  Pipe(const Pipe &) = delete;
+  Pipe &operator=(const Pipe &) = delete;
 
-  void Write(const std::string &data) {
-    ABSL_CHECK_EQ(write(write_fd(), data.data(), data.size()),
-                  static_cast<ssize_t>(data.size()));
-  }
+  FileDescriptor read_fd() const { return fds_[0]; }
+  FileDescriptor write_fd() const { return fds_[1]; }
+  void close_read_fd();
+  void close_write_fd();
 
-  std::string Read(size_t size) {
-    std::string result;
-    result.resize(size);
-    ABSL_CHECK_EQ(read(read_fd(), result.data(), size),
-                  static_cast<ssize_t>(size));
-    return result;
-  }
+  // Writes all of data, checking that none of it was dropped.
+  void Write(std::string_view data);
+
+  // Reads exactly size bytes.
+  std::string Read(size_t size);
+
+  // Returns whether the write end could accept data right now, without
+  // blocking, writing, or leaving any notification state armed on the fd.
+  bool write_ready();
 
  private:
-  int fds_[2];
+  FileDescriptor fds_[2];
 };
 
 }  // namespace aos

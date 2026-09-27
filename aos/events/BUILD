@@ -43,6 +43,30 @@ cc_static_flatbuffer(
     target = ":event_loop_fbs_reflection_out",
 )
 
+# Process-lifetime Winsock startup, shared by every AOS component that makes
+# a SOCKET.  Its own target so each can depend on it without depending on
+# the others.
+cc_library(
+    name = "winsock_init",
+    srcs = select({
+        "@platforms//os:windows": ["winsock_init.cc"],
+        "//conditions:default": [],
+    }),
+    hdrs = ["winsock_init.h"],
+    linkopts = select({
+        "@platforms//os:windows": ["-DEFAULTLIB:ws2_32.lib"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:public"],
+    deps = ["@com_google_absl//absl/log:absl_check"],
+)
+
+cc_library(
+    name = "file_descriptor",
+    hdrs = ["file_descriptor.h"],
+    visibility = ["//visibility:public"],
+)
+
 cc_library(
     name = "aio",
     srcs = [
@@ -54,6 +78,7 @@ cc_library(
     target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
+        ":file_descriptor",
         "//aos:realtime",
         "//aos/ipc_lib:thread_signal",
         "//aos/libc:aos_strerror",
@@ -132,12 +157,21 @@ cc_library(
 cc_library(
     name = "pipe",
     testonly = True,
+    srcs = select({
+        "@platforms//os:windows": ["pipe_windows.cc"],
+        "//conditions:default": ["pipe_unix.cc"],
+    }),
     hdrs = [
         "pipe.h",
     ],
     deps = [
+        ":file_descriptor",
         "@com_google_absl//absl/log:absl_check",
-    ],
+        "@com_google_absl//absl/log:absl_log",
+    ] + select({
+        "@platforms//os:windows": [":winsock_init"],
+        "//conditions:default": [],
+    }),
 )
 
 cc_test(
