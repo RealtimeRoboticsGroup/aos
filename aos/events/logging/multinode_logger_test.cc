@@ -4641,6 +4641,135 @@ TEST_P(MultinodeLoggerTest, OneDirectionTimeDrift) {
   ConfirmReadable(filenames);
 }
 
+// Tests that we can replay a log where the samples from pi1 to pi2 bend the
+// line through the samples from pi2 to pi1 during a long gap, and then stop
+// bending it part way through the gap.  This happens when the clocks drift,
+// and then pi1 to pi2 goes quiet for a while and comes back with more network
+// delay.
+//
+//  pi1 - pi2
+//    5ms  |                                  ..
+//         |                               ...o,...
+//         |                             ..,o,  ,o,..
+//         |                          ...,o        o ...
+//         |                        ..,o,           ,,  ..
+//         |                     ...o,                ,   ...
+//         |  .                ..,o,                   ,     ..
+//         |   .            ...,o                       ,,     ...
+//         |    ..        ..,o,                           ,       ..
+//         |      .    ...o,                               ,        ...
+//    0ms  |       *..*,o,                                  ,,         .*
+//         |       o,,o                                       ,
+//         |      ,                                            ,
+//         |    ,,                                              x,
+//         |   ,                                                  x,,
+//         |  ,                                                      x,
+//         |                                                           ,x
+//         +--------------------------------------------------------------
+//                 0s 1s                      11s   13s         18s     21s
+//                    |<------------ no pi2 -> pi1 samples ------------>|
+//                                                  |<- quiet ->|
+//
+// Letters are samples:
+//   * pi2 -> pi1 samples.  pi2 -> pi1 is disconnected from 1s to 21s, so
+//     there are none in between.
+//   o pi1 -> pi2 samples while the clocks drift apart.  pi1 -> pi2 then goes
+//     quiet from 13s to 18s.
+//   x pi1 -> pi2 samples after the quiet period.  They have 2.4ms more network
+//     delay.
+//
+// Each direction has a line:
+//   . pi2 -> pi1's line.  Its own samples are just the *'s, but the o's are
+//     above the straight line between them, so it bends up through the o's,
+//     kMinNetworkDelay() (2ns) above them.  After the last o at 13s, it goes
+//     straight to the * at 21s.
+//   , pi1 -> pi2's line.  It goes through its own samples, the o's and then
+//     the x's.  The *'s are never below it, so they don't bend it.
+//
+// The gaps between the *'s and the o's, and between the lines where they run
+// together, are drawn bigger than they are so both show.
+//
+// Before the first samples at 0s, each line moves away from its own samples
+// at the max slope, kMaxVelocity() (1000ppm, or 1ms/s), since that is as far
+// as the clocks could have drifted.
+//
+// Solving the first x at 18s uses the dotted line from the o at 13s to the *
+// at 21s.  Once that is solved, pi1 -> pi2 is done with the o at 13s, and it
+// used to get popped.  That also took it out of the dotted line, which snapped
+// back to straight from 1s to 21s, so the next solution, 100us later on pi2,
+// was 600us earlier on pi1.
+TEST_P(MultinodeLoggerTest, OneDirectionDriftWithDelayJump) {
+  std::vector<std::string> filenames;
+
+  time_converter_.AddNextTimestamp(
+      distributed_clock::epoch(),
+      {BootTimestamp::epoch(), BootTimestamp::epoch()});
+
+  const chrono::nanoseconds before_disconnect_duration =
+      time_converter_.AddMonotonic(
+          {chrono::milliseconds(1000), chrono::milliseconds(1000)});
+
+  // pi2 falls 5ms behind pi1, and then catches back up.  The samples from pi1
+  // to pi2 then land far past the line through the samples from pi2 to pi1
+  // before and after the gap.
+  const chrono::nanoseconds drift_duration =
+      time_converter_.AddMonotonic(
+          {chrono::milliseconds(10000),
+           chrono::milliseconds(10000) - chrono::milliseconds(5)}) +
+      time_converter_.AddMonotonic(
+          {chrono::milliseconds(10000),
+           chrono::milliseconds(10000) + chrono::milliseconds(5)});
+
+  const chrono::nanoseconds after_reconnect_duration =
+      time_converter_.AddMonotonic(
+          {chrono::milliseconds(5000), chrono::milliseconds(5000)});
+
+  // While pi2 is catching back up, pi1 stops talking to pi2 for a while.  When
+  // it comes back, the extra network delay puts its samples back inside the
+  // line through the samples from pi2 to pi1.  The jump needs to be gradual
+  // enough to not get rejected by the slope limit.
+  const chrono::nanoseconds before_quiet_duration = chrono::milliseconds(12000);
+  const chrono::nanoseconds quiet_duration = chrono::microseconds(5003400);
+  const chrono::nanoseconds delay_jump = chrono::microseconds(2400);
+
+  const std::string kLogfile =
+      aos::testing::TestTmpDir() + "/logs/multi_logfile2.1/";
+
+  {
+    LoggerState pi2_logger = MakeLogger(pi2_);
+    pi2_logger.StartLogger(kLogfile);
+    event_loop_factory_.RunFor(before_disconnect_duration);
+
+    pi2_->Disconnect(pi1_->node());
+
+    event_loop_factory_.RunFor(before_quiet_duration);
+    pi1_->Disconnect(pi2_->node());
+    event_loop_factory_.RunFor(quiet_duration);
+
+    for (const Channel *channel :
+         *event_loop_factory_.configuration()->channels()) {
+      if (channel->has_source_node() &&
+          channel->source_node()->string_view() == "pi1") {
+        event_loop_factory_.set_channel_network_delay_override(
+            channel, event_loop_factory_.network_delay() + delay_jump);
+      }
+    }
+    pi1_->Connect(pi2_->node());
+
+    event_loop_factory_.RunFor(drift_duration - before_quiet_duration -
+                               quiet_duration);
+
+    pi2_->Connect(pi1_->node());
+
+    event_loop_factory_.RunFor(after_reconnect_duration);
+    pi2_logger.AppendAllFilenames(&filenames);
+  }
+
+  const std::vector<LogFile> sorted_parts = SortParts(filenames);
+  EXPECT_TRUE(AllPartsMatchOutOfOrderDuration(sorted_parts));
+  ConfirmReadable(filenames);
+}
+
 // Test the that we can handle a log which has an asymetric record (between
 // VPUs) of a particular boot combination. The only trace of boot index 1 on the
 // remote node is a message that exists in the fetcher queue. This can occur

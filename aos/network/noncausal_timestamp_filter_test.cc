@@ -1653,6 +1653,73 @@ TEST_F(NoncausalTimestampFilterTest, DuplicateSample) {
   EXPECT_EQ(filter.timestamp(2), std::make_tuple(tc, oc));
 }
 
+// Tests that popping a point from one filter doesn't change the line of the
+// opposite filter while that line is still in use.  The opposite filter pulls
+// points from this filter into its line when they are below it (see
+// other_points_), so popping them early moves the line under a solution which
+// has already been returned, and time can go backwards.
+//
+// a's offset, in a's time:
+//
+//  -1000.0us  A0 - - - - - - - - - - - - - - - A20 ------------- A30
+//                `--.__                   __.-'
+//                      `--.__        _.--'
+//  -1000.5us                 `--B15-'
+//
+//             0s             15s  16s      20s                30s
+//                                  ^ solve here
+//
+// B15 is b's sample at 15s, flipped into a.  It is below the straight line
+// from A0 to A20, so a's line bends down through it.  After solving at 16s,
+// popping b past 15s used to drop B15, and a's line at 16s would jump back up
+// to the dashed line.
+TEST_F(NoncausalTimestampFilterTest, PopKeepsPointsUsedByOther) {
+  const BootTimestamp e{0, monotonic_clock::epoch()};
+
+  // a -> b offsets are about -1ms, with a long gap between samples.
+  TestingNoncausalTimestampFilter filter_a(node_a, node_b);
+  filter_a.Sample(e, {0, -chrono::microseconds(1000)});
+  filter_a.Sample(e + chrono::seconds(20), {0, -chrono::microseconds(1000)});
+  filter_a.Sample(e + chrono::seconds(30), {0, -chrono::microseconds(1000)});
+
+  // b -> a offsets.  The sample at 15 seconds, flipped, lands at
+  // 15.0010005 seconds on a with an offset of -1000.5us, below the line
+  // through a's samples.  a's line should bend down to go through it.
+  TestingNoncausalTimestampFilter filter_b(node_b, node_a);
+  filter_b.Sample(e + chrono::seconds(13), {0, chrono::microseconds(990)});
+  filter_b.Sample(e + chrono::seconds(15), {0, chrono::nanoseconds(1000500)});
+  filter_b.Sample(e + chrono::seconds(17), {0, chrono::microseconds(998)});
+  filter_b.Sample(e + chrono::milliseconds(17500),
+                  {0, chrono::microseconds(999)});
+
+  const BootTimestamp ta = e + chrono::seconds(16);
+  const BootDuration offset = filter_a.Offset(&filter_b, Pointer(), ta, 0);
+  // Confirm the flipped point is actually being used.
+  EXPECT_LT(offset.duration, -chrono::microseconds(1000));
+  EXPECT_NE(offset, filter_a.Offset(nullptr, Pointer(), ta, 0));
+
+  // Solve at ta, and freeze like the solver does.  a's line from 15 to 20
+  // seconds is still in use.
+  filter_a.FreezeUntil(ta, ta + offset);
+  filter_b.FreezeUntil(ta + offset, ta);
+
+  // Popping b past its 15 second sample would drop the point bending a's line.
+  // It needs to stay.
+  EXPECT_FALSE(filter_b.Pop(e + chrono::seconds(17), &filter_a));
+  EXPECT_EQ(filter_b.timestamps_size(), 4u);
+  EXPECT_EQ(offset, filter_a.Offset(&filter_b, Pointer(), ta, 0));
+
+  // Once a has moved past the segment which uses the point, it can be popped.
+  const BootTimestamp ta2 = e + chrono::seconds(25);
+  const BootDuration offset2 = filter_a.Offset(&filter_b, Pointer(), ta2, 0);
+  filter_a.FreezeUntil(ta2, ta2 + offset2);
+  filter_b.FreezeUntil(ta2 + offset2, ta2);
+
+  EXPECT_TRUE(filter_b.Pop(e + chrono::seconds(17), &filter_a));
+  EXPECT_EQ(filter_b.timestamps_size(), 2u);
+  EXPECT_EQ(offset2, filter_a.Offset(&filter_b, Pointer(), ta2, 0));
+}
+
 // Run a couple of points through the estimator and confirm it works.
 TEST(NoncausalOffsetEstimatorTest, FullEstimator) {
   const aos::FlatbufferDetachedBuffer<Node> node_a_buffer =

@@ -3145,185 +3145,204 @@ Result<std::optional<
 MultiNodeNoncausalOffsetEstimator::NextTimestamp() {
   // TODO(austin): Detect and handle there being fewer nodes in the log file
   // than in replay, or them being in a different order.
-  return MakeProblem().and_then([this](TimestampProblem problem)
-                                    -> Result<std::optional<std::tuple<
-                                        distributed_clock::time_point,
-                                        std::vector<BootTimestamp>>>> {
-    // Ok, now solve for the minimum time on each channel.
-    auto next_solution = NextSolution(&problem, last_monotonics_);
-    if (!next_solution.has_value()) {
-      return MakeError("Unable to solve timestamp problem.");
-    }
-    std::vector<BootTimestamp> result_times =
-        std::move(std::get<1>(next_solution.value()));
-    NoncausalTimestampFilter *next_filter = nullptr;
-    int solution_node_index = 0;
-    std::tie(next_filter, std::ignore, solution_node_index) =
-        next_solution.value();
-
-    ABSL_CHECK(!all_done_);
-
-    // All done.
-    if (result_times.empty()) {
-      if (first_solution_) {
-        ABSL_VLOG(1) << "No more timestamps and the first solution.";
-        // If this is our first time, there is no solution.  Instead of giving
-        // up completely, (and providing no estimate of time at all), just say
-        // that everything is on the distributed clock.  This will then get used
-        // as a 1:1 mapping.
-        first_solution_ = false;
-        if (fp_) {
-          fprintf(fp_, "0.000000000");
-          for (size_t i = 0; i < NodesCount(); ++i) {
-            fprintf(fp_, ", 0.000000000");
-          }
-          fprintf(fp_, "\n");
+  return MakeProblem().and_then(
+      [this](TimestampProblem problem)
+          -> Result<std::optional<std::tuple<distributed_clock::time_point,
+                                             std::vector<BootTimestamp>>>> {
+        // Ok, now solve for the minimum time on each channel.
+        auto next_solution = NextSolution(&problem, last_monotonics_);
+        if (!next_solution.has_value()) {
+          return MakeError("Unable to solve timestamp problem.");
         }
-        return std::make_tuple(
-            distributed_clock::epoch(),
-            std::vector<BootTimestamp>(NodesCount(), BootTimestamp::epoch()));
-      }
-      if (ABSL_VLOG_IS_ON(1)) {
-        ABSL_LOG(INFO) << "Found no more timestamps.";
-        for (const auto &filters : filters_per_node_) {
-          for (const auto &filter : filters) {
-            filter.filter->Debug();
+        std::vector<BootTimestamp> result_times =
+            std::move(std::get<1>(next_solution.value()));
+        NoncausalTimestampFilter *next_filter = nullptr;
+        int solution_node_index = 0;
+        std::tie(next_filter, std::ignore, solution_node_index) =
+            next_solution.value();
+
+        ABSL_CHECK(!all_done_);
+
+        // All done.
+        if (result_times.empty()) {
+          if (first_solution_) {
+            ABSL_VLOG(1) << "No more timestamps and the first solution.";
+            // If this is our first time, there is no solution.  Instead of
+            // giving up completely, (and providing no estimate of time at all),
+            // just say that everything is on the distributed clock.  This will
+            // then get used as a 1:1 mapping.
+            first_solution_ = false;
+            if (fp_) {
+              fprintf(fp_, "0.000000000");
+              for (size_t i = 0; i < NodesCount(); ++i) {
+                fprintf(fp_, ", 0.000000000");
+              }
+              fprintf(fp_, "\n");
+            }
+            return std::make_tuple(distributed_clock::epoch(),
+                                   std::vector<BootTimestamp>(
+                                       NodesCount(), BootTimestamp::epoch()));
+          }
+          if (ABSL_VLOG_IS_ON(1)) {
+            ABSL_LOG(INFO) << "Found no more timestamps.";
+            for (const auto &filters : filters_per_node_) {
+              for (const auto &filter : filters) {
+                filter.filter->Debug();
+              }
+            }
+          }
+          all_done_ = true;
+
+          // TODO(austin): Instead of giving up forever, give up as far as we
+          // can look into the future.  This would let nodes start up unknown
+          // and converge to something useful when they connect.
+          if (fp_) {
+            fflush(fp_);
+          }
+          Result<std::optional<std::tuple<distributed_clock::time_point,
+                                          std::vector<BootTimestamp>>>>
+              result;
+          result.emplace(std::nullopt);
+          ABSL_CHECK(result.has_value());
+          ABSL_CHECK(!result.value().has_value());
+          return result;
+        }
+
+        {
+          size_t index = 0;
+          for (auto t : result_times) {
+            ABSL_VLOG(1) << "Time: " << t << " "
+                         << logged_configuration_->nodes()
+                                ->Get(index)
+                                ->name()
+                                ->string_view();
+            ++index;
           }
         }
-      }
-      all_done_ = true;
 
-      // TODO(austin): Instead of giving up forever, give up as far as we can
-      // look into the future.  This would let nodes start up unknown and
-      // converge to something useful when they connect.
-      if (fp_) {
-        fflush(fp_);
-      }
-      Result<std::optional<std::tuple<distributed_clock::time_point,
-                                      std::vector<BootTimestamp>>>>
-          result;
-      result.emplace(std::nullopt);
-      ABSL_CHECK(result.has_value());
-      ABSL_CHECK(!result.value().has_value());
-      return result;
-    }
+        std::tuple<logger::BootTimestamp, logger::BootDuration> sample;
+        if (first_solution_) {
+          first_solution_ = false;
 
-    {
-      size_t index = 0;
-      for (auto t : result_times) {
-        ABSL_VLOG(1) << "Time: " << t << " "
-                     << logged_configuration_->nodes()
-                            ->Get(index)
-                            ->name()
-                            ->string_view();
-        ++index;
-      }
-    }
+          // Force any unknown nodes to track the distributed clock (which
+          // starts at 0 too).
+          for (BootTimestamp &time : result_times) {
+            if (time == BootTimestamp::min_time()) {
+              time = BootTimestamp::epoch();
+            }
+          }
+          if (next_filter) {
+            // This isn't a start time because we have a corresponding filter.
+            sample = *next_filter->Consume();
+            ABSL_VLOG(1) << "Sample is " << std::get<0>(sample) << " from "
+                         << next_filter->node_a()->name()->string_view();
+            next_filter->Pop(
+                std::get<0>(sample) - time_estimation_buffer_seconds_,
+                OppositeFilter(next_filter));
+          }
+        } else {
+          if (next_filter) {
+            // This isn't a start time because we have a corresponding filter.
+            sample = *next_filter->Consume();
+            ABSL_VLOG(1) << "Sample is " << std::get<0>(sample) << " from "
+                         << next_filter->node_a()->name()->string_view();
+            next_filter->Pop(
+                std::get<0>(sample) - time_estimation_buffer_seconds_,
+                OppositeFilter(next_filter));
+          }
+          // We found a good sample, so consume it.  If it is a duplicate, we
+          // still want to consume it.  But, if this is the first time around,
+          // we want to re-solve by recursing (once) to pickup the better base.
 
-    std::tuple<logger::BootTimestamp, logger::BootDuration> sample;
-    if (first_solution_) {
-      first_solution_ = false;
-
-      // Force any unknown nodes to track the distributed clock (which starts at
-      // 0 too).
-      for (BootTimestamp &time : result_times) {
-        if (time == BootTimestamp::min_time()) {
-          time = BootTimestamp::epoch();
+          TimeComparison compare = CompareTimes(last_monotonics_, result_times);
+          switch (compare) {
+            case TimeComparison::kBefore:
+              break;
+            case TimeComparison::kAfter:
+              problem.Debug();
+              for (size_t i = 0; i < result_times.size(); ++i) {
+                ABSL_LOG(INFO)
+                    << "  " << last_monotonics_[i] << " vs " << result_times[i]
+                    << " -> "
+                    << (last_monotonics_[i].time - result_times[i].time).count()
+                    << "ns";
+              }
+              UpdateSolution(std::move(result_times));
+              WriteFilter(next_filter, sample);
+              if (!FlushAndClose(false)) {
+                return MakeError(
+                    "Unable to flush timestamp debug information.");
+              }
+              ABSL_LOG(ERROR) << "Found a solution before the last returned "
+                                 "solution on node "
+                              << solution_node_index;
+              return MakeError("Timestamp solving error---see above.");
+            case TimeComparison::kEq:
+              WriteFilter(next_filter, sample);
+              return NextTimestamp();
+            case TimeComparison::kInvalid: {
+              const chrono::nanoseconds invalid_distance =
+                  InvalidDistance(last_monotonics_, result_times);
+              if (invalid_distance <= chrono::nanoseconds(absl::GetFlag(
+                                          FLAGS_max_invalid_distance_ns))) {
+                WriteFilter(next_filter, sample);
+                return NextTimestamp();
+              }
+              ABSL_LOG(INFO) << "Times can't be compared by "
+                             << invalid_distance.count() << "ns";
+              ABSL_CHECK_EQ(last_monotonics_.size(), result_times.size());
+              for (size_t i = 0; i < result_times.size(); ++i) {
+                ABSL_LOG(INFO)
+                    << "  " << last_monotonics_[i] << " vs " << result_times[i]
+                    << " -> "
+                    << (last_monotonics_[i].time - result_times[i].time).count()
+                    << "ns";
+              }
+              UpdateSolution(std::move(result_times));
+              WriteFilter(next_filter, sample);
+              if (!FlushAndClose(false)) {
+                return MakeError(
+                    "Unable to flush timestamp debug information.");
+              }
+              ABSL_LOG(ERROR)
+                  << "Please investigate.  Use --max_invalid_distance_ns="
+                  << invalid_distance.count() << " to ignore this.";
+              return MakeError("Timestamp solving error---see above.");
+            } break;
+          }
         }
-      }
-      if (next_filter) {
-        // This isn't a start time because we have a corresponding filter.
-        sample = *next_filter->Consume();
-        ABSL_VLOG(1) << "Sample is " << std::get<0>(sample) << " from "
-                     << next_filter->node_a()->name()->string_view();
-        next_filter->Pop(std::get<0>(sample) - time_estimation_buffer_seconds_);
-      }
-    } else {
-      if (next_filter) {
-        // This isn't a start time because we have a corresponding filter.
-        sample = *next_filter->Consume();
-        ABSL_VLOG(1) << "Sample is " << std::get<0>(sample) << " from "
-                     << next_filter->node_a()->name()->string_view();
-        next_filter->Pop(std::get<0>(sample) - time_estimation_buffer_seconds_);
-      }
-      // We found a good sample, so consume it.  If it is a duplicate, we still
-      // want to consume it.  But, if this is the first time around, we want to
-      // re-solve by recursing (once) to pickup the better base.
 
-      TimeComparison compare = CompareTimes(last_monotonics_, result_times);
-      switch (compare) {
-        case TimeComparison::kBefore:
-          break;
-        case TimeComparison::kAfter:
-          problem.Debug();
-          for (size_t i = 0; i < result_times.size(); ++i) {
-            ABSL_LOG(INFO)
-                << "  " << last_monotonics_[i] << " vs " << result_times[i]
-                << " -> "
-                << (last_monotonics_[i].time - result_times[i].time).count()
-                << "ns";
-          }
-          UpdateSolution(std::move(result_times));
-          WriteFilter(next_filter, sample);
-          if (!FlushAndClose(false)) {
-            return MakeError("Unable to flush timestamp debug information.");
-          }
-          ABSL_LOG(ERROR)
-              << "Found a solution before the last returned solution on node "
-              << solution_node_index;
-          return MakeError("Timestamp solving error---see above.");
-        case TimeComparison::kEq:
-          WriteFilter(next_filter, sample);
-          return NextTimestamp();
-        case TimeComparison::kInvalid: {
-          const chrono::nanoseconds invalid_distance =
-              InvalidDistance(last_monotonics_, result_times);
-          if (invalid_distance <= chrono::nanoseconds(absl::GetFlag(
-                                      FLAGS_max_invalid_distance_ns))) {
-            WriteFilter(next_filter, sample);
-            return NextTimestamp();
-          }
-          ABSL_LOG(INFO) << "Times can't be compared by "
-                         << invalid_distance.count() << "ns";
-          ABSL_CHECK_EQ(last_monotonics_.size(), result_times.size());
-          for (size_t i = 0; i < result_times.size(); ++i) {
-            ABSL_LOG(INFO)
-                << "  " << last_monotonics_[i] << " vs " << result_times[i]
-                << " -> "
-                << (last_monotonics_[i].time - result_times[i].time).count()
-                << "ns";
-          }
-          UpdateSolution(std::move(result_times));
-          WriteFilter(next_filter, sample);
-          if (!FlushAndClose(false)) {
-            return MakeError("Unable to flush timestamp debug information.");
-          }
-          ABSL_LOG(ERROR)
-              << "Please investigate.  Use --max_invalid_distance_ns="
-              << invalid_distance.count() << " to ignore this.";
-          return MakeError("Timestamp solving error---see above.");
-        } break;
-      }
-    }
+        UpdateSolution(std::move(result_times));
+        WriteFilter(next_filter, sample);
 
-    UpdateSolution(std::move(result_times));
-    WriteFilter(next_filter, sample);
-
-    // And freeze everything.
-    {
-      size_t node_index = 0;
-      for (const auto &filters : filters_per_node_) {
-        for (const auto &filter : filters) {
-          filter.filter->FreezeUntil(last_monotonics_[node_index],
-                                     last_monotonics_[filter.b_index]);
+        // And freeze everything.
+        {
+          size_t node_index = 0;
+          for (const auto &filters : filters_per_node_) {
+            for (const auto &filter : filters) {
+              filter.filter->FreezeUntil(last_monotonics_[node_index],
+                                         last_monotonics_[filter.b_index]);
+            }
+            ++node_index;
+          }
         }
-        ++node_index;
+
+        FlushAllSamples(false);
+        return std::make_tuple(last_distributed_, last_monotonics_);
+      });
+}
+
+const NoncausalTimestampFilter *
+MultiNodeNoncausalOffsetEstimator::OppositeFilter(
+    const NoncausalTimestampFilter *filter) const {
+  for (const auto &filters : filters_per_node_) {
+    for (const FilterPair &pair : filters) {
+      if (pair.filter == filter) {
+        return pair.b_filter;
       }
     }
-
-    FlushAllSamples(false);
-    return std::make_tuple(last_distributed_, last_monotonics_);
-  });
+  }
+  return nullptr;
 }
 
 void MultiNodeNoncausalOffsetEstimator::FlushAllSamples(bool finish) {

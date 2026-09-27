@@ -1254,7 +1254,8 @@ void NoncausalTimestampFilter::SingleFilter::Sample(
   }
 }
 
-bool NoncausalTimestampFilter::Pop(BootTimestamp time) {
+bool NoncausalTimestampFilter::Pop(BootTimestamp time,
+                                   const NoncausalTimestampFilter *other) {
   ABSL_CHECK_GE(filters_.size(), 1u);
 
   ABSL_VLOG(1) << NodeNames() << " Pop(" << time << ")";
@@ -1292,6 +1293,12 @@ bool NoncausalTimestampFilter::Pop(BootTimestamp time) {
     ABSL_CHECK(boot_filter != nullptr);
     size_t timestamps_size = 0;
 
+    // The opposite direction filter for the same pair of boots.
+    const SingleFilter *other_filter =
+        other == nullptr ? nullptr
+                         : other->maybe_single_filter(boot_filter->boot.second,
+                                                      boot_filter->boot.first);
+
     // Keep at least 2 timestamps in the filter because it's the minimum number
     // of points needed to calculate slope.
     while ((timestamps_size = boot_filter->filter.timestamps_size()) > 2) {
@@ -1302,6 +1309,18 @@ bool NoncausalTimestampFilter::Pop(BootTimestamp time) {
                      .time = std::get<0>(boot_filter->filter.timestamp(1))}) {
         // We reached a timestamp that is later than `time`, so return.
         return removed;
+      }
+      if (other_filter != nullptr) {
+        // The opposite filter sees this point at the remote time.  Keep it
+        // until the opposite filter is done with the segment it lands in.
+        const std::tuple<monotonic_clock::time_point, chrono::nanoseconds>
+            front = boot_filter->filter.timestamp(0);
+        if (!other_filter->SegmentFrozen(std::get<0>(front) +
+                                         std::get<1>(front))) {
+          ABSL_VLOG(1) << NodeNames() << " Not popping " << TimeString(front)
+                       << " because the opposite filter may still use it.";
+          return removed;
+        }
       }
       boot_filter->filter.PopFront();
       removed = true;
@@ -1487,6 +1506,26 @@ void NoncausalTimestampFilter::SingleFilter::FreezeUntilRemote(
   } else {
     ABSL_LOG(FATAL) << "How did we get here?";
   }
+}
+
+bool NoncausalTimestampFilter::SingleFilter::SegmentFrozen(
+    aos::monotonic_clock::time_point t) const {
+  if (fully_frozen_) {
+    return true;
+  }
+  // Find the end of the segment containing t.  If there isn't one, a future
+  // sample can still create a segment containing t.
+  auto it =
+      std::upper_bound(timestamps_.begin(), timestamps_.end(), t,
+                       [](monotonic_clock::time_point t,
+                          const std::tuple<aos::monotonic_clock::time_point,
+                                           std::chrono::nanoseconds> &x) {
+                         return t < std::get<0>(x);
+                       });
+  if (it == timestamps_.end()) {
+    return false;
+  }
+  return std::get<0>(*it) < frozen_time_;
 }
 
 void NoncausalTimestampFilter::SingleFilter::PopFront() {

@@ -585,6 +585,11 @@ class MultiNodeNoncausalOffsetEstimator final
   // Writes all samples to disk.
   void FlushAllSamples(bool finish);
 
+  // Returns the filter for the opposite direction of filter, or nullptr if
+  // there isn't one.
+  const NoncausalTimestampFilter *OppositeFilter(
+      const NoncausalTimestampFilter *filter) const;
+
   // Adds the solution to last_distributed_.
   void UpdateSolution(std::vector<logger::BootTimestamp> result_times);
 

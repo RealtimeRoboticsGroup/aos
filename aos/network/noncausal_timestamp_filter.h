@@ -201,7 +201,14 @@ class NoncausalTimestampFilter {
 
   // Removes any old timestamps from our timestamps list.
   // Returns true if any points were popped.
-  bool Pop(logger::BootTimestamp time);
+  //
+  // other is the filter for the opposite direction, if there is one.  The
+  // opposite filter pulls our points into its lines (see other_points_ in
+  // Pointer), so a point is only popped once the opposite filter can no longer
+  // evaluate the segment it lands in.  Otherwise, popping a point could move a
+  // line under an already returned solution.
+  bool Pop(logger::BootTimestamp time,
+           const NoncausalTimestampFilter *other = nullptr);
 
   size_t timestamps_size() const {
     size_t result = 0u;
@@ -453,6 +460,11 @@ class NoncausalTimestampFilter {
     bool frozen(aos::monotonic_clock::time_point t) const {
       return t <= frozen_time_;
     }
+
+    // Returns true if the segment containing t will never be evaluated again.
+    // Solutions are only found at or after the last time frozen, so any
+    // segment ending before frozen_time_ is behind us.
+    bool SegmentFrozen(aos::monotonic_clock::time_point t) const;
 
     size_t timestamps_size() const { return timestamps_.size(); }
     bool timestamps_empty() const { return timestamps_.empty(); }
