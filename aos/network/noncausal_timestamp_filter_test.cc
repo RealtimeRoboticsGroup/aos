@@ -938,6 +938,64 @@ TEST_F(NoncausalTimestampFilterTest, InterpolateOffset) {
   }
 }
 
+// Tests that InterpolateOffset is exact when the time between the points is
+// odd.  The integer math rounds to the nearest ns by adding dt / 2 before
+// dividing, which isn't dt / 2.0 when dt is odd, so the double part needs to
+// undo exactly what was added.  Otherwise the line is off by 1 / (2 dt), and
+// the error flips sign where the numerator crosses 0, making the line jump.
+TEST_F(NoncausalTimestampFilterTest, InterpolateOffsetOddDt) {
+  const monotonic_clock::time_point e = monotonic_clock::epoch();
+  const monotonic_clock::time_point t1 = e + chrono::nanoseconds(10000);
+  const chrono::nanoseconds o1 = chrono::nanoseconds(100);
+
+  // {dt, doffset}.  1000 is even and is here to show the test works there
+  // too.
+  for (const std::pair<int64_t, int64_t> &segment :
+       std::vector<std::pair<int64_t, int64_t>>{{1, 0},
+                                                {3, 1},
+                                                {3, -1},
+                                                {1000, 1},
+                                                {1001, 1},
+                                                {1001, -1},
+                                                {999999, 999},
+                                                {999999, -999}}) {
+    const chrono::nanoseconds dt(segment.first);
+    const chrono::nanoseconds doffset(segment.second);
+    const monotonic_clock::time_point t2 = t1 + dt;
+    const chrono::nanoseconds o2 = o1 + doffset;
+
+    // Check around both points and the middle.
+    for (const int64_t center : {int64_t{0}, dt.count() / 2, dt.count()}) {
+      for (int64_t time_in = center - 3; time_in <= center + 3; ++time_in) {
+        for (const double ta : {0.0, 0.25, 0.5, 0.999}) {
+          const monotonic_clock::time_point ta_base =
+              t1 + chrono::nanoseconds(time_in);
+          const std::tuple<chrono::nanoseconds, double, double> offset =
+              NoncausalTimestampFilter::InterpolateOffset(
+                  std::make_tuple(t1, o1), std::make_tuple(t2, o2), ta_base,
+                  ta);
+
+          // The integer part is still rounded to the nearest ns.
+          EXPECT_EQ(
+              std::get<0>(offset),
+              NoncausalTimestampFilter::InterpolateOffset(
+                  std::make_tuple(t1, o1), std::make_tuple(t2, o2), ta_base));
+
+          const double expected = static_cast<double>(o1.count()) +
+                                  (static_cast<double>(time_in) + ta) *
+                                      static_cast<double>(doffset.count()) /
+                                      static_cast<double>(dt.count());
+          EXPECT_NEAR(static_cast<double>(std::get<0>(offset).count()) +
+                          std::get<1>(offset),
+                      expected, 1e-9)
+              << ": dt " << dt.count() << "ns, doffset " << doffset.count()
+              << "ns, at " << time_in << "ns + " << ta;
+        }
+      }
+    }
+  }
+}
+
 // Tests that all variants of ExtrapolateOffset do reasonable things.
 TEST_F(NoncausalTimestampFilterTest, ExtrapolateOffset) {
   const monotonic_clock::time_point e = monotonic_clock::epoch();

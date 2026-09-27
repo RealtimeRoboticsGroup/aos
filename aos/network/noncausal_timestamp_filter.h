@@ -340,11 +340,21 @@ class NoncausalTimestampFilter {
       std::tuple<monotonic_clock::time_point, std::chrono::nanoseconds> p0,
       monotonic_clock::time_point ta);
 
+  // Returns the offset at ta_base + ta on the line through p0 and p1, where ta
+  // is in [0, 1).  The tuple is (integer, remainder, slope):
+  //   integer: the offset at ta_base, rounded to the nearest ns.
+  //   remainder: the rest of the offset in ns, so the offset is
+  //     integer + remainder.  This includes ta * slope.
+  //   slope: d offset / d ta.
+  // Splitting it up keeps ns precision when the offset is too big for a double
+  // to hold a fraction of a ns.
   static std::tuple<std::chrono::nanoseconds, double, double> InterpolateOffset(
       std::tuple<monotonic_clock::time_point, std::chrono::nanoseconds> p0,
       std::tuple<monotonic_clock::time_point, std::chrono::nanoseconds> p1,
       monotonic_clock::time_point ta_base, double ta);
 
+  // Same as InterpolateOffset above, but for the bounds and extrapolation
+  // lines.
   static std::tuple<std::chrono::nanoseconds, double, double> BoundOffset(
       std::tuple<monotonic_clock::time_point, std::chrono::nanoseconds> p0,
       std::tuple<monotonic_clock::time_point, std::chrono::nanoseconds> p1,

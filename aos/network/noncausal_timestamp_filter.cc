@@ -419,32 +419,35 @@ NoncausalTimestampFilter::InterpolateOffset(
   //
   //  oa = p0.o + (ta - p0.t) * (p1.o - p0.o) / (p1.t - p0.t)
   //
-  // Add (or subtract, integer division rounds towards 0...) 0.5 ((dt / 2) / dt)
-  // to the numerator to round to the nearest number rather than round down.
+  // Add (or subtract, integer division rounds towards 0...) dt / 2 to the
+  // numerator to round to the nearest number rather than round down.
   const chrono::nanoseconds time_in = ta_base - std::get<0>(p0);
   const chrono::nanoseconds dt = std::get<0>(p1) - std::get<0>(p0);
   const chrono::nanoseconds doffset = std::get<1>(p1) - std::get<1>(p0);
 
   absl::int128 numerator =
       absl::int128(time_in.count()) * absl::int128(doffset.count());
-  numerator += numerator > 0 ? absl::int128(dt.count() / 2)
-                             : -absl::int128(dt.count() / 2);
+  const absl::int128 half_dt = numerator > 0 ? absl::int128(dt.count() / 2)
+                                             : -absl::int128(dt.count() / 2);
+  numerator += half_dt;
 
   const chrono::nanoseconds integer =
       std::get<1>(p0) + chrono::nanoseconds(static_cast<int64_t>(
                             numerator / absl::int128(dt.count())));
   // Compute the remainder of the division in InterpolateOffset above, and
   // then use double math to compute it accurately.  Since integer math rounds
-  // down, we need to undo the rounding to get the double remainder.  Add or
-  // subtract dt/2/dt (0.5) to undo the addition.
+  // down, we need to undo the rounding to get the double remainder.  Subtract
+  // exactly what we added, half_dt / dt, to undo the addition.  This is 0.5
+  // when dt is even, but not when it is odd, since dt / 2 rounds down.
   //
   // We have good tests which confirm for small offsets this matches nicely. For
   // large offsets, the 128 bit math will take care of us.
   const double slope =
       static_cast<double>(doffset.count()) / static_cast<double>(dt.count());
   const double remainder =
-      static_cast<double>(numerator % absl::int128(dt.count())) / dt.count() +
-      (numerator > 0 ? -0.5 : 0.5) + ta * slope;
+      static_cast<double>(numerator % absl::int128(dt.count())) / dt.count() -
+      static_cast<double>(half_dt) / static_cast<double>(dt.count()) +
+      ta * slope;
   return std::make_tuple(integer, remainder, slope);
 }
 
