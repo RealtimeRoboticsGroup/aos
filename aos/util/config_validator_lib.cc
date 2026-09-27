@@ -15,7 +15,7 @@
 
 #include "absl/flags/declare.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "flatbuffers/buffer.h"
 #include "flatbuffers/detached_buffer.h"
 #include "flatbuffers/string.h"
@@ -125,7 +125,7 @@ void ConfigIsValid(const aos::Configuration *config,
         channel->logger() == aos::LoggerConfig::NOT_LOGGED;
     if (check_for_not_logged_channels) {
       if (channel_looks_like_remote_message_channel != channel_is_not_logged) {
-        LOG(WARNING)
+        ABSL_LOG(WARNING)
             << "Channel " << configuration::StrippedChannelToString(channel)
             << " is " << EnumNameLoggerConfig(channel->logger()) << " but "
             << (channel_looks_like_remote_message_channel ? "is" : "is not")
@@ -150,7 +150,7 @@ void ConfigIsValid(const aos::Configuration *config,
             case LoggerConfig::NOT_LOGGED:
             case LoggerConfig::LOCAL_LOGGER:
               if (connection->has_timestamp_logger_nodes()) {
-                LOG(WARNING)
+                ABSL_LOG(WARNING)
                     << "Connections that are "
                     << EnumNameLoggerConfig(connection->timestamp_logger())
                     << " should not have remote timestamp logger nodes "
@@ -166,7 +166,7 @@ void ConfigIsValid(const aos::Configuration *config,
                   connection->timestamp_logger_nodes()->size() != 1 ||
                   connection->timestamp_logger_nodes()->Get(0)->string_view() !=
                       channel->source_node()->string_view()) {
-                LOG(WARNING)
+                ABSL_LOG(WARNING)
                     << "Connections that are "
                     << EnumNameLoggerConfig(connection->timestamp_logger())
                     << " should have exactly 1 remote timestamp logger node "
@@ -196,9 +196,9 @@ void ConfigIsValid(const aos::Configuration *config,
   // we do not do a separate check that all the required channels exist.
   for (const auto &channel : configured_timestamp_channels) {
     if (required_timestamp_channels.count(channel) == 0) {
-      LOG(WARNING) << "Timestamp channel "
-                   << configuration::StrippedChannelToString(channel)
-                   << " was specified in the config but is not used.";
+      ABSL_LOG(WARNING) << "Timestamp channel "
+                        << configuration::StrippedChannelToString(channel)
+                        << " was specified in the config but is not used.";
       validation_failed = true;
     }
   }

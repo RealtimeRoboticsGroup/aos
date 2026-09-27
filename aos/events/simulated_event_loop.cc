@@ -27,10 +27,10 @@
 // die_on_malloc set, it won't die.  Really, we need to go RT, or fall back to
 // the base thread's original RT state to be actually accurate.
 
-ABSL_FLAG(
-    bool, use_simulated_clocks_for_logs, false,
-    "If true, hook into LOG statements to print out the simulated time instead "
-    "of the wall clock time. Also prints out the node name.");
+ABSL_FLAG(bool, use_simulated_clocks_for_logs, false,
+          "If true, hook into ABSL_LOG statements to print out the simulated "
+          "time instead of the wall clock time. Also prints out the node "
+          "name.");
 
 namespace aos {
 
@@ -386,9 +386,9 @@ class SimulatedChannel {
 
   void CountSenderCreated() {
     if (sender_count_ >= channel()->num_senders()) {
-      LOG(FATAL) << "Failed to create sender on "
-                 << configuration::CleanedChannelToString(channel())
-                 << ", too many senders.";
+      ABSL_LOG(FATAL) << "Failed to create sender on "
+                      << configuration::CleanedChannelToString(channel())
+                      << ", too many senders.";
     }
     CheckBufferCount();
     ++sender_count_;
@@ -418,9 +418,9 @@ class SimulatedChannel {
     CheckBufferCount();
     const int reader_count = watchers_.size() + fetchers_.size();
     if (reader_count >= channel()->num_readers()) {
-      LOG(FATAL) << "Failed to create reader on "
-                 << configuration::CleanedChannelToString(channel())
-                 << ", too many readers.";
+      ABSL_LOG(FATAL) << "Failed to create reader on "
+                      << configuration::CleanedChannelToString(channel())
+                      << ", too many readers.";
     }
   }
 
@@ -710,15 +710,16 @@ class SimulatedEventLoop : public EventLoop {
         break;
       }
     }
-    VLOG(1) << scheduler_->distributed_now() << " " << NodeName(node())
-            << monotonic_now() << " ~SimulatedEventLoop(\"" << name_ << "\")";
+    ABSL_VLOG(1) << scheduler_->distributed_now() << " " << NodeName(node())
+                 << monotonic_now() << " ~SimulatedEventLoop(\"" << name_
+                 << "\")";
     startup_tracker_->loop = nullptr;
   }
 
   void SetIsRunning(bool running) {
-    VLOG(1) << scheduler_->distributed_now() << " " << NodeName(node())
-            << monotonic_now() << " " << name_ << " set_is_running(" << running
-            << ")";
+    ABSL_VLOG(1) << scheduler_->distributed_now() << " " << NodeName(node())
+                 << monotonic_now() << " " << name_ << " set_is_running("
+                 << running << ")";
     ABSL_CHECK(startup_tracker_->has_setup);
 
     set_is_running(running);
@@ -790,8 +791,8 @@ class SimulatedEventLoop : public EventLoop {
 
   // Called by OnRunEvent when we need to process OnRun callbacks.
   void DoOnRun() {
-    VLOG(1) << distributed_now() << " " << NodeName(node()) << monotonic_now()
-            << " " << name() << " OnRun()";
+    ABSL_VLOG(1) << distributed_now() << " " << NodeName(node())
+                 << monotonic_now() << " " << name() << " OnRun()";
 
     // Synchronize with the threads for this event loop.
     WaitForNonIgnoredThreads();
@@ -978,9 +979,9 @@ void SimulatedEventLoop::MakeRawWatcher(
   GetSimulatedChannel(channel)->MakeRawWatcher(shm_watcher.get());
 
   NewWatcher(std::move(shm_watcher));
-  VLOG(1) << distributed_now() << " " << NodeName(node()) << monotonic_now()
-          << " " << name() << " MakeRawWatcher(\""
-          << configuration::StrippedChannelToString(channel) << "\")";
+  ABSL_VLOG(1) << distributed_now() << " " << NodeName(node())
+               << monotonic_now() << " " << name() << " MakeRawWatcher(\""
+               << configuration::StrippedChannelToString(channel) << "\")";
 
   // Order of operations gets kinda wonky if we let people make watchers after
   // running once.  If someone has a valid use case, we can reconsider.
@@ -991,9 +992,9 @@ std::unique_ptr<RawSender> SimulatedEventLoop::MakeRawSender(
     const Channel *channel) {
   TakeSender(channel);
 
-  VLOG(1) << distributed_now() << " " << NodeName(node()) << monotonic_now()
-          << " " << name() << " MakeRawSender(\""
-          << configuration::StrippedChannelToString(channel) << "\")";
+  ABSL_VLOG(1) << distributed_now() << " " << NodeName(node())
+               << monotonic_now() << " " << name() << " MakeRawSender(\""
+               << configuration::StrippedChannelToString(channel) << "\")";
   return GetSimulatedChannel(channel)->MakeRawSender(this);
 }
 
@@ -1003,15 +1004,16 @@ std::unique_ptr<RawFetcher> SimulatedEventLoop::MakeRawFetcher(
   ChannelIndex(channel);
 
   if (!configuration::ChannelIsReadableOnNode(channel, node())) {
-    LOG(FATAL) << "Channel { \"name\": \"" << channel->name()->string_view()
-               << "\", \"type\": \"" << channel->type()->string_view()
-               << "\" } is not able to be fetched on this node.  Check your "
-                  "configuration.";
+    ABSL_LOG(FATAL)
+        << "Channel { \"name\": \"" << channel->name()->string_view()
+        << "\", \"type\": \"" << channel->type()->string_view()
+        << "\" } is not able to be fetched on this node.  Check your "
+           "configuration.";
   }
 
-  VLOG(1) << distributed_now() << " " << NodeName(node()) << monotonic_now()
-          << " " << name() << " MakeRawFetcher(\""
-          << configuration::StrippedChannelToString(channel) << "\")";
+  ABSL_VLOG(1) << distributed_now() << " " << NodeName(node())
+               << monotonic_now() << " " << name() << " MakeRawFetcher(\""
+               << configuration::StrippedChannelToString(channel) << "\")";
   return GetSimulatedChannel(channel)->MakeRawFetcher(this);
 }
 
@@ -1072,19 +1074,19 @@ SimulatedWatcher::SimulatedWatcher(
       scheduler_(scheduler),
       event_(this),
       token_(scheduler_->InvalidToken()) {
-  VLOG(1) << simulated_event_loop_->distributed_now() << " "
-          << NodeName(simulated_event_loop_->node())
-          << simulated_event_loop_->monotonic_now() << " "
-          << simulated_event_loop_->name() << " Watching "
-          << configuration::StrippedChannelToString(channel_);
+  ABSL_VLOG(1) << simulated_event_loop_->distributed_now() << " "
+               << NodeName(simulated_event_loop_->node())
+               << simulated_event_loop_->monotonic_now() << " "
+               << simulated_event_loop_->name() << " Watching "
+               << configuration::StrippedChannelToString(channel_);
 }
 
 SimulatedWatcher::~SimulatedWatcher() {
-  VLOG(1) << simulated_event_loop_->distributed_now() << " "
-          << NodeName(simulated_event_loop_->node())
-          << simulated_event_loop_->monotonic_now() << " "
-          << simulated_event_loop_->name() << " ~Watching "
-          << configuration::StrippedChannelToString(channel_);
+  ABSL_VLOG(1) << simulated_event_loop_->distributed_now() << " "
+               << NodeName(simulated_event_loop_->node())
+               << simulated_event_loop_->monotonic_now() << " "
+               << simulated_event_loop_->name() << " ~Watching "
+               << configuration::StrippedChannelToString(channel_);
   simulated_event_loop_->RemoveEvent(&event_);
   if (token_ != scheduler_->InvalidToken()) {
     scheduler_->Deschedule(token_);
@@ -1116,11 +1118,11 @@ void SimulatedWatcher::Schedule(std::shared_ptr<SimulatedMessage> message) {
 void SimulatedWatcher::HandleEvent() noexcept {
   const monotonic_clock::time_point monotonic_now =
       simulated_event_loop_->monotonic_now();
-  VLOG(1) << simulated_event_loop_->distributed_now() << " "
-          << NodeName(simulated_event_loop_->node())
-          << simulated_event_loop_->monotonic_now() << " "
-          << simulated_event_loop_->name() << " Watcher "
-          << configuration::StrippedChannelToString(channel_);
+  ABSL_VLOG(1) << simulated_event_loop_->distributed_now() << " "
+               << NodeName(simulated_event_loop_->node())
+               << simulated_event_loop_->monotonic_now() << " "
+               << simulated_event_loop_->name() << " Watcher "
+               << configuration::StrippedChannelToString(channel_);
   ABSL_CHECK_NE(msgs_.size(), 0u) << ": No events to handle.";
 
   logging::ScopedLogRestorer prev_logger;
@@ -1305,11 +1307,11 @@ RawSender::Error SimulatedSender::DoSend(
   // no mallocs in RT code.
   ScopedNotRealtime nrt;
 
-  VLOG(1) << simulated_event_loop_->distributed_now() << " "
-          << NodeName(simulated_event_loop_->node())
-          << simulated_event_loop_->monotonic_now() << " "
-          << simulated_event_loop_->name() << " Send "
-          << configuration::StrippedChannelToString(channel());
+  ABSL_VLOG(1) << simulated_event_loop_->distributed_now() << " "
+               << NodeName(simulated_event_loop_->node())
+               << simulated_event_loop_->monotonic_now() << " "
+               << simulated_event_loop_->name() << " Send "
+               << configuration::StrippedChannelToString(channel());
 
   ABSL_CHECK_LE(length, size()) << ": Attempting to send too big a message.";
   message_->context.monotonic_event_time =
@@ -1329,17 +1331,18 @@ RawSender::Error SimulatedSender::DoSend(
 
   // Check that we are not sending messages too fast
   if (!optional_queue_index) {
-    VLOG(1) << simulated_event_loop_->distributed_now() << " "
-            << NodeName(simulated_event_loop_->node())
-            << simulated_event_loop_->monotonic_now() << " "
-            << simulated_event_loop_->name() << "   -> SentTooFast "
-            << configuration::StrippedChannelToString(channel())
-            << ", Tried to send more than " << simulated_channel_->queue_size()
-            << " (queue size) messages in the last "
-            << std::chrono::duration<double>(
-                   simulated_channel_->channel_storage_duration())
-                   .count()
-            << " seconds (channel storage duration)";
+    ABSL_VLOG(1) << simulated_event_loop_->distributed_now() << " "
+                 << NodeName(simulated_event_loop_->node())
+                 << simulated_event_loop_->monotonic_now() << " "
+                 << simulated_event_loop_->name() << "   -> SentTooFast "
+                 << configuration::StrippedChannelToString(channel())
+                 << ", Tried to send more than "
+                 << simulated_channel_->queue_size()
+                 << " (queue size) messages in the last "
+                 << std::chrono::duration<double>(
+                        simulated_channel_->channel_storage_duration())
+                        .count()
+                 << " seconds (channel storage duration)";
     return Error::kMessagesSentTooFast;
   }
 
@@ -1407,20 +1410,21 @@ SimulatedFetcher::SimulatedFetcher(SimulatedEventLoop *event_loop,
       simulated_channel_(simulated_channel) {
   monotonic_clock::time_point monotonic_now =
       simulated_event_loop_->monotonic_now();
-  VLOG(1) << simulated_event_loop_->distributed_now() << " "
-          << NodeName(simulated_event_loop_->node()) << monotonic_now << " "
-          << simulated_event_loop_->name() << " MakeFetcher "
-          << configuration::StrippedChannelToString(channel());
+  ABSL_VLOG(1) << simulated_event_loop_->distributed_now() << " "
+               << NodeName(simulated_event_loop_->node()) << monotonic_now
+               << " " << simulated_event_loop_->name() << " MakeFetcher "
+               << configuration::StrippedChannelToString(channel());
 }
 
 std::pair<RawFetcher::Result, monotonic_clock::time_point>
 SimulatedFetcher::DoFetchNextIf(
     std::function<bool(const Context &context)> fn) {
   monotonic_clock::time_point monotonic_now = event_loop()->monotonic_now();
-  VLOG(2) << simulated_event_loop_->distributed_now() << " "
-          << NodeName(simulated_event_loop_->node()) << monotonic_now << " "
-          << simulated_event_loop_->name() << " FetchNext/FetchNextIf "
-          << configuration::StrippedChannelToString(channel());
+  ABSL_VLOG(2) << simulated_event_loop_->distributed_now() << " "
+               << NodeName(simulated_event_loop_->node()) << monotonic_now
+               << " " << simulated_event_loop_->name()
+               << " FetchNext/FetchNextIf "
+               << configuration::StrippedChannelToString(channel());
   // The allocations in here are due to infrastructure and don't count in the
   // no mallocs in RT code.
   ScopedNotRealtime nrt;
@@ -1457,10 +1461,10 @@ SimulatedFetcher::DoFetchNextIf(
 std::pair<bool, monotonic_clock::time_point> SimulatedFetcher::DoFetchIf(
     std::function<bool(const Context &context)> fn) {
   monotonic_clock::time_point monotonic_now = event_loop()->monotonic_now();
-  VLOG(1) << simulated_event_loop_->distributed_now() << " "
-          << NodeName(simulated_event_loop_->node()) << monotonic_now << " "
-          << simulated_event_loop_->name() << " Fetch/FetchIf "
-          << configuration::StrippedChannelToString(channel());
+  ABSL_VLOG(1) << simulated_event_loop_->distributed_now() << " "
+               << NodeName(simulated_event_loop_->node()) << monotonic_now
+               << " " << simulated_event_loop_->name() << " Fetch/FetchIf "
+               << configuration::StrippedChannelToString(channel());
   // The allocations in here are due to infrastructure and don't count in the
   // no mallocs in RT code.
   ScopedNotRealtime nrt;
@@ -1540,9 +1544,10 @@ void SimulatedTimerHandler::Handle() noexcept {
 void SimulatedTimerHandler::HandleEvent() noexcept {
   const monotonic_clock::time_point monotonic_now =
       simulated_event_loop_->monotonic_now();
-  VLOG(1) << simulated_event_loop_->distributed_now() << " "
-          << NodeName(simulated_event_loop_->node()) << monotonic_now << " "
-          << simulated_event_loop_->name() << " Timer '" << name() << "'";
+  ABSL_VLOG(1) << simulated_event_loop_->distributed_now() << " "
+               << NodeName(simulated_event_loop_->node()) << monotonic_now
+               << " " << simulated_event_loop_->name() << " Timer '" << name()
+               << "'";
   logging::ScopedLogRestorer prev_logger;
   if (simulated_event_loop_->log_impl_) {
     prev_logger.Swap(simulated_event_loop_->log_impl_);
@@ -1608,9 +1613,10 @@ SimulatedPhasedLoopHandler::~SimulatedPhasedLoopHandler() {
 void SimulatedPhasedLoopHandler::HandleEvent() noexcept {
   monotonic_clock::time_point monotonic_now =
       simulated_event_loop_->monotonic_now();
-  VLOG(1) << simulated_event_loop_->scheduler_->distributed_now() << " "
-          << NodeName(simulated_event_loop_->node()) << monotonic_now << " "
-          << simulated_event_loop_->name() << " Phased loop '" << name() << "'";
+  ABSL_VLOG(1) << simulated_event_loop_->scheduler_->distributed_now() << " "
+               << NodeName(simulated_event_loop_->node()) << monotonic_now
+               << " " << simulated_event_loop_->name() << " Phased loop '"
+               << name() << "'";
   logging::ScopedLogRestorer prev_logger;
   if (simulated_event_loop_->log_impl_) {
     prev_logger.Swap(simulated_event_loop_->log_impl_);
@@ -1764,8 +1770,9 @@ NodeEventLoopFactory::NodeEventLoopFactory(
     }
   });
   scheduler_.set_on_shutdown([this]() {
-    VLOG(1) << scheduler_.distributed_now() << " " << NodeName(this->node())
-            << monotonic_now() << " Shutting down node.";
+    ABSL_VLOG(1) << scheduler_.distributed_now() << " "
+                 << NodeName(this->node()) << monotonic_now()
+                 << " Shutting down node.";
     Shutdown();
     ScheduleStartup();
   });
@@ -1778,17 +1785,17 @@ NodeEventLoopFactory::~NodeEventLoopFactory() {
       fn();
     }
 
-    VLOG(1) << scheduler_.distributed_now() << " " << NodeName(node())
-            << monotonic_now() << " Shutting down applications.";
+    ABSL_VLOG(1) << scheduler_.distributed_now() << " " << NodeName(node())
+                 << monotonic_now() << " Shutting down applications.";
     applications_.clear();
     started_ = false;
   }
 
   if (event_loops_.size() != 0u) {
     for (SimulatedEventLoop *event_loop : event_loops_) {
-      LOG(ERROR) << scheduler_.distributed_now() << " " << NodeName(node())
-                 << monotonic_now() << " Event loop '" << event_loop->name()
-                 << "' failed to shut down";
+      ABSL_LOG(ERROR) << scheduler_.distributed_now() << " " << NodeName(node())
+                      << monotonic_now() << " Event loop '"
+                      << event_loop->name() << "' failed to shut down";
     }
   }
   ABSL_CHECK_EQ(event_loops_.size(), 0u) << "Event loop didn't exit";
@@ -1819,8 +1826,9 @@ void NodeEventLoopFactory::ScheduleStartup() {
              "change TimeConverter?";
       boot_uuid_ = next_uuid;
     }
-    VLOG(1) << scheduler_.distributed_now() << " " << NodeName(this->node())
-            << monotonic_now() << " Starting up node on boot " << boot_uuid_;
+    ABSL_VLOG(1) << scheduler_.distributed_now() << " "
+                 << NodeName(this->node()) << monotonic_now()
+                 << " Starting up node on boot " << boot_uuid_;
     Startup();
   });
 }
@@ -1843,15 +1851,15 @@ void NodeEventLoopFactory::Shutdown() {
     fn();
   }
 
-  VLOG(1) << scheduler_.distributed_now() << " " << NodeName(node())
-          << monotonic_now() << " Shutting down applications.";
+  ABSL_VLOG(1) << scheduler_.distributed_now() << " " << NodeName(node())
+               << monotonic_now() << " Shutting down applications.";
   applications_.clear();
 
   if (event_loops_.size() != 0u) {
     for (SimulatedEventLoop *event_loop : event_loops_) {
-      LOG(ERROR) << scheduler_.distributed_now() << " " << NodeName(node())
-                 << monotonic_now() << " Event loop '" << event_loop->name()
-                 << "' failed to shut down";
+      ABSL_LOG(ERROR) << scheduler_.distributed_now() << " " << NodeName(node())
+                      << monotonic_now() << " Event loop '"
+                      << event_loop->name() << "' failed to shut down";
     }
   }
   ABSL_CHECK_EQ(event_loops_.size(), 0u) << "Not all event loops shut down";
@@ -1955,7 +1963,7 @@ void SimulatedEventLoopFactory::Exit(Result<void> status) {
   if (!exit_status_.has_value()) {
     exit_status_ = std::move(status);
   } else {
-    VLOG(1) << "Exit status is already set; not setting it again.";
+    ABSL_VLOG(1) << "Exit status is already set; not setting it again.";
   }
   scheduler_scheduler_.Exit();
 }
@@ -2033,15 +2041,17 @@ void NodeEventLoopFactory::DisableStatistics() {
 
   // TODO(austin): You shouldn't be able to make an event loop before t=0...
   if (monotonic_now() < monotonic_clock::epoch()) {
-    LOG(FATAL) << scheduler_.distributed_now() << " " << NodeName(node())
-               << monotonic_now() << " MakeEventLoop(\"" << result->name()
-               << "\") failed, node not started.  Wait until this node's "
-                  "monotonic clock >= 0ns by using an OnStartup callback, or "
-                  "just running until then.";
+    ABSL_LOG(FATAL)
+        << scheduler_.distributed_now() << " " << NodeName(node())
+        << monotonic_now() << " MakeEventLoop(\"" << result->name()
+        << "\") failed, node not started.  Wait until this node's "
+           "monotonic clock >= 0ns by using an OnStartup callback, or "
+           "just running until then.";
   }
 
-  VLOG(1) << scheduler_.distributed_now() << " " << NodeName(node())
-          << monotonic_now() << " MakeEventLoop(\"" << result->name() << "\")";
+  ABSL_VLOG(1) << scheduler_.distributed_now() << " " << NodeName(node())
+               << monotonic_now() << " MakeEventLoop(\"" << result->name()
+               << "\")";
   return result;
 }
 

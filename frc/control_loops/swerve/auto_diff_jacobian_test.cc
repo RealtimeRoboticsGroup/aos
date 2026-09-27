@@ -2,7 +2,7 @@
 
 #include <functional>
 
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 
 namespace frc::control_loops::swerve::testing {

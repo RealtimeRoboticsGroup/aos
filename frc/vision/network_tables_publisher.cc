@@ -45,8 +45,8 @@ const calibration::CameraCalibration *FindCameraCalibration(
     }
     return candidate;
   }
-  LOG(FATAL) << ": Failed to find camera calibration for " << node_name
-             << " and camera number " << camera_number;
+  ABSL_LOG(FATAL) << ": Failed to find camera calibration for " << node_name
+                  << " and camera number " << camera_number;
 }
 
 class NetworkTablesPublisher {
@@ -105,7 +105,7 @@ class NetworkTablesPublisher {
       ABSL_CHECK(fiducial->has_transform());
       ABSL_CHECK_EQ(fiducial->transform()->size(), 16u);
 
-      VLOG(1) << "Fiducial: " << fiducial->id();
+      ABSL_VLOG(1) << "Fiducial: " << fiducial->id();
       Eigen::Affine3d transformation;
       for (size_t i = 0; i < 16u; ++i) {
         transformation.matrix().data()[i] = fiducial->transform()->Get(i);
@@ -115,7 +115,7 @@ class NetworkTablesPublisher {
 
       tag_transformations_[fiducial->id()] = transformation;
 
-      VLOG(1)
+      ABSL_VLOG(1)
           << "  Tag at: "
           << (transformation * Eigen::Matrix<double, 3, 1>::Zero()).transpose();
     }
@@ -150,8 +150,8 @@ class NetworkTablesPublisher {
       const Eigen::Vector3d translation_vector_i(
           target_pose_i->position()->x(), target_pose_i->position()->y(),
           target_pose_i->position()->z());
-      VLOG(2) << "Got target pose: " << translation_vector_i.norm() << " for "
-              << i;
+      ABSL_VLOG(2) << "Got target pose: " << translation_vector_i.norm()
+                   << " for " << i;
       if (target_pose == nullptr ||
           translation_vector_i.norm() < min_distance) {
         target_pose = target_pose_i;
@@ -159,9 +159,9 @@ class NetworkTablesPublisher {
       }
     }
 
-    VLOG(1) << "Got map for " << calibration->camera_number() << " with "
-            << target_map.target_poses()->size() << " targets, min distance of "
-            << min_distance;
+    ABSL_VLOG(1) << "Got map for " << calibration->camera_number() << " with "
+                 << target_map.target_poses()->size()
+                 << " targets, min distance of " << min_distance;
     if (target_pose == nullptr ||
         min_distance > absl::GetFlag(FLAGS_max_distance)) {
       return;
@@ -208,8 +208,8 @@ class NetworkTablesPublisher {
     Eigen::Affine3d camera_to_robot;
     camera_to_robot.matrix() = camera_to_robot_matrix;
 
-    VLOG(2) << "Cam " << calibration->camera_number()
-            << " fixed extrinsics are: " << camera_to_robot.matrix();
+    ABSL_VLOG(2) << "Cam " << calibration->camera_number()
+                 << " fixed extrinsics are: " << camera_to_robot.matrix();
 
     const Eigen::Affine3d robot_to_field =
         camera_to_field * camera_to_robot.inverse();
@@ -220,11 +220,12 @@ class NetworkTablesPublisher {
         robot_to_field.rotation().matrix() * Eigen::Vector3d::UnitX();
     const double yaw = std::atan2(projected_z.y(), projected_z.x());
 
-    VLOG(1) << "Cam" << calibration->camera_number() << ", tag "
-            << target_pose->id() << ", t: " << translation_vector.transpose()
-            << " min distance " << min_distance << " at "
-            << (robot_to_field * Eigen::Vector3d::Zero()).transpose() << " yaw "
-            << yaw << " age: " << age_ms << "ms";
+    ABSL_VLOG(1) << "Cam" << calibration->camera_number() << ", tag "
+                 << target_pose->id()
+                 << ", t: " << translation_vector.transpose()
+                 << " min distance " << min_distance << " at "
+                 << (robot_to_field * Eigen::Vector3d::Zero()).transpose()
+                 << " yaw " << yaw << " age: " << age_ms << "ms";
 
     Publish(&pose2d_publisher_,
             robot_to_field * Eigen::Vector3d::Zero() +

@@ -606,9 +606,9 @@ void FitLines(
   const size_t kBlocks = (points + kPointsPerBlock - 2 * kErrorsBuffer - 1) /
                          (kPointsPerBlock - 2 * kErrorsBuffer);
 
-  VLOG(1) << "Spawning with " << kThreads << " threads, and " << kBlocks
-          << " blocks for " << num_extents << " blob_ids and " << points
-          << " points";
+  ABSL_VLOG(1) << "Spawning with " << kThreads << " threads, and " << kBlocks
+               << " blocks for " << num_extents << " blob_ids and " << points
+               << " points";
   DoFitLines<kThreads><<<kBlocks, kThreads, 0, stream->get()>>>(
       line_fit_points_device, points, selected_extents_device, errs_device,
       filtered_errs_device, peaks_device);
@@ -1208,8 +1208,8 @@ void FitQuads(
     CudaStream *stream) {
   constexpr size_t kThreads = MaxRankedIndex();
   const size_t kBlocks = num_extents;
-  VLOG(1) << "Spawning with " << kThreads << " threads, and " << kBlocks
-          << " blocks for " << num_extents << " blob_ids";
+  ABSL_VLOG(1) << "Spawning with " << kThreads << " threads, and " << kBlocks
+               << " blocks for " << num_extents << " blob_ids";
   ABSL_CHECK_EQ(nmaxima, kNMaxima)
       << ": Kernel is compiled and optimized for a fixed nmaxima, please "
          "recompile if you want to change it.";

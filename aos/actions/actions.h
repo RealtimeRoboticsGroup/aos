@@ -9,7 +9,7 @@
 #include <type_traits>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/actions/actions_generated.h"
 #include "aos/events/event_loop.h"
@@ -130,7 +130,7 @@ class TypedAction : public Action {
     // Clear out any old status messages from before now.
     status_fetcher_->Fetch();
     if (status_fetcher_->get()) {
-      VLOG(1) << "have status" << FlatbufferToJson(status_fetcher_->get());
+      ABSL_VLOG(1) << "have status" << FlatbufferToJson(status_fetcher_->get());
     }
   }
 
@@ -280,7 +280,7 @@ bool TypedAction<T>::DoRunning() {
     CheckInterrupted();
   } else {
     while (status_fetcher_->FetchNext()) {
-      VLOG(1) << "got status" << FlatbufferToJson(status_fetcher_->get());
+      ABSL_VLOG(1) << "got status" << FlatbufferToJson(status_fetcher_->get());
       CheckStarted();
       if (has_started_) CheckInterrupted();
     }
@@ -301,7 +301,7 @@ bool TypedAction<T>::DoCheckIteration() {
   if (!status_fetcher_->FetchNext()) {
     return false;
   }
-  VLOG(1) << "got status" << FlatbufferToJson(status_fetcher_->get());
+  ABSL_VLOG(1) << "got status" << FlatbufferToJson(status_fetcher_->get());
   CheckStarted();
   CheckInterrupted();
   if (has_started_ && (status_fetcher_->get() &&
@@ -387,7 +387,7 @@ void TypedAction<T>::DoStart() {
     }
     status_fetcher_->FetchNext();
     if (status_fetcher_->get()) {
-      VLOG(1) << "got status" << FlatbufferToJson(status_fetcher_->get());
+      ABSL_VLOG(1) << "got status" << FlatbufferToJson(status_fetcher_->get());
     }
     if (status_fetcher_->get() && status_fetcher_->get()->running() != 0) {
       old_run_value_ = status_fetcher_->get()->running();

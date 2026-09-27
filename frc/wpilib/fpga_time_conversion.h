@@ -5,7 +5,7 @@
 #include <optional>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/time/time.h"
 #include "hal/cpp/fpga_clock.h"
@@ -45,7 +45,7 @@ class FpgaTimeConverter {
         return;
       }
     }
-    LOG(FATAL) << "Failed to calculate FPGA offset";
+    ABSL_LOG(FATAL) << "Failed to calculate FPGA offset";
   }
 
   std::chrono::nanoseconds offset_ = std::chrono::nanoseconds::min();

@@ -102,8 +102,8 @@ TEST_F(BufferEncoderBaseTest, CorruptedBuffer) {
       // Eventually we'll get here, once the decoder is really sure it's done.
       if (read_result == 0) {
         // Sanity check the math in the test code.
-        LOG(INFO) << "Decoded " << total_decoded_size << " encoded "
-                  << total_encoded_size;
+        ABSL_LOG(INFO) << "Decoded " << total_decoded_size << " encoded "
+                       << total_encoded_size;
         ABSL_CHECK_EQ(total_decoded_size, TotalSize(decoded_buffers));
         break;
       }

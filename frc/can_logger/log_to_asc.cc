@@ -26,8 +26,8 @@ int main(int argc, char *argv[]) {
   }
   std::string replay_node = absl::GetFlag(FLAGS_node);
   if (replay_node.empty() && all_logs_from_same_node) {
-    LOG(INFO) << "Guessing \"" << logger_node
-              << "\" as node given that --node was not specified.";
+    ABSL_LOG(INFO) << "Guessing \"" << logger_node
+                   << "\" as node given that --node was not specified.";
     replay_node = logger_node;
   }
 

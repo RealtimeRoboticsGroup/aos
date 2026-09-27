@@ -14,7 +14,7 @@ class Mutex;
 // where a notification is sent after some process has checked if the thing has
 // happened but before it has started listening for notifications.
 //
-// This implementation will LOG(FATAL) if anything weird happens.
+// This implementation will ABSL_LOG(FATAL) if anything weird happens.
 //
 // A simple example of the use of a condition variable (adapted from
 // pthread_cond(3)):

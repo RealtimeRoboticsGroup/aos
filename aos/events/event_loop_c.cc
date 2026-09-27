@@ -6,8 +6,8 @@
 #include <memory>
 
 #include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/log/die_if_null.h"
-#include "absl/log/log.h"
 #include "flatbuffers/buffer.h"
 
 #include "aos/configuration.h"
@@ -205,8 +205,8 @@ aos_fetcher_t *aos_event_loop_make_fetcher(aos_event_loop_t *self,
       << ": Can't find channel " << channel_name << " " << channel_type;
   if (!aos::configuration::ChannelIsReadableOnNode(channel,
                                                    event_loop->node())) {
-    LOG(FATAL) << ": Channel " << channel_name << " " << channel_type
-               << " isn't readable on node " << event_loop->node();
+    ABSL_LOG(FATAL) << ": Channel " << channel_name << " " << channel_type
+                    << " isn't readable on node " << event_loop->node();
   }
   std::unique_ptr<aos::RawFetcher> fetcher =
       event_loop->MakeRawFetcher(channel);
@@ -230,8 +230,8 @@ aos_sender_t *aos_event_loop_make_sender(aos_event_loop_t *self,
       << ": Can't find channel " << channel_name << " " << channel_type;
   if (!aos::configuration::ChannelIsSendableOnNode(channel,
                                                    event_loop->node())) {
-    LOG(FATAL) << ": Channel " << channel_name << " " << channel_type
-               << " isn't sendable on node " << event_loop->node();
+    ABSL_LOG(FATAL) << ": Channel " << channel_name << " " << channel_type
+                    << " isn't sendable on node " << event_loop->node();
   }
   std::unique_ptr<aos::RawSender> sender = event_loop->MakeRawSender(channel);
   return reinterpret_cast<aos_sender_t *>(sender.release());
@@ -252,8 +252,8 @@ void aos_event_loop_make_watcher(aos_event_loop_t *self,
       << ": Can't find channel " << channel_name << " " << channel_type;
   if (!aos::configuration::ChannelIsReadableOnNode(channel,
                                                    event_loop->node())) {
-    LOG(FATAL) << ": Channel " << channel_name << " " << channel_type
-               << " isn't readable on node " << event_loop->node();
+    ABSL_LOG(FATAL) << ": Channel " << channel_name << " " << channel_type
+                    << " isn't readable on node " << event_loop->node();
   }
   event_loop->MakeRawWatcher(
       channel,
@@ -277,8 +277,8 @@ void aos_event_loop_make_no_arg_watcher(aos_event_loop_t *self,
       << ": Can't find channel " << channel_name << " " << channel_type;
   if (!aos::configuration::ChannelIsReadableOnNode(channel,
                                                    event_loop->node())) {
-    LOG(FATAL) << ": Channel " << channel_name << " " << channel_type
-               << " isn't readable on node " << event_loop->node();
+    ABSL_LOG(FATAL) << ": Channel " << channel_name << " " << channel_type
+                    << " isn't readable on node " << event_loop->node();
   }
   event_loop->MakeRawNoArgWatcher(
       channel,
@@ -654,7 +654,7 @@ aos_event_loop_t *aos_node_event_loop_factory_make_event_loop(
 
 aos_log_reader_t *aos_log_reader_create_from_argv(int argc, char *argv[]) {
   if (argc < 2) {
-    LOG(ERROR)
+    ABSL_LOG(ERROR)
         << "aos_log_reader_create_from_argv requires at least a log path";
     return nullptr;
   }
@@ -665,7 +665,7 @@ aos_log_reader_t *aos_log_reader_create_from_argv(int argc, char *argv[]) {
     auto log_reader = std::make_unique<aos::logger::LogReader>(log_files);
     return reinterpret_cast<aos_log_reader_t *>(log_reader.release());
   } catch (const std::exception &e) {
-    LOG(ERROR) << "Failed to create LogReader: " << e.what();
+    ABSL_LOG(ERROR) << "Failed to create LogReader: " << e.what();
     return nullptr;
   }
 }

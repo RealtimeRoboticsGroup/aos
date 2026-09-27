@@ -14,7 +14,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_replace.h"
@@ -261,9 +261,9 @@ class SwerveSimulation {
                     add(modules_[2].direct.torque, modules_[3].direct.torque))),
             J_);
 
-    VLOG(1) << "accel(0, 0) = " << ccode(*full_accel_.get(0, 0));
-    VLOG(1) << "accel(1, 0) = " << ccode(*full_accel_.get(1, 0));
-    VLOG(1) << "angular_accel = " << ccode(*full_angular_accel_);
+    ABSL_VLOG(1) << "accel(0, 0) = " << ccode(*full_accel_.get(0, 0));
+    ABSL_VLOG(1) << "accel(1, 0) = " << ccode(*full_accel_.get(1, 0));
+    ABSL_VLOG(1) << "angular_accel = " << ccode(*full_angular_accel_);
   }
 
   // Writes the physics out to the provided .cc and .h path.
@@ -991,7 +991,7 @@ class SwerveSimulation {
   }
 
   Module ModulePhysics(const int m, DenseMatrix mounting_location) {
-    VLOG(1) << "Solving module " << m;
+    ABSL_VLOG(1) << "Solving module " << m;
 
     Module result;
     result.mounting_location = mounting_location;
@@ -1012,7 +1012,7 @@ class SwerveSimulation {
 
     // Velocity of the module in field coordinates
     DenseMatrix robot_velocity = DenseMatrix(2, 1, {vx_, vy_});
-    VLOG(1) << "robot velocity: " << robot_velocity.__str__();
+    ABSL_VLOG(1) << "robot velocity: " << robot_velocity.__str__();
 
     // Velocity of the contact patch in field coordinates
     DenseMatrix temp_matrix = DenseMatrix(2, 1);
@@ -1030,9 +1030,9 @@ class SwerveSimulation {
                     angle_cross(temp_matrix3, add(omega_, result.omegas)),
                     result.contact_patch_velocity);
 
-    VLOG(1);
-    VLOG(1) << "contact patch velocity: "
-            << result.contact_patch_velocity.__str__();
+    ABSL_VLOG(1);
+    ABSL_VLOG(1) << "contact patch velocity: "
+                 << result.contact_patch_velocity.__str__();
 
     // Relative velocity of the surface of the wheel to the ground.
     result.wheel_ground_velocity = DenseMatrix(2, 1);
@@ -1052,23 +1052,23 @@ class SwerveSimulation {
     add_dense_dense(negative_wheel_ground_velocity, wheel_velocity,
                     result.wheel_slip_velocity);
 
-    VLOG(1);
-    VLOG(1) << "wheel ground velocity: "
-            << result.wheel_ground_velocity.__str__();
+    ABSL_VLOG(1);
+    ABSL_VLOG(1) << "wheel ground velocity: "
+                 << result.wheel_ground_velocity.__str__();
 
     result.slip_angle = sin(neg(atan2(result.wheel_ground_velocity.get(1, 0),
                                       result.wheel_ground_velocity.get(0, 0))));
 
-    VLOG(1);
-    VLOG(1) << "slip angle: " << result.slip_angle->__str__();
+    ABSL_VLOG(1);
+    ABSL_VLOG(1) << "slip angle: " << result.slip_angle->__str__();
 
     // TODO(austin): Does this handle decel properly?
     result.slip_ratio = div(
         sub(mul(rw_, result.omegad), result.wheel_ground_velocity.get(0, 0)),
         SymEngine::max(
             {real_double(0.02), abs(result.wheel_ground_velocity.get(0, 0))}));
-    VLOG(1);
-    VLOG(1) << "Slip ratio " << result.slip_ratio->__str__();
+    ABSL_VLOG(1);
+    ABSL_VLOG(1) << "Slip ratio " << result.slip_ratio->__str__();
 
     result.full.Fwx = simplify(mul(Cx_, result.slip_ratio));
     result.Fwy = simplify(mul(Cy_, result.slip_angle));
@@ -1083,12 +1083,12 @@ class SwerveSimulation {
         mul(neg(result.Fwy),
             add(div(mul(softsign_velocity, contact_patch_length_), integer(3)),
                 caster_));
-    VLOG(1);
-    VLOG(1) << "Ms " << result.Ms->__str__();
-    VLOG(1);
-    VLOG(1) << "full.Fwx " << result.full.Fwx->__str__();
-    VLOG(1);
-    VLOG(1) << "Fwy " << result.Fwy->__str__();
+    ABSL_VLOG(1);
+    ABSL_VLOG(1) << "Ms " << result.Ms->__str__();
+    ABSL_VLOG(1);
+    ABSL_VLOG(1) << "full.Fwx " << result.full.Fwx->__str__();
+    ABSL_VLOG(1);
+    ABSL_VLOG(1) << "Fwy " << result.Fwy->__str__();
 
     // -K_td * Id / Gd + Fwx * rw = 0
     // Fwx = K_td * Id / Gd / rw
@@ -1100,8 +1100,9 @@ class SwerveSimulation {
     // d/dt omegas = ...
     result.full.alphas_eqn = SteerAccel(result.full.Fwx, result.Ms, result.Is);
 
-    VLOG(1);
-    VLOG(1) << alphas->__str__() << " = " << result.full.alphas_eqn->__str__();
+    ABSL_VLOG(1);
+    ABSL_VLOG(1) << alphas->__str__() << " = "
+                 << result.full.alphas_eqn->__str__();
 
     RCP<const Basic> lhs =
         sub(mul(sub(div(add(rp_, rs_), rp_), integer(1)), alphas),
@@ -1113,27 +1114,27 @@ class SwerveSimulation {
                 mul(Ktd_, div(neg(result.Id), Gd_))),
             mul(neg(result.full.Fwx), rw_));
 
-    VLOG(1) << "full_drive_eqn: " << full_drive_eqn->__str__();
+    ABSL_VLOG(1) << "full_drive_eqn: " << full_drive_eqn->__str__();
 
     // Substitute in ddplanitary_eqn so we get rid of alphamd
     map_basic_basic map;
     RCP<const Set> reals = interval(NegInf, Inf, true, true);
     RCP<const Set> solve_solution = solve(ddplanitary_eqn, alphamd, reals);
     map[alphamd] = solve_solution->get_args()[1]->get_args()[0];
-    VLOG(1) << "temp: " << solve_solution->__str__();
+    ABSL_VLOG(1) << "temp: " << solve_solution->__str__();
     RCP<const Basic> drive_eqn_subs = full_drive_eqn->subs(map);
 
     map.clear();
     map[alphas] = result.full.alphas_eqn;
     RCP<const Basic> drive_eqn_subs2 = drive_eqn_subs->subs(map);
     RCP<const Basic> drive_eqn_subs3 = simplify(drive_eqn_subs2);
-    VLOG(1) << "full_drive_eqn simplified: " << drive_eqn_subs3->__str__();
+    ABSL_VLOG(1) << "full_drive_eqn simplified: " << drive_eqn_subs3->__str__();
 
     solve_solution = solve(drive_eqn_subs3, alphad, reals);
 
     result.full.alphad_eqn =
         simplify(solve_solution->get_args()[1]->get_args()[0]);
-    VLOG(1) << "drive_accel: " << result.full.alphad_eqn->__str__();
+    ABSL_VLOG(1) << "drive_accel: " << result.full.alphad_eqn->__str__();
 
     // Compute the resulting force from the module.
     result.full.F = DenseMatrix(2, 1);
@@ -1154,9 +1155,9 @@ class SwerveSimulation {
     result.direct.torque =
         force_cross(result.rotated_mounting_location, result.direct.F);
 
-    VLOG(1);
-    VLOG(1) << "full torque = " << result.full.torque->__str__();
-    VLOG(1) << "direct torque = " << result.full.torque->__str__();
+    ABSL_VLOG(1);
+    ABSL_VLOG(1) << "full torque = " << result.full.torque->__str__();
+    ABSL_VLOG(1) << "direct torque = " << result.full.torque->__str__();
 
     return result;
   }

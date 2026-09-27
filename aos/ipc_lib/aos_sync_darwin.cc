@@ -114,7 +114,7 @@ int wait_on_address(aos_futex *addr1, int val1,
   // error (e.g. low-memory / page-fault races) even for a valid address, and
   // the documented contract is for the caller to retry. Map it to
   // -EWOULDBLOCK so the existing wait/retry loops handle it like a spurious
-  // wake instead of LOG(FATAL)ing.
+  // wake instead of ABSL_LOG(FATAL)ing.
   if (errno == EFAULT) return -EWOULDBLOCK;
   return -errno;
 }

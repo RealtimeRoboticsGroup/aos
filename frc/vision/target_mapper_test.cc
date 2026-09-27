@@ -6,7 +6,7 @@
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 
 #include "aos/events/simulated_event_loop.h"
@@ -142,9 +142,10 @@ bool TargetIsInView(TargetMapper::TargetPose target_detection) {
   // Simulated camera field of view, in radians
   constexpr double kCameraFov = numbers::pi / 2.0;
   if (std::abs(angle_to_target) <= kCameraFov / 2.0) {
-    VLOG(2) << "Found target in view, based on T = "
-            << target_detection.pose.p(0) << ", " << target_detection.pose.p(1)
-            << " with angle " << angle_to_target;
+    ABSL_VLOG(2) << "Found target in view, based on T = "
+                 << target_detection.pose.p(0) << ", "
+                 << target_detection.pose.p(1) << " with angle "
+                 << angle_to_target;
     return true;
   } else {
     return false;

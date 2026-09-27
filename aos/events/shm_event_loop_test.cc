@@ -4,7 +4,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -105,7 +105,7 @@ bool IsRealtime() {
     // If we are RT, logging the scheduler will crash us.  Mark that we just
     // don't care.
     aos::ScopedNotRealtime nrt;
-    LOG(INFO) << "scheduler is " << scheduler;
+    ABSL_LOG(INFO) << "scheduler is " << scheduler;
   }
 
   const bool result = scheduler == SCHED_FIFO || scheduler == SCHED_RR;

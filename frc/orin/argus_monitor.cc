@@ -26,7 +26,7 @@ class State {
   State(aos::EventLoop *event_loop, const Channel *channel)
       : channel_(channel),
         channel_name_(aos::configuration::StrippedChannelToString(channel_)) {
-    LOG(INFO) << "Watching for healthy message sends on " << channel_name_;
+    ABSL_LOG(INFO) << "Watching for healthy message sends on " << channel_name_;
 
     event_loop->MakeRawNoArgWatcher(
         channel_,
@@ -47,7 +47,7 @@ class State {
 
   void HandleMessage(const aos::Context &context) {
     if (last_time_ == aos::monotonic_clock::min_time) {
-      LOG(INFO) << "First message on " << channel_name_;
+      ABSL_LOG(INFO) << "First message on " << channel_name_;
     }
     last_time_ = context.monotonic_event_time;
   }
@@ -58,9 +58,10 @@ class State {
                              absl::GetFlag(FLAGS_max_jitter))) <
         event_loop->monotonic_now()) {
       // Restart camera services
-      LOG(INFO) << "Restarting camera services";
-      LOG(INFO) << "Channel " << channel_name_ << " has not received a message "
-                << absl::GetFlag(FLAGS_max_jitter) << " seconds";
+      ABSL_LOG(INFO) << "Restarting camera services";
+      ABSL_LOG(INFO) << "Channel " << channel_name_
+                     << " has not received a message "
+                     << absl::GetFlag(FLAGS_max_jitter) << " seconds";
       ABSL_CHECK_EQ(std::system("aos_starter stop argus_camera0"), 0);
       ABSL_CHECK_EQ(std::system("aos_starter stop argus_camera1"), 0);
       ABSL_CHECK_EQ(

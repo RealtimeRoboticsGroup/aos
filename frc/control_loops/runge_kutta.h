@@ -2,7 +2,7 @@
 #define FRC_CONTROL_LOOPS_RUNGE_KUTTA_H_
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include <Eigen/Dense>
 
 #include "frc/control_loops/runge_kutta_helpers.h"

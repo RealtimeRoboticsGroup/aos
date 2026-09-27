@@ -3,7 +3,7 @@
 #include <chrono>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/vlog_is_on.h"
+#include "absl/log/absl_vlog_is_on.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -534,7 +534,7 @@ TEST_F(NoncausalTimestampFilterTest, RandomTimeInsertion) {
                chrono::microseconds(k), chrono::microseconds(l)});
           TestingNoncausalTimestampFilter forward(node_a, node_b);
 
-          VLOG(1) << "Sorting in order";
+          ABSL_VLOG(1) << "Sorting in order";
           forward.Sample({0, t[0]}, {0, o[0]});
           forward.Sample({0, t[1]}, {0, o[1]});
           forward.Sample({0, t[2]}, {0, o[2]});
@@ -564,7 +564,7 @@ TEST_F(NoncausalTimestampFilterTest, RandomTimeInsertion) {
                        std::make_pair(t[indices[2]], o[indices[2]]),
                        std::make_pair(t[indices[3]], o[indices[3]])});
 
-            VLOG(1) << "Sorting randomized";
+            ABSL_VLOG(1) << "Sorting randomized";
             TestingNoncausalTimestampFilter random(node_a, node_b);
             // Test that we can add each sample correctly.
             for (size_t actual_sample = 0; actual_sample < pairs.size();
@@ -577,7 +577,7 @@ TEST_F(NoncausalTimestampFilterTest, RandomTimeInsertion) {
                    repeated_sample < actual_sample + 1; ++repeated_sample) {
                 random.Sample({0, pairs[repeated_sample].first},
                               {0, pairs[repeated_sample].second});
-                if (VLOG_IS_ON(1)) {
+                if (ABSL_VLOG_IS_ON(1)) {
                   random.Debug();
                 }
                 if (repeated_sample < actual_sample) {
@@ -593,21 +593,21 @@ TEST_F(NoncausalTimestampFilterTest, RandomTimeInsertion) {
                  ++repeated_sample) {
               random.Sample({0, pairs[repeated_sample].first},
                             {0, pairs[repeated_sample].second});
-              if (VLOG_IS_ON(1)) {
+              if (ABSL_VLOG_IS_ON(1)) {
                 random.Debug();
               }
             }
 
             if (forward.timestamps_size() != random.timestamps_size()) {
-              LOG(INFO) << "Iteration i == " << i << " && j == " << j
-                        << " && k == " << k << " && l == " << l
-                        << " && r == " << r;
-              LOG(INFO) << "Forward";
+              ABSL_LOG(INFO)
+                  << "Iteration i == " << i << " && j == " << j
+                  << " && k == " << k << " && l == " << l << " && r == " << r;
+              ABSL_LOG(INFO) << "Forward";
               forward.Debug();
-              LOG(INFO) << "Random";
+              ABSL_LOG(INFO) << "Random";
               for (int i = 0; i < 4; ++i) {
-                LOG(INFO) << "Sample({0, " << pairs[i].first << "}, "
-                          << pairs[i].second.count() << ")";
+                ABSL_LOG(INFO) << "Sample({0, " << pairs[i].first << "}, "
+                               << pairs[i].second.count() << ")";
               }
               random.Debug();
             }

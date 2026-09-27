@@ -149,7 +149,7 @@ ceres::examples::Constraint3d DataAdapter::ComputeTargetConstraint(
                                     {target_constraint.p, target_constraint.q},
                                     confidence};
 
-  VLOG(2) << "Computed constraint: " << constraint_3d;
+  ABSL_VLOG(2) << "Computed constraint: " << constraint_3d;
   return constraint_3d;
 }
 
@@ -262,7 +262,7 @@ void TargetMapper::BuildTargetPoseOptimizationProblem(
   ABSL_CHECK(poses != nullptr);
   ABSL_CHECK(problem != nullptr);
   if (constraints.empty()) {
-    LOG(INFO) << "No constraints, no problem to optimize.";
+    ABSL_LOG(INFO) << "No constraints, no problem to optimize.";
     return;
   }
 
@@ -295,8 +295,8 @@ void TargetMapper::BuildTargetPoseOptimizationProblem(
         << "Should have counted constraints for " << id_pair.first << "->"
         << id_pair.second;
 
-    VLOG(1) << "Adding constraint pair: " << id_pair.first << " and "
-            << id_pair.second;
+    ABSL_VLOG(1) << "Adding constraint pair: " << id_pair.first << " and "
+                 << id_pair.second;
     // Store min & max id's; assumes first id < second id
     if (id_pair.first < min_constraint_id) {
       min_constraint_id = id_pair.first;
@@ -433,7 +433,7 @@ bool TargetMapper::SolveOptimizationProblem(ceres::Problem *problem) {
   ceres::Solver::Summary summary;
   ceres::Solve(options, problem, &summary);
 
-  LOG(INFO) << summary.FullReport() << '\n';
+  ABSL_LOG(INFO) << summary.FullReport() << '\n';
 
   return summary.IsSolutionUsable();
 }
@@ -446,7 +446,7 @@ void TargetMapper::Solve(std::string_view field_name,
   ABSL_CHECK(SolveOptimizationProblem(&target_pose_problem_1))
       << "The target pose solve 1 was not successful, exiting.";
   if (absl::GetFlag(FLAGS_visualize_solver)) {
-    LOG(INFO) << "Displaying constraint graph before removing outliers";
+    ABSL_LOG(INFO) << "Displaying constraint graph before removing outliers";
     DisplayConstraintGraph();
     DisplaySolvedVsInitial();
   }
@@ -460,13 +460,14 @@ void TargetMapper::Solve(std::string_view field_name,
   ABSL_CHECK(SolveOptimizationProblem(&target_pose_problem_2))
       << "The target pose solve 2 was not successful, exiting.";
   if (absl::GetFlag(FLAGS_visualize_solver)) {
-    LOG(INFO) << "Displaying constraint graph before removing outliers";
+    ABSL_LOG(INFO) << "Displaying constraint graph before removing outliers";
     DisplayConstraintGraph();
     DisplaySolvedVsInitial();
   }
 
   if (absl::GetFlag(FLAGS_do_map_fitting)) {
-    LOG(INFO) << "Solving the overall map's best alignment to the previous map";
+    ABSL_LOG(INFO)
+        << "Solving the overall map's best alignment to the previous map";
     ceres::Problem map_fitting_problem(
         {.loss_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP});
     std::unique_ptr<ceres::CostFunction> map_fitting_cost_function =
@@ -476,8 +477,8 @@ void TargetMapper::Solve(std::string_view field_name,
     map_fitting_cost_function.release();
 
     Eigen::Affine3d H_frozen_actual = T_frozen_actual_ * R_frozen_actual_;
-    LOG(INFO) << "H_frozen_actual: "
-              << PoseUtils::Affine3dToPose3d(H_frozen_actual);
+    ABSL_LOG(INFO) << "H_frozen_actual: "
+                   << PoseUtils::Affine3dToPose3d(H_frozen_actual);
 
     auto H_world_frozen = PoseUtils::Pose3dToAffine3d(
         target_poses_[absl::GetFlag(FLAGS_frozen_target_id)]);
@@ -501,12 +502,12 @@ void TargetMapper::Solve(std::string_view field_name,
   }
 
   auto map_json = MapToJson(field_name);
-  VLOG(1) << "Solved target poses: " << map_json;
+  ABSL_VLOG(1) << "Solved target poses: " << map_json;
 
   if (output_dir.has_value()) {
     std::string output_path =
         absl::StrCat(output_dir.value(), "/", field_name, ".json");
-    LOG(INFO) << "Writing map to file: " << output_path;
+    ABSL_LOG(INFO) << "Writing map to file: " << output_path;
     aos::util::WriteStringToFileOrDie(output_path, map_json);
   }
 
@@ -518,8 +519,8 @@ void TargetMapper::Solve(std::string_view field_name,
           PoseUtils::Pose3dToAffine3d(target_poses_.at(id_start)).inverse() *
           PoseUtils::Pose3dToAffine3d(target_poses_.at(id_end));
       auto constraint = PoseUtils::Affine3dToPose3d(H_start_end);
-      VLOG(1) << id_start << "->" << id_end << ": " << constraint.p.norm()
-              << " meters";
+      ABSL_VLOG(1) << id_start << "->" << id_end << ": " << constraint.p.norm()
+                   << " meters";
     }
   }
 }
@@ -575,8 +576,9 @@ bool TargetMapper::operator()(const S *const translation,
                                            translation[2]);
   // Actual target pose in the frame of the fixed pose.
   Affine3s H_frozen_actual = T_frozen_actual * R_frozen_actual;
-  VLOG(2) << "H_frozen_actual: "
-          << PoseUtils::Affine3dToPose3d(ScalarAffineToDouble(H_frozen_actual));
+  ABSL_VLOG(2) << "H_frozen_actual: "
+               << PoseUtils::Affine3dToPose3d(
+                      ScalarAffineToDouble(H_frozen_actual));
 
   Affine3s H_world_frozen =
       PoseUtils::Pose3dToAffine3d(
@@ -603,11 +605,11 @@ bool TargetMapper::operator()(const S *const translation,
     // that on top of the actual pose of the frozen target
     auto H_frozen_solved = H_world_frozen.inverse() * H_world_solved;
     auto H_world_actual = H_world_frozenactual * H_frozen_solved;
-    VLOG(2) << id << ": " << H_world_actual.translation();
+    ABSL_VLOG(2) << id << ": " << H_world_actual.translation();
     Affine3s H_ideal_actual = H_world_ideal.inverse() * H_world_actual;
     auto T_ideal_actual = H_ideal_actual.translation();
-    VLOG(2) << "T_ideal_actual: " << T_ideal_actual;
-    VLOG(2);
+    ABSL_VLOG(2) << "T_ideal_actual: " << T_ideal_actual;
+    ABSL_VLOG(2);
     auto R_ideal_actual = Eigen::AngleAxis<S>(H_ideal_actual.rotation());
 
     // Weight translation errors higher than rotation.
@@ -629,8 +631,8 @@ bool TargetMapper::operator()(const S *const translation,
         kRotationScalar * R_ideal_actual.angle() * R_ideal_actual.axis().z();
 
     if (absl::GetFlag(FLAGS_visualize_solver)) {
-      LOG(INFO) << std::to_string(id) + std::string("-est") << " at "
-                << ScalarAffineToDouble(H_world_actual).matrix();
+      ABSL_LOG(INFO) << std::to_string(id) + std::string("-est") << " at "
+                     << ScalarAffineToDouble(H_world_actual).matrix();
       vis_robot_.DrawFrameAxes(ScalarAffineToDouble(H_world_actual),
                                std::to_string(id) + std::string("-est"),
                                cv::Scalar(0, 255, 0));
@@ -735,12 +737,12 @@ void TargetMapper::RemoveOutlierConstraints() {
           }),
       target_constraints_.end());
 
-  LOG(INFO) << "Removed " << (original_size - target_constraints_.size())
-            << " outlier constraints out of " << original_size << " total";
+  ABSL_LOG(INFO) << "Removed " << (original_size - target_constraints_.size())
+                 << " outlier constraints out of " << original_size << " total";
 }
 
 void TargetMapper::DumpStats(std::string_view path) const {
-  LOG(INFO) << "Dumping mapping stats to " << path;
+  ABSL_LOG(INFO) << "Dumping mapping stats to " << path;
   Stats stats = ComputeStats();
   std::ofstream fout(path.data());
   fout << "Stats after outlier rejection: " << std::endl;
@@ -768,7 +770,7 @@ void TargetMapper::DumpStats(std::string_view path) const {
 }
 
 void TargetMapper::DumpConstraints(std::string_view path) const {
-  LOG(INFO) << "Dumping target constraints to " << path;
+  ABSL_LOG(INFO) << "Dumping target constraints to " << path;
   std::ofstream fout(path.data());
   for (const auto &constraint : target_constraints_) {
     fout << absl::StrCat("", constraint) << std::endl;
@@ -790,11 +792,11 @@ void TargetMapper::PrintDiffs() const {
                           180.0 / numbers::pi;
     Eigen::Vector3d trans = H_ideal_solved.translation();
 
-    LOG(INFO) << "\nOffset from ideal to solved for target " << id
-              << " (in m, deg)"
-              << "\n  x: " << trans(0) << ", y: " << trans(1)
-              << ", z: " << trans(2) << ", \n  roll: " << rpy(0)
-              << ", pitch: " << rpy(1) << ", yaw: " << rpy(2) << "\n";
+    ABSL_LOG(INFO) << "\nOffset from ideal to solved for target " << id
+                   << " (in m, deg)"
+                   << "\n  x: " << trans(0) << ", y: " << trans(1)
+                   << ", z: " << trans(2) << ", \n  roll: " << rpy(0)
+                   << ", pitch: " << rpy(1) << ", yaw: " << rpy(2) << "\n";
   }
 }
 

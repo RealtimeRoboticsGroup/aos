@@ -218,9 +218,10 @@ LogReader::LogReader(LogFilesContainer log_files,
              "lists.";
       for (const Node *node : *logged_configuration()->nodes()) {
         if (configuration::GetNode(replay_configuration, node) == nullptr) {
-          LOG(FATAL) << "Found node " << FlatbufferToJson(node)
-                     << " in logged config that is not present in the replay "
-                        "config.";
+          ABSL_LOG(FATAL)
+              << "Found node " << FlatbufferToJson(node)
+              << " in logged config that is not present in the replay "
+                 "config.";
         }
       }
     }
@@ -234,8 +235,9 @@ LogReader::~LogReader() {
   if (event_loop_factory_unique_ptr_) {
     Deregister();
   } else if (event_loop_factory_ != nullptr) {
-    LOG(FATAL) << "Must call Deregister before the SimulatedEventLoopFactory "
-                  "is destroyed";
+    ABSL_LOG(FATAL)
+        << "Must call Deregister before the SimulatedEventLoopFactory "
+           "is destroyed";
   }
 }
 
@@ -355,8 +357,8 @@ void LogReader::State::RunOnStart() {
   SetRealtimeOffset(monotonic_start_time(boot_count()),
                     realtime_start_time(boot_count()));
 
-  VLOG(1) << "Starting for node '" << MaybeNodeName(node()) << "' at time "
-          << monotonic_start_time(boot_count());
+  ABSL_VLOG(1) << "Starting for node '" << MaybeNodeName(node()) << "' at time "
+               << monotonic_start_time(boot_count());
   auto fn = [this]() {
     for (size_t i = 0; i < on_starts_.size(); ++i) {
       on_starts_[i]();
@@ -391,8 +393,8 @@ void LogReader::State::OnEnd(std::function<void()> fn) {
 }
 
 void LogReader::State::RunOnEnd() {
-  VLOG(1) << "Ending for node '" << MaybeNodeName(node()) << "' at time "
-          << monotonic_start_time(boot_count());
+  ABSL_VLOG(1) << "Ending for node '" << MaybeNodeName(node()) << "' at time "
+               << monotonic_start_time(boot_count());
   auto fn = [this]() {
     for (size_t i = 0; i < on_ends_.size(); ++i) {
       on_ends_[i]();
@@ -565,7 +567,7 @@ Status LogReader::NonFatalRegisterWithoutStarting(
   }
 
   if (live_nodes_ == 0) {
-    LOG(FATAL)
+    ABSL_LOG(FATAL)
         << "Don't have logs from any of the nodes in the replay config--are "
            "you sure that the replay config matches the original config?";
   }
@@ -617,10 +619,11 @@ void LogReader::StartAfterRegister(
 
   for (std::unique_ptr<State> &state : states_) {
     ABSL_CHECK(state);
-    VLOG(1) << "Start time is " << state->monotonic_start_time(0)
-            << " for node '" << MaybeNodeName(state->node()) << "' now "
-            << (state->event_loop() != nullptr ? state->monotonic_now()
-                                               : monotonic_clock::min_time);
+    ABSL_VLOG(1) << "Start time is " << state->monotonic_start_time(0)
+                 << " for node '" << MaybeNodeName(state->node()) << "' now "
+                 << (state->event_loop() != nullptr
+                         ? state->monotonic_now()
+                         : monotonic_clock::min_time);
     if (state->monotonic_start_time(0) == monotonic_clock::min_time) {
       continue;
     }
@@ -638,9 +641,9 @@ void LogReader::StartAfterRegister(
          "everything.";
 
   {
-    VLOG(1) << "Running until " << start_time << " in Register";
+    ABSL_VLOG(1) << "Running until " << start_time << " in Register";
     event_loop_factory_->RunFor(start_time.time_since_epoch());
-    VLOG(1) << "At start time";
+    ABSL_VLOG(1) << "At start time";
   }
 
   for (std::unique_ptr<State> &state : states_) {
@@ -649,10 +652,11 @@ void LogReader::StartAfterRegister(
       state->SetRealtimeOffset(state->monotonic_start_time(0),
                                state->realtime_start_time(0));
     }
-    VLOG(1) << "Start time is " << state->monotonic_start_time(0)
-            << " for node '" << MaybeNodeName(state->node()) << "' now "
-            << (state->event_loop() != nullptr ? state->monotonic_now()
-                                               : monotonic_clock::min_time);
+    ABSL_VLOG(1) << "Start time is " << state->monotonic_start_time(0)
+                 << " for node '" << MaybeNodeName(state->node()) << "' now "
+                 << (state->event_loop() != nullptr
+                         ? state->monotonic_now()
+                         : monotonic_clock::min_time);
   }
 
   if (absl::GetFlag(FLAGS_timestamps_to_csv)) {
@@ -819,12 +823,12 @@ void LogReader::ProcessTimestampedMessage(
             << " " << state->DebugString();
       } else if (monotonic_remote_now.boot !=
                  timestamped_message.monotonic_remote_time.boot) {
-        LOG(WARNING) << "Missmatched boots, " << monotonic_remote_now.boot
-                     << " vs "
-                     << timestamped_message.monotonic_remote_time.boot;
+        ABSL_LOG(WARNING) << "Missmatched boots, " << monotonic_remote_now.boot
+                          << " vs "
+                          << timestamped_message.monotonic_remote_time.boot;
       } else if (timestamped_message.monotonic_remote_time >
                  monotonic_remote_now) {
-        LOG(WARNING)
+        ABSL_LOG(WARNING)
             << "Check failed: timestamped_message.monotonic_remote_time < "
                "state->monotonic_remote_now(timestamped_message.channel_"
                "index) ("
@@ -851,9 +855,9 @@ void LogReader::ProcessTimestampedMessage(
     state->SetRealtimeOffset(timestamped_message.monotonic_event_time.time,
                              timestamped_message.realtime_event_time);
 
-    VLOG(1) << "For node '" << MaybeNodeName(state->event_loop()->node())
-            << "' sending at " << timestamped_message.monotonic_event_time
-            << " : " << state->DebugString();
+    ABSL_VLOG(1) << "For node '" << MaybeNodeName(state->event_loop()->node())
+                 << "' sending at " << timestamped_message.monotonic_event_time
+                 << " : " << state->DebugString();
     // TODO(austin): std::move channel_data in and make that efficient in
     // simulation.
     state->Send(std::move(timestamped_message));
@@ -874,13 +878,13 @@ void LogReader::ProcessTimestampedMessage(
       // Record it and ABSL_CHECK that in the rest of the log file, we don't
       // find any more data on that channel.  Not all channels will end at the
       // same point in time since they can be in different files.
-      VLOG(1) << "Found the last message on channel "
-              << timestamped_message.channel_index << ", "
-              << configuration::CleanedChannelToString(
-                     logged_configuration()->channels()->Get(
-                         timestamped_message.channel_index))
-              << " on node '" << MaybeNodeName(state->event_loop()->node())
-              << "' at " << timestamped_message;
+      ABSL_VLOG(1) << "Found the last message on channel "
+                   << timestamped_message.channel_index << ", "
+                   << configuration::CleanedChannelToString(
+                          logged_configuration()->channels()->Get(
+                              timestamped_message.channel_index))
+                   << " on node '" << MaybeNodeName(state->event_loop()->node())
+                   << "' at " << timestamped_message;
 
       // The user might be working with log files from 1 node but forgot to
       // configure the infrastructure to log data for a remote channel on
@@ -900,14 +904,15 @@ void LogReader::ProcessTimestampedMessage(
               configuration::ChannelMessageIsLoggedOnNode(channel, node);
         }
         if (!data_logged) {
-          LOG(WARNING) << "Got a timestamp without any logfiles which "
-                          "could contain data for channel "
-                       << configuration::CleanedChannelToString(channel);
-          LOG(WARNING) << "Only have logs logged on ["
-                       << absl::StrJoin(logger_nodes, ", ") << "]";
-          LOG(WARNING) << "Dropping the rest of the data on "
-                       << state->event_loop()->node()->name()->string_view();
-          LOG(WARNING)
+          ABSL_LOG(WARNING) << "Got a timestamp without any logfiles which "
+                               "could contain data for channel "
+                            << configuration::CleanedChannelToString(channel);
+          ABSL_LOG(WARNING) << "Only have logs logged on ["
+                            << absl::StrJoin(logger_nodes, ", ") << "]";
+          ABSL_LOG(WARNING)
+              << "Dropping the rest of the data on "
+              << state->event_loop()->node()->name()->string_view();
+          ABSL_LOG(WARNING)
               << "Consider using --skip_missing_forwarding_entries to "
                  "bypass this, update your config to log it, or add data "
                  "from one of the nodes it is logged on.";
@@ -935,7 +940,7 @@ void LogReader::ProcessTimestampedMessage(
     } else {
       if (state->last_message(timestamped_message.channel_index)) {
         if (timestamped_message.preceded_by_expired_message) {
-          LOG(FATAL)
+          ABSL_LOG(FATAL)
               << "Found missing data in the middle of the log file on channel "
               << timestamped_message.channel_index << " "
               << configuration::StrippedChannelToString(
@@ -950,7 +955,7 @@ void LogReader::ProcessTimestampedMessage(
               << " seconds). Current message: " << timestamped_message << " "
               << state->DebugString();
         } else {
-          LOG(FATAL)
+          ABSL_LOG(FATAL)
               << "Found missing data in the middle of the log file on channel "
               << timestamped_message.channel_index << " "
               << configuration::StrippedChannelToString(
@@ -1072,8 +1077,8 @@ Result<void> LogReader::RegisterDuringStartup(EventLoop *event_loop,
   state->set_timer_handler(event_loop->AddTimer([this, state]() {
     if (state->MultiThreadedOldestMessageTime() == BootTimestamp::max_time()) {
       --live_nodes_;
-      VLOG(1) << "Node '" << MaybeNodeName(state->event_loop()->node())
-              << "' down!";
+      ABSL_VLOG(1) << "Node '" << MaybeNodeName(state->event_loop()->node())
+                   << "' down!";
       if (exit_on_finish_ && live_nodes_ == 0 &&
           event_loop_factory_ != nullptr) {
         event_loop_factory_->Exit();
@@ -1106,14 +1111,14 @@ Result<void> LogReader::RegisterDuringStartup(EventLoop *event_loop,
       } else if (BootTimestamp{.boot = state->boot_count(),
                                .time = monotonic_now} !=
                  timestamped_message.monotonic_event_time) {
-        LOG(WARNING) << "Check failed: monotonic_now == "
-                        "timestamped_message.monotonic_event_time) ("
-                     << monotonic_now << " vs. "
-                     << timestamped_message.monotonic_event_time
-                     << "): " << FlatbufferToJson(state->event_loop()->node())
-                     << " Now " << monotonic_now << " trying to send "
-                     << timestamped_message.monotonic_event_time << " failure "
-                     << state->DebugString();
+        ABSL_LOG(WARNING) << "Check failed: monotonic_now == "
+                             "timestamped_message.monotonic_event_time) ("
+                          << monotonic_now << " vs. "
+                          << timestamped_message.monotonic_event_time << "): "
+                          << FlatbufferToJson(state->event_loop()->node())
+                          << " Now " << monotonic_now << " trying to send "
+                          << timestamped_message.monotonic_event_time
+                          << " failure " << state->DebugString();
       }
     }
 
@@ -1124,7 +1129,7 @@ Result<void> LogReader::RegisterDuringStartup(EventLoop *event_loop,
         !absl::GetFlag(FLAGS_drop_realtime_messages_before_start)) {
       ProcessTimestampedMessage(std::move(timestamped_message), state);
     } else {
-      LOG(WARNING)
+      ABSL_LOG(WARNING)
           << "Not sending data from before the start of the log file. "
           << timestamped_message.monotonic_event_time.time.time_since_epoch()
                  .count()
@@ -1142,31 +1147,32 @@ Result<void> LogReader::RegisterDuringStartup(EventLoop *event_loop,
     const BootTimestamp next_time = next_time_result.value();
     if (next_time != BootTimestamp::max_time()) {
       if (next_time.boot != state->boot_count()) {
-        VLOG(1) << "Next message for node '"
-                << MaybeNodeName(state->event_loop()->node())
-                << "' is on the next boot, " << next_time << " now is "
-                << state->monotonic_now();
+        ABSL_VLOG(1) << "Next message for node '"
+                     << MaybeNodeName(state->event_loop()->node())
+                     << "' is on the next boot, " << next_time << " now is "
+                     << state->monotonic_now();
         ABSL_CHECK(event_loop_factory_);
         state->NotifyLogfileEnd();
         return;
       }
       if (event_loop_factory_ != nullptr) {
-        VLOG(1) << "Scheduling for node '"
-                << MaybeNodeName(state->event_loop()->node()) << "' wakeup for "
-                << next_time.time << "("
-                << state->ToDistributedClock(next_time.time)
-                << " distributed), now is " << state->monotonic_now();
+        ABSL_VLOG(1) << "Scheduling for node '"
+                     << MaybeNodeName(state->event_loop()->node())
+                     << "' wakeup for " << next_time.time << "("
+                     << state->ToDistributedClock(next_time.time)
+                     << " distributed), now is " << state->monotonic_now();
       } else {
-        VLOG(1) << "Scheduling for node '"
-                << MaybeNodeName(state->event_loop()->node()) << "' wakeup for "
-                << next_time.time << ", now is " << state->monotonic_now();
+        ABSL_VLOG(1) << "Scheduling for node '"
+                     << MaybeNodeName(state->event_loop()->node())
+                     << "' wakeup for " << next_time.time << ", now is "
+                     << state->monotonic_now();
       }
       // TODO(james): This can result in negative times getting passed-through
       // in realtime replay.
       state->Schedule(next_time.time);
     } else {
-      VLOG(1) << "Node '" << MaybeNodeName(state->event_loop()->node())
-              << "': No next message, scheduling shutdown";
+      ABSL_VLOG(1) << "Node '" << MaybeNodeName(state->event_loop()->node())
+                   << "': No next message, scheduling shutdown";
       state->NotifyLogfileEnd();
       // Set a timer up immediately after now to die. If we don't do this,
       // then the watchers waiting on the message we just read will never get
@@ -1179,10 +1185,10 @@ Result<void> LogReader::RegisterDuringStartup(EventLoop *event_loop,
       }
     }
 
-    VLOG(1) << "Node '" << MaybeNodeName(state->event_loop()->node())
-            << "': Done sending at "
-            << state->event_loop()->context().monotonic_event_time << " now "
-            << state->monotonic_now();
+    ABSL_VLOG(1) << "Node '" << MaybeNodeName(state->event_loop()->node())
+                 << "': Done sending at "
+                 << state->event_loop()->context().monotonic_event_time
+                 << " now " << state->monotonic_now();
   }));
 
   AOS_RETURN_IF_ERROR(state->MaybeSeedSortedMessages());
@@ -1282,15 +1288,16 @@ void CheckAndHandleRemapConflict(
   if (existing_channel != nullptr) {
     switch (conflict_handling) {
       case ConfigRemapper::RemapConflict::kDisallow:
-        LOG(FATAL)
+        ABSL_LOG(FATAL)
             << "Channel "
             << configuration::StrippedChannelToString(existing_channel)
             << " is already used--you can't remap a logged channel to it.";
         break;
       case ConfigRemapper::RemapConflict::kCascade:
-        LOG(INFO) << "Automatically remapping "
-                  << configuration::StrippedChannelToString(existing_channel)
-                  << " to avoid conflicts.";
+        ABSL_LOG(INFO) << "Automatically remapping "
+                       << configuration::StrippedChannelToString(
+                              existing_channel)
+                       << " to avoid conflicts.";
         conflict_handler();
         break;
     }
@@ -1353,9 +1360,10 @@ LogReader::MaybeMakeReplayChannelIndices(const Node *node) {
       const Channel *ch = configuration::GetChannel(
           logged_configuration(), channel.first, channel.second, "", node);
       if (ch == nullptr) {
-        LOG(WARNING) << "Channel: " << channel.first << " " << channel.second
-                     << " not found in configuration for node: "
-                     << node->name()->string_view() << " Skipping ...";
+        ABSL_LOG(WARNING) << "Channel: " << channel.first << " "
+                          << channel.second
+                          << " not found in configuration for node: "
+                          << node->name()->string_view() << " Skipping ...";
         continue;
       }
       const size_t channel_index =
@@ -1565,7 +1573,7 @@ bool LogReader::State::Send(TimestampedMessage &&timestamped_message) {
                            element->actual_queue_index -
                            element->starting_queue_index;
     } else {
-      VLOG(1) << "No timestamp match in the map.";
+      ABSL_VLOG(1) << "No timestamp match in the map.";
     }
     ABSL_CHECK_EQ(timestamped_message.monotonic_remote_time.boot,
                   source_state->boot_count());
@@ -1882,10 +1890,11 @@ Result<TimestampedMessage> LogReader::State::PopOldest() {
         std::chrono::duration_cast<std::chrono::nanoseconds>(
             std::chrono::duration<double>(
                 absl::GetFlag(FLAGS_threaded_look_ahead_seconds))));
-    VLOG(1) << "Popped " << message.value().value()
-            << configuration::CleanedChannelToString(
-                   event_loop_->configuration()->channels()->Get(
-                       factory_channel_index_[message->value().channel_index]));
+    ABSL_VLOG(1)
+        << "Popped " << message.value().value()
+        << configuration::CleanedChannelToString(
+               event_loop_->configuration()->channels()->Get(
+                   factory_channel_index_[message->value().channel_index]));
     return message.value();
   } else {  // single threaded
     ABSL_CHECK(timestamp_mapper_ != nullptr);
@@ -1895,17 +1904,19 @@ Result<TimestampedMessage> LogReader::State::PopOldest() {
 
           TimestampedMessage result = std::move(*result_ptr);
 
-          VLOG(2) << "Node '" << MaybeNodeName(event_loop_->node())
-                  << "': PopOldest Popping " << result.monotonic_event_time;
+          ABSL_VLOG(2) << "Node '" << MaybeNodeName(event_loop_->node())
+                       << "': PopOldest Popping "
+                       << result.monotonic_event_time;
           AOS_RETURN_IF_ERROR(timestamp_mapper_->PopFront());
           AOS_RETURN_IF_ERROR(MaybeSeedSortedMessages());
 
           ABSL_CHECK_EQ(result.monotonic_event_time.boot, boot_count());
 
-          VLOG(1) << "Popped " << result
-                  << configuration::CleanedChannelToString(
-                         event_loop_->configuration()->channels()->Get(
-                             factory_channel_index_[result.channel_index]));
+          ABSL_VLOG(1)
+              << "Popped " << result
+              << configuration::CleanedChannelToString(
+                     event_loop_->configuration()->channels()->Get(
+                         factory_channel_index_[result.channel_index]));
           return result;
         });
   }
@@ -1941,8 +1952,9 @@ Result<BootTimestamp> LogReader::State::SingleThreadedOldestMessageTime() {
         if (result_ptr == nullptr) {
           return BootTimestamp::max_time();
         }
-        VLOG(2) << "Node '" << MaybeNodeName(node()) << "': oldest message at "
-                << result_ptr->monotonic_event_time.time;
+        ABSL_VLOG(2) << "Node '" << MaybeNodeName(node())
+                     << "': oldest message at "
+                     << result_ptr->monotonic_event_time.time;
         if (result_ptr->monotonic_event_time.boot == boot_count()) {
           ObserveNextMessage(result_ptr->monotonic_event_time.time,
                              result_ptr->realtime_event_time);
@@ -2037,13 +2049,14 @@ void LogReader::State::NotifyLogfileStart() {
     // (realtime_start_time())
     if (start_event_notifier_->realtime_event_time() >
         realtime_start_time(boot_count())) {
-      VLOG(1) << "Skipping, " << start_event_notifier_->realtime_event_time()
-              << " > " << realtime_start_time(boot_count());
+      ABSL_VLOG(1) << "Skipping, "
+                   << start_event_notifier_->realtime_event_time() << " > "
+                   << realtime_start_time(boot_count());
       return;
     }
   }
   if (found_last_message_) {
-    VLOG(1) << "Last message already found, bailing";
+    ABSL_VLOG(1) << "Last message already found, bailing";
     return;
   }
   RunOnStart();

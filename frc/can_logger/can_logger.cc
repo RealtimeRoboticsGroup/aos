@@ -2,7 +2,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 ABSL_FLAG(bool, poll, false,
           "If true, poll the CAN bus every 100ms.  If false, wake up for "
@@ -51,7 +51,8 @@ CanLogger::CanLogger(aos::ShmEventLoop *event_loop,
   ABSL_PCHECK(getsockopt(fd_.get(), SOL_SOCKET, SO_RCVBUF, &recieve_buffer_size,
                          &opt_size) == 0);
   ABSL_CHECK_EQ(opt_size, sizeof(recieve_buffer_size));
-  VLOG(0) << "CAN recieve bufffer is " << recieve_buffer_size << " bytes large";
+  ABSL_VLOG(0) << "CAN recieve bufffer is " << recieve_buffer_size
+               << " bytes large";
 
   if (absl::GetFlag(FLAGS_poll)) {
     aos::TimerHandler *timer_handler =
@@ -64,12 +65,12 @@ CanLogger::CanLogger(aos::ShmEventLoop *event_loop,
 }
 
 void CanLogger::Poll() {
-  VLOG(2) << "Polling";
+  ABSL_VLOG(2) << "Polling";
   int frames_read = 0;
   while (ReadFrame()) {
     frames_read++;
   }
-  VLOG(1) << "Read " << frames_read << " frames to end of buffer";
+  ABSL_VLOG(1) << "Read " << frames_read << " frames to end of buffer";
 }
 
 bool CanLogger::ReadFrame() {
@@ -82,7 +83,7 @@ bool CanLogger::ReadFrame() {
     return false;
   }
 
-  VLOG(2) << "Read " << bytes_read << " bytes";
+  ABSL_VLOG(2) << "Read " << bytes_read << " bytes";
   ABSL_PCHECK(bytes_read > 0);
   ABSL_PCHECK(bytes_read == static_cast<ssize_t>(CAN_MTU) ||
               bytes_read == static_cast<ssize_t>(CANFD_MTU))

@@ -17,7 +17,7 @@ namespace aos::util {
 //     interval.WantToLog();
 //   }
 //   if (interval.ShouldLog()) {
-//     LOG(DEBUG, "thingie happened! (%d times)\n", interval.Count());
+//     AOS_LOG(DEBUG, "thingie happened! (%d times)\n", interval.Count());
 //   }
 // }
 class LogInterval {

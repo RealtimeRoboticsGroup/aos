@@ -5,7 +5,7 @@
 #include <tuple>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/vlog_is_on.h"
+#include "absl/log/absl_vlog_is_on.h"
 #include "absl/numeric/int128.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
@@ -37,8 +37,8 @@ void TimestampFilter::Set(aos::monotonic_clock::time_point monotonic_now,
 
 void TimestampFilter::Sample(aos::monotonic_clock::time_point monotonic_now,
                              chrono::nanoseconds sample_ns) {
-  VLOG(2) << "  " << this << " Sample at " << monotonic_now << " is "
-          << sample_ns.count() << "ns, Base is " << base_offset_.count();
+  ABSL_VLOG(2) << "  " << this << " Sample at " << monotonic_now << " is "
+               << sample_ns.count() << "ns, Base is " << base_offset_.count();
   ABSL_CHECK_GE(monotonic_now, last_time_)
       << ": " << this << " Being asked to filter backwards in time!";
   // Compute the sample offset as a double (seconds), taking into account the
@@ -51,7 +51,7 @@ void TimestampFilter::Sample(aos::monotonic_clock::time_point monotonic_now,
 
   // This is our first sample.  Just use it.
   if (last_time_ == aos::monotonic_clock::min_time) {
-    VLOG(1) << "  " << this << " First, setting offset to sample.";
+    ABSL_VLOG(1) << "  " << this << " First, setting offset to sample.";
     offset_ = sample;
     velocity_contribution_ = 0.0;
     sample_contribution_ = 0.0;
@@ -116,7 +116,7 @@ void TimestampFilter::Sample(aos::monotonic_clock::time_point monotonic_now,
         time_contribution_ = time_contribution;
       }
 
-      VLOG(2) << "  " << this << " filter sample is " << offset_;
+      ABSL_VLOG(2) << "  " << this << " filter sample is " << offset_;
     }
   }
 
@@ -234,7 +234,7 @@ void ClippedAverageFilter::set_first_rev_time(
 void ClippedAverageFilter::FwdSet(
     aos::monotonic_clock::time_point monotonic_now,
     chrono::nanoseconds sample_ns) {
-  VLOG(2) << "Fwd Set";
+  ABSL_VLOG(2) << "Fwd Set";
   fwd_.Set(monotonic_now, sample_ns);
   Update(monotonic_now, &last_fwd_time_);
 }
@@ -242,8 +242,8 @@ void ClippedAverageFilter::FwdSet(
 void ClippedAverageFilter::FwdSample(
     aos::monotonic_clock::time_point monotonic_now,
     chrono::nanoseconds sample_ns) {
-  VLOG(1) << &fwd_ << " Fwd sample now " << monotonic_now << " sample "
-          << sample_ns.count();
+  ABSL_VLOG(1) << &fwd_ << " Fwd sample now " << monotonic_now << " sample "
+               << sample_ns.count();
   fwd_.Sample(monotonic_now, sample_ns);
   Update(monotonic_now, &last_fwd_time_);
 
@@ -275,7 +275,7 @@ void ClippedAverageFilter::FwdSample(
 void ClippedAverageFilter::RevSet(
     aos::monotonic_clock::time_point monotonic_now,
     chrono::nanoseconds sample_ns) {
-  VLOG(2) << "Rev set";
+  ABSL_VLOG(2) << "Rev set";
   rev_.Set(monotonic_now, sample_ns);
   Update(monotonic_now, &last_rev_time_);
 }
@@ -283,7 +283,7 @@ void ClippedAverageFilter::RevSet(
 void ClippedAverageFilter::RevSample(
     aos::monotonic_clock::time_point monotonic_now,
     chrono::nanoseconds sample_ns) {
-  VLOG(1) << "Rev sample";
+  ABSL_VLOG(1) << "Rev sample";
   rev_.Sample(monotonic_now, sample_ns);
   Update(monotonic_now, &last_rev_time_);
 
@@ -371,7 +371,7 @@ void ClippedAverageFilter::Update(
   const double hard_max = fwd_.offset();
   const double hard_min = -rev_.offset();
   const double average = (hard_max + hard_min) / 2.0;
-  VLOG(2) << this << "  Max(fwd) " << hard_max << " min(rev) " << hard_min;
+  ABSL_VLOG(2) << this << "  Max(fwd) " << hard_max << " min(rev) " << hard_min;
   // We don't want to clip the offset to the hard min/max.  We really want to
   // keep it within a band around the middle.  ratio of 0.3 means stay within
   // +- 0.15 of the middle of the hard min and max.
@@ -381,7 +381,7 @@ void ClippedAverageFilter::Update(
 
   // Update regardless for the first sample from both the min and max.
   if (*last_time == aos::monotonic_clock::min_time) {
-    VLOG(1) << this << "  No last time " << average;
+    ABSL_VLOG(1) << this << "  No last time " << average;
     offset_ = average;
     offset_velocity_ = 0.0;
   } else {
@@ -406,7 +406,7 @@ void ClippedAverageFilter::Update(
             (offset_velocity_ -
              (fwd_.filtered_velocity() - rev_.filtered_velocity()) / 2.0);
 
-    VLOG(2) << this << "  last time " << offset_;
+    ABSL_VLOG(2) << this << "  last time " << offset_;
   }
   *last_time = monotonic_now;
 
@@ -415,14 +415,14 @@ void ClippedAverageFilter::Update(
     // reverse samples.
     if (!MissingSamples()) {
       *sample_pointer_ = offset_;
-      VLOG(1) << this << " Updating sample to " << offset_;
+      ABSL_VLOG(1) << this << " Updating sample to " << offset_;
     } else {
-      VLOG(1) << this << " Don't have both samples.";
+      ABSL_VLOG(1) << this << " Don't have both samples.";
       if (last_fwd_time_ == aos::monotonic_clock::min_time) {
-        VLOG(1) << this << " Missing forward";
+        ABSL_VLOG(1) << this << " Missing forward";
       }
       if (last_rev_time_ == aos::monotonic_clock::min_time) {
-        VLOG(1) << this << " Missing reverse";
+        ABSL_VLOG(1) << this << " Missing reverse";
       }
     }
   }

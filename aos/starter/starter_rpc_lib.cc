@@ -4,7 +4,7 @@
 #include <ostream>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "flatbuffers/buffer.h"
 #include "flatbuffers/flatbuffer_builder.h"
 #include "flatbuffers/string.h"
@@ -83,19 +83,19 @@ StarterClient::StarterClient(EventLoop *event_loop)
                                      << " on " << node->name()->string_view();
       if (!configuration::ChannelIsReadableOnNode(channel,
                                                   event_loop_->node())) {
-        VLOG(1) << "Status channel "
-                << configuration::StrippedChannelToString(channel)
-                << " is not readable on "
-                << event_loop_->node()->name()->string_view();
+        ABSL_VLOG(1) << "Status channel "
+                     << configuration::StrippedChannelToString(channel)
+                     << " is not readable on "
+                     << event_loop_->node()->name()->string_view();
       } else if (!configuration::ChannelIsReadableOnNode(
                      StarterRpcChannelForNode(event_loop_->configuration(),
                                               event_loop_->node()),
                      node)) {
         // Don't attempt to construct a status fetcher if the other node won't
         // even be able to receive our commands.
-        VLOG(1) << "StarterRpc channel for "
-                << event_loop_->node()->name()->string_view()
-                << " is not readable on " << node->name()->string_view();
+        ABSL_VLOG(1) << "StarterRpc channel for "
+                     << event_loop_->node()->name()->string_view()
+                     << " is not readable on " << node->name()->string_view();
       } else {
         status_fetchers_[node->name()->str()] =
             event_loop_->MakeFetcher<Status>(channel->name()->string_view());
@@ -138,19 +138,21 @@ void StarterClient::SendCommands(
       const std::string node_name((node == nullptr) ? "" : node->name()->str());
       if (status_fetchers_.count(node_name) == 0) {
         if (is_multi_node) {
-          LOG(FATAL) << "Node \"" << node_name
-                     << "\" must be configured to both receive StarterRpc "
-                        "messages from \""
-                     << event_loop_->node()->name()->string_view()
-                     << "\" as well as to send starter Status messages back.";
+          ABSL_LOG(FATAL)
+              << "Node \"" << node_name
+              << "\" must be configured to both receive StarterRpc "
+                 "messages from \""
+              << event_loop_->node()->name()->string_view()
+              << "\" as well as to send starter Status messages back.";
         } else {
-          LOG(FATAL) << "On single-node configs, use an empty string for the "
-                        "node name.";
+          ABSL_LOG(FATAL)
+              << "On single-node configs, use an empty string for the "
+                 "node name.";
         }
       }
       if (status_fetchers_[node_name].get() == nullptr) {
-        LOG(WARNING) << ": No status available for node " << node_name
-                     << "; not executing commands for that node.";
+        ABSL_LOG(WARNING) << ": No status available for node " << node_name
+                          << "; not executing commands for that node.";
         continue;
       }
       if (is_multi_node) {

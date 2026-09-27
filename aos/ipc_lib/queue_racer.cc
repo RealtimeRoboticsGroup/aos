@@ -11,7 +11,7 @@
 #include <thread>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/types/span.h"
 #include "gtest/gtest.h"
 
@@ -335,12 +335,12 @@ void QueueRacer::RunIteration(bool race_reads, int write_wrap_count,
         memcpy(data, &tpc, sizeof(ThreadPlusCount));
 
         if ((i - start_i) % 0x800000 == 0x100000) {
-          VLOG(1) << "Sent " << (i - start_i) << ", "
-                  << (static_cast<double>(i - start_i) /
-                      static_cast<double>((num_messages_ - start_i) *
-                                          (1 + write_wrap_count)) *
-                      100.0)
-                  << " %";
+          ABSL_VLOG(1) << "Sent " << (i - start_i) << ", "
+                       << (static_cast<double>(i - start_i) /
+                           static_cast<double>((num_messages_ - start_i) *
+                                               (1 + write_wrap_count)) *
+                           100.0)
+                       << " %";
         }
 
         ++started_writes_;

@@ -11,8 +11,8 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
-#include "absl/log/vlog_is_on.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 #include "absl/strings/escaping.h"
 #include "flatbuffers/flatbuffers.h"
 
@@ -96,7 +96,7 @@ DetachedBufferWriter::DetachedBufferWriter(std::unique_ptr<LogSink> log_sink,
   ABSL_CHECK(log_sink_);
   ran_out_of_space_ = log_sink_->OpenForWrite() == WriteCode::kOutOfSpace;
   if (ran_out_of_space_) {
-    LOG(WARNING) << "And we are out of space";
+    ABSL_LOG(WARNING) << "And we are out of space";
   }
 }
 
@@ -157,8 +157,8 @@ std::chrono::nanoseconds DetachedBufferWriter::CopyMessage(
 
     overall_bytes_written += bytes_written;
     if (overall_bytes_written < message_size) {
-      VLOG(1) << "Flushing because of a partial write, tried to write "
-              << message_size << " wrote " << overall_bytes_written;
+      ABSL_VLOG(1) << "Flushing because of a partial write, tried to write "
+                   << message_size << " wrote " << overall_bytes_written;
       Flush(now);
     }
     total_encode_duration += encode_duration;
@@ -193,10 +193,10 @@ void DetachedBufferWriter::Flush(aos::monotonic_clock::time_point now) {
     // so refuse to write anything more once we've dropped data because we ran
     // out of space.
     if (encoder_) {
-      VLOG(1) << "Ignoring queue: " << encoder_->queue().size();
+      ABSL_VLOG(1) << "Ignoring queue: " << encoder_->queue().size();
       encoder_->Clear(encoder_->queue().size());
     } else {
-      VLOG(1) << "No queue to ignore";
+      ABSL_VLOG(1) << "No queue to ignore";
     }
     return;
   }
@@ -218,10 +218,10 @@ void DetachedBufferWriter::FlushAtThreshold(
     // so refuse to write anything more once we've dropped data because we ran
     // out of space.
     if (encoder_) {
-      VLOG(1) << "Ignoring queue: " << encoder_->queue().size();
+      ABSL_VLOG(1) << "Ignoring queue: " << encoder_->queue().size();
       encoder_->Clear(encoder_->queue().size());
     } else {
-      VLOG(1) << "No queue to ignore";
+      ABSL_VLOG(1) << "No queue to ignore";
     }
     return;
   }
@@ -244,8 +244,8 @@ void DetachedBufferWriter::FlushAtThreshold(
                                        chrono::duration<double>(absl::GetFlag(
                                            FLAGS_flush_period))) &&
           encoder_->queued_bytes() != 0)) {
-    VLOG(1) << "Chose to flush at " << now << ", last " << last_flush_time_
-            << " queued bytes " << encoder_->queued_bytes();
+    ABSL_VLOG(1) << "Chose to flush at " << now << ", last " << last_flush_time_
+                 << " queued bytes " << encoder_->queued_bytes();
     Flush(now);
   }
 }
@@ -573,7 +573,7 @@ flatbuffers::uoffset_t PackMessageHeaderSize(LogType log_type) {
           // queue_index, channel_index
           sizeof(uint32_t) * 2;
   }
-  LOG(FATAL);
+  ABSL_LOG(FATAL);
   AOS_UNREACHABLE();
 }
 
@@ -592,7 +592,7 @@ flatbuffers::uoffset_t PackMessageSize(LogType log_type, size_t data_size) {
              // Vector...
              sizeof(flatbuffers::uoffset_t) + aligned_data_length;
   }
-  LOG(FATAL);
+  ABSL_LOG(FATAL);
   AOS_UNREACHABLE();
 }
 
@@ -1022,12 +1022,13 @@ absl::Span<const uint8_t> SpanReader::PeekMessage() {
       flatbuffers::GetPrefixedSize(data_.data() + consumed_data_) +
       sizeof(flatbuffers::uoffset_t);
   if (data_size == sizeof(flatbuffers::uoffset_t)) {
-    LOG(ERROR) << "Size of data is zero.  Log file end is corrupted, skipping.";
-    LOG(ERROR) << "  Rest of log file is "
-               << absl::BytesToHexString(std::string_view(
-                      reinterpret_cast<const char *>(data_.data() +
-                                                     consumed_data_),
-                      data_.size() - consumed_data_));
+    ABSL_LOG(ERROR)
+        << "Size of data is zero.  Log file end is corrupted, skipping.";
+    ABSL_LOG(ERROR) << "  Rest of log file is "
+                    << absl::BytesToHexString(std::string_view(
+                           reinterpret_cast<const char *>(data_.data() +
+                                                          consumed_data_),
+                           data_.size() - consumed_data_));
     return absl::Span<const uint8_t>();
   }
   while (data_.size() < consumed_data_ + data_size) {
@@ -1139,8 +1140,8 @@ std::optional<SizePrefixedFlatbufferVector<LogFileHeader>> ReadHeader(
       aos::SizePrefixedFlatbufferSpan<aos::logger::LogFileHeader> maybe_header(
           maybe_header_data);
       if (maybe_header.Verify()) {
-        LOG(WARNING) << "Found duplicate LogFileHeader in "
-                     << span_reader->filename();
+        ABSL_LOG(WARNING) << "Found duplicate LogFileHeader in "
+                          << span_reader->filename();
         ResizeableBuffer header_data_copy;
         header_data_copy.resize(maybe_header_data.size());
         memcpy(header_data_copy.data(), maybe_header_data.begin(),
@@ -1212,25 +1213,25 @@ MessageReader::MessageReader(SpanReader span_reader)
                 chrono::duration<double>(absl::GetFlag(FLAGS_max_out_of_order)))
           : chrono::nanoseconds(log_file_header()->max_out_of_order_duration());
 
-  VLOG(1) << "Opened " << span_reader_.filename() << " as node "
-          << FlatbufferToJson(log_file_header()->node());
+  ABSL_VLOG(1) << "Opened " << span_reader_.filename() << " as node "
+               << FlatbufferToJson(log_file_header()->node());
 }
 
 std::shared_ptr<UnpackedMessageHeader> MessageReader::ReadMessage() {
   absl::Span<const uint8_t> msg_data = span_reader_.ReadMessage();
   if (msg_data.empty()) {
     if (is_corrupted()) {
-      LOG(ERROR) << "Total corrupted volumes: before = "
-                 << total_verified_before_
-                 << " | corrupted = " << total_corrupted_
-                 << " | during = " << total_verified_during_
-                 << " | after = " << total_verified_after_;
+      ABSL_LOG(ERROR) << "Total corrupted volumes: before = "
+                      << total_verified_before_
+                      << " | corrupted = " << total_corrupted_
+                      << " | during = " << total_verified_during_
+                      << " | after = " << total_verified_after_;
     }
 
     if (span_reader_.IsIncomplete()) {
-      LOG(ERROR) << "Unable to access some messages in " << filename() << ": "
-                 << span_reader_.TotalRead() << " bytes read, "
-                 << span_reader_.TotalConsumed() << " bytes usable.";
+      ABSL_LOG(ERROR) << "Unable to access some messages in " << filename()
+                      << ": " << span_reader_.TotalRead() << " bytes read, "
+                      << span_reader_.TotalConsumed() << " bytes usable.";
     }
     return nullptr;
   }
@@ -1246,8 +1247,8 @@ std::shared_ptr<UnpackedMessageHeader> MessageReader::ReadMessage() {
         << " anyway";
 
   } else if (!msg.Verify()) {
-    LOG(ERROR) << "Corrupted message at offset " << total_verified_before_
-               << " from " << filename();
+    ABSL_LOG(ERROR) << "Corrupted message at offset " << total_verified_before_
+                    << " from " << filename();
 
     total_corrupted_ += msg_data.size();
 
@@ -1256,17 +1257,18 @@ std::shared_ptr<UnpackedMessageHeader> MessageReader::ReadMessage() {
 
       if (msg_data.empty()) {
         if (!ignore_corrupt_messages_flag_) {
-          LOG(ERROR) << "Total corrupted volumes: before = "
-                     << total_verified_before_
-                     << " | corrupted = " << total_corrupted_
-                     << " | during = " << total_verified_during_
-                     << " | after = " << total_verified_after_ << std::endl;
+          ABSL_LOG(ERROR) << "Total corrupted volumes: before = "
+                          << total_verified_before_
+                          << " | corrupted = " << total_corrupted_
+                          << " | during = " << total_verified_during_
+                          << " | after = " << total_verified_after_
+                          << std::endl;
 
           if (span_reader_.IsIncomplete()) {
-            LOG(ERROR) << "Unable to access some messages in " << filename()
-                       << ": " << span_reader_.TotalRead() << " bytes read, "
-                       << span_reader_.TotalConsumed() << " bytes usable."
-                       << std::endl;
+            ABSL_LOG(ERROR) << "Unable to access some messages in "
+                            << filename() << ": " << span_reader_.TotalRead()
+                            << " bytes read, " << span_reader_.TotalConsumed()
+                            << " bytes usable." << std::endl;
           }
           return nullptr;
         }
@@ -1302,13 +1304,14 @@ std::shared_ptr<UnpackedMessageHeader> MessageReader::ReadMessage() {
 
   newest_timestamp_ = std::max(newest_timestamp_, timestamp);
 
-  if (VLOG_IS_ON(3)) {
-    VLOG(3) << "Read from " << filename() << " data " << FlatbufferToJson(msg);
-  } else if (VLOG_IS_ON(2)) {
+  if (ABSL_VLOG_IS_ON(3)) {
+    ABSL_VLOG(3) << "Read from " << filename() << " data "
+                 << FlatbufferToJson(msg);
+  } else if (ABSL_VLOG_IS_ON(2)) {
     SizePrefixedFlatbufferVector<MessageHeader> msg_copy = msg;
     msg_copy.mutable_message()->clear_data();
-    VLOG(2) << "Read from " << filename() << " data "
-            << FlatbufferToJson(msg_copy);
+    ABSL_VLOG(2) << "Read from " << filename() << " data "
+                 << FlatbufferToJson(msg_copy);
   }
 
   return result;
@@ -1471,9 +1474,9 @@ PartsMessageReader::ReadMessage() {
         if (monotonic_sent_time <
             newest_timestamp_ - max_out_of_order_duration()) {
           return MakeError(
-              // TODO(james): Come up with some clever macro akin to LOG(INFO)
-              // that makes it easier for people to use existing operator<<
-              // patterns.
+              // TODO(james): Come up with some clever macro akin to
+              // ABSL_LOG(INFO) that makes it easier for people to use existing
+              // operator<< patterns.
               (std::stringstream()
                << "Max out of order of " << max_out_of_order_duration().count()
                << "ns exceeded. " << log_parts_access_.parts()
@@ -1689,8 +1692,9 @@ Result<const Message *> MessageSorter::Front() {
   ABSL_CHECK_GE(messages_.begin()->raw_timestamp, last_message_time_)
       << DebugString() << " reading " << parts_message_reader_.filename();
   last_message_time_ = messages_.begin()->raw_timestamp;
-  VLOG(1) << this << " Front, sorted until " << sorted_until_ << " for "
-          << (*messages_.begin()) << " on " << parts_message_reader_.filename();
+  ABSL_VLOG(1) << this << " Front, sorted until " << sorted_until_ << " for "
+               << (*messages_.begin()) << " on "
+               << parts_message_reader_.filename();
   return &(*messages_.begin());
 }
 
@@ -1797,8 +1801,8 @@ Result<const Message *> PartsMerger::Front() {
   if (current_ != nullptr) {
     return current_->Front().transform([this](const Message *result) {
       ABSL_CHECK_GE(result->raw_timestamp, last_message_time_);
-      VLOG(1) << this << " PartsMerger::Front for node " << node_name() << " "
-              << *result;
+      ABSL_VLOG(1) << this << " PartsMerger::Front for node " << node_name()
+                   << " " << *result;
       return result;
     });
   }
@@ -1844,9 +1848,9 @@ Result<const Message *> PartsMerger::Front() {
     ABSL_CHECK_GE(oldest->raw_timestamp, last_message_time_);
     last_message_time_ = oldest->raw_timestamp;
     if (monotonic_oldest_time_ > oldest->raw_timestamp) {
-      VLOG(1) << this << " Updating oldest to " << oldest->raw_timestamp
-              << " for node " << node_name() << " with a start time of "
-              << monotonic_start_time_ << " " << *oldest;
+      ABSL_VLOG(1) << this << " Updating oldest to " << oldest->raw_timestamp
+                   << " for node " << node_name() << " with a start time of "
+                   << monotonic_start_time_ << " " << *oldest;
     }
     monotonic_oldest_time_ =
         std::min(monotonic_oldest_time_, oldest->raw_timestamp);
@@ -1857,10 +1861,10 @@ Result<const Message *> PartsMerger::Front() {
   // Return the oldest message found.  This will be nullptr if nothing was
   // found, indicating there is nothing left.
   if (oldest) {
-    VLOG(1) << this << " PartsMerger::Front for node " << node_name() << " "
-            << *oldest;
+    ABSL_VLOG(1) << this << " PartsMerger::Front for node " << node_name()
+                 << " " << *oldest;
   } else {
-    VLOG(1) << this << " PartsMerger::Front for node " << node_name();
+    ABSL_VLOG(1) << this << " PartsMerger::Front for node " << node_name();
   }
   return oldest;
 }
@@ -1879,7 +1883,7 @@ BootMerger::BootMerger(std::string_view node_name,
   size_t number_of_boots = log_files.BootsForNode(node_name);
   parts_mergers_.reserve(number_of_boots);
   for (size_t i = 0; i < number_of_boots; ++i) {
-    VLOG(2) << "Boot " << i;
+    ABSL_VLOG(2) << "Boot " << i;
     SelectedLogParts selected_parts =
         log_files.SelectParts(node_name, i, types);
     // We are guarenteed to have something each boot, but not guarenteed to have
@@ -1908,19 +1912,21 @@ Result<const Message *> BootMerger::Front() {
     }
 
     if (result.value() != nullptr) {
-      VLOG(1) << this << " BootMerger::Front " << node_name() << " " << *result;
+      ABSL_VLOG(1) << this << " BootMerger::Front " << node_name() << " "
+                   << *result;
       return result;
     }
   }
 
   if (index_ + 1u == parts_mergers_.size()) {
     // At the end of the last node merger, just return.
-    VLOG(1) << this << " BootMerger::Front " << node_name() << " nullptr";
+    ABSL_VLOG(1) << this << " BootMerger::Front " << node_name() << " nullptr";
     return nullptr;
   } else {
     ++index_;
     Result<const Message *> result = Front();
-    VLOG(1) << this << " BootMerger::Front " << node_name() << " " << **result;
+    ABSL_VLOG(1) << this << " BootMerger::Front " << node_name() << " "
+                 << **result;
     return result;
   }
 }
@@ -2061,11 +2067,11 @@ Status SplitTimestampBootMerger::QueueTimestamps(
 
       fn(&timestamped_message);
 
-      VLOG(2) << this << " Queued timestamp of " << timestamped_message;
+      ABSL_VLOG(2) << this << " Queued timestamp of " << timestamped_message;
 
       timestamp_messages_.emplace_back(std::move(*msg));
     } else {
-      VLOG(2) << this << " Dropped data";
+      ABSL_VLOG(2) << this << " Dropped data";
     }
     timestamp_boot_merger_->PopFront();
   }
@@ -2115,11 +2121,11 @@ Result<const Message *> SplitTimestampBootMerger::Front() {
         if (!timestamp_messages_front) {
           message_source_ = MessageSource::kBootMerger;
           if (boot_merger_front != nullptr) {
-            VLOG(1) << this << " SplitTimestampBootMerger::Front "
-                    << node_name() << " " << *boot_merger_front;
+            ABSL_VLOG(1) << this << " SplitTimestampBootMerger::Front "
+                         << node_name() << " " << *boot_merger_front;
           } else {
-            VLOG(1) << this << " SplitTimestampBootMerger::Front "
-                    << node_name() << " nullptr";
+            ABSL_VLOG(1) << this << " SplitTimestampBootMerger::Front "
+                         << node_name() << " nullptr";
           }
           return boot_merger_front;
         }
@@ -2127,30 +2133,30 @@ Result<const Message *> SplitTimestampBootMerger::Front() {
         if (boot_merger_front == nullptr) {
           message_source_ = MessageSource::kTimestampMessage;
 
-          VLOG(1) << this << " SplitTimestampBootMerger::Front " << node_name()
-                  << " " << *timestamp_messages_front;
+          ABSL_VLOG(1) << this << " SplitTimestampBootMerger::Front "
+                       << node_name() << " " << *timestamp_messages_front;
           return timestamp_messages_front;
         }
 
         if (*boot_merger_front <= *timestamp_messages_front) {
           if (*boot_merger_front == *timestamp_messages_front) {
-            VLOG(1) << this << " SplitTimestampBootMerger::Front "
-                    << node_name() << " Dropping duplicate timestamp.";
+            ABSL_VLOG(1) << this << " SplitTimestampBootMerger::Front "
+                         << node_name() << " Dropping duplicate timestamp.";
             timestamp_messages_.pop_front();
           }
           message_source_ = MessageSource::kBootMerger;
           if (boot_merger_front != nullptr) {
-            VLOG(1) << this << " SplitTimestampBootMerger::Front "
-                    << node_name() << " " << *boot_merger_front;
+            ABSL_VLOG(1) << this << " SplitTimestampBootMerger::Front "
+                         << node_name() << " " << *boot_merger_front;
           } else {
-            VLOG(1) << this << " SplitTimestampBootMerger::Front "
-                    << node_name() << " nullptr";
+            ABSL_VLOG(1) << this << " SplitTimestampBootMerger::Front "
+                         << node_name() << " nullptr";
           }
           return boot_merger_front;
         } else {
           message_source_ = MessageSource::kTimestampMessage;
-          VLOG(1) << this << " SplitTimestampBootMerger::Front " << node_name()
-                  << " " << *timestamp_messages_front;
+          ABSL_VLOG(1) << this << " SplitTimestampBootMerger::Front "
+                       << node_name() << " " << *timestamp_messages_front;
           return timestamp_messages_front;
         }
       });
@@ -2226,8 +2232,8 @@ void TimestampMapper::AddPeer(TimestampMapper *timestamp_mapper) {
   // Only set it if this node delivers to the peer timestamp_mapper. Otherwise
   // we could needlessly save data.
   if (node_data->any_delivered) {
-    VLOG(1) << "Registering on node " << node() << " for peer node "
-            << timestamp_mapper->node();
+    ABSL_VLOG(1) << "Registering on node " << node() << " for peer node "
+                 << timestamp_mapper->node();
     ABSL_CHECK(timestamp_mapper->nodes_data_[node()].peer == nullptr);
 
     timestamp_mapper->nodes_data_[node()].peer = this;
@@ -2249,7 +2255,7 @@ void TimestampMapper::QueueMessage(const Message *msg) {
       .monotonic_timestamp_time = BootTimestamp::min_time(),
       .data = std::move(msg->data),
       .preceded_by_expired_message = msg->preceded_by_expired_message});
-  VLOG(1) << node_name() << " Inserted " << matched_messages_.back();
+  ABSL_VLOG(1) << node_name() << " Inserted " << matched_messages_.back();
 }
 
 Result<TimestampedMessage *> TimestampMapper::Front() {
@@ -2258,12 +2264,12 @@ Result<TimestampedMessage *> TimestampMapper::Front() {
     case FirstMessage::kNeedsUpdate:
       break;
     case FirstMessage::kInMessage:
-      VLOG(1) << this << " TimestampMapper::Front " << node_name() << " "
-              << matched_messages_.front();
+      ABSL_VLOG(1) << this << " TimestampMapper::Front " << node_name() << " "
+                   << matched_messages_.front();
       return &matched_messages_.front();
     case FirstMessage::kNullptr:
-      VLOG(1) << this << " TimestampMapper::Front " << node_name()
-              << " nullptr";
+      ABSL_VLOG(1) << this << " TimestampMapper::Front " << node_name()
+                   << " nullptr";
       return nullptr;
   }
 
@@ -2272,14 +2278,14 @@ Result<TimestampedMessage *> TimestampMapper::Front() {
     AOS_ASSIGN_OR_RETURN_ERROR(queued_matched, QueueMatched());
     if (!queued_matched) {
       first_message_ = FirstMessage::kNullptr;
-      VLOG(1) << this << " TimestampMapper::Front " << node_name()
-              << " nullptr";
+      ABSL_VLOG(1) << this << " TimestampMapper::Front " << node_name()
+                   << " nullptr";
       return nullptr;
     }
   }
   first_message_ = FirstMessage::kInMessage;
-  VLOG(1) << this << " TimestampMapper::Front " << node_name() << " "
-          << matched_messages_.front();
+  ABSL_VLOG(1) << this << " TimestampMapper::Front " << node_name() << " "
+               << matched_messages_.front();
   return &matched_messages_.front();
 }
 
@@ -2297,7 +2303,7 @@ bool TimestampMapper::CheckReplayChannelsAndMaybePop(
     const TimestampedMessage & /*message*/) {
   if (replay_channels_callback_ &&
       !replay_channels_callback_(matched_messages_.back())) {
-    VLOG(1) << node_name() << " Popped " << matched_messages_.back();
+    ABSL_VLOG(1) << node_name() << " Popped " << matched_messages_.back();
     matched_messages_.pop_back();
     return true;
   }
@@ -2388,8 +2394,8 @@ Result<TimestampMapper::MatchResult> TimestampMapper::MaybeQueueMatched() {
                                      msg->header->monotonic_timestamp_time},
         .data = std::move(data.data),
         .preceded_by_expired_message = data.preceded_by_expired_message});
-    VLOG(1) << node_name() << " Inserted timestamp "
-            << matched_messages_.back();
+    ABSL_VLOG(1) << node_name() << " Inserted timestamp "
+                 << matched_messages_.back();
     ABSL_CHECK_GE(matched_messages_.back().monotonic_event_time,
                   last_message_time_)
         << " on " << node_name() << " " << matched_messages_.back();
@@ -2458,7 +2464,7 @@ Result<void> TimestampMapper::PopFront() {
     last_popped_message_time_ = message->monotonic_event_time;
     first_message_ = FirstMessage::kNeedsUpdate;
 
-    VLOG(1) << node_name() << " Popped " << matched_messages_.back();
+    ABSL_VLOG(1) << node_name() << " Popped " << matched_messages_.back();
     matched_messages_.pop_front();
   });
 }

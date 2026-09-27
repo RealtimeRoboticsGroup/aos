@@ -153,7 +153,7 @@ object->set_scalar(123);
   auto subtable = object->add_included_table();
   subtable->set_foo(included::TestEnum::B);
 }
-LOG(INFO) <<
+ABSL_LOG(INFO) <<
     aos::FlatbufferToJson(builder.AsFlatbufferSpan(),
                           {.multi_line = true});
 ```

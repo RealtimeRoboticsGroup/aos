@@ -9,8 +9,8 @@
 #include "absl/container/btree_map.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
-#include "absl/log/vlog_is_on.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 #include "absl/strings/str_join.h"
 
 #include "aos/containers/error_list.h"
@@ -117,7 +117,7 @@ void AddLogfiles(std::string_view filename,
   if (file_operations->Exists()) {
     file_operations->FindLogs(found_logfiles);
   } else {
-    LOG(FATAL) << "File " << filename << " does not exist";
+    ABSL_LOG(FATAL) << "File " << filename << " does not exist";
   }
 }
 
@@ -372,7 +372,7 @@ void PartsSorter::PopulateFromFiles(
         ReadHeader(reader);
     if (!log_header) {
       if (!absl::GetFlag(FLAGS_quiet_sorting)) {
-        LOG(WARNING) << "Skipping " << part.name << " without a header.";
+        ABSL_LOG(WARNING) << "Skipping " << part.name << " without a header.";
       }
       corrupted.emplace_back(part.name);
       continue;
@@ -457,8 +457,8 @@ void PartsSorter::PopulateFromFiles(
       continue;
     }
 
-    VLOG(1) << "Header " << FlatbufferToJson(log_header.value()) << " "
-            << part.name;
+    ABSL_VLOG(1) << "Header " << FlatbufferToJson(log_header.value()) << " "
+                 << part.name;
 
     if (configuration_sha256.empty()) {
       ABSL_CHECK(log_header->message().has_configuration())
@@ -503,7 +503,8 @@ void PartsSorter::PopulateFromFiles(
           ReadNthMessage(part.name, 0);
       if (!first_message) {
         if (!absl::GetFlag(FLAGS_quiet_sorting)) {
-          LOG(WARNING) << "Skipping " << part.name << " without any messages";
+          ABSL_LOG(WARNING)
+              << "Skipping " << part.name << " without any messages";
         }
         corrupted.emplace_back(part.name);
         continue;
@@ -588,8 +589,8 @@ void PartsSorter::PopulateFromFiles(
       }
     }
 
-    VLOG(1) << "Parts: " << parts_uuid << ", source boot uuid "
-            << source_boot_uuid << " index " << parts_index;
+    ABSL_VLOG(1) << "Parts: " << parts_uuid << ", source boot uuid "
+                 << source_boot_uuid << " index " << parts_index;
     auto it = log_it->second.unsorted_parts.find(
         std::pair(parts_uuid, std::string(source_boot_uuid)));
     if (it == log_it->second.unsorted_parts.end()) {
@@ -754,7 +755,7 @@ void PartsSorter::PopulateFromFiles(
         // logic after it simple and similar.
         if (oldest_remote_reliable_monotonic_transmit_timestamp <
             oldest_remote_unreliable_monotonic_timestamp) {
-          VLOG(1)
+          ABSL_VLOG(1)
               << "Updating oldest_remote_unreliable_monotonic_timestamp from "
               << oldest_remote_unreliable_monotonic_timestamp << " to "
               << oldest_remote_reliable_monotonic_transmit_timestamp
@@ -1099,8 +1100,8 @@ std::map<std::string, NodeBootState> PartsSorter::ComputeNewBootConstraints() {
         const std::string remote_node_name =
             config->nodes()->Get(remote_node.first)->name()->str();
 
-        VLOG(1) << "Local " << local_node_name << " boot " << local_boot_uuid
-                << " remote " << remote_node_name;
+        ABSL_VLOG(1) << "Local " << local_node_name << " boot "
+                     << local_boot_uuid << " remote " << remote_node_name;
 
         // Now, we have a bunch of remote boots for the same local boot and
         // remote node.  We want to sort them by observed local time.  This will
@@ -1115,10 +1116,10 @@ std::map<std::string, NodeBootState> PartsSorter::ComputeNewBootConstraints() {
           BootPairTimes max_boot_time = boot_time_list.second[0];
           for (size_t i = 0; i < boot_time_list.second.size(); ++i) {
             const BootPairTimes &next_boot_time = boot_time_list.second[i];
-            VLOG(1) << " Found " << next_boot_time;
+            ABSL_VLOG(1) << " Found " << next_boot_time;
             if (next_boot_time.oldest_local_unreliable_monotonic_timestamp !=
                 aos::monotonic_clock::max_time) {
-              VLOG(1)
+              ABSL_VLOG(1)
                   << "  Unreliable remote time "
                   << next_boot_time.oldest_remote_unreliable_monotonic_timestamp
                   << " remote " << boot_time_list.first << " -> local time "
@@ -1127,7 +1128,7 @@ std::map<std::string, NodeBootState> PartsSorter::ComputeNewBootConstraints() {
             }
             if (next_boot_time.oldest_local_reliable_monotonic_timestamp !=
                 aos::monotonic_clock::max_time) {
-              VLOG(1)
+              ABSL_VLOG(1)
                   << "  Reliable remote time "
                   << next_boot_time.oldest_remote_reliable_monotonic_timestamp
                   << " remote " << boot_time_list.first << " -> local time "
@@ -1182,9 +1183,10 @@ std::map<std::string, NodeBootState> PartsSorter::ComputeNewBootConstraints() {
                   aos::monotonic_clock::max_time &&
               boot_time.oldest_remote_reliable_monotonic_timestamp ==
                   aos::monotonic_clock::max_time) {
-            VLOG(1) << " Skipping local " << local_node_name << " boot "
-                    << local_boot_uuid << " remote " << remote_node_name
-                    << " boot " << boot_time_list.first << " " << boot_time;
+            ABSL_VLOG(1) << " Skipping local " << local_node_name << " boot "
+                         << local_boot_uuid << " remote " << remote_node_name
+                         << " boot " << boot_time_list.first << " "
+                         << boot_time;
             continue;
           }
 
@@ -1240,9 +1242,9 @@ std::map<std::string, NodeBootState> PartsSorter::ComputeNewBootConstraints() {
           ABSL_CHECK(reverse_local_node_boot_uuid_it ==
                      reverse_local_node_it->second.end());
           reverse_local_node_it->second.emplace(local_boot_uuid, boot_time);
-          VLOG(1) << " Boot time for local " << local_node_name << " boot "
-                  << local_boot_uuid << " remote " << remote_node_name
-                  << " boot " << boot_time_list.first << " " << boot_time;
+          ABSL_VLOG(1) << " Boot time for local " << local_node_name << " boot "
+                       << local_boot_uuid << " remote " << remote_node_name
+                       << " boot " << boot_time_list.first << " " << boot_time;
         }
 
         // All the nodes are from the same local boot here.  We are trying to
@@ -1387,13 +1389,13 @@ std::map<std::string, NodeBootState> PartsSorter::ComputeNewBootConstraints() {
                       aos::monotonic_clock::max_time;
 
               if (both_unreliable) {
-                VLOG(1) << "Both Unreliable";
+                ABSL_VLOG(1) << "Both Unreliable";
                 return std::get<1>(a)
                            .oldest_local_unreliable_monotonic_timestamp <
                        std::get<1>(b)
                            .oldest_local_unreliable_monotonic_timestamp;
               } else if (both_reliable) {
-                VLOG(1) << "Both Reliable";
+                ABSL_VLOG(1) << "Both Reliable";
                 ABSL_CHECK_NE(
                     std::get<1>(a).oldest_local_reliable_monotonic_timestamp,
                     std::get<1>(b).oldest_local_reliable_monotonic_timestamp)
@@ -1410,12 +1412,13 @@ std::map<std::string, NodeBootState> PartsSorter::ComputeNewBootConstraints() {
                          std::get<1>(b)
                                  .oldest_local_unreliable_monotonic_timestamp !=
                              aos::monotonic_clock::max_time) {
-                VLOG(1)
+                ABSL_VLOG(1)
                     << " Comparing Reliable  "
                     << std::get<1>(a).oldest_local_reliable_monotonic_timestamp;
-                VLOG(1) << "   Versus Uneliable  "
-                        << std::get<1>(b)
-                               .oldest_local_unreliable_monotonic_timestamp;
+                ABSL_VLOG(1)
+                    << "   Versus Uneliable  "
+                    << std::get<1>(b)
+                           .oldest_local_unreliable_monotonic_timestamp;
 
                 return std::get<1>(a)
                            .oldest_local_reliable_monotonic_timestamp <
@@ -1428,10 +1431,11 @@ std::map<std::string, NodeBootState> PartsSorter::ComputeNewBootConstraints() {
                          std::get<1>(b)
                                  .oldest_local_reliable_monotonic_timestamp !=
                              aos::monotonic_clock::max_time) {
-                VLOG(1) << " Comparing Unreliable  "
-                        << std::get<1>(a)
-                               .oldest_local_unreliable_monotonic_timestamp;
-                VLOG(1)
+                ABSL_VLOG(1)
+                    << " Comparing Unreliable  "
+                    << std::get<1>(a)
+                           .oldest_local_unreliable_monotonic_timestamp;
+                ABSL_VLOG(1)
                     << "   Versus Reliable     "
                     << std::get<1>(b).oldest_local_reliable_monotonic_timestamp;
 
@@ -1440,8 +1444,8 @@ std::map<std::string, NodeBootState> PartsSorter::ComputeNewBootConstraints() {
                        std::get<1>(b).oldest_local_reliable_monotonic_timestamp;
 
               } else {
-                LOG(FATAL) << "Broken logic, unable to compare timestamps "
-                           << std::get<1>(a) << ", " << std::get<1>(b);
+                ABSL_LOG(FATAL) << "Broken logic, unable to compare timestamps "
+                                << std::get<1>(a) << ", " << std::get<1>(b);
               }
             });
 
@@ -1457,8 +1461,8 @@ std::map<std::string, NodeBootState> PartsSorter::ComputeNewBootConstraints() {
           const std::tuple<std::string, BootPairTimes, BootPairTimes>
               &boot_time = remote_boot_times[boot_id];
           const std::string &local_boot_uuid = std::get<0>(boot_time);
-          VLOG(1) << " Boot " << local_boot_uuid << " is "
-                  << std::get<1>(boot_time);
+          ABSL_VLOG(1) << " Boot " << local_boot_uuid << " is "
+                       << std::get<1>(boot_time);
 
           // Enforce that the last time observed in the headers on the previous
           // boot is less than the first time on the next boot.  This equates to
@@ -1470,19 +1474,18 @@ std::map<std::string, NodeBootState> PartsSorter::ComputeNewBootConstraints() {
                   &fatal_boot_time = remote_boot_times[fatal_boot_id];
               const std::string &fatal_remote_boot_uuid =
                   std::get<0>(fatal_boot_time);
-              LOG(ERROR) << "Boot " << fatal_boot_id << ", "
-                         << fatal_remote_boot_uuid << " on " << remote_node_name
-                         << " spans ["
-                         << MinLocalBootTime(std::get<1>(fatal_boot_time))
-                         << ", "
-                         << MaxLocalBootTime(std::get<2>(fatal_boot_time))
-                         << "] on remote " << remote_node_name;
+              ABSL_LOG(ERROR)
+                  << "Boot " << fatal_boot_id << ", " << fatal_remote_boot_uuid
+                  << " on " << remote_node_name << " spans ["
+                  << MinLocalBootTime(std::get<1>(fatal_boot_time)) << ", "
+                  << MaxLocalBootTime(std::get<2>(fatal_boot_time))
+                  << "] on remote " << remote_node_name;
             }
-            LOG(FATAL) << "Broken log, found overlapping boots on "
-                       << remote_node_name << " remote node "
-                       << remote_node_name << ", "
-                       << MinLocalBootTime(std::get<1>(boot_time)) << " < "
-                       << last_boot_time;
+            ABSL_LOG(FATAL)
+                << "Broken log, found overlapping boots on " << remote_node_name
+                << " remote node " << remote_node_name << ", "
+                << MinLocalBootTime(std::get<1>(boot_time)) << " < "
+                << last_boot_time;
           }
 
           last_boot_time = MaxLocalBootTime(std::get<2>(boot_time));
@@ -1534,10 +1537,10 @@ std::map<std::string, NodeBootState> PartsSorter::ComputeNewBootConstraints() {
                       .first;
             }
 
-            VLOG(1) << "Inserting " << first_per_boot_constraints->first
-                    << " < " << local_boot_uuid;
-            VLOG(1) << "Inserting " << second_per_boot_constraints->first
-                    << " > " << prior_boot_uuid;
+            ABSL_VLOG(1) << "Inserting " << first_per_boot_constraints->first
+                         << " < " << local_boot_uuid;
+            ABSL_VLOG(1) << "Inserting " << second_per_boot_constraints->first
+                         << " > " << prior_boot_uuid;
             first_per_boot_constraints->second.emplace_back(
                 std::make_pair(local_boot_uuid, true));
             second_per_boot_constraints->second.emplace_back(
@@ -1579,11 +1582,13 @@ std::map<std::string, NodeBootState> PartsSorter::ComputeNewBootConstraints() {
                      b.second.oldest_remote_unreliable_monotonic_timestamp;
             });
 
-        VLOG(1) << "Reverse sort from " << remote_node_name << " boot "
-                << remote_node_boot_uuid.first << " to " << local_node.first;
+        ABSL_VLOG(1) << "Reverse sort from " << remote_node_name << " boot "
+                     << remote_node_boot_uuid.first << " to "
+                     << local_node.first;
         for (size_t boot_id = 0; boot_id < local_boot_times.size(); ++boot_id) {
-          VLOG(1) << "Sorted local times: " << local_boot_times[boot_id].first
-                  << " time " << local_boot_times[boot_id].second;
+          ABSL_VLOG(1) << "Sorted local times: "
+                       << local_boot_times[boot_id].first << " time "
+                       << local_boot_times[boot_id].second;
           const std::pair<std::string, BootPairTimes> &boot_time =
               local_boot_times[boot_id];
           const std::string &local_boot_uuid = boot_time.first;
@@ -1631,10 +1636,10 @@ std::map<std::string, NodeBootState> PartsSorter::ComputeNewBootConstraints() {
                       .first;
             }
 
-            VLOG(1) << "Inserting " << first_per_boot_constraints->first
-                    << " < " << local_boot_uuid;
-            VLOG(1) << "Inserting " << second_per_boot_constraints->first
-                    << " > " << prior_boot_uuid;
+            ABSL_VLOG(1) << "Inserting " << first_per_boot_constraints->first
+                         << " < " << local_boot_uuid;
+            ABSL_VLOG(1) << "Inserting " << second_per_boot_constraints->first
+                         << " > " << prior_boot_uuid;
             first_per_boot_constraints->second.emplace_back(
                 std::make_pair(local_boot_uuid, true));
             second_per_boot_constraints->second.emplace_back(
@@ -1755,7 +1760,7 @@ std::map<std::string, NodeBootState> PartsSorter::ComputeOldBootConstraints() {
           &per_node_boot_constraints = it->second.constraints;
 
       if (boot_parts_index_ranges.second.size() < 2) {
-        VLOG(1) << "Found only one boot for this node in this log.";
+        ABSL_VLOG(1) << "Found only one boot for this node in this log.";
         continue;
       }
 
@@ -1804,15 +1809,15 @@ MapBoots PartsSorter::ComputeBootCounts() {
                          : ComputeNewBootConstraints();
 
   // Print out our discovered constraints on request.
-  if (VLOG_IS_ON(2)) {
+  if (ABSL_VLOG_IS_ON(2)) {
     for (const std::pair<const std::string, NodeBootState> &node_state :
          boot_constraints) {
-      LOG(INFO) << "Node " << node_state.first;
+      ABSL_LOG(INFO) << "Node " << node_state.first;
       ABSL_CHECK_GT(node_state.second.boots.size(), 0u)
           << ": Need a boot from each node.";
 
       for (const std::string &boot : node_state.second.boots) {
-        LOG(INFO) << "  boot " << boot;
+        ABSL_LOG(INFO) << "  boot " << boot;
       }
       for (const std::pair<const std::string,
                            std::vector<std::pair<std::string, bool>>>
@@ -1820,9 +1825,9 @@ MapBoots PartsSorter::ComputeBootCounts() {
         for (const std::pair<std::string, bool> &constraint :
              constraints.second) {
           if (constraint.second) {
-            LOG(INFO) << constraints.first << " < " << constraint.first;
+            ABSL_LOG(INFO) << constraints.first << " < " << constraint.first;
           } else {
-            LOG(INFO) << constraints.first << " > " << constraint.first;
+            ABSL_LOG(INFO) << constraints.first << " > " << constraint.first;
           }
         }
       }
@@ -1854,8 +1859,8 @@ MapBoots PartsSorter::ComputeBootCounts() {
     while (true) {
       auto it = node_state.second.constraints.find(current_boot);
       if (it == node_state.second.constraints.end()) {
-        LOG(WARNING) << "Unconnected boot " << current_boot
-                     << " in set > 1 for node " << node_state.first;
+        ABSL_LOG(WARNING) << "Unconnected boot " << current_boot
+                          << " in set > 1 for node " << node_state.first;
         break;
       }
 
@@ -1887,8 +1892,8 @@ MapBoots PartsSorter::ComputeBootCounts() {
     while (true) {
       auto it = node_state.second.constraints.find(current_boot);
       if (it == node_state.second.constraints.end()) {
-        LOG(WARNING) << "Unconnected boot " << current_boot
-                     << " in set > 1 for node " << node_state.first;
+        ABSL_LOG(WARNING) << "Unconnected boot " << current_boot
+                          << " in set > 1 for node " << node_state.first;
         break;
       }
 
@@ -1924,11 +1929,11 @@ MapBoots PartsSorter::ComputeBootCounts() {
     ABSL_CHECK_EQ(sorted_boots.size(), node_state.second.boots.size())
         << ": Graph failed to reach all the boots on node " << node_state.first;
 
-    VLOG(1) << "Node " << node_state.first;
+    ABSL_VLOG(1) << "Node " << node_state.first;
     size_t boot_count = 0;
     boots.boots.insert(std::make_pair(node_state.first, sorted_boots));
     for (const std::string &boot : sorted_boots) {
-      VLOG(1) << "  Boot " << boot;
+      ABSL_VLOG(1) << "  Boot " << boot;
       boots.boot_count_map.insert(std::make_pair(std::move(boot), boot_count));
       ++boot_count;
     }
@@ -2017,10 +2022,10 @@ std::vector<LogFile> PartsSorter::FormatNewParts() {
               << "' and '" << p.first << "'";
           if (last_parts_index != -1) {
             if (p.second != last_parts_index + 1) {
-              LOG(FATAL) << "Broken log, missing part files between \""
-                         << last_part_name << "\" and \"" << p.first
-                         << "\", found "
-                         << ConcatenateParts(parts.second.parts);
+              ABSL_LOG(FATAL)
+                  << "Broken log, missing part files between \""
+                  << last_part_name << "\" and \"" << p.first << "\", found "
+                  << ConcatenateParts(parts.second.parts);
             }
           }
           last_parts_index = p.second;
@@ -2242,19 +2247,19 @@ template <typename TCollection>
 bool HasMatchingConfigsTemplate(const TCollection &items) {
   const Configuration *config = nullptr;
   for (const auto &item : items) {
-    VLOG(1) << item;
+    ABSL_VLOG(1) << item;
     if (config == nullptr) {
       config = GetConfig(item);
     } else {
       if (config != GetConfig(item)) {
-        LOG(ERROR) << ": Config mismatched: " << config << " vs. "
-                   << GetConfig(item);
+        ABSL_LOG(ERROR) << ": Config mismatched: " << config << " vs. "
+                        << GetConfig(item);
         return false;
       }
     }
   }
   if (config == nullptr) {
-    LOG(ERROR) << ": No configs are found";
+    ABSL_LOG(ERROR) << ": No configs are found";
     return false;
   }
   return true;
@@ -2291,8 +2296,8 @@ SelectedLogParts::SelectedLogParts(std::string_view node_name,
       boot_index_(boot_index),
       log_parts_(std::move(log_parts)) {
   if (log_parts_.empty()) {
-    VLOG(1) << "Nothing was selected for node " << node_name_ << " boot "
-            << boot_index_;
+    ABSL_VLOG(1) << "Nothing was selected for node " << node_name_ << " boot "
+                 << boot_index_;
     return;
   }
   ABSL_CHECK(HasMatchingConfigsTemplate(log_parts_));

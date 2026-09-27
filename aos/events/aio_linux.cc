@@ -626,12 +626,12 @@ class IoUringImpl : public Aio::Impl {
   //     (arming more than the depth before the first Run()/Poll(), when
   //     nothing can flush, or staging more than the depth between Poll()
   //     calls).
-  //   * Counts armed ops (CountArmedOp()) and VLOG(1)s, once per ring, the
+  //   * Counts armed ops (CountArmedOp()) and ABSL_VLOG(1)s, once per ring, the
   //     first time the concurrent count exceeds the depth -- the earliest
   //     moment the configuration is known to be undersized, usually app
   //     startup, long before either crash above or CQ-overflow degradation
-  //     is hit.  VLOG rather than LOG because arm sites run on RT paths --
-  //     see CountArmedOp().
+  //     is hit.  ABSL_VLOG rather than ABSL_LOG because arm sites run on RT
+  //     paths -- see CountArmedOp().
   struct io_uring_sqe *ArmSqe();
   // The accounting half of ArmSqe(), shared with
   // GetSqeForRingReconstruction() (which acquires its SQE by draining
@@ -750,7 +750,7 @@ class IoUringImpl : public Aio::Impl {
   // discovered as a bare exhaustion crash or silent CQ-overflow
   // degradation later.
   int armed_ops_ = 0;
-  // Ensures the undersized---aio_queue_depth VLOG fires once per ring,
+  // Ensures the undersized---aio_queue_depth ABSL_VLOG fires once per ring,
   // not once per arm.
   bool queue_depth_warned_ = false;
 
@@ -1526,9 +1526,9 @@ void IoUringImpl::CountArmedOp() {
   ++armed_ops_;
   if (armed_ops_ > static_cast<int>(sq_capacity_) && !queue_depth_warned_) {
     queue_depth_warned_ = true;
-    // VLOG, not LOG: this can run on an RT thread (arm sites live inside
-    // Poll() and on the documented RT-safe submission paths), where
-    // default-on logging allocates and locks.  Disabled-verbosity VLOG is
+    // ABSL_VLOG, not ABSL_LOG: this can run on an RT thread (arm sites live
+    // inside Poll() and on the documented RT-safe submission paths), where
+    // default-on logging allocates and locks.  Disabled-verbosity ABSL_VLOG is
     // one atomic load -- RT-fine -- and a user who enables verbosity on
     // an RT app has made that trade explicitly.
     ABSL_VLOG(1)
@@ -1737,9 +1737,9 @@ bool IoUringImpl::Poll(bool block) {
     if (io_uring_sq_ready(&ring) > 0) {
       ret = io_uring_submit(&ring);
       if (ret < 0 && ret != -EINTR && ret != -EAGAIN) {
-        // VLOG, not LOG: Poll() legitimately runs under ScopedRealtime,
-        // where default-on logging either allocates (ABSL_LOG, fatal via
-        // the malloc hook) or blocks in a write(2) from the RT thread
+        // ABSL_VLOG, not ABSL_LOG: Poll() legitimately runs under
+        // ScopedRealtime, where default-on logging either allocates (ABSL_LOG,
+        // fatal via the malloc hook) or blocks in a write(2) from the RT thread
         // (RAW_LOG) -- and fatal would turn an absorbable transient
         // submit error into a crash.  The error is absorbed either way
         // (the staged SQEs stay put and the next Poll() retries); a user
@@ -1773,7 +1773,7 @@ bool IoUringImpl::Poll(bool block) {
   }
 
   if (ret < 0 && ret != -EINTR && ret != -EAGAIN) {
-    // VLOG for the same RT-safety reasons as the short-circuit path above.
+    // ABSL_VLOG for the same RT-safety reasons as the short-circuit path above.
     ABSL_VLOG(1) << "io_uring submit failed: " << aos_strerror(-ret);
   }
 

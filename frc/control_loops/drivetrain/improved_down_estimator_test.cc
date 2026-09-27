@@ -4,7 +4,7 @@
 #include <random>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 #include <Eigen/Geometry>
 
@@ -179,8 +179,8 @@ TEST(DownEstimatorTest, SigmaPoints) {
   const Eigen::Matrix<double, 4, 1> calculated_mean =
       frc::controls::QuaternionMean(vectors);
 
-  VLOG(1) << "actual mean: " << mean.coeffs();
-  VLOG(1) << "calculated mean: " << calculated_mean;
+  ABSL_VLOG(1) << "actual mean: " << mean.coeffs();
+  ABSL_VLOG(1) << "calculated mean: " << calculated_mean;
 
   Eigen::Matrix<double, 3, 3 * 2 + 1> Wprime;
   Eigen::Matrix<double, 3, 3> calculated_covariance =

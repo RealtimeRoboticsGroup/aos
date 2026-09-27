@@ -7,7 +7,7 @@
 #include <ostream>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 namespace aos::util {
 
@@ -65,7 +65,7 @@ size_t ScopedPipe::ScopedReadPipe::Read(std::string *buffer) {
         buffer->resize(original_size + read_bytes);
         return read_bytes;
       }
-      PLOG(FATAL) << "Error on reading pipe.";
+      ABSL_PLOG(FATAL) << "Error on reading pipe.";
     } else if (result < kBufferSize) {
       read_bytes += result;
       buffer->resize(original_size + read_bytes);

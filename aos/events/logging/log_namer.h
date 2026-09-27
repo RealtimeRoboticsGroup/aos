@@ -9,7 +9,7 @@
 
 #include "absl/container/btree_map.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "flatbuffers/flatbuffers.h"
 
 #include "aos/events/logging/logfile_utils.h"
@@ -310,10 +310,11 @@ class LogNamer {
                      realtime_clock::time_point realtime_start_time,
                      monotonic_clock::time_point logger_monotonic_start_time,
                      realtime_clock::time_point logger_realtime_start_time) {
-    VLOG(1) << "Setting node_index " << node_index << ", node_name: "
-            << configuration_->nodes()->Get(node_index)->name()->string_view()
-            << " to start time " << monotonic_start_time << " rt "
-            << realtime_start_time << " UUID " << boot_uuid;
+    ABSL_VLOG(1)
+        << "Setting node_index " << node_index << ", node_name: "
+        << configuration_->nodes()->Get(node_index)->name()->string_view()
+        << " to start time " << monotonic_start_time << " rt "
+        << realtime_start_time << " UUID " << boot_uuid;
     NodeState *node_state = GetNodeState(node_index, boot_uuid);
     node_state->monotonic_start_time = monotonic_start_time;
     node_state->realtime_start_time = realtime_start_time;

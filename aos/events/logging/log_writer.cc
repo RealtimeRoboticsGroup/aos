@@ -46,7 +46,7 @@ Logger::Logger(EventLoop *event_loop, const Configuration *configuration,
                     "/aos")
               : aos::Fetcher<message_bridge::ServerStatistics>()) {
   timer_handler_->set_name("channel_poll");
-  VLOG(1) << "Creating logger for " << FlatbufferToJson(node_);
+  ABSL_VLOG(1) << "Creating logger for " << FlatbufferToJson(node_);
 
   // When we are logging remote timestamps, we need to be able to translate
   // from the channel index that the event loop uses to the channel index in
@@ -77,8 +77,8 @@ Logger::Logger(EventLoop *event_loop, const Configuration *configuration,
         const Node *other_node = configuration::GetNode(
             configuration_, connection->name()->string_view());
 
-        VLOG(1) << "Timestamps are logged from "
-                << FlatbufferToJson(other_node);
+        ABSL_VLOG(1) << "Timestamps are logged from "
+                     << FlatbufferToJson(other_node);
         // True if each channel's remote timestamps are split into a separate
         // RemoteMessage channel.
         const bool is_split =
@@ -196,11 +196,11 @@ Logger::Logger(EventLoop *event_loop, const Configuration *configuration,
 
     if (log_message || log_delivery_times || log_contents) {
       fs.fetcher = event_loop->MakeRawFetcher(event_loop_channel);
-      VLOG(1) << "Logging channel "
-              << configuration::CleanedChannelToString(event_loop_channel);
+      ABSL_VLOG(1) << "Logging channel "
+                   << configuration::CleanedChannelToString(event_loop_channel);
 
       if (log_delivery_times) {
-        VLOG(1) << "  Delivery times";
+        ABSL_VLOG(1) << "  Delivery times";
         fs.wants_timestamp_writer = true;
         fs.timestamp_node_index = static_cast<int>(node_index_);
       }
@@ -215,7 +215,7 @@ Logger::Logger(EventLoop *event_loop, const Configuration *configuration,
         }
       }
       if (log_message) {
-        VLOG(1) << "  Data";
+        ABSL_VLOG(1) << "  Data";
         fs.wants_writer = true;
         if (!is_local) {
           fs.log_type = LogType::kLogRemoteMessage;
@@ -224,8 +224,9 @@ Logger::Logger(EventLoop *event_loop, const Configuration *configuration,
         }
       }
       if (log_contents) {
-        VLOG(1) << "Timestamp logger channel "
-                << configuration::CleanedChannelToString(event_loop_channel);
+        ABSL_VLOG(1) << "Timestamp logger channel "
+                     << configuration::CleanedChannelToString(
+                            event_loop_channel);
         auto timestamp_logger_channel_info =
             timestamp_logger_channels.find(event_loop_channel);
         ABSL_CHECK(timestamp_logger_channel_info !=
@@ -272,7 +273,7 @@ std::string Logger::WriteConfiguration(LogNamer *log_namer) {
     aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader> config_header =
         PackConfiguration(configuration_);
     config_sha256 = Sha256(config_header.span());
-    VLOG(1) << "Config sha256 of " << config_sha256;
+    ABSL_VLOG(1) << "Config sha256 of " << config_sha256;
     log_namer->WriteConfiguration(&config_header, config_sha256);
   }
 
@@ -283,7 +284,7 @@ void Logger::StartLogging(std::unique_ptr<LogNamer> log_namer,
                           std::optional<UUID> log_start_uuid) {
   ABSL_CHECK(!log_namer_) << ": Already logging";
 
-  VLOG(1) << "Starting logger for " << FlatbufferToJson(node_);
+  ABSL_VLOG(1) << "Starting logger for " << FlatbufferToJson(node_);
 
   auto config_sha256 = WriteConfiguration(log_namer.get());
 
@@ -341,12 +342,12 @@ void Logger::StartLogging(std::unique_ptr<LogNamer> log_namer,
   const aos::monotonic_clock::time_point header_time =
       event_loop_->monotonic_now();
 
-  VLOG(1) << "Logging node as " << FlatbufferToJson(node_) << " start_time "
-          << last_synchronized_time_ << ", took "
-          << chrono::duration<double>(fetch_time - beginning_time).count()
-          << " to fetch, "
-          << chrono::duration<double>(header_time - fetch_time).count()
-          << " to write headers, boot uuid " << event_loop_->boot_uuid();
+  ABSL_VLOG(1) << "Logging node as " << FlatbufferToJson(node_)
+               << " start_time " << last_synchronized_time_ << ", took "
+               << chrono::duration<double>(fetch_time - beginning_time).count()
+               << " to fetch, "
+               << chrono::duration<double>(header_time - fetch_time).count()
+               << " to write headers, boot uuid " << event_loop_->boot_uuid();
 
   // Force logging up until the start of the log file now, so the messages at
   // the start are always ordered before the rest of the messages.
@@ -368,7 +369,7 @@ std::unique_ptr<LogNamer> Logger::RestartLogging(
     std::optional<monotonic_clock::time_point> end_time) {
   ABSL_CHECK(log_namer_) << ": Unexpected restart while not logging";
 
-  VLOG(1) << "Restarting logger for " << FlatbufferToJson(node_);
+  ABSL_VLOG(1) << "Restarting logger for " << FlatbufferToJson(node_);
 
   // Grab a representative time on both the RT and monotonic clock.
   // Average a monotonic clock before and after to reduce the error.
@@ -453,13 +454,13 @@ std::unique_ptr<LogNamer> Logger::RestartLogging(
   const aos::monotonic_clock::time_point channel_time =
       event_loop_->monotonic_now();
 
-  VLOG(1) << "Logging node as " << FlatbufferToJson(node_) << " restart_time "
-          << last_synchronized_time_ << ", took "
-          << chrono::duration<double>(header_time - monotonic_now1).count()
-          << " to prepare and write header, "
-          << chrono::duration<double>(channel_time - header_time).count()
-          << " to write initial channel messages, boot uuid "
-          << event_loop_->boot_uuid();
+  ABSL_VLOG(1) << "Logging node as " << FlatbufferToJson(node_)
+               << " restart_time " << last_synchronized_time_ << ", took "
+               << chrono::duration<double>(header_time - monotonic_now1).count()
+               << " to prepare and write header, "
+               << chrono::duration<double>(channel_time - header_time).count()
+               << " to write initial channel messages, boot uuid "
+               << event_loop_->boot_uuid();
 
   return old_log_namer;
 }
@@ -540,7 +541,7 @@ void Logger::WriteMissingTimestamps() {
             node, node_index,
             server_statistics_fetcher_.context().monotonic_event_time,
             server_statistics_fetcher_.context().realtime_event_time)) {
-      VLOG(1) << "Timestamps changed on " << aos::FlatbufferToJson(node);
+      ABSL_VLOG(1) << "Timestamps changed on " << aos::FlatbufferToJson(node);
     }
   }
 }
@@ -575,14 +576,15 @@ bool Logger::MaybeUpdateTimestamp(
       }
 
       if (connection->state() != message_bridge::State::CONNECTED) {
-        VLOG(1) << node->name()->string_view()
-                << " is not connected, can't start it yet.";
+        ABSL_VLOG(1) << node->name()->string_view()
+                     << " is not connected, can't start it yet.";
         break;
       }
 
       if (!connection->has_monotonic_offset()) {
-        VLOG(1) << "Missing monotonic offset for setting start time for node "
-                << aos::FlatbufferToJson(node);
+        ABSL_VLOG(1)
+            << "Missing monotonic offset for setting start time for node "
+            << aos::FlatbufferToJson(node);
         break;
       }
 
@@ -595,8 +597,8 @@ bool Logger::MaybeUpdateTimestamp(
         break;
       }
 
-      VLOG(1) << "Updating start time for "
-              << aos::FlatbufferToJson(connection);
+      ABSL_VLOG(1) << "Updating start time for "
+                   << aos::FlatbufferToJson(connection);
 
       // Found it and it is connected.  Compensate and go.
       log_namer_->SetStartTimes(
@@ -750,9 +752,10 @@ void Logger::WriteData(DataWriter *writer, const FetcherStruct &f) {
 
     const Channel *channel = f.fetcher->channel();
 
-    VLOG(2) << "Wrote data as node " << FlatbufferToJson(node_)
-            << " for channel " << configuration::CleanedChannelToString(channel)
-            << " to " << writer->name();
+    ABSL_VLOG(2) << "Wrote data as node " << FlatbufferToJson(node_)
+                 << " for channel "
+                 << configuration::CleanedChannelToString(channel) << " to "
+                 << writer->name();
 
     if (profiling_info_.has_value()) {
       profiling_info_->WriteProfileData(message_time, start_time,
@@ -782,10 +785,10 @@ void Logger::WriteTimestamps(DataWriter *timestamp_writer,
         f.fetcher->context().monotonic_event_time);
     RecordCreateMessageTime(start, coppier.end_time(), f);
 
-    VLOG(2) << "Wrote timestamps as node " << FlatbufferToJson(node_)
-            << " for channel "
-            << configuration::CleanedChannelToString(f.fetcher->channel())
-            << " to " << timestamp_writer->name() << " timestamp";
+    ABSL_VLOG(2) << "Wrote timestamps as node " << FlatbufferToJson(node_)
+                 << " for channel "
+                 << configuration::CleanedChannelToString(f.fetcher->channel())
+                 << " to " << timestamp_writer->name() << " timestamp";
   }
 }
 
@@ -879,9 +882,9 @@ Status Logger::LogUntil(monotonic_clock::time_point t) {
         const bool got_new = fetch_result == RawFetcher::Result::GOOD;
         RecordFetchResult(start, end, got_new, &f);
         if (!got_new) {
-          VLOG(2) << "No new data on "
-                  << configuration::CleanedChannelToString(
-                         f.fetcher->channel());
+          ABSL_VLOG(2) << "No new data on "
+                       << configuration::CleanedChannelToString(
+                              f.fetcher->channel());
           break;
         }
         f.written = false;
@@ -1011,13 +1014,15 @@ ProfileDataWriter::ProfileDataWriter(const std::filesystem::path &path) {
 
   // Warn if the path is not a csv file.
   if (std::filesystem::is_directory(path)) {
-    LOG(WARNING) << "Path for logger profiling output file should be a csv "
-                    "file, not a directory. Received path: "
-                 << path << ".";
+    ABSL_LOG(WARNING)
+        << "Path for logger profiling output file should be a csv "
+           "file, not a directory. Received path: "
+        << path << ".";
   } else if (lower_case_extension != ".csv") {
-    LOG(WARNING) << "The extension for logger profiling output file should be "
-                    "'.csv'. Received path: "
-                 << extension << ".";
+    ABSL_LOG(WARNING)
+        << "The extension for logger profiling output file should be "
+           "'.csv'. Received path: "
+        << extension << ".";
   }
 
   stream_.open(path, std::ios::out);

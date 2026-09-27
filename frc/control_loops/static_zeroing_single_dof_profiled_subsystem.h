@@ -381,11 +381,11 @@ void StaticZeroingSingleDOFProfiledSubsystem<
     ZeroingEstimator, ProfiledJointStatus, SubsystemParams,
     Profile>::set_unprofiled_goal(double goal, double goal_velocity) {
   if (goal < min_position_) {
-    VLOG(1) << "Limiting to " << min_position_ << " from " << goal;
+    ABSL_VLOG(1) << "Limiting to " << min_position_ << " from " << goal;
     goal = min_position_;
   }
   if (goal > max_position_) {
-    VLOG(1) << "Limiting to " << max_position_ << " from " << goal;
+    ABSL_VLOG(1) << "Limiting to " << max_position_ << " from " << goal;
     goal = max_position_;
   }
   profiled_subsystem_.set_unprofiled_goal(goal, goal_velocity);

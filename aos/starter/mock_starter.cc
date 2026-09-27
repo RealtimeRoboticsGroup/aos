@@ -6,7 +6,7 @@
 #include <utility>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "flatbuffers/buffer.h"
 #include "flatbuffers/flatbuffer_builder.h"
 #include "flatbuffers/string.h"
@@ -45,8 +45,9 @@ MockStarter::MockStarter(aos::EventLoop *event_loop)
                 switch (command.command()) {
                   case aos::starter::Command::START:
                     if (!status.running) {
-                      VLOG(1) << "Starting " << command.name()->string_view()
-                              << " at " << event_loop_->monotonic_now();
+                      ABSL_VLOG(1)
+                          << "Starting " << command.name()->string_view()
+                          << " at " << event_loop_->monotonic_now();
                       status.running = true;
                       status.start_time = event_loop_->monotonic_now();
                       status.id = next_id_++;
@@ -54,15 +55,17 @@ MockStarter::MockStarter(aos::EventLoop *event_loop)
                     break;
                   case aos::starter::Command::STOP:
                     if (status.running) {
-                      VLOG(1) << "Stopping " << command.name()->string_view()
-                              << " at " << event_loop_->monotonic_now();
+                      ABSL_VLOG(1)
+                          << "Stopping " << command.name()->string_view()
+                          << " at " << event_loop_->monotonic_now();
                     }
                     status.running = false;
                     break;
                   case aos::starter::Command::RESTART:
                     status.running = true;
-                    VLOG(1) << "Restarting " << command.name()->string_view()
-                            << " at " << event_loop_->monotonic_now();
+                    ABSL_VLOG(1)
+                        << "Restarting " << command.name()->string_view()
+                        << " at " << event_loop_->monotonic_now();
                     status.start_time = event_loop_->monotonic_now();
                     status.id = next_id_++;
                 }

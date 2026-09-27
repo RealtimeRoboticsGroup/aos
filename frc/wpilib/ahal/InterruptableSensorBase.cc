@@ -8,7 +8,7 @@
 #include "frc/wpilib/ahal/InterruptableSensorBase.h"
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "frc/wpilib/ahal/WPIErrors.h"
 #include "hal/HAL.h"

@@ -11,7 +11,7 @@ extern "C" {
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "flatbuffers/flatbuffers.h"
 
 ABSL_FLAG(int32_t, min_ice_port, -1,
@@ -37,7 +37,7 @@ std::shared_ptr<ScopedDataChannel> ScopedDataChannel::MakeDataChannel() {
 void ScopedDataChannel::Open(struct rawrtc_peer_connection *connection,
                              const std::string &label) {
   label_ = label;
-  VLOG(1) << "(" << this << ")  Opening " << label_;
+  ABSL_VLOG(1) << "(" << this << ")  Opening " << label_;
   struct rawrtc_data_channel_parameters *channel_parameters;
   // Create data channel parameters
   // TODO(austin): TYPE?
@@ -71,7 +71,7 @@ void ScopedDataChannel::Open(struct rawrtc_data_channel *const channel) {
   }
   mem_deref(parameters);
 
-  VLOG(1) << "(" << this << ") New data channel instance: " << label_;
+  ABSL_VLOG(1) << "(" << this << ") New data channel instance: " << label_;
 
   mem_ref(channel);
   data_channel_ = channel;
@@ -246,8 +246,8 @@ void RawRTCConnection::StaticPeerConnectionLocalCandidateErrorHandler(
     char const *const url, uint16_t const error_code,
     char const *const error_text, void *const arg) {
   RawRTCConnection *const client = reinterpret_cast<RawRTCConnection *>(arg);
-  LOG(ERROR) << "(" << client << ") ICE candidate error, URL: " << url
-             << ", reason: " << error_text;
+  ABSL_LOG(ERROR) << "(" << client << ") ICE candidate error, URL: " << url
+                  << ", reason: " << error_text;
   if (client->on_peer_connection_local_candidate_error_)
     client->on_peer_connection_local_candidate_error_(candidate, url,
                                                       error_code, error_text);
@@ -256,8 +256,8 @@ void RawRTCConnection::StaticPeerConnectionLocalCandidateErrorHandler(
 void RawRTCConnection::StaticSignalingStateChangeHandler(
     const enum rawrtc_signaling_state state, void *const arg) {
   RawRTCConnection *const client = reinterpret_cast<RawRTCConnection *>(arg);
-  VLOG(1) << "(" << client << ") Signaling state change: "
-          << rawrtc_signaling_state_to_name(state);
+  ABSL_VLOG(1) << "(" << client << ") Signaling state change: "
+               << rawrtc_signaling_state_to_name(state);
   if (client->on_signaling_state_change_)
     client->on_signaling_state_change_(state);
 }
@@ -265,8 +265,8 @@ void RawRTCConnection::StaticSignalingStateChangeHandler(
 void RawRTCConnection::StaticIceTransportStateChangeHandler(
     const enum rawrtc_ice_transport_state state, void *const arg) {
   RawRTCConnection *const client = reinterpret_cast<RawRTCConnection *>(arg);
-  VLOG(1) << "(" << client << ") ICE transport state: "
-          << rawrtc_ice_transport_state_to_name(state);
+  ABSL_VLOG(1) << "(" << client << ") ICE transport state: "
+               << rawrtc_ice_transport_state_to_name(state);
   if (client->on_ice_transport_state_change_)
     client->on_ice_transport_state_change_(state);
 }
@@ -274,8 +274,8 @@ void RawRTCConnection::StaticIceTransportStateChangeHandler(
 void RawRTCConnection::StaticIceGathererStateChangeHandler(
     const enum rawrtc_ice_gatherer_state state, void *const arg) {
   RawRTCConnection *const client = reinterpret_cast<RawRTCConnection *>(arg);
-  VLOG(1) << "(" << client << ") ICE gatherer state: "
-          << rawrtc_ice_gatherer_state_to_name(state);
+  ABSL_VLOG(1) << "(" << client << ") ICE gatherer state: "
+               << rawrtc_ice_gatherer_state_to_name(state);
   if (client->on_ice_gatherer_state_change_)
     client->on_ice_gatherer_state_change_(state);
 }
@@ -284,8 +284,8 @@ void RawRTCConnection::StaticConnectionStateChangeHandler(
     const enum rawrtc_peer_connection_state state,  // read-only
     void *const arg) {
   RawRTCConnection *const client = reinterpret_cast<RawRTCConnection *>(arg);
-  VLOG(1) << "(" << client << ") Peer connection state change: "
-          << rawrtc_peer_connection_state_to_name(state);
+  ABSL_VLOG(1) << "(" << client << ") Peer connection state change: "
+               << rawrtc_peer_connection_state_to_name(state);
   if (client->on_connection_state_change_)
     client->on_connection_state_change_(state);
 }

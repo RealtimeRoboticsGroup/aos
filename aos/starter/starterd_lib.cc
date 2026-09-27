@@ -15,7 +15,7 @@
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "flatbuffers/buffer.h"
 #include "flatbuffers/flatbuffer_builder.h"
 #include "flatbuffers/string.h"
@@ -74,7 +74,7 @@ Starter::Starter(const aos::Configuration *event_loop_config,
           std::chrono::milliseconds(1000))),
       cleanup_timer_(event_loop_.AddTimer([this] {
         event_loop_.Exit();
-        LOG(INFO) << "Starter event loop exit finished.";
+        ABSL_LOG(INFO) << "Starter event loop exit finished.";
       })),
       max_status_count_(
           event_loop_.GetChannel<aos::starter::Status>("/aos")->frequency() -
@@ -103,10 +103,10 @@ Starter::Starter(const aos::Configuration *event_loop_config,
                                      << " on " << node->name()->string_view();
       if (!aos::configuration::ChannelIsReadableOnNode(channel,
                                                        event_loop_.node())) {
-        LOG(INFO) << "StarterRpc channel "
-                  << aos::configuration::StrippedChannelToString(channel)
-                  << " is not readable on "
-                  << event_loop_.node()->name()->string_view();
+        ABSL_LOG(INFO) << "StarterRpc channel "
+                       << aos::configuration::StrippedChannelToString(channel)
+                       << " is not readable on "
+                       << event_loop_.node()->name()->string_view();
       } else {
         event_loop_.MakeWatcher(channel->name()->string_view(),
                                 [this](const aos::starter::StarterRpc &cmd) {
@@ -145,7 +145,7 @@ Starter::Starter(const aos::Configuration *event_loop_config,
   // MemoryMappedQueues for each one to allocate the shared memory before
   // spawning any child process.
   if (config_msg_->has_channels()) {
-    LOG(INFO) << "Starting to initialize shared memory.";
+    ABSL_LOG(INFO) << "Starting to initialize shared memory.";
     const aos::Node *this_node = event_loop_.node();
     std::vector<const aos::Channel *> channels_to_construct;
     for (const aos::Channel *channel : *config_msg_->channels()) {
@@ -184,7 +184,7 @@ Starter::Starter(const aos::Configuration *event_loop_config,
         threads[i].join();
       }
     }
-    LOG(INFO) << "Starting applications.";
+    ABSL_LOG(INFO) << "Starting applications.";
   }
 }
 
@@ -193,7 +193,7 @@ void Starter::HandleStarterRpc(const StarterRpc &command) {
     return;
   }
 
-  LOG(INFO) << "Received " << aos::FlatbufferToJson(&command);
+  ABSL_LOG(INFO) << "Received " << aos::FlatbufferToJson(&command);
 
   if (command.has_nodes()) {
     ABSL_CHECK(aos::configuration::MultiNode(config_msg_));
@@ -230,7 +230,8 @@ void Starter::HandleStateChange() {
     SendStatus();
     ++status_count_;
   } else {
-    VLOG(1) << "That's enough " << status_count_ << " " << max_status_count_;
+    ABSL_VLOG(1) << "That's enough " << status_count_ << " "
+                 << max_status_count_;
   }
 }
 
@@ -280,11 +281,11 @@ void Starter::OnSignal(signalfd_siginfo info) {
       event_loop_.Exit();
     }
   } else {
-    LOG(INFO) << "Received signal '" << strsignal(info.ssi_signo) << "'";
+    ABSL_LOG(INFO) << "Received signal '" << strsignal(info.ssi_signo) << "'";
 
     if (std::find(kStarterDeath.begin(), kStarterDeath.end(), info.ssi_signo) !=
         kStarterDeath.end()) {
-      LOG(WARNING) << "Starter shutting down";
+      ABSL_LOG(WARNING) << "Starter shutting down";
       Cleanup();
     }
   }
@@ -414,9 +415,9 @@ void Starter::AddChannel(const aos::Channel *channel) {
     std::unique_lock<std::mutex> locker(queue_mutex_);
     shm_queues_.emplace_back(std::move(queue));
   }
-  VLOG(1) << "Created MemoryMappedQueue for "
-          << aos::configuration::StrippedChannelToString(channel) << " under "
-          << shm_base_;
+  ABSL_VLOG(1) << "Created MemoryMappedQueue for "
+               << aos::configuration::StrippedChannelToString(channel)
+               << " under " << shm_base_;
 }
 
 }  // namespace aos::starter

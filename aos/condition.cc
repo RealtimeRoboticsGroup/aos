@@ -5,7 +5,7 @@
 #include <ctime>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/macros.h"
 #include "aos/mutex/mutex.h"

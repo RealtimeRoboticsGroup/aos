@@ -16,7 +16,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_format.h"
 #include "flatbuffers/flatbuffers.h"
 
@@ -110,12 +110,12 @@ class V4L2Source : public GstSampleSource {
         &error);
 
     if (error != NULL) {
-      LOG(FATAL) << "Could not create v4l2 pipeline: " << error->message;
+      ABSL_LOG(FATAL) << "Could not create v4l2 pipeline: " << error->message;
     }
 
     appsink_ = gst_bin_get_by_name(GST_BIN(pipeline_), "appsink");
     if (appsink_ == NULL) {
-      LOG(FATAL) << "Could not get appsink";
+      ABSL_LOG(FATAL) << "Could not get appsink";
     }
 
     g_signal_connect(appsink_, "new-sample",
@@ -142,7 +142,7 @@ class V4L2Source : public GstSampleSource {
   void OnSample() {
     GstSample *sample = gst_app_sink_pull_sample(GST_APP_SINK(appsink_));
     if (sample == NULL) {
-      LOG(WARNING) << "Received null sample";
+      ABSL_LOG(WARNING) << "Received null sample";
       return;
     }
     callback_(sample);
@@ -168,7 +168,7 @@ class ChannelSource : public GstSampleSource {
  private:
   void OnImage(const frc::vision::CameraImage &image) {
     if (!image.has_rows() || !image.has_cols() || !image.has_data()) {
-      VLOG(2) << "Skipping CameraImage with no data";
+      ABSL_VLOG(2) << "Skipping CameraImage with no data";
       return;
     }
     ABSL_CHECK_EQ(image.rows(), absl::GetFlag(FLAGS_height));
@@ -387,24 +387,24 @@ Connection::Connection(::seasocks::WebSocket *sock, ::seasocks::Server *server)
       &error);
 
   if (error != NULL) {
-    LOG(FATAL) << "Could not create WebRTC pipeline: " << error->message;
+    ABSL_LOG(FATAL) << "Could not create WebRTC pipeline: " << error->message;
   }
 
   webrtcbin_ = gst_bin_get_by_name(GST_BIN(pipeline_), "webrtcbin");
   if (webrtcbin_ == NULL) {
-    LOG(FATAL) << "Could not initialize webrtcbin";
+    ABSL_LOG(FATAL) << "Could not initialize webrtcbin";
   }
 
   appsrc_ = gst_bin_get_by_name(GST_BIN(pipeline_), "appsrc");
   if (appsrc_ == NULL) {
-    LOG(FATAL) << "Could not initialize appsrc";
+    ABSL_LOG(FATAL) << "Could not initialize appsrc";
   }
 
   {
     GArray *transceivers;
     g_signal_emit_by_name(webrtcbin_, "get-transceivers", &transceivers);
     if (transceivers == NULL || transceivers->len <= 0) {
-      LOG(FATAL) << "Could not initialize transceivers";
+      ABSL_LOG(FATAL) << "Could not initialize transceivers";
     }
 
     GstWebRTCRTPTransceiver *trans =
@@ -462,7 +462,7 @@ void Connection::OnSample(GstSample *sample) {
   GstFlowReturn response =
       gst_app_src_push_sample(GST_APP_SRC(appsrc_), sample);
   if (response != GST_FLOW_OK) {
-    LOG(WARNING) << "Sample pushed, did not receive OK";
+    ABSL_LOG(WARNING) << "Sample pushed, did not receive OK";
   }
 
   // Since the stream is already running (the camera turns on with
@@ -479,7 +479,7 @@ void Connection::OnSample(GstSample *sample) {
 
     guint64 offset = gst_segment_to_running_time(segment, GST_FORMAT_TIME,
                                                  GST_BUFFER_PTS(buffer));
-    LOG(INFO) << "Fixing offset " << offset;
+    ABSL_LOG(INFO) << "Fixing offset " << offset;
     gst_pad_set_offset(src, -offset);
 
     gst_object_unref(GST_OBJECT(src));
@@ -488,7 +488,7 @@ void Connection::OnSample(GstSample *sample) {
 }
 
 void Connection::OnOfferCreated(GstPromise *promise) {
-  LOG(INFO) << "OnOfferCreated";
+  ABSL_LOG(INFO) << "OnOfferCreated";
 
   GstWebRTCSessionDescription *offer = NULL;
   gst_structure_get(gst_promise_get_reply(promise), "offer",
@@ -506,7 +506,7 @@ void Connection::OnOfferCreated(GstPromise *promise) {
   GstSDPMessage *sdp_msg = offer->sdp;
   std::string sdp_str(gst_sdp_message_as_text(sdp_msg));
 
-  LOG(INFO) << "Negotiation offer created:\n" << sdp_str;
+  ABSL_LOG(INFO) << "Negotiation offer created:\n" << sdp_str;
 
   flatbuffers::FlatBufferBuilder fbb(512);
   flatbuffers::Offset<WebSocketSdp> sdp_fb =
@@ -519,7 +519,7 @@ void Connection::OnOfferCreated(GstPromise *promise) {
 }
 
 void Connection::OnNegotiationNeeded() {
-  LOG(INFO) << "OnNegotiationNeeded";
+  ABSL_LOG(INFO) << "OnNegotiationNeeded";
 
   GstPromise *promise;
   promise = gst_promise_new_with_change_func(Connection::OnOfferCreatedCallback,
@@ -528,7 +528,7 @@ void Connection::OnNegotiationNeeded() {
 }
 
 void Connection::OnIceCandidate(guint mline_index, gchar *candidate) {
-  LOG(INFO) << "OnIceCandidate";
+  ABSL_LOG(INFO) << "OnIceCandidate";
 
   flatbuffers::FlatBufferBuilder fbb(512);
 
@@ -554,7 +554,7 @@ void Connection::OnIceCandidate(guint mline_index, gchar *candidate) {
 }
 
 void Connection::HandleWebSocketData(const uint8_t *data, size_t /* size*/) {
-  LOG(INFO) << "HandleWebSocketData";
+  ABSL_LOG(INFO) << "HandleWebSocketData";
 
   const WebSocketMessage *message =
       flatbuffers::GetRoot<WebSocketMessage>(data);
@@ -563,17 +563,17 @@ void Connection::HandleWebSocketData(const uint8_t *data, size_t /* size*/) {
     case Payload::WebSocketSdp: {
       const WebSocketSdp *offer = message->payload_as_WebSocketSdp();
       if (offer->type() != SdpType::ANSWER) {
-        LOG(WARNING) << "Expected SDP message type \"answer\"";
+        ABSL_LOG(WARNING) << "Expected SDP message type \"answer\"";
         break;
       }
       const flatbuffers::String *sdp_string = offer->payload();
 
-      LOG(INFO) << "Received SDP:\n" << sdp_string->c_str();
+      ABSL_LOG(INFO) << "Received SDP:\n" << sdp_string->c_str();
 
       GstSDPMessage *sdp;
       GstSDPResult status = gst_sdp_message_new(&sdp);
       if (status != GST_SDP_OK) {
-        LOG(WARNING) << "Could not create SDP message";
+        ABSL_LOG(WARNING) << "Could not create SDP message";
         break;
       }
 
@@ -581,7 +581,7 @@ void Connection::HandleWebSocketData(const uint8_t *data, size_t /* size*/) {
                                             sdp_string->size(), sdp);
 
       if (status != GST_SDP_OK) {
-        LOG(WARNING) << "Could not parse SDP string";
+        ABSL_LOG(WARNING) << "Could not parse SDP string";
         break;
       }
 
@@ -601,7 +601,7 @@ void Connection::HandleWebSocketData(const uint8_t *data, size_t /* size*/) {
     case Payload::WebSocketIce: {
       const WebSocketIce *ice = message->payload_as_WebSocketIce();
       if (!ice->has_candidate() || ice->candidate()->size() == 0) {
-        LOG(WARNING) << "Received ICE message without candidate";
+        ABSL_LOG(WARNING) << "Received ICE message without candidate";
         break;
       }
 
@@ -609,8 +609,8 @@ void Connection::HandleWebSocketData(const uint8_t *data, size_t /* size*/) {
           static_cast<const gchar *>(ice->candidate()->c_str());
       guint mline_index = ice->sdp_m_line_index();
 
-      LOG(INFO) << "Received ICE candidate with mline index " << mline_index
-                << "; candidate: " << candidate;
+      ABSL_LOG(INFO) << "Received ICE candidate with mline index "
+                     << mline_index << "; candidate: " << candidate;
 
       g_signal_emit_by_name(webrtcbin_, "add-ice-candidate", mline_index,
                             candidate);
@@ -642,7 +642,7 @@ int main(int argc, char **argv) {
     seasocks::Server server(::std::shared_ptr<seasocks::Logger>(
         new ::aos::seasocks::SeasocksLogger(seasocks::Logger::Level::Info)));
 
-    LOG(INFO) << "Serving from " << absl::GetFlag(FLAGS_data_dir);
+    ABSL_LOG(INFO) << "Serving from " << absl::GetFlag(FLAGS_data_dir);
 
     auto websocket_handler =
         std::make_shared<WebsocketHandler>(&event_loop, &server);

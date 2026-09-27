@@ -6,8 +6,8 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
-#include "absl/log/vlog_is_on.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 #include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
 
@@ -58,8 +58,8 @@ void QueueAligner::FillAlignedQueue(
     auto *data = span.data();
     size_t size = span.size();
     const auto start = reinterpret_cast<size_t>(data);
-    VLOG(2) << "Consider span starting at " << std::hex << start
-            << " with size " << size;
+    ABSL_VLOG(2) << "Consider span starting at " << std::hex << start
+                 << " with size " << size;
 
     ABSL_CHECK_GT(size, 0u)
         << ": Nobody should be sending empty messages.  Queue index "
@@ -68,12 +68,12 @@ void QueueAligner::FillAlignedQueue(
     const auto next_aligned =
         IsAligned(start) ? start : AlignToLeft(start) + FileHandler::kSector;
     const auto prefix_size = next_aligned - start;
-    VLOG(2) << "Calculated prefix size " << std::hex << prefix_size;
+    ABSL_VLOG(2) << "Calculated prefix size " << std::hex << prefix_size;
 
     if (prefix_size >= size) {
       // size of prefix >= size of span - alignment is not possible, accept the
       // whole span
-      VLOG(2) << "Only prefix found";
+      ABSL_VLOG(2) << "Only prefix found";
       ABSL_CHECK_GT(size, 0u);
       aligned_queue_.emplace_back(data, size, false);
       continue;
@@ -82,8 +82,8 @@ void QueueAligner::FillAlignedQueue(
         << ": Wrong calculation of 'next' aligned position";
     if (prefix_size > 0) {
       // Cut the prefix and move to the main part.
-      VLOG(2) << "Cutting prefix at " << std::hex << start << " of size "
-              << prefix_size;
+      ABSL_VLOG(2) << "Cutting prefix at " << std::hex << start << " of size "
+                   << prefix_size;
       aligned_queue_.emplace_back(data, prefix_size, false);
       data += prefix_size;
       size -= prefix_size;
@@ -93,7 +93,7 @@ void QueueAligner::FillAlignedQueue(
 
     if (IsAligned(size)) {
       // the rest is aligned.
-      VLOG(2) << "Returning aligned main part";
+      ABSL_VLOG(2) << "Returning aligned main part";
       ABSL_CHECK_GT(size, 0u);
       aligned_queue_.emplace_back(data, size, true);
       continue;
@@ -102,8 +102,9 @@ void QueueAligner::FillAlignedQueue(
     const auto aligned_size = AlignToLeft(size);
     ABSL_CHECK(aligned_size < size) << ": Wrong calculation of 'main' size";
     if (aligned_size > 0) {
-      VLOG(2) << "Cutting main part starting " << std::hex
-              << reinterpret_cast<size_t>(data) << " of size " << aligned_size;
+      ABSL_VLOG(2) << "Cutting main part starting " << std::hex
+                   << reinterpret_cast<size_t>(data) << " of size "
+                   << aligned_size;
       aligned_queue_.emplace_back(data, aligned_size, true);
 
       data += aligned_size;
@@ -112,8 +113,8 @@ void QueueAligner::FillAlignedQueue(
           << " :Boundaries after main";
     }
 
-    VLOG(2) << "Cutting suffix part starting " << std::hex
-            << reinterpret_cast<size_t>(data) << " of size " << size;
+    ABSL_VLOG(2) << "Cutting suffix part starting " << std::hex
+                 << reinterpret_cast<size_t>(data) << " of size " << size;
     ABSL_CHECK_GT(size, 0u);
     aligned_queue_.emplace_back(data, size, false);
   }
@@ -127,8 +128,8 @@ BufferedFileHandler::BufferedFileHandler(std::string filename,
                                          size_t memory_buffer_size)
     : FileHandler(filename, supports_odirect),
       memory_buffer_size_(memory_buffer_size) {
-  VLOG(1) << "Allocating a memory buffer of " << memory_buffer_size << " for "
-          << filename;
+  ABSL_VLOG(1) << "Allocating a memory buffer of " << memory_buffer_size
+               << " for " << filename;
   buffer_.resize(AlignToLeft(memory_buffer_size_) + kSector);
 }
 
@@ -551,7 +552,7 @@ WriteCode RenamableFileBackend::RenameFileAfterClose(
     if (current_filename.find(base_name_) == 0) {
       // File was created after the base directory was renamed, so it already
       // has the new base name.
-      VLOG(1) << "File already has new base name: " << current_filename;
+      ABSL_VLOG(1) << "File already has new base name: " << current_filename;
     } else {
       auto offset = current_filename.find(old_base_name_);
       if (offset != std::string::npos) {
@@ -584,11 +585,11 @@ WriteCode RenamableFileBackend::RenameFileAfterClose(
     if (errno == ENOSPC) {
       ran_out_of_space = true;
     } else {
-      PLOG(FATAL) << "Renaming " << current_filename << " to " << final_filename
-                  << " failed";
+      ABSL_PLOG(FATAL) << "Renaming " << current_filename << " to "
+                       << final_filename << " failed";
     }
   } else {
-    VLOG(1) << "Renamed " << current_filename << " -> " << final_filename;
+    ABSL_VLOG(1) << "Renamed " << current_filename << " -> " << final_filename;
   }
   return ran_out_of_space ? WriteCode::kOutOfSpace : WriteCode::kOk;
 }

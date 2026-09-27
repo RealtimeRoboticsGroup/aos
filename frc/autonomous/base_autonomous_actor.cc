@@ -579,7 +579,7 @@ BaseAutonomousActor::SplineHandle BaseAutonomousActor::PlanSpline(
 
 bool BaseAutonomousActor::SplineHandle::IsPlanned() {
   base_autonomous_actor_->drivetrain_status_fetcher_.Fetch();
-  VLOG(1) << aos::FlatbufferToJson(
+  ABSL_VLOG(1) << aos::FlatbufferToJson(
       base_autonomous_actor_->drivetrain_status_fetcher_.get());
 
   if (base_autonomous_actor_->drivetrain_status_fetcher_.get() &&

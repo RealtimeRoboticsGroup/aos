@@ -16,7 +16,7 @@ namespace aos::testing {
 // hidden completely: where there is a fork(2) the child is a process which can
 // be killed outright mid-anything, and where there isn't it is a thread,
 // which cannot be killed at all.  Terminate() therefore only works where the
-// child is a process; on Windows it LOG(FATAL)s.  Tests which deliberately
+// child is a process; on Windows it ABSL_LOG(FATAL)s.  Tests which deliberately
 // leave a child blocked and then reap it are testing a cross-process property
 // and should be skipped on Windows -- for a test whose child is expected to
 // finish, reaching Terminate() means the test already failed, and dying

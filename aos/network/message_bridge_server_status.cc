@@ -389,8 +389,9 @@ void MessageBridgeServerStatus::Tick() {
           client_statistics_fetcher_.context().monotonic_event_time +
                   MessageBridgeServerStatus::kClientStatisticsStaleTimeout <
               event_loop_->context().monotonic_event_time) {
-        VLOG(1) << "Disconnected, no offset, or client message too old for "
-                << connection->node()->name()->string_view();
+        ABSL_VLOG(1)
+            << "Disconnected, no offset, or client message too old for "
+            << connection->node()->name()->string_view();
         ResetFilter(node_index);
         continue;
       }
@@ -418,7 +419,7 @@ void MessageBridgeServerStatus::Tick() {
                 has_their_offset = true;
               } else {
                 ResetFilter(node_index);
-                VLOG(1) << "Timestamp old, resetting.";
+                ABSL_VLOG(1) << "Timestamp old, resetting.";
               }
             }
             break;

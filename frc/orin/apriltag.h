@@ -241,7 +241,7 @@ class GpuDetector {
           .step = width_ / 2,
       };
     } else {
-      LOG(FATAL) << "Unknown image shape";
+      ABSL_LOG(FATAL) << "Unknown image shape";
     }
   }
 
@@ -262,7 +262,7 @@ class GpuDetector {
           .step = width_ / 2,
       };
     } else {
-      LOG(FATAL) << "Unknown image shape";
+      ABSL_LOG(FATAL) << "Unknown image shape";
     }
   }
 

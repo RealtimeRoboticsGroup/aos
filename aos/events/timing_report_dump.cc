@@ -1,6 +1,6 @@
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/configuration.h"
 #include "aos/events/logging/log_reader.h"
@@ -21,7 +21,7 @@ struct DumperState {
 };
 int Main(int argc, char *argv[]) {
   if (argc < 2) {
-    LOG(ERROR) << "Expected at least 1 logfile as an argument";
+    ABSL_LOG(ERROR) << "Expected at least 1 logfile as an argument";
     return 1;
   }
   aos::logger::LogReader reader(

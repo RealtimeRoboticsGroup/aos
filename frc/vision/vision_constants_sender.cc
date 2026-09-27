@@ -1,5 +1,5 @@
 #include "absl/flags/flag.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/ascii.h"
 
 #include "aos/configuration.h"
@@ -24,13 +24,13 @@ int main(int argc, char **argv) {
   std::optional<std::string> robotname =
       aos::util::MaybeReadFileToString("robotname");
   if (!robotname.has_value()) {
-    LOG(ERROR) << "Failed to read robotname file 'robotname': ";
+    ABSL_LOG(ERROR) << "Failed to read robotname file 'robotname': ";
     return 1;
   }
 
   *robotname = std::string(absl::StripAsciiWhitespace(*robotname));
   if (robotname->empty()) {
-    LOG(ERROR) << "robotname file was empty/whitespace.";
+    ABSL_LOG(ERROR) << "robotname file was empty/whitespace.";
     return 1;
   }
 

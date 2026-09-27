@@ -1,5 +1,5 @@
 #include "absl/container/btree_set.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 
 #include "aos/uuid.h"
@@ -22,8 +22,9 @@ TEST(UUIDTest, CollisionTest) {
     uuids.insert(uuid);
 
     if ((ii % (ii_max / 64)) == 0 && ii != 0) {
-      LOG(INFO) << static_cast<double>(ii) / static_cast<double>(ii_max) * 100.
-                << "%";
+      ABSL_LOG(INFO) << static_cast<double>(ii) / static_cast<double>(ii_max) *
+                            100.
+                     << "%";
     }
   }
 }
@@ -43,8 +44,9 @@ TEST(UUIDTest, SeedInitializationTest) {
     ASSERT_FALSE(values.count(value) > 0) << ii;
     values.insert(value);
     if ((ii % (ii_max / 64)) == 0 && ii != 0) {
-      LOG(INFO) << static_cast<double>(ii) / static_cast<double>(ii_max) * 100.0
-                << "%";
+      ABSL_LOG(INFO) << static_cast<double>(ii) / static_cast<double>(ii_max) *
+                            100.0
+                     << "%";
     }
   }
 }

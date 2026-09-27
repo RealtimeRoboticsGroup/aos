@@ -14,7 +14,7 @@
 #include <vector>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 
@@ -24,21 +24,21 @@
 namespace frc::vision {
 
 void Entity::Log() const {
-  LOG(INFO) << "  { \"id\": " << id() << ",";
-  LOG(INFO) << "    \"name\": \"" << name() << "\",";
-  LOG(INFO) << "    \"function\": " << function() << ",";
-  LOG(INFO) << "    \"interface_type\": " << interface_type() << ",";
-  LOG(INFO) << "    \"major\": " << major() << ",";
-  LOG(INFO) << "    \"minor\": " << minor() << ",";
+  ABSL_LOG(INFO) << "  { \"id\": " << id() << ",";
+  ABSL_LOG(INFO) << "    \"name\": \"" << name() << "\",";
+  ABSL_LOG(INFO) << "    \"function\": " << function() << ",";
+  ABSL_LOG(INFO) << "    \"interface_type\": " << interface_type() << ",";
+  ABSL_LOG(INFO) << "    \"major\": " << major() << ",";
+  ABSL_LOG(INFO) << "    \"minor\": " << minor() << ",";
   if (has_interface_) {
-    LOG(INFO) << "    \"device\": \"" << device() << "\",";
+    ABSL_LOG(INFO) << "    \"device\": \"" << device() << "\",";
   }
-  LOG(INFO) << "    \"pads\": [";
+  ABSL_LOG(INFO) << "    \"pads\": [";
   for (const Pad *pad : pads_) {
     pad->Log();
   }
-  LOG(INFO) << "    ]";
-  LOG(INFO) << "   }";
+  ABSL_LOG(INFO) << "    ]";
+  ABSL_LOG(INFO) << "   }";
 }
 
 void Entity::UpdateDevice() {
@@ -50,14 +50,14 @@ void Entity::UpdateDevice() {
 
   // Strip it out and return it.
   for (std::string_view line : absl::StrSplit(contents, "\n")) {
-    VLOG(1) << line;
+    ABSL_VLOG(1) << line;
     if (line.size() > 8 && line.substr(0, 8) == "DEVNAME=") {
       device_ = absl::StrCat("/dev/", line.substr(8, -1));
       return;
     }
   }
 
-  LOG(FATAL) << "Failed to find DEVNAME in uevent file.";
+  ABSL_LOG(FATAL) << "Failed to find DEVNAME in uevent file.";
 }
 
 std::optional<MediaDevice> MediaDevice::Initialize(int index) {
@@ -75,10 +75,10 @@ void MediaDevice::Update() {
   struct media_v2_topology topology;
   std::memset(&topology, 0, sizeof(topology));
   ABSL_PCHECK(ioctl(fd_.get(), MEDIA_IOC_G_TOPOLOGY, &topology) == 0);
-  VLOG(1) << "Got " << topology.num_entities << " entries";
-  VLOG(1) << "Got " << topology.num_interfaces << " interfaces";
-  VLOG(1) << "Got " << topology.num_pads << " pads";
-  VLOG(1) << "Got " << topology.num_links << " links";
+  ABSL_VLOG(1) << "Got " << topology.num_entities << " entries";
+  ABSL_VLOG(1) << "Got " << topology.num_interfaces << " interfaces";
+  ABSL_VLOG(1) << "Got " << topology.num_pads << " pads";
+  ABSL_VLOG(1) << "Got " << topology.num_links << " links";
 
   std::vector<struct media_v2_entity> entities;
   entities.resize(topology.num_entities);
@@ -123,8 +123,8 @@ void MediaDevice::Update() {
   links_.reserve(links.size());
 
   for (const struct media_v2_link &link : links) {
-    VLOG(1) << "Link " << link.id << " from " << link.source_id << " to "
-            << link.sink_id;
+    ABSL_VLOG(1) << "Link " << link.id << " from " << link.source_id << " to "
+                 << link.sink_id;
     if ((link.flags & MEDIA_LNK_FL_LINK_TYPE) == MEDIA_LNK_FL_INTERFACE_LINK) {
       const struct media_v2_interface *found_interface = nullptr;
       for (const struct media_v2_interface &interface : interfaces) {
@@ -138,7 +138,7 @@ void MediaDevice::Update() {
       for (Entity &entity : entities_) {
         if (entity.id() == link.sink_id) {
           found = true;
-          VLOG(1) << "Added interface to " << entity.name();
+          ABSL_VLOG(1) << "Added interface to " << entity.name();
           entity.has_interface_ = true;
           entity.interface_ = *found_interface;
           entity.UpdateDevice();
@@ -171,47 +171,48 @@ void MediaDevice::Update() {
       found_source_pad->links_.push_back(&links_.back());
       found_sink_pad->links_.push_back(&links_.back());
     } else {
-      LOG(FATAL) << "Unknown link type " << link.flags;
+      ABSL_LOG(FATAL) << "Unknown link type " << link.flags;
     }
   }
 }
 
 void MediaDevice::Log() const {
-  LOG(INFO) << "{\"driver\": \"" << driver() << "\",";
-  LOG(INFO) << " \"model\": \"" << model() << "\",";
-  LOG(INFO) << " \"serial\": \"" << serial() << "\",";
-  LOG(INFO) << " \"bus_info\": \"" << bus_info() << "\",";
-  LOG(INFO) << " \"entities\": [";
+  ABSL_LOG(INFO) << "{\"driver\": \"" << driver() << "\",";
+  ABSL_LOG(INFO) << " \"model\": \"" << model() << "\",";
+  ABSL_LOG(INFO) << " \"serial\": \"" << serial() << "\",";
+  ABSL_LOG(INFO) << " \"bus_info\": \"" << bus_info() << "\",";
+  ABSL_LOG(INFO) << " \"entities\": [";
   for (const Entity &entity : entities_) {
     entity.Log();
   }
-  LOG(INFO) << "] }";
+  ABSL_LOG(INFO) << "] }";
 }
 
 void Pad::Log() const {
-  LOG(INFO) << "     {\"id\": " << id() << ",";
-  LOG(INFO) << "      \"index\": " << index() << ",";
-  LOG(INFO) << "      \"type\": \"" << (source() ? "source" : "sink") << "\"";
-  LOG(INFO) << "      \"links\": [";
+  ABSL_LOG(INFO) << "     {\"id\": " << id() << ",";
+  ABSL_LOG(INFO) << "      \"index\": " << index() << ",";
+  ABSL_LOG(INFO) << "      \"type\": \"" << (source() ? "source" : "sink")
+                 << "\"";
+  ABSL_LOG(INFO) << "      \"links\": [";
   for (size_t i = 0; i < links_size(); ++i) {
-    LOG(INFO) << "       {";
+    ABSL_LOG(INFO) << "       {";
     if (source()) {
-      LOG(INFO) << "        \"sink\": \"" << links(i)->sink()->entity()->name()
-                << "\",";
-      LOG(INFO) << "        \"sink_index\": \"" << links(i)->sink()->index()
-                << "\",";
+      ABSL_LOG(INFO) << "        \"sink\": \""
+                     << links(i)->sink()->entity()->name() << "\",";
+      ABSL_LOG(INFO) << "        \"sink_index\": \""
+                     << links(i)->sink()->index() << "\",";
     } else {
-      LOG(INFO) << "        \"source\": \""
-                << links(i)->source()->entity()->name() << "\",";
-      LOG(INFO) << "        \"source_index\": \"" << links(i)->source()->index()
-                << "\",";
+      ABSL_LOG(INFO) << "        \"source\": \""
+                     << links(i)->source()->entity()->name() << "\",";
+      ABSL_LOG(INFO) << "        \"source_index\": \""
+                     << links(i)->source()->index() << "\",";
     }
-    LOG(INFO) << "        \"enabled\": " << links(i)->enabled() << ",";
-    LOG(INFO) << "        \"immutable\": " << links(i)->immutable() << ",";
-    LOG(INFO) << "       }";
+    ABSL_LOG(INFO) << "        \"enabled\": " << links(i)->enabled() << ",";
+    ABSL_LOG(INFO) << "        \"immutable\": " << links(i)->immutable() << ",";
+    ABSL_LOG(INFO) << "       }";
   }
-  LOG(INFO) << "      ],";
-  LOG(INFO) << "     }";
+  ABSL_LOG(INFO) << "      ],";
+  ABSL_LOG(INFO) << "     }";
 }
 
 void Pad::SetSubdevCrop(uint32_t width, uint32_t height) {
@@ -233,11 +234,11 @@ void Pad::SetSubdevCrop(uint32_t width, uint32_t height) {
   selection.r.height = height;
 
   ABSL_PCHECK(ioctl(fd, VIDIOC_SUBDEV_S_SELECTION, &selection) == 0);
-  LOG(INFO) << "Setting " << entity()->name() << " pad " << index()
-            << " crop to (0, 0) " << width << "x" << height;
+  ABSL_LOG(INFO) << "Setting " << entity()->name() << " pad " << index()
+                 << " crop to (0, 0) " << width << "x" << height;
 }
 void Pad::SetSubdevFormat(uint32_t width, uint32_t height, uint32_t code) {
-  VLOG(1) << "Opening " << entity()->device();
+  ABSL_VLOG(1) << "Opening " << entity()->device();
   int fd = open(entity()->device().c_str(), O_RDWR);
   ABSL_PCHECK(fd >= 0);
 
@@ -248,12 +249,12 @@ void Pad::SetSubdevFormat(uint32_t width, uint32_t height, uint32_t code) {
 
   ABSL_PCHECK(ioctl(fd, VIDIOC_SUBDEV_G_FMT, &format) == 0);
 
-  VLOG(1) << format.format.width << ", " << format.format.height << ", "
-          << format.format.code << " field " << format.format.field
-          << " colorspace " << format.format.colorspace << " ycbcr_enc "
-          << format.format.ycbcr_enc << " quantization "
-          << format.format.quantization << " xfer_func "
-          << format.format.xfer_func;
+  ABSL_VLOG(1) << format.format.width << ", " << format.format.height << ", "
+               << format.format.code << " field " << format.format.field
+               << " colorspace " << format.format.colorspace << " ycbcr_enc "
+               << format.format.ycbcr_enc << " quantization "
+               << format.format.quantization << " xfer_func "
+               << format.format.xfer_func;
 
   format.format.width = width;
   format.format.height = height;
@@ -264,9 +265,9 @@ void Pad::SetSubdevFormat(uint32_t width, uint32_t height, uint32_t code) {
   format.format.quantization = V4L2_QUANTIZATION_DEFAULT;
   format.format.xfer_func = V4L2_XFER_FUNC_DEFAULT;
 
-  LOG(INFO) << "Setting " << entity()->name() << " pad " << index()
-            << " format to " << width << "x" << height << " code 0x" << std::hex
-            << code;
+  ABSL_LOG(INFO) << "Setting " << entity()->name() << " pad " << index()
+                 << " format to " << width << "x" << height << " code 0x"
+                 << std::hex << code;
 
   ABSL_PCHECK(ioctl(fd, VIDIOC_SUBDEV_S_FMT, &format) == 0);
 
@@ -274,7 +275,7 @@ void Pad::SetSubdevFormat(uint32_t width, uint32_t height, uint32_t code) {
 }
 
 void Entity::SetFormat(uint32_t width, uint32_t height, uint32_t code) {
-  VLOG(1) << "Opening " << device();
+  ABSL_VLOG(1) << "Opening " << device();
   int fd = open(device().c_str(), O_RDWR);
   ABSL_PCHECK(fd >= 0);
 
@@ -284,20 +285,23 @@ void Entity::SetFormat(uint32_t width, uint32_t height, uint32_t code) {
 
   ABSL_PCHECK(ioctl(fd, VIDIOC_G_FMT, &format) == 0);
 
-  VLOG(1) << "width " << format.fmt.pix_mp.width;
-  VLOG(1) << "height " << format.fmt.pix_mp.height;
-  VLOG(1) << "pixelformat " << format.fmt.pix_mp.pixelformat;
-  VLOG(1) << "field " << format.fmt.pix_mp.field;
-  VLOG(1) << "colorspace " << format.fmt.pix_mp.colorspace;
-  VLOG(1) << "  sizeimage " << format.fmt.pix_mp.plane_fmt[0].sizeimage;
-  VLOG(1) << "  bytesperline " << format.fmt.pix_mp.plane_fmt[0].bytesperline;
-  VLOG(1) << "num_planes "
-          << static_cast<uint64_t>(format.fmt.pix_mp.num_planes);
-  VLOG(1) << "flags " << static_cast<uint64_t>(format.fmt.pix_mp.flags);
-  VLOG(1) << "ycbcr_enc " << static_cast<uint64_t>(format.fmt.pix_mp.ycbcr_enc);
-  VLOG(1) << "quantization "
-          << static_cast<uint64_t>(format.fmt.pix_mp.quantization);
-  VLOG(1) << "xfer_func " << static_cast<uint64_t>(format.fmt.pix_mp.xfer_func);
+  ABSL_VLOG(1) << "width " << format.fmt.pix_mp.width;
+  ABSL_VLOG(1) << "height " << format.fmt.pix_mp.height;
+  ABSL_VLOG(1) << "pixelformat " << format.fmt.pix_mp.pixelformat;
+  ABSL_VLOG(1) << "field " << format.fmt.pix_mp.field;
+  ABSL_VLOG(1) << "colorspace " << format.fmt.pix_mp.colorspace;
+  ABSL_VLOG(1) << "  sizeimage " << format.fmt.pix_mp.plane_fmt[0].sizeimage;
+  ABSL_VLOG(1) << "  bytesperline "
+               << format.fmt.pix_mp.plane_fmt[0].bytesperline;
+  ABSL_VLOG(1) << "num_planes "
+               << static_cast<uint64_t>(format.fmt.pix_mp.num_planes);
+  ABSL_VLOG(1) << "flags " << static_cast<uint64_t>(format.fmt.pix_mp.flags);
+  ABSL_VLOG(1) << "ycbcr_enc "
+               << static_cast<uint64_t>(format.fmt.pix_mp.ycbcr_enc);
+  ABSL_VLOG(1) << "quantization "
+               << static_cast<uint64_t>(format.fmt.pix_mp.quantization);
+  ABSL_VLOG(1) << "xfer_func "
+               << static_cast<uint64_t>(format.fmt.pix_mp.xfer_func);
 
   format.fmt.pix_mp.width = width;
   format.fmt.pix_mp.height = height;
@@ -317,16 +321,16 @@ void Entity::SetFormat(uint32_t width, uint32_t height, uint32_t code) {
   format.fmt.pix_mp.quantization = V4L2_QUANTIZATION_DEFAULT;
   format.fmt.pix_mp.xfer_func = V4L2_XFER_FUNC_DEFAULT;
 
-  LOG(INFO) << "Setting " << name() << " to " << width << "x" << height
-            << " code 0x" << std::hex << code;
+  ABSL_LOG(INFO) << "Setting " << name() << " to " << width << "x" << height
+                 << " code 0x" << std::hex << code;
   ABSL_PCHECK(ioctl(fd, VIDIOC_S_FMT, &format) == 0);
 
   ABSL_PCHECK(close(fd) == 0);
 }
 
 void MediaDevice::Reset(Link *link) {
-  LOG(INFO) << "Disabling link " << link->source()->entity()->name() << " -> "
-            << link->sink()->entity()->name();
+  ABSL_LOG(INFO) << "Disabling link " << link->source()->entity()->name()
+                 << " -> " << link->sink()->entity()->name();
   struct media_link_desc link_desc;
   link_desc.source.entity = link->source()->entity()->id();
   link_desc.source.index = link->source()->index();
@@ -341,8 +345,8 @@ void MediaDevice::Reset(Link *link) {
 }
 
 void MediaDevice::Enable(Link *link) {
-  LOG(INFO) << "Enabling link " << link->source()->entity()->name() << " -> "
-            << link->sink()->entity()->name();
+  ABSL_LOG(INFO) << "Enabling link " << link->source()->entity()->name()
+                 << " -> " << link->sink()->entity()->name();
   struct media_link_desc link_desc;
   link_desc.source.entity = link->source()->entity()->id();
   link_desc.source.index = link->source()->index();
@@ -380,13 +384,13 @@ Link *MediaDevice::FindLink(std::string_view source, int source_pad_index,
       return source_pad->links(i);
     }
   }
-  LOG(FATAL) << "Failed to find link between " << source << " pad "
-             << source_pad_index << " and " << sink << " pad "
-             << sink_pad_index;
+  ABSL_LOG(FATAL) << "Failed to find link between " << source << " pad "
+                  << source_pad_index << " and " << sink << " pad "
+                  << sink_pad_index;
 }
 
 void MediaDevice::Reset() {
-  LOG(INFO) << "Resetting " << bus_info();
+  ABSL_LOG(INFO) << "Resetting " << bus_info();
 
   for (Link &link : *links()) {
     if (!link.immutable()) {

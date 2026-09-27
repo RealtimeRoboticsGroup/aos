@@ -51,13 +51,13 @@ int PrintRaw(int argc, char **argv) {
     return 0;
   }
   if (argc != 2 && argc != 1) {
-    LOG(FATAL) << "Expected 1 logfile as an argument.";
+    ABSL_LOG(FATAL) << "Expected 1 logfile as an argument.";
   }
   aos::logger::SpanReader reader(argv[1]);
   absl::Span<const uint8_t> raw_log_file_header_span = reader.ReadMessage();
 
   if (raw_log_file_header_span.empty()) {
-    LOG(WARNING) << "Empty log file on " << reader.filename();
+    ABSL_LOG(WARNING) << "Empty log file on " << reader.filename();
     return 0;
   }
 
@@ -66,7 +66,7 @@ int PrintRaw(int argc, char **argv) {
   aos::SizePrefixedFlatbufferVector<aos::logger::LogFileHeader> log_file_header(
       raw_log_file_header_span);
   if (!log_file_header.Verify()) {
-    LOG(ERROR) << "Header corrupted on " << reader.filename();
+    ABSL_LOG(ERROR) << "Header corrupted on " << reader.filename();
     return 1;
   }
   while (true) {
@@ -84,7 +84,8 @@ int PrintRaw(int argc, char **argv) {
                         .max_vector_size = static_cast<size_t>(
                             absl::GetFlag(FLAGS_max_vector_size))})
                 << std::endl;
-      LOG(WARNING) << "Found duplicate LogFileHeader in " << reader.filename();
+      ABSL_LOG(WARNING) << "Found duplicate LogFileHeader in "
+                        << reader.filename();
       log_file_header =
           aos::SizePrefixedFlatbufferVector<aos::logger::LogFileHeader>(
               maybe_header_data);
@@ -195,14 +196,14 @@ int main(int argc, char **argv) {
   }
 
   if (argc < 2) {
-    LOG(FATAL) << "Expected at least 1 logfile as an argument.";
+    ABSL_LOG(FATAL) << "Expected at least 1 logfile as an argument.";
   }
 
   const std::vector<aos::logger::LogFile> logfiles =
       aos::logger::SortParts(aos::logger::FindLogs(argc, argv));
 
   for (auto &it : logfiles) {
-    VLOG(1) << it;
+    ABSL_VLOG(1) << it;
     if (absl::GetFlag(FLAGS_print_parts_only)) {
       std::cout << it << std::endl;
     }

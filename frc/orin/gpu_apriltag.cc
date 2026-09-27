@@ -56,10 +56,10 @@ vision::ImageFormat ImageFormatFromString(std::string_view format) {
   size_t i = 0;
   while (true) {
     if (vision::EnumNamesImageFormat()[i] == nullptr) {
-      LOG(FATAL) << "Invalid image format: " << format;
+      ABSL_LOG(FATAL) << "Invalid image format: " << format;
     }
     if (vision::EnumNamesImageFormat()[i] == format) {
-      LOG(INFO) << "Using image format: " << format;
+      ABSL_LOG(INFO) << "Using image format: " << format;
       return vision::EnumValuesImageFormat()[i];
     }
     ++i;
@@ -247,7 +247,8 @@ void ApriltagDetector::HandleImage(const vision::CameraImage &image,
           gpu_detection->p[1][1] < min_y || gpu_detection->p[1][1] > max_y ||
           gpu_detection->p[2][1] < min_y || gpu_detection->p[2][1] > max_y ||
           gpu_detection->p[3][1] < min_y || gpu_detection->p[3][1] > max_y) {
-        VLOG(1) << "Rejecting detection because corner is outside pixel border";
+        ABSL_VLOG(1)
+            << "Rejecting detection because corner is outside pixel border";
 
         // Send rejected corner points to foxglove in red
         std::vector<cv::Point2f> rejected_corner_points =
@@ -271,9 +272,9 @@ void ApriltagDetector::HandleImage(const vision::CameraImage &image,
               std::chrono::duration<float, std::milli>(end_time - start_time)
                   .count());
 
-      VLOG(1) << "Found tag number " << gpu_detection->id
-              << " hamming: " << gpu_detection->hamming
-              << " margin: " << gpu_detection->decision_margin;
+      ABSL_VLOG(1) << "Found tag number " << gpu_detection->id
+                   << " hamming: " << gpu_detection->hamming
+                   << " margin: " << gpu_detection->decision_margin;
 
       // First create an apriltag_detection_info_t struct using your known
       // parameters.
@@ -295,7 +296,8 @@ void ApriltagDetector::HandleImage(const vision::CameraImage &image,
       bool converged = UndistortDetection(gpu_detection);
 
       if (!converged) {
-        VLOG(1) << "Rejecting detection because Undistort failed to coverge";
+        ABSL_VLOG(1)
+            << "Rejecting detection because Undistort failed to coverge";
 
         // Send corner points rejected to to lack of convergence in orange
         std::vector<cv::Point2f> rejected_corner_points =
@@ -324,15 +326,17 @@ void ApriltagDetector::HandleImage(const vision::CameraImage &image,
 
       const aos::monotonic_clock::time_point after_pose_estimation =
           aos::monotonic_clock::now();
-      VLOG(1) << "Took "
-              << chrono::duration<double>(after_pose_estimation -
-                                          before_pose_estimation)
-                     .count()
-              << " seconds for pose estimation";
-      VLOG(1) << "Pose err 1: " << std::setprecision(20) << std::fixed
-              << pose_error_1 << " " << (pose_error_1 < 1e-6 ? "Good" : "Bad");
-      VLOG(1) << "Pose err 2: " << std::setprecision(20) << std::fixed
-              << pose_error_2 << " " << (pose_error_2 < 1e-6 ? "Good" : "Bad");
+      ABSL_VLOG(1) << "Took "
+                   << chrono::duration<double>(after_pose_estimation -
+                                               before_pose_estimation)
+                          .count()
+                   << " seconds for pose estimation";
+      ABSL_VLOG(1) << "Pose err 1: " << std::setprecision(20) << std::fixed
+                   << pose_error_1 << " "
+                   << (pose_error_1 < 1e-6 ? "Good" : "Bad");
+      ABSL_VLOG(1) << "Pose err 2: " << std::setprecision(20) << std::fixed
+                   << pose_error_2 << " "
+                   << (pose_error_2 < 1e-6 ? "Good" : "Bad");
 
       // Send undistorted corner points in pink
       std::vector<cv::Point2f> corner_points = MakeCornerVector(gpu_detection);
@@ -366,9 +370,9 @@ void ApriltagDetector::HandleImage(const vision::CameraImage &image,
                                      .distortion_factor = distortion_factor,
                                      .pose_error_ratio = pose_error_ratio});
 
-      VLOG(1) << "Found tag number " << gpu_detection->id
-              << " hamming: " << gpu_detection->hamming
-              << " margin: " << gpu_detection->decision_margin;
+      ABSL_VLOG(1) << "Found tag number " << gpu_detection->id
+                   << " hamming: " << gpu_detection->hamming
+                   << " margin: " << gpu_detection->decision_margin;
     } else {
       rejections_++;
     }
@@ -404,8 +408,9 @@ void ApriltagDetector::HandleImage(const vision::CameraImage &image,
     timeprofile_display(tag_detector_->tp);
   }
 
-  VLOG(2) << "Took " << chrono::duration<double>(end_time - start_time).count()
-          << " seconds to detect overall";
+  ABSL_VLOG(2) << "Took "
+               << chrono::duration<double>(end_time - start_time).count()
+               << " seconds to detect overall";
 }
 
 }  // namespace frc::apriltag

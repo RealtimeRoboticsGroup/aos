@@ -8,8 +8,8 @@
 #include <utility>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
-#include "absl/log/vlog_is_on.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 #include "absl/strings/ascii.h"
 #include "absl/strings/match.h"
 #include "absl/strings/numbers.h"
@@ -111,7 +111,7 @@ void InterruptsStatus::Update(std::string_view contents) {
             InterruptState *state = &states_[line_number - 1];
             if (state->interrupt_number != interrupt_number ||
                 state->interrupt_name != interrupt_name) {
-              VLOG(1)
+              ABSL_VLOG(1)
                   << "IRQ changed names...  Blow away the end and try again.";
               // This happens infrequently enough that it isn't worth trying to
               // resize things.  It may never happen while running.  Nuke
@@ -219,7 +219,7 @@ void InterruptsStatus::Update(std::string_view contents) {
             }
           }
         } else {
-          LOG(FATAL) << "Unexpected element, need to consume " << element;
+          ABSL_LOG(FATAL) << "Unexpected element, need to consume " << element;
         }
         ++element_number;
       }
@@ -242,27 +242,27 @@ void InterruptsStatus::Update(std::string_view contents) {
         }
       }
 
-      if (VLOG_IS_ON(1)) {
+      if (ABSL_VLOG_IS_ON(1)) {
         if (state->interrupt_number == -1) {
-          LOG(INFO) << "IRQ: " << state->interrupt_name;
+          ABSL_LOG(INFO) << "IRQ: " << state->interrupt_name;
         } else {
-          LOG(INFO) << "IRQ: " << state->interrupt_number;
+          ABSL_LOG(INFO) << "IRQ: " << state->interrupt_number;
         }
         for (unsigned int c : state->count) {
-          LOG(INFO) << "  " << c;
+          ABSL_LOG(INFO) << "  " << c;
         }
         if (!state->chip_name.empty()) {
-          LOG(INFO) << "chip_name \"" << state->chip_name << "\"";
+          ABSL_LOG(INFO) << "chip_name \"" << state->chip_name << "\"";
         }
         if (!state->description.empty()) {
-          LOG(INFO) << "description \"" << state->description << "\"";
+          ABSL_LOG(INFO) << "description \"" << state->description << "\"";
         }
         if (!state->hwirq.empty()) {
-          LOG(INFO) << "hwirq \"" << state->hwirq << "\"";
+          ABSL_LOG(INFO) << "hwirq \"" << state->hwirq << "\"";
         }
         if (!state->actions.empty()) {
           for (const std::string &action : state->actions) {
-            LOG(INFO) << "  action \"" << action << "\"";
+            ABSL_LOG(INFO) << "  action \"" << action << "\"";
           }
         }
       }

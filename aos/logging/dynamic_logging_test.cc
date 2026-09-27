@@ -5,7 +5,7 @@
 #include <ostream>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "flatbuffers/buffer.h"
 #include "flatbuffers/flatbuffer_builder.h"
 #include "gtest/gtest.h"
@@ -42,7 +42,7 @@ TEST_F(DynamicLoggingTest, TestVLog) {
   aos::Sender<DynamicLogCommand> dynamic_log_command_sender =
       event_loop_send_->MakeSender<DynamicLogCommand>("/aos");
 
-  // Set VLOG level to 1 at t=50us and then back to 0 at t=150us.
+  // Set ABSL_VLOG level to 1 at t=50us and then back to 0 at t=150us.
   int log_level = 1;
   aos::TimerHandler *timer_handler = event_loop_send_->AddTimer(
       [this, &dynamic_log_command_sender, &log_level, &timer_handler]() {
@@ -64,9 +64,9 @@ TEST_F(DynamicLoggingTest, TestVLog) {
   timer_handler->Schedule(event_loop_send_->monotonic_now() +
                           chrono::microseconds(50));
 
-  // VLOG(1) at t=0us, t=100us, t=200us
+  // ABSL_VLOG(1) at t=0us, t=100us, t=200us
   aos::TimerHandler *vlog_timer_handler =
-      event_loop_main_->AddTimer([]() { VLOG(1) << "VLOG 1"; });
+      event_loop_main_->AddTimer([]() { ABSL_VLOG(1) << "VLOG 1"; });
   vlog_timer_handler->Schedule(event_loop_main_->monotonic_now(),
                                chrono::microseconds(100));
 

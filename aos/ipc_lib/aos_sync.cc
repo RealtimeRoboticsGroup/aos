@@ -101,7 +101,7 @@ extern "C" void AnnotateHappensAfter(const char *file, int line,
 namespace aos::ipc_lib::sync {
 namespace {
 
-// This gets called by functions before LOG(FATAL)ing with error messages
+// This gets called by functions before ABSL_LOG(FATAL)ing with error messages
 // that would be incorrect if the error was caused by a process forking without
 // initialize_in_new_thread getting called in the fork.
 void check_cached_tid(pid_t tid) {

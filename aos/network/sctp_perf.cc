@@ -3,8 +3,8 @@
 #include "absl/flags/flag.h"
 #include "absl/flags/usage.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
-#include "absl/log/vlog_is_on.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 
 #include "aos/events/shm_event_loop.h"
 #include "aos/init.h"
@@ -77,18 +77,18 @@ class Server {
 
   void SendMessage(std::string_view message) {
     if (sac_assoc_id_ == 0) {
-      LOG(INFO) << "Lost connection to client. Not sending";
+      ABSL_LOG(INFO) << "Lost connection to client. Not sending";
       return;
     }
     if (server_.Send(message, sac_assoc_id_, 0, absl::GetFlag(FLAGS_ttl))) {
-      LOG(INFO) << "Server reply with " << message.size() << "B";
+      ABSL_LOG(INFO) << "Server reply with " << message.size() << "B";
     } else {
-      PLOG(FATAL) << "Failed to send";
+      ABSL_PLOG(FATAL) << "Failed to send";
     }
   }
 
   void MessageReceived() {
-    LOG(INFO) << "Received message";
+    ABSL_LOG(INFO) << "Received message";
     aos::unique_c_ptr<Message> message = server_.Read();
     if (!message) {
       return;
@@ -98,7 +98,7 @@ class Server {
       const union sctp_notification *snp =
           (const union sctp_notification *)message->data();
 
-      if (VLOG_IS_ON(2)) {
+      if (ABSL_VLOG_IS_ON(2)) {
         PrintNotification(message.get());
       }
 
@@ -108,16 +108,16 @@ class Server {
           switch (sac->sac_state) {
             case SCTP_COMM_UP:
               NodeConnected(sac->sac_assoc_id);
-              VLOG(1) << "Peer connected";
+              ABSL_VLOG(1) << "Peer connected";
               break;
             case SCTP_COMM_LOST:
             case SCTP_SHUTDOWN_COMP:
             case SCTP_CANT_STR_ASSOC:
               NodeDisconnected(sac->sac_assoc_id);
-              VLOG(1) << "Disconnect";
+              ABSL_VLOG(1) << "Disconnect";
               break;
             case SCTP_RESTART:
-              LOG(FATAL) << "Never seen this before.";
+              ABSL_LOG(FATAL) << "Never seen this before.";
               break;
           }
         } break;
@@ -168,9 +168,9 @@ class Client {
     std::string payload(absl::GetFlag(FLAGS_payload_size), 'a');
     sent_time_ = aos::monotonic_clock::now();
     if (client_.Send(0, payload, absl::GetFlag(FLAGS_ttl))) {
-      LOG(INFO) << "Sending " << payload.size() << "B";
+      ABSL_LOG(INFO) << "Sending " << payload.size() << "B";
     } else {
-      PLOG(ERROR) << "Failed to send";
+      ABSL_PLOG(ERROR) << "Failed to send";
     }
   }
 
@@ -184,7 +184,7 @@ class Client {
       const union sctp_notification *snp =
           (const union sctp_notification *)message->data();
 
-      if (VLOG_IS_ON(2)) {
+      if (ABSL_VLOG_IS_ON(2)) {
         PrintNotification(message.get());
       }
 
@@ -194,16 +194,16 @@ class Client {
           switch (sac->sac_state) {
             case SCTP_COMM_UP:
               NodeConnected(sac->sac_assoc_id);
-              VLOG(1) << "Peer connected";
+              ABSL_VLOG(1) << "Peer connected";
               break;
             case SCTP_COMM_LOST:
             case SCTP_SHUTDOWN_COMP:
             case SCTP_CANT_STR_ASSOC:
               NodeDisconnected(sac->sac_assoc_id);
-              VLOG(1) << "Disconnect";
+              ABSL_VLOG(1) << "Disconnect";
               break;
             case SCTP_RESTART:
-              LOG(FATAL) << "Never seen this before.";
+              ABSL_LOG(FATAL) << "Never seen this before.";
               break;
           }
         } break;
@@ -221,7 +221,7 @@ class Client {
   void HandleData(const Message *) {
     count_++;
     if (count_ <= 0) {
-      LOG(INFO) << "Got message: Skipping " << -count_;
+      ABSL_LOG(INFO) << "Got message: Skipping " << -count_;
       return;
     }
     auto elapsed = aos::monotonic_clock::now() - sent_time_;

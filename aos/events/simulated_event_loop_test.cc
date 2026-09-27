@@ -121,7 +121,7 @@ class RemoteMessageSimulatedEventLoopTest
   RemoteMessageSimulatedEventLoopTest()
       : config(aos::configuration::ReadConfig(ArtifactPath(
             absl::StrCat("aos/testing/ping_pong/", GetParam().config)))) {
-    LOG(INFO) << "Config " << GetParam().config;
+    ABSL_LOG(INFO) << "Config " << GetParam().config;
   }
 
   bool shared() const { return GetParam().shared; }
@@ -214,7 +214,7 @@ TEST(SimulatedEventLoopTest, DestructEventLoopBeforeOnRun) {
   {
     ::std::unique_ptr<EventLoop> test_event_loop =
         simulated_event_loop_factory.MakeEventLoop("test");
-    test_event_loop->OnRun([]() { LOG(FATAL) << "Don't run this"; });
+    test_event_loop->OnRun([]() { ABSL_LOG(FATAL) << "Don't run this"; });
   }
 
   simulated_event_loop_factory.RunFor(chrono::seconds(1));
@@ -543,14 +543,14 @@ TEST(SimulatedEventLoopTest, WatcherTimingReport) {
   FlatbufferDetachedBuffer<timing::Report> primary_report =
       FlatbufferDetachedBuffer<timing::Report>::Empty();
   while (report_fetcher.FetchNext()) {
-    LOG(INFO) << "Report " << FlatbufferToJson(report_fetcher.get());
+    ABSL_LOG(INFO) << "Report " << FlatbufferToJson(report_fetcher.get());
     if (report_fetcher->name()->string_view() == "primary") {
       primary_report = CopyFlatBuffer(report_fetcher.get());
     }
   }
 
   // Check the watcher report.
-  VLOG(1) << FlatbufferToJson(primary_report, {.multi_line = true});
+  ABSL_VLOG(1) << FlatbufferToJson(primary_report, {.multi_line = true});
 
   EXPECT_EQ(primary_report.message().name()->string_view(), "primary");
 
@@ -743,7 +743,7 @@ TEST_P(RemoteMessageSimulatedEventLoopTest, MultinodePingPong) {
   pi1_statistics_counter_event_loop->MakeWatcher(
       "/pi1/aos", [&pi1_server_statistics_count](
                       const message_bridge::ServerStatistics &stats) {
-        VLOG(1) << "pi1 ServerStatistics " << FlatbufferToJson(&stats);
+        ABSL_VLOG(1) << "pi1 ServerStatistics " << FlatbufferToJson(&stats);
         EXPECT_EQ(stats.connections()->size(), 2u);
         for (const message_bridge::ServerConnection *connection :
              *stats.connections()) {
@@ -756,7 +756,7 @@ TEST_P(RemoteMessageSimulatedEventLoopTest, MultinodePingPong) {
           } else if (connection->node()->name()->string_view() == "pi3") {
             EXPECT_GE(connection->sent_packets(), 5);
           } else {
-            LOG(FATAL) << "Unknown connection";
+            ABSL_LOG(FATAL) << "Unknown connection";
           }
 
           EXPECT_TRUE(connection->has_monotonic_offset());
@@ -780,7 +780,7 @@ TEST_P(RemoteMessageSimulatedEventLoopTest, MultinodePingPong) {
   pi2_statistics_counter_event_loop->MakeWatcher(
       "/pi2/aos", [&pi2_server_statistics_count](
                       const message_bridge::ServerStatistics &stats) {
-        VLOG(1) << "pi2 ServerStatistics " << FlatbufferToJson(&stats);
+        ABSL_VLOG(1) << "pi2 ServerStatistics " << FlatbufferToJson(&stats);
         EXPECT_EQ(stats.connections()->size(), 1u);
 
         const message_bridge::ServerConnection *connection =
@@ -811,7 +811,7 @@ TEST_P(RemoteMessageSimulatedEventLoopTest, MultinodePingPong) {
   pi3_statistics_counter_event_loop->MakeWatcher(
       "/pi3/aos", [&pi3_server_statistics_count](
                       const message_bridge::ServerStatistics &stats) {
-        VLOG(1) << "pi3 ServerStatistics " << FlatbufferToJson(&stats);
+        ABSL_VLOG(1) << "pi3 ServerStatistics " << FlatbufferToJson(&stats);
         EXPECT_EQ(stats.connections()->size(), 1u);
 
         const message_bridge::ServerConnection *connection =
@@ -842,7 +842,7 @@ TEST_P(RemoteMessageSimulatedEventLoopTest, MultinodePingPong) {
   pi1_statistics_counter_event_loop->MakeWatcher(
       "/pi1/aos", [&pi1_client_statistics_count](
                       const message_bridge::ClientStatistics &stats) {
-        VLOG(1) << "pi1 ClientStatistics " << FlatbufferToJson(&stats);
+        ABSL_VLOG(1) << "pi1 ClientStatistics " << FlatbufferToJson(&stats);
         EXPECT_EQ(stats.connections()->size(), 2u);
 
         for (const message_bridge::ClientConnection *connection :
@@ -853,7 +853,7 @@ TEST_P(RemoteMessageSimulatedEventLoopTest, MultinodePingPong) {
           } else if (connection->node()->name()->string_view() == "pi3") {
             EXPECT_GE(connection->received_packets(), 5);
           } else {
-            LOG(FATAL) << "Unknown connection";
+            ABSL_LOG(FATAL) << "Unknown connection";
           }
 
           EXPECT_EQ(connection->partial_deliveries(), 0);
@@ -869,7 +869,7 @@ TEST_P(RemoteMessageSimulatedEventLoopTest, MultinodePingPong) {
   pi2_statistics_counter_event_loop->MakeWatcher(
       "/pi2/aos", [&pi2_client_statistics_count](
                       const message_bridge::ClientStatistics &stats) {
-        VLOG(1) << "pi2 ClientStatistics " << FlatbufferToJson(&stats);
+        ABSL_VLOG(1) << "pi2 ClientStatistics " << FlatbufferToJson(&stats);
         EXPECT_EQ(stats.connections()->size(), 1u);
 
         const message_bridge::ClientConnection *connection =
@@ -888,7 +888,7 @@ TEST_P(RemoteMessageSimulatedEventLoopTest, MultinodePingPong) {
   pi3_statistics_counter_event_loop->MakeWatcher(
       "/pi3/aos", [&pi3_client_statistics_count](
                       const message_bridge::ClientStatistics &stats) {
-        VLOG(1) << "pi3 ClientStatistics " << FlatbufferToJson(&stats);
+        ABSL_VLOG(1) << "pi3 ClientStatistics " << FlatbufferToJson(&stats);
         EXPECT_EQ(stats.connections()->size(), 1u);
 
         const message_bridge::ClientConnection *connection =
@@ -914,10 +914,10 @@ TEST_P(RemoteMessageSimulatedEventLoopTest, MultinodePingPong) {
 
   for (const Channel *channel :
        *pi1_pong_counter_event_loop->configuration()->channels()) {
-    VLOG(1) << "Channel "
-            << configuration::ChannelIndex(
-                   pi1_pong_counter_event_loop->configuration(), channel)
-            << " " << configuration::CleanedChannelToString(channel);
+    ABSL_VLOG(1) << "Channel "
+                 << configuration::ChannelIndex(
+                        pi1_pong_counter_event_loop->configuration(), channel)
+                 << " " << configuration::CleanedChannelToString(channel);
   }
 
   std::unique_ptr<EventLoop> pi1_remote_timestamp =
@@ -943,8 +943,9 @@ TEST_P(RemoteMessageSimulatedEventLoopTest, MultinodePingPong) {
          &pi1_on_pi1_timestamp_fetcher, &simulated_event_loop_factory, pi2,
          channel_index = channel.first,
          channel_name = channel.second](const RemoteMessage &header) {
-          VLOG(1) << channel_name << " aos::message_bridge::RemoteMessage -> "
-                  << aos::FlatbufferToJson(&header);
+          ABSL_VLOG(1) << channel_name
+                       << " aos::message_bridge::RemoteMessage -> "
+                       << aos::FlatbufferToJson(&header);
           EXPECT_TRUE(header.has_boot_uuid());
           EXPECT_EQ(UUID::FromVector(header.boot_uuid()),
                     simulated_event_loop_factory.GetNodeEventLoopFactory(pi2)
@@ -1007,7 +1008,7 @@ TEST_P(RemoteMessageSimulatedEventLoopTest, MultinodePingPong) {
                       pi2_context->monotonic_event_time -
                           simulated_event_loop_factory.network_delay());
           } else {
-            LOG(FATAL) << "Unknown channel";
+            ABSL_LOG(FATAL) << "Unknown channel";
           }
 
           // Confirm the forwarded message has matching timestamps to the
@@ -1116,7 +1117,7 @@ TEST(SimulatedEventLoopTest, MultinodePingPongWithOffset) {
   pi1_pong_counter_event_loop->MakeWatcher(
       "/pi1/aos", [&pi1_server_statistics_count,
                    kOffset](const message_bridge::ServerStatistics &stats) {
-        VLOG(1) << "pi1 ServerStatistics " << FlatbufferToJson(&stats);
+        ABSL_VLOG(1) << "pi1 ServerStatistics " << FlatbufferToJson(&stats);
         EXPECT_EQ(stats.connections()->size(), 2u);
         for (const message_bridge::ServerConnection *connection :
              *stats.connections()) {
@@ -1128,7 +1129,7 @@ TEST(SimulatedEventLoopTest, MultinodePingPongWithOffset) {
           } else if (connection->node()->name()->string_view() == "pi3") {
             EXPECT_EQ(connection->monotonic_offset(), 0);
           } else {
-            LOG(FATAL) << "Unknown connection";
+            ABSL_LOG(FATAL) << "Unknown connection";
           }
 
           EXPECT_TRUE(connection->has_monotonic_offset());
@@ -1140,7 +1141,7 @@ TEST(SimulatedEventLoopTest, MultinodePingPongWithOffset) {
   pi2_pong_counter_event_loop->MakeWatcher(
       "/pi2/aos", [&pi2_server_statistics_count,
                    kOffset](const message_bridge::ServerStatistics &stats) {
-        VLOG(1) << "pi2 ServerStatistics " << FlatbufferToJson(&stats);
+        ABSL_VLOG(1) << "pi2 ServerStatistics " << FlatbufferToJson(&stats);
         EXPECT_EQ(stats.connections()->size(), 1u);
 
         const message_bridge::ServerConnection *connection =
@@ -1157,7 +1158,7 @@ TEST(SimulatedEventLoopTest, MultinodePingPongWithOffset) {
   pi3_pong_counter_event_loop->MakeWatcher(
       "/pi3/aos", [&pi3_server_statistics_count](
                       const message_bridge::ServerStatistics &stats) {
-        VLOG(1) << "pi3 ServerStatistics " << FlatbufferToJson(&stats);
+        ABSL_VLOG(1) << "pi3 ServerStatistics " << FlatbufferToJson(&stats);
         EXPECT_EQ(stats.connections()->size(), 1u);
 
         const message_bridge::ServerConnection *connection =
@@ -1829,7 +1830,7 @@ TEST_P(RemoteMessageSimulatedEventLoopTest, MultinodeStartupTesting) {
         EXPECT_EQ(UUID::FromVector(header.boot_uuid()),
                   simulated_event_loop_factory.GetNodeEventLoopFactory(pi2)
                       ->boot_uuid());
-        VLOG(1) << aos::FlatbufferToJson(&header);
+        ABSL_VLOG(1) << aos::FlatbufferToJson(&header);
         if (header.channel_index() == reliable_channel_index) {
           ++reliable_timestamp_count;
         }
@@ -1933,7 +1934,7 @@ TEST_P(RemoteMessageSimulatedEventLoopTest, BootUUIDTest) {
       [&timestamp_count, &expected_boot_uuid](const RemoteMessage &header) {
         EXPECT_TRUE(header.has_boot_uuid());
         EXPECT_EQ(UUID::FromVector(header.boot_uuid()), expected_boot_uuid);
-        VLOG(1) << aos::FlatbufferToJson(&header);
+        ABSL_VLOG(1) << aos::FlatbufferToJson(&header);
         ++timestamp_count;
       });
 
@@ -1945,7 +1946,7 @@ TEST_P(RemoteMessageSimulatedEventLoopTest, BootUUIDTest) {
       [&pi1_server_statistics_count, &expected_boot_uuid,
        &expected_connection_time, &first_pi1_server_statistics,
        &boot_number](const message_bridge::ServerStatistics &stats) {
-        VLOG(1) << "pi1 ServerStatistics " << FlatbufferToJson(&stats);
+        ABSL_VLOG(1) << "pi1 ServerStatistics " << FlatbufferToJson(&stats);
         for (const message_bridge::ServerConnection *connection :
              *stats.connections()) {
           if (connection->state() == message_bridge::State::CONNECTED) {
@@ -1975,7 +1976,7 @@ TEST_P(RemoteMessageSimulatedEventLoopTest, BootUUIDTest) {
       "/pi1/aos", [&pi1_client_statistics_count, &expected_boot_uuid,
                    &expected_connection_time, &boot_number](
                       const message_bridge::ClientStatistics &stats) {
-        VLOG(1) << "pi1 ClientStatistics " << FlatbufferToJson(&stats);
+        ABSL_VLOG(1) << "pi1 ClientStatistics " << FlatbufferToJson(&stats);
         for (const message_bridge::ClientConnection *connection :
              *stats.connections()) {
           EXPECT_EQ(connection->state(), message_bridge::State::CONNECTED);
@@ -2000,7 +2001,7 @@ TEST_P(RemoteMessageSimulatedEventLoopTest, BootUUIDTest) {
                    pi1, pi2, pi2_boot1]() {
     expected_boot_uuid = pi2_boot1;
     ++boot_number;
-    LOG(INFO) << "OnShutdown triggered for pi2";
+    ABSL_LOG(INFO) << "OnShutdown triggered for pi2";
     pi2->OnStartup(
         [&expected_boot_uuid, &expected_connection_time, pi1, pi2]() {
           EXPECT_EQ(expected_boot_uuid, pi2->boot_uuid());
@@ -2063,12 +2064,12 @@ TEST(SimulatedEventLoopTest, MultinodePingPongStartup) {
   size_t pi1_startup_counter = 0;
   size_t pi2_startup_counter = 0;
   pi1->OnStartup([pi1]() {
-    LOG(INFO) << "Made ping";
+    ABSL_LOG(INFO) << "Made ping";
     pi1->AlwaysStart<Ping>("ping");
   });
   pi1->OnStartup([&pi1_startup_counter]() { ++pi1_startup_counter; });
   pi2->OnStartup([pi2]() {
-    LOG(INFO) << "Made pong";
+    ABSL_LOG(INFO) << "Made pong";
     pi2->AlwaysStart<Pong>("pong");
   });
   pi2->OnStartup([&pi2_startup_counter]() { ++pi2_startup_counter; });
@@ -2105,8 +2106,8 @@ TEST(SimulatedEventLoopTest, MultinodePingPongStartup) {
   EXPECT_EQ(pi2_ping_counter->count(), 1001);
   EXPECT_EQ(pi1_pong_counter->count(), 1001);
 
-  LOG(INFO) << pi1->monotonic_now();
-  LOG(INFO) << pi2->monotonic_now();
+  ABSL_LOG(INFO) << pi1->monotonic_now();
+  ABSL_LOG(INFO) << pi2->monotonic_now();
 
   factory.RunFor(chrono::seconds(5) + chrono::milliseconds(5));
 
@@ -2585,7 +2586,7 @@ TEST(SimulatedEventLoopTest, OnStartupAll) {
         } else if (node == pi3) {
           ++pi3_count;
         } else {
-          LOG(FATAL) << "Unknown node";
+          ABSL_LOG(FATAL) << "Unknown node";
         }
 
         EXPECT_EQ(startup_count, pi1_count + pi2_count + pi3_count);
@@ -3340,8 +3341,8 @@ TEST_F(SimulatedEventLoopDisconnectTest, ReliableMessageInFlightDuringReboot) {
   // TODO(austin): Verify that the dropped packet count increases.
 }
 
-// Validates that setting --use_simulated_clocks_for_logs causes LOG statements
-// to use the simulated clocks and print the node name.
+// Validates that setting --use_simulated_clocks_for_logs causes ABSL_LOG
+// statements to use the simulated clocks and print the node name.
 TEST(SimulatedEventLoopTest, SimulatedLogSink) {
   aos::FlatbufferDetachedBuffer<aos::Configuration> config =
       aos::configuration::ReadConfig(
@@ -3369,16 +3370,17 @@ TEST(SimulatedEventLoopTest, SimulatedLogSink) {
   std::string output;
   {
     absl::FlagSaver flag_saver;
-    // Set the flag to enable the use of simulated clocks for LOG statements.
+    // Set the flag to enable the use of simulated clocks for ABSL_LOG
+    // statements.
     absl::SetFlag(&FLAGS_use_simulated_clocks_for_logs, true);
-    // Make sure that we actually hit some LOG statements.
+    // Make sure that we actually hit some ABSL_LOG statements.
     absl::SetFlag(&FLAGS_vmodule, "ping_lib=2,pong_lib=2");
     absl::SetFlag(&FLAGS_die_on_malloc, false);
 
     // Save the output to a string.
     ::testing::internal::CaptureStderr();
 
-    // Run for a short time here. We just need to validate that a few LOG
+    // Run for a short time here. We just need to validate that a few ABSL_LOG
     // statements work as expected. We don't need anything huge here.
     factory.RunFor(std::chrono::milliseconds(100));
 

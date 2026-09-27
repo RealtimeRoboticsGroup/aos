@@ -3,7 +3,7 @@
 #include <set>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/strip.h"
 #include "flatbuffers/reflection.h"
 #include "gmock/gmock.h"
@@ -47,7 +47,7 @@ aos::FlatbufferDetachedBuffer<Channel> ExpectedMultinodeLocation() {
 TEST_F(ConfigurationTest, ConfigMerge) {
   FlatbufferDetachedBuffer<Configuration> config =
       ReadConfig(ArtifactPath("aos/testdata/config1.json"));
-  LOG(INFO) << "Read: " << FlatbufferToJson(config, {.multi_line = true});
+  ABSL_LOG(INFO) << "Read: " << FlatbufferToJson(config, {.multi_line = true});
 
   EXPECT_EQ(absl::StripSuffix(util::ReadFileToStringOrDie(
                                   ArtifactPath("aos/testdata/expected.json")),
@@ -78,7 +78,7 @@ TEST_F(ConfigurationTest, GetFullySpecifiedChannel) {
 TEST_F(ConfigurationTest, ConfigMergeMultinode) {
   FlatbufferDetachedBuffer<Configuration> config =
       ReadConfig(ArtifactPath("aos/testdata/config1_multinode.json"));
-  LOG(INFO) << "Read: " << FlatbufferToJson(config, {.multi_line = true});
+  ABSL_LOG(INFO) << "Read: " << FlatbufferToJson(config, {.multi_line = true});
 
   EXPECT_EQ(std::string(absl::StripSuffix(
                 util::ReadFileToStringOrDie(
@@ -92,7 +92,7 @@ TEST_F(ConfigurationTest, UnsortedConfig) {
   FlatbufferDetachedBuffer<Configuration> config =
       ReadConfig(ArtifactPath("aos/testdata/backwards.json"));
 
-  LOG(INFO) << "Read: " << FlatbufferToJson(config, {.multi_line = true});
+  ABSL_LOG(INFO) << "Read: " << FlatbufferToJson(config, {.multi_line = true});
 
   EXPECT_EQ(FlatbufferToJson(GetChannel(config, "/frc/robot_state",
                                         "frc.RobotState", "app1", nullptr)),
@@ -146,14 +146,14 @@ TEST_F(ConfigurationDeathTest, InvalidChannelName) {
       {
         FlatbufferDetachedBuffer<Configuration> config =
             ReadConfig(ArtifactPath("aos/testdata/invalid_channel_name3.json"));
-        LOG(FATAL) << "Foo";
+        ABSL_LOG(FATAL) << "Foo";
       },
       "Invalid channel name");
   EXPECT_DEATH(
       {
         FlatbufferDetachedBuffer<Configuration> config =
             ReadConfig(ArtifactPath("aos/testdata/invalid_channel_name4.json"));
-        LOG(FATAL) << "Foo";
+        ABSL_LOG(FATAL) << "Foo";
       },
       "Channel names must start with '/'");
 }
@@ -162,7 +162,7 @@ TEST_F(ConfigurationDeathTest, InvalidChannelName) {
 TEST_F(ConfigurationTest, MergeWithConfig) {
   FlatbufferDetachedBuffer<Configuration> config =
       ReadConfig(ArtifactPath("aos/testdata/config1.json"));
-  LOG(INFO) << "Read: " << FlatbufferToJson(config, {.multi_line = true});
+  ABSL_LOG(INFO) << "Read: " << FlatbufferToJson(config, {.multi_line = true});
 
   FlatbufferDetachedBuffer<Configuration> updated_config =
       MergeWithConfig(&config.message(),
@@ -523,7 +523,7 @@ TEST_F(ConfigurationTest, MergeConfigurationOverwritesExtraCgroups) {
 TEST_F(ConfigurationTest, MergeWithConfigFromStatic) {
   FlatbufferDetachedBuffer<Configuration> config =
       ReadConfig(ArtifactPath("aos/testdata/config1.json"));
-  VLOG(1) << "Read: " << FlatbufferToJson(config, {.multi_line = true});
+  ABSL_VLOG(1) << "Read: " << FlatbufferToJson(config, {.multi_line = true});
 
   fbs::Builder<ConfigurationStatic> config_addition_builder;
   ConfigurationStatic *config_addition = config_addition_builder.get();
@@ -1957,9 +1957,9 @@ void TestGetPartialConfiguration(const Configuration &base_config,
           [test_channel_name, test_channel_type](const Channel &channel) {
             if (channel.name()->string_view() == test_channel_name &&
                 channel.type()->string_view() == test_channel_type) {
-              VLOG(1) << "Omitting channel from save_log, channel: "
-                      << channel.name()->string_view() << ", "
-                      << channel.type()->string_view();
+              ABSL_VLOG(1) << "Omitting channel from save_log, channel: "
+                           << channel.name()->string_view() << ", "
+                           << channel.type()->string_view();
               return false;
             }
             return true;

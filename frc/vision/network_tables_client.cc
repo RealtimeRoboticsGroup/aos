@@ -5,8 +5,8 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/log/die_if_null.h"
-#include "absl/log/log.h"
 #include "absl/strings/str_join.h"
 
 #include "aos/init.h"
@@ -52,17 +52,18 @@ int Main() {
       [&connection_mutex, &connection_notify](const nt::Event &event) {
         std::unique_lock<std::mutex> lock(connection_mutex);
         if (event.Is(nt::EventFlags::kConnected)) {
-          VLOG(1) << "Connected!";
+          ABSL_VLOG(1) << "Connected!";
           connection_notify.notify_one();
         } else if (event.Is(nt::EventFlags::kDisconnected)) {
-          VLOG(1) << "Disconnected!";
+          ABSL_VLOG(1) << "Disconnected!";
           connection_notify.notify_one();
         }
       });
   std::unique_lock<std::mutex> lock(connection_mutex);
   if (std::cv_status::timeout ==
       connection_notify.wait_for(lock, std::chrono::seconds(1))) {
-    LOG(ERROR) << "Timed out connecting to " << absl::GetFlag(FLAGS_server);
+    ABSL_LOG(ERROR) << "Timed out connecting to "
+                    << absl::GetFlag(FLAGS_server);
     return 1;
   }
 
@@ -75,17 +76,17 @@ int Main() {
         [&connection_mutex, &connection_notify](const nt::Event &event) {
           std::unique_lock<std::mutex> lock(connection_mutex);
           const nt::TopicInfo &topic = *ABSL_DIE_IF_NULL(event.GetTopicInfo());
-          VLOG(1) << "Found " << topic.name << " " << topic.type_str;
+          ABSL_VLOG(1) << "Found " << topic.name << " " << topic.type_str;
           connection_notify.notify_one();
         });
     if (std::cv_status::timeout ==
         connection_notify.wait_for(lock, std::chrono::seconds(1))) {
-      LOG(ERROR) << "Timed out finding topics on "
-                 << absl::GetFlag(FLAGS_server);
+      ABSL_LOG(ERROR) << "Timed out finding topics on "
+                      << absl::GetFlag(FLAGS_server);
       return 1;
     }
     const std::vector<nt::Topic> topics = instance.GetTopics();
-    VLOG(1) << "Found " << topics.size() << " topics.";
+    ABSL_VLOG(1) << "Found " << topics.size() << " topics.";
     for (const nt::Topic &topic : topics) {
       std::cout << "\"" << topic.GetName() << "\" \"" << topic.GetTypeString()
                 << "\"\n";
@@ -127,23 +128,23 @@ int Main() {
             std::vector<nt::Timestamped<frc::ChassisSpeeds>> values =
                 subscriber.ReadQueue();
             for (const nt::Timestamped<frc::ChassisSpeeds> &value : values) {
-              LOG(INFO) << "At " << value.serverTime
-                        << " Got: " << value.value.vx.value() << ", "
-                        << value.value.vy.value() << ", "
-                        << value.value.omega.value();
+              ABSL_LOG(INFO) << "At " << value.serverTime
+                             << " Got: " << value.value.vx.value() << ", "
+                             << value.value.vy.value() << ", "
+                             << value.value.omega.value();
             }
           });
       std::this_thread::sleep_for(std::chrono::seconds(100));
     } else {
-      LOG(FATAL) << "Unsupported type " << absl::GetFlag(FLAGS_type);
+      ABSL_LOG(FATAL) << "Unsupported type " << absl::GetFlag(FLAGS_type);
     }
   }
 
   instance.StopClient();
   if (std::cv_status::timeout ==
       connection_notify.wait_for(lock, std::chrono::seconds(1))) {
-    LOG(ERROR) << "Timed out disconnecting from "
-               << absl::GetFlag(FLAGS_server);
+    ABSL_LOG(ERROR) << "Timed out disconnecting from "
+                    << absl::GetFlag(FLAGS_server);
     return 1;
   }
   ABSL_CHECK(!instance.IsConnected());

@@ -21,7 +21,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/events/shm_event_loop.h"
 #include "aos/init.h"
@@ -152,8 +152,8 @@ void read_stat(int process, int *ppid, int *sid, bool *not_there) {
         *not_there = true;
         return;
       }
-      PLOG(FATAL) << "reading from " << stat_filename << " into buffer of size "
-                  << sizeof(buffer);
+      ABSL_PLOG(FATAL) << "reading from " << stat_filename
+                       << " into buffer of size " << sizeof(buffer);
     }
   }
 
@@ -189,7 +189,7 @@ void read_stat(int process, int *ppid, int *sid, bool *not_there) {
   ABSL_PCHECK(fclose(stat) == 0);
 
   if (field < 4) {
-    LOG(FATAL) << "couldn't get fields from /proc/" << process << "/stat";
+    ABSL_LOG(FATAL) << "couldn't get fields from /proc/" << process << "/stat";
   }
   ABSL_CHECK_EQ(pid, process);
 }
@@ -210,8 +210,8 @@ void read_status(int process, int ppid, int *pgrp, ::std::string *name,
     char buffer[1024];
     if (fgets(buffer, sizeof(buffer), status) == nullptr) {
       if (ferror(status)) {
-        PLOG(FATAL) << "reading from " << status_filename
-                    << " into buffer of size " << sizeof(buffer);
+        ABSL_PLOG(FATAL) << "reading from " << status_filename
+                         << " into buffer of size " << sizeof(buffer);
       } else {
         break;
       }

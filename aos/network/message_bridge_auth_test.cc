@@ -73,7 +73,7 @@ class MessageBridgeAuthTest : public ::testing::Test {
 
  protected:
   void RequestAuthKey() {
-    LOG(INFO) << "Requesting auth key";
+    ABSL_LOG(INFO) << "Requesting auth key";
     auto sender = request_key_sender_.MakeBuilder();
     auto builder = sender.MakeBuilder<SctpConfigRequest>();
     builder.add_request_key(true);
@@ -103,7 +103,7 @@ TEST_F(MessageBridgeAuthTest, SmokeTest) {
       if (auth_key.empty()) {
         auth_key.assign(config.key()->begin(), config.key()->end());
       }
-      LOG(INFO) << "Got new auth key";
+      ABSL_LOG(INFO) << "Got new auth key";
       // Key shouldn't change as we are running on the same server.
       EXPECT_THAT(auth_key,
                   ElementsAreArray(config.key()->begin(), config.key()->end()));

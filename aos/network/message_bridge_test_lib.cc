@@ -1,7 +1,7 @@
 #include "aos/network/message_bridge_test_lib.h"
 
 #include "absl/flags/flag.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/util/application_name.h"
 
@@ -49,7 +49,7 @@ PinForTest::PinForTest() {
 
 ThreadedEventLoopRunner::ThreadedEventLoopRunner(aos::ShmEventLoop *event_loop)
     : event_loop_(event_loop), my_thread_([this]() {
-        LOG(INFO) << "Started " << event_loop_->name();
+        ABSL_LOG(INFO) << "Started " << event_loop_->name();
         PinForTest pin;
         event_loop_->OnRun([this]() { event_.Set(); });
         event_loop_->Run();
@@ -72,7 +72,7 @@ MessageBridgeParameterizedTest::MessageBridgeParameterizedTest()
       pi2_("pi2", "raspberrypi2", GetParam().config),
       config_(aos::configuration::ReadConfig(GetParam().config)),
       config_sha256_(Sha256(config_.span())) {
-  LOG(INFO) << "Testing with " << GetParam().config;
+  ABSL_LOG(INFO) << "Testing with " << GetParam().config;
   // Make sure that we clean up all the shared memory queues so that we cannot
   // inadvertently be influenced other tests or by previously run AOS
   // applications (in a fully sharded test running inside the bazel sandbox,
@@ -101,7 +101,7 @@ void PiNode::OnPi() {
 
 void PiNode::MakeServer(const std::string server_config_sha256) {
   OnPi();
-  LOG(INFO) << "Making " << node_name_ << " server";
+  ABSL_LOG(INFO) << "Making " << node_name_ << " server";
   absl::SetFlag(&FLAGS_application_name,
                 absl::StrCat(node_name_, "_message_bridge_server"));
   server_event_loop_ = std::make_unique<aos::ShmEventLoop>(&config_.message());
@@ -113,7 +113,7 @@ void PiNode::MakeServer(const std::string server_config_sha256) {
 }
 
 void PiNode::RunServer(const chrono::nanoseconds duration) {
-  LOG(INFO) << "Running " << node_name_ << " server";
+  ABSL_LOG(INFO) << "Running " << node_name_ << " server";
   // Set up a shutdown callback.
   aos::TimerHandler *const quit =
       server_event_loop_->AddTimer([this]() { server_event_loop_->Exit(); });
@@ -126,13 +126,13 @@ void PiNode::RunServer(const chrono::nanoseconds duration) {
 }
 
 void PiNode::StartServer() {
-  LOG(INFO) << "Starting " << node_name_ << " server";
+  ABSL_LOG(INFO) << "Starting " << node_name_ << " server";
   server_thread_ =
       std::make_unique<ThreadedEventLoopRunner>(server_event_loop_.get());
 }
 
 void PiNode::StopServer() {
-  LOG(INFO) << "Stopping " << node_name_ << " server";
+  ABSL_LOG(INFO) << "Stopping " << node_name_ << " server";
   server_thread_.reset();
   message_bridge_server_.reset();
   server_event_loop_.reset();
@@ -140,7 +140,7 @@ void PiNode::StopServer() {
 
 void PiNode::MakeClient() {
   OnPi();
-  LOG(INFO) << "Making " << node_name_ << " client";
+  ABSL_LOG(INFO) << "Making " << node_name_ << " client";
   absl::SetFlag(&FLAGS_application_name,
                 absl::StrCat(node_name_, "_message_bridge_client"));
   client_event_loop_ = std::make_unique<aos::ShmEventLoop>(&config_.message());
@@ -150,13 +150,13 @@ void PiNode::MakeClient() {
 }
 
 void PiNode::StartClient() {
-  LOG(INFO) << "Starting " << node_name_ << " client";
+  ABSL_LOG(INFO) << "Starting " << node_name_ << " client";
   client_thread_ =
       std::make_unique<ThreadedEventLoopRunner>(client_event_loop_.get());
 }
 
 void PiNode::StopClient() {
-  LOG(INFO) << "Stopping " << node_name_ << " client";
+  ABSL_LOG(INFO) << "Stopping " << node_name_ << " client";
   client_thread_.reset();
   message_bridge_client_.reset();
   client_event_loop_.reset();
@@ -165,52 +165,52 @@ void PiNode::StopClient() {
 void PiNode::MakeTest(const std::string test_app_name,
                       const PiNode *other_node) {
   OnPi();
-  LOG(INFO) << "Making " << node_name_ << " test";
+  ABSL_LOG(INFO) << "Making " << node_name_ << " test";
   absl::SetFlag(&FLAGS_application_name, test_app_name);
   test_event_loop_ = std::make_unique<aos::ShmEventLoop>(&config_.message());
 
   std::string channel_name = "/" + node_name_ + "/aos";
   test_event_loop_->MakeWatcher(
       channel_name, [channel_name](const ServerStatistics &stats) {
-        VLOG(1) << channel_name << " ServerStatistics "
-                << FlatbufferToJson(&stats);
+        ABSL_VLOG(1) << channel_name << " ServerStatistics "
+                     << FlatbufferToJson(&stats);
       });
 
   test_event_loop_->MakeWatcher(
       channel_name, [channel_name](const ClientStatistics &stats) {
-        VLOG(1) << channel_name << " ClientStatistics "
-                << FlatbufferToJson(&stats);
+        ABSL_VLOG(1) << channel_name << " ClientStatistics "
+                     << FlatbufferToJson(&stats);
       });
 
   test_event_loop_->MakeWatcher(channel_name,
                                 [channel_name](const Timestamp &timestamp) {
-                                  VLOG(1) << channel_name << " Timestamp "
-                                          << FlatbufferToJson(&timestamp);
+                                  ABSL_VLOG(1) << channel_name << " Timestamp "
+                                               << FlatbufferToJson(&timestamp);
                                 });
   std::string other_channel_name = "/" + other_node->node_name_ + "/aos";
   test_event_loop_->MakeWatcher(
       other_channel_name,
       [this, other_channel_name, other_node](const Timestamp &timestamp) {
-        VLOG(1) << other_channel_name << " Timestamp "
-                << FlatbufferToJson(&timestamp);
+        ABSL_VLOG(1) << other_channel_name << " Timestamp "
+                     << FlatbufferToJson(&timestamp);
         EXPECT_EQ(test_event_loop_->context().source_boot_uuid,
                   other_node->boot_uuid_);
       });
 }
 
 void PiNode::StartTest() {
-  LOG(INFO) << "Starting " << node_name_ << " test";
+  ABSL_LOG(INFO) << "Starting " << node_name_ << " test";
   test_thread_ =
       std::make_unique<ThreadedEventLoopRunner>(test_event_loop_.get());
 }
 
 void PiNode::StopTest() {
-  LOG(INFO) << "Stopping " << node_name_ << " test";
+  ABSL_LOG(INFO) << "Stopping " << node_name_ << " test";
   test_thread_.reset();
 }
 
 void PiNode::RunClient(const chrono::nanoseconds duration) {
-  LOG(INFO) << "Running pi2 client";
+  ABSL_LOG(INFO) << "Running pi2 client";
   // Run for 5 seconds to make sure we have time to estimate the offset.
   aos::TimerHandler *const quit =
       client_event_loop_->AddTimer([this]() { client_event_loop_->Exit(); });

@@ -28,7 +28,7 @@
 #include <vector>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 
 #include "aos/testing/path.h"
@@ -60,7 +60,7 @@ std::vector<uint8_t> StripThroughSof0(std::vector<uint8_t> jpeg) {
       return jpeg;
     }
   }
-  LOG(FATAL) << "test JPEG contains no SOF0 marker";
+  ABSL_LOG(FATAL) << "test JPEG contains no SOF0 marker";
 }
 
 class NvJpegSeqTest : public ::testing::Test {

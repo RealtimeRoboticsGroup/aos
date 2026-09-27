@@ -11,7 +11,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_split.h"
 #include "flatbuffers/buffer.h"
 #include "flatbuffers/flatbuffer_builder.h"
@@ -34,7 +34,7 @@ std::optional<std::string> ReadShortFile(std::string_view file_name) {
   // Open as input and seek to end immediately.
   std::ifstream file(std::string(file_name), std::ios_base::in);
   if (!file.good()) {
-    VLOG(1) << "Can't read " << file_name;
+    ABSL_VLOG(1) << "Can't read " << file_name;
     return std::nullopt;
   }
   const size_t kMaxLineLength = 4096;
@@ -97,15 +97,15 @@ class FilesystemMonitor {
           type != "ext4" && type != "tmpfs" && type != "devtmpfs") {
         continue;
       }
-      VLOG(1) << mount_point << ", type " << type;
+      ABSL_VLOG(1) << mount_point << ", type " << type;
 
       struct statvfs info;
 
       ABSL_PCHECK(statvfs(mount_point.c_str(), &info) == 0);
 
-      VLOG(1) << "overall size: " << info.f_frsize * info.f_blocks << ", free "
-              << info.f_bfree * info.f_bsize << ", inodes " << info.f_files
-              << ", free " << info.f_ffree;
+      ABSL_VLOG(1) << "overall size: " << info.f_frsize * info.f_blocks
+                   << ", free " << info.f_bfree * info.f_bsize << ", inodes "
+                   << info.f_files << ", free " << info.f_ffree;
 
       flatbuffers::Offset<flatbuffers::String> path_offset =
           builder.fbb()->CreateString(mount_point);

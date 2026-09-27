@@ -34,7 +34,7 @@ void SendFieldMap(aos::EventLoop *event_loop, const FieldMap *field_map,
     ABSL_CHECK(fiducial->has_transform());
     ABSL_CHECK_EQ(fiducial->transform()->size(), 16u);
 
-    VLOG(1) << "Fiducial: " << fiducial->id();
+    ABSL_VLOG(1) << "Fiducial: " << fiducial->id();
     Eigen::Affine3d photonvision_transformation;
     for (size_t i = 0; i < 16u; ++i) {
       photonvision_transformation.matrix().data()[i] =
@@ -73,10 +73,10 @@ void SendFieldMap(aos::EventLoop *event_loop, const FieldMap *field_map,
     orientation->set_y(rotation.y());
     orientation->set_z(rotation.z());
 
-    VLOG(1) << "  Tag at: "
-            << (aprilrobotics_transformation *
-                Eigen::Matrix<double, 3, 1>::Zero())
-                   .transpose();
+    ABSL_VLOG(1) << "  Tag at: "
+                 << (aprilrobotics_transformation *
+                     Eigen::Matrix<double, 3, 1>::Zero())
+                        .transpose();
   }
 
   // And publish the converted result.

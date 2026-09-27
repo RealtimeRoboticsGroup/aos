@@ -13,7 +13,7 @@
 #include <vector>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/scoped/scoped_fd.h"
 
@@ -191,7 +191,7 @@ class MediaDevice {
   Entity *FindEntity(std::string_view entity_name);
 
   // Finds the link connecting a source and destination entity through the
-  // provided pads.  LOG(FATAL)'s if it can't find one.
+  // provided pads.  ABSL_LOG(FATAL)'s if it can't find one.
   Link *FindLink(std::string_view source, int source_pad, std::string_view sink,
                  int sink_pad);
 

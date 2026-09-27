@@ -4,7 +4,7 @@
 #include <numeric>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/logging/logging.h"
 #include "frc/zeroing/wrap.h"
@@ -69,13 +69,13 @@ void AbsoluteAndAbsoluteEncoderZeroingEstimator::UpdateEstimate(
   if (::std::isnan(info.absolute_encoder()) ||
       ::std::isnan(info.single_turn_absolute_encoder())) {
     if (zeroed_) {
-      VLOG(1) << "NAN on one of the absolute encoders.";
+      ABSL_VLOG(1) << "NAN on one of the absolute encoders.";
       error_ = true;
       errors_.Set(ZeroingError::LOST_ABSOLUTE_ENCODER);
     } else {
       ++nan_samples_;
-      VLOG(1) << "NAN on one of the absolute encoders while zeroing"
-              << nan_samples_;
+      ABSL_VLOG(1) << "NAN on one of the absolute encoders while zeroing"
+                   << nan_samples_;
       if (nan_samples_ >= constants_.average_filter_size) {
         error_ = true;
         zeroed_ = true;

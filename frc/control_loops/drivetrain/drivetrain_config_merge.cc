@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
 
   const std::string_view output_path = argv[argc - 1];
   for (int arg = 1; arg < argc - 1; ++arg) {
-    VLOG(1) << "Reading " << argv[arg];
+    ABSL_VLOG(1) << "Reading " << argv[arg];
     merged = aos::MergeFlatBuffers(
         merged, aos::JsonFileToFlatbuffer<
                     frc::control_loops::drivetrain::fbs::DrivetrainLoopConfig>(

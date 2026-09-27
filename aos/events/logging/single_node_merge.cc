@@ -65,7 +65,7 @@ int Main(int argc, char **argv) {
   // ignoring memory usage.
   const Node *node = configuration::GetNode(config, absl::GetFlag(FLAGS_node));
 
-  LOG(INFO) << "Reading all data for " << node->name()->string_view();
+  ABSL_LOG(INFO) << "Reading all data for " << node->name()->string_view();
   const size_t node_index = configuration::GetNodeIndex(config, node);
   TimestampMapper *timestamp_mapper = mappers[node_index].get();
   ABSL_CHECK(timestamp_mapper != nullptr);

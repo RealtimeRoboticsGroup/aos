@@ -101,7 +101,7 @@ std::vector<std::pair<std::string, std::string>> NodeConnections() {
       if (aos::util::PathExists(SampleFile(node1, node2)) ||
           aos::util::PathExists(SampleFile(node2, node1))) {
         result.emplace_back(node1, node2);
-        LOG(INFO) << "Found pairing " << node1 << ", " << node2;
+        ABSL_LOG(INFO) << "Found pairing " << node1 << ", " << node2;
       }
     }
   }
@@ -274,9 +274,10 @@ void NodePlotter::AddNodes(std::string_view node1, std::string_view node2) {
   ABSL_CHECK_EQ(noncausalfile12.first.size(), noncausalfile12.second.size());
   ABSL_CHECK_EQ(noncausalfile21.first.size(), noncausalfile21.second.size());
 
-  LOG(INFO) << samplefile12.first.size() + samplefile21.first.size() +
-                   noncausalfile12.first.size() + noncausalfile21.first.size()
-            << " points";
+  ABSL_LOG(INFO) << samplefile12.first.size() + samplefile21.first.size() +
+                        noncausalfile12.first.size() +
+                        noncausalfile21.first.size()
+                 << " points";
 
   plotter_.AddLine(offsetfile.first, offsetfile.second,
                    Plotter::LineOptions{
@@ -326,13 +327,13 @@ int Main(int argc, const char *const *argv) {
       plotter.AddNodes(ab.first, ab.second);
     }
     if (connections.size() == 0) {
-      LOG(WARNING) << "No connections found, is something wrong?";
+      ABSL_LOG(WARNING) << "No connections found, is something wrong?";
     }
   } else {
     ABSL_CHECK_EQ(argc, 3);
 
-    LOG(INFO) << argv[1];
-    LOG(INFO) << argv[2];
+    ABSL_LOG(INFO) << argv[1];
+    ABSL_LOG(INFO) << argv[2];
 
     const std::string_view node1 = argv[1];
     const std::string_view node2 = argv[2];

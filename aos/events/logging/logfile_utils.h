@@ -742,7 +742,7 @@ class PartsMerger {
   // ago.
   monotonic_clock::time_point monotonic_oldest_time() {
     if (monotonic_oldest_time_ == monotonic_clock::max_time) {
-      VLOG(1) << "No oldest message time, fetching " << node_name();
+      ABSL_VLOG(1) << "No oldest message time, fetching " << node_name();
       (void)Front();
     }
     return monotonic_oldest_time_;

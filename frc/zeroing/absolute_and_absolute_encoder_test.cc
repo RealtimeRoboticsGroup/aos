@@ -1,7 +1,7 @@
 #include "frc/zeroing/absolute_and_absolute_encoder.h"
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -337,7 +337,7 @@ TEST_F(AbsoluteAndAbsoluteEncoderZeroingTest,
           fbb2.GetBufferPointer());
 
   for (ZeroingError err : *state->errors()) {
-    LOG(INFO) << "error: " << EnumNameZeroingError(err);
+    ABSL_LOG(INFO) << "error: " << EnumNameZeroingError(err);
   }
   EXPECT_THAT(*state->errors(),
               ::testing::ElementsAre(ZeroingError::OFFSET_MOVED_TOO_FAR));

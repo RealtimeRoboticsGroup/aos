@@ -10,7 +10,8 @@ namespace aos::util {
 
 // Prints all FATAL messages to stderr and then abort(3)s before the regular
 // stuff can print out anything else. Ignores all other messages.
-// This is useful in death tests that expect a LOG(FATAL) to cause the death.
+// This is useful in death tests that expect a ABSL_LOG(FATAL) to cause the
+// death.
 class DeathTestLogImplementation
     : public logging::HandleMessageLogImplementation {
  public:

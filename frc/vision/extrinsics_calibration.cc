@@ -587,14 +587,14 @@ class PoseFilter : public CeresPoseFilter<double> {
       Eigen::Vector3d trans_error =
           H_world_imu_from_board.translation() - H_world_imu.translation();
       Eigen::Quaterniond error_rot(error.rotation());
-      VLOG(1) << "Error: \n"
-              << "Rotation: " << error_rot.coeffs().transpose() << "\n"
-              << "Translation: " << trans_error.transpose();
+      ABSL_VLOG(1) << "Error: \n"
+                   << "Rotation: " << error_rot.coeffs().transpose() << "\n"
+                   << "Translation: " << trans_error.transpose();
 
       cv::imshow("Live", image_mat);
       cv::waitKey(50);
     }
-    LOG(INFO) << "Finished visualizing robot.  Press any key to continue";
+    ABSL_LOG(INFO) << "Finished visualizing robot.  Press any key to continue";
     cv::waitKey();
   }
 
@@ -602,8 +602,8 @@ class PoseFilter : public CeresPoseFilter<double> {
                          Eigen::Matrix<double, 6, 1> x_hat,
                          Eigen::Quaternion<double> orientation,
                          Eigen::Matrix<double, 6, 6> p) override {
-    VLOG(2) << t << " -> " << p;
-    VLOG(2) << t << " xhat -> " << x_hat.transpose();
+    ABSL_VLOG(2) << t << " -> " << p;
+    ABSL_VLOG(2) << t << " xhat -> " << x_hat.transpose();
     times_.emplace_back(chrono::duration<double>(t.time_since_epoch()).count());
     x_hats_.emplace_back(x_hat);
     orientations_.emplace_back(orientation);
@@ -814,11 +814,11 @@ struct CostFunctor {
           trans_error_scale * filter.errorpz(i);
     }
 
-    VLOG(2) << "Cost function calc took "
-            << chrono::duration<double>(aos::monotonic_clock::now() -
-                                        start_time)
-                   .count()
-            << " seconds";
+    ABSL_VLOG(2) << "Cost function calc took "
+                 << chrono::duration<double>(aos::monotonic_clock::now() -
+                                             start_time)
+                        .count()
+                 << " seconds";
 
     return true;
   }
@@ -929,9 +929,9 @@ aos::FlatbufferDetachedBuffer<calibration::CameraCalibration> Solve(
   options.parameter_tolerance = 1e-6;
   ceres::Solver::Summary summary;
   Solve(options, &problem, &summary);
-  LOG(INFO) << summary.FullReport();
-  LOG(INFO) << "Solution is " << (summary.IsSolutionUsable() ? "" : "NOT ")
-            << "usable";
+  ABSL_LOG(INFO) << summary.FullReport();
+  ABSL_LOG(INFO) << "Solution is " << (summary.IsSolutionUsable() ? "" : "NOT ")
+                 << "usable";
 
   {
     flatbuffers::FlatBufferBuilder fbb;

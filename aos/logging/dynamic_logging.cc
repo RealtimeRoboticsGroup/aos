@@ -4,8 +4,8 @@
 #include <string_view>
 
 #include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/log/globals.h"
-#include "absl/log/log.h"
 #include "flatbuffers/string.h"
 
 namespace aos::logging {
@@ -13,8 +13,9 @@ namespace aos::logging {
 DynamicLogging::DynamicLogging(aos::EventLoop *event_loop)
     : application_name_(event_loop->name()) {
   if (event_loop->GetChannel<DynamicLogCommand>("/aos") == nullptr) {
-    LOG(WARNING) << "Disabling dynamic logger because the DynamicLogCommand "
-                    "channel is not configured.";
+    ABSL_LOG(WARNING)
+        << "Disabling dynamic logger because the DynamicLogCommand "
+           "channel is not configured.";
   } else {
     event_loop->MakeWatcher("/aos", [this](const DynamicLogCommand &cmd) {
       HandleDynamicLogCommand(cmd);

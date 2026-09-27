@@ -5,7 +5,7 @@
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include <Eigen/Dense>
 
 #include "frc/control_loops/c2d.h"
@@ -84,10 +84,10 @@ class LinearizedController {
     frc::controls::C2D(continuous_dynamics.A, continuous_dynamics.B, params_.dt,
                        &discrete_dynamics.A, &discrete_dynamics.B);
     auto c2d_time = aos::monotonic_clock::now();
-    VLOG(2) << "Controllability of dynamics (ideally should be " << NStates
-            << "): "
-            << frc::controls::Controllability(discrete_dynamics.A,
-                                              discrete_dynamics.B);
+    ABSL_VLOG(2) << "Controllability of dynamics (ideally should be " << NStates
+                 << "): "
+                 << frc::controls::Controllability(discrete_dynamics.A,
+                                                   discrete_dynamics.B);
     Eigen::Matrix<Scalar, kNumInputs, NStates> K;
     if (frc::controls::IsStabilizable(discrete_dynamics.A,
                                       discrete_dynamics.B)) {
@@ -107,12 +107,13 @@ class LinearizedController {
       feedback_contributions.col(state_idx) =
           K.col(state_idx) * (goal - X)(state_idx);
     }
-    VLOG(2) << "linearization time "
-            << aos::time::DurationInSeconds(linearization_time - start_time)
-            << " c2d time "
-            << aos::time::DurationInSeconds(c2d_time - linearization_time)
-            << " dlqr time "
-            << aos::time::DurationInSeconds(dlqr_time - c2d_time);
+    ABSL_VLOG(2) << "linearization time "
+                 << aos::time::DurationInSeconds(linearization_time -
+                                                 start_time)
+                 << " c2d time "
+                 << aos::time::DurationInSeconds(c2d_time - linearization_time)
+                 << " dlqr time "
+                 << aos::time::DurationInSeconds(dlqr_time - c2d_time);
     return {.U = U,
             .debug = {.U_ff = U_ff,
                       .U_feedback = U_feedback,

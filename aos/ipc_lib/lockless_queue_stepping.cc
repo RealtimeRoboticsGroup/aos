@@ -24,7 +24,7 @@
 #include <utility>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 
 #include "aos/ipc_lib/aos_sync.h"
@@ -120,7 +120,8 @@ void InstallHandler(int signal, void (*handler)(int, siginfo_t *, void *),
     SigactionType real_sigaction =
         reinterpret_cast<SigactionType>(dlsym(RTLD_NEXT, "sigaction"));
     if (sigaction == real_sigaction) {
-      LOG(WARNING) << "failed to work around tsan signal handling weirdness";
+      ABSL_LOG(WARNING)
+          << "failed to work around tsan signal handling weirdness";
     }
     ABSL_PCHECK(real_sigaction(signal, &action, old_action) == 0);
     return;
@@ -347,8 +348,8 @@ bool RunFunctionDieAt(::std::function<void(void *)> prepare,
           ABSL_PCHECK(ptrace(PTRACE_CONT, pid, nullptr, nullptr) == 0);
           continue;
         }
-        LOG(FATAL) << "Traced child was stopped with unexpected signal: "
-                   << static_cast<int>(WSTOPSIG(status));
+        ABSL_LOG(FATAL) << "Traced child was stopped with unexpected signal: "
+                        << static_cast<int>(WSTOPSIG(status));
       }
       if (WIFEXITED(status)) {
         if (WEXITSTATUS(status) == 0) return true;
@@ -436,7 +437,7 @@ void TestShmRobustness(const LocklessQueueConfiguration &config,
                  ::std::to_string(expected_writes->size()));
     if (RunFunctionDieAtAndCheck(config, prepare, function, check, &test_failed,
                                  die_at, expected_writes, nullptr)) {
-      LOG(INFO) << "Tested " << die_at << " death points";
+      ABSL_LOG(INFO) << "Tested " << die_at << " death points";
       return;
     }
     if (test_failed) {

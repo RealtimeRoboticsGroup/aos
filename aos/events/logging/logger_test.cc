@@ -4,7 +4,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_format.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -99,7 +99,7 @@ TEST_P(LoggerTest, Starts) {
   unlink(config.c_str());
   unlink(logfile.c_str());
 
-  LOG(INFO) << "Logging data to " << logfile;
+  ABSL_LOG(INFO) << "Logging data to " << logfile;
 
   {
     event_loop_factory_.RunFor(chrono::milliseconds(95));
@@ -163,7 +163,7 @@ TEST_P(LoggerTest, LoggerStatistics) {
   unlink(config.c_str());
   unlink(logfile.c_str());
 
-  LOG(INFO) << "Logging data to " << logfile;
+  ABSL_LOG(INFO) << "Logging data to " << logfile;
 
   {
     event_loop_factory_.RunFor(chrono::milliseconds(95));
@@ -205,7 +205,7 @@ TEST_P(LoggerTest, MutateCallback) {
   unlink(config.c_str());
   unlink(logfile.c_str());
 
-  LOG(INFO) << "Logging data to " << logfile;
+  ABSL_LOG(INFO) << "Logging data to " << logfile;
 
   {
     event_loop_factory_.RunFor(chrono::milliseconds(95));
@@ -273,7 +273,7 @@ TEST_P(LoggerTest, ExitOnFallBehind) {
   unlink(config.c_str());
   unlink(logfile.c_str());
 
-  LOG(INFO) << "Logging data to " << logfile;
+  ABSL_LOG(INFO) << "Logging data to " << logfile;
 
   {
     event_loop_factory_.RunFor(chrono::milliseconds(95));
@@ -312,7 +312,7 @@ TEST_P(LoggerDeathTest, CrashOnFallBehind) {
   unlink(config.c_str());
   unlink(logfile.c_str());
 
-  LOG(INFO) << "Logging data to " << logfile;
+  ABSL_LOG(INFO) << "Logging data to " << logfile;
 
   {
     event_loop_factory_.RunFor(chrono::milliseconds(95));
@@ -345,7 +345,7 @@ TEST_P(LoggerDeathTest, ExtraStart) {
   unlink(logfile2.c_str());
   unlink(config2.c_str());
 
-  LOG(INFO) << "Logging data to " << logfile1 << " then " << logfile2;
+  ABSL_LOG(INFO) << "Logging data to " << logfile1 << " then " << logfile2;
 
   {
     event_loop_factory_.RunFor(chrono::milliseconds(95));
@@ -383,7 +383,7 @@ TEST_P(LoggerDeathTest, DieOnDuplicateReplayChannels) {
   unlink(config_file.c_str());
   unlink(logfile.c_str());
 
-  LOG(INFO) << "Logging data to " << logfile;
+  ABSL_LOG(INFO) << "Logging data to " << logfile;
 
   {
     std::unique_ptr<EventLoop> logger_event_loop =
@@ -419,7 +419,7 @@ TEST_P(LoggerDeathTest, ExtraStop) {
   unlink(config.c_str());
   unlink(logfile.c_str());
 
-  LOG(INFO) << "Logging data to " << logfile;
+  ABSL_LOG(INFO) << "Logging data to " << logfile;
 
   {
     event_loop_factory_.RunFor(chrono::milliseconds(95));
@@ -458,7 +458,7 @@ TEST_P(LoggerTest, StartsTwice) {
   unlink(logfile2.c_str());
   unlink(config2.c_str());
 
-  LOG(INFO) << "Logging data to " << logfile1 << " then " << logfile2;
+  ABSL_LOG(INFO) << "Logging data to " << logfile1 << " then " << logfile2;
 
   {
     event_loop_factory_.RunFor(chrono::milliseconds(95));
@@ -526,7 +526,7 @@ TEST_P(LoggerTest, RotatedLogFile) {
   unlink(logfile0.c_str());
   unlink(logfile1.c_str());
 
-  LOG(INFO) << "Logging data to " << logfile0 << " and " << logfile1;
+  ABSL_LOG(INFO) << "Logging data to " << logfile0 << " and " << logfile1;
 
   {
     event_loop_factory_.RunFor(chrono::milliseconds(95));
@@ -608,7 +608,7 @@ TEST_P(LoggerTest, ManyMessages) {
   unlink(config.c_str());
   unlink(logfile.c_str());
 
-  LOG(INFO) << "Logging data to " << logfile;
+  ABSL_LOG(INFO) << "Logging data to " << logfile;
   ping_.set_quiet(true);
 
   {
@@ -660,7 +660,7 @@ TEST(SingleNodeLoggerNoFixtureTest, ReadTooFast) {
   unlink(config_file.c_str());
   unlink(logfile.c_str());
 
-  LOG(INFO) << "Logging data to " << logfile;
+  ABSL_LOG(INFO) << "Logging data to " << logfile;
 
   int sent_messages = 0;
 
@@ -777,27 +777,27 @@ void VerifyProfilingData(const std::filesystem::path &profiling_path) {
   }
 
   EXPECT_GT(record_count, 0) << "Profiling data file is empty.";
-  LOG(INFO) << "Total encoding duration: " << total_encoding_duration_ns;
+  ABSL_LOG(INFO) << "Total encoding duration: " << total_encoding_duration_ns;
 
   std::sort(encode_durations_ns.begin(), encode_durations_ns.end());
 
   // calculate the minimum encode duration.
   const int64_t min_encode_duration_ns = encode_durations_ns.front();
-  LOG(INFO) << "Minimum encoding duration: " << min_encode_duration_ns;
+  ABSL_LOG(INFO) << "Minimum encoding duration: " << min_encode_duration_ns;
 
   // calculate the maximum encode duration.
   const int64_t max_encode_duration_ns = encode_durations_ns.back();
-  LOG(INFO) << "Maximum encoding duration: " << max_encode_duration_ns;
+  ABSL_LOG(INFO) << "Maximum encoding duration: " << max_encode_duration_ns;
 
   // calculate the median encode duration.
   const int median_index = encode_durations_ns.size() / 2;
   const int64_t median_encode_duration_ns = encode_durations_ns[median_index];
-  LOG(INFO) << "Median encoding duration: " << median_encode_duration_ns;
+  ABSL_LOG(INFO) << "Median encoding duration: " << median_encode_duration_ns;
 
   // calculate the average encode duration.
   const int64_t average_encode_duration_ns =
       total_encoding_duration_ns / record_count;
-  LOG(INFO) << "Average encoding duration: " << average_encode_duration_ns;
+  ABSL_LOG(INFO) << "Average encoding duration: " << average_encode_duration_ns;
 }
 
 // Tests logging many messages with LZMA compression.
@@ -815,7 +815,7 @@ TEST_P(LoggerTest, ManyMessagesLzmaWithProfiling) {
   unlink(logfile.c_str());
   unlink((logfile + ".xz").c_str());
 
-  LOG(INFO) << "Logging data to " << logfile;
+  ABSL_LOG(INFO) << "Logging data to " << logfile;
   ping_.set_quiet(true);
 
   {

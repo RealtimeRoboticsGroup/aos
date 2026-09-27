@@ -10,7 +10,7 @@ namespace aos {
 
 // Terminates the task/process and logs a message (without using the logging
 // framework). Designed for use in code that can't use the logging framework
-// (code that can should LOG(FATAL), which calls this).
+// (code that can should ABSL_LOG(FATAL), which calls this).
 [[noreturn]] void Die(const char *format, ...) AOS_PRINTF_FORMAT(1, 2);
 [[noreturn]] void VDie(const char *format, va_list args)
     AOS_PRINTF_FORMAT(1, 0);

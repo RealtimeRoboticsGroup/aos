@@ -18,8 +18,8 @@ cc_library(
         "//aos:macros",
         "//aos/ipc_lib:aos_sync",
         "//aos/type_traits",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -35,7 +35,6 @@ cc_test(
         "//aos/testing:test_shm",
         "//aos/time",
         "//aos/util:death_test_log_implementation",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
     ],
 )

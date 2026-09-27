@@ -10,8 +10,8 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
-#include "absl/log/vlog_is_on.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 #include "absl/strings/str_cat.h"
 #include "absl/types/span.h"
 #include "flatbuffers/buffer.h"
@@ -83,7 +83,7 @@ nlohmann::json JsonSchemaForFlatbuffer(const FlatbufferType &type,
           if (type.FieldIsEnum(index)) {
             elementary_type = "string";
           } else {
-            LOG(FATAL) << "Should not encounter any sequence fields here.";
+            ABSL_LOG(FATAL) << "Should not encounter any sequence fields here.";
           }
           break;
       }
@@ -125,7 +125,7 @@ std::string_view CompressionName(McapLogger::Compression compression) {
     case McapLogger::Compression::kLz4:
       return "lz4";
   }
-  LOG(FATAL) << "Unreachable.";
+  ABSL_LOG(FATAL) << "Unreachable.";
   AOS_UNREACHABLE();
 }
 }  // namespace
@@ -260,20 +260,20 @@ McapLogger::~McapLogger() {
   // TODO(james): Add compression. With flatbuffers messages that contain large
   // numbers of zeros (e.g., large grids or thresholded images) this can result
   // in massive savings.
-  if (VLOG_IS_ON(2)) {
+  if (ABSL_VLOG_IS_ON(2)) {
     // For debugging, print out how much space each channel is taking in the
     // overall log.
-    LOG(INFO) << total_message_bytes_;
+    ABSL_LOG(INFO) << total_message_bytes_;
     std::vector<std::pair<size_t, const Channel *>> channel_bytes;
     for (const auto &pair : total_channel_bytes_) {
       channel_bytes.push_back(std::make_pair(pair.second, pair.first));
     }
     std::sort(channel_bytes.begin(), channel_bytes.end());
     for (const auto &pair : channel_bytes) {
-      LOG(INFO) << configuration::StrippedChannelToString(pair.second) << ": "
-                << static_cast<float>(pair.first) * 1e-6 << "MB "
-                << static_cast<float>(pair.first) / total_message_bytes_
-                << "\n";
+      ABSL_LOG(INFO) << configuration::StrippedChannelToString(pair.second)
+                     << ": " << static_cast<float>(pair.first) * 1e-6 << "MB "
+                     << static_cast<float>(pair.first) / total_message_bytes_
+                     << "\n";
     }
   }
 }
@@ -457,8 +457,9 @@ void McapLogger::WriteChannel(const uint16_t id, const uint16_t schema_id,
             ShortenedChannelName(event_loop_->configuration(), channel,
                                  event_loop_->name(), event_loop_->node());
         if (shortest_name != channel->name()->string_view()) {
-          VLOG(1) << "Shortening " << channel->name()->string_view() << " "
-                  << channel->type()->string_view() << " to " << shortest_name;
+          ABSL_VLOG(1) << "Shortening " << channel->name()->string_view() << " "
+                       << channel->type()->string_view() << " to "
+                       << shortest_name;
         }
         topic_name =
             absl::StrCat(shortest_name, " ", channel->type()->string_view());

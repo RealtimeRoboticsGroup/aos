@@ -133,8 +133,8 @@ cc_binary(
         "//aos:configuration",
         "//aos:init",
         "//aos/events:shm_event_loop",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/log:die_if_null",
     ],
 )

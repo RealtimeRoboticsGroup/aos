@@ -67,7 +67,7 @@ class EncoderFaultDetectorTest : public ::testing::Test {
       return aos::JsonToFlatbuffer<control_loops::drivetrain::CANPosition>(
           json);
     }
-    LOG(FATAL) << "You must provide two falcon arrays of equal length";
+    ABSL_LOG(FATAL) << "You must provide two falcon arrays of equal length";
     return aos::JsonToFlatbuffer<control_loops::drivetrain::CANPosition>("");
   }
 

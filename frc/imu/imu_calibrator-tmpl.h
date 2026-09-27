@@ -57,7 +57,7 @@ void ImuCalibrator<Scalar>::InsertImu(size_t imu_index,
       earliest_reading.parameter_residuals.gravity =
           earliest_reading.accel.norm() - kGravityGs;
       earliest_reading.parameter_residuals.gyro_zero = earliest_reading.gyro;
-      LOG(INFO) << earliest_reading.gyro.transpose();
+      ABSL_LOG(INFO) << earliest_reading.gyro.transpose();
     }
   }
 

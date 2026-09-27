@@ -44,12 +44,13 @@ void CameraReaderMain() {
   const int32_t exposure_flag = absl::GetFlag(FLAGS_exposure);
   if (exposure_flag >= 0) {
     if (exposure_flag > 0) {
-      LOG(INFO) << "Setting camera to Manual Exposure mode with exposure = "
-                << exposure_flag << " or "
-                << static_cast<double>(exposure_flag) / 10.0 << " ms";
+      ABSL_LOG(INFO)
+          << "Setting camera to Manual Exposure mode with exposure = "
+          << exposure_flag << " or "
+          << static_cast<double>(exposure_flag) / 10.0 << " ms";
       v4l2_reader.SetExposure(exposure_flag);
     } else {
-      LOG(INFO) << "Setting camera to use Auto Exposure";
+      ABSL_LOG(INFO) << "Setting camera to use Auto Exposure";
       v4l2_reader.UseAutoExposure();
     }
   }

@@ -57,8 +57,8 @@ cc_library(
         "//conditions:default": [
             "//aos/logging",
             "//third_party/cddlib",
-            "@com_google_absl//absl/log",
             "@com_google_absl//absl/log:absl_check",
+            "@com_google_absl//absl/log:absl_log",
         ],
     }),
 )
@@ -106,8 +106,8 @@ cc_library(
         "quaternion_utils.h",
     ],
     deps = [
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@eigen",
     ],
 )
@@ -123,8 +123,8 @@ cc_test(
         ":runge_kutta",
         "//aos/testing:googletest",
         "//aos/testing:random_seed",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@eigen",
     ],
 )
@@ -374,8 +374,8 @@ cc_library(
     deps = [
         "//aos:macros",
         "//frc/zeroing:wrap",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@eigen",
     ] + select({
         "@platforms//os:none": [],
@@ -416,8 +416,8 @@ cc_library(
         "runge_kutta_helpers.h",
     ],
     deps = [
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@eigen",
     ],
 )
@@ -622,7 +622,7 @@ cc_test(
         ":dare",
         "//aos/testing:googletest",
         "//third_party/python",
-        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:absl_log",
         "@eigen",
     ],
 )
@@ -648,8 +648,8 @@ cc_binary(
     deps = [
         ":dare",
         "//third_party/python",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 

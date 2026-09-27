@@ -18,8 +18,8 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
-#include "absl/log/vlog_is_on.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 #include "absl/strings/str_cat.h"
 
 #include "aos/realtime.h"
@@ -83,7 +83,7 @@ bool SctpAuthIsEnabled() {
         << "Unknown auth enable sysctl value: " << value;
     return value == 1;
   } else {
-    LOG(WARNING) << "/proc/sys/net/sctp/auth_enable doesn't exist.";
+    ABSL_LOG(WARNING) << "/proc/sys/net/sctp/auth_enable doesn't exist.";
     return false;
   }
 }
@@ -113,10 +113,10 @@ bool Ipv6Enabled() {
     case EAFNOSUPPORT:
     case EINVAL:
     case EPROTONOSUPPORT:
-      PLOG(INFO) << "no ipv6";
+      ABSL_PLOG(INFO) << "no ipv6";
       return false;
     default:
-      PLOG(FATAL) << "Open socket failed";
+      ABSL_PLOG(FATAL) << "Open socket failed";
       return false;
   };
 }
@@ -147,10 +147,10 @@ struct sockaddr_storage ResolveSocket(std::string_view host, int port,
   int ret = getaddrinfo(host.empty() ? nullptr : std::string(host).c_str(),
                         std::to_string(port).c_str(), &hints, &addrinfo_result);
   if (ret == EAI_SYSTEM) {
-    PLOG(FATAL) << "getaddrinfo failed to look up '" << host << "'";
+    ABSL_PLOG(FATAL) << "getaddrinfo failed to look up '" << host << "'";
   } else if (ret != 0) {
-    LOG(FATAL) << "getaddrinfo failed to look up '" << host
-               << "': " << gai_strerror(ret);
+    ABSL_LOG(FATAL) << "getaddrinfo failed to look up '" << host
+                    << "': " << gai_strerror(ret);
   }
   switch (addrinfo_result->ai_family) {
     case AF_INET:
@@ -181,11 +181,11 @@ struct sockaddr_storage ResolveSocket(std::string_view host, int port,
                           service_string, NI_MAXSERV, NI_NUMERICHOST);
 
   if (error) {
-    LOG(ERROR) << "Reverse lookup failed ... " << gai_strerror(error);
+    ABSL_LOG(ERROR) << "Reverse lookup failed ... " << gai_strerror(error);
   }
 
-  LOG(INFO) << "remote:addr=" << host_string << ", port=" << service_string
-            << ", family=" << addrinfo_result->ai_family;
+  ABSL_LOG(INFO) << "remote:addr=" << host_string << ", port=" << service_string
+                 << ", family=" << addrinfo_result->ai_family;
 
   freeaddrinfo(addrinfo_result);
 
@@ -220,49 +220,50 @@ void PrintNotification(const Message *msg) {
   const union sctp_notification *snp =
       (const union sctp_notification *)msg->data();
 
-  LOG(INFO) << "Notification:";
+  ABSL_LOG(INFO) << "Notification:";
 
   switch (snp->sn_header.sn_type) {
     case SCTP_ASSOC_CHANGE: {
       const struct sctp_assoc_change *sac = &snp->sn_assoc_change;
-      LOG(INFO) << "SCTP_ASSOC_CHANGE(" << sac_state_tbl[sac->sac_state] << ")";
-      VLOG(1) << "    (assoc_change: state=" << sac->sac_state
-              << ", error=" << sac->sac_error
-              << ", instr=" << sac->sac_inbound_streams
-              << " outstr=" << sac->sac_outbound_streams
-              << ", assoc=" << sac->sac_assoc_id << ")";
+      ABSL_LOG(INFO) << "SCTP_ASSOC_CHANGE(" << sac_state_tbl[sac->sac_state]
+                     << ")";
+      ABSL_VLOG(1) << "    (assoc_change: state=" << sac->sac_state
+                   << ", error=" << sac->sac_error
+                   << ", instr=" << sac->sac_inbound_streams
+                   << " outstr=" << sac->sac_outbound_streams
+                   << ", assoc=" << sac->sac_assoc_id << ")";
     } break;
     case SCTP_PEER_ADDR_CHANGE: {
       const struct sctp_paddr_change *spc = &snp->sn_paddr_change;
-      LOG(INFO) << " SlCTP_PEER_ADDR_CHANGE";
-      VLOG(1) << "\t\t(peer_addr_change: " << Address(spc->spc_aaddr)
-              << " state=" << spc->spc_state << ", error=" << spc->spc_error
-              << ")";
+      ABSL_LOG(INFO) << " SlCTP_PEER_ADDR_CHANGE";
+      ABSL_VLOG(1) << "\t\t(peer_addr_change: " << Address(spc->spc_aaddr)
+                   << " state=" << spc->spc_state
+                   << ", error=" << spc->spc_error << ")";
     } break;
     case SCTP_SEND_FAILED: {
       const struct sctp_send_failed *ssf = &snp->sn_send_failed;
-      LOG(INFO) << " SCTP_SEND_FAILED";
-      VLOG(1) << "\t\t(sendfailed: len=" << ssf->ssf_length
-              << " err=" << ssf->ssf_error << ")";
+      ABSL_LOG(INFO) << " SCTP_SEND_FAILED";
+      ABSL_VLOG(1) << "\t\t(sendfailed: len=" << ssf->ssf_length
+                   << " err=" << ssf->ssf_error << ")";
     } break;
     case SCTP_REMOTE_ERROR: {
       const struct sctp_remote_error *sre = &snp->sn_remote_error;
-      LOG(INFO) << " SCTP_REMOTE_ERROR";
-      VLOG(1) << "\t\t(remote_error: err=" << ntohs(sre->sre_error) << ")";
+      ABSL_LOG(INFO) << " SCTP_REMOTE_ERROR";
+      ABSL_VLOG(1) << "\t\t(remote_error: err=" << ntohs(sre->sre_error) << ")";
     } break;
     case SCTP_STREAM_CHANGE_EVENT: {
       const struct sctp_stream_change_event *sce = &snp->sn_strchange_event;
-      LOG(INFO) << " SCTP_STREAM_CHANGE_EVENT";
-      VLOG(1) << "\t\t(stream_change_event: flags=" << sce->strchange_flags
-              << ", assoc_id=" << sce->strchange_assoc_id
-              << ", instrms=" << sce->strchange_instrms
-              << ", outstrms=" << sce->strchange_outstrms << " )";
+      ABSL_LOG(INFO) << " SCTP_STREAM_CHANGE_EVENT";
+      ABSL_VLOG(1) << "\t\t(stream_change_event: flags=" << sce->strchange_flags
+                   << ", assoc_id=" << sce->strchange_assoc_id
+                   << ", instrms=" << sce->strchange_instrms
+                   << ", outstrms=" << sce->strchange_outstrms << " )";
     } break;
     case SCTP_SHUTDOWN_EVENT: {
-      LOG(INFO) << " SCTP_SHUTDOWN_EVENT";
+      ABSL_LOG(INFO) << " SCTP_SHUTDOWN_EVENT";
     } break;
     default:
-      LOG(INFO) << " Unknown type: " << snp->sn_header.sn_type;
+      ABSL_LOG(INFO) << " Unknown type: " << snp->sn_header.sn_type;
       break;
   }
 }
@@ -285,28 +286,31 @@ void LogSctpStatus(int fd, sctp_assoc_t assoc_id) {
   const int result = getsockopt(fd, IPPROTO_SCTP, SCTP_STATUS,
                                 reinterpret_cast<void *>(&status), &size);
   if (result == -1 && errno == EINVAL) {
-    LOG(INFO) << "sctp_status) not associated";
+    ABSL_LOG(INFO) << "sctp_status) not associated";
     return;
   }
   ABSL_PCHECK(result == 0);
 
-  LOG(INFO) << "sctp_status) sstat_assoc_id:" << status.sstat_assoc_id
-            << " sstat_state:" << status.sstat_state
-            << " sstat_rwnd:" << status.sstat_rwnd
-            << " sstat_unackdata:" << status.sstat_unackdata
-            << " sstat_penddata:" << status.sstat_penddata
-            << " sstat_instrms:" << status.sstat_instrms
-            << " sstat_outstrms:" << status.sstat_outstrms
-            << " sstat_fragmentation_point:" << status.sstat_fragmentation_point
-            << " sstat_primary.spinfo_srtt:" << status.sstat_primary.spinfo_srtt
-            << " sstat_primary.spinfo_rto:" << status.sstat_primary.spinfo_rto;
+  ABSL_LOG(INFO) << "sctp_status) sstat_assoc_id:" << status.sstat_assoc_id
+                 << " sstat_state:" << status.sstat_state
+                 << " sstat_rwnd:" << status.sstat_rwnd
+                 << " sstat_unackdata:" << status.sstat_unackdata
+                 << " sstat_penddata:" << status.sstat_penddata
+                 << " sstat_instrms:" << status.sstat_instrms
+                 << " sstat_outstrms:" << status.sstat_outstrms
+                 << " sstat_fragmentation_point:"
+                 << status.sstat_fragmentation_point
+                 << " sstat_primary.spinfo_srtt:"
+                 << status.sstat_primary.spinfo_srtt
+                 << " sstat_primary.spinfo_rto:"
+                 << status.sstat_primary.spinfo_rto;
 }
 
 void SctpReadWrite::OpenSocket(const struct sockaddr_storage &sockaddr_local) {
   fd_ = socket(sockaddr_local.ss_family, SOCK_SEQPACKET, IPPROTO_SCTP);
   ABSL_PCHECK(fd_ != -1);
-  LOG(INFO) << "socket(" << Family(sockaddr_local)
-            << ", SOCK_SEQPACKET, IPPROTOSCTP) = " << fd_;
+  ABSL_LOG(INFO) << "socket(" << Family(sockaddr_local)
+                 << ", SOCK_SEQPACKET, IPPROTOSCTP) = " << fd_;
   {
     // Set up Type-Of-Service.
     //
@@ -382,7 +386,7 @@ bool SctpReadWrite::SendMessage(
     std::optional<struct sockaddr_storage> sockaddr_remote,
     sctp_assoc_t snd_assoc_id) {
   ABSL_CHECK(fd_ != -1);
-  LOG_IF(FATAL, sctp_authentication_ && current_key_.empty())
+  ABSL_LOG_IF(FATAL, sctp_authentication_ && current_key_.empty())
       << "Expected SCTP authentication but no key active";
   struct iovec iov;
   iov.iov_base = const_cast<char *>(data.data());
@@ -394,7 +398,7 @@ bool SctpReadWrite::SendMessage(
   if (sockaddr_remote) {
     outmsg.msg_name = &*sockaddr_remote;
     outmsg.msg_namelen = sizeof(*sockaddr_remote);
-    VLOG(2) << "Sending to " << Address(*sockaddr_remote);
+    ABSL_VLOG(2) << "Sending to " << Address(*sockaddr_remote);
   } else {
     outmsg.msg_namelen = 0;
   }
@@ -428,16 +432,16 @@ bool SctpReadWrite::SendMessage(
   if (size == -1) {
     if (errno == EPIPE || errno == EAGAIN || errno == ESHUTDOWN ||
         errno == EINTR) {
-      if (VLOG_IS_ON(1)) {
-        PLOG(WARNING) << "sendmsg on sctp socket failed";
+      if (ABSL_VLOG_IS_ON(1)) {
+        ABSL_PLOG(WARNING) << "sendmsg on sctp socket failed";
       }
       return false;
     }
-    PLOG(FATAL) << "sendmsg on sctp socket failed";
+    ABSL_PLOG(FATAL) << "sendmsg on sctp socket failed";
     return false;
   }
   ABSL_CHECK_EQ(static_cast<ssize_t>(data.size()), size);
-  VLOG(2) << "Sent " << data.size() << " bytes";
+  ABSL_VLOG(2) << "Sent " << data.size() << " bytes";
   return true;
 }
 
@@ -482,7 +486,7 @@ aos::unique_c_ptr<Message> SctpReadWrite::AcquireMessage() {
 // fragmented. If we do end up with a fragment, then we copy the data out of it.
 aos::unique_c_ptr<Message> SctpReadWrite::ReadMessage() {
   ABSL_CHECK(fd_ != -1);
-  LOG_IF(FATAL, sctp_authentication_ && current_key_.empty())
+  ABSL_LOG_IF(FATAL, sctp_authentication_ && current_key_.empty())
       << "Expected SCTP authentication but no key active";
 
   while (true) {
@@ -513,7 +517,7 @@ aos::unique_c_ptr<Message> SctpReadWrite::ReadMessage() {
         // later.
         return nullptr;
       }
-      PLOG(FATAL) << "recvmsg on sctp socket " << fd_ << " failed";
+      ABSL_PLOG(FATAL) << "recvmsg on sctp socket " << fd_ << " failed";
     }
 
     ABSL_CHECK(!(inmessage.msg_flags & MSG_CTRUNC))
@@ -538,7 +542,7 @@ aos::unique_c_ptr<Message> SctpReadWrite::ReadMessage() {
                 *reinterpret_cast<struct sctp_rcvinfo *>(CMSG_DATA(scmsg));
           } break;
           default:
-            LOG(INFO) << "\tUnknown type: " << scmsg->cmsg_type;
+            ABSL_LOG(INFO) << "\tUnknown type: " << scmsg->cmsg_type;
             break;
         }
       }
@@ -554,9 +558,9 @@ aos::unique_c_ptr<Message> SctpReadWrite::ReadMessage() {
       Abort(result->header.rcvinfo.rcv_assoc_id);
       result->message_type = Message::kOverflow;
 
-      VLOG(1) << "Message overflowed buffer on stream "
-              << result->header.rcvinfo.rcv_sid << ", disconnecting."
-              << " Check for config mismatch or rogue device.";
+      ABSL_VLOG(1) << "Message overflowed buffer on stream "
+                   << result->header.rcvinfo.rcv_sid << ", disconnecting."
+                   << " Check for config mismatch or rogue device.";
       return result;
     }
 
@@ -603,12 +607,12 @@ aos::unique_c_ptr<Message> SctpReadWrite::ReadMessage() {
       memcpy(partial_message->mutable_data() + partial_message->size,
              result->data(), result->size);
       ++partial_message->partial_deliveries;
-      VLOG(2) << "Merged fragment of " << result->size << " after "
-              << partial_message->size << ", had "
-              << partial_message->partial_deliveries
-              << ", for: " << result->header.rcvinfo.rcv_sid << ","
-              << result->header.rcvinfo.rcv_ssn << ","
-              << result->header.rcvinfo.rcv_assoc_id;
+      ABSL_VLOG(2) << "Merged fragment of " << result->size << " after "
+                   << partial_message->size << ", had "
+                   << partial_message->partial_deliveries
+                   << ", for: " << result->header.rcvinfo.rcv_sid << ","
+                   << result->header.rcvinfo.rcv_ssn << ","
+                   << result->header.rcvinfo.rcv_assoc_id;
       partial_message->size += result->size;
       FreeMessage(std::move(result));
     }
@@ -621,19 +625,20 @@ aos::unique_c_ptr<Message> SctpReadWrite::ReadMessage() {
         ABSL_CHECK(!result);
         result = std::move(*partial_message_iterator);
         partial_messages_.erase(partial_message_iterator);
-        VLOG(1) << "Final count: " << (result->partial_deliveries + 1)
-                << ", size: " << result->size
-                << ", for: " << result->header.rcvinfo.rcv_sid << ","
-                << result->header.rcvinfo.rcv_ssn << ","
-                << result->header.rcvinfo.rcv_assoc_id;
+        ABSL_VLOG(1) << "Final count: " << (result->partial_deliveries + 1)
+                     << ", size: " << result->size
+                     << ", for: " << result->header.rcvinfo.rcv_sid << ","
+                     << result->header.rcvinfo.rcv_ssn << ","
+                     << result->header.rcvinfo.rcv_assoc_id;
       }
       ABSL_CHECK(result);
       return result;
     }
     if (partial_message_iterator == partial_messages_.end()) {
-      VLOG(2) << "Starting fragment for: " << result->header.rcvinfo.rcv_sid
-              << "," << result->header.rcvinfo.rcv_ssn << ","
-              << result->header.rcvinfo.rcv_assoc_id;
+      ABSL_VLOG(2) << "Starting fragment for: "
+                   << result->header.rcvinfo.rcv_sid << ","
+                   << result->header.rcvinfo.rcv_ssn << ","
+                   << result->header.rcvinfo.rcv_assoc_id;
       // Need to record this as the first fragment.
       partial_messages_.emplace_back(std::move(result));
       if (use_pool_) {
@@ -652,7 +657,7 @@ bool SctpReadWrite::Abort(sctp_assoc_t snd_assoc_id) {
   if (fd_ == -1) {
     return true;
   }
-  VLOG(1) << "Sending abort to assoc " << snd_assoc_id;
+  ABSL_VLOG(1) << "Sending abort to assoc " << snd_assoc_id;
 
   // Use the assoc_id for the destination instead of the msg_name.
   struct msghdr outmsg;
@@ -695,7 +700,7 @@ void SctpReadWrite::CloseSocket() {
   if (fd_ == -1) {
     return;
   }
-  LOG(INFO) << "close(" << fd_ << ")";
+  ABSL_LOG(INFO) << "close(" << fd_ << ")";
   ABSL_PCHECK(close(fd_) == 0);
   fd_ = -1;
 }
@@ -717,7 +722,7 @@ void SctpReadWrite::DoSetMaxSize() {
       << max_size;
   ABSL_PCHECK(setsockopt(fd(), SOL_SOCKET, SO_SNDBUF, &max_size,
                          sizeof(max_size)) == 0);
-  VLOG(1) << "Set SO_SNDBUF of socket " << fd() << " to " << max_size;
+  ABSL_VLOG(1) << "Set SO_SNDBUF of socket " << fd() << " to " << max_size;
 
   // The SO_RCVBUF option (also controlled by net.core.rmem_default) needs to be
   // decently large but the actual size can be measured by tuning.  The defaults
@@ -756,10 +761,10 @@ bool SctpReadWrite::ProcessNotification(const Message *message) {
           ABSL_CHECK(iterator != partial_messages_.end())
               << ": Got out of sync with the kernel for "
               << partial_delivery->pdapi_assoc_id;
-          VLOG(1) << "Pruning partial delivery for "
-                  << iterator->get()->header.rcvinfo.rcv_sid << ","
-                  << iterator->get()->header.rcvinfo.rcv_ssn << ","
-                  << iterator->get()->header.rcvinfo.rcv_assoc_id;
+          ABSL_VLOG(1) << "Pruning partial delivery for "
+                       << iterator->get()->header.rcvinfo.rcv_sid << ","
+                       << iterator->get()->header.rcvinfo.rcv_ssn << ","
+                       << iterator->get()->header.rcvinfo.rcv_assoc_id;
           FreeMessage(std::move(*iterator));
           partial_messages_.erase(iterator);
         }
@@ -785,8 +790,9 @@ void SctpReadWrite::SetAuthKey(absl::Span<const uint8_t> auth_key) {
   }
 
 #if !(HAS_SCTP_AUTH)
-  LOG(FATAL) << "SCTP Authentication key requested, but authentication isn't "
-                "available... You may need a newer kernel";
+  ABSL_LOG(FATAL)
+      << "SCTP Authentication key requested, but authentication isn't "
+         "available... You may need a newer kernel";
 #else
   // Set up the key with id `1`.
   // NOTE: `sctp_authkey` is a variable-sized struct since it holds a variable
@@ -795,7 +801,7 @@ void SctpReadWrite::SetAuthKey(absl::Span<const uint8_t> auth_key) {
   constexpr size_t MAX_KEY_LENGTH = 32;
 
   if (auth_key.size() > MAX_KEY_LENGTH) {
-    LOG(FATAL)
+    ABSL_LOG(FATAL)
         << "Unexpected SCTP key size: " << auth_key.size()
         << ". Maximum allowed key size is currently set to: " << MAX_KEY_LENGTH
         << ". If the SCTP key has changed, make sure to update the maximum "
@@ -812,14 +818,14 @@ void SctpReadWrite::SetAuthKey(absl::Span<const uint8_t> auth_key) {
   if (setsockopt(fd(), IPPROTO_SCTP, SCTP_AUTH_KEY, authkey,
                  sizeof(auth_key_buffer)) != 0) {
     if (errno == EACCES) {
-      if (VLOG_IS_ON(1)) {
+      if (ABSL_VLOG_IS_ON(1)) {
         // TODO(adam.snaider): Figure out why this fails when expected nodes are
         // not connected.
-        PLOG_EVERY_N(ERROR, 100) << "Setting authentication key failed";
+        ABSL_PLOG_EVERY_N(ERROR, 100) << "Setting authentication key failed";
       }
       return;
     } else {
-      PLOG(FATAL) << "Setting authentication key failed";
+      ABSL_PLOG(FATAL) << "Setting authentication key failed";
     }
   }
 
@@ -829,19 +835,19 @@ void SctpReadWrite::SetAuthKey(absl::Span<const uint8_t> auth_key) {
   authkeyid.scact_assoc_id = SCTP_ALL_ASSOC;
   if (setsockopt(fd(), IPPROTO_SCTP, SCTP_AUTH_ACTIVE_KEY, &authkeyid,
                  sizeof(authkeyid)) != 0) {
-    PLOG(FATAL) << "Setting key id `1` as active failed";
+    ABSL_PLOG(FATAL) << "Setting key id `1` as active failed";
   }
   current_key_.assign(auth_key.begin(), auth_key.end());
 #endif
 }  // namespace message_bridge
 
 void Message::LogRcvInfo() const {
-  LOG(INFO) << "\tSNDRCV (stream=" << header.rcvinfo.rcv_sid
-            << " ssn=" << header.rcvinfo.rcv_ssn
-            << " tsn=" << header.rcvinfo.rcv_tsn << " flags=0x" << std::hex
-            << header.rcvinfo.rcv_flags << std::dec
-            << " ppid=" << header.rcvinfo.rcv_ppid
-            << " cumtsn=" << header.rcvinfo.rcv_cumtsn << ")";
+  ABSL_LOG(INFO) << "\tSNDRCV (stream=" << header.rcvinfo.rcv_sid
+                 << " ssn=" << header.rcvinfo.rcv_ssn
+                 << " tsn=" << header.rcvinfo.rcv_tsn << " flags=0x" << std::hex
+                 << header.rcvinfo.rcv_flags << std::dec
+                 << " ppid=" << header.rcvinfo.rcv_ppid
+                 << " cumtsn=" << header.rcvinfo.rcv_cumtsn << ")";
 }
 
 size_t ReadRMemMax() {
@@ -850,8 +856,9 @@ size_t ReadRMemMax() {
     return static_cast<size_t>(
         std::stoi(util::ReadFileToStringOrDie("/proc/sys/net/core/rmem_max")));
   } else {
-    LOG(WARNING) << "/proc/sys/net/core/rmem_max doesn't exist.  Are you in a "
-                    "container?";
+    ABSL_LOG(WARNING)
+        << "/proc/sys/net/core/rmem_max doesn't exist.  Are you in a "
+           "container?";
     return 212992;
   }
 }
@@ -862,8 +869,9 @@ size_t ReadWMemMax() {
     return static_cast<size_t>(
         std::stoi(util::ReadFileToStringOrDie("/proc/sys/net/core/wmem_max")));
   } else {
-    LOG(WARNING) << "/proc/sys/net/core/wmem_max doesn't exist.  Are you in a "
-                    "container?";
+    ABSL_LOG(WARNING)
+        << "/proc/sys/net/core/wmem_max doesn't exist.  Are you in a "
+           "container?";
     return 212992;
   }
 }

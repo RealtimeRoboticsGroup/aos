@@ -173,7 +173,7 @@ class HybridEkf {
       }
       auto pushed = functors_.PushFromBottom(Pair{t, std::move(H)});
       if (pushed == functors_.end()) {
-        VLOG(1) << "Observation dropped off bottom of queue.";
+        ABSL_VLOG(1) << "Observation dropped off bottom of queue.";
         return;
       }
       ekf_->AddObservation(z, U, nullptr, &pushed->functor.value(), R, t);
@@ -540,13 +540,13 @@ void HybridEkf<Scalar>::AddObservation(
        observation_builder, expected_observations, R, StateSquare::Identity(),
        StateSquare::Zero(), std::chrono::seconds(0), State::Zero()});
   if (cur_it == observations_.end()) {
-    VLOG(1) << "Camera dropped off of end with time of "
-            << aos::time::DurationInSeconds(t.time_since_epoch())
-            << "s; earliest observation in "
-               "queue has time of "
-            << aos::time::DurationInSeconds(
-                   observations_.begin()->t.time_since_epoch())
-            << "s.\n";
+    ABSL_VLOG(1) << "Camera dropped off of end with time of "
+                 << aos::time::DurationInSeconds(t.time_since_epoch())
+                 << "s; earliest observation in "
+                    "queue has time of "
+                 << aos::time::DurationInSeconds(
+                        observations_.begin()->t.time_since_epoch())
+                 << "s.\n";
     return;
   }
   // Now we populate any state information that depends on where the

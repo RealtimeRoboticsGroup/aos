@@ -10,7 +10,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "flatbuffers/flatbuffers.h"
 
 #include "aos/condition.h"
@@ -224,8 +224,8 @@ class LogReader {
       SimulatedEventLoopFactory *event_loop_factory);
   // Identical to RegisterWithoutStarting(), except that certain classes of
   // errors will result in an error value being returned rather than resulting
-  // in a LOG(FATAL). If this returns an error, log reading has failed and the
-  // log reader may now be in an inconsistent state.
+  // in a ABSL_LOG(FATAL). If this returns an error, log reading has failed and
+  // the log reader may now be in an inconsistent state.
   [[nodiscard]] virtual Status NonFatalRegisterWithoutStarting(
       SimulatedEventLoopFactory *event_loop_factory);
   // Runs the log until the last start time.  Register above is defined as:
@@ -647,11 +647,11 @@ class LogReader {
           monotonic_start_time(boot_count());
       if (start_time == monotonic_clock::min_time) {
         if (event_loop_->node()) {
-          LOG(ERROR) << "No start time for "
-                     << event_loop_->node()->name()->string_view()
-                     << ", skipping.";
+          ABSL_LOG(ERROR) << "No start time for "
+                          << event_loop_->node()->name()->string_view()
+                          << ", skipping.";
         } else {
-          LOG(ERROR) << "No start time, skipping.";
+          ABSL_LOG(ERROR) << "No start time, skipping.";
         }
 
         // This is called from OnRun. There is too much complexity in supporting

@@ -1,7 +1,7 @@
 #include "aos/uuid.h"
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 
 namespace aos::testing {
@@ -9,7 +9,7 @@ namespace aos::testing {
 // Tests that random UUIDs are actually random, and we can convert them to a
 // string.  Not very exhaustive, but it is a good smoke test.
 TEST(UUIDTest, GetOne) {
-  LOG(INFO) << UUID::Random();
+  ABSL_LOG(INFO) << UUID::Random();
 
   UUID r = UUID::Random();
 

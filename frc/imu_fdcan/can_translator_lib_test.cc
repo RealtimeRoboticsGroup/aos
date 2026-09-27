@@ -1,7 +1,7 @@
 #include "frc/imu_fdcan/can_translator_lib.h"
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 
 #include "aos/events/simulated_event_loop.h"

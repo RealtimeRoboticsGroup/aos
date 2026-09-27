@@ -3,7 +3,7 @@
 #include <numbers>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "frc/zeroing/wrap.h"
 
@@ -78,8 +78,8 @@ TurretGoal AimerGoal(const ShotConfig &config, const RobotState &state) {
             state.pose, {state.velocity(0), state.velocity(1), 0}, config.goal,
             virtual_goal, config.ball_speed_over_ground);
       }
-      VLOG(1) << "Shooting-on-the-fly target position: "
-              << virtual_goal.abs_pos().transpose();
+      ABSL_VLOG(1) << "Shooting-on-the-fly target position: "
+                   << virtual_goal.abs_pos().transpose();
     }
     virtual_goal = virtual_goal.Rebase(&state.pose);
   }
@@ -112,9 +112,9 @@ TurretGoal AimerGoal(const ShotConfig &config, const RobotState &state) {
       (squared_norm < 1e-3)
           ? 0.0
           : (rel_x * rel_ydot - rel_y * rel_xdot) / squared_norm;
-  VLOG(1) << "atan diff " << atan_diff << " relx, rely " << rel_x << ", "
-          << rel_y << " relx/ydot " << rel_xdot << ", " << rel_ydot << " norm "
-          << squared_norm;
+  ABSL_VLOG(1) << "atan diff " << atan_diff << " relx, rely " << rel_x << ", "
+               << rel_y << " relx/ydot " << rel_xdot << ", " << rel_ydot
+               << " norm " << squared_norm;
   // heading = atan2(relative_y, relative_x) - robot_theta
   // dheading / dt =
   //     (rel_x * rel_y' - rel_y * rel_x') / (rel_x^2 + rel_y^2) - dtheta / dt

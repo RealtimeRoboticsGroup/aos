@@ -74,7 +74,7 @@ void AB(const DrivetrainConfig<double> &dt_config,
   } else {
     // We allow a FATAL error here since this should only be called during
     // initialization.
-    LOG(FATAL) << "Failed to solve for K: " << K.error();
+    ABSL_LOG(FATAL) << "Failed to solve for K: " << K.error();
   }
 }
 

@@ -188,22 +188,22 @@ bool CliUtilInfo::Initialize(
       }
 
       if (!absl::GetFlag(FLAGS_all) && !channel_filter(channel)) {
-        LOG(FATAL) << "matched channel does not pass the channel filter: \""
-                   << channel_filter_description
-                   << "\" [matched channel info]: "
-                   << configuration::CleanedChannelToString(channel);
+        ABSL_LOG(FATAL)
+            << "matched channel does not pass the channel filter: \""
+            << channel_filter_description << "\" [matched channel info]: "
+            << configuration::CleanedChannelToString(channel);
       }
 
       found_channels_now.push_back(channel);
     }
 
     if (found_channels_now.empty()) {
-      LOG(FATAL)
+      ABSL_LOG(FATAL)
           << "Could not find any channels with the given name and type for "
           << channel_name << " " << message_type;
     } else if (found_channels_now.size() > 1 && !message_type.empty()) {
-      LOG(FATAL) << "Multiple channels found with same type for "
-                 << channel_name << " " << message_type;
+      ABSL_LOG(FATAL) << "Multiple channels found with same type for "
+                      << channel_name << " " << message_type;
     }
     for (const aos::Channel *channel : found_channels_now) {
       found_channels.push_back(channel);

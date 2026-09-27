@@ -3,7 +3,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_cat.h"
 #include "gtest/gtest.h"
 
@@ -113,7 +113,7 @@ TEST_P(MessageBridgeParameterizedTest, PingPong) {
                                         this](const examples::Ping &ping) {
     EXPECT_EQ(pong_event_loop.context().source_boot_uuid, pi1_.boot_uuid_);
     ++pong_count;
-    VLOG(1) << "Got ping back " << FlatbufferToJson(&ping);
+    ABSL_VLOG(1) << "Got ping back " << FlatbufferToJson(&ping);
   });
 
   absl::SetFlag(&FLAGS_override_hostname, "");
@@ -125,7 +125,8 @@ TEST_P(MessageBridgeParameterizedTest, PingPong) {
       "/pi1/aos",
       [this, &ping_count, &ping_sender, &pi1_server_statistics_count,
        &long_data](const ServerStatistics &stats) {
-        VLOG(1) << "/pi1/aos ServerStatistics " << FlatbufferToJson(&stats);
+        ABSL_VLOG(1) << "/pi1/aos ServerStatistics "
+                     << FlatbufferToJson(&stats);
 
         ASSERT_TRUE(stats.has_connections());
         EXPECT_EQ(stats.connections()->size(), 1);
@@ -159,7 +160,7 @@ TEST_P(MessageBridgeParameterizedTest, PingPong) {
         }
 
         if (connected) {
-          VLOG(1) << "Connected!  Sent ping.";
+          ABSL_VLOG(1) << "Connected!  Sent ping.";
           auto builder = ping_sender.MakeBuilder();
           builder.fbb()->CreateString(long_data);
           examples::Ping::Builder ping_builder =
@@ -175,7 +176,7 @@ TEST_P(MessageBridgeParameterizedTest, PingPong) {
   int pi2_server_statistics_count = 0;
   pong_event_loop.MakeWatcher("/pi2/aos", [&pi2_server_statistics_count](
                                               const ServerStatistics &stats) {
-    VLOG(1) << "/pi2/aos ServerStatistics " << FlatbufferToJson(&stats);
+    ABSL_VLOG(1) << "/pi2/aos ServerStatistics " << FlatbufferToJson(&stats);
     for (const ServerConnection *connection : *stats.connections()) {
       if (connection->has_monotonic_offset()) {
         ++pi2_server_statistics_count;
@@ -213,7 +214,8 @@ TEST_P(MessageBridgeParameterizedTest, PingPong) {
       "/pi1/aos",
       [&pi1_client_statistics_count,
        &pi1_connected_client_statistics_count](const ClientStatistics &stats) {
-        VLOG(1) << "/pi1/aos ClientStatistics " << FlatbufferToJson(&stats);
+        ABSL_VLOG(1) << "/pi1/aos ClientStatistics "
+                     << FlatbufferToJson(&stats);
 
         for (const ClientConnection *connection : *stats.connections()) {
           if (connection->has_monotonic_offset()) {
@@ -256,7 +258,8 @@ TEST_P(MessageBridgeParameterizedTest, PingPong) {
       "/pi2/aos",
       [&pi2_client_statistics_count,
        &pi2_connected_client_statistics_count](const ClientStatistics &stats) {
-        VLOG(1) << "/pi2/aos ClientStatistics " << FlatbufferToJson(&stats);
+        ABSL_VLOG(1) << "/pi2/aos ClientStatistics "
+                     << FlatbufferToJson(&stats);
 
         for (const ClientConnection *connection : *stats.connections()) {
           if (connection->has_monotonic_offset()) {
@@ -293,11 +296,11 @@ TEST_P(MessageBridgeParameterizedTest, PingPong) {
 
   ping_event_loop.MakeWatcher("/pi1/aos", [](const Timestamp &timestamp) {
     EXPECT_TRUE(timestamp.has_offsets());
-    VLOG(1) << "/pi1/aos Timestamp " << FlatbufferToJson(&timestamp);
+    ABSL_VLOG(1) << "/pi1/aos Timestamp " << FlatbufferToJson(&timestamp);
   });
   pong_event_loop.MakeWatcher("/pi2/aos", [](const Timestamp &timestamp) {
     EXPECT_TRUE(timestamp.has_offsets());
-    VLOG(1) << "/pi2/aos Timestamp " << FlatbufferToJson(&timestamp);
+    ABSL_VLOG(1) << "/pi2/aos Timestamp " << FlatbufferToJson(&timestamp);
   });
 
   // Find the channel index for both the /pi1/aos Timestamp channel and Ping
@@ -309,10 +312,10 @@ TEST_P(MessageBridgeParameterizedTest, PingPong) {
                                   ping_on_pi2_fetcher.channel());
 
   for (const Channel *channel : *ping_event_loop.configuration()->channels()) {
-    VLOG(1) << "Channel "
-            << configuration::ChannelIndex(ping_event_loop.configuration(),
-                                           channel)
-            << " " << configuration::CleanedChannelToString(channel);
+    ABSL_VLOG(1) << "Channel "
+                 << configuration::ChannelIndex(ping_event_loop.configuration(),
+                                                channel)
+                 << " " << configuration::CleanedChannelToString(channel);
   }
 
   // For each remote timestamp we get back, confirm that it is either a ping
@@ -334,8 +337,8 @@ TEST_P(MessageBridgeParameterizedTest, PingPong) {
          &ping_on_pi1_fetcher, &pi1_on_pi2_timestamp_fetcher,
          &pi1_on_pi1_timestamp_fetcher,
          channel_index = channel.first](const RemoteMessage &header) {
-          VLOG(1) << "/pi1/aos/remote_timestamps/pi2 RemoteMessage "
-                  << aos::FlatbufferToJson(&header);
+          ABSL_VLOG(1) << "/pi1/aos/remote_timestamps/pi2 RemoteMessage "
+                       << aos::FlatbufferToJson(&header);
 
           EXPECT_TRUE(header.has_boot_uuid());
           if (channel_index != -1) {
@@ -370,7 +373,7 @@ TEST_P(MessageBridgeParameterizedTest, PingPong) {
               ASSERT_TRUE(pi1_on_pi1_timestamp_fetcher.FetchNext());
             }
 
-            VLOG(1) << "On the Timestamp channel";
+            ABSL_VLOG(1) << "On the Timestamp channel";
             pi1_context = &pi1_on_pi1_timestamp_fetcher.context();
             pi2_context = &pi1_on_pi2_timestamp_fetcher.context();
           } else if (header.channel_index() == ping_timestamp_channel) {
@@ -386,11 +389,11 @@ TEST_P(MessageBridgeParameterizedTest, PingPong) {
               ASSERT_TRUE(ping_on_pi1_fetcher.FetchNext());
             }
 
-            VLOG(1) << "On the Ping channel";
+            ABSL_VLOG(1) << "On the Ping channel";
             pi1_context = &ping_on_pi1_fetcher.context();
             pi2_context = &ping_on_pi2_fetcher.context();
           } else {
-            LOG(FATAL) << "Unknown channel";
+            ABSL_LOG(FATAL) << "Unknown channel";
           }
 
           // Confirm the forwarded message has matching timestamps to the
@@ -426,10 +429,10 @@ TEST_P(MessageBridgeParameterizedTest, PingPong) {
   ThreadedEventLoopRunner pong_thread(&pong_event_loop);
   ThreadedEventLoopRunner ping_thread(&ping_event_loop);
 
-  LOG(INFO) << "Starting servers.";
+  ABSL_LOG(INFO) << "Starting servers.";
   pi1_.StartServer();
   pi2_.StartServer();
-  LOG(INFO) << "Starting clients.";
+  ABSL_LOG(INFO) << "Starting clients.";
 
   // Wait a bit so all the queue indices don't match across the nodes.  This
   // makes it so that Timestamp messages will get dropped.  That means that the
@@ -860,8 +863,8 @@ TEST_P(MessageBridgeParameterizedTest, ReliableSentBeforeClientStartup) {
   pi1_remote_timestamp_event_loop.MakeWatcher(
       channel_name, [this, channel_name, ping_channel_index,
                      &ping_timestamp_count](const RemoteMessage &header) {
-        VLOG(1) << channel_name << " RemoteMessage "
-                << aos::FlatbufferToJson(&header);
+        ABSL_VLOG(1) << channel_name << " RemoteMessage "
+                     << aos::FlatbufferToJson(&header);
         EXPECT_TRUE(header.has_boot_uuid());
         if (shared() && header.channel_index() != ping_channel_index) {
           return;
@@ -997,8 +1000,8 @@ TEST_P(MessageBridgeParameterizedTest, ReliableSentBeforeServerStartup) {
   pi1_remote_timestamp_event_loop.MakeWatcher(
       channel_name, [this, channel_name, ping_channel_index,
                      &ping_timestamp_count](const RemoteMessage &header) {
-        VLOG(1) << channel_name << " RemoteMessage "
-                << aos::FlatbufferToJson(&header);
+        ABSL_VLOG(1) << channel_name << " RemoteMessage "
+                     << aos::FlatbufferToJson(&header);
         EXPECT_TRUE(header.has_boot_uuid());
         if (shared() && header.channel_index() != ping_channel_index) {
           return;
@@ -1048,7 +1051,7 @@ TEST_P(MessageBridgeParameterizedTest, ReliableSentBeforeServerStartup) {
 
     EXPECT_FALSE(unreliable_ping_fetcher.Fetch());
     EXPECT_EQ(ping_timestamp_count, 1);
-    LOG(INFO) << "Shutting down first pi1 MessageBridgeServer";
+    ABSL_LOG(INFO) << "Shutting down first pi1 MessageBridgeServer";
 
     pi1_.StopServer();
   }
@@ -1128,8 +1131,8 @@ TEST_P(MessageBridgeParameterizedTest, ReliableSentDuringClientReboot) {
   pi1_remote_timestamp_event_loop.MakeWatcher(
       channel_name, [this, channel_name, ping_channel_index,
                      &ping_timestamp_count](const RemoteMessage &header) {
-        VLOG(1) << channel_name << " RemoteMessage "
-                << aos::FlatbufferToJson(&header);
+        ABSL_VLOG(1) << channel_name << " RemoteMessage "
+                     << aos::FlatbufferToJson(&header);
         EXPECT_TRUE(header.has_boot_uuid());
         if (shared() && header.channel_index() != ping_channel_index) {
           return;
@@ -1310,10 +1313,10 @@ TEST_P(MessageBridgeParameterizedTest, MismatchedSha256) {
     EXPECT_EQ(pi1_client_connection->state(), State::CONNECTED);
     EXPECT_EQ(pi1_client_connection->connection_count(), 1u);
 
-    VLOG(1) << aos::FlatbufferToJson(pi2_server_statistics_fetcher.get());
-    VLOG(1) << aos::FlatbufferToJson(pi1_server_statistics_fetcher.get());
-    VLOG(1) << aos::FlatbufferToJson(pi2_client_statistics_fetcher.get());
-    VLOG(1) << aos::FlatbufferToJson(pi1_client_statistics_fetcher.get());
+    ABSL_VLOG(1) << aos::FlatbufferToJson(pi2_server_statistics_fetcher.get());
+    ABSL_VLOG(1) << aos::FlatbufferToJson(pi1_server_statistics_fetcher.get());
+    ABSL_VLOG(1) << aos::FlatbufferToJson(pi2_client_statistics_fetcher.get());
+    ABSL_VLOG(1) << aos::FlatbufferToJson(pi1_client_statistics_fetcher.get());
 
     pi2_.StopClient();
   }
@@ -1460,9 +1463,9 @@ TEST_P(MessageBridgeParameterizedTest, TooBigConnect) {
     EXPECT_EQ(pi1_client_connection->state(), State::CONNECTED);
     EXPECT_EQ(pi1_client_connection->connection_count(), 1u);
 
-    VLOG(1) << aos::FlatbufferToJson(pi2_server_statistics_fetcher.get());
-    VLOG(1) << aos::FlatbufferToJson(pi1_server_statistics_fetcher.get());
-    VLOG(1) << aos::FlatbufferToJson(pi1_client_statistics_fetcher.get());
+    ABSL_VLOG(1) << aos::FlatbufferToJson(pi2_server_statistics_fetcher.get());
+    ABSL_VLOG(1) << aos::FlatbufferToJson(pi1_server_statistics_fetcher.get());
+    ABSL_VLOG(1) << aos::FlatbufferToJson(pi1_client_statistics_fetcher.get());
 
     pi2_.client_event_loop_->epoll()->DeleteFd(client.fd());
 

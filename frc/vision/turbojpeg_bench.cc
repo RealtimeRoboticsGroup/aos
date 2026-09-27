@@ -13,9 +13,9 @@
 #include <cstring>
 #include <vector>
 
+#include "absl/log/absl_log.h"
 #include "absl/log/globals.h"
 #include "absl/log/initialize.h"
-#include "absl/log/log.h"
 #include "absl/strings/str_format.h"
 
 #include "turbojpeg.h"
@@ -24,14 +24,15 @@ int main(int argc, char **argv) {
   absl::InitializeLog();
   absl::SetStderrThreshold(absl::LogSeverityAtLeast::kInfo);
   if (argc < 2) {
-    LOG(ERROR) << "usage: " << argv[0] << " <file.jpg> [iterations] [out.pgm]";
+    ABSL_LOG(ERROR) << "usage: " << argv[0]
+                    << " <file.jpg> [iterations] [out.pgm]";
     return 1;
   }
   const int iterations = argc > 2 ? atoi(argv[2]) : 20;
 
   FILE *f = fopen(argv[1], "rb");
   if (f == nullptr) {
-    LOG(ERROR) << "open " << argv[1] << ": " << strerror(errno);
+    ABSL_LOG(ERROR) << "open " << argv[1] << ": " << strerror(errno);
     return 1;
   }
   fseek(f, 0, SEEK_END);
@@ -39,14 +40,14 @@ int main(int argc, char **argv) {
   fseek(f, 0, SEEK_SET);
   std::vector<unsigned char> jpeg(file_size);
   if (fread(jpeg.data(), 1, file_size, f) != static_cast<size_t>(file_size)) {
-    LOG(ERROR) << "short read of " << argv[1];
+    ABSL_LOG(ERROR) << "short read of " << argv[1];
     return 1;
   }
   fclose(f);
 
   tjhandle handle = tjInitDecompress();
   if (handle == nullptr) {
-    LOG(ERROR) << "tjInitDecompress failed";
+    ABSL_LOG(ERROR) << "tjInitDecompress failed";
     return 1;
   }
 
@@ -61,13 +62,13 @@ int main(int argc, char **argv) {
     int subsamp = 0, colorspace = 0;
     if (tjDecompressHeader3(handle, jpeg.data(), jpeg.size(), &width, &height,
                             &subsamp, &colorspace) != 0) {
-      LOG(ERROR) << "tjDecompressHeader3 failed: " << tjGetErrorStr();
+      ABSL_LOG(ERROR) << "tjDecompressHeader3 failed: " << tjGetErrorStr();
       return 1;
     }
     gray.resize(static_cast<size_t>(width) * height);
     if (tjDecompress2(handle, jpeg.data(), jpeg.size(), gray.data(), width,
                       0 /* pitch */, height, TJPF_GRAY, 0) != 0) {
-      LOG(ERROR) << "tjDecompress2 failed: " << tjGetErrorStr();
+      ABSL_LOG(ERROR) << "tjDecompress2 failed: " << tjGetErrorStr();
       return 1;
     }
 
@@ -77,25 +78,26 @@ int main(int argc, char **argv) {
     total_us += us;
     if (us < min_us) min_us = us;
     if (iter == 0) {
-      LOG(INFO) << absl::StrFormat("image: %dx%d, subsamp=%d, colorspace=%d",
-                                   width, height, subsamp, colorspace);
-      LOG(INFO) << absl::StrFormat("first decode: %.1f us", us);
+      ABSL_LOG(INFO) << absl::StrFormat(
+          "image: %dx%d, subsamp=%d, colorspace=%d", width, height, subsamp,
+          colorspace);
+      ABSL_LOG(INFO) << absl::StrFormat("first decode: %.1f us", us);
     }
   }
 
-  LOG(INFO) << absl::StrFormat("%d iterations: mean %.1f us, min %.1f us",
-                               iterations, total_us / iterations, min_us);
+  ABSL_LOG(INFO) << absl::StrFormat("%d iterations: mean %.1f us, min %.1f us",
+                                    iterations, total_us / iterations, min_us);
 
   if (argc > 3) {
     FILE *out = fopen(argv[3], "wb");
     if (out == nullptr) {
-      LOG(ERROR) << "open " << argv[3] << ": " << strerror(errno);
+      ABSL_LOG(ERROR) << "open " << argv[3] << ": " << strerror(errno);
       return 1;
     }
     fprintf(out, "P5\n%d %d\n255\n", width, height);
     fwrite(gray.data(), 1, gray.size(), out);
     fclose(out);
-    LOG(INFO) << "wrote " << argv[3];
+    ABSL_LOG(INFO) << "wrote " << argv[3];
   }
 
   tjDestroy(handle);

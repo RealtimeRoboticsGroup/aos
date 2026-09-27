@@ -10,7 +10,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/containers/resizeable_buffer.h"
 #include "aos/events/logging/log_backend.h"
@@ -48,14 +48,14 @@ aos::monotonic_clock::time_point start_time = aos::monotonic_clock::min_time;
 std::atomic<size_t> written_data = 0;
 
 void Cleanup() {
-  LOG(INFO) << "Overall average write speed: "
-            << ((written_data) /
-                chrono::duration<double>(aos::monotonic_clock::now() -
-                                         start_time)
-                    .count() /
-                1024. / 1024.)
-            << " MB/s for " << static_cast<double>(written_data) / 1024. / 1024.
-            << "MB";
+  ABSL_LOG(INFO) << "Overall average write speed: "
+                 << ((written_data) /
+                     chrono::duration<double>(aos::monotonic_clock::now() -
+                                              start_time)
+                         .count() /
+                     1024. / 1024.)
+                 << " MB/s for "
+                 << static_cast<double>(written_data) / 1024. / 1024. << "MB";
 
   // Delete FLAGS_file at shutdown
   ABSL_PCHECK(std::filesystem::remove(absl::GetFlag(FLAGS_file)) != 0)
@@ -171,10 +171,10 @@ int main(int argc, char **argv) {
         posix_fadvise(fd, written_data - data.size(), data.size(),
                       POSIX_FADV_DONTNEED);
       }
-      VLOG(1) << "Took "
-              << chrono::duration<double>(aos::monotonic_clock::now() -
-                                          monotonic_now)
-                     .count();
+      ABSL_VLOG(1) << "Took "
+                   << chrono::duration<double>(aos::monotonic_clock::now() -
+                                               monotonic_now)
+                          .count();
     }
 
     written_data += data.size();
@@ -200,16 +200,16 @@ int main(int argc, char **argv) {
         const auto sleep_duration =
             (cycle_start_time + chrono::milliseconds(100)) - monotonic_now;
         if (sleep_duration.count() > 0) {
-          VLOG(2) << "Sleeping for " << sleep_duration.count();
+          ABSL_VLOG(2) << "Sleeping for " << sleep_duration.count();
           std::this_thread::sleep_for(sleep_duration);
         } else {
-          LOG(WARNING) << "It took longer than 100ms to write "
-                       << data_per_cycle << " bytes.";
+          ABSL_LOG(WARNING) << "It took longer than 100ms to write "
+                            << data_per_cycle << " bytes.";
         }
         reset_cycle = true;
       } else {
         // If we aren't on track, don't sleep.
-        LOG(WARNING) << "Still catching up to target write rate.";
+        ABSL_LOG(WARNING) << "Still catching up to target write rate.";
       }
       // Either way, reset the data we're counting for this "cycle". If we're
       // still behind, let's check again after writing another data_per_cycle
@@ -221,7 +221,7 @@ int main(int argc, char **argv) {
         aos::monotonic_clock::now();
     // Print out MB/s once it has been at least 1 second since last time.
     if (monotonic_now > last_print_time + chrono::seconds(1)) {
-      LOG(INFO)
+      ABSL_LOG(INFO)
           << ((written_data - last_written_data) /
               chrono::duration<double>(monotonic_now - last_print_time)
                   .count() /
@@ -240,7 +240,7 @@ int main(int argc, char **argv) {
     // accurately as possible.
     if (reset_cycle) {
       cycle_start_time = monotonic_now;
-      VLOG(1) << cycle_start_time;
+      ABSL_VLOG(1) << cycle_start_time;
     }
   }
 

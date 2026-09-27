@@ -7,8 +7,8 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
-#include "absl/log/vlog_is_on.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 #include "absl/strings/str_join.h"
 
 #include "aos/configuration.h"
@@ -61,13 +61,13 @@ ABSL_FLAG(bool, constrained_solve, true,
           "If true, use the constrained solver.  If false, only solve "
           "unconstrained.");
 
-#define SOLVE_VLOG_IS_ON(solve_number, v)                           \
-  (VLOG_IS_ON(v) || (static_cast<int32_t>(solve_number) ==          \
-                         absl::GetFlag(FLAGS_debug_solve_number) && \
-                     v <= absl::GetFlag(FLAGS_solve_verbosity)))
+#define SOLVE_VLOG_IS_ON(solve_number, v)                                \
+  (ABSL_VLOG_IS_ON(v) || (static_cast<int32_t>(solve_number) ==          \
+                              absl::GetFlag(FLAGS_debug_solve_number) && \
+                          v <= absl::GetFlag(FLAGS_solve_verbosity)))
 
 #define SOLVE_VLOG(solve_number, v) \
-  LOG_IF(INFO, SOLVE_VLOG_IS_ON(solve_number, v))
+  ABSL_LOG_IF(INFO, SOLVE_VLOG_IS_ON(solve_number, v))
 
 namespace aos::message_bridge {
 namespace {
@@ -168,8 +168,9 @@ bool TimestampProblem::ValidateSolution(std::vector<BootTimestamp> solution,
             filter.b_filter->timestamps_empty(base_clock_[filter.b_index].boot,
                                               base_clock_[i].boot)) {
           Debug();
-          LOG(FATAL) << "Found no timestamps in either direction between nodes "
-                     << i << " and " << filter.b_index;
+          ABSL_LOG(FATAL)
+              << "Found no timestamps in either direction between nodes " << i
+              << " and " << filter.b_index;
         }
         continue;
       }
@@ -496,8 +497,8 @@ Eigen::VectorXd NewtonSolver::Newton(const Eigen::Ref<const Eigen::VectorXd> y,
         -derivatives.Axmb;
   }
 
-  VLOG(2) << "A: " << a.format(kHeavyFormat);
-  VLOG(2) << "b: " << b.format(kHeavyFormat);
+  ABSL_VLOG(2) << "A: " << a.format(kHeavyFormat);
+  ABSL_VLOG(2) << "b: " << b.format(kHeavyFormat);
 
   Eigen::VectorXd step = a.colPivHouseholderQr().solve(b);
 
@@ -654,7 +655,7 @@ std::tuple<Eigen::VectorXd, size_t, size_t> NewtonSolver::SolveNewton(
   }
 
   if (iteration > max_iterations) {
-    LOG(ERROR) << "Failed to converge on solve " << my_solve_number();
+    ABSL_LOG(ERROR) << "Failed to converge on solve " << my_solve_number();
   }
 
   SOLVE_VLOG(my_solve_number_, 1)
@@ -903,22 +904,23 @@ std::vector<BootTimestamp> TimestampProblem::PackResults(
           base_clock(i).time + std::chrono::nanoseconds(static_cast<int64_t>(
                                    std::round(y(NodeToFullSolutionIndex(i)))));
       if (print) {
-        LOG(INFO) << "    live " << points_[i] << " vs solution "
-                  << result[i].time << " "
-                  << (y(NodeToFullSolutionIndex(i)) -
-                      std::round(y(NodeToFullSolutionIndex(i))))
-                  << " (unrounded: " << y(NodeToFullSolutionIndex(i)) << ") dt "
-                  << (points_[i].time -
-                      (base_clock_[i].time +
-                       std::chrono::nanoseconds(static_cast<int64_t>(
-                           std::round(y(NodeToFullSolutionIndex(i)))))))
-                         .count()
-                  << "ns";
+        ABSL_LOG(INFO) << "    live " << points_[i] << " vs solution "
+                       << result[i].time << " "
+                       << (y(NodeToFullSolutionIndex(i)) -
+                           std::round(y(NodeToFullSolutionIndex(i))))
+                       << " (unrounded: " << y(NodeToFullSolutionIndex(i))
+                       << ") dt "
+                       << (points_[i].time -
+                           (base_clock_[i].time +
+                            std::chrono::nanoseconds(static_cast<int64_t>(
+                                std::round(y(NodeToFullSolutionIndex(i)))))))
+                              .count()
+                       << "ns";
       }
     } else {
       result[i] = BootTimestamp::min_time();
       if (print) {
-        LOG(INFO) << "  dead  " << result[i];
+        ABSL_LOG(INFO) << "  dead  " << result[i];
       }
     }
   }
@@ -1125,9 +1127,10 @@ NewtonSolver::SolveConstrainedNewton(
     PrintDerivatives(derivatives, y, "", 1);
 
     if (derivatives.f.rows() == 0) {
-      LOG(ERROR) << "No inequality constraints provided in constrained solver. "
-                    "This suggests an inconsistency in the solver code, please "
-                    "investigate.";
+      ABSL_LOG(ERROR)
+          << "No inequality constraints provided in constrained solver. "
+             "This suggests an inconsistency in the solver code, please "
+             "investigate.";
       return std::nullopt;
     }
 
@@ -1316,7 +1319,7 @@ NewtonSolver::SolveConstrainedNewton(
 
   if (iteration > max_iterations &&
       absl::GetFlag(FLAGS_crash_on_solve_failure)) {
-    LOG(ERROR) << "Failed to converge on solve " << my_solve_number_;
+    ABSL_LOG(ERROR) << "Failed to converge on solve " << my_solve_number_;
     return std::nullopt;
   }
 
@@ -1454,14 +1457,15 @@ void TimestampProblem::Debug() {
   }
 
   for (size_t i = 0u; i < clock_offset_filter_for_node_.size(); ++i) {
-    LOG(INFO) << (live(i) ? "live" : "dead") << " Grad[" << i << "] = "
-              << (gradients[i].empty() ? std::string("0.0")
-                                       : absl::StrJoin(gradients[i], " + "));
+    ABSL_LOG(INFO) << (live(i) ? "live" : "dead") << " Grad[" << i << "] = "
+                   << (gradients[i].empty()
+                           ? std::string("0.0")
+                           : absl::StrJoin(gradients[i], " + "));
   }
 
   for (size_t i = 0u; i < clock_offset_filter_for_node_.size(); ++i) {
-    LOG(INFO) << (live(i) ? "live" : "dead") << " base_clock[" << i
-              << "] = " << base_clock_[i];
+    ABSL_LOG(INFO) << (live(i) ? "live" : "dead") << " base_clock[" << i
+                   << "] = " << base_clock_[i];
   }
 }
 
@@ -1472,11 +1476,11 @@ InterpolatedTimeConverter::QueueNextTimestamp() {
       std::tuple<distributed_clock::time_point, std::vector<BootTimestamp>>>>
       next_time = NextTimestamp();
   if (!next_time.has_value()) {
-    VLOG(1) << "Error in processing timestamps.";
+    ABSL_VLOG(1) << "Error in processing timestamps.";
     return MakeError(next_time.error());
   }
   if (!next_time.value().has_value()) {
-    VLOG(1) << "Last timestamp, calling it quits";
+    ABSL_VLOG(1) << "Last timestamp, calling it quits";
     Result<std::optional<const std::tuple<distributed_clock::time_point,
                                           std::vector<BootTimestamp>> *>>
         result;
@@ -1487,10 +1491,10 @@ InterpolatedTimeConverter::QueueNextTimestamp() {
     return result;
   }
 
-  VLOG(1) << "Fetched next timestamp while solving: "
-          << std::get<0>(**next_time) << " ->";
+  ABSL_VLOG(1) << "Fetched next timestamp while solving: "
+               << std::get<0>(**next_time) << " ->";
   for (BootTimestamp t : std::get<1>(**next_time)) {
-    VLOG(1) << "  " << t;
+    ABSL_VLOG(1) << "  " << t;
   }
 
   ABSL_CHECK_EQ(node_count_, std::get<1>(**next_time).size());
@@ -1510,11 +1514,11 @@ InterpolatedTimeConverter::QueueNextTimestamp() {
     }
     if (rebooted) {
       ABSL_CHECK(reboot_found_);
-      if (VLOG_IS_ON(2)) {
-        VLOG(2) << "Notified reboot of";
+      if (ABSL_VLOG_IS_ON(2)) {
+        ABSL_VLOG(2) << "Notified reboot of";
         size_t node_index = 0;
         for (logger::BootTimestamp t : std::get<1>(**next_time)) {
-          VLOG(2) << "  Node " << node_index << " " << t;
+          ABSL_VLOG(2) << "  Node " << node_index << " " << t;
           ++node_index;
         }
       }
@@ -1534,15 +1538,15 @@ void InterpolatedTimeConverter::ObserveTimePassed(
       return;
     }
     if (std::get<0>(times_[1]) + time_estimation_buffer_seconds_ > time) {
-      VLOG(1) << "Not popping because "
-              << std::get<0>(times_[1]) + time_estimation_buffer_seconds_
-              << " > " << time;
+      ABSL_VLOG(1) << "Not popping because "
+                   << std::get<0>(times_[1]) + time_estimation_buffer_seconds_
+                   << " > " << time;
       return;
     }
 
-    VLOG(1) << "Popping sample because " << times_.size() << " > "
-            << kHistoryMinCount << " && " << std::get<0>(times_[1]) << " < "
-            << time - time_estimation_buffer_seconds_;
+    ABSL_VLOG(1) << "Popping sample because " << times_.size() << " > "
+                 << kHistoryMinCount << " && " << std::get<0>(times_[1])
+                 << " < " << time - time_estimation_buffer_seconds_;
     times_.pop_front();
     have_popped_ = true;
   }
@@ -1602,8 +1606,8 @@ InterpolatedTimeConverter::ToDistributedClock(size_t node_index,
     const distributed_clock::time_point result =
         time.time - std::get<1>(times_[0])[node_index].time +
         std::get<0>(times_[0]);
-    VLOG(3) << "ToDistributedClock(" << node_index << ", " << time << ") -> "
-            << result;
+    ABSL_VLOG(3) << "ToDistributedClock(" << node_index << ", " << time
+                 << ") -> " << result;
     return result;
   }
 
@@ -1631,32 +1635,32 @@ InterpolatedTimeConverter::ToDistributedClock(size_t node_index,
 
   if (time > t1) {
     const distributed_clock::time_point result = (time.time - t1.time) + d1;
-    VLOG(3) << "ToDistributedClock(" << node_index << ", " << time << ") -> "
-            << result;
+    ABSL_VLOG(3) << "ToDistributedClock(" << node_index << ", " << time
+                 << ") -> " << result;
     return result;
   }
 
   if (t0.boot != t1.boot) {
     if (t0.boot == time.boot) {
       const distributed_clock::time_point result = (time.time - t0.time) + d0;
-      VLOG(3) << "ToDistributedClock(" << node_index << ", " << time << ") -> "
-              << result;
+      ABSL_VLOG(3) << "ToDistributedClock(" << node_index << ", " << time
+                   << ") -> " << result;
       return result;
     } else if (t1.boot == time.boot) {
       const distributed_clock::time_point result = (time.time - t1.time) + d1;
-      VLOG(3) << "ToDistributedClock(" << node_index << ", " << time << ") -> "
-              << result;
+      ABSL_VLOG(3) << "ToDistributedClock(" << node_index << ", " << time
+                   << ") -> " << result;
       return result;
     } else {
-      LOG(FATAL) << t0 << " <= " << time << " <= " << t1;
+      ABSL_LOG(FATAL) << t0 << " <= " << time << " <= " << t1;
     }
   }
 
   const distributed_clock::time_point result =
       message_bridge::ToDistributedClock(d0, d1, t0.time, t1.time, time.time);
 
-  VLOG(3) << "ToDistributedClock(" << node_index << ", " << time << ") -> "
-          << result;
+  ABSL_VLOG(3) << "ToDistributedClock(" << node_index << ", " << time << ") -> "
+               << result;
   return result;
 }
 
@@ -1684,8 +1688,8 @@ Result<BootTimestamp> InterpolatedTimeConverter::FromDistributedClock(
     }
     monotonic_clock::time_point result =
         time - std::get<0>(times_[0]) + std::get<1>(times_[0])[node_index].time;
-    VLOG(3) << "FromDistributedClock(" << node_index << ", " << time << ", "
-            << boot_count << ") -> " << result;
+    ABSL_VLOG(3) << "FromDistributedClock(" << node_index << ", " << time
+                 << ", " << boot_count << ") -> " << result;
     return BootTimestamp{.boot = std::get<1>(times_[0])[node_index].boot,
                          .time = result};
   }
@@ -1719,29 +1723,29 @@ Result<BootTimestamp> InterpolatedTimeConverter::FromDistributedClock(
   if (time == d1) {
     if (boot_count == t1.boot) {
       const BootTimestamp result = t1 + (time - d1);
-      VLOG(3) << "FromDistributedClock(" << node_index << ", " << time << ", "
-              << boot_count << ") -> " << result;
+      ABSL_VLOG(3) << "FromDistributedClock(" << node_index << ", " << time
+                   << ", " << boot_count << ") -> " << result;
       return result;
     } else {
       ABSL_CHECK_EQ(boot_count, t0.boot);
       const BootTimestamp result = t0 + (time - d0);
-      VLOG(3) << "FromDistributedClock(" << node_index << ", " << time << ", "
-              << boot_count << ") -> " << result;
+      ABSL_VLOG(3) << "FromDistributedClock(" << node_index << ", " << time
+                   << ", " << boot_count << ") -> " << result;
       return result;
     }
   }
 
   if (time > d1) {
     const BootTimestamp result = t1 + (time - d1);
-    VLOG(3) << "FromDistributedClock(" << node_index << ", " << time << ", "
-            << boot_count << ") -> " << result;
+    ABSL_VLOG(3) << "FromDistributedClock(" << node_index << ", " << time
+                 << ", " << boot_count << ") -> " << result;
     return result;
   }
 
   if (t0.boot != t1.boot) {
     const BootTimestamp result = t0 + (time - d0);
-    VLOG(3) << "FromDistributedClock(" << node_index << ", " << time << ", "
-            << boot_count << ") -> " << result;
+    ABSL_VLOG(3) << "FromDistributedClock(" << node_index << ", " << time
+                 << ", " << boot_count << ") -> " << result;
     return result;
   }
 
@@ -1767,8 +1771,8 @@ Result<BootTimestamp> InterpolatedTimeConverter::FromDistributedClock(
   const monotonic_clock::time_point result =
       t0.time + std::chrono::nanoseconds(
                     static_cast<int64_t>(numerator / absl::int128(dd.count())));
-  VLOG(3) << "FromDistributedClock(" << node_index << ", " << time << ", "
-          << boot_count << ") -> " << result;
+  ABSL_VLOG(3) << "FromDistributedClock(" << node_index << ", " << time << ", "
+               << boot_count << ") -> " << result;
   return BootTimestamp{.boot = t0.boot, .time = result};
 }
 
@@ -1788,8 +1792,8 @@ MultiNodeNoncausalOffsetEstimator::MultiNodeNoncausalOffsetEstimator(
   const bool multi_node = configuration::MultiNode(logged_configuration);
   if (!boots_ && !multi_node) {
     // This is a super old log.  Fake out boots by making them up.
-    LOG(WARNING) << "Old single node log without boot UUIDs, generating a "
-                    "random boot UUID.";
+    ABSL_LOG(WARNING) << "Old single node log without boot UUIDs, generating a "
+                         "random boot UUID.";
     std::shared_ptr<logger::Boots> boots = std::make_shared<logger::Boots>();
     const UUID random_boot_uuid = UUID::Random();
     boots->boot_count_map.emplace(random_boot_uuid.ToString(), 0);
@@ -1878,11 +1882,11 @@ bool MultiNodeNoncausalOffsetEstimator::FlushAndClose(bool destructor) {
         std::optional<std::tuple<BootTimestamp, BootDuration>> next =
             filter.filter->Consume();
         if (next) {
-          LOG(ERROR) << "MultiNodeNoncausalOffsetEstimator reported all "
-                        "done, but "
-                     << node_a_index << " -> " << filter.b_index
-                     << " found more data at time " << std::get<0>(*next)
-                     << ".  Time estimation was silently wrong.";
+          ABSL_LOG(ERROR) << "MultiNodeNoncausalOffsetEstimator reported all "
+                             "done, but "
+                          << node_a_index << " -> " << filter.b_index
+                          << " found more data at time " << std::get<0>(*next)
+                          << ".  Time estimation was silently wrong.";
           if (!skip_order_validation_) {
             return false;
           }
@@ -1897,7 +1901,7 @@ bool MultiNodeNoncausalOffsetEstimator::FlushAndClose(bool destructor) {
     for (NodeSamples &node : node_samples_) {
       for (SingleNodeSamples &timestamps : node.nodes) {
         if (!timestamps.messages.empty()) {
-          LOG(ERROR) << "Timestamps still remaining.";
+          ABSL_LOG(ERROR) << "Timestamps still remaining.";
           return false;
         }
       }
@@ -2306,10 +2310,10 @@ void MultiNodeNoncausalOffsetEstimator::CheckGraph() {
     const BitSet64 orphaned_nodes = (~all_nodes) & full_set;
     for (size_t i = orphaned_nodes.FirstBitSet(0); i < orphaned_nodes.size();
          i = orphaned_nodes.FirstBitSet(i + 1)) {
-      LOG(ERROR) << "Node " << i << " is orphaned";
+      ABSL_LOG(ERROR) << "Node " << i << " is orphaned";
     }
 
-    LOG(FATAL) << "Found orphaned nodes";
+    ABSL_LOG(FATAL) << "Found orphaned nodes";
   }
 }
 
@@ -2459,9 +2463,9 @@ Result<TimestampProblem> MultiNodeNoncausalOffsetEstimator::MakeProblem() {
     for (size_t i = dead_nodes.FirstBitSet(0); i < dead_nodes.size();
          i = dead_nodes.FirstBitSet(i + 1)) {
       problem.set_live(i, false);
-      VLOG(1) << "Node " << i << " is dead";
+      ABSL_VLOG(1) << "Node " << i << " is dead";
     }
-    if (VLOG_IS_ON(2)) {
+    if (ABSL_VLOG_IS_ON(2)) {
       problem.Debug();
     }
   }
@@ -2476,7 +2480,7 @@ MultiNodeNoncausalOffsetEstimator::MakeCandidateTimes() const {
 
   size_t node_a_index = 0;
   for (const auto &filters : filters_per_node_) {
-    VLOG(2) << "Investigating filter for node " << node_a_index;
+    ABSL_VLOG(2) << "Investigating filter for node " << node_a_index;
     BootTimestamp next_node_time = BootTimestamp::max_time();
     BootDuration next_node_duration = BootDuration::max_time();
     size_t b_index = std::numeric_limits<size_t>::max();
@@ -2489,8 +2493,8 @@ MultiNodeNoncausalOffsetEstimator::MakeCandidateTimes() const {
           filter.filter->Observe();
 
       if (candidate) {
-        VLOG(2) << "Candidate for node " << node_a_index << " filter "
-                << filter_index << " is " << std::get<0>(*candidate);
+        ABSL_VLOG(2) << "Candidate for node " << node_a_index << " filter "
+                     << filter_index << " is " << std::get<0>(*candidate);
         if (std::get<0>(*candidate) < next_node_time) {
           next_node_time = std::get<0>(*candidate);
           next_node_duration = std::get<1>(*candidate);
@@ -2520,8 +2524,8 @@ MultiNodeNoncausalOffsetEstimator::MakeCandidateTimes() const {
       // Ignore that case.
       if (next_start_time < next_node_time &&
           next_start_time.time != monotonic_clock::min_time) {
-        VLOG(1) << "Candidate for node " << node_a_index
-                << " is the next startup time, " << next_start_time;
+        ABSL_VLOG(1) << "Candidate for node " << node_a_index
+                     << " is the next startup time, " << next_start_time;
         next_node_time = next_start_time;
         next_node_filter = nullptr;
         b_index = std::numeric_limits<size_t>::max();
@@ -2538,9 +2542,9 @@ MultiNodeNoncausalOffsetEstimator::MakeCandidateTimes() const {
           .time = timestamp_mappers_[node_a_index]->monotonic_oldest_time(
               next_boot)};
       if (next_oldest_time < next_node_time) {
-        VLOG(1) << "Candidate for node " << node_a_index
-                << " is the next oldest time, " << next_oldest_time
-                << " not applying yet";
+        ABSL_VLOG(1) << "Candidate for node " << node_a_index
+                     << " is the next oldest time, " << next_oldest_time
+                     << " not applying yet";
         next_node_time = next_oldest_time;
         next_node_filter = nullptr;
         b_index = std::numeric_limits<size_t>::max();
@@ -2584,12 +2588,12 @@ MultiNodeNoncausalOffsetEstimator::MakeCandidateTimes() const {
       break;
     }
   }
-  if (VLOG_IS_ON(1)) {
-    LOG(INFO) << "Boots all match: " << boots_all_match;
+  if (ABSL_VLOG_IS_ON(1)) {
+    ABSL_LOG(INFO) << "Boots all match: " << boots_all_match;
     for (size_t i = 0; i < candidate_times.size(); ++i) {
-      LOG(INFO) << "Candidate " << candidate_times[i].next_node_time
-                << " duration " << candidate_times[i].next_node_duration
-                << " (node " << candidate_times[i].b_index << ")";
+      ABSL_LOG(INFO) << "Candidate " << candidate_times[i].next_node_time
+                     << " duration " << candidate_times[i].next_node_duration
+                     << " (node " << candidate_times[i].b_index << ")";
     }
   }
 
@@ -2660,17 +2664,18 @@ MultiNodeNoncausalOffsetEstimator::SimultaneousSolution(
       if (!FlushAndClose(false)) {
         return std::nullopt;
       }
-      LOG(ERROR) << "Failed to converge.";
+      ABSL_LOG(ERROR) << "Failed to converge.";
       return std::nullopt;
     }
 
     if (!problem->ValidateSolution(solution, true)) {
       if (!absl::GetFlag(FLAGS_constrained_solve)) {
         problem->ValidateSolution(solution, false);
-        LOG(WARNING) << "Invalid solution, constraints not met for problem "
-                     << solver.my_solve_number();
+        ABSL_LOG(WARNING)
+            << "Invalid solution, constraints not met for problem "
+            << solver.my_solve_number();
         for (size_t i = 0; i < solution.size(); ++i) {
-          LOG(INFO) << "  " << solution[i];
+          ABSL_LOG(INFO) << "  " << solution[i];
         }
         problem->Debug();
         if (!skip_order_validation_) {
@@ -2678,8 +2683,9 @@ MultiNodeNoncausalOffsetEstimator::SimultaneousSolution(
           if (!FlushAndClose(false)) {
             return std::nullopt;
           }
-          LOG(ERROR) << "Bailing, use --skip_order_validation to continue.  "
-                        "Use at your own risk.";
+          ABSL_LOG(ERROR)
+              << "Bailing, use --skip_order_validation to continue.  "
+                 "Use at your own risk.";
           return std::nullopt;
         }
       } else {
@@ -2691,7 +2697,7 @@ MultiNodeNoncausalOffsetEstimator::SimultaneousSolution(
         }
 
         if (!absl::GetFlag(FLAGS_attempt_simultaneous_constrained_solve)) {
-          VLOG(1) << "Falling back to sequential constrained Newton.";
+          ABSL_VLOG(1) << "Falling back to sequential constrained Newton.";
           return SequentialSolution(problem, candidate_times, base_times);
         }
 
@@ -2712,15 +2718,16 @@ MultiNodeNoncausalOffsetEstimator::SimultaneousSolution(
           if (!FlushAndClose(false)) {
             return std::nullopt;
           }
-          LOG(ERROR) << "Failed to converge for problem "
-                     << solver.my_solve_number();
+          ABSL_LOG(ERROR) << "Failed to converge for problem "
+                          << solver.my_solve_number();
           return std::nullopt;
         }
         if (!problem->ValidateSolution(solution, false)) {
-          LOG(WARNING) << "Invalid solution, constraints not met for problem "
-                       << solver.my_solve_number();
+          ABSL_LOG(WARNING)
+              << "Invalid solution, constraints not met for problem "
+              << solver.my_solve_number();
           for (size_t i = 0; i < solution.size(); ++i) {
-            LOG(INFO) << "  " << solution[i];
+            ABSL_LOG(INFO) << "  " << solution[i];
           }
           problem->Debug();
           if (!skip_order_validation_) {
@@ -2728,8 +2735,9 @@ MultiNodeNoncausalOffsetEstimator::SimultaneousSolution(
             if (!FlushAndClose(false)) {
               return std::nullopt;
             }
-            LOG(ERROR) << "Bailing, use --skip_order_validation to continue.  "
-                          "Use at your own risk.";
+            ABSL_LOG(ERROR)
+                << "Bailing, use --skip_order_validation to continue.  "
+                   "Use at your own risk.";
             return std::nullopt;
           }
         }
@@ -2751,35 +2759,35 @@ bool MultiNodeNoncausalOffsetEstimator::CheckInvalidDistance(
       InvalidDistance(result_times, solution);
   if (invalid_distance <=
       chrono::nanoseconds(absl::GetFlag(FLAGS_max_invalid_distance_ns))) {
-    VLOG(1) << "Times can't be compared by " << invalid_distance.count()
-            << "ns";
+    ABSL_VLOG(1) << "Times can't be compared by " << invalid_distance.count()
+                 << "ns";
     for (size_t i = 0; i < result_times.size(); ++i) {
-      VLOG(1) << "  " << result_times[i] << " vs " << solution[i] << " -> "
-              << (result_times[i].time - solution[i].time).count() << "ns";
+      ABSL_VLOG(1) << "  " << result_times[i] << " vs " << solution[i] << " -> "
+                   << (result_times[i].time - solution[i].time).count() << "ns";
     }
-    VLOG(1) << "Ignoring because it is close enough.";
+    ABSL_VLOG(1) << "Ignoring because it is close enough.";
     return true;
   }
   // Somehow the new solution is better *and* worse than the old
   // solution...  This is an internal failure because that means time
   // goes backwards on a node.
   ABSL_CHECK_EQ(result_times.size(), solution.size());
-  LOG(INFO) << "Times can't be compared by " << invalid_distance.count()
-            << "ns";
+  ABSL_LOG(INFO) << "Times can't be compared by " << invalid_distance.count()
+                 << "ns";
   for (size_t i = 0; i < result_times.size(); ++i) {
-    LOG(INFO) << "  " << result_times[i] << " vs " << solution[i] << " -> "
-              << (result_times[i].time - solution[i].time).count() << "ns";
+    ABSL_LOG(INFO) << "  " << result_times[i] << " vs " << solution[i] << " -> "
+                   << (result_times[i].time - solution[i].time).count() << "ns";
   }
 
   if (skip_order_validation_) {
-    LOG(ERROR) << "Skipping because --skip_order_validation";
+    ABSL_LOG(ERROR) << "Skipping because --skip_order_validation";
   } else {
     UpdateSolution(solution);
     if (!FlushAndClose(false)) {
       return false;
     }
-    LOG(ERROR) << "Please investigate.  Use --max_invalid_distance_ns="
-               << invalid_distance.count() << " to ignore this.";
+    ABSL_LOG(ERROR) << "Please investigate.  Use --max_invalid_distance_ns="
+                    << invalid_distance.count() << " to ignore this.";
     return false;
   }
   return true;
@@ -2797,7 +2805,7 @@ MultiNodeNoncausalOffsetEstimator::SequentialSolution(
 
   for (size_t node_a_index = 0; node_a_index < candidate_times.size();
        ++node_a_index) {
-    VLOG(2) << "Investigating filter for node " << node_a_index;
+    ABSL_VLOG(2) << "Investigating filter for node " << node_a_index;
     BootTimestamp next_node_time = candidate_times[node_a_index].next_node_time;
     BootDuration next_node_duration =
         candidate_times[node_a_index].next_node_duration;
@@ -2809,10 +2817,11 @@ MultiNodeNoncausalOffsetEstimator::SequentialSolution(
     }
 
     if (next_node_filter != nullptr) {
-      VLOG(2) << "Trying " << next_node_time << " " << next_node_duration
-              << " for node " << node_a_index;
+      ABSL_VLOG(2) << "Trying " << next_node_time << " " << next_node_duration
+                   << " for node " << node_a_index;
     } else {
-      VLOG(1) << "Trying " << next_node_time << " for node " << node_a_index;
+      ABSL_VLOG(1) << "Trying " << next_node_time << " for node "
+                   << node_a_index;
     }
 
     // TODO(austin): If we start supporting only having 1 direction of
@@ -2862,7 +2871,7 @@ MultiNodeNoncausalOffsetEstimator::SequentialSolution(
     }
 
     if (!problem->HasObservations(node_a_index)) {
-      VLOG(1) << "No observations, checking if there's a filter";
+      ABSL_VLOG(1) << "No observations, checking if there's a filter";
       ABSL_CHECK(next_node_filter == nullptr)
           << ": No observations, but this isn't a start time.";
       continue;
@@ -2870,7 +2879,7 @@ MultiNodeNoncausalOffsetEstimator::SequentialSolution(
 
     std::vector<BootTimestamp> points(problem->size(),
                                       BootTimestamp::max_time());
-    if (VLOG_IS_ON(2)) {
+    if (ABSL_VLOG_IS_ON(2)) {
       problem->Debug();
     }
     points[node_a_index] = next_node_time;
@@ -2894,8 +2903,8 @@ MultiNodeNoncausalOffsetEstimator::SequentialSolution(
       if (!FlushAndClose(false)) {
         return std::nullopt;
       }
-      LOG(ERROR) << "Failed to converge for problem "
-                 << solver.my_solve_number();
+      ABSL_LOG(ERROR) << "Failed to converge for problem "
+                      << solver.my_solve_number();
       return std::nullopt;
     }
 
@@ -2907,10 +2916,11 @@ MultiNodeNoncausalOffsetEstimator::SequentialSolution(
         // Do it non-quiet now.
         problem->ValidateSolution(solution, false);
 
-        LOG(WARNING) << "Invalid solution, constraints not met for problem "
-                     << solver.my_solve_number();
+        ABSL_LOG(WARNING)
+            << "Invalid solution, constraints not met for problem "
+            << solver.my_solve_number();
         for (size_t i = 0; i < solution.size(); ++i) {
-          LOG(INFO) << "  " << solution[i];
+          ABSL_LOG(INFO) << "  " << solution[i];
         }
         problem->Debug();
         if (!skip_order_validation_) {
@@ -2918,8 +2928,9 @@ MultiNodeNoncausalOffsetEstimator::SequentialSolution(
           if (!FlushAndClose(false)) {
             return std::nullopt;
           }
-          LOG(ERROR) << "Bailing, use --skip_order_validation to continue.  "
-                        "Use at your own risk.";
+          ABSL_LOG(ERROR)
+              << "Bailing, use --skip_order_validation to continue.  "
+                 "Use at your own risk.";
           return std::nullopt;
         }
       } else {
@@ -2946,15 +2957,16 @@ MultiNodeNoncausalOffsetEstimator::SequentialSolution(
           if (!FlushAndClose(false)) {
             return std::nullopt;
           }
-          LOG(ERROR) << "Failed to converge for problem "
-                     << solver.my_solve_number();
+          ABSL_LOG(ERROR) << "Failed to converge for problem "
+                          << solver.my_solve_number();
           return std::nullopt;
         }
         if (!problem->ValidateSolution(solution, false)) {
-          LOG(WARNING) << "Invalid solution, constraints not met for problem "
-                       << solver.my_solve_number();
+          ABSL_LOG(WARNING)
+              << "Invalid solution, constraints not met for problem "
+              << solver.my_solve_number();
           for (size_t i = 0; i < solution.size(); ++i) {
-            LOG(INFO) << "  " << solution[i];
+            ABSL_LOG(INFO) << "  " << solution[i];
           }
           problem->Debug();
           if (!skip_order_validation_) {
@@ -2962,19 +2974,20 @@ MultiNodeNoncausalOffsetEstimator::SequentialSolution(
             if (!FlushAndClose(false)) {
               return std::nullopt;
             }
-            LOG(ERROR) << "Bailing, use --skip_order_validation to continue.  "
-                          "Use at your own risk.";
+            ABSL_LOG(ERROR)
+                << "Bailing, use --skip_order_validation to continue.  "
+                   "Use at your own risk.";
             return std::nullopt;
           }
         }
       }
     }
 
-    if (VLOG_IS_ON(1)) {
-      VLOG(1) << "Candidate solution for node " << node_a_index
-              << " on solve number " << solver.my_solve_number() << " is";
+    if (ABSL_VLOG_IS_ON(1)) {
+      ABSL_VLOG(1) << "Candidate solution for node " << node_a_index
+                   << " on solve number " << solver.my_solve_number() << " is";
       for (size_t i = 0; i < solution.size(); ++i) {
-        VLOG(1) << "  " << solution[i];
+        ABSL_VLOG(1) << "  " << solution[i];
       }
     }
 
@@ -3051,10 +3064,10 @@ MultiNodeNoncausalOffsetEstimator::NextSolution(
     result =
         SequentialSolution(problem, std::move(candidate_times), base_times);
   }
-  if (VLOG_IS_ON(1) && result.has_value()) {
-    VLOG(1) << "Best solution is for node " << std::get<2>(*result);
+  if (ABSL_VLOG_IS_ON(1) && result.has_value()) {
+    ABSL_VLOG(1) << "Best solution is for node " << std::get<2>(*result);
     for (size_t i = 0; i < std::get<1>(*result).size(); ++i) {
-      VLOG(1) << "  " << std::get<1>(*result)[i];
+      ABSL_VLOG(1) << "  " << std::get<1>(*result)[i];
     }
   }
   return result;
@@ -3122,7 +3135,7 @@ void MultiNodeNoncausalOffsetEstimator::WriteFilter(
               std::get<1>(sample).duration)
               .count());
     } else {
-      LOG(WARNING) << "Not writing point, missmatched boot.";
+      ABSL_LOG(WARNING) << "Not writing point, missmatched boot.";
     }
   }
 }
@@ -3153,7 +3166,7 @@ MultiNodeNoncausalOffsetEstimator::NextTimestamp() {
     // All done.
     if (result_times.empty()) {
       if (first_solution_) {
-        VLOG(1) << "No more timestamps and the first solution.";
+        ABSL_VLOG(1) << "No more timestamps and the first solution.";
         // If this is our first time, there is no solution.  Instead of giving
         // up completely, (and providing no estimate of time at all), just say
         // that everything is on the distributed clock.  This will then get used
@@ -3170,8 +3183,8 @@ MultiNodeNoncausalOffsetEstimator::NextTimestamp() {
             distributed_clock::epoch(),
             std::vector<BootTimestamp>(NodesCount(), BootTimestamp::epoch()));
       }
-      if (VLOG_IS_ON(1)) {
-        LOG(INFO) << "Found no more timestamps.";
+      if (ABSL_VLOG_IS_ON(1)) {
+        ABSL_LOG(INFO) << "Found no more timestamps.";
         for (const auto &filters : filters_per_node_) {
           for (const auto &filter : filters) {
             filter.filter->Debug();
@@ -3198,11 +3211,11 @@ MultiNodeNoncausalOffsetEstimator::NextTimestamp() {
     {
       size_t index = 0;
       for (auto t : result_times) {
-        VLOG(1) << "Time: " << t << " "
-                << logged_configuration_->nodes()
-                       ->Get(index)
-                       ->name()
-                       ->string_view();
+        ABSL_VLOG(1) << "Time: " << t << " "
+                     << logged_configuration_->nodes()
+                            ->Get(index)
+                            ->name()
+                            ->string_view();
         ++index;
       }
     }
@@ -3221,16 +3234,16 @@ MultiNodeNoncausalOffsetEstimator::NextTimestamp() {
       if (next_filter) {
         // This isn't a start time because we have a corresponding filter.
         sample = *next_filter->Consume();
-        VLOG(1) << "Sample is " << std::get<0>(sample) << " from "
-                << next_filter->node_a()->name()->string_view();
+        ABSL_VLOG(1) << "Sample is " << std::get<0>(sample) << " from "
+                     << next_filter->node_a()->name()->string_view();
         next_filter->Pop(std::get<0>(sample) - time_estimation_buffer_seconds_);
       }
     } else {
       if (next_filter) {
         // This isn't a start time because we have a corresponding filter.
         sample = *next_filter->Consume();
-        VLOG(1) << "Sample is " << std::get<0>(sample) << " from "
-                << next_filter->node_a()->name()->string_view();
+        ABSL_VLOG(1) << "Sample is " << std::get<0>(sample) << " from "
+                     << next_filter->node_a()->name()->string_view();
         next_filter->Pop(std::get<0>(sample) - time_estimation_buffer_seconds_);
       }
       // We found a good sample, so consume it.  If it is a duplicate, we still
@@ -3244,7 +3257,7 @@ MultiNodeNoncausalOffsetEstimator::NextTimestamp() {
         case TimeComparison::kAfter:
           problem.Debug();
           for (size_t i = 0; i < result_times.size(); ++i) {
-            LOG(INFO)
+            ABSL_LOG(INFO)
                 << "  " << last_monotonics_[i] << " vs " << result_times[i]
                 << " -> "
                 << (last_monotonics_[i].time - result_times[i].time).count()
@@ -3255,7 +3268,7 @@ MultiNodeNoncausalOffsetEstimator::NextTimestamp() {
           if (!FlushAndClose(false)) {
             return MakeError("Unable to flush timestamp debug information.");
           }
-          LOG(ERROR)
+          ABSL_LOG(ERROR)
               << "Found a solution before the last returned solution on node "
               << solution_node_index;
           return MakeError("Timestamp solving error---see above.");
@@ -3270,11 +3283,11 @@ MultiNodeNoncausalOffsetEstimator::NextTimestamp() {
             WriteFilter(next_filter, sample);
             return NextTimestamp();
           }
-          LOG(INFO) << "Times can't be compared by " << invalid_distance.count()
-                    << "ns";
+          ABSL_LOG(INFO) << "Times can't be compared by "
+                         << invalid_distance.count() << "ns";
           ABSL_CHECK_EQ(last_monotonics_.size(), result_times.size());
           for (size_t i = 0; i < result_times.size(); ++i) {
-            LOG(INFO)
+            ABSL_LOG(INFO)
                 << "  " << last_monotonics_[i] << " vs " << result_times[i]
                 << " -> "
                 << (last_monotonics_[i].time - result_times[i].time).count()
@@ -3285,8 +3298,9 @@ MultiNodeNoncausalOffsetEstimator::NextTimestamp() {
           if (!FlushAndClose(false)) {
             return MakeError("Unable to flush timestamp debug information.");
           }
-          LOG(ERROR) << "Please investigate.  Use --max_invalid_distance_ns="
-                     << invalid_distance.count() << " to ignore this.";
+          ABSL_LOG(ERROR)
+              << "Please investigate.  Use --max_invalid_distance_ns="
+              << invalid_distance.count() << " to ignore this.";
           return MakeError("Timestamp solving error---see above.");
         } break;
       }
@@ -3379,7 +3393,7 @@ void MultiNodeNoncausalOffsetEstimator::FlushAllSamples(bool finish) {
           } else if (t1.boot == message.first.boot) {
             distributed = message.first.time - t1.time + d1;
           } else {
-            LOG(FATAL) << "Boots don't match";
+            ABSL_LOG(FATAL) << "Boots don't match";
           }
         }
         fprintf(samples_fp, "%.9f, %.9f, %.9f, %.9f\n",

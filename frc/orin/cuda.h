@@ -5,7 +5,7 @@
 #include <span>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
@@ -13,10 +13,10 @@
 // CHECKs that a cuda method returned success.
 // TODO(austin): This will not handle if and else statements quite right, fix if
 // we care.
-#define CHECK_CUDA(condition)                                             \
-  if (auto c = condition)                                                 \
-  LOG(FATAL) << "Check failed: " #condition " (" << cudaGetErrorString(c) \
-             << ") "
+#define CHECK_CUDA(condition)                                                  \
+  if (auto c = condition)                                                      \
+  ABSL_LOG(FATAL) << "Check failed: " #condition " (" << cudaGetErrorString(c) \
+                  << ") "
 
 namespace frc::apriltag {
 

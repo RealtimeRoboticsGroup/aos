@@ -4,7 +4,7 @@
 #include "absl/flags/flag.h"
 #include "absl/flags/usage.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/configuration.h"
 #include "aos/events/logging/log_writer.h"
@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
 
   event_loop.Run();
 
-  LOG(INFO) << "Shutting down";
+  ABSL_LOG(INFO) << "Shutting down";
 
   return 0;
 }

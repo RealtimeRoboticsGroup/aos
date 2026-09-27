@@ -260,6 +260,7 @@ cc_library(
     deps = [
         "//third_party:wpilib",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -321,8 +322,8 @@ cc_library(
         "//aos/events:event_loop",
         "//aos/time",
         "//third_party:wpilib",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/types:span",
     ],
 )
@@ -440,8 +441,8 @@ cc_library(
         "//aos/time",
         "//aos/util:compiler_memory_barrier",
         "//third_party:wpilib",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -512,8 +513,8 @@ cc_library(
         "//aos/logging",
         "//frc/control_loops/drivetrain:drivetrain_can_position_fbs",
         "//third_party:phoenix6",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 

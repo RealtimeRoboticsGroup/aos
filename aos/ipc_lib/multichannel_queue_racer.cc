@@ -5,7 +5,7 @@
 #include <thread>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/containers/ring_buffer.h"
 #include "aos/ipc_lib/event.h"
@@ -40,15 +40,15 @@ void MultiChannelQueueRacer::Run() {
                                     channel_storage_duration_)
               .value();
       const UUID boot_uuid = UUID::Zero();
-      VLOG(1) << "sender " << thread_index << " is ready!";
+      ABSL_VLOG(1) << "sender " << thread_index << " is ready!";
 
       thread_start_event.Set();
       event.Wait();
-      VLOG(1) << "sender " << thread_index << " is running!";
+      ABSL_VLOG(1) << "sender " << thread_index << " is running!";
       for (size_t message_index = 0; message_index < num_messages_;
            ++message_index) {
         if (message_index % 100 == 0) {
-          VLOG(2) << "Sending " << message_index << " on " << thread_index;
+          ABSL_VLOG(2) << "Sending " << message_index << " on " << thread_index;
         }
         ABSL_CHECK(LocklessQueueSender::Result::GOOD ==
                    sender.Send(0, aos::monotonic_clock::min_time,
@@ -77,11 +77,11 @@ void MultiChannelQueueRacer::Run() {
     std::function<bool(const Context &)> should_read = [](const Context &) {
       return true;
     };
-    VLOG(1) << "queue readers are ready!";
+    ABSL_VLOG(1) << "queue readers are ready!";
     // We are ready to go!
     // Don't notify the receivers until they are waiting on us.
 
-    VLOG(1) << "Running!";
+    ABSL_VLOG(1) << "Running!";
     event.Set();
 
     // Algorithm for detecting races:
@@ -151,12 +151,12 @@ void MultiChannelQueueRacer::Run() {
       }
     }
   });
-  VLOG(1) << "Set up threads; waiting to finish!";
+  ABSL_VLOG(1) << "Set up threads; waiting to finish!";
   for (std::thread &thread : threads) {
     thread.join();
   }
   senders_done.store(true);
-  VLOG(1) << "Done sending data!";
+  ABSL_VLOG(1) << "Done sending data!";
   queue_readers.join();
 #if defined(AOS_IPC_LIB_TEST_CAN_RELIABLY_TRIGGER_RACES)
   // Check that we actually received a non-trivial number of messages.

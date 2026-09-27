@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/escaping.h"
 #include "flatbuffers/flatbuffers.h"
 
@@ -32,15 +32,15 @@ void CheckAndHandleRemapConflict(
   if (existing_channel != nullptr) {
     switch (conflict_handling) {
       case ConfigRemapper::RemapConflict::kDisallow:
-        LOG(FATAL)
+        ABSL_LOG(FATAL)
             << "Channel "
             << configuration::StrippedChannelToString(existing_channel)
             << " is already used--you can't remap an original channel to it.";
         break;
       case ConfigRemapper::RemapConflict::kCascade:
-        VLOG(1) << "Automatically remapping "
-                << configuration::StrippedChannelToString(existing_channel)
-                << " to avoid conflicts.";
+        ABSL_VLOG(1) << "Automatically remapping "
+                     << configuration::StrippedChannelToString(existing_channel)
+                     << " to avoid conflicts.";
         conflict_handler();
         break;
     }
@@ -197,9 +197,9 @@ ConfigRemapper::ConfigRemapper(const Configuration *config,
 
           // Otherwise collect this one up as a node to look for a combined
           // channel from.  It is more efficient to compare nodes than channels.
-          LOG(WARNING) << "Failed to find channel "
-                       << finder.SplitChannelName(channel, connection)
-                       << " on node " << FlatbufferToJson(node) << ".";
+          ABSL_LOG(WARNING) << "Failed to find channel "
+                            << finder.SplitChannelName(channel, connection)
+                            << " on node " << FlatbufferToJson(node) << ".";
           remote_nodes.insert(connection->name()->string_view());
         }
       }
@@ -299,12 +299,13 @@ const Channel *ConfigRemapper::RemapChannel(const Channel *channel) {
       configuration::ChannelIndex(original_configuration(), channel);
   // If the channel is remapped, find the correct channel name to use.
   if (remapped_channels_.count(channel_index) > 0) {
-    VLOG(3) << "Got remapped channel on "
-            << configuration::CleanedChannelToString(channel);
+    ABSL_VLOG(3) << "Got remapped channel on "
+                 << configuration::CleanedChannelToString(channel);
     channel_name = remapped_channels_[channel_index].remapped_name;
   }
 
-  VLOG(2) << "Going to remap channel " << channel_name << " " << channel_type;
+  ABSL_VLOG(2) << "Going to remap channel " << channel_name << " "
+               << channel_type;
   const Channel *remapped_channel = configuration::GetFullySpecifiedChannel(
       remapped_configuration(), channel_name, channel_type);
 
@@ -331,7 +332,7 @@ void ConfigRemapper::RemapOriginalChannel(std::string_view name,
                                           std::string_view new_type,
                                           RemapConflict conflict_handling) {
   if (node != nullptr) {
-    VLOG(1) << "Node is " << FlatbufferToJson(node);
+    ABSL_VLOG(1) << "Node is " << FlatbufferToJson(node);
   }
   if (replay_channels_ != nullptr) {
     ABSL_CHECK(
@@ -347,10 +348,10 @@ void ConfigRemapper::RemapOriginalChannel(std::string_view name,
   ABSL_CHECK(remapped_channel != nullptr)
       << ": Failed to find {\"name\": \"" << name << "\", \"type\": \"" << type
       << "\"}";
-  VLOG(1) << "Original {\"name\": \"" << name << "\", \"type\": \"" << type
-          << "\"}";
-  VLOG(1) << "Remapped "
-          << configuration::StrippedChannelToString(remapped_channel);
+  ABSL_VLOG(1) << "Original {\"name\": \"" << name << "\", \"type\": \"" << type
+               << "\"}";
+  ABSL_VLOG(1) << "Remapped "
+               << configuration::StrippedChannelToString(remapped_channel);
 
   // We want to make /spray on node 0 go to /0/spray by snooping the maps.  And
   // we want it to degrade if the heuristics fail to just work.
@@ -412,7 +413,7 @@ void ConfigRemapper::RenameOriginalChannel(const std::string_view name,
                                            const std::string_view new_name,
                                            const std::vector<MapT> &add_maps) {
   if (node != nullptr) {
-    VLOG(1) << "Node is " << FlatbufferToJson(node);
+    ABSL_VLOG(1) << "Node is " << FlatbufferToJson(node);
   }
   // First find the channel and rename it.
   const Channel *remapped_channel =
@@ -420,10 +421,10 @@ void ConfigRemapper::RenameOriginalChannel(const std::string_view name,
   ABSL_CHECK(remapped_channel != nullptr)
       << ": Failed to find {\"name\": \"" << name << "\", \"type\": \"" << type
       << "\"}";
-  VLOG(1) << "Original {\"name\": \"" << name << "\", \"type\": \"" << type
-          << "\"}";
-  VLOG(1) << "Remapped "
-          << configuration::StrippedChannelToString(remapped_channel);
+  ABSL_VLOG(1) << "Original {\"name\": \"" << name << "\", \"type\": \"" << type
+               << "\"}";
+  ABSL_VLOG(1) << "Remapped "
+               << configuration::StrippedChannelToString(remapped_channel);
 
   const size_t channel_index =
       configuration::ChannelIndex(original_configuration(), remapped_channel);
@@ -576,7 +577,8 @@ void ConfigRemapper::MakeRemappedConfig() {
     // Add the schema if it doesn't exist.
     if (schema_map.find(c->type()->string_view()) == schema_map.end()) {
       if (!c->has_schema()) {
-        LOG(FATAL) << "Could not find schema for " << c->type()->string_view();
+        ABSL_LOG(FATAL) << "Could not find schema for "
+                        << c->type()->string_view();
       }
       schema_map.insert(std::make_pair(c->type()->string_view(),
                                        RecursiveCopyFlatBuffer(c->schema())));

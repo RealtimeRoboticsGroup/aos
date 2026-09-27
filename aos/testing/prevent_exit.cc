@@ -7,7 +7,7 @@
 #include <cstdlib>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 namespace aos::testing {
 namespace {

@@ -29,10 +29,10 @@ float DefaultConstraint(ConstraintType type) {
       return 12.0;
     case ConstraintType::VELOCITY:
     case ConstraintType::CONSTRAINT_TYPE_UNDEFINED:
-      LOG(FATAL) << "No default constraint value for "
-                 << EnumNameConstraintType(type);
+      ABSL_LOG(FATAL) << "No default constraint value for "
+                      << EnumNameConstraintType(type);
   }
-  LOG(FATAL) << "Invalid ConstraintType " << static_cast<int>(type);
+  ABSL_LOG(FATAL) << "Invalid ConstraintType " << static_cast<int>(type);
 }
 }  // namespace
 
@@ -200,17 +200,18 @@ double BaseTrajectory::BestAcceleration(double x, double v,
   // Ideally, the max would never be less than the min, but due to the way that
   // the runge kutta solver works, it sometimes ticks over the edge.
   if (max_friction_accel < min_friction_accel) {
-    VLOG(1) << "At x " << x << " v " << v << " min fric acc "
-            << min_friction_accel << " max fric accel " << max_friction_accel;
+    ABSL_VLOG(1) << "At x " << x << " v " << v << " min fric acc "
+                 << min_friction_accel << " max fric accel "
+                 << max_friction_accel;
   }
   if (best_accel < min_voltage_accel || best_accel > max_voltage_accel) {
-    VLOG(1) << "Viable friction limits and viable voltage limits do not "
-               "overlap (x: "
-            << x << ", v: " << v << ", backwards: " << backwards
-            << ") best_accel = " << best_accel << ", min voltage "
-            << min_voltage_accel << ", max voltage " << max_voltage_accel
-            << " min friction " << min_friction_accel << " max friction "
-            << max_friction_accel << ".";
+    ABSL_VLOG(1) << "Viable friction limits and viable voltage limits do not "
+                    "overlap (x: "
+                 << x << ", v: " << v << ", backwards: " << backwards
+                 << ") best_accel = " << best_accel << ", min voltage "
+                 << min_voltage_accel << ", max voltage " << max_voltage_accel
+                 << " min friction " << min_friction_accel << " max friction "
+                 << max_friction_accel << ".";
 
     // Don't actually do anything--this will just result in attempting to drive
     // higher voltages thatn we have available. In practice, that'll probably
@@ -274,8 +275,8 @@ void BaseTrajectory::FrictionLngAccelLimits(double x, double v,
   const double max_wheel_lng_accel_squared =
       1.0 - std::pow(lateral_acceleration / max_lateral_accel(), 2.0);
   if (max_wheel_lng_accel_squared < 0.0) {
-    VLOG(1) << "Something (probably Runge-Kutta) queried invalid velocity " << v
-            << " at distance " << x;
+    ABSL_VLOG(1) << "Something (probably Runge-Kutta) queried invalid velocity "
+                 << v << " at distance " << x;
     // If we encounter this, it means that the Runge-Kutta has attempted to
     // sample points a bit past the edge of the friction boundary. If so, we
     // gradually ramp the min/max accels to be more and more incorrect (note
@@ -520,7 +521,7 @@ Eigen::Matrix<double, 3, 1> BaseTrajectory::FFAcceleration(
       // by the acceleration/deceleration limits. This may not always be true;
       // if we ever encounter this error, we just need to back out what the
       // accelerations would be in this case.
-      LOG(FATAL) << "Unexpectedly got VOLTAGE_LIMITED plan.";
+      ABSL_LOG(FATAL) << "Unexpectedly got VOLTAGE_LIMITED plan.";
       break;
     case fb::SegmentConstraint::ACCELERATION_LIMITED:
       // TODO(james): The integration done here and in the DECELERATION_LIMITED
@@ -622,7 +623,7 @@ std::vector<Eigen::Matrix<double, 3, 1>> Trajectory::PlanXVA(
 
   while (!is_at_end(state)) {
     if (state_is_faulted(state)) {
-      LOG(WARNING)
+      ABSL_LOG(WARNING)
           << "Found invalid state in generating spline and aborting. This is "
              "likely due to a spline with extremely high jerk/changes in "
              "curvature with an insufficiently small step size.";
@@ -771,7 +772,7 @@ void Trajectory::CalculatePathGains() {
   const std::vector<Eigen::Matrix<double, 3, 1>> xva_plan =
       PlanXVA(config_->dt);
   if (xva_plan.empty()) {
-    LOG(ERROR) << "Plan is empty--unable to plan trajectory.";
+    ABSL_LOG(ERROR) << "Plan is empty--unable to plan trajectory.";
     return;
   }
   plan_gains_.resize(xva_plan.size());

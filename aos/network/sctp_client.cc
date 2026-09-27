@@ -11,7 +11,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/network/sctp_lib.h"
 #include "aos/unique_malloc_ptr.h"
@@ -64,7 +64,7 @@ void SctpClient::SetPriorityScheduler([[maybe_unused]] sctp_assoc_t assoc_id) {
   scheduler.assoc_value = SCTP_SS_PRIO;
   if (setsockopt(fd(), IPPROTO_SCTP, SCTP_STREAM_SCHEDULER, &scheduler,
                  sizeof(scheduler)) != 0) {
-    PLOG(FATAL) << "Failed to set scheduler.";
+    ABSL_PLOG(FATAL) << "Failed to set scheduler.";
   }
 #endif
 }

@@ -1,7 +1,7 @@
 #include <arm_neon.h>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/time/time.h"
 #include "frc/orin/threshold.h"
@@ -51,11 +51,11 @@ std::unique_ptr<Threshold> MakeNeonThreshold(vision::ImageFormat image_format,
     case vision::ImageFormat::MONO16:
     case vision::ImageFormat::BGR8:
     case vision::ImageFormat::BGRA8:
-      LOG(FATAL) << "Unsupported NEON image format: "
-                 << vision::EnumNameImageFormat(image_format);
+      ABSL_LOG(FATAL) << "Unsupported NEON image format: "
+                      << vision::EnumNameImageFormat(image_format);
     default:
-      LOG(FATAL) << "Unknown image format: "
-                 << vision::EnumNameImageFormat(image_format);
+      ABSL_LOG(FATAL) << "Unknown image format: "
+                      << vision::EnumNameImageFormat(image_format);
   }
 }
 
@@ -75,8 +75,8 @@ void NeonThreshold::ToGreyscale(const uint8_t *color_image, uint8_t *gray_image,
 
   const aos::monotonic_clock::time_point end_time = aos::monotonic_clock::now();
 
-  VLOG(1) << "Neon Greyscale took "
-          << double_milli(end_time - start_time).count() << "ms";
+  ABSL_VLOG(1) << "Neon Greyscale took "
+               << double_milli(end_time - start_time).count() << "ms";
 }
 
 void NeonThreshold::ThresholdAndDecimate(const uint8_t *color_image,
@@ -331,10 +331,12 @@ void NeonThreshold::ThresholdAndDecimate(const uint8_t *color_image,
 
   const aos::monotonic_clock::time_point end_time = aos::monotonic_clock::now();
 
-  VLOG(1) << "Neon After, took "
-          << double_milli(pass1_time - start_time).count() << "ms for pass 1, "
-          << double_milli(end_time - pass1_time).count() << "ms for pass 2, "
-          << double_milli(end_time - start_time).count() << "ms overall";
+  ABSL_VLOG(1) << "Neon After, took "
+               << double_milli(pass1_time - start_time).count()
+               << "ms for pass 1, "
+               << double_milli(end_time - pass1_time).count()
+               << "ms for pass 2, "
+               << double_milli(end_time - start_time).count() << "ms overall";
 }
 
 }  // namespace frc::apriltag

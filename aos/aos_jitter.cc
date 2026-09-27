@@ -30,7 +30,7 @@ class State {
       : ftrace_(ftrace),
         channel_(channel),
         channel_name_(aos::configuration::StrippedChannelToString(channel_)) {
-    LOG(INFO) << "Watching for jitter on " << channel_name_;
+    ABSL_LOG(INFO) << "Watching for jitter on " << channel_name_;
 
     event_loop->MakeRawWatcher(
         channel_, [this](const aos::Context &context, const void *message) {
@@ -71,13 +71,14 @@ class State {
           // should know this.  Bypass the warning.
           ScopedNotRealtime nrt;
 
-          LOG(INFO) << "Got a high latency event on "
-                    << aos::configuration::StrippedChannelToString(channel_)
-                    << " -> " << std::fixed << std::setprecision(9)
-                    << std::chrono::duration<double>(
-                           context.monotonic_event_time - last_time_)
-                           .count()
-                    << " between messages.";
+          ABSL_LOG(INFO) << "Got a high latency event on "
+                         << aos::configuration::StrippedChannelToString(
+                                channel_)
+                         << " -> " << std::fixed << std::setprecision(9)
+                         << std::chrono::duration<double>(
+                                context.monotonic_event_time - last_time_)
+                                .count()
+                         << " between messages.";
         }
       }
     }
@@ -88,16 +89,16 @@ class State {
   void PrintLatencyStats() {
     std::sort(latency_.begin(), latency_.end());
     if (latency_.size() >= 100) {
-      LOG(INFO) << "Percentiles 25th: " << latency_[latency_.size() * 0.25]
-                << " 50th: " << latency_[latency_.size() * 0.5]
-                << " 75th: " << latency_[latency_.size() * 0.75]
-                << " 90th: " << latency_[latency_.size() * 0.9]
-                << " 95th: " << latency_[latency_.size() * 0.95]
-                << " 99th: " << latency_[latency_.size() * 0.99];
-      LOG(INFO) << "Max: " << latency_.back() << " Min: " << latency_.front()
-                << " Mean: "
-                << std::accumulate(latency_.begin(), latency_.end(), 0.0) /
-                       latency_.size();
+      ABSL_LOG(INFO) << "Percentiles 25th: " << latency_[latency_.size() * 0.25]
+                     << " 50th: " << latency_[latency_.size() * 0.5]
+                     << " 75th: " << latency_[latency_.size() * 0.75]
+                     << " 90th: " << latency_[latency_.size() * 0.9]
+                     << " 95th: " << latency_[latency_.size() * 0.95]
+                     << " 99th: " << latency_[latency_.size() * 0.99];
+      ABSL_LOG(INFO) << "Max: " << latency_.back()
+                     << " Min: " << latency_.front() << " Mean: "
+                     << std::accumulate(latency_.begin(), latency_.end(), 0.0) /
+                            latency_.size();
     }
   }
 

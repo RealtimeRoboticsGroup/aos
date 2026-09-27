@@ -1,7 +1,7 @@
 #include "aos/seasocks/seasocks_logger.h"
 
-#include "absl/log/log.h"
-#include "absl/log/vlog_is_on.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 
 #include "seasocks/PrintfLogger.h"
 
@@ -24,13 +24,13 @@ void SeasocksLogger::log(::seasocks::Logger::Level level, const char *message) {
     case ::seasocks::Logger::Level::Debug:
     case ::seasocks::Logger::Level::Access:
     default:
-      if (!VLOG_IS_ON(1)) {
+      if (!ABSL_VLOG_IS_ON(1)) {
         return;
       }
       log_level = absl::LogSeverity::kInfo;
       break;
   }
-  LOG(LEVEL(log_level)) << "Seasocks: " << message;
+  ABSL_LOG(LEVEL(log_level)) << "Seasocks: " << message;
 }
 
 }  // namespace aos::seasocks

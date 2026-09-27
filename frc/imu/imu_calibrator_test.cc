@@ -129,9 +129,9 @@ TEST(ImuCalibratorTest, BasicCalibrationTest) {
       Eigen::Vector3d(0, 0, 1), Eigen::Vector3d(0.1, 0.2, 0.3),
       Eigen::Vector3d(0.0, 1.0, 0.0));
   auto params = Solve(simulator.readings(), nominal_imus);
-  LOG(INFO) << params.ToString();
-  LOG(INFO) << real_imus[0].ToString();
-  LOG(INFO) << real_imus[1].ToString();
+  ABSL_LOG(INFO) << params.ToString();
+  ABSL_LOG(INFO) << real_imus[0].ToString();
+  ABSL_LOG(INFO) << real_imus[1].ToString();
   VerifyParameters(real_imus, params);
 }
 
@@ -166,9 +166,9 @@ TEST(ImuCalibratorTest, TimeOffsetTest) {
         Eigen::Vector3d(std::sin(ii / 1000.0), 0.0, 0.0));
   }
   auto params = Solve(simulator.readings(), nominal_imus);
-  LOG(INFO) << params.ToString();
-  LOG(INFO) << real_imus[0].ToString();
-  LOG(INFO) << real_imus[1].ToString();
+  ABSL_LOG(INFO) << params.ToString();
+  ABSL_LOG(INFO) << real_imus[0].ToString();
+  ABSL_LOG(INFO) << real_imus[1].ToString();
   VerifyParameters(real_imus, params, 1e-6);
 }
 
@@ -208,9 +208,9 @@ TEST(ImuCalibratorTest, RandomNoise) {
                               Eigen::Vector3d(1.0, 0.0, 0.0));
   }
   auto params = Solve(simulator.readings(), nominal_imus);
-  LOG(INFO) << params.ToString();
-  LOG(INFO) << real_imus[0].ToString();
-  LOG(INFO) << real_imus[1].ToString();
+  ABSL_LOG(INFO) << params.ToString();
+  ABSL_LOG(INFO) << real_imus[0].ToString();
+  ABSL_LOG(INFO) << real_imus[1].ToString();
   VerifyParameters(real_imus, params, 1e-4);
 }
 }  // namespace frc::imu::testing

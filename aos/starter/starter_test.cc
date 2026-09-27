@@ -11,7 +11,7 @@
 #include "absl/flags/flag.h"
 #include "absl/flags/reflection.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_format.h"
 #include "flatbuffers/string.h"
 #include "gtest/gtest.h"
@@ -287,7 +287,7 @@ TEST_F(StarterdTest, DeathTest) {
       case 0: {
         if (app_status->has_state() &&
             app_status->state() == aos::starter::State::RUNNING) {
-          LOG(INFO) << "Ping is running";
+          ABSL_LOG(INFO) << "Ping is running";
           test_stage = 1;
           ASSERT_TRUE(app_status->has_pid());
           ASSERT_TRUE(kill(app_status->pid(), SIGINT) != -1);
@@ -301,7 +301,7 @@ TEST_F(StarterdTest, DeathTest) {
         if (app_status->has_state() &&
             app_status->state() == aos::starter::State::RUNNING &&
             app_status->has_id() && app_status->id() != id) {
-          LOG(INFO) << "Ping restarted";
+          ABSL_LOG(INFO) << "Ping restarted";
           watcher_loop.Exit();
           SUCCEED();
         }
@@ -473,7 +473,7 @@ TEST_F(StarterdTest, DeathNoRestartTest) {
       case 0: {
         if (app_status->has_state() &&
             app_status->state() == aos::starter::State::RUNNING) {
-          LOG(INFO) << "Ping is running";
+          ABSL_LOG(INFO) << "Ping is running";
           test_stage = 1;
           ASSERT_TRUE(app_status->has_pid());
           ASSERT_TRUE(kill(app_status->pid(), SIGINT) != -1);
@@ -487,7 +487,7 @@ TEST_F(StarterdTest, DeathNoRestartTest) {
         if (app_status->has_state() &&
             app_status->state() == aos::starter::State::RUNNING &&
             app_status->has_id() && app_status->id() != id) {
-          LOG(INFO) << "Ping restarted, it shouldn't...";
+          ABSL_LOG(INFO) << "Ping restarted, it shouldn't...";
           watcher_loop.Exit();
           FAIL();
         }
@@ -560,33 +560,33 @@ TEST_F(StarterdTest, StarterChainTest) {
   // We want stage2 to timeout, triggering stage3.
 
   auto stage3 = [&client_loop, &success]() {
-    LOG(INFO) << "Begin stage3.";
+    ABSL_LOG(INFO) << "Begin stage3.";
     SUCCEED();
     success = true;
     client_loop.Exit();
-    LOG(INFO) << "End stage3.";
+    ABSL_LOG(INFO) << "End stage3.";
   };
   auto stage2 = [&client, &client_node, &stage3] {
-    LOG(INFO) << "Begin stage2";
+    ABSL_LOG(INFO) << "Begin stage2";
     client.SetTimeoutHandler(std::ref(stage3));
     client.SetSuccessHandler([]() {
-      LOG(INFO) << "stage3 success handler called.";
+      ABSL_LOG(INFO) << "stage3 success handler called.";
       FAIL() << ": Command should not have succeeded here.";
     });
     // we want this command to timeout
     // Don't wait as long as the start timer (1 second)
     client.SendCommands({{Command::START, "ping", {client_node}}},
                         std::chrono::milliseconds(500));
-    LOG(INFO) << "End stage2";
+    ABSL_LOG(INFO) << "End stage2";
   };
   auto stage1 = [&client, &client_node, &stage2] {
-    LOG(INFO) << "Begin stage1";
+    ABSL_LOG(INFO) << "Begin stage1";
     client.SetTimeoutHandler(
         []() { FAIL() << ": Command should not have timed out."; });
     client.SetSuccessHandler(std::ref(stage2));
     client.SendCommands({{Command::STOP, "ping", {client_node}}},
                         std::chrono::seconds(5));
-    LOG(INFO) << "End stage1";
+    ABSL_LOG(INFO) << "End stage1";
   };
   // start the test body
   client_loop.AddTimer(stage1)->Schedule(client_loop.monotonic_now() +
@@ -657,7 +657,7 @@ TEST_F(StarterdTest, ImmediateExitWithOnlyStopped) {
       ->Schedule(client_loop.monotonic_now() + std::chrono::seconds(20));
 
   auto stage2 = [this, &starter, &success, &client_loop] {
-    LOG(INFO) << "Begin stage2";
+    ABSL_LOG(INFO) << "Begin stage2";
     test_done_ = true;  // trigger `starter` to exit.
     auto start_time = starter.event_loop()->monotonic_now();
     auto tick_period = std::chrono::milliseconds(100);
@@ -665,27 +665,27 @@ TEST_F(StarterdTest, ImmediateExitWithOnlyStopped) {
     while (starter.event_loop()->is_running()) {
       if (starter.event_loop()->monotonic_now() - start_time >
           shutdown_time_max) {
-        LOG(INFO) << "Timeout while waiting for starter to exit";
+        ABSL_LOG(INFO) << "Timeout while waiting for starter to exit";
         return;
       }
-      LOG(INFO) << "Waiting for starter to close.";
+      ABSL_LOG(INFO) << "Waiting for starter to close.";
       std::this_thread::sleep_for(tick_period);
     }
     auto ticks_to_shut_down =
         (starter.event_loop()->monotonic_now() - start_time) / tick_period;
-    LOG(INFO) << "Starter took " << ticks_to_shut_down
-              << " ticks to shut down.";
+    ABSL_LOG(INFO) << "Starter took " << ticks_to_shut_down
+                   << " ticks to shut down.";
     success = true;
     client_loop.Exit();
   };
   auto stage1 = [&client, &client_node, &stage2] {
-    LOG(INFO) << "Begin stage1";
+    ABSL_LOG(INFO) << "Begin stage1";
     client.SetTimeoutHandler(
         []() { FAIL() << ": Command should not have timed out."; });
     client.SetSuccessHandler(std::ref(stage2));
     client.SendCommands({{Command::STOP, "pong", {client_node}}},
                         std::chrono::seconds(5));
-    LOG(INFO) << "End stage1";
+    ABSL_LOG(INFO) << "End stage1";
   };
   // start the test body
   client_loop.AddTimer(stage1)->Schedule(client_loop.monotonic_now() +

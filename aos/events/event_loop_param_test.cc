@@ -8,7 +8,7 @@
 #include "absl/flags/flag.h"
 #include "absl/flags/reflection.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -767,7 +767,7 @@ TEST_P(AbstractEventLoopTest, CheckTimerDisabled) {
   auto loop = MakePrimary("primary");
 
   auto timer = loop->AddTimer([this]() {
-    LOG(INFO) << "timer called";
+    ABSL_LOG(INFO) << "timer called";
     Exit();
   });
 
@@ -787,7 +787,7 @@ TEST_P(AbstractEventLoopTest, CheckTimerRunInPastDisabled) {
   auto loop = MakePrimary("primary");
 
   auto timer2 = loop->AddTimer([this]() {
-    LOG(INFO) << "timer called";
+    ABSL_LOG(INFO) << "timer called";
     Exit();
   });
 
@@ -811,7 +811,7 @@ TEST_P(AbstractEventLoopTest, CheckTimerRepeatOnCountDisabled) {
   int counter = 0;
 
   auto timer = loop->AddTimer([&counter, this]() {
-    LOG(INFO) << "timer called";
+    ABSL_LOG(INFO) << "timer called";
     counter++;
     if (counter >= 5) {
       Exit();
@@ -843,7 +843,7 @@ TEST_P(AbstractEventLoopTest, CheckTimerRepeatOnCountDisabled) {
 TEST_P(AbstractEventLoopTest, CheckTimerRepeatTillEndTimerDisabled) {
   auto loop = MakePrimary("primary");
 
-  auto timer = loop->AddTimer([]() { LOG(INFO) << "timer called"; });
+  auto timer = loop->AddTimer([]() { ABSL_LOG(INFO) << "timer called"; });
 
   loop->OnRun([&loop, timer]() {
     timer->Schedule(loop->monotonic_now() + chrono::seconds(1),
@@ -1695,7 +1695,7 @@ TEST_P(AbstractEventLoopTest, TimerIntervalAndDuration) {
 
     // Confirm that we have the right number of reports, and the contents are
     // sane.
-    VLOG(1) << FlatbufferToJson(report, {.multi_line = true});
+    ABSL_VLOG(1) << FlatbufferToJson(report, {.multi_line = true});
 
     EXPECT_EQ(report.message().name()->string_view(), "primary");
 
@@ -2278,7 +2278,7 @@ TEST_P(AbstractEventLoopTest, PhasedLoopTest) {
             EXPECT_EQ(loop1->context().buffer_index, -1);
 
             if (times.size() == kCount) {
-              LOG(INFO) << "Exiting";
+              ABSL_LOG(INFO) << "Exiting";
               this->Exit();
             }
           },
@@ -2350,7 +2350,7 @@ TEST_P(AbstractEventLoopTest, PhasedLoopTest) {
       }
     }
 
-    VLOG(1) << FlatbufferToJson(report, {.multi_line = true});
+    ABSL_VLOG(1) << FlatbufferToJson(report, {.multi_line = true});
 
     EXPECT_EQ(report.message().name()->string_view(), "primary");
 
@@ -2401,11 +2401,12 @@ TEST_P(AbstractEventLoopTest, PhasedLoopChangingOffsetTest) {
 
         phased_loop->set_interval_and_offset(
             kInterval, kOffset - chrono::milliseconds(times.size()));
-        LOG(INFO) << "new offset: "
-                  << (kOffset - chrono::milliseconds(times.size())).count();
+        ABSL_LOG(INFO)
+            << "new offset: "
+            << (kOffset - chrono::milliseconds(times.size())).count();
 
         if (times.size() == kCount) {
-          LOG(INFO) << "Exiting";
+          ABSL_LOG(INFO) << "Exiting";
           this->Exit();
         }
       },
@@ -2454,8 +2455,8 @@ TEST_P(AbstractEventLoopTest, PhasedLoopChangingOffsetTest) {
 
   // Confirm that the ideal wakeup times increment correctly.
   for (size_t i = 1; i < expected_times.size(); ++i) {
-    LOG(INFO) << i - 1 << ": " << expected_times[i - 1] << ", " << i << ": "
-              << expected_times[i];
+    ABSL_LOG(INFO) << i - 1 << ": " << expected_times[i - 1] << ", " << i
+                   << ": " << expected_times[i];
     EXPECT_EQ(expected_times[i], expected_times[i - 1] + chrono::seconds(1) -
                                      chrono::milliseconds(1));
   }
@@ -2506,7 +2507,7 @@ TEST_P(AbstractEventLoopTest, PhasedLoopChangingOffsetSweep) {
         counter++;
 
         if (counter == offset_sweep.size()) {
-          LOG(INFO) << "Exiting";
+          ABSL_LOG(INFO) << "Exiting";
           this->Exit();
           return;
         }
@@ -2543,7 +2544,7 @@ TEST_P(AbstractEventLoopTest, PhasedLoopRescheduleInPast) {
   TimerHandler *manager_timer =
       loop1->AddTimer([&phased_loop, &loop1, &expected_count, this]() {
         if (expected_count == 0) {
-          LOG(INFO) << "Exiting";
+          ABSL_LOG(INFO) << "Exiting";
           this->Exit();
           return;
         }
@@ -2589,7 +2590,7 @@ TEST_P(AbstractEventLoopTest, PhasedLoopRescheduleNow) {
   TimerHandler *manager_timer =
       loop1->AddTimer([&phased_loop, &loop1, &should_exit, this]() {
         if (should_exit) {
-          LOG(INFO) << "Exiting";
+          ABSL_LOG(INFO) << "Exiting";
           this->Exit();
           return;
         }
@@ -2631,7 +2632,7 @@ TEST_P(AbstractEventLoopTest, PhasedLoopRescheduleFuture) {
   TimerHandler *manager_timer = loop1->AddTimer(
       [&expected_count, &phased_loop, &loop1, &should_exit, this, kInterval]() {
         if (should_exit) {
-          LOG(INFO) << "Exiting";
+          ABSL_LOG(INFO) << "Exiting";
           this->Exit();
           return;
         }
@@ -2679,7 +2680,7 @@ TEST_P(AbstractEventLoopTest, PhasedLoopRescheduleWithLaterOffset) {
   TimerHandler *manager_timer = loop1->AddTimer(
       [&phased_loop, &loop1, &should_exit, this, kInterval, kOffset]() {
         if (should_exit) {
-          LOG(INFO) << "Exiting";
+          ABSL_LOG(INFO) << "Exiting";
           this->Exit();
           return;
         }
@@ -2729,7 +2730,7 @@ TEST_P(AbstractEventLoopTest, PhasedLoopRescheduleWithEarlierOffset) {
   TimerHandler *manager_timer = loop1->AddTimer(
       [&phased_loop, &loop1, &should_exit, this, kInterval, kOffset]() {
         if (should_exit) {
-          LOG(INFO) << "Exiting";
+          ABSL_LOG(INFO) << "Exiting";
           this->Exit();
           return;
         }
@@ -2818,13 +2819,13 @@ TEST_P(AbstractEventLoopTest, SenderTimingReport) {
     FlatbufferDetachedBuffer<timing::Report> primary_report =
         FlatbufferDetachedBuffer<timing::Report>::Empty();
     while (report_fetcher.FetchNext()) {
-      VLOG(1) << "Report " << FlatbufferToJson(report_fetcher.get());
+      ABSL_VLOG(1) << "Report " << FlatbufferToJson(report_fetcher.get());
       if (report_fetcher->name()->string_view() == "primary") {
         primary_report = CopyFlatBuffer(report_fetcher.get());
       }
     }
 
-    VLOG(1) << FlatbufferToJson(primary_report, {.multi_line = true});
+    ABSL_VLOG(1) << FlatbufferToJson(primary_report, {.multi_line = true});
 
     EXPECT_EQ(primary_report.message().name()->string_view(), "primary");
 
@@ -3042,14 +3043,14 @@ TEST_P(AbstractEventLoopTest, WatcherTimingReport) {
     FlatbufferDetachedBuffer<timing::Report> primary_report =
         FlatbufferDetachedBuffer<timing::Report>::Empty();
     while (report_fetcher.FetchNext()) {
-      LOG(INFO) << "Report " << FlatbufferToJson(report_fetcher.get());
+      ABSL_LOG(INFO) << "Report " << FlatbufferToJson(report_fetcher.get());
       if (report_fetcher->name()->string_view() == "primary") {
         primary_report = CopyFlatBuffer(report_fetcher.get());
       }
     }
 
     // Check the watcher report.
-    VLOG(1) << FlatbufferToJson(primary_report, {.multi_line = true});
+    ABSL_VLOG(1) << FlatbufferToJson(primary_report, {.multi_line = true});
 
     EXPECT_EQ(primary_report.message().name()->string_view(), "primary");
 
@@ -3123,7 +3124,7 @@ TEST_P(AbstractEventLoopTest, FetcherTimingReport) {
       }
     }
 
-    VLOG(1) << FlatbufferToJson(primary_report, {.multi_line = true});
+    ABSL_VLOG(1) << FlatbufferToJson(primary_report, {.multi_line = true});
 
     EXPECT_EQ(primary_report.message().name()->string_view(), "primary");
 

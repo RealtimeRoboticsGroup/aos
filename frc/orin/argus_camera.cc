@@ -6,7 +6,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "Argus/Argus.h"
 #include "Argus/EGLStream.h"
@@ -211,16 +211,16 @@ class ArgusCamera {
         << "Failed to get ICameraProperties Interface";
     // Get available Sensor Modes
     i_camera_properties->getAllSensorModes(&sensor_modes);
-    LOG(INFO) << "Found " << sensor_modes.size() << " modes";
+    ABSL_LOG(INFO) << "Found " << sensor_modes.size() << " modes";
 
     for (Argus::SensorMode *mode : sensor_modes) {
       Argus::ISensorMode *imode =
           Argus::interface_cast<Argus::ISensorMode>(mode);
-      LOG(INFO) << imode->getResolution().width() << " x "
-                << imode->getResolution().height();
-      LOG(INFO) << "type " << imode->getSensorModeType().getName();
-      LOG(INFO) << "exposure min " << imode->getExposureTimeRange().min();
-      LOG(INFO) << "exposure max " << imode->getExposureTimeRange().max();
+      ABSL_LOG(INFO) << imode->getResolution().width() << " x "
+                     << imode->getResolution().height();
+      ABSL_LOG(INFO) << "type " << imode->getSensorModeType().getName();
+      ABSL_LOG(INFO) << "exposure min " << imode->getExposureTimeRange().min();
+      ABSL_LOG(INFO) << "exposure max " << imode->getExposureTimeRange().max();
     }
     ABSL_CHECK_GT(sensor_modes.size(), 0u);
 
@@ -231,8 +231,9 @@ class ArgusCamera {
 
     {
       auto range = i_sensor_mode->getFrameDurationRange();
-      LOG(INFO) << "Frame duration min: " << range.min() << ", " << range.max()
-                << ", type " << i_sensor_mode->getSensorModeType().getName();
+      ABSL_LOG(INFO) << "Frame duration min: " << range.min() << ", "
+                     << range.max() << ", type "
+                     << i_sensor_mode->getSensorModeType().getName();
     }
 
     // Create the capture session using the first device and get the core
@@ -256,12 +257,13 @@ class ArgusCamera {
     i_buffer_output_stream_settings->setBufferType(
         Argus::BUFFER_TYPE_EGL_IMAGE);
     i_buffer_output_stream_settings->setMetadataEnable(true);
-    LOG(INFO) << "Type: "
-              << i_buffer_output_stream_settings->getBufferType().getName();
+    ABSL_LOG(INFO)
+        << "Type: "
+        << i_buffer_output_stream_settings->getBufferType().getName();
 
     output_stream_.reset(
         i_capture_session_->createOutputStream(stream_settings_.get()));
-    LOG(INFO) << "Got image stream";
+    ABSL_LOG(INFO) << "Got image stream";
 
     i_buffer_output_stream_ =
         Argus::interface_cast<Argus::IBufferOutputStream>(output_stream_);
@@ -379,10 +381,10 @@ class ArgusCamera {
 
   void Start() {
     if (i_capture_session_->repeat(request_.get()) != Argus::STATUS_OK) {
-      LOG(ERROR) << "Failed to submit repeat";
+      ABSL_LOG(ERROR) << "Failed to submit repeat";
     }
 
-    LOG(INFO) << "Session submitted";
+    ABSL_LOG(INFO) << "Session submitted";
   }
 
   // Class to manage an image buffer and return it when we are done.
@@ -404,21 +406,25 @@ class ArgusCamera {
       ABSL_CHECK_EQ(NvBufSurfaceFromFd(dmabuf_fd, (void **)(&nvbuf_surf_)), 0);
 
       ABSL_CHECK_EQ(NvBufSurfaceMap(nvbuf_surf_, -1, -1, NVBUF_MAP_READ), 0);
-      VLOG(1) << "Mapped";
+      ABSL_VLOG(1) << "Mapped";
       NvBufSurfaceSyncForCpu(nvbuf_surf_, -1, -1);
 
-      VLOG(1) << "Planes " << nvbuf_surf_->surfaceList->planeParams.num_planes
-              << " colorFormat " << nvbuf_surf_->surfaceList->colorFormat;
+      ABSL_VLOG(1) << "Planes "
+                   << nvbuf_surf_->surfaceList->planeParams.num_planes
+                   << " colorFormat " << nvbuf_surf_->surfaceList->colorFormat;
       for (size_t i = 0; i < nvbuf_surf_->surfaceList->planeParams.num_planes;
            ++i) {
-        VLOG(1) << "Address "
-                << static_cast<void *>(
-                       nvbuf_surf_->surfaceList->mappedAddr.addr[i])
-                << ", pitch " << nvbuf_surf_->surfaceList->planeParams.pitch[i]
-                << " height " << nvbuf_surf_->surfaceList->planeParams.height[i]
-                << " width " << nvbuf_surf_->surfaceList->planeParams.width[i]
-                << " bytes per pixel "
-                << nvbuf_surf_->surfaceList->planeParams.bytesPerPix[i];
+        ABSL_VLOG(1) << "Address "
+                     << static_cast<void *>(
+                            nvbuf_surf_->surfaceList->mappedAddr.addr[i])
+                     << ", pitch "
+                     << nvbuf_surf_->surfaceList->planeParams.pitch[i]
+                     << " height "
+                     << nvbuf_surf_->surfaceList->planeParams.height[i]
+                     << " width "
+                     << nvbuf_surf_->surfaceList->planeParams.width[i]
+                     << " bytes per pixel "
+                     << nvbuf_surf_->surfaceList->planeParams.bytesPerPix[i];
       }
       ABSL_CHECK_EQ(nvbuf_surf_->surfaceList->planeParams.width[0],
                     static_cast<size_t>(absl::GetFlag(FLAGS_width)));
@@ -474,7 +480,7 @@ class ArgusCamera {
   };
 
   MappedBuffer NextImageBlocking() {
-    VLOG(1) << "Going for frame";
+    ABSL_VLOG(1) << "Going for frame";
 
     Argus::Buffer *buffer;
     {
@@ -548,7 +554,7 @@ int Main() {
       event_loop.MakeSender<frc::vision::CameraImage>(
           absl::GetFlag(FLAGS_channel));
 
-  LOG(INFO) << "Started";
+  ABSL_LOG(INFO) << "Started";
   // Initialize the Argus camera provider.
   Argus::UniqueObj<Argus::CameraProvider> camera_provider;
   camera_provider =
@@ -568,11 +574,11 @@ int Main() {
     ORIGINATE_ERROR("there are %d cameras", (unsigned)camera_devices.size());
   }
 
-  LOG(INFO) << "Found " << camera_devices.size() << " cameras";
+  ABSL_LOG(INFO) << "Found " << camera_devices.size() << " cameras";
   for (Argus::CameraDevice *camera : camera_devices) {
     Argus::ICameraProperties *i_camera_properties =
         Argus::interface_cast<Argus::ICameraProperties>(camera);
-    LOG(INFO) << "Camera " << i_camera_properties->getModelName();
+    ABSL_LOG(INFO) << "Camera " << i_camera_properties->getModelName();
   }
 
   {
@@ -622,7 +628,7 @@ int Main() {
         const aos::monotonic_clock::time_point after_send =
             aos::monotonic_clock::now();
 
-        VLOG(1)
+        ABSL_VLOG(1)
             << "Got " << imetadata->getCaptureId() << " delay "
             << chrono::duration<double>(
                    chrono::nanoseconds(
@@ -668,7 +674,7 @@ int Main() {
     }
 
     event_loop.Run();
-    LOG(INFO) << "Event loop shutting down";
+    ABSL_LOG(INFO) << "Event loop shutting down";
 
     camera.Stop();
   }

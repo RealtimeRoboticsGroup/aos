@@ -4,7 +4,7 @@
 #include <numbers>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/containers/sized_array.h"
 #include "aos/time/time.h"
@@ -402,7 +402,7 @@ void ADIS16470::DoInitializeStep() {
     } break;
 
     case State::kRunning:
-      LOG(FATAL) << "Not a reset state";
+      ABSL_LOG(FATAL) << "Not a reset state";
   }
 }
 

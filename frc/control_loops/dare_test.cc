@@ -5,7 +5,7 @@
 
 #include "Eigen/Core"
 #include "Eigen/Eigenvalues"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 
 namespace frc::controls::testing {
@@ -15,15 +15,15 @@ void ExpectMatrixEqual(const Eigen::MatrixXd &lhs, const Eigen::MatrixXd &rhs,
   for (int row = 0; row < lhs.rows(); ++row) {
     for (int col = 0; col < lhs.cols(); ++col) {
       EXPECT_NEAR(lhs(row, col), rhs(row, col), tolerance);
-      VLOG(1) << "row = " << row;
-      VLOG(1) << "col = " << col;
+      ABSL_VLOG(1) << "row = " << row;
+      ABSL_VLOG(1) << "col = " << col;
     }
   }
 
   if (::testing::Test::HasFailure()) {
-    VLOG(1) << "lhs =\n" << lhs << "\n";
-    VLOG(1) << "rhs =\n" << rhs << "\n";
-    VLOG(1) << "delta =\n" << Eigen::MatrixXd{lhs - rhs} << "\n";
+    ABSL_VLOG(1) << "lhs =\n" << lhs << "\n";
+    ABSL_VLOG(1) << "rhs =\n" << rhs << "\n";
+    ABSL_VLOG(1) << "delta =\n" << Eigen::MatrixXd{lhs - rhs} << "\n";
   }
 }
 

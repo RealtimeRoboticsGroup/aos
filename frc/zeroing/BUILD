@@ -15,8 +15,8 @@ cc_library(
         "averager.h",
     ],
     deps = [
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@eigen",
     ],
 )
@@ -46,8 +46,8 @@ cc_library(
         "//frc/control_loops:control_loops_fbs",
         "//frc/control_loops/drivetrain:drivetrain_status_fbs",
         "//frc/wpilib:imu_fbs",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@eigen",
     ],
 )
@@ -78,8 +78,8 @@ cc_library(
         "//aos/logging",
         "//frc:constants",
         "//frc/control_loops:control_loops_fbs",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -108,8 +108,8 @@ cc_library(
                 "//aos/logging",
                 "//frc:constants",
                 "//frc/control_loops:control_loops_fbs",
-                "@com_google_absl//absl/log",
                 "@com_google_absl//absl/log:absl_check",
+                "@com_google_absl//absl/log:absl_log",
             ],
         ),
         cc_test(

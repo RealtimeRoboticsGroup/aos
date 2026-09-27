@@ -7,7 +7,7 @@
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "opencv2/core/eigen.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc.hpp"
@@ -148,7 +148,7 @@ void CameraImageCallback::HandleImage(const CameraImage &image) {
 
     ABSL_CHECK(server_connection != nullptr) << ": Failed to find client";
     if (!server_connection->has_monotonic_offset()) {
-      VLOG(1) << "No offset yet.";
+      ABSL_VLOG(1) << "No offset yet.";
       return;
     }
     offset = chrono::nanoseconds(server_connection->monotonic_offset());
@@ -173,7 +173,7 @@ void CameraImageCallback::HandleImage(const CameraImage &image) {
         DisableTracing();
       }
     }
-    VLOG(2) << "Age: " << age_double << ", getting behind, skipping";
+    ABSL_VLOG(2) << "Age: " << age_double << ", getting behind, skipping";
     return;
   }
 
@@ -203,7 +203,7 @@ ImageCallback::ImageCallback(
                 handle_image_(gray_image, eof);
               } break;
               case vision::ImageFormat::MONO16:
-                LOG(FATAL) << "Unsupported image format MONO16";
+                ABSL_LOG(FATAL) << "Unsupported image format MONO16";
                 break;
               case vision::ImageFormat::YUYV422: {
                 // Create color image:
@@ -236,10 +236,10 @@ ImageCallback::ImageCallback(
                 handle_image_(bgr_image, eof);
               } break;
               case vision::ImageFormat::BGRA8:
-                LOG(FATAL) << "Unsupported image format MONO16";
+                ABSL_LOG(FATAL) << "Unsupported image format MONO16";
                 return;
               case vision::ImageFormat::MJPEG:
-                LOG(FATAL) << "Unsupported image format MJPEG";
+                ABSL_LOG(FATAL) << "Unsupported image format MJPEG";
                 return;
             }
           },
@@ -282,23 +282,23 @@ void CharucoExtractor::SetupTargetData() {
                        : cv::aruco::DICT_6X6_250)));
     if (target_type_ == TargetType::kCharuco) {
       if (absl::GetFlag(FLAGS_twenty_inch_large_board)) {
-        LOG(INFO) << "Using 20in large board.";
+        ABSL_LOG(INFO) << "Using 20in large board.";
         board_ = MakeCharucoBoard(cv::Size(15, 15), 0.03, 0.022, dictionary_);
       } else if (absl::GetFlag(FLAGS_large_board)) {
         if (absl::GetFlag(FLAGS_coarse_pattern)) {
-          LOG(INFO) << "Using large board with coarse pattern.";
+          ABSL_LOG(INFO) << "Using large board with coarse pattern.";
           board_ =
               MakeCharucoBoard(cv::Size(12, 9), 0.06, 0.04666, dictionary_);
         } else {
-          LOG(INFO) << "Using large board with fine pattern.";
+          ABSL_LOG(INFO) << "Using large board with fine pattern.";
           board_ =
               MakeCharucoBoard(cv::Size(25, 18), 0.03, 0.0233, dictionary_);
         }
       } else if (absl::GetFlag(FLAGS_coarse_pattern)) {
-        LOG(INFO) << "Using coarse pattern.";
+        ABSL_LOG(INFO) << "Using coarse pattern.";
         board_ = MakeCharucoBoard(cv::Size(7, 5), 0.04, 0.025, dictionary_);
       } else if (absl::GetFlag(FLAGS_dict5x5_9x14_board)) {
-        LOG(INFO) << "Using 14x9 board with DICT5x5.";
+        ABSL_LOG(INFO) << "Using 14x9 board with DICT5x5.";
         board_ = MakeCharucoBoard(cv::Size(14, 9), 0.04, 0.03, dictionary_);
       } else {
         // TODO(jim): Need to figure out what
@@ -333,8 +333,8 @@ void CharucoExtractor::SetupTargetData() {
         cv::aruco::getPredefinedDictionary(cv::aruco::DICT_APRILTAG_16h5));
   } else {
     // Bail out if it's not a supported target
-    LOG(FATAL) << "Target type undefined: "
-               << static_cast<uint8_t>(target_type_);
+    ABSL_LOG(FATAL) << "Target type undefined: "
+                    << static_cast<uint8_t>(target_type_);
   }
 }
 
@@ -371,7 +371,7 @@ void CharucoExtractor::DrawTargetPoses(cv::Mat rgb_image,
     // small (trying to draw axes at inifinity)
     // TODO<Jim>: Either track this down or reimplement drawAxes
     if (result.z() < 0.01) {
-      LOG(INFO) << "Skipping, due to z value too small: " << result.z();
+      ABSL_LOG(INFO) << "Skipping, due to z value too small: " << result.z();
     } else if (absl::GetFlag(FLAGS_draw_axes) == true) {
       result /= result.z();
       if (target_type_ == TargetType::kCharuco ||
@@ -421,10 +421,11 @@ CharucoExtractor::CharucoExtractor(
     : event_loop_(nullptr),
       target_type_(target_type),
       calibration_(calibration) {
-  VLOG(2) << "Configuring CharucoExtractor without event_loop";
+  ABSL_VLOG(2) << "Configuring CharucoExtractor without event_loop";
   SetupTargetData();
-  VLOG(2) << "Camera matrix:\n" << calibration_.CameraIntrinsics();
-  VLOG(2) << "Distortion Coefficients:\n" << calibration_.CameraDistCoeffs();
+  ABSL_VLOG(2) << "Camera matrix:\n" << calibration_.CameraIntrinsics();
+  ABSL_VLOG(2) << "Distortion Coefficients:\n"
+               << calibration_.CameraDistCoeffs();
 }
 
 CharucoExtractor::CharucoExtractor(
@@ -443,9 +444,10 @@ CharucoExtractor::CharucoExtractor(
       handle_charuco_(std::move(handle_charuco_fn)) {
   SetupTargetData();
 
-  LOG(INFO) << "Camera matrix " << calibration_.CameraIntrinsics();
-  LOG(INFO) << "Distortion Coefficients " << calibration_.CameraDistCoeffs();
-  LOG(INFO) << "Connecting to channel " << image_channel_;
+  ABSL_LOG(INFO) << "Camera matrix " << calibration_.CameraIntrinsics();
+  ABSL_LOG(INFO) << "Distortion Coefficients "
+                 << calibration_.CameraDistCoeffs();
+  ABSL_LOG(INFO) << "Connecting to channel " << image_channel_;
 }
 
 void CharucoExtractor::HandleImage(cv::Mat rgb_image,
@@ -506,12 +508,12 @@ void CharucoExtractor::ProcessImage(
     cv::aruco::drawDetectedMarkers(rgb_image, marker_corners, marker_ids);
   }
 
-  VLOG(2) << "Handle Image, with target type = "
-          << static_cast<uint8_t>(target_type_) << " and " << marker_ids.size()
-          << " markers detected initially";
+  ABSL_VLOG(2) << "Handle Image, with target type = "
+               << static_cast<uint8_t>(target_type_) << " and "
+               << marker_ids.size() << " markers detected initially";
 
   if (marker_ids.size() == 0) {
-    VLOG(2) << "Didn't find any markers";
+    ABSL_VLOG(2) << "Didn't find any markers";
   } else {
     if (target_type_ == TargetType::kCharuco) {
       std::vector<int> charuco_ids;
@@ -566,18 +568,19 @@ void CharucoExtractor::ProcessImage(
               result_ids.emplace_back(cv::Vec4i{id, 0, 0, 0});
             }
           } else {
-            VLOG(2) << "Age: " << age_double << ", invalid charuco board pose";
+            ABSL_VLOG(2) << "Age: " << age_double
+                         << ", invalid charuco board pose";
           }
         } else {
-          VLOG(2) << "Age: " << age_double << ", not enough charuco IDs, got "
-                  << charuco_ids.size() << ", needed "
-                  << absl::GetFlag(FLAGS_min_charucos);
+          ABSL_VLOG(2) << "Age: " << age_double
+                       << ", not enough charuco IDs, got " << charuco_ids.size()
+                       << ", needed " << absl::GetFlag(FLAGS_min_charucos);
         }
       } else {
-        VLOG(2) << "Age: " << age_double
-                << ", not enough marker IDs for charuco board, got "
-                << marker_ids.size() << ", needed "
-                << absl::GetFlag(FLAGS_min_charucos);
+        ABSL_VLOG(2) << "Age: " << age_double
+                     << ", not enough marker IDs for charuco board, got "
+                     << marker_ids.size() << ", needed "
+                     << absl::GetFlag(FLAGS_min_charucos);
       }
     } else if (target_type_ == TargetType::kAruco ||
                target_type_ == TargetType::kAprilTag) {
@@ -616,7 +619,7 @@ void CharucoExtractor::ProcessImage(
           if ((id < absl::GetFlag(FLAGS_min_id)) ||
               (id > absl::GetFlag(FLAGS_max_id))) {
             all_valid_ids = false;
-            LOG(INFO) << "Got invalid charuco id: " << id;
+            ABSL_LOG(INFO) << "Got invalid charuco id: " << id;
           }
         }
         if (all_valid_ids) {
@@ -637,23 +640,24 @@ void CharucoExtractor::ProcessImage(
           result_ids = diamond_ids;
           result_corners = diamond_corners;
         } else {
-          LOG(INFO) << "Not all charuco ids were valid, so skipping";
+          ABSL_LOG(INFO) << "Not all charuco ids were valid, so skipping";
         }
       } else {
         if (diamond_ids.size() == 0) {
           // OK to not see any markers sometimes
-          VLOG(2) << "Found aruco markers, but no valid charuco diamond "
-                     "targets";
+          ABSL_VLOG(2) << "Found aruco markers, but no valid charuco diamond "
+                          "targets";
         } else {
-          VLOG(2) << "Found too many number of diamond markers, which likely "
-                     "means false positives were detected: "
-                  << diamond_ids.size() << " > "
-                  << absl::GetFlag(FLAGS_max_diamonds);
+          ABSL_VLOG(2)
+              << "Found too many number of diamond markers, which likely "
+                 "means false positives were detected: "
+              << diamond_ids.size() << " > "
+              << absl::GetFlag(FLAGS_max_diamonds);
         }
       }
     } else {
-      LOG(FATAL) << "Unknown target type: "
-                 << static_cast<uint8_t>(target_type_);
+      ABSL_LOG(FATAL) << "Unknown target type: "
+                      << static_cast<uint8_t>(target_type_);
     }
   }
 }
@@ -719,8 +723,8 @@ TargetType TargetTypeFromString(std::string_view str) {
   } else if (str == "apriltag") {
     return TargetType::kAprilTag;
   } else {
-    LOG(FATAL) << "Unknown target type: " << str
-               << ", expected: apriltag|aruco|charuco|charuco_diamond";
+    ABSL_LOG(FATAL) << "Unknown target type: " << str
+                    << ", expected: apriltag|aruco|charuco|charuco_diamond";
   }
 }
 

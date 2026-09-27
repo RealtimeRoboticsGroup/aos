@@ -12,7 +12,7 @@
 #include <vector>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 // libnvjpeg.so implements the libjpeg-8b API with NVIDIA's TEGRA_ACCELERATE
 // extensions.  TEGRA_ACCELERATE (set via local_defines in the BUILD file)
@@ -83,7 +83,7 @@ void ErrorExit(j_common_ptr cinfo) {
 void OutputMessage(j_common_ptr cinfo) {
   char message[JMSG_LENGTH_MAX];
   (*cinfo->err->format_message)(cinfo, message);
-  VLOG(1) << "libnvjpeg: " << message;
+  ABSL_VLOG(1) << "libnvjpeg: " << message;
 }
 
 }  // namespace
@@ -119,7 +119,7 @@ NvJpegDecoderLib::NvJpegDecoderLib() : impl_(new Impl()) {
   impl_->err.pub.output_message = OutputMessage;
 
   if (setjmp(impl_->err.setjmp_buffer)) {
-    LOG(FATAL) << "libnvjpeg failed to initialize: " << impl_->err.message;
+    ABSL_LOG(FATAL) << "libnvjpeg failed to initialize: " << impl_->err.message;
   }
   jpeg_create_decompress(&impl_->cinfo);
 
@@ -133,20 +133,21 @@ NvJpegDecoderLib::NvJpegDecoderLib() : impl_(new Impl()) {
     globfree(&engines);
   }
   if (engine_count == 0) {
-    LOG(FATAL) << "No NVJPG engine is bound to the tegra-nvjpg driver ("
-               << kNvjpgDriverGlob
-               << " matched nothing).  Is the tegra-drm kernel module "
-                  "loaded?  Check lsmod / 'sudo modprobe tegra-drm' on the "
-                  "Orin.  For CPU decode, switch the config template to "
-                  "turbojpeg_decoder instead.";
+    ABSL_LOG(FATAL)
+        << "No NVJPG engine is bound to the tegra-nvjpg driver ("
+        << kNvjpgDriverGlob
+        << " matched nothing).  Is the tegra-drm kernel module "
+           "loaded?  Check lsmod / 'sudo modprobe tegra-drm' on the "
+           "Orin.  For CPU decode, switch the config template to "
+           "turbojpeg_decoder instead.";
   }
   if (access("/dev/nvmap", R_OK | W_OK) != 0) {
-    LOG(FATAL) << "/dev/nvmap is not accessible: " << strerror(errno)
-               << " -- libnvjpeg needs it (does this user have the video "
-                  "group?)";
+    ABSL_LOG(FATAL) << "/dev/nvmap is not accessible: " << strerror(errno)
+                    << " -- libnvjpeg needs it (does this user have the video "
+                       "group?)";
   }
-  LOG(INFO) << engine_count
-            << " NVJPG engine(s) bound; hardware decode available";
+  ABSL_LOG(INFO) << engine_count
+                 << " NVJPG engine(s) bound; hardware decode available";
 }
 
 NvJpegDecoderLib::~NvJpegDecoderLib() {
@@ -181,8 +182,8 @@ void NvJpegDecoderLib::ResetStream() {
   // destroy/create should never fail, so a longjmp out of libjpeg here is
   // fatal (same stance as the constructor).
   if (setjmp(impl_->err.setjmp_buffer)) {
-    LOG(FATAL) << "libnvjpeg failed to reset the decode stream: "
-               << impl_->err.message;
+    ABSL_LOG(FATAL) << "libnvjpeg failed to reset the decode stream: "
+                    << impl_->err.message;
   }
   RebuildDecompress();
 }
@@ -196,7 +197,7 @@ bool NvJpegDecoderLib::FailFrame(const char *format, ...) {
   va_start(args, format);
   vsnprintf(impl_->err.message, sizeof(impl_->err.message), format, args);
   va_end(args);
-  VLOG(1) << "JPEG decode failed: " << impl_->err.message;
+  ABSL_VLOG(1) << "JPEG decode failed: " << impl_->err.message;
   RebuildDecompress();
   return false;
 }
@@ -212,8 +213,8 @@ bool NvJpegDecoderLib::DecodeToGray(const uint8_t *jpeg_data, size_t jpeg_size,
       // The failure happened inside RebuildDecompress itself
       // (destroy/create should never fail); re-entering the rebuild on a
       // half-initialized object cannot recover, so die loudly.
-      LOG(FATAL) << "libnvjpeg failed while rebuilding the decode stream: "
-                 << impl_->err.message;
+      ABSL_LOG(FATAL) << "libnvjpeg failed while rebuilding the decode stream: "
+                      << impl_->err.message;
     }
     // The hardware stream context is in an undefined state after an error,
     // so tear the decompress object down and rebuild it: the next frame
@@ -221,7 +222,7 @@ bool NvJpegDecoderLib::DecodeToGray(const uint8_t *jpeg_data, size_t jpeg_size,
     // pipeline refills through the usual warmup frame).  The message is
     // already in the last_error() buffer (ErrorExit formatted it there).
     RebuildDecompress();
-    VLOG(1) << "JPEG decode failed: " << impl_->err.message;
+    ABSL_VLOG(1) << "JPEG decode failed: " << impl_->err.message;
     return false;
   }
 
@@ -309,10 +310,11 @@ bool NvJpegDecoderLib::DecodeToGray(const uint8_t *jpeg_data, size_t jpeg_size,
   // engine being bound is not enough -- refuse to masquerade as a hardware
   // decoder while burning CPU.
   if (cinfo->tegra_acceleration == 0) {
-    LOG(FATAL) << "libnvjpeg decoded on the CPU even though an NVJPG engine "
-                  "is bound -- refusing to run without hardware decode.  For "
-                  "CPU decode, switch the config template to "
-                  "turbojpeg_decoder instead.";
+    ABSL_LOG(FATAL)
+        << "libnvjpeg decoded on the CPU even though an NVJPG engine "
+           "is bound -- refusing to run without hardware decode.  For "
+           "CPU decode, switch the config template to "
+           "turbojpeg_decoder instead.";
   }
 
   // The decoded luma plane lives in the hardware output surface.  In stream
@@ -335,8 +337,8 @@ bool NvJpegDecoderLib::DecodeToGray(const uint8_t *jpeg_data, size_t jpeg_size,
 
   if (!impl_->logged_first_decode) {
     impl_->logged_first_decode = true;
-    LOG(INFO) << "First JPEG decoded (" << width << "x" << height
-              << ") on the NVJPG engine";
+    ABSL_LOG(INFO) << "First JPEG decoded (" << width << "x" << height
+                   << ") on the NVJPG engine";
   }
 
   impl_->stream_width = width;

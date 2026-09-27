@@ -53,7 +53,7 @@ class TestLoopOutputHandler
     aos::CheckRealtime();
     // We don't care if this is RT if we are testing.
     aos::ScopedNotRealtime nrt;
-    LOG(INFO) << "output " << aos::FlatbufferToJson(&output);
+    ABSL_LOG(INFO) << "output " << aos::FlatbufferToJson(&output);
     ++count_;
     last_time_ = event_loop()->monotonic_now();
   }
@@ -63,7 +63,7 @@ class TestLoopOutputHandler
     // We don't care if this is RT if we are testing.
     aos::ScopedNotRealtime nrt;
     stop_time_ = event_loop()->monotonic_now();
-    LOG(INFO) << "Stopping";
+    ABSL_LOG(INFO) << "Stopping";
   }
 
  private:
@@ -102,7 +102,7 @@ TEST_F(LoopOutputHandlerTest, WatchdogTest) {
 
           ++count;
         }
-        LOG(INFO) << "Ping";
+        ABSL_LOG(INFO) << "Ping";
       });
 
   // Kick off the ping timer handler.

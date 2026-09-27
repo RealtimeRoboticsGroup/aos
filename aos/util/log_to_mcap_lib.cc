@@ -12,7 +12,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_join.h"
 #include "flatbuffers/reflection_generated.h"
 
@@ -154,9 +154,9 @@ class ProgressUpdatePrinter {
         monotonic_clock::duration total_virtual_duration =
             virtual_now - virtual_start_time_;
 
-        LOG(INFO) << "Processed a total of "
-                  << std::chrono::duration<double>(total_virtual_duration)
-                  << " of the log.";
+        ABSL_LOG(INFO) << "Processed a total of "
+                       << std::chrono::duration<double>(total_virtual_duration)
+                       << " of the log.";
 
         // Update the tracking variables for the next iteration.
         last_print_time_ = now;
@@ -243,11 +243,11 @@ int ConvertLogToMcap(const std::vector<std::string> &log_paths,
   std::string replay_node = absl::GetFlag(FLAGS_node);
   if (replay_node.empty()) {
     if (logger_nodes.size() == 1u) {
-      LOG(INFO) << "Guessing \"" << logger_node
-                << "\" as node given that --node was not specified.";
+      ABSL_LOG(INFO) << "Guessing \"" << logger_node
+                     << "\" as node given that --node was not specified.";
       replay_node = logger_node;
     } else {
-      LOG(ERROR) << "Must supply a --node for log_to_mcap.";
+      ABSL_LOG(ERROR) << "Must supply a --node for log_to_mcap.";
       return 1;
     }
   }

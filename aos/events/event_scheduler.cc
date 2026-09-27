@@ -92,7 +92,7 @@ Status EventScheduler::CallOldestEvent() {
   logger::BootTimestamp t;
   AOS_ASSIGN_OR_RETURN_ERROR(
       t, FromDistributedClock(scheduler_scheduler_->distributed_now()));
-  VLOG(2) << "Got time back " << t;
+  ABSL_VLOG(2) << "Got time back " << t;
   ABSL_CHECK_EQ(t.boot, boot_count_);
   ABSL_CHECK_EQ(t.time, iter->first)
       << ": Time is wrong on node " << node_index_;
@@ -268,9 +268,9 @@ Status EventSchedulerScheduler::Reboot() {
       std::get<1>(reboots_.front());
   ABSL_CHECK_EQ(times.size(), schedulers_.size());
 
-  VLOG(1) << "Rebooting at " << now_;
+  ABSL_VLOG(1) << "Rebooting at " << now_;
   for (const auto &time : times) {
-    VLOG(1) << "  " << time;
+    ABSL_VLOG(1) << "  " << time;
   }
 
   is_running_ = false;
@@ -499,8 +499,8 @@ EventSchedulerScheduler::OldestEvent() {
   }
 
   if (min_scheduler) {
-    VLOG(2) << "Oldest event " << min_event_time << " on scheduler "
-            << min_scheduler->node_index_;
+    ABSL_VLOG(2) << "Oldest event " << min_event_time << " on scheduler "
+                 << min_scheduler->node_index_;
   }
   return std::make_tuple(min_event_time, min_scheduler);
 }
@@ -508,7 +508,7 @@ EventSchedulerScheduler::OldestEvent() {
 Result<void> EventSchedulerScheduler::TemporarilyStopAndRun(
     std::function<void()> fn) {
   if (in_on_run_) {
-    LOG(FATAL)
+    ABSL_LOG(FATAL)
         << "Can't call AllowApplicationCreationDuring from an OnRun callback.";
   }
   const bool was_running = is_running_;

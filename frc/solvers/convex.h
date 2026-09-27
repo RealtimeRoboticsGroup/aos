@@ -7,8 +7,8 @@
 #include <iomanip>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
-#include "absl/log/vlog_is_on.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 #include "absl/strings/str_join.h"
 #include <Eigen/Dense>
 
@@ -100,7 +100,7 @@ class Solver {
       const Derivatives &derivatives,
       Eigen::Matrix<double, States + M + N, 1> y, double t_inverse);
 
-  // Prints out all the derivatives with VLOG at the provided verbosity.
+  // Prints out all the derivatives with ABSL_VLOG at the provided verbosity.
   void PrintDerivatives(
       const Derivatives &derivatives,
       const Eigen::Ref<const Eigen::Matrix<double, States + M + N, 1>> y,
@@ -197,28 +197,30 @@ Eigen::Matrix<double, States, 1> Solver<States, M, N>::Solve(
         // of the problem and start to run into rounding issues in the matrix
         // solve portion.
         if (dlambda(i) < 0.0 && dlambda(i) > -1e-12) {
-          VLOG(1) << "  lambda(" << i << ") " << lambda(i) << " + " << s
-                  << " * " << dlambda(i) << " -> s would be now "
-                  << -lambda(i) / dlambda(i);
+          ABSL_VLOG(1) << "  lambda(" << i << ") " << lambda(i) << " + " << s
+                       << " * " << dlambda(i) << " -> s would be now "
+                       << -lambda(i) / dlambda(i);
           dlambda(i) = 0.0;
-          VLOG(1) << "  dy -> " << std::setprecision(12) << std::fixed
-                  << std::setfill(' ') << dy.transpose().format(kHeavyFormat);
+          ABSL_VLOG(1) << "  dy -> " << std::setprecision(12) << std::fixed
+                       << std::setfill(' ')
+                       << dy.transpose().format(kHeavyFormat);
           continue;
         }
-        VLOG(1) << "  lambda(" << i << ") " << lambda(i) << " + " << s << " * "
-                << dlambda(i) << " -> s now " << -lambda(i) / dlambda(i);
+        ABSL_VLOG(1) << "  lambda(" << i << ") " << lambda(i) << " + " << s
+                     << " * " << dlambda(i) << " -> s now "
+                     << -lambda(i) / dlambda(i);
         s = -lambda(i) / dlambda(i);
       }
     }
 
-    VLOG(1) << "  After lambda line search, s is " << s;
+    ABSL_VLOG(1) << "  After lambda line search, s is " << s;
 
-    VLOG(3) << "  Initial step " << iteration << " -> " << std::setprecision(12)
-            << std::fixed << std::setfill(' ')
-            << dy.transpose().format(kHeavyFormat);
-    VLOG(3) << "   rt ->                                        "
-            << std::setprecision(12) << std::fixed << std::setfill(' ')
-            << rt_orig.transpose().format(kHeavyFormat);
+    ABSL_VLOG(3) << "  Initial step " << iteration << " -> "
+                 << std::setprecision(12) << std::fixed << std::setfill(' ')
+                 << dy.transpose().format(kHeavyFormat);
+    ABSL_VLOG(3) << "   rt ->                                        "
+                 << std::setprecision(12) << std::fixed << std::setfill(' ')
+                 << rt_orig.transpose().format(kHeavyFormat);
 
     const double rt_orig_squared_norm = rt_orig.squaredNorm();
 
@@ -238,31 +240,31 @@ Eigen::Matrix<double, States, 1> Solver<States, M, N>::Solve(
       const Eigen::Ref<const Eigen::VectorXd> next_v = next_y.block(
           next_x.rows() + next_lambda.rows(), 0, next_derivatives.A.rows(), 1);
 
-      VLOG(1) << "    next_rt(" << iteration << ") is " << rt.norm() << " -> "
-              << std::setprecision(12) << std::fixed << std::setfill(' ')
-              << rt.transpose().format(kHeavyFormat);
+      ABSL_VLOG(1) << "    next_rt(" << iteration << ") is " << rt.norm()
+                   << " -> " << std::setprecision(12) << std::fixed
+                   << std::setfill(' ') << rt.transpose().format(kHeavyFormat);
 
       PrintDerivatives(next_derivatives, next_y, "next_", 3);
 
       if (next_derivatives.f.maxCoeff() > 0.0) {
-        VLOG(1) << "   f_next > 0.0  -> " << next_derivatives.f.maxCoeff()
-                << ", continuing line search.";
+        ABSL_VLOG(1) << "   f_next > 0.0  -> " << next_derivatives.f.maxCoeff()
+                     << ", continuing line search.";
         s *= kBeta;
       } else if (next_derivatives.Axmb.squaredNorm() < 0.1 &&
                  rt.squaredNorm() >
                      std::pow(1.0 - kAlpha * s, 2.0) * rt_orig_squared_norm) {
-        VLOG(1) << "   |Rt| > |Rt+1| " << rt.norm() << " >  " << rt_orig.norm()
-                << ", drt -> " << std::setprecision(12) << std::fixed
-                << std::setfill(' ')
-                << (rt_orig - rt).transpose().format(kHeavyFormat);
+        ABSL_VLOG(1) << "   |Rt| > |Rt+1| " << rt.norm() << " >  "
+                     << rt_orig.norm() << ", drt -> " << std::setprecision(12)
+                     << std::fixed << std::setfill(' ')
+                     << (rt_orig - rt).transpose().format(kHeavyFormat);
         s *= kBeta;
       } else {
         break;
       }
     }
 
-    VLOG(1) << "  Terminated line search with s " << s << ", " << rt.norm()
-            << "(|Rt+1|) < " << rt_orig.norm() << "(|Rt|)";
+    ABSL_VLOG(1) << "  Terminated line search with s " << s << ", " << rt.norm()
+                 << "(|Rt+1|) < " << rt_orig.norm() << "(|Rt|)";
     y = next_y;
 
     const Eigen::Ref<const Eigen::VectorXd> next_lambda =
@@ -271,9 +273,9 @@ Eigen::Matrix<double, States, 1> Solver<States, M, N>::Solve(
     // See if we hit our convergence criteria.
     const double r_primal_squared_norm =
         rt.template block<N, 1>(States + M, 0).squaredNorm();
-    VLOG(1) << "  rt_next(" << iteration << ") is " << rt.norm() << " -> "
-            << std::setprecision(12) << std::fixed << std::setfill(' ')
-            << rt.transpose().format(kHeavyFormat);
+    ABSL_VLOG(1) << "  rt_next(" << iteration << ") is " << rt.norm() << " -> "
+                 << std::setprecision(12) << std::fixed << std::setfill(' ')
+                 << rt.transpose().format(kHeavyFormat);
     if (r_primal_squared_norm < kEpsilonF * kEpsilonF) {
       const double r_dual_squared_norm =
           rt.template block<States, 1>(0, 0).squaredNorm();
@@ -281,32 +283,32 @@ Eigen::Matrix<double, States, 1> Solver<States, M, N>::Solve(
         const double next_nu =
             -(next_derivatives.f.transpose() * next_lambda)(0, 0);
         if (next_nu < kEpsilon) {
-          VLOG(1) << "  r_primal(" << iteration << ") -> "
-                  << std::sqrt(r_primal_squared_norm) << " < " << kEpsilonF
-                  << ", r_dual(" << iteration << ") -> "
-                  << std::sqrt(r_dual_squared_norm) << " < " << kEpsilonF
-                  << ", nu(" << iteration << ") -> " << next_nu << " < "
-                  << kEpsilon;
+          ABSL_VLOG(1) << "  r_primal(" << iteration << ") -> "
+                       << std::sqrt(r_primal_squared_norm) << " < " << kEpsilonF
+                       << ", r_dual(" << iteration << ") -> "
+                       << std::sqrt(r_dual_squared_norm) << " < " << kEpsilonF
+                       << ", nu(" << iteration << ") -> " << next_nu << " < "
+                       << kEpsilon;
           break;
         } else {
-          VLOG(1) << "  nu(" << iteration << ") -> " << next_nu << " < "
-                  << kEpsilon << ", not done yet";
+          ABSL_VLOG(1) << "  nu(" << iteration << ") -> " << next_nu << " < "
+                       << kEpsilon << ", not done yet";
         }
 
       } else {
-        VLOG(1) << "  r_dual(" << iteration << ") -> "
-                << std::sqrt(r_dual_squared_norm) << " < " << kEpsilonF
-                << ", not done yet";
+        ABSL_VLOG(1) << "  r_dual(" << iteration << ") -> "
+                     << std::sqrt(r_dual_squared_norm) << " < " << kEpsilonF
+                     << ", not done yet";
       }
     } else {
-      VLOG(1) << "  r_primal(" << iteration << ") -> "
-              << std::sqrt(r_primal_squared_norm) << " < " << kEpsilonF
-              << ", not done yet";
+      ABSL_VLOG(1) << "  r_primal(" << iteration << ") -> "
+                   << std::sqrt(r_primal_squared_norm) << " < " << kEpsilonF
+                   << ", not done yet";
     }
-    VLOG(1) << "  step(" << iteration << ") " << std::setprecision(12)
-            << (s * dy).transpose().format(kHeavyFormat);
-    VLOG(1) << " y(" << iteration << ") is now " << std::setprecision(12)
-            << y.transpose().format(kHeavyFormat);
+    ABSL_VLOG(1) << "  step(" << iteration << ") " << std::setprecision(12)
+                 << (s * dy).transpose().format(kHeavyFormat);
+    ABSL_VLOG(1) << " y(" << iteration << ") is now " << std::setprecision(12)
+                 << y.transpose().format(kHeavyFormat);
 
     // Very import, use the last set of derivatives we picked for our new y
     // for the next iteration.  This avoids re-computing it.
@@ -314,7 +316,7 @@ Eigen::Matrix<double, States, 1> Solver<States, M, N>::Solve(
 
     ++iteration;
     if (iteration > 100) {
-      LOG(FATAL) << "Too many iterations";
+      ABSL_LOG(FATAL) << "Too many iterations";
     }
   }
 
@@ -350,7 +352,7 @@ void Solver<States, M, N>::PrintDerivatives(
   const Eigen::Ref<const Eigen::VectorXd> lambda =
       y.block(x.rows(), 0, derivatives.f.rows(), 1);
 
-  if (VLOG_IS_ON(verbosity)) {
+  if (ABSL_VLOG_IS_ON(verbosity)) {
     Eigen::IOFormat heavy(Eigen::StreamPrecision, 0, ", ",
                           ",\n                        "
                           "                                     ",
@@ -361,22 +363,24 @@ void Solver<States, M, N>::PrintDerivatives(
 
     const Eigen::Ref<const Eigen::VectorXd> v =
         y.block(x.rows() + lambda.rows(), 0, derivatives.A.rows(), 1);
-    VLOG(verbosity) << "   " << prefix << "x: " << x.transpose().format(heavy);
-    VLOG(verbosity) << "   " << prefix
-                    << "lambda: " << lambda.transpose().format(heavy);
-    VLOG(verbosity) << "   " << prefix << "v: " << v.transpose().format(heavy);
-    VLOG(verbosity) << "  " << prefix
-                    << "hessian:     " << derivatives.hessian.format(heavy);
-    VLOG(verbosity) << "  " << prefix
-                    << "gradient:    " << derivatives.gradient.format(heavy);
-    VLOG(verbosity) << "  " << prefix
-                    << "A:           " << derivatives.A.format(heavy);
-    VLOG(verbosity) << "  " << prefix
-                    << "Ax-b:        " << derivatives.Axmb.format(heavy);
-    VLOG(verbosity) << "  " << prefix
-                    << "f:           " << derivatives.f.format(heavy);
-    VLOG(verbosity) << "  " << prefix
-                    << "df:          " << derivatives.df.format(heavy);
+    ABSL_VLOG(verbosity) << "   " << prefix
+                         << "x: " << x.transpose().format(heavy);
+    ABSL_VLOG(verbosity) << "   " << prefix
+                         << "lambda: " << lambda.transpose().format(heavy);
+    ABSL_VLOG(verbosity) << "   " << prefix
+                         << "v: " << v.transpose().format(heavy);
+    ABSL_VLOG(verbosity) << "  " << prefix << "hessian:     "
+                         << derivatives.hessian.format(heavy);
+    ABSL_VLOG(verbosity) << "  " << prefix << "gradient:    "
+                         << derivatives.gradient.format(heavy);
+    ABSL_VLOG(verbosity) << "  " << prefix
+                         << "A:           " << derivatives.A.format(heavy);
+    ABSL_VLOG(verbosity) << "  " << prefix
+                         << "Ax-b:        " << derivatives.Axmb.format(heavy);
+    ABSL_VLOG(verbosity) << "  " << prefix
+                         << "f:           " << derivatives.f.format(heavy);
+    ABSL_VLOG(verbosity) << "  " << prefix
+                         << "df:          " << derivatives.df.format(heavy);
   }
 }
 

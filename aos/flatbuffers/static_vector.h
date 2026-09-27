@@ -3,8 +3,8 @@
 #include <span>
 
 #include "absl/log/absl_check.h"
+#include "absl/log/absl_log.h"
 #include "absl/log/die_if_null.h"
-#include "absl/log/log.h"
 #include "flatbuffers/base.h"
 #include "flatbuffers/vector.h"
 

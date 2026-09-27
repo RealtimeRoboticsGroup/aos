@@ -29,7 +29,7 @@ std::unique_ptr<DataDecoder> ResolveDecoder(std::string_view filename,
 #if ENABLE_S3
     decoder = std::make_unique<S3Fetcher>(filename);
 #else
-    LOG(FATAL) << "Reading files from S3 not supported on this platform";
+    ABSL_LOG(FATAL) << "Reading files from S3 not supported on this platform";
 #endif
   } else {
     decoder = std::make_unique<DummyDecoder>(filename);
@@ -52,11 +52,11 @@ std::unique_ptr<internal::FileOperations> MakeFileOperations(
 #if ENABLE_S3
     return std::make_unique<internal::S3FileOperations>(filename);
 #else
-    LOG(FATAL) << "Reading files from S3 not supported on this platform";
+    ABSL_LOG(FATAL) << "Reading files from S3 not supported on this platform";
 #endif
   }
   if (filename.find("://") != filename.npos) {
-    LOG(FATAL) << "This looks like a URL of an unknown type: " << filename;
+    ABSL_LOG(FATAL) << "This looks like a URL of an unknown type: " << filename;
   }
   return std::make_unique<internal::LocalFileOperations>(filename);
 }

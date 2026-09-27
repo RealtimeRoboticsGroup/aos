@@ -12,7 +12,7 @@ int main(int argc, char **argv) {
   struct sockaddr_storage sockaddr = aos::message_bridge::ResolveSocket(
       absl::GetFlag(FLAGS_host), absl::GetFlag(FLAGS_port),
       aos::message_bridge::Ipv6Enabled());
-  LOG(INFO) << "Family " << aos::message_bridge::Family(sockaddr);
-  LOG(INFO) << "Address " << aos::message_bridge::Address(sockaddr);
+  ABSL_LOG(INFO) << "Family " << aos::message_bridge::Family(sockaddr);
+  ABSL_LOG(INFO) << "Address " << aos::message_bridge::Address(sockaddr);
   return 0;
 }

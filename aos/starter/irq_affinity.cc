@@ -17,7 +17,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_cat.h"
 #include "flatbuffers/buffer.h"
 #include "flatbuffers/string.h"
@@ -145,7 +145,7 @@ struct ParsedKThreadConfig {
         new_scheduler = SCHED_FIFO;
         break;
       default:
-        LOG(FATAL) << "Unknown scheduler";
+        ABSL_LOG(FATAL) << "Unknown scheduler";
     }
     ABSL_PCHECK(sched_setscheduler(pid, new_scheduler, &param) == 0)
         << ", Failed to set " << name << "(" << pid << ") to "
@@ -184,7 +184,7 @@ class IrqAffinity {
       for (const starter::IrqConfig *irq_config :
            *irq_affinity_config.message().irqs()) {
         ABSL_CHECK(irq_config->has_name()) << ": Name required";
-        LOG(INFO) << "IRQ " << aos::FlatbufferToJson(irq_config);
+        ABSL_LOG(INFO) << "IRQ " << aos::FlatbufferToJson(irq_config);
         irqs_.push_back(ParsedIrqConfig{
             .name = irq_config->name()->str(),
             .affinity = AffinityFromFlatbuffer(irq_config->affinity()),
@@ -240,7 +240,7 @@ class IrqAffinity {
       std::vector<ParsedKThreadConfig> *threads) {
     threads->reserve(threads_config->size());
     for (const starter::KthreadConfig *kthread_config : *threads_config) {
-      LOG(INFO) << "Kthread " << aos::FlatbufferToJson(kthread_config);
+      ABSL_LOG(INFO) << "Kthread " << aos::FlatbufferToJson(kthread_config);
       ABSL_CHECK(kthread_config->has_name()) << ": Name required";
       const size_t star_position =
           kthread_config->name()->string_view().find('*');
@@ -296,7 +296,7 @@ int main(int argc, char **argv) {
         uid = user_data->pw_uid;
         gid = user_data->pw_gid;
       } else {
-        LOG(FATAL) << "Could not find user " << absl::GetFlag(FLAGS_user);
+        ABSL_LOG(FATAL) << "Could not find user " << absl::GetFlag(FLAGS_user);
         return 1;
       }
     }
@@ -307,12 +307,14 @@ int main(int argc, char **argv) {
     constexpr int kUnchanged = -1;
     if (setresgid(/* ruid */ gid, /* euid */ gid,
                   /* suid */ kUnchanged) != 0) {
-      PLOG(FATAL) << "Failed to change GID to " << absl::GetFlag(FLAGS_user);
+      ABSL_PLOG(FATAL) << "Failed to change GID to "
+                       << absl::GetFlag(FLAGS_user);
     }
 
     if (setresuid(/* ruid */ uid, /* euid */ uid,
                   /* suid */ kUnchanged) != 0) {
-      PLOG(FATAL) << "Failed to change UID to " << absl::GetFlag(FLAGS_user);
+      ABSL_PLOG(FATAL) << "Failed to change UID to "
+                       << absl::GetFlag(FLAGS_user);
     }
   }
 

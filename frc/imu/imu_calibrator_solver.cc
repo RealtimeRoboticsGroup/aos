@@ -82,10 +82,10 @@ AllParameters<double> Solve(
   options.parameter_tolerance = 1e-6;
   ceres::Solver::Summary summary;
   Solve(options, &problem, &summary);
-  LOG(INFO) << summary.FullReport();
-  LOG(INFO) << "Solution is " << (summary.IsSolutionUsable() ? "" : "NOT ")
-            << "usable";
-  LOG(INFO) << "Solution:\n" << parameters.ToString();
+  ABSL_LOG(INFO) << summary.FullReport();
+  ABSL_LOG(INFO) << "Solution is " << (summary.IsSolutionUsable() ? "" : "NOT ")
+                 << "usable";
+  ABSL_LOG(INFO) << "Solution:\n" << parameters.ToString();
   return parameters;
 }
 }  // namespace frc::imu

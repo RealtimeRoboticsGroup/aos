@@ -1,8 +1,8 @@
 #include "aos/testing/ping_pong/ping_lib.h"
 
 #include "absl/flags/flag.h"
-#include "absl/log/log.h"
-#include "absl/log/vlog_is_on.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/absl_vlog_is_on.h"
 
 #include "aos/json_to_flatbuffer.h"
 #include "aos/logging/logging.h"
@@ -36,9 +36,9 @@ Ping::Ping(EventLoop *event_loop, std::string_view channel_name)
 }
 
 void Ping::SendPing() {
-  if (last_pong_value_ != count_ && (!quiet_ || VLOG_IS_ON(1))) {
-    LOG(WARNING) << "Did not receive response to " << count_ << " within "
-                 << absl::GetFlag(FLAGS_sleep_us) << "us.";
+  if (last_pong_value_ != count_ && (!quiet_ || ABSL_VLOG_IS_ON(1))) {
+    ABSL_LOG(WARNING) << "Did not receive response to " << count_ << " within "
+                      << absl::GetFlag(FLAGS_sleep_us) << "us.";
   }
   ++count_;
   aos::Sender<examples::PingStatic>::StaticBuilder builder =
@@ -47,7 +47,7 @@ void Ping::SendPing() {
   builder->set_send_time(
       event_loop_->monotonic_now().time_since_epoch().count());
   builder.CheckOk(builder.Send());
-  VLOG(2) << "Sending ping";
+  ABSL_VLOG(2) << "Sending ping";
 }
 
 void Ping::HandlePong(const examples::Pong &pong) {
@@ -59,18 +59,18 @@ void Ping::HandlePong(const examples::Pong &pong) {
   const chrono::nanoseconds round_trip_time =
       monotonic_now - monotonic_send_time;
 
-  if (last_pong_value_ + 1 != pong.value() && (!quiet_ || VLOG_IS_ON(1))) {
-    LOG(WARNING) << "Unexpected pong value, wanted " << last_pong_value_ + 1
-                 << ", got " << pong.value();
+  if (last_pong_value_ + 1 != pong.value() && (!quiet_ || ABSL_VLOG_IS_ON(1))) {
+    ABSL_LOG(WARNING) << "Unexpected pong value, wanted "
+                      << last_pong_value_ + 1 << ", got " << pong.value();
   }
 
   if (pong.value() == count_) {
-    VLOG(1) << "Elapsed time " << round_trip_time.count() << " ns "
-            << FlatbufferToJson(&pong);
-  } else if (!quiet_ || VLOG_IS_ON(1)) {
-    LOG(WARNING) << "Unexpected pong response, got " << FlatbufferToJson(&pong)
-                 << " expected " << count_ << ", elapsed time "
-                 << round_trip_time.count() << " ns ";
+    ABSL_VLOG(1) << "Elapsed time " << round_trip_time.count() << " ns "
+                 << FlatbufferToJson(&pong);
+  } else if (!quiet_ || ABSL_VLOG_IS_ON(1)) {
+    ABSL_LOG(WARNING) << "Unexpected pong response, got "
+                      << FlatbufferToJson(&pong) << " expected " << count_
+                      << ", elapsed time " << round_trip_time.count() << " ns ";
   }
 
   last_pong_value_ = pong.value();

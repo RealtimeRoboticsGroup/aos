@@ -131,7 +131,7 @@ NodePrinter::NodePrinter(aos::EventLoop *event_loop,
       }
       const flatbuffers::string_view name = channel->name()->string_view();
       const flatbuffers::string_view type = channel->type()->string_view();
-      VLOG(1) << "Listening on " << name << " " << type;
+      ABSL_VLOG(1) << "Listening on " << name << " " << type;
 
       ABSL_CHECK(channel->schema() != nullptr);
       event_loop_->MakeRawWatcher(

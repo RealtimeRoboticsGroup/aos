@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 
 #include "aos/events/logging/logfile_utils.h"
@@ -40,7 +40,7 @@ class BufferEncoderBaseTest : public ::testing::Test {
     for (int i = 0; i < n; i++) {
       flatbuffers::DetachedBuffer buffer = CreateRandomBuffer();
       result.emplace_back(buffer.data(), buffer.data() + buffer.size());
-      LOG(INFO) << "Encoding " << buffer.size();
+      ABSL_LOG(INFO) << "Encoding " << buffer.size();
       ABSL_CHECK(encoder->HasSpace(buffer.size()))
           << ": The test isn't smart enough to flush, figure out what to do. "
              "Has "

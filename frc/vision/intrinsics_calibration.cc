@@ -4,7 +4,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_format.h"
 #include "opencv2/calib3d.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -42,7 +42,7 @@ void Main() {
   aos::ShmEventLoop event_loop(&config.message());
 
   const std::string hostname = aos::network::GetHostname();
-  LOG(INFO) << "Using pi/orin name from hostname as " << hostname;
+  ABSL_LOG(INFO) << "Using pi/orin name from hostname as " << hostname;
 
   ABSL_CHECK(!absl::GetFlag(FLAGS_base_intrinsics).empty())
       << "Need a base intrinsics json to use to auto-capture images when the "

@@ -199,7 +199,7 @@ TEST(InterpolatedTimeConverterTest, RebootInterpolation) {
   const BootTimestamp me = BootTimestamp::epoch();
   const BootTimestamp me2{.boot = 1u, .time = monotonic_clock::epoch()};
 
-  // LOG(FATAL) << "TODO(austin): Test ToDistributedClock too";
+  // ABSL_LOG(FATAL) << "TODO(austin): Test ToDistributedClock too";
 
   TestingTimeConverter time_converter(3u);
   size_t reboot_counter = 0;
@@ -317,11 +317,14 @@ TEST(InterpolatedTimeConverterDeathTest, ReadLostTime) {
 
   // Yup, can't read the origin anymore.
   EXPECT_DEATH(
-      { LOG(INFO) << CheckExpected(time_converter.ToDistributedClock(0, me)); },
+      {
+        ABSL_LOG(INFO) << CheckExpected(
+            time_converter.ToDistributedClock(0, me));
+      },
       "forgotten");
   EXPECT_DEATH(
       {
-        LOG(INFO) << CheckExpected(
+        ABSL_LOG(INFO) << CheckExpected(
             time_converter.FromDistributedClock(0, de, 0));
       },
       "forgotten");
@@ -358,7 +361,7 @@ class SquareProblem : public Problem {
   }
 
   void Prepare(size_t my_solve_number) override {
-    LOG(INFO) << "Starting solve " << my_solve_number;
+    ABSL_LOG(INFO) << "Starting solve " << my_solve_number;
   }
 
   void Update(size_t /*solve_number*/,
@@ -398,7 +401,7 @@ class SquareProblem : public Problem {
     result.Axmb = result.A * y.block<2, 1>(0, 0);
 
     if (!quiet) {
-      VLOG(2) << Q;
+      ABSL_VLOG(2) << Q;
     }
 
     return result;
@@ -427,7 +430,7 @@ TEST(TimestampProblemTest, SolveToyNewton) {
   std::tie(y, solution_node, iterations, used_constraints) =
       solver.SolveConstrainedNewton(&problem, 20, constraints).value();
 
-  LOG(INFO) << y.transpose();
+  ABSL_LOG(INFO) << y.transpose();
 
   EXPECT_EQ(constraints, used_constraints);
   EXPECT_NEAR(y(0), 1.0, 1e-3);

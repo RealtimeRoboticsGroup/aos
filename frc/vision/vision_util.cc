@@ -1,7 +1,7 @@
 #include "frc/vision/vision_util.h"
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 namespace frc::vision {
 
@@ -17,8 +17,8 @@ const frc::vision::calibration::CameraCalibration *FindCameraCalibration(
     }
     return candidate;
   }
-  LOG(FATAL) << ": Failed to find camera calibration for " << node_name
-             << " and camera number " << camera_number;
+  ABSL_LOG(FATAL) << ": Failed to find camera calibration for " << node_name
+                  << " and camera number " << camera_number;
 }
 
 }  // namespace frc::vision

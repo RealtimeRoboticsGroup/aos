@@ -6,7 +6,7 @@
 #include <sys/types.h>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 namespace aos::logger {
 
@@ -25,7 +25,7 @@ DummyDecoder::DummyDecoder(std::string_view filename)
 DummyDecoder::~DummyDecoder() {
   int status = _close(fd_);
   if (status != 0) {
-    PLOG(ERROR) << "DummyDecoder: Failed to close file";
+    ABSL_PLOG(ERROR) << "DummyDecoder: Failed to close file";
   }
 }
 

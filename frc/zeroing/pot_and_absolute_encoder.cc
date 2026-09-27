@@ -4,7 +4,7 @@
 #include <numeric>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 #include "aos/containers/error_list.h"
 #include "frc/zeroing/wrap.h"
@@ -57,12 +57,12 @@ void PotAndAbsoluteEncoderZeroingEstimator::UpdateEstimate(
   // code below. NaN values are given when the Absolute Encoder is disconnected.
   if (::std::isnan(info.absolute_encoder())) {
     if (zeroed_) {
-      VLOG(1) << "NAN on absolute encoder.";
+      ABSL_VLOG(1) << "NAN on absolute encoder.";
       errors_.Set(ZeroingError::LOST_ABSOLUTE_ENCODER);
       error_ = true;
     } else {
       ++nan_samples_;
-      VLOG(1) << "NAN on absolute encoder while zeroing " << nan_samples_;
+      ABSL_VLOG(1) << "NAN on absolute encoder while zeroing " << nan_samples_;
       if (nan_samples_ >= constants_.average_filter_size) {
         errors_.Set(ZeroingError::LOST_ABSOLUTE_ENCODER);
         error_ = true;
@@ -167,10 +167,10 @@ void PotAndAbsoluteEncoderZeroingEstimator::UpdateEstimate(
       if (::std::abs(first_offset_ - offset_) >
           constants_.allowable_encoder_error *
               constants_.one_revolution_distance) {
-        VLOG(1) << "Offset moved too far. Initial: " << first_offset_
-                << ", current " << offset_ << ", allowable change: "
-                << constants_.allowable_encoder_error *
-                       constants_.one_revolution_distance;
+        ABSL_VLOG(1) << "Offset moved too far. Initial: " << first_offset_
+                     << ", current " << offset_ << ", allowable change: "
+                     << constants_.allowable_encoder_error *
+                            constants_.one_revolution_distance;
         errors_.Set(ZeroingError::OFFSET_MOVED_TOO_FAR);
         error_ = true;
       }

@@ -13,7 +13,7 @@
 #include <vector>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
 #include "absl/types/span.h"
@@ -127,9 +127,9 @@ TEST_F(StaticFlatbuffersTest, DocumentationExample) {
     subtable->set_foo(included::TestEnum::B);
   }
   ASSERT_TRUE(builder.AsFlatbufferSpan().Verify());
-  LOG(INFO) << aos::FlatbufferToJson(builder.AsFlatbufferSpan(),
-                                     {.multi_line = true});
-  LOG(INFO) << AnnotateBinaries(test_schema_, builder.buffer());
+  ABSL_LOG(INFO) << aos::FlatbufferToJson(builder.AsFlatbufferSpan(),
+                                          {.multi_line = true});
+  ABSL_LOG(INFO) << AnnotateBinaries(test_schema_, builder.buffer());
 }
 
 // Test that compiles the same code that is used by an example in
@@ -219,10 +219,11 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
     Builder<SubTableStatic> builder(&allocator);
     SubTableStatic *object = builder.get();
     if (!builder.AsFlatbufferSpan().Verify()) {
-      LOG(ERROR) << object->SerializationDebugString() << "\nRoot table offset "
-                 << *reinterpret_cast<const uoffset_t *>(
-                        builder.buffer().data())
-                 << "\nraw bytes\n";
+      ABSL_LOG(ERROR) << object->SerializationDebugString()
+                      << "\nRoot table offset "
+                      << *reinterpret_cast<const uoffset_t *>(
+                             builder.buffer().data())
+                      << "\nraw bytes\n";
       aos::fbs::internal::DebugBytes(builder.buffer(), std::cerr);
       FAIL();
       return;
@@ -242,7 +243,7 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
     Builder<TestTableStatic> builder(&allocator);
     TestTableStatic *object = builder.get();
     const aos::fbs::testing::TestTable &fbs = object->AsFlatbuffer();
-    VLOG(1) << object->SerializationDebugString();
+    ABSL_VLOG(1) << object->SerializationDebugString();
     ABSL_CHECK(builder.AsFlatbufferSpan().Verify());
     EXPECT_EQ("{  }", aos::FlatbufferToJson(builder.AsFlatbufferSpan()));
     {
@@ -260,7 +261,7 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
       ASSERT_TRUE(vector->emplace_back(5));
       ASSERT_TRUE(object->has_vector_of_scalars());
       ASSERT_TRUE(fbs.has_vector_of_scalars());
-      VLOG(1) << vector->SerializationDebugString();
+      ABSL_VLOG(1) << vector->SerializationDebugString();
       EXPECT_TRUE(fbs.has_vector_of_scalars());
       EXPECT_EQ(2u, fbs.vector_of_scalars()->size());
       EXPECT_EQ(4, fbs.vector_of_scalars()->Get(0));
@@ -535,7 +536,7 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
                 reinterpret_cast<size_t>(fbs.vector_aligned()->data()) % 64);
       EXPECT_EQ(444, fbs.vector_aligned()->Get(0));
     }
-    VLOG(1) << object->SerializationDebugString();
+    ABSL_VLOG(1) << object->SerializationDebugString();
     ABSL_CHECK(builder.AsFlatbufferSpan().Verify());
     const std::string expected_contents =
         R"json({
@@ -584,13 +585,13 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
     EXPECT_EQ(expected_contents,
               aos::FlatbufferToJson(builder.AsFlatbufferSpan(),
                                     {.multi_line = true}));
-    VLOG(1) << AnnotateBinaries(test_schema_, builder.buffer());
+    ABSL_VLOG(1) << AnnotateBinaries(test_schema_, builder.buffer());
     VerifyJson<TestTableStatic>(expected_contents);
     {
       auto aligned_vector = object->mutable_vector_aligned();
       ASSERT_TRUE(aligned_vector->reserve(100));
 
-      VLOG(1) << AnnotateBinaries(test_schema_, builder.buffer());
+      ABSL_VLOG(1) << AnnotateBinaries(test_schema_, builder.buffer());
       // Since the allocator is going to allocate in blocks of 64, we end up
       // with more capacity than we asked for.  Better to have it than to leave
       // it as unusable padding.
@@ -606,8 +607,8 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
         scalars.push_back(aligned_vector->size());
         ABSL_CHECK(aligned_vector->emplace_back(aligned_vector->size()));
       }
-      VLOG(1) << aligned_vector->SerializationDebugString();
-      VLOG(1) << AnnotateBinaries(test_schema_, builder.buffer());
+      ABSL_VLOG(1) << aligned_vector->SerializationDebugString();
+      ABSL_VLOG(1) << AnnotateBinaries(test_schema_, builder.buffer());
       EXPECT_EQ(absl::StrFormat(
                     R"json({
  "scalar": 123,
@@ -916,9 +917,9 @@ TEST_F(StaticFlatbuffersTest, ExactSizeSpanAllocator) {
     subtable->set_foo(included::TestEnum::B);
   }
   ASSERT_TRUE(builder.AsFlatbufferSpan().Verify());
-  VLOG(1) << aos::FlatbufferToJson(builder.AsFlatbufferSpan(),
-                                   {.multi_line = true});
-  VLOG(1) << AnnotateBinaries(test_schema_, builder.buffer());
+  ABSL_VLOG(1) << aos::FlatbufferToJson(builder.AsFlatbufferSpan(),
+                                        {.multi_line = true});
+  ABSL_VLOG(1) << AnnotateBinaries(test_schema_, builder.buffer());
   TestMemory(builder.buffer());
 }
 
@@ -1084,9 +1085,9 @@ TEST_F(StaticFlatbuffersTest, FixedStackAllocator) {
     subtable->set_foo(included::TestEnum::B);
   }
   ASSERT_TRUE(builder.AsFlatbufferSpan().Verify());
-  VLOG(1) << aos::FlatbufferToJson(builder.AsFlatbufferSpan(),
-                                   {.multi_line = true});
-  VLOG(1) << AnnotateBinaries(test_schema_, builder.buffer());
+  ABSL_VLOG(1) << aos::FlatbufferToJson(builder.AsFlatbufferSpan(),
+                                        {.multi_line = true});
+  ABSL_VLOG(1) << AnnotateBinaries(test_schema_, builder.buffer());
   TestMemory(builder.buffer());
 }
 
@@ -1205,9 +1206,9 @@ TEST_F(StaticFlatbuffersTest, BuilderMoveConstructor) {
     subtable->set_foo(included::TestEnum::B);
   }
   ASSERT_TRUE(builder.AsFlatbufferSpan().Verify());
-  VLOG(1) << aos::FlatbufferToJson(builder.AsFlatbufferSpan(),
-                                   {.multi_line = true});
-  VLOG(1) << AnnotateBinaries(test_schema_, builder.buffer());
+  ABSL_VLOG(1) << aos::FlatbufferToJson(builder.AsFlatbufferSpan(),
+                                        {.multi_line = true});
+  ABSL_VLOG(1) << AnnotateBinaries(test_schema_, builder.buffer());
   TestMemory(builder.buffer());
 }
 

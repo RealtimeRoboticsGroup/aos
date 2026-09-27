@@ -325,8 +325,8 @@ std::unique_ptr<Threshold> MakeThreshold(vision::ImageFormat image_format,
       return std::make_unique<TypedThreshold<vision::ImageFormat::BGRA8>>(
           width, height);
     default:
-      LOG(FATAL) << "Unknown image format: "
-                 << vision::EnumNameImageFormat(image_format);
+      ABSL_LOG(FATAL) << "Unknown image format: "
+                      << vision::EnumNameImageFormat(image_format);
   }
 }
 

@@ -192,7 +192,7 @@ size_t SnappyDecoder::Read(uint8_t *begin, uint8_t *end) {
       break;
     }
     if (read_length != 4u) {
-      LOG(WARNING) << "Logfile data is truncated.";
+      ABSL_LOG(WARNING) << "Logfile data is truncated.";
       break;
     }
     const uint8_t chunk_type = header[0];
@@ -201,7 +201,7 @@ size_t SnappyDecoder::Read(uint8_t *begin, uint8_t *end) {
     if (chunk_size !=
         underlying_decoder_->Read(compressed_buffer_.data(),
                                   compressed_buffer_.data() + chunk_size)) {
-      LOG(WARNING) << "Logfile data is truncated.";
+      ABSL_LOG(WARNING) << "Logfile data is truncated.";
       break;
     }
     if (chunk_type == 0xFF) {
@@ -210,7 +210,7 @@ size_t SnappyDecoder::Read(uint8_t *begin, uint8_t *end) {
       continue;
     } else if (chunk_type == 0x00) {
       if (compressed_buffer_.size() < 4u) {
-        LOG(WARNING) << "Logfile data is truncated.";
+        ABSL_LOG(WARNING) << "Logfile data is truncated.";
         break;
       }
       const uint32_t checksum = compressed_buffer_.data()[0] +
@@ -258,8 +258,8 @@ size_t SnappyDecoder::Read(uint8_t *begin, uint8_t *end) {
       }
     } else {
       // Unimplemented.
-      LOG(FATAL) << "Unsupported snappy chunk type "
-                 << static_cast<int>(chunk_type);
+      ABSL_LOG(FATAL) << "Unsupported snappy chunk type "
+                      << static_cast<int>(chunk_type);
     }
   }
   total_output_ += current_output - begin;

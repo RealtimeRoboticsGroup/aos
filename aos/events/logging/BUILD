@@ -60,8 +60,8 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//aos/time",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -85,8 +85,8 @@ cc_binary(
         "//aos/events:shm_event_loop",
         "@aos_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/log:die_if_null",
     ],
 )
@@ -96,8 +96,8 @@ cc_library(
     srcs = ["file_operations.cc"],
     hdrs = ["file_operations.h"],
     deps = [
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/strings",
     ],
 )
@@ -138,8 +138,8 @@ cc_library(
         "//aos/time",
         "//aos/util:file",
         "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:span",
     ],
@@ -155,8 +155,8 @@ cc_test(
         "//aos/containers:resizeable_buffer",
         "//aos/testing:googletest",
         "//aos/testing:tmpdir",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -237,8 +237,8 @@ cc_library(
         "//aos/util:file",
         "@aos_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/types:span",
     ] + select({
         # s3_fetcher is x86_64-only (it depends on the AWS SDK), so gate these on
@@ -262,8 +262,8 @@ cc_binary(
         ":logfile_utils",
         "//aos:init",
         "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -309,8 +309,8 @@ cc_library(
         "//aos/containers:resizeable_buffer",
         "//aos/time",
         "@aos_flatbuffers//:flatbuffers",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/types:span",
     ],
 )
@@ -325,8 +325,8 @@ cc_test(
         ":buffer_encoder",
         ":buffer_encoder_param_test",
         "//aos/testing:googletest",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -346,8 +346,8 @@ cc_library(
         "//aos/containers:resizeable_buffer",
         "//aos/util:crc32",
         "@aos_flatbuffers//:flatbuffers",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/types:span",
         "@snappy",
     ],
@@ -363,8 +363,8 @@ cc_test(
         ":buffer_encoder_param_test",
         ":snappy_encoder",
         "//aos/testing:googletest",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -384,8 +384,8 @@ cc_library(
         "//aos/containers:resizeable_buffer",
         "@aos_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/types:span",
         "@xz//:lzma",
     ],
@@ -409,8 +409,8 @@ cc_library(
         "//aos/containers:resizeable_buffer",
         "@aws_sdk//:core",
         "@aws_sdk//:s3",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:span",
     ],
@@ -427,8 +427,8 @@ cc_test(
         ":lzma_encoder",
         "//aos/testing:googletest",
         "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -446,8 +446,8 @@ cc_library(
         ":logger_fbs",
         "//aos/testing:googletest",
         "//aos/testing:random_seed",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
     alwayslink = True,
 )
@@ -469,8 +469,8 @@ cc_library(
         "//aos/containers:sized_array",
         "//aos/ipc_lib:memory_estimation",
         "@aos_flatbuffers//:flatbuffers",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -622,8 +622,8 @@ cc_binary(
         "//aos:sha256",
         "//aos/events:simulated_event_loop",
         "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -640,8 +640,8 @@ cc_library(
         "//aos/events:simulated_event_loop",
         "//aos/network:multinode_timestamp_filter",
         "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -659,8 +659,8 @@ cc_binary(
         "//aos/events:simulated_event_loop",
         "//aos/network:multinode_timestamp_filter",
         "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -677,8 +677,8 @@ cc_binary(
         "//aos/events:simulated_event_loop",
         "//aos/network:multinode_timestamp_filter",
         "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -694,8 +694,8 @@ cc_binary(
         "//aos:json_to_flatbuffer",
         "//aos/util:file",
         "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -712,8 +712,8 @@ cc_binary(
         "//aos/events:simulated_event_loop",
         "//aos/time",
         "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -736,8 +736,8 @@ cc_binary(
         "//aos/events:shm_event_loop",
         "//aos/logging:log_namer",
         "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -1081,8 +1081,8 @@ cc_binary(
         "//aos:json_to_flatbuffer",
         "//aos/events/logging:log_reader",
         "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -1098,8 +1098,8 @@ cc_binary(
         "//aos:init",
         "//aos/containers:resizeable_buffer",
         "//aos/time",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 

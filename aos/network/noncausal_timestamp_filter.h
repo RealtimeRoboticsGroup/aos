@@ -9,7 +9,7 @@
 #include <deque>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/numeric/int128.h"
 
 #include "aos/configuration.h"
@@ -235,8 +235,8 @@ class NoncausalTimestampFilter {
   // For testing only:
   void Debug() const {
     for (const std::unique_ptr<BootFilter> &filter : filters_) {
-      LOG(INFO) << NodeNames() << " boota: " << filter->boot.first << ", "
-                << filter->boot.second;
+      ABSL_LOG(INFO) << NodeNames() << " boota: " << filter->boot.first << ", "
+                     << filter->boot.second;
       filter->filter.Debug();
     }
   }
@@ -688,7 +688,7 @@ class NoncausalOffsetEstimator {
       return &b_;
     }
 
-    LOG(FATAL) << "Unknown node";
+    ABSL_LOG(FATAL) << "Unknown node";
     return nullptr;
   }
 

@@ -14,7 +14,7 @@
 // clang-format on
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #endif  // !AOS_OS_NONE
 
 namespace frc::controls {
@@ -200,9 +200,9 @@ HPolytope<number_of_dimensions>::CalculateVertices(
   if (error != dd_NoError || polyhedra == NULL) {
     dd_WriteErrorMessages(stderr, error);
     dd_FreeMatrix(matrix);
-    LOG(ERROR) << "bad H" << H;
-    LOG(ERROR) << "bad k_" << k;
-    LOG(FATAL) << "dd_DDMatrix2Poly failed";
+    ABSL_LOG(ERROR) << "bad H" << H;
+    ABSL_LOG(ERROR) << "bad k_" << k;
+    ABSL_LOG(FATAL) << "dd_DDMatrix2Poly failed";
   }
 
   dd_MatrixPtr vertex_matrix = dd_CopyGenerators(polyhedra);

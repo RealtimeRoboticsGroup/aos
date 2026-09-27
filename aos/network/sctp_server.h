@@ -14,7 +14,7 @@
 #include <memory>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "absl/types/span.h"
 
 #include "aos/network/sctp_lib.h"

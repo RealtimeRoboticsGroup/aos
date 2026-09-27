@@ -4,7 +4,7 @@
 #include <limits>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 
 namespace frc::zeroing {
 
@@ -50,9 +50,9 @@ void PulseIndexZeroingEstimator::UpdateEstimate(const IndexPosition &info) {
   const int index_pulse_count = IndexPulseCount();
   if (index_pulse_count > constants_.index_pulse_count) {
     if (!error_) {
-      VLOG(1) << "Got more index pulses than expected. Got "
-              << index_pulse_count << " expected "
-              << constants_.index_pulse_count;
+      ABSL_VLOG(1) << "Got more index pulses than expected. Got "
+                   << index_pulse_count << " expected "
+                   << constants_.index_pulse_count;
       error_ = true;
     }
   }
@@ -82,7 +82,7 @@ void PulseIndexZeroingEstimator::UpdateEstimate(const IndexPosition &info) {
     // This lets us check if the index pulse is within an acceptable error
     // margin of where we expected it to be.
     if (::std::abs(error) > constants_.allowable_encoder_error) {
-      VLOG(1)
+      ABSL_VLOG(1)
           << "Encoder ticks out of range since last index pulse. known index "
              "pulse: "
           << constants_.measured_index_position << ", expected index pulse: "

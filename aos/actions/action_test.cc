@@ -7,7 +7,7 @@
 #include <string>
 
 #include "absl/log/absl_check.h"
-#include "absl/log/log.h"
+#include "absl/log/absl_log.h"
 #include "flatbuffers/buffer.h"
 #include "gtest/gtest.h"
 
@@ -42,7 +42,7 @@ class TestActorIndex
   }
 
   bool RunAction(const UInt *new_index) override {
-    VLOG(1) << "New index " << FlatbufferToJson(new_index);
+    ABSL_VLOG(1) << "New index " << FlatbufferToJson(new_index);
     index = new_index->val();
     return true;
   }
