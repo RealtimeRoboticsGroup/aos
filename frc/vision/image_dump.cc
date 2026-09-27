@@ -1,6 +1,7 @@
 #include <filesystem>
 
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 
 #include "aos/events/logging/log_reader.h"
 #include "aos/events/simulated_event_loop.h"
@@ -30,8 +31,8 @@ class ImageDump {
   }
 
   void LogImage(const frc::vision::CameraImage &image, int camera) {
-    CHECK(image.format() == frc::vision::ImageFormat::MJPEG);
-    CHECK(image.has_data());
+    ABSL_CHECK(image.format() == frc::vision::ImageFormat::MJPEG);
+    ABSL_CHECK(image.has_data());
     std::string_view image_data(
         reinterpret_cast<const char *>(image.data()->data()),
         image.data()->size());
@@ -42,12 +43,12 @@ class ImageDump {
                      sha256, "-", camera, ".jpg");
     LOG(INFO) << "Writing " << path;
 
-    CHECK(aos::util::MkdirPIfSpace(path,
-                                   std::filesystem::perms::owner_all |
-                                       std::filesystem::perms::group_read |
-                                       std::filesystem::perms::group_exec |
-                                       std::filesystem::perms::others_read |
-                                       std::filesystem::perms::others_exec));
+    ABSL_CHECK(aos::util::MkdirPIfSpace(
+        path, std::filesystem::perms::owner_all |
+                  std::filesystem::perms::group_read |
+                  std::filesystem::perms::group_exec |
+                  std::filesystem::perms::others_read |
+                  std::filesystem::perms::others_exec));
     aos::util::WriteStringToFileOrDie(path, image_data,
                                       std::filesystem::perms::owner_read |
                                           std::filesystem::perms::owner_write |

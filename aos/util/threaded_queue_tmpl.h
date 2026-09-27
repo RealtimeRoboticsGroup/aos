@@ -23,7 +23,7 @@ ThreadedQueue<T, SharedState>::ThreadedQueue(
               continue;
             } else {
               pusher_waiting_ = true;
-              CHECK(!popped_.Wait());
+              ABSL_CHECK(!popped_.Wait());
               pusher_waiting_ = false;
             }
           }
@@ -40,7 +40,7 @@ template <typename T, typename SharedState>
 void ThreadedQueue<T, SharedState>::WaitForNoMoreWork() {
   MutexLocker locker(&mutex_);
   while (state_updated_ || (!pusher_waiting_ && !done_)) {
-    CHECK(!pushed_.Wait());
+    ABSL_CHECK(!pushed_.Wait());
   }
 }
 
@@ -82,7 +82,7 @@ template <typename T, typename SharedState>
 std::optional<T> ThreadedQueue<T, SharedState>::PeekOrPop(bool pop) {
   MutexLocker locker(&mutex_);
   while (!done_ && queue_.empty()) {
-    CHECK(!pushed_.Wait());
+    ABSL_CHECK(!pushed_.Wait());
   }
   if (queue_.empty()) {
     return std::nullopt;

@@ -1,4 +1,6 @@
 #include "frc/imu/imu_calibrator_solver.h"
+
+#include "absl/log/absl_check.h"
 namespace frc::imu {
 
 struct ImuCalibratorCostFunctor {
@@ -42,7 +44,7 @@ AllParameters<double> Solve(
       new ceres::EigenQuaternionManifold();
   AllParameters<double> parameters;
   std::vector<size_t> num_readings;
-  CHECK_EQ(nominal_config.size(), readings.size());
+  ABSL_CHECK_EQ(nominal_config.size(), readings.size());
   for (size_t imu_index = 0; imu_index < nominal_config.size(); ++imu_index) {
     const size_t num_params = readings[imu_index].size();
     parameters.imus.emplace_back(nominal_config[imu_index]);

@@ -4,7 +4,7 @@
 #include <fstream>
 #include <string>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -127,7 +127,7 @@ TEST(SpanCopierTest, Matches) {
     data.push_back(i);
   }
 
-  CHECK_EQ(data.size(), 32u);
+  ABSL_CHECK_EQ(data.size(), 32u);
 
   for (int i = 0; i < 32; i += 8) {
     for (int j = i; j < 32; j += 8) {

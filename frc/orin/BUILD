@@ -48,7 +48,7 @@ cc_library(
         "@com_github_nvidia_cccl//:cccl",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -159,7 +159,7 @@ cuda_library(
         "@com_github_nvidia_cccl//:cccl",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -349,7 +349,7 @@ cc_binary(
         "//aos/logging:log_namer",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 

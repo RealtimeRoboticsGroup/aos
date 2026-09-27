@@ -2,7 +2,7 @@
 
 #include <numeric>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
 
@@ -13,19 +13,19 @@ namespace frc::vision {
 
 std::optional<cv::Mat> CameraExtrinsics(
     const frc::vision::calibration::CameraCalibration *camera_calibration) {
-  CHECK(!camera_calibration->has_turret_extrinsics())
+  ABSL_CHECK(!camera_calibration->has_turret_extrinsics())
       << "Turret not currently supported";
 
   if (!camera_calibration->has_fixed_extrinsics()) {
     return std::nullopt;
   }
-  CHECK(camera_calibration->fixed_extrinsics()->has_data());
+  ABSL_CHECK(camera_calibration->fixed_extrinsics()->has_data());
   cv::Mat result(4, 4, CV_32F,
                  const_cast<void *>(static_cast<const void *>(
                      camera_calibration->fixed_extrinsics()->data()->data())));
   result.convertTo(result, CV_64F);
-  CHECK_EQ(result.total(),
-           camera_calibration->fixed_extrinsics()->data()->size());
+  ABSL_CHECK_EQ(result.total(),
+                camera_calibration->fixed_extrinsics()->data()->size());
 
   return result;
 }
@@ -35,7 +35,7 @@ cv::Mat CameraIntrinsics(
   cv::Mat result(3, 3, CV_32F,
                  const_cast<void *>(static_cast<const void *>(
                      camera_calibration->intrinsics()->data())));
-  CHECK_EQ(result.total(), camera_calibration->intrinsics()->size());
+  ABSL_CHECK_EQ(result.total(), camera_calibration->intrinsics()->size());
 
   return result;
 }
@@ -45,7 +45,7 @@ cv::Mat CameraDistCoeffs(
   const cv::Mat result(camera_calibration->dist_coeffs()->size(), 1, CV_32F,
                        const_cast<void *>(static_cast<const void *>(
                            camera_calibration->dist_coeffs()->data())));
-  CHECK_EQ(result.total(), camera_calibration->dist_coeffs()->size());
+  ABSL_CHECK_EQ(result.total(), camera_calibration->dist_coeffs()->size());
   return result;
 }
 
@@ -163,9 +163,9 @@ Eigen::Affine3d ComputeAveragePose(
   Eigen::Affine3d average_pose =
       Eigen::Translation3d(avg_translation) * avg_rotation_q;
 
-  CHECK_EQ(translation_list.size(), rotation_list.size());
+  ABSL_CHECK_EQ(translation_list.size(), rotation_list.size());
   if (translation_variance != nullptr) {
-    CHECK(rotation_variance != nullptr);
+    ABSL_CHECK(rotation_variance != nullptr);
     Eigen::Vector3d translation_variance_sum(0.0, 0.0, 0.0);
     Eigen::Vector3d rotation_variance_sum(0.0, 0.0, 0.0);
     for (uint i = 0; i < translation_list.size(); i++) {
@@ -185,7 +185,7 @@ Eigen::Affine3d ComputeAveragePose(
     }
     // Compute the variance on the translations (in m)
     if (translation_variance != nullptr) {
-      CHECK(translation_list.size() > 1)
+      ABSL_CHECK(translation_list.size() > 1)
           << "Have to have at least two translations to compute variance";
       *translation_variance =
           translation_variance_sum / translation_list.size();
@@ -195,7 +195,7 @@ Eigen::Affine3d ComputeAveragePose(
     // referenced to the mean, to remove issues with Euler angles by
     // keeping them near zero
     if (rotation_variance != nullptr) {
-      CHECK(rotation_list.size() > 1)
+      ABSL_CHECK(rotation_list.size() > 1)
           << "Have to have at least two rotations to compute variance";
       *rotation_variance = rotation_variance_sum / rotation_list.size();
     }

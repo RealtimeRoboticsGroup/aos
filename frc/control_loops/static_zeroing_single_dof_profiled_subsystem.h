@@ -1,6 +1,8 @@
 #ifndef FRC_CONTROL_LOOPS_STATIC_ZEROING_SINGLE_DOF_PROFILED_SUBSYSTEM_H_
 #define FRC_CONTROL_LOOPS_STATIC_ZEROING_SINGLE_DOF_PROFILED_SUBSYSTEM_H_
 
+#include "absl/log/absl_check.h"
+
 #include "aos/flatbuffer_merge.h"
 #include "frc/control_loops/profiled_subsystem.h"
 #include "frc/control_loops/profiled_subsystem_static.h"
@@ -80,7 +82,7 @@ struct StaticZeroingSingleDOFProfiledSubsystemParams {
         range(frc::constants::Range::FromFlatbuffer(common->range())),
         zeroing_constants(aos::UnpackFlatbuffer(zeroing)),
         make_integral_loop([this]() {
-          CHECK(loop_params->message().loop() != nullptr);
+          ABSL_CHECK(loop_params->message().loop() != nullptr);
           return MakeStateFeedbackLoop<3, 1, 1>(*loop_params->message().loop());
         }),
         loop_params(std::make_shared<aos::FlatbufferDetachedBuffer<
@@ -279,7 +281,7 @@ bool StaticZeroingSingleDOFProfiledSubsystem<
     Profile>::Correct(const StaticZeroingSingleDOFProfiledSubsystemGoal *goal,
                       const typename ZeroingEstimator::Position *position,
                       bool disabled) {
-  CHECK(position != nullptr);
+  ABSL_CHECK(position != nullptr);
   profiled_subsystem_.Correct(*position);
 
   if (profiled_subsystem_.error()) {
@@ -443,7 +445,7 @@ flatbuffers::Offset<ProfiledJointStatus>
 StaticZeroingSingleDOFProfiledSubsystem<
     ZeroingEstimator, ProfiledJointStatus, SubsystemParams,
     Profile>::MakeStatus(flatbuffers::FlatBufferBuilder *status_fbb) {
-  CHECK(status_fbb != nullptr);
+  ABSL_CHECK(status_fbb != nullptr);
 
   typename ProfiledJointStatus::Builder status_builder =
       profiled_subsystem_

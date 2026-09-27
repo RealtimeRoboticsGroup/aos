@@ -9,7 +9,7 @@
 #include <set>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/log/vlog_is_on.h"
 #include "absl/strings/str_cat.h"
@@ -209,7 +209,8 @@ McapLogger::McapLogger(
       channel_should_be_dropped_(std::move(channel_should_be_dropped)) {
   // Open the stream and check immediately while errno is still valid.
   output_.open(output_path, std::ios::out | std::ios::binary);
-  PCHECK(output_.good()) << "Failed to open MCAP output file: " << output_path;
+  ABSL_PCHECK(output_.good())
+      << "Failed to open MCAP output file: " << output_path;
 
   event_loop->SkipTimingReport();
   event_loop->SkipAosLog();
@@ -357,7 +358,8 @@ void McapLogger::WriteConfigurationMessage() {
 }
 
 void McapLogger::WriteLogConversionMetadataMessage() {
-  CHECK(wrote_configuration_) << ": Call only after WriteConfigurationMessage";
+  ABSL_CHECK(wrote_configuration_)
+      << ": Call only after WriteConfigurationMessage";
   injected_conversion_metadata_->WriteMessage(
       [this]() -> aos::FlatbufferDetachedBuffer<LogConversionMetadata> {
         flatbuffers::FlatBufferBuilder fbb;
@@ -403,7 +405,7 @@ void McapLogger::WriteDataEnd() {
 }
 
 void McapLogger::WriteSchema(const uint16_t id, const aos::Channel *channel) {
-  CHECK(channel->has_schema());
+  ABSL_CHECK(channel->has_schema());
 
   const FlatbufferDetachedBuffer<reflection::Schema> schema =
       RecursiveCopyFlatBuffer(channel->schema());
@@ -486,7 +488,7 @@ void McapLogger::WriteMessage(uint16_t channel_id, const Channel *channel,
     WriteConfigurationMessage();
     WriteLogConversionMetadataMessage();
   }
-  CHECK(context.data != nullptr);
+  ABSL_CHECK(context.data != nullptr);
 
   message_counts_[channel_id]++;
 
@@ -520,10 +522,10 @@ void McapLogger::WriteMessage(uint16_t channel_id, const Channel *channel,
   // right now.
   AppendInt64(&string_builder_, event_time.time_since_epoch().count());
 
-  CHECK(flatbuffers::Verify(*channel->schema(),
-                            *channel->schema()->root_table(),
-                            static_cast<const uint8_t *>(context.data),
-                            static_cast<size_t>(context.size)))
+  ABSL_CHECK(flatbuffers::Verify(*channel->schema(),
+                                 *channel->schema()->root_table(),
+                                 static_cast<const uint8_t *>(context.data),
+                                 static_cast<size_t>(context.size)))
       << ": Corrupted flatbuffer on " << channel->name()->c_str() << " "
       << channel->type()->c_str();
 
@@ -559,11 +561,11 @@ void McapLogger::WriteRecord(OpCode op, std::string_view record,
 void McapLogger::WriteChunk(ChunkStatus *chunk) {
   string_builder_.Reset();
 
-  CHECK(chunk->earliest_message.has_value());
+  ABSL_CHECK(chunk->earliest_message.has_value());
   const uint64_t chunk_offset = output_.tellp();
   AppendInt64(&string_builder_,
               chunk->earliest_message->time_since_epoch().count());
-  CHECK(chunk->latest_message.has_value());
+  ABSL_CHECK(chunk->latest_message.has_value());
   AppendInt64(&string_builder_,
               chunk->latest_message.value().time_since_epoch().count());
 
@@ -588,7 +590,7 @@ void McapLogger::WriteChunk(ChunkStatus *chunk) {
       LZ4F_preferences_t *lz4_preferences = nullptr;
       const uint64_t max_size =
           LZ4F_compressFrameBound(records_size, lz4_preferences);
-      CHECK_NE(0u, max_size);
+      ABSL_CHECK_NE(0u, max_size);
       if (max_size > compression_buffer_.size()) {
         compression_buffer_.resize(max_size);
       }
@@ -596,7 +598,7 @@ void McapLogger::WriteChunk(ChunkStatus *chunk) {
           compression_buffer_.data(), compression_buffer_.size(),
           reinterpret_cast<const char *>(chunk_records.data()),
           chunk_records.size(), lz4_preferences);
-      CHECK(!LZ4F_isError(records_size_compressed));
+      ABSL_CHECK(!LZ4F_isError(records_size_compressed));
       AppendBytes(&string_builder_,
                   {reinterpret_cast<const char *>(compression_buffer_.data()),
                    static_cast<size_t>(records_size_compressed)});

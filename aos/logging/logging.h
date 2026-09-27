@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "absl/log/absl_check.h"
+
 #include "aos/libc/aos_strerror.h"
 #include "aos/macros.h"
 
@@ -114,7 +116,7 @@ void log_do(log_level level, const char *format, ...);
 
 namespace aos {
 
-// CHECK* macros, similar to glog
+// AOS_CHECK* macros, similar to glog
 // (<http://google-glog.googlecode.com/svn/trunk/doc/glog.html>)'s, except they
 // don't support streaming in extra text. Some of the implementation is borrowed
 // from there too.
@@ -148,38 +150,38 @@ namespace aos {
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-// CHECK dies with a fatal error if condition is not true.  It is *not*
+// AOS_CHECK dies with a fatal error if condition is not true.  It is *not*
 // controlled by NDEBUG, so the check will be executed regardless of
 // compilation mode.  Therefore, it is safe to do things like:
-//    CHECK(fp->Write(x) == 4)
+//    AOS_CHECK(fp->Write(x) == 4)
 // TODO(austin): We want to be pushing people to glog instead of AOS_CHECK here.
 // You are crashing anyways.  If we want glog to tee to AOS_LOG as well, we'll
 // implement that through that path.
-#define AOS_CHECK(condition)                          \
-  if (AOS_UNLIKELY(!(condition))) {                   \
-    AOS_LOG(FATAL, "CHECK(%s) failed\n", #condition); \
+#define AOS_CHECK(condition)                              \
+  if (AOS_UNLIKELY(!(condition))) {                       \
+    AOS_LOG(FATAL, "AOS_CHECK(%s) failed\n", #condition); \
   }
 
-// Helper functions for CHECK_OP macro.
+// Helper functions for AOS_CHECK_OP macro.
 // The (int, int) specialization works around the issue that the compiler
 // will not instantiate the template version of the function on values of
 // unnamed enum type.
-#define AOS_DEFINE_CHECK_OP_IMPL(name, op)                          \
-  template <typename T1, typename T2>                               \
-  inline void LogImpl##name(const T1 &v1, const T2 &v2,             \
-                            const char *exprtext) {                 \
-    if (!AOS_LIKELY(v1 op v2)) {                                    \
-      log_do(log_level::kFATAL,                                     \
-             LOG_SOURCENAME                                         \
-             ": " AOS_STRINGIFY(__LINE__) ": CHECK(%s) failed\n",   \
-             exprtext);                                             \
-      fprintf(stderr, "log_do(FATAL) fell through!!!!!\n");         \
-      printf("see stderr\n");                                       \
-      abort();                                                      \
-    }                                                               \
-  }                                                                 \
-  inline void LogImpl##name(int v1, int v2, const char *exprtext) { \
-    ::aos::LogImpl##name<int, int>(v1, v2, exprtext);               \
+#define AOS_DEFINE_CHECK_OP_IMPL(name, op)                            \
+  template <typename T1, typename T2>                                 \
+  inline void LogImpl##name(const T1 &v1, const T2 &v2,               \
+                            const char *exprtext) {                   \
+    if (!AOS_LIKELY(v1 op v2)) {                                      \
+      log_do(log_level::kFATAL,                                       \
+             LOG_SOURCENAME                                           \
+             ": " AOS_STRINGIFY(__LINE__) ": AOS_CHECK(%s) failed\n", \
+             exprtext);                                               \
+      fprintf(stderr, "log_do(FATAL) fell through!!!!!\n");           \
+      printf("see stderr\n");                                         \
+      abort();                                                        \
+    }                                                                 \
+  }                                                                   \
+  inline void LogImpl##name(int v1, int v2, const char *exprtext) {   \
+    ::aos::LogImpl##name<int, int>(v1, v2, exprtext);                 \
   }
 
 // We use the full name Check_EQ, Check_NE, etc. in case the file including
@@ -187,8 +189,8 @@ namespace aos {
 // This happens if, for example, those are used as token names in a
 // yacc grammar.
 AOS_DEFINE_CHECK_OP_IMPL(Check_EQ,
-                         ==)  // Compilation error with CHECK_EQ(NULL, x)?
-AOS_DEFINE_CHECK_OP_IMPL(Check_NE, !=)  // Use CHECK(x == NULL) instead.
+                         ==)  // Compilation error with AOS_CHECK_EQ(NULL, x)?
+AOS_DEFINE_CHECK_OP_IMPL(Check_NE, !=)  // Use AOS_CHECK(x == NULL) instead.
 AOS_DEFINE_CHECK_OP_IMPL(Check_LE, <=)
 AOS_DEFINE_CHECK_OP_IMPL(Check_LT, <)
 AOS_DEFINE_CHECK_OP_IMPL(Check_GE, >=)
@@ -205,7 +207,7 @@ AOS_DEFINE_CHECK_OP_IMPL(Check_GT, >)
 #define AOS_CHECK_GE(val1, val2) AOS_CHECK_OP(_GE, >=, val1, val2)
 #define AOS_CHECK_GT(val1, val2) AOS_CHECK_OP(_GT, >, val1, val2)
 
-// A small helper for CHECK_NOTNULL().
+// A small helper for AOS_CHECK_NOTNULL().
 template <typename T>
 inline T *CheckNotNull(const char *value_name, T *t) {
   if (t == NULL) {

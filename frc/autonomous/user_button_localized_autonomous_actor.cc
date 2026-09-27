@@ -1,5 +1,7 @@
 #include "frc/autonomous/user_button_localized_autonomous_actor.h"
 
+#include "absl/log/absl_check.h"
+
 using aos::monotonic_clock;
 namespace chrono = ::std::chrono;
 namespace this_thread = ::std::this_thread;
@@ -71,7 +73,7 @@ void UserButtonLocalizedAutonomousActor::DoReplan() {
 void UserButtonLocalizedAutonomousActor::MaybeSendStartingPosition() {
   if (is_planned_ && user_indicated_safe_to_reset_ &&
       !sent_starting_position_) {
-    CHECK(starting_position_);
+    ABSL_CHECK(starting_position_);
     SendStartingPosition(starting_position_.value());
   }
 }
@@ -81,7 +83,7 @@ void UserButtonLocalizedAutonomousActor::DoReset() {
   ResetDrivetrain();
 
   joystick_state_fetcher_.Fetch();
-  CHECK(joystick_state_fetcher_.get() != nullptr)
+  ABSL_CHECK(joystick_state_fetcher_.get() != nullptr)
       << "Expect at least one JoystickState message before running auto...";
   alliance_ = joystick_state_fetcher_->alliance();
 
@@ -96,7 +98,7 @@ bool UserButtonLocalizedAutonomousActor::RunAction(
 
   if (!user_indicated_safe_to_reset_) {
     AOS_LOG(WARNING, "Didn't send starting position prior to starting auto.");
-    CHECK(starting_position_);
+    ABSL_CHECK(starting_position_);
     SendStartingPosition(starting_position_.value());
   }
   // Clear this so that we don't accidentally resend things as soon as we

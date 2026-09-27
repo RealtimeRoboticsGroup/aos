@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "flatbuffers/flatbuffers.h"
 
@@ -309,8 +309,8 @@ class LogReader {
   // after the specified time (i.e., any message that was available on the node
   // in question after the monotonic start time but before the logs end and
   // whose channel is present in any of the provided logs will either be
-  // available in the log or will result in an internal CHECK-failure of the
-  // LogReader if it would be skipped).
+  // available in the log or will result in an internal ABSL_CHECK-failure of
+  // the LogReader if it would be skipped).
   monotonic_clock::time_point monotonic_start_time(
       const Node *node = nullptr) const;
   realtime_clock::time_point realtime_start_time(
@@ -475,21 +475,21 @@ class LogReader {
   template <typename MessageType, typename Callback>
   void AddBeforeSendCallback(std::string_view channel_name,
                              Callback &&callback) {
-    CHECK(!AreStatesInitialized())
+    ABSL_CHECK(!AreStatesInitialized())
         << ": Cannot add callbacks after calling Register";
 
     const Channel *channel = configuration::GetChannel(
         logged_configuration(), channel_name,
         MessageType::GetFullyQualifiedName(), "", nullptr);
 
-    CHECK(channel != nullptr)
+    ABSL_CHECK(channel != nullptr)
         << ": Channel { \"name\": \"" << channel_name << "\", \"type\": \""
         << MessageType::GetFullyQualifiedName()
         << "\" } not found in config for application.";
     auto channel_index =
         configuration::ChannelIndex(logged_configuration(), channel);
 
-    CHECK(!before_send_callbacks_[channel_index])
+    ABSL_CHECK(!before_send_callbacks_[channel_index])
         << ": Before Send Callback already registered for channel "
         << ":{ \"name\": \"" << channel_name << "\", \"type\": \""
         << MessageType::GetFullyQualifiedName() << "\" }";
@@ -620,8 +620,8 @@ class LogReader {
           // non-primary nodes, then returning 0 may not be accurate (since
           // remote nodes *can* reboot even if the EventLoop being played to
           // can't).
-          CHECK(!started_);
-          CHECK(!stopped_);
+          ABSL_CHECK(!started_);
+          ABSL_CHECK(!stopped_);
         }
         return 0u;
       }
@@ -661,7 +661,8 @@ class LogReader {
         return;
       }
       if (node_event_loop_factory_) {
-        CHECK_GE(start_time + clock_offset(), event_loop_->monotonic_now());
+        ABSL_CHECK_GE(start_time + clock_offset(),
+                      event_loop_->monotonic_now());
       }
       startup_timer_->Schedule(start_time + clock_offset());
     }
@@ -725,7 +726,7 @@ class LogReader {
     // distributed clock.
     Result<distributed_clock::time_point> ToDistributedClock(
         monotonic_clock::time_point time) {
-      CHECK(node_event_loop_factory_);
+      ABSL_CHECK(node_event_loop_factory_);
       return node_event_loop_factory_->ToDistributedClock(time);
     }
 
@@ -748,7 +749,7 @@ class LogReader {
     void DestroyEventLoop() { event_loop_unique_ptr_.reset(); }
 
     EventLoop *MakeEventLoop() {
-      CHECK(!event_loop_unique_ptr_);
+      ABSL_CHECK(!event_loop_unique_ptr_);
       // TODO(james): Enable exclusive senders on LogReader to allow us to
       // ensure we are remapping channels correctly.
       event_loop_unique_ptr_ = node_event_loop_factory_->MakeEventLoop(
@@ -760,7 +761,7 @@ class LogReader {
 
     Result<distributed_clock::time_point> RemoteToDistributedClock(
         size_t channel_index, monotonic_clock::time_point time) {
-      CHECK(node_event_loop_factory_);
+      ABSL_CHECK(node_event_loop_factory_);
       return channel_source_state_[channel_index]
           ->node_event_loop_factory_->ToDistributedClock(time);
     }
@@ -771,7 +772,7 @@ class LogReader {
     }
 
     monotonic_clock::time_point monotonic_now() const {
-      CHECK(event_loop_ != nullptr);
+      ABSL_CHECK(event_loop_ != nullptr);
       return event_loop_->monotonic_now();
     }
 
@@ -865,12 +866,12 @@ class LogReader {
     bool found_last_message() const { return found_last_message_; }
 
     void set_last_message(size_t channel_index) {
-      CHECK_LT(channel_index, last_message_.size());
+      ABSL_CHECK_LT(channel_index, last_message_.size());
       last_message_[channel_index] = true;
     }
 
     bool last_message(size_t channel_index) {
-      CHECK_LT(channel_index, last_message_.size());
+      ABSL_CHECK_LT(channel_index, last_message_.size());
       return last_message_[channel_index];
     }
 

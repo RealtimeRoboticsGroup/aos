@@ -13,7 +13,7 @@
 #include <vector>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/time/time.h"
@@ -109,7 +109,7 @@ void GpuDetector::UpdateFitQuads() {
     }
     QuadCorners corners;
     corners.blob_index = quad.blob_index;
-    CHECK(normal_border_ != reversed_border_);
+    ABSL_CHECK(normal_border_ != reversed_border_);
     corners.reversed_border = reversed_border_;
 
     double lines[4][4];

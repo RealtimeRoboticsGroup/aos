@@ -2,7 +2,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/usage.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/log/vlog_is_on.h"
 
@@ -256,7 +256,7 @@ int Main() {
 
   aos::ShmEventLoop event_loop(&config.message());
   if (absl::GetFlag(FLAGS_client)) {
-    CHECK(!absl::GetFlag(FLAGS_host).empty())
+    ABSL_CHECK(!absl::GetFlag(FLAGS_host).empty())
         << "Client Usage: `sctp_perf --client --host "
            "abc.com --payload_size [bytes] "
            "[--port PORT] [--config PATH]`";
@@ -264,7 +264,7 @@ int Main() {
     Client client(&event_loop);
     event_loop.Run();
   } else {
-    CHECK(absl::GetFlag(FLAGS_host).empty())
+    ABSL_CHECK(absl::GetFlag(FLAGS_host).empty())
         << "Server Usage: `sctp_perf [--config PATH]`";
     Server server(&event_loop);
     event_loop.Run();

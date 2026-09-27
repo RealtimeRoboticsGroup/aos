@@ -2,7 +2,7 @@
 #define AOS_FLATBUFFERS_STATIC_VECTOR_H_
 #include <span>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/die_if_null.h"
 #include "absl/log/log.h"
 #include "flatbuffers/base.h"
@@ -147,16 +147,16 @@ class Vector : public ResizeableObject {
       return retval;
     }
     bool operator==(const generic_iterator &other) const {
-      CHECK_EQ(other.vector_, vector_);
+      ABSL_CHECK_EQ(other.vector_, vector_);
       return index_ == other.index_;
     }
     std::strong_ordering operator<=>(const generic_iterator &other) const {
-      CHECK_EQ(other.vector_, vector_);
+      ABSL_CHECK_EQ(other.vector_, vector_);
       return index_ <=> other.index_;
     }
     reference operator*() const { return vector_->at(index_); }
     difference_type operator-(const generic_iterator &other) const {
-      CHECK_EQ(other.vector_, vector_);
+      ABSL_CHECK_EQ(other.vector_, vector_);
       return index_ - other.index_;
     }
     generic_iterator operator-(difference_type decrement) const {
@@ -291,9 +291,9 @@ class Vector : public ResizeableObject {
   // in length. parent must be non-null.
   Vector(std::span<uint8_t> buffer, ResizeableObject *parent)
       : ResizeableObject(buffer, parent) {
-    CHECK_EQ(0u,
-             reinterpret_cast<size_t>(buffer.data() + kAlignOffset) % kAlign);
-    CHECK_LE(kSize, buffer.size());
+    ABSL_CHECK_EQ(
+        0u, reinterpret_cast<size_t>(buffer.data() + kAlignOffset) % kAlign);
+    ABSL_CHECK_LE(kSize, buffer.size());
     if constexpr (kInline) {
       // If everything is inline, it costs us nothing to consume the padding and
       // use it for holding elements.  For something like a short string in 8
@@ -417,7 +417,7 @@ class Vector : public ResizeableObject {
   [[nodiscard]] bool FromFlatbuffer(
       ConstFlatbuffer *vector, ::aos::fbs::FlatbufferCopyMode mode =
                                    ::aos::fbs::FlatbufferCopyMode::kReplace) {
-    CHECK(vector != nullptr);
+    ABSL_CHECK(vector != nullptr);
     return FromFlatbuffer(*vector, mode);
   }
   [[nodiscard]] bool FromFlatbuffer(
@@ -468,7 +468,7 @@ class Vector : public ResizeableObject {
     resize_inline(input_size, SetZero::kNo);
 
     if (input_size > 0) {
-      CHECK(input_data != nullptr);
+      ABSL_CHECK(input_data != nullptr);
       memcpy(inline_data(), input_data, size() * sizeof(InlineType));
     }
     return true;
@@ -490,14 +490,14 @@ class Vector : public ResizeableObject {
         return false;
       }
       // Should never fail, due to the reserve() above.
-      CHECK(emplace_back(*it));
+      ABSL_CHECK(emplace_back(*it));
     }
     return true;
   }
 
   // Returns the element at the provided index. index must be less than size().
   const T &at(size_t index) const {
-    CHECK_LT(index, length_);
+    ABSL_CHECK_LT(index, length_);
     return unsafe_at(index);
   }
 
@@ -506,7 +506,7 @@ class Vector : public ResizeableObject {
   // TODO(james): The GetInlineElement() call itself does some bounds-checking;
   // consider down-grading that.
   const T &unsafe_at(size_t index) const {
-    DCHECK_LT(index, length_);
+    ABSL_DCHECK_LT(index, length_);
     if (kInline) {
       // This reinterpret_cast is extremely wrong if T != InlineType (this is
       // fine because we only do this if kInline is true).
@@ -526,7 +526,7 @@ class Vector : public ResizeableObject {
   // Returns a mutable pointer to the element at the provided index. index must
   // be less than size().
   T &at(size_t index) {
-    CHECK_LT(index, length_);
+    ABSL_CHECK_LT(index, length_);
     return unsafe_at(index);
   }
 
@@ -535,7 +535,7 @@ class Vector : public ResizeableObject {
   // TODO(james): The GetInlineElement() call itself does some bounds-checking;
   // consider down-grading that.
   T &unsafe_at(size_t index) {
-    DCHECK_LT(index, length_);
+    ABSL_DCHECK_LT(index, length_);
     if (kInline) {
       // This reinterpret_cast is extremely wrong if T != InlineType (this is
       // fine because we only do this if kInline is true).
@@ -567,7 +567,7 @@ class Vector : public ResizeableObject {
   // When changing the size of the vector, the removed/inserted elements will be
   // set to zero if requested. Otherwise, they will be left uninitialized.
   void resize_inline(size_t size, SetZero set_zero) {
-    CHECK_LE(size, allocated_length_);
+    ABSL_CHECK_LE(size, allocated_length_);
     static_assert(
         kInline,
         "Vector::resize_inline() only works for inline vector types (scalars, "
@@ -591,7 +591,7 @@ class Vector : public ResizeableObject {
   // vectors/strings; objects that exist but have no fields populated).
   // Note that this is always equivalent to resize().
   void resize_not_inline(size_t size) {
-    CHECK_LE(size, allocated_length_);
+    ABSL_CHECK_LE(size, allocated_length_);
     static_assert(!kInline,
                   "Vector::resize_not_inline() only works for offset vector "
                   "types (objects, strings).");
@@ -604,7 +604,7 @@ class Vector : public ResizeableObject {
       return;
     } else {
       while (length_ < size) {
-        CHECK(emplace_back() != nullptr);
+        ABSL_CHECK(emplace_back() != nullptr);
       }
     }
   }
@@ -676,17 +676,17 @@ class Vector : public ResizeableObject {
   }
 
   void SetInlineElement(size_t index, InlineType value) {
-    CHECK_LT(index, allocated_length_);
+    ABSL_CHECK_LT(index, allocated_length_);
     inline_data()[index] = value;
   }
 
   InlineType &GetInlineElement(size_t index) {
-    CHECK_LT(index, allocated_length_);
+    ABSL_CHECK_LT(index, allocated_length_);
     return inline_data()[index];
   }
 
   const InlineType &GetInlineElement(size_t index) const {
-    CHECK_LT(index, allocated_length_);
+    ABSL_CHECK_LT(index, allocated_length_);
     return inline_data()[index];
   }
 
@@ -752,7 +752,7 @@ class Vector : public ResizeableObject {
 
     for (const auto &entry : vector) {
       T *emplaced_entry = emplace_back();
-      CHECK(emplaced_entry != nullptr);
+      ABSL_CHECK(emplaced_entry != nullptr);
       if (!emplaced_entry->FromFlatbuffer(entry, mode)) {
         return false;
       }
@@ -814,7 +814,7 @@ T *Vector<T, kStaticLength, kInline, kForceAlign,
   const uoffset_t offset =
       object_start - (reinterpret_cast<size_t>(&GetInlineElement(length_)) -
                       reinterpret_cast<size_t>(buffer().data()));
-  CHECK(AddInlineElement(offset));
+  ABSL_CHECK(AddInlineElement(offset));
   return &objects_[objects_.size() - 1].t;
 }
 
@@ -831,7 +831,7 @@ class String : public Vector<char, kStaticLength, true, 0, true> {
       : VectorType(buffer, parent) {}
   virtual ~String() {}
   void SetString(std::string_view string) {
-    CHECK_LE(string.size(), VectorType::capacity());
+    ABSL_CHECK_LE(string.size(), VectorType::capacity());
     VectorType::resize_inline(string.size(), SetZero::kNo);
     if (string.size() > 0) {
       memcpy(VectorType::data(), string.data(), string.size());
@@ -867,7 +867,7 @@ class String : public Vector<char, kStaticLength, true, 0, true> {
 // succeeded.
 template <size_t kStaticLength>
 void SetStringOrDie(String<kStaticLength> *string, std::string_view value) {
-  CHECK(ABSL_DIE_IF_NULL(string)->reserve(value.size()));
+  ABSL_CHECK(ABSL_DIE_IF_NULL(string)->reserve(value.size()));
   string->SetString(value);
 }
 

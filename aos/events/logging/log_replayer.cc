@@ -9,7 +9,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/usage.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/die_if_null.h"
 #include "absl/log/log.h"
 #include "flatbuffers/flatbuffers.h"
@@ -110,7 +110,7 @@ int Main(int argc, char *argv[]) {
                     absl::GetFlag(FLAGS_replay_config).data())));
   std::vector<std::pair<std::string, std::string>> message_filter;
   if (absl::GetFlag(FLAGS_skip_sender_channels) && replay_config.has_value()) {
-    CHECK(replay_config.value().message().has_active_nodes());
+    ABSL_CHECK(replay_config.value().message().has_active_nodes());
     std::vector<const Node *> active_nodes;
     for (const auto &node : *replay_config.value().message().active_nodes()) {
       active_nodes.emplace_back(configuration::GetNode(
@@ -170,7 +170,7 @@ int Main(int argc, char *argv[]) {
     auto stats_msg = stats_sender.MakeStaticBuilder();
     if (replay_config.has_value()) {
       auto new_replay_config = ABSL_DIE_IF_NULL(stats_msg->add_replay_config());
-      CHECK(
+      ABSL_CHECK(
           new_replay_config->FromFlatbuffer(&replay_config.value().message()));
     }
 
@@ -219,7 +219,7 @@ int Main(int argc, char *argv[]) {
     if (absl::GetFlag(FLAGS_print_stats)) {
       aos::Fetcher<aos::LogReplayerStats> stats_fetcher =
           event_loop.MakeFetcher<aos::LogReplayerStats>("/replay");
-      CHECK(stats_fetcher.Fetch()) << "Failed to fetch LogReplayerStats!";
+      ABSL_CHECK(stats_fetcher.Fetch()) << "Failed to fetch LogReplayerStats!";
       std::cout << aos::FlatbufferToJson(stats_fetcher.get());
     }
   }

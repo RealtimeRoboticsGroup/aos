@@ -1,5 +1,7 @@
 #include "frc/control_loops/drivetrain/trajectory_generator.h"
 
+#include "absl/log/absl_check.h"
+
 namespace frc::control_loops::drivetrain {
 
 TrajectoryGenerator::TrajectoryGenerator(aos::EventLoop *event_loop,
@@ -26,8 +28,8 @@ void TrajectoryGenerator::HandleSplineGoal(const SplineGoal &goal) {
   aos::Sender<fb::Trajectory>::Builder builder =
       trajectory_sender_.MakeBuilder();
 
-  CHECK_EQ(builder.Send(trajectory.Serialize(builder.fbb())),
-           aos::RawSender::Error::kOk);
+  ABSL_CHECK_EQ(builder.Send(trajectory.Serialize(builder.fbb())),
+                aos::RawSender::Error::kOk);
 }
 
 }  // namespace frc::control_loops::drivetrain

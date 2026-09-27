@@ -3,7 +3,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "gtest/gtest.h"
 
@@ -17,7 +17,7 @@ class EPollTest : public ::testing::Test {
     internal::TimerFd timerfd;
     bool did_quit = false;
     epoll_.OnReadable(timerfd.fd(), [this, &timerfd, &did_quit]() {
-      CHECK(!did_quit);
+      ABSL_CHECK(!did_quit);
       epoll_.Quit();
       did_quit = true;
       timerfd.Read();
@@ -25,7 +25,7 @@ class EPollTest : public ::testing::Test {
     timerfd.SetTime(monotonic_clock::now() + duration,
                     monotonic_clock::duration::zero());
     epoll_.Run();
-    CHECK(did_quit);
+    ABSL_CHECK(did_quit);
     epoll_.DeleteFd(timerfd.fd());
   }
 

@@ -5,6 +5,7 @@
 #include <numbers>
 
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -79,8 +80,8 @@ class DrivetrainTest : public ::frc::testing::ControlLoopTest {
 
     // Run for enough time to allow the gyro/imu zeroing code to run.
     RunFor(std::chrono::seconds(15));
-    CHECK(drivetrain_status_fetcher_.Fetch());
-    CHECK(drivetrain_status_fetcher_->zeroing() != nullptr);
+    ABSL_CHECK(drivetrain_status_fetcher_.Fetch());
+    ABSL_CHECK(drivetrain_status_fetcher_->zeroing() != nullptr);
     EXPECT_TRUE(drivetrain_status_fetcher_->zeroing()->zeroed());
   }
   virtual ~DrivetrainTest() {}
@@ -103,7 +104,7 @@ class DrivetrainTest : public ::frc::testing::ControlLoopTest {
 
   void VerifyNearSplineGoal() {
     drivetrain_status_fetcher_.Fetch();
-    CHECK(drivetrain_status_fetcher_->trajectory_logging() != nullptr);
+    ABSL_CHECK(drivetrain_status_fetcher_->trajectory_logging() != nullptr);
     const double expected_x =
         drivetrain_status_fetcher_->trajectory_logging()->x();
     const double expected_y =
@@ -121,14 +122,14 @@ class DrivetrainTest : public ::frc::testing::ControlLoopTest {
     do {
       RunFor(dt());
       EXPECT_TRUE(drivetrain_status_fetcher_.Fetch());
-      CHECK(drivetrain_status_fetcher_->trajectory_logging() != nullptr);
+      ABSL_CHECK(drivetrain_status_fetcher_->trajectory_logging() != nullptr);
     } while (!drivetrain_status_fetcher_->trajectory_logging()->is_executed());
   }
 
   void VerifyDownEstimator() {
     EXPECT_TRUE(drivetrain_status_fetcher_.Fetch());
     // TODO(james): Handle Euler angle singularities...
-    CHECK(drivetrain_status_fetcher_->down_estimator() != nullptr);
+    ABSL_CHECK(drivetrain_status_fetcher_->down_estimator() != nullptr);
     const double down_estimator_yaw =
         drivetrain_status_fetcher_->down_estimator()->yaw();
     const double localizer_yaw = drivetrain_status_fetcher_->theta();
@@ -643,7 +644,7 @@ TEST_F(DrivetrainTest, SplineSimpleBackwards) {
   // Check that we are pointed the right direction:
   drivetrain_status_fetcher_.Fetch();
   auto actual = drivetrain_plant_.state();
-  CHECK(drivetrain_status_fetcher_->trajectory_logging() != nullptr);
+  ABSL_CHECK(drivetrain_status_fetcher_->trajectory_logging() != nullptr);
   const double expected_theta =
       drivetrain_status_fetcher_->trajectory_logging()->theta();
   // As a sanity check, compare both against absolute angle and the spline's
@@ -747,7 +748,7 @@ TEST_F(DrivetrainTest, SplineStop) {
     EXPECT_EQ(0.0, drivetrain_output_fetcher_->right_voltage());
     // The goal should be null after stopping.
     ASSERT_TRUE(drivetrain_status_fetcher_.Fetch());
-    CHECK(drivetrain_status_fetcher_->trajectory_logging() != nullptr);
+    ABSL_CHECK(drivetrain_status_fetcher_->trajectory_logging() != nullptr);
     EXPECT_FALSE(drivetrain_status_fetcher_->trajectory_logging()->has_x());
     EXPECT_FALSE(drivetrain_status_fetcher_->trajectory_logging()->has_y());
   }
@@ -815,7 +816,7 @@ TEST_F(DrivetrainTest, SplineRestart) {
 
   // The goal should be empty.
   drivetrain_status_fetcher_.Fetch();
-  CHECK(drivetrain_status_fetcher_->trajectory_logging() != nullptr);
+  ABSL_CHECK(drivetrain_status_fetcher_->trajectory_logging() != nullptr);
   EXPECT_FALSE(drivetrain_status_fetcher_->trajectory_logging()->has_x());
   EXPECT_FALSE(drivetrain_status_fetcher_->trajectory_logging()->has_y());
 }
@@ -976,7 +977,7 @@ TEST_F(DrivetrainTest, SplineVoltageError) {
   // Since the voltage error compensation is disabled, expect that we will have
   // *failed* to reach our goal.
   drivetrain_status_fetcher_.Fetch();
-  CHECK(drivetrain_status_fetcher_->trajectory_logging() != nullptr);
+  ABSL_CHECK(drivetrain_status_fetcher_->trajectory_logging() != nullptr);
   const double expected_x =
       drivetrain_status_fetcher_->trajectory_logging()->x();
   const double expected_y =
@@ -1504,9 +1505,9 @@ TEST_F(DrivetrainTest, FillSplineBuffer) {
     // We should always just have the past kNumStoredSplines available.
     drivetrain_status_fetcher_.Fetch();
 
-    CHECK(drivetrain_status_fetcher_.get()
-              ->trajectory_logging()
-              ->available_splines() != nullptr);
+    ABSL_CHECK(drivetrain_status_fetcher_.get()
+                   ->trajectory_logging()
+                   ->available_splines() != nullptr);
     ASSERT_EQ(expected_splines.size(), drivetrain_status_fetcher_.get()
                                            ->trajectory_logging()
                                            ->available_splines()

@@ -1,6 +1,6 @@
 #include <signal.h>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "gtest/gtest.h"
 
@@ -77,7 +77,7 @@ TEST(StacktraceDeathTest, StackTraceOnCrash) {
 // TODO(philipp.schrader): Enable when we get stack unwinding in signal handlers
 // working.
 TEST(StacktraceDeathTest, DISABLED_StackTraceOnSegfault) {
-  g_function = [] { CHECK_EQ(raise(SIGSEGV), 0); };
+  g_function = [] { ABSL_CHECK_EQ(raise(SIGSEGV), 0); };
 
   // NOTE(james): Depending on the platform this runs on, we sometimes get
   // libunwind warnings in a line here. We may consider suppressing that in the

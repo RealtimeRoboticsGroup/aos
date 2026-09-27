@@ -1,5 +1,7 @@
 #include "frc/vision/cuda_camera_image_callback.h"
 
+#include "absl/log/absl_check.h"
+
 #include "cuda_runtime.h"
 #include "frc/orin/cuda.h"
 
@@ -23,7 +25,7 @@ CudaCameraImageCallback::~CudaCameraImageCallback() {
 void CudaCameraImageCallback::PinMemory(aos::ShmEventLoop *shm_event_loop) {
   shm_event_loop->SetWatcherUseWritableMemory(channel_, true);
 
-  CHECK(channel_->read_method() == aos::ReadMethod::PIN)
+  ABSL_CHECK(channel_->read_method() == aos::ReadMethod::PIN)
       << ": Channel must be pinned to pin to CPU/GPU unified memory: "
       << aos::FlatbufferToJson(channel_);
   absl::Span<char> memory = shm_event_loop->GetWatcherSharedMemory(channel_);
@@ -41,7 +43,7 @@ void CudaCameraImageCallback::PinMemory(aos::ShmEventLoop *shm_event_loop) {
   uint8_t *device_ptr = nullptr;
   CHECK_CUDA(cudaHostGetDevicePointer(&device_ptr,
                                       static_cast<void *>(memory.data()), 0));
-  CHECK_NE(device_ptr, nullptr);
+  ABSL_CHECK_NE(device_ptr, nullptr);
 
   unified_memory_.push_back(memory);
 }

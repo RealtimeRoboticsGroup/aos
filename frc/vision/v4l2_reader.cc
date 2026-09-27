@@ -7,6 +7,7 @@
 #include <sys/types.h>
 
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 
 ABSL_FLAG(bool, ignore_timestamps, false,
           "Don't require timestamps on images.  Used to allow webcams");
@@ -34,13 +35,13 @@ V4L2ReaderBase::V4L2ReaderBase(aos::EventLoop *event_loop,
       fd_(open(device_name.data(), O_RDWR | O_NONBLOCK)),
       event_loop_(event_loop),
       image_channel_(image_channel) {
-  PCHECK(fd_.get() != -1) << " Failed to open device " << device_name;
+  ABSL_PCHECK(fd_.get() != -1) << " Failed to open device " << device_name;
 
   // Figure out if we are multi-planar or not.
   {
     struct v4l2_capability capability;
     memset(&capability, 0, sizeof(capability));
-    PCHECK(Ioctl(VIDIOC_QUERYCAP, &capability) == 0);
+    ABSL_PCHECK(Ioctl(VIDIOC_QUERYCAP, &capability) == 0);
 
     LOG(INFO) << "Opening " << device_name;
     LOG(INFO) << "  driver " << capability.driver;
@@ -86,8 +87,8 @@ void V4L2ReaderBase::StreamOn() {
     request.type = multiplanar() ? V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE
                                  : V4L2_BUF_TYPE_VIDEO_CAPTURE;
     request.memory = V4L2_MEMORY_USERPTR;
-    PCHECK(Ioctl(VIDIOC_REQBUFS, &request) == 0);
-    CHECK_EQ(request.count, buffers_.size())
+    ABSL_PCHECK(Ioctl(VIDIOC_REQBUFS, &request) == 0);
+    ABSL_CHECK_EQ(request.count, buffers_.size())
         << ": Kernel refused to give us the number of buffers we asked for";
   }
 
@@ -96,7 +97,7 @@ void V4L2ReaderBase::StreamOn() {
     memset(&format, 0, sizeof(format));
     format.type = multiplanar() ? V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE
                                 : V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    PCHECK(Ioctl(VIDIOC_G_FMT, &format) == 0);
+    ABSL_PCHECK(Ioctl(VIDIOC_G_FMT, &format) == 0);
 
     if (multiplanar()) {
       cols_ = format.fmt.pix_mp.width;
@@ -104,29 +105,30 @@ void V4L2ReaderBase::StreamOn() {
       image_size_ = AlignImageSize(format.fmt.pix_mp.plane_fmt[0].sizeimage);
       LOG(INFO) << "Format is " << cols_ << ", " << rows_;
       if (format.fmt.pix_mp.pixelformat == V4L2_PIX_FMT_MJPEG) {
-        CHECK_EQ(static_cast<int>(format.fmt.pix_mp.plane_fmt[0].bytesperline),
-                 0);
+        ABSL_CHECK_EQ(
+            static_cast<int>(format.fmt.pix_mp.plane_fmt[0].bytesperline), 0);
         format_ = ImageFormat::MJPEG;
       } else if (format.fmt.pix_mp.pixelformat == V4L2_PIX_FMT_YUYV) {
-        CHECK_EQ(static_cast<int>(format.fmt.pix_mp.plane_fmt[0].bytesperline),
-                 cols_ * 2 /* bytes per pixel */);
+        ABSL_CHECK_EQ(
+            static_cast<int>(format.fmt.pix_mp.plane_fmt[0].bytesperline),
+            cols_ * 2 /* bytes per pixel */);
         format_ = ImageFormat::YUYV422;
       } else {
         LOG(FATAL) << ": Invalid pixel format";
       }
 
-      CHECK_EQ(format.fmt.pix_mp.num_planes, 1u);
+      ABSL_CHECK_EQ(format.fmt.pix_mp.num_planes, 1u);
     } else {
       cols_ = format.fmt.pix.width;
       rows_ = format.fmt.pix.height;
       image_size_ = AlignImageSize(format.fmt.pix.sizeimage);
       LOG(INFO) << "Format is " << cols_ << ", " << rows_;
       if (format.fmt.pix.pixelformat == V4L2_PIX_FMT_MJPEG) {
-        CHECK_EQ(static_cast<int>(format.fmt.pix.bytesperline), 0);
+        ABSL_CHECK_EQ(static_cast<int>(format.fmt.pix.bytesperline), 0);
         format_ = ImageFormat::MJPEG;
       } else if (format.fmt.pix_mp.pixelformat == V4L2_PIX_FMT_YUYV) {
-        CHECK_EQ(static_cast<int>(format.fmt.pix.bytesperline),
-                 cols_ * 2 /* bytes per pixel */);
+        ABSL_CHECK_EQ(static_cast<int>(format.fmt.pix.bytesperline),
+                      cols_ * 2 /* bytes per pixel */);
         format_ = ImageFormat::YUYV422;
       } else {
         LOG(FATAL) << ": Invalid pixel format";
@@ -140,7 +142,7 @@ void V4L2ReaderBase::StreamOn() {
   }
   int type = multiplanar() ? V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE
                            : V4L2_BUF_TYPE_VIDEO_CAPTURE;
-  PCHECK(Ioctl(VIDIOC_STREAMON, &type) == 0);
+  ABSL_PCHECK(Ioctl(VIDIOC_STREAMON, &type) == 0);
 }
 
 void V4L2ReaderBase::MarkBufferToBeEnqueued(int buffer_index) {
@@ -201,12 +203,12 @@ void V4L2ReaderBase::SetExposure(size_t duration) {
   v4l2_control manual_control;
   manual_control.id = V4L2_CID_EXPOSURE_AUTO;
   manual_control.value = V4L2_EXPOSURE_MANUAL;
-  PCHECK(Ioctl(VIDIOC_S_CTRL, &manual_control) == 0);
+  ABSL_PCHECK(Ioctl(VIDIOC_S_CTRL, &manual_control) == 0);
 
   v4l2_control exposure_control;
   exposure_control.id = V4L2_CID_EXPOSURE_ABSOLUTE;
   exposure_control.value = static_cast<int>(duration);  // 100 micro s units
-  PCHECK(Ioctl(VIDIOC_S_CTRL, &exposure_control) == 0);
+  ABSL_PCHECK(Ioctl(VIDIOC_S_CTRL, &exposure_control) == 0);
 }
 
 void V4L2ReaderBase::UseAutoExposure() {
@@ -217,7 +219,7 @@ void V4L2ReaderBase::UseAutoExposure() {
     if (errno == EINVAL) {
       control.value = V4L2_EXPOSURE_APERTURE_PRIORITY;
       // Try setting V4L2_EXPOSURE_APERTURE_PRIORITY instead:
-      PCHECK(Ioctl(VIDIOC_S_CTRL, &control) == 0)
+      ABSL_PCHECK(Ioctl(VIDIOC_S_CTRL, &control) == 0)
           << ": Failed to set auto-exposure.";
     } else {
       PLOG(FATAL) << ": Failed to set auto-exposure.";
@@ -235,9 +237,9 @@ void V4L2ReaderBase::Buffer::InitializeMessage(size_t max_image_size) {
   // prints turned on.
   builder.fbb()->StartIndeterminateVector(max_image_size, 1, 128,
                                           &data_pointer);
-  CHECK_EQ(reinterpret_cast<uintptr_t>(data_pointer) % 128, 0u)
+  ABSL_CHECK_EQ(reinterpret_cast<uintptr_t>(data_pointer) % 128, 0u)
       << ": Flatbuffers failed to align things as requested";
-  CHECK_EQ(max_image_size % 128, 0u)
+  ABSL_CHECK_EQ(max_image_size % 128, 0u)
       << ": Image size must be a multiple of 128";
 }
 
@@ -250,7 +252,7 @@ void V4L2ReaderBase::Buffer::PrepareMessage(
   const auto data_offset =
       builder.fbb()->EndIndeterminateVector(memory_size, 1);
 
-  CHECK(data_pointer != nullptr);
+  ABSL_CHECK(data_pointer != nullptr);
   data_pointer = nullptr;
 
   // Now, trim any extra off the end of the vector by changing the length.
@@ -294,13 +296,14 @@ V4L2ReaderBase::BufferInfo V4L2ReaderBase::DequeueBuffer() {
     if (result == -1 && errno == EAGAIN) {
       return BufferInfo();
     }
-    PCHECK(result == 0) << ": VIDIOC_DQBUF failed";
-    CHECK_LT(buffer.index, buffers_.size());
+    ABSL_PCHECK(result == 0) << ": VIDIOC_DQBUF failed";
+    ABSL_CHECK_LT(buffer.index, buffers_.size());
 
-    CHECK_EQ(reinterpret_cast<uintptr_t>(buffers_[buffer.index].data_pointer),
-             planes[0].m.userptr);
+    ABSL_CHECK_EQ(
+        reinterpret_cast<uintptr_t>(buffers_[buffer.index].data_pointer),
+        planes[0].m.userptr);
 
-    CHECK_EQ(ImageSize(), planes[0].length);
+    ABSL_CHECK_EQ(ImageSize(), planes[0].length);
     memory_size = planes[0].length;
   } else {
     buffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -308,18 +311,19 @@ V4L2ReaderBase::BufferInfo V4L2ReaderBase::DequeueBuffer() {
     if (result == -1 && errno == EAGAIN) {
       return BufferInfo();
     }
-    PCHECK(result == 0) << ": VIDIOC_DQBUF failed";
-    CHECK_LT(buffer.index, buffers_.size());
-    CHECK_EQ(reinterpret_cast<uintptr_t>(buffers_[buffer.index].data_pointer),
-             buffer.m.userptr);
-    CHECK_EQ(ImageSize(), buffer.length);
+    ABSL_PCHECK(result == 0) << ": VIDIOC_DQBUF failed";
+    ABSL_CHECK_LT(buffer.index, buffers_.size());
+    ABSL_CHECK_EQ(
+        reinterpret_cast<uintptr_t>(buffers_[buffer.index].data_pointer),
+        buffer.m.userptr);
+    ABSL_CHECK_EQ(ImageSize(), buffer.length);
     memory_size = buffer.length;
   }
-  CHECK(buffer.flags & V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC);
+  ABSL_CHECK(buffer.flags & V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC);
   if (!absl::GetFlag(FLAGS_ignore_timestamps)) {
     // Require that we have good timestamp on images
-    CHECK_EQ(buffer.flags & V4L2_BUF_FLAG_TSTAMP_SRC_MASK,
-             static_cast<uint32_t>(V4L2_BUF_FLAG_TSTAMP_SRC_EOF));
+    ABSL_CHECK_EQ(buffer.flags & V4L2_BUF_FLAG_TSTAMP_SRC_MASK,
+                  static_cast<uint32_t>(V4L2_BUF_FLAG_TSTAMP_SRC_EOF));
   }
 
   if (format_ == ImageFormat::MJPEG) {
@@ -336,7 +340,7 @@ V4L2ReaderBase::BufferInfo V4L2ReaderBase::DequeueBuffer() {
     memory_size = aligned_bytes_used;
     valid_size = buffer.bytesused;
   } else {
-    CHECK_EQ(memory_size, buffer.bytesused);
+    ABSL_CHECK_EQ(memory_size, buffer.bytesused);
     valid_size = memory_size;
   }
 
@@ -346,9 +350,9 @@ V4L2ReaderBase::BufferInfo V4L2ReaderBase::DequeueBuffer() {
 }
 
 void V4L2ReaderBase::EnqueueBuffer(int buffer_number) {
-  CHECK_GE(buffer_number, 0);
-  CHECK_LT(buffer_number, static_cast<int>(buffers_.size()));
-  CHECK(buffers_[buffer_number].data_pointer != nullptr);
+  ABSL_CHECK_GE(buffer_number, 0);
+  ABSL_CHECK_LT(buffer_number, static_cast<int>(buffers_.size()));
+  ABSL_CHECK(buffers_[buffer_number].data_pointer != nullptr);
 
   struct v4l2_buffer buffer;
   struct v4l2_plane planes[1];
@@ -371,7 +375,7 @@ void V4L2ReaderBase::EnqueueBuffer(int buffer_number) {
     buffer.length = ImageSize();
   }
 
-  PCHECK(Ioctl(VIDIOC_QBUF, &buffer) == 0);
+  ABSL_PCHECK(Ioctl(VIDIOC_QBUF, &buffer) == 0);
 }
 
 void V4L2ReaderBase::StreamOff() {
@@ -417,11 +421,11 @@ V4L2Reader::V4L2Reader(aos::EventLoop *event_loop, std::string_view device_name,
   // This means we want to capture from a progressive (non-interlaced)
   // source.
   format.fmt.pix.field = V4L2_FIELD_NONE;
-  PCHECK(Ioctl(VIDIOC_S_FMT, &format) == 0);
-  CHECK_EQ(static_cast<int>(format.fmt.pix.width), width);
-  CHECK_EQ(static_cast<int>(format.fmt.pix.height), height);
-  CHECK_EQ(static_cast<int>(format.fmt.pix.bytesperline),
-           width * 2 /* bytes per pixel */);
+  ABSL_PCHECK(Ioctl(VIDIOC_S_FMT, &format) == 0);
+  ABSL_CHECK_EQ(static_cast<int>(format.fmt.pix.width), width);
+  ABSL_CHECK_EQ(static_cast<int>(format.fmt.pix.height), height);
+  ABSL_CHECK_EQ(static_cast<int>(format.fmt.pix.bytesperline),
+                width * 2 /* bytes per pixel */);
 
   ConfigureCameraFromConfig();
 
@@ -457,10 +461,10 @@ MjpegV4L2Reader::MjpegV4L2Reader(aos::EventLoop *event_loop, aos::EPoll *epoll,
   // This means we want to capture from a progressive (non-interlaced)
   // source.
   format.fmt.pix.field = V4L2_FIELD_NONE;
-  PCHECK(Ioctl(VIDIOC_S_FMT, &format) == 0);
-  CHECK_EQ(static_cast<int>(format.fmt.pix.width), width);
-  CHECK_EQ(static_cast<int>(format.fmt.pix.height), height);
-  CHECK_EQ(static_cast<int>(format.fmt.pix.bytesperline), 0);
+  ABSL_PCHECK(Ioctl(VIDIOC_S_FMT, &format) == 0);
+  ABSL_CHECK_EQ(static_cast<int>(format.fmt.pix.width), width);
+  ABSL_CHECK_EQ(static_cast<int>(format.fmt.pix.height), height);
+  ABSL_CHECK_EQ(static_cast<int>(format.fmt.pix.bytesperline), 0);
 
   // Set framerate, if we have one to set.
   if (absl::GetFlag(FLAGS_imagefps) > 0 ||
@@ -478,7 +482,7 @@ MjpegV4L2Reader::MjpegV4L2Reader(aos::EventLoop *event_loop, aos::EPoll *epoll,
       setfps.parm.capture.timeperframe.denominator =
           absl::GetFlag(FLAGS_imagefps);
     }
-    PCHECK(Ioctl(VIDIOC_S_PARM, &setfps) == 0);
+    ABSL_PCHECK(Ioctl(VIDIOC_S_PARM, &setfps) == 0);
     LOG(INFO) << "framerate ended up at "
               << setfps.parm.capture.timeperframe.numerator << "/"
               << setfps.parm.capture.timeperframe.denominator;
@@ -510,7 +514,7 @@ RockchipV4L2Reader::RockchipV4L2Reader(aos::EventLoop *event_loop,
       buffer_requeuer_([this](int buffer) { EnqueueBuffer(buffer); },
                        kEnqueueFifoPriority) {
   ConfigureCameraFromConfig();
-  PCHECK(image_sensor_fd_.get() != -1)
+  ABSL_PCHECK(image_sensor_fd_.get() != -1)
       << " Failed to open device " << device_name;
   StreamOn();
   epoll_->OnReadable(fd().get(), [this]() { OnImageReady(); });
@@ -539,21 +543,21 @@ void RockchipV4L2Reader::SetExposure(size_t duration) {
   v4l2_control exposure_control;
   exposure_control.id = V4L2_CID_EXPOSURE;
   exposure_control.value = static_cast<int>(duration);
-  PCHECK(ImageSensorIoctl(VIDIOC_S_CTRL, &exposure_control) == 0);
+  ABSL_PCHECK(ImageSensorIoctl(VIDIOC_S_CTRL, &exposure_control) == 0);
 }
 
 void V4L2ReaderBase::SetGain(size_t gain) {
   v4l2_control gain_control;
   gain_control.id = V4L2_CID_GAIN;
   gain_control.value = static_cast<int>(gain);
-  PCHECK(ioctl(fd_.get(), VIDIOC_S_CTRL, &gain_control) == 0);
+  ABSL_PCHECK(ioctl(fd_.get(), VIDIOC_S_CTRL, &gain_control) == 0);
 }
 
 void RockchipV4L2Reader::SetGain(size_t gain) {
   v4l2_control gain_control;
   gain_control.id = V4L2_CID_GAIN;
   gain_control.value = static_cast<int>(gain);
-  PCHECK(ImageSensorIoctl(VIDIOC_S_CTRL, &gain_control) == 0);
+  ABSL_PCHECK(ImageSensorIoctl(VIDIOC_S_CTRL, &gain_control) == 0);
 }
 
 void RockchipV4L2Reader::SetGainExt(size_t gain) {
@@ -568,7 +572,7 @@ void RockchipV4L2Reader::SetGainExt(size_t gain) {
   control[0].id = V4L2_CID_ANALOGUE_GAIN;
   control[0].value = gain;
 
-  PCHECK(ImageSensorIoctl(VIDIOC_S_EXT_CTRLS, &controls) == 0);
+  ABSL_PCHECK(ImageSensorIoctl(VIDIOC_S_EXT_CTRLS, &controls) == 0);
 }
 
 void RockchipV4L2Reader::SetVerticalBlanking(size_t vblank) {
@@ -583,7 +587,7 @@ void RockchipV4L2Reader::SetVerticalBlanking(size_t vblank) {
   control[0].id = V4L2_CID_VBLANK;
   control[0].value = vblank;
 
-  PCHECK(ImageSensorIoctl(VIDIOC_S_EXT_CTRLS, &controls) == 0);
+  ABSL_PCHECK(ImageSensorIoctl(VIDIOC_S_EXT_CTRLS, &controls) == 0);
 }
 
 }  // namespace frc::vision

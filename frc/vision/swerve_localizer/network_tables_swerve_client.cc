@@ -15,7 +15,7 @@
 #include "Eigen/Dense"
 #include "Eigen/Geometry"
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/die_if_null.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_join.h"
@@ -142,15 +142,17 @@ std::string ResolveHostname(std::string_view host, int port) {
 
 class EventFd {
  public:
-  EventFd() : fd_(eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)) { CHECK_NE(fd_, -1); }
+  EventFd() : fd_(eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)) {
+    ABSL_CHECK_NE(fd_, -1);
+  }
   ~EventFd() { close(fd_); }
 
-  void Add(uint64_t i) { PCHECK(write(fd_, &i, sizeof(uint64_t)) == 8); }
+  void Add(uint64_t i) { ABSL_PCHECK(write(fd_, &i, sizeof(uint64_t)) == 8); }
 
   uint64_t Read() {
     uint64_t val;
     if (read(fd_, &val, sizeof(val)) == -1) {
-      CHECK_EQ(errno, EAGAIN);
+      ABSL_CHECK_EQ(errno, EAGAIN);
       return 0u;
     }
     return val;
@@ -383,12 +385,12 @@ int Main() {
 
     const int received_length =
         drive_state_socket.Recv(buffer.data(), buffer.size());
-    CHECK_EQ(received_length % sizeof(double), 0u);
+    ABSL_CHECK_EQ(received_length % sizeof(double), 0u);
 
     std::span<const double> data(
         reinterpret_cast<const double *>(buffer.data()),
         received_length / sizeof(double));
-    CHECK_EQ(data.size(), 7u);
+    ABSL_CHECK_EQ(data.size(), 7u);
 
     auto offset = instance.GetServerTimeOffset();
     if (!offset.has_value()) {
@@ -491,7 +493,7 @@ int Main() {
         auto event_name_string = event_name_subscriber.GetAtomic();
         if (event_name_string.time != 0) {
           auto event_name = builder->add_event_name();
-          CHECK(event_name->reserve(event_name_string.value.size() + 1));
+          ABSL_CHECK(event_name->reserve(event_name_string.value.size() + 1));
           event_name->SetString(event_name_string.value);
         }
       }
@@ -543,7 +545,7 @@ int Main() {
       return 1;
     }
 
-    CHECK(instance.IsConnected());
+    ABSL_CHECK(instance.IsConnected());
 
     autonomous_topic =
         instance.GetBooleanTopic(absl::GetFlag(FLAGS_autonomous_topic));
@@ -616,8 +618,8 @@ int Main() {
           coral_forwarder.value().send_failure_count();
     }
     if (overall_send_failure_count > 0) {
-      CHECK(faults->reserve(1));
-      CHECK(faults->emplace_back(NetworkHealth::SEND_FAILURE));
+      ABSL_CHECK(faults->reserve(1));
+      ABSL_CHECK(faults->emplace_back(NetworkHealth::SEND_FAILURE));
       send_failure_count = 0;
       if (coral_forwarder.has_value()) {
         coral_forwarder.value().reset_send_failure_count();
@@ -647,7 +649,7 @@ int Main() {
                  << absl::GetFlag(FLAGS_server);
       return 1;
     }
-    CHECK(!instance.IsConnected());
+    ABSL_CHECK(!instance.IsConnected());
   }
 
   return 0;

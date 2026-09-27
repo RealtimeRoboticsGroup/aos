@@ -3,6 +3,8 @@
 
 #include <functional>
 
+#include "absl/log/absl_check.h"
+
 #include "aos/flatbuffer_merge.h"
 #include "aos/macros.h"
 #if !AOS_OS_NONE
@@ -44,8 +46,8 @@ struct LineFollowConfig {
     if (fbs == nullptr) {
       return {};
     }
-    CHECK(fbs->q() != nullptr);
-    CHECK(fbs->r() != nullptr);
+    ABSL_CHECK(fbs->q() != nullptr);
+    ABSL_CHECK(fbs->r() != nullptr);
     return LineFollowConfig{
         .Q = ToEigenOrDie<3, 3>(*fbs->q()),
         .R = ToEigenOrDie<2, 2>(*fbs->r()),
@@ -74,8 +76,8 @@ struct SplineFollowerConfig {
     if (fbs == nullptr) {
       return {};
     }
-    CHECK(fbs->q() != nullptr);
-    CHECK(fbs->r() != nullptr);
+    ABSL_CHECK(fbs->q() != nullptr);
+    ABSL_CHECK(fbs->r() != nullptr);
     return SplineFollowerConfig{.Q = ToEigenOrDie<5, 5>(*fbs->q()),
                                 .R = ToEigenOrDie<2, 2>(*fbs->r())};
   }
@@ -209,15 +211,15 @@ struct DrivetrainConfig {
         fbs_copy = std::make_shared<
             aos::FlatbufferDetachedBuffer<fbs::DrivetrainConfig>>(
             aos::RecursiveCopyFlatBuffer(&fbs));
-    CHECK(fbs_copy->message().loop_config()->drivetrain_loop() != nullptr);
-    CHECK(fbs_copy->message().loop_config()->velocity_drivetrain_loop() !=
-          nullptr);
-    CHECK(fbs_copy->message().loop_config()->kalman_drivetrain_loop() !=
-          nullptr);
-    CHECK(
+    ABSL_CHECK(fbs_copy->message().loop_config()->drivetrain_loop() != nullptr);
+    ABSL_CHECK(fbs_copy->message().loop_config()->velocity_drivetrain_loop() !=
+               nullptr);
+    ABSL_CHECK(fbs_copy->message().loop_config()->kalman_drivetrain_loop() !=
+               nullptr);
+    ABSL_CHECK(
         fbs_copy->message().loop_config()->hybrid_velocity_drivetrain_loop() !=
         nullptr);
-    CHECK(fbs.imu_transform() != nullptr);
+    ABSL_CHECK(fbs.imu_transform() != nullptr);
     return {
 #define ASSIGN(field) .field = fbs.field()
         ASSIGN(shifter_type),

@@ -19,7 +19,7 @@ cc_library(
         "//frc/wpilib:imu_batch_fbs",
         "//frc/wpilib:imu_fbs",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/types:span",
     ],
 )

@@ -2,7 +2,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/usage.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/events/logging/log_reader.h"
@@ -85,8 +85,8 @@ int main(int argc, char *argv[]) {
         std::chrono::duration<double>(
             absl::GetFlag(FLAGS_post_enable_time_sec)));
   } else {
-    CHECK_LT(absl::GetFlag(FLAGS_force_start_monotonic),
-             absl::GetFlag(FLAGS_force_end_monotonic));
+    ABSL_CHECK_LT(absl::GetFlag(FLAGS_force_start_monotonic),
+                  absl::GetFlag(FLAGS_force_end_monotonic));
     start_time = aos::monotonic_clock::time_point(
         std::chrono::duration_cast<std::chrono::nanoseconds>(
             std::chrono::duration<double>(

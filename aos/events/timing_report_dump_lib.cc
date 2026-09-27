@@ -3,6 +3,8 @@
 #include <iomanip>
 #include <iostream>
 
+#include "absl/log/absl_check.h"
+
 namespace aos {
 TimingReportDump::TimingReportDump(aos::EventLoop *event_loop,
                                    AccumulateStatistics accumulate,
@@ -72,10 +74,10 @@ void TimingReportDump::PrintTimers(
   rows.push_back({"Name", "Count", "Wakeup Latency", "Handler Time"});
   for (const timing::Timer *timer : timers) {
     std::stringstream wakeup_latency_stats;
-    CHECK(timer->has_wakeup_latency());
+    ABSL_CHECK(timer->has_wakeup_latency());
     wakeup_latency_stats << *timer->wakeup_latency();
     std::stringstream handler_time_stats;
-    CHECK(timer->has_handler_time());
+    ABSL_CHECK(timer->has_handler_time());
     handler_time_stats << *timer->handler_time();
     rows.push_back({timer->has_name() ? timer->name()->str() : "",
                     std::to_string(timer->count()), wakeup_latency_stats.str(),
@@ -95,8 +97,8 @@ void TimingReportDump::PrintWatchers(
     const Channel *channel = GetChannel(watcher->channel_index());
     std::stringstream latency_stats;
     std::stringstream handler_stats;
-    CHECK(watcher->has_wakeup_latency());
-    CHECK(watcher->has_handler_time());
+    ABSL_CHECK(watcher->has_wakeup_latency());
+    ABSL_CHECK(watcher->has_handler_time());
     latency_stats << *watcher->wakeup_latency();
     handler_stats << *watcher->handler_time();
     rows.push_back({channel->name()->str(), channel->type()->str(),
@@ -115,13 +117,13 @@ void TimingReportDump::PrintSenders(
   for (const timing::Sender *sender : senders) {
     const Channel *channel = GetChannel(sender->channel_index());
     std::stringstream size_stats;
-    CHECK(sender->has_size());
+    ABSL_CHECK(sender->has_size());
     size_stats << *sender->size();
     std::stringstream errors;
-    CHECK(sender->has_error_counts());
+    ABSL_CHECK(sender->has_error_counts());
     for (size_t ii = 0; ii < sender->error_counts()->size(); ++ii) {
       auto *error_counts = sender->error_counts()->Get(ii);
-      CHECK(error_counts != nullptr);
+      ABSL_CHECK(error_counts != nullptr);
       const size_t error_count = error_counts->count();
       errors << error_count;
       if (error_count > 0) {
@@ -153,7 +155,7 @@ void TimingReportDump::PrintFetchers(
   for (const timing::Fetcher *fetcher : fetchers) {
     const Channel *channel = GetChannel(fetcher->channel_index());
     std::stringstream latency_stats;
-    CHECK(fetcher->has_latency());
+    ABSL_CHECK(fetcher->has_latency());
     latency_stats << *fetcher->latency();
     rows.push_back({channel->name()->str(), channel->type()->str(),
                     std::to_string(fetcher->count()), latency_stats.str()});
@@ -162,7 +164,7 @@ void TimingReportDump::PrintFetchers(
 }
 
 void TimingReportDump::HandleTimingReport(const timing::Report &report) {
-  CHECK(report.has_name());
+  ABSL_CHECK(report.has_name());
   if (name_filter_.has_value() &&
       name_filter_.value() != report.name()->string_view()) {
     return;
@@ -314,8 +316,8 @@ void CombineTimers(
 }  // namespace
 
 void TimingReportDump::AccumulateReport(const timing::Report &raw_report) {
-  CHECK(raw_report.has_pid());
-  CHECK(raw_report.has_name());
+  ABSL_CHECK(raw_report.has_pid());
+  ABSL_CHECK(raw_report.has_name());
   const std::pair<pid_t, std::string> map_key(raw_report.pid(),
                                               raw_report.name()->str());
   if (accumulated_statistics_.count(map_key) == 0) {
@@ -359,8 +361,8 @@ void TimingReportDump::AccumulateReport(const timing::Report &raw_report) {
       CombineStatistics(sender->count, *sender->size, (*sender_iter)->count,
                         (*sender_iter)->size.get());
       (*sender_iter)->count += sender->count;
-      CHECK_EQ((*sender_iter)->error_counts.size(),
-               sender->error_counts.size());
+      ABSL_CHECK_EQ((*sender_iter)->error_counts.size(),
+                    sender->error_counts.size());
       for (size_t ii = 0; ii < sender->error_counts.size(); ++ii) {
         (*sender_iter)->error_counts[ii]->count +=
             sender->error_counts[ii]->count;
@@ -387,9 +389,9 @@ void TimingReportDump::AccumulateReport(const timing::Report &raw_report) {
 }
 
 const Channel *TimingReportDump::GetChannel(int index) {
-  CHECK_LE(0, index);
-  CHECK_GT(event_loop_->configuration()->channels()->size(),
-           static_cast<size_t>(index));
+  ABSL_CHECK_LE(0, index);
+  ABSL_CHECK_GT(event_loop_->configuration()->channels()->size(),
+                static_cast<size_t>(index));
   return event_loop_->configuration()->channels()->Get(index);
 }
 

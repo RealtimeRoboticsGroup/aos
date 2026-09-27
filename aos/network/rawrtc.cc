@@ -10,7 +10,7 @@ extern "C" {
 #include <string>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "flatbuffers/flatbuffers.h"
 
@@ -95,16 +95,16 @@ void ScopedDataChannel::Open(struct rawrtc_data_channel *const channel) {
 }
 
 ScopedDataChannel::~ScopedDataChannel() {
-  CHECK(opened_);
-  CHECK(closed_) << ": Never closed " << label();
-  CHECK(data_channel_ == nullptr)
+  ABSL_CHECK(opened_);
+  ABSL_CHECK(closed_) << ": Never closed " << label();
+  ABSL_CHECK(data_channel_ == nullptr)
       << ": Destroying open data channel " << this << ".";
 }
 
 void ScopedDataChannel::StaticDataChannelOpenHandler(void *const arg) {
   ScopedDataChannel *const client = reinterpret_cast<ScopedDataChannel *>(arg);
-  CHECK(!client->opened_);
-  CHECK(!client->closed_);
+  ABSL_CHECK(!client->opened_);
+  ABSL_CHECK(!client->closed_);
   if (client->on_open_) client->on_open_();
   client->opened_ = true;
 }
@@ -121,8 +121,8 @@ void ScopedDataChannel::StaticDataChannelErrorHandler(void *const arg) {
 
 void ScopedDataChannel::StaticDataChannelCloseHandler(void *const arg) {
   ScopedDataChannel *const client = reinterpret_cast<ScopedDataChannel *>(arg);
-  CHECK(client->opened_);
-  CHECK(!client->closed_);
+  ABSL_CHECK(client->opened_);
+  ABSL_CHECK(!client->closed_);
   // Close() assumes that this method will do the final cleanup.  The destructor
   // CHECKs that.
   client->closed_ = true;
@@ -148,7 +148,7 @@ void ScopedDataChannel::StaticDataChannelMessageHandler(
 }
 
 void ScopedDataChannel::Close() {
-  CHECK(opened_);
+  ABSL_CHECK(opened_);
   if (!closed_) {
     CHECK_RAWRTC(rawrtc_data_channel_close(data_channel_));
   }
@@ -166,7 +166,7 @@ void ScopedDataChannel::Send(const ::flatbuffers::DetachedBuffer &buffer) {
 
 void ScopedDataChannel::Send(struct mbuf *buffer) {
   // TODO(austin): Checking isn't right, handle errors more gracefully.
-  CHECK(data_channel_ != nullptr);
+  ABSL_CHECK(data_channel_ != nullptr);
   CHECK_RAWRTC(rawrtc_data_channel_send(data_channel_, buffer, true));
 }
 
@@ -175,7 +175,7 @@ uint64_t ScopedDataChannel::buffered_amount() {
 
   // TODO(austin): Not implemented yet...
   uint64_t result;
-  CHECK(data_channel_ != nullptr);
+  ABSL_CHECK(data_channel_ != nullptr);
   CHECK_RAWRTC(rawrtc_data_channel_get_buffered_amount(&result, data_channel_));
   return result;
 }
@@ -202,8 +202,8 @@ void RawRTCConnection::Open() {
 
   if (absl::GetFlag(FLAGS_min_ice_port) >= 0 &&
       absl::GetFlag(FLAGS_max_ice_port) >= 0) {
-    CHECK_LT(absl::GetFlag(FLAGS_min_ice_port),
-             absl::GetFlag(FLAGS_max_ice_port));
+    ABSL_CHECK_LT(absl::GetFlag(FLAGS_min_ice_port),
+                  absl::GetFlag(FLAGS_max_ice_port));
     // Set the port range to use for ICE candidates.
     CHECK_RAWRTC(rawrtc_peer_connection_configuration_set_ice_udp_port_range(
         configuration, absl::GetFlag(FLAGS_min_ice_port),

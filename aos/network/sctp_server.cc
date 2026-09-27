@@ -13,7 +13,7 @@
 #include <memory>
 #include <thread>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/log/vlog_is_on.h"
 
@@ -35,22 +35,23 @@ SctpServer::SctpServer(int streams, std::string_view local_host, int local_port,
       memset(&initmsg, 0, sizeof(struct sctp_initmsg));
       initmsg.sinit_num_ostreams = streams;
       initmsg.sinit_max_instreams = streams;
-      PCHECK(setsockopt(fd(), IPPROTO_SCTP, SCTP_INITMSG, &initmsg,
-                        sizeof(struct sctp_initmsg)) == 0);
+      ABSL_PCHECK(setsockopt(fd(), IPPROTO_SCTP, SCTP_INITMSG, &initmsg,
+                             sizeof(struct sctp_initmsg)) == 0);
     }
 
     {
       // Turn off the NAGLE algorithm.
       int on = 1;
-      PCHECK(setsockopt(fd(), IPPROTO_SCTP, SCTP_NODELAY, &on, sizeof(int)) ==
-             0);
+      ABSL_PCHECK(
+          setsockopt(fd(), IPPROTO_SCTP, SCTP_NODELAY, &on, sizeof(int)) == 0);
     }
 
     {
       int on = 1;
       LOG(INFO) << "setsockopt(" << fd()
                 << ", SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)";
-      PCHECK(setsockopt(fd(), SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)) == 0);
+      ABSL_PCHECK(
+          setsockopt(fd(), SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)) == 0);
     }
 
     // And go!
@@ -65,7 +66,7 @@ SctpServer::SctpServer(int streams, std::string_view local_host, int local_port,
     }
     LOG(INFO) << "bind(" << fd() << ", " << Address(sockaddr_local_) << ")";
 
-    PCHECK(listen(fd(), 100) == 0);
+    ABSL_PCHECK(listen(fd(), 100) == 0);
 
     SetMaxReadSize(1000);
     SetMaxWriteSize(1000);

@@ -10,7 +10,7 @@
 #include <sstream>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/log/vlog_is_on.h"
 #include "absl/strings/escaping.h"
@@ -93,7 +93,7 @@ class OutOfDiskSpaceLogSink : public LogSink {
 DetachedBufferWriter::DetachedBufferWriter(std::unique_ptr<LogSink> log_sink,
                                            std::unique_ptr<DataEncoder> encoder)
     : log_sink_(std::move(log_sink)), encoder_(std::move(encoder)) {
-  CHECK(log_sink_);
+  ABSL_CHECK(log_sink_);
   ran_out_of_space_ = log_sink_->OpenForWrite() == WriteCode::kOutOfSpace;
   if (ran_out_of_space_) {
     LOG(WARNING) << "And we are out of space";
@@ -107,7 +107,7 @@ DetachedBufferWriter::DetachedBufferWriter(already_out_of_space_t)
 DetachedBufferWriter::~DetachedBufferWriter() {
   Close();
   if (ran_out_of_space_) {
-    CHECK(acknowledge_ran_out_of_space_)
+    ABSL_CHECK(acknowledge_ran_out_of_space_)
         << ": Unacknowledged out of disk space, log file was not completed";
   }
 }
@@ -153,7 +153,7 @@ std::chrono::nanoseconds DetachedBufferWriter::CopyMessage(
     const size_t bytes_written =
         encoder_->Encode(copier, overall_bytes_written, &encode_duration);
 
-    CHECK(bytes_written != 0);
+    ABSL_CHECK(bytes_written != 0);
 
     overall_bytes_written += bytes_written;
     if (overall_bytes_written < message_size) {
@@ -309,10 +309,10 @@ size_t PackRemoteMessageInline(
     const aos::monotonic_clock::time_point monotonic_timestamp_time,
     size_t start_byte, size_t end_byte) {
   const flatbuffers::uoffset_t message_size = PackRemoteMessageSize();
-  DCHECK_EQ((start_byte % 8u), 0u);
-  DCHECK_EQ((end_byte % 8u), 0u);
-  DCHECK_LE(start_byte, end_byte);
-  DCHECK_LE(end_byte, message_size);
+  ABSL_DCHECK_EQ((start_byte % 8u), 0u);
+  ABSL_DCHECK_EQ((end_byte % 8u), 0u);
+  ABSL_DCHECK_LE(start_byte, end_byte);
+  ABSL_DCHECK_LE(end_byte, message_size);
 
   switch (start_byte) {
     case 0x00u:
@@ -604,11 +604,11 @@ size_t PackMessageInline(uint8_t *buffer, const Context &context,
   // of memory.
   const flatbuffers::uoffset_t message_size =
       PackMessageSize(log_type, context.size);
-  DCHECK_EQ((message_size % 8), 0u) << ": Non 8 byte length...";
-  DCHECK_EQ((start_byte % 8u), 0u);
-  DCHECK_EQ((end_byte % 8u), 0u);
-  DCHECK_LE(start_byte, end_byte);
-  DCHECK_LE(end_byte, message_size);
+  ABSL_DCHECK_EQ((message_size % 8), 0u) << ": Non 8 byte length...";
+  ABSL_DCHECK_EQ((start_byte % 8u), 0u);
+  ABSL_DCHECK_EQ((end_byte % 8u), 0u);
+  ABSL_DCHECK_LE(start_byte, end_byte);
+  ABSL_DCHECK_LE(end_byte, message_size);
 
   // Pack all the data in.  This is brittle but easy to change.  Use the
   // InlinePackMessage.Equivilent unit test to verify everything matches.
@@ -1197,12 +1197,12 @@ MessageReader::MessageReader(SpanReader span_reader)
       raw_log_file_header = ReadHeader(&span_reader_);
 
   // Make sure something was read.
-  CHECK(raw_log_file_header)
+  ABSL_CHECK(raw_log_file_header)
       << ": Failed to read header from: " << span_reader_.filename();
 
   raw_log_file_header_ = std::move(*raw_log_file_header);
 
-  CHECK(raw_log_file_header_.Verify()) << "Log file header is corrupted";
+  ABSL_CHECK(raw_log_file_header_.Verify()) << "Log file header is corrupted";
 
   total_verified_before_ = span_reader_.TotalConsumed();
 
@@ -1238,12 +1238,12 @@ std::shared_ptr<UnpackedMessageHeader> MessageReader::ReadMessage() {
   SizePrefixedFlatbufferSpan<MessageHeader> msg(msg_data);
 
   if (crash_on_corrupt_message_flag_) {
-    CHECK(msg.Verify()) << "Corrupted message at offset "
-                        << total_verified_before_ << " found within "
-                        << filename()
-                        << "; set --nocrash_on_corrupt_message to see summary;"
-                        << " also set --ignore_corrupt_messages to process"
-                        << " anyway";
+    ABSL_CHECK(msg.Verify())
+        << "Corrupted message at offset " << total_verified_before_
+        << " found within " << filename()
+        << "; set --nocrash_on_corrupt_message to see summary;"
+        << " also set --ignore_corrupt_messages to process"
+        << " anyway";
 
   } else if (!msg.Verify()) {
     LOG(ERROR) << "Corrupted message at offset " << total_verified_before_
@@ -1316,8 +1316,8 @@ std::shared_ptr<UnpackedMessageHeader> MessageReader::ReadMessage() {
 
 std::shared_ptr<UnpackedMessageHeader> UnpackedMessageHeader::MakeMessage(
     const MessageHeader &message) {
-  CHECK(message.has_channel_index());
-  CHECK(message.has_monotonic_sent_time());
+  ABSL_CHECK(message.has_channel_index());
+  ABSL_CHECK(message.has_monotonic_sent_time());
 
   std::optional<aos::monotonic_clock::time_point> monotonic_remote_time;
   if (message.has_monotonic_remote_time()) {
@@ -1415,11 +1415,11 @@ void PartsMessageReader::ComputeBootCounts() {
   if (log_file_header()->has_boot_uuids()) {
     // The new hotness with the boots explicitly listed out.  We can use the log
     // file header to compute the boot count of all relevant nodes.
-    CHECK_EQ(log_file_header()->boot_uuids()->size(), boot_counts_.size());
+    ABSL_CHECK_EQ(log_file_header()->boot_uuids()->size(), boot_counts_.size());
     size_t node_index = 0;
     for (const flatbuffers::String *boot_uuid :
          *log_file_header()->boot_uuids()) {
-      CHECK(boots);
+      ABSL_CHECK(boots);
       if (boot_uuid->size() != 0) {
         auto it = boots->boot_count_map.find(boot_uuid->str());
         if (it != boots->boot_count_map.end()) {
@@ -1443,7 +1443,7 @@ void PartsMessageReader::ComputeBootCounts() {
       }
     } else {
       // Really old single node logs without any UUIDs.  They can't reboot.
-      CHECK_EQ(boot_counts_.size(), 1u);
+      ABSL_CHECK_EQ(boot_counts_.size(), 1u);
       boot_counts_[0] = 0u;
     }
   }
@@ -1493,11 +1493,11 @@ PartsMessageReader::ReadMessage() {
 
 void PartsMessageReader::NextLog() {
   if (next_part_index_ == log_parts_access_.size()) {
-    CHECK(!next_message_reader_);
+    ABSL_CHECK(!next_message_reader_);
     done_ = true;
     return;
   }
-  CHECK(next_message_reader_);
+  ABSL_CHECK(next_message_reader_);
   message_reader_ = std::move(*next_message_reader_);
   ComputeBootCounts();
   if (next_part_index_ + 1 < log_parts_access_.size()) {
@@ -1634,15 +1634,15 @@ Result<const Message *> MessageSorter::Front() {
       size_t monotonic_remote_boot = 0xffffff;
 
       if (msg->has_monotonic_remote_time) {
-        CHECK_LT(msg->channel_index, source_node_index_.size());
+        ABSL_CHECK_LT(msg->channel_index, source_node_index_.size());
         const Node *node = parts().config->nodes()->Get(
             source_node_index_[msg->channel_index]);
 
         std::optional<size_t> boot = parts_message_reader_.boot_count(
             source_node_index_[msg->channel_index]);
-        CHECK(boot) << ": Failed to find boot for node '" << MaybeNodeName(node)
-                    << "', with index "
-                    << source_node_index_[msg->channel_index];
+        ABSL_CHECK(boot) << ": Failed to find boot for node '"
+                         << MaybeNodeName(node) << "', with index "
+                         << source_node_index_[msg->channel_index];
         monotonic_remote_boot = *boot;
       }
 
@@ -1686,7 +1686,7 @@ Result<const Message *> MessageSorter::Front() {
     return nullptr;
   }
 
-  CHECK_GE(messages_.begin()->raw_timestamp, last_message_time_)
+  ABSL_CHECK_GE(messages_.begin()->raw_timestamp, last_message_time_)
       << DebugString() << " reading " << parts_message_reader_.filename();
   last_message_time_ = messages_.begin()->raw_timestamp;
   VLOG(1) << this << " Front, sorted until " << sorted_until_ << " for "
@@ -1796,7 +1796,7 @@ Result<const Message *> PartsMerger::Front() {
   // Return the current Front if we have one, otherwise go compute one.
   if (current_ != nullptr) {
     return current_->Front().transform([this](const Message *result) {
-      CHECK_GE(result->raw_timestamp, last_message_time_);
+      ABSL_CHECK_GE(result->raw_timestamp, last_message_time_);
       VLOG(1) << this << " PartsMerger::Front for node " << node_name() << " "
               << *result;
       return result;
@@ -1830,8 +1830,8 @@ Result<const Message *> PartsMerger::Front() {
         current_ = &message_sorter;
         oldest = msg;
       } else {
-        CHECK_EQ(msg->header->monotonic_timestamp_time,
-                 oldest->header->monotonic_timestamp_time);
+        ABSL_CHECK_EQ(msg->header->monotonic_timestamp_time,
+                      oldest->header->monotonic_timestamp_time);
         message_sorter.PopFront();
       }
     }
@@ -1841,7 +1841,7 @@ Result<const Message *> PartsMerger::Front() {
   }
 
   if (oldest) {
-    CHECK_GE(oldest->raw_timestamp, last_message_time_);
+    ABSL_CHECK_GE(oldest->raw_timestamp, last_message_time_);
     last_message_time_ = oldest->raw_timestamp;
     if (monotonic_oldest_time_ > oldest->raw_timestamp) {
       VLOG(1) << this << " Updating oldest to " << oldest->raw_timestamp
@@ -1866,7 +1866,7 @@ Result<const Message *> PartsMerger::Front() {
 }
 
 void PartsMerger::PopFront() {
-  CHECK(current_ != nullptr) << "Popping before calling Front()";
+  ABSL_CHECK(current_ != nullptr) << "Popping before calling Front()";
   current_->PopFront();
   current_ = nullptr;
 }
@@ -1943,7 +1943,7 @@ std::vector<const LogParts *> BootMerger::Parts() const {
 
 monotonic_clock::time_point BootMerger::monotonic_start_time(
     size_t boot) const {
-  CHECK_LT(boot, parts_mergers_.size());
+  ABSL_CHECK_LT(boot, parts_mergers_.size());
   if (parts_mergers_[boot]) {
     return parts_mergers_[boot]->monotonic_start_time();
   }
@@ -1951,7 +1951,7 @@ monotonic_clock::time_point BootMerger::monotonic_start_time(
 }
 
 realtime_clock::time_point BootMerger::realtime_start_time(size_t boot) const {
-  CHECK_LT(boot, parts_mergers_.size());
+  ABSL_CHECK_LT(boot, parts_mergers_.size());
   if (parts_mergers_[boot]) {
     return parts_mergers_[boot]->realtime_start_time();
   }
@@ -1960,7 +1960,7 @@ realtime_clock::time_point BootMerger::realtime_start_time(size_t boot) const {
 
 monotonic_clock::time_point BootMerger::monotonic_oldest_time(
     size_t boot) const {
-  CHECK_LT(boot, parts_mergers_.size());
+  ABSL_CHECK_LT(boot, parts_mergers_.size());
   if (parts_mergers_[boot]) {
     return parts_mergers_[boot]->monotonic_oldest_time();
   }
@@ -2038,7 +2038,7 @@ Status SplitTimestampBootMerger::QueueTimestamps(
       queue_timestamps_ran_ = true;
       return Ok();
     }
-    CHECK_LT(msg->channel_index, source_node.size());
+    ABSL_CHECK_LT(msg->channel_index, source_node.size());
     if (source_node[msg->channel_index] != static_cast<size_t>(node())) {
       TimestampedMessage timestamped_message{
           .channel_index = msg->channel_index,
@@ -2081,13 +2081,13 @@ std::string_view SplitTimestampBootMerger::node_name() const {
 
 monotonic_clock::time_point SplitTimestampBootMerger::monotonic_start_time(
     size_t boot) const {
-  CHECK_LT(boot, monotonic_start_time_.size());
+  ABSL_CHECK_LT(boot, monotonic_start_time_.size());
   return monotonic_start_time_[boot];
 }
 
 realtime_clock::time_point SplitTimestampBootMerger::realtime_start_time(
     size_t boot) const {
-  CHECK_LT(boot, realtime_start_time_.size());
+  ABSL_CHECK_LT(boot, realtime_start_time_.size());
   return realtime_start_time_[boot];
 }
 
@@ -2104,7 +2104,7 @@ Result<const Message *> SplitTimestampBootMerger::Front() {
   return boot_merger_.Front().transform(
       [this](const Message *boot_merger_front) {
         if (timestamp_boot_merger_) {
-          CHECK(queue_timestamps_ran_);
+          ABSL_CHECK(queue_timestamps_ran_);
         }
 
         const Message *timestamp_messages_front = nullptr;
@@ -2159,7 +2159,7 @@ Result<const Message *> SplitTimestampBootMerger::Front() {
 void SplitTimestampBootMerger::PopFront() {
   switch (message_source_) {
     case MessageSource::kTimestampMessage:
-      CHECK(!timestamp_messages_.empty());
+      ABSL_CHECK(!timestamp_messages_.empty());
       timestamp_messages_.pop_front();
       break;
     case MessageSource::kBootMerger:
@@ -2218,9 +2218,9 @@ TimestampMapper::TimestampMapper(
 }
 
 void TimestampMapper::AddPeer(TimestampMapper *timestamp_mapper) {
-  CHECK(configuration::MultiNode(configuration()));
-  CHECK_NE(timestamp_mapper->node(), node());
-  CHECK_LT(timestamp_mapper->node(), nodes_data_.size());
+  ABSL_CHECK(configuration::MultiNode(configuration()));
+  ABSL_CHECK_NE(timestamp_mapper->node(), node());
+  ABSL_CHECK_LT(timestamp_mapper->node(), nodes_data_.size());
 
   NodeData *node_data = &nodes_data_[timestamp_mapper->node()];
   // Only set it if this node delivers to the peer timestamp_mapper. Otherwise
@@ -2228,7 +2228,7 @@ void TimestampMapper::AddPeer(TimestampMapper *timestamp_mapper) {
   if (node_data->any_delivered) {
     VLOG(1) << "Registering on node " << node() << " for peer node "
             << timestamp_mapper->node();
-    CHECK(timestamp_mapper->nodes_data_[node()].peer == nullptr);
+    ABSL_CHECK(timestamp_mapper->nodes_data_[node()].peer == nullptr);
 
     timestamp_mapper->nodes_data_[node()].peer = this;
 
@@ -2307,7 +2307,7 @@ bool TimestampMapper::CheckReplayChannelsAndMaybePop(
 Result<TimestampMapper::MatchResult> TimestampMapper::MaybeQueueMatched() {
   if (nodes_data_.empty()) {
     // Simple path.  We are single node, so there are no timestamps to match!
-    CHECK_EQ(messages_.size(), 0u);
+    ABSL_CHECK_EQ(messages_.size(), 0u);
     const Message *msg;
     AOS_ASSIGN_OR_RETURN_ERROR(msg, boot_merger_.Front());
     if (!msg) {
@@ -2317,7 +2317,8 @@ Result<TimestampMapper::MatchResult> TimestampMapper::MaybeQueueMatched() {
     // associate remote timestamps, and return it.
     QueueMessage(msg);
 
-    CHECK_GE(matched_messages_.back().monotonic_event_time, last_message_time_)
+    ABSL_CHECK_GE(matched_messages_.back().monotonic_event_time,
+                  last_message_time_)
         << " on " << node_name();
     last_message_time_ = matched_messages_.back().monotonic_event_time;
 
@@ -2351,7 +2352,8 @@ Result<TimestampMapper::MatchResult> TimestampMapper::MaybeQueueMatched() {
   if (source_node_[msg->channel_index] == node()) {
     // From us, just forward it on, filling the remote data in as invalid.
     QueueMessage(msg);
-    CHECK_GE(matched_messages_.back().monotonic_event_time, last_message_time_)
+    ABSL_CHECK_GE(matched_messages_.back().monotonic_event_time,
+                  last_message_time_)
         << " on " << node_name();
     last_message_time_ = matched_messages_.back().monotonic_event_time;
     messages_.pop_front();
@@ -2388,7 +2390,8 @@ Result<TimestampMapper::MatchResult> TimestampMapper::MaybeQueueMatched() {
         .preceded_by_expired_message = data.preceded_by_expired_message});
     VLOG(1) << node_name() << " Inserted timestamp "
             << matched_messages_.back();
-    CHECK_GE(matched_messages_.back().monotonic_event_time, last_message_time_)
+    ABSL_CHECK_GE(matched_messages_.back().monotonic_event_time,
+                  last_message_time_)
         << " on " << node_name() << " " << matched_messages_.back();
     last_message_time_ = matched_messages_.back().monotonic_event_time;
     // Since messages_ holds the data, drop it.
@@ -2450,7 +2453,7 @@ Result<void> TimestampMapper::QueueFor(
 }
 
 Result<void> TimestampMapper::PopFront() {
-  CHECK(first_message_ != FirstMessage::kNeedsUpdate);
+  ABSL_CHECK(first_message_ != FirstMessage::kNeedsUpdate);
   return Front().transform([this](const TimestampedMessage *message) {
     last_popped_message_time_ = message->monotonic_event_time;
     first_message_ = FirstMessage::kNeedsUpdate;
@@ -2462,14 +2465,14 @@ Result<void> TimestampMapper::PopFront() {
 
 Result<Message> TimestampMapper::MatchingMessageFor(const Message &message) {
   // Figure out what queue index we are looking for.
-  CHECK(message.header != nullptr);
-  CHECK(message.header->has_remote_queue_index);
+  ABSL_CHECK(message.header != nullptr);
+  ABSL_CHECK(message.header->has_remote_queue_index);
   const BootQueueIndex remote_queue_index =
       BootQueueIndex{.boot = message.monotonic_remote_boot,
                      .index = message.header->maybe_remote_queue_index};
 
-  CHECK(message.header->has_monotonic_remote_time);
-  CHECK(message.header->has_realtime_remote_time);
+  ABSL_CHECK(message.header->has_monotonic_remote_time);
+  ABSL_CHECK(message.header->has_realtime_remote_time);
 
   const BootTimestamp monotonic_remote_time{
       .boot = message.monotonic_remote_boot,
@@ -2532,16 +2535,16 @@ Result<Message> TimestampMapper::MatchingMessageFor(const Message &message) {
       (data_queue->back().raw_queue_index -
            data_queue->front().raw_queue_index + 1u ==
        data_queue->size())) {
-    CHECK_EQ(remote_queue_index.boot, data_queue->front().boot);
+    ABSL_CHECK_EQ(remote_queue_index.boot, data_queue->front().boot);
     // Pull the data out and confirm that the timestamps match as expected.
     //
     // TODO(austin): Move if not reliable.
     Message result = (*data_queue)[remote_queue_index.index -
                                    data_queue->front().raw_queue_index];
 
-    CHECK_EQ(result.timestamp(), monotonic_remote_time)
+    ABSL_CHECK_EQ(result.timestamp(), monotonic_remote_time)
         << ": Queue index matches, but timestamp doesn't.  Please investigate!";
-    CHECK_EQ(result.header->realtime_sent_time, realtime_remote_time)
+    ABSL_CHECK_EQ(result.header->realtime_sent_time, realtime_remote_time)
         << ": Queue index matches, but timestamp doesn't.  Please investigate!";
     // Now drop the data off the front.  We have deduplicated timestamps, so we
     // are done.  And all the data is in order.
@@ -2573,10 +2576,10 @@ Result<Message> TimestampMapper::MatchingMessageFor(const Message &message) {
 
     Message result = std::move(*it);
 
-    CHECK_EQ(result.timestamp(), monotonic_remote_time)
+    ABSL_CHECK_EQ(result.timestamp(), monotonic_remote_time)
         << ": Queue index matches, but timestamp doesn't.  Please "
            "investigate!";
-    CHECK_EQ(result.header->realtime_sent_time, realtime_remote_time)
+    ABSL_CHECK_EQ(result.header->realtime_sent_time, realtime_remote_time)
         << ": Queue index matches, but timestamp doesn't.  Please "
            "investigate!";
 
@@ -2675,7 +2678,7 @@ Result<bool> TimestampMapper::Queue() {
               // We should never have a message that is newer than the last
               // message we popped, because these messages should have been
               // sorted earlier.
-              CHECK_LT(message.boot, last_popped_message_time_.boot);
+              ABSL_CHECK_LT(message.boot, last_popped_message_time_.boot);
             }
 
             messages.pop_front();

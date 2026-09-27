@@ -5,7 +5,7 @@
 
 #include <algorithm>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "flatbuffers/buffer.h"
 #include "flatbuffers/flatbuffer_builder.h"
 #include "flatbuffers/vector.h"
@@ -131,7 +131,7 @@ class ErrorList {
   }
   template <typename StaticBuilder>
   void ToStaticFlatbuffer(StaticBuilder *vector_builder) const {
-    CHECK(vector_builder->FromData(array_.data(), array_.size()));
+    ABSL_CHECK(vector_builder->FromData(array_.data(), array_.size()));
   }
 };
 

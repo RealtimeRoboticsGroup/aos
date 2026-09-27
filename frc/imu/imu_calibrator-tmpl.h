@@ -1,5 +1,6 @@
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 
 #include "frc/imu/imu_calibrator.h"
 #include "frc/math/interpolate.h"
@@ -15,10 +16,10 @@ inline constexpr double kGyroMaxZeroingValue = 0.1;
 template <typename Scalar>
 void ImuCalibrator<Scalar>::InsertImu(size_t imu_index,
                                       const RawImuReading &reading) {
-  CHECK_LT(imu_index, imu_readings_.size());
+  ABSL_CHECK_LT(imu_index, imu_readings_.size());
   std::vector<ImuReading> &readings = imu_readings_[imu_index];
   if (readings.size() > 0u) {
-    CHECK_LT(readings.back().capture_time_raw, reading.capture_time)
+    ABSL_CHECK_LT(readings.back().capture_time_raw, reading.capture_time)
         << ": Readings must be inserted in time order per IMU.";
   }
   // Execute the stationary logic. We identify if this reading is plausibly
@@ -79,8 +80,9 @@ void ImuCalibrator<Scalar>::InsertImu(size_t imu_index,
 template <typename Scalar>
 void ImuCalibrator<Scalar>::EvaluateRelativeResiduals() {
   for (const auto &readings : imu_readings_) {
-    CHECK_LT(static_cast<size_t>(absl::GetFlag(FLAGS_imu_zeroing_buffer) * 2),
-             readings.size())
+    ABSL_CHECK_LT(
+        static_cast<size_t>(absl::GetFlag(FLAGS_imu_zeroing_buffer) * 2),
+        readings.size())
         << ": Insufficient readings to perform calibration.";
   }
   Scalar base_clock = imu_readings_[origin_index_][0].capture_time_adjusted;
@@ -134,9 +136,9 @@ void ImuCalibrator<Scalar>::EvaluateRelativeResiduals() {
         continue;
       }
       // Sanity check the above logic.
-      CHECK_LE(base_clock, reading_time);
-      CHECK_LT(reading_time, next_base_clock);
-      CHECK(imu_config.parameters.has_value());
+      ABSL_CHECK_LE(base_clock, reading_time);
+      ABSL_CHECK_LT(reading_time, next_base_clock);
+      ABSL_CHECK(imu_config.parameters.has_value());
       reading.gyro_residual =
           imu_config.parameters.value().rotation * reading.gyro -
           frc::math::Interpolate<Eigen::Matrix<Scalar, 3, 1>, Scalar>(
@@ -163,14 +165,14 @@ void ImuCalibrator<Scalar>::EvaluateRelativeResiduals() {
 namespace internal {
 template <typename Scalar>
 std::span<Scalar> SerializeScalar(Scalar value, std::span<Scalar> out) {
-  DCHECK(!out.empty());
+  ABSL_DCHECK(!out.empty());
   out[0] = value;
   return out.subspan(1);
 }
 template <typename Scalar, int kSize>
 std::span<Scalar> SerializeVector(const Eigen::Matrix<Scalar, kSize, 1> &value,
                                   std::span<Scalar> out) {
-  DCHECK_LE(static_cast<size_t>(value.size()), out.size());
+  ABSL_DCHECK_LE(static_cast<size_t>(value.size()), out.size());
   for (int index = 0; index < kSize; ++index) {
     out[index] = value(index);
   }
@@ -203,8 +205,8 @@ void ImuCalibrator<Scalar>::CalculateResiduals(std::span<Scalar> residuals) {
       }
     }
     if (!imu_configs_[imu_index].is_origin) {
-      CHECK_LT(0, valid_gyro_reading_count);
-      CHECK_LT(0, valid_accel_reading_count);
+      ABSL_CHECK_LT(0, valid_gyro_reading_count);
+      ABSL_CHECK_LT(0, valid_accel_reading_count);
     } else {
       valid_gyro_reading_count = readings.size();
       valid_accel_reading_count = readings.size();
@@ -233,8 +235,8 @@ void ImuCalibrator<Scalar>::CalculateResiduals(std::span<Scalar> residuals) {
           accel_reading_scalar;
       // 3 residuals
       residuals = internal::SerializeVector(accel_residual, residuals);
-      CHECK_EQ(internal::kResidualsPerReading,
-               residuals.data() - start_residual)
+      ABSL_CHECK_EQ(internal::kResidualsPerReading,
+                    residuals.data() - start_residual)
           << ": Need to update kResidualsPerReading.";
     }
   }

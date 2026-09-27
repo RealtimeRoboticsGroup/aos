@@ -17,7 +17,7 @@ cc_library(
         "//aos/network:team_number",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -40,7 +40,7 @@ cc_binary(
         "//frc/constants/testdata:constants_list_fbs",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -67,6 +67,6 @@ cc_test(
         "//frc/constants/testdata:constants_data_fbs",
         "//frc/constants/testdata:constants_list_fbs",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )

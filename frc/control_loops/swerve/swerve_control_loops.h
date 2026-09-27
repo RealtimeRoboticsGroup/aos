@@ -1,6 +1,8 @@
 #ifndef FRC_CONTROL_LOOPS_SWERVE_SWERVE_CONTROL_LOOPS_H_
 #define FRC_CONTROL_LOOPS_SWERVE_SWERVE_CONTROL_LOOPS_H_
 
+#include "absl/log/absl_check.h"
+
 #include "aos/time/time.h"
 #include "frc/control_loops/control_loop.h"
 #include "frc/control_loops/profiled_subsystem_generated.h"
@@ -21,7 +23,7 @@ inline void PopulateSwerveModuleRotation(
     const frc::control_loops::AbsoluteEncoderProfiledJointStatus
         *rotation_status) {
   auto rotation = swerve_module_table->add_rotation();
-  CHECK(rotation->FromFlatbuffer(rotation_status));
+  ABSL_CHECK(rotation->FromFlatbuffer(rotation_status));
 }
 
 // Handles the translation and rotation current for each swerve module

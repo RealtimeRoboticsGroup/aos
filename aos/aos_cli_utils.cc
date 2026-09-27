@@ -8,6 +8,8 @@
 #include <string_view>
 #include <utility>
 
+#include "absl/log/absl_check.h"
+
 #include "aos/configuration.h"
 #include "aos/events/shm_event_loop.h"
 #include "aos/events/simulated_event_loop.h"
@@ -88,7 +90,7 @@ bool CliUtilInfo::Initialize(
     std::cout << "COMPREPLY=()";
     return true;
   }
-  CHECK(config.has_value()) << "Could not read config. See above errors.";
+  ABSL_CHECK(config.has_value()) << "Could not read config. See above errors.";
 
   event_loop.emplace(&config->message());
   event_loop->SkipTimingReport();
@@ -128,7 +130,7 @@ bool CliUtilInfo::Initialize(
             std::set<std::string> aliases = configuration::GetChannelAliases(
                 event_loop->configuration(), channel->name()->string_view(),
                 channel->type()->string_view(), "", event_loop->node());
-            CHECK_GT(aliases.size(), 0u);
+            ABSL_CHECK_GT(aliases.size(), 0u);
             if (aliases.size() == 1) {
               // There were no aliases. Just print the canonical name.
               channels_to_print.emplace(channel->name()->str(),
@@ -138,7 +140,7 @@ bool CliUtilInfo::Initialize(
               // the base alias, and use that.
               // TODO(Sanjay): Consider having GetChannelAliases return a
               // hierarchical list instead.
-              CHECK_EQ(aliases.erase(channel->name()->str()), 1u);
+              ABSL_CHECK_EQ(aliases.erase(channel->name()->str()), 1u);
               auto it = aliases.begin();
               std::string_view shortest_alias = *it;
               while (it != aliases.end()) {
@@ -283,12 +285,12 @@ void PrintMessage(const std::string_view node_name, const aos::Channel *channel,
 
   builder->Reset();
 
-  CHECK(channel->schema() != nullptr)
+  ABSL_CHECK(channel->schema() != nullptr)
       << ": No schema on " << aos::FlatbufferToJson(channel);
-  CHECK(flatbuffers::Verify(*channel->schema(),
-                            *channel->schema()->root_table(),
-                            static_cast<const uint8_t *>(context.data),
-                            static_cast<size_t>(context.size)))
+  ABSL_CHECK(flatbuffers::Verify(*channel->schema(),
+                                 *channel->schema()->root_table(),
+                                 static_cast<const uint8_t *>(context.data),
+                                 static_cast<size_t>(context.size)))
       << ": Corrupted flatbuffer on " << channel->name()->c_str() << " "
       << channel->type()->c_str();
 

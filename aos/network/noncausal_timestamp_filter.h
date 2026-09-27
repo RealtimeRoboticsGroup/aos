@@ -8,7 +8,7 @@
 #include <cstdio>
 #include <deque>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/numeric/int128.h"
 
@@ -245,7 +245,7 @@ class NoncausalTimestampFilter {
   // used.
   void FreezeUntil(logger::BootTimestamp node_monotonic_now,
                    logger::BootTimestamp remote_monotonic_now) {
-    // TODO(austin): CHECK that all older boots are fully frozen.
+    // TODO(austin): ABSL_CHECK that all older boots are fully frozen.
     // This will create a BootFilter if it doesn't exist.
     filter(node_monotonic_now.boot, remote_monotonic_now.boot)
         ->filter.FreezeUntil(node_monotonic_now.time);
@@ -466,7 +466,7 @@ class NoncausalTimestampFilter {
         if (absl::int128(doffset.count()) *
                 absl::int128(MaxVelocityRatio::den) >
             absl::int128(dt.count()) * absl::int128(MaxVelocityRatio::num)) {
-          DCHECK_GE(dt.count(), 0);
+          ABSL_DCHECK_GE(dt.count(), 0);
           const aos::monotonic_clock::duration adjusted_initial_time =
               std::get<1>(timestamps_[1]) -
               aos::monotonic_clock::duration(
@@ -479,7 +479,7 @@ class NoncausalTimestampFilter {
                                  adjusted_initial_time);
         }
       }
-      CHECK_LT(i, timestamps_.size());
+      ABSL_CHECK_LT(i, timestamps_.size());
       return std::make_tuple(std::get<0>(timestamps_[i]),
                              std::get<1>(timestamps_[i]));
     }
@@ -561,9 +561,10 @@ class NoncausalTimestampFilter {
     }
 
     if (!filters_.empty() && current_filter_ >= 0) {
-      CHECK_LT(static_cast<size_t>(current_filter_), filters_.size());
-      CHECK_GE(boota, filters_[current_filter_]->boot.first);
-      CHECK_GE(bootb, filters_[current_filter_]->boot.second) << NodeNames();
+      ABSL_CHECK_LT(static_cast<size_t>(current_filter_), filters_.size());
+      ABSL_CHECK_GE(boota, filters_[current_filter_]->boot.first);
+      ABSL_CHECK_GE(bootb, filters_[current_filter_]->boot.second)
+          << NodeNames();
     }
     BootFilter *result =
         filters_
@@ -581,11 +582,11 @@ class NoncausalTimestampFilter {
       int last_boota = -1;
       int last_bootb = -1;
       for (const std::unique_ptr<BootFilter> &filter : filters_) {
-        CHECK(filter->boot.first != last_boota ||
-              filter->boot.second != last_bootb)
+        ABSL_CHECK(filter->boot.first != last_boota ||
+                   filter->boot.second != last_bootb)
             << ": Boots didn't increase.";
-        CHECK_GE(filter->boot.first, last_boota);
-        CHECK_GE(filter->boot.second, last_bootb);
+        ABSL_CHECK_GE(filter->boot.first, last_boota);
+        ABSL_CHECK_GE(filter->boot.second, last_bootb);
         last_boota = filter->boot.first;
         last_bootb = filter->boot.second;
       }
@@ -619,14 +620,14 @@ class NoncausalTimestampFilter {
 
   const BootFilter *filter(int boota, int bootb) const {
     const BootFilter *result = maybe_filter(boota, bootb);
-    CHECK(result != nullptr)
+    ABSL_CHECK(result != nullptr)
         << NodeNames() << " Failed to find " << boota << ", " << bootb;
     return result;
   }
 
   const BootFilter *filter(Pointer pointer, int boota, int bootb) const {
     const BootFilter *result = maybe_filter(pointer, boota, bootb);
-    CHECK(result != nullptr)
+    ABSL_CHECK(result != nullptr)
         << NodeNames() << " Failed to find " << boota << ", " << bootb;
     return result;
   }

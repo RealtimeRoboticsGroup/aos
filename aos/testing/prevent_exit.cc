@@ -6,7 +6,7 @@
 
 #include <cstdlib>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 namespace aos::testing {
@@ -16,6 +16,6 @@ void TerminateExitHandler() { _exit(EXIT_SUCCESS); }
 
 }  // namespace
 
-void PreventExit() { CHECK_EQ(atexit(TerminateExitHandler), 0); }
+void PreventExit() { ABSL_CHECK_EQ(atexit(TerminateExitHandler), 0); }
 
 }  // namespace aos::testing

@@ -6,7 +6,7 @@
 
 #include <ostream>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 namespace aos::util {
@@ -15,7 +15,7 @@ ScopedPipe::ScopedPipe(int fd) : fd_(fd) {}
 
 ScopedPipe::~ScopedPipe() {
   if (fd_ != -1) {
-    PCHECK(close(fd_) != -1);
+    ABSL_PCHECK(close(fd_) != -1);
   }
 }
 
@@ -25,7 +25,7 @@ ScopedPipe::ScopedPipe(ScopedPipe &&scoped_pipe) : fd_(scoped_pipe.fd_) {
 
 ScopedPipe &ScopedPipe::operator=(ScopedPipe &&scoped_pipe) {
   if (fd_ != -1) {
-    PCHECK(close(fd_) != -1);
+    ABSL_PCHECK(close(fd_) != -1);
   }
   fd_ = scoped_pipe.fd_;
   scoped_pipe.fd_ = -1;
@@ -34,9 +34,11 @@ ScopedPipe &ScopedPipe::operator=(ScopedPipe &&scoped_pipe) {
 
 ScopedPipe::PipePair ScopedPipe::MakePipe() {
   int fds[2];
-  PCHECK(pipe(fds) != -1);
-  PCHECK(fcntl(fds[0], F_SETFL, fcntl(fds[0], F_GETFL) | O_NONBLOCK) != -1);
-  PCHECK(fcntl(fds[1], F_SETFL, fcntl(fds[1], F_GETFL) | O_NONBLOCK) != -1);
+  ABSL_PCHECK(pipe(fds) != -1);
+  ABSL_PCHECK(fcntl(fds[0], F_SETFL, fcntl(fds[0], F_GETFL) | O_NONBLOCK) !=
+              -1);
+  ABSL_PCHECK(fcntl(fds[1], F_SETFL, fcntl(fds[1], F_GETFL) | O_NONBLOCK) !=
+              -1);
   return {std::unique_ptr<ScopedReadPipe>(new ScopedReadPipe(fds[0])),
           std::unique_ptr<ScopedWritePipe>(new ScopedWritePipe(fds[1]))};
 }
@@ -45,12 +47,12 @@ void ScopedPipe::SetCloexec() {
   // FD_CLOEXEC is the only known file descriptor flag, but call GETFD just in
   // case.
   int flags = fcntl(fd(), F_GETFD);
-  PCHECK(flags != -1);
-  PCHECK(fcntl(fd(), F_SETFD, flags | FD_CLOEXEC) != -1);
+  ABSL_PCHECK(flags != -1);
+  ABSL_PCHECK(fcntl(fd(), F_SETFD, flags | FD_CLOEXEC) != -1);
 }
 
 size_t ScopedPipe::ScopedReadPipe::Read(std::string *buffer) {
-  CHECK(buffer != nullptr);
+  ABSL_CHECK(buffer != nullptr);
   constexpr ssize_t kBufferSize = 1024;
   const size_t original_size = buffer->size();
   size_t read_bytes = 0;
@@ -69,7 +71,7 @@ size_t ScopedPipe::ScopedReadPipe::Read(std::string *buffer) {
       buffer->resize(original_size + read_bytes);
       break;
     } else {
-      CHECK_EQ(result, kBufferSize);
+      ABSL_CHECK_EQ(result, kBufferSize);
       read_bytes += result;
     }
   }
@@ -88,14 +90,14 @@ std::optional<uint32_t> ScopedPipe::ScopedReadPipe::Read() {
 
 void ScopedPipe::ScopedWritePipe::Write(uint32_t data) {
   ssize_t result = write(fd(), &data, sizeof(data));
-  PCHECK(result != -1);
-  CHECK_EQ(static_cast<size_t>(result), sizeof(data));
+  ABSL_PCHECK(result != -1);
+  ABSL_CHECK_EQ(static_cast<size_t>(result), sizeof(data));
 }
 
 void ScopedPipe::ScopedWritePipe::Write(absl::Span<const uint8_t> data) {
   ssize_t result = write(fd(), data.data(), data.size());
-  PCHECK(result != -1);
-  CHECK_EQ(static_cast<size_t>(result), data.size());
+  ABSL_PCHECK(result != -1);
+  ABSL_CHECK_EQ(static_cast<size_t>(result), data.size());
 }
 
 }  // namespace aos::util

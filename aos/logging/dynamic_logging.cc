@@ -3,7 +3,7 @@
 #include <ostream>
 #include <string_view>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/globals.h"
 #include "absl/log/log.h"
 #include "flatbuffers/string.h"

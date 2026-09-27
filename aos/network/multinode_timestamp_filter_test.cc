@@ -31,50 +31,50 @@ TEST(TimestampProblemTest, CompareTimes) {
   std::vector<BootTimestamp> times_b = {time_list.begin() + 1u,
                                         time_list.end()};
 
-  CHECK_EQ(static_cast<int>(CompareTimes(times_a, times_b)),
-           static_cast<int>(TimeComparison::kBefore));
+  ASSERT_EQ(static_cast<int>(CompareTimes(times_a, times_b)),
+            static_cast<int>(TimeComparison::kBefore));
 
-  CHECK_EQ(static_cast<int>(CompareTimes(times_b, times_a)),
-           static_cast<int>(TimeComparison::kAfter));
+  ASSERT_EQ(static_cast<int>(CompareTimes(times_b, times_a)),
+            static_cast<int>(TimeComparison::kAfter));
 
-  CHECK_EQ(static_cast<int>(CompareTimes(times_a, times_a)),
-           static_cast<int>(TimeComparison::kEq));
+  ASSERT_EQ(static_cast<int>(CompareTimes(times_a, times_a)),
+            static_cast<int>(TimeComparison::kEq));
 
   // Now try one of the times being min_time.
   std::vector<BootTimestamp> times_b_min = times_b;
   times_b_min[5] = BootTimestamp::min_time();
 
-  CHECK_EQ(static_cast<int>(CompareTimes(times_a, times_b_min)),
-           static_cast<int>(TimeComparison::kBefore));
-  CHECK_EQ(static_cast<int>(CompareTimes(times_b_min, times_a)),
-           static_cast<int>(TimeComparison::kAfter));
+  ASSERT_EQ(static_cast<int>(CompareTimes(times_a, times_b_min)),
+            static_cast<int>(TimeComparison::kBefore));
+  ASSERT_EQ(static_cast<int>(CompareTimes(times_b_min, times_a)),
+            static_cast<int>(TimeComparison::kAfter));
 
   // Test if one of the elements is equal
   std::vector<BootTimestamp> times_b_some_eq = times_b_min;
   times_b_some_eq[2] = times_a[2];
 
-  CHECK_EQ(static_cast<int>(CompareTimes(times_a, times_b_some_eq)),
-           static_cast<int>(TimeComparison::kInvalid));
-  CHECK_EQ(static_cast<int>(CompareTimes(times_b_some_eq, times_a)),
-           static_cast<int>(TimeComparison::kInvalid));
+  ASSERT_EQ(static_cast<int>(CompareTimes(times_a, times_b_some_eq)),
+            static_cast<int>(TimeComparison::kInvalid));
+  ASSERT_EQ(static_cast<int>(CompareTimes(times_b_some_eq, times_a)),
+            static_cast<int>(TimeComparison::kInvalid));
 
   // Test if elements are out of order
   std::vector<BootTimestamp> times_b_mixed = times_b_min;
   times_b_mixed[3] = times_a[0];
 
-  CHECK_EQ(static_cast<int>(CompareTimes(times_a, times_b_mixed)),
-           static_cast<int>(TimeComparison::kInvalid));
-  CHECK_EQ(static_cast<int>(CompareTimes(times_b_mixed, times_a)),
-           static_cast<int>(TimeComparison::kInvalid));
+  ASSERT_EQ(static_cast<int>(CompareTimes(times_a, times_b_mixed)),
+            static_cast<int>(TimeComparison::kInvalid));
+  ASSERT_EQ(static_cast<int>(CompareTimes(times_b_mixed, times_a)),
+            static_cast<int>(TimeComparison::kInvalid));
 
-  CHECK_EQ(InvalidDistance(times_a, times_a).count(), 0);
-  CHECK_EQ(InvalidDistance(times_a, times_b).count(), -1000);
-  CHECK_EQ(InvalidDistance(times_b, times_a).count(), -1000);
-  CHECK_EQ(InvalidDistance(times_a, times_b_min).count(), -1000);
-  CHECK_EQ(InvalidDistance(times_a, times_b_some_eq).count(), 0);
-  CHECK_EQ(InvalidDistance(times_b_some_eq, times_a).count(), 0);
-  CHECK_EQ(InvalidDistance(times_a, times_b_mixed).count(), 3000);
-  CHECK_EQ(InvalidDistance(times_b_mixed, times_a).count(), 3000);
+  ASSERT_EQ(InvalidDistance(times_a, times_a).count(), 0);
+  ASSERT_EQ(InvalidDistance(times_a, times_b).count(), -1000);
+  ASSERT_EQ(InvalidDistance(times_b, times_a).count(), -1000);
+  ASSERT_EQ(InvalidDistance(times_a, times_b_min).count(), -1000);
+  ASSERT_EQ(InvalidDistance(times_a, times_b_some_eq).count(), 0);
+  ASSERT_EQ(InvalidDistance(times_b_some_eq, times_a).count(), 0);
+  ASSERT_EQ(InvalidDistance(times_a, times_b_mixed).count(), 3000);
+  ASSERT_EQ(InvalidDistance(times_b_mixed, times_a).count(), 3000);
 }
 
 // Tests that a single timestamp InterpolatedTimeConverter returns equal
@@ -383,7 +383,7 @@ class SquareProblem : public Problem {
 
     if (all || active_constraints.size() != 0u) {
       if (!all) {
-        CHECK_EQ(active_constraints.size(), 4u);
+        EXPECT_EQ(active_constraints.size(), 4u);
       }
       result.f = H * y.block<2, 1>(0, 0) - k;
       result.df = H;

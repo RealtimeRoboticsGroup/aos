@@ -58,7 +58,7 @@ cc_library(
             "//aos/logging",
             "//third_party/cddlib",
             "@com_google_absl//absl/log",
-            "@com_google_absl//absl/log:check",
+            "@com_google_absl//absl/log:absl_check",
         ],
     }),
 )
@@ -107,7 +107,7 @@ cc_library(
     ],
     deps = [
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@eigen",
     ],
 )
@@ -124,7 +124,7 @@ cc_test(
         "//aos/testing:googletest",
         "//aos/testing:random_seed",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@eigen",
     ],
 )
@@ -375,7 +375,7 @@ cc_library(
         "//aos:macros",
         "//frc/zeroing:wrap",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@eigen",
     ] + select({
         "@platforms//os:none": [],
@@ -417,7 +417,7 @@ cc_library(
     ],
     deps = [
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@eigen",
     ],
 )
@@ -649,7 +649,7 @@ cc_binary(
         ":dare",
         "//third_party/python",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 

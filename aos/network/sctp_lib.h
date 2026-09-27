@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/types/span.h"
 
@@ -89,7 +89,7 @@ struct Message {
   bool must_be_returned_to_pool = false;
 
   ~Message() {
-    CHECK(!must_be_returned_to_pool)
+    ABSL_CHECK(!must_be_returned_to_pool)
         << ": Did you attempt to destroy a Message without "
            "using FreeMessage()?";
   }
@@ -157,7 +157,7 @@ class SctpReadWrite {
   int fd() const { return fd_; }
 
   void SetMaxReadSize(size_t max_size) {
-    CHECK(partial_messages_.empty())
+    ABSL_CHECK(partial_messages_.empty())
         << ": May not update size with queued fragments because we do not "
            "track individual message sizes";
     max_read_size_ = max_size;
@@ -167,7 +167,7 @@ class SctpReadWrite {
   }
 
   void SetMaxWriteSize(size_t max_size) {
-    CHECK(partial_messages_.empty())
+    ABSL_CHECK(partial_messages_.empty())
         << ": May not update size with queued fragments because we do not "
            "track individual message sizes";
     max_write_size_ = max_size;

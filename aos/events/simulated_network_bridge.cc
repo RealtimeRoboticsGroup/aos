@@ -1,6 +1,6 @@
 #include "aos/events/simulated_network_bridge.h"
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
 
@@ -37,8 +37,8 @@ class RawMessageDelayer {
   void set_forwarding_disabled(bool forwarding_disabled) {
     forwarding_disabled_ = forwarding_disabled;
     if (!forwarding_disabled_) {
-      CHECK(timestamp_logger_ == nullptr);
-      CHECK(sender_ == nullptr);
+      ABSL_CHECK(timestamp_logger_ == nullptr);
+      ABSL_CHECK(sender_ == nullptr);
     }
   }
 
@@ -195,10 +195,12 @@ class RawMessageDelayer {
         DeliveredTime(monotonic_remote_transmit_times_.front().transmit_time);
 
     // This can only happen if a node reboots in under 100 uS.  That's crazy,
-    // CHECK for now and handle it if someone actually has a good need.
-    CHECK_EQ(monotonic_delivery_time.boot, send_node_factory_->boot_count());
+    // ABSL_CHECK for now and handle it if someone actually has a good need.
+    ABSL_CHECK_EQ(monotonic_delivery_time.boot,
+                  send_node_factory_->boot_count());
 
-    CHECK_GE(monotonic_delivery_time.time, send_node_factory_->monotonic_now())
+    ABSL_CHECK_GE(monotonic_delivery_time.time,
+                  send_node_factory_->monotonic_now())
         << ": Trying to deliver message in the past on channel "
         << configuration::StrippedChannelToString(fetcher_->channel())
         << " to node " << send_event_loop_->node()->name()->string_view()
@@ -229,7 +231,7 @@ class RawMessageDelayer {
   void QueueMessage(uint32_t sent_queue_index,
                     monotonic_clock::time_point monotonic_sent_time,
                     monotonic_clock::time_point transmit_time) {
-    CHECK(!forwarding_disabled());
+    ABSL_CHECK(!forwarding_disabled());
 
     // When a reliable message gets queued, we can both receive the wakeup from
     // the watcher, and from ScheduleReliable.  In that case, detect that it is
@@ -238,9 +240,9 @@ class RawMessageDelayer {
       const TransmitTime back = monotonic_remote_transmit_times_
           [monotonic_remote_transmit_times_.size() - 1];
       if (back.sent_queue_index == sent_queue_index) {
-        CHECK_EQ(back.monotonic_sent_time, monotonic_sent_time) << this;
-        CHECK(reliable());
-        CHECK_LE(back.transmit_time, transmit_time) << this;
+        ABSL_CHECK_EQ(back.monotonic_sent_time, monotonic_sent_time) << this;
+        ABSL_CHECK(reliable());
+        ABSL_CHECK_LE(back.transmit_time, transmit_time) << this;
         return;
       }
     }
@@ -256,7 +258,7 @@ class RawMessageDelayer {
 
   // Handles this node connecting to the network.
   void Connect() {
-    CHECK(fetcher_);
+    ABSL_CHECK(fetcher_);
 
     // We only send the last message.  Point the fetcher to the latest to handle
     // getting too far behind.
@@ -295,7 +297,7 @@ class RawMessageDelayer {
 
   // Kicks us to re-fetch and schedule the timer.
   void Schedule() {
-    CHECK(!forwarding_disabled());
+    ABSL_CHECK(!forwarding_disabled());
     // Can't receive, bail.
     if (!fetcher_) {
       return;
@@ -320,22 +322,24 @@ class RawMessageDelayer {
 
     // This should be published after the reboot.  Forget about it.
     if (monotonic_delivery_time.boot != send_node_factory_->boot_count()) {
-      CHECK_GT(monotonic_delivery_time.boot, send_node_factory_->boot_count());
+      ABSL_CHECK_GT(monotonic_delivery_time.boot,
+                    send_node_factory_->boot_count());
 
       monotonic_remote_transmit_times_.erase(
           monotonic_remote_transmit_times_.begin());
-      CHECK(monotonic_remote_transmit_times_.empty());
+      ABSL_CHECK(monotonic_remote_transmit_times_.empty());
       return;
     }
 
-    CHECK_GE(monotonic_delivery_time.time, send_node_factory_->monotonic_now())
+    ABSL_CHECK_GE(monotonic_delivery_time.time,
+                  send_node_factory_->monotonic_now())
         << ": " << this << " Trying to deliver message in the past on channel "
         << configuration::StrippedChannelToString(fetcher_->channel())
         << " to node " << send_event_loop_->node()->name()->string_view()
         << " sent from " << fetcher_->channel()->source_node()->string_view()
         << " at " << fetch_node_factory_->monotonic_now();
 
-    CHECK(timer_);
+    ABSL_CHECK(timer_);
     server_status_->AddSentPacket(server_index_, channel_);
     timer_->Schedule(monotonic_delivery_time.time);
     timer_scheduled_ = true;
@@ -346,11 +350,11 @@ class RawMessageDelayer {
   void Send() {
     timer_scheduled_ = false;
 
-    CHECK(sender_);
-    CHECK(client_status_);
-    CHECK(fetcher_);
+    ABSL_CHECK(sender_);
+    ABSL_CHECK(client_status_);
+    ABSL_CHECK(fetcher_);
 
-    CHECK(!monotonic_remote_transmit_times_.empty());
+    ABSL_CHECK(!monotonic_remote_transmit_times_.empty());
     while (fetcher_->context().queue_index !=
            monotonic_remote_transmit_times_.front().sent_queue_index) {
       if (!fetcher_->FetchNext()) {
@@ -360,10 +364,10 @@ class RawMessageDelayer {
 
     // Confirm that the first element in the times list is ours, and pull the
     // transmit time out of it.
-    CHECK_EQ(monotonic_remote_transmit_times_[0].monotonic_sent_time,
-             fetcher_->context().monotonic_event_time);
-    CHECK_EQ(monotonic_remote_transmit_times_[0].sent_queue_index,
-             fetcher_->context().queue_index);
+    ABSL_CHECK_EQ(monotonic_remote_transmit_times_[0].monotonic_sent_time,
+                  fetcher_->context().monotonic_event_time);
+    ABSL_CHECK_EQ(monotonic_remote_transmit_times_[0].sent_queue_index,
+                  fetcher_->context().queue_index);
 
     const TransmitTime timestamp = monotonic_remote_transmit_times_[0];
 
@@ -462,7 +466,7 @@ class RawMessageDelayer {
 
   // Sends the next timestamp in remote_timestamps_.
   void SendTimestamp() {
-    CHECK(!remote_timestamps_.empty());
+    ABSL_CHECK(!remote_timestamps_.empty());
 
     // Send out all timestamps at the currently scheduled time.
     while (remote_timestamps_.front().monotonic_timestamp_time ==
@@ -565,7 +569,7 @@ class RawMessageDelayer {
 
 SimulatedMessageBridge::SimulatedMessageBridge(
     SimulatedEventLoopFactory *simulated_event_loop_factory) {
-  CHECK(
+  ABSL_CHECK(
       configuration::MultiNode(simulated_event_loop_factory->configuration()));
 
   // Pre-build up event loops for every node.  They are pretty cheap anyways.
@@ -573,7 +577,7 @@ SimulatedMessageBridge::SimulatedMessageBridge(
     NodeEventLoopFactory *node_factory =
         simulated_event_loop_factory->GetNodeEventLoopFactory(node);
     auto it = event_loop_map_.emplace(node, node_factory);
-    CHECK(it.second);
+    ABSL_CHECK(it.second);
 
     node_factory->OnStartup(
         [this, simulated_event_loop_factory, node_state = &it.first->second]() {
@@ -620,7 +624,7 @@ SimulatedMessageBridge::SimulatedMessageBridge(
         configuration::GetNode(simulated_event_loop_factory->configuration(),
                                channel->source_node()->string_view());
     auto source_event_loop = event_loop_map_.find(source_node);
-    CHECK(source_event_loop != event_loop_map_.end());
+    ABSL_CHECK(source_event_loop != event_loop_map_.end());
 
     std::unique_ptr<DelayersVector> delayers =
         std::make_unique<DelayersVector>();
@@ -631,7 +635,7 @@ SimulatedMessageBridge::SimulatedMessageBridge(
           configuration::GetNode(simulated_event_loop_factory->configuration(),
                                  connection->name()->string_view());
       auto destination_event_loop = event_loop_map_.find(destination_node);
-      CHECK(destination_event_loop != event_loop_map_.end());
+      ABSL_CHECK(destination_event_loop != event_loop_map_.end());
 
       const size_t destination_node_index = configuration::GetNodeIndex(
           simulated_event_loop_factory->configuration(), destination_node);
@@ -703,11 +707,11 @@ void SimulatedMessageBridge::SetState(const Node *source,
                                       const Node *destination,
                                       message_bridge::State state) {
   auto source_state = event_loop_map_.find(source);
-  CHECK(source_state != event_loop_map_.end());
+  ABSL_CHECK(source_state != event_loop_map_.end());
   source_state->second.SetServerState(destination, state);
 
   auto destination_state = event_loop_map_.find(destination);
-  CHECK(destination_state != event_loop_map_.end());
+  ABSL_CHECK(destination_state != event_loop_map_.end());
   destination_state->second.SetClientState(source, state);
 }
 
@@ -720,7 +724,7 @@ void SimulatedMessageBridge::DisableStatistics(DestroySenders destroy_senders) {
 void SimulatedMessageBridge::DisableStatistics(const Node *node,
                                                DestroySenders destroy_senders) {
   auto it = event_loop_map_.find(node);
-  CHECK(it != event_loop_map_.end());
+  ABSL_CHECK(it != event_loop_map_.end());
   it->second.DisableStatistics(destroy_senders);
 }
 
@@ -732,7 +736,7 @@ void SimulatedMessageBridge::EnableStatistics() {
 
 void SimulatedMessageBridge::EnableStatistics(const Node *node) {
   auto it = event_loop_map_.find(node);
-  CHECK(it != event_loop_map_.end());
+  ABSL_CHECK(it != event_loop_map_.end());
   it->second.EnableStatistics();
 }
 
@@ -761,7 +765,7 @@ void SimulatedMessageBridge::State::SetEventLoop(
     event_loop = std::move(loop);
     return;
   } else {
-    CHECK(!event_loop);
+    ABSL_CHECK(!event_loop);
   }
   event_loop = std::move(loop);
 
@@ -857,7 +861,7 @@ void SimulatedMessageBridge::State::SetEventLoop(
   }
 
   for (const Channel *channel : *event_loop->configuration()->channels()) {
-    CHECK(channel->has_source_node());
+    ABSL_CHECK(channel->has_source_node());
 
     // Sent by us.
     if (configuration::ChannelIsSendableOnNode(channel, event_loop->node()) &&
@@ -878,7 +882,7 @@ void SimulatedMessageBridge::State::SetEventLoop(
         if (!delivery_time_is_logged) {
           continue;
         }
-        CHECK(delayer != nullptr);
+        ABSL_CHECK(delayer != nullptr);
         if (delayer->forwarding_disabled()) {
           continue;
         }
@@ -926,7 +930,7 @@ void SimulatedMessageBridge::State::SetEventLoop(
 
 void SimulatedMessageBridge::State::SetSendData(
     std::function<void(uint32_t, monotonic_clock::time_point)> fn) {
-  CHECK(!fn_);
+  ABSL_CHECK(!fn_);
   fn_ = std::move(fn);
   if (server_status_) {
     server_status_->set_send_data(fn_);

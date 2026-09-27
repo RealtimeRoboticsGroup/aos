@@ -27,7 +27,7 @@
 #include <string>
 #include <vector>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "gtest/gtest.h"
 
@@ -46,7 +46,7 @@ std::vector<uint8_t> ReadTestJpeg(const std::string &name) {
   const std::string path =
       aos::testing::ArtifactPath("frc/vision/testdata/" + name);
   std::ifstream file(path, std::ios::binary);
-  CHECK(file) << ": failed to open " << path;
+  ABSL_CHECK(file) << ": failed to open " << path;
   return std::vector<uint8_t>(std::istreambuf_iterator<char>(file), {});
 }
 

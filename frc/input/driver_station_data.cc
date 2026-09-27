@@ -1,6 +1,6 @@
 #include "frc/input/driver_station_data.h"
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 namespace frc::input::driver_station {
@@ -9,8 +9,9 @@ Data::Data() : current_values_(), old_values_() {}
 
 void Data::Update(const frc::JoystickState *new_values) {
   old_values_ = current_values_;
-  CHECK(new_values->has_joysticks());
-  CHECK_EQ(new_values->joysticks()->size(), current_values_.joysticks.size());
+  ABSL_CHECK(new_values->has_joysticks());
+  ABSL_CHECK_EQ(new_values->joysticks()->size(),
+                current_values_.joysticks.size());
   for (size_t i = 0; i < current_values_.joysticks.size(); ++i) {
     const frc::Joystick *joystick = new_values->joysticks()->Get(i);
     current_values_.joysticks[i].buttons = joystick->buttons();

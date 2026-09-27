@@ -4,6 +4,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/usage.h"
+#include "absl/log/absl_check.h"
 #include "absl/strings/str_format.h"
 
 #include "aos/events/logging/log_reader.h"
@@ -49,8 +50,8 @@ class Histogram {
     if (value < max_value_bucket_) {
       const std::ptrdiff_t bucket = static_cast<std::ptrdiff_t>(
           std::floor(value * values_.size() / max_value_bucket_));
-      CHECK_GE(bucket, 0);
-      CHECK_LT(bucket, static_cast<std::ptrdiff_t>(values_.size()));
+      ABSL_CHECK_GE(bucket, 0);
+      ABSL_CHECK_LT(bucket, static_cast<std::ptrdiff_t>(values_.size()));
       values_[bucket] += value;
       if (all_counts_ == 0 || value > max_value_) {
         max_value_ = value;
@@ -133,7 +134,7 @@ class ChannelStats {
         config_(factory->configuration()),
         factory_(factory),
         schema_([&]() {
-          CHECK(schema != nullptr);
+          ABSL_CHECK(schema != nullptr);
           return schema;
         }()),
         destination_node_(destination_node),
@@ -141,13 +142,13 @@ class ChannelStats {
     // Multi-node channel
     if (channel_->has_source_node() && channel_->has_destination_nodes() &&
         channel_->destination_nodes()->size() > 0) {
-      CHECK(destination_node_)
+      ABSL_CHECK(destination_node_)
           << "Should have destination node for forwarded channel: "
           << channel_->name()->string_view();
       source_node_ = aos::configuration::GetNode(
           config_, channel_->source_node()->string_view());
-      CHECK(source_node_) << "Node not in config: "
-                          << channel_->source_node()->string_view();
+      ABSL_CHECK(source_node_)
+          << "Node not in config: " << channel_->source_node()->string_view();
     }
   }
 
@@ -506,7 +507,7 @@ int main(int argc, char **argv) {
         "log_stats_application", &event_loop_factory, &reader);
   });
   reader.OnEnd(node, [&log_stats_application, node_factory]() {
-    CHECK(log_stats_application != nullptr);
+    ABSL_CHECK(log_stats_application != nullptr);
     node_factory->Stop(log_stats_application);
     log_stats_application = nullptr;
   });

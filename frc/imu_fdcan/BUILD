@@ -96,7 +96,7 @@ cc_test(
         "//aos/testing:path",
         "//frc/can_logger:can_logging_fbs",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -117,7 +117,7 @@ cc_test(
         "//aos/testing:path",
         "//frc/can_logger:can_logging_fbs",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 

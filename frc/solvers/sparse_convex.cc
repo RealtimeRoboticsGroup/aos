@@ -1,6 +1,6 @@
 #include "frc/solvers/sparse_convex.h"
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/log/vlog_is_on.h"
 #include "absl/strings/str_join.h"
@@ -70,8 +70,8 @@ void AppendColumns(
 Eigen::VectorXd SparseSolver::Solve(
     const SparseConvexProblem &problem,
     Eigen::Ref<const Eigen::VectorXd> X_initial) {
-  CHECK_EQ(static_cast<size_t>(X_initial.rows()), problem.states());
-  CHECK_EQ(X_initial.cols(), 1);
+  ABSL_CHECK_EQ(static_cast<size_t>(X_initial.rows()), problem.states());
+  ABSL_CHECK_EQ(X_initial.cols(), 1);
 
   const Eigen::IOFormat kHeavyFormat(Eigen::StreamPrecision, 0, ", ",
                                      ",\n                        "
@@ -87,7 +87,7 @@ Eigen::VectorXd SparseSolver::Solve(
   Derivatives derivatives = ComputeDerivative(problem, y);
 
   for (size_t i = 0; i < problem.inequality_constraints(); ++i) {
-    CHECK_LE(derivatives.f(i, 0), 0.0)
+    ABSL_CHECK_LE(derivatives.f(i, 0), 0.0)
         << ": Initial state " << X_initial.transpose().format(kHeavyFormat)
         << " not feasible";
   }
@@ -291,33 +291,36 @@ SparseSolver::Derivatives SparseSolver::ComputeDerivative(
 
   Derivatives derivatives;
   derivatives.gradient = problem.df0(x);
-  CHECK_EQ(static_cast<size_t>(derivatives.gradient.rows()), problem.states());
-  CHECK_EQ(static_cast<size_t>(derivatives.gradient.cols()), 1u);
+  ABSL_CHECK_EQ(static_cast<size_t>(derivatives.gradient.rows()),
+                problem.states());
+  ABSL_CHECK_EQ(static_cast<size_t>(derivatives.gradient.cols()), 1u);
 
   derivatives.hessian = problem.ddf0(x);
-  CHECK_EQ(static_cast<size_t>(derivatives.hessian.rows()), problem.states());
-  CHECK_EQ(static_cast<size_t>(derivatives.hessian.cols()), problem.states());
+  ABSL_CHECK_EQ(static_cast<size_t>(derivatives.hessian.rows()),
+                problem.states());
+  ABSL_CHECK_EQ(static_cast<size_t>(derivatives.hessian.cols()),
+                problem.states());
 
   derivatives.f = problem.f(x);
-  CHECK_EQ(static_cast<size_t>(derivatives.f.rows()),
-           problem.inequality_constraints());
-  CHECK_EQ(static_cast<size_t>(derivatives.f.cols()), 1u);
+  ABSL_CHECK_EQ(static_cast<size_t>(derivatives.f.rows()),
+                problem.inequality_constraints());
+  ABSL_CHECK_EQ(static_cast<size_t>(derivatives.f.cols()), 1u);
 
   derivatives.df = problem.df(x);
-  CHECK_EQ(static_cast<size_t>(derivatives.df.rows()),
-           problem.inequality_constraints());
-  CHECK_EQ(static_cast<size_t>(derivatives.df.cols()), problem.states());
+  ABSL_CHECK_EQ(static_cast<size_t>(derivatives.df.rows()),
+                problem.inequality_constraints());
+  ABSL_CHECK_EQ(static_cast<size_t>(derivatives.df.cols()), problem.states());
 
   derivatives.A = problem.A();
-  CHECK_EQ(static_cast<size_t>(derivatives.A.rows()),
-           problem.equality_constraints());
-  CHECK_EQ(static_cast<size_t>(derivatives.A.cols()), problem.states());
+  ABSL_CHECK_EQ(static_cast<size_t>(derivatives.A.rows()),
+                problem.equality_constraints());
+  ABSL_CHECK_EQ(static_cast<size_t>(derivatives.A.cols()), problem.states());
 
   derivatives.Axmb =
       derivatives.A * y.block(0, 0, problem.states(), 1) - problem.b();
-  CHECK_EQ(static_cast<size_t>(derivatives.Axmb.rows()),
-           problem.equality_constraints());
-  CHECK_EQ(static_cast<size_t>(derivatives.Axmb.cols()), 1u);
+  ABSL_CHECK_EQ(static_cast<size_t>(derivatives.Axmb.rows()),
+                problem.equality_constraints());
+  ABSL_CHECK_EQ(static_cast<size_t>(derivatives.Axmb.cols()), 1u);
 
   return derivatives;
 }

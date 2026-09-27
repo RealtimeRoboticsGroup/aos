@@ -12,7 +12,7 @@
 #include "unsupported/Eigen/MatrixFunctions"
 
 #if !AOS_OS_NONE
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/logging/logging.h"
@@ -234,7 +234,8 @@ class StateFeedbackPlant {
     CheckU(U);
     if (coefficients().delayed_u > 0) {
 #if !AOS_OS_NONE
-      DCHECK_EQ(static_cast<ssize_t>(coefficients().delayed_u), last_U_.cols());
+      ABSL_DCHECK_EQ(static_cast<ssize_t>(coefficients().delayed_u),
+                     last_U_.cols());
 #endif  // !AOS_OS_NONE
       X_ = Update(X(), last_U(coefficients().delayed_u - 1));
       UpdateY(last_U(coefficients().delayed_u - 1));

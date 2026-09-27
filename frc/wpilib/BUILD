@@ -259,6 +259,7 @@ cc_library(
     target_compatible_with = ["//tools/platforms/hardware:roborio"],
     deps = [
         "//third_party:wpilib",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -321,7 +322,7 @@ cc_library(
         "//aos/time",
         "//third_party:wpilib",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/types:span",
     ],
 )
@@ -440,7 +441,7 @@ cc_library(
         "//aos/util:compiler_memory_barrier",
         "//third_party:wpilib",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -512,7 +513,7 @@ cc_library(
         "//frc/control_loops/drivetrain:drivetrain_can_position_fbs",
         "//third_party:phoenix6",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 

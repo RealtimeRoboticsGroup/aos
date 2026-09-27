@@ -1,6 +1,6 @@
 #include <arm_neon.h>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/time/time.h"
@@ -16,8 +16,8 @@ class NeonThreshold : public Threshold {
       : width_(width),
         height_(height),
         horizontal_filtered_min_max_image_(width_ / 8 * height_ / 8) {
-    CHECK_EQ(width_ % 16, 0u);
-    CHECK_EQ(height_ % 8, 0u);
+    ABSL_CHECK_EQ(width_ % 16, 0u);
+    ABSL_CHECK_EQ(height_ % 8, 0u);
   }
   // Create a full-size grayscale image from a color image on the provided
   // stream.

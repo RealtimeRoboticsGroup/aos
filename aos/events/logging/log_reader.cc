@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "absl/strings/escaping.h"
 #include "absl/types/span.h"
 #include "flatbuffers/flatbuffers.h"
@@ -32,7 +33,7 @@ ABSL_DECLARE_FLAG(double, max_network_delay);
 
 ABSL_FLAG(bool, skip_missing_forwarding_entries, false,
           "If true, drop any forwarding entries with missing data.  If "
-          "false, CHECK.");
+          "false, ABSL_CHECK.");
 
 ABSL_DECLARE_FLAG(bool, timestamps_to_csv);
 ABSL_FLAG(
@@ -103,7 +104,7 @@ class EventNotifier {
       : event_loop_(event_loop),
         fn_(std::move(fn)),
         realtime_event_time_(realtime_event_time) {
-    CHECK(event_loop_);
+    ABSL_CHECK(event_loop_);
     event_timer_ = event_loop->AddTimer([this]() { HandleTime(); });
 
     if (event_loop_->node() != nullptr) {
@@ -198,20 +199,21 @@ LogReader::LogReader(LogFilesContainer log_files,
   {
     // Log files container validates that log files shared the same config.
     const Configuration *config = log_files_.config().get();
-    CHECK(config != nullptr);
+    ABSL_CHECK(config != nullptr);
   }
 
   if (replay_channels_ != nullptr) {
-    CHECK(!replay_channels_->empty()) << "replay_channels is empty which means "
-                                         "no messages will get replayed.";
+    ABSL_CHECK(!replay_channels_->empty())
+        << "replay_channels is empty which means "
+           "no messages will get replayed.";
   }
 
   if (!configuration::MultiNode(configuration())) {
     states_.resize(1);
   } else {
     if (replay_configuration) {
-      CHECK_EQ(logged_configuration()->nodes()->size(),
-               replay_configuration->nodes()->size())
+      ABSL_CHECK_EQ(logged_configuration()->nodes()->size(),
+                    replay_configuration->nodes()->size())
           << ": Log file and replay config need to have matching nodes "
              "lists.";
       for (const Node *node : *logged_configuration()->nodes()) {
@@ -253,7 +255,7 @@ monotonic_clock::time_point LogReader::monotonic_start_time(
     const Node *node) const {
   State *state =
       states_[configuration::GetNodeIndex(configuration(), node)].get();
-  CHECK(state != nullptr) << ": Unknown node " << FlatbufferToJson(node);
+  ABSL_CHECK(state != nullptr) << ": Unknown node " << FlatbufferToJson(node);
 
   return state->monotonic_start_time(state->boot_count());
 }
@@ -262,29 +264,29 @@ realtime_clock::time_point LogReader::realtime_start_time(
     const Node *node) const {
   State *state =
       states_[configuration::GetNodeIndex(configuration(), node)].get();
-  CHECK(state != nullptr) << ": Unknown node " << FlatbufferToJson(node);
+  ABSL_CHECK(state != nullptr) << ": Unknown node " << FlatbufferToJson(node);
 
   return state->realtime_start_time(state->boot_count());
 }
 
 void LogReader::OnStart(std::function<void()> fn) {
-  CHECK(!configuration::MultiNode(configuration()));
+  ABSL_CHECK(!configuration::MultiNode(configuration()));
   OnStart(nullptr, std::move(fn));
 }
 
 void LogReader::OnStart(const Node *node, std::function<void()> fn) {
   const int node_index = configuration::GetNodeIndex(configuration(), node);
-  CHECK_GE(node_index, 0);
-  CHECK_LT(node_index, static_cast<int>(states_.size()));
+  ABSL_CHECK_GE(node_index, 0);
+  ABSL_CHECK_LT(node_index, static_cast<int>(states_.size()));
   State *state = states_[node_index].get();
-  CHECK(state != nullptr) << ": Unknown node " << FlatbufferToJson(node);
+  ABSL_CHECK(state != nullptr) << ": Unknown node " << FlatbufferToJson(node);
 
   state->OnStart(std::move(fn));
 }
 
 void LogReader::State::QueueThreadUntil(BootTimestamp time) {
   if (threading_ == ThreadedBuffering::kYes) {
-    CHECK(!message_queuer_.has_value()) << "Can't start thread twice.";
+    ABSL_CHECK(!message_queuer_.has_value()) << "Can't start thread twice.";
     message_queuer_.emplace(
         [this](const BootTimestamp queue_until) {
           // This will be called whenever anything prompts us for any state
@@ -370,16 +372,16 @@ void LogReader::State::RunOnStart() {
 }
 
 void LogReader::OnEnd(std::function<void()> fn) {
-  CHECK(!configuration::MultiNode(configuration()));
+  ABSL_CHECK(!configuration::MultiNode(configuration()));
   OnEnd(nullptr, std::move(fn));
 }
 
 void LogReader::OnEnd(const Node *node, std::function<void()> fn) {
   const int node_index = configuration::GetNodeIndex(configuration(), node);
-  CHECK_GE(node_index, 0);
-  CHECK_LT(node_index, static_cast<int>(states_.size()));
+  ABSL_CHECK_GE(node_index, 0);
+  ABSL_CHECK_LT(node_index, static_cast<int>(states_.size()));
   State *state = states_[node_index].get();
-  CHECK(state != nullptr) << ": Unknown node " << FlatbufferToJson(node);
+  ABSL_CHECK(state != nullptr) << ": Unknown node " << FlatbufferToJson(node);
 
   state->OnEnd(std::move(fn));
 }
@@ -409,7 +411,7 @@ void LogReader::State::RunOnEnd() {
 std::vector<
     std::pair<const aos::Channel *, NodeEventLoopFactory::ExclusiveSenders>>
 LogReader::State::NonExclusiveChannels() {
-  CHECK(node_event_loop_factory_ != nullptr);
+  ABSL_CHECK(node_event_loop_factory_ != nullptr);
   const aos::Configuration *config = node_event_loop_factory_->configuration();
   std::vector<
       std::pair<const aos::Channel *, NodeEventLoopFactory::ExclusiveSenders>>
@@ -614,7 +616,7 @@ void LogReader::StartAfterRegister(
   // running until the last node.
 
   for (std::unique_ptr<State> &state : states_) {
-    CHECK(state);
+    ABSL_CHECK(state);
     VLOG(1) << "Start time is " << state->monotonic_start_time(0)
             << " for node '" << MaybeNodeName(state->node()) << "' now "
             << (state->event_loop() != nullptr ? state->monotonic_now()
@@ -631,7 +633,7 @@ void LogReader::StartAfterRegister(
   // TODO(austin): If a node doesn't have a start time, we might not queue
   // enough.  If this happens, we'll explode with a frozen error eventually.
 
-  CHECK_GE(start_time, distributed_clock::epoch())
+  ABSL_CHECK_GE(start_time, distributed_clock::epoch())
       << ": Hmm, we have a node starting before the start of time.  Offset "
          "everything.";
 
@@ -793,8 +795,8 @@ void LogReader::ProcessTimestampedMessage(
       BootTimestamp monotonic_remote_now =
           state->monotonic_remote_now(timestamped_message.channel_index);
       if (!absl::GetFlag(FLAGS_skip_order_validation)) {
-        CHECK_EQ(timestamped_message.monotonic_remote_time.boot,
-                 monotonic_remote_now.boot)
+        ABSL_CHECK_EQ(timestamped_message.monotonic_remote_time.boot,
+                      monotonic_remote_now.boot)
             << state->event_loop()->node()->name()->string_view() << " to "
             << state->remote_node(timestamped_message.channel_index)
                    ->name()
@@ -804,8 +806,8 @@ void LogReader::ProcessTimestampedMessage(
                    logged_configuration()->channels()->Get(
                        timestamped_message.channel_index))
             << " " << timestamped_message << " " << state->DebugString();
-        CHECK_LE(timestamped_message.monotonic_remote_time,
-                 monotonic_remote_now)
+        ABSL_CHECK_LE(timestamped_message.monotonic_remote_time,
+                      monotonic_remote_now)
             << state->event_loop()->node()->name()->string_view() << " to "
             << state->remote_node(timestamped_message.channel_index)
                    ->name()
@@ -869,8 +871,8 @@ void LogReader::ProcessTimestampedMessage(
     if (!state->found_last_message()) {
       // We've found a timestamp without data that we expect to have data
       // for. This likely means that we are at the end of the log file.
-      // Record it and CHECK that in the rest of the log file, we don't find
-      // any more data on that channel.  Not all channels will end at the
+      // Record it and ABSL_CHECK that in the rest of the log file, we don't
+      // find any more data on that channel.  Not all channels will end at the
       // same point in time since they can be in different files.
       VLOG(1) << "Found the last message on channel "
               << timestamped_message.channel_index << ", "
@@ -964,7 +966,7 @@ void LogReader::ProcessTimestampedMessage(
 Result<void> LogReader::RegisterDuringStartup(EventLoop *event_loop,
                                               const Node *node) {
   if (event_loop != nullptr) {
-    CHECK(event_loop->configuration() == configuration());
+    ABSL_CHECK(event_loop->configuration() == configuration());
   }
 
   State *state =
@@ -1087,15 +1089,16 @@ Result<void> LogReader::RegisterDuringStartup(EventLoop *event_loop,
     TimestampedMessage timestamped_message =
         std::move(timestamped_message_result.value());
 
-    CHECK_EQ(timestamped_message.monotonic_event_time.boot,
-             state->boot_count());
+    ABSL_CHECK_EQ(timestamped_message.monotonic_event_time.boot,
+                  state->boot_count());
 
     const monotonic_clock::time_point monotonic_now =
         state->event_loop()->context().monotonic_event_time;
     if (event_loop_factory_ != nullptr) {
       // Only enforce exact timing in simulation.
       if (!absl::GetFlag(FLAGS_skip_order_validation)) {
-        CHECK(monotonic_now == timestamped_message.monotonic_event_time.time)
+        ABSL_CHECK(monotonic_now ==
+                   timestamped_message.monotonic_event_time.time)
             << ": " << FlatbufferToJson(state->event_loop()->node()) << " Now "
             << monotonic_now << " trying to send "
             << timestamped_message.monotonic_event_time << " failure "
@@ -1143,7 +1146,7 @@ Result<void> LogReader::RegisterDuringStartup(EventLoop *event_loop,
                 << MaybeNodeName(state->event_loop()->node())
                 << "' is on the next boot, " << next_time << " now is "
                 << state->monotonic_now();
-        CHECK(event_loop_factory_);
+        ABSL_CHECK(event_loop_factory_);
         state->NotifyLogfileEnd();
         return;
       }
@@ -1201,7 +1204,7 @@ Result<void> LogReader::RegisterDuringStartup(EventLoop *event_loop,
         ExitOrCheckExpected(next_time);
         return;
       }
-      CHECK_EQ(next_time->boot, state->boot_count());
+      ABSL_CHECK_EQ(next_time->boot, state->boot_count());
       // Queue up messages and then set clock offsets (we don't want to set
       // clock offsets before we've done the work of getting the first messages
       // primed).
@@ -1224,9 +1227,9 @@ void LogReader::SetEndTime(std::string end_time) {
   } else {
     std::optional<aos::realtime_clock::time_point> parsed_end_time =
         aos::realtime_clock::FromString(end_time);
-    CHECK(parsed_end_time) << ": Failed to parse end time '" << end_time
-                           << "'.  Expected a date in the format of "
-                              "2021-01-15_15-30-35.000000000.";
+    ABSL_CHECK(parsed_end_time) << ": Failed to parse end time '" << end_time
+                                << "'.  Expected a date in the format of "
+                                   "2021-01-15_15-30-35.000000000.";
     SetEndTime(*parsed_end_time);
   }
 }
@@ -1241,9 +1244,10 @@ void LogReader::SetStartTime(std::string start_time) {
   } else {
     std::optional<aos::realtime_clock::time_point> parsed_start_time =
         aos::realtime_clock::FromString(start_time);
-    CHECK(parsed_start_time) << ": Failed to parse start time '" << start_time
-                             << "'.  Expected a date in the format of "
-                                "2021-01-15_15-30-35.000000000.";
+    ABSL_CHECK(parsed_start_time)
+        << ": Failed to parse start time '" << start_time
+        << "'.  Expected a date in the format of "
+           "2021-01-15_15-30-35.000000000.";
     SetStartTime(*parsed_start_time);
   }
 }
@@ -1332,7 +1336,7 @@ void LogReader::RenameLoggedChannel(const std::string_view name,
 void LogReader::CheckEventsAreNotScheduled() {
   for (std::unique_ptr<State> &state : states_) {
     if (state) {
-      CHECK(!state->event_loop())
+      ABSL_CHECK(!state->event_loop())
           << ": Can't change the mapping after the events are scheduled.";
     }
   }
@@ -1467,7 +1471,7 @@ void LogReader::State::TrackMessageSendTiming(
   // to create excessive overhead in regenerated logfiles.
   // TODO(james): The overhead may be fine.
   constexpr size_t kMaxTimesPerStatisticsMessage = 100;
-  CHECK(timing_statistics_sender_.valid());
+  ABSL_CHECK(timing_statistics_sender_.valid());
   if (send_timings_.size() == kMaxTimesPerStatisticsMessage) {
     SendMessageTimings();
   }
@@ -1495,24 +1499,24 @@ void LogReader::State::SendMessageTimings() {
 
 bool LogReader::State::Send(TimestampedMessage &&timestamped_message) {
   aos::RawSender *sender = channels_[timestamped_message.channel_index].get();
-  CHECK(sender);
+  ABSL_CHECK(sender);
   uint32_t remote_queue_index = 0xffffffff;
 
   if (remote_timestamp_senders_[timestamped_message.channel_index] != nullptr) {
     State *source_state =
         channel_source_state_[timestamped_message.channel_index];
-    CHECK(source_state != nullptr);
+    ABSL_CHECK(source_state != nullptr);
     std::vector<ContiguousSentTimestamp> *queue_index_map =
         source_state->queue_index_map_[timestamped_message.channel_index].get();
-    CHECK(queue_index_map != nullptr);
+    ABSL_CHECK(queue_index_map != nullptr);
 
     struct SentTimestamp {
       monotonic_clock::time_point monotonic_event_time;
       uint32_t queue_index;
     } search;
 
-    CHECK_EQ(timestamped_message.monotonic_remote_time.boot,
-             source_state->boot_count());
+    ABSL_CHECK_EQ(timestamped_message.monotonic_remote_time.boot,
+                  source_state->boot_count());
     search.monotonic_event_time =
         timestamped_message.monotonic_remote_time.time;
     search.queue_index = timestamped_message.remote_queue_index.index;
@@ -1545,17 +1549,17 @@ bool LogReader::State::Send(TimestampedMessage &&timestamped_message) {
     // other node isn't done yet.  So there is no send time, but there is a
     // receive time.
     if (element != queue_index_map->end()) {
-      CHECK_EQ(timestamped_message.monotonic_remote_time.boot,
-               source_state->boot_count());
+      ABSL_CHECK_EQ(timestamped_message.monotonic_remote_time.boot,
+                    source_state->boot_count());
 
-      CHECK_GE(timestamped_message.monotonic_remote_time.time,
-               element->starting_monotonic_event_time);
-      CHECK_LE(timestamped_message.monotonic_remote_time.time,
-               element->ending_monotonic_event_time);
-      CHECK_GE(timestamped_message.remote_queue_index.index,
-               element->starting_queue_index);
-      CHECK_LE(timestamped_message.remote_queue_index.index,
-               element->ending_queue_index);
+      ABSL_CHECK_GE(timestamped_message.monotonic_remote_time.time,
+                    element->starting_monotonic_event_time);
+      ABSL_CHECK_LE(timestamped_message.monotonic_remote_time.time,
+                    element->ending_monotonic_event_time);
+      ABSL_CHECK_GE(timestamped_message.remote_queue_index.index,
+                    element->starting_queue_index);
+      ABSL_CHECK_LE(timestamped_message.remote_queue_index.index,
+                    element->ending_queue_index);
 
       remote_queue_index = timestamped_message.remote_queue_index.index +
                            element->actual_queue_index -
@@ -1563,8 +1567,8 @@ bool LogReader::State::Send(TimestampedMessage &&timestamped_message) {
     } else {
       VLOG(1) << "No timestamp match in the map.";
     }
-    CHECK_EQ(timestamped_message.monotonic_remote_time.boot,
-             source_state->boot_count());
+    ABSL_CHECK_EQ(timestamped_message.monotonic_remote_time.boot,
+                  source_state->boot_count());
   }
 
   if (event_loop_factory_ != nullptr &&
@@ -1573,13 +1577,13 @@ bool LogReader::State::Send(TimestampedMessage &&timestamped_message) {
     // Sanity check that we are using consistent boot uuids.
     State *source_state =
         channel_source_state_[timestamped_message.channel_index];
-    CHECK(source_state != nullptr);
-    CHECK(source_state->event_loop_ != nullptr);
-    CHECK_EQ(multinode_filters_->boot_uuid(
-                 configuration::GetNodeIndex(event_loop_->configuration(),
-                                             source_state->node()),
-                 timestamped_message.monotonic_remote_time.boot),
-             source_state->event_loop_->boot_uuid());
+    ABSL_CHECK(source_state != nullptr);
+    ABSL_CHECK(source_state->event_loop_ != nullptr);
+    ABSL_CHECK_EQ(multinode_filters_->boot_uuid(
+                      configuration::GetNodeIndex(event_loop_->configuration(),
+                                                  source_state->node()),
+                      timestamped_message.monotonic_remote_time.boot),
+                  source_state->event_loop_->boot_uuid());
   }
 
   SharedSpan to_send;
@@ -1593,8 +1597,9 @@ bool LogReader::State::Send(TimestampedMessage &&timestamped_message) {
       to_send = before_send_callbacks_[timestamped_message.channel_index](
           timestamped_message);
       if (!timestamped_message.data) {
-        CHECK(!to_send) << ": Callbacks may not turn a timestamp message into "
-                           "a non-timestamp message";
+        ABSL_CHECK(!to_send)
+            << ": Callbacks may not turn a timestamp message into "
+               "a non-timestamp message";
       }
       *timestamped_message.data.get() = to_send;
     } else {
@@ -1611,7 +1616,7 @@ bool LogReader::State::Send(TimestampedMessage &&timestamped_message) {
   // for the remote queue index.  This makes re-logging work.
   const UUID boot_uuid = [&]() -> UUID {
     if (channel_source_state_[timestamped_message.channel_index] != nullptr) {
-      CHECK(multinode_filters_ != nullptr);
+      ABSL_CHECK(multinode_filters_ != nullptr);
       return multinode_filters_->boot_uuid(
           configuration::GetNodeIndex(
               event_loop_->configuration(),
@@ -1636,7 +1641,7 @@ bool LogReader::State::Send(TimestampedMessage &&timestamped_message) {
   }
 
   if (queue_index_map_[timestamped_message.channel_index]) {
-    CHECK_EQ(timestamped_message.monotonic_event_time.boot, boot_count());
+    ABSL_CHECK_EQ(timestamped_message.monotonic_event_time.boot, boot_count());
     if (queue_index_map_[timestamped_message.channel_index]->empty()) {
       // Nothing here, start a range with 0 length.
       ContiguousSentTimestamp timestamp;
@@ -1685,7 +1690,7 @@ bool LogReader::State::Send(TimestampedMessage &&timestamped_message) {
     // correctly handle a non-zero clock_offset for the *_remote_time fields.
     State *source_state =
         channel_source_state_[timestamped_message.channel_index];
-    CHECK(source_state != nullptr);
+    ABSL_CHECK(source_state != nullptr);
 
     flatbuffers::FlatBufferBuilder fbb;
     fbb.ForceDefaults(true);
@@ -1705,8 +1710,8 @@ bool LogReader::State::Send(TimestampedMessage &&timestamped_message) {
         sender->realtime_sent_time().time_since_epoch().count());
     message_header_builder.add_queue_index(sender->sent_queue_index());
 
-    CHECK_EQ(timestamped_message.monotonic_remote_time.boot,
-             source_state->boot_count());
+    ABSL_CHECK_EQ(timestamped_message.monotonic_remote_time.boot,
+                  source_state->boot_count());
     message_header_builder.add_monotonic_remote_time(
         timestamped_message.monotonic_remote_time.time.time_since_epoch()
             .count());
@@ -1739,17 +1744,17 @@ LogReader::RemoteMessageSender::RemoteMessageSender(
 
 void LogReader::RemoteMessageSender::ScheduleTimestamp() {
   if (remote_timestamps_.empty()) {
-    CHECK(timer_ != nullptr);
+    ABSL_CHECK(timer_ != nullptr);
     timer_->Disable();
     scheduled_time_ = monotonic_clock::min_time;
     return;
   }
 
   if (scheduled_time_ != remote_timestamps_.front().monotonic_timestamp_time) {
-    CHECK(timer_ != nullptr);
+    ABSL_CHECK(timer_ != nullptr);
     timer_->Schedule(remote_timestamps_.front().monotonic_timestamp_time);
     scheduled_time_ = remote_timestamps_.front().monotonic_timestamp_time;
-    CHECK_GE(scheduled_time_, event_loop_->monotonic_now())
+    ABSL_CHECK_GE(scheduled_time_, event_loop_->monotonic_now())
         << event_loop_->node()->name()->string_view();
   }
 }
@@ -1784,7 +1789,7 @@ void LogReader::RemoteMessageSender::Send(
     return;
   }
 
-  CHECK_EQ(monotonic_timestamp_time.boot, source_boot_count);
+  ABSL_CHECK_EQ(monotonic_timestamp_time.boot, source_boot_count);
 
   remote_timestamps_.emplace(
       std::upper_bound(
@@ -1800,15 +1805,16 @@ void LogReader::RemoteMessageSender::Send(
 }
 
 void LogReader::RemoteMessageSender::SendTimestamp() {
-  CHECK_EQ(event_loop_->context().monotonic_event_time, scheduled_time_)
+  ABSL_CHECK_EQ(event_loop_->context().monotonic_event_time, scheduled_time_)
       << event_loop_->node()->name()->string_view();
-  CHECK(!remote_timestamps_.empty());
+  ABSL_CHECK(!remote_timestamps_.empty());
 
   // Send out all timestamps at the currently scheduled time.
   while (remote_timestamps_.front().monotonic_timestamp_time ==
          scheduled_time_) {
-    CHECK_EQ(sender_.Send(std::move(remote_timestamps_.front().remote_message)),
-             RawSender::Error::kOk);
+    ABSL_CHECK_EQ(
+        sender_.Send(std::move(remote_timestamps_.front().remote_message)),
+        RawSender::Error::kOk);
     remote_timestamps_.pop_front();
     if (remote_timestamps_.empty()) {
       break;
@@ -1840,9 +1846,10 @@ LogReader::RemoteMessageSender *LogReader::State::RemoteTimestampSender(
     // channel_timestamp_loggers_ and return.
     auto it = timestamp_loggers_.find(timestamp_channel);
     if (it != timestamp_loggers_.end()) {
-      CHECK(channel_timestamp_loggers_
-                .try_emplace(std::make_pair(channel, connection), it->second)
-                .second);
+      ABSL_CHECK(
+          channel_timestamp_loggers_
+              .try_emplace(std::make_pair(channel, connection), it->second)
+              .second);
       return it->second.get();
     }
   }
@@ -1855,8 +1862,9 @@ LogReader::RemoteMessageSender *LogReader::State::RemoteTimestampSender(
               timestamp_channel->name()->string_view()),
           event_loop()));
 
-  CHECK(timestamp_loggers_.try_emplace(timestamp_channel, result.first->second)
-            .second);
+  ABSL_CHECK(
+      timestamp_loggers_.try_emplace(timestamp_channel, result.first->second)
+          .second);
   return result.first->second.get();
 }
 
@@ -1864,7 +1872,7 @@ Result<TimestampedMessage> LogReader::State::PopOldest() {
   // multithreaded
   if (message_queuer_.has_value()) {
     std::optional<Result<TimestampedMessage>> message = message_queuer_->Pop();
-    CHECK(message.has_value()) << ": Unexpectedly ran out of messages.";
+    ABSL_CHECK(message.has_value()) << ": Unexpectedly ran out of messages.";
     // If there is an error during message reading, propagate it up.
     if (!message.value().has_value()) {
       return MakeError(message.value().error());
@@ -1880,10 +1888,10 @@ Result<TimestampedMessage> LogReader::State::PopOldest() {
                        factory_channel_index_[message->value().channel_index]));
     return message.value();
   } else {  // single threaded
-    CHECK(timestamp_mapper_ != nullptr);
+    ABSL_CHECK(timestamp_mapper_ != nullptr);
     return timestamp_mapper_->Front().and_then(
         [this](TimestampedMessage *result_ptr) -> Result<TimestampedMessage> {
-          CHECK(result_ptr != nullptr);
+          ABSL_CHECK(result_ptr != nullptr);
 
           TimestampedMessage result = std::move(*result_ptr);
 
@@ -1892,7 +1900,7 @@ Result<TimestampedMessage> LogReader::State::PopOldest() {
           AOS_RETURN_IF_ERROR(timestamp_mapper_->PopFront());
           AOS_RETURN_IF_ERROR(MaybeSeedSortedMessages());
 
-          CHECK_EQ(result.monotonic_event_time.boot, boot_count());
+          ABSL_CHECK_EQ(result.monotonic_event_time.boot, boot_count());
 
           VLOG(1) << "Popped " << result
                   << configuration::CleanedChannelToString(
@@ -1922,7 +1930,7 @@ Result<BootTimestamp> LogReader::State::MultiThreadedOldestMessageTime() {
 }
 
 Result<BootTimestamp> LogReader::State::SingleThreadedOldestMessageTime() {
-  CHECK(!message_queuer_.has_value())
+  ABSL_CHECK(!message_queuer_.has_value())
       << "Cannot use SingleThreadedOldestMessageTime() once the queuer thread "
          "is created.";
   if (timestamp_mapper_ == nullptr) {
@@ -2071,7 +2079,7 @@ void LogReader::State::NotifyFlagEnd() {
   if (!stopped_ && started_) {
     RunOnEnd();
     SetFoundLastMessage(true);
-    CHECK(notice_realtime_end_);
+    ABSL_CHECK(notice_realtime_end_);
     notice_realtime_end_();
 
     if (message_queuer_.has_value()) {
@@ -2096,14 +2104,14 @@ void LogReader::State::MaybeSetClockOffset() {
 }
 
 void LogReader::SetRealtimeReplayRate(double replay_rate) {
-  CHECK(event_loop_factory_ != nullptr)
+  ABSL_CHECK(event_loop_factory_ != nullptr)
       << ": Can't set replay rate without an event loop factory (have you "
          "called Register()?).";
   event_loop_factory_->SetRealtimeReplayRate(replay_rate);
 }
 
 void LogReader::NoticeRealtimeEnd() {
-  CHECK_GE(live_nodes_with_realtime_time_end_, 1u);
+  ABSL_CHECK_GE(live_nodes_with_realtime_time_end_, 1u);
   --live_nodes_with_realtime_time_end_;
   if (live_nodes_with_realtime_time_end_ == 0 && exit_on_finish() &&
       event_loop_factory_ != nullptr) {

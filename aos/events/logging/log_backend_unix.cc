@@ -8,7 +8,7 @@
 
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/util/file.h"
@@ -27,16 +27,17 @@ WriteCode FileHandler::OpenForWrite() {
     if (fd_ == -1 && errno == ENOSPC) {
       return WriteCode::kOutOfSpace;
     } else {
-      PCHECK(fd_ != -1) << ": Failed to open " << filename_ << " for writing";
+      ABSL_PCHECK(fd_ != -1)
+          << ": Failed to open " << filename_ << " for writing";
       VLOG(1) << "Opened " << filename_ << " for writing";
     }
 
     flags_ = fcntl(fd_, F_GETFL, 0);
-    PCHECK(flags_ >= 0) << ": Failed to get flags for " << filename_;
+    ABSL_PCHECK(flags_ >= 0) << ": Failed to get flags for " << filename_;
 
     EnableDirect();
 
-    CHECK(std::filesystem::exists(filename_));
+    ABSL_CHECK(std::filesystem::exists(filename_));
 
     return WriteCode::kOk;
   }
@@ -95,8 +96,8 @@ bool RenamableFileBackend::RenameLogBase(std::string_view new_base_name) {
       // EEXIST or ENOTEMPTY for a target already sitting there -- and the
       // caller has no way to act on any of them (set_base_name() drops this
       // return value on the floor).
-      PCHECK(errno == ENOSPC) << ": Unable to rename " << current_directory
-                              << " to " << new_directory;
+      ABSL_PCHECK(errno == ENOSPC) << ": Unable to rename " << current_directory
+                                   << " to " << new_directory;
       PLOG(ERROR) << "Ran out of space renaming " << current_directory << " to "
                   << new_directory << "; logging continues at the old path";
       return false;
@@ -108,7 +109,7 @@ bool RenamableFileBackend::RenameLogBase(std::string_view new_base_name) {
     // from under us -- this is not the "somebody already renamed it" case,
     // which is new_directory being present.  There is nothing left to rename
     // and nothing to keep logging into.
-    CHECK(DirectoryExists(new_directory))
+    ABSL_CHECK(DirectoryExists(new_directory))
         << ": Old directory " << current_directory
         << " missing and new directory " << new_directory << " not present.";
   }

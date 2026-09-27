@@ -7,7 +7,7 @@
 #include <ostream>
 #include <utility>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/log/vlog_is_on.h"
 #include "absl/strings/ascii.h"
@@ -75,7 +75,8 @@ void InterruptsStatus::Update(std::string_view contents) {
         // First time through.
         cpus_ = cpus_found;
       } else {
-        CHECK_EQ(cpus_found, cpus_) << ": Number of CPUs changed while running";
+        ABSL_CHECK_EQ(cpus_found, cpus_)
+            << ": Number of CPUs changed while running";
       }
     } else {
       size_t element_number = 0;
@@ -89,7 +90,7 @@ void InterruptsStatus::Update(std::string_view contents) {
           //  23:
           // or
           //  Err:
-          CHECK_EQ(element[element.size() - 1], ':')
+          ABSL_CHECK_EQ(element[element.size() - 1], ':')
               << ": Missing trailing ':'";
 
           int interrupt_number;
@@ -140,7 +141,7 @@ void InterruptsStatus::Update(std::string_view contents) {
         } else if (element_number <= cpus_) {
           // We are now parsing the count body.  Keep updating the elements.
           unsigned int interrupt_count;
-          CHECK(absl::SimpleAtoi(element, &interrupt_count))
+          ABSL_CHECK(absl::SimpleAtoi(element, &interrupt_count))
               << ": Failed to parse count " << interrupt_count;
           state->count[element_number - 1] = interrupt_count;
         } else if (element_number == cpus_ + 1) {
@@ -149,7 +150,8 @@ void InterruptsStatus::Update(std::string_view contents) {
             if (new_element) {
               state->description = std::string(element);
             } else {
-              CHECK_EQ(state->description, element) << ": Description changed";
+              ABSL_CHECK_EQ(state->description, element)
+                  << ": Description changed";
             }
           } else {
             // Ok, the rest is now some properties of the interrupt.
@@ -162,7 +164,7 @@ void InterruptsStatus::Update(std::string_view contents) {
                 if (new_element) {
                   state->chip_name = std::string(trailing_element);
                 } else {
-                  CHECK_EQ(state->chip_name, trailing_element)
+                  ABSL_CHECK_EQ(state->chip_name, trailing_element)
                       << ": Chip changed names";
                 }
               } else if (trailing_elements_count == 1) {
@@ -170,7 +172,7 @@ void InterruptsStatus::Update(std::string_view contents) {
                 if (new_element) {
                   state->hwirq = std::string(trailing_element);
                 } else {
-                  CHECK_EQ(state->hwirq, trailing_element)
+                  ABSL_CHECK_EQ(state->hwirq, trailing_element)
                       << ": Hardware IRQ changed names";
                 }
               } else {
@@ -224,19 +226,19 @@ void InterruptsStatus::Update(std::string_view contents) {
 
       // Validate that everything makes sense and we have the elements expected.
       if (state->interrupt_number != -1) {
-        CHECK_EQ(element_number, cpus_ + 2);
+        ABSL_CHECK_EQ(element_number, cpus_ + 2);
       } else {
         // Only these 3 interrupts are known to not be per core.
         if (state->interrupt_name == "Err" || state->interrupt_name == "ERR" ||
             state->interrupt_name == "MIS") {
           if (new_element) {
-            CHECK_LE(element_number, cpus_ + 1);
+            ABSL_CHECK_LE(element_number, cpus_ + 1);
             state->count.resize(element_number - 1);
           } else {
-            CHECK_EQ(state->count.size(), element_number - 1);
+            ABSL_CHECK_EQ(state->count.size(), element_number - 1);
           }
         } else {
-          CHECK_EQ(element_number, cpus_ + 2);
+          ABSL_CHECK_EQ(element_number, cpus_ + 2);
         }
       }
 
@@ -285,7 +287,7 @@ void InterruptsStatus::Update() {
 
     const ssize_t result = read(fd.get(), interrupts_content_.data() + so_far,
                                 interrupts_content_.capacity() - so_far);
-    PCHECK(result >= 0) << ": reading from /proc/interrupts";
+    ABSL_PCHECK(result >= 0) << ": reading from /proc/interrupts";
     if (result == 0) {
       break;
     }

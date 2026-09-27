@@ -1,6 +1,7 @@
 #include "Eigen/Dense"
 #include "Eigen/Geometry"
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/configuration.h"
@@ -20,7 +21,7 @@ namespace frc::vision {
 const calibration::CameraCalibration *FindCameraCalibration(
     const CameraConstants &calibration_data, std::string_view node_name,
     int camera_number) {
-  CHECK(calibration_data.has_calibration());
+  ABSL_CHECK(calibration_data.has_calibration());
   for (const calibration::CameraCalibration *candidate :
        *calibration_data.calibration()) {
     if (candidate->node_name()->string_view() != node_name ||
@@ -53,9 +54,9 @@ class GamePieceMapper {
     const calibration::CameraCalibration *calibration =
         FindCameraCalibration(calibration_data_.constants(),
                               event_loop->node()->name()->string_view(), 1);
-    CHECK(calibration->has_fixed_extrinsics());
-    CHECK(calibration->fixed_extrinsics()->has_data());
-    CHECK_EQ(calibration->fixed_extrinsics()->data()->size(), 16u);
+    ABSL_CHECK(calibration->has_fixed_extrinsics());
+    ABSL_CHECK(calibration->fixed_extrinsics()->has_data());
+    ABSL_CHECK_EQ(calibration->fixed_extrinsics()->data()->size(), 16u);
     camera_calibration_ = calibration;
   }
 
@@ -110,7 +111,7 @@ class GamePieceMapper {
       aos::Sender<frc::vision::GamePieceLocationsStatic>::StaticBuilder
           builder = game_piece_locations_sender_.MakeStaticBuilder();
       auto locations = builder->add_locations();
-      CHECK(locations->reserve(bounding_boxes.boxes()->size()));
+      ABSL_CHECK(locations->reserve(bounding_boxes.boxes()->size()));
       for (const frc::vision::BoundingBox *box : *bounding_boxes.boxes()) {
         float u0 = box->x0();
         float v0 = box->y0();

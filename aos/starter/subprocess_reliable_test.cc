@@ -11,7 +11,7 @@
 #include <thread>
 #include <unordered_set>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
 #include "gmock/gmock.h"
@@ -134,7 +134,7 @@ TEST(SubprocessTest, CanKillAfterStartup) {
   // Manually kill the application here. The Stop() and Terminate() helpers
   // trigger some timeout behaviour that interferes with the test here. This
   // should cause the child to exit and create the "shutdown" file.
-  PCHECK(kill(application->get_pid(), SIGTERM) == 0);
+  ABSL_PCHECK(kill(application->get_pid(), SIGTERM) == 0);
   Wait(application->get_pid());
   ASSERT_TRUE(std::filesystem::exists(shutdown_signal_file));
 }

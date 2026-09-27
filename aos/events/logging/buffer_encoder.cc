@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 
 namespace aos::logger {
 
@@ -36,8 +36,8 @@ size_t DummyEncoder::Encode(Copier *copy, size_t start_byte,
 }
 
 void DummyEncoder::Clear(const int n) {
-  CHECK_GE(n, 0);
-  CHECK_LE(static_cast<size_t>(n), queue_size());
+  ABSL_CHECK_GE(n, 0);
+  ABSL_CHECK_LE(static_cast<size_t>(n), queue_size());
   if (n != 0) {
     input_buffer_.resize(0u);
   }

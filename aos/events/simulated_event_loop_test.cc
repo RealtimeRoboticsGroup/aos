@@ -6,6 +6,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/reflection.h"
+#include "absl/log/absl_check.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 
@@ -1657,7 +1658,7 @@ TEST_P(RemoteMessageSimulatedEventLoopTest, MultinodeDisconnect) {
 }
 
 // Tests that the time offset having a slope doesn't break the world.
-// SimulatedMessageBridge has enough self consistency CHECK statements to
+// SimulatedMessageBridge has enough self consistency ABSL_CHECK statements to
 // confirm, and we can can also check a message in each direction to make sure
 // it gets delivered as expected.
 TEST(SimulatedEventLoopTest, MultinodePingPongWithOffsetAndSlope) {
@@ -3104,7 +3105,7 @@ class PingLogger {
       : event_loop_(event_loop),
         fetcher_(event_loop_->MakeFetcher<examples::Ping>(channel)),
         msgs_(msgs) {
-    event_loop_->OnRun([this]() { CHECK(!fetcher_.Fetch()); });
+    event_loop_->OnRun([this]() { ABSL_CHECK(!fetcher_.Fetch()); });
   }
 
   ~PingLogger() {

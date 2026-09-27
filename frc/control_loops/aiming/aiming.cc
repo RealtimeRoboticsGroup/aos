@@ -2,7 +2,7 @@
 
 #include <numbers>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "frc/zeroing/wrap.h"
@@ -59,7 +59,7 @@ Pose IterateVirtualGoal(const Pose &robot_pose,
 }  // namespace
 
 TurretGoal AimerGoal(const ShotConfig &config, const RobotState &state) {
-  CHECK(config.ball_speed_over_ground > 0.0)
+  ABSL_CHECK(config.ball_speed_over_ground > 0.0)
       << ": Ball speed must be positive.";
   TurretGoal result;
   // This code manages compensating the goal turret heading for the robot's

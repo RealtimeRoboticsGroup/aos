@@ -5,7 +5,7 @@
 #include <filesystem>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/escaping.h"
 
@@ -39,11 +39,11 @@ class Nonblocking {
   Nonblocking(int fd) {
     fd_ = fd;
     int flags_ = fcntl(fd_, F_GETFL, 0);
-    PCHECK(flags_ != -1);
-    PCHECK(fcntl(fd_, F_SETFL, flags_ | O_NONBLOCK) != -1);
+    ABSL_PCHECK(flags_ != -1);
+    ABSL_PCHECK(fcntl(fd_, F_SETFL, flags_ | O_NONBLOCK) != -1);
   }
 
-  ~Nonblocking() { PCHECK(fcntl(fd_, F_SETFL, flags_) != -1); }
+  ~Nonblocking() { ABSL_PCHECK(fcntl(fd_, F_SETFL, flags_) != -1); }
 
  private:
   int fd_;
@@ -54,10 +54,10 @@ class TerminalRawMode {
  public:
   explicit TerminalRawMode(int fd) : fd_(fd) {
     // Check if the file descriptor is associated with a terminal
-    CHECK(isatty(fd_)) << ": Only supported on terminals.";
+    ABSL_CHECK(isatty(fd_)) << ": Only supported on terminals.";
 
     // Get current terminal attributes
-    PCHECK(tcgetattr(fd_, &original_termios_) != -1);
+    ABSL_PCHECK(tcgetattr(fd_, &original_termios_) != -1);
 
     // Copy attributes and modify for raw mode
     struct termios raw = original_termios_;
@@ -70,11 +70,11 @@ class TerminalRawMode {
     raw.c_cc[VTIME] = 0;  // No timeout (wait indefinitely for a character)
 
     // Apply the modified attributes immediately
-    CHECK(tcsetattr(fd_, TCSAFLUSH, &raw) != -1);
+    ABSL_CHECK(tcsetattr(fd_, TCSAFLUSH, &raw) != -1);
   }
 
   ~TerminalRawMode() {
-    PCHECK(tcsetattr(fd_, TCSAFLUSH, &original_termios_) != -1);
+    ABSL_PCHECK(tcsetattr(fd_, TCSAFLUSH, &original_termios_) != -1);
   }
 
   TerminalRawMode(const TerminalRawMode &) = delete;
@@ -106,7 +106,7 @@ class ImageDump {
           if (errno == EAGAIN || errno == EWOULDBLOCK) {
             break;
           }
-          PCHECK(bytes_read != -1);
+          ABSL_PCHECK(bytes_read != -1);
         } else if (bytes_read == 0) {
           // End Of File (EOF) detected on stdin (e.g., Ctrl+D pressed)
           event_loop_->Exit();
@@ -149,8 +149,8 @@ class ImageDump {
   }
 
   void LogImage(const frc::vision::CameraImage &image) {
-    CHECK(image.format() == frc::vision::ImageFormat::MJPEG);
-    CHECK(image.has_data());
+    ABSL_CHECK(image.format() == frc::vision::ImageFormat::MJPEG);
+    ABSL_CHECK(image.has_data());
     std::string_view image_data(
         reinterpret_cast<const char *>(image.data()->data()),
         image.data()->size());
@@ -161,12 +161,12 @@ class ImageDump {
                      sha256, "-", camera_number_, ".jpg");
     LOG(INFO) << "Writing " << path;
 
-    CHECK(aos::util::MkdirPIfSpace(path,
-                                   std::filesystem::perms::owner_all |
-                                       std::filesystem::perms::group_read |
-                                       std::filesystem::perms::group_exec |
-                                       std::filesystem::perms::others_read |
-                                       std::filesystem::perms::others_exec));
+    ABSL_CHECK(aos::util::MkdirPIfSpace(
+        path, std::filesystem::perms::owner_all |
+                  std::filesystem::perms::group_read |
+                  std::filesystem::perms::group_exec |
+                  std::filesystem::perms::others_read |
+                  std::filesystem::perms::others_exec));
     aos::util::WriteStringToFileOrDie(path, image_data);
   }
 

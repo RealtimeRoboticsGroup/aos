@@ -1,5 +1,7 @@
 #include "frc/control_loops/catapult/catapult.h"
 
+#include "absl/log/absl_check.h"
+
 namespace frc::control_loops::catapult {
 
 const flatbuffers::Offset<
@@ -64,7 +66,7 @@ Catapult::Iterate(const CatapultGoal *catapult_goal,
         std::optional<double> solution = catapult_mpc_.Next();
 
         if (!solution.has_value()) {
-          CHECK(catapult_voltage != nullptr);
+          ABSL_CHECK(catapult_voltage != nullptr);
           *catapult_voltage = 0.0;
           if (catapult_mpc_.started()) {
             ++shot_count_;
@@ -73,7 +75,7 @@ Catapult::Iterate(const CatapultGoal *catapult_goal,
           }
         } else {
           // TODO(austin): Voltage error?
-          CHECK(catapult_voltage != nullptr);
+          ABSL_CHECK(catapult_voltage != nullptr);
           if (current_horizon_ == 1) {
             battery_voltage = 12.0;
           }

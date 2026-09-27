@@ -7,7 +7,7 @@
 #include <cstdio>
 #include <deque>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/numeric/int128.h"
 

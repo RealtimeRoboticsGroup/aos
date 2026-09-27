@@ -5,7 +5,7 @@
 #include <thread>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "Argus/Argus.h"
@@ -51,12 +51,12 @@ namespace chrono = std::chrono;
 // Converts a multiplanar 422 image into a single plane 422 image at the
 // provided memory location sutable for putting in a flatbuffer.
 void YCbCr422(NvBufSurface *nvbuf_surf, uint8_t *data_pointer) {
-  CHECK_EQ(nvbuf_surf->surfaceList->planeParams.width[0],
-           nvbuf_surf->surfaceList->planeParams.width[1] * 2);
-  CHECK_EQ(nvbuf_surf->surfaceList->planeParams.height[0],
-           nvbuf_surf->surfaceList->planeParams.height[1]);
-  CHECK_EQ(nvbuf_surf->surfaceList->planeParams.pitch[0], 0x600u);
-  CHECK_EQ(nvbuf_surf->surfaceList->planeParams.pitch[1], 0x600u);
+  ABSL_CHECK_EQ(nvbuf_surf->surfaceList->planeParams.width[0],
+                nvbuf_surf->surfaceList->planeParams.width[1] * 2);
+  ABSL_CHECK_EQ(nvbuf_surf->surfaceList->planeParams.height[0],
+                nvbuf_surf->surfaceList->planeParams.height[1]);
+  ABSL_CHECK_EQ(nvbuf_surf->surfaceList->planeParams.pitch[0], 0x600u);
+  ABSL_CHECK_EQ(nvbuf_surf->surfaceList->planeParams.pitch[1], 0x600u);
   std::array<halide_dimension_t, 2> y_dimensions{{
       {
           /*.min =*/0,
@@ -158,7 +158,7 @@ class DmaBuffer {
     params.params.memType = NVBUF_MEM_SURFACE_ARRAY;
 
     NvBufSurface *nvbuf_surf = 0;
-    CHECK_EQ(NvBufSurfaceAllocate(&nvbuf_surf, 1, &params), 0);
+    ABSL_CHECK_EQ(NvBufSurfaceAllocate(&nvbuf_surf, 1, &params), 0);
     buffer->fd_ = nvbuf_surf->surfaceList[0].bufferDesc;
 
     return buffer;
@@ -207,7 +207,8 @@ class ArgusCamera {
     std::vector<Argus::SensorMode *> sensor_modes;
     Argus::ICameraProperties *i_camera_properties =
         Argus::interface_cast<Argus::ICameraProperties>(camera_device);
-    CHECK(i_camera_properties) << "Failed to get ICameraProperties Interface";
+    ABSL_CHECK(i_camera_properties)
+        << "Failed to get ICameraProperties Interface";
     // Get available Sensor Modes
     i_camera_properties->getAllSensorModes(&sensor_modes);
     LOG(INFO) << "Found " << sensor_modes.size() << " modes";
@@ -221,12 +222,12 @@ class ArgusCamera {
       LOG(INFO) << "exposure min " << imode->getExposureTimeRange().min();
       LOG(INFO) << "exposure max " << imode->getExposureTimeRange().max();
     }
-    CHECK_GT(sensor_modes.size(), 0u);
+    ABSL_CHECK_GT(sensor_modes.size(), 0u);
 
     Argus::ISensorMode *i_sensor_mode =
         Argus::interface_cast<Argus::ISensorMode>(
             sensor_modes[absl::GetFlag(FLAGS_mode)]);
-    CHECK(i_sensor_mode);
+    ABSL_CHECK(i_sensor_mode);
 
     {
       auto range = i_sensor_mode->getFrameDurationRange();
@@ -240,9 +241,9 @@ class ArgusCamera {
         i_camera_provider->createCaptureSession(camera_device));
     i_capture_session_ =
         Argus::interface_cast<Argus::ICaptureSession>(capture_session_);
-    CHECK(i_capture_session_);
+    ABSL_CHECK(i_capture_session_);
 
-    CHECK_NE(egl_display_, EGL_NO_DISPLAY) << ": Failed to open display";
+    ABSL_CHECK_NE(egl_display_, EGL_NO_DISPLAY) << ": Failed to open display";
 
     // Create the OutputStream.
     stream_settings_.reset(i_capture_session_->createOutputStreamSettings(
@@ -251,7 +252,7 @@ class ArgusCamera {
     Argus::IBufferOutputStreamSettings *i_buffer_output_stream_settings =
         Argus::interface_cast<Argus::IBufferOutputStreamSettings>(
             stream_settings_);
-    CHECK(i_buffer_output_stream_settings != nullptr);
+    ABSL_CHECK(i_buffer_output_stream_settings != nullptr);
     i_buffer_output_stream_settings->setBufferType(
         Argus::BUFFER_TYPE_EGL_IMAGE);
     i_buffer_output_stream_settings->setMetadataEnable(true);
@@ -264,7 +265,7 @@ class ArgusCamera {
 
     i_buffer_output_stream_ =
         Argus::interface_cast<Argus::IBufferOutputStream>(output_stream_);
-    CHECK(i_buffer_output_stream_ != nullptr);
+    ABSL_CHECK(i_buffer_output_stream_ != nullptr);
 
     // Build the DmaBuffers
     for (size_t i = 0; i < native_buffers_.size(); ++i) {
@@ -280,16 +281,16 @@ class ArgusCamera {
       int ret = 0;
 
       ret = NvBufSurfaceFromFd(native_buffers_[i]->fd(), (void **)(&surf_[i]));
-      CHECK(ret == 0) << ": NvBufSurfaceFromFd failed";
+      ABSL_CHECK(ret == 0) << ": NvBufSurfaceFromFd failed";
 
       ret = NvBufSurfaceMapEglImage(surf_[i], 0);
       // This check typically fails from having X forwarding enabled.
       // Always call argus_camera without X forwarding.
-      CHECK(ret == 0) << ": NvBufSurfaceMapEglImage failed.  Make sure X "
-                         "forwarding is not enabled.";
+      ABSL_CHECK(ret == 0) << ": NvBufSurfaceMapEglImage failed.  Make sure X "
+                              "forwarding is not enabled.";
 
       egl_images_[i] = surf_[i]->surfaceList[0].mappedAddr.eglImage;
-      CHECK(egl_images_[i] != EGL_NO_IMAGE_KHR)
+      ABSL_CHECK(egl_images_[i] != EGL_NO_IMAGE_KHR)
           << ": Failed to create EGLImage";
     }
 
@@ -297,7 +298,7 @@ class ArgusCamera {
     buffer_settings_.reset(i_buffer_output_stream_->createBufferSettings());
     Argus::IEGLImageBufferSettings *i_buffer_settings =
         Argus::interface_cast<Argus::IEGLImageBufferSettings>(buffer_settings_);
-    CHECK(i_buffer_settings);
+    ABSL_CHECK(i_buffer_settings);
 
     // Create the Buffers for each EGLImage (and release to the stream for
     // initial capture use)
@@ -313,63 +314,65 @@ class ArgusCamera {
       i_buffer->setClientData(native_buffers_[i].get());
       native_buffers_[i]->set_argus_buffer(buffers_[i].get());
 
-      CHECK(Argus::interface_cast<Argus::IEGLImageBuffer>(buffers_[i]) !=
-            nullptr)
+      ABSL_CHECK(Argus::interface_cast<Argus::IEGLImageBuffer>(buffers_[i]) !=
+                 nullptr)
           << ": Failed to create Buffer";
 
-      CHECK_EQ(i_buffer_output_stream_->releaseBuffer(buffers_[i].get()),
-               Argus::STATUS_OK)
+      ABSL_CHECK_EQ(i_buffer_output_stream_->releaseBuffer(buffers_[i].get()),
+                    Argus::STATUS_OK)
           << "Failed to release Buffer for capture use";
     }
 
     request_.reset(i_capture_session_->createRequest());
     Argus::IRequest *i_request =
         Argus::interface_cast<Argus::IRequest>(request_);
-    CHECK(i_request);
+    ABSL_CHECK(i_request);
 
     Argus::IAutoControlSettings *i_auto_control_settings =
         Argus::interface_cast<Argus::IAutoControlSettings>(
             i_request->getAutoControlSettings());
-    CHECK(i_auto_control_settings != nullptr);
-    CHECK_EQ(i_auto_control_settings->setAwbMode(Argus::AWB_MODE_OFF),
-             Argus::STATUS_OK);
+    ABSL_CHECK(i_auto_control_settings != nullptr);
+    ABSL_CHECK_EQ(i_auto_control_settings->setAwbMode(Argus::AWB_MODE_OFF),
+                  Argus::STATUS_OK);
 
     i_auto_control_settings->setAeLock(false);
     Argus::Range<float> isp_digital_gain_range;
     isp_digital_gain_range.min() = 1;
     isp_digital_gain_range.max() = 1;
-    CHECK_EQ(
+    ABSL_CHECK_EQ(
         i_auto_control_settings->setIspDigitalGainRange(isp_digital_gain_range),
         Argus::STATUS_OK);
 
     Argus::IEdgeEnhanceSettings *i_ee_settings =
         Argus::interface_cast<Argus::IEdgeEnhanceSettings>(request_);
-    CHECK(i_ee_settings != nullptr);
+    ABSL_CHECK(i_ee_settings != nullptr);
 
-    CHECK_EQ(i_ee_settings->setEdgeEnhanceStrength(0), Argus::STATUS_OK);
+    ABSL_CHECK_EQ(i_ee_settings->setEdgeEnhanceStrength(0), Argus::STATUS_OK);
 
     Argus::ISourceSettings *i_source_settings =
         Argus::interface_cast<Argus::ISourceSettings>(
             i_request->getSourceSettings());
-    CHECK(i_source_settings != nullptr);
+    ABSL_CHECK(i_source_settings != nullptr);
 
     i_source_settings->setFrameDurationRange(
         i_sensor_mode->getFrameDurationRange().min());
-    CHECK_EQ(i_source_settings->setSensorMode(
-                 sensor_modes[absl::GetFlag(FLAGS_mode)]),
-             Argus::STATUS_OK);
+    ABSL_CHECK_EQ(i_source_settings->setSensorMode(
+                      sensor_modes[absl::GetFlag(FLAGS_mode)]),
+                  Argus::STATUS_OK);
 
     Argus::Range<float> sensor_mode_analog_gain_range;
     sensor_mode_analog_gain_range.min() = absl::GetFlag(FLAGS_gain);
     sensor_mode_analog_gain_range.max() = absl::GetFlag(FLAGS_gain);
-    CHECK_EQ(i_source_settings->setGainRange(sensor_mode_analog_gain_range),
-             Argus::STATUS_OK);
+    ABSL_CHECK_EQ(
+        i_source_settings->setGainRange(sensor_mode_analog_gain_range),
+        Argus::STATUS_OK);
 
     Argus::Range<uint64_t> limit_exposure_time_range;
     limit_exposure_time_range.min() = absl::GetFlag(FLAGS_exposure) * 1000;
     limit_exposure_time_range.max() = absl::GetFlag(FLAGS_exposure) * 1000;
-    CHECK_EQ(i_source_settings->setExposureTimeRange(limit_exposure_time_range),
-             Argus::STATUS_OK);
+    ABSL_CHECK_EQ(
+        i_source_settings->setExposureTimeRange(limit_exposure_time_range),
+        Argus::STATUS_OK);
 
     i_request->enableOutputStream(output_stream_.get());
   }
@@ -398,9 +401,9 @@ class ArgusCamera {
 
       int dmabuf_fd = dmabuf_->fd();
 
-      CHECK_EQ(NvBufSurfaceFromFd(dmabuf_fd, (void **)(&nvbuf_surf_)), 0);
+      ABSL_CHECK_EQ(NvBufSurfaceFromFd(dmabuf_fd, (void **)(&nvbuf_surf_)), 0);
 
-      CHECK_EQ(NvBufSurfaceMap(nvbuf_surf_, -1, -1, NVBUF_MAP_READ), 0);
+      ABSL_CHECK_EQ(NvBufSurfaceMap(nvbuf_surf_, -1, -1, NVBUF_MAP_READ), 0);
       VLOG(1) << "Mapped";
       NvBufSurfaceSyncForCpu(nvbuf_surf_, -1, -1);
 
@@ -417,10 +420,10 @@ class ArgusCamera {
                 << " bytes per pixel "
                 << nvbuf_surf_->surfaceList->planeParams.bytesPerPix[i];
       }
-      CHECK_EQ(nvbuf_surf_->surfaceList->planeParams.width[0],
-               static_cast<size_t>(absl::GetFlag(FLAGS_width)));
-      CHECK_EQ(nvbuf_surf_->surfaceList->planeParams.height[0],
-               static_cast<size_t>(absl::GetFlag(FLAGS_height)));
+      ABSL_CHECK_EQ(nvbuf_surf_->surfaceList->planeParams.width[0],
+                    static_cast<size_t>(absl::GetFlag(FLAGS_width)));
+      ABSL_CHECK_EQ(nvbuf_surf_->surfaceList->planeParams.height[0],
+                    static_cast<size_t>(absl::GetFlag(FLAGS_height)));
     }
     MappedBuffer(const MappedBuffer &other) = delete;
     MappedBuffer &operator=(const MappedBuffer &other) = delete;
@@ -439,7 +442,7 @@ class ArgusCamera {
 
     const Argus::ICaptureMetadata *imetadata() {
       Argus::IBuffer *ibuffer = Argus::interface_cast<Argus::IBuffer>(buffer_);
-      CHECK(ibuffer != nullptr);
+      ABSL_CHECK(ibuffer != nullptr);
 
       aos::ScopedNotRealtime nrt;
       const Argus::CaptureMetadata *metadata = ibuffer->getMetadata();
@@ -452,7 +455,7 @@ class ArgusCamera {
 
     virtual ~MappedBuffer() {
       if (buffer_ != nullptr) {
-        CHECK_EQ(NvBufSurfaceUnMap(nvbuf_surf_, -1, -1), 0);
+        ABSL_CHECK_EQ(NvBufSurfaceUnMap(nvbuf_surf_, -1, -1), 0);
         aos::ScopedNotRealtime nrt;
         i_buffer_output_stream_->releaseBuffer(buffer_);
       }
@@ -648,7 +651,7 @@ int Main() {
     // Set the libargus threads which got spawned to RT priority.
     {
       DIR *dirp = opendir("/proc/self/task");
-      PCHECK(dirp != nullptr);
+      ABSL_PCHECK(dirp != nullptr);
       const int main_pid = getpid();
       struct dirent *directory_entry;
       while ((directory_entry = readdir(dirp)) != NULL) {

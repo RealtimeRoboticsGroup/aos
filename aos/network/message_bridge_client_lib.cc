@@ -4,7 +4,7 @@
 #include <string_view>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/log/vlog_is_on.h"
 
@@ -110,7 +110,7 @@ SctpClientConnection::SctpClientConnection(
       remote_node_([&]() {
         const aos::Node *node =
             configuration::GetNode(event_loop->configuration(), remote_name);
-        CHECK(node != nullptr);
+        ABSL_CHECK(node != nullptr);
         return node;
       }()),
       client_(remote_node_->hostname()->string_view(), remote_node_->port(),
@@ -141,7 +141,7 @@ SctpClientConnection::SctpClientConnection(
   size_t max_read_size = 0u;
 
   for (const Channel *channel : *event_loop_->configuration()->channels()) {
-    CHECK(channel->has_source_node());
+    ABSL_CHECK(channel->has_source_node());
 
     if (configuration::ChannelIsSendableOnNode(channel, remote_node_) &&
         configuration::ChannelIsReadableOnNode(channel, event_loop_->node())) {
@@ -285,11 +285,11 @@ void SctpClientConnection::HandleData(const Message *message) {
       flatbuffers::GetSizePrefixedRoot<RemoteData>(message->data());
 
   VLOG(2) << "Got a message of size " << message->size;
-  CHECK_EQ(message->size, flatbuffers::GetPrefixedSize(message->data()) +
-                              sizeof(flatbuffers::uoffset_t));
+  ABSL_CHECK_EQ(message->size, flatbuffers::GetPrefixedSize(message->data()) +
+                                   sizeof(flatbuffers::uoffset_t));
   {
     flatbuffers::Verifier verifier(message->data(), message->size);
-    CHECK(remote_data->Verify(verifier));
+    ABSL_CHECK(remote_data->Verify(verifier));
   }
 
   const int stream = message->header.rcvinfo.rcv_sid - kControlStreams();
@@ -482,7 +482,7 @@ bool SctpClientConnection::SendTimestamp(SavedTimestamp timestamp) {
 void SctpClientConnection::SendTimestamps() {
   // This is only called from the timer, and the timer is only enabled when
   // there is something in the buffer.  Explode if that assumption is false.
-  CHECK(!timestamp_buffer_.empty());
+  ABSL_CHECK(!timestamp_buffer_.empty());
   do {
     if (!SendTimestamp(timestamp_buffer_[0])) {
       timestamp_retry_buffer_->Schedule(event_loop_->monotonic_now() +
@@ -510,7 +510,7 @@ MessageBridgeClient::MessageBridgeClient(
 
   // Set up the SCTP configuration watcher and timer.
   if (requested_authentication == SctpAuthMethod::kAuth && HasSctpAuth()) {
-    CHECK(sctp_config_request_.valid())
+    ABSL_CHECK(sctp_config_request_.valid())
         << ": Must have SctpConfig channel configured to use SCTP "
            "authentication.";
     event_loop->MakeWatcher("/aos", [this](const SctpConfig &config) {
@@ -582,7 +582,7 @@ MessageBridgeClient::MessageBridgeClient(
 }
 
 void MessageBridgeClient::RequestAuthKey() {
-  CHECK(sctp_config_request_.valid());
+  ABSL_CHECK(sctp_config_request_.valid());
   auto sender = sctp_config_request_.MakeBuilder();
   auto builder = sender.MakeBuilder<SctpConfigRequest>();
   builder.add_request_key(true);

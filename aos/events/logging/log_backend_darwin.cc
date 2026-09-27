@@ -10,7 +10,7 @@
 
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/util/file.h"
@@ -33,7 +33,8 @@ void FileHandler::EnableDirect() {
 
 void FileHandler::DisableDirect() {
   if (supports_odirect_ && ODirectEnabled()) {
-    PCHECK(fcntl(fd_, F_NOCACHE, 0) != -1) << ": Failed to disable F_NOCACHE";
+    ABSL_PCHECK(fcntl(fd_, F_NOCACHE, 0) != -1)
+        << ": Failed to disable F_NOCACHE";
     odirect_enabled_ = false;
     VLOG(1) << "Disabled F_NOCACHE on " << filename_;
   }
@@ -124,7 +125,7 @@ WriteResult FileHandler::DoWrite(
           // on the next trip around the outer loop.  Every push_back below
           // grows batch_bytes by the same non-zero amount, so an empty iovec_
           // means the whole budget is still available.
-          DCHECK_EQ(batch_bytes, 0u);
+          ABSL_DCHECK_EQ(batch_bytes, 0u);
           iovec_.push_back(
               {.iov_base = const_cast<uint8_t *>(msg.data() + offset),
                .iov_len = kMaxSingleWriteSize});

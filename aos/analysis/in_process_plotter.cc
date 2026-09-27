@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <ostream>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "flatbuffers/flatbuffer_builder.h"
 #include "flatbuffers/vector.h"
@@ -87,8 +87,8 @@ void Plotter::YLabel(std::string_view label) {
 
 void Plotter::AddLine(const std::vector<double> &x,
                       const std::vector<double> &y, LineOptions options) {
-  CHECK_EQ(x.size(), y.size()) << ": " << options.label;
-  CHECK(!position_.IsNull())
+  ABSL_CHECK_EQ(x.size(), y.size()) << ": " << options.label;
+  ABSL_CHECK(!position_.IsNull())
       << "You must call AddFigure() before calling AddLine().";
 
   flatbuffers::Offset<flatbuffers::String> label_offset;
@@ -113,7 +113,8 @@ void Plotter::AddLine(const std::vector<double> &x,
         [options_color = options.color](const ColorWheelColor &color) {
           return color.name == options_color;
         });
-    CHECK(it != color_wheel_.end()) << ": Failed to find " << options.color;
+    ABSL_CHECK(it != color_wheel_.end())
+        << ": Failed to find " << options.color;
     color = &(it->color);
   }
 
@@ -166,7 +167,8 @@ void Plotter::Publish() {
   plot_builder.add_title(title_);
   plot_builder.add_figures(figures_offset);
 
-  CHECK_EQ(builder_.Send(plot_builder.Finish()), aos::RawSender::Error::kOk);
+  ABSL_CHECK_EQ(builder_.Send(plot_builder.Finish()),
+                aos::RawSender::Error::kOk);
 
   builder_ = plot_sender_.MakeBuilder();
 

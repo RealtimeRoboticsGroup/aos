@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "opencv2/core.hpp"
 #include "opencv2/dnn/dnn.hpp"
@@ -86,7 +87,7 @@ class ModelInference {
                                cudaMemcpyHostToDevice, stream_));
 
     // Execute inference
-    CHECK_EQ(engine_->getNbIOTensors(), 2);
+    ABSL_CHECK_EQ(engine_->getNbIOTensors(), 2);
     {
       const char *tensor_name = engine_->getIOTensorName(0);
       context_->setTensorAddress(tensor_name, const_cast<float *>(input));
@@ -209,8 +210,8 @@ class YoloApplication {
         detections_sender_(
             event_loop->MakeSender<frc::vision::BoundingBoxesStatic>(
                 "/camera1/coral")) {
-    CHECK_EQ(inference_.input_size(),
-             kNormalizedWidth * kNormalizedHeight * 3 * sizeof(float));
+    ABSL_CHECK_EQ(inference_.input_size(),
+                  kNormalizedWidth * kNormalizedHeight * 3 * sizeof(float));
 
     {
       nvinfer1::Dims d = inference_.input_dims();
@@ -347,7 +348,7 @@ class YoloApplication {
       aos::Sender<frc::vision::BoundingBoxesStatic>::StaticBuilder builder =
           detections_sender_.MakeStaticBuilder();
       auto boxes = builder->add_boxes();
-      CHECK(boxes->reserve(nms.size()));
+      ABSL_CHECK(boxes->reserve(nms.size()));
       for (const Detection detection : nms) {
         // TODO(austin): Undistort.
 

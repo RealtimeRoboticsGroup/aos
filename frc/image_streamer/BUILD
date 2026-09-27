@@ -44,7 +44,7 @@ cc_binary(
         "//third_party/seasocks",
         "@aos_flatbuffers//:flatbuffers",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/strings:str_format",
     ],
 )

@@ -286,7 +286,7 @@ Scheduling a PhasedLoop at 0.1 Hz that gets scheduled with an offset of 2 sec (a
             std::chrono::duration_cast<std::chrono::seconds>(
                 event_loop_->context().monotonic_event_time.time_since_epoch()).count();
         int periods = scheduled_seconds / 10;
-        CHECK_EQ(2, scheduled_seconds - periods * 10);
+        ABSL_CHECK_EQ(2, scheduled_seconds - periods * 10);
         LOG(INFO) << "Scheduled time: "
                   << event_loop_->context().monotonic_event_time
                   << " Current time: " << event_loop_->monotonic_now();
@@ -559,7 +559,7 @@ class Pong {
         // Update the fetcher; if the watcher got triggered, we
         // should be guaranteed to have received a new message,
         // so Fetch() should always return true.
-        CHECK(fetcher_.Fetch());
+        ABSL_CHECK(fetcher_.Fetch());
         LOG(INFO) << aos::FlatbufferToJson(fetcher_.get());
       }
     });
@@ -693,7 +693,7 @@ void SendMessageOnChannel(aos::EventLoop *event_loop,
   // Retrieve the channel from the config and (after checking that it is valid),
   // make the raw sender.
   std::unique_ptr<aos::RawSender> sender =
-      event_loop->MakeRawSender(CHECK_NOTNULL(configuration::GetChannel(
+      event_loop->MakeRawSender(ABSL_DIE_IF_NULL(configuration::GetChannel(
           event_loop->configuration(), channel_name, type, event_loop->name(),
           event_loop->node(), true)));
   // Use the sender's allocator to make a FlatBufferBuilder so that
@@ -721,7 +721,7 @@ An example of how you might implement an `aos_dump`-like utility:
 ```cpp
 void RegisterRawWatcher(aos::EventLoop *event_loop,
                         std::string_view channel_name, std::string_view type) {
-  const aos::Channel *channel = CHECK_NOTNULL(
+  const aos::Channel *channel = ABSL_DIE_IF_NULL(
       configuration::GetChannel(event_loop->configuration(), channel_name, type,
                                 event_loop->name(), event_loop->node(), true));
   event_loop->MakeRawWatcher(
@@ -746,7 +746,7 @@ Example, similar to the [Raw Watcher Example](#raw-watchers), of using a fetcher
 
 void FetchLatestMessage(aos::EventLoop *event_loop,
                         std::string_view channel_name, std::string_view type) {
-  const aos::Channel *channel = CHECK_NOTNULL(
+  const aos::Channel *channel = ABSL_DIE_IF_NULL(
       configuration::GetChannel(event_loop->configuration(), channel_name, type,
                                 event_loop->name(), event_loop->node(), true));
   std::unique_ptr<aos::RawFetcher> fetcher =

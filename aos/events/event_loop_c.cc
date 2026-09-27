@@ -5,7 +5,7 @@
 #include <chrono>
 #include <memory>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/die_if_null.h"
 #include "absl/log/log.h"
 #include "flatbuffers/buffer.h"
@@ -197,11 +197,11 @@ aos_fetcher_t *aos_event_loop_make_fetcher(aos_event_loop_t *self,
                                            const char *channel_type) {
   aos::EventLoop *event_loop =
       reinterpret_cast<aos::EventLoop *>(ABSL_DIE_IF_NULL(self));
-  CHECK(event_loop != nullptr);
+  ABSL_CHECK(event_loop != nullptr);
   const aos::Channel *channel = aos::configuration::GetChannel(
       event_loop->configuration(), channel_name, channel_type,
       event_loop->name(), event_loop->node(), true);
-  CHECK(channel != nullptr)
+  ABSL_CHECK(channel != nullptr)
       << ": Can't find channel " << channel_name << " " << channel_type;
   if (!aos::configuration::ChannelIsReadableOnNode(channel,
                                                    event_loop->node())) {
@@ -222,11 +222,11 @@ aos_sender_t *aos_event_loop_make_sender(aos_event_loop_t *self,
                                          const char *channel_type) {
   aos::EventLoop *event_loop =
       reinterpret_cast<aos::EventLoop *>(ABSL_DIE_IF_NULL(self));
-  CHECK(event_loop != nullptr);
+  ABSL_CHECK(event_loop != nullptr);
   const aos::Channel *channel = aos::configuration::GetChannel(
       event_loop->configuration(), channel_name, channel_type,
       event_loop->name(), event_loop->node(), true);
-  CHECK(channel != nullptr)
+  ABSL_CHECK(channel != nullptr)
       << ": Can't find channel " << channel_name << " " << channel_type;
   if (!aos::configuration::ChannelIsSendableOnNode(channel,
                                                    event_loop->node())) {
@@ -244,11 +244,11 @@ void aos_event_loop_make_watcher(aos_event_loop_t *self,
                                  void *user_data) {
   aos::EventLoop *event_loop =
       reinterpret_cast<aos::EventLoop *>(ABSL_DIE_IF_NULL(self));
-  CHECK(event_loop != nullptr);
+  ABSL_CHECK(event_loop != nullptr);
   const aos::Channel *channel = aos::configuration::GetChannel(
       event_loop->configuration(), channel_name, channel_type,
       event_loop->name(), event_loop->node(), true);
-  CHECK(channel != nullptr)
+  ABSL_CHECK(channel != nullptr)
       << ": Can't find channel " << channel_name << " " << channel_type;
   if (!aos::configuration::ChannelIsReadableOnNode(channel,
                                                    event_loop->node())) {
@@ -273,7 +273,7 @@ void aos_event_loop_make_no_arg_watcher(aos_event_loop_t *self,
   const aos::Channel *channel = aos::configuration::GetChannel(
       event_loop->configuration(), channel_name, channel_type,
       event_loop->name(), event_loop->node(), true);
-  CHECK(channel != nullptr)
+  ABSL_CHECK(channel != nullptr)
       << ": Can't find channel " << channel_name << " " << channel_type;
   if (!aos::configuration::ChannelIsReadableOnNode(channel,
                                                    event_loop->node())) {
@@ -340,7 +340,7 @@ void aos_event_loop_set_runtime_affinity(aos_event_loop_t *self,
       reinterpret_cast<aos::EventLoop *>(ABSL_DIE_IF_NULL(self));
   aos::CpuSet affinity;
   for (size_t i = 0; i < affinity_list_size; ++i) {
-    CHECK_LT(static_cast<size_t>(affinity_list[i]), aos::CpuSet::kSize);
+    ABSL_CHECK_LT(static_cast<size_t>(affinity_list[i]), aos::CpuSet::kSize);
     affinity.Set(affinity_list[i]);
   }
   event_loop->SetRuntimeAffinity(affinity);

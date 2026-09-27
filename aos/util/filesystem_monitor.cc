@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_split.h"
 #include "flatbuffers/buffer.h"
@@ -68,7 +68,7 @@ class FilesystemMonitor {
 
     std::optional<std::string> contents = ReadShortFile("/proc/self/mountinfo");
 
-    CHECK(contents.has_value());
+    ABSL_CHECK(contents.has_value());
 
     std::vector<flatbuffers::Offset<Filesystem>> filesystems;
 
@@ -85,7 +85,7 @@ class FilesystemMonitor {
       size_t i = 6;
       while (elements[i] != "-") {
         ++i;
-        CHECK_LT(i + 1, elements.size());
+        ABSL_CHECK_LT(i + 1, elements.size());
       }
 
       // Mount point is the 4th element.
@@ -101,7 +101,7 @@ class FilesystemMonitor {
 
       struct statvfs info;
 
-      PCHECK(statvfs(mount_point.c_str(), &info) == 0);
+      ABSL_PCHECK(statvfs(mount_point.c_str(), &info) == 0);
 
       VLOG(1) << "overall size: " << info.f_frsize * info.f_blocks << ", free "
               << info.f_bfree * info.f_bsize << ", inodes " << info.f_files

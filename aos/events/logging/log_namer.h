@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "absl/container/btree_map.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "flatbuffers/flatbuffers.h"
 
@@ -27,7 +27,7 @@ class LogNamer;
 // The design of this class is that instead of being notified when any of the
 // header data changes, it polls and owns that decision.  This makes it much
 // harder to write corrupted data.  If that becomes a performance problem, we
-// can DCHECK and take it out of production binaries.
+// can ABSL_DCHECK and take it out of production binaries.
 class DataWriter {
  public:
   // Constructs a DataWriter.
@@ -49,8 +49,9 @@ class DataWriter {
 
   void UpdateMaxMessageSize(size_t new_size) {
     if (new_size > max_message_size_) {
-      CHECK(!header_written_) << ": Tried to update to " << new_size << ", was "
-                              << max_message_size_ << " for " << name();
+      ABSL_CHECK(!header_written_)
+          << ": Tried to update to " << new_size << ", was "
+          << max_message_size_ << " for " << name();
       max_message_size_ = new_size;
     }
   }
@@ -247,7 +248,7 @@ class LogNamer {
     // The LogNamer should never need the node from the event loop, only the
     // node from the logger configuration. Check to ensure that the correct node
     // was passed to the constructor.
-    CHECK(configuration::IsNodeFromConfiguration(configuration_, node_));
+    ABSL_CHECK(configuration::IsNodeFromConfiguration(configuration_, node_));
     nodes_.emplace_back(node_);
   }
   virtual ~LogNamer() = default;
@@ -322,7 +323,7 @@ class LogNamer {
 
   monotonic_clock::time_point monotonic_start_time(size_t node_index,
                                                    const UUID &boot_uuid) {
-    DCHECK_NE(boot_uuid, UUID::Zero());
+    ABSL_DCHECK_NE(boot_uuid, UUID::Zero());
 
     NodeState *node_state = GetNodeState(node_index, boot_uuid);
     return node_state->monotonic_start_time;
@@ -456,7 +457,7 @@ class MultiNodeLogNamer : public LogNamer {
   bool ran_out_of_space() const {
     return accumulate_data_writers<bool>(
         ran_out_of_space_, [](bool x, const DataWriter &data_writer) {
-          CHECK(data_writer.writer() != nullptr);
+          ABSL_CHECK(data_writer.writer() != nullptr);
           return x || (data_writer.writer() &&
                        data_writer.writer()->ran_out_of_space());
         });
@@ -469,7 +470,7 @@ class MultiNodeLogNamer : public LogNamer {
   size_t maximum_total_bytes() const {
     return accumulate_data_writers<size_t>(
         0, [](size_t x, const DataWriter &data_writer) {
-          CHECK(data_writer.writer() != nullptr);
+          ABSL_CHECK(data_writer.writer() != nullptr);
           return std::max(x, data_writer.writer()->total_bytes());
         });
   }
@@ -485,7 +486,7 @@ class MultiNodeLogNamer : public LogNamer {
     return accumulate_data_writers(
         logger_statistics_,
         [](LoggerStatistics result, const DataWriter &data_writer) {
-          CHECK(data_writer.writer() != nullptr);
+          ABSL_CHECK(data_writer.writer() != nullptr);
           result.UpdateWithStats(*data_writer.writer()->WriteStatistics());
           return result;
         });

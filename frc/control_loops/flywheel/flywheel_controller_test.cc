@@ -1,6 +1,6 @@
 #include "frc/control_loops/flywheel/flywheel_controller.h"
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "gtest/gtest.h"
 
@@ -42,8 +42,8 @@ class FlywheelTest : public ::frc::testing::ControlLoopTest {
 
     // Confirm that we aren't drawing too much current.  2 motors -> twice the
     // lumped current since our model can't tell them apart.
-    CHECK_LE(flywheel_plant_->battery_current(flywheel_U), 200.0);
-    CHECK_GE(flywheel_plant_->battery_current(flywheel_U), -200.0);
+    ABSL_CHECK_LE(flywheel_plant_->battery_current(flywheel_U), 200.0);
+    ABSL_CHECK_GE(flywheel_plant_->battery_current(flywheel_U), -200.0);
 
     flywheel_plant_->Update(flywheel_U);
 

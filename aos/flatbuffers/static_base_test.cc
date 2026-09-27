@@ -7,6 +7,7 @@
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
 #include "absl/flags/reflection.h"
+#include "absl/log/absl_check.h"
 #include "flatbuffers/flatbuffer_builder.h"
 #include "gtest/gtest.h"
 
@@ -340,7 +341,7 @@ TEST_F(AlignedVectorAllocatorDeathTest, ResizeBufferFailsInRealtimeMode) {
 
   {  // Verify we can enable DieOnMalloc.
     aos::ScopedRealtime realtime;
-    CHECK(aos::IsDieOnMallocEnabled());
+    ABSL_CHECK(aos::IsDieOnMallocEnabled());
   }
 
   EXPECT_DEATH(
@@ -419,7 +420,7 @@ TEST_F(StaticFlatbufferDeathTest, FromFlatbufferFailsInRealtimeMode) {
 
   {  // Verify we can enable DieOnMalloc.
     aos::ScopedRealtime realtime;
-    CHECK(aos::IsDieOnMallocEnabled());
+    ABSL_CHECK(aos::IsDieOnMallocEnabled());
   }
 
   EXPECT_DEATH(

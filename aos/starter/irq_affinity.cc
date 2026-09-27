@@ -16,7 +16,7 @@
 #include <vector>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
 #include "flatbuffers/buffer.h"
@@ -71,7 +71,7 @@ struct ParsedIrqConfig {
 
     // Contents will be a padded string which is the size of the number of
     // IRQs.
-    CHECK(!(CPU_SETSIZE & 0xf));
+    ABSL_CHECK(!(CPU_SETSIZE & 0xf));
     for (size_t i = 0; i < CPU_SETSIZE; i += 4) {
       if (i / 4 >= new_contents.size()) {
         break;
@@ -147,19 +147,19 @@ struct ParsedKThreadConfig {
       default:
         LOG(FATAL) << "Unknown scheduler";
     }
-    PCHECK(sched_setscheduler(pid, new_scheduler, &param) == 0)
+    ABSL_PCHECK(sched_setscheduler(pid, new_scheduler, &param) == 0)
         << ", Failed to set " << name << "(" << pid << ") to "
         << (new_scheduler == SCHED_OTHER
                 ? "SCHED_OTHER"
                 : (new_scheduler == SCHED_RR ? "SCHED_RR" : "SCHED_FIFO"));
 
     if (scheduler == SchedulingPolicy::SCHEDULER_OTHER && nice.has_value()) {
-      PCHECK(setpriority(PRIO_PROCESS, pid, *nice) == 0)
+      ABSL_PCHECK(setpriority(PRIO_PROCESS, pid, *nice) == 0)
           << ": Failed to set priority";
     }
 
-    PCHECK(sched_setaffinity(pid, sizeof(cpu_set_t),
-                             affinity.native_handle()) == 0);
+    ABSL_PCHECK(sched_setaffinity(pid, sizeof(cpu_set_t),
+                                  affinity.native_handle()) == 0);
   }
 };
 
@@ -183,7 +183,7 @@ class IrqAffinity {
       irqs_.reserve(irq_affinity_config.message().irqs()->size());
       for (const starter::IrqConfig *irq_config :
            *irq_affinity_config.message().irqs()) {
-        CHECK(irq_config->has_name()) << ": Name required";
+        ABSL_CHECK(irq_config->has_name()) << ": Name required";
         LOG(INFO) << "IRQ " << aos::FlatbufferToJson(irq_config);
         irqs_.push_back(ParsedIrqConfig{
             .name = irq_config->name()->str(),
@@ -241,7 +241,7 @@ class IrqAffinity {
     threads->reserve(threads_config->size());
     for (const starter::KthreadConfig *kthread_config : *threads_config) {
       LOG(INFO) << "Kthread " << aos::FlatbufferToJson(kthread_config);
-      CHECK(kthread_config->has_name()) << ": Name required";
+      ABSL_CHECK(kthread_config->has_name()) << ": Name required";
       const size_t star_position =
           kthread_config->name()->string_view().find('*');
       const bool has_star = star_position != std::string_view::npos;
@@ -285,8 +285,8 @@ int main(int argc, char **argv) {
   if (!absl::GetFlag(FLAGS_user).empty()) {
     // Maintain root permissions as we switch to become the user so we can
     // actually manipulate priorities.
-    PCHECK(prctl(PR_SET_SECUREBITS, SECBIT_NO_SETUID_FIXUP | SECBIT_NOROOT) ==
-           0);
+    ABSL_PCHECK(
+        prctl(PR_SET_SECUREBITS, SECBIT_NO_SETUID_FIXUP | SECBIT_NOROOT) == 0);
 
     uid_t uid;
     uid_t gid;

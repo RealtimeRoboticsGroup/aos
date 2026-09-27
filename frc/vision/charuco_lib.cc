@@ -6,7 +6,7 @@
 
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "opencv2/core/eigen.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -62,11 +62,11 @@ using aos::monotonic_clock;
 CameraCalibration::CameraCalibration(
     const calibration::CameraCalibration *calibration)
     : intrinsics_([calibration]() {
-        CHECK(calibration != nullptr);
+        ABSL_CHECK(calibration != nullptr);
         const cv::Mat result(3, 3, CV_32F,
                              const_cast<void *>(static_cast<const void *>(
                                  calibration->intrinsics()->data())));
-        CHECK_EQ(result.total(), calibration->intrinsics()->size());
+        ABSL_CHECK_EQ(result.total(), calibration->intrinsics()->size());
         return result;
       }()),
       intrinsics_eigen_([this]() {
@@ -80,7 +80,7 @@ CameraCalibration::CameraCalibration(
         const cv::Mat result(calibration->dist_coeffs()->size(), 1, CV_32F,
                              const_cast<void *>(static_cast<const void *>(
                                  calibration->dist_coeffs()->data())));
-        CHECK_EQ(result.total(), calibration->dist_coeffs()->size());
+        ABSL_CHECK_EQ(result.total(), calibration->dist_coeffs()->size());
         return result;
       }()) {}
 
@@ -138,7 +138,7 @@ void CameraImageCallback::HandleImage(const CameraImage &image) {
 
     for (const aos::message_bridge::ServerConnection *connection :
          *server_fetcher_->connections()) {
-      CHECK(connection->has_node());
+      ABSL_CHECK(connection->has_node());
       if (connection->node()->name()->string_view() ==
           source_node_->name()->string_view()) {
         server_connection = connection;
@@ -146,7 +146,7 @@ void CameraImageCallback::HandleImage(const CameraImage &image) {
       }
     }
 
-    CHECK(server_connection != nullptr) << ": Failed to find client";
+    ABSL_CHECK(server_connection != nullptr) << ": Failed to find client";
     if (!server_connection->has_monotonic_offset()) {
       VLOG(1) << "No offset yet.";
       return;
@@ -196,7 +196,7 @@ ImageCallback::ImageCallback(
           [this](const CameraImage &image, monotonic_clock::time_point eof) {
             switch (image.format()) {
               case vision::ImageFormat::MONO8: {
-                CHECK(format_ == Format::GRAYSCALE);
+                ABSL_CHECK(format_ == Format::GRAYSCALE);
                 cv::Mat gray_image(cv::Size(image.cols(), image.rows()),
                                    CV_8UC1, (void *)image.data()->data());
                 const cv::Size image_size(image.cols(), image.rows());
@@ -229,7 +229,7 @@ ImageCallback::ImageCallback(
                 }
               } break;
               case vision::ImageFormat::BGR8: {
-                CHECK(format_ == Format::BGR);
+                ABSL_CHECK(format_ == Format::BGR);
                 cv::Mat bgr_image(cv::Size(image.cols(), image.rows()), CV_8UC3,
                                   (void *)image.data()->data());
                 const cv::Size image_size(image.cols(), image.rows());

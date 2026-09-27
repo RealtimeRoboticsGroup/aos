@@ -3,7 +3,7 @@
 #include <cmath>
 #include <numeric>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/containers/error_list.h"

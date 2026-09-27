@@ -3,7 +3,7 @@
 #include <memory>
 #include <thread>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "gtest/gtest.h"
 
@@ -20,14 +20,14 @@ TEST(SignalFdTest, LeaveSignalBlocked) {
   std::thread thread([]() {
     {
       sigset_t test_mask;
-      CHECK_EQ(0, sigemptyset(&test_mask));
-      CHECK_EQ(0, sigaddset(&test_mask, SIGUSR1));
-      PCHECK(sigprocmask(SIG_BLOCK, &test_mask, nullptr) == 0);
+      ABSL_CHECK_EQ(0, sigemptyset(&test_mask));
+      ABSL_CHECK_EQ(0, sigaddset(&test_mask, SIGUSR1));
+      ABSL_PCHECK(sigprocmask(SIG_BLOCK, &test_mask, nullptr) == 0);
     }
     SignalFd({SIGUSR1});
     {
       sigset_t blocked_now;
-      PCHECK(sigprocmask(SIG_BLOCK, nullptr, &blocked_now) == 0);
+      ABSL_PCHECK(sigprocmask(SIG_BLOCK, nullptr, &blocked_now) == 0);
       ASSERT_TRUE(sigismember(&blocked_now, SIGUSR1));
     }
   });
@@ -41,18 +41,18 @@ TEST(SignalFdTest, BlockSignal) {
   std::thread thread([]() {
     {
       sigset_t blocked_now;
-      PCHECK(sigprocmask(SIG_BLOCK, nullptr, &blocked_now) == 0);
+      ABSL_PCHECK(sigprocmask(SIG_BLOCK, nullptr, &blocked_now) == 0);
       ASSERT_FALSE(sigismember(&blocked_now, SIGUSR1));
     }
     {
       SignalFd signalfd({SIGUSR1});
       sigset_t blocked_now;
-      PCHECK(sigprocmask(SIG_BLOCK, nullptr, &blocked_now) == 0);
+      ABSL_PCHECK(sigprocmask(SIG_BLOCK, nullptr, &blocked_now) == 0);
       ASSERT_TRUE(sigismember(&blocked_now, SIGUSR1));
     }
     {
       sigset_t blocked_now;
-      PCHECK(sigprocmask(SIG_BLOCK, nullptr, &blocked_now) == 0);
+      ABSL_PCHECK(sigprocmask(SIG_BLOCK, nullptr, &blocked_now) == 0);
       ASSERT_FALSE(sigismember(&blocked_now, SIGUSR1));
     }
   });
@@ -66,9 +66,9 @@ TEST(SignalFdDeathTest, ExternalUnblockSignal) {
   auto t = []() {
     SignalFd signalfd({SIGUSR1});
     sigset_t test_mask;
-    CHECK_EQ(0, sigemptyset(&test_mask));
-    CHECK_EQ(0, sigaddset(&test_mask, SIGUSR1));
-    PCHECK(sigprocmask(SIG_UNBLOCK, &test_mask, nullptr) == 0);
+    ABSL_CHECK_EQ(0, sigemptyset(&test_mask));
+    ABSL_CHECK_EQ(0, sigaddset(&test_mask, SIGUSR1));
+    ABSL_PCHECK(sigprocmask(SIG_UNBLOCK, &test_mask, nullptr) == 0);
   };
   EXPECT_DEATH(
       { t(); }, "Some other code unblocked one or more of our signals");

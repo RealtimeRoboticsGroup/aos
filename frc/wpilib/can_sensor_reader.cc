@@ -1,5 +1,7 @@
 #include "frc/wpilib/can_sensor_reader.h"
 
+#include "absl/log/absl_check.h"
+
 using frc::wpilib::CANSensorReader;
 using frc::wpilib::kCANUpdateFreqHz;
 
@@ -19,7 +21,7 @@ CANSensorReader::CANSensorReader(
   // TODO(max): Decide if we want to keep this on this core.
   event_loop->SetRuntimeAffinity(aos::MakeCpusetFromCpus({1}));
 
-  CHECK(flatbuffer_callback_);
+  ABSL_CHECK(flatbuffer_callback_);
   timer_handler_ = event_loop->AddTimer([this]() { Loop(); });
   timer_handler_->set_name("CANSensorReader Loop");
 

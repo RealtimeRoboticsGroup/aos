@@ -4,7 +4,7 @@
 #include <cstring>
 #include <type_traits>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "frc/wpilib/ahal/AnalogInput.h"
@@ -145,7 +145,7 @@ void DMA::Add(frc::AnalogInput *input) {
 
 void DMA::SetExternalTrigger(frc::DigitalSource *input, bool rising,
                              bool falling) {
-  CHECK(input);
+  ABSL_CHECK(input);
   tRioStatusCode status = 0;
 
   if (manager_) {

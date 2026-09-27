@@ -4,7 +4,7 @@
 #include <thread>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/die_if_null.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_join.h"
@@ -66,7 +66,7 @@ int Main() {
     return 1;
   }
 
-  CHECK(instance.IsConnected());
+  ABSL_CHECK(instance.IsConnected());
 
   if (absl::GetFlag(FLAGS_topics)) {
     std::vector<std::string_view> prefixes = {""};
@@ -146,7 +146,7 @@ int Main() {
                << absl::GetFlag(FLAGS_server);
     return 1;
   }
-  CHECK(!instance.IsConnected());
+  ABSL_CHECK(!instance.IsConnected());
 
   return 0;
 }

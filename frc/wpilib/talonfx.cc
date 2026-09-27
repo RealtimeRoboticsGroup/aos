@@ -1,5 +1,7 @@
 #include "frc/wpilib/talonfx.h"
 
+#include "absl/log/absl_check.h"
+
 using frc::wpilib::kMaxBringupPower;
 using frc::wpilib::TalonFX;
 
@@ -21,7 +23,7 @@ TalonFX::TalonFX(int device_id, bool inverted, std::string canbus,
   // device temp is not timesynced so don't add it to the list of signals
   device_temp_.SetUpdateFrequency(kCANUpdateFreqHz);
 
-  CHECK(signals != nullptr);
+  ABSL_CHECK(signals != nullptr);
 
   supply_voltage_.SetUpdateFrequency(kCANUpdateFreqHz);
   signals->push_back(&supply_voltage_);

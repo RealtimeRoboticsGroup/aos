@@ -3,6 +3,8 @@
 #include <numeric>
 #include <string>
 
+#include "absl/log/absl_check.h"
+
 #include "aos/configuration.h"
 #include "aos/events/logging/log_reader.h"
 #include "aos/events/simulated_event_loop.h"
@@ -234,7 +236,7 @@ void HandlePoses(
   }
 
   bool draw_vis = false;
-  CHECK_LE(target_poses.size(), 2u)
+  ABSL_CHECK_LE(target_poses.size(), 2u)
       << "Can't handle more than two tags in field of view";
   if (target_poses.size() == 2) {
     draw_vis = true;
@@ -622,7 +624,7 @@ void ExtrinsicsMain(const NodeList &node_list,
     // Extract the extrinsics from the calibration, and save as "defaults"
     std::optional<cv::Mat> extrinsics_cv_opt =
         frc::vision::CameraExtrinsics(calibration);
-    CHECK(extrinsics_cv_opt.has_value())
+    ABSL_CHECK(extrinsics_cv_opt.has_value())
         << "Must provide initial extrinsics for each camera; missing for "
         << camera_node.node_name << " camera " << camera_node.camera_number
         << ".";
@@ -673,7 +675,7 @@ void ExtrinsicsMain(const NodeList &node_list,
 
   reader->event_loop_factory()->Run();
 
-  CHECK_GT(two_board_extrinsics_list_with_outliers.size(), 0u)
+  ABSL_CHECK_GT(two_board_extrinsics_list_with_outliers.size(), 0u)
       << "Must have at least one view of both boards";
   int base_target_id = two_board_extrinsics_list_with_outliers[0].board_id;
   VLOG(1) << "Base id for two_board_extrinsics_list_with_outliers is "
@@ -704,7 +706,7 @@ void ExtrinsicsMain(const NodeList &node_list,
     for (auto camera_node : node_list.cameras) {
       std::vector<TimestampedCameraDetection> pose_list;
       for (auto ext : two_board_extrinsics_list_with_outliers) {
-        CHECK_EQ(base_target_id, ext.board_id)
+        ABSL_CHECK_EQ(base_target_id, ext.board_id)
             << " All boards should have same reference id";
         if (ext.camera_name == camera_node.camera_name()) {
           pose_list.push_back(ext);
@@ -717,7 +719,7 @@ void ExtrinsicsMain(const NodeList &node_list,
         RemoveOutliers(pose_list, remove_outliers_iterations);
       }
 
-      CHECK(pose_list.size() > 0)
+      ABSL_CHECK(pose_list.size() > 0)
           << "Didn't get any two_board extrinsics for camera "
           << camera_node.camera_name();
       Eigen::Vector3d translation_variance, rotation_variance;
@@ -781,7 +783,7 @@ void ExtrinsicsMain(const NodeList &node_list,
     // of the pair's (the i+1'th camera) extrinsics
     for (auto [pose1, pose2] : detection_list) {
       // Note that this assumes our poses are ordered by the node_list
-      CHECK(
+      ABSL_CHECK(
           !((pose1.camera_name == node_list.cameras.at(i + 1).camera_name()) &&
             (pose2.camera_name == node_list.cameras.at(i).camera_name())))
           << "The camera ordering on our detections is incorrect!";

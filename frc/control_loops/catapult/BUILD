@@ -47,7 +47,7 @@ cc_library(
             "//aos/time",
             "//third_party/osqp-cpp",
             "@com_google_absl//absl/log",
-            "@com_google_absl//absl/log:check",
+            "@com_google_absl//absl/log:absl_check",
             "@eigen",
         ],
 )

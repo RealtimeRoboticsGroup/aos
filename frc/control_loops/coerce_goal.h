@@ -2,6 +2,7 @@
 #define FRC_CONTROL_LOOPS_COERCE_GOAL_H_
 
 #include "Eigen/Dense"
+#include "absl/log/absl_check.h"
 
 #include "aos/macros.h"
 #include "frc/control_loops/polytope.h"
@@ -103,7 +104,7 @@ Eigen::Matrix<Scalar, 2, 1> DoCoerceGoal(
     // the line.
     Eigen::Matrix<Scalar, 2, 4> region_vertices = region.StaticVertices();
 #if !AOS_OS_NONE
-    CHECK_GT(reinterpret_cast<ssize_t>(region_vertices.outerSize()), 0);
+    ABSL_CHECK_GT(reinterpret_cast<ssize_t>(region_vertices.outerSize()), 0);
 #else
     assert(region_vertices.outerSize() > 0);
 #endif

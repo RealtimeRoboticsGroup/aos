@@ -8,7 +8,7 @@
 
 #include "absl/container/btree_map.h"
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/log/vlog_is_on.h"
 #include "absl/strings/str_join.h"
@@ -31,7 +31,7 @@ namespace {
 namespace chrono = std::chrono;
 
 bool ConfigOnly(const LogFileHeader *header) {
-  CHECK_EQ(LogFileHeader::MiniReflectTypeTable()->num_elems, 37u);
+  ABSL_CHECK_EQ(LogFileHeader::MiniReflectTypeTable()->num_elems, 37u);
   if (header->has_monotonic_start_time()) return false;
   if (header->has_realtime_start_time()) return false;
   if (header->has_max_out_of_order_duration()) return false;
@@ -74,14 +74,14 @@ bool ConfigOnly(const LogFileHeader *header) {
 
 bool HasNewTimestamps(const LogFileHeader *header) {
   if (header->has_oldest_remote_monotonic_timestamps()) {
-    CHECK(header->has_oldest_local_monotonic_timestamps());
-    CHECK(header->has_oldest_remote_unreliable_monotonic_timestamps());
-    CHECK(header->has_oldest_local_unreliable_monotonic_timestamps());
+    ABSL_CHECK(header->has_oldest_local_monotonic_timestamps());
+    ABSL_CHECK(header->has_oldest_remote_unreliable_monotonic_timestamps());
+    ABSL_CHECK(header->has_oldest_local_unreliable_monotonic_timestamps());
     return true;
   } else {
-    CHECK(!header->has_oldest_local_monotonic_timestamps());
-    CHECK(!header->has_oldest_remote_unreliable_monotonic_timestamps());
-    CHECK(!header->has_oldest_local_unreliable_monotonic_timestamps());
+    ABSL_CHECK(!header->has_oldest_local_monotonic_timestamps());
+    ABSL_CHECK(!header->has_oldest_remote_unreliable_monotonic_timestamps());
+    ABSL_CHECK(!header->has_oldest_local_unreliable_monotonic_timestamps());
     return false;
   }
 }
@@ -461,7 +461,7 @@ void PartsSorter::PopulateFromFiles(
             << part.name;
 
     if (configuration_sha256.empty()) {
-      CHECK(log_header->message().has_configuration())
+      ABSL_CHECK(log_header->message().has_configuration())
           << ": Failed to find header on " << part.name;
       // If we don't have a configuration_sha256, we need to have a
       // configuration directly inside the header.  This ends up being a bit
@@ -488,7 +488,7 @@ void PartsSorter::PopulateFromFiles(
       config_sha256_list.emplace(config_copy_sha256);
       configuration_sha256 = std::move(config_copy_sha256);
     } else {
-      CHECK(!log_header->message().has_configuration())
+      ABSL_CHECK(!log_header->message().has_configuration())
           << ": Found header where one shouldn't be on " << part.name;
       config_sha256_list.emplace(configuration_sha256);
     }
@@ -535,18 +535,18 @@ void PartsSorter::PopulateFromFiles(
       } else {
         result->unsorted_parts.emplace_back(
             std::make_pair(first_message_time, part.name));
-        CHECK_EQ(result->name, name);
-        CHECK_EQ(result->parts.config_sha256, configuration_sha256);
+        ABSL_CHECK_EQ(result->name, name);
+        ABSL_CHECK_EQ(result->parts.config_sha256, configuration_sha256);
       }
       continue;
     }
 
-    CHECK(log_header->message().has_log_event_uuid());
-    CHECK(log_header->message().has_parts_uuid());
-    CHECK(log_header->message().has_parts_index());
+    ABSL_CHECK(log_header->message().has_log_event_uuid());
+    ABSL_CHECK(log_header->message().has_parts_uuid());
+    ABSL_CHECK(log_header->message().has_parts_index());
 
-    CHECK_EQ(log_header->message().has_logger_node(),
-             log_header->message().has_node());
+    ABSL_CHECK_EQ(log_header->message().has_logger_node(),
+                  log_header->message().has_node());
 
     const std::string log_event_uuid =
         log_header->message().log_event_uuid()->str();
@@ -567,13 +567,13 @@ void PartsSorter::PopulateFromFiles(
       log_it->second.logger_sha1 = logger_sha1;
       log_it->second.logger_version = logger_version;
     } else {
-      CHECK_EQ(log_it->second.logger_node, logger_node);
-      CHECK_EQ(log_it->second.logger_boot_uuid, logger_boot_uuid);
-      CHECK_EQ(log_it->second.log_start_uuid, log_start_uuid);
-      CHECK_EQ(log_it->second.logger_instance_uuid, logger_instance_uuid);
-      CHECK_EQ(log_it->second.name, name);
-      CHECK_EQ(log_it->second.logger_sha1, logger_sha1);
-      CHECK_EQ(log_it->second.logger_version, logger_version);
+      ABSL_CHECK_EQ(log_it->second.logger_node, logger_node);
+      ABSL_CHECK_EQ(log_it->second.logger_boot_uuid, logger_boot_uuid);
+      ABSL_CHECK_EQ(log_it->second.log_start_uuid, log_start_uuid);
+      ABSL_CHECK_EQ(log_it->second.logger_instance_uuid, logger_instance_uuid);
+      ABSL_CHECK_EQ(log_it->second.name, name);
+      ABSL_CHECK_EQ(log_it->second.logger_sha1, logger_sha1);
+      ABSL_CHECK_EQ(log_it->second.logger_version, logger_version);
     }
 
     if (node == log_it->second.logger_node) {
@@ -582,8 +582,9 @@ void PartsSorter::PopulateFromFiles(
         log_it->second.monotonic_start_time = monotonic_start_time;
         log_it->second.realtime_start_time = realtime_start_time;
       } else {
-        CHECK_EQ(log_it->second.monotonic_start_time, monotonic_start_time);
-        CHECK_EQ(log_it->second.realtime_start_time, realtime_start_time);
+        ABSL_CHECK_EQ(log_it->second.monotonic_start_time,
+                      monotonic_start_time);
+        ABSL_CHECK_EQ(log_it->second.realtime_start_time, realtime_start_time);
       }
     }
 
@@ -607,7 +608,7 @@ void PartsSorter::PopulateFromFiles(
       it->second.log_start_uuid = log_start_uuid;
       it->second.config_sha256 = configuration_sha256;
     } else {
-      CHECK_EQ(it->second.config_sha256, configuration_sha256);
+      ABSL_CHECK_EQ(it->second.config_sha256, configuration_sha256);
     }
     if (log_header->message().has_data_stored()) {
       for (const StoredDataType type : *log_header->message().data_stored()) {
@@ -671,39 +672,41 @@ void PartsSorter::PopulateFromFiles(
 
       // Older logs don't have our fancy new boot_uuids and oldest timestamps.
       // So only fill those out when we find them.
-      CHECK(log_header->message().has_boot_uuids());
+      ABSL_CHECK(log_header->message().has_boot_uuids());
       const size_t boot_uuids_size = log_header->message().boot_uuids()->size();
-      CHECK_EQ(
+      ABSL_CHECK_EQ(
           boot_uuids_size,
           log_header->message().oldest_local_monotonic_timestamps()->size());
-      CHECK_EQ(
+      ABSL_CHECK_EQ(
           boot_uuids_size,
           log_header->message().oldest_remote_monotonic_timestamps()->size());
-      CHECK_EQ(boot_uuids_size,
-               log_header->message()
-                   .oldest_local_unreliable_monotonic_timestamps()
-                   ->size());
-      CHECK_EQ(boot_uuids_size,
-               log_header->message()
-                   .oldest_remote_unreliable_monotonic_timestamps()
-                   ->size());
-      CHECK_EQ(log_header->message()
-                   .has_oldest_logger_local_unreliable_monotonic_timestamps(),
-               log_header->message()
-                   .has_oldest_logger_remote_unreliable_monotonic_timestamps());
+      ABSL_CHECK_EQ(boot_uuids_size,
+                    log_header->message()
+                        .oldest_local_unreliable_monotonic_timestamps()
+                        ->size());
+      ABSL_CHECK_EQ(boot_uuids_size,
+                    log_header->message()
+                        .oldest_remote_unreliable_monotonic_timestamps()
+                        ->size());
+      ABSL_CHECK_EQ(
+          log_header->message()
+              .has_oldest_logger_local_unreliable_monotonic_timestamps(),
+          log_header->message()
+              .has_oldest_logger_remote_unreliable_monotonic_timestamps());
       if (log_header->message()
               .has_oldest_logger_local_unreliable_monotonic_timestamps()) {
-        CHECK_EQ(boot_uuids_size,
-                 log_header->message()
-                     .oldest_logger_local_unreliable_monotonic_timestamps()
-                     ->size());
-        CHECK_EQ(boot_uuids_size,
-                 log_header->message()
-                     .oldest_logger_remote_unreliable_monotonic_timestamps()
-                     ->size());
+        ABSL_CHECK_EQ(boot_uuids_size,
+                      log_header->message()
+                          .oldest_logger_local_unreliable_monotonic_timestamps()
+                          ->size());
+        ABSL_CHECK_EQ(
+            boot_uuids_size,
+            log_header->message()
+                .oldest_logger_remote_unreliable_monotonic_timestamps()
+                ->size());
       }
-      CHECK(!logger_boot_uuid.empty());
-      CHECK(!source_boot_uuid.empty());
+      ABSL_CHECK(!logger_boot_uuid.empty());
+      ABSL_CHECK(!source_boot_uuid.empty());
       for (size_t node_index = 0; node_index < boot_uuids_size; ++node_index) {
         const std::string_view boot_uuid =
             log_header->message().boot_uuids()->Get(node_index)->string_view();
@@ -803,40 +806,42 @@ void PartsSorter::PopulateFromFiles(
                               ->Get(node_index)))
                     : monotonic_clock::max_time;
         if (boot_uuid.empty()) {
-          CHECK_EQ(oldest_local_monotonic_timestamp, monotonic_clock::max_time);
-          CHECK_EQ(oldest_remote_monotonic_timestamp,
-                   monotonic_clock::max_time);
-          CHECK_EQ(oldest_local_unreliable_monotonic_timestamp,
-                   monotonic_clock::max_time);
-          CHECK_EQ(oldest_remote_unreliable_monotonic_timestamp,
-                   monotonic_clock::max_time);
-          CHECK_EQ(oldest_logger_local_unreliable_monotonic_timestamp,
-                   monotonic_clock::max_time);
-          CHECK_EQ(oldest_logger_remote_unreliable_monotonic_timestamp,
-                   monotonic_clock::max_time);
-          CHECK_EQ(oldest_local_reliable_monotonic_timestamp,
-                   monotonic_clock::max_time);
-          CHECK_EQ(oldest_remote_reliable_monotonic_timestamp,
-                   monotonic_clock::max_time);
+          ABSL_CHECK_EQ(oldest_local_monotonic_timestamp,
+                        monotonic_clock::max_time);
+          ABSL_CHECK_EQ(oldest_remote_monotonic_timestamp,
+                        monotonic_clock::max_time);
+          ABSL_CHECK_EQ(oldest_local_unreliable_monotonic_timestamp,
+                        monotonic_clock::max_time);
+          ABSL_CHECK_EQ(oldest_remote_unreliable_monotonic_timestamp,
+                        monotonic_clock::max_time);
+          ABSL_CHECK_EQ(oldest_logger_local_unreliable_monotonic_timestamp,
+                        monotonic_clock::max_time);
+          ABSL_CHECK_EQ(oldest_logger_remote_unreliable_monotonic_timestamp,
+                        monotonic_clock::max_time);
+          ABSL_CHECK_EQ(oldest_local_reliable_monotonic_timestamp,
+                        monotonic_clock::max_time);
+          ABSL_CHECK_EQ(oldest_remote_reliable_monotonic_timestamp,
+                        monotonic_clock::max_time);
           continue;
         }
 
         if (boot_uuid == source_boot_uuid) {
-          CHECK_EQ(oldest_local_monotonic_timestamp, monotonic_clock::max_time);
-          CHECK_EQ(oldest_remote_monotonic_timestamp,
-                   monotonic_clock::max_time);
-          CHECK_EQ(oldest_local_unreliable_monotonic_timestamp,
-                   monotonic_clock::max_time);
-          CHECK_EQ(oldest_remote_unreliable_monotonic_timestamp,
-                   monotonic_clock::max_time);
-          CHECK_EQ(oldest_local_reliable_monotonic_timestamp,
-                   monotonic_clock::max_time);
-          CHECK_EQ(oldest_remote_reliable_monotonic_timestamp,
-                   monotonic_clock::max_time);
+          ABSL_CHECK_EQ(oldest_local_monotonic_timestamp,
+                        monotonic_clock::max_time);
+          ABSL_CHECK_EQ(oldest_remote_monotonic_timestamp,
+                        monotonic_clock::max_time);
+          ABSL_CHECK_EQ(oldest_local_unreliable_monotonic_timestamp,
+                        monotonic_clock::max_time);
+          ABSL_CHECK_EQ(oldest_remote_unreliable_monotonic_timestamp,
+                        monotonic_clock::max_time);
+          ABSL_CHECK_EQ(oldest_local_reliable_monotonic_timestamp,
+                        monotonic_clock::max_time);
+          ABSL_CHECK_EQ(oldest_remote_reliable_monotonic_timestamp,
+                        monotonic_clock::max_time);
           if (oldest_logger_local_unreliable_monotonic_timestamp !=
               monotonic_clock::max_time) {
-            CHECK_NE(oldest_logger_remote_unreliable_monotonic_timestamp,
-                     monotonic_clock::max_time);
+            ABSL_CHECK_NE(oldest_logger_remote_unreliable_monotonic_timestamp,
+                          monotonic_clock::max_time);
             // Now, we found a timestamp going the other way.  Add it in!
             auto logger_node_boot_times_it = boot_times.find(logger_node);
             if (logger_node_boot_times_it == boot_times.end()) {
@@ -921,10 +926,10 @@ void PartsSorter::PopulateFromFiles(
         // There is no supported way to get logger timestamps from anything but
         // the source node.  Since we've already handled that above, we should
         // always expect max_time here.
-        CHECK_EQ(oldest_logger_local_unreliable_monotonic_timestamp,
-                 monotonic_clock::max_time);
-        CHECK_EQ(oldest_logger_remote_unreliable_monotonic_timestamp,
-                 monotonic_clock::max_time);
+        ABSL_CHECK_EQ(oldest_logger_local_unreliable_monotonic_timestamp,
+                      monotonic_clock::max_time);
+        ABSL_CHECK_EQ(oldest_logger_remote_unreliable_monotonic_timestamp,
+                      monotonic_clock::max_time);
 
         // Now, we have a valid pairing.
         auto destination_boot_times_it =
@@ -973,16 +978,16 @@ void PartsSorter::PopulateFromFiles(
       it->second.logger_monotonic_start_time = logger_monotonic_start_time;
       it->second.logger_realtime_start_time = logger_realtime_start_time;
     } else if (monotonic_start_time != monotonic_clock::min_time) {
-      CHECK_EQ(it->second.monotonic_start_time, monotonic_start_time);
-      CHECK_EQ(it->second.logger_monotonic_start_time,
-               logger_monotonic_start_time);
-      CHECK_EQ(it->second.logger_realtime_start_time,
-               logger_realtime_start_time);
+      ABSL_CHECK_EQ(it->second.monotonic_start_time, monotonic_start_time);
+      ABSL_CHECK_EQ(it->second.logger_monotonic_start_time,
+                    logger_monotonic_start_time);
+      ABSL_CHECK_EQ(it->second.logger_realtime_start_time,
+                    logger_realtime_start_time);
     }
     if (it->second.realtime_start_time == realtime_clock::min_time) {
       it->second.realtime_start_time = realtime_start_time;
     } else if (realtime_start_time != realtime_clock::min_time) {
-      CHECK_EQ(it->second.realtime_start_time, realtime_start_time);
+      ABSL_CHECK_EQ(it->second.realtime_start_time, realtime_start_time);
     }
 
     it->second.parts.emplace_back(std::make_pair(part.name, parts_index));
@@ -991,7 +996,7 @@ void PartsSorter::PopulateFromFiles(
 
 std::vector<LogFile> PartsSorter::FormatOldParts() {
   // Now reformat old_parts to be in the right datastructure to report.
-  CHECK(!old_parts.empty());
+  ABSL_CHECK(!old_parts.empty());
 
   std::vector<LogFile> result;
   for (UnsortedOldParts &p : old_parts) {
@@ -1021,7 +1026,7 @@ std::vector<LogFile> PartsSorter::FormatOldParts() {
     std::string config_copy_sha256 = Sha256(config_copy.span());
 
     auto it = config_sha256_lookup.find(p.parts.config_sha256);
-    CHECK(it != config_sha256_lookup.end());
+    ABSL_CHECK(it != config_sha256_lookup.end());
 
     log_file.config = it->second;
     log_file.config_sha256 = p.parts.config_sha256;
@@ -1045,9 +1050,10 @@ std::vector<LogFile> PartsSorter::FormatOldParts() {
 std::map<std::string, NodeBootState> PartsSorter::ComputeNewBootConstraints() {
   std::map<std::string, NodeBootState> boot_constraints;
 
-  CHECK_EQ(config_sha256_list.size(), 1u) << ": Found more than one config";
+  ABSL_CHECK_EQ(config_sha256_list.size(), 1u)
+      << ": Found more than one config";
   auto config_it = config_sha256_lookup.find(*config_sha256_list.begin());
-  CHECK(config_it != config_sha256_lookup.end())
+  ABSL_CHECK(config_it != config_sha256_lookup.end())
       << ": Failed to find a config with a sha256 of "
       << *config_sha256_list.begin();
   const Configuration *config = config_it->second.get();
@@ -1231,8 +1237,8 @@ std::map<std::string, NodeBootState> PartsSorter::ComputeNewBootConstraints() {
 
           auto reverse_local_node_boot_uuid_it =
               reverse_local_node_it->second.find(local_boot_uuid);
-          CHECK(reverse_local_node_boot_uuid_it ==
-                reverse_local_node_it->second.end());
+          ABSL_CHECK(reverse_local_node_boot_uuid_it ==
+                     reverse_local_node_it->second.end());
           reverse_local_node_it->second.emplace(local_boot_uuid, boot_time);
           VLOG(1) << " Boot time for local " << local_node_name << " boot "
                   << local_boot_uuid << " remote " << remote_node_name
@@ -1388,7 +1394,7 @@ std::map<std::string, NodeBootState> PartsSorter::ComputeNewBootConstraints() {
                            .oldest_local_unreliable_monotonic_timestamp;
               } else if (both_reliable) {
                 VLOG(1) << "Both Reliable";
-                CHECK_NE(
+                ABSL_CHECK_NE(
                     std::get<1>(a).oldest_local_reliable_monotonic_timestamp,
                     std::get<1>(b).oldest_local_reliable_monotonic_timestamp)
                     << ": Broken logic, the same reliable message has been "
@@ -1669,7 +1675,7 @@ std::map<std::string, NodeBootState> PartsSorter::ComputeOldBootConstraints() {
 
     for (std::pair<const std::pair<std::string, std::string>, UnsortedLogParts>
              &parts : logs.second.unsorted_parts) {
-      CHECK_GT(parts.second.parts.size(), 0u);
+      ABSL_CHECK_GT(parts.second.parts.size(), 0u);
 
       // Track that this boot exists so we know the overall set of boots we need
       // to link.
@@ -1754,8 +1760,8 @@ std::map<std::string, NodeBootState> PartsSorter::ComputeOldBootConstraints() {
       }
 
       for (size_t i = 1; i < boot_parts_index_ranges.second.size(); ++i) {
-        CHECK_LT(boot_parts_index_ranges.second[i - 1].second.second,
-                 boot_parts_index_ranges.second[i].second.first)
+        ABSL_CHECK_LT(boot_parts_index_ranges.second[i - 1].second.second,
+                      boot_parts_index_ranges.second[i].second.first)
             << ": Overlapping parts_index, please investigate "
             << boot_parts_index_ranges.first << " "
             << boot_parts_index_ranges.second[i - 1].first << " "
@@ -1802,7 +1808,7 @@ MapBoots PartsSorter::ComputeBootCounts() {
     for (const std::pair<const std::string, NodeBootState> &node_state :
          boot_constraints) {
       LOG(INFO) << "Node " << node_state.first;
-      CHECK_GT(node_state.second.boots.size(), 0u)
+      ABSL_CHECK_GT(node_state.second.boots.size(), 0u)
           << ": Need a boot from each node.";
 
       for (const std::string &boot : node_state.second.boots) {
@@ -1829,7 +1835,7 @@ MapBoots PartsSorter::ComputeBootCounts() {
   MapBoots boots;
   for (const std::pair<const std::string, NodeBootState> &node_state :
        boot_constraints) {
-    CHECK_GT(node_state.second.boots.size(), 0u)
+    ABSL_CHECK_GT(node_state.second.boots.size(), 0u)
         << ": Need a boot from each node.";
     if (node_state.second.boots.size() == 1u) {
       boots.boot_count_map.insert(
@@ -1867,7 +1873,7 @@ MapBoots PartsSorter::ComputeBootCounts() {
 
       ++update_count;
 
-      CHECK_LE(update_count, node_state.second.boots.size())
+      ABSL_CHECK_LE(update_count, node_state.second.boots.size())
           << ": Found a cyclic boot graph, giving up.";
     }
 
@@ -1893,8 +1899,8 @@ MapBoots PartsSorter::ComputeBootCounts() {
       //  a < c
       //  b < c
       //
-      // That is rare enough in practice that we can CHECK and fix it if someone
-      // produces a valid use case.
+      // That is rare enough in practice that we can ABSL_CHECK and fix it if
+      // someone produces a valid use case.
       bool updated = false;
       for (const std::pair<std::string, bool> &constraint : it->second) {
         if (constraint.second) {
@@ -1911,11 +1917,11 @@ MapBoots PartsSorter::ComputeBootCounts() {
 
       ++update_count;
 
-      CHECK_LE(update_count, node_state.second.boots.size())
+      ABSL_CHECK_LE(update_count, node_state.second.boots.size())
           << ": Found a cyclic boot graph, giving up.";
     }
 
-    CHECK_EQ(sorted_boots.size(), node_state.second.boots.size())
+    ABSL_CHECK_EQ(sorted_boots.size(), node_state.second.boots.size())
         << ": Graph failed to reach all the boots on node " << node_state.first;
 
     VLOG(1) << "Node " << node_state.first;
@@ -1950,7 +1956,7 @@ std::vector<LogFile> PartsSorter::FormatNewParts() {
     {
       auto boot_count_it =
           boot_counts->boot_count_map.find(new_file.logger_boot_uuid);
-      CHECK(boot_count_it != boot_counts->boot_count_map.end());
+      ABSL_CHECK(boot_count_it != boot_counts->boot_count_map.end());
       new_file.logger_boot_count = boot_count_it->second;
     }
     new_file.monotonic_start_time = logs.second.monotonic_start_time;
@@ -1991,7 +1997,7 @@ std::vector<LogFile> PartsSorter::FormatNewParts() {
       {
         auto boot_count_it =
             boot_counts->boot_count_map.find(new_parts.source_boot_uuid);
-        CHECK(boot_count_it != boot_counts->boot_count_map.end());
+        ABSL_CHECK(boot_count_it != boot_counts->boot_count_map.end());
         new_parts.boot_count = boot_count_it->second;
       }
       new_parts.logger_boot_count = new_file.logger_boot_count;
@@ -2006,7 +2012,7 @@ std::vector<LogFile> PartsSorter::FormatNewParts() {
         int last_parts_index = -1;
         std::string_view last_part_name;
         for (std::pair<std::string, int> &p : parts.second.parts) {
-          CHECK_LT(last_parts_index, p.second)
+          ABSL_CHECK_LT(last_parts_index, p.second)
               << ": Broken log, Found duplicate parts in '" << last_part_name
               << "' and '" << p.first << "'";
           if (last_parts_index != -1) {
@@ -2027,11 +2033,11 @@ std::vector<LogFile> PartsSorter::FormatNewParts() {
         }
       }
 
-      CHECK(!parts.second.config_sha256.empty());
+      ABSL_CHECK(!parts.second.config_sha256.empty());
       // The easy case.  We've got a sha256 to point to, so go look it up.
       // Abort if it doesn't exist.
       auto it = config_sha256_lookup.find(parts.second.config_sha256);
-      CHECK(it != config_sha256_lookup.end())
+      ABSL_CHECK(it != config_sha256_lookup.end())
           << ": Failed to find a matching config with a SHA256 of "
           << parts.second.config_sha256;
       new_parts.config_sha256 = std::move(parts.second.config_sha256);
@@ -2041,7 +2047,7 @@ std::vector<LogFile> PartsSorter::FormatNewParts() {
         new_file.config = new_parts.config;
         config_sha256 = new_file.config_sha256;
       } else {
-        CHECK_EQ(config_sha256, new_file.config_sha256)
+        ABSL_CHECK_EQ(config_sha256, new_file.config_sha256)
             << ": Mismatched configs in " << new_file;
       }
       seen_part = true;
@@ -2052,7 +2058,7 @@ std::vector<LogFile> PartsSorter::FormatNewParts() {
   }
 
   {
-    CHECK_EQ(config_sha256_lookup.size(), 1u)
+    ABSL_CHECK_EQ(config_sha256_lookup.size(), 1u)
         << ": We only support log files with 1 config in them.";
     std::shared_ptr<const aos::Configuration> config =
         config_sha256_lookup.begin()->second;
@@ -2081,7 +2087,7 @@ std::vector<LogFile> PartsSorter::SortParts() {
     }
     return std::vector<LogFile>{};
   }
-  CHECK_NE(old_parts.empty(), parts_list.empty())
+  ABSL_CHECK_NE(old_parts.empty(), parts_list.empty())
       << ": Can't have a mix of old and new parts.";
   if (!old_parts.empty()) {
     return FormatOldParts();
@@ -2289,11 +2295,11 @@ SelectedLogParts::SelectedLogParts(std::string_view node_name,
             << boot_index_;
     return;
   }
-  CHECK(HasMatchingConfigsTemplate(log_parts_));
+  ABSL_CHECK(HasMatchingConfigsTemplate(log_parts_));
   config_ = log_parts_.front().config();
 
   for (LogPartsAccess &part : log_parts_) {
-    CHECK_EQ(config_.get(), part.config().get());
+    ABSL_CHECK_EQ(config_.get(), part.config().get());
   }
 
   // Enforce that we are sorting things only from a single node from a single
@@ -2301,18 +2307,19 @@ SelectedLogParts::SelectedLogParts(std::string_view node_name,
   const std::string_view part0_source_boot_uuid =
       log_parts_.front().source_boot_uuid();
   for (const auto &part : log_parts_) {
-    CHECK_EQ(node_name_, part.node_name()) << ": Can't merge different nodes.";
-    CHECK_EQ(part0_source_boot_uuid, part.source_boot_uuid())
+    ABSL_CHECK_EQ(node_name_, part.node_name())
+        << ": Can't merge different nodes.";
+    ABSL_CHECK_EQ(part0_source_boot_uuid, part.source_boot_uuid())
         << ": Can't merge different boots.";
-    CHECK_EQ(boot_index_, part.boot_count());
+    ABSL_CHECK_EQ(boot_index_, part.boot_count());
   }
 }
 
 LogFilesContainer::LogFilesContainer(
     std::optional<const LogSource *> log_source, std::vector<LogFile> log_files)
     : log_source_(log_source), log_files_(std::move(log_files)) {
-  CHECK_GT(log_files_.size(), 0u);
-  CHECK(HasMatchingConfigsTemplate(log_files_));
+  ABSL_CHECK_GT(log_files_.size(), 0u);
+  ABSL_CHECK(HasMatchingConfigsTemplate(log_files_));
   config_ = log_files_.front().config;
   boots_ = log_files_.front().boots;
 
@@ -2320,7 +2327,7 @@ LogFilesContainer::LogFilesContainer(
 
   // Scan and collect all related nodes and number of reboots per node.
   for (const LogFile &log_file : log_files_) {
-    CHECK_EQ(config_.get(), log_file.config.get());
+    ABSL_CHECK_EQ(config_.get(), log_file.config.get());
     for (const LogParts &part : log_file.parts) {
       auto node_item = nodes_boots_.find(part.node);
       if (node_item != nodes_boots_.end()) {
@@ -2339,9 +2346,9 @@ LogFilesContainer::LogFilesContainer(
 
 size_t LogFilesContainer::BootsForNode(std::string_view node_name) const {
   const auto &node_item = nodes_boots_.find(std::string(node_name));
-  CHECK(node_item != nodes_boots_.end())
+  ABSL_CHECK(node_item != nodes_boots_.end())
       << ": Missing parts associated with node " << node_name;
-  CHECK_GT(node_item->second, 0u) << ": No boots for node " << node_name;
+  ABSL_CHECK_GT(node_item->second, 0u) << ": No boots for node " << node_name;
   return node_item->second;
 }
 

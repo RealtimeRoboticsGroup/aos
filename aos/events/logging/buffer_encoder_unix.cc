@@ -5,14 +5,14 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 namespace aos::logger {
 
 DummyDecoder::DummyDecoder(std::string_view filename)
     : filename_(filename), fd_(open(filename_.c_str(), O_RDONLY | O_CLOEXEC)) {
-  PCHECK(fd_ != -1) << ": Failed to open " << filename;
+  ABSL_PCHECK(fd_ != -1) << ": Failed to open " << filename;
 }
 
 DummyDecoder::~DummyDecoder() {
@@ -27,7 +27,7 @@ size_t DummyDecoder::Read(uint8_t *begin, uint8_t *end) {
     return 0;
   }
   const ssize_t count = read(fd_, begin, end - begin);
-  PCHECK(count >= 0) << ": Failed to read from file";
+  ABSL_PCHECK(count >= 0) << ": Failed to read from file";
   if (count == 0) {
     end_of_file_ = true;
   }

@@ -6,7 +6,7 @@
 #include <string>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/configuration.h"
@@ -49,14 +49,14 @@ int main(int argc, char **argv) {
         // a member of more groups than 0.  Something went wrong if that isn't
         // true.
         int ngroups = 0;
-        CHECK(getgrouplist(user_data->pw_name, gid, NULL, &ngroups) == -1);
+        ABSL_CHECK(getgrouplist(user_data->pw_name, gid, NULL, &ngroups) == -1);
         groups.resize(ngroups);
 
-        PCHECK(getgrouplist(user_data->pw_name, gid, groups.data(), &ngroups) ==
-               static_cast<int>(groups.size()));
+        ABSL_PCHECK(getgrouplist(user_data->pw_name, gid, groups.data(),
+                                 &ngroups) == static_cast<int>(groups.size()));
         for (int i = 0; i < ngroups; i++) {
           struct group *gr = getgrgid(groups[i]);
-          PCHECK(gr != nullptr);
+          ABSL_PCHECK(gr != nullptr);
 
           LOG(INFO) << "  Adding supplemental group of " << gr->gr_name;
         }
@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
       }
     }
     // Change the supplemental groups of the user we're running as.
-    PCHECK(setgroups(groups.size(), groups.data()) == 0)
+    ABSL_PCHECK(setgroups(groups.size(), groups.data()) == 0)
         << ": Failed to set groups";
 
     // Change the real and effective IDs to the user we're running as. The

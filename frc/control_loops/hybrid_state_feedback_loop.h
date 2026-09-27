@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "Eigen/Dense"
+#include "absl/log/absl_check.h"
 
 #include "aos/logging/logging.h"
 #include "aos/macros.h"
@@ -185,7 +186,7 @@ class StateFeedbackHybridPlant {
   // Computes the new X and Y given the control input.
   void Update(const Eigen::Matrix<Scalar, number_of_inputs, 1> &U,
               ::std::chrono::nanoseconds dt, Scalar voltage_battery) {
-    CHECK_NE(dt, std::chrono::nanoseconds(0));
+    ABSL_CHECK_NE(dt, std::chrono::nanoseconds(0));
 
     // Powers outside of the range are more likely controller bugs than things
     // that the plant should deal with.
@@ -269,7 +270,7 @@ struct HybridKalmanCoefficients final {
         R_continuous(R_continuous),
         P_steady_state(P_steady_state),
         delayed_u(delayed_u) {
-    CHECK(!delayed_u) << ": Delayed hybrid filters aren't supported yet.";
+    ABSL_CHECK(!delayed_u) << ": Delayed hybrid filters aren't supported yet.";
   }
 };
 

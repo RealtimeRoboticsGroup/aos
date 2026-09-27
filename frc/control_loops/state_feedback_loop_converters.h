@@ -1,6 +1,8 @@
 #ifndef FRC_CONTROL_LOOPS_STATE_FEEDBACK_LOOP_CONVERTERS_H_
 #define FRC_CONTROL_LOOPS_STATE_FEEDBACK_LOOP_CONVERTERS_H_
 
+#include "absl/log/absl_check.h"
+
 #include "frc/control_loops/state_feedback_loop.h"
 #include "frc/control_loops/state_feedback_loop_static.h"
 #include "frc/math/flatbuffers_matrix.h"
@@ -17,14 +19,14 @@ std::unique_ptr<StateFeedbackPlantCoefficients<
     number_of_states, number_of_inputs, number_of_outputs>>
 MakeStateFeedbackPlantCoefficients(
     const fbs::StateFeedbackPlantCoefficients &coefficients) {
-  CHECK(coefficients.a() != nullptr);
-  CHECK(coefficients.b() != nullptr);
-  CHECK(coefficients.c() != nullptr);
-  CHECK(coefficients.d() != nullptr);
-  CHECK(coefficients.u_max() != nullptr);
-  CHECK(coefficients.u_min() != nullptr);
-  CHECK(coefficients.u_limit_coefficient() != nullptr);
-  CHECK(coefficients.u_limit_constant() != nullptr);
+  ABSL_CHECK(coefficients.a() != nullptr);
+  ABSL_CHECK(coefficients.b() != nullptr);
+  ABSL_CHECK(coefficients.c() != nullptr);
+  ABSL_CHECK(coefficients.d() != nullptr);
+  ABSL_CHECK(coefficients.u_max() != nullptr);
+  ABSL_CHECK(coefficients.u_min() != nullptr);
+  ABSL_CHECK(coefficients.u_limit_coefficient() != nullptr);
+  ABSL_CHECK(coefficients.u_limit_constant() != nullptr);
 
   return std::make_unique<StateFeedbackPlantCoefficients<
       number_of_states, number_of_inputs, number_of_outputs>>(
@@ -46,8 +48,8 @@ std::unique_ptr<StateFeedbackControllerCoefficients<
     number_of_states, number_of_inputs, number_of_outputs>>
 MakeStateFeedbackControllerCoefficients(
     const fbs::StateFeedbackControllerCoefficients &coefficients) {
-  CHECK(coefficients.k() != nullptr);
-  CHECK(coefficients.kff() != nullptr);
+  ABSL_CHECK(coefficients.k() != nullptr);
+  ABSL_CHECK(coefficients.kff() != nullptr);
   return std::make_unique<StateFeedbackControllerCoefficients<
       number_of_states, number_of_inputs, number_of_outputs>>(
       ToEigenOrDie<number_of_inputs, number_of_states>(*coefficients.k()),
@@ -59,9 +61,9 @@ std::unique_ptr<StateFeedbackObserverCoefficients<
     number_of_states, number_of_inputs, number_of_outputs>>
 MakeStateFeedbackObserverCoefficients(
     const fbs::StateFeedbackObserverCoefficients &coefficients) {
-  CHECK(coefficients.kalman_gain() != nullptr);
-  CHECK(coefficients.q() != nullptr);
-  CHECK(coefficients.r() != nullptr);
+  ABSL_CHECK(coefficients.kalman_gain() != nullptr);
+  ABSL_CHECK(coefficients.q() != nullptr);
+  ABSL_CHECK(coefficients.r() != nullptr);
   return std::make_unique<StateFeedbackObserverCoefficients<
       number_of_states, number_of_inputs, number_of_outputs>>(
       ToEigenOrDie<number_of_states, number_of_outputs>(
@@ -75,7 +77,7 @@ template <int number_of_states, int number_of_inputs, int number_of_outputs>
 StateFeedbackLoop<number_of_states, number_of_inputs, number_of_outputs>
 MakeStateFeedbackLoop(const flatbuffers::Vector<flatbuffers::Offset<
                           fbs::StateFeedbackLoopCoefficients>> &coefficients) {
-  CHECK_LE(1u, coefficients.size());
+  ABSL_CHECK_LE(1u, coefficients.size());
   std::vector<std::unique_ptr<StateFeedbackPlantCoefficients<
       number_of_states, number_of_inputs, number_of_outputs>>>
       plant_coefficients;
@@ -86,9 +88,9 @@ MakeStateFeedbackLoop(const flatbuffers::Vector<flatbuffers::Offset<
       number_of_states, number_of_inputs, number_of_outputs>>>
       observer_coefficients;
   for (const fbs::StateFeedbackLoopCoefficients *loop : coefficients) {
-    CHECK(loop->has_plant());
-    CHECK(loop->has_controller());
-    CHECK(loop->has_observer());
+    ABSL_CHECK(loop->has_plant());
+    ABSL_CHECK(loop->has_controller());
+    ABSL_CHECK(loop->has_observer());
     plant_coefficients.emplace_back(
         MakeStateFeedbackPlantCoefficients<number_of_states, number_of_inputs,
                                            number_of_outputs>(*loop->plant()));

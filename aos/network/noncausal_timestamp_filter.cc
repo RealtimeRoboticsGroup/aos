@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <tuple>
 
+#include "absl/log/absl_check.h"
 #include "absl/log/vlog_is_on.h"
 #include "absl/numeric/int128.h"
 #include "absl/strings/str_cat.h"
@@ -73,8 +74,8 @@ void NormalizeTimestamps(monotonic_clock::time_point *ta_base, double *ta) {
     *ta_base += chrono::nanoseconds(1);
   }
 
-  CHECK_GE(*ta, 0.0);
-  CHECK_LT(*ta, 1.0);
+  ABSL_CHECK_GE(*ta, 0.0);
+  ABSL_CHECK_LT(*ta, 1.0);
 }
 void NormalizeTimestamps(BootTimestamp *ta_base, double *ta) {
   NormalizeTimestamps(&ta_base->time, ta);
@@ -98,8 +99,8 @@ NoncausalTimestampFilter::FindTimestamps(const NoncausalTimestampFilter *other,
                                          bool use_other, Pointer pointer,
                                          BootTimestamp ta_base, double ta,
                                          size_t sample_boot) const {
-  CHECK_GE(ta, 0.0);
-  CHECK_LT(ta, 1.0);
+  ABSL_CHECK_GE(ta, 0.0);
+  ABSL_CHECK_LT(ta, 1.0);
 
   // Since ta is less than an integer, and timestamps should be at least 1 ns
   // apart, we can ignore ta if we make sure that the end of the segment is
@@ -114,8 +115,8 @@ std::pair<
 NoncausalTimestampFilter::SingleFilter::FindTimestamps(
     const SingleFilter *other, bool use_other, Pointer pointer,
     monotonic_clock::time_point ta_base, double ta) const {
-  CHECK_GE(ta, 0.0);
-  CHECK_LT(ta, 1.0);
+  ABSL_CHECK_GE(ta, 0.0);
+  ABSL_CHECK_LT(ta, 1.0);
 
   // Since ta is less than an integer, and timestamps should be at least 1 ns
   // apart, we can ignore ta if we make sure that the end of the segment is
@@ -142,10 +143,11 @@ NoncausalTimestampFilter::InterpolateWithOtherFilter(
 
   // The invariant of pointer is that other_points is bounded by t0, t1. Confirm
   // it before we return things depending on it since it is easy.
-  CHECK_GT(std::get<0>(pointer.other_points_[0].second), std::get<0>(t0));
-  CHECK_LT(std::get<0>(
-               pointer.other_points_[pointer.other_points_.size() - 1].second),
-           std::get<0>(t1));
+  ABSL_CHECK_GT(std::get<0>(pointer.other_points_[0].second), std::get<0>(t0));
+  ABSL_CHECK_LT(
+      std::get<0>(
+          pointer.other_points_[pointer.other_points_.size() - 1].second),
+      std::get<0>(t1));
   // We have 2 timestamps bookending everything, and a list of points in the
   // middle.
   //
@@ -155,7 +157,7 @@ NoncausalTimestampFilter::InterpolateWithOtherFilter(
     // We are before the hunk!  Use the start point, and the beginning of the
     // hunk.
     t1 = pointer.other_points_[0].second;
-    CHECK_LE(
+    ABSL_CHECK_LE(
         absl::int128(std::abs((std::get<1>(t1) - std::get<1>(t0)).count())) *
             absl::int128(MaxVelocityRatio::den),
         absl::int128((std::get<0>(t1) - std::get<0>(t0)).count()) *
@@ -167,7 +169,7 @@ NoncausalTimestampFilter::InterpolateWithOtherFilter(
     // We are after the hunk!  Use the end point, and the end of the
     // hunk.
     t0 = pointer.other_points_[pointer.other_points_.size() - 1].second;
-    CHECK_LE(
+    ABSL_CHECK_LE(
         absl::int128(std::abs((std::get<1>(t1) - std::get<1>(t0)).count())) *
             absl::int128(MaxVelocityRatio::den),
         absl::int128((std::get<0>(t1) - std::get<0>(t0)).count()) *
@@ -175,7 +177,7 @@ NoncausalTimestampFilter::InterpolateWithOtherFilter(
         << ": t0 " << TimeString(t0) << ", t1 " << TimeString(t1);
   } else {
     // We are inside the hunk.  Find the points bounding it.
-    CHECK_GT(pointer.other_points_.size(), 1u);
+    ABSL_CHECK_GT(pointer.other_points_.size(), 1u);
 
     auto it = std::upper_bound(
         pointer.other_points_.begin() + 1, pointer.other_points_.end() - 1, ta,
@@ -187,7 +189,7 @@ NoncausalTimestampFilter::InterpolateWithOtherFilter(
     t0 = (it - 1)->second;
     t1 = it->second;
   }
-  DCHECK_LT(std::get<0>(t0), std::get<0>(t1));
+  ABSL_DCHECK_LT(std::get<0>(t0), std::get<0>(t1));
   return std::make_pair(pointer, std::make_pair(t0, t1));
 }
 
@@ -198,7 +200,7 @@ std::pair<
 NoncausalTimestampFilter::SingleFilter::FindTimestamps(
     const SingleFilter *other, bool use_other, Pointer pointer,
     monotonic_clock::time_point ta) const {
-  CHECK_GT(timestamps_size(), 1u);
+  ABSL_CHECK_GT(timestamps_size(), 1u);
 
   std::tuple<monotonic_clock::time_point, chrono::nanoseconds> t0;
   std::tuple<monotonic_clock::time_point, chrono::nanoseconds> t1;
@@ -208,13 +210,13 @@ NoncausalTimestampFilter::SingleFilter::FindTimestamps(
   if (pointer.boot_filter_ != nullptr &&
       &pointer.boot_filter_->filter == this &&
       pointer.index_ + 1 != timestamps_size()) {
-    CHECK_LT(pointer.index_ + 1, timestamps_size()) << " " << this;
+    ABSL_CHECK_LT(pointer.index_ + 1, timestamps_size()) << " " << this;
     // Confirm that the cached timestamps haven't changed so we can trust the
     // results.
     //
-    // TODO(austin): Should this be a DCHECK when we are happier?  This is a
-    // constraint on the user's behavior we are enforcing.
-    CHECK(timestamp(pointer.index_) == pointer.t0_)
+    // TODO(austin): Should this be a ABSL_DCHECK when we are happier?  This is
+    // a constraint on the user's behavior we are enforcing.
+    ABSL_CHECK(timestamp(pointer.index_) == pointer.t0_)
         << ": " << this << " boot_filter " << pointer.boot_filter_ << " got "
         << std::get<0>(timestamp(pointer.index_)) << ", "
         << std::get<1>(timestamp(pointer.index_)).count()
@@ -225,8 +227,8 @@ NoncausalTimestampFilter::SingleFilter::FindTimestamps(
     if (pointer.t0_ != pointer.t1_) {
       // If t0 and t1 match, this was a "before the start" point.  We can still
       // check it against the first segment, but we know it won't match so don't
-      // enforce the CHECK that the cache matches.
-      CHECK(timestamp(pointer.index_ + 1) == pointer.t1_)
+      // enforce the ABSL_CHECK that the cache matches.
+      ABSL_CHECK(timestamp(pointer.index_ + 1) == pointer.t1_)
           << ": " << this << " boot_filter " << pointer.boot_filter_
           << " index " << pointer.index_ << ", size " << timestamps_size()
           << ", got " << std::get<0>(timestamp(pointer.index_ + 1)) << ", "
@@ -246,15 +248,15 @@ NoncausalTimestampFilter::SingleFilter::FindTimestamps(
 
         // Er, we shouldn't be able to have a non-empty other_points_ without
         // having other and points...
-        CHECK(other != nullptr);
-        CHECK(!other->timestamps_empty());
+        ABSL_CHECK(other != nullptr);
+        ABSL_CHECK(!other->timestamps_empty());
 
         // TODO(austin): Is there a cheaper way to verify nothing has changed?
         // Should we add a generation counter of some sort?
         for (const auto &point : pointer.other_points_) {
           const auto other_point = other->timestamps_[point.first];
-          CHECK(std::get<0>(other_point) + std::get<1>(other_point) ==
-                std::get<0>(point.second))
+          ABSL_CHECK(std::get<0>(other_point) + std::get<1>(other_point) ==
+                     std::get<0>(point.second))
               << ": Cache changed";
         }
 
@@ -345,8 +347,8 @@ NoncausalTimestampFilter::SingleFilter::FindTimestamps(
 std::pair<Pointer, std::tuple<monotonic_clock::time_point, chrono::nanoseconds>>
 NoncausalTimestampFilter::SingleFilter::GetReferenceTimestamp(
     monotonic_clock::time_point ta_base, double ta) const {
-  DCHECK_GE(ta, 0.0);
-  DCHECK_LT(ta, 1.0);
+  ABSL_DCHECK_GE(ta, 0.0);
+  ABSL_DCHECK_LT(ta, 1.0);
   std::tuple<monotonic_clock::time_point, chrono::nanoseconds>
       reference_timestamp = timestamp(0);
 
@@ -366,8 +368,8 @@ NoncausalTimestampFilter::SingleFilter::GetReferenceTimestamp(
 
 bool NoncausalTimestampFilter::SingleFilter::IsOutsideSamples(
     monotonic_clock::time_point ta_base, double ta) const {
-  DCHECK_GE(ta, 0.0);
-  DCHECK_LT(ta, 1.0);
+  ABSL_DCHECK_GE(ta, 0.0);
+  ABSL_DCHECK_LT(ta, 1.0);
   if (timestamps_size() == 1u || ta_base < std::get<0>(timestamp(0)) ||
       ta_base >= std::get<0>(timestamp(timestamps_size() - 1u))) {
     return true;
@@ -378,8 +380,8 @@ bool NoncausalTimestampFilter::SingleFilter::IsOutsideSamples(
 
 bool NoncausalTimestampFilter::SingleFilter::IsAfterSamples(
     monotonic_clock::time_point ta_base, double ta) const {
-  DCHECK_GE(ta, 0.0);
-  DCHECK_LT(ta, 1.0);
+  ABSL_DCHECK_GE(ta, 0.0);
+  ABSL_DCHECK_LT(ta, 1.0);
   if (ta_base >= std::get<0>(timestamp(timestamps_size() - 1u))) {
     return true;
   }
@@ -405,8 +407,8 @@ NoncausalTimestampFilter::InterpolateOffset(
     std::tuple<monotonic_clock::time_point, chrono::nanoseconds> p0,
     std::tuple<monotonic_clock::time_point, chrono::nanoseconds> p1,
     monotonic_clock::time_point ta_base, double ta) {
-  DCHECK_GE(ta, 0.0);
-  DCHECK_LT(ta, 1.0);
+  ABSL_DCHECK_GE(ta, 0.0);
+  ABSL_DCHECK_LT(ta, 1.0);
 
   // Given 2 points defining a line and the time along that line, interpolate.
   //
@@ -463,8 +465,8 @@ NoncausalTimestampFilter::BoundOffset(
     std::tuple<monotonic_clock::time_point, chrono::nanoseconds> p0,
     std::tuple<monotonic_clock::time_point, chrono::nanoseconds> p1,
     monotonic_clock::time_point ta_base, double ta) {
-  DCHECK_GE(ta, 0.0);
-  DCHECK_LT(ta, 1.0);
+  ABSL_DCHECK_GE(ta, 0.0);
+  ABSL_DCHECK_LT(ta, 1.0);
 
   const std::tuple<chrono::nanoseconds, double, double> o0 =
       NoncausalTimestampFilter::ExtrapolateOffset(p0, ta_base, ta);
@@ -485,8 +487,8 @@ std::tuple<chrono::nanoseconds, double, double>
 NoncausalTimestampFilter::ExtrapolateOffset(
     std::tuple<monotonic_clock::time_point, std::chrono::nanoseconds> p0,
     monotonic_clock::time_point ta_base, double ta) {
-  DCHECK_GE(ta, 0.0);
-  DCHECK_LT(ta, 1.0);
+  ABSL_DCHECK_GE(ta, 0.0);
+  ABSL_DCHECK_LT(ta, 1.0);
   // Since the point (p0) is an integer, we now can guarantee that ta won't put
   // us on a different side of p0.  This is because ta is between 0 and 1, and
   // always positive.  Compute the integer and double portions and return them.
@@ -546,7 +548,7 @@ std::pair<Pointer, chrono::nanoseconds>
 NoncausalTimestampFilter::SingleFilter::Offset(
     const SingleFilter *other, Pointer pointer,
     monotonic_clock::time_point ta) const {
-  CHECK_GT(timestamps_size(), 0u);
+  ABSL_CHECK_GT(timestamps_size(), 0u);
   if (IsOutsideSamples(ta, 0.)) {
     // Special case when size = 1 or if we're asked to extrapolate to
     // times before or after we have data.
@@ -570,7 +572,7 @@ std::pair<Pointer, std::tuple<chrono::nanoseconds, double, double>>
 NoncausalTimestampFilter::SingleFilter::Offset(
     const SingleFilter *other, Pointer pointer,
     monotonic_clock::time_point ta_base, double ta) const {
-  CHECK_GT(timestamps_size(), 0u) << node_names_;
+  ABSL_CHECK_GT(timestamps_size(), 0u) << node_names_;
   if (IsOutsideSamples(ta_base, ta)) {
     // Special case size = 1 or ta_base before first timestamp or
     // after last timesteamp, so we need to extrapolate out
@@ -587,7 +589,8 @@ NoncausalTimestampFilter::SingleFilter::Offset(
       std::pair<std::tuple<monotonic_clock::time_point, chrono::nanoseconds>,
                 std::tuple<monotonic_clock::time_point, chrono::nanoseconds>>>
       points = FindTimestamps(other, true, pointer, ta_base, ta);
-  CHECK_LT(std::get<0>(points.second.first), std::get<0>(points.second.second));
+  ABSL_CHECK_LT(std::get<0>(points.second.first),
+                std::get<0>(points.second.second));
   // Return both the integer and double portion together to save a timestamp
   // lookup.
   return std::make_pair(
@@ -600,7 +603,7 @@ std::pair<Pointer, std::tuple<chrono::nanoseconds, double, double>>
 NoncausalTimestampFilter::SingleFilter::BoundsOffset(
     const SingleFilter *other, Pointer pointer,
     monotonic_clock::time_point ta_base, double ta) const {
-  CHECK_GT(timestamps_size(), 0u) << node_names_;
+  ABSL_CHECK_GT(timestamps_size(), 0u) << node_names_;
   if (IsOutsideSamples(ta_base, ta)) {
     // Special case size = 1 or ta_base before first timestamp or
     // after last timestamp, so we need to extrapolate out
@@ -617,7 +620,8 @@ NoncausalTimestampFilter::SingleFilter::BoundsOffset(
       std::pair<std::tuple<monotonic_clock::time_point, chrono::nanoseconds>,
                 std::tuple<monotonic_clock::time_point, chrono::nanoseconds>>>
       points = FindTimestamps(other, false, pointer, ta_base, ta);
-  CHECK_LT(std::get<0>(points.second.first), std::get<0>(points.second.second));
+  ABSL_CHECK_LT(std::get<0>(points.second.first),
+                std::get<0>(points.second.second));
   // Return both the integer and double portion together to save a timestamp
   // lookup.
   return std::make_pair(points.first, NoncausalTimestampFilter::BoundOffset(
@@ -784,7 +788,7 @@ bool NoncausalTimestampFilter::SingleFilter::ValidateSolution(
     bool quiet) const {
   NormalizeTimestamps(&ta_base, &ta);
   NormalizeTimestamps(&tb_base, &tb);
-  CHECK_GT(timestamps_size(), 0u);
+  ABSL_CHECK_GT(timestamps_size(), 0u);
   if (ta_base < std::get<0>(timestamp(0)) && has_popped_ && validate_popped) {
     if (!quiet || VLOG_IS_ON(1)) {
       LOG(ERROR) << node_names_ << " O(" << ta_base << ", " << ta
@@ -856,7 +860,7 @@ bool NoncausalTimestampFilter::SingleFilter::ValidateSolution(
     const SingleFilter *other, Pointer pointer,
     aos::monotonic_clock::time_point ta, aos::monotonic_clock::time_point tb,
     bool validate_popped, bool quiet) const {
-  CHECK_GT(timestamps_size(), 0u);
+  ABSL_CHECK_GT(timestamps_size(), 0u);
   if (ta < std::get<0>(timestamp(0)) && has_popped_ && validate_popped) {
     if (!quiet || VLOG_IS_ON(1)) {
       LOG(ERROR) << node_names_ << " O(" << ta
@@ -924,7 +928,7 @@ void NoncausalTimestampFilter::SingleFilter::Sample(
             << TimeString(monotonic_now, sample_ns);
     timestamps_.emplace_back(
         std::make_tuple(monotonic_now.time, sample_ns.duration));
-    CHECK(!fully_frozen_)
+    ABSL_CHECK(!fully_frozen_)
         << ": " << node_names_
         << " Returned a horizontal line previously and then "
            "got a new sample at "
@@ -940,7 +944,7 @@ void NoncausalTimestampFilter::SingleFilter::Sample(
         << ", or set --force_timestamp_loading";
     return;
   }
-  CHECK_GT(monotonic_now.time, frozen_time_)
+  ABSL_CHECK_GT(monotonic_now.time, frozen_time_)
       << ": " << node_names_ << " Tried to insert " << monotonic_now
       << " before the frozen time of " << frozen_time_
       << ".  Increase "
@@ -983,7 +987,7 @@ void NoncausalTimestampFilter::SingleFilter::Sample(
 
     // Be overly conservative here.  It either won't make a difference, or
     // will give us an error with an actual useful time difference.
-    CHECK(!fully_frozen_)
+    ABSL_CHECK(!fully_frozen_)
         << ": " << node_names_
         << " Returned a horizontal line previously and then got a new "
            "sample at "
@@ -1013,7 +1017,7 @@ void NoncausalTimestampFilter::SingleFilter::Sample(
                absl::int128(doffset.count()) *
                    absl::int128(MaxVelocityRatio::den) &&
            timestamps_.size() > 1u) {
-      CHECK(!frozen(std::get<0>(back)))
+      ABSL_CHECK(!frozen(std::get<0>(back)))
           << ": " << node_names_ << " Can't pop an already frozen sample "
           << TimeString(back) << " while inserting "
           << TimeString(monotonic_now, sample_ns) << ", "
@@ -1051,10 +1055,10 @@ void NoncausalTimestampFilter::SingleFilter::Sample(
              x,
          monotonic_clock::time_point t) { return std::get<0>(x) < t; });
 
-  CHECK(it != timestamps_.end());
+  ABSL_CHECK(it != timestamps_.end());
 
   // We shouldn't hit this one, but I really want to be sure...
-  CHECK(!frozen(std::get<0>(*(it))));
+  ABSL_CHECK(!frozen(std::get<0>(*(it))));
 
   if (it == timestamps_.begin()) {
     // We are being asked to add at the beginning.
@@ -1221,7 +1225,7 @@ void NoncausalTimestampFilter::SingleFilter::Sample(
                 absl::int128(MaxVelocityRatio::den) >
             absl::int128(prior_dt.count()) *
                 absl::int128(MaxVelocityRatio::num)) {
-          CHECK(!frozen(std::get<0>(*prior_it)))
+          ABSL_CHECK(!frozen(std::get<0>(*prior_it)))
               << ": " << node_names_
               << " Can't pop an already frozen sample.  Increase "
                  "--time_estimation_buffer_seconds to greater than "
@@ -1242,7 +1246,7 @@ void NoncausalTimestampFilter::SingleFilter::Sample(
 }
 
 bool NoncausalTimestampFilter::Pop(BootTimestamp time) {
-  CHECK_GE(filters_.size(), 1u);
+  ABSL_CHECK_GE(filters_.size(), 1u);
 
   VLOG(1) << NodeNames() << " Pop(" << time << ")";
   bool removed = false;
@@ -1276,7 +1280,7 @@ bool NoncausalTimestampFilter::Pop(BootTimestamp time) {
   // max_pop_filter, or until we find a timestamp that is later than `time`.
   while (pop_filter_ <= max_pop_filter) {
     BootFilter *boot_filter = filters_[pop_filter_].get();
-    CHECK(boot_filter != nullptr);
+    ABSL_CHECK(boot_filter != nullptr);
     size_t timestamps_size = 0;
 
     // Keep at least 2 timestamps in the filter because it's the minimum number
@@ -1385,7 +1389,7 @@ NoncausalTimestampFilter::Consume() {
   if (filters_.size() == 0u) {
     return std::nullopt;
   }
-  DCHECK_LT(current_filter_, static_cast<std::ptrdiff_t>(filters_.size()));
+  ABSL_DCHECK_LT(current_filter_, static_cast<std::ptrdiff_t>(filters_.size()));
 
   while (true) {
     std::optional<

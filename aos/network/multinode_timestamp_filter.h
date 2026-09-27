@@ -8,7 +8,7 @@
 
 #include "Eigen/Dense"
 #include "absl/container/btree_set.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/configuration.h"
@@ -282,11 +282,11 @@ class TimestampProblem : public Problem {
     size_t solution_node = std::numeric_limits<size_t>::max();
     for (size_t i = 0; i < points.size(); ++i) {
       if (points[i] != logger::BootTimestamp::max_time()) {
-        CHECK_EQ(solution_node, std::numeric_limits<size_t>::max());
+        ABSL_CHECK_EQ(solution_node, std::numeric_limits<size_t>::max());
         solution_node = i;
       }
     }
-    CHECK_NE(solution_node, std::numeric_limits<size_t>::max());
+    ABSL_CHECK_NE(solution_node, std::numeric_limits<size_t>::max());
     return solution_node;
   }
 
@@ -303,7 +303,7 @@ class TimestampProblem : public Problem {
   // Converts from a node index to an index in the solution without skipping the
   // solution node.
   size_t NodeToFullSolutionIndex(size_t node_index) const {
-    CHECK(node_mapping_valid_);
+    ABSL_CHECK(node_mapping_valid_);
     return node_mapping_[node_index];
   }
 
@@ -401,7 +401,7 @@ class InterpolatedTimeConverter : public TimeConverter {
           QueueNextTimestamp().transform([](const auto) { return; }));
     }
 
-    CHECK(!times_.empty())
+    ABSL_CHECK(!times_.empty())
         << ": Found no times to do timestamp estimation, please investigate.";
     return {};
   }
@@ -526,8 +526,8 @@ class MultiNodeNoncausalOffsetEstimator final
   // Returns the configuration that we are replaying into.
   const aos::Configuration *configuration() const { return configuration_; }
 
-  // Runs some checks that normally run with fatal CHECK's in the destructor.
-  // Returns false if any checks failed. This is used to allow the
+  // Runs some checks that normally run with fatal ABSL_CHECK's in the
+  // destructor. Returns false if any checks failed. This is used to allow the
   // logfile_validator to non-fatally identify certain log sorting issues.
   [[nodiscard]] bool RunDestructorChecks() {
     non_fatal_destructor_checks_ = true;

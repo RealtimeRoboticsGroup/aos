@@ -3,7 +3,7 @@
 #include <regex>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
 #include "opencv2/calib3d.hpp"
@@ -44,20 +44,20 @@ void Main() {
   const std::string hostname = aos::network::GetHostname();
   LOG(INFO) << "Using pi/orin name from hostname as " << hostname;
 
-  CHECK(!absl::GetFlag(FLAGS_base_intrinsics).empty())
+  ABSL_CHECK(!absl::GetFlag(FLAGS_base_intrinsics).empty())
       << "Need a base intrinsics json to use to auto-capture images when the "
          "camera moves.";
   std::unique_ptr<aos::ExitHandle> exit_handle = event_loop.MakeExitHandle();
 
-  CHECK(aos::network::ParsePiOrOrin(hostname))
+  ABSL_CHECK(aos::network::ParsePiOrOrin(hostname))
       << "Failed to parse node type from " << hostname
       << ".  Should be of form orin-971-1";
-  CHECK(aos::network::ParsePiOrOrinNumber(hostname))
+  ABSL_CHECK(aos::network::ParsePiOrOrinNumber(hostname))
       << "Failed to parse node number from " << hostname
       << ".  Should be of form orin-7971-2";
 
   const std::string channel = absl::StrCat(absl::GetFlag(FLAGS_channel));
-  CHECK(event_loop.GetChannel<CameraImage>(channel) != nullptr)
+  ABSL_CHECK(event_loop.GetChannel<CameraImage>(channel) != nullptr)
       << " invalid camera name provided as '" << channel << "'";
 
   IntrinsicsCalibration calibrator(

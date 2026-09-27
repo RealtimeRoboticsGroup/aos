@@ -323,7 +323,7 @@ And `ping_lib.cc` will be:
 #include "aos/json_to_flatbuffer.h"
 #include "absl/flags/flag.h"
 #include "absl/log/log.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 
 ABSL_FLAG(int32_t, sleep_ms, 10, "Time to sleep between pings");
 
@@ -480,7 +480,7 @@ cc_library(
         "//aos:json_to_flatbuffer",
         "//aos/events:event_loop",
         "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log","@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log","@com_google_absl//absl/log:absl_check",
     ],
 )
 ```

@@ -42,7 +42,7 @@ cc_library(
         "//aos:configuration",
         "//aos/time",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -55,7 +55,7 @@ cc_test(
         ":logging",
         "//aos/testing:googletest",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -89,7 +89,7 @@ cc_library(
         ":dynamic_log_command_fbs",
         "//aos/events:event_loop",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 

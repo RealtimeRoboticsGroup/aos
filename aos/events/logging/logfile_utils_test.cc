@@ -7,6 +7,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/reflection.h"
+#include "absl/log/absl_check.h"
 #include "absl/strings/escaping.h"
 #include "flatbuffers/reflection_generated.h"
 #include "gtest/gtest.h"
@@ -330,7 +331,7 @@ aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader> MakeHeader(
 
   aos::FlatbufferDetachedBuffer<LogFileHeader> header_updates(
       JsonToFlatbuffer<LogFileHeader>(json));
-  CHECK(header_updates.Verify());
+  ABSL_CHECK(header_updates.Verify());
   flatbuffers::FlatBufferBuilder fbb2;
   fbb2.ForceDefaults(true);
   fbb2.FinishSizePrefixed(
@@ -584,7 +585,7 @@ class SortingElementTest : public ::testing::Test {
     context.realtime_event_time = aos::realtime_clock::epoch() +
                                   chrono::seconds(1000) +
                                   monotonic_now.time_since_epoch();
-    CHECK_LT(static_cast<size_t>(channel_index), queue_index_.size());
+    ABSL_CHECK_LT(static_cast<size_t>(channel_index), queue_index_.size());
     context.queue_index = queue_index_[channel_index];
     context.size = message_fbb.GetSize();
     context.data = message_fbb.GetBufferPointer();
@@ -796,7 +797,8 @@ TEST_F(MessageSorterDeathTest, Pull) {
         MakeLogMessage(e + chrono::milliseconds(1000), 1, 0x105));
     writer.WriteSizedFlatbuffer(
         MakeLogMessage(e + chrono::milliseconds(2001), 0, 0x006));
-    // The following message is too far out of order and will trigger the CHECK.
+    // The following message is too far out of order and will trigger the
+    // ABSL_CHECK.
     writer.WriteSizedFlatbuffer(
         MakeLogMessage(e + chrono::milliseconds(1900), 1, 0x107));
   }

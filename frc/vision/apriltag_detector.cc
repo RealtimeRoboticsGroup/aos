@@ -1,6 +1,7 @@
 #include <string>
 
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 
 #include "aos/events/shm_event_loop.h"
 #include "aos/init.h"
@@ -23,7 +24,7 @@ namespace frc::vision {
 const calibration::CameraCalibration *FindCameraCalibration(
     const CameraConstants &calibration_data, std::string_view node_name,
     int camera_number) {
-  CHECK(calibration_data.has_calibration());
+  ABSL_CHECK(calibration_data.has_calibration());
   for (const calibration::CameraCalibration *candidate :
        *calibration_data.calibration()) {
     if (candidate->node_name()->string_view() != node_name ||
@@ -47,7 +48,7 @@ void GpuApriltagDetector() {
   const frc::constants::ConstantsFetcher<CameraConstants> calibration_data(
       &event_loop);
 
-  CHECK_GE(absl::GetFlag(FLAGS_channel).length(), 8u)
+  ABSL_CHECK_GE(absl::GetFlag(FLAGS_channel).length(), 8u)
       << ": Channel name must be of the form /cameraX*";
   int camera_id = std::stoi(absl::GetFlag(FLAGS_channel).substr(7, 1));
   const frc::vision::calibration::CameraCalibration *calibration =
@@ -55,7 +56,7 @@ void GpuApriltagDetector() {
                             event_loop.node()->name()->string_view(),
                             camera_id);
 
-  CHECK(calibration_data.constants().has_default_camera_stream_settings())
+  ABSL_CHECK(calibration_data.constants().has_default_camera_stream_settings())
       << ": Must provide camera stream settings for image width/height.";
 
   const CameraStreamSettings *const stream_settings =
@@ -76,7 +77,7 @@ void GpuApriltagDetector() {
   LOG(INFO) << "Setting scheduler priority";
   struct sched_param param;
   param.sched_priority = 21;
-  PCHECK(sched_setscheduler(0, SCHED_FIFO, &param) == 0);
+  ABSL_PCHECK(sched_setscheduler(0, SCHED_FIFO, &param) == 0);
 
   LOG(INFO) << "Running event loop";
   // TODO(austin): Pre-warm it...

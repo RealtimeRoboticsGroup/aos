@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 
 #include "aos/aos_cli_utils.h"
 #include "aos/configuration.h"
@@ -60,11 +61,12 @@ class State {
       LOG(INFO) << "Restarting camera services";
       LOG(INFO) << "Channel " << channel_name_ << " has not received a message "
                 << absl::GetFlag(FLAGS_max_jitter) << " seconds";
-      CHECK_EQ(std::system("aos_starter stop argus_camera0"), 0);
-      CHECK_EQ(std::system("aos_starter stop argus_camera1"), 0);
-      CHECK_EQ(std::system("sudo systemctl restart nvargus-daemon.service"), 0);
-      CHECK_EQ(std::system("aos_starter start argus_camera0"), 0);
-      CHECK_EQ(std::system("aos_starter start argus_camera1"), 0);
+      ABSL_CHECK_EQ(std::system("aos_starter stop argus_camera0"), 0);
+      ABSL_CHECK_EQ(std::system("aos_starter stop argus_camera1"), 0);
+      ABSL_CHECK_EQ(
+          std::system("sudo systemctl restart nvargus-daemon.service"), 0);
+      ABSL_CHECK_EQ(std::system("aos_starter start argus_camera0"), 0);
+      ABSL_CHECK_EQ(std::system("aos_starter start argus_camera1"), 0);
 
       std::exit(0);
       return;

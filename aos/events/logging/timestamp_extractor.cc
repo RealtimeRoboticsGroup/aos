@@ -4,6 +4,7 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/usage.h"
+#include "absl/log/absl_check.h"
 
 #include "aos/events/logging/logfile_sorting.h"
 #include "aos/events/logging/logfile_utils.h"
@@ -18,8 +19,8 @@ namespace aos::logger {
 
 int Main(int argc, char **argv) {
   const LogFilesContainer log_files(SortParts(FindLogs(argc, argv)));
-  CHECK(MultiNodeLogIsReadable(log_files,
-                               absl::GetFlag(FLAGS_skip_order_validation)));
+  ABSL_CHECK(MultiNodeLogIsReadable(
+      log_files, absl::GetFlag(FLAGS_skip_order_validation)));
   return 0;
 }
 

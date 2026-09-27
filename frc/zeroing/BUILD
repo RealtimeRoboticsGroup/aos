@@ -16,7 +16,7 @@ cc_library(
     ],
     deps = [
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@eigen",
     ],
 )
@@ -47,7 +47,7 @@ cc_library(
         "//frc/control_loops/drivetrain:drivetrain_status_fbs",
         "//frc/wpilib:imu_fbs",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@eigen",
     ],
 )
@@ -79,7 +79,7 @@ cc_library(
         "//frc:constants",
         "//frc/control_loops:control_loops_fbs",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -109,7 +109,7 @@ cc_library(
                 "//frc:constants",
                 "//frc/control_loops:control_loops_fbs",
                 "@com_google_absl//absl/log",
-                "@com_google_absl//absl/log:check",
+                "@com_google_absl//absl/log:absl_check",
             ],
         ),
         cc_test(

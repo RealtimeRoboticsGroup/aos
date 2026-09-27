@@ -1,5 +1,7 @@
 #include "frc/imu_fdcan/can_translator_lib.h"
 
+#include "absl/log/absl_check.h"
+
 using frc::imu_fdcan::CANTranslator;
 
 constexpr std::size_t kCanFrameSize = 64;
@@ -71,7 +73,7 @@ void CANTranslator::HandleFrame(const frc::can_logger::CanFrame *can_frame) {
     }
   }
   // Should have already checked length.
-  CHECK_EQ(can_frame->data()->size(), 8u);
+  ABSL_CHECK_EQ(can_frame->data()->size(), 8u);
   memcpy(current_frame_.data() + frame_index * 8, can_frame->data()->data(), 8);
   if (frame_index < 7) {
     return;

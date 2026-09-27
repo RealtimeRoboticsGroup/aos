@@ -1,7 +1,7 @@
 #include "aos/network/message_bridge_server_lib.h"
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/log/vlog_is_on.h"
 #include "absl/strings/str_cat.h"
@@ -175,7 +175,7 @@ void ChannelState::SendData() {
 }
 
 bool ChannelState::TrySendData(const Context &context) {
-  CHECK(context.data != nullptr)
+  ABSL_CHECK(context.data != nullptr)
       << configuration::StrippedChannelToString(channel_);
   // TODO(austin): I don't like allocating this buffer when we are just
   // freeing it at the end of the function.
@@ -211,7 +211,7 @@ bool ChannelState::TrySendData(const Context &context) {
     logged_remotely = logged_remotely || peer.logged_remotely;
 
     const int time_to_live_ms = peer.connection->time_to_live() / 1000000;
-    CHECK((time_to_live_ms == 0) == (peer.connection->time_to_live() == 0))
+    ABSL_CHECK((time_to_live_ms == 0) == (peer.connection->time_to_live() == 0))
         << ": TTLs below 1ms are not supported, as they would get rounded "
            "down to zero, which is used to indicate a reliable connection.";
 
@@ -465,12 +465,12 @@ MessageBridgeServer::MessageBridgeServer(
       refresh_key_timer_(event_loop->AddTimer([this]() { RequestAuthKey(); })),
       sctp_config_request_(
           event_loop_->TryMakeSender<SctpConfigRequest>("/aos")) {
-  CHECK_EQ(config_sha256_.size(), 64u) << ": Wrong length sha256sum";
-  CHECK(event_loop_->node() != nullptr) << ": No nodes configured.";
+  ABSL_CHECK_EQ(config_sha256_.size(), 64u) << ": Wrong length sha256sum";
+  ABSL_CHECK(event_loop_->node() != nullptr) << ": No nodes configured.";
 
   // Set up the SCTP configuration watcher and timer.
   if (requested_authentication == SctpAuthMethod::kAuth && HasSctpAuth()) {
-    CHECK(sctp_config_request_.valid())
+    ABSL_CHECK(sctp_config_request_.valid())
         << ": Must have SctpConfig channel configured to use SCTP "
            "authentication.";
     event_loop_->MakeWatcher("/aos", [this](const SctpConfig &config) {
@@ -527,15 +527,15 @@ MessageBridgeServer::MessageBridgeServer(
   const Channel *const timestamp_channel = configuration::GetChannel(
       event_loop_->configuration(), "/aos", Timestamp::GetFullyQualifiedName(),
       event_loop_->name(), event_loop_->node());
-  CHECK(timestamp_channel != nullptr)
+  ABSL_CHECK(timestamp_channel != nullptr)
       << ": Failed to find timestamp channel {\"name\": \"/aos\", \"type\": \""
       << Timestamp::GetFullyQualifiedName() << "\"}";
-  CHECK(configuration::ChannelIsSendableOnNode(timestamp_channel,
-                                               event_loop_->node()))
+  ABSL_CHECK(configuration::ChannelIsSendableOnNode(timestamp_channel,
+                                                    event_loop_->node()))
       << ": Timestamp channel is not sendable on this node.";
 
   for (const Channel *channel : *event_loop_->configuration()->channels()) {
-    CHECK(channel->has_source_node());
+    ABSL_CHECK(channel->has_source_node());
 
     if (configuration::ChannelIsForwardedFromNode(channel,
                                                   event_loop_->node())) {
@@ -587,9 +587,9 @@ MessageBridgeServer::MessageBridgeServer(
             channel, [state_ptr](const Context &) { state_ptr->SendData(); });
       } else {
         for (const Connection *connection : *channel->destination_nodes()) {
-          CHECK_GE(connection->time_to_live(), 1000u);
+          ABSL_CHECK_GE(connection->time_to_live(), 1000u);
         }
-        CHECK(timestamp_state_ == nullptr);
+        ABSL_CHECK(timestamp_state_ == nullptr);
         timestamp_state_ = state.get();
       }
       channels_.emplace_back(std::move(state));
@@ -597,7 +597,7 @@ MessageBridgeServer::MessageBridgeServer(
       std::unique_ptr<ChannelState> state(new ChannelState{
           event_loop_, channel, channel_index, &server_, &allocator_});
       for (const Connection *connection : *channel->destination_nodes()) {
-        CHECK_GE(connection->time_to_live(), 1000u);
+        ABSL_CHECK_GE(connection->time_to_live(), 1000u);
       }
       timestamp_state_ = state.get();
       channels_.emplace_back(std::move(state));
@@ -606,7 +606,7 @@ MessageBridgeServer::MessageBridgeServer(
     }
     ++channel_index;
   }
-  CHECK(timestamp_state_ != nullptr);
+  ABSL_CHECK(timestamp_state_ != nullptr);
 
   // Buffer up the max size a bit so everything fits nicely.
   LOG(INFO) << "Max message read size for all clients is " << max_size;
@@ -797,7 +797,7 @@ void MessageBridgeServer::HandleData(const Message *message) {
           node_index = channel_state->NodeConnected(
               connect->node(), message->header.rcvinfo.rcv_assoc_id,
               channel_index, monotonic_now, &reconnected_);
-          CHECK_NE(node_index, -1)
+          ABSL_CHECK_NE(node_index, -1)
               << ": Failed to find node "
               << aos::FlatbufferToJson(connect->node()) << " for connection "
               << aos::FlatbufferToJson(connect);
@@ -838,14 +838,14 @@ void MessageBridgeServer::HandleData(const Message *message) {
         flatbuffers::GetRoot<logger::MessageHeader>(message->data());
     {
       flatbuffers::Verifier verifier(message->data(), message->size);
-      CHECK(message_header->Verify(verifier));
+      ABSL_CHECK(message_header->Verify(verifier));
     }
 
     VLOG(1) << "Received Timestamp msg: " << FlatbufferToJson(message_header);
 
-    CHECK_LT(message_header->channel_index(), channels_.size());
+    ABSL_CHECK_LT(message_header->channel_index(), channels_.size());
     ChannelState *channel = channels_[message_header->channel_index()].get();
-    CHECK(channel != nullptr);
+    ABSL_CHECK(channel != nullptr);
     channel->HandleDelivery(
         message->header.rcvinfo.rcv_assoc_id, message->header.rcvinfo.rcv_ssn,
         absl::Span<const uint8_t>(message->data(), message->size),
@@ -865,7 +865,7 @@ void MessageBridgeServer::HandleData(const Message *message) {
 }
 
 void MessageBridgeServer::RequestAuthKey() {
-  CHECK(sctp_config_request_.valid());
+  ABSL_CHECK(sctp_config_request_.valid());
   auto sender = sctp_config_request_.MakeBuilder();
   auto builder = sender.MakeBuilder<SctpConfigRequest>();
   builder.add_request_key(true);

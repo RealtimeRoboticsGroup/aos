@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <tuple>
 
+#include "absl/log/absl_check.h"
 #include "absl/log/vlog_is_on.h"
 #include "absl/numeric/int128.h"
 #include "absl/strings/str_cat.h"
@@ -38,7 +39,7 @@ void TimestampFilter::Sample(aos::monotonic_clock::time_point monotonic_now,
                              chrono::nanoseconds sample_ns) {
   VLOG(2) << "  " << this << " Sample at " << monotonic_now << " is "
           << sample_ns.count() << "ns, Base is " << base_offset_.count();
-  CHECK_GE(monotonic_now, last_time_)
+  ABSL_CHECK_GE(monotonic_now, last_time_)
       << ": " << this << " Being asked to filter backwards in time!";
   // Compute the sample offset as a double (seconds), taking into account the
   // base offset.

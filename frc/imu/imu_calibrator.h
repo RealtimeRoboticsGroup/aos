@@ -6,7 +6,7 @@
 #include <tuple>
 #include <vector>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
@@ -264,12 +264,12 @@ class ImuCalibrator {
     origin_index_ = -1;
     for (size_t imu_index = 0; imu_index < imu_configs_.size(); ++imu_index) {
       if (imu_configs_[imu_index].is_origin) {
-        CHECK_EQ(origin_index_, -1)
+        ABSL_CHECK_EQ(origin_index_, -1)
             << ": Can't have more than one IMU specified as the origin.";
         origin_index_ = imu_index;
       }
     }
-    CHECK_NE(origin_index_, -1)
+    ABSL_CHECK_NE(origin_index_, -1)
         << ": Must have at least one IMU specified as the origin.";
   }
 

@@ -5,6 +5,7 @@
 #include <thread>
 
 #include "Eigen/Dense"
+#include "absl/log/absl_check.h"
 
 #include "aos/condition.h"
 #include "aos/mutex/mutex.h"
@@ -50,7 +51,7 @@ class SplineDrivetrain {
   ::Eigen::Matrix<double, 5, 1> CurrentGoalState() const {
     if (executing_spline_) {
       const FinishedTrajectory *finished = current_trajectory();
-      CHECK(finished != nullptr);
+      ABSL_CHECK(finished != nullptr);
       return finished->GoalState(current_xva_(0), current_xva_(1));
     } else {
       return ::Eigen::Matrix<double, 5, 1>::Zero();
@@ -63,7 +64,7 @@ class SplineDrivetrain {
     }
 
     const FinishedTrajectory *finished = current_trajectory();
-    CHECK(finished != nullptr);
+    ABSL_CHECK(finished != nullptr);
     return finished->is_at_end(current_xva_.block<2, 1>(0, 0));
   }
 

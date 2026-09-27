@@ -1,5 +1,7 @@
 #include "frc/can_logger/asc_logger.h"
 
+#include "absl/log/absl_check.h"
+
 #define CAN_EFF_FLAG 0x80000000u
 #define CAN_SFF_MASK 0x000007ffu
 #define CAN_EFF_MASK 0x1fffffffu
@@ -10,7 +12,7 @@ namespace frc::can_logger {
 
 AscLogger::AscLogger(aos::EventLoop *event_loop, const std::string &filename)
     : output_(filename), event_loop_(event_loop) {
-  CHECK(output_);
+  ABSL_CHECK(output_);
   event_loop->MakeWatcher(
       "/can", [this](const CanFrame &frame) { HandleFrame(frame); });
 }

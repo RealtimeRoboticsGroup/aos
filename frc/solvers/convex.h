@@ -6,7 +6,7 @@
 
 #include <iomanip>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/log/vlog_is_on.h"
 #include "absl/strings/str_join.h"
@@ -149,7 +149,7 @@ Eigen::Matrix<double, States, 1> Solver<States, M, N>::Solve(
   Derivatives derivatives = ComputeDerivative(problem, y);
 
   for (size_t i = 0; i < M; ++i) {
-    CHECK_LE(derivatives.f(i, 0), 0.0)
+    ABSL_CHECK_LE(derivatives.f(i, 0), 0.0)
         << ": Initial state " << X_initial.transpose().format(kHeavyFormat)
         << " not feasible";
   }

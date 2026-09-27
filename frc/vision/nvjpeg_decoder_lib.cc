@@ -11,7 +11,7 @@
 #include <cstring>
 #include <vector>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 // libnvjpeg.so implements the libjpeg-8b API with NVIDIA's TEGRA_ACCELERATE
@@ -319,12 +319,12 @@ bool NvJpegDecoderLib::DecodeToGray(const uint8_t *jpeg_data, size_t jpeg_size,
   // mode this surface holds the PREVIOUS submission's frame once the
   // pipeline is primed (and an all-zero warmup frame on the second decode);
   // the caller handles that pairing.
-  CHECK(cinfo->jpegTegraMgr != nullptr &&
-        cinfo->jpegTegraMgr->buff[0] != nullptr)
+  ABSL_CHECK(cinfo->jpegTegraMgr != nullptr &&
+             cinfo->jpegTegraMgr->buff[0] != nullptr)
       << ": hardware decode reported but no output surface is present";
   const uint8_t *surface = cinfo->jpegTegraMgr->buff[0];
   const size_t pitch = cinfo->jpegTegraMgr->pitch[0];
-  CHECK_GE(pitch, static_cast<size_t>(width))
+  ABSL_CHECK_GE(pitch, static_cast<size_t>(width))
       << ": hardware surface pitch is narrower than the image";
   for (uint32_t row = 0; row < height; ++row) {
     memcpy(gray_out + static_cast<size_t>(row) * width,

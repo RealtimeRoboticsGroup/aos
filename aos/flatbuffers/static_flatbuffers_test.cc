@@ -12,7 +12,7 @@
 #include <utility>
 #include <vector>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
@@ -89,8 +89,8 @@ TEST_F(StaticFlatbuffersTest, DocumentationExample) {
   object->set_scalar(123);
   {
     auto vector = object->add_vector_of_scalars();
-    CHECK(vector->emplace_back(4));
-    CHECK(vector->emplace_back(5));
+    ABSL_CHECK(vector->emplace_back(4));
+    ABSL_CHECK(vector->emplace_back(5));
   }
   {
     auto string = object->add_string();
@@ -99,8 +99,8 @@ TEST_F(StaticFlatbuffersTest, DocumentationExample) {
   {
     auto vector_of_strings = object->add_vector_of_strings();
     auto sub_string = vector_of_strings->emplace_back();
-    CHECK(sub_string != nullptr);
-    CHECK(sub_string->emplace_back('D'));
+    ABSL_CHECK(sub_string != nullptr);
+    ABSL_CHECK(sub_string->emplace_back('D'));
   }
   {
     object->set_substruct({1323, 254});
@@ -111,11 +111,11 @@ TEST_F(StaticFlatbuffersTest, DocumentationExample) {
   }
   {
     auto vector = object->add_vector_of_structs();
-    CHECK(vector->emplace_back({48, 67}));
-    CHECK(vector->emplace_back({118, 148}));
-    CHECK(vector->emplace_back({1323, 973}));
+    ABSL_CHECK(vector->emplace_back({48, 67}));
+    ABSL_CHECK(vector->emplace_back({118, 148}));
+    ABSL_CHECK(vector->emplace_back({1323, 973}));
     // Max vector size is three; this should fail.
-    CHECK(!vector->emplace_back({1114, 2056}));
+    ABSL_CHECK(!vector->emplace_back({1114, 2056}));
   }
   {
     auto vector = object->add_vector_of_tables();
@@ -142,7 +142,7 @@ flatbuffers::Offset<SubTable> PopulateOld(flatbuffers::FlatBufferBuilder *fbb) {
   return builder.Finish();
 }
 void PopulateStatic(SubTableStatic *subtable) {
-  CHECK(subtable != nullptr);
+  ABSL_CHECK(subtable != nullptr);
   subtable->set_foo(1234);
 }
 
@@ -230,7 +230,7 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
     EXPECT_EQ("{  }", aos::FlatbufferToJson(builder.AsFlatbufferSpan()));
     object->set_foo(123);
     object->set_baz(1323);
-    CHECK(builder.AsFlatbufferSpan().Verify());
+    ABSL_CHECK(builder.AsFlatbufferSpan().Verify());
     EXPECT_EQ(123, object->AsFlatbuffer().foo());
     EXPECT_EQ(1323, object->AsFlatbuffer().baz());
     EXPECT_EQ(R"json({ "foo": 123, "baz": 1323 })json",
@@ -243,7 +243,7 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
     TestTableStatic *object = builder.get();
     const aos::fbs::testing::TestTable &fbs = object->AsFlatbuffer();
     VLOG(1) << object->SerializationDebugString();
-    CHECK(builder.AsFlatbufferSpan().Verify());
+    ABSL_CHECK(builder.AsFlatbufferSpan().Verify());
     EXPECT_EQ("{  }", aos::FlatbufferToJson(builder.AsFlatbufferSpan()));
     {
       ASSERT_FALSE(object->has_scalar());
@@ -290,7 +290,7 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
       auto vector_of_strings = object->add_vector_of_strings();
       EXPECT_TRUE(object->has_vector_of_strings());
       auto sub_string = vector_of_strings->emplace_back();
-      CHECK(sub_string != nullptr);
+      ABSL_CHECK(sub_string != nullptr);
       ASSERT_TRUE(sub_string->emplace_back('D'));
       EXPECT_TRUE(fbs.has_vector_of_strings());
       ASSERT_EQ(1u, fbs.vector_of_strings()->size());
@@ -536,7 +536,7 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
       EXPECT_EQ(444, fbs.vector_aligned()->Get(0));
     }
     VLOG(1) << object->SerializationDebugString();
-    CHECK(builder.AsFlatbufferSpan().Verify());
+    ABSL_CHECK(builder.AsFlatbufferSpan().Verify());
     const std::string expected_contents =
         R"json({
  "scalar": 123,
@@ -604,7 +604,7 @@ TEST_F(StaticFlatbuffersTest, ManuallyConstructFlatbuffer) {
       scalars.push_back(aligned_vector->at(0));
       while (aligned_vector->size() < 100u) {
         scalars.push_back(aligned_vector->size());
-        CHECK(aligned_vector->emplace_back(aligned_vector->size()));
+        ABSL_CHECK(aligned_vector->emplace_back(aligned_vector->size()));
       }
       VLOG(1) << aligned_vector->SerializationDebugString();
       VLOG(1) << AnnotateBinaries(test_schema_, builder.buffer());
@@ -1143,7 +1143,7 @@ TEST_F(StaticFlatbuffersTest, IncludeReflectionTypes) {
 
 // Tests that if we use FromFlatbuffer() where the destination buffer does not
 // have enough space for an empty vector that we provide an error (rather than
-// CHECK-failing).
+// ABSL_CHECK-failing).
 TEST_F(StaticFlatbuffersTest, FromFlatbufferHandlesFailedAdd) {
   alignas(64) uint8_t buffer[Builder<TestTableStatic>::kBufferSize];
   aos::fbs::SpanAllocator allocator({buffer, sizeof(buffer)});

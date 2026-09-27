@@ -24,7 +24,7 @@ cc_binary(
         "//aos/events:event_loop",
         "//frc/vision:vision_util_lib",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/strings:str_format",
         "@eigen",
     ],
@@ -170,7 +170,7 @@ cc_library(
         "//third_party:opencv",
         "@com_github_foxglove_schemas//:schemas",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/strings:str_format",
         "@com_google_absl//absl/types:span",
         "@eigen",
@@ -278,7 +278,7 @@ cc_library(
         "//aos/util:math",
         "//third_party:opencv",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -306,7 +306,7 @@ cc_library(
         "//aos:init",
         "//third_party:opencv",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/strings:str_format",
         "@eigen",
     ],
@@ -325,7 +325,7 @@ cc_binary(
         "//third_party:opencv",
         "@ceres-solver//:ceres",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@eigen",
     ],
 )
@@ -342,7 +342,7 @@ cc_library(
         "//aos/scoped:scoped_fd",
         "//aos/util:file",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/strings",
     ],
 )
@@ -359,7 +359,7 @@ cc_library(
         "//third_party:opencv",
         "@com_github_foxglove_schemas//:schemas",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -450,7 +450,7 @@ cc_library(
         "//frc/wpilib:imu_fbs",
         "//third_party:opencv",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:die_if_null",
         "@com_google_absl//absl/strings:str_format",
         "@eigen",
@@ -475,7 +475,7 @@ cc_binary(
         "//frc/wpilib:imu_fbs",
         "//third_party:opencv",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/strings:str_format",
         "@eigen",
     ],
@@ -545,7 +545,7 @@ cc_library(
         "//third_party:opencv",
         "@ceres-solver//:ceres",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/strings:str_format",
         "@eigen",
     ],
@@ -559,7 +559,7 @@ cc_test(
         "//aos/testing:googletest",
         "//frc/vision:vision_util_lib",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -688,7 +688,7 @@ cc_library(
     deps = [
         "@arm64_debian_sysroot//:nvjpeg",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -757,7 +757,7 @@ cc_test(
         "//aos/testing:googletest",
         "//aos/testing:path",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -820,7 +820,7 @@ cuda_library(
         "@com_github_nvidia_cccl//:cccl",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
     alwayslink = True,
 )
@@ -884,7 +884,7 @@ cc_binary(
         "//aos:init",
         "//aos:json_to_flatbuffer",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -967,7 +967,7 @@ cc_binary(
         "@com_github_wpilibsuite_allwpilib//wpimath:wpimath.static",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:die_if_null",
     ],
 )
@@ -1025,7 +1025,7 @@ cc_binary(
         "//third_party:tensorrt",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -1070,7 +1070,7 @@ cc_binary(
         "//frc/control_loops/drivetrain/localization:localizer_output_fbs",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@eigen",
     ],
 )
@@ -1090,7 +1090,7 @@ cc_binary(
         "//aos/util:file",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -1108,6 +1108,6 @@ cc_binary(
         "//aos/util:file",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )

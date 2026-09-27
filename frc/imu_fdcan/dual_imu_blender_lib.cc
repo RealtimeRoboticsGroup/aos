@@ -3,6 +3,7 @@
 #include <numbers>
 
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 
 namespace numbers = std::numbers;
 
@@ -46,7 +47,7 @@ void DualImuBlender::HandleDualImu(const frc::imu::DualImu *dual_imu) {
 
   frc::IMUValuesStatic *imu_values =
       imu_values_batch_builder_->add_readings()->emplace_back();
-  CHECK(imu_values != nullptr);
+  ABSL_CHECK(imu_values != nullptr);
 
   imu_values->set_pico_timestamp_us(dual_imu->board_timestamp_us());
   imu_values->set_monotonic_timestamp_ns(dual_imu->kernel_timestamp());

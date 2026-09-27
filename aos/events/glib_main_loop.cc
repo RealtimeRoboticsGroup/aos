@@ -1,6 +1,6 @@
 #include "aos/events/glib_main_loop.h"
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/events/shm_event_loop.h"
@@ -30,7 +30,7 @@ gint EpollToGio(uint32_t epoll) {
     result |= G_IO_ERR;
     epoll &= ~EPOLLERR;
   }
-  CHECK_EQ(epoll, 0u) << ": Unhandled epoll bits";
+  ABSL_CHECK_EQ(epoll, 0u) << ": Unhandled epoll bits";
   return result;
 }
 
@@ -56,7 +56,7 @@ uint32_t GioToEpoll(gint gio) {
     result |= EPOLLERR;
     gio &= ~G_IO_ERR;
   }
-  CHECK_EQ(gio, 0) << ": Unhandled gio bits";
+  ABSL_CHECK_EQ(gio, 0) << ": Unhandled gio bits";
   return result;
 }
 
@@ -78,8 +78,8 @@ GlibMainLoop::GlibMainLoop(EventLoop *event_loop, EPoll *epoll,
       g_main_context_(g_main_context_ref(g_main_context_default())),
       g_main_loop_(g_main_loop_new(g_main_context_, true)) {
   event_loop_->OnRun([this]() {
-    CHECK(!acquired_context_);
-    CHECK(g_main_context_acquire(g_main_context_))
+    ABSL_CHECK(!acquired_context_);
+    ABSL_CHECK(g_main_context_acquire(g_main_context_))
         << ": The EventLoop thread must own the context";
     acquired_context_ = true;
   });
@@ -87,7 +87,7 @@ GlibMainLoop::GlibMainLoop(EventLoop *event_loop, EPoll *epoll,
 }
 
 GlibMainLoop::~GlibMainLoop() {
-  CHECK_EQ(children_, 0) << ": Failed to destroy all children";
+  ABSL_CHECK_EQ(children_, 0) << ": Failed to destroy all children";
   RemoveAllFds();
   if (acquired_context_) {
     g_main_context_release(g_main_context_);
@@ -155,7 +155,7 @@ void GlibMainLoop::BeforeWait() {
 
   for (GPollFD gpoll_fd : gpoll_fds_) {
     // API docs are a bit unclear, but this shouldn't ever happen I think?
-    CHECK_EQ(gpoll_fd.revents, 0) << ": what does this mean?";
+    ABSL_CHECK_EQ(gpoll_fd.revents, 0) << ": what does this mean?";
 
     if (added_fds_.count(gpoll_fd.fd) == 0) {
       VLOG(1) << "Add to ShmEventLoop: " << gpoll_fd.fd;
@@ -164,7 +164,7 @@ void GlibMainLoop::BeforeWait() {
         const auto iterator = std::find_if(
             gpoll_fds_.begin(), gpoll_fds_.end(),
             [fd](const GPollFD &candidate) { return candidate.fd == fd; });
-        CHECK(iterator != gpoll_fds_.end())
+        ABSL_CHECK(iterator != gpoll_fds_.end())
             << ": Lost GPollFD for " << fd
             << " but still registered with epoll";
         iterator->revents |= EpollToGio(events);
@@ -182,7 +182,7 @@ void GlibMainLoop::BeforeWait() {
       added_fds_.erase(fd);
     }
   }
-  CHECK_EQ(added_fds_.size(), gpoll_fds_.size());
+  ABSL_CHECK_EQ(added_fds_.size(), gpoll_fds_.size());
   VLOG(1) << "Timeout: " << timeout_ms;
   if (timeout_ms == -1) {
     timeout_timer_->Disable();

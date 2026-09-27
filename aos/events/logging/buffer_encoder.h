@@ -1,7 +1,7 @@
 #ifndef AOS_EVENTS_LOGGING_BUFFER_ENCODER_H_
 #define AOS_EVENTS_LOGGING_BUFFER_ENCODER_H_
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/types/span.h"
 #include "flatbuffers/flatbuffers.h"
@@ -43,12 +43,12 @@ class DataEncoder {
    public:
     SpanCopier(absl::Span<const uint8_t> data)
         : Copier(data.size()), data_(data) {
-      CHECK(data_.data() != nullptr);
+      ABSL_CHECK(data_.data() != nullptr);
     }
 
     size_t Copy(uint8_t *data, size_t start_byte, size_t end_byte) final {
-      DCHECK_LE(start_byte, end_byte);
-      DCHECK_LE(end_byte, data_.size());
+      ABSL_DCHECK_LE(start_byte, end_byte);
+      ABSL_DCHECK_LE(end_byte, data_.size());
 
       std::memcpy(data, data_.data() + start_byte, end_byte - start_byte);
       return end_byte - start_byte;

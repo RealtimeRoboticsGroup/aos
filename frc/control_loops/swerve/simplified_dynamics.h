@@ -2,7 +2,7 @@
 #define FRC_CONTROL_LOOPS_SWERVE_SIMPLIFIED_DYNAMICS_H_
 #include <numbers>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/util/math.h"
@@ -237,7 +237,7 @@ class SimplifiedDynamics {
    public:
     ModuleDynamics(const Parameters &robot_params, const size_t module_index)
         : robot_params_(robot_params), module_index_(module_index) {
-      CHECK_LT(module_index_, robot_params_.modules.size());
+      ABSL_CHECK_LT(module_index_, robot_params_.modules.size());
     }
 
     // This returns the portions of the derivative of state that are due to the

@@ -9,7 +9,7 @@
 #include <thread>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
@@ -492,15 +492,15 @@ class ResolvePathTest : public ::testing::Test {
     // Before doing anything else,
     if (getenv("PATH") != nullptr) {
       original_path_ = getenv("PATH");
-      PCHECK(0 == unsetenv("PATH"));
+      ABSL_PCHECK(0 == unsetenv("PATH"));
     }
   }
 
   ~ResolvePathTest() {
     if (!original_path_.empty()) {
-      PCHECK(0 == setenv("PATH", original_path_.c_str(), /*overwrite=*/1));
+      ABSL_PCHECK(0 == setenv("PATH", original_path_.c_str(), /*overwrite=*/1));
     } else {
-      PCHECK(0 == unsetenv("PATH"));
+      ABSL_PCHECK(0 == unsetenv("PATH"));
     }
   }
 
@@ -516,8 +516,8 @@ class ResolvePathTest : public ::testing::Test {
   }
 
   void SetPath(const std::vector<std::string> &path) {
-    PCHECK(0 ==
-           setenv("PATH", absl::StrJoin(path, ":").c_str(), /*overwrite=*/1));
+    ABSL_PCHECK(
+        0 == setenv("PATH", absl::StrJoin(path, ":").c_str(), /*overwrite=*/1));
   }
 
   // Keep track of original PATH environment variable so that we can restore

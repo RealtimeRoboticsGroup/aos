@@ -1,7 +1,7 @@
 #include "frc/can_logger/can_logger.h"
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 ABSL_FLAG(bool, poll, false,
@@ -30,27 +30,27 @@ CanLogger::CanLogger(aos::ShmEventLoop *event_loop,
   }
   struct ifreq ifr;
   strcpy(ifr.ifr_name, interface_name.data());
-  PCHECK(ioctl(fd_.get(), SIOCGIFINDEX, &ifr) == 0)
+  ABSL_PCHECK(ioctl(fd_.get(), SIOCGIFINDEX, &ifr) == 0)
       << "Failed to get index for interface " << interface_name;
 
   int enable_canfd = true;
-  PCHECK(setsockopt(fd_.get(), SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &enable_canfd,
-                    sizeof(enable_canfd)) == 0)
+  ABSL_PCHECK(setsockopt(fd_.get(), SOL_CAN_RAW, CAN_RAW_FD_FRAMES,
+                         &enable_canfd, sizeof(enable_canfd)) == 0)
       << "Failed to enable CAN FD";
 
   struct sockaddr_can addr;
   addr.can_family = AF_CAN;
   addr.can_ifindex = ifr.ifr_ifindex;
 
-  PCHECK(bind(fd_.get(), reinterpret_cast<struct sockaddr *>(&addr),
-              sizeof(addr)) == 0)
+  ABSL_PCHECK(bind(fd_.get(), reinterpret_cast<struct sockaddr *>(&addr),
+                   sizeof(addr)) == 0)
       << "Failed to bind socket to interface " << interface_name;
 
   int recieve_buffer_size;
   socklen_t opt_size = sizeof(recieve_buffer_size);
-  PCHECK(getsockopt(fd_.get(), SOL_SOCKET, SO_RCVBUF, &recieve_buffer_size,
-                    &opt_size) == 0);
-  CHECK_EQ(opt_size, sizeof(recieve_buffer_size));
+  ABSL_PCHECK(getsockopt(fd_.get(), SOL_SOCKET, SO_RCVBUF, &recieve_buffer_size,
+                         &opt_size) == 0);
+  ABSL_CHECK_EQ(opt_size, sizeof(recieve_buffer_size));
   VLOG(0) << "CAN recieve bufffer is " << recieve_buffer_size << " bytes large";
 
   if (absl::GetFlag(FLAGS_poll)) {
@@ -83,13 +83,13 @@ bool CanLogger::ReadFrame() {
   }
 
   VLOG(2) << "Read " << bytes_read << " bytes";
-  PCHECK(bytes_read > 0);
-  PCHECK(bytes_read == static_cast<ssize_t>(CAN_MTU) ||
-         bytes_read == static_cast<ssize_t>(CANFD_MTU))
+  ABSL_PCHECK(bytes_read > 0);
+  ABSL_PCHECK(bytes_read == static_cast<ssize_t>(CAN_MTU) ||
+              bytes_read == static_cast<ssize_t>(CANFD_MTU))
       << "Incomplete can frame";
 
   struct timeval tv;
-  PCHECK(ioctl(fd_.get(), SIOCGSTAMP, &tv) == 0)
+  ABSL_PCHECK(ioctl(fd_.get(), SIOCGSTAMP, &tv) == 0)
       << "Failed to get timestamp of CAN frame";
 
   aos::Sender<CanFrame>::Builder builder = frames_sender_.MakeBuilder();

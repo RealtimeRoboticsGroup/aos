@@ -17,7 +17,7 @@
 #include <vector>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
@@ -67,7 +67,7 @@ std::vector<const aos::Node *> InteractNodes(
   }
 
   if (!absl::GetFlag(FLAGS_node).empty()) {
-    CHECK(!absl::GetFlag(FLAGS_all_nodes))
+    ABSL_CHECK(!absl::GetFlag(FLAGS_all_nodes))
         << "Can't specify both --node and --all_nodes.";
     return {
         aos::configuration::GetNode(configuration, absl::GetFlag(FLAGS_node))};
@@ -406,7 +406,7 @@ bool InteractWithProgram(int argc, char **argv,
   }
 
   const auto command_search = kCommandConversions.find(command_string);
-  CHECK(command_search != kCommandConversions.end())
+  ABSL_CHECK(command_search != kCommandConversions.end())
       << "Internal error: \"" << command_string
       << "\" is not in kCommandConversions.";
   const aos::starter::Command command = command_search->second;

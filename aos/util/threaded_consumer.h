@@ -5,7 +5,7 @@
 #include <optional>
 #include <thread>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/condition.h"
@@ -72,7 +72,7 @@ class ThreadedConsumer {
       {
         aos::MutexLocker locker(&mutex_);
         while (task_queue_.empty() && !quit_) {
-          CHECK(!more_tasks_.Wait());
+          ABSL_CHECK(!more_tasks_.Wait());
         }
 
         if (task_queue_.empty() && quit_) break;

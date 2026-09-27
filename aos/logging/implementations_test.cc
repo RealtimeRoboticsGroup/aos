@@ -7,7 +7,7 @@
 #include <cinttypes>
 #include <string>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "gtest/gtest.h"
 
@@ -103,7 +103,7 @@ class LoggingTest : public ::testing::Test {
   void TearDown() override {
     SetImplementation(nullptr);
     internal::Context::DeleteNow();
-    CHECK_EQ(log_implementation.use_count(), 1);
+    ABSL_CHECK_EQ(log_implementation.use_count(), 1);
     log_implementation.reset();
   }
 

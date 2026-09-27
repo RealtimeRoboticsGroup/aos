@@ -12,7 +12,7 @@
 #include <string_view>
 #include <vector>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/scoped/scoped_fd.h"
@@ -143,7 +143,7 @@ class Entity {
 
   // Returns the device needed to access this entity.
   const std::string &device() const {
-    CHECK(has_interface_);
+    ABSL_CHECK(has_interface_);
     return device_;
   }
 

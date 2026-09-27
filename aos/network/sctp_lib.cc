@@ -17,7 +17,7 @@
 #include <vector>
 
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/log/vlog_is_on.h"
 #include "absl/strings/str_cat.h"
@@ -79,7 +79,7 @@ bool SctpAuthIsEnabled() {
   if (stat("/proc/sys/net/sctp/auth_enable", &current_stat) != -1) {
     int value = std::stoi(
         util::ReadFileToStringOrDie("/proc/sys/net/sctp/auth_enable"));
-    CHECK(value == 0 || value == 1)
+    ABSL_CHECK(value == 0 || value == 1)
         << "Unknown auth enable sysctl value: " << value;
     return value == 1;
   } else {
@@ -90,10 +90,10 @@ bool SctpAuthIsEnabled() {
 
 std::vector<uint8_t> GenerateSecureRandomSequence(size_t count) {
   std::ifstream rng("/dev/random", std::ios::in | std::ios::binary);
-  CHECK(rng) << "Unable to open /dev/random";
+  ABSL_CHECK(rng) << "Unable to open /dev/random";
   std::vector<uint8_t> out(count, 0);
   rng.read(reinterpret_cast<char *>(out.data()), count);
-  CHECK(rng) << "Couldn't read from random device";
+  ABSL_CHECK(rng) << "Couldn't read from random device";
   rng.close();
   return out;
 }
@@ -270,7 +270,7 @@ void PrintNotification(const Message *msg) {
 std::string GetHostname() {
   char buf[256];
   buf[sizeof(buf) - 1] = '\0';
-  PCHECK(gethostname(buf, sizeof(buf) - 1) == 0);
+  ABSL_PCHECK(gethostname(buf, sizeof(buf) - 1) == 0);
   return buf;
 }
 
@@ -288,7 +288,7 @@ void LogSctpStatus(int fd, sctp_assoc_t assoc_id) {
     LOG(INFO) << "sctp_status) not associated";
     return;
   }
-  PCHECK(result == 0);
+  ABSL_PCHECK(result == 0);
 
   LOG(INFO) << "sctp_status) sstat_assoc_id:" << status.sstat_assoc_id
             << " sstat_state:" << status.sstat_state
@@ -304,7 +304,7 @@ void LogSctpStatus(int fd, sctp_assoc_t assoc_id) {
 
 void SctpReadWrite::OpenSocket(const struct sockaddr_storage &sockaddr_local) {
   fd_ = socket(sockaddr_local.ss_family, SOCK_SEQPACKET, IPPROTO_SCTP);
-  PCHECK(fd_ != -1);
+  ABSL_PCHECK(fd_ != -1);
   LOG(INFO) << "socket(" << Family(sockaddr_local)
             << ", SOCK_SEQPACKET, IPPROTOSCTP) = " << fd_;
   {
@@ -312,7 +312,7 @@ void SctpReadWrite::OpenSocket(const struct sockaddr_storage &sockaddr_local) {
     //
     // See comments for the --sctp_tos flag for more information.
     int tos = IPTOS_DSCP(absl::GetFlag(FLAGS_sctp_tos));
-    PCHECK(setsockopt(fd_, IPPROTO_IP, IP_TOS, &tos, sizeof(tos)) == 0);
+    ABSL_PCHECK(setsockopt(fd_, IPPROTO_IP, IP_TOS, &tos, sizeof(tos)) == 0);
   }
   {
     // Per https://tools.ietf.org/html/rfc6458
@@ -325,14 +325,14 @@ void SctpReadWrite::OpenSocket(const struct sockaddr_storage &sockaddr_local) {
     // also address the TODO in ProcessNotification to match on all the
     // necessary fields.
     int interleaving = 1;
-    PCHECK(setsockopt(fd_, IPPROTO_SCTP, SCTP_FRAGMENT_INTERLEAVE,
-                      &interleaving, sizeof(interleaving)) == 0);
+    ABSL_PCHECK(setsockopt(fd_, IPPROTO_SCTP, SCTP_FRAGMENT_INTERLEAVE,
+                           &interleaving, sizeof(interleaving)) == 0);
   }
   {
     // Enable recvinfo when a packet arrives.
     int on = 1;
-    PCHECK(setsockopt(fd_, IPPROTO_SCTP, SCTP_RECVRCVINFO, &on, sizeof(int)) ==
-           0);
+    ABSL_PCHECK(
+        setsockopt(fd_, IPPROTO_SCTP, SCTP_RECVRCVINFO, &on, sizeof(int)) == 0);
   }
 
   {
@@ -343,13 +343,13 @@ void SctpReadWrite::OpenSocket(const struct sockaddr_storage &sockaddr_local) {
     subscribe.sctp_association_event = 1;
     subscribe.sctp_stream_change_event = 1;
     subscribe.sctp_partial_delivery_event = 1;
-    PCHECK(setsockopt(fd(), IPPROTO_SCTP, SCTP_EVENTS, (char *)&subscribe,
-                      sizeof(subscribe)) == 0);
+    ABSL_PCHECK(setsockopt(fd(), IPPROTO_SCTP, SCTP_EVENTS, (char *)&subscribe,
+                           sizeof(subscribe)) == 0);
   }
 
 #if HAS_SCTP_AUTH
   if (sctp_authentication_) {
-    CHECK(SctpAuthIsEnabled())
+    ABSL_CHECK(SctpAuthIsEnabled())
         << "SCTP Authentication key requested, but authentication isn't "
            "enabled... Use `sysctl -w net.sctp.auth_enable=1` to enable";
 
@@ -362,15 +362,15 @@ void SctpReadWrite::OpenSocket(const struct sockaddr_storage &sockaddr_local) {
     struct sctp_authkeyid authkeyid;
     authkeyid.scact_keynumber = 0;
     authkeyid.scact_assoc_id = SCTP_ALL_ASSOC;
-    PCHECK(setsockopt(fd(), IPPROTO_SCTP, SCTP_AUTH_DELETE_KEY, &authkeyid,
-                      sizeof(authkeyid)) == 0);
+    ABSL_PCHECK(setsockopt(fd(), IPPROTO_SCTP, SCTP_AUTH_DELETE_KEY, &authkeyid,
+                           sizeof(authkeyid)) == 0);
 
     // Set up authentication for data chunks.
     struct sctp_authchunk authchunk;
     authchunk.sauth_chunk = 0;
 
-    PCHECK(setsockopt(fd(), IPPROTO_SCTP, SCTP_AUTH_CHUNK, &authchunk,
-                      sizeof(authchunk)) == 0);
+    ABSL_PCHECK(setsockopt(fd(), IPPROTO_SCTP, SCTP_AUTH_CHUNK, &authchunk,
+                           sizeof(authchunk)) == 0);
   }
 #endif
 
@@ -381,7 +381,7 @@ bool SctpReadWrite::SendMessage(
     int stream, std::string_view data, int time_to_live,
     std::optional<struct sockaddr_storage> sockaddr_remote,
     sctp_assoc_t snd_assoc_id) {
-  CHECK(fd_ != -1);
+  ABSL_CHECK(fd_ != -1);
   LOG_IF(FATAL, sctp_authentication_ && current_key_.empty())
       << "Expected SCTP authentication but no key active";
   struct iovec iov;
@@ -436,7 +436,7 @@ bool SctpReadWrite::SendMessage(
     PLOG(FATAL) << "sendmsg on sctp socket failed";
     return false;
   }
-  CHECK_EQ(static_cast<ssize_t>(data.size()), size);
+  ABSL_CHECK_EQ(static_cast<ssize_t>(data.size()), size);
   VLOG(2) << "Sent " << data.size() << " bytes";
   return true;
 }
@@ -449,7 +449,7 @@ void SctpReadWrite::FreeMessage(aos::unique_c_ptr<Message> &&message) {
 }
 
 void SctpReadWrite::SetPoolSize(size_t pool_size) {
-  CHECK(!use_pool_);
+  ABSL_CHECK(!use_pool_);
   partial_messages_.reserve(pool_size);
   free_messages_.reserve(pool_size);
   for (size_t i = 0; i < pool_size; ++i) {
@@ -470,7 +470,7 @@ aos::unique_c_ptr<Message> SctpReadWrite::AcquireMessage() {
     result->must_be_returned_to_pool = false;
     return result;
   } else {
-    CHECK_GT(free_messages_.size(), 0u);
+    ABSL_CHECK_GT(free_messages_.size(), 0u);
     aos::unique_c_ptr<Message> result = std::move(free_messages_.back());
     free_messages_.pop_back();
     result->must_be_returned_to_pool = true;
@@ -481,7 +481,7 @@ aos::unique_c_ptr<Message> SctpReadWrite::AcquireMessage() {
 // We read each fragment into a fresh Message, because most of them won't be
 // fragmented. If we do end up with a fragment, then we copy the data out of it.
 aos::unique_c_ptr<Message> SctpReadWrite::ReadMessage() {
-  CHECK(fd_ != -1);
+  ABSL_CHECK(fd_ != -1);
   LOG_IF(FATAL, sctp_authentication_ && current_key_.empty())
       << "Expected SCTP authentication but no key active";
 
@@ -516,7 +516,7 @@ aos::unique_c_ptr<Message> SctpReadWrite::ReadMessage() {
       PLOG(FATAL) << "recvmsg on sctp socket " << fd_ << " failed";
     }
 
-    CHECK(!(inmessage.msg_flags & MSG_CTRUNC))
+    ABSL_CHECK(!(inmessage.msg_flags & MSG_CTRUNC))
         << ": Control message truncated.";
 
     if (MSG_NOTIFICATION & inmessage.msg_flags) {
@@ -532,7 +532,7 @@ aos::unique_c_ptr<Message> SctpReadWrite::ReadMessage() {
            scmsg = CMSG_NXTHDR(&inmessage, scmsg)) {
         switch (scmsg->cmsg_type) {
           case SCTP_RCVINFO: {
-            CHECK(!found_rcvinfo);
+            ABSL_CHECK(!found_rcvinfo);
             found_rcvinfo = true;
             result->header.rcvinfo =
                 *reinterpret_cast<struct sctp_rcvinfo *>(CMSG_DATA(scmsg));
@@ -542,7 +542,7 @@ aos::unique_c_ptr<Message> SctpReadWrite::ReadMessage() {
             break;
         }
       }
-      CHECK_EQ(found_rcvinfo, result->message_type == Message::kMessage)
+      ABSL_CHECK_EQ(found_rcvinfo, result->message_type == Message::kMessage)
           << ": Failed to find a SCTP_RCVINFO cmsghdr. flags: "
           << inmessage.msg_flags;
     }
@@ -562,7 +562,7 @@ aos::unique_c_ptr<Message> SctpReadWrite::ReadMessage() {
 
     if (result->message_type == Message::kNotification) {
       // Notifications are never fragmented, just return it now.
-      CHECK(inmessage.msg_flags & MSG_EOR)
+      ABSL_CHECK(inmessage.msg_flags & MSG_EOR)
           << ": Notifications should never be big enough to fragment";
       if (ProcessNotification(result.get())) {
         FreeMessage(std::move(result));
@@ -586,18 +586,18 @@ aos::unique_c_ptr<Message> SctpReadWrite::ReadMessage() {
       const aos::unique_c_ptr<Message> &partial_message =
           *partial_message_iterator;
       // Verify it's really part of the same message.
-      CHECK_EQ(partial_message->message_type, result->message_type)
+      ABSL_CHECK_EQ(partial_message->message_type, result->message_type)
           << ": for " << result->header.rcvinfo.rcv_sid << ","
           << result->header.rcvinfo.rcv_ssn << ","
           << result->header.rcvinfo.rcv_assoc_id;
-      CHECK_EQ(partial_message->header.rcvinfo.rcv_ppid,
-               result->header.rcvinfo.rcv_ppid)
+      ABSL_CHECK_EQ(partial_message->header.rcvinfo.rcv_ppid,
+                    result->header.rcvinfo.rcv_ppid)
           << ": for " << result->header.rcvinfo.rcv_sid << ","
           << result->header.rcvinfo.rcv_ssn << ","
           << result->header.rcvinfo.rcv_assoc_id;
 
       // Now copy the data over and update the size.
-      CHECK_LE(partial_message->size + result->size, max_read_size_)
+      ABSL_CHECK_LE(partial_message->size + result->size, max_read_size_)
           << ": Assembled fragments overflowed buffer on stream "
           << result->header.rcvinfo.rcv_sid << ".";
       memcpy(partial_message->mutable_data() + partial_message->size,
@@ -618,7 +618,7 @@ aos::unique_c_ptr<Message> SctpReadWrite::ReadMessage() {
       if (partial_message_iterator != partial_messages_.end()) {
         // It was already merged into the message in the list, so now we
         // pull that out of the list and return it.
-        CHECK(!result);
+        ABSL_CHECK(!result);
         result = std::move(*partial_message_iterator);
         partial_messages_.erase(partial_message_iterator);
         VLOG(1) << "Final count: " << (result->partial_deliveries + 1)
@@ -627,7 +627,7 @@ aos::unique_c_ptr<Message> SctpReadWrite::ReadMessage() {
                 << result->header.rcvinfo.rcv_ssn << ","
                 << result->header.rcvinfo.rcv_assoc_id;
       }
-      CHECK(result);
+      ABSL_CHECK(result);
       return result;
     }
     if (partial_message_iterator == partial_messages_.end()) {
@@ -637,14 +637,14 @@ aos::unique_c_ptr<Message> SctpReadWrite::ReadMessage() {
       // Need to record this as the first fragment.
       partial_messages_.emplace_back(std::move(result));
       if (use_pool_) {
-        CHECK(!free_messages_.empty())
+        ABSL_CHECK(!free_messages_.empty())
             << ": Insufficient free messages in pool to ever be able to "
                "complete incoming partial SCTP message; something may be "
                "misconfigured.";
       }
     }
-    CHECK(!result) << ": Failed to do anything with result object before "
-                      "continuing while loop.";
+    ABSL_CHECK(!result) << ": Failed to do anything with result object before "
+                           "continuing while loop.";
   }
 }
 
@@ -686,7 +686,7 @@ bool SctpReadWrite::Abort(sctp_assoc_t snd_assoc_id) {
     }
     return false;
   } else {
-    CHECK_EQ(0, size);
+    ABSL_CHECK_EQ(0, size);
     return true;
   }
 }
@@ -696,7 +696,7 @@ void SctpReadWrite::CloseSocket() {
     return;
   }
   LOG(INFO) << "close(" << fd_ << ")";
-  PCHECK(close(fd_) == 0);
+  ABSL_PCHECK(close(fd_) == 0);
   fd_ = -1;
 }
 
@@ -711,12 +711,12 @@ void SctpReadWrite::DoSetMaxSize() {
           : std::max(max_write_size_, absl::GetFlag(FLAGS_min_wmem));
 
   // This sets the max packet size that we can send.
-  CHECK_GE(ReadWMemMax(), max_write_size_)
+  ABSL_CHECK_GE(ReadWMemMax(), max_write_size_)
       << "wmem_max is too low. To increase wmem_max temporarily, do sysctl "
          "-w net.core.wmem_max="
       << max_size;
-  PCHECK(setsockopt(fd(), SOL_SOCKET, SO_SNDBUF, &max_size, sizeof(max_size)) ==
-         0);
+  ABSL_PCHECK(setsockopt(fd(), SOL_SOCKET, SO_SNDBUF, &max_size,
+                         sizeof(max_size)) == 0);
   VLOG(1) << "Set SO_SNDBUF of socket " << fd() << " to " << max_size;
 
   // The SO_RCVBUF option (also controlled by net.core.rmem_default) needs to be
@@ -724,7 +724,8 @@ void SctpReadWrite::DoSetMaxSize() {
   // should be fine.  If it isn't big enough, transmission will fail.
   if (absl::GetFlag(FLAGS_rmem) > 0) {
     size_t rmem = absl::GetFlag(FLAGS_rmem);
-    PCHECK(setsockopt(fd(), SOL_SOCKET, SO_RCVBUF, &rmem, sizeof(rmem)) == 0);
+    ABSL_PCHECK(setsockopt(fd(), SOL_SOCKET, SO_RCVBUF, &rmem, sizeof(rmem)) ==
+                0);
   }
 }
 
@@ -735,7 +736,7 @@ bool SctpReadWrite::ProcessNotification(const Message *message) {
     case SCTP_PARTIAL_DELIVERY_EVENT: {
       const struct sctp_pdapi_event *const partial_delivery =
           &snp->sn_pdapi_event;
-      CHECK_EQ(partial_delivery->pdapi_length, sizeof(*partial_delivery))
+      ABSL_CHECK_EQ(partial_delivery->pdapi_length, sizeof(*partial_delivery))
           << ": Kernel's SCTP code is not a version we support";
       switch (partial_delivery->pdapi_indication) {
         case SCTP_PARTIAL_DELIVERY_ABORTED: {
@@ -752,7 +753,7 @@ bool SctpReadWrite::ProcessNotification(const Message *message) {
                 return candidate->header.rcvinfo.rcv_assoc_id ==
                        partial_delivery->pdapi_assoc_id;
               });
-          CHECK(iterator != partial_messages_.end())
+          ABSL_CHECK(iterator != partial_messages_.end())
               << ": Got out of sync with the kernel for "
               << partial_delivery->pdapi_assoc_id;
           VLOG(1) << "Pruning partial delivery for "
@@ -774,7 +775,7 @@ struct alignas(sctp_authkey) AuthKeyBufferByte {
 };
 
 void SctpReadWrite::SetAuthKey(absl::Span<const uint8_t> auth_key) {
-  PCHECK(fd_ != -1);
+  ABSL_PCHECK(fd_ != -1);
   if (auth_key.empty()) {
     return;
   }

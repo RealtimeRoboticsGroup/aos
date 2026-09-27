@@ -5,7 +5,7 @@
 
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/log/vlog_is_on.h"
 #include "gtest/gtest.h"
@@ -108,8 +108,8 @@ namespace frc::apriltag::testing {
 // Checks that 2 images match.
 void CheckImage(image_u8_t compare_im_one, image_u8_t compare_im_two,
                 std::string_view label) {
-  CHECK_EQ(compare_im_one.width, compare_im_two.width);
-  CHECK_EQ(compare_im_one.height, compare_im_two.height);
+  ABSL_CHECK_EQ(compare_im_one.width, compare_im_two.width);
+  ABSL_CHECK_EQ(compare_im_one.height, compare_im_two.height);
   ssize_t p = 0;
   for (int j = 0; j < compare_im_one.height; ++j) {
     for (int i = 0; i < compare_im_one.width; ++i) {
@@ -126,8 +126,8 @@ void CheckImage(image_u8_t compare_im_one, image_u8_t compare_im_two,
         ++p;
       }
 
-      CHECK_EQ(compare_im_one.buf[j * compare_im_one.stride + i],
-               compare_im_two.buf[j * compare_im_two.stride + i])
+      ABSL_CHECK_EQ(compare_im_one.buf[j * compare_im_one.stride + i],
+                    compare_im_two.buf[j * compare_im_two.stride + i])
           << "First Image Value "
           << (int)compare_im_one.buf[j * compare_im_one.stride + i] << " "
           << "Second Image Value "
@@ -177,7 +177,7 @@ std::map<uint32_t, BlobInfo> CheckUnionfind(unionfind_t *uf,
         v_remapped = it->second;
       }
 
-      CHECK_EQ(v_remapped, union_markers.at<uint32_t>(y, x))
+      ABSL_CHECK_EQ(v_remapped, union_markers.at<uint32_t>(y, x))
           << "At " << x << ", " << y;
     }
   }
@@ -204,8 +204,8 @@ std::map<uint32_t, BlobInfo> CheckUnionfind(unionfind_t *uf,
       if (!it.second) {
         BlobInfo *info = &(it.first->second);
         ++(info->size);
-        CHECK_EQ(info->april_robotics_id,
-                 unionfind_get_representative(uf, y * width + x));
+        ABSL_CHECK_EQ(info->april_robotics_id,
+                      unionfind_get_representative(uf, y * width + x));
         info->min_x = std::min(info->min_x, x);
         info->max_x = std::max(info->max_x, x);
         info->min_y = std::min(info->min_y, y);
@@ -219,16 +219,16 @@ std::map<uint32_t, BlobInfo> CheckUnionfind(unionfind_t *uf,
       const uint32_t blob_id = union_markers.at<uint32_t>(y, x);
       const BlobInfo &blob_info = blob_sizes[blob_id];
       if (threshold.at<uint8_t>(y, x) == 127) {
-        CHECK_EQ(0u, union_markers_size[blob_id])
+        ABSL_CHECK_EQ(0u, union_markers_size[blob_id])
             << " at (" << x << ", " << y << ") -> " << blob_id;
         continue;
       }
 
       if (blob_info.size >= 25u) {
-        CHECK_LE(25u, union_markers_size[blob_id])
+        ABSL_CHECK_LE(25u, union_markers_size[blob_id])
             << " at (" << x << ", " << y << ") -> " << blob_id;
       } else {
-        CHECK_EQ(blob_info.size, union_markers_size[blob_id])
+        ABSL_CHECK_EQ(blob_info.size, union_markers_size[blob_id])
             << " at (" << x << ", " << y << ") -> " << blob_id;
       }
     }
@@ -290,7 +290,7 @@ class CudaAprilTagDetector {
     // Report out info about our GPU.
     {
       cudaDeviceProp prop;
-      CHECK_EQ(cudaGetDeviceProperties(&prop, 0), cudaSuccess);
+      ABSL_CHECK_EQ(cudaGetDeviceProperties(&prop, 0), cudaSuccess);
 
       LOG(INFO) << "Device: sm_" << prop.major << prop.minor;
 #define DUMP(x) LOG(INFO) << "" #x ": " << prop.x;
@@ -339,7 +339,7 @@ class CudaAprilTagDetector {
 
   // Detects tags on the GPU.
   void DetectGPU(cv::Mat color_image) {
-    CHECK_EQ(color_image.size(), gray_cuda_.size());
+    ABSL_CHECK_EQ(color_image.size(), gray_cuda_.size());
 
     gpu_detector_.Detect(color_image.data, nullptr);
 
@@ -489,7 +489,7 @@ class CudaAprilTagDetector {
 
           QuadBoundaryPoint actual = union_marker_pair_[index];
           if (!point.near(actual)) {
-            CHECK_LT(wrong, 10u);
+            ABSL_CHECK_LT(wrong, 10u);
             LOG(WARNING) << "point == actual (" << std::hex << point << ", "
                          << actual << ") : Failed at (" << std::dec << x << ", "
                          << y << ") + (" << dx << ", " << dy
@@ -516,10 +516,10 @@ class CudaAprilTagDetector {
         }
       }
     }
-    CHECK_EQ(wrong, 0u) << ", got " << right_nonzero << " right";
+    ABSL_CHECK_EQ(wrong, 0u) << ", got " << right_nonzero << " right";
 
     for (size_t i = 0; i < expected_union_marker_pair.size(); ++i) {
-      CHECK_EQ(expected_union_marker_pair[i], union_marker_pair_[i]);
+      ABSL_CHECK_EQ(expected_union_marker_pair[i], union_marker_pair_[i]);
     }
 
     return expected_union_marker_pair;
@@ -547,14 +547,14 @@ class CudaAprilTagDetector {
         }
       }
 
-      CHECK_EQ(static_cast<size_t>(sorted_union_marker_pair.size()),
-               expected_compressed_union_marker_pair.size());
+      ABSL_CHECK_EQ(static_cast<size_t>(sorted_union_marker_pair.size()),
+                    expected_compressed_union_marker_pair.size());
 
       // And make sure they match.
       for (size_t i = 0; i < expected_compressed_union_marker_pair.size();
            ++i) {
-        CHECK_EQ(expected_compressed_union_marker_pair[i],
-                 compressed_union_marker_pair[i]);
+        ABSL_CHECK_EQ(expected_compressed_union_marker_pair[i],
+                      compressed_union_marker_pair[i]);
       }
     }
 
@@ -571,8 +571,8 @@ class CudaAprilTagDetector {
 
     for (size_t i = 0; i < static_cast<size_t>(sorted_union_marker_pair.size());
          ++i) {
-      CHECK_EQ(expected_compressed_union_marker_pair[i].rep01(),
-               sorted_union_marker_pair[i].rep01());
+      ABSL_CHECK_EQ(expected_compressed_union_marker_pair[i].rep01(),
+                    sorted_union_marker_pair[i].rep01());
     }
 
     return expected_compressed_union_marker_pair;
@@ -589,7 +589,7 @@ class CudaAprilTagDetector {
       const int32_t y = pair.y();
 
       auto blob_center = blob_centers.find(pair.rep01());
-      CHECK(blob_center != blob_centers.end());
+      ABSL_CHECK(blob_center != blob_centers.end());
 
       const float cx = blob_center->second.first;
       const float cy = blob_center->second.second;
@@ -620,7 +620,7 @@ class CudaAprilTagDetector {
       const int32_t y = pair.y();
 
       auto blob_center = blob_centers.find(pair.rep01());
-      CHECK(blob_center != blob_centers.end());
+      ABSL_CHECK(blob_center != blob_centers.end());
 
       const float cx = blob_center->second.first;
       const float cy = blob_center->second.second;
@@ -814,7 +814,7 @@ class CudaAprilTagDetector {
                               return std::get<1>(a) == std::get<1>(b);
                             }),
                 pts.end());
-      CHECK_EQ(pts.size(), before_size);
+      ABSL_CHECK_EQ(pts.size(), before_size);
 
       std::sort(
           pts.begin(), pts.end(),
@@ -964,7 +964,7 @@ class CudaAprilTagDetector {
     QuadBoundaryPoint start = compressed_union_marker_pairs[0];
     for (size_t i = 0; i < compressed_union_marker_pairs.size(); ++i) {
       QuadBoundaryPoint current = compressed_union_marker_pairs[i];
-      CHECK_GE(current.rep01(), start.rep01())
+      ABSL_CHECK_GE(current.rep01(), start.rep01())
           << " Failed on index " << i << " of "
           << compressed_union_marker_pairs.size();
       if ((start.rep01()) != (current.rep01())) {
@@ -988,7 +988,7 @@ class CudaAprilTagDetector {
     IndexPoint start = compressed_cuda_points[0];
     for (size_t i = 0; i < compressed_cuda_points.size(); ++i) {
       IndexPoint current = compressed_cuda_points[i];
-      CHECK_GE(current.blob_index(), start.blob_index())
+      ABSL_CHECK_GE(current.blob_index(), start.blob_index())
           << " Failed on index " << i << " of "
           << compressed_cuda_points.size();
       if ((start.blob_index()) != (current.blob_index())) {
@@ -1013,15 +1013,15 @@ class CudaAprilTagDetector {
     const std::vector<std::vector<uint64_t>> april_sorted_grouped_points =
         SortAprilroboticsPoints(april_grouped_points);
 
-    CHECK_EQ(april_sorted_grouped_points.size(),
-             cuda_point_sorted_grouped_points.size());
+    ABSL_CHECK_EQ(april_sorted_grouped_points.size(),
+                  cuda_point_sorted_grouped_points.size());
     for (size_t i = 0; i < april_sorted_grouped_points.size(); ++i) {
-      CHECK_EQ(april_sorted_grouped_points[i].size(),
-               cuda_point_sorted_grouped_points[i].size());
+      ABSL_CHECK_EQ(april_sorted_grouped_points[i].size(),
+                    cuda_point_sorted_grouped_points[i].size());
       for (size_t j = 0; j < april_sorted_grouped_points[i].size(); ++j) {
-        CHECK_EQ(april_sorted_grouped_points[i][j],
-                 cuda_point_sorted_grouped_points[i][j].x() +
-                     cuda_point_sorted_grouped_points[i][j].y() * width_)
+        ABSL_CHECK_EQ(april_sorted_grouped_points[i][j],
+                      cuda_point_sorted_grouped_points[i][j].x() +
+                          cuda_point_sorted_grouped_points[i][j].y() * width_)
             << ": On list of size " << april_sorted_grouped_points[i].size()
             << ", failed on point " << j << "("
             << april_sorted_grouped_points[i][j] % width_ << ", "
@@ -1043,7 +1043,7 @@ class CudaAprilTagDetector {
       BlobExtentsIndexFinder finder(extents_cuda.data(), extents_cuda.size());
       size_t i = 0;
       size_t starting_offset = 0;
-      CHECK_EQ(cuda_grouped_points.size(), extents_cuda.size());
+      ABSL_CHECK_EQ(cuda_grouped_points.size(), extents_cuda.size());
       for (const std::vector<QuadBoundaryPoint> &points : cuda_grouped_points) {
         size_t min_x, min_y, max_x, max_y;
         min_x = max_x = points[0].x();
@@ -1059,12 +1059,12 @@ class CudaAprilTagDetector {
         }
 
         const MinMaxExtents extents = extents_cuda[i];
-        CHECK_EQ(extents.min_x, min_x);
-        CHECK_EQ(extents.max_x, max_x);
-        CHECK_EQ(extents.min_y, min_y);
-        CHECK_EQ(extents.max_y, max_y);
-        CHECK_EQ(extents.count, points.size());
-        CHECK_EQ(extents.starting_offset, starting_offset)
+        ABSL_CHECK_EQ(extents.min_x, min_x);
+        ABSL_CHECK_EQ(extents.max_x, max_x);
+        ABSL_CHECK_EQ(extents.min_y, min_y);
+        ABSL_CHECK_EQ(extents.max_y, max_y);
+        ABSL_CHECK_EQ(extents.count, points.size());
+        ABSL_CHECK_EQ(extents.starting_offset, starting_offset)
             << " for index " << i;
 
         float dot = 0;
@@ -1084,11 +1084,11 @@ class CudaAprilTagDetector {
                  (static_cast<float>(points[j].y()) - cy) * points[j].gy();
 
           // Make sure our blob finder agrees.
-          CHECK_EQ(i, finder.FindBlobIndex(starting_offset + j));
+          ABSL_CHECK_EQ(i, finder.FindBlobIndex(starting_offset + j));
         }
 
         // Test that the summed dot product is right.
-        CHECK_LT(std::abs(extents.dot() - dot) / std::abs(dot), 1e-2)
+        ABSL_CHECK_LT(std::abs(extents.dot() - dot) / std::abs(dot), 1e-2)
             << ": for point " << i << ", cuda -> " << extents.dot()
             << ", C++ -> " << dot;
 
@@ -1130,13 +1130,13 @@ class CudaAprilTagDetector {
   void CheckFilteredCudaPoints(
       const std::vector<IndexPoint> &selected_blobs,
       const std::vector<IndexPoint> &selected_blobs_cuda) const {
-    CHECK_EQ(selected_blobs.size(), selected_blobs_cuda.size());
+    ABSL_CHECK_EQ(selected_blobs.size(), selected_blobs_cuda.size());
     for (size_t i = 0;
          i < std::min(selected_blobs.size(), selected_blobs_cuda.size()); ++i) {
       VLOG(1) << "Got blob[" << i << "] -> " << selected_blobs[i] << " vs "
               << selected_blobs_cuda[i];
-      CHECK_EQ(selected_blobs[i].blob_index(),
-               selected_blobs_cuda[i].blob_index());
+      ABSL_CHECK_EQ(selected_blobs[i].blob_index(),
+                    selected_blobs_cuda[i].blob_index());
     }
   }
 
@@ -1146,12 +1146,12 @@ class CudaAprilTagDetector {
           &slope_sorted_expected_grouped_points,
       size_t selected_quads, const std::vector<IndexPoint> &selected_blobs,
       const std::vector<IndexPoint> &sorted_selected_blobs_cuda) const {
-    CHECK_EQ(selected_blobs.size(), sorted_selected_blobs_cuda.size());
+    ABSL_CHECK_EQ(selected_blobs.size(), sorted_selected_blobs_cuda.size());
     const std::vector<std::vector<IndexPoint>> cuda_grouped_points =
         CudaGroupedPoints(sorted_selected_blobs_cuda);
 
-    CHECK_EQ(cuda_grouped_points.size(), selected_quads);
-    CHECK_EQ(slope_sorted_expected_grouped_points.size(), selected_quads);
+    ABSL_CHECK_EQ(cuda_grouped_points.size(), selected_quads);
+    ABSL_CHECK_EQ(slope_sorted_expected_grouped_points.size(), selected_quads);
 
     size_t missmatched_points = 0;
     for (size_t i = 0; i < cuda_grouped_points.size(); ++i) {
@@ -1159,7 +1159,7 @@ class CudaAprilTagDetector {
       const std::vector<QuadBoundaryPoint> &slope_sorted_points =
           slope_sorted_expected_grouped_points[i];
 
-      CHECK_EQ(cuda_grouped_blob.size(), slope_sorted_points.size());
+      ABSL_CHECK_EQ(cuda_grouped_blob.size(), slope_sorted_points.size());
       if (VLOG_IS_ON(1) && cuda_grouped_blob[0].blob_index() == 160) {
         for (size_t j = 0; j < cuda_grouped_points[i].size(); ++j) {
           LOG(INFO) << "For blob " << cuda_grouped_blob[0].blob_index()
@@ -1182,7 +1182,7 @@ class CudaAprilTagDetector {
         const int32_t y = pair.y();
 
         auto blob_center = blob_centers.find(pair.rep01());
-        CHECK(blob_center != blob_centers.end());
+        ABSL_CHECK(blob_center != blob_centers.end());
 
         const float cx = blob_center->second.first;
         const float cy = blob_center->second.second;
@@ -1255,7 +1255,7 @@ class CudaAprilTagDetector {
                   << slope_sorted_points[j].x() << ", "
                   << slope_sorted_points[j].y() << "), in size "
                   << cuda_grouped_points[i].size();
-          CHECK_LE(missmatched_runs, 4u);
+          ABSL_CHECK_LE(missmatched_runs, 4u);
         } else {
           missmatched_runs = 0;
         }
@@ -1264,7 +1264,7 @@ class CudaAprilTagDetector {
 
     // Or a lot of points overall.  The slope algo has duplicate points, and
     // is occasionally wrong.
-    CHECK_LE(missmatched_points, 25u);
+    ABSL_CHECK_LE(missmatched_points, 25u);
   }
 
   void CheckCudaFilteredExtents(
@@ -1277,16 +1277,16 @@ class CudaAprilTagDetector {
       VLOG(1) << "Extent " << i << " started at "
               << selected_extents_cuda[i].value.starting_offset
               << " with count " << selected_extents_cuda[i].value.count;
-      CHECK_EQ(selected_extents_cuda[i].value.starting_offset, start)
+      ABSL_CHECK_EQ(selected_extents_cuda[i].value.starting_offset, start)
           << " for extent " << i;
       size_t found_blobs = 0;
-      CHECK_EQ(selected_extents_cuda[i].value.starting_offset,
-               sorted_point_index);
+      ABSL_CHECK_EQ(selected_extents_cuda[i].value.starting_offset,
+                    sorted_point_index);
       while (sorted_selected_blobs_cuda[sorted_point_index].blob_index() == i) {
         ++found_blobs;
         ++sorted_point_index;
       }
-      CHECK_EQ(found_blobs, selected_extents_cuda[i].value.count);
+      ABSL_CHECK_EQ(found_blobs, selected_extents_cuda[i].value.count);
       start += selected_extents_cuda[i].value.count;
     }
   }
@@ -1321,7 +1321,7 @@ class CudaAprilTagDetector {
         zarray_add(cluster, &p);
       }
 
-      CHECK_EQ(static_cast<size_t>(zarray_size(cluster)), group.size());
+      ABSL_CHECK_EQ(static_cast<size_t>(zarray_size(cluster)), group.size());
 
       struct line_fit_pt *lfps = compute_lfps(group.size(), cluster, &quad_im);
 
@@ -1335,22 +1335,22 @@ class CudaAprilTagDetector {
                     << "), cuda: " << line_fit_points_cuda[accumulated_size + i]
                     << " aprilrobotics " << lfps[i];
         }
-        CHECK_EQ(line_fit_points_cuda[accumulated_size + i].Mx / 2.0,
-                 lfps[i].Mx)
+        ABSL_CHECK_EQ(line_fit_points_cuda[accumulated_size + i].Mx / 2.0,
+                      lfps[i].Mx)
             << ": for blob index " << group[i].blob_index();
-        CHECK_EQ(line_fit_points_cuda[accumulated_size + i].My / 2.0,
-                 lfps[i].My)
+        ABSL_CHECK_EQ(line_fit_points_cuda[accumulated_size + i].My / 2.0,
+                      lfps[i].My)
             << ": for blob index " << group[i].blob_index();
-        CHECK_EQ(line_fit_points_cuda[accumulated_size + i].Mxx / 4.0,
-                 lfps[i].Mxx)
+        ABSL_CHECK_EQ(line_fit_points_cuda[accumulated_size + i].Mxx / 4.0,
+                      lfps[i].Mxx)
             << ": for blob index " << group[i].blob_index();
-        CHECK_EQ(line_fit_points_cuda[accumulated_size + i].Mxy / 4.0,
-                 lfps[i].Mxy)
+        ABSL_CHECK_EQ(line_fit_points_cuda[accumulated_size + i].Mxy / 4.0,
+                      lfps[i].Mxy)
             << ": for blob index " << group[i].blob_index();
-        CHECK_EQ(line_fit_points_cuda[accumulated_size + i].Myy / 4.0,
-                 lfps[i].Myy)
+        ABSL_CHECK_EQ(line_fit_points_cuda[accumulated_size + i].Myy / 4.0,
+                      lfps[i].Myy)
             << ": for blob index " << group[i].blob_index();
-        CHECK_EQ(line_fit_points_cuda[accumulated_size + i].W, lfps[i].W)
+        ABSL_CHECK_EQ(line_fit_points_cuda[accumulated_size + i].W, lfps[i].W)
             << ": for blob index " << group[i].blob_index();
       }
 
@@ -1432,7 +1432,7 @@ class CudaAprilTagDetector {
         for (int i = 0; i < fsz; i++) {
           int j = i - fsz / 2;
           filter_coefficients.push_back(exp(-j * j / (2 * sigma * sigma)));
-          CHECK_EQ(filter_coefficients[i], FilterCoefficients()[i]);
+          ABSL_CHECK_EQ(filter_coefficients[i], FilterCoefficients()[i]);
         }
       }
 
@@ -1464,9 +1464,9 @@ class CudaAprilTagDetector {
 
         // Make sure the filter math works.  This can be a lot tighter since the
         // error calc appears to be less accurate.
-        CHECK_LT(std::abs(accumulated_cuda -
-                          filtered_errors_device[accumulated_size + i]),
-                 1e-3)
+        ABSL_CHECK_LT(std::abs(accumulated_cuda -
+                               filtered_errors_device[accumulated_size + i]),
+                      1e-3)
             << " Failed to match error at blob " << blob_index << " index " << i
             << " global index " << accumulated_size + i
             << " for a blob of size " << group.size() << " expected "
@@ -1475,7 +1475,7 @@ class CudaAprilTagDetector {
 
         // Make sure it hasn't walked too far off from the actual error.
         /*
-        CHECK_LT(std::abs(filtered_errors[i] -
+        ABSL_CHECK_LT(std::abs(filtered_errors[i] -
                           filtered_errors_device[accumulated_size + i]),
                  1e-1)
             << " Failed to match error at blob " << blob_index << " index " << i
@@ -1511,27 +1511,29 @@ class CudaAprilTagDetector {
           ++num_peaks_april;
         }
         // We don't agree...  But it is on little stupid stuff.
-        /*CHECK_EQ(is_peak_aprilrobotics, peaks_device[accumulated_size + i])
+        /*ABSL_CHECK_EQ(is_peak_aprilrobotics, peaks_device[accumulated_size +
+           i])
             << " Failed to match peak at blob " << blob_index << " index " << i
             << " global index " << accumulated_size + i
             << " for a blob of size " << group.size() << " compared "
             << before_aprilrobotics << " vs " << us_aprilrobotics << " vs "
             << after_aprilrobotics;*/
-        CHECK_EQ(is_peak_cuda, peaks_device[accumulated_size + i].blob_index !=
-                                   Peak::kNoPeak())
+        ABSL_CHECK_EQ(
+            is_peak_cuda,
+            peaks_device[accumulated_size + i].blob_index != Peak::kNoPeak())
             << " Failed to match peak at blob " << blob_index << " index " << i
             << " global index " << accumulated_size + i
             << " for a blob of size " << group.size() << " compared "
             << before_cuda << " vs " << us_cuda << " vs " << after_cuda;
-        CHECK_EQ(peaks_device[accumulated_size + i].filtered_point_index,
-                 accumulated_size + i);
-        CHECK_LE(peaks_device[accumulated_size + i].error,
-                 -filtered_errors_device[accumulated_size + i] + 1e-3);
-        CHECK_GE(peaks_device[accumulated_size + i].error,
-                 -filtered_errors_device[accumulated_size + i] - 1e-3);
+        ABSL_CHECK_EQ(peaks_device[accumulated_size + i].filtered_point_index,
+                      accumulated_size + i);
+        ABSL_CHECK_LE(peaks_device[accumulated_size + i].error,
+                      -filtered_errors_device[accumulated_size + i] + 1e-3);
+        ABSL_CHECK_GE(peaks_device[accumulated_size + i].error,
+                      -filtered_errors_device[accumulated_size + i] - 1e-3);
         if (is_peak_cuda) {
-          CHECK_EQ(peaks_device[accumulated_size + i].blob_index,
-                   group[0].blob_index())
+          ABSL_CHECK_EQ(peaks_device[accumulated_size + i].blob_index,
+                        group[0].blob_index())
               << " Failed to match peak at blob " << blob_index << " index "
               << i << " global index " << accumulated_size + i
               << " for a blob of size " << group.size() << " compared "
@@ -1545,7 +1547,7 @@ class CudaAprilTagDetector {
 
       (void)num_peaks_cuda;
       (void)num_peaks_april;
-      // CHECK_EQ(num_peaks_cuda, num_peaks_april);
+      // ABSL_CHECK_EQ(num_peaks_cuda, num_peaks_april);
 
       zarray_destroy(cluster);
       free(lfps);
@@ -1554,7 +1556,7 @@ class CudaAprilTagDetector {
     }
     LOG(INFO) << "Overall, found " << summed_cuda_pts << " peaks with "
               << bad_errors << " bad errors.";
-    // CHECK_LT(bad_errors, 60u);
+    // ABSL_CHECK_LT(bad_errors, 60u);
   }
 
   // Orders the clusters reported by AprilRobotics to match the inbound cuda
@@ -1626,7 +1628,7 @@ class CudaAprilTagDetector {
 
       std::sort(points.points.begin(), points.points.end(),
                 [this](const QuadBoundaryPoint &a, const QuadBoundaryPoint &b) {
-                  CHECK_EQ(a.rep01(), b.rep01());
+                  ABSL_CHECK_EQ(a.rep01(), b.rep01());
                   return a.x() + a.y() * width_ < b.x() + b.y() * width_;
                 });
       cuda_points.emplace_back(std::move(points));
@@ -1649,17 +1651,18 @@ class CudaAprilTagDetector {
     });
 
     // OK, we now have the cuda points in the same order as the aprilrobotics
-    // points.  First CHECK that they match, just in case...
+    // points.  First ABSL_CHECK that they match, just in case...
     std::vector<zarray_t *> sorted_result;
     sorted_result.resize(cuda_points.size());
 
-    CHECK_EQ(april_points.size(), cuda_points.size());
+    ABSL_CHECK_EQ(april_points.size(), cuda_points.size());
     for (size_t i = 0; i < april_points.size(); ++i) {
-      CHECK_EQ(april_points[i].points.size(), cuda_points[i].points.size());
+      ABSL_CHECK_EQ(april_points[i].points.size(),
+                    cuda_points[i].points.size());
       for (size_t j = 0; j < april_points[i].points.size(); ++j) {
-        CHECK_EQ(april_points[i].points[j],
-                 cuda_points[i].points[j].x() +
-                     cuda_points[i].points[j].y() * width_)
+        ABSL_CHECK_EQ(april_points[i].points[j],
+                      cuda_points[i].points[j].x() +
+                          cuda_points[i].points[j].y() * width_)
             << ": " << i << " " << j;
       }
 
@@ -1720,7 +1723,7 @@ class CudaAprilTagDetector {
                                           return (int)corner.blob_index == i;
                                         });
 
-      CHECK_EQ(quad_iterator != fit_quads.end(), valid_blob != 0)
+      ABSL_CHECK_EQ(quad_iterator != fit_quads.end(), valid_blob != 0)
           << ": Missmatch on quad " << i;
 
       if (!valid_blob) {
@@ -1735,14 +1738,14 @@ class CudaAprilTagDetector {
 
       for (size_t point = 0; point < 4; ++point) {
         constexpr double kEpsilon = 1e-3;
-        CHECK_LE(quad_result.p[point][0],
-                 cuda_corner.corners[point][0] + kEpsilon);
-        CHECK_GE(quad_result.p[point][0],
-                 cuda_corner.corners[point][0] - kEpsilon);
-        CHECK_LE(quad_result.p[point][1],
-                 cuda_corner.corners[point][1] + kEpsilon);
-        CHECK_GE(quad_result.p[point][1],
-                 cuda_corner.corners[point][1] - kEpsilon);
+        ABSL_CHECK_LE(quad_result.p[point][0],
+                      cuda_corner.corners[point][0] + kEpsilon);
+        ABSL_CHECK_GE(quad_result.p[point][0],
+                      cuda_corner.corners[point][0] - kEpsilon);
+        ABSL_CHECK_LE(quad_result.p[point][1],
+                      cuda_corner.corners[point][1] + kEpsilon);
+        ABSL_CHECK_GE(quad_result.p[point][1],
+                      cuda_corner.corners[point][1] - kEpsilon);
       }
     }
   }
@@ -1768,8 +1771,8 @@ class CudaAprilTagDetector {
     zarray_sort(gpu_detections, DetectionCompareFunction);
     zarray_sort(aprilrobotics_detections, DetectionCompareFunction);
 
-    CHECK_EQ(zarray_size(aprilrobotics_detections),
-             zarray_size(gpu_detections));
+    ABSL_CHECK_EQ(zarray_size(aprilrobotics_detections),
+                  zarray_size(gpu_detections));
     LOG(INFO) << "Found " << zarray_size(gpu_detections) << " tags";
 
     for (int i = 0; i < zarray_size(aprilrobotics_detections); ++i) {
@@ -1806,8 +1809,8 @@ class CudaAprilTagDetector {
       // deviate.  It should be the same function for both at this point.
       const double threshold = undistort_ ? 15.0 : (valid ? 2e-3 : 1e-1);
 
-      CHECK_EQ(aprilrobotics_detection->id, gpu_detection->id);
-      CHECK_EQ(aprilrobotics_detection->hamming, gpu_detection->hamming);
+      ABSL_CHECK_EQ(aprilrobotics_detection->id, gpu_detection->id);
+      ABSL_CHECK_EQ(aprilrobotics_detection->hamming, gpu_detection->hamming);
       EXPECT_NEAR(aprilrobotics_detection->c[0], gpu_detection->c[0],
                   threshold);
       EXPECT_NEAR(aprilrobotics_detection->c[1], gpu_detection->c[1],
@@ -1820,8 +1823,8 @@ class CudaAprilTagDetector {
         }
       }
 
-      CHECK_EQ(aprilrobotics_detection->H->nrows, gpu_detection->H->nrows);
-      CHECK_EQ(aprilrobotics_detection->H->ncols, gpu_detection->H->ncols);
+      ABSL_CHECK_EQ(aprilrobotics_detection->H->nrows, gpu_detection->H->nrows);
+      ABSL_CHECK_EQ(aprilrobotics_detection->H->ncols, gpu_detection->H->ncols);
 
       for (size_t j = 0; j < gpu_detection->H->ncols; ++j) {
         for (size_t k = 0; k < gpu_detection->H->nrows; ++k) {
@@ -2032,7 +2035,7 @@ class CudaAprilTagDetector {
             }
           }
 
-          CHECK(one_to_one_blob_match);
+          ABSL_CHECK(one_to_one_blob_match);
 
           unionfind_image_common.at<cv::Vec3b>(y, x) = color;
         }

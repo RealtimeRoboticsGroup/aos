@@ -16,7 +16,7 @@ cc_binary(
         "//aos/time",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -33,7 +33,7 @@ cc_library(
         "//aos/events:shm_event_loop",
         "//aos/scoped:scoped_fd",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -59,7 +59,7 @@ cc_binary(
         "//aos/events/logging:log_reader",
         "//aos/time",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -76,6 +76,6 @@ cc_library(
         "//aos/events:event_loop",
         "//aos/scoped:scoped_fd",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )

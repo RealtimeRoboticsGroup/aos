@@ -1,3 +1,4 @@
+#include "absl/log/absl_check.h"
 #include "gtest/gtest.h"
 
 #include "aos/testing/path.h"
@@ -36,7 +37,7 @@ TEST_F(DrivetrainJsonTest, DrivetrainLoop) {
       ReadCoefficients(ArtifactPath("frc/control_loops/python/test_drivetrain/"
                                     "drivetrain_dog_motor_plant.json"));
 
-  CHECK(coeffs.message().drivetrain_loop() != nullptr);
+  ABSL_CHECK(coeffs.message().drivetrain_loop() != nullptr);
   StateFeedbackLoop<4, 2, 2> json_loop =
       MakeStateFeedbackLoop<4, 2, 2>(*coeffs.message().drivetrain_loop());
   for (size_t index = 0; index < 4; ++index) {
@@ -84,7 +85,7 @@ TEST_F(DrivetrainJsonTest, HybridLoop) {
       ArtifactPath("frc/control_loops/python/test_drivetrain/"
                    "hybrid_velocity_drivetrain.json"));
 
-  CHECK(coeffs.message().hybrid_velocity_drivetrain_loop() != nullptr);
+  ABSL_CHECK(coeffs.message().hybrid_velocity_drivetrain_loop() != nullptr);
   HybridLoop json_loop = MakeHybridStateFeedbackLoop<2, 2, 2>(
       *coeffs.message().hybrid_velocity_drivetrain_loop());
   for (size_t index = 0; index < 4; ++index) {

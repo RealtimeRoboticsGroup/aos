@@ -1,6 +1,7 @@
 #include "Eigen/Core"
 #include "Eigen/Geometry"
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 
 #include "aos/events/event_loop.h"
 #include "aos/json_to_flatbuffer.h"
@@ -19,19 +20,19 @@ void SendFieldMap(aos::EventLoop *event_loop, const FieldMap *field_map,
 
   // Convert the field map JSON from limelight's format to our FieldMap format.
   auto field_name_string = builder->add_field_name();
-  CHECK(field_name_string->reserve(field_name.size() + 1));
+  ABSL_CHECK(field_name_string->reserve(field_name.size() + 1));
   field_name_string->SetString(field_name);
 
   auto target_poses = builder->add_target_poses();
-  CHECK(target_poses->reserve(field_map->fiducials()->size()));
+  ABSL_CHECK(target_poses->reserve(field_map->fiducials()->size()));
 
   builder->set_fieldlength(field_map->fieldlength());
   builder->set_fieldwidth(field_map->fieldwidth());
 
   // Now, fill in the tag transformations table.
   for (const Fiducial *fiducial : *field_map->fiducials()) {
-    CHECK(fiducial->has_transform());
-    CHECK_EQ(fiducial->transform()->size(), 16u);
+    ABSL_CHECK(fiducial->has_transform());
+    ABSL_CHECK_EQ(fiducial->transform()->size(), 16u);
 
     VLOG(1) << "Fiducial: " << fiducial->id();
     Eigen::Affine3d photonvision_transformation;
@@ -52,7 +53,7 @@ void SendFieldMap(aos::EventLoop *event_loop, const FieldMap *field_map,
         photonvision_transformation * april_to_photon;
 
     TargetPoseFbsStatic *target_pose = target_poses->emplace_back();
-    CHECK(target_pose != nullptr);
+    ABSL_CHECK(target_pose != nullptr);
 
     target_pose->set_id(fiducial->id());
 

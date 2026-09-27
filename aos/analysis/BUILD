@@ -24,7 +24,7 @@ cc_binary(
         "//aos/events/logging:log_reader",
         "//third_party/python",
         "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 

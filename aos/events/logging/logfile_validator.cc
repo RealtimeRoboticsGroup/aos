@@ -1,6 +1,8 @@
 
 #include "aos/events/logging/logfile_validator.h"
 
+#include "absl/log/absl_check.h"
+
 #include "aos/events/logging/logfile_sorting.h"
 #include "aos/events/logging/logfile_utils.h"
 #include "aos/events/logging/logfile_validator.h"
@@ -11,7 +13,7 @@ bool MultiNodeLogIsReadable(const LogFilesContainer &log_files,
                             bool skip_order_validation) {
   const Configuration *config = log_files.config().get();
 
-  CHECK(configuration::MultiNode(config))
+  ABSL_CHECK(configuration::MultiNode(config))
       << ": Timestamps only make sense in a multi-node world.";
 
   // Now, build up all the TimestampMapper classes to read and sort the data.
@@ -132,7 +134,7 @@ bool MultiNodeLogIsReadable(const LogFilesContainer &log_files,
   std::vector<monotonic_clock::time_point> just_monotonic(
       std::get<1>(*next_timestamp.value().value()).size());
   for (size_t i = 0; i < just_monotonic.size(); ++i) {
-    CHECK_EQ(std::get<1>(*next_timestamp.value().value())[i].boot, 0u);
+    ABSL_CHECK_EQ(std::get<1>(*next_timestamp.value().value())[i].boot, 0u);
     just_monotonic[i] = std::get<1>(*next_timestamp.value().value())[i].time;
   }
   multinode_estimator.Start(just_monotonic);

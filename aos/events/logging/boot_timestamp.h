@@ -9,7 +9,7 @@
 #include <iostream>
 #include <limits>
 
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 
 #include "aos/time/time.h"
@@ -34,12 +34,12 @@ struct BootDuration {
   }
 
   BootDuration operator-(BootDuration d) const {
-    CHECK_EQ(d.boot, boot);
+    ABSL_CHECK_EQ(d.boot, boot);
     return {boot, duration - d.duration};
   }
 
   BootDuration operator+(BootDuration d) const {
-    CHECK_EQ(d.boot, boot);
+    ABSL_CHECK_EQ(d.boot, boot);
     return {boot, duration + d.duration};
   }
 
@@ -111,7 +111,7 @@ struct BootTimestamp {
   }
 
   BootDuration operator-(BootTimestamp t) const {
-    CHECK_EQ(t.boot, boot);
+    ABSL_CHECK_EQ(t.boot, boot);
     return {boot, time - t.time};
   }
 };

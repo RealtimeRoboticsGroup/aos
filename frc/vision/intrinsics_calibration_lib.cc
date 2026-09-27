@@ -4,7 +4,7 @@
 
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
-#include "absl/log/check.h"
+#include "absl/log/absl_check.h"
 #include "absl/log/die_if_null.h"
 #include "absl/log/log.h"
 #include "opencv2/core/eigen.hpp"
@@ -84,12 +84,13 @@ IntrinsicsCalibration::IntrinsicsCalibration(
     image_callback_.set_format(ImageCallback::Format::GRAYSCALE);
   }
 
-  CHECK((absl::GetFlag(FLAGS_image_save_path) == "") ||
-        !absl::GetFlag(FLAGS_draw_axes))
+  ABSL_CHECK((absl::GetFlag(FLAGS_image_save_path) == "") ||
+             !absl::GetFlag(FLAGS_draw_axes))
       << "Only save images if we're not drawing on them";
 
   if (absl::GetFlag(FLAGS_image_save_path) != "") {
-    CHECK(std::filesystem::is_directory(absl::GetFlag(FLAGS_image_save_path)))
+    ABSL_CHECK(
+        std::filesystem::is_directory(absl::GetFlag(FLAGS_image_save_path)))
         << absl::GetFlag(FLAGS_image_save_path) << " is not a directory";
   }
 
@@ -97,7 +98,7 @@ IntrinsicsCalibration::IntrinsicsCalibration(
             << camera_channel_ << " make sure you are using the right channel.";
 
   std::regex re{"^[0-9][0-9]-[0-9][0-9]"};
-  CHECK(std::regex_match(camera_id_, re))
+  ABSL_CHECK(std::regex_match(camera_id_, re))
       << ": Invalid camera_id '" << camera_id_ << "', should be of form YY-NN";
 }
 
@@ -162,10 +163,10 @@ void IntrinsicsCalibration::HandleCharuco(
     return;
   }
 
-  CHECK(tvecs_eigen.size() == 1)
+  ABSL_CHECK(tvecs_eigen.size() == 1)
       << "Charuco board should only return one translational pose.  Returned "
       << tvecs_eigen.size();
-  CHECK(rvecs_eigen.size() == 1)
+  ABSL_CHECK(rvecs_eigen.size() == 1)
       << "Charuco board should only return one rotational pose. Returned "
       << rvecs_eigen.size();
 
@@ -349,7 +350,7 @@ IntrinsicsCalibration::BuildCalibration(
 
   std::optional<uint16_t> camera_number =
       frc::vision::CameraNumberFromChannel(std::string(camera_channel));
-  CHECK(camera_number.has_value())
+  ABSL_CHECK(camera_number.has_value())
       << ": Failed to parse camera number from " << camera_channel;
 
   flatbuffers::Offset<flatbuffers::Vector<float>>
@@ -499,7 +500,7 @@ void IntrinsicsCalibration::MaybeCalibrate() {
         std_deviations_intrinsics, std_deviations_extrinsics, per_view_errors,
         calibration_flags, term_crit);
 
-    CHECK_LE(reprojection_error_, 5.0)
+    ABSL_CHECK_LE(reprojection_error_, 5.0)
         << ": Reproduction error is bad-- greater than 5 pixels.";
     if (reprojection_error_ < 1.0) {
       LOG(INFO) << "Reprojection Error is " << reprojection_error_;
@@ -512,8 +513,8 @@ void IntrinsicsCalibration::MaybeCalibrate() {
         aos::realtime_clock::now();
     std::optional<uint16_t> team_number =
         aos::network::team_number_internal::ParsePiOrOrinTeamNumber(hostname_);
-    CHECK(team_number.has_value()) << ": Invalid hostname " << hostname_
-                                   << ", failed to parse team number";
+    ABSL_CHECK(team_number.has_value()) << ": Invalid hostname " << hostname_
+                                        << ", failed to parse team number";
     aos::FlatbufferDetachedBuffer<calibration::CameraCalibration>
         camera_calibration =
             BuildCalibration(camera_mat_, dist_coeffs_, realtime_now,
@@ -524,7 +525,7 @@ void IntrinsicsCalibration::MaybeCalibrate() {
 
     std::optional<uint16_t> camera_number =
         frc::vision::CameraNumberFromChannel(camera_channel_);
-    CHECK(camera_number.has_value());
+    ABSL_CHECK(camera_number.has_value());
     std::string calibration_filename = CalibrationFilename(
         calibration_folder_, node_name_, team_number.value(),
         camera_number.value(), camera_id_, time_ss.str());

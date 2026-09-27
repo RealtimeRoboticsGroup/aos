@@ -1,13 +1,14 @@
 #include "aos/network/timestamp_channel.h"
 
 #include "absl/flags/flag.h"
+#include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
 
 ABSL_FLAG(bool, combined_timestamp_channel_fallback, true,
           "If true, fall back to using the combined timestamp channel if the "
           "single timestamp channel doesn't exist for a timestamp.");
 ABSL_FLAG(bool, check_timestamp_channel_frequencies, true,
-          "If true, include a debug CHECK to ensure that remote timestamp "
+          "If true, include a debug ABSL_CHECK to ensure that remote timestamp "
           "channels are configured to have at least as great a frequency as "
           "the corresponding data channel.");
 
@@ -78,7 +79,7 @@ const Channel *ChannelTimestampFinder::ForChannel(
     return shared_timestamp_channel;
   }
 
-  CHECK(shared_timestamp_channel != nullptr)
+  ABSL_CHECK(shared_timestamp_channel != nullptr)
       << ": Remote timestamp channel { \"name\": \""
       << split_timestamp_channel_name << "\", \"type\": \""
       << RemoteMessage::GetFullyQualifiedName()
@@ -93,13 +94,13 @@ const Channel *ChannelTimestampFinder::ForChannel(
 ChannelTimestampSender::ChannelTimestampSender(aos::EventLoop *event_loop)
     : event_loop_(event_loop) {
   if (event_loop_) {
-    CHECK(configuration::MultiNode(event_loop_->configuration()));
+    ABSL_CHECK(configuration::MultiNode(event_loop_->configuration()));
   }
 }
 
 aos::Sender<RemoteMessage> *ChannelTimestampSender::SenderForChannel(
     const Channel *channel, const Connection *connection) {
-  CHECK(event_loop_);
+  ABSL_CHECK(event_loop_);
 
   ChannelTimestampFinder finder(event_loop_);
   // Look at any pre-created channel/connection pairs.
@@ -116,7 +117,7 @@ aos::Sender<RemoteMessage> *ChannelTimestampSender::SenderForChannel(
   if (absl::GetFlag(FLAGS_check_timestamp_channel_frequencies)) {
     // Sanity-check that the timestamp channel can actually support full-rate
     // messages coming through on the source channel.
-    CHECK_GE(timestamp_channel->frequency(), channel->frequency())
+    ABSL_CHECK_GE(timestamp_channel->frequency(), channel->frequency())
         << ": Timestamp channel "
         << configuration::StrippedChannelToString(timestamp_channel)
         << "'s rate is lower than the source channel.";
@@ -125,9 +126,10 @@ aos::Sender<RemoteMessage> *ChannelTimestampSender::SenderForChannel(
   {
     auto it = timestamp_loggers_.find(timestamp_channel);
     if (it != timestamp_loggers_.end()) {
-      CHECK(channel_timestamp_loggers_
-                .try_emplace(std::make_pair(channel, connection), it->second)
-                .second);
+      ABSL_CHECK(
+          channel_timestamp_loggers_
+              .try_emplace(std::make_pair(channel, connection), it->second)
+              .second);
       return it->second.get();
     }
   }
@@ -138,8 +140,9 @@ aos::Sender<RemoteMessage> *ChannelTimestampSender::SenderForChannel(
           event_loop_->MakeSender<RemoteMessage>(
               timestamp_channel->name()->string_view())));
 
-  CHECK(timestamp_loggers_.try_emplace(timestamp_channel, result.first->second)
-            .second);
+  ABSL_CHECK(
+      timestamp_loggers_.try_emplace(timestamp_channel, result.first->second)
+          .second);
   return result.first->second.get();
 }
 

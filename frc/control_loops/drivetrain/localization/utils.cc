@@ -1,5 +1,7 @@
 #include "frc/control_loops/drivetrain/localization/utils.h"
 
+#include "absl/log/absl_check.h"
+
 namespace frc::control_loops::drivetrain {
 
 LocalizationUtils::LocalizationUtils(aos::EventLoop *event_loop)
@@ -33,7 +35,7 @@ Eigen::Vector2d LocalizationUtils::VoltageOrZero(
   if (output_fetcher_.valid()) {
     return GetVoltage(output_fetcher_, now);
   } else {
-    CHECK(combined_fetcher_.valid());
+    ABSL_CHECK(combined_fetcher_.valid());
     return GetVoltage(combined_fetcher_, now);
   }
 }
@@ -59,7 +61,7 @@ std::optional<Eigen::Vector2d> LocalizationUtils::Encoders(
   if (position_fetcher_.valid()) {
     return GetPosition(position_fetcher_, now);
   } else {
-    CHECK(combined_fetcher_.valid());
+    ABSL_CHECK(combined_fetcher_.valid());
     return GetPosition(combined_fetcher_, now);
   }
 }
@@ -101,7 +103,7 @@ std::optional<aos::monotonic_clock::duration> LocalizationUtils::ClockOffset(
       }
     }
   }
-  CHECK(monotonic_offset.has_value());
+  ABSL_CHECK(monotonic_offset.has_value());
   return monotonic_offset;
 }
 
@@ -109,8 +111,8 @@ std::optional<aos::monotonic_clock::duration> LocalizationUtils::ClockOffset(
 // verbosity here seems appropriate.
 Eigen::Matrix<double, 4, 4> FlatbufferToTransformationMatrix(
     const frc::vision::calibration::TransformationMatrix &flatbuffer) {
-  CHECK(flatbuffer.data() != nullptr);
-  CHECK_EQ(16u, flatbuffer.data()->size());
+  ABSL_CHECK(flatbuffer.data() != nullptr);
+  ABSL_CHECK_EQ(16u, flatbuffer.data()->size());
   Eigen::Matrix<double, 4, 4> result;
   result.setIdentity();
   for (int row = 0; row < 4; ++row) {
