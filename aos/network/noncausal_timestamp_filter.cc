@@ -214,9 +214,15 @@ NoncausalTimestampFilter::SingleFilter::FindTimestamps(
 
   // boot_filter_ is non-null when the rest of the contents are valid.  Make
   // sure it's pointing to this filter, and the pointer is in bounds.
+  //
+  // t0_ and t1_ match when the pointer came from a time before the start or
+  // after the end of the samples.  Those pointers never found the points from
+  // the other filter, so don't trust them for a segment.  Otherwise, we would
+  // skip bending the line through those points until the solver leaves the
+  // segment, and the line would depend on where the solver looked before.
   if (pointer.boot_filter_ != nullptr &&
       &pointer.boot_filter_->filter == this &&
-      pointer.index_ + 1 != timestamps_size()) {
+      pointer.index_ + 1 != timestamps_size() && pointer.t0_ != pointer.t1_) {
     ABSL_CHECK_LT(pointer.index_ + 1, timestamps_size()) << " " << this;
     // Confirm that the cached timestamps haven't changed so we can trust the
     // results.
@@ -230,20 +236,14 @@ NoncausalTimestampFilter::SingleFilter::FindTimestamps(
         << "ns, expected index " << pointer.index_ << ", "
         << std::get<0>(pointer.t0_) << ", " << std::get<1>(pointer.t0_).count()
         << "ns";
-    // Last point has been filtered out.
-    if (pointer.t0_ != pointer.t1_) {
-      // If t0 and t1 match, this was a "before the start" point.  We can still
-      // check it against the first segment, but we know it won't match so don't
-      // enforce the ABSL_CHECK that the cache matches.
-      ABSL_CHECK(timestamp(pointer.index_ + 1) == pointer.t1_)
-          << ": " << this << " boot_filter " << pointer.boot_filter_
-          << " index " << pointer.index_ << ", size " << timestamps_size()
-          << ", got " << std::get<0>(timestamp(pointer.index_ + 1)) << ", "
-          << std::get<1>(timestamp(pointer.index_ + 1)).count()
-          << "ns, expected index " << pointer.index_ << ", "
-          << std::get<0>(pointer.t1_) << ", "
-          << std::get<1>(pointer.t1_).count() << "ns";
-    }
+    ABSL_CHECK(timestamp(pointer.index_ + 1) == pointer.t1_)
+        << ": " << this << " boot_filter " << pointer.boot_filter_ << " index "
+        << pointer.index_ << ", size " << timestamps_size() << ", got "
+        << std::get<0>(timestamp(pointer.index_ + 1)) << ", "
+        << std::get<1>(timestamp(pointer.index_ + 1)).count()
+        << "ns, expected index " << pointer.index_ << ", "
+        << std::get<0>(pointer.t1_) << ", " << std::get<1>(pointer.t1_).count()
+        << "ns";
 
     t0 = timestamp(pointer.index_);
     if (ta >= std::get<0>(t0)) {

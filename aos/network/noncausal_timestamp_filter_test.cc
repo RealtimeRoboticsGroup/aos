@@ -1754,6 +1754,54 @@ TEST_F(NoncausalTimestampFilterTest, DebugOffsetErrorPointsUsesOther) {
       ::testing::HasSubstr(kBentPoint));
 }
 
+// Tests that a pointer from a lookup before the first sample, or after the
+// last, doesn't lose the points from the opposite filter when it gets reused
+// for a time inside the samples.  The solver reuses pointers between
+// iterations, and it can step before the first sample and then come back.
+//
+// This uses the same filters as PopKeepsPointsUsedByOther.  a's first segment,
+// from A0 to A20, is bent down through B15.
+//
+//  -1000.0us  A0 - - - - - - - - - - - - - - - A20 ------------- A30
+//      ^         `--.__                   __.-'                      ^
+//      |               `--.__        _.--'                           |
+//  -1000.5us                 `--B15-'                                |
+//      |                              ^                              |
+//   look up here first,   then reuse the pointer here,   or look up here.
+TEST_F(NoncausalTimestampFilterTest,
+       PointerFromOutsideSamplesKeepsOtherPoints) {
+  const BootTimestamp e{0, monotonic_clock::epoch()};
+
+  TestingNoncausalTimestampFilter filter_a(node_a, node_b);
+  filter_a.Sample(e, {0, -chrono::microseconds(1000)});
+  filter_a.Sample(e + chrono::seconds(20), {0, -chrono::microseconds(1000)});
+  filter_a.Sample(e + chrono::seconds(30), {0, -chrono::microseconds(1000)});
+
+  TestingNoncausalTimestampFilter filter_b(node_b, node_a);
+  filter_b.Sample(e + chrono::seconds(13), {0, chrono::microseconds(990)});
+  filter_b.Sample(e + chrono::seconds(15), {0, chrono::nanoseconds(1000500)});
+  filter_b.Sample(e + chrono::seconds(17), {0, chrono::microseconds(998)});
+  filter_b.Sample(e + chrono::milliseconds(17500),
+                  {0, chrono::microseconds(999)});
+
+  const BootTimestamp ta = e + chrono::seconds(16);
+  const std::tuple<chrono::nanoseconds, double, double> expected =
+      filter_a.OffsetError(&filter_b, Pointer(), ta, 0.0, ta, 0.0).second;
+  // Confirm B15 is bending the line at ta.
+  EXPECT_NE(expected,
+            filter_a.OffsetError(nullptr, Pointer(), ta, 0.0, ta, 0.0).second);
+
+  for (const BootTimestamp outside :
+       {e - chrono::seconds(1), e + chrono::seconds(31)}) {
+    const Pointer pointer =
+        filter_a.OffsetError(&filter_b, Pointer(), outside, 0.5, outside, 0.0)
+            .first;
+    EXPECT_EQ(expected,
+              filter_a.OffsetError(&filter_b, pointer, ta, 0.0, ta, 0.0).second)
+        << ": Reusing the pointer from " << outside;
+  }
+}
+
 // Tests that a line bent through points from the opposite filter is continuous
 // at those points.  The solver evaluates the line at an integer time plus a
 // fraction of a ns, so the time from p to p + 1ns needs to use the segment
