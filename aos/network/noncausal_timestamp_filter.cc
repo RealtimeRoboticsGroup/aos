@@ -705,7 +705,8 @@ std::string NoncausalTimestampFilter::DebugOffsetError(
   // any of the indirections to go get it might also be nullptr.  So keep
   // checking if it's safe to continue, or give up and return nullptr.
   const BootFilter *other_boot_filter =
-      other == nullptr ? nullptr : maybe_filter(tb_base.boot, ta_base.boot);
+      other == nullptr ? nullptr
+                       : other->maybe_filter(tb_base.boot, ta_base.boot);
   const SingleFilter *other_filter =
       other_boot_filter == nullptr ? nullptr : &other_boot_filter->filter;
 
@@ -764,7 +765,8 @@ std::string NoncausalTimestampFilter::DebugOffsetErrorPoints(
   // any of the indirections to go get it might also be nullptr.  So keep
   // checking if it's safe to continue, or give up and return nullptr.
   const BootFilter *other_boot_filter =
-      other == nullptr ? nullptr : maybe_filter(tb_base.boot, ta_base.boot);
+      other == nullptr ? nullptr
+                       : other->maybe_filter(tb_base.boot, ta_base.boot);
   const SingleFilter *other_filter =
       other_boot_filter == nullptr ? nullptr : &other_boot_filter->filter;
 

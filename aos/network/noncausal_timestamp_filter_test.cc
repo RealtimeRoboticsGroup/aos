@@ -1720,6 +1720,40 @@ TEST_F(NoncausalTimestampFilterTest, PopKeepsPointsUsedByOther) {
   EXPECT_EQ(offset2, filter_a.Offset(&filter_b, Pointer(), ta2, 0));
 }
 
+// Tests that DebugOffsetErrorPoints reports the points from the opposite
+// filter which bend the line, both with a fresh pointer and a cached one.
+TEST_F(NoncausalTimestampFilterTest, DebugOffsetErrorPointsUsesOther) {
+  const BootTimestamp e{0, monotonic_clock::epoch()};
+
+  // Same setup as PopKeepsPointsUsedByOther.  b's sample at 15s, flipped,
+  // bends a's line down through 15.0010005s.
+  TestingNoncausalTimestampFilter filter_a(node_a, node_b);
+  filter_a.Sample(e, {0, -chrono::microseconds(1000)});
+  filter_a.Sample(e + chrono::seconds(20), {0, -chrono::microseconds(1000)});
+  filter_a.Sample(e + chrono::seconds(30), {0, -chrono::microseconds(1000)});
+
+  TestingNoncausalTimestampFilter filter_b(node_b, node_a);
+  filter_b.Sample(e + chrono::seconds(13), {0, chrono::microseconds(990)});
+  filter_b.Sample(e + chrono::seconds(15), {0, chrono::nanoseconds(1000500)});
+  filter_b.Sample(e + chrono::seconds(17), {0, chrono::microseconds(998)});
+  filter_b.Sample(e + chrono::milliseconds(17500),
+                  {0, chrono::microseconds(999)});
+
+  const BootTimestamp ta = e + chrono::seconds(16);
+  const BootTimestamp tb = ta + filter_a.Offset(&filter_b, Pointer(), ta, 0);
+
+  const std::string kBentPoint = "O(15.001000500sec) = -1000502ns";
+  EXPECT_THAT(
+      filter_a.DebugOffsetErrorPoints(&filter_b, Pointer(), ta, 0.0, tb, 0.0),
+      ::testing::HasSubstr(kBentPoint));
+
+  const Pointer pointer =
+      filter_a.OffsetError(&filter_b, Pointer(), ta, 0.0, tb, 0.0).first;
+  EXPECT_THAT(
+      filter_a.DebugOffsetErrorPoints(&filter_b, pointer, ta, 0.0, tb, 0.0),
+      ::testing::HasSubstr(kBentPoint));
+}
+
 // Run a couple of points through the estimator and confirm it works.
 TEST(NoncausalOffsetEstimatorTest, FullEstimator) {
   const aos::FlatbufferDetachedBuffer<Node> node_a_buffer =
