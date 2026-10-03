@@ -4,7 +4,7 @@ This page will walk through how to create a simple Ping/Pong application in AOS,
 
 ## Building the Code
 
-For purposes of this exercise, we will assume that you have cloned the [aos](https://github.com/RealtimeRoboticsGroup/aos) repository. If you have set up AOS as an external repository in your own [Bazel](https://bazel.build/) workspace, then the main differences should just be that you add Bazel dependencies with an `@aos`.
+For purposes of this exercise, we will assume that you have cloned the [aos](https://github.com/RealtimeRoboticsGroup/aos) repository. If you have set up AOS as an external repository in your own [Bazel](https://bazel.build/) workspace, the same steps apply. All AOS labels below are written as `@aos//...`, which works both from inside the AOS repository and from a repository that depends on AOS.
 
 AOS nominally supports Debian Bookworm, although later versions of Debian and Ubuntu 20.04+ should work to build the code.
 
@@ -18,7 +18,7 @@ Note that several tests may fail to run due to permissions issues, since they wi
 
 At a minimum, `bazel test //aos/events:simulated_event_loop_test` should reliably succeed.
 
-Once you have the code building, you can start trying to write an application. Note that this example will just be walking through replicating the existing ping/pong processes that are defined in `//aos/events/`[^paths]. If you are unsure if you are doing something wrong, you can compare your code to the code already in the repository.
+Once you have the code building, you can start trying to write an application. Note that this example will just be walking through replicating the existing ping/pong processes that are defined in `//documentation/examples/ping_pong/`[^paths]. If you are unsure if you are doing something wrong, you can compare your code to the code already in the repository.
 
 ## Writing a Pair of Ping/Pong Applications
 
@@ -99,35 +99,40 @@ root_type Pong;
 The final part of defining the FlatBuffer messages is defining Bazel targets to actually do the codegen for the schemas. Since we have not yet created a BUILD file for this new directory, we will create a new `BUILD` file with the following contents:
 
 ```python
-load("@aos_flatbuffers//:build_defs.bzl", "flatbuffer_cc_library")
+load("@aos//aos:defs.bzl", "static_flatbuffer")
 
-flatbuffer_cc_library(
+static_flatbuffer(
     name = "ping_fbs",
     srcs = ["ping.fbs"],
-    gen_reflections = 1,
 )
 
-flatbuffer_cc_library(
+static_flatbuffer(
     name = "pong_fbs",
     srcs = ["pong.fbs"],
-    gen_reflections = 1,
 )
 ```
 
 If we step through the interesting lines in the `BUILD` file:
 
 ```python
-load("@aos_flatbuffers//:build_defs.bzl", "flatbuffer_cc_library")
+load("@aos//aos:defs.bzl", "static_flatbuffer")
 ```
 
-Imports the `flatbuffer_cc_library` build rule so that we have it available.
+Imports the `static_flatbuffer` build rule so that we have it available. `@aos//aos:defs.bzl` is the public entry point for AOS build macros.
 
 ```python
-flatbuffer_cc_library(
+static_flatbuffer(
     name = "ping_fbs",
 ```
 
-Defines a target (named `ping_fbs`) that will codegen a C++ library for the specified `.fbs` file. This can then be depended on by C++ Bazel targets directly.
+Defines a target (named `ping_fbs`) that will codegen a C++ library for the specified `.fbs` file. This can then be depended on by C++ Bazel targets directly. The library provides two APIs for each table:
+
+- The [static FlatBuffers API](flatbuffers.md) (`ping_static.h`), which provides an `aos.examples.PingStatic` class. This is what AOS code should use to _build_ messages.
+- The standard FlatBuffers API (`ping_generated.h`, which `ping_static.h` includes), which provides the read-only `aos.examples.Ping` class used to _read_ messages.
+
+You can also write messages with the upstream FlatBuffers API (`Sender::MakeBuilder()` and a `flatbuffers::FlatBufferBuilder`), but it is harder to use: tables, strings, and vectors must be built bottom-up, and each table must be finished before it can be referenced by its parent.
+
+`static_flatbuffer` also always generates the reflection schema for the FlatBuffer file. This results in a `.bfbs` file being generated that contains a FlatBuffer of type `reflection.Schema` (defined in [reflection.fbs][reflection_fbs]). This is required for FlatBuffer files that will be used for AOS messages so that the AOS config can include reflection information.
 
 ```python
     srcs = ["ping.fbs"],
@@ -135,13 +140,7 @@ Defines a target (named `ping_fbs`) that will codegen a C++ library for the spec
 
 Specifies the `.fbs` file that we are generating code for.
 
-```python
-    gen_reflections = 1,
-```
-
-This turns on generation of the reflection schemas for the FlatBuffer file. This results in a `.bfbs` file being generated that contains a FlatBuffer of type `reflection.Schema` (defined in [reflection.fbs][reflection_fbs]). This is required for FlatBuffer files that will be used for AOS messages so that the AOS config can include reflection information.
-
-For more details on the arguments available in the `flatbuffer_cc_library` rule, see the [upstream FlatBuffers repository][flatbuffer_cc_library].
+For more details on the arguments available in the `static_flatbuffer` rule, see the docstring in [`aos/flatbuffers/generate.bzl`](https://github.com/RealtimeRoboticsGroup/aos/blob/main/aos/flatbuffers/generate.bzl).
 
 To confirm that you have successfully set up your FlatBuffer files and BUILD targets, you can build the targets directly:
 
@@ -149,7 +148,7 @@ To confirm that you have successfully set up your FlatBuffer files and BUILD tar
 bazel build //foo:ping_fbs
 ```
 
-This should generate a C++ header at `bazel-bin/foo/ping_generated.h`.
+This should generate C++ headers at `bazel-bin/foo/ping_static.h` and `bazel-bin/foo/ping_generated.h`.
 
 ### Writing the AOS Config
 
@@ -232,7 +231,7 @@ To do this, we add the following to our `BUILD` file:
 
 ```python
 # Typically, this load() statement will go at the top of the file.
-load("//aos:config.bzl", "aos_config")
+load("@aos//aos:defs.bzl", "aos_config")
 
 aos_config(
     name = "pingpong_config",
@@ -241,11 +240,11 @@ aos_config(
         ":ping_fbs",
         ":pong_fbs",
     ],
-    deps = ["//aos/events:aos_config"],
+    deps = ["@aos//aos/events:aos_config"],
 )
 ```
 
-In particular, note that the list of `flatbuffers` must include _all_ the FlatBuffers used by the config (so that we can get at the schemas generated by the `gen_reflections` argument in the previous section). We also have a `deps` entry for the config that we are importing.
+In particular, note that the list of `flatbuffers` must include _all_ the FlatBuffers used by the config (so that we can get at the reflection schemas that `static_flatbuffer` generates, as described in the previous section). We also have a `deps` entry for the config that we are importing.
 
 If we build this config
 
@@ -285,8 +284,8 @@ The contents of `ping_lib.h` will be:
 #define FOO_PING_LIB_H_
 
 #include "aos/events/event_loop.h"
-#include "foo/ping_generated.h"
-#include "foo/pong_generated.h"
+#include "foo/ping_static.h"
+#include "foo/pong_static.h"
 
 namespace aos {
 
@@ -303,7 +302,7 @@ class Ping {
   void HandlePong(const examples::Pong &pong);
 
   aos::EventLoop *event_loop_;
-  aos::Sender<examples::Ping> sender_;
+  aos::Sender<examples::PingStatic> sender_;
   // Timer handle which sends the Ping message.
   aos::TimerHandler *timer_handle_;
   // Number of pings sent.
@@ -320,10 +319,10 @@ And `ping_lib.cc` will be:
 ```cpp
 #include "foo/ping_lib.h"
 
-#include "aos/json_to_flatbuffer.h"
 #include "absl/flags/flag.h"
 #include "absl/log/absl_log.h"
-#include "absl/log/absl_check.h"
+
+#include "aos/json_to_flatbuffer.h"
 
 ABSL_FLAG(int32_t, sleep_ms, 10, "Time to sleep between pings");
 
@@ -333,7 +332,7 @@ namespace chrono = std::chrono;
 
 Ping::Ping(EventLoop *event_loop)
     : event_loop_(event_loop),
-      sender_(event_loop_->MakeSender<examples::Ping>("/test")) {
+      sender_(event_loop_->MakeSender<examples::PingStatic>("/test")) {
   timer_handle_ = event_loop_->AddTimer([this]() { SendPing(); });
   timer_handle_->set_name("ping");
 
@@ -341,19 +340,20 @@ Ping::Ping(EventLoop *event_loop)
       "/test", [this](const examples::Pong &pong) { HandlePong(pong); });
 
   event_loop_->OnRun([this]() {
-    timer_handle_->Schedule(event_loop_->monotonic_now(),
-                            chrono::milliseconds(FLAGS_sleep_ms));
+    timer_handle_->Schedule(
+        event_loop_->monotonic_now(),
+        chrono::milliseconds(absl::GetFlag(FLAGS_sleep_ms)));
   });
 }
 
 void Ping::SendPing() {
   ++count_;
-  aos::Sender<examples::Ping>::Builder builder = sender_.MakeBuilder();
-  examples::Ping::Builder ping_builder = builder.MakeBuilder<examples::Ping>();
-  ping_builder.add_value(count_);
-  ping_builder.add_send_time(
+  aos::Sender<examples::PingStatic>::StaticBuilder builder =
+      sender_.MakeStaticBuilder();
+  builder->set_value(count_);
+  builder->set_send_time(
       event_loop_->monotonic_now().time_since_epoch().count());
-  builder.CheckOk(builder.Send(ping_builder.Finish()));
+  builder.CheckOk(builder.Send());
 }
 
 void Ping::HandlePong(const examples::Pong &pong) {
@@ -379,11 +379,11 @@ Stepping over some of the more relevant code:
 In `ping_lib.h`:
 
 ```cpp
-  #include "foo/ping_generated.h"
-  #include "foo/pong_generated.h"
+  #include "foo/ping_static.h"
+  #include "foo/pong_static.h"
 ```
 
-These are the generated headers for each of the FlatBuffer messages that we defined. For a `.fbs` file named `foo.fbs`, the resulting header will be named `foo_generated.h`.
+These are the generated headers for each of the FlatBuffer messages that we defined. For a `.fbs` file named `foo.fbs`, the resulting static API header will be named `foo_static.h`. It includes `foo_generated.h`, so both the `Foo` (reading) and `FooStatic` (building) classes are available.
 
 ```cpp
   Ping(EventLoop *event_loop);
@@ -397,13 +397,13 @@ In `ping_lib.cc`:
 ABSL_FLAG(int32_t, sleep_ms, 10, "Time to sleep between pings");
 ```
 
-This creates a command-line flag `--sleep_ms` which can be accessed in the code as `FLAGS_sleep_ms`, using the [gflags](https://gflags.github.io/gflags/) library. `gflags` is the default command-line flag management library used throughout AOS, although for testability we generally discourage using flags for configuration of normal application behavior.
+This creates a command-line flag `--sleep_ms` which can be accessed in the code as `absl::GetFlag(FLAGS_sleep_ms)`, using the [Abseil flags](https://abseil.io/docs/cpp/guides/flags) library. Abseil flags is the default command-line flag management library used throughout AOS, although for testability we generally discourage using flags for configuration of normal application behavior.
 
 ```cpp
-      sender_(event_loop_->MakeSender<examples::Ping>("/test")) {
+      sender_(event_loop_->MakeSender<examples::PingStatic>("/test")) {
 ```
 
-Here we create a sender for the `aos.examples.Ping` message on the `/test` channel. Senders need to be created before the EventLoop starts running. The `MakeSender` call will check for whether the requested channel actually exists in the AOS configuration, and die if no such channel is available. There is a `TryMakeSender` available for those situations where it makes sense to gate logic on the existence of a channel.
+Here we create a sender for the `aos.examples.Ping` message on the `/test` channel. Note that the sender is templated on `examples::PingStatic` rather than `examples::Ping`; this is what lets us build messages with the static API below. Senders need to be created before the EventLoop starts running. The `MakeSender` call will check for whether the requested channel actually exists in the AOS configuration, and die if no such channel is available. There is a `TryMakeSender` available for those situations where it makes sense to gate logic on the existence of a channel.
 
 ```cpp
   timer_handle_ = event_loop_->AddTimer([this]() { SendPing(); });
@@ -421,12 +421,13 @@ This sets up the `HandlePong()` method to be called every time a new message is 
 
 ```cpp
   event_loop_->OnRun([this]() {
-    timer_handle_->Schedule(event_loop_->monotonic_now(),
-                            chrono::milliseconds(FLAGS_sleep_ms));
+    timer_handle_->Schedule(
+        event_loop_->monotonic_now(),
+        chrono::milliseconds(absl::GetFlag(FLAGS_sleep_ms)));
   });
 ```
 
-This makes it so that, once execution starts on the EventLoop, the timer (which calls `SendPing`) will start getting called at the current time (`event_loop_->monotonic_now()`) and every `FLAGS_sleep_ms` milliseconds thereafter.
+This makes it so that, once execution starts on the EventLoop, the timer (which calls `SendPing`) will start getting called at the current time (`event_loop_->monotonic_now()`) and every `--sleep_ms` milliseconds thereafter.
 
 `OnRun` can be called many times to register many handlers to be called when the `EventLoop` starts. The `OnRun` handler allows you to delay certain actions until execution is "actually" happening. In many real situations, there is little practical difference between just doing all your setup in the constructor of your class vs. in the `OnRun`. However, in situations where you do long-running initialization work in your constructor (e.g., you need to pre-seed a complex solver), it can be desirable to delay certain work until the EventLoop actually starts running. There are also some subtle differences in guarantees provided by the EventLoop when it is running vs. when it is not.
 
@@ -435,16 +436,16 @@ This makes it so that, once execution starts on the EventLoop, the timer (which 
 ```cpp
 void Ping::SendPing() {
   ++count_;
-  aos::Sender<examples::Ping>::Builder builder = sender_.MakeBuilder();
-  examples::Ping::Builder ping_builder = builder.MakeBuilder<examples::Ping>();
-  ping_builder.add_value(count_);
-  ping_builder.add_send_time(
+  aos::Sender<examples::PingStatic>::StaticBuilder builder =
+      sender_.MakeStaticBuilder();
+  builder->set_value(count_);
+  builder->set_send_time(
       event_loop_->monotonic_now().time_since_epoch().count());
-  builder.CheckOk(builder.Send(ping_builder.Finish()));
+  builder.CheckOk(builder.Send());
 }
 ```
 
-Here we actually send out our Ping message. We use the various `MakeBuilder` methods and the resulting builders to construct a `Ping` message with a count and current time. We then actually send it out, checking to ensure that there were no errors encountered while attempting to send the message.
+Here we actually send out our Ping message. `MakeStaticBuilder` claims a buffer in the channel's shared memory and returns a `StaticBuilder` which constructs the `PingStatic` table in place. We use `->` on the builder to access the table, set the count and current time on it, and then actually send it out, checking to ensure that there were no errors encountered while attempting to send the message. Unlike the standard FlatBuffers API, fields can be set in any order and changed again before sending.
 
 See [FlatBuffers](flatbuffers.md) for more details on working with FlatBuffers in AOS.
 
@@ -477,10 +478,10 @@ cc_library(
     deps = [
         ":ping_fbs",
         ":pong_fbs",
-        "//aos:json_to_flatbuffer",
-        "//aos/events:event_loop",
+        "@aos//aos:json_to_flatbuffer",
+        "@aos//aos/events:event_loop",
         "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log:absl_log","@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 ```
@@ -568,16 +569,16 @@ Let us know if having the comments explaining the code inline works better or wo
 
 And then, in order to actually execute the test, we need to create a `cc_test` target in our BUILD file:
 
-```
+```python
 cc_test(
     name = "ping_lib_test",
     srcs = ["ping_lib_test.cc"],
     data = [":pingpong_config.json"],
     deps = [
         ":ping_lib",
-        "//aos/events:simulated_event_loop",
-        "//aos/testing:googletest",
-        "//aos/testing:path",
+        "@aos//aos/events:simulated_event_loop",
+        "@aos//aos/testing:googletest",
+        "@aos//aos/testing:path",
     ],
 )
 ```
@@ -612,7 +613,7 @@ int main(int argc, char **argv) {
   aos::InitGoogle(&argc, &argv);
 
   aos::FlatbufferDetachedBuffer<aos::Configuration> config =
-      aos::configuration::ReadConfig(FLAGS_config);
+      aos::configuration::ReadConfig(absl::GetFlag(FLAGS_config));
 
   // Create a shared-memory based EventLoop using the provided config.
   // This is currently the only EventLoop implementation for using on realtime
@@ -640,9 +641,9 @@ cc_binary(
     data = [":pingpong_config"],
     deps = [
         ":ping_lib",
-        "//aos:configuration",
-        "//aos:init",
-        "//aos/events:shm_event_loop",
+        "@aos//aos:configuration",
+        "@aos//aos:init",
+        "@aos//aos/events:shm_event_loop",
         "@com_google_absl//absl/flags:flag",
     ],
 )
@@ -661,7 +662,8 @@ We will not go over Pong in as much detail, and instead just provided the sugges
 #define FOO_PONG_LIB_H_
 
 #include "aos/events/event_loop.h"
-#include "foo/pong_generated.h"
+#include "foo/ping_static.h"
+#include "foo/pong_static.h"
 
 namespace aos {
 
@@ -672,7 +674,7 @@ class Pong {
 
  private:
   EventLoop *event_loop_;
-  aos::Sender<examples::Pong> sender_;
+  aos::Sender<examples::PongStatic> sender_;
   int32_t last_value_ = 0;
   int32_t last_send_time_ = 0;
 };
@@ -688,22 +690,20 @@ class Pong {
 #include "foo/pong_lib.h"
 
 #include "aos/events/event_loop.h"
-#include "foo/ping_generated.h"
 
 namespace aos {
 
 Pong::Pong(EventLoop *event_loop)
     : event_loop_(event_loop),
-      sender_(event_loop_->MakeSender<examples::Pong>("/test")) {
+      sender_(event_loop_->MakeSender<examples::PongStatic>("/test")) {
   event_loop_->MakeWatcher("/test", [this](const examples::Ping &ping) {
     last_value_ = ping.value();
     last_send_time_ = ping.send_time();
-    aos::Sender<examples::Pong>::Builder builder = sender_.MakeBuilder();
-    examples::Pong::Builder pong_builder =
-        builder.MakeBuilder<examples::Pong>();
-    pong_builder.add_value(ping.value());
-    pong_builder.add_initial_send_time(ping.send_time());
-    builder.CheckOk(builder.Send(pong_builder.Finish()));
+    aos::Sender<examples::PongStatic>::StaticBuilder builder =
+        sender_.MakeStaticBuilder();
+    builder->set_value(ping.value());
+    builder->set_initial_send_time(ping.send_time());
+    builder.CheckOk(builder.Send());
   });
 }
 
@@ -724,7 +724,7 @@ cc_library(
     deps = [
         ":ping_fbs",
         ":pong_fbs",
-        "//aos/events:event_loop",
+        "@aos//aos/events:event_loop",
     ],
 )
 
@@ -734,9 +734,9 @@ cc_binary(
     data = [":pingpong_config"],
     deps = [
         ":pong_lib",
-        "//aos:configuration",
-        "//aos:init",
-        "//aos/events:shm_event_loop",
+        "@aos//aos:configuration",
+        "@aos//aos:init",
+        "@aos//aos/events:shm_event_loop",
         "@com_google_absl//absl/flags:flag",
     ],
 )
@@ -754,15 +754,15 @@ Let us open three separate terminals, and in the first two run:
 We should immediately see the `ping` terminal printing to `stderr` for every pong message it is receiving. If we want to actually see the message flow itself, we can use the `aos_dump` utility to view raw messages on individual channels in the third terminal:
 
 ```bash
-# Ensure that aos_dump and the config are both built and in the Bazel cache.
-bazel build //aos:aos_dump //foo:pingpong_config
-bazel-bin/aos/aos_dump --config=bazel-bin/foo/pingpong_config.json
+# Build the config so that aos_dump can read it.
+bazel build //foo:pingpong_config
+bazel run @aos//aos:aos_dump -- --config=$PWD/bazel-bin/foo/pingpong_config.json
 ```
 
-`aos_dump` with no extra arguments (beyond the config, which we only need because we are in a special case) will print a list of available channels. You can either manually copy the channels or just use tab completion to specify a channel to watch:
+`aos_dump` with no extra arguments (beyond the config, which we only need because we are in a special case) will print a list of available channels. Copy a channel name and type from that list to watch it:
 
 ```
-bazel-bin/aos/aos_dump --config=bazel-bin/foo/pingpong_config.json /test aos.examples.Ping
+bazel run @aos//aos:aos_dump -- --config=$PWD/bazel-bin/foo/pingpong_config.json /test aos.examples.Ping
 ```
 
 And you now have a simple, running, AOS application! There are lots of things that this hasn't covered, but hopefully it has provided a basic overview of how to get things working.
@@ -788,7 +788,6 @@ should also work.
 In order for these changes to take effect, you will need to reboot your machine (strictly speaking, you only need a new session, which can be done by, e.g., logging out and logging back in, or by creating a new ssh session). Confirm that the limits have taken effect using `ulimit -a`.
 
 [github]: https://github.com/RealtimeRoboticsGroup/aos
-[flatbuffer_cc_library]: https://github.com/google/flatbuffers/blob/eeb49c275776fe7948370a0f7a4dd644a2c5f7a8/build_defs.bzl#L141
 [reflection_fbs]: https://github.com/google/flatbuffers/blob/master/reflection/reflection.fbs
 
 [^paths]: Note that `//` refers to the root of the current repository in Bazel. In some places, we will also use this syntax to refer to paths in the repository, to be clear that we are referencing a path relative to the root of the repository.
