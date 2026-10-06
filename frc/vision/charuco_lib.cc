@@ -29,7 +29,8 @@ ABSL_FLAG(bool, twenty_inch_large_board, false,
           "If true, use the large calibration board from "
           "etsy.com/listing/1820746969/charuco-calibration-target");
 ABSL_FLAG(bool, dict5x5_9x14_board, true,
-          "If true, use the larger calibration board from ");
+          "If true, use the 600x400mm coarse 9x14 DICT_5x5 ChArUco board from "
+          "calib.io/products/charuco-targets?variant=9400454938671");
 ABSL_FLAG(bool, large_board, false,
           "If true, use the large calibration board.");
 // Rule of thumb for # of points from paper: https://arxiv.org/pdf/1907.04096
