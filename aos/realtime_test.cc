@@ -152,9 +152,10 @@ TEST(RealtimeDeathTest, Malloc) {
 
 // The first *contended* absl::Mutex lock in a process runs a one-time
 // initialization (absl::base_internal::NumCPUs(), to size the spin loop) that
-// mallocs on Windows.  If that first contention lands on a realtime thread,
-// the malloc hook kills the process.  MarkRealtime() forces the
-// initialization before the thread goes realtime; this pins that.
+// mallocs on Windows, and the first contended lock on each *thread* creates
+// that thread's absl identity, which mallocs on macOS.  If either lands on a
+// realtime thread, the malloc hook kills the process.  MarkRealtime() forces
+// both before the thread goes realtime; this pins that.
 //
 // A death test because the property is per-process: the child is a fresh
 // process, so the lock below really is its first contended one.  Everything
