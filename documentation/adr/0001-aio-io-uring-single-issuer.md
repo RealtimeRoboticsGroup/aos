@@ -6,8 +6,8 @@ Proposed. Partially implemented.
 
 This document describes the full design; not all of it exists yet. As of the change introducing it (`aos/events/aio.h`, `aos/events/aio_linux.cc`):
 
-- **Implemented:** the io_uring backend — `SINGLE_ISSUER | DEFER_TASKRUN` with `R_DISABLED` lazy binding, the automatic per-instance downgrade (`DowngradeFromSingleIssuer()`), timerfd-backed timers, non-blocking orphan/recycle destruction, the embedded-epoll legacy-fd path, thread-signal receivers, and the enforced kernel version floor — plus the `--aio_backend` flag and the `EpollImpl` fallback backend, with the test suite parameterized over both.
-- **Not yet implemented** (referenced below; lands in follow-up changes): `fork()` support (decision 6 and its design section — `pthread_atfork`, `CheckForFork()`, `HandleFork()`, `CheckForParentFork()`); moving `ShmEventLoop` and `EPoll` onto `Aio` (both still run directly on `aos/events/epoll.h` today); and the `WPILibRobotBase::AddLoop()` factory restructure under `frc/`.
+- **Implemented:** the io_uring backend — `SINGLE_ISSUER | DEFER_TASKRUN` with `R_DISABLED` lazy binding, the automatic per-instance downgrade (`DowngradeFromSingleIssuer()`), timerfd-backed timers, non-blocking orphan/recycle destruction, the embedded-epoll legacy-fd path, thread-signal receivers, and the enforced kernel version floor — plus the `--aio_backend` flag and the `EpollImpl` fallback backend, with the test suite parameterized over both, and `fork()` support (`pthread_atfork`, `CheckForFork()`, `HandleFork()`, `CheckForParentFork()`).
+- **Not yet implemented** (referenced below; lands in follow-up changes): moving `ShmEventLoop` and `EPoll` onto `Aio` (both still run directly on `aos/events/epoll.h` today); and the `WPILibRobotBase::AddLoop()` factory restructure under `frc/`.
 - **Superseded detail:** the _enforced_ kernel floor is the 6.1 feature floor (`RequireMinimumKernelVersion()` in `aos/events/aio_linux.cc`), with 6.12 recommended in the error message; the "Kernel version floor: 6.12" section below predates that requirement/recommendation split.
 
 ## Context

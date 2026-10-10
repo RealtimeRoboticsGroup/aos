@@ -1,9 +1,22 @@
 #include "aos/events/aio.h"
 
+#include "absl/log/absl_check.h"
+
 #include "aos/events/aio_internal.h"
 #include "aos/realtime.h"
 
 namespace aos {
+
+void Aio::Impl::CheckNoRawRequestsInFlightOnFork() const {
+  ABSL_CHECK(!HasRawRequestsInFlight())
+      << ": a forked child touched an Aio with caller-submitted "
+         "AsyncRead/AsyncWrite requests in flight at the fork.  A request "
+         "is in flight until its callback has run: let it complete, or "
+         "Cancel() it, and Poll() until the callback has been delivered "
+         "before forking, or keep the child away from this Aio.";
+}
+
+Aio::~Aio() = default;
 
 // The calls below that register, replace or remove something allocate or
 // free on every backend, if only sometimes -- a freelist miss, a
@@ -11,8 +24,6 @@ namespace aos {
 // sometimes allocates only sometimes trips the realtime malloc hook, a
 // data-dependent crash, so they are all illegal under realtime outright and
 // say so here, once, for every backend.
-
-Aio::~Aio() = default;
 
 void Aio::Run() { impl_->Run(); }
 
