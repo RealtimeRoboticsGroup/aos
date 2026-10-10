@@ -1,0 +1,110 @@
+FeatureScript 2856;
+import(path : "onshape/std/geometry.fs", version : "2856.0");
+
+export function frac8String(frac is number) returns string
+{
+    // frac is assumed 0..99999999
+    var n = frac;
+
+    const d7 = floor(n / 10000000);
+    n = n - d7 * 10000000;
+    const d6 = floor(n / 1000000);
+    n = n - d6 * 1000000;
+    const d5 = floor(n / 100000);
+    n = n - d5 * 100000;
+    const d4 = floor(n / 10000);
+    n = n - d4 * 10000;
+    const d3 = floor(n / 1000);
+    n = n - d3 * 1000;
+    const d2 = floor(n / 100);
+    n = n - d2 * 100;
+    const d1 = floor(n / 10);
+    n = n - d1 * 10;
+    const d0 = floor(n);
+
+    return toString(d7) ~ toString(d6) ~ toString(d5) ~ toString(d4) ~
+        toString(d3) ~ toString(d2) ~ toString(d1) ~ toString(d0);
+}
+
+export function fixed8(x is number) returns string
+{
+    const scale = 100000000;
+
+    var y = x;
+    var sign = "";
+    if (y < 0)
+    {
+        sign = "-";
+        y = -y;
+    }
+
+    // integer-like rounding to 8 decimals
+    const scaled = floor(y * scale + 0.5);
+
+    // avoid "-0.00000000"
+    if (scaled == 0)
+        sign = "";
+
+    const whole = floor(scaled / scale);
+    const frac = scaled - whole * scale;
+
+    return sign ~ toString(whole) ~ "." ~ frac8String(frac);
+}
+
+annotation { "Feature Type Name" : "Mate Connector Transform" }
+export const mateConnectorTransform = defineFeature(function(context is Context, id is Id, definition is map)
+    precondition
+    {
+        annotation { "Name" : "From mate connector", "Filter" : BodyType.MATE_CONNECTOR, "MaxNumberOfPicks" : 1 }
+        definition.fromMC is Query;
+
+        annotation { "Name" : "To mate connector", "Filter" : BodyType.MATE_CONNECTOR, "MaxNumberOfPicks" : 1 }
+        definition.toMC is Query;
+    }
+    {
+        const csFrom = evMateConnector(context, { "mateConnector" : definition.fromMC });
+        const csTo = evMateConnector(context, { "mateConnector" : definition.toMC });
+
+        // p_to = T * p_from
+        const T = fromWorld(csTo) * toWorld(csFrom);
+
+        const R = T.linear;
+        const p = T.translation;
+
+        // Row-major 4x4 (translation in meters)
+        const r00 = R[0][0];
+        const r01 = R[0][1];
+        const r02 = R[0][2];
+        const tx = p[0] / meter;
+        const r10 = R[1][0];
+        const r11 = R[1][1];
+        const r12 = R[1][2];
+        const ty = p[1] / meter;
+        const r20 = R[2][0];
+        const r21 = R[2][1];
+        const r22 = R[2][2];
+        const tz = p[2] / meter;
+
+        const msg =
+        "[\n" ~
+            "    " ~ fixed8(r00) ~ ",\n" ~
+            "    " ~ fixed8(r01) ~ ",\n" ~
+            "    " ~ fixed8(r02) ~ ",\n" ~
+            "    " ~ fixed8(tx) ~ ",\n" ~
+            "    " ~ fixed8(r10) ~ ",\n" ~
+            "    " ~ fixed8(r11) ~ ",\n" ~
+            "    " ~ fixed8(r12) ~ ",\n" ~
+            "    " ~ fixed8(ty) ~ ",\n" ~
+            "    " ~ fixed8(r20) ~ ",\n" ~
+            "    " ~ fixed8(r21) ~ ",\n" ~
+            "    " ~ fixed8(r22) ~ ",\n" ~
+            "    " ~ fixed8(tz) ~ ",\n" ~
+            "    " ~ fixed8(0) ~ ",\n" ~
+            "    " ~ fixed8(0) ~ ",\n" ~
+            "    " ~ fixed8(0) ~ ",\n" ~
+            "    " ~ fixed8(1) ~ "\n" ~
+            "]";
+
+        reportFeatureInfo(context, id, msg);
+        println(msg);
+    });
