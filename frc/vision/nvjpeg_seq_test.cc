@@ -21,7 +21,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <iterator>
@@ -33,16 +32,12 @@
 #include "gtest/gtest.h"
 
 #include "aos/testing/path.h"
+#include "frc/vision/gray_image_diff.h"
 #include "frc/vision/nvjpeg_decoder_lib.h"
 #include "turbojpeg.h"
 
 namespace frc::vision::testing {
 namespace {
-
-// Mean absolute difference, in grey levels, under which two decodes count
-// as the same image.  Hardware and turbojpeg agree to well under 1; two
-// different camera frames differ by 20+.
-constexpr double kSameImage = 2.0;
 
 // Output buffer size: large enough for every test frame.
 constexpr size_t kMaxPixels = 1280 * 800;
@@ -122,14 +117,6 @@ std::vector<uint8_t> StripThroughSof0(std::vector<uint8_t> jpeg) {
   ABSL_LOG(FATAL) << "test JPEG contains no SOF0 marker";
 }
 
-double MeanAbsDiff(const uint8_t *a, const std::vector<uint8_t> &b) {
-  uint64_t sum = 0;
-  for (size_t i = 0; i < b.size(); ++i) {
-    sum += std::abs(static_cast<int>(a[i]) - static_cast<int>(b[i]));
-  }
-  return static_cast<double>(sum) / b.size();
-}
-
 // One test frame: the JPEG and turbojpeg's decode of it.
 struct Frame {
   explicit Frame(const std::string &name)
@@ -156,7 +143,9 @@ double DecodeAndDiff(NvJpegDecoderLib *decoder, const Frame &frame,
       static_cast<int>(result.height) != frame.reference.height) {
     return -1;
   }
-  return MeanAbsDiff(gray->data(), frame.reference.pixels);
+  return MeanAbsDiff(
+      absl::MakeConstSpan(gray->data(), frame.reference.pixels.size()),
+      frame.reference.pixels);
 }
 
 class NvJpegSeqTest : public ::testing::Test {
@@ -188,7 +177,7 @@ TEST_F(NvJpegSeqTest, TestFramesAreDistinguishable) {
   for (int i = 0; i < 3; ++i) {
     const Frame &a = camera_[i];
     const Frame &b = camera_[(i + 1) % 3];
-    EXPECT_GT(MeanAbsDiff(a.reference.pixels.data(), b.reference.pixels),
+    EXPECT_GT(MeanAbsDiff(a.reference.pixels, b.reference.pixels),
               5 * kSameImage)
         << a.name << " vs " << b.name;
   }

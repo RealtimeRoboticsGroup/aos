@@ -670,6 +670,27 @@ cc_binary(
     ],
 )
 
+# Compares 8-bit greyscale images, e.g. a hardware decode with turbojpeg's;
+# see gray_image_diff.h.
+cc_library(
+    name = "gray_image_diff",
+    srcs = ["gray_image_diff.cc"],
+    hdrs = ["gray_image_diff.h"],
+    deps = [
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_test(
+    name = "gray_image_diff_test",
+    srcs = ["gray_image_diff_test.cc"],
+    deps = [
+        ":gray_image_diff",
+        "//aos/testing:googletest",
+    ],
+)
+
 # Thin wrapper around the Jetson NVJPG hardware JPEG decoder; see
 # nvjpeg_decoder_lib.h.
 cc_library(
@@ -750,6 +771,7 @@ cc_binary(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        ":gray_image_diff",
         ":nvjpeg_decoder_service",
         "//aos:configuration",
         "//aos:init",
@@ -803,12 +825,36 @@ cc_test(
         "@platforms//os:linux",
     ],
     deps = [
+        ":gray_image_diff",
         ":nvjpeg_decoder_lib",
         "//aos/testing:googletest",
         "//aos/testing:path",
         "//third_party:libturbojpeg",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
+    ],
+)
+
+# On-bus latency test for a running decoder service: publishes real camera
+# JPEGs and times how long until each one's pixels come back on /gray; see
+# decoder_latency_test.cc.  scp to the Orin and run by hand.
+cc_binary(
+    name = "decoder_latency_test",
+    srcs = ["decoder_latency_test.cc"],
+    target_compatible_with = [
+        "@platforms//cpu:arm64",
+        "@platforms//os:linux",
+    ],
+    deps = [
+        ":gray_image_diff",
+        ":vision_fbs",
+        "//aos:configuration",
+        "//aos:init",
+        "//aos/events:shm_event_loop",
+        "//third_party:libturbojpeg",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
+        "@com_google_absl//absl/strings:str_format",
     ],
 )
 
