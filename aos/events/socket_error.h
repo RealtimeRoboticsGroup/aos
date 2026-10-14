@@ -20,7 +20,7 @@ inline bool IsSocket(int fd) {
 }
 
 // The socket detail EPoll has always added to an unhandled error event.
-// Shared so that CHECK reads the same from EPoll and every Aio backend.
+// Shared so that CHECK reads the same from every Aio backend.
 // Empty for anything that is not a socket, or a socket with no pending error.
 inline std::string GetSocketErrorStr(int fd) {
   std::string error_str;

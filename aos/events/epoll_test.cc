@@ -2,31 +2,48 @@
 
 #include <fcntl.h>
 #include <unistd.h>
+#ifndef _WIN32
+#include <sys/select.h>
+#endif
 
+#include <string>
+#include <vector>
+
+#include "absl/flags/declare.h"
+#include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 
 #include "aos/events/pipe.h"
 
+ABSL_DECLARE_FLAG(std::string, aio_backend);
+
 namespace aos::testing {
 
-class EPollTest : public ::testing::Test {
+// Parameterized by backend name -- the string --aio_backend takes -- so a
+// failure names the backend rather than an index.
+class EPollTest : public ::testing::TestWithParam<std::string> {
  public:
+  void SetUp() override {
+    absl::SetFlag(&FLAGS_aio_backend, GetParam());
+    epoll_ = std::make_unique<EPoll>();
+  }
+
   void RunFor(std::chrono::nanoseconds duration) {
     internal::TimerFd timerfd;
     bool did_quit = false;
-    epoll_.OnReadable(timerfd.fd(), [this, &timerfd, &did_quit]() {
+    epoll_->OnReadable(timerfd.fd(), [this, &timerfd, &did_quit]() {
       ABSL_CHECK(!did_quit);
-      epoll_.Quit();
+      epoll_->Quit();
       did_quit = true;
       timerfd.Read();
     });
     timerfd.SetTime(monotonic_clock::now() + duration,
                     monotonic_clock::duration::zero());
-    epoll_.Run();
+    epoll_->Run();
     ABSL_CHECK(did_quit);
-    epoll_.DeleteFd(timerfd.fd());
+    epoll_->DeleteFd(timerfd.fd());
   }
 
   // Tests should avoid relying on ordering for events closer in time than this,
@@ -35,14 +52,31 @@ class EPollTest : public ::testing::Test {
     return std::chrono::milliseconds(50);
   }
 
-  EPoll epoll_;
+  std::unique_ptr<EPoll> epoll_;
 };
 
+// Helper function to fill up a pipe using OnWritable callbacks.
+// It uses select() to query writability and runs the event loop until
+// the pipe buffer is full and select() returns 0.
+void FillPipe(EPoll &epoll, int fd) {
+  while (true) {
+    fd_set write_fds;
+    FD_ZERO(&write_fds);
+    FD_SET(fd, &write_fds);
+    struct timeval timeout = {0, 0};
+    int ret = select(fd + 1, nullptr, &write_fds, nullptr, &timeout);
+    if (ret <= 0) {
+      break;
+    }
+    epoll.Poll(true);
+  }
+}
+
 // Test that the basics of OnReadable work.
-TEST_F(EPollTest, BasicReadable) {
+TEST_P(EPollTest, BasicReadable) {
   Pipe pipe;
   bool got_data = false;
-  epoll_.OnReadable(pipe.read_fd(), [&]() {
+  epoll_->OnReadable(pipe.read_fd(), [&]() {
     ASSERT_FALSE(got_data);
     ASSERT_EQ("some", pipe.Read(4));
     got_data = true;
@@ -54,26 +88,26 @@ TEST_F(EPollTest, BasicReadable) {
   RunFor(tick_duration());
   EXPECT_TRUE(got_data);
 
-  epoll_.DeleteFd(pipe.read_fd());
+  epoll_->DeleteFd(pipe.read_fd());
 }
 
 // Test that the basics of OnWritable work.
-TEST_F(EPollTest, BasicWritable) {
+TEST_P(EPollTest, BasicWritable) {
   Pipe pipe;
   int number_writes = 0;
-  epoll_.OnWritable(pipe.write_fd(), [&]() {
+  epoll_->OnWritable(pipe.write_fd(), [&]() {
     pipe.Write(" ");
     ++number_writes;
   });
 
   // First, fill up the pipe's write buffer.
-  RunFor(tick_duration());
+  FillPipe(*epoll_, pipe.write_fd());
   EXPECT_GT(number_writes, 0);
 
   // Now, if we try again, we shouldn't do anything.
   const int bytes_in_pipe = number_writes;
   number_writes = 0;
-  RunFor(tick_duration());
+  FillPipe(*epoll_, pipe.write_fd());
   EXPECT_EQ(number_writes, 0);
 
   // Empty the pipe, then fill it up again.
@@ -81,19 +115,19 @@ TEST_F(EPollTest, BasicWritable) {
     ASSERT_EQ(" ", pipe.Read(1));
   }
   number_writes = 0;
-  RunFor(tick_duration());
+  FillPipe(*epoll_, pipe.write_fd());
   EXPECT_EQ(number_writes, bytes_in_pipe);
 
-  epoll_.DeleteFd(pipe.write_fd());
+  epoll_->DeleteFd(pipe.write_fd());
 }
 
 // Test that the basics of OnError work.
-TEST_F(EPollTest, BasicError) {
+TEST_P(EPollTest, BasicError) {
   // In order to trigger an error, close the read file descriptor (per the
   // epoll_ctl manpage, this should trigger an error).
   Pipe pipe;
   int number_errors = 0;
-  epoll_.OnError(pipe.write_fd(), [&]() { ++number_errors; });
+  epoll_->OnError(pipe.write_fd(), [&]() { ++number_errors; });
 
   // Sanity check that we *don't* get any errors before anything interesting has
   // happened.
@@ -104,14 +138,16 @@ TEST_F(EPollTest, BasicError) {
 
   // For some reason, OnError doesn't seem to play nice with the timer setup we
   // have in this test, so just poll for a single event.
-  epoll_.Poll(false);
+  while (number_errors == 0) {
+    epoll_->Poll(true);
+  }
 
   EXPECT_EQ(number_errors, 1);
 
-  epoll_.DeleteFd(pipe.write_fd());
+  epoll_->DeleteFd(pipe.write_fd());
 }
 
-TEST(EPollDeathTest, InvalidFd) {
+TEST_P(EPollTest, InvalidFd) {
   EPoll epoll;
   Pipe pipe;
   epoll.OnReadable(pipe.read_fd(), []() {});
@@ -127,16 +163,16 @@ TEST(EPollDeathTest, InvalidFd) {
 }
 
 // Tests that enabling/disabling a writable FD works.
-TEST_F(EPollTest, WritableEnableDisable) {
+TEST_P(EPollTest, WritableEnableDisable) {
   Pipe pipe;
   int number_writes = 0;
-  epoll_.OnWritable(pipe.write_fd(), [&]() {
+  epoll_->OnWritable(pipe.write_fd(), [&]() {
     pipe.Write(" ");
     ++number_writes;
   });
 
   // First, fill up the pipe's write buffer.
-  RunFor(tick_duration());
+  FillPipe(*epoll_, pipe.write_fd());
   EXPECT_GT(number_writes, 0);
 
   // Empty the pipe.
@@ -146,32 +182,54 @@ TEST_F(EPollTest, WritableEnableDisable) {
   }
 
   // If we disable writable checking, then nothing should happen.
-  epoll_.DisableWritable(pipe.write_fd());
+  epoll_->DisableWritable(pipe.write_fd());
   number_writes = 0;
   RunFor(tick_duration());
   EXPECT_EQ(number_writes, 0);
 
   // Disabling it again should be a NOP.
-  epoll_.DisableWritable(pipe.write_fd());
+  epoll_->DisableWritable(pipe.write_fd());
 
   // And then when we re-enable, it should fill the pipe up again.
-  epoll_.EnableWritable(pipe.write_fd());
+  epoll_->EnableWritable(pipe.write_fd());
   number_writes = 0;
-  RunFor(tick_duration());
+  FillPipe(*epoll_, pipe.write_fd());
   EXPECT_EQ(number_writes, bytes_in_pipe);
 
-  epoll_.DeleteFd(pipe.write_fd());
+  epoll_->DeleteFd(pipe.write_fd());
 }
 
-TEST_F(EPollTest, QuitInBeforeWait) {
-  epoll_.BeforeWait([this]() { epoll_.Quit(); });
-  epoll_.Run();
+TEST_P(EPollTest, QuitInBeforeWait) {
+  epoll_->BeforeWait([this]() { epoll_->Quit(); });
+  epoll_->Run();
 }
 
-TEST_F(EPollTest, RemoveWithoutEvents) {
+TEST_P(EPollTest, RemoveWithoutEvents) {
   Pipe pipe;
-  epoll_.OnEvents(pipe.read_fd(), [](uint32_t) {});
-  epoll_.DeleteFd(pipe.read_fd());
+  epoll_->OnEvents(pipe.read_fd(), [](uint32_t) {});
+  epoll_->DeleteFd(pipe.read_fd());
 }
+
+// The backends this platform has, the same way aio_test.cc picks them.
+// --aio_backend is fatal on any name the platform has no backend for.
+//
+// Built as a function rather than inline in the macro call below: a
+// preprocessor directive inside a function-like macro's argument list is
+// undefined behavior, and MSVC rejects it outright.
+std::vector<std::string> Backends() {
+#if defined(__linux__)
+  return {"io_uring", "epoll"};
+#elif defined(_WIN32)
+  return {"iocp"};
+#else
+  return {"kqueue"};
+#endif
+}
+
+INSTANTIATE_TEST_SUITE_P(EPollTestBackends, EPollTest,
+                         ::testing::ValuesIn(Backends()),
+                         [](const ::testing::TestParamInfo<std::string> &info) {
+                           return info.param;
+                         });
 
 }  // namespace aos::testing
