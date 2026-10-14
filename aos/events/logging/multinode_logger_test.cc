@@ -2581,9 +2581,6 @@ TEST_P(MultinodeLoggerTest, RemoteReboot) {
   const UUID pi2_boot0 = UUID::Random();
   const UUID pi2_boot1 = UUID::Random();
   {
-    ABSL_CHECK_EQ(pi1_index_, 0u);
-    ABSL_CHECK_EQ(pi2_index_, 1u);
-
     time_converter_.set_boot_uuid(pi1_index_, 0, pi1_boot0);
     time_converter_.set_boot_uuid(pi2_index_, 0, pi2_boot0);
     time_converter_.set_boot_uuid(pi2_index_, 1, pi2_boot1);
@@ -2962,9 +2959,6 @@ TEST_P(MultinodeLoggerTest, RemoteRebootOnlyTimestamps) {
   const UUID pi2_boot0 = UUID::Random();
   const UUID pi2_boot1 = UUID::Random();
   {
-    ABSL_CHECK_EQ(pi1_index_, 0u);
-    ABSL_CHECK_EQ(pi2_index_, 1u);
-
     time_converter_.set_boot_uuid(pi1_index_, 0, pi1_boot0);
     time_converter_.set_boot_uuid(pi2_index_, 0, pi2_boot0);
     time_converter_.set_boot_uuid(pi2_index_, 1, pi2_boot1);
@@ -4607,9 +4601,6 @@ TEST(MissingDirectionTest, OneDirectionAfterRebootMixedCase2) {
 TEST_P(MultinodeLoggerTest, OneDirectionTimeDrift) {
   std::vector<std::string> filenames;
 
-  ABSL_CHECK_EQ(pi1_index_, 0u);
-  ABSL_CHECK_EQ(pi2_index_, 1u);
-
   time_converter_.AddNextTimestamp(
       distributed_clock::epoch(),
       {BootTimestamp::epoch(), BootTimestamp::epoch()});
@@ -4814,9 +4805,6 @@ TEST(MultinodeLoggerLoopTest, PopWithEmptyFilter) {
 // be booted after the other node(s)).
 TEST_P(MultinodeLoggerTest, StartOneNodeBeforeOther) {
   std::vector<std::string> filenames;
-
-  ABSL_CHECK_EQ(pi1_index_, 0u);
-  ABSL_CHECK_EQ(pi2_index_, 1u);
 
   time_converter_.AddNextTimestamp(
       distributed_clock::epoch(),

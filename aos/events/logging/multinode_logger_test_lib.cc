@@ -117,6 +117,11 @@ MultinodeLoggerTest::MultinodeLoggerTest()
       pi1_reboot_logfiles_(MakePi1RebootLogfiles()),
       logfiles_(MakeLogFiles(logfile_base1_, logfile_base2_)),
       structured_logfiles_(StructureLogFiles()) {
+  // Tests use pi1_index_ and pi2_index_ to index into per node arrays such as
+  // the time converter's, and assume they are the first 2 nodes.
+  ABSL_CHECK_EQ(pi1_index_, 0u);
+  ABSL_CHECK_EQ(pi2_index_, 1u);
+
   absl::SetFlag(&FLAGS_force_timestamp_loading,
                 std::get<0>(GetParam()).timestamp_buffering ==
                     ForceTimestampBuffering::kForceBufferTimestamps);
