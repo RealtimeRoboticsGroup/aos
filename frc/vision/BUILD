@@ -686,9 +686,34 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "@arm64_debian_sysroot//:nvbufsurface",
         "@arm64_debian_sysroot//:nvjpeg",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
+    ],
+)
+
+# The NVJPG decoder service, shared by nvjpeg_decoder and
+# nvjpeg_decoder_verify; see nvjpeg_decoder_service.h.
+cc_library(
+    name = "nvjpeg_decoder_service",
+    srcs = ["nvjpeg_decoder_service.cc"],
+    hdrs = ["nvjpeg_decoder_service.h"],
+    target_compatible_with = [
+        "@platforms//cpu:arm64",
+        "@platforms//os:linux",
+    ],
+    deps = [
+        ":nvjpeg_decoder_lib",
+        ":turbojpeg_decoder_status_fbs",
+        ":vision_fbs",
+        "//aos:realtime",
+        "//aos/containers:inlined_vector",
+        "//aos/events:event_loop",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
+        "@com_google_absl//absl/strings",
     ],
 )
 
@@ -704,13 +729,36 @@ cc_binary(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        ":nvjpeg_decoder_lib",
-        ":turbojpeg_decoder_status_fbs",
-        ":vision_fbs",
+        ":nvjpeg_decoder_service",
         "//aos:configuration",
         "//aos:init",
-        "//aos/containers:inlined_vector",
         "//aos/events:shm_event_loop",
+        "@com_google_absl//absl/flags:flag",
+    ],
+)
+
+# nvjpeg_decoder that also decodes every frame with turbojpeg and dies if the
+# hardware output differs.  Swap it in for nvjpeg_decoder (executable_name in
+# the config) to check libnvjpeg on a bench or robot; it costs a CPU decode
+# per frame, so it is not for matches.
+cc_binary(
+    name = "nvjpeg_decoder_verify",
+    srcs = ["nvjpeg_decoder_verify.cc"],
+    target_compatible_with = [
+        "@platforms//cpu:arm64",
+        "@platforms//os:linux",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":nvjpeg_decoder_service",
+        "//aos:configuration",
+        "//aos:init",
+        "//aos:realtime",
+        "//aos/events:shm_event_loop",
+        "//third_party:libturbojpeg",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -735,18 +783,20 @@ cc_binary(
 )
 
 # Hardware test: decodes DIFFERENT JPEGs through one NvJpegDecoderLib
-# instance and asserts the pipelining contract, to expose persistent-state
-# bugs; see nvjpeg_seq_test.cc.  Needs the NVJPG engine, so CI (x86) skips
+# instance and checks every output against turbojpeg, to expose stale,
+# delayed or wrong-buffer output; see nvjpeg_seq_test.cc.  Needs the NVJPG engine, so CI (x86) skips
 # it -- build with --config=arm64 and run it on an Orin.
 cc_test(
     name = "nvjpeg_seq_test",
     srcs = ["nvjpeg_seq_test.cc"],
     data = [
+        "testdata/camera_a.jpg",
+        "testdata/camera_b.jpg",
+        "testdata/camera_c.jpg",
         "testdata/seq_040.jpg",
         "testdata/seq_080.jpg",
         "testdata/seq_120.jpg",
         "testdata/seq_200.jpg",
-        "testdata/seq_other_size.jpg",
     ],
     target_compatible_with = [
         "@platforms//cpu:arm64",
@@ -756,6 +806,7 @@ cc_test(
         ":nvjpeg_decoder_lib",
         "//aos/testing:googletest",
         "//aos/testing:path",
+        "//third_party:libturbojpeg",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
     ],

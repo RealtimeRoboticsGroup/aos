@@ -4,15 +4,15 @@
 #include <setjmp.h>
 #include <unistd.h>
 
-#include <algorithm>
 #include <cerrno>
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
-#include <vector>
 
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+
+#include "nvbufsurface.h"
 
 // libnvjpeg.so implements the libjpeg-8b API with NVIDIA's TEGRA_ACCELERATE
 // extensions.  TEGRA_ACCELERATE (set via local_defines in the BUILD file)
@@ -22,31 +22,43 @@ extern "C" {
 }
 
 // JPEG decode happens through libnvjpeg's hardware MJPEG stream mode
-// (cinfo->mjpeg_decode = TRUE), reading the decoded luma plane from the
-// hardware output surface (cinfo->jpegTegraMgr->buff[0] / pitch[0]):
+// (cinfo->mjpeg_decode = TRUE) with the output delivered as a dmabuf, the
+// sequence NVIDIA's NvJPEGDecoder::decodeToFd uses on JetPack 6:
 //
 //   mjpeg_decode = TRUE -> jpeg_mem_src -> jpeg_read_header ->
-//   raw_data_out = TRUE -> jpeg_start_decompress ->
-//   jpeg_read_raw_data per iMCU row group (into discard rows, only to
-//   advance the scanline state machine) -> copy Y from jpegTegraMgr ->
-//   jpeg_finish_decompress
+//   IsVendorbuf = TRUE, pVendor_buf = &NvBufSurface -> jpeg_start_decompress
+//   -> one jpeg_read_raw_data(NULL) -> jpeg_finish_decompress -> cinfo->fd
+//   -> map the dmabuf, copy Y, unmap
 //
-// The obvious-looking alternative -- letting jpeg_read_raw_data copy the
-// rows -- is broken in this library: it only produces pixels for the FIRST
-// decode of a decompress object's lifetime, and silently writes nothing on
-// every later decode while still reporting success (verified empirically on
-// L4T r36.4 with nvjpeg_seq_test; a same-file-in-a-loop benchmark cannot
-// see this, which is how it originally slipped through).
+// Every piece of that is load-bearing (verified empirically on L4T r36.4 by
+// comparing each output to turbojpeg's decode of the same and the previous
+// frame; nvjpeg_seq_test keeps checking the same-frame match):
 //
-// In stream mode the engine pipelines: the surface read back after
-// submitting frame N contains frame N-1 (the first decode after object
-// creation is synchronous, and the second typically yields an all-zero
-// warmup frame).  See the header for the caller-visible contract.
+//   * Without pVendor_buf, cinfo->fd stays -1.
+//   * Without mjpeg_decode, only the FIRST decode of a decompress object's
+//     lifetime produces pixels; later ones return a stale image while
+//     reporting success.  (Letting jpeg_read_raw_data copy rows into our
+//     own buffers has the same first-frame-only bug.)
+//   * Reading the stream-mode surface through cinfo->jpegTegraMgr instead of
+//     the dmabuf returns the PREVIOUS submission's frame (a one-frame
+//     pipeline delay, plus an all-zero warmup frame after each restart).
+//   * The fd stays the same number from frame to frame but fronts a
+//     rotating set of buffers, so it must be looked up and mapped every
+//     frame; a mapping kept across frames reads the wrong frame.
 //
 // On JetPack 6 / L4T 36 there is no /dev/nvhost-nvjpg chardev (that was the
 // JetPack 5 interface): libnvjpeg reaches the engine through the tegra-drm
 // render node (/dev/dri/renderD*) and /dev/nvmap, with the engine's client
 // driver (tegra-nvjpg) living inside tegra-drm.ko.
+//
+// libnvjpeg has also been seen to block forever inside a decode
+// (jpeg_read_raw_data -> jpegTegraDecoderRenderWait), but only while four
+// decoder processes decoded synthetic frames in a startup self-test as the
+// rest of the stack came up.  With that self-test gone, 2000 decoder starts
+// and a 4 h, four-camera 120 Hz soak on the bench never hung.  If a hang
+// shows up again, the process stays RUNNING but never publishes: look for
+// a decoder whose main thread sleeps in a futex instead of the event loop's
+// epoll wait.
 //
 // The library would decode on the CPU when the engine is unavailable; we
 // deliberately fail loudly instead (at construction when no engine is bound
@@ -92,10 +104,10 @@ struct NvJpegDecoderLib::Impl {
   struct jpeg_decompress_struct cinfo;
   DecodeErrorMgr err;
 
-  // One row of DCT-padded scratch.  All raw-data rows land here: the real
-  // pixels are read from the hardware surface, the raw-data calls exist
-  // only to run the scanline state machine forward.
-  std::vector<uint8_t> discard_row;
+  // Handed to libnvjpeg through cinfo.pVendor_buf; without it the library
+  // does not return an output dmabuf.  Zeroed before every decode, as
+  // NvJPEGDecoder::decodeToFd passes a fresh one each call.
+  NvBufSurface vendor_surface;
 
   bool logged_first_decode = false;
 
@@ -105,8 +117,8 @@ struct NvJpegDecoderLib::Impl {
   bool rebuilding = false;
 
   // Dimensions of the current hardware stream (0 until the first successful
-  // decode after a (re)build).  The output surface is sized for these, so a
-  // mid-stream dimension change must restart the stream before readback.
+  // decode after a (re)build).  The hardware stream is set up for these, so
+  // a mid-stream dimension change fails that frame and restarts the stream.
   uint32_t stream_width = 0;
   uint32_t stream_height = 0;
 };
@@ -160,11 +172,8 @@ NvJpegDecoderLib::~NvJpegDecoderLib() {
 }
 
 // Tears the decompress object down and rebuilds it: the next frame starts a
-// fresh hardware stream (its first decode is synchronous, then the pipeline
-// refills through the usual warmup frame).  The rebuild deliberately
-// discards the pipelined in-flight frame -- after any failure the stream
-// state is suspect, and guaranteed-correct timestamp pairing afterwards is
-// worth the one or two extra lost frames on what should be a rare event.
+// fresh hardware stream.  After any failure the stream state is suspect, so
+// every failure path goes through here.
 void NvJpegDecoderLib::RebuildDecompress() {
   impl_->rebuilding = true;
   jpeg_decompress_struct *cinfo = &impl_->cinfo;
@@ -202,6 +211,41 @@ bool NvJpegDecoderLib::FailFrame(const char *format, ...) {
   return false;
 }
 
+bool NvJpegDecoderLib::CopyLumaFromDmabuf(int fd, uint32_t width,
+                                          uint32_t height, uint8_t *gray_out) {
+  if (fd < 0) {
+    return FailFrame("libnvjpeg returned no output buffer (fd %d)", fd);
+  }
+  // Looked up and mapped every frame: the fd number is stable but the
+  // buffer behind it rotates.
+  NvBufSurface *surface = nullptr;
+  if (NvBufSurfaceFromFd(fd, reinterpret_cast<void **>(&surface)) != 0 ||
+      surface == nullptr || surface->numFilled < 1) {
+    return FailFrame("no NvBufSurface behind output fd %d", fd);
+  }
+  const NvBufSurfaceParams &params = surface->surfaceList[0];
+  // The buffer may be padded past the image (300 wide decodes into a
+  // 304-wide buffer), but never smaller.
+  if (params.width < width || params.height < height ||
+      params.planeParams.pitch[0] < width) {
+    return FailFrame("output buffer is %ux%u (pitch %u), image is %ux%u",
+                     params.width, params.height, params.planeParams.pitch[0],
+                     width, height);
+  }
+  if (NvBufSurfaceMap(surface, 0, 0, NVBUF_MAP_READ) != 0) {
+    return FailFrame("failed to map output buffer fd %d", fd);
+  }
+  NvBufSurfaceSyncForCpu(surface, 0, 0);
+  const uint8_t *luma = static_cast<const uint8_t *>(params.mappedAddr.addr[0]);
+  const size_t pitch = params.planeParams.pitch[0];
+  for (uint32_t row = 0; row < height; ++row) {
+    memcpy(gray_out + static_cast<size_t>(row) * width,
+           luma + static_cast<size_t>(row) * pitch, width);
+  }
+  NvBufSurfaceUnMap(surface, 0, 0);
+  return true;
+}
+
 bool NvJpegDecoderLib::DecodeToGray(const uint8_t *jpeg_data, size_t jpeg_size,
                                     uint8_t *gray_out, size_t max_out_size,
                                     Result *result) {
@@ -218,16 +262,16 @@ bool NvJpegDecoderLib::DecodeToGray(const uint8_t *jpeg_data, size_t jpeg_size,
     }
     // The hardware stream context is in an undefined state after an error,
     // so tear the decompress object down and rebuild it: the next frame
-    // starts a fresh stream (its first decode is synchronous, then the
-    // pipeline refills through the usual warmup frame).  The message is
-    // already in the last_error() buffer (ErrorExit formatted it there).
+    // starts a fresh stream.  The message is already in the last_error()
+    // buffer (ErrorExit formatted it there).
     RebuildDecompress();
     ABSL_VLOG(1) << "JPEG decode failed: " << impl_->err.message;
     return false;
   }
 
   // Hardware MJPEG stream-decode mode; this is what NVIDIA's own nvjpegdec
-  // GStreamer element uses for frame-after-frame camera streams.
+  // GStreamer element uses for frame-after-frame camera streams.  Without
+  // it, every decode after the first returns a stale image.
   cinfo->mjpeg_decode = TRUE;
 
   jpeg_mem_src(cinfo, const_cast<unsigned char *>(jpeg_data),
@@ -236,9 +280,31 @@ bool NvJpegDecoderLib::DecodeToGray(const uint8_t *jpeg_data, size_t jpeg_size,
 
   const uint32_t width = cinfo->image_width;
   const uint32_t height = cinfo->image_height;
-  // The output surface is sized for the stream's dimensions; a mid-stream
-  // dimension change (camera re-enumerated at a new resolution?) would make
-  // the readback below use the wrong geometry, so restart the stream.
+  // Only the cameras' format reaches the library: it crashes (in
+  // jpeg_start_decompress) on some others, e.g. 4:4:4, instead of reporting
+  // an error, and nothing else has been verified to decode correctly.
+  if (cinfo->progressive_mode || cinfo->arith_code ||
+      cinfo->data_precision != 8) {
+    return FailFrame("Only baseline 8-bit Huffman JPEG is supported");
+  }
+  if (cinfo->jpeg_color_space != JCS_YCbCr || cinfo->num_components != 3 ||
+      cinfo->comp_info[0].h_samp_factor != 2 ||
+      cinfo->comp_info[0].v_samp_factor != 1 ||
+      cinfo->comp_info[1].h_samp_factor != 1 ||
+      cinfo->comp_info[1].v_samp_factor != 1 ||
+      cinfo->comp_info[2].h_samp_factor != 1 ||
+      cinfo->comp_info[2].v_samp_factor != 1) {
+    return FailFrame(
+        "Unsupported JPEG format (color space %d, %d components, Y %dx%d); "
+        "only baseline YCbCr 4:2:2 is accepted",
+        static_cast<int>(cinfo->jpeg_color_space), cinfo->num_components,
+        cinfo->comp_info[0].h_samp_factor, cinfo->comp_info[0].v_samp_factor);
+  }
+
+  // The hardware stream is set up for its first frame's dimensions; on a
+  // mid-stream change (camera re-enumerated at a new resolution?) fail this
+  // frame and restart the stream rather than find out what the library
+  // does with it.
   if (impl_->stream_width != 0 &&
       (width != impl_->stream_width || height != impl_->stream_height)) {
     return FailFrame("JPEG dimensions changed mid-stream: %ux%u vs %ux%u",
@@ -248,61 +314,18 @@ bool NvJpegDecoderLib::DecodeToGray(const uint8_t *jpeg_data, size_t jpeg_size,
     return FailFrame("JPEG %ux%u exceeds output buffer (%zu bytes)", width,
                      height, max_out_size);
   }
-  if (cinfo->progressive_mode) {
-    return FailFrame("Progressive JPEG is not supported");
-  }
-  const bool grayscale_source = (cinfo->jpeg_color_space == JCS_GRAYSCALE);
-  if (!grayscale_source && cinfo->jpeg_color_space != JCS_YCbCr) {
-    return FailFrame("Unsupported JPEG color space %d",
-                     static_cast<int>(cinfo->jpeg_color_space));
-  }
 
-  cinfo->raw_data_out = TRUE;
-  cinfo->out_color_space = grayscale_source ? JCS_GRAYSCALE : JCS_YCbCr;
+  cinfo->out_color_space = JCS_YCbCr;
+  cinfo->IsVendorbuf = TRUE;
+  memset(&impl_->vendor_surface, 0, sizeof(impl_->vendor_surface));
+  cinfo->pVendor_buf =
+      reinterpret_cast<unsigned char *>(&impl_->vendor_surface);
 
   jpeg_start_decompress(cinfo);
-
-  // Raw-data mode hands us one iMCU row group per call, DCT-padded on both
-  // axes.  Y always carries the max sampling factor for the formats we
-  // accept, so the group height equals the luma rows per group.
-  const int lines_per_group = cinfo->max_v_samp_factor * DCTSIZE;
-  const int y_rows_per_group = cinfo->comp_info[0].v_samp_factor * DCTSIZE;
-  if (y_rows_per_group != lines_per_group || y_rows_per_group > 4 * DCTSIZE) {
-    return FailFrame("Unsupported subsampling (Y %dx%d, max_v %d)",
-                     cinfo->comp_info[0].h_samp_factor,
-                     cinfo->comp_info[0].v_samp_factor,
-                     cinfo->max_v_samp_factor);
-  }
-
-  size_t scratch_row_size =
-      static_cast<size_t>(cinfo->comp_info[0].width_in_blocks) * DCTSIZE;
-  for (int c = 1; c < cinfo->num_components; ++c) {
-    scratch_row_size = std::max<size_t>(
-        scratch_row_size,
-        static_cast<size_t>(cinfo->comp_info[c].width_in_blocks) * DCTSIZE);
-  }
-  impl_->discard_row.resize(scratch_row_size);
-
-  // Every row of every plane goes to the discard row: these calls only
-  // advance the library's scanline state so jpeg_finish_decompress is
-  // legal.  The pixels come from the hardware surface below.
-  JSAMPROW y_rows[4 * DCTSIZE];
-  JSAMPROW cb_rows[4 * DCTSIZE];
-  JSAMPROW cr_rows[4 * DCTSIZE];
-  JSAMPARRAY planes[3] = {y_rows, cb_rows, cr_rows};
-  for (int i = 0; i < 4 * DCTSIZE; ++i) {
-    y_rows[i] = impl_->discard_row.data();
-    cb_rows[i] = impl_->discard_row.data();
-    cr_rows[i] = impl_->discard_row.data();
-  }
-
-  while (cinfo->output_scanline < cinfo->output_height) {
-    if (jpeg_read_raw_data(cinfo, planes, lines_per_group) == 0) {
-      // Treat like a decode error: rebuild so the stream restarts cleanly.
-      return FailFrame("jpeg_read_raw_data made no progress at row %u",
-                       cinfo->output_scanline);
-    }
-  }
+  // In vendor-buffer mode one call decodes the whole frame into the dmabuf;
+  // there are no rows to hand over.
+  jpeg_read_raw_data(cinfo, nullptr,
+                     cinfo->comp_info[0].v_samp_factor * DCTSIZE);
 
   // Read hardware state before finish -- finish/abort may reset it.
   //
@@ -317,23 +340,11 @@ bool NvJpegDecoderLib::DecodeToGray(const uint8_t *jpeg_data, size_t jpeg_size,
            "turbojpeg_decoder instead.";
   }
 
-  // The decoded luma plane lives in the hardware output surface.  In stream
-  // mode this surface holds the PREVIOUS submission's frame once the
-  // pipeline is primed (and an all-zero warmup frame on the second decode);
-  // the caller handles that pairing.
-  ABSL_CHECK(cinfo->jpegTegraMgr != nullptr &&
-             cinfo->jpegTegraMgr->buff[0] != nullptr)
-      << ": hardware decode reported but no output surface is present";
-  const uint8_t *surface = cinfo->jpegTegraMgr->buff[0];
-  const size_t pitch = cinfo->jpegTegraMgr->pitch[0];
-  ABSL_CHECK_GE(pitch, static_cast<size_t>(width))
-      << ": hardware surface pitch is narrower than the image";
-  for (uint32_t row = 0; row < height; ++row) {
-    memcpy(gray_out + static_cast<size_t>(row) * width,
-           surface + static_cast<size_t>(row) * pitch, width);
-  }
-
   jpeg_finish_decompress(cinfo);
+
+  if (!CopyLumaFromDmabuf(cinfo->fd, width, height, gray_out)) {
+    return false;
+  }
 
   if (!impl_->logged_first_decode) {
     impl_->logged_first_decode = true;
