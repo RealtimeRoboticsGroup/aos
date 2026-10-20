@@ -298,19 +298,12 @@ struct Aio::TimerState {
   CompletionCallback user_callback = nullptr;
   void *user_context = nullptr;
 
-  // Intrusive doubly-linked list pointers for active timers
+  // Intrusive doubly-linked list pointers for the epoll backend's live timers.
   Aio::TimerState *prev_active = nullptr;
   Aio::TimerState *next_active = nullptr;
+  // Whether the timer is armed, for a backend that keeps its armed timers in
+  // a container of its own (Darwin's active_timers_).
   bool is_active = false;
-
-  // Set while an asynchronous cancellation is in flight (io_uring backend).
-  // Only teardown does that now: IoUringImpl::DestroyTimerState() cancels the
-  // multishot poll the timer holds on its timerfd and parks the state as an
-  // orphan until that cancel's completion drains.  It is what makes the
-  // resulting error completion expected rather than fatal, and what stops the
-  // poll from being re-armed in the meantime.  Scheduling and cancelling the
-  // *timer* never set this -- both are a plain timerfd_settime(2).
-  bool canceling = false;
 };
 
 // One Aio's before-wait functions, run in the order they were added.  Shared

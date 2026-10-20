@@ -93,9 +93,8 @@ struct KqueueTimerState : public Aio::TimerState {
   ~KqueueTimerState() override;
 
   // Owned by KqueueImpl::active_timers_ -- see TimerQueue, which is the only
-  // thing allowed to touch them.  They live here rather than on
-  // Aio::TimerState because prev_active/next_active there are the Linux
-  // backends' intrusive list, and a timer is only ever on one backend.
+  // thing allowed to touch them.  Per backend rather than on Aio::TimerState,
+  // like aio_linux.cc's IoUringTimerState, since each spells its own traits.
   KqueueTimerState *left = nullptr;
   KqueueTimerState *right = nullptr;
   KqueueTimerState *parent = nullptr;
@@ -291,14 +290,10 @@ class KqueueImpl : public internal::ReadinessBackend {
 
   void InsertActiveTimer(KqueueTimerState *state);
   void RemoveActiveTimer(KqueueTimerState *state);
-  // Every armed timer, in dispatch order: front() is both the deadline to wait
-  // for and the timer to hand over when it arrives.
-  //
-  // The order is the contract.  Both Linux backends give a timer its own
-  // timerfd and let the kernel sort them, and callers rely on the result: a
-  // callback for the earlier deadline may cancel, reschedule or destroy a
-  // later timer whose firing is already queued.  kqueue cannot be asked for
-  // the same thing -- see UpdateTimerKnote() -- so it is maintained here.
+  // Every armed timer, earliest deadline first and first-scheduled first among
+  // equal deadlines.  Timers fire in that order.  front() is both the deadline
+  // to wait for and the timer to hand over when it arrives.  kqueue cannot be
+  // asked for the order (see UpdateTimerKnote()), so it is kept here.
   struct ActiveTimerTraits {
     static KqueueTimerState *&left(KqueueTimerState *state) {
       return state->left;

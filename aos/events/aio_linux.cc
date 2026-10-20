@@ -40,6 +40,7 @@
 #include "aos/events/aio_unix.h"
 #include "aos/events/kernel_release.h"
 #include "aos/events/socket_error.h"
+#include "aos/events/timer_queue.h"
 #include "aos/ipc_lib/thread_signal.h"
 #include "aos/libc/aos_strerror.h"
 #include "aos/realtime.h"
@@ -146,14 +147,19 @@ std::string KernelRelease() {
 constexpr int kMinimumKernelMajor = 6;
 constexpr int kMinimumKernelMinor = 1;
 
-void RequireMinimumKernelVersion() {
+// Whether the running kernel is at least major.minor.
+bool KernelAtLeast(int want_major, int want_minor) {
   const std::string release = KernelRelease();
   int major = 0;
   int minor = 0;
   ABSL_CHECK_EQ(sscanf(release.c_str(), "%d.%d", &major, &minor), 2)
       << "Could not parse the kernel release \"" << release << "\"";
-  ABSL_CHECK(major > kMinimumKernelMajor ||
-             (major == kMinimumKernelMajor && minor >= kMinimumKernelMinor))
+  return major > want_major || (major == want_major && minor >= want_minor);
+}
+
+void RequireMinimumKernelVersion() {
+  const std::string release = KernelRelease();
+  ABSL_CHECK(KernelAtLeast(kMinimumKernelMajor, kMinimumKernelMinor))
       << "Kernel " << release
       << " is too old: aos's io_uring backend requires >= "
       << kMinimumKernelMajor << "." << kMinimumKernelMinor
@@ -247,8 +253,7 @@ class EventFD {
   // call this: a child inherits the parent's eventfd, and an eventfd is an
   // ordinary descriptor, so the two processes end up sharing one wakeup.
   // Either side's pending read then consumes writes meant for the other --
-  // a Quit() that never wakes the loop it was aimed at.  Same defect, and
-  // the same fix, as the inherited timerfds.
+  // a Quit() that never wakes the loop it was aimed at.
   //
   // The object itself stays put, so the address of wakeup_req -- which the
   // ring encodes into user_data -- does not move.
@@ -423,8 +428,7 @@ inline struct timespec AbsoluteTimerfdValue(
 
 class IoUringImpl;
 
-// The active-timer list links, shared by both Linux backends -- they live on
-// Aio::TimerState, so there is one spelling of them rather than one each.
+// The epoll backend's live-timer list links, which live on Aio::TimerState.
 struct ActiveTimerTraits {
   static Aio::TimerState *&next(Aio::TimerState *state) {
     return state->next_active;
@@ -434,87 +438,192 @@ struct ActiveTimerTraits {
   }
 };
 
-// A one-shot timer, implemented as a timerfd whose readiness io_uring
-// watches.
+// A timer, on the io_uring backend.  Nothing of it is in the kernel: its
+// deadline is ordered in IoUringTimers, and the blocking io_uring_enter(2)
+// sleeps until the earliest one, with it as the wait's timeout.
 //
-// The deadline lives entirely in the kernel's timerfd, not in an io_uring
-// op: Schedule() and Cancel() are each a single timerfd_settime() and submit
-// nothing to the ring.  io_uring's only job is telling us when timer_fd
-// became readable, via one multishot poll armed once in Initialize() and
-// held for the state's whole life -- so the steady state costs zero
-// submissions per firing.
+// Not a timerfd per timer, because of PREEMPT_RT.  There a timerfd's hrtimer
+// expires in the per-CPU ktimers/N thread, at SCHED_FIFO 1, so a real-time
+// loop's timer fires late by however long any other real-time task on its CPU
+// runs: measured at up to a whole 1 ms burst of a SCHED_FIFO 20 thread, against
+// a SCHED_FIFO 40 loop.  The kernel cannot expire a timerfd in hard interrupt
+// context there either: the expiry wakes the timerfd's pollers under its
+// wait-queue lock, a spinlock_t, which sleeps on PREEMPT_RT.  A wait's own
+// timeout has no such problem.  It wakes one known task, and the kernel expires
+// the timeout of a sleeping real-time task in hard interrupt context
+// (__hrtimer_setup_sleeper() in kernel/time/hrtimer.c).  io_uring_enter()
+// arms its own hrtimer (io_cqring_schedule_timeout() in io_uring/io_uring.c),
+// which is soft until the kernel applies the same rule to it.
 //
-// This replaces an earlier design built on IORING_OP_TIMEOUT with a
-// steady-state IORING_TIMEOUT_MULTISHOT and IORING_TIMEOUT_UPDATE reschedules.
-// Two reasons, both in documentation/adr/0001-aio-io-uring-single-issuer.md:
-//
-//   * IORING_TIMEOUT_MULTISHOT cannot keep phase.  The kernel rejects
-//     MULTISHOT|ABS outright (__io_timeout_prep() in linux/io_uring/
-//     timeout.c), so a repeating op is necessarily relative, and
-//     io_timeout_complete() re-arms it with hrtimer_start(period) from
-//     whenever task work ran -- not hrtimer_forward() from the previous
-//     deadline.  Every period absorbs the wakeup latency and it accumulates,
-//     measured at 4-10us per period on an idle machine and growing with how
-//     busy the loop is.  That defect is what took repeating timers out of
-//     Aio's API entirely (see Aio::Timer::Schedule()); a caller-driven
-//     period against an absolute deadline has nowhere to accumulate error.
-//   * Retargeting a timerfd is one atomic settime() that cannot race
-//     anything.  Retargeting an armed io_uring timeout meant
-//     IORING_TIMEOUT_UPDATE or IORING_OP_ASYNC_CANCEL, both of which resolve
-//     their target by a lookup that a firing op is briefly absent from --
-//     the source of essentially every lifecycle bug in that ADR.
-struct IoUringTimerState : public Aio::TimerState {
-  explicit IoUringTimerState(IoUringImpl *impl) : impl_(impl) {}
+// It also leaves nothing to race.  Schedule() and Cancel() edit a tree that
+// only the loop thread touches, so there is no kernel object to retarget or
+// cancel (the IORING_OP_TIMEOUT design's failure), none to re-arm after a ring
+// rebuild, and none to replace after fork() -- a child inherits the tree, and
+// with it every armed deadline, exactly.  See
+// documentation/adr/0001-aio-io-uring-single-issuer.md.
+class IoUringTimers;
+
+struct IoUringTimerState final : public Aio::TimerState {
+  explicit IoUringTimerState(IoUringTimers *timers);
   ~IoUringTimerState() override;
 
-  void Initialize() override;
+  void Initialize() override {}
   void Schedule(aos::monotonic_clock::time_point deadline,
                 CompletionCallback callback, void *context) override;
   void Cancel(bool reap) override;
 
-  // Public so IoUringImpl can reach them for recycling and ring rebuilds,
-  // like the state on the Aio::TimerState base.
-
-  // This timer's deadline and period.  Outlives recycling: MakeTimerState()
-  // hands a drained state back out with its timerfd intact rather than
-  // paying timerfd_create() again (Reset()).
-  std::unique_ptr<TimerFD> timer_fd;
-
-  // While the owning Timer is destroyed with the poll still in flight, the
-  // impl owns this state on its intrusive orphan list (orphaned_timers_,
-  // linked through next_orphan) and recycles it once the poll's terminal
-  // completion has drained.  Membership on that list is the one and only
-  // record of orphan-hood -- there is deliberately no flag to fall out of
-  // sync with it.  See DestroyTimerState().
-  IoUringTimerState *next_orphan = nullptr;
-
-  // Whether the kernel timer is set: true from Schedule() until the firing
-  // is delivered or Cancel() disarms it.  user_callback is not that --
-  // nothing clears it when a one-shot firing is delivered -- and a forked
-  // child that re-armed from it would fire an already-delivered timer a
-  // second time.  See HandleFork().
-  bool armed = false;
-
-  // (Re-)arms the multishot poll on timer_fd.  Called once from
-  // Initialize(), again from the completion handler if the kernel ever
-  // terminates the op, and again for every live timer whenever the ring is
-  // rebuilt (ReArmPersistentRegistrations()).  That last caller passes
-  // `draining_ok`, since re-arming every timer at once can outrun a shallow
-  // --aio_queue_depth -- see GetSqeForRingReconstruction().
-  void SubmitPoll(bool draining_ok = false);
-
-  // Clears everything a recycled state must not inherit, keeping the pieces
-  // that are safe (and expensive) to carry over: the timerfd and the
-  // request's generation counter.  See MakeTimerState().
-  void Reset();
+  // IoUringTimers::queue_'s.  Nothing else may touch them -- see TimerQueue.
+  IoUringTimerState *left = nullptr;
+  IoUringTimerState *right = nullptr;
+  IoUringTimerState *parent = nullptr;
+  bool red = false;
+  uint64_t sequence = 0;
+  // Whether this timer is in IoUringTimers::queue_.  The tree cannot answer
+  // that itself, and removing a node that is not in it is not safe.
+  bool queued = false;
 
  private:
-  // request's completion handler, installed by SubmitPoll(): reads the
-  // timerfd and delivers the user callback.
-  static void OnTimerFdReadable(Completion completion, void *ctx);
-
-  IoUringImpl *impl_;
+  IoUringTimers *timers_;
 };
+
+// One ring's armed timers, earliest deadline first and first-scheduled first
+// among equal deadlines, and the rule for delivering them.
+class IoUringTimers {
+ public:
+  // `check` runs at every timer entry point: the backend's fork and
+  // submitter-thread enforcement (CheckForFork()), which a timer gets like
+  // every other mutating call.
+  IoUringTimers(void (*check)(void *), void *check_context)
+      : check_(check), check_context_(check_context) {}
+
+  std::unique_ptr<Aio::TimerState> Make() {
+    Check();
+    ++live_;
+    return std::make_unique<IoUringTimerState>(this);
+  }
+
+  // Timers that exist, armed or not, so the backend's destructor can CHECK
+  // that none outlive it: ~IoUringTimerState reaches back in here.
+  int live() const { return live_; }
+
+  bool empty() const { return queue_.empty(); }
+  // The deadline the loop has to wake for.  Only when !empty().
+  aos::monotonic_clock::time_point front_deadline() const {
+    return queue_.front()->deadline;
+  }
+  bool FrontDue(aos::monotonic_clock::time_point now) const {
+    return !queue_.empty() && queue_.front()->deadline <= now;
+  }
+
+  // Whether a due timer goes ahead of I/O that is also ready.  It does,
+  // unless the previous delivery was a timer too -- so neither can starve the
+  // other.  A loop flooded with ready I/O still fires its timers, as it did
+  // when a timer was one more fd in the kernel's ready list; one whose
+  // callbacks keep rescheduling into the past still gets its I/O.
+  bool TimerFirst() const { return !fired_last_; }
+  // Records a delivery that was not a timer.
+  void DeliveredOther() { fired_last_ = false; }
+
+  // Fires the earliest timer if it is due at `now`: one, at most, since
+  // aio.h's Poll() delivers one completion per call.  Returns whether a
+  // callback ran.  A callback may cancel, reschedule or destroy any timer,
+  // its own included -- the one firing is resolved and out of the tree before
+  // it runs, and nothing here touches it afterward.
+  bool FireDue(aos::monotonic_clock::time_point now);
+
+ private:
+  friend struct IoUringTimerState;
+
+  void Check() { check_(check_context_); }
+  void Arm(IoUringTimerState *state) {
+    state->queued = true;
+    queue_.Insert(state);
+  }
+  void Disarm(IoUringTimerState *state) {
+    if (!state->queued) return;
+    state->queued = false;
+    queue_.Remove(state);
+  }
+
+  struct QueueTraits {
+    static IoUringTimerState *&left(IoUringTimerState *s) { return s->left; }
+    static IoUringTimerState *&right(IoUringTimerState *s) { return s->right; }
+    static IoUringTimerState *&parent(IoUringTimerState *s) {
+      return s->parent;
+    }
+    static bool &red(IoUringTimerState *s) { return s->red; }
+    static uint64_t &sequence(IoUringTimerState *s) { return s->sequence; }
+    static aos::monotonic_clock::time_point deadline(
+        const IoUringTimerState *s) {
+      return s->deadline;
+    }
+  };
+  TimerQueue<IoUringTimerState, QueueTraits> queue_;
+
+  void (*const check_)(void *);
+  void *const check_context_;
+  int live_ = 0;
+  bool fired_last_ = false;
+};
+
+IoUringTimerState::IoUringTimerState(IoUringTimers *timers) : timers_(timers) {
+  // Not armed: request.done is false exactly while a timer is.
+  request.done = true;
+}
+
+IoUringTimerState::~IoUringTimerState() {
+  timers_->Check();
+  timers_->Disarm(this);
+  --timers_->live_;
+}
+
+void IoUringTimerState::Schedule(aos::monotonic_clock::time_point deadline,
+                                 CompletionCallback callback, void *context) {
+  timers_->Check();
+  ABSL_CHECK_GE(deadline, aos::monotonic_clock::epoch());
+  // Out of the tree before the key changes, and back in after: a rescheduled
+  // timer goes behind every timer already armed for the same deadline.  The
+  // epoch is not special here, the way it was for a timerfd (whose all-zero
+  // it_value means "disarm"): it is in the past, so the timer fires on the
+  // next Poll().
+  timers_->Disarm(this);
+  this->deadline = deadline;
+  user_callback = callback;
+  user_context = context;
+  request.done = false;
+  timers_->Arm(this);
+}
+
+void IoUringTimerState::Cancel(bool /*reap*/) {
+  // Synchronous on both backends: there is nothing in flight to reap.
+  timers_->Check();
+  timers_->Disarm(this);
+  request.done = true;
+  user_callback = nullptr;
+}
+
+bool IoUringTimers::FireDue(aos::monotonic_clock::time_point now) {
+  while (FrontDue(now)) {
+    IoUringTimerState *const state = queue_.front();
+    Disarm(state);
+    state->request.done = true;
+    const CompletionCallback callback = state->user_callback;
+    if (callback == nullptr) {
+      continue;
+    }
+    fired_last_ = true;
+    Completion completion;
+    // nullptr, as documented on Timer::Schedule(): the caller supplies no
+    // user_data, so none is delivered.
+    completion.user_data = nullptr;
+    completion.status = aos::Ok();
+    completion.result = 0;
+    // Last use of `state`: the callback may destroy it.
+    callback(completion, state->user_context);
+    return true;
+  }
+  return false;
+}
 
 // The io_uring backend.  Design and invariants; the comments at each method
 // carry only the local kernel details.
@@ -540,18 +649,19 @@ struct IoUringTimerState : public Aio::TimerState {
 // comparison, never inferred from surrounding state.  (Ack CQEs name
 // cancel_ack_sentinel_ instead of their target -- see EncodeUserData().)
 //
-// Timers.  Not io_uring ops at all: each is a timerfd, and io_uring only
-// watches it for readability -- see IoUringTimerState.  That is what keeps
-// scheduling drift-free and keeps reschedules out of the cancel/lookup
-// races the incarnation scheme above exists to contain.
+// Timers.  Not in the ring at all: they are ordered in userspace and the
+// blocking io_uring_enter(2) waits with the earliest deadline as its timeout
+// -- see IoUringTimerState.  That keeps scheduling drift-free and keeps
+// reschedules out of the cancel/lookup races the incarnation scheme above
+// exists to contain.
 //
-// Destruction.  Nothing in this backend blocks on the kernel.  Destroying
-// a Timer (or unregistering a signal receiver) with traffic still in
+// Destruction.  Nothing in this backend blocks on the kernel.  Unregistering
+// a signal receiver with traffic still in
 // flight *orphans* its state onto an intrusive list, with the user
 // callback stripped and a cancel in flight; destruction itself is
 // CheckNotRealtime() (it can free).  Once an orphan's terminal completion
 // has drained (and dispatched or been unlinked), it is *recycled* onto a
-// freelist that MakeTimerState() reuses -- cancel acks never gate this,
+// freelist that registration reuses -- cancel acks never gate this,
 // since they name cancel_ack_sentinel_ rather than the orphan (see the
 // EncodeUserData() block).  Recycling is pointer manipulation only,
 // because it runs inside Poll() -- including on RT threads; memory is
@@ -582,14 +692,11 @@ struct IoUringTimerState : public Aio::TimerState {
 // History and rejected alternatives:
 // documentation/adr/0001-aio-io-uring-single-issuer.md.
 class IoUringImpl : public Aio::Impl {
-  friend struct IoUringTimerState;
-
  public:
   IoUringImpl();
   ~IoUringImpl() override;
 
   std::unique_ptr<Aio::TimerState> MakeTimerState() override;
-  void DestroyTimerState(std::unique_ptr<Aio::TimerState> state) override;
 
   void Run() override;
   bool should_run() const override;
@@ -660,27 +767,6 @@ class IoUringImpl : public Aio::Impl {
   // What owns fd if the loop made it for itself (a timer, the thread-signal
   // receiver, the wakeup), or nullptr for a caller's registration.
   const char *OwnFdName(FileDescriptor fd);
-  // Returns a submission queue entry for use inside
-  // ReArmPersistentRegistrations() only, flushing the queue to the kernel
-  // (an io_uring_submit() syscall) and retrying once if it is currently
-  // full.  ReArmPersistentRegistrations() re-arms every persistent request
-  // (wakeup read, the legacy-fd epoll poll, receivers, and every active
-  // timer) in a single pass, which can queue more entries than the ring is
-  // deep -- e.g. several active timers with a shallow --aio_queue_depth.
-  // A plain io_uring_get_sqe() would return null and abort; draining the
-  // queue frees the entries so reconstruction can continue.
-  //
-  // Deliberately NOT used by the steady-state submission paths (AsyncRead,
-  // SubmitLegacyEpollPoll, ThreadSignalReceiverState::Submit): those call
-  // ArmSqe() and CHECK-fail immediately on exhaustion.  Ring reconstruction
-  // already has unbounded latency (a fork or downgrade just rebuilt the
-  // whole ring; nothing about that is real-time), so paying for a syscall
-  // there is fine.  On the steady-state path, exhaustion is a
-  // real-time-affecting config error (--aio_queue_depth too small for the
-  // app's actual concurrent registrations) and should crash immediately and
-  // deterministically rather than silently absorb an unbounded-latency
-  // syscall on an RT thread.
-  struct io_uring_sqe *GetSqeForRingReconstruction();
   // Rebuilds the ring if the process forked since we last looked.  Called at
   // the top of every public entry point that touches the ring, so a forked
   // child that submits work before its first Poll() uses the live ring, not
@@ -702,10 +788,12 @@ class IoUringImpl : public Aio::Impl {
   //     is hit.  ABSL_VLOG rather than ABSL_LOG because arm sites run on RT
   //     paths -- see CountArmedOp().
   struct io_uring_sqe *ArmSqe();
-  // The accounting half of ArmSqe(), shared with
-  // GetSqeForRingReconstruction() (which acquires its SQE by draining
-  // instead).  See armed_ops_.
+  // The accounting half of ArmSqe().  See armed_ops_.
   void CountArmedOp();
+  // Publishes the SQEs staged with io_uring_get_sqe() to the kernel and
+  // returns how many it has yet to consume, as liburing's internal
+  // __io_uring_flush_sq() does, for an io_uring_enter2() made by hand.
+  unsigned FlushSq();
 
   // Flushes queued SQEs to the kernel.  No-op if the ring hasn't been
   // enabled yet (see EnsureBound()): io_uring rejects submission on a ring
@@ -734,7 +822,7 @@ class IoUringImpl : public Aio::Impl {
   // MaybeSubmit() refuses to submit until it is, so the kernel has never
   // seen a single SQE.  Everything "armed" so far exists as userspace
   // bookkeeping (the wakeup read, the legacy-fd epoll poll, receiver
-  // registrations, active timers) plus SQEs queued locally in the old SQ
+  // registrations) plus SQEs queued locally in the old SQ
   // ring.  Those queued SQEs die with the old ring's mmap;
   // ReArmPersistentRegistrations() regenerates fresh ones from the
   // bookkeeping, so nothing observable is lost.  The one thing that
@@ -747,8 +835,8 @@ class IoUringImpl : public Aio::Impl {
   // lifetime, then delete this downgrade path and the COOP_TASKRUN tier
   // with it.
   void DowngradeFromSingleIssuer();
-  // Re-submits the wakeup read, fd registrations, thread-signal receivers,
-  // and active timers to the current ring.  Shared by HandleFork() and
+  // Re-submits the wakeup read, fd registrations and thread-signal receivers
+  // to the current ring.  Shared by HandleFork() and
   // DowngradeFromSingleIssuer(): both replace the ring with a fresh one and
   // need to restore everything that was registered on the old one.
   void ReArmPersistentRegistrations();
@@ -816,13 +904,13 @@ class IoUringImpl : public Aio::Impl {
   // round --aio_queue_depth up to a power of two).  Refreshed whenever the
   // ring is (re)built.
   uint32_t sq_capacity_ = 0;
-  // Kernel ops currently armed: one per live timer poll, thread-signal
-  // receiver poll, in-flight AsyncRead/AsyncWrite, unacknowledged Cancel(),
-  // plus the wakeup read and the legacy-epoll poll.  Incremented by
-  // CountArmedOp() at every arm site; decremented in DrainCompletions()
-  // when a terminal CQE or a cancel ack drains; reset on ring rebuild
-  // (in-flight ops die with the old ring).  This is the number that
-  // predicts queue exhaustion: the SQ must hold `armed_ops_` staged
+  // Kernel ops currently armed: one per thread-signal receiver poll,
+  // in-flight AsyncRead/AsyncWrite and unacknowledged Cancel(), plus the
+  // wakeup read and the legacy-epoll poll.  Timers are not kernel ops.
+  // Incremented by CountArmedOp() at every arm site; decremented in
+  // DrainCompletions() when a terminal CQE or a cancel ack drains; reset on
+  // ring rebuild (in-flight ops die with the old ring).  This is the number
+  // that predicts queue exhaustion: the SQ must hold `armed_ops_` staged
   // entries before the first Run()/Poll() (nothing can flush a disabled
   // ring) and the CQ (2x the depth) absorbs up to one pending completion
   // per armed op, so "peak armed_ops_ <= --aio_queue_depth" is the sizing
@@ -885,8 +973,8 @@ class IoUringImpl : public Aio::Impl {
   BeforeWaitFunctions before_wait_functions_;
 
   // Readiness state for one fd registered via OnReadable/OnWritable/OnError/
-  // OnEvents.  Unlike AsyncRead/AsyncWrite/timers, this has no io_uring
-  // request of its own: all legacy fds share one embedded epoll instance
+  // OnEvents.  Unlike AsyncRead/AsyncWrite, this has no io_uring request of
+  // its own: all legacy fds share one embedded epoll instance
   // (legacy_epoll_fd_) and one repeatedly-rearmed poll on it -- see
   // UpdateLegacyEpoll()/SubmitLegacyEpollPoll()/DrainLegacyEpoll() and
   // documentation/adr/0001-aio-io-uring-single-issuer.md.
@@ -1030,11 +1118,6 @@ class IoUringImpl : public Aio::Impl {
   // tell their wakeups apart -- and nothing needs more than one.
   std::unique_ptr<ThreadSignalReceiverState> receiver_state_;
 
-  struct TimerOrphanTraits {
-    static IoUringTimerState *&next(IoUringTimerState *state) {
-      return state->next_orphan;
-    }
-  };
   struct ReceiverOrphanTraits {
     static ThreadSignalReceiverState *&next(ThreadSignalReceiverState *state) {
       return state->next_orphan;
@@ -1046,38 +1129,31 @@ class IoUringImpl : public Aio::Impl {
   // by RecycleDrainedOrphans(); scrubbed wholesale on ring rebuild
   // (completions die with the old ring).  Owned raw pointers (released
   // from their unique_ptrs at orphan time).
-  OwningIntrusiveStack<IoUringTimerState, TimerOrphanTraits> orphaned_timers_;
   OwningIntrusiveStack<ThreadSignalReceiverState, ReceiverOrphanTraits>
       orphaned_receivers_;
-  // Drained orphans are recycled here (and reused by MakeTimerState() /
+  // Drained orphans are recycled here (and reused by
   // RegisterThreadSignalReceiver) rather than freed: recycling is pointer
   // manipulation, legal on any thread including RT, and it bounds memory
   // by peak usage instead of cumulative churn.  Actual deallocation only
   // happens in ~IoUringImpl().
-  OwningIntrusiveStack<IoUringTimerState, TimerOrphanTraits> free_timers_;
   OwningIntrusiveStack<ThreadSignalReceiverState, ReceiverOrphanTraits>
       free_receivers_;
   void RecycleDrainedOrphans();
 
-  // Every *live* timer -- linked by Initialize(), unlinked only when the
-  // owning Timer is destroyed -- so ring rebuilds can re-arm the poll each
-  // one holds on its timerfd (ReArmPersistentRegistrations()).  is_active
-  // tracks membership.  Deliberately not "every scheduled timer", which is
-  // what it used to mean back when a timer *was* an io_uring op: whether a
-  // timer is currently scheduled now lives entirely in its timerfd, and the
-  // poll needs re-arming either way.
-  IntrusiveDoublyLinkedList<Aio::TimerState, ActiveTimerTraits> active_timers_;
-  void LinkTimer(Aio::TimerState *state) {
-    if (state->is_active) return;
-    active_timers_.PushFront(state);
-    state->is_active = true;
-    state->canceling = false;
-  }
-  void UnlinkTimer(Aio::TimerState *state) {
-    if (!state->is_active) return;
-    active_timers_.Remove(state);
-    state->is_active = false;
-  }
+  // Every timer, armed ones in deadline order; see IoUringTimerState.  Not in
+  // the kernel, so ring rebuilds and fork() leave them alone.
+  IoUringTimers timers_{
+      [](void *self) { static_cast<IoUringImpl *>(self)->CheckForFork(); },
+      this};
+  // Whether io_uring_enter(2) takes an absolute wait timeout
+  // (IORING_ENTER_ABS_TIMER, 6.12).  Below that the wait gets the time left
+  // instead, recomputed from the absolute deadline before each wait, so the
+  // error is one clock-read-to-hrtimer-start latency per wait rather than
+  // anything that accumulates.
+  bool abs_wait_timeout_ = false;
+  // Blocks until a completion exists or the earliest timer is due; see
+  // Poll().  Returns the last io_uring_enter(2) result.
+  int WaitForCompletionOrTimer();
 };
 
 void IoUringImpl::UpdateLegacyEpoll(LegacyState *state) {
@@ -1343,46 +1419,6 @@ void IoUringImpl::ThreadSignalReceiverState::Submit(IoUringImpl *impl) {
   ArmRequest(sqe, &request, callback, this);
 }
 
-// Timer destruction, without blocking: disarm the timerfd, then either free
-// now (if the poll on it has already resolved) or strip the user-facing
-// callback, cancel the poll, and park the state on orphaned_timers_ until
-// the poll's terminal completion has drained (RecycleDrainedOrphans()).
-// The identity -- and the timerfd the poll names -- stay alive the whole
-// time, preserving "never free an identity with CQEs in flight".  (The
-// cancel's ack is not such a CQE: it names cancel_ack_sentinel_, not this
-// state, so it never gates recycling.)
-void IoUringImpl::DestroyTimerState(std::unique_ptr<Aio::TimerState> state) {
-  auto *tstate = static_cast<IoUringTimerState *>(state.get());
-  CheckForFork();
-  // Disarm before anything else.  A recycled state must reach the freelist
-  // with a quiet timerfd -- Reset() keeps the fd rather than recreating it,
-  // so a still-armed timer would otherwise make its next owner's poll fire
-  // for a schedule nobody asked for.
-  tstate->Cancel(true);
-  UnlinkTimer(tstate);
-  // Unconditionally, and before the fast path below -- for the same reason
-  // CancelRequest() does it unconditionally.  This timer's poll completion
-  // can be sitting resolved-but-undispatched on pending_dispatch_ right now
-  // (an earlier callback in this very dispatch batch destroying a different
-  // timer is an ordinary pattern), and the fast path frees the state.  The
-  // dispatch loop would then walk into freed memory when it reached that
-  // node -- a live SIGSEGV inside OnTimerFdReadable(), reproduced by
-  // DestroyTimerWithTerminatedPollAndQueuedCompletion.  Reachable only when
-  // the poll had been terminated by CQ overflow and its terminal completion
-  // is drained but not yet dispatched, since a live multishot poll is never
-  // `done`.
-  UnlinkPendingDispatch(&tstate->request);
-  if (tstate->request.done) {
-    return;  // state destroys here; nothing in flight names it.
-  }
-  if (!tstate->request.done && !tstate->canceling) {
-    tstate->canceling = true;
-    CancelRequest(&tstate->request);
-  }
-  state.release();
-  orphaned_timers_.Push(tstate);
-}
-
 // Recycles every orphan whose kernel traffic has fully drained: terminal
 // completion drained (done) and dispatched or unlinked (!queued).  Cancel
 // acks don't factor in -- they name cancel_ack_sentinel_, never the
@@ -1393,9 +1429,6 @@ void IoUringImpl::RecycleDrainedOrphans() {
   auto drained = [](AsyncRequest *req) {
     return req->done && !State(req).link.queued;
   };
-  orphaned_timers_.MoveMatchingTo(&free_timers_, [&](IoUringTimerState *state) {
-    return drained(&state->request);
-  });
   orphaned_receivers_.MoveMatchingTo(&free_receivers_,
                                      [&](ThreadSignalReceiverState *state) {
                                        return drained(&state->request);
@@ -1403,25 +1436,12 @@ void IoUringImpl::RecycleDrainedOrphans() {
 }
 
 std::unique_ptr<Aio::TimerState> IoUringImpl::MakeTimerState() {
-  // Timer construction is a mutating entry point like every other:
-  // Initialize() links the timer and arms its poll, so it gets the same
-  // fork/thread enforcement as Schedule()/Cancel()/destruction.  It can
-  // also be a forked child's first Aio interaction, so the fork resync has
-  // to precede the submitter-thread comparison.
-  CheckForFork();
-  if (IoUringTimerState *state = free_timers_.Pop(); state != nullptr) {
-    // Reset() rather than whole-object assignment, so the recycled state
-    // keeps its already-created (and already-disarmed) timerfd instead of
-    // paying timerfd_create()/close() again.  Aio::Timer's constructor
-    // calls Initialize(), which re-arms the poll on it.
-    state->Reset();
-    return std::unique_ptr<Aio::TimerState>(state);
-  }
-  return std::make_unique<IoUringTimerState>(this);
+  return timers_.Make();
 }
 
 IoUringImpl::IoUringImpl() {
   RequireMinimumKernelVersion();
+  abs_wait_timeout_ = KernelAtLeast(6, 12);
   RegisterAtFork();
   last_fork_count_ = internal::ForkCount();
   last_parent_fork_count_ = internal::ParentForkCount();
@@ -1471,7 +1491,7 @@ IoUringImpl::~IoUringImpl() {
   // before this class is destroyed").  A live Aio::Timer is the sharpest
   // case: its destructor dereferences this impl, so a Timer outliving its
   // Aio is a use-after-free that would otherwise go silent.
-  ABSL_CHECK(active_timers_.empty())
+  ABSL_CHECK_EQ(timers_.live(), 0)
       << ": An Aio::Timer must be destroyed before its Aio";
   ABSL_CHECK(legacy_states_.empty())
       << ": All fds must be removed (DeleteFd()/ForgetClosedFd()) before "
@@ -1496,9 +1516,7 @@ IoUringImpl::~IoUringImpl() {
   // have to be freed after the queue_exit above, and ~LegacyState can run
   // capture destructors which reenter the Aio, so the timing is deliberate.
   // The destructors remain as the backstop.
-  orphaned_timers_.Clear();
   orphaned_receivers_.Clear();
-  free_timers_.Clear();
   free_receivers_.Clear();
   // retired_legacy_states_ is expected empty here -- parked states are
   // freed at the end of the dispatch that parked them -- but sweep it as
@@ -1547,28 +1565,6 @@ void IoUringImpl::Run() {
 
 bool IoUringImpl::should_run() const { return run && !quit_requested; }
 
-struct io_uring_sqe *IoUringImpl::GetSqeForRingReconstruction() {
-  struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
-  if (sqe == nullptr) {
-    // The submission queue is full.  Flush what is queued to the kernel,
-    // which frees the entries, then get one from the now-drained queue.
-    // A plain io_uring_submit() (not MaybeSubmit()) is correct here: this is
-    // reachable only from within ReArmPersistentRegistrations(), and its
-    // callers enable the fresh ring before the reconstruction work that calls
-    // this, with one exception.  HandleFork() leaves a ring the parent never
-    // drove disabled, and a submit there would fail with -EBADFD.  It never
-    // gets here, though: nothing flushed the parent's undriven ring either, so
-    // ArmSqe() already held it to sq_capacity_ staged entries, and the child
-    // re-stages no more than that.
-    int ret = io_uring_submit(&ring);
-    ABSL_PCHECK(ret >= 0) << "io_uring_submit failed: " << aos_strerror(-ret);
-    sqe = io_uring_get_sqe(&ring);
-    ABSL_CHECK(sqe != nullptr) << "Out of SQEs after draining the queue";
-  }
-  CountArmedOp();
-  return sqe;
-}
-
 struct io_uring_sqe *IoUringImpl::ArmSqe() {
   struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
   ABSL_CHECK(sqe != nullptr)
@@ -1582,11 +1578,21 @@ struct io_uring_sqe *IoUringImpl::ArmSqe() {
               : "Nothing can flush before the first Run()/Poll() call enables "
                 "the ring, so every operation armed before then holds a "
                 "staged entry; arm fewer than --aio_queue_depth operations "
-                "(timers, receivers, raw requests, plus two internal "
-                "registrations) before first driving the loop, or raise the "
-                "flag.");
+                "(receivers, raw requests, plus the internal registrations) "
+                "before first driving the loop, or raise the flag.");
   CountArmedOp();
   return sqe;
+}
+
+unsigned IoUringImpl::FlushSq() {
+  struct io_uring_sq *sq = &ring.sq;
+  const unsigned tail = sq->sqe_tail;
+  if (sq->sqe_head != tail) {
+    sq->sqe_head = tail;
+    // Release, so the SQE contents are visible before the tail.
+    io_uring_smp_store_release(sq->ktail, tail);
+  }
+  return tail - IO_URING_READ_ONCE(*sq->khead);
 }
 
 void IoUringImpl::CountArmedOp() {
@@ -1607,17 +1613,18 @@ void IoUringImpl::CountArmedOp() {
            "terminated and re-armed, and arming this many before the first "
            "Run()/Poll() -- or submitting this many between Poll() calls -- "
            "is a crash.  Raise --aio_queue_depth to at least the peak "
-           "concurrent operation count: every live timer, thread-signal "
-           "receiver, in-flight AsyncRead/AsyncWrite, and unacknowledged "
-           "Cancel() holds one slot, plus two internal registrations.";
+           "concurrent operation count: every thread-signal receiver, "
+           "in-flight AsyncRead/AsyncWrite, and unacknowledged Cancel() "
+           "holds one slot, plus the internal registrations.  Timers hold "
+           "none.";
   }
 }
 
 void IoUringImpl::MaybeSubmit() {
   if (!ring_enabled_) return;
   // Asks for completions too, as Poll()'s flush does.  With DEFER_TASKRUN the
-  // kernel runs deferred task work, which is how a timer's completion and a
-  // Canceled one reach the CQ, only on an enter with GETEVENTS.  A callback
+  // kernel runs deferred task work, which is how a Canceled completion and a
+  // receiver's poll reach the CQ, only on an enter with GETEVENTS.  A callback
   // that flushes for itself, with a Cancel() say, leaves Poll() nothing
   // staged to flush, so if this flush didn't ask, nothing would.
   // min_complete is 0, so it never blocks.
@@ -1735,13 +1742,6 @@ void IoUringImpl::HandleFork() {
     internal::CheckOwnFdOpenAfterFork(receiver_state_->fd,
                                       "thread-signal receiver");
   }
-  for (Aio::TimerState *state = active_timers_.front(); state != nullptr;
-       state = decltype(active_timers_)::Next(state)) {
-    auto *timer = static_cast<IoUringTimerState *>(state);
-    if (timer->timer_fd != nullptr) {
-      internal::CheckOwnFdOpenAfterFork(timer->timer_fd->fd(), "timer");
-    }
-  }
   for (const auto &pair : legacy_states_) {
     internal::CheckRegisteredFdOpenAfterFork(pair.first);
   }
@@ -1814,55 +1814,16 @@ void IoUringImpl::HandleFork() {
     Wakeup();
   }
 
-  // Every timerfd was inherited from the parent, and a timerfd is an
-  // ordinary descriptor: parent and child now name the *same* kernel timer.
-  // Sharing one is not survivable in either direction.  The child's read()
-  // on firing consumes the parent's expiration, so the parent's timer never
-  // fires.  The child's Schedule(), Cancel() or ~Timer re-arms or disarms
-  // the parent's timer -- and ~Timer means a child that merely runs
-  // destructors on its way out silently stops the parent's timers.
-  //
-  // So give this process its own.  Only HandleFork() does this:
-  // DowngradeFromSingleIssuer() rebuilds the ring within one process, where
-  // the fds are genuinely still ours and re-creating them would throw away
-  // live timers for nothing.
-  //
-  // Only an armed timer is set again, at its old deadline.  One that has
-  // fired and been delivered, or was never scheduled, or was cancelled, gets
-  // a fresh fd and no timerfd_settime(), exactly as if it had never been
-  // scheduled.  One that fired but has not been delivered is still armed:
-  // its completion died with the parent's ring, and setting it again here
-  // delivers it in the child instead.
-  for (Aio::TimerState *state = active_timers_.front(); state != nullptr;
-       state = decltype(active_timers_)::Next(state)) {
-    auto *timer = static_cast<IoUringTimerState *>(state);
-    timer->timer_fd = std::make_unique<TimerFD>();
-    if (timer->armed) {
-      struct itimerspec its;
-      std::memset(&its, 0, sizeof(its));
-      its.it_value = AbsoluteTimerfdValue(timer->deadline);
-      int ret = timerfd_settime(timer->timer_fd->fd(), TFD_TIMER_ABSTIME, &its,
-                                nullptr);
-      ABSL_PCHECK(ret == 0)
-          << "timerfd_settime failed: " << aos_strerror(errno);
-    }
-  }
-  // Pooled states carry their timerfd across recycling (see Reset()), so an
-  // inherited one would be handed to the next timer that reuses the state --
-  // arming a descriptor the parent may have re-armed for a live timer of its
-  // own.  Drop them; Initialize() creates a fresh one on reuse.
-  const auto drop_fd = [](IoUringTimerState *timer) {
-    timer->timer_fd.reset();
-  };
-  orphaned_timers_.ForEach(drop_fd);
-  free_timers_.ForEach(drop_fd);
+  // Timers need nothing: they are not in the kernel (see IoUringTimerState),
+  // so the child inherits every armed deadline as it stands, and one that
+  // was due but undelivered in the parent fires in the child too.
 
   ReArmPersistentRegistrations();
 }
 
 // Re-submits everything that was registered on the old ring to the current
 // one: the wakeup read, the legacy-fd epoll poll, the thread-signal
-// receivers, and every active timer.  Shared by HandleFork() and
+// receivers.  Timers are not in the ring.  Shared by HandleFork() and
 // DowngradeFromSingleIssuer() -- both replace the ring with a fresh one and
 // need to restore what was on the old one.
 //
@@ -1881,18 +1842,18 @@ void IoUringImpl::ReArmPersistentRegistrations() {
   // Every entry on pending_dispatch_ is a completion the *old* ring
   // produced: drained by DrainCompletions() but not yet dispatched.  Drop
   // them all before touching anything else.  Two things go wrong otherwise,
-  // and both are the same mistake as the one DestroyTimerState() unlinks to
-  // avoid -- recycling or re-arming a request that is still linked:
+  // and both are the same mistake -- recycling or re-arming a request that is
+  // still linked:
   //
   //   * The wholesale orphan recycle below ignores link.queued (unlike
   //     RecycleDrainedOrphans(), which checks it).  A queued orphan would
-  //     reach the freelist, and MakeTimerState()'s Reset() zeroes the
-  //     request -- including the intrusive links -- while it is still in
+  //     reach the freelist, and its reuse zeroes the request -- including
+  //     the intrusive links -- while it is still in
   //     this list, truncating it or tripping its own "removing a node that
   //     is not on this list" ABSL_CHECK.  Its new owner could then be handed a
   //     spurious firing belonging to the previous one.
   //   * Every request re-armed below (the wakeup read, the legacy-fd poll,
-  //     receivers, every timer's poll) may be queued too.  Dispatching a
+  //     receivers) may be queued too.  Dispatching a
   //     dead ring's completion against a freshly re-armed request re-arms it
   //     a second time, putting two incarnations on one identity.
   //
@@ -1901,8 +1862,7 @@ void IoUringImpl::ReArmPersistentRegistrations() {
   // None of them is a raw request's: those keep the request in flight until
   // their callback runs, so CheckNoRawRequestsInFlightOnFork() has already
   // refused the fork.  What is left -- the wakeup read, legacy-fd and
-  // receiver polls, timer polls -- is re-armed below, and a timer whose
-  // firing was dropped here is set again (see `armed`).
+  // receiver polls -- is re-armed below.
   // DowngradeFromSingleIssuer() reaches it only before the first Poll() has
   // dispatched anything.  Safe to do underneath a live ReapCompletions()
   // loop: that pops from the live list each iteration, so it simply finds it
@@ -1923,8 +1883,6 @@ void IoUringImpl::ReArmPersistentRegistrations() {
   // loses its own callback to the deferred clear.  Its poll died with the
   // ring too, so marking it done lets RecycleDrainedOrphans() take it once the
   // dispatch has unwound.
-  orphaned_timers_.MoveMatchingTo(&free_timers_,
-                                  [](IoUringTimerState *) { return true; });
   orphaned_receivers_.MoveMatchingTo(
       &free_receivers_, [this](ThreadSignalReceiverState *state) {
         if (state == deferred_receiver_callback_clear_) {
@@ -1945,27 +1903,6 @@ void IoUringImpl::ReArmPersistentRegistrations() {
   if (receiver_state_ != nullptr) {
     receiver_state_->request.done = true;
     receiver_state_->Submit(this);
-  }
-
-  // Only the *poll* is rebuilt here.  Within one process that is the whole
-  // job: a ring rebuild never touched the timerfds, which are still armed,
-  // so there is no deadline to reconstruct, and no in-flight-cancel case to
-  // unwind -- the old ring's -ECANCELED simply never arrives and nothing was
-  // waiting for it.
-  //
-  // Across a fork the fds themselves are the problem, not their arming, and
-  // HandleFork() has already replaced them before calling here.
-  Aio::TimerState *curr = active_timers_.front();
-  while (curr != nullptr) {
-    Aio::TimerState *next = decltype(active_timers_)::Next(curr);
-    curr->request.done = true;
-    // Only DestroyTimerState() sets `canceling`, and it unlinks the timer
-    // at the same time, so nothing reachable from here has it set.  Check
-    // rather than clear: clearing would resurrect the poll on a timer its
-    // owner has already destroyed.
-    ABSL_CHECK(!curr->canceling);
-    static_cast<IoUringTimerState *>(curr)->SubmitPoll(/*draining_ok=*/true);
-    curr = next;
   }
 }
 
@@ -2037,6 +1974,14 @@ bool IoUringImpl::Poll(bool block) {
     EnsureBound();
   }
 
+  // A due timer goes ahead of completions, unless the previous delivery was
+  // a timer too (see IoUringTimers::TimerFirst()) -- and needs no trip into the
+  // kernel to deliver.  ReapCompletions() fires it.
+  if (!timers_.empty() && timers_.TimerFirst() &&
+      timers_.FrontDue(aos::monotonic_clock::now())) {
+    return ReapCompletions();
+  }
+
   int ret;
   // Already-queued completions are delivered before going back to the
   // kernel at all.  One CQ drain yields a whole batch but Poll() dispatches
@@ -2050,10 +1995,11 @@ bool IoUringImpl::Poll(bool block) {
   // also asks for completions (GETEVENTS), at no extra syscall.  It has to:
   // callbacks that keep re-arming keep this queue from ever emptying, and
   // with DEFER_TASKRUN the kernel only runs deferred task work, which is
-  // how a timer's completion reaches the CQ, on an enter with GETEVENTS.  A
-  // bare submit here let two re-arming regular-file reads starve a timer
-  // forever.  MaybeSubmit() asks the same way, so every flush does, whoever
-  // makes it.  Without a flush nothing new is submitted, so the queue
+  // how a poll's or a Canceled completion reaches the CQ, on an enter with
+  // GETEVENTS.  A bare submit here let two re-arming regular-file reads
+  // starve a legacy fd and a receiver forever, and a timer too while timers
+  // were timerfd polls.  MaybeSubmit() asks the same way, so every flush does,
+  // whoever makes it.  Without a flush nothing new is submitted, so the queue
   // strictly shrinks and the next empty-queue Poll() goes to the kernel.
   if (!pending_dispatch_.empty()) {
     if (io_uring_sq_ready(&ring) > 0) {
@@ -2072,20 +2018,9 @@ bool IoUringImpl::Poll(bool block) {
     return ReapCompletions();
   }
   if (block) {
-    // Loop until a completion actually exists.  One submit_and_wait()
-    // call is not a reliable wait: when io_uring_enter(2) both submits
-    // and waits, it returns the submit count and discards the wait result
-    // ("if (!ret) ret = ret2;"), so a wait interrupted by unrelated task
-    // work (e.g. another ring's teardown via io_tctx_exit_cb) looks like
-    // success with an empty CQ.  Bare -EINTR on later iterations is
-    // retried the same way: signals never end a blocking Poll() (see
-    // Aio::Poll()); Quit()'s eventfd write is what wakes it.
-    //
     // pending_dispatch_ is necessarily empty here (the short-circuit above
     // returned otherwise), so blocking cannot stall queued work.
-    do {
-      ret = io_uring_submit_and_wait(&ring, 1);
-    } while (ret == -EINTR || (ret >= 0 && io_uring_cq_ready(&ring) == 0));
+    ret = WaitForCompletionOrTimer();
   } else {
     // Not io_uring_submit(): DEFER_TASKRUN only delivers completions on
     // an enter with IORING_ENTER_GETEVENTS set, which a bare submit
@@ -2100,6 +2035,70 @@ bool IoUringImpl::Poll(bool block) {
   }
 
   return ReapCompletions();
+}
+
+int IoUringImpl::WaitForCompletionOrTimer() {
+  // Loops until a completion actually exists or the earliest timer is due.
+  // One wait is not a reliable answer to either question.  When
+  // io_uring_enter(2) both submits and waits, it returns the submit count
+  // and discards the wait result ("if (!ret) ret = ret2;"), so a wait
+  // interrupted by unrelated task work (e.g. another ring's teardown via
+  // io_tctx_exit_cb) looks like success with an empty CQ.  Bare -EINTR is
+  // retried the same way: signals never end a blocking Poll() (see
+  // Aio::Poll()); Quit()'s eventfd write is what wakes it.  And -ETIME only
+  // says the kernel's hrtimer fired, so the deadline is judged again against
+  // a fresh clock reading, the one Poll() will fire it by.
+  while (true) {
+    int ret;
+    if (timers_.empty()) {
+      ret = io_uring_submit_and_wait(&ring, 1);
+    } else {
+      const aos::monotonic_clock::time_point deadline =
+          timers_.front_deadline();
+      const aos::monotonic_clock::time_point now = aos::monotonic_clock::now();
+      if (deadline <= now) {
+        // Due.  Collect whatever else is ready without waiting, and let
+        // ReapCompletions() choose between them.
+        return io_uring_submit_and_get_events(&ring);
+      }
+      // liburing has no wait that takes IORING_ENTER_ABS_TIMER except
+      // through registered wait regions, so this one is by hand, and it
+      // submits whatever a callback staged in the same call, as liburing's
+      // own submit-and-wait does: publish the SQ tail, and pass the count.
+      // (The wakeup read stages a fresh SQE every wakeup, so a separate
+      // submit would be a second syscall per wakeup.)  With both, the kernel
+      // returns the submit count, and the empty-CQ check below waits again.
+      const unsigned to_submit = FlushSq();
+      const struct timespec timeout =
+          abs_wait_timeout_ ? ::aos::time::to_timespec(deadline)
+                            : ::aos::time::to_timespec(deadline - now);
+      struct __kernel_timespec kernel_timeout;
+      kernel_timeout.tv_sec = timeout.tv_sec;
+      kernel_timeout.tv_nsec = timeout.tv_nsec;
+      struct io_uring_getevents_arg arg;
+      std::memset(&arg, 0, sizeof(arg));
+      arg.ts = reinterpret_cast<uint64_t>(&kernel_timeout);
+      ret =
+          io_uring_enter2(ring.ring_fd, to_submit, 1,
+                          IORING_ENTER_GETEVENTS | IORING_ENTER_EXT_ARG |
+                              (abs_wait_timeout_ ? IORING_ENTER_ABS_TIMER : 0),
+                          &arg, sizeof(arg));
+      if (ret == -ETIME) {
+        // The wait ran the ring's deferred task work on its way out, so if
+        // the timer is due and nothing was staged since, there is nothing for
+        // another enter to collect: fire it.
+        if (io_uring_sq_ready(&ring) == 0 &&
+            timers_.front_deadline() <= aos::monotonic_clock::now()) {
+          return 0;
+        }
+        continue;
+      }
+    }
+    if (ret == -EINTR || (ret >= 0 && io_uring_cq_ready(&ring) == 0)) {
+      continue;
+    }
+    return ret;
+  }
 }
 
 void IoUringImpl::Quit() {
@@ -2439,13 +2438,6 @@ const char *IoUringImpl::OwnFdName(FileDescriptor fd) {
       fd == receiver_state_->fd) {
     return "thread-signal receiver";
   }
-  for (Aio::TimerState *state = active_timers_.front(); state != nullptr;
-       state = decltype(active_timers_)::Next(state)) {
-    const auto *timer = static_cast<IoUringTimerState *>(state);
-    if (timer->timer_fd != nullptr && fd == timer->timer_fd->fd()) {
-      return "timer";
-    }
-  }
   return nullptr;
 }
 
@@ -2580,8 +2572,7 @@ void IoUringImpl::UnregisterThreadSignalReceiver(
   } else {
     state->callback = nullptr;
   }
-  // Unconditionally, and before the fast path below -- the same reason
-  // DestroyTimerState() unlinks unconditionally.  `done` here can mean
+  // Unconditionally, and before the fast path below.  `done` here can mean
   // "drained but undispatched": the multishot poll was terminated (CQ
   // overflow), DrainCompletions() set request.done AND queued that same
   // terminal completion on pending_dispatch_ in one iteration, and the
@@ -2595,8 +2586,8 @@ void IoUringImpl::UnregisterThreadSignalReceiver(
     if (dispatching_) {
       // This unregister can be running from inside this very receiver's
       // dispatched trampoline: it reads the signalfd and invokes the user
-      // callback, and -- unlike the timer trampoline, which touches
-      // nothing after its user callback -- it keeps using `state`
+      // callback, and -- unlike a trampoline that touches nothing after
+      // its user callback -- it keeps using `state`
       // afterward (the drain loop continues, then the revival check
       // runs).  Freeing here would free that executing lambda's state out
       // from under it.  Park it as a drained orphan instead:
@@ -2624,209 +2615,6 @@ void IoUringImpl::ConsumeThreadSignalReceiver(
   // too -- see there.)
   CheckForFork();
   receiver->ConsumeWakeup();
-}
-
-// Destruction is handled by IoUringImpl::DestroyTimerState(), which strips
-// the user callback and orphans this state until the poll's terminal
-// completion has drained -- so by the time this runs, nothing is in flight
-// and closing the timerfd cannot strand an armed op on it.
-IoUringTimerState::~IoUringTimerState() = default;
-
-void IoUringTimerState::Initialize() {
-  // Constructing a timer touches the ring (SubmitPoll() below), so it needs
-  // the same fork check every other ring-touching entry point starts with.
-  // Without it, a forked child that constructs a Timer before its first
-  // Poll() stages an SQE into the stale inherited ring and dies with
-  // -EEXIST from io_uring_submit() -- which is how logger_test's
-  // LoggerDeathTest.CrashOnFallBehind found this, building a Timer inside
-  // EventSchedulerScheduler::RunFor().
-  impl_->CheckForFork();
-  // Recycled states arrive with their timerfd already created and already
-  // disarmed by Reset() -- see MakeTimerState().
-  if (timer_fd == nullptr) {
-    timer_fd = std::make_unique<TimerFD>();
-    if (impl_->legacy_states_.contains(timer_fd->fd())) {
-      internal::DieOwnFdStillRegistered(timer_fd->fd(), "timer");
-    }
-  }
-  // The poll is armed here, once, and stays armed for this state's whole
-  // life regardless of whether the timer is currently scheduled: a disarmed
-  // timerfd is simply never readable.  That is what lets Schedule() and
-  // Cancel() be pure timerfd_settime() calls that never touch the ring.
-  //
-  // Flushed rather than left staged.  Each live timer holds one armed poll
-  // for its whole life, so N timers need N SQEs; leaving them queued means
-  // building more than --aio_queue_depth timers before the first Poll()
-  // exhausts the submission queue and CHECK-fails in SubmitPoll().
-  // Submitting as we go keeps only one outstanding at a time.  This costs a
-  // syscall per timer construction, which is fine -- construction is not on
-  // any RT path (and MaybeSubmit() is a no-op until the ring is enabled, so
-  // pre-Run() setup is still capped by the queue depth; that is the same
-  // "depth too small for the app's registrations" limit the ring already
-  // has in steady state, just reported earlier).
-  impl_->LinkTimer(this);
-  SubmitPoll();
-  impl_->MaybeSubmit();
-}
-
-// Clears the schedule but deliberately keeps timer_fd (so recycling doesn't
-// pay timerfd_create()) and the request's generation counter (keeping
-// user_data unambiguous across recycling).  The caller is responsible for
-// the timerfd itself being disarmed -- DestroyTimerState() does that before
-// the state can ever reach the freelist.
-void IoUringTimerState::Reset() {
-  ABSL_CHECK(!is_active) << "Recycled a timer still on the active list";
-  deadline = aos::monotonic_clock::epoch();
-  user_callback = nullptr;
-  user_context = nullptr;
-  // Keeping the generation monotonic across recycling costs nothing and
-  // keeps every incarnation of this identity unique -- a recycled state
-  // reaches here with its terminal completion drained, so nothing is in
-  // flight, but distinct generations keep any trace or CHECK message
-  // unambiguous about which owner an op belonged to.
-  const uint16_t generation = State(&request).uring.generation;
-  request = AsyncRequest();
-  State(&request).uring.generation = generation;
-  canceling = false;
-  next_orphan = nullptr;
-  armed = false;
-}
-
-void IoUringTimerState::SubmitPoll(bool draining_ok) {
-  struct io_uring_sqe *sqe;
-  if (draining_ok) {
-    sqe = impl_->GetSqeForRingReconstruction();
-  } else {
-    sqe = impl_->ArmSqe();
-  }
-
-  // Multishot, unlike the legacy-fd epoll poll next door, and for the same
-  // reason ThreadSignalReceiverState's poll can be: a timerfd's readiness
-  // genuinely toggles on every read.  read() zeroes ctx->ticks
-  // (fs/timerfd.c), and the next expiration calls wake_up_locked_poll() --
-  // a real edge, which is the only thing IORING_OP_POLL_ADD ever completes
-  // on.  So the steady state costs zero SQEs per firing.
-  io_uring_prep_poll_multishot(sqe, timer_fd->fd(), POLLIN);
-  ArmRequest(sqe, &request, &IoUringTimerState::OnTimerFdReadable, this);
-}
-
-void IoUringTimerState::OnTimerFdReadable(Completion completion, void *ctx) {
-  auto *tstate = static_cast<IoUringTimerState *>(ctx);
-
-  if (!aos::IsOk(completion.status)) {
-    // The only cancel anything ever submits for this poll is
-    // DestroyTimerState()'s, which sets `canceling` first.  Any other error
-    // is fatal rather than absorbed, for the same reason as the
-    // thread-signal receiver's poll: re-arming would resubmit a failing op
-    // forever, and swallowing it would silently stop this timer from ever
-    // firing again.
-    ABSL_CHECK(tstate->canceling) << "Poll on a timer's timerfd failed: "
-                                  << aos_strerror(completion.result);
-    return;
-  }
-
-  // Consume the expiration.  A single-shot timerfd banks at most one, and
-  // reading it clears ctx->ticks (fs/timerfd.c) so the fd stops being
-  // readable -- which is exactly the edge the multishot poll needs to fire
-  // again for the next schedule.
-  //
-  // EAGAIN is normal: the poll fired on a readiness that Cancel()'s
-  // timerfd_settime(0) has since zeroed.  Deliver nothing in that case.
-  uint64_t buf;
-  ssize_t result = read(tstate->timer_fd->fd(), &buf, sizeof(buf));
-  const bool expired = result == static_cast<ssize_t>(sizeof(buf));
-  if (!expired) {
-    ABSL_PCHECK(result == -1 && errno == EAGAIN)
-        << "Unexpected read from a timer's timerfd";
-  } else {
-    // One-shot: delivering this firing leaves nothing armed.  Cleared before
-    // the callback, which may Schedule() again.
-    tstate->armed = false;
-  }
-
-  // A multishot poll normally stays armed forever, posting one CQE per
-  // firing with IORING_CQE_F_MORE ("more coming") so request.done stays
-  // false.  The kernel revokes that whenever it cannot post such a CQE:
-  // with the CQ full, io_req_post_cqe() fails and io_poll_check_events()
-  // (linux/io_uring/poll.c) ends the op with a normal, final completion
-  // instead of dropping the event.  Re-arm, or this timer stops firing
-  // forever after one CQ overflow.
-  //
-  // Done *before* dispatching, so that nothing here touches `tstate` after
-  // the user callback runs -- a callback is allowed to destroy its own
-  // timer, and this way that needs no guard.  Re-arming a poll the callback
-  // then destroys is harmless: DestroyTimerState() cancels it.
-  if (tstate->request.done && !tstate->canceling) {
-    tstate->SubmitPoll();
-    tstate->impl_->MaybeSubmit();
-  }
-
-  // Last use of tstate.  A callback may destroy its own timer, and
-  // DestroyTimerState() frees the state outright when the poll has already
-  // resolved, so dispatch off copies rather than depending on the re-arm
-  // above having cleared `done`.
-  const CompletionCallback user_callback = tstate->user_callback;
-  void *const user_context = tstate->user_context;
-  IoUringImpl *const impl = tstate->impl_;
-
-  if (!expired || user_callback == nullptr) {
-    return;
-  }
-  Completion timer_completion;
-  // nullptr, exactly as documented: Completion::user_data is "the opaque
-  // pointer supplied by the caller", and Timer::Schedule() takes no
-  // user_data -- leaking the internal state pointer here contradicted
-  // that.
-  timer_completion.user_data = nullptr;
-  timer_completion.status = aos::Ok();
-  timer_completion.result = 0;
-  impl->user_dispatch_ = true;
-  user_callback(timer_completion, user_context);
-}
-
-void IoUringTimerState::Schedule(aos::monotonic_clock::time_point deadline,
-                                 CompletionCallback callback, void *context) {
-  impl_->CheckForFork();
-  ABSL_CHECK_GE(deadline, aos::monotonic_clock::epoch());
-
-  this->deadline = deadline;
-  this->user_callback = callback;
-  this->user_context = context;
-  armed = true;
-
-  // The whole reschedule, armed or not: one syscall that atomically
-  // replaces whatever the kernel had.  It also zeroes the expiration
-  // counter (timerfd_setup() in fs/timerfd.c), so a previous schedule's
-  // firing cannot leak into this one.  Nothing is submitted to the ring, so
-  // there is no cancel to race, no update to lose, and no ack to reconcile.
-  //
-  // it_interval stays zero: this is a one-shot.  TFD_TIMER_ABSTIME is what
-  // makes a caller-driven periodic timer (re-scheduling from its own
-  // callback, as ShmTimerHandler does) hold its phase -- the deadline is a
-  // point on the caller's grid, not an offset from whenever we got here.
-  struct itimerspec its;
-  std::memset(&its, 0, sizeof(its));
-  its.it_value = AbsoluteTimerfdValue(deadline);
-  int ret = timerfd_settime(timer_fd->fd(), TFD_TIMER_ABSTIME, &its, nullptr);
-  ABSL_PCHECK(ret == 0) << "timerfd_settime failed: " << aos_strerror(errno);
-}
-
-void IoUringTimerState::Cancel(bool reap) {
-  impl_->CheckForFork();
-  // `reap` is meaningless here: there is nothing asynchronous to reap.  A
-  // disarm takes effect the instant the syscall returns.
-  (void)reap;
-
-  // RT-safe: one syscall, no allocation, nothing submitted to the ring.
-  // Silent by design, matching the documented Timer::Cancel() contract --
-  // the pending callback is dropped, not delivered as Canceled.
-  user_callback = nullptr;
-  armed = false;
-
-  struct itimerspec its;
-  std::memset(&its, 0, sizeof(its));
-  int ret = timerfd_settime(timer_fd->fd(), 0, &its, nullptr);
-  ABSL_PCHECK(ret == 0) << "timerfd_settime failed: " << aos_strerror(errno);
 }
 
 void IoUringImpl::QueuePendingDispatch(AsyncRequest *req, int32_t res) {
@@ -2972,6 +2760,17 @@ bool IoUringImpl::ReapCompletions() {
   // for the next Poll(), which is where the rest of this batch is waiting
   // anyway.
   user_dispatch_ = false;
+  // Timers are dispatched here too, among completions: a due one first on
+  // its turn (IoUringTimers::TimerFirst()), and otherwise only if no completion
+  // was delivered.  One clock reading for both, and none without a timer.
+  const aos::monotonic_clock::time_point now =
+      timers_.empty() ? aos::monotonic_clock::min_time
+                      : aos::monotonic_clock::now();
+  bool fired_timer = timers_.TimerFirst() && timers_.FireDue(now);
+  if (fired_timer) {
+    user_dispatch_ = true;
+    processed = true;
+  }
   while (!user_dispatch_) {
     AsyncRequest *req = pending_dispatch_.PopFront();
     if (req == nullptr) {
@@ -2991,6 +2790,14 @@ bool IoUringImpl::ReapCompletions() {
     // still report progress, or Run()'s post-Quit() drain would stop with
     // callbacks still queued.
     processed = true;
+  }
+  if (!user_dispatch_ && timers_.FireDue(now)) {
+    fired_timer = true;
+    user_dispatch_ = true;
+    processed = true;
+  }
+  if (user_dispatch_ && !fired_timer) {
+    timers_.DeliveredOther();
   }
   dispatching_ = false;
 
@@ -3022,7 +2829,7 @@ bool IoUringImpl::ReapCompletions() {
   //   * Nothing else can reach a parked state: DeleteFd() already erased
   //     it from legacy_states_ and from the epoll registration, and a
   //     LegacyState is not an AsyncRequest, so pending_dispatch_ cannot
-  //     name it (which is why timers need UnlinkPendingDispatch() and
+  //     name it (which is why receivers need UnlinkPendingDispatch() and
   //     these don't).
   //   * ~LegacyState runs capture destructors, which may reenter the Aio;
   //     dispatching_ is already false and the node is popped before the
@@ -3483,10 +3290,10 @@ void EpollImpl::CheckOwnFdsOpenAfterFork() {
 }
 
 void EpollTimerState::Initialize() {
-  // The fork check before the timerfd exists, as IoUringTimerState does.  In a
-  // child that closed a registered fd without forgetting it, the new timerfd
-  // would take that number, and the rebuild would then find it open and
-  // re-register the stale handler on the timer's fd.
+  // The fork check before the timerfd exists.  In a child that closed a
+  // registered fd without forgetting it, the new timerfd would take that
+  // number, and the rebuild would then find it open and re-register the stale
+  // handler on the timer's fd.
   impl_->CheckForFork();
   timer_fd = std::make_unique<TimerFD>();
   if (impl_->registrations_.GetActive(timer_fd->fd()) != nullptr) {

@@ -22,7 +22,10 @@ std::unique_ptr<TestAioDriver> MakeHosting() {
 std::vector<AioBackend> Backends() {
 #if defined(__linux__)
   return {
-      AioBackend{.name = "io_uring", .make = &MakeHosting, .is_io_uring = true},
+      AioBackend{.name = "io_uring",
+                 .make = &MakeHosting,
+                 .timers_are_descriptors = false,
+                 .is_io_uring = true},
       AioBackend{.name = "epoll", .make = &MakeHosting},
   };
 #elif defined(_WIN32)

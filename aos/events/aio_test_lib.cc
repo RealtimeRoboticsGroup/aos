@@ -398,10 +398,10 @@ TEST_P(AioTest, BasicPipeReadWrite) {
 // the epoch, so a ShmEventLoop that treated it differently would diverge
 // from sim for the same application code.
 //
-// The Linux backends need help here: they arm with timerfd_settime(2), and
-// an itimerspec whose it_value is exactly zero means "disarm", not "expire
-// immediately" -- so the epoch is the one past deadline that would silently
-// never fire.  See IoUringTimerState::Schedule().
+// The epoch is a deadline in the past like any other.  It once needed help on
+// Linux, when timers were timerfds: an itimerspec whose it_value is exactly
+// zero means "disarm" there, so a timer scheduled at the epoch silently never
+// fired.
 TEST_P(AioTest, ScheduleTimerAtEpochFiresTest) {
   TestAio aio;
   Aio::Timer timer(aio.get());
@@ -2453,6 +2453,51 @@ TEST_P(AioTest, SelfRearmingSocketReadDoesNotStarveTimers) {
   }
 }
 
+// A timer that reschedules itself into the past is due again the moment its
+// callback returns, every time.  On io_uring it still cannot starve a
+// readable fd: a due timer goes ahead of ready I/O only when the previous
+// delivery was not a timer (IoUringTimers::TimerFirst()), so the two
+// alternate.  The reverse, ready I/O starving a due timer, is
+// SelfRearmingRegularFileReadDoesNotStarveTimers below.
+struct PastReschedulingTimer {
+  Aio::Timer *timer;
+  int fires = 0;
+
+  static void Fire(Completion, void *raw) {
+    auto *self = static_cast<PastReschedulingTimer *>(raw);
+    ++self->fires;
+    self->timer->Schedule(aos::monotonic_clock::epoch(), &Fire, self);
+  }
+};
+
+TEST_P(AioTest, PastReschedulingTimerDoesNotStarveReadyFd) {
+  if (!Backend().is_io_uring) {
+    GTEST_SKIP() << "the alternation is io_uring's rule";
+  }
+  TestAio aio;
+  Pipe pipe;
+  pipe.Write("x");
+  int reads = 0;
+  aio.OnReadable(pipe.read_fd(), [&pipe, &reads]() {
+    pipe.Read(1);
+    ++reads;
+  });
+  Aio::Timer timer(aio.get());
+  PastReschedulingTimer rescheduling{&timer};
+  timer.Schedule(aos::monotonic_clock::epoch(), &PastReschedulingTimer::Fire,
+                 &rescheduling);
+
+  // Bounded: a starved fd would otherwise spin here forever, since the timer
+  // keeps every Poll() busy.
+  for (int i = 0; i < 100 && reads == 0; ++i) {
+    aio.Poll(false);
+  }
+  EXPECT_EQ(reads, 1);
+  EXPECT_GE(rescheduling.fires, 1);
+  timer.Cancel();
+  aio.DeleteFd(pipe.read_fd());
+}
+
 // A callback that keeps re-arming a read on a regular file is always ready
 // again, so a loop that serviced its queued completions before looking at
 // the kernel starved everything else -- timers included -- until EOF.
@@ -2532,27 +2577,30 @@ TEST_P(AioTest, SelfRearmingRegularFileReadDoesNotStarveTimers) {
 // delivers a read, and each delivered read queues another.  A single reader
 // cannot show this (SelfRearmingRegularFileReadDoesNotStarveTimers), because
 // its one read in flight leaves a moment with nothing queued.  With two,
-// whether a timer that comes due while they run ever gets its turn depends on
-// how each backend interleaves going back to the kernel with draining what it
-// already holds.
+// whether something that becomes ready while they run ever gets its turn
+// depends on how each backend interleaves going back to the kernel with
+// draining what it already holds.
 //
-// The timer has to fire, and promptly, on every backend.  The first read's
-// callback arms it, so it always comes due while the readers are running.  The
-// run is bounded at kMaxReads so a backend that starves the timer outright
-// fails instead of hanging.  The measurement (whether it fired, how many reads
-// ran after its deadline, how late it was) is logged either way.
+// Two things become ready while they run, and both have to be delivered, and
+// promptly, on every backend: a timer, and a legacy OnReadable() pipe.  The
+// first read's callback arms the timer and writes the pipe, so both always
+// arrive while the readers are running.  The run is bounded at kMaxReads so a
+// backend that starves either outright fails instead of hanging.  The
+// measurements (whether each arrived, and how many reads ran before it did)
+// are logged either way.
 //
-// io_uring with SINGLE_ISSUER|DEFER_TASKRUN starved it: the kernel runs its
-// deferred task work, which is how a timer's completion reaches the CQ, only
+// io_uring with SINGLE_ISSUER|DEFER_TASKRUN starved both: the kernel runs its
+// deferred task work, which is how a poll's completion reaches the CQ, only
 // on an enter with GETEVENTS.  Poll() flushed a callback's re-armed reads
 // with a bare submit while its dispatch queue was non-empty, and two readers
-// keep that queue from ever emptying.
+// keep that queue from ever emptying.  The legacy pipe is what still shows
+// that, since io_uring's timers are no longer in the kernel.
 //
-// With cancel_a_pipe_read, each callback also Cancel()s a pipe read until its
-// Canceled completion arrives.  The Cancel() flushes the callback's re-arm
-// itself, through MaybeSubmit(), so Poll() never has anything staged to
-// flush, and a bare submit in MaybeSubmit() starved both the timer and the
-// Canceled completion the same way.
+// With cancel_a_pipe_read, each callback also Cancel()s a read on another pipe
+// until its Canceled completion arrives, which also has to be prompt.  The
+// Cancel() flushes the callback's re-arm itself, through MaybeSubmit(), so
+// Poll() never has anything staged to flush, and a bare submit in
+// MaybeSubmit() starved the Canceled completion the same way.
 //
 // POSIX-only: regular files from mkstemp()/unlink() on integer descriptors.
 #ifndef _WIN32
@@ -2564,46 +2612,72 @@ void TimerVersusTwoRearmingReaders(std::string_view backend,
   constexpr int kReaders = 2;
   constexpr int kMaxReads = 100000;
   constexpr size_t kFileSize = 1 << 20;
+  // How many reads may run between something becoming ready and its delivery.
+  // Loose on purpose.  A read here is a fraction of a microsecond and a
+  // kernel wakeup is not, so a few dozen to a few hundred reads normally slip
+  // in (measured: up to ~160 and ~1 ms on kqueue).  Starvation is tens of
+  // thousands.
+  constexpr int kMaxReadsLate = 2000;
 
-  struct TimerResult;
+  // Read counts at the moment each event became ready and was delivered, or
+  // -1 until it has been.
+  struct Event {
+    int ready_at = -1;
+    int delivered_at = -1;
+    bool delivered() const { return delivered_at >= 0; }
+    int reads_late() const { return delivered_at - ready_at; }
+  };
   struct Shared {
     TestAio *aio;
     Aio::Timer *timer;
-    TimerResult *result;
     AsyncRequest *pipe_req;
+    FileDescriptor legacy_write_fd;
     bool cancel_a_pipe_read;
     int total_reads = 0;
-    int reads_after_deadline = 0;
-    bool stop = false;
     aos::monotonic_clock::time_point deadline = aos::monotonic_clock::max_time;
+    Event timer_event;
+    Event legacy_event;
+    Event cancel_event;
+    bool stop = false;
+
+    bool done() const {
+      return timer_event.delivered() && legacy_event.delivered() &&
+             (!cancel_a_pipe_read || cancel_event.delivered());
+    }
   };
-  struct TimerResult {
-    Shared *shared = nullptr;
-    int reads_after_deadline = -1;
-    aos::monotonic_clock::time_point fired_at;
-  } result;
 
   Aio::Timer timer(aio.get());
-  Pipe pipe;
+  Pipe legacy_pipe;
+  Pipe cancel_pipe;
   char pipe_byte;
-  struct PipeResult {
-    bool called = false;
-    bool canceled = false;
-  } pipe_result;
+  bool canceled = false;
   AsyncRequest pipe_req;
-  pipe_req.context = &pipe_result;
-  pipe_req.callback = [](Completion completion, void *ctx) {
-    auto *self = static_cast<PipeResult *>(ctx);
-    self->called = true;
-    self->canceled = !aos::IsOk(completion.status);
-  };
 
   Shared shared{.aio = &aio,
                 .timer = &timer,
-                .result = &result,
                 .pipe_req = &pipe_req,
-                .cancel_a_pipe_read = cancel_a_pipe_read};
-  result.shared = &shared;
+                .legacy_write_fd = legacy_pipe.write_fd(),
+                .cancel_a_pipe_read = cancel_a_pipe_read,
+                .timer_event = {},
+                .legacy_event = {},
+                .cancel_event = {}};
+
+  struct CancelContext {
+    Shared *shared;
+    bool *canceled;
+  } cancel_context{&shared, &canceled};
+  pipe_req.context = &cancel_context;
+  pipe_req.callback = [](Completion completion, void *ctx) {
+    auto *self = static_cast<CancelContext *>(ctx);
+    self->shared->cancel_event.delivered_at = self->shared->total_reads;
+    *self->canceled = !aos::IsOk(completion.status);
+  };
+
+  aio.OnReadable(legacy_pipe.read_fd(), [&shared, &legacy_pipe]() {
+    char byte;
+    ASSERT_EQ(ReadSome(legacy_pipe.read_fd(), &byte, 1), 1);
+    shared.legacy_event.delivered_at = shared.total_reads;
+  });
 
   struct Reader {
     Shared *shared;
@@ -2634,51 +2708,57 @@ void TimerVersusTwoRearmingReaders(std::string_view backend,
         shared->timer->Schedule(
             shared->deadline,
             [](Completion, void *ctx) {
-              auto *result = static_cast<TimerResult *>(ctx);
-              result->reads_after_deadline =
-                  result->shared->reads_after_deadline;
-              result->fired_at = aos::monotonic_clock::now();
-              result->shared->stop = true;
+              auto *shared = static_cast<Shared *>(ctx);
+              shared->timer_event.delivered_at = shared->total_reads;
             },
-            shared->result);
+            shared);
+        shared->legacy_event.ready_at = shared->total_reads;
+        ASSERT_EQ(WriteSome(shared->legacy_write_fd, "x", 1), 1);
       }
-      if (aos::monotonic_clock::now() >= shared->deadline) {
-        ++shared->reads_after_deadline;
+      if (shared->timer_event.ready_at < 0 &&
+          aos::monotonic_clock::now() >= shared->deadline) {
+        shared->timer_event.ready_at = shared->total_reads;
       }
-      if (shared->stop) return;
+      if (shared->stop || shared->done()) return;
       shared->aio->AsyncRead(self->fd, std::span<char>(&self->byte, 1),
                              &self->req);
       if (shared->cancel_a_pipe_read && !shared->pipe_req->done) {
+        if (shared->cancel_event.ready_at < 0) {
+          shared->cancel_event.ready_at = shared->total_reads;
+        }
         shared->aio->Cancel(shared->pipe_req);
       }
     };
   }
 
   if (cancel_a_pipe_read) {
-    aio.AsyncRead(pipe.read_fd(), std::span<char>(&pipe_byte, 1), &pipe_req);
+    aio.AsyncRead(cancel_pipe.read_fd(), std::span<char>(&pipe_byte, 1),
+                  &pipe_req);
   }
   for (Reader &reader : readers) {
     aio.AsyncRead(reader.fd, std::span<char>(&reader.byte, 1), &reader.req);
   }
-  while (result.reads_after_deadline < 0 && shared.total_reads < kMaxReads &&
-         aio.Poll(true)) {
+  while (!shared.done() && shared.total_reads < kMaxReads && aio.Poll(true)) {
   }
-  const bool fired = result.reads_after_deadline >= 0;
-  const double late_ms =
-      std::chrono::duration<double, std::milli>(
-          (fired ? result.fired_at : aos::monotonic_clock::now()) -
-          shared.deadline)
-          .count();
-  const int reads_late =
-      fired ? result.reads_after_deadline : shared.reads_after_deadline;
-  const bool canceled_in_time = pipe_result.called;
-  ABSL_LOG(INFO) << backend << ": timer " << (fired ? "fired" : "never fired")
-                 << "; " << reads_late << " reads ran after its deadline, "
-                 << late_ms << " ms late (" << shared.total_reads
-                 << " reads in all)";
-  ::testing::Test::RecordProperty("timer_fired", fired ? 1 : 0);
-  ::testing::Test::RecordProperty("reads_after_deadline", reads_late);
-  ::testing::Test::RecordProperty("us_late", static_cast<int>(late_ms * 1000));
+  // A read that ran past the deadline may not have noticed it if the timer
+  // was delivered first.
+  if (shared.timer_event.delivered() && shared.timer_event.ready_at < 0) {
+    shared.timer_event.ready_at = shared.timer_event.delivered_at;
+  }
+  const auto report = [&](std::string_view name, const Event &event) {
+    ABSL_LOG(INFO) << backend << ": " << name << " "
+                   << (event.delivered() ? "arrived" : "never arrived") << ", "
+                   << event.reads_late() << " reads after it was ready"
+                   << " (" << shared.total_reads << " reads in all)";
+    ::testing::Test::RecordProperty(std::string(name) + "_reads_late",
+                                    event.reads_late());
+  };
+  report("timer", shared.timer_event);
+  report("legacy_fd", shared.legacy_event);
+  if (cancel_a_pipe_read) {
+    report("canceled", shared.cancel_event);
+  }
+  ::testing::Test::RecordProperty("total_reads", shared.total_reads);
 
   // Stop re-arming and let whatever is still in flight finish.  Drained
   // rather than canceled, as in the single-reader test.
@@ -2689,27 +2769,31 @@ void TimerVersusTwoRearmingReaders(std::string_view backend,
     }
   }
   if (cancel_a_pipe_read) {
-    while (!pipe_result.called) {
+    while (!shared.cancel_event.delivered()) {
       aio.Poll(true);
     }
   }
   while (aio.Poll(false)) {
   }
+  aio.DeleteFd(legacy_pipe.read_fd());
   for (Reader &reader : readers) {
     close(reader.fd);
   }
 
-  ASSERT_TRUE(fired) << "the timer never fired in " << kMaxReads << " reads";
-  // Loose on purpose.  A read here is a fraction of a microsecond and the
-  // kernel's timer expiry is not, so a few dozen reads normally slip in
-  // between the deadline and the timerfd becoming readable (measured: 2 to
-  // ~50, 0.01 ms late).  Starvation is tens of thousands.
-  EXPECT_LT(result.reads_after_deadline, 2000)
+  EXPECT_TRUE(shared.timer_event.delivered())
+      << "the timer never fired in " << kMaxReads << " reads";
+  EXPECT_LT(shared.timer_event.reads_late(), kMaxReadsLate)
       << "the timer waited behind the re-arming reads";
+  EXPECT_TRUE(shared.legacy_event.delivered())
+      << "the legacy fd was never reported in " << kMaxReads << " reads";
+  EXPECT_LT(shared.legacy_event.reads_late(), kMaxReadsLate)
+      << "the legacy fd waited behind the re-arming reads";
   if (cancel_a_pipe_read) {
-    EXPECT_TRUE(canceled_in_time)
+    EXPECT_TRUE(shared.cancel_event.delivered())
+        << "the Canceled completion never arrived in " << kMaxReads << " reads";
+    EXPECT_LT(shared.cancel_event.reads_late(), kMaxReadsLate)
         << "the Canceled completion waited behind the re-arming reads";
-    EXPECT_TRUE(pipe_result.canceled);
+    EXPECT_TRUE(canceled);
   }
 }
 
@@ -3640,6 +3724,46 @@ TEST_P(AioTest, RescheduleATimerFiringInTheSameBatchTest) {
   EXPECT_EQ(batch.second_fires, 1) << "The rescheduled timer never fired.";
 }
 
+// Timers that share a deadline fire in the order they were scheduled.
+// Rescheduling one, even to the deadline it already had, puts it behind the
+// rest, since Schedule() cancels it and schedules it anew, and rescheduling
+// one to an earlier deadline puts it ahead of all of them.  io_uring used to
+// rewrite a queued timer's deadline in place, which kept its old place.
+TEST_P(AioTest, RescheduledTimerGoesBehindTimersAtItsDeadline) {
+  TestAio aio;
+  constexpr int kTimers = 8;
+  struct Context {
+    std::vector<int> *order;
+    int index;
+  };
+  std::vector<int> order;
+  std::vector<Context> contexts;
+  std::vector<std::unique_ptr<Aio::Timer>> timers;
+  for (int i = 0; i < kTimers; ++i) {
+    contexts.push_back(Context{&order, i});
+    timers.push_back(std::make_unique<Aio::Timer>(aio.get()));
+  }
+  const auto callback = [](Completion, void *ctx) {
+    Context *const context = static_cast<Context *>(ctx);
+    context->order->push_back(context->index);
+  };
+
+  const aos::monotonic_clock::time_point deadline =
+      aos::monotonic_clock::now() + std::chrono::milliseconds(20);
+  for (int i = 0; i < kTimers; ++i) {
+    timers[i]->Schedule(deadline, callback, &contexts[i]);
+  }
+  timers[2]->Schedule(deadline, callback, &contexts[2]);
+  timers[5]->Schedule(deadline - std::chrono::milliseconds(10), callback,
+                      &contexts[5]);
+
+  for (int polls = 0;
+       order.size() < static_cast<size_t>(kTimers) && polls < 100; ++polls) {
+    aio.Poll(true);
+  }
+  EXPECT_EQ(order, (std::vector<int>{5, 0, 1, 3, 4, 6, 7, 2}));
+}
+
 // Destroying the second timer from the first's callback must not leave the
 // dispatch loop walking into freed memory when it reaches that timer's
 // already-queued completion.
@@ -4332,137 +4456,110 @@ TEST_P(AioTest, CancelRescheduleAndDestroyPastUnobservedFirings) {
   }
 }
 
-// Regression test for DestroyTimerState()'s "nothing in flight, free it
-// right here" fast path, which used to skip unlinking the request from
-// pending_dispatch_.
-//
-// Three things have to be true at once to reach it.  A timer's multishot
-// poll must have been terminated by the kernel (CQ overflow -- see
-// TimerPollsSurviveCqOverflow below), which is what sets request.done and
-// leaves no cancel ack outstanding, so the fast path applies.  That timer's
-// completion must still be sitting on pending_dispatch_, queued by
-// DrainCompletions() but not yet dispatched.  And something must destroy it
-// in that window -- which an earlier callback in the same dispatch batch
-// can legitimately do.  Freeing it there leaves the dispatch loop holding a
-// pointer into freed memory, which it walks into as soon as it pops that
-// node.
-//
-// Constructed here by overflowing a tiny CQ with many simultaneous timers
-// (producing terminated polls and queued completions in bulk) and giving
-// every timer a callback that destroys all the others.  Without the
-// unconditional UnlinkPendingDispatch() in DestroyTimerState() this fails
-// as a use-after-free under ASAN, or as the intrusive list's own "removing
-// a node that is not on this list" CHECK on a normal build.
-//
-// Note the shape predates the timerfd redesign: the old backend had the
-// identical fast path, and reached it far more easily, because there a
-// plain fired single-shot timer was `done` while queued.  CancelRequest()
-// has always unlinked unconditionally for exactly this reason; the fast
-// path just never did.
-TEST_P(AioTest, DestroyTimerWithTerminatedPollAndQueuedCompletion) {
+// `count` raw reads, each pending on a pipe of its own until Complete() writes
+// a byte into every pipe at once: a burst of user-visible completions, one per
+// read in the order written, to overflow a small io_uring CQ with.  Each
+// completion counts into *completed.
+class PendingReads {
+ public:
+  PendingReads(TestAio *aio, int count, int *completed)
+      : pipes_(count), requests_(count), buffers_(count) {
+    for (int i = 0; i < count; ++i) {
+      pipes_[i] = std::make_unique<Pipe>();
+      requests_[i] = std::make_unique<AsyncRequest>();
+      requests_[i]->callback = [](Completion, void *raw) {
+        ++*static_cast<int *>(raw);
+      };
+      requests_[i]->context = completed;
+      aio->get()->AsyncRead(pipes_[i]->read_fd(),
+                            std::span<char>(&buffers_[i], 1),
+                            requests_[i].get());
+      // Flushes the staged read, which a small --aio_queue_depth would
+      // otherwise run out of room for.  Nothing completes: the pipes are
+      // empty until Complete().
+      aio->Poll(false);
+    }
+  }
+
+  void Complete() {
+    for (const std::unique_ptr<Pipe> &pipe : pipes_) {
+      pipe->Write("x");
+    }
+  }
+
+ private:
+  std::vector<std::unique_ptr<Pipe>> pipes_;
+  std::vector<std::unique_ptr<AsyncRequest>> requests_;
+  std::vector<char> buffers_;
+};
+
+// Many timers due at once, and the first to fire destroys all the others.
+// None of them may fire after that, and the backend must not reach a
+// destroyed one on its way to the next.  DestroyATimerFiringInTheSameBatchTest
+// does this with two timers.  ASAN checks the lifetimes.
+TEST_P(AioTest, DestroyManyDueTimersFromATimerCallback) {
   constexpr int kTimers = 32;
+  ScopedDeathTestWatchdog watchdog;
+  TestAio aio;
+
+  std::vector<std::unique_ptr<Aio::Timer>> timers(kTimers);
+  int fired = 0;
+  struct Ctx {
+    std::vector<std::unique_ptr<Aio::Timer>> *timers = nullptr;
+    int *fired = nullptr;
+    int self = 0;
+  };
+  std::vector<Ctx> ctxs(kTimers);
+
+  const auto deadline =
+      aos::monotonic_clock::now() + std::chrono::milliseconds(5);
+  for (int i = 0; i < kTimers; ++i) {
+    timers[i] = std::make_unique<Aio::Timer>(aio.get());
+    ctxs[i] = Ctx{&timers, &fired, i};
+    timers[i]->Schedule(
+        deadline,
+        [](Completion, void *raw) {
+          auto *ctx = static_cast<Ctx *>(raw);
+          ++*ctx->fired;
+          for (int j = 0; j < static_cast<int>(ctx->timers->size()); ++j) {
+            if (j == ctx->self) continue;
+            (*ctx->timers)[j].reset();
+          }
+        },
+        &ctxs[i]);
+  }
+  // Every deadline is well past by the time anything polls.
+  std::this_thread::sleep_for(std::chrono::milliseconds(25));
+
+  while (fired == 0 && aio.Poll(true)) {
+  }
+  while (aio.Poll(false)) {
+  }
+  EXPECT_EQ(fired, 1);
+}
+
+// Timers keep firing while a full io_uring CQ drains from the kernel's
+// overflow list.  The loop waits for the CQ and the earliest deadline
+// together, and a due timer takes turns with queued completions
+// (IoUringTimers::TimerFirst()).  Here 28 reads overflow an 8-slot CQ while
+// 24 repeating timers fall behind.  Every read must complete, and every timer
+// must fire again afterward.  On the other backends it is a backlog of ready
+// reads and due timers, with the same outcome.
+TEST_P(AioTest, TimersKeepFiringThroughCqOverflow) {
+  constexpr int kReads = 28;
+  constexpr int kTimers = 24;
   const uint32_t saved_depth = ::absl::GetFlag(FLAGS_aio_queue_depth);
   ::absl::SetFlag(&FLAGS_aio_queue_depth, 4);  // CQ = 8 slots.
   ScopedDeathTestWatchdog watchdog;
   {
     TestAio aio;
-    // Enable the ring before constructing timers; each construction arms a
-    // poll, and 32 of them would otherwise outrun the 4-entry SQ.
+    // Enable the ring first, so PendingReads can flush each read as it arms
+    // it.
     aio.Poll(false);
 
-    std::vector<std::unique_ptr<Aio::Timer>> timers(kTimers);
-    int fired = 0;
-    // Destroying is held off until the second round of dispatch.  The first
-    // Poll() drains the per-firing (F_MORE) completions, which leaves the
-    // terminated polls' *terminal* completions still in the kernel's
-    // overflow list; only the round after that carries them, and a
-    // terminal is what sets request.done and arms the fast path.
-    // Destroying during round one would just orphan everything, which is
-    // the safe path and proves nothing.
-    bool destroy_enabled = false;
-    struct Ctx {
-      std::vector<std::unique_ptr<Aio::Timer>> *timers = nullptr;
-      int *fired = nullptr;
-      const bool *destroy_enabled = nullptr;
-      int self = 0;
-    };
-    std::vector<Ctx> ctxs(kTimers);
+    int completed = 0;
+    PendingReads reads(&aio, kReads, &completed);
 
-    const auto deadline =
-        aos::monotonic_clock::now() + std::chrono::milliseconds(5);
-    for (int i = 0; i < kTimers; ++i) {
-      timers[i] = std::make_unique<Aio::Timer>(aio.get());
-      ctxs[i] = Ctx{&timers, &fired, &destroy_enabled, i};
-      timers[i]->Schedule(
-          deadline,
-          [](Completion, void *raw) {
-            auto *ctx = static_cast<Ctx *>(raw);
-            ++*ctx->fired;
-            if (!*ctx->destroy_enabled) return;
-            // Destroy every other timer -- including any whose completion
-            // is queued behind this one in the very same dispatch batch.
-            for (int j = 0; j < static_cast<int>(ctx->timers->size()); ++j) {
-              if (j == ctx->self) continue;
-              (*ctx->timers)[j].reset();
-            }
-          },
-          &ctxs[i]);
-    }
-
-    // All 32 expire with nothing draining, so the 8-slot CQ overflows and
-    // the kernel terminates polls in bulk.
-    std::this_thread::sleep_for(std::chrono::milliseconds(60));
-
-    // Round one: exactly one Poll(), which drains the CQ's worth of
-    // per-firing completions and no more.  Draining to empty here would
-    // also consume the terminals, and dispatching a terminal re-arms the
-    // poll (clearing request.done) -- which is precisely the state the fast
-    // path needs, so it must still be pending when destroying starts.
-    aio.Poll(true);
-    // Round two onward: the terminated polls' terminal completions arrive,
-    // several to a batch, and the first callback frees the rest
-    // mid-dispatch-loop.
-    destroy_enabled = true;
-    const auto deadline_stop =
-        aos::monotonic_clock::now() + std::chrono::seconds(2);
-    while (aos::monotonic_clock::now() < deadline_stop) {
-      if (!aio.Poll(false)) break;
-    }
-    EXPECT_GE(fired, 1);
-  }
-  ::absl::SetFlag(&FLAGS_aio_queue_depth, saved_depth);
-}
-
-// Regression test: the kernel terminates any multishot op whose auxiliary
-// CQE cannot be posted -- a full CQ ends the op with a terminal completion
-// (io_req_post_cqe() returning false; aux CQEs get no overflow-list
-// fallback, unlike ordinary completions).  "Persistent" ops are therefore
-// revocable at the kernel's convenience, so every multishot consumer must
-// re-arm on an unexpected terminal completion.  Each timer's poll on its
-// timerfd is one such consumer: a poll killed by an overflow and never
-// re-armed leaves that timer silently dead, armed kernel-side with nobody
-// watching.
-//
-// Forcing the overflow takes many timers rather than one fast one.  A
-// single repeating timer cannot overflow anything now: an undrained
-// timerfd stays readable without generating a new wait-queue edge, so a
-// hundred banked expirations still produce exactly one CQE (and one read()
-// reporting all of them).  Independent timers do produce independent CQEs,
-// so 24 of them against an 8-slot CQ, left undrained, overflows it.  Every
-// timer must still be firing afterward.
-TEST_P(AioTest, TimerPollsSurviveCqOverflow) {
-  constexpr int kTimers = 24;
-  const uint32_t saved_depth = ::absl::GetFlag(FLAGS_aio_queue_depth);
-  ::absl::SetFlag(&FLAGS_aio_queue_depth, 4);
-  ScopedDeathTestWatchdog watchdog;
-  {
-    TestAio aio;
-    // Enable the ring before building the timers.  Each one arms a poll at
-    // construction, and MaybeSubmit() cannot flush those until the ring is
-    // enabled -- so without this, 24 constructions would queue 24 SQEs
-    // against a 4-entry submission queue and CHECK-fail before the test got
-    // anywhere near the CQ.
-    aio.Poll(false);
     std::vector<int> fire_counts(kTimers, 0);
     std::vector<std::unique_ptr<RepeatingTimer>> timers;
     for (int i = 0; i < kTimers; ++i) {
@@ -4472,23 +4569,22 @@ TEST_P(AioTest, TimerPollsSurviveCqOverflow) {
               ++fire_counts[i];
             }
           }));
-      // Staggered so their CQEs arrive spread out rather than as one batch
-      // the ring might absorb between polls.
       timers.back()->Start(
           aos::monotonic_clock::now() + std::chrono::milliseconds(5 + i % 5),
           std::chrono::milliseconds(5));
     }
 
-    // Overflow the 8-slot CQ: 24 timers firing every 5ms for 100ms, with
-    // nothing draining.
+    // Every read completes and every timer falls behind, with nothing
+    // draining.  The CQ overflows on the next Poll().
+    reads.Complete();
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    // Drain the backlog, then require every timer to fire well past
-    // anything the pre-termination backlog alone could deliver.  A timer
-    // whose poll died in the overflow stalls the loop here instead (caught
-    // by the watchdog).
+    // Drain the backlog, then require every timer to fire five more times.
+    // A timer the overflow stalled stops the loop here instead, and the
+    // watchdog catches it.
     while (aio.Poll(false)) {
     }
+    EXPECT_EQ(completed, kReads);
     std::vector<int> target(kTimers);
     for (int i = 0; i < kTimers; ++i) {
       target[i] = fire_counts[i] + 5;
@@ -4519,42 +4615,46 @@ TEST_P(AioTest, TimerPollsSurviveCqOverflow) {
 // then holds a staged SQE, and exceeding --aio_queue_depth there is
 // deterministic at the arming call.  ArmSqe()'s message must name the flag
 // and the cause.  (The wakeup read and the legacy-epoll poll hold two of
-// the four slots; the third timer's poll is the one that cannot stage.)
+// the four slots; the third read is the one that cannot stage.)
 TEST_P(AioIoUringTest, PreRunArmingExceedsQueueDepthDeathTest) {
   ::absl::SetFlag(&FLAGS_aio_queue_depth, 4);
   EXPECT_DEATH(
       {
         ScopedDeathTestWatchdog watchdog;
         TestAio aio;
-        Aio::Timer t1(aio.get());
-        Aio::Timer t2(aio.get());
+        Pipe pipes[3];
+        char buffers[3];
+        AsyncRequest requests[3];
+        aio.AsyncRead(pipes[0].read_fd(), std::span<char>(&buffers[0], 1),
+                      &requests[0]);
+        aio.AsyncRead(pipes[1].read_fd(), std::span<char>(&buffers[1], 1),
+                      &requests[1]);
         MarkFatalStatement();
-        Aio::Timer t3(aio.get());
+        aio.AsyncRead(pipes[2].read_fd(), std::span<char>(&buffers[2], 1),
+                      &requests[2]);
       },
       DiesAfterMarker("aio_queue_depth"));
 }
 
 // Regression test for UnregisterThreadSignalReceiver()'s "nothing in
 // flight, free it right here" fast path, which used to skip unlinking the
-// request from pending_dispatch_ -- the receiver twin of
-// DestroyTimerWithTerminatedPollAndQueuedCompletion above, with the same
-// three-way setup: the receiver's multishot poll terminated by CQ overflow
-// (request.done set, no cancel acks outstanding, so the fast path applies),
-// its terminal completion queued by DrainCompletions() but not yet
-// dispatched, and an earlier callback in the same dispatch batch
-// unregistering the receiver.  Freeing there leaves the dispatch loop
-// holding a pointer into freed memory.  A regression fails as a
+// request from pending_dispatch_.  A three-way setup: the receiver's multishot
+// poll terminated by CQ overflow (request.done set, no cancel acks outstanding,
+// so the fast path applies), its terminal completion queued by
+// DrainCompletions() but not yet dispatched, and an earlier callback in the
+// same dispatch batch unregistering the receiver.  Freeing there leaves the
+// dispatch loop holding a pointer into freed memory.  A regression fails as a
 // use-after-free under ASAN, or as the intrusive list's own CHECK on a
 // normal build.
 TEST_P(AioTest, UnregisterReceiverWithTerminatedPollAndQueuedCompletion) {
-  // 28 timers against an 8-slot CQ: 8 fit as auxiliary CQEs, the other 20
-  // terminate their polls, and those 20 terminals plus the receiver's --
-  // fired last, so ordered last -- land on the kernel's overflow list, 21
-  // entries total.  The overflow refills the freed CQ 8 at a time, so the
-  // final refill batch is [4 timer terminals, receiver terminal]: exactly
-  // the shape where DrainCompletions() queues the receiver's terminal
-  // (setting request.done) *behind* user-visible work in one batch.
-  constexpr int kTimers = 28;
+  // 28 reads against an 8-slot CQ: 8 fit, and the other 20 plus the
+  // receiver's terminal -- its multishot poll cannot post against the full
+  // CQ, and it fired last, so it is ordered last -- land on the kernel's
+  // overflow list, 21 entries total.  The overflow refills the freed CQ 8 at
+  // a time, so the final refill batch is [4 reads, receiver terminal]:
+  // exactly the shape where DrainCompletions() queues the receiver's
+  // terminal (setting request.done) *behind* user-visible work in one batch.
+  constexpr int kReads = 28;
   const uint32_t saved_depth = ::absl::GetFlag(FLAGS_aio_queue_depth);
   ::absl::SetFlag(&FLAGS_aio_queue_depth, 4);  // CQ = 8 slots.
   ScopedDeathTestWatchdog watchdog;
@@ -4567,25 +4667,17 @@ TEST_P(AioTest, UnregisterReceiverWithTerminatedPollAndQueuedCompletion) {
     aio.RegisterThreadSignalReceiver(&sfd, []() {});
 
     int fired = 0;
-    std::vector<std::unique_ptr<Aio::Timer>> timers(kTimers);
-    const auto deadline =
-        aos::monotonic_clock::now() + std::chrono::milliseconds(5);
-    for (int i = 0; i < kTimers; ++i) {
-      timers[i] = std::make_unique<Aio::Timer>(aio.get());
-      timers[i]->Schedule(
-          deadline, [](Completion, void *raw) { ++*static_cast<int *>(raw); },
-          &fired);
-    }
+    PendingReads reads(&aio, kReads, &fired);
 
-    // All 28 timers expire with nothing draining.  Only then fire the
-    // receiver's poll, so its completion is ordered after every timer's.
+    // All 28 reads complete with nothing draining.  Only then fire the
+    // receiver's poll, so its completion is ordered after every read's.
     // (Under DEFER_TASKRUN nothing posts until the next Poll() enters the
     // kernel; the CQ overflows there, in wake order.)
-    std::this_thread::sleep_for(std::chrono::milliseconds(60));
+    reads.Complete();
     SignalSelf();
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-    // Poll() dispatches one user-visible completion (one timer callback)
+    // Poll() dispatches one user-visible completion (one read's callback)
     // per call.  The 25th is the first entry of that final refill batch --
     // when it has been dispatched, the receiver's terminal has been drained
     // (request.done set, no cancel acks outstanding: the fast path's exact
@@ -4618,7 +4710,7 @@ TEST_P(AioTest, UnregisterReceiverWithTerminatedPollAndQueuedCompletion) {
     while (aos::monotonic_clock::now() < deadline_stop) {
       if (!aio.Poll(false)) break;
     }
-    EXPECT_EQ(fired, kTimers);
+    EXPECT_EQ(fired, kReads);
     // The unregistered receiver never read the signal; don't leave it
     // pending.
     sfd.ConsumeWakeup();
@@ -4639,7 +4731,7 @@ TEST_P(AioTest, UnregisterReceiverWithTerminatedPollAndQueuedCompletion) {
 // callback.  A regression is a read of freed memory in the trampoline's
 // drain loop, which needs ASAN to fail reliably.
 TEST_P(AioTest, UnregisterReceiverFromOwnCallbackDuringTerminalDispatch) {
-  constexpr int kTimers = 28;
+  constexpr int kReads = 28;
   const uint32_t saved_depth = ::absl::GetFlag(FLAGS_aio_queue_depth);
   ::absl::SetFlag(&FLAGS_aio_queue_depth, 4);  // CQ = 8 slots.
   ScopedDeathTestWatchdog watchdog;
@@ -4656,19 +4748,14 @@ TEST_P(AioTest, UnregisterReceiverFromOwnCallbackDuringTerminalDispatch) {
       aio.UnregisterThreadSignalReceiver(&sfd);
     });
 
-    std::vector<std::unique_ptr<Aio::Timer>> timers(kTimers);
-    const auto deadline =
-        aos::monotonic_clock::now() + std::chrono::milliseconds(5);
-    for (int i = 0; i < kTimers; ++i) {
-      timers[i] = std::make_unique<Aio::Timer>(aio.get());
-      timers[i]->Schedule(deadline, [](Completion, void *) {}, nullptr);
-    }
+    int completed = 0;
+    PendingReads reads(&aio, kReads, &completed);
 
-    // Overflow the CQ with the timer firings, then wake the receiver's
+    // Overflow the CQ with the reads' completions, then wake the receiver's
     // poll against the full CQ so the kernel terminates the multishot --
     // its terminal completion is what makes the in-callback unregister
     // take the fast path.
-    std::this_thread::sleep_for(std::chrono::milliseconds(60));
+    reads.Complete();
     SignalSelf();
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
@@ -4678,6 +4765,7 @@ TEST_P(AioTest, UnregisterReceiverFromOwnCallbackDuringTerminalDispatch) {
       if (!aio.Poll(false)) break;
     }
     EXPECT_TRUE(unregistered);
+    EXPECT_EQ(completed, kReads);
     if (!unregistered) {
       // Kernel batching drift kept the terminal dispatch (and so the
       // in-callback unregister) from happening: clean up so the failure
@@ -6932,12 +7020,10 @@ TEST_P(AioTest, QuitBeforeRunStillDrainsTest) {
 // A timer armed in the parent must still fire in the *parent* after a forked
 // child has run the same timer to completion.
 //
-// timerfds are ordinary descriptors, so a fork leaves both processes naming
-// one kernel timer.  The child's read() on firing consumed the parent's
-// expiration and the parent's timer then never fired at all -- and the child
-// did not have to be malicious about it: Schedule(), Cancel() or just
-// ~Timer on the way out re-armed or disarmed the parent's timer through the
-// shared fd.  HandleFork() gives the child its own timerfds instead.
+// A timer the kernel holds would be shared across the fork: the child's
+// firing would consume the parent's, and the child's Schedule(), Cancel() or
+// ~Timer would re-arm or disarm the parent's.  This holds every backend to
+// sharing nothing.
 //
 // TimerForkTest above covers the child half and passes either way, because
 // nothing there ever asks the parent whether its own timer survived.
@@ -7721,41 +7807,6 @@ TEST_P(AioTest, DeleteTimerWhileRealtimeDeathTest) {
       DiesAfterMarker("GetIsRealtime"));
 }
 
-// Destroying an armed timer (off RT) orphans its state -- the poll on its
-// timerfd cancelled, user callback stripped -- and continued polling drains
-// and recycles it; a new timer then reuses the freelist, including its
-// already-created timerfd.  ASAN checks the lifetime story end to end.
-TEST_P(AioIoUringTest, DeleteArmedTimerOrphansAndRecycles) {
-  TestAio aio;
-
-  {
-    Aio::Timer timer(aio.get());
-    timer.Schedule(
-        aos::monotonic_clock::now() + std::chrono::milliseconds(5),
-        [](Completion, void *) {}, nullptr);
-    // Drive the loop so the poll is really armed kernel-side before the
-    // destructor has to cancel it.
-    aio.Poll(false);
-  }  // Orphaned here.
-
-  // Drain the orphan's terminal completion; the sweep recycles it.
-  const auto deadline = aos::monotonic_clock::now() + std::chrono::seconds(2);
-  while (aos::monotonic_clock::now() < deadline) {
-    aio.Poll(false);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-  }
-
-  // A fresh timer picks the state back up off the freelist and must work.
-  Aio::Timer reused(aio.get());
-  int fired = 0;
-  reused.Schedule(
-      aos::monotonic_clock::now() + std::chrono::milliseconds(5),
-      [](Completion, void *ctx) { ++*static_cast<int *>(ctx); }, &fired);
-  while (fired == 0 && aio.Poll(true)) {
-  }
-  EXPECT_EQ(fired, 1);
-}
-
 // Confirms Schedule()/Cancel() (async) are unaffected by the enforcement
 // above: both must keep working, unblocked, from an RT thread.
 TEST_P(AioTest, AsyncCancelWhileRealtimeDoesNotDie) {
@@ -7980,13 +8031,31 @@ TEST_P(AioTest, ForkedChildWithClosedUnforgottenFdDies) {
 }
 
 // The lowest free descriptor number, which is the one the next descriptor this
-// thread creates gets.  How the tests below find a timer's timerfd without a
-// hook into the backend: probe, then construct the timer.
+// thread creates gets.
 int LowestFreeFd() {
   const int probe = dup(STDERR_FILENO);
   ABSL_PCHECK(probe >= 0);
   ABSL_PCHECK(close(probe) == 0);
   return probe;
+}
+
+// A timer is not a descriptor on io_uring.  On PREEMPT_RT a timerfd expires in
+// the ktimers/N thread at SCHED_FIFO 1, so a real-time loop's timer would wait
+// for every other real-time task on its CPU.
+TEST_P(AioTest, TimerTakesNoDescriptor) {
+  if (BackendName() == "uv") {
+    GTEST_SKIP() << "libuv's loop opens descriptors of its own";
+  }
+  if (Backend().timers_are_descriptors) {
+    GTEST_SKIP() << "this backend's timers are descriptors";
+  }
+  TestAio aio;
+  const int before = LowestFreeFd();
+  Aio::Timer timer(aio.get());
+  timer.Schedule(aos::monotonic_clock::now() + std::chrono::hours(1),
+                 [](Completion, void *) {});
+  EXPECT_EQ(LowestFreeFd(), before);
+  timer.Cancel();
 }
 
 // The rebuild's closed-fd check knows the loop's own descriptors from the
@@ -8025,10 +8094,12 @@ TEST_P(AioTest, ForgetClosedFdOfTimerFdDies) {
                "belongs to this Aio's own timer, not to a registration");
 }
 
-// A forked child that closed a registered fd and then builds a timer: the
-// fork check runs before the timerfd exists.  Otherwise the timerfd takes the
-// closed number, the check finds it open, and the stale handler is
-// re-registered on the timer's fd ("Duplicate in functions").
+// A forked child that closed a registered fd and then builds a timer.  Making
+// a timer is an entry point like any other, so the fork rebuild runs there and
+// finds the closed registration.  Where a timer is a timerfd, the check runs
+// before the timerfd exists.  Otherwise the timerfd takes the closed number,
+// the check finds it open, and the stale handler is re-registered on the
+// timer's fd ("Duplicate in functions").
 TEST_P(AioTest, ForkedChildMakingTimerAfterClosingRegisteredFdDies) {
   if (!Backend().survives_fork)
     GTEST_SKIP()

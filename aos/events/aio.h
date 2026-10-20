@@ -314,7 +314,7 @@ class Aio {
     // Schedules a single timer execution.  The callback fires once, at or
     // after the given deadline, and nothing is armed afterward.  If a timer
     // is already scheduled, it is canceled first.  RT-safe on every backend:
-    // one syscall, no allocation.
+    // no allocation, and at most one syscall.
     //
     // The callback is only ever invoked with an Ok() status, on every
     // backend.  There is no error to deliver: Cancel() is silent (the
