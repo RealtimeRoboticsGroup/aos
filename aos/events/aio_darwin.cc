@@ -449,9 +449,13 @@ void KqueueImpl::UpdateTimerKnote() {
   if (timer_armed_ && armed_deadline_ == front->deadline) {
     return;
   }
+  // NOTE_CRITICAL, because otherwise macOS coalesces the timer with others and
+  // fires it late by up to about 1% of how far away it is: 8ms for a timer 1s
+  // out.
   struct kevent ev;
   EV_SET(&ev, kTimerIdent, EVFILT_TIMER, EV_ADD | EV_ENABLE | EV_ONESHOT,
-         NOTE_MACHTIME | NOTE_ABSOLUTE, ToMachTicks(front->deadline), nullptr);
+         NOTE_MACHTIME | NOTE_ABSOLUTE | NOTE_CRITICAL,
+         ToMachTicks(front->deadline), nullptr);
   ABSL_PCHECK(kevent(kqueue_fd_, &ev, 1, nullptr, 0, nullptr) == 0)
       << ": Failed to arm the timer knote";
   timer_armed_ = true;
