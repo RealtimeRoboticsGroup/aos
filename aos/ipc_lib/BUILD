@@ -658,6 +658,7 @@ cc_test(
     srcs = ["memory_estimation_test.cc"],
     deps = [
         ":memory_estimation",
+        "//aos:sanitizers",
         "//aos/testing:googletest",
         "@aos//aos:json_to_flatbuffer",
         "@com_google_googletest//:gtest",

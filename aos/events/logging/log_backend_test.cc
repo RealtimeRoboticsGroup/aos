@@ -427,9 +427,9 @@ TEST(LogBackendTest, CloseReportsBufferedOutOfSpace) {
 }
 
 TEST(LogBackendTest, CreateFileMassiveWrite) {
-#ifdef AOS_SANITIZE_MEMORY
-  GTEST_SKIP() << "Skipping CreateFileMassiveWrite under MSan due to high "
-                  "memory usage (>3GB + MSan overhead)";
+#if defined(AOS_SANITIZE_MEMORY) || defined(AOS_SANITIZE_THREAD)
+  GTEST_SKIP() << "Skipping CreateFileMassiveWrite under MSan and TSan due to "
+                  "high memory usage (>3GB + sanitizer shadow memory)";
 #endif
   const std::string logevent = TestTmpDir() + "/logevent/";
   auto backend = MakeRenamableFileBackend(logevent, false);

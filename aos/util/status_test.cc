@@ -53,8 +53,9 @@ TEST_F(ErrorTest, ExitCode) {
             ResultExitCode(MakeError("")));
 }
 
-// Malloc hooks don't work with asan/msan.
-#if !defined(AOS_SANITIZE_MEMORY) && !defined(AOS_SANITIZE_ADDRESS)
+// Malloc hooks don't work with asan, msan, or tsan.
+#if !defined(AOS_SANITIZE_MEMORY) && !defined(AOS_SANITIZE_ADDRESS) && \
+    !defined(AOS_SANITIZE_THREAD)
 // Tests that we do indeed malloc (and catch it) on an extra-long error message
 // (this is mostly intended to ensure that the test setup is working correctly).
 TEST(ErrorDeathTest, BlowsUpOnRealtimeAllocation) {
