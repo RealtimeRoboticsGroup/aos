@@ -50,8 +50,8 @@ IntrinsicsCalibration::IntrinsicsCalibration(
       camera_channel_(camera_channel),
       camera_id_(camera_id),
       reprojection_error_(std::numeric_limits<double>::max()),
-      prev_H_board_camera_(Eigen::Affine3d()),
-      last_frame_H_board_camera_(Eigen::Affine3d()),
+      prev_H_board_camera_(Eigen::Affine3d::Identity()),
+      last_frame_H_board_camera_(Eigen::Affine3d::Identity()),
       base_intrinsics_(
           aos::JsonFileToFlatbuffer<calibration::CameraCalibration>(
               base_intrinsics_file)),
