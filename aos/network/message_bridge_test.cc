@@ -515,7 +515,7 @@ TEST_P(MessageBridgeParameterizedTest, ClientRestart) {
   // And build the app for testing.
   pi1_.MakeTest("test1", &pi2_);
   aos::Fetcher<ServerStatistics> pi1_server_statistics_fetcher =
-      pi1_.test_event_loop_->MakeFetcher<ServerStatistics>("/pi1/aos");
+      pi1_.test_fetcher_event_loop_->MakeFetcher<ServerStatistics>("/pi1/aos");
 
   // Now do it for "raspberrypi2", the client.
   pi2_.OnPi();
@@ -524,7 +524,7 @@ TEST_P(MessageBridgeParameterizedTest, ClientRestart) {
   // And build the app for testing.
   pi2_.MakeTest("test2", &pi1_);
   aos::Fetcher<ServerStatistics> pi2_server_statistics_fetcher =
-      pi2_.test_event_loop_->MakeFetcher<ServerStatistics>("/pi2/aos");
+      pi2_.test_fetcher_event_loop_->MakeFetcher<ServerStatistics>("/pi2/aos");
 
   // Wait until we are connected, then send.
 
@@ -669,9 +669,9 @@ TEST_P(MessageBridgeParameterizedTest, ServerRestart) {
   // And build the app for testing.
   pi1_.MakeTest("test1", &pi2_);
   aos::Fetcher<ServerStatistics> pi1_server_statistics_fetcher =
-      pi1_.test_event_loop_->MakeFetcher<ServerStatistics>("/pi1/aos");
+      pi1_.test_fetcher_event_loop_->MakeFetcher<ServerStatistics>("/pi1/aos");
   aos::Fetcher<ClientStatistics> pi1_client_statistics_fetcher =
-      pi1_.test_event_loop_->MakeFetcher<ClientStatistics>("/pi1/aos");
+      pi1_.test_fetcher_event_loop_->MakeFetcher<ClientStatistics>("/pi1/aos");
 
   // Now do it for "raspberrypi2", the client.
   pi2_.OnPi();
@@ -680,7 +680,7 @@ TEST_P(MessageBridgeParameterizedTest, ServerRestart) {
   // And build the app for testing.
   pi2_.MakeTest("test1", &pi1_);
   aos::Fetcher<ServerStatistics> pi2_server_statistics_fetcher =
-      pi2_.test_event_loop_->MakeFetcher<ServerStatistics>("/pi2/aos");
+      pi2_.test_fetcher_event_loop_->MakeFetcher<ServerStatistics>("/pi2/aos");
 
   // Start everything up.  Pong is the only thing we don't know how to wait on,
   // so start it first.
@@ -1251,9 +1251,9 @@ TEST_P(MessageBridgeParameterizedTest, MismatchedSha256) {
   // And build the app for testing.
   pi1_.MakeTest("test1", &pi2_);
   aos::Fetcher<ServerStatistics> pi1_server_statistics_fetcher =
-      pi1_.test_event_loop_->MakeFetcher<ServerStatistics>("/pi1/aos");
+      pi1_.test_fetcher_event_loop_->MakeFetcher<ServerStatistics>("/pi1/aos");
   aos::Fetcher<ClientStatistics> pi1_client_statistics_fetcher =
-      pi1_.test_event_loop_->MakeFetcher<ClientStatistics>("/pi1/aos");
+      pi1_.test_fetcher_event_loop_->MakeFetcher<ClientStatistics>("/pi1/aos");
 
   // Now do it for "raspberrypi2", the client.
   pi2_.OnPi();
@@ -1262,9 +1262,9 @@ TEST_P(MessageBridgeParameterizedTest, MismatchedSha256) {
   // And build the app for testing.
   pi2_.MakeTest("test1", &pi1_);
   aos::Fetcher<ServerStatistics> pi2_server_statistics_fetcher =
-      pi2_.test_event_loop_->MakeFetcher<ServerStatistics>("/pi2/aos");
+      pi2_.test_fetcher_event_loop_->MakeFetcher<ServerStatistics>("/pi2/aos");
   aos::Fetcher<ClientStatistics> pi2_client_statistics_fetcher =
-      pi2_.test_event_loop_->MakeFetcher<ClientStatistics>("/pi2/aos");
+      pi2_.test_fetcher_event_loop_->MakeFetcher<ClientStatistics>("/pi2/aos");
 
   // Wait until we are connected, then send.
 
@@ -1354,9 +1354,9 @@ TEST_P(MessageBridgeParameterizedTest, TooBigConnect) {
   // And build the app for testing.
   pi1_.MakeTest("test1", &pi2_);
   aos::Fetcher<ServerStatistics> pi1_server_statistics_fetcher =
-      pi1_.test_event_loop_->MakeFetcher<ServerStatistics>("/pi1/aos");
+      pi1_.test_fetcher_event_loop_->MakeFetcher<ServerStatistics>("/pi1/aos");
   aos::Fetcher<ClientStatistics> pi1_client_statistics_fetcher =
-      pi1_.test_event_loop_->MakeFetcher<ClientStatistics>("/pi1/aos");
+      pi1_.test_fetcher_event_loop_->MakeFetcher<ClientStatistics>("/pi1/aos");
 
   // Now do it for "raspberrypi2", the client.
   pi2_.OnPi();
@@ -1365,9 +1365,9 @@ TEST_P(MessageBridgeParameterizedTest, TooBigConnect) {
   // And build the app for testing.
   pi2_.MakeTest("test1", &pi1_);
   aos::Fetcher<ServerStatistics> pi2_server_statistics_fetcher =
-      pi2_.test_event_loop_->MakeFetcher<ServerStatistics>("/pi2/aos");
+      pi2_.test_fetcher_event_loop_->MakeFetcher<ServerStatistics>("/pi2/aos");
   aos::Fetcher<ClientStatistics> pi2_client_statistics_fetcher =
-      pi2_.test_event_loop_->MakeFetcher<ClientStatistics>("/pi2/aos");
+      pi2_.test_fetcher_event_loop_->MakeFetcher<ClientStatistics>("/pi2/aos");
 
   // Wait until we are connected, then send.
 

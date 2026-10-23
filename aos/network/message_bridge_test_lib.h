@@ -95,6 +95,10 @@ class PiNode {
 
   std::unique_ptr<aos::ShmEventLoop> test_event_loop_;
   std::unique_ptr<ThreadedEventLoopRunner> test_thread_;
+  // For the test body's fetchers.  test_event_loop_ runs on test_thread_, and
+  // an event loop belongs to one thread, so this one is never run and is only
+  // used from the test's thread.
+  std::unique_ptr<aos::ShmEventLoop> test_fetcher_event_loop_;
 };
 
 class MessageBridgeParameterizedTest
