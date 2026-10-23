@@ -1553,10 +1553,13 @@ struct io_uring_sqe *IoUringImpl::GetSqeForRingReconstruction() {
     // The submission queue is full.  Flush what is queued to the kernel,
     // which frees the entries, then get one from the now-drained queue.
     // A plain io_uring_submit() (not MaybeSubmit()) is correct here: this is
-    // reachable only from within ReArmPersistentRegistrations(), whose
-    // callers (HandleFork() and DowngradeFromSingleIssuer()) both enable
-    // the fresh ring before doing any of the reconstruction work that
-    // calls this -- see there.
+    // reachable only from within ReArmPersistentRegistrations(), and its
+    // callers enable the fresh ring before the reconstruction work that calls
+    // this, with one exception.  HandleFork() leaves a ring the parent never
+    // drove disabled, and a submit there would fail with -EBADFD.  It never
+    // gets here, though: nothing flushed the parent's undriven ring either, so
+    // ArmSqe() already held it to sq_capacity_ staged entries, and the child
+    // re-stages no more than that.
     int ret = io_uring_submit(&ring);
     ABSL_PCHECK(ret >= 0) << "io_uring_submit failed: " << aos_strerror(-ret);
     sqe = io_uring_get_sqe(&ring);
@@ -1752,11 +1755,11 @@ void IoUringImpl::HandleFork() {
   }
 
   // A forked child has exactly one surviving thread -- this one, running
-  // via CheckForFork() -- so treating it as both the construction and the
-  // bound thread is always correct, and gives this ring a fresh chance at
-  // the SINGLE_ISSUER tier even if the pre-fork ring had been downgraded
-  // away from it.  The atfork child handler cleared the tid cache, so
-  // CachedThreadId() reads the child's fresh tid.
+  // via CheckForFork() -- so treating it as the construction thread is
+  // always correct, and gives this ring a fresh chance at the SINGLE_ISSUER
+  // tier even if the pre-fork ring had been downgraded away from it.  The
+  // atfork child handler cleared the tid cache, so CachedThreadId() reads the
+  // child's fresh tid.
   construction_tid_ = CachedThreadId();
   uint32_t depth = ::absl::GetFlag(FLAGS_aio_queue_depth);
   InitSingleIssuerRing(&ring, depth);
@@ -1764,12 +1767,17 @@ void IoUringImpl::HandleFork() {
   single_issuer_ = true;
   // Not enabled until EnsureBound() -- see IORING_SETUP_R_DISABLED above.
   ring_enabled_ = false;
-  // Rebind now rather than at the next Poll(): a stale submitter_tid_ names
-  // a thread that no longer exists in this process, which would make
-  // EnsureBound() below a no-op -- and ReArmPersistentRegistrations()
-  // submits, so it needs the ring already enabled.
+  // A stale submitter_tid_ names a thread that no longer exists in this
+  // process, so clear it either way.  A ring the parent had driven is bound
+  // to this thread now, so ReArmPersistentRegistrations() can submit.  One the
+  // parent never drove is still in pre-Run() setup, which any thread may do,
+  // so it stays unbound: the re-arms below stage their entries, and the first
+  // Poll() binds it, downgrading if that Poll() is on another thread.
+  const bool parent_bound = submitter_tid_.has_value();
   submitter_tid_ = std::nullopt;
-  EnsureBound();
+  if (parent_bound) {
+    EnsureBound();
+  }
 
   // The embedded epoll instance is a plain fd, so it has none of the ring's
   // mmap problem -- but sharing it with the parent still isn't safe: both

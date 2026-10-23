@@ -6791,6 +6791,40 @@ TEST_P(AioTest, ForkQuitBeforeFirstPollDeathTest) {
       },
       ::testing::ExitedWithCode(42), "");
 }
+
+// A forked child that sets up a loop nobody has driven on one thread, then
+// drives it from a new one.  Before the first Poll(), any thread may set an
+// Aio up, and forking does not change that.  io_uring's rebuild used to bind
+// the ring to whichever thread noticed the fork, so the worker's first Poll()
+// died in the submitter-thread check.
+TEST_P(AioTest, ForkSetupThenPollFromNewThreadDeathTest) {
+  if (!Backend().survives_fork)
+    GTEST_SKIP()
+        << "a borrowed loop is not this backend's to rebuild in a forked child";
+  TestAio aio;
+
+  EXPECT_EXIT(
+      {
+        alarm(30);
+        // On io_uring any entry point notices the fork, and this is the one
+        // that has nothing else to say.  Epoll and kqueue don't check here,
+        // so the worker notices it instead, and the test holds either way.
+        aio.BeforeWait([]() {});
+        bool fired = false;
+        std::thread worker([&aio, &fired]() {
+          Aio::Timer timer(aio.get());
+          timer.Schedule(
+              aos::monotonic_clock::now(),
+              [](Completion, void *ctx) { *static_cast<bool *>(ctx) = true; },
+              &fired);
+          while (!fired && aio.Poll(true)) {
+          }
+        });
+        worker.join();
+        exit(fired ? 42 : 1);
+      },
+      ::testing::ExitedWithCode(42), "");
+}
 #endif  // !_WIN32
 
 TEST_P(AioTest, ShouldRunTest) {
