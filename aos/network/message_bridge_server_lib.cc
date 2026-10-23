@@ -197,7 +197,8 @@ bool ChannelState::TrySendData(const Context &context) {
           "Bridge skipping channel=%d peer=%d queue=%" PRIu32 " event=%" PRId64
           " size=%u",
           channel_index_, peer.node_index, context.queue_index,
-          context.monotonic_event_time.time_since_epoch().count(),
+          static_cast<int64_t>(
+              context.monotonic_event_time.time_since_epoch().count()),
           fbb.GetSize());
       ABSL_VLOG(1) << "Skipping send for "
                    << configuration::StrippedChannelToString(channel_) << " to "
@@ -225,7 +226,8 @@ bool ChannelState::TrySendData(const Context &context) {
           "Bridge sent channel=%d peer=%d queue=%" PRIu32 " event=%" PRId64
           " size=%u ttl_ms=%d",
           channel_index_, peer.node_index, context.queue_index,
-          context.monotonic_event_time.time_since_epoch().count(),
+          static_cast<int64_t>(
+              context.monotonic_event_time.time_since_epoch().count()),
           fbb.GetSize(), time_to_live_ms);
       peer.server_status->AddSentPacket(peer.node_index, channel_);
       if (peer.logged_remotely) {
@@ -237,7 +239,8 @@ bool ChannelState::TrySendData(const Context &context) {
           "Bridge disconnected channel=%d peer=%d queue=%" PRIu32
           " event=%" PRId64 " size=%u ttl_ms=%d",
           channel_index_, peer.node_index, context.queue_index,
-          context.monotonic_event_time.time_since_epoch().count(),
+          static_cast<int64_t>(
+              context.monotonic_event_time.time_since_epoch().count()),
           fbb.GetSize(), time_to_live_ms);
       if (time_to_live_ms == 0) {
         // Reliable connection that failed to send; set a retry timer.
