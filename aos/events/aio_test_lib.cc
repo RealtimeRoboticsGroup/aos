@@ -6984,7 +6984,7 @@ TEST_P(AioTest, WakeupSurvivesAChildConsumingItTest) {
 //
 // The kqueue backend has two: the ordinary EVFILT_SIGNAL dispatch, and a
 // replay of the wakeup a fork may have swallowed, queued when the child
-// rebuilds its kernel state (see signal_wakeup_pending_after_fork_).
+// rebuilds its kernel state (see signal_wakeup_pending_ in aio_darwin.cc).
 // Unregister defers clearing the std::function until the callback returns,
 // and it can only do that if the delivery path told it a callback was
 // running.  A path that forgets destroys the std::function while it is
@@ -7024,6 +7024,58 @@ TEST_P(AioTest, UnregisterReceiverFromPostForkWakeupTest) {
       ::testing::ExitedWithCode(42), "");
 
   aio.UnregisterThreadSignalReceiver(&sfd);
+}
+// A receiver callback that unregisters its own receiver, forks, and registers
+// a successor in the child before returning.  The child's registration is
+// what notices the fork, so the rebuild runs while the old callback is still
+// executing.  io_uring recycled that executing state in the rebuild, the
+// successor took it over, and the deferred clear of the old callback then
+// cleared the successor's, so its first wakeup threw std::bad_function_call.
+TEST_P(AioTest, ForkFromReceiverCallbackRegistersSuccessorDeathTest) {
+  if (!Backend().survives_fork)
+    GTEST_SKIP()
+        << "a borrowed loop is not this backend's to rebuild in a forked child";
+  EXPECT_EXIT(
+      {
+        alarm(30);
+        TestAio aio;
+        ipc_lib::ThreadSignalReceiver first;
+        std::optional<ipc_lib::ThreadSignalReceiver> successor;
+        bool fired = false;
+        bool in_child = false;
+        pid_t child = -1;
+        int successor_fired = 0;
+        aio.RegisterThreadSignalReceiver(&first, [&]() {
+          fired = true;
+          aio.UnregisterThreadSignalReceiver(&first);
+          child = fork();
+          ABSL_PCHECK(child >= 0);
+          if (child == 0) {
+            // alarm() isn't inherited across fork().  The child does the real
+            // waiting, and if it hung it would hold gtest's death-test pipe
+            // open past the parent's alarm.
+            alarm(30);
+            in_child = true;
+            // The child's own receiver, built after the fork.
+            successor.emplace();
+            aio.RegisterThreadSignalReceiver(&*successor,
+                                             [&]() { ++successor_fired; });
+          }
+        });
+        SignalSelf();
+        while (!fired && aio.Poll(true)) {
+        }
+        if (in_child) {
+          SignalSelf();
+          while (successor_fired == 0 && aio.Poll(true)) {
+          }
+          _exit(successor_fired == 1 ? 42 : 1);
+        }
+        int status = 0;
+        ABSL_PCHECK(waitpid(child, &status, 0) == child);
+        exit(WIFEXITED(status) ? WEXITSTATUS(status) : 2);
+      },
+      ::testing::ExitedWithCode(42), "");
 }
 #endif  // !defined(_WIN32)
 

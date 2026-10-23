@@ -1896,10 +1896,24 @@ void IoUringImpl::ReArmPersistentRegistrations() {
   // for them again, so recycle them all now.  So did every in-flight op
   // and cancel ack -- reset the counters to match; the re-arms below
   // recount through CountArmedOp().
+  //
+  // Except a receiver whose callback is still running: a callback that
+  // unregisters its receiver and then forks gets here from the child's next
+  // call.  Its state is still executing, so recycling it would hand it to the
+  // next registration, which overwrites the running std::function and then
+  // loses its own callback to the deferred clear.  Its poll died with the
+  // ring too, so marking it done lets RecycleDrainedOrphans() take it once the
+  // dispatch has unwound.
   orphaned_timers_.MoveMatchingTo(&free_timers_,
                                   [](IoUringTimerState *) { return true; });
   orphaned_receivers_.MoveMatchingTo(
-      &free_receivers_, [](ThreadSignalReceiverState *) { return true; });
+      &free_receivers_, [this](ThreadSignalReceiverState *state) {
+        if (state == deferred_receiver_callback_clear_) {
+          state->request.done = true;
+          return false;
+        }
+        return true;
+      });
   cancel_acks_outstanding_ = 0;
   armed_ops_ = 0;
 

@@ -237,7 +237,10 @@ class KqueueImpl : public internal::ReadinessBackend {
   // The one ThreadSignalReceiver this loop may have -- aio.h permits exactly
   // one at a time, and it is always watching kWakeupSignal.
   ipc_lib::ThreadSignalReceiver *signal_receiver_ = nullptr;
-  std::function<void()> signal_callback_ = nullptr;
+  // On the heap so that retiring it while it runs moves only the pointer.
+  // Moving a std::function can move its callable, which would pull the
+  // captures out from under the frame that is using them.
+  std::unique_ptr<std::function<void()>> signal_callback_;
   // A wakeup that has been observed but not yet handed to a callback --
   // because none was registered when it arrived, or because a fork lost it.
   // Held until one is, which is what makes a successor receiver own the
@@ -262,35 +265,28 @@ class KqueueImpl : public internal::ReadinessBackend {
   // across an unregister, because deleting it destroys the pending count with
   // it and that count is what a successor receiver is owed.
   bool signal_knote_armed_ = false;
-  // True while the callback is on the stack.  Unregistering from inside it
-  // must not clear the std::function that is executing; Poll() finishes the
-  // job once the frame has unwound.
-  bool signal_in_callback_ = false;
-  bool signal_clear_pending_ = false;
-  // Runs the receiver's callback with the reentrancy guard that
-  // UnregisterThreadSignalReceiver()'s deferred path depends on.  Both
-  // delivery paths go through here: a second copy of this that forgets to set
-  // signal_in_callback_ lets an unregister from inside the callback destroy
-  // the std::function that is executing, which is a use-after-free on its
-  // captures rather than anything the CHECKs would catch.
+  // The callback on the stack, or nullptr.  Unregistering it from inside
+  // itself must not destroy it, so the unregister parks it in
+  // retired_signal_callback_ and DispatchSignalCallback() destroys it once the
+  // frame has unwound.  The registration itself is gone at once, so a
+  // successor can register from inside the same callback, as on the other
+  // backends.
+  std::function<void()> *running_signal_callback_ = nullptr;
+  std::unique_ptr<std::function<void()>> retired_signal_callback_;
+  // Runs the receiver's callback with the guard that
+  // UnregisterThreadSignalReceiver() depends on.  Both delivery paths go
+  // through here: a second copy of this that forgets running_signal_callback_
+  // lets an unregister from inside the callback destroy the std::function
+  // that is executing, which is a use-after-free on its captures rather than
+  // anything the CHECKs would catch.
   void DispatchSignalCallback() {
     if (!signal_callback_) {
       return;
     }
-    signal_in_callback_ = true;
-    signal_callback_();
-    signal_in_callback_ = false;
-    if (signal_clear_pending_) {
-      ClearSignalRegistration();
-    }
-  }
-  void ClearSignalRegistration() {
-    signal_receiver_ = nullptr;
-    signal_callback_ = nullptr;
-    // signal_wakeup_pending_ is deliberately not cleared: an undelivered
-    // wakeup outlives the receiver that failed to consume it.
-    signal_in_callback_ = false;
-    signal_clear_pending_ = false;
+    running_signal_callback_ = signal_callback_.get();
+    (*running_signal_callback_)();
+    running_signal_callback_ = nullptr;
+    retired_signal_callback_.reset();
   }
 
   void InsertActiveTimer(KqueueTimerState *state);
@@ -396,9 +392,7 @@ KqueueImpl::~KqueueImpl() {
   // is what makes TimerOutlivesAioDeathTest agree across backends.
   ABSL_CHECK_EQ(live_timers_, 0)
       << ": An Aio::Timer must be destroyed before its Aio";
-  // A receiver left behind by an unregister that happened inside its own
-  // callback is already retired -- Poll() just never ran again to clear it.
-  ABSL_CHECK(signal_receiver_ == nullptr || signal_clear_pending_)
+  ABSL_CHECK(signal_receiver_ == nullptr)
       << ": The ThreadSignalReceiver must be unregistered before destroying "
          "the Aio";
   // Only the internal wakeup read and async-only registrations may remain:
@@ -767,7 +761,8 @@ void KqueueImpl::RegisterThreadSignalReceiver(
   receiver->BindToCurrentThread();
 
   signal_receiver_ = receiver;
-  signal_callback_ = std::move(callback);
+  signal_callback_ =
+      std::make_unique<std::function<void()>>(std::move(callback));
 
   if (!signal_knote_armed_) {
     struct kevent ev;
@@ -792,19 +787,16 @@ void KqueueImpl::UnregisterThreadSignalReceiver(
   // parks in signal_wakeup_pending_ rather than being dropped, and the knote
   // dies with the kqueue in ~KqueueImpl().
 
-  if (signal_in_callback_) {
-    // Called from inside this receiver's own callback.  Clearing the
+  if (signal_callback_.get() == running_signal_callback_) {
+    // Called from inside this receiver's own callback.  Destroying the
     // std::function that is executing would free it out from under itself,
-    // so leave it to Poll().
-    //
-    // receiver stays set deliberately, so a Register() before Poll() gets
-    // there -- i.e. from inside this same callback -- fails the duplicate
-    // check rather than overwriting the std::function still running.  The
-    // destructor tolerates the leftover by testing clear_pending.
-    signal_clear_pending_ = true;
-    return;
+    // so it waits in retired_signal_callback_ until it returns.
+    retired_signal_callback_ = std::move(signal_callback_);
   }
-  ClearSignalRegistration();
+  signal_receiver_ = nullptr;
+  signal_callback_.reset();
+  // signal_wakeup_pending_ is deliberately not cleared: an undelivered wakeup
+  // outlives the receiver that failed to consume it.
 }
 
 void KqueueImpl::ConsumeThreadSignalReceiver(
