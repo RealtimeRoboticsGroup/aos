@@ -6768,6 +6768,31 @@ TEST_P(AioTest, ForkOperationBeforePollDeathTest) {
 }
 #endif  // !_WIN32
 
+// A forked child that calls Quit() and then Poll(true) before anything else.
+// Quit() is async-signal-safe, so it cannot rebuild the loop, and it wakes
+// the wakeup descriptor the child inherited.  The Poll() then rebuilds, and
+// the new descriptor never heard about the Quit(), so the Poll() blocked
+// forever.  It has to return, as it does without the fork.
+//
+// POSIX-only, like ForkOperationBeforePollDeathTest.
+#ifndef _WIN32
+TEST_P(AioTest, ForkQuitBeforeFirstPollDeathTest) {
+  if (!Backend().survives_fork)
+    GTEST_SKIP()
+        << "a borrowed loop is not this backend's to rebuild in a forked child";
+  TestAio aio;
+
+  EXPECT_EXIT(
+      {
+        alarm(30);
+        aio.Quit();
+        aio.Poll(true);
+        exit(42);
+      },
+      ::testing::ExitedWithCode(42), "");
+}
+#endif  // !_WIN32
+
 TEST_P(AioTest, ShouldRunTest) {
   TestAio aio;
   // True before any Run() or Quit(), as EPoll's run_{true} was.

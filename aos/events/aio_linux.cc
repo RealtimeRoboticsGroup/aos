@@ -1793,7 +1793,18 @@ void IoUringImpl::HandleFork() {
   // Quit() aimed at the parent can leave it blocked in Poll() forever.  The
   // ring is brand new, so nothing needs unregistering first -- the re-armed
   // read below simply names the new descriptor.
+  //
+  // A Quit() the child made before this rebuild woke the old descriptor, and
+  // Quit() latches, so a second one would not wake the new descriptor either.
+  // Wake it here, after the swap.  A Quit() from a signal handler before the
+  // swap sets the latch, and one after it writes the new descriptor.  One
+  // inside Recreate(), between closing the old eventfd and making the new one,
+  // writes a closed descriptor and dies.  Nothing in production forks, so that
+  // window stays open.
   event_fd.Recreate();
+  if (quit_requested) {
+    Wakeup();
+  }
 
   // Every timerfd was inherited from the parent, and a timerfd is an
   // ordinary descriptor: parent and child now name the *same* kernel timer.

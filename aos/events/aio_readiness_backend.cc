@@ -82,6 +82,17 @@ void ReadinessBackend::HandleForkInternal() {
   RecreateKernelState();
   ReArmAllRegistrations();
   AfterForkReArm();
+
+  // A Quit() the child made before this rebuild woke the old wakeup
+  // descriptor, which the rebuild just replaced (RecreateKernelState() on
+  // kqueue, AfterForkReArm() on epoll), and Quit() latches, so a second one
+  // would not wake the new one either.  Checked after the swap: a Quit() from
+  // a signal handler before it sets the latch, and one after it writes the new
+  // descriptor.  One inside the swap writes a closed descriptor and dies.
+  // Nothing in production forks, so that window stays open.
+  if (quit_requested_) {
+    WakeLoop();
+  }
 }
 
 void ReadinessBackend::Quit() {
