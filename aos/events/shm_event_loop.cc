@@ -1046,10 +1046,12 @@ class ScopedSignalMask {
 // loops.
 class SignalHandler {
  public:
-  // Gets the singleton.
+  // Gets the singleton.  It is never destroyed, because an event loop on
+  // another thread can still be registered, or a signal can still arrive, while
+  // the process exits.
   static SignalHandler *global() {
-    static SignalHandler loop;
-    return &loop;
+    static SignalHandler *const loop = new SignalHandler();
+    return loop;
   }
 
   // Handles the signal with the singleton.
