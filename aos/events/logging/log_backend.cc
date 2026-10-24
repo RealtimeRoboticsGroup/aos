@@ -161,10 +161,13 @@ void BufferedFileHandler::StartWriterThread() {
   }
   closing_ = false;
   ABSL_CHECK(!file_writer_.has_value());
-  file_writer_.emplace([this]() {
-    SetCurrentThreadName(
-        ("writer_" + std::filesystem::path(filename()).filename().string())
-            .substr(0, 16));
+  // Name the thread here, on the caller's thread, because the writer thread
+  // must not read filename_ while a rename updates it.
+  std::string thread_name =
+      ("writer_" + std::filesystem::path(filename()).filename().string())
+          .substr(0, 16);
+  file_writer_.emplace([this, thread_name = std::move(thread_name)]() {
+    SetCurrentThreadName(thread_name);
     std::unique_lock lock(buffer_index_mutex_);
     while (!closing_ || (!buffer_empty_ && !ran_out_of_space_in_thread_)) {
       if (buffer_empty_ || ran_out_of_space_in_thread_) {
