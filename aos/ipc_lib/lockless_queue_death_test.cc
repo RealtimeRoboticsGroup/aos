@@ -116,7 +116,8 @@ TEST(LocklessQueueTest, Death) {
         }
 
         // Building and destroying a sender will clean up the queue.
-        LocklessQueueSender::Make(queue, kChannelStorageDuration).value();
+        ABSL_CHECK(LocklessQueueSender::Make(queue, kChannelStorageDuration)
+                       .has_value());
 
         if (print) {
           ABSL_LOG(INFO) << "Cleaned up version:";
@@ -147,7 +148,8 @@ TEST(LocklessQueueTest, Death) {
           {
             // Make a second sender to confirm that the slot was freed.
             // If the sender doesn't get cleaned up, this will fail.
-            LocklessQueueSender::Make(queue, kChannelStorageDuration).value();
+            ABSL_CHECK(LocklessQueueSender::Make(queue, kChannelStorageDuration)
+                           .has_value());
           }
 
           // Send a message to make sure that the queue still works.

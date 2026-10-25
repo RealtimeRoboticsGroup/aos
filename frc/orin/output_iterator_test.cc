@@ -1,3 +1,4 @@
+#include <array>
 #include <random>
 
 #include "gtest/gtest.h"
@@ -19,9 +20,13 @@ TEST(TransformOutputIteratorTest, IntArr) {
   std::mt19937 generator(aos::testing::RandomSeed());
   std::uniform_int_distribution<uint32_t> random_uint32(0, UINT32_MAX);
 
-  uint32_t *nums_in = (uint32_t *)malloc(UINT32_WIDTH * 20);
-  uint64_t *nums_out = (uint64_t *)malloc(UINT64_WIDTH * 20);
-  uint64_t *expected_out = (uint64_t *)malloc(UINT64_WIDTH * 20);
+  std::array<uint32_t, 20> nums_in_storage;
+  std::array<uint64_t, 20> nums_out_storage;
+  std::array<uint64_t, 20> expected_out_storage;
+  // Moved around below to test against, and back to the start by the end.
+  uint32_t *nums_in = nums_in_storage.data();
+  uint64_t *nums_out = nums_out_storage.data();
+  uint64_t *expected_out = expected_out_storage.data();
 
   for (size_t i = 0; i < 20; i++) {
     nums_in[i] = random_uint32(generator);

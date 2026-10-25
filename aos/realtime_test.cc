@@ -108,8 +108,9 @@ TEST(RealtimeTest, GetSetSchedulingPolicy) {
   UnsetCurrentThreadRealtimePriority();
 }
 
-// Malloc hooks don't work with asan/msan.
-#if !defined(AOS_SANITIZE_MEMORY) && !defined(AOS_SANITIZE_ADDRESS)
+// Malloc hooks don't work with asan, msan, or tsan.
+#if !defined(AOS_SANITIZE_MEMORY) && !defined(AOS_SANITIZE_ADDRESS) && \
+    !defined(AOS_SANITIZE_THREAD)
 
 // Tests that ABSL_CHECK statements give real error messages rather than die on
 // malloc.
@@ -265,7 +266,8 @@ TEST(RealtimeDeathTest, RawFatal) {
       "Cute message here");
 }
 
-#endif  // !defined(AOS_SANITIZE_MEMORY) && !defined(AOS_SANITIZE_ADDRESS)
+#endif  // !defined(AOS_SANITIZE_MEMORY) && !defined(AOS_SANITIZE_ADDRESS) &&
+        // !defined(AOS_SANITIZE_THREAD)
 
 #if !defined(__APPLE__) && !defined(_WIN32)
 // Tests that we see which CPUs we tried to set when it fails. This can be
@@ -353,7 +355,8 @@ TEST(CpuSetTest, MakeCpusetFromCpus) {
 GTEST_API_ int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
 
-#if !defined(AOS_SANITIZE_MEMORY) && !defined(AOS_SANITIZE_ADDRESS)
+#if !defined(AOS_SANITIZE_MEMORY) && !defined(AOS_SANITIZE_ADDRESS) && \
+    !defined(AOS_SANITIZE_THREAD)
   absl::SetFlag(&FLAGS_die_on_malloc, true);
 #endif
 

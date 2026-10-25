@@ -1,0 +1,16 @@
+diff --git a/snappy.cc b/snappy.cc
+index 8dc3713..2e71397 100644
+--- a/snappy.cc
++++ b/snappy.cc
+@@ -1501,7 +1501,10 @@ class SnappyDecompressor {
+   const char* ip_limit_min_maxtaglen_;
+   uint64_t peeked_;                  // Bytes peeked from reader (need to skip)
+   bool eof_;                         // Hit end of input without an error?
+-  char scratch_[kMaximumTagLength];  // See RefillTag().
++  // Zeroed, because RefillTag() copies a short final tag into it and the
++  // decoder then loads all kMaximumTagLength bytes, masking off the ones past
++  // the tag.  MemorySanitizer reports the load of the uninitialized tail.
++  char scratch_[kMaximumTagLength] = {};  // See RefillTag().
+ 
+   // Ensure that all of the tag metadata for the next tag is available
+   // in [ip_..ip_limit_-1].  Also ensures that [ip,ip+4] is readable even

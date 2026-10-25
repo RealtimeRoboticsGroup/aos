@@ -30,8 +30,9 @@ TEST(SizedArrayTest, NoUnnecessaryMalloc) {
     // And double-check that we can actually construct a new object at realtime.
     InlinedVector<int, 5> b;
   }
-// Malloc hooks don't work with asan/msan.
-#if !defined(AOS_SANITIZE_MEMORY) && !defined(AOS_SANITIZE_ADDRESS)
+// Malloc hooks don't work with asan, msan, or tsan.
+#if !defined(AOS_SANITIZE_MEMORY) && !defined(AOS_SANITIZE_ADDRESS) && \
+    !defined(AOS_SANITIZE_THREAD)
   EXPECT_DEATH(
       {
         aos::ScopedRealtime realtime;

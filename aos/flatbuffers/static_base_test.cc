@@ -336,8 +336,9 @@ TEST_F(AlignedVectorAllocatorDeathTest, ResizeBufferFailsInRealtimeMode) {
   const size_t initial_size = AlignedVectorAllocatorTest::kInitialSize;
   AllocateInitialBuffer(initial_size);
 
-// Malloc hooks don't work with asan/msan.
-#if !defined(AOS_SANITIZE_MEMORY) && !defined(AOS_SANITIZE_ADDRESS)
+// Malloc hooks don't work with asan, msan, or tsan.
+#if !defined(AOS_SANITIZE_MEMORY) && !defined(AOS_SANITIZE_ADDRESS) && \
+    !defined(AOS_SANITIZE_THREAD)
 
   {  // Verify we can enable DieOnMalloc.
     aos::ScopedRealtime realtime;
@@ -415,8 +416,9 @@ TEST_F(StaticFlatbufferDeathTest, FromFlatbufferFailsInRealtimeMode) {
   // Create a flatbuffer with a vector larger than the static_length (4).
   CreateTestTable(4);
 
-// Malloc hooks don't work with asan/msan.
-#if !defined(AOS_SANITIZE_MEMORY) && !defined(AOS_SANITIZE_ADDRESS)
+// Malloc hooks don't work with asan, msan, or tsan.
+#if !defined(AOS_SANITIZE_MEMORY) && !defined(AOS_SANITIZE_ADDRESS) && \
+    !defined(AOS_SANITIZE_THREAD)
 
   {  // Verify we can enable DieOnMalloc.
     aos::ScopedRealtime realtime;

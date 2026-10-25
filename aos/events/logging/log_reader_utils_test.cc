@@ -189,29 +189,29 @@ TEST(LogfileSorting, FindLogs) {
   std::filesystem::create_directories(log_folder);
 
   std::filesystem::create_directories(log_folder + "/log1/a");
-  std::ofstream(log_folder + "/log1/a/part1.bfbs").good();
-  std::ofstream(log_folder + "/log1/a/part2.bfbs").good();
-  std::ofstream(log_folder + "/log1/a/randomfile").good();
+  ASSERT_TRUE(std::ofstream(log_folder + "/log1/a/part1.bfbs").good());
+  ASSERT_TRUE(std::ofstream(log_folder + "/log1/a/part2.bfbs").good());
+  ASSERT_TRUE(std::ofstream(log_folder + "/log1/a/randomfile").good());
   std::filesystem::create_directories(log_folder + "/log1/b");
-  std::ofstream(log_folder + "/log1/b/part1.bfbs").good();
-  std::ofstream(log_folder + "/log1/b/randomfile").good();
+  ASSERT_TRUE(std::ofstream(log_folder + "/log1/b/part1.bfbs").good());
+  ASSERT_TRUE(std::ofstream(log_folder + "/log1/b/randomfile").good());
   std::filesystem::create_directories(log_folder + "/log1/c");
-  std::ofstream(log_folder + "/log1/c/part1.bfbs").good();
-  std::ofstream(log_folder + "/log1/c/part2.bfbs").good();
-  std::ofstream(log_folder + "/log1/c/part3.bfbs").good();
+  ASSERT_TRUE(std::ofstream(log_folder + "/log1/c/part1.bfbs").good());
+  ASSERT_TRUE(std::ofstream(log_folder + "/log1/c/part2.bfbs").good());
+  ASSERT_TRUE(std::ofstream(log_folder + "/log1/c/part3.bfbs").good());
 
   std::filesystem::create_directories(log_folder + "/log2/a");
-  std::ofstream(log_folder + "/log2/a/part1.bfbs").good();
-  std::ofstream(log_folder + "/log2/a/part2.bfbs").good();
-  std::ofstream(log_folder + "/log2/a/part3.bfbs").good();
-  std::ofstream(log_folder + "/log2/a/randomfile").good();
+  ASSERT_TRUE(std::ofstream(log_folder + "/log2/a/part1.bfbs").good());
+  ASSERT_TRUE(std::ofstream(log_folder + "/log2/a/part2.bfbs").good());
+  ASSERT_TRUE(std::ofstream(log_folder + "/log2/a/part3.bfbs").good());
+  ASSERT_TRUE(std::ofstream(log_folder + "/log2/a/randomfile").good());
 
   std::filesystem::create_directories(log_folder + "/log3/b");
-  std::ofstream(log_folder + "/log3/b/part1.bfbs").good();
+  ASSERT_TRUE(std::ofstream(log_folder + "/log3/b/part1.bfbs").good());
   std::filesystem::create_directories(log_folder + "/log3/c");
-  std::ofstream(log_folder + "/log3/c/part1.bfbs").good();
-  std::ofstream(log_folder + "/log3/c/part2.bfbs").good();
-  std::ofstream(log_folder + "/log3/c/part3.bfbs").good();
+  ASSERT_TRUE(std::ofstream(log_folder + "/log3/c/part1.bfbs").good());
+  ASSERT_TRUE(std::ofstream(log_folder + "/log3/c/part2.bfbs").good());
+  ASSERT_TRUE(std::ofstream(log_folder + "/log3/c/part3.bfbs").good());
 
   auto empty_file_with_name = [](std::string_view name) {
     return ::testing::AllOf(

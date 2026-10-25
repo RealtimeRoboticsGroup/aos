@@ -168,6 +168,8 @@ void PiNode::MakeTest(const std::string test_app_name,
   ABSL_LOG(INFO) << "Making " << node_name_ << " test";
   absl::SetFlag(&FLAGS_application_name, test_app_name);
   test_event_loop_ = std::make_unique<aos::ShmEventLoop>(&config_.message());
+  test_fetcher_event_loop_ =
+      std::make_unique<aos::ShmEventLoop>(&config_.message());
 
   std::string channel_name = "/" + node_name_ + "/aos";
   test_event_loop_->MakeWatcher(

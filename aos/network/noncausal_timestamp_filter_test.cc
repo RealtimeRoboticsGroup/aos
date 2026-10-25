@@ -965,7 +965,9 @@ TEST_F(NoncausalTimestampFilterTest, InterpolateOffsetOddDt) {
     const chrono::nanoseconds o2 = o1 + doffset;
 
     // Check around both points and the middle.
-    for (const int64_t center : {int64_t{0}, dt.count() / 2, dt.count()}) {
+    for (const int64_t center :
+         {int64_t{0}, static_cast<int64_t>(dt.count() / 2),
+          static_cast<int64_t>(dt.count())}) {
       for (int64_t time_in = center - 3; time_in <= center + 3; ++time_in) {
         for (const double ta : {0.0, 0.25, 0.5, 0.999}) {
           const monotonic_clock::time_point ta_base =

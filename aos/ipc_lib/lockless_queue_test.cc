@@ -63,7 +63,7 @@ TEST_F(LocklessQueueTest, UnregisteredWatcherWakeup) {
   LocklessQueueWakeUpper wake_upper(queue());
 
   {
-    LocklessQueueWatcher::Make(queue(), 5).value();
+    ASSERT_TRUE(LocklessQueueWatcher::Make(queue(), 5).has_value());
   }
 
   EXPECT_EQ(wake_upper.Wakeup(7), 0);

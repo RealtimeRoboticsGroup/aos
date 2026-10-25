@@ -3,6 +3,7 @@
 #include "gtest/gtest.h"
 
 #include "aos/json_to_flatbuffer.h"
+#include "aos/sanitizers.h"
 
 namespace aos::ipc_lib::testing {
 class MemoryEstimationTest : public ::testing::Test {
@@ -68,6 +69,10 @@ class MemoryEstimationTest : public ::testing::Test {
 
 // Validates that the total shared memory usage numbers are reasonable.
 TEST_F(MemoryEstimationTest, TotalMemoryUsage) {
+#if defined(AOS_SANITIZE_THREAD)
+  GTEST_SKIP() << "tsan builds put a pthread mutex in every aos_mutex, which "
+                  "changes the sizes.";
+#endif
   // Just hard-code these; we want to be able to visually check that they look
   // sane, and they can be updated when needed.
 #ifdef _WIN32
