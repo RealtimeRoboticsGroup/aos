@@ -249,9 +249,14 @@ UUID UUID::Random() {
   // thread_local to guarantee safe use of the generator itself.
   thread_local std::mt19937 gen = MakeThreadLocalGenerator();
 
-  std::uniform_int_distribution<> dis(0, 255);
+  // Take the top byte of each number rather than using a
+  // std::uniform_int_distribution.  How a distribution turns numbers into its
+  // range is up to the standard library: libstdc++ takes the top byte and
+  // libc++ the bottom one, so a seeded run would give different UUIDs on
+  // macOS than on Linux.  The top byte is what libstdc++ did, so seeded runs
+  // on Linux give the UUIDs they always have.
   for (size_t i = 0; i < kDataSize; ++i) {
-    result.data_[i] = dis(gen);
+    result.data_[i] = static_cast<uint8_t>(gen() >> 24);
   }
 
   // Mark the reserved bits in the data that this is a uuid4, a random UUID.
