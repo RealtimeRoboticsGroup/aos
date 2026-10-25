@@ -31,6 +31,11 @@ class TcpPair {
   FileDescriptor server_ = kInvalidFd;
 };
 
+// Whether the ReadSome() that just returned -1 failed because the peer reset
+// the connection: ECONNRESET, or WSAECONNRESET on Windows.  A graceful close
+// reads 0 instead.
+bool LastReadWasReset();
+
 // Two connected datagram sockets, for the tests that need message
 // boundaries.  Both ends are non-blocking.  A socketpair(2) where there is
 // one, and two loopback UDP sockets connected to each other on Windows, which

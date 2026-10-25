@@ -2202,6 +2202,66 @@ TEST_P(AioTest, WakeupDoesNotSpendPollBudget) {
   EXPECT_TRUE(fired);
 }
 
+// A callback that keeps re-arming a read on a socket with a backlog finds
+// data every time, so each read completes as soon as it is armed.  A loop
+// that always took the next completion before looking at its timers would
+// keep a due timer waiting until the backlog ran out.
+TEST_P(AioTest, SelfRearmingSocketReadDoesNotStarveTimers) {
+  Aio aio;
+  SocketPair pair;
+  constexpr int kBacklog = 2048;
+  const std::string backlog(kBacklog, 'x');
+  ASSERT_EQ(WriteSome(pair.second_fd(), backlog.data(), backlog.size()),
+            kBacklog);
+
+  struct State {
+    Aio *aio;
+    FileDescriptor fd;
+    char byte;
+    AsyncRequest req;
+    int reads = 0;
+    int reads_at_timer = -1;
+  } state{&aio, pair.first_fd(), 0, {}, 0, -1};
+  state.req.context = &state;
+  state.req.callback = [](Completion completion, void *ctx) {
+    auto *self = static_cast<State *>(ctx);
+    ASSERT_TRUE(aos::IsOk(completion.status));
+    ++self->reads;
+    // Once the timer has had its turn the test is over.  Stop re-arming, so
+    // nothing is left in flight that would have to be canceled.
+    if (self->reads_at_timer >= 0 || self->reads == kBacklog) return;
+    self->aio->AsyncRead(self->fd, std::span<char>(&self->byte, 1), &self->req);
+  };
+
+  Aio::Timer timer(&aio);
+  timer.Schedule(
+      aos::monotonic_clock::now(),
+      [](Completion completion, void *ctx) {
+        ABSL_CHECK(completion.status.has_value());
+        auto *self = static_cast<State *>(ctx);
+        self->reads_at_timer = self->reads;
+      },
+      &state);
+  // Make sure the timer is due before the reads start.
+  std::this_thread::sleep_for(std::chrono::milliseconds(5));
+
+  aio.AsyncRead(pair.first_fd(), std::span<char>(&state.byte, 1), &state.req);
+  while (state.reads_at_timer < 0 && state.reads < kBacklog && aio.Poll(true)) {
+  }
+
+  ASSERT_GE(state.reads_at_timer, 0) << "the timer never fired";
+  // A regression guard rather than a promise of aio.h's, which says only that
+  // each Poll() delivers one completion.  Every backend today lets the timer
+  // in within two reads.
+  EXPECT_LT(state.reads_at_timer, 8)
+      << "the timer waited behind the re-arming reads";
+  while (!state.req.done) {
+    aio.Poll(true);
+  }
+  while (aio.Poll(false)) {
+  }
+}
+
 // A callback that keeps re-arming a read on a regular file is always ready
 // again, so a loop that serviced its queued completions before looking at
 // the kernel starved everything else -- timers included -- until EOF.
@@ -4679,6 +4739,42 @@ TEST_P(AioTest, EPollLikeBasicWritable) {
   aio.DeleteFd(pipe.write_fd());
 }
 
+// A write watch nobody fills stays writable, so it is ready on every Poll().
+// That must not keep everything else from its turn: a backend that asks its
+// write watches before anything else would dispatch this one forever.
+TEST_P(AioTest, AlwaysWritableFdDoesNotStarveTimers) {
+  Aio aio;
+  Pipe pipe;
+  int writables = 0;
+  aio.OnWritable(pipe.write_fd(), [&writables]() { ++writables; });
+
+  bool fired = false;
+  Aio::Timer timer(&aio);
+  timer.Schedule(
+      aos::monotonic_clock::now(),
+      [](Completion completion, void *ctx) {
+        ABSL_CHECK(completion.status.has_value());
+        *static_cast<bool *>(ctx) = true;
+      },
+      &fired);
+  // Make sure the timer is due before the first Poll().
+  std::this_thread::sleep_for(std::chrono::milliseconds(5));
+
+  // Until both have had a turn, in whichever order the backend serves them.
+  int polls = 0;
+  while ((!fired || writables == 0) && polls < 100) {
+    aio.Poll(true);
+    ++polls;
+  }
+  EXPECT_TRUE(fired) << "the timer waited behind the write watch";
+  EXPECT_GT(writables, 0);
+  // A regression guard rather than a promise of aio.h's, as in
+  // SelfRearmingSocketReadDoesNotStarveTimers.
+  EXPECT_LT(polls, 8);
+
+  aio.DeleteFd(pipe.write_fd());
+}
+
 // Test that the basics of OnError work by closing the read end.
 TEST_P(AioTest, EPollLikeBasicError) {
   Aio aio;
@@ -4701,6 +4797,43 @@ TEST_P(AioTest, EPollLikeBasicError) {
   EXPECT_EQ(number_errors, 1);
 
   aio.DeleteFd(pipe.write_fd());
+}
+
+// A reset on a socket with no OnError() reaches its read handler, whose read
+// then fails with the reset rather than reading end of file.
+TEST_P(AioTest, AbortiveResetReachesAReadOnlyRegistration) {
+  Aio aio;
+  TcpPair connection;
+  bool saw_reset = false;
+  bool saw_end_of_file = false;
+  aio.OnReadable(connection.server_fd(), [&]() {
+    char byte;
+    const int size = ReadSome(connection.server_fd(), &byte, 1);
+    // A reset reads as an error, where a graceful close would read 0.
+    if (size < 0 && LastReadWasReset()) {
+      saw_reset = true;
+    } else if (size == 0) {
+      saw_end_of_file = true;
+    } else {
+      return;
+    }
+    aio.DeleteFd(connection.server_fd());
+  });
+
+  connection.ResetClient();
+
+  // Not Poll(true): with nothing else registered it waits with no timeout,
+  // and a reset that never arrived would hang the test rather than fail it.
+  const auto give_up = aos::monotonic_clock::now() + std::chrono::seconds(5);
+  while (!saw_reset && !saw_end_of_file &&
+         aos::monotonic_clock::now() < give_up) {
+    aio.Poll(false);
+  }
+  if (!saw_reset && !saw_end_of_file) {
+    aio.DeleteFd(connection.server_fd());
+  }
+  EXPECT_FALSE(saw_end_of_file) << "the reset read as a graceful close";
+  EXPECT_TRUE(saw_reset) << "the peer's reset never reached OnReadable()";
 }
 
 // Tests that removing an event before scheduling any events works.

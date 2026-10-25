@@ -60,6 +60,8 @@ void TcpPair::ResetClient() {
   client_ = kInvalidFd;
 }
 
+bool LastReadWasReset() { return errno == ECONNRESET; }
+
 DatagramPair::DatagramPair() {
   ABSL_PCHECK(socketpair(AF_UNIX, SOCK_DGRAM, 0, fds_) == 0);
   SetUp(fds_[0]);

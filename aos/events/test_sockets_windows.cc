@@ -99,6 +99,8 @@ void TcpPair::ResetClient() {
   client_ = kInvalidFd;
 }
 
+bool LastReadWasReset() { return WSAGetLastError() == WSAECONNRESET; }
+
 DatagramPair::DatagramPair() {
   EnsureWinsockInitialized();
   const SOCKET first = MakeSocket(SOCK_DGRAM, IPPROTO_UDP);
