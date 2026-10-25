@@ -243,12 +243,30 @@ cc_test(
     ],
 )
 
+cc_library(
+    name = "test_sockets",
+    testonly = True,
+    srcs = select({
+        "@platforms//os:windows": ["test_sockets_windows.cc"],
+        "//conditions:default": ["test_sockets_unix.cc"],
+    }),
+    hdrs = ["test_sockets.h"],
+    deps = [
+        ":file_descriptor",
+        "@com_google_absl//absl/log:absl_check",
+    ] + select({
+        "@platforms//os:windows": [":winsock_init"],
+        "//conditions:default": [],
+    }),
+)
+
 cc_test(
     name = "aio_test",
     srcs = ["aio_test.cc"],
     deps = [
         ":aio",
         ":pipe",
+        ":test_sockets",
         "//aos:realtime",
         "//aos/ipc_lib:thread_signal",
         "//aos/testing:googletest",

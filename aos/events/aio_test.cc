@@ -4,7 +4,6 @@
 #include <signal.h>
 #include <sys/mman.h>
 #include <sys/select.h>
-#include <sys/socket.h>
 #include <sys/syscall.h>
 #include <sys/uio.h>
 #include <sys/utsname.h>
@@ -37,6 +36,7 @@
 #include "gtest/gtest.h"
 
 #include "aos/events/pipe.h"
+#include "aos/events/test_sockets.h"
 #include "aos/ipc_lib/thread_signal.h"
 #include "aos/realtime.h"
 #include "aos/testing/tmpdir.h"
@@ -1989,15 +1989,12 @@ TEST_P(AioTest, RawWriteWaitsForWritable) {
   EXPECT_EQ(completion->result, 1);
 }
 
-// POSIX-only: socketpair(2) and a datagram socket.
-#ifndef _WIN32
 // A zero-length write reaches the file, as io_uring's does: on a datagram
 // socket it sends an empty datagram.  preadv2()/pwritev2() return 0 for an
 // empty buffer without calling into the file at all, so the readiness
 // backends used to send nothing.
 TEST_P(AioTest, ZeroLengthWriteSendsEmptyDatagram) {
-  int fds[2];
-  ABSL_PCHECK(socketpair(AF_UNIX, SOCK_DGRAM, 0, fds) == 0);
+  DatagramPair pair;
   Aio aio;
 
   std::optional<Completion> completion;
@@ -2007,21 +2004,25 @@ TEST_P(AioTest, ZeroLengthWriteSendsEmptyDatagram) {
   };
   req.context = &completion;
   char buf[1];
-  aio.AsyncWrite(fds[0], std::span<const char>(buf, 0), &req);
+  aio.AsyncWrite(pair.first_fd(), std::span<const char>(buf, 0), &req);
   while (!completion.has_value() && aio.Poll(true)) {
   }
   ASSERT_TRUE(completion.has_value());
   EXPECT_TRUE(aos::IsOk(completion->status));
   EXPECT_EQ(completion->result, 0);
 
-  // An empty datagram is there to receive: 0, not EAGAIN.
-  EXPECT_EQ(recv(fds[1], buf, sizeof(buf), MSG_DONTWAIT), 0)
-      << "no datagram was sent";
-
-  ABSL_PCHECK(close(fds[0]) == 0);
-  ABSL_PCHECK(close(fds[1]) == 0);
+  // An empty datagram is there to receive: 0, not "nothing there".  It is
+  // not always there the moment the write completes (see DatagramPair), so
+  // give it a bounded moment to arrive.
+  int size = -1;
+  for (int i = 0; i < 1000 && size < 0; ++i) {
+    size = ReadSome(pair.second_fd(), buf, sizeof(buf));
+    if (size < 0) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+  }
+  EXPECT_EQ(size, 0) << "no datagram was sent";
 }
-#endif
 
 // Linux-only: inotify and eventfd are Linux interfaces.
 #if defined(__linux__)
