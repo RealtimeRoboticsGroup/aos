@@ -37,6 +37,8 @@
 #include "absl/flags/reflection.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "absl/synchronization/notification.h"
+#include "absl/time/time.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -51,19 +53,36 @@ ABSL_DECLARE_FLAG(size_t, aio_pool_size);
 
 namespace aos::testing {
 
-// Scoped watchdog: arms a SIGALRM fuse so a wedged test dies loudly instead
-// of hanging until bazel's timeout, and disarms it on scope exit so the fuse
-// cannot leak into subsequent tests in this process (alarm(2) keeps exactly
-// one pending fuse per process, and nothing else would ever clear it).
-// SIGALRM's default disposition -- terminate -- is the whole watchdog; no
-// handler is installed on purpose.  Note the fuse lives in the *parent*
-// test process even when armed around a death test: alarm() timers are not
-// inherited across fork(), so the child never sees it -- the parent's fuse
-// covers waiting on a wedged child.
+// Scoped watchdog: a wedged test dies loudly after 30s instead of hanging
+// until bazel's timeout, and the fuse is gone on scope exit so it cannot
+// reach later tests in this process.  A thread rather than alarm(2), so it is
+// the same on every platform.
+//
+// A death test builds it inside the death statement, never around it.  The
+// child then has a fuse of its own, and its message is the child's output,
+// which gtest prints.  One alive in the parent would make gtest's fork
+// multi-threaded: the child can inherit a lock the watchdog thread holds
+// (absl::Mutex's global deadlock-detection state, for one) and spin on it,
+// TSAN kills such a child as soon as it starts a thread, and the parent's
+// message goes to the stderr gtest is capturing for the child.
 class ScopedDeathTestWatchdog {
  public:
-  ScopedDeathTestWatchdog() { alarm(30); }
-  ~ScopedDeathTestWatchdog() { alarm(0); }
+  ScopedDeathTestWatchdog()
+      : thread_([this]() {
+          if (!done_.WaitForNotificationWithTimeout(absl::Seconds(30))) {
+            ABSL_LOG(FATAL) << "Watchdog: the test has been stuck for 30s, "
+                               "which for these tests means a wait nothing "
+                               "will end";
+          }
+        }) {}
+  ~ScopedDeathTestWatchdog() {
+    done_.Notify();
+    thread_.join();
+  }
+
+ private:
+  absl::Notification done_;
+  std::thread thread_;
 };
 
 namespace {
@@ -1069,7 +1088,6 @@ TEST_P(AioTest, UntrackedUnregistrationDeathTest) {
 // Tests that calling Poll() from inside a callback dies (constraint 3 in
 // aio.h).
 TEST_P(AioTest, NestedPollDeathTest) {
-  ScopedDeathTestWatchdog watchdog;
   Aio aio;
 
   Aio::Timer timer(&aio);
@@ -1079,6 +1097,7 @@ TEST_P(AioTest, NestedPollDeathTest) {
       &aio);
   EXPECT_DEATH(
       {
+        ScopedDeathTestWatchdog watchdog;
         while (aio.Poll(true)) {
         }
       },
@@ -1091,7 +1110,6 @@ TEST_P(AioTest, NestedPollDeathTest) {
 // the parked state is freed at the end of that same Poll() -- which destroys
 // the callback, which destroys its captures.
 TEST_P(AioTest, NestedPollFromCaptureDestructorDeathTest) {
-  ScopedDeathTestWatchdog watchdog;
   Aio aio;
   Pipe pipe;
 
@@ -1112,6 +1130,7 @@ TEST_P(AioTest, NestedPollFromCaptureDestructorDeathTest) {
   // nothing behind for the cleanup to remove.
   EXPECT_DEATH(
       {
+        ScopedDeathTestWatchdog watchdog;
         bool armed = false;
         aio.OnReadable(
             pipe.read_fd(),
@@ -1265,9 +1284,9 @@ TEST_P(AioTest, ClosedFdAsyncReadReportsErrorTest) {
 // used to be legal, and was the shape that let a cancelled sibling request
 // strand a half-dispatched batch.
 TEST_P(AioTest, LegacyAndAsyncAreExclusiveDeathTest) {
-  ScopedDeathTestWatchdog watchdog;
   EXPECT_DEATH(
       {
+        ScopedDeathTestWatchdog watchdog;
         Aio aio;
         Pipe pipe;
         AsyncRequest write_req;
@@ -1472,9 +1491,9 @@ TEST_P(AioTest, CallbacklessRequestMayBeFreedOnceDoneTest) {
 // Cancel() is how a caller retires a raw request; ForgetClosedFd() is the
 // same story and rejects it the same way.
 TEST_P(AioTest, DeleteFdWithPendingAsyncReadDeathTest) {
-  ScopedDeathTestWatchdog watchdog;
   EXPECT_DEATH(
       {
+        ScopedDeathTestWatchdog watchdog;
         Aio aio;
         Pipe pipe;
         AsyncRequest read_req;
@@ -2132,9 +2151,9 @@ TEST_P(AioTest, ZeroLengthReadOnEventfd) {
 // result, and die on the next Poll() with "removing a node that is not on
 // this list".
 TEST_P(AioTest, RearmBeforeCallbackDeathTest) {
-  ScopedDeathTestWatchdog watchdog;
   EXPECT_DEATH(
       {
+        ScopedDeathTestWatchdog watchdog;
         Aio aio;
         Pipe pipe;
         pipe.Write("ab");
@@ -2297,11 +2316,11 @@ TEST_P(AioTest, RearmBeforeCanceledDeliveryDeathTest) {
 // resolved but before it is delivered, and arms and cancels the newer
 // request there.
 TEST_P(AioTest, CanceledCompletionReleasesOnlyItsOwnClaimDeathTest) {
-  ScopedDeathTestWatchdog watchdog;
   // Everything inside the child: a raw request in flight is what this needs,
   // and it cannot be set up in the parent (see DoubleSubmitDeathTest).
   EXPECT_DEATH(
       {
+        ScopedDeathTestWatchdog watchdog;
         Aio aio;
         Pipe pipe;
 
@@ -4044,9 +4063,9 @@ TEST_P(AioTest, PreRunArmingExceedsQueueDepthDeathTest) {
                     "submission queue to exhaust.";
   }
   ::absl::SetFlag(&FLAGS_aio_queue_depth, 4);
-  ScopedDeathTestWatchdog watchdog;
   EXPECT_DEATH(
       {
+        ScopedDeathTestWatchdog watchdog;
         Aio aio;
         Aio::Timer t1(&aio);
         Aio::Timer t2(&aio);
@@ -4340,9 +4359,9 @@ TEST_P(AioTest, DowngradeReArmsActiveTimers) {
 // impl, so a Timer outliving its Aio is a use-after-free.  The destructor
 // CHECKs active timers so the bug dies loudly at the Aio instead.
 TEST_P(AioTest, TimerOutlivesAioDeathTest) {
-  ScopedDeathTestWatchdog watchdog;
   EXPECT_DEATH(
       {
+        ScopedDeathTestWatchdog watchdog;
         auto aio = std::make_unique<Aio>();
         Aio::Timer timer(aio.get());
         MarkFatalStatement();
@@ -4354,9 +4373,9 @@ TEST_P(AioTest, TimerOutlivesAioDeathTest) {
 // aio.h documents "All Fds must be cleaned up before this class is
 // destroyed"; EPoll::~EPoll() has always CHECKed it.  So does Aio now.
 TEST_P(AioTest, DestroyWithFdRegisteredDeathTest) {
-  ScopedDeathTestWatchdog watchdog;
   EXPECT_DEATH(
       {
+        ScopedDeathTestWatchdog watchdog;
         Pipe pipe;
         Aio aio;
         aio.OnReadable(pipe.read_fd(), []() {});
@@ -4366,9 +4385,9 @@ TEST_P(AioTest, DestroyWithFdRegisteredDeathTest) {
 }
 
 TEST_P(AioTest, DestroyWithReceiverRegisteredDeathTest) {
-  ScopedDeathTestWatchdog watchdog;
   EXPECT_DEATH(
       {
+        ScopedDeathTestWatchdog watchdog;
         aos::ipc_lib::ThreadSignalReceiver sfd;
         Aio aio;
         aio.RegisterThreadSignalReceiver(&sfd, []() {});
@@ -4813,9 +4832,9 @@ TEST_P(AioTest, LegacyReadableSurvivesPollingPastHangup) {
 // std::function.  Pinned as a CHECK rather than left as silent UB (which
 // is what EPoll's range-for did).
 TEST_P(AioTest, BeforeWaitFromBeforeWaitDeathTest) {
-  ScopedDeathTestWatchdog watchdog;
   EXPECT_DEATH(
       {
+        ScopedDeathTestWatchdog watchdog;
         Aio aio;
         aio.BeforeWait([&aio]() {
           aio.BeforeWait([]() {});
@@ -5098,8 +5117,8 @@ TEST_P(AioTest, ForkDeathTest) {
 // Poll() went into the stale inherited ring/epoll and was silently discarded
 // when Poll() rebuilt the backend, so it never completed and Poll() blocked
 // forever.  Here the child issues an AsyncRead and makes data available, both
-// before its first Poll(), and the read must complete.  The alarm() turns the
-// hang into a loud ExitedWithCode(42) failure instead of a wedged suite.
+// before its first Poll(), and the read must complete.  The watchdog turns the
+// hang into a loud failure instead of a wedged suite.
 //
 // POSIX-only: this is about inherited state, and the Windows death-test child
 // starts from a fresh process with nothing stale to detect.
@@ -5110,7 +5129,7 @@ TEST_P(AioTest, ForkOperationBeforePollDeathTest) {
 
   EXPECT_EXIT(
       {
-        alarm(30);
+        ScopedDeathTestWatchdog watchdog;
 
         AsyncRequest read_req;
         read_req.callback = [](Completion completion, void *) {
@@ -5564,9 +5583,9 @@ TEST_P(AioTest, DowngradeWithRawRequestInFlightDeathTest) {
   if (!IsIoUring()) {
     GTEST_SKIP() << "The SINGLE_ISSUER downgrade is io_uring-specific.";
   }
-  ScopedDeathTestWatchdog watchdog;
   EXPECT_DEATH(
       {
+        ScopedDeathTestWatchdog watchdog;
         Aio aio;
         Pipe pipe;
         AsyncRequest request;
@@ -5657,8 +5676,7 @@ TEST_P(AioTest, UnregisterThreadSignalReceiverTriggersDowngradeTest) {
 //
 // On Windows the death-test child re-execs from scratch rather than inheriting
 // state, so there is nothing stale to recover; the code should still work, so
-// we run it there too.  alarm() (the watchdog that turns a hang into a loud
-// failure instead of wedging the suite) is the only POSIX-only piece.
+// we run it there too.
 TEST_P(AioTest, CancelTimerBeforeForkDeathTest) {
   Aio aio;
   Aio::Timer timer(&aio);

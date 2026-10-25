@@ -258,6 +258,8 @@ cc_test(
         "@com_google_absl//absl/flags:reflection",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
+        "@com_google_absl//absl/synchronization",
+        "@com_google_absl//absl/time",
     ],
 )
 
