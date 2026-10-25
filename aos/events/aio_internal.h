@@ -34,6 +34,12 @@ inline constexpr char kRequestStillInFlight[] =
 template <typename Node, typename Traits>
 class IntrusiveStack {
  public:
+  IntrusiveStack() = default;
+  // A copy would share nodes with the original, so a push onto either one
+  // would corrupt the other.
+  IntrusiveStack(const IntrusiveStack &) = delete;
+  IntrusiveStack &operator=(const IntrusiveStack &) = delete;
+
   bool empty() const { return head_ == nullptr; }
 
   void Push(Node *node) {
@@ -134,6 +140,13 @@ class OwningIntrusiveStack : public IntrusiveStack<Node, Traits> {
 template <typename Node, typename Traits>
 class IntrusiveDoublyLinkedList {
  public:
+  IntrusiveDoublyLinkedList() = default;
+  // A copy would share nodes with the original, so a push onto either one
+  // would corrupt the other.
+  IntrusiveDoublyLinkedList(const IntrusiveDoublyLinkedList &) = delete;
+  IntrusiveDoublyLinkedList &operator=(const IntrusiveDoublyLinkedList &) =
+      delete;
+
   bool empty() const { return head_ == nullptr; }
   Node *front() const { return head_; }
   static Node *Next(Node *node) { return Traits::next(node); }
