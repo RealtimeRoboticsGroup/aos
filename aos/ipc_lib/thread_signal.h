@@ -47,14 +47,8 @@ class ThreadSignalSender {
   // may trigger spurious wakeups on other threads waiting in the same process.
   void Signal(pid_t pid, pid_t tid);
 
-#ifdef _WIN32
-  HANDLE event_handle() const { return event_handle_; }
-#endif
-
  private:
-#ifdef _WIN32
-  HANDLE event_handle_ = NULL;
-#else
+#ifndef _WIN32
   const pid_t pid_;
   const uid_t uid_;
 #endif
@@ -62,15 +56,12 @@ class ThreadSignalSender {
 
 // The receiving half of the thread wakeup mechanism.
 //
-// This wraps the platform primitive used to receive kWakeupSignal (a signalfd
-// on Linux, an ignored signal + kqueue EVFILT_SIGNAL on macOS) and exposes it
-// as an fd, so callers can watch it with their event loop (e.g. via
-// Aio::RegisterThreadSignalReceiver).  It replaces the old separate SignalFd
-// class -- if raw signalfd-of-arbitrary-signals behavior is ever needed again,
-// add a dedicated (Linux-only) class for it rather than generalizing this one.
-//
-// Windows support is added later, once the Aio loop it plugs into exists.
-#ifndef _WIN32
+// This wraps the platform primitive used to receive kWakeupSignal: a signalfd
+// on Linux, an ignored signal plus kqueue EVFILT_SIGNAL on macOS, and a named
+// Event on Windows.  Callers watch it with their event loop, e.g. via
+// Aio::RegisterThreadSignalReceiver.  It replaces the old SignalFd class.  If
+// a signalfd of arbitrary signals is ever needed again, add a separate
+// Linux-only class for it rather than generalizing this one.
 class ThreadSignalReceiver {
  public:
   ThreadSignalReceiver();
@@ -79,11 +70,16 @@ class ThreadSignalReceiver {
   ThreadSignalReceiver(const ThreadSignalReceiver &) = delete;
   ThreadSignalReceiver &operator=(const ThreadSignalReceiver &) = delete;
 
-  // The signalfd's file descriptor (Linux).  -1 on platforms that don't back
-  // the receiver with an fd (macOS).
-#if defined(__APPLE__)
+#ifdef _WIN32
+  // The Event which ThreadSignalSender::Signal() signals.  Windows has no
+  // signalfd equivalent, so the Aio (IOCP) backend watches this handle instead
+  // of an fd.
+  HANDLE event_handle() const { return event_handle_; }
+#elif defined(__APPLE__)
+  // Always -1: nothing backs the receiver with an fd on macOS.
   int fd() const { return -1; }
 #else
+  // The signalfd's file descriptor.
   int fd() const { return fd_; }
 #endif
 
@@ -95,12 +91,19 @@ class ThreadSignalReceiver {
   // is destroyed, rather than restoring the previous disposition.  This closes
   // a shutdown race: a sender can signal us between when we stop being watched
   // and when we're destroyed, and without this the stray signal would hit the
-  // default action and kill the process.
+  // default action and kill the process.  There is no signal disposition to
+  // restore on Windows, so it does nothing there.
   void LeaveSignalBlocked();
 
  private:
+#if defined(_WIN32)
+  // The Event the sender opens by name and signals.  It is manual-reset, so a
+  // successful wait leaves it set and ConsumeWakeup() clears it.  The
+  // constructor explains why we, not the wait, have to clear it.
+  HANDLE event_handle_ = NULL;
+
   // Nothing backs the receiver on macOS, so it has no state at all.
-#if !defined(__APPLE__)
+#elif !defined(__APPLE__)
 
   int fd_ = -1;
   // Whether the destructor unblocks kWakeupSignal.  False if it was already
@@ -108,7 +111,6 @@ class ThreadSignalReceiver {
   bool should_unblock_ = true;
 #endif
 };
-#endif  // !_WIN32
 
 }  // namespace aos::ipc_lib
 

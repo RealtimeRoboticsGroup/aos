@@ -4,6 +4,7 @@
 #define FUTEX_TID_MASK 0x3fffffff
 #endif
 
+#include <future>
 #include <thread>
 
 #include "absl/log/absl_check.h"
@@ -24,8 +25,7 @@ namespace aos::ipc_lib::testing {
 // successfully wake up the thread.
 TEST(ThreadSignalTest, BasicSignalWakeup) {
 #ifdef _WIN32
-  ThreadSignalSender signal;
-  EXPECT_NE(signal.event_handle(), nullptr);
+  ThreadSignalReceiver receiver;
 
   const pid_t pid = GetCurrentProcessId();
   const pid_t tid = GetCurrentThreadId();
@@ -37,7 +37,7 @@ TEST(ThreadSignalTest, BasicSignalWakeup) {
     signaler_signal.Signal(pid, tid);
   });
 
-  DWORD wait_result = WaitForSingleObject(signal.event_handle(), 2000);
+  DWORD wait_result = WaitForSingleObject(receiver.event_handle(), 2000);
   EXPECT_EQ(wait_result, WAIT_OBJECT_0);
 
   signaler.join();
@@ -74,10 +74,10 @@ TEST(ThreadSignalTest, BasicSignalWakeup) {
 #endif
 }
 
-// This exercises the receiver by polling its signalfd, so it's Linux-only: on
-// macOS the receiver has no pollable fd (it uses an ignored signal + kqueue
-// EVFILT_SIGNAL driven by the Aio backend, so fd() is -1), and the Windows
-// receiver lands with the Aio (IOCP) loop it plugs into.
+// This exercises the receiver by polling its signalfd, so it's Linux-only.  On
+// macOS the receiver has no pollable fd: it uses an ignored signal plus kqueue
+// EVFILT_SIGNAL, driven by the Aio backend, so fd() is -1.  Windows has its own
+// test below.
 #ifdef __linux__
 TEST(ThreadSignalReceiverTest, BasicSignalWakeup) {
   ThreadSignalReceiver receiver;
@@ -104,5 +104,41 @@ TEST(ThreadSignalReceiverTest, BasicSignalWakeup) {
   signaler.join();
 }
 #endif  // __linux__
+
+#ifdef _WIN32
+// A wakeup leaves the receiver's Event set until ConsumeWakeup() clears it.
+TEST(ThreadSignalReceiverTest, BasicSignalWakeup) {
+  ThreadSignalReceiver receiver;
+  ThreadSignalSender sender;
+  sender.Signal(GetCurrentProcessId(), GetCurrentThreadId());
+
+  // Manual-reset: waiting does not consume the wakeup.
+  EXPECT_EQ(WaitForSingleObject(receiver.event_handle(), 0), WAIT_OBJECT_0);
+  EXPECT_EQ(WaitForSingleObject(receiver.event_handle(), 0), WAIT_OBJECT_0);
+
+  receiver.ConsumeWakeup();
+  EXPECT_EQ(WaitForSingleObject(receiver.event_handle(), 0), WAIT_TIMEOUT);
+}
+
+// The receiver names its Event after the thread that constructs it, so a
+// sender on another thread reaches it through that thread's (pid, tid).
+TEST(ThreadSignalReceiverTest, SignalFromAnotherThread) {
+  std::promise<pid_t> receiver_tid;
+  std::promise<void> signaled;
+  DWORD wait_result = WAIT_FAILED;
+  std::thread receiver_thread([&]() {
+    ThreadSignalReceiver receiver;
+    receiver_tid.set_value(GetCurrentThreadId());
+    signaled.get_future().wait();
+    wait_result = WaitForSingleObject(receiver.event_handle(), 0);
+  });
+
+  ThreadSignalSender sender;
+  sender.Signal(GetCurrentProcessId(), receiver_tid.get_future().get());
+  signaled.set_value();
+  receiver_thread.join();
+  EXPECT_EQ(wait_result, WAIT_OBJECT_0);
+}
+#endif  // _WIN32
 
 }  // namespace aos::ipc_lib::testing
