@@ -236,7 +236,10 @@ class SimulatedWatcher : public WatcherState, public EventScheduler::Event {
   void Construct() override {}
   void Startup() override {}
 
-  void Schedule(std::shared_ptr<SimulatedMessage> message);
+  // Queues message up to be handled.  monotonic_now is the time on this node,
+  // which whoever is sending the message has already worked out.
+  void Schedule(std::shared_ptr<SimulatedMessage> message,
+                monotonic_clock::time_point monotonic_now);
 
   void HandleEvent() noexcept;
 
@@ -286,12 +289,11 @@ class SimulatedFactoryExitHandle : public ExitHandle {
 class SimulatedChannel {
  public:
   explicit SimulatedChannel(const Channel *channel,
-                            std::chrono::nanoseconds channel_storage_duration,
-                            const EventScheduler *scheduler)
+                            std::chrono::nanoseconds channel_storage_duration)
       : channel_(channel),
+        max_size_(channel->max_size()),
         channel_storage_duration_(channel_storage_duration),
-        next_queue_index_(ipc_lib::QueueIndex::Zero(number_buffers())),
-        scheduler_(scheduler) {
+        next_queue_index_(ipc_lib::QueueIndex::Zero(number_buffers())) {
     // Gut check that things fit.  Configuration validation should have caught
     // this before we get here.
     ABSL_CHECK_LT(static_cast<size_t>(number_buffers()),
@@ -368,15 +370,18 @@ class SimulatedChannel {
 
   // Sends the message to all the connected receivers and fetchers.  Returns the
   // sent queue index, or std::nullopt if messages were sent too fast.
+  // monotonic_now is the time on this node.  The sender has it already, and it
+  // costs enough to work out that it is worth not doing that again per watcher.
   std::optional<uint32_t> Send(std::shared_ptr<SimulatedMessage> message,
-                               CheckSentTooFast check_sent_too_fast);
+                               CheckSentTooFast check_sent_too_fast,
+                               monotonic_clock::time_point monotonic_now);
 
   // Unregisters a fetcher.
   void UnregisterFetcher(SimulatedFetcher *fetcher);
 
   std::shared_ptr<SimulatedMessage> latest_message() { return latest_message_; }
 
-  size_t max_size() const { return channel()->max_size(); }
+  size_t max_size() const { return max_size_; }
 
   const std::string_view name() const {
     return channel()->name()->string_view();
@@ -425,6 +430,8 @@ class SimulatedChannel {
   }
 
   const Channel *const channel_;
+  // channel_->max_size(), which gets looked at for every message sent.
+  const size_t max_size_;
   const std::chrono::nanoseconds channel_storage_duration_;
 
   // List of all watchers.
@@ -442,8 +449,6 @@ class SimulatedChannel {
   bool allow_new_senders_ = true;
 
   std::vector<ipc_lib::QueueIndex::PackedIndexType> available_buffer_indices_;
-
-  const EventScheduler *scheduler_;
 
   // Queue of all the message send times in the last channel_storage_duration_
   std::queue<monotonic_clock::time_point> last_times_;
@@ -744,6 +749,15 @@ class SimulatedEventLoop : public EventLoop {
     return node_event_loop_factory_->realtime_now();
   }
 
+  // Returns what realtime_now() is when monotonic_now() is monotonic_now, for
+  // somebody who has called monotonic_now() already.
+  realtime_clock::time_point realtime_at(
+      monotonic_clock::time_point monotonic_now) const {
+    return realtime_clock::time_point(
+        monotonic_now.time_since_epoch() +
+        node_event_loop_factory_->realtime_offset());
+  }
+
   distributed_clock::time_point distributed_now() {
     return scheduler_->distributed_now();
   }
@@ -1032,8 +1046,7 @@ SimulatedChannel *SimulatedEventLoop::GetSimulatedChannel(
                            // variation in timing.  Ignore that.
                            configuration::ChannelStorageDuration(
                                configuration(), channel) -
-                               send_delay(),
-                           scheduler_)))
+                               send_delay())))
              .first;
   }
   return it->second.get();
@@ -1100,17 +1113,15 @@ bool SimulatedWatcher::has_run() const {
   return simulated_event_loop_->has_run();
 }
 
-void SimulatedWatcher::Schedule(std::shared_ptr<SimulatedMessage> message) {
-  monotonic_clock::time_point event_time =
-      simulated_event_loop_->monotonic_now();
-
+void SimulatedWatcher::Schedule(std::shared_ptr<SimulatedMessage> message,
+                                monotonic_clock::time_point monotonic_now) {
   // Messages are queued in order.  If we are the first, add ourselves.
   // Otherwise, don't.
   if (msgs_.size() == 0) {
     event_.set_event_time(message->context.monotonic_event_time);
     simulated_event_loop_->AddEvent(&event_);
 
-    DoSchedule(event_time);
+    DoSchedule(monotonic_now);
   }
 
   msgs_.emplace_back(std::move(message));
@@ -1232,12 +1243,12 @@ void SimulatedChannel::MakeRawWatcher(SimulatedWatcher *watcher) {
 
 std::optional<uint32_t> SimulatedChannel::Send(
     std::shared_ptr<SimulatedMessage> message,
-    CheckSentTooFast check_sent_too_fast) {
-  const auto now = scheduler_->monotonic_now();
+    CheckSentTooFast check_sent_too_fast,
+    monotonic_clock::time_point monotonic_now) {
   // Remove times that are greater than or equal to a channel_storage_duration_
   // ago
   while (!last_times_.empty() &&
-         (now >= channel_storage_duration_ + last_times_.front())) {
+         (monotonic_now >= channel_storage_duration_ + last_times_.front())) {
     last_times_.pop();
   }
 
@@ -1248,7 +1259,7 @@ std::optional<uint32_t> SimulatedChannel::Send(
   }
 
   const std::optional<uint32_t> queue_index = {next_queue_index_.index()};
-  last_times_.push(now);
+  last_times_.push(monotonic_now);
 
   message->context.queue_index = *queue_index;
   // Points to the actual data depending on the size set in context. Data may
@@ -1272,7 +1283,7 @@ std::optional<uint32_t> SimulatedChannel::Send(
   latest_message_ = std::move(message);
   for (SimulatedWatcher *watcher : watchers_) {
     if (watcher->has_run()) {
-      watcher->Schedule(latest_message_);
+      watcher->Schedule(latest_message_, monotonic_now);
     }
   }
   for (auto &fetcher : fetchers_) {
@@ -1302,8 +1313,13 @@ RawSender::Error SimulatedSender::DoSend(
     realtime_clock::time_point realtime_remote_time,
     monotonic_clock::time_point monotonic_remote_transmit_time,
     uint32_t remote_queue_index, const UUID &source_boot_uuid) {
-  ABSL_CHECK_GE(simulated_event_loop_->monotonic_now(),
-                aos::monotonic_clock::epoch())
+  // Working out what time it is means asking the time converter, so do it once
+  // here for everything which a send needs it for.
+  const monotonic_clock::time_point monotonic_now =
+      simulated_event_loop_->monotonic_now();
+  const realtime_clock::time_point realtime_now =
+      simulated_event_loop_->realtime_at(monotonic_now);
+  ABSL_CHECK_GE(monotonic_now, aos::monotonic_clock::epoch())
       << ": Can only send messages after time starts.";
   // The allocations in here are due to infrastructure and don't count in the
   // no mallocs in RT code.
@@ -1316,11 +1332,10 @@ RawSender::Error SimulatedSender::DoSend(
                << configuration::StrippedChannelToString(channel());
 
   ABSL_CHECK_LE(length, size()) << ": Attempting to send too big a message.";
-  message_->context.monotonic_event_time =
-      simulated_event_loop_->monotonic_now();
+  message_->context.monotonic_event_time = monotonic_now;
   message_->context.monotonic_remote_time = monotonic_remote_time;
   message_->context.remote_queue_index = remote_queue_index;
-  message_->context.realtime_event_time = simulated_event_loop_->realtime_now();
+  message_->context.realtime_event_time = realtime_now;
   message_->context.realtime_remote_time = realtime_remote_time;
   message_->context.source_boot_uuid = source_boot_uuid;
   message_->context.monotonic_remote_transmit_time =
@@ -1329,7 +1344,8 @@ RawSender::Error SimulatedSender::DoSend(
   message_->context.size = length;
 
   const std::optional<uint32_t> optional_queue_index = simulated_channel_->Send(
-      message_, simulated_event_loop_->options().check_sent_too_fast);
+      message_, simulated_event_loop_->options().check_sent_too_fast,
+      monotonic_now);
 
   // Check that we are not sending messages too fast
   if (!optional_queue_index) {
@@ -1349,8 +1365,8 @@ RawSender::Error SimulatedSender::DoSend(
   }
 
   sent_queue_index_ = *optional_queue_index;
-  monotonic_sent_time_ = simulated_event_loop_->monotonic_now();
-  realtime_sent_time_ = simulated_event_loop_->realtime_now();
+  monotonic_sent_time_ = monotonic_now;
+  realtime_sent_time_ = realtime_now;
 
   // Drop the reference to the message so that we allocate a new message for
   // next time.  Otherwise we will continue to reuse the same memory for all
