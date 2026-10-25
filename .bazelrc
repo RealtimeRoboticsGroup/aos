@@ -192,6 +192,8 @@ build:remote --remote_timeout=1500
 build:remote --spawn_strategy=remote,linux-sandbox
 build:remote --grpc_keepalive_time=30s
 build:remote --verbose_failures
+build:remote --bes_keywords=engflow:BuildScmRemote=https://github.com/RealtimeRoboticsGroup/aos
+build:remote --bes_keywords=aos
 
 # How to use IWYU - Include What You Use
 # Start by deleting any *.iwyu.txt files that you might have from a previous run:
