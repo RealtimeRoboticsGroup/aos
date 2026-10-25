@@ -1,3 +1,7 @@
+// windows.h, included below, otherwise defines min and max as macros.
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include "aos/ipc_lib/thread_signal.h"
 
 #ifdef __APPLE__
@@ -37,7 +41,7 @@ TEST(ThreadSignalTest, BasicSignalWakeup) {
     signaler_signal.Signal(pid, tid);
   });
 
-  DWORD wait_result = WaitForSingleObject(receiver.event_handle(), 2000);
+  DWORD wait_result = WaitForSingleObject(receiver.fd(), 2000);
   EXPECT_EQ(wait_result, WAIT_OBJECT_0);
 
   signaler.join();
@@ -74,10 +78,19 @@ TEST(ThreadSignalTest, BasicSignalWakeup) {
 #endif
 }
 
+#ifdef __APPLE__
+// macOS is the one platform where fd() is promised to be kInvalidFd, rather
+// than a descriptor that happens to exist.
+TEST(ThreadSignalReceiverTest, NoPollableFdOnMacOS) {
+  ThreadSignalReceiver receiver;
+  EXPECT_EQ(receiver.fd(), kInvalidFd);
+}
+#endif
+
 // This exercises the receiver by polling its signalfd, so it's Linux-only.  On
 // macOS the receiver has no pollable fd: it uses an ignored signal plus kqueue
-// EVFILT_SIGNAL, driven by the Aio backend, so fd() is -1.  Windows has its own
-// test below.
+// EVFILT_SIGNAL, driven by the Aio backend, so fd() is kInvalidFd.  Windows has
+// its own test below.
 #ifdef __linux__
 TEST(ThreadSignalReceiverTest, BasicSignalWakeup) {
   ThreadSignalReceiver receiver;
@@ -113,11 +126,11 @@ TEST(ThreadSignalReceiverTest, BasicSignalWakeup) {
   sender.Signal(GetCurrentProcessId(), GetCurrentThreadId());
 
   // Manual-reset: waiting does not consume the wakeup.
-  EXPECT_EQ(WaitForSingleObject(receiver.event_handle(), 0), WAIT_OBJECT_0);
-  EXPECT_EQ(WaitForSingleObject(receiver.event_handle(), 0), WAIT_OBJECT_0);
+  EXPECT_EQ(WaitForSingleObject(receiver.fd(), 0), WAIT_OBJECT_0);
+  EXPECT_EQ(WaitForSingleObject(receiver.fd(), 0), WAIT_OBJECT_0);
 
   receiver.ConsumeWakeup();
-  EXPECT_EQ(WaitForSingleObject(receiver.event_handle(), 0), WAIT_TIMEOUT);
+  EXPECT_EQ(WaitForSingleObject(receiver.fd(), 0), WAIT_TIMEOUT);
 }
 
 // The receiver names its Event after the thread that constructs it, so a
@@ -130,7 +143,7 @@ TEST(ThreadSignalReceiverTest, SignalFromAnotherThread) {
     ThreadSignalReceiver receiver;
     receiver_tid.set_value(GetCurrentThreadId());
     signaled.get_future().wait();
-    wait_result = WaitForSingleObject(receiver.event_handle(), 0);
+    wait_result = WaitForSingleObject(receiver.fd(), 0);
   });
 
   ThreadSignalSender sender;

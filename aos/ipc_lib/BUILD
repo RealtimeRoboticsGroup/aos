@@ -100,6 +100,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//aos:realtime",
+        "//aos/events:file_descriptor",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/strings",
