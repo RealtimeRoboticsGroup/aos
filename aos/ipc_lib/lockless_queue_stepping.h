@@ -2,7 +2,11 @@
 #define AOS_IPC_LIB_LOCKLESS_QUEUE_STEPPING_H_
 
 #include <stdlib.h>
+// unistd.h is for the write()/STDERR_FILENO in SIMPLE_ASSERT below, which only
+// exists in the single-stepping implementation.
+#if defined(__linux__) && defined(__x86_64__)
 #include <unistd.h>
+#endif
 
 #include <cinttypes>
 #include <functional>

@@ -38,7 +38,9 @@ class MultiChannelQueueRacer {
   // message before the earlier senders have finished running.
   struct LocalMemoryQueue {
     LocalMemoryQueue(const LocklessQueueConfiguration &config)
-        : memory(LocklessQueueMemorySize(config) / sizeof(uint64_t), 0),
+        : memory((LocklessQueueMemorySize(config) + sizeof(uint64_t) - 1) /
+                     sizeof(uint64_t),
+                 0),
           queue(reinterpret_cast<LocklessQueueMemory *>(memory.data()),
                 reinterpret_cast<LocklessQueueMemory *>(memory.data()),
                 config) {}
