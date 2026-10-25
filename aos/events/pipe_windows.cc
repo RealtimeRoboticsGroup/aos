@@ -34,16 +34,17 @@ namespace {
 // directly -- no int<->SOCKET registry needed.
 SOCKET ToSocket(FileDescriptor fd) { return reinterpret_cast<SOCKET>(fd); }
 
-}  // namespace
-
+// Connects an AF_UNIX socket pair, both ends non-blocking, with pipe-sized
+// buffers.  fds[0] is the accepted end and fds[1] the connecting one.
+//
 // Windows has no pollable anonymous pipe (anonymous pipes don't support
 // overlapped I/O, and named pipes aren't SOCKETs, which is what the Aio backend
-// speaks), so emulate one with a connected AF_UNIX socket pair.  Unlike a
-// loopback TCP pair, a unix socket moves data with a kernel buffer copy: a
-// completed send is immediately visible at the other end, exactly like a pipe,
-// with no in-flight window where a write has happened but the reader can't see
-// it yet.
-Pipe::Pipe() {
+// speaks), and no socketpair(), so this is what both Pipe and SocketPair are.
+// Unlike a loopback TCP pair, a unix socket moves data with a kernel buffer
+// copy: a completed send is immediately visible at the other end, exactly like
+// a pipe, with no in-flight window where a write has happened but the reader
+// can't see it yet.
+void MakeUnixSocketPair(FileDescriptor fds[2]) {
   // A Pipe can outlive every Aio, or be built before the first one, so it
   // cannot rely on Aio having started Winsock.
   EnsureWinsockInitialized();
@@ -104,23 +105,33 @@ Pipe::Pipe() {
   DeleteFileA(socket_path.c_str());
 
   // A pipe has a small fixed capacity, and callers rely on being able to fill
-  // it with a bounded number of writes.  Bound the buffering the same way.
+  // it with a bounded number of writes.  Bound the buffering the same way, in
+  // both directions.
   constexpr int kSocketBufferSize = 4096;
-  setsockopt(server, SOL_SOCKET, SO_RCVBUF,
-             reinterpret_cast<const char *>(&kSocketBufferSize),
-             sizeof(kSocketBufferSize));
-  setsockopt(client, SOL_SOCKET, SO_SNDBUF,
-             reinterpret_cast<const char *>(&kSocketBufferSize),
-             sizeof(kSocketBufferSize));
+  for (SOCKET s : {server, client}) {
+    ABSL_CHECK_EQ(setsockopt(s, SOL_SOCKET, SO_RCVBUF,
+                             reinterpret_cast<const char *>(&kSocketBufferSize),
+                             sizeof(kSocketBufferSize)),
+                  0)
+        << ": setsockopt(SO_RCVBUF) failed: " << WSAGetLastError();
+    ABSL_CHECK_EQ(setsockopt(s, SOL_SOCKET, SO_SNDBUF,
+                             reinterpret_cast<const char *>(&kSocketBufferSize),
+                             sizeof(kSocketBufferSize)),
+                  0)
+        << ": setsockopt(SO_SNDBUF) failed: " << WSAGetLastError();
+    // Non-blocking, like the fcntl(O_NONBLOCK) on the other platforms.
+    u_long mode = 1;
+    ABSL_CHECK_EQ(ioctlsocket(s, FIONBIO, &mode), 0)
+        << ": ioctlsocket(FIONBIO) failed: " << WSAGetLastError();
+  }
 
-  // Non-blocking, like the fcntl(O_NONBLOCK) on the other platforms.
-  u_long mode = 1;
-  ioctlsocket(server, FIONBIO, &mode);
-  ioctlsocket(client, FIONBIO, &mode);
-
-  fds_[0] = reinterpret_cast<FileDescriptor>(server);
-  fds_[1] = reinterpret_cast<FileDescriptor>(client);
+  fds[0] = reinterpret_cast<FileDescriptor>(server);
+  fds[1] = reinterpret_cast<FileDescriptor>(client);
 }
+
+}  // namespace
+
+Pipe::Pipe() { MakeUnixSocketPair(fds_); }
 
 Pipe::~Pipe() {
   if (fds_[0] != nullptr) {
@@ -167,6 +178,44 @@ bool Pipe::write_ready() {
   poll_fd.revents = 0;
   const int ret = WSAPoll(&poll_fd, 1, 0);
   return ret > 0 && (poll_fd.revents & POLLWRNORM) != 0;
+}
+
+SocketPair::SocketPair() { MakeUnixSocketPair(fds_); }
+
+SocketPair::~SocketPair() {
+  ABSL_CHECK_EQ(closesocket(ToSocket(fds_[0])), 0);
+  ABSL_CHECK_EQ(closesocket(ToSocket(fds_[1])), 0);
+}
+
+int ReadSome(FileDescriptor fd, char *buffer, size_t size) {
+  return recv(ToSocket(fd), buffer, static_cast<int>(size), 0);
+}
+
+int WriteSome(FileDescriptor fd, const char *buffer, size_t size) {
+  return send(ToSocket(fd), buffer, static_cast<int>(size), 0);
+}
+
+size_t FillUntilBlocked(FileDescriptor fd) {
+  const char chunk[4096] = {};
+  size_t total = 0;
+  int written;
+  while ((written = WriteSome(fd, chunk, sizeof(chunk))) > 0) {
+    total += written;
+  }
+  ABSL_CHECK_EQ(WSAGetLastError(), WSAEWOULDBLOCK) << ": filling fd " << fd;
+  return total;
+}
+
+size_t DrainUntilBlocked(FileDescriptor fd) {
+  char chunk[4096];
+  size_t total = 0;
+  int got;
+  while ((got = ReadSome(fd, chunk, sizeof(chunk))) > 0) {
+    total += got;
+  }
+  ABSL_CHECK_NE(got, 0) << ": fd " << fd << " reached end of file";
+  ABSL_CHECK_EQ(WSAGetLastError(), WSAEWOULDBLOCK) << ": draining fd " << fd;
+  return total;
 }
 
 }  // namespace aos
