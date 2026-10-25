@@ -100,8 +100,11 @@ class PriorityQueue {
 
   // Gets the index of the next (higher valued) element in the queue.
   size_t next_idx(size_t idx) const { return list_[idx].upper_idx; }
-  // Gets the index of the previous (lower valued) element in the queue.
-  size_t prev_idx(size_t idx) const { return list_[idx].lower_idx; }
+  // Gets the index of the previous (lower valued) element in the queue.  The
+  // element before end() is the top of the queue.
+  size_t prev_idx(size_t idx) const {
+    return idx == buffer_size ? top_ : list_[idx].lower_idx;
+  }
 
  private:
   struct Datum {
