@@ -161,6 +161,36 @@ build --host_platform=//tools/platforms:darwin_arm64
 build --extra_execution_platforms=//tools/platforms:darwin_arm64
 EOF
 fi
+
+# Label remote builds in EngFlow with the commit they built, so an invocation
+# can be traced back to the code it ran.
+if SCM_REVISION="$(git -C "${TOP_LEVEL_DIR}" rev-parse HEAD 2>/dev/null)"; then
+  if git -C "${TOP_LEVEL_DIR}" diff --quiet HEAD; then
+    SCM_STATUS=clean
+  else
+    SCM_STATUS=modified
+  fi
+  cat >> "${TMP_BAZELRC_AUTODETECTION}" <<EOF
+# Label remote builds with the commit they built.
+build:remote --bes_keywords=engflow:BuildScmRevision=${SCM_REVISION}
+build:remote --bes_keywords=engflow:BuildScmBranch=$(git -C "${TOP_LEVEL_DIR}" rev-parse --abbrev-ref HEAD)
+build:remote --bes_keywords=engflow:BuildScmStatus=${SCM_STATUS}
+EOF
+fi
+
+# Label remote builds with the machine that ran them, so one machine's
+# invocations can be found in the EngFlow search.  macOS renames its hostname
+# after whatever network it joins, so use the name set in its Sharing settings.
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  MACHINE_NAME="$(scutil --get LocalHostName 2>/dev/null || hostname -s)"
+else
+  MACHINE_NAME="$(hostname -s)"
+fi
+cat >> "${TMP_BAZELRC_AUTODETECTION}" <<EOF
+# Label remote builds with the machine that ran them.
+build:remote --bes_keywords=$(uname -s | tr '[:upper:]' '[:lower:]')
+build:remote --bes_keywords=${MACHINE_NAME}
+EOF
 # Now, do the rename atomically to avoid races, but only if the content changed to avoid invalidating the analysis cache.
 if [[ -f "${TOP_LEVEL_DIR}/.bazelrc_autodetection" ]] && cmp -s "${TMP_BAZELRC_AUTODETECTION}" "${TOP_LEVEL_DIR}/.bazelrc_autodetection"; then
   rm "${TMP_BAZELRC_AUTODETECTION}"
