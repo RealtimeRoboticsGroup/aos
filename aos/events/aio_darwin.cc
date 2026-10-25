@@ -51,15 +51,6 @@ ABSL_FLAG(std::string, aio_backend, "kqueue",
 
 namespace aos {
 
-// The shared readiness encoding, as aio_linux.cc pulls it in too.
-using internal::kErr;
-using internal::kErrorEvents;
-using internal::kIn;
-using internal::kInEvents;
-using internal::kOut;
-using internal::kOutEvents;
-using internal::kPri;
-
 class KqueueImpl;
 
 namespace {
@@ -168,8 +159,9 @@ class KqueueImpl : public internal::ReadinessBackend {
   // Tracks active event handlers and request status for a registered file
   // descriptor.
 
-  // The readiness bits (kIn/kOut, never kErr) this registration actually
-  // subscribed to, through On*()/SetEvents() or a raw request.
+  // The readiness bits (kReadableEvent/kWritableEvent, never kErrorEvent) this
+  // registration actually subscribed to, through On*()/SetEvents() or a raw
+  // request.
   //
   // UpdateRegistration() arms filters from this, and Poll() masks what the
   // kernel reports back down to it.  Both need the same answer: kqueue has no
@@ -179,12 +171,13 @@ class KqueueImpl : public internal::ReadinessBackend {
   // Poll() has to drop those to stay a faithful mirror of it.
   static uint32_t DesiredReadiness(internal::FdRegistration *reg) {
     uint32_t desired = 0;
-    if (Armed(reg, Direction::kRead) != nullptr) desired |= kIn;
-    if (Armed(reg, Direction::kWrite) != nullptr) desired |= kOut;
-    // kPri widens to kIn: kqueue cannot tell priority data apart, so a kPri
-    // subscriber gets the read filter and has to be told when it fires.
-    if (reg->events & kInEvents) desired |= kIn;
-    if (reg->events & kOutEvents) desired |= kOut;
+    if (Armed(reg, Direction::kRead) != nullptr) desired |= kReadableEvent;
+    if (Armed(reg, Direction::kWrite) != nullptr) desired |= kWritableEvent;
+    // kPriorityEvent widens to kReadableEvent: kqueue cannot tell priority data
+    // apart, so a kPriorityEvent subscriber gets the read filter and has to be
+    // told when it fires.
+    if (reg->events & kReadableEvents) desired |= kReadableEvent;
+    if (reg->events & kWritableEvent) desired |= kWritableEvent;
     return desired;
   }
 
@@ -538,10 +531,10 @@ void KqueueImpl::RemoveRegistration(internal::FdRegistration *reg) {
   }
   struct kevent events[2];
   int n = 0;
-  if (reg->epoll_events & (kIn | kPri | kErr)) {
+  if (reg->epoll_events & (kReadableEvent | kPriorityEvent | kErrorEvent)) {
     EV_SET(&events[n++], reg->fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
   }
-  if (reg->epoll_events & (kOut | kErr)) {
+  if (reg->epoll_events & (kWritableEvent | kErrorEvent)) {
     EV_SET(&events[n++], reg->fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
   }
   if (n > 0) {
@@ -657,22 +650,22 @@ internal::ReadinessBackend::WaitResult KqueueImpl::WaitForOne(bool block,
     // OnError() silent on Darwin with nothing else to raise it.  On the
     // read filter it means the writer is gone and reads return a clean
     // EOF, which is EPOLLHUP -- not an error, and epoll pairs it with
-    // EPOLLIN so the reader drains.  Folding that one into kErr would
+    // EPOLLIN so the reader drains.  Folding that one into kErrorEvent would
     // instead abort on the err_fn CHECK below for the ordinary
     // OnReadable()-only registration.
     //
     // Second, readiness nobody subscribed to; see DesiredReadiness().
     uint32_t events = 0;
     if (event.filter == EVFILT_READ) {
-      events |= kIn;
+      events |= kReadableEvent;
     } else if (event.filter == EVFILT_WRITE) {
-      events |= kOut;
+      events |= kWritableEvent;
       if (event.flags & EV_EOF) {
-        events |= kErr;
+        events |= kErrorEvent;
       }
     }
     if (event.flags & EV_ERROR) {
-      events |= kErr;
+      events |= kErrorEvent;
     }
     // Masking readiness can never hide a filter we still need drained: a
     // filter is left level-triggered exactly when its readiness bit is
@@ -680,7 +673,7 @@ internal::ReadinessBackend::WaitResult KqueueImpl::WaitForOne(bool block,
     // only to watch for errors -- see UpdateRegistration().  So a bit dropped
     // here belongs to an edge-triggered filter that will not re-report it,
     // and Poll() cannot spin on it.
-    events &= DesiredReadiness(reg) | kErrorEvents;
+    events &= DesiredReadiness(reg) | kErrorEvent;
     const bool terminal = (event.flags & (EV_EOF | EV_ERROR)) != 0;
 
     out->reg = reg;
@@ -795,12 +788,15 @@ bool KqueueImpl::UpdateRegistration(internal::FdRegistration *reg) {
   // Registered-vs-not is decided on the caller's untranslated mask, as epoll
   // decides it.  A mask made only of bits with no filter of their own (a bare
   // EPOLLHUP, say) still has to hear about errors and hangups, which epoll
-  // reports for any registered fd, so it watches for them the way kErr does.
-  if (reg->events & ~(kInEvents | kOutEvents)) desired_events |= kErr;
+  // reports for any registered fd, so it watches for them the way kErrorEvent
+  // does.
+  if (reg->events & ~(kReadableEvents | kWritableEvent))
+    desired_events |= kErrorEvent;
 
-  bool want_read = (desired_events & kIn) || (desired_events & kErr);
-  bool has_read = reg->registered &&
-                  ((reg->epoll_events & kIn) || (reg->epoll_events & kErr));
+  bool want_read =
+      (desired_events & kReadableEvent) || (desired_events & kErrorEvent);
+  bool has_read = reg->registered && ((reg->epoll_events & kReadableEvent) ||
+                                      (reg->epoll_events & kErrorEvent));
 
   // EV_CLEAR is only set when the filter exists purely to report errors, so
   // it has to be re-evaluated whenever that changes -- not just when the
@@ -809,8 +805,8 @@ bool KqueueImpl::UpdateRegistration(internal::FdRegistration *reg) {
   // we'd miss readiness; going the other way would leave it level-triggered
   // and spin. EV_ADD on an already-registered filter updates its flags in
   // place.
-  const bool want_read_clear = want_read && !(desired_events & kIn);
-  const bool has_read_clear = has_read && !(reg->epoll_events & kIn);
+  const bool want_read_clear = want_read && !(desired_events & kReadableEvent);
+  const bool has_read_clear = has_read && !(reg->epoll_events & kReadableEvent);
 
   if (want_read != has_read ||
       (want_read && want_read_clear != has_read_clear)) {
@@ -843,13 +839,16 @@ bool KqueueImpl::UpdateRegistration(internal::FdRegistration *reg) {
     }
   }
 
-  bool want_write = (desired_events & kOut) || (desired_events & kErr);
-  bool has_write = reg->registered &&
-                   ((reg->epoll_events & kOut) || (reg->epoll_events & kErr));
+  bool want_write =
+      (desired_events & kWritableEvent) || (desired_events & kErrorEvent);
+  bool has_write = reg->registered && ((reg->epoll_events & kWritableEvent) ||
+                                       (reg->epoll_events & kErrorEvent));
 
   // Same EV_CLEAR re-evaluation as the read filter above.
-  const bool want_write_clear = want_write && !(desired_events & kOut);
-  const bool has_write_clear = has_write && !(reg->epoll_events & kOut);
+  const bool want_write_clear =
+      want_write && !(desired_events & kWritableEvent);
+  const bool has_write_clear =
+      has_write && !(reg->epoll_events & kWritableEvent);
 
   if (want_write != has_write ||
       (want_write && want_write_clear != has_write_clear)) {

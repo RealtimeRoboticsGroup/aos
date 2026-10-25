@@ -124,8 +124,9 @@ class ReadinessBackend : public Aio::Impl {
   };
   struct FdReady {
     FdRegistration *reg = nullptr;
-    // The readiness bits, already translated to kIn/kPri/kOut/kErr and
-    // already masked down to what the caller subscribed to.
+    // The readiness bits, already translated to
+    // kReadableEvent/kPriorityEvent/kWritableEvent/kErrorEvent and already
+    // masked down to what the caller subscribed to.
     uint32_t events = 0;
     // Whether the condition was terminal -- a hangup or an error.  A raw
     // request has to observe one by running, since it cannot be consumed.

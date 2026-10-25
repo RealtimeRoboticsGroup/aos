@@ -16,19 +16,6 @@
 
 namespace aos::internal {
 
-// AOS's fd-readiness event encoding, shared by every backend and by the
-// public SetEvents()/OnEvents() contract.  Numerically identical to the low
-// 4 bits of the real epoll event flags (the encoding documented on
-// Aio::OnEvents()).
-inline constexpr uint32_t kIn = 0x01;   // EPOLLIN
-inline constexpr uint32_t kPri = 0x02;  // EPOLLPRI
-inline constexpr uint32_t kOut = 0x04;  // EPOLLOUT
-inline constexpr uint32_t kErr = 0x08;  // EPOLLERR
-
-inline constexpr uint32_t kInEvents = kIn | kPri;
-inline constexpr uint32_t kOutEvents = kOut;
-inline constexpr uint32_t kErrorEvents = kErr;
-
 // Where a legacy registration's hangup or error goes when no handler asked
 // for it: a hangup with no readable, writable or error bit to carry it, or an
 // error on an fd with no error handler.  Both go to the handler that can act
@@ -49,18 +36,18 @@ inline constexpr uint32_t kErrorEvents = kErr;
 // error bit, and the error-handler CHECK still fires for it.
 inline uint32_t RouteHangupOrError(uint32_t events, bool hangup,
                                    uint32_t subscribed, bool has_err_fn) {
-  constexpr uint32_t kData = kInEvents | kOutEvents;
-  const bool bare_hangup = hangup && (events & (kData | kErrorEvents)) == 0;
+  constexpr uint32_t kData = kReadableEvents | kWritableEvent;
+  const bool bare_hangup = hangup && (events & (kData | kErrorEvent)) == 0;
   if (has_err_fn) {
-    return bare_hangup ? (events | kErr) : events;
+    return bare_hangup ? (events | kErrorEvent) : events;
   }
-  if (!bare_hangup && (events & kErrorEvents) == 0) {
+  if (!bare_hangup && (events & kErrorEvent) == 0) {
     return events;
   }
   if ((subscribed & kData) == 0) {
     return events;
   }
-  return (events & ~kErrorEvents) | (subscribed & kData);
+  return (events & ~kErrorEvent) | (subscribed & kData);
 }
 
 // What one fd is registered for, and the table that owns them.

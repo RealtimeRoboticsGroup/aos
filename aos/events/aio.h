@@ -408,9 +408,9 @@ class Aio {
   // The function is passed an argument containing the events which occurred.
   // Configure events to call this function for using SetEvents.
   //
-  // The event encoding, in the argument and in SetEvents()'s mask, is the
-  // low four epoll bits on every platform: readable 0x01, priority data
-  // 0x02, writable 0x04, error 0x08.  Error conditions are always
+  // The event encoding, in the argument and in SetEvents()'s mask, is
+  // kReadableEvent, kPriorityEvent, kWritableEvent and kErrorEvent (see
+  // file_descriptor.h) on every platform.  Error conditions are always
   // reported, and a hangup is delivered as the error bit.
   //
   // A fd may be registered exclusively with OnReadable/OnWritable/OnError OR

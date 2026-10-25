@@ -333,12 +333,12 @@ bool ReadinessBackend::ServiceRaw(const FdReady &ready) {
   // request issues.
   bool resolved = false;
   if (Armed(reg, Direction::kRead) != nullptr &&
-      (ready.terminal || (ready.events & kInEvents) != 0)) {
+      (ready.terminal || (ready.events & kReadableEvents) != 0)) {
     resolved |= TryRawIo(reg, Direction::kRead);
   }
   // The read may have retired the registration (Detach() tombstones fd).
   if (reg->fd != kInvalidFd && Armed(reg, Direction::kWrite) != nullptr &&
-      (ready.terminal || (ready.events & kOutEvents) != 0)) {
+      (ready.terminal || (ready.events & kWritableEvent) != 0)) {
     resolved |= TryRawIo(reg, Direction::kWrite);
   }
   return resolved;
@@ -449,7 +449,7 @@ void ReadinessBackend::OnReadable(FileDescriptor fd,
   ABSL_CHECK(!reg->in_fn) << "Duplicate in functions for " << fd;
   reg->in_fn = std::move(callback);
 
-  reg->events |= kInEvents;
+  reg->events |= kReadableEvents;
   UpdateRegistrationOrDie(reg);
 }
 
@@ -465,7 +465,7 @@ void ReadinessBackend::OnError(FileDescriptor fd,
   ABSL_CHECK(!reg->err_fn) << "Duplicate error functions for " << fd;
   reg->err_fn = std::move(callback);
 
-  reg->events |= kErrorEvents;
+  reg->events |= kErrorEvent;
   UpdateRegistrationOrDie(reg);
 }
 
@@ -483,7 +483,7 @@ void ReadinessBackend::OnWritable(FileDescriptor fd,
   ABSL_CHECK(!reg->out_fn) << "Duplicate out functions for " << fd;
   reg->out_fn = std::move(callback);
 
-  reg->events |= kOutEvents;
+  reg->events |= kWritableEvent;
   UpdateRegistrationOrDie(reg);
 }
 
@@ -559,7 +559,7 @@ void ReadinessBackend::EnableWritable(FileDescriptor fd) {
       << "EnableWritable is only for fds registered using OnWritable, not "
          "OnEvents";
 
-  uint32_t new_events = reg->events | kOutEvents;
+  uint32_t new_events = reg->events | kWritableEvent;
   if (reg->events != new_events) {
     reg->events = new_events;
     UpdateRegistrationOrDie(reg);
@@ -576,7 +576,7 @@ void ReadinessBackend::DisableWritable(FileDescriptor fd) {
       << "DisableWritable is only for fds registered using OnWritable, not "
          "OnEvents";
 
-  uint32_t new_events = reg->events & ~kOutEvents;
+  uint32_t new_events = reg->events & ~kWritableEvent;
   if (reg->events != new_events) {
     reg->events = new_events;
     UpdateRegistrationOrDie(reg);
@@ -872,7 +872,8 @@ void ReadinessBackend::RunLegacyHandlers(const FdReady &ready) {
     // OnEvents delivers everything, hangups included -- see the OnEvents()
     // contract in aio.h.  SetEvents(fd, <hangup bit>) is a supported way to
     // watch for one, which is why this does not follow EPoll here.
-    reg->events_fn(ready.terminal ? (ready.events | kErr) : ready.events);
+    reg->events_fn(ready.terminal ? (ready.events | kErrorEvent)
+                                  : ready.events);
     return;
   }
 
@@ -883,21 +884,21 @@ void ReadinessBackend::RunLegacyHandlers(const FdReady &ready) {
   // callers depend on those semantics.  A callback that deletes its own fd
   // tombstones reg->fd (Detach()), which ends the remaining handlers.
   const uint32_t events = RouteHangupOrError(
-      ready.events, ready.terminal && (ready.events & kErr) == 0, reg->events,
-      static_cast<bool>(reg->err_fn));
-  if (events & kInEvents) {
+      ready.events, ready.terminal && (ready.events & kErrorEvent) == 0,
+      reg->events, static_cast<bool>(reg->err_fn));
+  if (events & kReadableEvents) {
     ABSL_CHECK(reg->in_fn)
         << ": No handler registered for input events on descriptor " << reg->fd
         << ". Received events = 0x" << std::hex << events << std::dec;
     reg->in_fn();
   }
-  if (reg->fd != kInvalidFd && (events & kOutEvents)) {
+  if (reg->fd != kInvalidFd && (events & kWritableEvent)) {
     ABSL_CHECK(reg->out_fn)
         << ": No handler registered for output events on descriptor " << reg->fd
         << ". Received events = 0x" << std::hex << events << std::dec;
     reg->out_fn();
   }
-  if (reg->fd != kInvalidFd && (events & kErrorEvents)) {
+  if (reg->fd != kInvalidFd && (events & kErrorEvent)) {
     ABSL_CHECK(reg->err_fn)
         << ": No handler registered for error events on descriptor " << reg->fd
         << ". Received events = 0x" << std::hex << events << std::dec << ". "

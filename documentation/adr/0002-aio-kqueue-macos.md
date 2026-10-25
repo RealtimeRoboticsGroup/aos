@@ -111,9 +111,9 @@ The difference is confined to six helpers behind one `#ifdef` (`CreateDeadlineFd
 
 ### `Aio`'s event encoding is not epoll's
 
-`Aio::OnEvents()` documents its encoding as "the low four epoll bits on every platform": readable `0x01`, priority `0x02`, writable `0x04`, error `0x08`, with a hangup delivered as the error bit. `GlibMainLoop` was reaching into `<sys/epoll.h>` for those constants, which is the only thing that had kept it Linux-only. Naming them directly (`kAioIn`/`kAioPri`/`kAioOut`/`kAioErr` in `aos/events/glib_main_loop.cc`) removes the header and the platform gate.
+`Aio::OnEvents()` documents its encoding as `kReadableEvent`, `kPriorityEvent`, `kWritableEvent` and `kErrorEvent` (`aos/events/file_descriptor.h`) on every platform: readable `0x01`, priority `0x02`, writable `0x04`, error `0x08`, with a hangup delivered as the error bit. The values are the low four epoll bits, but nothing outside Linux may reach into `<sys/epoll.h>` for them. `GlibMainLoop` translates to and from those names, so it needs no Linux header and builds wherever glib does, which is everywhere but Windows.
 
-Doing so exposed two translations that were already wrong on their own terms: `EPOLLRDHUP|EPOLLHUP` inbound was unreachable, since `Aio` folds a hangup into the error bit and never sets `EPOLLHUP` itself; and `G_IO_HUP` outbound became `EPOLLHUP`, a bit outside the documented four, which epoll ignores (it reports hangups regardless of the mask) but which asks the kqueue backend for no filters at all.
+Two of the epoll translations have no counterpart in the four bits. An inbound `EPOLLRDHUP|EPOLLHUP` cannot arrive, since `Aio` folds a hangup into the error bit, so there is no inbound hangup case. An outbound `G_IO_HUP` asks for `kErrorEvent`, as `G_IO_ERR` does, rather than `EPOLLHUP`, a bit outside the documented four that each backend would otherwise have to interpret. A mask of nothing but those still keeps the fd registered, which a mask of 0 would not.
 
 ## Consequences
 

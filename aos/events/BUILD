@@ -1030,7 +1030,10 @@ cc_library(
     implementation_deps = [
         "//aos/events:shm_event_loop",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:public"],
     deps = [
         ":aio",

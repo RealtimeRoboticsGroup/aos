@@ -193,7 +193,8 @@ void aos_shm_event_loop_on_fd_events(aos_event_loop_t *self, int fd,
                                      void *user_data);
 // Removes fd from the event loop.
 void aos_shm_event_loop_delete_fd(aos_event_loop_t *self, int fd);
-// Sets the epoll events for the given fd.
+// Sets the events for the given fd, in the encoding Aio::OnEvents()
+// documents: readable 0x01, priority 0x02, writable 0x04 and error 0x08.
 void aos_shm_event_loop_set_fd_events(aos_event_loop_t *self, int fd,
                                       uint32_t events);
 aos_event_loop_t *aos_shm_event_loop_create(

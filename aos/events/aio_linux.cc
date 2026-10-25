@@ -371,14 +371,6 @@ inline Completion CompletionFromResult(AsyncRequest *req, int32_t res) {
   return completion;
 }
 
-using internal::kErr;
-using internal::kErrorEvents;
-using internal::kIn;
-using internal::kInEvents;
-using internal::kOut;
-using internal::kOutEvents;
-using internal::kPri;
-
 // One read or write at the fd's current position that returns EAGAIN rather
 // than sleeping, whatever the fd's flags: preadv2()/pwritev2() with
 // RWF_NOWAIT.  glibc only wraps them from 2.26, and the roboRIO's is 2.24, so
@@ -902,8 +894,8 @@ class IoUringImpl : public Aio::Impl {
   // documentation/adr/0001-aio-io-uring-single-issuer.md.
   struct LegacyState {
     int fd = -1;
-    // kIn/kPri/kOut/kErr encoding (matches SetEvents()'s documented "raw
-    // epoll events" contract).
+    // In the kReadableEvent/kPriorityEvent/kWritableEvent/kErrorEvent
+    // encoding SetEvents() takes.
     uint32_t events = 0;
     std::function<void()> in_fn = nullptr;
     std::function<void()> out_fn = nullptr;
@@ -1092,13 +1084,13 @@ class IoUringImpl : public Aio::Impl {
 
 void IoUringImpl::UpdateLegacyEpoll(LegacyState *state) {
   uint32_t desired_epoll = 0;
-  if (state->events & kIn) desired_epoll |= EPOLLIN;
-  if (state->events & kPri) desired_epoll |= EPOLLPRI;
-  if (state->events & kOut) desired_epoll |= EPOLLOUT;
-  if (state->events & kErr) desired_epoll |= EPOLLERR;
+  if (state->events & kReadableEvent) desired_epoll |= EPOLLIN;
+  if (state->events & kPriorityEvent) desired_epoll |= EPOLLPRI;
+  if (state->events & kWritableEvent) desired_epoll |= EPOLLOUT;
+  if (state->events & kErrorEvent) desired_epoll |= EPOLLERR;
   // Not EPOLLHUP: never requested explicitly -- the kernel always reports
   // EPOLLERR/EPOLLHUP regardless of the registered mask (epoll_ctl(2)).
-  // DrainLegacyEpoll() hands a hangup to OnEvents as kErr, and to the
+  // DrainLegacyEpoll() hands a hangup to OnEvents as kErrorEvent, and to the
   // in/out/err handlers only when no other bit carries it.  See
   // RouteHangupOrError().
 
@@ -1219,11 +1211,11 @@ bool IoUringImpl::DrainLegacyEpoll() {
   if (state == nullptr) return false;
 
   uint32_t ready_epoll = 0;
-  if (event.events & EPOLLIN) ready_epoll |= kIn;
-  if (event.events & EPOLLPRI) ready_epoll |= kPri;
-  if (event.events & EPOLLOUT) ready_epoll |= kOut;
-  if (event.events & EPOLLERR) ready_epoll |= kErr;
-  // EPOLLHUP reaches OnEvents as kErr, and the in/out/err trio only when
+  if (event.events & EPOLLIN) ready_epoll |= kReadableEvent;
+  if (event.events & EPOLLPRI) ready_epoll |= kPriorityEvent;
+  if (event.events & EPOLLOUT) ready_epoll |= kWritableEvent;
+  if (event.events & EPOLLERR) ready_epoll |= kErrorEvent;
+  // EPOLLHUP reaches OnEvents as kErrorEvent, and the in/out/err trio only when
   // nothing else carries it.  An error with no err_fn goes to the subscribed
   // in/out handlers.  See RouteHangupOrError().  This drain carries no raw
   // requests (CheckNoRawOnFd() keeps them on the ring), so those are the only
@@ -1231,7 +1223,7 @@ bool IoUringImpl::DrainLegacyEpoll() {
   const bool terminal = (event.events & (EPOLLERR | EPOLLHUP)) != 0;
 
   if (state->events_fn) {
-    state->events_fn(terminal ? (ready_epoll | kErr) : ready_epoll);
+    state->events_fn(terminal ? (ready_epoll | kErrorEvent) : ready_epoll);
     return true;
   }
   ready_epoll = internal::RouteHangupOrError(
@@ -1254,7 +1246,7 @@ bool IoUringImpl::DrainLegacyEpoll() {
   // closes it, and registers a fresh fd that reuses the same number --
   // the old event's remaining bits die with the tombstone.
   bool dispatched = false;
-  if (ready_epoll & kInEvents) {
+  if (ready_epoll & kReadableEvents) {
     ABSL_CHECK(state->in_fn)
         << ": No handler registered for input events on descriptor " << ready_fd
         << ". Received events = 0x" << std::hex << ready_epoll << std::dec;
@@ -1262,7 +1254,7 @@ bool IoUringImpl::DrainLegacyEpoll() {
     dispatched = true;
     if (state->fd == -1) return dispatched;
   }
-  if (ready_epoll & kOutEvents) {
+  if (ready_epoll & kWritableEvent) {
     ABSL_CHECK(state->out_fn)
         << ": No handler registered for output events on descriptor "
         << ready_fd << ". Received events = 0x" << std::hex << ready_epoll
@@ -1271,7 +1263,7 @@ bool IoUringImpl::DrainLegacyEpoll() {
     dispatched = true;
     if (state->fd == -1) return dispatched;
   }
-  if (ready_epoll & kErrorEvents) {
+  if (ready_epoll & kErrorEvent) {
     ABSL_CHECK(state->err_fn)
         << ": No handler registered for error events on descriptor " << ready_fd
         << ". Received events = 0x" << std::hex << ready_epoll << std::dec
@@ -2320,7 +2312,7 @@ void IoUringImpl::OnReadable(FileDescriptor fd,
   ABSL_CHECK(!state.events_fn)
       << "Cannot mix OnEvents and OnReadable for fd " << fd;
   state.in_fn = std::move(callback);
-  uint32_t new_events = state.events | kInEvents | kErrorEvents;
+  uint32_t new_events = state.events | kReadableEvents | kErrorEvent;
   if (state.events != new_events) {
     state.events = new_events;
     UpdateLegacyEpoll(&state);
@@ -2341,7 +2333,7 @@ void IoUringImpl::OnError(FileDescriptor fd, std::function<void()> callback) {
   ABSL_CHECK(!state.events_fn)
       << "Cannot mix OnEvents and OnError for fd " << fd;
   state.err_fn = std::move(callback);
-  uint32_t new_events = state.events | kErrorEvents;
+  uint32_t new_events = state.events | kErrorEvent;
   if (state.events != new_events) {
     state.events = new_events;
     UpdateLegacyEpoll(&state);
@@ -2363,7 +2355,7 @@ void IoUringImpl::OnWritable(FileDescriptor fd,
   ABSL_CHECK(!state.events_fn)
       << "Cannot mix OnEvents and OnWritable for fd " << fd;
   state.out_fn = std::move(callback);
-  uint32_t new_events = state.events | kOutEvents;
+  uint32_t new_events = state.events | kWritableEvent;
   if (state.events != new_events) {
     state.events = new_events;
     UpdateLegacyEpoll(&state);
@@ -2470,7 +2462,7 @@ void IoUringImpl::EnableWritable(FileDescriptor fd) {
   ABSL_CHECK(!state.events_fn)
       << "EnableWritable is only for fds registered using OnWritable, not "
          "OnEvents";
-  uint32_t new_events = state.events | kOutEvents;
+  uint32_t new_events = state.events | kWritableEvent;
   if (state.events != new_events) {
     state.events = new_events;
     UpdateLegacyEpoll(&state);
@@ -2486,7 +2478,7 @@ void IoUringImpl::DisableWritable(FileDescriptor fd) {
   ABSL_CHECK(!state.events_fn)
       << "DisableWritable is only for fds registered using OnWritable, not "
          "OnEvents";
-  uint32_t new_events = state.events & ~kOutEvents;
+  uint32_t new_events = state.events & ~kWritableEvent;
   if (state.events != new_events) {
     state.events = new_events;
     UpdateLegacyEpoll(&state);
@@ -3288,10 +3280,10 @@ internal::ReadinessBackend::WaitResult EpollImpl::WaitForOne(bool block,
   const uint32_t got_events = event.events;
   out->reg = static_cast<internal::FdRegistration *>(event.data.ptr);
   out->events = 0;
-  if (got_events & EPOLLIN) out->events |= kIn;
-  if (got_events & EPOLLPRI) out->events |= kPri;
-  if (got_events & EPOLLOUT) out->events |= kOut;
-  if (got_events & EPOLLERR) out->events |= kErr;
+  if (got_events & EPOLLIN) out->events |= kReadableEvent;
+  if (got_events & EPOLLPRI) out->events |= kPriorityEvent;
+  if (got_events & EPOLLOUT) out->events |= kWritableEvent;
+  if (got_events & EPOLLERR) out->events |= kErrorEvent;
   // EPOLLHUP is absent from the translation above, as it was in EPoll: a
   // hangup is not an error event.  It still reaches OnEvents, a raw
   // AsyncRead/AsyncWrite, and a legacy handler when nothing else carries it,
@@ -3578,10 +3570,10 @@ bool EpollImpl::UpdateRegistration(internal::FdRegistration *reg) {
   if (read_armed) desired_events |= EPOLLIN;
   if (write_armed) desired_events |= EPOLLOUT;
 
-  if (reg->events & kIn) desired_events |= EPOLLIN;
-  if (reg->events & kPri) desired_events |= EPOLLPRI;
-  if (reg->events & kOut) desired_events |= EPOLLOUT;
-  if (reg->events & kErr) desired_events |= EPOLLERR;
+  if (reg->events & kReadableEvent) desired_events |= EPOLLIN;
+  if (reg->events & kPriorityEvent) desired_events |= EPOLLPRI;
+  if (reg->events & kWritableEvent) desired_events |= EPOLLOUT;
+  if (reg->events & kErrorEvent) desired_events |= EPOLLERR;
 
   // Registered-vs-not follows what the caller asked for, not the
   // translated mask, matching EPoll::DoEpollCtl(): a SetEvents() mask of

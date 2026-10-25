@@ -11,14 +11,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #if defined(__linux__)
-#include <sys/epoll.h>
 #include <sys/eventfd.h>
 #include <sys/inotify.h>
-#else
-#define EPOLLIN 0x01
-#define EPOLLOUT 0x04
-#define EPOLLERR 0x08
-#define EPOLLHUP 0x10
 #endif
 
 #include <algorithm>
@@ -4541,17 +4535,20 @@ TEST_P(AioTest, ReceiverCallbackCapturesSurviveSelfUnregister) {
 // the translated mask unregistered the fd entirely, so the hangup below
 // would never be delivered.
 TEST_P(AioTest, SetEventsUntranslatedMaskKeepsRegistration) {
+  // EPOLLHUP's value: a bit no backend translates, which keeps the fd
+  // registered and asks for nothing else.
+  constexpr uint32_t kHangupMaskBit = 0x10;
   Aio aio;
   Pipe pipe;
 
   int events_seen = 0;
   aio.OnEvents(pipe.read_fd(), [&aio, &pipe, &events_seen](uint32_t events) {
-    EXPECT_TRUE(events & EPOLLERR);
+    EXPECT_TRUE(events & kErrorEvent);
     ++events_seen;
     // Stop the level-triggered hangup from re-firing.
     aio.DeleteFd(pipe.read_fd());
   });
-  aio.SetEvents(pipe.read_fd(), EPOLLHUP);
+  aio.SetEvents(pipe.read_fd(), kHangupMaskBit);
 
   pipe.close_write_fd();
   // Non-blocking with a deadline: the regression mode is "the fd got
@@ -4778,9 +4775,9 @@ TEST_P(AioTest, LegacyReadableIgnoresHangup) {
 // error rather than as readability dies on the err_fn CHECK the first time
 // the loop comes back around.  The IOCP backend did exactly that: its
 // readiness watch is one zero-byte WSARecv standing in for both of kqueue's
-// filters, and it translated the peer's orderly shutdown to kErr regardless
-// of which side had gone away.  An ordinary OnReadable()-only registration
-// therefore killed the process the moment its peer closed.
+// filters, and it translated the peer's orderly shutdown to kErrorEvent
+// regardless of which side had gone away.  An ordinary OnReadable()-only
+// registration therefore killed the process the moment its peer closed.
 //
 // Every backend hands the bare hangup that follows the buffered byte to the
 // read handler (epoll via RouteHangupOrError(), kqueue as EVFILT_READ|EV_EOF),
@@ -5039,12 +5036,12 @@ TEST_P(AioTest, DuplicateEventOnCancel) {
   int count = 0;
 
   aio.OnEvents(pipe.write_fd(), [&](uint32_t events) {
-    EXPECT_TRUE(events & EPOLLOUT);
+    EXPECT_TRUE(events & kWritableEvent);
     ++count;
     aio.SetEvents(pipe.write_fd(), 0);
   });
 
-  aio.SetEvents(pipe.write_fd(), EPOLLOUT);
+  aio.SetEvents(pipe.write_fd(), kWritableEvent);
   aio.Poll(true);
   aio.Poll(false);
 
@@ -5071,12 +5068,12 @@ TEST_P(AioTest, ForkDeathTest) {
   aio.RegisterThreadSignalReceiver(&sfd, [&]() { ++signal_count; });
 
   aio.OnEvents(pipe.write_fd(), [&](uint32_t events) {
-    EXPECT_TRUE(events & EPOLLOUT);
+    EXPECT_TRUE(events & kWritableEvent);
     ++fd_count;
     aio.SetEvents(pipe.write_fd(), 0);
   });
 
-  aio.SetEvents(pipe.write_fd(), EPOLLOUT);
+  aio.SetEvents(pipe.write_fd(), kWritableEvent);
 
   EXPECT_EXIT(
       {

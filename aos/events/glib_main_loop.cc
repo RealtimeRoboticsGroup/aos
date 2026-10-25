@@ -1,7 +1,5 @@
 #include "aos/events/glib_main_loop.h"
 
-#include <sys/epoll.h>
-
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 
@@ -10,53 +8,50 @@
 namespace aos {
 namespace {
 
-gint EpollToGio(uint32_t epoll) {
+// Aio delivers the four bits named in file_descriptor.h and nothing else, a
+// hangup included: it arrives as kErrorEvent.
+gint AioToGio(uint32_t events) {
   gint result = 0;
-  if (epoll & EPOLLIN) {
+  if (events & kReadableEvent) {
     result |= G_IO_IN;
-    epoll &= ~EPOLLIN;
+    events &= ~kReadableEvent;
   }
-  if (epoll & EPOLLOUT) {
+  if (events & kWritableEvent) {
     result |= G_IO_OUT;
-    epoll &= ~EPOLLOUT;
+    events &= ~kWritableEvent;
   }
-  if (epoll & (EPOLLRDHUP | EPOLLHUP)) {
-    result |= G_IO_HUP;
-    epoll &= ~(EPOLLRDHUP | EPOLLHUP);
-  }
-  if (epoll & EPOLLPRI) {
+  if (events & kPriorityEvent) {
     result |= G_IO_PRI;
-    epoll &= ~EPOLLPRI;
+    events &= ~kPriorityEvent;
   }
-  if (epoll & EPOLLERR) {
+  if (events & kErrorEvent) {
     result |= G_IO_ERR;
-    epoll &= ~EPOLLERR;
+    events &= ~kErrorEvent;
   }
-  ABSL_CHECK_EQ(epoll, 0u) << ": Unhandled epoll bits";
+  ABSL_CHECK_EQ(events, 0u) << ": Unhandled Aio event bits";
   return result;
 }
 
-uint32_t GioToEpoll(gint gio) {
+// G_IO_HUP and G_IO_ERR both ask for kErrorEvent, the bit Aio reports either
+// on.  A mask of nothing but them still keeps the fd registered, where a mask
+// of 0 would remove it.
+uint32_t GioToAio(gint gio) {
   uint32_t result = 0;
   if (gio & G_IO_IN) {
-    result |= EPOLLIN;
+    result |= kReadableEvent;
     gio &= ~G_IO_IN;
   }
   if (gio & G_IO_OUT) {
-    result |= EPOLLOUT;
+    result |= kWritableEvent;
     gio &= ~G_IO_OUT;
   }
-  if (gio & G_IO_HUP) {
-    result |= EPOLLHUP;
-    gio &= ~G_IO_HUP;
-  }
   if (gio & G_IO_PRI) {
-    result |= EPOLLPRI;
+    result |= kPriorityEvent;
     gio &= ~G_IO_PRI;
   }
-  if (gio & G_IO_ERR) {
-    result |= EPOLLERR;
-    gio &= ~G_IO_ERR;
+  if (gio & (G_IO_HUP | G_IO_ERR)) {
+    result |= kErrorEvent;
+    gio &= ~(G_IO_HUP | G_IO_ERR);
   }
   ABSL_CHECK_EQ(gio, 0) << ": Unhandled gio bits";
   return result;
@@ -168,12 +163,12 @@ void GlibMainLoop::BeforeWait() {
             [fd](const GPollFD &candidate) { return candidate.fd == fd; });
         ABSL_CHECK(iterator != gpoll_fds_.end())
             << ": Lost GPollFD for " << fd
-            << " but still registered with epoll";
-        iterator->revents |= EpollToGio(events);
+            << " but still registered with the Aio";
+        iterator->revents |= AioToGio(events);
       });
       added_fds_.insert(gpoll_fd.fd);
     }
-    aio_->SetEvents(gpoll_fd.fd, GioToEpoll(gpoll_fd.events));
+    aio_->SetEvents(gpoll_fd.fd, GioToAio(gpoll_fd.events));
   }
   for (int fd : added_fds_) {
     const auto iterator = std::find_if(

@@ -73,8 +73,8 @@ class EPoll {
   // Configure events to call this function for using SetEvents.
   //
   // The event encoding is documented on Aio::OnEvents().  One delta from
-  // the pre-Aio EPoll: a hangup (EPOLLHUP) is delivered as the error bit
-  // (0x08), where it used to be dropped and the callback invoked with 0.
+  // the pre-Aio EPoll: a hangup (EPOLLHUP) is delivered as kErrorEvent,
+  // where it used to be dropped and the callback invoked with 0.
   //
   // A fd may be registered exclusively with OnReadable/OnWritable/OnError OR
   // OnEvents.
