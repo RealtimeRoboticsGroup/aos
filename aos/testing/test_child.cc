@@ -53,9 +53,13 @@ class TestChild::Impl {
   }
 
   // A forked process can be killed outright.  Dying by signal is expected.
+  // SIGKILL, because a signal with a handler is not always delivered: tsan
+  // holds a handled signal until the thread reaches one of its interceptors,
+  // and a child blocked in a raw futex syscall that retries on EINTR never
+  // does.
   void Terminate() {
     ABSL_CHECK_NE(child_, -1) << ": not started";
-    ABSL_PCHECK(kill(child_, SIGTERM) != -1);
+    ABSL_PCHECK(kill(child_, SIGKILL) != -1);
     const int status = Wait();
     ABSL_CHECK(WIFEXITED(status) || WIFSIGNALED(status));
     child_ = -1;
