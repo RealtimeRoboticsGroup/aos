@@ -158,13 +158,13 @@ std::set<std::string> LoggerNodes(const std::vector<LogFile> &log_files);
 // Validates that collection of log files or log parts shares the same configs.
 bool HasMatchingConfigs(const std::vector<LogFile> &items);
 
-// Recursively searches the file/folder for .bfbs and .bfbs.xz files and adds
-// them to the vector.
+// Recursively searches the file/folder for .bfbs, .bfbs.xz, and .bfbs.sz files
+// and adds them to the vector.
 void FindLogs(std::vector<internal::FileOperations::File> *files,
               std::string filename);
 
-// Recursively searches the file/folder for .bfbs and .bfbs.xz files and returns
-// them in a vector.
+// Recursively searches the file/folder for .bfbs, .bfbs.xz, and .bfbs.sz files
+// and returns them in a vector.
 std::vector<internal::FileOperations::File> FindLogs(std::string filename);
 
 // Recursively searches for logfiles in argv[1] and onward.
