@@ -6,7 +6,6 @@
 // nvjpeg_decoder (executable_name in the config); it costs a CPU decode per
 // frame, so it is not for matches.
 
-#include <cstdlib>
 #include <vector>
 
 #include "absl/flags/flag.h"
@@ -17,6 +16,7 @@
 #include "aos/events/shm_event_loop.h"
 #include "aos/init.h"
 #include "aos/realtime.h"
+#include "frc/vision/gray_image_diff.h"
 #include "frc/vision/nvjpeg_decoder_service.h"
 #include "turbojpeg.h"
 
@@ -25,19 +25,6 @@ ABSL_FLAG(std::string, config, "aos_config.json",
 
 namespace frc::vision {
 namespace {
-
-// Mean absolute difference, in grey levels, under which the hardware and
-// CPU decodes of one JPEG count as the same image.  They agree to well
-// under 1; two different camera frames differ by 20+.
-constexpr double kSameImage = 2.0;
-
-double MeanAbsDiff(const uint8_t *a, const uint8_t *b, size_t size) {
-  uint64_t sum = 0;
-  for (size_t i = 0; i < size; ++i) {
-    sum += std::abs(static_cast<int>(a[i]) - static_cast<int>(b[i]));
-  }
-  return static_cast<double>(sum) / size;
-}
 
 class VerifyingNvjpegDecoder : public NvjpegDecoder {
  public:
@@ -65,7 +52,9 @@ class VerifyingNvjpegDecoder : public NvjpegDecoder {
       ++skipped_;
       return;
     }
-    const double diff = MeanAbsDiff(gray, cpu_gray_.data(), size);
+    const double diff =
+        MeanAbsDiff(absl::MakeConstSpan(gray, size),
+                    absl::MakeConstSpan(cpu_gray_.data(), size));
     ABSL_CHECK_LT(diff, kSameImage)
         << ": hardware decode of a " << cols << "x" << rows
         << " frame differs from the CPU decode";
