@@ -585,7 +585,12 @@ WriteCode RenamableFileBackend::RenameFileAfterClose(
         std::filesystem::path(final_filename).parent_path());
   }
   if (result != 0) {
-    if (errno == ENOSPC || errno == EDQUOT) {
+    // MSVC's errno.h has no EDQUOT.
+    if (errno == ENOSPC
+#ifdef EDQUOT
+        || errno == EDQUOT
+#endif
+    ) {
       ran_out_of_space = true;
     } else {
       ABSL_PLOG(FATAL) << "Renaming " << current_filename << " to "
