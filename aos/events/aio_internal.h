@@ -34,6 +34,12 @@ inline constexpr char kRequestStillInFlight[] =
 template <typename Node, typename Traits>
 class IntrusiveStack {
  public:
+  IntrusiveStack() = default;
+  // A copy would share nodes with the original, so a push onto either one
+  // would corrupt the other.
+  IntrusiveStack(const IntrusiveStack &) = delete;
+  IntrusiveStack &operator=(const IntrusiveStack &) = delete;
+
   bool empty() const { return head_ == nullptr; }
 
   void Push(Node *node) {
@@ -91,6 +97,59 @@ class IntrusiveStack {
   Node *head_ = nullptr;
 };
 
+// Intrusive singly-linked FIFO.  Same Traits as IntrusiveStack -- one `next`
+// link inside the node -- plus a tail pointer, so what comes out is in the
+// order it went in.  Use it where that order is observable (a queue of
+// completions a caller is driving) and IntrusiveStack where it is not.
+// Nothing allocates or frees; a node may only be on one list at a time.
+template <typename Node, typename Traits>
+class IntrusiveFifo {
+ public:
+  IntrusiveFifo() = default;
+  // A copy would share nodes with the original, so a push onto either one
+  // would corrupt the other.
+  IntrusiveFifo(const IntrusiveFifo &) = delete;
+  IntrusiveFifo &operator=(const IntrusiveFifo &) = delete;
+
+  bool empty() const { return head_ == nullptr; }
+
+  void PushBack(Node *node) {
+    Traits::next(node) = nullptr;
+    if (tail_ != nullptr) {
+      Traits::next(tail_) = node;
+    } else {
+      head_ = node;
+    }
+    tail_ = node;
+  }
+
+  // Visits every node, oldest first.  Does not tolerate the callback
+  // unlinking a node.
+  template <typename Fn>
+  void ForEach(Fn fn) const {
+    for (Node *node = head_; node != nullptr; node = Traits::next(node)) {
+      fn(node);
+    }
+  }
+
+  // Pops and returns the least recently pushed node, or nullptr when empty.
+  Node *PopFront() {
+    Node *node = head_;
+    if (node != nullptr) {
+      head_ = Traits::next(node);
+      if (head_ == nullptr) {
+        tail_ = nullptr;
+      }
+      Traits::next(node) = nullptr;
+    }
+    return node;
+  }
+
+ private:
+  Node *head_ = nullptr;
+  Node *tail_ = nullptr;
+};
+
 // An IntrusiveStack which owns what is on it, deleting whatever is left when
 // it goes away.  Use it where the stack is the owner -- a free pool, a list of
 // orphaned states -- and plain IntrusiveStack where the nodes belong to
@@ -134,7 +193,18 @@ class OwningIntrusiveStack : public IntrusiveStack<Node, Traits> {
 template <typename Node, typename Traits>
 class IntrusiveDoublyLinkedList {
  public:
+  IntrusiveDoublyLinkedList() = default;
+  // A copy would share nodes with the original, so a push onto either one
+  // would corrupt the other.
+  IntrusiveDoublyLinkedList(const IntrusiveDoublyLinkedList &) = delete;
+  IntrusiveDoublyLinkedList &operator=(const IntrusiveDoublyLinkedList &) =
+      delete;
+
   bool empty() const { return head_ == nullptr; }
+  // Maintained by the mutators below rather than counted on demand.  A caller
+  // that needs the length has it in O(1), and cannot get it out of step with
+  // the list by keeping its own tally beside it.
+  size_t size() const { return size_; }
   Node *front() const { return head_; }
   static Node *Next(Node *node) { return Traits::next(node); }
 
@@ -147,6 +217,7 @@ class IntrusiveDoublyLinkedList {
       tail_ = node;
     }
     head_ = node;
+    ++size_;
   }
 
   void PushBack(Node *node) {
@@ -158,6 +229,7 @@ class IntrusiveDoublyLinkedList {
       head_ = node;
     }
     tail_ = node;
+    ++size_;
   }
 
   void Remove(Node *node) {
@@ -179,6 +251,7 @@ class IntrusiveDoublyLinkedList {
     }
     Traits::prev(node) = nullptr;
     Traits::next(node) = nullptr;
+    --size_;
   }
 
   // Visits every node, front to back.  Does not tolerate the callback
@@ -202,6 +275,7 @@ class IntrusiveDoublyLinkedList {
  private:
   Node *head_ = nullptr;
   Node *tail_ = nullptr;
+  size_t size_ = 0;
 };
 
 struct Aio::TimerState {

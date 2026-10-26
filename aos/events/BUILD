@@ -211,6 +211,20 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "aio_internal_test",
+    srcs = [
+        # Same package as :aio, which lists it as a source rather than a
+        # header so the containers stay private to the backends.
+        "aio_internal.h",
+        "aio_internal_test.cc",
+    ],
+    deps = [
+        ":aio",
+        "//aos/testing:googletest",
+    ],
+)
+
 cc_library(
     name = "intrusive_rb_tree",
     hdrs = ["intrusive_rb_tree.h"],
