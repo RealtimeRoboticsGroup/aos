@@ -14,6 +14,12 @@
 #include "aos/stl_mutex/stl_mutex.h"
 
 namespace aos {
+
+class AosLogToFbs;
+namespace logging {
+class ScopedLogRestorer;
+}  // namespace logging
+
 namespace shm_event_loop_internal {
 
 class ShmWatcherState;
@@ -40,6 +46,23 @@ class ShmEventLoop : public EventLoop {
   ShmEventLoop(const Flatbuffer<Configuration> &configuration)
       : ShmEventLoop(&configuration.message()) {}
   ShmEventLoop(const Configuration *configuration);
+
+  // Builds an event loop that runs on somebody else's Aio rather than its own.
+  //
+  // This is how AOS gets scheduled onto a foreign event loop: pair it with an
+  // Aio subclass backed by that loop, and the watchers and timers here become
+  // work that loop is already waiting on.
+  //
+  // The Aio is borrowed and must outlive this.  Run() is not usable in this
+  // mode, because whoever owns the Aio is the one driving it; call Startup()
+  // and Shutdown() around their loop instead.  No other event loop may be on
+  // that Aio, because an Aio carries one event loop's wakeups.
+  //
+  // Exit(), ExitWithStatus() and an ExitHandle Quit() that Aio.
+  ShmEventLoop(const Flatbuffer<Configuration> &configuration, Aio *aio)
+      : ShmEventLoop(&configuration.message(), aio) {}
+  ShmEventLoop(const Configuration *configuration, Aio *aio);
+
   ShmEventLoop(const ShmEventLoop &) = delete;
   ~ShmEventLoop() override;
 
@@ -47,10 +70,30 @@ class ShmEventLoop : public EventLoop {
 
   // Runs the event loop until Exit is called, or ^C is caught.
   // TODO(james): Upgrade this to [[nodiscard]].
+  //
+  // Only for an event loop that owns its Aio.  On a borrowed Aio, use Startup()
+  // and Shutdown().
   Status Run();
+
+  // Run() without the polling in the middle, for an event loop on a borrowed
+  // Aio: Startup() before the Aio is first polled, and Shutdown() after it is
+  // last polled, before anything made from this event loop is destroyed.
+  // Polling the Aio while this is not started, or destroying it while it is,
+  // dies.  Shutdown() returns what Run() would have.
+  //
+  // Both run on the thread that polls the Aio, and so does the destructor.
+  // Shutdown() may not run from one of this event loop's callbacks, and only
+  // one event loop may be started on a thread at a time.  Startup() names the
+  // thread and sets its affinity and realtime priority, and Shutdown() drops
+  // the priority; neither restores what the thread had before.  The
+  // destructor takes a before-wait function off the Aio, so destroying this
+  // from one, a glib callback under GlibMainLoop included, dies.
+  void Startup();
+  Status Shutdown();
   // Exits the event loop.  async-signal-safe (see
   // https://man7.org/linux/man-pages/man7/signal-safety.7.html).
-  // Will result in Run() returning a successful result when called.
+  // Run() then returns a successful result.  On a borrowed Aio this stops the
+  // owner's loop instead; see the constructor.
   void Exit();
 
   // Exits the event loop with the provided status. Thread-safe, but not
@@ -115,7 +158,7 @@ class ShmEventLoop : public EventLoop {
   const UUID &boot_uuid() const override { return boot_uuid_; }
 
   // Returns the Aio loop used to run the event loop.
-  Aio *aio() { return &aio_; }
+  Aio *aio() { return aio_; }
 
   // Returns the local mapping of the shared memory used by the watcher on the
   // specified channel. A watcher must be created on this channel before calling
@@ -226,11 +269,11 @@ class ShmEventLoop : public EventLoop {
 
   void CheckCurrentThread() const;
 
-  // CheckCurrentThread(), and while Run() is running, also checks that this is
-  // the thread running it.  Timers and phased loops arm Aio timers, which
-  // only the thread driving the Aio may do, so they check this.  Before
-  // Run() and after it returns, any thread may set them up or tear them down,
-  // as far as the Aio allows.
+  // CheckCurrentThread(), and between Startup() and Shutdown(), also checks
+  // that this is the thread that ran Startup().  Timers and phased loops arm
+  // Aio timers, which only the thread driving the Aio may do, so they check
+  // this.  Before Startup() and after Shutdown(), any thread may set them up
+  // or tear them down, as far as the Aio allows.
   void CheckLoopThread() const;
 
   // Validates that the current thread is not the main thread.
@@ -273,14 +316,36 @@ class ShmEventLoop : public EventLoop {
 
   aos::stl_mutex *check_mutex_ = nullptr;
   std::optional<pid_t> check_tid_;
-  // The thread inside Run(), and so driving the Aio.  A std::thread::id
-  // because reading it is free, where gettid() is a syscall on every timer
-  // Schedule().
+  // The thread that ran Startup(), and so drives the Aio, until Shutdown().
+  // A std::thread::id because reading it is free, where gettid() is a
+  // syscall on every timer Schedule().
   std::optional<std::thread::id> loop_thread_;
 
-  Aio aio_;
+  // Shared by both constructors.
+  void Initialize(const Configuration *configuration);
 
-  // Only set during Run().
+  // Startup() and Shutdown() each run once per run.  Shutdown() clears them,
+  // because an event loop may be Run() more than once.
+  bool started_ = false;
+  bool shut_down_ = false;
+  // Whether one of this event loop's callbacks is running, which Shutdown()
+  // may not be called from.
+  bool in_callback_ = false;
+
+  // Live from Startup() to Shutdown(), which is why they are not locals.
+  // Held by pointer so this header does not have to define them.
+  std::unique_ptr<logging::ScopedLogRestorer> log_restorer_;
+  std::unique_ptr<AosLogToFbs> aos_logger_;
+
+  // A borrowed Aio's before-wait hook, which the destructor removes.
+  Aio::BeforeWaitId check_polled_hook_ = 0;
+
+  // Engaged only when this event loop owns its Aio; aio_ points into it.
+  std::optional<Aio> owned_aio_;
+  // The Aio actually in use, owned or borrowed.  Never null.
+  Aio *const aio_;
+
+  // Only set from Startup() to Shutdown(), and only with watchers.
   std::unique_ptr<ipc_lib::ThreadSignalReceiver> signal_receiver_;
 
   // Calls to Exit() are guaranteed to be thread-safe, so the exit_status_mutex_

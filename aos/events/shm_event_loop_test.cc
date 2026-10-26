@@ -6,8 +6,11 @@
 
 #include <atomic>
 #include <chrono>
+#include <memory>
+#include <optional>
 #include <string_view>
 #include <thread>
+#include <vector>
 
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
@@ -15,6 +18,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include "aos/events/aio.h"
 #include "aos/events/event_loop_param_test.h"
 #include "aos/events/test_message_generated.h"
 #include "aos/ipc_lib/memory_mapped_queue.h"
@@ -41,8 +45,14 @@ class ShmEventLoopTestFactory : public EventLoopTestFactory {
  public:
   // The backend name --aio_backend takes, rather than a bool, so adding a
   // backend does not mean re-teaching this a new flag shape.
-  explicit ShmEventLoopTestFactory(std::string backend = "io_uring")
-      : backend_(std::move(backend)) {
+  //
+  // With borrow_aio, every event loop is built on an Aio this owns, and Run()
+  // drives the primary's Aio around Startup() and Shutdown() instead of
+  // calling ShmEventLoop::Run().  Anything Run() does that those two miss
+  // then fails the suite.
+  explicit ShmEventLoopTestFactory(std::string backend = "io_uring",
+                                   bool borrow_aio = false)
+      : backend_(std::move(backend)), borrow_aio_(borrow_aio) {
     // Clean up anything left there before.
     EmptyQueues(configuration());
   }
@@ -53,32 +63,26 @@ class ShmEventLoopTestFactory : public EventLoopTestFactory {
   }
 
   ::std::unique_ptr<EventLoop> Make(std::string_view name) override {
-    absl::SetFlag(&FLAGS_aio_backend, backend_);
-    if (configuration()->has_nodes()) {
-      absl::SetFlag(&FLAGS_override_hostname,
-                    std::string(my_node()->hostname()->string_view()));
-    }
-    ::std::unique_ptr<ShmEventLoop> loop(new ShmEventLoop(configuration()));
-    loop->set_name(name);
-    return loop;
+    return MakeShmEventLoop(name);
   }
 
   ::std::unique_ptr<EventLoop> MakePrimary(std::string_view name) override {
-    absl::SetFlag(&FLAGS_aio_backend, backend_);
-    if (configuration()->has_nodes()) {
-      absl::SetFlag(&FLAGS_override_hostname,
-                    std::string(my_node()->hostname()->string_view()));
-    }
-    ::std::unique_ptr<ShmEventLoop> loop =
-        ::std::unique_ptr<ShmEventLoop>(new ShmEventLoop(configuration()));
+    ::std::unique_ptr<ShmEventLoop> loop = MakeShmEventLoop(name);
     primary_event_loop_ = loop.get();
-    loop->set_name(name);
+    primary_aio_ = borrow_aio_ ? aios_.back().get() : nullptr;
     return loop;
   }
 
   Status Run() override {
     ABSL_CHECK(primary_event_loop_ != nullptr);
-    return primary_event_loop_->Run();
+    if (primary_aio_ == nullptr) {
+      return primary_event_loop_->Run();
+    }
+    // Deliberately not primary_event_loop_->Run(): the point is that this
+    // works without it.
+    primary_event_loop_->Startup();
+    primary_aio_->Run();
+    return primary_event_loop_->Shutdown();
   }
 
   std::unique_ptr<ExitHandle> MakeExitHandle() override {
@@ -96,8 +100,31 @@ class ShmEventLoopTestFactory : public EventLoopTestFactory {
   }
 
  private:
+  ::std::unique_ptr<ShmEventLoop> MakeShmEventLoop(std::string_view name) {
+    absl::SetFlag(&FLAGS_aio_backend, backend_);
+    if (configuration()->has_nodes()) {
+      absl::SetFlag(&FLAGS_override_hostname,
+                    std::string(my_node()->hostname()->string_view()));
+    }
+    ::std::unique_ptr<ShmEventLoop> loop;
+    if (borrow_aio_) {
+      aios_.push_back(std::make_unique<Aio>());
+      loop.reset(new ShmEventLoop(configuration(), aios_.back().get()));
+    } else {
+      loop.reset(new ShmEventLoop(configuration()));
+    }
+    loop->set_name(name);
+    return loop;
+  }
+
   ::aos::ShmEventLoop *primary_event_loop_ = nullptr;
+  // The primary's Aio when borrow_aio_, which Run() drives.
+  Aio *primary_aio_ = nullptr;
   const std::string backend_;
+  const bool borrow_aio_;
+  // One per event loop when borrow_aio_.  The tests destroy their event loops
+  // before this factory, so these outlive every loop built on them.
+  std::vector<std::unique_ptr<Aio>> aios_;
 };
 
 auto CommonParameters(std::string backend) {
@@ -109,6 +136,19 @@ auto CommonParameters(std::string backend) {
       ::testing::Values(DoTimingReports::kYes, DoTimingReports::kNo));
 }
 
+// The same suite on borrowed Aios.  One read method and one timing setting are
+// enough: what this covers is Startup() and Shutdown(), which neither changes.
+// No timing reports, since their 1 Hz rescan of every watcher would hide a
+// dead wakeup path behind a slow one.
+auto BorrowedParameters(std::string backend) {
+  return ::testing::Combine(::testing::Values([backend = std::move(backend)]() {
+                              return new ShmEventLoopTestFactory(
+                                  backend, /*borrow_aio=*/true);
+                            }),
+                            ::testing::Values(ReadMethod::COPY),
+                            ::testing::Values(DoTimingReports::kNo));
+}
+
 #ifdef __linux__
 #ifndef AOS_EPOLL_ONLY
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonTestIoUring, AbstractEventLoopTest,
@@ -116,6 +156,11 @@ INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonTestIoUring, AbstractEventLoopTest,
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonDeathTestIoUring,
                          AbstractEventLoopDeathTest,
                          CommonParameters("io_uring"));
+INSTANTIATE_TEST_SUITE_P(ShmEventLoopBorrowedAioTestIoUring,
+                         AbstractEventLoopTest, BorrowedParameters("io_uring"));
+INSTANTIATE_TEST_SUITE_P(ShmEventLoopBorrowedAioDeathTestIoUring,
+                         AbstractEventLoopDeathTest,
+                         BorrowedParameters("io_uring"));
 #endif  // AOS_EPOLL_ONLY
 
 #ifndef AOS_IO_URING_ONLY
@@ -123,18 +168,33 @@ INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonTestEpoll, AbstractEventLoopTest,
                          CommonParameters("epoll"));
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonDeathTestEpoll,
                          AbstractEventLoopDeathTest, CommonParameters("epoll"));
+INSTANTIATE_TEST_SUITE_P(ShmEventLoopBorrowedAioTestEpoll,
+                         AbstractEventLoopTest, BorrowedParameters("epoll"));
+INSTANTIATE_TEST_SUITE_P(ShmEventLoopBorrowedAioDeathTestEpoll,
+                         AbstractEventLoopDeathTest,
+                         BorrowedParameters("epoll"));
 #endif  // AOS_IO_URING_ONLY
 #elif defined(_WIN32)
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonTestIocp, AbstractEventLoopTest,
                          CommonParameters("iocp"));
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonDeathTestIocp,
                          AbstractEventLoopDeathTest, CommonParameters("iocp"));
+INSTANTIATE_TEST_SUITE_P(ShmEventLoopBorrowedAioTestIocp, AbstractEventLoopTest,
+                         BorrowedParameters("iocp"));
+INSTANTIATE_TEST_SUITE_P(ShmEventLoopBorrowedAioDeathTestIocp,
+                         AbstractEventLoopDeathTest,
+                         BorrowedParameters("iocp"));
 #else
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonTestKQueue, AbstractEventLoopTest,
                          CommonParameters("kqueue"));
 INSTANTIATE_TEST_SUITE_P(ShmEventLoopCommonDeathTestKQueue,
                          AbstractEventLoopDeathTest,
                          CommonParameters("kqueue"));
+INSTANTIATE_TEST_SUITE_P(ShmEventLoopBorrowedAioTestKQueue,
+                         AbstractEventLoopTest, BorrowedParameters("kqueue"));
+INSTANTIATE_TEST_SUITE_P(ShmEventLoopBorrowedAioDeathTestKQueue,
+                         AbstractEventLoopDeathTest,
+                         BorrowedParameters("kqueue"));
 #endif
 
 }  // namespace
@@ -753,6 +813,232 @@ TEST_P(ShmEventLoopTest, TimerFromAnotherThreadAfterRun) {
   timer->Schedule(loop->monotonic_now() + std::chrono::seconds(10));
   phased_loop->Reschedule(loop->monotonic_now());
   timer->Disable();
+}
+
+// A started event loop on a borrowed Aio has to be shut down before it goes,
+// as Run() returning shuts down an owned one.
+TEST_P(ShmEventLoopDeathTest, DestroyingAStartedLoopOnABorrowedAioDies) {
+  absl::SetFlag(&FLAGS_aio_backend, std::get<1>(GetParam()));
+  EXPECT_DEATH(
+      {
+        Aio aio;
+        auto event_loop =
+            std::make_unique<ShmEventLoop>(factory()->configuration(), &aio);
+        event_loop->SkipTimingReport();
+        event_loop->SkipAosLog();
+        event_loop->Startup();
+        event_loop.reset();
+      },
+      "On a borrowed Aio");
+}
+
+// Run() drives the Aio, which a borrowed one is not this event loop's to do.
+TEST_P(ShmEventLoopDeathTest, RunIsRefusedOnABorrowedAio) {
+  absl::SetFlag(&FLAGS_aio_backend, std::get<1>(GetParam()));
+  Aio aio;
+  ShmEventLoop event_loop(factory()->configuration(), &aio);
+  EXPECT_DEATH((void)event_loop.Run(), "borrowed Aio");
+}
+
+// Polls a borrowed Aio, without blocking, until duration has passed.
+void PollFor(Aio &aio, monotonic_clock::duration duration) {
+  const monotonic_clock::time_point end = monotonic_clock::now() + duration;
+  while (monotonic_clock::now() < end) {
+    aio.Poll(false);
+  }
+}
+
+// The Aio outlives the event loop it carried, and is polled on without it.
+// Under ASAN this catches a before-wait hook left behind on the Aio.  The
+// Sender is torn down the way every application's is: after Shutdown().
+TEST_P(ShmEventLoopTest, BorrowedAioOutlivesItsEventLoop) {
+  absl::SetFlag(&FLAGS_aio_backend, std::get<1>(GetParam()));
+  Aio aio;
+  for (int i = 0; i < 2; ++i) {
+    int ticks = 0;
+    {
+      ShmEventLoop event_loop(factory()->configuration(), &aio);
+      event_loop.SkipTimingReport();
+      event_loop.SkipAosLog();
+      std::optional<aos::Sender<TestMessage>> sender =
+          event_loop.MakeSender<TestMessage>("/test");
+      TimerHandler *const timer = event_loop.AddTimer([&]() { ++ticks; });
+      event_loop.OnRun([&]() {
+        timer->Schedule(event_loop.monotonic_now(), chrono::milliseconds(1));
+      });
+      event_loop.Startup();
+      PollFor(aio, chrono::milliseconds(20));
+      ASSERT_TRUE(IsOk(event_loop.Shutdown()));
+      sender.reset();
+    }
+    EXPECT_GT(ticks, 0);
+    PollFor(aio, chrono::milliseconds(20));
+  }
+}
+
+// A shut-down event loop on a borrowed Aio is what one on an owned Aio is
+// between runs: what it scheduled stays scheduled, more may be scheduled, and
+// the next Startup() runs it all.
+TEST_P(ShmEventLoopTest, ShutDownEventLoopKeepsItsScheduleForTheNextStartup) {
+  absl::SetFlag(&FLAGS_aio_backend, std::get<1>(GetParam()));
+  Aio aio;
+  ShmEventLoop event_loop(factory()->configuration(), &aio);
+  event_loop.SkipAosLog();
+  event_loop.MakeWatcher("/test", [](const TestMessage &) {});
+  int ticks = 0;
+  int phases = 0;
+  TimerHandler *const timer = event_loop.AddTimer([&]() { ++ticks; });
+  event_loop.AddPhasedLoop([&](int) { ++phases; }, chrono::milliseconds(1));
+  event_loop.OnRun([&]() {
+    timer->Schedule(event_loop.monotonic_now(), chrono::milliseconds(1));
+  });
+
+  event_loop.Startup();
+  PollFor(aio, chrono::milliseconds(20));
+  EXPECT_TRUE(IsOk(event_loop.Shutdown()));
+  const int ticks_at_shutdown = ticks;
+  const int phases_at_shutdown = phases;
+  EXPECT_GT(ticks_at_shutdown, 0);
+  EXPECT_GT(phases_at_shutdown, 0);
+
+  int late = 0;
+  TimerHandler *const late_timer = event_loop.AddTimer([&]() { ++late; });
+  late_timer->Schedule(event_loop.monotonic_now());
+
+  event_loop.Startup();
+  PollFor(aio, chrono::milliseconds(20));
+  EXPECT_GT(ticks, ticks_at_shutdown);
+  EXPECT_GT(phases, phases_at_shutdown);
+  EXPECT_EQ(late, 1);
+  EXPECT_TRUE(IsOk(event_loop.Shutdown()));
+}
+
+// Run() shuts an owned event loop down before it returns, so destroying one
+// from its own callback is a misuse.
+TEST_P(ShmEventLoopDeathTest, DestroyingAnOwnedEventLoopFromItsCallbackDies) {
+  EXPECT_DEATH(
+      {
+        std::unique_ptr<EventLoop> event_loop = factory()->MakePrimary("loop");
+        event_loop->SkipTimingReport();
+        event_loop->SkipAosLog();
+        TimerHandler *const timer =
+            event_loop->AddTimer([&]() { event_loop.reset(); });
+        event_loop->OnRun(
+            [&]() { timer->Schedule(event_loop->monotonic_now()); });
+        factory()->Run();
+      },
+      "destroyed while running");
+}
+
+// Shutdown() is what Run() returning is on an owned Aio, which never happens
+// inside one of the event loop's own callbacks.
+TEST_P(ShmEventLoopDeathTest, ShutdownFromACallbackDies) {
+  absl::SetFlag(&FLAGS_aio_backend, std::get<1>(GetParam()));
+  EXPECT_DEATH(
+      {
+        Aio aio;
+        ShmEventLoop event_loop(factory()->configuration(), &aio);
+        event_loop.SkipTimingReport();
+        event_loop.SkipAosLog();
+        TimerHandler *const timer =
+            event_loop.AddTimer([&]() { (void)event_loop.Shutdown(); });
+        event_loop.OnRun(
+            [&]() { timer->Schedule(event_loop.monotonic_now()); });
+        event_loop.Startup();
+        PollFor(aio, chrono::milliseconds(20));
+      },
+      "Shutdown\\(\\) from inside one of this event loop's own callbacks");
+}
+
+// The watchers Shutdown() unregisters belong to the thread that ran Startup().
+TEST_P(ShmEventLoopDeathTest, ShutdownOffTheLoopThreadDies) {
+  absl::SetFlag(&FLAGS_aio_backend, std::get<1>(GetParam()));
+  EXPECT_DEATH(
+      {
+        Aio aio;
+        ShmEventLoop event_loop(factory()->configuration(), &aio);
+        event_loop.SkipTimingReport();
+        event_loop.SkipAosLog();
+        event_loop.MakeWatcher("/test", [](const TestMessage &) {});
+        std::thread([&]() {
+          event_loop.Startup();
+          PollFor(aio, chrono::milliseconds(5));
+        }).join();
+        (void)event_loop.Shutdown();
+      },
+      "thread that ran Startup");
+}
+
+// A borrowed Aio may only be polled while the event loop on it is started, as
+// an owned one is only polled inside Run(): not before Startup(), and not
+// after Shutdown().
+TEST_P(ShmEventLoopDeathTest, PollingTheAioWhileNotStartedDies) {
+  absl::SetFlag(&FLAGS_aio_backend, std::get<1>(GetParam()));
+  for (const bool started_once : {false, true}) {
+    EXPECT_DEATH(
+        {
+          Aio aio;
+          ShmEventLoop event_loop(factory()->configuration(), &aio);
+          event_loop.SkipTimingReport();
+          event_loop.SkipAosLog();
+          if (started_once) {
+            event_loop.Startup();
+            ABSL_CHECK(IsOk(event_loop.Shutdown()));
+          }
+          aio.Poll(false);
+        },
+        "Polled the Aio while an event loop on it was not started");
+  }
+}
+
+// An event loop's wakeups, realtime priority and logging are per thread, so
+// two started on one thread, even on two Aios, would take each other's.
+TEST_P(ShmEventLoopDeathTest, TwoStartedEventLoopsOnOneThreadDie) {
+  absl::SetFlag(&FLAGS_aio_backend, std::get<1>(GetParam()));
+  EXPECT_DEATH(
+      {
+        Aio aio_a;
+        Aio aio_b;
+        ShmEventLoop a(factory()->configuration(), &aio_a);
+        ShmEventLoop b(factory()->configuration(), &aio_b);
+        a.SkipTimingReport();
+        a.SkipAosLog();
+        b.SkipTimingReport();
+        b.SkipAosLog();
+        a.Startup();
+        b.Startup();
+      },
+      "Another event loop is already started on this thread");
+}
+
+// The Aio's wakeups and timers belong to the thread that ran Startup().  This
+// starts on one thread and polls from another made after it exits, which can
+// reuse its std::thread::id.
+TEST_P(ShmEventLoopDeathTest, PollingTheAioOffTheStartupThreadDies) {
+  absl::SetFlag(&FLAGS_aio_backend, std::get<1>(GetParam()));
+  EXPECT_DEATH(
+      {
+        Aio aio;
+        ShmEventLoop event_loop(factory()->configuration(), &aio);
+        event_loop.SkipTimingReport();
+        event_loop.SkipAosLog();
+        std::thread([&]() { event_loop.Startup(); }).join();
+        std::thread([&]() { aio.Poll(false); }).join();
+      },
+      "Polled the Aio on a different thread");
+}
+
+// An Aio carries one event loop's wakeups, so a second event loop on it would
+// never hear about its messages.
+TEST_P(ShmEventLoopDeathTest, TwoEventLoopsOnOneAioDie) {
+  absl::SetFlag(&FLAGS_aio_backend, std::get<1>(GetParam()));
+  EXPECT_DEATH(
+      {
+        Aio aio;
+        ShmEventLoop a(factory()->configuration(), &aio);
+        ShmEventLoop b(factory()->configuration(), &aio);
+      },
+      "Only one event loop may be on an Aio");
 }
 
 // TODO(austin): Test that missing a deadline with a timer recovers as expected.

@@ -810,6 +810,7 @@ cc_test(
     local_defines = ["AOS_EPOLL_ONLY"],
     shard_count = 50,
     deps = [
+        ":aio",
         ":event_loop_param_test",
         ":shm_event_loop",
         ":test_message_fbs",
@@ -826,6 +827,7 @@ cc_test(
     shard_count = 50,
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
+        ":aio",
         ":event_loop_param_test",
         ":shm_event_loop",
         ":test_message_fbs",
