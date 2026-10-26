@@ -109,12 +109,11 @@ size_t LzmaEncoder::Encode(Copier *copy, size_t start_byte,
   // since lzma is going to take it from here.
   ABSL_CHECK_LE(copy_size, input_buffer_.size());
 
-  ABSL_CHECK_EQ(
-      copy->Copy(input_buffer_.data(), start_byte, copy_size - start_byte),
-      copy_size - start_byte);
+  ABSL_CHECK_EQ(copy->Copy(input_buffer_.data(), start_byte, copy_size),
+                copy_size - start_byte);
 
   stream_.next_in = input_buffer_.data();
-  stream_.avail_in = copy_size;
+  stream_.avail_in = copy_size - start_byte;
   RunLzmaCode(LZMA_RUN, encode_duration);
 
   return copy_size - start_byte;

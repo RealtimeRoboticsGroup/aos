@@ -122,4 +122,41 @@ TEST_F(BufferEncoderBaseTest, CorruptedBuffer) {
   }
 }
 
+// Tests that encoding from the middle of a message only encodes the rest of
+// it.
+TEST_F(BufferEncoderBaseTest, EncodeFromStartByte) {
+  const std::string file_path = aos::testing::TestTmpDir() + "/foo";
+  absl::SetFlag(&FLAGS_lzma_threads, 1);
+
+  std::vector<uint8_t> data(1000);
+  for (size_t i = 0; i < data.size(); ++i) {
+    data[i] = static_cast<uint8_t>(i);
+  }
+  constexpr size_t kStartByte = 504;
+
+  {
+    const auto encoder = std::make_unique<LzmaEncoder>(
+        BufferEncoderBaseTest::kMaxMessageSize, 2);
+    DataEncoder::SpanCopier copier(data);
+    EXPECT_EQ(encoder->Encode(&copier, kStartByte), data.size() - kStartByte);
+    encoder->Finish();
+
+    std::string contents;
+    for (auto span : encoder->queue()) {
+      absl::StrAppend(
+          &contents,
+          std::string_view(reinterpret_cast<const char *>(span.data()),
+                           span.size()));
+    }
+    aos::util::WriteStringToFileOrDie(file_path, contents);
+  }
+
+  const auto decoder = std::make_unique<LzmaDecoder>(file_path);
+  std::vector<uint8_t> decoded(data.size());
+  decoded.resize(
+      decoder->Read(decoded.data(), decoded.data() + decoded.size()));
+  EXPECT_THAT(decoded, ::testing::ElementsAreArray(data.begin() + kStartByte,
+                                                   data.end()));
+}
+
 }  // namespace aos::logger::testing
