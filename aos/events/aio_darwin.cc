@@ -7,7 +7,9 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <sys/event.h>
+#include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <sys/sockio.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -159,9 +161,9 @@ class KqueueImpl : public internal::ReadinessBackend {
   // Tracks active event handlers and request status for a registered file
   // descriptor.
 
-  // The readiness bits (kReadableEvent/kWritableEvent, never kErrorEvent) this
-  // registration actually subscribed to, through On*()/SetEvents() or a raw
-  // request.
+  // The readiness bits (kReadableEvent/kPriorityEvent/kWritableEvent, never
+  // kErrorEvent) this registration actually subscribed to, through
+  // On*()/SetEvents() or a raw request.
   //
   // UpdateRegistration() arms filters from this, and Poll() masks what the
   // kernel reports back down to it.  Both need the same answer: kqueue has no
@@ -173,12 +175,30 @@ class KqueueImpl : public internal::ReadinessBackend {
     uint32_t desired = 0;
     if (Armed(reg, Direction::kRead) != nullptr) desired |= kReadableEvent;
     if (Armed(reg, Direction::kWrite) != nullptr) desired |= kWritableEvent;
-    // kPriorityEvent widens to kReadableEvent: kqueue cannot tell priority data
-    // apart, so a kPriorityEvent subscriber gets the read filter and has to be
-    // told when it fires.
-    if (reg->events & kReadableEvents) desired |= kReadableEvent;
+    if (reg->events & kReadableEvent) desired |= kReadableEvent;
+    if (reg->events & kPriorityEvent) desired |= kPriorityEvent;
     if (reg->events & kWritableEvent) desired |= kWritableEvent;
     return desired;
+  }
+
+  // Whether `events` calls for EVFILT_EXCEPT, which is how kqueue reports
+  // out-of-band TCP data, epoll's EPOLLPRI.  The read filter never fires for
+  // it, and watching a priority-only registration with the read filter would
+  // call it back on every Poll() for as long as ordinary data sat unread.
+  //
+  // Not for an OnReadable() registration.  It subscribes to priority along
+  // with readability, as it does on epoll, but only to be woken, and arming
+  // a second filter on every reader would wake the loop twice for each
+  // arrival of ordinary data.  The cost is that an OnReadable() registration
+  // is not woken by out-of-band data on kqueue, since the read filter does
+  // not fire for an urgent byte, where epoll wakes it on every Poll() while
+  // the byte is unread.  An OnEvents() registration
+  // asked for kPriorityEvent itself, so it gets the filter even when it reads
+  // too, and pays that second wake.
+  static bool WatchesOutOfBand(const internal::FdRegistration *reg,
+                               uint32_t events) {
+    return (events & kPriorityEvent) != 0 &&
+           ((events & kReadableEvent) == 0 || reg->events_fn != nullptr);
   }
 
   // Syncs registration's requested events (epoll_events) with the actual kqueue
@@ -529,10 +549,13 @@ void KqueueImpl::RemoveRegistration(internal::FdRegistration *reg) {
   if (!reg->registered) {
     return;
   }
-  struct kevent events[2];
+  struct kevent events[3];
   int n = 0;
-  if (reg->epoll_events & (kReadableEvent | kPriorityEvent | kErrorEvent)) {
+  if (reg->epoll_events & (kReadableEvent | kErrorEvent)) {
     EV_SET(&events[n++], reg->fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
+  }
+  if (reg->epoll_events & kPriorityEvent) {
+    EV_SET(&events[n++], reg->fd, EVFILT_EXCEPT, EV_DELETE, 0, 0, NULL);
   }
   if (reg->epoll_events & (kWritableEvent | kErrorEvent)) {
     EV_SET(&events[n++], reg->fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
@@ -639,7 +662,7 @@ internal::ReadinessBackend::WaitResult KqueueImpl::WaitForOne(bool block,
     auto *reg = static_cast<internal::FdRegistration *>(event.udata);
     // Translate into the mask epoll would have reported for the same
     // condition, so everything below can stay a bit-for-bit mirror of
-    // EpollImpl::Poll().  Two kqueue-isms have to be undone to get there.
+    // EpollImpl::Poll().  Three kqueue-isms have to be undone to get there.
     //
     // First, which side hung up.  EV_EOF is the only terminal indication
     // kqueue gives -- there is no separate error bit -- so it has to be
@@ -655,9 +678,49 @@ internal::ReadinessBackend::WaitResult KqueueImpl::WaitForOne(bool block,
     // OnReadable()-only registration.
     //
     // Second, readiness nobody subscribed to; see DesiredReadiness().
+    //
+    // Third, EVFILT_EXCEPT fires for ordinary data as well as out-of-band
+    // data, and only NOTE_OOB tells them apart.  Ordinary data is nothing a
+    // priority-only registration asked about, so that firing is consumed
+    // here rather than delivered as an empty mask.  NOTE_OOB alone does not
+    // tell either: it stays set for as long as ordinary data from before the
+    // mark is unread, whether or not the urgent byte itself has been read, so
+    // a firing with it set short of the mark is only out-of-band data if
+    // there is an urgent byte to receive.  On EV_EOF, fflags holds the socket
+    // error instead of NOTE_* bits, so it is a hangup, whatever bits that errno
+    // happens to share with NOTE_OOB.  Every registration with this filter also
+    // has the read filter, which reports that hangup, so this one is consumed
+    // rather than delivering the hangup twice.
     uint32_t events = 0;
     if (event.filter == EVFILT_READ) {
       events |= kReadableEvent;
+    } else if (event.filter == EVFILT_EXCEPT) {
+      if (event.flags & EV_EOF) {
+        return WaitResult::kInternal;
+      }
+      if (!(event.fflags & NOTE_OOB)) {
+        return WaitResult::kInternal;
+      }
+      // Only short of the mark, where XNU leaves the urgent byte to be
+      // received however many times it is peeked at.  At the mark a peek
+      // takes it, and the caller's own recv(MSG_OOB) then finds nothing.
+      // There, NOTE_OOB with the byte already read cannot be told apart from
+      // the byte still waiting, so it is reported: a reader that has read up
+      // to the mark is told again on each arrival until it reads past it.
+      // With SO_OOBINLINE the peek always says EINVAL, so nothing is reported
+      // short of the mark, which aio.h leaves unspecified.
+      int at_mark = 0;
+      if (ioctl(reg->fd, SIOCATMARK, &at_mark) == 0 && at_mark == 0) {
+        // EINVAL: no urgent byte to receive, so this firing was for
+        // ordinary data.  Any other answer leaves it to the caller's own
+        // recv().
+        char byte;
+        if (recv(reg->fd, &byte, 1, MSG_OOB | MSG_PEEK) < 0 &&
+            errno == EINVAL) {
+          return WaitResult::kInternal;
+        }
+      }
+      events |= kPriorityEvent;
     } else if (event.filter == EVFILT_WRITE) {
       events |= kWritableEvent;
       if (event.flags & EV_EOF) {
@@ -672,9 +735,15 @@ internal::ReadinessBackend::WaitResult KqueueImpl::WaitForOne(bool block,
     // desired, and armed EV_CLEAR (one edge, then quiet) when it exists
     // only to watch for errors -- see UpdateRegistration().  So a bit dropped
     // here belongs to an edge-triggered filter that will not re-report it,
-    // and Poll() cannot spin on it.
+    // and Poll() cannot spin on it.  EVFILT_EXCEPT is always EV_CLEAR, for
+    // the ordinary data it also fires on.
     events &= DesiredReadiness(reg) | kErrorEvent;
     const bool terminal = (event.flags & (EV_EOF | EV_ERROR)) != 0;
+    // An error-only filter firing for ordinary readiness leaves nothing to
+    // report, and an empty mask is nothing epoll would deliver.
+    if (events == 0 && !terminal) {
+      return WaitResult::kInternal;
+    }
 
     out->reg = reg;
     out->events = events;
@@ -792,6 +861,61 @@ bool KqueueImpl::UpdateRegistration(internal::FdRegistration *reg) {
   // does.
   if (reg->events & ~(kReadableEvents | kWritableEvent))
     desired_events |= kErrorEvent;
+  // So does a priority-only mask, through the read filter's error-only
+  // watch, since EVFILT_EXCEPT cannot be relied on for a hangup: while
+  // NOTE_OOB is asserted, which it is for as long as an urgent byte or the
+  // ordinary data ahead of the mark is unread, XNU reports an activation as
+  // NOTE_OOB rather than EV_EOF, and with EV_CLEAR only once.  A reset behind
+  // either would never be heard.
+  if ((desired_events & kPriorityEvent) && !(desired_events & kReadableEvent))
+    desired_events |= kErrorEvent;
+
+  // Out-of-band data, before the read filter, since a descriptor that cannot
+  // carry any changes what the read filter has to do.  EV_CLEAR because the
+  // filter also fires for ordinary data, which Poll() drops; level-triggered,
+  // it would fire on every wait until that data was read.  So an out-of-band
+  // byte left unread is reported once, and again when more data arrives,
+  // where EPOLLPRI repeats on every wait.  A hangup is heard through the
+  // read filter, which every registration watching out-of-band data has.
+  //
+  // epoll_events holds kPriorityEvent exactly when the filter is armed, so
+  // removing it does not depend on which callback is still registered.
+  const bool want_oob = WatchesOutOfBand(reg, desired_events);
+  if (!want_oob) {
+    desired_events &= ~kPriorityEvent;
+  }
+  const bool has_oob =
+      reg->registered && (reg->epoll_events & kPriorityEvent) != 0;
+  if (want_oob != has_oob) {
+    struct kevent ev;
+    if (want_oob) {
+      EV_SET(&ev, fd, EVFILT_EXCEPT, EV_ADD | EV_ENABLE | EV_CLEAR, NOTE_OOB, 0,
+             reg);
+    } else {
+      EV_SET(&ev, fd, EVFILT_EXCEPT, EV_DELETE, 0, 0, NULL);
+    }
+    if (kevent(kqueue_fd_, &ev, 1, NULL, 0, NULL) != 0) {
+      if (want_oob && errno == EINVAL) {
+        // Not a socket.  Nothing out-of-band can arrive on it, just as
+        // EPOLLPRI never fires for a pipe, but epoll still reports its
+        // hangup.  The read filter's error-only watch hears that instead.
+        // Recorded without kPriorityEvent, so the next update asks again and
+        // RemoveRegistration() deletes only what is armed.
+        desired_events &= ~kPriorityEvent;
+        desired_events |= kErrorEvent;
+      } else if (want_oob && (errno == EBADF || errno == ENOENT)) {
+        // Same as the read and write filters below.
+        reg->registration_errno = errno;
+        reg->registered = false;
+        reg->epoll_events = 0;
+        return false;
+      } else {
+        ABSL_PLOG(FATAL) << "kevent EVFILT_EXCEPT "
+                         << (want_oob ? "EV_ADD" : "EV_DELETE")
+                         << " failed for fd " << fd;
+      }
+    }
+  }
 
   bool want_read =
       (desired_events & kReadableEvent) || (desired_events & kErrorEvent);
@@ -881,7 +1005,8 @@ bool KqueueImpl::UpdateRegistration(internal::FdRegistration *reg) {
     }
   }
 
-  reg->registered = (want_read || want_write);
+  reg->registered =
+      (want_read || want_write || (desired_events & kPriorityEvent) != 0);
   reg->epoll_events = desired_events;
   return true;
 }

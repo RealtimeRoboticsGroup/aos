@@ -4943,6 +4943,234 @@ TEST_P(AioTest, LegacyReadableSurvivesPollingPastHangup) {
   aio.DeleteFd(pipe.read_fd());
 }
 
+// Ordinary data is not priority data, so a registration for kPriorityEvent
+// alone hears nothing of it, and Poll(false) still finds nothing to do.  A
+// kqueue read filter on such a registration stays ready for as long as the
+// data sits unread, and would call it back on every Poll() with nothing to
+// report.
+TEST_P(AioTest, PriorityOnlyRegistrationIgnoresOrdinaryData) {
+  Aio aio;
+  TcpPair connection;
+  int calls = 0;
+  aio.OnEvents(connection.server_fd(), [&calls](uint32_t) { ++calls; });
+  aio.SetEvents(connection.server_fd(), kPriorityEvent);
+  ASSERT_EQ(WriteSome(connection.client_fd(), "x", 1), 1);
+  RunAioFor(aio, std::chrono::milliseconds(50));
+  for (int i = 0; i < 10; ++i) {
+    aio.Poll(false);
+  }
+  EXPECT_EQ(calls, 0);
+
+  aio.DeleteFd(connection.server_fd());
+}
+
+// Out-of-band data is what kPriorityEvent asks for, so a registration for it
+// hears a byte of it as kPriorityEvent and never as an error.  Once the byte
+// has been read there is nothing more to report.  epoll reports EPOLLPRI for
+// as long as the byte sits unread, so the test reads it in the callback
+// before it asks for quiet.
+TEST_P(AioTest, OutOfBandDataReachesAPriorityRegistration) {
+  Aio aio;
+  TcpPair connection;
+  int priority = 0;
+  int errors = 0;
+  int others = 0;
+  bool received = false;
+  char byte = 0;
+  aio.OnEvents(connection.server_fd(), [&](uint32_t events) {
+    if ((events & kErrorEvent) != 0) ++errors;
+    if ((events & ~(kPriorityEvent | kErrorEvent)) != 0) ++others;
+    if ((events & kPriorityEvent) != 0) {
+      ++priority;
+      if (ReceiveOutOfBand(connection.server_fd(), &byte)) received = true;
+    }
+  });
+  aio.SetEvents(connection.server_fd(), kPriorityEvent);
+  SendOutOfBand(connection.client_fd(), '!');
+  for (int i = 0; i < 50 && !received; ++i) {
+    RunAioFor(aio, std::chrono::milliseconds(10));
+  }
+  EXPECT_TRUE(received) << "the out-of-band byte was never reported";
+  EXPECT_EQ(byte, '!');
+  EXPECT_GE(priority, 1);
+
+  const int reported = priority;
+  for (int i = 0; i < 10; ++i) {
+    aio.Poll(false);
+  }
+  EXPECT_EQ(priority, reported)
+      << "kPriorityEvent was reported again after the byte was read";
+  EXPECT_EQ(errors, 0);
+  EXPECT_EQ(others, 0);
+
+  aio.DeleteFd(connection.server_fd());
+}
+
+// Ordinary data is not out-of-band data, even with ordinary data from before
+// the mark still unread.  kqueue keeps NOTE_OOB set for as long as that data
+// is, whether or not the urgent byte has been read, and reported every later
+// arrival to a priority-only registration as kPriorityEvent.
+TEST_P(AioTest, OrdinaryDataAfterAReadOutOfBandByteIsNotPriority) {
+  Aio aio;
+  TcpPair connection;
+  int priority = 0;
+  bool received = false;
+  char byte = 0;
+  aio.OnEvents(connection.server_fd(), [&](uint32_t events) {
+    if ((events & kPriorityEvent) != 0) {
+      ++priority;
+      if (ReceiveOutOfBand(connection.server_fd(), &byte)) received = true;
+    }
+  });
+  aio.SetEvents(connection.server_fd(), kPriorityEvent);
+  ASSERT_EQ(WriteSome(connection.client_fd(), "abc", 3), 3);
+  SendOutOfBand(connection.client_fd(), '!');
+  for (int i = 0; i < 50 && !received; ++i) {
+    RunAioFor(aio, std::chrono::milliseconds(10));
+  }
+  ASSERT_TRUE(received) << "the out-of-band byte was never reported";
+  EXPECT_EQ(byte, '!');
+  const int reported = priority;
+
+  for (int i = 0; i < 3; ++i) {
+    ASSERT_EQ(WriteSome(connection.client_fd(), "d", 1), 1);
+    RunAioFor(aio, std::chrono::milliseconds(10));
+  }
+  EXPECT_EQ(priority, reported)
+      << "ordinary data was reported as kPriorityEvent";
+
+  aio.DeleteFd(connection.server_fd());
+}
+
+namespace {
+
+// A priority-only registration hears its peer's reset, out-of-band data or
+// not.  kqueue reports an activation of EVFILT_EXCEPT as NOTE_OOB rather than
+// EV_EOF while an urgent byte, or the ordinary data from before the mark, is
+// unread, so the reset was never heard there.
+void ResetReachesAPriorityRegistration(bool read_the_byte) {
+  Aio aio;
+  TcpPair connection;
+  int priority = 0;
+  int errors = 0;
+  bool received = false;
+  aio.OnEvents(connection.server_fd(), [&](uint32_t events) {
+    if ((events & kErrorEvent) != 0) ++errors;
+    if ((events & kPriorityEvent) != 0) {
+      ++priority;
+      char byte;
+      if (read_the_byte && ReceiveOutOfBand(connection.server_fd(), &byte)) {
+        received = true;
+      }
+    }
+  });
+  aio.SetEvents(connection.server_fd(), kPriorityEvent);
+  if (read_the_byte) {
+    ASSERT_EQ(WriteSome(connection.client_fd(), "abc", 3), 3);
+  }
+  SendOutOfBand(connection.client_fd(), '!');
+  for (int i = 0; i < 50 && priority == 0; ++i) {
+    RunAioFor(aio, std::chrono::milliseconds(10));
+  }
+  ASSERT_GE(priority, 1) << "the out-of-band byte was never reported";
+  EXPECT_EQ(received, read_the_byte);
+  EXPECT_EQ(errors, 0);
+
+  connection.ResetClient();
+  for (int i = 0; i < 50 && errors == 0; ++i) {
+    RunAioFor(aio, std::chrono::milliseconds(10));
+  }
+  EXPECT_GE(errors, 1) << "the reset never reached the registration";
+
+  aio.DeleteFd(connection.server_fd());
+}
+
+}  // namespace
+
+TEST_P(AioTest, ResetBehindAnUnreadOutOfBandByteReachesAPriorityRegistration) {
+  ResetReachesAPriorityRegistration(false);
+}
+
+TEST_P(AioTest, ResetBehindUnreadDataReachesAPriorityRegistration) {
+  ResetReachesAPriorityRegistration(true);
+}
+
+// An OnEvents() registration is never called back with an empty mask: there
+// is nothing in one to act on, and epoll never delivers one.  kqueue's
+// error-only filters fire for ordinary readiness too, and that firing, masked
+// down to nothing, used to be delivered anyway.
+TEST_P(AioTest, OnEventsIsNeverCalledWithNothing) {
+  Aio aio;
+  Pipe pipe;
+  int empty_calls = 0;
+  aio.OnEvents(pipe.read_fd(), [&](uint32_t events) {
+    if (events == 0) ++empty_calls;
+  });
+  aio.OnEvents(pipe.write_fd(), [&](uint32_t events) {
+    if (events == 0) ++empty_calls;
+  });
+  // Nothing on the read end that ordinary data answers, and on the write end
+  // a mask that asks for readability and priority, neither of which a write
+  // end ever has.
+  aio.SetEvents(pipe.read_fd(), kErrorEvent);
+  aio.SetEvents(pipe.write_fd(), kReadableEvent | kPriorityEvent);
+  RunAioFor(aio, std::chrono::milliseconds(10));
+  for (int i = 0; i < 5; ++i) {
+    pipe.Write("x");
+    RunAioFor(aio, std::chrono::milliseconds(10));
+  }
+  aio.SetEvents(pipe.read_fd(), kPriorityEvent);
+  for (int i = 0; i < 5; ++i) {
+    pipe.Write("x");
+    RunAioFor(aio, std::chrono::milliseconds(10));
+  }
+  EXPECT_EQ(empty_calls, 0);
+
+  aio.DeleteFd(pipe.read_fd());
+  aio.DeleteFd(pipe.write_fd());
+}
+
+// A registration that asks for kPriorityEvent along with kReadableEvent hears
+// an out-of-band byte as priority, and ordinary data as readable.  kqueue's
+// read filter never fires for out-of-band data, so this registration needs
+// EVFILT_EXCEPT as much as a priority-only one does.
+TEST_P(AioTest, ReadingRegistrationHearsOutOfBandData) {
+  Aio aio;
+  TcpPair connection;
+  int readable = 0;
+  int priority = 0;
+  char urgent = 0;
+  aio.OnEvents(connection.server_fd(), [&](uint32_t events) {
+    if (events & kPriorityEvent) {
+      ++priority;
+      EXPECT_TRUE(ReceiveOutOfBand(connection.server_fd(), &urgent));
+    }
+    if (events & kReadableEvent) {
+      ++readable;
+      char byte;
+      EXPECT_EQ(ReadSome(connection.server_fd(), &byte, 1), 1);
+    }
+  });
+  aio.SetEvents(connection.server_fd(), kReadableEvent | kPriorityEvent);
+
+  SendOutOfBand(connection.client_fd(), '!');
+  for (int i = 0; i < 200 && priority == 0; ++i) {
+    RunAioFor(aio, std::chrono::milliseconds(1));
+  }
+  EXPECT_EQ(priority, 1);
+  EXPECT_EQ(urgent, '!');
+  EXPECT_EQ(readable, 0);
+
+  ASSERT_EQ(WriteSome(connection.client_fd(), "x", 1), 1);
+  for (int i = 0; i < 200 && readable == 0; ++i) {
+    RunAioFor(aio, std::chrono::milliseconds(1));
+  }
+  EXPECT_EQ(readable, 1);
+  EXPECT_EQ(priority, 1);
+
+  aio.DeleteFd(connection.server_fd());
+}
+
 // Registering a before-wait function from inside one is disallowed: the
 // push_back could reallocate the vector out from under the executing
 // std::function.  Pinned as a CHECK rather than left as silent UB (which

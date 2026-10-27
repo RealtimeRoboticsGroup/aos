@@ -31,6 +31,12 @@ class TcpPair {
   FileDescriptor server_ = kInvalidFd;
 };
 
+// Sends one byte of out-of-band (TCP urgent) data on a connected stream
+// socket, for the tests of kPriorityEvent.
+void SendOutOfBand(FileDescriptor fd, char byte);
+// Receives the out-of-band byte waiting on fd.  Returns false if there is
+// none.
+bool ReceiveOutOfBand(FileDescriptor fd, char *byte);
 // Whether the ReadSome() that just returned -1 failed because the peer reset
 // the connection: ECONNRESET, or WSAECONNRESET on Windows.  A graceful close
 // reads 0 instead.

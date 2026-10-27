@@ -1,6 +1,7 @@
 #include "aos/events/test_sockets.h"
 
 #include <arpa/inet.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -60,6 +61,22 @@ void TcpPair::ResetClient() {
   client_ = kInvalidFd;
 }
 
+void SendOutOfBand(FileDescriptor fd, char byte) {
+  ABSL_PCHECK(send(fd, &byte, 1, MSG_OOB) == 1);
+}
+
+bool ReceiveOutOfBand(FileDescriptor fd, char *byte) {
+  const ssize_t res = recv(fd, byte, 1, MSG_OOB);
+  if (res == 1) {
+    return true;
+  }
+  // 0, on Linux, for an urgent pointer seen on a socket that has since been
+  // shut down, EAGAIN while the urgent byte is still on its way, and EINVAL
+  // once it has been read or when there never was one.
+  ABSL_PCHECK(res == 0 ||
+              (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINVAL));
+  return false;
+}
 bool LastReadWasReset() { return errno == ECONNRESET; }
 
 DatagramPair::DatagramPair() {

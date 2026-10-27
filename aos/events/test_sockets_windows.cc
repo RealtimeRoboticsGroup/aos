@@ -99,6 +99,24 @@ void TcpPair::ResetClient() {
   client_ = kInvalidFd;
 }
 
+void SendOutOfBand(FileDescriptor fd, char byte) {
+  ABSL_CHECK_EQ(send(ToSocket(fd), &byte, 1, MSG_OOB), 1)
+      << ": send(MSG_OOB) failed: " << WSAGetLastError();
+}
+
+bool ReceiveOutOfBand(FileDescriptor fd, char *byte) {
+  const int res = recv(ToSocket(fd), byte, 1, MSG_OOB);
+  if (res == 1) {
+    return true;
+  }
+  // 0 after the peer's graceful close, and WSAECONNRESET after its reset,
+  // where POSIX gives EINVAL.
+  const int error = res == 0 ? 0 : WSAGetLastError();
+  ABSL_CHECK(res == 0 || error == WSAEWOULDBLOCK || error == WSAEINVAL ||
+             error == WSAECONNRESET)
+      << ": recv(MSG_OOB) failed: " << error;
+  return false;
+}
 bool LastReadWasReset() { return WSAGetLastError() == WSAECONNRESET; }
 
 DatagramPair::DatagramPair() {

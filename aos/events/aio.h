@@ -413,6 +413,12 @@ class Aio {
   // file_descriptor.h) on every platform.  Error conditions are always
   // reported, and a hangup is delivered as the error bit.
   //
+  // kPriorityEvent means out-of-band data is waiting for recv(MSG_OOB).  Read
+  // it when told: whether an unread byte is reported again differs by platform,
+  // and a report may find nothing to read.  With SO_OOBINLINE urgent data is
+  // ordinary stream data, and whether kPriorityEvent reports it differs by
+  // platform.
+  //
   // A fd may be registered exclusively with OnReadable/OnWritable/OnError OR
   // OnEvents.
   void OnEvents(FileDescriptor fd, std::function<void(uint32_t)> callback);
