@@ -348,7 +348,7 @@ class Adder {
   Adder(aos_mutex *m) : head_(&thread_state()->robust_head), m_(m) {
     assert(head_->pending_next == 0);
     if (kRobustListDebug) {
-      printf("%" PRId32 ": maybe add %p\n", get_tid(), m_);
+      printf("%" PRId32 ": maybe add %p\n", get_tid(), static_cast<void *>(m_));
     }
     head_->pending_next = mutex_to_next(m);
     aos_compiler_memory_barrier();
@@ -356,8 +356,10 @@ class Adder {
   ~Adder() {
     assert(head_->pending_next == mutex_to_next(m_));
     if (kRobustListDebug) {
-      printf("%" PRId32 ": done maybe add %p, n=%p p=%p\n", get_tid(), m_,
-             next_to_mutex(head_, m_->next), m_->previous);
+      printf("%" PRId32 ": done maybe add %p, n=%p p=%p\n", get_tid(),
+             static_cast<void *>(m_),
+             static_cast<void *>(next_to_mutex(head_, m_->next)),
+             static_cast<void *>(m_->previous));
     }
     aos_compiler_memory_barrier();
     head_->pending_next = 0;
@@ -366,7 +368,7 @@ class Adder {
   void Add() {
     assert(head_->pending_next == mutex_to_next(m_));
     if (kRobustListDebug) {
-      printf("%" PRId32 ": adding %p\n", get_tid(), m_);
+      printf("%" PRId32 ": adding %p\n", get_tid(), static_cast<void *>(m_));
     }
     const uintptr_t old_head_next_value = head_->next;
 
@@ -381,7 +383,8 @@ class Adder {
     }
     aos_compiler_memory_barrier();
     if (kRobustListDebug) {
-      printf("%" PRId32 ": done adding %p\n", get_tid(), m_);
+      printf("%" PRId32 ": done adding %p\n", get_tid(),
+             static_cast<void *>(m_));
     }
   }
 
@@ -400,8 +403,10 @@ class Remover {
   Remover(aos_mutex *m) : head_(&thread_state()->robust_head) {
     assert(head_->pending_next == 0);
     if (kRobustListDebug) {
-      printf("%" PRId32 ": beginning to remove %p, n=%p p=%p\n", get_tid(), m,
-             next_to_mutex(head_, m->next), m->previous);
+      printf("%" PRId32 ": beginning to remove %p, n=%p p=%p\n", get_tid(),
+             static_cast<void *>(m),
+             static_cast<void *>(next_to_mutex(head_, m->next)),
+             static_cast<void *>(m->previous));
     }
     head_->pending_next = mutex_to_next(m);
     aos_compiler_memory_barrier();
@@ -424,7 +429,8 @@ class Remover {
     m->previous = nullptr;
 
     if (kRobustListDebug) {
-      printf("%" PRId32 ": done removing %p\n", get_tid(), m);
+      printf("%" PRId32 ": done removing %p\n", get_tid(),
+             static_cast<void *>(m));
     }
   }
   ~Remover() {

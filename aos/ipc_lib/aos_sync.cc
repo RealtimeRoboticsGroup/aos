@@ -263,7 +263,7 @@ void mutex_unlock(aos_mutex *m) {
   RunShmObservers run_observers(m, true);
   const uint32_t tid = get_tid();
   if (kPrintOperations) {
-    printf("%" PRId32 ": %p unlock\n", tid, m);
+    printf("%" PRId32 ": %p unlock\n", tid, static_cast<void *>(m));
   }
 
   const uint32_t value =
@@ -289,7 +289,7 @@ int mutex_trylock(aos_mutex *m) {
   RunShmObservers run_observers(m, true);
   const uint32_t tid = get_tid();
   if (kPrintOperations) {
-    printf("%" PRId32 ": %p trylock\n", tid, m);
+    printf("%" PRId32 ": %p trylock\n", tid, static_cast<void *>(m));
   }
   my_robust_list::Adder adder(m);
 
@@ -344,7 +344,8 @@ bool mutex_pretend_owner_died_for_testing(aos_mutex *m, uint32_t tid) {
 void death_notification_init(aos_mutex *m) {
   const uint32_t tid = get_tid();
   if (kPrintOperations) {
-    printf("%" PRId32 ": %p death_notification start\n", tid, m);
+    printf("%" PRId32 ": %p death_notification start\n", tid,
+           static_cast<void *>(m));
   }
   my_robust_list::Adder adder(m);
   {
@@ -362,7 +363,8 @@ void death_notification_release(aos_mutex *m) {
   {
     const uint32_t tid = get_tid();
     if (kPrintOperations) {
-      printf("%" PRId32 ": %p death_notification release\n", tid, m);
+      printf("%" PRId32 ": %p death_notification release\n", tid,
+             static_cast<void *>(m));
     }
     const uint32_t value =
         std::atomic_ref<uint32_t>(m->futex).load(std::memory_order_seq_cst);
