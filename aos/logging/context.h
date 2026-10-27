@@ -23,7 +23,7 @@ class LogImplementation;
 // goes.
 namespace internal {
 
-// An separate instance of this class is accessible from each task/thread.
+// A separate instance of this class is accessible from each task/thread.
 // NOTE: It will get deleted in the child of a fork.
 //
 // Get() and Delete() are implemented in the platform-specific interface.cc
