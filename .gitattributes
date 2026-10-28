@@ -1,3 +1,18 @@
+# Text is LF in the repository and in every checkout, Windows included,
+# whatever core.autocrlf says.  Golden files and generated-file diffs compare
+# bytes, and Git for Windows' default (autocrlf=true) checked them out CRLF.
+# Every tool the build uses reads LF on Windows.
+* text=auto eol=lf
+# cmd.exe can misparse labels in a batch file with bare LFs.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+# Stored with CRLF, and kept byte for byte as they are.
+frc/control_loops/swerve/references.bib -text
+motors/teensy_loader_cli/**/*.hex -text
+# Upstream's bytes, exactly: never converted on checkout or renormalized,
+# batch files included.  Last, so it wins over the rules above.
+third_party/** -text
+
 MODULE.bazel.lock -diff
 tools/python/requirements.lock.txt -diff
 
