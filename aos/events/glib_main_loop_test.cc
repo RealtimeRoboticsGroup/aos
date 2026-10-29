@@ -66,6 +66,9 @@ class GlibMainLoopTest : public ::testing::TestWithParam<EventLoopType> {
   // Retrieves the GlibMainLoop being tested.
   GlibMainLoop *glib_main_loop() { return glib_main_loop_.get(); }
 
+  // Destroys the GlibMainLoop, leaving the event loop it was on.
+  void DestroyGlibMainLoop() { glib_main_loop_.reset(); }
+
   // Runs the event loop until something calls Exit().
   void Run() {
     if (shm_event_loop_) {
@@ -141,6 +144,23 @@ TEST_P(GlibMainLoopTest, CreateDestroy) {
 // events from the glib side.
 TEST_P(GlibMainLoopTest, CreateRunDestroy) {
   bool ran = false;
+  event_loop()
+      ->AddTimer([this, &ran]() {
+        Exit();
+        ran = true;
+      })
+      ->Schedule(event_loop()->monotonic_now() +
+                 std::chrono::milliseconds(100));
+  Run();
+  EXPECT_TRUE(ran);
+}
+
+// Tests that the event loop keeps running after the GlibMainLoop on it is gone.
+TEST_P(GlibMainLoopTest, DestroyWhileRunning) {
+  bool ran = false;
+  event_loop()
+      ->AddTimer([this]() { DestroyGlibMainLoop(); })
+      ->Schedule(event_loop()->monotonic_now() + std::chrono::milliseconds(10));
   event_loop()
       ->AddTimer([this, &ran]() {
         Exit();

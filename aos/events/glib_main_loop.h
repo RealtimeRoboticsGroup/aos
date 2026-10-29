@@ -126,6 +126,14 @@ class GlibSignalCallback {
 // Manages a GMainLoop attached to a ShmEventLoop.
 //
 // Also provides C++ RAII wrappers around the related glib objects.
+//
+// Destroying it requires destroying its event loop, rather than running or
+// starting it again: the event loop keeps the OnRun handler this registers,
+// which points at this, so another run would use freed memory.  The current
+// run may finish.  Destroy this before the event loop and its Aio, since its
+// destructor takes its before-wait function and its fds back off the Aio.
+// Destroying it from a before-wait function, a glib callback under it
+// included, dies, since a before-wait function may not be removed from one.
 class GlibMainLoop {
  public:
   // Binds to an event loop and an Aio object. This could be from an
@@ -196,6 +204,8 @@ class GlibMainLoop {
   TimerHandler *const timeout_timer_;
   GMainContext *const g_main_context_;
   GMainLoop *const g_main_loop_;
+  // The Aio can outlive this, so the destructor takes the hook back off it.
+  Aio::BeforeWaitId before_wait_hook_ = 0;
 
   // The list of FDs and priority received from glib on the latest
   // g_main_context_query call, so we can pass them to the g_main_context_check

@@ -85,11 +85,12 @@ GlibMainLoop::GlibMainLoop(EventLoop *event_loop, Aio *aio,
         << ": The EventLoop thread must own the context";
     acquired_context_ = true;
   });
-  aio_->BeforeWait([this]() { BeforeWait(); });
+  before_wait_hook_ = aio_->BeforeWait([this]() { BeforeWait(); });
 }
 
 GlibMainLoop::~GlibMainLoop() {
   ABSL_CHECK_EQ(children_, 0) << ": Failed to destroy all children";
+  aio_->RemoveBeforeWait(before_wait_hook_);
   RemoveAllFds();
   if (acquired_context_) {
     g_main_context_release(g_main_context_);
