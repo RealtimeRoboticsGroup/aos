@@ -1,0 +1,217 @@
+{
+  "channels": [
+    {
+      "name": "/pi1/aos",
+      "type": "aos.logging.LogMessageFbs",
+      "source_node": "pi1",
+      "frequency": 200,
+      "num_senders": 20,
+      "max_size": 2048
+    },
+    {
+      "name": "/pi2/aos",
+      "type": "aos.logging.LogMessageFbs",
+      "source_node": "pi2",
+      "frequency": 200,
+      "num_senders": 20,
+      "max_size": 2048
+    },
+    {
+      "name": "/pi1/aos",
+      "type": "aos.message_bridge.Timestamp",
+      "source_node": "pi1",
+      "frequency": 15,
+      "max_size": 200,
+      "destination_nodes": [
+        {
+          "name": "pi2",
+          "priority": 1,
+          "timestamp_logger": "LOCAL_AND_REMOTE_LOGGER",
+          "timestamp_logger_nodes": ["pi1"],
+          "time_to_live": 5000000
+        }
+      ]
+    },
+    {
+      "name": "/pi2/aos",
+      "type": "aos.message_bridge.Timestamp",
+      "source_node": "pi2",
+      "frequency": 15,
+      "max_size": 200,
+      "destination_nodes": [
+        {
+          "name": "pi1",
+          "priority": 1,
+          "timestamp_logger": "LOCAL_AND_REMOTE_LOGGER",
+          "timestamp_logger_nodes": ["pi2"],
+          "time_to_live": 5000000
+        }
+      ]
+    },
+    {
+      "name": "/pi1/aos",
+      "type": "aos.message_bridge.ServerStatistics",
+      "source_node": "pi1",
+      "frequency": 2
+    },
+    {
+      "name": "/pi2/aos",
+      "type": "aos.message_bridge.ServerStatistics",
+      "source_node": "pi2",
+      "frequency": 2
+    },
+    {
+      "name": "/pi1/aos",
+      "type": "aos.message_bridge.ClientStatistics",
+      "source_node": "pi1",
+      "frequency": 15
+    },
+    {
+      "name": "/pi2/aos",
+      "type": "aos.message_bridge.ClientStatistics",
+      "source_node": "pi2",
+      "frequency": 15
+    },
+    {
+      "name": "/pi1/aos/remote_timestamps/pi2/pi1/aos/aos-message_bridge-Timestamp",
+      "type": "aos.message_bridge.RemoteMessage",
+      "logger": "NOT_LOGGED",
+      "source_node": "pi1",
+      "frequency": 15
+    },
+    {
+      "name": "/pi2/aos/remote_timestamps/pi1/pi2/aos/aos-message_bridge-Timestamp",
+      "type": "aos.message_bridge.RemoteMessage",
+      "logger": "NOT_LOGGED",
+      "source_node": "pi2",
+      "frequency": 15
+    },
+    {
+      "name": "/pi1/aos/remote_timestamps/pi2/test/low/aos-examples-Ping",
+      "type": "aos.message_bridge.RemoteMessage",
+      "logger": "NOT_LOGGED",
+      "source_node": "pi1"
+    },
+    {
+      "name": "/pi1/aos/remote_timestamps/pi2/test/high/aos-examples-Ping",
+      "type": "aos.message_bridge.RemoteMessage",
+      "logger": "NOT_LOGGED",
+      "source_node": "pi1"
+    },
+    {
+      "name": "/pi1/aos",
+      "type": "aos.timing.Report",
+      "source_node": "pi1",
+      "frequency": 50,
+      "num_senders": 20,
+      "max_size": 2048
+    },
+    {
+      "name": "/pi2/aos",
+      "type": "aos.timing.Report",
+      "source_node": "pi2",
+      "frequency": 50,
+      "num_senders": 20,
+      "max_size": 2048
+    },
+    {
+      "name": "/pi1/aos",
+      "type": "aos.message_bridge.SctpConfig",
+      "source_node": "pi1",
+      "frequency": 10,
+      "num_senders": 1,
+      "max_size": 256
+    },
+    {
+      "name": "/pi2/aos",
+      "type": "aos.message_bridge.SctpConfig",
+      "source_node": "pi2",
+      "frequency": 10,
+      "num_senders": 1,
+      "max_size": 256
+    },
+    {
+      "name": "/pi1/aos",
+      "type": "aos.message_bridge.SctpConfigRequest",
+      "source_node": "pi1",
+      "frequency": 1,
+      "num_senders": 2,
+      "max_size": 32
+    },
+    {
+      "name": "/pi2/aos",
+      "type": "aos.message_bridge.SctpConfigRequest",
+      "source_node": "pi2",
+      "frequency": 1,
+      "num_senders": 2,
+      "max_size": 32
+    },
+    {
+      "name": "/test/low",
+      "type": "aos.examples.Ping",
+      "source_node": "pi1",
+      "destination_nodes": [
+        {
+          "name": "pi2",
+          "priority": 200,
+          "timestamp_logger": "REMOTE_LOGGER",
+          "timestamp_logger_nodes": ["pi1"]
+        }
+      ],
+      "max_size": 2048
+    },
+    {
+      "name": "/test/high",
+      "type": "aos.examples.Ping",
+      "source_node": "pi1",
+      "destination_nodes": [
+        {
+          "name": "pi2",
+          "priority": 10,
+          "timestamp_logger": "REMOTE_LOGGER",
+          "timestamp_logger_nodes": ["pi1"]
+        }
+      ],
+      "max_size": 2048
+    },
+    {
+      "name": "/pi2/stall",
+      "type": "aos.examples.Pong",
+      "source_node": "pi2"
+    }
+  ],
+  "maps": [
+    {
+      "match": {
+        "name": "/aos*",
+        "source_node": "pi1"
+      },
+      "rename": {
+        "name": "/pi1/aos"
+      }
+    },
+    {
+      "match": {
+        "name": "/aos*",
+        "source_node": "pi2"
+      },
+      "rename": {
+        "name": "/pi2/aos"
+      }
+    }
+  ],
+  "nodes": [
+    {
+      "name": "pi1",
+      "hostname": "localhost",
+      "hostnames": ["raspberrypi"],
+      "port": 3141
+    },
+    {
+      "name": "pi2",
+      "hostname": "localhost",
+      "hostnames": ["raspberrypi2"],
+      "port": 9972
+    }
+  ]
+}

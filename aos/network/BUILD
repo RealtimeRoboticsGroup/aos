@@ -347,6 +347,20 @@ cc_library(
     ],
 )
 
+cc_test(
+    name = "sctp_priority_test",
+    size = "small",
+    srcs = [
+        "sctp_priority_test.cc",
+    ],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        ":sctp_client",
+        ":sctp_server",
+        "//aos/testing:googletest",
+    ],
+)
+
 cc_library(
     name = "message_bridge_protocol",
     srcs = [
@@ -719,6 +733,47 @@ cc_test(
         "//aos/ipc_lib:event",
         "//aos/testing:googletest",
         "//aos/testing:path",
+        "//aos/testing/ping_pong:ping_fbs",
+        "//aos/testing/ping_pong:pong_fbs",
+        "//aos/util:application_name",
+    ],
+)
+
+aos_config(
+    name = "message_bridge_priority_test_config",
+    src = "message_bridge_priority_test.json",
+    flatbuffers = [
+        ":remote_message_fbs",
+        ":sctp_config_fbs",
+        ":sctp_config_request_fbs",
+        "//aos/testing/ping_pong:ping_fbs",
+        "//aos/testing/ping_pong:pong_fbs",
+        "//aos/network:message_bridge_client_fbs",
+        "//aos/network:message_bridge_server_fbs",
+        "//aos/network:timestamp_fbs",
+    ],
+    deps = ["//aos/events:aos_config"],
+)
+
+cc_test(
+    name = "message_bridge_priority_test",
+    srcs = [
+        "message_bridge_priority_test.cc",
+    ],
+    data = [
+        ":message_bridge_priority_test_config",
+    ],
+    tags = [
+        "block-network",
+    ],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        ":message_bridge_client_lib",
+        ":message_bridge_server_fbs",
+        ":message_bridge_test_lib",
+        "//aos/events:shm_event_loop",
+        "//aos/ipc_lib:event",
+        "//aos/testing:googletest",
         "//aos/testing/ping_pong:ping_fbs",
         "//aos/testing/ping_pong:pong_fbs",
         "//aos/util:application_name",
