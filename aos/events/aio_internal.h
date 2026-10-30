@@ -1,9 +1,12 @@
 #ifndef AOS_EVENTS_AIO_INTERNAL_H_
 #define AOS_EVENTS_AIO_INTERNAL_H_
 
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <span>
+#include <utility>
+#include <vector>
 
 #include "absl/log/absl_check.h"
 
@@ -310,6 +313,61 @@ struct Aio::TimerState {
   bool canceling = false;
 };
 
+// One Aio's before-wait functions, run in the order they were added.  Shared
+// by every backend so that the rules below cannot drift apart.
+//
+// Neither adding nor removing is allowed from inside a before-wait function:
+// either can reallocate or shift the vector while Run() is executing an
+// element of it.  That is deterministically illegal rather than sometimes
+// corrupting.
+class BeforeWaitFunctions {
+ public:
+  Aio::BeforeWaitId Add(std::function<void()> function) {
+    ABSL_CHECK(!running_)
+        << ": BeforeWait() may not be called from a before-wait function";
+    // Unique in the process rather than per Aio, so that an id handed to the
+    // wrong Aio dies in Remove() instead of removing that Aio's function.
+    // Not starting at 0, so a zero-initialized id never names a function.
+    static std::atomic<Aio::BeforeWaitId> next_id{1868};
+    const Aio::BeforeWaitId id =
+        next_id.fetch_add(1, std::memory_order_relaxed);
+    functions_.emplace_back(id, std::move(function));
+    return id;
+  }
+
+  void Remove(Aio::BeforeWaitId id) {
+    ABSL_CHECK(!running_) << ": RemoveBeforeWait() may not be called from a "
+                             "before-wait function";
+    auto it = std::find_if(
+        functions_.begin(), functions_.end(),
+        [id](const auto &function) { return function.first == id; });
+    ABSL_CHECK(it != functions_.end())
+        << ": RemoveBeforeWait() of a function this Aio does not have";
+    // Out of the vector before erasing, so that its destructor runs once the
+    // vector is whole again.  Its captures can own something whose
+    // destructor adds or removes a before-wait function on this Aio, a
+    // borrowed ShmEventLoop or a GlibMainLoop say, and that would otherwise
+    // run on a half-shifted vector.
+    std::function<void()> removed = std::move(it->second);
+    functions_.erase(it);
+  }
+
+  void Run() {
+    running_ = true;
+    for (const auto &function : functions_) {
+      function.second();
+    }
+    running_ = false;
+  }
+
+  // True while Run() is calling them.
+  bool running() const { return running_; }
+
+ private:
+  std::vector<std::pair<Aio::BeforeWaitId, std::function<void()>>> functions_;
+  bool running_ = false;
+};
+
 struct Aio::Impl {
   Impl() = default;
   Impl(const Impl &) = delete;
@@ -369,7 +427,8 @@ struct Aio::Impl {
   virtual void AsyncWrite(FileDescriptor fd, std::span<const char> buffer,
                           AsyncRequest *request) = 0;
   virtual void Cancel(AsyncRequest *request) = 0;
-  virtual void BeforeWait(std::function<void()> function) = 0;
+  virtual Aio::BeforeWaitId BeforeWait(std::function<void()> function) = 0;
+  virtual void RemoveBeforeWait(Aio::BeforeWaitId id) = 0;
 
   // Legacy Readiness Hooks.
   virtual void OnReadable(FileDescriptor fd,

@@ -6138,6 +6138,136 @@ TEST_P(AioTest, QuitInBeforeWait) {
   aio.Run();
 }
 
+// A removed before-wait function is never called, and the rest still run in
+// the order they were added.
+TEST_P(AioTest, RemoveBeforeWait) {
+  TestAio aio;
+  std::vector<int> calls;
+  aio.BeforeWait([&calls]() { calls.push_back(1); });
+  const Aio::BeforeWaitId second =
+      aio.BeforeWait([&calls]() { calls.push_back(2); });
+  aio.BeforeWait([&calls]() { calls.push_back(3); });
+  aio.RemoveBeforeWait(second);
+  // One Poll() rather than Run(), so that removing the wrong function fails
+  // here instead of hanging.
+  aio.Poll(false);
+  EXPECT_EQ(calls, (std::vector<int>{1, 3}));
+}
+
+// An id belongs to the Aio that returned it.  Handed to another Aio, it dies
+// there rather than removing one of that Aio's functions.
+TEST_P(AioTest, RemoveBeforeWaitOfAnotherAiosIdDeathTest) {
+  TestAio first;
+  TestAio second;
+  const Aio::BeforeWaitId first_id = first.BeforeWait([]() {});
+  const Aio::BeforeWaitId second_id = second.BeforeWait([]() {});
+  EXPECT_DEATH(second.RemoveBeforeWait(first_id),
+               "RemoveBeforeWait\\(\\) of a function this Aio does not have");
+  first.RemoveBeforeWait(first_id);
+  second.RemoveBeforeWait(second_id);
+}
+
+// Polling from a before-wait function is as fatal as from a callback: the
+// before-wait functions run inside Poll().
+TEST_P(AioTest, PollFromBeforeWaitDeathTest) {
+  if (!Backend().drives_its_own_loop)
+    GTEST_SKIP() << "a borrowed loop has no Poll() of its own";
+  EXPECT_DEATH(
+      {
+        ScopedDeathTestWatchdog watchdog;
+        TestAio aio;
+        aio.BeforeWait([&aio]() { aio.Poll(false); });
+        MarkFatalStatement();
+        aio.Poll(false);
+      },
+      DiesAfterMarker("reentered"));
+}
+
+// A removed function's destructor runs once it is out of the list, so its
+// captures may add or remove before-wait functions on the same Aio.  A
+// borrowed ShmEventLoop and a GlibMainLoop both remove one as they go, and a
+// before-wait function can hold the last reference to either.  Each function
+// owns its number on the heap, so that one left moved-from or destroyed twice
+// by a half-shifted list shows up, under ASAN at least.
+namespace {
+
+void RemovedBeforeWaitsDestructorChangesTheList(TestAio &aio, bool add_one) {
+  std::vector<int> calls;
+  // Runs its action when the last copy of it goes.
+  struct OnDestroy {
+    std::function<void()> action;
+    ~OnDestroy() {
+      if (action) action();
+    }
+  };
+  const auto add = [&aio, &calls](int number) {
+    return aio.BeforeWait([&calls, number = std::make_shared<int>(number)]() {
+      calls.push_back(*number);
+    });
+  };
+  const Aio::BeforeWaitId first = add(0);
+  auto on_destroy = std::make_shared<OnDestroy>();
+  const Aio::BeforeWaitId second =
+      aio.BeforeWait([&calls, on_destroy, number = std::make_shared<int>(1)]() {
+        calls.push_back(*number);
+      });
+  const Aio::BeforeWaitId third = add(2);
+  const Aio::BeforeWaitId fourth = add(3);
+  std::optional<Aio::BeforeWaitId> added;
+  on_destroy->action = [&]() {
+    if (add_one) {
+      added = add(4);
+    } else {
+      aio.RemoveBeforeWait(fourth);
+    }
+  };
+  on_destroy.reset();
+
+  aio.RemoveBeforeWait(second);
+  aio.Poll(false);
+  if (add_one) {
+    ASSERT_TRUE(added.has_value());
+    EXPECT_EQ(calls, (std::vector<int>{0, 2, 3, 4}));
+    aio.RemoveBeforeWait(*added);
+    aio.RemoveBeforeWait(fourth);
+  } else {
+    EXPECT_EQ(calls, (std::vector<int>{0, 2}));
+  }
+  aio.RemoveBeforeWait(first);
+  aio.RemoveBeforeWait(third);
+}
+
+}  // namespace
+
+TEST_P(AioTest, RemovedBeforeWaitsDestructorRemovesAnother) {
+  TestAio aio;
+  RemovedBeforeWaitsDestructorChangesTheList(aio, false);
+}
+
+TEST_P(AioTest, RemovedBeforeWaitsDestructorAddsOne) {
+  TestAio aio;
+  RemovedBeforeWaitsDestructorChangesTheList(aio, true);
+}
+
+// Removing a before-wait function from inside one is disallowed for the same
+// reason adding one is: it would shift the functions out from under the one
+// that is running.
+TEST_P(AioTest, RemoveBeforeWaitFromBeforeWaitDeathTest) {
+  EXPECT_DEATH(
+      {
+        ScopedDeathTestWatchdog watchdog;
+        TestAio aio;
+        const Aio::BeforeWaitId other = aio.BeforeWait([]() {});
+        aio.BeforeWait([&aio, other]() {
+          aio.RemoveBeforeWait(other);
+          aio.Quit();
+        });
+        MarkFatalStatement();
+        aio.Run();
+      },
+      DiesAfterMarker("may not be called from a before-wait function"));
+}
+
 // Tests that Run() flushes what is already queued before returning from a
 // Quit().
 //

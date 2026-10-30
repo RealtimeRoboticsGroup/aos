@@ -22,9 +22,8 @@ class EPoll {
   // the On*() handlers are registered on aio itself, and Run(), Poll(),
   // Quit() and should_run() drive and report on the whole shared loop, not
   // just this EPoll's registrations.  Destroying this EPoll neither quits aio
-  // nor removes what was registered through it; DeleteFd() those first.  A
-  // BeforeWait() hook cannot be removed, so one registered through a borrowed
-  // EPoll lives as long as aio does.
+  // nor removes what was registered through it; DeleteFd() those first, and
+  // remove BeforeWait() functions with aio's RemoveBeforeWait().
   explicit EPoll(Aio *aio);
   ~EPoll();
   EPoll(const EPoll &) = delete;
@@ -44,8 +43,9 @@ class EPoll {
   // Quits.  Async safe.
   void Quit();
 
-  // Adds a function which will be called before waiting.
-  void BeforeWait(std::function<void()> function);
+  // Adds a function which will be called before waiting.  Returns the
+  // Aio::BeforeWaitId that Aio::RemoveBeforeWait() takes to remove it again.
+  uint64_t BeforeWait(std::function<void()> function);
 
   // Registers a function to be called when the fd is readable.
   // Only one function may be registered for readability on each fd.

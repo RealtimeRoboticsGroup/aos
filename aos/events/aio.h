@@ -380,8 +380,19 @@ class Aio {
   // authoritative answer.
   void Cancel(AsyncRequest *request);
 
+  // Identifies a function BeforeWait() registered.  An id belongs to the Aio
+  // that returned it.  Ids are unique in the process, so one handed to
+  // another Aio's RemoveBeforeWait() dies there rather than removing one of
+  // its functions.
+  using BeforeWaitId = uint64_t;
+
   // Registers a function to be executed just before blocking on events.
-  void BeforeWait(std::function<void()> function);
+  // Returns what RemoveBeforeWait() takes to remove it again.
+  BeforeWaitId BeforeWait(std::function<void()> function);
+
+  // Removes a function BeforeWait() registered, so it is never called again.
+  // Neither this nor BeforeWait() may be called from a before-wait function.
+  void RemoveBeforeWait(BeforeWaitId id);
 
   // Registers a function to be called when the fd is readable.
   // Only one function may be registered for readability on each fd.

@@ -427,10 +427,12 @@ void ReadinessBackend::Cancel(AsyncRequest *request) {
                             : QueueKind::kPendingCancelWrite);
 }
 
-void ReadinessBackend::BeforeWait(std::function<void()> function) {
-  ABSL_CHECK(!in_before_wait_)
-      << ": BeforeWait() may not be called from a before-wait function";
-  before_wait_functions_.push_back(std::move(function));
+Aio::BeforeWaitId ReadinessBackend::BeforeWait(std::function<void()> function) {
+  return before_wait_functions_.Add(std::move(function));
+}
+
+void ReadinessBackend::RemoveBeforeWait(Aio::BeforeWaitId id) {
+  before_wait_functions_.Remove(id);
 }
 
 void ReadinessBackend::OnReadable(FileDescriptor fd,
@@ -668,13 +670,7 @@ bool ReadinessBackend::Poll(bool block) {
 }
 
 bool ReadinessBackend::PollOnce(bool block) {
-  // Registering a before-wait function from inside one is disallowed --
-  // see BeforeWait().
-  in_before_wait_ = true;
-  for (const auto &fn : before_wait_functions_) {
-    fn();
-  }
-  in_before_wait_ = false;
+  before_wait_functions_.Run();
 
   bool processed = false;
   FdReady harvested;

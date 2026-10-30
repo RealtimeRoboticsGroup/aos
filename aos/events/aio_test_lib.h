@@ -159,9 +159,10 @@ class TestAio {
   }
   void Cancel(AsyncRequest *request) { get()->Cancel(request); }
 
-  void BeforeWait(std::function<void()> function) {
-    get()->BeforeWait(std::move(function));
+  Aio::BeforeWaitId BeforeWait(std::function<void()> function) {
+    return get()->BeforeWait(std::move(function));
   }
+  void RemoveBeforeWait(Aio::BeforeWaitId id) { get()->RemoveBeforeWait(id); }
 
   void OnReadable(FileDescriptor fd, std::function<void()> callback) {
     get()->OnReadable(fd, std::move(callback));

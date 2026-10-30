@@ -23,8 +23,8 @@ bool EPoll::Poll(bool block) { return aio_->Poll(block); }
 
 void EPoll::Quit() { aio_->Quit(); }
 
-void EPoll::BeforeWait(std::function<void()> function) {
-  aio_->BeforeWait(std::move(function));
+uint64_t EPoll::BeforeWait(std::function<void()> function) {
+  return aio_->BeforeWait(std::move(function));
 }
 
 void EPoll::OnReadable(int fd, ::std::function<void()> function) {

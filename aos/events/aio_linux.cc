@@ -603,7 +603,8 @@ class IoUringImpl : public Aio::Impl {
   void AsyncWrite(FileDescriptor fd, std::span<const char> buffer,
                   AsyncRequest *request) override;
   void Cancel(AsyncRequest *request) override;
-  void BeforeWait(std::function<void()> function) override;
+  Aio::BeforeWaitId BeforeWait(std::function<void()> function) override;
+  void RemoveBeforeWait(Aio::BeforeWaitId id) override;
 
   void OnReadable(FileDescriptor fd, std::function<void()> callback) override;
   void OnError(FileDescriptor fd, std::function<void()> callback) override;
@@ -881,10 +882,7 @@ class IoUringImpl : public Aio::Impl {
   std::atomic<bool> run{true};
   std::atomic<bool> quit_requested{false};
 
-  std::vector<std::function<void()>> before_wait_functions;
-  // True while Poll() is running the before-wait functions; BeforeWait()
-  // CHECKs it -- see there.
-  bool in_before_wait_ = false;
+  BeforeWaitFunctions before_wait_functions_;
 
   // Readiness state for one fd registered via OnReadable/OnWritable/OnError/
   // OnEvents.  Unlike AsyncRead/AsyncWrite/timers, this has no io_uring
@@ -1980,7 +1978,7 @@ bool IoUringImpl::Poll(bool block) {
   // Not reentrant: a nested Poll() can never dispatch (the outer loop owns
   // delivery), so reentry could only silently starve its caller.  Die at
   // the call site instead; fatal is RT-clean.
-  ABSL_CHECK(!in_poll_ && !in_before_wait_)
+  ABSL_CHECK(!in_poll_ && !before_wait_functions_.running())
       << "Aio::Poll() reentered from inside a completion callback, a "
          "before-wait function, or a destructor the loop ran; wait by "
          "returning to the event loop instead";
@@ -1998,16 +1996,7 @@ bool IoUringImpl::Poll(bool block) {
   CheckForFork();
   EnsureBound();
 
-  // Registering a new before-wait function from inside one is disallowed
-  // (BeforeWait() CHECKs in_before_wait_): the push_back could reallocate
-  // the vector, moving the very std::function this loop is executing out
-  // from under itself.  EPoll never supported it either -- its range-for
-  // hit the same reallocation as silent UB.
-  in_before_wait_ = true;
-  for (const std::function<void()> &fn : before_wait_functions) {
-    fn();
-  }
-  in_before_wait_ = false;
+  before_wait_functions_.Run();
 
   int ret;
   // Already-queued completions are delivered before going back to the
@@ -2284,17 +2273,17 @@ void IoUringImpl::Cancel(AsyncRequest *request) {
   MaybeSubmit();
 }
 
-void IoUringImpl::BeforeWait(std::function<void()> function) {
+Aio::BeforeWaitId IoUringImpl::BeforeWait(std::function<void()> function) {
   // Same-thread only, like every other registration call: Poll() iterates
-  // before_wait_functions, so a push_back from another thread would race
-  // it.  (CheckForFork() enforces that too -- see there.)
+  // the before-wait functions, so changing them from another thread would
+  // race it.  (CheckForFork() enforces that too; see there.)
   CheckForFork();
-  // Not from inside a before-wait function: the push_back can reallocate
-  // the vector while Poll()'s iteration is executing an element in the old
-  // storage.  Deterministically illegal rather than sometimes-corrupting.
-  ABSL_CHECK(!in_before_wait_)
-      << ": BeforeWait() may not be called from a before-wait function";
-  before_wait_functions.emplace_back(std::move(function));
+  return before_wait_functions_.Add(std::move(function));
+}
+
+void IoUringImpl::RemoveBeforeWait(Aio::BeforeWaitId id) {
+  CheckForFork();
+  before_wait_functions_.Remove(id);
 }
 
 void IoUringImpl::OnReadable(FileDescriptor fd,

@@ -46,9 +46,14 @@ void Aio::AsyncWrite(FileDescriptor fd, std::span<const char> buffer,
 
 void Aio::Cancel(AsyncRequest *request) { impl_->Cancel(request); }
 
-void Aio::BeforeWait(std::function<void()> function) {
+Aio::BeforeWaitId Aio::BeforeWait(std::function<void()> function) {
   aos::CheckNotRealtime();
-  impl_->BeforeWait(std::move(function));
+  return impl_->BeforeWait(std::move(function));
+}
+
+void Aio::RemoveBeforeWait(BeforeWaitId id) {
+  aos::CheckNotRealtime();
+  impl_->RemoveBeforeWait(id);
 }
 
 void Aio::OnReadable(FileDescriptor fd, std::function<void()> callback) {

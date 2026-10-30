@@ -580,7 +580,8 @@ class IocpImpl : public Aio::Impl {
   void AsyncWrite(FileDescriptor fd, std::span<const char> buffer,
                   AsyncRequest *request) override;
   void Cancel(AsyncRequest *request) override;
-  void BeforeWait(std::function<void()> function) override;
+  Aio::BeforeWaitId BeforeWait(std::function<void()> function) override;
+  void RemoveBeforeWait(Aio::BeforeWaitId id) override;
 
   // Legacy Readiness Hooks.
   void OnReadable(FileDescriptor fd, std::function<void()> callback) override;
@@ -608,7 +609,7 @@ class IocpImpl : public Aio::Impl {
   // and Quit() clears it on shutdown.
   std::atomic<bool> run_{true};
   std::atomic<bool> quit_requested_{false};
-  std::vector<std::function<void()>> before_wait_functions_;
+  BeforeWaitFunctions before_wait_functions_;
 
   // Nonzero while Poll() is dispatching, which is when a retired
   // registration's callbacks may still be on the stack; see
@@ -624,8 +625,6 @@ class IocpImpl : public Aio::Impl {
   static constexpr int kSourceCount = 3;
   // The source PollOnce() asks first: the one after whichever delivered last.
   int next_source_ = kWritableSource;
-  // True while running the before-wait functions; see BeforeWait().
-  bool in_before_wait_ = false;
 
   // The armed timers, ordered by (deadline, arming sequence).  An
   // IntrusiveRbTree rather than the sorted list this used to be: arming is
@@ -1861,14 +1860,12 @@ void IocpImpl::CancelOverlapped(FdState *state, OVERLAPPED *overlapped) {
               : "");
 }
 
-void IocpImpl::BeforeWait(std::function<void()> function) {
-  // Not from inside a before-wait function: the push_back can reallocate the
-  // vector while Poll()'s iteration is executing an element in the old
-  // storage.  Deterministically illegal rather than sometimes-corrupting,
-  // matching IoUringImpl/EpollImpl.
-  ABSL_CHECK(!in_before_wait_)
-      << ": BeforeWait() may not be called from a before-wait function";
-  before_wait_functions_.push_back(std::move(function));
+Aio::BeforeWaitId IocpImpl::BeforeWait(std::function<void()> function) {
+  return before_wait_functions_.Add(std::move(function));
+}
+
+void IocpImpl::RemoveBeforeWait(Aio::BeforeWaitId id) {
+  before_wait_functions_.Remove(id);
 }
 
 void IocpImpl::OnReadable(FileDescriptor fd, std::function<void()> callback) {
@@ -2541,11 +2538,7 @@ bool IocpImpl::PollOnce(bool block) {
   // function and are expected to observe the caller's realtime state.  The
   // blocking wait itself is fine to perform while realtime (a sleeping thread
   // allocates nothing), so there is nothing to bracket with ScopedNotRealtime.
-  in_before_wait_ = true;
-  for (const auto &fn : before_wait_functions_) {
-    fn();
-  }
-  in_before_wait_ = false;
+  before_wait_functions_.Run();
 
   // Something resolved without a callback to run: the wakeup, or a request
   // with no callback.  Nothing was delivered, so the budget is unspent, but

@@ -70,7 +70,8 @@ class ReadinessBackend : public Aio::Impl {
   void AsyncWrite(FileDescriptor fd, std::span<const char> buffer,
                   AsyncRequest *request) final;
   void Cancel(AsyncRequest *request) final;
-  void BeforeWait(std::function<void()> function) final;
+  Aio::BeforeWaitId BeforeWait(std::function<void()> function) final;
+  void RemoveBeforeWait(Aio::BeforeWaitId id) final;
 
   void OnReadable(FileDescriptor fd, std::function<void()> callback) final;
   void OnError(FileDescriptor fd, std::function<void()> callback) final;
@@ -202,8 +203,7 @@ class ReadinessBackend : public Aio::Impl {
   // std::functions, and their captures' destructors are user code too.
   // Backs Poll()'s reentrancy CHECK, like IoUringImpl's in_poll_.
   bool in_poll_ = false;
-  bool in_before_wait_ = false;
-  std::vector<std::function<void()>> before_wait_functions_;
+  BeforeWaitFunctions before_wait_functions_;
 
   // Quit() writes these from other threads and from a signal handler
   // (ShmEventLoop's SIGINT/SIGHUP/SIGTERM handler), and should_run() reads
