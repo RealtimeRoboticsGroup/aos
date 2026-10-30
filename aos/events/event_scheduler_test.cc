@@ -529,6 +529,7 @@ TEST_P(EventSchedulerParamTest, TemporarilyStopAndRunStaggeredStart) {
 }
 
 INSTANTIATE_TEST_SUITE_P(EventSchedulerParamTest, EventSchedulerParamTest,
-                         testing::Values(RunMode::kRun, RunMode::kRunFor));
+                         testing::Values(RunMode::kRun, RunMode::kRunFor,
+                                         RunMode::kRunUntil));
 
 }  // namespace aos
