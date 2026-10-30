@@ -162,7 +162,7 @@ void TouchRobustListCleaner() { my_robust_list::robust_list_cleaner.Touch(); }
 int portable_mutex_do_get(aos_mutex *m, bool signals_fail, uint32_t tid) {
   RunShmObservers run_observers(m, true);
   if (kPrintOperations) {
-    printf("%" PRId32 ": %p do_get\n", tid, static_cast<void *>(m));
+    printf("%" PRIu32 ": %p do_get\n", tid, static_cast<void *>(m));
   }
 
   while (true) {
