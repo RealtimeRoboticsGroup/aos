@@ -30,10 +30,10 @@ cc_library(
     includes = ["cpp/foxglove-websocket/include/"],
     visibility = ["//visibility:public"],
     deps = [
+        "@boringssl//:crypto",
+        "@boringssl//:ssl",
         "@com_github_nlohmann_json//:json",
         "@websocketpp",
-        "@boringssl//:ssl",
-        "@boringssl//:crypto",
     ],
 )
 
