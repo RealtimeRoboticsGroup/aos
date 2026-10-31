@@ -534,9 +534,18 @@ TEST_F(ResolvePathTest, ResolveWithUnsetPath) {
   // to choose some utility that we can reasonably expect to be available in the
   // test environment.
   const std::filesystem::path echo_path = ResolvePath("echo");
-  EXPECT_THAT((std::vector<std::string>{"/bin/echo", "/usr/bin/echo",
-                                        "/bin/echo.coreutils"}),
-              ::testing::Contains(echo_path.native()));
+  // ResolvePath() returns the canonical path, so compute the expected
+  // candidates the same way; this keeps the test independent of symlink
+  // layouts (e.g. merged /usr, or echo being an alternatives symlink to
+  // echo.coreutils).
+  std::vector<std::string> expected_paths;
+  for (const char *candidate : {"/bin/echo", "/usr/bin/echo"}) {
+    if (std::filesystem::exists(candidate)) {
+      expected_paths.push_back(std::filesystem::canonical(candidate).native());
+    }
+  }
+  ASSERT_FALSE(expected_paths.empty());
+  EXPECT_THAT(expected_paths, ::testing::Contains(echo_path.native()));
 
   // Test that a file with /'s in the name ignores the PATH.
   const std::filesystem::path local_echo_path =
