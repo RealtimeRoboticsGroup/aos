@@ -106,6 +106,9 @@ void WriteCoreDumps();
 void LockAllMemory();
 
 void ExpandStackSize();
+
+// Raises this process's soft RLIMIT_RTPRIO to its hard limit.
+void RaiseRealtimePriorityLimit();
 #endif
 
 // Sets the name of the current thread.

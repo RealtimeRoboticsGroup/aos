@@ -1,6 +1,14 @@
 #include "aos/realtime.h"
 
+#ifdef __linux__
+#include <sys/resource.h>
+#include <unistd.h>
+#endif
+
+#include <algorithm>
+#include <cerrno>
 #include <chrono>
+#include <cstring>
 #include <semaphore>
 #include <thread>
 
@@ -107,6 +115,44 @@ TEST(RealtimeTest, GetSetSchedulingPolicy) {
   EXPECT_EQ(GetCurrentThreadSchedulingPolicy(), SCHED_RR);
   UnsetCurrentThreadRealtimePriority();
 }
+
+#ifdef __linux__
+// Tests that RaiseRealtimePriorityLimit() lifts the soft RLIMIT_RTPRIO to the
+// hard limit, so that a bare SetCurrentThreadRealtimePriorityLowLevel
+// (what the wakeup priority boost uses) can reach any priority the hard limit
+// allows.
+TEST(RealtimeTest, RaiseRealtimePriorityLimit) {
+  struct rlimit64 rlim;
+  ASSERT_EQ(getrlimit64(RLIMIT_RTPRIO, &rlim), 0);
+  // Root isn't bound by RLIMIT_RTPRIO, so the refusal below can't be shown.
+  if (getuid() == 0 || rlim.rlim_max < 2) {
+    GTEST_SKIP() << "Needs a non-root user with a hard RLIMIT_RTPRIO >= 2";
+  }
+  const struct rlimit64 original = rlim;
+
+  const int priority = static_cast<int>(std::min<rlim64_t>(rlim.rlim_max, 99));
+  UnsetCurrentThreadRealtimePriority();
+
+  // With the soft limit below the priority, the bare call is refused.
+  rlim.rlim_cur = 1;
+  ASSERT_EQ(setrlimit64(RLIMIT_RTPRIO, &rlim), 0);
+  EXPECT_EQ(SetCurrentThreadRealtimePriorityLowLevel(priority, SCHED_FIFO), -1);
+  EXPECT_EQ(errno, EPERM);
+
+  RaiseRealtimePriorityLimit();
+
+  ASSERT_EQ(getrlimit64(RLIMIT_RTPRIO, &rlim), 0);
+  EXPECT_EQ(rlim.rlim_cur, rlim.rlim_max);
+  EXPECT_EQ(rlim.rlim_max, original.rlim_max);
+
+  EXPECT_EQ(SetCurrentThreadRealtimePriorityLowLevel(priority, SCHED_FIFO), 0)
+      << strerror(errno);
+  EXPECT_EQ(GetCurrentThreadRealtimePriority(), priority);
+  UnsetCurrentThreadRealtimePriority();
+
+  ASSERT_EQ(setrlimit64(RLIMIT_RTPRIO, &original), 0);
+}
+#endif
 
 // Malloc hooks don't work with asan, msan, or tsan.
 #if !defined(AOS_SANITIZE_MEMORY) && !defined(AOS_SANITIZE_ADDRESS) && \

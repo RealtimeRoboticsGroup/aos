@@ -140,7 +140,7 @@ Some real-time problems arrive as a crash rather than a number, because AOS deli
 | --- | --- |
 | `Malloced <n> bytes` / `Deleted <ptr>` / `Delete Hook <ptr>` | Something allocated or freed on an RT thread. Look at the backtrace, not the flag that would silence it. |
 | `rt_tgsigqueueinfo(...) failed` with `EAGAIN` | `RLIMIT_SIGPENDING` exhausted. This is a **per-user aggregate** across every pending realtime signal on the machine, so the process that crashed is often not the one at fault — some other process of the same user saturated the limit. Raise the limit, or find what is queueing realtime signals. AOS crashes here rather than let a wakeup be dropped and hang a thread indefinitely. |
-| `changing to SCHED_FIFO with <n>` | A sender failed to apply the wakeup priority ceiling. Normally means a watcher registered above the sender's `RLIMIT_RTPRIO` — check for a privileged application watching a channel an unprivileged one publishes to. |
+| `changing to SCHED_FIFO with <n>` | A sender failed to apply the wakeup priority ceiling. Normally means a watcher registered above the sender's hard `RLIMIT_RTPRIO` — check for a privileged application, or one with a higher `LimitRTPRIO=`, watching a channel the crashing one publishes to. |
 | `SIGXCPU` | `RLIMIT_RTTIME`: an RT thread ran 3 seconds of solid CPU without blocking. Almost always a spin loop or a genuinely unbounded computation. |
 | `The next message is no longer available ... TOO_OLD` / `OVERWROTE` | A fetcher fell far enough behind that the queue wrapped past it. Either the reader is too slow or the channel's queue is too shallow. The timing report is sent before the crash, so `timing_report_dump` on the log will show you which. |
 

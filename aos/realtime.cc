@@ -135,6 +135,10 @@ void LockAllMemory() {
 
 #ifndef _WIN32
 void InitRT() {
+  // Cheap and can't fail, so do it even when skipping the rest: anything that
+  // later goes RT anyway can then reach every priority it is allowed.
+  RaiseRealtimePriorityLimit();
+
   if (absl::GetFlag(FLAGS_skip_locking_memory)) {
     ABSL_LOG(WARNING) << "Ignoring request to lock all memory due to "
                          "--skip_locking_memory.";
@@ -153,12 +157,27 @@ void InitRT() {
       RLIMIT_RTTIME, 3000000, SetLimitForRoot::kYes,
       ", use --skip_realtime_scheduler to stay non-rt and bypass this "
       "warning.");
+#endif
+}
 
-  // Allow rt processes up to priority 40.
-  SetSoftRLimit(
-      RLIMIT_RTPRIO, 40, SetLimitForRoot::kNo,
-      ", use --skip_realtime_scheduler to stay non-rt and bypass this "
-      "warning.");
+void RaiseRealtimePriorityLimit() {
+#ifdef __linux__
+  // Priorities get changed later on RT threads (the wakeup priority boost in
+  // LocklessQueueWakeUpper) with a bare sched_setscheduler(), which the kernel
+  // checks against the soft limit only.  Lifting the soft limit to the hard
+  // limit needs no privilege, so the hard limit (systemd's LimitRTPRIO=,
+  // limits.conf) is the real policy.  Raising the hard limit would need
+  // CAP_SYS_RESOURCE, but anything holding that normally also holds
+  // CAP_SYS_NICE, which skips the rlimit check entirely.
+  struct rlimit64 rlim;
+  ABSL_PCHECK(getrlimit64(RLIMIT_RTPRIO, &rlim) == 0)
+      << ": getting limit for RLIMIT_RTPRIO";
+  if (rlim.rlim_cur == rlim.rlim_max) {
+    return;
+  }
+  rlim.rlim_cur = rlim.rlim_max;
+  ABSL_PCHECK(setrlimit64(RLIMIT_RTPRIO, &rlim) == 0)
+      << ": raising the RLIMIT_RTPRIO soft limit to " << rlim.rlim_max;
 #endif
 }
 #endif  // !_WIN32

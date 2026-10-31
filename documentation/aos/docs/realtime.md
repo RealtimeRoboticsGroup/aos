@@ -63,9 +63,9 @@ The failure this prevents is subtle: without it, an allocation the kernel satisf
 `InitRT()` then sets two rlimits:
 
 - **`RLIMIT_RTTIME` = 3 s.** An RT thread that runs for 3 seconds of solid CPU without blocking gets `SIGXCPU`. This is a deliberate safety net: a runaway `SCHED_FIFO` thread at high priority on a single-core system is otherwise unrecoverable without a power cycle.
-- **`RLIMIT_RTPRIO` = 40.** Unprivileged processes cannot go above priority 40 by default. This is the ceiling AOS reserves the space above for kernel IRQ threads and anything privileged.
+- **Soft `RLIMIT_RTPRIO` raised to the hard limit.** `RaiseRealtimePriorityLimit()` lifts the soft limit, which is what the kernel checks and which needs no privilege to raise that far. It leaves the hard limit alone: raising that needs `CAP_SYS_RESOURCE`, and a process with that normally has `CAP_SYS_NICE` too, which bypasses `RLIMIT_RTPRIO` entirely. Every priority the system grants the process can then later be reached with a bare `sched_setscheduler()` — in particular by the wakeup priority boost, which runs mid-send on an RT thread and can't adjust rlimits there. AOS sets no ceiling of its own: reserving high priorities for kernel IRQ threads and privileged processes is the job of the hard limit (`LimitRTPRIO=` in the systemd unit, or `limits.conf`). This one runs even under the flags below, since it is cheap and can't fail.
 
-`--skip_locking_memory` bypasses the locking, and `--skip_realtime_scheduler` skips both the rlimits and the actual scheduler change. Both exist so tests and desktop debugging work without privileges. Neither belongs on a deployed target.
+`--skip_locking_memory` bypasses the locking, and `--skip_realtime_scheduler` skips `RLIMIT_RTTIME` and the actual scheduler change. Both exist so tests and desktop debugging work without privileges. Neither belongs on a deployed target.
 
 ### The malloc hooks
 
@@ -354,7 +354,7 @@ That distinction matters because it tells you exactly what the ceiling does and 
 Two edges:
 
 - **The sender's priority argument is `0` when the event loop is not running yet.** `ShmSender::DoSend` passes `event_loop()->is_running() ? runtime_realtime_priority() : 0`, so a send issued during construction or from an `OnRun` handler before the loop starts takes the non-RT path and does not boost.
-- **The boost is subject to the sender's own `RLIMIT_RTPRIO`.** In the normal case this never bites: `InitRT()` pins the soft limit at 40 for unprivileged processes, and watchers are held to the same ceiling, so any priority a watcher could have registered is a priority the sender can boost to. It can bite in a mixed-privilege system — a root application registering a watcher above 40 on a channel an unprivileged RT application publishes to would make that sender's boost fail `EPERM`, and the `ABSL_PCHECK` turns that into a crash on the send path.
+- **The boost is subject to the sender's own `RLIMIT_RTPRIO`.** In the normal case this never bites: `InitRT()` raises the soft limit to the hard limit for unprivileged processes, and watchers running under the same hard limit are held to the same ceiling, so any priority a watcher could have registered is a priority the sender can boost to. It can bite in a mixed-privilege system — a root application, or one with a higher hard limit, registering a watcher above the sender's hard limit on a channel the sender publishes to would make that sender's boost fail `EPERM`, and the `ABSL_PCHECK` turns that into a crash on the send path.
 
 Note also that the boost itself is not asserted by any test: `LocklessQueueTest.WakeUpThreads` uses watcher priorities below the sender's, so it exercises the sort and the signalling loop while skipping the ceiling.
 
