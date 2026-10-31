@@ -37,7 +37,7 @@ using aos::testing::ArtifactPath;
 using aos::testing::MessageCounter;
 
 constexpr std::string_view kSingleConfigSha256(
-    "73cda496bc071505c9121dad16ccfc4c90ae9c7218eb16e1c5c4a6bf952d64c6");
+    "d5f2aa11084d3d74a0473efd2dff3a18b0b418393b8435b76e7e8fd740eea730");
 
 // Parameterize on the memory buffer size.
 class LoggerTest : public ::testing::TestWithParam<double> {

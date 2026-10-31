@@ -1,4 +1,6 @@
 #include <stdint.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <atomic>
 #include <chrono>
@@ -12,6 +14,7 @@
 #include "absl/flags/reflection.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "flatbuffers/string.h"
 #include "gtest/gtest.h"
@@ -30,6 +33,7 @@
 #include "aos/starter/starter_rpc_lib.h"
 #include "aos/starter/starterd_lib.h"
 #include "aos/testing/path.h"
+#include "aos/testing/tmpdir.h"
 #include "aos/util/file.h"
 #include "aos/util/process_info_generated.h"
 #include "documentation/examples/ping_pong/ping_generated.h"
@@ -769,6 +773,64 @@ TEST_F(StarterdTest, ImmediateExitWithOnlyStopped) {
 
   client_loop.Run();
   ASSERT_TRUE(success);
+}
+
+// A fake proc tree under a temp dir: EnsureHugePages reads and writes
+// <root_dir>/proc/sys/vm/nr_hugepages.
+class EnsureHugePagesTest : public ::testing::Test {
+ protected:
+  EnsureHugePagesTest()
+      : nr_hugepages_file_(root_dir_ + "/proc/sys/vm/nr_hugepages") {
+    aos::util::MkdirP(nr_hugepages_file_, std::filesystem::perms::all);
+  }
+
+  ~EnsureHugePagesTest() override { aos::util::UnlinkRecursive(root_dir_); }
+
+  void WriteNrHugePages(long value) {
+    aos::util::WriteStringToFileOrDie(nr_hugepages_file_, absl::StrCat(value));
+  }
+
+  long ReadNrHugePages() {
+    return std::stol(aos::util::ReadFileToStringOrDie(nr_hugepages_file_));
+  }
+
+  const std::string root_dir_ =
+      absl::StrCat(aos::testing::TestTmpDir(), "/fake_root");
+  const std::string nr_hugepages_file_;
+};
+
+// The kernel grants the request: nr_hugepages ends at `needed`.
+TEST_F(EnsureHugePagesTest, Success) {
+  WriteNrHugePages(10);
+  EXPECT_TRUE(EnsureHugePages(500, root_dir_));
+  EXPECT_EQ(ReadNrHugePages(), 500);
+}
+
+// Already enough pages reserved: the value stays untouched.
+TEST_F(EnsureHugePagesTest, AlreadyEnough) {
+  WriteNrHugePages(900);
+  EXPECT_TRUE(EnsureHugePages(500, root_dir_));
+  EXPECT_EQ(ReadNrHugePages(), 900);
+}
+
+// A read-only nr_hugepages (starterd not running as root) dies on the write
+// instead of quietly running w/o huge pages, and leaves the value alone.
+TEST_F(EnsureHugePagesTest, ReadOnlyDies) {
+  if (getuid() == 0) {
+    GTEST_SKIP() << "root ignores file permissions";
+  }
+  WriteNrHugePages(10);
+  ASSERT_EQ(chmod(nr_hugepages_file_.c_str(), 0444), 0);
+  EXPECT_DEATH(EnsureHugePages(500, root_dir_), "opening .*nr_hugepages");
+  EXPECT_EQ(ReadNrHugePages(), 10);
+  ASSERT_EQ(chmod(nr_hugepages_file_.c_str(), 0664), 0);
+}
+
+// nr_hugepages doesn't exist: returns false without ever writing (a write
+// would have created the file).
+TEST_F(EnsureHugePagesTest, Unreadable) {
+  EXPECT_FALSE(EnsureHugePages(500, root_dir_));
+  EXPECT_FALSE(aos::util::PathExists(nr_hugepages_file_));
 }
 
 }  // namespace aos::starter

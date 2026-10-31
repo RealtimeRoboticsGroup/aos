@@ -35,8 +35,12 @@ long SystemPageSize() {
 // hazard it exists to cover -- and they never reach storage at all.
 // FILE_ATTRIBUTE_TEMPORARY below buys back most of that last point.
 WritableShmMapping::WritableShmMapping(std::string_view path, size_t size,
-                                       std::filesystem::perms permissions)
+                                       std::filesystem::perms permissions,
+                                       std::string_view hugepage_path)
     : size_(size) {
+  // Huge pages are a Linux-only concept; see shm_mapping_linux.cc.
+  ABSL_CHECK(hugepage_path.empty())
+      << ": hugepage-backed mappings are not supported on this OS";
   const long kSystemPageSize = SystemPageSize();
 
   std::string path_str(path);
@@ -126,8 +130,12 @@ WritableShmMapping::~WritableShmMapping() {
 }
 
 ReadOnlyShmMapping::ReadOnlyShmMapping(std::string_view path, size_t size,
-                                       std::filesystem::perms /*permissions*/)
+                                       std::filesystem::perms /*permissions*/,
+                                       bool hugepages)
     : size_(size) {
+  // Huge pages are a Linux-only concept; see shm_mapping_linux.cc.
+  ABSL_CHECK(!hugepages)
+      << ": hugepage-backed mappings are not supported on this OS";
   const long kSystemPageSize = SystemPageSize();
 
   std::string path_str(path);

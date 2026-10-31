@@ -134,8 +134,12 @@ void *MapShm(std::string_view path, size_t size,
 }  // namespace
 
 WritableShmMapping::WritableShmMapping(std::string_view path, size_t size,
-                                       std::filesystem::perms permissions)
+                                       std::filesystem::perms permissions,
+                                       std::string_view hugepage_path)
     : size_(size) {
+  // Huge pages are a Linux-only concept; see shm_mapping_linux.cc.
+  ABSL_CHECK(hugepage_path.empty())
+      << ": hugepage-backed mappings are not supported on this OS";
   data_ = MapShm(path, size, permissions, /*writable=*/true);
 }
 
@@ -144,8 +148,12 @@ WritableShmMapping::~WritableShmMapping() {
 }
 
 ReadOnlyShmMapping::ReadOnlyShmMapping(std::string_view path, size_t size,
-                                       std::filesystem::perms permissions)
+                                       std::filesystem::perms permissions,
+                                       bool hugepages)
     : size_(size) {
+  // Huge pages are a Linux-only concept; see shm_mapping_linux.cc.
+  ABSL_CHECK(!hugepages)
+      << ": hugepage-backed mappings are not supported on this OS";
   data_ = MapShm(path, size, permissions, /*writable=*/false);
 }
 

@@ -71,8 +71,10 @@ cc_library(
         "//aos:configuration",
         "//aos:macros",
         "//aos/events:shm_event_loop",
+        "//aos/util:file",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
+        "@com_google_absl//absl/strings",
     ],
 )
 

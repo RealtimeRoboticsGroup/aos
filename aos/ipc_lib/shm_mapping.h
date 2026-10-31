@@ -27,6 +27,10 @@ void PageFaultDataRead(const char *data, size_t size, const long page_size);
 // it could not be removed.
 bool UnlinkShm(std::string_view path);
 
+// Lets huge-page-backed mappings live on a filesystem other than hugetlbfs, so
+// tests can use an ordinary directory as a stand-in mount.  Linux only.
+void AllowHugePagesOffHugetlbfsForTesting(bool allow);
+
 // RAII wrappers around a shared-memory-backed file mapped into this process.
 //
 // Lifetime is part of the contract, not an implementation detail: the contents
@@ -42,10 +46,17 @@ bool UnlinkShm(std::string_view path);
 // safely with other creators), sizes it to `size`, and maps it read/write.
 // Pre-faults every page so realtime code can touch the memory without faulting,
 // and unmap on destruction.
+//
+// If `hugepage_path` is non-empty, the file lives at `hugepage_path` on a
+// hugetlbfs mount instead, sized to `size` rounded up to the huge page size,
+// and `path` is a symlink to it.  Dies if `path` is anything else, or if the
+// file isn't on hugetlbfs.  Only supported on Linux; other OSes die if it is
+// set.
 class WritableShmMapping {
  public:
   WritableShmMapping(std::string_view path, size_t size,
-                     std::filesystem::perms permissions);
+                     std::filesystem::perms permissions,
+                     std::string_view hugepage_path = {});
   ~WritableShmMapping();
 
   WritableShmMapping(const WritableShmMapping &) = delete;
@@ -58,6 +69,9 @@ class WritableShmMapping {
 
  private:
   const size_t size_;
+  // Bytes actually mmap()ed: size_ rounded up to the backing filesystem's
+  // page size when the file lives on hugetlbfs (Linux), size_ otherwise.
+  size_t mapped_size_ = size_;
   void *data_ = nullptr;
 };
 
@@ -66,10 +80,14 @@ class WritableShmMapping {
 // first.  It does wait for a creator that has made the file but not yet sized
 // it.  Pre-faults every page so realtime code can touch the memory without
 // faulting, and unmap on destruction.
+//
+// If `hugepages` is true, dies unless the file `path` leads to is on hugetlbfs
+// (see WritableShmMapping).
 class ReadOnlyShmMapping {
  public:
   ReadOnlyShmMapping(std::string_view path, size_t size,
-                     std::filesystem::perms permissions);
+                     std::filesystem::perms permissions,
+                     bool hugepages = false);
   ~ReadOnlyShmMapping();
 
   ReadOnlyShmMapping(const ReadOnlyShmMapping &) = delete;
@@ -82,6 +100,9 @@ class ReadOnlyShmMapping {
 
  private:
   const size_t size_;
+  // Bytes actually mmap()ed: size_ rounded up to the backing filesystem's
+  // page size when the file lives on hugetlbfs (Linux), size_ otherwise.
+  size_t mapped_size_ = size_;
   const void *data_ = nullptr;
 };
 

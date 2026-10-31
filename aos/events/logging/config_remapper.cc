@@ -652,6 +652,12 @@ void ConfigRemapper::MakeRemappedConfig() {
       applications_offset =
           RecursiveCopyVectorTable(base_config->applications(), &fbb);
 
+  flatbuffers::Offset<flatbuffers::String> shm_hugepage_base_offset;
+  if (base_config->has_shm_hugepage_base()) {
+    shm_hugepage_base_offset =
+        fbb.CreateString(base_config->shm_hugepage_base()->string_view());
+  }
+
   // Now insert everything else in unmodified.
   ConfigurationBuilder configuration_builder(fbb);
   if (!channels_offset.IsNull()) {
@@ -671,8 +677,15 @@ void ConfigRemapper::MakeRemappedConfig() {
     configuration_builder.add_channel_storage_duration(
         base_config->channel_storage_duration());
   }
+  if (!shm_hugepage_base_offset.IsNull()) {
+    configuration_builder.add_shm_hugepage_base(shm_hugepage_base_offset);
+  }
+  if (base_config->has_shm_hugepage_threshold()) {
+    configuration_builder.add_shm_hugepage_threshold(
+        base_config->shm_hugepage_threshold());
+  }
 
-  ABSL_CHECK_EQ(Configuration::MiniReflectTypeTable()->num_elems, 6u)
+  ABSL_CHECK_EQ(Configuration::MiniReflectTypeTable()->num_elems, 8u)
       << ": Merging logic needs to be updated when the number of configuration "
          "fields changes.";
 

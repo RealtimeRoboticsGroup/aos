@@ -8,6 +8,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -29,6 +30,21 @@ const aos::Channel *StatusChannelForNode(const aos::Configuration *config,
                                          const aos::Node *node);
 const aos::Channel *StarterRpcChannelForNode(const aos::Configuration *config,
                                              const aos::Node *node);
+
+// If the configuration sets shm_hugepage_base, reserves enough huge pages
+// (/proc/sys/vm/nr_hugepages) to back every queue readable on node whose size
+// is >= shm_hugepage_threshold.  Must run as root, before the --user switch.
+// Dies if shm_hugepage_base isn't on a hugetlbfs mount or the reservation
+// can't be fully satisfied (after writing the original nr_hugepages back), so
+// starterd fails to start instead of running without huge pages.
+void ReserveHugePages(const aos::Configuration *config, const aos::Node *node);
+
+// Raises <root_dir>/proc/sys/vm/nr_hugepages to at least `needed`.  Returns
+// true if the kernel satisfied it.  If it only partly did, writes the original
+// value back so no huge pages stay reserved after starterd gives up.  Dies if
+// nr_hugepages exists but can't be written.  Tests point root_dir at a fake
+// proc tree.
+bool EnsureHugePages(size_t needed, std::string_view root_dir = "/");
 
 class Starter {
  public:

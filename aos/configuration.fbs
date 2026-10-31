@@ -328,6 +328,15 @@ table Configuration {
   // data allocated so that if data is published at the configured frequency,
   // at least this many nanoseconds of messages will be available for fetchers.
   channel_storage_duration:long = 2000000000 (id: 5);
+
+  // If set, a directory on a hugetlbfs mount.  Every queue whose memory is at
+  // least shm_hugepage_threshold bytes lives there, backed by huge pages, and
+  // is reached from --shm_base through a symlink.  Processes refuse to map
+  // such a queue from anywhere else.  Linux only.
+  shm_hugepage_base:string (id: 6);
+  // Queue memory size, in bytes, at or above which a queue is backed by
+  // shm_hugepage_base.
+  shm_hugepage_threshold:ulong = 524288000 (id: 7);
 }
 
 root_type Configuration;
