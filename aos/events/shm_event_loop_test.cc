@@ -1485,6 +1485,43 @@ TEST_F(MemoryMappedQueueTest, ParallelCreationOfLargeQueueSharesMemory) {
   }
 }
 
+// The write pre-fault run by a second MemoryMappedQueue must store to every
+// page without changing the data.
+TEST_F(MemoryMappedQueueTest, PageFaultDataWriteKeepsDataInline) {
+  ipc_lib::MemoryMappedQueue creator(shm_dir_, kPermissions, config_,
+                                     small_channel_);
+  const std::vector<char> before(creator.GetConstSharedMemory().begin(),
+                                 creator.GetConstSharedMemory().end());
+
+  ipc_lib::MemoryMappedQueue second(shm_dir_, kPermissions, config_,
+                                    small_channel_);
+
+  EXPECT_TRUE(std::equal(before.begin(), before.end(),
+                         second.GetConstSharedMemory().begin()));
+}
+
+// After a second MemoryMappedQueue's constructor write pre-fault, writing to
+// every page of its read-write mapping takes no further minor faults.
+// Trivially true on x86 (hardware sets the dirty bit on store); the real
+// check is aarch64 without CONFIG_ARM64_HW_AFDBM, where a store to a clean
+// PTE traps.
+TEST_F(MemoryMappedQueueTest, SecondMappingWritesDoNotFault) {
+  ipc_lib::MemoryMappedQueue creator(shm_dir_, kPermissions, config_,
+                                     big_channel_);
+
+  ipc_lib::MemoryMappedQueue reader(shm_dir_, kPermissions, config_,
+                                    big_channel_);
+
+  const long faults_before = MinorFaults();
+  absl::Span<char> mem = reader.GetMutableSharedMemory();
+  const long page_size = sysconf(_SC_PAGESIZE);
+  for (size_t i = 0; i < mem.size(); i += page_size) {
+    __atomic_fetch_or(reinterpret_cast<volatile char *>(&mem[i]), 0,
+                      __ATOMIC_RELAXED);
+  }
+  EXPECT_EQ(0, MinorFaults() - faults_before);
+}
+
 #endif  // __linux__
 
 // A started event loop on a borrowed Aio has to be shut down before it goes,
