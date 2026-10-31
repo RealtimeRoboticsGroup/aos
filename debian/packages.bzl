@@ -126,10 +126,14 @@ def generate_repositories_for_debs(files, base_url = "https://realtimeroboticsgr
                 downloaded_file_path = f,
             )
 
-def generate_deb_tarball(name, files, target_compatible_with = None):
+def generate_deb_tarball(name, files, target_compatible_with = None, deb_label = "@%s//file"):
     """Takes all debs in the dictionary and generates one tarball from them.
 
     This can then be uploaded and used as another WORKSPACE entry.
+
+    deb_label is the label format for a deb's file, given its
+    convert_deb_to_target name (e.g. "@my_debs//:%s" for a module extension's
+    alias hub).
     """
     if target_compatible_with == None:
         target_compatible_with = host_compatible_with([
@@ -143,7 +147,7 @@ def generate_deb_tarball(name, files, target_compatible_with = None):
         if ("generate_%s_tarball" % dep) not in native.existing_rules():
             native.genrule(
                 name = "generate_%s_tarball" % dep,
-                srcs = ["@%s//file" % dep],
+                srcs = [deb_label % dep],
                 outs = ["extracted_%s.tar" % dep],
                 cmd = "dpkg-deb --fsys-tarfile $(SRCS) > $@",
                 target_compatible_with = target_compatible_with,
