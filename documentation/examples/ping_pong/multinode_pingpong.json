@@ -77,14 +77,14 @@
     {
       "name": "/devbox/aos/remote_timestamps/remote",
       "type": "aos.message_bridge.RemoteMessage",
-      "frequency": 200,
+      "frequency": 2000,
       "logger": "NOT_LOGGED",
       "source_node": "devbox"
     },
     {
       "name": "/remote/aos/remote_timestamps/devbox",
       "type": "aos.message_bridge.RemoteMessage",
-      "frequency": 200,
+      "frequency": 2000,
       "logger": "NOT_LOGGED",
       "source_node": "remote"
     },
