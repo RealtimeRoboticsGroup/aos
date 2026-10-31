@@ -62,6 +62,68 @@ SizePrefixedFlatbufferDetachedBuffer<T> JsonToSizedFlatbuffer(
   return fbb.Release();
 }
 
+// Tests that BufferLogSink tracks open/close state and appends spans in order.
+TEST(BufferLogSinkTest, WriteAndLifecycle) {
+  ResizeableBuffer buffer;
+  BufferLogSink sink(&buffer);
+
+  EXPECT_FALSE(sink.is_open());
+  EXPECT_EQ(sink.name(), "<buffer>");
+  EXPECT_EQ(sink.OpenForWrite(), WriteCode::kOk);
+  EXPECT_TRUE(sink.is_open());
+
+  const std::array<uint8_t, 3> chunk1 = {'a', 'b', 'c'};
+  const std::array<uint8_t, 2> chunk2 = {'d', 'e'};
+  const std::array<absl::Span<const uint8_t>, 2> first_queue = {
+      absl::MakeConstSpan(chunk1), absl::MakeConstSpan(chunk2)};
+  const WriteResult first_result = sink.Write(absl::MakeConstSpan(first_queue));
+  EXPECT_EQ(first_result.code, WriteCode::kOk);
+  EXPECT_EQ(first_result.messages_written, 2u);
+  EXPECT_EQ(first_result.bytes_written, 5u);
+
+  const std::array<uint8_t, 3> chunk3 = {'f', 'g', 'h'};
+  const std::array<absl::Span<const uint8_t>, 1> second_queue = {
+      absl::MakeConstSpan(chunk3)};
+  const WriteResult second_result =
+      sink.Write(absl::MakeConstSpan(second_queue));
+  EXPECT_EQ(second_result.code, WriteCode::kOk);
+  EXPECT_EQ(second_result.messages_written, 1u);
+  EXPECT_EQ(second_result.bytes_written, 3u);
+
+  EXPECT_EQ(sink.Close(), WriteCode::kOk);
+  EXPECT_FALSE(sink.is_open());
+  EXPECT_EQ(std::string_view(reinterpret_cast<const char *>(buffer.data()),
+                             buffer.size()),
+            "abcdefgh");
+}
+
+// Tests that DetachedBufferWriter flushes encoded messages into BufferLogSink.
+TEST(BufferLogSinkTest, DetachedBufferWriter) {
+  const aos::SizePrefixedFlatbufferDetachedBuffer<TestMessage> m1 =
+      JsonToSizedFlatbuffer<TestMessage>(R"({ "value": 1 })");
+  const aos::SizePrefixedFlatbufferDetachedBuffer<TestMessage> m2 =
+      JsonToSizedFlatbuffer<TestMessage>(R"({ "value": 2 })");
+
+  ResizeableBuffer buffer;
+  {
+    DetachedBufferWriter writer(std::make_unique<BufferLogSink>(&buffer),
+                                std::make_unique<DummyEncoder>(
+                                    TestDetachedBufferWriter::kMaxMessageSize));
+    EXPECT_TRUE(writer.is_open());
+    DataEncoder::SpanCopier copier1(m1.span());
+    writer.CopyMessage(&copier1, monotonic_clock::now());
+    DataEncoder::SpanCopier copier2(m2.span());
+    writer.CopyMessage(&copier2, monotonic_clock::now());
+    writer.Close();
+    EXPECT_FALSE(writer.is_open());
+  }
+
+  const absl::Span<const uint8_t> written(buffer.data(), buffer.size());
+  ASSERT_EQ(written.size(), m1.span().size() + m2.span().size());
+  EXPECT_EQ(written.subspan(0, m1.span().size()), m1.span());
+  EXPECT_EQ(written.subspan(m1.span().size()), m2.span());
+}
+
 // Tests that we can write and read 2 flatbuffers to file.
 TEST(SpanReaderTest, ReadWrite) {
   const std::string logfile = aos::testing::TestTmpDir() + "/log.bfbs";
