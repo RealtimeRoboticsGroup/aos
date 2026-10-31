@@ -1,0 +1,15 @@
+// A test schema that depends on a type from an external workspace
+// (@com_github_foxglove_schemas) to exercise cross-workspace Foxglove TS generation.
+// The foxglove.Pose type transitively pulls in Vector3 and Quaternion,
+// verifying that the generator correctly prefixes output filenames with
+// the external workspace name and wires up cross-workspace imports.
+include "Pose.fbs";
+
+namespace external_dep_test;
+
+table Waypoint {
+  label:string (id: 0);
+  pose:foxglove.Pose (id: 1);
+}
+
+root_type Waypoint;

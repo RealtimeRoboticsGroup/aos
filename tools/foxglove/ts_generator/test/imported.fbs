@@ -1,0 +1,8 @@
+namespace test;
+
+enum Tag : uint { Unknown = 0, Primary = 1, Secondary = 2 }
+
+table Metadata {
+  source:string (id: 0);
+  tag:Tag (id: 1);
+}
