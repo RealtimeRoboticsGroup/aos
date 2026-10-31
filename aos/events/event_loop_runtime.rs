@@ -907,7 +907,7 @@ impl Timer {
     /// Returns a tick which can be `.await`ed.
     ///
     /// This tick will resolve on the next timer expired.
-    pub fn tick(&mut self) -> TimerTick {
+    pub fn tick(&mut self) -> TimerTick<'_> {
         TimerTick(self)
     }
 
@@ -1018,7 +1018,7 @@ impl RawWatcher {
     /// watcher.next();
     /// # }
     /// ```
-    pub fn next(&mut self) -> RawWatcherNext {
+    pub fn next(&mut self) -> RawWatcherNext<'_> {
         RawWatcherNext(Some(self))
     }
 }
@@ -1264,7 +1264,7 @@ impl RawFetcher {
         }
     }
 
-    pub fn context(&self) -> Context {
+    pub fn context(&self) -> Context<'_> {
         Context(&self.last_context)
     }
 }
@@ -1353,7 +1353,7 @@ impl RawSender {
     /// # }
     /// # }
     /// ```
-    pub fn make_builder(&mut self) -> RawBuilder {
+    pub fn make_builder(&mut self) -> RawBuilder<'_> {
         let allocator = ChannelPreallocatedAllocator::new(unsafe {
             std::slice::from_raw_parts_mut(
                 aos_sender_data(self.0) as *mut u8,
@@ -1451,7 +1451,7 @@ where
     /// PongBuilder::new(builder1.fbb()).finish();
     /// # }
     /// ```
-    pub fn make_builder(&mut self) -> Builder<T> {
+    pub fn make_builder(&mut self) -> Builder<'_, T> {
         Builder(self.0.make_builder(), PhantomData)
     }
 }
