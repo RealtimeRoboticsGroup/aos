@@ -6,6 +6,11 @@
 #include "absl/log/absl_vlog_is_on.h"
 
 ABSL_FLAG(int32_t, lzma_threads, 1, "Number of threads to use for encoding");
+ABSL_FLAG(
+    int32_t, lzma_decoder_queue_size, 8,
+    "Number of 256 KiB buffers each threaded LZMA decoder decompresses ahead "
+    "of its reader.  Raise it when individual messages are larger than the "
+    "read-ahead, so the reader doesn't wait on decompression for each one.");
 
 namespace aos::logger {
 namespace {
@@ -300,12 +305,19 @@ size_t LzmaDecoder::Read(uint8_t *begin, uint8_t *end) {
 
 ThreadedLzmaDecoder::ThreadedLzmaDecoder(
     std::unique_ptr<DataDecoder> underlying_decoder, bool quiet)
-    : decoder_(std::move(underlying_decoder), quiet), decode_thread_([this] {
+    : queue_size_([] {
+        const int32_t queue_size = absl::GetFlag(FLAGS_lzma_decoder_queue_size);
+        ABSL_CHECK_GT(queue_size, 0)
+            << ": --lzma_decoder_queue_size must be positive";
+        return static_cast<size_t>(queue_size);
+      }()),
+      decoder_(std::move(underlying_decoder), quiet),
+      decode_thread_([this] {
         std::unique_lock lock(decode_mutex_);
         while (true) {
           // Wake if the queue is too small or we are finished.
           continue_decoding_.wait(lock, [this] {
-            return decoded_queue_.size() < kQueueSize || finished_;
+            return decoded_queue_.size() < queue_size_ || finished_;
           });
 
           if (finished_) {
@@ -332,16 +344,15 @@ ThreadedLzmaDecoder::ThreadedLzmaDecoder(
             } else {
               finished_ = true;
             }
+            // Wake the reader as soon as there is data, rather than once the
+            // queue is full, so it doesn't stall for queue_size_ buffers.
+            queue_filled_.notify_one();
 
             // If we've filled the queue or are out of data, go back to sleep.
-            if (decoded_queue_.size() >= kQueueSize || finished_) {
+            if (decoded_queue_.size() >= queue_size_ || finished_) {
               break;
             }
           }
-
-          // Notify main thread in case it was waiting for us to queue more
-          // data.
-          queue_filled_.notify_one();
         }
       }) {}
 
@@ -390,7 +401,7 @@ size_t ThreadedLzmaDecoder::Read(uint8_t *begin, uint8_t *end) {
   front_buffer.erase_front(bytes_to_copy);
 
   // Ensure the decoding thread wakes up if the queue isn't full.
-  if (!finished_ && decoded_queue_.size() < kQueueSize) {
+  if (!finished_ && decoded_queue_.size() < queue_size_) {
     continue_decoding_.notify_one();
   }
 
