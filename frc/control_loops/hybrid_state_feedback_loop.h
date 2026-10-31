@@ -368,13 +368,14 @@ class HybridKalman {
       const Eigen::Matrix<Scalar, number_of_measurements, number_of_states> &C,
       const Eigen::Matrix<Scalar, number_of_measurements, number_of_inputs> &D,
       const Eigen::Matrix<Scalar, number_of_inputs, 1> &U,
-      const Eigen::Matrix<Scalar, number_of_outputs, 1> &Y,
-      const Eigen::Matrix<Scalar, number_of_outputs, number_of_outputs> &R) {
-    Eigen::Matrix<Scalar, number_of_outputs, 1> Y_bar =
+      const Eigen::Matrix<Scalar, number_of_measurements, 1> &Y,
+      const Eigen::Matrix<Scalar, number_of_measurements,
+                          number_of_measurements> &R) {
+    Eigen::Matrix<Scalar, number_of_measurements, 1> Y_bar =
         Y - (C * X_hat_ + D * U);
-    Eigen::Matrix<Scalar, number_of_outputs, number_of_outputs> S =
+    Eigen::Matrix<Scalar, number_of_measurements, number_of_measurements> S =
         C * P_ * C.transpose() + R;
-    Eigen::Matrix<Scalar, number_of_states, number_of_outputs> KalmanGain;
+    Eigen::Matrix<Scalar, number_of_states, number_of_measurements> KalmanGain;
     KalmanGain = (S.transpose().ldlt().solve((P() * C.transpose()).transpose()))
                      .transpose();
     X_hat_ = X_hat_ + KalmanGain * Y_bar;

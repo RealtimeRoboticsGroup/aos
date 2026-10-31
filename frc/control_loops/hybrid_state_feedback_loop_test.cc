@@ -171,6 +171,24 @@ TEST(StateFeedbackLoopTest, UnequalSizes) {
   test_loop.CapU();
 }
 
+// Tests that DynamicCorrect takes a different number of measurements than the
+// plant has outputs, and moves the estimate towards them.
+TEST(StateFeedbackLoopTest, DynamicCorrectWithMoreMeasurementsThanOutputs) {
+  HybridKalman<3, 1, 1> observer = MakeIntegralShooterObserver();
+
+  // Measure the first two states directly.
+  Eigen::Matrix<double, 2, 3> C;
+  C << 1.0, 0.0, 0.0, 0.0, 1.0, 0.0;
+  const Eigen::Matrix<double, 2, 1> Y(1.0, 2.0);
+  observer.DynamicCorrect<2>(C, Eigen::Matrix<double, 2, 1>::Zero(),
+                             Eigen::Matrix<double, 1, 1>::Zero(), Y,
+                             Eigen::Matrix<double, 2, 2>::Identity() * 1e-9);
+
+  // R is tiny compared to P, so the estimate snaps to the measurements.
+  EXPECT_NEAR(observer.X_hat(0), 1.0, 0.05);
+  EXPECT_NEAR(observer.X_hat(1), 2.0, 0.05);
+}
+
 // Tests that the continuous to discrete calculation for the kalman filter
 // matches what was computed both in Python and in Matlab.
 TEST(StateFeedbackLoopTest, PythonMatch) {
