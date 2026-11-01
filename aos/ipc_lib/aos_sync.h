@@ -221,6 +221,21 @@ void condition_broadcast(aos_condition *c, struct aos_mutex *m);
 #ifdef __cplusplus
 }
 
+#ifdef _WIN32
+namespace aos::ipc_lib {
+
+// Tells aos_mutex that a view of a file mapping is gone.  Windows caches how
+// each mutex address is backed, per thread, and hands a new view the address
+// an old one just gave back, so without this a thread would take a mutex in
+// the new view for the old one's kernel mutex.  Call it after every
+// UnmapViewOfFile() of memory that can hold an aos_mutex.  Only views are
+// covered: a mutex in memory that went through VirtualFree() or a heap free,
+// and came back as a view at the same address, is still taken as the old one.
+void NoteMappingUnmapped();
+
+}  // namespace aos::ipc_lib
+#endif
+
 namespace aos {
 namespace linux_code {
 namespace ipc_lib {

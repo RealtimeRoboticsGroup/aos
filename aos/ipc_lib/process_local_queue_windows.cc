@@ -2,6 +2,7 @@
 
 #include "absl/log/absl_check.h"
 
+#include "aos/ipc_lib/aos_sync.h"
 #include "aos/ipc_lib/process_local_queue_internal.h"
 
 namespace aos::ipc_lib::internal {
@@ -38,6 +39,7 @@ void UnmapProcessLocal(const ProcessLocalMapping &mapping) {
       << ": UnmapViewOfFile failed: " << GetLastError();
   ABSL_CHECK(UnmapViewOfFile(mapping.readonly))
       << ": UnmapViewOfFile failed: " << GetLastError();
+  NoteMappingUnmapped();
 }
 
 }  // namespace aos::ipc_lib::internal

@@ -15,10 +15,14 @@
 
 #include <windows.h>
 
+#include <atomic>
+#include <filesystem>
+#include <string>
 #include <thread>
 
 #include "gtest/gtest.h"
 
+#include "aos/ipc_lib/shm_mapping.h"
 #include "aos/testing/tmpdir.h"
 
 namespace aos::testing {
@@ -47,9 +51,12 @@ class FileBackedMemory {
 
   ~FileBackedMemory() {
     UnmapViewOfFile(data_);
+    ipc_lib::NoteMappingUnmapped();
     CloseHandle(mapping_);
     CloseHandle(file_);
   }
+
+  void *data() { return data_; }
 
   aos_mutex *mutex() { return static_cast<aos_mutex *>(data_); }
   aos_futex *futex() {
@@ -65,6 +72,63 @@ class FileBackedMemory {
   HANDLE mapping_ = nullptr;
   void *data_ = nullptr;
 };
+
+}  // namespace
+
+// A thread that used a mutex in a view that has since gone does not take a
+// mutex in a new view at the same address for the old one.  Windows hands a
+// new view the address an old one just gave back, and the thread's cache of
+// how each address is backed used to keep the old file's kernel mutex for it,
+// so that thread's trylock won while another thread held the new mutex.
+TEST(AosSyncWindowsCacheTest, NewViewAtAnOldAddressIsANewMutex) {
+  const std::string path = TestTmpDir() + "\\aos_sync_windows_test_old_view";
+  void *address;
+  {
+    // Through the real mapping, so this covers it telling aos_sync.
+    ipc_lib::WritableShmMapping old_view(path, FileBackedMemory::kSize,
+                                         std::filesystem::perms::owner_all);
+    address = old_view.data();
+    aos_mutex *const old_mutex = static_cast<aos_mutex *>(address);
+    // This thread caches the address as the old file's.
+    ASSERT_EQ(0, mutex_grab(old_mutex));
+    mutex_unlock(old_mutex);
+  }
+
+  // Process-private memory at the same address, as a ThreadEventLoop queue
+  // gets: an unnamed page-file-backed section.
+  HANDLE section =
+      CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0,
+                         FileBackedMemory::kSize, nullptr);
+  ASSERT_NE(section, nullptr) << GetLastError();
+  void *const new_view = MapViewOfFileEx(
+      section, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0, address);
+  ASSERT_EQ(new_view, address) << GetLastError();
+  aos_mutex *const m = static_cast<aos_mutex *>(new_view);
+
+  std::atomic<bool> held{false};
+  std::atomic<bool> release{false};
+  std::thread fresh([&]() {
+    ASSERT_EQ(0, mutex_grab(m));
+    held = true;
+    while (!release) {
+      std::this_thread::yield();
+    }
+    mutex_unlock(m);
+  });
+  while (!held) {
+    std::this_thread::yield();
+  }
+  // Lost, not taken over as if the holder had died.
+  EXPECT_EQ(4, mutex_trylock(m));
+  release = true;
+  fresh.join();
+
+  UnmapViewOfFile(new_view);
+  ipc_lib::NoteMappingUnmapped();
+  CloseHandle(section);
+}
+
+namespace {
 
 class AosSyncWindowsTest : public ::testing::Test {
  protected:

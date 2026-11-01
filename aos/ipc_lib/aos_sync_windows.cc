@@ -146,9 +146,18 @@ FutexMemoryType ClassifyFutexAddress(void *addr, uint64_t *out_hash,
   return FutexMemoryType::kShared;
 }
 
+// Bumped by NoteMappingUnmapped().  An entry cached before the latest bump may
+// describe a mapping that is gone, from an address a new one reuses.
+std::atomic<uint64_t> unmap_generation{0};
+
 struct FutexCacheEntry {
   // Where this futex lives, as returned by ClassifyFutexAddress.
   FutexMemoryType type;
+  // What named hMutex, for kShared.
+  uint64_t hash;
+  uint64_t offset;
+  // unmap_generation when this entry was last known to be right.
+  uint64_t generation;
 
   // The named kernel mutex backing a shared-memory aos_mutex (NULL for
   // kPrivate).  Only ever waited on by the mutex_ functions; futex_ and
@@ -170,20 +179,15 @@ struct ThreadLocalFutexCache {
     }
   }
 
-  // Returns a pointer to the FutexCacheEntry for the given address,
-  // creating it if it doesn't exist.
-  FutexCacheEntry *GetOrCreate(void *addr) {
-    auto it = cache.find(addr);
-    if (it != cache.end()) {
-      return &it->second;
-    }
-
-    uint64_t hash = 0;
-    uint64_t offset = 0;
-    const FutexMemoryType type = ClassifyFutexAddress(addr, &hash, &offset);
-
+  // An entry for a futex classified as `type`, opening its kernel mutex if it
+  // is shared.  The caller sets its generation.
+  static FutexCacheEntry MakeEntry(FutexMemoryType type, uint64_t hash,
+                                   uint64_t offset) {
     FutexCacheEntry entry;
     entry.type = type;
+    entry.hash = hash;
+    entry.offset = offset;
+    entry.generation = 0;
     entry.hMutex = NULL;
 
     if (type == FutexMemoryType::kShared) {
@@ -196,6 +200,42 @@ struct ThreadLocalFutexCache {
                         << ") failed: " << GetLastError();
       }
     }
+    return entry;
+  }
+
+  // Returns a pointer to the FutexCacheEntry for the given address,
+  // creating it if it doesn't exist.
+  FutexCacheEntry *GetOrCreate(void *addr) {
+    const uint64_t generation = unmap_generation.load();
+    auto it = cache.find(addr);
+    if (it != cache.end()) {
+      FutexCacheEntry &entry = it->second;
+      if (entry.generation == generation) {
+        return &entry;
+      }
+      // A mapping went since this was cached, so addr may be in a new one now.
+      // Keep the handle if it is still the same mutex, since this thread may
+      // own it.
+      uint64_t hash = 0;
+      uint64_t offset = 0;
+      const FutexMemoryType type = ClassifyFutexAddress(addr, &hash, &offset);
+      if (type != entry.type ||
+          (type == FutexMemoryType::kShared &&
+           (hash != entry.hash || offset != entry.offset))) {
+        if (entry.hMutex != NULL) {
+          CloseHandle(entry.hMutex);
+        }
+        entry = MakeEntry(type, hash, offset);
+      }
+      entry.generation = generation;
+      return &entry;
+    }
+
+    uint64_t hash = 0;
+    uint64_t offset = 0;
+    const FutexMemoryType type = ClassifyFutexAddress(addr, &hash, &offset);
+    FutexCacheEntry entry = MakeEntry(type, hash, offset);
+    entry.generation = generation;
 
     {
       // This is on Windows, and we just don't care...  There is no way this
@@ -210,6 +250,18 @@ struct ThreadLocalFutexCache {
 
 // Thread-local instance.
 thread_local ThreadLocalFutexCache tl_futex_cache;
+
+}  // namespace
+}  // namespace aos::ipc_lib::sync
+
+namespace aos::ipc_lib {
+
+void NoteMappingUnmapped() { sync::unmap_generation.fetch_add(1); }
+
+}  // namespace aos::ipc_lib
+
+namespace aos::ipc_lib::sync {
+namespace {
 
 // Convert a relative timeout timespec into a millisecond count for the Win32
 // wait APIs.  Callers reduce any absolute deadline to a relative interval

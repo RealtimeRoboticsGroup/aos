@@ -76,7 +76,10 @@ cc_library(
         "//aos/util:file",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
-    ],
+    ] + select({
+        "@platforms//os:windows": [":aos_sync"],
+        "//conditions:default": [],
+    }),
 )
 
 cc_test(
@@ -472,6 +475,7 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        ":aos_sync",
         ":lockless_queue",
         ":memory_mapped_queue",
         ":queue_memory",
@@ -648,6 +652,7 @@ cc_test(
     }),
     deps = [
         ":aos_sync",
+        ":shm_mapping",
         "//aos/testing:googletest",
         "//aos/testing:tmpdir",
     ],

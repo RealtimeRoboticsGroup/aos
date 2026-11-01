@@ -10,6 +10,7 @@
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 
+#include "aos/ipc_lib/aos_sync.h"
 #include "aos/util/file.h"
 
 namespace aos::ipc_lib {
@@ -121,6 +122,7 @@ WritableShmMapping::WritableShmMapping(std::string_view path, size_t size,
 
 WritableShmMapping::~WritableShmMapping() {
   ABSL_PCHECK(UnmapViewOfFile(data_));
+  NoteMappingUnmapped();
 }
 
 ReadOnlyShmMapping::ReadOnlyShmMapping(std::string_view path, size_t size,
@@ -161,6 +163,7 @@ ReadOnlyShmMapping::ReadOnlyShmMapping(std::string_view path, size_t size,
 
 ReadOnlyShmMapping::~ReadOnlyShmMapping() {
   ABSL_PCHECK(UnmapViewOfFile(const_cast<void *>(data_)));
+  NoteMappingUnmapped();
 }
 
 bool UnlinkShm(std::string_view path) {
