@@ -1697,11 +1697,11 @@ TEST_P(AioTest, BareHangupReachesReadHandlerTest) {
   Pipe pipe;
 
   int reads = 0;
-  ssize_t last_read = -1;
+  int last_read = -1;
   aio.OnReadable(pipe.read_fd(), [&]() {
     ++reads;
     char buf[8];
-    last_read = read(pipe.read_fd(), buf, sizeof(buf));
+    last_read = ReadSome(pipe.read_fd(), buf, sizeof(buf));
     aio.DeleteFd(pipe.read_fd());
   });
   pipe.close_write_fd();
@@ -1755,9 +1755,7 @@ TEST_P(AioTest, LoneErrorReachesWriteHandlerTest) {
 
   Aio aio;
   Pipe pipe;
-  std::vector<char> filler(1 << 16, 'x');
-  while (write(pipe.write_fd(), filler.data(), filler.size()) > 0) {
-  }
+  FillUntilBlocked(pipe.write_fd());
 
   int writes = 0;
   int write_errno = 0;
@@ -1902,10 +1900,7 @@ TEST_P(AioTest, ZeroLengthCompletesImmediately) {
     Pipe pipe;
     if (!is_read) {
       // Fill the pipe, so the write end is not writable either.
-      const std::string chunk(4096, 'x');
-      while (write(pipe.write_fd(), chunk.data(), chunk.size()) > 0) {
-      }
-      ABSL_CHECK_EQ(errno, EAGAIN);
+      FillUntilBlocked(pipe.write_fd());
     }
 
     std::optional<Completion> completion;
@@ -1957,9 +1952,6 @@ TEST_P(AioTest, ArmingAloneIsNotProgress) {
   EXPECT_TRUE(fired);
 }
 
-// POSIX-only: fills and drains the pipe with write(2)/read(2) on its
-// descriptors.
-#ifndef _WIN32
 // A raw write to a full pipe waits for room: its first attempt gets EAGAIN,
 // and only the fd becoming writable completes it.  Everything else that
 // writes resolves at its first attempt, so this is the test that the wait
@@ -1967,12 +1959,8 @@ TEST_P(AioTest, ArmingAloneIsNotProgress) {
 TEST_P(AioTest, RawWriteWaitsForWritable) {
   Aio aio;
   Pipe pipe;
-  const std::string chunk(4096, 'x');
-  size_t filled = 0;
-  while (write(pipe.write_fd(), chunk.data(), chunk.size()) > 0) {
-    filled += chunk.size();
-  }
-  ABSL_PCHECK(errno == EAGAIN);
+  const size_t filled = FillUntilBlocked(pipe.write_fd());
+  ASSERT_GT(filled, 0u);
 
   std::optional<Completion> completion;
   AsyncRequest req;
@@ -1989,7 +1977,13 @@ TEST_P(AioTest, RawWriteWaitsForWritable) {
 
   // Make room.  Never Poll(true) below: a write that is not waiting on
   // writability would hang it, rather than fail.
-  ASSERT_EQ(pipe.Read(filled).size(), filled);
+  std::string drain(filled, '\0');
+  for (size_t drained = 0; drained < filled;) {
+    const int got =
+        ReadSome(pipe.read_fd(), drain.data() + drained, filled - drained);
+    ASSERT_GT(got, 0);
+    drained += got;
+  }
   for (int i = 0; i < 2000 && !completion.has_value(); ++i) {
     aio.Poll(false);
     if (!completion.has_value()) {
@@ -2000,7 +1994,6 @@ TEST_P(AioTest, RawWriteWaitsForWritable) {
   EXPECT_TRUE(aos::IsOk(completion->status));
   EXPECT_EQ(completion->result, 1);
 }
-#endif
 
 // POSIX-only: socketpair(2) and a datagram socket.
 #ifndef _WIN32
@@ -2599,10 +2592,11 @@ TEST_P(AioTest, LegacyHandlerAfterCancelDispatchTest) {
 // readable/writable/error handlers still run together -- but raw requests get
 // no such carve-out.
 TEST_P(AioTest, RawReadAndWriteOnOneFdTakeTwoPolls) {
-  int fds[2];
-  ABSL_PCHECK(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-  ABSL_PCHECK(fcntl(fds[0], F_SETFL, O_NONBLOCK) == 0);
-  ABSL_PCHECK(fcntl(fds[1], F_SETFL, O_NONBLOCK) == 0);
+  // Needs one descriptor that is readable and writable at once, which is
+  // why this is a SocketPair and not a Pipe: a pipe's ends are
+  // unidirectional.
+  SocketPair pair;
+  const FileDescriptor local = pair.first_fd();
 
   Aio aio;
   AsyncRequest read_req;
@@ -2619,26 +2613,20 @@ TEST_P(AioTest, RawReadAndWriteOnOneFdTakeTwoPolls) {
   // Neither direction ready to start with -- nothing to read, and a full
   // send buffer -- so both first attempts find nothing and the requests wait
   // on the kernel.  Resolving at submit would bypass the event entirely.
-  const std::string chunk(4096, 'z');
-  while (write(fds[0], chunk.data(), chunk.size()) > 0) {
-  }
-  ABSL_PCHECK(errno == EAGAIN);
+  FillUntilBlocked(local);
 
   char in_buf[8];
   const char out_buf[1] = {'x'};
-  aio.AsyncRead(fds[0], in_buf, &read_req);
-  aio.AsyncWrite(fds[0], out_buf, &write_req);
+  aio.AsyncRead(local, in_buf, &read_req);
+  aio.AsyncWrite(local, out_buf, &write_req);
   aio.Poll(false);
   ASSERT_EQ(completions, 0);
 
   // Now make both ready at once, so one event reports both directions:
   // drain the peer, which frees the send buffer, then give it data to send
   // back.
-  char drain[4096];
-  while (read(fds[1], drain, sizeof(drain)) > 0) {
-  }
-  ABSL_PCHECK(errno == EAGAIN);
-  ABSL_PCHECK(write(fds[1], "y", 1) == 1);
+  DrainUntilBlocked(pair.second_fd());
+  ABSL_CHECK_EQ(WriteSome(pair.second_fd(), "y", 1), 1);
 
   int polls = 0;
   while (completions < 2 && polls < 10) {
@@ -2648,9 +2636,6 @@ TEST_P(AioTest, RawReadAndWriteOnOneFdTakeTwoPolls) {
 
   EXPECT_EQ(completions, 2);
   EXPECT_EQ(polls, 2) << "two raw completions must take two Poll() calls";
-
-  ABSL_PCHECK(close(fds[0]) == 0);
-  ABSL_PCHECK(close(fds[1]) == 0);
 }
 
 // A request with no callback is supported -- aio.h defaults the field to
@@ -4772,7 +4757,7 @@ TEST_P(AioTest, LegacyReadableIgnoresHangup) {
   int bytes_read = 0;
   aio.OnReadable(pipe.read_fd(), [&pipe, &bytes_read]() {
     char buf[16];
-    const ssize_t n = read(pipe.read_fd(), buf, sizeof(buf));
+    const int n = ReadSome(pipe.read_fd(), buf, sizeof(buf));
     ABSL_PCHECK(n >= 0) << "read failed";
     bytes_read += n;
   });
@@ -4808,7 +4793,7 @@ TEST_P(AioTest, LegacyReadableSurvivesPollingPastHangup) {
   int bytes_read = 0;
   aio.OnReadable(pipe.read_fd(), [&pipe, &bytes_read]() {
     char buf[16];
-    const ssize_t n = read(pipe.read_fd(), buf, sizeof(buf));
+    const int n = ReadSome(pipe.read_fd(), buf, sizeof(buf));
     if (n > 0) {
       bytes_read += n;
     }
@@ -5917,9 +5902,7 @@ TEST_P(AioTest, ForkedChildWithPendingAsyncWriteDies) {
   Aio aio;
   Pipe pipe;
 
-  std::vector<char> filler(1 << 16, 'x');
-  while (write(pipe.write_fd(), filler.data(), filler.size()) > 0) {
-  }
+  FillUntilBlocked(pipe.write_fd());
 
   AsyncRequest request;
   request.callback = [](Completion, void *) {};
