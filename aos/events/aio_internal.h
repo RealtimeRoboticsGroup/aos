@@ -363,6 +363,8 @@ class BeforeWaitFunctions {
   // True while Run() is calling them.
   bool running() const { return running_; }
 
+  bool empty() const { return functions_.empty(); }
+
  private:
   std::vector<std::pair<Aio::BeforeWaitId, std::function<void()>>> functions_;
   bool running_ = false;

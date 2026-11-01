@@ -681,7 +681,12 @@ bool ReadinessBackend::Poll(bool block) {
 }
 
 bool ReadinessBackend::PollOnce(bool block) {
-  before_wait_functions_.Run();
+  if (!before_wait_functions_.empty()) {
+    before_wait_functions_.Run();
+    // Again, since a before-wait function may have forked, and the child
+    // would otherwise wait on the parent's kernel objects.
+    CheckForFork();
+  }
 
   bool processed = false;
   FdReady harvested;

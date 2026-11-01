@@ -2021,7 +2021,13 @@ bool IoUringImpl::Poll(bool block) {
   CheckForFork();
   EnsureBound();
 
-  before_wait_functions_.Run();
+  if (!before_wait_functions_.empty()) {
+    before_wait_functions_.Run();
+    // Again, since a before-wait function may have forked, and the child
+    // would otherwise deliver the parent's completions or drive its ring.
+    CheckForFork();
+    EnsureBound();
+  }
 
   int ret;
   // Already-queued completions are delivered before going back to the

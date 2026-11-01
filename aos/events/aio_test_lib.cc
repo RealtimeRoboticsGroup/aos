@@ -8152,6 +8152,108 @@ TEST_P(AioTest, DestroyingAnUnusedLoopInAForkedChildLeavesItsDescriptorsAlone) {
   }
   ExpectForkedChildExitsCleanly(child);
 }
+
+// A before-wait function runs inside Poll(), after Poll() has checked for a
+// fork, so one that forks leaves the child in the middle of a Poll() on the
+// parent's kernel objects.  Both processes' timers still have to fire: the
+// child used to wait on the parent's timerfd on epoll, which took the
+// parent's firing, and to die on kqueue.
+TEST_P(AioTest, ForkFromBeforeWaitKeepsBothLoopsWorking) {
+  if (!Backend().survives_fork)
+    GTEST_SKIP()
+        << "a borrowed loop is not this backend's to rebuild in a forked child";
+  if (!Backend().drives_its_own_loop)
+    GTEST_SKIP() << "a borrowed loop has no Poll() of its own";
+  TestAio aio;
+  bool fired = false;
+  Aio::Timer timer(aio.get());
+  timer.Schedule(
+      aos::monotonic_clock::now() + std::chrono::milliseconds(50),
+      [](Completion, void *ctx) { *static_cast<bool *>(ctx) = true; }, &fired);
+  pid_t child = -1;
+  const Aio::BeforeWaitId before_wait = aio.BeforeWait([&child]() {
+    if (child == -1) {
+      child = fork();
+      ABSL_PCHECK(child >= 0);
+    }
+  });
+  // Blocking, as a loop does, so that the child's first wait is on whatever
+  // the before-wait function left it.  The second timer bounds it.
+  bool gave_up = false;
+  Aio::Timer give_up(aio.get());
+  give_up.Schedule(
+      aos::monotonic_clock::now() + std::chrono::seconds(3),
+      [](Completion, void *ctx) { *static_cast<bool *>(ctx) = true; },
+      &gave_up);
+  while (!fired && !gave_up) {
+    aio.Poll(true);
+  }
+  if (child == 0) {
+    // The child.  Nothing gtest-shaped here: it only reports by exit code.
+    _exit(fired ? 0 : 1);
+  }
+  aio.RemoveBeforeWait(before_wait);
+  int status;
+  ABSL_PCHECK(waitpid(child, &status, 0) == child);
+  EXPECT_TRUE(fired) << "the parent's timer never fired";
+  EXPECT_TRUE(WIFEXITED(status) && WEXITSTATUS(status) == 0)
+      << "the child's timer never fired";
+}
+
+// A before-wait function that forks with a read resolved but not yet delivered
+// has forked with a request in flight, so the child dies rather than delivering
+// the parent's completion.  io_uring has it drained already by then.
+TEST_P(AioTest, ForkFromBeforeWaitWithAnUndeliveredReadDies) {
+  if (!Backend().survives_fork)
+    GTEST_SKIP()
+        << "a borrowed loop is not this backend's to rebuild in a forked child";
+  if (!Backend().drives_its_own_loop)
+    GTEST_SKIP() << "a borrowed loop has no Poll() of its own";
+  TestAio aio;
+  Pipe first;
+  Pipe second;
+  first.Write("x");
+  second.Write("y");
+
+  int delivered = 0;
+  char buf[2][1];
+  AsyncRequest requests[2];
+  for (AsyncRequest &request : requests) {
+    request.callback = [](Completion, void *ctx) {
+      ++*static_cast<int *>(ctx);
+    };
+    request.context = &delivered;
+  }
+  aio.AsyncRead(first.read_fd(), std::span<char>(buf[0]), &requests[0]);
+  aio.AsyncRead(second.read_fd(), std::span<char>(buf[1]), &requests[1]);
+  while (delivered == 0) {
+    aio.Poll(true);
+  }
+  if (delivered == 2) {
+    GTEST_SKIP() << "this backend delivered both reads in one Poll()";
+  }
+
+  pid_t child = -1;
+  const Aio::BeforeWaitId before_wait = aio.BeforeWait([&child]() {
+    if (child == -1) {
+      child = fork();
+      ABSL_PCHECK(child >= 0);
+    }
+  });
+  aio.Poll(false);
+  if (child == 0) {
+    // The child should have died in that Poll().
+    _exit(0);
+  }
+  aio.RemoveBeforeWait(before_wait);
+  int status;
+  ABSL_PCHECK(waitpid(child, &status, 0) == child);
+  EXPECT_FALSE(WIFEXITED(status) && WEXITSTATUS(status) == 0)
+      << "the child delivered the parent's read";
+  while (delivered < 2 && aio.Poll(false)) {
+  }
+  EXPECT_EQ(delivered, 2);
+}
 #endif  // !_WIN32
 
 // Cancel() does not end a request's flight: it stays in flight until its
