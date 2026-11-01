@@ -4,18 +4,11 @@
 #include <functional>
 #include <memory>
 
+#include "aos/events/file_descriptor.h"
 #include "aos/realtime.h"
 
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#elif defined(__APPLE__)
+#if !defined(_WIN32)
 #include <signal.h>
-#else
-#include <signal.h>
-#include <sys/signalfd.h>
 #endif
 
 namespace aos::ipc_lib {
@@ -70,18 +63,10 @@ class ThreadSignalReceiver {
   ThreadSignalReceiver(const ThreadSignalReceiver &) = delete;
   ThreadSignalReceiver &operator=(const ThreadSignalReceiver &) = delete;
 
-#ifdef _WIN32
-  // The Event which ThreadSignalSender::Signal() signals.  Windows has no
-  // signalfd equivalent, so the Aio (IOCP) backend watches this handle instead
-  // of an fd.
-  HANDLE event_handle() const { return event_handle_; }
-#elif defined(__APPLE__)
-  // Always -1: nothing backs the receiver with an fd on macOS.
-  int fd() const { return -1; }
-#else
-  // The signalfd's file descriptor.
-  int fd() const { return fd_; }
-#endif
+  // What an event loop waits on for this receiver's wakeups: the signalfd on
+  // Linux, and on Windows the Event ThreadSignalSender::Signal() signals.
+  // kInvalidFd on macOS, where kqueue watches the signal itself.
+  FileDescriptor fd() const { return fd_; }
 
   // Drains any pending wakeups so we don't immediately wake again.  Returns
   // whether it consumed anything; a platform that cannot tell returns true.
@@ -96,16 +81,13 @@ class ThreadSignalReceiver {
   void LeaveSignalBlocked();
 
  private:
-#if defined(_WIN32)
-  // The Event the sender opens by name and signals.  It is manual-reset, so a
-  // successful wait leaves it set and ConsumeWakeup() clears it.  The
-  // constructor explains why we, not the wait, have to clear it.
-  HANDLE event_handle_ = NULL;
+  // See fd().  On Windows the Event the sender opens by name and signals.  It
+  // is manual-reset, so a successful wait leaves it set and ConsumeWakeup()
+  // clears it.  The constructor explains why we, not the wait, have to clear
+  // it.
+  FileDescriptor fd_ = kInvalidFd;
 
-  // Nothing backs the receiver on macOS, so it has no state at all.
-#elif !defined(__APPLE__)
-
-  int fd_ = -1;
+#if !defined(_WIN32) && !defined(__APPLE__)
   // Whether the destructor unblocks kWakeupSignal.  False if it was already
   // blocked before we got here, or if LeaveSignalBlocked() was called.
   bool should_unblock_ = true;

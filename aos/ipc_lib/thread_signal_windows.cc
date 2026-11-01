@@ -67,13 +67,13 @@ ThreadSignalReceiver::ThreadSignalReceiver() {
   // in aio.h possible.  Manual-reset gives us that same control.
   // ConsumeWakeup() clears the bit, in the place read() has on Linux, and a
   // lost completion leaves the bit set for the next wait to deliver again.
-  event_handle_ = CreateEventA(NULL, TRUE, FALSE, name);
-  ABSL_PCHECK(event_handle_ != NULL) << "CreateEventA(" << name << ") failed";
+  fd_ = CreateEventA(NULL, TRUE, FALSE, name);
+  ABSL_PCHECK(fd_ != kInvalidFd) << "CreateEventA(" << name << ") failed";
 }
 
 ThreadSignalReceiver::~ThreadSignalReceiver() {
-  if (event_handle_ != NULL) {
-    ABSL_PCHECK(CloseHandle(event_handle_)) << "CloseHandle failed";
+  if (fd_ != kInvalidFd) {
+    ABSL_PCHECK(CloseHandle(fd_)) << "CloseHandle failed";
   }
 }
 
@@ -83,7 +83,7 @@ bool ThreadSignalReceiver::ConsumeWakeup() {
   // the analogue of read()ing the signalfd until it is empty -- every wakeup
   // pending at this instant is consumed, and one arriving after it stays set
   // and produces a later notification rather than being lost.
-  ABSL_PCHECK(ResetEvent(event_handle_)) << "ResetEvent failed";
+  ABSL_PCHECK(ResetEvent(fd_)) << "ResetEvent failed";
   // Whether the Event was set is not something ResetEvent() reports.
   return true;
 }

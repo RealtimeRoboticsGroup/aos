@@ -2,6 +2,7 @@
 
 #include <errno.h>
 #include <string.h>
+#include <sys/signalfd.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <unistd.h>
