@@ -1622,12 +1622,19 @@ void IoUringImpl::CountArmedOp() {
 
 void IoUringImpl::MaybeSubmit() {
   if (!ring_enabled_) return;
-  int ret = io_uring_submit(&ring);
+  // Asks for completions too, as Poll()'s flush does.  With DEFER_TASKRUN the
+  // kernel runs deferred task work, which is how a timer's completion and a
+  // Canceled one reach the CQ, only on an enter with GETEVENTS.  A callback
+  // that flushes for itself, with a Cancel() say, leaves Poll() nothing
+  // staged to flush, so if this flush didn't ask, nothing would.
+  // min_complete is 0, so it never blocks.
+  int ret = io_uring_submit_and_get_events(&ring);
   // A streaming CHECK is fine on this RT-reachable path: the failure is
   // fatal either way.  (Under the RT malloc hooks the message build
   // trips NewHook's own FATAL first, which loses this message but still
   // dies with this frame in the stack.)
-  ABSL_PCHECK(ret >= 0) << "io_uring_submit failed: " << aos_strerror(-ret);
+  ABSL_PCHECK(ret >= 0) << "io_uring_submit_and_get_events failed: "
+                        << aos_strerror(-ret);
 }
 
 void IoUringImpl::EnsureBound() {
@@ -2017,15 +2024,20 @@ bool IoUringImpl::Poll(bool block) {
   // next few Poll()s -- and going through the ring for each of those would
   // turn a batch of N into N io_uring_enter(2) calls, which is the entire
   // cost of the one-completion-per-Poll() contract if it isn't skipped.
-  // Nothing is lost by not looking: no new CQE can appear while we aren't
-  // entering the kernel, so the queue strictly shrinks and this converges.
   //
   // Staged SQEs still get flushed, so work a callback submitted isn't stuck
-  // behind the rest of the queue.  A bare submit is enough -- fetching
-  // completions is exactly what we are deferring.
+  // behind the rest of the queue.  That flush enters the kernel anyway, so it
+  // also asks for completions (GETEVENTS), at no extra syscall.  It has to:
+  // callbacks that keep re-arming keep this queue from ever emptying, and
+  // with DEFER_TASKRUN the kernel only runs deferred task work, which is
+  // how a timer's completion reaches the CQ, on an enter with GETEVENTS.  A
+  // bare submit here let two re-arming regular-file reads starve a timer
+  // forever.  MaybeSubmit() asks the same way, so every flush does, whoever
+  // makes it.  Without a flush nothing new is submitted, so the queue
+  // strictly shrinks and the next empty-queue Poll() goes to the kernel.
   if (!pending_dispatch_.empty()) {
     if (io_uring_sq_ready(&ring) > 0) {
-      ret = io_uring_submit(&ring);
+      ret = io_uring_submit_and_get_events(&ring);
       if (ret < 0 && ret != -EINTR && ret != -EAGAIN) {
         // ABSL_VLOG, not ABSL_LOG: Poll() legitimately runs under
         // ScopedRealtime, where default-on logging either allocates (ABSL_LOG,
