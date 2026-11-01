@@ -270,6 +270,28 @@ TEST_P(GlibMainLoopTest, WatchClosesItsFdAndRemovesItself) {
       << "the watch was never dispatched";
 }
 
+// A watch for input or a hangup on a pipe whose writer has closed is
+// dispatched with G_IO_HUP, as it is under plain glib.  On Linux a pipe at
+// end of file is a hangup alone, which Aio reports as kErrorEvent.
+TEST_P(GlibMainLoopTest, PipeHangupReachesAnInputWatch) {
+  Pipe pipe;
+  pipe.close_write_fd();
+  const GIOCondition dispatched =
+      WatchPipe(pipe, static_cast<GIOCondition>(G_IO_IN | G_IO_HUP));
+  ASSERT_NE(dispatched, 0) << "the watch was never dispatched";
+  EXPECT_TRUE(dispatched & G_IO_HUP) << "dispatched with " << dispatched;
+}
+
+// A watch for nothing but a hangup is dispatched too.  glib leaves G_IO_HUP
+// out of the events it asks GlibMainLoop to poll for, as poll(2) reports it
+// regardless, so this watch asks the Aio for no events at all.
+TEST_P(GlibMainLoopTest, PipeHangupReachesAHangupOnlyWatch) {
+  Pipe pipe;
+  pipe.close_write_fd();
+  const GIOCondition dispatched = WatchPipe(pipe, G_IO_HUP);
+  EXPECT_TRUE(dispatched & G_IO_HUP) << "dispatched with " << dispatched;
+}
+
 // Run the above tests against both ShmEventLoop and a simulated event loop.
 INSTANTIATE_TEST_SUITE_P(
     GlibMainLoopTest, GlibMainLoopTest,

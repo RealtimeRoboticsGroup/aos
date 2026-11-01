@@ -14,7 +14,11 @@ namespace aos {
 namespace {
 
 // Aio delivers the four bits named in file_descriptor.h and nothing else, a
-// hangup included: it arrives as kErrorEvent.
+// hangup included: it arrives as kErrorEvent.  That bit is both G_IO_ERR and
+// G_IO_HUP to glib, since Aio does not say which it was, and a watch that
+// asked for either has to hear it.  A pipe at end of file is a hangup alone
+// on Linux, and a G_IO_IN | G_IO_HUP watch handed only G_IO_ERR is never
+// dispatched while the hangup keeps the fd ready.
 gint AioToGio(uint32_t events) {
   gint result = 0;
   if (events & kReadableEvent) {
@@ -30,7 +34,7 @@ gint AioToGio(uint32_t events) {
     events &= ~kPriorityEvent;
   }
   if (events & kErrorEvent) {
-    result |= G_IO_ERR;
+    result |= G_IO_ERR | G_IO_HUP;
     events &= ~kErrorEvent;
   }
   ABSL_CHECK_EQ(events, 0u) << ": Unhandled Aio event bits";
@@ -38,8 +42,8 @@ gint AioToGio(uint32_t events) {
 }
 
 // G_IO_HUP and G_IO_ERR both ask for kErrorEvent, the bit Aio reports either
-// on.  A mask of nothing but them still keeps the fd registered, where a mask
-// of 0 would remove it.
+// on.  g_main_context_query() leaves them out of the events it hands over, so
+// they do not reach here from it; see the SetEvents() call below.
 uint32_t GioToAio(gint gio) {
   uint32_t result = 0;
   if (gio & G_IO_IN) {
@@ -174,7 +178,12 @@ void GlibMainLoop::BeforeWait() {
       });
       added_fds_.insert(gpoll_fd.fd);
     }
-    aio_->SetEvents(gpoll_fd.fd, GioToAio(gpoll_fd.events));
+    // poll(2) reports an error or a hangup whatever it was asked for, so
+    // g_main_context_query() leaves G_IO_ERR and G_IO_HUP out of the events
+    // it hands over.  Watching for kErrorEvent always does what poll(2)
+    // would, and keeps a watch for nothing but a hangup registered, where a
+    // mask of 0 would remove the fd.
+    aio_->SetEvents(gpoll_fd.fd, GioToAio(gpoll_fd.events) | kErrorEvent);
   }
   for (auto added = added_fds_.begin(); added != added_fds_.end();) {
     const FileDescriptor fd = *added;
