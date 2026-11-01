@@ -242,8 +242,7 @@ void initialize_in_new_thread() {
 
   thread_state()->tid = do_get_tid();
 
-  static absl::once_flag once;
-  absl::call_once(once, InstallAtforkHook);
+  InstallForkHandler();
 
   my_robust_list::Init();
   TouchRobustListCleaner();
@@ -428,6 +427,15 @@ int futex_set(aos_futex *m) { return futex_set_value(m, 1); }
 int futex_unset(aos_futex *m) {
   return !std::atomic_ref<uint32_t>(*m).exchange(0, std::memory_order_seq_cst);
 }
+
+namespace aos::ipc_lib {
+
+void InstallForkHandler() {
+  static absl::once_flag once;
+  absl::call_once(once, sync::InstallAtforkHook);
+}
+
+}  // namespace aos::ipc_lib
 
 namespace aos::linux_code::ipc_lib {
 

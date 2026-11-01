@@ -221,6 +221,21 @@ void condition_broadcast(aos_condition *c, struct aos_mutex *m);
 #ifdef __cplusplus
 }
 
+namespace aos::ipc_lib {
+
+// Installs aos_sync's handler for the child of a fork(2), once per process.
+// InitGoogle(), InitEmbedded() and aos_init_from_rust() call it.  The first
+// aos_sync call on any thread also calls it, for a program that uses aos_sync
+// without initializing AOS.  Whichever comes first can race a fork on another
+// thread: a child forked while the call is in progress finds it in progress
+// for good, and hangs on its first aos_mutex.  So it is only closed for a
+// program that initializes before it has threads, which a host calling
+// InitEmbedded() from a library may not.  Does nothing on Windows, which has
+// no fork.
+void InstallForkHandler();
+
+}  // namespace aos::ipc_lib
+
 #ifdef _WIN32
 namespace aos::ipc_lib {
 

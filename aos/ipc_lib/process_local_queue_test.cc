@@ -77,13 +77,6 @@ using ProcessLocalQueueDeathTest = ProcessLocalQueueTest;
 // thread was in the middle of making or destroying one as it forked.  That
 // thread held the registry's lock, which the child used to find held for good.
 TEST_F(ProcessLocalQueueTest, ForkWhileAnotherThreadMakesAQueue) {
-  // aos_sync's once-per-process setup, before the maker thread can be the one
-  // to run it.  A fork in the middle of that call_once leaves it running for
-  // good in the child, which is a different hang from the one this is about
-  // (seen on macOS).
-  {
-    ProcessLocalQueue warm(&config_.message(), channel("/other"));
-  }
   std::atomic<bool> stop{false};
   std::thread maker([this, &stop]() {
     while (!stop) {

@@ -12,6 +12,7 @@
 #include "absl/log/initialize.h"
 
 #include "aos/init.h"
+#include "aos/ipc_lib/aos_sync.h"
 
 namespace aos {
 
@@ -28,6 +29,7 @@ void aos_init_from_rust() {
   ABSL_CHECK(!aos::IsInitialized())
       << "Only initialize once.  InitEmbedded() may have got here first.";
   absl::InitializeLog();
+  aos::ipc_lib::InstallForkHandler();
   aos::MarkInitialized();
 }
 

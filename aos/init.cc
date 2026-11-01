@@ -28,6 +28,7 @@
 #include "absl/log/globals.h"
 #include "absl/log/initialize.h"
 
+#include "aos/ipc_lib/aos_sync.h"
 #include "aos/realtime.h"
 #include "aos/uuid.h"
 
@@ -120,6 +121,8 @@ void InitGoogleLocked(int *argc, char ***argv, const InitOptions &options) {
   } else {
     SkipMallocHook();
   }
+  // Before the program has threads, so no fork can land in the middle of it.
+  ipc_lib::InstallForkHandler();
   // Ensure that the random number generator for the UUID code is initialized
   // (it does some potentially expensive random number generation).
   UUID::Random();

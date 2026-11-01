@@ -49,7 +49,7 @@ inline constexpr InitOptions kEmbeddedInitOptions{
 // register_malloc_hook, Windows Detours the CRT's allocator process-wide, and
 // macOS installs a malloc zone and pthread_atfork handlers, aborting under
 // --die_on_malloc if the host's default zone is its own.  Turn those two off
-// when the host owns them.
+// when the host owns them.  It also installs aos_sync's pthread_atfork handler.
 void InitEmbedded(const InitOptions &options = kEmbeddedInitOptions);
 
 // Returns true if we have been initialized.  This is mostly here so

@@ -193,6 +193,7 @@ cc_library(
         ":die",
         ":realtime",
         ":uuid",
+        "//aos/ipc_lib:aos_sync",
         "//aos/logging",
         "@com_google_absl//absl/debugging:failure_signal_handler",
         "@com_google_absl//absl/flags:flag",
@@ -280,6 +281,7 @@ cc_library(
     ],
     deps = [
         ":init",
+        "//aos/ipc_lib:aos_sync",
         "//aos/logging",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log:flags",
