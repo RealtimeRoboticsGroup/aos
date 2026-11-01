@@ -4,6 +4,7 @@
 #include <signal.h>
 #ifndef _WIN32
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <sys/syscall.h>
 #include <sys/uio.h>
 #include <sys/utsname.h>
@@ -8051,6 +8052,82 @@ constexpr bool kDeathTestChildIsForked =
 #else
     true;
 #endif
+
+#ifndef _WIN32
+namespace {
+
+// Opens enough descriptors that one of them takes whatever number the parent's
+// loop had that the child did not inherit.
+constexpr int kForkedChildFds = 16;
+void OpenForkedChildFds(int (&fds)[kForkedChildFds]) {
+  for (int &fd : fds) {
+    fd = open("/dev/null", O_RDONLY | O_CLOEXEC);
+    ABSL_PCHECK(fd >= 0);
+  }
+}
+
+// Checks the descriptors from OpenForkedChildFds() are all still /dev/null.
+void CheckForkedChildFds(const int (&fds)[kForkedChildFds]) {
+  for (int fd : fds) {
+    struct stat st;
+    ABSL_PCHECK(fstat(fd, &st) == 0) << ": the child's fd " << fd << " closed";
+    ABSL_CHECK(S_ISCHR(st.st_mode))
+        << ": the child's fd " << fd << " is no longer /dev/null";
+  }
+}
+
+void ExpectForkedChildExitsCleanly(pid_t child) {
+  int status;
+  ABSL_PCHECK(waitpid(child, &status, 0) == child);
+  EXPECT_TRUE(WIFEXITED(status) && WEXITSTATUS(status) == 0)
+      << "the child failed, with status " << status;
+}
+
+}  // namespace
+
+// A forked child's descriptors are its own after the loop rebuilds there.
+// A kqueue is not inherited, so in the child its number is free and the
+// child's own descriptors can take it, and the rebuild used to close
+// whatever had.  Forked by hand, since a death test's child need not be a fork.
+TEST_P(AioTest, ForkRebuildLeavesTheChildsDescriptorsAlone) {
+  if (!Backend().survives_fork)
+    GTEST_SKIP()
+        << "a borrowed loop is not this backend's to rebuild in a forked child";
+  TestAio aio;
+  aio.Poll(false);
+  const pid_t child = fork();
+  ABSL_PCHECK(child >= 0);
+  if (child == 0) {
+    int fds[kForkedChildFds];
+    OpenForkedChildFds(fds);
+    aio.Poll(false);
+    CheckForkedChildFds(fds);
+    _exit(0);
+  }
+  ExpectForkedChildExitsCleanly(child);
+}
+
+// The same for a child that destroys the inherited loop without using it, which
+// used to close whatever had taken the kqueue's number.
+TEST_P(AioTest, DestroyingAnUnusedLoopInAForkedChildLeavesItsDescriptorsAlone) {
+  if (!Backend().survives_fork)
+    GTEST_SKIP()
+        << "a borrowed loop is not this backend's to rebuild in a forked child";
+  std::optional<TestAio> aio;
+  aio.emplace();
+  aio->Poll(false);
+  const pid_t child = fork();
+  ABSL_PCHECK(child >= 0);
+  if (child == 0) {
+    int fds[kForkedChildFds];
+    OpenForkedChildFds(fds);
+    aio.reset();
+    CheckForkedChildFds(fds);
+    _exit(0);
+  }
+  ExpectForkedChildExitsCleanly(child);
+}
+#endif  // !_WIN32
 
 // Cancel() does not end a request's flight: it stays in flight until its
 // Canceled callback has run.  So forking between the Cancel() and that

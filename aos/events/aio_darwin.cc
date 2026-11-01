@@ -409,7 +409,10 @@ KqueueImpl::~KqueueImpl() {
   // std::functions a parked registration still holds are destroyed while this
   // impl is intact -- a capture's destructor can reenter it.
   run_ = false;
-  if (kqueue_fd_ >= 0) {
+  // Only a kqueue this process made.  In a forked child that never rebuilt,
+  // kqueue_fd_ is the parent's number, which the child may since have used
+  // for a descriptor of its own.
+  if (kqueue_fd_ >= 0 && last_fork_count_ == internal::ForkCount()) {
     close(kqueue_fd_);
   }
 }
@@ -486,7 +489,10 @@ void KqueueImpl::WakeLoop() {
 // the child builds a new one.  Detection is the shared counter; see
 // aos/events/aio_unix.h.
 void KqueueImpl::RecreateKernelState() {
-  close(kqueue_fd_);
+  // Not close(kqueue_fd_) first: the child never had that kqueue, so the
+  // number is free here, and whatever the child opened since may have taken
+  // it.  Closing it would close the child's descriptor, and the new kqueue
+  // would take its number.
   kqueue_fd_ = kqueue();
   ABSL_PCHECK(kqueue_fd_ >= 0) << "Failed to recreate kqueue on fork";
   ABSL_PCHECK(fcntl(kqueue_fd_, F_SETFD, FD_CLOEXEC) == 0);
