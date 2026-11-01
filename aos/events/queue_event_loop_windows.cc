@@ -60,9 +60,8 @@ class ConsoleCtrlHandler {
       ABSL_CHECK(SetConsoleCtrlHandler(&HandleCtrl, TRUE)) << GetLastError();
     });
     std::unique_lock<std::mutex> locker(mutex_);
-    if (event_loops_.empty()) {
-      handled_ = false;
-    }
+    // A loop started after an event gets its own first event, as on POSIX.
+    handled_ = false;
     event_loops_.push_back(event_loop);
   }
 
@@ -96,10 +95,9 @@ class ConsoleCtrlHandler {
       return FALSE;
     }
     if (handled_) {
-      // The first event didn't get the loops out, so end the process, as
-      // SIGINT's default action does on POSIX once SA_RESETHAND has put it
-      // back.  Passing the event on instead could reach the CRT's handler,
-      // which only sets a flag for Python to read.
+      // The first event didn't get the loops out, so end the process, as a
+      // second SIGINT does on POSIX.  Passing the event on instead could reach
+      // the CRT's handler, which only sets a flag for Python to read.
       TerminateProcess(GetCurrentProcess(), STATUS_CONTROL_C_EXIT);
     }
     handled_ = true;

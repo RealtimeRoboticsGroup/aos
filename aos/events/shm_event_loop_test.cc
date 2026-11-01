@@ -8,6 +8,8 @@
 
 #include <atomic>
 #include <chrono>
+#include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <memory>
 #include <optional>
@@ -456,6 +458,114 @@ TEST_P(ShmEventLoopTest, HandleSignals) {
   }
 
   ASSERT_EQ(sigaction(SIGTERM, &previous, nullptr), 0);
+}
+
+// A process-directed SIGTERM can arrive on any thread, including while
+// another thread is registering or unregistering an event loop's handler.
+// The handler used to CHECK that it could take the lock those hold, which
+// only the registering thread's own mask guaranteed, and aborted.  Each round
+// sends one SIGTERM, since a second one is fatal while a loop is registered.
+TEST_P(ShmEventLoopTest, SignalWhileOtherThreadsRegister) {
+  struct sigaction ignore{};
+  ignore.sa_handler = &IgnoreSignalForTest;
+  sigemptyset(&ignore.sa_mask);
+  struct sigaction previous{};
+  ASSERT_EQ(sigaction(SIGTERM, &ignore, &previous), 0);
+
+  for (int round = 0; round < 50; ++round) {
+    std::atomic<bool> stop{false};
+    std::vector<std::thread> threads;
+    for (int i = 0; i < 4; ++i) {
+      threads.emplace_back([this, &stop]() {
+        Aio aio;
+        std::unique_ptr<QueueEventLoop> loop =
+            MakeLoop(std::get<2>(GetParam()), factory()->configuration(), &aio);
+        loop->SkipTimingReport();
+        loop->SkipAosLog();
+        while (!stop) {
+          loop->Startup();
+          (void)loop->Shutdown();
+        }
+      });
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    ASSERT_EQ(kill(getpid(), SIGTERM), 0);
+    std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    stop = true;
+    for (std::thread &thread : threads) {
+      thread.join();
+    }
+    // Every loop is gone, so the handler from before is back.
+    EXPECT_EQ(SigtermHandler(), &IgnoreSignalForTest);
+  }
+
+  ASSERT_EQ(sigaction(SIGTERM, &previous, nullptr), 0);
+}
+
+// The first signal exits the running loops, and a second one, sent because
+// they were too slow to go, kills the process with it.  A loop started after
+// the first has been handled counts afresh.
+TEST_P(ShmEventLoopTest, SecondSignalKills) {
+  const auto child = [this]() {
+    for (int run = 0; run < 2; ++run) {
+      auto loop = factory()->MakePrimary("primary");
+      static_cast<QueueEventLoop *>(loop.get())->set_handle_signals(true);
+      loop->OnRun([]() { ABSL_CHECK_EQ(raise(SIGINT), 0); });
+      factory()->Run();
+      std::fprintf(stderr, "run %d exited\n", run);
+    }
+    auto loop = factory()->MakePrimary("primary");
+    static_cast<QueueEventLoop *>(loop.get())->set_handle_signals(true);
+    loop->OnRun([]() {
+      ABSL_CHECK_EQ(raise(SIGINT), 0);
+      ABSL_CHECK_EQ(raise(SIGINT), 0);
+    });
+    factory()->Run();
+    std::exit(0);
+  };
+  EXPECT_EXIT(child(), ::testing::KilledBySignal(SIGINT), "run 1 exited");
+}
+
+// A loop started after a signal gets its own first signal, even with an earlier
+// loop still registered and not going anywhere.  So here the second signal only
+// exits the new loop, and it takes a third to kill the process.
+TEST_P(ShmEventLoopTest, LoopStartedAfterASignalGetsItsOwnFirstSignal) {
+  const auto child = [this]() {
+    std::atomic<bool> started{false};
+    std::atomic<bool> release{false};
+    std::thread stuck([this, &started, &release]() {
+      Aio aio;
+      std::unique_ptr<QueueEventLoop> loop =
+          MakeLoop(std::get<2>(GetParam()), factory()->configuration(), &aio);
+      loop->SkipTimingReport();
+      loop->SkipAosLog();
+      loop->set_handle_signals(true);
+      loop->Startup();
+      started = true;
+      while (!release) {
+        std::this_thread::yield();
+      }
+      (void)loop->Shutdown();
+    });
+    while (!started) {
+      std::this_thread::yield();
+    }
+    // raise() returns after the handler has run on this thread.
+    ABSL_CHECK_EQ(raise(SIGTERM), 0);
+
+    auto loop = factory()->MakePrimary("primary");
+    static_cast<QueueEventLoop *>(loop.get())->set_handle_signals(true);
+    loop->OnRun([]() { ABSL_CHECK_EQ(raise(SIGTERM), 0); });
+    factory()->Run();
+    std::fprintf(stderr, "second signal only exited the new loop\n");
+
+    ABSL_CHECK_EQ(raise(SIGTERM), 0);
+    release = true;
+    stuck.join();
+    std::exit(0);
+  };
+  EXPECT_EXIT(child(), ::testing::KilledBySignal(SIGTERM),
+              "second signal only exited the new loop");
 }
 #endif
 
