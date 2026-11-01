@@ -1074,6 +1074,7 @@ cc_test(
     ],
     deps = [
         ":glib_main_loop",
+        ":pipe",
         ":simulated_event_loop",
         "//aos:configuration",
         "//aos/events:shm_event_loop",

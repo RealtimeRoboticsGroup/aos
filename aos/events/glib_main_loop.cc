@@ -1,5 +1,10 @@
 #include "aos/events/glib_main_loop.h"
 
+#include <fcntl.h>
+
+#include <algorithm>
+#include <cerrno>
+
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 
@@ -170,14 +175,25 @@ void GlibMainLoop::BeforeWait() {
     }
     aio_->SetEvents(gpoll_fd.fd, GioToAio(gpoll_fd.events));
   }
-  for (int fd : added_fds_) {
-    const auto iterator = std::find_if(
-        gpoll_fds_.begin(), gpoll_fds_.end(),
-        [fd](const GPollFD &candidate) { return candidate.fd == fd; });
-    if (iterator == gpoll_fds_.end()) {
-      ABSL_VLOG(1) << "Remove from ShmEventLoop: " << fd;
-      added_fds_.erase(fd);
+  for (auto added = added_fds_.begin(); added != added_fds_.end();) {
+    const FileDescriptor fd = *added;
+    if (std::any_of(
+            gpoll_fds_.begin(), gpoll_fds_.end(),
+            [fd](const GPollFD &candidate) { return candidate.fd == fd; })) {
+      ++added;
+      continue;
     }
+    ABSL_VLOG(1) << "Remove from ShmEventLoop: " << fd;
+    // glib has stopped asking about fd, and whoever owned it may have closed
+    // it since, which poll(2) never minds.  The Aio does, so it is told
+    // which.  A number that was closed and already reused by the time this
+    // runs looks open, and DeleteFd() of it dies.
+    if (fcntl(fd, F_GETFD) == -1 && errno == EBADF) {
+      aio_->ForgetClosedFd(fd);
+    } else {
+      aio_->DeleteFd(fd);
+    }
+    added = added_fds_.erase(added);
   }
   ABSL_CHECK_EQ(added_fds_.size(), gpoll_fds_.size());
   ABSL_VLOG(1) << "Timeout: " << timeout_ms;

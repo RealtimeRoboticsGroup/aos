@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 
 #include "aos/configuration.h"
+#include "aos/events/pipe.h"
 #include "aos/events/shm_event_loop.h"
 #include "aos/events/simulated_event_loop.h"
 #include "aos/testing/path.h"
@@ -81,6 +82,47 @@ class GlibMainLoopTest : public ::testing::TestWithParam<EventLoopType> {
     } else {
       simulated_event_loop_factory_->Exit();
     }
+  }
+
+  // Watches pipe's read end for condition through glib, and runs until the
+  // watch is dispatched or 2 seconds have passed.  Returns what the watch was
+  // dispatched with, or 0 if it never was.  The watch removes itself when it
+  // is dispatched, and with close_in_callback closes the read end too, before
+  // GlibMainLoop learns that glib has stopped asking about it.
+  GIOCondition WatchPipe(Pipe &pipe, GIOCondition condition,
+                         bool close_in_callback = false) {
+    struct State {
+      GlibMainLoopTest *test;
+      Pipe *pipe;
+      bool close_in_callback;
+      GIOCondition dispatched;
+    } state{this, &pipe, close_in_callback, static_cast<GIOCondition>(0)};
+    GIOChannel *const channel = g_io_channel_unix_new(pipe.read_fd());
+    const guint watch = g_io_add_watch(
+        channel, condition,
+        [](GIOChannel *, GIOCondition dispatched, gpointer data) -> gboolean {
+          State *const state = static_cast<State *>(data);
+          state->dispatched = dispatched;
+          if (state->close_in_callback) {
+            state->pipe->close_read_fd();
+          }
+          state->test->Exit();
+          return G_SOURCE_REMOVE;
+        },
+        &state);
+
+    TimerHandler *const give_up = event_loop()->AddTimer([this]() { Exit(); });
+    event_loop()->OnRun([this, give_up]() {
+      give_up->Schedule(event_loop()->monotonic_now() +
+                        std::chrono::seconds(2));
+    });
+    Run();
+
+    if (state.dispatched == 0) {
+      g_source_remove(watch);
+    }
+    g_io_channel_unref(channel);
+    return state.dispatched;
   }
 
  private:
@@ -189,6 +231,23 @@ TEST_P(GlibMainLoopTest, TimeoutRemoveSelf) {
   Run();
   EXPECT_TRUE(ran);
   EXPECT_EQ(runs, 1);
+}
+
+// A watch that removes itself from its own callback is taken off the Aio
+// the next time GlibMainLoop asks glib what to watch.
+TEST_P(GlibMainLoopTest, WatchRemovesItself) {
+  Pipe pipe;
+  pipe.Write("x");
+  EXPECT_NE(WatchPipe(pipe, G_IO_IN), 0) << "the watch was never dispatched";
+}
+
+// A watch whose callback removes it and closes its fd leaves GlibMainLoop
+// to forget a closed fd, rather than to remove an open one.
+TEST_P(GlibMainLoopTest, WatchClosesItsFdAndRemovesItself) {
+  Pipe pipe;
+  pipe.Write("x");
+  EXPECT_NE(WatchPipe(pipe, G_IO_IN, /*close_in_callback=*/true), 0)
+      << "the watch was never dispatched";
 }
 
 // Run the above tests against both ShmEventLoop and a simulated event loop.
