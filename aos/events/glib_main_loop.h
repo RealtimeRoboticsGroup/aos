@@ -135,9 +135,9 @@ class GlibSignalCallback {
 // Destroying it from a before-wait function, a glib callback under it
 // included, dies, since a before-wait function may not be removed from one.
 //
-// A watch on an fd the Aio cannot poll, such as /dev/null or a regular file,
-// dies at the first BeforeWait(), whatever it watches for.  That includes
-// G_IO_HUP alone, which plain glib would just never dispatch.
+// A watch on an fd the Aio cannot poll, such as /dev/null or, on Linux, a
+// regular file, dies at the first BeforeWait(), whatever it watches for.  That
+// includes G_IO_HUP alone, which plain glib would just never dispatch.
 class GlibMainLoop {
  public:
   // Binds to an event loop and an Aio object. This could be from an
