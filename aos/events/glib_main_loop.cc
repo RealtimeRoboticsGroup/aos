@@ -109,8 +109,22 @@ void GlibMainLoop::RemoveAllFds() {
     if (to_remove == added_fds_.end()) {
       break;
     }
-    aio_->DeleteFd(*to_remove);
+    RemoveFd(*to_remove);
     added_fds_.erase(to_remove);
+  }
+}
+
+void GlibMainLoop::RemoveFd(FileDescriptor fd) {
+  // glib has stopped asking about fd, and whoever owned it may have closed it
+  // since, which poll(2) never minds.  The Aio does, so it is told which.  A
+  // number that was closed and already reused by the time this runs looks
+  // open, and DeleteFd() of it dies.  A closed number whose file lives on
+  // through a dup() or a fork() is forgotten while the kernel may still report
+  // it, which epoll dies on and which keeps io_uring's loop from returning.
+  if (fcntl(fd, F_GETFD) == -1 && errno == EBADF) {
+    aio_->ForgetClosedFd(fd);
+  } else {
+    aio_->DeleteFd(fd);
   }
 }
 
@@ -194,15 +208,7 @@ void GlibMainLoop::BeforeWait() {
       continue;
     }
     ABSL_VLOG(1) << "Remove from ShmEventLoop: " << fd;
-    // glib has stopped asking about fd, and whoever owned it may have closed
-    // it since, which poll(2) never minds.  The Aio does, so it is told
-    // which.  A number that was closed and already reused by the time this
-    // runs looks open, and DeleteFd() of it dies.
-    if (fcntl(fd, F_GETFD) == -1 && errno == EBADF) {
-      aio_->ForgetClosedFd(fd);
-    } else {
-      aio_->DeleteFd(fd);
-    }
+    RemoveFd(fd);
     added = added_fds_.erase(added);
   }
   ABSL_CHECK_EQ(added_fds_.size(), gpoll_fds_.size());

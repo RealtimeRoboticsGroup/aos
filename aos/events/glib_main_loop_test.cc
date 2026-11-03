@@ -270,6 +270,56 @@ TEST_P(GlibMainLoopTest, WatchClosesItsFdAndRemovesItself) {
       << "the watch was never dispatched";
 }
 
+// An fd closed while it is still watched leaves destroying the GlibMainLoop
+// to forget it, rather than to remove an open one.
+TEST_P(GlibMainLoopTest, DestroyAfterAWatchedFdIsClosed) {
+  Pipe pipe;
+  GIOChannel *const channel = g_io_channel_unix_new(pipe.read_fd());
+  const guint watch = g_io_add_watch(
+      channel, G_IO_IN,
+      [](GIOChannel *, GIOCondition, gpointer) -> gboolean {
+        return G_SOURCE_CONTINUE;
+      },
+      nullptr);
+
+  event_loop()
+      ->AddTimer([this, &pipe]() {
+        pipe.close_read_fd();
+        DestroyGlibMainLoop();
+      })
+      ->Schedule(event_loop()->monotonic_now() + std::chrono::milliseconds(10));
+  event_loop()
+      ->AddTimer([this]() { Exit(); })
+      ->Schedule(event_loop()->monotonic_now() + std::chrono::milliseconds(50));
+  Run();
+
+  g_source_remove(watch);
+  g_io_channel_unref(channel);
+}
+
+// So does the event loop exiting, which quits glib's loop too.
+TEST_P(GlibMainLoopTest, ExitAfterAWatchedFdIsClosed) {
+  Pipe pipe;
+  GIOChannel *const channel = g_io_channel_unix_new(pipe.read_fd());
+  const guint watch = g_io_add_watch(
+      channel, G_IO_IN,
+      [](GIOChannel *, GIOCondition, gpointer) -> gboolean {
+        return G_SOURCE_CONTINUE;
+      },
+      nullptr);
+
+  event_loop()
+      ->AddTimer([this, &pipe]() {
+        pipe.close_read_fd();
+        Exit();
+      })
+      ->Schedule(event_loop()->monotonic_now() + std::chrono::milliseconds(10));
+  Run();
+
+  g_source_remove(watch);
+  g_io_channel_unref(channel);
+}
+
 // A watch for input or a hangup on a pipe whose writer has closed is
 // dispatched with G_IO_HUP, as it is under plain glib.  On Linux a pipe at
 // end of file is a hangup alone, which Aio reports as kErrorEvent.
