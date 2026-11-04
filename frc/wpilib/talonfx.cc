@@ -2,6 +2,8 @@
 
 #include "absl/log/absl_check.h"
 
+#include "frc/wpilib/can_status.h"
+
 using frc::wpilib::kMaxBringupPower;
 using frc::wpilib::TalonFX;
 
@@ -22,23 +24,29 @@ TalonFX::TalonFX(int device_id, bool inverted, std::string canbus,
       supply_current_limit_(supply_current_limit) {
   // Temperature changes slowly, so ask for it at Phoenix's minimum rate.  It
   // isn't in the list of signals since SerializePosition refreshes it.
-  device_temp_.SetUpdateFrequency(4_Hz);
+  CheckSetupStatus(device_temp_.SetUpdateFrequency(4_Hz),
+                   "set the device temperature rate");
 
   ABSL_CHECK(signals != nullptr);
 
-  supply_voltage_.SetUpdateFrequency(kCANUpdateFreqHz);
+  CheckSetupStatus(supply_voltage_.SetUpdateFrequency(kCANUpdateFreqHz),
+                   "set the supply voltage rate");
   signals->push_back(&supply_voltage_);
 
-  supply_current_.SetUpdateFrequency(kCANUpdateFreqHz);
+  CheckSetupStatus(supply_current_.SetUpdateFrequency(kCANUpdateFreqHz),
+                   "set the supply current rate");
   signals->push_back(&supply_current_);
 
-  torque_current_.SetUpdateFrequency(kCANUpdateFreqHz);
+  CheckSetupStatus(torque_current_.SetUpdateFrequency(kCANUpdateFreqHz),
+                   "set the torque current rate");
   signals->push_back(&torque_current_);
 
-  position_.SetUpdateFrequency(kCANUpdateFreqHz);
+  CheckSetupStatus(position_.SetUpdateFrequency(kCANUpdateFreqHz),
+                   "set the position rate");
   signals->push_back(&position_);
 
-  duty_cycle_.SetUpdateFrequency(kCANUpdateFreqHz);
+  CheckSetupStatus(duty_cycle_.SetUpdateFrequency(kCANUpdateFreqHz),
+                   "set the duty cycle rate");
   signals->push_back(&duty_cycle_);
 }
 
@@ -48,14 +56,18 @@ TalonFX::TalonFX(TalonFXParams params, std::string canbus,
     : TalonFX(params.device_id, params.inverted, canbus, signals,
               stator_current_limit, supply_current_limit) {}
 
+void TalonFX::CheckSetupStatus(ctre::phoenix::StatusCode status,
+                               const char *action) {
+  if (!CheckCANSetupStatus(status, "talonfx", device_id_, action)) {
+    setup_failed_ = true;
+  }
+}
+
 void TalonFX::PrintConfigs() {
   ctre::phoenix6::configs::TalonFXConfiguration configuration;
   ctre::phoenix::StatusCode status =
       talon_.GetConfigurator().Refresh(configuration);
-  if (!status.IsOK()) {
-    AOS_LOG(ERROR, "Failed to get talonfx motor configuration: %s: %s",
-            status.GetName(), status.GetDescription());
-  }
+  CheckSetupStatus(status, "get the configuration");
   AOS_LOG(INFO, "configuration: %s", configuration.ToString().c_str());
 }
 
@@ -80,10 +92,7 @@ void TalonFX::WriteConfigs() {
 
   ctre::phoenix::StatusCode status =
       talon_.GetConfigurator().Apply(configuration);
-  if (!status.IsOK()) {
-    AOS_LOG(ERROR, "Failed to set talonfx motor configuration: %s: %s",
-            status.GetName(), status.GetDescription());
-  }
+  CheckSetupStatus(status, "set the configuration");
 
   PrintConfigs();
 }
@@ -130,4 +139,15 @@ void TalonFX::SerializePosition(control_loops::CANTalonFXStatic *can_talonfx,
   can_talonfx->set_duty_cycle(duty_cycle());
   can_talonfx->set_position(position() * gear_ratio);
   can_talonfx->set_timestamp(GetTimestamp());
+
+  if (setup_failed_) {
+    errors_.Set(control_loops::CANDeviceError::SETUP_FAILED);
+  }
+  // The temperature isn't here since it is much slower than everything else.
+  if (!ctre::phoenix6::BaseStatusSignal::IsAllGood(
+          supply_voltage_, supply_current_, torque_current_, position_,
+          duty_cycle_)) {
+    errors_.Set(control_loops::CANDeviceError::READ_FAILED);
+  }
+  errors_.ToStaticFlatbuffer(can_talonfx->add_errors());
 }

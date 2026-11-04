@@ -1,3 +1,7 @@
+include "frc/control_loops/can_device_error.fbs";
+
+attribute "static_length";
+
 namespace frc.control_loops;
 
 table CANTalonFX {
@@ -28,4 +32,7 @@ table CANTalonFX {
   // This will have less jitter than the
   // timestamp of the message being sent out.
   timestamp:int64 (id: 7);
+
+  // Everything which has gone wrong with this device since startup.
+  errors:[CANDeviceError] (id: 8, static_length: 2);
 }

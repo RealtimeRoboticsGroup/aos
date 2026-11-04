@@ -528,6 +528,21 @@ ts_project(
 )
 
 cc_library(
+    name = "can_status",
+    srcs = [
+        "can_status.cc",
+    ],
+    hdrs = [
+        "can_status.h",
+    ],
+    deps = [
+        "//aos/logging",
+        "//third_party:phoenix6",
+        "@com_google_absl//absl/log:absl_log",
+    ],
+)
+
+cc_library(
     name = "talonfx",
     srcs = [
         "talonfx.cc",
@@ -536,8 +551,10 @@ cc_library(
         "talonfx.h",
     ],
     deps = [
+        ":can_status",
         "//aos:init",
         "//aos:math",
+        "//aos/containers:error_list",
         "//aos/events:shm_event_loop",
         "//aos/logging",
         "//frc/control_loops/drivetrain:drivetrain_can_position_fbs",
