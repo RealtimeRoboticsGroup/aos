@@ -3,6 +3,7 @@ load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
 load("//aos:config.bzl", "aos_config")
+load("//aos/flatbuffers:build_defs.bzl", "DEFAULT_FLATC_ARGS")
 load("//aos/flatbuffers:generate.bzl", "static_flatbuffer")
 load("//frc:downloader.bzl", "robot_downloader")
 load("//frc/downloader:downloader.bzl", "aos_downloader_dir")
@@ -994,6 +995,9 @@ camera_constants_json(
 static_flatbuffer(
     name = "field_map_fbs",
     srcs = ["field_map.fbs"],
+    # field_map.fbs mirrors the Limelight .fmap JSON format, so its pngBase64
+    # field can't be renamed to snake_case to quiet flatc's warning.
+    flatc_args = DEFAULT_FLATC_ARGS + ["--no-warnings"],
     visibility = ["//visibility:public"],
 )
 
