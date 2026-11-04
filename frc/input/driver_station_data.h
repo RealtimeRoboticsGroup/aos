@@ -12,7 +12,9 @@
 namespace frc::input::driver_station {
 
 // Represents a feature of a joystick (a button or an axis).
-// All indices are 1-based.
+// All indices are 0-based, the same as the HAL and WPILib: joystick 0 is
+// the first Driver Station port, and button 0 is the HAL's first button
+// bit.
 class JoystickFeature {
  public:
   JoystickFeature(int joystick, int number)
@@ -21,9 +23,10 @@ class JoystickFeature {
   // How many joysticks there are.
   static const int kJoysticks = 6;
 
-  // Which joystick number this is (1-based).
+  // Which joystick number this is (0-based).
   int joystick() const { return joystick_; }
-  // Which feature on joystick() this is (1-based).
+  // Which feature on joystick() this is (0-based).  For a POVLocation, this is
+  // the POV's angle in degrees instead.
   int number() const { return number_; }
 
  private:

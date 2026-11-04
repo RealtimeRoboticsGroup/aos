@@ -34,9 +34,9 @@ class RedundantData : public Data {
   float GetAxis(JoystickAxis axis) const override;
 
  private:
-  static constexpr int kIdBit0Button = 14;
-  static constexpr int kIdBit1Button = 15;
-  static constexpr int kRedundantBitButton = 16;
+  static constexpr int kIdBit0Button = 13;
+  static constexpr int kIdBit1Button = 14;
+  static constexpr int kRedundantBitButton = 15;
 
   int MapRedundantJoystick(int joystick) const;
 

@@ -17,9 +17,8 @@ void JoystickInput::HandleData(const frc::JoystickState *joystick_state) {
   {
     using driver_station::ButtonLocation;
     using driver_station::JoystickFeature;
-    for (int joystick = 1; joystick <= JoystickFeature::kJoysticks;
-         ++joystick) {
-      for (int button = 1; button <= ButtonLocation::kButtons; ++button) {
+    for (int joystick = 0; joystick < JoystickFeature::kJoysticks; ++joystick) {
+      for (int button = 0; button < ButtonLocation::kButtons; ++button) {
         ButtonLocation location(joystick, button);
         if (data_.PosEdge(location)) {
           AOS_LOG(INFO, "PosEdge(%d, %d)\n", joystick, button);

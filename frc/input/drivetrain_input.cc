@@ -24,7 +24,7 @@ namespace drivetrain = frc::control_loops::drivetrain;
 
 namespace frc::input {
 
-const ButtonLocation kShiftHigh(2, 3), kShiftHigh2(2, 2), kShiftLow(2, 1);
+const ButtonLocation kShiftHigh(1, 2), kShiftHigh2(1, 1), kShiftLow(1, 0);
 
 void DrivetrainInputReader::HandleDrivetrain(
     const ::frc::input::driver_station::Data &data) {
@@ -145,9 +145,9 @@ void SwerveDrivetrainInputReader::HandleDrivetrain(
 std::unique_ptr<SwerveDrivetrainInputReader> SwerveDrivetrainInputReader::Make(
     ::aos::EventLoop *event_loop) {
   // Swerve Controller
-  // axis (2, 2) will give you alternative omega axis (controls with vertical
+  // axis (1, 1) will give you alternative omega axis (controls with vertical
   // movement)
-  const JoystickAxis kVxAxis(2, 1), kVyAxis(1, 1), kOmegaAxis(1, 2);
+  const JoystickAxis kVxAxis(1, 0), kVyAxis(0, 0), kOmegaAxis(0, 1);
 
   std::unique_ptr<SwerveDrivetrainInputReader> result(
       new SwerveDrivetrainInputReader(event_loop, kVxAxis, kVyAxis,
@@ -299,10 +299,10 @@ XboxDrivetrainInputReader::GetWheelAndThrottle(
 std::unique_ptr<SteeringWheelDrivetrainInputReader>
 SteeringWheelDrivetrainInputReader::Make(::aos::EventLoop *event_loop,
                                          bool default_high_gear) {
-  const JoystickAxis kSteeringWheel(1, 1), kDriveThrottle(2, 2);
-  const ButtonLocation kQuickTurn(1, 5);
-  const ButtonLocation kTurn1(1, 7);
-  const ButtonLocation kTurn2(1, 11);
+  const JoystickAxis kSteeringWheel(0, 0), kDriveThrottle(1, 1);
+  const ButtonLocation kQuickTurn(0, 4);
+  const ButtonLocation kTurn1(0, 6);
+  const ButtonLocation kTurn2(0, 10);
   std::unique_ptr<SteeringWheelDrivetrainInputReader> result(
       new SteeringWheelDrivetrainInputReader(
           event_loop, kSteeringWheel, kDriveThrottle, kQuickTurn, kTurn1,
@@ -318,22 +318,22 @@ std::unique_ptr<PistolDrivetrainInputReader> PistolDrivetrainInputReader::Make(
     PistolTopButtonUse top_button_use, PistolSecondButtonUse second_button_use,
     PistolBottomButtonUse bottom_button_use) {
   // Pistol Grip controller
-  const JoystickAxis kTriggerHigh(1, 1), kTriggerLow(1, 4),
-      kTriggerVelocityHigh(1, 2), kTriggerVelocityLow(1, 5),
-      kTriggerTorqueHigh(1, 3), kTriggerTorqueLow(1, 6);
+  const JoystickAxis kTriggerHigh(0, 0), kTriggerLow(0, 3),
+      kTriggerVelocityHigh(0, 1), kTriggerVelocityLow(0, 4),
+      kTriggerTorqueHigh(0, 2), kTriggerTorqueLow(0, 5);
 
-  const JoystickAxis kWheelHigh(2, 1), kWheelLow(2, 4),
-      kWheelVelocityHigh(2, 2), kWheelVelocityLow(2, 5), kWheelTorqueHigh(2, 3),
-      kWheelTorqueLow(2, 6);
+  const JoystickAxis kWheelHigh(1, 0), kWheelLow(1, 3),
+      kWheelVelocityHigh(1, 1), kWheelVelocityLow(1, 4), kWheelTorqueHigh(1, 2),
+      kWheelTorqueLow(1, 5);
 
-  const ButtonLocation kQuickTurn(1, 3);
+  const ButtonLocation kQuickTurn(0, 2);
 
-  const ButtonLocation kTopButton(1, 1);
+  const ButtonLocation kTopButton(0, 0);
 
-  const ButtonLocation kSecondButton(1, 2);
-  const ButtonLocation kBottomButton(1, 4);
+  const ButtonLocation kSecondButton(0, 1);
+  const ButtonLocation kBottomButton(0, 3);
   // Non-existant button for nops.
-  const ButtonLocation kDummyButton(1, 15);
+  const ButtonLocation kDummyButton(0, 14);
 
   // TODO(james): Make a copy assignment operator for ButtonLocation so we don't
   // have to shoehorn in these ternary operators.
@@ -372,12 +372,12 @@ std::unique_ptr<PistolDrivetrainInputReader> PistolDrivetrainInputReader::Make(
 std::unique_ptr<XboxDrivetrainInputReader> XboxDrivetrainInputReader::Make(
     ::aos::EventLoop *event_loop) {
   // xbox
-  const JoystickAxis kSteeringWheel(1, 5), kDriveThrottle(1, 2);
-  const ButtonLocation kQuickTurn(1, 5);
+  const JoystickAxis kSteeringWheel(0, 4), kDriveThrottle(0, 1);
+  const ButtonLocation kQuickTurn(0, 4);
 
   // Nop
-  const ButtonLocation kTurn1(1, 1);
-  const ButtonLocation kTurn2(1, 2);
+  const ButtonLocation kTurn1(0, 0);
+  const ButtonLocation kTurn2(0, 1);
 
   std::unique_ptr<XboxDrivetrainInputReader> result(
       new XboxDrivetrainInputReader(event_loop, kSteeringWheel, kDriveThrottle,

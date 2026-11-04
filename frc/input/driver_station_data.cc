@@ -34,19 +34,19 @@ void Data::Update(const frc::JoystickState *new_values) {
 bool Data::GetButton(const ButtonLocation location,
                      const Data::SavedJoystickState &values) {
   if (location.joystick() < 0 ||
-      location.joystick() > static_cast<int>(values.joysticks.size())) {
+      location.joystick() >= static_cast<int>(values.joysticks.size())) {
     return false;
   }
-  if (location.number() <= 0 || location.number() > 16) {
+  if (location.number() < 0 || location.number() >= 16) {
     return false;
   }
-  return values.joysticks[location.joystick() - 1].buttons &
-         (1 << (location.number() - 1));
+  return values.joysticks[location.joystick()].buttons &
+         (1 << (location.number()));
 }
 
 bool Data::DoGetPOV(const POVLocation location,
                     const Data::SavedJoystickState &values) {
-  return values.joysticks[location.joystick() - 1].pov == location.number();
+  return values.joysticks[location.joystick()].pov == location.number();
 }
 
 bool Data::GetControlBitValue(const ControlBit bit,
@@ -94,11 +94,11 @@ bool Data::NegEdge(const POVLocation location) const {
 }
 
 int32_t Data::GetPOV(int joystick) const {
-  return current_values_.joysticks[joystick - 1].pov;
+  return current_values_.joysticks[joystick].pov;
 }
 
 int32_t Data::GetOldPOV(int joystick) const {
-  return old_values_.joysticks[joystick - 1].pov;
+  return old_values_.joysticks[joystick].pov;
 }
 
 bool Data::GetControlBit(const ControlBit bit) const {
@@ -116,7 +116,7 @@ bool Data::NegEdge(const ControlBit bit) const {
 }
 
 float Data::GetAxis(JoystickAxis axis) const {
-  return current_values_.joysticks[axis.joystick() - 1].axis[axis.number() - 1];
+  return current_values_.joysticks[axis.joystick()].axis[axis.number()];
 }
 
 }  // namespace frc::input::driver_station
