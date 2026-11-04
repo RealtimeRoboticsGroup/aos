@@ -142,62 +142,6 @@ flatbuffer_ts_library(
     deps = ["//frc/control_loops:can_talonfx_ts_fbs"],
 )
 
-genrule(
-    name = "drivetrain_goal_float_fbs_generated",
-    srcs = ["drivetrain_goal.fbs"],
-    outs = ["drivetrain_goal_float.fbs"],
-    cmd = "cat $(SRCS) | sed 's/double/float/g' > $(OUTS)",
-)
-
-genrule(
-    name = "drivetrain_position_float_fbs_generated",
-    srcs = ["drivetrain_position.fbs"],
-    outs = ["drivetrain_position_float.fbs"],
-    cmd = "cat $(SRCS) | sed 's/double/float/g' > $(OUTS)",
-)
-
-genrule(
-    name = "drivetrain_output_float_fbs_generated",
-    srcs = ["drivetrain_output.fbs"],
-    outs = ["drivetrain_output_float.fbs"],
-    cmd = "cat $(SRCS) | sed 's/double/float/g' > $(OUTS)",
-)
-
-genrule(
-    name = "drivetrain_status_float_fbs_generated",
-    srcs = ["drivetrain_status.fbs"],
-    outs = ["drivetrain_status_float.fbs"],
-    cmd = "cat $(SRCS) | sed 's/double/float/g' > $(OUTS)",
-)
-
-static_flatbuffer(
-    name = "drivetrain_goal_float_fbs",
-    srcs = ["drivetrain_goal_float.fbs"],
-    deps = [
-        ":spline_goal_fbs",
-        "//frc/control_loops:control_loops_fbs",
-    ],
-)
-
-static_flatbuffer(
-    name = "drivetrain_output_float_fbs",
-    srcs = ["drivetrain_output_float.fbs"],
-)
-
-static_flatbuffer(
-    name = "drivetrain_position_float_fbs",
-    srcs = ["drivetrain_position_float.fbs"],
-)
-
-static_flatbuffer(
-    name = "drivetrain_status_float_fbs",
-    srcs = ["drivetrain_status_float.fbs"],
-    deps = [
-        "//frc/control_loops:control_loops_fbs",
-        "//frc/control_loops:encoder_fault_status_fbs",
-    ],
-)
-
 aos_config(
     name = "multinode_drivetrain_config",
     testonly = True,
@@ -452,37 +396,24 @@ cc_library(
     hdrs = [
         "polydrivetrain.h",
     ],
-    copts = select({
-        "@platforms//os:none": ["-Wno-type-limits"],
-        "//conditions:default": [],
-    }),
     deps = [
         ":drivetrain_config",
+        ":drivetrain_goal_fbs",
+        ":drivetrain_output_fbs",
+        ":drivetrain_position_fbs",
         ":drivetrain_states",
+        ":drivetrain_status_fbs",
         ":gear",
         ":spline_goal_fbs",
         "//aos:macros",
         "//aos:math",
+        "//aos/util:log_interval",
         "//frc/control_loops:coerce_goal",
         "//frc/control_loops:control_loops_fbs",
         "//frc/control_loops:polytope",
         "//frc/control_loops:state_feedback_loop",
-    ] + select({
-        "@platforms//os:none": [
-            ":drivetrain_goal_float_fbs",
-            ":drivetrain_output_float_fbs",
-            ":drivetrain_position_float_fbs",
-            ":drivetrain_status_float_fbs",
-        ],
-        "//conditions:default": [
-            ":drivetrain_goal_fbs",
-            ":drivetrain_output_fbs",
-            ":drivetrain_position_fbs",
-            ":drivetrain_status_fbs",
-            "//aos/util:log_interval",
-            "//frc/input:robot_state_fbs",
-        ],
-    }),
+        "//frc/input:robot_state_fbs",
+    ],
 )
 
 genrule(
