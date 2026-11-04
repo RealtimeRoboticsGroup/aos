@@ -209,6 +209,34 @@ cc_library(
     ],
 )
 
+# joystick_sender, but reading the HAL directly instead of through ahal, for
+# processes which link wpilibc.
+#
+# This asks for the HAL as wpiHal.static because a cc_library can't depend on a
+# cc_shared_library.  A binary sharing the process with prebuilt vendor
+# libraries (Phoenix 6) must list the shared HAL in its dynamic_deps.  Bazel
+# then leaves wpiHal.static out of the link, so the process ends up with one
+# HAL.
+cc_library(
+    name = "joystick_sender_hal",
+    srcs = [
+        "joystick_sender_hal.cc",
+    ],
+    hdrs = [
+        "joystick_sender_hal.h",
+    ],
+    target_compatible_with = ["//tools/platforms/hardware:roborio"],
+    deps = [
+        "//aos/events:shm_event_loop",
+        "//aos/logging",
+        "//aos/network:team_number",
+        "//frc/input:driver_station_data",
+        "//frc/input:joystick_state_fbs",
+        "@com_github_wpilibsuite_allwpilib//hal:wpiHal.static",
+        "@com_google_absl//absl/log:check",
+    ],
+)
+
 cc_library(
     name = "wpilib_interface",
     srcs = [
