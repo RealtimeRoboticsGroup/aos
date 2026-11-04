@@ -37,6 +37,8 @@
 
 using aos::testing::ArtifactPath;
 
+ABSL_DECLARE_FLAG(bool, memory_cgroups);
+
 namespace aos::starter {
 
 class ThreadedStarterRunner {
@@ -402,6 +404,72 @@ TEST_F(StarterdTest, Autostart) {
       SUCCEED();
     }
   });
+
+  SetupStarterCleanup(&starter);
+
+  ThreadedStarterRunner starterd_thread(&starter);
+  watcher_loop.Run();
+
+  test_done_ = true;
+}
+
+// Tests that with --nomemory_cgroups, starterd hands out no cgroups and still
+// runs applications.  This is how it runs on the roboRIO, which has no memory
+// cgroup controller.
+TEST_F(StarterdTest, RunsWithoutMemoryCgroups) {
+  absl::SetFlag(&FLAGS_memory_cgroups, false);
+  EXPECT_EQ(MakeCGroupManager()->MakeCGroup("pong"), nullptr);
+
+  const std::string config_file =
+      ArtifactPath("documentation/examples/ping_pong/pingpong_config.json");
+
+  aos::FlatbufferDetachedBuffer<aos::Configuration> config =
+      aos::configuration::ReadConfig(config_file);
+
+  auto new_config = aos::configuration::MergeWithConfig(
+      &config.message(),
+      absl::StrFormat(
+          R"({"applications": [
+                                  {
+                                    "name": "ping",
+                                    "executable_name": "%s",
+                                    "args": ["--shm_base", "%s"],
+                                    "autostart": false
+                                  },
+                                  {
+                                    "name": "pong",
+                                    "executable_name": "%s",
+                                    "args": ["--shm_base", "%s"]
+                                  }
+                                ]})",
+          ArtifactPath("documentation/examples/ping_pong/ping"),
+          absl::GetFlag(FLAGS_shm_base),
+          ArtifactPath("documentation/examples/ping_pong/pong"),
+          absl::GetFlag(FLAGS_shm_base)));
+
+  const aos::Configuration *config_msg = &new_config.message();
+
+  aos::starter::Starter starter(config_msg, MakeCGroupManager());
+
+  aos::ShmEventLoop watcher_loop(config_msg);
+  watcher_loop.SkipAosLog();
+
+  watcher_loop
+      .AddTimer([&watcher_loop] {
+        watcher_loop.Exit();
+        FAIL();
+      })
+      ->Schedule(watcher_loop.monotonic_now() + std::chrono::seconds(7));
+
+  watcher_loop.MakeWatcher(
+      "/aos", [&watcher_loop](const aos::starter::Status &status) {
+        const aos::starter::ApplicationStatus *pong_app_status =
+            FindApplicationStatus(status, "pong");
+        if (pong_app_status != nullptr && pong_app_status->has_state() &&
+            pong_app_status->state() == aos::starter::State::RUNNING) {
+          watcher_loop.Exit();
+        }
+      });
 
   SetupStarterCleanup(&starter);
 

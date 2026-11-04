@@ -307,14 +307,21 @@ Application *Starter::AddApplication(const aos::Application *application) {
   if (application->has_extra_cgroups()) {
     for (const CgroupConfiguration *cgroup_config :
          *application->extra_cgroups()) {
-      extra_cgroups.push_back(cgroup_manager_->MakeCGroup(
-          cgroup_config->name()->string_view(), user_name));
+      std::unique_ptr<aos::starter::MemoryCGroup> cgroup =
+          cgroup_manager_->MakeCGroup(cgroup_config->name()->string_view(),
+                                      user_name);
+      // With --nomemory_cgroups, there are no cgroups.
+      if (cgroup) {
+        extra_cgroups.push_back(std::move(cgroup));
+      }
     }
     // Delegate ownership of the main cgroup and extra cgroups to the
     // user so that non-root child processes can manage their own cgroup
     // subtree. Only delegate if a user is specified.
     if (!user_name.empty()) {
-      main_cgroup->Delegate(user_name);
+      if (main_cgroup) {
+        main_cgroup->Delegate(user_name);
+      }
       for (auto &cgroup : extra_cgroups) {
         cgroup->Delegate(user_name);
       }

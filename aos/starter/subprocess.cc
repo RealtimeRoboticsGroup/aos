@@ -34,6 +34,10 @@ ABSL_FLAG(int32_t, cgroup_remove_max_retries, 5,
           "Maximum number of retries when removing a cgroup directory.");
 ABSL_FLAG(int32_t, cgroup_remove_retry_delay_secs, 1,
           "Delay in seconds between retries when removing a cgroup directory.");
+ABSL_FLAG(bool, memory_cgroups, true,
+          "If true, give each application its own memory cgroup.  Turn this "
+          "off on systems without a memory cgroup controller, such as the "
+          "roboRIO.  Applications with a memory_limit need it on.");
 
 namespace aos::starter {
 
@@ -206,7 +210,9 @@ class MemoryCGroupV1 : public MemoryCGroup {
 
       if (ret != 0) {
         ABSL_PLOG(FATAL) << ": Failed to create cgroup " << cgroup_
-                         << ", do you have permission?";
+                         << ", do you have permission?  If this system has "
+                            "no memory cgroup controller, run with "
+                            "--nomemory_cgroups.";
       }
     }
   }
@@ -257,6 +263,15 @@ class CGroupManagerV1 : public CGroupManager {
 
  private:
   MemoryCGroup::Create should_create_cgroups_;
+};
+
+// For --nomemory_cgroups: hands out no cgroups at all.
+class NoCGroupManager : public CGroupManager {
+ public:
+  std::unique_ptr<MemoryCGroup> MakeCGroup(
+      std::string_view /* name */, std::string_view /* user_name */) override {
+    return nullptr;
+  }
 };
 
 bool RemoveCGroupV2Hierarchy(const std::string &cgroup_path, bool remove_self) {
@@ -314,7 +329,9 @@ class MemoryCGroupV2 : public MemoryCGroup {
 
         if (ret != 0) {
           ABSL_PLOG(FATAL) << ": Failed to create cgroup aos_" << cgroup_
-                           << ", do you have permission?";
+                           << ", do you have permission?  If this system has "
+                              "no memory cgroup controller, run with "
+                              "--nomemory_cgroups.";
         }
       });
     } else if (!std::filesystem::exists(cgroup_)) {
@@ -534,6 +551,10 @@ class CGroupManagerV2 : public CGroupManager {
 
 std::unique_ptr<CGroupManager> MakeCGroupManager(
     MemoryCGroup::Create should_create_cgroups) {
+  if (!absl::GetFlag(FLAGS_memory_cgroups)) {
+    return std::make_unique<NoCGroupManager>();
+  }
+
   // The kernel only supports cgroups v1 or v2, not both.  The standard
   // autodetection mechanism for other programs appears to be to check for the
   // cgroup.controllers file, which signifies that cgroups v2 is in use.

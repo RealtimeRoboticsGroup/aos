@@ -139,12 +139,13 @@ class CGroupManager {
   // cgroup owned by this user named "user_<user_name>".
   // Under cgroups v1, user_name has no effect.
   // Note that if user name is empty, the current user is assumed.
+  // Returns nullptr with --nomemory_cgroups.
   virtual std::unique_ptr<MemoryCGroup> MakeCGroup(
       std::string_view name, std::string_view user_name = "") = 0;
 };
 
 // Auto-detects what cgroups version is on this machine and constructs a manager
-// for it.
+// for it.  With --nomemory_cgroups, the manager makes no cgroups.
 // If should_create_cgroups is kDoCreate, the manager will create cgroups and
 // also create a new cgroup for the current process to enable memory
 // controllers. If kDoNotCreate, the manager will only manage existing cgroups.
@@ -276,7 +277,10 @@ class Application {
 
   // Sets the memory limit for the application to the provided limit.
   void SetMemoryLimit(size_t limit) {
-    ABSL_CHECK(main_cgroup_);
+    ABSL_CHECK(main_cgroup_)
+        << ": " << name_ << " has a memory_limit, but there is no memory "
+        << "cgroup to enforce it in.  Is starterd running with "
+        << "--nomemory_cgroups?";
 
     main_cgroup_->SetMemoryLimit(limit);
   }
