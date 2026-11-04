@@ -220,8 +220,9 @@ cc_library(
     target_compatible_with = ["//tools/platforms/hardware:roborio"],
     deps = [
         "//aos/events:event_loop",
+        "//aos/logging",
         "//frc/input:robot_state_fbs",
-        "//third_party:wpilib",
+        "@com_github_wpilibsuite_allwpilib//hal:wpiHal.static",
     ],
 )
 
