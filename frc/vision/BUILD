@@ -1085,6 +1085,7 @@ cc_binary(
         ":constants.json",
     ],
     target_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:public"],
     deps = [
         "//aos:init",
         "//aos/events:simulated_event_loop",
