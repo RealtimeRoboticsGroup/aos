@@ -81,6 +81,11 @@ class ControlLoopTestTemplated : public TestBaseClass {
   void set_alliance(frc::Alliance alliance) { alliance_ = alliance; }
   frc::Alliance alliance() const { return alliance_; }
 
+  // Sets whether the driver station is in autonomous mode.  This shows up in
+  // the next JoystickState.
+  void set_autonomous(bool autonomous) { autonomous_ = autonomous; }
+  bool autonomous() const { return autonomous_; }
+
   // Sets the enabled/disabled bit and (potentially) rebroadcasts the robot
   // state messages.
   void SetEnabled(bool enabled) {
@@ -145,7 +150,7 @@ class ControlLoopTestTemplated : public TestBaseClass {
       builder.add_fake(true);
 
       builder.add_enabled(enabled_);
-      builder.add_autonomous(false);
+      builder.add_autonomous(autonomous_);
       builder.add_team_id(team_id_);
       builder.add_alliance(alliance_);
 
@@ -193,6 +198,7 @@ class ControlLoopTestTemplated : public TestBaseClass {
 
   uint16_t team_id_ = 118;
   frc::Alliance alliance_ = frc::Alliance::kInvalid;
+  bool autonomous_ = false;
   int32_t reader_pid_ = 1;
   double battery_voltage_ = 12.4;
 
