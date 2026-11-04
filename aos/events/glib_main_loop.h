@@ -197,6 +197,8 @@ class GlibMainLoop {
 
  private:
   void RemoveAllFds();
+  // Takes fd off the Aio, whether or not it has been closed.
+  void RemoveFd(FileDescriptor fd);
   void BeforeWait();
 
   // fds which we have added to the Aio object, keyed the way Aio spells them.
