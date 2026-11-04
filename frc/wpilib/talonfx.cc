@@ -20,8 +20,9 @@ TalonFX::TalonFX(int device_id, bool inverted, std::string canbus,
       duty_cycle_(talon_.GetDutyCycle()),
       stator_current_limit_(stator_current_limit),
       supply_current_limit_(supply_current_limit) {
-  // device temp is not timesynced so don't add it to the list of signals
-  device_temp_.SetUpdateFrequency(kCANUpdateFreqHz);
+  // Temperature changes slowly, so ask for it at Phoenix's minimum rate.  It
+  // isn't in the list of signals since SerializePosition refreshes it.
+  device_temp_.SetUpdateFrequency(4_Hz);
 
   ABSL_CHECK(signals != nullptr);
 
@@ -120,6 +121,7 @@ ctre::phoenix::StatusCode TalonFX::WriteVoltage(double voltage) {
 }
 void TalonFX::SerializePosition(control_loops::CANTalonFXStatic *can_talonfx,
                                 double gear_ratio) {
+  RefreshNontimesyncedSignals();
   can_talonfx->set_id(device_id_);
   can_talonfx->set_device_temp(device_temp());
   can_talonfx->set_supply_voltage(supply_voltage());

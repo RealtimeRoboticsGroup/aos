@@ -70,7 +70,11 @@ class TalonFX {
     return latest_timestamp.count();
   }
 
-  void RefreshNontimesyncedSignals() { device_temp_.Refresh(); };
+  // This doesn't block.  It runs in the sensor reading loops, so don't have
+  // Phoenix report errors to the driver station from it.
+  void RefreshNontimesyncedSignals() {
+    device_temp_.Refresh(/*reportError=*/false);
+  };
 
   void set_stator_current_limit(double stator_current_limit) {
     stator_current_limit_ = stator_current_limit;
