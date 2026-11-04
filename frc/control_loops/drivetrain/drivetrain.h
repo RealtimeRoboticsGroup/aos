@@ -8,10 +8,10 @@
 #include "frc/control_loops/control_loops_generated.h"
 #include "frc/control_loops/drivetrain/drivetrain_config.h"
 #include "frc/control_loops/drivetrain/drivetrain_goal_generated.h"
-#include "frc/control_loops/drivetrain/drivetrain_output_generated.h"
+#include "frc/control_loops/drivetrain/drivetrain_output_static.h"
 #include "frc/control_loops/drivetrain/drivetrain_position_generated.h"
 #include "frc/control_loops/drivetrain/drivetrain_states.h"
-#include "frc/control_loops/drivetrain/drivetrain_status_generated.h"
+#include "frc/control_loops/drivetrain/drivetrain_status_static.h"
 #include "frc/control_loops/drivetrain/gear.h"
 #include "frc/control_loops/drivetrain/improved_down_estimator.h"
 #include "frc/control_loops/drivetrain/line_follow_drivetrain.h"
@@ -55,15 +55,12 @@ class DrivetrainFilters {
   StateFeedbackLoop<7, 2, 4> *kf() { return &kf_; }
 
   // Populates the various state flatbuffers used for diagnostics.
-  flatbuffers::Offset<LocalizerState> PopulateLocalizerState(
-      flatbuffers::FlatBufferBuilder *fbb);
-  flatbuffers::Offset<ImuZeroerState> PopulateImuZeroerState(
-      flatbuffers::FlatBufferBuilder *fbb);
-  flatbuffers::Offset<DownEstimatorState> PopulateDownEstimatorState(
-      flatbuffers::FlatBufferBuilder *fbb,
+  void PopulateLocalizerState(LocalizerStateStatic *state);
+  void PopulateImuZeroerState(ImuZeroerStateStatic *state);
+  void PopulateDownEstimatorState(
+      DownEstimatorStateStatic *state,
       aos::monotonic_clock::time_point monotonic_now);
-  flatbuffers::Offset<GearLogging> CreateGearLogging(
-      flatbuffers::FlatBufferBuilder *fbb) const;
+  void PopulateGearLogging(GearLoggingStatic *gear_logging) const;
 
   // Returns the current localizer state.
   Eigen::Matrix<double, 5, 1> trajectory_state() {
@@ -145,7 +142,8 @@ class DrivetrainFilters {
 };
 
 class DrivetrainLoop
-    : public frc::controls::ControlLoop<Goal, Position, Status, Output> {
+    : public frc::controls::ControlLoop<Goal, Position, StatusStatic,
+                                        OutputStatic> {
  public:
   // Note that we only actually store N - 1 splines consistently, since we need
   // to keep one fetcher free to check whether there are any new splines.
@@ -171,12 +169,12 @@ class DrivetrainLoop
   void RunIteration(
       const ::frc::control_loops::drivetrain::Goal *goal,
       const ::frc::control_loops::drivetrain::Position *position,
-      aos::Sender<::frc::control_loops::drivetrain::Output>::Builder *output,
-      aos::Sender<::frc::control_loops::drivetrain::Status>::Builder *status)
-      override;
+      aos::Sender<::frc::control_loops::drivetrain::OutputStatic>::StaticBuilder
+          *output,
+      aos::Sender<::frc::control_loops::drivetrain::StatusStatic>::StaticBuilder
+          *status) override;
 
-  flatbuffers::Offset<drivetrain::Output> Zero(
-      aos::Sender<drivetrain::Output>::Builder *builder) override;
+  void Zero(drivetrain::OutputStatic *output) override;
 
   void UpdateTrajectoryFetchers();
 

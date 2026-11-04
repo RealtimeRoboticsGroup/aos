@@ -277,7 +277,7 @@ void DrivetrainMotorsSS::SetOutput(
 }
 
 void DrivetrainMotorsSS::PopulateStatus(
-    ::frc::control_loops::drivetrain::StatusBuilder *builder) const {
+    ::frc::control_loops::drivetrain::StatusStatic *status) const {
   Eigen::Matrix<double, 2, 1> profiled_linear =
       dt_config_.LeftRightToLinear(kf_->next_R());
   Eigen::Matrix<double, 2, 1> profiled_angular =
@@ -288,13 +288,13 @@ void DrivetrainMotorsSS::PopulateStatus(
   Eigen::Matrix<double, 4, 1> profiled_gyro_left_right =
       dt_config_.AngularLinearToLeftRight(profiled_linear, profiled_angular);
 
-  builder->add_profiled_left_position_goal(
+  status->set_profiled_left_position_goal(
       profiled_gyro_left_right(kLeftPosition));
-  builder->add_profiled_left_velocity_goal(
+  status->set_profiled_left_velocity_goal(
       profiled_gyro_left_right(kLeftVelocity));
-  builder->add_profiled_right_position_goal(
+  status->set_profiled_right_position_goal(
       profiled_gyro_left_right(kRightPosition));
-  builder->add_profiled_right_velocity_goal(
+  status->set_profiled_right_velocity_goal(
       profiled_gyro_left_right(kRightVelocity));
 }
 

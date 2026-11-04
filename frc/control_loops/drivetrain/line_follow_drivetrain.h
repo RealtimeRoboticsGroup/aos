@@ -6,7 +6,7 @@
 #include "frc/control_loops/drivetrain/drivetrain_config.h"
 #include "frc/control_loops/drivetrain/drivetrain_goal_generated.h"
 #include "frc/control_loops/drivetrain/drivetrain_output_generated.h"
-#include "frc/control_loops/drivetrain/drivetrain_status_generated.h"
+#include "frc/control_loops/drivetrain/drivetrain_status_static.h"
 #include "frc/control_loops/drivetrain/localizer.h"
 #include "frc/control_loops/pose.h"
 #include "frc/control_loops/profiled_subsystem_generated.h"
@@ -40,9 +40,7 @@ class LineFollowDrivetrain {
   // over.
   bool SetOutput(::frc::control_loops::drivetrain::OutputT *output);
 
-  flatbuffers::Offset<LineFollowLogging> PopulateStatus(
-      aos::Sender<drivetrain::Status>::Builder *line_follow_logging_builder)
-      const;
+  void PopulateStatus(LineFollowLoggingStatic *line_follow_logging) const;
 
  private:
   // Nominal max voltage.

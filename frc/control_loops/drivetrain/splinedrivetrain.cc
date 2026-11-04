@@ -227,99 +227,77 @@ void SplineDrivetrain::SetOutput(
   }
 }
 
-void SplineDrivetrain::PopulateStatus(
-    drivetrain::Status::Builder *builder) const {
-  if (builder && enable_) {
-    builder->add_uncapped_left_voltage(uncapped_U_(0));
-    builder->add_uncapped_right_voltage(uncapped_U_(1));
-    builder->add_robot_speed(current_xva_(1));
-    builder->add_output_was_capped(output_was_capped_);
+void SplineDrivetrain::PopulateStatus(drivetrain::StatusStatic *status) const {
+  if (status && enable_) {
+    status->set_uncapped_left_voltage(uncapped_U_(0));
+    status->set_uncapped_right_voltage(uncapped_U_(1));
+    status->set_robot_speed(current_xva_(1));
+    status->set_output_was_capped(output_was_capped_);
   }
 }
 
 namespace {
 template <typename Matrix>
-flatbuffers::Offset<SplineState> MakeSplineState(
-    const Matrix &state, flatbuffers::FlatBufferBuilder *fbb) {
-  SplineState::Builder builder(*fbb);
-  builder.add_x(state(0));
-  builder.add_y(state(1));
-  builder.add_theta(::aos::math::NormalizeAngle(state(2)));
-  builder.add_left_velocity(state(3));
-  builder.add_right_velocity(state(4));
-  return builder.Finish();
+void PopulateSplineState(const Matrix &state, SplineStateStatic *spline_state) {
+  spline_state->set_x(state(0));
+  spline_state->set_y(state(1));
+  spline_state->set_theta(::aos::math::NormalizeAngle(state(2)));
+  spline_state->set_left_velocity(state(3));
+  spline_state->set_right_velocity(state(4));
 }
 }  // namespace
 
-flatbuffers::Offset<TrajectoryLogging> SplineDrivetrain::MakeTrajectoryLogging(
-    flatbuffers::FlatBufferBuilder *builder) const {
-  int *spline_handles;
-  const flatbuffers::Offset<flatbuffers::Vector<int>> handles_vector =
-      builder->CreateUninitializedVector(trajectories_.size(), &spline_handles);
-
-  for (size_t ii = 0; ii < trajectories_.size(); ++ii) {
-    spline_handles[ii] = trajectories_[ii].spline_handle();
+void SplineDrivetrain::PopulateTrajectoryLogging(
+    drivetrain::TrajectoryLoggingStatic *trajectory_logging) const {
+  auto *available_splines = trajectory_logging->add_available_splines();
+  ABSL_CHECK(available_splines->reserve(trajectories_.size()));
+  for (const auto &trajectory : trajectories_) {
+    ABSL_CHECK(available_splines->emplace_back(trajectory.spline_handle()));
   }
 
-  const flatbuffers::Offset<SplineState> state_error_offset =
-      MakeSplineState(last_state_error_, builder);
-  const flatbuffers::Offset<SplineState> left_voltage_components_offset =
-      MakeSplineState(last_U_components_.row(0), builder);
-  const flatbuffers::Offset<SplineState> right_voltage_components_offset =
-      MakeSplineState(last_U_components_.row(1), builder);
-
-  drivetrain::TrajectoryLogging::Builder trajectory_logging_builder(*builder);
   if (executing_spline_) {
     ::Eigen::Matrix<double, 5, 1> goal_state = CurrentGoalState();
-    trajectory_logging_builder.add_x(goal_state(0));
-    trajectory_logging_builder.add_y(goal_state(1));
+    trajectory_logging->set_x(goal_state(0));
+    trajectory_logging->set_y(goal_state(1));
     const FinishedTrajectory *const trajectory = current_trajectory();
     ABSL_CHECK(trajectory != nullptr);
     if (trajectory->drive_spline_backwards()) {
-      trajectory_logging_builder.add_left_velocity(-goal_state(4));
-      trajectory_logging_builder.add_right_velocity(-goal_state(3));
-      trajectory_logging_builder.add_theta(
+      trajectory_logging->set_left_velocity(-goal_state(4));
+      trajectory_logging->set_right_velocity(-goal_state(3));
+      trajectory_logging->set_theta(
           ::aos::math::NormalizeAngle(goal_state(2) + numbers::pi));
     } else {
-      trajectory_logging_builder.add_theta(
-          ::aos::math::NormalizeAngle(goal_state(2)));
-      trajectory_logging_builder.add_left_velocity(goal_state(3));
-      trajectory_logging_builder.add_right_velocity(goal_state(4));
+      trajectory_logging->set_theta(::aos::math::NormalizeAngle(goal_state(2)));
+      trajectory_logging->set_left_velocity(goal_state(3));
+      trajectory_logging->set_right_velocity(goal_state(4));
     }
-    trajectory_logging_builder.add_state_error(state_error_offset);
-    trajectory_logging_builder.add_left_voltage_components(
-        left_voltage_components_offset);
-    trajectory_logging_builder.add_right_voltage_components(
-        right_voltage_components_offset);
-    trajectory_logging_builder.add_left_ff_voltage(last_U_ff_(0));
-    trajectory_logging_builder.add_right_ff_voltage(last_U_ff_(1));
+    PopulateSplineState(last_state_error_,
+                        trajectory_logging->add_state_error());
+    PopulateSplineState(last_U_components_.row(0),
+                        trajectory_logging->add_left_voltage_components());
+    PopulateSplineState(last_U_components_.row(1),
+                        trajectory_logging->add_right_voltage_components());
+    trajectory_logging->set_left_ff_voltage(last_U_ff_(0));
+    trajectory_logging->set_right_ff_voltage(last_U_ff_(1));
   }
-  trajectory_logging_builder.add_is_executing(!IsAtEnd() && executing_spline_);
-  trajectory_logging_builder.add_is_executed(executing_spline_ && IsAtEnd());
+  trajectory_logging->set_is_executing(!IsAtEnd() && executing_spline_);
+  trajectory_logging->set_is_executed(executing_spline_ && IsAtEnd());
   if (commanded_spline_) {
-    trajectory_logging_builder.add_goal_spline_handle(*commanded_spline_);
+    trajectory_logging->set_goal_spline_handle(*commanded_spline_);
     if (executing_spline_) {
-      trajectory_logging_builder.add_current_spline_idx(*commanded_spline_);
+      trajectory_logging->set_current_spline_idx(*commanded_spline_);
     }
   }
   if (executing_spline_) {
     const FinishedTrajectory *const trajectory = current_trajectory();
     ABSL_CHECK(trajectory != nullptr);
-    trajectory_logging_builder.add_distance_remaining(trajectory->length() -
-                                                      current_xva_.x());
+    trajectory_logging->set_distance_remaining(trajectory->length() -
+                                               current_xva_.x());
   } else {
-    trajectory_logging_builder.add_distance_remaining(0.0);
+    trajectory_logging->set_distance_remaining(0.0);
   }
-  trajectory_logging_builder.add_available_splines(handles_vector);
-  trajectory_logging_builder.add_distance_traveled(
-      executing_spline_ ? current_xva_.x() : 0.0);
-
-  return trajectory_logging_builder.Finish();
-}
-
-flatbuffers::Offset<TrajectoryLogging> SplineDrivetrain::MakeTrajectoryLogging(
-    aos::Sender<drivetrain::Status>::Builder *builder) const {
-  return MakeTrajectoryLogging(builder->fbb());
+  trajectory_logging->set_distance_traveled(executing_spline_ ? current_xva_.x()
+                                                              : 0.0);
 }
 
 }  // namespace frc::control_loops::drivetrain

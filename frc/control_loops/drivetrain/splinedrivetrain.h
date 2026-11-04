@@ -14,7 +14,7 @@
 #include "frc/control_loops/drivetrain/drivetrain_config.h"
 #include "frc/control_loops/drivetrain/drivetrain_goal_generated.h"
 #include "frc/control_loops/drivetrain/drivetrain_output_generated.h"
-#include "frc/control_loops/drivetrain/drivetrain_status_generated.h"
+#include "frc/control_loops/drivetrain/drivetrain_status_static.h"
 #include "frc/control_loops/drivetrain/spline.h"
 #include "frc/control_loops/drivetrain/trajectory.h"
 
@@ -40,11 +40,9 @@ class SplineDrivetrain {
 
   void SetOutput(::frc::control_loops::drivetrain::OutputT *output);
 
-  flatbuffers::Offset<TrajectoryLogging> MakeTrajectoryLogging(
-      aos::Sender<drivetrain::Status>::Builder *builder) const;
-  flatbuffers::Offset<TrajectoryLogging> MakeTrajectoryLogging(
-      flatbuffers::FlatBufferBuilder *builder) const;
-  void PopulateStatus(drivetrain::Status::Builder *status) const;
+  void PopulateTrajectoryLogging(
+      drivetrain::TrajectoryLoggingStatic *trajectory_logging) const;
+  void PopulateStatus(drivetrain::StatusStatic *status) const;
 
   // Accessor for the current goal state, pretty much only present for debugging
   // purposes.

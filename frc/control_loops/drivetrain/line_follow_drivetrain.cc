@@ -288,23 +288,18 @@ void LineFollowDrivetrain::Update(
   }
 }
 
-flatbuffers::Offset<LineFollowLogging> LineFollowDrivetrain::PopulateStatus(
-    aos::Sender<drivetrain::Status>::Builder *builder) const {
-  LineFollowLogging::Builder line_follow_logging_builder =
-      builder->MakeBuilder<LineFollowLogging>();
-  line_follow_logging_builder.add_frozen(freeze_target_);
-  line_follow_logging_builder.add_have_target(have_target_);
-  line_follow_logging_builder.add_x(target_pose_.abs_pos().x());
-  line_follow_logging_builder.add_y(target_pose_.abs_pos().y());
-  line_follow_logging_builder.add_theta(target_pose_.abs_theta());
-  line_follow_logging_builder.add_offset(relative_pose_.rel_pos().y());
-  line_follow_logging_builder.add_distance_to_target(
-      -relative_pose_.rel_pos().x());
-  line_follow_logging_builder.add_goal_theta(controls_goal_(0, 0));
-  line_follow_logging_builder.add_rel_theta(relative_pose_.rel_theta());
-  line_follow_logging_builder.add_drive_direction(
-      target_selector_->DriveDirection());
-  return line_follow_logging_builder.Finish();
+void LineFollowDrivetrain::PopulateStatus(
+    LineFollowLoggingStatic *line_follow_logging) const {
+  line_follow_logging->set_frozen(freeze_target_);
+  line_follow_logging->set_have_target(have_target_);
+  line_follow_logging->set_x(target_pose_.abs_pos().x());
+  line_follow_logging->set_y(target_pose_.abs_pos().y());
+  line_follow_logging->set_theta(target_pose_.abs_theta());
+  line_follow_logging->set_offset(relative_pose_.rel_pos().y());
+  line_follow_logging->set_distance_to_target(-relative_pose_.rel_pos().x());
+  line_follow_logging->set_goal_theta(controls_goal_(0, 0));
+  line_follow_logging->set_rel_theta(relative_pose_.rel_theta());
+  line_follow_logging->set_drive_direction(target_selector_->DriveDirection());
 }
 
 }  // namespace frc::control_loops::drivetrain

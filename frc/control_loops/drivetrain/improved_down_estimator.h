@@ -9,7 +9,7 @@
 #include "aos/events/event_loop.h"
 #include "aos/time/time.h"
 #include "frc/control_loops/drivetrain/drivetrain_config.h"
-#include "frc/control_loops/drivetrain/drivetrain_status_generated.h"
+#include "frc/control_loops/drivetrain/drivetrain_status_static.h"
 #include "frc/control_loops/quaternion_utils.h"
 #include "frc/control_loops/runge_kutta.h"
 
@@ -250,9 +250,8 @@ class DrivetrainUkf : public QuaternionUkf {
 
   void UpdateIntegratedPositions(aos::monotonic_clock::time_point now);
 
-  flatbuffers::Offset<DownEstimatorState> PopulateStatus(
-      flatbuffers::FlatBufferBuilder *fbb,
-      aos::monotonic_clock::time_point now);
+  void PopulateStatus(DownEstimatorStateStatic *state,
+                      aos::monotonic_clock::time_point now);
 };
 
 }  // namespace frc::control_loops::drivetrain

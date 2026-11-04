@@ -115,23 +115,19 @@ void ImuZeroer::ProcessMeasurements() {
   }
 }
 
-flatbuffers::Offset<control_loops::drivetrain::ImuZeroerState>
-ImuZeroer::PopulateStatus(flatbuffers::FlatBufferBuilder *fbb) const {
-  control_loops::drivetrain::ImuZeroerState::Builder builder(*fbb);
+void ImuZeroer::PopulateStatus(
+    control_loops::drivetrain::ImuZeroerStateStatic *state) const {
+  state->set_zeroed(Zeroed());
+  state->set_faulted(Faulted());
+  state->set_number_of_zeroes(num_zeroes_);
 
-  builder.add_zeroed(Zeroed());
-  builder.add_faulted(Faulted());
-  builder.add_number_of_zeroes(num_zeroes_);
+  state->set_gyro_x_average(GyroOffset().x());
+  state->set_gyro_y_average(GyroOffset().y());
+  state->set_gyro_z_average(GyroOffset().z());
 
-  builder.add_gyro_x_average(GyroOffset().x());
-  builder.add_gyro_y_average(GyroOffset().y());
-  builder.add_gyro_z_average(GyroOffset().z());
-
-  builder.add_accel_x_average(accel_averager_.GetAverage()[0]);
-  builder.add_accel_y_average(accel_averager_.GetAverage()[1]);
-  builder.add_accel_z_average(accel_averager_.GetAverage()[2]);
-
-  return builder.Finish();
+  state->set_accel_x_average(accel_averager_.GetAverage()[0]);
+  state->set_accel_y_average(accel_averager_.GetAverage()[1]);
+  state->set_accel_z_average(accel_averager_.GetAverage()[2]);
 }
 
 }  // namespace frc::zeroing

@@ -64,20 +64,17 @@ DrivetrainFilters::DrivetrainFilters(const DrivetrainConfig<double> &dt_config,
   }
 }
 
-flatbuffers::Offset<LocalizerState> DrivetrainFilters::PopulateLocalizerState(
-    flatbuffers::FlatBufferBuilder *fbb) {
-  return localizer_->PopulateStatus(fbb);
+void DrivetrainFilters::PopulateLocalizerState(LocalizerStateStatic *state) {
+  localizer_->PopulateStatus(state);
 }
-flatbuffers::Offset<ImuZeroerState> DrivetrainFilters::PopulateImuZeroerState(
-    flatbuffers::FlatBufferBuilder *fbb) {
-  return imu_zeroer_.PopulateStatus(fbb);
+void DrivetrainFilters::PopulateImuZeroerState(ImuZeroerStateStatic *state) {
+  imu_zeroer_.PopulateStatus(state);
 }
 
-flatbuffers::Offset<DownEstimatorState>
-DrivetrainFilters::PopulateDownEstimatorState(
-    flatbuffers::FlatBufferBuilder *fbb,
+void DrivetrainFilters::PopulateDownEstimatorState(
+    DownEstimatorStateStatic *state,
     aos::monotonic_clock::time_point monotonic_now) {
-  return down_estimator_.PopulateStatus(fbb, monotonic_now);
+  down_estimator_.PopulateStatus(state, monotonic_now);
 }
 
 void DrivetrainFilters::Reset(aos::monotonic_clock::time_point monotonic_now,
@@ -312,15 +309,13 @@ int DrivetrainFilters::ControllerIndexFromGears() const {
     }
   }
 }
-flatbuffers::Offset<GearLogging> DrivetrainFilters::CreateGearLogging(
-    flatbuffers::FlatBufferBuilder *fbb) const {
-  GearLogging::Builder gear_logging_builder(*fbb);
-  gear_logging_builder.add_left_state(static_cast<uint32_t>(left_gear_));
-  gear_logging_builder.add_right_state(static_cast<uint32_t>(right_gear_));
-  gear_logging_builder.add_left_loop_high(MaybeHigh(left_gear_));
-  gear_logging_builder.add_right_loop_high(MaybeHigh(right_gear_));
-  gear_logging_builder.add_controller_index(ControllerIndexFromGears());
-  return gear_logging_builder.Finish();
+void DrivetrainFilters::PopulateGearLogging(
+    GearLoggingStatic *gear_logging) const {
+  gear_logging->set_left_state(static_cast<uint32_t>(left_gear_));
+  gear_logging->set_right_state(static_cast<uint32_t>(right_gear_));
+  gear_logging->set_left_loop_high(MaybeHigh(left_gear_));
+  gear_logging->set_right_loop_high(MaybeHigh(right_gear_));
+  gear_logging->set_controller_index(ControllerIndexFromGears());
 }
 
 Gear DrivetrainFilters::ComputeGear(
@@ -343,8 +338,8 @@ DrivetrainLoop::DrivetrainLoop(const DrivetrainConfig<double> &dt_config,
                                ::aos::EventLoop *event_loop,
                                LocalizerInterface *localizer,
                                const ::std::string &name)
-    : frc::controls::ControlLoop<Goal, Position, Status, Output>(event_loop,
-                                                                 name),
+    : frc::controls::ControlLoop<Goal, Position, StatusStatic, OutputStatic>(
+          event_loop, name),
       dt_config_(dt_config),
       filters_(dt_config, event_loop, localizer),
       dt_openloop_(dt_config_, filters_.kf()),
@@ -416,8 +411,8 @@ void DrivetrainLoop::UpdateTrajectoryFetchers() {
 
 void DrivetrainLoop::RunIteration(
     const drivetrain::Goal *goal, const drivetrain::Position *position,
-    aos::Sender<drivetrain::Output>::Builder *output,
-    aos::Sender<drivetrain::Status>::Builder *status) {
+    aos::Sender<drivetrain::OutputStatic>::StaticBuilder *output,
+    aos::Sender<drivetrain::StatusStatic>::StaticBuilder *status) {
   const monotonic_clock::time_point monotonic_now =
       event_loop()->monotonic_now();
 
@@ -435,8 +430,8 @@ void DrivetrainLoop::RunIteration(
 
   // Set the gear-logging parts of the status
   ABSL_CHECK(status);
-  flatbuffers::Offset<GearLogging> gear_logging_offset =
-      filters_.CreateGearLogging(status->fbb());
+  StatusStatic *status_fbs = status->get();
+  filters_.PopulateGearLogging(status_fbs->add_gear_logging());
 
   dt_openloop_.SetPosition(position, filters_.left_gear(),
                            filters_.right_gear());
@@ -509,72 +504,52 @@ void DrivetrainLoop::RunIteration(
     Eigen::Matrix<double, 4, 1> gyro_left_right =
         dt_config_.AngularLinearToLeftRight(linear, angular);
 
-    const flatbuffers::Offset<CIMLogging> cim_logging_offset =
-        dt_openloop_.PopulateShiftingStatus(status->fbb());
+    dt_openloop_.PopulateShiftingStatus(status_fbs->add_cim_logging());
+    dt_openloop_.PopulateStatus(status_fbs->add_poly_drive_logging());
+    filters_.PopulateDownEstimatorState(status_fbs->add_down_estimator(),
+                                        monotonic_now);
+    filters_.PopulateLocalizerState(status_fbs->add_localizer());
+    filters_.PopulateImuZeroerState(status_fbs->add_zeroing());
+    dt_line_follow_.PopulateStatus(status_fbs->add_line_follow_logging());
+    dt_spline_.PopulateTrajectoryLogging(status_fbs->add_trajectory_logging());
 
-    const flatbuffers::Offset<PolyDriveLogging> poly_drive_logging_offset =
-        dt_openloop_.PopulateStatus(status->fbb());
+    dt_closedloop_.PopulateStatus(status_fbs);
 
-    const flatbuffers::Offset<DownEstimatorState> down_estimator_state_offset =
-        filters_.PopulateDownEstimatorState(status->fbb(), monotonic_now);
+    status_fbs->set_estimated_left_position(gyro_left_right(kLeftPosition));
+    status_fbs->set_estimated_right_position(gyro_left_right(kRightPosition));
 
-    const flatbuffers::Offset<LocalizerState> localizer_offset =
-        filters_.PopulateLocalizerState(status->fbb());
-
-    const flatbuffers::Offset<ImuZeroerState> zeroer_offset =
-        filters_.PopulateImuZeroerState(status->fbb());
-
-    flatbuffers::Offset<LineFollowLogging> line_follow_logging_offset =
-        dt_line_follow_.PopulateStatus(status);
-    flatbuffers::Offset<TrajectoryLogging> trajectory_logging_offset =
-        dt_spline_.MakeTrajectoryLogging(status);
-
-    Status::Builder builder = status->MakeBuilder<Status>();
-
-    dt_closedloop_.PopulateStatus(&builder);
-
-    builder.add_estimated_left_position(gyro_left_right(kLeftPosition));
-    builder.add_estimated_right_position(gyro_left_right(kRightPosition));
-
-    builder.add_estimated_left_velocity(gyro_left_right(kLeftVelocity));
-    builder.add_estimated_right_velocity(gyro_left_right(kRightVelocity));
+    status_fbs->set_estimated_left_velocity(gyro_left_right(kLeftVelocity));
+    status_fbs->set_estimated_right_velocity(gyro_left_right(kRightVelocity));
 
     if (dt_spline_.enable()) {
-      dt_spline_.PopulateStatus(&builder);
+      dt_spline_.PopulateStatus(status_fbs);
     } else {
-      builder.add_robot_speed((filters_.DrivetrainXHat(kLeftVelocity) +
-                               filters_.DrivetrainXHat(kRightVelocity)) /
-                              2.0);
-      builder.add_output_was_capped(dt_closedloop_.output_was_capped());
-      builder.add_uncapped_left_voltage(
+      status_fbs->set_robot_speed((filters_.DrivetrainXHat(kLeftVelocity) +
+                                   filters_.DrivetrainXHat(kRightVelocity)) /
+                                  2.0);
+      status_fbs->set_output_was_capped(dt_closedloop_.output_was_capped());
+      status_fbs->set_uncapped_left_voltage(
           filters_.DrivetrainUUncapped(kLeftVoltage));
-      builder.add_uncapped_right_voltage(
+      status_fbs->set_uncapped_right_voltage(
           filters_.DrivetrainUUncapped(kRightVoltage));
     }
 
-    builder.add_left_voltage_error(filters_.DrivetrainXHat(kLeftError));
-    builder.add_right_voltage_error(filters_.DrivetrainXHat(kRightError));
-    builder.add_estimated_angular_velocity_error(
+    status_fbs->set_left_voltage_error(filters_.DrivetrainXHat(kLeftError));
+    status_fbs->set_right_voltage_error(filters_.DrivetrainXHat(kRightError));
+    status_fbs->set_estimated_angular_velocity_error(
         filters_.DrivetrainXHat(kAngularError));
-    builder.add_estimated_heading(filters_.localizer_theta());
+    status_fbs->set_estimated_heading(filters_.localizer_theta());
 
-    builder.add_x(filters_.x());
-    builder.add_y(filters_.y());
-    builder.add_theta(::aos::math::NormalizeAngle(filters_.localizer_theta()));
+    status_fbs->set_x(filters_.x());
+    status_fbs->set_y(filters_.y());
+    status_fbs->set_theta(
+        ::aos::math::NormalizeAngle(filters_.localizer_theta()));
 
-    builder.add_cim_logging(cim_logging_offset);
-    builder.add_poly_drive_logging(poly_drive_logging_offset);
-    builder.add_gear_logging(gear_logging_offset);
-    builder.add_line_follow_logging(line_follow_logging_offset);
-    builder.add_trajectory_logging(trajectory_logging_offset);
-    builder.add_down_estimator(down_estimator_state_offset);
-    builder.add_localizer(localizer_offset);
-    builder.add_zeroing(zeroer_offset);
-    builder.add_filters_ready(filters_.Ready());
+    status_fbs->set_filters_ready(filters_.Ready());
 
-    builder.add_send_failures(status_failure_counter_.failures());
+    status_fbs->set_send_failures(status_failure_counter_.failures());
 
-    status_failure_counter_.Count(status->Send(builder.Finish()));
+    status_failure_counter_.Count(status->Send());
   }
 
   // If the filters aren't ready/valid, then disable all outputs (currently,
@@ -614,7 +589,12 @@ void DrivetrainLoop::RunIteration(
   }
 
   if (output) {
-    output->CheckOk(output->Send(Output::Pack(*output->fbb(), &output_struct)));
+    OutputStatic *output_fbs = output->get();
+    output_fbs->set_left_voltage(output_struct.left_voltage);
+    output_fbs->set_right_voltage(output_struct.right_voltage);
+    output_fbs->set_left_high(output_struct.left_high);
+    output_fbs->set_right_high(output_struct.right_high);
+    output->CheckOk(output->Send());
   }
 
   if (localizer_input_sender_.valid()) {
@@ -629,14 +609,11 @@ void DrivetrainLoop::RunIteration(
   }
 }
 
-flatbuffers::Offset<Output> DrivetrainLoop::Zero(
-    aos::Sender<Output>::Builder *output) {
-  Output::Builder builder = output->MakeBuilder<Output>();
-  builder.add_left_voltage(0);
-  builder.add_right_voltage(0);
-  builder.add_left_high(dt_config_.default_high_gear);
-  builder.add_right_high(dt_config_.default_high_gear);
-  return builder.Finish();
+void DrivetrainLoop::Zero(OutputStatic *output) {
+  output->set_left_voltage(0);
+  output->set_right_voltage(0);
+  output->set_left_high(dt_config_.default_high_gear);
+  output->set_right_high(dt_config_.default_high_gear);
 }
 
 }  // namespace frc::control_loops::drivetrain

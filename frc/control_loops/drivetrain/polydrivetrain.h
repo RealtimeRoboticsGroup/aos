@@ -14,6 +14,7 @@
 #include "frc/control_loops/drivetrain/drivetrain_position_generated.h"
 #include "frc/control_loops/drivetrain/drivetrain_states.h"
 #include "frc/control_loops/drivetrain/drivetrain_status_generated.h"
+#include "frc/control_loops/drivetrain/drivetrain_status_static.h"
 #include "frc/control_loops/drivetrain/gear.h"
 #include "frc/control_loops/polytope.h"
 #include "frc/control_loops/state_feedback_loop.h"
@@ -49,11 +50,9 @@ class PolyDrivetrain {
 
   void SetOutput(::frc::control_loops::drivetrain::OutputT *output);
 
-  flatbuffers::Offset<PolyDriveLogging> PopulateStatus(
-      flatbuffers::FlatBufferBuilder *fbb);
+  void PopulateStatus(PolyDriveLoggingStatic *status) const;
 
-  flatbuffers::Offset<CIMLogging> PopulateShiftingStatus(
-      flatbuffers::FlatBufferBuilder *fbb);
+  void PopulateShiftingStatus(CIMLoggingStatic *status) const;
 
   // Computes the next state of a shifter given the current state and the
   // requested state.
@@ -418,32 +417,24 @@ void PolyDrivetrain<Scalar>::SetOutput(
 }
 
 template <typename Scalar>
-flatbuffers::Offset<PolyDriveLogging> PolyDrivetrain<Scalar>::PopulateStatus(
-    flatbuffers::FlatBufferBuilder *fbb) {
-  PolyDriveLogging::Builder builder(*fbb);
-
-  builder.add_goal_left_velocity(goal_left_velocity_);
-  builder.add_goal_right_velocity(goal_right_velocity_);
-  builder.add_ff_left_voltage(ff_volts_(0, 0));
-  builder.add_ff_right_voltage(ff_volts_(1, 0));
-
-  return builder.Finish();
+void PolyDrivetrain<Scalar>::PopulateStatus(
+    PolyDriveLoggingStatic *status) const {
+  status->set_goal_left_velocity(goal_left_velocity_);
+  status->set_goal_right_velocity(goal_right_velocity_);
+  status->set_ff_left_voltage(ff_volts_(0, 0));
+  status->set_ff_right_voltage(ff_volts_(1, 0));
 }
 
 template <typename Scalar>
-flatbuffers::Offset<CIMLogging> PolyDrivetrain<Scalar>::PopulateShiftingStatus(
-    flatbuffers::FlatBufferBuilder *fbb) {
-  CIMLogging::Builder builder(*fbb);
+void PolyDrivetrain<Scalar>::PopulateShiftingStatus(
+    CIMLoggingStatic *status) const {
+  status->set_left_in_gear(IsInGear(left_gear_));
+  status->set_left_motor_speed(left_motor_speed_);
+  status->set_left_velocity(current_left_velocity_);
 
-  builder.add_left_in_gear(IsInGear(left_gear_));
-  builder.add_left_motor_speed(left_motor_speed_);
-  builder.add_left_velocity(current_left_velocity_);
-
-  builder.add_right_in_gear(IsInGear(right_gear_));
-  builder.add_right_motor_speed(right_motor_speed_);
-  builder.add_right_velocity(current_right_velocity_);
-
-  return builder.Finish();
+  status->set_right_in_gear(IsInGear(right_gear_));
+  status->set_right_motor_speed(right_motor_speed_);
+  status->set_right_velocity(current_right_velocity_);
 }
 
 }  // namespace frc::control_loops::drivetrain

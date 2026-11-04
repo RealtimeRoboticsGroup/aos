@@ -780,6 +780,7 @@ cc_test(
     ],
     deps = [
         ":drivetrain_test_lib",
+        "//aos/flatbuffers:builder",
         "//aos/testing:googletest",
         "//aos/testing:random_seed",
         "//frc/control_loops:quaternion_utils",

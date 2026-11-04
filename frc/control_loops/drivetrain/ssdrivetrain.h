@@ -10,7 +10,7 @@
 #include "frc/control_loops/drivetrain/drivetrain_goal_generated.h"
 #include "frc/control_loops/drivetrain/drivetrain_output_generated.h"
 #include "frc/control_loops/drivetrain/drivetrain_states.h"
-#include "frc/control_loops/drivetrain/drivetrain_status_generated.h"
+#include "frc/control_loops/drivetrain/drivetrain_status_static.h"
 #include "frc/control_loops/drivetrain/localizer.h"
 #include "frc/control_loops/polytope.h"
 #include "frc/control_loops/state_feedback_loop.h"
@@ -36,7 +36,7 @@ class DrivetrainMotorsSS {
 
   void SetOutput(::frc::control_loops::drivetrain::OutputT *output) const;
   void PopulateStatus(
-      ::frc::control_loops::drivetrain::StatusBuilder *builder) const;
+      ::frc::control_loops::drivetrain::StatusStatic *status) const;
 
  private:
   void PolyCapU(Eigen::Matrix<double, 2, 1> *U);

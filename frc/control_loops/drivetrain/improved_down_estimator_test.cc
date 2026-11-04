@@ -8,6 +8,7 @@
 #include "gtest/gtest.h"
 #include <Eigen/Geometry>
 
+#include "aos/flatbuffers/builder.h"
 #include "aos/testing/random_seed.h"
 #include "frc/control_loops/drivetrain/drivetrain_test_lib.h"
 #include "frc/control_loops/quaternion_utils.h"
@@ -92,13 +93,10 @@ TEST(DownEstimatorTest, UkfEulerStatus) {
   EXPECT_FLOAT_EQ(kYaw, dtukf.yaw());
   const Eigen::Quaterniond expected(Eigen::AngleAxis<double>(kPitch, uy) *
                                     Eigen::AngleAxis<double>(kRoll, ux));
-  flatbuffers::FlatBufferBuilder fbb;
-  fbb.ForceDefaults(true);
-  fbb.Finish(dtukf.PopulateStatus(&fbb, now));
-
-  aos::FlatbufferDetachedBuffer<drivetrain::DownEstimatorState> state(
-      fbb.Release());
-  EXPECT_EQ(kPitch, state.message().longitudinal_pitch());
+  aos::fbs::Builder<drivetrain::DownEstimatorStateStatic> state(
+      std::make_unique<aos::fbs::AlignedVectorAllocator>());
+  dtukf.PopulateStatus(state.get(), now);
+  EXPECT_EQ(kPitch, state.AsFlatbufferSpan().message().longitudinal_pitch());
   // The longitudinal pitch is not actually the same number as the roll, so we
   // don't check it here.
 

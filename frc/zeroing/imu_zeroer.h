@@ -3,7 +3,7 @@
 
 #include <optional>
 
-#include "frc/control_loops/drivetrain/drivetrain_status_generated.h"
+#include "frc/control_loops/drivetrain/drivetrain_status_static.h"
 #include "frc/wpilib/imu_generated.h"
 #include "frc/zeroing/averager.h"
 
@@ -47,8 +47,8 @@ class ImuZeroer {
   std::optional<Eigen::Vector3d> ZeroedGyro() const;
   std::optional<Eigen::Vector3d> ZeroedAccel() const;
 
-  flatbuffers::Offset<control_loops::drivetrain::ImuZeroerState> PopulateStatus(
-      flatbuffers::FlatBufferBuilder *fbb) const;
+  void PopulateStatus(
+      control_loops::drivetrain::ImuZeroerStateStatic *state) const;
 
  private:
   // Maximum magnitude we allow the gyro zero to have--this is used to prevent

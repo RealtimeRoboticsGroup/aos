@@ -3,7 +3,7 @@
 
 #include "aos/events/event_loop.h"
 #include "frc/control_loops/drivetrain/drivetrain_config.h"
-#include "frc/control_loops/drivetrain/drivetrain_status_generated.h"
+#include "frc/control_loops/drivetrain/drivetrain_status_static.h"
 #include "frc/control_loops/drivetrain/hybrid_ekf.h"
 #include "frc/control_loops/pose.h"
 
@@ -81,22 +81,19 @@ class LocalizerInterface {
   virtual void ResetPosition(::aos::monotonic_clock::time_point t, double x,
                              double y, double theta, double theta_uncertainty,
                              bool reset_theta) = 0;
-  flatbuffers::Offset<LocalizerState> PopulateStatus(
-      flatbuffers::FlatBufferBuilder *fbb) {
-    LocalizerState::Builder builder(*fbb);
-    builder.add_x(x());
-    builder.add_y(y());
-    builder.add_theta(theta());
-    builder.add_left_velocity(left_velocity());
-    builder.add_right_velocity(right_velocity());
-    builder.add_left_encoder(left_encoder());
-    builder.add_right_encoder(right_encoder());
-    builder.add_left_voltage_error(left_voltage_error());
-    builder.add_right_voltage_error(right_voltage_error());
-    builder.add_angular_error(angular_error());
-    builder.add_longitudinal_velocity_offset(longitudinal_velocity_offset());
-    builder.add_lateral_velocity(lateral_velocity());
-    return builder.Finish();
+  void PopulateStatus(LocalizerStateStatic *state) {
+    state->set_x(x());
+    state->set_y(y());
+    state->set_theta(theta());
+    state->set_left_velocity(left_velocity());
+    state->set_right_velocity(right_velocity());
+    state->set_left_encoder(left_encoder());
+    state->set_right_encoder(right_encoder());
+    state->set_left_voltage_error(left_voltage_error());
+    state->set_right_voltage_error(right_voltage_error());
+    state->set_angular_error(angular_error());
+    state->set_longitudinal_velocity_offset(longitudinal_velocity_offset());
+    state->set_lateral_velocity(lateral_velocity());
   }
   virtual Ekf::State Xhat() const = 0;
   // There are several subtly different norms floating around for state
