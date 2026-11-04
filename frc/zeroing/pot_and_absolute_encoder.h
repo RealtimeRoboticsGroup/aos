@@ -44,6 +44,7 @@ class PotAndAbsoluteEncoderZeroingEstimator
   // Returns information about our current state.
   virtual flatbuffers::Offset<State> GetEstimatorState(
       flatbuffers::FlatBufferBuilder *fbb) const override;
+  void GetEstimatorState(PotAndAbsoluteEncoderEstimatorStateStatic *fbs) const;
 
  private:
   struct PositionStruct {

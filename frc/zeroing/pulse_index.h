@@ -37,6 +37,7 @@ class PulseIndexZeroingEstimator
   // Returns information about our current state.
   virtual flatbuffers::Offset<State> GetEstimatorState(
       flatbuffers::FlatBufferBuilder *fbb) const override;
+  void GetEstimatorState(IndexEstimatorStateStatic *fbs) const;
 
   void TriggerError() override { error_ = true; }
 

@@ -18,14 +18,6 @@
 
 namespace frc::control_loops::swerve {
 
-inline void PopulateSwerveModuleRotation(
-    SwerveModuleStatusStatic *swerve_module_table,
-    const frc::control_loops::AbsoluteEncoderProfiledJointStatus
-        *rotation_status) {
-  auto rotation = swerve_module_table->add_rotation();
-  ABSL_CHECK(rotation->FromFlatbuffer(rotation_status));
-}
-
 // Handles the translation and rotation current for each swerve module
 class SwerveControlLoops
     : public ::frc::controls::ControlLoop<Goal, Position, StatusStatic,

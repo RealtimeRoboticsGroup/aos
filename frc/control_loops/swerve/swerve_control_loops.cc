@@ -75,18 +75,6 @@ void SwerveControlLoops::RunIteration(
   const double back_right_voltage = back_right_.UpdateController(disabled);
   back_right_.UpdateObserver(back_right_voltage);
   (void)goal, (void)position;
-  aos::FlatbufferFixedAllocatorArray<
-      frc::control_loops::AbsoluteEncoderProfiledJointStatus, 512>
-      front_left_status_buffer, front_right_status_buffer,
-      back_left_status_buffer, back_right_status_buffer;
-  front_left_status_buffer.Finish(
-      front_left_.MakeStatus(front_left_status_buffer.fbb()));
-  front_right_status_buffer.Finish(
-      front_right_.MakeStatus(front_right_status_buffer.fbb()));
-  back_left_status_buffer.Finish(
-      back_left_.MakeStatus(back_left_status_buffer.fbb()));
-  back_right_status_buffer.Finish(
-      back_right_.MakeStatus(back_right_status_buffer.fbb()));
 
   if (output_builder != nullptr) {
     OutputStatic *output = output_builder->get();
@@ -118,21 +106,14 @@ void SwerveControlLoops::RunIteration(
   if (status_builder != nullptr) {
     StatusStatic *status = status_builder->get();
 
-    auto front_left_status = status->add_front_left_status();
-    PopulateSwerveModuleRotation(front_left_status,
-                                 &front_left_status_buffer.message());
+    front_left_.PopulateStatus(status->add_front_left_status()->add_rotation());
 
-    auto front_right_status = status->add_front_right_status();
-    PopulateSwerveModuleRotation(front_right_status,
-                                 &front_right_status_buffer.message());
+    front_right_.PopulateStatus(
+        status->add_front_right_status()->add_rotation());
 
-    auto back_left_status = status->add_back_left_status();
-    PopulateSwerveModuleRotation(back_left_status,
-                                 &back_left_status_buffer.message());
+    back_left_.PopulateStatus(status->add_back_left_status()->add_rotation());
 
-    auto back_right_status = status->add_back_right_status();
-    PopulateSwerveModuleRotation(back_right_status,
-                                 &back_right_status_buffer.message());
+    back_right_.PopulateStatus(status->add_back_right_status()->add_rotation());
 
     // Ignore the return value of Send
     status_builder->CheckOk(status_builder->Send());

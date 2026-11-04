@@ -123,4 +123,13 @@ HallEffectAndPositionZeroingEstimator::GetEstimatorState(
   return builder.Finish();
 }
 
+void HallEffectAndPositionZeroingEstimator::GetEstimatorState(
+    HallEffectAndPositionEstimatorStateStatic *fbs) const {
+  fbs->set_error(error_);
+  fbs->set_zeroed(zeroed_);
+  fbs->set_encoder(position_);
+  fbs->set_high_long_enough(high_long_enough_);
+  fbs->set_offset(offset_);
+}
+
 }  // namespace frc::zeroing

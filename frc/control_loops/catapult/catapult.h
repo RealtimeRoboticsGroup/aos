@@ -45,13 +45,12 @@ class Catapult {
   double estimated_position() const { return catapult_.estimated_position(); }
 
   // Runs either the MPC or the profiled subsystem depending on if we are
-  // shooting or not.  Returns the status.
-  const flatbuffers::Offset<
-      frc::control_loops::PotAndAbsoluteEncoderProfiledJointStatus>
-  Iterate(const CatapultGoal *catapult_goal,
-          const PotAndAbsolutePosition *position, double battery_voltage,
-          double *catapult_voltage, bool fire,
-          flatbuffers::FlatBufferBuilder *fbb);
+  // shooting or not.  Populates status.
+  void Iterate(
+      const CatapultGoal *catapult_goal, const PotAndAbsolutePosition *position,
+      double battery_voltage, double *catapult_voltage, bool fire,
+      frc::control_loops::PotAndAbsoluteEncoderProfiledJointStatusStatic
+          *status);
 
  private:
   PotAndAbsoluteEncoderSubsystem catapult_;

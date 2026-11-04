@@ -112,4 +112,14 @@ PulseIndexZeroingEstimator::GetEstimatorState(
   return builder.Finish();
 }
 
+void PulseIndexZeroingEstimator::GetEstimatorState(
+    IndexEstimatorStateStatic *fbs) const {
+  fbs->set_error(error_);
+  fbs->set_zeroed(zeroed_);
+  fbs->set_position(position_);
+  fbs->set_min_index_position(min_index_position_);
+  fbs->set_max_index_position(max_index_position_);
+  fbs->set_index_pulses_seen(IndexPulseCount());
+}
+
 }  // namespace frc::zeroing

@@ -111,9 +111,9 @@ class ProfiledSubsystem {
   }
 
   // Returns the current internal estimator state for logging.
-  flatbuffers::Offset<typename ZeroingEstimator::State> EstimatorState(
-      flatbuffers::FlatBufferBuilder *fbb, int index) {
-    return estimators_[index].GetEstimatorState(fbb);
+  template <typename StateStatic>
+  void EstimatorState(StateStatic *state, int index) {
+    estimators_[index].GetEstimatorState(state);
   }
 
   // Sets the maximum voltage that will be commanded by the loop.
@@ -172,9 +172,9 @@ class SingleDOFProfiledSubsystem
   // move the state to match.
   void UpdateObserver(double voltage);
 
-  // Fills out the ProfiledJointStatus structure with the current state.
-  template <class StatusTypeBuilder>
-  StatusTypeBuilder BuildStatus(flatbuffers::FlatBufferBuilder *fbb);
+  // Fills out the static flatbuffer ProfiledJointStatus with the current state.
+  template <class StatusTypeStatic>
+  void PopulateStatus(StatusTypeStatic *status);
 
   // Forces the current goal to the provided goal, bypassing the profiler.
   void ForceGoal(double goal, double goal_velocity = 0.0);
@@ -278,37 +278,29 @@ void SingleDOFProfiledSubsystem<ZeroingEstimator, Profile>::UpdateOffset(
 }
 
 template <class ZeroingEstimator, class Profile>
-template <class StatusTypeBuilder>
-StatusTypeBuilder
-SingleDOFProfiledSubsystem<ZeroingEstimator, Profile>::BuildStatus(
-    flatbuffers::FlatBufferBuilder *fbb) {
-  flatbuffers::Offset<typename ZeroingEstimator::State> estimator_state =
-      this->EstimatorState(fbb, 0);
+template <class StatusTypeStatic>
+void SingleDOFProfiledSubsystem<ZeroingEstimator, Profile>::PopulateStatus(
+    StatusTypeStatic *status) {
+  this->EstimatorState(status->add_estimator_state(), 0);
 
-  StatusTypeBuilder builder(*fbb);
+  status->set_zeroed(this->zeroed());
 
-  builder.add_zeroed(this->zeroed());
-  // We don't know, so default to the bad case.
-
-  builder.add_position(this->X_hat_(0, 0));
-  builder.add_velocity(this->X_hat_(1, 0));
-  builder.add_goal_position(this->goal(0, 0));
-  builder.add_goal_velocity(this->goal(1, 0));
-  builder.add_unprofiled_goal_position(this->unprofiled_goal(0, 0));
-  builder.add_unprofiled_goal_velocity(this->unprofiled_goal(1, 0));
-  builder.add_voltage_error(this->X_hat_(2, 0));
-  builder.add_calculated_velocity(
+  status->set_position(this->X_hat_(0, 0));
+  status->set_velocity(this->X_hat_(1, 0));
+  status->set_goal_position(this->goal(0, 0));
+  status->set_goal_velocity(this->goal(1, 0));
+  status->set_unprofiled_goal_position(this->unprofiled_goal(0, 0));
+  status->set_unprofiled_goal_velocity(this->unprofiled_goal(1, 0));
+  status->set_voltage_error(this->X_hat_(2, 0));
+  status->set_calculated_velocity(
       (position() - last_position_) /
       ::aos::time::DurationInSeconds(this->loop_->plant().coefficients().dt));
 
-  builder.add_estimator_state(estimator_state);
-
   Eigen::Matrix<double, 3, 1> error = this->controller().error();
-  builder.add_position_power(this->controller().controller().K(0, 0) *
+  status->set_position_power(this->controller().controller().K(0, 0) *
                              error(0, 0));
-  builder.add_velocity_power(this->controller().controller().K(0, 1) *
+  status->set_velocity_power(this->controller().controller().K(0, 1) *
                              error(1, 0));
-  return builder;
 }
 
 template <class ZeroingEstimator, class Profile>

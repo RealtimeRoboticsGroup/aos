@@ -391,19 +391,13 @@ class Subsystem
 
     double output_voltage;
 
-    // The subsystem builds its status with a FlatBufferBuilder, so build it
-    // here and copy it into the Status.
-    FBB status_fbb;
-    status_fbb.Finish(subsystem_.Iterate(
+    subsystem_.Iterate(
         unsafe_goal == nullptr
             ? nullptr
             : flatbuffers::GetRoot<StaticZeroingSingleDOFProfiledSubsystemGoal>(
                   fbb.GetBufferPointer()),
         position->position(), output == nullptr ? nullptr : &output_voltage,
-        &status_fbb));
-    ABSL_CHECK(status->get()->add_status()->FromFlatbuffer(
-        *flatbuffers::GetRoot<typename SZSDPS::ProfiledJointStatus>(
-            status_fbb.GetBufferPointer())));
+        status->get()->add_status());
     ABSL_CHECK_EQ(status->Send(), aos::RawSender::Error::kOk);
     if (output != nullptr) {
       output->get()->set_output(output_voltage);

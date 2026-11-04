@@ -165,6 +165,11 @@ class RelativeEncoderZeroingEstimator
     return builder.Finish();
   }
 
+  void GetEstimatorState(RelativeEncoderEstimatorStateStatic *fbs) const {
+    fbs->set_error(error_);
+    fbs->set_position(position_);
+  }
+
  private:
   // Position from encoder relative to start
   double position_ = 0;

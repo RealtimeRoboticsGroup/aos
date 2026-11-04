@@ -37,6 +37,7 @@ class HallEffectAndPositionZeroingEstimator
   // Returns information about our current state.
   virtual flatbuffers::Offset<State> GetEstimatorState(
       flatbuffers::FlatBufferBuilder *fbb) const override;
+  void GetEstimatorState(HallEffectAndPositionEstimatorStateStatic *fbs) const;
 
  private:
   // Sets the minimum and maximum posedge position values.
