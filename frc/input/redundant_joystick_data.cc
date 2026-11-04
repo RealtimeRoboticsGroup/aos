@@ -11,9 +11,9 @@ RedundantData::RedundantData(const Data &data) : joystick_map_(), data_(data) {
   }
 
   for (int i = 0; i < JoystickFeature::kJoysticks; i++) {
-    ButtonLocation id_bit0_location(i + 1, kIdBit0Button);
-    ButtonLocation id_bit1_location(i + 1, kIdBit1Button);
-    ButtonLocation redundant_bit_location(i + 1, kRedundantBitButton);
+    ButtonLocation id_bit0_location(i, kIdBit0Button);
+    ButtonLocation id_bit1_location(i, kIdBit1Button);
+    ButtonLocation redundant_bit_location(i, kRedundantBitButton);
 
     int id_bit0 = data_.IsPressed(id_bit0_location);
     int id_bit1 = data_.IsPressed(id_bit1_location);
@@ -25,7 +25,7 @@ RedundantData::RedundantData(const Data &data) : joystick_map_(), data_(data) {
 
     int packed_joystick_number = (id_bit1 << 1u) | (id_bit0 << 0u);
 
-    joystick_map_.at(packed_joystick_number) = i + 1;
+    joystick_map_.at(packed_joystick_number) = i;
   }
 };
 

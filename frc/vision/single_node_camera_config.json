@@ -54,7 +54,7 @@
       "name": "/frc",
       "type": "frc.JoystickState",
       "source_node": "orin",
-      "max_size": 256
+      "max_size": 1024
     },
     {
       "name": "/frc",

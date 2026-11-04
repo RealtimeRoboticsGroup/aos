@@ -115,50 +115,6 @@ cc_library(
     ),
 ]
 
-cc_binary(
-    name = "simple_receiver.elf",
-    srcs = [
-        "simple_receiver.cc",
-    ],
-    copts = ["-Wno-type-limits"],
-    target_compatible_with = ["@platforms//os:none"],
-    deps = [
-        ":util",
-        "//motors/core",
-        "//motors/peripheral:adc",
-        "//motors/peripheral:can",
-        "//motors/print:usb",
-        "//motors/seems_reasonable:drivetrain_lib",
-        "//motors/seems_reasonable:spring",
-    ],
-)
-
-hex_from_elf(
-    name = "simpler_receiver",
-    target_compatible_with = ["@platforms//os:none"],
-)
-
-cc_binary(
-    name = "simpler_receiver.elf",
-    srcs = [
-        "simpler_receiver.cc",
-    ],
-    copts = ["-Wno-type-limits"],
-    target_compatible_with = ["@platforms//os:none"],
-    deps = [
-        ":util",
-        "//motors/core",
-        "//motors/peripheral:configuration",
-        "//motors/print:usb",
-        "//motors/seems_reasonable:drivetrain_lib",
-    ],
-)
-
-hex_from_elf(
-    name = "simple_receiver",
-    target_compatible_with = ["@platforms//os:none"],
-)
-
 py_library(
     name = "python_init",
     srcs = ["__init__.py"],

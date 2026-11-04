@@ -3,19 +3,36 @@ load("//tools/build_rules:clean_dep.bzl", "clean_dep")
 
 def _mkdocs_impl(ctx):
     output_file = ctx.actions.declare_file(ctx.attr.name + ".tar")
+
+    # mkdocs only looks for markdown in the docs/ directory next to the
+    # config, so generated srcs (which live in bazel-out) would be silently
+    # left out.  Stage the config and all the srcs into one tree instead.
+    root = ctx.attr.name + "_root/"
+    config = ctx.actions.declare_file(root + "mkdocs.yaml")
+    ctx.actions.symlink(output = config, target_file = ctx.file.config)
+    staged_srcs = []
+    seen = {}
+    for src in ctx.files.srcs:
+        if src.basename in seen:
+            fail("Duplicate markdown file name %s: %s and %s" % (src.basename, seen[src.basename].short_path, src.short_path))
+        seen[src.basename] = src
+        staged = ctx.actions.declare_file(root + "docs/" + src.basename)
+        ctx.actions.symlink(output = staged, target_file = src)
+        staged_srcs.append(staged)
+
     build_args = ctx.actions.args()
     build_args.add("build")
     site_subdir = "site"
     build_args.add("-f")
-    build_args.add_all(ctx.files.config)
+    build_args.add(config)
     build_args.add("--site-dir")
     build_args.add(site_subdir)
-    site_dir = ctx.files.config[0].dirname + "/" + site_subdir
+    site_dir = config.dirname + "/" + site_subdir
     ctx.actions.run(
         mnemonic = "MkDocsBuild",
         executable = ctx.executable._mkdocs,
         arguments = [build_args],
-        inputs = ctx.files.srcs + ctx.files.config,
+        inputs = staged_srcs + [config],
         env = {"OUTPUT": output_file.path, "SITE_DIR": site_dir},
         outputs = [output_file],
     )
@@ -26,7 +43,7 @@ _mkdocs = rule(
     attrs = {
         "config": attr.label(
             doc = "mkdocs.yaml configuration file to use for the documentation.",
-            allow_files = [".yaml"],
+            allow_single_file = [".yaml"],
             mandatory = True,
         ),
         "srcs": attr.label_list(

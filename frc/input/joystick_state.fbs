@@ -1,5 +1,7 @@
 namespace frc;
 
+attribute "static_length";
+
 enum MatchType : byte { kNone, kPractice, kQualification, kElimination }
 
 table Joystick {
@@ -7,8 +9,7 @@ table Joystick {
   buttons:ushort (id: 0);
 
   // The 6 joystick axes.
-  // TODO: Should have size of 6
-  axis:[double] (id: 1);
+  axis:[double] (id: 1, static_length: 6);
 
   // The POV axis.
   pov:int (id: 2);
@@ -19,8 +20,7 @@ enum Alliance : byte { kRed, kBlue, kInvalid }
 // This message is checked by all control loops to make sure that the
 // joystick code hasn't died.  It is published on "/aos"
 table JoystickState {
-  //TODO: should have fixed size.
-  joysticks:[Joystick] (id: 0);
+  joysticks:[Joystick] (id: 0, static_length: 6);
 
   test_mode:bool (id: 1);
   fms_attached:bool (id: 2);
@@ -44,8 +44,9 @@ table JoystickState {
   // Color of our current alliance.
   alliance:Alliance = kInvalid (id: 9);
 
-  // String corresponding to the game data string
-  game_data:string (id: 10);
+  // String corresponding to the game data string.  The HAL caps it at 64
+  // bytes.
+  game_data:string (id: 10, static_length: 64);
 
   // Driver station location.
   location:ubyte (id: 11);
@@ -53,7 +54,8 @@ table JoystickState {
   match_number:int (id: 12);
   replay_number:int (id: 13);
   match_type:MatchType (id: 14);
-  event_name:string (id: 15);
+  // The HAL caps this at 64 bytes, including the null terminator.
+  event_name:string (id: 15, static_length: 64);
   match_time:int = -1 (id: 16);
   ds_attached:bool (id: 17);
   emergency_stop:bool (id: 18);

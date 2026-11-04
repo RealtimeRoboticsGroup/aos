@@ -1,30 +1,23 @@
 #ifndef FRC_CONTROL_LOOPS_DRIVETRAIN_POLYDRIVETRAIN_H_
 #define FRC_CONTROL_LOOPS_DRIVETRAIN_POLYDRIVETRAIN_H_
 
+#include <numbers>
+
 #include "aos/commonmath.h"
+#include "aos/logging/logging.h"
 #include "aos/macros.h"
 #include "frc/control_loops/coerce_goal.h"
-#include "frc/control_loops/drivetrain/gear.h"
-#include "frc/control_loops/polytope.h"
-#if !AOS_OS_NONE
-#include "aos/logging/logging.h"
 #include "frc/control_loops/control_loops_generated.h"
+#include "frc/control_loops/drivetrain/drivetrain_config.h"
 #include "frc/control_loops/drivetrain/drivetrain_goal_generated.h"
 #include "frc/control_loops/drivetrain/drivetrain_output_generated.h"
 #include "frc/control_loops/drivetrain/drivetrain_position_generated.h"
-#include "frc/control_loops/drivetrain/drivetrain_status_generated.h"
-#include "frc/input/robot_state_generated.h"
-#else
-#include "frc/control_loops/drivetrain/drivetrain_goal_float_generated.h"
-#include "frc/control_loops/drivetrain/drivetrain_output_float_generated.h"
-#include "frc/control_loops/drivetrain/drivetrain_position_float_generated.h"
-#include "frc/control_loops/drivetrain/drivetrain_status_float_generated.h"
-#endif  // !AOS_OS_NONE
-#include <numbers>
-
-#include "frc/control_loops/drivetrain/drivetrain_config.h"
 #include "frc/control_loops/drivetrain/drivetrain_states.h"
+#include "frc/control_loops/drivetrain/drivetrain_status_generated.h"
+#include "frc/control_loops/drivetrain/gear.h"
+#include "frc/control_loops/polytope.h"
 #include "frc/control_loops/state_feedback_loop.h"
+#include "frc/input/robot_state_generated.h"
 
 namespace frc::control_loops::drivetrain {
 
@@ -409,11 +402,7 @@ void PolyDrivetrain<Scalar>::Update(Scalar voltage_battery) {
         (R_right / dt_config_.v)(0, 0) + (IsInGear(right_gear_) ? 0 : wiggle),
         -kTwelve, kTwelve);
     ff_volts_ = loop_->U();
-#if !AOS_OS_NONE
     loop_->mutable_U() *= kTwelve / voltage_battery;
-#else
-    (void)voltage_battery;
-#endif  // !AOS_OS_NONE
   }
 }
 
