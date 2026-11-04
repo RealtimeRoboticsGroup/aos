@@ -19,6 +19,8 @@ class Constant(object):
         self.value = value
         self.formatToType = {}
         self.formatToType['%f'] = "double"
+        # Enough digits for a double to round trip exactly.
+        self.formatToType['%.17g'] = "double"
         self.formatToType['%d'] = "int"
         if comment is None:
             self.comment = ""
