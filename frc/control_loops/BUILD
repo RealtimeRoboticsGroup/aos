@@ -304,6 +304,14 @@ static_flatbuffer(
     deps = [":can_device_error_fbs"],
 )
 
+static_flatbuffer(
+    name = "can_cancoder_fbs",
+    srcs = [
+        "can_cancoder.fbs",
+    ],
+    deps = [":can_device_error_fbs"],
+)
+
 cc_test(
     name = "position_sensor_sim_test",
     srcs = [

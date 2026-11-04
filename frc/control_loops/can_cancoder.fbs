@@ -1,0 +1,28 @@
+include "frc/control_loops/can_device_error.fbs";
+
+attribute "static_length";
+
+namespace frc.control_loops;
+
+table CANcoder {
+  // The CAN id of the CANcoder
+  id:int (id: 0);
+
+  // In radians, multiplied by the gear ratio passed to SerializePosition.
+  // This is relative to the absolute position at boot, and keeps counting
+  // through multiple rotations.  NaN if the CANcoder is disconnected.
+  position:float (id: 1);
+
+  // In radians, multiplied by the gear ratio passed to SerializePosition.
+  // This wraps every rotation of the sensor and survives a power cycle.  NaN if
+  // the CANcoder is disconnected.
+  absolute_position:float (id: 2);
+
+  // The timestamp of the measurement on the canivore clock in nanoseconds
+  // This will have less jitter than the
+  // timestamp of the message being sent out.
+  timestamp:int64 (id: 3);
+
+  // Everything which has gone wrong with this device since startup.
+  errors:[CANDeviceError] (id: 4, static_length: 2);
+}

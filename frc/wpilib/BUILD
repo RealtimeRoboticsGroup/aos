@@ -565,6 +565,25 @@ cc_library(
 )
 
 cc_library(
+    name = "cancoder",
+    srcs = [
+        "cancoder.cc",
+    ],
+    hdrs = [
+        "cancoder.h",
+    ],
+    deps = [
+        ":can_status",
+        ":talonfx",
+        "//aos/containers:error_list",
+        "//aos/logging",
+        "//frc/control_loops:can_cancoder_fbs",
+        "//third_party:phoenix6",
+        "@com_google_absl//absl/log:absl_check",
+    ],
+)
+
+cc_library(
     name = "can_drivetrain_writer",
     srcs = [
         "can_drivetrain_writer.cc",
