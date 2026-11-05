@@ -190,7 +190,7 @@ common --noenable_workspace --noincompatible_disallow_empty_glob
 # Disable warnings about using directories in Bazel.
 startup --host_jvm_args=-DBAZEL_TRACK_SOURCE_DIRECTORIES=1
 
-build --incompatible_strict_action_env --experimental_inmemory_dotd_files --experimental_inmemory_jdeps_files --experimental_remote_merkle_tree_cache --incompatible_allow_tags_propagation
+build --incompatible_strict_action_env --experimental_inmemory_dotd_files --experimental_inmemory_jdeps_files --incompatible_allow_tags_propagation
 
 # Builds on the buildbarn cluster running in the datacenter.  This will only
 # work inside the datacenter.
@@ -225,7 +225,6 @@ build:iwyu --@bazel_iwyu//:iwyu_mappings=//tools/iwyu:mappings
 build:iwyu --output_groups=report
 build:iwyu --@bazel_iwyu//:iwyu_opts=--no_fwd_decls,--cxx17ns,--verbose=3
 build:iwyu --strategy=iwyu=sandboxed,standalone
-common --experimental_remote_merkle_tree_cache
 
 common --@rules_cuda//cuda:compiler=clang
 

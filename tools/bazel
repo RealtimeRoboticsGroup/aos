@@ -24,7 +24,17 @@ if [[ -n "${BAZEL_OVERRIDE+x}" ]]; then
   exec "${BAZEL_OVERRIDE}" "$@"
 fi
 
-readonly VERSION="8.5.0"
+# Bazel 9 has no WORKSPACE mode.
+VERSION="9.3.1"
+for arg in "$@"; do
+  if [[ "${arg}" == "--" ]]; then
+    break
+  elif [[ "${arg}" == "--enable_workspace" ]]; then
+    VERSION="8.5.0"
+    break
+  fi
+done
+readonly VERSION
 
 readonly DOWNLOAD_DIR="${HOME}/.cache/bazel"
 # Directory to unpack bazel into.  This must change whenever bazel changes.
