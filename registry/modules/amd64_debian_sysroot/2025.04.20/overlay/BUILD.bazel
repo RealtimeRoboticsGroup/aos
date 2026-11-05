@@ -114,10 +114,6 @@ add_ld_library_path_for lib/x86_64-linux-gnu/libreadline.so.8.2
 
 set -ex
 
-echo "--- Available locales ---"
-locale -a
-echo "-------------------------"
-
 exec $(rlocation amd64_debian_sysroot/usr/lib/postgresql/15/bin/%s) "$@"
 """
 
