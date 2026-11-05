@@ -1,8 +1,16 @@
 diff --git a/BUILD b/BUILD
-index 451b695..bc46654 100644
+index 386fc58..3450ec2 100644
 --- a/BUILD
 +++ b/BUILD
-@@ -46,7 +46,8 @@
+@@ -30,6 +30,7 @@
+ #
+ # These are Bazel rules to build Ceres. It's currently in Alpha state, and does
+ # not support parameterization around threading choice or sparse backends.
++load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
+ load("//:bazel/ceres.bzl", "ceres_library")
+ 
+ ceres_library(
+@@ -46,7 +47,8 @@ cc_library(
      ]],
      copts = [
          "-Wno-sign-compare",
@@ -12,7 +20,7 @@ index 451b695..bc46654 100644
      ],
      includes = [
          "internal",
-@@ -157,6 +158,12 @@
+@@ -157,6 +159,12 @@ TEST_DEPS = [
      timeout = "short",
      srcs = ["internal/ceres/" + test_name + "_test.cc"],
      deps = TEST_DEPS,
@@ -25,7 +33,7 @@ index 451b695..bc46654 100644
  ) for test_name in CERES_TESTS]
  
  # Instantiate all the bundle adjustment tests. These are separate to
-@@ -180,7 +187,15 @@
+@@ -180,7 +188,15 @@ TEST_DEPS = [
  [cc_binary(
      name = benchmark_name,
      srcs = ["internal/ceres/" + benchmark_name + ".cc"],
@@ -42,11 +50,29 @@ index 451b695..bc46654 100644
      deps = TEST_DEPS + ["@google_benchmark//:benchmark"],
  
  ) for benchmark_name in [
+diff --git a/MODULE.bazel b/MODULE.bazel
+index d0060e6..c97c2f4 100644
+--- a/MODULE.bazel
++++ b/MODULE.bazel
+@@ -6,3 +6,4 @@ bazel_dep(name = "abseil-cpp", version = "20250127.0")
+ bazel_dep(name = "googletest", version = "1.16.0")
+ bazel_dep(name = "eigen", version = "3.4.0")
+ bazel_dep(name = "google_benchmark", version = "1.8.4")
++bazel_dep(name = "rules_cc", version = "0.2.13")
 diff --git a/bazel/ceres.bzl b/bazel/ceres.bzl
-index ed4d66d..be8948d 100644
+index aba3c9d..081972f 100644
 --- a/bazel/ceres.bzl
 +++ b/bazel/ceres.bzl
-@@ -34,6 +34,7 @@
+@@ -28,6 +28,8 @@
+ #
+ # Support for building Ceres Solver with a specific configuration.
+ 
++load("@rules_cc//cc:defs.bzl", "cc_library")
++
+ CERES_SRCS = ["internal/ceres/" + filename for filename in [
+     "accelerate_sparse.cc",
+     "array_utils.cc",
+@@ -64,6 +66,7 @@ CERES_SRCS = ["internal/ceres/" + filename for filename in [
      "dogleg_strategy.cc",
      "dynamic_compressed_row_jacobian_writer.cc",
      "dynamic_compressed_row_sparse_matrix.cc",
@@ -54,11 +80,32 @@ index ed4d66d..be8948d 100644
      "dynamic_sparse_normal_cholesky_solver.cc",
      "eigensparse.cc",
      "evaluation_callback.cc",
+@@ -160,7 +163,7 @@ def ceres_library(
+     else:
+         schur_sources = native.glob(["internal/ceres/generated/*.cc"])
+ 
+-    native.cc_library(
++    cc_library(
+         name = name,
+ 
+         # Internal sources, options, and dependencies.
+diff --git a/examples/BUILD b/examples/BUILD
+index dddc0f9..0777f7e 100644
+--- a/examples/BUILD
++++ b/examples/BUILD
+@@ -29,6 +29,7 @@
+ # Author: mierle@gmail.com (Keir Mierle)
+ 
+ 
++load("@rules_cc//cc:defs.bzl", "cc_binary")
+ 
+ EXAMPLE_DEPS = [
+     "//:ceres",
 diff --git a/internal/ceres/autodiff_test.cc b/internal/ceres/autodiff_test.cc
-index b50327cb..19adcae0 100644
+index 787adf8..e2a1027 100644
 --- a/internal/ceres/autodiff_test.cc
 +++ b/internal/ceres/autodiff_test.cc
-@@ -647,6 +647,10 @@ TEST(AutoDiff, VariadicAutoDiff) {
+@@ -648,6 +648,10 @@ TEST(AutoDiff, VariadicAutoDiff) {
    }
  }
  
@@ -69,7 +116,7 @@ index b50327cb..19adcae0 100644
  // This is fragile test that triggers the alignment bug on
  // i686-apple-darwin10-llvm-g++-4.2 (GCC) 4.2.1. It is quite possible,
  // that other combinations of operating system + compiler will
-@@ -671,5 +675,8 @@ TEST(AutoDiff, AlignedAllocationTest) {
+@@ -672,5 +676,8 @@ TEST(AutoDiff, AlignedAllocationTest) {
    // Need this to makes sure that x does not get optimized out.
    x[0] = x[0] + JetT(1.0);
  }
@@ -79,7 +126,7 @@ index b50327cb..19adcae0 100644
  
  }  // namespace ceres::internal
 diff --git a/internal/ceres/triplet_sparse_matrix_test.cc b/internal/ceres/triplet_sparse_matrix_test.cc
-index e145c1a2..bde9a6ed 100644
+index e145c1a..bde9a6e 100644
 --- a/internal/ceres/triplet_sparse_matrix_test.cc
 +++ b/internal/ceres/triplet_sparse_matrix_test.cc
 @@ -184,8 +184,15 @@ TEST(TripletSparseMatrix, AssignmentOperatorSelfAssignment) {
@@ -98,12 +145,3 @@ index e145c1a2..bde9a6ed 100644
  
    EXPECT_EQ(orig.num_rows(), 2);
    EXPECT_EQ(orig.num_cols(), 5);
-diff --git a/internal/ceres/triplet_sparse_matrix_test.cc b/internal/ceres/triplet_sparse_matrix_test.cc
-index e145c1a2..bde9a6ed 100644
---- a/MODULE.bazel
-+++ b/MODULE.bazel
-@@ -6,3 +6,4 @@
- bazel_dep(name = "googletest", version = "1.16.0")
- bazel_dep(name = "eigen", version = "3.4.0")
- bazel_dep(name = "google_benchmark", version = "1.8.4")
-+bazel_dep(name = "rules_cc", version = "0.2.13")

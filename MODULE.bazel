@@ -500,6 +500,8 @@ bazel_dep(name = "hedron_compile_commands", dev_dependency = True)
 archive_override(
     module_name = "hedron_compile_commands",
     integrity = "sha256-Q0UaMr8nHnukY1oH95ltU1UB8GbA/o/qsE+wyR3VmG4=",
+    patch_strip = 1,
+    patches = ["//third_party:hedron_compile_commands/0001-Load-py_binary-from-rules_python.patch"],
     strip_prefix = "bazel-compile-commands-extractor-daae6f40adfa5fdb7c89684cbe4d88b691c63b2d",
     urls = ["https://github.com/hedronvision/bazel-compile-commands-extractor/archive/daae6f40adfa5fdb7c89684cbe4d88b691c63b2d.tar.gz"],
 )

@@ -1196,7 +1196,7 @@
     },
     "@@bzlmodrio-ni+//:maven_cpp_deps.bzl%setup_bzlmodrio_ni_cpp_dependencies": {
       "general": {
-        "bzlTransitiveDigest": "Mv5VHKKUN5E7XjajNRVzSIcGh9qxmULeW6zdIJRNorM=",
+        "bzlTransitiveDigest": "T+PUMgpI2vL7rjeu63Ep2zI1VwvsUBqW0r8mwwWZ9/k=",
         "usagesDigest": "OCIA9NSglmIFnEwtqY5JINvczP3+i/hjZzmYb4/5Dnk=",
         "recordedInputs": [
           "REPO_MAPPING:bzlmodrio-ni+,bazel_tools bazel_tools"
@@ -1207,7 +1207,7 @@
             "attributes": {
               "url": "https://frcmaven.wpi.edu/release/edu/wpi/first/ni-libraries/chipobject/2025.2.0/chipobject-2025.2.0-headers.zip",
               "sha256": "5b0f685890fe02fc5da0c64a8b7755a1e4cc1debd107717673f17ba1c0e37742",
-              "build_file_content": "cc_library(\n    name = \"headers\",\n    hdrs = glob([\"**\"]),\n    includes = [\".\"],\n    visibility = [\"//visibility:public\"],\n)\n\nfilegroup(\n    name = \"header_files\",\n    srcs = glob([\"**\"]),\n    visibility = [\"//visibility:public\"],\n)\n"
+              "build_file_content": "load(\"@rules_cc//cc:cc_library.bzl\", \"cc_library\")\n\ncc_library(\n    name = \"headers\",\n    hdrs = glob([\"**\"]),\n    includes = [\".\"],\n    visibility = [\"//visibility:public\"],\n)\n\nfilegroup(\n    name = \"header_files\",\n    srcs = glob([\"**\"]),\n    visibility = [\"//visibility:public\"],\n)\n"
             }
           },
           "bazelrio_edu_wpi_first_ni-libraries_chipobject_linuxathena": {
@@ -1223,7 +1223,7 @@
             "attributes": {
               "url": "https://frcmaven.wpi.edu/release/edu/wpi/first/ni-libraries/visa/2025.2.0/visa-2025.2.0-headers.zip",
               "sha256": "fad1ef38ba5a709a91a933a5d521e7d146f1407edf29d987265f33d61f16da0c",
-              "build_file_content": "cc_library(\n    name = \"headers\",\n    hdrs = glob([\"**\"]),\n    includes = [\".\"],\n    visibility = [\"//visibility:public\"],\n)\n\nfilegroup(\n    name = \"header_files\",\n    srcs = glob([\"**\"]),\n    visibility = [\"//visibility:public\"],\n)\n"
+              "build_file_content": "load(\"@rules_cc//cc:cc_library.bzl\", \"cc_library\")\n\ncc_library(\n    name = \"headers\",\n    hdrs = glob([\"**\"]),\n    includes = [\".\"],\n    visibility = [\"//visibility:public\"],\n)\n\nfilegroup(\n    name = \"header_files\",\n    srcs = glob([\"**\"]),\n    visibility = [\"//visibility:public\"],\n)\n"
             }
           },
           "bazelrio_edu_wpi_first_ni-libraries_visa_linuxathena": {
@@ -1247,7 +1247,7 @@
             "attributes": {
               "url": "https://frcmaven.wpi.edu/release/edu/wpi/first/ni-libraries/netcomm/2025.2.0/netcomm-2025.2.0-headers.zip",
               "sha256": "9a652d8bffe6304ab80bedeabf74352421413b3751ff0e7eec54f6fe1262112a",
-              "build_file_content": "cc_library(\n    name = \"headers\",\n    hdrs = glob([\"**\"]),\n    includes = [\".\"],\n    visibility = [\"//visibility:public\"],\n)\n\nfilegroup(\n    name = \"header_files\",\n    srcs = glob([\"**\"]),\n    visibility = [\"//visibility:public\"],\n)\n"
+              "build_file_content": "load(\"@rules_cc//cc:cc_library.bzl\", \"cc_library\")\n\ncc_library(\n    name = \"headers\",\n    hdrs = glob([\"**\"]),\n    includes = [\".\"],\n    visibility = [\"//visibility:public\"],\n)\n\nfilegroup(\n    name = \"header_files\",\n    srcs = glob([\"**\"]),\n    visibility = [\"//visibility:public\"],\n)\n"
             }
           },
           "bazelrio_edu_wpi_first_ni-libraries_netcomm_linuxathena": {

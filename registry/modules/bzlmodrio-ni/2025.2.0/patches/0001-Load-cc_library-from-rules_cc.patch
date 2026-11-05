@@ -1,0 +1,15 @@
+diff --git a/maven_cpp_deps.bzl b/maven_cpp_deps.bzl
+index 061b9fc..795aa8f 100644
+--- a/maven_cpp_deps.bzl
++++ b/maven_cpp_deps.bzl
+@@ -1,7 +1,9 @@
+ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+ load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
+ 
+-cc_library_headers = """cc_library(
++cc_library_headers = """load("@rules_cc//cc:cc_library.bzl", "cc_library")
++
++cc_library(
+     name = "headers",
+     hdrs = glob(["**"]),
+     includes = ["."],

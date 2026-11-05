@@ -1,5 +1,9 @@
 {
     "integrity": "sha256-mKjkmA+R0EjckVnPxfEVKA0LXsWaWwHfBCK4hyEvpPA=",
     "strip_prefix": "RangeHTTPServer-9070394508a135789238a33259793f3c6f3c127a",
-    "url": "https://github.com/jkuszmaul/RangeHTTPServer/archive/9070394508a135789238a33259793f3c6f3c127a.zip"
+    "url": "https://github.com/jkuszmaul/RangeHTTPServer/archive/9070394508a135789238a33259793f3c6f3c127a.zip",
+    "patch_strip": 1,
+    "patches": {
+        "0001-Load-py_library-from-rules_python.patch": "sha256-V5As7gV5m90bhCxtJvTkm508Ok3wLuDgI9P3uHXll9E="
+    }
 }

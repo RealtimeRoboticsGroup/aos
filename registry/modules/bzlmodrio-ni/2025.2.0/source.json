@@ -1,4 +1,8 @@
 {
     "integrity": "sha256-//YsPLPoP5oNCgHxc5R3ycpemm+sBb4a1Z2vzThYAfc=",
-    "url": "https://github.com/wpilibsuite/bzlmodRio-ni/releases/download/2025.2.0/bzlmodRio-ni-2025.2.0.tar.gz"
+    "url": "https://github.com/wpilibsuite/bzlmodRio-ni/releases/download/2025.2.0/bzlmodRio-ni-2025.2.0.tar.gz",
+    "patch_strip": 1,
+    "patches": {
+        "0001-Load-cc_library-from-rules_cc.patch": "sha256-S4lxNqzwotf/oP9wE9K2WJT+0CFJClLe7kdFSTcj50s="
+    }
 }

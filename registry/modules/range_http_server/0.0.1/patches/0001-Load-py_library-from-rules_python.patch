@@ -1,0 +1,10 @@
+diff --git a/BUILD.bazel b/BUILD.bazel
+index 93c3d7b..bf978dd 100644
+--- a/BUILD.bazel
++++ b/BUILD.bazel
+@@ -1,3 +1,5 @@
++load("@rules_python//python:py_library.bzl", "py_library")
++
+ py_library(
+     name = "RangeHTTPServer",
+     srcs = ["RangeHTTPServer/__init__.py"],
