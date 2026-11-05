@@ -518,7 +518,7 @@ single_version_override(
     patches = ["third_party/websocketpp/websocketpp.patch"],
 )
 
-bazel_dep(name = "asio", version = "1.28.2")
+bazel_dep(name = "asio", version = "1.31.0")
 
 bazel_dep(name = "ctre_phoenix6_api_cpp_headers", version = "25.3.2", dev_dependency = True)
 bazel_dep(name = "ctre_phoenix6_tools_headers", version = "25.3.2", dev_dependency = True)
