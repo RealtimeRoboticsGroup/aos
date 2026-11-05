@@ -263,20 +263,19 @@ void DrivetrainUkf::UpdateIntegratedPositions(
   last_pos_vel_update_ = now;
 }
 
-flatbuffers::Offset<DownEstimatorState> DrivetrainUkf::PopulateStatus(
-    flatbuffers::FlatBufferBuilder *fbb, aos::monotonic_clock::time_point now) {
+void DrivetrainUkf::PopulateStatus(DownEstimatorStateStatic *state,
+                                   aos::monotonic_clock::time_point now) {
   // On everything but the first iteration, integrate the position/velocity
   // estimates.
   // TODO(james): Consider optionally disabling this to avoid excess CPU usage.
   UpdateIntegratedPositions(now);
 
-  DownEstimatorState::Builder builder(*fbb);
-  builder.add_quaternion_x(X_hat().x());
-  builder.add_quaternion_y(X_hat().y());
-  builder.add_quaternion_z(X_hat().z());
-  builder.add_quaternion_w(X_hat().w());
+  state->set_quaternion_x(X_hat().x());
+  state->set_quaternion_y(X_hat().y());
+  state->set_quaternion_z(X_hat().z());
+  state->set_quaternion_w(X_hat().w());
 
-  builder.add_yaw(aos::math::NormalizeAngle(yaw()));
+  state->set_yaw(aos::math::NormalizeAngle(yaw()));
 
   // Calculate the current pitch numbers to provide a more human-readable
   // debugging output.
@@ -286,41 +285,39 @@ flatbuffers::Offset<DownEstimatorState> DrivetrainUkf::PopulateStatus(
     const double xy_norm = robot_x_in_global_frame.block<2, 1>(0, 0).norm();
     const double pitch = std::atan2(-robot_x_in_global_frame.z(), xy_norm);
 
-    builder.add_longitudinal_pitch(pitch);
+    state->set_longitudinal_pitch(pitch);
   }
   {
     const Eigen::Vector3d robot_y_in_global_frame =
         X_hat() * Eigen::Vector3d::UnitY();
     const double xy_norm = robot_y_in_global_frame.block<2, 1>(0, 0).norm();
-    builder.add_lateral_pitch(std::atan2(robot_y_in_global_frame.z(), xy_norm));
+    state->set_lateral_pitch(std::atan2(robot_y_in_global_frame.z(), xy_norm));
   }
 
-  builder.add_position_x(pos_vel()(0, 0));
-  builder.add_position_y(pos_vel()(1, 0));
-  builder.add_position_z(pos_vel()(2, 0));
-  builder.add_velocity_x(pos_vel()(3, 0));
-  builder.add_velocity_y(pos_vel()(4, 0));
-  builder.add_velocity_z(pos_vel()(5, 0));
+  state->set_position_x(pos_vel()(0, 0));
+  state->set_position_y(pos_vel()(1, 0));
+  state->set_position_z(pos_vel()(2, 0));
+  state->set_velocity_x(pos_vel()(3, 0));
+  state->set_velocity_y(pos_vel()(4, 0));
+  state->set_velocity_z(pos_vel()(5, 0));
 
   {
     const Eigen::Vector3d last_accel_avg = avg_recent_accel();
-    builder.add_accel_x(last_accel_avg.x());
-    builder.add_accel_y(last_accel_avg.y());
-    builder.add_accel_z(last_accel_avg.z());
+    state->set_accel_x(last_accel_avg.x());
+    state->set_accel_y(last_accel_avg.y());
+    state->set_accel_z(last_accel_avg.z());
   }
 
   {
     const Eigen::Vector3d expected_accel = H(X_hat().coeffs());
-    builder.add_expected_accel_x(expected_accel.x());
-    builder.add_expected_accel_y(expected_accel.y());
-    builder.add_expected_accel_z(expected_accel.z());
+    state->set_expected_accel_x(expected_accel.x());
+    state->set_expected_accel_y(expected_accel.y());
+    state->set_expected_accel_z(expected_accel.z());
   }
 
-  builder.add_gravity_magnitude(gravity_magnitude());
+  state->set_gravity_magnitude(gravity_magnitude());
 
-  builder.add_consecutive_still(consecutive_still());
-
-  return builder.Finish();
+  state->set_consecutive_still(consecutive_still());
 }
 
 }  // namespace frc::control_loops::drivetrain

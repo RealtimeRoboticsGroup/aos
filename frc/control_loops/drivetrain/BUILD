@@ -137,6 +137,7 @@ flatbuffer_ts_library(
         "frc/control-loops/drivetrain.ts",
         "frc/control-loops/drivetrain/canposition.ts",
         "frc/control-loops.ts",
+        "frc/control-loops/candevice-error.ts",
         "frc/control-loops/cantalon-fx.ts",
     ],
     deps = ["//frc/control_loops:can_talonfx_ts_fbs"],
@@ -780,6 +781,7 @@ cc_test(
     ],
     deps = [
         ":drivetrain_test_lib",
+        "//aos/flatbuffers:builder",
         "//aos/testing:googletest",
         "//aos/testing:random_seed",
         "//frc/control_loops:quaternion_utils",

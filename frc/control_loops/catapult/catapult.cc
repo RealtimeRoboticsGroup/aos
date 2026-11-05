@@ -4,12 +4,11 @@
 
 namespace frc::control_loops::catapult {
 
-const flatbuffers::Offset<
-    frc::control_loops::PotAndAbsoluteEncoderProfiledJointStatus>
-Catapult::Iterate(const CatapultGoal *catapult_goal,
-                  const PotAndAbsolutePosition *position,
-                  double battery_voltage, double *catapult_voltage, bool fire,
-                  flatbuffers::FlatBufferBuilder *fbb) {
+void Catapult::Iterate(
+    const CatapultGoal *catapult_goal, const PotAndAbsolutePosition *position,
+    double battery_voltage, double *catapult_voltage, bool fire,
+    frc::control_loops::PotAndAbsoluteEncoderProfiledJointStatusStatic
+        *status) {
   const frc::control_loops::StaticZeroingSingleDOFProfiledSubsystemGoal
       *return_goal =
           catapult_goal != nullptr && catapult_goal->has_return_position()
@@ -136,7 +135,7 @@ Catapult::Iterate(const CatapultGoal *catapult_goal,
                                ? (*catapult_voltage * battery_voltage / 12.0)
                                : 0.0);
 
-  return catapult_.MakeStatus(fbb);
+  catapult_.PopulateStatus(status);
 }
 
 }  // namespace frc::control_loops::catapult

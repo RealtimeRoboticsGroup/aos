@@ -499,7 +499,7 @@ def WriteAngularSystem(params,
                                                  plant_type=plant_type,
                                                  observer_type=observer_type)
     loop_writer.AddConstant(
-        control_loop.Constant('kOutputRatio', '%f', angular_systems[0].G))
+        control_loop.Constant('kOutputRatio', '%.17g', angular_systems[0].G))
     loop_writer.AddConstant(
         control_loop.Constant('kFreeSpeed', '%f',
                               angular_systems[0].motor.free_speed))

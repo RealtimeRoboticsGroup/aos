@@ -44,6 +44,7 @@ class AbsoluteEncoderZeroingEstimator
   // Returns information about our current state.
   virtual flatbuffers::Offset<State> GetEstimatorState(
       flatbuffers::FlatBufferBuilder *fbb) const override;
+  void GetEstimatorState(AbsoluteEncoderEstimatorStateStatic *fbs) const;
 
  private:
   struct PositionStruct {

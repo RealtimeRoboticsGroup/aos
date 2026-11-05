@@ -1,6 +1,7 @@
 #ifndef FRC_WPILIB_TALONFX_MOTOR_H_
 #define FRC_WPILIB_TALONFX_MOTOR_H_
 
+#include <atomic>
 #include <chrono>
 #include <cinttypes>
 #include <vector>
@@ -10,6 +11,7 @@
 #include "ctre/phoenix6/TalonFX.hpp"
 
 #include "aos/commonmath.h"
+#include "aos/containers/error_list.h"
 #include "aos/init.h"
 #include "aos/logging/logging.h"
 #include "frc/control_loops/can_talonfx_static.h"
@@ -70,7 +72,11 @@ class TalonFX {
     return latest_timestamp.count();
   }
 
-  void RefreshNontimesyncedSignals() { device_temp_.Refresh(); };
+  // This doesn't block.  It runs in the sensor reading loops, so don't have
+  // Phoenix report errors to the driver station from it.
+  void RefreshNontimesyncedSignals() {
+    device_temp_.Refresh(/*reportError=*/false);
+  };
 
   void set_stator_current_limit(double stator_current_limit) {
     stator_current_limit_ = stator_current_limit;
@@ -89,6 +95,10 @@ class TalonFX {
   }
 
  private:
+  // Latches SETUP_FAILED if status says the motor is disconnected, and dies for
+  // any other failure.  See CheckCANSetupStatus.
+  void CheckSetupStatus(ctre::phoenix::StatusCode status, const char *action);
+
   ctre::phoenix6::hardware::TalonFX talon_;
   int device_id_;
 
@@ -104,6 +114,11 @@ class TalonFX {
 
   double stator_current_limit_;
   double supply_current_limit_;
+
+  // WriteConfigs can run on a different thread than SerializePosition.
+  std::atomic<bool> setup_failed_ = false;
+  // Only touched by SerializePosition.
+  ::aos::ErrorList<control_loops::CANDeviceError> errors_;
 };
 }  // namespace frc::wpilib
 #endif  // FRC_WPILIB_TALONFX_MOTOR_H_

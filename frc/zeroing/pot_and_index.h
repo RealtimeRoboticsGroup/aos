@@ -54,6 +54,7 @@ class PotAndIndexPulseZeroingEstimator
   // Returns information about our current state.
   virtual flatbuffers::Offset<State> GetEstimatorState(
       flatbuffers::FlatBufferBuilder *fbb) const override;
+  void GetEstimatorState(EstimatorStateStatic *fbs) const;
 
  private:
   // This function calculates the start position given the internal state and

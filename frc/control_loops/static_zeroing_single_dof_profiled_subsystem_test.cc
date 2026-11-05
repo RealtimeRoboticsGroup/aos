@@ -10,14 +10,14 @@
 #include "frc/control_loops/control_loop.h"
 #include "frc/control_loops/control_loop_test.h"
 #include "frc/control_loops/position_sensor_sim.h"
-#include "frc/control_loops/static_zeroing_single_dof_profiled_subsystem_test_absolute_encoder_status_generated.h"
+#include "frc/control_loops/static_zeroing_single_dof_profiled_subsystem_test_absolute_encoder_status_static.h"
 #include "frc/control_loops/static_zeroing_single_dof_profiled_subsystem_test_absolute_position_generated.h"
 #include "frc/control_loops/static_zeroing_single_dof_profiled_subsystem_test_integral_plant.h"
 #include "frc/control_loops/static_zeroing_single_dof_profiled_subsystem_test_plant.h"
-#include "frc/control_loops/static_zeroing_single_dof_profiled_subsystem_test_pot_and_absolute_encoder_status_generated.h"
+#include "frc/control_loops/static_zeroing_single_dof_profiled_subsystem_test_pot_and_absolute_encoder_status_static.h"
 #include "frc/control_loops/static_zeroing_single_dof_profiled_subsystem_test_pot_and_absolute_position_generated.h"
 #include "frc/control_loops/static_zeroing_single_dof_profiled_subsystem_test_subsystem_goal_generated.h"
-#include "frc/control_loops/static_zeroing_single_dof_profiled_subsystem_test_subsystem_output_generated.h"
+#include "frc/control_loops/static_zeroing_single_dof_profiled_subsystem_test_subsystem_output_static.h"
 #include "frc/zeroing/absolute_encoder.h"
 #include "frc/zeroing/continuous_absolute_encoder.h"
 #include "frc/zeroing/pot_and_absolute_encoder.h"
@@ -50,30 +50,40 @@ using aos::testing::ArtifactPath;
 struct PotAndAbsoluteEncoderTestParams {
   typedef zeroing::testing::SubsystemPotAndAbsoluteEncoderProfiledJointStatus
       Status;
+  typedef zeroing::testing::
+      SubsystemPotAndAbsoluteEncoderProfiledJointStatusStatic StatusStatic;
   typedef zeroing::testing::SubsystemPotAndAbsolutePosition Position;
   typedef PotAndAbsolutePosition RealPosition;
   typedef ::frc::control_loops::zeroing::testing::SubsystemGoal Goal;
   typedef ::frc::control_loops::zeroing::testing::SubsystemOutput Output;
+  typedef ::frc::control_loops::zeroing::testing::SubsystemOutputStatic
+      OutputStatic;
   static constexpr bool kRespectsHardstops = true;
   static constexpr bool kIsContinuous = false;
 };
 
 struct AbsoluteEncoderTestParams {
   typedef zeroing::testing::SubsystemAbsoluteEncoderProfiledJointStatus Status;
+  typedef zeroing::testing::SubsystemAbsoluteEncoderProfiledJointStatusStatic
+      StatusStatic;
   typedef zeroing::testing::SubsystemAbsolutePosition Position;
   typedef AbsolutePosition RealPosition;
   typedef zeroing::testing::SubsystemGoal Goal;
   typedef zeroing::testing::SubsystemOutput Output;
+  typedef zeroing::testing::SubsystemOutputStatic OutputStatic;
   static constexpr bool kRespectsHardstops = true;
   static constexpr bool kIsContinuous = false;
 };
 
 struct ContinuousAbsoluteEncoderTestParams {
   typedef zeroing::testing::SubsystemAbsoluteEncoderProfiledJointStatus Status;
+  typedef zeroing::testing::SubsystemAbsoluteEncoderProfiledJointStatusStatic
+      StatusStatic;
   typedef zeroing::testing::SubsystemAbsolutePosition Position;
   typedef AbsolutePosition RealPosition;
   typedef zeroing::testing::SubsystemGoal Goal;
   typedef zeroing::testing::SubsystemOutput Output;
+  typedef zeroing::testing::SubsystemOutputStatic OutputStatic;
   static constexpr bool kRespectsHardstops = false;
   static constexpr bool kIsContinuous = true;
 };
@@ -320,26 +330,28 @@ void TestIntakeSystemSimulation<SZSDPS_Continuous,
 // to wrap it.
 template <typename TestParams, typename SZSDPS>
 class Subsystem
-    : public ::frc::controls::ControlLoop<
-          typename TestParams::Goal, typename TestParams::Position,
-          typename TestParams::Status, typename TestParams::Output> {
+    : public ::frc::controls::ControlLoop<typename TestParams::Goal,
+                                          typename TestParams::Position,
+                                          typename TestParams::StatusStatic,
+                                          typename TestParams::OutputStatic> {
  public:
   typedef typename TestParams::Goal GoalType;
-  typedef typename TestParams::Status StatusType;
+  typedef typename TestParams::StatusStatic StatusType;
   typedef typename TestParams::Position PositionType;
-  typedef typename TestParams::Output OutputType;
+  typedef typename TestParams::OutputStatic OutputType;
 
   Subsystem(::aos::EventLoop *event_loop, const ::std::string &name)
-      : frc::controls::ControlLoop<
-            typename TestParams::Goal, typename TestParams::Position,
-            typename TestParams::Status, typename TestParams::Output>(
+      : frc::controls::ControlLoop<typename TestParams::Goal,
+                                   typename TestParams::Position,
+                                   typename TestParams::StatusStatic,
+                                   typename TestParams::OutputStatic>(
             event_loop, name),
         subsystem_(TestIntakeSystemValues<
                    typename SZSDPS::ZeroingEstimator>::make_params()) {}
 
   void RunIteration(const GoalType *unsafe_goal, const PositionType *position,
-                    typename ::aos::Sender<OutputType>::Builder *output,
-                    typename ::aos::Sender<StatusType>::Builder *status) {
+                    typename ::aos::Sender<OutputType>::StaticBuilder *output,
+                    typename ::aos::Sender<StatusType>::StaticBuilder *status) {
     if (this->WasReset()) {
       AOS_LOG(ERROR, "WPILib reset, restarting\n");
       subsystem_.Reset();
@@ -379,25 +391,17 @@ class Subsystem
 
     double output_voltage;
 
-    auto status_offset = subsystem_.Iterate(
+    subsystem_.Iterate(
         unsafe_goal == nullptr
             ? nullptr
             : flatbuffers::GetRoot<StaticZeroingSingleDOFProfiledSubsystemGoal>(
                   fbb.GetBufferPointer()),
         position->position(), output == nullptr ? nullptr : &output_voltage,
-        status->fbb());
-    typename StatusType::Builder subsystem_status_builder =
-        status->template MakeBuilder<StatusType>();
-
-    subsystem_status_builder.add_status(status_offset);
-    ABSL_CHECK_EQ(status->Send(subsystem_status_builder.Finish()),
-                  aos::RawSender::Error::kOk);
+        status->get()->add_status());
+    ABSL_CHECK_EQ(status->Send(), aos::RawSender::Error::kOk);
     if (output != nullptr) {
-      typename OutputType::Builder output_builder =
-          output->template MakeBuilder<OutputType>();
-      output_builder.add_output(output_voltage);
-      ABSL_CHECK_EQ(output->Send(output_builder.Finish()),
-                    aos::RawSender::Error::kOk);
+      output->get()->set_output(output_voltage);
+      ABSL_CHECK_EQ(output->Send(), aos::RawSender::Error::kOk);
     }
   }
 

@@ -1,13 +1,17 @@
 #ifndef AOS_CONTROLS_CONTROL_LOOP_TEST_H_
 #define AOS_CONTROLS_CONTROL_LOOP_TEST_H_
 
+#include <unistd.h>
+
 #include <chrono>
 #include <string_view>
 
+#include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "gtest/gtest.h"
 
+#include "aos/events/logging/log_writer.h"
 #include "aos/events/simulated_event_loop.h"
 #include "aos/flatbuffers.h"
 #include "aos/json_to_flatbuffer.h"
@@ -16,6 +20,8 @@
 #include "aos/time/time.h"
 #include "frc/input/joystick_state_generated.h"
 #include "frc/input/robot_state_generated.h"
+
+ABSL_DECLARE_FLAG(std::string, output_file);
 
 namespace frc::testing {
 
@@ -37,6 +43,15 @@ class ControlLoopTestTemplated : public TestBaseClass {
         event_loop_factory_(&configuration_.message()),
         dt_(dt) {
     event_loop_factory()->SetTimeConverter(&time_converter_);
+
+    if (!absl::GetFlag(FLAGS_output_file).empty()) {
+      unlink(absl::GetFlag(FLAGS_output_file).c_str());
+      logger_event_loop_ = MakeEventLoop(
+          "logger",
+          aos::configuration::GetNode(this->configuration(), "roborio"));
+      logger_ = std::make_unique<aos::logger::Logger>(logger_event_loop_.get());
+      logger_->StartLoggingOnRun(absl::GetFlag(FLAGS_output_file));
+    }
 
     // We need to setup the time converter before any event loop has been
     // created.  Otherwise, the event loop will read the boot uuid and we'll be
@@ -214,6 +229,9 @@ class ControlLoopTestTemplated : public TestBaseClass {
 
   ::aos::PhasedLoopHandler *send_robot_state_phased_loop_ = nullptr;
   ::aos::TimerHandler *send_joystick_state_timer_ = nullptr;
+
+  std::unique_ptr<aos::EventLoop> logger_event_loop_;
+  std::unique_ptr<aos::logger::Logger> logger_;
 };
 
 typedef ControlLoopTestTemplated<::testing::Test> ControlLoopTest;

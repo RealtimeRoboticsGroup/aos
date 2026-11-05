@@ -179,9 +179,10 @@ class StaticZeroingSingleDOFProfiledSubsystem {
   // Predicts the observer state with the applied voltage.
   void UpdateObserver(double voltage);
 
-  // Returns the current status.
-  flatbuffers::Offset<ProfiledJointStatus> MakeStatus(
-      flatbuffers::FlatBufferBuilder *status_fbb);
+  // Populates the provided static flatbuffer status (the *Static version of
+  // ProfiledJointStatus) with the current status.
+  template <typename ProfiledJointStatusStatic>
+  void PopulateStatus(ProfiledJointStatusStatic *status);
 
   // Sets whether to use the trapezoidal profiler or whether to just bypass it
   // and pass the unprofiled goal through directly.
@@ -189,11 +190,12 @@ class StaticZeroingSingleDOFProfiledSubsystem {
     profiled_subsystem_.set_enable_profile(enable);
   }
 
-  // Iterates the controller with the provided goal.
-  flatbuffers::Offset<ProfiledJointStatus> Iterate(
-      const StaticZeroingSingleDOFProfiledSubsystemGoal *goal,
-      const typename ZeroingEstimator::Position *position, double *output,
-      flatbuffers::FlatBufferBuilder *status_fbb);
+  // Iterates the controller with the provided goal, and populates the provided
+  // static flatbuffer status.
+  template <typename ProfiledJointStatusStatic>
+  void Iterate(const StaticZeroingSingleDOFProfiledSubsystemGoal *goal,
+               const typename ZeroingEstimator::Position *position,
+               double *output, ProfiledJointStatusStatic *status);
 
   // Sets the current profile state to solve from.  Useful for when an
   // external controller gives back control and we want the trajectory
@@ -393,13 +395,12 @@ void StaticZeroingSingleDOFProfiledSubsystem<
 
 template <typename ZeroingEstimator, typename ProfiledJointStatus,
           typename SubsystemParams, typename Profile>
-flatbuffers::Offset<ProfiledJointStatus>
-StaticZeroingSingleDOFProfiledSubsystem<
+template <typename ProfiledJointStatusStatic>
+void StaticZeroingSingleDOFProfiledSubsystem<
     ZeroingEstimator, ProfiledJointStatus, SubsystemParams,
     Profile>::Iterate(const StaticZeroingSingleDOFProfiledSubsystemGoal *goal,
                       const typename ZeroingEstimator::Position *position,
-                      double *output,
-                      flatbuffers::FlatBufferBuilder *status_fbb) {
+                      double *output, ProfiledJointStatusStatic *status) {
   const bool disabled = Correct(goal, position, output == nullptr);
 
   // Calculate the loops for a cycle.
@@ -412,7 +413,7 @@ StaticZeroingSingleDOFProfiledSubsystem<
     *output = voltage;
   }
 
-  return MakeStatus(status_fbb);
+  PopulateStatus(status);
 }
 
 template <typename ZeroingEstimator, typename ProfiledJointStatus,
@@ -441,20 +442,16 @@ void StaticZeroingSingleDOFProfiledSubsystem<
 
 template <typename ZeroingEstimator, typename ProfiledJointStatus,
           typename SubsystemParams, typename Profile>
-flatbuffers::Offset<ProfiledJointStatus>
-StaticZeroingSingleDOFProfiledSubsystem<
+template <typename ProfiledJointStatusStatic>
+void StaticZeroingSingleDOFProfiledSubsystem<
     ZeroingEstimator, ProfiledJointStatus, SubsystemParams,
-    Profile>::MakeStatus(flatbuffers::FlatBufferBuilder *status_fbb) {
-  ABSL_CHECK(status_fbb != nullptr);
+    Profile>::PopulateStatus(ProfiledJointStatusStatic *status) {
+  ABSL_CHECK(status != nullptr);
 
-  typename ProfiledJointStatus::Builder status_builder =
-      profiled_subsystem_
-          .template BuildStatus<typename ProfiledJointStatus::Builder>(
-              status_fbb);
+  profiled_subsystem_.PopulateStatus(status);
 
-  status_builder.add_estopped(estopped());
-  status_builder.add_state(static_cast<int32_t>(state_));
-  return status_builder.Finish();
+  status->set_estopped(estopped());
+  status->set_state(static_cast<int32_t>(state_));
 }
 
 }  // namespace frc::control_loops

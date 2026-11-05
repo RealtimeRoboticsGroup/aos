@@ -131,4 +131,12 @@ PotAndIndexPulseZeroingEstimator::GetEstimatorState(
   return builder.Finish();
 }
 
+void PotAndIndexPulseZeroingEstimator::GetEstimatorState(
+    EstimatorStateStatic *fbs) const {
+  fbs->set_error(error_);
+  fbs->set_zeroed(zeroed_);
+  fbs->set_position(position_);
+  fbs->set_pot_position(filtered_position_);
+}
+
 }  // namespace frc::zeroing

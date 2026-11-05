@@ -35,6 +35,7 @@ cc_library(
         "//aos:flatbuffers",
         "//aos:json_to_flatbuffer",
         "//aos/events:simulated_event_loop",
+        "//aos/events/logging:log_writer",
         "//aos/network:testing_time_converter",
         "//aos/testing:googletest",
         "//aos/testing:test_logging",
@@ -265,13 +266,33 @@ static_flatbuffer(
 )
 
 flatbuffer_ts_library(
+    name = "can_device_error_ts_fbs",
+    srcs = [
+        "can_device_error.fbs",
+    ],
+    ts_files = [
+        "frc/control-loops.ts",
+        "frc/control-loops/candevice-error.ts",
+    ],
+)
+
+flatbuffer_ts_library(
     name = "can_talonfx_ts_fbs",
     srcs = [
         "can_talonfx.fbs",
     ],
     ts_files = [
         "frc/control-loops.ts",
+        "frc/control-loops/candevice-error.ts",
         "frc/control-loops/cantalon-fx.ts",
+    ],
+    deps = [":can_device_error_ts_fbs"],
+)
+
+static_flatbuffer(
+    name = "can_device_error_fbs",
+    srcs = [
+        "can_device_error.fbs",
     ],
 )
 
@@ -280,6 +301,15 @@ static_flatbuffer(
     srcs = [
         "can_talonfx.fbs",
     ],
+    deps = [":can_device_error_fbs"],
+)
+
+static_flatbuffer(
+    name = "can_cancoder_fbs",
+    srcs = [
+        "can_cancoder.fbs",
+    ],
+    deps = [":can_device_error_fbs"],
 )
 
 cc_test(

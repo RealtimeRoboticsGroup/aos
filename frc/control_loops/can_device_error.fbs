@@ -1,0 +1,13 @@
+namespace frc.control_loops;
+
+// An enum to represent the different types of errors a CAN device can have.
+// Like ZeroingError, once one of these happens it stays set until the process
+// restarts.
+enum CANDeviceError : short {
+  // The device couldn't be reached while setting it up, so its signal rates or
+  // configs may be wrong, even if it comes back later.
+  SETUP_FAILED,
+  // Reading the device's signals failed, so its data can't be trusted for that
+  // long.  The device may have come back since.
+  READ_FAILED,
+}
