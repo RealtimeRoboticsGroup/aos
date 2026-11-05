@@ -241,8 +241,9 @@ single_version_override(
     patches = ["third_party/snappy/0001-Zero-the-tag-scratch-buffer-for-MemorySanitizer.patch"],
 )
 
-# Not used directly.  This is the first version which loads the C++ rules from
-# rules_cc, which Bazel 9 requires.
+# Not used directly.  These are the first versions which load the C++ rules
+# from rules_cc, which Bazel 9 requires.
+bazel_dep(name = "opentelemetry-cpp", version = "1.24.0")
 bazel_dep(name = "re2", version = "2025-08-12.bcr.1")
 bazel_dep(name = "nlohmann_json", version = "3.12.0.bcr.1", repo_name = "com_github_nlohmann_json")
 bazel_dep(name = "lz4", version = "1.9.4")
