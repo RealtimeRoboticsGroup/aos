@@ -9,7 +9,7 @@ import subprocess
 from absl import app
 from absl import flags
 
-from rootfs_utils import scoped_tmpdir_tegraflash_rootfs, Filesystem, check_required_deps, check_buildifier, scoped_mount, generate_build_file
+from rootfs_utils import scoped_tmpdir_tegraflash_rootfs, Filesystem, check_required_deps, check_buildifier, scoped_mount, generate_build_file, write_registry_overlay
 
 REQUIRED_DEPS = ["xfsprogs"]
 
@@ -154,14 +154,10 @@ def main(argv):
             ]
 
             # TODO(austin): We will need to make new module versions each time we make a new sysroot.
-            with open(
-                    "../registry/modules/arm64_debian_sysroot/2025.10.25/overlay/BUILD.bazel",
-                    "w") as file:
-                file.write(
-                    generate_build_file(filesystem, packages_to_eval,
-                                        "orin_debian_rootfs.BUILD.template"))
-
-            subprocess.run(['buildifier', "orin_debian_rootfs.BUILD"])
+            write_registry_overlay(
+                "../registry/modules/arm64_debian_sysroot/2025.10.25",
+                generate_build_file(filesystem, packages_to_eval,
+                                    "orin_debian_rootfs.BUILD.template"))
 
             do_package(argv[1], partition)
 

@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 
 from __future__ import annotations
+import base64
 import contextlib
+import hashlib
+import json
 import unicodedata
 import jinja2
 import pathlib
@@ -790,6 +793,21 @@ class Filesystem:
                 runpaths.append(line.strip().split()[1])
 
         return deps, soname, runpaths
+
+
+def write_registry_overlay(module_dir, contents):
+    """Writes a registry module's overlay and updates its hash in source.json."""
+    module_dir = pathlib.Path(module_dir)
+    overlay = module_dir / "overlay" / "BUILD.bazel"
+    overlay.write_text(contents)
+    subprocess.run(["buildifier", str(overlay)], check=True)
+
+    digest = hashlib.sha256(overlay.read_bytes()).digest()
+    source_json = module_dir / "source.json"
+    source = json.loads(source_json.read_text())
+    source["overlay"]["BUILD.bazel"] = "sha256-" + base64.b64encode(
+        digest).decode()
+    source_json.write_text(json.dumps(source, indent=4) + "\n")
 
 
 def generate_build_file(filesystem, packages_to_eval, template_filename):

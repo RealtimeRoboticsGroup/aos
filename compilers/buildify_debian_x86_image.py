@@ -5,11 +5,10 @@ import sys
 import unicodedata
 import datetime
 import os
-import subprocess
 from absl import app
 from absl import flags
 
-from rootfs_utils import scoped_tmpdir_tarball, Filesystem, check_buildifier, generate_build_file
+from rootfs_utils import scoped_tmpdir_tarball, Filesystem, check_buildifier, generate_build_file, write_registry_overlay
 
 
 def main(argv):
@@ -61,14 +60,10 @@ def main(argv):
         ]
 
         # TODO(austin): We will need to make new module versions each time we make a new sysroot.
-        with open(
-                "../registry/modules/amd64_debian_sysroot/2025.04.20/overlay/BUILD.bazel",
-                "w") as file:
-            file.write(
-                generate_build_file(filesystem, packages_to_eval,
-                                    "amd64_debian_rootfs.BUILD.template"))
-
-        subprocess.run(['buildifier', "amd64_debian_rootfs.BUILD"])
+        write_registry_overlay(
+            "../registry/modules/amd64_debian_sysroot/2025.04.20",
+            generate_build_file(filesystem, packages_to_eval,
+                                "amd64_debian_rootfs.BUILD.template"))
 
 
 if __name__ == '__main__':
