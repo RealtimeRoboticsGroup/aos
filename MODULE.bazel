@@ -573,7 +573,7 @@ use_repo(cypress, "cypress_toolchains")
 
 register_toolchains("@cypress_toolchains//:all")
 
-bazel_dep(name = "toolchains_llvm", version = "1.9.0", dev_dependency = True)
+bazel_dep(name = "toolchains_llvm", version = "1.11.1", dev_dependency = True)
 
 llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm", dev_dependency = True)
 
@@ -671,6 +671,10 @@ llvm.toolchain(
         "linux-aarch64": llvm_extra_compile_flags_aarch64,
         "linux-x86_64": llvm_extra_compile_flags,
     },
+    # The ld64.lld in LLVM 22 can't parse the .tbd files in Xcode 27.2's SDK, which
+    # list an arm64e.x1 target.  toolchains_llvm says this is fixed in LLVM 24.
+    # Until then, use the linker from the active Xcode.
+    linker = {"darwin-aarch64": "auto"},
     llvm_versions = {"": llvm_version},
     multiarch = {
         "linux-aarch64": "aarch64-oe4t-linux",
