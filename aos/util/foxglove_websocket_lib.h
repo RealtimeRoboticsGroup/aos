@@ -6,6 +6,7 @@
 #include <memory>
 #include <regex>
 #include <set>
+#include <unordered_map>
 
 #include "foxglove/websocket/websocket_notls.hpp"
 #include "foxglove/websocket/websocket_server.hpp"

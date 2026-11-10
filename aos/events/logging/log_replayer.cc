@@ -235,7 +235,7 @@ int main(int argc, char *argv[]) {
                 #replay_config should be set in order to replay a set of nodes, applications and channels
                 #print config and skip replay, if you only want to print the config and not do log replay
                 Use case #1: log_replayer <log_dir> --print_config --replay_config=<path_to_config> --skip_replay
-                Use case #2: log_replayer <log_dir> --nofatal_sent_too_fast --replay_config=<path_to_config>
+                Use case #2: log_replayer <log_dir> --replay_config=<path_to_config>
       )message");
 
   aos::InitGoogle(&argc, &argv);

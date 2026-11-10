@@ -930,7 +930,8 @@ Status Logger::DoLogData(const monotonic_clock::time_point end_time,
 
     // If we missed cycles, we could be pretty far behind.  Spin until we are
     // caught up.
-  } while (last_synchronized_time_ + polling_period_ < end_time);
+  } while (last_synchronized_time_ + polling_period_ < end_time &&
+           is_started());
   return aos::Ok();
 }
 
