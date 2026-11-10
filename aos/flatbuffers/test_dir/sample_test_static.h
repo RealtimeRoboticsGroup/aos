@@ -1,3 +1,4 @@
+// clang-format off
 #pragma once
 // This is a generated file. Do not modify.
 #include <optional>
@@ -2366,3 +2367,4 @@ class TestTableStatic : public ::aos::fbs::Table {
       ::aos::fbs::AlignOffset(kSize + sizeof(::flatbuffers::uoffset_t), kAlign);
 };
 }  // namespace aos::fbs::testing
+// clang-format on

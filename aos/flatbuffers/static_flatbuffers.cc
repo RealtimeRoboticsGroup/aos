@@ -1327,8 +1327,9 @@ GeneratedCode GeneratedCode::MergeCode(
   GeneratedCode result;
   // TODO(james): Should we use #ifdef include guards instead?
   result.contents_prefix =
-      "#pragma once\n// This is a generated file. Do not modify.\n#include "
-      "<optional>\n\n";
+      "// clang-format off\n#pragma once\n// This is a generated file. Do not "
+      "modify.\n#include <optional>\n\n";
+  result.contents_suffix = "// clang-format on\n";
   // We need to get the ordering of objects correct in order to ensure that
   // depended-on objects appear before their dependees.
   // In order to do this, we:
