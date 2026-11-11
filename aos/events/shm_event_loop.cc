@@ -1,6 +1,8 @@
 #include "aos/events/shm_event_loop.h"
 
 #include <filesystem>
+#include <memory>
+#include <utility>
 
 #include "absl/flags/flag.h"
 
@@ -29,12 +31,42 @@ ShmEventLoop::ShmEventLoop(const Configuration *configuration, Aio *aio)
 
 ShmEventLoop::~ShmEventLoop() { CheckNotRunningForDestruction(); }
 
+namespace {
+
+// One user's handle on a MemoryMappedQueue shared through
+// GetOrCreateMemoryMappedQueue().  The mapping lives as long as any handle on
+// it, in this or any other ShmEventLoop in the process.
+class SharedMemoryMappedQueue : public ipc_lib::QueueMemory {
+ public:
+  explicit SharedMemoryMappedQueue(
+      std::shared_ptr<ipc_lib::MemoryMappedQueue> queue)
+      : queue_(std::move(queue)) {}
+
+  ipc_lib::LocklessQueueMemory *memory() const override {
+    return queue_->memory();
+  }
+  const ipc_lib::LocklessQueueMemory *const_memory() const override {
+    return queue_->const_memory();
+  }
+  const ipc_lib::LocklessQueueConfiguration &config() const override {
+    return queue_->config();
+  }
+
+ private:
+  const std::shared_ptr<ipc_lib::MemoryMappedQueue> queue_;
+};
+
+}  // namespace
+
 std::unique_ptr<ipc_lib::QueueMemory> ShmEventLoop::MakeQueueMemory(
     const Channel *channel) {
-  return std::make_unique<ipc_lib::MemoryMappedQueue>(
-      shm_base_,
-      static_cast<std::filesystem::perms>(absl::GetFlag(FLAGS_permissions)),
-      configuration(), channel);
+  // Every sender, fetcher and watcher on a channel in this process shares one
+  // mapping, rather than mapping and pre-faulting the queue once each.
+  return std::make_unique<SharedMemoryMappedQueue>(
+      ipc_lib::GetOrCreateMemoryMappedQueue(
+          shm_base_,
+          static_cast<std::filesystem::perms>(absl::GetFlag(FLAGS_permissions)),
+          configuration(), channel));
 }
 
 }  // namespace aos

@@ -1036,6 +1036,157 @@ TEST_P(ShmEventLoopTest, TimerFromAnotherThreadAfterRun) {
   timer->Disable();
 }
 
+// Verifies that GetOrCreateMemoryMappedQueue returns the same instance for the
+// same channel, confirming the process-global cache deduplicates mmaps.
+TEST_P(ShmEventLoopTest, SharedMmapCacheSameChannel) {
+  if (kLoopKind != LoopKind::kShm) {
+    GTEST_SKIP() << "Only ShmEventLoop shares queues through the cache";
+  }
+  auto loop = factory()->MakePrimary("primary");
+  const Channel *channel = configuration::GetChannel(
+      loop->configuration(), "/test", "aos.TestMessage", "", nullptr);
+  ASSERT_NE(channel, nullptr);
+
+  auto q1 = ipc_lib::GetOrCreateMemoryMappedQueue(
+      absl::GetFlag(FLAGS_shm_base), static_cast<std::filesystem::perms>(0770),
+      loop->configuration(), channel);
+  auto q2 = ipc_lib::GetOrCreateMemoryMappedQueue(
+      absl::GetFlag(FLAGS_shm_base), static_cast<std::filesystem::perms>(0770),
+      loop->configuration(), channel);
+
+  // Both should be the exact same object.
+  EXPECT_EQ(q1.get(), q2.get());
+  EXPECT_EQ(q1->GetMutableSharedMemory().data(),
+            q2->GetMutableSharedMemory().data());
+}
+
+// Verifies that the shared mmap cache garbage-collects entries once all holders
+// drop their references.  After dropping all shared_ptrs, a new call should
+// return a freshly constructed MemoryMappedQueue object.
+TEST_P(ShmEventLoopTest, SharedMmapCacheGarbageCollects) {
+  if (kLoopKind != LoopKind::kShm) {
+    GTEST_SKIP() << "Only ShmEventLoop shares queues through the cache";
+  }
+  auto loop = factory()->MakePrimary("primary");
+  const Channel *channel = configuration::GetChannel(
+      loop->configuration(), "/test", "aos.TestMessage", "", nullptr);
+  ASSERT_NE(channel, nullptr);
+
+  ipc_lib::MemoryMappedQueue *first_ptr = nullptr;
+  {
+    auto q = ipc_lib::GetOrCreateMemoryMappedQueue(
+        absl::GetFlag(FLAGS_shm_base),
+        static_cast<std::filesystem::perms>(0770), loop->configuration(),
+        channel);
+    first_ptr = q.get();
+    // q destroyed here, dropping the last shared_ptr ref and destroying the
+    // MemoryMappedQueue (munmap).
+  }
+
+  // The old weak_ptr should have expired, so this constructs a new object.
+  auto q2 = ipc_lib::GetOrCreateMemoryMappedQueue(
+      absl::GetFlag(FLAGS_shm_base), static_cast<std::filesystem::perms>(0770),
+      loop->configuration(), channel);
+  // The new MemoryMappedQueue must be a distinct object (the old one was
+  // destroyed).  Note: the OS *may* reuse the same mmap VA, but the C++
+  // object itself must be different.
+  EXPECT_NE(first_ptr, q2.get());
+}
+
+// Verifies that a sender and fetcher on the same channel end up sharing the
+// same MemoryMappedQueue from the cache.  We verify this indirectly: get the
+// cache entry, then create sender/fetcher and confirm the cache entry's
+// use_count increased (meaning more holders share it).
+TEST_P(ShmEventLoopTest, SenderAndFetcherShareCacheEntry) {
+  if (kLoopKind != LoopKind::kShm) {
+    GTEST_SKIP() << "Only ShmEventLoop shares queues through the cache";
+  }
+  auto loop = factory()->MakePrimary("primary");
+  const Channel *channel = configuration::GetChannel(
+      loop->configuration(), "/test", "aos.TestMessage", "", nullptr);
+  ASSERT_NE(channel, nullptr);
+
+  // Get an initial reference via the cache.
+  auto q = ipc_lib::GetOrCreateMemoryMappedQueue(
+      absl::GetFlag(FLAGS_shm_base), static_cast<std::filesystem::perms>(0770),
+      loop->configuration(), channel);
+  long initial_count = q.use_count();
+
+  // Creating a sender on the same channel should share the same queue.
+  auto sender = loop->MakeSender<TestMessage>("/test");
+  EXPECT_GT(q.use_count(), initial_count);
+
+  long after_sender_count = q.use_count();
+
+  // Creating a fetcher on the same channel should also share the same queue.
+  auto fetcher = loop->MakeFetcher<TestMessage>("/test");
+  EXPECT_GT(q.use_count(), after_sender_count);
+}
+
+// Two ShmEventLoops running on different threads of one process share the
+// cached MemoryMappedQueue for every channel they both touch (/test and /test2
+// here).  Verifies that messages still flow in both directions through the
+// shared mappings: loop1 sends on /test, loop2 echoes each message back on
+// /test2, and loop1 exits once it has seen enough echoes.
+TEST_P(ShmEventLoopTest, TwoThreadedEventLoopsShareCachedQueues) {
+  if (kLoopKind != LoopKind::kShm) {
+    GTEST_SKIP() << "Only ShmEventLoop shares queues through the cache";
+  }
+  auto loop1 = factory()->MakePrimary("primary");
+  auto loop2 = factory()->Make("loop2");
+
+  aos::Sender<TestMessage> sender1 = loop1->MakeSender<TestMessage>("/test");
+  aos::Sender<TestMessage> sender2 = loop2->MakeSender<TestMessage>("/test2");
+
+  // loop2 echoes every message it sees on /test back out on /test2.
+  loop2->MakeWatcher("/test", [&sender2](const TestMessage &message) {
+    aos::Sender<TestMessage>::Builder builder = sender2.MakeBuilder();
+    TestMessage::Builder test_builder = builder.MakeBuilder<TestMessage>();
+    test_builder.add_value(message.value());
+    builder.CheckOk(builder.Send(test_builder.Finish()));
+  });
+
+  constexpr int kEchoesToWaitFor = 10;
+  int echoes = 0;
+  int sent = 0;
+  loop1->MakeWatcher("/test2", [&](const TestMessage &message) {
+    EXPECT_GT(message.value(), 0);
+    EXPECT_LE(message.value(), sent);
+    if (++echoes == kEchoesToWaitFor) {
+      factory()->Exit();
+    }
+  });
+
+  // Keep sending until loop1 has seen enough echoes, so the test does not
+  // depend on loop2's watcher being registered before the first send.
+  aos::TimerHandler *send_timer = loop1->AddTimer([&]() {
+    aos::Sender<TestMessage>::Builder builder = sender1.MakeBuilder();
+    TestMessage::Builder test_builder = builder.MakeBuilder<TestMessage>();
+    test_builder.add_value(++sent);
+    builder.CheckOk(builder.Send(test_builder.Finish()));
+  });
+  // Fail rather than hang if messages stop flowing.
+  aos::TimerHandler *watchdog = loop1->AddTimer([&]() {
+    ADD_FAILURE() << "Only saw " << echoes << " echoes before the deadline";
+    factory()->Exit();
+  });
+  loop1->OnRun([&]() {
+    send_timer->Schedule(loop1->monotonic_now(), chrono::milliseconds(20));
+    watchdog->Schedule(loop1->monotonic_now() + chrono::seconds(10));
+  });
+
+  std::thread loop2_thread(
+      [&loop2]() { static_cast<ShmEventLoop *>(loop2.get())->Run(); });
+
+  factory()->Run();
+
+  static_cast<ShmEventLoop *>(loop2.get())->Exit();
+  loop2_thread.join();
+
+  EXPECT_EQ(echoes, kEchoesToWaitFor);
+  EXPECT_GE(sent, kEchoesToWaitFor);
+}
+
 // A started event loop on a borrowed Aio has to be shut down before it goes,
 // as Run() returning shuts down an owned one.
 TEST_P(ShmEventLoopDeathTest, DestroyingAStartedLoopOnABorrowedAioDies) {
