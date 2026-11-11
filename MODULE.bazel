@@ -168,8 +168,18 @@ pip.override(
 )
 use_repo(pip, "aos_pip_deps", pip_deps = "pip_deps")
 
-bazel_dep(name = "grpc", version = "1.81.0", repo_name = "com_github_grpc_grpc")
-bazel_dep(name = "protobuf", version = "33.5", repo_name = "com_google_protobuf")
+bazel_dep(name = "grpc", version = "1.83.1", repo_name = "com_github_grpc_grpc")
+bazel_dep(name = "protobuf", version = "35.1", repo_name = "com_google_protobuf")
+
+# protobuf's crate extension has no lockfile, which rules_rust 0.71 rejects in a
+# non-root module.  Fixed in protobuf 37.
+single_version_override(
+    module_name = "protobuf",
+    patch_strip = 1,
+    patches = ["//third_party:protobuf/0001-Make-the-crate-extension-a-dev-dependency.patch"],
+    version = "35.1",
+)
+
 bazel_dep(name = "rules_proto", version = "7.1.0")
 bazel_dep(name = "aspect_rules_ts", version = "3.10.1")
 bazel_dep(name = "aspect_rules_js", version = "3.5.2")
