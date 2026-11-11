@@ -100,16 +100,60 @@ LocklessQueueConfiguration MakeQueueConfiguration(
   return config;
 }
 
+size_t HugePagesNeededForNode(const Configuration *config, const Node *node,
+                              size_t threshold, size_t huge_page_size) {
+  size_t pages = 0;
+  if (!config->has_channels()) {
+    return pages;
+  }
+  for (const aos::Channel *channel : *config->channels()) {
+    if (!configuration::ChannelIsReadableOnNode(channel, node)) {
+      continue;
+    }
+    const size_t size =
+        LocklessQueueMemorySize(MakeQueueConfiguration(config, channel));
+    if (size < threshold) {
+      continue;
+    }
+    pages += (size + huge_page_size - 1) / huge_page_size;
+  }
+  return pages;
+}
+
+namespace {
+
+// Returns the path on the hugetlbfs mount at which the queue file for channel
+// lives, or an empty string when the queue lives directly at the tmpfs path:
+// with shm_hugepage_base configured, queues of at least shm_hugepage_threshold
+// bytes live on the hugetlbfs mount with a symlink at the tmpfs path (see
+// WritableShmMapping).
+std::string HugePagePath(const Configuration *config, const Channel *channel,
+                         size_t size) {
+  if (!config->has_shm_hugepage_base() ||
+      size < config->shm_hugepage_threshold()) {
+    return "";
+  }
+  return ShmPath(config->shm_hugepage_base()->string_view(), channel);
+}
+
+}  // namespace
+
 MemoryMappedQueue::MemoryMappedQueue(std::string_view shm_base,
                                      std::filesystem::perms permissions,
                                      const Configuration *config,
                                      const Channel *channel)
     : config_(MakeQueueConfiguration(config, channel)),
-      writable_mapping_(ShmPath(shm_base, channel),
-                        ipc_lib::LocklessQueueMemorySize(config_), permissions),
+      writable_mapping_(
+          ShmPath(shm_base, channel), ipc_lib::LocklessQueueMemorySize(config_),
+          permissions,
+          HugePagePath(config, channel,
+                       ipc_lib::LocklessQueueMemorySize(config_))),
       readonly_mapping_(ShmPath(shm_base, channel),
-                        ipc_lib::LocklessQueueMemorySize(config_),
-                        permissions) {
+                        ipc_lib::LocklessQueueMemorySize(config_), permissions,
+                        /*hugepages=*/
+                        !HugePagePath(config, channel,
+                                      ipc_lib::LocklessQueueMemorySize(config_))
+                             .empty()) {
   ipc_lib::InitializeLocklessQueueMemory(memory(), config_);
 }
 

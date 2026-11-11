@@ -212,6 +212,8 @@ struct MutableConfiguration {
   absl::btree_map<std::string_view, MutableNode> nodes;
   absl::btree_map<std::string_view, MutableApplication> applications;
   std::optional<uint64_t> channel_storage_duration;
+  std::optional<std::string_view> shm_hugepage_base;
+  std::optional<uint64_t> shm_hugepage_threshold;
 
   absl::btree_map<std::string_view, const reflection::Schema *> schemas;
 };
@@ -559,6 +561,13 @@ void UnpackConfiguration(const Configuration *configuration,
   if (configuration->has_channel_storage_duration()) {
     result->channel_storage_duration =
         configuration->channel_storage_duration();
+  }
+  if (configuration->has_shm_hugepage_base()) {
+    result->shm_hugepage_base =
+        configuration->shm_hugepage_base()->string_view();
+  }
+  if (configuration->has_shm_hugepage_threshold()) {
+    result->shm_hugepage_threshold = configuration->shm_hugepage_threshold();
   }
 }
 
@@ -971,6 +980,12 @@ flatbuffers::Offset<Configuration> PackConfiguration(
     applications_offset = fbb->CreateVector(applications_offsets);
   }
 
+  flatbuffers::Offset<flatbuffers::String> shm_hugepage_base_offset;
+  if (configuration.shm_hugepage_base.has_value()) {
+    shm_hugepage_base_offset =
+        fbb->CreateString(configuration.shm_hugepage_base.value());
+  }
+
   // And then build a Configuration with them all.
   ConfigurationBuilder configuration_builder(*fbb);
   configuration_builder.add_channels(channels_offset);
@@ -986,6 +1001,13 @@ flatbuffers::Offset<Configuration> PackConfiguration(
   if (configuration.channel_storage_duration) {
     configuration_builder.add_channel_storage_duration(
         configuration.channel_storage_duration.value());
+  }
+  if (!shm_hugepage_base_offset.IsNull()) {
+    configuration_builder.add_shm_hugepage_base(shm_hugepage_base_offset);
+  }
+  if (configuration.shm_hugepage_threshold) {
+    configuration_builder.add_shm_hugepage_threshold(
+        configuration.shm_hugepage_threshold.value());
   }
 
   return configuration_builder.Finish();

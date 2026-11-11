@@ -24,7 +24,7 @@ WriteCode FileHandler::OpenForWrite() {
     return WriteCode::kOutOfSpace;
   } else {
     fd_ = open(filename_.c_str(), O_RDWR | O_CLOEXEC | O_CREAT | O_EXCL, 0774);
-    if (fd_ == -1 && errno == ENOSPC) {
+    if (fd_ == -1 && (errno == ENOSPC || errno == EDQUOT)) {
       return WriteCode::kOutOfSpace;
     } else {
       ABSL_PCHECK(fd_ != -1)
@@ -59,7 +59,7 @@ WriteCode FileHandler::Close() {
   }
 
   if (close(fd_) == -1) {
-    if (errno == ENOSPC) {
+    if (errno == ENOSPC || errno == EDQUOT) {
       ran_out_of_space = true;
     } else {
       ABSL_PLOG(ERROR) << "Closing log file failed";
@@ -96,8 +96,9 @@ bool RenamableFileBackend::RenameLogBase(std::string_view new_base_name) {
       // EEXIST or ENOTEMPTY for a target already sitting there -- and the
       // caller has no way to act on any of them (set_base_name() drops this
       // return value on the floor).
-      ABSL_PCHECK(errno == ENOSPC) << ": Unable to rename " << current_directory
-                                   << " to " << new_directory;
+      ABSL_PCHECK(errno == ENOSPC || errno == EDQUOT)
+          << ": Unable to rename " << current_directory << " to "
+          << new_directory;
       ABSL_PLOG(ERROR) << "Ran out of space renaming " << current_directory
                        << " to " << new_directory
                        << "; logging continues at the old path";

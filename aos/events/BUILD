@@ -842,9 +842,14 @@ cc_test(
         ":shm_event_loop",
         ":test_message_fbs",
         ":thread_event_loop",
+        "//aos:json_to_flatbuffer",
         "//aos/ipc_lib:memory_mapped_queue",
         "//aos/ipc_lib:process_local_queue",
         "//aos/ipc_lib:shm_mapping",
+        "//aos/testing:tmpdir",
+        "//aos/util:file",
+        "@com_google_absl//absl/flags:reflection",
+        "@com_google_absl//absl/strings",
     ],
 )
 
@@ -861,10 +866,15 @@ cc_test(
         ":shm_event_loop",
         ":test_message_fbs",
         ":thread_event_loop",
+        "//aos:json_to_flatbuffer",
         "//aos/ipc_lib:memory_mapped_queue",
         "//aos/ipc_lib:process_local_queue",
         "//aos/ipc_lib:shm_mapping",
         "//aos/logging",
+        "//aos/testing:tmpdir",
+        "//aos/util:file",
+        "@com_google_absl//absl/flags:reflection",
+        "@com_google_absl//absl/strings",
     ],
 )
 
@@ -885,10 +895,15 @@ cc_test(
         ":shm_event_loop",
         ":test_message_fbs",
         ":thread_event_loop",
+        "//aos:json_to_flatbuffer",
         "//aos/ipc_lib:memory_mapped_queue",
         "//aos/ipc_lib:process_local_queue",
         "//aos/ipc_lib:shm_mapping",
         "//aos/logging",
+        "//aos/testing:tmpdir",
+        "//aos/util:file",
+        "@com_google_absl//absl/flags:reflection",
+        "@com_google_absl//absl/strings",
     ],
 )
 
@@ -908,9 +923,14 @@ cc_test(
         ":shm_event_loop",
         ":test_message_fbs",
         ":thread_event_loop",
+        "//aos:json_to_flatbuffer",
         "//aos/ipc_lib:memory_mapped_queue",
         "//aos/ipc_lib:process_local_queue",
         "//aos/ipc_lib:shm_mapping",
+        "//aos/testing:tmpdir",
+        "//aos/util:file",
+        "@com_google_absl//absl/flags:reflection",
+        "@com_google_absl//absl/strings",
     ],
 )
 

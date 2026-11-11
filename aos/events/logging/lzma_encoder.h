@@ -140,7 +140,9 @@ class ThreadedLzmaDecoder : public DataDecoder {
 
  private:
   static constexpr size_t kBufSize{256 * 1024};
-  static constexpr size_t kQueueSize{8};
+
+  // Maximum number of kBufSize buffers to decode ahead of Read().
+  const size_t queue_size_;
 
   LzmaDecoder decoder_;
 

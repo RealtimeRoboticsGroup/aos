@@ -1,0 +1,10 @@
+// See multi_a.fbs.  multi_b lives in the same multi-source
+// `static_flatbuffer` as multi_a and references a type declared there.
+include "multi_a.fbs";
+
+namespace multitest;
+
+table Outer {
+  inner:Inner (id: 0);
+  count:int (id: 1);
+}

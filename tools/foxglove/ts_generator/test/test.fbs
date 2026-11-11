@@ -1,0 +1,39 @@
+include "imported.fbs";
+
+namespace test;
+
+enum Color : ubyte { Red = 0, Green = 1, Blue = 2 }
+enum Priority : short { Low = 0, Medium = 1, High = 2 }
+
+table Position {
+  x:double (id: 0);
+  y:double (id: 1);
+  z:double (id: 2);
+}
+
+table TestMessage {
+  name:string (id: 0);
+  value:int (id: 1);
+  active:bool (id: 2);
+  score:float (id: 3);
+  timestamp:long (id: 4);
+  color:Color (id: 5);
+  data:[ubyte] (id: 6);
+  tags:[string] (id: 7);
+  position:Position (id: 8);
+  scores:[float] (id: 9);
+  // A vector of a ubyte-backed enum.  FlatBuffers packs these into a
+  // contiguous byte buffer, so the generator emits a Uint8Array (plus an
+  // explanatory comment in the generated .ts file).
+  colors:[Color] (id: 10);
+  priority:Priority (id: 11);
+  // A vector of a non-ubyte enum.  These show up as a regular TS array
+  // (Priority[]) in the generated file.
+  priorities:[Priority] (id: 12);
+  // A field whose type lives in an included .fbs.  The Foxglove TS bundle
+  // emits a separate file for the imported schema and imports the type by
+  // basename from it.
+  metadata:Metadata (id: 13);
+}
+
+root_type TestMessage;

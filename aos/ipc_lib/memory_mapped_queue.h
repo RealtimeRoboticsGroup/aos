@@ -23,6 +23,12 @@ std::string ShmPath(std::string_view shm_base, const Channel *channel);
 LocklessQueueConfiguration MakeQueueConfiguration(
     const Configuration *configuration, const Channel *channel);
 
+// Returns the number of huge pages of size huge_page_size needed to back every
+// queue readable on node whose memory size is >= threshold.  Used by starterd
+// to size vm.nr_hugepages before creating the queues.
+size_t HugePagesNeededForNode(const Configuration *config, const Node *node,
+                              size_t threshold, size_t huge_page_size);
+
 // Queue memory in a shared-memory file under shm_base, mapped read/write and
 // read-only.  Shared with every other process that maps the same file, and it
 // outlives all of them; see shm_mapping.h.

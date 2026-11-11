@@ -1,11 +1,14 @@
 #include "aos/starter/starterd_lib.h"
 
+#include <linux/magic.h>
 #include <string.h>
+#include <sys/vfs.h>
 
 #include <algorithm>
 #include <chrono>
 #include <filesystem>
 #include <functional>
+#include <optional>
 #include <ostream>
 #include <set>
 #include <string_view>
@@ -16,6 +19,8 @@
 #include "absl/flags/flag.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
+#include "absl/strings/numbers.h"
+#include "absl/strings/str_cat.h"
 #include "flatbuffers/buffer.h"
 #include "flatbuffers/flatbuffer_builder.h"
 #include "flatbuffers/string.h"
@@ -23,6 +28,7 @@
 
 #include "aos/events/context.h"
 #include "aos/json_to_flatbuffer.h"
+#include "aos/util/file.h"
 
 #if SYSTEMD_AVAILABLE
 #include "systemd/sd-daemon.h"
@@ -51,6 +57,31 @@ ABSL_FLAG(double, starterd_shutdown_timeout, 1.5,
 
 namespace aos::starter {
 
+namespace {
+
+// Reads nr_hugepages from file; -1 on failure.
+long ReadNrHugePages(const std::filesystem::path &file) {
+  const std::optional<std::string> contents =
+      util::MaybeReadFileToString(file.string());
+  if (!contents.has_value()) {
+    return -1;
+  }
+  long value;
+  if (!absl::SimpleAtoi(*contents, &value)) {
+    return -1;
+  }
+  return value;
+}
+
+// Writes value to the nr_hugepages file.  Dies if it can't be opened (e.g.
+// not running as root).  A short grant isn't a write error; the read-back in
+// EnsureHugePages catches it.
+void WriteNrHugePages(const std::filesystem::path &file, long value) {
+  util::WriteStringToFileOrDie(file.string(), absl::StrCat(value));
+}
+
+}  // namespace
+
 const aos::Channel *StatusChannelForNode(const aos::Configuration *config,
                                          const aos::Node *node) {
   return configuration::GetChannel<Status>(config, "/aos", "", node);
@@ -58,6 +89,57 @@ const aos::Channel *StatusChannelForNode(const aos::Configuration *config,
 const aos::Channel *StarterRpcChannelForNode(const aos::Configuration *config,
                                              const aos::Node *node) {
   return configuration::GetChannel<StarterRpc>(config, "/aos", "", node);
+}
+
+void ReserveHugePages(const aos::Configuration *config, const aos::Node *node) {
+  if (!config->has_shm_hugepage_base()) {
+    return;
+  }
+  const std::string base = config->shm_hugepage_base()->str();
+
+  struct statfs sfs;
+  ABSL_PCHECK(statfs(base.c_str(), &sfs) == 0)
+      << ": shm_hugepage_base " << base << " is not accessible";
+  ABSL_CHECK(sfs.f_type == static_cast<decltype(sfs.f_type)>(HUGETLBFS_MAGIC))
+      << ": shm_hugepage_base " << base << " is not on a hugetlbfs mount";
+  const size_t huge_page_size = sfs.f_bsize;
+
+  const size_t needed = aos::ipc_lib::HugePagesNeededForNode(
+      config, node, config->shm_hugepage_threshold(), huge_page_size);
+
+  ABSL_CHECK(EnsureHugePages(needed))
+      << ": Failed to reserve " << needed
+      << " huge pages for queues >= " << config->shm_hugepage_threshold()
+      << " bytes under " << base;
+  ABSL_LOG(INFO) << "Reserved " << needed << " huge pages ("
+                 << (needed * huge_page_size >> 20)
+                 << " MiB) for large shm queues; nr_hugepages="
+                 << ReadNrHugePages("/proc/sys/vm/nr_hugepages");
+}
+
+bool EnsureHugePages(size_t needed, std::string_view root_dir) {
+  const std::filesystem::path file =
+      std::filesystem::path(root_dir) / "proc/sys/vm/nr_hugepages";
+  const long current = ReadNrHugePages(file);
+  if (current < 0) {
+    return false;
+  }
+  if (static_cast<size_t>(current) >= needed) {
+    return true;
+  }
+  WriteNrHugePages(file, static_cast<long>(needed));
+  const long after = ReadNrHugePages(file);
+  if (after >= 0 && static_cast<size_t>(after) >= needed) {
+    return true;
+  }
+  // The kernel only partly satisfied the request; hand the pages back so
+  // nothing stays reserved after starterd gives up.
+  WriteNrHugePages(file, current);
+  const long restored = ReadNrHugePages(file);
+  ABSL_LOG(ERROR) << "Kernel granted only " << after << " of " << needed
+                  << " requested huge pages (was " << current
+                  << ", restored to " << restored << ")";
+  return false;
 }
 
 Starter::Starter(const aos::Configuration *event_loop_config,

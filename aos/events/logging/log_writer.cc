@@ -395,6 +395,7 @@ std::unique_ptr<LogNamer> Logger::RestartLogging(
 
   std::unique_ptr<LogNamer> old_log_namer = std::move(log_namer_);
   log_namer_ = std::move(log_namer);
+  log_namer_->set_encoded_configuration(old_log_namer->encoded_configuration());
 
   // Our start time is now how far we logged until before.
   const aos::monotonic_clock::time_point monotonic_start_time =

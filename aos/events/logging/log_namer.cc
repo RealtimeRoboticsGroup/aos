@@ -798,14 +798,33 @@ void MultiNodeLogNamer::WriteConfiguration(
     return;
   }
 
+  if (encoded_configuration_ == nullptr ||
+      encoded_configuration_->sha256 != config_sha256 ||
+      encoded_configuration_->extension != extension_) {
+    ResizeableBuffer encoded_data;
+    DetachedBufferWriter buffer_writer(
+        std::make_unique<BufferLogSink>(&encoded_data),
+        encoder_factory_(header->span().size()));
+    DataEncoder::SpanCopier coppier(header->span());
+    buffer_writer.CopyMessage(&coppier, aos::monotonic_clock::now());
+    CloseWriter(&buffer_writer);
+    encoded_configuration_ = std::make_shared<const EncodedConfiguration>(
+        EncodedConfiguration{.sha256 = std::string(config_sha256),
+                             .extension = extension_,
+                             .data = std::move(encoded_data)});
+  }
+
   const std::string filename = absl::StrCat(config_sha256, ".bfbs", extension_);
   auto file_handle =
       log_backend_->RequestFile(filename, /*memory_buffer_size=*/0);
   std::unique_ptr<DetachedBufferWriter> writer =
       std::make_unique<DetachedBufferWriter>(
-          std::move(file_handle), encoder_factory_(header->span().size()));
+          std::move(file_handle),
+          std::make_unique<DummyEncoder>(encoded_configuration_->data.size(),
+                                         absl::GetFlag(FLAGS_flush_size)));
 
-  DataEncoder::SpanCopier coppier(header->span());
+  DataEncoder::SpanCopier coppier({encoded_configuration_->data.data(),
+                                   encoded_configuration_->data.size()});
   writer->CopyMessage(&coppier, aos::monotonic_clock::now());
 
   if (!writer->ran_out_of_space()) {

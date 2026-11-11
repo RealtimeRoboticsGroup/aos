@@ -37,7 +37,7 @@ using aos::testing::ArtifactPath;
 using aos::testing::MessageCounter;
 
 constexpr std::string_view kSingleConfigSha256(
-    "73cda496bc071505c9121dad16ccfc4c90ae9c7218eb16e1c5c4a6bf952d64c6");
+    "d5f2aa11084d3d74a0473efd2dff3a18b0b418393b8435b76e7e8fd740eea730");
 
 // Parameterize on the memory buffer size.
 class LoggerTest : public ::testing::TestWithParam<double> {
@@ -869,6 +869,75 @@ TEST_P(LoggerTest, ManyMessagesLzmaWithProfiling) {
 #ifdef LZMA
   VerifyProfilingData(profiling_path);
 #endif
+}
+
+// Tests the periodic log-rotation scenario where RestartLogging switches to a
+// new MultiNodeFilesLogNamer: the separate configuration is compressed once on
+// StartLogging and reused from cache on RestartLogging rather than
+// re-compressed, and both log directories remain independently readable.
+TEST_P(LoggerTest, RestartLoggingCachesEncodedConfiguration) {
+  const std::string tmpdir = aos::testing::TestTmpDir();
+  const std::string dir1 = tmpdir + "/restart_cached1";
+  const std::string dir2 = tmpdir + "/restart_cached2";
+  std::filesystem::remove_all(dir1);
+  std::filesystem::remove_all(dir2);
+  std::filesystem::create_directories(dir1);
+  std::filesystem::create_directories(dir2);
+  const std::string base_name1 = dir1 + "/log";
+  const std::string base_name2 = dir2 + "/log";
+  const size_t config_size =
+      aos::logger::PackConfiguration(&config_.message()).span().size();
+
+  size_t config_encoder_creations = 0;
+
+  {
+    event_loop_factory_.RunFor(chrono::milliseconds(95));
+
+    std::unique_ptr<EventLoop> logger_event_loop =
+        event_loop_factory_.MakeEventLoop("logger");
+    Logger logger(logger_event_loop.get());
+    logger.set_separate_config(true);
+    logger.set_polling_period(std::chrono::milliseconds(100));
+
+    auto make_namer = [&](std::string_view base_name) {
+      auto namer = std::make_unique<MultiNodeFilesLogNamer>(
+          base_name, logger_event_loop->configuration(),
+          logger_event_loop.get(), logger_event_loop->node());
+      namer->set_memory_buffer_duration(
+          std::chrono::nanoseconds(static_cast<size_t>(GetParam() * 1e9)));
+#ifdef LZMA
+      namer->set_extension(LzmaEncoder::kExtension);
+      namer->set_encoder_factory([&](size_t max_message_size) {
+        if (max_message_size == config_size) {
+          ++config_encoder_creations;
+        }
+        return std::make_unique<LzmaEncoder>(max_message_size, 1);
+      });
+#else
+      namer->set_encoder_factory([&](size_t max_message_size) {
+        if (max_message_size == config_size) {
+          ++config_encoder_creations;
+        }
+        return std::make_unique<DummyEncoder>(max_message_size);
+      });
+#endif
+      return namer;
+    };
+
+    logger.StartLogging(make_namer(base_name1));
+    EXPECT_EQ(config_encoder_creations, 1u);
+    event_loop_factory_.RunFor(chrono::milliseconds(1000));
+
+    logger.RestartLogging(make_namer(base_name2));
+    EXPECT_EQ(config_encoder_creations, 1u);
+    event_loop_factory_.RunFor(chrono::milliseconds(1000));
+  }
+
+  for (const std::string &dir : {dir1, dir2}) {
+    LogReader reader(SortParts(FindLogs(dir)));
+    reader.Register();
+    reader.event_loop_factory()->Run();
+  }
 }
 
 INSTANTIATE_TEST_SUITE_P(BufferSweep, LoggerTest,

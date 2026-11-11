@@ -42,6 +42,53 @@ enum class LogType : uint8_t {
   kLogRemoteMessage
 };
 
+// LogSink that appends written chunks into a ResizeableBuffer.
+class BufferLogSink final : public LogSink {
+ public:
+  explicit BufferLogSink(ResizeableBuffer *buffer) : buffer_(buffer) {
+    ABSL_CHECK(buffer_ != nullptr);
+  }
+
+  WriteCode OpenForWrite() override {
+    ABSL_CHECK(!is_open_);
+    is_open_ = true;
+    return WriteCode::kOk;
+  }
+  WriteCode Close() override {
+    is_open_ = false;
+    return WriteCode::kOk;
+  }
+  bool is_open() const override { return is_open_; }
+  WriteResult Write(
+      const absl::Span<const absl::Span<const uint8_t>> &queue) override {
+    ABSL_CHECK(is_open_);
+    size_t total_bytes = 0;
+    for (const absl::Span<const uint8_t> &span : queue) {
+      total_bytes += span.size();
+    }
+    buffer_->reserve(buffer_->size() + total_bytes);
+    size_t bytes_written = 0;
+    for (const absl::Span<const uint8_t> &span : queue) {
+      if (!span.empty()) {
+        const size_t starting_size = buffer_->size();
+        buffer_->resize(starting_size + span.size());
+        memcpy(buffer_->data() + starting_size, span.data(), span.size());
+        bytes_written += span.size();
+      }
+    }
+    return WriteResult{
+        .code = WriteCode::kOk,
+        .messages_written = queue.size(),
+        .bytes_written = bytes_written,
+    };
+  }
+  std::string_view name() const override { return "<buffer>"; }
+
+ private:
+  ResizeableBuffer *const buffer_;
+  bool is_open_ = false;
+};
+
 // This class manages efficiently writing a sequence of detached buffers to a
 // file.  It encodes them, queues them up, and batches the write operation.
 

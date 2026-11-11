@@ -291,6 +291,21 @@ class LogNamer {
   const UUID &logger_node_boot_uuid() const { return logger_node_boot_uuid_; }
   size_t logger_node_index() const { return logger_node_index_; }
 
+  struct EncodedConfiguration {
+    std::string sha256;
+    std::string extension;
+    ResizeableBuffer data;
+  };
+
+  void set_encoded_configuration(
+      std::shared_ptr<const EncodedConfiguration> encoded_configuration) {
+    encoded_configuration_ = std::move(encoded_configuration);
+  }
+  const std::shared_ptr<const EncodedConfiguration> &encoded_configuration()
+      const {
+    return encoded_configuration_;
+  }
+
   // Writes out the nested Configuration object to the config file location.
   virtual void WriteConfiguration(
       aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader> *header,
@@ -402,6 +417,11 @@ class LogNamer {
       aos::SizePrefixedFlatbufferDetachedBuffer<LogFileHeader>::Empty();
 
   std::chrono::nanoseconds memory_buffer_duration_{0};
+
+  // Caches the encoded configuration file bytes (keyed by sha256 and
+  // extension) so Logger::RestartLogging can hand them to the new LogNamer
+  // without re-compressing the configuration on every log rotation.
+  std::shared_ptr<const EncodedConfiguration> encoded_configuration_;
 };
 
 // Log namer which uses a config to name a bunch of files.

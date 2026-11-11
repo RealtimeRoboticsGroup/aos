@@ -1,0 +1,10 @@
+// Half of a multi-source static_flatbuffer test target; see multi_b.fbs.
+// multi_b references types declared here, exercising the foxglove TS aspect's
+// same-node sibling --import wiring so `multi_b_foxglove.ts` resolves
+// `Inner` via `import { Inner } from './multi_a_foxglove'`.
+namespace multitest;
+
+table Inner {
+  value:int (id: 0);
+  label:string (id: 1);
+}

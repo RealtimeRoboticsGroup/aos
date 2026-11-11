@@ -30,9 +30,23 @@ ABSL_FLAG(bool, purge_shm_base, false,
 int main(int argc, char **argv) {
   aos::InitGoogle(&argc, &argv);
 
+  aos::FlatbufferDetachedBuffer<aos::Configuration> config =
+      aos::configuration::ReadConfig(absl::GetFlag(FLAGS_config));
+  const aos::Configuration *config_msg = &config.message();
+
   if (absl::GetFlag(FLAGS_purge_shm_base)) {
     aos::util::UnlinkRecursive(absl::GetFlag(FLAGS_shm_base));
+    // The symlinks in shm_base don't reach the hugetlbfs files.
+    if (config_msg->has_shm_hugepage_base()) {
+      aos::util::UnlinkRecursive(config_msg->shm_hugepage_base()->str());
+    }
   }
+
+  // Runs as root here, before the --user switch below drops privileges.
+  aos::starter::ReserveHugePages(config_msg,
+                                 aos::configuration::MultiNode(config_msg)
+                                     ? aos::configuration::GetMyNode(config_msg)
+                                     : nullptr);
 
   if (!absl::GetFlag(FLAGS_user).empty()) {
     uid_t uid;
@@ -86,11 +100,6 @@ int main(int argc, char **argv) {
                        << absl::GetFlag(FLAGS_user);
     }
   }
-
-  aos::FlatbufferDetachedBuffer<aos::Configuration> config =
-      aos::configuration::ReadConfig(absl::GetFlag(FLAGS_config));
-
-  const aos::Configuration *config_msg = &config.message();
 
   aos::starter::Starter starter(config_msg, aos::starter::MakeCGroupManager());
   if (!absl::GetFlag(FLAGS_version_string).empty()) {

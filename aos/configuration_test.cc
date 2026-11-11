@@ -55,6 +55,28 @@ TEST_F(ConfigurationTest, ConfigMerge) {
             FlatbufferToJson(config, {.multi_line = true}));
 }
 
+// Tests that merging keeps the shm huge page settings, and that a later
+// configuration overrides them.
+TEST_F(ConfigurationTest, MergeKeepsShmHugePageSettings) {
+  const FlatbufferDetachedBuffer<Configuration> config =
+      MergeConfiguration(FlatbufferDetachedBuffer<Configuration>(
+          JsonToFlatbuffer<Configuration>(R"json({
+  "channels": [ { "name": "/foo", "type": ".aos.bar", "max_size": 5 } ],
+  "shm_hugepage_base": "/dev/hugepages/aos",
+  "shm_hugepage_threshold": 1234
+})json")));
+  ASSERT_TRUE(config.message().has_shm_hugepage_base());
+  EXPECT_EQ(config.message().shm_hugepage_base()->string_view(),
+            "/dev/hugepages/aos");
+  EXPECT_EQ(config.message().shm_hugepage_threshold(), 1234u);
+
+  const FlatbufferDetachedBuffer<Configuration> merged = MergeWithConfig(
+      &config.message(), R"json({ "shm_hugepage_threshold": 5678 })json");
+  EXPECT_EQ(merged.message().shm_hugepage_base()->string_view(),
+            "/dev/hugepages/aos");
+  EXPECT_EQ(merged.message().shm_hugepage_threshold(), 5678u);
+}
+
 // Tests that we can get back a ChannelIndex.
 TEST_F(ConfigurationTest, ChannelIndex) {
   FlatbufferDetachedBuffer<Configuration> config =
