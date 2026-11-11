@@ -242,7 +242,10 @@ single_version_override(
 )
 
 # Not used directly.  These are the first versions which load the C++ rules
-# from rules_cc, which Bazel 9 requires.
+# from rules_cc, which Bazel 9 requires.  Earlier curl either leaks a
+# --version-script into everything which links it or hides its API from
+# shared libraries.
+bazel_dep(name = "curl", version = "8.12.0.bcr.2")
 bazel_dep(name = "opentelemetry-cpp", version = "1.24.0")
 bazel_dep(name = "re2", version = "2025-08-12.bcr.1")
 bazel_dep(name = "nlohmann_json", version = "3.12.0.bcr.1", repo_name = "com_github_nlohmann_json")
