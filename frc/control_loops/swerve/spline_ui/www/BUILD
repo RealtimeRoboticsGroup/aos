@@ -1,4 +1,4 @@
-load("@aspect_bazel_lib//lib:copy_file.bzl", "copy_file")
+load("@bazel_lib//lib:copy_file.bzl", "copy_file")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("//tools/build_rules:js.bzl", "ng_application")
 load("//tools/build_rules/js:static.bzl", "assemble_static_files")

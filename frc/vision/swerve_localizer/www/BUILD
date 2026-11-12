@@ -1,4 +1,4 @@
-load("@aspect_bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
+load("@bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
 load("//frc/downloader:downloader.bzl", "aos_downloader_dir")
 load("//tools/build_rules:js.bzl", "rollup_bundle", "ts_project")
 

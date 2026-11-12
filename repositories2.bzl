@@ -1,5 +1,6 @@
 load("@aspect_bazel_lib//lib:repositories.bzl", "aspect_bazel_lib_dependencies", "aspect_bazel_lib_register_toolchains", "register_jq_toolchains")
 load("@bazel_features//:deps.bzl", "bazel_features_deps")
+load("@bazel_lib//lib:repositories.bzl", "bazel_lib_dependencies", "register_copy_to_directory_toolchains", "register_coreutils_toolchains")
 load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
 load("@bzlmodrio-ni//:maven_cpp_deps.bzl", "setup_legacy_bzlmodrio_ni_cpp_dependencies")
 load("@rules_halide//internal:prebuilt_pkg.bzl", "prebuilt_pkg")
@@ -25,6 +26,14 @@ def dependencies_phase1():
     aspect_bazel_lib_register_toolchains()
 
     register_jq_toolchains()
+
+    # AOS's own rules use bazel_lib 3; aspect_bazel_lib 2 above is for the JS
+    # rule sets. Both default to the same toolchain repository names.
+    bazel_lib_dependencies()
+
+    register_copy_to_directory_toolchains(name = "bazel_lib_copy_to_directory")
+
+    register_coreutils_toolchains(name = "bazel_lib_coreutils")
 
     py_repositories()
 

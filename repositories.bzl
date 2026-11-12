@@ -58,6 +58,13 @@ alias(
     )
 
     http_archive(
+        name = "bazel_lib",
+        integrity = "sha256-6hrIRLb/fP69dAPnxIr/NwIFKgRNG4n5qcNYfrEKVgo=",
+        strip_prefix = "bazel-lib-3.7.0",
+        url = "https://github.com/bazel-contrib/bazel-lib/releases/download/v3.7.0/bazel-lib-v3.7.0.tar.gz",
+    )
+
+    http_archive(
         name = "com_google_absl",
         patch_args = ["-p1"],
         patches = [

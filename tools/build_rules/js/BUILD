@@ -1,4 +1,4 @@
-load("@aspect_bazel_lib//lib:copy_file.bzl", "copy_file")
+load("@bazel_lib//lib:copy_file.bzl", "copy_file")
 load("@npm//:@angular/compiler-cli/package_json.bzl", angular_compiler_cli = "bin")
 load("//tools/python:defs.bzl", "py_binary")
 load(":ts.bzl", "ts_project")

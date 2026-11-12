@@ -1,4 +1,4 @@
-load("@aspect_bazel_lib//lib:run_binary.bzl", "run_binary")
+load("@bazel_lib//lib:run_binary.bzl", "run_binary")
 
 # Validates constants.json file and outputs a formatted version.
 # TODO(austin): Make this generic

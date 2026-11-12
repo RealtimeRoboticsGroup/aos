@@ -1,9 +1,9 @@
-load("@aspect_bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory_bin_action")
+load("@bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory_bin_action")
 
 def _assemble_static_files_impl(ctx):
     out_dir = ctx.actions.declare_directory(ctx.label.name)
 
-    copy_to_directory_bin = ctx.toolchains["@aspect_bazel_lib//lib:copy_to_directory_toolchain_type"].copy_to_directory_info.bin
+    copy_to_directory_bin = ctx.toolchains["@bazel_lib//lib:copy_to_directory_toolchain_type"].copy_to_directory_info.bin
 
     copy_to_directory_bin_action(
         ctx,
@@ -33,5 +33,5 @@ assemble_static_files = rule(
             allow_files = True,
         ),
     },
-    toolchains = ["@aspect_bazel_lib//lib:copy_to_directory_toolchain_type"],
+    toolchains = ["@bazel_lib//lib:copy_to_directory_toolchain_type"],
 )

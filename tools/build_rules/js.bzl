@@ -1,11 +1,11 @@
-load("@aspect_bazel_lib//lib:copy_file.bzl", "copy_file")
-load("@aspect_bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
 load("@aspect_rules_cypress//cypress:defs.bzl", "cypress_module_test")
 load("@aspect_rules_esbuild//esbuild:defs.bzl", "esbuild")
 load("@aspect_rules_js//js:providers.bzl", "JsInfo")
 load("@aspect_rules_js//npm:defs.bzl", "npm_package")
 load("@aspect_rules_rollup//rollup:defs.bzl", upstream_rollup_bundle = "rollup")
 load("@aspect_rules_terser//terser:defs.bzl", terser_minified = "terser")
+load("@bazel_lib//lib:copy_file.bzl", "copy_file")
+load("@bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 
 #load("@npm//:history-server/package_json.bzl", history_server_bin = "bin")

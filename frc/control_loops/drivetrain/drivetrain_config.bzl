@@ -1,4 +1,4 @@
-load("@aspect_bazel_lib//lib:run_binary.bzl", "run_binary")
+load("@bazel_lib//lib:run_binary.bzl", "run_binary")
 
 def drivetrain_config(name, out):
     """Merges the JSONs for a drivetrain into a single output.
