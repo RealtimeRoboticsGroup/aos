@@ -144,7 +144,7 @@ WritableShmMapping::WritableShmMapping(std::string_view path, size_t size,
 }
 
 WritableShmMapping::~WritableShmMapping() {
-  ABSL_PCHECK(munmap(data_, size_) == 0);
+  ABSL_PCHECK(munmap(data_, mapped_size_) == 0);
 }
 
 ReadOnlyShmMapping::ReadOnlyShmMapping(std::string_view path, size_t size,
@@ -158,7 +158,7 @@ ReadOnlyShmMapping::ReadOnlyShmMapping(std::string_view path, size_t size,
 }
 
 ReadOnlyShmMapping::~ReadOnlyShmMapping() {
-  ABSL_PCHECK(munmap(const_cast<void *>(data_), size_) == 0);
+  ABSL_PCHECK(munmap(const_cast<void *>(data_), mapped_size_) == 0);
 }
 
 bool UnlinkShm(std::string_view path) {
