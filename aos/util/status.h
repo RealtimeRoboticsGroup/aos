@@ -78,6 +78,9 @@ class ErrorType {
       std::string_view message,
       std::source_location source_location = std::source_location::current())
       : ErrorType(StatusCode::kError, message, std::move(source_location)) {}
+  // Constructs an error, retaining the provided pointer to a null-terminated
+  // error message rather than copying it.  The message must outlive the
+  // error, so this is generally only appropriate for string literals.
   explicit ErrorType(const char *message, std::source_location source_location =
                                               std::source_location::current())
       : ErrorType(StatusCode::kError, message, std::move(source_location)) {}
