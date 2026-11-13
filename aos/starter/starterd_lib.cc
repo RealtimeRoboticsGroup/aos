@@ -50,7 +50,7 @@ ABSL_FLAG(uint32_t, queue_initialization_threads, 0,
           "Number of threads to spin up to initialize the queue.  0 means "
           "use the main thread.");
 ABSL_DECLARE_FLAG(bool, enable_ftrace);
-ABSL_FLAG(double, starterd_shutdown_timeout, 1.5,
+ABSL_FLAG(double, starterd_shutdown_timeout, 5.0,
           "Time, in seconds, to wait for everything to shut down when starterd "
           "is cleaning up. When running with large numbers of processes, you "
           "may need a longer timeout than the default.");
