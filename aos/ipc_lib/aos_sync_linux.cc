@@ -257,7 +257,7 @@ int sys_futex_unlock_pi(aos_futex *addr1) {
 int mutex_do_get(aos_mutex *m, bool signals_fail, uint32_t tid) {
   RunShmObservers run_observers(m, true);
   if (kPrintOperations) {
-    printf("%" PRId32 ": %p do_get\n", tid, static_cast<void *>(m));
+    printf("%" PRIu32 ": %p do_get\n", tid, static_cast<void *>(m));
   }
 
   while (true) {
@@ -285,7 +285,7 @@ int mutex_do_get(aos_mutex *m, bool signals_fail, uint32_t tid) {
                          << "), 1, nullptr) failed";
       } else {
         if (kLockDebug) {
-          printf("%" PRId32 ": %p kernel lock done\n", tid,
+          printf("%" PRIu32 ": %p kernel lock done\n", tid,
                  static_cast<void *>(m));
         }
         // The kernel already handled setting the value to our TID (ish).
@@ -293,7 +293,7 @@ int mutex_do_get(aos_mutex *m, bool signals_fail, uint32_t tid) {
       }
     } else {
       if (kLockDebug) {
-        printf("%" PRId32 ": %p fast lock done\n", tid, static_cast<void *>(m));
+        printf("%" PRIu32 ": %p fast lock done\n", tid, static_cast<void *>(m));
       }
       lock_pthread_mutex(m);
       // Fastpath succeeded, so no need to call into the kernel.

@@ -156,7 +156,7 @@ void Init() {
   RegisterRobustList(reinterpret_cast<void *>(robust_head_next_value(head)),
                      sizeof(*head));
   if (kRobustListDebug) {
-    printf("%" PRId32 ": init done\n", get_tid());
+    printf("%" PRIu32 ": init done\n", get_tid());
   }
 }
 
@@ -262,7 +262,7 @@ void mutex_unlock(aos_mutex *m) {
   RunShmObservers run_observers(m, true);
   const uint32_t tid = get_tid();
   if (kPrintOperations) {
-    printf("%" PRId32 ": %p unlock\n", tid, static_cast<void *>(m));
+    printf("%" PRIu32 ": %p unlock\n", tid, static_cast<void *>(m));
   }
 
   const uint32_t value =
@@ -288,7 +288,7 @@ int mutex_trylock(aos_mutex *m) {
   RunShmObservers run_observers(m, true);
   const uint32_t tid = get_tid();
   if (kPrintOperations) {
-    printf("%" PRId32 ": %p trylock\n", tid, static_cast<void *>(m));
+    printf("%" PRIu32 ": %p trylock\n", tid, static_cast<void *>(m));
   }
   my_robust_list::Adder adder(m);
 
@@ -343,7 +343,7 @@ bool mutex_pretend_owner_died_for_testing(aos_mutex *m, uint32_t tid) {
 void death_notification_init(aos_mutex *m) {
   const uint32_t tid = get_tid();
   if (kPrintOperations) {
-    printf("%" PRId32 ": %p death_notification start\n", tid,
+    printf("%" PRIu32 ": %p death_notification start\n", tid,
            static_cast<void *>(m));
   }
   my_robust_list::Adder adder(m);
@@ -362,7 +362,7 @@ void death_notification_release(aos_mutex *m) {
   {
     const uint32_t tid = get_tid();
     if (kPrintOperations) {
-      printf("%" PRId32 ": %p death_notification release\n", tid,
+      printf("%" PRIu32 ": %p death_notification release\n", tid,
              static_cast<void *>(m));
     }
     const uint32_t value =
