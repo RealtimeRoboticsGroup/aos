@@ -76,14 +76,21 @@ SctpServer::SctpServer(int streams, std::string_view local_host, int local_port,
 }
 
 void SctpServer::SetPriorityScheduler([[maybe_unused]] sctp_assoc_t assoc_id) {
-// Kernel 4.9 does not have SCTP_SS_PRIO.
-#ifdef SCTP_SS_PRIO
+// Kernel 4.9 does not have SCTP_STREAM_SCHEDULER.
+#ifdef SCTP_STREAM_SCHEDULER
   struct sctp_assoc_value scheduler;
   memset(&scheduler, 0, sizeof(scheduler));
   scheduler.assoc_id = assoc_id;
   scheduler.assoc_value = SCTP_SS_PRIO;
   if (setsockopt(fd(), IPPROTO_SCTP, SCTP_STREAM_SCHEDULER, &scheduler,
                  sizeof(scheduler)) != 0) {
+    // The association can be closed asynchronously before we get here, the
+    // same as in SetStreamPriority.  Nothing to configure in that case.
+    if (errno == EINVAL) {
+      ABSL_VLOG(1) << "Failed to set scheduler for assoc id " << assoc_id
+                   << ", connection likely closed.";
+      return;
+    }
     ABSL_PLOG(FATAL) << "Failed to set scheduler.";
   }
 #endif
