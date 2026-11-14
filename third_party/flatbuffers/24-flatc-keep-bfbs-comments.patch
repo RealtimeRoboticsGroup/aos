@@ -1,0 +1,25 @@
+Keep an explicit --bfbs-comments working with -b --schema.
+
+flatc's per-generator option loop assigns binary_schema_comments from
+CodeGenerator::SupportsBfbsGeneration(), which is false for the plain
+binary generator, so 'flatc --bfbs-comments -b --schema foo.fbs' emitted
+a .bfbs without any documentation. OR the flag in instead of overwriting
+it. Tools that read doc comments out of the reflection schema depend on
+them, so losing them is a behavior change, not just cosmetic.
+--- a/src/flatc.cpp
++++ b/src/flatc.cpp
+@@ -788,7 +788,13 @@
+         opts.lang_to_generate |= code_generator->Language();
+ 
+         auto is_binary_schema = code_generator->SupportsBfbsGeneration();
+-        opts.binary_schema_comments = is_binary_schema;
++        // Don't clobber an explicit --bfbs-comments: this assignment runs for
++        // every requested generator, and plain binary schema output
++        // (`-b --schema`) reports SupportsBfbsGeneration() == false, which
++        // silently dropped the user's flag and stripped documentation from
++        // the emitted .bfbs.
++        opts.binary_schema_comments =
++            opts.binary_schema_comments || is_binary_schema;
+         options.requires_bfbs = is_binary_schema;
+         options.generators.push_back(std::move(code_generator));
+       }

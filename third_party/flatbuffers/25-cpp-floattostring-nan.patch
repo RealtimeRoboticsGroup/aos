@@ -1,0 +1,33 @@
+Special-case NaN in FloatToString's std::to_chars path.
+
+std::to_chars is allowed to emit "nan(<implementation-defined chars>)" for
+NaN payloads, which isn't valid JSON for the flatbuffers text generator and
+doesn't round-trip. Emit plain "nan" / "-nan" instead, matching what AOS's
+own flatbuffer introspection prints.
+
+--- a/include/flatbuffers/util.h
++++ b/include/flatbuffers/util.h
+@@ -168,11 +168,18 @@ std::string FloatToString(T t, int precision) {
+   #ifndef FLATBUFFERS_PREFER_PRINTF
+     // TODO(james): Use std::format("{}") once we fully support C++20, for simplicity.
+     (void)precision;
+-    std::array<char, 25> buffer;
+-    // Should never fail; a 20 character buffer should be more than adequate
+-    char *end = std::to_chars(buffer.data(), buffer.data() + buffer.size(), t).ptr;
+-    FLATBUFFERS_ASSERT(buffer.data() + buffer.size() != end);
+-    std::string s(buffer.data(), end);
++    std::string s;
++    // std::to_chars may return "nan(arbitrary sequence of implementation-defined characters)"
++    // for nan's. Prevent that.
++    if (std::isnan(t)) {
++      s = std::signbit(t) ? "-nan" : "nan";
++    } else {
++      std::array<char, 25> buffer;
++      // Should never fail; a 20 character buffer should be more than adequate
++      char *end = std::to_chars(buffer.data(), buffer.data() + buffer.size(), t).ptr;
++      FLATBUFFERS_ASSERT(buffer.data() + buffer.size() != end);
++      s = std::string(buffer.data(), end);
++    }
+   #else // FLATBUFFERS_PREFER_PRINTF
+     auto v = static_cast<double>(t);
+     auto s = NumToStringImplWrapper(v, "%0.*f", precision);
