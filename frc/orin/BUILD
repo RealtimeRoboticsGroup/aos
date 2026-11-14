@@ -286,9 +286,9 @@ cuda_library(
         "//aos/events:shm_event_loop",
         "//frc/constants:constants_sender_lib",
         "//frc/vision:calibration_fbs",
-        "//frc/vision:cuda_camera_image_callback",
         "//frc/vision:target_map_fbs",
-        "//frc/vision:vision_util_lib",
+        "//frc/vision/camera:cuda_camera_image_callback",
+        "//frc/vision/util:vision_util_lib",
         "//third_party:opencv",
     ],
 )
@@ -364,7 +364,7 @@ cuda_library(
         "//aos/testing:googletest",
         "//aos/testing:path",
         "//frc/vision:calibration_fbs",
-        "//frc/vision:charuco_lib",
+        "//frc/vision/util:charuco_lib",
     ],
     alwayslink = True,
 )

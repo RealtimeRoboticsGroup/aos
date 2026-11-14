@@ -17,8 +17,8 @@
 #include "frc/constants/constants_sender_lib.h"
 #include "frc/orin/apriltag.h"
 #include "frc/vision/calibration_generated.h"
-#include "frc/vision/charuco_lib.h"
-#include "frc/vision/vision_util_lib.h"
+#include "frc/vision/util/charuco_lib.h"
+#include "frc/vision/util/vision_util_lib.h"
 
 ABSL_FLAG(bool, debug, false, "If true, write debug images.");
 ABSL_FLAG(

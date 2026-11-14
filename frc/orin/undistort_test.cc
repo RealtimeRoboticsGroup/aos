@@ -6,7 +6,7 @@
 #include "aos/testing/path.h"
 #include "apriltag.h"
 #include "frc/vision/calibration_generated.h"
-#include "frc/vision/charuco_lib.h"
+#include "frc/vision/util/charuco_lib.h"
 #include "gpu_apriltag.h"
 
 using namespace frc::vision;

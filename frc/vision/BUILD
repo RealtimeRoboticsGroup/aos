@@ -1,82 +1,12 @@
 load("@aos//aos/flatbuffers:ts.bzl", "flatbuffer_ts_library")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
-load("@rules_cc//cc:cc_library.bzl", "cc_library")
-load("@rules_cc//cc:cc_test.bzl", "cc_test")
 load("//aos:config.bzl", "aos_config")
 load("//aos/flatbuffers:build_defs.bzl", "DEFAULT_FLATC_ARGS")
 load("//aos/flatbuffers:generate.bzl", "static_flatbuffer")
 load("//frc:downloader.bzl", "robot_downloader")
 load("//frc/downloader:downloader.bzl", "aos_downloader_dir")
-load("//tools:cuda_library.bzl", "cuda_library")
 load("//tools/build_rules:template.bzl", "jinja2_template")
 load(":validator.bzl", "camera_constants_json")
-
-cc_binary(
-    name = "modify_extrinsics",
-    srcs = [
-        "modify_extrinsics.cc",
-    ],
-    target_compatible_with = ["@platforms//os:linux"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":calibration_fbs",
-        "//aos:configuration",
-        "//aos:init",
-        "//aos/events:event_loop",
-        "//frc/vision:vision_util_lib",
-        "@com_google_absl//absl/log:absl_check",
-        "@com_google_absl//absl/log:absl_log",
-        "@com_google_absl//absl/strings:str_format",
-        "@eigen",
-    ],
-)
-
-cc_binary(
-    name = "image_replay",
-    srcs = [
-        "image_replay.cc",
-    ],
-    target_compatible_with = ["@platforms//os:linux"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":vision_fbs",
-        "//aos:configuration",
-        "//aos:init",
-        "//aos/events:simulated_event_loop",
-        "//aos/events/logging:log_reader",
-        "//third_party:opencv",
-    ],
-)
-
-cc_binary(
-    name = "image_logger",
-    srcs = [
-        "image_logger.cc",
-    ],
-    target_compatible_with = ["@platforms//os:linux"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":vision_fbs",
-        "//aos:configuration",
-        "//aos:init",
-        "//aos/events:shm_event_loop",
-        "//aos/events/logging:log_writer",
-        "//aos/logging:log_namer",
-        "//aos/util:filesystem_fbs",
-        "//frc/input:joystick_state_fbs",
-    ],
-)
-
-cc_binary(
-    name = "foxglove_image_converter",
-    srcs = ["foxglove_image_converter.cc"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "//aos:init",
-        "//aos/events:shm_event_loop",
-        "//frc/vision:foxglove_image_converter_lib",
-    ],
-)
 
 static_flatbuffer(
     name = "vision_fbs",
@@ -129,234 +59,10 @@ flatbuffer_ts_library(
     visibility = ["//visibility:public"],
 )
 
-cc_library(
-    name = "v4l2_reader",
-    srcs = [
-        "v4l2_reader.cc",
-    ],
-    hdrs = [
-        "v4l2_reader.h",
-    ],
-    target_compatible_with = ["@platforms//os:linux"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":camera_constants_fbs",
-        ":vision_fbs",
-        "//aos/events:aio",
-        "//aos/events:event_loop",
-        "//aos/scoped:scoped_fd",
-        "//aos/util:threaded_consumer",
-        "@com_google_absl//absl/base",
-    ],
-)
-
-cc_library(
-    name = "charuco_lib",
-    srcs = [
-        "charuco_lib.cc",
-    ],
-    hdrs = [
-        "charuco_lib.h",
-    ],
-    target_compatible_with = ["@platforms//os:linux"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":vision_fbs",
-        "//aos:flatbuffers",
-        "//aos/events:event_loop",
-        "//aos/network:message_bridge_server_fbs",
-        "//aos/network:team_number",
-        "//frc/control_loops:quaternion_utils",
-        "//frc/vision:calibration_fbs",
-        "//third_party:opencv",
-        "@com_github_foxglove_schemas//:schemas",
-        "@com_google_absl//absl/log:absl_check",
-        "@com_google_absl//absl/log:absl_log",
-        "@com_google_absl//absl/strings:str_format",
-        "@com_google_absl//absl/types:span",
-        "@eigen",
-    ],
-)
-
-cc_library(
-    name = "cuda_camera_image_callback",
-    srcs = ["cuda_camera_image_callback.cc"],
-    hdrs = ["cuda_camera_image_callback.h"],
-    target_compatible_with = ["@platforms//os:linux"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":charuco_lib",
-        "//aos/events:shm_event_loop",
-        "//frc/orin:cuda",
-    ],
-)
-
-cc_library(
-    name = "extrinsics_calibration",
-    srcs = [
-        "calibration_accumulator.cc",
-        "calibration_accumulator.h",
-        "extrinsics_calibration.cc",
-        "extrinsics_calibration.h",
-    ],
-    target_compatible_with = ["@platforms//os:linux"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":charuco_lib",
-        ":foxglove_image_converter_lib",
-        "//aos:init",
-        "//aos/analysis:in_process_plotter",
-        "//aos/events/logging:log_reader",
-        "//frc/control_loops/drivetrain:improved_down_estimator",
-        "//frc/vision:visualize_robot",
-        "//frc/wpilib:imu_batch_fbs",
-        "//frc/wpilib:imu_fbs",
-        "//third_party:opencv",
-        "@ceres-solver//:ceres",
-        "@com_github_foxglove_schemas//:CompressedImage_schema",
-        "@com_github_foxglove_schemas//:ImageAnnotations_schema",
-        "@com_google_absl//absl/strings:str_format",
-        "@eigen",
-    ],
-)
-
 static_flatbuffer(
     name = "target_map_fbs",
     srcs = ["target_map.fbs"],
     visibility = ["//visibility:public"],
-)
-
-cc_library(
-    name = "target_mapper",
-    srcs = ["target_mapper.cc"],
-    hdrs = ["target_mapper.h"],
-    data = ["target_map.json"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":geometry_lib",
-        ":target_map_fbs",
-        "//aos/events:simulated_event_loop",
-        "//frc/control_loops:control_loop",
-        "//frc/vision:vision_util_lib",
-        "//frc/vision:visualize_robot",
-        "//frc/vision/ceres:pose_graph_3d_lib",
-        "//third_party:opencv",
-        "@ceres-solver//:ceres",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log:absl_log",
-        "@eigen",
-    ],
-)
-
-cc_test(
-    name = "target_mapper_test",
-    srcs = [
-        "target_mapper_test.cc",
-    ],
-    data = [":target_map.json"],
-    deps = [
-        ":target_mapper",
-        "//aos/events:simulated_event_loop",
-        "//aos/testing:googletest",
-        "//aos/testing:path",
-        "//aos/testing:random_seed",
-        "//aos/util:math",
-    ],
-)
-
-cc_library(
-    name = "geometry_lib",
-    hdrs = [
-        "geometry.h",
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        "//aos/util:math",
-        "//third_party:opencv",
-        "@com_google_absl//absl/log:absl_check",
-        "@com_google_absl//absl/log:absl_log",
-    ],
-)
-
-cc_test(
-    name = "geometry_test",
-    srcs = [
-        "geometry_test.cc",
-    ],
-    deps = [
-        ":geometry_lib",
-        "//aos/testing:googletest",
-    ],
-)
-
-cc_library(
-    name = "visualize_robot",
-    srcs = [
-        "visualize_robot.cc",
-    ],
-    hdrs = [
-        "visualize_robot.h",
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        "//aos:init",
-        "//third_party:opencv",
-        "@com_google_absl//absl/log:absl_check",
-        "@com_google_absl//absl/log:absl_log",
-        "@com_google_absl//absl/strings:str_format",
-        "@eigen",
-    ],
-)
-
-cc_binary(
-    name = "visualize_robot_sample",
-    srcs = [
-        "visualize_robot_sample.cc",
-    ],
-    target_compatible_with = ["@platforms//os:linux"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "//aos:init",
-        "//frc/vision:visualize_robot",
-        "//third_party:opencv",
-        "@ceres-solver//:ceres",
-        "@com_google_absl//absl/log:absl_check",
-        "@com_google_absl//absl/log:absl_log",
-        "@eigen",
-    ],
-)
-
-cc_library(
-    name = "media_device",
-    srcs = [
-        "media_device.cc",
-    ],
-    hdrs = ["media_device.h"],
-    target_compatible_with = ["@platforms//os:linux"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "//aos/scoped:scoped_fd",
-        "//aos/util:file",
-        "@com_google_absl//absl/log:absl_check",
-        "@com_google_absl//absl/log:absl_log",
-        "@com_google_absl//absl/strings",
-    ],
-)
-
-cc_library(
-    name = "foxglove_image_converter_lib",
-    srcs = ["foxglove_image_converter_lib.cc"],
-    hdrs = ["foxglove_image_converter_lib.h"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":charuco_lib",
-        ":vision_fbs",
-        "//aos/events:event_loop",
-        "//third_party:opencv",
-        "@com_github_foxglove_schemas//:schemas",
-        "@com_google_absl//absl/log:absl_check",
-        "@com_google_absl//absl/log:absl_log",
-    ],
 )
 
 aos_config(
@@ -379,11 +85,11 @@ aos_config(
         "//aos/network:message_bridge_server_fbs",
         "//aos/network:timestamp_fbs",
         "//frc/orin:hardware_stats_fbs",
-        "//frc/vision/swerve_localizer:chassis_speeds_fbs",
-        "//frc/vision/swerve_localizer:pose2d_fbs",
-        "//frc/vision/swerve_localizer:visualization_fbs",
-        "//frc/vision/swerve_localizer:status_fbs",
-        "//frc/vision/swerve_localizer:udp_status_fbs",
+        ":chassis_speeds_fbs",
+        ":pose2d_fbs",
+        "//frc/vision/field_map:visualization_fbs",
+        "//frc/vision/field_map:status_fbs",
+        "//frc/vision/field_map:udp_status_fbs",
         "//frc/control_loops/drivetrain/localization:localizer_output_fbs",
         "//frc/control_loops/drivetrain:localizer_fbs",
         "//frc/input:joystick_state_fbs",
@@ -391,206 +97,6 @@ aos_config(
         "@com_github_foxglove_schemas//:schemas",
     ],
     visibility = ["//visibility:public"],
-)
-
-aos_config(
-    name = "converter_config",
-    testonly = True,
-    src = "converter_test_config.json",
-    flatbuffers = [
-        ":vision_fbs",
-        "//aos/events:event_loop_fbs",
-        "//aos/logging:log_message_fbs",
-        "//aos/network:message_bridge_client_fbs",
-        "//aos/network:message_bridge_server_fbs",
-        "//aos/network:timestamp_fbs",
-        "@com_github_foxglove_schemas//:schemas",
-    ],
-)
-
-cc_test(
-    name = "foxglove_image_converter_test",
-    srcs = ["foxglove_image_converter_test.cc"],
-    data = [
-        ":converter_config",
-        "@april_tag_test_image",
-    ],
-    deps = [
-        ":foxglove_image_converter_lib",
-        "//aos:configuration",
-        "//aos/events:simulated_event_loop",
-        "//aos/testing:googletest",
-        "//aos/testing:path",
-        "//aos/testing:tmpdir",
-        "@bazel_tools//tools/cpp/runfiles",
-        "@com_google_absl//absl/log:die_if_null",
-    ],
-)
-
-cc_library(
-    name = "intrinsics_calibration_lib",
-    srcs = [
-        "intrinsics_calibration_lib.cc",
-    ],
-    hdrs = [
-        "intrinsics_calibration_lib.h",
-    ],
-    target_compatible_with = ["@platforms//os:linux"],
-    deps = [
-        ":vision_fbs",
-        "//aos/events:event_loop",
-        "//frc/control_loops/drivetrain:improved_down_estimator",
-        "//frc/vision:charuco_lib",
-        "//frc/vision:vision_util_lib",
-        "//frc/wpilib:imu_batch_fbs",
-        "//frc/wpilib:imu_fbs",
-        "//third_party:opencv",
-        "@com_google_absl//absl/log:absl_check",
-        "@com_google_absl//absl/log:absl_log",
-        "@com_google_absl//absl/log:die_if_null",
-        "@com_google_absl//absl/strings:str_format",
-        "@eigen",
-    ],
-)
-
-cc_binary(
-    name = "intrinsics_calibration",
-    srcs = [
-        "intrinsics_calibration.cc",
-    ],
-    data = [":aos_config"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":intrinsics_calibration_lib",
-        ":vision_fbs",
-        "//aos:init",
-        "//aos/events:shm_event_loop",
-        "//frc/control_loops/drivetrain:improved_down_estimator",
-        "//frc/vision:charuco_lib",
-        "//frc/wpilib:imu_batch_fbs",
-        "//frc/wpilib:imu_fbs",
-        "//third_party:opencv",
-        "@com_google_absl//absl/log:absl_check",
-        "@com_google_absl//absl/log:absl_log",
-        "@com_google_absl//absl/strings:str_format",
-        "@eigen",
-    ],
-)
-
-aos_config(
-    name = "intrinsics_test_config",
-    src = "intrinsics_test_config_source.json",
-    flatbuffers = [
-        "//aos/network:message_bridge_client_fbs",
-        "//aos/network:message_bridge_server_fbs",
-        "//aos/network:timestamp_fbs",
-        "//aos/network:remote_message_fbs",
-        "//frc/control_loops/drivetrain/localization:localizer_output_fbs",
-        "//frc/orin:hardware_stats_fbs",
-        "//frc/vision:calibration_fbs",
-        "//frc/vision:target_map_fbs",
-        "//frc/vision:vision_fbs",
-        "//aos/util:filesystem_fbs",
-        "@com_github_foxglove_schemas//:schemas",
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        "//aos/events:aos_config",
-        "//frc/control_loops/drivetrain:aos_config",
-        "//frc/input:aos_config",
-    ],
-)
-
-cc_test(
-    name = "intrinsics_calibration_test",
-    timeout = "long",
-    srcs = [
-        "intrinsics_calibration_test.cc",
-    ],
-    data = [
-        ":intrinsics_test_config",
-        "//frc/vision/test_calib_files",
-        "@intrinsic_calibration_test_images",
-    ],
-    shard_count = 4,
-    deps = [
-        ":intrinsics_calibration",
-        ":intrinsics_calibration_lib",
-        "//aos:init",
-        "//aos/events:shm_event_loop",
-        "//aos/events:simulated_event_loop",
-        "//aos/testing:googletest",
-        "//aos/testing:path",
-        "//aos/testing:random_seed",
-        "//aos/util:math",
-        "//third_party:opencv",
-        "@bazel_tools//tools/cpp/runfiles",
-    ],
-)
-
-cc_library(
-    name = "vision_util_lib",
-    srcs = ["vision_util_lib.cc"],
-    hdrs = ["vision_util_lib.h"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "//aos/util:math",
-        "//frc/control_loops:quaternion_utils",
-        "//frc/vision:calibration_fbs",
-        "//frc/vision/ceres:pose_graph_3d_lib",
-        "//third_party:opencv",
-        "@ceres-solver//:ceres",
-        "@com_google_absl//absl/log:absl_check",
-        "@com_google_absl//absl/log:absl_log",
-        "@com_google_absl//absl/strings:str_format",
-        "@eigen",
-    ],
-)
-
-cc_test(
-    name = "vision_util_lib_test",
-    srcs = ["vision_util_lib_test.cc"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "//aos/testing:googletest",
-        "//frc/vision:vision_util_lib",
-        "@com_google_absl//absl/log:absl_check",
-        "@com_google_absl//absl/log:absl_log",
-    ],
-)
-
-cc_library(
-    name = "target_map_utils",
-    srcs = ["target_map_utils.cc"],
-    hdrs = ["target_map_utils.h"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "//frc/vision:target_map_fbs",
-        "@eigen",
-    ],
-)
-
-cc_library(
-    name = "calibrate_multi_cameras_lib",
-    srcs = ["calibrate_multi_cameras_lib.cc"],
-    hdrs = ["calibrate_multi_cameras_lib.h"],
-    target_compatible_with = ["@platforms//os:linux"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "//aos:init",
-        "//aos/events:simulated_event_loop",
-        "//aos/events/logging:log_reader",
-        "//aos/util:mcap_logger",
-        "//frc/constants:constants_sender_lib",
-        "//frc/control_loops:pose",
-        "//frc/vision:calibration_fbs",
-        "//frc/vision:charuco_lib",
-        "//frc/vision:extrinsics_calibration",
-        "//frc/vision:target_mapper",
-        "//frc/vision:vision_util_lib",
-        "//third_party:opencv",
-        "@eigen",
-    ],
 )
 
 aos_downloader_dir(
@@ -602,17 +108,17 @@ aos_downloader_dir(
 
 robot_downloader(
     binaries = [
-        ":yolo",
+        "//frc/vision/detection:yolo",
         ":image_dump_cli",
-        ":apriltag_detector",
+        "//frc/vision/detection:apriltag_detector",
         ":field_side_exposure_adjuster",
         ":game_piece_mapper",
-        ":image_logger",
-        ":intrinsics_calibration",
-        ":turbojpeg_decoder",
-        ":network_tables_publisher",
-        ":network_tables_client",
-        ":vision_constants_sender",
+        "//frc/vision/camera:image_logger",
+        "//frc/vision/calibration:intrinsics_calibration",
+        "//frc/vision/camera:turbojpeg_decoder",
+        "//frc/vision/networking:network_tables_publisher",
+        "//frc/vision/networking:network_tables_client",
+        "//frc/vision/networking:vision_constants_sender",
         "//aos/events:aos_timing_report_streamer",
         "//aos/network:web_proxy_main",
         "//aos/starter:irq_affinity",
@@ -621,10 +127,10 @@ robot_downloader(
         "//aos/util:foxglove_websocket",
         "//frc/orin:hardware_monitor",
         "//frc/orin:localizer_logger",
-        "//frc/vision/swerve_localizer:field_map_constants_sender",
-        "//frc/vision/swerve_localizer:localizer_main",
-        "//frc/vision/swerve_localizer:network_tables_swerve_client",
-        "//frc/vision:camera_reader",
+        "//frc/vision/field_map:field_map_constants_sender",
+        "//frc/vision/field_map:localizer_main",
+        "//frc/vision/networking:network_tables_swerve_client",
+        "//frc/vision/camera:camera_reader",
     ],
     data = [
         ":aos_config",
@@ -636,7 +142,7 @@ robot_downloader(
     # without needing to manually scp around intrinsics JSON's.
     dirs = [
         ":base_intrinsics_files",
-        "//frc/vision/swerve_localizer/www:www_files",
+        "//frc/vision/field_map/www:www_files",
     ],
     target_compatible_with = [
         "@platforms//cpu:arm64",
@@ -649,224 +155,6 @@ static_flatbuffer(
     name = "turbojpeg_decoder_status_fbs",
     srcs = ["turbojpeg_decoder_status.fbs"],
     visibility = ["//visibility:public"],
-)
-
-cc_binary(
-    name = "turbojpeg_decoder",
-    srcs = ["turbojpeg_decoder.cc"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":turbojpeg_decoder_status_fbs",
-        ":vision_fbs",
-        "//aos:configuration",
-        "//aos:init",
-        "//aos/containers:inlined_vector",
-        "//aos/events:shm_event_loop",
-        "//third_party:libturbojpeg",
-    ],
-)
-
-# Compares 8-bit greyscale images, e.g. a hardware decode with turbojpeg's;
-# see gray_image_diff.h.
-cc_library(
-    name = "gray_image_diff",
-    srcs = ["gray_image_diff.cc"],
-    hdrs = ["gray_image_diff.h"],
-    deps = [
-        "@com_google_absl//absl/log:absl_check",
-        "@com_google_absl//absl/types:span",
-    ],
-)
-
-cc_test(
-    name = "gray_image_diff_test",
-    srcs = ["gray_image_diff_test.cc"],
-    deps = [
-        ":gray_image_diff",
-        "//aos/testing:googletest",
-    ],
-)
-
-# Thin wrapper around the Jetson NVJPG hardware JPEG decoder; see
-# nvjpeg_decoder_lib.h.
-cc_library(
-    name = "nvjpeg_decoder_lib",
-    srcs = ["nvjpeg_decoder_lib.cc"],
-    hdrs = ["nvjpeg_decoder_lib.h"],
-    # Selects the hardware-extended jpeglib struct layout matching
-    # libnvjpeg.so's ABI; must only be set for TUs including the sysroot's
-    # libjpeg-8b headers.
-    local_defines = ["TEGRA_ACCELERATE"],
-    target_compatible_with = [
-        "@platforms//cpu:arm64",
-        "@platforms//os:linux",
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        "@arm64_debian_sysroot//:nvbufsurface",
-        "@arm64_debian_sysroot//:nvjpeg",
-        "@com_google_absl//absl/log:absl_check",
-        "@com_google_absl//absl/log:absl_log",
-    ],
-)
-
-# The NVJPG decoder service, shared by nvjpeg_decoder and
-# nvjpeg_decoder_verify; see nvjpeg_decoder_service.h.
-cc_library(
-    name = "nvjpeg_decoder_service",
-    srcs = ["nvjpeg_decoder_service.cc"],
-    hdrs = ["nvjpeg_decoder_service.h"],
-    target_compatible_with = [
-        "@platforms//cpu:arm64",
-        "@platforms//os:linux",
-    ],
-    deps = [
-        ":nvjpeg_decoder_lib",
-        ":turbojpeg_decoder_status_fbs",
-        ":vision_fbs",
-        "//aos:realtime",
-        "//aos/containers:inlined_vector",
-        "//aos/events:event_loop",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log:absl_check",
-        "@com_google_absl//absl/log:absl_log",
-        "@com_google_absl//absl/strings",
-    ],
-)
-
-# Hardware (NVJPG engine) counterpart to turbojpeg_decoder with the identical
-# channel/flag/status interface -- swap decoders by changing executable_name
-# in the config.  arm64-only; x86 simulation keeps using turbojpeg_decoder.
-cc_binary(
-    name = "nvjpeg_decoder",
-    srcs = ["nvjpeg_decoder.cc"],
-    target_compatible_with = [
-        "@platforms//cpu:arm64",
-        "@platforms//os:linux",
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":nvjpeg_decoder_service",
-        "//aos:configuration",
-        "//aos:init",
-        "//aos/events:shm_event_loop",
-        "@com_google_absl//absl/flags:flag",
-    ],
-)
-
-# nvjpeg_decoder that also decodes every frame with turbojpeg and dies if the
-# hardware output differs.  Swap it in for nvjpeg_decoder (executable_name in
-# the config) to check libnvjpeg on a bench or robot; it costs a CPU decode
-# per frame, so it is not for matches.
-cc_binary(
-    name = "nvjpeg_decoder_verify",
-    srcs = ["nvjpeg_decoder_verify.cc"],
-    target_compatible_with = [
-        "@platforms//cpu:arm64",
-        "@platforms//os:linux",
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":gray_image_diff",
-        ":nvjpeg_decoder_service",
-        "//aos:configuration",
-        "//aos:init",
-        "//aos:realtime",
-        "//aos/events:shm_event_loop",
-        "//third_party:libturbojpeg",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log:absl_check",
-        "@com_google_absl//absl/log:absl_log",
-    ],
-)
-
-# Probe/benchmark for libnvjpeg on the Orin: reports whether the NVJPG
-# engine is engaged and the per-frame decode time.  scp to the target and
-# run by hand; independent of nvjpeg_decoder_lib's fail-loud policy.
-cc_binary(
-    name = "nvjpeg_bench",
-    srcs = ["nvjpeg_bench.cc"],
-    local_defines = ["TEGRA_ACCELERATE"],
-    target_compatible_with = [
-        "@platforms//cpu:arm64",
-        "@platforms//os:linux",
-    ],
-    deps = [
-        "@arm64_debian_sysroot//:nvjpeg",
-        "@com_google_absl//absl/log:absl_log",
-        "@com_google_absl//absl/log:globals",
-        "@com_google_absl//absl/log:initialize",
-        "@com_google_absl//absl/strings:str_format",
-    ],
-)
-
-# Hardware test: decodes DIFFERENT JPEGs through one NvJpegDecoderLib
-# instance and checks every output against turbojpeg, to expose stale,
-# delayed or wrong-buffer output; see nvjpeg_seq_test.cc.  Needs the NVJPG engine, so CI (x86) skips
-# it -- build with --config=arm64 and run it on an Orin.
-cc_test(
-    name = "nvjpeg_seq_test",
-    srcs = ["nvjpeg_seq_test.cc"],
-    data = [
-        "testdata/camera_a.jpg",
-        "testdata/camera_b.jpg",
-        "testdata/camera_c.jpg",
-        "testdata/seq_040.jpg",
-        "testdata/seq_080.jpg",
-        "testdata/seq_120.jpg",
-        "testdata/seq_200.jpg",
-    ],
-    target_compatible_with = [
-        "@platforms//cpu:arm64",
-        "@platforms//os:linux",
-    ],
-    deps = [
-        ":gray_image_diff",
-        ":nvjpeg_decoder_lib",
-        "//aos/testing:googletest",
-        "//aos/testing:path",
-        "//third_party:libturbojpeg",
-        "@com_google_absl//absl/log:absl_check",
-        "@com_google_absl//absl/log:absl_log",
-    ],
-)
-
-# On-bus latency test for a running decoder service: publishes real camera
-# JPEGs and times how long until each one's pixels come back on /gray; see
-# decoder_latency_test.cc.  scp to the Orin and run by hand.
-cc_binary(
-    name = "decoder_latency_test",
-    srcs = ["decoder_latency_test.cc"],
-    target_compatible_with = [
-        "@platforms//cpu:arm64",
-        "@platforms//os:linux",
-    ],
-    deps = [
-        ":gray_image_diff",
-        ":vision_fbs",
-        "//aos:configuration",
-        "//aos:init",
-        "//aos/events:shm_event_loop",
-        "//third_party:libturbojpeg",
-        "@com_google_absl//absl/log:absl_check",
-        "@com_google_absl//absl/log:absl_log",
-        "@com_google_absl//absl/strings:str_format",
-    ],
-)
-
-# Standalone benchmark for the turbojpeg CPU decode path, mirroring
-# turbojpeg_decoder's per-frame calls.  scp to a target and run by hand on a
-# .jpg to compare decoder latencies (counterpart to :nvjpeg_bench).
-cc_binary(
-    name = "turbojpeg_bench",
-    srcs = ["turbojpeg_bench.cc"],
-    deps = [
-        "//third_party:libturbojpeg",
-        "@com_google_absl//absl/log:absl_log",
-        "@com_google_absl//absl/log:globals",
-        "@com_google_absl//absl/log:initialize",
-        "@com_google_absl//absl/strings:str_format",
-    ],
 )
 
 static_flatbuffer(
@@ -898,87 +186,12 @@ static_flatbuffer(
     ],
 )
 
-cuda_library(
-    name = "apriltag_detector_lib",
-    srcs = ["apriltag_detector.cc"],
-    target_compatible_with = ["@platforms//os:linux"],
-    deps = [
-        ":camera_constants_fbs",
-        "//aos:configuration",
-        "//aos:init",
-        "//aos/events:shm_event_loop",
-        "//frc/orin:gpu_apriltag_lib",
-        "//third_party:cudart",
-        "//third_party/apriltag",
-        "@com_github_nvidia_cccl//:cccl",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log:absl_check",
-        "@com_google_absl//absl/log:absl_log",
-    ],
-    alwayslink = True,
-)
-
-cc_binary(
-    name = "apriltag_detector",
-    target_compatible_with = ["//tools/platforms/gpu:nvidia"],
-    visibility = ["//visibility:public"],
-    deps = [":apriltag_detector_lib"],
-)
-
-cc_binary(
-    name = "vision_constants_sender",
-    srcs = [
-        "vision_constants_sender.cc",
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":camera_constants_fbs",
-        ":camera_constants_list_fbs",
-        "//aos:configuration",
-        "//aos:init",
-        "//aos/events:shm_event_loop",
-        "//aos/util:file",
-        "//frc/constants:constants_sender_lib",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log:absl_log",
-        "@com_google_absl//absl/strings",
-    ],
-)
-
 jinja2_template(
     name = "constants_unvalidated.json",
-    src = "constants.jinja2.json",
+    src = "templates/constants.jinja2.json",
     includes = glob([
         "constants/*.json",
     ]),
-)
-
-cc_binary(
-    name = "camera_reader",
-    srcs = [
-        "camera_reader_main.cc",
-    ],
-    target_compatible_with = ["@platforms//os:linux"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "//aos:init",
-        "//aos/events:shm_event_loop",
-        "//frc/constants:constants_sender_lib",
-        "//frc/vision:v4l2_reader",
-    ],
-)
-
-cc_binary(
-    name = "camera_constants_formatter",
-    srcs = ["camera_constants_formatter.cc"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":camera_constants_list_fbs",
-        "//aos:init",
-        "//aos:json_to_flatbuffer",
-        "@com_google_absl//absl/log:absl_check",
-        "@com_google_absl//absl/log:absl_log",
-    ],
 )
 
 camera_constants_json(
@@ -997,50 +210,6 @@ static_flatbuffer(
 )
 
 cc_binary(
-    name = "network_tables_publisher",
-    srcs = ["network_tables_publisher.cc"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":camera_constants_fbs",
-        ":field_map_fbs",
-        ":target_map_fbs",
-        "//aos:configuration",
-        "//aos:init",
-        "//aos/events:shm_event_loop",
-        "//frc/constants:constants_sender_lib",
-        "//frc/control_loops/drivetrain/localization:localizer_output_fbs",
-        "//frc/vision/swerve_localizer:status_fbs",
-        "@com_github_wpilibsuite_allwpilib//ntcore:ntcore.static",
-        "@com_github_wpilibsuite_allwpilib//wpimath:wpimath.static",
-        "@com_google_absl//absl/flags:flag",
-        "@eigen",
-    ],
-)
-
-cc_binary(
-    name = "robot_transformation_calculator",
-    srcs = [
-        "robot_transformation_calculator.cc",
-    ],
-    deps = [
-        "//aos:init",
-        "@com_google_absl//absl/log:absl_log",
-        "@eigen",
-    ],
-)
-
-cc_binary(
-    name = "network_tables_server",
-    srcs = ["network_tables_server.cc"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "//aos:init",
-        "@com_github_wpilibsuite_allwpilib//ntcore:ntcore.static",
-        "@com_google_absl//absl/flags:flag",
-    ],
-)
-
-cc_binary(
     name = "field_side_exposure_adjuster",
     srcs = ["field_side_exposure_adjuster.cc"],
     visibility = ["//visibility:public"],
@@ -1050,79 +219,6 @@ cc_binary(
         "//aos:init",
         "//aos/events:shm_event_loop",
         "//frc/input:joystick_state_fbs",
-    ],
-)
-
-cc_binary(
-    name = "network_tables_client",
-    srcs = ["network_tables_client.cc"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "//aos:init",
-        "@com_github_wpilibsuite_allwpilib//ntcore:ntcore.static",
-        "@com_github_wpilibsuite_allwpilib//wpimath:wpimath.static",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log:absl_check",
-        "@com_google_absl//absl/log:absl_log",
-        "@com_google_absl//absl/log:die_if_null",
-    ],
-)
-
-cc_binary(
-    name = "calibrate_multi_cameras",
-    srcs = [
-        "calibrate_multi_cameras.cc",
-        "vision_util.cc",
-        "vision_util.h",
-    ],
-    data = [
-        ":aos_config",
-        ":constants.json",
-    ],
-    target_compatible_with = ["@platforms//os:linux"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "//aos:init",
-        "//aos/events:simulated_event_loop",
-        "//aos/events/logging:log_reader",
-        "//aos/util:mcap_logger",
-        "//frc/constants:constants_sender_lib",
-        "//frc/control_loops:pose",
-        "//frc/vision:calibrate_multi_cameras_lib",
-        "//frc/vision:calibration_fbs",
-        "//frc/vision:charuco_lib",
-        "//frc/vision:extrinsics_calibration",
-        "//frc/vision:target_mapper",
-        "//frc/vision:vision_util_lib",
-        "//frc/vision/swerve_localizer:simulated_constants_sender_lib",
-        "//third_party:opencv",
-        "@eigen",
-    ],
-)
-
-cc_binary(
-    name = "yolo",
-    srcs = [
-        "yolo.cc",
-    ],
-    target_compatible_with = ["//tools/platforms/gpu:nvidia"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":coral_detection_fbs",
-        ":cuda_camera_image_callback",
-        ":vision_fbs",
-        "//aos:configuration",
-        "//aos:init",
-        "//aos/events:shm_event_loop",
-        "//aos/util:file",
-        "//frc/orin:cuda",
-        "//frc/orin:resize_normalize",
-        "//third_party:cudart",
-        "//third_party:opencv",
-        "//third_party:tensorrt",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/log:absl_check",
-        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -1207,4 +303,20 @@ cc_binary(
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
     ],
+)
+
+static_flatbuffer(
+    name = "chassis_speeds_fbs",
+    srcs = [
+        "chassis_speeds.fbs",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+static_flatbuffer(
+    name = "pose2d_fbs",
+    srcs = [
+        "pose2d.fbs",
+    ],
+    visibility = ["//visibility:public"],
 )

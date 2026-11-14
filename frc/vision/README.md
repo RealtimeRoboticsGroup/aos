@@ -1,3 +1,25 @@
+## Layout
+
+The code is grouped by what it does:
+
+- `calibration/`: intrinsics and extrinsics calibration, and the tools that
+  edit calibration files.
+- `camera/`: `camera_reader`, the JPEG decoders and the image logger.
+- `detection/`: the AprilTag detector, YOLO and the target map.
+- `field_map/`: the localizer, the field map constants sender and the field
+  web page.
+- `networking/`: the NetworkTables bridges and the constants sender.
+- `tools/`: offline tools: image replay, the Foxglove image converter and
+  Foxglove layouts.
+- `util/`: libraries the rest share (ChArUco, geometry, `vision_util_lib`,
+  `visualize_robot`).
+- `templates/`: the jinja2 template `constants.jinja2.json` is built from.
+- `constants/` and `test_calib_files/`: camera calibration JSON.
+- `ceres/`: the pose graph solver.
+
+The flatbuffer schemas, the AOS config, `constants.json` and the deploy rule
+(`//frc/vision:download_stripped`) stay at the top level.
+
 ## Hardware
 
 The vision coprocessor is made of three parts:
@@ -129,7 +151,7 @@ accepted, and whether it is receiving chassis speeds from the robot.
 
 The roboRIO and the Orin talk to each other over UDP, plus NetworkTables. On
 the Orin side, this is `network_tables_swerve_client`
-([`swerve_localizer/network_tables_swerve_client.cc`](swerve_localizer/network_tables_swerve_client.cc)).
+([`networking/network_tables_swerve_client.cc`](networking/network_tables_swerve_client.cc)).
 On the roboRIO side, use 4646's
 [`OrinVision.java`](https://github.com/frc4646/2025-Robot-Public/blob/e853b90ee0815684757cfb01439a986384d29dcc/src/main/java/org/team4646/lib/vision/OrinVision.java)
 as the starting point for a new team's robot code.
@@ -481,13 +503,13 @@ Notes to be aware of:
 
 When the solve finishes, it writes a JSON file to the `--calibration_folder`.
 Copy it off the Orin into `frc/vision/constants/`, and update
-`frc/vision/constants.jinja2.json` to point the camera at the new file in
+`frc/vision/templates/constants.jinja2.json` to point the camera at the new file in
 place of its base calibration.
 
 ## Extrinsics calibration
 
 ```
-bazel run -c opt //frc/vision:calibrate_multi_cameras -- `realpath pre-champs-calibration2/` --team_number 4646 --vmodule=calibrate_multi_cameras_lib=0 --visualize
+bazel run -c opt //frc/vision/calibration:calibrate_multi_cameras -- `realpath pre-champs-calibration2/` --team_number 4646 --vmodule=calibrate_multi_cameras_lib=0 --visualize
 ```
 
 Do the same, copy the constants over and update `constants.jinja.json`.
@@ -495,7 +517,7 @@ Do the same, copy the constants over and update `constants.jinja.json`.
 ## Replaying the localizer
 
 ```
-rm -rf /tmp/replayed/ && bazel run -c opt //frc/vision/swerve_localizer:localizer_replay -- /home/austin/local/aos/frc/vision/logs/image_log-060_1970-01-01_00-02-15-MOSE-e11/ --vmodule=simulated_event_loop=0
+rm -rf /tmp/replayed/ && bazel run -c opt //frc/vision/field_map:localizer_replay -- /home/austin/local/aos/frc/vision/logs/image_log-060_1970-01-01_00-02-15-MOSE-e11/ --vmodule=simulated_event_loop=0
 ```
 
 ## Adjusting exposure settings
