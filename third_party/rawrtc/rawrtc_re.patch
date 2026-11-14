@@ -3,7 +3,7 @@ new file mode 100644
 index 000000000..b8a1106ed
 --- /dev/null
 +++ b/BUILD
-@@ -0,0 +1,84 @@
+@@ -0,0 +1,88 @@
 +load("@aos//tools/build_rules:select.bzl", "compiler_select")
 +
 +cc_library(
@@ -16,6 +16,7 @@ index 000000000..b8a1106ed
 +        exclude = [
 +            "src/aes/apple/**",
 +            "src/aes/stub.c",
++            "src/crc32/**",
 +            "src/hmac/apple/**",
 +            "src/hmac/hmac.c",
 +            "src/mqueue/win32/**",
@@ -56,7 +57,7 @@ index 000000000..b8a1106ed
 +        "-DUSE_DTLS",
 +        "-DUSE_OPENSSL_SRTP",
 +        "-DUSE_DTLS_SRTP",
-+        #"-DUSE_ZLIB",
++        "-DUSE_ZLIB",
 +        "-DHAVE_INET6",
 +        "-DHAVE_SELECT",
 +        "-DHAVE_STDBOOL_H",
@@ -86,7 +87,10 @@ index 000000000..b8a1106ed
 +    defines = ["HAVE_INTTYPES_H"],
 +    includes = ["include/"],
 +    visibility = ["//visibility:public"],
-+    deps = ["@boringssl//:ssl"],
++    deps = [
++        "@boringssl//:ssl",
++        "@zlib",
++    ],
 +)
 diff --git a/WORKSPACE b/WORKSPACE
 new file mode 100644
