@@ -1,0 +1,77 @@
+diff --git a/BUILD.bazel b/BUILD.bazel
+index 8fdcf44..23b50f4 100644
+--- a/BUILD.bazel
++++ b/BUILD.bazel
+@@ -89,7 +89,7 @@ config_setting(
+ )
+ 
+ cc_library(
+-    name = "z",
++    name = "z_src",
+     srcs = [
+         "adler32.c",
+         "compress.c",
+@@ -130,6 +130,52 @@ cc_library(
+     visibility = ["//visibility:public"],
+ )
+ 
++config_setting(
++    name = "linux_arm64",
++    constraint_values = [
++        "@platforms//os:linux",
++        "@platforms//cpu:arm64",
++    ],
++)
++
++config_setting(
++    name = "linux_x86_64",
++    constraint_values = [
++        "@platforms//os:linux",
++        "@platforms//cpu:x86_64",
++    ],
++)
++
++config_setting(
++    name = "linux_arm64_msan",
++    constraint_values = [
++        "@platforms//os:linux",
++        "@platforms//cpu:arm64",
++    ],
++    values = {"features": "msan"},
++)
++
++config_setting(
++    name = "linux_x86_64_msan",
++    constraint_values = [
++        "@platforms//os:linux",
++        "@platforms//cpu:x86_64",
++    ],
++    values = {"features": "msan"},
++)
++
++alias(
++    name = "z",
++    actual = select({
++        ":linux_arm64_msan": ":z_src",
++        ":linux_x86_64_msan": ":z_src",
++        ":linux_arm64": "@arm64_debian_sysroot//:zlib",
++        ":linux_x86_64": "@amd64_debian_sysroot//:zlib",
++        "//conditions:default": ":z_src",
++    }),
++    visibility = ["//visibility:public"],
++)
++
+ alias(
+     name = "zlib",
+     actual = ":z",
+diff --git a/MODULE.bazel b/MODULE.bazel
+index d172165..52d4c6b 100644
+--- a/MODULE.bazel
++++ b/MODULE.bazel
+@@ -6,3 +6,6 @@ module(
+ bazel_dep(name = "platforms", version = "0.0.7")
+ bazel_dep(name = "rules_cc", version = "0.0.8")
+ bazel_dep(name = "rules_license", version = "1.0.0")
++
++bazel_dep(name = "arm64_debian_sysroot", version = "2025.10.25")
++bazel_dep(name = "amd64_debian_sysroot", version = "2025.04.20")
