@@ -172,24 +172,27 @@ TEST(RealtimeTest, RaiseRealtimePriorityLimit) {
 // handler.
 TEST(RealtimeTest, FatalUnsetRealtimePriorityDropsEveryThread) {
   std::atomic<pid_t> sibling_tid{0};
-  std::atomic<bool> sibling_is_realtime{false};
+  std::atomic<int> sibling_set_result{0};
+  std::atomic<bool> sibling_ready{false};
   std::atomic<bool> done{false};
 
   std::thread sibling([&]() {
     sibling_tid = GetThreadId();
-    sibling_is_realtime =
-        SetCurrentThreadRealtimePriorityLowLevel(1, SCHED_FIFO) == 0;
+    sibling_set_result =
+        SetCurrentThreadRealtimePriorityLowLevel(1, SCHED_FIFO);
+    sibling_ready = true;
     while (!done.load()) {
       std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
   });
 
-  while (sibling_tid.load() == 0) {
+  while (!sibling_ready.load()) {
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
-  while (!sibling_is_realtime.load() &&
-         sched_getscheduler(sibling_tid.load()) != SCHED_FIFO) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  if (sibling_set_result.load() != 0) {
+    done = true;
+    sibling.join();
+    FAIL() << "Failed to make the sibling thread realtime";
   }
 
   // NO_MODE keeps the malloc hooks off, so gtest can keep allocating while we

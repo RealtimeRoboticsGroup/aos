@@ -291,9 +291,13 @@ int ParseTid(const char *name) {
   return result;
 }
 
-// The subset of struct linux_dirent64 we need, matching the kernel ABI.
+// struct linux_dirent64, matching the kernel ABI in include/linux/dirent.h.
 // Declared here rather than relying on a libc getdents64() wrapper, which is
 // only available in newer glibc.
+//
+// d_off is signed (s64 in the kernel, off64_t in getdents(2)) and fixed width.
+// Older manpages show an unsigned long d_off, but that is struct linux_dirent
+// for the legacy getdents() syscall, not this one.  We don't use d_off anyway.
 struct Dirent64 {
   uint64_t d_ino;
   int64_t d_off;
@@ -330,6 +334,10 @@ extern "C" void aos_FatalUnsetRealtimePriority() {
   // down with the rest of the process, and nothing they do between now and
   // then is worth preempting a healthy RT application elsewhere on the system.
 #ifdef __linux__
+  // getdents(2) recommends readdir(3) over calling getdents64() directly, but
+  // readdir() needs the DIR from opendir(), which mallocs it, and neither is on
+  // the async-signal-safe list in signal-safety(7).  So we walk the directory
+  // with the raw syscall into a stack buffer instead.
   const int fd = open("/proc/self/task", O_RDONLY | O_DIRECTORY | O_CLOEXEC, 0);
   if (fd != -1) {
     // Sized to comfortably hold a directory block's worth of entries.  We loop
