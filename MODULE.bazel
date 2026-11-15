@@ -290,14 +290,7 @@ single_version_override(
 )
 
 bazel_dep(name = "rawrtc", version = "0.5.2")
-
-# Use zlib's crc32 instead of re's, which collides with it at link time.
-single_version_override(
-    module_name = "rawrtc_re",
-    patch_strip = 1,
-    patches = ["//third_party:rawrtc_re/0001-Use-zlib-crc32.patch"],
-    version = "0.6.0-3",
-)
+bazel_dep(name = "rawrtc_re", version = "0.6.0-3.bcr.1")
 
 bazel_dep(name = "bazel_iwyu", version = "0.0.4", dev_dependency = True)
 
