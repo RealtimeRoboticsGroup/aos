@@ -1,28 +1,46 @@
 diff --git a/absl/log/internal/check_op.cc b/absl/log/internal/check_op.cc
-index be8ceaf..0beccdd 100644
 --- a/absl/log/internal/check_op.cc
 +++ b/absl/log/internal/check_op.cc
-@@ -31,6 +31,19 @@
+@@ -31,6 +31,37 @@
  #include <strings.h>  // for strcasecmp, but msvc does not have this header
  #endif
  
-+#ifdef _WIN32
++#if defined(_WIN32)
 +extern "C" void aos_FatalUnsetRealtimePriority_default_check_op() {}
 +extern "C" void aos_FatalUnsetRealtimePriority();
 +#pragma comment(linker, "/alternatename:aos_FatalUnsetRealtimePriority=aos_FatalUnsetRealtimePriority_default_check_op")
-+#else
++
++static void MaybeUnsetRealtime() { aos_FatalUnsetRealtimePriority(); }
++#elif defined(__APPLE__)
++// Mach-O has no undefined-weak-resolves-to-null, so the ELF form below fails to
++// link when AOS isn't present.  Fall back to a weak definition, which Mach-O
++// does support.  That reintroduces the shadowing hazard the ELF comment
++// describes, which is acceptable here only because macOS is not a realtime
++// target -- realtime_darwin.cc is stubs.
 +extern "C" void aos_FatalUnsetRealtimePriority();
 +extern "C" __attribute__((weak)) void aos_FatalUnsetRealtimePriority() {}
-+#endif
++
++static void MaybeUnsetRealtime() { aos_FatalUnsetRealtimePriority(); }
++#else
++// Declared weak, and deliberately NOT defined.  A weak *definition* here would
++// be picked over AOS's real one whenever this object comes first in the link or
++// dynamic search order, silently turning the drop back into a no-op.  An
++// undefined weak reference is instead null when AOS is not linked in at all,
++// which is the fallback we actually want.
++extern "C" __attribute__((weak)) void aos_FatalUnsetRealtimePriority();
 +
 +static void MaybeUnsetRealtime() {
-+  aos_FatalUnsetRealtimePriority();
++  if (aos_FatalUnsetRealtimePriority != nullptr) {
++    aos_FatalUnsetRealtimePriority();
++  }
 +}
++#endif
 +
  namespace absl {
  ABSL_NAMESPACE_BEGIN
  namespace log_internal {
-@@ -55,6 +68,7 @@ ABSL_LOG_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(const void*);
+@@ -54,7 +85,8 @@
+ #undef ABSL_LOG_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING
  
  CheckOpMessageBuilder::CheckOpMessageBuilder(
 -    const char* absl_nonnull exprtext) {
@@ -32,30 +50,47 @@ index be8ceaf..0beccdd 100644
  }
  
 diff --git a/absl/log/internal/log_message.cc b/absl/log/internal/log_message.cc
-index 4acd503..39b0e3e 100644
 --- a/absl/log/internal/log_message.cc
 +++ b/absl/log/internal/log_message.cc
-@@ -66,6 +66,19 @@ extern "C" ABSL_ATTRIBUTE_WEAK void ABSL_INTERNAL_C_SYMBOL(
+@@ -66,6 +66,37 @@
    // Default - Do nothing
  }
  
-+#ifdef _WIN32
++#if defined(_WIN32)
 +extern "C" void aos_FatalUnsetRealtimePriority_default_log_message() {}
 +extern "C" void aos_FatalUnsetRealtimePriority();
 +#pragma comment(linker, "/alternatename:aos_FatalUnsetRealtimePriority=aos_FatalUnsetRealtimePriority_default_log_message")
-+#else
++
++static void MaybeUnsetRealtime() { aos_FatalUnsetRealtimePriority(); }
++#elif defined(__APPLE__)
++// Mach-O has no undefined-weak-resolves-to-null, so the ELF form below fails to
++// link when AOS isn't present.  Fall back to a weak definition, which Mach-O
++// does support.  That reintroduces the shadowing hazard the ELF comment
++// describes, which is acceptable here only because macOS is not a realtime
++// target -- realtime_darwin.cc is stubs.
 +extern "C" void aos_FatalUnsetRealtimePriority();
 +extern "C" __attribute__((weak)) void aos_FatalUnsetRealtimePriority() {}
-+#endif
++
++static void MaybeUnsetRealtime() { aos_FatalUnsetRealtimePriority(); }
++#else
++// Declared weak, and deliberately NOT defined.  A weak *definition* here would
++// be picked over AOS's real one whenever this object comes first in the link or
++// dynamic search order, silently turning the drop back into a no-op.  An
++// undefined weak reference is instead null when AOS is not linked in at all,
++// which is the fallback we actually want.
++extern "C" __attribute__((weak)) void aos_FatalUnsetRealtimePriority();
 +
 +static void MaybeUnsetRealtime() {
-+  aos_FatalUnsetRealtimePriority();
++  if (aos_FatalUnsetRealtimePriority != nullptr) {
++    aos_FatalUnsetRealtimePriority();
++  }
 +}
++#endif
 +
  namespace absl {
  ABSL_NAMESPACE_BEGIN
  namespace log_internal {
-@@ -279,8 +292,14 @@ LogMessage::LogMessage(const char* absl_nonnull file, int line,
+@@ -279,8 +310,14 @@
    : LogMessage(absl::string_view(file), line, severity) {}
  LogMessage::LogMessage(absl::string_view file, int line,
                         absl::LogSeverity severity)

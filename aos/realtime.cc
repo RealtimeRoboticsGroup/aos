@@ -1,9 +1,10 @@
 #include "aos/realtime.h"
 
 #ifndef _WIN32
-#include <dirent.h>
+#include <fcntl.h>
 #ifdef __linux__
 #include <malloc.h>
+#include <sys/syscall.h>
 #endif
 #include <sys/mman.h>
 #include <sys/resource.h>
@@ -270,30 +271,94 @@ void DeleteHook(const void *ptr) {
   }
 }
 
+namespace {
+
+#ifdef __linux__
+// Parses a positive decimal integer out of a NUL terminated string, returning
+// -1 if it isn't one.  Used instead of atoi() because this runs from a signal
+// handler, and atoi() is not async-signal-safe (it may consult the locale).
+int ParseTid(const char *name) {
+  if (name[0] < '0' || name[0] > '9') {
+    return -1;
+  }
+  int result = 0;
+  for (const char *c = name; *c != '\0'; ++c) {
+    if (*c < '0' || *c > '9') {
+      return -1;
+    }
+    result = result * 10 + (*c - '0');
+  }
+  return result;
+}
+
+// The subset of struct linux_dirent64 we need, matching the kernel ABI.
+// Declared here rather than relying on a libc getdents64() wrapper, which is
+// only available in newer glibc.
+struct Dirent64 {
+  uint64_t d_ino;
+  int64_t d_off;
+  unsigned short d_reclen;
+  unsigned char d_type;
+  char d_name[];
+};
+#endif
+
+}  // namespace
+
+// This runs from fatal signal handlers (see the abseil AOS hooks patch), so
+// every call it makes must be async-signal-safe.  That rules out opendir(),
+// which allocates -- if we faulted inside malloc while holding the arena lock,
+// calling it here would deadlock instead of dying.  It also rules out
+// ABSL_(P)CHECK, so failures to change a thread's scheduler are ignored: we
+// are already dying, and a best-effort drop beats a recursive crash.
 extern "C" void aos_FatalUnsetRealtimePriority() {
   int saved_errno = errno;
-  // Drop our priority first.  We are about to do lots of work to undo
+
+  // Drop our own priority first.  We are about to do lots of work to undo
   // everything, don't get overly clever.
-  UnsetCurrentThreadRealtimePriority();
+#ifndef _WIN32
+  {
+    struct sched_param param;
+    param.sched_priority = 0;
+    sched_setscheduler(0, SCHED_OTHER, &param);
+  }
+#endif
 
   SetIsRealtime(false);
 
-  // Put all sub-tasks back to non-rt priority too.
+  // Put all sub-tasks back to non-rt priority too.  They are about to be torn
+  // down with the rest of the process, and nothing they do between now and
+  // then is worth preempting a healthy RT application elsewhere on the system.
 #ifdef __linux__
-  DIR *dirp = opendir("/proc/self/task");
-  if (dirp) {
-    struct dirent *directory_entry;
-    while ((directory_entry = readdir(dirp)) != NULL) {
-      int thread_id = std::atoi(directory_entry->d_name);
-
-      // ignore . and .. which are zeroes for some reason
-      if (thread_id != 0) {
-        struct sched_param param;
-        param.sched_priority = 0;
-        sched_setscheduler(thread_id, SCHED_OTHER, &param);
+  const int fd = open("/proc/self/task", O_RDONLY | O_DIRECTORY | O_CLOEXEC, 0);
+  if (fd != -1) {
+    // Sized to comfortably hold a directory block's worth of entries.  We loop
+    // until getdents64() reports the end, so a small buffer is only a
+    // performance question, and this path is not performance sensitive.
+    alignas(Dirent64) char buffer[4096];
+    while (true) {
+      const long bytes_read =
+          syscall(SYS_getdents64, fd, buffer, sizeof(buffer));
+      if (bytes_read <= 0) {
+        // 0 means we reached the end.  Anything negative means we can't
+        // enumerate the threads; we already dropped our own priority, which is
+        // the important half, so just stop.
+        break;
+      }
+      for (long offset = 0; offset < bytes_read;) {
+        const Dirent64 *const entry =
+            reinterpret_cast<const Dirent64 *>(buffer + offset);
+        // Skips "." and ".." for free, since neither parses as a number.
+        const int thread_id = ParseTid(entry->d_name);
+        if (thread_id > 0) {
+          struct sched_param param;
+          param.sched_priority = 0;
+          sched_setscheduler(thread_id, SCHED_OTHER, &param);
+        }
+        offset += entry->d_reclen;
       }
     }
-    closedir(dirp);
+    close(fd);
   }
 #elif defined(__APPLE__)
 #elif defined(_WIN32)
