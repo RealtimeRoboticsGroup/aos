@@ -320,7 +320,7 @@ extern "C" void aos_FatalUnsetRealtimePriority() {
 
   // Drop our own priority first.  We are about to do lots of work to undo
   // everything, don't get overly clever.
-#ifndef _WIN32
+#ifdef __linux__
   {
     struct sched_param param;
     param.sched_priority = 0;
