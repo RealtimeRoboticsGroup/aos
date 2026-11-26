@@ -66,54 +66,79 @@ new builds.
 Instructions for bringing up a vision system running the
 apriltag detection in this folder:
 
-1. Follow [the instructions](../orin/README.md) to flash a rootfs image to an orin.
-2. The current default image will cause the Orin to have an IP address of
-   `10.18.68.101` and a hostname of `orin-1868-1`.
-3. To SSH to the device, do `ssh pi@10.18.68.101`. The default password will be
-   `raspberry`, similar to any raspberry pi device.
-4. In order to update the hostname and IP address to match that of your FRC
-   team, use the `change_hostname.sh` script in `/root/bin`. It takes a
+### Prerequisites
+
+Follow [the instructions](../orin/README.md) to flash a rootfs image to an orin.
+
+### Change hostname and IP to match your FRC team
+
+The current default image will cause the Orin to have an IP address of
+`10.18.68.101` and a hostname of `orin-1868-1`.
+
+1. Set the IP and netmask on the ethernet adapter on your host machine to 10.18.68.50/24
+2. SSH to the device with `ssh pi@10.18.68.101`. The default password will be
+   `raspberry` (similar to any raspberry pi device).
+3. On the orin, `su` to the root user and run the `change_hostname.sh` script in `/root/bin`. It takes a
    hostname of the form `orin-[team#]-[orin#]`, and sets the IP address to
-   `10.TE.AM.(100 + orin#)`. For example, for team 4646:
+   `10.TE.AM.(100 + orin#)`. For example, for team 2073:
 
 ```
 $ ssh pi@10.18.68.101
 pi[1] orin-1868-1 ~
 $ sudo su
 root[1] orin-1868-1 /home/pi
-# /root/bin/change_hostname.sh orin-4646-1
+# /root/bin/change_hostname.sh orin-2073-1
 root[2] orin-1868-1 /home/pi
 # reboot
 ```
 
-5. Set the robot name. The hostname gives the team number, and
-   `/home/pi/bin/robotname` names which robot of that team this is. Together
-   they pick the matching entry (`team` and `robot_name`) in
-   [`constants.jinja2.json`](constants.jinja2.json), which holds that robot's
-   camera calibrations. `vision_constants_sender` won't start if the file is
-   missing, and nothing will find its constants if there's no matching entry.
-   The file isn't overwritten by deploys, so this only needs to be done once:
+4. Update the IP and netmask on the host ethernet adapter to match (e.g. for team 2073, use `10.20.73.50/24`)
+5. Reconnect using the new IP (e.g. `ssh pi@10.20.73.101`)
+
+### Set the robotname
+
+The hostname of the orin gives the team number, and `/home/pi/bin/robotname` names which robot of that team this is. Together
+they pick the matching entry (`team` and `robot_name`) in [`constants.jinja2.json`](templates/constants.jinja2.json), which holds that robot's
+camera calibrations.
+
+Important: `vision_constants_sender` won't start if the file is missing, and nothing will find its constants if there's no matching entry.
+The file isn't overwritten by deploys, so this only needs to be done once:
 
 ```
 $ echo bot1 > /home/pi/bin/robotname   # team 1868's "bot1" entry
 ```
 
-6. To deploy code, run:
-   `bazel run -c opt --config=arm64 //frc/vision:download_stripped -- 10.TE.AM.101`
-   for a team number `TEAM`.
-7. Once code is running, view the cameras in Foxglove. See [Viewing live
-   camera feeds](#viewing-live-camera-feeds) below.
-8. Depending on your cameras, you may need to alter the `/etc/modprobe.d/uvc.conf`.
-   By default, most MJPEG cameras we have encountered grossly overestimate the
-   bandwidth that they will typically require. This means that v4l2 refuses to
-   stream all of your cameras because it could theoretically consume more
-   bandwidth than the USB device on the Orin has available. The
-   `bandwidth_quirk_divisor` setting in `/etc/modprobe.d/uvc.conf` will be used
-   to divide the reported bandwidth. Note that any time a camera attempts to
-   send more data than the kernel alots to it, it will end up truncated and
-   will cause an invalid image to be read. The image defaults to a divisor of
-   `8`. 4646 is using a divisor of `8`,
-   1868 is using a divisor of `2`.
+### Add constants for your robot
+
+[Set starting values for your robot](#setting-up-constants-for-a-new-robot)
+
+### Deploy AOS to the orin
+
+To deploy code, run:
+`bazel run -c opt --config=arm64 //frc/vision:download_stripped -- 10.TE.AM.101`
+for a team number `TEAM`.
+
+To confirm this is working, ssh to the orin, and run `aos_starter status`. If you have a camera plugged in,
+and you have correctly configured your robot name and constants, then you should see one of camera_reader0-camera_reader4 with no exit code (indicating the reader is still running).
+
+See [checking-on-the-orin](#checking-on-the-orin) below for more commands you can use to debug from the orin.
+
+### View the camera feed in foxglove
+
+Once code is running, view the cameras in Foxglove. See [Viewing live
+camera feeds](#viewing-live-camera-feeds) below.
+
+Depending on your cameras, you may need to alter the `/etc/modprobe.d/uvc.conf`.
+By default, most MJPEG cameras we have encountered grossly overestimate the
+bandwidth that they will typically require. This means that v4l2 refuses to
+stream all of your cameras because it could theoretically consume more
+bandwidth than the USB device on the Orin has available. The
+`bandwidth_quirk_divisor` setting in `/etc/modprobe.d/uvc.conf` will be used
+to divide the reported bandwidth. Note that any time a camera attempts to
+send more data than the kernel alots to it, it will end up truncated and
+will cause an invalid image to be read. The image defaults to a divisor of
+`8`. 4646 is using a divisor of `8`,
+1868 is using a divisor of `2`.
 
 ## Viewing live camera feeds
 
@@ -133,7 +158,7 @@ $ echo bot1 > /home/pi/bin/robotname   # team 1868's "bot1" entry
 3. Select "Open a new connection", and use the "Foxglove WebSocket" option
    with a URL of `ws://localhost:8765`.
 4. [Import](https://docs.foxglove.dev/docs/visualization/layouts#import-and-export) the Foxglove layout that we have at
-   [`foxglove_camera_feeds.json`](foxglove_camera_feeds.json).
+   [`foxglove_camera_feeds.json`](tools/foxglove_camera_feeds.json).
 
 You may need to close some of the camera feeds to reduce bandwidth load.
 You can also zoom in on feeds, and do any variety of things to ease in looking
@@ -357,7 +382,7 @@ $ journalctl -u aos -b --no-pager | grep -B2 -A14 'Check failed'
 ## Setting up constants for a new robot
 
 All the camera constants for every robot live in
-[`constants.jinja2.json`](constants.jinja2.json). Each entry is selected by
+[`constants.jinja2.json`](templates/constants.jinja2.json). Each entry is selected by
 the team number (from the hostname) and the robot name (from
 `/home/pi/bin/robotname`, see the bring-up steps above), and holds a
 calibration for each camera plus the stream settings for all of them. A new
